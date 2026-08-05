@@ -89,6 +89,30 @@ class TestSonic3kTitleCardManagerRewind {
     }
 
     @Test
+    void phaseOneInLevelArtAdmissionFollowsTheSecondExitOwnerPoll()
+            throws Exception {
+        startLevel();
+        GameServices.level().getObjectManager().initVblaCounter(1);
+
+        Sonic3kTitleCardManager title = new Sonic3kTitleCardManager();
+        Sonic3kObjectArtProvider provider = (Sonic3kObjectArtProvider)
+                GameServices.module().getObjectArtProvider();
+        title.initializeInLevel(0, 1);
+        prepareExitForCompletion(title);
+        setField(title, "inLevelExitDelayFrames", 5);
+
+        title.update();
+        assertFalse(provider.capture().runtimeArtAdmissionConsumed(),
+                "the first Wait2 poll only observes the drained children");
+        assertEquals(4, title.capture().inLevelExitDelayFrames());
+
+        title.update();
+        assertTrue(provider.capture().runtimeArtAdmissionConsumed(),
+                "LoadEnemyArt belongs to the following owner poll");
+        assertEquals(3, title.capture().inLevelExitDelayFrames());
+    }
+
+    @Test
     void productionRegistryRestoresTitleBeforeProviderAndConsumesTheExactLease()
             throws Exception {
         startLevel();

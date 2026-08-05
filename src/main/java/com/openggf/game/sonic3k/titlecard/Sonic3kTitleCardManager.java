@@ -912,17 +912,17 @@ public class Sonic3kTitleCardManager
             // final child's deletion on its following object dispatch.
             if (!exitChildrenGone) {
                 exitChildrenGone = true;
-                // The ROM's LoadEnemyArt falls through at this parent
-                // observation boundary. A retained AIZ handoff may keep the
-                // title overlay alive for additional display/camera dispatches,
-                // but that later presentation owner must not hold the queue's
-                // admission lease behind those unrelated writes.
-                if (inLevelMode && inLevelExitDelayFrames > 0) {
-                    consumeRuntimeArtAdmissionIfNeeded();
-                }
                 return;
             }
             if (inLevelMode && inLevelExitDelayFrames > 0) {
+                // The phase-one handoff leaves five native Wait2 dispatches
+                // after the slotless manager first observes its children
+                // gone. LoadEnemyArt is reached on the second of those
+                // represented owner passes, before the remaining display
+                // release delay is consumed.
+                if (inLevelExitDelayFrames == 4) {
+                    consumeRuntimeArtAdmissionIfNeeded();
+                }
                 inLevelExitDelayFrames--;
                 if (inLevelExitDelayFrames == 0
                         && releasePreloadedActCameraOnComplete

@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K AIZ phase-one title ownership now admits the ROM-backed enemy
+  batch on the second native exit-owner poll, after child retirement and before
+  the remaining release delay. The standard AIZ replay frontier advances from
+  raw frame `8938` to the camera handoff at raw frame `8941` without changing
+  trace payloads.
 - Fix/Test: S3K results art now follows the ROM's first-dispatch submission
   boundary, and the AIZ in-level title resets the level gamestate on its native
   display row. The standard AIZ replay frontier advances to the next queue

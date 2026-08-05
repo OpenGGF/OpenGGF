@@ -61797,3 +61797,34 @@ to synthesize a POST phase on a VBLANK-only row.
   frame `8938` (`queue.s3k_kos_direct.busy`, expected `false`, actual `true`).
   The report contains `1146` errors and `0` warnings; no trace payloads were
   changed. The next frontier is the title-owner queue submission/service edge.
+
+## 2026-08-05 — S3K AIZ title-owner queue admission frontier
+
+- Worktree: repository root, branch `bugfix/s3k-traces`, parent frontier
+  `d6416eee0`. No trace payloads were edited.
+- Root cause: the slotless title manager observed its retired children while
+  the phase-one Wait2 handoff still had five native owner dispatches pending.
+  Admitting the lease at that first observation submitted the enemy batch two
+  rows early; waiting for title completion submitted it two rows late. The ROM
+  reaches `LoadEnemyArt` on the second represented owner poll.
+- Fix: the title owner now consumes its exact runtime-art admission lease when
+  the semantic phase-one exit countdown reaches its second owner poll. The
+  production provider and hardware timing path remain unchanged; no trace,
+  route, zone, or frame-number branch was added.
+- Focused validation passed:
+  `mvn -q -Dmse=off
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.game.sonic3k.titlecard.TestSonic3kTitleCardManagerRewind,com.openggf.game.sonic3k.TestSonic3kTitleCardTeardownModel,com.openggf.game.sonic3k.TestSonic3kPlcArtRewindSnapshot'
+  test`
+- Clean authoritative command:
+  `mvn -q -Dmse=off -Dtrace.context.diagnosticChars=full
+  -Dsurefire.argLine='-Xshare:off -Xmx6g'
+  -Dsurefire.forkCount=1 -DreuseForks=true
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace'
+  test`
+- Result: the first comparison error advances from raw frame `8938`
+  (`queue.s3k_kos_direct.busy`, expected `false`, actual `true`) to raw frame
+  `8941` (`camera_y`, expected `0x02C1`, actual `0x02B8`). The report contains
+  `1138` errors and `0` warnings; no trace payloads were changed. The next
+  frontier is the AIZ title-to-gameplay camera/event handoff.
