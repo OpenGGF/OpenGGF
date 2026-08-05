@@ -3,6 +3,24 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: a Sonic 1 end-of-act advance now runs the whole `GM_Level` restart the
+  ROM re-enters, instead of a fade-to-black that loads the next act from its own
+  completion. `Got_NextLevel` writes nothing but `f_restart`
+  (`docs/s1disasm/_incObj/3A Got Through Card.asm:200-211`); the level main
+  loop's own `tst.w (f_restart).w` then falls back into `GM_Level`
+  (sonic.asm:3041-3055), which reaches `Level_TtlCardLoop` exactly as a first
+  entry does (sonic.asm:2814-2842). The engine skipped that card entirely on any
+  host that omits a direct entry's presentation, so the restart occupied 21 movie
+  rows against the recording's 228 and the S1 emerald route could not cross a
+  plain act-to-act boundary at all. `advanceToNextLevel` now marks the load as a
+  `Level:` re-entry so its card is mandatory, a run's shared transition gap
+  carries that card the way it already carries a special-stage results exit, and
+  the destination admission seam honours the live initial-title-card barrier
+  instead of forcing it clear. A whole-run destination is also no longer
+  admitted before its own first recorded row: the restart's un-timed load steps
+  have no counted form (see *Whole-Run Level-Restart Admission Row* in
+  `docs/status/known-discrepancies.md`). The route's GHZ3 -> MZ1 advance now
+  replays, and MZ1 runs 3,220 of its 3,391 rows before its first divergence.
 - Fix: the GHZ spiked-pole helix (Obj 0x17) now allocates one real object-RAM
   slot per spike instead of drawing every spike from a single instance's
   internal array. ROM `Hel_Main` calls `FindFreeObj` once per non-parent spike

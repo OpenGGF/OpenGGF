@@ -18,6 +18,7 @@ public class LevelTransitionCoordinator {
     private boolean specialStageEntryAdvancesLevel;
     private boolean specialStageReturnLevelReloadRequested;
     private boolean resultsReturnCardOwnedByCaller;
+    private boolean levelRoutineReentry;
 
     // ── S3K big ring return (ROM: Saved2_* variables) ──────────
     private BigRingReturnState bigRingReturn;
@@ -171,6 +172,29 @@ public class LevelTransitionCoordinator {
     /** Returns true when the caller presents the results-return title card itself. */
     public boolean isResultsReturnCardOwnedByCaller() {
         return resultsReturnCardOwnedByCaller;
+    }
+
+    /**
+     * Signals that the next level load re-enters the game's {@code Level:}
+     * routine from a level that was already running, rather than entering one
+     * from a host/tooling boundary.
+     *
+     * <p>Sonic 1's end-of-act card only writes {@code f_restart}
+     * (docs/s1disasm/_incObj/3A Got Through Card.asm:200-211); the main loop's
+     * own {@code tst.w (f_restart).w} then falls out of {@code Level_MainLoop}
+     * (docs/s1disasm/sonic.asm:3041-3055) straight back into {@code GM_Level}.
+     * That re-entry runs the whole routine, so it reaches
+     * {@code Level_TtlCardLoop} (sonic.asm:2814-2842) exactly as a first entry
+     * does. The presentation is therefore part of the modelled restart and is
+     * not omitted for a host that omits a direct entry's card.
+     */
+    public void setLevelRoutineReentry(boolean reentry) {
+        this.levelRoutineReentry = reentry;
+    }
+
+    /** Returns true while the pending load re-enters a running level's {@code Level:} routine. */
+    public boolean isLevelRoutineReentry() {
+        return levelRoutineReentry;
     }
 
     // ================================================================
@@ -701,6 +725,7 @@ public class LevelTransitionCoordinator {
         specialStageEntryAdvancesLevel = false;
         specialStageReturnLevelReloadRequested = false;
         resultsReturnCardOwnedByCaller = false;
+        levelRoutineReentry = false;
         bigRingReturn = null;
         bonusStageRequested = null;
         bonusStageReturnCheckpointIndex = -1;

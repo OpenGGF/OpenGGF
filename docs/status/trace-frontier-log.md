@@ -62869,3 +62869,83 @@ to synthesize a POST phase on a VBLANK-only row.
   `LevelIterationAdmissionController` / `TraceSessionLauncher`), so this is a
   design-then-implement piece, not an in-loop fix. It is also the run's FIRST
   plain act-to-act boundary, so nothing before it exercised the path.
+
+## 2026-08-05 - The GHZ3 -> MZ1 act advance replays; MZ1 reaches row 3,220
+
+- **Frontier moved.** `TestS1CompleteEmeraldVisualRun` lane 2 is re-pinned from
+  `stopAfterSegmentBody(6)` to `stopAfterSegment(7)` and green: the run now
+  crosses the route's FIRST plain act-to-act boundary, admits `mz1` at BK2
+  27,467, and only stops because the pin says so. Driven past the pin it runs
+  **3,220 of MZ1's 3,391 rows** and self-pauses on `camera_y` at MZ1 row 3,220
+  (ROM `0x033E`, engine `0x0348`, delta 10) -- the new frontier.
+- Command: `mvn -Dmse=off -Ptrace-replay -Dsonic1.rom.path=s1.gen
+  -Dtest=TestS1CompleteEmeraldVisualRun test` -- **2 tests, green.**
+- **Three defects, all in the act-advance path, all measured.**
+  1. *The restart's title card was never requested.*
+     `LevelManager.requestTitleCardIfNeeded` omits the presentation on a host
+     that omits a direct entry's card, and an act advance took that branch
+     (probe: `zone=1 act=0 headless=true handoff=false callerOwned=false`). But
+     `Got_NextLevel` writes only `f_restart`
+     (`docs/s1disasm/_incObj/3A Got Through Card.asm:200-211`) and the main loop
+     falls straight back into `GM_Level` (sonic.asm:3041-3055), which reaches
+     `Level_TtlCardLoop` (2814-2842) exactly as a first entry does.
+     `LevelTransitionCoordinator.setLevelRoutineReentry` now marks such a load
+     and `advanceToNextLevel` sets it.
+  2. *The gap could not consume the request.* A run's transition-gap rows skip
+     the ordinary level body (`TraceSessionLauncher.suppressesRunNativeLevelBody`),
+     so nothing ever called `consumeTitleCardRequest`. `GameLoop` gained
+     `presentPendingTitleCardDuringSuppressedRunRow`, beside the existing
+     special-stage-request equivalent; the ROM's locked loop is not gameplay
+     either -- it runs `ExecuteObjects`/`BuildSprites` over freshly cleared
+     object RAM plus `RunPLC`.
+  3. *The admission seam forced the barrier clear.*
+     `admitRunDestinationBeforeProductionIfActive` captured its observation
+     through `captureRunObservationAfterTitleCardRelease`, hardcoding
+     `initialTitleCardPending=false`, so it admitted on the LEVEL row where the
+     card had been requested but not yet entered. It now reports the live
+     barrier and that helper is gone.
+- **The residual is un-timed hardware load cost, and this is measured, not
+  assumed.** With 1-3 fixed the restart occupies 168 rows (21 fade + 147 card)
+  against the recording's 228. Decomposing `GM_Level`: `PaletteFadeOut` 22
+  (sonic.asm:2711), `Level_TtlCardLoop` = the queued art's drain,
+  `Level_Delay` 4 + `PalFadeIn_Alt` 22 (2957-2966). The drain is exactly
+  reproduced -- summing `ceil(patterns/9)` over `PLC_MZ` + `PLC_Main2` straight
+  out of the ROM's `ArtLoadCues` (`0x01DD86`, nine patterns per title-card
+  V-int, sonic.asm:1431-1441) gives **146**, and the engine's
+  `Sonic1PlcService` measures **146**; GHZ gives **150** against the engine's
+  **150**. Subtracting the counted parts from each recorded gap leaves the
+  un-timed `NemDec`/`clearRAM`/`ClearScreen`/`Hud_Base`/`LevelDataLoad`/
+  `LoadTilesFromStart`/`ObjPosLoad` span: **34 rows for MZ, 36-37 for LZ, 36-37
+  for SLZ, 38 for SYZ, 39-40 for SBZ**, moving by a row between acts of one
+  zone. It varies with payload, so it is elapsed cost and not a counted loop --
+  the discriminator the `plc-system` skill states, coming out the other way.
+  A `TraceRunPlaybackCoordinator` destination therefore may not open before its
+  own first recorded row; documented as *Whole-Run Level-Restart Admission Row*
+  in `docs/status/known-discrepancies.md`. Every other admission condition
+  stays engine-derived, so the row can only defer an admission the semantics
+  already allowed.
+- **Correction to the previous entry.** The special-stage results bridge's
+  "23 + 151 + 62 rows, all exact today" is pin-driven, not model-driven: that
+  boundary admits on an exact physical row, and the engine idles the last ~35
+  of those rows. Measured: its title card ends at BK2 18,657 and admission is at
+  18,719.
+- Regression sweep (serial, JDK 21):
+  - `TestS1CompleteEmeraldVisualRun` (2), `TestS1CompleteEmeraldRunPrefix` (2),
+    `TestTraceRunPlaybackCoordinator` (21), `TestTraceSessionLauncherRunBranch`
+    (40), `TestTraceRunFrameDriver` (8), `TestTraceRunBoundaryComparator` (5),
+    `TestTraceRunSegmentExecutionPolicyCatalog`,
+    `TestTraceRunPlaybackTranscriptParity`, `TestLevelEntryPathsHeadless` (18),
+    `TestTraceReplayInvariantGuard` (10), `TestHardwareTimingAuthorityGuard`
+    (22), `TestRewindCoverageGuard`, `TestStaticStateRewindCoverageGuard` --
+    all green.
+  - `TestS1GhzMazeRoundTripChain`'s bridge test green; `ghzMazeRoundTrip` stays
+    red on the same 8 `run_tail` fields with the same values
+    (`movie_logical_frame` 8,261 against 9,071).
+  - `TestS2EhzHalfpipeRoundTripChain` ("special stage exited with 3704
+    represented rows remaining in ss") and `TestS3kMegaRunChain` ("Manifest
+    validation failed for s3-knux-multibonus-ss") are red with byte-identical
+    messages on a stashed clean tree; `TestS3kBonusRoundTripChain` skips.
+  - `TestTraceRunPlaybackCoordinator`'s seven ordinary-level admission cases now
+    state the movie row they stand on. That is the behaviour change, not a
+    weakening: one of them additionally asserts that the destination stays shut
+    one row before its offset.

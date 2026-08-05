@@ -151,9 +151,12 @@ class TestTraceRunPlaybackCoordinator {
         assertEquals(0, coordinator.currentSegmentIndex());
 
         coordinator.afterProduction(levelObservation(10, 0, 0, 2, true, 0));
+        assertTrue(coordinator.beforeAdmission(
+                levelObservationAt(129, 11, 1, 0, 2, false, 0)).isEmpty(),
+                "a destination cannot open before its own first recorded row");
         AdmitDestination admission = assertInstanceOf(AdmitDestination.class,
                 coordinator.beforeAdmission(
-                        levelObservation(11, 1, 0, 2, false, 0)).getFirst());
+                        levelObservationAt(130, 11, 1, 0, 2, false, 0)).getFirst());
         assertEquals(11, admission.receipt().loadGeneration());
         assertEquals(130, admission.receipt().absoluteBk2Row());
     }
@@ -178,13 +181,13 @@ class TestTraceRunPlaybackCoordinator {
                 coordinator.afterProduction(levelObservation(
                         10, 0, 0, 2, true, 0, false, true)));
 
-        assertTrue(coordinator.beforeAdmission(levelObservation(
-                11, 1, 0, 3, false, 0, false, true)).isEmpty());
+        assertTrue(coordinator.beforeAdmission(levelObservationAt(
+                130, 11, 1, 0, 3, false, 0, false, true)).isEmpty());
         assertEquals(TraceRunPlaybackCoordinator.Phase.TRANSITION_GAP,
                 coordinator.phase());
         assertInstanceOf(AdmitDestination.class,
-                coordinator.beforeAdmission(levelObservation(
-                        11, 1, 0, 4, false, 0, false, false)).getFirst());
+                coordinator.beforeAdmission(levelObservationAt(
+                        130, 11, 1, 0, 4, false, 0, false, false)).getFirst());
     }
 
     @Test
@@ -199,13 +202,13 @@ class TestTraceRunPlaybackCoordinator {
                 levelObservation(2, 1, 0, 1, false, 0));
         coordinator.afterProduction(levelObservation(1, 0, 0, 2, true, 0));
         RunPlaybackObservation titleCard = new RunPlaybackObservation(
-                GameMode.TITLE_CARD, 0, 2, destination,
+                GameMode.TITLE_CARD, 20, 2, destination,
                 false, null, null, false, false, 0, false, 10, 20);
 
         assertTrue(coordinator.beforeAdmission(titleCard).isEmpty());
         assertInstanceOf(AdmitDestination.class,
                 coordinator.beforeAdmission(
-                        levelObservation(2, 1, 0, 2, false, 0)).getFirst());
+                        levelObservationAt(20, 2, 1, 0, 2, false, 0)).getFirst());
     }
 
     @Test
@@ -236,7 +239,7 @@ class TestTraceRunPlaybackCoordinator {
                     levelObservation(1, 0, 0, 2, true, 0));
 
             assertTrue(coordinator.beforeAdmission(
-                    levelObservation(2, 1, 0, 2, false, 0)).isEmpty(),
+                    levelObservationAt(120, 2, 1, 0, 2, false, 0)).isEmpty(),
                     rejected + " must not satisfy transitionless adjacency");
         }
     }
@@ -273,7 +276,7 @@ class TestTraceRunPlaybackCoordinator {
 
         assertInstanceOf(AdmitDestination.class,
                 coordinator.beforeAdmission(
-                        levelObservation(2, 0, 0, 2, false, 0)).getFirst());
+                        levelObservationAt(20, 2, 0, 0, 2, false, 0)).getFirst());
     }
 
     @Test
@@ -491,20 +494,20 @@ class TestTraceRunPlaybackCoordinator {
         TraceRunPlaybackCoordinator zero = levelPairCoordinator();
         prepareOrdinaryLevelDestination(zero, 0);
         assertEquals(0, assertInstanceOf(AdmitDestination.class,
-                zero.beforeAdmission(levelObservation(2, 1, 0, 2, false, 0)).getFirst())
-                .receipt().rowsConsumed());
+                zero.beforeAdmission(levelObservationAt(20, 2, 1, 0, 2, false, 0))
+                .getFirst()).receipt().rowsConsumed());
 
         TraceRunPlaybackCoordinator one = levelPairCoordinator();
         prepareOrdinaryLevelDestination(one, 1);
         assertEquals(1, assertInstanceOf(AdmitDestination.class,
-                one.beforeAdmission(levelObservation(2, 1, 0, 2, false, 1)).getFirst())
-                .receipt().rowsConsumed());
+                one.beforeAdmission(levelObservationAt(21, 2, 1, 0, 2, false, 1))
+                .getFirst()).receipt().rowsConsumed());
 
         TraceRunPlaybackCoordinator drift = levelPairCoordinator();
         prepareOrdinaryLevelDestination(drift, 2);
         assertThrows(IllegalArgumentException.class,
-                () -> drift.beforeAdmission(levelObservation(
-                        2, 1, 0, 2, false, 2)));
+                () -> drift.beforeAdmission(levelObservationAt(
+                        22, 2, 1, 0, 2, false, 2)));
     }
 
     @Test
@@ -580,7 +583,7 @@ class TestTraceRunPlaybackCoordinator {
 
         assertInstanceOf(AdmitDestination.class,
                 coordinator.beforeAdmission(
-                        levelObservation(2, 1, 0, 2, false, 0)).getFirst());
+                        levelObservationAt(120, 2, 1, 0, 2, false, 0)).getFirst());
     }
 
     private static TraceRunPlaybackCoordinator levelPairCoordinator() {
@@ -668,7 +671,27 @@ class TestTraceRunPlaybackCoordinator {
             long generation, int romZone, int act, long step,
             boolean exhausted, int rowsConsumed, boolean lagOnly,
             boolean initialTitleCardPending) {
-        return new RunPlaybackObservation(GameMode.LEVEL, 0, step,
+        return levelObservationAt(0, generation, romZone, act, step,
+                exhausted, rowsConsumed, lagOnly, initialTitleCardPending);
+    }
+
+    /**
+     * A level observation on an explicit shared movie row. A destination is
+     * only admissible once the cursor has reached its own recorded offset, so
+     * every admitting observation has to state the row it is standing on.
+     */
+    private static RunPlaybackObservation levelObservationAt(
+            int cursor, long generation, int romZone, int act, long step,
+            boolean exhausted, int rowsConsumed) {
+        return levelObservationAt(cursor, generation, romZone, act, step,
+                exhausted, rowsConsumed, false, false);
+    }
+
+    private static RunPlaybackObservation levelObservationAt(
+            int cursor, long generation, int romZone, int act, long step,
+            boolean exhausted, int rowsConsumed, boolean lagOnly,
+            boolean initialTitleCardPending) {
+        return new RunPlaybackObservation(GameMode.LEVEL, cursor, step,
                 new RunPlaybackObservation.LevelIdentity(
                         generation, romZone, romZone, act),
                 initialTitleCardPending, null, null, false,

@@ -826,6 +826,27 @@ public class GameLoop {
     }
 
     /**
+     * Presents a level restart's mandatory title card on a row whose ordinary
+     * level body is suppressed.
+     *
+     * <p>The card is not gameplay: the ROM's {@code Level_TtlCardLoop} runs
+     * {@code ExecuteObjects}/{@code BuildSprites} over freshly cleared object
+     * RAM holding only the card's own elements, plus {@code RunPLC}
+     * (docs/s1disasm/sonic.asm:2814-2842). A restart therefore reaches the card
+     * on the same rows a run's shared transition gap suppresses the level body
+     * on, exactly as the special-stage results exit already does from its own
+     * mode's update.
+     */
+    boolean presentPendingTitleCardDuringSuppressedRunRow() {
+        if (currentGameMode != GameMode.LEVEL || levelManager == null
+                || !levelManager.consumeTitleCardRequest()) {
+            return false;
+        }
+        enterTitleCard(levelManager.getTitleCardZone(), levelManager.getTitleCardAct());
+        return true;
+    }
+
+    /**
      * True whenever rewind engagement must be rejected: either
      * {@link #isNonRewindableTransitionPending()} (the four transition flags,
      * which ALSO freeze gameplay), or a fade is in flight with a completion
@@ -1121,6 +1142,7 @@ public class GameLoop {
             // request at the same dispatch boundary or the fade will remain
             // white forever while the run driver continues replaying gap input.
             consumeSpecialStageRequestDuringSuppressedRunRow();
+            presentPendingTitleCardDuringSuppressedRunRow();
             inputHandler.update();
             return;
         }

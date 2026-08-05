@@ -872,12 +872,6 @@ public final class TraceSessionLauncher {
                 levelManager.isTitleCardRequested());
     }
 
-    /** Captures the release seam after the title-card owner has relinquished control. */
-    private RunPlaybackObservation captureRunObservationAfterTitleCardRelease(
-            GameMode mode, int rowsConsumed, boolean lagOnlyContinuation) {
-        return captureRunObservation(mode, rowsConsumed, lagOnlyContinuation, false);
-    }
-
     private RunPlaybackObservation captureRunObservation(
             GameMode mode, int rowsConsumed, boolean lagOnlyContinuation,
             boolean initialTitleCardPending) {
@@ -2057,7 +2051,16 @@ public final class TraceSessionLauncher {
         }
     }
 
-    /** Attempts destination ownership after title-card/setup admission but before production. */
+    /**
+     * Attempts destination ownership after title-card/setup admission but
+     * before production.
+     *
+     * <p>The observation reports the live initial-title-card barrier. A level
+     * restart raises its card from inside the transition gap and the gap's own
+     * rows carry the presentation, so this seam can run on a LEVEL row whose
+     * card has been requested but not yet entered; forcing the barrier clear
+     * here would admit the destination on that row.
+     */
     static void admitRunDestinationBeforeProductionIfActive(GameMode mode) {
         TraceSessionLauncher session = active();
         if (session == null || session.runCoordinator == null) {
@@ -2066,7 +2069,7 @@ public final class TraceSessionLauncher {
         session.forwardLatchedRunBoundary(mode);
         int rowsConsumed = session.destinationRowsConsumedForAdmission();
         session.applyRunCoordinatorActions(session.runCoordinator.beforeAdmission(
-                session.captureRunObservationAfterTitleCardRelease(mode, rowsConsumed,
+                session.captureRunObservation(mode, rowsConsumed,
                         session.isLagOnlySameLevelContinuation())));
     }
 

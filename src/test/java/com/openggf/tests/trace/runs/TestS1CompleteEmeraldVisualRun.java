@@ -76,16 +76,26 @@ class TestS1CompleteEmeraldVisualRun {
      * the first whose object V-blank clock had accumulated both bridges' worth
      * of missing V-ints -- which de-phased the prison capsule's animal spawn
      * and escape-direction gates and armed the end-of-act PLC nine rows early.
+     * <p>
+     * It then crosses the route's FIRST plain act-to-act boundary. GHZ1 and
+     * GHZ2 both left through a giant ring, so nothing before this exercised
+     * {@code Got_NextLevel}'s {@code f_restart} write and the whole
+     * {@code GM_Level} restart the level main loop falls back into
+     * (docs/s1disasm/_incObj/3A Got Through Card.asm:200-211,
+     * sonic.asm:3041-3055). That restart's {@code PaletteFadeOut}, its
+     * mandatory locked title-card loop and MZ1's own load all run inside the
+     * transition gap. The pin stops the instant MZ1 is admitted: MZ1's body
+     * then diverges on {@code camera_y} at its row 3,220.
      */
     @Test
     void replaysTheSecondGiantRingAndTheSpecialStageBehindIt() throws Exception {
         VisualRunReplayHarness.Result result =
                 VisualRunReplayHarness.replay(
-                        RUN_DIR, VisualRunReplayHarness.stopAfterSegmentBody(6));
+                        RUN_DIR, VisualRunReplayHarness.stopAfterSegment(7));
 
         assertTrue(result.sharedCursor() > 27_238,
                 "visual run stopped inside the returned GHZ3 act: " + result);
-        assertEquals(6, result.currentSegmentIndex(),
-                "visual run stalled before the returned GHZ3 act: " + result);
+        assertEquals(7, result.currentSegmentIndex(),
+                "visual run stalled before the MZ1 act advance: " + result);
     }
 }

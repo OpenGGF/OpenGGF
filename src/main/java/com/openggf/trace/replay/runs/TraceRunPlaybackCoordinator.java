@@ -379,8 +379,23 @@ public final class TraceRunPlaybackCoordinator {
                             == currentLevelGeneration) {
                 return true;
             }
+            // A restart's own load, boundary, identity and released title card
+            // all remain engine-derived. Its first main-loop row is not: the
+            // game's Level: routine reaches that row after four counted loops
+            // -- PaletteFadeOut, the locked title-card loop, Level_Delay and
+            // PalFadeIn_Alt (docs/s1disasm/sonic.asm:2711, 2814-2842,
+            // 2957-2966) -- plus un-timed load steps whose elapsed cost is
+            // payload-dependent and has no counted form. Measured across every
+            // ordinary boundary of the S1 emerald route that un-timed span is
+            // 34 rows for MZ, 36-37 for LZ and SLZ, 38 for SYZ and 39-40 for
+            // SBZ, and moves by a row between acts of one zone. A destination
+            // therefore cannot be admitted before its own first recorded row
+            // exists, exactly as a presentation bridge cannot above. Rows past
+            // it stay bounded by the receipt's consumed-row contract, so this
+            // can only defer an admission the semantics already allowed.
             return rememberedLevelLoad != null
                     && rememberedLevelLoad.identity().equals(observation.level())
+                    && observation.sharedBk2Cursor() >= destination.bk2FrameOffset()
                     && (expected == null || observedBoundary != null);
         }
         if (expected == null || observedBoundary == null) {

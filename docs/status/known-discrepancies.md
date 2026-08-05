@@ -29,12 +29,13 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 15. [Legacy Pre-Level Intro Prefix Trace Bootstrap Contract](#legacy-pre-level-intro-prefix-trace-bootstrap-contract)
 16. [S2 Tornado Ride-Start Trace Bootstrap Contract](#s2-tornado-ride-start-trace-bootstrap-contract)
 17. [S2 CNZ Slot-Machine Trace Bootstrap Contract](#s2-cnz-slot-machine-trace-bootstrap-contract)
-18. [S3K Production Lifecycle and Structural Trace Replay Scheduling](#s3k-production-lifecycle-and-structural-trace-replay-scheduling)
-19. [Hardware-Timing Replay Input Exception](#hardware-timing-replay-input-exception)
-20. [S3K Complete-Run Segment Start-Position Bootstrap Debt](#s3k-complete-run-segment-start-position-bootstrap-debt)
-21. [Frame-0 Trace Bootstrap Snapshot Coverage Debt](#frame-0-trace-bootstrap-snapshot-coverage-debt)
-22. [Sonic 1 Embedded Runtime Data Ratchet](#sonic-1-embedded-runtime-data-ratchet)
-23. [Special-stage Live Rewind Scope](#special-stage-live-rewind-scope)
+18. [Whole-Run Level-Restart Admission Row](#whole-run-level-restart-admission-row)
+19. [S3K Production Lifecycle and Structural Trace Replay Scheduling](#s3k-production-lifecycle-and-structural-trace-replay-scheduling)
+20. [Hardware-Timing Replay Input Exception](#hardware-timing-replay-input-exception)
+21. [S3K Complete-Run Segment Start-Position Bootstrap Debt](#s3k-complete-run-segment-start-position-bootstrap-debt)
+22. [Frame-0 Trace Bootstrap Snapshot Coverage Debt](#frame-0-trace-bootstrap-snapshot-coverage-debt)
+23. [Sonic 1 Embedded Runtime Data Ratchet](#sonic-1-embedded-runtime-data-ratchet)
+24. [Special-stage Live Rewind Scope](#special-stage-live-rewind-scope)
 
 ---
 
@@ -890,6 +891,48 @@ state to compare from frame 0 without the prelude.
 Regenerate the affected fixtures with a recorder schema name that is no longer
 CNZ-specific, or replace the fixture-capability predicate with explicit runtime
 feature-state phase metadata.
+
+---
+
+## Whole-Run Level-Restart Admission Row
+
+**Location:** `TraceRunPlaybackCoordinator.destinationReady`
+**Scope:** Multi-segment whole-run replay comparison ownership only; not
+gameplay.
+
+### Contract
+
+A whole-run destination level segment is admitted only once the shared movie
+cursor has reached that segment's own recorded first row. Every other condition
+stays engine-derived: the destination is still unreachable without a real
+production level load with the matching cause, the recorded boundary signal, a
+matching level identity, and a released initial title card. The recorded offset
+can therefore only defer an admission the semantics already allowed; rows past
+it remain bounded by the receipt's zero-or-one consumed-row contract. The
+presentation-bridge branch immediately above it already worked this way.
+
+### Rationale
+
+A game's `Level:` routine reaches its first main-loop row after a fixed set of
+counted `WaitForVBlank` loops plus un-timed load steps whose elapsed cost the
+engine cannot count. For Sonic 1 the counted part is `PaletteFadeOut` (22
+rows), the locked `Level_TtlCardLoop` (the queued art's own drain — 146 rows
+for MZ, 150 for GHZ at nine patterns per title-card V-int), `Level_Delay` (4)
+and `PalFadeIn_Alt` (22) — docs/s1disasm/sonic.asm:2711, 2814-2842, 2957-2966,
+1431-1441. The remainder is `NemDec`, the `clearRAM` block, `ClearScreen`,
+`Hud_Base`, `LevelSizeLoad`, `LevelDataLoad`, `LoadTilesFromStart`,
+`ObjPosLoad`, `ExecuteObjects` and `BuildSprites`, none of which is a counted
+loop. Measured against every ordinary boundary of the
+`s1-sonic-complete-withemeralds` run, that un-timed remainder is 34 rows for
+MZ, 36-37 for LZ and SLZ, 38 for SYZ and 39-40 for SBZ, and it moves by a row
+between acts of the same zone — the signature of payload-dependent hardware
+cost, not of a loop with a frame count.
+
+### Removal Condition
+
+Remove this boundary if the engine ever gains a derivation for a level load's
+elapsed hardware cost, or if the recorder begins to record the restart span so
+the counted and un-timed parts can be compared separately.
 
 ---
 
