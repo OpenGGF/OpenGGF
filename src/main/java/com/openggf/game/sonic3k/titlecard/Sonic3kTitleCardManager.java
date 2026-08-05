@@ -395,11 +395,11 @@ public class Sonic3kTitleCardManager
             heldLevelCounterDispatchOwned = true;
             int modulePhase = GameServices.level().getObjectManager().getVblaCounter() & 3;
             // The slotless manager reaches its predicted display point after
-            // 26 updates. At module phase 1 the native children are not live
+            // 24 updates. At module phase 1 the native children are not live
             // until the next phase-0 handoff, followed by their object/render
             // visibility pass; preserve those six additional updates. Phase 3
             // has already crossed that handoff and needs no compensation.
-            resetLevelGamestateCountdown = 26 + (modulePhase == 1 ? 6 : 0);
+            resetLevelGamestateCountdown = 24 + (modulePhase == 1 ? 6 : 0);
             // The same child-visibility handoff reaches the later Wait2 poll
             // five updates after the slotless manager would otherwise predict
             // completion when initialization precedes phase 0.
@@ -912,6 +912,14 @@ public class Sonic3kTitleCardManager
             // final child's deletion on its following object dispatch.
             if (!exitChildrenGone) {
                 exitChildrenGone = true;
+                // The ROM's LoadEnemyArt falls through at this parent
+                // observation boundary. A retained AIZ handoff may keep the
+                // title overlay alive for additional display/camera dispatches,
+                // but that later presentation owner must not hold the queue's
+                // admission lease behind those unrelated writes.
+                if (inLevelMode && inLevelExitDelayFrames > 0) {
+                    consumeRuntimeArtAdmissionIfNeeded();
+                }
                 return;
             }
             if (inLevelMode && inLevelExitDelayFrames > 0) {

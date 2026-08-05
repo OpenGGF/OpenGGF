@@ -74,12 +74,17 @@ class TestS3kResultsScreenObjectInstance {
     }
 
     @Test
-    void productionConstructionSurfacesMissingHardwareTimingService() {
-        assertThrows(IllegalStateException.class,
-                () -> ObjectConstructionContext.construct(
-                        new TestObjectServices(),
-                        () -> new S3kResultsScreenObjectInstance(
-                                PlayerCharacter.SONIC_AND_TAILS, 0)));
+    void productionDispatchSurfacesMissingHardwareTimingService() {
+        TestObjectServices services = new TestObjectServices();
+        S3kResultsScreenObjectInstance results = ObjectConstructionContext.construct(
+                services,
+                () -> new S3kResultsScreenObjectInstance(
+                        PlayerCharacter.SONIC_AND_TAILS, 0));
+        results.setServices(services);
+        TestablePlayableSprite player =
+                new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+
+        assertThrows(IllegalStateException.class, () -> results.update(0, player));
     }
 
     @Test

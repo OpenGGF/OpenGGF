@@ -41,10 +41,10 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
     private static final int PLAYER_STOP_X_OFFSET = 0x1F8;
     // ROM: loc_695A8 — transition when y_pos >= _unkFA86 + $1E6
     private static final int NEXT_LEVEL_Y_OFFSET = 0x1E6;
-    // Restore_PlayerControl2 reaches a still-riding native P2 through the later
-    // solid-support path before loc_69526 can expose P1's forced walk. Preserve
-    // those two extra object entries from the live Status_OnObj state.
-    private static final int POST_RESULTS_CONTROL_RESTORE_DELAY = 4;
+    // The capsule publishes the results-owner release before the controller's
+    // next object entry. Keep the one-entry handoff so the following player
+    // pass consumes the first forced-right word at the ROM boundary.
+    private static final int POST_RESULTS_CONTROL_RESTORE_DELAY = 1;
     private static final int RIDING_SIDEKICK_CONTROL_RESTORE_DELAY = 6;
     private static final int POST_BUTTON_CAMERA_MAX_Y_TARGET = 0x1000;
     private static final int INC_LEVEL_END_Y_GRADUAL_STEP = 0x8000;
@@ -110,7 +110,8 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
         }
 
         if (postResultsControlRestoreDelay < 0) {
-            postResultsControlRestoreDelay = hasRidingSidekick(player)
+            boolean ridingSidekick = hasRidingSidekick(player);
+            postResultsControlRestoreDelay = ridingSidekick
                     ? RIDING_SIDEKICK_CONTROL_RESTORE_DELAY
                     : POST_RESULTS_CONTROL_RESTORE_DELAY;
         }

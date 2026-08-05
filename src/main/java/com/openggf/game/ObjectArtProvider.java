@@ -31,6 +31,13 @@ public interface ObjectArtProvider {
     }
 
     /**
+     * Processes provider-owned work admitted after the frame's direct hardware
+     * service boundary. Most providers have no such late loop-tail producer.
+     */
+    default void processRuntimeArtQueueAfterPreMainLoop() {
+    }
+
+    /**
      * Opens any runtime-art admission held behind level-presentation work.
      *
      * <p>A normal level load calls this when title-card art retires. A
@@ -89,9 +96,11 @@ public interface ObjectArtProvider {
      *
      * <p>The results owner can create an in-level title after an earlier
      * runtime-art batch has already been admitted. Providers with exact
-     * admission leases may issue the presentation's lease here; the title-card
-     * owner still binds and consumes that lease through the typed APIs below.
-     * Providers without lease-backed queues retain their existing behavior.
+     * admission leases may issue the presentation's lease here and, when the
+     * earlier batch has retired, admit the next ROM-owned runtime-art batch;
+     * the title-card owner still binds and consumes that lease through the
+     * typed APIs below. Providers without lease-backed queues retain their
+     * existing behavior.
      */
     default void prepareRuntimeArtForInLevelTitleCard() {
     }

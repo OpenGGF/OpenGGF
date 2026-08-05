@@ -43,6 +43,7 @@ public class LevelLoadContext {
     // Post-load assembly fields
     private boolean includePostLoadAssembly;
     private boolean showTitleCard = true;
+    private boolean titleCardRequiredInHeadlessMode;
     private LevelData levelData;
     private int spawnY = -1;
     private LevelAssemblyKind assemblyKind = LevelAssemblyKind.DECODE_ONLY;
@@ -97,6 +98,20 @@ public class LevelLoadContext {
 
     public boolean isShowTitleCard() { return showTitleCard; }
     public void setShowTitleCard(boolean showTitleCard) { this.showTitleCard = showTitleCard; }
+
+    /**
+     * Returns whether this load must retain its title-card request even when
+     * rendering is headless. Whole-run playback reaches the same production
+     * level-load boundary as live play and therefore needs the title-card
+     * owner to execute its hardware-timed lifecycle.
+     */
+    public boolean isTitleCardRequiredInHeadlessMode() {
+        return titleCardRequiredInHeadlessMode;
+    }
+
+    public void setTitleCardRequiredInHeadlessMode(boolean required) {
+        this.titleCardRequiredInHeadlessMode = required;
+    }
 
     public LevelData getLevelData() { return levelData; }
     public void setLevelData(LevelData levelData) { this.levelData = levelData; }

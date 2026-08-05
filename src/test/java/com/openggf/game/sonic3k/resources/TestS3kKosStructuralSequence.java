@@ -318,7 +318,7 @@ class TestS3kKosStructuralSequence {
                 new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
         act2.init(1);
         act2.setDynamicResizeRoutine(8);
-        GameServices.camera().setX((short) 0x3C00);
+        GameServices.camera().setX((short) 0x4880);
         GameServices.camera().setY((short) 0x0200);
         act2.update(1, 0);
         assertLiteralJob(timing, 0, 0x3B48C6, 0x1FC);
@@ -336,6 +336,10 @@ class TestS3kKosStructuralSequence {
         assertLiteralJob(timing, 2, 0x365260, 0x180);
         drainHardware(timing);
         boss.update(1, player);
+        boss.update(2, player);
+        assertEquals(3, moduleJobs(timing).size(),
+                "AIZ end-boss art is a one-shot ROM load and must not be re-queued "
+                        + "after its owner claims the prepared sheet");
 
         assertCapturedSession(timing, List.of(
                 AIZ_BATTLESHIP_TERRAIN,
@@ -415,10 +419,6 @@ class TestS3kKosStructuralSequence {
         assertLiteralJob(timing, 1, 0x3B15D2, 0x000);
         assertLiteralJob(timing, 2, 0x3B3784, 0x1FC);
 
-        var request = GameServices.level().consumeSeamlessTransitionRequest();
-        assertNotNull(request);
-        GameServices.level().applySeamlessTransition(request);
-
         Sonic3kLevelEventManager manager =
                 (Sonic3kLevelEventManager) GameServices.module()
                         .getLevelEventProvider();
@@ -428,15 +428,23 @@ class TestS3kKosStructuralSequence {
                 "ROM-visible fire art must survive the act reload");
         assertTrue(postReload.getFireOverlayTileCount() > 0,
                 "the resumed fire curtain must retain its prepared tile range");
-        postReload.update(1, 0);
 
         Sonic3kObjectArtProvider provider =
                 (Sonic3kObjectArtProvider) GameServices.module()
                         .getObjectArtProvider();
-        provider.processRuntimeArtQueue();
-        assertEquals(3, moduleJobs(timing).size(),
-                "AIZ1BGE_FireTransition preserves the existing enemy set and "
-                        + "must not insert enemy or fire-overlay work");
+        for (int frame = 0; frame < 64 && moduleJobs(timing).size() < 6; frame++) {
+            postReload.update(1, frame);
+            provider.processRuntimeArtQueue();
+            service(timing, HardwareServiceBoundary.POST_OBJECTS);
+            service(timing, HardwareServiceBoundary.PRE_MAIN_LOOP);
+            provider.processRuntimeArtQueueAfterPreMainLoop();
+        }
+        assertLiteralJob(timing, 3, 0x36800C, 0x548);
+        assertLiteralJob(timing, 4, 0x367DCA, 0x52A);
+        assertLiteralJob(timing, 5, 0x3681FE, 0x55F);
+        assertEquals(6, moduleJobs(timing).size(),
+                "AIZ1BGE_Finish continues with one LoadEnemyArt batch "
+                        + "without inserting a second fire-overlay job");
     }
 
     @Test
@@ -450,6 +458,7 @@ class TestS3kKosStructuralSequence {
                                 PlayerCharacter.SONIC_AND_TAILS, 0));
         results.setServices(TestEnvironment.objectServices());
 
+        results.update(0, player);
         assertLiteralJob(timing, 0, 0x0D6A62, 0x520);
         assertLiteralJob(timing, 1, 0x0D6D84, 0x568);
         assertLiteralJob(timing, 2, 0x15B95C, 0x578);

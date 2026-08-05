@@ -2896,6 +2896,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         // its lease unbound until that explicit initialization, even headless.
         if (!graphicsManager.isHeadlessMode()
                 || headlessWholeRunHandoff
+                || ctx.isTitleCardRequiredInHeadlessMode()
                 || bonusStageReturn) {
             // ROM: title card reads Apparent_act, not Current_act.
             // After AIZ's seamless fire transition, Current_act is 1 but
@@ -3058,6 +3059,12 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     private void loadCurrentLevel(
             boolean showTitleCard, LevelLoadMode loadMode, boolean runtimeReload) {
+        loadCurrentLevel(showTitleCard, loadMode, runtimeReload, false);
+    }
+
+    private void loadCurrentLevel(
+            boolean showTitleCard, LevelLoadMode loadMode, boolean runtimeReload,
+            boolean titleCardRequiredInHeadlessMode) {
         try {
             // V_int_run_count is global work RAM, outside Dynamic_object_RAM.
             // A full death/results reload rebuilds ObjectManager just like the
@@ -3082,6 +3089,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
             LevelLoadContext ctx = new LevelLoadContext();
             ctx.setShowTitleCard(showTitleCard);
+            ctx.setTitleCardRequiredInHeadlessMode(titleCardRequiredInHeadlessMode);
             ctx.setLevelData(levelData);
             ctx.setIncludePostLoadAssembly(true);
             ctx.setAssemblyKind(LevelAssemblyKind.FRESH_LEVEL_ASSEMBLY);
@@ -3204,13 +3212,36 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
     public void loadZoneAndAct(int zone, int act, LevelLoadMode loadMode) throws IOException {
+        loadZoneAndAct(zone, act, loadMode, false);
+    }
+
+    /**
+     * Loads a destination reached through a normal zone/act transition while
+     * retaining the production title-card owner in headless mode.
+     *
+     * <p>Ordinary standalone headless level loads intentionally omit the
+     * initial presentation. A whole-run handoff is different: the ROM has
+     * loaded the destination and entered its blocking title-card loop, whose
+     * hardware-timed art work is part of the destination lifecycle.
+     */
+    public void loadZoneAndActWithTitleCard(int zone, int act) throws IOException {
+        loadZoneAndAct(zone, act, LevelLoadMode.FULL, true);
+    }
+
+    private void loadZoneAndAct(
+            int zone, int act, LevelLoadMode loadMode,
+            boolean titleCardRequiredInHeadlessMode) throws IOException {
         try {
             writeCurrentAct(act);
             writeApparentAct(act);
             writeCurrentZone(zone);
             // Clear checkpoint when manually changing level
             checkpointCoordinator.clear();
-            loadCurrentLevel(loadMode != LevelLoadMode.PREVIEW_CAPTURE, loadMode, false);
+            loadCurrentLevel(
+                    loadMode != LevelLoadMode.PREVIEW_CAPTURE,
+                    loadMode,
+                    false,
+                    titleCardRequiredInHeadlessMode);
         } finally {
             // A load that fails before initCameraBounds must not leak a bonus-return
             // respawn table into a later, potentially different, level.

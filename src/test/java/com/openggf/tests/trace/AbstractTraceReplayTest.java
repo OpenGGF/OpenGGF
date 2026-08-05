@@ -192,6 +192,17 @@ public abstract class AbstractTraceReplayTest {
         return null;
     }
 
+    /**
+     * Whether the recorded run deliberately ends with production hardware
+     * work still in flight. Such a trace is a semantic handoff prefix: every
+     * completion edge represented by the stream must still be consumed, but
+     * work whose ROM completion lies beyond the captured rows is detached with
+     * the fixture rather than treated as a replay failure.
+     */
+    protected boolean allowPendingHardwareTimingAtTraceEnd(TraceData trace) {
+        return false;
+    }
+
     static boolean shouldValidateRewindReferenceClosure(SonicGame game) {
         return game == SonicGame.SONIC_2 || game == SonicGame.SONIC_3K;
     }
@@ -489,7 +500,12 @@ public abstract class AbstractTraceReplayTest {
                     trace, binder, fixture,
                     !frontierStopper.stoppedEarly());
             if (!hardwareTimingReplayClosed) {
-                fixture.closeHardwareTimingReplayRun();
+                if (allowPendingHardwareTimingAtTraceEnd(trace)) {
+                    fixture.verifyHardwareTimingSegmentEdges();
+                    fixture.abortHardwareTimingReplayRun();
+                } else {
+                    fixture.closeHardwareTimingReplayRun();
+                }
                 hardwareTimingReplayClosed = true;
             }
 

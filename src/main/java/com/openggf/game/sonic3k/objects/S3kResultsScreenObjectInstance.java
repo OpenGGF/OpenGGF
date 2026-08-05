@@ -119,6 +119,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private List<SpriteMappingFrame> mappingFrames;
     private boolean artLoaded;
     private boolean artCached;
+    private boolean resultsArtLoadPending;
     private Sonic3kObjectArt.QueuedResultsArt queuedResultsArt;
     private long resultsGeneralArtOrdinal = -1;
     private long resultsNumberArtOrdinal = -1;
@@ -201,7 +202,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         // Rewind restoration reconstructs a scalar shell, then rebinds the
         // captured hardware ordinals after GenericFieldCapturer restores them.
         if (!ObjectConstructionContext.isRewindActiveRestore()) {
-            loadArt();
+            resultsArtLoadPending = true;
         }
 
         LOG.fine(() -> String.format("S3K results init: character=%s act=%d timeBonus=%d ringBonus=%d",
@@ -216,6 +217,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         super("S3kResults");
         this.character = PlayerCharacter.SONIC_AND_TAILS;
         this.act = 0;
+        this.resultsArtLoadPending = false;
         createElements();
     }
 
@@ -427,6 +429,13 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         this.playerRef = player;
         this.frameCounter = vIntRunCount;
+        if (resultsArtLoadPending) {
+            // Obj_LevelResultsInit runs on the first dispatch after the SST
+            // is allocated.  Keep the ROM's one-frame gap between the object
+            // publication and its three Kosinski submissions.
+            loadArt();
+            resultsArtLoadPending = false;
+        }
         if (!updateCreateGate()) {
             return;
         }
@@ -696,6 +705,10 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     protected void onExitReady() {
         if (exitPublicationComplete) {
             if (titleInitializationPending) {
+                // ROM Obj_LevelResultsWait2 mutates this SST into
+                // Obj_TitleCard and returns. The title object's init routine
+                // runs on its next object dispatch, not on the publication
+                // dispatch that made the object visible.
                 initializePublishedTitleCard();
                 titleInitializationPending = false;
                 complete = true;

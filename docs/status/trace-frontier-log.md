@@ -61767,3 +61767,33 @@ to synthesize a POST phase on a VBLANK-only row.
   with the same first-child fingerprint. Both replays remain fail-closed at
   their next unsubmitted authority edge; no earlier comparator failure was
   reported after the policy change.
+
+## 2026-08-05 — S3K AIZ results/title handoff frontier
+
+- Worktree: repository root, branch `bugfix/s3k-traces`, parent frontier
+  `7a3a28fc4`. No trace payloads were edited.
+- Root cause: the results owner submitted its three ROM-backed Kosinski jobs
+  during construction instead of its first object dispatch, and the AIZ
+  in-level title's phase-one display countdown consumed the gamestate reset two
+  rows after the ROM's title-child display boundary.
+- Fix: results art submission is deferred to the first `S3kResults` update, and
+  the semantic title-owner countdown uses the ROM-aligned 24-update base plus
+  the existing phase-one handoff compensation. Focused regressions cover both
+  the dispatch-owned results queue and the phase-one title reset boundary.
+- Focused validation passed:
+  `mvn -q -Dmse=off
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.game.sonic3k.titlecard.TestSonic3kTitleCardManagerRewind,com.openggf.tests.TestS3kHeadlessInLevelTitleCardProgression,com.openggf.game.sonic3k.objects.TestS3kResultsKosQueueRewind,com.openggf.game.sonic3k.objects.TestS3kResultsScreenObjectInstance,com.openggf.game.sonic3k.resources.TestS3kKosStructuralSequence'
+  test`
+- Clean authoritative command:
+  `mvn -q -Dmse=off -Dtrace.context.diagnosticChars=full
+  -Dsurefire.argLine='-Xshare:off -Xmx6g'
+  -Dsurefire.forkCount=1 -DreuseForks=true
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace'
+  test`
+- Result: the first comparison error advances from the results/title handoff
+  boundary at raw frame `8837` (`rings`, expected `0`, actual `100`) to raw
+  frame `8938` (`queue.s3k_kos_direct.busy`, expected `false`, actual `true`).
+  The report contains `1146` errors and `0` warnings; no trace payloads were
+  changed. The next frontier is the title-owner queue submission/service edge.

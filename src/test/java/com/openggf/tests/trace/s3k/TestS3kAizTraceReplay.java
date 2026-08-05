@@ -72,6 +72,15 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
     }
 
     @Override
+    protected boolean allowPendingHardwareTimingAtTraceEnd(TraceData trace) {
+        // The fixture ends on the HCZ handoff row immediately after the
+        // destination title owner submits its four native KosM parents. The
+        // recorder captures the first two completions, while the remaining
+        // parents are still in the ROM FIFO beyond the represented prefix.
+        return true;
+    }
+
+    @Override
     @Test
     public void replayMatchesTrace() throws Exception {
         super.replayMatchesTrace();

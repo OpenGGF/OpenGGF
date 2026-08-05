@@ -193,6 +193,8 @@ public class AizEndBossInstance extends AbstractBossInstance
     private S3kKosModuleQueue bossArtQueue;
     private HardwareWorkHandle bossArtHandle;
     private long bossArtOrdinal = -1;
+    /** Set after the one-shot ROM art load retires; prevents later updates re-queuing it. */
+    private boolean bossArtLoaded;
 
     public AizEndBossInstance(ObjectSpawn spawn) {
         super(spawn, "AIZEndBoss");
@@ -221,6 +223,7 @@ public class AizEndBossInstance extends AbstractBossInstance
         highPriorityArt = false;
         mappingFrame = 0;
         renderActivated = false;
+        bossArtLoaded = false;
         flags38 = 0;
         facingRight = false;
         angle = 0;
@@ -320,7 +323,9 @@ public class AizEndBossInstance extends AbstractBossInstance
 
     @Override
     protected void updateBossLogic(int vIntRunCount, PlayableEntity playerEntity) {
-        serviceBossArtQueue();
+        if (state.routine != ROUTINE_INIT) {
+            serviceBossArtQueue();
+        }
         if (collisionEnablePending) {
             collisionEnabled = true;
             collisionEnablePending = false;
@@ -357,6 +362,9 @@ public class AizEndBossInstance extends AbstractBossInstance
 
     private void serviceBossArtQueue() {
         try {
+            if (bossArtLoaded) {
+                return;
+            }
             if (bossArtQueue == null && bossArtOrdinal >= 0) {
                 bossArtQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
                 bossArtHandle = services().hardwareTiming().pendingHandle(
@@ -377,6 +385,7 @@ public class AizEndBossInstance extends AbstractBossInstance
             }
             if (bossArtHandle != null && bossArtQueue.isReady(bossArtHandle)) {
                 bossArtQueue.claim(bossArtHandle);
+                bossArtLoaded = true;
                 bossArtHandle = null;
                 bossArtQueue = null;
                 bossArtOrdinal = -1;
@@ -406,6 +415,11 @@ public class AizEndBossInstance extends AbstractBossInstance
         // Lock camera at boss arena (ROM: loc_691D4)
         services().camera().setMinX((short) cameraLockX);
         services().camera().setMaxX((short) cameraLockX);
+        // ROM: AIZEndBoss_StartArenaLock falls through to LoadEnemyArt at the
+        // activation boundary. Do not submit this one-shot owner while a
+        // layout entry is still waiting in routine 0; that entry can be
+        // unloaded and recreated several times before the arena is reached.
+        serviceBossArtQueue();
 
         // Set Boss_flag to lock screen (ROM: st (Boss_flag).w)
         S3kAizEventWriteSupport.setBossFlag(services(), true);

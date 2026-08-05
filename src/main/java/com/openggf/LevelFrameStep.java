@@ -399,6 +399,10 @@ public final class LevelFrameStep {
         // first child decompressed on the same frame, which the frame-top
         // placement could not represent.
         serviceBoundary(context, HardwareServiceBoundary.PRE_MAIN_LOOP);
+        if (context.gameModule().getObjectArtProvider() != null) {
+            context.gameModule().getObjectArtProvider()
+                    .processRuntimeArtQueueAfterPreMainLoop();
+        }
         if (frame.isOwnedBy(phase)) {
             frame.prepareAfterLoop(phase);
         }

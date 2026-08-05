@@ -3,6 +3,10 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K results art now follows the ROM's first-dispatch submission
+  boundary, and the AIZ in-level title resets the level gamestate on its native
+  display row. The standard AIZ replay frontier advances to the next queue
+  boundary at raw frame `8938` without changing trace payloads.
 - Fix/Test: S3K AIZ's live act-2 reload now admits the ROM-observed
   `PLCKosM_AIZ` enemy batch through the immediate runtime-art owner. Standard
   AIZ advances past direct completion `#36` at raw frame `5543` to `#47` at
