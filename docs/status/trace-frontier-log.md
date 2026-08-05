@@ -61999,3 +61999,76 @@ to synthesize a POST phase on a VBLANK-only row.
   advertises no timing extras. Out of scope here; also note the timing-kind
   registry currently admits only S3K Kosinski kinds, so S1 PLC timing
   authority is a deliberate contract change.
+
+## 2026-08-05 - Gap DPLC: the ~37-row "hardware load time" attribution is REFUTED
+
+- Command: `mvn -Dmse=off -Ptrace-replay -Dtest=TestS1CompleteEmeraldVisualRun
+  -Dsonic1.rom.path=s1.gen test` on unmodified `develop` @ 41150328e, pin
+  temporarily at `stopAfterSegment(3)`. Reproduced: 2 errors, both
+  `run_gap.edge[0..1].movie_logical_frame` at comparison frame 9,504, recorded
+  9,715 vs engine 9,678, delta 37. Pin reverted to 2 and re-verified green.
+- **The attribution is wrong. The 37 rows are not elapsed hardware cost and
+  need no recorded timing stream — they are a flush-placement error, and the
+  correct placement is fully frame-counted in the listing.**
+- The decisive evidence is in the fixture itself: `run_manifest.json` carries a
+  `run_gap` DPLC pair for EVERY level load in the run, and all 22 of them sit
+  at exactly `segment bk2_frame_offset - 26`: 834/860 (ghz1), 9,715/9,741
+  (ghz2_2), 18,693/18,719, 27,441/27,467, 31,060/31,086, 43,052/43,078,
+  47,008/47,034, 66,578/66,604, 78,140/78,166, 93,799/93,825, 107,115/107,141,
+  119,404/119,430, 123,016/123,042, 139,527/139,553, 148,384/148,410,
+  161,333/161,359, 166,813/166,839, 171,338/171,364, 181,043/181,069,
+  189,439/189,465, 202,106/202,132, 209,046/209,072. GHZ, MZ, SYZ, LZ, SLZ and
+  SBZ have wildly different art payloads, PLC list sizes and Nem/Kos
+  decompression costs; hardware decode time cannot produce a zone-invariant
+  constant. (SBZ1/SBZ2 also show one EXTRA earlier pair each, at -219/-220 —
+  post-signpost tally-walk DPLCs; those loads' own load pairs are still
+  exactly -26.)
+- The 26 is two counted loops, not a fitted number: `Level_Delay` runs exactly
+  4 VBlank frames (`move.w #4-1,d1`, docs/s1disasm/sonic.asm:2957-2963) and
+  `PalFadeIn_Alt` exactly 22 (`move.w #22-1,d4`,
+  docs/s1disasm/_inc/Palette Fading.asm:32-51, called at sonic.asm:2966).
+  4 + 22 = 26. (Earlier entries called this "the ROM's 26-frame
+  PaletteFadeIn" — the fade is 22; the other 4 are Level_Delay.)
+- Why the pair is pinned there regardless of load time: every un-counted load
+  step — `Hud_Base` (sonic.asm:2857), `LevelDataLoad` / `LoadTilesFromStart`
+  (2865-2866), collision/water init — runs BEFORE Sonic's first
+  `ExecuteObjects` at `Level_LoadObj` (2895+). That pass stages his tiles and
+  sets `f_sonframechg` (docs/s1disasm/_incObj/01 Sonic.asm:2410), and there is
+  no `WaitForVBlank` between that pass and the delay loop, so the transfer
+  V-int (the level VBlank's `v_sgfx_buffer` write, sonic.asm:832-836) is
+  always the FIRST `Level_Delay` frame: main-loop admission minus 26, for
+  every zone.
+- The old attribution's pieces, individually: the `Nem_TitleCard` NemDec under
+  `disable_ints` (sonic.asm:2718-2723) runs at `GM_Level` entry, BEFORE the
+  card is even displayed — the wrong end of the sequence, inside the
+  already-modelled fade-out/card window. `Hud_Base` and the level-data
+  decompression do sit in the un-counted span after the card's PLC drain, but
+  the pair does not sit in that span — it sits after it, at a counted distance
+  from admission. The FIFO-degraded drain rate shapes the card's own length,
+  and no compared field observes the ROM's release row.
+- The engine agrees on totals: its gameplay admission already lands on the
+  recorded 9,741 (harness timeline step 8985), so no rows are missing
+  anywhere — only the stamp is misplaced.
+  `LevelManager.completeInitialTitleCardPresentation` (src/main/java/com/
+  openggf/level/LevelManager.java:2931-2949) flushes the pending S1
+  preparation at the card's RELEASE row (9,678);
+  `DynamicArtLifecycleService.flushPendingPlayerPreparationAtPresentationBoundary`'s
+  own Javadoc (DynamicArtLifecycleService.java:612-626) already names the
+  correct V-int — "the pre-fade VBla delay / first PaletteFadeIn frame". The
+  same defect is latent at the initial load: the engine's ledger stamps the
+  first pair at 860 (the admission row) against the recorded 834 = 860 - 26;
+  it simply is not compared today.
+- **RECOMMENDATION: DERIVE.** Model the 26-frame pre-admission tail (4-frame
+  `Level_Delay` + 22-frame `PalFadeIn_Alt`) as a counted `LevelInitProfile`
+  value alongside the existing 22-frame `preLevelFadeOutFrames()`, and flush
+  the pending S1 preparation on the tail's first frame — 26 rows before
+  main-loop admission — instead of at title-card release. Expected movement:
+  return pair 9,678 -> 9,715 (field goes green), latent initial pair 860 ->
+  834. Nothing here needs the v5 hardware-timing stream: the only genuinely
+  un-counted elapsed work (the card-exit-to-`Level_Delay` load span, the ~37
+  rows of Hud_Base/level-data time in this recording) is observed by NO
+  compared field — its right edge is pinned by the counted 26 and its left by
+  the modelled PLC drain. Do not start the S1 timing-capture /
+  timing-authority contract change on this defect's account.
+  `TestS1CompleteEmeraldVisualRun`'s Javadoc still carries the refuted
+  attribution; correct it when the fix lands.
