@@ -62127,7 +62127,19 @@ to synthesize a POST phase on a VBLANK-only row.
   bridge's own defect is unrelated and unchanged in kind); its
   presentation-bridge test is green. S1 `*TraceReplay` fleet: 27/30 green, the
   same 3 reds (`Sbz3CompleteRun`, `Credits03Lz3`, `FzCompleteRun`). S2/S3K
-  fleets unchanged against the unmodified tree.
+  fleets unchanged against the unmodified tree (`TestS2Mtz2LevelSelect` /
+  `TestS2Mtz3LevelSelect` fail on `tails_cpu_ctrl2_pressed` at the same
+  frames, 1,969 and 8,042, with and without the change). Full default suite:
+  14,343 tests, 39 red against the unmodified tree's 45 in the same
+  environment; every test in the symmetric difference is an ordering flake
+  that reproduces or passes identically on the unmodified tree in isolation
+  (`TestDisplayAspectResolution`'s 4 fail on both trees standalone;
+  `TestTraceSessionLauncherRunBranch`'s 4 pass on both). The touched
+  guard classes — `TestGameLoop`, `TestArchUnitRules`,
+  `TestArchitecturalSourceGuard`,
+  `TestTraceSessionLauncherProductionFailureCleanup` — fail with
+  byte-identical messages on the unmodified tree; the already-over-budget
+  `LevelManager` ratchet moves 2,510 -> 2,511 effective lines.
 - No hardware-timing capture is needed for this defect and none was added. The
   un-timed load span between the card's drain and the tail is observed by no
   compared field: its right edge is pinned by the counted 26 and its left by
