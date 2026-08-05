@@ -605,29 +605,50 @@ public final class DynamicArtLifecycleService
 
     public void serviceProductionVBlank() {
         requireRunActive();
-        if (s1Preparation != null) {
-            Preparation preparation = s1Preparation;
-            s1Preparation = null;
-            long transferId = nextTransferId++;
-            List<Long> before = List.copyOf(ledger.keySet());
-            Descriptor descriptor = new Descriptor(
-                    transferId, preparation.owner(),
-                    preparation.mappingFrame(),
-                    comparisonSegmentOpen ? "segment" : "run_gap",
-                    preparation.requests());
-            ledger.put(transferId, descriptor);
-            buffer(transferId, "submitted", descriptor.owner(),
-                    descriptor.mappingFrame(), descriptor.requests(), before);
-            completeApplied(new ArtUpdate(true, transferId, List.of()),
-                    List.of(DynamicArtDiagnosticsSnapshot.Request.ram(
-                            PLAYER_PROFILES.get(GameId.S1).get("sonic")
-                                    .stagingRamAddress(),
-                            PLAYER_PROFILES.get(GameId.S1).get("sonic")
-                                    .vramDestination(),
-                            PLAYER_PROFILES.get(GameId.S1).get("sonic")
-                                    .stagingByteLength())));
-        }
+        flushS1PreparationIfPending();
         retireSubmittedTransfers();
+    }
+
+    /**
+     * Flushes only a pending S1 player DPLC preparation, without retiring any
+     * other game's submitted transfers. This models the V-int immediately
+     * after {@code Level_StartGame}'s object prelude pass: the pass staged the
+     * player's tiles and set {@code f_sonframechg}
+     * (docs/s1disasm/_incObj/01 Sonic.asm:2391-2398), and the next
+     * {@code WaitForVBlank} — the pre-fade VBla delay / first
+     * {@code PaletteFadeIn} frame (docs/s1disasm/sonic.asm:2969-2995,
+     * docs/s1disasm/_inc/Palette Fading.asm PalFadeIn_Alt) — performs the
+     * transfer before {@code Level_MainLoop} begins.
+     */
+    public void flushPendingPlayerPreparationAtPresentationBoundary() {
+        requireRunActive();
+        flushS1PreparationIfPending();
+    }
+
+    private void flushS1PreparationIfPending() {
+        if (s1Preparation == null) {
+            return;
+        }
+        Preparation preparation = s1Preparation;
+        s1Preparation = null;
+        long transferId = nextTransferId++;
+        List<Long> before = List.copyOf(ledger.keySet());
+        Descriptor descriptor = new Descriptor(
+                transferId, preparation.owner(),
+                preparation.mappingFrame(),
+                comparisonSegmentOpen ? "segment" : "run_gap",
+                preparation.requests());
+        ledger.put(transferId, descriptor);
+        buffer(transferId, "submitted", descriptor.owner(),
+                descriptor.mappingFrame(), descriptor.requests(), before);
+        completeApplied(new ArtUpdate(true, transferId, List.of()),
+                List.of(DynamicArtDiagnosticsSnapshot.Request.ram(
+                        PLAYER_PROFILES.get(GameId.S1).get("sonic")
+                                .stagingRamAddress(),
+                        PLAYER_PROFILES.get(GameId.S1).get("sonic")
+                                .vramDestination(),
+                        PLAYER_PROFILES.get(GameId.S1).get("sonic")
+                                .stagingByteLength())));
     }
 
     /**

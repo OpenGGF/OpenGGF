@@ -61889,3 +61889,74 @@ to synthesize a POST phase on a VBLANK-only row.
   and vanished from the gap ledger. It also means the 210-frame target is
   reached by controlling WHICH VBlank flushes the preparation, not by moving
   the prelude alone.
+
+## 2026-08-05 - Gap DPLC: 151 of the 210 rows closed; the last 59 are load time
+
+- Command: `mvn -Dmse=off -Ptrace-replay -Dtest=TestS1CompleteEmeraldVisualRun
+  -Dsonic1.rom.path=s1.gen test` with the pin raised to `stopAfterSegment(3)`.
+  Still red on `run_gap.edge[0..1].movie_logical_frame`, but the delta fell
+  210 -> 59 (recorded 9,715 vs engine 9,505 before, 9,656 after), with the
+  pair's identity — ordinals 4964/4965, transfer id 2482, owner, mapping
+  frame, per-frame gap index — intact and the initial pair unchanged at 860.
+  The pin stays at 2.
+- Four causes measured, three closed:
+  1. **The SS-return reload force-drained its own PLC queue.** The 1,292
+     queued patterns (GHZ primary + `plcid_Main2`) were drained synchronously
+     inside `loadCurrentLevel` because `requestTitleCardIfNeeded`'s headless
+     branch modelled an omitted presentation while GameLoop then presented a
+     real card. That is why the reverted `updateSlideIn` busy-gate was a
+     no-op: the queue was already empty when the card started. The reload now
+     requests the card even headless via a caller-owned results-return flag
+     mirroring `isBonusStageReturn()`.
+  2. **The exit body ran one iteration early.** The whiteout fade's
+     completion callback fired inside the production iteration of the
+     bridge's LAST recorded row, so the reload's `ClearPLC`/`AddPLC` polluted
+     that row's published queue snapshot (rom empty vs engine 15
+     fingerprints) once cause 1 was fixed. The ROM's GM loop only falls
+     through to `GM_Level` on the frame AFTER `PaletteWhiteOut`'s final
+     `WaitForVBla`. `GameLoop` now latches the completion and runs
+     `doExitResultsScreen` on the next `updateSpecialStageResultsMode`
+     iteration; the load lands on the first gap row (9,505), where the ROM
+     loads.
+  3. **The card released on a timer instead of the PLC drain.**
+     `Sonic1TitleCardManager.updateDisplay` now also requires
+     `!Sonic1PlcService.isBusy()`, modelling `Level_TtlCardLoop`
+     (sonic.asm:2814-2842). With the queue alive the card grew 103 -> 151
+     rows, all drain-time, no constant.
+  4. **The pair was flushed by the card's first V-blank.** The card-start
+     `warmUpFreshMainPlayableOnly` in `prepareResultsTransition` is removed —
+     the ROM's pass is `Level_StartGame`'s, which the release path already
+     runs via `shouldRunPlayerPreludeAtRelease` — and
+     `completeInitialTitleCardPresentation` now flushes a pending S1
+     preparation at that boundary
+     (`DynamicArtLifecycleService.flushPendingPlayerPreparationAtPresentationBoundary`),
+     modelling the pre-fade V-int that performs the `f_sonframechg` transfer.
+     The pair is stamped with the release row.
+- REMAINING 59 rows, decomposed against the disassembly: 22 are `GM_Level`'s
+  own `PaletteFadeOut` (sonic.asm:2710-2737), which runs BEFORE `AddPLC`, so
+  the ROM's drain starts 22 rows after the load while the engine queues at
+  the load itself; the other ~37 are real hardware load time — `NemDec` of
+  `Nem_TitleCard` under `disable_ints`, `Hud_Base`, the level-data KosDec
+  after the drain, and VDP-FIFO-degraded 9-tile V-blank service. Neither is a
+  number to port: the 22 needs the PLC submission sequenced after a modelled
+  fade-out, and the ~37 needs this run re-recorded with the v5
+  hardware-timing stream — noting `TestS1S2PlcComparisonOnlyGuard.
+  timingKindRegistryAdmitsOnlyKosinskiWork` currently admits only S3K
+  Kosinski kinds, so extending timing authority to the S1 PLC pipeline is a
+  contract change to make deliberately, not a patch.
+- Verification: `TestS1CompleteEmeraldVisualRun` (pin 2),
+  `TestS1CompleteEmeraldRunPrefix`, `TestTraceRunPlaybackCoordinator` green.
+  `TestS1GhzMazeRoundTripChain.ghzMazeRoundTrip` still red on its upstream
+  GHZ1 frame-2,082 `player_animation_id` (unchanged first error); its
+  presentation-bridge test green. S1 `*TraceReplay` fleet: 27/30 green; the 3
+  reds (`Sbz3CompleteRun`, `Credits03Lz3`, `FzCompleteRun`) reproduce
+  identically on the unmodified tree. `TestS2EhzHalfpipeRoundTripChain` and
+  `TestS3kMegaRunChain` fail with byte-identical messages on the unmodified
+  tree (SS-exit rows remaining / manifest capability), so nothing leaked out
+  of the S1 owners through the shared results-exit deferral. Full default
+  suite: 14,344 tests, 41 red = the 39-red baseline (each failing class
+  reproduces with the same failing test names on the unmodified tree,
+  including `TestGameLoop`'s two and the already-over-budget large-class
+  ratchet) + the `TestMhzMushroomParachuteObjectInstance` order flake +
+  `TestInLevelTitleCardCoordinator`, updated to the new
+  prelude-at-release contract.

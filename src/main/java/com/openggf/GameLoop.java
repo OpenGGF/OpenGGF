@@ -181,6 +181,10 @@ public class GameLoop {
 
     // Bonus stage entry/exit state
     private boolean bonusStageTransitionPending;
+    /** The results-exit fade completed this iteration; the exit body waits one more. */
+    private boolean resultsExitFadeCompleted;
+    /** The results-exit body runs at the start of this iteration's mode update. */
+    private boolean resultsExitReady;
     private BonusStageProvider activeBonusStageProvider;
     // Star-post activation high-water captured at bonus entry (ROM: the star post's
     // respawn bit, kept across the reload by Respawn_table_keep). Restored on bonus
@@ -1295,12 +1299,34 @@ public class GameLoop {
      */
     private void updateSpecialStageResultsMode() {
         activePlcLifecycleFrame.claim(PlcLifecyclePhase.SPECIAL_STAGE_RESULTS);
-        // Update results screen
-        resultsFrameCounter++;
-        if (resultsScreen != null) {
-            resultsScreen.update(resultsFrameCounter, null);
-            if (resultsScreen.isComplete()) {
-                exitResultsScreen();
+        if (resultsExitReady) {
+            // ROM: the GM loop only falls through to the next mode's dispatch
+            // on the frame after the whiteout's final WaitForVBla, so the
+            // returning level's load (and its ClearPLC/AddPLC submissions)
+            // belongs to the first frame past the results screen's last
+            // sampled row, never to that row itself.
+            resultsExitReady = false;
+            if (activePlcLifecycleFrame.isOwnedBy(PlcLifecyclePhase.SPECIAL_STAGE_RESULTS)) {
+                activePlcLifecycleFrame.prepareAfterLoop(PlcLifecyclePhase.SPECIAL_STAGE_RESULTS);
+            }
+            doExitResultsScreen();
+            return;
+        }
+        if (resultsExitFadeCompleted) {
+            // The exit fade's completion fired during this iteration's fade
+            // update; hold the (already white) screen for the rest of the
+            // frame — the ROM CPU is still inside PaletteWhiteOut's final
+            // wait — and run the exit body on the next iteration.
+            resultsExitFadeCompleted = false;
+            resultsExitReady = true;
+        } else {
+            // Update results screen
+            resultsFrameCounter++;
+            if (resultsScreen != null) {
+                resultsScreen.update(resultsFrameCounter, null);
+                if (resultsScreen.isComplete()) {
+                    exitResultsScreen();
+                }
             }
         }
         if (activePlcLifecycleFrame.isOwnedBy(PlcLifecyclePhase.SPECIAL_STAGE_RESULTS)) {
@@ -2759,9 +2785,13 @@ public class GameLoop {
         // Play the special stage exit sound (same as entry sound)
         playSpecialStageTransitionSfx(getActiveSpecialStageProvider());
 
-        // Start fade-to-white, then show title card when complete
+        // Start fade-to-white, then show title card when complete. The
+        // completion only latches the exit: the fade update that completes it
+        // runs at the start of the results screen's last whiteout frame, and
+        // the exit body (the returning level's load) must not run until the
+        // iteration after that frame's V-int sample.
         GameLoopPlcLifecycle.startToWhite(resolveGameplayModeContext(), fadeManager, () -> {
-            doExitResultsScreen();
+            resultsExitFadeCompleted = true;
         });
 
         LOGGER.info("Starting fade-to-white to exit Results Screen");
@@ -2804,7 +2834,15 @@ public class GameLoop {
         // - S2: same zone/act, objects reset, rings cleared (Obj79_LoadData clr.w Ring_count)
         // - S3K: same zone/act, objects reset, rings restored from Saved2_ring_count
         levelManager.consumeSpecialStageReturnLevelReloadRequest();
-        levelManager.loadCurrentLevel();
+        // The reload's title card is presented below by this method, so the
+        // load must request it (keeping the queued initial PLCs live for the
+        // card's locked loop) rather than model an omitted presentation.
+        levelManager.setResultsReturnCardOwnedByCaller(true);
+        try {
+            levelManager.loadCurrentLevel();
+        } finally {
+            levelManager.setResultsReturnCardOwnedByCaller(false);
+        }
 
         // Consume any pending title card request to prevent double title card
         // (we're manually entering the title card below)
@@ -2904,7 +2942,7 @@ public class GameLoop {
             }
         }
         InLevelTitleCardCoordinator.prepareResultsTransition(
-                sprite, this::applyTitleCardControlLock, GameServices::module, spriteManager, levelManager);
+                this::applyTitleCardControlLock);
 
         // Initialize the title card manager
         if (getTitleCardProviderLazy() != null) {

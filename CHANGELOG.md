@@ -3,6 +3,21 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the special-stage results return now reaches the returning level the
+  way the ROM's GM loop does. The exit body (and its level reload) runs on the
+  iteration after the whiteout's final V-int instead of inside the frame that
+  V-int samples, so the bridge's last recorded row no longer sees the next
+  level's freshly queued PLCs; the reload requests its title card even
+  headless — mirroring the bonus-stage return — instead of force-draining the
+  queued level art at load; the S1 title card holds its locked phase until
+  that queue drains, matching `Level_TtlCardLoop`'s "stay on them until PLCs
+  have finished"; and the S1 fresh-player prelude runs only at the card's
+  release, where `Level_StartGame` runs it, with its player DPLC pair raised
+  at that boundary rather than by the first V-blank after the card began. On
+  the S1 complete-emeralds run this closes 151 of the 210 rows the return-gap
+  DPLC pair was stamped early; the residual 59 is GM_Level's pre-queue
+  `PaletteFadeOut` plus real hardware load time and needs the run re-recorded
+  with the v5 hardware-timing stream.
 - Fix: the S1 special-stage results card now takes its continue branch. With
   50 or more rings `SSR_RingBonus.finished` waits one second, spends a frame on
   `SSR_Continue`'s jingle, then waits six more — 421 frames where the ordinary

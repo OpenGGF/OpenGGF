@@ -2845,8 +2845,13 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             completeSkippedInitialTitleCardPresentation();
             return;
         }
-        boolean bonusStageReturn = transitions.isBonusStageReturn();
-        boolean presentationSuppressed = !bonusStageReturn
+        // GameLoop presents the bonus- and special-stage-results return cards
+        // itself after the reload; both loads must request rather than model an
+        // omitted presentation, keeping the queued initial PLCs live for the
+        // presented card's locked loop.
+        boolean callerOwnedReturnCard = transitions.isBonusStageReturn()
+                || transitions.isResultsReturnCardOwnedByCaller();
+        boolean presentationSuppressed = !callerOwnedReturnCard
                 && zoneFeatureProvider != null
                 && zoneFeatureProvider.shouldSuppressInitialTitleCard(
                         currentZone, currentAct);
@@ -2863,11 +2868,12 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             completeInitialTitleCardPresentation();
             return;
         }
-        // GameLoop owns the mandatory bonus-return card after the reload. Keep
-        // its lease unbound until that explicit initialization, even headless.
+        // GameLoop owns the mandatory bonus/results-return card after the
+        // reload. Keep its lease unbound until that explicit initialization,
+        // even headless.
         if (!graphicsManager.isHeadlessMode()
                 || headlessWholeRunHandoff
-                || bonusStageReturn) {
+                || callerOwnedReturnCard) {
             // ROM: title card reads Apparent_act, not Current_act.
             // After AIZ's seamless fire transition, Current_act is 1 but
             // Apparent_act stays 0 until the results screen exits.
@@ -2930,6 +2936,14 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         profile.completeInitialPresentationPlcs();
         replaySkippedPresentationPlayerAnimation(
                 profile.skippedPresentationPlayableFrames());
+        // The release prelude's staged player DPLC is transferred by the very
+        // next V-int — the pre-fade VBla delay / first PaletteFadeIn frame —
+        // before Level_MainLoop begins, so its edge belongs to this boundary,
+        // not to the first gameplay claim after the transition gap.
+        var dynamicArt = GameServices.dynamicArtLifecycleOrNull();
+        if (dynamicArt != null && dynamicArt.isRunActive()) {
+            dynamicArt.flushPendingPlayerPreparationAtPresentationBoundary();
+        }
         initialPresentationPlcsCompleted = true;
     }
 
@@ -3532,6 +3546,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     /** @see LevelTransitionCoordinator#clearBonusStageReturn() */
     public void clearBonusStageReturn() { transitions.clearBonusStageReturn(); }
+
+    /** @see LevelTransitionCoordinator#setResultsReturnCardOwnedByCaller(boolean) */
+    public void setResultsReturnCardOwnedByCaller(boolean owned) { transitions.setResultsReturnCardOwnedByCaller(owned); }
 
     /** @see LevelTransitionCoordinator#requestTitleCard(int, int) */
     public void requestTitleCard(int zone, int act) { transitions.requestTitleCard(zone, act); }

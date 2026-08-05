@@ -17,6 +17,7 @@ public class LevelTransitionCoordinator {
     private boolean specialStageEntryRoutineArmed;
     private boolean specialStageEntryAdvancesLevel;
     private boolean specialStageReturnLevelReloadRequested;
+    private boolean resultsReturnCardOwnedByCaller;
 
     // ── S3K big ring return (ROM: Saved2_* variables) ──────────
     private BigRingReturnState bigRingReturn;
@@ -154,6 +155,22 @@ public class LevelTransitionCoordinator {
      */
     public void setSpecialStageReturnLevelReloadRequested(boolean requested) {
         this.specialStageReturnLevelReloadRequested = requested;
+    }
+
+    /**
+     * Signals that the next level load is a special-stage results return whose
+     * mandatory title card the caller presents itself after the reload
+     * (mirrors {@link #isBonusStageReturn()}). The load must request the card
+     * — leaving its PLC queue live for the presented card's locked loop —
+     * rather than model an omitted presentation, even headless.
+     */
+    public void setResultsReturnCardOwnedByCaller(boolean owned) {
+        this.resultsReturnCardOwnedByCaller = owned;
+    }
+
+    /** Returns true when the caller presents the results-return title card itself. */
+    public boolean isResultsReturnCardOwnedByCaller() {
+        return resultsReturnCardOwnedByCaller;
     }
 
     // ================================================================
@@ -683,6 +700,7 @@ public class LevelTransitionCoordinator {
         specialStageEntryRoutineArmed = false;
         specialStageEntryAdvancesLevel = false;
         specialStageReturnLevelReloadRequested = false;
+        resultsReturnCardOwnedByCaller = false;
         bigRingReturn = null;
         bonusStageRequested = null;
         bonusStageReturnCheckpointIndex = -1;

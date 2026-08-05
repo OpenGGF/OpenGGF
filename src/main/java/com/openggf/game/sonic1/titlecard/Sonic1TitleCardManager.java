@@ -7,6 +7,8 @@ import com.openggf.game.TitleCardProvider;
 import com.openggf.game.titlecard.TitleCardElement;
 import com.openggf.game.titlecard.TitleCardMappings;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
+import com.openggf.game.sonic1.resources.Sonic1PlcService;
+import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.PatternAtlasRange;
@@ -264,10 +266,27 @@ public class Sonic1TitleCardManager implements TitleCardProvider {
     }
 
     private void updateDisplay() {
-        if (stateTimer >= DISPLAY_HOLD_DURATION) {
+        if (stateTimer >= DISPLAY_HOLD_DURATION && !plcQueueBusy()) {
             state = Sonic1TitleCardState.SLIDE_OUT;
             stateTimer = 0;
         }
+    }
+
+    /**
+     * S1's locked title-card loop holds until the level's queued PLCs finish
+     * decompressing as well as until the elements arrive: {@code
+     * Level_TtlCardLoop} ("stay on them until PLCs have finished") re-loops
+     * while {@code v_plc_buffer} is non-empty (docs/s1disasm/sonic.asm:
+     * 2814-2842). The card's length is therefore the queued art's drain time,
+     * not a constant.
+     */
+    private boolean plcQueueBusy() {
+        if (SessionManager.getCurrentWorldSession() == null) {
+            return false;
+        }
+        Sonic1PlcService plcService =
+                GameServices.module().getGameService(Sonic1PlcService.class);
+        return plcService != null && plcService.isBusy();
     }
 
     /**

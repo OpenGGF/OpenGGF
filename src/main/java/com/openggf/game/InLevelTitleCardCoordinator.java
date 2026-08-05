@@ -3,7 +3,6 @@ package com.openggf.game;
 import com.openggf.level.LevelManager;
 import com.openggf.sprites.Sprite;
 import com.openggf.sprites.managers.SpriteManager;
-import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -14,20 +13,16 @@ public final class InLevelTitleCardCoordinator {
     private InLevelTitleCardCoordinator() {
     }
 
-    /** Locks control and runs the game-specific fresh-player prelude for a results-return title card. */
-    public static void prepareResultsTransition(Sprite sprite,
-                                                Consumer<Boolean> controlLock,
-                                                Supplier<GameModule> moduleSupplier,
-                                                SpriteManager spriteManager,
-                                                LevelManager levelManager) {
+    /**
+     * Locks control for a results-return title card. The fresh-player prelude
+     * deliberately does NOT run here: the ROM's equivalent pass is
+     * {@code Level_StartGame}'s single ObjPosLoad/ExecuteObjects iteration
+     * after the locked title-card loop drains its PLCs, immediately before
+     * {@code Level_MainLoop} — which the release path already models via
+     * {@link com.openggf.game.TitleCardProvider#shouldRunPlayerPreludeAtRelease()}.
+     */
+    public static void prepareResultsTransition(Consumer<Boolean> controlLock) {
         controlLock.accept(true);
-        if (sprite instanceof AbstractPlayableSprite playable) {
-            int freshPlayerPreludeFrames = moduleSupplier.get()
-                    .getLevelInitProfile()
-                    .freshMainPlayablePreludeFrames();
-            spriteManager.warmUpFreshMainPlayableOnly(
-                    freshPlayerPreludeFrames, levelManager, playable, false);
-        }
     }
 
     public static boolean startIfRequested(LevelManager levelManager,

@@ -30,16 +30,16 @@ class TestS1CompleteEmeraldVisualRun {
      * stage, and admission of the GHZ2 presentation bridge the stage returns
      * through.
      * <p>
-     * It stops there deliberately. The bridge now hands back to GHZ2 gameplay
-     * (see {@code TestTraceRunPlaybackCoordinator}), but the run then pauses on
-     * its first comparison error: the manifest records Sonic's DPLC art load in
-     * the gap after the bridge ({@code movie_logical_frame 9715}) because the
-     * ROM loads GHZ2 AFTER its 800-row results screen -- the bridge holds
-     * {@code Level_frame_counter} at 0x1009 and gameplay resumes at 1 -- while
-     * the engine loads before the bridge and produces no gap edges at all
-     * ({@code run_gap.edge_count} 2 vs 0). Raise the target here when the
-     * engine's post-special-stage load moves to the recorded side of the
-     * bridge.
+     * It stops there deliberately. The bridge hands back to GHZ2 gameplay and
+     * the return gap now emits Sonic's DPLC pair with matching identity at the
+     * title card's release, but the run still pauses on
+     * {@code run_gap.edge[N].movie_logical_frame}: recorded 9,715 against the
+     * engine's release row 9,656. The remaining 59 rows are GM_Level's
+     * 22-frame {@code PaletteFadeOut} before {@code AddPLC}
+     * (docs/s1disasm/sonic.asm:2710-2737) plus ~37 rows of real load time
+     * (NemDec under disabled interrupts, Hud_Base, level-data KosDec) that
+     * needs this run re-recorded with the v5 hardware-timing stream. Raise the
+     * target here when that lands.
      */
     @Test
     void replaysThroughTheSpecialStageAndItsReturnBridgeAdmission() throws Exception {
