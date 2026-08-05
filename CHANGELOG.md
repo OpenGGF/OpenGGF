@@ -3,6 +3,19 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: a Special Stage UP/DOWN block now only rewrites itself as its counterpart
+  when it actually changed the stage's rotation speed. `SonicSS_ChkUP` and
+  `SonicSS_ChkDOWN` skip the `move.b #id_SS_DOWN/#id_SS_UP` rewrite with the
+  same branch that skips the `asl.w`/`asr.w`
+  (`docs/s1disasm/_incObj/09 Sonic in Special Stage.asm:853-862, 888-897`), so a
+  block touched while the stage is already at that speed stays what it was. The
+  engine rewrote it regardless, which left the layout one toggle out of step for
+  the rest of the stage and only became visible on a later crossing of the same
+  cell, where the block then took the other branch. On the S1 complete-emeralds
+  run the second special stage's rotation speed diverged at its row 2,162 and
+  surfaced 75 rows later as a Sonic DPLC the recording does not have; the stage
+  now replays all 4,337 of its rows with byte-exact position, velocity, inertia
+  and rotation, and the run walks on through the GHZ3 presentation bridge.
 - Fix: a whole-run replay's giant-ring / star-post special-stage boundary signal
   now reports the stage the entry actually selects instead of the one the
   provider still has loaded. The index is chosen by

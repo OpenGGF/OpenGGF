@@ -53,29 +53,34 @@ class TestS1CompleteEmeraldVisualRun {
     }
 
     /**
-     * Walks every compared row of the returned GHZ2 act and on through the
-     * route's SECOND giant ring. The pin above stops the instant segment 3 is
-     * admitted, so it never reaches the act body; reaching segment 4 requires
-     * all 3,606 of the act's rows (its last physical row is BK2 13,347) plus
-     * the boundary, so a self-pause anywhere inside it fails this instead.
+     * Walks every compared row of the returned GHZ2 act, the route's SECOND
+     * giant ring, all 4,337 rows of the special stage behind it, its results
+     * bridge, and the GHZ3 presentation bridge it returns through. The pin above stops the
+     * instant segment 3 is admitted, so it never reaches the act body; reaching
+     * segment 6 requires all 3,606 of GHZ2's rows (its last physical row is BK2
+     * 13,347) plus three later boundaries, so a self-pause anywhere inside them
+     * fails this instead.
      * <p>
-     * Row 107 is the act's first PLC completion that lands on an iteration held
-     * into a lag V-blank, where the ROM's own {@code RunPLC}
-     * (docs/s1disasm/sonic.asm:3032) runs on the lag closure rather than the row
-     * that completed the previous entry. The boundary itself is the second entry
-     * to a special stage in the run, and so the first whose index
-     * ({@code special_stage_index} 1) differs from the stage the provider still
-     * has loaded when the giant ring is touched.
+     * Three defects live on this stretch. Row 107 of the GHZ2 act is its first
+     * PLC completion that lands on an iteration held into a lag V-blank, where
+     * the ROM's own {@code RunPLC} (docs/s1disasm/sonic.asm:3032) runs on the
+     * lag closure rather than the row that completed the previous entry. The
+     * giant ring is the second entry to a special stage in the run, and so the
+     * first whose index ({@code special_stage_index} 1) differs from the stage
+     * the provider still has loaded when the ring is touched. Inside the stage,
+     * row 2,237's Sonic DPLC is the first observable consequence of an UP/DOWN
+     * block that rewrote itself even when it could not change the rotation
+     * speed (09 Sonic in Special Stage.asm:853-862, 888-897).
      */
     @Test
-    void replaysTheReturnedGhz2ActAndItsGiantRingAdmission() throws Exception {
+    void replaysTheSecondGiantRingAndTheSpecialStageBehindIt() throws Exception {
         VisualRunReplayHarness.Result result =
                 VisualRunReplayHarness.replay(
-                        RUN_DIR, VisualRunReplayHarness.stopAfterSegment(4));
+                        RUN_DIR, VisualRunReplayHarness.stopAfterSegment(6));
 
         assertTrue(result.sharedCursor() > 13_347,
                 "visual run stopped inside the returned GHZ2 act: " + result);
-        assertEquals(4, result.currentSegmentIndex(),
-                "visual run stalled at the second giant ring: " + result);
+        assertEquals(6, result.currentSegmentIndex(),
+                "visual run stalled before the returned GHZ3 act: " + result);
     }
 }

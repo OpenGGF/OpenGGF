@@ -62365,3 +62365,103 @@ to synthesize a POST phase on a VBLANK-only row.
     (4 run / 1 failure / 3 errors, and 88 run / 2 failures).
 - Next frontier for this lane: the second special stage's dynamic-art edges at
   segment-4 row 2,237.
+
+## 2026-08-05 - Second special stage: an UP/DOWN block rewrote itself when it could not act
+
+- Command: `mvn -Dmse=off -Ptrace-replay -Dtest=TestS1CompleteEmeraldVisualRun
+  -Dsonic1.rom.path=s1.gen test`, on `develop` at `ed472fa3a`, with the second
+  lane's pin temporarily raised past its committed `stopAfterSegment(4)`.
+- Before: **3 errors** at segment-4 row **2,237** (the second special stage,
+  `special_stage_index` 1, BK2 15,585), then the documented self-pause cascade:
+  - `dynamic_art.edges` expected `[]`, actual `[1398, 1399]`
+  - `dynamic_art.edge[0].present` / `edge[1].present` expected `false`,
+    actual `true`
+- After: **0 errors through the whole of segment 4**, and on through segments 5
+  and 6's admission. The new first failure is a different, unrelated frontier:
+  segment-6 row **7,983** (`ghz3_2`, BK2 26,702), 3 errors on
+  `queue.s1_nemesis_plc.busy` / `prepared` / `remaining_work` (expected
+  `false`/`false`/`-1`, actual `true`/`true`/`128`).
+- Root cause, measured, not reasoned. The failing field is a *player DPLC*, so
+  the first job was to find what drove Sonic's roll animation off phase, since
+  `SAnim_RollJump`'s frame interval is `($400 - |inertia|) >> 8` plus one
+  (docs/s1disasm/_incObj/01 Sonic.asm:2321-2352). Two fixture queries pinned it
+  before any engine code was read:
+  - Across all 1,314 recorded DPLC intervals in `ss_2`, the interval at an edge
+    on row F is exactly `dur(inertia[F-1]) + 1` in 1,297 cases, and every one of
+    the 17 exceptions is explained by the lag rows inside its window. So the
+    recorded fixture alone determines the animation from `inertia`, and the
+    2,237 divergence means `inertia` diverged.
+  - Temporary per-frame instrumentation on `Sonic1SpecialStageManager.update()`
+    (reverted) dumped `ssAngle`/`ssRotate`/position/velocity/inertia/anim state
+    and was aligned to the recorded rows by exact state match. The engine's
+    state is **byte-identical to the recording for 2,064 rows** — the alignment
+    offset only steps at the 3 recorded lag rows in the window, confirming the
+    engine correctly suppresses those — and first diverges at row **2,162**:
+    engine `ss_angle` `0xDBC0` against the recorded `0xDC00`, i.e. the recording
+    halved `v_ssrotate` from `-$80` to `-$40` on that row and the engine did
+    not.
+  - The same dump showed why: at row 2,162 the engine's touched block was `$29`
+    (UP) where the ROM's was `$2A` (DOWN), at the *same* cell (row 63, col 38).
+    Searching the dump for earlier touches of that cell found row 187, where the
+    engine touched a `$2A` DOWN block with `v_ssrotate = $40` — already slow, so
+    no halving — and rewrote it to `$29` anyway.
+- The disassembly confirms the ROM does not. `SonicSS_ChkUP`'s
+  `btst #6,(v_ssrotate+1).w / beq.s SonicSS_UPsnd`
+  (09 Sonic in Special Stage.asm:853-854) skips **both** the `asl.w` (857) and
+  the `move.b #id_SS_DOWN,(a1)` rewrite (859-862); `SonicSS_ChkDOWN`'s
+  `bne.s SonicSS_DOWNsnd` (888-889) does the same for `asr.w` (892) and
+  `move.b #id_SS_UP,(a1)` (894-897). Only the cooldown
+  (`sonss_timeout_updown`, 840-845/875-880) and the blip sound (865-868/900-903)
+  are unconditional. The engine ran the rewrite outside that gate.
+- Fix: `Sonic1SpecialStageManager.processItemInteraction` moves the rewrite
+  inside the speed-change branch of both handlers, through a new
+  `flipUpDownBlock`. No zone, route, frame or game predicate; nothing about the
+  fixture enters the engine.
+- Why the defect stayed invisible for 2,064 rows and then surfaced as art. The
+  layout toggle is only observable when the SAME cell is crossed again and the
+  stale id takes the other branch — 1,975 rows later here. From 2,162 the
+  engine's stage rotation, position and velocity all diverge, but `inertia` is
+  almost entirely input-driven (`sonss_acceleration`/`sonss_deceleration` on
+  held L/R, zeroed by `SonicSS_Move`'s wall check), so it stayed *coincidentally*
+  in step for another 70 rows. It broke at the jump on row 2,232: the ROM's
+  wall check zeroes inertia on that row and the engine's — at a different
+  sub-pixel offset against a different stage angle — did not, giving a frame
+  interval of 4 against the recorded 5 and publishing a DPLC on row 2,237 that
+  the ROM publishes on 2,238. The visual run compares only structural rows for a
+  special-stage segment (no playable-state comparison), so the DPLC was the
+  first compared field the divergence could reach.
+- Coverage: `Sonic1SpecialStageManagerTest`
+  `testUpDownBlockOnlyFlipsWhenItActuallyChangesRotation` pins all four cases
+  (UP/DOWN x acted/could-not-act) and fails on the unmodified tree.
+  `TestS1CompleteEmeraldVisualRun`'s second lane becomes
+  `replaysTheSecondGiantRingAndTheSpecialStageBehindIt`, pinned at
+  `stopAfterSegment(6)`; it subsumes the previous pin 4 and additionally walks
+  all 4,337 rows of the special stage, the stage's results bridge, and the GHZ3
+  presentation bridge.
+- Verification (serial; JDK 21):
+  - `TestS1CompleteEmeraldVisualRun` both lanes green;
+    `TestS1CompleteEmeraldRunPrefix` (2), `TestTraceRunPlaybackCoordinator`
+    (21), `TestTraceSessionLauncherRunBranch` (40) and
+    `Sonic1SpecialStageManagerTest` (15) green.
+  - `TestS1GhzMazeRoundTripChain`'s presentation-bridge test green;
+    `ghzMazeRoundTrip` stays red on the same 8 `run_tail` fields with the same
+    values (`movie_logical_frame` 8,261 against the recorded 9,071).
+  - S1 `*TraceReplay` fleet under `-Ptrace-replay`, 30 classes: 27 green, the
+    same 3 reds (`Sbz3CompleteRun`, `Credits03Lz3`, `FzCompleteRun`).
+    `TestS1SpecialStageTraceReplay` — the stage-0 fixture — stays green.
+  - Run chains: `TestS2EhzHalfpipeRoundTripChain` ("special stage exited with
+    3704 represented rows remaining in ss") and `TestS3kMegaRunChain`
+    ("Manifest validation failed for .../s3-knux-multibonus-ss") fail with the
+    same messages as before; `TestS3kBonusRoundTripChain` skips.
+  - Full default suite: 14,347 tests, **38 red** (26 failures + 12 errors),
+    against the documented 38-red baseline and the same class set the previous
+    two commits recorded, minus the usual ordering flakes.
+- Next frontier for this lane: the GHZ3 act's end-of-act PLC. At recorded row
+  7,992 the fixture arms a 128-pattern Nemesis PLC on the same row that
+  `object_appeared slot 23 id 0x3A` (`GotThroughCard`) and
+  `object_removed slot 34 id 0x3E` (`Prison`) fire — i.e. `Pri_EndAct`'s
+  `GotThroughAct` hand-off (docs/s1disasm/_incObj/3E Prison Capsule.asm:204-230)
+  once the last animal object has been deleted. The engine arms the same queue
+  9 rows earlier, at 7,983. The recorded `object_removed id 0x28` (animal)
+  events at 7,940/7,942/7,944/7,965/7,973/7,980/7,987/7,991 are the input to
+  that scan, so the suspect is animal despawn cadence rather than the PLC.

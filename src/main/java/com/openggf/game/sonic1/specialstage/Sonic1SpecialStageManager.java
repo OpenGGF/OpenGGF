@@ -871,11 +871,14 @@ public final class Sonic1SpecialStageManager {
                 // If rotation is slow (bit 6 of low byte set), double speed
                 if ((ssRotate & 0x40) != 0) {
                     ssRotate <<= 1;
-                }
-                // Change block to DOWN
-                int idx = lastCollisionRow * SS_LAYOUT_STRIDE + lastCollisionCol;
-                if (idx >= 0 && idx < layout.length) {
-                    layout[idx] = 0x2A;
+                    // Only a block that ACTUALLY sped the stage up becomes a
+                    // DOWN block: SonicSS_ChkUP's beq skips the asl.w AND the
+                    // move.b #id_SS_DOWN together (09 Sonic in Special
+                    // Stage.asm:853-862), so a rotation already at fast speed
+                    // leaves the block an UP block. Converting it regardless
+                    // put the layout one toggle out of step with the ROM for
+                    // the rest of the stage.
+                    flipUpDownBlock(0x2A);
                 }
                 playSfx(Sonic1Sfx.SS_ITEM);
             }
@@ -889,11 +892,10 @@ public final class Sonic1SpecialStageManager {
                 // If rotation is fast (bit 6 not set), halve speed
                 if ((ssRotate & 0x40) == 0) {
                     ssRotate >>= 1;
-                }
-                // Change block to UP
-                int idx = lastCollisionRow * SS_LAYOUT_STRIDE + lastCollisionCol;
-                if (idx >= 0 && idx < layout.length) {
-                    layout[idx] = 0x29;
+                    // Same gate as the UP block above: SonicSS_ChkDOWN's bne
+                    // skips the asr.w and the move.b #id_SS_UP together
+                    // (09 Sonic in Special Stage.asm:888-897).
+                    flipUpDownBlock(0x29);
                 }
                 playSfx(Sonic1Sfx.SS_ITEM);
             }
@@ -921,6 +923,21 @@ public final class Sonic1SpecialStageManager {
                 startGlassAnimation(idx, nextState);
             }
             playSfx(Sonic1Sfx.SS_GLASS);
+        }
+    }
+
+    /**
+     * Rewrites the just-touched UP/DOWN block as its counterpart, the way the
+     * ROM's {@code movea.l sonss_touchedblock_ram(a0),a1 / subq.l #1,a1 /
+     * move.b #id_SS_*,(a1)} tail does (09 Sonic in Special Stage.asm:859-862,
+     * 894-897). The touched cell is the one {@code SonicSS_FindWall_CheckType}
+     * last recorded, which is what {@link #lastCollisionRow}/
+     * {@link #lastCollisionCol} track.
+     */
+    private void flipUpDownBlock(int replacementId) {
+        int idx = lastCollisionRow * SS_LAYOUT_STRIDE + lastCollisionCol;
+        if (idx >= 0 && idx < layout.length) {
+            layout[idx] = (byte) replacementId;
         }
     }
 
