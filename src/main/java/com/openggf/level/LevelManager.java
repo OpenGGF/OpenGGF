@@ -77,7 +77,6 @@ import com.openggf.sprites.playable.SidekickCpuController;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -156,7 +155,6 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     PerformanceProfiler profiler;
     private CrossGameFeatureProvider crossGameFeatures;
     final List<List<LevelData>> levels = new ArrayList<>();
-    private final List<PendingLostRingSpawn> pendingLostRingSpawns = new ArrayList<>();
     private final WorldSession worldSession;
     // Local mirror of zone/act state owned by WorldSession. Reads use these
     // fields directly for speed; writes go through writeCurrentZone /
@@ -240,6 +238,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     private final java.util.Map<String, DynamicArtDecisionOwner> playerArtDplcOwners =
             new java.util.HashMap<>();
     private final LevelDirtyRegionDispatcher dirtyRegionDispatcher;
+    private final LevelLostRingSpawnCoordinator lostRingSpawns = new LevelLostRingSpawnCoordinator(this);
     final LevelWaterCoordinator waterCoordinator;
     final LevelCheckpointCoordinator checkpointCoordinator;
     private final LevelActTransitionExecutor actTransitionExecutor;
@@ -1135,7 +1134,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         // rather than in drawWithSpritePriority() so headless tests see the
         // counter advance even when rendering is disabled.
         frameCounter++;
-        processPendingLostRingSpawns();
+        lostRingSpawns.processPending();
 
         Sprite player = null;
         AbstractPlayableSprite playable = null;
@@ -2473,91 +2472,15 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
     public void spawnLostRings(AbstractPlayableSprite player, int frameCounter) {
-        if (ringManager == null || player == null) {
-            return;
-        }
-        int count = player.getRingCount();
-        if (count <= 0) {
-            return;
-        }
-        ringManager.spawnLostRings(player, count, frameCounter);
+        lostRingSpawns.spawnImmediately(player, frameCounter);
     }
 
     public void spawnLostRingsAfterCurrentFrame(AbstractPlayableSprite player, int frameCounter) {
-        queueLostRingSpawn(player, frameCounter, false);
+        lostRingSpawns.queue(player, frameCounter, false);
     }
 
     public void spawnLostRingsWithDeferredOwner(AbstractPlayableSprite player, int frameCounter) {
-        queueLostRingSpawn(player, frameCounter, true);
-    }
-
-    private void queueLostRingSpawn(
-            AbstractPlayableSprite player, int scheduledFrame, boolean deferOwnerRingClear) {
-        if (player == null || ringManager == null) {
-            return;
-        }
-        int count = player.getRingCount();
-        if (count <= 0) {
-            return;
-        }
-        int preallocatedFirstSlot = -1;
-        if (objectManager != null && objectManager.preallocatesLostRingOwnerSlot()) {
-            preallocatedFirstSlot = objectManager.allocateDynamicSlotAvoidingCurrentPassFrees();
-        }
-        int[] preallocatedSlots = preallocatedFirstSlot >= 0
-                ? new int[] {preallocatedFirstSlot}
-                : new int[0];
-        boolean slotsFullyReserved = false;
-        if (preallocatedFirstSlot >= 0 && objectManager != null
-                && objectManager.lostRingRemainderAllocatesAfterOwnerSlot()) {
-            int requested = Math.min(count, 32);
-            int[] reserved = new int[requested];
-            reserved[0] = preallocatedFirstSlot;
-            int reservedCount = 1;
-            int previousSlot = preallocatedFirstSlot;
-            while (reservedCount < requested) {
-                int slot = objectManager.allocateSlotAfter(previousSlot);
-                if (slot < 0) {
-                    break;
-                }
-                reserved[reservedCount++] = slot;
-                previousSlot = slot;
-            }
-            preallocatedSlots = java.util.Arrays.copyOf(reserved, reservedCount);
-            slotsFullyReserved = true;
-        }
-        pendingLostRingSpawns.add(new PendingLostRingSpawn(
-                player, count, player.getCentreX(), player.getCentreY(), scheduledFrame,
-                preallocatedSlots, slotsFullyReserved, deferOwnerRingClear));
-    }
-
-    private void processPendingLostRingSpawns() {
-        if (pendingLostRingSpawns.isEmpty() || ringManager == null) {
-            return;
-        }
-        Iterator<PendingLostRingSpawn> iterator = pendingLostRingSpawns.iterator();
-        while (iterator.hasNext()) {
-            PendingLostRingSpawn pending = iterator.next();
-            if (frameCounter <= pending.frameCounter()) {
-                continue;
-            }
-            if (pending.player().getRingCount() > 0) {
-                ringManager.spawnLostRingsWithInitialObjectStep(
-                        pending.player(), pending.ringCount(), frameCounter,
-                        pending.x(), pending.y(), pending.preallocatedSlots(),
-                        pending.slotsFullyReserved(), pending.deferOwnerRingClear());
-            } else if (objectManager != null) {
-                for (int slot : pending.preallocatedSlots()) {
-                    objectManager.releaseDynamicSlot(slot);
-                }
-            }
-            iterator.remove();
-        }
-    }
-
-    private record PendingLostRingSpawn(
-            AbstractPlayableSprite player, int ringCount, int x, int y, int frameCounter,
-            int[] preallocatedSlots, boolean slotsFullyReserved, boolean deferOwnerRingClear) {
+        lostRingSpawns.queue(player, frameCounter, true);
     }
 
     // ── Post-load assembly methods ──────────────────────────────────────

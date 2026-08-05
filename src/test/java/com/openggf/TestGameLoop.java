@@ -996,7 +996,7 @@ public class TestGameLoop {
         handler.handleKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_PRESS);
         handler.handleKeyEvent(GLFW_KEY_B, GLFW_PRESS);
 
-        assertEquals(BonusStageType.GUMBALL, GameLoop.resolveBonusStageDebugShortcut(handler));
+        assertEquals(BonusStageType.GUMBALL, GameLoopDebugShortcuts.resolveBonusStageDebugShortcut(handler));
     }
 
     @Test
@@ -1005,7 +1005,7 @@ public class TestGameLoop {
         handler.handleKeyEvent(GLFW_KEY_LEFT_CONTROL, GLFW_PRESS);
         handler.handleKeyEvent(GLFW_KEY_B, GLFW_PRESS);
 
-        assertEquals(BonusStageType.GLOWING_SPHERE, GameLoop.resolveBonusStageDebugShortcut(handler));
+        assertEquals(BonusStageType.GLOWING_SPHERE, GameLoopDebugShortcuts.resolveBonusStageDebugShortcut(handler));
     }
 
     @Test
@@ -1014,7 +1014,7 @@ public class TestGameLoop {
         handler.handleKeyEvent(GLFW_KEY_LEFT_ALT, GLFW_PRESS);
         handler.handleKeyEvent(GLFW_KEY_B, GLFW_PRESS);
 
-        assertEquals(BonusStageType.SLOT_MACHINE, GameLoop.resolveBonusStageDebugShortcut(handler));
+        assertEquals(BonusStageType.SLOT_MACHINE, GameLoopDebugShortcuts.resolveBonusStageDebugShortcut(handler));
     }
 
     @Test
@@ -1024,7 +1024,7 @@ public class TestGameLoop {
         handler.handleKeyEvent(GLFW_KEY_LEFT_CONTROL, GLFW_PRESS);
         handler.handleKeyEvent(GLFW_KEY_B, GLFW_PRESS);
 
-        assertEquals(BonusStageType.NONE, GameLoop.resolveBonusStageDebugShortcut(handler));
+        assertEquals(BonusStageType.NONE, GameLoopDebugShortcuts.resolveBonusStageDebugShortcut(handler));
     }
 
     @Test
@@ -1032,7 +1032,7 @@ public class TestGameLoop {
         InputHandler handler = new InputHandler();
         handler.handleKeyEvent(GLFW_KEY_B, GLFW_PRESS);
 
-        assertEquals(BonusStageType.NONE, GameLoop.resolveBonusStageDebugShortcut(handler));
+        assertEquals(BonusStageType.NONE, GameLoopDebugShortcuts.resolveBonusStageDebugShortcut(handler));
     }
 
     /**
@@ -1054,7 +1054,7 @@ public class TestGameLoop {
         handler.setLogicalOverride(LogicalInputSnapshot.neutral()
                 .withDebugInput(false, false, false, true, false));
 
-        assertEquals(BonusStageType.SLOT_MACHINE, GameLoop.resolveBonusStageDebugShortcut(handler));
+        assertEquals(BonusStageType.SLOT_MACHINE, GameLoopDebugShortcuts.resolveBonusStageDebugShortcut(handler));
     }
 
     @Test
@@ -1065,7 +1065,7 @@ public class TestGameLoop {
         handler.setLogicalOverride(LogicalInputSnapshot.neutral()
                 .withDebugInput(false, false, false, false, false));
 
-        assertEquals(BonusStageType.NONE, GameLoop.resolveBonusStageDebugShortcut(handler));
+        assertEquals(BonusStageType.NONE, GameLoopDebugShortcuts.resolveBonusStageDebugShortcut(handler));
     }
 
     @Test

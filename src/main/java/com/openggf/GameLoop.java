@@ -18,7 +18,6 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.debug.DebugObjectArtViewer;
 import com.openggf.game.sonic1.Sonic1GameModule;
 import com.openggf.game.sonic1.dataselect.S1DataSelectImageCacheManager;
-import com.openggf.game.sonic1.dataselect.S1DataSelectImageGenerator;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic2.dataselect.S2DataSelectImageCacheManager;
 import com.openggf.debug.PerformanceProfiler;
@@ -36,7 +35,6 @@ import com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame
 import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.graphics.PixelFontTextRenderer;
 import com.openggf.level.BigRingReturnState;
-import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectSpawn;
 import static org.lwjgl.glfw.GLFW.*;
@@ -76,7 +74,6 @@ import com.openggf.testmode.TraceCameraFocusController;
 import com.openggf.trace.replay.TraceSuppressedRowClosure;
 
 import java.io.IOException;
-import java.util.Comparator;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -114,17 +111,17 @@ public class GameLoop {
 
     private static final Logger LOGGER = Logger.getLogger(GameLoop.class.getName());
     private final EngineContext engineServices;
-    private final SonicConfigurationService configService;
+    final SonicConfigurationService configService;
     private final AudioManager audioManager;
     private final OuterFramePresentation outerFramePresentation;
     private final RomManager romManager;
     private final DebugOverlayManager debugOverlayManager;
-    private SpriteManager spriteManager;
-    private Camera camera;
+    SpriteManager spriteManager;
+    Camera camera;
     private TimerManager timerManager;
-    private LevelManager levelManager;
-    private GameStateManager gameState;
-    private FadeManager fadeManager;
+    LevelManager levelManager;
+    GameStateManager gameState;
+    FadeManager fadeManager;
     private WaterSystem waterSystem;
     private final PerformanceProfiler profiler;
     private final PlaybackDebugManager playbackDebugManager;
@@ -133,6 +130,7 @@ public class GameLoop {
     private final StartupRouteResolver startupRouteResolver = new StartupRouteResolver();
     private final BootScreenModeController bootScreenModeController = new BootScreenModeController();
     private final MenuScreenModeController menuScreenModeController = new MenuScreenModeController();
+    private final GameLoopDebugShortcuts debugShortcuts = new GameLoopDebugShortcuts(this);
     private final BonusStageTransitionCoordinator bonusStageTransitionCoordinator =
             new BonusStageTransitionCoordinator();
     private final PresenceManager presenceManager;
@@ -166,9 +164,9 @@ public class GameLoop {
 
     // Special stage results screen
     private ResultsScreen resultsScreen;
-    private int ssRingsCollected;
-    private boolean ssEmeraldCollected;
-    private int ssStageIndex;
+    int ssRingsCollected;
+    boolean ssEmeraldCollected;
+    int ssStageIndex;
     private int resultsFrameCounter = 0;
 
     // Flag to track when returning from special stage (for title card exit
@@ -415,7 +413,7 @@ public class GameLoop {
         }
     }
 
-    private GameplayModeContext resolveGameplayModeContext() {
+    GameplayModeContext resolveGameplayModeContext() {
         return gameplayMode != null ? gameplayMode : SessionManager.getCurrentGameplayMode();
     }
 
@@ -1077,7 +1075,7 @@ public class GameLoop {
         }
 
         BonusStageType debugBonusType = debugShortcutsEnabled
-                ? resolveBonusStageDebugShortcut(inputHandler)
+                ? GameLoopDebugShortcuts.resolveBonusStageDebugShortcut(inputHandler)
                 : BonusStageType.NONE;
         if (debugBonusType != BonusStageType.NONE) {
             handleBonusStageDebugKey(debugBonusType);
@@ -1210,12 +1208,12 @@ public class GameLoop {
 
         // Debug complete special stage with emerald (for testing results screen)
         if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_COMPLETE_KEY))) {
-            debugCompleteSpecialStageWithEmerald();
+            debugShortcuts.debugCompleteSpecialStageWithEmerald();
         }
 
         // Debug fail special stage (for testing results screen without emerald)
         if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_FAIL_KEY))) {
-            debugFailSpecialStage();
+            debugShortcuts.debugFailSpecialStage();
         }
 
         // Toggle sprite frame debug viewer (shows all animation frames)
@@ -1615,7 +1613,7 @@ public class GameLoop {
 
         // Debug: Teleport to last checkpoint (END key, only in LEVEL mode)
         if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.DEBUG_LAST_CHECKPOINT_KEY))) {
-            teleportToLastCheckpoint();
+            debugShortcuts.teleportToLastCheckpoint();
         }
 
         // Level select key (F9 by default)
@@ -1625,7 +1623,7 @@ public class GameLoop {
 
         if (isUnmodifiedDebugKeyPressed(
                 configService.getInt(SonicConfiguration.CROSS_GAME_S1_DATA_SELECT_IMAGE_COORD_LOG_KEY))) {
-            logCurrentPreviewCaptureOverride();
+            debugShortcuts.logCurrentPreviewCaptureOverride();
         }
         return true;
     }
@@ -1836,7 +1834,7 @@ public class GameLoop {
         return null;
     }
 
-    private String resolveMainCharacterCode() {
+    String resolveMainCharacterCode() {
         return ActiveGameplayTeamResolver.resolveMainCharacterCode(configService);
     }
 
@@ -1846,16 +1844,6 @@ public class GameLoop {
      * When in special stage mode, exits to results screen (as failure).
      * When in results screen mode, skips back to level.
      */
-    private void handleSpecialStageDebugKey() {
-        if (currentGameMode == GameMode.LEVEL) {
-            enterSpecialStage();
-        } else if (currentGameMode == GameMode.SPECIAL_STAGE) {
-            enterResultsScreen(false);
-        } else if (currentGameMode == GameMode.SPECIAL_STAGE_RESULTS) {
-            exitResultsScreen();
-        }
-    }
-
     private void detectSpecialStageLiveOnlyShortcutBoundary() {
         if (currentGameMode != GameMode.SPECIAL_STAGE || !debugShortcutsEnabled()) {
             return;
@@ -1909,37 +1897,14 @@ public class GameLoop {
         return configService.getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED);
     }
 
-    private boolean userPauseInputAllowedForCurrentMode() {
-        return switch (currentGameMode) {
-            case LEVEL, TITLE_CARD, SPECIAL_STAGE, SPECIAL_STAGE_RESULTS, BONUS_STAGE -> true;
-            default -> false;
-        };
-    }
-
-    static BonusStageType resolveBonusStageDebugShortcut(InputHandler inputHandler) {
-        if (inputHandler == null || !inputHandler.isKeyPressed(GLFW_KEY_B)) {
-            return BonusStageType.NONE;
+    private void handleSpecialStageDebugKey() {
+        if (currentGameMode == GameMode.LEVEL) {
+            enterSpecialStage();
+        } else if (currentGameMode == GameMode.SPECIAL_STAGE) {
+            enterResultsScreen(false);
+        } else if (currentGameMode == GameMode.SPECIAL_STAGE_RESULTS) {
+            exitResultsScreen();
         }
-
-        boolean shift = inputHandler.isShiftDown();
-        boolean control = inputHandler.isControlDown();
-        boolean alt = inputHandler.isAltDown();
-        int activeModifierCount = (shift ? 1 : 0) + (control ? 1 : 0) + (alt ? 1 : 0);
-        if (activeModifierCount != 1) {
-            return BonusStageType.NONE;
-        }
-        if (shift) {
-            return BonusStageType.GUMBALL;
-        }
-        if (control) {
-            return BonusStageType.GLOWING_SPHERE;
-        }
-        return BonusStageType.SLOT_MACHINE;
-    }
-
-    public static ObjectSpawn resolveBonusStageBootstrapSpawn(BonusStageType type) {
-        return BonusStageBootstrapInstaller.resolveSpawn(
-                GameServices.currentOrBootstrapGameModule().getBonusStageProvider(), type);
     }
 
     /**
@@ -1958,166 +1923,16 @@ public class GameLoop {
         }
     }
 
-    /**
-     * Debug function: Teleports the player to the furthest right checkpoint in the level.
-     * Only works in LEVEL mode (END key is used for special stage completion in special stage mode).
-     */
-    private void teleportToLastCheckpoint() {
-        Level level = levelManager.getCurrentLevel();
-        if (level == null) {
-            return;
-        }
-
-        // Find the furthest right checkpoint (game-agnostic)
-        int checkpointId = GameServices.module().getCheckpointObjectId();
-        if (checkpointId == 0) {
-            LOGGER.info("DEBUG: Current game has no checkpoint object ID configured");
-            return;
-        }
-        ObjectSpawn lastCheckpoint = level.getObjects().stream()
-            .filter(spawn -> spawn.objectId() == checkpointId)
-            .max(Comparator.comparingInt(ObjectSpawn::x))
-            .orElse(null);
-
-        if (lastCheckpoint != null) {
-            int checkpointX = lastCheckpoint.x();
-            int checkpointY = lastCheckpoint.y();
-
-            String mainCode = resolveMainCharacterCode();
-            var sprite = spriteManager.getSprite(mainCode);
-                if (sprite instanceof AbstractPlayableSprite player) {
-                // Teleport player to checkpoint position
-                player.setX((short) checkpointX);
-                player.setY((short) checkpointY);
-                player.setXSpeed((short) 0);
-                player.setYSpeed((short) 0);
-                player.setGSpeed((short) 0);
-                player.setAir(false);
-                player.setRolling(false);
-
-                // Move camera to center on player (prevents pit death from camera mismatch)
-                int screenWidth = configService.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS);
-                int screenHeight = configService.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS);
-                int cameraX = checkpointX - (screenWidth / 2);
-                int cameraY = checkpointY - (screenHeight / 2);
-
-                // Clamp camera to reasonable range (floor at 0)
-                cameraX = Math.max(0, cameraX);
-                cameraY = Math.max(0, cameraY);
-
-                camera.setX((short) cameraX);
-                camera.setY((short) cameraY);
-
-                LOGGER.info("DEBUG: Teleported to checkpoint at (" + checkpointX + ", " + checkpointY +
-                    "), camera at (" + cameraX + ", " + cameraY + ")");
-            }
-        } else {
-            LOGGER.info("DEBUG: No checkpoints found in this level");
-        }
+    private boolean userPauseInputAllowedForCurrentMode() {
+        return switch (currentGameMode) {
+            case LEVEL, TITLE_CARD, SPECIAL_STAGE, SPECIAL_STAGE_RESULTS, BONUS_STAGE -> true;
+            default -> false;
+        };
     }
 
-    private void logCurrentPreviewCaptureOverride() {
-        if (camera == null || levelManager == null) {
-            return;
-        }
-        S1DataSelectImageGenerator.PreviewCapturePoint point =
-                S1DataSelectImageGenerator.previewCapturePointFromCamera(camera.getX(), camera.getY());
-        LOGGER.info("DEBUG: Preview capture override for zone "
-                + levelManager.getRomZoneId()
-                + " -> new PreviewCapturePoint("
-                + point.centreX()
-                + ", "
-                + point.centreY()
-                + ")");
-    }
-
-    /**
-     * Debug function: Immediately completes the special stage with emerald
-     * collected.
-     * Simulates successful completion with the ring requirement met.
-     * Press END key during special stage to trigger.
-     */
-    private void debugCompleteSpecialStageWithEmerald() {
-        if (currentGameMode != GameMode.SPECIAL_STAGE) {
-            return;
-        }
-
-        SpecialStageProvider ssProvider = getActiveSpecialStageProvider();
-
-        // Force emerald collection state
-        ssProvider.setEmeraldCollected(true);
-
-        // Get the ring count for this stage from the active provider
-        int stageIndex = ssProvider.getCurrentStage();
-        int ringRequirement = ssProvider.getDebugCompletionRingCount(stageIndex);
-
-        LOGGER.info("DEBUG: Completing Special Stage " + (stageIndex + 1) +
-                " with emerald (forcing " + ringRequirement + " rings)");
-
-        // Enter results screen with emerald collected and simulated ring count
-        enterResultsScreenWithDebugRings(true, ringRequirement);
-    }
-
-    /**
-     * Debug method to fail special stage and go directly to results screen.
-     * Press DEL key during special stage to trigger.
-     */
-    private void debugFailSpecialStage() {
-        if (currentGameMode != GameMode.SPECIAL_STAGE) {
-            return;
-        }
-
-        int stageIndex = getActiveSpecialStageProvider().getCurrentStage();
-        int smallRingCount = 15; // A small amount of rings to show ring bonus tally
-
-        LOGGER.info("DEBUG: Failing Special Stage " + (stageIndex + 1) +
-                " (with " + smallRingCount + " rings)");
-
-        // Enter results screen without emerald and with small ring count
-        enterResultsScreenWithDebugRings(false, smallRingCount);
-    }
-
-    /**
-     * Enters results screen with a specific ring count (for debug).
-     * Uses fade-to-white transition like the normal path.
-     */
-    private void enterResultsScreenWithDebugRings(boolean emeraldCollected, int ringsCollected) {
-        if (currentGameMode != GameMode.SPECIAL_STAGE) {
-            return;
-        }
-
-        // Don't start another fade if one is already in progress
-        FadeManager fadeManager = this.fadeManager;
-        if (fadeManager.isActive()) {
-            return;
-        }
-
-        // Store special stage results for the results screen
-        ssRingsCollected = ringsCollected;
-        ssEmeraldCollected = emeraldCollected;
-        ssStageIndex = getActiveSpecialStageProvider().getCurrentStage();
-
-        // Mark emerald as collected now (so it shows in results screen)
-        if (emeraldCollected) {
-            GameStateManager gsm = this.gameState;
-            gsm.markEmeraldCollected(ssStageIndex);
-            LOGGER.info("DEBUG: Collected emerald " + (ssStageIndex + 1) + "! Total: " + gsm.getEmeraldCount());
-        }
-
-        // Start fade-to-white, then show results when complete
-        GameLoopPlcLifecycle.startToWhite(resolveGameplayModeContext(), fadeManager, () -> {
-            doEnterResultsScreenDebug();
-        });
-
-        LOGGER.info("DEBUG: Starting fade-to-white to exit Special Stage");
-    }
-
-    /**
-     * Actually enters the results screen after fade-to-white completes (debug
-     * version).
-     */
-    private void doEnterResultsScreenDebug() {
-        doEnterResultsScreen();
+    public static ObjectSpawn resolveBonusStageBootstrapSpawn(BonusStageType type) {
+        return BonusStageBootstrapInstaller.resolveSpawn(
+                GameServices.currentOrBootstrapGameModule().getBonusStageProvider(), type);
     }
 
     /**
@@ -2761,7 +2576,7 @@ public class GameLoop {
     /**
      * Actually enters the results screen after fade-to-white completes.
      */
-    private void doEnterResultsScreen() {
+    void doEnterResultsScreen() {
         // Reset special stage provider
         SpecialStageProvider ssProvider = getActiveSpecialStageProvider();
         ssProvider.resetForResults();

@@ -153,6 +153,7 @@ the collaborator that owns it:
 | `LevelWaterCoordinator` | Water provider loading, dynamic water advancement, playable underwater state |
 | `LevelCheckpointCoordinator` | Checkpoint/respawn state, checkpoint restore, rewind checkpoint capture |
 | `LevelActTransitionExecutor` | ROM-aligned in-place act-transition reload choreography |
+| `LevelLostRingSpawnCoordinator` | Lost-ring scattering, the deferred spawn queue, and its dynamic-slot reservations |
 | `LevelTransitionCoordinator` | Transition request/consume state for acts, warps, title cards, respawns |
 | `LevelDebugRenderer` | Debug overlay rendering (collision, chunks, paths) |
 | `LevelGeometry` *(record)* | Immutable level dimension/boundary data |
