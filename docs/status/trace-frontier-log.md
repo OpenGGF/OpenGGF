@@ -61798,3 +61798,31 @@ to synthesize a POST phase on a VBLANK-only row.
   ("movie row" versus "production iterations since run start") should be
   settled against the native recorder's own definition first, not inferred
   from these two data points alone.
+
+## 2026-08-05 - Gap DPLC: contract settled from the recorder, two causes closed
+
+- The `movie_logical_frame` contract is now settled from the recorder rather
+  than inferred. `S1RunCaptureRunner`'s `rowsConsumed` counts EVERY BK2 movie
+  row from zero (lines 199-215) and `S1DynamicArtObserver`:483 replaces a gap
+  edge's frame with it, so a gap edge carries the physical movie row. The
+  lifecycle counted production iterations instead, losing a row for every
+  suppressed one. `DynamicArtLifecycleService.setMovieLogicalFrame` now takes
+  it, and `TraceSessionLauncher.preparePhysicalRow` states the row the driver
+  already holds.
+- The same read corrected the gap-edge index: the recorder keys its counter on
+  a dictionary of LOGICAL FRAME
+  (`S1DynamicArtObserver`:247-252), not on the gap. Two edges sharing a frame
+  are 0 and 1 while a later frame in the same gap restarts at 0. The per-gap
+  reset committed earlier gave the same answer only because each of these gaps
+  holds a single pair; it is now keyed per frame like the recorder.
+- Result: `run_gap.edge[N].movie_logical_frame` moves 8,748 -> 9,505 against a
+  recorded 9,715. Of the 967-frame decomposition recorded above, the 730-frame
+  origin and the 27-frame stall are both closed. The residual is exactly the
+  210-frame prelude placement.
+- SOLE REMAINING CAUSE: the engine runs the fresh-player prelude at the level
+  load (BK2 9,505) while the ROM runs its equivalent pass immediately before
+  `Level_MainLoop` (BK2 9,715), after a title card the engine finishes 107 rows
+  early -- engine 9,505-9,607 against the ROM's 9,505-9,741 load-to-gameplay
+  window, with the ROM's 26-frame `PaletteFadeIn` between its prelude and the
+  main loop. Moving the prelude to the title card's end needs that duration
+  with it, or it merely lands 108 rows early instead of 210.

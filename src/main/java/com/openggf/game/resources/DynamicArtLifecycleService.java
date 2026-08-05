@@ -74,7 +74,16 @@ public final class DynamicArtLifecycleService
     private int nextLogicalEdgeIndex;
     private int nextPublicationFrame;
     private int movieLogicalFrame;
-    private int nextGapEdgeIndex;
+    private boolean movieLogicalFrameSuppliedExternally;
+    /**
+     * Gap-edge numbering is per LOGICAL FRAME, not per gap. The recorder keys
+     * its counter on the edge's frame
+     * ("tools/bizhawk-headless/src/Recording/S1DynamicArtObserver.cs":247-252),
+     * so two edges sharing a frame are 0 and 1 while a later frame in the same
+     * gap restarts at 0.
+     */
+    private final Map<Integer, Integer> nextGapEdgeIndexByFrame =
+            new HashMap<>();
 
     private record ProductionArtProfile(
             int romArtBase,
@@ -317,12 +326,6 @@ public final class DynamicArtLifecycleService
             latest = publishBuffered(terminalFrame, true, alreadyPublished);
         }
         comparisonSegmentOpen = false;
-        // Entering a gap starts a fresh gap-edge sequence. The recorder numbers
-        // each transition gap's edges from zero -- both of the S1 emerald
-        // route's recorded pairs carry gap_edge_index 0 and 1 -- so a counter
-        // that only reset at run start reported the second gap's pair as 2 and
-        // 3 and diverged on a field nothing else was wrong with.
-        nextGapEdgeIndex = 0;
     }
 
     public void finishRun() {
@@ -583,6 +586,23 @@ public final class DynamicArtLifecycleService
     }
 
     /** Retires the S2 DMA FIFO at the production ProcessDMAQueue boundary. */
+    /**
+     * Supplies the physical movie row a gap edge should carry. The recorder
+     * stamps gap edges with the BK2 row it has consumed
+     * ("tools/bizhawk-headless/src/Recording/S1RunCaptureRunner.cs":199-215,
+     * whose {@code rowsConsumed} counts every movie row from zero, and
+     * S1DynamicArtObserver:483, which replaces a gap edge's frame with it).
+     * Counting production iterations instead loses a row for every suppressed
+     * one, so a driver that knows the row states it.
+     */
+    public void setMovieLogicalFrame(int movieRow) {
+        if (movieRow < 0) {
+            throw new IllegalArgumentException("movieRow must be nonnegative");
+        }
+        movieLogicalFrame = movieRow;
+        movieLogicalFrameSuppliedExternally = true;
+    }
+
     public void serviceProductionVBlank() {
         requireRunActive();
         if (s1Preparation != null) {
@@ -688,7 +708,9 @@ public final class DynamicArtLifecycleService
         if (comparisonSegmentOpen) {
             publishRow(nextPublicationFrame++, lagged);
         }
-        movieLogicalFrame++;
+        if (!movieLogicalFrameSuppliedExternally) {
+            movieLogicalFrame++;
+        }
     }
 
     private DynamicArtDiagnosticsSnapshot publishBuffered(
@@ -750,7 +772,8 @@ public final class DynamicArtLifecycleService
                 comparisonSegmentReserved,
                 nextTransferId, nextEdgeOrdinal,
                 logicalFrame, nextLogicalEdgeIndex, nextPublicationFrame,
-                movieLogicalFrame, nextGapEdgeIndex);
+                movieLogicalFrame,
+                nextGapEdgeIndexByFrame.getOrDefault(movieLogicalFrame, 0));
     }
 
     @Override
@@ -783,7 +806,13 @@ public final class DynamicArtLifecycleService
         nextLogicalEdgeIndex = snapshot.nextLogicalEdgeIndex();
         nextPublicationFrame = snapshot.nextPublicationFrame();
         movieLogicalFrame = snapshot.movieLogicalFrame();
-        nextGapEdgeIndex = snapshot.nextGapEdgeIndex();
+        // The snapshot carries the counter for the frame it was taken on,
+        // which is the only one a restore inside a gap can continue.
+        nextGapEdgeIndexByFrame.clear();
+        if (snapshot.nextGapEdgeIndex() > 0) {
+            nextGapEdgeIndexByFrame.put(
+                    movieLogicalFrame, snapshot.nextGapEdgeIndex());
+        }
     }
 
     @Override
@@ -810,7 +839,8 @@ public final class DynamicArtLifecycleService
         nextLogicalEdgeIndex = 0;
         nextPublicationFrame = 0;
         movieLogicalFrame = 0;
-        nextGapEdgeIndex = 0;
+        movieLogicalFrameSuppliedExternally = false;
+        nextGapEdgeIndexByFrame.clear();
     }
 
     public boolean isSegmentArmed() {
@@ -846,7 +876,9 @@ public final class DynamicArtLifecycleService
         DynamicArtGapTransition.GapEdge edge =
                 new DynamicArtGapTransition.GapEdge(
                         edgeOrdinal, transferId, phase, owner,
-                mappingFrame, movieLogicalFrame, nextGapEdgeIndex++, requests);
+                mappingFrame, movieLogicalFrame,
+                nextGapEdgeIndexByFrame.merge(movieLogicalFrame, 1, Integer::sum) - 1,
+                requests);
         gapTransitions.add(new DynamicArtGapTransition(edge, beforeOutstanding,
                 List.copyOf(ledger.keySet())));
     }

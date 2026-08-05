@@ -2417,6 +2417,14 @@ public final class TraceSessionLauncher {
                     @Override
                     public void preparePhysicalRow(TraceRunFrameDriver.Step row) {
                         activeRunDisposition = row.disposition();
+                        // Gap edges are stamped with the physical movie row, so
+                        // the driver states it rather than letting the lifecycle
+                        // infer it from production iterations it never runs
+                        // during a suppressed gap.
+                        if (dynamicArtSegmentGameplayMode != null) {
+                            dynamicArtSegmentGameplayMode.dynamicArtLifecycle()
+                                    .setMovieLogicalFrame(row.movieRow());
+                        }
                         Bk2FrameInput physical;
                         if (row.disposition()
                                 == TraceRunFrameDriver.Disposition.GAMEPLAY_SHARED) {
