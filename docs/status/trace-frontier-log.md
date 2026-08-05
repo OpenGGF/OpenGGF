@@ -61864,3 +61864,13 @@ to synthesize a POST phase on a VBLANK-only row.
   for S1) but from a later boundary that the card's exit position misses.
   Establish where the S1 completion edge is actually raised before moving the
   prelude again; the move is necessary but not sufficient on its own.
+
+- Concrete lead for the next attempt, found while chasing the missing
+  completion edge: `DynamicArtDecisionOwner.observe` calls
+  `lifecycle.completePlayerDplc(...)` guarded by `if (gameId == GameId.S1)`,
+  while `DynamicArtLifecycleService.completePlayerDplc` opens with
+  `if (gameId == GameId.S1 || !update.submitted()) return;`. The call is dead
+  as written -- one of the two guards is inverted. S1's completed edges
+  therefore come from somewhere else, and identifying that path is the
+  prerequisite for moving the prelude without losing the pair. `completeApplied`
+  has no callers outside the service, which narrows where to look.
