@@ -1646,14 +1646,27 @@ abstract class AbstractRunChainTest {
                 TraceRunReplayWalker.TerminalMovieTailPlan tail =
                         runCoordinator.terminalPlan();
                 if (tail != null) {
+                    // rowsToReplay counts rows, so tailStart + rowsToReplay is
+                    // the movie's frame COUNT -- one past the last row a cursor
+                    // can ever hold. Playback pins on its last valid row and
+                    // stops, so waiting for the count itself never returns:
+                    // this loop hung the whole class rather than failing it.
+                    // Drive until the cursor stops advancing, then prove it
+                    // stopped because the movie ended.
+                    int previousCursor = -1;
                     while (playback.getCursorFrame()
-                            < tail.tailStart() + tail.rowsToReplay()) {
+                                    < tail.tailStart() + tail.rowsToReplay()
+                            && playback.getCursorFrame() != previousCursor) {
+                        previousCursor = playback.getCursorFrame();
                         driveHeadlessTransitionRow(
                                 physicalRows,
                                 TraceRunFrameDriver.Disposition.TERMINAL_TAIL,
                                 loop, inputHandler, movie, playback, fixture,
                                 runCoordinator);
                     }
+                    assertEquals(movie.getFrameCount() - 1,
+                            playback.getCursorFrame(),
+                            "terminal tail must consume the movie to its last row");
                     assertEquals(tail.expectedMode(),
                             loop.getCurrentGameMode(),
                             "Complete movie must finish in the manifest-declared mode");

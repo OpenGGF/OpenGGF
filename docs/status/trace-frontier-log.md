@@ -61556,3 +61556,36 @@ to synthesize a POST phase on a VBLANK-only row.
   -Dtest=TestS1CompleteEmeraldVisualRun,TestS1CompleteEmeraldRunPrefix,TestTraceRunPlaybackCoordinator test`
   — 24 tests, 0 failures, 0 errors. Full default suite: 14,346 tests with the
   same 39-red set, no new failures.
+
+## 2026-08-05 - TestS1GhzMazeRoundTripChain hang, and the corrected return-load timing
+
+- `TestS1GhzMazeRoundTripChain#ghzMazeRoundTrip` did not fail slowly, it never
+  returned. `AbstractRunChainTest`'s terminal-tail drive looped
+  `while (playback.getCursorFrame() < tail.tailStart() + tail.rowsToReplay())`,
+  and `rowsToReplay` is `movieFrameCount - tailStart`, so the target IS the
+  frame count -- one past the last row a cursor can hold. Playback pins on its
+  last valid row and stops, so the condition can never go false. For this
+  fixture that is a wait for 9,093 against a cursor frozen at 9,092. The loop
+  now stops when the cursor stops advancing and asserts it stopped on the
+  movie's last row. The method runs in 3 seconds.
+- What it now reports is the same defect the complete run hits:
+  `run_tail.edge_count expected 2, actual 0`, the missing Sonic DPLC pair after
+  a special-stage return. Two independent S1 runs, one root cause.
+- CORRECTION to the entry above. The engine does not load GHZ2 before the
+  bridge; it loads it INSIDE the bridge, and the coordinator never forced that.
+  A `VisualRunReplayHarness` timeline of the complete run gives the engine's
+  actual sequence:
+  `8,705` bridge admitted (still SPECIAL_STAGE) - `8,773` SPECIAL_STAGE_RESULTS
+  - `9,264` load generation 2 -> 3 and TITLE_CARD - `9,367` LEVEL - `9,505`
+  bridge exhausted - `9,741` gameplay admitted.
+- So the ordering (results -> load -> title card -> level) is already right.
+  The load is ~451 rows EARLY: the ROM performs it at movie logical frame
+  ~9,715, inside the gap, while the engine performs it at 9,264, inside the
+  bridge, which is why its DPLC edges are never attributed to the gap. The
+  engine spends 559 rows between the special stage ending and the load
+  (68 in SPECIAL_STAGE, 491 in SPECIAL_STAGE_RESULTS); the ROM spends roughly
+  1,010. The next step is which of those two phases is short against the
+  disassembly -- a transition-timing port like the `Got_NextLevel` work above,
+  not an architecture change.
+- The harness now records a change timeline (mode, coordinator phase, segment,
+  level load generation) on `Result`, which is what produced the numbers above.

@@ -24,6 +24,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.file.Path;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -67,8 +68,16 @@ public final class VisualRunReplayHarness {
 
     public record Result(Outcome outcome, int steps, int sharedCursor,
                          TraceRunPlaybackCoordinator.Phase phase,
-                         int currentSegmentIndex) {
+                         int currentSegmentIndex, List<String> timeline) {
     }
+
+    /**
+     * One line per change of mode, coordinator phase, segment, or level load
+     * generation. A run is tens of thousands of steps and almost all of them
+     * are identical, so the interesting question -- what happened, in what
+     * order, at which physical row -- is answered by the changes alone.
+     */
+    private static final int TIMELINE_LIMIT = 400;
 
     /** Steps of context retained for an abort message. */
     private static final int TRACE_WINDOW = 12;
@@ -142,6 +151,8 @@ public final class VisualRunReplayHarness {
         finishRunLaunch(session);
 
         ArrayDeque<String> recent = new ArrayDeque<>();
+        List<String> timeline = new ArrayList<>();
+        String[] lastKey = {""};
         int steps = 0;
         boolean stalled = false;
         boolean reachedTarget = false;
@@ -149,6 +160,7 @@ public final class VisualRunReplayHarness {
             loop.step();
             steps++;
             record(recent, steps, session, loop);
+            recordTimeline(timeline, lastKey, steps, session, loop);
             rethrowIfAborted(session, recent);
             // Only meaningful once the title card has handed off and the run
             // coordinator exists; before that there is no session to stall.
@@ -175,7 +187,8 @@ public final class VisualRunReplayHarness {
                 : stalled ? Outcome.PLAYBACK_STALLED : Outcome.BUDGET_EXHAUSTED;
         Result result = new Result(outcome, steps,
                 GameServices.playbackDebug().getCursorFrame(),
-                coordinatorPhase(session), currentSegmentIndex(session));
+                coordinatorPhase(session), currentSegmentIndex(session),
+                List.copyOf(timeline));
         if (outcome == Outcome.PLAYBACK_STALLED) {
             throw new AssertionError("visual run stalled: BK2 playback stopped with "
                     + "the coordinator still on segment "
@@ -301,6 +314,32 @@ public final class VisualRunReplayHarness {
             return " errors=" + errors + " " + recent;
         } catch (ReflectiveOperationException e) {
             return " errors=?";
+        }
+    }
+
+    private static void recordTimeline(List<String> timeline, String[] lastKey,
+                                       int step, TraceSessionLauncher session,
+                                       GameLoop loop) {
+        String key = loop.getCurrentGameMode() + "|" + coordinatorPhase(session)
+                + "|" + currentSegmentIndex(session) + "|" + loadGeneration();
+        if (key.equals(lastKey[0]) || timeline.size() >= TIMELINE_LIMIT) {
+            return;
+        }
+        lastKey[0] = key;
+        timeline.add("step=" + step
+                + " cursor=" + GameServices.playbackDebug().getCursorFrame()
+                + " mode=" + loop.getCurrentGameMode()
+                + " phase=" + coordinatorPhase(session)
+                + " segment=" + currentSegmentIndex(session)
+                + " loadGen=" + loadGeneration());
+    }
+
+    private static String loadGeneration() {
+        try {
+            return String.valueOf(
+                    GameServices.level().getCompletedProductionLoadGeneration());
+        } catch (RuntimeException e) {
+            return "n/a";
         }
     }
 
