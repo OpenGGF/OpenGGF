@@ -2694,10 +2694,13 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                 SeamlessLevelTransitionRequest.builder(
                                 SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
                         // ROM loads AIZ act 2 resources here, but this is presented as
-                        // a seamless continuation (no title card transition).
+                        // a seamless continuation (no title card transition). The
+                        // live Load_Level continuation also re-enters the target
+                        // act's PLCKosM_AIZ LoadEnemyArt batch, so admit it immediately
+                        // through the normal provider pump rather than a title owner.
                         .targetZoneAct(levelManager.getCurrentZone(), 1)
                         .runtimeArtAdmissionPolicy(
-                                RuntimeArtAdmissionPolicy.PRESERVE_CURRENT)
+                                RuntimeArtAdmissionPolicy.IMMEDIATE)
                         // ROM: level stays active during the Kos decompression
                         // wait in AIZ1BGE_Finish — fire keeps rising and rendering.
                         // deactivateLevelNow(true) freezes the game loop, killing all

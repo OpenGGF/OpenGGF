@@ -35,7 +35,7 @@ The title manager already models the hold and child-retirement state and reaches
 
 `LevelActTransitionExecutor` reloads target-act standalone art, which records pending enemy archives, and currently calls `onTitleCardArtRetired()` whenever `showInLevelTitleCard` is false. The boolean describes immediate overlay presentation only. It does not prove that no retained results/title or transition-resource owner exists.
 
-CNZ and MGZ carry the Act 1 results lifecycle across the reload. The retained results object later mutates into `Obj_TitleCard`, and its next dispatch queues the target title parents. Enemy art must remain pending until that title owner reaches completion. ICZ has a different semantic owner: its pre-submitted terrain/module handoff must publish before target-act enemy archives enter the same FIFOs. LBZ likewise uses a false-overlay reload while a retained results/title owner controls admission. AIZ's false-overlay fire reload is the contrasting case: the ROM path does not call `LoadEnemyArt`, so the engine must preserve the current enemy set without registering a target batch.
+CNZ and MGZ carry the Act 1 results lifecycle across the reload. The retained results object later mutates into `Obj_TitleCard`, and its next dispatch queues the target title parents. Enemy art must remain pending until that title owner reaches completion. ICZ has a different semantic owner: its pre-submitted terrain/module handoff must publish before target-act enemy archives enter the same FIFOs. LBZ likewise uses a false-overlay reload while a retained results/title owner controls admission. AIZ's false-overlay fire reload is the contrasting presentation case, but its live `Load_Level` continuation re-enters the target act's `LoadEnemyArt` lifecycle and therefore owns a fresh `PLCKosM_AIZ` batch without displaying a title card. The batch is admitted immediately by the transition executor and submits through the normal provider pump.
 
 The request therefore needs an explicit, game-neutral runtime-art admission policy, separate from `showInLevelTitleCard`:
 
@@ -86,7 +86,7 @@ Every existing S3K `SeamlessLevelTransitionRequest` builder is assigned explicit
 
 | Builder | Overlay now | Policy | Sole owner and release point |
 |---|---:|---|---|
-| AIZ fire reload | no | `PRESERVE_CURRENT` | no new enemy batch or lease; `AIZ1BGE_FireTransition`/`AIZ1BGE_Finish` does not execute `LoadEnemyArt` and preserves the already loaded AIZ enemy set |
+| AIZ fire reload | no | `IMMEDIATE` | live `Load_Level` continuation admits the fresh `PLCKosM_AIZ` batch through the executor/provider boundary; no title owner is created |
 | CNZ Act 1 reload | no | `TITLE_OWNER` | production-preserved/recreated results owner publishes on next dispatch; title COMPLETE consumes lease |
 | ICZ Act 1 reload | no | `RESOURCE_HANDOFF_OWNER` | `IczSeamlessTransitionResourceHandoff` transfers lease; `publishTransferredIcz2Resources()` consumes after successful apply |
 | LBZ Act 1 reload | no | `TITLE_OWNER` | carried results owner publishes later Act 2 title; title COMPLETE consumes lease |
@@ -96,7 +96,7 @@ Every existing S3K `SeamlessLevelTransitionRequest` builder is assigned explicit
 
 No `TITLE_OWNER`/false-overlay request calls `onTitleCardPresentationSkipped()`: that method models the omitted standard initial-title owner, not a retained seamless-results lifetime. `PRESERVE_CURRENT` does not create, clear, replace, bind, or consume a lease. A source guard enumerates S3K request builders and fails if any relies on the default policy.
 
-The table is the final state, not an authorization to issue an unowned lease between commits. Infrastructure lands first with explicit, behavior-preserving intermediate assignments: CNZ, ICZ, and LBZ remain `IMMEDIATE`; MGZ remains `TITLE_OWNER` with its existing displayed overlay; HCZ/MHZ remain displayed `TITLE_OWNER`; AIZ moves to its independently proved `PRESERVE_CURRENT` behavior. An interim regression proves that `IMMEDIATE` only arms inside executor execution and submits at the same subsequent provider pump as the pre-lease code. CNZ, MGZ/LBZ, and ICZ each switch to the final policy in the same atomic commit that installs and tests the corresponding results/title or resource-handoff owner. The source guard requires explicit assignment throughout this migration.
+The table is the final state, not an authorization to issue an unowned lease between commits. Infrastructure lands first with explicit, behavior-preserving intermediate assignments: CNZ, ICZ, and LBZ remain `IMMEDIATE`; MGZ remains `TITLE_OWNER` with its existing displayed overlay; HCZ/MHZ remain displayed `TITLE_OWNER`; AIZ uses the independently proved `IMMEDIATE` live-reload owner. An interim regression proves that `IMMEDIATE` only arms inside executor execution and submits at the same subsequent provider pump as the pre-lease code. CNZ, MGZ/LBZ, and ICZ each switch to the final policy in the same atomic commit that installs and tests the corresponding results/title or resource-handoff owner. The source guard requires explicit assignment throughout this migration.
 
 ### CNZ late entry ring
 

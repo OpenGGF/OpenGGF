@@ -61725,3 +61725,45 @@ to synthesize a POST phase on a VBLANK-only row.
   `c3e8ddd34bf587540ca7d131fc68d371538d1a746da64c4eee3ec01f524948b7`, with
   no matching engine-submitted job. The next frontier is AIZ2 post-reload
   queue ownership/readiness.
+
+## 2026-08-05 — S3K AIZ post-reload enemy-art admission frontier
+
+- Worktree: repository root, branch `bugfix/s3k-traces`, parent frontier
+  `fd1030ebe`. No trace payloads were edited.
+- Root cause: the live AIZ `Load_Level` continuation re-enters the ROM's
+  `LoadEnemyArt` lifecycle after the act-2 reload, even though the fire path
+  displays no title card. `PRESERVE_CURRENT` refreshed only standalone
+  registrations and left the expected `PLCKosM_AIZ` batch unsubmitted. The
+  first missing work is the direct child at `0x36800E` (`ArtKosM_AIZ_MonkeyDude`);
+  its two module parents are the remaining AIZ badnik archives.
+- Fix: AIZ's reload request now uses the semantic `IMMEDIATE` admission policy.
+  The executor consumes the production lease during the live transition, and
+  the normal provider pump submits the ROM-backed enemy batch; no title-card
+  or trace-specific path is involved.
+- Focused validation passed:
+  `mvn -q -Dmse=off
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.game.sonic3k.events.TestSonic3kAIZEvents,com.openggf.tests.TestSonic3kActTransitionZoneFeatures,com.openggf.level.TestLevelSeamlessTransitionExecutor,com.openggf.game.sonic3k.TestSonic3kTitleCardTeardownModel'
+  test`
+- Clean authoritative standard-AIZ command:
+  `mvn -q -Dmse=off -Dtrace.context.diagnosticChars=full
+  -Dsurefire.argLine='-Xshare:off -Xmx6g'
+  -Dsurefire.forkCount=1 -DreuseForks=true
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace'
+  test`
+- Clean authoritative complete-run command:
+  `mvn -q -Dmse=off -Dtrace.context.diagnosticChars=full
+  -Dsurefire.argLine='-Xshare:off -Xmx6g'
+  -Dsurefire.forkCount=1 -DreuseForks=true
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay#replayMatchesTrace'
+  test`
+- Result: standard AIZ clears the prior raw `5543` direct completion `#36`
+  stop and reaches raw `8942`, direct completion `#47`, fingerprint
+  `c3e8ddd34bf587540ca7d131fc68d371538d1a746da64c4eee3ec01f524948b7`,
+  with no matching engine job. The complete-run lane clears raw `6346`,
+  direct completion `#35`, and reaches raw `12002`, direct completion `#46`,
+  with the same first-child fingerprint. Both replays remain fail-closed at
+  their next unsubmitted authority edge; no earlier comparator failure was
+  reported after the policy change.

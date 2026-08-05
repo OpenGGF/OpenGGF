@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K AIZ's live act-2 reload now admits the ROM-observed
+  `PLCKosM_AIZ` enemy batch through the immediate runtime-art owner. Standard
+  AIZ advances past direct completion `#36` at raw frame `5543` to `#47` at
+  raw frame `8942`; the complete-run lane advances past `#35` at raw frame
+  `6346` to `#46` at raw frame `12002`, without changing trace payloads.
 - Fix/Test: S3K AIZ now applies the act-2 `Load_Level` and coordinate-offset
   handoff inside the live background-event dispatch, matching the ROM's
   same-row reload visibility. The AIZ replay frontier advances from raw frame
