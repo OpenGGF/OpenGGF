@@ -16,6 +16,7 @@ import java.util.OptionalInt;
 public final class TraceRunVblankClock {
     private final TracePlaybackProfile profile;
     private final Map<Integer, SourceAnchor> levelSourceTails = new HashMap<>();
+    private final Map<Integer, Integer> presentationBridgeEntries = new HashMap<>();
 
     public TraceRunVblankClock(TracePlaybackProfile profile) {
         this.profile = Objects.requireNonNull(profile, "profile");
@@ -35,9 +36,62 @@ public final class TraceRunVblankClock {
             return;
         }
         levelSourceTails.put(segmentIndex, new SourceAnchor(
-                source,
-                TraceRunReplayWalker.sourceTailVblankAtBoundary(
-                        source, observedBk2Cursor, observedVblank)));
+                source, sourceTailVblank(
+                        segmentIndex, source, observedBk2Cursor, observedVblank)));
+    }
+
+    /**
+     * The clock a special stage's presentation bridge starts on. The bridge is
+     * the results screen the stage exits through: the engine plays every one of
+     * its rows, but no level loop runs on them, so the production counter never
+     * ticks and cannot be projected forward from. The value therefore comes from
+     * the level that entered the stage, plus one tick for each movie row between
+     * that level's tail and the bridge.
+     */
+    public OptionalInt presentationBridgeEntryTarget(
+            int sourceIndex,
+            TraceRunManifest.Segment source,
+            int bridgeIndex,
+            TraceRunManifest.Segment bridge) {
+        Objects.requireNonNull(source, "source");
+        Objects.requireNonNull(bridge, "bridge");
+        if (!profile.alignsStageResultsPresentationVblank()
+                || !"level".equals(source.kind())
+                || !"level".equals(bridge.kind())) {
+            return OptionalInt.empty();
+        }
+        SourceAnchor sourceAnchor = sourceAnchor(sourceIndex, source);
+        if (sourceAnchor == null) {
+            return OptionalInt.empty();
+        }
+        int target = Math.addExact(
+                sourceAnchor.tailVblank(),
+                TraceRunReplayWalker.presentationBridgeEntryVblankBudget(
+                        source, bridge));
+        presentationBridgeEntries.put(bridgeIndex, target);
+        return OptionalInt.of(target);
+    }
+
+    /**
+     * A bridge's own tail is derived, not observed: its recorded rows each
+     * carry a V-int except the profiled ones the ROM builds the results screen
+     * through with interrupts disabled.
+     */
+    private int sourceTailVblank(
+            int segmentIndex,
+            TraceRunManifest.Segment source,
+            int observedBk2Cursor,
+            int observedVblank) {
+        Integer bridgeEntry = presentationBridgeEntries.get(segmentIndex);
+        if (bridgeEntry != null) {
+            return Math.addExact(
+                    bridgeEntry,
+                    TraceRunReplayWalker.presentationBridgeVblankSpan(
+                            source,
+                            profile.stageResultsEntryNonAdvancingMovieRows()));
+        }
+        return TraceRunReplayWalker.sourceTailVblankAtBoundary(
+                source, observedBk2Cursor, observedVblank);
     }
 
     public OptionalInt levelDestinationTarget(

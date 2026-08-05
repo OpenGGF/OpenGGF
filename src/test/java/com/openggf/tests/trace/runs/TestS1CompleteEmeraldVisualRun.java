@@ -55,13 +55,14 @@ class TestS1CompleteEmeraldVisualRun {
     /**
      * Walks every compared row of the returned GHZ2 act, the route's SECOND
      * giant ring, all 4,337 rows of the special stage behind it, its results
-     * bridge, and the GHZ3 presentation bridge it returns through. The pin above stops the
-     * instant segment 3 is admitted, so it never reaches the act body; reaching
-     * segment 6 requires all 3,606 of GHZ2's rows (its last physical row is BK2
-     * 13,347) plus three later boundaries, so a self-pause anywhere inside them
-     * fails this instead.
+     * bridge, the GHZ3 presentation bridge it returns through, and then all
+     * 8,520 rows of the GHZ3 act itself -- its boss, its prison capsule, the
+     * animal window, and the end-of-act card. The pin above stops the instant
+     * segment 3 is admitted, so it never reaches an act body; this one stops
+     * only once segment 6 has published its LAST row, so a self-pause anywhere
+     * inside four boundaries and three acts fails this instead.
      * <p>
-     * Three defects live on this stretch. Row 107 of the GHZ2 act is its first
+     * Four defects live on this stretch. Row 107 of the GHZ2 act is its first
      * PLC completion that lands on an iteration held into a lag V-blank, where
      * the ROM's own {@code RunPLC} (docs/s1disasm/sonic.asm:3032) runs on the
      * lag closure rather than the row that completed the previous entry. The
@@ -70,16 +71,20 @@ class TestS1CompleteEmeraldVisualRun {
      * the provider still has loaded when the ring is touched. Inside the stage,
      * row 2,237's Sonic DPLC is the first observable consequence of an UP/DOWN
      * block that rewrote itself even when it could not change the rotation
-     * speed (09 Sonic in Special Stage.asm:853-862, 888-897).
+     * speed (09 Sonic in Special Stage.asm:853-862, 888-897). And the GHZ3 act
+     * is the first the run reaches through TWO results-screen bridges, so it is
+     * the first whose object V-blank clock had accumulated both bridges' worth
+     * of missing V-ints -- which de-phased the prison capsule's animal spawn
+     * and escape-direction gates and armed the end-of-act PLC nine rows early.
      */
     @Test
     void replaysTheSecondGiantRingAndTheSpecialStageBehindIt() throws Exception {
         VisualRunReplayHarness.Result result =
                 VisualRunReplayHarness.replay(
-                        RUN_DIR, VisualRunReplayHarness.stopAfterSegment(6));
+                        RUN_DIR, VisualRunReplayHarness.stopAfterSegmentBody(6));
 
-        assertTrue(result.sharedCursor() > 13_347,
-                "visual run stopped inside the returned GHZ2 act: " + result);
+        assertTrue(result.sharedCursor() > 27_238,
+                "visual run stopped inside the returned GHZ3 act: " + result);
         assertEquals(6, result.currentSegmentIndex(),
                 "visual run stalled before the returned GHZ3 act: " + result);
     }

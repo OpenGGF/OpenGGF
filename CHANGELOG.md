@@ -3,6 +3,25 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: a whole-run replay now carries the ROM object V-blank clock across a
+  special stage's results-screen presentation bridge instead of freezing it for
+  the bridge's whole length. The ROM's `VBlank_Exit` increments
+  `v_vblank_count` unconditionally (`docs/s1disasm/sonic.asm:684`), so every
+  movie row of the stage interior and of `SS_Finish`'s fade-out and results
+  screen carries a tick — but no level loop runs on a bridge row, and a bridge
+  is admitted with a level *presentation* identity, so the run's V-blank clock
+  applied no target there and handed the next act a frozen anchor. A new
+  `TracePlaybackProfile.stageResultsEntryNonAdvancingMovieRows` (Sonic 1: 7)
+  models the V-ints `SS_Finish` builds the results screen through with
+  interrupts disabled — `disable_ints / ClearScreen / NemDec Nem_TitleCard /
+  Hud_Base / enable_ints` (`docs/s1disasm/sonic.asm:3369-3383`) — so a bridge is
+  seeded from the level that entered the stage and its tail is derived from its
+  own recorded row count. On the S1 complete-emeralds run the GHZ3 act had been
+  arriving 1,587 ticks behind, which is 3 mod 8 and 19 mod 32 and so de-phased
+  both the prison capsule's `Pri_Animals` spawn gate and `Anml_ChkFloor`'s
+  `btst #4` escape-direction flip; the act now replays all 8,520 of its rows —
+  boss, capsule, animal window and end-of-act card — with no compared-field
+  error, against a first error at row 7,983 before.
 - Fix: a Special Stage UP/DOWN block now only rewrites itself as its counterpart
   when it actually changed the stage's rotation speed. `SonicSS_ChkUP` and
   `SonicSS_ChkDOWN` skip the `move.b #id_SS_DOWN/#id_SS_UP` rewrite with the

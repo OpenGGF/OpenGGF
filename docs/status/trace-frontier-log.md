@@ -62618,3 +62618,102 @@ to synthesize a POST phase on a VBLANK-only row.
   are already in the S1 complete-run fixture, and the RNG question was answered
   by reimplementing the ROM LFSR against the engine's own logged seeds rather
   than by recording a new stream.
+
+## 2026-08-05 - GHZ3 animal window closed: the presentation bridge's V-blank clock
+
+- **Frontier moved.** `TestS1CompleteEmeraldVisualRun`'s second lane went from
+  **3 errors at segment-6 row 7,983** (`ghz3_2`, BK2 26,702, on
+  `queue.s1_nemesis_plc.busy` / `prepared` / `remaining_work`) to **zero errors
+  across all 8,520 rows of the GHZ3 act** -- its boss, the prison capsule, the
+  whole animal window, and the end-of-act card. Commit on `develop` at
+  `38eb52ea3` plus this change.
+- Command: `mvn -Dmse=off -Ptrace-replay -Dsonic1.rom.path=s1.gen
+  -Dtest=TestS1CompleteEmeraldVisualRun test` -- **2 tests, green.**
+- **Cause: the run's object V-blank clock froze for every presentation-bridge
+  row.** Confirmed by joining the harness's per-step `getVblaCounter()` against
+  each segment's recorded `vblank_counter`, with the cursor's off-by-one
+  resolved (the value logged at cursor `C` is the state after row `C-1`, so it
+  compares against `v(C-1)`). Corrected that way, `ghz1` and `ghz2_2` were
+  already exact; the deficit was **-2 entering the first bridge and -795
+  leaving it**, and **-1,587** by `ghz3_2`. Three separate losses:
+  - the single BK2 gap row on each side of the uncompared special-stage
+    interior (BK2 4,975 and 8,704) -- one ROM V-int each, no engine tick;
+  - all 800 rows of the `ghz2` bridge, over which the ROM advances 793 (from
+    the value entering its first row to the value entering the row after its
+    last) and the engine advanced 0.
+  `applyRunDestinationVblankAdmission` skipped the bridge outright because a
+  bridge is admitted with `LevelPresentationIdentity`, not `LevelIdentity`, so
+  neither the interior-return nor the inter-level target ever applied; the
+  frozen tail was then handed to `levelDestinationTarget` verbatim.
+- **Fix.** `TracePlaybackProfile` gains
+  `stageResultsEntryNonAdvancingMovieRows` (S1 = **7**, other games -1/opt-out),
+  the V-ints `SS_Finish` builds the results screen through with interrupts
+  disabled -- `disable_ints / ClearScreen / NemDec Nem_TitleCard / Hud_Base /
+  enable_ints` (docs/s1disasm/sonic.asm:3369-3383) -- which never reach
+  `VBlank_Exit`'s unconditional `addq.l #1,(v_vblank_count).w` (sonic.asm:684).
+  The recording confirms the shape and the count: both bridges stall on exactly
+  rows 59-65 and 68 with a +2 on row 69, i.e. 7 lost over 799/797 row steps,
+  payload-fixed rather than route-dependent. `TraceRunVblankClock` seeds a
+  bridge from the level that entered the stage
+  (`presentationBridgeEntryVblankBudget` = movie rows strictly between the
+  source's tail anchor and the bridge's first row) and derives the bridge's own
+  tail as `entry + traceFrameCount - nonAdvancingRows`
+  (`presentationBridgeVblankSpan`) instead of reading the frozen production
+  counter. No fitted constant, no zone/route/frame predicate, and no trace field
+  enters gameplay -- the seed comes only from a production anchor plus manifest
+  row distances.
+- **Verified per-row.** With the fix, the engine's counter matches the recorded
+  `vblank_counter` on **every** row of `ghz1` (4,115), `ghz2_2` (3,606) and
+  `ghz3_2` (8,520) -- deficit histogram `{0: n}` for all three. The bridges stay
+  frozen by design; nothing reads the counter there.
+- **The three "further defects" the previous entry listed did not survive
+  re-measurement.** With the whole chain on the recorded clock (rather than only
+  `ghz3_2`'s seed scratch-forced), the burst row, the capsule animal spawn Y and
+  the `RandomNumber` stream all produce **no compared-field error at all** --
+  the act walks clean end to end. They were artefacts of measuring one segment's
+  phase in isolation while its inputs were still de-phased.
+- **New frontier: the GHZ3 -> MZ1 act boundary, and it is a ring-count bug.**
+  Segment 6 now publishes its last row and the run aborts in the transition gap
+  with `rowsConsumed must be 0 or 1` at BK2 27,469 (segment 7 `mz1` starts at
+  27,467). Measured with the guard temporarily relaxed: the engine never reaches
+  the boundary at all -- it spins the full 17,111-step transition cap because the
+  end-of-act card has not finished. The card's own cadence is right (`Got_Main`
+  at row 8,035, matching the recorded `object_appeared slot 24-29 id 0x3A`;
+  68-frame slide, 180-frame pre-tally, 180-frame post-tally), but its tally runs
+  **60 frames against the ROM's 57**: the engine holds **59 rings** at
+  `GotThroughAct` where the recording holds **56**, so `v_ringbonus` is 590
+  instead of 560 and `Got_Bonus` (docs/s1disasm/_incObj/3A Got Through
+  Card.asm:127-160) ticks three frames longer. The extra rings first appear at
+  `ghz3_2` row **3,643** (recorded 0, engine 1) and never re-converge.
+  `ToleranceConfig.DEFAULT` has `RingCountMode.DISABLED`, which is why 4,877
+  divergent rows pass the comparator -- run a ring-count-enabled probe rather
+  than trusting a green act.
+- **Pin.** `VisualRunReplayHarness` gains `stopAfterSegmentBody(n)`, which stops
+  once the coordinator has closed segment `n` and entered its transition gap.
+  Admission alone (`stopAfterSegment`) only proves the boundary *before* a
+  segment; the second lane now walks segment 6's whole body and asserts
+  `sharedCursor > 27,238`. Pinning at `stopAfterSegment(7)` is not yet possible
+  because of the ring frontier above.
+- Regression sweep (serial, JDK 21):
+  - `TestS1CompleteEmeraldVisualRun` both lanes green;
+    `TestS1CompleteEmeraldRunPrefix` (2), `TestTraceRunPlaybackCoordinator`
+    (21), `TestTraceRunReplayWalkerControlFlow` (37),
+    `TestTraceSessionLauncherRunBranch` (40), `TestTraceRunFrameDriver` (8),
+    `TestTracePlaybackProfile` (3) and `TestTraceRunVblankClock` (5) green.
+  - `TestS1GhzMazeRoundTripChain`'s presentation-bridge test green;
+    `ghzMazeRoundTrip` stays red on the same 8 `run_tail` fields with the same
+    values (`movie_logical_frame` 8,261 against the recorded 9,071).
+  - S1 `*TraceReplay` fleet under `-Ptrace-replay`, 30 classes: 27 green, the
+    same 3 reds (`Sbz3CompleteRun`, `Credits03Lz3`, `FzCompleteRun`).
+    `TestS1SpecialStageTraceReplay` green.
+  - Run chains: `TestS2EhzHalfpipeRoundTripChain` ("special stage exited with
+    3704 represented rows remaining in ss") and `TestS3kMegaRunChain`
+    ("Manifest validation failed for .../s3-knux-multibonus-ss") fail with the
+    same messages as before; `TestS3kBonusRoundTripChain` skips.
+  - Full default suite: 14,349 tests, **38 red** (26 failures + 12 errors),
+    matching the documented baseline. The five classes that fail near this
+    change (`TestGameLoop`, `TestArchUnitRules`,
+    `TestObjectPhysicsStandardizationGuard`, `TestZoneEventRuntimeAccessGuard`,
+    `TestTraceSessionLauncherProductionFailureCleanup`) were re-run as an
+    isolated subset on both trees and produce the identical 7 failures + 3
+    errors with and without the change.

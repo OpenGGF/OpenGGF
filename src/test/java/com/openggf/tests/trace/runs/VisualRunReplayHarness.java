@@ -90,12 +90,26 @@ public final class VisualRunReplayHarness {
      * one boundary, so a target segment lets a test pin the frontier it has
      * actually cleared instead of driving into the next unexplored one.
      */
-    public record Stop(int maxSteps, int untilSegmentIndex) {
+    public record Stop(int maxSteps, int untilSegmentIndex, boolean afterBody) {
+        public Stop(int maxSteps, int untilSegmentIndex) {
+            this(maxSteps, untilSegmentIndex, false);
+        }
     }
 
     /** Stops cleanly as soon as {@code segmentIndex} is admitted. */
     public static Stop stopAfterSegment(int segmentIndex) {
-        return new Stop(DEFAULT_MAX_STEPS, segmentIndex);
+        return new Stop(DEFAULT_MAX_STEPS, segmentIndex, false);
+    }
+
+    /**
+     * Stops once {@code segmentIndex} has published its LAST compared row --
+     * the coordinator has closed it and entered the transition gap. Admission
+     * alone proves only that the boundary before a segment works; this pins a
+     * lane on the segment's whole body without driving into the next
+     * unexplored boundary behind it.
+     */
+    public static Stop stopAfterSegmentBody(int segmentIndex) {
+        return new Stop(DEFAULT_MAX_STEPS, segmentIndex, true);
     }
 
     private VisualRunReplayHarness() {
@@ -180,7 +194,7 @@ public final class VisualRunReplayHarness {
             // Checked LAST, so a target that lands on the same step as a pause
             // or a stall reports the failure rather than a hollow success.
             if (stop.untilSegmentIndex() >= 0
-                    && currentSegmentIndex(session) >= stop.untilSegmentIndex()) {
+                    && reachedStopTarget(session, stop)) {
                 reachedTarget = true;
                 break;
             }
@@ -244,6 +258,18 @@ public final class VisualRunReplayHarness {
             TraceSessionLauncher session) {
         TraceRunPlaybackCoordinator coordinator = coordinator(session);
         return coordinator == null ? null : coordinator.phase();
+    }
+
+    private static boolean reachedStopTarget(
+            TraceSessionLauncher session, Stop stop) {
+        int segment = currentSegmentIndex(session);
+        if (!stop.afterBody()) {
+            return segment >= stop.untilSegmentIndex();
+        }
+        return segment > stop.untilSegmentIndex()
+                || (segment == stop.untilSegmentIndex()
+                        && coordinatorPhase(session)
+                                == TraceRunPlaybackCoordinator.Phase.TRANSITION_GAP);
     }
 
     private static int currentSegmentIndex(TraceSessionLauncher session) {

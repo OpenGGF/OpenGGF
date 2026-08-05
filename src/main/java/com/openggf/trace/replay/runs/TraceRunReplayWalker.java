@@ -739,6 +739,53 @@ public final class TraceRunReplayWalker {
         return movieRows;
     }
 
+    /**
+     * Calculates the VBlank ticks between a source level's tail anchor and the
+     * first row of the presentation bridge a special stage exits through.
+     *
+     * <p>The ROM's V-int increment is unconditional
+     * ({@code VBlank_Exit: addq.l #1,(v_vblank_count).w},
+     * docs/s1disasm/sonic.asm:684) and runs after whichever routine the mode
+     * table dispatched, {@code VBlank_SpecialStage} included — so every movie
+     * row of the uncompared stage interior carries exactly one tick. An anchor
+     * is the value in effect ENTERING the row after the source's final row, and
+     * the target is the value entering the bridge's first row, so the budget is
+     * the rows strictly between them.
+     */
+    public static int presentationBridgeEntryVblankBudget(
+            TraceRunManifest.Segment sourceLevel,
+            TraceRunManifest.Segment bridge) {
+        if (sourceLevel.traceFrameCount() <= 0) {
+            throw new IllegalArgumentException("source level must contain recorded frames");
+        }
+        int sourceFinalRow = sourceLevel.bk2FrameOffset()
+                + sourceLevel.traceFrameCount() - 1;
+        int movieRows = bridge.bk2FrameOffset() - sourceFinalRow - 1;
+        if (movieRows < 0) {
+            throw new IllegalArgumentException(
+                    "presentation bridge precedes source level tail");
+        }
+        return movieRows;
+    }
+
+    /**
+     * Calculates the VBlank ticks a presentation bridge represents, from the
+     * value entering its first row to the value entering the row after its
+     * last. Every recorded row carries a tick except the profiled ones the ROM
+     * spends building the results screen with interrupts disabled.
+     */
+    public static int presentationBridgeVblankSpan(
+            TraceRunManifest.Segment bridge,
+            int nonAdvancingMovieRows) {
+        if (nonAdvancingMovieRows < 0) {
+            throw new IllegalArgumentException("frame counts must be non-negative");
+        }
+        if (bridge.traceFrameCount() <= 0) {
+            throw new IllegalArgumentException("bridge must contain recorded frames");
+        }
+        return Math.max(0, bridge.traceFrameCount() - nonAdvancingMovieRows);
+    }
+
     /** Projects a source-tail VBlank from the observed playback cursor. */
     public static int sourceTailVblankAtBoundary(
             TraceRunManifest.Segment sourceLevel,

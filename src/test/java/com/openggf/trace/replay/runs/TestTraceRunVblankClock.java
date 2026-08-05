@@ -52,6 +52,48 @@ class TestTraceRunVblankClock {
                         0, source, returned).orElseThrow());
     }
 
+    /**
+     * The committed emerald route's first results-screen bridge, at its real
+     * manifest rows: ghz1 ends at BK2 4,974, the bridge starts at 8,705 and
+     * runs 800 rows, and ghz2's gameplay resumes at 9,741. The recorded ROM
+     * clock is 0x1234 entering BK2 4,975, 0x20C7 on the bridge's first row and
+     * 0x24C6 on ghz2's -- so the bridge is entered on 0x20C6, leaves on 0x23DF,
+     * and hands ghz2 0x24C5 to tick into 0x24C6.
+     */
+    @Test
+    void aPresentationBridgeCarriesTheClockItsOwnRowsCouldNotTick() {
+        TraceRunManifest.Segment ghz1 = level("ghz1", 860, 4_115, 1);
+        TraceRunManifest.Segment bridge = level("ghz2", 8_705, 800, 2);
+        TraceRunManifest.Segment ghz2 = level("ghz2_2", 9_741, 3_606, 2);
+        TraceRunVblankClock clock = new TraceRunVblankClock(
+                TracePlaybackProfile.SONIC_1);
+
+        clock.captureLevelSourceTail(0, ghz1, 4_975, 0x1234);
+        assertEquals(0x20C6,
+                clock.presentationBridgeEntryTarget(0, ghz1, 2, bridge)
+                        .orElseThrow());
+
+        // The bridge's own production counter never ticks, so its observed
+        // tail is the value it was seeded with -- the derived span must not
+        // consult it.
+        clock.captureLevelSourceTail(2, bridge, 9_504, 0x20C6);
+        assertEquals(0x24C5,
+                clock.levelDestinationTarget(2, bridge, ghz2, 0).orElseThrow());
+    }
+
+    @Test
+    void disabledProfilesNeverSeedAPresentationBridge() {
+        TraceRunManifest.Segment source = level("act1", 10, 20, 1);
+        TraceRunManifest.Segment bridge = level("bridge", 60, 20, 2);
+        TraceRunVblankClock clock = new TraceRunVblankClock(
+                TracePlaybackProfile.DISABLED);
+
+        clock.captureLevelSourceTail(0, source, 30, 1234);
+
+        assertTrue(clock.presentationBridgeEntryTarget(0, source, 1, bridge)
+                .isEmpty());
+    }
+
     private static TraceRunManifest.Segment level(
             String dir, int offset, int frames, int act) {
         return new TraceRunManifest.Segment(

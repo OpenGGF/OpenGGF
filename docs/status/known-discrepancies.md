@@ -1435,15 +1435,29 @@ trace `VBLANK_ONLY` / `PLAYABLE_ANIMATION_ONLY`) calls
 `ObjectManager.advanceVblaCounter()` exactly once. `TestVblaCounterVBlankInvariant`
 pins the single mutation statement and the per-row tick counts.
 
-Two row kinds deliberately diverge and **must not be "fixed" casually**:
+Three row kinds diverge:
 
-- **PAUSE rows.** The ROM's pause loop still runs the V-int, so the ROM counter
-  advances while paused; the engine's does not.
-- **Seamless-boundary LAG rows.** These service `LevelFrameStep.serviceVBlankOnly`
-  without ticking the counter.
+- **PAUSE rows** (deliberate). The ROM's pause loop still runs the V-int, so the
+  ROM counter advances while paused; the engine's does not.
+- **Seamless-boundary LAG rows** (deliberate). These service
+  `LevelFrameStep.serviceVBlankOnly` without ticking the counter.
+- **Special-stage results-screen presentation rows** (modelled around, not
+  fixed). A trace run's stage-exit presentation bridge plays every recorded row
+  of `SS_Finish`'s fade-out and the results screen, but no level loop runs on
+  any of them, so the production counter is frozen for the whole segment while
+  the ROM's keeps ticking. This one is **not** unobservable: measured on the
+  `s1-sonic-complete-withemeralds` route, the engine reached GHZ3 act 2 with a
+  1,587-tick deficit, which is 3 mod 8 and 19 mod 32 and so de-phased both the
+  prison capsule's `Pri_Animals` spawn gate and `Anml_ChkFloor`'s `btst #4`
+  escape-direction flip. `TraceRunVblankClock` now seeds the bridge from the
+  level that entered the stage and derives the bridge's own tail from
+  `TracePlaybackProfile.stageResultsEntryNonAdvancingMovieRows` (S1: the seven
+  V-ints `SS_Finish` builds the results screen through with interrupts
+  disabled, docs/s1disasm/sonic.asm:3369-3383), so every gameplay segment after
+  a bridge is back on the recorded clock. The bridge's own rows remain frozen;
+  nothing observes the counter there.
 
-Both are unobservable against the currently recorded traces -- the engine's
-counter matches the recorded ROM value every frame on the probed traces.
+The first two are unobservable against the currently recorded traces.
 Closing either divergence is a phase change, not a refactor: the counter is the
 `vblaCounter` argument handed to every object instance each frame, so a one-tick
 shift moves spilled-ring floor-probe cadence in all three games, the S3K slot

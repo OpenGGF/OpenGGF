@@ -1758,8 +1758,12 @@ public final class TraceSessionLauncher {
     void applyRunDestinationVblankAdmission(
             DestinationAdmissionReceipt receipt,
             ObjectManager objects) {
-        if (runVblankClock == null
-                || !(receipt.identity()
+        if (runVblankClock == null) {
+            return;
+        }
+        boolean presentation = receipt.identity()
+                instanceof DestinationAdmissionReceipt.LevelPresentationIdentity;
+        if (!presentation && !(receipt.identity()
                         instanceof DestinationAdmissionReceipt.LevelIdentity)) {
             return;
         }
@@ -1772,6 +1776,11 @@ public final class TraceSessionLauncher {
         }
         TraceRunManifest.Segment previous =
                 runSegments.get(destinationIndex - 1).segment();
+        if (presentation) {
+            applyRunPresentationBridgeVblankAdmission(
+                    destinationIndex, destination, previous, objects);
+            return;
+        }
         if ("level".equals(previous.kind())) {
             runVblankClock.levelDestinationTarget(
                     destinationIndex - 1, previous, destination,
@@ -1790,6 +1799,36 @@ public final class TraceSessionLauncher {
         runVblankClock.uncomparedInteriorReturnTarget(
                 sourceIndex,
                 runSegments.get(sourceIndex).segment(),
+                destination).ifPresent(objects::initVblaCounter);
+    }
+
+    /**
+     * Seeds the object VBlank clock a special stage's results-screen bridge
+     * plays on. Nothing on that bridge runs a level loop, so the production
+     * counter is frozen for the whole of it and the level after it would
+     * otherwise inherit an anchor short by the stage interior and the bridge
+     * together. The seed derives only from the level that entered the stage and
+     * the manifest's movie-row distance; the bridge's own tail is derived by
+     * {@link TraceRunVblankClock} from the game's profiled non-advancing rows.
+     */
+    private void applyRunPresentationBridgeVblankAdmission(
+            int destinationIndex,
+            TraceRunManifest.Segment destination,
+            TraceRunManifest.Segment previous,
+            ObjectManager objects) {
+        if (!"special_stage".equals(previous.kind())) {
+            return;
+        }
+        TraceRunManifest.Transition entryBoundary =
+                runSegments.get(destinationIndex - 1).entryBoundary();
+        if (entryBoundary == null) {
+            return;
+        }
+        int sourceIndex = entryBoundary.fromSegment();
+        runVblankClock.presentationBridgeEntryTarget(
+                sourceIndex,
+                runSegments.get(sourceIndex).segment(),
+                destinationIndex,
                 destination).ifPresent(objects::initVblaCounter);
     }
 
