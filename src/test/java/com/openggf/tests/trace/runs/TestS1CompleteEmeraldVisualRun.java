@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Runs the committed S1 emerald route through the production visual-session
@@ -19,6 +20,9 @@ class TestS1CompleteEmeraldVisualRun {
     private static final Path RUN_DIR = Path.of(
             "src", "test", "resources", "traces", "s1", "runs",
             "s1-sonic-complete-withemeralds");
+
+    /** Enough steps to clear segment 3's terminal physical row (BK2 13,347). */
+    private static final int GHZ2_ACT_BODY_STEPS = 13_000;
 
     @AfterEach
     void tearDown() {
@@ -49,5 +53,29 @@ class TestS1CompleteEmeraldVisualRun {
 
         assertEquals(3, result.currentSegmentIndex(),
                 "visual run stalled before the GHZ2 return bridge: " + result);
+    }
+
+    /**
+     * Walks every compared row of the returned GHZ2 act. The segment's own last
+     * physical row is BK2 13,347, so a budget past it proves no row inside the
+     * act self-paused the session.
+     * <p>
+     * The pin above stops the instant segment 3 is admitted, so it never
+     * reaches the act body. This one does: row 107 is the act's first PLC
+     * completion that lands on an iteration held into a lag V-blank, where the
+     * ROM's own {@code RunPLC} (docs/s1disasm/sonic.asm:3032) runs on the lag
+     * closure rather than the row that completed the previous entry. The budget
+     * deliberately stops inside the following transition gap, whose giant-ring
+     * boundary is a separate open frontier.
+     */
+    @Test
+    void replaysEveryComparedRowOfTheReturnedGhz2Act() throws Exception {
+        VisualRunReplayHarness.Result result =
+                VisualRunReplayHarness.replay(RUN_DIR, GHZ2_ACT_BODY_STEPS);
+
+        assertTrue(result.sharedCursor() > 13_347,
+                "visual run stopped inside the returned GHZ2 act: " + result);
+        assertEquals(3, result.currentSegmentIndex(),
+                "visual run left segment 3 unexpectedly: " + result);
     }
 }

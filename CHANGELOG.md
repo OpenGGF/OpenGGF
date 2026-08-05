@@ -3,6 +3,18 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: a main-loop iteration held across a lag V-blank now runs its loop-tail
+  PLC preparation on the closure that consumed the lag V-blank, not on the row
+  that closed the previous entry. S1's `RunPLC` (`sonic.asm:3032`) sits behind
+  every expensive call in `Level_MainLoop` — `ExecuteObjects` (3010),
+  `DeformLayers` (3025), `BuildSprites` (3028), `ObjPosLoad` (3029),
+  `PaletteCycle` (3031) — and an iteration that has not reached the loop top's
+  V-blank-routine re-arm (3000) takes `VBlank_Lag` (`sonic.asm:709`), so it has
+  not reached `RunPLC` either. The engine armed the next queue head on the row
+  whose V-blank finished the previous entry, one represented closure early. On
+  the S1 complete-emeralds run the returned GHZ2 act's frame 107 goes green on
+  `queue.s1_nemesis_plc.prepared` / `remaining_work` / `queued_fingerprints`
+  and the act now replays all 3,606 of its rows.
 - Fix: a level's staged player DPLC transfer is now placed on the ROM's counted
   pre-main-loop tail instead of on the title card's release. S1's `Level:`
   routine stages Sonic's tiles in the `Level_LoadObj` object pass and then

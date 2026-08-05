@@ -312,6 +312,9 @@ public final class LiveTraceComparator implements PlaybackFrameObserver, TraceHu
                 ? trace.getFrame(preparedRowPolicy.traceIndex() - 1) : null;
         boolean vblankStarved =
                 TraceReplayBootstrap.isVblankStarvedIterationForReplay(previous, current);
+        TraceFrame next = preparedRowPolicy.traceIndex() + 1 < trace.frameCount()
+                ? trace.getFrame(preparedRowPolicy.traceIndex() + 1) : null;
+        TraceReplayBootstrap.markIterationHeldIntoNextRowForReplay(current, next);
         if (!preparedRowPolicy.productionPublicationClaim()) {
             pendingVblankStarvedProductionMarker |= vblankStarved;
             return;

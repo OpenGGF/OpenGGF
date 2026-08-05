@@ -144,6 +144,44 @@ with the Nemesis decoder cursor; preserve the original descriptor by observing
 the lifecycle before preparation rather than guessing it from an end-frame
 sample.
 
+### An S1/S2 lag row carries the held iteration's `RunPLC`
+
+On every ordinary row the level V-blank services its patterns and the loop
+tail's `RunPLC` arms the next head, and both are visible in the same
+end-of-frame sample: a completion row shows the *next* entry prepared with its
+full pattern count, never `prepared=false`. The one exception is a row whose
+iteration did not finish. `Level_MainLoop` re-arms `v_vblank_routine` at its top
+(docs/s1disasm/sonic.asm:3000) and bumps `v_framecount` in the instruction after
+`WaitForVBlank` returns (3001-3002), so a recorded row where `vblank_counter`
+advanced but `gameplay_frame_counter` did not is `VBlank_Lag` (sonic.asm:709)
+fired *inside* the previous row's iteration. `RunPLC` (3032) sits behind
+`ExecuteObjects` (3010), `DeformLayers` (3025), `BuildSprites` (3028),
+`ObjPosLoad` (3029) and `PaletteCycle` (3031) — all of the loop's cost — with
+only `OscillateNumDo`, `SynchroAnimate` and `SignpostArtLoad` (3033-3035) after
+it, so a held iteration has not reached `RunPLC` either and arms the next head
+on the lag closure instead. Modelled as
+`TraceExecutionModel.isIterationHeldIntoNextRow` plus
+`PlcFrameLifecycleCoordinator.markRepresentedIterationDefersLoopTailPreparation`.
+
+The shape is rare: across every audited fixture in the repo there is exactly one
+such row (`s1/runs/s1-sonic-complete-withemeralds/ghz2_2` frame 107). Every
+other `busy && !prepared` row is the `SignpostArtLoad` case, where the level
+loop's tail submits *after* `RunPLC` so the work is only armed the next row.
+This query finds both classes in any fixture:
+
+```bash
+python3 -c "
+import gzip,json,sys
+q={};lag={}
+for line in gzip.open(sys.argv[1],'rt'):
+    d=json.loads(line); f=d.get('frame')
+    if f is None or f<0: continue
+    if d.get('event')=='load_queue_state': q[f]=d
+    elif d.get('event')=='lag_state': lag[f]=d.get('lagged')
+print([(f,'lag-next' if lag.get(f+1) else 'loop-tail-submit')
+       for f in sorted(q) if q[f]['busy'] and not q[f]['prepared']])" <dir>/aux_state.jsonl.gz
+```
+
 ## Dynamic-Art Reports and Routing
 
 Native audited fixture captures must use `--load-queue-state`. Confirm

@@ -62163,3 +62163,123 @@ to synthesize a POST phase on a VBLANK-only row.
     Exception" — a "Recorder coverage: S3K only" subsection, since the
     contract's cross-game wording describes what is permitted, not what the
     recorder implements.
+
+## 2026-08-05 - Gap DPLC lane: the held iteration's RunPLC belongs to the lag closure
+
+- Command: `mvn -Dmse=off -Ptrace-replay -Dtest=TestS1CompleteEmeraldVisualRun
+  -Dsonic1.rom.path=s1.gen test`, with the pin temporarily raised to
+  `stopAfterSegment(4)` to reach the defect (the committed pin at
+  `stopAfterSegment(3)` stops the instant segment 3 is *admitted*, at harness
+  step 8,985, and never enters the act body — which is why it was green while
+  the windowed session was not).
+- Before: **3 errors**, all at comparison frame **107** of segment 3
+  (returned GHZ2, BK2 9,741 + 107 = 9,848, harness step 9,093), then the
+  documented self-pause cascade abort at row 108
+  (`dynamic-art row 108 was not published atomically after production`):
+  - `queue.s1_nemesis_plc.prepared` expected `false`, actual `true`
+  - `queue.s1_nemesis_plc.remaining_work` expected `-1`, actual `14`
+  - `queue.s1_nemesis_plc.queued_fingerprints` expected
+    `e21297d4…f910e444`, actual empty
+- After: **0 errors through the whole of segment 3**. The act replays all 3,606
+  of its rows and the run walks on through the following transition gap; the
+  new first failure is a different, unrelated frontier — `transition step cap
+  17111 exceeded for giant_ring from segment 3 at BK2 cursor 30458`, i.e. the
+  segment-3 -> segment-4 giant-ring boundary is never latched. **The pin
+  therefore stays at 3**, because the pin measures the segment index admitted
+  and segment 4 still is not; the frontier moved *inside* segment 3, from row
+  107 to its terminal row 3,605.
+- Root cause, and the evidence that fixed the attribution. The fixture makes
+  the ROM's cadence unambiguous: on every ordinary row the level V-blank
+  services 3 patterns and the loop tail's `RunPLC` arms the next head, both
+  visible in the same sample (e.g. ghz2_2 rows 100 -> 101: `rem=3` on the last
+  entry, then `rem=18` on the next entry unserviced; ghz2 rows 80 -> 81 the
+  same). Row 107 is the one row in the entire run where the completion and the
+  arming split across two rows — and row 108 is a **lag** row
+  (`lag_state.lagged=true`, `lagcount` 471 -> 472; `gameplay_frame_counter`
+  holds at `0x006C` while `vblank_counter` goes `0x2531` -> `0x2532`).
+- The disassembly explains why that split is deterministic, not luck.
+  `Level_MainLoop` re-arms `v_vblank_routine` at its top
+  (docs/s1disasm/sonic.asm:3000) and bumps `v_framecount` in the instruction
+  after `WaitForVBlank` returns (3001-3002), so a V-blank taken with the
+  gameplay counter unchanged is `VBlank_Lag` (sonic.asm:709) fired *inside* the
+  previous row's iteration. `RunPLC` (3032) sits behind every expensive call in
+  that iteration — `ExecuteObjects` (3010), `DeformLayers` (3025),
+  `BuildSprites` (3028), `ObjPosLoad` (3029), `PaletteCycle` (3031) — and only
+  `OscillateNumDo`, `SynchroAnimate` and `SignpostArtLoad` (3033-3035) separate
+  it from the re-arm at 3000. An iteration that had already reached `RunPLC`
+  would have re-armed the routine within a few hundred cycles, so the V-blank
+  that fired would not have been a lag one. The ROM's `RunPLC` for a held
+  iteration therefore runs on the closure that consumes the lag V-blank.
+  `RunPLC`'s own `tst.w (v_plc_patternsleft).w` gate (sonic.asm:1381-1382) and
+  `ProcessPLC_ShiftCue` (sonic.asm:1494+) are unchanged by this — the shift
+  still happens in the V-blank that finishes the entry; only the arming moves.
+- Fixture-wide check before implementing, because the observation is a single
+  row: across every audited fixture in the repo (all 34 S1 and 17 S2 dirs
+  advertising `load_queue_state_per_frame`) there are 19 `busy && !prepared`
+  rows in the emerald run and exactly one — ghz2_2 row 107 — whose next row is
+  a lag row. The other 18 are the already-modelled `SignpostArtLoad` case,
+  where the ROM's level-loop tail submits *after* `RunPLC`
+  (sonic.asm:3032-3035; engine `LevelFrameStep` step 6b). No S2 or S3K fixture
+  contains the shape at all, which is why the change is observable on exactly
+  one row of one fixture.
+- Fix, in three pieces, with no game name, zone, route or frame number anywhere
+  in the predicate:
+  1. `TraceExecutionModel.isIterationHeldIntoNextRow(current, next)` — the
+     structural classification, a sibling of the existing
+     `isVblankStarvedRow`: a V-blank elapsed but the gameplay counter did not.
+  2. `PlcFrameLifecycleCoordinator.markRepresentedIterationDefersLoopTailPreparation()`
+     holds the row's `prepareAfterLoop` instead of running it (still marking
+     the boundary so `finish()` keeps its one-preparation-per-closure
+     invariant), and releases it on the next closure that is not itself held —
+     so a stall spanning several lag rows arms on the last of them.
+  3. `LiveTraceComparator.activatePreparedProductionMarker` arms it from the
+     row's own recorded counters, the same input and the same call site as the
+     existing `markRepresentedIterationWithoutVblank`.
+  No hardware-timing stream is involved and none exists for this fixture; the
+  input is the same recorded row-shape classification the run replay already
+  consumes to suppress gameplay on lag rows.
+- Coverage: `TestS1CompleteEmeraldVisualRun` gains
+  `replaysEveryComparedRowOfTheReturnedGhz2Act`, a 13,000-step budget that
+  walks past segment 3's terminal physical row (BK2 13,347) and stops inside
+  the following gap. Verified to fail on the unmodified tree with exactly the
+  three frame-107 errors above. `TestTraceExecutionModel` and
+  `TestPlcFrameLifecycleCoordinator` gain unit coverage of the predicate and of
+  the hold/release/one-shot behaviour.
+- Verification (serial; JDK 21; `target/surefire-reports` cleared before the
+  suite run):
+  - `TestS1CompleteEmeraldVisualRun` — both tests green at the committed pin 3.
+  - `TestS1CompleteEmeraldRunPrefix`, `TestTraceRunPlaybackCoordinator`, and
+    `TestS1GhzMazeRoundTripChain`'s presentation-bridge test green.
+    `TestS1GhzMazeRoundTripChain.ghzMazeRoundTrip` stays red on the same 8
+    `run_tail` fields with the same values (`movie_logical_frame` 8,261 against
+    the recorded 9,071) as before this change — its own defect is unrelated.
+  - S1 `*TraceReplay` fleet under `-Ptrace-replay`, 30 classes: 27 green, the
+    same 3 reds (`FzCompleteRun`, `Credits03Lz3`, `Sbz3CompleteRun`).
+    `Sbz3CompleteRun`'s `cannot mutate queued PLC entries while the decoder is
+    active` (the known unconditional `SignpostArtLoad` submission in
+    `Sonic1LevelEventManager.updateAtLevelLoopTail`) was re-measured on the
+    unmodified tree and is byte-identical.
+  - Run chains: `TestS2EhzHalfpipeRoundTripChain` ("special stage exited with
+    3704 represented rows remaining in ss") and `TestS3kMegaRunChain`
+    ("trace_schema 5 segment omits dynamic-art capability") fail with
+    byte-identical messages on the unmodified tree; `TestS3kBonusRoundTripChain`
+    skips on both.
+  - Full default suite: 14,346 tests, **39 red** (27 failures + 12 errors). The
+    seven classes that could plausibly be attributed to this change —
+    `Sonic2SpecialStageBootstrapCadenceTest`, `TestGameLoop`,
+    `TestRewindTorture`, `TestTraceSessionLauncherProductionFailureCleanup`,
+    `TestArchUnitRules`, `TestObjectPhysicsStandardizationGuard`,
+    `TestZoneEventRuntimeAccessGuard` — were re-run in isolation on both trees
+    and produce the **identical** 22-test failing set (181 run, 18 failures,
+    4 errors) with and without the change. The remainder
+    (`TestDisplayAspectResolution`, `TestTornadoObjectInstance`,
+    `TestWfzTornadoThrusterRendering`, `TestS3kCnz*`,
+    `TestMhzMushroomParachuteObjectInstance`, `TestS1PushBlockSideContact`,
+    `TestS1GhzBossGraphRewind`) are unrelated to the PLC lifecycle and are the
+    documented order flakes.
+- Next frontier for this lane: the giant-ring boundary out of segment 3. The
+  visual run walks ~17,100 steps of transition gap from BK2 13,347 without the
+  probe latching, then aborts on the transition step cap. Segment 4 is the
+  special stage at BK2 13,348; the run does reach `SPECIAL_STAGE`,
+  `SPECIAL_STAGE_RESULTS`, `TITLE_CARD` and `LEVEL` modes inside that gap, so
+  the modes happen but the coordinator never admits the segment.
