@@ -61929,3 +61929,38 @@ to synthesize a POST phase on a VBLANK-only row.
   `13986` (`tails_air`, expected `0x0001`, actual `0x0000`). The report
   contains `1130` errors and `0` warnings; no trace payloads were changed.
   The next frontier is the AIZ Tails airborne-state handoff.
+
+## 2026-08-05 — S3K AIZ disappearing-floor clock/lifetime frontier
+
+- Worktree: repository root, branch `bugfix/s3k-traces`, parent frontier
+  `bae71cf8e`. No trace payloads were edited.
+- Root cause: `Obj_AIZDisappearingFloor` reads `Level_frame_counter`, but the
+  port gated its animation with the object-visible `V_int_run_count`, so the
+  parent animation was de-phased when those clocks separated. Its border
+  child also was incorrectly destroyed at parent mapping frame 3; the ROM
+  moves it to `x_pos=$7FF0`, then still runs `SolidObjectFull` to publish the
+  same-frame ride release.
+- Fix: the parent now resolves the level-frame clock from `LevelManager` (with
+  the native `+1` Process_Sprites visibility) and the child models the ROM
+  off-screen sentinel while continuing its animation/solid pass. No trace,
+  route, zone, or frame-number branch was added.
+- Focused validation passed:
+  `mvn -q -Dmse=off
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dsurefire.argLine='-Xshare:off -Xmx6g'
+  -Dsurefire.forkCount=1 -DreuseForks=true
+  -Dtest='com.openggf.game.sonic3k.objects.TestAizDisappearingFloorGraphRewind,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kBootstrapResolver,com.openggf.tests.TestSonic3kDecodingUtils'
+  test`
+- Clean authoritative command:
+  `mvn -q -Dmse=off -Dtrace.context.diagnosticChars=full
+  -Dsurefire.argLine='-Xshare:off -Xmx6g'
+  -Dsurefire.forkCount=1 -DreuseForks=true
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace'
+  test`
+- Result: the first comparison error advances from raw frame `13986`
+  (`tails_air`, expected `0x0001`, actual `0x0000`) to raw frame `16067`
+  (`queue.s3k_kos_direct.busy`, expected `false`, actual `true`). The report
+  contains `194` errors and `0` warnings across `20463` compared frames; no
+  trace payloads were changed. The next frontier is the S3K direct Kosinski
+  queue boundary at raw frame `16067`.

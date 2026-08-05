@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K AIZ disappearing-floor animation now uses the ROM's
+  `Level_frame_counter`, and its border child moves off-screen before still
+  running `SolidObjectFull` on the frame-3 reappear edge. The standard AIZ
+  replay frontier advances from raw frame `13986` (`tails_air`) to raw frame
+  `16067` (`queue.s3k_kos_direct.busy`) with `194` remaining errors.
 - Fix/Test: S3K AIZ spiked-log sidekick touch now preserves the ROM-owned
   Tails animation byte and restarts the retained script cursor for the hurt
   pass; the standard replay frontier advances from raw frame `10744`
