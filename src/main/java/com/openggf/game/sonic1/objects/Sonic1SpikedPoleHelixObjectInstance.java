@@ -2,10 +2,13 @@ package com.openggf.game.sonic1.objects;
 import com.openggf.game.PlayableEntity;
 
 import com.openggf.debug.DebugRenderContext;
+import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
@@ -51,8 +54,6 @@ public class Sonic1SpikedPoleHelixObjectInstance extends AbstractObjectInstance
     // HURT ($80) + size index 4
     private static final int COLLISION_TYPE_HARMFUL = 0x84;
 
-    private static final TouchResponseProfile MULTI_REGION_HURT_PROFILE = hurtProfile(
-            true, TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_MAIN_ONLY);
     private static final TouchResponseProfile SINGLE_REGION_HURT_PROFILE = hurtProfile(
             false, TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
 
@@ -74,6 +75,20 @@ public class Sonic1SpikedPoleHelixObjectInstance extends AbstractObjectInstance
 
     // Parent spike index (the one at the original spawn X position)
     private int parentIndex;
+
+    // ROM Hel_Main .loopBuildHelix allocates ONE OST slot per non-parent spike
+    // via FindFreeObj (REV01 FixBugs=0; docs/s1disasm/_incObj/17 GHZ Spiked Pole
+    // Helix.asm:46-49,56-63,84-90), storing each child's 0-based slot index in
+    // the parent's helix_children array. Each child runs routine 8
+    // (Hel_ChildSpike) which only rotates its own frame and displays; deletion
+    // is handled en masse by the parent's Hel_ChkDel .deleteHelix loop (:126-141).
+    // Modelling the spikes as ONE instance with an internal array left the SST
+    // 30 slots emptier than ROM in GHZ3, so RLoss_Count's FindFreeObj loop found
+    // 31 free slots instead of 19 and scattered 12 extra rings on a hit
+    // (ghz3_2 row 3,561 -> three of them re-collected -> 59 rings at
+    // GotThroughAct against ROM's 56).
+    private HelixSpikeChild[] spikeChildren;
+    private boolean spikeChildrenSpawned;
 
     // v_ani0_frame is ROM's GLOBAL sync counter 0, ticked by SynchroAnimate every 12 gfc ticks.
     // It is NOT a per-object counter. ROM initialises v_ani0_time=0 and v_ani0_frame=0 at level
@@ -196,6 +211,40 @@ public class Sonic1SpikedPoleHelixObjectInstance extends AbstractObjectInstance
         }
 
         updateSpikeFrames();
+        // ROM Hel_Main is routine 0: it builds the children on the object's FIRST
+        // execution, then advances to Hel_ParentSpike
+        // (docs/s1disasm/_incObj/17 GHZ Spiked Pole Helix.asm:22-23,42-90).
+        spawnSpikeChildren();
+    }
+
+    /**
+     * Allocate one render-and-hurt OST-slot child per non-parent spike, matching
+     * ROM {@code Hel_Main .loopBuildHelix} (FindFreeObj per spike, REV01
+     * FixBugs=0, docs/s1disasm/_incObj/17 GHZ Spiked Pole Helix.asm:46-90).
+     * The loop bails the moment object RAM is full ({@code bne.s
+     * Hel_ParentSpike}, :50), so a helix that loads into a crowded SST really
+     * does carry fewer spikes than its subtype asks for.
+     */
+    private void spawnSpikeChildren() {
+        if (spikeChildrenSpawned) {
+            return;
+        }
+        spikeChildrenSpawned = true;
+        spikeChildren = new HelixSpikeChild[spikeCount];
+        for (int i = 0; i < spikeCount; i++) {
+            if (i == parentIndex) {
+                continue;
+            }
+            final int idx = i;
+            HelixSpikeChild child = spawnFreeChild(() -> new HelixSpikeChild(
+                    spikeX[idx], spikeY, spikePhase[idx], spawn.x()));
+            if (child == null || child.isDestroyed()) {
+                // ROM: FindFreeObj returned "object RAM full" -> branch out of the
+                // build loop with only the spikes allocated so far.
+                break;
+            }
+            spikeChildren[i] = child;
+        }
     }
 
     /**
@@ -225,12 +274,13 @@ public class Sonic1SpikedPoleHelixObjectInstance extends AbstractObjectInstance
         PatternSpriteRenderer renderer = getRenderer(ObjectArtKeys.SPIKED_POLE_HELIX);
         if (renderer == null) return;
 
-        // Render each spike at its position with its current frame
-        for (int i = 0; i < spikeCount; i++) {
-            int frame = spikeFrame[i];
-            // Frame 6 is the invisible hack (empty mapping) — renderer handles 0-piece frames
-            renderer.drawFrameIndex(frame, spikeX[i], spikeY, false, false);
-        }
+        // ROM Hel_ParentSpike displays only the parent's own spike; every other
+        // spike is a separate OST object that displays itself from
+        // Hel_ChildSpike (docs/s1disasm/_incObj/17 GHZ Spiked Pole
+        // Helix.asm:93-99,159-162).
+        // Frame 6 is the invisible hack (empty mapping) — renderer handles 0-piece frames
+        renderer.drawFrameIndex(spikeFrame[parentIndex], spikeX[parentIndex], spikeY,
+                false, false);
     }
 
     @Override
@@ -246,12 +296,12 @@ public class Sonic1SpikedPoleHelixObjectInstance extends AbstractObjectInstance
 
     @Override
     public TouchResponseProfile getTouchResponseProfile() {
-        return getTouchResponseProfile(getMultiTouchRegions() != null);
+        return SINGLE_REGION_HURT_PROFILE;
     }
 
     @Override
     public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
-        return multiRegionSource ? MULTI_REGION_HURT_PROFILE : SINGLE_REGION_HURT_PROFILE;
+        return SINGLE_REGION_HURT_PROFILE;
     }
 
     @Override
@@ -263,32 +313,6 @@ public class Sonic1SpikedPoleHelixObjectInstance extends AbstractObjectInstance
     @Override
     public int getCollisionProperty() {
         return 0;
-    }
-
-    /**
-     * Returns touch collision regions for all currently harmful spikes.
-     * Each harmful spike (frame 0) reports its position with collision type $84.
-     * This allows the engine to check collision against every spike independently.
-     */
-    @Override
-    public TouchRegion[] getMultiTouchRegions() {
-        int harmfulCount = 0;
-        for (int i = 0; i < spikeCount; i++) {
-            if (spikeHarmful[i]) {
-                harmfulCount++;
-            }
-        }
-        if (harmfulCount == 0) {
-            return null;
-        }
-        TouchRegion[] regions = new TouchRegion[harmfulCount];
-        int idx = 0;
-        for (int i = 0; i < spikeCount; i++) {
-            if (spikeHarmful[i]) {
-                regions[idx++] = new TouchRegion(spikeX[i], spikeY, COLLISION_TYPE_HARMFUL);
-            }
-        }
-        return regions;
     }
 
     // ---- Persistence ----
@@ -304,6 +328,31 @@ public class Sonic1SpikedPoleHelixObjectInstance extends AbstractObjectInstance
         return isInRangeAt(spawn.x());
     }
 
+    @Override
+    public void onUnload() {
+        // ROM Hel_ChkDel -> .deleteHelix walks the parent's helix_children array
+        // and DeleteChild's every stored child slot on the same frame the parent
+        // leaves range, then deletes itself
+        // (docs/s1disasm/_incObj/17 GHZ Spiked Pole Helix.asm:120-145). The
+        // children run routine 8 (Hel_ChildSpike) which has no out_of_range check
+        // of its own, so the parent owns their teardown; freeing the slots here
+        // keeps downstream FindFreeObj allocation aligned with ROM. Mirrors
+        // Sonic1SwingingPlatformObjectInstance.onUnload.
+        ObjectManager objectManager = tryServices() != null
+                ? tryServices().objectManager() : null;
+        if (spikeChildren == null) {
+            return;
+        }
+        for (HelixSpikeChild child : spikeChildren) {
+            if (child != null) {
+                ObjectLifetimeOps.expireDynamic(child);
+                if (objectManager != null) {
+                    objectManager.removeDynamicObject(child);
+                }
+            }
+        }
+    }
+
     // ---- Debug rendering ----
 
     @Override
@@ -317,5 +366,114 @@ public class Sonic1SpikedPoleHelixObjectInstance extends AbstractObjectInstance
         }
     }
 
+    /**
+     * One non-parent spike of the helix (ROM routine 8, {@code Hel_ChildSpike}).
+     * <p>
+     * ROM {@code Hel_Main} allocates a real OST slot per spike via
+     * {@code FindFreeObj} and sets routine 8; the child then only calls
+     * {@code Hel_RotateSpikes} (which rewrites its own frame and sets
+     * {@code col_8x32|col_hurt} while the frame is 0) and {@code DisplaySprite}
+     * (docs/s1disasm/_incObj/17 GHZ Spiked Pole Helix.asm:56-90,101-116,159-162).
+     * It carries no {@code out_of_range} check of its own — the parent's
+     * {@code Hel_ChkDel .deleteHelix} removes the whole assembly at once.
+     */
+    public static final class HelixSpikeChild extends AbstractObjectInstance
+            implements TouchResponseProvider, SpawnRewindRecreatable {
+        private int posX;
+        private int posY;
+        private int phase;
+        private int frame;
+        private boolean harmful;
+        // ROM Hel_ChkDel feeds the PARENT's obX to out_of_range and deletes the
+        // whole helix at once; a child never tests its own position. Keying the
+        // child's range reference on the parent pivot keeps every spike unloading
+        // on the parent's frame. Un-finaled so the generic rewind field capturer
+        // can reapply it after a recreate.
+        private int pivotBaseX;
 
+        HelixSpikeChild(int x, int y, int phase, int pivotBaseX) {
+            super(new ObjectSpawn(x, y, Sonic1ObjectIds.SPIKED_POLE_HELIX, 0, 0, false, 0),
+                    "HelixSpike");
+            this.posX = x;
+            this.posY = y;
+            this.phase = phase & 0x07;
+            this.pivotBaseX = pivotBaseX;
+        }
+
+        HelixSpikeChild(ObjectSpawn spawn) {
+            this(spawn.x(), spawn.y(), 0, spawn.x());
+        }
+
+        @Override
+        public int getX() {
+            return posX;
+        }
+
+        @Override
+        public int getY() {
+            return posY;
+        }
+
+        @Override
+        public void update(int vIntRunCount, PlayableEntity player) {
+            if (isDestroyed()) {
+                return;
+            }
+            // Hel_RotateSpikes, run from the child's own SST slot.
+            LevelManager levelManager = services().levelManager();
+            int animFrame = 0;
+            if (levelManager != null) {
+                int gfc = levelManager.getFrameCounter() + 1;
+                animFrame = (-((gfc + ANIM_FRAME_DURATION - 2) / ANIM_FRAME_DURATION)) & 0x07;
+            }
+            frame = (animFrame + phase) & 0x07;
+            harmful = frame == 0;
+        }
+
+        @Override
+        public boolean isPersistent() {
+            // Routine 8 has no out_of_range check; the parent's Hel_ChkDel
+            // .deleteHelix owns the teardown (see the parent's onUnload).
+            return !isDestroyed();
+        }
+
+        @Override
+        public int getOutOfRangeReferenceX() {
+            return pivotBaseX;
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            PatternSpriteRenderer renderer = getRenderer(ObjectArtKeys.SPIKED_POLE_HELIX);
+            if (renderer == null) {
+                return;
+            }
+            renderer.drawFrameIndex(frame, posX, posY, false, false);
+        }
+
+        @Override
+        public int getPriorityBucket() {
+            return RenderPriority.clamp(DISPLAY_PRIORITY);
+        }
+
+        @Override
+        public TouchResponseProfile getTouchResponseProfile() {
+            return SINGLE_REGION_HURT_PROFILE;
+        }
+
+        @Override
+        public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+            return SINGLE_REGION_HURT_PROFILE;
+        }
+
+        @Override
+        public int getCollisionFlags() {
+            return harmful ? COLLISION_TYPE_HARMFUL : 0;
+        }
+
+        @Override
+        public int getCollisionProperty() {
+            return 0;
+        }
+    }
 }

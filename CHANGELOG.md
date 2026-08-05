@@ -3,6 +3,23 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the GHZ spiked-pole helix (Obj 0x17) now allocates one real object-RAM
+  slot per spike instead of drawing every spike from a single instance's
+  internal array. ROM `Hel_Main` calls `FindFreeObj` once per non-parent spike
+  and gives each one routine 8 (`Hel_ChildSpike`), which rotates and displays
+  itself; `Hel_ChkDel .deleteHelix` frees the whole assembly at once when the
+  parent leaves range (`docs/s1disasm/_incObj/17 GHZ Spiked Pole
+  Helix.asm:46-90,120-145`). Two 16-spike helixes therefore hold 32 slots in
+  ROM and held 2 in the engine, leaving GHZ3's object RAM 30 slots emptier than
+  the recording. That is invisible until something reads the free-slot count:
+  when Sonic is hit, `RLoss_Count` scatters rings until `FindFreeObj` reports
+  the pool full (`docs/s1disasm/_incObj/25, 37 Rings.asm:234-252`), so the
+  engine spilled 31 rings where the ROM spilled 19. The player re-collected
+  three of the extra ones and reached `GotThroughAct` holding 59 rings against
+  the ROM's 56, which stretched `Got_Bonus`'s tally three frames past the end
+  of the act and softlocked the GHZ3 -> MZ1 transition. On the S1
+  complete-emeralds run the ring count now matches the recording on every
+  compared row of every act it reaches.
 - Fix: a whole-run replay now carries the ROM object V-blank clock across a
   special stage's results-screen presentation bridge instead of freezing it for
   the bridge's whole length. The ROM's `VBlank_Exit` increments

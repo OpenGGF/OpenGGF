@@ -62717,3 +62717,103 @@ to synthesize a POST phase on a VBLANK-only row.
     `TestTraceSessionLauncherProductionFailureCleanup`) were re-run as an
     isolated subset on both trees and produce the identical 7 failures + 3
     errors with and without the change.
+
+## 2026-08-05 - GHZ3's ring count was a helix slot-allocation bug, not a ring bug
+
+- **Frontier moved.** `TestS1CompleteEmeraldVisualRun` lane 2 stays pinned at
+  `stopAfterSegmentBody(6)` and green, but the GHZ3 -> MZ1 softlock is gone:
+  the run now closes segment 6, walks its transition gap, and *reaches* the
+  segment-7 admission. It fails there instead, on a new and different cause
+  (below). Commit on `develop` at `4339eda18` plus this change.
+- Command: `mvn -Dmse=off -Ptrace-replay -Dsonic1.rom.path=s1.gen
+  -Dtest=TestS1CompleteEmeraldVisualRun test` -- **2 tests, green.**
+- **First: the comparator blind spot, and it is NOT `RingCountMode`.**
+  `ToleranceConfig.DEFAULT` is `RingCountMode.FORCE_ERROR`, and
+  `TestTraceReplayInvariantGuard.defaultTraceReplayToleranceIsStrict` pins it
+  there; `DISABLED` only appears in the backward-compatible 7-arg constructor.
+  The real gap is engine-side: `LiveTraceComparator` builds its
+  `EngineDiagnostics` through
+  `EngineDiagnostics.formattedWithCameraAnimationAndSubpixel`
+  (`EngineDiagnostics.java`:94-100), which hardcodes `rings = -1`, and
+  `TraceBinder` skips the `rings` field unless `engineDiag.rings() >= 0`
+  (`TraceBinder.java`:251-253). So **no run-lane segment has ever compared ring
+  count**, at any tolerance. `AbstractTraceReplayTest` does capture it
+  (`AbstractTraceReplayTest.java`:1036,1137), so the per-zone traces are
+  unaffected. Recommendation: pass `sprite.getRingCount()` into the run
+  comparator's diagnostics. It is a one-line change but its own piece of work --
+  it turns 4,877 previously-silent rows into hard errors and needs its own
+  sweep. Not folded in here.
+- **Measured, throwaway probe (reverted).** A per-row `expected.rings()` vs
+  `sprite.getRingCount()` log over the whole run gave exactly two divergent
+  windows: a pre-existing 1-row monitor skew at `ghz1` row 2,292 (exp 70, act 60,
+  converges at 2,293), and `ghz3_2` rows 3,561-8,519. The engine collected
+  scattered rings at rows **3,643 / 3,646 / 3,655 / 3,656 / 3,689 / 3,690**
+  where the recording collected at **3,646 / 3,655 / 3,689** -- one extra per
+  ROM collection, never re-converging, ending +3 (59 against 56).
+- **Cause, from an object-id multiset diff.** The fixture's `slot_dump` at row
+  3,561 shows ROM object RAM **completely full**: slots 32-127 all occupied,
+  with only 39/41/43/44/45 and 114-127 free -- 19 slots, which is exactly how
+  many rings `RLoss_Count` managed to spawn before `FindFreeObj` reported full
+  (`docs/s1disasm/_incObj/25, 37 Rings.asm:234-252`). The engine's
+  `ObjectManager.occupiedDynamicSlotIds()` at the same row held **47** objects
+  and spawned **31** rings. Diffing the two id multisets, every id matched
+  exactly -- 0x26 x7, 0x49 x2, 0x18 x2, 0x36 x5, 0x15 x10, 0x3B x1, 0x79 x2,
+  0x44 x13, 0x41 x1, 0x25 x2 -- except **0x17, ROM 32 against engine 2**.
+- **Obj 0x17 is the GHZ spiked-pole helix.** `Hel_Main .loopBuildHelix` calls
+  `FindFreeObj` once per non-parent spike, writes routine 8
+  (`Hel_ChildSpike`) into it, and stores its 0-based slot index in the parent's
+  `helix_children` array; `Hel_ChkDel .deleteHelix` walks that array and
+  `DeleteChild`s every spike when the parent's own X leaves range
+  (`docs/s1disasm/_incObj/17 GHZ Spiked Pole Helix.asm:46-90,120-145`). The
+  engine modelled both 16-spike helixes as ONE instance carrying
+  `spikeX[]`/`spikePhase[]` and a `getMultiTouchRegions()` fan-out, so it held 2
+  slots where ROM holds 32.
+- **Fix.** `Sonic1SpikedPoleHelixObjectInstance` gains a
+  `HelixSpikeChild` (routine 8: rotate + display + its own
+  `col_8x32|col_hurt` when its frame is 0), allocated left-to-right through
+  `spawnFreeChild` on the parent's first execution and torn down en masse in
+  the parent's `onUnload`. The build loop breaks the first time allocation
+  fails, matching `bne.s Hel_ParentSpike`. The parent now renders and collides
+  only as its own centre spike, so `getMultiTouchRegions()` is gone. This is the
+  catalogued P8 pattern (`s1-implement-object/rom-pitfalls.md`), and it follows
+  `Sonic1SwingingPlatformObjectInstance.SwingChainLinkChild` line for line.
+- **Verified.** With the fix the run's ring count matches the recording on
+  **every** compared row of `ghz3_2` -- and of every other act the lane reaches
+  -- with the pre-existing `ghz1` row-2,292 monitor skew the only residue. That
+  skew is present on the clean tree too (measured both ways).
+- **New frontier: the GHZ3 -> MZ1 transition gap is 21 movie rows, not 228.**
+  With the pin raised to `stopAfterSegmentBody(7)` the run now closes segment 6
+  at step 26,483 / cursor 27,239 (segment 6's 8,520th row), runs 21
+  `TRANSITION_GAP` steps to cursor 27,260, and then admits segment 7 -- but
+  `mz1` starts at BK2 27,467, so `requireContinuousRunPlaybackAt`
+  (`TraceSessionLauncher.java`:1861-1871) rejects it: *"run destination must
+  retain the active movie at row 27467, got cursor=27260"*. This is the run's
+  **first plain act-to-act boundary** (GHZ1 and GHZ2 both left through a giant
+  ring, and their returns are presentation bridges), so the ordinary
+  `GM_Level` restart budget -- `PaletteFadeOut`, `ClearScreen`,
+  `LevelDataLoad`, `Level_Delay`, `PalFadeIn_Alt`, the MZ1 title card -- has
+  never been exercised by a run lane before. The end-of-act card itself is
+  inside segment 6's rows and now lands exactly (`Got_Main` row 8,035, tally 57
+  frames, last row 8,519). The pin is therefore left at
+  `stopAfterSegmentBody(6)`.
+- Regression sweep (serial, JDK 21):
+  - `TestS1CompleteEmeraldVisualRun` both lanes green;
+    `TestS1CompleteEmeraldRunPrefix` (2) and `TestTraceRunPlaybackCoordinator`
+    (21) green.
+  - `TestS1GhzMazeRoundTripChain`'s presentation-bridge test green;
+    `ghzMazeRoundTrip` stays red on the same 8 `run_tail` fields with the same
+    values (`movie_logical_frame` 8,261 against the recorded 9,071).
+  - S1 `*TraceReplay` fleet under `-Ptrace-replay`, 30 classes: 27 green, the
+    same 3 reds (`Sbz3CompleteRun`, `Credits03Lz3`, `FzCompleteRun`).
+    `TestS1SpecialStageTraceReplay` green, and all three GHZ complete-run
+    traces green.
+  - `TestRewindCoverageGuard` and `TestStaticStateRewindCoverageGuard` green.
+    Two test expectations moved WITH the behaviour and are part of this change:
+    `TestSonic1ObjectTouchResponseProfiles` (the helix parent is now a
+    single-region hurt source like the spiked-ball chain) and
+    `TestRemainingRewindTailInventory` (878/684 -> 879/685 for the new child
+    class, which round-trips).
+  - `TestArchUnitRules`, `TestObjectPhysicsStandardizationGuard`,
+    `TestS1GhzBossGraphRewind`, `TestS1PushBlockSideContact` and
+    `TestRewindTorture` produce byte-identical failures with and without the
+    change (re-run as an isolated subset on both trees).
