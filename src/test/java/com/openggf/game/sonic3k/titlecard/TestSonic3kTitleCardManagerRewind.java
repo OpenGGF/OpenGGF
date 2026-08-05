@@ -104,11 +104,15 @@ class TestSonic3kTitleCardManagerRewind {
         title.update();
         assertFalse(provider.capture().runtimeArtAdmissionConsumed(),
                 "the first Wait2 poll only observes the drained children");
+        assertFalse(title.hasPublishedInLevelRuntimeArtAdmission(),
+                "the camera handoff must remain behind the first Wait2 poll");
         assertEquals(4, title.capture().inLevelExitDelayFrames());
 
         title.update();
         assertTrue(provider.capture().runtimeArtAdmissionConsumed(),
                 "LoadEnemyArt belongs to the following owner poll");
+        assertTrue(title.hasPublishedInLevelRuntimeArtAdmission(),
+                "the camera handoff follows the native LoadEnemyArt boundary");
         assertEquals(3, title.capture().inLevelExitDelayFrames());
     }
 

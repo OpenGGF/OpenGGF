@@ -384,16 +384,17 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
             return false;
         }
         // ROM Obj_LevelResults changes into the in-level title-card object for
-        // Act 1 results. Obj_TitleCardWait2 sets End_of_level_flag only after
-        // the title-card children have disappeared, then Obj_EndSignControlDoStart
-        // runs Change_Act2Sizes (sonic3k.asm:62708-62720,62276-62279,
-        // 180415-180419). Do not widen the miniboss arena during the child
-        // slide-out phase before that flag exists.
+        // Act 1 results. The retained owner reaches its LoadEnemyArt handoff
+        // before the later End_of_level_flag completion edge; Obj_EndSignControl
+        // may then run Change_Act2Sizes without waiting for the title overlay's
+        // remaining display-release entries (sonic3k.asm:62220-62253,
+        // 62276-62301, 180415-180419). Do not widen the arena during the child
+        // slide-out phase before that owner handoff exists.
         Sonic3kTitleCardManager titleCardManager =
                 services().gameService(Sonic3kTitleCardManager.class);
         return services().gameState().isEndOfLevelFlag()
                 || (titleCardManager != null
-                        && titleCardManager.willSetInLevelEndOfLevelFlagThisUpdate());
+                        && titleCardManager.hasPublishedInLevelRuntimeArtAdmission());
     }
 
     private void updateLevelEndCameraUnlock(int triggerX) {

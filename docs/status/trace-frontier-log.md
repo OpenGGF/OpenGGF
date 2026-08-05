@@ -61828,3 +61828,35 @@ to synthesize a POST phase on a VBLANK-only row.
   `8941` (`camera_y`, expected `0x02C1`, actual `0x02B8`). The report contains
   `1138` errors and `0` warnings; no trace payloads were changed. The next
   frontier is the AIZ title-to-gameplay camera/event handoff.
+
+## 2026-08-05 — S3K AIZ title-to-gameplay camera handoff frontier
+
+- Worktree: repository root, branch `bugfix/s3k-traces`, parent frontier
+  `ff3000d81`. No trace payloads were edited.
+- Root cause: the defeated AIZ miniboss waited for the title owner's later
+  `End_of_level_flag` prediction before starting `Change_Act2Sizes`. The ROM's
+  retained end-sign owner begins the act-size handoff at the earlier published
+  title-owner `LoadEnemyArt` boundary, while the title overlay's remaining
+  release entries continue afterward.
+- Fix: the S3K title manager now exposes its semantic in-level runtime-art
+  publication boundary, and the AIZ miniboss uses that owner state to release
+  its independent max-X/max-Y resize workers. No trace, route, zone, or frame
+  number branch was added; the completion flag remains owned by title
+  completion.
+- Focused validation passed:
+  `mvn -q -Dmse=off
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.game.sonic3k.titlecard.TestSonic3kTitleCardManagerRewind,com.openggf.game.sonic3k.objects.TestAizMinibossCameraUnlock,com.openggf.game.sonic3k.TestSonic3kTitleCardTeardownModel,com.openggf.game.sonic3k.TestSonic3kPlcArtRewindSnapshot'
+  test`
+- Clean authoritative command:
+  `mvn -q -Dmse=off -Dtrace.context.diagnosticChars=full
+  -Dsurefire.argLine='-Xshare:off -Xmx6g'
+  -Dsurefire.forkCount=1 -DreuseForks=true
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace'
+  test`
+- Result: the first comparison error advances from raw frame `8941`
+  (`camera_y`, expected `0x02C1`, actual `0x02B8`) to raw frame `10701`
+  (`tails_mapping_frame`, expected `0x00AB`, actual `0x0002`). The report
+  contains `1136` errors and `0` warnings; no trace payloads were changed. The
+  next frontier is Tails animation-state parity after the AIZ camera handoff.

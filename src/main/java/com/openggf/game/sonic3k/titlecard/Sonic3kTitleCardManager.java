@@ -677,6 +677,18 @@ public class Sonic3kTitleCardManager
         return true;
     }
 
+    /**
+     * Reports the in-level title owner's native post-child handoff. The
+     * {@code LoadEnemyArt} admission is the first published boundary at which
+     * retained AIZ end-sign owners may begin their act-size transition; the
+     * later title completion still owns {@code End_of_level_flag}.
+     */
+    public boolean hasPublishedInLevelRuntimeArtAdmission() {
+        return inLevelMode
+                && state == Sonic3kTitleCardState.EXIT
+                && runtimeArtAdmissionConsumed;
+    }
+
     public int getExitPhaseCounter() {
         return phaseCounter;
     }

@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K AIZ's defeated miniboss now releases the act-size camera
+  workers at the semantic in-level title owner's published `LoadEnemyArt`
+  handoff, before the later `End_of_level_flag` completion edge. The standard
+  AIZ replay frontier advances from raw frame `8941` (`camera_y`) to raw frame
+  `10701` (`tails_mapping_frame`) without changing trace payloads.
 - Fix/Test: S3K AIZ phase-one title ownership now admits the ROM-backed enemy
   batch on the second native exit-owner poll, after child retirement and before
   the remaining release delay. The standard AIZ replay frontier advances from
