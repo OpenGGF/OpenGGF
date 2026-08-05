@@ -61712,3 +61712,28 @@ to synthesize a POST phase on a VBLANK-only row.
   compared by `TraceRunDynamicArtGapJournal`). The next step is to instrument
   that ledger across the boundary rather than the publication serial, and
   establish whether the prelude submits into it at all.
+
+## 2026-08-05 - Gap DPLC: why the prelude emits nothing, measured
+
+- `DynamicArtLifecycleService.buffer` routes an edge to `gapTransitions`
+  whenever `comparisonSegmentOpen` is false, so anything the prelude submits
+  during a transition gap WOULD reach the ledger the journal compares. It
+  submits nothing: `primePlayerDplc` records `lastMappingFrames` and returns
+  `ArtUpdate(true, -1, requests)` without ever calling `buffer`, and
+  `completePlayerDplc` returns immediately for S1. That is also why adding a
+  `completePlayerDplc` call to the prime branch changed nothing -- it is a
+  no-op for S1 by construction.
+- Experiment (reverted): giving the prelude `observe` semantics instead of
+  `prime` DOES produce gap edges. `run_gap.edge_count` 2 vs 0 becomes
+  `run_gap.edge[1].gap_edge_index` rom 1 vs engine 3 -- the engine emits FOUR
+  edges into that gap and the expected pair lands at indices 2 and 3 instead of
+  0 and 1. Scoping the change to the results-return prelude alone
+  (leaving `TraceReplaySessionBootstrap`'s call priming) gives the same 4, so
+  the two extra edges are not the initial bootstrap leaking; something emits a
+  pair into that gap ahead of the prelude.
+- Note the comparison frame is 8748, the SS-to-bridge destination opening, not
+  the bridge-to-gameplay gap the 9,715 manifest pair sits in. Establish which
+  gap each recorded pair belongs to before attributing the extra edges.
+- Next step is therefore to identify the two edges the engine already emits
+  into that gap, not to add more emission. Reverted rather than left in tree:
+  it makes nothing green and its extra pair is unexplained.
