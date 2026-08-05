@@ -3,6 +3,21 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: a level's staged player DPLC transfer is now placed on the ROM's counted
+  pre-main-loop tail instead of on the title card's release. S1's `Level:`
+  routine stages Sonic's tiles in the `Level_LoadObj` object pass and then
+  waits out `Level_Delay`'s 4 `WaitForVBlank` rows plus `PalFadeIn_Alt`'s 22
+  before `Level_MainLoop` (`sonic.asm:2895-2969`,
+  `_inc/Palette Fading.asm:32-51`), with no wait between the pass and the
+  delay loop, so the V-int that performs the transfer is always the level's
+  first main-loop row minus 26 — regardless of how long the un-timed load
+  steps between them (`Hud_Base`, `LevelDataLoad`, `LoadTilesFromStart`) take.
+  The transfer is now held for that tail
+  (`LevelInitProfile.preLevelMainLoopDelayFrames`, S1: 26; other games settle
+  where they prepared it) and settled against the level's first main-loop row.
+  On the S1 complete-emeralds run the special-stage return's gap pair moves
+  from 9,678 to the recorded 9,715 and that comparison goes green, and the
+  initial GHZ1 load's pair moves from 860 to the recorded 834.
 - Fix: the special-stage results return now models the next game mode's
   pre-level fade-out before it reloads the level. S1's `GM_Level` runs
   `ClearPLC` then `PaletteFadeOut` — an unconditional 22-frame `WaitForVBlank`

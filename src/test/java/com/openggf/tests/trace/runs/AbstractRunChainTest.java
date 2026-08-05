@@ -282,6 +282,10 @@ abstract class AbstractRunChainTest {
                 throw new AssertionError(
                         "terminal dynamic-art tail has no open source gap");
             }
+            // Mirrors the launcher's terminal tail: the movie ends before this
+            // level reaches its main loop, so a transfer still held for the
+            // pre-main-loop tail settles at the tail's earliest row.
+            lifecycle.releaseUnclaimedPreMainLoopPlayerTransfer();
             int transitionCount = lifecycle.gapTransitions().size();
             List<DynamicArtGapTransition> added = transitionCount
                     >= transitionCountAtGapStart

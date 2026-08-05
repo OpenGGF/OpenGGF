@@ -2929,21 +2929,25 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * title-card loop and the first ordinary level iteration.
      */
     public void completeInitialTitleCardPresentation() {
+        var profile = activeGameModule().getLevelInitProfile();
+        // The prelude that stages the player's tiles runs before this boundary,
+        // and its transfer belongs to the first V-int of the Level: routine's
+        // counted pre-main-loop tail — the Level_Delay / PalFadeIn_Alt rows
+        // ending on the frame before Level_MainLoop — not to this frame and
+        // not to the first gameplay claim after the transition gap. A load
+        // whose PLC boundary was already reached still stages here, so hold
+        // the transfer before the completed-boundary check.
+        var dynamicArt = GameServices.dynamicArtLifecycleOrNull();
+        if (dynamicArt != null && dynamicArt.isRunActive()) {
+            dynamicArt.holdPendingPlayerPreparationForPreMainLoopTail(
+                    profile.preLevelMainLoopDelayFrames());
+        }
         if (initialPresentationPlcsCompleted) {
             return;
         }
-        var profile = activeGameModule().getLevelInitProfile();
         profile.completeInitialPresentationPlcs();
         replaySkippedPresentationPlayerAnimation(
                 profile.skippedPresentationPlayableFrames());
-        // The release prelude's staged player DPLC is transferred by the very
-        // next V-int — the pre-fade VBla delay / first PaletteFadeIn frame —
-        // before Level_MainLoop begins, so its edge belongs to this boundary,
-        // not to the first gameplay claim after the transition gap.
-        var dynamicArt = GameServices.dynamicArtLifecycleOrNull();
-        if (dynamicArt != null && dynamicArt.isRunActive()) {
-            dynamicArt.flushPendingPlayerPreparationAtPresentationBoundary();
-        }
         initialPresentationPlcsCompleted = true;
     }
 

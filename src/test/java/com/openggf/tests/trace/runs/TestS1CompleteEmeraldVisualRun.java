@@ -27,27 +27,27 @@ class TestS1CompleteEmeraldVisualRun {
 
     /**
      * The current frontier: GHZ1, the giant-ring handoff, the whole special
-     * stage, and admission of the GHZ2 presentation bridge the stage returns
-     * through.
+     * stage, the GHZ2 presentation bridge the stage returns through, and
+     * admission of the GHZ2 gameplay the bridge hands back to.
      * <p>
-     * It stops there deliberately. The bridge hands back to GHZ2 gameplay and
-     * the return gap now emits Sonic's DPLC pair with matching identity at the
-     * title card's release, but the run still pauses on
-     * {@code run_gap.edge[N].movie_logical_frame}: recorded 9,715 against the
-     * engine's release row 9,678. GM_Level's 22-frame {@code PaletteFadeOut}
-     * before {@code AddPLC} (docs/s1disasm/sonic.asm:2710-2737) is modelled;
-     * the remaining ~37 rows are real load time (NemDec under disabled
-     * interrupts, Hud_Base, level-data KosDec) that needs this run re-recorded
-     * with the v5 hardware-timing stream. Raise the target here when that
-     * lands.
+     * The return gap's Sonic DPLC pair now matches the recording on identity
+     * and row. Its row is the first frame of {@code GM_Level}'s counted
+     * pre-main-loop tail — {@code Level_Delay}'s 4 frames plus
+     * {@code PalFadeIn_Alt}'s 22 (docs/s1disasm/sonic.asm:2956-2969) — i.e.
+     * main-loop admission minus 26, not the title card's release row. The
+     * un-timed load steps between the two ({@code Hud_Base},
+     * {@code LevelDataLoad}, {@code LoadTilesFromStart}) take real hardware
+     * time in the recording, but no compared field observes their span: its
+     * right edge is pinned by the counted tail and its left by the modelled
+     * PLC drain. Raise the target here as later segments come in.
      */
     @Test
     void replaysThroughTheSpecialStageAndItsReturnBridgeAdmission() throws Exception {
         VisualRunReplayHarness.Result result =
                 VisualRunReplayHarness.replay(
-                        RUN_DIR, VisualRunReplayHarness.stopAfterSegment(2));
+                        RUN_DIR, VisualRunReplayHarness.stopAfterSegment(3));
 
-        assertEquals(2, result.currentSegmentIndex(),
+        assertEquals(3, result.currentSegmentIndex(),
                 "visual run stalled before the GHZ2 return bridge: " + result);
     }
 }

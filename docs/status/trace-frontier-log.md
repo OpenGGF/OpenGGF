@@ -62072,3 +62072,63 @@ to synthesize a POST phase on a VBLANK-only row.
   timing-authority contract change on this defect's account.
   `TestS1CompleteEmeraldVisualRun`'s Javadoc still carries the refuted
   attribution; correct it when the fix lands.
+
+## 2026-08-05 - Gap DPLC: the counted pre-main-loop tail closes the last 37 rows
+
+- Command: `mvn -Dmse=off -Ptrace-replay -Dtest=TestS1CompleteEmeraldVisualRun
+  -Dsonic1.rom.path=s1.gen test`, pin raised to `stopAfterSegment(3)`. **PASS**
+  — the pin stays at 3. Before: 2 errors,
+  `run_gap.edge[0..1].movie_logical_frame` at comparison frame 9,504, recorded
+  9,715 vs engine 9,678, delta 37. After: no errors; the pair keeps its
+  identity (ordinals 4964/4965, transfer id 2482, owner `sonic`, mapping frame
+  1, per-frame gap index) and gameplay admission stays on 9,741.
+- The previous entry's DERIVE recommendation was implemented as written and it
+  holds. The latent initial-load defect moved with it, unprompted by any
+  comparison: the GHZ1 load's pair goes 860 -> **834**, exactly the recorded
+  value (`run_manifest.json` segment 0, `bk2_frame_offset` 860 minus the
+  counted 26). One model, both loads, no per-load constant.
+- Fix, in three pieces:
+  1. `LevelInitProfile.preLevelMainLoopDelayFrames()` (default 0; S1 overrides
+     with `4 + 22`) — `Level_Delay`'s `move.w #4-1,d1` loop
+     (docs/s1disasm/sonic.asm:2957-2963) plus the `PalFadeIn_Alt` call after it
+     (sonic.asm:2966, `move.w #22-1,d4`,
+     docs/s1disasm/_inc/Palette Fading.asm:32-51). Re-read against the listing
+     before implementing: nothing between `Level_LoadObj`'s `ExecuteObjects`
+     (sonic.asm:2895-2897) and `Level_DelayLoop` waits for a V-blank, and
+     nothing between the fade and `Level_MainLoop` does either.
+  2. `DynamicArtLifecycleService` holds a staged S1 preparation for that tail
+     instead of flushing it at the presentation boundary, and settles it
+     against the level's first main-loop row. The run announces that row when
+     it admits a level destination — the shared movie clock still reads the
+     gap's last row there, so the transfer's row is
+     `movieLogicalFrame + 1 - tailRows`. `LevelManager` arms the hold at the
+     PLC boundary and `PostTitleCardDestination` re-arms it at the release, so
+     a load whose boundary was already reached (the run's first level) still
+     assigns its prelude's transfer to the tail.
+  3. A run that ends before any level reaches its main loop can never measure
+     the tail back from it, so `releaseUnclaimedPreMainLoopPlayerTransfer()`
+     settles the hold at the tail's earliest legal row — the row after the
+     prelude staged it — from the launcher's terminal-tail comparison and the
+     chain harness's equivalent.
+- Two measurements decided the placement, both cheap and both worth repeating
+  before touching this area: (a) removing the boundary flush entirely makes the
+  return pair vanish from the gap ledger, proving the transition-gap rows never
+  service a production V-blank and that the gap ledger is compared at admission
+  *before* the admitted row's body runs; (b) settling unconditionally at
+  admission invented a spurious pair at the special-stage gap (8,704), so the
+  settle acts only on an explicitly held tail.
+- Verification: `TestS1CompleteEmeraldVisualRun` (pin 3),
+  `TestS1CompleteEmeraldRunPrefix`, `TestTraceRunPlaybackCoordinator`,
+  `TestInLevelTitleCardCoordinator`,
+  `TestLevelManagerInitialPresentationPlcLifecycle` green.
+  `TestS1GhzMazeRoundTripChain.ghzMazeRoundTrip` stays red at the same
+  assertion on the same 8 `run_tail` fields as the unmodified tree, with its
+  `movie_logical_frame` 8,261 against 8,260 before (recorded 9,071 — that
+  bridge's own defect is unrelated and unchanged in kind); its
+  presentation-bridge test is green. S1 `*TraceReplay` fleet: 27/30 green, the
+  same 3 reds (`Sbz3CompleteRun`, `Credits03Lz3`, `FzCompleteRun`). S2/S3K
+  fleets unchanged against the unmodified tree.
+- No hardware-timing capture is needed for this defect and none was added. The
+  un-timed load span between the card's drain and the tail is observed by no
+  compared field: its right edge is pinned by the counted 26 and its left by
+  the modelled PLC drain.

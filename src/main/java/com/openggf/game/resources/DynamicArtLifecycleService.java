@@ -76,6 +76,14 @@ public final class DynamicArtLifecycleService
     private int movieLogicalFrame;
     private boolean movieLogicalFrameSuppliedExternally;
     /**
+     * Counted V-int rows separating a staged pre-main-loop player transfer
+     * from the level's first main-loop row, or {@code -1} when no staged
+     * transfer is waiting on that tail.
+     */
+    private int preMainLoopTailRows = -1;
+    /** Movie row the held transfer was staged on, i.e. the tail's lower bound. */
+    private int preMainLoopHoldBoundaryRow;
+    /**
      * Gap-edge numbering is per LOGICAL FRAME, not per gap. The recorder keys
      * its counter on the edge's frame
      * ("tools/bizhawk-headless/src/Recording/S1DynamicArtObserver.cs":247-252),
@@ -166,6 +174,7 @@ public final class DynamicArtLifecycleService
             int nextLogicalEdgeIndex,
             int nextPublicationFrame,
             int movieLogicalFrame,
+            int preMainLoopTailRows,
             int nextGapEdgeIndex) {
         public RewindState {
             lastMappingFrames = Map.copyOf(lastMappingFrames);
@@ -605,30 +614,101 @@ public final class DynamicArtLifecycleService
 
     public void serviceProductionVBlank() {
         requireRunActive();
-        flushS1PreparationIfPending();
+        // A held tail is released by the level's first main-loop row, which is
+        // announced, not observed here. An ordinary service therefore keeps
+        // its own row: whatever is still pending belongs to this V-blank.
+        preMainLoopTailRows = -1;
+        flushS1PreparationIfPending(movieLogicalFrame);
         retireSubmittedTransfers();
     }
 
     /**
-     * Flushes only a pending S1 player DPLC preparation, without retiring any
-     * other game's submitted transfers. This models the V-int immediately
-     * after {@code Level_StartGame}'s object prelude pass: the pass staged the
-     * player's tiles and set {@code f_sonframechg}
-     * (docs/s1disasm/_incObj/01 Sonic.asm:2391-2398), and the next
-     * {@code WaitForVBlank} — the pre-fade VBla delay / first
-     * {@code PaletteFadeIn} frame (docs/s1disasm/sonic.asm:2969-2995,
-     * docs/s1disasm/_inc/Palette Fading.asm PalFadeIn_Alt) — performs the
-     * transfer before {@code Level_MainLoop} begins.
+     * Holds a staged S1 player DPLC preparation for the level routine's
+     * counted pre-main-loop tail.
+     *
+     * <p>The presentation boundary's object prelude staged the player's tiles
+     * and set {@code f_sonframechg}
+     * (docs/s1disasm/_incObj/01 Sonic.asm:2391-2398), but the V-int that
+     * performs the transfer is the first row of the {@code Level_Delay} /
+     * {@code PalFadeIn_Alt} tail that ends on the frame before
+     * {@code Level_MainLoop} (docs/s1disasm/sonic.asm:2956-2969). Every load
+     * step between the two — {@code Hud_Base}, {@code LevelDataLoad},
+     * {@code LoadTilesFromStart}, {@code ObjPosLoad} — is straight-line code
+     * with no wait of its own, so the transfer's row is fixed relative to the
+     * main loop and not to the boundary that prepared it. The engine reaches
+     * the main loop without spending those load rows, so the preparation waits
+     * here until the level's first main-loop V-int settles it.
+     *
+     * @param tailRows counted V-int rows between the transfer and the first
+     *                 main-loop row; zero settles at the boundary itself
      */
-    public void flushPendingPlayerPreparationAtPresentationBoundary() {
+    public void holdPendingPlayerPreparationForPreMainLoopTail(int tailRows) {
         requireRunActive();
-        flushS1PreparationIfPending();
-    }
-
-    private void flushS1PreparationIfPending() {
+        if (tailRows < 0) {
+            throw new IllegalArgumentException("tailRows must be nonnegative");
+        }
         if (s1Preparation == null) {
             return;
         }
+        if (tailRows == 0) {
+            flushS1PreparationIfPending(movieLogicalFrame);
+            return;
+        }
+        preMainLoopTailRows = tailRows;
+        preMainLoopHoldBoundaryRow = movieLogicalFrame;
+    }
+
+    /**
+     * Settles a held pre-main-loop player transfer from the row that precedes
+     * the level's first main-loop row, i.e. the tail's last row.
+     *
+     * <p>A run admits a destination while the shared movie clock still reads
+     * the row the transition gap ended on; the level's first main-loop row is
+     * the next one, so the tail's first row — the transfer's — is
+     * {@code movieLogicalFrame + 1 - tailRows}.
+     */
+    public void settlePendingPlayerPreparationBeforeLevelMainLoop() {
+        requireRunActive();
+        if (preMainLoopTailRows < 0) {
+            // Nothing was staged for a tail: an ordinary submission still
+            // belongs to the V-blank that services it, not to this boundary.
+            return;
+        }
+        flushS1PreparationIfPending(Math.addExact(movieLogicalFrame, 1));
+    }
+
+    /**
+     * Settles a held pre-main-loop player transfer for a run that ends before
+     * the level reaches its main loop, so the tail's length can never be
+     * measured back from it. The transfer then takes the earliest row its tail
+     * can occupy: the row after the one the prelude staged it on.
+     */
+    public void releaseUnclaimedPreMainLoopPlayerTransfer() {
+        if (!runActive || preMainLoopTailRows < 0) {
+            return;
+        }
+        int boundaryRow = preMainLoopHoldBoundaryRow;
+        preMainLoopTailRows = -1;
+        flushS1PreparationIfPending(Math.addExact(boundaryRow, 1));
+    }
+
+    private void flushS1PreparationIfPending(int firstMainLoopRow) {
+        if (s1Preparation == null) {
+            preMainLoopTailRows = -1;
+            return;
+        }
+        int tailRows = Math.max(0, preMainLoopTailRows);
+        preMainLoopTailRows = -1;
+        int restore = movieLogicalFrame;
+        movieLogicalFrame = Math.max(0, firstMainLoopRow - tailRows);
+        try {
+            flushS1Preparation();
+        } finally {
+            movieLogicalFrame = restore;
+        }
+    }
+
+    private void flushS1Preparation() {
         Preparation preparation = s1Preparation;
         s1Preparation = null;
         long transferId = nextTransferId++;
@@ -793,7 +873,7 @@ public final class DynamicArtLifecycleService
                 comparisonSegmentReserved,
                 nextTransferId, nextEdgeOrdinal,
                 logicalFrame, nextLogicalEdgeIndex, nextPublicationFrame,
-                movieLogicalFrame,
+                movieLogicalFrame, preMainLoopTailRows,
                 nextGapEdgeIndexByFrame.getOrDefault(movieLogicalFrame, 0));
     }
 
@@ -827,6 +907,7 @@ public final class DynamicArtLifecycleService
         nextLogicalEdgeIndex = snapshot.nextLogicalEdgeIndex();
         nextPublicationFrame = snapshot.nextPublicationFrame();
         movieLogicalFrame = snapshot.movieLogicalFrame();
+        preMainLoopTailRows = snapshot.preMainLoopTailRows();
         // The snapshot carries the counter for the frame it was taken on,
         // which is the only one a restore inside a gap can continue.
         nextGapEdgeIndexByFrame.clear();
@@ -861,6 +942,7 @@ public final class DynamicArtLifecycleService
         nextPublicationFrame = 0;
         movieLogicalFrame = 0;
         movieLogicalFrameSuppliedExternally = false;
+        preMainLoopTailRows = -1;
         nextGapEdgeIndexByFrame.clear();
     }
 

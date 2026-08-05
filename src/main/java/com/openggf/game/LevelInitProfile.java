@@ -104,6 +104,25 @@ public interface LevelInitProfile {
     }
 
     /**
+     * Counted {@code WaitForVBlank} rows the game's {@code Level:} routine
+     * spends between its last un-timed load step and the first iteration of
+     * the level main loop.
+     *
+     * <p>The routine's own object prelude stages the player's tiles and raises
+     * the "graphics changed" flag; the very next V-int — the first row of this
+     * tail — performs the transfer. The tail is frame-counted in the listing,
+     * so the transfer's row is the level's first main-loop row minus this
+     * count regardless of how long the un-timed load steps before it took.
+     *
+     * <p>Zero for a game whose tail has not been transcribed from its
+     * disassembly; its staged transfer then belongs to the presentation
+     * boundary that prepared it.
+     */
+    default int preLevelMainLoopDelayFrames() {
+        return 0;
+    }
+
+    /**
      * Ordered steps for entering a level (title card through control unlock).
      * <p>
      * Maps to the game's {@code Level:} routine: S1 has 44 steps (phases A-L),

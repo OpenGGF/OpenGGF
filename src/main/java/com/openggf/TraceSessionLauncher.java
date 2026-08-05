@@ -1441,12 +1441,30 @@ public final class TraceSessionLauncher {
         }
     }
 
+    /**
+     * Settles a player transfer the level routine staged for its counted
+     * pre-main-loop tail. The row a destination is admitted on is that level's
+     * first main-loop row, and the tail's own length is the game's, so the
+     * transfer belongs that many rows earlier — before this admission opens
+     * the destination's comparison window or reads the gap ledger.
+     */
+    private void settlePreMainLoopPlayerTransferAtAdmission() {
+        if (dynamicArtSegmentGameplayMode == null) {
+            return;
+        }
+        var lifecycle = dynamicArtSegmentGameplayMode.dynamicArtLifecycle();
+        if (lifecycle != null && lifecycle.isRunActive()) {
+            lifecycle.settlePendingPlayerPreparationBeforeLevelMainLoop();
+        }
+    }
+
     private void applyRunDestinationAdmission(DestinationAdmissionReceipt receipt) {
         TraceRunReplayWalker.SegmentPlan segment = runSegments.get(receipt.segmentIndex());
         ObjectManager objects = GameServices.level().getObjectManager();
         if (objects != null) {
             applyRunDestinationVblankAdmission(receipt, objects);
         }
+        settlePreMainLoopPlayerTransferAtAdmission();
         if (runHardwareTiming != null) {
             // The handoff verifies the source schedule. It must succeed before
             // any destination comparison, dynamic-art, or input owner opens.
@@ -1956,6 +1974,14 @@ public final class TraceSessionLauncher {
             return;
         }
         runTerminalTailCompared = true;
+        // The movie ends before this level reaches its main loop, so a
+        // transfer still held for the pre-main-loop tail has to settle at the
+        // earliest row that tail could occupy.
+        if (dynamicArtSegmentGameplayMode != null
+                && dynamicArtSegmentGameplayMode.dynamicArtLifecycle() != null) {
+            dynamicArtSegmentGameplayMode.dynamicArtLifecycle()
+                    .releaseUnclaimedPreMainLoopPlayerTransfer();
+        }
         ingestRunUndisplayedComparison(
                 runDynamicArtGapJournal.terminalTailClosed(
                         movie.getFrameCount()));

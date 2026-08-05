@@ -68,6 +68,20 @@ public class Sonic1LevelInitProfile extends AbstractLevelInitProfile {
     }
 
     @Override
+    public int preLevelMainLoopDelayFrames() {
+        // Level_Delay runs 4 WaitForVBlank rows (move.w #4-1,d1 —
+        // docs/s1disasm/sonic.asm:2957-2963) and the PalFadeIn_Alt call that
+        // follows it (docs/s1disasm/sonic.asm:2966) runs 22 more
+        // (move.w #22-1,d4 — docs/s1disasm/_inc/Palette Fading.asm:32-51),
+        // with no further wait between the fade and Level_MainLoop. The
+        // Level_LoadObj ExecuteObjects pass that stages Sonic's tiles
+        // (docs/s1disasm/sonic.asm:2895-2897) sits immediately before the
+        // delay loop, so the V-int that performs the transfer is the tail's
+        // first row: the level's first main-loop row minus 26.
+        return 4 + 22;
+    }
+
+    @Override
     public List<InitStep> levelLoadSteps(LevelLoadContext ctx) {
         List<InitStep> steps = buildCoreSteps(ctx);
         // GM_Level clears v_misc_variables before resource setup
