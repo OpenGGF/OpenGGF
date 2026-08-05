@@ -61653,3 +61653,40 @@ to synthesize a POST phase on a VBLANK-only row.
   and stall checks. It ran first, so a target reached on the same step as the
   self-pause reported success -- which is how the reverted change briefly looked
   like it had fixed the boundary. Failures also carry the change timeline now.
+
+## 2026-08-05 - S1 special-stage return: load lands on the ROM's row
+
+- The aux stream settles the ROM's phase boundaries directly, replacing two
+  rounds of arithmetic fitted from bridge totals. The complete run's `ghz2`
+  bridge records: frame 0 Sonic and the level objects removed (`SS_Finish`),
+  frame 67 object `0x7E` in one slot (`SS_Finish` spawned the card, so
+  `SSR_ChkPLC` runs 67-84 = 18 frames), frame 85 four MORE `0x7E` elements --
+  five in total, which is `SSR_Loop`'s `addq.w #1,d1` continue tally and
+  independent proof of the continue branch -- and frame 121 object `0x7F`, the
+  emerald object `SSR_Move.reachedXTarget` spawns, giving a 36-frame slide.
+- The model then closes exactly, with no residual:
+  `67 + 18 + 36 + 180 + 55 + 60 + 1 + 360 + 22 = 799`, so `SSR_Exit` and
+  `PaletteWhiteOut` finish on the bridge's last row and the returning level
+  loads on the FIRST gap row. The engine's pre-fix 491-row results phase
+  decomposes as `18 + 36 + 180 + 55 + 180 + 22` — identical everywhere except
+  the exit wait.
+- Fix: `Sonic1SpecialStageResultsScreen` implements the continue branch --
+  `1*60`, a frame of its own for `SSR_Continue`, then `6*60`. 241 frames, not
+  the 240 first tried: `SSR_Continue` is a routine that owns a frame. Measured
+  by harness timeline, the complete run's load moves 9,264 -> 9,505 (the ROM's
+  row) and the maze round trip's to its bridge row 812.
+- `AbstractRunChainTest`'s "presentation bridge must hand off in LEVEL mode"
+  was corrected. A special-stage results bridge does not end in gameplay: the
+  ROM is mid-`PaletteWhiteOut` there and the returning level loads on the next
+  row. That assertion only held because the engine finished the whole card
+  early, which is the divergence this lane exists to catch.
+- REMAINING, single defect: the recorded gap carries two Sonic DPLC edges
+  (`movie_logical_frame 9715`, owner `sonic`, `mapping_frame 1`) that the
+  engine does not emit, so `run_gap.edge_count` is still 2 vs 0 (and
+  `run_tail.edge_count` in the maze). Root cause located:
+  `PlayableSpriteAnimation.update` is the only caller of
+  `DynamicArtDecisionOwner.prime`/`observe`, and the level body it runs in is
+  suppressed for the whole transition gap. The ROM emits its pair during the
+  post-title-card fade-in, which is engine-owned transition work rather than a
+  body tick. `TestS1CompleteEmeraldVisualRun` stays pinned at bridge admission
+  until that lands.

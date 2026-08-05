@@ -3,6 +3,13 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the S1 special-stage results card now takes its continue branch. With
+  50 or more rings `SSR_RingBonus.finished` waits one second, spends a frame on
+  `SSR_Continue`'s jingle, then waits six more — 421 frames where the ordinary
+  path spends 180 — and the engine only ever ran the ordinary path. That made
+  the returning level load 241 frames early, before the recorded results screen
+  had finished. The card now matches the ROM and the level loads on the frame
+  the ROM loads it.
 - Fix: a whole-run replay can now cross from a special stage's return
   presentation bridge back into its own act's gameplay. A bridge and the
   gameplay it hands back to are one recorded act split at the row gameplay

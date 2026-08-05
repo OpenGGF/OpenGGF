@@ -1604,12 +1604,22 @@ abstract class AbstractRunChainTest {
                                                 == bridgeIndex
                                         && prefixTarget.committedRows()
                                                 == structural.cursor()) {
-                                    assertEquals(GameMode.LEVEL,
+                                    // A special-stage results bridge does NOT
+                                    // end in gameplay. Its recorded rows are the
+                                    // ROM's results card, which ends at
+                                    // SSR_Exit followed by PaletteWhiteOut, so
+                                    // the returning level loads on the FIRST row
+                                    // after the bridge and its title card is
+                                    // what shows there
+                                    // ("_incObj/7E, 7F Special Stage Results and
+                                    // Chaos Emeralds.asm":157-159,
+                                    // sonic.asm:3419-3421). Requiring LEVEL here
+                                    // required the engine to finish the whole
+                                    // card early, which is the divergence this
+                                    // lane exists to catch.
+                                    assertNotEquals(GameMode.SPECIAL_STAGE,
                                             loop.getCurrentGameMode(),
-                                            "presentation bridge must hand off in LEVEL mode");
-                                    assertFalse(GameServices.level()
-                                                    .isTitleCardRequested(),
-                                            "presentation bridge must finish after the title card");
+                                            "presentation bridge must leave the special stage");
                                     throw new ReplayPrefixReached();
                                 }
                             }
