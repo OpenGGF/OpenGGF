@@ -3,6 +3,10 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K AIZ now applies the act-2 `Load_Level` and coordinate-offset
+  handoff inside the live background-event dispatch, matching the ROM's
+  same-row reload visibility. The AIZ replay frontier advances from raw frame
+  5496 to the post-reload Kosinski queue boundary at raw frame 5542.
 - Fix/Test: S3K AIZ's transition floor now enters the normal object pass
   without a synthetic same-row solid checkpoint. This preserves the ROM's
   allocation-row versus first-execution-row boundary and advances the AIZ

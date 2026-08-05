@@ -61690,3 +61690,38 @@ to synthesize a POST phase on a VBLANK-only row.
   `c3e8ddd34bf587540ca7d131fc68d371538d1a746da64c4eee3ec01f524948b7`,
   with no matching engine-submitted job. The next frontier is the same-row
   AIZ2 reload/offset handoff.
+
+## 2026-08-05 — S3K AIZ reload-dispatch frontier
+
+- Worktree: repository root, branch `bugfix/s3k-traces`, parent frontier
+  `d7994aa66`. No trace payloads were edited.
+- Root cause: AIZ's act-2 handoff used the deferred seamless-transition
+  request path even when the live level was already executing. The ROM's
+  `AIZ1BGE_Finish` performs `Load_Level` and the coordinate subtractions in
+  the same background-event dispatch, so deferral left one unshifted
+  comparison row at raw frame `5496`.
+- Fix: the AIZ event owner now applies the act transition directly when a live
+  level exists, retaining the request path only for a no-level bootstrap
+  fallback. The focused event and transition suites verify the applied act-2
+  state and no deferred request.
+- Focused validation passed:
+  `mvn -q -Dmse=off
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.game.sonic3k.events.TestSonic3kAIZEvents,com.openggf.tests.TestSonic3kActTransitionZoneFeatures,com.openggf.level.TestLevelSeamlessTransitionExecutor'
+  test`
+- Clean authoritative command:
+  `mvn -q -Dmse=off -Dtrace.context.diagnosticChars=full
+  -Dsurefire.argLine='-Xshare:off -Xmx6g'
+  -Dsurefire.forkCount=1 -DreuseForks=true
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace'
+  test`
+- Result: the first comparison error advances from raw frame `5496`
+  (`x`, expected `$00CD`, actual `$2FCD`) to raw frame `5542`
+  (`queue.s3k_kos_direct.busy`, expected `true`, actual `false`). The partial
+  report falls from `41` to `7` comparison errors (all physics, with no
+  animation errors). The replay still fails closed at direct Kosinski
+  completion `#36`, raw frame `5543`, fingerprint
+  `c3e8ddd34bf587540ca7d131fc68d371538d1a746da64c4eee3ec01f524948b7`, with
+  no matching engine-submitted job. The next frontier is AIZ2 post-reload
+  queue ownership/readiness.

@@ -2690,8 +2690,9 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         persistTransitionCheckpoint();
         SessionSaveRequests.requestCurrentSessionSave(SaveReason.PROGRESSION_SAVE);
         LevelManager levelManager = levelManager();
-        levelManager().requestSeamlessTransition(
-                SeamlessLevelTransitionRequest.builder(SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
+        SeamlessLevelTransitionRequest request =
+                SeamlessLevelTransitionRequest.builder(
+                                SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
                         // ROM loads AIZ act 2 resources here, but this is presented as
                         // a seamless continuation (no title card transition).
                         .targetZoneAct(levelManager.getCurrentZone(), 1)
@@ -2726,7 +2727,20 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                         .postTransitionMinY(0)
                         .postTransitionMaxY(0x260)
                         .postTransitionMaxYTarget(0x260)
-                        .build());
+                        .build();
+        if (levelManager.getCurrentLevel() == null) {
+            levelManager.requestSeamlessTransition(request);
+        } else {
+            try {
+                // AIZ1BGE_Finish performs Load_Level and the coordinate
+                // subtractions inside this background-event dispatch. Deferring
+                // through the outer frame driver leaves one unshifted comparison
+                // row before the AIZ2 continuation becomes visible.
+                levelManager.executeActTransition(request);
+            } catch (IOException e) {
+                throw new IllegalStateException("Failed to apply AIZ act transition", e);
+            }
+        }
         LOG.info("AIZ1: requested seamless in-place post-miniboss reload");
     }
 
