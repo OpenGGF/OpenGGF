@@ -62465,3 +62465,50 @@ to synthesize a POST phase on a VBLANK-only row.
   9 rows earlier, at 7,983. The recorded `object_removed id 0x28` (animal)
   events at 7,940/7,942/7,944/7,965/7,973/7,980/7,987/7,991 are the input to
   that scan, so the suspect is animal despawn cadence rather than the PLC.
+
+## 2026-08-05 - Next frontier measured: GHZ3's prison-capsule animal window
+
+- Frontier: `TestS1CompleteEmeraldVisualRun` with the second lane's pin raised
+  to `stopAfterSegment(7)`, on `develop` at `9d73e15b6`. **3 errors** at
+  segment-6 row **7,983** (`ghz3_2`, BK2 26,702), then the self-pause cascade:
+  `queue.s1_nemesis_plc.busy` / `prepared` / `remaining_work` expected
+  `false`/`false`/`-1`, actual `true`/`true`/`128`. The recording arms that
+  128-pattern queue at row **7,992**, nine rows later; the engine arms it early.
+- What the queue is. Row 7,992 is also where the fixture logs
+  `object_appeared slot 23 id 0x3A` (`GotThroughCard`) and
+  `object_removed slot 34 id 0x3E` (`Prison`) — i.e. `Pri_EndAct`'s
+  `GotThroughAct` hand-off once its object-RAM scan finds no `id_Animals` left
+  (docs/s1disasm/_incObj/3E Prison Capsule.asm:204-230). Note
+  `SignpostArtLoad` is NOT the source: it returns immediately on a third act
+  (sonic.asm:3189-3190). So the defect is the animal window, not the PLC.
+- Measured, with temporary instrumentation on
+  `Sonic1EggPrisonObjectInstance.update` (reverted) logging the live
+  `Sonic1AnimalsObjectInstance` slot set per `vIntRunCount`, against the
+  fixture's 0x28 `object_appeared`/`object_removed` events. Expressed relative
+  to each side's own animal burst (`Pri_SpawnAnimals`):
+  - **Spawn cadence is phase-shifted by 2.** The recording's continuous spawns
+    (`Pri_Animals`, every frame where `v_vbla_byte & 7 == 0`) land at burst +6,
+    +14, +22 … +150 — 19 of them, the last one on the very frame the 150-frame
+    timer expires. The engine's land at +8, +16, +24 … +144 — 18 of them,
+    because +152 falls outside the window. The engine gates on
+    `vIntRunCount & 7`.
+  - **Despawn times diverge much more than 2.** Sorted, burst-relative:
+    recording `119,120,132,141,152,156,162,179,200,222,224,226,226,227,227,233,
+    236,238,241,245,247,249,270,278,285,292,296`; engine
+    `119,133,138,145,151,161,172,186,206,214,215,220,226,226,233,241,241,243,
+    245,245,247,250,263,264,269,287`. The last recorded animal leaves at +296
+    and the last engine one at +287 — exactly the nine rows the queue is early.
+  - Slot allocation also differs from the first frame: the recording's initial
+    burst takes 37, 41-47 while the engine's takes 40-47, so the two sides'
+    slot labels are not comparable and the sequences above are the honest
+    comparison.
+- **Not diagnosed — stopped deliberately.** The spawn phase is one candidate,
+  but it cannot by itself produce a divergence of tens of frames in the middle
+  of the despawn sequence. `Animals` picks its type and direction from
+  `RandomNumber` and is deleted when it leaves the screen, so the despawn
+  spread is consistent with an RNG-call-order or animal-motion difference,
+  which this evidence does not separate. S1 fixtures carry no
+  `rng_call_per_frame` family (it is one of the hook-driven families the native
+  recorder defers), so the next step is either a scratch PC-execute probe on
+  `RandomNumber` across the window, or an engine-side RNG-call log compared
+  against the recorded animal type/direction outcomes. No change was made.
