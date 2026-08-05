@@ -25,6 +25,17 @@ class TestS1CompleteEmeraldRunPrefix extends AbstractRunChainTest {
         assertChainReplayThroughSegmentRow(RUN_DIR, 1, 1);
     }
 
+    /**
+     * Extends the frontier past the special stage's own exit: segment 2 is the
+     * GHZ2 presentation bridge the stage returns through, whose structural rows
+     * are the ones a visual run reported failing atomic dynamic-art publication.
+     */
+    @Test
+    void specialStageReturnThroughGhz2PresentationBridge() throws Exception {
+        assertChainReplayThroughSegmentRow(RUN_DIR, 2, 800);
+    }
+
+
     @Override
     protected void assertCompletedSegmentComparison(
             int segmentIndex, LiveTraceComparator comparator) {

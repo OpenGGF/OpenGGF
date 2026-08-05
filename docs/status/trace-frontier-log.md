@@ -61465,3 +61465,54 @@ to synthesize a POST phase on a VBLANK-only row.
   `TestBubblerObjectInstance` red that passes in isolation and a
   `TestEngineLiveCapturePresentation` capture-queue red belonging to unrelated
   uncommitted capture work in the shared tree.
+
+## 2026-08-05 - Visual-run parity driver and the bridge-to-gameplay handoff
+
+- Branch: `feature/ai-visual-trace-fast-forward`, based on `2aabd35be`.
+- User report: a windowed session of `s1-sonic-complete-withemeralds` aborted
+  after the special-stage results with `dynamic-art row 580 was not published
+  atomically after production`, and the special stage was visible through the
+  entry white-out.
+- Parity gap closed: `AbstractRunChainTest` is not the visual path. It builds
+  its own coordinator/driver loop beside `TraceSessionLauncher` and calls the
+  three-argument `TraceStructuralRowComparator.completePostProduction`, where
+  the visual adapter passes the row's observed-V-blank flag as a fourth. New
+  `VisualRunReplayHarness` (test scope) boots a run headlessly and enters the
+  production launcher through `finishRunLaunch` -- the same callback the
+  master-title fade hands to -- so everything after game bootstrap is
+  production code. Only the master-title screen is skipped, because fading
+  through it reaches `glCreateShader`, which aborts the JVM rather than
+  throwing. The harness also restores failure visibility: the launcher
+  deliberately contains replay failures (log + `TraceLaunchStatus`) so a
+  windowed session returns to the picker, which would otherwise read as a green
+  headless run.
+- Defect found and fixed: `TraceRunPlaybackCoordinator` had no rule for
+  admitting out of a presentation bridge into its own act's gameplay. Segments
+  2 and 3 of this run are one GHZ2 act split at the row gameplay resumes --
+  measured `loadGen=3` on both sides, so no level load and no boundary signal
+  separates them -- leaving `rememberedLevelLoad` null and the all-lag
+  continuation unreachable (the bridge measured 8 lagged rows of 800, against a
+  threshold of 799). The shared cursor ran past the destination offset until
+  `requireRowsConsumed` threw. Exact physical row plus level identity plus a
+  released title card are now the authority, matching both the rule that admits
+  the bridge itself and `AbstractRunChainTest`'s own handoff assertion
+  ("gameplay destination must open at its exact physical row").
+- Frontier now at GHZ2's first gameplay row after that handoff, and it is NOT
+  visual-only. The visual driver fails it with `dynamic-art row 0 was not
+  published atomically after production`; the headless chain
+  (`assertChainReplayThroughSegmentRow(RUN_DIR, 3, 1)`) fails the same boundary
+  with `advertised special-stage row 2894 was not published atomically for
+  generation 5`. Neither adapter had crossed it before, so no lane regressed.
+  `TestS1CompleteEmeraldVisualRun` is pinned at the handoff via
+  `VisualRunReplayHarness.stopAfterSegment(3)`; raise that target when the
+  frontier moves.
+- Evidence: `mvn -Dmse=off -Ptrace-replay -Dsonic1.rom.path=s1.gen
+  -Dtest=TestS1CompleteEmeraldVisualRun,TestS1CompleteEmeraldRunPrefix,TestTraceRunPlaybackCoordinator test`
+  — 22 tests, 0 failures, 0 errors, including two new coordinator cases for the
+  handoff rule and its title-card guard.
+  `TestS1GhzMazeRoundTripChain#ghzMazeSpecialStageReturnPresentationBridge`
+  remains green. `TestS2EhzHalfpipeRoundTripChain` is red, verified identical
+  on the unmodified coordinator.
+- Full default suite: 14,346 tests with the same 39-red set as the pre-change
+  run; nothing new, and the stale capture-queue assertion plus an
+  order-sensitive `TestBubblerObjectInstance` red cleared.

@@ -216,6 +216,11 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Headless visual-run parity driver (2026-08-05):** whole trace runs can now be
+  driven through the production visual-session owners without a window, so a
+  Trace Test Mode defect is reproducible in a test rather than a screenshot.
+  Its first find: a run can now cross from a special stage's return
+  presentation bridge back into its own act's gameplay.
 - **Special Stage entry frame parity (2026-08-04):** the game mode now changes on
   the frame the ROM changes it, with the white-out owned by the special stage
   rather than the level it was entered from. The S1 giant-ring handoff no longer

@@ -203,11 +203,21 @@ class TestEngineLiveCapturePresentation {
                 Engine.resolveLiveCapturePresentationState(false, false, false, true));
     }
 
+    /**
+     * The two invariants that make live capture lossless and complete: the
+     * encoder never downscales, and the sink blocks rather than dropping frames
+     * when it falls behind. The queue DEPTH is deliberately not pinned here —
+     * it is budgeted from window size by
+     * {@code LiveCaptureRecorderFactory.queueFrames}, which
+     * {@code LiveCaptureRecorderFactoryTest} covers directly.
+     */
     @Test
-    void productionRecorderUsesBlockCapacityEightAndScaleOne() throws Exception {
+    void productionRecorderUsesBlockBackpressureAndScaleOne() throws Exception {
         String source = Files.readString(Path.of("src/main/java/com/openggf/capture/LiveCaptureRecorderFactory.java"));
-        assertTrue(source.contains("new FfmpegEncoder(ffmpeg, 1)"));
-        assertTrue(source.contains("BackpressurePolicy.BLOCK, 8"));
+        assertTrue(source.contains("new FfmpegEncoder(ffmpeg, 1)"),
+                "live capture must encode at scale 1");
+        assertTrue(source.contains("BackpressurePolicy.BLOCK, queueFrames"),
+                "live capture must block on a full queue rather than drop frames");
     }
 
     @Test

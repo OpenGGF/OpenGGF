@@ -3,6 +3,31 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: a whole-run replay can now cross from a special stage's return
+  presentation bridge back into its own act's gameplay. A bridge and the
+  gameplay it hands back to are one recorded act split at the row gameplay
+  resumes — same level, same load generation, no boundary signal between them —
+  so neither a remembered level load nor an all-lag continuation is ever
+  observable there, and the coordinator had no other rule to admit on. The
+  shared cursor ran past the destination offset until the run aborted on
+  `rowsConsumed must be 0 or 1`. The exact physical row plus level identity are
+  now the authority, mirroring the rule that admitted the bridge itself.
+- Feature: `VisualRunReplayHarness` drives a whole trace run through the
+  production visual-session owners with no window, so a defect that only Trace
+  Test Mode reaches is reproducible in a test. The headless run-chain fixture
+  builds its own coordinator loop beside `TraceSessionLauncher` and calls a
+  different structural-comparison overload, so it could stay green through a
+  boundary a real session aborted on. The harness also converts the launcher's
+  deliberate failure containment — which logs and returns a windowed session to
+  the picker rather than propagating — back into a test failure, and reports a
+  stopped BK2 session as a stall rather than spinning out the step budget.
+- Fix: the special stage is no longer visible through its own entry white-out.
+  The white-out belongs to `GM_Special`, but it runs there *before*
+  `ClearScreen` and the art load, over the previous screen still in VRAM;
+  fading in destination-owned form after the stage had already been initialised
+  showed the stage fading out instead. Reproducing the ROM needs the stage's
+  draw suppressed for the fade's duration with the previous scene still
+  rendering, so entry holds opaque until the reveal until that lands.
 - Fix: entering a Special Stage no longer costs an extra fade's worth of
   frames. Every ROM writes the game mode inside the level-side object tick and
   runs no fade of its own — S1 `Got_ChkSS`, S2 `Obj79_Star`, S3K

@@ -74,7 +74,7 @@ class TestGameLoopSpecialStageEntryPresentation {
     }
 
     @Test
-    void normalReadyEntryUsesFastPolicyAndWhitesOutBeforeTheModeChangeListener() throws Exception {
+    void normalReadyEntryUsesFastPolicyAndPreservesMusicRevealListenerOrder() throws Exception {
         SpecialStageProvider provider = readyProvider();
         GameLoop.GameModeChangeListener listener = mock(GameLoop.GameModeChangeListener.class);
         loop.setGameModeChangeListener(listener);
@@ -83,10 +83,10 @@ class TestGameLoopSpecialStageEntryPresentation {
 
         InOrder order = inOrder(provider, audio, fade, listener);
         order.verify(provider).initializeStage(2, SpecialStageStartupPolicy.FAST);
-        order.verify(fade).startFadeToWhite(any(), anyInt());
+        order.verify(audio).playMusic(GameMusic.SPECIAL_STAGE);
+        order.verify(fade).startFadeFromWhite(any());
         order.verify(listener).onGameModeChanged(GameMode.LEVEL, GameMode.SPECIAL_STAGE);
         verify(fade, never()).holdWhite();
-        verify(audio, never()).playMusic(GameMusic.SPECIAL_STAGE);
         assertEquals(GameMode.SPECIAL_STAGE, loop.getCurrentGameMode());
     }
 
@@ -189,7 +189,7 @@ class TestGameLoopSpecialStageEntryPresentation {
     }
 
     @Test
-    void concreteS1AndS3kProvidersRetainWhiteOutAndImmediateBlackEntry() throws Exception {
+    void concreteS1AndS3kProvidersRetainImmediateWhiteAndBlackEntry() throws Exception {
         doAnswer(invocation -> {
             invocation.<Runnable>getArgument(0).run();
             return null;
@@ -207,7 +207,7 @@ class TestGameLoopSpecialStageEntryPresentation {
         doReturn(Optional.empty()).when(s1).rewindAdapter();
 
         loop.doEnterSpecialStage(s1, 0, false);
-        verify(fade).startFadeToWhite(any(), anyInt());
+        verify(fade).startFadeFromWhite(any());
         verify(fade, never()).holdWhite();
 
         loop.changeGameModeForBoundary(GameMode.LEVEL);

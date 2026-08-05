@@ -340,6 +340,23 @@ public final class TraceRunPlaybackCoordinator {
         TraceRunManifest.Transition expected =
                 boundaries.exitBoundaries()[currentSegmentIndex];
         if ("level".equals(destination.kind())) {
+            if (policy(currentSegmentIndex)
+                            == TraceRunReplayWalker.SegmentExecutionPolicy
+                                    .LEVEL_PRESENTATION_BRIDGE
+                    && sameRecordedLevel(currentSegment(), destination)) {
+                // Leaving a bridge back into its own act's gameplay. The
+                // recorder split ONE continuous level at the row gameplay
+                // resumes -- no load, no mode change, and no boundary signal
+                // separates the two halves -- so neither a remembered level
+                // load nor an all-lag continuation can ever be observed here.
+                // Exact physical row plus level identity are the authority,
+                // mirroring the rule that admitted the bridge itself.
+                return observation.mode() == GameMode.LEVEL
+                        && !observation.initialTitleCardPending()
+                        && observation.sharedBk2Cursor()
+                                == destination.bk2FrameOffset()
+                        && matchesLevel(destination, observation.level());
+            }
             if (policy(destinationIndex())
                     == TraceRunReplayWalker.SegmentExecutionPolicy
                             .LEVEL_PRESENTATION_BRIDGE) {
