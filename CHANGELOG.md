@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K AIZ fire-transition events now perform the first fire-rise
+  step on the same background-event tick that starts the ROM transition.
+  This removes the one-frame AIZ queue handoff drift without changing the
+  trace payload and advances the first comparison frontier to the Tails
+  vertical-state handoff.
 - Fix/Test: S3K CNZ Clamer now preserves the ROM's one-pass initialization
   boundary after `Obj_WaitOffscreen` releases the object, so its idle gate and
   auto-close projectile path begin on the native execution pass. CNZ's clean

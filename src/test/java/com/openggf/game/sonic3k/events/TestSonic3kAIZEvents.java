@@ -784,6 +784,23 @@ public class TestSonic3kAIZEvents {
     }
 
     @Test
+    public void eventsFg5RunsFireRiseOnTheTriggeringBackgroundEventTick() {
+        Camera camera = GameServices.camera();
+        camera.setX((short) 0x2F10);
+        camera.setY((short) 0x0200);
+
+        var events = newFireTransitionEvents();
+        events.init(0);
+        events.setEventsFg5(true);
+
+        updateWithHardware(events, 0, 0);
+
+        assertTrue(events.isFireTransitionActive());
+        assertEquals(1, events.getFireTransitionFrames());
+        assertEquals(0x0022_4000, events.getFireBgCopyFixed());
+    }
+
+    @Test
     public void eventsFg5TransitionWritesProgressionSaveForActiveSlot() throws Exception {
         SessionManager.clear();
         SessionManager.clear();

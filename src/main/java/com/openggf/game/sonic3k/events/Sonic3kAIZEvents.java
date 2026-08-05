@@ -2367,8 +2367,9 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         if (fireSequencePhase == FireSequencePhase.INACTIVE) {
             if (eventsFg5 && !introNormalRefreshPending) {
                 beginFireTransition();
+            } else {
+                return;
             }
-            return;
         }
 
         switch (fireSequencePhase) {

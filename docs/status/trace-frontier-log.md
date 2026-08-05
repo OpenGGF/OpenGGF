@@ -61629,3 +61629,32 @@ to synthesize a POST phase on a VBLANK-only row.
   fails closed at direct Kosinski completion `#31`, fingerprint
   `66961069e564ef707173bbad733f75e3ab034e29e3f4833a02e2e26af452d8fd`, with
   no matching engine-submitted job.
+
+## 2026-08-05 — S3K AIZ fire-transition handoff frontier
+
+- Worktree: repository root, branch `bugfix/s3k-traces`, parent frontier
+  `dc32f797d`. No trace payloads were edited.
+- Root cause: when the ROM's background event first raises the fire-transition
+  trigger, the engine began the transition and returned before executing the
+  initial fire-rise step. The ROM falls through into that step on the same
+  event tick, leaving the engine's fire state and subsequent art-queue gate one
+  replay row behind.
+- Fix: the AIZ event handler now continues into the fire-rise state machine on
+  the triggering background-event tick while retaining the inactive return
+  when no trigger is present. A focused regression test covers the same-tick
+  fixed-point update.
+- Clean authoritative command:
+  `mvn -q -Dmse=off -Dtrace.context.diagnosticChars=full
+  -Dsurefire.argLine='-Xshare:off -Xmx6g'
+  -Dsurefire.forkCount=1 -DreuseForks=true
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace'
+  test`
+- Result: the first comparison error advances at raw frame `5414` from the
+  direct Kosinski busy mismatch (`expected=true`, `actual=false`) to
+  `tails_y` (`$037F` expected, `$0380` actual). The partial report falls from
+  `50` to `46` errors (physics `37`, animation `9`); the replay still fails
+  closed at direct Kosinski completion `#36`, fingerprint
+  `c3e8ddd34bf587540ca7d131fc68d371538d1a746da64c4eee3ec01f524948b7`, with
+  no matching engine-submitted job. The AIZ queue handoff is therefore
+  resolved and the next frontier is the Tails vertical-state handoff.
