@@ -61516,3 +61516,43 @@ to synthesize a POST phase on a VBLANK-only row.
 - Full default suite: 14,346 tests with the same 39-red set as the pre-change
   run; nothing new, and the stale capture-queue assertion plus an
   order-sensitive `TestBubblerObjectInstance` red cleared.
+
+## 2026-08-05 - Post-special-stage level load sits on the wrong side of the bridge
+
+- Continues the entry above. With the bridge-to-gameplay admission rule in
+  place, the visual driver clears the handoff and then the run pauses itself:
+  `TraceRunExternalDiagnostics` fires its first-error callback
+  (`GameLoop::toggleUserPause`), `stepInternalBody` returns at its paused gate
+  without a production iteration, and every later row reports
+  `dynamic-art row N was not published atomically after production
+  (serial 8747->8747, published=false, ... frame=-1)` -- nothing published
+  because nothing ran. The publication message now names which condition failed.
+- The error it paused on is `run_gap.edge_count expected 2, actual 0` (plus both
+  `run_gap.edge[N].present`). The manifest records Sonic's DPLC art load in the
+  gap after the bridge: `dynamic_art_gap_transitions` carries a
+  submitted/completed pair at `movie_logical_frame 9715`, owner `sonic`,
+  `mapping_frame 1`, ROM source `0x2260C` onward into VRAM `0xF000`.
+- Root cause: the ROM loads GHZ2 AFTER its 800-row special-stage results
+  screen, not before. The recorded bridge (`ghz2`, rows 8,705-9,504) holds
+  `Level_frame_counter` frozen at 0x1009 -- one past GHZ1's last recorded
+  0x1008 -- and segment 3 (`ghz2_2`, from 9,741) opens at 1, which only a fresh
+  `GM_Level` init produces. The engine instead loads in
+  `GameLoop.doExitResultsScreen` before the bridge is admitted, so its player
+  DPLC edges land outside the gap and it produces none there.
+- The bridge-admission rule forces that ordering today:
+  `destinationReady`'s presentation-bridge branch matches the destination
+  against the engine's LOADED level identity, so the engine must already be in
+  GHZ2 at row 8,705. The recorder labels the bridge GHZ2 from `v_zone_act`,
+  which the ROM advances at `Got_NextLevel` before the special stage while the
+  level data is still GHZ1's. Closing this needs bridge identity to key on the
+  pending/apparent zone-act rather than the loaded level, with the engine's
+  post-special-stage load moved into the gap -- a design change, not a patch,
+  and the next piece of work here.
+- `TestS1CompleteEmeraldVisualRun` is pinned at bridge admission
+  (`stopAfterSegment(2)`); the handoff rule itself is covered by two
+  `TestTraceRunPlaybackCoordinator` cases. The harness now fails on the
+  self-pause with the HUD mismatches attached rather than reporting a stall.
+- Evidence: `mvn -Dmse=off -Ptrace-replay -Dsonic1.rom.path=s1.gen
+  -Dtest=TestS1CompleteEmeraldVisualRun,TestS1CompleteEmeraldRunPrefix,TestTraceRunPlaybackCoordinator test`
+  — 24 tests, 0 failures, 0 errors. Full default suite: 14,346 tests with the
+  same 39-red set, no new failures.

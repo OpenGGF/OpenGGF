@@ -404,7 +404,13 @@ public final class LiveTraceComparator implements PlaybackFrameObserver, TraceHu
                     || after.frame() != expected.frame()) {
                 throw new IllegalStateException(
                         "dynamic-art row " + expected.frame()
-                                + " was not published atomically after production");
+                                + " was not published atomically after production"
+                                + " (serial " + before.deliverySerial() + "->"
+                                + after.deliverySerial()
+                                + ", published=" + after.published()
+                                + ", generation " + before.segmentGeneration()
+                                + "->" + after.segmentGeneration()
+                                + ", frame=" + after.frame() + ")");
             }
         } else if (!after.equals(before)) {
             throw new IllegalStateException(

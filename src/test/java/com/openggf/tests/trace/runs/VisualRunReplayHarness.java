@@ -157,6 +157,13 @@ public final class VisualRunReplayHarness {
                 reachedTarget = true;
                 break;
             }
+            if (loop.isPaused()) {
+                throw new AssertionError(
+                        "visual run paused itself on its first comparison error"
+                                + " -- a windowed session pauses so the user can"
+                                + " read the HUD, which headlessly is a stall"
+                                + window(recent));
+            }
             if (coordinator(session) != null
                     && !GameServices.playbackDebug().isSessionPlaying()) {
                 stalled = true;
@@ -255,11 +262,9 @@ public final class VisualRunReplayHarness {
                 + " mode=" + loop.getCurrentGameMode()
                 + " phase=" + coordinatorPhase(session)
                 + " segment=" + currentSegmentIndex(session)
-                + " structLag=" + laggedFrames(field(session, "runStructuralComparator"))
-                + " liveLag=" + laggedFrames(field(session, "comparator"))
-                + " loadGen=" + loadGeneration()
                 + " art=" + dynamicArt()
-                + " disp=" + field(session, "activeRunDisposition"));
+                + " paused=" + loop.isPaused()
+                + diagnostics(session));
     }
 
     private static String dynamicArt() {
@@ -268,30 +273,34 @@ public final class VisualRunReplayHarness {
             return "serial=" + snap.deliverySerial()
                     + ",published=" + snap.published()
                     + ",frame=" + snap.frame()
-                    + ",gen=" + snap.segmentGeneration();
+                    + ",gen=" + snap.segmentGeneration()
+                    + ",open=" + com.openggf.game.session.SessionManager
+                            .getCurrentGameplayMode().dynamicArtLifecycle()
+                            .isComparisonSegmentOpen();
         } catch (RuntimeException e) {
             return "n/a";
         }
     }
 
-    private static String loadGeneration() {
-        try {
-            return String.valueOf(
-                    GameServices.level().getCompletedProductionLoadGeneration());
-        } catch (RuntimeException e) {
-            return "n/a";
-        }
-    }
-
-    private static String laggedFrames(Object comparator) {
-        if (comparator == null) {
-            return "none";
+    /**
+     * The run's own HUD diagnostics. A windowed session pauses on its first
+     * error so the user can read them; headlessly that reads as a stall, so
+     * the mismatch itself has to reach the failure message.
+     */
+    private static String diagnostics(TraceSessionLauncher session) {
+        Object diag = field(session, "runExternalDiagnostics");
+        if (diag == null) {
+            return "";
         }
         try {
-            Method m = comparator.getClass().getMethod("laggedFrames");
-            return String.valueOf(m.invoke(comparator));
+            int errors = (int) diag.getClass().getMethod("errorCount").invoke(diag);
+            if (errors == 0) {
+                return "";
+            }
+            Object recent = diag.getClass().getMethod("recentMismatches").invoke(diag);
+            return " errors=" + errors + " " + recent;
         } catch (ReflectiveOperationException e) {
-            return "?";
+            return " errors=?";
         }
     }
 

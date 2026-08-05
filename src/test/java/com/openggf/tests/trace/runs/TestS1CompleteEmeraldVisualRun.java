@@ -27,23 +27,27 @@ class TestS1CompleteEmeraldVisualRun {
 
     /**
      * The current frontier: GHZ1, the giant-ring handoff, the whole special
-     * stage, and the GHZ2 presentation bridge the stage returns through, up to
-     * and including the bridge handing off to GHZ2 gameplay.
+     * stage, and admission of the GHZ2 presentation bridge the stage returns
+     * through.
      * <p>
-     * It stops there deliberately. GHZ2's first gameplay row after the bridge
-     * fails dynamic-art publication, and so does the headless chain
-     * ({@code assertChainReplayThroughSegmentRow(RUN_DIR, 3, 1)} raises
-     * "advertised special-stage row 2894 was not published atomically for
-     * generation 5"), so that row is an unexplored frontier in both adapters
-     * rather than a visual-only defect. Raise the target here when it moves.
+     * It stops there deliberately. The bridge now hands back to GHZ2 gameplay
+     * (see {@code TestTraceRunPlaybackCoordinator}), but the run then pauses on
+     * its first comparison error: the manifest records Sonic's DPLC art load in
+     * the gap after the bridge ({@code movie_logical_frame 9715}) because the
+     * ROM loads GHZ2 AFTER its 800-row results screen -- the bridge holds
+     * {@code Level_frame_counter} at 0x1009 and gameplay resumes at 1 -- while
+     * the engine loads before the bridge and produces no gap edges at all
+     * ({@code run_gap.edge_count} 2 vs 0). Raise the target here when the
+     * engine's post-special-stage load moves to the recorded side of the
+     * bridge.
      */
     @Test
-    void replaysThroughTheSpecialStageReturnBridgeHandoff() throws Exception {
+    void replaysThroughTheSpecialStageAndItsReturnBridgeAdmission() throws Exception {
         VisualRunReplayHarness.Result result =
                 VisualRunReplayHarness.replay(
-                        RUN_DIR, VisualRunReplayHarness.stopAfterSegment(3));
+                        RUN_DIR, VisualRunReplayHarness.stopAfterSegment(2));
 
-        assertEquals(3, result.currentSegmentIndex(),
-                "visual run stalled before GHZ2 gameplay was admitted: " + result);
+        assertEquals(2, result.currentSegmentIndex(),
+                "visual run stalled before the GHZ2 return bridge: " + result);
     }
 }
