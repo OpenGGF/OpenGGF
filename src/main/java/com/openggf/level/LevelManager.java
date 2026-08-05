@@ -2825,6 +2825,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         // even headless.
         if (!graphicsManager.isHeadlessMode()
                 || headlessWholeRunHandoff
+                || ctx.isTitleCardRequiredInHeadlessMode()
                 || callerOwnedReturnCard) {
             // ROM: title card reads Apparent_act, not Current_act.
             // After AIZ's seamless fire transition, Current_act is 1 but

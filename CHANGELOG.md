@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: reconciled the latest `develop` merge with S3K's headless
+  transition-owned title-card path. The LBZ complete-run replay again submits
+  the ROM `ArtKosM_TitleCardRedAct` work at direct `#318` and matches through
+  direct `#321` / module `#218`; the next native boundary remains direct `#322`
+  at raw frame `46196`. No trace payloads changed.
 - Fix/Test: S3K LBZ's final-boss owner now submits and rewind-owns the
   ROM-backed `ArtKosM_LBZ2DeathEggSmall` parent, and the final-fall handoff
   observes the LBZ2 `$-2` camera step at the object/event boundary. Suppressed

@@ -63714,3 +63714,32 @@ to synthesize a POST phase on a VBLANK-only row.
   `LevelIterationAdmissionController` / `TraceSessionLauncher`), so this is a
   design-then-implement piece, not an in-loop fix. It is also the run's FIRST
   plain act-to-act boundary, so nothing before it exercised the path.
+
+## 2026-08-05 — S3K LBZ post-develop merge reconciliation
+
+- Merge `origin/develop` at `18a243d04` was completed on
+  `bugfix/s3k-traces` as `bc9c70976`; the existing unrelated worktree changes
+  were left unstaged.
+- The first clean post-merge LBZ replay regressed from the previously verified
+  direct `#318` boundary: the merge resolution retained the branch's
+  `loadZoneAndActWithTitleCard` path but dropped its matching
+  `LevelLoadContext.isTitleCardRequiredInHeadlessMode()` predicate from
+  `LevelManager.requestTitleCardIfNeeded`. That suppressed the ROM-owned
+  `ArtKosM_TitleCardRedAct` submission at source `0xD6F2A`.
+- Restored the transition-owned predicate alongside `develop`'s
+  `callerOwnedReturnCard` predicate. Clean authoritative replay then matched
+  direct `#318..#321` (raw `46113`, `46115`, `46117`, `46119`) and module
+  `#215..#218` (raw `46114`, `46116`, `46118`, `46120`) again. The first
+  remaining authority failure is direct `#322` at raw `46196`, fingerprint
+  `sha256:bc4e524205ab25aafd9a78f8900b26d5d5d2aa694c45bdb25d47c607b274d335`;
+  the engine has no pending job. No trace payloads changed.
+- Validation commands:
+  `mvn -q -Dmse=off -DskipTests compile` and the focused
+  `TestLbzFinalBoss1Instance,TestTraceReplayInvariantGuard` selection passed;
+  the clean LBZ command was
+  `mvn -q -Dmse=off -Dtrace.context.diagnosticChars=full
+  -Dsurefire.argLine='-Xshare:off -Xmx6g'
+  -Dsurefire.forkCount=1 -DreuseForks=true
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kLbzCompleteRunTraceReplay#replayMatchesTrace'
+  test`.
