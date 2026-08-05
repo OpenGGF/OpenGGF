@@ -1898,12 +1898,14 @@ public class SidekickCpuController {
         // FollowRight to preserve the delayed Ctrl_2 word (sonic3k.asm:26702-
         // 26705). A push carrying terrain ground-wall provenance is genuine and
         // must survive to the loc_13DD0 read (AIZ2 reload underwater wall bounce,
-        // trace F14299); only a stale released-object push (no terrain
-        // provenance) is pre-cleared here.
+        // trace F14299). A live SolidObject-owned push is the same native
+        // status source and must also survive; only a stale released-object
+        // push with neither owner provenance is pre-cleared here.
         if (currentPushing
                 && releasedUnderwaterPushConsumed
                 && releasedUnderwaterZeroSpeedPush
-                && !sidekick.isPushFromGroundWallCollision()) {
+                && !sidekick.isPushFromGroundWallCollision()
+                && !hasLiveObjectPushingLatch()) {
             sidekick.setPushing(false);
             currentPushing = false;
         } else if (!releasedUnderwaterObjectSlot) {

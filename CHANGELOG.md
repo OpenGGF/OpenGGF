@@ -3,6 +3,10 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K Tails' released-underwater push cleanup now preserves a live
+  SolidObject-owned push latch alongside terrain wall provenance. The standard
+  AIZ replay frontier advances from raw frame `10701` (`tails_mapping_frame`)
+  to raw frame `10744` (`tails_animation_id`) without changing trace payloads.
 - Fix/Test: S3K AIZ's defeated miniboss now releases the act-size camera
   workers at the semantic in-level title owner's published `LoadEnemyArt`
   handoff, before the later `End_of_level_flag` completion edge. The standard

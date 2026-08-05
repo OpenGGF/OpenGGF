@@ -61860,3 +61860,37 @@ to synthesize a POST phase on a VBLANK-only row.
   (`tails_mapping_frame`, expected `0x00AB`, actual `0x0002`). The report
   contains `1136` errors and `0` warnings; no trace payloads were changed. The
   next frontier is Tails animation-state parity after the AIZ camera handoff.
+
+## 2026-08-05 — S3K AIZ released-underwater push-owner frontier
+
+- Worktree: repository root, branch `bugfix/s3k-traces`, parent frontier
+  `94c1385eb`. No trace payloads were edited.
+- Root cause: the S3K sidekick's one-shot released-underwater push cleanup
+  treated every zero-speed push in a retained interact-slot state as stale
+  unless the same frame carried terrain wall provenance. AIZ's live solid pass
+  reasserts its own native object-pushing latch after that release state, so the
+  controller was clearing a live SolidObject-owned `Status_Push` before the
+  animation pass read it.
+- Fix: the released-underwater pre-CPU clear now requires neither terrain wall
+  provenance nor a live SolidObject pushing latch. The cleanup remains active
+  for stale released-object residue, while live object ownership reaches
+  `Tails_CPU_Control` and the animation dispatcher unchanged. A focused
+  controller regression covers the retained released slot plus live solid
+  owner combination.
+- Focused validation passed:
+  `mvn -q -Dmse=off
+  -Dtest='com.openggf.sprites.playable.TestSidekickCpuFollowParity'
+  test`
+- Clean authoritative command:
+  `mvn -q -Dmse=off -Dtrace.context.diagnosticChars=full
+  -Dsurefire.argLine='-Xshare:off -Xmx6g'
+  -Dsurefire.forkCount=1 -DreuseForks=true
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace'
+  test`
+- Result: the first comparison error advances from raw frame `10701`
+  (`tails_mapping_frame`, expected `0x00AB`, actual `0x0002`) to raw frame
+  `10744` (`tails_animation_id`, expected `0x0000`, actual `0x001A`). The
+  report contains `1135` errors and `0` warnings; no trace payloads were
+  changed. The next frontier is Tails animation-id parity after the released
+  underwater push-owner handoff.
