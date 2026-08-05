@@ -99,21 +99,23 @@ class TestSonic3kTitleCardManagerRewind {
                 GameServices.module().getObjectArtProvider();
         title.initializeInLevel(0, 1);
         prepareExitForCompletion(title);
-        setField(title, "inLevelExitDelayFrames", 5);
+        // LBZ's retained preloaded-act title keeps the camera-release tail alive
+        // for eleven dispatches; LoadEnemyArt still follows the second Wait2 poll.
+        setField(title, "inLevelExitDelayFrames", 11);
 
         title.update();
         assertFalse(provider.capture().runtimeArtAdmissionConsumed(),
                 "the first Wait2 poll only observes the drained children");
         assertFalse(title.hasPublishedInLevelRuntimeArtAdmission(),
                 "the camera handoff must remain behind the first Wait2 poll");
-        assertEquals(4, title.capture().inLevelExitDelayFrames());
+        assertEquals(10, title.capture().inLevelExitDelayFrames());
 
         title.update();
         assertTrue(provider.capture().runtimeArtAdmissionConsumed(),
                 "LoadEnemyArt belongs to the following owner poll");
         assertTrue(title.hasPublishedInLevelRuntimeArtAdmission(),
                 "the camera handoff follows the native LoadEnemyArt boundary");
-        assertEquals(3, title.capture().inLevelExitDelayFrames());
+        assertEquals(9, title.capture().inLevelExitDelayFrames());
     }
 
     @Test

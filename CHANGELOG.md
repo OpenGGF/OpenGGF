@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K's in-level title owner now models `Obj_TitleCardWait2`'s
+  second owner poll for `LoadEnemyArt` independently of the retained camera
+  release tail. The LBZ complete-run hardware frontier advances from direct
+  Kosinski `#297` at raw frame `22332` to direct `#301` at raw frame `29371`;
+  direct `#297..#300` and module `#202..#205` now match without changing trace
+  payloads.
 - Fix/Test: LBZ1 Robotnik now submits and rewind-owns the ROM's
   `ArtKosM_LBZMiniboss` parent at `loc_8CCF6`, instead of relying only on
   preloaded standalone art. The LBZ complete-run hardware frontier advances

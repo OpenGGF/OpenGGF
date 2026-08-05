@@ -61998,3 +61998,39 @@ to synthesize a POST phase on a VBLANK-only row.
   The replay aborts before the comparison report is emitted, so no aggregate
   comparison-error count is available for this failed run; no trace payloads
   were changed.
+
+## 2026-08-05 — S3K LBZ title-owner art-admission frontier
+
+- Worktree: repository root, branch `bugfix/s3k-traces`, parent frontier
+  `eb8181db4`. No trace payloads were edited.
+- Root cause: native `Obj_TitleCardWait2` observes the drained child counter on
+  one owner dispatch and reaches `LoadEnemyArt` on the following dispatch. The
+  title manager derived that handoff from the remaining camera-release delay,
+  which delayed LBZ's retained preloaded-act title long enough to miss the
+  enemy-art batch before the recorded direct `#297`.
+- Fix: the title owner now captures the independent first-observation poll in
+  rewind state and admits runtime art on the following owner dispatch,
+  regardless of the retained camera-release tail. The regression test uses the
+  LBZ-shaped eleven-dispatch tail and still expects admission on poll two.
+- Focused validation passed:
+  `mvn -q -Dmse=off
+  -Dsurefire.argLine='-Xshare:off -Xmx6g'
+  -Dsurefire.forkCount=1 -DreuseForks=true
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.game.sonic3k.titlecard.TestSonic3kTitleCardManagerRewind,com.openggf.game.sonic3k.titlecard.TestSonic3kTitleCardKosQueue'
+  test`
+- Clean authoritative command:
+  `mvn -q -Dmse=off -Dtrace.context.diagnosticChars=full
+  -Dsurefire.argLine='-Xshare:off -Xmx6g'
+  -Dsurefire.forkCount=1 -DreuseForks=true
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kLbzCompleteRunTraceReplay#replayMatchesTrace'
+  test`
+- Result: direct completions `#297..#300` at raw frames `22332`, `22334`,
+  `22337`, and `22340`, with module completions `#202..#205` at raw frames
+  `22333`, `22335`, `22338`, and `22341`, now match. The first remaining
+  authority failure is direct completion `#301` at raw frame `29371`,
+  fingerprint `sha256:c2db2fda975f758607b601f686bc782c7ebe55e2413f540f23b193ba2b6f1741`;
+  the engine has no pending job. The replay aborts before the comparison report
+  is emitted, so no aggregate comparison-error count is available; no trace
+  payloads were changed.
