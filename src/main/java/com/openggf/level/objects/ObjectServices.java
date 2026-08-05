@@ -279,10 +279,11 @@ public interface ObjectServices {
     void advanceZoneActOnly();
 
     /**
-     * Requests entry into a special stage from a checkpoint/big ring.
-     * Wraps {@link com.openggf.level.LevelTransitionCoordinator#requestSpecialStageFromCheckpoint()}.
+     * Advances an end-of-act results card to its special-stage entry routine,
+     * whose body — the game-mode write — runs on the following frame.
+     * Wraps {@link com.openggf.level.LevelTransitionCoordinator#advanceToSpecialStageEntryRoutine()}.
      */
-    void requestSpecialStageFromCheckpoint();
+    void advanceToSpecialStageEntryRoutine();
 
     /**
      * Requests entry into a bonus stage of the given type.

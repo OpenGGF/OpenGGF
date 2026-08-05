@@ -18,6 +18,27 @@ class TestDynamicArtLifecycleService {
     private static final int SONIC_VRAM = 0xF000;
 
     @Test
+    void freshPlayablePrimeUpdatesTheDedupeBankWithoutPublishingAnEdge() {
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        startOpen(service);
+        SpriteDplcFrame frame = new SpriteDplcFrame(
+                List.of(new TileLoadRequest(0, 3)));
+
+        DynamicArtLifecycleService.ArtUpdate prime =
+                service.primePlayerDplc(
+                        GameId.S1, "sonic", 1, frame);
+        DynamicArtLifecycleService.ArtUpdate repeated =
+                service.observePlayerDplc(
+                        GameId.S1, "sonic", 1, frame);
+        service.finishProductionIteration(false);
+
+        assertTrue(prime.mappingChanged());
+        assertEquals(frame.requests(), prime.tileRequests());
+        assertFalse(repeated.mappingChanged());
+        assertTrue(service.latestSnapshot().edges().isEmpty());
+    }
+
+    @Test
     void consumedDestinationRowsAdvanceOnlyTheComparisonCursor() {
         DynamicArtLifecycleService service = new DynamicArtLifecycleService();
         startOpen(service);

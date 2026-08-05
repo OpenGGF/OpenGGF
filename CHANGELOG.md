@@ -125,6 +125,219 @@ All notable changes to the OpenGGF project are documented in this file.
   dispatch and pumps the native LoadEnemyArt handoff; CNZ signpost pose and
   post-transition control restoration now follow the ROM dispatch order. The
   canonical CNZ timing frontier advances from direct completion #24 to #28.
+- Fix: the GHZ spiked-pole helix (Obj 0x17) now allocates one real object-RAM
+  slot per spike instead of drawing every spike from a single instance's
+  internal array. ROM `Hel_Main` calls `FindFreeObj` once per non-parent spike
+  and gives each one routine 8 (`Hel_ChildSpike`), which rotates and displays
+  itself; `Hel_ChkDel .deleteHelix` frees the whole assembly at once when the
+  parent leaves range (`docs/s1disasm/_incObj/17 GHZ Spiked Pole
+  Helix.asm:46-90,120-145`). Two 16-spike helixes therefore hold 32 slots in
+  ROM and held 2 in the engine, leaving GHZ3's object RAM 30 slots emptier than
+  the recording. That is invisible until something reads the free-slot count:
+  when Sonic is hit, `RLoss_Count` scatters rings until `FindFreeObj` reports
+  the pool full (`docs/s1disasm/_incObj/25, 37 Rings.asm:234-252`), so the
+  engine spilled 31 rings where the ROM spilled 19. The player re-collected
+  three of the extra ones and reached `GotThroughAct` holding 59 rings against
+  the ROM's 56, which stretched `Got_Bonus`'s tally three frames past the end
+  of the act and softlocked the GHZ3 -> MZ1 transition. On the S1
+  complete-emeralds run the ring count now matches the recording on every
+  compared row of every act it reaches.
+- Fix: a whole-run replay now carries the ROM object V-blank clock across a
+  special stage's results-screen presentation bridge instead of freezing it for
+  the bridge's whole length. The ROM's `VBlank_Exit` increments
+  `v_vblank_count` unconditionally (`docs/s1disasm/sonic.asm:684`), so every
+  movie row of the stage interior and of `SS_Finish`'s fade-out and results
+  screen carries a tick — but no level loop runs on a bridge row, and a bridge
+  is admitted with a level *presentation* identity, so the run's V-blank clock
+  applied no target there and handed the next act a frozen anchor. A new
+  `TracePlaybackProfile.stageResultsEntryNonAdvancingMovieRows` (Sonic 1: 7)
+  models the V-ints `SS_Finish` builds the results screen through with
+  interrupts disabled — `disable_ints / ClearScreen / NemDec Nem_TitleCard /
+  Hud_Base / enable_ints` (`docs/s1disasm/sonic.asm:3369-3383`) — so a bridge is
+  seeded from the level that entered the stage and its tail is derived from its
+  own recorded row count. On the S1 complete-emeralds run the GHZ3 act had been
+  arriving 1,587 ticks behind, which is 3 mod 8 and 19 mod 32 and so de-phased
+  both the prison capsule's `Pri_Animals` spawn gate and `Anml_ChkFloor`'s
+  `btst #4` escape-direction flip; the act now replays all 8,520 of its rows —
+  boss, capsule, animal window and end-of-act card — with no compared-field
+  error, against a first error at row 7,983 before.
+- Fix: a Special Stage UP/DOWN block now only rewrites itself as its counterpart
+  when it actually changed the stage's rotation speed. `SonicSS_ChkUP` and
+  `SonicSS_ChkDOWN` skip the `move.b #id_SS_DOWN/#id_SS_UP` rewrite with the
+  same branch that skips the `asl.w`/`asr.w`
+  (`docs/s1disasm/_incObj/09 Sonic in Special Stage.asm:853-862, 888-897`), so a
+  block touched while the stage is already at that speed stays what it was. The
+  engine rewrote it regardless, which left the layout one toggle out of step for
+  the rest of the stage and only became visible on a later crossing of the same
+  cell, where the block then took the other branch. On the S1 complete-emeralds
+  run the second special stage's rotation speed diverged at its row 2,162 and
+  surfaced 75 rows later as a Sonic DPLC the recording does not have; the stage
+  now replays all 4,337 of its rows with byte-exact position, velocity, inertia
+  and rotation, and the run walks on through the GHZ3 presentation bridge.
+- Fix: a whole-run replay's giant-ring / star-post special-stage boundary signal
+  now reports the stage the entry actually selects instead of the one the
+  provider still has loaded. The index is chosen by
+  `SpecialStageProvider#consumeStageIndexForEntry` inside
+  `GameLoop#enterSpecialStage`, when the level frame consumes the request, so a
+  signal built while the level still owned the frame carried the previously
+  played stage — harmless for a run's first entry, where that value is the
+  un-entered provider's 0 and happens to be correct, and wrong for every entry
+  after it. The identity is now taken once the special-stage provider owns the
+  entry, matching the bonus-stage branch beside it. On the S1 complete-emeralds
+  run the route's second giant ring is admitted at its recorded row (BK2 13,348)
+  instead of running the transition gap out to its step cap.
+- Fix: a main-loop iteration held across a lag V-blank now runs its loop-tail
+  PLC preparation on the closure that consumed the lag V-blank, not on the row
+  that closed the previous entry. S1's `RunPLC` (`sonic.asm:3032`) sits behind
+  every expensive call in `Level_MainLoop` — `ExecuteObjects` (3010),
+  `DeformLayers` (3025), `BuildSprites` (3028), `ObjPosLoad` (3029),
+  `PaletteCycle` (3031) — and an iteration that has not reached the loop top's
+  V-blank-routine re-arm (3000) takes `VBlank_Lag` (`sonic.asm:709`), so it has
+  not reached `RunPLC` either. The engine armed the next queue head on the row
+  whose V-blank finished the previous entry, one represented closure early. On
+  the S1 complete-emeralds run the returned GHZ2 act's frame 107 goes green on
+  `queue.s1_nemesis_plc.prepared` / `remaining_work` / `queued_fingerprints`
+  and the act now replays all 3,606 of its rows.
+- Fix: a level's staged player DPLC transfer is now placed on the ROM's counted
+  pre-main-loop tail instead of on the title card's release. S1's `Level:`
+  routine stages Sonic's tiles in the `Level_LoadObj` object pass and then
+  waits out `Level_Delay`'s 4 `WaitForVBlank` rows plus `PalFadeIn_Alt`'s 22
+  before `Level_MainLoop` (`sonic.asm:2895-2969`,
+  `_inc/Palette Fading.asm:32-51`), with no wait between the pass and the
+  delay loop, so the V-int that performs the transfer is always the level's
+  first main-loop row minus 26 — regardless of how long the un-timed load
+  steps between them (`Hud_Base`, `LevelDataLoad`, `LoadTilesFromStart`) take.
+  The transfer is now held for that tail
+  (`LevelInitProfile.preLevelMainLoopDelayFrames`, S1: 26; other games settle
+  where they prepared it) and settled against the level's first main-loop row.
+  On the S1 complete-emeralds run the special-stage return's gap pair moves
+  from 9,678 to the recorded 9,715 and that comparison goes green, and the
+  initial GHZ1 load's pair moves from 860 to the recorded 834.
+- Fix: the special-stage results return now models the next game mode's
+  pre-level fade-out before it reloads the level. S1's `GM_Level` runs
+  `ClearPLC` then `PaletteFadeOut` — an unconditional 22-frame `WaitForVBlank`
+  loop whose `RunPLC` calls only ever see the just-cleared queue — before it
+  decompresses the title-card art and queues the level PLCs
+  (`sonic.asm:2710-2737`, `_inc/Palette Fading.asm:134-149`), so the returning
+  level's art drain starts 22 rows after the game-mode handoff rather than at
+  it. The exit body now waits out the profile-declared fade
+  (`LevelInitProfile.preLevelFadeOutFrames`, S1: 22; other games keep their
+  measured timing until their fades are verified). On the S1 complete-emeralds
+  run the return-gap DPLC pair moves from 59 to 37 rows early — the remainder
+  is real hardware load time that needs the run re-recorded with the v5
+  hardware-timing stream — and the GHZ maze round trip's tail pair moves 22
+  rows closer for the same reason.
+- Fix: the special-stage results return now reaches the returning level the
+  way the ROM's GM loop does. The exit body (and its level reload) runs on the
+  iteration after the whiteout's final V-int instead of inside the frame that
+  V-int samples, so the bridge's last recorded row no longer sees the next
+  level's freshly queued PLCs; the reload requests its title card even
+  headless — mirroring the bonus-stage return — instead of force-draining the
+  queued level art at load; the S1 title card holds its locked phase until
+  that queue drains, matching `Level_TtlCardLoop`'s "stay on them until PLCs
+  have finished"; and the S1 fresh-player prelude runs only at the card's
+  release, where `Level_StartGame` runs it, with its player DPLC pair raised
+  at that boundary rather than by the first V-blank after the card began. On
+  the S1 complete-emeralds run this closes 151 of the 210 rows the return-gap
+  DPLC pair was stamped early; the residual 59 is GM_Level's pre-queue
+  `PaletteFadeOut` plus real hardware load time and needs the run re-recorded
+  with the v5 hardware-timing stream.
+- Fix: the S1 special-stage results card now takes its continue branch. With
+  50 or more rings `SSR_RingBonus.finished` waits one second, spends a frame on
+  `SSR_Continue`'s jingle, then waits six more — 421 frames where the ordinary
+  path spends 180 — and the engine only ever ran the ordinary path. That made
+  the returning level load 241 frames early, before the recorded results screen
+  had finished. The card now matches the ROM and the level loads on the frame
+  the ROM loads it.
+- Fix: a whole-run replay can now cross from a special stage's return
+  presentation bridge back into its own act's gameplay. A bridge and the
+  gameplay it hands back to are one recorded act split at the row gameplay
+  resumes — same level, same load generation, no boundary signal between them —
+  so neither a remembered level load nor an all-lag continuation is ever
+  observable there, and the coordinator had no other rule to admit on. The
+  shared cursor ran past the destination offset until the run aborted on
+  `rowsConsumed must be 0 or 1`. The exact physical row plus level identity are
+  now the authority, mirroring the rule that admitted the bridge itself.
+- Feature: `VisualRunReplayHarness` drives a whole trace run through the
+  production visual-session owners with no window, so a defect that only Trace
+  Test Mode reaches is reproducible in a test. The headless run-chain fixture
+  builds its own coordinator loop beside `TraceSessionLauncher` and calls a
+  different structural-comparison overload, so it could stay green through a
+  boundary a real session aborted on. The harness also converts the launcher's
+  deliberate failure containment — which logs and returns a windowed session to
+  the picker rather than propagating — back into a test failure, and reports a
+  stopped BK2 session as a stall rather than spinning out the step budget.
+- Fix: the special stage is no longer visible through its own entry white-out.
+  The white-out belongs to `GM_Special`, but it runs there *before*
+  `ClearScreen` and the art load, over the previous screen still in VRAM;
+  fading in destination-owned form after the stage had already been initialised
+  showed the stage fading out instead. Reproducing the ROM needs the stage's
+  draw suppressed for the fade's duration with the previous scene still
+  rendering, so entry holds opaque until the reveal until that lands.
+- Fix: entering a Special Stage no longer costs an extra fade's worth of
+  frames. Every ROM writes the game mode inside the level-side object tick and
+  runs no fade of its own — S1 `Got_ChkSS`, S2 `Obj79_Star`, S3K
+  `SSEntryFlash_GoSS` — with the white-out belonging to the special stage's own
+  entry (`GM_Special`'s `PaletteWhiteOut`). The engine was fading to white in
+  level mode first and only then flipping the mode, so the transition ran 22
+  frames late and performed the white-out twice (S1's provider already models
+  the ROM's 44-tick pre-physics hold). Complete-run visual playback aborted at
+  the giant ring with "Special Stage entry crossed destination physical row".
+  The mode change is now immediate, the white-out is owned by the special-stage
+  entry presentation, and the S1 results card models `Got_Wait`'s routine
+  advance so `Got_NextLevel`'s zone/act write and mode change land together on
+  the following frame. `GameLoop.specialStageTransitionPending` went with it:
+  there is no longer a window between the request and the mode change for it to
+  describe.
+- Feature/Perf: capture encoder speed is now tunable, and an overloaded encoder
+  says so. `capture.encoderPreset` exposes the x264/x265 speed preset and now
+  defaults to `fast`: libx265's own `medium` default keeps up with ordinary
+  play but has little headroom for high-motion content such as fast-forwarded
+  trace playback. It is the lever that matters, since libx265 already threads
+  internally; presets never affect losslessness. `capture.encoderThreads`
+  exposes ffmpeg's `-threads` (0 = auto), and FFV1 is now sliced so threads can
+  be used by it at all. Exhausting the encoder queue logs a rate-limited
+  warning with the blocked time and a one-line summary when the recording
+  stops, rather than silently stalling the game thread.
+- Perf: live viewport recording no longer allocates two full frames plus a
+  native read buffer per captured frame. The pixel grabber now reuses its
+  buffers — which is exactly the producer-side reuse `CapturedFrame`'s
+  defensive copy already existed to make safe — cutting steady-state capture
+  garbage roughly in half and removing a per-frame native malloc/free. At a
+  1280x896 window that was around 9MB of garbage per frame, and it grew with
+  the window.
+- Perf: the live recording encoder queue is now sized from a memory budget
+  (`capture.queueBudgetMb`, default 192MB) rather than a fixed 8 frames, so it
+  absorbs far longer encoder stalls before `BLOCK` backpressure reaches the
+  game thread. Lossless encoding falls behind on high-motion content — most
+  sharply on fast-forwarded trace playback — and the resulting stall was
+  visible as a stutter in the running game that outlived the burst. Budgeting
+  in bytes keeps the depth honest across window sizes, where a queued frame
+  costs width*height*4.
+- Feature: the visual trace HUD now owns the playback transport display,
+  replacing the legacy `== PLAYBACK ==` debug panel for the whole of a trace
+  session. Movie name, mode, frame counter, and a `Rate: < 1x >` fast-forward
+  readout are pinned right-aligned in the top-right corner; the panel's input
+  visualiser and status message are dropped as redundant with the trace HUD's
+  own input glyphs and state.
+- Feature: visual Trace Test Mode playback can now fast-forward. While playback
+  is running, Right steps up a 1x / 1.5x / 2x / 3x / 5x ladder and Left steps
+  back down, folding extra gameplay steps into each rendered frame. Audio
+  speeds and pitches up with the picture through a new forward playback rate on
+  the audio presentation producer, the mirror of the existing reverse rate. The
+  VHS tape effect now covers visual trace transports as well as live rewind,
+  scaling with the fast-forward rate and scrolling its tear bands the opposite
+  way from a rewind. Left/Right keep their paused-only camera-focus meaning.
+- Fix/Test: visual and headless whole-run replay now share one segment policy
+  and the same physical-row driver for presentation, structural gaps, and
+  terminal movie tails. Presentation rows keep BK2 input,
+  PLC/load-queue, hardware-timing, and dynamic-art ownership advancing and
+  compared without treating them as playable physics; recorded no-VBlank spans
+  use native suppressed closures, and fresh destination setup art is primed
+  without a false runtime edge. The common trace HUD remains live across the
+  bridge, and physical capture shortcuts remain available while BK2 controls
+  gameplay. S1 special-stage returns therefore resume the next act at the
+  manifest-owned input window without seeking, reloading, or restarting music.
 - Fix/Test: visual and headless complete-run return checks now share one
   manifest-derived field policy. Fresh next-act returns no longer compare a
   Special Stage exit-ring tally against the correctly reset destination level,

@@ -398,7 +398,8 @@ public class TraceBinder {
     }
 
     /**
-     * Merges exact, comparison-only physical load queue fields into a captured frame.
+     * Merges exact, comparison-only physical load queue fields into a captured
+     * frame, creating a structural-only frame when gameplay was not compared.
      */
     public void compareLoadQueues(
             int frame,
@@ -406,7 +407,7 @@ public class TraceBinder {
             List<QueueDiagnosticSnapshot> actualStates) {
         FrameComparison existing = comparisonsByFrame.get(frame);
         if (existing == null) {
-            return;
+            existing = new FrameComparison(frame, Map.of());
         }
         Map<String, TraceEvent.LoadQueueState> expectedByKind = new LinkedHashMap<>();
         for (TraceEvent.LoadQueueState state :

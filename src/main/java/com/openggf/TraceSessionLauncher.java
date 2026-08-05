@@ -25,13 +25,16 @@ import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.game.rewind.InputSource;
 import com.openggf.game.rewind.PlaybackController;
 import com.openggf.game.rewind.RewindController;
+import com.openggf.game.rewind.RewindEffectEnvelope;
 import com.openggf.game.rewind.RewindSeekAwareEngineStepper;
 import com.openggf.graphics.PixelFontTextRenderer;
 import com.openggf.graphics.FadeManager;
+import com.openggf.graphics.shaderlib.RewindVhsEffectPass;
 import com.openggf.sprites.ghost.GhostTraceRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.testmode.TraceCameraFocusController;
+import com.openggf.testmode.TracePlaybackSpeedController;
 import com.openggf.testmode.TraceHudOverlay;
 import com.openggf.testmode.SpecialStageTraceHudOverlay;
 import com.openggf.testmode.TraceSessionOverlay;
@@ -63,11 +66,15 @@ import com.openggf.trace.replay.runs.RunLevelLoadCause;
 import com.openggf.trace.replay.runs.RunLevelLoadTracker;
 import com.openggf.trace.replay.runs.RunPlaybackObservation;
 import com.openggf.trace.replay.runs.TraceRunPlaybackCoordinator;
+import com.openggf.trace.replay.runs.TraceRunFrameDriver;
+import com.openggf.trace.replay.runs.TraceRunPresentationClosure;
 import com.openggf.trace.replay.runs.TraceRunBoundaryComparator;
 import com.openggf.trace.replay.runs.TraceRunDynamicArtGapJournal;
+import com.openggf.trace.replay.runs.TraceRunExternalDiagnostics;
 import com.openggf.trace.replay.runs.TraceRunSpecialStageRows;
 import com.openggf.trace.replay.runs.TraceRunSpecialStageRowDriver;
 import com.openggf.trace.replay.runs.TraceRunSpecialStageRows.SpecialStageRowAdmission;
+import com.openggf.trace.replay.runs.TraceStructuralRowComparator;
 import com.openggf.trace.replay.runs.TraceRunVblankClock;
 import com.openggf.trace.timing.HardwareTimingReplayPort;
 import com.openggf.trace.timing.HardwareTimingSchedule;
@@ -78,6 +85,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.logging.Logger;
 
 /**
@@ -140,6 +148,9 @@ public final class TraceSessionLauncher {
     private List<TraceRunReplayWalker.SegmentPlan> runSegments;
     private RunSegmentAdvancer runAdvancer;
     private TraceRunPlaybackCoordinator runCoordinator;
+    private TraceRunFrameDriver runFrameDriver;
+    private TraceRunFrameDriver.Disposition activeRunDisposition;
+    private TraceStructuralRowComparator runStructuralComparator;
     private TraceRunReplayWalker.BoundaryProbe runBoundaryProbe;
     private final List<TraceRunPlaybackCoordinator.Action>
             runCoordinatorTranscript = new ArrayList<>();
@@ -152,8 +163,16 @@ public final class TraceSessionLauncher {
     private int runSpecialVblankBefore;
     private boolean runSpecialInputApplied;
     private TraceRunReplayWalker.TerminalMovieTailPlan runTerminalTail;
-    private int runTerminalTailRow;
-    private boolean runTerminalInputApplied;
+    private boolean runTerminalRowAdvanced;
+    private boolean runTerminalMovieEndReached;
+    private boolean runTerminalTailCompared;
+    /**
+     * The level production row that requests a Special Stage is also the
+     * destination segment's BK2 offset. Keep the shared cursor on that row
+     * until the destination admission installs its local clock.
+     */
+    private boolean runPhysicalRowAdvanceDeferred;
+    private Bk2FrameInput runLastPhysicalInput;
     private InputHandler runOwnedInputHandler;
     private boolean runLevelLoadedDuringSourceProduction;
     private RunPlaybackObservation runProductionOwnerObservation;
@@ -163,6 +182,7 @@ public final class TraceSessionLauncher {
     private TraceRunReplayWalker.DynamicArtSegmentController runDynamicArtSegments;
     private GameplayModeContext dynamicArtSegmentGameplayMode;
     private TraceRunDynamicArtGapJournal runDynamicArtGapJournal;
+    private TraceRunExternalDiagnostics runExternalDiagnostics;
     private int runClosingDynamicArtSegment = -1;
     private int runSpecialTimingSegment = -1;
     private int runSpecialTimingRow;
@@ -192,6 +212,13 @@ public final class TraceSessionLauncher {
     private boolean realtimeRewinding;
     private boolean realtimeReleasePending;
     private AudioPresentationPolicy pendingRealtimeReleasePolicy;
+
+    private final TracePlaybackSpeedController playbackSpeed =
+            new TracePlaybackSpeedController();
+    private final RewindEffectEnvelope tapeEffectEnvelope =
+            new RewindEffectEnvelope();
+    private float tapeEffectScrollDirection =
+            RewindVhsEffectPass.REWIND_SCROLL_DIRECTION;
 
     private boolean completionArmed;
     private int completionHoldFrames;
@@ -515,7 +542,7 @@ public final class TraceSessionLauncher {
                     this::rewindStatusLabel);
             // Mark active before entering so any entry-time rewind recording is
             // suppressed (GameLoop gates SS capture on active() == null).
-            activeSession = this;
+            becomeActiveSession();
             SpecialStageProvider provider = GameServices.module().getSpecialStageProvider();
             Integer index = ssTrace.metadata().specialStageIndex();
             enterSpecialStageTrace(loop, provider, index != null ? index : 0);
@@ -598,7 +625,7 @@ public final class TraceSessionLauncher {
         Objects.requireNonNull(presentation, "presentation");
         presentation.prepareLevel();
         launchPhase.beginTitleCardPresentation();
-        activeSession = this;
+        becomeActiveSession();
         presentation.enterTitleCard();
     }
 
@@ -702,7 +729,7 @@ public final class TraceSessionLauncher {
             // TraceReplayDriver.startPreparedLevel already attached the
             // comparator as the playback frame observer.
             installTraceRewindController(loop, startIndex, initialCursor);
-            activeSession = this;
+            becomeActiveSession();
             TraceGhostHook.set(ghostHook);
             launchPhase.markActive();
         } catch (Throwable launchFailure) {
@@ -736,13 +763,18 @@ public final class TraceSessionLauncher {
             TraceData seg0Trace = runSegments.get(0).trace();
             this.fixture = new LiveFixture(playback, loop);
             installDynamicArtSegments(fixture.gameplayMode());
+            this.runExternalDiagnostics =
+                    new TraceRunExternalDiagnostics(loop::toggleUserPause);
             TraceReplayDriver driver = new TraceReplayDriver(
                     seg0Trace, movie, fixture, loop, loop::getMainPlayableSprite,
                     loop::toggleUserPause,
-                    TraceRunReplayWalker.hasHardwareTimingStream(runSegments));
+                    TraceRunReplayWalker.hasHardwareTimingStream(runSegments),
+                    runExternalDiagnostics::acceptDisplayed);
             driver.startPreparedLevel();
 
             this.comparator = driver.comparator();
+            runExternalDiagnostics.acceptBootstrap(
+                    comparator.bootstrapDivergences());
             this.runHardwareTiming =
                     new TraceRunReplayWalker.HardwareTimingCoordinator(
                             fixture,
@@ -750,7 +782,9 @@ public final class TraceSessionLauncher {
             this.runCoordinator = new TraceRunPlaybackCoordinator(
                     entry.runManifest(),
                     GameServices.module().getTracePlaybackProfile(),
-                    movie.getFrameCount());
+                    movie.getFrameCount(), runSegments);
+            this.runFrameDriver = new TraceRunFrameDriver();
+            fixture.gameplayMode().installTraceRunFrameDriver(runFrameDriver);
             this.runVblankClock = new TraceRunVblankClock(
                     GameServices.module().getTracePlaybackProfile());
             this.runBoundaryProbe = createRunBoundaryProbe(loop);
@@ -776,13 +810,13 @@ public final class TraceSessionLauncher {
                     GameServices.configuration(),
                     loop::isPaused);
             loop.setTraceCameraFocusController(cameraFocusController);
-            this.overlay = new TraceHudOverlay(comparator,
+            this.overlay = new TraceHudOverlay(createRunHudModel(comparator),
                     () -> cameraFocusController.currentLabel(),
                     this::rewindStatusLabel);
             // TraceReplayDriver.startPreparedLevel already attached the
             // comparator as the playback frame observer. No
             // installTraceRewindController call here — see method javadoc.
-            activeSession = this;
+            becomeActiveSession();
             TraceGhostHook.set(ghostHook);
             launchPhase.markActive();
         } catch (Throwable launchFailure) {
@@ -908,6 +942,12 @@ public final class TraceSessionLauncher {
                     ? runSpecialRowDriver.isComplete()
                     : runSpecialRows != null
                             && runSpecialLocalRow >= runSpecialRows.rowCount();
+        }
+        if (runSegments.get(index).executionPolicy()
+                == TraceRunReplayWalker.SegmentExecutionPolicy
+                        .LEVEL_PRESENTATION_BRIDGE) {
+            return runStructuralComparator != null
+                    && runStructuralComparator.allRowsConsumed();
         }
         return comparator != null && comparator.isComplete();
     }
@@ -1328,13 +1368,22 @@ public final class TraceSessionLauncher {
                     && GameServices.bonusStageOrNull() != null
                     ? new RunBoundarySignal.BonusRequest(frame,
                             GameServices.bonusStageOrNull().getActiveType()) : null;
+            // The provider's current stage is the stage it has LOADED, not the
+            // one a pending request will enter: the entry's index is chosen by
+            // SpecialStageProvider#consumeStageIndexForEntry inside
+            // GameLoop#enterSpecialStage, which runs when the level frame
+            // consumes the request. Read while the level still owns the frame it
+            // returns the previously played stage -- correct only for a run's
+            // first entry, where nothing has been played yet. So, exactly as the
+            // bonus branch above does, take the identity from the provider that
+            // owns the entry once it owns it. The probe already latched the
+            // boundary's own physical row, so waiting costs the signal nothing.
             case "giant_ring", "starpost_special" ->
-                    getActiveSpecialStageIndex() != null
+                    mode == GameMode.SPECIAL_STAGE
+                    && getActiveSpecialStageIndex() != null
                     ? new RunBoundarySignal.SpecialStageRequest(
                             frame, getActiveSpecialStageIndex()) : null;
-            case "stage_exit" -> mode == GameMode.LEVEL
-                    ? new RunBoundarySignal.StageExit(
-                            currentRunBoundaryBk2Frame()) : null;
+            case "stage_exit" -> null; // emitted by the semantic results-entry seam
             default -> null; // level-load signals are forwarded at their load seam
         };
         if (signal != null) {
@@ -1356,6 +1405,7 @@ public final class TraceSessionLauncher {
             } else if (action instanceof TraceRunPlaybackCoordinator.BeginTerminalTail tail) {
                 beginRunTerminalTail(tail.plan());
             } else if (action instanceof TraceRunPlaybackCoordinator.CompleteRun) {
+                compareRunTerminalDynamicArtTail();
                 finishPendingRunEnd();
             } else if (action instanceof TraceRunPlaybackCoordinator.FailRun failure) {
                 failRun(failure.diagnostic());
@@ -1386,13 +1436,36 @@ public final class TraceSessionLauncher {
             runSpecialRows = null;
         }
         if (runDynamicArtSegments != null) {
-            enterRunDynamicArtGapForSegment(segmentIndex);
+            closeRunDynamicArtWindowForSegment(segmentIndex);
         }
-        if (comparator != null) {
+        if (runStructuralComparator != null) {
+            FrameComparison terminal = runStructuralComparator.finalizeSegment(
+                    GameServices.captureDynamicArtDiagnostics());
+            ingestRunExternalComparison(terminal);
+            runStructuralComparator = null;
+        } else if (comparator != null) {
             comparator.finalizeTerminalDynamicArtComparison();
         }
+        markRunDynamicArtGapOpened(segmentIndex);
         if (fixture != null) {
             fixture.enterHardwareTimingGap();
+        }
+    }
+
+    /**
+     * Settles a player transfer the level routine staged for its counted
+     * pre-main-loop tail. The row a destination is admitted on is that level's
+     * first main-loop row, and the tail's own length is the game's, so the
+     * transfer belongs that many rows earlier — before this admission opens
+     * the destination's comparison window or reads the gap ledger.
+     */
+    private void settlePreMainLoopPlayerTransferAtAdmission() {
+        if (dynamicArtSegmentGameplayMode == null) {
+            return;
+        }
+        var lifecycle = dynamicArtSegmentGameplayMode.dynamicArtLifecycle();
+        if (lifecycle != null && lifecycle.isRunActive()) {
+            lifecycle.settlePendingPlayerPreparationBeforeLevelMainLoop();
         }
     }
 
@@ -1402,6 +1475,7 @@ public final class TraceSessionLauncher {
         if (objects != null) {
             applyRunDestinationVblankAdmission(receipt, objects);
         }
+        settlePreMainLoopPlayerTransferAtAdmission();
         if (runHardwareTiming != null) {
             // The handoff verifies the source schedule. It must succeed before
             // any destination comparison, dynamic-art, or input owner opens.
@@ -1421,7 +1495,7 @@ public final class TraceSessionLauncher {
             runBoundaryProbe.setDelegate(null);
             TraceRunSpecialStageRows hudRows = runSpecialRows;
             overlay = new SpecialStageTraceHudOverlay(
-                    createRunSpecialStageHudModel(segment),
+                    createRunHudModel(createRunSpecialStageHudModel(segment)),
                     () -> hudRows.metadata().traceProfile()
                             .replace('_', ' ').toUpperCase(java.util.Locale.ROOT),
                     () -> null,
@@ -1441,7 +1515,28 @@ public final class TraceSessionLauncher {
                         receipt.segmentIndex());
             }
         }
-        if (receipt.inputClock() == DestinationAdmissionReceipt.InputClock.SHARED) {
+        if (receipt.executionPolicy()
+                == TraceRunReplayWalker.SegmentExecutionPolicy
+                        .LEVEL_PRESENTATION_BRIDGE) {
+            if (receipt.rowsConsumed() != 0) {
+                throw new IllegalStateException(
+                        "presentation bridge must begin at row 0, got "
+                                + receipt.rowsConsumed());
+            }
+            runStructuralComparator = new TraceStructuralRowComparator(
+                    segment.trace(), ToleranceConfig.DEFAULT, 0);
+            TraceStructuralRowComparator structural = runStructuralComparator;
+            overlay = new TraceHudOverlay(
+                    createRunHudModel(createRunPresentationHudModel(structural)),
+                    () -> null, this::rewindStatusLabel);
+            runBoundaryProbe.setDelegate(null);
+            if (GameServices.playbackDebug().getCursorFrame()
+                    != receipt.absoluteBk2Row()) {
+                throw new IllegalStateException(
+                        "presentation bridge cursor changed during admission");
+            }
+        } else if (receipt.inputClock()
+                == DestinationAdmissionReceipt.InputClock.SHARED) {
             installRunComparator(segment, receipt.rowsConsumed(), receipt.absoluteBk2Row());
             GameLoop destinationLoop = Engine.currentGameLoop();
             if (destinationLoop != null) {
@@ -1454,8 +1549,8 @@ public final class TraceSessionLauncher {
             adoptRunDestinationProductionIterationOwner(comparator);
             compareRunReturnBoundaryIfPresent(receipt.segmentIndex());
         }
-        if (gapComparison != null && comparator != null) {
-            comparator.ingestExternalComparison(gapComparison);
+        if (gapComparison != null) {
+            ingestRunUndisplayedComparison(gapComparison);
         }
         armCurrentRunBoundary();
         runLevelLoadedDuringSourceProduction = false;
@@ -1528,6 +1623,113 @@ public final class TraceSessionLauncher {
         };
     }
 
+    private TraceHudModel createRunPresentationHudModel(
+            TraceStructuralRowComparator structural) {
+        return new TraceHudModel() {
+            @Override public int errorCount() {
+                return structural.errorCount();
+            }
+
+            @Override public int warningCount() {
+                return structural.warningCount();
+            }
+
+            @Override public int laggedFrames() {
+                return structural.laggedFrames();
+            }
+
+            @Override public int recentActionMask() {
+                return structural.recentActionMask();
+            }
+
+            @Override public int recentInputMask() {
+                return structural.recentInputMask();
+            }
+
+            @Override public boolean recentStartPressed() {
+                return structural.recentStartPressed();
+            }
+
+            @Override
+            public List<com.openggf.trace.live.MismatchEntry> recentMismatches() {
+                return structural.recentMismatches();
+            }
+
+            @Override public boolean hasRecordingDesync() {
+                return structural.hasRecordingDesync();
+            }
+
+            @Override public boolean isComplete() {
+                return structural.isComplete();
+            }
+        };
+    }
+
+    /**
+     * Keeps the visible HUD attached to the physical movie clock while segment
+     * diagnostic owners change. Segment completion is intentionally hidden:
+     * only the whole-run coordinator may publish TRACE COMPLETE.
+     */
+    private TraceHudModel createRunHudModel(TraceHudModel delegate) {
+        Objects.requireNonNull(delegate, "delegate");
+        return new TraceHudModel() {
+            @Override public int errorCount() {
+                return runExternalErrorCount();
+            }
+            @Override public int warningCount() {
+                return runExternalWarningCount();
+            }
+            @Override public int laggedFrames() { return delegate.laggedFrames(); }
+
+            @Override public int recentActionMask() {
+                return runLastPhysicalInput != null
+                        ? runLastPhysicalInput.p1ActionMask()
+                        : delegate.recentActionMask();
+            }
+
+            @Override public int recentInputMask() {
+                return runLastPhysicalInput != null
+                        ? runLastPhysicalInput.p1InputMask()
+                        : delegate.recentInputMask();
+            }
+
+            @Override public boolean recentStartPressed() {
+                return runLastPhysicalInput != null
+                        ? runLastPhysicalInput.p1StartPressed()
+                        : delegate.recentStartPressed();
+            }
+
+            @Override
+            public List<com.openggf.trace.live.MismatchEntry> recentMismatches() {
+                return runExternalDiagnostics != null
+                        ? runExternalDiagnostics.recentMismatches()
+                        : delegate.recentMismatches();
+            }
+
+            @Override public boolean hasRecordingDesync() {
+                return delegate.hasRecordingDesync()
+                        || runExternalErrorCount() > 0;
+            }
+
+            @Override public boolean isComplete() {
+                return runCoordinator != null
+                        ? runCoordinator.phase()
+                                == TraceRunPlaybackCoordinator.Phase.COMPLETE
+                        : delegate.isComplete();
+            }
+        };
+    }
+
+    private int runExternalErrorCount() {
+        return runExternalDiagnostics != null
+                ? runExternalDiagnostics.errorCount() : 0;
+    }
+
+    private int runExternalWarningCount() {
+        return runExternalDiagnostics != null
+                ? runExternalDiagnostics.warningCount() : 0;
+    }
+
     private void captureRunLevelSourceTail(int segmentIndex) {
         if (runVblankClock == null) {
             return;
@@ -1556,8 +1758,12 @@ public final class TraceSessionLauncher {
     void applyRunDestinationVblankAdmission(
             DestinationAdmissionReceipt receipt,
             ObjectManager objects) {
-        if (runVblankClock == null
-                || !(receipt.identity()
+        if (runVblankClock == null) {
+            return;
+        }
+        boolean presentation = receipt.identity()
+                instanceof DestinationAdmissionReceipt.LevelPresentationIdentity;
+        if (!presentation && !(receipt.identity()
                         instanceof DestinationAdmissionReceipt.LevelIdentity)) {
             return;
         }
@@ -1570,6 +1776,11 @@ public final class TraceSessionLauncher {
         }
         TraceRunManifest.Segment previous =
                 runSegments.get(destinationIndex - 1).segment();
+        if (presentation) {
+            applyRunPresentationBridgeVblankAdmission(
+                    destinationIndex, destination, previous, objects);
+            return;
+        }
         if ("level".equals(previous.kind())) {
             runVblankClock.levelDestinationTarget(
                     destinationIndex - 1, previous, destination,
@@ -1591,6 +1802,36 @@ public final class TraceSessionLauncher {
                 destination).ifPresent(objects::initVblaCounter);
     }
 
+    /**
+     * Seeds the object VBlank clock a special stage's results-screen bridge
+     * plays on. Nothing on that bridge runs a level loop, so the production
+     * counter is frozen for the whole of it and the level after it would
+     * otherwise inherit an anchor short by the stage interior and the bridge
+     * together. The seed derives only from the level that entered the stage and
+     * the manifest's movie-row distance; the bridge's own tail is derived by
+     * {@link TraceRunVblankClock} from the game's profiled non-advancing rows.
+     */
+    private void applyRunPresentationBridgeVblankAdmission(
+            int destinationIndex,
+            TraceRunManifest.Segment destination,
+            TraceRunManifest.Segment previous,
+            ObjectManager objects) {
+        if (!"special_stage".equals(previous.kind())) {
+            return;
+        }
+        TraceRunManifest.Transition entryBoundary =
+                runSegments.get(destinationIndex - 1).entryBoundary();
+        if (entryBoundary == null) {
+            return;
+        }
+        int sourceIndex = entryBoundary.fromSegment();
+        runVblankClock.presentationBridgeEntryTarget(
+                sourceIndex,
+                runSegments.get(sourceIndex).segment(),
+                destinationIndex,
+                destination).ifPresent(objects::initVblaCounter);
+    }
+
     private void installRunComparator(
             TraceRunReplayWalker.SegmentPlan segment,
             int rowsConsumed,
@@ -1599,9 +1840,12 @@ public final class TraceSessionLauncher {
         if (loop == null) {
             throw new IllegalStateException("run destination has no active GameLoop");
         }
+        requireContinuousRunPlaybackAt(absoluteBk2Row);
         comparator = new LiveTraceComparator(
                 segment.trace(), ToleranceConfig.DEFAULT, rowsConsumed,
-                loop::getMainPlayableSprite, loop::toggleUserPause);
+                loop::getMainPlayableSprite, loop::toggleUserPause,
+                runExternalDiagnostics != null
+                        ? runExternalDiagnostics::acceptDisplayed : null);
         cameraFocusController = new TraceCameraFocusController(
                 comparator, loop::getMainPlayableSprite, () -> {
                     var sprites = GameServices.spritesOrNull();
@@ -1609,10 +1853,22 @@ public final class TraceSessionLauncher {
                             ? null : sprites.getSidekicks().getFirst();
                 }, GameServices::camera, GameServices.configuration(), loop::isPaused);
         loop.setTraceCameraFocusController(cameraFocusController);
-        overlay = new TraceHudOverlay(comparator,
+        overlay = new TraceHudOverlay(createRunHudModel(comparator),
                 () -> cameraFocusController.currentLabel(), this::rewindStatusLabel);
         runBoundaryProbe.setDelegate(comparator);
-        GameServices.playbackDebug().startSession(movie, absoluteBk2Row);
+    }
+
+    private void requireContinuousRunPlaybackAt(int expectedRow) {
+        PlaybackDebugManager playback = GameServices.playbackDebug();
+        if (!playback.isSessionPlaying()
+                || playback.getMovieFrameCount() != movie.getFrameCount()
+                || playback.getCursorFrame() != expectedRow) {
+            throw new IllegalStateException(
+                    "run destination must retain the active movie at row "
+                            + expectedRow + ", got cursor="
+                            + playback.getCursorFrame() + ", frames="
+                            + playback.getMovieFrameCount());
+        }
     }
 
     /**
@@ -1636,16 +1892,45 @@ public final class TraceSessionLauncher {
     }
 
     private void enterRunDynamicArtGapForSegment(int segmentIndex) {
+        closeRunDynamicArtWindowForSegment(segmentIndex);
+        markRunDynamicArtGapOpened(segmentIndex);
+    }
+
+    private void closeRunDynamicArtWindowForSegment(int segmentIndex) {
         runClosingDynamicArtSegment = segmentIndex;
         try {
             runDynamicArtSegments.enterGap();
         } finally {
             runClosingDynamicArtSegment = -1;
         }
-        if (runDynamicArtGapJournal != null
-                && segmentIndex + 1 < runSegments.size()) {
+    }
+
+    private void markRunDynamicArtGapOpened(int segmentIndex) {
+        if (runDynamicArtGapJournal != null) {
             runDynamicArtGapJournal.gapOpened(segmentIndex);
         }
+    }
+
+    private void ingestRunExternalComparison(FrameComparison comparison) {
+        if (comparison == null) {
+            return;
+        }
+        if (comparator == null) {
+            throw new IllegalStateException(
+                    "run structural comparison has no diagnostic sink");
+        }
+        comparator.ingestExternalComparison(comparison);
+    }
+
+    private void ingestRunUndisplayedComparison(FrameComparison comparison) {
+        if (comparison == null) {
+            return;
+        }
+        if (runExternalDiagnostics != null) {
+            runExternalDiagnostics.accept(comparison);
+            return;
+        }
+        ingestRunExternalComparison(comparison);
     }
 
     private void compareRunReturnBoundaryIfPresent(int destinationIndex) {
@@ -1687,35 +1972,69 @@ public final class TraceSessionLauncher {
                         GameServices.gameState().getEmeraldCount(),
                         !TraceRunReplayWalker.isUncomparedInterior(
                                 interior.segment()));
-        comparator.ingestExternalComparison(TraceRunBoundaryComparator.compare(
+        ingestRunUndisplayedComparison(TraceRunBoundaryComparator.compare(
                 interior.exitBoundary().modeChangeBk2Frame(), expected, actual));
     }
 
     private void beginRunTerminalTail(
             TraceRunReplayWalker.TerminalMovieTailPlan plan) {
-        GameServices.playbackDebug().endSession();
+        PlaybackDebugManager playback = GameServices.playbackDebug();
+        boolean continuousClockRetained = plan.shouldReplay()
+                ? playback.isSessionPlaying()
+                        && playback.getCursorFrame() == plan.tailStart()
+                : playback.hasLoadedMovie()
+                        && playback.getMovieFrameCount() == movie.getFrameCount()
+                        && plan.tailStart() == movie.getFrameCount()
+                        && playback.getCursorFrame()
+                                == movie.getFrameCount() - 1;
+        if (!continuousClockRetained) {
+            throw new IllegalStateException(
+                    "terminal tail must retain continuous playback at row "
+                            + plan.tailStart() + ", got "
+                            + playback.getCursorFrame());
+        }
         if (runBoundaryProbe != null) {
             runBoundaryProbe.setDelegate(null);
         }
         runTerminalTail = plan;
-        runTerminalTailRow = plan.tailStart();
+        runTerminalRowAdvanced = false;
+        runTerminalMovieEndReached = false;
+        runTerminalTailCompared = false;
         if (!plan.shouldReplay()) {
+            compareRunTerminalDynamicArtTail();
             applyRunCoordinatorActions(runCoordinator.finishTerminalTail(
                     Engine.currentGameLoop().getCurrentGameMode()));
         }
     }
 
     private void finishRunTerminalTailStep(GameMode mode) {
-        clearRunOwnedInputOverride();
-        if (!runTerminalInputApplied) {
+        if (!runTerminalRowAdvanced) {
             return;
         }
-        runTerminalInputApplied = false;
-        runTerminalTailRow++;
-        if (runTerminalTailRow >= runTerminalTail.tailStart()
-                + runTerminalTail.rowsToReplay()) {
+        runTerminalRowAdvanced = false;
+        if (runTerminalMovieEndReached) {
+            runTerminalMovieEndReached = false;
+            compareRunTerminalDynamicArtTail();
             applyRunCoordinatorActions(runCoordinator.finishTerminalTail(mode));
         }
+    }
+
+    private void compareRunTerminalDynamicArtTail() {
+        if (runTerminalTailCompared || runDynamicArtGapJournal == null) {
+            return;
+        }
+        runTerminalTailCompared = true;
+        // The movie ends before this level reaches its main loop, so a
+        // transfer still held for the pre-main-loop tail has to settle at the
+        // earliest row that tail could occupy.
+        if (dynamicArtSegmentGameplayMode != null
+                && dynamicArtSegmentGameplayMode.dynamicArtLifecycle() != null) {
+            dynamicArtSegmentGameplayMode.dynamicArtLifecycle()
+                    .releaseUnclaimedPreMainLoopPlayerTransfer();
+        }
+        ingestRunUndisplayedComparison(
+                runDynamicArtGapJournal.terminalTailClosed(
+                        movie.getFrameCount()));
     }
 
     private void failRun(String diagnostic) {
@@ -1736,26 +2055,6 @@ public final class TraceSessionLauncher {
             runOwnedInputHandler.clearLogicalOverride();
             runOwnedInputHandler = null;
         }
-    }
-
-    /** Installs one physical terminal-tail movie row before any mode dispatch. */
-    static void applyRunTerminalTailInputIfActive(InputHandler input) {
-        TraceSessionLauncher session = active();
-        if (session == null || input == null || session.runTerminalTail == null
-                || session.runCoordinator == null
-                || session.runCoordinator.phase()
-                        != TraceRunPlaybackCoordinator.Phase.TERMINAL_TAIL
-                || session.runTerminalInputApplied
-                || session.runTerminalTailRow >= session.runTerminalTail.tailStart()
-                        + session.runTerminalTail.rowsToReplay()) {
-            return;
-        }
-        int row = session.runTerminalTailRow;
-        Bk2FrameInput current = session.movie.getFrame(row);
-        Bk2FrameInput previous = row > 0 ? session.movie.getFrame(row - 1) : null;
-        input.setLogicalOverride(RecordedInputSnapshots.fromBk2(current, previous));
-        session.runOwnedInputHandler = input;
-        session.runTerminalInputApplied = true;
     }
 
     /** Attempts destination ownership after title-card/setup admission but before production. */
@@ -1781,6 +2080,20 @@ public final class TraceSessionLauncher {
 
     static void markNextRunInteriorReturnLoad() {
         markNextRunLevelLoadCause(RunLevelLoadCause.INTERIOR_RETURN);
+    }
+
+    /** Records the native special/bonus-stage exit before any return load starts. */
+    public static void observeRunStageExitIfActive() {
+        TraceSessionLauncher session = active();
+        if (session == null || session.runCoordinator == null
+                || session.runBoundaryProbe == null) {
+            return;
+        }
+        int frame = session.currentRunBoundaryBk2Frame();
+        RunBoundarySignal.StageExit signal = new RunBoundarySignal.StageExit(frame);
+        session.runBoundaryProbe.observeSignal(signal);
+        session.runCoordinator.observeBoundary(signal);
+        session.runForwardedBoundarySegment = session.currentRunSegmentIndex();
     }
 
     static void runDeathRestartLoad(com.openggf.level.LevelManager levelManager) {
@@ -1818,11 +2131,6 @@ public final class TraceSessionLauncher {
         int frame = session.currentRunBoundaryBk2Frame();
         RunPlaybackObservation.LevelIdentity identity = receipt.identity();
         RunLevelLoadCause cause = receipt.cause();
-        if (cause == RunLevelLoadCause.INTERIOR_RETURN) {
-            RunBoundarySignal.StageExit exit = new RunBoundarySignal.StageExit(frame);
-            session.runBoundaryProbe.observeSignal(exit);
-            session.runCoordinator.observeBoundary(exit);
-        }
         RunBoundarySignal.LevelLoaded signal =
                 new RunBoundarySignal.LevelLoaded(frame, cause, identity);
         session.runBoundaryProbe.observeSignal(signal);
@@ -1861,8 +2169,14 @@ public final class TraceSessionLauncher {
         if (!"level".equals(destination.kind())) {
             return false;
         }
-        GameServices.playbackDebug().scheduleSessionAtNextLevelLoad(
-                movie, destination.bk2FrameOffset());
+        PlaybackDebugManager playback = GameServices.playbackDebug();
+        if (!playback.isSessionPlaying()
+                || playback.getCursorFrame() > destination.bk2FrameOffset()) {
+            throw new IllegalStateException(
+                    "accepted level load lost the continuous run clock before "
+                            + destination.bk2FrameOffset() + ": cursor="
+                            + playback.getCursorFrame());
+        }
         return true;
     }
 
@@ -1996,28 +2310,154 @@ public final class TraceSessionLauncher {
                 dynamicArtSnapshotBeforeIteration.deliverySerial();
     }
 
-    static void runProductionIterationIfActive(Runnable productionIteration) {
+    static boolean isRunFrameDriverActive() {
         TraceSessionLauncher session = active();
-        if (session == null) {
+        GameplayModeContext context = SessionManager.getCurrentGameplayMode();
+        boolean installed = context != null
+                && context.traceRunFrameDriver().isPresent();
+        return installed && (session == null || (session.runFrameDriver != null
+                && session.runCoordinator != null
+                && !session.fadeStarted
+                && session.runCoordinator.phase()
+                        != TraceRunPlaybackCoordinator.Phase.COMPLETE
+                && session.runCoordinator.phase()
+                        != TraceRunPlaybackCoordinator.Phase.FAILED));
+    }
+
+    public static boolean allowsRunLogicalGameplayInput() {
+        TraceSessionLauncher session = active();
+        if (!isRunFrameDriverActive()) {
+            return true;
+        }
+        if (session != null) {
+            return session.activeRunDisposition
+                    == TraceRunFrameDriver.Disposition.GAMEPLAY_SHARED;
+        }
+        GameplayModeContext context = SessionManager.getCurrentGameplayMode();
+        return context != null
+                && context.traceRunFrameDriver()
+                        .map(TraceRunFrameDriver::currentDisposition)
+                        .orElse(null)
+                        == TraceRunFrameDriver.Disposition.GAMEPLAY_SHARED;
+    }
+
+    static boolean admitsRunLogicalGameplayInput(GameMode mode) {
+        return (mode == GameMode.LEVEL || mode == GameMode.BONUS_STAGE)
+                && allowsRunLogicalGameplayInput();
+    }
+
+    static boolean suppressesRunNativeLevelBody(GameMode mode) {
+        return mode == GameMode.LEVEL
+                && isRunFrameDriverActive()
+                && !allowsRunLogicalGameplayInput();
+    }
+
+    static boolean shouldSkipRunGameplayTick(
+            PlaybackDebugManager playback) {
+        return allowsRunLogicalGameplayInput()
+                && playback.shouldSkipCurrentGameplayTick();
+    }
+
+    static boolean commitDeferredRunModeBoundary(
+            GameMode mode,
+            SpecialStageProvider provider,
+            Consumer<Boolean> enterResultsScreen) {
+        TraceSessionLauncher session = active();
+        if (mode != GameMode.SPECIAL_STAGE
+                || provider == null
+                || !provider.isFinished()
+                || (session != null && session.isSpecialStageSession())) {
+            return false;
+        }
+        enterResultsScreen.accept(provider.isEmeraldCollected());
+        return true;
+    }
+
+    /**
+     * True when the represented production row begins a recorded synchronous
+     * overrun. Mode owners retain their completed boundary until the first
+     * later production row while intervening physical rows advance only.
+     */
+    public static boolean shouldDeferRunModeBoundaryCommit() {
+        GameplayModeContext context = SessionManager.getCurrentGameplayMode();
+        return context != null
+                && context.traceRunFrameDriver()
+                        .map(TraceRunFrameDriver
+                                ::defersBoundaryCommitAfterCurrentRow)
+                        .orElse(false);
+    }
+
+    /**
+     * Marks the current run row as a mode handoff when production entered a
+     * Special Stage at the destination segment's physical offset. The
+     * destination's local row driver must consume that offset next; advancing
+     * it here would make input and hardware timing one row late.
+     */
+    static void deferRunPhysicalRowForSpecialStageEntry(
+            GameMode previousMode, GameMode nextMode) {
+        if (previousMode != GameMode.LEVEL
+                || nextMode != GameMode.SPECIAL_STAGE) {
+            return;
+        }
+        TraceSessionLauncher session = active();
+        if (session != null) {
+            session.deferRunPhysicalRowForSpecialStageEntry();
+        }
+    }
+
+    private void deferRunPhysicalRowForSpecialStageEntry() {
+        if (runCoordinator == null || runFrameDriver == null
+                || runFrameDriver.currentDisposition()
+                        != TraceRunFrameDriver.Disposition.SHARED_GAP
+                || runCoordinator.phase()
+                        != TraceRunPlaybackCoordinator.Phase.TRANSITION_GAP) {
+            return;
+        }
+        int sourceIndex = runCoordinator.currentSegmentIndex();
+        int destinationIndex = sourceIndex + 1;
+        if (sourceIndex < 0 || destinationIndex >= runSegments.size()
+                || !"special_stage".equals(
+                        runSegments.get(destinationIndex).segment().kind())) {
+            return;
+        }
+        int cursor = GameServices.playbackDebug().getCursorFrame();
+        int destinationOffset = runSegments.get(destinationIndex)
+                .segment().bk2FrameOffset();
+        if (cursor > destinationOffset) {
+            throw new IllegalStateException(
+                    "Special Stage entry crossed destination physical row: "
+                            + "cursor=" + cursor + ", destinationOffset="
+                            + destinationOffset);
+        }
+        if (cursor == destinationOffset) {
+            runPhysicalRowAdvanceDeferred = true;
+        }
+    }
+
+    private boolean consumeDeferredRunPhysicalRowAdvance() {
+        if (!runPhysicalRowAdvanceDeferred) {
+            return false;
+        }
+        runPhysicalRowAdvanceDeferred = false;
+        return true;
+    }
+
+    static void runProductionIterationIfActive(
+            Runnable productionIteration,
+            Runnable advanceRunPhysicalRow) {
+        TraceSessionLauncher session = active();
+        if (session == null || !isRunFrameDriverActive()) {
             productionIteration.run();
             return;
         }
         Objects.requireNonNull(productionIteration, "productionIteration");
-        session.beforeProductionIteration();
+        Objects.requireNonNull(advanceRunPhysicalRow, "advanceRunPhysicalRow");
         Throwable primaryFailure = null;
         try {
-            productionIteration.run();
+            session.driveRunPhysicalRow(
+                    productionIteration, advanceRunPhysicalRow);
         } catch (RuntimeException | Error failure) {
             primaryFailure = failure;
-        }
-        try {
-            session.afterProductionIteration();
-        } catch (RuntimeException | Error hookFailure) {
-            if (primaryFailure != null) {
-                primaryFailure.addSuppressed(hookFailure);
-            } else {
-                primaryFailure = hookFailure;
-            }
         }
         if (primaryFailure == null) {
             return;
@@ -2033,6 +2473,275 @@ public final class TraceSessionLauncher {
         }
         LOGGER.log(java.util.logging.Level.SEVERE,
                 "Visual trace session aborted after a replay failure", contained);
+    }
+
+    /** Compatibility seam for focused tests and standalone trace callers. */
+    static void runProductionIterationIfActive(Runnable productionIteration) {
+        runProductionIterationIfActive(productionIteration, () -> {
+        });
+    }
+
+    private void driveRunPhysicalRow(
+            Runnable productionIteration,
+            Runnable advanceRunPhysicalRow) {
+        GameLoop loop = Engine.currentGameLoop();
+        GameMode mode = loop != null
+                ? loop.getCurrentGameMode() : GameMode.LEVEL;
+        TraceRunFrameDriver.Step step = currentRunFrameStep();
+        runFrameDriver.execute(step,
+                new TraceRunFrameDriver.Hooks<DynamicArtDiagnosticsSnapshot>() {
+                    @Override
+                    public void preparePhysicalRow(TraceRunFrameDriver.Step row) {
+                        activeRunDisposition = row.disposition();
+                        // Gap edges are stamped with the physical movie row, so
+                        // the driver states it rather than letting the lifecycle
+                        // infer it from production iterations it never runs
+                        // during a suppressed gap.
+                        if (dynamicArtSegmentGameplayMode != null) {
+                            dynamicArtSegmentGameplayMode.dynamicArtLifecycle()
+                                    .setMovieLogicalFrame(row.movieRow());
+                        }
+                        Bk2FrameInput physical;
+                        if (row.disposition()
+                                == TraceRunFrameDriver.Disposition.GAMEPLAY_SHARED) {
+                            GameServices.playbackDebug().prepareCurrentFrame();
+                            physical = GameServices.playbackDebug()
+                                    .currentFrameOrThrow();
+                        } else {
+                            physical = GameServices.playbackDebug()
+                                    .currentFrameOrThrow();
+                        }
+                        if (physical.frameIndex() != row.movieRow()) {
+                            throw new IllegalStateException(
+                                    "physical run row changed during admission: expected "
+                                            + row.movieRow() + ", got "
+                                            + physical.frameIndex());
+                        }
+                        runLastPhysicalInput = physical;
+                        if (usesDriverOwnedPhysicalInput(row.disposition())) {
+                            applyRunPhysicalInput(loop, physical);
+                        }
+                        if (row.disposition()
+                                == TraceRunFrameDriver.Disposition
+                                        .PRESENTATION_VBLANK
+                                || row.disposition()
+                                == TraceRunFrameDriver.Disposition
+                                        .PRESENTATION_SUPPRESSED_CLOSURE
+                                || row.disposition()
+                                == TraceRunFrameDriver.Disposition
+                                        .PRESENTATION_ADVANCE_ONLY) {
+                            if (runStructuralComparator == null) {
+                                throw new IllegalStateException(
+                                        "presentation row has no structural comparator");
+                            }
+                            runStructuralComparator.prepareRow(
+                                    physical);
+                        }
+                    }
+
+                    @Override
+                    public void prepareHardwareTiming(TraceRunFrameDriver.Step row) {
+                        prepareRunFrameHardwareTiming(row.disposition(), mode);
+                    }
+
+                    @Override
+                    public DynamicArtDiagnosticsSnapshot captureBefore(
+                            TraceRunFrameDriver.Step row) {
+                        if (row.disposition().runsProductionLifecycle()) {
+                            beforeProductionIteration();
+                        }
+                        return GameServices.captureDynamicArtDiagnostics();
+                    }
+
+                    @Override
+                    public void runProductionLifecycle(TraceRunFrameDriver.Step row) {
+                        if (row.disposition()
+                                == TraceRunFrameDriver.Disposition
+                                        .PRESENTATION_SUPPRESSED_CLOSURE) {
+                            TraceRunPresentationClosure.execute(loop, row);
+                        } else {
+                            productionIteration.run();
+                        }
+                    }
+
+                    @Override
+                    public boolean shouldAdvancePhysicalRow(
+                            TraceRunFrameDriver.Step row) {
+                        return row.disposition()
+                                != TraceRunFrameDriver.Disposition.SHARED_GAP
+                                || !consumeDeferredRunPhysicalRowAdvance();
+                    }
+
+                    @Override
+                    public void advancePhysicalRow(TraceRunFrameDriver.Step row) {
+                        advanceRunPhysicalRow.run();
+                        if (row.disposition()
+                                == TraceRunFrameDriver.Disposition.TERMINAL_TAIL) {
+                            runTerminalRowAdvanced = true;
+                            runTerminalMovieEndReached =
+                                    row.terminalSegmentRow();
+                        }
+                    }
+
+                    @Override
+                    public DynamicArtDiagnosticsSnapshot captureAfter(
+                            TraceRunFrameDriver.Step row) {
+                        return GameServices.captureDynamicArtDiagnostics();
+                    }
+
+                    @Override
+                    public void compare(
+                            TraceRunFrameDriver.Step row,
+                            DynamicArtDiagnosticsSnapshot before,
+                            DynamicArtDiagnosticsSnapshot after) {
+                        if (row.disposition().runsProductionLifecycle()) {
+                            afterProductionIteration();
+                        }
+                        if (row.disposition()
+                                == TraceRunFrameDriver.Disposition
+                                        .PRESENTATION_VBLANK
+                                || row.disposition()
+                                == TraceRunFrameDriver.Disposition
+                                        .PRESENTATION_SUPPRESSED_CLOSURE
+                                || row.disposition()
+                                == TraceRunFrameDriver.Disposition
+                                        .PRESENTATION_ADVANCE_ONLY) {
+                            FrameComparison result = runStructuralComparator
+                                    .completePostProduction(
+                                            before, after,
+                                            row.disposition()
+                                                    .runsProductionLifecycle(),
+                                            !row.observedVblankCounterAdvance());
+                            ingestRunExternalComparison(result);
+                        }
+                    }
+
+                    @Override
+                    public void afterStep(TraceRunFrameDriver.Step row) {
+                        if (usesDriverOwnedPhysicalInput(row.disposition())) {
+                            clearRunOwnedInputOverride();
+                        }
+                        activeRunDisposition = null;
+                    }
+                });
+    }
+
+    private static boolean usesDriverOwnedPhysicalInput(
+            TraceRunFrameDriver.Disposition disposition) {
+        return switch (disposition) {
+            case PRESENTATION_VBLANK, PRESENTATION_SUPPRESSED_CLOSURE,
+                    PRESENTATION_ADVANCE_ONLY, SHARED_GAP, TERMINAL_TAIL -> true;
+            case GAMEPLAY_SHARED, SPECIAL_LOCAL, OFFSET_HANDOFF -> false;
+        };
+    }
+
+    private void applyRunPhysicalInput(
+            GameLoop loop, Bk2FrameInput current) {
+        if (loop == null) {
+            throw new IllegalStateException(
+                    "physical run input has no active GameLoop");
+        }
+        int previousIndex = current.frameIndex() - 1;
+        Bk2FrameInput previous = previousIndex >= 0
+                ? movie.getFrame(previousIndex) : null;
+        InputHandler input = loop.getInputHandler();
+        input.setLogicalOverride(
+                RecordedInputSnapshots.fromBk2(current, previous));
+        runOwnedInputHandler = input;
+    }
+
+    private TraceRunFrameDriver.Step currentRunFrameStep() {
+        GameLoop loop = Engine.currentGameLoop();
+        int movieRow = Math.max(0,
+                GameServices.playbackDebug().getCursorFrame());
+        TraceRunPlaybackCoordinator.Phase phase = runCoordinator.phase();
+        int segmentIndex = runCoordinator.currentSegmentIndex();
+        TraceRunReplayWalker.SegmentExecutionPolicy policy =
+                segmentIndex >= 0 && segmentIndex < runSegments.size()
+                        ? runSegments.get(segmentIndex).executionPolicy()
+                        : TraceRunReplayWalker.SegmentExecutionPolicy.GAMEPLAY;
+        TraceExecutionPhase rowPhase = TraceExecutionPhase.VBLANK_ONLY;
+        boolean observedVblankCounterAdvance = true;
+        boolean previousObservedVblankCounterAdvance = true;
+        boolean terminalRow = false;
+        boolean deferBoundaryCommit = false;
+        if (phase == TraceRunPlaybackCoordinator.Phase.CURRENT_SEGMENT
+                && segmentIndex >= 0 && segmentIndex < runSegments.size()) {
+            TraceRunReplayWalker.SegmentPlan plan = runSegments.get(segmentIndex);
+            int localRow = policy
+                            == TraceRunReplayWalker.SegmentExecutionPolicy.SPECIAL_LOCAL
+                    ? runSpecialLocalRow
+                    : movieRow - plan.segment().bk2FrameOffset();
+            if (policy
+                    == TraceRunReplayWalker.SegmentExecutionPolicy
+                            .LEVEL_PRESENTATION_BRIDGE) {
+                if (localRow < 0 || localRow >= plan.trace().frameCount()) {
+                    throw new IllegalStateException(
+                            "presentation row " + localRow + " outside segment "
+                                    + segmentIndex);
+                }
+                TraceReplayRowPolicy rowPolicy = TraceReplayRowPolicy.resolve(
+                        plan.trace(), localRow, movieRow);
+                rowPhase = rowPolicy.phase();
+                observedVblankCounterAdvance =
+                        rowPolicy.observedVblankCounterAdvance();
+                if (localRow > 0) {
+                    previousObservedVblankCounterAdvance =
+                            TraceReplayRowPolicy.resolve(
+                                    plan.trace(), localRow - 1, movieRow - 1)
+                                    .observedVblankCounterAdvance();
+                }
+                if (localRow + 1 < plan.trace().frameCount()) {
+                    TraceReplayRowPolicy nextRowPolicy =
+                            TraceReplayRowPolicy.resolve(
+                                    plan.trace(), localRow + 1, movieRow + 1);
+                    deferBoundaryCommit = TraceRunFrameDriver
+                            .shouldDeferBoundaryCommit(
+                                    rowPolicy.observedVblankCounterAdvance(),
+                                    nextRowPolicy
+                                            .observedVblankCounterAdvance());
+                }
+            }
+            terminalRow = localRow == plan.segment().traceFrameCount() - 1;
+        } else if (phase
+                == TraceRunPlaybackCoordinator.Phase.TERMINAL_TAIL) {
+            terminalRow = movieRow == movie.getFrameCount() - 1;
+        }
+        TraceRunFrameDriver.Disposition disposition =
+                TraceRunFrameDriver.selectDisposition(
+                        phase, policy, rowPhase,
+                        observedVblankCounterAdvance,
+                        previousObservedVblankCounterAdvance,
+                        loop != null
+                                && loop.getCurrentGameMode() == GameMode.LEVEL);
+        boolean commitDeferredBoundaryAfterClosure = TraceRunFrameDriver
+                .shouldCommitDeferredBoundaryAfterClosure(
+                        previousObservedVblankCounterAdvance,
+                        observedVblankCounterAdvance);
+        return new TraceRunFrameDriver.Step(
+                disposition, movieRow, terminalRow,
+                deferBoundaryCommit, commitDeferredBoundaryAfterClosure,
+                observedVblankCounterAdvance);
+    }
+
+    private void prepareRunFrameHardwareTiming(
+            TraceRunFrameDriver.Disposition disposition,
+            GameMode mode) {
+        if (fixture == null || runHardwareTiming == null) {
+            return;
+        }
+        switch (disposition) {
+            case GAMEPLAY_SHARED, PRESENTATION_VBLANK,
+                    PRESENTATION_SUPPRESSED_CLOSURE,
+                    PRESENTATION_ADVANCE_ONLY ->
+                    runHardwareTiming.beginPlaybackFrame(
+                            GameServices.playbackDebug().currentFrameOrThrow());
+            case SPECIAL_LOCAL -> prepareRunSpecialStageHardwareTimingRow();
+            case SHARED_GAP, TERMINAL_TAIL ->
+                    fixture.enterHardwareTimingGap();
+            case OFFSET_HANDOFF -> throw new IllegalStateException(
+                    "offset handoff cannot prepare hardware timing");
+        }
     }
 
     /**
@@ -2397,8 +3106,8 @@ public final class TraceSessionLauncher {
     }
 
     /**
-     * Applies a segment-advance {@link RunSegmentAdvancer.AdvanceAction}: re-seeks
-     * playback to the next segment's BK2 offset and rebinds EVERYTHING that
+     * Applies a segment-advance {@link RunSegmentAdvancer.AdvanceAction}: keeps
+     * playback at the next segment's BK2 offset and rebinds EVERYTHING that
      * captured the old comparator — the comparator field itself (read by
      * ghost rendering), the camera focus controller and HUD overlay (rebuilt
      * and re-registered, mirroring {@link #finishRunLaunch}), and the
@@ -2418,7 +3127,9 @@ public final class TraceSessionLauncher {
         // not just segment 0.
         this.comparator = new LiveTraceComparator(
                 segment.trace(), ToleranceConfig.DEFAULT, 0,
-                loop::getMainPlayableSprite, loop::toggleUserPause);
+                loop::getMainPlayableSprite, loop::toggleUserPause,
+                runExternalDiagnostics != null
+                        ? runExternalDiagnostics::acceptDisplayed : null);
         this.cameraFocusController = new TraceCameraFocusController(
                 comparator,
                 loop::getMainPlayableSprite,
@@ -2432,7 +3143,7 @@ public final class TraceSessionLauncher {
                 GameServices.configuration(),
                 loop::isPaused);
         loop.setTraceCameraFocusController(cameraFocusController);
-        this.overlay = new TraceHudOverlay(comparator,
+        this.overlay = new TraceHudOverlay(createRunHudModel(comparator),
                 () -> cameraFocusController.currentLabel(),
                 this::rewindStatusLabel);
         if (runBoundaryProbe != null) {
@@ -2441,9 +3152,124 @@ public final class TraceSessionLauncher {
         } else {
             GameServices.playbackDebug().setFrameObserver(comparator);
         }
-        GameServices.playbackDebug().startSession(movie, action.reseekOffset());
+        requireContinuousRunPlaybackAt(action.reseekOffset());
         completionArmed = false;
         completionHoldFrames = 0;
+    }
+
+    /**
+     * Opens an outer frame of visual Trace Test Mode fast-forward, and reports
+     * how many EXTRA gameplay steps {@link GameLoop} should pump into it.
+     * <p>
+     * Called once per outer frame, before the frame's first step, so the
+     * Left/Right ladder input is read while the key edges are still fresh and
+     * the audio rate is in place before the frame's one audio presentation.
+     * Left/Right only move the ladder while playback is actually running:
+     * paused, they belong to {@link TraceCameraFocusController}'s focus cycle,
+     * and during a held rewind the rewind transport owns the frame.
+     * <p>
+     * This also owns the tape-effect envelope for every frame it returns
+     * from — except a rewinding one, where
+     * {@link #handleRealtimeRewindInput} ticks it instead, since only that
+     * method knows whether the rewind actually engaged.
+     */
+    public int beginFastForwardOuterFrame(InputHandler input, boolean paused) {
+        if (fadeStarted || teardownPending) {
+            resetFastForward();
+            return 0;
+        }
+        playbackSpeed.handleInput(input, paused || realtimeRewinding,
+                GameServices.configuration().getInt(SonicConfiguration.LEFT),
+                GameServices.configuration().getInt(SonicConfiguration.RIGHT));
+        if (realtimeRewinding) {
+            applyForwardRate(1.0);
+            return 0;
+        }
+        if (paused) {
+            applyForwardRate(1.0);
+            tapeEffectEnvelope.frameInactive();
+            return 0;
+        }
+        double rate = playbackSpeed.rate();
+        applyForwardRate(rate);
+        if (rate > 1.0) {
+            tapeEffectScrollDirection =
+                    RewindVhsEffectPass.FAST_FORWARD_SCROLL_DIRECTION;
+            tapeEffectEnvelope.frameActive(rate);
+        } else {
+            tapeEffectEnvelope.frameInactive();
+        }
+        return playbackSpeed.consumeExtraSteps();
+    }
+
+    /**
+     * Whether another fast-forward step may still be pumped into this outer
+     * frame. Re-checked between pumped steps because any of them can end the
+     * session, engage a rewind, or start the completion fade.
+     */
+    public boolean isFastForwardPumpAllowed() {
+        return activeSession == this
+                && !realtimeRewinding
+                && !fadeStarted
+                && !teardownPending;
+    }
+
+    /** Current VHS tape-effect presentation intensity, 0..1. */
+    public float tapeEffectIntensity() {
+        return tapeEffectEnvelope.intensity();
+    }
+
+    /** Latched tape speed for the VHS presentation, 0.25..4.0. */
+    public float tapeEffectSpeed() {
+        return tapeEffectEnvelope.speed();
+    }
+
+    /** Tear-band scroll direction for the VHS presentation. */
+    public float tapeEffectScrollDirection() {
+        return tapeEffectScrollDirection;
+    }
+
+    /** Speed ladder display for the trace HUD, e.g. {@code < 1.5x >}. */
+    public String playbackRateDisplay() {
+        return playbackSpeed.rateDisplay();
+    }
+
+    /**
+     * The single choke point for becoming the active session. Every entry path
+     * routes through here so the legacy {@code == PLAYBACK ==} panel handoff
+     * cannot be missed by one of them — this HUD renders that information
+     * itself, top-right, for the session's lifetime.
+     */
+    private void becomeActiveSession() {
+        activeSession = this;
+        GameServices.playbackDebug().setOverlayOwnedExternally(true);
+    }
+
+    /** The matching choke point for standing down; hands the panel back. */
+    private void releaseActiveSession() {
+        activeSession = null;
+        GameServices.playbackDebug().setOverlayOwnedExternally(false);
+    }
+
+    /**
+     * Drops playback back to real time and kills the tape effect. The forward
+     * rate outlives this session on the shared producer, so every exit path
+     * has to come through here.
+     */
+    private void resetFastForward() {
+        playbackSpeed.reset();
+        tapeEffectEnvelope.reset();
+        applyForwardRate(1.0);
+    }
+
+    /**
+     * Restated every outer frame rather than only on change, the way
+     * {@link com.openggf.game.rewind.LiveRewindManager} restates the reverse
+     * rate: the producer can be rebuilt mid-session and comes back at real
+     * time, which a change-guarded write would never notice.
+     */
+    private void applyForwardRate(double rate) {
+        GameServices.audio().setForwardPlaybackRate(rate);
     }
 
     /**
@@ -2495,6 +3321,11 @@ public final class TraceSessionLauncher {
                 beginReverseFadePresentation();
             }
             realtimeRewinding = true;
+            // Trace rewind walks a fixed one step per frame, so the tape speed
+            // the effect latches is the base speed rather than a controller
+            // reading like live rewind's.
+            tapeEffectScrollDirection = RewindVhsEffectPass.REWIND_SCROLL_DIRECTION;
+            tapeEffectEnvelope.frameActive(1.0);
             rewindPlaybackController.rewind();
             rewindPlaybackController.tick();
             syncVisualRewindCursors(false);
@@ -2558,7 +3389,7 @@ public final class TraceSessionLauncher {
     private Throwable abortIncompleteSession(
             Throwable primary, String reason, GameLoop fallbackLoop) {
         Throwable failure = primary;
-        activeSession = null;
+        releaseActiveSession();
         launchPhase.abort();
         teardownPending = false;
         completionStartPending = false;
@@ -2573,6 +3404,7 @@ public final class TraceSessionLauncher {
         }
         failure = cleanupFailure(failure, this::abortRunDynamicArtSegments);
         failure = cleanupFailure(failure, () -> TraceGhostHook.clear(ghostHook));
+        failure = cleanupFailure(failure, this::resetFastForward);
         failure = cleanupFailure(failure,
                 () -> GameServices.audio().setRewindHistoryArmed(false));
         failure = cleanupFailure(failure,
@@ -2787,6 +3619,9 @@ public final class TraceSessionLauncher {
     }
 
     private String rewindStatusLabel() {
+        // Fast-forward state is not reported here — the top-right transport
+        // block's Rate line is its single display, and it stays visible for
+        // run sessions, which never install a rewind controller.
         if (rewindController == null) {
             return null;
         }
@@ -2824,9 +3659,19 @@ public final class TraceSessionLauncher {
                 return true;
             }
         }
-        activeSession = null;
+        releaseActiveSession();
+        GameplayModeContext runContext = SessionManager.getCurrentGameplayMode();
+        if (runContext != null && runFrameDriver != null) {
+            runContext.clearTraceRunFrameDriver(runFrameDriver);
+        }
+        runFrameDriver = null;
+        activeRunDisposition = null;
+        runStructuralComparator = null;
+        runLastPhysicalInput = null;
+        runExternalDiagnostics = null;
         closeRunDynamicArtSegments();
         TraceGhostHook.clear(ghostHook);
+        resetFastForward();
         GameServices.audio().setRewindHistoryArmed(false);
         GameServices.playbackDebug().endSession();
         // Restore the user's gameplay-altering config before we

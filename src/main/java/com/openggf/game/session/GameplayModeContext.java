@@ -61,6 +61,7 @@ import com.openggf.physics.TerrainCollisionManager;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.timer.TimerManager;
 import com.openggf.trace.replay.runs.RunLevelLoadTracker;
+import com.openggf.trace.replay.runs.TraceRunFrameDriver;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -92,6 +93,7 @@ public final class GameplayModeContext implements ModeContext {
     private final PlcFrameLifecycleCoordinator plcFrameLifecycle;
     private final DynamicArtLifecycleService dynamicArtLifecycle;
     private final RunLevelLoadTracker runLevelLoads = new RunLevelLoadTracker();
+    private TraceRunFrameDriver traceRunFrameDriver;
 
     private Camera camera;
     private TimerManager timerManager;
@@ -526,6 +528,20 @@ public final class GameplayModeContext implements ModeContext {
     /** Production-issued structural receipts consumed by complete-run adapters. */
     public RunLevelLoadTracker runLevelLoads() {
         return runLevelLoads;
+    }
+
+    public Optional<TraceRunFrameDriver> traceRunFrameDriver() {
+        return Optional.ofNullable(traceRunFrameDriver);
+    }
+
+    public void installTraceRunFrameDriver(TraceRunFrameDriver driver) {
+        traceRunFrameDriver = Objects.requireNonNull(driver, "driver");
+    }
+
+    public void clearTraceRunFrameDriver(TraceRunFrameDriver driver) {
+        if (traceRunFrameDriver == driver) {
+            traceRunFrameDriver = null;
+        }
     }
 
     /**

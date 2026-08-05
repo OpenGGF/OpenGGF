@@ -257,7 +257,9 @@ public final class TraceCaptureTool {
         // encoder, so selecting one silently did nothing.
         SonicConfigurationService captureConfig = GameServices.configuration();
         encoder.setCodecs(args.codec(),
-                captureConfig.getString(SonicConfiguration.CAPTURE_AUDIO_CODEC));
+                captureConfig.getString(SonicConfiguration.CAPTURE_AUDIO_CODEC),
+                captureConfig.getInt(SonicConfiguration.CAPTURE_ENCODER_THREADS),
+                captureConfig.getString(SonicConfiguration.CAPTURE_ENCODER_PRESET));
         encoder.setCommandOverrides(
                 captureConfig.getString(SonicConfiguration.CAPTURE_FFMPEG_PASS1_ARGS),
                 captureConfig.getString(SonicConfiguration.CAPTURE_FFMPEG_PASS2_ARGS));
@@ -310,7 +312,13 @@ public final class TraceCaptureTool {
                     System.out.println("Output size: " + Files.size(out) + " bytes");
                 }
             } finally {
-                GameServices.audio().endCaptureMode();
+                try {
+                    GameServices.audio().endCaptureMode();
+                } finally {
+                    // The grabber holds a frame-sized native read buffer for
+                    // its lifetime now that it reuses one per grab.
+                    grabber.close();
+                }
             }
         }
         return ownership.transfer();

@@ -107,6 +107,81 @@ class TestAudioPresentationProducer {
     }
 
     @Test
+    void forwardRateRendersRateTimesTheSourceAndDecimatesItIntoOnePacket() {
+        // maxStereoFrames is 4 here, so a 7-frame source pull also crosses the
+        // chunk boundary the resampler splits the mixer passes on.
+        Fixture fixture = fixture(8, 2, rampStereo("fast-forward", 16));
+        fixture.submitTone();
+        fixture.producer.setHistoryArmed(true);
+        fixture.producer.setForwardRate(2.0);
+
+        fixture.producer.present(0, PresentationMode.FORWARD);
+
+        assertArrayEquals(new short[] {0, 100, 2, 102, 4, 104, 6, 106},
+                fixture.sink.lastPacket(4),
+                "every other source frame lands in the one clocked packet");
+        assertEquals(4, fixture.sink.copiedFrames,
+                "the packet stays one outer frame long whatever the rate");
+        assertEquals(7L << 32, sampleCursor(fixture.registry),
+                "the voice advances by the source frames the rate consumed");
+
+        fixture.producer.beginReverse(1.0);
+        fixture.producer.present(1, PresentationMode.REVERSE);
+        assertArrayEquals(new short[] {6, 106, 4, 104, 2, 102, 0, 100},
+                fixture.sink.lastPacket(4),
+                "history holds the decimated packet that was actually heard");
+    }
+
+    @Test
+    void fractionalForwardRateSpacesPickedSourceFramesUnevenly() {
+        Fixture fixture = fixture(8, 2, rampStereo("one-and-a-half", 16));
+        fixture.submitTone();
+        fixture.producer.setForwardRate(1.5);
+
+        fixture.producer.present(0, PresentationMode.FORWARD);
+
+        assertArrayEquals(new short[] {0, 100, 2, 102, 3, 103, 5, 105},
+                fixture.sink.lastPacket(4));
+        assertEquals(6L << 32, sampleCursor(fixture.registry));
+    }
+
+    @Test
+    void nonPositiveOrNaNForwardRateFallsBackToRealTime() {
+        Fixture fixture = fixture(8, 2, rampStereo("bad-rate", 16));
+        fixture.submitTone();
+
+        fixture.producer.setForwardRate(0.0);
+        fixture.producer.present(0, PresentationMode.FORWARD);
+        assertArrayEquals(new short[] {0, 100, 1, 101, 2, 102, 3, 103},
+                fixture.sink.lastPacket(4));
+
+        fixture.producer.setForwardRate(Double.NaN);
+        fixture.producer.present(1, PresentationMode.FORWARD);
+        assertArrayEquals(new short[] {4, 104, 5, 105, 6, 106, 7, 107},
+                fixture.sink.lastPacket(4));
+    }
+
+    @Test
+    void forwardRateDoesNotApplyToReverseOrSilentPresentation() {
+        Fixture fixture = fixture(8, 2, rampStereo("mode-scoped", 16));
+        fixture.submitTone();
+        fixture.producer.setHistoryArmed(true);
+        fixture.producer.present(0, PresentationMode.FORWARD);
+        fixture.producer.setForwardRate(4.0);
+
+        fixture.producer.present(1, PresentationMode.SILENT);
+        assertArrayEquals(new short[8], fixture.sink.lastPacket(4));
+        assertEquals(4L << 32, sampleCursor(fixture.registry),
+                "a silent frame renders no source however fast forward is set");
+
+        fixture.producer.beginReverse(1.0);
+        fixture.producer.present(2, PresentationMode.REVERSE);
+        assertArrayEquals(new short[] {3, 103, 2, 102, 1, 101, 0, 100},
+                fixture.sink.lastPacket(4),
+                "reverse keeps its own cursor rate");
+    }
+
+    @Test
     void reverseBroadcastsHistoryWithoutAdvancingVoiceOrAppendingHistory() {
         Fixture fixture = fixture(4, 2, rampStereo("reverse", 8));
         fixture.submitTone();

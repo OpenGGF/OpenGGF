@@ -14,7 +14,10 @@ public class LevelTransitionCoordinator {
 
     // ── Special stage ──────────────────────────────────────────────────
     private boolean specialStageRequestedFromCheckpoint;
+    private boolean specialStageEntryRoutineArmed;
+    private boolean specialStageEntryAdvancesLevel;
     private boolean specialStageReturnLevelReloadRequested;
+    private boolean resultsReturnCardOwnedByCaller;
 
     // ── S3K big ring return (ROM: Saved2_* variables) ──────────
     private BigRingReturnState bigRingReturn;
@@ -65,29 +68,61 @@ public class LevelTransitionCoordinator {
     // ================================================================
 
     /**
-     * Request entry to special stage from a checkpoint star.
-     * Called by CheckpointStarInstance when the player touches a star.
+     * Advances an end-of-act results card to {@code Got_NextLevel}, whose body
+     * runs on the FOLLOWING frame and both advances the level and enters the
+     * special stage.
+     * <p>
+     * ROM: {@code Got_Wait} ("_incObj/3A Got Through Card.asm":112-116) spends
+     * the frame its post-tally delay expires doing nothing but
+     * {@code addq.b #2,obRoutine}; {@code Got_NextLevel} (same file, 175-202)
+     * executes one frame later, reading the next level out of
+     * {@code LevelOrder} into {@code v_zone_act} and then, for a collected
+     * giant ring, writing {@code v_gamemode = id_Special}. Doing either on the
+     * expiry frame instead changes the level a frame early, which a whole-run
+     * replay sees as the source segment losing ownership of its final
+     * represented frame.
      */
-    public void requestSpecialStageFromCheckpoint() {
-        requestSpecialStageEntry();
+    public void advanceToSpecialStageEntryRoutine() {
+        this.specialStageEntryRoutineArmed = true;
     }
 
     /**
      * Request entry to special stage using the current game's access method.
+     * Used by owners whose ROM counterpart writes the game mode in the same
+     * object tick as the trigger (S2 {@code Obj79_Star}, S3K
+     * {@code SSEntryFlash_GoSS}).
      */
     public void requestSpecialStageEntry() {
         this.specialStageRequestedFromCheckpoint = true;
     }
 
     /**
-     * Consumes and clears the special stage request flag.
+     * Consumes and clears the special stage request flag. A routine advance
+     * armed by {@link #advanceToSpecialStageEntryRoutine()} becomes the
+     * pending request here, so the entry is serviced by the next frame's
+     * consume rather than this one.
      *
      * @return true if a special stage was requested since last check
      */
     public boolean consumeSpecialStageRequest() {
         boolean requested = specialStageRequestedFromCheckpoint;
         specialStageRequestedFromCheckpoint = false;
+        if (!requested && specialStageEntryRoutineArmed) {
+            specialStageEntryRoutineArmed = false;
+            specialStageRequestedFromCheckpoint = true;
+            specialStageEntryAdvancesLevel = true;
+        }
         return requested;
+    }
+
+    /**
+     * True exactly once, on the frame the armed {@code Got_NextLevel} body
+     * runs, for the {@code v_zone_act} write that precedes its mode change.
+     */
+    public boolean consumeSpecialStageEntryLevelAdvance() {
+        boolean advance = specialStageEntryAdvancesLevel;
+        specialStageEntryAdvancesLevel = false;
+        return advance;
     }
 
     /**
@@ -97,7 +132,8 @@ public class LevelTransitionCoordinator {
      * transition without swallowing it (spec 2026-07-18, addition #1).
      */
     public boolean isSpecialStageRequested() {
-        return specialStageRequestedFromCheckpoint;
+        return specialStageRequestedFromCheckpoint
+                || specialStageEntryRoutineArmed;
     }
 
     /**
@@ -119,6 +155,22 @@ public class LevelTransitionCoordinator {
      */
     public void setSpecialStageReturnLevelReloadRequested(boolean requested) {
         this.specialStageReturnLevelReloadRequested = requested;
+    }
+
+    /**
+     * Signals that the next level load is a special-stage results return whose
+     * mandatory title card the caller presents itself after the reload
+     * (mirrors {@link #isBonusStageReturn()}). The load must request the card
+     * — leaving its PLC queue live for the presented card's locked loop —
+     * rather than model an omitted presentation, even headless.
+     */
+    public void setResultsReturnCardOwnedByCaller(boolean owned) {
+        this.resultsReturnCardOwnedByCaller = owned;
+    }
+
+    /** Returns true when the caller presents the results-return title card itself. */
+    public boolean isResultsReturnCardOwnedByCaller() {
+        return resultsReturnCardOwnedByCaller;
     }
 
     // ================================================================
@@ -645,7 +697,10 @@ public class LevelTransitionCoordinator {
      */
     public void resetState() {
         specialStageRequestedFromCheckpoint = false;
+        specialStageEntryRoutineArmed = false;
+        specialStageEntryAdvancesLevel = false;
         specialStageReturnLevelReloadRequested = false;
+        resultsReturnCardOwnedByCaller = false;
         bigRingReturn = null;
         bonusStageRequested = null;
         bonusStageReturnCheckpointIndex = -1;

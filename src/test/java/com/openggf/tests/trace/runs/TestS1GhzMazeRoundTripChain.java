@@ -33,6 +33,12 @@ class TestS1GhzMazeRoundTripChain extends AbstractRunChainTest {
     private Path activeRunDir;
 
     @Test
+    void ghzMazeSpecialStageReturnPresentationBridge() throws Exception {
+        assertChainReplayThroughSegmentRow(
+                DEFAULT_RUN_DIR, 2, 812);
+    }
+
+    @Test
     void ghzMazeRoundTrip() throws Exception {
         String configuredRunDir = System.getProperty(EXTERNAL_RUN_DIR_PROPERTY);
         activeRunDir = configuredRunDir == null || configuredRunDir.isBlank()

@@ -9,8 +9,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestTraceExecutionModel {
 
@@ -48,6 +50,48 @@ class TestTraceExecutionModel {
 
         assertEquals(TraceExecutionPhase.VBLANK_ONLY,
                 TraceExecutionModel.forGame("s1").phaseFor(previous, current));
+    }
+
+    /**
+     * The gameplay counter is bumped in the instruction after
+     * {@code WaitForVBlank} returns (docs/s1disasm/sonic.asm:3001-3002), so a
+     * V-blank that elapses without it advancing was taken inside the previous
+     * row's iteration: that iteration's loop tail is still ahead.
+     */
+    @Test
+    void aVblankWithoutAGameplayDeltaHoldsTheIterationIntoTheNextRow() {
+        TraceFrame current = TraceFrame.executionTestFrame(0, 0x2531, 0x006C, 0);
+        TraceFrame next = TraceFrame.executionTestFrame(1, 0x2532, 0x006C, 1);
+
+        assertTrue(TraceExecutionModel.isIterationHeldIntoNextRow(current, next));
+    }
+
+    @Test
+    void anIterationThatCompletedIsNotHeldIntoTheNextRow() {
+        TraceFrame current = TraceFrame.executionTestFrame(0, 0x2531, 0x006C, 0);
+        TraceFrame next = TraceFrame.executionTestFrame(1, 0x2532, 0x006D, 0);
+
+        assertFalse(TraceExecutionModel.isIterationHeldIntoNextRow(current, next));
+    }
+
+    /**
+     * A row on which no V-blank ran at all is the starved shape, not a held
+     * iteration; it is classified by {@link TraceExecutionModel#isVblankStarvedRow}.
+     */
+    @Test
+    void aStarvedRowIsNotAHeldIteration() {
+        TraceFrame current = TraceFrame.executionTestFrame(0, 0x2531, 0x006C, 0);
+        TraceFrame next = TraceFrame.executionTestFrame(1, 0x2531, 0x006C, 0);
+
+        assertFalse(TraceExecutionModel.isIterationHeldIntoNextRow(current, next));
+        assertTrue(TraceExecutionModel.isVblankStarvedRow(current, next));
+    }
+
+    @Test
+    void aMissingSuccessorRowIsNotAHeldIteration() {
+        TraceFrame current = TraceFrame.executionTestFrame(0, 0x2531, 0x006C, 0);
+
+        assertFalse(TraceExecutionModel.isIterationHeldIntoNextRow(current, null));
     }
 
     @Test

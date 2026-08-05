@@ -47,6 +47,37 @@ class GlReadPixelsGrabberTest {
     }
 
     @Test
+    void repeatedGrabsReuseOneBufferAndRefreshItsContents() {
+        byte[] fill = {1};
+        GlReadPixelsGrabber g = new GlReadPixelsGrabber(0, 0, 2, 1,
+                (x, y, width, height, target) -> {
+                    target.clear();
+                    for (int i = 0; i < width * height * 4; i++) {
+                        target.put(fill[0]);
+                    }
+                });
+
+        byte[] first = g.grab();
+        assertEquals(1, first[0]);
+
+        fill[0] = 2;
+        byte[] second = g.grab();
+
+        assertSame(first, second,
+                "the grab buffer is reused; CapturedFrame's copy is what makes that safe");
+        assertEquals(2, second[0], "a reused buffer must still be refilled each grab");
+        g.close();
+    }
+
+    @Test
+    void closeIsIdempotent() {
+        GlReadPixelsGrabber g = new GlReadPixelsGrabber(0, 0, 2, 1,
+                (x, y, width, height, target) -> { });
+        g.close();
+        assertDoesNotThrow(g::close, "a double free of the native buffer would crash the JVM");
+    }
+
+    @Test
     void grabsOnlyNonZeroOriginViewportFromOffscreenBackBuffer() {
         long window = createOffscreenContextOrAbort();
         try {

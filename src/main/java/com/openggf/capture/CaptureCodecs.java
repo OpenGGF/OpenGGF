@@ -51,19 +51,81 @@ public final class CaptureCodecs {
      *         a recording in a codec the user did not ask for
      */
     public static Codec video(String name) {
+        return video(name, 0, "");
+    }
+
+    /**
+     * @param threads value for ffmpeg's {@code -threads}; {@code 0} lets ffmpeg
+     *        choose, which is normally one thread per core. FFV1 additionally
+     *        needs the frame split into slices before threads can do anything,
+     *        so that is added here rather than left as a trap.
+     * @param preset x264/x265 speed preset, or blank for the encoder's own
+     *        default. Ignored for FFV1, which has no preset option — passing one
+     *        makes ffmpeg warn about an unused option. Presets trade encode
+     *        speed for file size and do NOT affect losslessness: {@code -crf 0}
+     *        and {@code lossless=1} stay lossless at every preset.
+     *        <p>
+     *        This matters most for H.265: libx265 defaults to {@code medium},
+     *        which cannot keep up with lossless RGB at a full window resolution
+     *        in real time, and because libx265 already threads internally, more
+     *        threads will not rescue it — the preset is the lever.
+     */
+    public static Codec video(String name, int threads, String preset) {
+        List<String> threadArgs = threadArguments(threads);
+        List<String> presetArgs = presetArguments(preset);
         return switch (normalize(name)) {
-            case "ffv1" -> new Codec("ffv1", List.of("-c:v", "ffv1"), true);
+            // FFV1 is single-threaded unless the frame is sliced, so -threads
+            // alone would silently do nothing.
+            case "ffv1" -> new Codec("ffv1",
+                    concat(List.of("-c:v", "ffv1"),
+                            threads == 1 ? List.of() : List.of("-slices", "16"),
+                            threadArgs),
+                    true);
             // RGB-native H.264: the only libx264 form that returns the exact
             // submitted pixels. See the class javadoc.
             case "h264" -> new Codec("h264",
-                    List.of("-c:v", "libx264rgb", "-crf", "0", "-pix_fmt", "rgb24"), true);
+                    concat(List.of("-c:v", "libx264rgb", "-crf", "0", "-pix_fmt", "rgb24"),
+                            presetArgs, threadArgs),
+                    true);
             // Planar RGB H.265, for the same reason.
             case "h265" -> new Codec("h265",
-                    List.of("-c:v", "libx265", "-x265-params", "lossless=1",
-                            "-pix_fmt", "gbrp"), true);
+                    concat(List.of("-c:v", "libx265", "-x265-params", "lossless=1",
+                            "-pix_fmt", "gbrp"), presetArgs, threadArgs),
+                    true);
             default -> throw new IllegalArgumentException(
                     "unknown capture video codec '" + name + "'; expected ffv1, h264 or h265");
         };
+    }
+
+    /** Valid x264/x265 speed presets, slowest to fastest. */
+    public static final List<String> PRESETS = List.of(
+            "placebo", "veryslow", "slower", "slow", "medium", "fast",
+            "faster", "veryfast", "superfast", "ultrafast");
+
+    private static List<String> threadArguments(int threads) {
+        return threads <= 0 ? List.of() : List.of("-threads", String.valueOf(threads));
+    }
+
+    private static List<String> presetArguments(String preset) {
+        String normalized = normalize(preset);
+        if (normalized.isEmpty()) {
+            return List.of();
+        }
+        if (!PRESETS.contains(normalized)) {
+            throw new IllegalArgumentException(
+                    "unknown capture encoder preset '" + preset + "'; expected one of "
+                            + PRESETS);
+        }
+        return List.of("-preset", normalized);
+    }
+
+    @SafeVarargs
+    private static List<String> concat(List<String>... parts) {
+        List<String> all = new java.util.ArrayList<>();
+        for (List<String> part : parts) {
+            all.addAll(part);
+        }
+        return all;
     }
 
     /**

@@ -593,6 +593,38 @@ public final class TraceReplayBootstrap {
         return TraceExecutionModel.isVblankStarvedRow(previous, current);
     }
 
+    /**
+     * Forwards the hardware-timing classification of a row whose main-loop
+     * iteration is still in flight when the next row is sampled, so the PLC
+     * frame closure represents the iteration's loop tail on the closure where
+     * the ROM actually ran it. Same category of input as
+     * {@link #phaseForReplay}: recorder counters only.
+     *
+     * @see TraceExecutionModel#isIterationHeldIntoNextRow
+     */
+    public static void markIterationHeldIntoNextRowForReplay(
+            TraceFrame current, TraceFrame next) {
+        if (!isIterationHeldIntoNextRowForReplay(current, next)) {
+            return;
+        }
+        markReplayIterationDefersLoopTailPreparation();
+    }
+
+    /** Holds the represented row's loop-tail PLC preparation for a later closure. */
+    public static void markReplayIterationDefersLoopTailPreparation() {
+        var gameplayMode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        if (gameplayMode != null && gameplayMode.plcFrameLifecycle() != null) {
+            gameplayMode.plcFrameLifecycle()
+                    .markRepresentedIterationDefersLoopTailPreparation();
+        }
+    }
+
+    /** Returns the structural in-flight-iteration classification used by replay closure. */
+    public static boolean isIterationHeldIntoNextRowForReplay(
+            TraceFrame current, TraceFrame next) {
+        return TraceExecutionModel.isIterationHeldIntoNextRow(current, next);
+    }
+
     public static TraceExecutionPhase phaseForReplay(TraceData trace,
                                                      TraceFrame previous,
                                                      TraceFrame current) {

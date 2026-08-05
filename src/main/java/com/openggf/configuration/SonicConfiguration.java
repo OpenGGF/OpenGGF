@@ -357,6 +357,12 @@ public enum SonicConfiguration {
 	CAPTURE_AUDIO_CODEC,
 	/** Output container extension for recordings, e.g. mkv or mp4. */
 	CAPTURE_CONTAINER,
+	/** Memory budget in MB for the live-recording encoder queue. */
+	CAPTURE_QUEUE_BUDGET_MB,
+	/** ffmpeg encode-pass thread count; 0 lets ffmpeg choose. */
+	CAPTURE_ENCODER_THREADS,
+	/** x264/x265 speed preset; blank uses the encoder default. */
+	CAPTURE_ENCODER_PRESET,
 	/** Advanced: full argument list for the first ffmpeg pass. */
 	CAPTURE_FFMPEG_PASS1_ARGS,
 	/** Advanced: full argument list for the second ffmpeg pass; empty skips it. */

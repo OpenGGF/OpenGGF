@@ -2,7 +2,9 @@ package com.openggf.testmode;
 
 import com.openggf.Engine;
 import com.openggf.GameLoop;
+import com.openggf.TraceSessionLauncher;
 import com.openggf.debug.DebugColor;
+import com.openggf.debug.playback.PlaybackDebugManager;
 import com.openggf.configuration.GlfwKeyNameResolver;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.game.GameServices;
@@ -26,6 +28,8 @@ import java.util.function.Supplier;
 public final class TraceHudOverlay implements TraceSessionOverlay {
 
     private final TraceHudModel model;
+    private Supplier<TracePlaybackStatus> playbackStatusSupplier =
+            TraceHudOverlay::currentPlaybackStatus;
     private final Supplier<String> pauseKeyLabelSupplier;
     private final BooleanSupplier pausedSupplier;
     private final Supplier<String> focusLabelSupplier;
@@ -48,6 +52,14 @@ public final class TraceHudOverlay implements TraceSessionOverlay {
                            Supplier<String> rewindStatusSupplier) {
         this(comparator, TraceHudOverlay::configuredPauseKeyLabel,
                 TraceHudOverlay::isGameLoopPaused, focusLabelSupplier, rewindStatusSupplier);
+    }
+
+    public TraceHudOverlay(TraceHudModel model,
+                           Supplier<String> focusLabelSupplier,
+                           Supplier<String> rewindStatusSupplier) {
+        this(model, TraceHudOverlay::configuredPauseKeyLabel,
+                TraceHudOverlay::isGameLoopPaused,
+                focusLabelSupplier, rewindStatusSupplier);
     }
 
     TraceHudOverlay(LiveTraceComparator comparator,
@@ -93,10 +105,15 @@ public final class TraceHudOverlay implements TraceSessionOverlay {
     private static final int RIGHT_MARGIN = 4;
     private static final int NATIVE_WIDTH = 320;
 
+    // Genuine top-right corner, clear of both the ROM's top-bar HUD (which is
+    // left-anchored) and the paused camera-focus block down at TOP_Y.
+    private static final int STATUS_TOP_Y = 8;
+
     @Override
     public void render(PixelFontTextRenderer text) {
         text.beginBatch();
         try {
+            renderPlaybackStatus(text);
             int y = TOP_Y;
             boolean paused = pausedSupplier.getAsBoolean();
             if (desyncPauseMessageShown && !paused) {
@@ -198,6 +215,67 @@ public final class TraceHudOverlay implements TraceSessionOverlay {
             // GraphicsManager may not be available in all test contexts.
         }
         return NATIVE_WIDTH;
+    }
+
+    /**
+     * Paints the transport summary this HUD took over from the legacy
+     * {@code == PLAYBACK ==} panel, right-anchored in the top-right corner.
+     * Each line is measured and placed individually so the block stays flush
+     * to the right edge with a proportional font.
+     */
+    private void renderPlaybackStatus(PixelFontTextRenderer text) {
+        TracePlaybackStatus status = playbackStatusSupplier.get();
+        if (status == null) {
+            return;
+        }
+        int right = projectionWidth() - RIGHT_MARGIN;
+        int y = STATUS_TOP_Y;
+        y = drawRightAligned(text, status.movieName(), right, y, DebugColor.LIGHT_GRAY);
+        y = drawRightAligned(text, "Mode: " + status.mode(), right, y, DebugColor.GRAY);
+        y = drawRightAligned(text,
+                "Frame: " + status.frame() + "/" + status.frameCount(),
+                right, y, DebugColor.GRAY);
+        drawRightAligned(text, "Rate: " + status.rateLabel(), right, y, DebugColor.CYAN);
+    }
+
+    /** Draws one right-anchored line and returns the next line's y. */
+    private int drawRightAligned(
+            PixelFontTextRenderer text, String line, int right, int y, DebugColor color) {
+        if (line == null || line.isBlank()) {
+            return y;
+        }
+        text.drawShadowedText(line, right - text.measureWidth(line, SCALE), y, color, SCALE);
+        return y + LINE_HEIGHT;
+    }
+
+    /**
+     * Resolves the transport summary from the live playback session and the
+     * active trace session's speed ladder. Static by the same pattern as
+     * {@link #configuredPauseKeyLabel()} and {@link #isGameLoopPaused()};
+     * tests substitute their own through
+     * {@link #setPlaybackStatusSupplier(Supplier)}.
+     */
+    static TracePlaybackStatus currentPlaybackStatus() {
+        TraceSessionLauncher session = TraceSessionLauncher.active();
+        if (session == null) {
+            return null;
+        }
+        PlaybackDebugManager playback = GameServices.playbackDebug();
+        String movieName = playback.movieName();
+        if (movieName == null) {
+            return null;
+        }
+        return new TracePlaybackStatus(
+                movieName,
+                playback.observedMode().name(),
+                playback.getCursorFrame(),
+                Math.max(0, playback.getMovieFrameCount() - 1),
+                session.playbackRateDisplay());
+    }
+
+    /** Test seam for the transport summary. */
+    void setPlaybackStatusSupplier(Supplier<TracePlaybackStatus> supplier) {
+        this.playbackStatusSupplier = supplier;
     }
 
     private static char bit(int mask, int flag, char letter) {

@@ -113,7 +113,9 @@ class TestRemainingRewindTailInventory {
         assertEquals(0, buckets.get(Bucket.COUNT_MISMATCH).size(), "count-mismatch inventory count");
         assertEquals(0, buckets.get(Bucket.SCALAR_MISMATCH).size(), "scalar-mismatch inventory count");
 
-        return new TailInventory(878, 684, 194, 0, buckets);
+        // 879/685: Obj17's spikes became real SST-slot children
+        // (Sonic1SpikedPoleHelixObjectInstance.HelixSpikeChild), which round-trips.
+        return new TailInventory(879, 685, 194, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {

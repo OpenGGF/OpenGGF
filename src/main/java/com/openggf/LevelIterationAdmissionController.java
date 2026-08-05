@@ -98,6 +98,10 @@ final class LevelIterationAdmissionController {
             boolean advance,
             PlaybackDebugManager playback,
             UserRecordingRuntimeControls recordingControls) {
+        if (TraceSessionLauncher.isRunFrameDriverActive()) {
+            lastAppliedPlaybackFrame = playback.getCursorFrame();
+            return;
+        }
         int appliedFrame;
         if (advance) {
             appliedFrame = playback.getCursorFrame();
@@ -116,6 +120,23 @@ final class LevelIterationAdmissionController {
                         appliedFrame,
                         playback.getMovieFrameCount(),
                         playback.isSessionPlaying()));
+    }
+
+    void advanceTraceRunPhysicalRow(
+            PlaybackDebugManager playback,
+            UserRecordingRuntimeControls recordingControls,
+            TraceSessionLauncher session) {
+        int appliedFrame = playback.getCursorFrame();
+        lastAppliedPlaybackFrame = appliedFrame;
+        playback.onLevelFrameAdvanced();
+        recordingControls.afterPlaybackFrame(
+                appliedFrame, false,
+                isPlaybackMovieEnd(
+                        appliedFrame, playback.getMovieFrameCount(),
+                        playback.isSessionPlaying()));
+        if (session != null) {
+            session.recordExternalRewindFrame();
+        }
     }
 
     void setLastAppliedPlaybackFrame(int frame) {
@@ -167,7 +188,6 @@ final class LevelIterationAdmissionController {
     }
 
     static void refreshTraceInputSnapshot(com.openggf.control.InputHandler input) {
-        TraceSessionLauncher.applyRunTerminalTailInputIfActive(input);
         input.refreshLogicalSnapshot();
     }
 

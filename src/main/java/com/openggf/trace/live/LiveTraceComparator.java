@@ -312,6 +312,9 @@ public final class LiveTraceComparator implements PlaybackFrameObserver, TraceHu
                 ? trace.getFrame(preparedRowPolicy.traceIndex() - 1) : null;
         boolean vblankStarved =
                 TraceReplayBootstrap.isVblankStarvedIterationForReplay(previous, current);
+        TraceFrame next = preparedRowPolicy.traceIndex() + 1 < trace.frameCount()
+                ? trace.getFrame(preparedRowPolicy.traceIndex() + 1) : null;
+        TraceReplayBootstrap.markIterationHeldIntoNextRowForReplay(current, next);
         if (!preparedRowPolicy.productionPublicationClaim()) {
             pendingVblankStarvedProductionMarker |= vblankStarved;
             return;
@@ -404,7 +407,13 @@ public final class LiveTraceComparator implements PlaybackFrameObserver, TraceHu
                     || after.frame() != expected.frame()) {
                 throw new IllegalStateException(
                         "dynamic-art row " + expected.frame()
-                                + " was not published atomically after production");
+                                + " was not published atomically after production"
+                                + " (serial " + before.deliverySerial() + "->"
+                                + after.deliverySerial()
+                                + ", published=" + after.published()
+                                + ", generation " + before.segmentGeneration()
+                                + "->" + after.segmentGeneration()
+                                + ", frame=" + after.frame() + ")");
             }
         } else if (!after.equals(before)) {
             throw new IllegalStateException(
@@ -471,7 +480,7 @@ public final class LiveTraceComparator implements PlaybackFrameObserver, TraceHu
                 new FrameComparison(expectedDynamicArt.frame(), dynamicFields);
         deferredTerminalDynamicArtFrame = null;
         if (perFrameObserver != null) {
-            perFrameObserver.accept(merged);
+            perFrameObserver.accept(dynamicOnly);
         }
         absorbDivergentFields(dynamicOnly, expected.frame());
         return merged;

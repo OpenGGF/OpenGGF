@@ -42,6 +42,44 @@ class EncoderSinkTest {
     }
 
     @Test
+    void exhaustingTheQueueIsCountedAndSummarized() throws Exception {
+        CountDownLatch gate = new CountDownLatch(1);
+        FakeEncoder enc = new FakeEncoder(gate);
+        EncoderSink sink = new EncoderSink(enc, BackpressurePolicy.BLOCK, 2);
+        sink.open(Path.of("out.mkv"), 1, 1, 60, 48000);
+
+        assertNull(sink.exhaustionSummary(), "a healthy encoder reports nothing");
+
+        // The encoder is held on the gate, so it takes one frame off the queue
+        // and stalls; the queue of 2 then fills and the next submit must wait.
+        Thread producer = new Thread(() -> {
+            try {
+                for (long i = 0; i < 4; i++) {
+                    sink.submit(frame(i));
+                }
+            } catch (CaptureException ignored) {
+                // asserted via the sink's counters below
+            }
+        });
+        producer.start();
+        // Give the producer time to reach a blocking submit before releasing.
+        Thread.sleep(200);
+        gate.countDown();
+        producer.join(5_000);
+        sink.stop();
+
+        assertTrue(sink.exhaustedFrameCount() > 0,
+                "a submit that waited on a full queue must be counted");
+        assertTrue(sink.totalBlockedNanos() > 0);
+        assertTrue(sink.worstBlockedNanos() > 0);
+        assertEquals(0, sink.droppedCount(), "BLOCK still never drops");
+
+        String summary = sink.exhaustionSummary();
+        assertNotNull(summary);
+        assertTrue(summary.contains("exhausted"), summary);
+    }
+
+    @Test
     void blockNeverDropsAndPreservesOrder() throws Exception {
         FakeEncoder enc = new FakeEncoder(null);
         EncoderSink sink = new EncoderSink(enc, BackpressurePolicy.BLOCK, 2);

@@ -216,6 +216,19 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Headless visual-run parity driver (2026-08-05):** whole trace runs can now be
+  driven through the production visual-session owners without a window, so a
+  Trace Test Mode defect is reproducible in a test rather than a screenshot.
+  Its first find: a run can now cross from a special stage's return
+  presentation bridge back into its own act's gameplay.
+- **Special Stage entry frame parity (2026-08-04):** the game mode now changes on
+  the frame the ROM changes it, with the white-out owned by the special stage
+  rather than the level it was entered from. The S1 giant-ring handoff no longer
+  arrives 22 frames late, which had aborted complete-run visual playback at the
+  destination row.
+- **Visual run presentation clock parity (2026-08-04):** complete-run playback now
+  keeps the shared input, PLC, dynamic-art, and trace HUD clocks continuous across
+  title cards, special stages, inter-act gaps, and the terminal movie tail.
 - **Visual special-stage handoff parity (2026-08-04):** held-white S1 entry
   no longer replays the transition SFX, and complete-run returns rebind the
   BK2 input cursor at level load so GHZ2 consumes and compares the same
@@ -224,6 +237,14 @@ straightforward to add new objects, zones, and game-specific behaviour.
   startup now waits for the ROM readiness boundary; special stages share the
   normal trace HUD and recorded input display; GHZ2 rebinds through the run
   boundary probe; and the live capture chord remains usable during playback.
+- **Visual Special Stage physical-row handoff (2026-08-04):** giant-ring
+  transitions retain the destination BK2 row until local Special Stage
+  admission, keeping white-screen inputs, lag rows, and the trace HUD on one
+  clock.
+- **Visual Special Stage transition dispatch (2026-08-04):** shared transition
+  gaps now consume engine-raised Special Stage requests even while native level
+  gameplay is suppressed, so the held-white S1 results fade enters the stage
+  instead of replaying inputs behind a stuck white screen.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 

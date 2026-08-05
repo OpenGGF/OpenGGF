@@ -956,10 +956,11 @@ release either queue.
 
 The hardware-timing replay exception below does not apply to S1/S2 PLCs.
 Physics and auxiliary trace data remain comparison-only, and no S1/S2
-recorded completion edge is accepted. Remove or amend this entry only if a
-future cycle-accuracy finding proves the modeled native service budget
-insufficient and the hardware-timing contract is deliberately expanded with
-its own guarded schema.
+recorded completion edge is accepted. No S1 or S2 capture can supply one
+either: see "Recorder coverage" under that exception. Remove or amend this
+entry only if a future cycle-accuracy finding proves the modeled native
+service budget insufficient and the hardware-timing contract is deliberately
+expanded with its own guarded schema.
 
 ---
 
@@ -1008,6 +1009,26 @@ An absent timing file means no recorded timing port and leaves the production
 scheduler live. A present empty file is an explicit v5 recorded stream with
 the complete registry and no edges. Legacy schema-1/schema-2 fixtures and
 their metadata selectors are not supported runtime inputs.
+
+### Recorder coverage: S3K only
+
+The contract's wording is cross-game — recorded timing *may* delay S1 PLC, S2
+DPLC, and S3K Kosinski readiness. **The recorder implements it for S3K only.**
+`HardwareTimingEventEngine` is constructed solely by
+`tools/bizhawk-headless/src/Recording/S3KCompleteRunCaptureRunner.cs`:428 and
+`.../S3KTraceCaptureRunner.cs`:297, and `hardware_timing.jsonl` appears only in
+`CommandLineOptions.S3kTraceOutputFileNames` — never in `TraceOutputFileNames`,
+and never in the shared S1/S2 run-mode sink (`StagedRunSegmentSink`:47-49).
+
+Consequently an S1 or S2 capture emits no `hardware_timing.jsonl`, and
+re-recording an S1/S2 run cannot produce one. Treat "re-record it with the
+hardware-timing stream" as unavailable for those games until the recorder side
+is built deliberately, alongside the timing-kind registry change that
+`TestS1S2PlcComparisonOnlyGuard.timingKindRegistryAdmitsOnlyKosinskiWork`
+currently pins to Kosinski kinds. Recorded timing is not the first resort in any
+case: an S1 divergence that looks like elapsed hardware cost is usually a
+counted ROM wait loop in the wrong place (see the `plc-system` skill's S1
+`segment_start - 26` load-pair invariant).
 
 ### Historical pre-v5 evidence (not live)
 
@@ -1414,15 +1435,29 @@ trace `VBLANK_ONLY` / `PLAYABLE_ANIMATION_ONLY`) calls
 `ObjectManager.advanceVblaCounter()` exactly once. `TestVblaCounterVBlankInvariant`
 pins the single mutation statement and the per-row tick counts.
 
-Two row kinds deliberately diverge and **must not be "fixed" casually**:
+Three row kinds diverge:
 
-- **PAUSE rows.** The ROM's pause loop still runs the V-int, so the ROM counter
-  advances while paused; the engine's does not.
-- **Seamless-boundary LAG rows.** These service `LevelFrameStep.serviceVBlankOnly`
-  without ticking the counter.
+- **PAUSE rows** (deliberate). The ROM's pause loop still runs the V-int, so the
+  ROM counter advances while paused; the engine's does not.
+- **Seamless-boundary LAG rows** (deliberate). These service
+  `LevelFrameStep.serviceVBlankOnly` without ticking the counter.
+- **Special-stage results-screen presentation rows** (modelled around, not
+  fixed). A trace run's stage-exit presentation bridge plays every recorded row
+  of `SS_Finish`'s fade-out and the results screen, but no level loop runs on
+  any of them, so the production counter is frozen for the whole segment while
+  the ROM's keeps ticking. This one is **not** unobservable: measured on the
+  `s1-sonic-complete-withemeralds` route, the engine reached GHZ3 act 2 with a
+  1,587-tick deficit, which is 3 mod 8 and 19 mod 32 and so de-phased both the
+  prison capsule's `Pri_Animals` spawn gate and `Anml_ChkFloor`'s `btst #4`
+  escape-direction flip. `TraceRunVblankClock` now seeds the bridge from the
+  level that entered the stage and derives the bridge's own tail from
+  `TracePlaybackProfile.stageResultsEntryNonAdvancingMovieRows` (S1: the seven
+  V-ints `SS_Finish` builds the results screen through with interrupts
+  disabled, docs/s1disasm/sonic.asm:3369-3383), so every gameplay segment after
+  a bridge is back on the recorded clock. The bridge's own rows remain frozen;
+  nothing observes the counter there.
 
-Both are unobservable against the currently recorded traces -- the engine's
-counter matches the recorded ROM value every frame on the probed traces.
+The first two are unobservable against the currently recorded traces.
 Closing either divergence is a phase change, not a refactor: the counter is the
 `vblaCounter` argument handed to every object instance each frame, so a one-tick
 shift moves spilled-ring floor-probe cadence in all three games, the S3K slot

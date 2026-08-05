@@ -292,6 +292,27 @@ class TestPlcFrameLifecycleCoordinator {
     }
 
     @Test
+    void suppressedLagLeavesAnActiveNativeFadePaused() {
+        List<String> events = new ArrayList<>();
+        PlcFrameLifecycleCoordinator coordinator =
+                new PlcFrameLifecycleCoordinator(recording(events));
+        coordinator.beginNativeBlockingFade();
+
+        coordinator.runSuppressedLagIteration(frame -> {
+            assertTrue(frame.claim(PlcLifecyclePhase.LAG));
+            return null;
+        });
+        coordinator.runLogicalIteration(() -> { }, frame -> {
+            assertTrue(frame.isOwnedBy(PlcLifecyclePhase.PALETTE_FADE));
+            return null;
+        });
+
+        assertEquals(List.of(
+                "service:LAG", "service:PALETTE_FADE",
+                "prepare:PALETTE_FADE"), events);
+    }
+
+    @Test
     void tokenRejectsReuseDuplicatePreparationAndMissingPreparation() {
         PlcFrameLifecycleCoordinator coordinator =
                 new PlcFrameLifecycleCoordinator(recording(new ArrayList<>()));
@@ -532,6 +553,97 @@ class TestPlcFrameLifecycleCoordinator {
             assertFalse(dynamicArt.latestSnapshot().edges().isEmpty(),
                     "starved row " + index + " publishes its own row");
         }
+    }
+
+    /**
+     * S1 {@code RunPLC} (docs/s1disasm/sonic.asm:3032) sits at the tail of
+     * {@code Level_MainLoop}, after every expensive call in it. An iteration
+     * still in flight when the next V-blank fires takes {@code VBlank_Lag}
+     * (sonic.asm:709) and runs its {@code RunPLC} on that lag closure, so the
+     * held tail belongs to the lag row rather than to the row that closed the
+     * previous entry.
+     */
+    @Test
+    void aHeldIterationRunsItsLoopTailPreparationOnTheLagClosure() {
+        List<String> events = new ArrayList<>();
+        PlcFrameLifecycleCoordinator coordinator =
+                new PlcFrameLifecycleCoordinator(recording(events));
+
+        coordinator.markRepresentedIterationDefersLoopTailPreparation();
+        coordinator.runLogicalIteration(() -> { }, frame -> {
+            frame.claim(PlcLifecyclePhase.ORDINARY_LEVEL);
+            frame.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
+            return null;
+        });
+        assertEquals(List.of("service:ORDINARY_LEVEL"), events,
+                "the held row services its V-blank but not its loop tail");
+
+        coordinator.runLogicalIteration(() -> { }, frame -> {
+            frame.claim(PlcLifecyclePhase.LAG);
+            return null;
+        });
+        assertEquals(
+                List.of("service:ORDINARY_LEVEL", "service:LAG",
+                        "prepare:ORDINARY_LEVEL"),
+                events,
+                "the lag closure runs the held iteration's RunPLC");
+    }
+
+    /** A stall spanning several lag rows keeps the tail until the loop resumes. */
+    @Test
+    void aTailHeldAcrossConsecutiveLagRowsRunsOnTheLastOfThem() {
+        List<String> events = new ArrayList<>();
+        PlcFrameLifecycleCoordinator coordinator =
+                new PlcFrameLifecycleCoordinator(recording(events));
+
+        coordinator.markRepresentedIterationDefersLoopTailPreparation();
+        coordinator.runLogicalIteration(() -> { }, frame -> {
+            frame.claim(PlcLifecyclePhase.ORDINARY_LEVEL);
+            frame.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
+            return null;
+        });
+        coordinator.markRepresentedIterationDefersLoopTailPreparation();
+        coordinator.runLogicalIteration(() -> { }, frame -> {
+            frame.claim(PlcLifecyclePhase.LAG);
+            return null;
+        });
+        assertEquals(List.of("service:ORDINARY_LEVEL", "service:LAG"), events,
+                "a lag row that is itself still mid-iteration keeps the tail");
+
+        coordinator.runLogicalIteration(() -> { }, frame -> {
+            frame.claim(PlcLifecyclePhase.LAG);
+            return null;
+        });
+        assertEquals(
+                List.of("service:ORDINARY_LEVEL", "service:LAG", "service:LAG",
+                        "prepare:ORDINARY_LEVEL"),
+                events);
+    }
+
+    /** The deferral is a one-shot: an ordinary row keeps its own loop tail. */
+    @Test
+    void anUnheldIterationRunsItsOwnLoopTailPreparation() {
+        List<String> events = new ArrayList<>();
+        PlcFrameLifecycleCoordinator coordinator =
+                new PlcFrameLifecycleCoordinator(recording(events));
+
+        coordinator.markRepresentedIterationDefersLoopTailPreparation();
+        coordinator.runLogicalIteration(() -> { }, frame -> {
+            frame.claim(PlcLifecyclePhase.ORDINARY_LEVEL);
+            frame.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
+            return null;
+        });
+        coordinator.runLogicalIteration(() -> { }, frame -> {
+            frame.claim(PlcLifecyclePhase.ORDINARY_LEVEL);
+            frame.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
+            return null;
+        });
+
+        assertEquals(
+                List.of("service:ORDINARY_LEVEL", "service:ORDINARY_LEVEL",
+                        "prepare:ORDINARY_LEVEL", "prepare:ORDINARY_LEVEL"),
+                events,
+                "the released tail runs before the resuming row's own tail");
     }
 
     private static void observeSonicDplc(

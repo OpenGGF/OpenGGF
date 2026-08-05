@@ -36,6 +36,45 @@ public interface TraceExecutionModel {
                 && !vblankCounterAdvanced(previous, current);
     }
 
+    /**
+     * True when the main-loop iteration sampled by {@code current} was still in
+     * flight when {@code next} was sampled: a V-blank elapsed between the two
+     * rows, but the gameplay frame counter did not advance.
+     *
+     * <p>The gameplay frame counter is bumped at the very top of the loop, in
+     * the instruction after {@code WaitForVBlank} returns (S1
+     * {@code addq.w #1,(v_framecount).w}, docs/s1disasm/sonic.asm:3001-3002;
+     * S2 {@code Level_frame_counter}). A row on which it did not advance while
+     * the V-blank counter did is therefore a lag V-blank taken <em>inside</em>
+     * the previous row's iteration -- {@code Vint_routine}/
+     * {@code v_vblank_routine} was still 0 because the loop had not yet reached
+     * the {@code move.b} that re-arms it (sonic.asm:3000).
+     *
+     * <p>That places the iteration's loop tail after the sample that closed
+     * {@code current}. In S1 the tail is where {@code RunPLC} lives
+     * (sonic.asm:3032), reached only after {@code ExecuteObjects} (3010),
+     * {@code DeformLayers} (3025), {@code BuildSprites} (3028),
+     * {@code ObjPosLoad} (3029) and {@code PaletteCycle} (3031) -- the whole of
+     * the loop's cost. Had the loop already run {@code RunPLC}, only
+     * {@code OscillateNumDo}, {@code SynchroAnimate} and
+     * {@code SignpostArtLoad} would have stood between it and the re-arm at
+     * 3000, so the V-blank that fired would not have been a lag one.
+     *
+     * <p>Like {@link #isVblankStarvedRow} this is a hardware-timing
+     * classification of the recorded row shape: it carries no gameplay,
+     * queue-identity or art value.
+     */
+    static boolean isIterationHeldIntoNextRow(TraceFrame current, TraceFrame next) {
+        return current != null
+                && next != null
+                && hasAuthoritativeVblankCounter(current)
+                && hasAuthoritativeVblankCounter(next)
+                && current.gameplayFrameCounter() >= 0
+                && next.gameplayFrameCounter() >= 0
+                && !gameplayCounterAdvanced(current, next)
+                && vblankCounterAdvanced(current, next);
+    }
+
     static TraceExecutionModel forGame(String game) {
         if (game == null) {
             throw new IllegalArgumentException("Unsupported trace game: null");

@@ -327,7 +327,7 @@ Current schema ownership:
 - `metadata.json` — game, zone, act, BK2 frame offset, trace frame count,
   oscillation pre-advance, character set, opaque recorder provenance, ROM
   checksum, profile, `trace_schema: 5`, and `aux_schema_extras`.
-- `physics.csv` — one row per recorded frame. Frame numbers are hex; fields documented in the recorder's CSV header function.
+- `physics.csv` — one row per recorded frame. **Every numeric column is hex-rendered**, not just the frame number: `rings`, `camera_x/y`, the frame/VBlank counters, positions, sub-pixels, speeds (two's complement), routine, status, animation and mapping ids. Only the boolean/enum columns (`player_present`, `player_air`, `player_rolling`, `player_ground_mode`) are plain decimal. The writer is `S1TraceCsvWriter.FormatRow` (`Hex4`/`Hex2` per field) and the reader parses radix 16 (`TraceFrame.java`:161). Reading `rings=0037` as 37 instead of 55 put a special-stage results card on the wrong branch of `SSR_RingBonus.finished` and invalidated a whole timing analysis — convert before comparing a column against a disassembly threshold.
 - `aux_state.jsonl` — one JSON object per line. Standard event types: `zone_act_state`, `checkpoint`, `state_snapshot`, `mode_change`, `slot_dump`, `object_appeared`, `object_near`, `object_removed`. Plus opt-in events declared in `aux_schema_extras` (e.g. `cpu_state` per-frame for sidekick CPU state). The S1 complete-run recorder (`s1_complete_run_recorder.lua`) is at **v3.13**: beyond the standard set it carries `objoff_32/34/36/38` (maker/collapse/approach timers), `v_oscillate` (the osc array @`0xFFFE5E`), `lag_state` (`emu.islagged`/`lagcount`), and conveyor-specific `s1_obj64_state`/`tracked_obj`. Before claiming a counter/osc/lag/maker-timer frontier is gated, check whether the field is ALREADY captured here; if a needed field is missing, extend the recorder and regen (it is byte-identical physics + new aux — verify, then swap aux+metadata only).
 - `*.bk2` — the BK2 movie. Bizhawk replays this against the ROM to drive the recording. `bk2_frame_offset` in metadata is where recording starts inside the BK2.
 
@@ -347,6 +347,30 @@ Pre-trace setup events (frame `-1`) capture starting state for one-time bootstra
 
 - `AbstractTraceReplayTest` — abstract base. Subclasses provide game/zone/act/path; the base class loads metadata, validates configuration, drives BK2 playback via `HeadlessTestFixture`, runs the per-frame comparator, and writes the divergence report.
 - Concrete subclasses: one per recorded zone.
+
+#### Multi-segment run tests: two drivers, only one of them is the visual path
+
+- `tests/trace/runs/VisualRunReplayHarness` drives a whole multi-segment run
+  through the **production** visual-session owners — `TraceSessionLauncher`'s run
+  branch, its `TraceRunFrameDriver` hooks and its structural row comparator —
+  headlessly, entering at `finishRunLaunch` exactly as a windowed launch does
+  once its master-title fade completes. Anything it reproduces is reproduced in
+  production code. Call `VisualRunReplayHarness.replay(runDir, stopAfterSegment(n))`
+  to pin a lane at the frontier it has actually cleared instead of driving into
+  the next unexplored boundary, and `tearDown()` from `@AfterEach`. It converts
+  two production behaviours back into test failures: the launcher's deliberate
+  failure *containment* (a windowed session logs and returns the user to the
+  picker rather than propagating) and its first-error *self-pause* (headlessly a
+  stall). Its failure text carries a 12-step context window, a change timeline
+  (mode / coordinator phase / segment / load generation), and — on the
+  self-pause path — the dynamic-art gap ledger.
+- `tests/trace/runs/AbstractRunChainTest` is **not** the visual path. It builds
+  its own coordinator/driver loop beside the launcher and calls a different
+  `completePostProduction` overload, so a visual-only defect (an unpublished
+  dynamic-art row, a mode change on the wrong physical row, a transition that
+  softlocks) can stay green there while a real session aborts on it. Reproduce
+  suspected visual/boundary defects in the harness before believing a green
+  chain test.
 
 ## Workflow — Diagnose, Fix, Regen, Loop
 
@@ -1080,6 +1104,53 @@ ordinal, fingerprint, and service-boundary checks; it cannot create work.
 Record the first frame, exact field/admission reason, and total error count in
 `docs/status/trace-frontier-log.md`. Never add missing capability names to
 legacy metadata or infer audited evidence from an old trace.
+
+### Transition-gap (`run_gap.*`) triage traps
+
+Field-level contracts for `movie_logical_frame` and `gap_edge_index`, and the
+S1 `segment_start - 26` load-pair invariant, live in the `plc-system` skill's
+"Dynamic-Art Reports and Routing". The mechanical traps that cost the most time:
+
+- **`art=serial` in the harness step window cannot tell you whether a gap edge
+  was emitted.** `deliverySerial` advances only inside
+  `DynamicArtLifecycleService.publishRow`/`publishBuffered`
+  (`.../DynamicArtLifecycleService.java`:776-797, :823-842), both of which
+  require an open comparison segment — and the window is closed for the whole
+  gap. Gap edges live in a separate ledger,
+  `DynamicArtLifecycleService.gapTransitions`, compared by
+  `TraceRunDynamicArtGapJournal`. Instrument that ledger, not the publication
+  serial.
+- **Transition-gap rows never service a production V-blank.** Measured directly:
+  removing the S1 preparation's boundary flush makes the return pair vanish from
+  the gap ledger entirely.
+- **The gap ledger is compared at destination admission, BEFORE the admitted
+  row's body runs.** `TraceRunDynamicArtGapJournal.destinationOpened` is called
+  from `TraceSessionLauncher.applyRunDestinationAdmission`
+  (`src/main/java/com/openggf/TraceSessionLauncher.java`:1501-1505), after
+  `settlePreMainLoopPlayerTransferAtAdmission` (:1444-1467). Anything that must
+  be visible to the comparison has to settle at or before that point — but
+  settling *unconditionally* at admission invents a spurious pair at the
+  special-stage gap, so settle only an explicitly held tail.
+- **The shared movie clock still reads the gap's LAST row at admission.** The
+  level's first main-loop row is the next one, so a transfer derived back from
+  it is at `movieLogicalFrame + 1 - tailRows`
+  (`DynamicArtLifecycleService.settlePendingPlayerPreparationBeforeLevelMainLoop`,
+  :661-678, and `flushS1PreparationIfPending`, :695-709). A run that ends before
+  any level reaches its main loop can never measure the tail back from it and
+  takes the earliest legal row instead
+  (`releaseUnclaimedPreMainLoopPlayerTransfer`, :680-693).
+
+### Prefer derivation over "it needs recorded timing"
+
+Closing all 210 frames of the S1 emerald route's special-stage-return divergence
+took only frame-counted ROM loops (`Level_Delay`, `PalFadeIn_Alt`,
+`PaletteFadeOut`, `SSR_*`) plus fixture invariants — no new recorded stream, and
+no fitted constant. A residual initially attributed to un-modelable hardware load
+cost was refuted by a one-line manifest query showing the value was
+zone-invariant. Before concluding a divergence needs hardware timing: count the
+ROM's actual wait loops in the listing, and check whether the fixture already
+pins the quantity as an invariant across zones with very different workloads. An
+elapsed hardware cost varies with payload; a counted loop does not.
 
 ## Why This Matters
 

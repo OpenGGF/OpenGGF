@@ -18,6 +18,9 @@ public final class GlReadPixelsGrabber implements VideoFrameGrabber {
     private final int width;
     private final int height;
     private final GlReadRegion glReadRegion;
+    private final ByteBuffer readBuffer;
+    private final byte[] frameBytes;
+    private boolean released;
 
     public GlReadPixelsGrabber(int width, int height) {
         this(0, 0, width, height);
@@ -29,12 +32,13 @@ public final class GlReadPixelsGrabber implements VideoFrameGrabber {
 
     GlReadPixelsGrabber(int x, int y, int width, int height, GlReadRegion glReadRegion) {
         CaptureViewport viewport = new CaptureViewport(x, y, width, height);
-        viewport.rgbaByteSize();
         this.x = viewport.x();
         this.y = viewport.y();
         this.width = width;
         this.height = height;
         this.glReadRegion = glReadRegion;
+        this.readBuffer = MemoryUtil.memAlloc(viewport.rgbaByteSize());
+        this.frameBytes = new byte[viewport.rgbaByteSize()];
     }
 
     /** RGBA8888 — 4 bytes per pixel. */
@@ -57,16 +61,33 @@ public final class GlReadPixelsGrabber implements VideoFrameGrabber {
         return frameByteSize(width, height);
     }
 
+    /**
+     * Grabs into this grabber's own reusable buffers, which is exactly the
+     * producer-side reuse {@link CapturedFrame}'s defensive copy exists to make
+     * safe — the returned array is valid only until the next {@code grab()}.
+     * <p>
+     * Allocating both buffers per call instead cost a native malloc/free plus a
+     * full-frame heap array every frame, on top of the copy {@code CapturedFrame}
+     * already makes: at a 1280x896 window that was ~9MB of garbage per frame,
+     * roughly half a gigabyte a second at 60fps, and it grew with the window.
+     * The buffers are sized once from the fixed viewport this grabber was built
+     * for; a viewport change builds a new grabber.
+     */
     @Override
     public byte[] grab() {
-        ByteBuffer buf = MemoryUtil.memAlloc(frameByteSize());
-        try {
-            glReadRegion.read(x, y, width, height, buf);
-            byte[] out = new byte[frameByteSize()];
-            buf.get(out);            // tight copy, bottom-up as GL provides
-            return out;
-        } finally {
-            MemoryUtil.memFree(buf);
+        glReadRegion.read(x, y, width, height, readBuffer);
+        readBuffer.clear();
+        readBuffer.get(frameBytes);  // tight copy, bottom-up as GL provides
+        readBuffer.clear();
+        return frameBytes;
+    }
+
+    /** Releases the native read buffer. Safe to call more than once. */
+    @Override
+    public void close() {
+        if (!released) {
+            released = true;
+            MemoryUtil.memFree(readBuffer);
         }
     }
 

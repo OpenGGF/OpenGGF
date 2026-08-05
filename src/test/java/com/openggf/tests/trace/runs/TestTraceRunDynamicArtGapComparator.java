@@ -7,6 +7,7 @@ import com.openggf.trace.FrameComparison;
 import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.replay.runs.TraceRunDynamicArtGapComparator;
 import com.openggf.trace.replay.runs.TraceRunDynamicArtGapComparator.RuntimeGap;
+import com.openggf.trace.replay.runs.TraceRunDynamicArtGapComparator.RuntimeTerminalTail;
 import com.openggf.trace.replay.runs.TraceRunDynamicArtGapComparator.StructuralOrder;
 import org.junit.jupiter.api.Test;
 
@@ -117,6 +118,39 @@ class TestTraceRunDynamicArtGapComparator {
         assertFalse(comparison.hasError(), comparison.divergentFields()::toString);
     }
 
+    @Test
+    void terminalTailUsesExclusiveMovieRangeAndChecksFinalLedgerWithoutDestination() {
+        DynamicArtTransfer.Descriptor terminal = descriptor(
+                7, "sonic", 4, "run_gap", request(0x50000, 4));
+        DynamicArtTransfer.Descriptor outsideMovie = descriptor(
+                8, "sonic", 5, "run_gap", request(0x51000, 5));
+        List<DynamicArtTransfer.GapTransition> expected = List.of(
+                expectedGap(10, terminal, "submitted", 110, 0,
+                        List.of(), List.of(terminal)),
+                expectedGap(11, terminal, "completed", 119, 0,
+                        List.of(terminal), List.of()),
+                expectedGap(12, outsideMovie, "submitted", 120, 0,
+                        List.of(), List.of(outsideMovie)));
+        TraceRunManifest manifest = terminalManifest(expected);
+        RuntimeTerminalTail actual = new RuntimeTerminalTail(
+                "source", 0, 1, 2, List.of(), List.of(
+                        actualGap(10, terminal, "submitted", 110, 0,
+                                List.of(), List.of(7L)),
+                        actualGap(11, terminal, "completed", 119, 0,
+                                List.of(7L), List.of())));
+
+        FrameComparison comparison =
+                TraceRunDynamicArtGapComparator.compareTerminalTail(
+                        110, manifest, 0, 120, actual);
+
+        assertFalse(comparison.hasError(), comparison.divergentFields()::toString);
+        assertTrue(comparison.fields().containsKey(
+                "run_tail.final_ledger_fingerprints"));
+        assertFalse(comparison.fields().keySet().stream()
+                        .anyMatch(field -> field.contains("destination")),
+                "the terminal-tail contract has no fabricated destination");
+    }
+
     private static RuntimeGap runtimeGap(
             List<DynamicArtTransfer.Descriptor> opening,
             List<DynamicArtGapTransition> transitions) {
@@ -138,6 +172,16 @@ class TestTraceRunDynamicArtGapComparator {
         return new TraceRunManifest("s2", "run", "movie.bk2",
                 "crc", List.of(source, destination), List.of(), gaps,
                 TraceRunManifest.ExpectedMovieEndMode.UNSPECIFIED);
+    }
+
+    private static TraceRunManifest terminalManifest(
+            List<DynamicArtTransfer.GapTransition> gaps) {
+        var source = new TraceRunManifest.Segment(
+                "source", "level", "gameplay_unlock", 100, 10,
+                0, 1, null, null, List.of(), null);
+        return new TraceRunManifest("s1", "terminal", "movie.bk2",
+                "crc", List.of(source), List.of(), gaps,
+                TraceRunManifest.ExpectedMovieEndMode.LEVEL);
     }
 
     private static DynamicArtTransfer.GapTransition expectedGap(

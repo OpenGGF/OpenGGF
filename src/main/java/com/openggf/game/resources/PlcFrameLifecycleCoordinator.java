@@ -22,6 +22,8 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
     private boolean representedIterationWithoutVblank;
     private boolean vblankOverrunCarry;
     private boolean nextVblankServicesDmaQueue;
+    private boolean representedIterationDefersLoopTailPreparation;
+    private PlcLifecyclePhase heldLoopTailPreparation;
 
     public PlcFrameLifecycleCoordinator(GameModule module) {
         this(() -> module.getGameService(PlcLifecycleService.class), null,
@@ -159,6 +161,46 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
         return runLogicalIteration(fadeUpdate, iteration);
     }
 
+    /**
+     * Runs a represented lag closure without advancing or assigning ownership
+     * to an active native blocking fade. A ROM lag handler leaves that fade's
+     * mode-specific PLC work paused until the next ordinary VBlank.
+     */
+    public <T> T runSuppressedLagIteration(
+            Function<PlcLifecycleFrame, T> iteration) {
+        Objects.requireNonNull(iteration, "iteration");
+        if (activeFrame != null && !activeFrame.finished) {
+            throw new IllegalStateException(
+                    "previous PLC lifecycle frame is still active");
+        }
+        PlcLifecycleFrame frame = new PlcLifecycleFrame(serviceSupplier.get());
+        activeFrame = frame;
+        Throwable primaryFailure = null;
+        try {
+            T result = iteration.apply(frame);
+            if (!frame.isOwnedBy(PlcLifecyclePhase.LAG)) {
+                throw new IllegalStateException(
+                        "suppressed lag iteration did not claim LAG");
+            }
+            return result;
+        } catch (RuntimeException | Error failure) {
+            primaryFailure = failure;
+            throw failure;
+        } finally {
+            try {
+                if (!frame.finished) {
+                    frame.finish();
+                }
+            } catch (RuntimeException | Error validationFailure) {
+                if (primaryFailure != null) {
+                    primaryFailure.addSuppressed(validationFailure);
+                } else {
+                    throw validationFailure;
+                }
+            }
+        }
+    }
+
     @Override
     public NativeBlockingFade beginNativeBlockingFade() {
         if (activeFade != null && !activeFade.closed) {
@@ -219,6 +261,32 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
         nextVblankServicesDmaQueue = true;
     }
 
+    /**
+     * Declares that the represented iteration about to run is still in flight
+     * when its row is sampled, so its loop tail belongs to a later closure.
+     *
+     * <p>ROM basis: the loop-tail PLC preparation ({@code RunPLC},
+     * docs/s1disasm/sonic.asm:3032) sits after every expensive call in
+     * {@code Level_MainLoop} -- {@code ExecuteObjects} (3010),
+     * {@code DeformLayers} (3025), {@code BuildSprites} (3028),
+     * {@code ObjPosLoad} (3029), {@code PaletteCycle} (3031). An iteration that
+     * has not reached the loop top's {@code move.b #id_VBlank_Levels,
+     * (v_vblank_routine).w} (3000) by the next V-blank takes {@code VBlank_Lag}
+     * (sonic.asm:709) instead of the level handler, and has essentially always
+     * not reached {@code RunPLC} either: only {@code OscillateNumDo},
+     * {@code SynchroAnimate} and {@code SignpostArtLoad} separate 3032 from the
+     * re-arm. So the ROM's own {@code RunPLC} for that iteration executes
+     * during the closure that consumes the lag V-blank, and the
+     * still-decompressing head is what the previous row's sample observes.
+     *
+     * <p>This only moves <em>when</em> the engine's own already-submitted queue
+     * head is armed between two represented closures of one ROM iteration. It
+     * carries no gameplay value, no queue identity, and creates no work.
+     */
+    public void markRepresentedIterationDefersLoopTailPreparation() {
+        representedIterationDefersLoopTailPreparation = true;
+    }
+
     public void reset() {
         if (externalComparisonSegmentOpenDeferred
                 && dynamicArtLifecycle != null
@@ -229,6 +297,8 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
         representedIterationWithoutVblank = false;
         vblankOverrunCarry = false;
         nextVblankServicesDmaQueue = false;
+        representedIterationDefersLoopTailPreparation = false;
+        heldLoopTailPreparation = null;
         externalComparisonSegmentOpenDeferred = false;
         if (activeFade != null) {
             activeFade.closed = true;
@@ -344,6 +414,18 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
             if (service != null) {
                 service.serviceVBlank(phase);
             }
+            // The loop tail held by an in-flight iteration runs on the closure
+            // that consumed its lag V-blank, after that V-blank's own service
+            // -- which for a lag handler decompresses nothing. A closure that
+            // is itself still mid-iteration keeps holding it.
+            if (heldLoopTailPreparation != null
+                    && !representedIterationDefersLoopTailPreparation) {
+                PlcLifecyclePhase held = heldLoopTailPreparation;
+                heldLoopTailPreparation = null;
+                if (service != null) {
+                    service.prepareAfterLoop(held);
+                }
+            }
             if (dynamicArtLifecycle != null
                     && dynamicArtLifecycle.isRunActive()) {
                 // A represented iteration whose V-blank had not yet bumped
@@ -382,7 +464,15 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
                 throw new IllegalStateException("PLC lifecycle frame was already prepared");
             }
             if (service != null && service.hasPreparationBoundary(phase)) {
-                service.prepareAfterLoop(phase);
+                if (representedIterationDefersLoopTailPreparation) {
+                    // The ROM had not reached this iteration's RunPLC when the
+                    // row was sampled; a later closure of the same iteration
+                    // owns it. The boundary is still accounted for here so
+                    // finish() keeps its one-preparation-per-closure invariant.
+                    heldLoopTailPreparation = phase;
+                } else {
+                    service.prepareAfterLoop(phase);
+                }
                 prepared = true;
             }
         }
@@ -415,6 +505,7 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
             //     the very next closure, never a frame number or route.
             boolean withoutVblank = representedIterationWithoutVblank;
             representedIterationWithoutVblank = false;
+            representedIterationDefersLoopTailPreparation = false;
             // A row sampled mid-V-int is never carried: its real handler already
             // ran ProcessDMAQueue. That holds however many such rows occur in a
             // row, so the guard is on the row's own shape, not on a one-shot.

@@ -8,6 +8,7 @@ import com.openggf.game.resources.DynamicArtDiagnosticsSnapshot;
 import com.openggf.trace.DynamicArtSpecialStageComparator;
 import com.openggf.trace.FrameComparison;
 import com.openggf.trace.TraceData;
+import com.openggf.trace.TraceExecutionPhase;
 import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.replay.TraceReplayFixture;
 import com.openggf.trace.timing.HardwareTimingSchedule;
@@ -51,15 +52,73 @@ public final class TraceRunReplayWalker {
         TraceData trace,
         TraceRunManifest.Transition entryBoundary,
         TraceRunManifest.Transition exitBoundary,
-        TraceRunSpecialStageRows specialStageRows
+        TraceRunSpecialStageRows specialStageRows,
+        SegmentExecutionPolicy executionPolicy
     ) {
         public SegmentPlan(
                 TraceRunManifest.Segment segment,
                 TraceData trace,
                 TraceRunManifest.Transition entryBoundary,
                 TraceRunManifest.Transition exitBoundary) {
-            this(segment, trace, entryBoundary, exitBoundary, null);
+            this(segment, trace, entryBoundary, exitBoundary, null,
+                    segmentExecutionPolicy(segment, entryBoundary, trace));
         }
+
+        public SegmentPlan(
+                TraceRunManifest.Segment segment,
+                TraceData trace,
+                TraceRunManifest.Transition entryBoundary,
+                TraceRunManifest.Transition exitBoundary,
+                TraceRunSpecialStageRows specialStageRows) {
+            this(segment, trace, entryBoundary, exitBoundary, specialStageRows,
+                    segmentExecutionPolicy(segment, entryBoundary, trace));
+        }
+    }
+
+    /** Structural execution ownership for one run segment. */
+    public enum SegmentExecutionPolicy {
+        GAMEPLAY,
+        SPECIAL_LOCAL,
+        LEVEL_PRESENTATION_BRIDGE
+    }
+
+    /**
+     * Classifies a segment from manifest topology and recorded row shape. A
+     * stage-exit destination is a presentation bridge only when row zero is the
+     * synthetic full row caused by its missing predecessor and every later row
+     * is canonically non-gameplay.
+     */
+    public static SegmentExecutionPolicy segmentExecutionPolicy(
+            TraceRunManifest.Segment segment,
+            TraceRunManifest.Transition entryBoundary,
+            TraceData trace) {
+        Objects.requireNonNull(segment, "segment");
+        Objects.requireNonNull(trace, "trace");
+        if ("special_stage".equals(segment.kind())) {
+            return SegmentExecutionPolicy.SPECIAL_LOCAL;
+        }
+        if (!"level".equals(segment.kind())
+                || entryBoundary == null
+                || !"stage_exit".equals(entryBoundary.entryKind())
+                || trace.frameCount() < 2) {
+            return SegmentExecutionPolicy.GAMEPLAY;
+        }
+        TraceExecutionPhase first =
+                com.openggf.trace.replay.TraceReplayRowPolicy.resolve(
+                        trace, 0, segment.bk2FrameOffset()).phase();
+        if (first != TraceExecutionPhase.FULL_LEVEL_FRAME) {
+            return SegmentExecutionPolicy.GAMEPLAY;
+        }
+        for (int row = 1; row < trace.frameCount(); row++) {
+            TraceExecutionPhase phase =
+                    com.openggf.trace.replay.TraceReplayRowPolicy.resolve(
+                            trace, row, segment.bk2FrameOffset() + row).phase();
+            if (phase != TraceExecutionPhase.VBLANK_ONLY
+                    && phase != TraceExecutionPhase.ADVANCE_ONLY) {
+                return SegmentExecutionPolicy.GAMEPLAY;
+            }
+        }
+        return SegmentExecutionPolicy.LEVEL_PRESENTATION_BRIDGE;
     }
 
     /**
@@ -680,6 +739,53 @@ public final class TraceRunReplayWalker {
         return movieRows;
     }
 
+    /**
+     * Calculates the VBlank ticks between a source level's tail anchor and the
+     * first row of the presentation bridge a special stage exits through.
+     *
+     * <p>The ROM's V-int increment is unconditional
+     * ({@code VBlank_Exit: addq.l #1,(v_vblank_count).w},
+     * docs/s1disasm/sonic.asm:684) and runs after whichever routine the mode
+     * table dispatched, {@code VBlank_SpecialStage} included — so every movie
+     * row of the uncompared stage interior carries exactly one tick. An anchor
+     * is the value in effect ENTERING the row after the source's final row, and
+     * the target is the value entering the bridge's first row, so the budget is
+     * the rows strictly between them.
+     */
+    public static int presentationBridgeEntryVblankBudget(
+            TraceRunManifest.Segment sourceLevel,
+            TraceRunManifest.Segment bridge) {
+        if (sourceLevel.traceFrameCount() <= 0) {
+            throw new IllegalArgumentException("source level must contain recorded frames");
+        }
+        int sourceFinalRow = sourceLevel.bk2FrameOffset()
+                + sourceLevel.traceFrameCount() - 1;
+        int movieRows = bridge.bk2FrameOffset() - sourceFinalRow - 1;
+        if (movieRows < 0) {
+            throw new IllegalArgumentException(
+                    "presentation bridge precedes source level tail");
+        }
+        return movieRows;
+    }
+
+    /**
+     * Calculates the VBlank ticks a presentation bridge represents, from the
+     * value entering its first row to the value entering the row after its
+     * last. Every recorded row carries a tick except the profiled ones the ROM
+     * spends building the results screen with interrupts disabled.
+     */
+    public static int presentationBridgeVblankSpan(
+            TraceRunManifest.Segment bridge,
+            int nonAdvancingMovieRows) {
+        if (nonAdvancingMovieRows < 0) {
+            throw new IllegalArgumentException("frame counts must be non-negative");
+        }
+        if (bridge.traceFrameCount() <= 0) {
+            throw new IllegalArgumentException("bridge must contain recorded frames");
+        }
+        return Math.max(0, bridge.traceFrameCount() - nonAdvancingMovieRows);
+    }
+
     /** Projects a source-tail VBlank from the observed playback cursor. */
     public static int sourceTailVblankAtBoundary(
             TraceRunManifest.Segment sourceLevel,
@@ -838,7 +944,9 @@ public final class TraceRunReplayWalker {
             plans.add(new SegmentPlan(
                 segments.get(i), traces[i],
                 pairing.entryBoundaries()[i], pairing.exitBoundaries()[i],
-                specialStageRows[i]));
+                specialStageRows[i],
+                segmentExecutionPolicy(segments.get(i),
+                        pairing.entryBoundaries()[i], traces[i])));
         }
         return plans;
     }
@@ -905,13 +1013,14 @@ public final class TraceRunReplayWalker {
         /** Attaches (or, with {@code null}, detaches) the delegate observer. */
         public void setDelegate(PlaybackDebugManager.PlaybackFrameObserver delegate) {
             this.delegate = delegate;
-            // A destination admission is performed between production
-            // iterations.  Discard any cached source-row delegate so the
-            // next prepare/advance pair cannot replay the old segment's
-            // input or comparison owner.
-            preparedFrame = null;
-            framePrepared = false;
-            preparedDelegate = null;
+            // A handoff may be observed after prepareFrame() but before the
+            // represented row advances. Keep that row pinned to the delegate
+            // which prepared it; afterFrameAdvanced() clears the pin. When no
+            // row is prepared there is no cached ownership to retain.
+            if (!framePrepared) {
+                preparedFrame = null;
+                preparedDelegate = null;
+            }
         }
 
         /**

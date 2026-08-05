@@ -77,7 +77,6 @@ import com.openggf.sprites.playable.SidekickCpuController;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -156,7 +155,6 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     PerformanceProfiler profiler;
     private CrossGameFeatureProvider crossGameFeatures;
     final List<List<LevelData>> levels = new ArrayList<>();
-    private final List<PendingLostRingSpawn> pendingLostRingSpawns = new ArrayList<>();
     private final WorldSession worldSession;
     // Local mirror of zone/act state owned by WorldSession. Reads use these
     // fields directly for speed; writes go through writeCurrentZone /
@@ -241,6 +239,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     private final java.util.Map<String, DynamicArtDecisionOwner> playerArtDplcOwners =
             new java.util.HashMap<>();
     private final LevelDirtyRegionDispatcher dirtyRegionDispatcher;
+    private final LevelLostRingSpawnCoordinator lostRingSpawns = new LevelLostRingSpawnCoordinator(this);
     final LevelWaterCoordinator waterCoordinator;
     final LevelCheckpointCoordinator checkpointCoordinator;
     private final LevelActTransitionExecutor actTransitionExecutor;
@@ -1164,7 +1163,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         // rather than in drawWithSpritePriority() so headless tests see the
         // counter advance even when rendering is disabled.
         frameCounter++;
-        processPendingLostRingSpawns();
+        lostRingSpawns.processPending();
 
         Sprite player = null;
         AbstractPlayableSprite playable = null;
@@ -2502,91 +2501,15 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
     public void spawnLostRings(AbstractPlayableSprite player, int frameCounter) {
-        if (ringManager == null || player == null) {
-            return;
-        }
-        int count = player.getRingCount();
-        if (count <= 0) {
-            return;
-        }
-        ringManager.spawnLostRings(player, count, frameCounter);
+        lostRingSpawns.spawnImmediately(player, frameCounter);
     }
 
     public void spawnLostRingsAfterCurrentFrame(AbstractPlayableSprite player, int frameCounter) {
-        queueLostRingSpawn(player, frameCounter, false);
+        lostRingSpawns.queue(player, frameCounter, false);
     }
 
     public void spawnLostRingsWithDeferredOwner(AbstractPlayableSprite player, int frameCounter) {
-        queueLostRingSpawn(player, frameCounter, true);
-    }
-
-    private void queueLostRingSpawn(
-            AbstractPlayableSprite player, int scheduledFrame, boolean deferOwnerRingClear) {
-        if (player == null || ringManager == null) {
-            return;
-        }
-        int count = player.getRingCount();
-        if (count <= 0) {
-            return;
-        }
-        int preallocatedFirstSlot = -1;
-        if (objectManager != null && objectManager.preallocatesLostRingOwnerSlot()) {
-            preallocatedFirstSlot = objectManager.allocateDynamicSlotAvoidingCurrentPassFrees();
-        }
-        int[] preallocatedSlots = preallocatedFirstSlot >= 0
-                ? new int[] {preallocatedFirstSlot}
-                : new int[0];
-        boolean slotsFullyReserved = false;
-        if (preallocatedFirstSlot >= 0 && objectManager != null
-                && objectManager.lostRingRemainderAllocatesAfterOwnerSlot()) {
-            int requested = Math.min(count, 32);
-            int[] reserved = new int[requested];
-            reserved[0] = preallocatedFirstSlot;
-            int reservedCount = 1;
-            int previousSlot = preallocatedFirstSlot;
-            while (reservedCount < requested) {
-                int slot = objectManager.allocateSlotAfter(previousSlot);
-                if (slot < 0) {
-                    break;
-                }
-                reserved[reservedCount++] = slot;
-                previousSlot = slot;
-            }
-            preallocatedSlots = java.util.Arrays.copyOf(reserved, reservedCount);
-            slotsFullyReserved = true;
-        }
-        pendingLostRingSpawns.add(new PendingLostRingSpawn(
-                player, count, player.getCentreX(), player.getCentreY(), scheduledFrame,
-                preallocatedSlots, slotsFullyReserved, deferOwnerRingClear));
-    }
-
-    private void processPendingLostRingSpawns() {
-        if (pendingLostRingSpawns.isEmpty() || ringManager == null) {
-            return;
-        }
-        Iterator<PendingLostRingSpawn> iterator = pendingLostRingSpawns.iterator();
-        while (iterator.hasNext()) {
-            PendingLostRingSpawn pending = iterator.next();
-            if (frameCounter <= pending.frameCounter()) {
-                continue;
-            }
-            if (pending.player().getRingCount() > 0) {
-                ringManager.spawnLostRingsWithInitialObjectStep(
-                        pending.player(), pending.ringCount(), frameCounter,
-                        pending.x(), pending.y(), pending.preallocatedSlots(),
-                        pending.slotsFullyReserved(), pending.deferOwnerRingClear());
-            } else if (objectManager != null) {
-                for (int slot : pending.preallocatedSlots()) {
-                    objectManager.releaseDynamicSlot(slot);
-                }
-            }
-            iterator.remove();
-        }
-    }
-
-    private record PendingLostRingSpawn(
-            AbstractPlayableSprite player, int ringCount, int x, int y, int frameCounter,
-            int[] preallocatedSlots, boolean slotsFullyReserved, boolean deferOwnerRingClear) {
+        lostRingSpawns.queue(player, frameCounter, true);
     }
 
     // ── Post-load assembly methods ──────────────────────────────────────
@@ -2874,8 +2797,13 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             completeSkippedInitialTitleCardPresentation();
             return;
         }
-        boolean bonusStageReturn = transitions.isBonusStageReturn();
-        boolean presentationSuppressed = !bonusStageReturn
+        // GameLoop presents the bonus- and special-stage-results return cards
+        // itself after the reload; both loads must request rather than model an
+        // omitted presentation, keeping the queued initial PLCs live for the
+        // presented card's locked loop.
+        boolean callerOwnedReturnCard = transitions.isBonusStageReturn()
+                || transitions.isResultsReturnCardOwnedByCaller();
+        boolean presentationSuppressed = !callerOwnedReturnCard
                 && zoneFeatureProvider != null
                 && zoneFeatureProvider.shouldSuppressInitialTitleCard(
                         currentZone, currentAct);
@@ -2892,12 +2820,12 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             completeInitialTitleCardPresentation();
             return;
         }
-        // GameLoop owns the mandatory bonus-return card after the reload. Keep
-        // its lease unbound until that explicit initialization, even headless.
+        // GameLoop owns the mandatory bonus/results-return card after the
+        // reload. Keep its lease unbound until that explicit initialization,
+        // even headless.
         if (!graphicsManager.isHeadlessMode()
                 || headlessWholeRunHandoff
-                || ctx.isTitleCardRequiredInHeadlessMode()
-                || bonusStageReturn) {
+                || callerOwnedReturnCard) {
             // ROM: title card reads Apparent_act, not Current_act.
             // After AIZ's seamless fire transition, Current_act is 1 but
             // Apparent_act stays 0 until the results screen exits.
@@ -2953,10 +2881,22 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * title-card loop and the first ordinary level iteration.
      */
     public void completeInitialTitleCardPresentation() {
+        var profile = activeGameModule().getLevelInitProfile();
+        // The prelude that stages the player's tiles runs before this boundary,
+        // and its transfer belongs to the first V-int of the Level: routine's
+        // counted pre-main-loop tail — the Level_Delay / PalFadeIn_Alt rows
+        // ending on the frame before Level_MainLoop — not to this frame and
+        // not to the first gameplay claim after the transition gap. A load
+        // whose PLC boundary was already reached still stages here, so hold
+        // the transfer before the completed-boundary check.
+        var dynamicArt = GameServices.dynamicArtLifecycleOrNull();
+        if (dynamicArt != null && dynamicArt.isRunActive()) {
+            dynamicArt.holdPendingPlayerPreparationForPreMainLoopTail(
+                    profile.preLevelMainLoopDelayFrames());
+        }
         if (initialPresentationPlcsCompleted) {
             return;
         }
-        var profile = activeGameModule().getLevelInitProfile();
         profile.completeInitialPresentationPlcs();
         replaySkippedPresentationPlayerAnimation(
                 profile.skippedPresentationPlayableFrames());
@@ -3545,9 +3485,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     /** Returns the transition coordinator. */
     public LevelTransitionCoordinator getTransitions() { return transitions; }
 
-    /** @see LevelTransitionCoordinator#requestSpecialStageFromCheckpoint() */
-    public void requestSpecialStageFromCheckpoint() {
-        transitions.requestSpecialStageFromCheckpoint();
+    /** @see LevelTransitionCoordinator#advanceToSpecialStageEntryRoutine() */
+    public void advanceToSpecialStageEntryRoutine() {
+        transitions.advanceToSpecialStageEntryRoutine();
         GameServices.playbackDebug().onSpecialStageRequestRaised();
     }
 
@@ -3557,8 +3497,20 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         GameServices.playbackDebug().onSpecialStageRequestRaised();
     }
 
-    /** @see LevelTransitionCoordinator#consumeSpecialStageRequest() */
-    public boolean consumeSpecialStageRequest() { return transitions.consumeSpecialStageRequest(); }
+    /**
+     * @see LevelTransitionCoordinator#consumeSpecialStageRequest()
+     * <p>
+     * A results card's armed {@code Got_NextLevel} performs its
+     * {@code v_zone_act} write here, on the same frame as the mode change it
+     * returns — not on the earlier frame that armed the routine.
+     */
+    public boolean consumeSpecialStageRequest() {
+        boolean entering = transitions.consumeSpecialStageRequest();
+        if (entering && transitions.consumeSpecialStageEntryLevelAdvance()) {
+            advanceZoneActOnly();
+        }
+        return entering;
+    }
 
     /** @see LevelTransitionCoordinator#consumeSpecialStageReturnLevelReloadRequest() */
     public boolean consumeSpecialStageReturnLevelReloadRequest() { return transitions.consumeSpecialStageReturnLevelReloadRequest(); }
@@ -3592,6 +3544,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     /** @see LevelTransitionCoordinator#clearBonusStageReturn() */
     public void clearBonusStageReturn() { transitions.clearBonusStageReturn(); }
+
+    /** @see LevelTransitionCoordinator#setResultsReturnCardOwnedByCaller(boolean) */
+    public void setResultsReturnCardOwnedByCaller(boolean owned) { transitions.setResultsReturnCardOwnedByCaller(owned); }
 
     /** @see LevelTransitionCoordinator#requestTitleCard(int, int) */
     public void requestTitleCard(int zone, int act) { transitions.requestTitleCard(zone, act); }

@@ -85,7 +85,10 @@ class TestGameLoopAudioPresentationModes {
         loop.setAudioPresentationProbe(presented::add);
         replaceField(loop, "currentGameMode", mode);
         if (mode == GameMode.LEVEL || mode == GameMode.TITLE_CARD) {
-            replaceField(loop, "specialStageTransitionPending", true);
+            // Any of isNonRewindableTransitionPending()'s flags will do: this
+            // only needs the gameplay tick frozen so the fixture never reaches
+            // Camera.updatePosition() with no level loaded.
+            replaceField(loop, "endingTransitionPending", true);
         } else if (mode == GameMode.BONUS_STAGE) {
             replaceField(loop, "bonusStageTransitionPending", true);
         }

@@ -61165,6 +61165,16 @@ to synthesize a POST phase on a VBLANK-only row.
   already red in the recorded `develop` baseline (14,383 completed tests;
   32 failures, 47 errors, 31 skips); a normalized class/method comparison found
   no feature-only red method.
+- After fast-forward integration, the same full command first produced an
+  invalid 3,795-test run when Surefire lost compiled S2 special-stage test
+  classes during discovery. A fresh `mvn -q -Dmse=off -DskipTests
+  test-compile` succeeded, and the repeated merged run completed 14,225 tests
+  (27 failures, 7 errors, 31 skips) before the existing heap-space/fork crash.
+  Against the saved baseline XML it had one extra order-sensitive S3K
+  mushroom-parachute red; that complete class passed immediately when rerun
+  in both merged `develop` and the feature worktree, so no attributable
+  regression remained. The launcher/lifecycle/GHZ1/GHZ2 focused selection
+  also passed again on merged `develop` after the order-heavy run.
 
 ## 2026-08-03 - Visual/headless represented-row convergence
 
@@ -62215,3 +62225,1492 @@ to synthesize a POST phase on a VBLANK-only row.
   the engine has no pending job. The replay aborts before the comparison
   report is emitted, so no aggregate comparison-error count is available;
   no trace payloads were changed.
+## 2026-08-04 - Shared physical clock through visual run presentation
+
+- Worktree: `.worktrees/bugfix-ai-visual-run-presentation-clock`, branch
+  `bugfix/ai-visual-run-presentation-clock`, based on `845367f80`.
+- Visual and headless whole-run adapters now use the same segment policy and
+  physical-row driver for presentation, structural-gap, and terminal-tail
+  ownership. The visual adapter uses that owner across the full run, while
+  established headless gameplay retains its fixture loop. The BK2 session is
+  continuous: destination admission neither reloads the level nor
+  restarts/reseeks the movie, so music and production setup are not repeated.
+- Presentation rows compare physical input, PLC/load queues, hardware timing,
+  and atomic dynamic-art publication without hydrating playable state. The
+  terminal movie tail is included in the dynamic-art gap journal, and the
+  common HUD follows physical input until the whole run—not an individual
+  segment—completes.
+- Focused non-ROM validation: 306 tests across launcher, physical-row driver,
+  coordinator, structural comparator, comparator observers, PLC/dynamic-art
+  lifecycle, S1 Special Stage, HUD/capture, bootstrap diagnostics, and policy
+  catalog; 0 failures and 0 errors.
+- Bounded ROM validation:
+  `mvn -q -Dmse=off -Dsonic1.rom.path=s1.gen
+  -Dtest=com.openggf.tests.trace.runs.TestS1GhzMazeRoundTripChain#ghzMazeSpecialStageReturnPresentationBridge test`
+  — 1 test, 0 failures, 0 errors. It consumed all 812 recorded return bridge
+  rows and reached GHZ2 in `LEVEL` mode with its title card cleared at the exact
+  destination boundary. The lane retains its known animation-only first error
+  at GHZ1 frame 2,082 (`player_animation_id`); physics, S1 PLC queue, and
+  dynamic-art fields remained matched there. No gameplay frontier moved and no
+  trace payload changed.
+- Baseline suite on clean `origin/develop` (`845367f80`): 14,291 tests,
+  24 failures, 9 errors, and 31 skips. The feature and post-merge full suites
+  were not run; exhaustive replay of this fixture's 186,000+ unrepresented
+  true-movie-end tail was stopped after timeout and is not a focused gate.
+
+## 2026-08-04 - Special Stage entry lands on the recorded mode-change frame
+
+- Branch: `feature/ai-visual-trace-fast-forward`, based on `2daa1de28`
+  (shared working tree; a concurrent collaborator held unrelated capture and
+  configuration edits throughout).
+- User report: visual complete-run playback of
+  `s1-sonic-complete-withemeralds` aborted at the GHZ1 giant ring with
+  `IllegalStateException: Special Stage entry crossed destination physical row:
+  cursor=4996, destinationOffset=4976`.
+- Root cause: the engine ran a 22-frame fade-to-white in LEVEL mode before
+  flipping to `SPECIAL_STAGE`, so the mode change landed 22 physical rows late
+  (segment 0 closes at row 4,974, the shared gap opens at 4,975, and
+  4,975 + 22 = 4,996). No ROM does this: `Got_ChkSS`
+  ("_incObj/3A Got Through Card.asm":198-201), `Obj79_Star` (s2.asm:44875-44877)
+  and `SSEntryFlash_GoSS` (s3.asm:79628) all write the game mode in the
+  level-side object tick with no fade, and the white-out belongs to
+  `GM_Special`'s `PaletteWhiteOut` (sonic.asm:3227) — which
+  `Sonic1SpecialStageManager`'s 44-tick pre-physics hold already models, so the
+  engine was performing it twice.
+- Fix: `GameLoop.enterSpecialStage` enters immediately;
+  `SpecialStageEntryPresentationController` owns the white-out and defers its
+  reveal until the fade reaches its opaque hold; and the S1 results card models
+  `Got_Wait`'s routine advance, arming the whole `Got_NextLevel` body — zone/act
+  write included — for the following frame. Advancing zone/act on the arming
+  frame instead would change the observed level identity on segment 0's final
+  represented row and fail source ownership.
+- Evidence:
+  `mvn -Dmse=off -Ptrace-replay -Dtest=TestS1CompleteEmeraldRunPrefix
+  -Dsonic1.rom.path=s1.gen test`
+  — 1 test, 0 failures, 0 errors both before and after, but the pre-change run
+  logged a first error at trace frame 4,114 with
+  `dynamic_art.frame expected=4114 actual=4136` (the same 22-frame skew) and the
+  post-change run logs no first error at all.
+- Follow-up in the same change: `GameLoop.specialStageTransitionPending` became
+  unreachable (nothing arms a window that no longer exists) and was removed
+  along with its term in `isNonRewindableTransitionPending()`.
+  `TestGameLoopSpecialStageEntryPresentation` had been aborting its forked JVM
+  in `Sonic2SpecialStageManager.setupPalettes` -> `glGenTextures` with no GL
+  context — `GraphicsManager.cachePaletteTexture` already guards on headless
+  mode, the class simply never entered it — so it now boots headless graphics
+  like the other 231 GL-touching test classes and runs.
+- Focused non-ROM validation: 54 tests across the transition coordinator, the
+  entry presentation controller, the special-stage entry presentation, the
+  special-stage rewind gate/boundary, and audio presentation modes; 0 failures
+  and 0 errors.
+- Full default suite: 14,346 tests (29 failures, 12 errors, 17 skips), with no
+  fork abort — the run previously died partway through on that GL crash.
+  Against the pre-change list, the ten reds that cleared are all in the classes
+  this change touches; the two that appeared are an order-sensitive
+  `TestBubblerObjectInstance` red that passes in isolation and a
+  `TestEngineLiveCapturePresentation` capture-queue red belonging to unrelated
+  uncommitted capture work in the shared tree.
+
+## 2026-08-05 - Visual-run parity driver and the bridge-to-gameplay handoff
+
+- Branch: `feature/ai-visual-trace-fast-forward`, based on `2aabd35be`.
+- User report: a windowed session of `s1-sonic-complete-withemeralds` aborted
+  after the special-stage results with `dynamic-art row 580 was not published
+  atomically after production`, and the special stage was visible through the
+  entry white-out.
+- Parity gap closed: `AbstractRunChainTest` is not the visual path. It builds
+  its own coordinator/driver loop beside `TraceSessionLauncher` and calls the
+  three-argument `TraceStructuralRowComparator.completePostProduction`, where
+  the visual adapter passes the row's observed-V-blank flag as a fourth. New
+  `VisualRunReplayHarness` (test scope) boots a run headlessly and enters the
+  production launcher through `finishRunLaunch` -- the same callback the
+  master-title fade hands to -- so everything after game bootstrap is
+  production code. Only the master-title screen is skipped, because fading
+  through it reaches `glCreateShader`, which aborts the JVM rather than
+  throwing. The harness also restores failure visibility: the launcher
+  deliberately contains replay failures (log + `TraceLaunchStatus`) so a
+  windowed session returns to the picker, which would otherwise read as a green
+  headless run.
+- Defect found and fixed: `TraceRunPlaybackCoordinator` had no rule for
+  admitting out of a presentation bridge into its own act's gameplay. Segments
+  2 and 3 of this run are one GHZ2 act split at the row gameplay resumes --
+  measured `loadGen=3` on both sides, so no level load and no boundary signal
+  separates them -- leaving `rememberedLevelLoad` null and the all-lag
+  continuation unreachable (the bridge measured 8 lagged rows of 800, against a
+  threshold of 799). The shared cursor ran past the destination offset until
+  `requireRowsConsumed` threw. Exact physical row plus level identity plus a
+  released title card are now the authority, matching both the rule that admits
+  the bridge itself and `AbstractRunChainTest`'s own handoff assertion
+  ("gameplay destination must open at its exact physical row").
+- Frontier now at GHZ2's first gameplay row after that handoff, and it is NOT
+  visual-only. The visual driver fails it with `dynamic-art row 0 was not
+  published atomically after production`; the headless chain
+  (`assertChainReplayThroughSegmentRow(RUN_DIR, 3, 1)`) fails the same boundary
+  with `advertised special-stage row 2894 was not published atomically for
+  generation 5`. Neither adapter had crossed it before, so no lane regressed.
+  `TestS1CompleteEmeraldVisualRun` is pinned at the handoff via
+  `VisualRunReplayHarness.stopAfterSegment(3)`; raise that target when the
+  frontier moves.
+- Evidence: `mvn -Dmse=off -Ptrace-replay -Dsonic1.rom.path=s1.gen
+  -Dtest=TestS1CompleteEmeraldVisualRun,TestS1CompleteEmeraldRunPrefix,TestTraceRunPlaybackCoordinator test`
+  — 22 tests, 0 failures, 0 errors, including two new coordinator cases for the
+  handoff rule and its title-card guard.
+  `TestS1GhzMazeRoundTripChain#ghzMazeSpecialStageReturnPresentationBridge`
+  remains green. `TestS2EhzHalfpipeRoundTripChain` is red, verified identical
+  on the unmodified coordinator.
+- Full default suite: 14,346 tests with the same 39-red set as the pre-change
+  run; nothing new, and the stale capture-queue assertion plus an
+  order-sensitive `TestBubblerObjectInstance` red cleared.
+
+## 2026-08-05 - Post-special-stage level load sits on the wrong side of the bridge
+
+- Continues the entry above. With the bridge-to-gameplay admission rule in
+  place, the visual driver clears the handoff and then the run pauses itself:
+  `TraceRunExternalDiagnostics` fires its first-error callback
+  (`GameLoop::toggleUserPause`), `stepInternalBody` returns at its paused gate
+  without a production iteration, and every later row reports
+  `dynamic-art row N was not published atomically after production
+  (serial 8747->8747, published=false, ... frame=-1)` -- nothing published
+  because nothing ran. The publication message now names which condition failed.
+- The error it paused on is `run_gap.edge_count expected 2, actual 0` (plus both
+  `run_gap.edge[N].present`). The manifest records Sonic's DPLC art load in the
+  gap after the bridge: `dynamic_art_gap_transitions` carries a
+  submitted/completed pair at `movie_logical_frame 9715`, owner `sonic`,
+  `mapping_frame 1`, ROM source `0x2260C` onward into VRAM `0xF000`.
+- Root cause: the ROM loads GHZ2 AFTER its 800-row special-stage results
+  screen, not before. The recorded bridge (`ghz2`, rows 8,705-9,504) holds
+  `Level_frame_counter` frozen at 0x1009 -- one past GHZ1's last recorded
+  0x1008 -- and segment 3 (`ghz2_2`, from 9,741) opens at 1, which only a fresh
+  `GM_Level` init produces. The engine instead loads in
+  `GameLoop.doExitResultsScreen` before the bridge is admitted, so its player
+  DPLC edges land outside the gap and it produces none there.
+- The bridge-admission rule forces that ordering today:
+  `destinationReady`'s presentation-bridge branch matches the destination
+  against the engine's LOADED level identity, so the engine must already be in
+  GHZ2 at row 8,705. The recorder labels the bridge GHZ2 from `v_zone_act`,
+  which the ROM advances at `Got_NextLevel` before the special stage while the
+  level data is still GHZ1's. Closing this needs bridge identity to key on the
+  pending/apparent zone-act rather than the loaded level, with the engine's
+  post-special-stage load moved into the gap -- a design change, not a patch,
+  and the next piece of work here.
+- `TestS1CompleteEmeraldVisualRun` is pinned at bridge admission
+  (`stopAfterSegment(2)`); the handoff rule itself is covered by two
+  `TestTraceRunPlaybackCoordinator` cases. The harness now fails on the
+  self-pause with the HUD mismatches attached rather than reporting a stall.
+- Evidence: `mvn -Dmse=off -Ptrace-replay -Dsonic1.rom.path=s1.gen
+  -Dtest=TestS1CompleteEmeraldVisualRun,TestS1CompleteEmeraldRunPrefix,TestTraceRunPlaybackCoordinator test`
+  — 24 tests, 0 failures, 0 errors. Full default suite: 14,346 tests with the
+  same 39-red set, no new failures.
+
+## 2026-08-05 - TestS1GhzMazeRoundTripChain hang, and the corrected return-load timing
+
+- `TestS1GhzMazeRoundTripChain#ghzMazeRoundTrip` did not fail slowly, it never
+  returned. `AbstractRunChainTest`'s terminal-tail drive looped
+  `while (playback.getCursorFrame() < tail.tailStart() + tail.rowsToReplay())`,
+  and `rowsToReplay` is `movieFrameCount - tailStart`, so the target IS the
+  frame count -- one past the last row a cursor can hold. Playback pins on its
+  last valid row and stops, so the condition can never go false. For this
+  fixture that is a wait for 9,093 against a cursor frozen at 9,092. The loop
+  now stops when the cursor stops advancing and asserts it stopped on the
+  movie's last row. The method runs in 3 seconds.
+- What it now reports is the same defect the complete run hits:
+  `run_tail.edge_count expected 2, actual 0`, the missing Sonic DPLC pair after
+  a special-stage return. Two independent S1 runs, one root cause.
+- CORRECTION to the entry above. The engine does not load GHZ2 before the
+  bridge; it loads it INSIDE the bridge, and the coordinator never forced that.
+  A `VisualRunReplayHarness` timeline of the complete run gives the engine's
+  actual sequence:
+  `8,705` bridge admitted (still SPECIAL_STAGE) - `8,773` SPECIAL_STAGE_RESULTS
+  - `9,264` load generation 2 -> 3 and TITLE_CARD - `9,367` LEVEL - `9,505`
+  bridge exhausted - `9,741` gameplay admitted.
+- So the ordering (results -> load -> title card -> level) is already right.
+  The load is ~451 rows EARLY: the ROM performs it at movie logical frame
+  ~9,715, inside the gap, while the engine performs it at 9,264, inside the
+  bridge, which is why its DPLC edges are never attributed to the gap. The
+  engine spends 559 rows between the special stage ending and the load
+  (68 in SPECIAL_STAGE, 491 in SPECIAL_STAGE_RESULTS); the ROM spends roughly
+  1,010. The next step is which of those two phases is short against the
+  disassembly -- a transition-timing port like the `Got_NextLevel` work above,
+  not an architecture change.
+- The harness now records a change timeline (mode, coordinator phase, segment,
+  level load generation) on `Result`, which is what produced the numbers above.
+
+## 2026-08-05 - The 451 rows are S1's SS-results PLC decompression wait
+
+- ROM budget from the special stage ending to the returning level's load, read
+  off `sonic.asm:3341-3425` and
+  "_incObj/7E, 7F Special Stage Results and Chaos Emeralds.asm":
+  `SS_FinLoop` 60 frames (`v_generictimer = 60`), then the SSResult object --
+  `SSR_ChkPLC` (routine 0) returning every frame until `v_plc_buffer` drains,
+  `SSR_Move` at 16px/frame, `SSR_Wait` 180, `SSR_RingBonus`, `SSR_Wait` 180 --
+  then `sfx_EnterSS` + `PaletteWhiteOut` 22.
+- `SSR_RingBonus` decrements `v_ringbonus` by 10 EVERY frame; the `andi.b #3`
+  gate is on the blip sound only, exactly like `Got_AddBonus`. This stage ends
+  with 37 rings (below `ss_continue_rings`, so no continue branch), giving
+  `v_ringbonus = 370` and a 37-frame tally.
+- Solving the recorded 800-row bridge:
+  `800 = 60 + ChkPLC + 36 + 180 + 37 + 180`, where 36 is the ring-bonus
+  element's slide (0x360 -> 0x120 at 16px). So `SSR_ChkPLC` is ~307 frames.
+  The engine's measured 491-row results phase against the same 433 frames of
+  timed work leaves ~58. The engine's PLC drains about 5x too fast.
+- Everything else already matches. `Sonic1SpecialStageResultsScreen` has the
+  right constants (180/180, 16px slide, decrement 10) and DOES model
+  `SSR_ChkPLC` via its `plcReadinessPassed` gate on `Sonic1PlcService.isBusy()`,
+  and `Sonic1SpecialStageProvider.onEnterResults` submits the right pair --
+  `replace(0)` for `plcid_Main` plus `append(27)` for `plcid_SSResult`,
+  matching the ROM's `NewPLC` + `AddPLC`.
+- So the remaining work is not the results screen or the transition ordering:
+  it is the S1 PLC queue's decompression RATE for that pair, measured against
+  `RunPLC`'s per-frame Nemesis budget. That is the last link between the engine
+  loading the returning level at cursor 9,264 and the ROM loading it at ~9,715,
+  and it is what leaves the recorded Sonic DPLC pair outside the gap in both
+  the complete run (`run_gap.edge_count` 2 vs 0) and the maze round trip
+  (`run_tail.edge_count` 2 vs 0).
+
+## 2026-08-05 - The return delay is three deltas, and the ring counts are hex
+
+- Correction to the entry above: the trace `rings` column is HEX. The complete
+  run's first special stage ends on `0037` = 55 rings and the maze round trip on
+  `0043` = 67, both at or above `ss_continue_rings` (50). So the results card
+  takes `SSR_RingBonus.finished`'s CONTINUE branch -- `1*60`, `SSR_Continue`,
+  `6*60` -- not the plain `3*60`. The earlier "37 rings, no continue" reading,
+  and the ~307-frame `SSR_ChkPLC` estimate built on it, were both wrong.
+- The corrected ROM model fits BOTH bridges with one shared constant:
+  `SS_FinLoop 60 + SSR_ChkPLC + slide 36 + 180 + rings + 60 + 360 = bridge`.
+  Complete run: `751 + ChkPLC + 55 = 800`. Maze: `751 + ChkPLC + 67 = 812`.
+  Both give `SSR_ChkPLC = 49`. `PaletteWhiteOut`'s 22 frames then fall in the
+  gap, putting the ROM's level load at ~9,527 for the complete run.
+- Measured engine, same decomposition:
+  `SS phase 68 + ChkPLC 18 + 36 + 180 + 55 + [no continue] + whiteout 22 = 599`,
+  load at cursor 9,264. Three deltas, worth 263 frames:
+  the missing continue branch (240), `SSR_ChkPLC` 18 vs 49 (31), and the
+  special-stage exit phase 68 vs 60 (-8).
+- Implementing the continue branch alone was tried and REVERTED. It moved the
+  load exactly as predicted, 9,264 -> 9,504, which is verified by the harness
+  timeline; but 9,504 is still the bridge's last row rather than the gap, so
+  `run_gap.edge_count` stayed 2 vs 0, and the remaining 23 frames matter. It
+  also broke `ghzMazeSpecialStageReturnPresentationBridge`, whose
+  "presentation bridge must hand off in LEVEL mode" assertion encodes the
+  engine's current early timing -- with ROM timing the engine is still in its
+  title card there, and the ROM itself is mid-`PaletteWhiteOut`. All three
+  deltas have to land together, and that assertion has to move with them.
+- Harness fix worth keeping: the stop-at-segment check now runs AFTER the pause
+  and stall checks. It ran first, so a target reached on the same step as the
+  self-pause reported success -- which is how the reverted change briefly looked
+  like it had fixed the boundary. Failures also carry the change timeline now.
+
+## 2026-08-05 - S1 special-stage return: load lands on the ROM's row
+
+- The aux stream settles the ROM's phase boundaries directly, replacing two
+  rounds of arithmetic fitted from bridge totals. The complete run's `ghz2`
+  bridge records: frame 0 Sonic and the level objects removed (`SS_Finish`),
+  frame 67 object `0x7E` in one slot (`SS_Finish` spawned the card, so
+  `SSR_ChkPLC` runs 67-84 = 18 frames), frame 85 four MORE `0x7E` elements --
+  five in total, which is `SSR_Loop`'s `addq.w #1,d1` continue tally and
+  independent proof of the continue branch -- and frame 121 object `0x7F`, the
+  emerald object `SSR_Move.reachedXTarget` spawns, giving a 36-frame slide.
+- The model then closes exactly, with no residual:
+  `67 + 18 + 36 + 180 + 55 + 60 + 1 + 360 + 22 = 799`, so `SSR_Exit` and
+  `PaletteWhiteOut` finish on the bridge's last row and the returning level
+  loads on the FIRST gap row. The engine's pre-fix 491-row results phase
+  decomposes as `18 + 36 + 180 + 55 + 180 + 22` — identical everywhere except
+  the exit wait.
+- Fix: `Sonic1SpecialStageResultsScreen` implements the continue branch --
+  `1*60`, a frame of its own for `SSR_Continue`, then `6*60`. 241 frames, not
+  the 240 first tried: `SSR_Continue` is a routine that owns a frame. Measured
+  by harness timeline, the complete run's load moves 9,264 -> 9,505 (the ROM's
+  row) and the maze round trip's to its bridge row 812.
+- `AbstractRunChainTest`'s "presentation bridge must hand off in LEVEL mode"
+  was corrected. A special-stage results bridge does not end in gameplay: the
+  ROM is mid-`PaletteWhiteOut` there and the returning level loads on the next
+  row. That assertion only held because the engine finished the whole card
+  early, which is the divergence this lane exists to catch.
+- REMAINING, single defect: the recorded gap carries two Sonic DPLC edges
+  (`movie_logical_frame 9715`, owner `sonic`, `mapping_frame 1`) that the
+  engine does not emit, so `run_gap.edge_count` is still 2 vs 0 (and
+  `run_tail.edge_count` in the maze). Root cause located:
+  `PlayableSpriteAnimation.update` is the only caller of
+  `DynamicArtDecisionOwner.prime`/`observe`, and the level body it runs in is
+  suppressed for the whole transition gap. The ROM emits its pair during the
+  post-title-card fade-in, which is engine-owned transition work rather than a
+  body tick. `TestS1CompleteEmeraldVisualRun` stays pinned at bridge admission
+  until that lands.
+
+## 2026-08-05 - Gap DPLC: the prelude runs, the pair still does not appear
+
+- Narrowing the remaining `run_gap.edge_count` 2 vs 0. The prime mechanism is
+  present and wired for this path: `GameLoop` calls
+  `InLevelTitleCardCoordinator.prepareResultsTransition` on the results return,
+  which runs `SpriteManager.warmUpFreshMainPlayableOnly` with
+  `Sonic1LevelInitProfile.freshMainPlayablePreludeFrames() == 1` and
+  `bootstrapDynamicArtPrime` set, so `PlayableSpriteAnimation.update` takes the
+  `DynamicArtDecisionOwner.prime` branch outside the suppressed level body.
+- Tried and REVERTED: having `prime` also call `completePlayerDplc` for S1, on
+  the reasoning that the ROM's prelude pass is a real V_int whose
+  ProcessDMAQueue performs the transfer it queued, so the recorder sees a
+  submitted AND a completed edge while `prime` only submits. It changed
+  nothing measurable and its premise is unverified, so it was not kept.
+- Note for whoever picks this up: the harness's `art=serial` field cannot
+  answer this. `deliverySerial` advances only in `publishRow`, which needs an
+  open comparison segment, and the window is closed for the whole gap. Gap
+  edges live in a separate ledger (`DynamicArtLifecycleService.gapTransitions`,
+  compared by `TraceRunDynamicArtGapJournal`). The next step is to instrument
+  that ledger across the boundary rather than the publication serial, and
+  establish whether the prelude submits into it at all.
+
+## 2026-08-05 - Gap DPLC: why the prelude emits nothing, measured
+
+- `DynamicArtLifecycleService.buffer` routes an edge to `gapTransitions`
+  whenever `comparisonSegmentOpen` is false, so anything the prelude submits
+  during a transition gap WOULD reach the ledger the journal compares. It
+  submits nothing: `primePlayerDplc` records `lastMappingFrames` and returns
+  `ArtUpdate(true, -1, requests)` without ever calling `buffer`, and
+  `completePlayerDplc` returns immediately for S1. That is also why adding a
+  `completePlayerDplc` call to the prime branch changed nothing -- it is a
+  no-op for S1 by construction.
+- Experiment (reverted): giving the prelude `observe` semantics instead of
+  `prime` DOES produce gap edges. `run_gap.edge_count` 2 vs 0 becomes
+  `run_gap.edge[1].gap_edge_index` rom 1 vs engine 3 -- the engine emits FOUR
+  edges into that gap and the expected pair lands at indices 2 and 3 instead of
+  0 and 1. Scoping the change to the results-return prelude alone
+  (leaving `TraceReplaySessionBootstrap`'s call priming) gives the same 4, so
+  the two extra edges are not the initial bootstrap leaking; something emits a
+  pair into that gap ahead of the prelude.
+- Note the comparison frame is 8748, the SS-to-bridge destination opening, not
+  the bridge-to-gameplay gap the 9,715 manifest pair sits in. Establish which
+  gap each recorded pair belongs to before attributing the extra edges.
+- Next step is therefore to identify the two edges the engine already emits
+  into that gap, not to add more emission. Reverted rather than left in tree:
+  it makes nothing green and its extra pair is unexplained.
+
+## 2026-08-05 - Gap DPLC now emits with matching identity; one field left
+
+- Dumping `DynamicArtLifecycleService.gapTransitions` directly settled it. With
+  the results-return prelude observing instead of priming, the engine's ledger
+  holds exactly the recorder's edges: ordinals 0/1 and 4964/4965, transfer ids
+  0 and 2482, owner `sonic`, mapping frame 1 -- identical to the manifest's
+  `dynamic_art_gap_transitions`. That identity match is what justifies the
+  change: the ROM's prelude pass is a real `BuildSprites` whose DPLC the
+  recorder captures, and `primePlayerDplc` never calls `buffer` at all, so the
+  prime branch could not produce it.
+- Second fix from the same dump: the recorder numbers each transition gap's
+  edges from zero (both recorded pairs carry `gap_edge_index` 0 and 1) while
+  `nextGapEdgeIndex` only reset at run start, reporting the second gap's pair
+  as 2 and 3. It now resets in `closeComparisonSegment`, which is where a gap
+  begins.
+- `run_gap` is down from three mismatched fields to ONE:
+  `movie_logical_frame`, 8,748 against the recorded 9,715. Two causes, both
+  identified: the prelude runs at the START of the title card while the ROM's
+  equivalent pass is the one immediately before `Level_MainLoop`
+  (`Sonic1LevelInitProfile.freshMainPlayablePreludeFrames`'s own comment says
+  so), and the counter advances per production iteration rather than per movie
+  row, so it loses ground across every suppressed gap. Moving the prelude to
+  the title card's end and making the counter track movie rows are the two
+  remaining steps.
+- The maze round trip moved the same way, from `run_tail.edge_count` 2 vs 0 to
+  an identity mismatch: `edge_ordinal` 4710 vs 4698 and `transfer_id` 2355 vs
+  2349, six extra player transfers accumulated earlier in that run. That is
+  downstream of the lane's long-standing `player_animation_id` divergence at
+  GHZ1 frame 2,082, not of this change; `ghzMazeRoundTrip` was already red.
+- Full suite unchanged at 39 attributable reds. The two that appeared are
+  `TestBubblerObjectInstance` and `TestMhzMushroomParachuteObjectInstance`,
+  both green in isolation -- the known order-sensitive fork flakes.
+
+## 2026-08-05 - The last field decomposes into three exact causes
+
+- `run_gap.edge[N].movie_logical_frame` is 8,748 against the recorded 9,715.
+  The 967 difference is not one bug. Solving both recorded data points against
+  the engine's values -- (834, 104) for the initial pair and (9,715, 8,748) for
+  the return -- and against the engine's own load row of BK2 9,505:
+  - **730 -- counter origin.** `movieLogicalFrame` resets to 0 in
+    `resetState`, so it counts from the run's dynamic-art start rather than
+    from movie frame 0, where the recorder counts. At the initial pair the
+    engine reads 104 for a recorded 834.
+  - **27 -- counter stall.** It advances only in `finishProductionIteration`,
+    which `PlcFrameLifecycleCoordinator` calls only when the frame had an
+    owner, so it does not move on rows whose level body was suppressed. Across
+    this route that costs 27 rows by the return; it grows with every
+    suppressed row a longer run accumulates.
+  - **210 -- prelude placement.** The engine's prelude runs at BK2 9,505, the
+    start of the title card. The ROM's equivalent pass is the one immediately
+    before `Level_MainLoop` (see `Sonic1LevelInitProfile
+    .freshMainPlayablePreludeFrames`'s own comment), 210 rows later. The
+    engine's title card also spans 9,505-9,607, 103 rows against the ROM's 236
+    from load to gameplay, so the placement fix needs the duration with it.
+  - 730 + 27 + 210 = 967, the observed difference exactly.
+- Order matters when fixing these: the counter changes are shared with the
+  headless chain and the recording driver, so `movieLogicalFrame`'s contract
+  ("movie row" versus "production iterations since run start") should be
+  settled against the native recorder's own definition first, not inferred
+  from these two data points alone.
+
+## 2026-08-05 - Gap DPLC: contract settled from the recorder, two causes closed
+
+- The `movie_logical_frame` contract is now settled from the recorder rather
+  than inferred. `S1RunCaptureRunner`'s `rowsConsumed` counts EVERY BK2 movie
+  row from zero (lines 199-215) and `S1DynamicArtObserver`:483 replaces a gap
+  edge's frame with it, so a gap edge carries the physical movie row. The
+  lifecycle counted production iterations instead, losing a row for every
+  suppressed one. `DynamicArtLifecycleService.setMovieLogicalFrame` now takes
+  it, and `TraceSessionLauncher.preparePhysicalRow` states the row the driver
+  already holds.
+- The same read corrected the gap-edge index: the recorder keys its counter on
+  a dictionary of LOGICAL FRAME
+  (`S1DynamicArtObserver`:247-252), not on the gap. Two edges sharing a frame
+  are 0 and 1 while a later frame in the same gap restarts at 0. The per-gap
+  reset committed earlier gave the same answer only because each of these gaps
+  holds a single pair; it is now keyed per frame like the recorder.
+- Result: `run_gap.edge[N].movie_logical_frame` moves 8,748 -> 9,505 against a
+  recorded 9,715. Of the 967-frame decomposition recorded above, the 730-frame
+  origin and the 27-frame stall are both closed. The residual is exactly the
+  210-frame prelude placement.
+- SOLE REMAINING CAUSE: the engine runs the fresh-player prelude at the level
+  load (BK2 9,505) while the ROM runs its equivalent pass immediately before
+  `Level_MainLoop` (BK2 9,715), after a title card the engine finishes 107 rows
+  early -- engine 9,505-9,607 against the ROM's 9,505-9,741 load-to-gameplay
+  window, with the ROM's 26-frame `PaletteFadeIn` between its prelude and the
+  main loop. Moving the prelude to the title card's end needs that duration
+  with it, or it merely lands 108 rows early instead of 210.
+
+## 2026-08-05 - The last 210 frames are architectural, not a constant
+
+- `Level_TtlCardLoop` (sonic.asm:2814-2842) exits on TWO conditions, and its
+  own comment states them: "move in title cards, stay on them until PLCs have
+  finished". Every card element must have reached its target AND
+  `v_plc_buffer` must be empty. The ROM's title card is therefore as long as
+  the level art takes to decompress -- it is NOT a constant, so porting 210 as
+  a duration would have been another fitted number.
+- Adding that PLC condition to `Sonic1TitleCardManager.updateSlideIn` was tried
+  and reverted: it is a no-op. The engine's title card still spans BK2
+  9,505-9,607 because the engine decompresses level art synchronously during
+  the load, so its queue is already drained when the card starts. The ROM
+  spends 236 rows between load and gameplay; the engine spends 103.
+- So the residual 210 needs two things that are architectural rather than
+  numeric:
+  1. the returning level's art to load THROUGH the timed PLC queue across the
+     title card, as `Level_TtlCardLoop` does, instead of synchronously at the
+     load; and
+  2. the fresh-player prelude to move from the card's start
+     (`InLevelTitleCardCoordinator.prepareResultsTransition`) to the point the
+     ROM runs it, immediately before `Level_MainLoop` -- 26 rows before
+     gameplay, after the card and before `PaletteFadeIn`.
+  Lengthening the card alone does not move the prelude, and moving the prelude
+  alone lands it 108 rows early instead of 210. Neither is a constant to tune.
+- Everything else in this defect is closed. The gap pair is emitted with
+  matching ordinals, transfer ids, mapping frame, owner and per-frame gap
+  index, and `movie_logical_frame` now carries the physical movie row.
+
+- Follow-up attempt, also reverted: moving the fresh-player prelude from
+  `InLevelTitleCardCoordinator.prepareResultsTransition` to the
+  `returningFromSpecialStage` branch of the title-card exit made things WORSE,
+  not better -- `run_gap` went from 2 mismatched fields to 3, with
+  `edge[1].present` false. The pair stops completing when the prelude runs
+  there, so the completed edge does not come from `completePlayerDplc` (a no-op
+  for S1) but from a later boundary that the card's exit position misses.
+  Establish where the S1 completion edge is actually raised before moving the
+  prelude again; the move is necessary but not sufficient on its own.
+
+- Concrete lead for the next attempt, found while chasing the missing
+  completion edge: `DynamicArtDecisionOwner.observe` calls
+  `lifecycle.completePlayerDplc(...)` guarded by `if (gameId == GameId.S1)`,
+  while `DynamicArtLifecycleService.completePlayerDplc` opens with
+  `if (gameId == GameId.S1 || !update.submitted()) return;`. The call is dead
+  as written -- one of the two guards is inverted. S1's completed edges
+  therefore come from somewhere else, and identifying that path is the
+  prerequisite for moving the prelude without losing the pair. `completeApplied`
+  has no callers outside the service, which narrows where to look.
+
+- ANSWERED: S1's player DPLC pair is raised by `serviceProductionVBlank`, not
+  by the observe call. `observePlayerDplc` routes S1 to `prepareS1`, which only
+  stores a pending `s1Preparation`; the next `serviceProductionVBlank` turns it
+  into the submitted edge (and its completion), stamping the origin
+  `comparisonSegmentOpen ? "segment" : "run_gap"` at THAT moment. So the
+  `completePlayerDplc` call in `DynamicArtDecisionOwner.observe` is vestigial
+  for S1, and the recorded gap pair's frame is the frame of the VBlank that
+  flushed the preparation -- not the frame the prelude ran on.
+- That explains the reverted prelude move directly: running the prelude at the
+  title card's exit left its preparation to be flushed by a VBlank after the
+  window had reopened, so the pair was stamped `segment` instead of `run_gap`
+  and vanished from the gap ledger. It also means the 210-frame target is
+  reached by controlling WHICH VBlank flushes the preparation, not by moving
+  the prelude alone.
+
+## 2026-08-05 - Gap DPLC: 151 of the 210 rows closed; the last 59 are load time
+
+- Command: `mvn -Dmse=off -Ptrace-replay -Dtest=TestS1CompleteEmeraldVisualRun
+  -Dsonic1.rom.path=s1.gen test` with the pin raised to `stopAfterSegment(3)`.
+  Still red on `run_gap.edge[0..1].movie_logical_frame`, but the delta fell
+  210 -> 59 (recorded 9,715 vs engine 9,505 before, 9,656 after), with the
+  pair's identity — ordinals 4964/4965, transfer id 2482, owner, mapping
+  frame, per-frame gap index — intact and the initial pair unchanged at 860.
+  The pin stays at 2.
+- Four causes measured, three closed:
+  1. **The SS-return reload force-drained its own PLC queue.** The 1,292
+     queued patterns (GHZ primary + `plcid_Main2`) were drained synchronously
+     inside `loadCurrentLevel` because `requestTitleCardIfNeeded`'s headless
+     branch modelled an omitted presentation while GameLoop then presented a
+     real card. That is why the reverted `updateSlideIn` busy-gate was a
+     no-op: the queue was already empty when the card started. The reload now
+     requests the card even headless via a caller-owned results-return flag
+     mirroring `isBonusStageReturn()`.
+  2. **The exit body ran one iteration early.** The whiteout fade's
+     completion callback fired inside the production iteration of the
+     bridge's LAST recorded row, so the reload's `ClearPLC`/`AddPLC` polluted
+     that row's published queue snapshot (rom empty vs engine 15
+     fingerprints) once cause 1 was fixed. The ROM's GM loop only falls
+     through to `GM_Level` on the frame AFTER `PaletteWhiteOut`'s final
+     `WaitForVBla`. `GameLoop` now latches the completion and runs
+     `doExitResultsScreen` on the next `updateSpecialStageResultsMode`
+     iteration; the load lands on the first gap row (9,505), where the ROM
+     loads.
+  3. **The card released on a timer instead of the PLC drain.**
+     `Sonic1TitleCardManager.updateDisplay` now also requires
+     `!Sonic1PlcService.isBusy()`, modelling `Level_TtlCardLoop`
+     (sonic.asm:2814-2842). With the queue alive the card grew 103 -> 151
+     rows, all drain-time, no constant.
+  4. **The pair was flushed by the card's first V-blank.** The card-start
+     `warmUpFreshMainPlayableOnly` in `prepareResultsTransition` is removed —
+     the ROM's pass is `Level_StartGame`'s, which the release path already
+     runs via `shouldRunPlayerPreludeAtRelease` — and
+     `completeInitialTitleCardPresentation` now flushes a pending S1
+     preparation at that boundary
+     (`DynamicArtLifecycleService.flushPendingPlayerPreparationAtPresentationBoundary`),
+     modelling the pre-fade V-int that performs the `f_sonframechg` transfer.
+     The pair is stamped with the release row.
+- REMAINING 59 rows, decomposed against the disassembly: 22 are `GM_Level`'s
+  own `PaletteFadeOut` (sonic.asm:2710-2737), which runs BEFORE `AddPLC`, so
+  the ROM's drain starts 22 rows after the load while the engine queues at
+  the load itself; the other ~37 are real hardware load time — `NemDec` of
+  `Nem_TitleCard` under `disable_ints`, `Hud_Base`, the level-data KosDec
+  after the drain, and VDP-FIFO-degraded 9-tile V-blank service. Neither is a
+  number to port: the 22 needs the PLC submission sequenced after a modelled
+  fade-out, and the ~37 needs this run re-recorded with the v5
+  hardware-timing stream — noting `TestS1S2PlcComparisonOnlyGuard.
+  timingKindRegistryAdmitsOnlyKosinskiWork` currently admits only S3K
+  Kosinski kinds, so extending timing authority to the S1 PLC pipeline is a
+  contract change to make deliberately, not a patch.
+- Verification: `TestS1CompleteEmeraldVisualRun` (pin 2),
+  `TestS1CompleteEmeraldRunPrefix`, `TestTraceRunPlaybackCoordinator` green.
+  `TestS1GhzMazeRoundTripChain.ghzMazeRoundTrip` still red on its upstream
+  GHZ1 frame-2,082 `player_animation_id` (unchanged first error); its
+  presentation-bridge test green. S1 `*TraceReplay` fleet: 27/30 green; the 3
+  reds (`Sbz3CompleteRun`, `Credits03Lz3`, `FzCompleteRun`) reproduce
+  identically on the unmodified tree. `TestS2EhzHalfpipeRoundTripChain` and
+  `TestS3kMegaRunChain` fail with byte-identical messages on the unmodified
+  tree (SS-exit rows remaining / manifest capability), so nothing leaked out
+  of the S1 owners through the shared results-exit deferral. Full default
+  suite: 14,344 tests, 41 red = the 39-red baseline (each failing class
+  reproduces with the same failing test names on the unmodified tree,
+  including `TestGameLoop`'s two and the already-over-budget large-class
+  ratchet) + the `TestMhzMushroomParachuteObjectInstance` order flake +
+  `TestInLevelTitleCardCoordinator`, updated to the new
+  prelude-at-release contract.
+
+## 2026-08-05 - Gap DPLC: GM_Level's pre-queue PaletteFadeOut closes 22 of the last 59
+
+- Command: `mvn -Dmse=off -Ptrace-replay -Dtest=TestS1CompleteEmeraldVisualRun
+  -Dsonic1.rom.path=s1.gen test` with the pin temporarily at
+  `stopAfterSegment(3)`. Still red on the single remaining field,
+  `run_gap.edge[0..1].movie_logical_frame` at comparison frame 9,504, but the
+  delta fell 59 -> 37: recorded 9,715 against the engine's release row 9,656
+  before, 9,678 after. The initial gap pair is unchanged at 860, gameplay
+  admission unchanged at 9,741, and the pair's identity (ordinals 4964/4965,
+  transfer id 2482, owner `sonic`, mapping frame 1, per-frame gap index)
+  intact. The pin stays at 2.
+- The previous entry's 22-row attribution was re-verified against the
+  disassembly before implementing, given this lane's two earlier wrong
+  attributions. It holds: `GM_Level` runs `ClearPLC` then `PaletteFadeOut`
+  BEFORE the `Nem_TitleCard` NemDec and both `AddPLC` calls
+  (sonic.asm:2710-2737), and `PaletteFadeOut` is an unconditional
+  `move.w #22-1,d4` loop of 22 `WaitForVBlank` frames whose per-frame `RunPLC`
+  only ever sees the just-cleared queue
+  (docs/s1disasm/_inc/Palette Fading.asm:134-149). The returning level's
+  drain therefore starts 22 rows after the game-mode handoff, while the
+  engine queued and started draining at the handoff itself.
+- Fix: `LevelInitProfile.preLevelFadeOutFrames()` (default 0; S1 overrides
+  with the cited 22) and `GameLoop.updateSpecialStageResultsMode` holds the
+  latched exit body for that many iterations before running
+  `doExitResultsScreen`, keeping the per-iteration `prepareAfterLoop` (the
+  fade loop's `RunPLC`) on each held row. Measured by harness timeline: the
+  load moves to 9,528 with the 22 fade rows at 9,506-9,527, the card spans
+  9,528-9,678, and the release-row prelude stamps the pair at 9,678. S2/S3K
+  keep their default 0 — their return fades have not been verified against
+  their disassemblies, and their results exits are byte-identical with the
+  default.
+- REMAINING ~37 rows: real hardware load time (NemDec of `Nem_TitleCard`
+  under `disable_ints`, `Hud_Base`, level-data KosDec, FIFO-degraded V-blank
+  service), which needs this run re-recorded with the v5 hardware-timing
+  stream — this fixture has no `hardware_timing` file and its metadata
+  advertises no timing extras. Out of scope here; also note the timing-kind
+  registry currently admits only S3K Kosinski kinds, so S1 PLC timing
+  authority is a deliberate contract change.
+
+## 2026-08-05 - Gap DPLC: the ~37-row "hardware load time" attribution is REFUTED
+
+- Command: `mvn -Dmse=off -Ptrace-replay -Dtest=TestS1CompleteEmeraldVisualRun
+  -Dsonic1.rom.path=s1.gen test` on unmodified `develop` @ 41150328e, pin
+  temporarily at `stopAfterSegment(3)`. Reproduced: 2 errors, both
+  `run_gap.edge[0..1].movie_logical_frame` at comparison frame 9,504, recorded
+  9,715 vs engine 9,678, delta 37. Pin reverted to 2 and re-verified green.
+- **The attribution is wrong. The 37 rows are not elapsed hardware cost and
+  need no recorded timing stream — they are a flush-placement error, and the
+  correct placement is fully frame-counted in the listing.**
+- The decisive evidence is in the fixture itself: `run_manifest.json` carries a
+  `run_gap` DPLC pair for EVERY level load in the run, and all 22 of them sit
+  at exactly `segment bk2_frame_offset - 26`: 834/860 (ghz1), 9,715/9,741
+  (ghz2_2), 18,693/18,719, 27,441/27,467, 31,060/31,086, 43,052/43,078,
+  47,008/47,034, 66,578/66,604, 78,140/78,166, 93,799/93,825, 107,115/107,141,
+  119,404/119,430, 123,016/123,042, 139,527/139,553, 148,384/148,410,
+  161,333/161,359, 166,813/166,839, 171,338/171,364, 181,043/181,069,
+  189,439/189,465, 202,106/202,132, 209,046/209,072. GHZ, MZ, SYZ, LZ, SLZ and
+  SBZ have wildly different art payloads, PLC list sizes and Nem/Kos
+  decompression costs; hardware decode time cannot produce a zone-invariant
+  constant. (SBZ1/SBZ2 also show one EXTRA earlier pair each, at -219/-220 —
+  post-signpost tally-walk DPLCs; those loads' own load pairs are still
+  exactly -26.)
+- The 26 is two counted loops, not a fitted number: `Level_Delay` runs exactly
+  4 VBlank frames (`move.w #4-1,d1`, docs/s1disasm/sonic.asm:2957-2963) and
+  `PalFadeIn_Alt` exactly 22 (`move.w #22-1,d4`,
+  docs/s1disasm/_inc/Palette Fading.asm:32-51, called at sonic.asm:2966).
+  4 + 22 = 26. (Earlier entries called this "the ROM's 26-frame
+  PaletteFadeIn" — the fade is 22; the other 4 are Level_Delay.)
+- Why the pair is pinned there regardless of load time: every un-counted load
+  step — `Hud_Base` (sonic.asm:2857), `LevelDataLoad` / `LoadTilesFromStart`
+  (2865-2866), collision/water init — runs BEFORE Sonic's first
+  `ExecuteObjects` at `Level_LoadObj` (2895+). That pass stages his tiles and
+  sets `f_sonframechg` (docs/s1disasm/_incObj/01 Sonic.asm:2410), and there is
+  no `WaitForVBlank` between that pass and the delay loop, so the transfer
+  V-int (the level VBlank's `v_sgfx_buffer` write, sonic.asm:832-836) is
+  always the FIRST `Level_Delay` frame: main-loop admission minus 26, for
+  every zone.
+- The old attribution's pieces, individually: the `Nem_TitleCard` NemDec under
+  `disable_ints` (sonic.asm:2718-2723) runs at `GM_Level` entry, BEFORE the
+  card is even displayed — the wrong end of the sequence, inside the
+  already-modelled fade-out/card window. `Hud_Base` and the level-data
+  decompression do sit in the un-counted span after the card's PLC drain, but
+  the pair does not sit in that span — it sits after it, at a counted distance
+  from admission. The FIFO-degraded drain rate shapes the card's own length,
+  and no compared field observes the ROM's release row.
+- The engine agrees on totals: its gameplay admission already lands on the
+  recorded 9,741 (harness timeline step 8985), so no rows are missing
+  anywhere — only the stamp is misplaced.
+  `LevelManager.completeInitialTitleCardPresentation` (src/main/java/com/
+  openggf/level/LevelManager.java:2931-2949) flushes the pending S1
+  preparation at the card's RELEASE row (9,678);
+  `DynamicArtLifecycleService.flushPendingPlayerPreparationAtPresentationBoundary`'s
+  own Javadoc (DynamicArtLifecycleService.java:612-626) already names the
+  correct V-int — "the pre-fade VBla delay / first PaletteFadeIn frame". The
+  same defect is latent at the initial load: the engine's ledger stamps the
+  first pair at 860 (the admission row) against the recorded 834 = 860 - 26;
+  it simply is not compared today.
+- **RECOMMENDATION: DERIVE.** Model the 26-frame pre-admission tail (4-frame
+  `Level_Delay` + 22-frame `PalFadeIn_Alt`) as a counted `LevelInitProfile`
+  value alongside the existing 22-frame `preLevelFadeOutFrames()`, and flush
+  the pending S1 preparation on the tail's first frame — 26 rows before
+  main-loop admission — instead of at title-card release. Expected movement:
+  return pair 9,678 -> 9,715 (field goes green), latent initial pair 860 ->
+  834. Nothing here needs the v5 hardware-timing stream: the only genuinely
+  un-counted elapsed work (the card-exit-to-`Level_Delay` load span, the ~37
+  rows of Hud_Base/level-data time in this recording) is observed by NO
+  compared field — its right edge is pinned by the counted 26 and its left by
+  the modelled PLC drain. Do not start the S1 timing-capture /
+  timing-authority contract change on this defect's account.
+  `TestS1CompleteEmeraldVisualRun`'s Javadoc still carries the refuted
+  attribution; correct it when the fix lands.
+
+## 2026-08-05 - Gap DPLC: the counted pre-main-loop tail closes the last 37 rows
+
+- Command: `mvn -Dmse=off -Ptrace-replay -Dtest=TestS1CompleteEmeraldVisualRun
+  -Dsonic1.rom.path=s1.gen test`, pin raised to `stopAfterSegment(3)`. **PASS**
+  — the pin stays at 3. Before: 2 errors,
+  `run_gap.edge[0..1].movie_logical_frame` at comparison frame 9,504, recorded
+  9,715 vs engine 9,678, delta 37. After: no errors; the pair keeps its
+  identity (ordinals 4964/4965, transfer id 2482, owner `sonic`, mapping frame
+  1, per-frame gap index) and gameplay admission stays on 9,741.
+- The previous entry's DERIVE recommendation was implemented as written and it
+  holds. The latent initial-load defect moved with it, unprompted by any
+  comparison: the GHZ1 load's pair goes 860 -> **834**, exactly the recorded
+  value (`run_manifest.json` segment 0, `bk2_frame_offset` 860 minus the
+  counted 26). One model, both loads, no per-load constant.
+- Fix, in three pieces:
+  1. `LevelInitProfile.preLevelMainLoopDelayFrames()` (default 0; S1 overrides
+     with `4 + 22`) — `Level_Delay`'s `move.w #4-1,d1` loop
+     (docs/s1disasm/sonic.asm:2957-2963) plus the `PalFadeIn_Alt` call after it
+     (sonic.asm:2966, `move.w #22-1,d4`,
+     docs/s1disasm/_inc/Palette Fading.asm:32-51). Re-read against the listing
+     before implementing: nothing between `Level_LoadObj`'s `ExecuteObjects`
+     (sonic.asm:2895-2897) and `Level_DelayLoop` waits for a V-blank, and
+     nothing between the fade and `Level_MainLoop` does either.
+  2. `DynamicArtLifecycleService` holds a staged S1 preparation for that tail
+     instead of flushing it at the presentation boundary, and settles it
+     against the level's first main-loop row. The run announces that row when
+     it admits a level destination — the shared movie clock still reads the
+     gap's last row there, so the transfer's row is
+     `movieLogicalFrame + 1 - tailRows`. `LevelManager` arms the hold at the
+     PLC boundary and `PostTitleCardDestination` re-arms it at the release, so
+     a load whose boundary was already reached (the run's first level) still
+     assigns its prelude's transfer to the tail.
+  3. A run that ends before any level reaches its main loop can never measure
+     the tail back from it, so `releaseUnclaimedPreMainLoopPlayerTransfer()`
+     settles the hold at the tail's earliest legal row — the row after the
+     prelude staged it — from the launcher's terminal-tail comparison and the
+     chain harness's equivalent.
+- Two measurements decided the placement, both cheap and both worth repeating
+  before touching this area: (a) removing the boundary flush entirely makes the
+  return pair vanish from the gap ledger, proving the transition-gap rows never
+  service a production V-blank and that the gap ledger is compared at admission
+  *before* the admitted row's body runs; (b) settling unconditionally at
+  admission invented a spurious pair at the special-stage gap (8,704), so the
+  settle acts only on an explicitly held tail.
+- Verification: `TestS1CompleteEmeraldVisualRun` (pin 3),
+  `TestS1CompleteEmeraldRunPrefix`, `TestTraceRunPlaybackCoordinator`,
+  `TestInLevelTitleCardCoordinator`,
+  `TestLevelManagerInitialPresentationPlcLifecycle` green.
+  `TestS1GhzMazeRoundTripChain.ghzMazeRoundTrip` stays red at the same
+  assertion on the same 8 `run_tail` fields as the unmodified tree, with its
+  `movie_logical_frame` 8,261 against 8,260 before (recorded 9,071 — that
+  bridge's own defect is unrelated and unchanged in kind); its
+  presentation-bridge test is green. S1 `*TraceReplay` fleet: 27/30 green, the
+  same 3 reds (`Sbz3CompleteRun`, `Credits03Lz3`, `FzCompleteRun`). S2/S3K
+  fleets unchanged against the unmodified tree (`TestS2Mtz2LevelSelect` /
+  `TestS2Mtz3LevelSelect` fail on `tails_cpu_ctrl2_pressed` at the same
+  frames, 1,969 and 8,042, with and without the change). Full default suite:
+  14,343 tests, 39 red against the unmodified tree's 45 in the same
+  environment; every test in the symmetric difference is an ordering flake
+  that reproduces or passes identically on the unmodified tree in isolation
+  (`TestDisplayAspectResolution`'s 4 fail on both trees standalone;
+  `TestTraceSessionLauncherRunBranch`'s 4 pass on both). The touched
+  guard classes — `TestGameLoop`, `TestArchUnitRules`,
+  `TestArchitecturalSourceGuard`,
+  `TestTraceSessionLauncherProductionFailureCleanup` — fail with
+  byte-identical messages on the unmodified tree; the already-over-budget
+  `LevelManager` ratchet moves 2,510 -> 2,511 effective lines.
+- No hardware-timing capture is needed for this defect and none was added. The
+  un-timed load span between the card's drain and the tail is observed by no
+  compared field: its right edge is pinned by the counted 26 and its left by
+  the modelled PLC drain.
+
+## 2026-08-05 - Durable homes for this lane's reusable facts
+
+- The reusable contracts and traps this lane established have been moved out of
+  this chronological log, which is the wrong place to find them:
+  - `plc-system` skill, "Dynamic-Art Reports and Routing" — the recorder-defined
+    `run_gap` field contracts (`movie_logical_frame` is the physical BK2 movie
+    row; `gap_edge_index` resets per logical frame), the S1
+    `segment_start - 26` load-pair invariant with its `Level_Delay` +
+    `PalFadeIn_Alt` derivation and the manifest query that verifies it, and the
+    S3K-only scope of hardware-timing capture.
+  - `trace-replay-bug-fixing` skill — physics.csv columns are hex (`rings`
+    included), the `art=serial`/gap-ledger trap, the destination-admission
+    ordering of the gap comparison, `VisualRunReplayHarness` versus
+    `AbstractRunChainTest`, and the derive-before-recording method note.
+  - `docs/status/known-discrepancies.md`, "Hardware-Timing Replay Input
+    Exception" — a "Recorder coverage: S3K only" subsection, since the
+    contract's cross-game wording describes what is permitted, not what the
+    recorder implements.
+
+## 2026-08-05 - Gap DPLC lane: the held iteration's RunPLC belongs to the lag closure
+
+- Command: `mvn -Dmse=off -Ptrace-replay -Dtest=TestS1CompleteEmeraldVisualRun
+  -Dsonic1.rom.path=s1.gen test`, with the pin temporarily raised to
+  `stopAfterSegment(4)` to reach the defect (the committed pin at
+  `stopAfterSegment(3)` stops the instant segment 3 is *admitted*, at harness
+  step 8,985, and never enters the act body — which is why it was green while
+  the windowed session was not).
+- Before: **3 errors**, all at comparison frame **107** of segment 3
+  (returned GHZ2, BK2 9,741 + 107 = 9,848, harness step 9,093), then the
+  documented self-pause cascade abort at row 108
+  (`dynamic-art row 108 was not published atomically after production`):
+  - `queue.s1_nemesis_plc.prepared` expected `false`, actual `true`
+  - `queue.s1_nemesis_plc.remaining_work` expected `-1`, actual `14`
+  - `queue.s1_nemesis_plc.queued_fingerprints` expected
+    `e21297d4…f910e444`, actual empty
+- After: **0 errors through the whole of segment 3**. The act replays all 3,606
+  of its rows and the run walks on through the following transition gap; the
+  new first failure is a different, unrelated frontier — `transition step cap
+  17111 exceeded for giant_ring from segment 3 at BK2 cursor 30458`, i.e. the
+  segment-3 -> segment-4 giant-ring boundary is never latched. **The pin
+  therefore stays at 3**, because the pin measures the segment index admitted
+  and segment 4 still is not; the frontier moved *inside* segment 3, from row
+  107 to its terminal row 3,605.
+- Root cause, and the evidence that fixed the attribution. The fixture makes
+  the ROM's cadence unambiguous: on every ordinary row the level V-blank
+  services 3 patterns and the loop tail's `RunPLC` arms the next head, both
+  visible in the same sample (e.g. ghz2_2 rows 100 -> 101: `rem=3` on the last
+  entry, then `rem=18` on the next entry unserviced; ghz2 rows 80 -> 81 the
+  same). Row 107 is the one row in the entire run where the completion and the
+  arming split across two rows — and row 108 is a **lag** row
+  (`lag_state.lagged=true`, `lagcount` 471 -> 472; `gameplay_frame_counter`
+  holds at `0x006C` while `vblank_counter` goes `0x2531` -> `0x2532`).
+- The disassembly explains why that split is deterministic, not luck.
+  `Level_MainLoop` re-arms `v_vblank_routine` at its top
+  (docs/s1disasm/sonic.asm:3000) and bumps `v_framecount` in the instruction
+  after `WaitForVBlank` returns (3001-3002), so a V-blank taken with the
+  gameplay counter unchanged is `VBlank_Lag` (sonic.asm:709) fired *inside* the
+  previous row's iteration. `RunPLC` (3032) sits behind every expensive call in
+  that iteration — `ExecuteObjects` (3010), `DeformLayers` (3025),
+  `BuildSprites` (3028), `ObjPosLoad` (3029), `PaletteCycle` (3031) — and only
+  `OscillateNumDo`, `SynchroAnimate` and `SignpostArtLoad` (3033-3035) separate
+  it from the re-arm at 3000. An iteration that had already reached `RunPLC`
+  would have re-armed the routine within a few hundred cycles, so the V-blank
+  that fired would not have been a lag one. The ROM's `RunPLC` for a held
+  iteration therefore runs on the closure that consumes the lag V-blank.
+  `RunPLC`'s own `tst.w (v_plc_patternsleft).w` gate (sonic.asm:1381-1382) and
+  `ProcessPLC_ShiftCue` (sonic.asm:1494+) are unchanged by this — the shift
+  still happens in the V-blank that finishes the entry; only the arming moves.
+- Fixture-wide check before implementing, because the observation is a single
+  row: across every audited fixture in the repo (all 34 S1 and 17 S2 dirs
+  advertising `load_queue_state_per_frame`) there are 19 `busy && !prepared`
+  rows in the emerald run and exactly one — ghz2_2 row 107 — whose next row is
+  a lag row. The other 18 are the already-modelled `SignpostArtLoad` case,
+  where the ROM's level-loop tail submits *after* `RunPLC`
+  (sonic.asm:3032-3035; engine `LevelFrameStep` step 6b). No S2 or S3K fixture
+  contains the shape at all, which is why the change is observable on exactly
+  one row of one fixture.
+- Fix, in three pieces, with no game name, zone, route or frame number anywhere
+  in the predicate:
+  1. `TraceExecutionModel.isIterationHeldIntoNextRow(current, next)` — the
+     structural classification, a sibling of the existing
+     `isVblankStarvedRow`: a V-blank elapsed but the gameplay counter did not.
+  2. `PlcFrameLifecycleCoordinator.markRepresentedIterationDefersLoopTailPreparation()`
+     holds the row's `prepareAfterLoop` instead of running it (still marking
+     the boundary so `finish()` keeps its one-preparation-per-closure
+     invariant), and releases it on the next closure that is not itself held —
+     so a stall spanning several lag rows arms on the last of them.
+  3. `LiveTraceComparator.activatePreparedProductionMarker` arms it from the
+     row's own recorded counters, the same input and the same call site as the
+     existing `markRepresentedIterationWithoutVblank`.
+  No hardware-timing stream is involved and none exists for this fixture; the
+  input is the same recorded row-shape classification the run replay already
+  consumes to suppress gameplay on lag rows.
+- Coverage: `TestS1CompleteEmeraldVisualRun` gains
+  `replaysEveryComparedRowOfTheReturnedGhz2Act`, a 13,000-step budget that
+  walks past segment 3's terminal physical row (BK2 13,347) and stops inside
+  the following gap. Verified to fail on the unmodified tree with exactly the
+  three frame-107 errors above. `TestTraceExecutionModel` and
+  `TestPlcFrameLifecycleCoordinator` gain unit coverage of the predicate and of
+  the hold/release/one-shot behaviour.
+- Verification (serial; JDK 21; `target/surefire-reports` cleared before the
+  suite run):
+  - `TestS1CompleteEmeraldVisualRun` — both tests green at the committed pin 3.
+  - `TestS1CompleteEmeraldRunPrefix`, `TestTraceRunPlaybackCoordinator`, and
+    `TestS1GhzMazeRoundTripChain`'s presentation-bridge test green.
+    `TestS1GhzMazeRoundTripChain.ghzMazeRoundTrip` stays red on the same 8
+    `run_tail` fields with the same values (`movie_logical_frame` 8,261 against
+    the recorded 9,071) as before this change — its own defect is unrelated.
+  - S1 `*TraceReplay` fleet under `-Ptrace-replay`, 30 classes: 27 green, the
+    same 3 reds (`FzCompleteRun`, `Credits03Lz3`, `Sbz3CompleteRun`).
+    `Sbz3CompleteRun`'s `cannot mutate queued PLC entries while the decoder is
+    active` (the known unconditional `SignpostArtLoad` submission in
+    `Sonic1LevelEventManager.updateAtLevelLoopTail`) was re-measured on the
+    unmodified tree and is byte-identical.
+  - Run chains: `TestS2EhzHalfpipeRoundTripChain` ("special stage exited with
+    3704 represented rows remaining in ss") and `TestS3kMegaRunChain`
+    ("trace_schema 5 segment omits dynamic-art capability") fail with
+    byte-identical messages on the unmodified tree; `TestS3kBonusRoundTripChain`
+    skips on both.
+  - Full default suite: 14,346 tests, **39 red** (27 failures + 12 errors). The
+    seven classes that could plausibly be attributed to this change —
+    `Sonic2SpecialStageBootstrapCadenceTest`, `TestGameLoop`,
+    `TestRewindTorture`, `TestTraceSessionLauncherProductionFailureCleanup`,
+    `TestArchUnitRules`, `TestObjectPhysicsStandardizationGuard`,
+    `TestZoneEventRuntimeAccessGuard` — were re-run in isolation on both trees
+    and produce the **identical** 22-test failing set (181 run, 18 failures,
+    4 errors) with and without the change. The remainder
+    (`TestDisplayAspectResolution`, `TestTornadoObjectInstance`,
+    `TestWfzTornadoThrusterRendering`, `TestS3kCnz*`,
+    `TestMhzMushroomParachuteObjectInstance`, `TestS1PushBlockSideContact`,
+    `TestS1GhzBossGraphRewind`) are unrelated to the PLC lifecycle and are the
+    documented order flakes.
+- Next frontier for this lane: the giant-ring boundary out of segment 3. The
+  visual run walks ~17,100 steps of transition gap from BK2 13,347 without the
+  probe latching, then aborts on the transition step cap. Segment 4 is the
+  special stage at BK2 13,348; the run does reach `SPECIAL_STAGE`,
+  `SPECIAL_STAGE_RESULTS`, `TITLE_CARD` and `LEVEL` modes inside that gap, so
+  the modes happen but the coordinator never admits the segment.
+
+## 2026-08-05 - Second giant ring: the boundary signal read the LOADED stage
+
+- Command: `mvn -Dmse=off -Ptrace-replay -Dtest=TestS1CompleteEmeraldVisualRun
+  -Dsonic1.rom.path=s1.gen test`, on `develop` at `99746ffa9`. The defect needs
+  a lane targeting `stopAfterSegment(4)`; the committed lanes stopped at 3.
+- Before: the run walked the whole segment-3 -> 4 transition gap without the
+  coordinator latching, then `transition step cap 17111 exceeded for giant_ring
+  from segment 3 at BK2 cursor 30458` (harness step 29,702). The engine visibly
+  entered `SPECIAL_STAGE` on the exactly-recorded row 13,348, ran it, returned
+  through `SPECIAL_STAGE_RESULTS` / `TITLE_CARD` / `LEVEL`, and was never
+  admitted.
+- After: segment 4 is admitted at harness step 12,592, BK2 cursor **13,348** --
+  the manifest's `mode_change_bk2_frame` exactly, and the same
+  step-after-source-closure shape the first giant ring has. The run then walks
+  2,237 rows into the stage and self-pauses on the next, unrelated frontier:
+  segment-4 row **2,237** (BK2 15,585), `dynamic_art.edges` expected `[]`,
+  actual `[1398, 1399]`, plus `dynamic_art.edge[0].present` /
+  `edge[1].present` expected `false` actual `true` -- 3 errors.
+- Root cause, measured, not reasoned. Temporary instrumentation on
+  `forwardLatchedRunBoundary`, `BoundaryProbe` and the coordinator's
+  `observeBoundary` / `destinationReady` (reverted before committing) produced
+  the decisive pair of lines:
+  - `FWD idx=3 kind=giant_ring observedFrame=13347 activeSS=0 mode=LEVEL`
+  - `OBSERVE seg=3 signal=SpecialStageRequest[physicalBk2Frame=13347,
+    stageIndex=0] expected=...entryKind=giant_ring... match=false`
+
+  The probe latched correctly and in-window (13,347 against a 13,348 edge, as
+  the first ring latches 4,975 against 4,976). What did not match was the
+  signal's **stage index**: 0, against the destination's 1. Everything else was
+  already right -- once the stage was entered, `READY-BLOCKED ... actualIdx=1`
+  shows the engine's own selection is the recorded `special_stage_index` 1,
+  every step of the gap. So the hypothesis that the engine's stage cycling
+  diverges from `v_lastspecial` is **refuted**: the engine selects correctly;
+  only the replay signal reported the wrong stage.
+- Why 0. `forwardLatchedRunBoundary` built the signal from
+  `getActiveSpecialStageIndex()`, i.e. `SpecialStageProvider#getCurrentStage()`
+  -- the stage the provider has **loaded**. The entry's index is chosen by
+  `SpecialStageProvider#consumeStageIndexForEntry` inside
+  `GameLoop#enterSpecialStage` (`GameLoop.java`:2005), which runs when the level
+  frame consumes the request. The forward fires while the level still owns the
+  frame (`mode=LEVEL` above), so it read the previously played stage. For a
+  run's FIRST entry that stale value is the un-entered provider's 0, which is
+  also the expected index -- so the first giant ring passed by coincidence and
+  hid the defect. The second is the first entry in the run whose index differs
+  from the stage already loaded.
+- Fix, one branch in `TraceSessionLauncher.forwardLatchedRunBoundary`: take the
+  identity from the provider that owns the entry once it owns it
+  (`mode == GameMode.SPECIAL_STAGE`), exactly as the `starpost_bonus` branch
+  immediately above it already does with `GameMode.BONUS_STAGE` and
+  `bonusStageOrNull().getActiveType()`. The asymmetry between the two branches
+  was the whole bug. The probe has already latched the boundary's own physical
+  row and the forward retries every tick until it emits, so the signal keeps its
+  recorded frame and loses nothing by waiting. No frame, zone, route or game
+  predicate; no change to stage selection.
+- Coverage: `TestS1CompleteEmeraldVisualRun`'s second lane becomes
+  `replaysTheReturnedGhz2ActAndItsGiantRingAdmission`, pinned at
+  `stopAfterSegment(4)`. It subsumes the previous 13,000-step budget -- reaching
+  segment 4 requires all 3,606 rows of the returned GHZ2 act and the boundary --
+  and was verified to fail on the unmodified tree with the exact cap message
+  above.
+- Verification (serial; JDK 21):
+  - `TestS1CompleteEmeraldVisualRun` both lanes green;
+    `TestS1CompleteEmeraldRunPrefix` (2), `TestTraceRunPlaybackCoordinator`
+    (21) and `TestTraceSessionLauncherRunBranch` (40) green.
+  - `TestS1GhzMazeRoundTripChain`'s presentation-bridge test green;
+    `ghzMazeRoundTrip` stays red on the same 8 `run_tail` fields with the same
+    values (`movie_logical_frame` 8,261 against the recorded 9,071) as before.
+  - S1 `*TraceReplay` fleet under `-Ptrace-replay`, 30 classes: 27 green, the
+    same 3 reds (`Sbz3CompleteRun`, `Credits03Lz3`, `FzCompleteRun`).
+  - Run chains: `TestS2EhzHalfpipeRoundTripChain` ("special stage exited with
+    3704 represented rows remaining in ss") and `TestS3kMegaRunChain`
+    ("Manifest validation failed for .../s3-knux-multibonus-ss") fail with the
+    same messages as before; `TestS3kBonusRoundTripChain` skips.
+  - Full default suite: 14,346 tests, **39 red** (27 failures + 12 errors) --
+    the same total and the same class set as the previous commit's measurement.
+    The only two red classes that touch the changed file,
+    `TestTraceSessionLauncherProductionFailureCleanup` and `TestGameLoop`, were
+    re-run in isolation on both trees and produce byte-identical failures
+    (4 run / 1 failure / 3 errors, and 88 run / 2 failures).
+- Next frontier for this lane: the second special stage's dynamic-art edges at
+  segment-4 row 2,237.
+
+## 2026-08-05 - Second special stage: an UP/DOWN block rewrote itself when it could not act
+
+- Command: `mvn -Dmse=off -Ptrace-replay -Dtest=TestS1CompleteEmeraldVisualRun
+  -Dsonic1.rom.path=s1.gen test`, on `develop` at `ed472fa3a`, with the second
+  lane's pin temporarily raised past its committed `stopAfterSegment(4)`.
+- Before: **3 errors** at segment-4 row **2,237** (the second special stage,
+  `special_stage_index` 1, BK2 15,585), then the documented self-pause cascade:
+  - `dynamic_art.edges` expected `[]`, actual `[1398, 1399]`
+  - `dynamic_art.edge[0].present` / `edge[1].present` expected `false`,
+    actual `true`
+- After: **0 errors through the whole of segment 4**, and on through segments 5
+  and 6's admission. The new first failure is a different, unrelated frontier:
+  segment-6 row **7,983** (`ghz3_2`, BK2 26,702), 3 errors on
+  `queue.s1_nemesis_plc.busy` / `prepared` / `remaining_work` (expected
+  `false`/`false`/`-1`, actual `true`/`true`/`128`).
+- Root cause, measured, not reasoned. The failing field is a *player DPLC*, so
+  the first job was to find what drove Sonic's roll animation off phase, since
+  `SAnim_RollJump`'s frame interval is `($400 - |inertia|) >> 8` plus one
+  (docs/s1disasm/_incObj/01 Sonic.asm:2321-2352). Two fixture queries pinned it
+  before any engine code was read:
+  - Across all 1,314 recorded DPLC intervals in `ss_2`, the interval at an edge
+    on row F is exactly `dur(inertia[F-1]) + 1` in 1,297 cases, and every one of
+    the 17 exceptions is explained by the lag rows inside its window. So the
+    recorded fixture alone determines the animation from `inertia`, and the
+    2,237 divergence means `inertia` diverged.
+  - Temporary per-frame instrumentation on `Sonic1SpecialStageManager.update()`
+    (reverted) dumped `ssAngle`/`ssRotate`/position/velocity/inertia/anim state
+    and was aligned to the recorded rows by exact state match. The engine's
+    state is **byte-identical to the recording for 2,064 rows** — the alignment
+    offset only steps at the 3 recorded lag rows in the window, confirming the
+    engine correctly suppresses those — and first diverges at row **2,162**:
+    engine `ss_angle` `0xDBC0` against the recorded `0xDC00`, i.e. the recording
+    halved `v_ssrotate` from `-$80` to `-$40` on that row and the engine did
+    not.
+  - The same dump showed why: at row 2,162 the engine's touched block was `$29`
+    (UP) where the ROM's was `$2A` (DOWN), at the *same* cell (row 63, col 38).
+    Searching the dump for earlier touches of that cell found row 187, where the
+    engine touched a `$2A` DOWN block with `v_ssrotate = $40` — already slow, so
+    no halving — and rewrote it to `$29` anyway.
+- The disassembly confirms the ROM does not. `SonicSS_ChkUP`'s
+  `btst #6,(v_ssrotate+1).w / beq.s SonicSS_UPsnd`
+  (09 Sonic in Special Stage.asm:853-854) skips **both** the `asl.w` (857) and
+  the `move.b #id_SS_DOWN,(a1)` rewrite (859-862); `SonicSS_ChkDOWN`'s
+  `bne.s SonicSS_DOWNsnd` (888-889) does the same for `asr.w` (892) and
+  `move.b #id_SS_UP,(a1)` (894-897). Only the cooldown
+  (`sonss_timeout_updown`, 840-845/875-880) and the blip sound (865-868/900-903)
+  are unconditional. The engine ran the rewrite outside that gate.
+- Fix: `Sonic1SpecialStageManager.processItemInteraction` moves the rewrite
+  inside the speed-change branch of both handlers, through a new
+  `flipUpDownBlock`. No zone, route, frame or game predicate; nothing about the
+  fixture enters the engine.
+- Why the defect stayed invisible for 2,064 rows and then surfaced as art. The
+  layout toggle is only observable when the SAME cell is crossed again and the
+  stale id takes the other branch — 1,975 rows later here. From 2,162 the
+  engine's stage rotation, position and velocity all diverge, but `inertia` is
+  almost entirely input-driven (`sonss_acceleration`/`sonss_deceleration` on
+  held L/R, zeroed by `SonicSS_Move`'s wall check), so it stayed *coincidentally*
+  in step for another 70 rows. It broke at the jump on row 2,232: the ROM's
+  wall check zeroes inertia on that row and the engine's — at a different
+  sub-pixel offset against a different stage angle — did not, giving a frame
+  interval of 4 against the recorded 5 and publishing a DPLC on row 2,237 that
+  the ROM publishes on 2,238. The visual run compares only structural rows for a
+  special-stage segment (no playable-state comparison), so the DPLC was the
+  first compared field the divergence could reach.
+- Coverage: `Sonic1SpecialStageManagerTest`
+  `testUpDownBlockOnlyFlipsWhenItActuallyChangesRotation` pins all four cases
+  (UP/DOWN x acted/could-not-act) and fails on the unmodified tree.
+  `TestS1CompleteEmeraldVisualRun`'s second lane becomes
+  `replaysTheSecondGiantRingAndTheSpecialStageBehindIt`, pinned at
+  `stopAfterSegment(6)`; it subsumes the previous pin 4 and additionally walks
+  all 4,337 rows of the special stage, the stage's results bridge, and the GHZ3
+  presentation bridge.
+- Verification (serial; JDK 21):
+  - `TestS1CompleteEmeraldVisualRun` both lanes green;
+    `TestS1CompleteEmeraldRunPrefix` (2), `TestTraceRunPlaybackCoordinator`
+    (21), `TestTraceSessionLauncherRunBranch` (40) and
+    `Sonic1SpecialStageManagerTest` (15) green.
+  - `TestS1GhzMazeRoundTripChain`'s presentation-bridge test green;
+    `ghzMazeRoundTrip` stays red on the same 8 `run_tail` fields with the same
+    values (`movie_logical_frame` 8,261 against the recorded 9,071).
+  - S1 `*TraceReplay` fleet under `-Ptrace-replay`, 30 classes: 27 green, the
+    same 3 reds (`Sbz3CompleteRun`, `Credits03Lz3`, `FzCompleteRun`).
+    `TestS1SpecialStageTraceReplay` — the stage-0 fixture — stays green.
+  - Run chains: `TestS2EhzHalfpipeRoundTripChain` ("special stage exited with
+    3704 represented rows remaining in ss") and `TestS3kMegaRunChain`
+    ("Manifest validation failed for .../s3-knux-multibonus-ss") fail with the
+    same messages as before; `TestS3kBonusRoundTripChain` skips.
+  - Full default suite: 14,347 tests, **38 red** (26 failures + 12 errors),
+    against the documented 38-red baseline and the same class set the previous
+    two commits recorded, minus the usual ordering flakes.
+- Next frontier for this lane: the GHZ3 act's end-of-act PLC. At recorded row
+  7,992 the fixture arms a 128-pattern Nemesis PLC on the same row that
+  `object_appeared slot 23 id 0x3A` (`GotThroughCard`) and
+  `object_removed slot 34 id 0x3E` (`Prison`) fire — i.e. `Pri_EndAct`'s
+  `GotThroughAct` hand-off (docs/s1disasm/_incObj/3E Prison Capsule.asm:204-230)
+  once the last animal object has been deleted. The engine arms the same queue
+  9 rows earlier, at 7,983. The recorded `object_removed id 0x28` (animal)
+  events at 7,940/7,942/7,944/7,965/7,973/7,980/7,987/7,991 are the input to
+  that scan, so the suspect is animal despawn cadence rather than the PLC.
+
+## 2026-08-05 - Next frontier measured: GHZ3's prison-capsule animal window
+
+- Frontier: `TestS1CompleteEmeraldVisualRun` with the second lane's pin raised
+  to `stopAfterSegment(7)`, on `develop` at `9d73e15b6`. **3 errors** at
+  segment-6 row **7,983** (`ghz3_2`, BK2 26,702), then the self-pause cascade:
+  `queue.s1_nemesis_plc.busy` / `prepared` / `remaining_work` expected
+  `false`/`false`/`-1`, actual `true`/`true`/`128`. The recording arms that
+  128-pattern queue at row **7,992**, nine rows later; the engine arms it early.
+- What the queue is. Row 7,992 is also where the fixture logs
+  `object_appeared slot 23 id 0x3A` (`GotThroughCard`) and
+  `object_removed slot 34 id 0x3E` (`Prison`) — i.e. `Pri_EndAct`'s
+  `GotThroughAct` hand-off once its object-RAM scan finds no `id_Animals` left
+  (docs/s1disasm/_incObj/3E Prison Capsule.asm:204-230). Note
+  `SignpostArtLoad` is NOT the source: it returns immediately on a third act
+  (sonic.asm:3189-3190). So the defect is the animal window, not the PLC.
+- Measured, with temporary instrumentation on
+  `Sonic1EggPrisonObjectInstance.update` (reverted) logging the live
+  `Sonic1AnimalsObjectInstance` slot set per `vIntRunCount`, against the
+  fixture's 0x28 `object_appeared`/`object_removed` events. Expressed relative
+  to each side's own animal burst (`Pri_SpawnAnimals`):
+  - **Spawn cadence is phase-shifted by 2.** The recording's continuous spawns
+    (`Pri_Animals`, every frame where `v_vbla_byte & 7 == 0`) land at burst +6,
+    +14, +22 … +150 — 19 of them, the last one on the very frame the 150-frame
+    timer expires. The engine's land at +8, +16, +24 … +144 — 18 of them,
+    because +152 falls outside the window. The engine gates on
+    `vIntRunCount & 7`.
+  - **Despawn times diverge much more than 2.** Sorted, burst-relative:
+    recording `119,120,132,141,152,156,162,179,200,222,224,226,226,227,227,233,
+    236,238,241,245,247,249,270,278,285,292,296`; engine
+    `119,133,138,145,151,161,172,186,206,214,215,220,226,226,233,241,241,243,
+    245,245,247,250,263,264,269,287`. The last recorded animal leaves at +296
+    and the last engine one at +287 — exactly the nine rows the queue is early.
+  - Slot allocation also differs from the first frame: the recording's initial
+    burst takes 37, 41-47 while the engine's takes 40-47, so the two sides'
+    slot labels are not comparable and the sequences above are the honest
+    comparison.
+- **Not diagnosed — stopped deliberately.** The spawn phase is one candidate,
+  but it cannot by itself produce a divergence of tens of frames in the middle
+  of the despawn sequence. `Animals` picks its type and direction from
+  `RandomNumber` and is deleted when it leaves the screen, so the despawn
+  spread is consistent with an RNG-call-order or animal-motion difference,
+  which this evidence does not separate. S1 fixtures carry no
+  `rng_call_per_frame` family (it is one of the hook-driven families the native
+  recorder defers), so the next step is either a scratch PC-execute probe on
+  `RandomNumber` across the window, or an engine-side RNG-call log compared
+  against the recorded animal type/direction outcomes. No change was made.
+
+## 2026-08-05 - GHZ3 animal window: the object V-blank clock, not the RNG
+
+- Frontier unchanged: `TestS1CompleteEmeraldVisualRun` with the second lane's
+  pin raised to `stopAfterSegment(7)`, on `develop` at `18caadb01`. **3 errors**
+  at segment-6 row **7,983** (`ghz3_2`, BK2 26,702) on
+  `queue.s1_nemesis_plc.busy` / `prepared` / `remaining_work`. Nothing was
+  committed beyond this entry; every measurement below came from throwaway
+  instrumentation that has been reverted, and both committed lanes are green
+  again on the clean tree.
+- **The previous entry's two hypotheses are now separated, and neither was the
+  root cause.** The deciding evidence is a plain fixture query: `ghz3_2`'s
+  `physics.csv` carries a `vblank_counter` column that advances exactly once per
+  recorded row, and every `Pri_Animals` spawn lands on a row where
+  `vblank_counter & 7 == 0` (docs/s1disasm/_incObj/3E Prison Capsule.asm:169-170).
+  The recording's burst is row 7,695 with `vblank_counter` `0x65DA` -- 2 mod 8 --
+  so its continuous spawns start at +6. The engine's `ObjectManager.vblaCounter`
+  is 0 mod 8 there.
+- **Measured: the engine's V-blank clock is 1,587 ticks behind the ROM by
+  `ghz3_2`.** Temporary per-row instrumentation on `VisualRunReplayHarness`
+  logging the shared BK2 cursor against `getVblaCounter()`, joined to each level
+  segment's recorded `vblank_counter`, gives a constant per-segment deficit:
+
+  | segment | rows | engine deficit |
+  |---|---|---|
+  | 0 `ghz1` | 4,115 | **1**, constant |
+  | 3 `ghz2_2` | 3,606 | **795**, constant |
+  | 6 `ghz3_2` | 8,520 | **1,587**, constant |
+
+  1,587 is 3 mod 8 and 19 mod 32, which de-phases both animal gates at once:
+  `Pri_Animals`' `moveq #7,d0 / and.b (v_vblank_byte).w,d0` and
+  `Anml_ChkFloor`'s `btst #4,(v_vblank_byte).w` prison-escape direction flip
+  (`_incObj/28, 29 Animals and Points.asm:226-229`). The 32-frame flip gate is
+  what spreads the despawn sequence by tens of frames -- an animal that leaves
+  in the wrong direction exits the opposite screen edge.
+- **Where the deficit accrues.** The counter is frozen for the whole of each
+  presentation bridge segment: `ghz2` (800 rows, played in `SPECIAL_STAGE` then
+  `SPECIAL_STAGE_RESULTS`) and `ghz3` (798 rows) never tick it, while the ROM
+  advances 792 and 790 across them. `TraceSessionLauncher.applyRunSpecialPreservedVblankPolicy`
+  (`TraceSessionLauncher.java`:1090-1097) advances it once per admitted
+  special-stage row, but stops the moment the coordinator leaves that segment,
+  and `GameLoop.updateSpecialStageResultsMode` (`GameLoop.java`:1304-1357) never
+  touches it. `TraceRunVblankClock.levelDestinationTarget` then re-seeds the
+  destination from the *bridge* segment's frozen tail plus a correct 231-row gap
+  budget, so the deficit is carried forward verbatim. The ROM's own increment is
+  unconditional -- `VBlank_Exit: addq.l #1,(v_vblank_count).w`
+  (docs/s1disasm/sonic.asm:684) runs after every V-int routine the mode table
+  dispatched, `VBlank_SpecialStage` and `VBlank_TitleCards` included. This is a
+  third row class alongside the two that
+  [docs/status/known-discrepancies.md](known-discrepancies.md) already records as
+  deliberate, and it is **not** unobservable: the doc's claim that the counter
+  "matches the recorded ROM value every frame on the probed traces" does not hold
+  for this run.
+  - Note for whoever closes it: the ROM misses 7 V-ints inside each bridge, at
+    the same relative rows (60-70) both times. That is `SS_Finish`'s
+    `disable_ints ... ClearScreen / NemDec Nem_TitleCard / Hud_Base ...
+    enable_ints` block (sonic.asm:3369-3383), so the count is payload-fixed
+    rather than route-dependent. `TracePlaybackProfile.interLevelNonAdvancingMovieRows`
+    (currently 6 for S1) is the existing home for exactly this kind of quantity.
+- **Effect of correcting it, measured.** With the `ghz3_2` seed scratch-forced to
+  the recorded `0x47CB`:
+  - all **8** `Pri_Explosion` spawns land on rows 7,637 / 7,645 / ... / 7,693 --
+    identical to the recording;
+  - all **19** `Pri_Animals` spawns land on rows 7,701 / 7,709 / ... / 7,845 --
+    identical to the recording, against 18 spawns at the wrong rows before.
+  Forcing `ghz2_2`'s seed as well (to `0x24C6`) still walks all 3,606 of its rows
+  and both special stages, so the phase correction does not regress anything the
+  lane currently passes. The first error moves to row 7,978 rather than
+  disappearing, because three further defects remain -- so the phase fix is a
+  prerequisite, not a frontier move, and was reverted rather than committed.
+- **Three defects still between here and the frontier**, all measured with the
+  phase corrected:
+  1. **The burst is one row late.** Engine `Pri_SpawnAnimals` at row 7,696
+     against the recording's 7,695; the explosion timer runs 60 rows in both, so
+     the switch's landing trigger itself is one row late (engine 7,636 against
+     7,635).
+  2. **Prison animals spawn 3px too high, and explosions ~29px too low.** The
+     fixture's `object_appeared` puts the prison switch (slot 34) at
+     `y=0x037D` (893) and the capsule body (slot 35) at `y=0x03A2` (930), and the
+     recorded animals at **933** = 893 + 8 + 32 -- `Pri_Switch`'s
+     `addq.w #8,obY` (3E Prison Capsule.asm:99) plus `Pri_SpawnAnimals`'
+     `addi.w #32,obY` (:145). `Sonic1EggPrisonObjectInstance` spawns both
+     animals and explosions from the *body's* `spawn.y()` (930), so every
+     capsule animal starts 3px high and every explosion 29px low. The animals'
+     X values already match exactly, so only the Y owner is wrong. Floor-hit row
+     is what selects the `btst #4` flip, so this feeds straight into the despawn
+     sequence.
+  3. **The ROM makes exactly one more `RandomNumber` draw than the engine before
+     the animal window -- and only one.** Reimplementing `RandomNumber`
+     (`_incObj/sub RandomNumber.asm`: `newSeed = (L<<16) | (41*S & 0xFFFF)`,
+     `L = ((41*S & 0xFFFF) + (41*S >> 16)) & 0xFFFF`) reproduces the engine's
+     logged seed transitions exactly. Replaying that stream from the engine's own
+     seed one draw later, at stride 2, reproduces **all 19** recorded
+     continuous-spawn X offsets
+     (`-6, 16, -5, -3, -6, 5, -12, -3, 7, -13, 2, -17, -8, -14, -25, 9, -6, 6, 5`)
+     -- so the per-spawn draw count (`Pri_Animals` + the animal's own
+     `Anml_FromEnemy`) is already right and the streams differ by a single
+     earlier draw. With the phase corrected the 8 explosion draws and 8 burst
+     draws match the recording's object counts, so the missing draw is upstream,
+     most likely in the GHZ boss's defeat explosions
+     (`sub BossDefeated & BossMove.asm:7,18` gates its `RandomNumber` on
+     `v_vblank_byte` too, so it is itself downstream of the same clock).
+- Method note: no PC-execute probe was needed. `vblank_counter` and `lag_state`
+  are already in the S1 complete-run fixture, and the RNG question was answered
+  by reimplementing the ROM LFSR against the engine's own logged seeds rather
+  than by recording a new stream.
+
+## 2026-08-05 - GHZ3 animal window closed: the presentation bridge's V-blank clock
+
+- **Frontier moved.** `TestS1CompleteEmeraldVisualRun`'s second lane went from
+  **3 errors at segment-6 row 7,983** (`ghz3_2`, BK2 26,702, on
+  `queue.s1_nemesis_plc.busy` / `prepared` / `remaining_work`) to **zero errors
+  across all 8,520 rows of the GHZ3 act** -- its boss, the prison capsule, the
+  whole animal window, and the end-of-act card. Commit on `develop` at
+  `38eb52ea3` plus this change.
+- Command: `mvn -Dmse=off -Ptrace-replay -Dsonic1.rom.path=s1.gen
+  -Dtest=TestS1CompleteEmeraldVisualRun test` -- **2 tests, green.**
+- **Cause: the run's object V-blank clock froze for every presentation-bridge
+  row.** Confirmed by joining the harness's per-step `getVblaCounter()` against
+  each segment's recorded `vblank_counter`, with the cursor's off-by-one
+  resolved (the value logged at cursor `C` is the state after row `C-1`, so it
+  compares against `v(C-1)`). Corrected that way, `ghz1` and `ghz2_2` were
+  already exact; the deficit was **-2 entering the first bridge and -795
+  leaving it**, and **-1,587** by `ghz3_2`. Three separate losses:
+  - the single BK2 gap row on each side of the uncompared special-stage
+    interior (BK2 4,975 and 8,704) -- one ROM V-int each, no engine tick;
+  - all 800 rows of the `ghz2` bridge, over which the ROM advances 793 (from
+    the value entering its first row to the value entering the row after its
+    last) and the engine advanced 0.
+  `applyRunDestinationVblankAdmission` skipped the bridge outright because a
+  bridge is admitted with `LevelPresentationIdentity`, not `LevelIdentity`, so
+  neither the interior-return nor the inter-level target ever applied; the
+  frozen tail was then handed to `levelDestinationTarget` verbatim.
+- **Fix.** `TracePlaybackProfile` gains
+  `stageResultsEntryNonAdvancingMovieRows` (S1 = **7**, other games -1/opt-out),
+  the V-ints `SS_Finish` builds the results screen through with interrupts
+  disabled -- `disable_ints / ClearScreen / NemDec Nem_TitleCard / Hud_Base /
+  enable_ints` (docs/s1disasm/sonic.asm:3369-3383) -- which never reach
+  `VBlank_Exit`'s unconditional `addq.l #1,(v_vblank_count).w` (sonic.asm:684).
+  The recording confirms the shape and the count: both bridges stall on exactly
+  rows 59-65 and 68 with a +2 on row 69, i.e. 7 lost over 799/797 row steps,
+  payload-fixed rather than route-dependent. `TraceRunVblankClock` seeds a
+  bridge from the level that entered the stage
+  (`presentationBridgeEntryVblankBudget` = movie rows strictly between the
+  source's tail anchor and the bridge's first row) and derives the bridge's own
+  tail as `entry + traceFrameCount - nonAdvancingRows`
+  (`presentationBridgeVblankSpan`) instead of reading the frozen production
+  counter. No fitted constant, no zone/route/frame predicate, and no trace field
+  enters gameplay -- the seed comes only from a production anchor plus manifest
+  row distances.
+- **Verified per-row.** With the fix, the engine's counter matches the recorded
+  `vblank_counter` on **every** row of `ghz1` (4,115), `ghz2_2` (3,606) and
+  `ghz3_2` (8,520) -- deficit histogram `{0: n}` for all three. The bridges stay
+  frozen by design; nothing reads the counter there.
+- **The three "further defects" the previous entry listed did not survive
+  re-measurement.** With the whole chain on the recorded clock (rather than only
+  `ghz3_2`'s seed scratch-forced), the burst row, the capsule animal spawn Y and
+  the `RandomNumber` stream all produce **no compared-field error at all** --
+  the act walks clean end to end. They were artefacts of measuring one segment's
+  phase in isolation while its inputs were still de-phased.
+- **New frontier: the GHZ3 -> MZ1 act boundary, and it is a ring-count bug.**
+  Segment 6 now publishes its last row and the run aborts in the transition gap
+  with `rowsConsumed must be 0 or 1` at BK2 27,469 (segment 7 `mz1` starts at
+  27,467). Measured with the guard temporarily relaxed: the engine never reaches
+  the boundary at all -- it spins the full 17,111-step transition cap because the
+  end-of-act card has not finished. The card's own cadence is right (`Got_Main`
+  at row 8,035, matching the recorded `object_appeared slot 24-29 id 0x3A`;
+  68-frame slide, 180-frame pre-tally, 180-frame post-tally), but its tally runs
+  **60 frames against the ROM's 57**: the engine holds **59 rings** at
+  `GotThroughAct` where the recording holds **56**, so `v_ringbonus` is 590
+  instead of 560 and `Got_Bonus` (docs/s1disasm/_incObj/3A Got Through
+  Card.asm:127-160) ticks three frames longer. The extra rings first appear at
+  `ghz3_2` row **3,643** (recorded 0, engine 1) and never re-converge.
+  `ToleranceConfig.DEFAULT` has `RingCountMode.DISABLED`, which is why 4,877
+  divergent rows pass the comparator -- run a ring-count-enabled probe rather
+  than trusting a green act.
+- **Pin.** `VisualRunReplayHarness` gains `stopAfterSegmentBody(n)`, which stops
+  once the coordinator has closed segment `n` and entered its transition gap.
+  Admission alone (`stopAfterSegment`) only proves the boundary *before* a
+  segment; the second lane now walks segment 6's whole body and asserts
+  `sharedCursor > 27,238`. Pinning at `stopAfterSegment(7)` is not yet possible
+  because of the ring frontier above.
+- Regression sweep (serial, JDK 21):
+  - `TestS1CompleteEmeraldVisualRun` both lanes green;
+    `TestS1CompleteEmeraldRunPrefix` (2), `TestTraceRunPlaybackCoordinator`
+    (21), `TestTraceRunReplayWalkerControlFlow` (37),
+    `TestTraceSessionLauncherRunBranch` (40), `TestTraceRunFrameDriver` (8),
+    `TestTracePlaybackProfile` (3) and `TestTraceRunVblankClock` (5) green.
+  - `TestS1GhzMazeRoundTripChain`'s presentation-bridge test green;
+    `ghzMazeRoundTrip` stays red on the same 8 `run_tail` fields with the same
+    values (`movie_logical_frame` 8,261 against the recorded 9,071).
+  - S1 `*TraceReplay` fleet under `-Ptrace-replay`, 30 classes: 27 green, the
+    same 3 reds (`Sbz3CompleteRun`, `Credits03Lz3`, `FzCompleteRun`).
+    `TestS1SpecialStageTraceReplay` green.
+  - Run chains: `TestS2EhzHalfpipeRoundTripChain` ("special stage exited with
+    3704 represented rows remaining in ss") and `TestS3kMegaRunChain`
+    ("Manifest validation failed for .../s3-knux-multibonus-ss") fail with the
+    same messages as before; `TestS3kBonusRoundTripChain` skips.
+  - Full default suite: 14,349 tests, **38 red** (26 failures + 12 errors),
+    matching the documented baseline. The five classes that fail near this
+    change (`TestGameLoop`, `TestArchUnitRules`,
+    `TestObjectPhysicsStandardizationGuard`, `TestZoneEventRuntimeAccessGuard`,
+    `TestTraceSessionLauncherProductionFailureCleanup`) were re-run as an
+    isolated subset on both trees and produce the identical 7 failures + 3
+    errors with and without the change.
+
+## 2026-08-05 - GHZ3's ring count was a helix slot-allocation bug, not a ring bug
+
+- **Frontier moved.** `TestS1CompleteEmeraldVisualRun` lane 2 stays pinned at
+  `stopAfterSegmentBody(6)` and green, but the GHZ3 -> MZ1 softlock is gone:
+  the run now closes segment 6, walks its transition gap, and *reaches* the
+  segment-7 admission. It fails there instead, on a new and different cause
+  (below). Commit on `develop` at `4339eda18` plus this change.
+- Command: `mvn -Dmse=off -Ptrace-replay -Dsonic1.rom.path=s1.gen
+  -Dtest=TestS1CompleteEmeraldVisualRun test` -- **2 tests, green.**
+- **First: the comparator blind spot, and it is NOT `RingCountMode`.**
+  `ToleranceConfig.DEFAULT` is `RingCountMode.FORCE_ERROR`, and
+  `TestTraceReplayInvariantGuard.defaultTraceReplayToleranceIsStrict` pins it
+  there; `DISABLED` only appears in the backward-compatible 7-arg constructor.
+  The real gap is engine-side: `LiveTraceComparator` builds its
+  `EngineDiagnostics` through
+  `EngineDiagnostics.formattedWithCameraAnimationAndSubpixel`
+  (`EngineDiagnostics.java`:94-100), which hardcodes `rings = -1`, and
+  `TraceBinder` skips the `rings` field unless `engineDiag.rings() >= 0`
+  (`TraceBinder.java`:251-253). So **no run-lane segment has ever compared ring
+  count**, at any tolerance. `AbstractTraceReplayTest` does capture it
+  (`AbstractTraceReplayTest.java`:1036,1137), so the per-zone traces are
+  unaffected. Recommendation: pass `sprite.getRingCount()` into the run
+  comparator's diagnostics. It is a one-line change but its own piece of work --
+  it turns 4,877 previously-silent rows into hard errors and needs its own
+  sweep. Not folded in here.
+- **Measured, throwaway probe (reverted).** A per-row `expected.rings()` vs
+  `sprite.getRingCount()` log over the whole run gave exactly two divergent
+  windows: a pre-existing 1-row monitor skew at `ghz1` row 2,292 (exp 70, act 60,
+  converges at 2,293), and `ghz3_2` rows 3,561-8,519. The engine collected
+  scattered rings at rows **3,643 / 3,646 / 3,655 / 3,656 / 3,689 / 3,690**
+  where the recording collected at **3,646 / 3,655 / 3,689** -- one extra per
+  ROM collection, never re-converging, ending +3 (59 against 56).
+- **Cause, from an object-id multiset diff.** The fixture's `slot_dump` at row
+  3,561 shows ROM object RAM **completely full**: slots 32-127 all occupied,
+  with only 39/41/43/44/45 and 114-127 free -- 19 slots, which is exactly how
+  many rings `RLoss_Count` managed to spawn before `FindFreeObj` reported full
+  (`docs/s1disasm/_incObj/25, 37 Rings.asm:234-252`). The engine's
+  `ObjectManager.occupiedDynamicSlotIds()` at the same row held **47** objects
+  and spawned **31** rings. Diffing the two id multisets, every id matched
+  exactly -- 0x26 x7, 0x49 x2, 0x18 x2, 0x36 x5, 0x15 x10, 0x3B x1, 0x79 x2,
+  0x44 x13, 0x41 x1, 0x25 x2 -- except **0x17, ROM 32 against engine 2**.
+- **Obj 0x17 is the GHZ spiked-pole helix.** `Hel_Main .loopBuildHelix` calls
+  `FindFreeObj` once per non-parent spike, writes routine 8
+  (`Hel_ChildSpike`) into it, and stores its 0-based slot index in the parent's
+  `helix_children` array; `Hel_ChkDel .deleteHelix` walks that array and
+  `DeleteChild`s every spike when the parent's own X leaves range
+  (`docs/s1disasm/_incObj/17 GHZ Spiked Pole Helix.asm:46-90,120-145`). The
+  engine modelled both 16-spike helixes as ONE instance carrying
+  `spikeX[]`/`spikePhase[]` and a `getMultiTouchRegions()` fan-out, so it held 2
+  slots where ROM holds 32.
+- **Fix.** `Sonic1SpikedPoleHelixObjectInstance` gains a
+  `HelixSpikeChild` (routine 8: rotate + display + its own
+  `col_8x32|col_hurt` when its frame is 0), allocated left-to-right through
+  `spawnFreeChild` on the parent's first execution and torn down en masse in
+  the parent's `onUnload`. The build loop breaks the first time allocation
+  fails, matching `bne.s Hel_ParentSpike`. The parent now renders and collides
+  only as its own centre spike, so `getMultiTouchRegions()` is gone. This is the
+  catalogued P8 pattern (`s1-implement-object/rom-pitfalls.md`), and it follows
+  `Sonic1SwingingPlatformObjectInstance.SwingChainLinkChild` line for line.
+- **Verified.** With the fix the run's ring count matches the recording on
+  **every** compared row of `ghz3_2` -- and of every other act the lane reaches
+  -- with the pre-existing `ghz1` row-2,292 monitor skew the only residue. That
+  skew is present on the clean tree too (measured both ways).
+- **New frontier: the GHZ3 -> MZ1 transition gap is 21 movie rows, not 228.**
+  With the pin raised to `stopAfterSegmentBody(7)` the run now closes segment 6
+  at step 26,483 / cursor 27,239 (segment 6's 8,520th row), runs 21
+  `TRANSITION_GAP` steps to cursor 27,260, and then admits segment 7 -- but
+  `mz1` starts at BK2 27,467, so `requireContinuousRunPlaybackAt`
+  (`TraceSessionLauncher.java`:1861-1871) rejects it: *"run destination must
+  retain the active movie at row 27467, got cursor=27260"*. This is the run's
+  **first plain act-to-act boundary** (GHZ1 and GHZ2 both left through a giant
+  ring, and their returns are presentation bridges), so the ordinary
+  `GM_Level` restart budget -- `PaletteFadeOut`, `ClearScreen`,
+  `LevelDataLoad`, `Level_Delay`, `PalFadeIn_Alt`, the MZ1 title card -- has
+  never been exercised by a run lane before. The end-of-act card itself is
+  inside segment 6's rows and now lands exactly (`Got_Main` row 8,035, tally 57
+  frames, last row 8,519). The pin is therefore left at
+  `stopAfterSegmentBody(6)`.
+- Regression sweep (serial, JDK 21):
+  - `TestS1CompleteEmeraldVisualRun` both lanes green;
+    `TestS1CompleteEmeraldRunPrefix` (2) and `TestTraceRunPlaybackCoordinator`
+    (21) green.
+  - `TestS1GhzMazeRoundTripChain`'s presentation-bridge test green;
+    `ghzMazeRoundTrip` stays red on the same 8 `run_tail` fields with the same
+    values (`movie_logical_frame` 8,261 against the recorded 9,071).
+  - S1 `*TraceReplay` fleet under `-Ptrace-replay`, 30 classes: 27 green, the
+    same 3 reds (`Sbz3CompleteRun`, `Credits03Lz3`, `FzCompleteRun`).
+    `TestS1SpecialStageTraceReplay` green, and all three GHZ complete-run
+    traces green.
+  - `TestRewindCoverageGuard` and `TestStaticStateRewindCoverageGuard` green.
+    Two test expectations moved WITH the behaviour and are part of this change:
+    `TestSonic1ObjectTouchResponseProfiles` (the helix parent is now a
+    single-region hurt source like the spiked-ball chain) and
+    `TestRemainingRewindTailInventory` (878/684 -> 879/685 for the new child
+    class, which round-trips).
+  - `TestArchUnitRules`, `TestObjectPhysicsStandardizationGuard`,
+    `TestS1GhzBossGraphRewind`, `TestS1PushBlockSideContact` and
+    `TestRewindTorture` produce byte-identical failures with and without the
+    change (re-run as an isolated subset on both trees).
+
+## 2026-08-05 - Where the GHZ3 -> MZ1 gap's missing 207 rows go, traced
+
+- Follow-up to the entry above; **no code change**, read-only tracing of the
+  production path so the next agent does not re-derive it. Frontier unchanged:
+  `TestS1CompleteEmeraldVisualRun` lane 2 green at `stopAfterSegmentBody(6)`,
+  failing at `stopAfterSegmentBody(7)` with *"run destination must retain the
+  active movie at row 27467, got cursor=27260"*.
+- **The run already models one 200+ row S1 level entry correctly, and it is a
+  different code path.** The special-stage return into `ghz2_2` spends 23 gap
+  rows in `SPECIAL_STAGE_RESULTS`, **151 in `GameMode.TITLE_CARD`**, then 62 in
+  `LEVEL` before admission -- 236 rows, and every one of them is now exact. The
+  GHZ3 -> MZ1 boundary never enters `TITLE_CARD` at all: all 21 of its gap steps
+  report `mode=LEVEL`.
+- **Why.** S1's end-of-act does not go through the S3K-only
+  `SeamlessLevelTransitionRequest` path (`LevelIterationAdmissionController`
+  :53-63; every `requestSeamlessTransition` caller is under
+  `game/sonic3k/events/`). It goes through
+  `Sonic1ResultsScreenObjectInstance.triggerFadeToBlack`
+  (`Sonic1ResultsScreenObjectInstance.java`:411-430): a native blocking
+  fade-to-black whose completion calls `services().advanceToNextLevel()` and
+  immediately starts a fade-from-black. `LevelManager.advanceToNextLevel`
+  (:3078-3092) then runs `loadCurrentLevel` under
+  `TraceSessionLauncher.runLevelAdvanceLoad`, which marks the load
+  `LEVEL_ADVANCE`, and `beforeRunLevelLoadPlaybackActivationIfActive`
+  (`TraceSessionLauncher.java`:2115-2145) hands the coordinator a
+  `LevelLoaded` signal that admits the destination on the spot.
+- **The title-card barrier does not cover this boundary.**
+  `RunPlaybackObservation.initialTitleCardPending` is populated from
+  `levelManager.isTitleCardRequested()`
+  (`TraceSessionLauncher.java`:868-873) -- the full `GameMode.TITLE_CARD`
+  request. The act advance raises the *in-level* card instead, consumed by
+  `InLevelTitleCardCoordinator.startIfRequested`
+  (`InLevelTitleCardCoordinator.java`:28-56) through
+  `levelManager.consumeInLevelTitleCardRequest()`, which the barrier never
+  observes. So even with the fade lengthened, admission would still not wait
+  for the card.
+- **ROM shape of the missing budget.** `Got_NextLevel` only writes
+  `f_restart = 1` (`docs/s1disasm/_incObj/3A Got Through Card.asm:200-211`); the
+  228 recorded rows are `GM_Level`'s own restart -- its `PaletteFadeOut`, the
+  `Level_ClrRam`/`LevelDataLoad` block, the `Level_TtlCard` wait loop, then
+  `Level_Delay` (4) and `PalFadeIn_Alt` (22) (sonic.asm:2956-2969, and the same
+  counted tail the `segment_start - 26` load-pair invariant already uses). The
+  end-of-act card itself is entirely inside segment 6's rows and now lands
+  exactly, so the whole 207-row deficit is on the restart side of `f_restart`.
+- **Suggested shape, not yet attempted.** Route the S1 act advance through the
+  same counted `GM_Level` restart the results bridge already models rather than
+  a fade-to-black plus immediate load, and widen the admission barrier to the
+  in-level card. Both touch shared owners (`GameLoop` /
+  `LevelIterationAdmissionController` / `TraceSessionLauncher`), so this is a
+  design-then-implement piece, not an in-loop fix. It is also the run's FIRST
+  plain act-to-act boundary, so nothing before it exercised the path.

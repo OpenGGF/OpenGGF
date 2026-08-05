@@ -263,7 +263,7 @@ The engine models `locktime`/`move_lock` as `moveLockTimer`, decremented only in
 
 **Cross-game note.** S2/S3K spawn multi-piece children through `AllocateObject` (lowest-free) / `AllocateObjectAfterCurrent` (after parent) — `docs/s2disasm/s2.asm` and `docs/skdisasm/sonic3k.asm:37911,37917`. Same "real OST slot per piece, count = dbf+1" rule.
 
-**Originating commit.** `9f47f557f` (S1 SBZ2 Obj 0x15 swinging-platform chain links — render-only children spawned as real OST slots). Banked: MZ3 ChainStomp `StomperPieceChild`.
+**Originating commit.** `9f47f557f` (S1 SBZ2 Obj 0x15 swinging-platform chain links — render-only children spawned as real OST slots). Banked: MZ3 ChainStomp `StomperPieceChild`; S1 GHZ Obj 0x17 spiked-pole helix `HelixSpikeChild` (`Hel_Main .loopBuildHelix`, `docs/s1disasm/_incObj/17 GHZ Spiked Pole Helix.asm:46-90` — 16-spike helixes held 1 slot instead of 16, leaving GHZ3's SST 30 slots emptier than ROM, so a hit's `RLoss_Count` found 31 free slots instead of 19 and scattered 12 extra rings; the player re-collected 3 of them and reached `GotThroughAct` with 59 rings against ROM's 56, stretching `Got_Bonus` by 3 frames and softlocking the GHZ3 -> MZ1 boundary). **The tell is a ring count, not a slot field:** the run comparators leave `EngineDiagnostics.rings` at -1, so ring divergence is silent — dump the ROM `slot_dump` against `ObjectManager.occupiedDynamicSlotIds()` and diff the object-id MULTISET; a single id whose count is wildly off (32 vs 2) names the under-allocating multi-piece object immediately.
 
 ---
 

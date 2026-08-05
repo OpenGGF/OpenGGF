@@ -109,6 +109,7 @@ No dedicated PLC/art/mapping/DPLC entry currently exists in either `rom-pitfalls
 - `.agents/skills/plc-system/SKILL.md` (cross-game PLC) and `.agents/skills/s3k-plc-system/SKILL.md` (S3K PLC).
 - `.agents/skills/s3k-implement-object/SKILL.md` (S3K art / mapping / DPLC parsing via `Sonic3kObjectArt.buildLevelArtSheetFromRom`).
 - Guard tests `TestSonic3kPlcArtRegistry` and `TestPatternSpriteRendererCorruptionGuard` catch art/mapping/PLC and pathological frame geometry.
+- For dynamic-art / DPLC divergences in a multi-segment run trace, the recorder-defined `run_gap` field contracts and the S1 `segment_start - 26` load-pair invariant are in `plc-system`; the comparison-side traps (`art=serial` cannot see gap edges, the gap ledger is compared at destination admission) are in `.agents/skills/trace-replay-bug-fixing/SKILL.md`.
 
 (Listed here so the bug class is not silently dropped; add a pitfall entry to the source files — mirrored — if/when a reusable PLC/art pitfall is surfaced by a trace fix.)
 
