@@ -61542,3 +61542,31 @@ to synthesize a POST phase on a VBLANK-only row.
   `#31`, fingerprint
   `66961069e564ef707173bbad733f75e3ab034e29e3f4833a02e2e26af452d8fd`, with
   no matching engine-submitted job.
+
+## 2026-08-04 - S3K CNZ off-screen solid push-release animation frontier
+
+- Worktree: repository root, branch `bugfix/s3k-traces`, parent frontier
+  `54221cf18`. No trace payloads were edited.
+- Root cause: the S3K `SolidObjectFull` off-screen/no-contact branch cleared
+  the prior object's push latch and `Status_Push`, but omitted the native
+  `SolidObject_TestClearPush` adjacent `Walk/Run` animation-word write. At
+  the CNZ spike boundary the engine therefore entered the sidekick animation
+  slot with `Wait` (`$05`) instead of the ROM's `Walk` (`$00`).
+- Fix: publish the shared solid push-release animation word before clearing
+  the live push bit on the off-screen branch. The existing provider/game-rule
+  gates remain in force, so this models the owning solid routine without a
+  route, zone, or trace predicate.
+- Clean authoritative command:
+  `mvn -q -Dmse=off -Dsurefire.argLine='-Xshare:off -Xmx6g'
+  -Dsurefire.forkCount=1 -DreuseForks=true
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace'
+  test`
+- Result: the replay report reaches raw frame `33746` with `1308` errors
+  (physics `1131`, animation `177`). The first comparison error advances
+  from raw frame `21146` to frame `23302`, `tails_cpu_ctrl2_pressed`
+  (`$0010` expected, `$0000` actual); the first animation error is now frame
+  `23430`, `tails_animation_id` (`$0002` expected, `$0005` actual). The replay
+  still fails closed at direct Kosinski completion `#31`, fingerprint
+  `66961069e564ef707173bbad733f75e3ab034e29e3f4833a02e2e26af452d8fd`, with
+  no matching engine-submitted job.

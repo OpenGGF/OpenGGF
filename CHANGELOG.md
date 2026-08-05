@@ -3,6 +3,10 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K off-screen SolidObject push release now publishes the native
+  Walk/Run animation word before the sidekick animation slot. CNZ's clean
+  replay frontier advances from raw frame 21,146 to 23,302 without changing
+  the trace payload.
 - Fix/Test: S3K CNZ overlapping hover fans now execute in managed SST order,
   restoring the native two-fan lift handoff and advancing the clean replay
   frontier from raw frame 20,457 to 21,146.
