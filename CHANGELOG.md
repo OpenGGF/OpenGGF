@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K AIZ spiked-log sidekick touch now preserves the ROM-owned
+  Tails animation byte and restarts the retained script cursor for the hurt
+  pass; the standard replay frontier advances from raw frame `10744`
+  (`tails_animation_id`) to raw frame `13986` (`tails_air`) with no trace
+  payload changes.
 - Fix/Test: S3K Tails' released-underwater push cleanup now preserves a live
   SolidObject-owned push latch alongside terrain wall provenance. The standard
   AIZ replay frontier advances from raw frame `10701` (`tails_mapping_frame`)

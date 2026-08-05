@@ -440,5 +440,13 @@ public class AizSpikedLogObjectInstance extends AbstractObjectInstance
         public int getCollisionProperty() {
             return 0;
         }
+
+        @Override
+        public boolean sidekickTouchHurtPublishesAnimation() {
+            // ROM's spiked-log child reaches the generic touch-hurt owner with
+            // Tails' existing anim byte still live; Animate_Tails advances the
+            // prior script during the two-frame hurt window.
+            return false;
+        }
     }
 }

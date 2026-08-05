@@ -61894,3 +61894,38 @@ to synthesize a POST phase on a VBLANK-only row.
   report contains `1135` errors and `0` warnings; no trace payloads were
   changed. The next frontier is Tails animation-id parity after the released
   underwater push-owner handoff.
+
+## 2026-08-05 — S3K AIZ spiked-log sidekick hurt-animation frontier
+
+- Worktree: repository root, branch `bugfix/s3k-traces`, parent frontier
+  `55b013262`. No trace payloads were edited.
+- Root cause: the AIZ spiked-log child reaches the generic sidekick touch-hurt
+  boundary with Tails' existing raw `anim` byte still live. The shared engine
+  hurt helper published `$1A` for that contact, so the next animation pass
+  selected the hurt mapping instead of advancing the retained `$FF` script.
+  Ordinary touch owners that write the ROM hurt animation remain unchanged.
+- Fix: `TouchResponseProvider` now exposes an object-owned generic touch-hurt
+  animation-publication predicate, defaulting to the shared `$1A` write. The
+  AIZ spiked-log child opts out; the dispatcher restores the retained raw byte,
+  installs it as the temporary animation owner, and resets the existing
+  animation manager restart cursor. Native hurt landing/recovery releases that
+  temporary owner. Direct object-owned `HurtCharacter` paths remain unchanged;
+  no zone, route, trace-frame, or game-name branch was added.
+- Focused validation passed:
+  `mvn -q -Dmse=off
+  -Dsurefire.argLine='-Xshare:off -Xmx6g'
+  -Dsurefire.forkCount=1 -DreuseForks=true
+  -Dtest='com.openggf.level.objects.TestSidekickTouchHurtAnimationOwnership,com.openggf.level.objects.TestTouchResponseManager,com.openggf.level.objects.TestTouchResponseProfileMapping,com.openggf.sprites.playable.TestHurtAnimationPublication,com.openggf.sprites.playable.TestSidekickCpuFollowParity,com.openggf.game.sonic3k.objects.TestAizSpikedLogGraphRewind'
+  test`
+- Clean authoritative command:
+  `mvn -q -Dmse=off -Dtrace.context.diagnosticChars=full
+  -Dsurefire.argLine='-Xshare:off -Xmx6g'
+  -Dsurefire.forkCount=1 -DreuseForks=true
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace'
+  test`
+- Result: the first comparison error advances from raw frame `10744`
+  (`tails_animation_id`, expected `0x0000`, actual `0x001A`) to raw frame
+  `13986` (`tails_air`, expected `0x0001`, actual `0x0000`). The report
+  contains `1130` errors and `0` warnings; no trace payloads were changed.
+  The next frontier is the AIZ Tails airborne-state handoff.
