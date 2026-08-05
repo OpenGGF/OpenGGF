@@ -21,9 +21,6 @@ class TestS1CompleteEmeraldVisualRun {
             "src", "test", "resources", "traces", "s1", "runs",
             "s1-sonic-complete-withemeralds");
 
-    /** Enough steps to clear segment 3's terminal physical row (BK2 13,347). */
-    private static final int GHZ2_ACT_BODY_STEPS = 13_000;
-
     @AfterEach
     void tearDown() {
         VisualRunReplayHarness.tearDown();
@@ -56,26 +53,29 @@ class TestS1CompleteEmeraldVisualRun {
     }
 
     /**
-     * Walks every compared row of the returned GHZ2 act. The segment's own last
-     * physical row is BK2 13,347, so a budget past it proves no row inside the
-     * act self-paused the session.
+     * Walks every compared row of the returned GHZ2 act and on through the
+     * route's SECOND giant ring. The pin above stops the instant segment 3 is
+     * admitted, so it never reaches the act body; reaching segment 4 requires
+     * all 3,606 of the act's rows (its last physical row is BK2 13,347) plus
+     * the boundary, so a self-pause anywhere inside it fails this instead.
      * <p>
-     * The pin above stops the instant segment 3 is admitted, so it never
-     * reaches the act body. This one does: row 107 is the act's first PLC
-     * completion that lands on an iteration held into a lag V-blank, where the
-     * ROM's own {@code RunPLC} (docs/s1disasm/sonic.asm:3032) runs on the lag
-     * closure rather than the row that completed the previous entry. The budget
-     * deliberately stops inside the following transition gap, whose giant-ring
-     * boundary is a separate open frontier.
+     * Row 107 is the act's first PLC completion that lands on an iteration held
+     * into a lag V-blank, where the ROM's own {@code RunPLC}
+     * (docs/s1disasm/sonic.asm:3032) runs on the lag closure rather than the row
+     * that completed the previous entry. The boundary itself is the second entry
+     * to a special stage in the run, and so the first whose index
+     * ({@code special_stage_index} 1) differs from the stage the provider still
+     * has loaded when the giant ring is touched.
      */
     @Test
-    void replaysEveryComparedRowOfTheReturnedGhz2Act() throws Exception {
+    void replaysTheReturnedGhz2ActAndItsGiantRingAdmission() throws Exception {
         VisualRunReplayHarness.Result result =
-                VisualRunReplayHarness.replay(RUN_DIR, GHZ2_ACT_BODY_STEPS);
+                VisualRunReplayHarness.replay(
+                        RUN_DIR, VisualRunReplayHarness.stopAfterSegment(4));
 
         assertTrue(result.sharedCursor() > 13_347,
                 "visual run stopped inside the returned GHZ2 act: " + result);
-        assertEquals(3, result.currentSegmentIndex(),
-                "visual run left segment 3 unexpectedly: " + result);
+        assertEquals(4, result.currentSegmentIndex(),
+                "visual run stalled at the second giant ring: " + result);
     }
 }

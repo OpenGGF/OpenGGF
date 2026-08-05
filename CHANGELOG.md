@@ -3,6 +3,18 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: a whole-run replay's giant-ring / star-post special-stage boundary signal
+  now reports the stage the entry actually selects instead of the one the
+  provider still has loaded. The index is chosen by
+  `SpecialStageProvider#consumeStageIndexForEntry` inside
+  `GameLoop#enterSpecialStage`, when the level frame consumes the request, so a
+  signal built while the level still owned the frame carried the previously
+  played stage — harmless for a run's first entry, where that value is the
+  un-entered provider's 0 and happens to be correct, and wrong for every entry
+  after it. The identity is now taken once the special-stage provider owns the
+  entry, matching the bonus-stage branch beside it. On the S1 complete-emeralds
+  run the route's second giant ring is admitted at its recorded row (BK2 13,348)
+  instead of running the transition gap out to its step cap.
 - Fix: a main-loop iteration held across a lag V-blank now runs its loop-tail
   PLC preparation on the closure that consumed the lag V-blank, not on the row
   that closed the previous entry. S1's `RunPLC` (`sonic.asm:3032`) sits behind

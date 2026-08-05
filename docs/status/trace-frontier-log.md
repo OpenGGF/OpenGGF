@@ -62283,3 +62283,85 @@ to synthesize a POST phase on a VBLANK-only row.
   special stage at BK2 13,348; the run does reach `SPECIAL_STAGE`,
   `SPECIAL_STAGE_RESULTS`, `TITLE_CARD` and `LEVEL` modes inside that gap, so
   the modes happen but the coordinator never admits the segment.
+
+## 2026-08-05 - Second giant ring: the boundary signal read the LOADED stage
+
+- Command: `mvn -Dmse=off -Ptrace-replay -Dtest=TestS1CompleteEmeraldVisualRun
+  -Dsonic1.rom.path=s1.gen test`, on `develop` at `99746ffa9`. The defect needs
+  a lane targeting `stopAfterSegment(4)`; the committed lanes stopped at 3.
+- Before: the run walked the whole segment-3 -> 4 transition gap without the
+  coordinator latching, then `transition step cap 17111 exceeded for giant_ring
+  from segment 3 at BK2 cursor 30458` (harness step 29,702). The engine visibly
+  entered `SPECIAL_STAGE` on the exactly-recorded row 13,348, ran it, returned
+  through `SPECIAL_STAGE_RESULTS` / `TITLE_CARD` / `LEVEL`, and was never
+  admitted.
+- After: segment 4 is admitted at harness step 12,592, BK2 cursor **13,348** --
+  the manifest's `mode_change_bk2_frame` exactly, and the same
+  step-after-source-closure shape the first giant ring has. The run then walks
+  2,237 rows into the stage and self-pauses on the next, unrelated frontier:
+  segment-4 row **2,237** (BK2 15,585), `dynamic_art.edges` expected `[]`,
+  actual `[1398, 1399]`, plus `dynamic_art.edge[0].present` /
+  `edge[1].present` expected `false` actual `true` -- 3 errors.
+- Root cause, measured, not reasoned. Temporary instrumentation on
+  `forwardLatchedRunBoundary`, `BoundaryProbe` and the coordinator's
+  `observeBoundary` / `destinationReady` (reverted before committing) produced
+  the decisive pair of lines:
+  - `FWD idx=3 kind=giant_ring observedFrame=13347 activeSS=0 mode=LEVEL`
+  - `OBSERVE seg=3 signal=SpecialStageRequest[physicalBk2Frame=13347,
+    stageIndex=0] expected=...entryKind=giant_ring... match=false`
+
+  The probe latched correctly and in-window (13,347 against a 13,348 edge, as
+  the first ring latches 4,975 against 4,976). What did not match was the
+  signal's **stage index**: 0, against the destination's 1. Everything else was
+  already right -- once the stage was entered, `READY-BLOCKED ... actualIdx=1`
+  shows the engine's own selection is the recorded `special_stage_index` 1,
+  every step of the gap. So the hypothesis that the engine's stage cycling
+  diverges from `v_lastspecial` is **refuted**: the engine selects correctly;
+  only the replay signal reported the wrong stage.
+- Why 0. `forwardLatchedRunBoundary` built the signal from
+  `getActiveSpecialStageIndex()`, i.e. `SpecialStageProvider#getCurrentStage()`
+  -- the stage the provider has **loaded**. The entry's index is chosen by
+  `SpecialStageProvider#consumeStageIndexForEntry` inside
+  `GameLoop#enterSpecialStage` (`GameLoop.java`:2005), which runs when the level
+  frame consumes the request. The forward fires while the level still owns the
+  frame (`mode=LEVEL` above), so it read the previously played stage. For a
+  run's FIRST entry that stale value is the un-entered provider's 0, which is
+  also the expected index -- so the first giant ring passed by coincidence and
+  hid the defect. The second is the first entry in the run whose index differs
+  from the stage already loaded.
+- Fix, one branch in `TraceSessionLauncher.forwardLatchedRunBoundary`: take the
+  identity from the provider that owns the entry once it owns it
+  (`mode == GameMode.SPECIAL_STAGE`), exactly as the `starpost_bonus` branch
+  immediately above it already does with `GameMode.BONUS_STAGE` and
+  `bonusStageOrNull().getActiveType()`. The asymmetry between the two branches
+  was the whole bug. The probe has already latched the boundary's own physical
+  row and the forward retries every tick until it emits, so the signal keeps its
+  recorded frame and loses nothing by waiting. No frame, zone, route or game
+  predicate; no change to stage selection.
+- Coverage: `TestS1CompleteEmeraldVisualRun`'s second lane becomes
+  `replaysTheReturnedGhz2ActAndItsGiantRingAdmission`, pinned at
+  `stopAfterSegment(4)`. It subsumes the previous 13,000-step budget -- reaching
+  segment 4 requires all 3,606 rows of the returned GHZ2 act and the boundary --
+  and was verified to fail on the unmodified tree with the exact cap message
+  above.
+- Verification (serial; JDK 21):
+  - `TestS1CompleteEmeraldVisualRun` both lanes green;
+    `TestS1CompleteEmeraldRunPrefix` (2), `TestTraceRunPlaybackCoordinator`
+    (21) and `TestTraceSessionLauncherRunBranch` (40) green.
+  - `TestS1GhzMazeRoundTripChain`'s presentation-bridge test green;
+    `ghzMazeRoundTrip` stays red on the same 8 `run_tail` fields with the same
+    values (`movie_logical_frame` 8,261 against the recorded 9,071) as before.
+  - S1 `*TraceReplay` fleet under `-Ptrace-replay`, 30 classes: 27 green, the
+    same 3 reds (`Sbz3CompleteRun`, `Credits03Lz3`, `FzCompleteRun`).
+  - Run chains: `TestS2EhzHalfpipeRoundTripChain` ("special stage exited with
+    3704 represented rows remaining in ss") and `TestS3kMegaRunChain`
+    ("Manifest validation failed for .../s3-knux-multibonus-ss") fail with the
+    same messages as before; `TestS3kBonusRoundTripChain` skips.
+  - Full default suite: 14,346 tests, **39 red** (27 failures + 12 errors) --
+    the same total and the same class set as the previous commit's measurement.
+    The only two red classes that touch the changed file,
+    `TestTraceSessionLauncherProductionFailureCleanup` and `TestGameLoop`, were
+    re-run in isolation on both trees and produce byte-identical failures
+    (4 run / 1 failure / 3 errors, and 88 run / 2 failures).
+- Next frontier for this lane: the second special stage's dynamic-art edges at
+  segment-4 row 2,237.

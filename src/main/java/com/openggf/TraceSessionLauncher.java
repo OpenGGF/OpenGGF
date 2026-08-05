@@ -1368,8 +1368,19 @@ public final class TraceSessionLauncher {
                     && GameServices.bonusStageOrNull() != null
                     ? new RunBoundarySignal.BonusRequest(frame,
                             GameServices.bonusStageOrNull().getActiveType()) : null;
+            // The provider's current stage is the stage it has LOADED, not the
+            // one a pending request will enter: the entry's index is chosen by
+            // SpecialStageProvider#consumeStageIndexForEntry inside
+            // GameLoop#enterSpecialStage, which runs when the level frame
+            // consumes the request. Read while the level still owns the frame it
+            // returns the previously played stage -- correct only for a run's
+            // first entry, where nothing has been played yet. So, exactly as the
+            // bonus branch above does, take the identity from the provider that
+            // owns the entry once it owns it. The probe already latched the
+            // boundary's own physical row, so waiting costs the signal nothing.
             case "giant_ring", "starpost_special" ->
-                    getActiveSpecialStageIndex() != null
+                    mode == GameMode.SPECIAL_STAGE
+                    && getActiveSpecialStageIndex() != null
                     ? new RunBoundarySignal.SpecialStageRequest(
                             frame, getActiveSpecialStageIndex()) : null;
             case "stage_exit" -> null; // emitted by the semantic results-entry seam
