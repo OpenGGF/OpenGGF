@@ -1479,6 +1479,12 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
                 return;
             }
             boolean detachedSegment = segment.isDestroyed();
+            // The ROM segment publishes its position before Obj_LBZFinalBoss1LaserHead
+            // reads the parent-relative coordinates. Keep that relationship explicit when
+            // the managed SST order places a recreated head before its segment.
+            if (!detachedSegment) {
+                segment.refreshFromBoss();
+            }
             if (--stepTimer < 0) {
                 advanceStep();
             }
@@ -1510,8 +1516,10 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
                 if (hFlip == boss.renderXFlip) {
                     boolean muzzleFlip = hFlip;
                     int muzzleDx = muzzleFlip ? 8 : -8;
-                    boss.recordChild(ChildKind.MUZZLE_LASER,
-                            boss.spawnChild(() -> new MuzzleLaserChild(boss, this, muzzleDx, 0, muzzleFlip)));
+                    MuzzleLaserChild muzzle = tryServices() == null
+                            ? boss.spawnChild(() -> new MuzzleLaserChild(boss, this, muzzleDx, 0, muzzleFlip))
+                            : spawnChild(() -> new MuzzleLaserChild(boss, this, muzzleDx, 0, muzzleFlip));
+                    boss.recordChild(ChildKind.MUZZLE_LASER, muzzle);
                 }
             }
         }

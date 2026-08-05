@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K LBZ final-boss laser children now refresh through their ROM
+  parent order, keeping the firing head and muzzle collision state aligned at
+  the first HP2 hit. The LBZ complete-run hardware frontier advances from
+  direct Kosinski `#314` at raw frame `43942` to direct `#317` at raw frame
+  `44454`; direct `#314..#316` and module `#211..#213` now match without
+  changing trace payloads.
 - Fix/Test: S3K LBZ now submits the ROM-owned Death Egg terrain Kos/KosM
   batch through the shared hardware queues, then submits the one-module
   launch PLC after that terrain batch retires. The LBZ complete-run hardware

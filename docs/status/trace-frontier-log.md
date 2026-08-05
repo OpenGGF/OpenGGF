@@ -62141,3 +62141,39 @@ to synthesize a POST phase on a VBLANK-only row.
   the engine has no pending job. The replay aborts before the comparison
   report is emitted, so no aggregate comparison-error count is available;
   no trace payloads were changed.
+
+## 2026-08-05 — S3K LBZ final-boss laser collision frontier
+
+- Worktree: repository root, branch `bugfix/s3k-traces`, parent frontier
+  `c62216889`. No trace payloads were edited.
+- Root cause: the firing head could read its turret segment's routine-entry
+  position when the managed SST order placed the head before that segment. The
+  muzzle was also spawned through the boss owner, so its `FindNextFreeObj`
+  allocation started after the boss instead of after the firing head and ran
+  before the refreshed head state.
+- Fix: the laser head refreshes its live segment parent before reading the
+  parent-relative position, while preserving the detached-parent tail. The
+  muzzle is allocated from the firing head's owner boundary in managed runtime
+  objects, with the existing unmanaged-fixture fallback retained for isolated
+  tests. No trace, route, zone, or frame-number branch was added.
+- Focused validation passed:
+  `mvn -q -Dmse=off
+  -Dsurefire.argLine='-Xshare:off -Xmx6g'
+  -Dsurefire.forkCount=1 -DreuseForks=true
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.game.sonic3k.objects.TestLbzFinalBoss1Instance' test`
+- Clean authoritative command:
+  `mvn -q -Dmse=off -Dtrace.context.diagnosticChars=full
+  -Dsurefire.argLine='-Xshare:off -Xmx6g'
+  -Dsurefire.forkCount=1 -DreuseForks=true
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kLbzCompleteRunTraceReplay#replayMatchesTrace'
+  test`
+- Result: direct completions `#314..#316` at raw frames `43942`, `43944`,
+  and `43946`, with module completions `#211..#213` at raw frames `43943`,
+  `43945`, and `43947`, now match. The first remaining authority failure is
+  direct completion `#317` at raw frame `44454`, fingerprint
+  `sha256:1954b7bee9d71b84484eed2a1eeea249c28ee6ea135817d449a31ec813392254`;
+  the engine has no pending job. The replay aborts before the comparison
+  report is emitted, so no aggregate comparison-error count is available;
+  no trace payloads were changed.
