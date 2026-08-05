@@ -61690,3 +61690,25 @@ to synthesize a POST phase on a VBLANK-only row.
   post-title-card fade-in, which is engine-owned transition work rather than a
   body tick. `TestS1CompleteEmeraldVisualRun` stays pinned at bridge admission
   until that lands.
+
+## 2026-08-05 - Gap DPLC: the prelude runs, the pair still does not appear
+
+- Narrowing the remaining `run_gap.edge_count` 2 vs 0. The prime mechanism is
+  present and wired for this path: `GameLoop` calls
+  `InLevelTitleCardCoordinator.prepareResultsTransition` on the results return,
+  which runs `SpriteManager.warmUpFreshMainPlayableOnly` with
+  `Sonic1LevelInitProfile.freshMainPlayablePreludeFrames() == 1` and
+  `bootstrapDynamicArtPrime` set, so `PlayableSpriteAnimation.update` takes the
+  `DynamicArtDecisionOwner.prime` branch outside the suppressed level body.
+- Tried and REVERTED: having `prime` also call `completePlayerDplc` for S1, on
+  the reasoning that the ROM's prelude pass is a real V_int whose
+  ProcessDMAQueue performs the transfer it queued, so the recorder sees a
+  submitted AND a completed edge while `prime` only submits. It changed
+  nothing measurable and its premise is unverified, so it was not kept.
+- Note for whoever picks this up: the harness's `art=serial` field cannot
+  answer this. `deliverySerial` advances only in `publishRow`, which needs an
+  open comparison segment, and the window is closed for the whole gap. Gap
+  edges live in a separate ledger (`DynamicArtLifecycleService.gapTransitions`,
+  compared by `TraceRunDynamicArtGapJournal`). The next step is to instrument
+  that ledger across the boundary rather than the publication serial, and
+  establish whether the prelude submits into it at all.
