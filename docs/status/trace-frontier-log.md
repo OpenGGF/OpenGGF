@@ -63130,3 +63130,64 @@ to synthesize a POST phase on a VBLANK-only row.
     `TestTornadoObjectInstance`, `TestWfzTornadoThrusterRendering`,
     `TestS3kCnzEndBossHeadless`, `TestS3kCnzTeleporterRouteHeadless`) were
     re-run as an isolated subset on both trees and produce identical failures.
+
+## 2026-08-06 - The MZ1 death restart is never requested, and why
+
+- Follow-up to the entry above; **no code change**, read-only measurement of the
+  next frontier so it is not re-derived. Frontier unchanged:
+  `TestS1CompleteEmeraldVisualRun` lane 2 green at `stopAfterSegmentBody(7)`,
+  failing at `stopAfterSegment(8)` with *"rowsConsumed must be 0 or 1"* at BK2
+  31,088 (segment 8 `mz1_2` starts at 31,086).
+- **The gap does nothing at all.** With the pin at `stopAfterSegment(8)` the
+  harness timeline shows segment 7 closing at step 30,102 / cursor 30,858 and
+  then 230 identical steps to the abort: `mode=LEVEL`,
+  `phase=TRANSITION_GAP`, `loadGen=5` throughout. No `TITLE_CARD`, no load
+  generation bump -- unlike the now-working act advance, which reaches
+  `TITLE_CARD` 22 rows into its gap and bumps the generation. **The level is
+  never reloaded.**
+- **Measured cause: `requestRespawn` is never called, once, in the entire run.**
+  A throwaway append-to-file probe on
+  `LevelTransitionCoordinator.requestRespawn` (reverted) produced an empty file.
+  The restart is not mis-timed; it is never asked for.
+- **Why, and it is a one-row ROM fact.** `Sonic_HandleDeath` sets
+  `restartime = 60` on the crossing frame, MZ1 row 3,331, and hands off to
+  routine 8. `Sonic_ResetLevel` first runs the frame AFTER that, so its
+  decrements cover rows 3,332-3,390 -- 59 of them -- and `restartime` is still
+  **1** at the segment's last recorded row (`docs/s1disasm/_incObj/01
+  Sonic.asm:2010-2011, 2062-2073`; the fixture's rows 3,331-3,390 are exactly 60
+  rows of `routine 08` with `y`/`y_sub`/`y_speed` frozen). The 60th decrement,
+  and therefore `f_restart = 1`, lands on MZ1 local row **3,391** = BK2
+  **30,858** -- the FIRST row of the transition gap. `Level_MainLoop` runs a
+  full `ExecuteObjects` pass on that row before its
+  `tst.w (f_restart).w / bne.w GM_Level` (sonic.asm:3009-3018, REV01), so in ROM
+  that gap row is an ordinary level iteration.
+- **The engine's gap rows are not.**
+  `TraceSessionLauncher.suppressesRunNativeLevelBody`
+  (`TraceSessionLauncher.java`:2352-2356) makes `GameLoop`
+  (`GameLoop.java`:1138-1147) skip the whole of `updateLevelMode` on a gap row,
+  running only the special-stage-request and title-card consumers added for the
+  act advance. So the player object never executes routine 8 a 60th time, the
+  countdown parks at 1 forever, and neither `requestRespawn()` nor the
+  `consumeRespawnRequest()` beside `consumeNextActRequest()`
+  (`GameLoop.java`:1474) is ever reached.
+- **This is NOT the act-advance defect, and porting `levelRoutineReentry` alone
+  will not fix it.** `Got_NextLevel` writes `f_restart` from an object that runs
+  inside the segment's own rows, so by the time that gap opened the advance had
+  already been requested; only the load's presentation was wrong. A death writes
+  `f_restart` from the player object one iteration past the last recorded row.
+  Marking `runDeathRestartLoad` a `Level:` re-entry
+  (`TraceSessionLauncher.java`:2102-2105 against `LevelManager`:3098-3108) is
+  still needed -- the ROM path is the same `GM_Level` restart, and the budget
+  decomposes the same way (`PaletteFadeOut` 22 + the MZ PLC drain 146 +
+  `Level_Delay` 4 + `PalFadeIn_Alt` 22 = 194, leaving the 34 un-timed MZ rows
+  already documented, total 228 = the recorded gap exactly) -- but it is the
+  SECOND half of the fix, not the first.
+- **The first half is a design decision about who owns the gap's first row.**
+  ROM keeps iterating `Level_MainLoop` until something ends the level; the
+  engine's gap suppression assumes no gap row is a gameplay row. A candidate
+  shape: let the level body keep running on gap rows until a level transition is
+  actually requested, which is a no-op for every boundary the run already
+  crosses (the act advance and both special-stage returns request their
+  transition from inside the segment) and gives a death exactly the one extra
+  iteration ROM gives it. It touches `GameLoop` and `TraceSessionLauncher`, so
+  it wants designing before implementing rather than an in-loop patch.
