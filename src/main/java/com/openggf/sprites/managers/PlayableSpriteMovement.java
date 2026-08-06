@@ -4,6 +4,7 @@ import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelEventProvider;
+import com.openggf.game.LevelState;
 import com.openggf.game.rules.CollisionRules;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.PlayerAnimationRules;
@@ -80,6 +81,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private static final int DEBUG_MOVE_SPEED = 3;
 	// Controlled roll deceleration: derived per-frame from sprite.getRunDecel() >> 2
 	// (s1:01 Sonic.asm:595-601 — rollDecel = decel/4 = $80/4 = $20)
+
+	/**
+	 * ROM {@code move.w #60,restartime(a0)} — the delay armed on the death row
+	 * crossing when the level is going to restart (s1:01 Sonic.asm:2042,
+	 * s2.asm:38281, sonic3k.asm:24583).
+	 */
+	private static final int DEATH_RESTART_DELAY_FRAMES = 60;
 
 	private final CollisionSystem bootstrapCollisionSystem;
 	private final AudioManager audioManager;
@@ -4139,7 +4147,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// restart delay down. No gravity, no ObjectFall, so the recorded position,
 		// sub-position and y_vel all stand still until the level restarts (S1 MZ1
 		// rows 3,331-3,390).
-		if (sprite.getDeathCountdown() > 0) {
+		if (sprite.isInDeathRestartRoutine()) {
 			tickRestartCountdown();
 			return 0;
 		}
@@ -4156,7 +4164,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				// and leaves it stopped (01 Sonic.asm:2010).
 				sprite.setYSpeed((short) -sprite.getGravity());
 			}
-			sprite.startDeathCountdown();
+			enterDeathRestartRoutine();
 		}
 
 		short oldYSpeed = sprite.getYSpeed();
@@ -4187,6 +4195,57 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		return sprite.getCentreY() > reference + 0x100;
 	}
 
+	/**
+	 * The death row crossing's own bookkeeping, identical in all three games.
+	 *
+	 * <p>S1 {@code Sonic_HandleDeath} (docs/s1disasm/_incObj/01
+	 * Sonic.asm:2011-2049), S2 {@code CheckGameOver}
+	 * (docs/s2disasm/s2.asm:38279-38316) and S3K {@code loc_12432}
+	 * (docs/skdisasm/sonic3k.asm:24581-24616) all do the same three things on
+	 * this one frame: enter the post-fall routine with {@code restartime} armed
+	 * at 60, raise the lives-counter HUD flag and subtract the life, and then
+	 * rewrite {@code restartime} to zero if that subtraction produced a game
+	 * over, or if the time-over flag was already set. The life therefore comes
+	 * off here, not 60 frames later, and the two zero-delay cases never restart
+	 * the level at all: {@code Sonic_ResetLevel} / {@code Obj01_Gone} /
+	 * {@code loc_1257C} only write the restart flag from a non-zero delay.
+	 *
+	 * <p>The two zero-delay cases stay distinct in the ROM even though they
+	 * share the delay: the game-over branch also clears the time-over flag and
+	 * shows GAME/OVER, while the time-over branch keeps it and shows TIME/OVER,
+	 * which is what later lets {@code Over_Wait} restart the level after a time
+	 * over but send a game over to the continue screen
+	 * (docs/s1disasm/_incObj/39 Game Over.asm:57-88).
+	 */
+	private void enterDeathRestartRoutine() {
+		if (sprite.isCpuControlled() && sprite.getCpuController() != null) {
+			// A CPU sidekick's crossing despawns it and never reaches the life
+			// counter: S3K sends Tails to routine 2 instead
+			// (docs/skdisasm/sonic3k.asm:24572-24578).
+			sprite.enterDeathRestartRoutine(DEATH_RESTART_DELAY_FRAMES);
+			return;
+		}
+		GameStateManager gameState = gameState();
+		if (gameState != null) {
+			gameState.loseLife();
+		}
+		boolean gameOver = gameState != null && gameState.getLives() == 0;
+		boolean timeOver = !gameOver && isTimeOverFlagged();
+		sprite.enterDeathRestartRoutine(
+				gameOver || timeOver ? 0 : DEATH_RESTART_DELAY_FRAMES);
+	}
+
+	/**
+	 * The ROM's {@code Time_over_flag} / {@code f_timeover}, owned by the level's
+	 * timer rather than by the player: the HUD's {@code TimeOver} routine both
+	 * kills the player and raises the flag when the timer reaches 9:59:59
+	 * (docs/s1disasm/_inc/HUD Update.asm:103-111).
+	 */
+	private boolean isTimeOverFlagged() {
+		LevelState levelState = sprite.currentLevelState();
+		return levelState != null && levelState.isTimeOver();
+	}
+
 	private void tickRestartCountdown() {
 		if (!sprite.tickDeathCountdown()) {
 			return;
@@ -4196,7 +4255,6 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// instead of causing a level reset
 			sprite.getCpuController().despawn();
 		} else {
-			gameState().loseLife();
 			levelManager().requestRespawn();
 		}
 	}

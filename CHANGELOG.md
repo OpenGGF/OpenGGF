@@ -3,6 +3,46 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: a death that ends the game no longer restarts the level, and the life comes off
+  on the frame the ROM takes it. `PlayableSpriteMovement` did both jobs at the wrong
+  time: it armed a 60-frame countdown on the death-row crossing and then called
+  `loseLife()` plus `requestRespawn()` unconditionally when that countdown expired.
+  All three ROMs instead do the whole decision on the crossing frame — S1
+  `Sonic_HandleDeath` (`docs/s1disasm/_incObj/01 Sonic.asm:2011-2049`), S2
+  `CheckGameOver` (`docs/s2disasm/s2.asm:38279-38316`), S3K `loc_12432`
+  (`docs/skdisasm/sonic3k.asm:24581-24616`) — writing routine 8, arming
+  `restartime` with 60, raising the lives-counter HUD flag and subtracting the life
+  together, then rewriting `restartime` to zero when that subtraction produced a game
+  over *or* when the time-over flag was already set. `Sonic_ResetLevel` / `Obj01_Gone`
+  / `loc_1257C` only write the restart flag from a non-zero delay, so neither case
+  restarts the level at all. The engine's freeze test moved off "countdown non-zero"
+  onto a new `isInDeathRestartRoutine()` modelling the ROM routine number, because the
+  two now differ: the zero-delay cases still enter the routine, so the corpse still
+  stops falling. The two zero-delay paths are kept distinct rather than collapsed —
+  the ROM's game-over branch clears the time-over flag and shows GAME/OVER while the
+  time-over branch keeps it and shows TIME/OVER, which is what later lets `Over_Wait`
+  restart the level after a time over but send a game over to the continue screen.
+  No trace column carries lives or game over, so nothing in the suite covered this;
+  it was found by audit against the any-BK2 bar. What is still missing downstream —
+  the GAME OVER / TIME OVER card object, its music/PLC pair, its 12-second wait, and
+  the continue screen — is recorded in `docs/status/known-bugs.md`.
+- Fix: the S1 title card's release gate no longer holds for a minimum of 60 frames.
+  `Sonic1TitleCardManager` required `stateTimer >= 60` alongside an idle PLC queue,
+  citing `move.w #1*60,obTimeFrame(a1)`. That citation pointed at the wrong routine:
+  the 60 belongs to `Card_Wait`, routine 4/6 (`docs/s1disasm/_incObj/34 Title
+  Cards.asm:74,118-122`), which nothing reaches until the routine bump at
+  `docs/s1disasm/sonic.asm:2971-2974` — after the loop, after `Level_Delay` and after
+  `PalFadeIn_Alt`, i.e. inside `Level_MainLoop` with gameplay already running.
+  `Level_TtlCardLoop`'s own exit condition is only "every element at its target and
+  `v_plc_buffer` empty" (`docs/s1disasm/sonic.asm:2814-2842`); there is no minimum
+  hold. Measured against the ROM, no retail act was actually affected: the title-card
+  queue is the zone's first PLC list followed by `PLC_Main2`, and at
+  `ProcessPLC_9Tiles`' nine patterns per VBlank that drains in 150 (GHZ), 132 (LZ,
+  and so SBZ3), 146 (MZ), 135 (SLZ), 144 (SYZ) and 132 (SBZ, and so FZ) frames against
+  a 44-frame slide-in — the floor never bound, with 28 frames of headroom at the
+  narrowest. The gate was still wrong for any smaller title-card payload, which is the
+  bar. `DISPLAY_HOLD_DURATION` had no other use and is removed; the ROM's genuine
+  post-release `Card_Wait` hold remains unmodelled and is now documented as such.
 - Fix: the per-act `*TraceReplay` lane compares ring count. `AbstractTraceReplayTest`
   already computed a real count via `captureEngineDiagnostics`, then discarded it by
   re-wrapping through `formattedWithCameraAndAnimation`, which hardcodes

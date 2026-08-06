@@ -63918,3 +63918,48 @@ to synthesize a POST phase on a VBLANK-only row.
   `Sonic1LevelEventManager:172` with the `NewPLC` citation at `:211`). Closed.
 - **Route position unchanged.** No engine change; pins stay at
   `stopAfterSegment(3)` and `stopAfterSegmentBody(11)`.
+
+## 2026-08-06 - S1 title-card release floor removed; death crossing modelled
+
+- **Commands.** Two detached worktrees off `c20ee7fbf`, one clean and one
+  carrying only this change, both run with
+  `mvn -Ptrace-replay -Dmse=off "-Dtest=com.openggf.tests.trace.s1.*TraceReplay"
+  -Dsonic1.rom.path=<repo>/s1.gen -Dsurefire.reportsDirectory=<private>`. The
+  shared working tree was **not** usable as an "after": another agent's S2
+  ring-count edits were live in it and measured 19/30 red against the same
+  baseline's 14/30, so five of those failures are theirs. Every figure below is
+  worktree-isolated. `develop` has since moved to `b57cd1e57`, which lands the
+  ring-comparison work in `src/`; the tip's failure set will not match this one.
+- **Delta: none.** 30 tests, 14 failing before, 14 failing after, byte-identical
+  failing set and identical first-error frame/field on all 14. One error total
+  moved: `TestS1FzCompleteRunTraceReplay` 12,712 → 12,687 errors, first error
+  unchanged at frame 0, `x` (expected `0x0B7F`, actual `0x2090`) — that trace is
+  desynced from its first row and is not a frontier this touches.
+- **Attribution of those 25.** A third worktree carrying *only* the title-card
+  change reproduced 12,712 exactly, so the title card moved nothing. The 25 come
+  from the death model: the engine used to treat "restart delay non-zero" as the
+  ROM's routine 8, so once the delay expired the corpse resumed falling under
+  gravity for the frames between the respawn request and the level actually
+  reloading. `Sonic_ResetLevel` / `Obj01_Gone` / `loc_1257C` never apply gravity,
+  so the corpse is now held for those frames as well.
+- **S1 title card: no retail act was affected.** `Sonic1TitleCardManager` gated
+  release on `stateTimer >= 60` alongside the PLC queue, citing an `obTimeFrame`
+  that belongs to `Card_Wait` (routine 4/6) — a post-release timer nothing reaches
+  until after `Level_TtlCardLoop`, `Level_Delay` and `PalFadeIn_Alt`
+  (`docs/s1disasm/sonic.asm:2971-2974`). The loop's real exit condition is only
+  "every element at target and `v_plc_buffer` empty"
+  (`docs/s1disasm/sonic.asm:2814-2842`). Measured from the ROM: the title-card
+  queue is the zone's first PLC list plus `PLC_Main2`, and at `ProcessPLC_9Tiles`'
+  nine patterns per VBlank it drains in GHZ 150, LZ 132, MZ 146, SLZ 135, SYZ 144,
+  SBZ 132 frames (the 146/150 figures match the audit's independently measured MZ
+  and GHZ). Slide-in is 44 frames (`0x2C0 / 0x10`, the ACT element) for every
+  zone, 36 for FZ, which has no moving ACT element. The floor could only bind if
+  the drain remaining at `DISPLAY` fell under 60; the narrowest margin is 28
+  frames (LZ and SBZ, and so SBZ3 and FZ). **FZ was not the exposed act** — it
+  reads the SBZ zone header, so it shares SBZ's 132-frame drain. The gate was
+  still wrong for any smaller payload, which is the acceptance bar.
+- **No trace covers either fix.** `TraceFrame` carries no lives or game-over
+  column and the S1 recorder reads neither, so the game-over/time-over restart
+  suppression has no fixture coverage at all; it is covered by
+  `TestDeathRestartRoutineParity` instead.
+- **Route position unchanged.** No frontier moved.
