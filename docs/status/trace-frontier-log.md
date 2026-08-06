@@ -64036,3 +64036,38 @@ to synthesize a POST phase on a VBLANK-only row.
   step for MCZ is `Obj37` lifetime and bounce parity -- the per-slot floor-check phase
   (`Vint_runcount+3 + d7 & 7`), the `Camera_Max_Y_pos + screen_height` boundary delete, and
   the global spill timer -- not ring windowing.
+
+## 2026-08-06 - S1 FZ / SBZ3 complete-run fixtures were installed in each other's directories
+
+- Baseline at `82b6a9533`: `TestS1FzCompleteRunTraceReplay` failed at frame 0
+  (`player_x` expected `0x0B7F`, actual `0x2090`; 12687 errors) and
+  `TestS1Sbz3CompleteRunTraceReplay` errored with `IllegalStateException: cannot
+  mutate queued PLC entries while the decoder is active`. Neither was an engine
+  defect.
+- Sonic 1 aliases two levels: Scrap Brain Act 3 is internally LZ act 4 and Final
+  Zone is internally SBZ act 3 (`docs/s1disasm/_inc/LevelSizeLoad &
+  BgScrollSpeed.asm:186,205`). The native recorder names its segment directories
+  from the raw ROM zone/act, so it emits SBZ3 as `lz4/` and Final Zone as
+  `sbz3/`. The v5 publication mapping applied that alias in the wrong direction,
+  so `2026-08-04-trace-v5-capture-matrix.json` sent `lz4` to `s1/fz_completerun`
+  and `sbz3` to `s1/sbz3_completerun`. `c6dd959af` fixed this in June;
+  `93398b8fb` ("publish strict v5 fixture fleet") reintroduced it.
+- The SBZ3 `IllegalStateException` was a consequence, not a PLC kernel hazard:
+  the harness plants the fixture's start position, so Final Zone's
+  `0x2140,0x05AC` landed inside SBZ3 past its `v_limitright2 - 0x100` signpost
+  preload threshold on the first level-loop tail, submitting `plcid_Signpost`
+  while the level-load Nemesis decoder was still mid-entry. With the correct
+  fixture that threshold is crossed thousands of frames later with an idle
+  decoder, so `NemesisPlcServiceQueue.requireIdleDecoder` stays as it is.
+- Fix is fixtures only - the three payload files were exchanged between the two
+  directories and the two capture-matrix destinations transposed. No `src/`
+  change. Payloads stay `.gz`, so `TestTraceFixtureCompressionGuard` is
+  unaffected. Post-swap metadata matches each test class's own javadoc:
+  `fz_completerun` = offset 189578 / 4457 frames / start `0x2140,0x05AC`;
+  `sbz3_completerun` = offset 181004 / 8354 frames / start `0x0B80,0x0000`.
+- Command: `mvn -Ptrace-replay -Dmse=off -DforkCount=1
+  -Dsurefire.reportsDirectory=target/rep-fixswap
+  -Dtest='TestS1FzCompleteRunTraceReplay,TestS1Sbz3CompleteRunTraceReplay'
+  -Dsurefire.failIfNoSpecifiedTests=false` with all three ROM paths, JDK 21.
+  Result: 2 tests, 0 failures, 0 errors, 0 skips. Both frontiers closed, taking
+  the S1/S2 red-class count from 27 to 25.
