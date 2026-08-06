@@ -64230,3 +64230,53 @@ work is a small, well-defined change to the replay drivers.
   advance the baseline, as they already do in the candidate.
 - The candidate diff is kept verbatim at
   `docs/architecture/audits/2026-08-06-bk2-press-edge-lag-baseline.patch.txt`.
+
+## 2026-08-06 - BK2 press-edge baseline, corrected: the CNZ2 blocker was mis-diagnosed
+
+Supersedes the blocker analysis in the entry above, which was wrong and is left
+in place only so the mistake is traceable.
+
+- **The recorded blocker was not the cause.** That entry blamed
+  `TraceReplayDrive`/`TraceReplayFrameClosureDriver` routing both `VBLANK_ONLY`
+  and `PLAYABLE_ANIMATION_ONLY` to `skipFrameFromRecording`. Instrumenting the
+  driver showed CNZ2's bootstrap issues only `stepFrameFromRecording` calls -
+  no skip rows at all - so the lag path never executed and could not have caused
+  the frame-0 divergence.
+- **Actual cause: the join seam.** `setBk2Movie` seeded the new press-edge
+  baseline to `null`. The ROM has been polling the movie since its own frame 0
+  and the replay merely joins at `bk2FrameOffset` with buttons already held
+  through the level-select menu, so `Ctrl_1_Held` is not neutral there. From
+  `null` every held button read as a fresh press on the first row, which is why
+  the divergence was at frame 0 (`y` 0x058C vs 0x0591) and why it hit a
+  level-select trace. Seeding from `frame(bk2StartIndex - 1)` - what the old
+  `index - 1` gave incidentally - fixes it. The `PLAYABLE_ANIMATION_ONLY`
+  change made on the wrong hypothesis was reverted; its ROM reasoning may hold
+  but no measurement supports it.
+- With that corrected, `TestS2Cnz2LevelSelectTraceReplay`,
+  `TestS2ObjectOccupancyOracle`, `TestS2Mtz2LevelSelectTraceReplay` and
+  `TestS2Mtz3LevelSelectTraceReplay` all pass together, and the two MTZ traces
+  are closed.
+- **Still not landed - ARZ2 becomes marginal.** Four full `TestS1*,TestS2*`
+  sweeps, same command, same commit apart from the patch:
+
+  | run | patch | Arz2 | ObjectOccupancyOracle | red |
+  |---|---|---|---|---|
+  | sweep2 | no | green | green | 16 |
+  | control | no | green | green | 16 |
+  | sweep4 | yes | green | FAIL (2 arz2 pillar cases) | 15 |
+  | sweep5 | yes | FAIL (99 errors) | green | 15 |
+
+  0/2 unpatched runs show an ARZ2-area failure; 2/2 patched runs do, alternating
+  which class surfaces it. `TestS2ObjectOccupancyOracle` passes in isolation
+  (2/2), paired with the ARZ2 trace, and across all 346 `TestS2*` tests - it only
+  fails once S1 classes have run in the same fork. So there is ambient
+  cross-class state (the known shared-fork/global-state flakiness) AND the patch
+  moves ARZ2 close enough to the margin for that state to decide the outcome.
+  ARZ2's 99-error shape is exactly its pre-fix baseline, i.e. the whole trace
+  reverts, not a new divergence.
+- **Next step:** the blast-radius measurement found exactly one press-edge
+  affected row in the arz2 fixture. Identify that row, establish whether the ROM
+  polled it, and determine why a single edge flips the whole trace. Do not land
+  the patch until ARZ2 is deterministic across repeated full sweeps.
+- Candidate diff (with the seam fix) at
+  `docs/architecture/audits/2026-08-06-bk2-press-edge-lag-baseline.patch.txt`.
