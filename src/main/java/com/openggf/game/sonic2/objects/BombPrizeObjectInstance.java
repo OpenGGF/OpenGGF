@@ -130,9 +130,6 @@ public class BombPrizeObjectInstance extends AbstractObjectInstance implements S
                 if (prizeCounter != null && prizeCounter.length > 0) {
                     prizeCounter[0]--;
                 }
-                if (parent != null) {
-                    parent.onPrizeCounterChanged(player);
-                }
                 setDestroyed(true);
             }
         }

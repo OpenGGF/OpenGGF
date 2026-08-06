@@ -64,7 +64,6 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
 
     // Timing constants
     private static final int COUNTDOWN_FRAMES = 0x78;   // 120 frames (~2 seconds)
-    private static final int PRIZE_SPAWN_INTERVAL = 2;  // Spawn every other frame
     private static final int SFX_FRAME_OFFSET = 3;      // Offset for SFX timing (s2.asm: Vint_runcount+3)
     private static final int ACTIVE_ANIM_SPEED = 2;     // Toggle animation frame every 2 frames (from Ani_objD6)
 
@@ -104,7 +103,6 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
     private int slotReward = 0;
     private int prizesToSpawn = 0;        // Total prizes left to spawn (SlotMachine_Reward equivalent)
     private int prizeAngle = 0;
-    private int prizeSpawnTimer = 0;
     private final int[] activePrizeCount = new int[1];  // Active prizes on screen (objoff_2C equivalent)
 
     // Contact tracking
@@ -301,7 +299,6 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
         activePrizeCount[0] = 0;
         prizesToSpawn = 0;
         prizeAngle = 0;
-        prizeSpawnTimer = 0;
     }
 
     /**
@@ -327,7 +324,6 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
         prizesToSpawn = 0;
         activePrizeCount[0] = 0;
         prizeAngle = 0;
-        prizeSpawnTimer = 0;
     }
 
     private void playCasinoBonusSound() {
@@ -446,7 +442,6 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
                 prizesToSpawn = (slotReward < 0) ? 100 : slotReward;
                 activePrizeCount[0] = 0;  // No prizes on screen yet
                 prizeAngle = 0;
-                prizeSpawnTimer = 0;
                 playerState = STATE_SPAWNING_PRIZES;
             }
         } else {
@@ -476,29 +471,47 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
 
         // NO SFX during prize spawning - ROM only plays sound during waiting/countdown
 
-        // Spawn prizes every other frame, but only if < 16 on screen
-        prizeSpawnTimer++;
-        if (prizeSpawnTimer >= PRIZE_SPAWN_INTERVAL) {
-            prizeSpawnTimer = 0;
-            // Only spawn if more prizes to spawn AND less than 16 currently active
-            if (prizesToSpawn > 0 && activePrizeCount[0] < MAX_PRIZES) {
-                spawnPrize(player, vIntRunCount);
-                prizesToSpawn--;
+        // loc_2BD4E (rings, s2.asm:59156-59193) and its identical twin at
+        // loc_2BC86 (bombs, s2.asm:59110-59148) gate on the *global* clock:
+        // "btst #0,(Level_frame_counter+1).w / beq.w return_2BDF6". A prize is
+        // therefore only ever created on an odd Level_frame_counter, and that
+        // same branch returns before the "tst.w objoff_2C(a0) / beq loc_2BE2E"
+        // release check, so while the reward is outstanding the release is only
+        // polled on odd frames too. Once the reward is exhausted the "beq.w +"
+        // at the head of loc_2BD4E skips the spawn block entirely and the
+        // release check runs every frame.
+        if (prizesToSpawn > 0) {
+            if ((levelFrameCounter(vIntRunCount) & 1) == 0) {
+                return; // beq.w return_2BDF6 - no spawn, and no release poll
             }
+            // cmpi.w #$10,objoff_2C(a0) / bhs.w return_2BDF6
+            if (activePrizeCount[0] >= MAX_PRIZES) {
+                return;
+            }
+            spawnPrize(player, vIntRunCount);
+            prizesToSpawn--;
         }
 
         releaseIfAllPrizesSettled(player);
     }
 
-    void onPrizeCounterChanged(AbstractPlayableSprite contextPlayer) {
-        releaseIfAllPrizesSettled(contextPlayer);
+    /**
+     * ROM-visible Level_frame_counter. The object update argument is
+     * V_int_run_count, which de-phases from Level_frame_counter across lag
+     * frames; loc_2BD4E reads Level_frame_counter.
+     */
+    private int levelFrameCounter(int vIntRunCount) {
+        return services().levelManager() != null
+                ? services().levelManager().getFrameCounter() + 1
+                : vIntRunCount;
     }
 
     private void releaseIfAllPrizesSettled(AbstractPlayableSprite contextPlayer) {
-        // ObjDC/ObjD3 decrement ObjD6's objoff_2C through a shared pointer.
-        // If a child runs earlier than the cage slot, the release path must see
-        // that decrement in the same frame rather than waiting for ObjD6's next
-        // scheduled update.
+        // ObjDC/ObjD3 decrement ObjD6's objoff_2C through a shared pointer
+        // (s2.asm:25490-25492). The cage only ever reads that counter at its own
+        // point in the object update order ("tst.w objoff_2C(a0)" in loc_2BD4E),
+        // so a child that runs after the cage cannot release the player in the
+        // same frame - loc_2BE2E is reached on the cage's next update.
         if (playerState != STATE_SPAWNING_PRIZES
                 || prizesToSpawn > 0
                 || activePrizeCount[0] > 0
@@ -648,7 +661,7 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
         int managerReward = debugManager != null ? debugManager.getReward() : 0;
         String managerState = debugManager != null ? debugManager.traceDebugState() : "none";
         return String.format(
-                "state=%d linked=%d countdown=%d slotComplete=%d slotReward=%d mgrReward=%d prizes=%d active=%d timer=%d occupied=%d frame=%d slot={%s}",
+                "state=%d linked=%d countdown=%d slotComplete=%d slotReward=%d mgrReward=%d prizes=%d active=%d occupied=%d frame=%d slot={%s}",
                 playerState,
                 isLinkedMode ? 1 : 0,
                 countdown,
@@ -657,7 +670,6 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
                 managerReward,
                 prizesToSpawn,
                 activePrizeCount[0],
-                prizeSpawnTimer,
                 playerOccupied ? 1 : 0,
                 mappingFrame,
                 managerState);

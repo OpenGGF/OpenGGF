@@ -225,9 +225,6 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance
         if (player != null) {
             player.addRings(1);
         }
-        if (parent != null) {
-            parent.onPrizeCounterChanged(player);
-        }
 
         // Play ring sound
         services().playSfx(GameSound.RING);
