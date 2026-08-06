@@ -87,13 +87,17 @@ class TestS1CompleteEmeraldVisualRun {
      * transition gap.
      * <p>
      * It then walks every compared row of MZ1 itself, whose last 170 rows are
-     * the run's FIRST death. MZ1's descending bottom boundary catches Sonic
-     * mid-roll, so the act ends through {@code Sonic_LevelBound} rather than a
-     * signpost: {@code DynamicLevelEvents} snaps {@code v_limitbtm2} to the
-     * camera and ratchets it upward, the camera rides it up through a
+     * the run's FIRST death. That death is a faithful reproduction of an
+     * original-game bug, NOT an engine defect: crossing a camera boundary
+     * backwards ratchets the camera upward and pushes Sonic into a death he
+     * cannot avoid. Do not "fix" it. MZ1's descending bottom boundary catches
+     * Sonic mid-roll, so the act ends through {@code Sonic_LevelBound} rather
+     * than a signpost: {@code DynamicLevelEvents} snaps {@code v_limitbtm2} to
+     * the camera and ratchets it upward, the camera rides it up through a
      * {@code v_limittop2} it is allowed to pass, the pit kill fires, and
      * {@code Sonic_HandleDeath} freezes the corpse for a 60-frame restart
-     * delay. The pin stops once MZ1 has published its last row; the
+     * delay. The ratchet is the bug; reproducing it is the point, so tidying
+     * the boundary logic would break this lane rather than improve it. The pin stops once MZ1 has published its last row; the
      * death-restart boundary behind it is the route's first, and it now
      * replays: {@code Sonic_ResetLevel}'s sixtieth decrement lands on the first
      * row of the transition gap, which is the source level's own last
