@@ -462,9 +462,10 @@ public abstract class AbstractTraceReplayTest {
                         sprite.getAngle(),
                         sprite.getAir(), sprite.getRolling(),
                         sprite.getGroundMode().ordinal(), romDiag,
-                        EngineDiagnostics.formattedWithCameraAndAnimation(
+                        EngineDiagnostics.formattedWithCameraAnimationAndRings(
                                 engineDiag.cameraX(), engineDiag.cameraY(),
-                                engineDiag.animationId(), engineDiag.mappingFrame(), engineDiagText),
+                                engineDiag.animationId(), engineDiag.mappingFrame(),
+                                engineDiag.rings(), engineDiagText),
                         secondaryCharacterLabel, actualSidekick,
                         expectedSidekickCpu, actualSidekickCpu, expectedSidekickNormalStep);
                     compareLoadQueuesIfAdvertised(

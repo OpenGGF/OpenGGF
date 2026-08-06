@@ -63616,3 +63616,56 @@ to synthesize a POST phase on a VBLANK-only row.
   `stopAfterSegment(3)` and `stopAfterSegmentBody(11)`. The frontier moves at the
   plan's Phase 5 (the `99746ffa9` revert), which must be measured on its own
   against M8 before Phase 6 begins.
+
+## 2026-08-06 - The per-act `*TraceReplay` lane never compared rings; 21 real divergences surface
+
+- **The hole.** `AbstractTraceReplayTest` computes a real ring count at :440 via
+  `captureEngineDiagnostics`, then throws it away at :465 by re-wrapping through
+  `EngineDiagnostics.formattedWithCameraAndAnimation`, which hardcodes `rings = -1`
+  — exactly the value `TraceBinder`:258 reads as "not captured". So the whole
+  per-act family has never compared rings, despite `ToleranceConfig.DEFAULT`
+  setting `RingCountMode.FORCE_ERROR`. Sibling of the run-path hole fixed in
+  `9e7590efa`, and independent of it.
+- **The fix is narrow on purpose.** New `formattedWithCameraAnimationAndRings`;
+  `formattedWithCameraAndAnimation` is left intact for `TestTraceBinder`, which has
+  no sprite and asserts no PHYSICS error. Forwarding the whole `engineDiag` would
+  have been shorter but wrong here: `TraceBinder` also scores `routine` (:226),
+  `statusByte` (:231) and `xSub`/`ySub` (:191) off the same record, all `-1` on this
+  lane, so it would have switched on five comparisons at once and made the delta
+  unattributable.
+- **Measurement method — the previous entries' figures were unsound.** A default
+  `mvn test` sweep **excludes `**/tests/trace/**` entirely** (`pom.xml`:789), so it
+  never runs a single trace test; and `target/surefire-reports` persists XML across
+  sessions, which both a naive parse and the MSE summary count as live. Measured
+  that way the corpus looked like 116-118 red on 43-44 classes and every ring delta
+  came out as exactly zero. The real protocol is `-Ptrace-replay -Dmse=off` with
+  `target/surefire-reports` wiped first. Under it: **749 test cases, 80 red / 29
+  classes before, 101 red / 50 classes after. 21 newly red, 0 newly green.**
+- **All 21 fail with a ring mismatch as the first error** — no collateral, so the
+  plumbing is not producing side effects. Four clusters, likely far fewer than 21
+  root causes:
+
+  | Cluster | Tests | Evidence |
+  |---|---|---|
+  | Engine collapses to 0 rings | 3 | GHZ3 f6390 `81→0`, LZ1 f6024 `28→0`, MZ1 f4166 `10→0` |
+  | Engine exactly 10 short | 2 | GHZ1 f2032 `49→39`, MCZ2 f4145 `67→57` |
+  | Engine 1 short | 9 | S1 GHZ1-complete f1613 `6→5`, SLZ1 f855 `2→1`, plus six acts first diverging at `1→0` |
+  | Engine 1 **ahead**, all S2 | 7 | EHZ1 f1045 `9→10`, CNZ f704 `16→17`, MCZ f1817 `8→9`, ARZ f2340 `55→56`, CNZ2 f2722 `49→50`, MTZ f2766 `41→42` |
+
+- **Diagnosis: category (a), real engine divergences now correctly caught.** The
+  values are plausible gameplay counts rather than sentinels; the same hex parse
+  serves the several hundred cases that still match, so a mis-parsed fixture field
+  would have failed nearly everything rather than 21; and a throwaway `+1000` offset
+  probe failed `TestS1Ghz1TraceReplay` at frame 0 with `rings mismatch (expected=0,
+  actual=1000)`, confirming the field reaches the binder. Probe reverted.
+  `TestS2Ehz1TraceReplay` and `TestS2ReplayReferenceClosureIntegration` are the same
+  EHZ1 trace at the same frame, so 21 tests is an upper bound on distinct causes.
+- **The all-S2 `+1` cluster is the one to look at first, and may be category (b).**
+  Seven S2 traces each running exactly one ring *ahead* is the signature of a
+  sampling-phase difference between recorder and engine — rings banked one frame
+  early relative to the sampled row — not seven independent collection bugs. Worth
+  settling before chasing the individual acts, since it would clear a third of the
+  list.
+- **No tolerance was loosened and no ring carve-out added.** The `9e7590efa`
+  run-path change is unaffected: no test under `tests/trace/runs` fails on `rings`
+  in either sweep.

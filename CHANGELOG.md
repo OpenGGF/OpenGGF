@@ -3,6 +3,25 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the per-act `*TraceReplay` lane compares ring count. `AbstractTraceReplayTest`
+  already computed a real count via `captureEngineDiagnostics`, then discarded it by
+  re-wrapping through `formattedWithCameraAndAnimation`, which hardcodes
+  `rings = -1` — the value `TraceBinder` reads as "not captured". The whole family
+  has therefore never compared rings despite `ToleranceConfig.DEFAULT` setting
+  `RingCountMode.FORCE_ERROR`. It now passes the count through a new
+  `formattedWithCameraAnimationAndRings`; the ring-less factory is left intact for
+  the callers that genuinely have no sprite. Deliberately narrow: the binder also
+  scores `routine`, `statusByte` and `xSub`/`ySub` off the same record, all still
+  `-1` on this lane, and forwarding the whole snapshot would have switched on five
+  comparisons at once. Enabling the check turns **21 tests red across the S1 and S2
+  per-act corpus, every one of them with a ring mismatch as its first error** — real
+  pre-existing divergences that were previously invisible, not regressions. They fall
+  into four clusters: engine ring count collapsing to 0 (GHZ3 f6390 81→0, LZ1 f6024
+  28→0, MZ1 f4166 10→0), engine exactly 10 short (GHZ1 f2032 49→39, MCZ2 f4145
+  67→57), engine one short across eight S1/S2 acts, and engine one *ahead* across
+  seven S2 traces. The last cluster's uniformity points at a sampling-phase
+  difference rather than seven independent bugs. Divergences are recorded in
+  `docs/status/trace-frontier-log.md`; none is suppressed.
 - Fix: whole-run replay genuinely compares ring count again. `ToleranceConfig.DEFAULT`
   has always set `RingCountMode.FORCE_ERROR`, but `LiveTraceComparator` built its
   per-frame diagnostics through a factory that hardcoded `rings = -1`, and
@@ -13,10 +32,15 @@ All notable changes to the OpenGGF project are documented in this file.
   `EngineDiagnostics.formattedWithCameraAnimationSubpixelAndRings`. The negative
   sentinel is deliberately kept: it is a genuine "no ring context" signal for the
   callers that collapse diagnostics without a sprite to read (`EMPTY`,
-  `formattedOnly`, `formattedWithCamera`), not a blanket opt-out. Nothing regressed —
-  a full suite before and after is red on the identical 116 tests — and a throwaway
-  probe that offset the engine count by 1000 confirmed the field now reaches the
-  comparator as an `ERROR`-severity mismatch rather than being skipped.
+  `formattedOnly`, `formattedWithCamera`), not a blanket opt-out. A throwaway probe
+  that offset the engine count by 1000 confirmed the field reaches the comparator as
+  an `ERROR`-severity mismatch rather than being skipped. Nothing regressed: no
+  run-chain test fails on `rings` under `-Ptrace-replay`. (The "identical 116 tests"
+  figure first published with this entry was wrong — it came from a default-profile
+  sweep, which excludes `**/tests/trace/**` entirely and so never ran the run-chain
+  tests, over a `target/surefire-reports` still holding stale XML from earlier
+  sessions. Trace deltas must be measured with `-Ptrace-replay`, `-Dmse=off`, and a
+  wiped report directory.)
 - Fix: a whole-run replay's transition gap no longer swallows the source level's
   last main-loop iteration. A gap is a gap in the *recording*: each run recorder
   finalizes a level segment on the first frame whose sampled game mode has left
