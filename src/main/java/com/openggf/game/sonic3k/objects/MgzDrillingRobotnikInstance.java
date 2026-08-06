@@ -13,8 +13,13 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.events.S3kMgzEventWriteSupport;
+import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.PatternAtlasRange;
+import com.openggf.game.timing.HardwareWorkHandle;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpriteSheet;
@@ -326,6 +331,15 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     private boolean miniInitialExecutionPending;
     private boolean flipX;
     private boolean artQueued;
+    @RewindTransient(reason = "queue facade is rebound from the captured MGZ KosM ordinals")
+    private S3kKosModuleQueue bossArtQueue;
+    @RewindTransient(reason = "hardware handle is rebound from the captured MGZ KosM ordinal")
+    private HardwareWorkHandle bossArtHandle;
+    @RewindTransient(reason = "hardware handle is rebound from the captured MGZ KosM ordinal")
+    private HardwareWorkHandle bossDebrisArtHandle;
+    private long bossArtOrdinal;
+    private long bossDebrisArtOrdinal;
+    private boolean bossArtLoaded;
     private boolean palettesLoaded;
     private boolean bossMusicPlayed;
     private boolean hit;
@@ -404,6 +418,12 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         waitTimer = INIT_WAIT_FRAMES;
         miniInitialExecutionPending = !endBossMode;
         artQueued = false;
+        bossArtQueue = null;
+        bossArtHandle = null;
+        bossDebrisArtHandle = null;
+        bossArtOrdinal = -1;
+        bossDebrisArtOrdinal = -1;
+        bossArtLoaded = false;
         palettesLoaded = false;
         bossMusicPlayed = false;
         hit = false;
@@ -1152,10 +1172,77 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         if (artQueued) {
             return;
         }
+        serviceBossArtQueue();
         services().fadeOutMusic();
         ensureArtLoaded();
         loadBossPalette();
         artQueued = true;
+    }
+
+    /**
+     * ROM {@code Obj_MGZ2DrillingRobotnik} queues the drill and debris KosM
+     * archives before loading PLC {@code $6D} (sonic3k.asm:142447-142454).
+     * The sheets are registered separately for rendering, but the global
+     * module FIFO still owns this hardware-visible work.
+     */
+    private void serviceBossArtQueue() {
+        try {
+            if (bossArtLoaded) {
+                return;
+            }
+            if (bossArtQueue == null && bossArtOrdinal >= 0) {
+                bossArtQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
+                bossArtHandle = services().hardwareTiming().pendingHandle(
+                                HardwareWorkKind.KOS_MODULE_QUEUE, bossArtOrdinal)
+                        .orElseThrow(() -> new IllegalStateException(
+                                "restored MGZ end-boss owner cannot find KosM ordinal "
+                                        + bossArtOrdinal));
+                bossDebrisArtHandle = services().hardwareTiming().pendingHandle(
+                                HardwareWorkKind.KOS_MODULE_QUEUE, bossDebrisArtOrdinal)
+                        .orElseThrow(() -> new IllegalStateException(
+                                "restored MGZ end-boss owner cannot find debris KosM ordinal "
+                                        + bossDebrisArtOrdinal));
+            }
+            if (bossArtQueue == null && bossArtOrdinal < 0) {
+                bossArtQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
+                bossArtHandle = bossArtQueue.queue(
+                        services().rom(),
+                        Sonic3kConstants.ART_KOSM_MGZ_ENDBOSS_ADDR,
+                        Sonic3kConstants.ART_TILE_MGZ_END_BOSS);
+                bossArtOrdinal = bossArtHandle.ordinal();
+                bossDebrisArtHandle = bossArtQueue.queue(
+                        services().rom(),
+                        Sonic3kConstants.ART_KOSM_MGZ_ENDBOSS_DEBRIS_ADDR,
+                        Sonic3kConstants.ART_TILE_MGZ_END_BOSS_DEBRIS);
+                bossDebrisArtOrdinal = bossDebrisArtHandle.ordinal();
+                return;
+            }
+            if (bossArtHandle != null && bossArtQueue.isReady(bossArtHandle)) {
+                bossArtQueue.claim(bossArtHandle);
+                bossArtHandle = null;
+                bossArtOrdinal = -1;
+            }
+            if (bossDebrisArtHandle != null && bossArtQueue.isReady(bossDebrisArtHandle)) {
+                bossArtQueue.claim(bossDebrisArtHandle);
+                bossDebrisArtHandle = null;
+                bossDebrisArtOrdinal = -1;
+            }
+            if (bossArtHandle == null && bossDebrisArtHandle == null) {
+                bossArtQueue = null;
+                bossArtLoaded = true;
+            }
+        } catch (Exception unavailable) {
+            if (bossArtOrdinal >= 0 || bossDebrisArtOrdinal >= 0) {
+                throw new IllegalStateException(
+                        "MGZ end-boss KosM owner lost its submitted job", unavailable);
+            }
+            // Lightweight object tests can exercise the native wait without a
+            // session timing/ROM service. Production has already submitted both
+            // ordinals before this fallback could be taken.
+            bossArtQueue = null;
+            bossArtHandle = null;
+            bossDebrisArtHandle = null;
+        }
     }
 
     /** ROM: Obj_MGZ2DrillingRobotnikGo (sonic3k.asm:142404) — Play_Music(mus_EndBoss). */

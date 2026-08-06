@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K MGZ Act 2 drilling-Robotnik now submits the ROM-owned
+  `ArtKosM_MGZEndBoss` and `ArtKosM_MGZEndBossDebris` modules to the shared
+  KosM FIFO in native order and retains rewind ordinals for both jobs. The
+  MGZ complete-run hardware frontier advances from direct `#149` at raw frame
+  `17952` to direct `#153` at raw frame `18276`; no trace payloads changed.
 - Fix/Test: S3K HCZ water-wall debris and spray now use the native
   `0x18 x 0x18` `Sprite_OnScreen_Test` bounds, preventing vertical geyser
   particles from exhausting the dynamic SST pool before the conveyor

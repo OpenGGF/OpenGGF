@@ -64458,3 +64458,35 @@ to synthesize a POST phase on a VBLANK-only row.
 - Route position: AIZ standard and complete-run frontiers remain green;
   HCZ now reaches direct hardware admission `#104`. MGZ is next in gameplay
   order; CNZ, ICZ, and LBZ remain pending.
+
+## 2026-08-06 - S3K MGZ end-boss KosM frontier
+
+- Worktree: `bugfix/s3k-traces` at `75af106c8` before the frontier commit;
+  unrelated edits in `.idea/vcs.xml` and
+  `docs/status/rewind-round-trip-gaps.md` remained unstaged. Validation used
+  JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen` (SHA-1
+  `b711a909cce238ca4af3e517a2edca306228efa5`), without replacing or renaming
+  it.
+- Frontier command: `mvn -q -Dmse=off
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kMgzCompleteRunTraceReplay#replayMatchesTrace
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Result: the complete-run replay advances from direct
+  `KOS_DECOMPRESSION_QUEUE#149` at raw frame `17952` to the next recorded
+  completion, direct `#153` at raw frame `18276`, fingerprint
+  `sha256:739f902840d04b1e3b1d536c3aa323cc1faf13957bd7bb02a82433ff932e05a5`.
+  The run aborts at that boundary because module parents `#102` and `#103`
+  remain pending; the report contains 419 comparator errors at the current
+  stop, first raw frame `15974`, `queue.s3k_kos_direct.busy`, expected `true`
+  and actual `false`.
+- Regression status: AIZ and HCZ frontiers remain at their committed
+  checkpoints; ring comparison remains enabled with
+  `ToleranceConfig.DEFAULT` `FORCE_ERROR`. No trace payloads changed.
+- Fix scope: `Obj_MGZ2DrillingRobotnik` now submits the ROM's end-boss body
+  and debris KosM archives to the shared module FIFO at their native
+  destination tiles and preserves both hardware ordinals across rewind.
+  Rendering still uses the ROM-backed standalone sheets; no trace-derived
+  gameplay values were introduced.
+- Route position: AIZ and HCZ remain green at their committed frontiers; MGZ
+  now reaches direct `#153`. The pending MGZ module owners are next; CNZ, ICZ,
+  and LBZ remain pending in gameplay order.
