@@ -64395,3 +64395,35 @@ to synthesize a POST phase on a VBLANK-only row.
 - Route position: AIZ standard has advanced through the HCZ handoff. AIZ
   complete-run and later zone frontiers remain pending at the checkpoints
   above.
+
+## 2026-08-06 - S3K AIZ held-row queue closure frontier
+
+- Worktree: `bugfix/s3k-traces` at `8fa54b578` before the frontier commit;
+  unrelated edits in `.idea/vcs.xml` and
+  `docs/status/rewind-round-trip-gaps.md` remained unstaged. Validation used
+  JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen` (SHA-1
+  `b711a909cce238ca4af3e517a2edca306228efa5`), without replacing or renaming
+  it.
+- Frontier command: `mvn -q -Dmse=off
+  "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay#replayMatchesTrace"
+  "-Ds3k.rom.path=./Sonic and Knuckles & Sonic 3 (W) [!].gen" test`.
+  Result: the complete-run replay now reaches direct Kosinski `#50` at raw
+  frame `20376`; the engine has no pending work. This advances the previous
+  direct `#35` stop at raw frame `6346`. The run reports one expected hardware
+  admission error; first error frame/field is raw `20376`,
+  `KOS_DECOMPRESSION_QUEUE#50`, fingerprint
+  `sha256:66961069e564ef707173bbad733f75e3ab034e29e3f4833a02e2e26af452d8fd`.
+- Regression checks: `TestS3kAizTraceReplay#replayMatchesTrace`, the changed
+  PLC/KosM lifecycle unit tests, and the AIZ standard replay pass with zero
+  comparator errors. HCZ complete-run remains at its pre-existing direct
+  `#90` admission stop with no pending engine work; no unrelated comparator
+  divergence was introduced.
+- Fix scope: suppressed held rows now service the ROM-owned event runtime-art
+  admission between the module and direct hardware boundaries, while the
+  generic KosM module queue carries a child handoff across the held-tail
+  closure. No trace payloads or trace-derived gameplay values changed. Ring
+  comparison remains enabled with `ToleranceConfig.DEFAULT` `FORCE_ERROR`.
+- Route position: AIZ standard remains through the HCZ handoff; AIZ complete
+  now reaches direct `#50`. HCZ, MGZ, CNZ, ICZ, and LBZ remain pending at the
+  recorded checkpoints.

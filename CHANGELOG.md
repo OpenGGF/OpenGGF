@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K held-row replay closure now carries a deferred KosM child
+  handoff through the following direct-FIFO tail and services event-owned
+  runtime art between the suppressed-row POST and PRE boundaries. The AIZ
+  complete-run hardware frontier advances from direct Kosinski `#35` at raw
+  frame `6346` to `#50` at raw frame `20376`; the standard AIZ replay remains
+  green with zero comparator errors. No trace payloads changed.
 - Fix/Test: S3K AIZ trace replay now preserves the native AIZ-to-HCZ fade and
   title-card transition boundary, orders the AIZ results/cutscene handoff by
   ROM object timing, and defers only held-tail KosM child publication. The

@@ -41,6 +41,10 @@ public final class S3kKosModuleQueue {
             new HashMap<>();
     private final Set<HardwareWorkHandle> freshLevelHandoffHandles = new HashSet<>();
     private boolean deferChildSubmissionForHeldLoopTail;
+    private boolean carryDeferredChildSubmissionForHeldLoopTail;
+    private boolean heldLoopTailClosure;
+    private boolean deferredChildSubmissionForNextLoop;
+    private boolean deferredChildSubmissionReady;
 
     public S3kKosModuleQueue(
             HardwareTimingService timing,
@@ -116,6 +120,32 @@ public final class S3kKosModuleQueue {
     /** Defers only the next child publication; a ready child may still retire. */
     public void deferChildSubmissionForHeldLoopTail() {
         deferChildSubmissionForHeldLoopTail = true;
+    }
+
+    /** Carries the module FIFO's held-tail handoff into the next closure. */
+    public void deferChildSubmissionForHeldLoopTailClosure() {
+        heldLoopTailClosure = true;
+        deferChildSubmissionForHeldLoopTail =
+                carryDeferredChildSubmissionForHeldLoopTail;
+        carryDeferredChildSubmissionForHeldLoopTail = false;
+    }
+
+    /** Makes a held-tail handoff available only after the next direct service. */
+    public void finishHeldLoopTailClosure() {
+        if (deferredChildSubmissionForNextLoop) {
+            deferredChildSubmissionReady = true;
+            deferredChildSubmissionForNextLoop = false;
+        }
+        heldLoopTailClosure = false;
+    }
+
+    /** Publishes a child after the direct FIFO has serviced this iteration. */
+    public void stepDeferredChildAfterDirectTail() {
+        if (!deferredChildSubmissionReady || !directQueue.hasCapacity()) {
+            return;
+        }
+        deferredChildSubmissionReady = false;
+        stepHeadArchive();
     }
 
     private HardwareWorkHandle queueInternal(
@@ -255,7 +285,20 @@ public final class S3kKosModuleQueue {
             if (preparation.isPrepared()) {
                 continue;
             }
-            preparation.coordinate(handle, directQueue, deferChildSubmission);
+            if (preparation.activeChild == null && deferChildSubmission) {
+                if (heldLoopTailClosure) {
+                    deferredChildSubmissionForNextLoop = true;
+                }
+                return;
+            }
+            boolean completed = preparation.coordinate(
+                    handle, directQueue, deferChildSubmission);
+            if (deferChildSubmission && completed) {
+                carryDeferredChildSubmissionForHeldLoopTail = true;
+            }
+            if (heldLoopTailClosure && completed) {
+                deferredChildSubmissionForNextLoop = true;
+            }
             return;
         }
     }

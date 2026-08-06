@@ -112,8 +112,15 @@ public final class TraceSuppressedRowClosure {
         } else {
             LevelFrameStep.serviceVBlankOnly(
                     context, lifecycleFrame, PlcLifecyclePhase.LAG);
+            if (levelEvents != null) {
+                levelEvents.advanceVblankOnlyState();
+            }
             if (context.runtimeArtCoordinator().ownsHeldLevelCounterHardwareTail()) {
                 LevelFrameStep.serviceHardwarePostObjectsOnly(context);
+                if (context.gameModule().getObjectArtProvider() != null) {
+                    context.gameModule().getObjectArtProvider()
+                            .processRuntimeArtQueueAfterPreMainLoop();
+                }
                 LevelFrameStep.serviceHardwarePreMainLoopOnly(context);
             } else if (context.hardwareTimingBoundaryObserver()
                     instanceof TraceHardwareTimingBoundaryObserver replayObserver) {
@@ -127,7 +134,8 @@ public final class TraceSuppressedRowClosure {
         if (levelManager.hasPendingInLevelTitleCardHeldCounterDispatch()) {
             startPendingInLevelTitleCard.run();
         }
-        if (levelEvents != null) {
+        if (levelEvents != null && titleCardProvider != null
+                && titleCardProvider.advancesOnHeldLevelCounter()) {
             levelEvents.advanceVblankOnlyState();
         }
         levelManager.getObjectManager().advanceVblaCounter();

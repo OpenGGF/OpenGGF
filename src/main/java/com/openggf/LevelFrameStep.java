@@ -123,6 +123,10 @@ public final class LevelFrameStep {
             throw new IllegalArgumentException("not a VBlank-only PLC phase: " + phase);
         }
         frame.claim(phase);
+        if (frame.consumedHeldLoopTailPreparation()) {
+            context.runtimeArtCoordinator()
+                    .deferProductionSubmissionForHeldLoopTailClosure();
+        }
         serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
     }
 
@@ -142,6 +146,7 @@ public final class LevelFrameStep {
     /** Services only the direct-FIFO boundary represented by a held row tail. */
     public static void serviceHardwarePreMainLoopOnly(LevelFrameContext context) {
         serviceBoundary(context, HardwareServiceBoundary.PRE_MAIN_LOOP);
+        context.runtimeArtCoordinator().finishHeldLoopTailClosure();
     }
 
     /**
@@ -158,10 +163,15 @@ public final class LevelFrameStep {
             PlcLifecyclePhase phase, Runnable objectScan) {
         Objects.requireNonNull(objectScan, "objectScan");
         frame.claim(phase);
+        if (frame.consumedHeldLoopTailPreparation()) {
+            context.runtimeArtCoordinator()
+                    .deferProductionSubmissionForHeldLoopTailClosure();
+        }
         serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
         objectScan.run();
         serviceBoundary(context, HardwareServiceBoundary.POST_OBJECTS);
         serviceBoundary(context, HardwareServiceBoundary.PRE_MAIN_LOOP);
+        context.runtimeArtCoordinator().finishHeldLoopTailClosure();
         if (frame.isOwnedBy(phase)) {
             frame.prepareAfterLoop(phase);
         }
@@ -195,6 +205,10 @@ public final class LevelFrameStep {
         }
 
         frame.claim(phase);
+        if (frame.consumedHeldLoopTailPreparation()) {
+            context.runtimeArtCoordinator()
+                    .deferProductionSubmissionForHeldLoopTailClosure();
+        }
         serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
 
         // 0a. Drain the per-frame palette-write accumulator at frame top, before
@@ -358,15 +372,15 @@ public final class LevelFrameStep {
             levelEvents.update();
         }
 
-        // OscillateNumDo is the loop-tail update after ScreenEvents. A restart
-        // requested by Process_Sprites/ScreenEvents branches to Level before
-        // this point in the ROM, so that row must retain the prior oscillator
-        // phase even though Level_frame_counter still advances across reload.
-        boolean actTransitionExecutedDuringFrame =
-                levelManager.consumeActTransitionExecutedDuringFrame();
+        // OscillateNumDo is the loop-tail update after ScreenEvents. An
+        // in-loop act reload has already replaced the level data, but the ROM
+        // still reaches this loop tail on that row (the AIZ1->AIZ2 trace keeps
+        // the oscillator tick at the reload boundary). Outer frame-boundary
+        // reloads consume their own tail in LevelSeamlessTransitionExecutor
+        // before this method is entered.
+        levelManager.consumeActTransitionExecutedDuringFrame();
         if (!bonusStageExitRequestedThisFrame
-                && !levelManager.isLevelInactiveForTransition()
-                && !actTransitionExecutedDuringFrame) {
+                && !levelManager.isLevelInactiveForTransition()) {
             levelManager.advanceGlobalOscillationAtLevelLoopTail();
         }
 
@@ -403,6 +417,7 @@ public final class LevelFrameStep {
         // first child decompressed on the same frame, which the frame-top
         // placement could not represent.
         serviceBoundary(context, HardwareServiceBoundary.PRE_MAIN_LOOP);
+        context.runtimeArtCoordinator().finishHeldLoopTailClosure();
         if (context.gameModule().getObjectArtProvider() != null) {
             context.gameModule().getObjectArtProvider()
                     .processRuntimeArtQueueAfterPreMainLoop();

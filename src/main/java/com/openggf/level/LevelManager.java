@@ -1107,7 +1107,13 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     /** Advances the global oscillator at the canonical level-loop tail. */
     public void advanceGlobalOscillationAtLevelLoopTail() {
-        advanceGlobalOscillation();
+        // LevelFrameStep calls this before update() increments frameCounter.
+        // OscillateNumDo runs after the current Level_frame_counter tick, so
+        // publish the phase for the frame that the following object pass will
+        // consume rather than reusing the completed frame's counter. This is
+        // the ROM order in LevelLoop (sonic3k.asm:7889, 7928-7931): the next
+        // Process_Sprites pass reads the table after this tail update.
+        OscillationManager.update(frameCounter + 1);
     }
 
     void advanceGlobalOscillation() {

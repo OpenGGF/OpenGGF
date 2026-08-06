@@ -32,6 +32,14 @@ public interface RuntimeArtCoordinator extends QueueDiagnosticsProvider {
     default void deferProductionSubmissionForHeldLoopTail() {
     }
 
+    /** Defers only the child handoff owned by a closure consuming a held tail. */
+    default void deferProductionSubmissionForHeldLoopTailClosure() {
+    }
+
+    /** Completes a held-tail closure after its direct-FIFO boundary. */
+    default void finishHeldLoopTailClosure() {
+    }
+
     /**
      * Returns whether this game owns the hardware queue tail on a held
      * level-counter row. Such a row skips the ordinary object/physics body but

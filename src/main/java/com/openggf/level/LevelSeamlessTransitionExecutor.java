@@ -117,8 +117,12 @@ final class LevelSeamlessTransitionExecutor {
     void advanceFrameCounterAcrossReload() {
         // The outer transition is consumed at the frame boundary, so the
         // driver returns before the ordinary level-loop tail can run. Preserve
-        // the native OscillateNumDo dispatch for this transition-only row.
-        levelManager.advanceGlobalOscillation();
+        // the native OscillateNumDo dispatch for this transition-only row at
+        // the same post-Level_frame_counter boundary as LevelLoop. Using the
+        // old counter value here is deduplicated after the preceding tail and
+        // drops one oscillator tick across the AIZ reload (sonic3k.asm:7889,
+        // 7931).
+        levelManager.advanceGlobalOscillationAtLevelLoopTail();
 
         // The pending seamless reload is consumed at frame top, so this row
         // returns before ObjectManager.update() can perform its normal V-int

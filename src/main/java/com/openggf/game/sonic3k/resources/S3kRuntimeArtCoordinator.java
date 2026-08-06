@@ -100,6 +100,9 @@ public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator,
     public void afterTimingService(HardwareServiceBoundary boundary) {
         directQueue.afterTimingService(boundary);
         moduleQueue.afterTimingService(boundary);
+        if (boundary == HardwareServiceBoundary.PRE_MAIN_LOOP) {
+            moduleQueue.stepDeferredChildAfterDirectTail();
+        }
         moduleQueue.claimReadyFreshLevelHandoffs();
         if (boundary == HardwareServiceBoundary.PRE_MAIN_LOOP
                 && deferredFreshLevelRuntimeArt != null) {
@@ -130,6 +133,16 @@ public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator,
     @Override
     public void deferProductionSubmissionForHeldLoopTail() {
         moduleQueue.deferChildSubmissionForHeldLoopTail();
+    }
+
+    @Override
+    public void deferProductionSubmissionForHeldLoopTailClosure() {
+        moduleQueue.deferChildSubmissionForHeldLoopTailClosure();
+    }
+
+    @Override
+    public void finishHeldLoopTailClosure() {
+        moduleQueue.finishHeldLoopTailClosure();
     }
 
     @Override

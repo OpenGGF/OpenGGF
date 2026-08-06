@@ -1452,7 +1452,6 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                 battleshipPostScrollCameraX = -1;
             }
         }
-
         // ROM: ShakeScreen_Setup — timed (bomb) and constant (water trigger) modes
         tickScreenShake();
 
