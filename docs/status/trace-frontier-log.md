@@ -64332,3 +64332,34 @@ to synthesize a POST phase on a VBLANK-only row.
 - Route position unchanged: `TestS1CompleteEmeraldVisualRun` green at
   `stopAfterSegment(3)` and `stopAfterSegmentBody(11)` — GHZ1 through MZ2 with
   three giant rings, three special stages, one act advance and two deaths.
+
+## 2026-08-06 - post-merge S3K replay baseline and boundary-harness repair
+
+- Worktree: `bugfix/s3k-traces` at merge commit `66479f247` before the
+  boundary-harness repair; unrelated user edits in `.idea/vcs.xml` and
+  `docs/status/rewind-round-trip-gaps.md` were preserved. The run used JDK
+  21.0.11 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen` (SHA-1
+  `b711a909cce238ca4af3e517a2edca306228efa5`), which does not match the
+  documented `CFBF98...` fixture hash and was not replaced or renamed.
+- Gameplay-order baseline: AIZ standard stops at raw frame `16067` with 194
+  comparator errors (`queue.s3k_kos_direct.busy`); AIZ complete-run stops at
+  direct Kosinski `#35` with no matching engine pending. HCZ complete-run
+  stops at `#90` with no pending work. MGZ standard and complete-run stop at
+  `#24` and `#149`, respectively, both with no pending work. CNZ standard
+  reaches the same direct `#31` admission with no pending work and its 26
+  focused tests pass; CNZ complete-run stops at `#205` with no pending work.
+  ICZ reaches `#245` but has a physical fingerprint mismatch
+  (`669610...` expected versus `403b1d...` submitted). LBZ retains the
+  documented first comparator divergence at raw frame `19869` with 83 errors.
+- The merged `LevelManager` title-card condition had a duplicated conditional
+  fragment; removing it restores compilation. Custom CNZ/HCZ replay drivers
+  now register each trace row, mark VBlank-starved iterations, and dispatch
+  through the canonical phase driver. Fresh CNZ admission activation and
+  teardown now preserve the production token lifecycle. Ring comparison was
+  verified as `ToleranceConfig.DEFAULT` `FORCE_ERROR`; no trace values are
+  used to hydrate gameplay state.
+- Validation: `TestTraceBinder` and the CNZ focused suite pass; the complete
+  `TestS3kCnzTraceReplay` class reports 27 tests, 0 failures, and the one
+  expected hardware-admission error above. No frontier moved in this
+  baseline and no trace payload changed.

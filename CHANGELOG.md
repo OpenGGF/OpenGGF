@@ -3,6 +3,10 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: restore the merged S3K headless title-card condition and make
+  custom S3K replay helpers use the canonical phase, VBlank-starvation,
+  recorded-admission, and trace-row lifecycle. CNZ focused slot and miniboss
+  boundary tests now pass; no trace payloads changed.
 - Fix/Test: S3K fresh-level terrain handoff restores headless
   transition-owned title-card admission and publishes each destination's
   ROM-backed primary and secondary terrain parents through the native

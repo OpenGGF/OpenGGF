@@ -2843,7 +2843,6 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         if (!graphicsManager.isHeadlessMode()
                 || headlessWholeRunHandoff
                 || ctx.isTitleCardRequiredInHeadlessMode()
-                || callerOwnedReturnCard) {
                 || callerOwnedReturnCard
                 || transitions.isLevelRoutineReentry()) {
             // ROM: title card reads Apparent_act, not Current_act.
