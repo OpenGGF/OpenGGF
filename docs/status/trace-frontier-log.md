@@ -64187,3 +64187,46 @@ based explicitly on `c936a1571`.
 Bonus closure: `TestS2Arz2LevelSelectTraceReplay` (99 errors) also went green.
 One new red appeared and was fixed in the same batch: `TestS2PointPokeyRewind`
 reflectively seeded the deleted `prizeSpawnTimer`.
+
+## 2026-08-06 - BK2 press-edge baseline: fix works, held back on a skip-path conflation
+
+Not landed. Recorded here because the ROM model is settled and the remaining
+work is a small, well-defined change to the replay drivers.
+
+- Defect: `RecordingFrameDriver` computes the P1 press edge against the
+  immediately preceding BK2 row (`previousBk2Input` = index-1). ROM
+  `Joypad_Read` computes `pressed = new & ~stored_held` and only then overwrites
+  `stored_held` (s2.asm:1361-1387, sonic.asm:1088-1119), and it is reached only
+  from the polling V-int routines - `Vint_Level` calls `ReadJoypads`
+  (s2.asm:706) while `Vint_Lag`/`VintSub0` does not (s2.asm:528-543), likewise
+  `VBlank_Lag` in S1 (sonic.asm:711-712). So on a lag frame `Ctrl_1_Held` is not
+  refreshed and the next polled frame computes its edge against the older held
+  byte: a press whose first row is a lag row survives rather than being
+  swallowed. The correct baseline is the last row actually POLLED.
+- The candidate change tracks a last-polled row, advanced only when a row is
+  consumed (so a `SETUP_ONLY` re-drive cannot compute a press against itself),
+  and leaves the cursor alone so lag rows are still consumed 1:1 for the
+  binder's `input` comparison.
+- Measured on a full `TestS1*,TestS2*` sweep: closes both target traces,
+  `TestS2Mtz2LevelSelectTraceReplay` (1 error at frame 1969) and
+  `TestS2Mtz3LevelSelectTraceReplay` (1 error at frame 8042). No S1 trace moved,
+  which matches the prediction that the ~35 affected S1 rows are behaviourally
+  inert because the leader's own movement edge already uses a last-executed-frame
+  model.
+- Why it is held: `TraceReplayDrive.driveOneFrame` routes BOTH
+  `TraceExecutionPhase.VBLANK_ONLY` AND `PLAYABLE_ANIMATION_ONLY` to
+  `skipFrameFromRecording`. Only the first is a genuine lag frame; on an
+  animation-only row the ROM's V-int did poll. Freezing the baseline on both
+  corrupts the CNZ2 level-select bootstrap:
+  `TestS2Cnz2LevelSelectTraceReplay` fails at frame 0 (`y` expected 0x058C,
+  actual 0x0591, 51422 errors) and `TestS2ObjectOccupancyOracle`'s
+  `cnz2VerticalFlipperRightEdgeKeepsTailsPushBeforeCpuFollowAtRomFrame7983`
+  fails with it. Net effect was zero, so it was reverted rather than landed.
+- Remaining work: give the skip path a "the ROM polled this frame" signal so
+  only `VBLANK_ONLY` freezes the baseline, and thread it through the two
+  drivers (`TraceReplayDrive.driveOneFrame` and the test-side
+  `HeadlessTestRunner.skipFrameFromRecording`) plus their test doubles.
+  `ADVANCE_ONLY` rows go through `consumeRecordingFrameInputOnly` and should
+  advance the baseline, as they already do in the candidate.
+- The candidate diff is kept verbatim at
+  `docs/architecture/audits/2026-08-06-bk2-press-edge-lag-baseline.patch.txt`.
