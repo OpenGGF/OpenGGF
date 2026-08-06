@@ -2834,10 +2834,18 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         // GameLoop owns the mandatory bonus/results-return card after the
         // reload. Keep its lease unbound until that explicit initialization,
         // even headless.
+        // A re-entry into the game's own Level: routine from a running level
+        // reaches the locked title-card loop by construction — S1's end-of-act
+        // card writes only f_restart and the main loop falls straight back into
+        // GM_Level (docs/s1disasm/_incObj/3A Got Through Card.asm:200-211,
+        // sonic.asm:3041-3055, 2814-2842). Its card is part of the restart, not
+        // of a host entry a headless boundary may omit.
         if (!graphicsManager.isHeadlessMode()
                 || headlessWholeRunHandoff
                 || ctx.isTitleCardRequiredInHeadlessMode()
                 || callerOwnedReturnCard) {
+                || callerOwnedReturnCard
+                || transitions.isLevelRoutineReentry()) {
             // ROM: title card reads Apparent_act, not Current_act.
             // After AIZ's seamless fire transition, Current_act is 1 but
             // Apparent_act stays 0 until the results screen exits.
@@ -2986,6 +2994,27 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      */
     public void loadCurrentLevel() {
         loadCurrentLevel(true);
+    }
+
+    /**
+     * Reloads the current level the way a death restart reaches it.
+     *
+     * <p>ROM: {@code Sonic_ResetLevel} writes nothing but {@code f_restart}
+     * (docs/s1disasm/_incObj/01 Sonic.asm:2062-2073) and the level main loop's
+     * own {@code tst.w (f_restart).w} falls straight back into {@code GM_Level}
+     * (sonic.asm:3016-3018), which runs the whole routine including the locked
+     * {@code Level_TtlCardLoop} (sonic.asm:2814-2842) exactly as a first entry
+     * does. That makes the card part of the restart rather than of a host
+     * entry a headless boundary may omit — the same reason
+     * {@link #advanceToNextLevel()} marks its load.
+     */
+    public void restartCurrentLevelAfterDeath() {
+        transitions.setLevelRoutineReentry(true);
+        try {
+            loadCurrentLevel(true);
+        } finally {
+            transitions.setLevelRoutineReentry(false);
+        }
     }
 
     /**
@@ -3146,7 +3175,16 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         writeApparentAct(currentAct);
         // Clear checkpoint when advancing
         checkpointCoordinator.clear();
-        com.openggf.TraceSessionLauncher.runLevelAdvanceLoad(this::loadCurrentLevel);
+        // ROM: the end-of-act card only sets f_restart, so this load is a
+        // Level: re-entry rather than a fresh host entry — it runs the whole
+        // routine including Level_TtlCardLoop.
+        // docs/s1disasm/_incObj/3A Got Through Card.asm:200-211, sonic.asm:3041-3055
+        transitions.setLevelRoutineReentry(true);
+        try {
+            com.openggf.TraceSessionLauncher.runLevelAdvanceLoad(this::loadCurrentLevel);
+        } finally {
+            transitions.setLevelRoutineReentry(false);
+        }
     }
 
     /**
@@ -3798,6 +3836,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     // ==================== Transition Request Delegation ====================
     // These delegate to LevelTransitionCoordinator so external callers keep working.
+
+    /** @see LevelTransitionCoordinator#hasPendingLevelExit() */
+    public boolean hasPendingLevelExit() { return transitions.hasPendingLevelExit(); }
 
     /** @see LevelTransitionCoordinator#requestRespawn() */
     public void requestRespawn() { transitions.requestRespawn(); }

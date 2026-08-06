@@ -42,16 +42,13 @@ public record GameRules(
                     false,
                     false,
                     new PlayerLandingRules(false, false, false, false),
+                    new PlayerLevelBoundaryRules(false, true, true, false, true, true),
                     false,
                     false,
                     true,
                     false,
-                    true,
                     false,
                     false,
-                    false,
-                    false,
-                    true,
                     false
             ),
             new PlayerCapabilityRules(
@@ -180,17 +177,14 @@ public record GameRules(
                     true,
                     false,
                     new PlayerLandingRules(true, true, false, true),
+                    new PlayerLevelBoundaryRules(false, true, false, true, true, false),
                     true,
                     false,
                     false,
-                    false,
                     true,
                     true,
-                    true,
                     false,
-                    false,
-                    false,
-                    true
+                    false
             ),
             new PlayerCapabilityRules(
                     true,
@@ -318,17 +312,14 @@ public record GameRules(
                     false,
                     true,
                     new PlayerLandingRules(true, true, true, false),
+                    new PlayerLevelBoundaryRules(true, true, false, false, false, false),
                     false,
                     true,
                     false,
                     true,
                     true,
                     true,
-                    true,
-                    true,
-                    true,
-                    false,
-                    false
+                    true
             ),
             new PlayerCapabilityRules(
                     true,

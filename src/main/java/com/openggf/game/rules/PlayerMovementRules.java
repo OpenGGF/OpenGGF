@@ -10,19 +10,32 @@ public record PlayerMovementRules(
         boolean slopeRepelChecksOnObject,
         boolean slopeRepelUsesS3kSlipKick,
         PlayerLandingRules landing,
+        PlayerLevelBoundaryRules levelBoundary,
         boolean rollingJumpPinballGateRequiresSpindashFlag,
         boolean rollStopsBelowMinimumSpeed,
         boolean rollControlledDecelUsesEffectiveDecelQuarter,
-        boolean levelBoundaryRightStrict,
-        boolean levelBoundaryUsesCentreY,
         boolean controlLockLatchesLogicalInput,
         boolean hurtRoutineLatchesLogicalInput,
         boolean waterExitBoostSkipsFastUpwardVelocity,
-        boolean slopeResistAppliesAtZeroInertia,
-        boolean levelBoundaryLockUsesScreenLockFlag,
-        boolean levelBoundaryUsesPreEasedMaxXDuringBossLock) {
+        boolean slopeResistAppliesAtZeroInertia) {
 
     public boolean objectSolidHurtLandingRetainsRoutine() {
         return landing.objectSolidHurtLandingRetainsRoutine();
+    }
+
+    public boolean levelBoundaryRightStrict() {
+        return levelBoundary.rightStrict();
+    }
+
+    public boolean levelBoundaryUsesCentreY() {
+        return levelBoundary.usesCentreY();
+    }
+
+    public boolean levelBoundaryLockUsesScreenLockFlag() {
+        return levelBoundary.lockUsesScreenLockFlag();
+    }
+
+    public boolean levelBoundaryUsesPreEasedMaxXDuringBossLock() {
+        return levelBoundary.usesPreEasedMaxXDuringBossLock();
     }
 }

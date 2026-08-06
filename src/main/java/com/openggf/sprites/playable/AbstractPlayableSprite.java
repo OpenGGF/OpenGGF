@@ -2713,7 +2713,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // hurt path instead branches to Hurt_Sidekick and preserves a split
                 // status/radius state (observed by the HTZ2 trace). Keep that ROM
                 // distinction in the movement profile rather than a game-name branch.
-                PlayableHurtRadiusTransition.apply(this);
+                PlayableResetOnFloorRadiusTransition.applyForHurt(this);
 
                 setCrouching(false);
                 // HurtCharacter calls the reset-on-floor tail before setting InAir;
@@ -2877,7 +2877,17 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 setInvincibleFrames(0);
                 setSpringing(0);
                 setSpindash(false);
-                setRolling(false);
+                // The kill routines reach the reset-on-floor tail before they force
+                // the airborne bit, so a player killed mid-roll gets the standing
+                // radii AND the accompanying y_pos lift, not just the roll bit
+                // cleared (S1 KillSonic, docs/s1disasm/_incObj/Sonic
+                // ReactToItem.asm:454-459; S2 KillCharacter, docs/s2disasm/s2.asm
+                // :85544-85551; S3K Kill_Character, docs/skdisasm/sonic3k.asm
+                // :21136-21151). Without the lift the taller standing shape pushed
+                // the centre 5px DOWN where the ROM raises it 5px, so a rolling
+                // pit death landed 10px low and never re-converged (S1 MZ1 row
+                // 3,261: ROM y $03CB, engine $03D5).
+                PlayableResetOnFloorRadiusTransition.applyForDeath(this);
                 setCrouching(false);
                 setPushing(false);
                 setAir(true); setOnObject(onObject || controller.isOnObjectAtFrameStart());

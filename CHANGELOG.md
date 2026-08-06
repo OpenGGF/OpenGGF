@@ -146,6 +146,77 @@ All notable changes to the OpenGGF project are documented in this file.
   dispatch and pumps the native LoadEnemyArt handoff; CNZ signpost pose and
   post-transition control restoration now follow the ROM dispatch order. The
   canonical CNZ timing frontier advances from direct completion #24 to #28.
+- Fix: a whole-run replay's transition gap no longer swallows the source level's
+  last main-loop iteration. A gap is a gap in the *recording*: each run recorder
+  finalizes a level segment on the first frame whose sampled game mode has left
+  the level, and that frame's iteration ran — the write that ended the level came
+  from inside its own object pass, and the level loop's test for it sits directly
+  behind `ExecuteObjects` (`docs/s1disasm/sonic.asm:3009-3018`). The engine
+  suppressed every gap row's level body, so a Sonic 1 death never reached the
+  sixtieth `Sonic_ResetLevel` decrement that writes `f_restart`
+  (`docs/s1disasm/_incObj/01 Sonic.asm:2062-2073`) — it lands exactly on the
+  gap's first row — and the restart was never requested at all. The gap's first
+  row now runs the level body unless the engine already holds the write that ends
+  the loop, and the rows behind it keep servicing only the blocking exit
+  routine's own mode transitions, which now include the restart itself. The
+  restart's load is also marked a `Level:` re-entry so its mandatory title card
+  is presented, and a transitionless level adjacency accepts a death restart
+  beside an end-of-act advance — both write the same `f_restart` and fall back
+  into the same `GM_Level`. The S1 emerald route crosses its first death restart
+  and replays MZ1's restarted act, its third special stage, MZ2's presentation
+  bridge and MZ2 itself.
+- Fix: `SV_BottomBoundary`'s clamp no longer consults the top boundary. ROM
+  compares the new camera Y against `v_limitbtm2` alone and, on the no-wrap
+  branch, writes `v_limitbtm2` straight back
+  (`docs/s1disasm/_inc/ScrollHoriz & ScrollVertical.asm:258-271`) — including
+  when the bottom bound sits above the top bound, which is an ordinary state
+  rather than a degenerate one: `DynamicLevelEvents`' move-up branch snaps
+  `v_limitbtm2` to `(v_screenposy & $FFFE) - 2` whenever the camera is below the
+  new `v_limitbtm1` (`DynamicLevelEvents.asm:17-28`), dropping it below a
+  `v_limittop2` the zone handler left in place. The engine's inherited
+  `maxY < minY` fallback skipped the clamp for that whole ascent, so the camera
+  ran free where the ROM rides the bottom bound upward two pixels a frame.
+- Fix: a player killed mid-roll now takes the ROM's reset-on-floor `y_pos` lift.
+  `KillSonic` / `KillCharacter` / `Kill_Character` all reach the reset-on-floor
+  tail before forcing the airborne bit (`docs/s1disasm/_incObj/Sonic
+  ReactToItem.asm:454-459`, `docs/s2disasm/s2.asm:85544-85551`,
+  `docs/skdisasm/sonic3k.asm:21136-21151`), and that tail raises the centre by
+  the radius difference so the taller standing shape does not sink into the
+  ground. The engine cleared the roll bit without the lift, which moved the
+  centre 5px the wrong way — a rolling pit death landed 10px low and never
+  re-converged.
+- Fix: the dying player's fall now ends on the ROM's own restart row. The death
+  routines compare `y_pos` against a camera-derived row plus `$100` — S1
+  `v_limitbtm2` (`docs/s1disasm/_incObj/01 Sonic.asm:2004`), S2
+  `Camera_Max_Y_pos` (`docs/s2disasm/s2.asm:38277`), S3K `Camera_Y_pos`
+  (`docs/skdisasm/sonic3k.asm:24541`) — where the engine used the camera's
+  bottom edge plus a screen height for every game and compared render bounds
+  instead of centre-Y. The crossing frame now hands off to a routine that only
+  counts the 60-frame restart delay down, so the corpse stops moving exactly
+  where the recording stops it, and S1 additionally writes `y_vel = -gravity`
+  so the fall that follows the handoff nets to nothing (01 Sonic.asm:2010).
+  These are carried by a new typed `PlayerLevelBoundaryRules`, split out of
+  `PlayerMovementRules` with the four level-boundary flags it already held.
+  The S1 emerald route now replays all 3,391 rows of MZ1, including the run's
+  first death.
+- Fix: a Sonic 1 end-of-act advance now runs the whole `GM_Level` restart the
+  ROM re-enters, instead of a fade-to-black that loads the next act from its own
+  completion. `Got_NextLevel` writes nothing but `f_restart`
+  (`docs/s1disasm/_incObj/3A Got Through Card.asm:200-211`); the level main
+  loop's own `tst.w (f_restart).w` then falls back into `GM_Level`
+  (sonic.asm:3041-3055), which reaches `Level_TtlCardLoop` exactly as a first
+  entry does (sonic.asm:2814-2842). The engine skipped that card entirely on any
+  host that omits a direct entry's presentation, so the restart occupied 21 movie
+  rows against the recording's 228 and the S1 emerald route could not cross a
+  plain act-to-act boundary at all. `advanceToNextLevel` now marks the load as a
+  `Level:` re-entry so its card is mandatory, a run's shared transition gap
+  carries that card the way it already carries a special-stage results exit, and
+  the destination admission seam honours the live initial-title-card barrier
+  instead of forcing it clear. A whole-run destination is also no longer
+  admitted before its own first recorded row: the restart's un-timed load steps
+  have no counted form (see *Whole-Run Level-Restart Admission Row* in
+  `docs/status/known-discrepancies.md`). The route's GHZ3 -> MZ1 advance now
+  replays, and MZ1 runs 3,220 of its 3,391 rows before its first divergence.
 - Fix: the GHZ spiked-pole helix (Obj 0x17) now allocates one real object-RAM
   slot per spike instead of drawing every spike from a single instance's
   internal array. ROM `Hel_Main` calls `FindFreeObj` once per non-parent spike

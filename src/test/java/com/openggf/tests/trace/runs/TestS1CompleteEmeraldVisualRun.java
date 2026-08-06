@@ -76,16 +76,42 @@ class TestS1CompleteEmeraldVisualRun {
      * the first whose object V-blank clock had accumulated both bridges' worth
      * of missing V-ints -- which de-phased the prison capsule's animal spawn
      * and escape-direction gates and armed the end-of-act PLC nine rows early.
+     * <p>
+     * It then crosses the route's FIRST plain act-to-act boundary. GHZ1 and
+     * GHZ2 both left through a giant ring, so nothing before this exercised
+     * {@code Got_NextLevel}'s {@code f_restart} write and the whole
+     * {@code GM_Level} restart the level main loop falls back into
+     * (docs/s1disasm/_incObj/3A Got Through Card.asm:200-211,
+     * sonic.asm:3041-3055). That restart's {@code PaletteFadeOut}, its
+     * mandatory locked title-card loop and MZ1's own load all run inside the
+     * transition gap.
+     * <p>
+     * It then walks every compared row of MZ1 itself, whose last 170 rows are
+     * the run's FIRST death. MZ1's descending bottom boundary catches Sonic
+     * mid-roll, so the act ends through {@code Sonic_LevelBound} rather than a
+     * signpost: {@code DynamicLevelEvents} snaps {@code v_limitbtm2} to the
+     * camera and ratchets it upward, the camera rides it up through a
+     * {@code v_limittop2} it is allowed to pass, the pit kill fires, and
+     * {@code Sonic_HandleDeath} freezes the corpse for a 60-frame restart
+     * delay. The pin stops once MZ1 has published its last row; the
+     * death-restart boundary behind it is the route's first, and it now
+     * replays: {@code Sonic_ResetLevel}'s sixtieth decrement lands on the first
+     * row of the transition gap, which is the source level's own last
+     * {@code Level_MainLoop} iteration rather than a row the gap owns
+     * (sonic.asm:3009-3018). The lane then walks all 8,684 rows of MZ1's
+     * restarted act, the route's THIRD giant ring and the special stage behind
+     * it, MZ2's presentation bridge, and all 3,728 rows of MZ2 -- which ends in
+     * the run's SECOND death, so the boundary is exercised twice.
      */
     @Test
     void replaysTheSecondGiantRingAndTheSpecialStageBehindIt() throws Exception {
         VisualRunReplayHarness.Result result =
                 VisualRunReplayHarness.replay(
-                        RUN_DIR, VisualRunReplayHarness.stopAfterSegmentBody(6));
+                        RUN_DIR, VisualRunReplayHarness.stopAfterSegmentBody(11));
 
-        assertTrue(result.sharedCursor() > 27_238,
-                "visual run stopped inside the returned GHZ3 act: " + result);
-        assertEquals(6, result.currentSegmentIndex(),
-                "visual run stalled before the returned GHZ3 act: " + result);
+        assertTrue(result.sharedCursor() > 46_804,
+                "visual run stopped inside the MZ2 act: " + result);
+        assertEquals(11, result.currentSegmentIndex(),
+                "visual run stalled before MZ2's second half: " + result);
     }
 }

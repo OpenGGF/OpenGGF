@@ -826,6 +826,70 @@ public class GameLoop {
     }
 
     /**
+     * Presents a level restart's mandatory title card on a row whose ordinary
+     * level body is suppressed.
+     *
+     * <p>The card is not gameplay: the ROM's {@code Level_TtlCardLoop} runs
+     * {@code ExecuteObjects}/{@code BuildSprites} over freshly cleared object
+     * RAM holding only the card's own elements, plus {@code RunPLC}
+     * (docs/s1disasm/sonic.asm:2814-2842). A restart therefore reaches the card
+     * on the same rows a run's shared transition gap suppresses the level body
+     * on, exactly as the special-stage results exit already does from its own
+     * mode's update.
+     */
+    boolean presentPendingTitleCardDuringSuppressedRunRow() {
+        if (currentGameMode != GameMode.LEVEL || levelManager == null
+                || !levelManager.consumeTitleCardRequest()) {
+            return false;
+        }
+        enterTitleCard(levelManager.getTitleCardZone(), levelManager.getTitleCardAct());
+        return true;
+    }
+
+    /**
+     * Starts a level restart's fade on a row whose ordinary level body is
+     * suppressed.
+     *
+     * <p>{@code Sonic_ResetLevel}'s sixtieth decrement writes {@code f_restart}
+     * from inside the object pass of the first row a run's transition gap owns
+     * (docs/s1disasm/_incObj/01 Sonic.asm:2062-2073); the level main loop's own
+     * test then falls into {@code GM_Level} without iterating again
+     * (docs/s1disasm/sonic.asm:3016-3018). The engine's respawn consumer runs a
+     * row later than that test, which lands on a gap row whose body is already
+     * suppressed, so the restart is started here for the same reason the
+     * results exit and the restart's title card are.
+     */
+    boolean startPendingRespawnDuringSuppressedRunRow() {
+        if (currentGameMode != GameMode.LEVEL || levelManager == null
+                || fadeManager == null || fadeManager.isActive()
+                || !levelManager.consumeRespawnRequest()) {
+            return false;
+        }
+        startRespawnFade();
+        return true;
+    }
+
+    /**
+     * True while a run's shared transition-gap row is still the source level's
+     * own main-loop iteration, so the ordinary level body must run on it.
+     *
+     * <p>See {@link TraceSessionLauncher#runGapRowContinuesSourceLevelMainLoop}
+     * for the recorder and ROM basis. The engine's form of the ROM writes that
+     * end a level loop is a pending level-exit request
+     * ({@link com.openggf.level.LevelTransitionCoordinator#hasPendingLevelExit()})
+     * or an in-flight blocking transition ({@link #isRewindBlocked()}, which
+     * covers a native blocking fade's pending completion and the
+     * bonus/ending/zone-act flags); either means the loop has already ended.
+     */
+    private boolean runGapRowContinuesSourceLevelMainLoop() {
+        boolean levelExitWritten = levelManager == null
+                || levelManager.hasPendingLevelExit()
+                || isRewindBlocked();
+        return TraceSessionLauncher.runGapRowContinuesSourceLevelMainLoop(
+                currentGameMode, levelExitWritten);
+    }
+
+    /**
      * True whenever rewind engagement must be rejected: either
      * {@link #isNonRewindableTransitionPending()} (the four transition flags,
      * which ALSO freeze gameplay), or a fade is in flight with a completion
@@ -1114,13 +1178,26 @@ public class GameLoop {
 
         profiler.endSection("input");
 
-        if (TraceSessionLauncher.suppressesRunNativeLevelBody(currentGameMode)) {
-            // Shared transition-gap rows intentionally skip the ordinary level
-            // body, but the S1 results path can raise the Special Stage request
-            // from a fade callback while that gap is active. Consume that
-            // request at the same dispatch boundary or the fade will remain
-            // white forever while the run driver continues replaying gap input.
+        // Evaluated before the suppression test, never inside it: the call
+        // consumes the gap's first row whatever mode that row is in, and a gap
+        // opened from a Special Stage results screen spends its first rows
+        // outside LEVEL.
+        boolean gapRowContinuesLevelMainLoop =
+                runGapRowContinuesSourceLevelMainLoop();
+        if (TraceSessionLauncher.suppressesRunNativeLevelBody(currentGameMode)
+                && !gapRowContinuesLevelMainLoop) {
+            // A shared transition gap's rows are owned by the game's blocking
+            // level-exit/entry routine once the level's own main loop has ended
+            // (see runGapRowContinuesSourceLevelMainLoop for the row that still
+            // belongs to the loop). That routine is not gameplay, but it does
+            // make mode transitions of its own -- the S1 results path raises the
+            // Special Stage request from a fade callback, a restart's load
+            // raises its locked title card, and a death's own f_restart starts
+            // the reload. Service those here or the run driver replays gap input
+            // forever against a scene that never moves.
             consumeSpecialStageRequestDuringSuppressedRunRow();
+            presentPendingTitleCardDuringSuppressedRunRow();
+            startPendingRespawnDuringSuppressedRunRow();
             inputHandler.update();
             return;
         }
