@@ -94,17 +94,24 @@ class TestS1CompleteEmeraldVisualRun {
      * {@code v_limittop2} it is allowed to pass, the pit kill fires, and
      * {@code Sonic_HandleDeath} freezes the corpse for a 60-frame restart
      * delay. The pin stops once MZ1 has published its last row; the
-     * death-restart boundary behind it is the next frontier.
+     * death-restart boundary behind it is the route's first, and it now
+     * replays: {@code Sonic_ResetLevel}'s sixtieth decrement lands on the first
+     * row of the transition gap, which is the source level's own last
+     * {@code Level_MainLoop} iteration rather than a row the gap owns
+     * (sonic.asm:3009-3018). The lane then walks all 8,684 rows of MZ1's
+     * restarted act, the route's THIRD giant ring and the special stage behind
+     * it, MZ2's presentation bridge, and all 3,728 rows of MZ2 -- which ends in
+     * the run's SECOND death, so the boundary is exercised twice.
      */
     @Test
     void replaysTheSecondGiantRingAndTheSpecialStageBehindIt() throws Exception {
         VisualRunReplayHarness.Result result =
                 VisualRunReplayHarness.replay(
-                        RUN_DIR, VisualRunReplayHarness.stopAfterSegmentBody(7));
+                        RUN_DIR, VisualRunReplayHarness.stopAfterSegmentBody(11));
 
-        assertTrue(result.sharedCursor() > 30_856,
-                "visual run stopped inside the MZ1 act: " + result);
-        assertEquals(7, result.currentSegmentIndex(),
-                "visual run stalled before MZ1's death restart: " + result);
+        assertTrue(result.sharedCursor() > 46_804,
+                "visual run stopped inside the MZ2 act: " + result);
+        assertEquals(11, result.currentSegmentIndex(),
+                "visual run stalled before MZ2's second half: " + result);
     }
 }

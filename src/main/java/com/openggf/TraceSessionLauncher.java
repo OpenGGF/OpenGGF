@@ -150,6 +150,12 @@ public final class TraceSessionLauncher {
     private TraceRunPlaybackCoordinator runCoordinator;
     private TraceRunFrameDriver runFrameDriver;
     private TraceRunFrameDriver.Disposition activeRunDisposition;
+    /**
+     * Latched once the source level's main loop has stopped owning the current
+     * transition gap's rows. Monotone within a gap: a game's level-exit routine
+     * never hands the rows back to the loop it left.
+     */
+    private boolean runGapSourceLevelMainLoopEnded;
     private TraceStructuralRowComparator runStructuralComparator;
     private TraceRunReplayWalker.BoundaryProbe runBoundaryProbe;
     private final List<TraceRunPlaybackCoordinator.Action>
@@ -1396,6 +1402,7 @@ public final class TraceSessionLauncher {
                 closeRunSegment(close.segmentIndex());
             } else if (action instanceof TraceRunPlaybackCoordinator.EnterTransitionGap) {
                 runLevelLoadedDuringSourceProduction = false;
+                runGapSourceLevelMainLoopEnded = false;
             } else if (action instanceof TraceRunPlaybackCoordinator.BeginTerminalTail tail) {
                 beginRunTerminalTail(tail.plan());
             } else if (action instanceof TraceRunPlaybackCoordinator.CompleteRun) {
@@ -2101,7 +2108,7 @@ public final class TraceSessionLauncher {
 
     static void runDeathRestartLoad(com.openggf.level.LevelManager levelManager) {
         markNextRunLevelLoadCause(RunLevelLoadCause.DEATH_RESTART);
-        levelManager.loadCurrentLevel();
+        levelManager.restartCurrentLevelAfterDeath();
     }
 
     @FunctionalInterface
@@ -2353,6 +2360,51 @@ public final class TraceSessionLauncher {
         return mode == GameMode.LEVEL
                 && isRunFrameDriverActive()
                 && !allowsRunLogicalGameplayInput();
+    }
+
+    /**
+     * True while a shared transition gap's row is still owned by the source
+     * level's own main loop, so the ordinary level body must run on it.
+     *
+     * <p>A gap is a gap in the <em>recording</em>, not in the ROM. A run
+     * recorder finalizes a level segment on the first frame whose sampled game
+     * mode has left the level
+     * ({@code tools/bizhawk-headless/src/Recording/S1RunCaptureRunner.cs}:285-296,
+     * {@code S2RunCaptureRunner.cs}:311), and that frame's level iteration ran:
+     * the write that left the level came from inside its own object pass, and
+     * the loop tests for it on the very next instruction
+     * (docs/s1disasm/sonic.asm:3009-3018, docs/s2disasm/s2.asm:5095-5097,
+     * docs/skdisasm/sonic3k.asm:7894-7896). So the first unrecorded row after a
+     * segment is an ordinary level iteration, and suppressing it stops the
+     * level from ever reaching the write that ends it — a Sonic 1 death's
+     * sixtieth {@code Sonic_ResetLevel} decrement lands exactly there
+     * (docs/s1disasm/_incObj/01 Sonic.asm:2062-2073).
+     *
+     * <p>It is exactly one row. The write that ends the loop is what stopped
+     * the recorder, so it lands on the gap's FIRST row and no other; from the
+     * second row on the gap belongs to the game's blocking exit/entry routine,
+     * which never returns to the loop it left. And if the engine already holds
+     * that write when the gap opens — a Special Stage entry arms one iteration
+     * ahead, an end-of-act card starts its fade from the segment's last
+     * recorded row — then even the first row is past the loop's end. Those rows
+     * service only the exit routine's own mode transitions.
+     *
+     * @param levelExitWritten whether the level has already been asked to stop
+     *                         being the level on this row
+     */
+    static boolean runGapRowContinuesSourceLevelMainLoop(
+            GameMode mode, boolean levelExitWritten) {
+        TraceSessionLauncher session = active();
+        if (session == null
+                || session.activeRunDisposition
+                        != TraceRunFrameDriver.Disposition.SHARED_GAP) {
+            return false;
+        }
+        boolean firstGapRow = !session.runGapSourceLevelMainLoopEnded;
+        session.runGapSourceLevelMainLoopEnded = true;
+        return firstGapRow
+                && !levelExitWritten
+                && suppressesRunNativeLevelBody(mode);
     }
 
     static boolean shouldSkipRunGameplayTick(

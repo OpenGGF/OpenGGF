@@ -63191,3 +63191,102 @@ to synthesize a POST phase on a VBLANK-only row.
   transition from inside the segment) and gives a death exactly the one extra
   iteration ROM gives it. It touches `GameLoop` and `TraceSessionLauncher`, so
   it wants designing before implementing rather than an in-loop patch.
+
+## 2026-08-06 - The MZ1 death restart replays; the route reaches MZ2 act 2
+
+- **Frontier moved four segments.** `TestS1CompleteEmeraldVisualRun` lane 2 is
+  re-pinned from `stopAfterSegmentBody(7)` to `stopAfterSegmentBody(11)` and
+  green: the run crosses the route's FIRST death restart, then replays every
+  compared row of `mz1_2` (8,684), `ss_3` (2,536), the `mz2` presentation bridge
+  (542) and `mz2_2` (3,728) -- which ends in the run's SECOND death, so the new
+  boundary is exercised twice. Driven past the pin it admits `mz2_3` and
+  self-pauses at its row **101** on `queue.s1_nemesis_plc.prepared`
+  (ROM `true`, engine `false`; `remaining_work` 18 against -1;
+  `queued_fingerprints` carries one extra head) -- the new frontier.
+- Command: `mvn -Dmse=off -Ptrace-replay -Dsonic1.rom.path=s1.gen
+  -Dtest=TestS1CompleteEmeraldVisualRun test` -- **2 tests, green.** Before:
+  green at `stopAfterSegmentBody(7)`, aborting at `stopAfterSegment(8)` with
+  *"rowsConsumed must be 0 or 1"* at BK2 31,088.
+- **The design question the previous entry left open, answered.** *May a
+  transition gap's first row run the level body?* Yes -- and it is not an
+  exemption, it is what the row is. A gap is a gap in the **recording**. Each
+  run recorder finalizes a level segment on the first frame whose sampled game
+  mode has left the level
+  (`tools/bizhawk-headless/src/Recording/S1RunCaptureRunner.cs`:285-296), and
+  that frame's iteration RAN: the write that left the level came from inside its
+  own `ExecuteObjects` pass, and `Level_MainLoop`'s test for it sits directly
+  behind that pass (`docs/s1disasm/sonic.asm:3009-3018`). So the first
+  unrecorded row after a level segment is an ordinary level iteration, and it is
+  **exactly one row** -- the write that ends the loop is what stopped the
+  recorder, and `GM_Level` / `GM_Special` never return to the loop they left.
+- **Measured, not assumed.** A throwaway per-step probe (reverted) over the
+  whole run confirmed the phase to the row. `Sonic_ResetLevel`'s decrements run
+  60 -> 1 across BK2 30,798-30,857 and the sixtieth lands on 30,858, the gap's
+  first row, exactly where ROM's `restartime` hits zero. With the first row's
+  body restored, `requestRespawn` fires at 30,858, the restart's fade is started
+  at 30,859, its title card is presented at 30,881, and segment 8 is admitted at
+  its recorded offset 31,086.
+- **The two existing "escape hatches" were not omissions, and the unified model
+  keeps them.** The probe shows what actually owns each gap's rows: the Special
+  Stage gap's single row already holds a pending request at its top (the entry
+  arms one iteration ahead, `Got_Wait`/`Got_NextLevel`), and the act-advance
+  gap's first row is already inside a native blocking fade started from the
+  segment's last recorded row (`pend=true`, `nbf=true` at BK2 27,239). Both are
+  past the loop's end, so both stay suppressed and their transitions are
+  serviced as before. The model is therefore two clauses, not three exceptions:
+  while the source loop owns the row, run the level body; once it does not, the
+  row belongs to the blocking exit/entry routine and only that routine's own
+  mode transitions run. The death restart joins that second clause.
+- **Three code changes, all at the owning boundary.**
+  1. `TraceSessionLauncher.runGapRowContinuesSourceLevelMainLoop` -- the gap's
+     first row continues the source loop unless the engine already holds the
+     write that ends it, expressed as
+     `LevelTransitionCoordinator.hasPendingLevelExit()` (the engine's form of
+     `f_restart` / a `v_gamemode` change written from inside the object pass) or
+     `GameLoop.isRewindBlocked()` (a native blocking fade's pending completion,
+     or the bonus/ending/zone-act flags).
+  2. `LevelManager.restartCurrentLevelAfterDeath` marks the restart's load a
+     `Level:` re-entry so its mandatory title card is presented, exactly as
+     `advanceToNextLevel` already did -- `Sonic_ResetLevel` writes only
+     `f_restart` and the loop falls into the same `GM_Level`
+     (`_incObj/01 Sonic.asm:2062-2073`, sonic.asm:3016-3018, 2814-2842).
+  3. `TraceRunPlaybackCoordinator.isTransitionlessLevelLoad` accepts
+     `DEATH_RESTART`. A manifest records a transition only where the run left
+     the level for another game mode, so an adjacent level pair with no
+     transition entry is a boundary the level's own routine owns end to end; a
+     death restart belongs there beside an end-of-act advance.
+- **The trap that cost a round.** The first attempt evaluated the new predicate
+  inside the suppression `if`, so Java's `&&` short-circuit never reached it on
+  a gap row whose mode is not LEVEL. The GHZ2 return gap opens from
+  `SPECIAL_STAGE_RESULTS`, so its "first row" was mis-identified as the first
+  row after its title card -- 236 rows into the gap -- and the level body ran
+  there, emitting Sonic DPLC gap edges at mapping frame 8 against the recorded
+  1. The predicate must consume the gap's first row whatever mode it is in.
+- Regression sweep (serial, JDK 21):
+  - `TestS1CompleteEmeraldVisualRun` (2), `TestS1CompleteEmeraldRunPrefix` (2),
+    `TestTraceRunPlaybackCoordinator` (21), `TestTraceSessionLauncherRunBranch`
+    (40), `TestTraceRunFrameDriver` (8), `TestTraceRunBoundaryComparator` (5),
+    `TestTraceRunSegmentExecutionPolicyCatalog`,
+    `TestTraceRunPlaybackTranscriptParity`, `TestLevelEntryPathsHeadless` (18),
+    `TestTraceReplayInvariantGuard` (10), `TestHardwareTimingAuthorityGuard`
+    (22), `TestGameLoopSpecialStageEntryPresentation` (9) -- all green.
+  - S1 `*TraceReplay` fleet: 30 classes, 27 green, the same 3 reds
+    (`Sbz3CompleteRun`, `Credits03Lz3`, `FzCompleteRun`).
+  - `TestS1GhzMazeRoundTripChain`'s bridge test green; `ghzMazeRoundTrip` stays
+    red on the same 8 `run_tail` fields with the same values
+    (`movie_logical_frame` 8,261 against 9,071).
+  - `TestS2EhzHalfpipeRoundTripChain` ("special stage exited with 3704
+    represented rows remaining in ss") and `TestS3kMegaRunChain` ("Manifest
+    validation failed for s3-knux-multibonus-ss") red with byte-identical
+    messages; `TestS3kBonusRoundTripChain` skips.
+  - `TestTraceRunPlaybackCoordinator`'s transitionless-adjacency case now states
+    that a death restart is accepted and a special-stage return is not. That is
+    the behaviour change, not a weakening: the rejection half is unchanged.
+  - `TestRewindCoverageGuard` and `TestStaticStateRewindCoverageGuard` green.
+  - **Full suite, both trees.** `mvn -Dmse=off -Ptrace-replay` with all three
+    ROMs was run on this tree and on the same tree with the change stashed:
+    **749 tests, 14 failures, 64 errors on both**, and the sorted set of 78
+    failing test methods is IDENTICAL -- no new red, none newly green. The 78
+    span 28 classes, overwhelmingly S3K frontier work
+    (`TestTraceReplayStartPositionPolicy` 24, `TestS3kCnzTraceReplay` 21) plus
+    the three chain reds and the three S1 `*TraceReplay` reds above.

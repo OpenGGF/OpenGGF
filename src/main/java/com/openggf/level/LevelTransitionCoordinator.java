@@ -456,6 +456,36 @@ public class LevelTransitionCoordinator {
     // ================================================================
 
     /**
+     * True once something has asked the running level to stop being the level.
+     *
+     * <p>This is the engine's form of the ROM writes that end a level main
+     * loop: {@code f_restart} (Sonic 1's end-of-act card and its death restart,
+     * docs/s1disasm/_incObj/3A Got Through Card.asm:200-211,
+     * _incObj/01 Sonic.asm:2069-2073) and a {@code v_gamemode} change written
+     * from inside {@code ExecuteObjects} (the giant ring's Special Stage entry,
+     * 3A Got Through Card.asm:196-201). All three games' level loops test them
+     * on the instruction after their object pass and do not iterate again —
+     * S1 {@code ExecuteObjects} then {@code tst.w (f_restart).w}
+     * (docs/s1disasm/sonic.asm:3009-3018, 3041-3055), S2 {@code RunObjects}
+     * then {@code tst.w (Level_Inactive_flag).w}
+     * (docs/s2disasm/s2.asm:5095-5097), S3K {@code Process_Sprites} then
+     * {@code tst.w (Restart_level_flag).w}
+     * (docs/skdisasm/sonic3k.asm:7894-7896) — so a pending request means the
+     * main loop has already ended even though the engine has not yet run the
+     * consumer that acts on it.
+     */
+    public boolean hasPendingLevelExit() {
+        return titleCardRequested
+                || respawnRequested
+                || nextActRequested
+                || nextZoneRequested
+                || specificZoneActRequested
+                || creditsRequested
+                || specialStageRequestedFromCheckpoint
+                || bonusStageRequested != null;
+    }
+
+    /**
      * Request a respawn (death). GameLoop will handle the fade transition.
      */
     public void requestRespawn() {

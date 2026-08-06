@@ -3,6 +3,25 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: a whole-run replay's transition gap no longer swallows the source level's
+  last main-loop iteration. A gap is a gap in the *recording*: each run recorder
+  finalizes a level segment on the first frame whose sampled game mode has left
+  the level, and that frame's iteration ran — the write that ended the level came
+  from inside its own object pass, and the level loop's test for it sits directly
+  behind `ExecuteObjects` (`docs/s1disasm/sonic.asm:3009-3018`). The engine
+  suppressed every gap row's level body, so a Sonic 1 death never reached the
+  sixtieth `Sonic_ResetLevel` decrement that writes `f_restart`
+  (`docs/s1disasm/_incObj/01 Sonic.asm:2062-2073`) — it lands exactly on the
+  gap's first row — and the restart was never requested at all. The gap's first
+  row now runs the level body unless the engine already holds the write that ends
+  the loop, and the rows behind it keep servicing only the blocking exit
+  routine's own mode transitions, which now include the restart itself. The
+  restart's load is also marked a `Level:` re-entry so its mandatory title card
+  is presented, and a transitionless level adjacency accepts a death restart
+  beside an end-of-act advance — both write the same `f_restart` and fall back
+  into the same `GM_Level`. The S1 emerald route crosses its first death restart
+  and replays MZ1's restarted act, its third special stage, MZ2's presentation
+  bridge and MZ2 itself.
 - Fix: `SV_BottomBoundary`'s clamp no longer consults the top boundary. ROM
   compares the new camera Y against `v_limitbtm2` alone and, on the no-wrap
   branch, writes `v_limitbtm2` straight back

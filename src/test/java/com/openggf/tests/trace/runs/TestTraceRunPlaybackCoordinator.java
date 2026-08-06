@@ -218,12 +218,23 @@ class TestTraceRunPlaybackCoordinator {
         assertLevelBoundaryCause(null, RunLevelLoadCause.ORDINARY);
     }
 
+    /**
+     * A manifest records a transition only where the run left the level for
+     * another game mode, so an adjacent level pair with no transition entry is
+     * a boundary the level's own routine owns end to end. A death restart
+     * belongs there beside an end-of-act advance: both write {@code f_restart}
+     * and fall back into the same {@code GM_Level}
+     * (docs/s1disasm/_incObj/01 Sonic.asm:2062-2073,
+     * _incObj/3A Got Through Card.asm:200-211, sonic.asm:3016-3018). A
+     * special-stage return is not — it re-enters from another mode and carries
+     * its own {@code stage_exit} transition.
+     */
     @Test
-    void transitionlessLevelAdjacencyAcceptsProductionLevelAdvanceOnly() {
+    void transitionlessLevelAdjacencyAcceptsEveryLevelRoutineReentry() {
         assertLevelBoundaryCause(null, RunLevelLoadCause.LEVEL_ADVANCE);
+        assertLevelBoundaryCause(null, RunLevelLoadCause.DEATH_RESTART);
 
         for (RunLevelLoadCause rejected : List.of(
-                RunLevelLoadCause.DEATH_RESTART,
                 RunLevelLoadCause.INTERIOR_RETURN)) {
             TraceRunPlaybackCoordinator coordinator = coordinator(
                     List.of(level("a", 0, 1, 100, 10),

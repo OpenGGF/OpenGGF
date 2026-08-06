@@ -2955,6 +2955,27 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
     /**
+     * Reloads the current level the way a death restart reaches it.
+     *
+     * <p>ROM: {@code Sonic_ResetLevel} writes nothing but {@code f_restart}
+     * (docs/s1disasm/_incObj/01 Sonic.asm:2062-2073) and the level main loop's
+     * own {@code tst.w (f_restart).w} falls straight back into {@code GM_Level}
+     * (sonic.asm:3016-3018), which runs the whole routine including the locked
+     * {@code Level_TtlCardLoop} (sonic.asm:2814-2842) exactly as a first entry
+     * does. That makes the card part of the restart rather than of a host
+     * entry a headless boundary may omit — the same reason
+     * {@link #advanceToNextLevel()} marks its load.
+     */
+    public void restartCurrentLevelAfterDeath() {
+        transitions.setLevelRoutineReentry(true);
+        try {
+            loadCurrentLevel(true);
+        } finally {
+            transitions.setLevelRoutineReentry(false);
+        }
+    }
+
+    /**
      * Loads the current level for death respawn (no title card).
      */
     public void respawnPlayer() {
@@ -3713,6 +3734,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     // ==================== Transition Request Delegation ====================
     // These delegate to LevelTransitionCoordinator so external callers keep working.
+
+    /** @see LevelTransitionCoordinator#hasPendingLevelExit() */
+    public boolean hasPendingLevelExit() { return transitions.hasPendingLevelExit(); }
 
     /** @see LevelTransitionCoordinator#requestRespawn() */
     public void requestRespawn() { transitions.requestRespawn(); }

@@ -573,10 +573,21 @@ public final class TraceRunPlaybackCoordinator {
         };
     }
 
+    /**
+     * A manifest records a transition only where the run left the level for
+     * another game mode, so an adjacent level pair with no transition entry is
+     * a boundary the level's own routine owns end to end. Every load cause that
+     * re-enters that routine belongs here: an ordinary load, an end-of-act
+     * advance, and a death restart, which writes the same {@code f_restart} the
+     * advance does (docs/s1disasm/_incObj/01 Sonic.asm:2062-2073 against
+     * _incObj/3A Got Through Card.asm:200-211) and falls back into the same
+     * {@code GM_Level} (docs/s1disasm/sonic.asm:3016-3018).
+     */
     private static boolean isTransitionlessLevelLoad(
             RunLevelLoadCause cause) {
         return cause == RunLevelLoadCause.ORDINARY
-                || cause == RunLevelLoadCause.LEVEL_ADVANCE;
+                || cause == RunLevelLoadCause.LEVEL_ADVANCE
+                || cause == RunLevelLoadCause.DEATH_RESTART;
     }
 
     private static BonusStageType bonusType(String token) {
