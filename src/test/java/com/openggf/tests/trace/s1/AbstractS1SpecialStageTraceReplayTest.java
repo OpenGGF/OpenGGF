@@ -231,8 +231,37 @@ public abstract class AbstractS1SpecialStageTraceReplayTest {
 
         int offset = trace.metadata().bk2FrameOffset();
         int ssIndex = specialStageIndex(trace);
-        Path bk2 = dir.resolve(trace.metadata().sourceBk2());
-        return new S1SpecialStageReplayHarness(bk2, offset, ssIndex);
+        return new S1SpecialStageReplayHarness(
+                resolveSourceBk2(dir, trace.metadata().sourceBk2()), offset, ssIndex);
+    }
+
+    /**
+     * Resolves the recorded input movie named by {@code metadata.source_bk2}.
+     * A standalone fixture stores the BK2 beside its own metadata; a run
+     * segment ({@code <run>/<segment>/}) shares one movie stored once at the
+     * run root, with the segment's {@code bk2_frame_offset} indexing into it.
+     * Falls back to the shared {@code _movies/} store used by the generic
+     * trace tests. This resolves an <em>input source</em> only -- the movie is
+     * controller data, never engine state, so the comparison-only invariant
+     * (hard rule 4) is untouched.
+     */
+    static Path resolveSourceBk2(Path dir, String sourceBk2) {
+        Path local = dir.resolve(sourceBk2);
+        if (Files.exists(local)) {
+            return local;
+        }
+        Path runRoot = dir.getParent();
+        if (runRoot != null) {
+            Path atRunRoot = runRoot.resolve(sourceBk2);
+            if (Files.exists(atRunRoot)) {
+                return atRunRoot;
+            }
+            Path shared = runRoot.resolve("_movies").resolve(sourceBk2);
+            if (Files.exists(shared)) {
+                return shared;
+            }
+        }
+        return local;
     }
 
     // ==================== Comparator ====================

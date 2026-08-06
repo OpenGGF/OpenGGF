@@ -64349,3 +64349,77 @@ Diagnosed, deliberately not fixed (no fitted constant shipped):
   comparison error is `rings` at ghz1 frame 2262 (rom 50, engine 60) - a 10-ring
   monitor award one frame early, the same shape as `TestS1Ghz1CompleteRun`'s
   frame 3143. Those two are likely one defect.
+
+## 2026-08-06 - Special-stage replay coverage: S1 complete, S2 blocked on the recorder
+
+Both games' special stages were ALREADY captured - no recording was needed. The
+complete-emerald runs contain every stage with full payloads
+(metadata.json + physics.csv.gz + aux_state.jsonl.gz):
+`s1/runs/s1-sonic-complete-withemeralds/{ss, ss_2..ss_6}` = index 0..5 (six
+stages) and `s2/runs/s2-sonic-tails-complete-emeralds/{ss, ss_2..ss_7}` =
+index 0..6 (seven). Until now only ONE replay test existed per game, both
+covering index 0 from a separate standalone fixture.
+
+**S1: coverage complete, 4 of 6 green.** Six classes added
+(`TestS1SpecialStage1..6TraceReplay`), one per index, each only overriding
+`traceDirectory()`.
+
+| stage | index | result |
+|---|---|---|
+| 1 | 0 | PASS (3729 frames) |
+| 2 | 1 | FAIL - 3 errors, all at frame 3120, first `ss_angle` (19712 vs 19584) |
+| 3 | 2 | PASS (2537 frames) |
+| 4 | 3 | FAIL - 3 errors, all at frame 1148, first `ss_angle` (52096 vs 52224) |
+| 5 | 4 | PASS (5080 frames) |
+| 6 | 5 | PASS (3830 frames) |
+
+Both failures are the same shape: three errors (`ss_angle`, `x_pos`, `y_pos`)
+confined to ONE frame, non-cascading, with the next compared frame back in
+agreement. The `ss_angle` delta is exactly 128 - one `v_ssrotate` step at
+`ss_rotatespeed` $40 scaling - and the position deltas are one rotation step's
+worth. That is consistent with either a one-frame torn RAM sample that
+`isTornLagBoundaryRow` does not classify as torn, or a genuine one-tick
+rotation-phase slip. Deliberately left red rather than absorbed into a
+heuristic; the two frames above are the entry points.
+
+**S2: seven classes added, all seven fail STRUCTURALLY - none reaches
+frame-by-frame comparison.** Two independent fixture/loader defects, neither an
+engine physics divergence:
+
+1. **Carried-over opening ledger** (stages 1, 2, 5, 6, 7). Their frame-0
+   `dynamic_art_transfer_state` declares `outstanding_transfer_ids` [3283],
+   [8984], [31522], [49013], [61078] - transfers submitted in the PREVIOUS run
+   segment. `SpecialStageTraceData.load` -> `TraceData.validateDynamicArtTransferStates`
+   -> `DynamicArtTransfer.validateSegment` starts from an EMPTY ledger and throws
+   at row 0. `DynamicArtTransfer.validateGaps` already accepts an
+   `openingLedger` parameter; `validateSegment` has no equivalent, so mid-run
+   segments are currently unloadable. The structurally honest fix is to plumb a
+   segment opening ledger (declared in `run_manifest.json`, or carried between
+   consecutive segments) into `validateSegment` - NOT a test-side bypass.
+2. **No `run_objects_end` in any S2 run segment** (stages 3 and 4 reach this;
+   the other five would too once (1) is fixed). All seven segments contain ZERO
+   `run_objects_end` entries, versus 2991 over 5299 rows in the standalone
+   `traces/s2/special_stage` fixture. Without them `SpecialStageRunObjectsPassBinder`
+   has no passes, so pass-paced comparison is impossible and
+   `discoverRingsToGoRefreshFrames` throws "rings-to-go trigger clear at frame N
+   has no following completed pass" (stage 3 frame 1804, stage 4 frame 1284).
+   **This is the same root cause as `TestS2EhzHalfpipeRoundTripChain`**, whose ss
+   segment also has zero `run_objects_end` and therefore paces the track ~1.8x
+   too fast and under-collects at checkpoint 1 (36 vs 40).
+
+So S2 special-stage coverage from run segments is blocked on a RECORDER gap: the
+native harness does not emit `run_objects_end` for `special_stage` segments in
+run mode, though it does for a standalone special-stage capture. Fixing (1)
+alone yields no green stage. The S2 classes are therefore NOT landed yet - they
+would add seven permanently-erroring tests that no engine work can close.
+
+Harness change (shared by both games, comparison-only under hard rule 4):
+`bootHarness` resolved the input movie as `dir.resolve(metadata.source_bk2)`,
+which assumes the standalone layout where the BK2 sits beside metadata.json. A
+run capture stores one movie at the run root and each segment indexes into it
+via its own `bk2_frame_offset`. `resolveSourceBk2` now tries the segment dir,
+then the run root, then the `_movies/` store, falling back to the original path
+so the not-found error is unchanged. This relocates an INPUT source only - the
+BK2 is recorded controller data feeding `RecordedInputRows` ->
+`SpecialStageInputMapper` -> `provider.handleInput`; no physics, aux or
+comparison column is read into the engine.
