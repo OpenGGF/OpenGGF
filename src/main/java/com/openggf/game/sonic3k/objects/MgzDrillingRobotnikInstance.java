@@ -35,6 +35,7 @@ import com.openggf.physics.TerrainCheckResult;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.SwingMotion;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -340,6 +341,8 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     private long bossArtOrdinal;
     private long bossDebrisArtOrdinal;
     private boolean bossArtLoaded;
+    /** True after loc_6C200 publishes the four post-flee KosM parents. */
+    private boolean postFleeLevelArtQueued;
     private boolean palettesLoaded;
     private boolean bossMusicPlayed;
     private boolean hit;
@@ -424,6 +427,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         bossArtOrdinal = -1;
         bossDebrisArtOrdinal = -1;
         bossArtLoaded = false;
+        postFleeLevelArtQueued = false;
         palettesLoaded = false;
         bossMusicPlayed = false;
         hit = false;
@@ -1133,6 +1137,9 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         if (escapeTimer >= 0) {
             return;
         }
+        if (!endBossMode && !queuePostFleeLevelArtIfNeeded()) {
+            return;
+        }
         restoreMgzPalette();
         services().playMusic(Sonic3kMusic.MGZ2.id);
         // ROM loc_6C200 allocates the gradual boundary worker from the start
@@ -1147,6 +1154,50 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         S3kMgzEventWriteSupport.completeDrillingRobotnikFlee(services());
         setDestroyed(true);
         LOG.fine(() -> "MGZ2 Drilling Robotnik cleanup completed at y=" + state.y);
+    }
+
+    /**
+     * Mirrors {@code loc_6C200}: the fleeing drilling Robotnik publishes the
+     * Act 2 primary/secondary terrain modules followed by the Spiker and
+     * Mantis modules. The object is deleted immediately after these calls, so
+     * the coordinator owns the ready-and-claim handoff for the four parents.
+     */
+    private boolean queuePostFleeLevelArtIfNeeded() {
+        if (postFleeLevelArtQueued) {
+            return true;
+        }
+        try {
+            S3kKosModuleQueue queue =
+                    S3kRuntimeArtCoordinator.from(services()).moduleQueue();
+            if (!queue.hasCapacityFor(4)) {
+                return false;
+            }
+            List<HardwareWorkHandle> handles = List.of(
+                    queue.queue(
+                            services().rom(),
+                            Sonic3kConstants.ART_KOSM_MGZ_PRIMARY_ADDR,
+                            0x000),
+                    queue.queue(
+                            services().rom(),
+                            Sonic3kConstants.KOSM_MGZ2_SECONDARY_ART_ADDR,
+                            0x252),
+                    queue.queue(
+                            services().rom(),
+                            Sonic3kConstants.ART_KOSM_MGZ_SPIKER_ADDR,
+                            Sonic3kConstants.ARTTILE_MGZ_SPIKER),
+                    queue.queue(
+                            services().rom(),
+                            Sonic3kConstants.ART_KOSM_MGZ_MANTIS_ADDR,
+                            Sonic3kConstants.ARTTILE_MGZ_MANTIS));
+            for (HardwareWorkHandle handle : handles) {
+                queue.claimAfterFreshLevelHandoff(handle);
+            }
+            postFleeLevelArtQueued = true;
+            return true;
+        } catch (IOException exception) {
+            throw new IllegalStateException(
+                    "Unable to queue MGZ post-flee level art", exception);
+        }
     }
 
     private void applyYVelocity() {
@@ -1169,10 +1220,10 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
      * load Pal_MGZEndBoss into palette line 1.
      */
     private void queueInitialAssetsIfNeeded() {
+        serviceBossArtQueue();
         if (artQueued) {
             return;
         }
-        serviceBossArtQueue();
         services().fadeOutMusic();
         ensureArtLoaded();
         loadBossPalette();

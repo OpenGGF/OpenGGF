@@ -64490,3 +64490,37 @@ to synthesize a POST phase on a VBLANK-only row.
 - Route position: AIZ and HCZ remain green at their committed frontiers; MGZ
   now reaches direct `#153`. The pending MGZ module owners are next; CNZ, ICZ,
   and LBZ remain pending in gameplay order.
+
+## 2026-08-07 — S3K MGZ flee-tail KosM frontier
+
+- Worktree: `bugfix/s3k-traces` at `52443a7f3` before the frontier commit;
+  unrelated edits in `.idea/vcs.xml` and
+  `docs/status/rewind-round-trip-gaps.md` remained unstaged. Validation used
+  JDK 21.0.11 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen` (SHA-1
+  `b711a909cce238ca4af3e517a2edca306228efa5`), without replacing or renaming
+  it.
+- Frontier command: `mvn -Dmse=off
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kMgzCompleteRunTraceReplay#replayMatchesTrace
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Result: the complete-run replay advances from direct
+  `KOS_DECOMPRESSION_QUEUE#153` at raw frame `18276` to the next recorded
+  completion, direct `#162` at raw frame `18342`, fingerprint
+  `sha256:528fb63e818c7ef697b37d8a5edbafbd1d00079570a4d36bd47a09d22792253e`.
+  The run aborts at the following expected direct `#163` boundary (raw frame
+  `31228`) because that next ROM-owned submission is not yet modeled; the
+  report contains 2310 comparator errors at the current stop, first raw frame
+  `15974`, `queue.s3k_kos_direct.busy`, expected `true` and actual `false`.
+- Regression checks: `TestS3kAizTraceReplay#replayMatchesTrace` passes with
+  zero comparator errors. AIZ complete and HCZ complete remain at their
+  previously recorded no-pending-work stops, direct `#50` and `#104`,
+  respectively; MGZ standard remains at its pre-existing raw frame `13903`
+  / direct `#24` boundary. Ring comparison remains enabled with
+  `ToleranceConfig.DEFAULT` `FORCE_ERROR`; no trace payloads changed.
+- Fix scope: `Obj_MGZ2DrillingRobotnik` now mirrors the native `loc_6C200`
+  flee-tail queue order for the Act 2 primary/secondary terrain and Spiker /
+  Mantis modules. Fresh-level handoff ownership keeps the four parents alive
+  until readiness after the object deletes itself; no trace-derived gameplay
+  values were introduced.
+- Route position: AIZ and HCZ remain at their committed frontiers; MGZ now
+  reaches direct `#162`. CNZ, ICZ, and LBZ remain pending in gameplay order.

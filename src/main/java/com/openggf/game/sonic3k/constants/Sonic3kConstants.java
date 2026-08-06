@@ -1424,6 +1424,8 @@ public class Sonic3kConstants {
     public static final int ART_KOSM_HCZ2_SECONDARY_ADDR = 0x3BFA6C;
     public static final int KOS_HCZ2_SECONDARY_BLOCK_ADDR = 0x3BF17C;
     public static final int KOS_HCZ2_SECONDARY_CHUNK_ADDR = 0x3C18EE;
+    // MGZ_8x8_Primary_KosM queued by Obj_MGZ2DrillingRobotnik's flee tail.
+    public static final int ART_KOSM_MGZ_PRIMARY_ADDR = 0x3C3EBE;
     public static final int KOS_MGZ2_SECONDARY_BLOCK_ADDR = 0x3C9CD2;
     public static final int KOSM_MGZ2_SECONDARY_ART_ADDR = 0x3CA132;
     public static final int KOS_MGZ2_SECONDARY_CHUNK_ADDR = 0x3CB1C4;

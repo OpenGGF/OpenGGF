@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K MGZ Act 2 drilling-Robotnik's flee tail now submits the
+  ROM-owned primary terrain, secondary terrain, Spiker, and Mantis KosM
+  modules in native order, with the runtime coordinator retaining the
+  ready-and-claim handoff after the object is deleted. The MGZ complete-run
+  hardware frontier advances from direct `#153` at raw frame `18276` to
+  direct `#162` at raw frame `18342`; no trace payloads changed.
 - Fix/Test: S3K MGZ Act 2 drilling-Robotnik now submits the ROM-owned
   `ArtKosM_MGZEndBoss` and `ArtKosM_MGZEndBossDebris` modules to the shared
   KosM FIFO in native order and retains rewind ordinals for both jobs. The
