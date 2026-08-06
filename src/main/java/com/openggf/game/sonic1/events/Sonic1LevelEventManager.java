@@ -385,6 +385,31 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
         return loopManager;
     }
 
+    /**
+     * S1's floor routines write {@code move.b #id_Walk,obAnim(a0)} unconditionally
+     * when Sonic lands ({@code Sonic_Floor}/{@code Sonic_FloorLeft}/
+     * {@code Sonic_FloorRight} .landed, docs/s1disasm/_incObj/"01 Sonic.asm":1563,
+     * 1692, 1825). Level_MainLoop runs LZWaterFeatures before ExecuteObjects
+     * (docs/s1disasm/sonic.asm:3005-3006), so the wind tunnel's
+     * {@code move.b #id_Float2,obAnim(a1)}
+     * (docs/s1disasm/_inc/LZWaterFeatures.asm:409 -- the only writer of
+     * {@code id_Float2} in the disassembly) is clobbered again in the same frame
+     * whenever Sonic re-lands. The engine models that byte with a sticky forced
+     * animation, so release the tunnel's own write here; Sonic_Control's repair
+     * ({@code obAnim==0 -> obPrevAni}, "01 Sonic.asm":86-90) is modelled by
+     * PlayableSpriteAnimation.restoreWaterTunnelPreviousAnimation and runs next.
+     */
+    @Override
+    public void onPlayableLandingAnimationWrite(AbstractPlayableSprite playable) {
+        if (playable == null
+                || playable.getForcedAnimationId()
+                        != com.openggf.game.sonic1.constants.Sonic1AnimationIds.FLOAT2.id()) {
+            return;
+        }
+        playable.setForcedAnimationId(-1);
+        playable.setAnimationId(com.openggf.game.sonic1.constants.Sonic1AnimationIds.WALK);
+    }
+
     @Override
     public java.util.List<com.openggf.game.rewind.RewindSnapshottable<?>> extraRewindAdapters() {
         return java.util.List.of(
