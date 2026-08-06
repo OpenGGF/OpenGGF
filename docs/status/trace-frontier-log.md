@@ -63529,3 +63529,90 @@ to synthesize a POST phase on a VBLANK-only row.
   baseline. Isolated single-class runs of `TestS1CompleteEmeraldVisualRun` remain
   subject to the documented ambient-global-state order dependence, so a clean
   before/after for this work needs a whole-suite run on an unmodified tree.
+
+## 2026-08-06 - DECISION: `NEMESIS_PLC_QUEUE` admitted to the v5 timing registry (review only, nothing built)
+
+- **Command.** None. This is a documents-only authoring pass; no Maven run, no
+  probe pass, no engine or recorder change. Commit context `c20ee7fbf` on
+  `develop`, shared working tree with concurrent agents mid-measurement, so no
+  suite baseline was taken and none should be inferred from `target/`.
+- **What landed.** The "separate ROM evidence and design review" the cross-game
+  contract requires before a PLC kind may enter the registry:
+  [docs/architecture/designs/2026-08-06-s1-nemesis-plc-timing-kind-admission-review.md](../architecture/designs/2026-08-06-s1-nemesis-plc-timing-kind-admission-review.md),
+  plus the revised implementation plan that supersedes the earlier draft at
+  [docs/architecture/plans/trace/2026-08-06-s1-nemesis-plc-timing-stream-plan.md](../architecture/plans/trace/2026-08-06-s1-nemesis-plc-timing-stream-plan.md).
+- **Verdict: admit** `HardwareWorkKind.NEMESIS_PLC_QUEUE` (wire
+  `nemesis_plc_queue`), at `pre_main_loop`, confined to `Level_MainLoop`'s
+  `RunPLC` (`docs/s1disasm/sonic.asm:3032`) by the existing `ORDINARY_LEVEL`
+  `PlcLifecyclePhase` gate. The edge means "the ROM promoted the FIFO head to the
+  active decode slot on this raw frame"; the engine keeps ownership of which
+  entry, the 3/9-pattern budget, the decrement, and retirement.
+- **The polled gate is `v_plc_buffer` (`$FFFFF680`), not `v_plc_patternsleft`.**
+  The prior framing of this work was wrong on that point and would have been
+  rebutted immediately. Measured over the disassembly: `v_plc_patternsleft` has
+  **six** touches in the whole program (`sonic.asm:1382, 1397, 1415, 1432, 1444,
+  1476`), every one inside `RunPLC`/`ProcessPLC*`, **zero** external readers, and
+  no wait loop anywhere. `v_plc_buffer` has nine gameplay-visible `tst.l` polls —
+  four unbounded spin loops (`LevelSelect` 2203, `Level_TtlCardLoop` 2841,
+  `SS_NormalExit` 3412, `Cred_WaitLoop` 3888) and five object-dispatcher gates
+  (Obj 3A `:29`, Obj 7E `:30`, Obj 39 `:18`, Obj 4A `:20`, and
+  `BossFinal_Eggman_Wait` `:157`, which also seeds the Final Zone RNG once per
+  waiting frame). `SignpostArtLoad` (3186-3208) reads no PLC state at all — it is
+  a camera-triggered `NewPLC` *writer*, i.e. a mid-gameplay queue reset.
+- **What the stream is worth, stated up front.** Census over 383,502 probed
+  frames: 1,170 armings, and the "arm falls into the next raw frame" shape occurs
+  **once** (`ghz2_2` 9849). Reverting `99746ffa9` is therefore correct on
+  1,169/1,170; the entire apparatus exists for the one remaining case, which the
+  emerald visual lane must cross to reach `mz2_3` at all. Recorded here so the
+  cost/benefit is not rediscovered later.
+- **Fingerprint: `compressedLength` waiver GRANTED, with an amendment.** Nemesis
+  is self-terminating, so under a hash-pinned ROM its length is a total function
+  of `romSourceAddress` and adds no discriminating power over a field already in
+  the tuple — while requiring two independent bitstream decoders (a new C# scanner
+  and a new `NemesisReader.inspect`, plus a cross-implementation vector file) whose
+  disagreement would surface as a spurious *timing* failure. Amendment: the
+  header's bit 15 (XOR mode) must not be dropped with it. Adopted tuple is
+  `(NEMESIS_PLC_QUEUE, romSourceAddress, 0, destinationAddress,
+  (header & 0x7FFF) * 0x20, "nemesis" | "nemesis_xor", 1)`, with both sides reading
+  the same 2-byte big-endian ROM header at `romSourceAddress`. Zero new codec code
+  either side. Guarded by a new assertion that the waiver is confined to this kind.
+- **The registry guard moves; the authority guard does not.**
+  `TestS1S2PlcComparisonOnlyGuard.timingKindRegistryAdmitsOnlyKosinskiWork`:79-90
+  asserts the admitted set *equals exactly* `{KOS_MODULE_QUEUE,
+  KOS_DECOMPRESSION_QUEUE}`, so a kind named to dodge the `PLC` substring still
+  fails — deliberately. It is replaced by five assertions that keep the registry
+  closed, keep the PLC subset exactly `{NEMESIS_PLC_QUEUE}`, keep the shared
+  `NemesisPlcServiceQueue` kernel free of `com.openggf.game.timing` so S2 cannot
+  inherit the authority, pin the single submitter, and confine the waiver.
+  `TestHardwareTimingAuthorityGuard` holds **no kind literals** and must stay green
+  **unmodified**; if any step needs to edit it, the design is out of contract.
+- **No S3K re-record.** This is the decisive difference from
+  [2026-08-06-level-load-span-timing-port-scope.md](../architecture/designs/2026-08-06-level-load-span-timing-port-scope.md)
+  §4.2's rejection of `LEVEL_LOAD`. The v5 registry is all-or-nothing, so the new
+  kind becomes `RECORDED` for S3K fixtures too — but its only submitter is
+  `Sonic1RuntimeArtCoordinator`, and S3K instantiates no `NemesisPlcServiceQueue`
+  and registers no `PlcLifecycleService`. A `RECORDED` policy over a kind with zero
+  submissions is inert. `TestCommittedHardwareTimingFixtures` staying green is the
+  verification.
+- **Largest risk found, and not in the prior plan: fail-closed starvation.** Under
+  `RECORDED` admission `releasePreparedInFifoOrder` is `LIVE`-only, so a job with
+  no edge is permanently pending and its consumer waits forever. The S1
+  title-card drain reaches the hardware boundaries through
+  `LevelFrameStep.executeHardwareTimedObjectScan` (:353, :362) on rows the
+  recorder never records, and the 21 inter-segment gaps traverse no boundary at
+  all. Resolved by confining submission to `ORDINARY_LEVEL`, marking submissions
+  `exportableAcrossSegment = false` so a straggler fails loudly at `handoffTo`,
+  counting recorder ordinals only inside armed segments (a deliberate divergence
+  from S3K's run-wide ledger), and bounding every PLC-drain consumer.
+- **Eight measurements deferred, none invented.** Per-segment arming counts (M1);
+  gap-row armings after a segment's last row (M2); `ClearPLC`/`NewPLC` overlap
+  with an armed entry (M3); the claimed `PlcLifecyclePhase` on every armed row
+  (M4) and its recorder-side `v_vblank_routine` twin (M5); engine-vs-ROM arming
+  count/order parity (M6); whether the comparator already treats the engine's
+  idle-with-queued `remaining=-1` as equal to the recorder's `PlcPatternsLeft == 0`
+  on the denied row (M7); and a clean pre-revert suite baseline (M8). M1/M2/M3/M5
+  are one extra pass of the existing untracked `.scratch/PlcProbe.cs`.
+- **Route position unchanged.** No engine change; the committed pins stay at
+  `stopAfterSegment(3)` and `stopAfterSegmentBody(11)`. The frontier moves at the
+  plan's Phase 5 (the `99746ffa9` revert), which must be measured on its own
+  against M8 before Phase 6 begins.
