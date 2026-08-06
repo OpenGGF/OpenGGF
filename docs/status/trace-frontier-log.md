@@ -64427,3 +64427,34 @@ to synthesize a POST phase on a VBLANK-only row.
 - Route position: AIZ standard remains through the HCZ handoff; AIZ complete
   now reaches direct `#50`. HCZ, MGZ, CNZ, ICZ, and LBZ remain pending at the
   recorded checkpoints.
+
+## 2026-08-06 - S3K HCZ dynamic-SST frontier
+
+- Worktree: `bugfix/s3k-traces` at `1117d2d1a498d9d7cf718df7d103c89b60a02c2a`
+  before the frontier commit; unrelated edits in `.idea/vcs.xml` and
+  `docs/status/rewind-round-trip-gaps.md` remained unstaged. Validation used
+  JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen` (SHA-1
+  `b711a909cce238ca4af3e517a2edca306228efa5`), without replacing or renaming
+  it.
+- Frontier command: `mvn -q -Dmse=off
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay#replayMatchesTrace
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Result: the complete-run replay now reaches hardware admission
+  `KOS_DECOMPRESSION_QUEUE#104`; the engine has no pending work. This
+  advances the previous `#90` stop. The run reports 103 comparator errors;
+  the first is raw frame `9761`, `player_animation_id`, expected `0x0013`
+  and actual `0x0009`. The frontier admission fingerprint is
+  `sha256:fbfc78d499717cfec6df27fdd04fa4b5293a7147ec7ff7a7a18004e9db801e78`.
+- Regression check: `TestS3kAizTraceReplay#replayMatchesTrace` passes with
+  zero comparator errors. Ring comparison remains enabled with
+  `ToleranceConfig.DEFAULT` `FORCE_ERROR`; no trace payloads changed.
+- Fix scope: HCZ water-wall debris and spray now cull using the native
+  `Sprite_OnScreen_Test` `0x18 x 0x18` bounds, so the vertical wall no longer
+  fills the dynamic SST pool before the conveyor Y-pass. The HCZ placement
+  parser also preserves native same-X-chunk order, and the native fixed SST
+  water-skim slot is represented by a persistent owner. No trace-derived
+  gameplay values were introduced.
+- Route position: AIZ standard and complete-run frontiers remain green;
+  HCZ now reaches direct hardware admission `#104`. MGZ is next in gameplay
+  order; CNZ, ICZ, and LBZ remain pending.

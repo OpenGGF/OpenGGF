@@ -3,6 +3,13 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K HCZ water-wall debris and spray now use the native
+  `0x18 x 0x18` `Sprite_OnScreen_Test` bounds, preventing vertical geyser
+  particles from exhausting the dynamic SST pool before the conveyor
+  Y-pass. The HCZ complete-run hardware frontier advances from Kosinski
+  `#90` to `#104`; the first comparator error moves from raw frame `3253` to
+  `9761` (103 errors at the current stop). Standard AIZ remains green; no
+  trace payloads changed.
 - Fix/Test: S3K held-row replay closure now carries a deferred KosM child
   handoff through the following direct-FIFO tail and services event-owned
   runtime art between the suppressed-row POST and PRE boundaries. The AIZ
