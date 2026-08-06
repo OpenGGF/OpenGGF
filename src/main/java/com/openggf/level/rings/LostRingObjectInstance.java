@@ -343,8 +343,21 @@ public class LostRingObjectInstance extends AbstractObjectInstance
             }
         }
 
+    }
+    /**
+     * ROM {@code Level_MainLoop} runs the object pass, then the camera step, then
+     * BuildSprites (s2.asm:5088-5112), and BuildSprites is what latches
+     * {@code render_flags.on_screen} against {@code Camera_X_pos_copy}
+     * (s2.asm:30560-30575). Latching at the tail of the object pass instead would
+     * read the pre-scroll camera, i.e. a camera one frame stale, which for a ring
+     * skirting the screen edge flips the gate on {@link #hasRomRenderFlagForFloorProbe}
+     * and skips a floor probe.
+     */
+    @Override
+    public void refreshPostCameraRenderState() {
         refreshRomRenderFlagForFloorProbe();
     }
+
 
     @Override
     public boolean usesCustomOutOfRangeCheck() {

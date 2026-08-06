@@ -64071,3 +64071,29 @@ to synthesize a POST phase on a VBLANK-only row.
   -Dsurefire.failIfNoSpecifiedTests=false` with all three ROM paths, JDK 21.
   Result: 2 tests, 0 failures, 0 errors, 0 skips. Both frontiers closed, taking
   the S1/S2 red-class count from 27 to 25.
+
+## 2026-08-06 - Obj37 latched its on-screen flag against a stale camera
+
+- `TestS2MczLevelSelectTraceReplay` closed: 1 error at frame 1817
+  (`rings` expected 8, actual 9) -> 0 errors. Measured at `947f727d1` before and
+  after, same command, so the delta is attributable to this change alone.
+- ROM `Obj37_Main` probes the floor only when
+  `(Vint_runcount+3 + d7) & 7 == 0` AND `render_flags.on_screen` is set
+  (s2.asm:25213-25224). That flag is latched by `BuildSprites` against
+  `Camera_X_pos_copy` (s2.asm:30560-30575), and `Level_MainLoop` runs the object
+  pass, then the camera step, then BuildSprites (s2.asm:5088-5112).
+- `LostRingObjectInstance` refreshed the flag at the tail of its own `update()`,
+  i.e. inside the object pass, where the shared camera bounds still hold the
+  pre-scroll camera - one frame stale. For the ring skirting the right edge at
+  MCZ row 1732 the ROM's latch evaluates `x - camera_x - 8` = 319 (on-screen)
+  and the engine evaluated 321 (off-screen), so the engine skipped that probe,
+  kept falling, and bounced at row 1740 on a floor 7 px lower. By row 1817 the
+  ring sat ~36 px low, inside Sonic's touch box, and was collected 25 frames
+  before the ROM's Tails collects it at 1842.
+- Fix moves the latch to the existing `refreshPostCameraRenderState()` hook,
+  which `ObjectManager` drives after `updateCameraBounds()` - the same hook ~15
+  other objects already use to model the BuildSprites pass. No constant, no
+  tolerance and no comparison was changed.
+- Command: `mvn -Ptrace-replay -Dmse=off -DforkCount=1
+  -Dsurefire.reportsDirectory=target/rep-three -Dtest=<4 focused classes>` with
+  all three ROM paths, JDK 21.
