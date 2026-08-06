@@ -64280,3 +64280,72 @@ in place only so the mistake is traceable.
   the patch until ARZ2 is deterministic across repeated full sweeps.
 - Candidate diff (with the seam fix) at
   `docs/architecture/audits/2026-08-06-bk2-press-edge-lag-baseline.patch.txt`.
+
+## 2026-08-06 - Measurement correction: -DforkCount=1 never worked, and four more traces closed
+
+**Read this before quoting any red count from earlier entries today.**
+
+- `-DforkCount=1` does NOT override `${surefire.forkCount}`. `pom.xml:25` defaults
+  that property to 4 and only the `ci` profile (activated by `env.CI=true`,
+  pom.xml:120-131) sets it to 1; the `trace-replay` profile does not. The
+  effective flag is **`-Dsurefire.forkCount=1`**. Every sweep run earlier today,
+  and the command published in the handoff, therefore ran 4 reused parallel
+  forks with run-to-run variation in class-to-fork assignment.
+- That fully explains the ARZ2 / `TestS2ObjectOccupancyOracle` oscillation
+  recorded in the entry above, and **invalidates its conclusion** that the BK2
+  press-edge patch destabilised ARZ2. It did not. With a control and a patched
+  sweep both at `-Dsurefire.forkCount=1` over the full `TestS1*,TestS2*` set:
+  control 18 red, patched 14 red, patched-minus-control **empty** (no new
+  failure), control-minus-patched exactly the four traces closed below.
+- Single-fork is the honest configuration but it is not a fix for the underlying
+  problem: it puts all 154 classes in ONE JVM, which maximises cross-class state
+  leakage rather than removing it. `TestS2Arz2LevelSelectTraceReplay` (99 errors)
+  and the two `arz2RisingPillar*` oracle cases fail in the CONTROL under a single
+  fork while passing in isolation with every patch applied - so they are a
+  pre-existing ambient-state defect, not a regression, and they were only ever
+  "green" in the 4-fork sweeps by luck. This is the documented shared-fork /
+  global-state flakiness and wants real reset isolation.
+
+Closed (control 18 -> patched 14), each measured in its own worktree at
+`12a971688` and confirmed by the paired full sweeps:
+
+- **`TestS2Mtz2` and `TestS2Mtz3`** - the BK2 press-edge baseline fix finally
+  lands. ROM `Joypad_Read` computes `pressed = new & ~stored_held` then
+  overwrites `stored_held` (s2.asm:1361-1387, sonic.asm:1088-1119) and is
+  reached only from polling V-int routines (`Vint_Level` s2.asm:706 vs
+  `Vint_Lag` s2.asm:528-543; `VBlank_Lag` sonic.asm:711-712), so a lag frame
+  leaves `Ctrl_1_Held` unrefreshed and the edge belongs against the last POLLED
+  row. The recorder settles it independently: arz2 `cpu_state` frame 2691
+  `ctrl1_logical=0x0000` (lag row, held NOT refreshed despite the BK2 row
+  holding Right) and frame 2692 `=0x0808`. The patch reproduces the recorded ROM
+  value; the unpatched engine does not. The join seam is seeded from
+  `frame(bk2StartIndex - 1)`, which is what keeps CNZ2 green.
+- **`TestS2MtzLevelSelectTraceReplay`** - the "hole at slot 17" is the Obj08 skid
+  dust puff. ROM Obj08 never calls `MarkObjGone`, but the engine subjected the
+  dynamically allocated puff to the off-screen unload window, so puffs the ROM
+  keeps for 18 frames died after 1 and streamed objects filled one slot low.
+  Fixed with the existing `usesCustomOutOfRangeCheck`/`isCustomOutOfRange` hook,
+  the same pattern `SteamPuffObjectInstance` already uses.
+- **`TestS1Syz3CompleteRunTraceReplay`** - S1 placed rings were edge-triggered.
+  ROM `React_CollisionDetected`'s ring branch has no once-only latch: it re-tests
+  `cmpi.w #90,flashtime(a0)` every overlapping frame and self-latches only by
+  advancing the ring's routine (Sonic ReactToItem.asm:191-203). A frame where
+  the flash gate blocked the pickup consumed the overlap edge and was never
+  re-armed. Opted into the pre-existing `requiresContinuousTouchCallbacks()`
+  contract that S1's monitor already uses. Also advances SBZ1 (8 -> 2 errors)
+  and SLZ1 (10 errors at frame 2422 -> 1 error at frame 5611).
+
+Diagnosed, deliberately not fixed (no fitted constant shipped):
+
+- **`TestS1Credits03Lz3TraceReplay` 2px at frame 236** is the phase of the ROM's
+  free-running `v_vblank_count`. `LZWindTunnels` loads `v_vblank_byte` for the
+  every-$40-frames waterfall SFX gate and re-uses d0 for the suction compare, so
+  on a sound frame the +2px `add.w d0,obY` fires regardless of Sonic's X. The
+  engine models that clobber exactly; what differs is WHEN the sound frame lands,
+  because `v_vblank_count` increments every VBlank since power-on and is never
+  reset (sonic.asm:685) while the engine's counter is level-local. Closing this
+  needs a global VBlank clock, not a tweak.
+- **`TestS1CompleteEmeraldVisualRun`**'s pause is a red herring; the real first
+  comparison error is `rings` at ghz1 frame 2262 (rom 50, engine 60) - a 10-ring
+  monitor award one frame early, the same shape as `TestS1Ghz1CompleteRun`'s
+  frame 3143. Those two are likely one defect.

@@ -83,6 +83,42 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * boundaries and every carry-over assertion still hold. Closing it is a separate
  * title-card-duration parity item and is left for a follow-up.
  *
+ * <h2>Current RED: the special-stage interior exits ~3704 rows early
+ * (fixture gap — needs a RE-RECORD, not a harness change)</h2>
+ *
+ * <p>The paragraph above ("the earlier fixture-data gap story is wrong") remains true
+ * of the {@code seg2} return handoff it was written about, but it is NOT the current
+ * failure and must not be read as retiring the fixture gap. The chain now fails in
+ * {@link AbstractRunChainTest} with {@code "special stage exited with 3704 represented
+ * rows remaining in ss"}: the half-pipe reaches {@code Checkpoint 1 triggered:
+ * required=40, collected=36}, FAILS, and is ejected at interior row ~2029 of 5733.
+ *
+ * <p>That is exactly the pass-pacing gap documented on
+ * {@link AbstractRunChainTest#emeraldCarryOverIsVerifiable(SegmentPlan)}, and the
+ * committed fixtures confirm it directly: this run's
+ * {@code traces/s2/runs/s2-ehz-halfpipe-roundtrip/ss/aux_state.jsonl.gz} carries 5733
+ * {@code dynamic_art_transfer_state} rows and ZERO {@code run_objects_end} entries,
+ * while the standalone {@code traces/s2/special_stage/aux_state.jsonl.gz} — same stage
+ * (special_stage_index 0, Sonic+Tails), driven green for its whole length by
+ * {@code TestS2SpecialStageTraceReplay} — carries 2991 {@code run_objects_end} entries
+ * over 5299 rows. The half-pipe track is ROM-object-pass paced, so binding one
+ * {@code GameLoop.step()} per admitted row (all {@link #uncomparedInteriorStep} can do
+ * without a pass log) advances the track ~1.9x too fast; the recorded ring-requirement
+ * reloads land at interior rows 1325/1849/3482 while the engine hits checkpoint 1 at
+ * row 2029.
+ *
+ * <p><b>This is not fixable in the harness.</b> Deriving a pass cadence by measuring
+ * this fixture's own rows would be a fitted model (it would desync the first different
+ * recording), and reading the interior's pacing out of the trace to drive engine state
+ * is barred by the comparison-only rule. Loosening or skipping the remaining-rows
+ * assertion is likewise not an option: the assertion is correctly detecting a real
+ * premature exit. <b>What the recorder must emit</b> to close this: a
+ * {@code run_objects_end} aux entry per ROM RunObjects pass for special-stage segments
+ * of MULTI-SEGMENT runs, with the same shape the standalone special-stage recording
+ * already produces (so {@code SpecialStageRunObjectsPassBinder}/{@code stepPasses} can
+ * bind each pass to the BK2 row the ROM's V-int sampled). Until the run is re-recorded
+ * with that stream, this lane stays RED for fixture reasons.
+ *
  * <h2>Emerald boundary-model correction (retained + tightened)</h2>
  * <p>Asserting the LIVE {@code emeralds_after} count across an <b>advance-uncompared</b>
  * special stage is a boundary-model over-reach (an emerald is awarded only on a WON

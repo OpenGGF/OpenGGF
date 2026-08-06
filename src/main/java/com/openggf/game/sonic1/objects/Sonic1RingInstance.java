@@ -280,6 +280,24 @@ public class Sonic1RingInstance extends AbstractObjectInstance
         return 0;
     }
 
+    /**
+     * ROM parity: {@code React_CollisionDetected}'s {@code col_item} ring branch
+     * (docs/s1disasm/_incObj/"Sonic ReactToItem.asm":191-203) is re-evaluated on
+     * every frame the hitboxes overlap. It carries no "already touched" latch:
+     * the only gate is {@code cmpi.w #90,flashtime(a0) / bhs .return}, and when
+     * that gate blocks the pickup the ring stays at {@code Ring_Animate} with its
+     * {@code obColType} intact, so the very next frame checks again. The engine's
+     * default edge-trigger would consume the overlap on the blocked frame and
+     * never re-arm while Sonic stands still, losing the pickup entirely. Once the
+     * ring is collected it advances to {@code Ring_Sparkle} and stops reporting
+     * collision flags, which is what actually latches the response — exactly as
+     * {@link #getCollisionFlags()} models above.
+     */
+    @Override
+    public boolean requiresContinuousTouchCallbacks() {
+        return true;
+    }
+
     @Override
     public void onTouchResponse(PlayableEntity playerEntity, TouchResponseResult result, int frameCounter) {
         if (state != State.ANIMATE || result.category() != TouchCategory.SPECIAL) {
