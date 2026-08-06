@@ -29,6 +29,7 @@ import com.openggf.level.resources.LevelResourcePlan;
 import com.openggf.level.resources.LoadOp;
 import com.openggf.game.sonic3k.objects.AizIntroTerrainSwap;
 import com.openggf.game.sonic3k.resources.Sonic3kDeferredLevelResourceProfile;
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
 
 import java.util.LinkedHashSet;
 import java.io.IOException;
@@ -204,6 +205,41 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
     public Level loadLevel(int levelIdx) throws IOException {
         return loadLevelWithDeferredResources(
                 levelIdx, DeferredLevelResourceTracker.none());
+    }
+
+    /**
+     * Publishes the fresh level terrain KosM streams through the native S3K
+     * runtime queue. The level loader has already decoded the same ROM sources
+     * synchronously; this submission models the ROM's hardware-owned handoff
+     * without making gameplay depend on trace data.
+     */
+    @Override
+    public void queueFreshLevelRuntimeArt(int levelIdx) throws IOException {
+        int s3kIdx = levelIdx >= 0xC0 ? levelIdx - 0xC0 : levelIdx;
+        int zone = s3kIdx / 2;
+        int act = s3kIdx % 2;
+        Sonic3kLoadBootstrap bootstrap = Sonic3kBootstrapResolver.resolve(zone, act);
+        int llbIndex = resolveLevelLoadBlockIndex(zone, act, bootstrap);
+        int llbAddr = Sonic3kConstants.LEVEL_LOAD_BLOCK_ADDR
+                + llbIndex * Sonic3kConstants.LEVEL_LOAD_BLOCK_ENTRY_SIZE;
+
+        int primaryArtAddr = rom.read32BitAddr(llbAddr) & 0x00FFFFFF;
+        int secondaryArtAddr = rom.read32BitAddr(llbAddr + 4) & 0x00FFFFFF;
+        boolean applyAiz1OverlayBridge = zone == 0
+                && act == 0
+                && bootstrap != null
+                && bootstrap.isSkipIntro()
+                && llbIndex != Sonic3kConstants.LEVEL_LOAD_BLOCK_AIZ1_INTRO_INDEX;
+        if (applyAiz1OverlayBridge) {
+            Aiz1GameplayOverlay override = readAiz1GameplayOverlayFromIntroEntry();
+            if (override != null) {
+                secondaryArtAddr = override.secondaryArtAddr();
+            }
+        }
+
+        S3kRuntimeArtCoordinator coordinator = S3kRuntimeArtCoordinator.current();
+        coordinator.deferFreshLevelRuntimeArt(
+                rom, primaryArtAddr, secondaryArtAddr);
     }
 
     @Override

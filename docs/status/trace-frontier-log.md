@@ -63743,3 +63743,38 @@ to synthesize a POST phase on a VBLANK-only row.
   -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen'
   -Dtest='com.openggf.tests.trace.s3k.TestS3kLbzCompleteRunTraceReplay#replayMatchesTrace'
   test`.
+
+## 2026-08-06 — S3K LBZ fresh-level MHZ terrain handoff
+
+- Worktree: `bugfix/s3k-traces`, candidate committed from the clean
+  `0b405ad4d` baseline after the `origin/develop` merge; unrelated worktree
+  changes remained unstaged. The source-of-truth addresses are the ROM's
+  `ArtKosM_MHZ_Primary` at `0x19ABF2` and `ArtKosM_MHZ_Secondary` at
+  `0x19E714` (`docs/skdisasm/Split/sk.txt`).
+- The fresh-level load now arms the title-card owner, and the S3K runtime-art
+  coordinator publishes those ROM sources after the title-card art becomes
+  ready, at the loop-tail boundary that leaves direct child `#322` active on
+  raw frame `46194`. The handoff owner claims the parents after their native
+  readiness and is rewind-snapshotted; no trace data drives submission,
+  preparation, or gameplay state.
+- Focused command:
+  `mvn -q -Dmse=off -Dtrace.context.diagnosticChars=full
+  -Dsurefire.argLine='-Xshare:off -Xmx6g' -Dsurefire.forkCount=1
+  -DreuseForks=true -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kLbzCompleteRunTraceReplay#replayMatchesTrace'
+  test`.
+- Result: the LBZ replay consumes direct `#322..#329` at raw frames
+  `46196, 46200, 46204, 46208, 46210, 46214, 46218, 46220` and module
+  `#219..#220` at raw frames `46211` and `46221`. The comparator still reports
+  `83` errors, with first error raw frame `19869`, field
+  `queue.s3k_kos_direct.busy`; there is no hardware-authority failure at the
+  new frontier. The pre-fix clean baseline stopped at direct `#322` with
+  `engine pending: <none>`.
+- Regression checks: the serial `*TraceReplay` sweep remained `108` tests,
+  `10` failures, `30` errors, and `1` skipped; relative to the clean baseline
+  (`9` failures, `31` errors, `1` skipped), the only changed class was LBZ,
+  which moved from the direct-`#322` runtime error to its existing 83-error
+  comparator report. The post-adapter S3K replay subset was `57` tests,
+  `6` failures, `29` errors, `0` skipped, with the same non-LBZ signatures.
+  Focused KosM/title-card/LBZ/rewind coverage checks passed (`79` tests,
+  `0` failures, `0` errors, `0` skipped).

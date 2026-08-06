@@ -180,6 +180,7 @@ public class Sonic3kTitleCardManager
     private boolean artLoading;
     private long runtimeArtAdmissionLeaseId = -1;
     private boolean runtimeArtAdmissionConsumed;
+    private int freshLevelRuntimeArtHandoffLevelIndex = -1;
 
     /**
      * Immutable live-title snapshot. Array accessors clone their payload so a
@@ -221,7 +222,8 @@ public class Sonic3kTitleCardManager
             List<Integer> artDestinations,
             boolean artLoading,
             long runtimeArtAdmissionLeaseId,
-            boolean runtimeArtAdmissionConsumed) {
+            boolean runtimeArtAdmissionConsumed,
+            int freshLevelRuntimeArtHandoffLevelIndex) {
         public Snapshot {
             Objects.requireNonNull(state, "state");
             elemX = elemX.clone();
@@ -270,7 +272,8 @@ public class Sonic3kTitleCardManager
                 elemOutsideViewport, elemExited, actNumberVisible,
                 combinedPatterns, artLoaded, artCached, lastLoadedZone,
                 lastLoadedAct, artHandles, artDestinations, artLoading,
-                runtimeArtAdmissionLeaseId, runtimeArtAdmissionConsumed);
+                runtimeArtAdmissionLeaseId, runtimeArtAdmissionConsumed,
+                freshLevelRuntimeArtHandoffLevelIndex);
     }
 
     @Override
@@ -327,6 +330,8 @@ public class Sonic3kTitleCardManager
         artLoading = snapshot.artLoading();
         runtimeArtAdmissionLeaseId = snapshot.runtimeArtAdmissionLeaseId();
         runtimeArtAdmissionConsumed = snapshot.runtimeArtAdmissionConsumed();
+        freshLevelRuntimeArtHandoffLevelIndex =
+                snapshot.freshLevelRuntimeArtHandoffLevelIndex();
         if (!snapshot.artHandles().isEmpty()) {
             var timing = GameServices.hardwareTiming();
             for (HardwareWorkHandle captured : snapshot.artHandles()) {
@@ -380,6 +385,11 @@ public class Sonic3kTitleCardManager
     @Override
     public void initialize(int zoneIndex, int actIndex) {
         initInternal(zoneIndex, actIndex, false);
+    }
+
+    @Override
+    public void requestFreshLevelRuntimeArtHandoff(int levelIndex) {
+        freshLevelRuntimeArtHandoffLevelIndex = levelIndex;
     }
 
     /**
@@ -611,14 +621,21 @@ public class Sonic3kTitleCardManager
 
     @Override
     public void update() {
-        if (artLoading && !finishQueuedArtIfReady()) {
-            if (retainedResultsHeldLevelCounterOwned
-                    && resetLevelGamestateOnInLevelDisplay
-                    && resetLevelGamestateCountdown > 0
-                    && --resetLevelGamestateCountdown == 0) {
-                consumeLevelGamestateResetRequest();
+        boolean artBecameReady = false;
+        if (artLoading) {
+            if (!finishQueuedArtIfReady()) {
+                if (retainedResultsHeldLevelCounterOwned
+                        && resetLevelGamestateOnInLevelDisplay
+                        && resetLevelGamestateCountdown > 0
+                        && --resetLevelGamestateCountdown == 0) {
+                    consumeLevelGamestateResetRequest();
+                }
+                return;
             }
-            return;
+            artBecameReady = true;
+        }
+        if (artBecameReady) {
+            publishFreshLevelRuntimeArtHandoffIfNeeded();
         }
         if (resetLevelGamestateOnInLevelDisplay && resetLevelGamestateCountdown > 0
                 && --resetLevelGamestateCountdown == 0) {
@@ -812,6 +829,7 @@ public class Sonic3kTitleCardManager
         artLoading = false;
         runtimeArtAdmissionLeaseId = -1;
         runtimeArtAdmissionConsumed = false;
+        freshLevelRuntimeArtHandoffLevelIndex = -1;
         Arrays.fill(elemX, 0);
         Arrays.fill(elemY, 0);
         Arrays.fill(elemFrame, 0);
@@ -966,6 +984,7 @@ public class Sonic3kTitleCardManager
             // transition.
             consumeRuntimeArtAdmissionIfNeeded();
             state = Sonic3kTitleCardState.COMPLETE;
+            publishFreshLevelRuntimeArtHandoffIfNeeded();
             if (inLevelMode) {
                 // ROM Obj_TitleCardWait2 sets End_of_level_flag only after the
                 // in-level title-card timer has elapsed and its child objects
@@ -1003,6 +1022,21 @@ public class Sonic3kTitleCardManager
             // their own completion-owned handoff timing.
             S3kTransitionWriteSupport.preparePreloadedActTitleCardRuntimeArtAdmission(
                     GameServices.module().getLevelEventProvider());
+        }
+    }
+
+    private void publishFreshLevelRuntimeArtHandoffIfNeeded() {
+        int levelIndex = freshLevelRuntimeArtHandoffLevelIndex;
+        if (levelIndex < 0) {
+            return;
+        }
+        freshLevelRuntimeArtHandoffLevelIndex = -1;
+        try {
+            GameServices.level().getGame().queueFreshLevelRuntimeArt(levelIndex);
+        } catch (java.io.IOException exception) {
+            throw new IllegalStateException(
+                    "Failed to publish fresh S3K runtime art for level " + levelIndex,
+                    exception);
         }
     }
 

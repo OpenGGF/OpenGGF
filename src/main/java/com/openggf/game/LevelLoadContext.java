@@ -44,6 +44,7 @@ public class LevelLoadContext {
     private boolean includePostLoadAssembly;
     private boolean showTitleCard = true;
     private boolean titleCardRequiredInHeadlessMode;
+    private boolean queueFreshLevelRuntimeArt;
     private LevelData levelData;
     private int spawnY = -1;
     private LevelAssemblyKind assemblyKind = LevelAssemblyKind.DECODE_ONLY;
@@ -111,6 +112,19 @@ public class LevelLoadContext {
 
     public void setTitleCardRequiredInHeadlessMode(boolean required) {
         this.titleCardRequiredInHeadlessMode = required;
+    }
+
+    /**
+     * Returns whether this fresh load owns the runtime hardware-art handoff.
+     * Standalone fixture/bootstrap loads leave this false so their initial
+     * synchronous level assembly cannot consume a later run's ordinals.
+     */
+    public boolean isQueueFreshLevelRuntimeArt() {
+        return queueFreshLevelRuntimeArt;
+    }
+
+    public void setQueueFreshLevelRuntimeArt(boolean queue) {
+        this.queueFreshLevelRuntimeArt = queue;
     }
 
     public LevelData getLevelData() { return levelData; }

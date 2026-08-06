@@ -2831,6 +2831,13 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             // After AIZ's seamless fire transition, Current_act is 1 but
             // Apparent_act stays 0 until the results screen exits.
             requestTitleCard(currentZone, apparentAct);
+            if (ctx.isQueueFreshLevelRuntimeArt()) {
+                var titleCardProvider = activeGameModule().getTitleCardProvider();
+                if (titleCardProvider != null) {
+                    titleCardProvider.requestFreshLevelRuntimeArtHandoff(
+                            ctx.getLevelIndex());
+                }
+            }
             return;
         }
 
@@ -3000,12 +3007,20 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     private void loadCurrentLevel(
             boolean showTitleCard, LevelLoadMode loadMode, boolean runtimeReload) {
-        loadCurrentLevel(showTitleCard, loadMode, runtimeReload, false);
+        loadCurrentLevel(showTitleCard, loadMode, runtimeReload, false, false);
     }
 
     private void loadCurrentLevel(
             boolean showTitleCard, LevelLoadMode loadMode, boolean runtimeReload,
             boolean titleCardRequiredInHeadlessMode) {
+        loadCurrentLevel(showTitleCard, loadMode, runtimeReload,
+                titleCardRequiredInHeadlessMode, false);
+    }
+
+    private void loadCurrentLevel(
+            boolean showTitleCard, LevelLoadMode loadMode, boolean runtimeReload,
+            boolean titleCardRequiredInHeadlessMode,
+            boolean queueFreshLevelRuntimeArt) {
         try {
             // V_int_run_count is global work RAM, outside Dynamic_object_RAM.
             // A full death/results reload rebuilds ObjectManager just like the
@@ -3031,6 +3046,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             LevelLoadContext ctx = new LevelLoadContext();
             ctx.setShowTitleCard(showTitleCard);
             ctx.setTitleCardRequiredInHeadlessMode(titleCardRequiredInHeadlessMode);
+            ctx.setQueueFreshLevelRuntimeArt(queueFreshLevelRuntimeArt);
             ctx.setLevelData(levelData);
             ctx.setIncludePostLoadAssembly(true);
             ctx.setAssemblyKind(LevelAssemblyKind.FRESH_LEVEL_ASSEMBLY);
@@ -3182,6 +3198,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                     loadMode != LevelLoadMode.PREVIEW_CAPTURE,
                     loadMode,
                     false,
+                    titleCardRequiredInHeadlessMode,
                     titleCardRequiredInHeadlessMode);
         } finally {
             // A load that fails before initCameraBounds must not leak a bonus-return

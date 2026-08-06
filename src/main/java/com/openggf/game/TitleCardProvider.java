@@ -39,6 +39,16 @@ public interface TitleCardProvider {
         requestLevelGamestateResetAtInLevelDisplay(additionalDispatches);
     }
 
+    /**
+     * Arms a fresh-level runtime-art producer for the title-card handoff.
+     * Games whose level assembly owns a later hardware queue can retain the
+     * level index here and publish that work when the title-card owner reaches
+     * its native completion boundary.
+     */
+    default void requestFreshLevelRuntimeArtHandoff(int levelIndex) {
+        // No-op for games without a post-title-card runtime-art handoff.
+    }
+
     default void requestInLevelPlayerControlLock() {
         // No-op unless an in-level title card owns the native controller lock.
     }

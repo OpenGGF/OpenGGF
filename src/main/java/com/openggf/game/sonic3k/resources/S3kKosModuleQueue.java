@@ -16,9 +16,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Coordinator for S3K's four-entry {@code Queue_Kos_Module} FIFO.
@@ -37,6 +39,7 @@ public final class S3kKosModuleQueue {
     private final S3kKosDecompressionQueue directQueue;
     private final Map<HardwareWorkHandle, S3kKosModuleDescriptor> descriptors =
             new HashMap<>();
+    private final Set<HardwareWorkHandle> freshLevelHandoffHandles = new HashSet<>();
 
     public S3kKosModuleQueue(
             HardwareTimingService timing,
@@ -268,7 +271,53 @@ public final class S3kKosModuleQueue {
     public byte[] claim(HardwareWorkHandle handle) {
         byte[] payload = timing.claim(handle);
         descriptors.remove(handle);
+        freshLevelHandoffHandles.remove(handle);
         return payload;
+    }
+
+    /** Marks a fresh-level parent for the synchronous loader's handoff owner. */
+    public void claimAfterFreshLevelHandoff(HardwareWorkHandle handle) {
+        if (!descriptors.containsKey(handle)) {
+            throw new IllegalArgumentException(
+                    "fresh-level handoff handle is not a KosM parent");
+        }
+        freshLevelHandoffHandles.add(handle);
+    }
+
+    /** Claims marked parents immediately after the boundary admits readiness. */
+    public void claimReadyFreshLevelHandoffs() {
+        for (HardwareWorkHandle handle : List.copyOf(freshLevelHandoffHandles)) {
+            if (timing.isReady(handle)) {
+                claim(handle);
+            }
+        }
+    }
+
+    List<HardwareWorkHandle> captureFreshLevelHandoffHandles() {
+        return freshLevelHandoffHandles.stream()
+                .sorted(java.util.Comparator.comparingLong(HardwareWorkHandle::ordinal))
+                .toList();
+    }
+
+    void restoreFreshLevelHandoffHandles(List<HardwareWorkHandle> handles) {
+        freshLevelHandoffHandles.clear();
+        for (HardwareWorkHandle captured : handles) {
+            HardwareWorkHandle rebound = timing.pendingHandle(
+                            captured.kind(), captured.ordinal())
+                    .orElseThrow(() -> new IllegalStateException(
+                            "missing restored fresh-level handoff "
+                                    + captured.kind() + "#" + captured.ordinal()));
+            if (!captured.equals(rebound)) {
+                throw new IllegalStateException(
+                        "restored fresh-level handoff identity mismatch: expected "
+                                + captured + ", actual " + rebound);
+            }
+            if (captured.kind() != HardwareWorkKind.KOS_MODULE_QUEUE) {
+                throw new IllegalStateException(
+                        "fresh-level handoff is not a KosM parent: " + captured);
+            }
+            freshLevelHandoffHandles.add(rebound);
+        }
     }
 
     public S3kKosModuleDescriptor descriptor(HardwareWorkHandle handle) {
@@ -289,6 +338,7 @@ public final class S3kKosModuleQueue {
 
     void resetForMissingSnapshot() {
         descriptors.clear();
+        freshLevelHandoffHandles.clear();
     }
 
     static HardwareWorkPreparation recreatePreparation(

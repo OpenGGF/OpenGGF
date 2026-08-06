@@ -3,6 +3,13 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K fresh-level terrain handoff now publishes the ROM-backed MHZ
+  `ArtKosM_MHZ_Primary` and `ArtKosM_MHZ_Secondary` parents through the native
+  KosM/direct queue owner at the title-card art-readiness boundary. The LBZ
+  complete-run replay consumes direct `#322..#329` (raw frames `46196..46220`)
+  and module `#219..#220` (raw frames `46211` and `46221`); its remaining 83
+  comparator errors begin at the pre-existing raw frame `19869`. No trace
+  payloads changed.
 - Fix/Test: reconciled the latest `develop` merge with S3K's headless
   transition-owned title-card path. The LBZ complete-run replay again submits
   the ROM `ArtKosM_TitleCardRedAct` work at direct `#318` and matches through
