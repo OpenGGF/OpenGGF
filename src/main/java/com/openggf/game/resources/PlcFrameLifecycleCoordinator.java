@@ -481,6 +481,11 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
             return owner == phase;
         }
 
+        /** Whether this represented iteration's loop-tail work belongs to a later closure. */
+        public boolean defersLoopTailPreparation() {
+            return representedIterationDefersLoopTailPreparation;
+        }
+
         public void finish() {
             requireOpen();
             if (service != null && owner != null

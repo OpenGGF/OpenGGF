@@ -154,6 +154,15 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         this(character, act, 0, 0);
     }
 
+    @Override
+    protected boolean skipsSameFrameUpdateAfterSpawn() {
+        // Obj_LevelResults is published by AllocateObject from an earlier SST
+        // and does not run its init routine until the next Process_Sprites pass.
+        // The slot is visible immediately, but its first KosM submissions are
+        // therefore one frame after publication (sonic3k.asm:62512-62531).
+        return true;
+    }
+
     S3kResultsScreenObjectInstance(PlayerCharacter character, int act, int waitDurationAdjustment,
             int postControlHandoffDelayEntries) {
         this(character, act, waitDurationAdjustment, postControlHandoffDelayEntries,
@@ -526,6 +535,9 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             if (!elem.renderOnScreen) {
                 elem.offScreen = true;
                 childrenRemaining--;
+                if (childrenRemaining == 0) {
+                    onResultsChildrenRetired();
+                }
                 continue;
             }
             if (exitQueueCounter >= elem.exitQueuePriority) {
@@ -566,6 +578,15 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
      */
     protected void onAdditionalChildRetireDispatch(int dispatchesRemaining) {
         // Default results parents have no retained slot work.
+    }
+
+    /**
+     * Called when the final embedded results child retires.  Route owners can
+     * publish the ROM's child-count handoff before their parent performs its
+     * final exit callback on the next object pass.
+     */
+    protected void onResultsChildrenRetired() {
+        // Default results parents have no early release owner.
     }
 
     @Override

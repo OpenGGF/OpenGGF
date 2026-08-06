@@ -40,6 +40,7 @@ public final class S3kKosModuleQueue {
     private final Map<HardwareWorkHandle, S3kKosModuleDescriptor> descriptors =
             new HashMap<>();
     private final Set<HardwareWorkHandle> freshLevelHandoffHandles = new HashSet<>();
+    private boolean deferChildSubmissionForHeldLoopTail;
 
     public S3kKosModuleQueue(
             HardwareTimingService timing,
@@ -105,6 +106,16 @@ public final class S3kKosModuleQueue {
             throw new IllegalArgumentException("submissions must not be negative");
         }
         return physicalQueueSize() + submissions <= MAX_QUEUE_DEPTH;
+    }
+
+    /** Whether the ROM module FIFO already owns an unprepared parent. */
+    public boolean hasPendingPhysicalModules() {
+        return physicalQueueSize() != 0;
+    }
+
+    /** Defers only the next child publication; a ready child may still retire. */
+    public void deferChildSubmissionForHeldLoopTail() {
+        deferChildSubmissionForHeldLoopTail = true;
     }
 
     private HardwareWorkHandle queueInternal(
@@ -233,6 +244,8 @@ public final class S3kKosModuleQueue {
      * shifts it out at 2778-2788), so it is skipped rather than blocking.
      */
     private void stepHeadArchive() {
+        boolean deferChildSubmission = deferChildSubmissionForHeldLoopTail;
+        deferChildSubmissionForHeldLoopTail = false;
         for (HardwareWorkHandle handle : timing.pendingHandles()) {
             if (handle.kind() != HardwareWorkKind.KOS_MODULE_QUEUE
                     || timing.isReady(handle)) {
@@ -242,7 +255,7 @@ public final class S3kKosModuleQueue {
             if (preparation.isPrepared()) {
                 continue;
             }
-            preparation.coordinate(handle, directQueue);
+            preparation.coordinate(handle, directQueue, deferChildSubmission);
             return;
         }
     }
@@ -447,7 +460,8 @@ public final class S3kKosModuleQueue {
 
         private boolean coordinate(
                 HardwareWorkHandle parent,
-                S3kKosDecompressionQueue directQueue) {
+                S3kKosDecompressionQueue directQueue,
+                boolean deferChildSubmission) {
             if (prepared) {
                 return false;
             }
@@ -456,6 +470,9 @@ public final class S3kKosModuleQueue {
                 return true;
             }
             if (activeChild == null) {
+                if (deferChildSubmission) {
+                    return false;
+                }
                 if (!directQueue.hasCapacity()) {
                     return false;
                 }

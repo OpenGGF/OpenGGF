@@ -476,6 +476,7 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
         sprite.setYSpeed((short) 0);
         sprite.setGSpeed((short) 0);
         sprite.setAnimationId(Sonic3kAnimationIds.VICTORY);
+        sprite.setForcedAnimationId(Sonic3kAnimationIds.VICTORY);
     }
 
     protected PlayerCharacter getPlayerCharacter() {

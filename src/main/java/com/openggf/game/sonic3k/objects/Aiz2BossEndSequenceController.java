@@ -117,15 +117,16 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
         }
         if (postResultsControlRestoreDelay > 0) {
             postResultsControlRestoreDelay--;
-            holdEndingPose(player);
             clearPositiveLockedSidekickLogicalWord(player);
             if (postResultsControlRestoreDelay == 0) {
-                // The later controller slot reaches loc_69526 after the player
-                // slot but before its separately allocated camera-bound child.
-                // Expose the logical Right word now so the next player pass
-                // owns acceleration/animation without advancing that child.
-                ObjectControlState.none().applyTo(player);
-                forceRightLogicalInput(player);
+                // loc_694D4 calls Restore_PlayerControl/2 after the results
+                // owner clears _unkFAA8.  That entry clears object_control
+                // and publishes WAIT, but leaves Ctrl_1_locked set; the
+                // following loc_69526 entry publishes the first RIGHT word
+                // after the next player pass.
+                restoreNativePlayerControlsAfterResults(player);
+            } else {
+                holdEndingPose(player);
             }
             return;
         }
@@ -230,6 +231,26 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
         ObjectControlState.nativeBit7FullControl().applyTo(player);
     }
 
+    private void restoreNativePlayerControlsAfterResults(AbstractPlayableSprite player) {
+        for (PlayableEntity candidate : services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (!(candidate instanceof AbstractPlayableSprite sprite)) {
+                continue;
+            }
+            ObjectControlState.none().applyTo(sprite);
+            sprite.setAir(false);
+            sprite.setForcedAnimationId(-1);
+            sprite.setAnimationId(Sonic3kAnimationIds.WAIT);
+            sprite.getAnimationManager().publishPreviousAnimationId(
+                    Sonic3kAnimationIds.WAIT.id());
+            sprite.setAnimationFrameIndex(0);
+            sprite.setAnimationTick(0);
+        }
+        // Restore_PlayerControl does not clear Ctrl_1_locked; loc_694D4
+        // explicitly leaves the main input latch asserted for loc_69526.
+        player.setControlLocked(true);
+    }
+
     private boolean hasRidingSidekick(AbstractPlayableSprite player) {
         for (PlayableEntity sidekick : services().playerQuery().playersFor(
                 ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
@@ -272,11 +293,11 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
     }
 
     private void forceRightLogicalInput(AbstractPlayableSprite player) {
-        // ROM writes Ctrl_1_logical while Ctrl_1_locked is set, so Sonic_RecordPos
-        // stores the forced RIGHT word for Tails' delayed CPU replay.
+        // ROM writes Ctrl_1_logical after both playable slots have already run.
+        // The next Sonic_RecordPos call therefore records this word; do not
+        // overwrite the current follower-history slot here.
         player.setForceInputRight(false);
         player.setForcedInputMask(AbstractPlayableSprite.INPUT_RIGHT);
-        player.writeLogicalInputAndCurrentFollowerHistory(AbstractPlayableSprite.INPUT_RIGHT, false);
     }
 
     private void updatePostButtonCameraMaxYRelease() {

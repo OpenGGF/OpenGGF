@@ -24,6 +24,7 @@ import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.game.mutation.MutationEffects;
 import com.openggf.game.resources.DynamicArtDecisionOwner;
 import com.openggf.game.rewind.RewindSnapshottable;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.rewind.snapshot.LevelSnapshot;
 import com.openggf.game.rewind.snapshot.LevelTilemapSnapshot;
 import com.openggf.game.render.AdvancedRenderModeController;
@@ -58,6 +59,7 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PersistentRespawnState;
 import com.openggf.level.objects.TouchResponseTable;
+import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.rings.RingManager;
 import com.openggf.level.rings.RingSpriteSheet;
 import com.openggf.level.resources.DeferredLevelResourceTracker;
@@ -167,6 +169,34 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     private boolean actTransitionExecutedDuringFrame;
     private boolean resetCounterPlacementAfterCameraSnap;
     private long completedProductionLoadGeneration;
+
+    /**
+     * The native Level routine clears the playable object slots before its
+     * blocking title-card loop starts. The ordinary Java load path assembles
+     * the destination roster synchronously, so the recording driver holds this
+     * boundary until the title-card owner has consumed that loop. It is a
+     * transition-only handoff, not gameplay state, and is deliberately not
+     * part of rewind snapshots.
+     */
+    @RewindTransient(reason = "transient fresh-level title-card boundary; rebuilt by the transition owner")
+    private FreshLevelTransitionBoundary pendingFreshLevelTransitionBoundary;
+
+    private record FreshLevelTransitionBoundary(
+            short previousCameraX,
+            short previousCameraY,
+            int previousRings,
+            short destinationCameraX,
+            short destinationCameraY,
+            List<TransitionPlayableState> playableStates) {
+        private FreshLevelTransitionBoundary {
+            playableStates = List.copyOf(playableStates);
+        }
+    }
+
+    private record TransitionPlayableState(
+            String code,
+            PerObjectRewindSnapshot state) {
+    }
 
     void writeCurrentZone(int zone) {
         this.currentZone = zone;
@@ -3229,6 +3259,106 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      */
     public void loadZoneAndActWithTitleCard(int zone, int act) throws IOException {
         loadZoneAndAct(zone, act, LevelLoadMode.FULL, true, true);
+    }
+
+    /**
+     * Loads a fresh destination while exposing the native pre-title-card
+     * boundary to a deterministic frame driver.
+     *
+     * <p>The S3K {@code Level:} routine clears the old playable slots before
+     * the title-card loop, then assembles the destination players after that
+     * loop. The normal production load API keeps the complete assembly
+     * synchronous for callers that need an immediately playable level. This
+     * companion retains the assembled destination state for release, but
+     * presents the cleared transition boundary until
+     * {@link #completeFreshLevelTransitionBoundary()} is called.</p>
+     */
+    public void loadZoneAndActAtFreshTitleCardBoundary(int zone, int act)
+            throws IOException {
+        if (pendingFreshLevelTransitionBoundary != null) {
+            throw new IllegalStateException(
+                    "a fresh title-card transition boundary is already pending");
+        }
+        short previousCameraX = camera.getX();
+        short previousCameraY = camera.getY();
+        int previousRings = levelGamestate != null ? levelGamestate.getRings() : 0;
+
+        loadZoneAndActWithTitleCard(zone, act);
+
+        List<TransitionPlayableState> playableStates = new ArrayList<>();
+        for (Sprite sprite : spriteManager.getAllSprites()) {
+            if (sprite instanceof AbstractPlayableSprite playable) {
+                playableStates.add(new TransitionPlayableState(
+                        playable.getCode(), playable.captureRewindState(false)));
+            }
+        }
+        short destinationCameraX = camera.getX();
+        short destinationCameraY = camera.getY();
+
+        // Level: has cleared Dynamic_object_RAM and both player slots at this
+        // point, but retains the prior camera/ring globals until the title
+        // loop's post-load tail reinitializes them.
+        camera.setX(previousCameraX);
+        camera.setY(previousCameraY);
+        if (levelGamestate != null) {
+            levelGamestate.setRings(previousRings);
+        }
+        AbstractPlayableSprite player = mainPlayableSprite();
+        if (player != null) {
+            player.setCentreX((short) 0);
+            player.setCentreY((short) 0);
+            player.setXSpeed((short) 0);
+            player.setYSpeed((short) 0);
+            player.setGSpeed((short) 0);
+            player.setAir(false);
+            player.setObjectRoutineOverride(0);
+            player.setNativeSlotPresent(true);
+        }
+        for (AbstractPlayableSprite sidekick : spriteManager.getSidekicks()) {
+            sidekick.setCentreX((short) 0);
+            sidekick.setCentreY((short) 0);
+            sidekick.setXSpeed((short) 0);
+            sidekick.setYSpeed((short) 0);
+            sidekick.setGSpeed((short) 0);
+            sidekick.setAir(false);
+            sidekick.setNativeSlotPresent(false);
+        }
+        discardPendingInitialProcessSpritesForStateRestoration();
+        pendingFreshLevelTransitionBoundary = new FreshLevelTransitionBoundary(
+                previousCameraX,
+                previousCameraY,
+                previousRings,
+                destinationCameraX,
+                destinationCameraY,
+                playableStates);
+    }
+
+    /** Completes the destination-player assembly after its title-card loop. */
+    public void completeFreshLevelTransitionBoundary() {
+        FreshLevelTransitionBoundary boundary = pendingFreshLevelTransitionBoundary;
+        if (boundary == null) {
+            return;
+        }
+        for (TransitionPlayableState playableState : boundary.playableStates()) {
+            Sprite sprite = spriteManager.getSprite(playableState.code());
+            if (sprite instanceof AbstractPlayableSprite playable) {
+                playable.restoreRewindState(playableState.state());
+                playable.setObjectRoutineOverride(null);
+                playable.setNativeSlotPresent(true);
+            }
+        }
+        camera.setX(boundary.destinationCameraX());
+        camera.setY(boundary.destinationCameraY());
+        AbstractPlayableSprite player = mainPlayableSprite();
+        if (player != null) {
+            camera.setFocusedSprite(player);
+        }
+        pendingFreshLevelTransitionBoundary = null;
+    }
+
+    private AbstractPlayableSprite mainPlayableSprite() {
+        Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
+        return player instanceof AbstractPlayableSprite playable ? playable : null;
     }
 
     private void loadZoneAndAct(

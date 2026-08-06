@@ -35,6 +35,7 @@ public class S3kCutsceneButtonObjectInstance extends AbstractObjectInstance
     private int y;
     private boolean cutsceneOverride;
     private boolean pressed;
+    private boolean pressPending;
 
     public S3kCutsceneButtonObjectInstance(ObjectSpawn spawn) {
         this(spawn, false);
@@ -86,6 +87,15 @@ public class S3kCutsceneButtonObjectInstance extends AbstractObjectInstance
         if (pressed) {
             return;
         }
+        if (pressPending) {
+            // Obj_CutsceneButton first changes its routine to loc_65C50 when
+            // the range check succeeds.  The subtype action (loc_65C56) is
+            // entered on the following object pass, after Player_1 has
+            // consumed the logical word written by loc_69588.
+            pressPending = false;
+            pressButton();
+            return;
+        }
         CutsceneKnucklesAiz2Instance knuckles = Aiz2BossEndSequenceState.getActiveKnuckles();
         if (knuckles == null) {
             return;
@@ -96,14 +106,18 @@ public class S3kCutsceneButtonObjectInstance extends AbstractObjectInstance
         int dx = knuckles.getX() - x;
         int dy = knuckles.getY() - y;
         if (dx >= RANGE_LEFT && dx < RANGE_RIGHT && dy >= RANGE_TOP && dy < RANGE_BOTTOM) {
-            pressed = true;
-            Aiz2BossEndSequenceState.pressButton();
-            if (Aiz2BossEndSequenceState.isButtonBeforeBridgeDispatch()) {
-                services().objectManager().activeObjectsOfType(AizDrawBridgeObjectInstance.class)
-                        .forEach(AizDrawBridgeObjectInstance::beginCollapseFromEarlierButtonSlot);
-            }
-            services().playSfx(Sonic3kSfx.SWITCH.id);
+            pressPending = true;
         }
+    }
+
+    private void pressButton() {
+        pressed = true;
+        Aiz2BossEndSequenceState.pressButton();
+        if (cutsceneOverride || Aiz2BossEndSequenceState.isButtonBeforeBridgeDispatch()) {
+            services().objectManager().activeObjectsOfType(AizDrawBridgeObjectInstance.class)
+                    .forEach(AizDrawBridgeObjectInstance::beginCollapseFromEarlierButtonSlot);
+        }
+        services().playSfx(Sonic3kSfx.SWITCH.id);
     }
 
     @Override

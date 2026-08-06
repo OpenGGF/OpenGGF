@@ -389,6 +389,10 @@ public final class LevelFrameStep {
             context.gameModule().getObjectArtProvider().processRuntimeArtQueue();
         }
 
+        if (frame.defersLoopTailPreparation()) {
+            context.runtimeArtCoordinator()
+                    .deferProductionSubmissionForHeldLoopTail();
+        }
         serviceBoundary(context, HardwareServiceBoundary.POST_OBJECTS);
 
         // ROM LevelLoop's Process_Kos_Queue (docs/skdisasm/sonic3k.asm:7887)

@@ -26,6 +26,13 @@ public interface RuntimeArtCoordinator extends QueueDiagnosticsProvider {
     }
 
     /**
+     * Defers only a new production submission from a held loop tail. Existing
+     * hardware work may still retire at that tail.
+     */
+    default void deferProductionSubmissionForHeldLoopTail() {
+    }
+
+    /**
      * Returns whether this game owns the hardware queue tail on a held
      * level-counter row. Such a row skips the ordinary object/physics body but
      * can still run the ROM's module and direct-FIFO service boundaries.

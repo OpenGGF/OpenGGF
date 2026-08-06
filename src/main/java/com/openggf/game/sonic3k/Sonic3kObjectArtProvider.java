@@ -1564,17 +1564,22 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         if (!enemyKosSubmitAfterPreMainLoop) {
             return;
         }
+        S3kKosModuleQueue moduleQueue =
+                S3kRuntimeArtCoordinator.current().moduleQueue();
+        boolean moduleQueueWasEmpty = !moduleQueue.hasPendingPhysicalModules();
         enemyKosSubmissionArmed = true;
         processEnemyKosArt();
         if (!pendingEnemyKosEntries.isEmpty() || enemyKosHandles.isEmpty()) {
             return;
         }
         enemyKosSubmitAfterPreMainLoop = false;
-        // Process_Kos_Module_Queue follows this ScreenEvents producer in the
-        // ROM, but Process_Kos_Queue already ran at the iteration head. Step
-        // only the newly published parent; a second timing POST boundary would
-        // service every queue twice and let recorded input choose chronology.
-        enemyKosQueue.stepHeadModuleAfterDirectTail();
+        // Process_Kos_Module_Queue runs once after ScreenEvents. A late
+        // LoadEnemyArt publication can therefore start its first parent only
+        // when the native module FIFO was empty; if an older parent is already
+        // live, that head owns this iteration's step and advances next loop.
+        if (moduleQueueWasEmpty) {
+            moduleQueue.stepHeadModuleAfterDirectTail();
+        }
     }
 
     private void scheduleEnemyKosArt(int zoneIndex, int actIndex) {

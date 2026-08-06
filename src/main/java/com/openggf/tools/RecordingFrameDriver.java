@@ -55,6 +55,7 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
     private boolean lastFrameRanGameplay = true;
     private boolean pendingSeamlessBoundaryCompletion;
     private boolean normalTitleCardActive;
+    private boolean freshLevelLoadedThisIteration;
     private TraceHardwareTimingBoundaryObserver hardwareTimingReplayObserver;
 
     /**
@@ -196,6 +197,17 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
             pendingSeamlessBoundaryCompletion = true;
         }
         boolean loadedZoneActTransition = applyPendingZoneActTransition();
+        if (loadedZoneActTransition) {
+            // The native Level routine's cleared/playerless boundary is a
+            // represented row of its own. Its title-card owner starts on the
+            // following row, so do not admit normal gameplay or a VBlank
+            // service for this boundary.
+            lastFrameResult = LevelFrameResult.GAMEPLAY_FRAME;
+            lastFrameRanGameplay = false;
+            inputHandler.update();
+            previousDriverSnapshot = snapshot;
+            return lastFrameResult;
+        }
         // A normal game-loop transition loads the destination from the fade
         // callback, then consumes its title-card request at the next level
         // iteration. Keep those boundaries separate in the recording driver:
@@ -308,18 +320,31 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
      * the recording driver owns the same level-load boundary directly.
      */
     private boolean applyPendingZoneActTransition() {
+        if (freshLevelLoadedThisIteration) {
+            freshLevelLoadedThisIteration = false;
+            return true;
+        }
+        var gameplayMode = SessionManager.getCurrentGameplayMode();
+        if (gameplayMode.getFadeManager().isActive()) {
+            return false;
+        }
         if (!levelManager.consumeZoneActRequest()) {
             return false;
         }
         int zone = levelManager.getRequestedZone();
         int act = levelManager.getRequestedAct();
-        try {
-            levelManager.loadZoneAndActWithTitleCard(zone, act);
-        } catch (IOException exception) {
-            throw new IllegalStateException(
-                    "Failed to load requested zone " + zone + " act " + act,
-                    exception);
-        }
+        var blockingFade = gameplayMode.plcFrameLifecycle().beginNativeBlockingFade();
+        gameplayMode.getFadeManager().startFadeToBlack(
+                blockingFade.wrapCompletion(() -> {
+                    try {
+                        levelManager.loadZoneAndActAtFreshTitleCardBoundary(zone, act);
+                        freshLevelLoadedThisIteration = true;
+                    } catch (IOException exception) {
+                        throw new IllegalStateException(
+                                "Failed to load requested zone " + zone + " act " + act,
+                                exception);
+                    }
+                }));
         return true;
     }
 
@@ -369,6 +394,7 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
         }
 
         if (provider.shouldReleaseControl()) {
+            levelManager.completeFreshLevelTransitionBoundary();
             normalTitleCardActive = false;
             applyInLevelTitleCardControlLock(false);
         }

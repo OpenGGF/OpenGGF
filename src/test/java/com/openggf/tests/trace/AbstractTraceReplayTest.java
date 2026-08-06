@@ -757,6 +757,10 @@ public abstract class AbstractTraceReplayTest {
                     TraceReplayBootstrap.phaseForReplay(trace, previousDriveFrame, driveFrame);
             TraceReplayBootstrap.markVblankStarvedIterationForReplay(
                     previousDriveFrame, driveFrame);
+            TraceReplayBootstrap.markIterationHeldIntoNextRowForReplay(
+                    driveFrame,
+                    driveTraceIndex + 1 < trace.frameCount()
+                            ? trace.getFrame(driveTraceIndex + 1) : null);
             int validationTraceIndex = driveTraceIndex;
             int bk2Input = TraceReplayFrameClosureDriver.driveS3k(
                     phase,

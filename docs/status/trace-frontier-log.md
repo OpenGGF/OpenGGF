@@ -64363,3 +64363,35 @@ to synthesize a POST phase on a VBLANK-only row.
   `TestS3kCnzTraceReplay` class reports 27 tests, 0 failures, and the one
   expected hardware-admission error above. No frontier moved in this
   baseline and no trace payload changed.
+
+## 2026-08-06 - AIZ to HCZ handoff frontier
+
+- Worktree: `bugfix/s3k-traces` at `578a008a7` before the frontier commit;
+  unrelated edits in `.idea/vcs.xml` and
+  `docs/status/rewind-round-trip-gaps.md` remained unstaged. Validation used
+  JDK 21.0.11 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen` (SHA-1
+  `b711a909cce238ca4af3e517a2edca306228efa5`), without replacing or renaming
+  it.
+- Frontier command: `mvn -Dmse=off
+  "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace"
+  "-Ds3k.rom.path=./Sonic and Knuckles & Sonic 3 (W) [!].gen" test`.
+  Result: pass, 0 comparator errors, first error frame/field: none. AIZ now
+  holds its native state through the fade and loads HCZ at the title-card
+  boundary; the focused replay reaches the HCZ handoff and all rows match.
+- The AIZ complete-run trace remains the pre-existing direct Kosinski `#35`
+  admission error (`engine pending: <none>`). Later route checkpoints were
+  unchanged: HCZ `#90`, MGZ `#149`, CNZ `#205`, and ICZ `#245` with its known
+  `669610...` versus `403b1d...` fingerprint mismatch. The combined regression
+  process reached its existing Java heap limit before LBZ; no new comparator
+  divergence was observed. Required S3K bootstrap, timing-authority, rewind,
+  and fixture-compression guards passed (75 tests total).
+- Fix scope: held loop tails defer only new KosM child publication; AIZ
+  cutscene/results slots follow native object ordering; the recording driver
+  uses the native fade/title-card transition boundary; transition character
+  state hides non-native playable slots. Ring comparison remains enabled with
+  `ToleranceConfig.DEFAULT` `FORCE_ERROR`; no trace values hydrate gameplay
+  state.
+- Route position: AIZ standard has advanced through the HCZ handoff. AIZ
+  complete-run and later zone frontiers remain pending at the checkpoints
+  above.

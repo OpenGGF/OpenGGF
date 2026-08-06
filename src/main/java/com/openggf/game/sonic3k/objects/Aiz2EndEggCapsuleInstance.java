@@ -23,7 +23,6 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
     private boolean tailsEndingPoseObjectControlLocked;
     private int tailsOpenControllerLockDelay;
     private int resultsActiveWaitEntries;
-    private boolean resultsStartEligibilityObserved;
 
     public Aiz2EndEggCapsuleInstance(int initialX, int initialY) {
         super(initialX, initialY, "AIZ2EndEggCapsule");
@@ -91,10 +90,6 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
     protected boolean shouldStartResults(AbstractPlayableSprite player) {
         // sub_868F8 only rejects a dead/airborne/non-playable routine. It then
         // calls Set_PlayerEndingPose, which owns the velocity clears itself.
-        if (!resultsStartEligibilityObserved) {
-            resultsStartEligibilityObserved = true;
-            return false;
-        }
         return !player.getAir() && !player.getDead();
     }
 
@@ -225,12 +220,17 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
         }
 
         @Override
+        protected void onResultsChildrenRetired() {
+            // Obj_LevelResultsWait2 clears _unkFAA8 as soon as the final
+            // results child has left the screen.  The AIZ2 controller is an
+            // earlier SST slot, so it consumes this release on the following
+            // object pass while the results owner performs its final delete.
+            Aiz2BossEndSequenceState.releaseEggCapsule();
+        }
+
+        @Override
         protected void onExitReady() {
             super.onExitReady();
-            // This later results slot clears _unkFAA8 after the capsule owner
-            // has already run. Publish Restore_PlayerControl2 here so the next
-            // Player_2 CPU pass sees the released state.
-            Aiz2BossEndSequenceState.scheduleTailsControlRelease(4);
         }
     }
 }

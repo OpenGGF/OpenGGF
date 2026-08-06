@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K AIZ trace replay now preserves the native AIZ-to-HCZ fade and
+  title-card transition boundary, orders the AIZ results/cutscene handoff by
+  ROM object timing, and defers only held-tail KosM child publication. The
+  standard AIZ replay advances through the HCZ handoff with zero comparator
+  errors; no trace payloads changed.
 - Fix/Test: restore the merged S3K headless title-card condition and make
   custom S3K replay helpers use the canonical phase, VBlank-starvation,
   recorded-admission, and trace-row lifecycle. CNZ focused slot and miniboss
