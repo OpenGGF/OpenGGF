@@ -101,6 +101,16 @@ file is guidance you can weigh against the situation in front of you.
    behaviour except in AIZ"* is still a zone carve-out. Zone/event/object providers may
    expose ROM state at the owning boundary, but shared physics/sidekick/object code
    consumes semantic predicates.
+   **The bar is any BK2, not this BK2.** Traces exist to prove engine accuracy, so a fix
+   must hold for a movie nobody has recorded yet — a green fixture proves the fixture.
+   A constant derived by measuring a fixture's own rows, rather than read out of the
+   disassembly, is a fitted model even when every test passes, and it will desync the
+   first different recording. Measuring a fixture is only a legitimate *starting point*:
+   the landed value must be traceable to the ROM routine that owns it and cited there.
+   A value that is close to the ROM's but not equal is usually absorbing an error
+   elsewhere — chase that, don't keep the constant. Where genuine hardware timing cannot
+   be derived from frame-granularity state at all, the answer is a regenerable per-movie
+   timing sidecar under rule 4, never a tuned number.
 4. **Trace data is comparison-only by default.** Engine gameplay state must never be
    hydrated or synced from a trace in committed test code. The sole exception is the
    dedicated hardware-timing input contract documented in
