@@ -62949,3 +62949,85 @@ to synthesize a POST phase on a VBLANK-only row.
     state the movie row they stand on. That is the behaviour change, not a
     weakening: one of them additionally asserts that the destination stays shut
     one row before its offset.
+
+## 2026-08-06 - REVIEW: Whole-Run Level-Restart Admission Row (2b046b8ec)
+
+- **Verdict: ACCEPTABLE-WITH-CAVEAT.** Independent review of the recorded-row
+  admission floor added to `TraceRunPlaybackCoordinator.destinationReady` by
+  commit `2b046b8ec`, against CLAUDE.md hard rule 4. The mechanism is sound in
+  substance; its confinement rests on convention rather than a guard, and one
+  line of its justification is weaker than presented.
+- **The precedent claim is factually true but rhetorically inflated.** The
+  presentation-bridge branches really do key admission on the exact physical
+  row: `observation.sharedBk2Cursor() == destination.bk2FrameOffset()` at
+  `TraceRunPlaybackCoordinator.java:356-358` (bridge-exit back into its own
+  act) and `:367-369` (bridge entry). But that precedent dates from
+  `0132a36a6` (2026-08-04) and `5f4eb150e` (2026-08-05) -- one and two days
+  before the reviewed commit, from the same line of work. "The authority the
+  presentation bridge beside it already uses" is a sibling decision, not
+  settled practice. The precedent nevertheless holds on merits, and is in fact
+  the *more* aggressive use: the recorder split one continuous level with no
+  load, no mode change and no boundary signal, so the exact row is the bridge's
+  *sole* timing authority (`==`), where the reviewed change is a floor (`>=`)
+  over a fully engine-derived conjunction.
+- **The defer-only claim is true as implemented.** The new condition is a
+  conjunct AND-ed onto the pre-existing return (`rememberedLevelLoad` non-null,
+  identity equality, boundary observed, live title-card barrier) -- strictly
+  monotone; it can only turn an admission off, never on. It reads only the
+  shared movie cursor (the harness's own input-feed position) and the
+  manifest's segment offset; it writes nothing, and
+  `RunPlaybackObservation` deliberately carries no gameplay owner or
+  comparison row. `TestTraceRunPlaybackCoordinator` pins the semantics: row
+  129 rejected, row 130 admitted, all engine conditions held constant. One
+  nuance the commit message underplays: deferral is not effect-free -- while
+  unadmitted, `suppressesRunNativeLevelBody` keeps skipping the level body, so
+  the recorded row does extend the engine's suppressed-idle window. But that
+  window models the ROM's genuinely elapsed un-timed load span, and the whole
+  transition-gap architecture already sequences suppression from the
+  manifest's row structure; the conjunct adds no new category of authority.
+- **Rule 4: no violation in letter, consonant in spirit, one reservation.**
+  Nothing hydrates or syncs gameplay state; the hardware-timing port is
+  untouched (`TestHardwareTimingAuthorityGuard`, 22 tests, green in the
+  commit's own sweep). The coordinator is comparison-ownership scaffolding --
+  "which recorded segment is the harness comparing against" is a question that
+  has no meaning outside replay and is inherently defined by the recording's
+  structure. The rule's own spirit-test -- only *when* engine-created work
+  proceeds, never *what* happens -- is satisfied: destination, load, cause,
+  identity, boundary and card are all engine-created. The reservation: this is
+  exactly the shape of mechanism (recorded-timing-driven delay) that rule 4's
+  exception was written to contain, and it now lives outside the guarded port,
+  confined only by a javadoc, a discrepancy entry and unit tests.
+- **The "not a frame index" framing is partly rationalisation.**
+  `bk2FrameOffset` *is* a frame index into the shared movie; the discrepancy
+  entry should not be read as denying that. What actually distinguishes it
+  from the banned key: (a) it is per-run manifest data, not a constant in
+  code -- no "at frame N do X" can be expressed with it; (b) it is
+  self-referential -- a destination waits for its *own* first row, the minimal
+  alignment fact any input-movie replay must respect for subsequent input rows
+  to land on the right frames; (c) it is defer-only and conjunctive. The
+  frame-index ban exists to stop route-specific behaviour smuggling, and
+  (a)-(c) close that channel. The distinction is real, but it is those three
+  properties doing the work, not the label.
+- **No better engine-derived alternative at reasonable cost.** Every
+  engine-observable readiness signal is *already* a required conjunct, and the
+  counted spans are already derived exactly (PLC drain 146 vs 146 for MZ, 150
+  vs 150 for GHZ). The residual 34-40 rows are 68k CPU time between V-blanks
+  (`NemDec`, `clearRAM`, `LevelDataLoad`, `ObjPosLoad`, ...) -- payload-
+  dependent elapsed cost with no counted structure. Deriving it engine-side
+  means a cycle-cost model of Nemesis decompression and friends: partial 68k
+  emulation, architecturally alien to a reimplementation, and itself just a
+  different import of hardware timing. The principled replacement is the one
+  the discrepancy's removal condition already names: record the restart span
+  (or a level-load readiness entry keyed by submission fingerprint) through
+  the v5 hardware-timing stream so the delay lives inside the guarded port.
+  That costs a contract amendment (the port is scoped to art pipelines),
+  recorder/schema/guard changes and re-recorded or re-derived spans -- days,
+  for identical behaviour. Worth doing if a second consumer of load-span
+  timing appears; not worth displacing the active slice now.
+- **Caveats to carry.** (1) Add a cheap guard when convenient: assert the
+  coordinator's level-admission predicate remains conjunctive over
+  engine-derived conditions, or that `bk2FrameOffset` never reaches a gameplay
+  owner -- today the confinement is documentation-and-test-only. (2) Treat the
+  presentation-bridge exact-row branches as covered by this same review: they
+  are the stronger form of the pattern and inherit the same justification and
+  the same containment obligation.
