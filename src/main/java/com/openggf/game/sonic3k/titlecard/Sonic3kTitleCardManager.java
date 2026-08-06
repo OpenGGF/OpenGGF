@@ -392,6 +392,11 @@ public class Sonic3kTitleCardManager
         freshLevelRuntimeArtHandoffLevelIndex = levelIndex;
     }
 
+    @Override
+    public void completeOmittedPresentationFreshLevelRuntimeArtHandoff() {
+        publishFreshLevelRuntimeArtHandoffIfNeeded();
+    }
+
     /**
      * Initializes for in-level mode (no black background, control released immediately).
      * Used during AIZ intro when the level is already visible.
@@ -621,7 +626,6 @@ public class Sonic3kTitleCardManager
 
     @Override
     public void update() {
-        boolean artBecameReady = false;
         if (artLoading) {
             if (!finishQueuedArtIfReady()) {
                 if (retainedResultsHeldLevelCounterOwned
@@ -632,9 +636,12 @@ public class Sonic3kTitleCardManager
                 }
                 return;
             }
-            artBecameReady = true;
-        }
-        if (artBecameReady) {
+            publishFreshLevelRuntimeArtHandoffIfNeeded();
+        } else if (artLoaded) {
+            // A repeated same-zone load reuses the already-ready title sheet.
+            // Publish at the same readiness boundary as the queued-art path
+            // instead of waiting for EXIT, where another load could replace
+            // the armed level identity.
             publishFreshLevelRuntimeArtHandoffIfNeeded();
         }
         if (resetLevelGamestateOnInLevelDisplay && resetLevelGamestateCountdown > 0

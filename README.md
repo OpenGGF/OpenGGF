@@ -216,6 +216,12 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Shared movement and S3K trace-parity corrections (2026-08-06):** the
+  shared movement path now keeps ROM `move_lock` semantics through a full
+  dispatch, and the shared oscillator no longer gains a duplicate transition
+  tick. S3K replay work also corrects Bubbler/Air Countdown off-screen
+  lifetimes, results/title-card queue ownership, and fresh-level destination
+  terrain admission without changing trace fixtures.
 - **Headless visual-run parity driver (2026-08-05):** whole trace runs can now be
   driven through the production visual-session owners without a window, so a
   Trace Test Mode defect is reproducible in a test rather than a screenshot.

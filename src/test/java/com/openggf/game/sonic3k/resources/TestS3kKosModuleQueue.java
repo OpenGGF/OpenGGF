@@ -5,6 +5,7 @@ import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareTimingSnapshot;
+import com.openggf.game.timing.HardwareTimingJob;
 import com.openggf.game.timing.HardwareWorkHandle;
 import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
@@ -16,6 +17,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -42,6 +44,95 @@ class TestS3kKosModuleQueue {
 
     @TempDir
     Path tempDir;
+
+    @Test
+    void sequentialBatchPreflightsEveryArchiveBeforeSubmitting() throws Exception {
+        byte[] fixture = new byte[ABC_KOSM.length + 2];
+        System.arraycopy(ABC_KOSM, 0, fixture, 0, ABC_KOSM.length);
+        Path romPath = tempDir.resolve("atomic-batch.gen");
+        Files.write(romPath, fixture);
+        try (Rom rom = new Rom()) {
+            assertTrue(rom.open(romPath.toString()));
+            HardwareTimingService timing = new HardwareTimingService();
+            S3kKosModuleQueue modules = new S3kKosModuleQueue(
+                    timing, new S3kKosDecompressionQueue(timing));
+
+            assertThrows(java.io.IOException.class, () ->
+                    modules.queueSequentialBatch(
+                            rom, List.of(0, fixture.length - 1), 0));
+
+            assertEquals(List.of(), timing.pendingHandles(),
+                    "a bad second archive must not leave the first parent submitted");
+        }
+    }
+
+    @Test
+    void deferredFreshBatchRetainsRequestUntilTwoQueueSlotsAreAvailable()
+            throws Exception {
+        byte[] fixture = new byte[ABC_KOSM.length * 5];
+        for (int index = 0; index < 5; index++) {
+            System.arraycopy(ABC_KOSM, 0, fixture,
+                    index * ABC_KOSM.length, ABC_KOSM.length);
+        }
+        Path romPath = tempDir.resolve("fresh-capacity.gen");
+        Files.write(romPath, fixture);
+        try (Rom rom = new Rom()) {
+            assertTrue(rom.open(romPath.toString()));
+            HardwareTimingService timing = new HardwareTimingService();
+            S3kRuntimeArtCoordinator coordinator =
+                    new S3kRuntimeArtCoordinator(timing);
+            for (int index = 0; index < 3; index++) {
+                coordinator.moduleQueue().queue(
+                        rom, index * ABC_KOSM.length, index);
+            }
+            coordinator.deferFreshLevelRuntimeArt(
+                    rom, 3 * ABC_KOSM.length, 4 * ABC_KOSM.length);
+
+            coordinator.afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
+
+            assertEquals(3, timing.pendingHandles().size());
+            assertEquals(3 * ABC_KOSM.length,
+                    coordinator.capture().deferredPrimarySource());
+        }
+    }
+
+    @Test
+    void replacingAndRewindingDeferredFreshBatchReplaysExactOrdinals()
+            throws Exception {
+        byte[] fixture = new byte[ABC_KOSM.length * 3];
+        for (int index = 0; index < 3; index++) {
+            System.arraycopy(ABC_KOSM, 0, fixture,
+                    index * ABC_KOSM.length, ABC_KOSM.length);
+        }
+        Path romPath = tempDir.resolve("fresh-rewind.gen");
+        Files.write(romPath, fixture);
+        try (Rom rom = new Rom()) {
+            assertTrue(rom.open(romPath.toString()));
+            HardwareTimingService timing = new HardwareTimingService();
+            S3kRuntimeArtCoordinator coordinator =
+                    new S3kRuntimeArtCoordinator(timing);
+            coordinator.deferFreshLevelRuntimeArt(rom, 0, ABC_KOSM.length);
+            coordinator.deferFreshLevelRuntimeArt(
+                    rom, ABC_KOSM.length, 2 * ABC_KOSM.length);
+            HardwareTimingSnapshot timingBefore = timing.capture();
+            S3kRuntimeArtCoordinator.Snapshot coordinatorBefore = coordinator.capture();
+
+            coordinator.afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            List<HardwareWorkHandle> first =
+                    coordinator.capture().freshLevelHandoffHandles();
+
+            timing.restore(timingBefore);
+            coordinator.restore(coordinatorBefore);
+            coordinator.afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
+
+            assertEquals(first,
+                    coordinator.capture().freshLevelHandoffHandles());
+            assertEquals(List.of(1 * ABC_KOSM.length, 2 * ABC_KOSM.length),
+                    timing.capture().jobs().stream()
+                            .map(HardwareTimingJob.Snapshot::romSourceAddress)
+                            .toList());
+        }
+    }
 
     @Test
     void transitionPreflightRejectsInvalidBatchBeforeSubmittingAnyWork() throws Exception {

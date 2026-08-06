@@ -57,7 +57,11 @@ class TestLevelFrameHardwareTimingBoundaries {
         doAnswer(ignored -> {
             events.add("objects:ready=" + timing.isReady(handle));
             return null;
-        }).when(level).updateObjectPositionsWithoutTouches();
+        }).when(level).updateObjectPositionsWithoutTouches(false);
+        doAnswer(ignored -> {
+            events.add("oscillation-tail");
+            return null;
+        }).when(level).advanceGlobalOscillationAtLevelLoopTail();
         Camera camera = mock(Camera.class);
         doAnswer(ignored -> {
             events.add("camera");
@@ -83,6 +87,7 @@ class TestLevelFrameHardwareTimingBoundaries {
                         "physics",
                         "camera",
                         "screen-events:ready=false",
+                        "oscillation-tail",
                         "observer:POST_OBJECTS:ready=false",
                         "observer:PRE_MAIN_LOOP:ready=true",
                         "observer:VINT_SERVICE:ready=true",
@@ -90,6 +95,7 @@ class TestLevelFrameHardwareTimingBoundaries {
                         "physics",
                         "camera",
                         "screen-events:ready=true",
+                        "oscillation-tail",
                         "observer:POST_OBJECTS:ready=true",
                         "observer:PRE_MAIN_LOOP:ready=true"),
                 events);
@@ -123,7 +129,12 @@ class TestLevelFrameHardwareTimingBoundaries {
         doAnswer(ignored -> {
             events.add("objects:ready=" + timing.isReady(handle));
             return null;
-        }).when(level).updateObjectPositionsPostPhysicsWithoutTouches(any());
+        }).when(level).updateObjectPositionsPostPhysicsWithoutTouches(
+                any(), org.mockito.ArgumentMatchers.eq(false));
+        doAnswer(ignored -> {
+            events.add("oscillation-tail");
+            return null;
+        }).when(level).advanceGlobalOscillationAtLevelLoopTail();
         Camera camera = mock(Camera.class);
         doAnswer(ignored -> {
             events.add("camera");
@@ -144,6 +155,7 @@ class TestLevelFrameHardwareTimingBoundaries {
                         "objects:ready=false",
                         "camera",
                         "screen-events:ready=false",
+                        "oscillation-tail",
                         "observer:POST_OBJECTS:ready=false",
                         "observer:PRE_MAIN_LOOP:ready=true"),
                 events);

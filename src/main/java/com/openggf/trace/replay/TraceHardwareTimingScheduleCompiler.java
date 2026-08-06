@@ -1,5 +1,6 @@
 package com.openggf.trace.replay;
 
+import com.openggf.game.RuntimeArtCoordinator;
 import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceExecutionPhase;
 import com.openggf.trace.timing.HardwareCompletionEdge;
@@ -20,8 +21,10 @@ final class TraceHardwareTimingScheduleCompiler {
     private TraceHardwareTimingScheduleCompiler() {
     }
 
-    static HardwareTimingSchedule compileForInstall(TraceData trace) {
+    static HardwareTimingSchedule compileForInstall(
+            TraceData trace, RuntimeArtCoordinator runtimeArtCoordinator) {
         Objects.requireNonNull(trace, "trace");
+        Objects.requireNonNull(runtimeArtCoordinator, "runtimeArtCoordinator");
         HardwareTimingSchedule schedule = trace.hardwareTimingSchedule();
         if (!schedule.hasRecordedInput() || schedule.edges().isEmpty()) {
             return schedule;
@@ -41,16 +44,18 @@ final class TraceHardwareTimingScheduleCompiler {
             }
             TraceReplayRowPolicy row =
                     TraceReplayRowPolicy.resolve(trace, traceIndex, traceIndex);
-            requireExecutablePostPhase(edge, row.phase());
+            requireExecutablePostPhase(edge, row.phase(), runtimeArtCoordinator);
         }
         return schedule;
     }
 
     static void requireExecutablePostPhase(
-            HardwareCompletionEdge edge, TraceExecutionPhase phase) {
+            HardwareCompletionEdge edge, TraceExecutionPhase phase,
+            RuntimeArtCoordinator runtimeArtCoordinator) {
         if (phase == TraceExecutionPhase.FULL_LEVEL_FRAME
                 || phase == TraceExecutionPhase.FULL_LEVEL_FRAME_WITH_SIDEKICK_ANIMATION_HELD
-                || phase == TraceExecutionPhase.VBLANK_ONLY) {
+                || (phase == TraceExecutionPhase.VBLANK_ONLY
+                && runtimeArtCoordinator.ownsHeldLevelCounterHardwareTail())) {
             return;
         }
         throw new IllegalStateException(

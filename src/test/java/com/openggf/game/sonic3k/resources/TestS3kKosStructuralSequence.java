@@ -611,6 +611,32 @@ class TestS3kKosStructuralSequence {
                 HCZ_POINTDEXTER));
     }
 
+    @Test
+    void lateEnemyBatchStepsParentWithoutSecondPostObjectsService() {
+        HardwareTimingService timing = startLevel(0, 0);
+        Sonic3kObjectArtProvider provider =
+                (Sonic3kObjectArtProvider) GameServices.module()
+                        .getObjectArtProvider();
+        service(timing, HardwareServiceBoundary.PRE_MAIN_LOOP);
+        provider.deferEnemyKosArtAdmissionUntilAfterPreMainLoop();
+
+        provider.processRuntimeArtQueueAfterPreMainLoop();
+
+        assertEquals(3, moduleJobs(timing).size(),
+                "the late LoadEnemyArt owner publishes its parent batch");
+        assertEquals(1, timing.capture().jobs().stream()
+                        .filter(job -> job.kind()
+                                == HardwareWorkKind.KOS_DECOMPRESSION_QUEUE)
+                        .count(),
+                "the native module state step publishes the first direct child");
+        assertEquals(HardwareServiceBoundary.PRE_MAIN_LOOP,
+                timing.capture().lastServicedBoundary(),
+                "late publication must not manufacture a second POST service");
+        assertFalse(S3kRuntimeArtCoordinator.current().directQueue()
+                        .captureDiagnostics(List.of()).prepared(),
+                "the direct queue already ran this iteration");
+    }
+
     private static HardwareTimingService startLevel(int zone, int act) {
         TestEnvironment.resetAll();
         SessionManager.clear();

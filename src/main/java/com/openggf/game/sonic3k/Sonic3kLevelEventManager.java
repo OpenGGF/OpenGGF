@@ -144,7 +144,6 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     private int cnzAct2MaxXAccumulator;
     private int cnzAct2MinYAccumulator;
     private int cnzAct2MaxYAccumulator;
-    private boolean cnzAct2SizeUpdatedBeforeCamera;
 
     public Sonic3kLevelEventManager() {
         super();
@@ -369,7 +368,6 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                 // before DeformBgLayer runs.
                 updatePendingCnzAct2LevelSizeChange();
             }
-            cnzAct2SizeUpdatedBeforeCamera = true;
         }
     }
 
@@ -415,13 +413,6 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
         releasePendingMgzPostTransition();
         releasePendingCnzPostTransition();
-        if (!cnzAct2SizeUpdatedBeforeCamera) {
-            // Direct manager-driven tests and non-frame callers have no
-            // Process_Sprites/pre-camera slot, so retain their native update
-            // semantics in this fallback path.
-            updatePendingCnzAct2LevelSizeChange();
-        }
-        cnzAct2SizeUpdatedBeforeCamera = false;
         syncSidekickBoundsToCamera();
     }
 
@@ -1311,6 +1302,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         sprite.setControlLocked(false);
         sprite.setForcedAnimationId(-1);
         sprite.setAir(false);
+        // Restore_PlayerControl2 writes both anim and prev_anim to WAIT ($05)
+        // before clearing their frame state (docs/skdisasm/sonic3k.asm:180359-180367).
         sprite.setAnimationId(Sonic3kAnimationIds.WAIT);
     }
 
@@ -1588,7 +1581,6 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         cnzAct2MaxXAccumulator = 0;
         cnzAct2MinYAccumulator = 0;
         cnzAct2MaxYAccumulator = 0;
-        cnzAct2SizeUpdatedBeforeCamera = false;
     }
     /**
      * Intercepts pit death in S3K bonus stages (Gumball, Pachinko, Slots).

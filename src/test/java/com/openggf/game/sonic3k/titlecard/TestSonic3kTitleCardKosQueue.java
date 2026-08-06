@@ -7,6 +7,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.RuntimeArtAdmissionLease;
 import com.openggf.game.RuntimeArtAdmissionOwnerKind;
 import com.openggf.game.RuntimeArtAdmissionPolicy;
+import com.openggf.game.sonic3k.Sonic3k;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.rewind.snapshot.PlcProgressSnapshot;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
@@ -14,6 +15,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
 import com.openggf.game.sonic3k.resources.S3kKosDecompressionQueue;
 import com.openggf.game.sonic3k.resources.S3kKosDecompressionQueueSnapshot;
+import com.openggf.level.LevelData;
 import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.game.timing.HardwareTimingSnapshot;
@@ -137,6 +139,36 @@ class TestSonic3kTitleCardKosQueue {
                 "claiming title payloads is not title-owner retirement");
         assertTrue(moduleHandles().isEmpty(),
                 "enemy art remains held until the title owner reaches COMPLETE");
+    }
+
+    @Test
+    void repeatedSameZoneCachedCardPublishesExactlyOneFreshTerrainBatch()
+            throws Exception {
+        Object previousGame = getLevelManagerGame();
+        setLevelManagerGame(new Sonic3k(rom));
+        try {
+            installCachedTitleArt();
+            manager.requestFreshLevelRuntimeArtHandoff(
+                    LevelData.S3K_ANGEL_ISLAND_1.getLevelIndex());
+            manager.initialize(0, 0);
+
+            manager.update();
+            S3kRuntimeArtCoordinator.current().afterTimingService(
+                    HardwareServiceBoundary.PRE_MAIN_LOOP);
+
+            assertEquals(2, moduleHandles().size(),
+                    "cached title readiness publishes the two-parent terrain batch");
+            assertEquals(-1,
+                    manager.capture().freshLevelRuntimeArtHandoffLevelIndex());
+
+            manager.update();
+            S3kRuntimeArtCoordinator.current().afterTimingService(
+                    HardwareServiceBoundary.PRE_MAIN_LOOP);
+            assertEquals(2, moduleHandles().size(),
+                    "the armed handoff is consumed exactly once");
+        } finally {
+            setLevelManagerGame(previousGame);
+        }
     }
 
     @Test
@@ -413,6 +445,18 @@ class TestSonic3kTitleCardKosQueue {
         Field field = target.getClass().getDeclaredField(name);
         field.setAccessible(true);
         return field.get(target);
+    }
+
+    private static Object getLevelManagerGame() throws Exception {
+        Field field = GameServices.level().getClass().getDeclaredField("game");
+        field.setAccessible(true);
+        return field.get(GameServices.level());
+    }
+
+    private static void setLevelManagerGame(Object game) throws Exception {
+        Field field = GameServices.level().getClass().getDeclaredField("game");
+        field.setAccessible(true);
+        field.set(GameServices.level(), game);
     }
 
     private static final class CountingObjectArtProvider extends Sonic3kObjectArtProvider {

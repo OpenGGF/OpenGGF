@@ -165,7 +165,6 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
     private long deathEggChunksOrdinal = -1;
     private long deathEggTerrainArtOrdinal = -1;
     private long deathEggLaunchArtOrdinal = -1;
-    private boolean deathEggLaunchArtQueued;
     private boolean restartInitChecked;
     private int[] lbz2CopiedWindowDescriptors;
     private int lbz2CopiedWindowScreenX;
@@ -243,7 +242,6 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         clearTransitionKosOwnership();
         clearDeathEggTerrainKosOwnership();
         clearDeathEggLaunchArtOwnership();
-        deathEggLaunchArtQueued = false;
     }
 
     @Override
@@ -932,11 +930,20 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         }
         var timing = hardwareTiming();
         deathEggBlocksHandle = timing.pendingHandle(
-                HardwareWorkKind.KOS_DECOMPRESSION_QUEUE, deathEggBlocksOrdinal).orElseThrow();
+                        HardwareWorkKind.KOS_DECOMPRESSION_QUEUE, deathEggBlocksOrdinal)
+                .orElseThrow(() -> new IllegalStateException(
+                        "restored LBZ Death Egg terrain owner cannot find block Kos ordinal "
+                                + deathEggBlocksOrdinal));
         deathEggChunksHandle = timing.pendingHandle(
-                HardwareWorkKind.KOS_DECOMPRESSION_QUEUE, deathEggChunksOrdinal).orElseThrow();
+                        HardwareWorkKind.KOS_DECOMPRESSION_QUEUE, deathEggChunksOrdinal)
+                .orElseThrow(() -> new IllegalStateException(
+                        "restored LBZ Death Egg terrain owner cannot find chunk Kos ordinal "
+                                + deathEggChunksOrdinal));
         deathEggTerrainArtHandle = timing.pendingHandle(
-                HardwareWorkKind.KOS_MODULE_QUEUE, deathEggTerrainArtOrdinal).orElseThrow();
+                        HardwareWorkKind.KOS_MODULE_QUEUE, deathEggTerrainArtOrdinal)
+                .orElseThrow(() -> new IllegalStateException(
+                        "restored LBZ Death Egg terrain owner cannot find art KosM ordinal "
+                                + deathEggTerrainArtOrdinal));
         deathEggTerrainDirectQueue = directKosQueue();
         deathEggTerrainModuleQueue = moduleKosQueue();
     }
@@ -1169,7 +1176,6 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
                     Sonic3kConstants.ART_KOSM_LBZ2_DEATH_EGG_2_8X8_ADDR,
                     Sonic3kConstants.ART_TILE_LBZ2_DEATH_EGG_2);
             deathEggLaunchArtOrdinal = deathEggLaunchArtHandle.ordinal();
-            deathEggLaunchArtQueued = true;
         } catch (IOException e) {
             throw new IllegalStateException(
                     "Unable to queue LBZ2 Death Egg launch art", e);
@@ -1214,7 +1220,9 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         }
         deathEggLaunchArtHandle = hardwareTiming().pendingHandle(
                 HardwareWorkKind.KOS_MODULE_QUEUE,
-                deathEggLaunchArtOrdinal).orElseThrow();
+                deathEggLaunchArtOrdinal).orElseThrow(() -> new IllegalStateException(
+                        "restored LBZ Death Egg launch owner cannot find KosM ordinal "
+                                + deathEggLaunchArtOrdinal));
         deathEggLaunchArtQueue = moduleKosQueue();
     }
 

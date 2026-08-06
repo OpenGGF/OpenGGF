@@ -165,22 +165,6 @@ public final class HardwareTimingReplayPort
         return true;
     }
 
-    /**
-     * Reports whether the next recorded edge belongs to the latched row and
-     * boundary. This is only a scheduling look-ahead; it never admits work or
-     * changes the production ledger.
-     */
-    public boolean hasPendingCompletionAtCurrentRawFrame(
-            HardwareServiceBoundary boundary) {
-        requireActive();
-        Objects.requireNonNull(boundary, "boundary");
-        HardwareCompletionEdge next = nextEdge();
-        return rawFrameLatch != null
-                && next != null
-                && next.rawFrame() == rawFrameLatch
-                && next.boundary() == boundary;
-    }
-
     private void consumeAtBoundary(
             HardwareServiceBoundary boundary,
             boolean suppressedRow) {

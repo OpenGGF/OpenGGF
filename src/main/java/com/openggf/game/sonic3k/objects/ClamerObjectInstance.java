@@ -928,10 +928,9 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
         updateIdle(primary);
     }
 
-    /** Test-only: bypass Obj_WaitOffscreen for unit fixtures without a camera. */
-    void testReleaseWaitOffscreen() {
+    /** Test-only: release Obj_WaitOffscreen, then run the production init dispatch. */
+    void testRunProductionInitializationAfterOffscreenWait() {
         waitingForOnscreen = false;
-        initialized = true;
-        ensureSpringChildSlot();
+        update(0, null);
     }
 }

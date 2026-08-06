@@ -63778,3 +63778,30 @@ to synthesize a POST phase on a VBLANK-only row.
   `6` failures, `29` errors, `0` skipped, with the same non-LBZ signatures.
   Focused KosM/title-card/LBZ/rewind coverage checks passed (`79` tests,
   `0` failures, `0` errors, `0` skipped).
+
+## 2026-08-06 — LLM review remediation validation
+
+- Worktree: uncommitted review remediation on `bugfix/s3k-traces`, still eight
+  commits behind local `origin/develop`. No trace payload or recorded frontier
+  changed. Existing `.idea/vcs.xml`, `docs/status/rewind-round-trip-gaps.md`,
+  `identity/`, and `ghosts/` state remained user-owned and untouched.
+- Review fixes remove recorded-edge selection of suppressed-row production
+  boundaries, make fresh terrain admission capacity/validation atomic, verify
+  the AIZ semantic-prefix pending jobs exactly, and preserve one POST then one
+  PRE timing service while allowing the ROM-owned late KosM parent state step.
+  Live, rendered-headless, omitted-headless, and cached same-zone title paths
+  now retain the same fresh-load ownership contract.
+- Final JDK 21 integrated selection covered timing authority/compiler guards,
+  queue structure and atomicity, title-card/fresh-load paths, CNZ allocation
+  and first dispatch, AIZ events, LBZ owner rewind, shared movement, rewind
+  guards, and S3K keep-green loaders: `375` tests, `0` failures, `0` errors,
+  `0` skipped.
+- Cross-game smoke command selected `TestS1Ghz1TraceReplay`,
+  `TestS2Ehz1TraceReplay`, `TestTraceCharacterState`, and
+  `TestLevelFrameHardwareTimingBoundaries` with the discovered S1/S2 ROMs:
+  `13` tests, `0` failures, `0` errors, `0` skipped. Both trace smoke lanes
+  remained green; this was not a full `*TraceReplay` sweep.
+- The previously recorded AIZ comparator baseline remains `194` errors, first
+  at raw frame `16067` on `queue.s3k_kos_direct.busy`; exact terminal pending
+  verification completes before that known comparator report. LBZ and CNZ
+  residual frontiers were not reclassified or advanced by this remediation.

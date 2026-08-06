@@ -225,17 +225,9 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
 
         int primaryArtAddr = rom.read32BitAddr(llbAddr) & 0x00FFFFFF;
         int secondaryArtAddr = rom.read32BitAddr(llbAddr + 4) & 0x00FFFFFF;
-        boolean applyAiz1OverlayBridge = zone == 0
-                && act == 0
-                && bootstrap != null
-                && bootstrap.isSkipIntro()
-                && llbIndex != Sonic3kConstants.LEVEL_LOAD_BLOCK_AIZ1_INTRO_INDEX;
-        if (applyAiz1OverlayBridge) {
-            Aiz1GameplayOverlay override = readAiz1GameplayOverlayFromIntroEntry();
-            if (override != null) {
-                secondaryArtAddr = override.secondaryArtAddr();
-            }
-        }
+        ResolvedGameplayOverlay overlay = resolveGameplayOverlay(
+                zone, act, bootstrap, llbIndex, secondaryArtAddr, -1);
+        secondaryArtAddr = overlay.secondaryArtAddr();
 
         S3kRuntimeArtCoordinator coordinator = S3kRuntimeArtCoordinator.current();
         coordinator.deferFreshLevelRuntimeArt(
@@ -317,24 +309,14 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
                     expectedDeferredManifest);
         }
 
-        boolean applyAiz1OverlayBridge = zone == 0
-                && act == 0
-                && bootstrap != null
-                && llbIndex != Sonic3kConstants.LEVEL_LOAD_BLOCK_AIZ1_INTRO_INDEX
-                && bootstrap.isSkipIntro();
-        if (applyAiz1OverlayBridge) {
-            Aiz1GameplayOverlay override = readAiz1GameplayOverlayFromIntroEntry();
-            if (override != null) {
-                // AIZ1 parity bridge:
-                // Skip-intro bootstrap should immediately use AIZ1 "main level" overlays
-                // for 8x8/16x16 terrain resources.
-                secondaryArtAddr = override.secondaryArtAddr();
-                secondaryBlocksAddr = override.secondaryBlocksAddr();
-                LOG.info(String.format("  AIZ1 overlay bridge active: art2=0x%06X blocks2=0x%06X",
-                        secondaryArtAddr, secondaryBlocksAddr));
-            } else {
-                LOG.warning("  AIZ1 overlay bridge requested but intro overlay entry was invalid.");
-            }
+        ResolvedGameplayOverlay overlay = resolveGameplayOverlay(
+                zone, act, bootstrap, llbIndex,
+                secondaryArtAddr, secondaryBlocksAddr);
+        secondaryArtAddr = overlay.secondaryArtAddr();
+        secondaryBlocksAddr = overlay.secondaryBlocksAddr();
+        if (overlay.applied()) {
+            LOG.info(String.format("  AIZ1 overlay bridge active: art2=0x%06X blocks2=0x%06X",
+                    secondaryArtAddr, secondaryBlocksAddr));
         }
 
         LOG.info(String.format("  LLB entry: plc1=0x%02X plc2=0x%02X art1=0x%06X art2=0x%06X " +
@@ -709,6 +691,37 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
                 sources.art(), sources.chunks());
     }
 
+    private ResolvedGameplayOverlay resolveGameplayOverlay(
+            int zone,
+            int act,
+            Sonic3kLoadBootstrap bootstrap,
+            int levelLoadBlockIndex,
+            int secondaryArtAddr,
+            int secondaryBlocksAddr) throws IOException {
+        boolean applyAiz1OverlayBridge = zone == 0
+                && act == 0
+                && bootstrap != null
+                && bootstrap.isSkipIntro()
+                && levelLoadBlockIndex
+                != Sonic3kConstants.LEVEL_LOAD_BLOCK_AIZ1_INTRO_INDEX;
+        if (!applyAiz1OverlayBridge) {
+            return new ResolvedGameplayOverlay(
+                    secondaryArtAddr, secondaryBlocksAddr, false);
+        }
+        Aiz1GameplayOverlay override = readAiz1GameplayOverlayFromIntroEntry();
+        if (override == null) {
+            LOG.warning("AIZ1 overlay bridge requested but intro overlay entry was invalid.");
+            return new ResolvedGameplayOverlay(
+                    secondaryArtAddr, secondaryBlocksAddr, false);
+        }
+        return new ResolvedGameplayOverlay(
+                override.secondaryArtAddr(),
+                secondaryBlocksAddr < 0
+                        ? secondaryBlocksAddr
+                        : override.secondaryBlocksAddr(),
+                true);
+    }
+
     private SecondaryResourceSources readSecondaryResourceSources(
             int levelLoadBlockIndex) throws IOException {
         int entryAddr = Sonic3kConstants.LEVEL_LOAD_BLOCK_ADDR
@@ -787,6 +800,9 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
 
     static record CollisionAddressInfo(int primaryAddress, int secondaryAddress, boolean interleaved) {}
     private record Aiz1GameplayOverlay(int secondaryArtAddr, int secondaryBlocksAddr) {}
+
+    private record ResolvedGameplayOverlay(
+            int secondaryArtAddr, int secondaryBlocksAddr, boolean applied) {}
     private record SecondaryResourceSources(int art, int chunks, int blocks) {}
 
     /**

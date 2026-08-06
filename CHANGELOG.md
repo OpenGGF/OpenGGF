@@ -3,18 +3,25 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
-- Fix/Test: S3K fresh-level terrain handoff now publishes the ROM-backed MHZ
-  `ArtKosM_MHZ_Primary` and `ArtKosM_MHZ_Secondary` parents through the native
-  KosM/direct queue owner at the title-card art-readiness boundary. The LBZ
-  complete-run replay consumes direct `#322..#329` (raw frames `46196..46220`)
-  and module `#219..#220` (raw frames `46211` and `46221`); its remaining 83
-  comparator errors begin at the pre-existing raw frame `19869`. No trace
-  payloads changed.
-- Fix/Test: reconciled the latest `develop` merge with S3K's headless
-  transition-owned title-card path. The LBZ complete-run replay again submits
-  the ROM `ArtKosM_TitleCardRedAct` work at direct `#318` and matches through
-  direct `#321` / module `#218`; the next native boundary remains direct `#322`
-  at raw frame `46196`. No trace payloads changed.
+- Fix/Test: S3K fresh-level terrain handoff restores headless
+  transition-owned title-card admission and publishes each destination's
+  ROM-backed primary and secondary terrain parents through the native
+  KosM/direct queue owner at the title-card art-readiness boundary. Live,
+  rendered-headless, omitted-headless, and cached same-zone title paths now
+  retain the same owner, while two-parent capacity and archive validation are
+  failure-atomic. The LBZ
+  complete-run hardware-authority frontier now consumes direct `#322..#329`
+  (raw frames `46196..46220`) and module `#219..#220` (raw frames `46211` and
+  `46221`); its separate comparator report remains at 83 errors, first at the
+  pre-existing raw frame `19869`. No trace payloads changed.
+- Fix: shared playable-character movement now preserves the ROM's entry-time
+  `move_lock` decision through the ground-input and balance/lookup tail, so a
+  timer decremented later in the same dispatch cannot enable a balance state
+  early. This applies consistently to the games using the shared movement
+  path.
+- Fix: S3K Bubbler and Air Countdown objects now use their ROM-initialized
+  zero vertical render margin for off-screen lifetime checks, preventing stale
+  object slots from changing later allocation and execution order.
 - Fix/Test: S3K LBZ's final-boss owner now submits and rewind-owns the
   ROM-backed `ArtKosM_LBZ2DeathEggSmall` parent, and the final-fall handoff
   observes the LBZ2 `$-2` camera step at the object/event boundary. Suppressed
@@ -83,8 +90,10 @@ All notable changes to the OpenGGF project are documented in this file.
   trace payloads.
 - Fix/Test: S3K results art now follows the ROM's first-dispatch submission
   boundary, and the AIZ in-level title resets the level gamestate on its native
-  display row. The standard AIZ replay frontier advances to the next queue
-  boundary at raw frame `8938` without changing trace payloads.
+  display row. The standard AIZ comparator's first error moves from raw frame
+  `8837` (`rings`) to raw frame `8938` (`queue.s3k_kos_direct.busy`), while the
+  separate hardware-authority frontier remains the next unsubmitted queue job.
+  No trace payloads changed.
 - Fix/Test: S3K AIZ's live act-2 reload now admits the ROM-observed
   `PLCKosM_AIZ` enemy batch through the immediate runtime-art owner. Standard
   AIZ advances past direct completion `#36` at raw frame `5543` to `#47` at
@@ -119,11 +128,11 @@ All notable changes to the OpenGGF project are documented in this file.
 - Fix/Test: S3K CNZ overlapping hover fans now execute in managed SST order,
   restoring the native two-fan lift handoff and advancing the clean replay
   frontier from raw frame 20,457 to 21,146.
-- Fix/Test: S3K's global oscillator now advances at the native level-loop tail;
-  an in-frame act transition consumes its provider-owned transition dispatch
-  without a duplicate tail tick. CNZ bumper orbit and carried-results dispatch
-  timing now reach the recorded direct Kosinski completion #30 (raw frame
-  25,667), beyond the previous #28 boundary.
+- Fix/Test: the shared global oscillator now advances at the native level-loop
+  tail; an in-frame act transition consumes its provider-owned transition
+  dispatch without a duplicate tail tick. CNZ bumper orbit and carried-results
+  dispatch timing now reach the recorded direct Kosinski completion #30 (raw
+  frame `25,667`), beyond the previous #28 boundary.
 - Fix/Test: S3K carried title-card reset ownership now continues ticking while
   ROM-backed title KosM work is still being serviced, while the title owner
   keeps target enemy admission sealed until its completion dispatch. CNZ's

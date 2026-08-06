@@ -4,6 +4,7 @@ import com.openggf.trace.*;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.TouchResponseProvider;
@@ -24,6 +25,7 @@ import org.junit.jupiter.api.Test;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -72,12 +74,34 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
     }
 
     @Override
-    protected boolean allowPendingHardwareTimingAtTraceEnd(TraceData trace) {
+    protected List<ExpectedPendingHardwareWork> expectedPendingHardwareTimingAtTraceEnd(
+            TraceData trace) {
         // The fixture ends on the HCZ handoff row immediately after the
         // destination title owner submits its four native KosM parents. The
-        // recorder captures the first two completions, while the remaining
+        // recorder captures the first two completions, but the prefix ends
+        // before their title owner polls and claims them; the remaining two
         // parents are still in the ROM FIFO beyond the represented prefix.
-        return true;
+        return List.of(
+                expectedPendingHardwareWork(
+                        HardwareWorkKind.KOS_MODULE_QUEUE,
+                        38,
+                        0x0D6F28,
+                        "sha256:10eb568a70724c579f022914f56227c2c7fa421aafa8578aebaa874f0cffb0ca"),
+                expectedPendingHardwareWork(
+                        HardwareWorkKind.KOS_MODULE_QUEUE,
+                        39,
+                        0x15C3A2,
+                        "sha256:05324378670c6afa8c6d99f6e5313d625d2d926e6bc16f25cd9d8d1a5a195bf8"),
+                expectedPendingHardwareWork(
+                        HardwareWorkKind.KOS_MODULE_QUEUE,
+                        40,
+                        0x0D6D84,
+                        "sha256:7059802f2a045495d22a16d8c858c1758b786bf5d5f46c45838fa10bc0d1f6aa"),
+                expectedPendingHardwareWork(
+                        HardwareWorkKind.KOS_MODULE_QUEUE,
+                        41,
+                        0x39BEDA,
+                        "sha256:2c17b1dba426e8b37a9b4dd2e2fc175f78010f755f4d1d43d7b0a9948eee4ba2"));
     }
 
     @Override

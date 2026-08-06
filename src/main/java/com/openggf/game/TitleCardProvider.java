@@ -126,6 +126,11 @@ public interface TitleCardProvider {
         // No-op unless the game models a gameplay-phase title-card exit tail.
     }
 
+    /** Publishes an armed fresh-level handoff when an omitted native owner reaches its exit. */
+    default void completeOmittedPresentationFreshLevelRuntimeArtHandoff() {
+        // No-op for games without a title-owned fresh-level hardware handoff.
+    }
+
     /**
      * Initializes the title card for a bonus stage entry.
      * S3K shows "BONUS STAGE" text; S1/S2 have no bonus stages so this is a no-op.

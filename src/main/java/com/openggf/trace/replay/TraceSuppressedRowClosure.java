@@ -117,10 +117,7 @@ public final class TraceSuppressedRowClosure {
                 LevelFrameStep.serviceHardwarePreMainLoopOnly(context);
             } else if (context.hardwareTimingBoundaryObserver()
                     instanceof TraceHardwareTimingBoundaryObserver replayObserver) {
-                if (replayObserver.hasPendingCompletionAtCurrentRawFrame(
-                        HardwareServiceBoundary.POST_OBJECTS)) {
-                    LevelFrameStep.serviceHardwarePostObjectsOnly(context);
-                } else if (replayObserver.applySuppressedRowCompletion()) {
+                if (replayObserver.applySuppressedRowCompletion()) {
                     context.runtimeArtCoordinator().afterTimingService(
                             HardwareServiceBoundary.PRE_MAIN_LOOP);
                 }

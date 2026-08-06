@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
@@ -107,10 +108,13 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
     private LbzMinibossBoxRig boxRig;
     private int hitReactionTimer;
     private boolean shipGone;
+    @RewindTransient(reason = "hardware handle is rebound from the captured KosM ordinal")
     private HardwareWorkHandle initialBoxArtHandle;
     private long initialBoxArtOrdinal = -1;
+    @RewindTransient(reason = "hardware handle is rebound from the captured KosM ordinal")
     private HardwareWorkHandle collapseBoxArtHandle;
     private long collapseBoxArtOrdinal = -1;
+    @RewindTransient(reason = "hardware handle is rebound from the captured KosM ordinal")
     private HardwareWorkHandle minibossArtHandle;
     private long minibossArtOrdinal = -1;
     private boolean minibossArtLoaded;

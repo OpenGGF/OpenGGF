@@ -1558,12 +1558,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         }
     }
 
-    /**
-     * Completes a late ROM {@code LoadEnemyArt} admission after the current
-     * frame's direct FIFO service. The module step is still performed at its
-     * owning POST_OBJECTS boundary, leaving the first direct child unarmed
-     * until the following PRE_MAIN_LOOP service.
-     */
+    /** Completes a late ROM {@code LoadEnemyArt} admission after this frame's queue tail. */
     @Override
     public void processRuntimeArtQueueAfterPreMainLoop() {
         if (!enemyKosSubmitAfterPreMainLoop) {
@@ -1575,7 +1570,11 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
             return;
         }
         enemyKosSubmitAfterPreMainLoop = false;
-        enemyKosQueue.processModuleQueueAfterObjects();
+        // Process_Kos_Module_Queue follows this ScreenEvents producer in the
+        // ROM, but Process_Kos_Queue already ran at the iteration head. Step
+        // only the newly published parent; a second timing POST boundary would
+        // service every queue twice and let recorded input choose chronology.
+        enemyKosQueue.stepHeadModuleAfterDirectTail();
     }
 
     private void scheduleEnemyKosArt(int zoneIndex, int actIndex) {
@@ -1964,6 +1963,11 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
                 titleCardTeardownLeaseId,
                 RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
         consumeRuntimeArtAdmission(lease, RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
+        var titleCardProvider = GameServices.module().getTitleCardProvider();
+        if (titleCardProvider != null) {
+            titleCardProvider
+                    .completeOmittedPresentationFreshLevelRuntimeArtHandoff();
+        }
         titleCardTeardownLeaseId = -1;
     }
 

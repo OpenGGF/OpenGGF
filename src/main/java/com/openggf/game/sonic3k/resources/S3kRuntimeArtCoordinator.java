@@ -10,8 +10,8 @@ import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.game.timing.HardwareWorkHandle;
 import com.openggf.level.objects.ObjectServices;
-import com.openggf.level.Pattern;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -76,10 +76,8 @@ public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator,
      */
     public void deferFreshLevelRuntimeArt(
             Rom rom, int primarySource, int secondarySource) {
-        if (deferredFreshLevelRuntimeArt != null) {
-            throw new IllegalStateException(
-                    "fresh-level runtime art handoff is already deferred");
-        }
+        // A newer fresh load supersedes a handoff that has not yet reached the
+        // publication tail. No production work for the older request exists.
         deferredFreshLevelRuntimeArt = new FreshLevelRuntimeArtRequest(
                 Objects.requireNonNull(rom, "rom"), primarySource, secondarySource);
     }
@@ -106,20 +104,22 @@ public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator,
         if (boundary == HardwareServiceBoundary.PRE_MAIN_LOOP
                 && deferredFreshLevelRuntimeArt != null) {
             FreshLevelRuntimeArtRequest request = deferredFreshLevelRuntimeArt;
-            deferredFreshLevelRuntimeArt = null;
+            List<Integer> sources = new ArrayList<>();
+            sources.add(request.primarySource());
+            if (request.secondarySource() != request.primarySource()
+                    && request.secondarySource() > 0) {
+                sources.add(request.secondarySource());
+            }
+            if (!moduleQueue.hasCapacityFor(sources.size())) {
+                return;
+            }
             try {
-                HardwareWorkHandle primary = moduleQueue.queue(
-                        request.rom(), request.primarySource(), 0);
-                moduleQueue.claimAfterFreshLevelHandoff(primary);
-                int secondaryDestinationPattern = moduleQueue.descriptor(primary)
-                        .destinationLength() / Pattern.PATTERN_SIZE_IN_ROM;
-                if (request.secondarySource() != request.primarySource()
-                        && request.secondarySource() > 0) {
-                    HardwareWorkHandle secondary = moduleQueue.queue(
-                            request.rom(), request.secondarySource(),
-                            secondaryDestinationPattern);
-                    moduleQueue.claimAfterFreshLevelHandoff(secondary);
+                List<HardwareWorkHandle> handles =
+                        moduleQueue.queueSequentialBatch(request.rom(), sources, 0);
+                for (HardwareWorkHandle handle : handles) {
+                    moduleQueue.claimAfterFreshLevelHandoff(handle);
                 }
+                deferredFreshLevelRuntimeArt = null;
             } catch (java.io.IOException exception) {
                 throw new IllegalStateException(
                         "Unable to publish deferred fresh-level runtime art", exception);

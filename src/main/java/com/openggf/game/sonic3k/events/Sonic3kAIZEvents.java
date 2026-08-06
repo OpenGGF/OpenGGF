@@ -1810,8 +1810,19 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     }
 
     private void retireBattleshipKosArtIfReady() {
-        if (battleshipKosQueue == null && battleshipTerrainKosHandle == null) {
+        if ((battleshipTerrainKosHandle == null) != (battleshipTerrainArtHandle == null)) {
+            throw new IllegalStateException(
+                    "AIZ battleship terrain owner lost one half of its Kos/KosM pair");
+        }
+        if (battleshipTerrainKosHandle == null
+                && battleshipTerrainArtHandle == null
+                && battleshipObjectArtHandle == null) {
+            battleshipKosQueue = null;
             return;
+        }
+        if (battleshipKosQueue == null) {
+            throw new IllegalStateException(
+                    "AIZ battleship KosM owner has live handles without its rebound queue");
         }
         if (battleshipTerrainKosHandle != null
                 && battleshipTerrainArtHandle != null
@@ -2751,18 +2762,14 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                         .postTransitionMaxY(0x260)
                         .postTransitionMaxYTarget(0x260)
                         .build();
-        if (levelManager.getCurrentLevel() == null) {
-            levelManager.requestSeamlessTransition(request);
-        } else {
-            try {
-                // AIZ1BGE_Finish performs Load_Level and the coordinate
-                // subtractions inside this background-event dispatch. Deferring
-                // through the outer frame driver leaves one unshifted comparison
-                // row before the AIZ2 continuation becomes visible.
-                levelManager.executeActTransition(request);
-            } catch (IOException e) {
-                throw new IllegalStateException("Failed to apply AIZ act transition", e);
-            }
+        try {
+            // AIZ1BGE_Finish performs Load_Level and the coordinate
+            // subtractions inside this background-event dispatch. Deferring
+            // through the outer frame driver leaves one unshifted comparison
+            // row before the AIZ2 continuation becomes visible.
+            levelManager.executeActTransition(request);
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to apply AIZ act transition", e);
         }
         LOG.info("AIZ1: requested seamless in-place post-miniboss reload");
     }

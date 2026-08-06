@@ -495,15 +495,15 @@ class TestS3kCnzAct1EventFlow {
         manager.requestCnzPostTransitionRelease(1);
 
         for (int i = 0; i < 20; i++) {
-            manager.update();
+            updateCnzProductionSlots(manager);
         }
 
         assertEquals(0x0260, GameServices.camera().getMaxX() & 0xFFFF,
                 "Change_Act2Sizes must wait on the in-level title-card End_of_level_flag, not elapsed frames");
 
         GameServices.gameState().setEndOfLevelFlag(true);
-        for (int i = 0; i < 5; i++) {
-            manager.update();
+        for (int i = 0; i < 4; i++) {
+            updateCnzProductionSlots(manager);
         }
 
         assertEquals(0x0260, GameServices.camera().getMaxX() & 0xFFFF,
@@ -512,7 +512,7 @@ class TestS3kCnzAct1EventFlow {
                         + "Camera_max_X_pos until its fourth update "
                         + "(docs/skdisasm/sonic3k.asm:180407-180419,178154-178168)");
 
-        manager.update();
+        updateCnzProductionSlots(manager);
 
         assertEquals(0x0261, GameServices.camera().getMaxX() & 0xFFFF,
                 "Obj_EndSignControlDoStart calls Change_Act2Sizes after the in-level title-card "
@@ -520,13 +520,18 @@ class TestS3kCnzAct1EventFlow {
                         + "(docs/skdisasm/sonic3k.asm:180415-180419,180575-180632,178154-178168)");
 
         for (int i = 0; i < 4; i++) {
-            manager.update();
+            updateCnzProductionSlots(manager);
         }
 
         assertEquals(0x0266, GameServices.camera().getMaxX() & 0xFFFF,
                 "Obj_IncLevEndXGradual keeps its full 16.16 object accumulator in $30(a0) and "
                         + "applies the swapped high word each frame; it is not a delta-only "
                         + "fractional carry (docs/skdisasm/sonic3k.asm:178154-178168)");
+    }
+
+    private static void updateCnzProductionSlots(Sonic3kLevelEventManager manager) {
+        manager.updateAfterObjectsBeforeCamera();
+        manager.update();
     }
 
     @Test
@@ -733,8 +738,11 @@ class TestS3kCnzAct1EventFlow {
         S3kResultsScreenObjectInstance initiallyAllocatedResults = results;
         GameServices.level().getObjectManager().addDynamicObject(results);
         int sourceSlot = results.getSlotIndex();
+        assertModuleParents(timing, List.of(),
+                "allocating the production results owner must not run Obj_LevelResultsInit");
+        fixture.stepFrame(false, false, false, false, false);
         assertModuleParents(timing, RESULTS_PARENTS,
-                "the production results owner queues its exact three ROM parents");
+                "the first production dispatch queues the exact three ROM results parents");
         drainModuleHardware(timing);
         fixture.stepFrame(false, false, false, false, false);
 

@@ -162,7 +162,9 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
     private boolean engineFlamesSpawned;
     private boolean bossExplosionPlcQueued;
     private boolean deathEggSmallArtQueued;
+    @RewindTransient(reason = "queue facade is rebound from the captured KosM ordinal")
     private S3kKosModuleQueue deathEggSmallArtQueue;
+    @RewindTransient(reason = "hardware handle is rebound from the captured KosM ordinal")
     private HardwareWorkHandle deathEggSmallArtHandle;
     private long deathEggSmallArtOrdinal = -1;
     private boolean deathEggSmallArtLoaded;

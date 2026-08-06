@@ -2820,6 +2820,17 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             completeInitialTitleCardPresentation();
             return;
         }
+        // Runtime-art ownership is a property of the fresh load, not of
+        // whether this process renders the title card. Headless gameplay still
+        // retains the native title owner through its omitted-presentation exit
+        // tail, so arm that owner's handoff before choosing the render path.
+        if (ctx.isQueueFreshLevelRuntimeArt()) {
+            var titleCardProvider = activeGameModule().getTitleCardProvider();
+            if (titleCardProvider != null) {
+                titleCardProvider.requestFreshLevelRuntimeArtHandoff(
+                        ctx.getLevelIndex());
+            }
+        }
         // GameLoop owns the mandatory bonus/results-return card after the
         // reload. Keep its lease unbound until that explicit initialization,
         // even headless.
@@ -2831,13 +2842,6 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             // After AIZ's seamless fire transition, Current_act is 1 but
             // Apparent_act stays 0 until the results screen exits.
             requestTitleCard(currentZone, apparentAct);
-            if (ctx.isQueueFreshLevelRuntimeArt()) {
-                var titleCardProvider = activeGameModule().getTitleCardProvider();
-                if (titleCardProvider != null) {
-                    titleCardProvider.requestFreshLevelRuntimeArtHandoff(
-                            ctx.getLevelIndex());
-                }
-            }
             return;
         }
 
@@ -3169,7 +3173,12 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
     public void loadZoneAndAct(int zone, int act, LevelLoadMode loadMode) throws IOException {
-        loadZoneAndAct(zone, act, loadMode, false);
+        loadZoneAndAct(zone, act, loadMode, false, false);
+    }
+
+    /** Loads a production fresh level while leaving presentation ownership to GameLoop. */
+    public void loadZoneAndActForFreshRuntime(int zone, int act) throws IOException {
+        loadZoneAndAct(zone, act, LevelLoadMode.FULL, false, true);
     }
 
     /**
@@ -3182,12 +3191,13 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * hardware-timed art work is part of the destination lifecycle.
      */
     public void loadZoneAndActWithTitleCard(int zone, int act) throws IOException {
-        loadZoneAndAct(zone, act, LevelLoadMode.FULL, true);
+        loadZoneAndAct(zone, act, LevelLoadMode.FULL, true, true);
     }
 
     private void loadZoneAndAct(
             int zone, int act, LevelLoadMode loadMode,
-            boolean titleCardRequiredInHeadlessMode) throws IOException {
+            boolean titleCardRequiredInHeadlessMode,
+            boolean queueFreshLevelRuntimeArt) throws IOException {
         try {
             writeCurrentAct(act);
             writeApparentAct(act);
@@ -3199,7 +3209,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                     loadMode,
                     false,
                     titleCardRequiredInHeadlessMode,
-                    titleCardRequiredInHeadlessMode);
+                    queueFreshLevelRuntimeArt);
         } finally {
             // A load that fails before initCameraBounds must not leak a bonus-return
             // respawn table into a later, potentially different, level.

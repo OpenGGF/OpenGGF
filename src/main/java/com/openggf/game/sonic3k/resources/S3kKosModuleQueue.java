@@ -68,6 +68,37 @@ public final class S3kKosModuleQueue {
                 rom, source, destinationPatternAddress, true);
     }
 
+    /**
+     * Appends one native sequential batch only after every archive has been
+     * validated and the physical FIFO has room for the whole batch.
+     */
+    public List<HardwareWorkHandle> queueSequentialBatch(
+            Rom rom, List<Integer> sources, int destinationPatternAddress)
+            throws IOException {
+        Objects.requireNonNull(rom, "rom");
+        List<Integer> stableSources = List.copyOf(sources);
+        if (!hasCapacityFor(stableSources.size())) {
+            throw new IllegalStateException(
+                    "S3K KosM module FIFO cannot fit batch of "
+                            + stableSources.size());
+        }
+        List<PreparedSubmission> prepared = new java.util.ArrayList<>();
+        int destination = destinationPatternAddress;
+        for (int source : stableSources) {
+            PreparedSubmission submission = prepareSubmission(
+                    rom, source, destination, false);
+            prepared.add(submission);
+            destination = Math.addExact(
+                    destination,
+                    submission.descriptor().destinationLength() / PATTERN_BYTES);
+        }
+        List<HardwareWorkHandle> handles = new java.util.ArrayList<>();
+        for (PreparedSubmission submission : prepared) {
+            handles.add(submitPrepared(submission));
+        }
+        return List.copyOf(handles);
+    }
+
     /** Whether a producer can append an entire native FIFO batch without partial submission. */
     public boolean hasCapacityFor(int submissions) {
         if (submissions < 0) {
@@ -85,6 +116,16 @@ public final class S3kKosModuleQueue {
         if (physicalQueueSize() >= MAX_QUEUE_DEPTH) {
             throw new IllegalStateException("S3K KosM module FIFO is full");
         }
+        return submitPrepared(prepareSubmission(
+                rom, source, destinationPatternAddress, exportableAcrossSegment));
+    }
+
+    private PreparedSubmission prepareSubmission(
+            Rom rom,
+            int source,
+            int destinationPatternAddress,
+            boolean exportableAcrossSegment) throws IOException {
+        Objects.requireNonNull(rom, "rom");
         long remaining = rom.getSize() - source;
         if (source < 0 || remaining < 2) {
             throw new IOException("KosM source is outside ROM: 0x"
@@ -105,6 +146,12 @@ public final class S3kKosModuleQueue {
                 info.moduleCount());
         S3kKosModulePreparation preparation =
                 new S3kKosModulePreparation(descriptor, archive);
+        return new PreparedSubmission(descriptor, preparation,
+                exportableAcrossSegment);
+    }
+
+    private HardwareWorkHandle submitPrepared(PreparedSubmission prepared) {
+        S3kKosModuleDescriptor descriptor = prepared.descriptor();
         HardwareWorkHandle handle = timing.submit(new HardwareWorkSubmission(
                 HardwareWorkKind.KOS_MODULE_QUEUE,
                 descriptor.sourceAddress(),
@@ -113,10 +160,16 @@ public final class S3kKosModuleQueue {
                 descriptor.destinationLength(),
                 COMPRESSION_VARIANT,
                 descriptor.moduleCount(),
-                exportableAcrossSegment,
-                preparation));
+                prepared.exportableAcrossSegment(),
+                prepared.preparation()));
         descriptors.put(handle, descriptor);
         return handle;
+    }
+
+    private record PreparedSubmission(
+            S3kKosModuleDescriptor descriptor,
+            S3kKosModulePreparation preparation,
+            boolean exportableAcrossSegment) {
     }
 
     public void prepareQueuedModuleBeforeVSync() {
@@ -128,6 +181,16 @@ public final class S3kKosModuleQueue {
         beforeTimingService(HardwareServiceBoundary.POST_OBJECTS);
         timing.service(HardwareServiceBoundary.POST_OBJECTS);
         afterTimingService(HardwareServiceBoundary.POST_OBJECTS);
+    }
+
+    /**
+     * Runs the native module state step for a parent published by ScreenEvents
+     * after this iteration's direct-queue service, without inventing another
+     * hardware timing boundary. The child remains unprepared until the next
+     * iteration's direct tail.
+     */
+    public void stepHeadModuleAfterDirectTail() {
+        stepHeadArchive();
     }
 
     /**
