@@ -1,7 +1,26 @@
 # Trace validation roadmap
 
-**Status:** active — the ordering the trace work follows until the S1 whole-run route is
-green end to end.
+**Status:** active — the ordering the trace work follows until the project goals below
+are met.
+
+## Project goals
+
+The near-term priority is **stabilisation of the engine and the traces**, not new
+capability. In order:
+
+1. **Headless traces pass for all games.** S1, S2 and S3K, not just the game whose
+   route is currently being walked.
+2. **Visual Trace Tests pass for all games.**
+3. **Visual Trace Tests for multi-segment / complete runs play end to end with no
+   errors.**
+
+These are project goals, not session goals. Everything in *Order of work* below serves
+them; anything that does not is deferred regardless of how interesting it is.
+
+Note the measurement trap before quoting progress against goal 1: **`mvn test` runs zero
+trace tests** — `pom.xml` excludes `**/tests/trace/**` from the default profile. Use
+`-Ptrace-replay -Dmse=off` and wipe `target/surefire-reports` first, or stale XML from
+previous runs will be counted as passes.
 
 ## The bar
 
@@ -45,7 +64,11 @@ Closing these is what converts the route from *replays* to *proves*.
 
 ## Order of work
 
-### 1. Ring-count divergences — in progress
+Each strand is tagged with the project goal it serves. Strands 1 and 2 are pure
+stabilisation and are cross-game; strands 3 and 4 unblock the S1 complete run and are
+prerequisites for goal 3 only.
+
+### 1. Ring-count divergences — in progress · goal 1
 
 Ring count was never compared: `EngineDiagnostics` passed a `-1` sentinel and
 `TraceBinder` skipped negatives. Fixed on the run path (`9e7590efa`) and the per-act
@@ -63,7 +86,7 @@ ahead is one systematic cause. Establish the *direction* of an off-by-one before
 changing anything: engine crediting early and comparator sampling late need opposite
 fixes and both turn the test green.
 
-### 2. Latent desyncs with no fixture — in progress
+### 2. Latent desyncs with no fixture — in progress · goals 1 and 3
 
 Neither is caught today because no committed movie exercises them.
 
@@ -78,7 +101,7 @@ Neither is caught today because no committed movie exercises them.
   (`:2066-2067`) then never writes `f_restart`. Any BK2 containing a game over desyncs
   immediately. The lives write is also 60 frames late for HUD comparison.
 
-### 3. The PLC arming closure — design under review
+### 3. The PLC arming closure — design under review · goal 3
 
 The shape *"entry completes on row f, recorded row f+1 is a lag row"* occurs 15 times
 corpus-wide. `99746ffa9` models it the wrong way round — right 1 time in 15. The
@@ -95,7 +118,7 @@ fall wherever its own 68000 history puts them.
 proceeds.** It depends only on the baseline measurements, it is the pure correctness
 fix, and it shrinks the surface every later phase is measured against.
 
-### 4. The level-load span
+### 4. The level-load span · goal 3
 
 The un-timed span between the counted title-card drain and the counted pre-main-loop
 tail is what finding (1) papers over. Three separate investigations converged on the
@@ -111,7 +134,7 @@ same answer: an **engine-counted load model** for the derivable part plus a
 
 Sequenced after (3) because it needs the same S1 timing-stream infrastructure.
 
-## Later: the light-touch tier
+## Later: the light-touch tier — serves no current goal
 
 The end goal is that a BK2 needs only light-touch processing to be runnable. We are
 nowhere near it, and **the sanctioned home for it already exists** — do not build a
