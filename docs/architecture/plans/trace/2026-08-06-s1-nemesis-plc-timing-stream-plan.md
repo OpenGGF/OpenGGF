@@ -1,8 +1,10 @@
 # Plan: a recorded hardware-timing readiness stream for the Nemesis PLC queue
 
-Date: 2026-08-06 (revised)
+Date: 2026-08-06 (revision 2)
 Status: **Planned, not built.** This revision supersedes the earlier 2026-08-06
-draft at this path in its entirety.
+draft at this path in its entirety. Revision 2 re-sequences the `99746ffa9`
+revert to first, promotes M3 to a stop-gate, adds the `ghz2_2` end-to-end phase,
+and closes an unenforced guard gap.
 
 Governing documents:
 
@@ -22,12 +24,13 @@ propagate.
 |---|---|
 | "ROM code polls `v_plc_patternsleft`" | **Wrong.** `v_plc_patternsleft` has six touches, all inside the PLC service block. The polled gate is `v_plc_buffer`. Review §1. |
 | `compressedLength` must be carried; both sides need a Nemesis scanner; "do not shortcut this" | **Reversed.** Waived, with the XOR-mode bit moved into `compressionVariant`. Review §6. This deletes the largest line item on both sides. |
-| Submit "one `HardwareWorkSubmission` per PLC entry at append/replace" | **Reversed.** Submission is at the arming decision, not at append. Append-time submission creates `ClearPLC` orphans that can never be released under `RECORDED` admission. Phase 4. |
-| "Ordinal allocation across `ClearPLC`/`LoadPLC2` needs measuring before it can be written" | **Dissolved** by submitting at arming. `ClearPLC`/`LoadPLC2` drop *queued, never-armed* entries, which are now never submitted and consume no ordinal on either side. The measurement is downgraded from a blocker to a confirmation (M3). |
-| "The 30-plus segment handoffs are the largest correctness risk" | **Superseded by a larger one.** The largest risk is fail-closed starvation of the level-load / title-card drain and the 21 inter-segment gaps, which the draft did not identify. Review §9; Phase 1 and Phase 4 here. |
+| Submit "one `HardwareWorkSubmission` per PLC entry at append/replace" | **Reversed.** Submission is at the arming decision, not at append. Append-time submission creates `ClearPLC` orphans that can never be released under `RECORDED` admission. Phase 5. |
+| "Ordinal allocation across `ClearPLC`/`LoadPLC2` needs measuring before it can be written" | **Dissolved as an ordinal problem, retained as a producer-ordering problem.** `ClearPLC`/`LoadPLC2` drop *queued, never-armed* entries, which are now never submitted and consume no ordinal on either side. But M3 is **promoted to a stop-gate** for a different reason — the `SignpostArtLoad` ordering hazard, below. |
+| "The 30-plus segment handoffs are the largest correctness risk" | **Superseded by a larger one.** The largest risk is fail-closed starvation of the level-load / title-card drain and the 21 inter-segment gaps, which the draft did not identify. Review §9; Phase 2 and Phase 5 here. |
 | Decision gate 1 ("reopening the registry is a reviewed decision") | **Discharged** by the admission review. |
-| Decision gate 2 ("fixture regeneration is a user decision") | **Discharged** — the user has explicitly allowed regeneration. It is no longer a gate, only a step (Phase 9). |
-| Boundary order `VINT_SERVICE -> PRE_MAIN_LOOP -> objects -> POST_OBJECTS` (from `2026-07-28-s1-s2-plc-service-queues.md`) | **Stale.** Actual order is `VINT_SERVICE` → objects → `POST_OBJECTS` → `PRE_MAIN_LOOP` → `prepareAfterLoop` (`LevelFrameStep.java:144-150`, `HardwareServiceBoundary` javadoc). Phase 11 corrects the doc. |
+| Decision gate 2 ("fixture regeneration is a user decision") | **Discharged** — the user has explicitly allowed regeneration. It is no longer a gate, only a step (Phase 10). |
+| Boundary order `VINT_SERVICE -> PRE_MAIN_LOOP -> objects -> POST_OBJECTS` (from `2026-07-28-s1-s2-plc-service-queues.md`) | **Stale.** Actual order is `VINT_SERVICE` → objects → `POST_OBJECTS` → `PRE_MAIN_LOOP` → `prepareAfterLoop` (`LevelFrameStep.java:144-150`, `HardwareServiceBoundary` javadoc). Phase 12 corrects the doc. |
+| Revision 1's phase order (revert fifth) | **Re-sequenced.** The revert is now Phase 1: it depends only on M7/M8, it is the pure correctness fix, it closes 14 of the 15 cases on its own, and landing it shrinks the surface every later phase is measured against. |
 
 ## Evidence status legend
 
@@ -46,14 +49,14 @@ phase it blocks. **No number in this plan is invented to stand in for one.**
 
 | id | Measurement | Blocks | Method |
 |---|---|---|---|
-| **M1** | For each of the 34 segments of `s1-sonic-complete-withemeralds`, the set of raw frames in `[bk2_frame_offset, bk2_frame_offset + trace_frame_count)` on which the arming path `0x0015F0` executes. Gives the exact per-segment edge count and the run-wide ordinal range. | 6, 8, 9 | Extend the existing probe (see M-method) with the manifest's segment windows. |
-| **M2** | Whether the arming path executes on the first *gap* row immediately after any segment's last recorded row. | 4 (exportability), 6 | Same probe pass as M1. |
-| **M3** | Whether any `ClearPLC` (`sonic.asm:1363`) or `NewPLC` (`:1336`) executes on a recorded row while an entry is armed but not retired, and whether any `LoadPLC`→`ClearPLC` pair occurs inside one raw frame. Confirms the arming-time submission model has no orphan case. | 4 | Add hooks at the reviewed `append begin` `0x001578`, `replace begin` `0x0015AA`, `clear begin` `0x0015DA` boundaries. |
-| **M4** | The `PlcLifecyclePhase` the engine claims on every recorded row of every segment, and whether any row on which `0x0015F0` fires claims anything other than `ORDINARY_LEVEL`. | 4, 6 | Engine-side instrumented dry run over the fixture, cross-referenced against M1. |
-| **M5** | Whether `v_vblank_routine` (`$FFFFF62A`) is `id_VBlank_Levels` (`$08`) on every armed-segment row on which `0x0015F0` fires. The recorder-side equivalent of M4. | 6 | Probe pass; requires adding `VblankRoutine` to `S1Ram.cs`. |
-| **M6** | Whether the engine's arming *decisions* on recorded rows match the ROM's armings 1:1 in count and order, before any edge is applied. A count divergence fails closed but must be known before fixture capture, not after. | 6, 9 | Engine dry run with a diagnostic-only arming log, diffed against M1. |
-| **M7** | Whether the comparator already treats the engine's idle-with-queued diagnostic (`prepared=false, remaining=-1`, `NemesisPlcServiceQueue.java:94-105`) as equal to the recorder's `PlcPatternsLeft == 0` on the denied row. Review §10. | 5, 10 | Focused replay of `ghz2_2` around row 107 with the deferral forced. |
-| **M8** | The full `*TraceReplay` and visual-run baseline immediately before Phase 5's revert: pass set, error counts, first-error frame/field. | 5, 10 | `mvn -Dmse=off -Dtest='*TraceReplay' -DfailIfNoTests=false` plus both visual-run lanes, all three ROM properties. |
+| **M1** | For each of the 34 segments of `s1-sonic-complete-withemeralds`, the set of raw frames in `[bk2_frame_offset, bk2_frame_offset + trace_frame_count)` on which the arming path `0x0015F0` executes. Gives the exact per-segment edge count and the run-wide ordinal range. | 7, 9, 10 | Extend the existing probe (see M-method) with the manifest's segment windows. |
+| **M2** | **Stop-gate.** Whether the arming path executes on the first *gap* row immediately after any segment's last recorded row. | 5 (exportability), 7 | Same probe pass as M1. |
+| **M3** | **Stop-gate.** Whether any `NewPLC` (`sonic.asm:1336`) or `ClearPLC` (`:1363`) executes **in the same `Level_MainLoop` iteration as, and after, an arming** — the `SignpostArtLoad` hazard below. Secondarily, whether any `LoadPLC`→`ClearPLC` pair occurs inside one raw frame. | 5 | Add hooks at the reviewed `append begin` `0x001578`, `replace begin` `0x0015AA`, `clear begin` `0x0015DA` boundaries, plus `SignpostArtLoad` entry, and record intra-frame ordering against `0x0015F0`. |
+| **M4** | The `PlcLifecyclePhase` the engine claims on every recorded row of every segment, and whether any row on which `0x0015F0` fires claims anything other than `ORDINARY_LEVEL`. | 5, 7 | Engine-side instrumented dry run over the fixture, cross-referenced against M1. |
+| **M5** | Whether `v_vblank_routine` (`$FFFFF62A`) is `id_VBlank_Levels` (`$08`) on every armed-segment row on which `0x0015F0` fires. The recorder-side equivalent of M4. | 7 | Probe pass; requires adding `VblankRoutine` to `S1Ram.cs`. |
+| **M6** | Whether the engine's arming *decisions* on recorded rows match the ROM's armings 1:1 in count and order, before any edge is applied. A count divergence fails closed but must be known before fixture capture, not after. | 7, 10 | Engine dry run with a diagnostic-only arming log, diffed against M1. |
+| **M7** | Whether the comparator already treats the engine's idle-with-queued diagnostic (`prepared=false, remaining=-1`, `NemesisPlcServiceQueue.java:94-105`) as equal to the recorder's `PlcPatternsLeft == 0` on the denied row. Review §10. | 1, 6, 11 | Focused replay of `ghz2_2` around row 107 with the deferral forced. |
+| **M8** | The full `*TraceReplay` and visual-run baseline immediately before Phase 1's revert: pass set, error counts, first-error frame/field. | 1, 11 | `mvn -Dmse=off -Dtest='*TraceReplay' -DfailIfNoTests=false` plus both visual-run lanes, all three ROM properties. |
 
 **M-method.** M1, M2, M3 and M5 are all one additional pass of the throwaway
 native probe described in the observability research
@@ -62,27 +65,127 @@ ignores `tools/*`). **`PlcProbe.cs` and `PlcProbe2.cs` already exist in
 `.scratch/` — read them before writing anything new there.** The probe is not part
 of the harness build and must not become one.
 
+### Why M3 is a stop-gate: the `SignpostArtLoad` ordering hazard
+
+**[E]** The ROM's loop tail is:
+
+```
+3032		bsr.w	RunPLC					; run PLC, if any
+3033		bsr.w	OscillateNumDo
+3034		bsr.w	SynchroAnimate
+3035		bsr.w	SignpostArtLoad				; ... and lock left boundary
+```
+
+and `SignpostArtLoad` ends:
+
+```
+3204		moveq	#plcid_Signpost,d0
+3205		bra.w	NewPLC					; add to new PLC queue
+```
+
+**[E]** `NewPLC` (`:1336`) begins with `ClearPLC` (`:1363`). So within one
+`Level_MainLoop` iteration the ROM can arm a head at `3032` and then **wipe the
+queue** at `3035`.
+
+**[I]** The engine inverts that order. `SignpostArtLoad` is a loop-tail subroutine
+in the ROM, but OpenGGF's signpost art load is triggered from object/event code,
+which runs in the object scan — *before* `PRE_MAIN_LOOP`, and therefore before
+Phase 5's submission point. If an arming and a signpost `NewPLC` ever coincide
+with a non-empty queue, the ROM arms the outgoing head and the engine arms the
+incoming one. The fingerprint mismatch fails closed and corrupts nothing, but
+**Phase 5's submission model would be invalid** and would have to be re-specified
+against the ROM's producer ordering rather than patched at the edge.
+
+**[E]** The exposure is bounded and cheap to inspect. `SignpostArtLoad` returns
+early on `v_debuguse` and on `act3`, and latches `v_limitleft2` so it fires **at
+most once per act** — roughly 22 candidate iterations across the emerald run.
+
+**[E]** This is the same retail producer/decoder aliasing that
+`2026-07-28-s1-s2-plc-service-queues.md` made its Task 1 evidence gate
+(*"`ClearPLC` zeroes that longword without clearing the other decoder scalars"*).
+That gate must be **re-answered for the arming site specifically**: the native
+model needed only that clear/replace happen while the decoder was idle, whereas
+the timing port additionally needs it to happen on the same side of the arming in
+both implementations.
+
+**If M3 fires, stop.** Do not reorder the engine's signpost producer to suit the
+port, and do not special-case the affected iteration — either would be a
+trace-shaped fix to a ROM-ordering question. Amend the plan.
+
+---
+
+## Phase 1 — Revert `99746ffa9`
+
+**Mandatory independently of everything else in this plan.** It is the pure
+correctness fix: `99746ffa9`'s model is right 1 time in 15 and the revert is right
+14. If the admission is later withdrawn, or the programme is descheduled behind
+the S3K vertical slice, **this phase still lands.** Nothing below it is a
+prerequisite; it is blocked only on M7 and M8.
+
+Landing it first also shrinks the surface every later phase is measured against:
+after Phase 1 the only remaining S1 arming divergence in the corpus is `ghz2_2`
+107, so any new failure introduced by Phases 2-11 is unambiguously attributable.
+
+**[E]** `99746ffa9` is an ancestor of HEAD and touched 11 files. Revert surface:
+
+| Symbol | File |
+|---|---|
+| `isIterationHeldIntoNextRow` | `trace/TraceExecutionModel.java:67-76` |
+| `markIterationHeldIntoNextRowForReplay`, `markReplayIterationDefersLoopTailPreparation`, `isIterationHeldIntoNextRowForReplay` | `trace/TraceReplayBootstrap.java:605-626` |
+| `representedIterationDefersLoopTailPreparation`, `heldLoopTailPreparation` fields; `markRepresentedIterationDefersLoopTailPreparation()`; the release block in `claim()`; the branch in `prepareAfterLoop()`; the clear in `finish()`; the two `reset()` lines | `game/resources/PlcFrameLifecycleCoordinator.java:25-26, 286-288, 300-301, 421-428, 466-477, 508` |
+| the call at `:318` inside `activatePreparedProductionMarker()` | `trace/live/LiveTraceComparator.java:305-326` |
+| 3 tests | `TestPlcFrameLifecycleCoordinator.java:572, 599, 605, 630` |
+| 4 tests | `TestTraceExecutionModel.java:66, 74, 86, 94` |
+| 1 test (`replaysTheSecondGiantRingAndTheSpecialStageBehindIt`, `:111-119`) | `TestS1CompleteEmeraldVisualRun.java` |
+
+`isVblankStarvedRow` and `markReplayProductionIterationWithoutVblank` are **not**
+part of this commit and must survive untouched.
+
+**Acceptance.**
+
+- The full `*TraceReplay` sweep and both visual-run lanes are re-measured against
+  M8. Expected: the 14 standalone-fixture cases improve or are unaffected
+  (`LiveTraceComparator` is the deferral's only production caller, so the
+  standalone lane never saw it); the emerald visual lane's stop moves **back** to
+  `ghz2_2` 107 or earlier.
+- The new stopping point is confirmed to be `ghz2_2` 107 specifically, not
+  `mz2_3` 101 relocated. If it is anywhere else, stop — the model of the failure
+  is wrong, and every phase below it is built on that model.
+- `TestS1CompleteEmeraldVisualRun`'s second test is removed in the same commit
+  that removes the behaviour it pins; it is re-added in Phase 6 against a
+  synthetic stream and re-verified in Phase 11 against the published one.
+- Frontier log updated with both measurements.
+
 ---
 
 ## Phase 0 — Measurement pass A (M1, M2, M3, M5)
 
-No production change. Produces the numbers Phases 4 and 6 are written against.
+Numbered 0 because it gates the *specification* of Phases 5 and 7 rather than
+their prerequisites; it can run concurrently with Phase 1, which needs none of it.
+
+No production change. Produces the numbers Phases 5 and 7 are written against.
 
 **Deliverable.** A short addendum to the observability research doc carrying: the
-per-segment arming table, the gap-row answer, the clear/replace answer, and the
-V-blank-routine answer. Not a new document — the research doc is the owner.
+per-segment arming table (M1), the gap-row answer (M2), the
+arming-versus-`NewPLC`/`ClearPLC` intra-iteration ordering answer (M3), and the
+V-blank-routine answer (M5). Not a new document — the research doc is the owner.
 
 **Acceptance.** The addendum exists, is committed, and its per-segment arming
-counts sum to a number that Phase 6 can pin as the expected edge count.
+counts sum to a number Phase 7 can pin as the expected edge count.
 
-**Gate.** If M2 is positive — an arming does fall on a gap row after a segment —
-Phase 4's `exportableAcrossSegment = false` decision produces a hard failure at
-that handoff, and the plan must stop and be amended before Phase 6. Do not paper
-over it by exporting the submission.
+**Stop-gates.** Two, and both halt the programme rather than being worked around:
+
+- **M2 positive** — an arming falls on a gap row after a segment. Phase 5's
+  `exportableAcrossSegment = false` then produces a hard failure at that handoff.
+  Do not paper over it by exporting the submission.
+- **M3 positive** — a `NewPLC`/`ClearPLC` follows an arming inside one iteration.
+  Phase 5's submission model is invalid as written; see the hazard note above.
+
+Phase 1 is unaffected by either and proceeds regardless.
 
 ---
 
-## Phase 1 — Bound every PLC-drain consumer
+## Phase 2 — Bound every PLC-drain consumer
 
 Independent of the timing stream and worth landing on its own.
 
@@ -106,13 +209,13 @@ bounded and must fail with a diagnosable message.
 **Acceptance.** `TestSonic1PlcService` (or the owning class) gains a test that a
 never-releasing readiness produces a named failure inside the budget rather than
 hanging. No behaviour change on the passing path; the full S1 `*TraceReplay` set
-keeps M8's baseline.
+keeps Phase 1's post-revert baseline.
 
 ---
 
-## Phase 2 — Kind, wire name, registry, boundary coupling
+## Phase 3 — Kind, wire name, registry, boundary coupling
 
-Smallest self-contained production step. Behaviourally inert until Phase 4
+Smallest self-contained production step. Behaviourally inert until Phase 5
 submits something.
 
 **Work.**
@@ -141,42 +244,75 @@ submits something.
 
 ---
 
-## Phase 3 — Replace the registry guard
+## Phase 4 — Replace the registry guard, and close the trace-import gap
 
-Separate commit from Phase 2 so the guard change is visible in isolation and
+Separate commit from Phase 3 so the guard change is visible in isolation and
 reviewable on its own.
 
-**Work.** Rewrite `TestS1S2PlcComparisonOnlyGuard.timingKindRegistryAdmitsOnlyKosinskiWork`
-(`:79-90`) per admission review §5.5 — five assertions:
+### 4.1 The unenforced prohibition
 
-1. `HardwareWorkKind` values are exactly
-   `{KOS_MODULE_QUEUE, KOS_DECOMPRESSION_QUEUE, NEMESIS_PLC_QUEUE}`.
-2. Kinds whose name contains `PLC` are exactly `{NEMESIS_PLC_QUEUE}`, with the
-   message rewritten to *"S1/S2 PLC readiness is native deterministic service
-   except at the reviewed `Level_MainLoop` arming site"*.
-3. `com.openggf.level.resources.NemesisPlcServiceQueue` does not import
-   `com.openggf.game.timing` — the shared kernel stays clean so S2 cannot inherit
-   the authority through it. **New assertion; this is the substantive
-   replacement.**
-4. The only production source constructing a `HardwareWorkSubmission` with
-   `NEMESIS_PLC_QUEUE` is
-   `com.openggf.game.sonic1.resources.Sonic1RuntimeArtCoordinator`.
-5. The only kind submitted with `compressedLength == 0` is `NEMESIS_PLC_QUEUE`
-   (confines the §6 waiver).
+**[E]** The `com.openggf.trace` ban this design relies on does **not** currently
+cover the classes it adds to the readiness path:
 
-The class's three existing package-isolation tests are **unchanged**.
+- `TestHardwareTimingAuthorityGuard` forbids gameplay owners from reaching
+  `TIMING_PACKAGE_PREFIX = "com.openggf.trace.timing"` (`:28`, `:595-614`) — the
+  *parser* package only. It says nothing about the rest of `com.openggf.trace`.
+- The broader ban lives in
+  `TestS1S2PlcComparisonOnlyGuard.nativePlcServicesDoNotDependOnTracePackages`,
+  whose `PLC_SERVICES` scan list (`:29-31`) is exactly
+  `{Sonic1PlcService, Sonic2PlcService}`.
 
-**Acceptance.** The rewritten class passes; each of the five assertions has a
+**[I]** A plain `import com.openggf.trace.TraceMetadata;` in
+`Sonic1RuntimeArtCoordinator` or `NemesisPlcServiceQueue` therefore trips
+**neither guard**. Closing this is required, not optional hardening.
+
+### 4.2 Work
+
+1. Extend `PLC_SERVICES` (`:29-31`) to include
+   `com.openggf.game.sonic1.resources.Sonic1RuntimeArtCoordinator` and
+   `com.openggf.level.resources.NemesisPlcServiceQueue`. Rename the constant to
+   reflect that it is now the PLC *readiness path*, not just the two services.
+   **This must land in the same commit as, or before, Phase 5** — the guard is
+   worthless if it arrives after the class it is meant to constrain.
+2. Rewrite `timingKindRegistryAdmitsOnlyKosinskiWork` (`:79-90`) per admission
+   review §5.5 — five assertions:
+   1. `HardwareWorkKind` values are exactly
+      `{KOS_MODULE_QUEUE, KOS_DECOMPRESSION_QUEUE, NEMESIS_PLC_QUEUE}`.
+   2. Kinds whose name contains `PLC` are exactly `{NEMESIS_PLC_QUEUE}`, with the
+      message rewritten to *"S1/S2 PLC readiness is native deterministic service
+      except at the reviewed `Level_MainLoop` arming site"*.
+   3. `com.openggf.level.resources.NemesisPlcServiceQueue` does not import
+      `com.openggf.game.timing` — the shared kernel stays clean so S2 cannot
+      inherit the authority through it. **New assertion; the substantive
+      replacement for what the old test protected.**
+   4. The only production source constructing a `HardwareWorkSubmission` with
+      `NEMESIS_PLC_QUEUE` is
+      `com.openggf.game.sonic1.resources.Sonic1RuntimeArtCoordinator`.
+   5. The only kind submitted with `compressedLength == 0` is
+      `NEMESIS_PLC_QUEUE` (confines the §6 waiver).
+
+Note that assertions 2.3 and 4.2.1 are complementary, not redundant: 4.2.1 keeps
+`com.openggf.trace` out of the kernel, 2.3 keeps `com.openggf.game.timing` out of
+it. The kernel must reach neither.
+
+The class's other two package-isolation tests
+(`traceProductionSourcesDoNotDependOnNativePlcServices`,
+`replayAndBootstrapSourcesDoNotReferenceNativePlcServices`) are **unchanged**.
+
+**Acceptance.** The rewritten class passes; each of the six assertions has a
 crafted-violation negative self-test in the style
-`TestHardwareTimingAuthorityGuard` already uses.
+`TestHardwareTimingAuthorityGuard` already uses — including one that adds
+`import com.openggf.trace.TraceMetadata;` to a synthetic coordinator source and
+proves the widened scan list rejects it.
 
 ---
 
-## Phase 4 — The S1 submission path
+## Phase 5 — The S1 submission path
 
-The largest engine phase. Blocked on M2, M3, M4.
+The largest engine phase. Blocked on M2, M3, M4 — and on Phase 4's widened scan
+list, which must not arrive afterwards.
 
-### 4.1 Where the code goes
+### 5.1 Where the code goes
 
 **[E]** Nothing exists today: `Sonic1GameModule` does not override
 `GameModule.createRuntimeArtCoordinator` (`GameModule.java:46-50`) and inherits
@@ -191,7 +327,7 @@ the interface is `S3kRuntimeArtCoordinator` (`:19-91`).
 | 3 | Route `prepareAfterLoop(ORDINARY_LEVEL)` through the coordinator; every other phase keeps calling `queue.prepareHead()` directly | `Sonic1PlcService.java:162-166` |
 | 4 | Expose the head entry's `(romAddr, tileIndex)` and the ROM header word to the coordinator without exposing mutation | `NemesisPlcServiceQueue.java`, `Sonic1PlcService.java` |
 
-### 4.2 Submission point and per-boundary contract
+### 5.2 Submission point and per-boundary contract
 
 **[E]** `HardwareBoundaryDispatch.serviceBoundary` fixes the order:
 
@@ -221,7 +357,7 @@ drain, which reaches the boundaries through
 §9.2 argues why this is a ROM-loop rule and not a carve-out. M4 confirms it holds
 over the fixture.
 
-### 4.3 The submission descriptor
+### 5.3 The submission descriptor
 
 Per admission review §6.3:
 
@@ -248,7 +384,7 @@ so an arming cannot survive a segment boundary. It makes M2's failure mode loud 
 `handoffTo` throws *"non-exportable pending hardware submission at segment end"*
 naming the job (`HardwareTimingReplayPort.java:222-226`).
 
-### 4.4 Claim and retirement
+### 5.4 Claim and retirement
 
 Step 4 claims every ready `NEMESIS_PLC_QUEUE` job in FIFO order and, for each,
 calls the queue's `prepareHead()`. Everything after that — the 3-or-9-pattern
@@ -256,12 +392,12 @@ budget, the per-frame decrement, `ProcessPLC_ShiftCue`'s retirement — stays
 exactly where it is in `NemesisPlcServiceQueue.servicePatterns` (`:52-68`). The
 timing port never touches it.
 
-### 4.5 Package isolation
+### 5.5 Package isolation
 
-**[E]** `Sonic1PlcService`, `Sonic1RuntimeArtCoordinator` and
-`NemesisPlcServiceQueue` may import `com.openggf.game.timing` but never
-`com.openggf.trace` or `com.openggf.trace.timing`
-(`TestS1S2PlcComparisonOnlyGuard`, `TestHardwareTimingAuthorityGuard`).
+`Sonic1PlcService`, `Sonic1RuntimeArtCoordinator` and `NemesisPlcServiceQueue` may
+import `com.openggf.game.timing` but never `com.openggf.trace` in any form.
+**[E]** As Phase 4.1 records, that is only true once Phase 4's scan list has
+landed — today neither guard covers the two new classes.
 `PlcFrameLifecycleCoordinator` is a gameplay owner and gains no timing import at
 all. The route is the one `S3kKosModuleQueue` already uses: hold an injected
 `HardwareTimingService`, ask `timing.isReady(handle)`, never know a trace exists.
@@ -272,8 +408,7 @@ all. The route is the one `S3kKosModuleQueue` already uses: hold an injected
   opportunity; does not resubmit while an arming is unclaimed; submits nothing for
   `LEVEL_TITLE_CARD`, `PALETTE_FADE`, `CREDITS_TEXT`, `SPECIAL_STAGE_RESULTS`,
   `TITLE_SCREEN`, `LEVEL_SELECT` or `CREDITS_DEMO`; the descriptor matches the
-  §4.3 tuple for a known ROM PLC id; the XOR-mode entry produces
-  `"nemesis_xor"`.
+  §5.3 tuple for a known ROM PLC id; the XOR-mode entry produces `"nemesis_xor"`.
 - Java/C# fingerprint parity for a fixed set of S1 PLC entries, asserted from a
   committed language-neutral vector file under
   `src/test/resources/nemesis/plc-submission-vectors.tsv`, consumed by both
@@ -284,53 +419,86 @@ all. The route is the one `S3kKosModuleQueue` already uses: hold an injected
 - `TestS1S2PlcComparisonOnlyGuard` and `TestHardwareTimingAuthorityGuard` green.
 - Live (non-trace) S1 play unchanged: with `LIVE` admission,
   `releasePreparedInFifoOrder` releases in the same boundary, so the arming lands
-  exactly where it does today. A focused S1 `*TraceReplay` subset must keep M8's
-  baseline with no timing stream present.
+  exactly where it does today. A focused S1 `*TraceReplay` subset must keep
+  Phase 1's post-revert baseline with no timing stream present.
 
 ---
 
-## Phase 5 — Revert `99746ffa9`
+## Phase 6 — The `ghz2_2` shape, end to end, against a synthetic stream
 
-Blocked on M7 and M8. Landing this before Phase 6 is deliberate: it is the change
-that fixes 14 of the 15 cases, and it should be measurable on its own.
+**This phase exists because it is the one row the entire programme is for, and
+without it the first end-to-end proof would arrive after Phase 10's expensive
+capture.** It needs no recorder, no published fixture, and no re-record: a
+hand-built `HardwareTimingSchedule` and a two-row synthetic trace are sufficient.
 
-**[E]** `99746ffa9` is an ancestor of HEAD and touched 11 files. Revert surface:
+Blocked on Phase 5. Blocks Phase 10.
 
-| Symbol | File |
-|---|---|
-| `isIterationHeldIntoNextRow` | `trace/TraceExecutionModel.java:67-76` |
-| `markIterationHeldIntoNextRowForReplay`, `markReplayIterationDefersLoopTailPreparation`, `isIterationHeldIntoNextRowForReplay` | `trace/TraceReplayBootstrap.java:605-626` |
-| `representedIterationDefersLoopTailPreparation`, `heldLoopTailPreparation` fields; `markRepresentedIterationDefersLoopTailPreparation()`; the release block in `claim()`; the branch in `prepareAfterLoop()`; the clear in `finish()`; the two `reset()` lines | `game/resources/PlcFrameLifecycleCoordinator.java:25-26, 286-288, 300-301, 421-428, 466-477, 508` |
-| the call at `:318` inside `activatePreparedProductionMarker()` | `trace/live/LiveTraceComparator.java:305-326` |
-| 3 tests | `TestPlcFrameLifecycleCoordinator.java:572, 599, 605, 630` |
-| 4 tests | `TestTraceExecutionModel.java:66, 74, 86, 94` |
-| 1 test (`replaysTheSecondGiantRingAndTheSpecialStageBehindIt`, `:111-119`) | `TestS1CompleteEmeraldVisualRun.java` |
+### 6.1 The shape to reproduce
 
-`isVblankStarvedRow` and `markReplayProductionIterationWithoutVblank` are **not**
-part of this commit and must survive untouched.
+From the probe, `ghz2_2` rows 107-108 (raw 9848-9849):
 
-**Acceptance.**
+```
+raw    order  patsleft  meaning
+9848   3S     0         service, ProcessPLC_ShiftCue retires the head, RunPLC never entered
+9849   RAW    14        lag row: no ProcessPLC service, but the whole of RunPLC runs
+```
 
-- The full `*TraceReplay` sweep and both visual-run lanes are re-measured against
-  M8. Expected: the 14 standalone-fixture cases improve or are unaffected
-  (`LiveTraceComparator` is the deferral's only production caller, so the
-  standalone lane never saw it); the emerald visual lane's stop moves **back** to
-  `ghz2_2` 107 or earlier.
-- The new stopping point is confirmed to be `ghz2_2` 107 specifically, not
-  `mz2_3` 101 relocated. If it is anywhere else, stop — the model of the failure
-  is wrong.
-- `TestS1CompleteEmeraldVisualRun`'s second test is removed with the commit that
-  removes the behaviour it pins; it is re-added in Phase 10 against the stream.
-- Frontier log updated with both measurements.
+The engine must produce: submission at row `f`'s `PRE_MAIN_LOOP`, **denied**;
+row `f+1` executed as a lag row with `VINT_SERVICE` only and no PLC service;
+suppressed-row admission of the `pre_main_loop` edge on that lag row; the
+coordinator's post-service hook claiming it and calling `prepareHead()`, leaving
+`remaining = 14` at row `f+1`'s sample point.
+
+### 6.2 The unknown this de-risks
+
+**[A]** It is not established that the S1 lag-row path reaches
+`TraceSuppressedRowClosure` the way S3K's does. **[E]** S1 lag rows go through
+`LevelFrameStep`'s `VINT_SERVICE`-only entry (`:123-128`) and
+`serviceVBlankOnly(..., LAG)`; **[E]** `applySuppressedRowCompletion`
+(`HardwareTimingReplayPort.java:143-166`) requires `lastAppliedBoundary ==
+VINT_SERVICE` on the latched current row, which that path satisfies. **[A]** What
+is *not* established is that the S1 replay driver invokes the closure at all —
+the closure is currently exercised only by S3K routes.
+
+If it does not, that is a plan amendment, not a bug to patch at the edge: the
+correct fix is to route S1 lag rows through the same closure the contract already
+defines, **not** to invent a second admission path or relax
+`applySuppressedRowCompletion`'s precondition.
+
+### 6.3 Work
+
+1. A focused replay-level test constructing a `HardwareTimingSchedule` with one
+   `NEMESIS_PLC_QUEUE` edge at `(raw_frame = f+1, pre_main_loop, ordinal 0,
+   fingerprint F)`, a two-row trace whose second row is a lag row, and a seeded
+   PLC queue whose head hashes to `F`.
+2. Assert the full sequence: denied at `f`; queue state at `f` matches the ROM's
+   idle-with-queued shape (this is M7's question, and this test is where its
+   answer is pinned); admitted at `f+1`; `remaining` correct at `f+1`; the edge
+   consumed exactly once.
+3. Negative twins on the same fixture: no edge → the arming never happens and the
+   consumer's bounded wait (Phase 2) fails with a named message; edge one row
+   late → structural failure; edge at `post_objects` → rejected at load.
+4. Rewind twin: snapshot on the denied row, restore, replay — the edge is
+   consumed exactly once again.
+
+**Acceptance.** All of the above green, with **no published fixture and no
+recorder involvement**. `TestS1CompleteEmeraldVisualRun`'s
+`replaysTheSecondGiantRingAndTheSpecialStageBehindIt`, removed in Phase 1, is
+re-added here in its synthetic form and re-verified against the real stream in
+Phase 11.
+
+**Gate.** Phase 10's capture does not start until this phase is green. Discovering
+the §6.2 unknown after a 209k-frame capture is the specific outcome this phase
+exists to prevent.
 
 ---
 
-## Phase 6 — Recorder: `S1NemesisPlcTimingEventEngine`
+## Phase 7 — Recorder: `S1NemesisPlcTimingEventEngine`
 
-Blocked on M1, M2, M4, M5, M6. Mirrors the S3K engine's structure; does not
-invent a parallel mechanism.
+Blocked on M1, M2, M4, M5, M6 and Phase 6. Mirrors the S3K engine's structure;
+does not invent a parallel mechanism.
 
-### 6.1 The hook
+### 7.1 The hook
 
 **One** address-filtered `M68K BUS` execute callback at REV01 PC `0x0015F0` —
 `movea.l (v_plc_buffer).w,a0`, the arming path taken.
@@ -349,7 +517,7 @@ Structural FIFO mirroring could recover it, but is strictly weaker than the exac
 observation and requires retaining head identity across an advancing pointer. Do
 not substitute it.
 
-### 6.2 The harness rule this needs amended
+### 7.2 The harness rule this needs amended
 
 **[E]** `tools/bizhawk-headless/CLAUDE.md:176-184` (and `AGENTS.md:179-187`)
 scopes the sole permitted callback exception to S3K:
@@ -378,7 +546,7 @@ never enable diagnostic-hook output, Mono delegate strongly rooted and
 deterministically unregistered — and regularising the existing dynamic-art
 registrations in the same list. Do **not** relax the general prohibition.
 
-### 6.3 The engine
+### 7.3 The engine
 
 Mirror `HardwareTimingEventEngine` (`:14-1434`), not a new shape.
 
@@ -396,7 +564,7 @@ Mirror `HardwareTimingEventEngine` (`:14-1434`), not a new shape.
 - `S1Ram.cs` gains `VblankRoutine = 0xF62A` for the M5 gate. `PlcBuffer 0xF680`,
   `PlcPatternsLeft 0xF6F8`, `FrameCount 0xFE04` already exist (`:24-29`).
 
-### 6.4 Ordinal allocation — the deliberate divergence from S3K
+### 7.4 Ordinal allocation — the deliberate divergence from S3K
 
 **[E]** `HardwareTimingEventEngine` assigns ordinals at mirror creation and keeps
 a run-wide ledger across gaps, using a null writer to advance it outside
@@ -420,7 +588,7 @@ observed inside an armed segment under a different V-blank routine is a **hard
 recorder failure**, not a silent skip — it means M4/M5 were wrong and the engine
 and recorder gates have diverged.
 
-### 6.5 Plumbing
+### 7.5 Plumbing
 
 **[E]** The S1 path has no timing file today.
 
@@ -442,7 +610,7 @@ Presence of the *file* is the whole discovery mechanism.
 **Acceptance.**
 
 - New `S1NemesisPlcTimingEventEngineTests`, registered in `BuildRegistry`:
-  fingerprint golden values matching the Phase 4 vector file; the ordinal ledger
+  fingerprint golden values matching the Phase 5 vector file; the ordinal ledger
   advances only inside armed segments; an arming under a non-`$08` V-blank routine
   inside an armed segment throws; `Reset` clears the ledger; the emitted line is
   byte-exact.
@@ -453,7 +621,7 @@ Presence of the *file* is the whole discovery mechanism.
 
 ---
 
-## Phase 7 — Rewind ledger coverage
+## Phase 8 — Rewind ledger coverage
 
 **[E]** `HardwareTimingService` (`REWIND_KEY = "hardware-timing"`) and
 `HardwareTimingReplayPort` (`"hardware-timing-replay"`) already capture the
@@ -483,12 +651,11 @@ missing is the S1 side.
   arming admission, in both `LIVE` and `RECORDED` modes, reproduce the same
   readiness edge and consume the same future edge exactly once — the contract's
   explicit requirement.
-- A restore across the `ghz2_2` deferral re-consumes the suppressed-row edge
-  exactly once.
+- Phase 6's rewind twin still green.
 
 ---
 
-## Phase 8 — Segment handoff and ordinal continuity
+## Phase 9 — Segment handoff and ordinal continuity
 
 Blocked on M1, M2.
 
@@ -500,7 +667,7 @@ fingerprint)`. `validateSchedule` (`:364-413`) enforces per-kind `+1` ordinal
 contiguity *within* a schedule. `HardwareTimingStreamLoader` bounds `raw_frame` to
 `[0, traceFrameCount)` (`:88-91`).
 
-**[I]** Under Phase 4's `exportableAcrossSegment = false` and Phase 6.4's
+**[I]** Under Phase 5's `exportableAcrossSegment = false` and Phase 7.4's
 armed-segment-only ledger, the intended steady state at every one of the 33
 handoffs is: **zero pending submissions, zero unconsumed edges, and the next
 segment's first ordinal equal to the previous segment's last + 1.**
@@ -522,16 +689,16 @@ the negative coverage the contract's failure semantics require.
 
 ---
 
-## Phase 9 — Fixture regeneration
+## Phase 10 — Fixture regeneration
 
-Blocked on M1, M6 and Phases 4-8 being green. Regeneration is explicitly allowed
-and is not a separate approval gate; the **publication** contract still applies in
-full.
+Blocked on M1, M6, **Phase 6 green**, and Phases 5, 7, 8, 9 green. Regeneration
+is explicitly allowed and is not a separate approval gate; the **publication**
+contract still applies in full.
 
 **Scope.** `s1-sonic-complete-withemeralds` only. **[E]** No other S1 fixture
 needs one: standard S1 fixtures are single-act and never cross a level-load
 boundary, `s1-ghz-maze-roundtrip` has only bridge splits, and the 14
-non-`ghz2_2` cases are fixed by Phase 5's revert, whose only production consumer
+non-`ghz2_2` cases are fixed by Phase 1's revert, whose only production consumer
 was `LiveTraceComparator`. No S2 fixture and **no S3K fixture** — admission review
 §7.4.
 
@@ -542,7 +709,7 @@ was `LiveTraceComparator`. No S2 fixture and **no S3K fixture** — admission re
    as immutable evidence *before* comparing.
 3. Categorise every byte-level delta against a named cause. The expected deltas
    are: 34 new `hardware_timing.jsonl` files, and the `trace_schema` integer if
-   Phase 12 has landed. **Any physics or aux delta is unexplained and blocks
+   Phase 13 has landed. **Any physics or aux delta is unexplained and blocks
    publication.**
 4. Cross-check the total edge count against M1 and the ordinal range against M6.
 5. Obtain explicit user approval of the exact candidate, then copy byte-for-byte.
@@ -553,23 +720,23 @@ was `LiveTraceComparator`. No S2 fixture and **no S3K fixture** — admission re
 
 **Acceptance.** Committed tests use frozen literal expectations and must not
 compute them by invoking the recorder that produced the candidate. The fixture
-loads, validates under `tools/traces/validate_trace_v5.py`, and Phase 10 runs
+loads, validates under `tools/traces/validate_trace_v5.py`, and Phase 11 runs
 against it.
 
 ---
 
-## Phase 10 — End-to-end acceptance
+## Phase 11 — End-to-end acceptance
 
 - Both lanes of `TestS1CompleteEmeraldVisualRun` pass at their current pins;
-  `replaysTheSecondGiantRingAndTheSpecialStageBehindIt` is restored, now passing
-  against the stream rather than against the deferral.
+  `replaysTheSecondGiantRingAndTheSpecialStageBehindIt` is verified against the
+  published stream, having already passed against Phase 6's synthetic one.
 - The lane's pin then moves, and the new stopping point is confirmed to be a
   **different** error — not `ghz2_2` 107 or `mz2_3` 101 relocated.
 - `TestS1Mz3CompleteRunTraceReplay` and the rest of the S1 `*TraceReplay` fleet
-  keep M8's pass set. The other 14 cases live there and must be fixed by the
-  revert alone, with no timing stream present.
+  keep Phase 1's post-revert pass set. The other 14 cases live there and must be
+  fixed by the revert alone, with no timing stream present.
 - `TestHardwareTimingAuthorityGuard` green, **unmodified**.
-  `TestS1S2PlcComparisonOnlyGuard` green with the Phase 3 replacement.
+  `TestS1S2PlcComparisonOnlyGuard` green with the Phase 4 replacement.
   `TestCommittedHardwareTimingFixtures` green.
 - All previously-green non-LBZ S3K replays and the required S3K
   bootstrap/loading guards green.
@@ -577,19 +744,20 @@ against it.
   acceptance check has no S1 analogue; the equivalent evidence is that a
   no-timing-stream S1 replay of the same acts produces identical queue columns.
 - Frontier log updated with command, commit/worktree context, pass/fail, error
-  count and first-error frame/field for each of Phase 5, Phase 8 and Phase 10.
+  count and first-error frame/field for each of Phase 1, Phase 9 and Phase 11.
 
 ---
 
-## Phase 11 — Documentation
+## Phase 12 — Documentation
 
 - Amend the cross-game contract's Completion-event-schema section with the
   scoped `compressedLength` waiver (admission review §6), and move `PLC_QUEUE`
   from the non-authoritative candidate list to *admitted as `NEMESIS_PLC_QUEUE`,
   scoped to `Level_MainLoop`'s `RunPLC`*, leaving `LEVEL_LOAD`, VDP transfer
   fences and plane-draw fences rejected/pending as they are.
-- Correct `2026-07-28-s1-s2-plc-service-queues.md`'s stale boundary order and
-  record that its deferred-fallback clause has now been exercised.
+- Correct `2026-07-28-s1-s2-plc-service-queues.md`'s stale boundary order, and
+  record both that its deferred-fallback clause has now been exercised and how M3
+  re-answered its Task 1 producer/decoder aliasing gate at the arming site.
 - Update the *Sonic 1/2 Native PLC Readiness* and *Hardware-Timing Replay Input
   Exception* entries in `docs/status/known-discrepancies.md`.
 - Update `plc-system` (and `s1-trace-replay` if it names the deferral) in
@@ -602,7 +770,7 @@ against it.
 
 ---
 
-## Phase 12 — Schema bump
+## Phase 13 — Schema bump
 
 Per the user's decision: `trace_schema` 5 → 6, **no compatibility handling, no
 shim, no migration path**.
@@ -616,11 +784,11 @@ and the `trace_schema` integer in every committed `metadata.json` and
 fallback, so a partial bump leaves the whole suite red. This is a mechanical
 integer re-stamp — no payload byte changes — but it touches the entire corpus.
 
-Sequence it **last**, after Phase 9's publication, so the emerald run is captured
+Sequence it **last**, after Phase 10's publication, so the emerald run is captured
 and approved once rather than twice.
 
 **Acceptance.** Every committed fixture loads; the full `*TraceReplay` sweep
-matches Phase 10's result exactly; `validate_trace_v5.py` (renamed to match)
+matches Phase 11's result exactly; `validate_trace_v5.py` (renamed to match)
 accepts the corpus.
 
 ---
@@ -628,21 +796,33 @@ accepts the corpus.
 ## Phase dependency summary
 
 ```
-M1 M2 M3 M5 ── Phase 0 ─┬─────────────────────────────┐
-                        │                             │
-M4 ─────────────────────┤                             │
-                        v                             v
-        Phase 1 ──> Phase 2 ──> Phase 3 ──> Phase 4 ──> Phase 6 ──> Phase 8
-                                                │           │          │
-M7 M8 ──────────────> Phase 5 ──────────────────┘           │          │
-                                                            v          v
-                                            Phase 7 ──> Phase 9 ──> Phase 10
-                                                                       │
-                                                        Phase 11 ──────┤
-                                                                       v
-                                                                   Phase 12
+M7 M8 ─────────────> Phase 1  (revert; MANDATORY, independent of all below)
+                        │
+M1 M2 M3 M5 ─> Phase 0 ─┤   (concurrent with Phase 1; stop-gates on M2 and M3)
+                        │
+                        v
+        Phase 2 ──> Phase 3 ──> Phase 4 ──> Phase 5 ──> Phase 6 ──> Phase 7
+                                              ^  ^         │           │
+M4 ───────────────────────────────────────────┘  │         │           │
+M6 ──────────────────────────────────────────────┼─────────┼───────────┤
+                                                 │         │           │
+                              Phase 8 <───────────┘         │           │
+                                 │                          │           │
+                              Phase 9 <──────── M1 M2       │           │
+                                 │                          │           │
+                                 └────> Phase 10 <──────────┘  (gated on Phase 6)
+                                            │
+                                        Phase 11
+                                            │
+                            Phase 12 ───────┤
+                                            v
+                                        Phase 13
 ```
 
-Phases 1, 2, 3, 5 and 7 are independently landable and independently verifiable.
-Phase 5 is the one that moves the frontier on its own, and should be measured
-alone.
+Edges worth stating explicitly, because the table above carries them and a
+diagram flattens them: **M4** blocks Phases 5 and 7; **M6** blocks Phases 7 and
+10; **M7** blocks Phases 1, 6 and 11; **M1/M2** additionally block Phase 9.
+
+Phases 1, 2, 3, 4 and 8 are independently landable and independently verifiable.
+**Phase 1 is the one that moves the frontier on its own, is mandatory regardless
+of whether anything else here proceeds, and must be measured alone.**

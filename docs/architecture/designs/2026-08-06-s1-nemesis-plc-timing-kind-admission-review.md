@@ -25,9 +25,9 @@ this review must survive).
 
 | Question | Answer |
 |---|---|
-| Does S1 have a polled, gameplay-visible PLC readiness gate? | **Yes** — but on `v_plc_buffer` (`$FFFFF680`), not `v_plc_patternsleft`. Nine gameplay-visible poll sites, four of them unbounded frame-locked spin loops. §2. |
+| Does S1 have a polled, gameplay-visible PLC readiness gate? | **Yes** — but on `v_plc_buffer` (`$FFFFF680`), not `v_plc_patternsleft`. Eight reachable gameplay-visible poll sites, four of them unbounded frame-locked spin loops. §2. |
 | Is the timing already reproduced by lag, phase, or deterministic queue service? | **No.** The discriminator is sub-frame 68000 cycle position; the two outcomes leave an identical recorded row shape and identical lag classification. §3. |
-| What exactly does the stream buy? | **One row, in one fixture.** Reverting `99746ffa9` is correct on 1,169 of 1,170 measured armings. The stream exists for `ghz2_2` 107. This is stated up front because it is the strongest argument against the change. §4. |
+| What exactly does the stream buy? | **One row, in one fixture — but deterministically, every run.** Reverting `99746ffa9` is correct on 1,169 of 1,170 measured armings. The stream exists for `ghz2_2` 107, which is not a rare event but a fixed property of this BK2. §4. |
 | Does it drag the S3K fixture corpus with it? | **No** — and this is the decisive structural difference from the rejected `LEVEL_LOAD` proposal. §7.3. |
 | Is the `compressedLength` waiver granted? | **Yes, with an amendment.** Waived; the mode bit must move into `compressionVariant` rather than being silently dropped. §6. |
 | Does `TestHardwareTimingAuthorityGuard` need editing? | **No.** It holds no kind literals. §8.2. |
@@ -96,7 +96,8 @@ engine already parses today.
 ### 2.2 Criterion 2 — the ROM exposes a readiness value polled by ordinary main-loop code
 
 **Satisfied, on `v_plc_buffer`.** Complete inventory of `tst.l (v_plc_buffer).w`
-readiness polls, nine gameplay-visible plus one service-internal:
+readiness polls — ten sites: one service-internal, eight reachable
+gameplay-visible, and one on an object the game never spawns:
 
 | # | Site | Routine | Shape |
 |---|---|---|---|
@@ -109,7 +110,7 @@ readiness polls, nine gameplay-visible plus one service-internal:
 | 7 | `_incObj/7E, 7F Special Stage Results…asm:30` | `SSR_ChkPLC` (Obj 7E routine 0) | frame-sliced gate |
 | 8 | `_incObj/39 Game Over.asm:18` | `Over_ChkPLC` (Obj 39 routine 0) | frame-sliced gate |
 | 9 | `_incObj/85,84,86 Boss - FZ Main…asm:157` | `BossFinal_Eggman_Wait` | frame-sliced gate |
-| 10 | `_incObj/4A Unused - Special Stage Entry.asm:20` | `Van_ChkPLC` | frame-sliced gate; unreferenced object |
+| 10 | `_incObj/4A Unused - Special Stage Entry.asm:20` | `Van_ChkPLC` | frame-sliced gate; **object never spawned — does not count toward the eight** |
 
 Two are worth quoting because they are the sharpest.
 
@@ -181,10 +182,10 @@ write — happens inside row `f+1`.
 **Satisfied at the level of the kind. Not demonstrated at the level of the
 15 instances, and this review will not pretend otherwise.**
 
-For the kind: §2.2's ten poll sites include level-select input acceptance,
-title-card duration, credits-page duration, end-of-act card start, Game Over card
-start, and the Final Zone boss's start *and RNG stream*. PLC readiness is as
-gameplay-visible as anything in the game.
+For the kind: §2.2's eight reachable poll sites include level-select input
+acceptance, title-card duration, credits-page duration, end-of-act card start,
+Game Over card start, and the Final Zone boss's start *and RNG stream*. PLC
+readiness is as gameplay-visible as anything in the game.
 
 For the instances, an honest reading of the probe data: in all 15 measured cases
 the arming position within `{f, f+1}` has **no downstream service-schedule
@@ -271,11 +272,42 @@ exists for the fifteenth**, `ghz2_2` 107 — which the emerald run's visual lane
 must cross to reach `mz2_3` at all, and which `LiveTraceComparator:318` is the
 sole production consumer of.
 
-Three options were weighed:
+### 4.1 "One row in 383,502 frames" is the wrong unit, and undersells it
 
-1. **Revert only, and pin the frontier at `ghz2_2` 107.** Cheapest. Leaves the
-   whole-run visual lane permanently blocked one segment into the run, and leaves
-   a known-unmodellable divergence with no owner.
+The rarity figure is a *frequency over frames*, and frequency is the wrong frame
+of reference for a deterministic replay system. Three corrections, because the
+1-in-383,502 number will otherwise be read as "rare, therefore ignorable":
+
+1. **It is not stochastic. It is a fixed property of this BK2.** The same movie
+   drives the same ROM through the same code path, so raw 9849 arms on the lag
+   row in *every* replay and in *every* regeneration of this fixture. The correct
+   statement is not "this happens rarely" but "this happens **always**, at one
+   known place". A revert-only programme does not have a small chance of failing;
+   it fails, every time, at the same row.
+2. **The blast radius is the whole run, not the row.** `ghz2_2` is segment 2 of
+   34. Revert-only pins the emerald visual lane there **permanently**, which
+   forfeits every downstream frontier the lane exists to measure — the 21 act
+   boundaries, the special-stage detours, the whole-run ring and results
+   comparisons. The cost is not one red row; it is 32 segments of unmeasured
+   route.
+3. **The rate is a per-capture expectation, not a one-off.** One `RAW` per ~1,170
+   armings means each future complete-run capture carries roughly **0.5 expected
+   occurrences** of this shape. It is not a `ghz2_2` quirk that could be worked
+   around once; it is a recurring feature of S1 whole-run capture, and every
+   cheap workaround for it — a zone predicate, a row exception, a frame-number
+   branch, a known-failing-trace carve-out — is forbidden outright by hard
+   rule 3.
+
+None of this changes the honest accounting above: the revert does the bulk of the
+work and should land first and separately. What it changes is the conclusion
+drawn from the accounting. The residue is small, permanent, load-bearing, and has
+no other owner.
+
+### 4.2 Options weighed
+
+1. **Revert only, and pin the frontier at `ghz2_2` 107.** Cheapest. Per §4.1,
+   leaves the whole-run visual lane permanently blocked at segment 2 of 34 and
+   leaves a known-unmodellable, recurring divergence with no owner.
 2. **Model it from ROM state.** Ruled out by measurement — the discriminator is
    not in any ROM-visible state at frame granularity.
 3. **The recorded stream.** What this review proposes.
@@ -391,12 +423,20 @@ post-change assertions in the same class:
 5. **The fingerprint waiver is confined.** The only kind submitted with
    `compressedLength == 0` is `NEMESIS_PLC_QUEUE` (§6.5).
 
-The three existing package-isolation tests in that class
-(`nativePlcServicesDoNotDependOnTracePackages`,
-`traceProductionSourcesDoNotDependOnNativePlcServices`,
-`replayAndBootstrapSourcesDoNotReferenceNativePlcServices`) are **unchanged and
-must stay green**. `Sonic1PlcService` gains an import of `com.openggf.game.timing`,
-which none of them forbids.
+6. **The trace-import ban actually covers the new classes.**
+   `nativePlcServicesDoNotDependOnTracePackages`'s `PLC_SERVICES` scan list
+   (`:29-31`) must gain
+   `com.openggf.game.sonic1.resources.Sonic1RuntimeArtCoordinator` and
+   `com.openggf.level.resources.NemesisPlcServiceQueue`. Without this the
+   `com.openggf.trace` prohibition asserted throughout §7 is unenforced for
+   exactly the two classes this design adds to the readiness path — see §7.5.
+
+Of the class's three existing package-isolation tests,
+`traceProductionSourcesDoNotDependOnNativePlcServices` and
+`replayAndBootstrapSourcesDoNotReferenceNativePlcServices` are **unchanged and
+must stay green**, and `nativePlcServicesDoNotDependOnTracePackages` changes only
+by widening its scan list per item 6. `Sonic1PlcService` gains an import of
+`com.openggf.game.timing`, which none of them forbids.
 
 ---
 
@@ -613,10 +653,22 @@ filename-construction and parser-isolation scans (`:281`, `:595-614`).
 The design keeps every constraint it enforces:
 
 - `Sonic1PlcService`, `Sonic1RuntimeArtCoordinator` and `NemesisPlcServiceQueue`
-  import `com.openggf.game.timing` only — never `com.openggf.trace.timing`. This
-  is the same route `S3kKosModuleQueue` uses: it holds an injected
+  import `com.openggf.game.timing` only — never `com.openggf.trace` in any form.
+  This is the same route `S3kKosModuleQueue` uses: it holds an injected
   `HardwareTimingService` and asks `timing.isReady(handle)`, and never knows a
   trace exists.
+
+  **That prohibition is currently unenforced for the two new classes, and the
+  plan must close the gap.** `TestHardwareTimingAuthorityGuard` forbids gameplay
+  owners from reaching `com.openggf.trace.timing` — the parser package — but says
+  nothing about the rest of `com.openggf.trace`. The broader ban lives in
+  `TestS1S2PlcComparisonOnlyGuard.nativePlcServicesDoNotDependOnTracePackages`,
+  whose `PLC_SERVICES` scan list (`:29-31`) contains exactly
+  `Sonic1PlcService` and `Sonic2PlcService`. A plain
+  `import com.openggf.trace.TraceMetadata;` in `Sonic1RuntimeArtCoordinator` or
+  `NemesisPlcServiceQueue` would therefore trip **neither** guard. Extending the
+  scan list to both new classes is a required part of the registry-guard change,
+  not an optional hardening.
 - `PlcFrameLifecycleCoordinator` is a gameplay owner and gains no timing-parser
   import.
 - The consumption point does not move, so the guard's exemption list
@@ -745,15 +797,37 @@ Consequences, all of them intentional:
 
 ### 9.3 What remains, and what must be measured before it is claimed closed
 
-Two residual hazards, both with a named measurement in the plan:
+Three residual hazards, each with a named measurement in the plan:
 
 - Whether any recorded row in any of the 34 segments claims a phase other than
   `ORDINARY_LEVEL` while an arming fires — an end-of-act `PALETTE_FADE` inside an
   armed window would produce an engine/recorder count mismatch.
 - Whether any arming fires on the first gap row immediately after a segment's
   last recorded row — the failure-mode-3 trigger.
+- **`SignpostArtLoad` producing a queue reset in the same iteration as an
+  arming.** `Level_MainLoop` calls `RunPLC` at `sonic.asm:3032` and
+  `SignpostArtLoad` three instructions later at `:3035`; `SignpostArtLoad` ends
+  `bra.w NewPLC` (`:3205`), and `NewPLC` (`:1336`) begins with `ClearPLC`. So the
+  ROM can arm a head and then wipe the queue **within one loop tail**. The
+  engine's signpost-triggered producer runs in the object scan — *before*
+  `PRE_MAIN_LOOP` — inverting the order. If both ever coincide with a non-empty
+  queue, the two sides arm different heads: the ROM the outgoing one, the engine
+  the incoming one. The fingerprint fails closed rather than corrupting anything,
+  but the submission model of §7.1 would be invalid and would have to be
+  re-specified against the ROM's producer ordering, not patched. The exposure is
+  bounded: `SignpostArtLoad` returns early on act 3 and in debug, and latches
+  `v_limitleft2` so it fires at most **once per act** — roughly 22 candidate
+  iterations across the emerald run, which is exactly what the measurement
+  inspects. This is the same retail producer/decoder aliasing that
+  `2026-07-28-s1-s2-plc-service-queues.md` flagged as its Task 1 evidence gate;
+  that gate must be re-answered for the arming site specifically, because the
+  native model only needed clear/replace to occur while the decoder was idle,
+  whereas the timing port additionally needs it to occur on the same side of the
+  arming on both implementations.
 
-Both are answerable from the existing probe. Neither is guessed at here.
+All three are answerable from the existing probe. None is guessed at here, and
+the third is a **stop-gate**: if it fires, the plan halts and is amended rather
+than proceeding to capture.
 
 ### 9.4 A defence in depth that costs nothing
 
@@ -813,11 +887,15 @@ the registry guard replaced as specified in §5.5 and
 `TestHardwareTimingAuthorityGuard` untouched.
 
 Implement per
-[`../plans/trace/2026-08-06-s1-nemesis-plc-timing-stream-plan.md`](../plans/trace/2026-08-06-s1-nemesis-plc-timing-stream-plan.md),
-whose phases 0-2 are measurement and are prerequisites for specifying phases 4
-and 6.
+[`../plans/trace/2026-08-06-s1-nemesis-plc-timing-stream-plan.md`](../plans/trace/2026-08-06-s1-nemesis-plc-timing-stream-plan.md).
+Its Phase 0 is measurement and gates the specification of the submission model
+and the recorder; its Phase 1 — reverting `99746ffa9` — is **mandatory
+independently of this admission**, closes 14 of the 15 cases on its own, and
+should land first and be measured alone.
 
-The honest summary for anyone approving this: it buys one row of one fixture
-today, and it buys a correct owner for a class of divergence that has no other
-owner. The first half of that sentence is why it should be scheduled behind the
-S3K vertical slice; the second is why it should be built rather than papered over.
+The honest summary for anyone approving this: it buys one row of one fixture, but
+it buys that row *deterministically and permanently* (§4.1), and it buys a correct
+owner for a recurring class of divergence that has no other owner and whose every
+cheap workaround is forbidden by hard rule 3. The small size of the residue is why
+this should be scheduled behind the S3K vertical slice; its permanence is why it
+should be built rather than papered over.

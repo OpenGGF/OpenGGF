@@ -63552,13 +63552,15 @@ to synthesize a POST phase on a VBLANK-only row.
   rebutted immediately. Measured over the disassembly: `v_plc_patternsleft` has
   **six** touches in the whole program (`sonic.asm:1382, 1397, 1415, 1432, 1444,
   1476`), every one inside `RunPLC`/`ProcessPLC*`, **zero** external readers, and
-  no wait loop anywhere. `v_plc_buffer` has nine gameplay-visible `tst.l` polls —
-  four unbounded spin loops (`LevelSelect` 2203, `Level_TtlCardLoop` 2841,
-  `SS_NormalExit` 3412, `Cred_WaitLoop` 3888) and five object-dispatcher gates
-  (Obj 3A `:29`, Obj 7E `:30`, Obj 39 `:18`, Obj 4A `:20`, and
+  no wait loop anywhere. `v_plc_buffer` has eight *reachable* gameplay-visible
+  `tst.l` polls — four unbounded spin loops (`LevelSelect` 2203,
+  `Level_TtlCardLoop` 2841, `SS_NormalExit` 3412, `Cred_WaitLoop` 3888) and four
+  object-dispatcher gates (Obj 3A `:29`, Obj 7E `:30`, Obj 39 `:18`, and
   `BossFinal_Eggman_Wait` `:157`, which also seeds the Final Zone RNG once per
-  waiting frame). `SignpostArtLoad` (3186-3208) reads no PLC state at all — it is
-  a camera-triggered `NewPLC` *writer*, i.e. a mid-gameplay queue reset.
+  waiting frame). A ninth, `Van_ChkPLC` (Obj 4A `:20`), sits on an object the game
+  never spawns. `SignpostArtLoad` (3186-3208) reads no PLC state at all — it is a
+  camera-triggered `NewPLC` *writer*, i.e. a mid-gameplay queue reset, and §9.3 of
+  the review now treats its loop-tail position as a stop-gate hazard.
 - **What the stream is worth, stated up front.** Census over 383,502 probed
   frames: 1,170 armings, and the "arm falls into the next raw frame" shape occurs
   **once** (`ghz2_2` 9849). Reverting `99746ffa9` is therefore correct on
@@ -63669,3 +63671,64 @@ to synthesize a POST phase on a VBLANK-only row.
 - **No tolerance was loosened and no ring carve-out added.** The `9e7590efa`
   run-path change is unaffected: no test under `tests/trace/runs` fails on `rings`
   in either sweep.
+
+## 2026-08-06 - Review pass on `0a002ac3f`: approve with changes; revert re-sequenced to first
+
+- **Command.** None. Documents-only follow-up on the adversarial review of the
+  `NEMESIS_PLC_QUEUE` admission. No Maven run, no probe pass, no engine or
+  recorder change. Still `develop`, shared working tree, no suite baseline taken.
+- **Verdict received: approve with required changes.** The admission itself was
+  independently confirmed — the `v_plc_buffer` gate clears the contract's bar, the
+  fingerprint waiver plus the XOR-mode amendment is sufficient (nothing
+  identity-bearing left outside the tuple), the submit-at-arming dissolution of the
+  ordinal problem is genuine, the starvation mitigation is adequate, and no
+  deferred measurement was substituted with a guess.
+- **The `99746ffa9` revert is now Phase 1, and is mandatory independently of the
+  admission.** It depends only on M7/M8, not on any other phase; it is the pure
+  correctness fix (right 14 times in 15 where the current model is right once);
+  and landing it first means the only remaining S1 arming divergence in the corpus
+  is `ghz2_2` 107, so any later regression is unambiguously attributable. If the
+  admission is withdrawn or the programme is descheduled behind the S3K slice,
+  this phase still lands.
+- **`SignpostArtLoad` promoted to a stop-gate (M3).** `Level_MainLoop` calls
+  `RunPLC` at `sonic.asm:3032` and `SignpostArtLoad` three instructions later at
+  `:3035`; `SignpostArtLoad` ends `bra.w NewPLC` (`:3205`) and `NewPLC` (`:1336`)
+  begins with `ClearPLC`. So the ROM can arm a head and wipe the queue **inside one
+  loop tail**, whereas the engine's signpost producer runs in the object scan —
+  before `PRE_MAIN_LOOP`, inverting the order. If the two ever coincide with a
+  non-empty queue the sides arm different heads and the submission model is
+  invalid (fails closed, but invalid). Exposure is bounded: `SignpostArtLoad`
+  returns early on debug and act 3 and latches `v_limitleft2`, so it fires at most
+  once per act — ~22 candidate iterations. This re-opens, at the arming site
+  specifically, the Task 1 producer/decoder aliasing gate from
+  `2026-07-28-s1-s2-plc-service-queues.md`.
+- **New Phase 6: the `ghz2_2` shape end-to-end against a synthetic stream**, before
+  the fixture capture. Needs no recorder and no published fixture — a hand-built
+  schedule and a two-row trace whose second row is a lag row. It exists to settle
+  an `[A]`-grade unknown: `applySuppressedRowCompletion` requires
+  `lastAppliedBoundary == VINT_SERVICE`, which S1's lag-row path satisfies, but it
+  is **not** established that the S1 replay driver invokes
+  `TraceSuppressedRowClosure` at all — the closure is exercised only by S3K routes
+  today. Discovering that after a 209k-frame capture is what the phase prevents.
+- **Guard gap closed.** The plan asserted the new classes may not import
+  `com.openggf.trace`, but nothing enforced it:
+  `TestHardwareTimingAuthorityGuard` bans only `com.openggf.trace.timing` from
+  gameplay owners, and `nativePlcServicesDoNotDependOnTracePackages` scans exactly
+  `{Sonic1PlcService, Sonic2PlcService}` (`:29-31`). A plain
+  `import com.openggf.trace.TraceMetadata;` in `Sonic1RuntimeArtCoordinator` or
+  `NemesisPlcServiceQueue` tripped neither. The scan list widens to both, in the
+  same commit as or before the coordinator lands.
+- **Framing corrected: the `ghz2_2` divergence is deterministic, not rare.** The
+  same BK2 drives the same ROM path, so raw 9849 arms on the lag row in every
+  replay and every regeneration — "one row in 383,502 frames" is a frequency over
+  frames and the wrong unit. Revert-only does not *risk* failing; it fails every
+  time, at segment 2 of 34, forfeiting the 21 act boundaries and the special-stage
+  detours the lane exists to measure. At one `RAW` per ~1,170 armings each future
+  complete-run capture carries ~0.5 expected occurrences, and hard rule 3 forbids
+  every cheap workaround.
+- **Count correction.** The previous entry said nine gameplay-visible
+  `v_plc_buffer` polls; the reachable count is **eight**. `Van_ChkPLC` (Obj 4A
+  `:20`) sits on an object the game never spawns. The previous entry has been
+  corrected in place; the argument is unaffected.
+- **Route position unchanged.** No engine change; pins stay at
+  `stopAfterSegment(3)` and `stopAfterSegmentBody(11)`.
