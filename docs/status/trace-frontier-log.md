@@ -64097,3 +64097,37 @@ to synthesize a POST phase on a VBLANK-only row.
 - Command: `mvn -Ptrace-replay -Dmse=off -DforkCount=1
   -Dsurefire.reportsDirectory=target/rep-three -Dtest=<4 focused classes>` with
   all three ROM paths, JDK 21.
+
+## 2026-08-06 - SLZ foreground pylon unloaded a slot the ROM never frees
+
+- Two S1 frontiers advanced, neither closed:
+  `TestS1Slz1CompleteRunTraceReplay` 11 errors first at frame 855
+  (`rings` 2 -> 1) becomes 10 errors first at frame 2422 (`rings` 1 -> 0);
+  `TestS1Slz3CompleteRunTraceReplay` 28 errors first at frame 3346
+  (`rings` 4 -> 3) becomes 25 errors first at frame 3379 (`rings` 4 -> 3).
+  `TestS1Slz2CompleteRunTraceReplay` stays green.
+- ROM `Pyl_Display` recomputes obX/obScreenY from the camera every frame and
+  ends in `bra.w DisplaySprite` (docs/s1disasm/_incObj/5C SLZ Foreground
+  Pylon.asm:28-43). There is no out_of_range test, no MarkObjGone and no
+  DeleteObject anywhere in Obj5C, so it holds SST slot 32 for the whole act -
+  the fixture's slot_dump confirms 0x5C at slot 32 from frame 0 through 725.
+- The engine loaded it identically at frame 0 but unloaded it at frame 125 via
+  the shared camera-distance check. Obj5C's obX is a screen-fixed parallax
+  value rather than a level position, so that check has nothing meaningful to
+  measure. Freeing slot 32 shifts every later dynamic allocation: at the SLZ1
+  spill (f724) the Obj37 owner took slot 32 instead of 35 and the four rings
+  landed at 32/35/36/37 against the ROM's 35/36/37/43. Because `RLoss_Bounce`
+  probes the floor only when `(v_vblank_byte + d7) & 3 == 0` with
+  `d7 = 127 - slot` (25, 37 Rings.asm:334-339, ExecuteObjects.asm:10-30), a
+  one-slot shift changes which frames a ring bounces on, hence its resting
+  position, hence which frame Sonic overlaps it.
+- This is the third distinct object found holding the wrong number of SST
+  slots. The allocator itself is not implicated: GHZ1 dynamic-slot occupancy at
+  f1420 is byte-identical to the ROM across slots 32-40, and `FindFreeObj`'s
+  ascending first-free scan and `ExecuteObjects`' ascending walk are both
+  modelled correctly. The remaining known occupancy gaps are the GHZ Bridge
+  (1 slot instead of parent + one child per log, `Bri_Main` 11 GHZ Bridge.asm:
+  51-97) and an MTZ hole at slot 17.
+- Command: `mvn -Ptrace-replay -Dmse=off -DforkCount=1
+  -Dsurefire.reportsDirectory=target/rep-slz -Dtest=<5 focused classes>` with
+  all three ROM paths, JDK 21.
