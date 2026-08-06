@@ -63436,3 +63436,96 @@ to synthesize a POST phase on a VBLANK-only row.
   `formattedWithCameraAndAnimation`, which hardcodes `rings = -1`. Closing that is a
   separate, much wider measurement and was deliberately left out of this change so
   the run-path delta stayed attributable.
+
+## 2026-08-06 - The S1 PLC arming row IS observable to the recorder (Phase A gate)
+
+- **Command.** Throwaway native probe over the harness' own `GpgxHost`, one
+  address-filtered `M68K BUS` execute callback per S1 PLC ROM site, writing the
+  per-raw-frame execution order plus the frame-end RAM sample:
+
+  ```bash
+  source tools/bizhawk-headless/common-env.sh
+  mono tools/bizhawk-headless/.scratch/PlcProbe.exe s1.gen \
+    src/test/resources/traces/s1/runs/s1-sonic-complete-withemeralds/sonic1-complete-withemeralds.bk2 \
+    202300 <out.tsv>
+  mono tools/bizhawk-headless/.scratch/PlcProbe.exe s1.gen \
+    src/test/resources/traces/s1/_movies/s1-complete-run.bk2 181200 <out.tsv>
+  ```
+
+  Commit context `c20ee7fbf` on `develop`, working tree, no engine change. Probe
+  and its scratch outputs are throwaway and untracked.
+- **Question.** `37ada49ad` established that the discriminator between the 14
+  "arm on the completion row" cases and the one `ghz2_2` 107 "arm on the lag row"
+  case is sub-frame 68000 cycle position, which the v5 aux stream does not carry.
+  Hard rule 4 permits a recorded hardware-timing readiness stream for the S1 PLC
+  pipeline, but only if a recorder can actually see the difference. That is the
+  gate; this entry is its measurement.
+- **Verdict: PASS, and not marginally.** The two shapes have completely disjoint
+  execution, not a straddled instruction:
+
+  | | completion row `f` | lag row `f+1` |
+  |---|---|---|
+  | the 14 | `3SRAW` — service, `ProcessPLC_ShiftCue`, **whole of `RunPLC`** | *(nothing executes)* |
+  | `ghz2_2` 107 | `3S` — service, `ProcessPLC_ShiftCue`, **`RunPLC` not entered at all** | `RAW` — **whole of `RunPLC`** |
+
+  All 15 cases were re-derived from ROM execution rather than from the aux
+  columns and reproduce the 14-to-1 split exactly: `mz2_3` 101, `mz3_2` 102/109,
+  `lz3` 10185, `lz4` 11/16/114/122, `mz3_completerun` 102, `fz_completerun`
+  11/16/29/118/125 all `3SRAW`; `ghz2_2` 107 alone `3S` then `RAW`.
+- **Census.** 202,301 emerald frames plus 181,201 complete-run frames: 642 + 528
+  armings, the same number of retirements, never more than one of either per raw
+  frame, and the arming never precedes the frame's VInt service — **0 exceptions
+  in 383,502 frames** — so the edge boundary is strictly later than
+  `vint_service` and lands on the ROM loop tail, i.e. `pre_main_loop`. `RAW`
+  occurs **once** in both movies combined, at `ghz2_2` 9849; the only other `3S`
+  frame retires the last entry to an empty queue, so nothing was left to arm.
+- **Frame-end RAM sampling alone is not enough.** "`v_plc_patternsleft` went 0 →
+  nonzero" disagrees with the hook on **536** emerald and **438** complete-run
+  frames, because the `9SRAW` / `3SRAW` shape retires and arms inside one frame
+  and never samples zero. A
+  recorder needs either the reviewed `0x0015F0` execute callback or a structural
+  six-byte `ProcessPLC_ShiftCue` FIFO-shift mirror.
+- **ROM addresses** (REV01, byte-verified; the `loc_`/`sub_` comments in
+  `docs/s1disasm/sonic.asm` are REV00 and run 8 bytes ahead here): `RunPLC`
+  `0x0015E4`, arming path `0x0015F0`, arming write `0x00160A`,
+  `ProcessPLC_9Tiles` `0x00163A`, `ProcessPLC_3Tiles` `0x001656`,
+  `ProcessPLC_ShiftCue` `0x0016D4`. The three used for arming/retirement are the
+  same PCs already reviewed as `prepare begin` / `early PatternsLeft publish` /
+  `pop pre` in
+  [docs/architecture/research/trace/2026-07-28-s1-s2-plc-readiness-evidence.md](../architecture/research/trace/2026-07-28-s1-s2-plc-readiness-evidence.md).
+- **Two findings that shrink the build.** (1) No new boundary semantics are
+  needed: the `ghz2_2` edge lands on a held-counter lag row, which is exactly the
+  suppressed-row `pre_main_loop` admission the cross-game contract already
+  defines and `HardwareTimingReplayPort.applySuppressedRowCompletion` already
+  implements. (2) `LiveTraceComparator`:318 is the only production caller of
+  `99746ffa9`'s deferral, so reverting it cannot move any standalone
+  `*TraceReplay` result, and `ghz2_2` — the sole case the deferral is right about
+  — occurs only in `s1-sonic-complete-withemeralds`. **That one fixture is the
+  only one that needs the stream.**
+- **Not built here, and why.** The recorder emission, the engine consumption and
+  the fixture re-record are specified in
+  [docs/architecture/plans/trace/2026-08-06-s1-nemesis-plc-timing-stream-plan.md](../architecture/plans/trace/2026-08-06-s1-nemesis-plc-timing-stream-plan.md).
+  Two gates sit above the fix loop and were not taken:
+  `TestS1S2PlcComparisonOnlyGuard.timingKindRegistryAdmitsOnlyKosinskiWork`:79-90
+  closes the kind registry against PLC work *by policy* ("PLC readiness is native
+  deterministic service, not timing-stream authority"), matching the cross-game
+  contract's "`PLC_QUEUE` … requires separate ROM evidence and design review" and
+  the S1/S2 PLC audit's `NATIVE_MODEL_APPROVED` disposition; and regenerating the
+  209k-frame emerald fixture is a user decision requiring approval of the exact
+  candidate bytes. The engine side also has no S1 timing infrastructure at all
+  today — no `RuntimeArtCoordinator`, no submission, no ordinal, no submission
+  fingerprint — and the fingerprint needs a Nemesis compressed-length scanner on
+  both the Java and the C# side.
+- **Route position unchanged.** No engine change was made; the committed pins
+  stay at `stopAfterSegment(3)` and `stopAfterSegmentBody(11)`.
+- **No trustworthy suite measurement was taken, and none was needed.** A
+  `-Ptrace-replay` sweep started here was contaminated: the shared working tree
+  carried a concurrent collaborator's in-flight edit to
+  `EngineDiagnostics`/`AbstractTraceReplayTest` (the previous entry's "residual
+  hole"), including the +1000 ring probe, which surfaced as
+  `TestS1Mz3CompleteRunTraceReplay` failing at frame 0 on
+  `rings mismatch (expected=0, actual=1000)`. The edit was reverted mid-run. That
+  sweep was abandoned and `target/surefire-reports` from it must not be read as a
+  baseline. Isolated single-class runs of `TestS1CompleteEmeraldVisualRun` remain
+  subject to the documented ambient-global-state order dependence, so a clean
+  before/after for this work needs a whole-suite run on an unmodified tree.
