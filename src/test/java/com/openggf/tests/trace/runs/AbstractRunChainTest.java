@@ -962,9 +962,18 @@ abstract class AbstractRunChainTest {
                 if (uncomparedInterior) {
                     TraceRunSpecialStageRows specialRows;
                     try {
-                        specialRows = TraceRunSpecialStageRows.load(
-                                seg.segment().traceProfile(),
-                                runDir.resolve(seg.segment().dir()));
+                        // The plan already parsed this interior with the
+                        // segment's declared opening dynamic-art ledger; a
+                        // bare re-load restarts that ledger empty and rejects
+                        // a segment whose frame-0 state legitimately carries
+                        // transfers over from the preceding segment.
+                        specialRows = seg.specialStageRows() != null
+                                ? seg.specialStageRows()
+                                : TraceRunSpecialStageRows.load(
+                                        seg.segment().traceProfile(),
+                                        runDir.resolve(seg.segment().dir()),
+                                        seg.segment()
+                                                .dynamicArtInitialLedgerDescriptors());
                     } catch (IOException e) {
                         throw new AssertionError(
                                 "Failed to load special-stage row policy for "
@@ -1352,10 +1361,17 @@ abstract class AbstractRunChainTest {
         probe.setDelegate(null);
         productionComparator = null;
         try {
+            // Reuse the plan's parse (loaded with the segment's declared
+            // opening dynamic-art ledger); re-loading here would restart the
+            // ledger empty and reject a carried-over frame-0 state.
             TraceRunSpecialStageRows specialRows =
-                    TraceRunSpecialStageRows.load(
-                            special.segment().traceProfile(),
-                            runDir.resolve(special.segment().dir()));
+                    special.specialStageRows() != null
+                            ? special.specialStageRows()
+                            : TraceRunSpecialStageRows.load(
+                                    special.segment().traceProfile(),
+                                    runDir.resolve(special.segment().dir()),
+                                    special.segment()
+                                            .dynamicArtInitialLedgerDescriptors());
             TraceRunSpecialStageRowDriver specialDriver =
                     new TraceRunSpecialStageRowDriver(
                             specialRows, special.trace());

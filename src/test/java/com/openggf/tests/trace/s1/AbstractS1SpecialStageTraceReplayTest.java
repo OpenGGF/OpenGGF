@@ -364,24 +364,41 @@ public abstract class AbstractS1SpecialStageTraceReplayTest {
      * {@code vel_x}/{@code vel_y}/{@code inertia} are written earlier in
      * {@code SonicSS_Display}'s tick (by {@code SonicSS_Jump}/{@code
      * SonicSS_Move}/{@code SonicSS_Fall}, docs/s1disasm/_incObj/09 Sonic in
-     * Special Stage.asm:96-106) than {@code y_pos}/{@code ss_angle} (written
-     * later, by {@code SpeedToPos} at asm:114 and the {@code v_ssangle} update
-     * at asm:117-119) -- so a row genuinely torn mid-tick shows the velocity
-     * fields already advanced to the next step while {@code y_pos}/
-     * {@code ss_angle} still hold the previous step's values verbatim. (
-     * {@code x_pos} is excluded from the staleness half of this check: unlike
-     * {@code y_pos}, it can land partway between two steps rather than cleanly
-     * at one or the other -- see the frame-1767 values below -- so requiring it
-     * to equal the previous row would under-detect the real tear.) Only a row
-     * satisfying BOTH the lag-run shape AND this field-level inconsistency is
-     * dropped; a row that merely precedes a &ge;2 lag run but is internally
-     * coherent is scored normally. The committed maze trace's sole such row is
-     * frame 1767 (preceding the 1768-1769 lag burst): vel_x/vel_y/inertia
-     * ({@code $FB1C}/{@code $016A}/{@code $FE28} at frame 1766 &rarr;
-     * {@code $FB01}/{@code $018A}/{@code $FE34} at frame 1767, already changed)
-     * versus y_pos/ss_angle ({@code $519CA00}/{@code $E640} at both 1766 and
-     * 1767, unchanged) -- not a coherent ROM frame, and not reproducible by any
-     * single engine tick.
+     * Special Stage.asm:96-106) than the position stores and the
+     * {@code v_ssangle} update ({@code SpeedToPos} at asm:114 --
+     * {@code move.l d2,obX} then {@code move.l d3,obY},
+     * {@code _incObj/sub ObjectFall & SpeedToPos.asm:47-48} -- followed by the
+     * {@code v_ssangle} update at asm:117-119).
+     *
+     * <p>{@code v_ssangle} is the <em>last</em> of those writes, and
+     * {@code SonicSS_Display} performs it unconditionally
+     * ({@code d0 = v_ssangle + v_ssrotate}). So whenever {@code v_ssrotate} is
+     * non-zero the angle must differ from the previous tick's in any coherent
+     * sample, and an unchanged angle next to already-advanced velocities can
+     * only be a sample straddling the tick. That single witness covers every
+     * tear point inside the tick, whereas also demanding {@code y_pos} still be
+     * previous would only catch tears landing before the {@code obY} store and
+     * would misclassify the (equally real) later ones as coherent rows. The
+     * {@code ss_rotate != 0} qualifier is what keeps the angle a valid witness:
+     * the pre-setup fade and the exit ramp's {@code v_ssrotate = 0} window
+     * ({@code sonic.asm:3268}, {@code _incObj/09 asm:394}) legitimately hold
+     * the angle still, and are excluded rather than misread as tears.
+     * {@code x_pos} is not used at all -- a longword store is two word writes
+     * on the 68k, so it can be caught half-written and equal neither step.
+     *
+     * <p>Only a row satisfying BOTH the lag-run shape AND this field-level
+     * inconsistency is dropped; a row that merely precedes a &ge;2 lag run but
+     * is internally coherent is scored normally. Observed instances: the
+     * committed maze trace's frame 1767 (tear before the {@code obY} store --
+     * vel_x/vel_y/inertia {@code $FB1C}/{@code $016A}/{@code $FE28} &rarr;
+     * {@code $FB01}/{@code $018A}/{@code $FE34}, y_pos/ss_angle
+     * {@code $519CA00}/{@code $E640} unchanged), and the complete-run
+     * segments' {@code ss_2} frame 3120 and {@code ss_4} frame 1148 (tear
+     * after both position stores -- x_pos and ss_angle still previous, y_pos
+     * and the velocities already advanced; in both the engine's coherent frame
+     * matches the settled post-lag row exactly on x_pos, y_pos and ss_angle).
+     * None is a coherent ROM frame, and none is reproducible by any single
+     * engine tick.
      */
     private static boolean isTornLagBoundaryRow(Sonic1SpecialStageTraceData trace,
                                                 int f, int compareEnd) {
@@ -399,10 +416,19 @@ public abstract class AbstractS1SpecialStageTraceReplayTest {
         boolean velocityAlreadyAdvanced = (cur.velX() & 0xFFFF) != (prev.velX() & 0xFFFF)
                 || (cur.velY() & 0xFFFF) != (prev.velY() & 0xFFFF)
                 || (cur.inertia() & 0xFFFF) != (prev.inertia() & 0xFFFF);
-        boolean lateTickFieldsStillPrevious = (cur.yPos() & 0xFFFFFFFFL) == (prev.yPos() & 0xFFFFFFFFL)
+        // v_ssangle is the LAST of the compared per-tick writes (updated at
+        // asm:117-119, after SpeedToPos at asm:114) and SonicSS_Display
+        // updates it unconditionally: d0 = v_ssangle + v_ssrotate. So while
+        // v_ssrotate is non-zero the angle MUST differ from the previous
+        // tick's in any coherent sample, and an unchanged angle alongside
+        // already-advanced velocities can only be a sample taken after the
+        // early-tick velocity writes and before that final angle write --
+        // regardless of which of SpeedToPos's two position stores
+        // (obX at asm:47, obY at asm:48) the tear happened to fall between.
+        boolean lateTickAngleStillPrevious = (cur.ssRotate() & 0xFFFF) != 0
                 && (cur.ssAngle() & 0xFFFF) == (prev.ssAngle() & 0xFFFF);
 
-        return velocityAlreadyAdvanced && lateTickFieldsStillPrevious;
+        return velocityAlreadyAdvanced && lateTickAngleStillPrevious;
     }
 
     private static void addFields(Map<String, FieldComparison> fields,

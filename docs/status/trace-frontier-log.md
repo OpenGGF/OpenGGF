@@ -64423,3 +64423,71 @@ so the not-found error is unchanged. This relocates an INPUT source only - the
 BK2 is recorded controller data feeding `RecordedInputRows` ->
 `SpecialStageInputMapper` -> `provider.handleInput`; no physics, aux or
 comparison column is read into the engine.
+
+## 2026-08-07 - S1 special-stage tears, SBZ junction control byte, and the run-mode recorder gap
+
+Measured with a deterministic full sweep: `-Ptrace-replay -Dmse=off
+-Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical -Dtest='TestS1*,TestS2*'`.
+**Always pass `-Dsurefire.runOrder=alphabetical`**: surefire's default is
+`filesystem`, i.e. inode order, which differs per checkout directory, so red sets
+are otherwise not comparable between machines or even between clones.
+
+- **S1 special stages 2 and 4 now pass** (`TestS1SpecialStage2/4TraceReplay`).
+  Both single-frame failures were torn RAM samples, proved rather than assumed:
+  at each failing frame the ENGINE's state equals the recording's own settled
+  post-lag row byte-for-byte across all three mismatched fields (`ss_angle`,
+  `x_pos`, `y_pos`). An engine that had genuinely slipped a rotation tick could
+  not land exactly on the recording's next settled sample in three fields, in two
+  stages, in OPPOSITE rotation directions (`ss_rotate` $FF80 vs $80 — which is
+  precisely why the `ss_angle` delta sign differed between them).
+  `isTornLagBoundaryRow`'s staleness witness was `y_pos`, which only catches
+  tears landing before `SpeedToPos`'s `obY` store; `SpeedToPos` writes obX then
+  obY as two separate longword stores (sub ObjectFall & SpeedToPos.asm:47-48) and
+  the `v_ssangle` update is LAST in the tick and unconditional
+  (_incObj/"09 Sonic in Special Stage.asm":114-119). The witness is now
+  "`ss_angle` unchanged while velocities have advanced, with `ss_rotate != 0`",
+  which covers every tear point. Blast radius audited row-by-row over all six
+  complete-run `ss_*` segments plus the standalone maze (~25k rows): exactly TWO
+  additional rows are dropped — the two failing rows — and every previously
+  dropped row is still dropped. No tolerance widened.
+- **`TestS1Sbz1CompleteRunTraceReplay` advanced 2 errors at frame 754 -> 1 error
+  at frame 5752.** S1's `f_playerctrl` was applied as bit 7 ($81, "disable object
+  interaction") by two objects the ROM writes with bit 0 only (`move.b #1,
+  (f_playerctrl).w`): SBZ Rotating Junction (Obj66) and LZ Pole That Breaks
+  (Obj0B). While Sonic rode the junction the engine skipped the entire
+  TouchResponse pass, so a bouncing lost ring the ROM re-collects at frame 754
+  was never collected. LZ1/LZ2/LZ3 stay green.
+- **Run-chain special-stage segments now load with their opening ledger.** The
+  plumbing already existed end to end (`TraceRunManifest.Segment.
+  dynamicArtInitialLedgerDescriptors` -> `TraceRunReplayWalker.plan` ->
+  `TraceRunSpecialStageRows.load(..., openingLedger)` -> `DynamicArtTransfer.
+  validateSegment(openingLedger)`); the break was `AbstractRunChainTest`
+  re-loading each special-stage interior through the 2-arg overload and
+  discarding the plan's ledger-aware parse. Both call sites now reuse
+  `SegmentPlan.specialStageRows()`. No validation was relaxed.
+- **The recorder now emits `run_objects_end` for run-mode special-stage
+  segments** (`S2RunCaptureRunner`; the Lua v9.13-s2 port had a self-imposed
+  "minimal writer" restriction). Native suite: 468 passed, 0 failed.
+  **This does not move any Java test yet, and that is expected:** the COMMITTED
+  fixtures still contain zero `run_objects_end` rows across all seven S2 segments.
+  Closing `TestS2EhzHalfpipeRoundTripChain` and landing the seven S2
+  special-stage replay classes both require a RE-RECORD of the S2
+  complete-emeralds run with the fixed recorder. That is fixture work, not engine
+  work, and it is now unblocked.
+
+Open, with sharpened diagnoses:
+
+- **The 10-ring monitor cluster is an SST occupancy divergence, not an award-timing
+  bug.** The award model is already ROM-exact (32 rise steps, award on the 33rd
+  execution, first execution same-frame iff icon slot > monitor slot). Direct
+  evidence independent of monitors: comparing the recorded `player_stand_on_obj`
+  against the engine's stand-on slot index across `TestS1Ghz1CompleteRun` gives
+  10 distinct sustained slot mismatches, the first at frame 2574. Fix the
+  occupancy, not the award.
+- **`TestS2Arz2LevelSelectTraceReplay` and the two `arz2RisingPillar*` oracle
+  cases share a frame:** ARZ2's first error is frame 4046 `obj_s*`, and the
+  oracle case is `arz2RisingPillarParentDebrisMovesOnBreakFrame4046`. Treat them
+  as one Obj2B rising-pillar-debris defect rather than as fork flakiness. Note a
+  separate agent could not reproduce either failure in a clean worktree under
+  several deterministic orderings, so ordering still influences whether it
+  surfaces; the frame-4046 coincidence is the lead worth pulling.

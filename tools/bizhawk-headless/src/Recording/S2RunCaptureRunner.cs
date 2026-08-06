@@ -385,6 +385,13 @@ namespace OpenGGF.BizHawk.Headless
             private int currentSsIndex;
             private bool ssArmed;
             private S2SpecialStageAuxEventEngine ssAuxEngine;
+            // run_objects_end pass records, ported from the standalone
+            // capture path (S2SpecialStageCaptureRunner). The Lua run port's
+            // "no execute hooks" rule does not bind the native harness --
+            // S2DynamicArtObserver already registers execute callbacks in
+            // run mode -- and without these records the replay side has no
+            // RunObjects passes to pace a special-stage interior with.
+            private S2SpecialStageRunObjectsObserver ssRunObjects;
 
             // Run counters. Level tokens number by level arms only; the ss
             // token is bare "ss" for the first detour, "ss_2"+ afterwards.
@@ -676,6 +683,12 @@ namespace OpenGGF.BizHawk.Headless
                 ssAuxEngine = new S2SpecialStageAuxEventEngine(host);
                 WriteLine(
                     auxWriter, ssAuxEngine.FormatPretraceSnapshot(host));
+                // The run port skips the $10 entry frame, so this detour's
+                // trace_frame 0 is emu frame frameNow + 1; that is the offset
+                // the standalone observer's frame arithmetic expects (there
+                // row 0 is written on the arm frame itself).
+                ssRunObjects = new S2SpecialStageRunObjectsObserver(
+                    host, frameNow + 1, () => traceFrame);
                 ArmDynamicArtSegment();
             }
 
@@ -689,6 +702,15 @@ namespace OpenGGF.BizHawk.Headless
                     lagged,
                     host);
                 var auxLines = new List<string>();
+                // Standalone order (S2SpecialStageCaptureRunner): the row's
+                // completed RunObjects passes first, then the state-sampled
+                // events, with the terminal pass published immediately after
+                // the checkpoint edge.
+                foreach (string line in ssRunObjects.PublishForRow(
+                    traceFrame, lagged))
+                {
+                    auxLines.Add(line);
+                }
                 // v9.13-s2 (§11.3): SS aux events after the physics row and
                 // before the trace_frame increment, in the standalone's
                 // record_frame order.
@@ -696,6 +718,16 @@ namespace OpenGGF.BizHawk.Headless
                     traceFrame, lagged, host))
                 {
                     auxLines.Add(line);
+                    if (line.IndexOf(
+                        "\"type\":\"checkpoint\"",
+                        StringComparison.Ordinal) >= 0)
+                    {
+                        foreach (string terminal
+                            in ssRunObjects.PublishTerminal(traceFrame))
+                        {
+                            auxLines.Add(terminal);
+                        }
+                    }
                 }
                 if (dynamicArt != null)
                 {
@@ -753,6 +785,11 @@ namespace OpenGGF.BizHawk.Headless
                 ssArmed = false;
                 traceFrame = 0;
                 ssAuxEngine = null;
+                if (ssRunObjects != null)
+                {
+                    ssRunObjects.Dispose();
+                    ssRunObjects = null;
+                }
             }
 
             /// <summary>

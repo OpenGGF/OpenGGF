@@ -454,7 +454,13 @@ public class Sonic1JunctionObjectInstance extends AbstractObjectInstance
     private void beginGrab(AbstractPlayableSprite player, int gapFrame) {
         grabFrame = gapFrame;
         routine = Routine.RELEASE;
-        ObjectControlState.nativeBit7FullControl().applyTo(player);
+        // ROM: move.b #1,(f_playerctrl).w -- bit 0 only, sign bit CLEAR
+        // (docs/s1disasm/_incObj/66 SBZ Rotating Junction.asm:82). Bit 0 makes
+        // Sonic_Control skip Sonic_Modes, but the object-interaction gate is the
+        // sign bit (tst.b f_playerctrl / bmi.s .ignoreobjcoll,
+        // docs/s1disasm/_incObj/01 Sonic.asm:94-97), so ReactToItem keeps running
+        // every frame Sonic is riding the junction.
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
         player.setControlLocked(true);
         player.setRolling(false);
         player.setAnimationId(Sonic1AnimationIds.ROLL);
