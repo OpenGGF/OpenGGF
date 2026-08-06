@@ -64131,3 +64131,59 @@ to synthesize a POST phase on a VBLANK-only row.
 - Command: `mvn -Ptrace-replay -Dmse=off -DforkCount=1
   -Dsurefire.reportsDirectory=target/rep-slz -Dtest=<5 focused classes>` with
   all three ROM paths, JDK 21.
+
+## 2026-08-06 - Five diagnosed S1/S2 defects closed or advanced
+
+Measured with one full `-Dtest='TestS1*,TestS2*'` sweep on `develop` before and
+after (`-Ptrace-replay -Dmse=off -DforkCount=1`, private reports directory, all
+three ROM paths, JDK 21). Red classes 25 -> 16. Nine classes closed, none
+regressed. Each fix was developed and measured independently in its own worktree
+based explicitly on `c936a1571`.
+
+- **S1 lost-ring clear ran a frame early on spike damage** (closed: Ghz3, Lz1,
+  Mz1, Mz3). The ROM's `HurtSonic` does not touch `v_rings`; it only reserves the
+  Obj37 owner slot via `FindFreeObj` and stamps `id_RingLoss`
+  (Sonic ReactToItem.asm:375-387). `v_rings` is cleared later by that owner's own
+  routine 0 (`RLoss_Count` -> `.resetcounter`, 25, 37 Rings.asm:234, 297-299), so
+  when `Obj36 Spikes` raises the hit from its own tick and `FindFreeObj` returns a
+  slot the object loop has already passed, the clear slips to the next pass. The
+  engine had this machinery but it was dead for S1: `ObjectSlotLayout.SONIC_1`
+  used the 2-arg constructor, leaving `preallocatesLostRingOwnerSlot` false. The
+  landed change is that one boolean; the clear frame is computed at runtime from
+  the reserved slot against the live exec cursor.
+- **CNZ Point Pokey spawned prizes on a local timer** (closed: Cnz2, 9 errors ->
+  0). `prizeSpawnTimer++ >= 2` made the spawn phase depend on the parity the
+  machine happened to be entered on - green for this BK2 only. ROM loc_2BD4E
+  gates on `btst #0,(Level_frame_counter+1).w` (s2.asm:59156-59190), and because
+  that branch returns before the `tst.w objoff_2C(a0) / beq loc_2BE2E` release
+  check, the release is polled only on odd frames until `SlotMachine_Reward` is
+  exhausted. Fixing the gate alone took the trace to 28182 errors with the player
+  ejected at f5241 instead of f5243; the child->parent immediate-release callback
+  was the second half of the defect. ObjDC/ObjD3 only decrement `objoff_2C`
+  through the shared pointer and the cage reads it at its own point in the object
+  order, so that callback was removed.
+- **GHZ Bridge occupied 1 SST slot instead of 12** (advanced: Ghz1CompleteRun 4
+  errors at f1613 -> 2 at f3143; closed: Ghz1TraceReplay). ROM `Bri_Main`
+  allocates `subtype - 1` display-only child logs via `FindFreeObj`
+  (11 GHZ Bridge.asm:41-97). Without them every later dynamic object sat 11 slots
+  low, shifting each Obj37's `(v_vblank_byte + 127 - slot) & 3` floor-probe
+  cadence. The parent still draws every log; only occupancy changed.
+- **LZ wind tunnel latched Float2 8 frames early** (advanced: Credits03Lz3 15
+  errors at f156 -> 13 at f236). The engine modelled the tunnel's
+  `move.b #id_Float2,obAnim` as a sticky `forcedAnimationId`, but `Sonic_Floor`'s
+  `.landed` overwrites it with `id_Walk` in the same frame (01 Sonic.asm:1563,
+  1692, 1825). `Sonic1LevelEventManager` had no `onPlayableLandingAnimationWrite`
+  override, so the already-correct `obPrevAni` repair was unreachable. The whole
+  animation-id divergence class is gone; the residual is a distinct 2 px vertical
+  defect.
+- **Two stale test preconditions** (closed: TestS1GhzBossGraphRewind,
+  TestS1PushBlockSideContact). The engine is ROM-correct in both. The boss test
+  asserted destruction after one `update` when `3bb149a55` had adopted the ROM's
+  `GBall_Vanish` 0x61-update countdown, and drove a V-int the child's
+  `shouldUpdate` rejected. The push-block test carried `0x0E1A` from the pre-v5
+  recording; `93398b8fb` re-timed that fixture by one row and the engine matches
+  the current one. The literal was deleted in favour of reading the fixture row.
+
+Bonus closure: `TestS2Arz2LevelSelectTraceReplay` (99 errors) also went green.
+One new red appeared and was fixed in the same batch: `TestS2PointPokeyRewind`
+reflectively seeded the deleted `prizeSpawnTimer`.
