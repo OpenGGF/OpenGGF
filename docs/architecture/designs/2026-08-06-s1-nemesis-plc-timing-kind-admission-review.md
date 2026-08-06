@@ -29,7 +29,7 @@ this review must survive).
 | Is the timing already reproduced by lag, phase, or deterministic queue service? | **No.** The discriminator is sub-frame 68000 cycle position; the two outcomes leave an identical recorded row shape and identical lag classification. §3. |
 | What exactly does the stream buy? | On the measured corpus, one row — deterministically, every run. Against the real bar (**any BK2 replays clean**) it is the only construction that scales at all: a native model is *permanently* incapable because the discriminator is sub-frame. §4.1-4.2. |
 | Isn't this hand-fitting one recording? | **No.** The sidecar is mechanically regenerable from any movie, derived only from ROM execution, carries no gameplay values, creates no work, and gets *stricter* as more movies are thrown at it. §7.5. |
-| Does it make any S1 BK2 replay clean? | **No, and the boundary is stated.** It removes one divergence class; it does not confer verifiability without a comparison payload, and one structural gap does not generalise. §11. |
+| Does it make any S1 BK2 replay clean? | It removes one divergence class. The acceptance standard stays **full per-frame validation** (§11.2). Three named limits: no timing-only tier exists — such a session is *undrivable*, not merely unchecked (§11.3a); every other divergence class is untouched (§11.3); and one structural gap does not generalise (§11.4). |
 | Does it drag the S3K fixture corpus with it? | **No** — and this is the decisive structural difference from the rejected `LEVEL_LOAD` proposal. §7.3. |
 | Is the `compressedLength` waiver granted? | **Yes, with an amendment.** Waived; the mode bit must move into `compressionVariant` rather than being silently dropped. §6. |
 | Does `TestHardwareTimingAuthorityGuard` need editing? | **No.** It holds no kind literals. §8.2. |
@@ -713,10 +713,16 @@ other movie. Six properties refute it, and each is checkable rather than asserte
    cannot derive.
 
 The distinction that matters: a fixture-specific fudge makes *one* recording pass
-and generalises to nothing. A sidecar makes *every* recording replayable by the
-same mechanism, and the mechanism gets stricter — not looser — as more movies are
-thrown at it, because each one is a fresh opportunity for the fingerprint and
-ordinal checks to catch a divergence.
+and generalises to nothing. This mechanism applies identically to *every*
+recording — the timing stream falls out of the same capture pass that produces the
+payload — and it gets stricter, not looser, as more movies are thrown at it,
+because each one is a fresh opportunity for the fingerprint and ordinal checks to
+catch a divergence.
+
+(To be exact, since §11.3a matters here: the artefact is regenerable per movie,
+but it is a *scheduling input to a full capture*, not a standalone session. The
+confinement argument above is unaffected — it is about what the artefact can and
+cannot influence, not about whether it can be used alone.)
 
 ### 7.6 `TestHardwareTimingAuthorityGuard` stays green, unmodified
 
@@ -947,24 +953,83 @@ fix owned by the diagnostic projection, not by the timing port.
 ## 11. What an arbitrary BK2 still cannot do
 
 The arbitrary-BK2 bar deserves a boundary drawn now rather than discovered at
-capture time. **The sidecar does not make any S1 movie replay clean. It removes
-exactly one divergence class.** Stated precisely:
+capture time. **The timing stream does not make any S1 movie replay clean. It
+removes exactly one divergence class.** Stated precisely, with four named limits
+in §11.2-§11.4:
 
 ### 11.1 What it does buy
 
-For any S1 BK2 with a generated sidecar: every `Level_MainLoop` PLC arming in
-every recorded segment is scheduled at the raw frame the ROM scheduled it,
+For any S1 BK2 captured with the timing stream: every `Level_MainLoop` PLC arming
+in every recorded segment is scheduled at the raw frame the ROM scheduled it,
 including the sub-frame cases no frame-granularity model can reach. That is the
 whole of the benefit.
 
-### 11.2 What it does not buy — replayability is not verifiability
+### 11.2 Full per-frame validation is the acceptance standard, and stays so
 
-A timing-only sidecar makes a movie **playable** at correct PLC timing. It does
-not make it **verifiable**: detecting a desync requires a recorded comparison
-payload (`physics.csv`, `aux_state.jsonl`) to compare against. A movie with a
-sidecar and no payload can be driven through the engine, but nothing will notice
-if it goes wrong. Anyone reading "any BK2 replays with no desyncs" as "and we will
-know" needs the full capture, not the sidecar.
+**The immediate goal is unchanged: full traces with full per-frame validation.**
+The timing stream is a scheduling input to that path, not a replacement for it,
+and nothing in this admission trades any of it away.
+
+A longer-term aspiration exists — that a BK2 should eventually need only
+light-touch processing to be runnable, with the detection mechanism being a human
+noticing the movie plays back wrong, and a full trace generated *then* as a
+diagnostic. It is directional and some way off. It is recorded in the plan's
+*Future work* section, deliberately outside the phase list, and **it is not a
+design target for anything here**. Designing toward it prematurely is the same
+failure mode as designing toward the sampled-comparison artifact in §11.6.
+
+**A correction to two earlier drafts of this section**, since neither near-term
+scope narrowing nor widening may be allowed to blur a fact:
+
+- One draft said verification was out of scope and a full capture was an on-demand
+  diagnostic. That over-applied the long-term aspiration to the near-term
+  programme. **Withdrawn.**
+- An earlier one said a payload-free movie "can be driven through the engine, but
+  nothing will notice if it goes wrong." **That is wrong: it cannot be driven at
+  all.** §11.3a states the corrected limit, which is sharper than either draft.
+
+The honesty rule this section is held to: state plainly what the architecture does
+not currently support, **whether or not anyone is asking for it today**. §11.3a
+does that regardless of where near-term scope lands.
+
+### 11.3a There is no sidecar-only tier — the payload is structural, not just comparative
+
+**[E]** A timing sidecar cannot drive a replay by itself. Three independent
+blockers, any one sufficient:
+
+1. **Edges are compiled against the trace's rows.**
+   `TraceHardwareTimingScheduleCompiler.compileForInstall(TraceData)` builds
+   `traceIndexByRawFrame` from `trace.getFrame(traceIndex).frame()` (`:30-32`) and
+   resolves every edge through that map (`:38`). `raw_frame` is a *segment-relative
+   row index*, bounded by `traceFrameCount`
+   (`HardwareTimingStreamLoader.java:88-91`). No rows, no keys — the schedule
+   cannot be **installed**, never mind consumed.
+2. **Frame admission lives in the row payload.** The contract's *first* replay
+   contract is main-loop admission, carried by the per-row `lag` outcome in
+   `physics.csv`. Replay is row-driven and dispatches on the row policy derived
+   from recorded rows. `Bk2FrameInput` supplies **inputs**, not an admission
+   schedule, and the sidecar's metadata carries row counts and offsets only. There
+   is nothing in a sidecar that can say which physical frames ran a gameplay loop.
+3. **The manifest hard-requires payload capabilities.** `TraceRunManifest` rejects
+   a `trace_schema: 5` manifest with no `dynamic_art_gap_transitions` array
+   (`:181-184`) and rejects any segment whose metadata lacks
+   `hasPerFrameDynamicArtTransferState()` (`:384-393`).
+
+So the comparison payload is **structural**, not merely evidential. Two things
+follow, and they pull in opposite directions — both are true:
+
+- **The capability bar is unaffected.** The payload comes from the same mechanical
+  harness pass: arbitrary BK2 in, capture plus sidecar out, clean replay with no
+  per-movie code. The user's requirement is met.
+- **The claimed middle tier does not exist.** "Generate just a sidecar and play an
+  arbitrary movie" is not a thing the system can do. What Phase 7a buys is a
+  *cheaper artefact* — the timing stream without paying for the payload — not a
+  standalone session.
+
+**Building a payload-free drive path is not authorised here.** It would mean
+reproducing frame admission from something other than recorded rows, which is a
+change to the contract's contract 1 and needs its own design and review. It is
+also, on current evidence, not needed: nothing in the stated goal requires it.
 
 ### 11.3 What it does not buy — every other divergence class is untouched
 
@@ -1015,6 +1080,35 @@ The generalisation mechanism throughout is the same: **gate on a ROM-state
 predicate evaluated per frame, and hard-fail on anything that does not match**,
 rather than on a fact measured once on one route. M1 and M2 exist to prove the
 mechanism, not to become constants.
+
+### 11.6 An existing artifact already owns "cheap standing confidence" — do not foreclose it
+
+Noted so that nobody grows a verification story onto this sidecar by default.
+
+The repository already has a lightweight, sampled playback-drift artifact,
+specified and partly built:
+
+- `docs/architecture/designs/2026-06-29-user-recording-playback-design.md` — an
+  *"optional lightweight diagnostic sidecar for detecting playback drift"* (`:16`)
+  written as `OpenGGF/desync-lite.jsonl` inside the recording's own BK2 zip
+  (`:225`, `:334`), read back by `UserRecordingVerifier`, which *"reports
+  clean/mismatch/missing/truncated/unsupported state **without mutating the
+  engine**"* (`:63`).
+- `DesyncLiteFrame` is 15 scalars per row — player centre, velocity, inertia,
+  status bits, animation, camera, timer, rings, score — against `physics.csv`'s
+  full field set. `DesyncLiteSnapshotter.capture` builds it from live services.
+- The **sampling** dimension is already in the schema and deliberately unbuilt:
+  `UserRecordingSidecarMetadata(desyncLiteSchemaVersion, sampleMode,
+  sampleInterval)`, where only `everyFrame()` is ever constructed and the design
+  records *"reserved optional `sidecar.sampleInterval` for future sparse modes"*
+  (`:294`), with the MVP writing every frame (`:336`).
+
+That artifact — not this one — is the natural owner of periodic or
+event-triggered confidence checking, and it is already scoped to be non-mutating,
+which is the property that matters for hard rule 4. **Nothing here is designed
+toward it**, and nothing here should be built that would make it redundant or
+harder to adopt. The timing sidecar stays a pure scheduling input with no
+comparison role.
 
 ## 12. What this review does not authorise
 

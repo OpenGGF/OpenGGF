@@ -63804,3 +63804,117 @@ to synthesize a POST phase on a VBLANK-only row.
   criterion is marked `EVIDENCE_INCOMPLETE` rather than declared met on one route.
 - **Route position unchanged.** No engine change; pins stay at
   `stopAfterSegment(3)` and `stopAfterSegmentBody(11)`.
+
+## 2026-08-06 - Scope reduced: replayability is the bar; verification is out of scope
+
+- **Command.** None. Documents-only. No Maven run, no probe pass, no engine or
+  recorder change. Still `develop`, shared working tree.
+- **Scope reduction, not addition.** The previous entry listed "replayability is
+  not verifiability" as a limit of the timing sidecar. That is now a **deliberate
+  design boundary**: engine accuracy is meant to carry an arbitrary movie, a human
+  noticing wrong playback is the detection mechanism, and a full comparison
+  capture is generated *then*, as an on-demand diagnostic. Full traces are a
+  debugging tool, not a routine gate on arbitrary movies.
+- **What this deletes.** No phase may design, plan, or reserve surface for making
+  a sidecar-only movie self-checking — no reduced comparison payload, no sampled
+  compare, no verify-as-you-play reporting. Phase 7a gains an explicit
+  not-in-scope clause. Nothing had been built toward this, so the saving is in
+  surface not taken rather than work removed.
+- **M9's consequence softens.** Whether `TraceRunManifest`/`TraceMetadata` will
+  load a payload-free manifest is still worth measuring, but if payload
+  capabilities turn out to be mandatory that is now **a loader constraint to
+  relax** for a diagnostic-optional path, not a threat to the capability claim.
+  Shipping the sidecar alongside a full payload capture is explicitly *not* an
+  acceptable M9 outcome — it would defeat the point of a cheap regenerable
+  artefact — and would be escalated rather than absorbed.
+- **Phase 7a acceptance narrowed and clarified.** The byte-identical
+  `hardware_timing.jsonl` check between full and timing-only captures is kept and
+  is still the phase's most important assertion — it proves the reduced mode
+  observes the ROM identically rather than approximately. Clarified that
+  "every edge consumed exactly once" is the **timing port's own** integrity
+  checking (kind, ordinal, fingerprint, boundary, preparation, contiguity,
+  zero-pending-at-handoff), not gameplay comparison. A sidecar-only movie is not
+  "unchecked"; what is absent is gameplay-state comparison specifically.
+- **The lightweight sampled artifact the user was recalling: found, and it is not
+  new.** It is `OpenGGF/desync-lite.jsonl`, specified in
+  [docs/architecture/designs/2026-06-29-user-recording-playback-design.md](../architecture/designs/2026-06-29-user-recording-playback-design.md)
+  as an *"optional lightweight diagnostic sidecar for detecting playback drift"*
+  (`:16`), written into the recording's own BK2 zip (`:225`, `:334`) and read back
+  by `UserRecordingVerifier`, which *"reports clean/mismatch/missing/truncated/
+  unsupported state **without mutating the engine**"* (`:63`). Plan:
+  [docs/architecture/plans/2026-06-29-user-recording-playback.md](../architecture/plans/2026-06-29-user-recording-playback.md).
+- **Its status: reduced field set built, sampling cadence reserved but unbuilt.**
+  `DesyncLiteFrame` is 15 scalars per row (player centre/velocity/inertia/status
+  bits/animation, camera, timer, rings, score) against `physics.csv`'s full field
+  set, captured by `DesyncLiteSnapshotter`. The sampling dimension is already in
+  the schema — `UserRecordingSidecarMetadata(desyncLiteSchemaVersion, sampleMode,
+  sampleInterval)` — but only `everyFrame()` is ever constructed, and the design
+  records *"reserved optional `sidecar.sampleInterval` for future sparse modes"*
+  (`:294`) with the MVP writing every frame (`:336`). So "samples rather than
+  comparing every field every frame" is **half-built: the reduced fields landed,
+  the sparse cadence did not.**
+- **Not designed toward.** `desync-lite` is the natural owner of periodic or
+  event-triggered confidence checking and is already scoped non-mutating, which is
+  the property hard rule 4 cares about. Recorded in review §11.6 purely so nobody
+  grows a verification story onto the timing sidecar by default. The timing
+  sidecar stays a pure scheduling input with no comparison role.
+- **Route position unchanged.** No engine change; pins stay at
+  `stopAfterSegment(3)` and `stopAfterSegmentBody(11)`.
+
+## 2026-08-06 - Full validation reaffirmed; timing-only capture mode deferred to future work
+
+- **Command.** None. Documents-only. No Maven run, no probe pass, no engine or
+  recorder change. Still `develop`, shared working tree.
+- **Scope correction, reversing the previous entry.** "Replayability is the bar,
+  verification is out of scope" over-applied a long-term aspiration to the
+  near-term programme and is **withdrawn**. The immediate goal is unchanged: full
+  traces with full per-frame validation. Nothing on the full-capture path was
+  removed, deferred, or softened, and the plan's goal statement now says so
+  explicitly — where it says "replays", it means under full validation.
+- **The sidecar-only tier does not exist, and this is the sharper finding.** The
+  previous entry called a payload-free movie unverifiable. It is **undrivable**.
+  Three independent blockers, any one sufficient: (1)
+  `TraceHardwareTimingScheduleCompiler.compileForInstall` keys
+  `traceIndexByRawFrame` on `trace.getFrame(i).frame()` (`:30-32`) and resolves
+  every edge through it (`:38`), so with no rows a schedule cannot even be
+  *installed*; (2) frame admission — the contract's first replay contract — is the
+  per-row `lag` column in `physics.csv`, and `Bk2FrameInput` supplies inputs, not
+  an admission schedule; (3) `TraceRunManifest` hard-requires payload capabilities
+  (`:181-184`, `:384-393`). Recorded in review §11.3a. Narrowing near-term scope
+  does not soften this — the limit is stated whether or not anyone is asking for
+  the tier today.
+- **Phase 7a (timing-only recorder mode) deferred to future work.** Its original
+  justification is void twice over: arbitrary sidecar-only movies are undrivable,
+  and that tier is not being asked for. What survived — regenerating a timing
+  stream for a movie whose payload already exists — is off the critical path to
+  both the `ghz2_2` fix and full-validation replay. Two further reasons to defer
+  rather than keep, beyond schedule: it is **in tension with the publication
+  contract** (pairing a freshly generated stream with a previously published
+  payload is close to the hand-assembly that contract exists to prevent), and it
+  **introduces a second production path for one artefact** whose only safeguard
+  would be a drift check a single-path design does not need. If revived, the
+  segmentation-equality assertions are mandatory: byte-identical
+  `hardware_timing.jsonl` is **not** sufficient, because identical timing bytes
+  under a shifted `bk2_frame_offset` or row count compile to different absolute
+  frames. M9 and M10 leave the blocking set with it.
+- **M3 severity contradiction reconciled.** The document previously said in one
+  place that M3 gates Phase 5 and in another that it halts the programme. Settled:
+  **M2 halts the programme** (an arming on a gap row breaks the handoff and the
+  intervening `ClearPLC` leaves nothing for a next-segment edge to match); **M3
+  gates Phase 5 only**, with the fix owned by the queue kernel's clear/replace
+  semantics, because the engine already reproduces the ROM's loop-tail ordering
+  and the submission model stands.
+- **The light-touch aspiration is now recorded as future work**, outside the phase
+  list, with what the current architecture makes hard about it: row-driven replay,
+  the admission schedule living in the payload, and manifest payload capability
+  requirements. Reaching it means reproducing frame admission from something other
+  than recorded rows — a change to contract 1 of the cross-game hardware-timing
+  contract, needing its own design and review. Recorded so the intent survives
+  without anyone designing toward it, which is the same failure mode as designing
+  toward the `desync-lite` sampled artifact.
+- **Prior review pass confirmed the M3 pushback was correct.** The claimed
+  engine-side ordering inversion was an unverified inference stated as fact; the
+  engine already matches the ROM (`LevelFrameStep:417` after `:362`/`:364`;
+  `Sonic1LevelEventManager:172` with the `NewPLC` citation at `:211`). Closed.
+- **Route position unchanged.** No engine change; pins stay at
+  `stopAfterSegment(3)` and `stopAfterSegmentBody(11)`.

@@ -1,10 +1,13 @@
 # Plan: a recorded hardware-timing readiness stream for the Nemesis PLC queue
 
-Date: 2026-08-06 (revision 2)
+Date: 2026-08-06 (revision 4)
 Status: **Planned, not built.** This revision supersedes the earlier 2026-08-06
-draft at this path in its entirety. Revision 2 re-sequences the `99746ffa9`
-revert to first, promotes M3 to a stop-gate, adds the `ghz2_2` end-to-end phase,
-and closes an unenforced guard gap.
+draft at this path in its entirety. Revision 2 re-sequenced the `99746ffa9` revert
+to first, added the `ghz2_2` end-to-end phase, and closed an unenforced guard gap.
+Revision 3 restated the goal as an arbitrary-BK2 capability. Revision 4 reconciles
+the M3 severity contradiction, corrects the sidecar-only tier claim, confirms full
+per-frame validation as the acceptance standard, and **defers the timing-only
+recorder mode to future work.**
 
 Governing documents:
 
@@ -17,31 +20,45 @@ Governing documents:
 
 ## The goal
 
-> **Any S1 BK2 — including movies nobody has recorded yet — replays at correct PLC
-> arming timing, using a companion timing sidecar that is generated mechanically
-> from that movie.**
+> **Any S1 BK2 — including movies nobody has recorded yet — replays under full
+> per-frame validation at correct PLC arming timing, from a capture produced by
+> one mechanical harness pass over that movie.**
 
 This is a *capability*, not a fixture fix. `ghz2_2` 107 is the first reachable
 instance of the class, and its value is that it is a **known** instance against
 which the mechanism can be proved before unknown ones depend on it. It is not the
 deliverable.
 
+**The acceptance standard is unchanged and is full per-frame validation.** A
+movie is captured in full — payload and timing stream from the same mechanical
+harness pass — and replayed under strict comparison on every row. Nothing in this
+plan trades that away, defers it, or substitutes a lighter check for it. Where
+this document says "replays", it means *replays under full validation*.
+
 Two things follow, and they shape every phase below.
 
-- **The sidecar must be cheap and automatic**, or the capability is theoretical.
-  Phase 7a specifies a timing-only recorder mode: an arbitrary BK2 in, a
-  segmented `hardware_timing.jsonl` set out, with no physics or aux payload.
+- **The pipeline must be mechanical**, or the capability is theoretical: an
+  arbitrary BK2 in, a full capture plus its timing stream out, replayed with **no
+  per-movie code, constant, or exception**. That is what "any BK2" means here.
+  The timing stream is produced by the same capture pass that produces the
+  payload (Phase 7), so it costs nothing extra to obtain.
 - **Invariants must be route-independent.** Anything measured once on one route
   proves the mechanism; it must not become a constant. The generalisation
   mechanism throughout is the same — *gate on a ROM-state predicate evaluated per
   frame, and hard-fail on anything that does not match*. Review §11.5 tabulates
   which properties generalise and which do not.
 
-**Scope boundary, stated up front:** the sidecar removes exactly one divergence
-class. It does not make an arbitrary movie replay clean, and it does not confer
-verifiability — detecting a desync still requires a recorded comparison payload.
-Review §11 draws the full boundary, including the one structural gap (§11.4) that
-does not generalise.
+**Scope boundary, stated up front.** The timing stream removes exactly one
+divergence class. It is a scheduling input, not a comparison artefact, and it
+**cannot drive a replay on its own**: edges are compiled against the trace's own
+rows, and frame admission — the contract's first replay contract — lives in the
+row payload. Review §11.3a establishes this. There is no "timing-only movie" tier,
+this plan does not build one, and any phrasing suggesting otherwise is a misread.
+
+A longer-term aspiration exists — that a BK2 should eventually need only
+light-touch processing to be runnable — and it is recorded as **future work** in
+the closing section, deliberately outside the phase list. It is directional. It is
+not a design target for anything below, and no phase may be shaped by it.
 
 ## What changed from the superseded draft
 
@@ -53,14 +70,17 @@ propagate.
 | "ROM code polls `v_plc_patternsleft`" | **Wrong.** `v_plc_patternsleft` has six touches, all inside the PLC service block. The polled gate is `v_plc_buffer`. Review §1. |
 | `compressedLength` must be carried; both sides need a Nemesis scanner; "do not shortcut this" | **Reversed.** Waived, with the XOR-mode bit moved into `compressionVariant`. Review §6. This deletes the largest line item on both sides. |
 | Submit "one `HardwareWorkSubmission` per PLC entry at append/replace" | **Reversed.** Submission is at the arming decision, not at append. Append-time submission creates `ClearPLC` orphans that can never be released under `RECORDED` admission. Phase 5. |
-| "Ordinal allocation across `ClearPLC`/`LoadPLC2` needs measuring before it can be written" | **Dissolved as an ordinal problem, retained as a producer-ordering problem.** `ClearPLC`/`LoadPLC2` drop *queued, never-armed* entries, which are now never submitted and consume no ordinal on either side. But M3 is **promoted to a stop-gate** for a different reason — the `SignpostArtLoad` ordering hazard, below. |
+| "Ordinal allocation across `ClearPLC`/`LoadPLC2` needs measuring before it can be written" | **Dissolved as an ordinal problem, retained as a kernel-precondition problem.** `ClearPLC`/`LoadPLC2` drop *queued, never-armed* entries, which are now never submitted and consume no ordinal on either side. M3 survives for a different reason — the `SignpostArtLoad` clear-over-armed-decoder hazard below — and **gates Phase 5 only, not the programme.** |
 | "The 30-plus segment handoffs are the largest correctness risk" | **Superseded by a larger one.** The largest risk is fail-closed starvation of the level-load / title-card drain and the 21 inter-segment gaps, which the draft did not identify. Review §9; Phase 2 and Phase 5 here. |
 | Decision gate 1 ("reopening the registry is a reviewed decision") | **Discharged** by the admission review. |
 | Decision gate 2 ("fixture regeneration is a user decision") | **Discharged** — the user has explicitly allowed regeneration. It is no longer a gate, only a step (Phase 10). |
 | Boundary order `VINT_SERVICE -> PRE_MAIN_LOOP -> objects -> POST_OBJECTS` (from `2026-07-28-s1-s2-plc-service-queues.md`) | **Stale.** Actual order is `VINT_SERVICE` → objects → `POST_OBJECTS` → `PRE_MAIN_LOOP` → `prepareAfterLoop` (`LevelFrameStep.java:144-150`, `HardwareServiceBoundary` javadoc). Phase 12 corrects the doc. |
 | Revision 1's phase order (revert fifth) | **Re-sequenced.** The revert is now Phase 1: it depends only on M7/M8, it is the pure correctness fix, it closes 14 of the 15 cases on its own, and landing it shrinks the surface every later phase is measured against. |
 | Revision 2's `SignpostArtLoad` framing ("the engine's signpost producer runs in the object scan, inverting the ROM's order") | **Wrong; withdrawn.** `LevelFrameStep.java:415-418` runs the loop-tail slot *after* `PRE_MAIN_LOOP` (`:362`), with a comment stating the constraint. The engine already matches the ROM. M3 survives, rescoped to the queue kernel's clear-over-armed-decoder precondition, and is a gate on Phase 5 rather than on the programme. |
-| Revision 1 and 2's deliverable ("give the emerald fixture a stream so `ghz2_2` 107 stops failing") | **Reframed as a capability** — any S1 BK2, including unrecorded ones, replays at correct arming timing from a mechanically generated sidecar. Adds Phase 7a and the §11.1 capability criterion, and re-marks M1/M2 as route-specific. |
+| Revision 1 and 2's deliverable ("give the emerald fixture a stream so `ghz2_2` 107 stops failing") | **Reframed as a capability** — any S1 BK2, including unrecorded ones, replays under full validation at correct arming timing from one mechanical harness pass. Adds the §11.1 capability criterion and re-marks M1/M2 as route-specific. |
+| Revision 3's "replayability is the bar, verification is out of scope" | **Withdrawn.** That over-applied a long-term aspiration to the near-term programme. **Full per-frame validation is and remains the acceptance standard**, and nothing is cut from the full-capture path. The light-touch aspiration is recorded as future work, outside the phase list. |
+| Revision 3's Phase 7a (timing-only recorder mode) | **Deferred to future work.** Its original justification — arbitrary sidecar-only movies — is dead twice over: such movies are *undrivable*, not merely unverifiable (§11.3a), and that tier is not being asked for. What survived was cheap timing regeneration for a movie whose payload already exists, which is off the critical path and, worse, introduces a second production path for one artefact whose only guard would be a drift check the single-path design does not need. See *Future work*. |
+| Revision 3's "a sidecar-only movie can be driven but not checked" | **Wrong; corrected.** It cannot be driven at all — edge compilation is keyed on the trace's own rows and frame admission lives in the payload. Review §11.3a. The limit is *sharper* than revision 3 stated, and narrowing near-term scope does not soften it. |
 
 ## Evidence status legend
 
@@ -217,13 +237,22 @@ V-blank-routine answer (M5). Not a new document — the research doc is the owne
 **Acceptance.** The addendum exists, is committed, and its per-segment arming
 counts sum to a number Phase 7 can pin as the expected edge count.
 
-**Stop-gates.** Two, and both halt the programme rather than being worked around:
+**Gates.** Two, at **different severities**. This distinction is load-bearing; do
+not treat them as a pair.
 
-- **M2 positive** — an arming falls on a gap row after a segment. Phase 5's
-  `exportableAcrossSegment = false` then produces a hard failure at that handoff.
-  Do not paper over it by exporting the submission.
-- **M3 positive** — a `NewPLC`/`ClearPLC` follows an arming inside one iteration.
-  Phase 5's submission model is invalid as written; see the hazard note above.
+- **M2 positive — halts the programme.** An arming falls on a gap row after a
+  segment, so Phase 5's `exportableAcrossSegment = false` produces a hard failure
+  at that handoff. Stop and amend. Do not paper over it by exporting the
+  submission; the intervening `ClearPLC` has destroyed the entry, so there is
+  nothing for a next-segment edge to match.
+- **M3 positive — gates Phase 5 only; the programme continues.** A
+  `NewPLC`/`ClearPLC` follows an arming inside one iteration, so
+  `NemesisPlcServiceQueue.clearQueued` runs against a freshly armed decoder and
+  trips its idle precondition. **Phase 5's submission model remains valid** — the
+  engine already reproduces the ROM's loop-tail ordering, per the hazard note
+  above. The fix is owned by the **queue kernel's clear/replace semantics**,
+  re-answering the Task 1 aliasing gate for "clear arrives one slot after an
+  arming in the same iteration". Phase 5 waits for that fix; nothing else does.
 
 Phase 1 is unaffected by either and proceeds regardless.
 
@@ -665,95 +694,6 @@ Presence of the *file* is the whole discovery mechanism.
 
 ---
 
-## Phase 7a — The timing-only sidecar mode
-
-**This is the phase that turns a fixture fix into a capability, and it is
-first-class rather than incidental.** Blocked on Phase 7.
-
-### 7a.1 What it must produce, and the constraint that shapes it
-
-**[E]** `raw_frame` is a **segment-relative row index**, hard-bounded by that
-segment's own row count (`HardwareTimingStreamLoader.loadVersion:88-91`) and
-compiled against the segment's rows by
-`TraceHardwareTimingScheduleCompiler.compileForInstall`. A bare list of edges is
-therefore not consumable: the sidecar must also carry the **segmentation** — the
-per-segment `bk2_frame_offset` and row count — or nothing can resolve an edge to a
-row.
-
-So "timing-only" means *no comparison payload*, not *no structure*:
-
-| Artefact | Full capture | Timing sidecar |
-|---|---|---|
-| `physics.csv` | yes | **no** |
-| `aux_state.jsonl` | yes | **no** |
-| `hardware_timing.jsonl` (per segment) | yes | **yes** |
-| `metadata.json` (per segment) | yes | **yes** — row counts and offsets only |
-| `run_manifest.json` | yes | **yes** |
-
-**[I]** The segmentation comes from the same arm predicate the full runner already
-applies (`v_gamemode == 0x0C && obCtrlLock == 0`), so it is the same code path
-with the payload writers suppressed — not a second segmentation implementation. A
-second implementation would be a source of drift and must not be built.
-
-### 7a.2 Work
-
-**[E]** `S1RunCaptureRunner` already threads its payload writers through
-`RunSegmentStreams` / `StagedRunSegmentSink`, so the mode is a sink variant plus a
-CLI flag, not a new runner:
-
-1. A `--timing-only` (or equivalently named) flag on the S1 run capture command,
-   which selects a sink that opens the timing and metadata streams and binds
-   `TextWriter.Null` for physics and aux.
-2. Suppress the per-row projector work that only feeds the suppressed payloads —
-   `S1AuxEventEngine.ProcessFrame` and `LoadQueueStateProjector.CaptureS1` — while
-   **keeping** the arm/finalize segment lifecycle and the timing engine's
-   `ObserveFrameEnd`. This is where the runtime saving comes from.
-3. `Program.cs`'s output-filename registration and `:550` no-replace preflight
-   must accept the reduced file set rather than demanding the full one.
-4. The run manifest writer must emit a manifest that `TraceRunManifest` accepts
-   with no payload capabilities declared. **[A]** Whether it currently can is
-   unverified — `TraceRunManifest.java:391` rejects a `trace_schema: 5` segment
-   that *"omits dynamic-art capability"*, and the loader may require payload
-   capabilities that a timing-only manifest cannot honestly declare. **This is
-   deferred measurement M9.**
-
-### 7a.3 Deferred measurement M9
-
-| id | Measurement | Blocks | Method |
-|---|---|---|---|
-| **M9** | Whether `TraceRunManifest` and `TraceMetadata` will load a manifest/metadata pair that declares no physics or aux payload, and if not, precisely which declared capabilities are mandatory. | 7a | Read `TraceRunManifest.java:170-200, 380-400` and `TraceMetadata.java:480-520`; construct a minimal manifest and attempt a load. |
-
-**Do not guess the answer.** If mandatory payload capabilities exist, the honest
-options are (a) relax them for a declared timing-only manifest kind, or (b) accept
-that the sidecar ships alongside a payload capture. Option (b) would substantially
-weaken the capability claim and must be surfaced, not absorbed.
-
-### 7a.4 Runtime expectation
-
-**[A]** No runtime figure is stated here because none has been measured. What is
-**[E]** known: a full S1 emerald capture is roughly 3.5 minutes of native capture,
-and the payload writers plus `S1AuxEventEngine` / `LoadQueueStateProjector` are
-the per-row work being removed while emulation itself is unchanged. Emulation
-therefore bounds the sidecar from below and the full capture bounds it from above.
-**M10: measure the timing-only wall-clock and output size against the full capture
-on the same movie**, and record both. A sidecar that is not materially cheaper
-than a full capture has not delivered this phase's purpose and the phase should be
-re-examined rather than declared done.
-
-**Acceptance.**
-
-- The mode runs over a short S1 movie the fixture corpus has never seen and emits
-  a segmented timing set that `tools/traces/validate_trace_v5.py` accepts and
-  `HardwareTimingStreamLoader` loads.
-- The same movie, captured in full and in timing-only mode, produces
-  **byte-identical** `hardware_timing.jsonl` files. This is the anti-drift check
-  and is the single most important assertion in the phase.
-- The engine replays that previously-unseen movie with the sidecar installed, and
-  every edge is consumed exactly once with no structural failure.
-- M10 recorded.
-
----
-
 ## Phase 8 — Rewind ledger coverage
 
 **[E]** `HardwareTimingService` (`REWIND_KEY = "hardware-timing"`) and
@@ -862,13 +802,17 @@ against it.
 
 ### 11.1 The capability criterion
 
-This is the criterion the programme is judged on, and it must be met on a movie
-that was **not** used to develop any of it:
+This is the criterion the programme is judged on. The bar is **replayability**:
+the movie plays, and the timing port's structural checks stay silent. It is not a
+gameplay-comparison bar, and no comparison payload is generated to satisfy it.
 
-- Take an S1 BK2 outside the committed corpus. Generate its sidecar with Phase
-  7a's mode. Replay it. **Every edge is consumed exactly once, no structural
-  failure occurs, and no per-movie code, constant, or exception was added to make
-  it work.**
+It must be met on a movie that was **not** used to develop any of it:
+
+- Take an S1 BK2 outside the committed corpus. Capture it in full with Phase 7's
+  harness — payload and timing stream from the one pass. Replay it under strict
+  comparison. **Every edge is consumed exactly once, no structural failure
+  occurs, every row is compared, and no per-movie code, constant, or exception
+  was added to make it work.**
 - Repeat on a second movie with a materially different shape — a different zone
   order, a death and restart in an unfamiliar place, or a special-stage entry at
   an arbitrary point — so that the route-independence claims of review §11.5 are
@@ -954,13 +898,10 @@ accepts the corpus.
 ```
 M7 M8 ─────────────> Phase 1  (revert; MANDATORY, independent of all below)
                         │
-M1 M2 M3 M5 ─> Phase 0 ─┤   (concurrent with Phase 1; stop-gates on M2 and M3)
-                        │
+M1 M2 M3 M5 ─> Phase 0 ─┤   (concurrent with Phase 1)
+                        │       M2 halts the programme; M3 gates Phase 5 only
                         v
         Phase 2 ──> Phase 3 ──> Phase 4 ──> Phase 5 ──> Phase 6 ──> Phase 7
-                                                           │           │
-                                                           │           v
-                                                           │       Phase 7a <── M9
                                                            │           │
                                               Phase 8 <────┘           │
                                                  │                     │
@@ -977,13 +918,87 @@ M1 M2 M3 M5 ─> Phase 0 ─┤   (concurrent with Phase 1; stop-gates on M2 and
 
 Edges the diagram flattens, stated explicitly because the measurement table
 carries them: **M4** blocks Phases 5 and 7; **M6** blocks Phases 7 and 10;
-**M7** blocks Phases 1, 6 and 11; **M1/M2** additionally block Phase 9;
-**M9** blocks Phase 7a; **M10** is recorded by Phase 7a rather than blocking it.
-Phase 10 is additionally gated on Phase 6 being green, and Phase 11's §11.1
-capability criterion is gated on Phase 7a.
+**M7** blocks Phases 1, 6 and 11; **M1/M2** additionally block Phase 9. Phase 10
+is additionally gated on Phase 6 being green.
 
 Phases 1, 2, 3, 4 and 8 are independently landable and independently verifiable.
 **Phase 1 is the one that moves the frontier on its own, is mandatory regardless
-of whether anything else here proceeds, and must be measured alone.** **Phase 7a
-is the one the capability claim rests on** — without it the programme delivers a
-fixture fix, whatever this document says in its goal.
+of whether anything else here proceeds, and must be measured alone.**
+
+The capability claim of §11.1 rests on **Phase 7**, not on any reduced-capture
+mode: the timing stream falls out of the same harness pass that produces the
+payload, so an arbitrary BK2 needs one mechanical capture and no per-movie work.
+
+---
+
+## Future work — light-touch BK2 processing
+
+**Recorded so the intent survives without anyone designing toward it. Nothing in
+the phase list above may be shaped by this section.**
+
+### The aspiration
+
+Eventually a BK2 should need only light-touch processing to be runnable, rather
+than a full comparison capture. That is directional and some way off; the current
+programme is not a step toward it and should not be bent into one.
+
+### What the current architecture makes hard about it
+
+Stated concretely so a future effort starts from facts rather than from this
+paragraph's optimism. **[E]** all three:
+
+1. **Replay is row-driven.** `TraceSessionLauncher` dispatches on a row policy
+   derived from recorded payload rows. There is no frame-driving mode that does
+   not consume rows.
+2. **The frame-admission schedule lives in the payload.** The contract's *first*
+   replay contract is main-loop admission, carried by the per-row `lag` outcome in
+   `physics.csv`. `Bk2FrameInput` supplies inputs, not an admission schedule.
+   Nothing outside the payload can say which physical frames ran a gameplay loop.
+3. **Timing edges are compiled against the trace's own rows.**
+   `TraceHardwareTimingScheduleCompiler.compileForInstall` keys
+   `traceIndexByRawFrame` on `trace.getFrame(i).frame()` (`:30-32`), and
+   `raw_frame` is segment-relative and bounded by `traceFrameCount`
+   (`HardwareTimingStreamLoader.java:88-91`). With no rows there is nothing to key
+   on, so a schedule cannot even be installed.
+
+   Additionally, `TraceRunManifest` hard-requires payload capabilities: a
+   `dynamic_art_gap_transitions` array (`:181-184`) and per-segment
+   `hasPerFrameDynamicArtTransferState()` (`:384-393`).
+
+Reaching the aspiration therefore means **reproducing frame admission from
+something other than recorded rows**. That is a change to contract 1 of the
+cross-game hardware-timing contract, not a recorder feature, and it needs its own
+design and review.
+
+### The deferred timing-only recorder mode, and why it is deferred rather than dropped
+
+Revision 3 specified a `--timing-only` capture mode. It is deferred, and the
+reason is not only that it is off the critical path:
+
+- Its original justification — producing playable arbitrary movies from a sidecar
+  alone — is void, per the three blockers above.
+- What survives is narrow: regenerating a timing stream for a movie whose payload
+  already exists, without re-running a full capture.
+- **That narrow case is in tension with the publication contract**, which requires
+  capturing a whole candidate into scratch, freezing its digests and counts, and
+  copying it byte-for-byte. Pairing a freshly generated timing stream with a
+  previously published payload is close to the hand-assembly that contract exists
+  to prevent.
+- And it introduces **a second production path for one artefact**. The only thing
+  that would make that safe is a drift guard — byte-identical
+  `hardware_timing.jsonl` *plus* segment-count, `bk2_frame_offset` and
+  `trace_frame_count` equality between the two modes, since identical timing bytes
+  under shifted segmentation compile to different absolute frames. A single-path
+  design needs no such guard, because it cannot drift.
+
+So the mode would add a failure surface in order to save capture time in a case
+the publication contract discourages. If it is ever revived, **the segmentation
+equality assertions above are mandatory**, not optional.
+
+### Do not foreclose the existing sampled-comparison artifact
+
+Separately, and for the same "do not design toward it" reason: the repository
+already has a lightweight sampled playback-drift artifact, specified and partly
+built. Review §11.6 has the detail. It — not the timing stream — is the natural
+owner of any future cheap standing confidence signal, and nothing in this plan
+should make it harder to adopt.
