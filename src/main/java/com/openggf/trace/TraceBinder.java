@@ -248,6 +248,12 @@ public class TraceBinder {
             }
         }
 
+        // Ring counts: only compared when BOTH the ROM trace and the engine
+        // recorded them. The engine-side -1 is a genuine "no ring context"
+        // signal for callers that collapse diagnostics without a sprite to
+        // read (EMPTY, formattedOnly, formattedWithCamera); it is not a
+        // blanket opt-out, and comparators holding a sprite must pass the
+        // real count through.
         if (tolerances.ringCountMode() != ToleranceConfig.RingCountMode.DISABLED
                 && expected.rings() >= 0 && engineDiag != null && engineDiag.rings() >= 0) {
             fields.put("rings", compareRingCount(expected.rings(), engineDiag.rings()));

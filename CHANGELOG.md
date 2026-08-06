@@ -3,6 +3,20 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: whole-run replay genuinely compares ring count again. `ToleranceConfig.DEFAULT`
+  has always set `RingCountMode.FORCE_ERROR`, but `LiveTraceComparator` built its
+  per-frame diagnostics through a factory that hardcoded `rings = -1`, and
+  `TraceBinder` reads a negative engine ring count as "not captured" and skips the
+  field — so every run-comparator row passed the ring check silently, and a real
+  gameplay divergence could only surface later as an unrelated-looking failure. The
+  run path now passes `sprite.getRingCount()` through
+  `EngineDiagnostics.formattedWithCameraAnimationSubpixelAndRings`. The negative
+  sentinel is deliberately kept: it is a genuine "no ring context" signal for the
+  callers that collapse diagnostics without a sprite to read (`EMPTY`,
+  `formattedOnly`, `formattedWithCamera`), not a blanket opt-out. Nothing regressed —
+  a full suite before and after is red on the identical 116 tests — and a throwaway
+  probe that offset the engine count by 1000 confirmed the field now reaches the
+  comparator as an `ERROR`-severity mismatch rather than being skipped.
 - Fix: a whole-run replay's transition gap no longer swallows the source level's
   last main-loop iteration. A gap is a gap in the *recording*: each run recorder
   finalizes a level segment on the first frame whose sampled game mode has left

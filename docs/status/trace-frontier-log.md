@@ -63397,3 +63397,42 @@ to synthesize a POST phase on a VBLANK-only row.
 - Route position unchanged: `TestS1CompleteEmeraldVisualRun` green at
   `stopAfterSegment(3)` and `stopAfterSegmentBody(11)` — GHZ1 through MZ2 with
   three giant rings, three special stages, one act advance and two deaths.
+
+## 2026-08-06 - The run comparator's ring check was dead; it is now live
+
+- **The hole.** `ToleranceConfig.DEFAULT` sets `RingCountMode.FORCE_ERROR`, so a
+  ring mismatch is meant to be a hard error. It never fired on the run path.
+  `LiveTraceComparator`:268 built its per-frame diagnostics through
+  `EngineDiagnostics.formattedWithCameraAnimationAndSubpixel`, which hardcoded
+  `rings = -1`, and `TraceBinder`:251-253 skips the field when the engine value is
+  negative. Every run-comparator row passed the ring check silently. A GHZ helix
+  occupying 2 object-RAM slots instead of 32 was masked by this earlier in the
+  session and only surfaced three segments later as an unrelated-looking failure.
+- **The fix is the call site, not the guard.** The run path now passes
+  `sprite.getRingCount()` through a renamed
+  `formattedWithCameraAnimationSubpixelAndRings`. The factory had exactly one
+  caller, so widening it was safe. `TraceBinder`'s negative-skip is **kept**: it is
+  a genuine "no ring context" signal for `EMPTY`, `formattedOnly` and
+  `formattedWithCamera`. Removing it would have compared `-1` against real recorded
+  counts on every caller that has no sprite to read.
+- **Measured blast radius: none.** Full suite before and after, JDK 21, all three
+  ROMs: 14,945 passed / 40 failed / 76 errors both times, and the red sets are
+  byte-identical (116 test methods across 43 classes). No trace newly red, none
+  newly green. Ring counts genuinely agree wherever a run fixture records them.
+- **Coverage was verified, not assumed.** A zero delta after enabling a dead
+  comparison is indistinguishable from a change that did not take effect, so a
+  throwaway probe offset the engine count by 1000. The comparator produced
+  `MismatchEntry[field=rings, romValue=0, engineValue=1000, delta=1000,
+  severity=ERROR]` on the S1 emerald run — the field reaches the binder and is
+  scored. Probe reverted.
+- **Caveat on isolated subset runs.** Running the six run-chain tests alone makes
+  `TestS1GhzMazeRoundTripChain` and `TestS1CompleteEmeraldVisualRun` fail on
+  `run_tail.edge[0].edge_ordinal` / a dynamic-art gap, with or without the probe —
+  identical messages either way. That is the known ambient-global-state order
+  dependence, not a ring regression; only whole-suite runs are comparable.
+- **Residual hole, not closed here.** The per-act `*TraceReplay` lane has the same
+  defect independently: `AbstractTraceReplayTest`:440 computes a real ring count via
+  `captureEngineDiagnostics`, then discards it at :465 by re-wrapping through
+  `formattedWithCameraAndAnimation`, which hardcodes `rings = -1`. Closing that is a
+  separate, much wider measurement and was deliberately left out of this change so
+  the run-path delta stayed attributable.

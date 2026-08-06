@@ -90,11 +90,15 @@ public record EngineDiagnostics(
                 -1, -1, -1, -1, animationId, mappingFrame);
     }
 
-    /** Preformatted diagnostics retaining strict camera, animation, and subpixel values. */
-    public static EngineDiagnostics formattedWithCameraAnimationAndSubpixel(
+    /**
+     * Preformatted diagnostics retaining strict camera, animation, subpixel, and
+     * ring values. Callers that genuinely have no ring context pass {@code -1},
+     * which {@link TraceBinder} treats as "not captured" and skips.
+     */
+    public static EngineDiagnostics formattedWithCameraAnimationSubpixelAndRings(
             int cameraX, int cameraY, int animationId, int mappingFrame,
-            int xSub, int ySub, String formatted) {
-        return new EngineDiagnostics(-1, -1, -1, -1, -1, cameraX, cameraY,
+            int xSub, int ySub, int rings, String formatted) {
+        return new EngineDiagnostics(-1, -1, -1, rings, -1, cameraX, cameraY,
                 -1, -1, -1, -1, formatted == null ? "" : formatted,
                 xSub, ySub, -1, -1, animationId, mappingFrame);
     }
