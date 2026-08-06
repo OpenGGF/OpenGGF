@@ -63290,3 +63290,110 @@ to synthesize a POST phase on a VBLANK-only row.
     span 28 classes, overwhelmingly S3K frontier work
     (`TestTraceReplayStartPositionPolicy` 24, `TestS3kCnzTraceReplay` 21) plus
     the three chain reds and the three S1 `*TraceReplay` reds above.
+
+## 2026-08-06 - MZ2's row 101 is the held-row PLC model failing 14 rows out of 15
+
+- Command: `mvn -Dmse=off -Ptrace-replay -Dtest=TestS1CompleteEmeraldVisualRun
+  -Dsonic1.rom.path=s1.gen test`, pin temporarily raised to
+  `stopAfterSegmentBody(12)`. **Nothing landed; the committed pin stays at
+  `stopAfterSegmentBody(11)` and both lanes are green there.**
+- Frontier reproduced exactly: segment 12 (`mz2_3`, BK2 offset 47,034) row
+  **101** — BK2 47,135, harness step 46,380 — 3 errors, then the documented
+  self-pause cascade:
+  - `queue.s1_nemesis_plc.prepared` ROM `true`, engine `false`
+  - `queue.s1_nemesis_plc.remaining_work` ROM `18`, engine `-1`
+  - `queue.s1_nemesis_plc.queued_fingerprints` ROM `f322185a…`, engine
+    `7e44b415…,f322185a…` — the engine still carries the head the ROM has
+    already armed.
+- **The row is not a new defect. It is `99746ffa9`'s deferral firing where the
+  ROM did not defer.** `TraceExecutionModel.isIterationHeldIntoNextRow` is true
+  at `mz2_3` 101 exactly as it is at `ghz2_2` 107: gameplay counter `0x0066`
+  held across `vblank_counter` `B6AC -> B6AD`, `lagcount` 839 -> 840.
+- **Corpus measurement, the thing that settles it.** Across every fixture under
+  `src/test/resources/traces` advertising `load_queue_state_per_frame`, the
+  shape *"a PLC entry completes on row f and recorded row f+1 is a lag row"*
+  occurs **15 times**. In **14** of them the ROM's own row-f sample already
+  shows the next head armed; in **one** — `ghz2_2` 107 — it does not:
+
+  | fixture | row | ROM at row f |
+  |---|---|---|
+  | `runs/…/ghz2_2` | 107 | `prepared=false`, arms on the lag row |
+  | `runs/…/mz2_3` | 101 | armed, `rem` 3 -> 18 |
+  | `runs/…/mz3_2` | 102, 109 | armed, 3 -> 18 / 3 -> 14 |
+  | `runs/…/lz3` | 10185 | armed, 3 -> 42 |
+  | `runs/…/lz4` | 11, 16, 114, 122 | armed |
+  | `s1/fz_completerun` | 11, 16, 29, 118, 125 | armed |
+  | `s1/mz3_completerun` | 102 | armed, 3 -> 18 |
+
+  So the committed predicate is right once and wrong fourteen times. It only
+  looked like a fix because `ghz2_2` is the first of the fifteen the route
+  reaches; `mz2_3` 101 is simply the second, and seven more sit behind it in
+  this same run.
+- **Independent confirmation from a green test, not from reading the
+  disassembly.** `LiveTraceComparator`:317 is the *only* caller of
+  `TraceReplayBootstrap.markIterationHeldIntoNextRowForReplay`;
+  `AbstractTraceReplayTest` never calls it. `TestS1Mz3CompleteRunTraceReplay`
+  was re-run on this tree and is **green (1 test)** — and its fixture's row 102
+  is one of the fourteen, compared through the same `TraceBinder` queue fields.
+  A green standalone trace therefore pins "arm on the completion row" as the
+  correct default.
+- **Mechanism, bracketed by a second recorded observable.** `OscillateNumDo`
+  (docs/s1disasm/sonic.asm:3033) runs immediately after `RunPLC` (3032), and the
+  recorder samples `v_oscillate`. On `ghz2_2` 107, `mz2_3` 101, `mz3_2` 102/109
+  and `lz4` 114/122 the oscillation bytes are **held** on the completion row and
+  advance on the lag row; on `lz3` 10185 they advance on the completion row and
+  the lag row holds. So the ROM's iteration really is cut inside the loop tail —
+  but the cut point moves. In the retail build (`FixBugs=0`) `RunPLC` writes
+  `move.w d2,(v_plc_patternsleft).w` **before** `NemDec_BuildCodeTable`
+  (sonic.asm:1394-1397, ahead of 1398; the `FixBugs` build moves that write to
+  1415). `prepared` therefore flips in the first handful of instructions of
+  `RunPLC`'s work and the expensive part sits entirely behind it, so the frame
+  boundary lands inside `NemDec_BuildCodeTable` — arming visible — whenever the
+  arming itself is what pushed the iteration over budget. That is the fourteen.
+- **Why `ghz2_2` 107 is the exception, measured.** Its sample carries **16**
+  `object_near` records; the other fourteen carry 1-7 (`mz2_3` 101 and `mz3_2`
+  102/109 carry 4, `lz4` carries 1). GHZ2's `ExecuteObjects`/`BuildSprites`
+  (sonic.asm:3010, 3028) had consumed the frame before `ObjPosLoad` (3029),
+  `PaletteCycle` (3031) and `RunPLC` were reached, so the boundary fell in front
+  of the section-counter write. `ghz2_2` also has exactly **one** lag row in its
+  first 400 (row 108) against `mz3_2`'s six and `lz4`'s twenty-seven, so this is
+  not a generally starved segment — it is one heavy iteration.
+- **The discriminator is sub-frame 68000 cycle position, and the v5 aux stream
+  does not carry it.** "Boundary inside `NemDec_BuildCodeTable`" and "boundary
+  before `RunPLC`" leave an identical recorded row shape: same counter hold,
+  same lag flag, same oscillation hold, same fingerprint list shape. No
+  structural predicate over the recorded row can separate them, so no narrowing
+  of `isIterationHeldIntoNextRow` can be right more than 14/15 or less than 1/15.
+- Throwaway probes, both reverted:
+  1. Deferral disabled at `TraceReplayBootstrap`:607 — the run fails at
+     `ghz2_2` 107 with the exact mirror image (`prepared` ROM `false` engine
+     `true`, `remaining_work` `-1` against `14`, `queued_fingerprints` ROM
+     `e21297d4…` against empty), harness step 9,093. So the two models are
+     genuinely exclusive on the current evidence.
+  2. Deferral disabled **and** `TraceBinder.putQueueField` neutralised for
+     `prepared` / `remaining_work` / `queued_fingerprints` — the run walks
+     `mz2_3` to row **592**, whose first error is
+     `player_animation_id` `0x0005` against `0x0006` with
+     `player_mapping_frame` `0x0001` against `0x003A` (Sonic at BK2 47,626,
+     among MZ bricks, a button, a glass block and a Batbrain). Clearing this
+     queue row is therefore worth about 490 rows, not the rest of the act.
+- **Resolutions, both of which need a decision above the fix loop; neither was
+  taken here.**
+  - **A. Revert `99746ffa9`'s behaviour change.** Correct 14 times out of 15 and
+    consistent with the green standalone trace, but lane 2 regresses from
+    `stopAfterSegmentBody(11)` to failing inside segment 3 at `ghz2_2` 107.
+  - **B. Give S1 the sanctioned hardware-timing readiness stream.** Hard rule 4
+    already permits recorded hardware timing to drive a delay in the **S1 PLC**
+    pipeline — release the readiness of a matching, prepared,
+    production-submitted job by kind, ordinal and fingerprint — which is exactly
+    "which closure does this queue head arm on". No S1 or S2 fixture carries
+    `hardware_timing.jsonl`; `tools/bizhawk-headless` emits it for S3K only
+    (`S3KStagedSegmentSink.cs`). That is a recorder change plus a regeneration
+    of the 209k-frame emerald-run fixture, so it needs approval and a full
+    frontier re-measurement.
+  - A comparator tolerance over the straddled loop tail would be a third option
+    and is **not** recommended: it weakens the only field group that currently
+    catches PLC phase errors.
+- Route position unchanged: `TestS1CompleteEmeraldVisualRun` green at
+  `stopAfterSegment(3)` and `stopAfterSegmentBody(11)` — GHZ1 through MZ2 with
+  three giant rings, three special stages, one act advance and two deaths.
