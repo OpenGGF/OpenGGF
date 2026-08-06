@@ -241,7 +241,7 @@ public record GameRules(
                     6,
                     6,
                     false,
-                    false
+                    true
             ),
             new ObjectInteractionRules(
                     false,

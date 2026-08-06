@@ -10,6 +10,7 @@ import com.openggf.level.SolidTile;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.spawn.AbstractPlacementManager;
+import com.openggf.level.spawn.PlacementViewportWidth;
 import com.openggf.level.ChunkDesc;
 import com.openggf.level.objects.TouchResponseTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -1151,8 +1152,8 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     private static final class RingPlacement extends AbstractPlacementManager<RingSpawn> {
         private static final int EXTRA_AHEAD = 0x140; // 320; native -> 0x280 window
         private static final int UNLOAD_BEHIND = 0x300;
-        private static final int S3K_RAW_WINDOW_BEHIND = 0x08;
-        private static final int S3K_RAW_WINDOW_AHEAD = 0x148;
+        private static final int RAW_WINDOW_BEHIND = 0x08;
+        private static final int RAW_WINDOW_AHEAD_MARGIN = 0x10;
         private static final int NO_SPARKLE = -1;
 
         private final boolean useRawCameraWindow;
@@ -1169,7 +1170,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
 
         private RingPlacement(List<RingSpawn> spawns, boolean useRawCameraWindow) {
             super(spawns, EXTRA_AHEAD, UNLOAD_BEHIND,
-                    com.openggf.level.spawn.PlacementViewportWidth::current);
+                    PlacementViewportWidth::current);
             this.useRawCameraWindow = useRawCameraWindow;
             this.sparkleStartFrames = new int[this.spawns.size()];
             Arrays.fill(this.sparkleStartFrames, NO_SPARKLE);
@@ -1386,22 +1387,32 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             activeIndexMembership.clear();
         }
 
+        // The consolidated ring array is windowed off the raw camera, not off
+        // the chunk-aligned object spawn range: S2 RingsManager_Main walks
+        // Ring_start_addr/Ring_end_addr out to camera_x-8 and camera_x-8 +
+        // screen_width+$10, and S3K Load_Rings uses the same pair of bounds.
+        // Touch_Rings, Test_Ring_Collisions and the ring draw routine all read
+        // those two pointers, so a ring outside them is neither collectable nor
+        // drawn even with a character standing on it.
         private int ringWindowStart(int cameraX) {
             if (!useRawCameraWindow) {
                 return getWindowStart(cameraX);
             }
-            return Math.max(0, cameraX - S3K_RAW_WINDOW_BEHIND);
+            return Math.max(0, cameraX - RAW_WINDOW_BEHIND);
         }
 
         private int ringWindowEnd(int cameraX) {
             if (!useRawCameraWindow) {
                 return getWindowEnd(cameraX);
             }
-            // S3K Load_Rings leaves Ring_end_addr_ROM pointing at the first
-            // record whose X equals camera_x-$8+$150. Render_Rings and
-            // Test_Ring_Collisions treat that pointer as exclusive, so the
-            // integer-coordinate window ends one pixel before that record.
-            return cameraX + S3K_RAW_WINDOW_AHEAD - 1;
+            // Ring_end_addr points at the first record whose X reaches
+            // camera_x-$8 + screen_width+$10; the render and collision walks
+            // treat that pointer as exclusive, so the integer-coordinate window
+            // ends one pixel before it. The ROM's screen_width is the viewport
+            // width, which is 320 (giving the native $148 lead) unless a wider
+            // aspect preset is configured.
+            return cameraX - RAW_WINDOW_BEHIND
+                    + PlacementViewportWidth.current() + RAW_WINDOW_AHEAD_MARGIN - 1;
         }
 
         private boolean areAllCollected() {

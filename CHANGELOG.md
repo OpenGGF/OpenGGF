@@ -3,6 +3,42 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Sonic 2 collects stage rings through the ROM's ring-array window instead of the
+  object spawn window. S2 keeps rings in one sorted array rather than in object slots,
+  and `RingsManager_Main` rewalks `Ring_start_addr` / `Ring_end_addr` out to
+  `Camera_X_pos-8` and `Camera_X_pos-8 + screen_width+$10` every frame
+  (`s2.asm`:31847-31881). `Touch_Rings` iterates only that span (`s2.asm`:31932-32005),
+  so a ring outside it is neither collectable nor drawn even with a character standing
+  on it. The engine was windowing S2's rings with the *chunk-aligned object placement*
+  range instead -- `(cameraX & 0xFF80) - 0x300 .. + 0x280`, which reaches 768px further
+  back -- so CPU Tails, who routinely trails hundreds of pixels behind the left edge of
+  the screen, kept banking rings the ROM's window had already scrolled past.
+  `RingRules.stageRingSweepUsesRawCameraWindow` is now true for Sonic 2; it was already
+  true for Sonic 3&K, whose `Load_Rings` derives the identical pair of bounds. The
+  forward extent is now expressed as the ROM's `screen_width+$10` rather than a pinned
+  `$148` so it tracks the configured viewport; at the native 320 it is byte-identical and
+  no S3K behaviour changes.
+- This **refutes the sampling-phase hypothesis** published with the previous entry. The
+  engine is not banking a ring one frame early: it runs +1 to the *end* of the trace, and
+  the ROM's own next ring increment is 20-600 frames later (EHZ1 f1045 against the ROM's
+  next at f1065; CNZ f704 against f1304). At five of the six divergences the ring the
+  engine banked sits left of `Camera_X_pos-8` -- EHZ1 `(1128,693)` with the window
+  starting at 1165, CNZ `(682,881)` against 941, ARZ `(4820,768)` against 5598, CNZ2
+  `(4492,912)` against 4896, MTZ `(2426,1648)` against 3034 -- and is inside the ROM
+  window on *no* frame any character overlaps it. Replaying the ROM's own box test
+  offline across all six traces, the narrow window collects nothing the ROM does not and
+  drops no ring the ROM does.
+- Measured with `-Ptrace-replay -Dmse=off` in a dedicated worktree with a wiped report
+  directory, both sides at the same commit: **749 test cases / 137 classes, 101 red
+  before, 97 red after -- 4 newly green, 0 newly red.** EHZ1, its reference-closure
+  subclass, ARZ and CNZ go green. MTZ and CNZ2 stay red with their ring frontiers moved
+  and their sign flipped (MTZ f2766 `41->42` becomes f7717 `111->101`; CNZ2 f2722
+  `49->50` becomes f5224 `59->58`) -- pre-existing deficits the phantom ring had been
+  compensating for, now unmasked. MCZ is unchanged at f1817 `8->9` and is a **separate
+  root cause**: no placed ring is under either character there, the increments around it
+  are re-collected `Obj37` lost rings from the f1649 hit, and the ROM spawned 29 of them
+  and deleted 28 before expiry, so it is a lost-ring lifetime/bounce divergence rather
+  than a windowing one.
 - Fix: a death that ends the game no longer restarts the level, and the life comes off
   on the frame the ROM takes it. `PlayableSpriteMovement` did both jobs at the wrong
   time: it armed a 60-frame countdown on the death-row crossing and then called

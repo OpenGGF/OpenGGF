@@ -63963,3 +63963,76 @@ to synthesize a POST phase on a VBLANK-only row.
   suppression has no fixture coverage at all; it is covered by
   `TestDeathRestartRoutineParity` instead.
 - **Route position unchanged.** No frontier moved.
+
+## 2026-08-06 - The all-S2 ring `+1` cluster is one cause: the stage-ring window, not sampling phase
+
+- **The prior entry's hypothesis is refuted.** Seven S2 traces each running exactly one
+  ring ahead looked like a recorder/engine sampling-phase difference. It is not. The
+  engine is `+1` from the divergence frame to the *last frame of the trace* (EHZ1's
+  report is a single `rings` group spanning f1045-f5851), and the ROM's own next ring
+  increment is 20-600 frames after the divergence -- EHZ1 diverges at f1045 while the ROM
+  goes 9->10 at f1065; CNZ diverges at f704 while the ROM goes 16->17 at f1304. A
+  one-frame phase error cannot produce either shape. The engine banks a ring the ROM
+  never banks at all.
+- **Root cause: S2's stage rings were windowed off the object spawn range.** S2 does not
+  give rings object slots; it keeps them in one sorted array and rewalks
+  `Ring_start_addr` / `Ring_end_addr` to `Camera_X_pos-8` and
+  `Camera_X_pos-8 + screen_width+$10` in `RingsManager_Main` (`s2.asm`:31847-31881).
+  `Touch_Rings` (`s2.asm`:31932-32005) iterates only `[start, end)`, and the ring draw
+  routine reads the same two pointers, so a ring outside that span is neither collectable
+  nor drawn. `RingManager.RingPlacement` was using the chunk-aligned
+  `AbstractPlacementManager` window `(cameraX & 0xFF80) - 0x300 .. + 0x280` for S2, which
+  reaches 768px behind the camera. CPU Tails trails far off the left of the screen, so he
+  kept collecting rings the ROM's window had already passed.
+- **Evidence, per trace.** Decoding the ROM ring layout at `Off_Rings` and replaying the
+  ROM's `Touch_Rings` box test (`d1=6`, `d6=12`, `d4=16`, `d5=2*(y_radius-3)`) against the
+  recorded positions:
+
+  | Trace | Divergence | Ring banked | ROM window at that frame | Carrier |
+  |---|---|---|---|---|
+  | EHZ1 f1045 | `9->10` | `(1128, 693)` | `[1165, 1500]` | Tails, 32px behind cam |
+  | CNZ f704 | `16->17` | `(682, 881)` | `[941, 1276]` | Tails, 267px behind |
+  | ARZ f2340 | `55->56` | `(4820, 768)` | `[5598, 5933]` | Tails, 789px behind |
+  | CNZ2 f2722 | `49->50` | `(4492, 912)` | `[4896, 5231]` | Tails, 424px behind |
+  | MTZ f2766 | `41->42` | `(2426, 1648)` | `[3034, 3369]` | Tails, 614px behind |
+
+  Each of those rings is overlapped by a character starting on exactly the divergence
+  frame, and is inside the ROM window on **none** of the frames it is overlapped. Sonic is
+  inside the window in all five cases; only the trailing sidekick is outside it.
+- **The narrow window loses nothing.** Simulating the ROM box test over every frame of all
+  six traces: with the raw window the sim collects **zero** rings on frames where the ROM
+  ring count does not rise (EHZ1/CNZ/ARZ/CNZ2), and on no ROM ring-count increase is the
+  overlapped ring outside the window. The wide window adds exactly the phantom
+  collections listed above.
+- **Fix.** `RingRules.stageRingSweepUsesRawCameraWindow` set true for `GameRules.SONIC_2`.
+  The flag already existed and was already true for S3K, whose `Load_Rings` derives the
+  same `camera_x-8 .. camera_x-8+$150` pair; the constants are renamed off their `S3K_`
+  prefix and the forward extent is expressed as the ROM's `screen_width+$10` so it follows
+  the configured viewport instead of a pinned `$148`. At the native 320 the two are
+  byte-identical, so no S3K trace moves.
+- **Measurement.** `mvn -Ptrace-replay -Dmse=off -Dsonic1.rom.path=s1.gen
+  -Dsonic2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen test`, run in two dedicated detached
+  worktrees at `4aae81f0b` with `target/surefire-reports` wiped, one clean and one
+  carrying only this change. **749 test cases / 137 classes both sides. 101 red before,
+  97 red after: 4 newly green, 0 newly red.**
+  - Newly green: `TestS2Ehz1TraceReplay`, `TestS2ReplayReferenceClosureIntegration` (the
+    same EHZ1 trace), `TestS2ArzLevelSelectTraceReplay`, `TestS2CnzLevelSelectTraceReplay`.
+  - A first attempt to measure this in the shared checkout was discarded: a concurrent
+    Maven build in the same `target/` produced 986 "cases", 12 non-trace classes, and 41
+    `NoClassDefFoundError`s on `DrowningController$FixedCountdownAirEvent`. Full-corpus
+    sweeps in this repo need their own worktree while other agents are active.
+- **Frontiers moved rather than closed, on two traces.** Both flip sign, i.e. they leave
+  this cluster and join the engine-*short* ones. The phantom ring had been compensating
+  for a pre-existing deficit further along each route.
+  - `TestS2MtzLevelSelectTraceReplay`: f2766 `41->42` becomes **f7717 `111->101`** (1 error).
+  - `TestS2Cnz2LevelSelectTraceReplay`: f2722 `49->50` becomes **f5224 `59->58`** (9 errors).
+- **`TestS2MczLevelSelectTraceReplay` is unchanged at f1817 `8->9` and is a different root
+  cause.** No placed ring is under Sonic or Tails at f1817, or anywhere near it: decoding
+  the MCZ1 layout, the ROM's ring gains at f1812/f1816/f1842 have no placed ring within
+  40px of either character. They are `Obj37` lost rings being re-collected after the f1649
+  hit that took the count 29->0. The aux slot dump shows the ROM created 29 lost rings at
+  f1649 and removed 28 of them between f1744 and f1867 (boundary deletion and the shared
+  `Ring_spill_anim_counter` expiry), recovering only 9; the engine recovers 10. The next
+  step for MCZ is `Obj37` lifetime and bounce parity -- the per-slot floor-check phase
+  (`Vint_runcount+3 + d7 & 7`), the `Camera_Max_Y_pos + screen_height` boundary delete, and
+  the global spill timer -- not ring windowing.
