@@ -15,6 +15,34 @@ Governing documents:
 - Observability evidence — [`../../research/trace/2026-08-06-s1-plc-arming-row-observability.md`](../../research/trace/2026-08-06-s1-plc-arming-row-observability.md).
 - Address evidence — [`../../research/trace/2026-07-28-s1-s2-plc-readiness-evidence.md`](../../research/trace/2026-07-28-s1-s2-plc-readiness-evidence.md).
 
+## The goal
+
+> **Any S1 BK2 — including movies nobody has recorded yet — replays at correct PLC
+> arming timing, using a companion timing sidecar that is generated mechanically
+> from that movie.**
+
+This is a *capability*, not a fixture fix. `ghz2_2` 107 is the first reachable
+instance of the class, and its value is that it is a **known** instance against
+which the mechanism can be proved before unknown ones depend on it. It is not the
+deliverable.
+
+Two things follow, and they shape every phase below.
+
+- **The sidecar must be cheap and automatic**, or the capability is theoretical.
+  Phase 7a specifies a timing-only recorder mode: an arbitrary BK2 in, a
+  segmented `hardware_timing.jsonl` set out, with no physics or aux payload.
+- **Invariants must be route-independent.** Anything measured once on one route
+  proves the mechanism; it must not become a constant. The generalisation
+  mechanism throughout is the same — *gate on a ROM-state predicate evaluated per
+  frame, and hard-fail on anything that does not match*. Review §11.5 tabulates
+  which properties generalise and which do not.
+
+**Scope boundary, stated up front:** the sidecar removes exactly one divergence
+class. It does not make an arbitrary movie replay clean, and it does not confer
+verifiability — detecting a desync still requires a recorded comparison payload.
+Review §11 draws the full boundary, including the one structural gap (§11.4) that
+does not generalise.
+
 ## What changed from the superseded draft
 
 Recorded because the earlier draft is cited elsewhere and its errors should not
@@ -31,6 +59,8 @@ propagate.
 | Decision gate 2 ("fixture regeneration is a user decision") | **Discharged** — the user has explicitly allowed regeneration. It is no longer a gate, only a step (Phase 10). |
 | Boundary order `VINT_SERVICE -> PRE_MAIN_LOOP -> objects -> POST_OBJECTS` (from `2026-07-28-s1-s2-plc-service-queues.md`) | **Stale.** Actual order is `VINT_SERVICE` → objects → `POST_OBJECTS` → `PRE_MAIN_LOOP` → `prepareAfterLoop` (`LevelFrameStep.java:144-150`, `HardwareServiceBoundary` javadoc). Phase 12 corrects the doc. |
 | Revision 1's phase order (revert fifth) | **Re-sequenced.** The revert is now Phase 1: it depends only on M7/M8, it is the pure correctness fix, it closes 14 of the 15 cases on its own, and landing it shrinks the surface every later phase is measured against. |
+| Revision 2's `SignpostArtLoad` framing ("the engine's signpost producer runs in the object scan, inverting the ROM's order") | **Wrong; withdrawn.** `LevelFrameStep.java:415-418` runs the loop-tail slot *after* `PRE_MAIN_LOOP` (`:362`), with a comment stating the constraint. The engine already matches the ROM. M3 survives, rescoped to the queue kernel's clear-over-armed-decoder precondition, and is a gate on Phase 5 rather than on the programme. |
+| Revision 1 and 2's deliverable ("give the emerald fixture a stream so `ghz2_2` 107 stops failing") | **Reframed as a capability** — any S1 BK2, including unrecorded ones, replays at correct arming timing from a mechanically generated sidecar. Adds Phase 7a and the §11.1 capability criterion, and re-marks M1/M2 as route-specific. |
 
 ## Evidence status legend
 
@@ -49,9 +79,9 @@ phase it blocks. **No number in this plan is invented to stand in for one.**
 
 | id | Measurement | Blocks | Method |
 |---|---|---|---|
-| **M1** | For each of the 34 segments of `s1-sonic-complete-withemeralds`, the set of raw frames in `[bk2_frame_offset, bk2_frame_offset + trace_frame_count)` on which the arming path `0x0015F0` executes. Gives the exact per-segment edge count and the run-wide ordinal range. | 7, 9, 10 | Extend the existing probe (see M-method) with the manifest's segment windows. |
-| **M2** | **Stop-gate.** Whether the arming path executes on the first *gap* row immediately after any segment's last recorded row. | 5 (exportability), 7 | Same probe pass as M1. |
-| **M3** | **Stop-gate.** Whether any `NewPLC` (`sonic.asm:1336`) or `ClearPLC` (`:1363`) executes **in the same `Level_MainLoop` iteration as, and after, an arming** — the `SignpostArtLoad` hazard below. Secondarily, whether any `LoadPLC`→`ClearPLC` pair occurs inside one raw frame. | 5 | Add hooks at the reviewed `append begin` `0x001578`, `replace begin` `0x0015AA`, `clear begin` `0x0015DA` boundaries, plus `SignpostArtLoad` entry, and record intra-frame ordering against `0x0015F0`. |
+| **M1** | For each of the 34 segments of `s1-sonic-complete-withemeralds`, the set of raw frames in `[bk2_frame_offset, bk2_frame_offset + trace_frame_count)` on which the arming path `0x0015F0` executes. **Route-specific: validates the mechanism, and must never become a committed expectation** (review §11.5). | 7, 9, 10 | Extend the existing probe (see M-method) with the manifest's segment windows. |
+| **M2** | **Stop-gate for this route; a known non-generalising limit for others.** Whether the arming path executes on the first *gap* row immediately after any segment's last recorded row. Review §11.4. | 5 (exportability), 7 | Same probe pass as M1. |
+| **M3** | **Gate on Phase 5, not on the programme.** Whether any `NewPLC` (`sonic.asm:1336`) or `ClearPLC` (`:1363`) executes **in the same `Level_MainLoop` iteration as, and after, an arming** — the `SignpostArtLoad` hazard below. Secondarily, whether any `LoadPLC`→`ClearPLC` pair occurs inside one raw frame. | 5 | Add hooks at the reviewed `append begin` `0x001578`, `replace begin` `0x0015AA`, `clear begin` `0x0015DA` boundaries, plus `SignpostArtLoad` entry, and record intra-frame ordering against `0x0015F0`. |
 | **M4** | The `PlcLifecyclePhase` the engine claims on every recorded row of every segment, and whether any row on which `0x0015F0` fires claims anything other than `ORDINARY_LEVEL`. | 5, 7 | Engine-side instrumented dry run over the fixture, cross-referenced against M1. |
 | **M5** | Whether `v_vblank_routine` (`$FFFFF62A`) is `id_VBlank_Levels` (`$08`) on every armed-segment row on which `0x0015F0` fires. The recorder-side equivalent of M4. | 7 | Probe pass; requires adding `VblankRoutine` to `S1Ram.cs`. |
 | **M6** | Whether the engine's arming *decisions* on recorded rows match the ROM's armings 1:1 in count and order, before any edge is applied. A count divergence fails closed but must be known before fixture capture, not after. | 7, 10 | Engine dry run with a diagnostic-only arming log, diffed against M1. |
@@ -65,7 +95,13 @@ ignores `tools/*`). **`PlcProbe.cs` and `PlcProbe2.cs` already exist in
 `.scratch/` — read them before writing anything new there.** The probe is not part
 of the harness build and must not become one.
 
-### Why M3 is a stop-gate: the `SignpostArtLoad` ordering hazard
+### Why M3 is a gate: the `SignpostArtLoad` clear-over-armed-decoder hazard
+
+**A review pass framed this as an ordering inversion between the ROM and the
+engine. That framing was checked and is wrong; the corrected, narrower hazard is
+below.** The gate is retained because what remains is still a real precondition
+failure, but it is scoped to the queue kernel and does **not** invalidate Phase 5's
+submission model.
 
 **[E]** The ROM's loop tail is:
 
@@ -87,30 +123,38 @@ and `SignpostArtLoad` ends:
 `Level_MainLoop` iteration the ROM can arm a head at `3032` and then **wipe the
 queue** at `3035`.
 
-**[I]** The engine inverts that order. `SignpostArtLoad` is a loop-tail subroutine
-in the ROM, but OpenGGF's signpost art load is triggered from object/event code,
-which runs in the object scan — *before* `PRE_MAIN_LOOP`, and therefore before
-Phase 5's submission point. If an arming and a signpost `NewPLC` ever coincide
-with a non-empty queue, the ROM arms the outgoing head and the engine arms the
-incoming one. The fingerprint mismatch fails closed and corrupts nothing, but
-**Phase 5's submission model would be invalid** and would have to be re-specified
-against the ROM's producer ordering rather than patched at the edge.
+**[E] The engine already reproduces that order exactly.**
+`LevelFrameStep.java:415-418` runs
+`LevelEventProvider.updateAtLevelLoopTail()` *after*
+`serviceBoundary(PRE_MAIN_LOOP)` (`:362`) and after `prepareAfterLoop` (`:364`),
+under a comment stating the constraint outright — *"this runs after RunPLC in the
+same frame, so work queued here is only serviced from the next frame"* — and
+`LevelEventProvider.java:181-198` documents the slot as ROM `sonic.asm:3032`'s
+tail. `Sonic1LevelEventManager:172` is the S1 implementation. So both sides arm
+the outgoing head and then clear. **Phase 5's submission model is not at risk from
+this**, and the earlier claim that the engine's signpost producer runs in the
+object scan is withdrawn.
+
+**[I]** What survives is narrower, pre-existing, and owned elsewhere.
+`NemesisPlcServiceQueue.clearQueued` carries the idle-decoder precondition from
+`2026-07-28-s1-s2-plc-service-queues.md`'s Task 1 gate and **fails rather than
+silently discarding work** when a decoder is active. The arming lands one slot
+earlier in the same iteration than the signpost clear, so a coincidence of the two
+drives `clearQueued` against a freshly armed decoder — which is exactly the retail
+aliasing that gate was written for (*"`ClearPLC` zeroes that longword without
+clearing the other decoder scalars"*), now reachable at the arming site.
 
 **[E]** The exposure is bounded and cheap to inspect. `SignpostArtLoad` returns
 early on `v_debuguse` and on `act3`, and latches `v_limitleft2` so it fires **at
 most once per act** — roughly 22 candidate iterations across the emerald run.
 
-**[E]** This is the same retail producer/decoder aliasing that
-`2026-07-28-s1-s2-plc-service-queues.md` made its Task 1 evidence gate
-(*"`ClearPLC` zeroes that longword without clearing the other decoder scalars"*).
-That gate must be **re-answered for the arming site specifically**: the native
-model needed only that clear/replace happen while the decoder was idle, whereas
-the timing port additionally needs it to happen on the same side of the arming in
-both implementations.
-
-**If M3 fires, stop.** Do not reorder the engine's signpost producer to suit the
-port, and do not special-case the affected iteration — either would be a
-trace-shaped fix to a ROM-ordering question. Amend the plan.
+**If M3 fires**, the fix is owned by the queue kernel's clear/replace semantics —
+re-answer the Task 1 gate for the case "clear arrives one slot after an arming in
+the same iteration", from the ROM's actual aliasing behaviour. Do **not** reorder
+the engine's loop-tail slot to suit the port (it is already correct), and do not
+special-case the affected iteration. The timing port's model stands either way,
+which is why this is a scoped gate on Phase 5 rather than a stop-gate on the
+programme.
 
 ---
 
@@ -621,6 +665,95 @@ Presence of the *file* is the whole discovery mechanism.
 
 ---
 
+## Phase 7a — The timing-only sidecar mode
+
+**This is the phase that turns a fixture fix into a capability, and it is
+first-class rather than incidental.** Blocked on Phase 7.
+
+### 7a.1 What it must produce, and the constraint that shapes it
+
+**[E]** `raw_frame` is a **segment-relative row index**, hard-bounded by that
+segment's own row count (`HardwareTimingStreamLoader.loadVersion:88-91`) and
+compiled against the segment's rows by
+`TraceHardwareTimingScheduleCompiler.compileForInstall`. A bare list of edges is
+therefore not consumable: the sidecar must also carry the **segmentation** — the
+per-segment `bk2_frame_offset` and row count — or nothing can resolve an edge to a
+row.
+
+So "timing-only" means *no comparison payload*, not *no structure*:
+
+| Artefact | Full capture | Timing sidecar |
+|---|---|---|
+| `physics.csv` | yes | **no** |
+| `aux_state.jsonl` | yes | **no** |
+| `hardware_timing.jsonl` (per segment) | yes | **yes** |
+| `metadata.json` (per segment) | yes | **yes** — row counts and offsets only |
+| `run_manifest.json` | yes | **yes** |
+
+**[I]** The segmentation comes from the same arm predicate the full runner already
+applies (`v_gamemode == 0x0C && obCtrlLock == 0`), so it is the same code path
+with the payload writers suppressed — not a second segmentation implementation. A
+second implementation would be a source of drift and must not be built.
+
+### 7a.2 Work
+
+**[E]** `S1RunCaptureRunner` already threads its payload writers through
+`RunSegmentStreams` / `StagedRunSegmentSink`, so the mode is a sink variant plus a
+CLI flag, not a new runner:
+
+1. A `--timing-only` (or equivalently named) flag on the S1 run capture command,
+   which selects a sink that opens the timing and metadata streams and binds
+   `TextWriter.Null` for physics and aux.
+2. Suppress the per-row projector work that only feeds the suppressed payloads —
+   `S1AuxEventEngine.ProcessFrame` and `LoadQueueStateProjector.CaptureS1` — while
+   **keeping** the arm/finalize segment lifecycle and the timing engine's
+   `ObserveFrameEnd`. This is where the runtime saving comes from.
+3. `Program.cs`'s output-filename registration and `:550` no-replace preflight
+   must accept the reduced file set rather than demanding the full one.
+4. The run manifest writer must emit a manifest that `TraceRunManifest` accepts
+   with no payload capabilities declared. **[A]** Whether it currently can is
+   unverified — `TraceRunManifest.java:391` rejects a `trace_schema: 5` segment
+   that *"omits dynamic-art capability"*, and the loader may require payload
+   capabilities that a timing-only manifest cannot honestly declare. **This is
+   deferred measurement M9.**
+
+### 7a.3 Deferred measurement M9
+
+| id | Measurement | Blocks | Method |
+|---|---|---|---|
+| **M9** | Whether `TraceRunManifest` and `TraceMetadata` will load a manifest/metadata pair that declares no physics or aux payload, and if not, precisely which declared capabilities are mandatory. | 7a | Read `TraceRunManifest.java:170-200, 380-400` and `TraceMetadata.java:480-520`; construct a minimal manifest and attempt a load. |
+
+**Do not guess the answer.** If mandatory payload capabilities exist, the honest
+options are (a) relax them for a declared timing-only manifest kind, or (b) accept
+that the sidecar ships alongside a payload capture. Option (b) would substantially
+weaken the capability claim and must be surfaced, not absorbed.
+
+### 7a.4 Runtime expectation
+
+**[A]** No runtime figure is stated here because none has been measured. What is
+**[E]** known: a full S1 emerald capture is roughly 3.5 minutes of native capture,
+and the payload writers plus `S1AuxEventEngine` / `LoadQueueStateProjector` are
+the per-row work being removed while emulation itself is unchanged. Emulation
+therefore bounds the sidecar from below and the full capture bounds it from above.
+**M10: measure the timing-only wall-clock and output size against the full capture
+on the same movie**, and record both. A sidecar that is not materially cheaper
+than a full capture has not delivered this phase's purpose and the phase should be
+re-examined rather than declared done.
+
+**Acceptance.**
+
+- The mode runs over a short S1 movie the fixture corpus has never seen and emits
+  a segmented timing set that `tools/traces/validate_trace_v5.py` accepts and
+  `HardwareTimingStreamLoader` loads.
+- The same movie, captured in full and in timing-only mode, produces
+  **byte-identical** `hardware_timing.jsonl` files. This is the anti-drift check
+  and is the single most important assertion in the phase.
+- The engine replays that previously-unseen movie with the sidecar installed, and
+  every edge is consumed exactly once with no structural failure.
+- M10 recorded.
+
+---
+
 ## Phase 8 — Rewind ledger coverage
 
 **[E]** `HardwareTimingService` (`REWIND_KEY = "hardware-timing"`) and
@@ -727,6 +860,29 @@ against it.
 
 ## Phase 11 — End-to-end acceptance
 
+### 11.1 The capability criterion
+
+This is the criterion the programme is judged on, and it must be met on a movie
+that was **not** used to develop any of it:
+
+- Take an S1 BK2 outside the committed corpus. Generate its sidecar with Phase
+  7a's mode. Replay it. **Every edge is consumed exactly once, no structural
+  failure occurs, and no per-movie code, constant, or exception was added to make
+  it work.**
+- Repeat on a second movie with a materially different shape — a different zone
+  order, a death and restart in an unfamiliar place, or a special-stage entry at
+  an arbitrary point — so that the route-independence claims of review §11.5 are
+  exercised rather than asserted.
+- Any failure is triaged against review §11: if it is §11.4's non-generalising
+  gap, it must present as the named `handoffTo` failure and be recorded as such,
+  not worked around.
+
+**Asserting route-independence is not evidence of it.** If no second movie is
+available, say so and mark the criterion `EVIDENCE_INCOMPLETE` rather than
+declaring the capability met on one route.
+
+### 11.2 Regression criteria
+
 - Both lanes of `TestS1CompleteEmeraldVisualRun` pass at their current pins;
   `replaysTheSecondGiantRingAndTheSpecialStageBehindIt` is verified against the
   published stream, having already passed against Phase 6's synthetic one.
@@ -802,27 +958,32 @@ M1 M2 M3 M5 ─> Phase 0 ─┤   (concurrent with Phase 1; stop-gates on M2 and
                         │
                         v
         Phase 2 ──> Phase 3 ──> Phase 4 ──> Phase 5 ──> Phase 6 ──> Phase 7
-                                              ^  ^         │           │
-M4 ───────────────────────────────────────────┘  │         │           │
-M6 ──────────────────────────────────────────────┼─────────┼───────────┤
-                                                 │         │           │
-                              Phase 8 <───────────┘         │           │
-                                 │                          │           │
-                              Phase 9 <──────── M1 M2       │           │
-                                 │                          │           │
-                                 └────> Phase 10 <──────────┘  (gated on Phase 6)
-                                            │
-                                        Phase 11
-                                            │
-                            Phase 12 ───────┤
-                                            v
-                                        Phase 13
+                                                           │           │
+                                                           │           v
+                                                           │       Phase 7a <── M9
+                                                           │           │
+                                              Phase 8 <────┘           │
+                                                 │                     │
+                                              Phase 9                  │
+                                                 │                     │
+                                                 └──> Phase 10 <───────┘
+                                                          │
+                                                      Phase 11
+                                                          │
+                                          Phase 12 ───────┤
+                                                          v
+                                                      Phase 13
 ```
 
-Edges worth stating explicitly, because the table above carries them and a
-diagram flattens them: **M4** blocks Phases 5 and 7; **M6** blocks Phases 7 and
-10; **M7** blocks Phases 1, 6 and 11; **M1/M2** additionally block Phase 9.
+Edges the diagram flattens, stated explicitly because the measurement table
+carries them: **M4** blocks Phases 5 and 7; **M6** blocks Phases 7 and 10;
+**M7** blocks Phases 1, 6 and 11; **M1/M2** additionally block Phase 9;
+**M9** blocks Phase 7a; **M10** is recorded by Phase 7a rather than blocking it.
+Phase 10 is additionally gated on Phase 6 being green, and Phase 11's §11.1
+capability criterion is gated on Phase 7a.
 
 Phases 1, 2, 3, 4 and 8 are independently landable and independently verifiable.
 **Phase 1 is the one that moves the frontier on its own, is mandatory regardless
-of whether anything else here proceeds, and must be measured alone.**
+of whether anything else here proceeds, and must be measured alone.** **Phase 7a
+is the one the capability claim rests on** — without it the programme delivers a
+fixture fix, whatever this document says in its goal.

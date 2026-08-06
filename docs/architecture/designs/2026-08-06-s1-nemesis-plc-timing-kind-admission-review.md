@@ -27,7 +27,9 @@ this review must survive).
 |---|---|
 | Does S1 have a polled, gameplay-visible PLC readiness gate? | **Yes** — but on `v_plc_buffer` (`$FFFFF680`), not `v_plc_patternsleft`. Eight reachable gameplay-visible poll sites, four of them unbounded frame-locked spin loops. §2. |
 | Is the timing already reproduced by lag, phase, or deterministic queue service? | **No.** The discriminator is sub-frame 68000 cycle position; the two outcomes leave an identical recorded row shape and identical lag classification. §3. |
-| What exactly does the stream buy? | **One row, in one fixture — but deterministically, every run.** Reverting `99746ffa9` is correct on 1,169 of 1,170 measured armings. The stream exists for `ghz2_2` 107, which is not a rare event but a fixed property of this BK2. §4. |
+| What exactly does the stream buy? | On the measured corpus, one row — deterministically, every run. Against the real bar (**any BK2 replays clean**) it is the only construction that scales at all: a native model is *permanently* incapable because the discriminator is sub-frame. §4.1-4.2. |
+| Isn't this hand-fitting one recording? | **No.** The sidecar is mechanically regenerable from any movie, derived only from ROM execution, carries no gameplay values, creates no work, and gets *stricter* as more movies are thrown at it. §7.5. |
+| Does it make any S1 BK2 replay clean? | **No, and the boundary is stated.** It removes one divergence class; it does not confer verifiability without a comparison payload, and one structural gap does not generalise. §11. |
 | Does it drag the S3K fixture corpus with it? | **No** — and this is the decisive structural difference from the rejected `LEVEL_LOAD` proposal. §7.3. |
 | Is the `compressedLength` waiver granted? | **Yes, with an amendment.** Waived; the mode bit must move into `compressionVariant` rather than being silently dropped. §6. |
 | Does `TestHardwareTimingAuthorityGuard` need editing? | **No.** It holds no kind literals. §8.2. |
@@ -303,7 +305,44 @@ work and should land first and separately. What it changes is the conclusion
 drawn from the accounting. The residue is small, permanent, load-bearing, and has
 no other owner.
 
-### 4.2 Options weighed
+### 4.2 The bar is arbitrary-BK2 replay, and that makes a native model *permanently* incapable
+
+The user has since restated the objective, and it changes this section's
+conclusion rather than merely reinforcing it:
+
+> The goal is that we can throw **any** BK2 at the engine and it replays with no
+> desyncs. Generating a companion lightweight timing trace to achieve that is
+> fine. What is not acceptable is the engine being tied to one individual BK2's
+> specific transition timings, which are a function of 68000 state.
+
+Under that bar the accounting above is the wrong accounting, because it measures
+a *fixed corpus*. Restated against arbitrary input:
+
+- A native model is not "wrong 14 times in 15". It is **structurally incapable**,
+  permanently. The arming's position within `{f, f+1}` is a function of where the
+  physical frame boundary falls inside `Level_MainLoop`, which is a function of
+  that movie's accumulated 68000 execution — object count, decompression length,
+  DMA pressure, lag history. A new BK2's `RAW` rows fall wherever *that* movie's
+  cycle history puts them. No amount of refinement to a frame-granularity
+  predictor reaches them, because the quantity is sub-frame by construction.
+- The corpus rate is the *expected defect density of arbitrary input*, not a
+  property of `ghz2_2`. One `RAW` per ~1,170 armings means an S1 whole-run capture
+  carries ~0.5 expected occurrences. Any sufficiently long new movie eventually
+  contains one, and it will be somewhere nobody has looked.
+- Every cheap per-movie workaround is closed by hard rule 3: no frame-number
+  branch, no route predicate, no known-failing-trace exception, no zone carve-out.
+
+**The recorded sidecar is therefore not a fix for `ghz2_2`; it is the only
+construction in the design space that scales to input nobody has recorded yet.**
+`ghz2_2` 107 is simply the first instance of the class to be reached, and it is
+valuable precisely because it is a *known* instance against which the mechanism
+can be proved before it is relied on for unknown ones.
+
+That reframing also answers the sharpest objection to this whole proposal —
+"you are hand-fitting one recording" — and §7.6 makes the confinement argument
+that follows from it.
+
+### 4.3 Options weighed
 
 1. **Revert only, and pin the frontier at `ghz2_2` 107.** Cheapest. Per §4.1,
    leaves the whole-run visual lane permanently blocked at segment 2 of 34 and
@@ -429,7 +468,7 @@ post-change assertions in the same class:
    `com.openggf.game.sonic1.resources.Sonic1RuntimeArtCoordinator` and
    `com.openggf.level.resources.NemesisPlcServiceQueue`. Without this the
    `com.openggf.trace` prohibition asserted throughout §7 is unenforced for
-   exactly the two classes this design adds to the readiness path — see §7.5.
+   exactly the two classes this design adds to the readiness path — see §7.6.
 
 Of the class's three existing package-isolation tests,
 `traceProductionSourcesDoNotDependOnNativePlcServices` and
@@ -642,7 +681,44 @@ stream. If S2 later wires one, its fixtures need re-recording — that is a futu
 scope decision, and §5.5 assertion 3 ensures it cannot happen by accident through
 the shared kernel.
 
-### 7.5 `TestHardwareTimingAuthorityGuard` stays green, unmodified
+### 7.5 A regenerable per-BK2 sidecar is categorically not a fixture-specific fudge
+
+This is the confinement argument the arbitrary-BK2 bar (§4.2) makes available, and
+it is stronger than anything in §7.1-§7.4.
+
+The obvious objection to admitting a recorded input is that it lets a specific
+recording carry a specific answer for a specific engine failure — that the fix is
+fitted to `s1-sonic-complete-withemeralds` and would not survive contact with any
+other movie. Six properties refute it, and each is checkable rather than asserted:
+
+1. **Anyone can produce one, from any movie.** The sidecar is generated by a
+   mechanical pass over an arbitrary BK2 (plan Phase 7a). It is not authored,
+   curated, or corrected. There is no privileged fixture.
+2. **It is derived entirely from ROM execution, not from the engine.** The
+   recorder observes `0x0015F0`; it never reads the engine's state, never
+   compares, and cannot be tuned to make a test pass. A wrong engine produces a
+   *failure*, not a green run — `admitRecordedCompletion` requires the engine to
+   have independently submitted a fingerprint-matching job.
+3. **It carries no gameplay values.** Six fields, none of them a position, count,
+   flag, address, or payload.
+4. **It creates no work.** An edge with nothing pending fails with
+   `engine pending: <none>`.
+5. **It keys on nothing route-specific.** No zone, act, route, fixture name, game
+   name, or frame-number branch exists anywhere in the consumption path. The one
+   frame-shaped field, `raw_frame`, is a position in the movie being replayed, not
+   a selector.
+6. **It is falsifiable per movie.** If the engine and the sidecar disagree about
+   *what* work exists, the run fails structurally and loudly. A sidecar cannot
+   conceal an engine bug; it can only supply a scheduling bit the engine provably
+   cannot derive.
+
+The distinction that matters: a fixture-specific fudge makes *one* recording pass
+and generalises to nothing. A sidecar makes *every* recording replayable by the
+same mechanism, and the mechanism gets stricter — not looser — as more movies are
+thrown at it, because each one is a fresh opportunity for the fingerprint and
+ordinal checks to catch a divergence.
+
+### 7.6 `TestHardwareTimingAuthorityGuard` stays green, unmodified
 
 Verified: the class holds **no kind literals at all**. It is entirely
 package/path/regex shaped —
@@ -808,26 +884,37 @@ Three residual hazards, each with a named measurement in the plan:
   arming.** `Level_MainLoop` calls `RunPLC` at `sonic.asm:3032` and
   `SignpostArtLoad` three instructions later at `:3035`; `SignpostArtLoad` ends
   `bra.w NewPLC` (`:3205`), and `NewPLC` (`:1336`) begins with `ClearPLC`. So the
-  ROM can arm a head and then wipe the queue **within one loop tail**. The
-  engine's signpost-triggered producer runs in the object scan — *before*
-  `PRE_MAIN_LOOP` — inverting the order. If both ever coincide with a non-empty
-  queue, the two sides arm different heads: the ROM the outgoing one, the engine
-  the incoming one. The fingerprint fails closed rather than corrupting anything,
-  but the submission model of §7.1 would be invalid and would have to be
-  re-specified against the ROM's producer ordering, not patched. The exposure is
-  bounded: `SignpostArtLoad` returns early on act 3 and in debug, and latches
-  `v_limitleft2` so it fires at most **once per act** — roughly 22 candidate
-  iterations across the emerald run, which is exactly what the measurement
-  inspects. This is the same retail producer/decoder aliasing that
-  `2026-07-28-s1-s2-plc-service-queues.md` flagged as its Task 1 evidence gate;
-  that gate must be re-answered for the arming site specifically, because the
-  native model only needed clear/replace to occur while the decoder was idle,
-  whereas the timing port additionally needs it to occur on the same side of the
-  arming on both implementations.
+  ROM can arm a head and then wipe the queue **within one loop tail**.
 
-All three are answerable from the existing probe. None is guessed at here, and
-the third is a **stop-gate**: if it fires, the plan halts and is amended rather
-than proceeding to capture.
+  A review pass proposed that the engine inverts this order by running its
+  signpost producer in the object scan. **That is not the case, and the claim is
+  withdrawn.** `LevelFrameStep.java:415-418` runs
+  `LevelEventProvider.updateAtLevelLoopTail()` *after*
+  `serviceBoundary(PRE_MAIN_LOOP)` (`:362`) and after `prepareAfterLoop` (`:364`),
+  with a comment that states the constraint explicitly — *"this runs after RunPLC
+  in the same frame, so work queued here is only serviced from the next frame"* —
+  and `LevelEventProvider.java:181-198` documents the slot as ROM
+  `sonic.asm:3032`'s tail. `Sonic1LevelEventManager:172` is the S1 implementation.
+  **The engine already reproduces the ROM ordering exactly**, so both sides arm
+  the outgoing head and then clear. The submission model of §7.1 is not at risk
+  from this.
+
+  What survives is narrower and pre-existing: `NemesisPlcServiceQueue.clearQueued`
+  carries the idle-decoder precondition from
+  `2026-07-28-s1-s2-plc-service-queues.md`'s Task 1 gate and **fails rather than
+  discarding work** when a decoder is active. Because the arming now lands one
+  slot earlier in the same iteration than the signpost clear, a coincidence of the
+  two would drive `clearQueued` against a freshly armed decoder. That is the
+  retail aliasing the Task 1 gate was written for, and it needs re-answering at
+  the arming site — but it is an engine-model question that exists with or without
+  the timing port, not a port-model invalidator. Exposure is bounded:
+  `SignpostArtLoad` returns early on `v_debuguse` and `act3` and latches
+  `v_limitleft2`, so it fires **at most once per act**.
+
+All three are answerable from the existing probe plus a code read. None is guessed
+at here. The third remains a gate — but a *scoped* one: if it fires, the fix is
+owned by the queue kernel's clear/replace semantics, not by the timing port, and
+the port's model stands either way.
 
 ### 9.4 A defence in depth that costs nothing
 
@@ -857,7 +944,79 @@ fix owned by the diagnostic projection, not by the timing port.
 
 ---
 
-## 11. What this review does not authorise
+## 11. What an arbitrary BK2 still cannot do
+
+The arbitrary-BK2 bar deserves a boundary drawn now rather than discovered at
+capture time. **The sidecar does not make any S1 movie replay clean. It removes
+exactly one divergence class.** Stated precisely:
+
+### 11.1 What it does buy
+
+For any S1 BK2 with a generated sidecar: every `Level_MainLoop` PLC arming in
+every recorded segment is scheduled at the raw frame the ROM scheduled it,
+including the sub-frame cases no frame-granularity model can reach. That is the
+whole of the benefit.
+
+### 11.2 What it does not buy — replayability is not verifiability
+
+A timing-only sidecar makes a movie **playable** at correct PLC timing. It does
+not make it **verifiable**: detecting a desync requires a recorded comparison
+payload (`physics.csv`, `aux_state.jsonl`) to compare against. A movie with a
+sidecar and no payload can be driven through the engine, but nothing will notice
+if it goes wrong. Anyone reading "any BK2 replays with no desyncs" as "and we will
+know" needs the full capture, not the sidecar.
+
+### 11.3 What it does not buy — every other divergence class is untouched
+
+The sidecar is scoped to one `HardwareWorkKind`. It does nothing for:
+unimplemented or divergent S1 objects; any other unmodelled hardware timing;
+special-stage entropy; RNG history seeded before the recorded prefix; the
+level-load span residual (which
+`2026-08-06-level-load-span-timing-port-scope.md` assigns to main-loop admission,
+not to this port); or S2 and S3K, which wire no coordinator.
+
+### 11.4 The one structural gap that does not generalise
+
+`exportableAcrossSegment = false` (§9.2) makes a pending arming at a segment
+boundary a hard failure. On the measured route no arming falls on the first gap
+row after a segment (pending M2). **On an arbitrary route, one might** — segment
+ends are ~34 specific frames per run and `RAW`-shaped armings occur at roughly one
+per 1,170, so the probability is low but not zero, and it rises with route length.
+
+Such a BK2 fails, at capture-consumption time, with
+*"non-exportable pending hardware submission at segment end"* naming the job. That
+is a **diagnosable, named failure, not a silent desync**, which is the correct
+behaviour — but it is a real limit on "any BK2", and it is stated here rather than
+papered over.
+
+The generalising fix, if one is ever needed, is for the recorder to extend the
+armed segment by the one row that carries the spilled loop tail, so the edge
+becomes representable. That is a segmentation change with its own review, and it
+is explicitly **not** authorised here. Exporting the submission across the gap is
+not an option: the intervening level restart's `ClearPLC` destroys the entry, so
+there is nothing for a next-segment edge to match.
+
+### 11.5 Which invariants are route-independent, and which are not
+
+Because the bar is now arbitrary input, this distinction has to be explicit:
+
+| Property | Generalises? | Why |
+|---|---|---|
+| Fingerprint tuple | **Yes, by construction** | Derived only from ROM bytes at the entry's address; contains nothing route-, movie-, or segment-derived |
+| Ordinal rule ("count armings inside armed segments, monotone across the run") | **Yes, by construction** | A counting rule, not a measured number |
+| Boundary (`pre_main_loop`) | **Yes** | A property of `Level_MainLoop`'s shape, measured at 0 exceptions in 383,502 frames |
+| Recorder gate (`v_vblank_routine == $08` inside an armed segment) | **Yes** | A ROM-state predicate evaluated per frame, with a hard failure on any arming that does not match — so a new route cannot silently violate it |
+| Engine gate (phase `== ORDINARY_LEVEL`) | **Yes** | A ROM-loop classification the engine already computes for its own pattern budget |
+| Zero-pending-at-handoff | **Yes**, subject to §11.4 | Follows from non-exportability; violations are named failures |
+| **Per-segment edge counts (M1)** | **No** | Route-specific data. Used to validate the mechanism on the measured route; **must never become a committed expectation** |
+| **"No arming on a gap row" (M2)** | **No** | Route-specific fact. See §11.4 |
+
+The generalisation mechanism throughout is the same: **gate on a ROM-state
+predicate evaluated per frame, and hard-fail on anything that does not match**,
+rather than on a fact measured once on one route. M1 and M2 exist to prove the
+mechanism, not to become constants.
+
+## 12. What this review does not authorise
 
 - Any further PLC-adjacent kind. `PLC_QUEUE` as a generic name, a DPLC kind, a
   VDP transfer fence, a plane-draw fence and `LEVEL_LOAD` all remain
@@ -878,7 +1037,7 @@ fix owned by the diagnostic projection, not by the timing port.
 
 ---
 
-## 12. Recommendation
+## 13. Recommendation
 
 **Admit `NEMESIS_PLC_QUEUE`** to the v5 hardware-timing registry, at
 `pre_main_loop`, with the waived-`compressedLength` fingerprint of §6.3, confined
@@ -893,9 +1052,16 @@ and the recorder; its Phase 1 — reverting `99746ffa9` — is **mandatory
 independently of this admission**, closes 14 of the 15 cases on its own, and
 should land first and be measured alone.
 
-The honest summary for anyone approving this: it buys one row of one fixture, but
-it buys that row *deterministically and permanently* (§4.1), and it buys a correct
-owner for a recurring class of divergence that has no other owner and whose every
-cheap workaround is forbidden by hard rule 3. The small size of the residue is why
-this should be scheduled behind the S3K vertical slice; its permanence is why it
-should be built rather than papered over.
+The honest summary for anyone approving this. Measured against the current corpus
+it buys one row — but deterministically and permanently (§4.1). Measured against
+the actual bar, *any BK2 replays clean*, it is the only construction in the design
+space that reaches sub-frame scheduling at all, and every alternative is either
+structurally incapable (a native predictor, §4.2) or forbidden by hard rule 3 (a
+per-movie workaround). It is not a fixture fix (§7.5), and it is not a claim that
+arbitrary movies now replay clean — §11 draws that boundary explicitly, including
+the one gap that does not generalise.
+
+The small size of today's residue is why this should be scheduled behind the S3K
+vertical slice. Its permanence, and the fact that it is the only thing that scales
+to input nobody has recorded yet, is why it should be built rather than papered
+over.

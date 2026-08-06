@@ -63732,3 +63732,75 @@ to synthesize a POST phase on a VBLANK-only row.
   corrected in place; the argument is unaffected.
 - **Route position unchanged.** No engine change; pins stay at
   `stopAfterSegment(3)` and `stopAfterSegmentBody(11)`.
+
+## 2026-08-06 - Goal restated: arbitrary-BK2 replay via a generated timing sidecar
+
+- **Command.** None. Documents-only. No Maven run, no probe pass, no engine or
+  recorder change. Still `develop`, shared working tree.
+- **Requirement change.** The deliverable is a **capability**, not a fixture fix:
+  any S1 BK2 — including movies nobody has recorded — replays at correct PLC
+  arming timing, from a companion timing sidecar generated mechanically from that
+  movie. `ghz2_2` 107 is the first reachable instance of the class, not the target.
+  Generating the sidecar is explicitly approved; tying the engine to one movie's
+  transition timings is not.
+- **This strengthens the justification rather than merely widening it.** Against a
+  fixed corpus a native model is wrong 14 times in 15. Against arbitrary input it
+  is **permanently incapable**: the arming's position within `{f, f+1}` is a
+  function of that movie's accumulated 68000 execution, so a new BK2's `RAW` rows
+  fall wherever its cycle history puts them, and no frame-granularity predictor
+  reaches a sub-frame quantity. At ~0.5 expected occurrences per whole-run
+  capture, any sufficiently long new movie contains one, somewhere nobody looked.
+- **New Phase 7a: the timing-only sidecar mode**, now first-class. The constraint
+  that shapes it: `raw_frame` is a *segment-relative* row index bounded by that
+  segment's row count (`HardwareTimingStreamLoader:88-91`), so the sidecar must
+  carry the segmentation — offsets and row counts — even though it carries no
+  `physics.csv` or `aux_state.jsonl`. It is therefore the existing S1 run runner
+  with the payload writers bound to `TextWriter.Null` and the payload-only
+  projectors suppressed, **not** a second segmentation implementation. Its key
+  acceptance is that a full capture and a timing-only capture of the same movie
+  produce **byte-identical** `hardware_timing.jsonl`.
+- **Two new deferred measurements.** M9: whether `TraceRunManifest` /
+  `TraceMetadata` will load a manifest declaring no physics or aux payload —
+  `TraceRunManifest.java:391` already rejects a segment that omits dynamic-art
+  capability, so this is genuinely open, and if payload capabilities are mandatory
+  the capability claim weakens and must be surfaced rather than absorbed. M10: the
+  timing-only wall-clock and output size against a full capture on the same movie.
+  No runtime figure is asserted; emulation bounds it below, full capture above.
+- **What remains out of reach, stated now.** The sidecar removes exactly one
+  divergence class. It does **not** confer verifiability — detecting a desync
+  needs a comparison payload, so a sidecar-only movie is playable but unchecked.
+  It does nothing for unimplemented objects, other unmodelled timing, or the
+  level-load span. And one invariant does not generalise: with
+  `exportableAcrossSegment = false`, an arming that spills onto the first gap row
+  after a segment fails hard. On the measured route it does not occur (pending
+  M2); on an arbitrary route it may. That presents as a named `handoffTo` failure,
+  not a silent desync — a real limit on "any BK2", recorded rather than papered
+  over. The generalising fix (extend the armed segment by the spilled row) is a
+  segmentation change needing its own review and is **not** authorised.
+- **Route-independence is now tabulated** (review §11.5). Generalising by
+  construction: the fingerprint tuple (ROM-derived only), the ordinal rule (a
+  counting rule, not a number), the boundary, both gates. **Not** generalising:
+  M1's per-segment edge counts and M2's gap-row answer — route-specific data that
+  validates the mechanism and must never become a committed expectation. The
+  generalisation mechanism throughout is to gate on a per-frame ROM-state
+  predicate and hard-fail on any mismatch, so a new route cannot silently violate
+  an invariant.
+- **Correction to the previous entry's `SignpostArtLoad` hazard.** The claim that
+  the engine's signpost producer runs in the object scan, inverting the ROM's
+  order, is **wrong and withdrawn**. `LevelFrameStep.java:415-418` runs
+  `LevelEventProvider.updateAtLevelLoopTail()` *after*
+  `serviceBoundary(PRE_MAIN_LOOP)` (`:362`) and after `prepareAfterLoop` (`:364`),
+  under a comment stating the constraint outright, and
+  `LevelEventProvider.java:181-198` documents the slot as ROM `sonic.asm:3032`'s
+  tail. The engine already matches the ROM. M3 survives rescoped: the arming lands
+  one slot before the signpost clear, so a coincidence drives
+  `NemesisPlcServiceQueue.clearQueued` against a freshly armed decoder and trips
+  its idle precondition. That is a pre-existing queue-kernel question, owned by the
+  Task 1 aliasing gate, and it is a gate on Phase 5 rather than a stop-gate on the
+  programme.
+- **New acceptance criterion (§11.1).** The capability is proved on a movie **not**
+  used to develop any of it, plus a second of materially different shape, with no
+  per-movie code, constant, or exception added. If no second movie exists, the
+  criterion is marked `EVIDENCE_INCOMPLETE` rather than declared met on one route.
+- **Route position unchanged.** No engine change; pins stay at
+  `stopAfterSegment(3)` and `stopAfterSegmentBody(11)`.
