@@ -8,6 +8,7 @@ import com.openggf.game.rules.CollisionRules;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.PlayerAnimationRules;
 import com.openggf.game.rules.PlayerCapabilityRules;
+import com.openggf.game.rules.PlayerLevelBoundaryRules;
 import com.openggf.game.rules.PlayerMovementRules;
 import com.openggf.game.rules.PowerUpRules;
 
@@ -4131,27 +4132,73 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
     }
 
 	private short applyDeathMovement() {
+		// Once the corpse has left the screen the ROM leaves the falling routine
+		// behind entirely: S1 Sonic_ResetLevel (docs/s1disasm/_incObj/01
+		// Sonic.asm:2062-2073), S2 Obj01_Gone (docs/s2disasm/s2.asm:38345-38352)
+		// and S3K loc_1257C (docs/skdisasm/sonic3k.asm:24697-24706) only count the
+		// restart delay down. No gravity, no ObjectFall, so the recorded position,
+		// sub-position and y_vel all stand still until the level restarts (S1 MZ1
+		// rows 3,331-3,390).
+		if (sprite.getDeathCountdown() > 0) {
+			tickRestartCountdown();
+			return 0;
+		}
+
+		// Sonic_HandleDeath / CheckGameOver / sub_123C2 run BEFORE the fall, so
+		// the row they compare is the position this frame's fall starts from, and
+		// S1's gravity cancellation is still in y_vel when the fall applies it.
+		if (hasFallenPastDeathRestartRow()) {
+			PlayerMovementRules movementRules = playerMovementRulesOrNull();
+			if (movementRules != null && movementRules.levelBoundary() != null
+					&& movementRules.levelBoundary().deathFallRestartHandoffCancelsGravity()) {
+				// S1 alone writes y_vel = -gravity so the ObjectFall that follows
+				// moves the corpse back by exactly what gravity is about to add
+				// and leaves it stopped (01 Sonic.asm:2010).
+				sprite.setYSpeed((short) -sprite.getGravity());
+			}
+			sprite.startDeathCountdown();
+		}
+
 		short oldYSpeed = sprite.getYSpeed();
 		applyGravity();  // Gated on isObjectControlled(); a controlled sprite never enters the death routine anyway but keep gates consistent
 		sprite.setGSpeed((short) 0);
 		sprite.setXSpeed((short) 0);
-
-		Camera camera = camera();
-		if (camera != null && sprite.getY() > camera.getY() + camera.getHeight() + 256) {
-			sprite.startDeathCountdown();
-		}
-
-		if (sprite.tickDeathCountdown()) {
-			if (sprite.isCpuControlled() && sprite.getCpuController() != null) {
-				// CPU-controlled sprites (Tails) despawn and respawn near the main player
-				// instead of causing a level reset
-				sprite.getCpuController().despawn();
-			} else {
-				gameState().loseLife();
-				levelManager().requestRespawn();
-			}
-		}
 		return oldYSpeed;
+	}
+
+	/**
+	 * ROM death-fall restart test: {@code cmp.w y_pos(a0),d0} against a
+	 * camera-derived row plus {@code $100}, where the row itself is per game
+	 * (see {@link PlayerLevelBoundaryRules}). The comparison is against the ROM
+	 * y_pos word, i.e. centre-Y, not the render bounds.
+	 */
+	private boolean hasFallenPastDeathRestartRow() {
+		Camera camera = camera();
+		if (camera == null) {
+			return false;
+		}
+		PlayerMovementRules movementRules = playerMovementRulesOrNull();
+		PlayerLevelBoundaryRules boundaryRules =
+				movementRules != null ? movementRules.levelBoundary() : null;
+		int reference = boundaryRules != null
+				&& boundaryRules.deathFallBottomReferenceIsCameraBottomBoundary()
+				? camera.getMaxY()
+				: camera.getY();
+		return sprite.getCentreY() > reference + 0x100;
+	}
+
+	private void tickRestartCountdown() {
+		if (!sprite.tickDeathCountdown()) {
+			return;
+		}
+		if (sprite.isCpuControlled() && sprite.getCpuController() != null) {
+			// CPU-controlled sprites (Tails) despawn and respawn near the main player
+			// instead of causing a level reset
+			sprite.getCpuController().despawn();
+		} else {
+			gameState().loseLife();
+			levelManager().requestRespawn();
+		}
 	}
 
 	/**

@@ -84,18 +84,27 @@ class TestS1CompleteEmeraldVisualRun {
      * (docs/s1disasm/_incObj/3A Got Through Card.asm:200-211,
      * sonic.asm:3041-3055). That restart's {@code PaletteFadeOut}, its
      * mandatory locked title-card loop and MZ1's own load all run inside the
-     * transition gap. The pin stops the instant MZ1 is admitted: MZ1's body
-     * then diverges on {@code camera_y} at its row 3,220.
+     * transition gap.
+     * <p>
+     * It then walks every compared row of MZ1 itself, whose last 170 rows are
+     * the run's FIRST death. MZ1's descending bottom boundary catches Sonic
+     * mid-roll, so the act ends through {@code Sonic_LevelBound} rather than a
+     * signpost: {@code DynamicLevelEvents} snaps {@code v_limitbtm2} to the
+     * camera and ratchets it upward, the camera rides it up through a
+     * {@code v_limittop2} it is allowed to pass, the pit kill fires, and
+     * {@code Sonic_HandleDeath} freezes the corpse for a 60-frame restart
+     * delay. The pin stops once MZ1 has published its last row; the
+     * death-restart boundary behind it is the next frontier.
      */
     @Test
     void replaysTheSecondGiantRingAndTheSpecialStageBehindIt() throws Exception {
         VisualRunReplayHarness.Result result =
                 VisualRunReplayHarness.replay(
-                        RUN_DIR, VisualRunReplayHarness.stopAfterSegment(7));
+                        RUN_DIR, VisualRunReplayHarness.stopAfterSegmentBody(7));
 
-        assertTrue(result.sharedCursor() > 27_238,
-                "visual run stopped inside the returned GHZ3 act: " + result);
+        assertTrue(result.sharedCursor() > 30_856,
+                "visual run stopped inside the MZ1 act: " + result);
         assertEquals(7, result.currentSegmentIndex(),
-                "visual run stalled before the MZ1 act advance: " + result);
+                "visual run stalled before MZ1's death restart: " + result);
     }
 }

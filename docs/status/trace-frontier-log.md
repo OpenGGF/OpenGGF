@@ -63031,3 +63031,102 @@ to synthesize a POST phase on a VBLANK-only row.
   presentation-bridge exact-row branches as covered by this same review: they
   are the stronger form of the pattern and inherit the same justification and
   the same containment obligation.
+
+## 2026-08-06 - MZ1 replays end to end; the route reaches its first death restart
+
+- **Frontier moved twice.** `TestS1CompleteEmeraldVisualRun` lane 2 is re-pinned
+  from `stopAfterSegment(7)` to `stopAfterSegmentBody(7)` and green: the run now
+  walks every one of MZ1's 3,391 rows -- including the run's FIRST death -- and
+  stops only because the pin says so. Before: self-pause at MZ1 row **3,220**,
+  `camera_y` ROM `0x033E` engine `0x0348`. After: no compared error anywhere in
+  the segment; the next failure is the transition gap behind it.
+- Command: `mvn -Dmse=off -Ptrace-replay -Dsonic1.rom.path=s1.gen
+  -Dtest=TestS1CompleteEmeraldVisualRun test` -- **2 tests, green.**
+- **Defect 1: the bottom-boundary clamp consulted the top boundary.** Measured
+  from the fixture's own `camera_boundary` aux event (per-frame `limitbtm1` /
+  `limitbtm2` / `bgscrollvert` / `lookshift`; 3,391 rows in `mz1`) plus a
+  throwaway per-frame dump of the engine's `y/minY/maxY/maxYTarget` at the top
+  of `updateBoundaryEasing`. Both agreed exactly: at row 3,219 the camera moves
+  to `0x341`, `DynamicLevelEvents`' move-up branch snaps `v_limitbtm2` from
+  `0x03A2` to `(0x341 & $FFFE) - 2 = 0x33E` (DynamicLevelEvents.asm:17-28), and
+  row 3,220's `ScrollVertical` clamps the camera to it. The engine had the same
+  `maxY = 0x33E` -- and skipped the clamp, because
+  `Camera.clampBottomBoundary` carried a `maxY < minY` fallback inherited from
+  `clampAxisWithWrap` and MZ1's DLE routine 2 had left `v_limittop2` at `0x340`.
+  ROM `SV_BottomBoundary` never reads `v_limittop2` (ScrollHoriz &
+  ScrollVertical.asm:258-271); the crossed state is ordinary, and the camera
+  rides the bottom bound up past the top bound at 2px/frame for the next 60
+  rows. Fallback removed. Frontier 3,220 -> 3,261.
+- **Defect 2: a rolling death skipped the reset-on-floor lift.** Row 3,261 is
+  MZ1's pit kill (`routine_change 0x02 -> 0x06`, `rolling 1 -> 0`, aux at frame
+  3,261). ROM `Sonic_LevelBound` fires on `v_limitbtm2 + 224` BEFORE
+  `ObjectFall`, `KillSonic` calls `Sonic_ResetOnFloor` (`subq.w #5,obY`), and
+  the `ObjectFall` that follows applies the fresh `y_vel = -$700`: `0x3D7 - 5 -
+  7 = 0x3CB`, `y_sub` unchanged at `0xA600`, `y_vel = -$6C8` -- all three exactly
+  as recorded. The engine's `applyDeath` cleared the roll bit with a bare
+  `setRolling(false)`, which *grows* the standing shape around a fixed top-left
+  and so moved the centre 5px DOWN where the ROM raises it 5px: `0x3D5`, delta
+  10 = 2x5. `PlayableHurtRadiusTransition` already modelled the tail for the
+  hurt path; it is now `PlayableResetOnFloorRadiusTransition` with a death entry
+  point that drops the hurt-only S2 sidekick split (`KillCharacter` calls
+  `Sonic_ResetOnFloor_Part2` unconditionally). Frontier 3,261 -> 3,331.
+- **Defect 3: the death-fall restart row was invented.** Row 3,331 is the
+  handoff: recorded `routine 0x06 -> 0x08`, `y_speed 0`, and `y`/`y_sub` frozen
+  at `0x03F8`/`0xB600` for the segment's remaining 60 rows.
+  `Sonic_HandleDeath` (01 Sonic.asm:2004-2011, REV01 `FixBugs=0`) compares
+  `v_limitbtm2 + $100` = `0x3F4` against `obY` = `0x3F8`, writes
+  `y_vel = -gravity` so the following `ObjectFall` nets to `y` unchanged /
+  `y_sub -= 0x3800` / `y_vel = 0`, and enters `Sonic_ResetLevel`, which does
+  nothing but count 60 down. The engine used `camera.getY() + height + 256`
+  (= `0x4D6` here, not `0x3F4`), compared render-bounds Y, kept applying gravity
+  after the handoff, and ticked the countdown on the crossing frame itself. All
+  four fixed. The reference row is genuinely per game -- S1 and S2 read the
+  camera's bottom boundary, S3K reads `Camera_Y_pos`
+  (s2.asm:38273-38285, sonic3k.asm:24538-24585) -- and only S1 cancels gravity,
+  so both live in a new typed `PlayerLevelBoundaryRules`, split out of
+  `PlayerMovementRules` together with the four `levelBoundary*` flags it already
+  carried (`TestPerGameRuleArchitectureGuard` caps a rule record at 20
+  components and says to split rather than raise it; the record goes 20 -> 17).
+- **Next frontier: the death restart gap.** Driving the pin to
+  `stopAfterSegment(8)` closes segment 7 at cursor 30,857, spins the whole
+  228-row gap, and aborts at BK2 31,088 with `rowsConsumed must be 0 or 1`
+  (segment 8 `mz1_2` starts at 31,086). This is the same shape the act advance
+  had before `2b046b8ec`: `TraceSessionLauncher.runDeathRestartLoad` does not
+  mark the load a `Level:` re-entry, so `GM_Level`'s restart does not run. It is
+  NOT the same ROM path -- `Sonic_ResetLevel` writes `f_restart` from the player
+  object rather than from `Got_NextLevel` -- so measure the gap's mode timeline
+  before porting the act-advance fix onto it.
+- **Deferred, unchanged:** the run comparator still never compares ring count
+  (`EngineDiagnostics.formattedWithCameraAnimationAndSubpixel`
+  (`EngineDiagnostics.java`:94-100) hardcodes `rings = -1` and `TraceBinder`
+  (`TraceBinder.java`:251) skips the field when negative).
+- Regression sweep (serial, JDK 21):
+  - `TestS1CompleteEmeraldVisualRun` both lanes green;
+    `TestS1CompleteEmeraldRunPrefix` (2), `TestTraceRunPlaybackCoordinator`
+    (21), `TestTraceSessionLauncherRunBranch` (40), `TestTraceRunFrameDriver`
+    (8), `TestLevelEntryPathsHeadless` (18), `TestTraceReplayInvariantGuard`
+    (10), `TestHardwareTimingAuthorityGuard` (22),
+    `TestPerGameRuleArchitectureGuard` (3), `TestPlayableSpriteMovement` (151),
+    `TestCrossGameFeatureProviderRefactor` and `TestArchitecturalSourceGuard`
+    (69) green.
+  - `TestS1GhzMazeRoundTripChain`'s bridge test green; `ghzMazeRoundTrip` stays
+    red on the same 8 `run_tail` fields with the same values
+    (`movie_logical_frame` 8,261 against 9,071).
+  - S1 `*TraceReplay` fleet under `-Ptrace-replay`, 30 classes: 27 green, the
+    same 3 reds (`Sbz3CompleteRun`, `Credits03Lz3`, `FzCompleteRun`).
+  - Whole `*TraceReplay` selection across all three games (108 tests) diffed
+    line-by-line against a stashed clean tree: **43 error lines, 42 identical**.
+    The only delta is inside the already-red `TestS1FzCompleteRunTraceReplay`,
+    whose total drops 12,302 -> 12,297 with the same first error (frame 0, `x`).
+  - `TestS2EhzHalfpipeRoundTripChain` ("special stage exited with 3704
+    represented rows remaining in ss") and `TestS3kMegaRunChain` ("Manifest
+    validation failed for s3-knux-multibonus-ss") red with identical messages;
+    `TestS3kBonusRoundTripChain` skips.
+  - Full default suite: 14,352 tests, **38 red** (26 failures + 12 errors),
+    matching the documented baseline. The eleven classes nearest this change
+    (`TestS1PushBlockSideContact`, `TestS1GhzBossGraphRewind`,
+    `TestRewindTorture`, `TestGameLoop`, `TestArchUnitRules`,
+    `TestObjectPhysicsStandardizationGuard`, `TestZoneEventRuntimeAccessGuard`,
+    `TestTornadoObjectInstance`, `TestWfzTornadoThrusterRendering`,
+    `TestS3kCnzEndBossHeadless`, `TestS3kCnzTeleporterRouteHeadless`) were
+    re-run as an isolated subset on both trees and produce identical failures.

@@ -557,14 +557,21 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * ROM SV_BottomBoundary clamp: enforce only the bottom boundary (v_limitbtm2 /
 	 * maxY) when the camera scrolled down (or the bottom boundary is moving). The
 	 * top boundary is never consulted on the down path
-	 * (docs/s1disasm/_inc/ScrollHoriz & ScrollVertical.asm:248-261). Mirror
-	 * {@link #clampAxisWithWrap}'s degenerate handling: if the bottom bound is
-	 * transiently above the top bound, enforce only the top bound.
+	 * (docs/s1disasm/_inc/ScrollHoriz & ScrollVertical.asm:258-271): the routine
+	 * compares d1 against v_limitbtm2 alone and, on the no-wrap branch, writes
+	 * v_limitbtm2 straight into d1.
+	 * <p>
+	 * That holds even when the bottom bound sits ABOVE the top bound. The state is
+	 * ordinary rather than degenerate: DynamicLevelEvents' move-up branch snaps
+	 * v_limitbtm2 to {@code (v_screenposy & $FFFE) - 2} whenever the camera is
+	 * below the new v_limitbtm1 (DynamicLevelEvents.asm:17-28), which drops the
+	 * bottom bound below a v_limittop2 the zone handler left in place. The camera
+	 * then rides the bottom bound upward past the top bound, two pixels per frame,
+	 * and never touches SV_MoveCameraUp's top clamp on the way (S1 MZ1 row 3,220:
+	 * v_limittop2 $340, v_limitbtm2 $33E, recorded camera $33E). Consulting minY
+	 * here left the camera unclamped for the whole ascent.
 	 */
 	private short clampBottomBoundary(short value) {
-		if (maxY < minY) {
-			return value < minY ? minY : value;
-		}
 		return value > maxY ? maxY : value;
 	}
 

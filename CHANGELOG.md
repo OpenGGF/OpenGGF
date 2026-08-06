@@ -3,6 +3,40 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: `SV_BottomBoundary`'s clamp no longer consults the top boundary. ROM
+  compares the new camera Y against `v_limitbtm2` alone and, on the no-wrap
+  branch, writes `v_limitbtm2` straight back
+  (`docs/s1disasm/_inc/ScrollHoriz & ScrollVertical.asm:258-271`) — including
+  when the bottom bound sits above the top bound, which is an ordinary state
+  rather than a degenerate one: `DynamicLevelEvents`' move-up branch snaps
+  `v_limitbtm2` to `(v_screenposy & $FFFE) - 2` whenever the camera is below the
+  new `v_limitbtm1` (`DynamicLevelEvents.asm:17-28`), dropping it below a
+  `v_limittop2` the zone handler left in place. The engine's inherited
+  `maxY < minY` fallback skipped the clamp for that whole ascent, so the camera
+  ran free where the ROM rides the bottom bound upward two pixels a frame.
+- Fix: a player killed mid-roll now takes the ROM's reset-on-floor `y_pos` lift.
+  `KillSonic` / `KillCharacter` / `Kill_Character` all reach the reset-on-floor
+  tail before forcing the airborne bit (`docs/s1disasm/_incObj/Sonic
+  ReactToItem.asm:454-459`, `docs/s2disasm/s2.asm:85544-85551`,
+  `docs/skdisasm/sonic3k.asm:21136-21151`), and that tail raises the centre by
+  the radius difference so the taller standing shape does not sink into the
+  ground. The engine cleared the roll bit without the lift, which moved the
+  centre 5px the wrong way — a rolling pit death landed 10px low and never
+  re-converged.
+- Fix: the dying player's fall now ends on the ROM's own restart row. The death
+  routines compare `y_pos` against a camera-derived row plus `$100` — S1
+  `v_limitbtm2` (`docs/s1disasm/_incObj/01 Sonic.asm:2004`), S2
+  `Camera_Max_Y_pos` (`docs/s2disasm/s2.asm:38277`), S3K `Camera_Y_pos`
+  (`docs/skdisasm/sonic3k.asm:24541`) — where the engine used the camera's
+  bottom edge plus a screen height for every game and compared render bounds
+  instead of centre-Y. The crossing frame now hands off to a routine that only
+  counts the 60-frame restart delay down, so the corpse stops moving exactly
+  where the recording stops it, and S1 additionally writes `y_vel = -gravity`
+  so the fall that follows the handoff nets to nothing (01 Sonic.asm:2010).
+  These are carried by a new typed `PlayerLevelBoundaryRules`, split out of
+  `PlayerMovementRules` with the four level-boundary flags it already held.
+  The S1 emerald route now replays all 3,391 rows of MZ1, including the run's
+  first death.
 - Fix: a Sonic 1 end-of-act advance now runs the whole `GM_Level` restart the
   ROM re-enters, instead of a fade-to-black that loads the next act from its own
   completion. `Got_NextLevel` writes nothing but `f_restart`
