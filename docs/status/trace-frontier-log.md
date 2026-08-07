@@ -65031,3 +65031,52 @@ control), zero new failures.
   but NOT `Palette_frame` (s2.asm:37476-37481); only `Sonic_RevertToNormal` ($28,
   :37530) and s2.asm:13036 ($30) re-seed it. The previously-landed comment claiming
   re-seeding on the next transformation was wrong.
+
+## 2026-08-07 - Three frontiers advance inside traces; no class flips
+
+Sweep unchanged at S1/S2 15 red, S3K 21, nothing new. All three changes moved a
+frontier *within* a trace without flipping a class, and all are kept because each
+removes a confirmed defect with a full green regression set.
+
+- **`rings_togo_bcd` was a HARNESS comparison bug, not an engine defect** - a
+  useful counterexample to "the recording beats your reasoning", which is about
+  recorded ROM *state*, not about every red being an engine fault.
+  `SS_RingsToGoBCD` is a LATCH: `Obj5A_RingsNeeded` (s2.asm:71568-71645) begins
+  `move.b (SS_TriggerRingsToGo).w,(SS_HideRingsToGo).w / bne -> rts`, so while the
+  trigger byte is set the cell is never recomputed and holds a stale value. In
+  ss_3 the trigger is 0xff from frame 135, so the cell reads 0 for the whole first
+  section even though rings were owed. `AbstractS2SpecialStageTraceReplayTest.
+  ringsToGoRefreshFrames` selected "the first completed pass whose published frame
+  is after the clear frame", which in a run segment is a row carrying the stale
+  sample. The engine's figure was correct throughout.
+  Frontiers: ss_3 1805 -> 2460 (now `tails_routine`, expected JUMPING actual
+  NORMAL), ss_6 2105 -> 2474.
+- **`TestS1GhzMazeRoundTripChain` goes from 8 divergent fields to 2.** The run's
+  first level load stages the player DPLC bank through
+  `DynamicArtLifecycleService.primePlayerDplc`, which deliberately publishes no
+  edge - correct for a segment-scoped replay starting at `Level_MainLoop`, wrong
+  for a run whose movie spans the load. The recording's transfer 0 is exactly that
+  transfer (mapping_frame 1, submission_origin run_gap, movie row 748 = ghz1 offset
+  774 minus the ROM-counted 26-row `Level_Delay`+`PalFadeIn_Alt` tail). Priming now
+  keeps the bank and the chain publishes it. `edge_ordinal` (4698/4699),
+  `transfer_id` (2349) and BOTH ledger fingerprints now match exactly.
+  **The residual is `movie_logical_frame` 9071 vs 9035, delta 36 - the roadmap's
+  section-4 un-modelled level-load span.** That is blocked on recording the load
+  span, not on further engine work, so this chain cannot close without it.
+- **Another SST occupancy defect fixed, with no test movement, honestly reported.**
+  An object that borrows a reserved child slot as its execution slot (S1
+  `Sonic1StaircaseObjectInstance`) had its `out_of_range`/`DeleteObject` retirement
+  evaluated at the BORROWED slot rather than the slot it OWNS, so the slot release
+  landed far too late in the ascending `ExecuteObjects` walk
+  (_inc/ExecuteObjects.asm:10-30; the Staircase entry runs `out_of_range.w
+  DeleteObject,stair_origX(a0)` for parent and children alike, "5B SLZ
+  Staircase.asm":6-12, 39-66). At SLZ1 frame 1914 three staircases go out of range
+  together: the ROM frees slots 34/36/39 at walk positions 34/36/39 and the ring
+  parent at slot 53 then takes 34, 35, 36, 39, while the engine released slot 39
+  only at walk position 74 and its rings went 34, 35, 36, 40. Direction: the engine
+  was LATE freeing, not early.
+  SLZ1's internal occupancy divergence moved 1914 -> 2522 and the one-slot ring
+  lead is fully closed, but none of the six ring traces changed - their remaining
+  symptoms sit downstream of divergences still open. Note the change is confined to
+  `updateCounterBasedExecThenLoad`, which only S1 uses, so the S2 ring targets
+  could not have been affected.

@@ -799,11 +799,20 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
             }
         }
 
+        List<PassSample> passSamples = new ArrayList<>();
+        for (TraceEvent.StateSnapshot snapshot : trace.runObjectsEndSnapshots()) {
+            Object rawCursor = snapshot.fields().get("completion_cursor_frame");
+            if (rawCursor == null) {
+                throw new IllegalStateException(
+                        "run_objects_end is missing completion_cursor_frame at frame "
+                                + snapshot.frame());
+            }
+            passSamples.add(new PassSample(
+                    snapshot.frame(), numericTraceValue(rawCursor)));
+        }
         return discoverRingsToGoRefreshFrames(
                 triggerSamples,
-                trace.runObjectsEndSnapshots().stream()
-                        .map(TraceEvent.StateSnapshot::frame)
-                        .toList(),
+                passSamples,
                 checkRingsFlags,
                 finishObservedFrames);
     }
@@ -811,9 +820,16 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
     record TriggerSample(int frame, int value) {
     }
 
+    /**
+     * A completed {@code run_objects_end} pass: the frame the row is published
+     * on, and the frame its object work actually completed against.
+     */
+    record PassSample(int frame, int completionCursorFrame) {
+    }
+
     static Set<Integer> discoverRingsToGoRefreshFrames(
             List<TriggerSample> triggerSamples,
-            List<Integer> completedPassFrames,
+            List<PassSample> completedPasses,
             List<Integer> checkRingsFlags,
             List<Integer> finishObservedFrames) {
         if (triggerSamples.isEmpty() || triggerSamples.get(0).value() != 0xFF) {
@@ -855,15 +871,21 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
 
         Set<Integer> refreshFrames = new LinkedHashSet<>();
         for (int gateFrame : triggerClearFrames) {
-            int refreshFrame = completedPassFrames.stream()
-                    .mapToInt(Integer::intValue)
-                    .filter(frame -> frame > gateFrame)
+            // Obj5A_RingsNeeded reads SS_TriggerRingsToGo during the object
+            // pass, so a pass that completed on the same frame the cleared
+            // trigger was first observed still ran with the trigger set and
+            // left SS_RingsToGoBCD at its stale value (s2.asm:71568-71574).
+            // Only a pass whose completion cursor is strictly past the
+            // observation recomputed the cell.
+            int refreshFrame = completedPasses.stream()
+                    .filter(pass -> pass.completionCursorFrame() > gateFrame)
+                    .mapToInt(PassSample::frame)
                     .min()
                     .orElseThrow(() -> new IllegalStateException(
                             "rings-to-go trigger clear at frame " + gateFrame
                                     + " has no following completed pass"));
-            long passCountAtObservation = completedPassFrames.stream()
-                    .filter(frame -> frame == refreshFrame)
+            long passCountAtObservation = completedPasses.stream()
+                    .filter(pass -> pass.frame() == refreshFrame)
                     .count();
             if (passCountAtObservation != 1) {
                 throw new IllegalStateException(

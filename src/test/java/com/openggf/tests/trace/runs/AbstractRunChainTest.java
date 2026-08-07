@@ -791,6 +791,16 @@ abstract class AbstractRunChainTest {
                                         .closeComparisonSegment();
                             }
                         });
+        // The run's movie spans the first level's load, so the transfer that
+        // load staged for the player belongs to the run — unlike a
+        // segment-scoped replay, which starts at Level_MainLoop and never owns
+        // it. It lands on the row the counted pre-main-loop tail puts it on:
+        // the first main-loop row minus preLevelMainLoopDelayFrames.
+        gameplayMode.dynamicArtLifecycle()
+                .publishInitialLevelLoadPlayerTransfer(
+                        first.segment().bk2FrameOffset(),
+                        GameServices.module().getLevelInitProfile()
+                                .preLevelMainLoopDelayFrames());
         dynamicArtSegments.beginSegment();
         // The initial standalone bootstrap may omit a recorded pre-level prefix.
         // Keep the read-only dynamic-art publication clock on the same first

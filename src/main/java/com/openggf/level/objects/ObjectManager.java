@@ -132,6 +132,13 @@ public class ObjectManager {
      */
     private final ObjectWindowingStrategy windowingStrategy;
     private final ObjectInstance[] execOrder;
+    /**
+     * Parallel to {@link #execOrder}, but keyed by an object's OWN SST slot rather
+     * than the slot it executes from. Only objects that borrow a different
+     * execution slot appear here; see the retirement note in
+     * {@link #updateCounterBasedExecThenLoad}.
+     */
+    private final ObjectInstance[] ownSlotRetireOrder;
     private final int[] playerCentreXAtSlotStart;
     private final int[] playerCentreYAtSlotStart;
     private final boolean[] playerCentreAtSlotStartValid;
@@ -251,6 +258,7 @@ public class ObjectManager {
         this.placement.setTwoAxisCursorPlacement(slotLayout.twoAxisCursorPlacement());
         this.placement.setWindowingStrategy(windowingStrategy);
         this.execOrder = new ObjectInstance[slotLayout.dynamicSlotCount()];
+        this.ownSlotRetireOrder = new ObjectInstance[slotLayout.dynamicSlotCount()];
         this.playerCentreXAtSlotStart = new int[execOrder.length];
         this.playerCentreYAtSlotStart = new int[execOrder.length];
         this.playerCentreAtSlotStartValid = new boolean[execOrder.length];
@@ -314,6 +322,70 @@ public class ObjectManager {
 
     private int slotIndexForExec(int execIndex) {
         return slotLayout.toSlotIndex(execIndex);
+    }
+
+    /**
+     * Records an object that runs from a slot other than the one it owns, so its
+     * {@code out_of_range} retirement can still be evaluated at its OWN slot in
+     * the ascending {@code ExecuteObjects} walk.
+     */
+    private void indexOwnSlotRetirement(AbstractObjectInstance aoi) {
+        int ownSlot = aoi.getSlotIndex();
+        if (ownSlot == executionSlotIndex(aoi) || !isManagedDynamicSlot(ownSlot)) {
+            return;
+        }
+        ownSlotRetireOrder[execIndexForSlot(ownSlot)] = aoi;
+    }
+
+    /**
+     * ROM {@code ExecuteObjects} walks the SST in ascending slot order and each
+     * object's {@code out_of_range ...,DeleteObject} tail therefore frees THAT
+     * object's slot at THAT slot's position in the walk
+     * (docs/s1disasm/_inc/ExecuteObjects.asm:10-30).
+     *
+     * <p>A few engine objects consolidate a ROM parent plus its children into one
+     * instance and borrow a reserved child slot as their execution slot to get
+     * the ROM's solid-pass ordering right (S1 {@code Sonic1StaircaseObjectInstance},
+     * whose blocks share the {@code Staircase} entry that runs
+     * {@code out_of_range.w DeleteObject,stair_origX(a0)} for every block,
+     * docs/s1disasm/_incObj/"5B SLZ Staircase.asm":6-12,39-66). Retiring such an
+     * object only at the borrowed slot moved the ROM parent block's slot release
+     * far later in the walk, so lowest-free {@code FindFreeObj} allocations made
+     * between the two positions — notably {@code Ring_Main}'s per-ring children
+     * (docs/s1disasm/_incObj/"25, 37 Rings.asm":251) — saw the parent slot as
+     * still occupied and skipped it.
+     *
+     * <p>The retirement anchor is the object's own slot; where it runs is
+     * unchanged. This is safe for the same reason ROM's result is
+     * position-independent here: these objects feed {@code out_of_range} a fixed
+     * origin ({@code stair_origX}) that their routine never writes, so the check
+     * yields the same answer either side of the routine.
+     *
+     * @return {@code true} if an object was retired at this slot
+     */
+    private boolean retireBorrowedExecutionSlotOwnerAtOwnSlot(int cameraX) {
+        ObjectInstance owner = ownSlotRetireOrder[currentExecSlot];
+        if (owner == null) {
+            return false;
+        }
+        ownSlotRetireOrder[currentExecSlot] = null;
+        if (!(owner instanceof AbstractObjectInstance aoi) || owner.isDestroyed()) {
+            return false;
+        }
+        int execSlot = executionSlotIndex(aoi);
+        if (!isManagedDynamicSlot(execSlot)) {
+            return false;
+        }
+        int execIndex = execIndexForSlot(execSlot);
+        if (execOrder[execIndex] != owner) {
+            return false;
+        }
+        ObjectSpawn spawn = instanceToSpawn.get(owner);
+        if (!unloadCounterBasedOutOfRange(owner, spawn, execSlot, cameraX)) {
+            return false;
+        }
+        execOrder[execIndex] = null;
+        return true;
     }
 
     public void reset(int cameraX) { reset(cameraX, null); }
@@ -779,6 +851,7 @@ public class ObjectManager {
         }
 
         Arrays.fill(execOrder, null);
+        Arrays.fill(ownSlotRetireOrder, null);
         Arrays.fill(playerCentreAtSlotStartValid, false);
         for (ObjectInstance inst : activeObjects.values()) {
             if (initialDispatch.excludesFromDynamicPass(inst)) {
@@ -786,6 +859,7 @@ public class ObjectManager {
             }
             if (inst instanceof AbstractObjectInstance aoi && isManagedDynamicSlot(executionSlotIndex(aoi))) {
                 execOrder[execIndexForSlot(executionSlotIndex(aoi))] = inst;
+                indexOwnSlotRetirement(aoi);
             }
         }
         for (ObjectInstance inst : dynamicObjects) {
@@ -794,6 +868,7 @@ public class ObjectManager {
             }
             if (inst instanceof AbstractObjectInstance aoi && isManagedDynamicSlot(executionSlotIndex(aoi))) {
                 execOrder[execIndexForSlot(executionSlotIndex(aoi))] = inst;
+                indexOwnSlotRetirement(aoi);
             }
         }
         // Phase 2: ExecuteObjects — run objects in slot order with inline out_of_range.
@@ -802,6 +877,9 @@ public class ObjectManager {
         try {
             for (currentExecSlot = 0; currentExecSlot < execOrder.length; currentExecSlot++) {
                 capturePlayerCentreAtSlotStart(player);
+                if (retireBorrowedExecutionSlotOwnerAtOwnSlot(cameraX)) {
+                    objectsRemoved = true;
+                }
                 ObjectInstance instance = execOrder[currentExecSlot];
                 if (instance == null) continue;
 

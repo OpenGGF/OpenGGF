@@ -3,6 +3,18 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: a run whose movie spans its first level's load now publishes the player DPLC
+  transfer that load stages. `DynamicArtLifecycleService.primePlayerDplc` deliberately
+  establishes a freshly loaded playable's art bank without an edge, because a
+  segment-scoped trace replay starts at `Level_MainLoop` and never owns that transfer.
+  A manifest-driven run does own it: `Level_LoadObj`'s `ExecuteObjects` pass stages the
+  tiles and sets `f_sonframechg` (`_incObj/01 Sonic.asm`:2391-2398), and the first V-int
+  of the `Level_Delay` / `PalFadeIn_Alt` tail performs it (`sonic.asm`:2956-2969) -- the
+  run's transfer 0, on its first main-loop row minus the counted 26-row tail. Priming now
+  keeps that bank and the run chain publishes it through the new
+  `publishInitialLevelLoadPlayerTransfer`, so every downstream transfer id and edge
+  ordinal in the run matches the recording; `s1-ghz-maze-roundtrip`'s terminal tail edge
+  goes from eight divergent fields to one (the un-modelled level-load span).
 - Fix: Sonic 2 collects stage rings through the ROM's ring-array window instead of the
   object spawn window. S2 keeps rings in one sorted array rather than in object slots,
   and `RingsManager_Main` rewalks `Ring_start_addr` / `Ring_end_addr` out to
