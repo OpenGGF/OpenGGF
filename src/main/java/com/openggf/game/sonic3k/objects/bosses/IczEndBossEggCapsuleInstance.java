@@ -19,7 +19,7 @@ import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
  */
 public final class IczEndBossEggCapsuleInstance extends AbstractS3kUprightEggCapsuleInstance
         implements SpawnCoordinateRewindRecreatable {
-    private static final int RESULTS_CHILD_RETIRE_DISPATCHES = 13;
+    private static final int RESULTS_CHILD_RETIRE_DISPATCHES = 1;
     private static final int FINAL_CAMERA_MAX_X = 0x47C0;
 
     public IczEndBossEggCapsuleInstance(int x, int y) {

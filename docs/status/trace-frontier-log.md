@@ -65166,3 +65166,40 @@ to synthesize a POST phase on a VBLANK-only row.
 - Route position: AIZ, HCZ, MGZ, and CNZ remain at their established
   frontiers; ICZ's next target is the raw `24576` sidekick control mismatch;
   LBZ remains pending.
+
+## 2026-08-08 — S3K ICZ retained-owner release frontier
+
+- Worktree: `bugfix/s3k-traces` at `7aa601c64` before this frontier commit;
+  unrelated edits in `.idea/vcs.xml`,
+  `docs/status/rewind-round-trip-gaps.md`, and
+  `src/main/java/com/openggf/level/objects/ObjectPlacementController.java`
+  remained unstaged. Validation used JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen` (SHA-1
+  `b711a909cce238ca4af3e517a2edca306228efa5`), without replacing or renaming
+  it.
+- Frontier command: `mvn -q -Dmse=off -DforkCount=0
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace
+  test`. The committed baseline had 70 errors with first new actionable
+  comparison `player_animation_id`/`tails_animation_id` at raw `25093`.
+  The candidate has 10 report errors, consumes the native WAIT/control handoff
+  at raw `25093`, and reaches the next actionable comparison at raw `25338`
+  (handoff position/camera and S3K module queue state); the run stops only at
+  the recorded direct completion `KOS_DECOMPRESSION_QUEUE#264`.
+- Root cause: native ICZ result children retire through raw `25091`, the
+  retained slot at raw `25092`, and `Obj_ICZEndBoss.loc_71DE2` restores both
+  players at raw `25093`. The embedded engine result children already model
+  the twelve visual retirements; ICZ now retains one owner dispatch for the
+  single remaining native slot instead of thirteen stale entries. This is a
+  ROM owner/allocation contract, not a frame, route, zone, or trace exception.
+- Regression checks: frontier-only gameplay-order AIZ/HCZ/MGZ/CNZ/ICZ sweep
+  retained established reports AIZ 8 (raw `1237`), HCZ 16 (raw `9761`), MGZ 0,
+  CNZ 9 (raw `12024`), and ICZ 2 established camera errors (raw `15401`/`15403`);
+  segment-end exits were only the expected recorded hardware edges AIZ
+  `#8`/raw `1240`, HCZ `#94`/raw `9764`, CNZ `#205`/raw `13962`, and ICZ
+  `#255`/raw `21185`. Ring comparison remains enabled through
+  `ToleranceConfig.DEFAULT` with `RingCountMode.FORCE_ERROR`; no trace
+  payloads changed.
+- Route position: AIZ, HCZ, MGZ, and CNZ remain at their established
+  frontiers; ICZ now reaches raw `25338`; the next target is the ICZ→LBZ
+  handoff; LBZ remains pending.

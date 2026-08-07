@@ -3,6 +3,13 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K ICZ's retained ICZ2 results owner now models the single
+  native child-slot retirement between the final embedded result child and
+  `Obj_ICZEndBoss.loc_71DE2`. The clean complete-run report drops from 70 to
+  10 errors, removing the raw frame `25093` WAIT/ending-pose and sidekick
+  cascade; the next actionable handoff comparison is raw frame `25338`.
+  AIZ, HCZ, MGZ, and CNZ retain their established frontiers; no trace
+  payloads changed.
 - Fix/Test: S3K ICZ's deferred Tails ending-pose handoff now preserves the
   CPU-written `Ctrl_2_logical` word through the native `Set_PlayerEndingPose`
   object-control write; the routine does not mirror raw controller input. The
