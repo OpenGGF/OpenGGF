@@ -64903,3 +64903,40 @@ to synthesize a POST phase on a VBLANK-only row.
 - Route position: AIZ and HCZ remain green; MGZ and its handoff into CNZ are
   green through the CNZ standard replay's raw `25743` comparator edge. ICZ is
   next in gameplay order; LBZ remains pending.
+
+## 2026-08-07 — S3K ICZ resource-owner held-tail frontier
+
+- Worktree: `bugfix/s3k-traces` at `7b33354d8` before the frontier commit;
+  unrelated edits in `.idea/vcs.xml` and
+  `docs/status/rewind-round-trip-gaps.md` remained unstaged. Validation used
+  JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen` (SHA-1
+  `b711a909cce238ca4af3e517a2edca306228efa5`), without replacing or renaming
+  it.
+- Frontier command: `mvn -q -Dmse=off -Dsurefire.forkCount=1
+  -DreuseForks=true -Dtrace.frontierOnly=true
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace
+  test`. The committed baseline stopped at direct
+  `KOS_DECOMPRESSION_QUEUE#241`/raw `12330`, with the held-tail module
+  remaining-work mismatch beginning at raw `12320`. The candidate reaches
+  direct `#245`/raw `12380`; its report has eight comparator errors over
+  `12350` frames, first at raw `12352`, where the next native module owner is
+  submitted too early.
+- Root cause: an ICZ2 resource-owner KosM parent is submitted before an
+  in-loop level reload and is explicitly marked exportable across that
+  segment. When a represented iteration is held into the following row, the
+  parent must retain a ready child until the held-tail closure; ordinary KosM
+  parents still retire ready children under the existing policy. The timing
+  service exposes only the submission's existing ownership contract; no zone,
+  frame, route, or trace-data branch was added.
+- Regression checks: AIZ remains zero-error; HCZ remains at its expected raw
+  `9764`/direct `#94` admission stop; MGZ remains at its established complete
+  run frontier; and CNZ remains at its expected raw `33755`/direct `#31`
+  admission stop. Ring comparison remains enabled through
+  `ToleranceConfig.DEFAULT` with `RingCountMode.FORCE_ERROR`; no trace payloads
+  changed.
+- Route position: AIZ and HCZ remain green; MGZ and CNZ remain at their
+  established frontiers; ICZ now reaches its recorded direct `#245` boundary.
+  The next ICZ target is the raw `12352` post-handoff module publication;
+  LBZ remains pending.

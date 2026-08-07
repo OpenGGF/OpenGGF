@@ -3,6 +3,13 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K ICZ's resource-owner KosM parent now keeps a ready child
+  pending across a held loop-tail row when the parent is explicitly exportable
+  across the in-loop level handoff. The ICZ complete-run replay advances from
+  direct completion `#241` at raw frame `12330` to the recorded direct
+  completion `#245` at raw frame `12380`; its first remaining comparator error
+  is raw frame `12352`, with AIZ, HCZ, MGZ, and CNZ unchanged and no trace
+  payloads changed.
 - Fix/Test: S3K CNZ's in-loop act-transition oscillator dispatch is now
   consumed by the transition owner exactly once, so the shared loop tail no
   longer double-advances CNZ1→CNZ2. The CNZ standard replay advances from

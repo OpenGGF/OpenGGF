@@ -285,6 +285,19 @@ public final class S3kKosModuleQueue {
             if (preparation.isPrepared()) {
                 continue;
             }
+            // A resource-owner parent may survive an in-loop level reload.
+            // When that reload's represented iteration is held into the next
+            // row, the native queue tail has not yet retired a ready child
+            // across the handoff boundary. The closure owns that state step;
+            // ordinary parents retain the normal ready-child retirement.
+            if (deferChildSubmission
+                    && !heldLoopTailClosure
+                    && timing.isExportableAcrossSegment(handle)
+                    && preparation.activeChild != null
+                    && !directQueue.decompressionsPending()
+                    && directQueue.isReady(preparation.activeChild)) {
+                return;
+            }
             if (preparation.activeChild == null && deferChildSubmission) {
                 if (heldLoopTailClosure) {
                     deferredChildSubmissionForNextLoop = true;
