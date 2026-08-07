@@ -3,6 +3,15 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K fresh-level title owners now publish the ROM-backed runtime-art
+  handoff when their native `#$16` wait reaches `LoadEnemyArt`/EXIT. The
+  recording driver restores the destination player and camera on that same
+  semantic boundary, while the S3K level loader defers the real KosM parent
+  batch through the following PRE_MAIN_LOOP service so its first child starts
+  on the next iteration. ICZ's complete-run report drops from 10 to 2 errors,
+  consumes direct completion `#264` at raw frame `25341`, and leaves only the
+  established camera mismatches at raw frames `15401`/`15403`; no trace
+  payloads changed.
 - Fix/Test: S3K ICZ's retained ICZ2 results owner now models the single
   native child-slot retirement between the final embedded result child and
   `Obj_ICZEndBoss.loc_71DE2`. The clean complete-run report drops from 70 to

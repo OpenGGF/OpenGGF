@@ -65203,3 +65203,42 @@ to synthesize a POST phase on a VBLANK-only row.
 - Route position: AIZ, HCZ, MGZ, and CNZ remain at their established
   frontiers; ICZ now reaches raw `25338`; the next target is the ICZ→LBZ
   handoff; LBZ remains pending.
+
+## 2026-08-08 — S3K ICZ→LBZ fresh-level runtime-art handoff frontier
+
+- Worktree: `bugfix/s3k-traces` at `da5102175` before this frontier commit;
+  unrelated edits in `.idea/vcs.xml`,
+  `docs/status/rewind-round-trip-gaps.md`, and
+  `src/main/java/com/openggf/level/objects/ObjectPlacementController.java`
+  remained unstaged. Validation used JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen` (SHA-1
+  `b711a909cce238ca4af3e517a2edca306228efa5`), without replacing or renaming
+  it.
+- Frontier command: `mvn -q -Dmse=off -Dsurefire.forkCount=1
+  -DreuseForks=true
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace
+  test`. The committed baseline had 10 errors and stopped at the raw `25338`
+  handoff comparison. The candidate consumes the same-row destination pose and
+  queue admission, consumes direct `KOS_DECOMPRESSION_QUEUE#264` at raw
+  `25341`, and leaves 2 established camera errors at raw `15401`/`15403`.
+- Root cause: the ROM's fresh title owner reaches `LoadEnemyArt` when its
+  native `#$16` wait transitions into EXIT. The provider now publishes the
+  production handoff at that owner boundary; the recording driver restores the
+  destination player/camera boundary on the same row, and the S3K loader
+  defers the ROM-resolved parent KosM batch through the current PRE_MAIN_LOOP
+  service so its first child begins on the following iteration. This models
+  title-owner and queue-service timing without a zone, frame, route, or
+  trace-data branch.
+- Regression checks, in gameplay order: AIZ complete replay still reaches its
+  established recorded `#50` admission abort (raw `20376`); HCZ still reaches
+  `#113` (raw `20697`); MGZ retains its recorded zero-error segment frontier
+  (the complete-run continuation still has its established raw `39348`
+  four-field queue mismatch, reproduced with both submission orderings); CNZ
+  still reaches its established `#205` admission abort (raw `13962`). The
+  focused ICZ report is 2 errors as above. Ring comparison remains enabled
+  through `ToleranceConfig.DEFAULT` with `RingCountMode.FORCE_ERROR`; no trace
+  payloads changed.
+- Route position: AIZ, HCZ, MGZ, and CNZ retain their established gameplay
+  frontiers; ICZ now crosses the ICZ→LBZ handoff at raw `25341`. LBZ is the
+  next gameplay-order target.

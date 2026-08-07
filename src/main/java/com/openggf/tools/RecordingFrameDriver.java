@@ -423,7 +423,7 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
         }
 
         if (provider.shouldCompleteFreshLevelTransitionBoundary()) {
-            levelManager.completeFreshLevelTransitionCameraBoundary();
+            levelManager.publishFreshLevelTransitionInitialBoundary();
             normalTitleCardActive = false;
             applyInLevelTitleCardControlLock(false);
         }

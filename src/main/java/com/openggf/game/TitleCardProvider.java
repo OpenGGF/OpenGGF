@@ -152,10 +152,10 @@ public interface TitleCardProvider {
     }
 
     /**
-     * Publishes a fresh-level handoff after the destination title owner has
-     * completed its first ordinary level-loop boundary. The recording/live
-     * drivers use this when a game keeps the loaded player slots held through
-     * that boundary; games without such a split can leave it as a no-op.
+     * Publishes a fresh-level handoff when the destination title owner reaches
+     * its native runtime-art boundary. The recording/live drivers use this
+     * when a game keeps the loaded player slots held through that boundary;
+     * games without such a split can leave it as a no-op.
      */
     default void completeFreshLevelRuntimeArtHandoff() {
         // No-op for games without a split fresh-level title boundary.
