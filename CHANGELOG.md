@@ -3,6 +3,14 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K MGZ2 now clears a stale `End_of_level_flag` when it publishes
+  the new ROM capsule/results window, so the retained boss waiter cannot start
+  the MGZ-to-CNZ fade from the preceding act's completion flag. The MGZ
+  complete-run replay is now gameplay/physics green through the recorded end;
+  the first remaining comparison is the expected hardware queue window at raw
+  frame `38517` (`queue.s3k_kos_direct.busy`) before direct completion `#183`.
+  AIZ and carried-results ownership checks remain green; no trace payloads
+  changed.
 - Fix/Test: S3K MGZ Mantis now creates its visual child only after
   `Obj_WaitOffscreen` restores normal operation, matching the ROM's
   `Obj_Mantis` `loc_88E82`/`CreateChild1_Normal` allocation order. The MGZ

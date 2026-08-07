@@ -64787,3 +64787,43 @@ to synthesize a POST phase on a VBLANK-only row.
 - Route position: AIZ remains green; HCZ remains at direct `#113`; MGZ now
   reaches the raw `38414` movement discrepancy with 65 errors and expected
   direct `#183` stop. CNZ, ICZ, and LBZ remain pending in gameplay order.
+
+## 2026-08-07 — S3K MGZ2 stale end-flag frontier
+
+- Worktree: `bugfix/s3k-traces` at `cbb139ed9` before the frontier commit;
+  unrelated edits in `.idea/vcs.xml` and
+  `docs/status/rewind-round-trip-gaps.md` remained unstaged. Validation used
+  JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen` (SHA-1
+  `b711a909cce238ca4af3e517a2edca306228efa5`), without replacing or renaming
+  it.
+- Frontier command: `mvn -q -Dmse=off -Dtrace.frontierOnly=true
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kMgzCompleteRunTraceReplay
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Result: gameplay and physics now match through the recorded MGZ route; the
+  replay reaches the expected direct
+  `KOS_DECOMPRESSION_QUEUE#183` completion boundary at raw frame `38524`,
+  but the engine's pending completion fingerprint
+  `sha256:fbfc78d499717cfec6df27fdd04fa4b5293a7147ec7ff7a7a18004e9db801e78`
+  still differs from the recorded
+  `sha256:589a478d29f5c788ad304520acc86172ea220a4a68b5a74ac25ee62e80d5899c`.
+- Comparator report: 8 errors, 0 warnings; all eight are the remaining
+  `queue.s3k_kos_direct`/`queue.s3k_kos_module` readiness fields at raw frames
+  `38517`–`38518`. The prior committed report had 65 errors with the first
+  movement mismatch at raw frame `38414`, `x`, expected `0x3CFA`, actual
+  `0x3CFB`; no player, sidekick, or ring comparison error remains before the
+  queue window. Ring comparison remains enabled with
+  `ToleranceConfig.DEFAULT` `FORCE_ERROR`.
+- Regression checks: `TestS3kAizTraceReplay#replayMatchesTrace` and
+  `TestS3kMgzLbzCarriedResultsTitleOwnership` remain green; no trace payloads
+  changed.
+- Fix scope: MGZ2's `loc_694AA` capsule/results handoff starts a fresh
+  `_unkFAA8` window. Clearing the engine's retained completion flag at that
+  owner boundary prevents `loc_6C2EE` from mistaking the preceding act's
+  completion for the current capsule's results completion. The fix is rooted
+  in `docs/skdisasm/sonic3k.asm:142747-142760` and does not add a zone, frame,
+  route, or trace-derived gameplay branch.
+- Route position: AIZ remains green; HCZ remains at direct `#113`; MGZ is now
+  gameplay/physics green through its expected direct `#183` stop, with the
+  remaining frontier at the raw `38517` hardware queue window. CNZ, ICZ, and
+  LBZ remain pending in gameplay order.

@@ -831,6 +831,11 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         }
 
         clearEndBossRuntimeState();
+        // ROM loc_694AA arms a new _unkFAA8 capsule/results window before
+        // the capsule is published.  End_of_level_flag is the completion
+        // signal for that window; clear a flag retained from the preceding
+        // act before the boss waiter starts polling it.
+        services().gameState().setEndOfLevelFlag(false);
         // ROM loc_694AA loads PLC_EggCapsule and animals/explosion art here.
         // The engine's S3K object-art provider keeps the egg capsule as a
         // standalone sheet, so the observable handoff is the same object spawn.
