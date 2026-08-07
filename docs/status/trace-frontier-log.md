@@ -64732,3 +64732,74 @@ Options, with the rule-4 analysis:
 C is an exclusion, which is the category this project otherwise refuses, so it
 needs an explicit owner decision rather than being adopted quietly. Recorded here
 undecided.
+
+## 2026-08-07 - Option A: predecessor replay for inherited dynamic-art ledgers
+
+The open decision recorded above is **resolved: option A**, by owner decision.
+Options B (hydrate the ledger from the manifest) and C (exclude the inherited ids
+from comparison) are rejected and should not be revisited - B creates work the
+engine never submitted, outside hard rule 4's hardware-timing exception, and C is
+an exclusion.
+
+- **New `S2SpecialStagePredecessorReplay`** replays the run segments a
+  special-stage segment inherits state from, driven only by the recorded BK2
+  stream, so the engine SUBMITS the outstanding transfer natively. Selection is
+  pure manifest topology: walk back while the segment being entered declares a
+  non-empty `dynamic_art_initial_ledger_descriptors`, starting at the first
+  segment whose own opening ledger is empty. No stage number, directory name,
+  zone or frame appears in the predicate. The predecessor is replayed
+  **uncompared** - state evolution only, the same treatment the run-chain harness
+  gives uncompared interiors - because comparing it would couple these lanes to
+  unrelated EHZ/CPZ/ARZ level defects.
+- **The engine passed the verification this approach depends on, exactly.** A
+  throwaway probe replaying `seg1_ehz1` (3710 rows, uncompared) plus its single
+  gap row produced a gap edge `{transferId=3283, phase=submitted, owner=sonic,
+  mappingFrame=61, requests=[rom 360448, tile 1024, vram 61440, len 512]}` and
+  `afterOutstanding=[3283]` - identical field for field to the `ss` segment's
+  declared descriptor, **including the absolute transfer id**, because the engine
+  allocated the same number of transfers over the preceding 3710 rows. The
+  recorded `seg1_ehz1` tail (`outstanding [3282]`) also matches the engine's row
+  3709. This is a far stronger accuracy statement than a green test, and it
+  confirms the scope-mismatch diagnosis rather than assuming it.
+- Frontiers: `ss` 0 -> 393 (`sonic_ss_x`), `ss_5` 0 -> 126
+  (`dynamic_art.edge[0].mapping_frame` 98 vs 97), `ss_6` 0 -> 1147
+  (`combined_rings` 27 vs 25). `ss_3` (916) and `ss_4` (1652) unchanged, as are
+  both chains, the standalone S2 SS, S1 SS1 and both guards.
+- **`ss_2` and `ss_7` still fail at frame 0, now for a genuine engine reason:**
+  their inherited transfer is TAILS-owned and the engine's predecessor tail does
+  not leave it outstanding. That is a real sidekick dynamic-art finding, no longer
+  a scope mismatch.
+- Two supporting changes: rows claim `PlcLifecyclePhase.PALETTE_FADE` rather than
+  `SPECIAL_STAGE` while the engine's own intro state machine is in `PRE_ROLL`,
+  because `Vint_Fade` never reaches `ProcessDMAQueue` and `VintID_S2SS` is not
+  selected until SpecialStage finishes loading (s2.asm:781/899/1000/1046/1083/1138,
+  6600-6660, 6644-6651); and a published edge now carries its transfer's
+  `submissionOrigin` from the ledger descriptor instead of the comparator
+  hardcoding `"segment"`.
+
+### Open findings from this batch
+
+- **GHZ1's first true dynamic-slot divergence is frame 1848, slot 35** (ROM 0x40,
+  engine empty); everything before it matches slot for slot. Root cause chain,
+  fully ROM-derived but NOT yet fixed because the change is large and risky:
+  a Moto Bug spawned with no floor beneath it free-falls, because `Moto_Main` runs
+  `ObjectFall`+`ObjFloorDist` while invisible and REV01 has `FixBugs=0`, so the
+  "fell below max level height -> DeleteObject" guard is assembled out
+  (docs/s1disasm/_incObj/"40 Badnik - Moto Bug.asm":29-52). It does not fall
+  forever because `FindNearestTile` MASKS the layout row index rather than
+  bounds-checking it (`lsr.w #1,d0 / andi.w #$380,d0` over an 8-row x 0x80 array,
+  docs/s1disasm/_incObj/"sub FindNearestTile & FindFloor & FindWall.asm":15-22),
+  so Y wraps modulo 0x800 and at y=0x0AB7 it reads layout row 2 and lands on real
+  geometry. The engine does not model that wrap.
+- **The `s2-ehz-halfpipe-roundtrip` re-record is settled and is now purely a
+  publication decision.** Re-capturing with the HEAD harness reproduces all five
+  committed segments' `physics.csv` byte-identically and all three level segments'
+  `aux_state` byte-identically; `ss` gains exactly 2991 `run_objects_end` records
+  and `ss_2` gains 3291, with nothing else changed and only `recording_date`
+  differing in metadata. **But the capture additionally produces a SIXTH segment,
+  `seg4_ehz2` (bk2 22782, 36 frames), plus its `level_advance` transition and gap
+  edges** - the committed fixture stops short of the movie's EHZ2 tail. That is an
+  additive delta needing categorisation and explicit byte approval, so it was NOT
+  published. The regenerated capture was preserved outside the repository under the agent
+  artifact cache (`oggf-artifacts-ehzstepper/regen-halfpipe/`); re-running the
+  capture reproduces it.

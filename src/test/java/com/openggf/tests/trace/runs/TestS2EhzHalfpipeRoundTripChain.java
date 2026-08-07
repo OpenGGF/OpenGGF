@@ -113,9 +113,30 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * {@code TraceRunSpecialStageRows} nor {@code TraceRunSpecialStageRowDriver}
  * references {@code run_objects_end} or {@code SpecialStageRunObjectsPassBinder}
  * (the binder is referenced only from the standalone
- * {@code S2SpecialStageReplayHarness}). Re-recording this run with the pass stream
- * would therefore leave the lane RED until the interior stepper is made pass-paced:
- * both changes are required and neither substitutes for the other.
+ * {@code S2SpecialStageReplayHarness}). {@code TraceRunSpecialStageRows} now exposes
+ * the pass cursor ({@code newRunObjectsPassBinder} / {@code passPacedFromRow}) for a
+ * segment that recorded one, but no driver consumes it yet. Re-recording this run
+ * with the pass stream therefore still leaves the lane RED.
+ *
+ * <p><b>Status of each blocker, measured 2026-08-07.</b> The recorder side is
+ * settled: a scratch native re-capture of this run's own movie reproduces all five
+ * committed segments' {@code physics.csv} byte-for-byte and every level segment's
+ * aux byte-for-byte, adds 2991 {@code run_objects_end} records to {@code ss} and
+ * 3291 to {@code ss_2}, and additionally captures a sixth {@code seg4_ehz2} tail
+ * segment the committed fixture stops short of. What is NOT closed is the driver,
+ * and the shape it needs is narrower than "one engine step per pass". A
+ * {@code GameLoop.step()} is one V-blank row, and this segment advertises
+ * {@code dynamic_art_transfer_state_per_frame}, so
+ * {@code TraceRunSpecialStageRowDriver.publishAdmittedRow} requires exactly one
+ * dynamic-art delivery per admitted row. On the re-capture, {@code ss} rows own zero
+ * passes 3341 times, one pass 1793 times and two passes 599 times, so stepping the
+ * loop once per pass immediately trips that atomicity check (verified: it throws at
+ * row 426, the second consecutive zero-pass row after pass pacing starts at the
+ * recorded {@code control_state} rise on row 423). The passes of one observation must
+ * run inside ONE lifecycle iteration, exactly as
+ * {@code S2SpecialStageReplayHarness.stepPasses} already does for the standalone —
+ * i.e. {@code GameLoop.updateSpecialStageMode}'s object-scan body must be able to run
+ * the row's completed-pass count (0, 1 or 2) instead of always exactly one.
  *
  * <p><b>This is not fixable in the harness alone.</b> Deriving a pass cadence by measuring
  * this fixture's own rows would be a fitted model (it would desync the first different

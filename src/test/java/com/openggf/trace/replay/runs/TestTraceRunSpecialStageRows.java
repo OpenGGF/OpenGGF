@@ -107,6 +107,76 @@ class TestTraceRunSpecialStageRows {
                 () -> assertTrue(s2Admission.syntheticPlcPhase().isEmpty()));
     }
 
+    /**
+     * A segment that recorded no {@code run_objects_end} pass records exposes no
+     * pass cursor, so a driver keeps its recorded-row pacing. This is the shape of
+     * every committed multi-segment run's special-stage segment today.
+     */
+    @Test
+    void s2WithoutRecordedPassesExposesNoPassCursor(@TempDir Path dir) throws Exception {
+        writeMetadata(dir, "s2", "s2_special_stage", 2, true);
+        Files.writeString(dir.resolve("physics.csv"),
+                s2Header() + s2Row(0, false) + s2Row(1, false));
+
+        TraceRunSpecialStageRows rows =
+                TraceRunSpecialStageRows.load("s2_special_stage", dir);
+
+        assertAll(
+                () -> assertTrue(rows.newRunObjectsPassBinder().isEmpty()),
+                () -> assertEquals(Integer.MAX_VALUE, rows.passPacedFromRow()));
+    }
+
+    /**
+     * With the pass stream recorded, the segment owns a fresh pass cursor and pacing
+     * starts at the recorded {@code SpecialStage_Started} rise. One observation can
+     * own no pass at all, which is exactly why row pacing and pass pacing differ.
+     */
+    @Test
+    void s2WithRecordedPassesExposesAPassCursorFromControlStart(@TempDir Path dir)
+            throws Exception {
+        writeMetadata(dir, "s2", "s2_special_stage", 4, true);
+        Files.writeString(dir.resolve("physics.csv"), s2Header()
+                + s2Row(0, false) + s2Row(1, false) + s2Row(2, false) + s2Row(3, false));
+        Files.writeString(dir.resolve("aux_state.jsonl"),
+                Files.readString(dir.resolve("aux_state.jsonl"))
+                        + """
+                        {"frame":0,"type":"control_state","started":0}
+                        {"frame":1,"type":"control_state","started":1}
+                        """
+                        + runObjectsEnd(1, 0, 1, 1, 1, 100, 0, 99, 10)
+                        + runObjectsEnd(3, 1, 3, 3, 2, 101, 1, 100, 11));
+
+        TraceRunSpecialStageRows rows =
+                TraceRunSpecialStageRows.load("s2_special_stage", dir);
+        var binder = rows.newRunObjectsPassBinder().orElseThrow();
+
+        assertAll(
+                () -> assertEquals(1, rows.passPacedFromRow()),
+                () -> assertEquals(1, binder.passesForObservation(1).size()),
+                () -> assertTrue(binder.passesForObservation(2).isEmpty()),
+                () -> assertEquals(1, binder.passesForObservation(3).size()),
+                () -> assertFalse(binder.hasRemaining()),
+                // A second call hands back an independent, unconsumed cursor.
+                () -> assertTrue(rows.newRunObjectsPassBinder().orElseThrow()
+                        .hasRemaining()));
+    }
+
+    private static String runObjectsEnd(int frame, int sequence, int firstEligible,
+            int completionCursor, int inputSampleFrame, int inputSampleBk2Frame,
+            int previousInputSampleFrame, int previousInputSampleBk2Frame,
+            int inputSampleSequence) {
+        return String.format("""
+                {"frame":%d,"type":"run_objects_end","pass_sequence":%d,\
+                "first_eligible_frame":%d,"completion_cursor_frame":%d,\
+                "input_sample_frame":%d,"input_sample_bk2_frame":%d,\
+                "previous_input_sample_frame":%d,"previous_input_sample_bk2_frame":%d,\
+                "input_sample_sequence":%d,"input_source":"vint_s2ss_read_joypads",\
+                "p1_held":0,"p2_held":0,"previous_p1_held":0,"previous_p2_held":0}
+                """, frame, sequence, firstEligible, completionCursor, inputSampleFrame,
+                inputSampleBk2Frame, previousInputSampleFrame,
+                previousInputSampleBk2Frame, inputSampleSequence);
+    }
+
     @Test
     void rejectsUnsupportedSpecialStageProfile(@TempDir Path dir) {
         assertThrows(IllegalArgumentException.class,

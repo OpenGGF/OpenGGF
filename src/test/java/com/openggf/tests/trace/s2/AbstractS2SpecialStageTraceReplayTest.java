@@ -170,8 +170,7 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
                 "SS trace must carry the s2_special_stage profile");
         assertTrue(trace.frameCount() > 0, "SS trace should have frames");
 
-        S2SpecialStageReplayHarness harness =
-                bootHarness(trace, context.movieDirectory(), romFile);
+        S2SpecialStageReplayHarness harness = bootHarness(trace, context, romFile);
         DivergenceReport report = compareReplay(trace, harness);
 
         int ssIndex = specialStageIndex(trace);
@@ -204,12 +203,25 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
      * segment's own directory name — the recorder's own continuity record, not
      * a route, zone or frame.
      *
+     * <p>A run segment also carries its own place in the run, because a segment
+     * whose opening ledger is non-empty inherits engine state from the segments
+     * before it: see {@link S2SpecialStagePredecessorReplay}.
+     *
      * @param movieDirectory directory holding {@code metadata.source_bk2}
      * @param openingDynamicArtLedger transfers outstanding at segment entry
+     * @param manifest the run manifest, or null for a standalone trace
+     * @param segmentIndex this segment's manifest index, or -1 when standalone
      */
     record SegmentContext(
             Path movieDirectory,
-            List<DynamicArtTransfer.Descriptor> openingDynamicArtLedger) {
+            List<DynamicArtTransfer.Descriptor> openingDynamicArtLedger,
+            TraceRunManifest manifest,
+            int segmentIndex) {
+
+        SegmentContext(Path movieDirectory,
+                       List<DynamicArtTransfer.Descriptor> openingDynamicArtLedger) {
+            this(movieDirectory, openingDynamicArtLedger, null, -1);
+        }
     }
 
     static SegmentContext segmentContext(Path traceDir) throws IOException {
@@ -221,21 +233,47 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
         }
         TraceRunManifest manifest = TraceRunManifest.load(manifestPath);
         String segmentDir = traceDir.getFileName().toString();
-        return manifest.segments().stream()
-                .filter(segment -> segmentDir.equals(segment.dir()))
-                .findFirst()
-                .map(segment -> new SegmentContext(
-                        runRoot, segment.dynamicArtInitialLedgerDescriptors()))
-                .orElseThrow(() -> new IllegalStateException(
-                        "No run_manifest.json segment named '" + segmentDir
-                                + "' in " + manifestPath));
+        for (int index = 0; index < manifest.segments().size(); index++) {
+            TraceRunManifest.Segment segment = manifest.segments().get(index);
+            if (segmentDir.equals(segment.dir())) {
+                return new SegmentContext(
+                        runRoot, segment.dynamicArtInitialLedgerDescriptors(),
+                        manifest, index);
+            }
+        }
+        throw new IllegalStateException(
+                "No run_manifest.json segment named '" + segmentDir
+                        + "' in " + manifestPath);
     }
 
     // ==================== Boot ====================
 
+    /**
+     * Boots the special stage, first replaying any run segments whose engine
+     * state this one inherits (see {@link S2SpecialStagePredecessorReplay}).
+     * The prefix runs after the ROM/module install and before the special-stage
+     * provider is created, so the dynamic-art lifecycle the prefix populated is
+     * the one the stage starts from.
+     */
+    static S2SpecialStageReplayHarness bootHarness(SpecialStageTraceData trace,
+                                                   SegmentContext context,
+                                                   File romFile) throws IOException {
+        S2SpecialStageReplayHarness harness =
+                bootHarness(trace, context.movieDirectory(), romFile, context);
+        return harness;
+    }
+
     static S2SpecialStageReplayHarness bootHarness(SpecialStageTraceData trace,
                                                    Path dir,
                                                    File romFile) throws IOException {
+        return bootHarness(trace, dir, romFile, null);
+    }
+
+    private static S2SpecialStageReplayHarness bootHarness(
+            SpecialStageTraceData trace,
+            Path dir,
+            File romFile,
+            SegmentContext context) throws IOException {
         // Headless graphics so the SS manager's pattern/renderer setup is safe
         // without a GL context.
         GraphicsManager.getInstance().resetState();
@@ -248,6 +286,12 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
         // (re)applied inside the harness ctor afterwards.
         TestEnvironment.configureRomFixture(rom);
         GraphicsManager.getInstance().initHeadless();
+
+        if (context != null && context.manifest() != null) {
+            S2SpecialStagePredecessorReplay.replayInheritedPrefix(
+                    context.movieDirectory(), context.manifest(),
+                    context.segmentIndex());
+        }
 
         int offset = trace.metadata().bk2FrameOffset();
         int ssIndex = specialStageIndex(trace);

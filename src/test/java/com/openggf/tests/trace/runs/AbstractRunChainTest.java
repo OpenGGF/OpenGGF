@@ -2393,10 +2393,14 @@ abstract class AbstractRunChainTest {
      *
      * <p>This is compounded, and made unrecoverable in code, by a property of the
      * committed run fixtures: the multi-segment run recorder captured each
-     * special-stage segment's {@code physics.csv} (frames + lag column) but wrote an
-     * <b>empty</b> {@code aux_state.jsonl.gz} — no {@code run_objects_end} pass
-     * snapshots and no control-state transitions (verified across the S2
-     * {@code ss}/{@code ss_2} and the S1 {@code ss} segments). The S2 half-pipe in
+     * special-stage segment's {@code physics.csv} (frames + lag column) but wrote
+     * no {@code run_objects_end} pass snapshots. (Correcting an earlier claim on this
+     * comment: the aux stream is <b>not</b> empty — the committed
+     * {@code s2-ehz-halfpipe-roundtrip/ss/aux_state.jsonl.gz} carries 6762 records,
+     * including 5733 {@code dynamic_art_transfer_state} rows, both
+     * {@code control_state} transitions, {@code checkpoint},
+     * {@code stage_finished} and {@code results_started}. Exactly one family is
+     * missing, and it is the pacing one.) The S2 half-pipe in
      * particular is ROM-object-pass paced: the standalone must-stay-green
      * {@code TestS2SpecialStageTraceReplay} drives it via
      * {@code SpecialStageRunObjectsPassBinder}, binding each recurring RunObjects
@@ -2408,13 +2412,41 @@ abstract class AbstractRunChainTest {
      * fails the checkpoint, and is ejected without the emerald. That is a
      * fixture-data limitation, not an engine defect: nothing the comparison-only
      * chain may do (it must not hydrate engine state from the trace) can recover the
-     * unrecorded V-int sampling. It is also not the ONLY missing piece: even with a
-     * re-recorded pass stream nothing on this path would consume it — this class's
-     * {@link #uncomparedInteriorStep} steps {@code bk2FrameOffset + localRow}
-     * directly, and neither {@code TraceRunSpecialStageRows} nor
-     * {@code TraceRunSpecialStageRowDriver} references {@code run_objects_end} or
-     * {@code SpecialStageRunObjectsPassBinder}. Closing the S2 half-pipe lane needs
-     * the re-record AND a pass-paced interior stepper. The recorded
+     * unrecorded V-int sampling. It is also not the ONLY missing piece — there are
+     * three, and all three must land together:
+     *
+     * <ol>
+     *   <li><b>The re-record.</b> Settled: the native harness at HEAD does emit
+     *       run-mode special-stage pass records. A scratch re-capture of this run's
+     *       own movie reproduces all five committed segments' {@code physics.csv}
+     *       byte-for-byte and every level segment's aux byte-for-byte, and adds
+     *       2991 {@code run_objects_end} records to {@code ss} and 3291 to
+     *       {@code ss_2} (plus a sixth, previously untruncated {@code seg4_ehz2}
+     *       tail segment). Publishing those bytes is a fixture-publication decision,
+     *       not a code one.</li>
+     *   <li><b>A pass-paced interior.</b> {@link TraceRunSpecialStageRows} now
+     *       exposes the pass cursor
+     *       ({@code newRunObjectsPassBinder}/{@code passPacedFromRow}) for a
+     *       segment that recorded one, so the pacing authority is available to any
+     *       driver; nothing consumes it yet.</li>
+     *   <li><b>A V-blank body that can run 0..n object passes.</b> This is the piece
+     *       the earlier note missed. Pass pacing cannot be expressed as one
+     *       {@code GameLoop.step()} per pass: a step is one V-blank row, and an
+     *       audited segment's {@code TraceRunSpecialStageRowDriver} requires each
+     *       admitted row to publish exactly one dynamic-art delivery
+     *       ({@code publishAdmittedRow}: "advertised special-stage row N was not
+     *       published atomically"). Measured on the re-capture, {@code ss} rows own
+     *       zero passes 3341 times, one pass 1793 times and two passes 599 times —
+     *       so row-to-step and pass-to-step cannot both hold. The standalone
+     *       harness already separates them, running every pass of an observation
+     *       inside ONE {@code plcFrameLifecycle} iteration
+     *       ({@code S2SpecialStageReplayHarness.stepPasses}); the run path needs the
+     *       same split, i.e. the SS body in {@code GameLoop.updateSpecialStageMode}
+     *       driving the row's completed-pass count inside its single lifecycle
+     *       frame, fed through the existing per-row special-stage admission seam.</li>
+     * </ol>
+     *
+     * <p>The recorded
      * {@code emeralds_after} therefore
      * stays a diagnostic for an advance-uncompared special stage. The always-safe
      * carry-overs — the ROM's on-return position restore and ring zero-out, which

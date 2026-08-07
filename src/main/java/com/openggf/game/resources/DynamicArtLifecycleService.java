@@ -147,9 +147,12 @@ public final class DynamicArtLifecycleService
             int mappingFrame,
             int logicalFrame,
             int logicalEdgeIndex,
-            List<DynamicArtDiagnosticsSnapshot.Request> requests) {
+            List<DynamicArtDiagnosticsSnapshot.Request> requests,
+            String submissionOrigin) {
         public BufferedEdge {
             requests = List.copyOf(requests);
+            submissionOrigin = submissionOrigin == null
+                    ? "segment" : submissionOrigin;
         }
     }
 
@@ -539,7 +542,8 @@ public final class DynamicArtLifecycleService
                 new Descriptor(transferId, owner, mappingFrame,
                         comparisonSegmentOpen ? "segment" : "run_gap", requests);
         ledger.put(transferId, descriptor);
-        buffer(transferId, "submitted", owner, mappingFrame, requests, before);
+        buffer(transferId, "submitted", owner, mappingFrame, requests, before,
+                descriptor.submissionOrigin());
         return new ArtUpdate(true, transferId, checked);
     }
 
@@ -591,7 +595,8 @@ public final class DynamicArtLifecycleService
         List<Long> before = List.copyOf(ledger.keySet());
         ledger.remove(update.transferId());
         buffer(update.transferId(), "completed", descriptor.owner(),
-                descriptor.mappingFrame(), requests, before);
+                descriptor.mappingFrame(), requests, before,
+                descriptor.submissionOrigin());
     }
 
     /** Retires the S2 DMA FIFO at the production ProcessDMAQueue boundary. */
@@ -720,7 +725,8 @@ public final class DynamicArtLifecycleService
                 preparation.requests());
         ledger.put(transferId, descriptor);
         buffer(transferId, "submitted", descriptor.owner(),
-                descriptor.mappingFrame(), descriptor.requests(), before);
+                descriptor.mappingFrame(), descriptor.requests(), before,
+                descriptor.submissionOrigin());
         completeApplied(new ArtUpdate(true, transferId, List.of()),
                 List.of(DynamicArtDiagnosticsSnapshot.Request.ram(
                         PLAYER_PROFILES.get(GameId.S1).get("sonic")
@@ -832,7 +838,8 @@ public final class DynamicArtLifecycleService
                     edge.edgeOrdinal(), edge.transferId(), edge.phase(),
                     edge.owner(), edge.mappingFrame(), edge.logicalFrame(),
                     edge.logicalEdgeIndex(), publicationFrame,
-                    terminalForwarded, edge.requests()));
+                    terminalForwarded, edge.requests(),
+                    edge.submissionOrigin()));
         }
         bufferedEdges.clear();
         publishedOutstanding = List.copyOf(ledger.keySet());
@@ -968,12 +975,13 @@ public final class DynamicArtLifecycleService
             String owner,
             int mappingFrame,
             List<DynamicArtDiagnosticsSnapshot.Request> requests,
-            List<Long> beforeOutstanding) {
+            List<Long> beforeOutstanding,
+            String submissionOrigin) {
         long edgeOrdinal = nextEdgeOrdinal++;
         if (comparisonSegmentOpen) {
             bufferedEdges.add(new BufferedEdge(edgeOrdinal, transferId,
                     phase, owner, mappingFrame, logicalFrame,
-                    nextLogicalEdgeIndex++, requests));
+                    nextLogicalEdgeIndex++, requests, submissionOrigin));
             return;
         }
         DynamicArtGapTransition.GapEdge edge =
