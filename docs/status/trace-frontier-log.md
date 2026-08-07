@@ -64491,3 +64491,99 @@ Open, with sharpened diagnoses:
   separate agent could not reproduce either failure in a clean worktree under
   several deterministic orderings, so ordering still influences whether it
   surfaces; the frame-4046 coincidence is the lead worth pulling.
+
+## 2026-08-07 - The ARZ2 "fork flakiness" was a poisoned static mapping holder
+
+Deterministic full sweep (`-Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical`):
+14 red -> 12 red. `TestS2Arz2LevelSelectTraceReplay` and
+`TestS2ObjectOccupancyOracle` both close; nothing new appears.
+
+- **Root cause: `LazyMappingHolder` latched an empty mapping list.** It set
+  `attempted = true` BEFORE checking whether a ROM-backed game was mounted, so
+  any call made while `GameServices.levelOrNull()` was null cached the empty
+  result permanently. The holder is a `private static final` field on the object
+  class, so the poisoning survives for the whole JVM/fork.
+  `RisingPillarObjectInstance.breakIntoDebris` reads
+  `MAPPINGS.get(MAP_UNC_OBJ2B_ADDR, ...)` and bails with `setDestroyed(true)` on
+  an empty list, so a poisoned holder made the pillar delete itself on the break
+  frame and spawn ZERO debris children - exactly the recorded signature
+  (ARZ2 frame 4046, `obj_s19_type` expected 0x2B, actual missing) and exactly
+  the two `arz2RisingPillar*` oracle assertions.
+- **This closes out a long mis-diagnosis chain, recorded here so it is not
+  repeated.** The pair was called fork-state leakage, then dismissed as a
+  `-DforkCount=1` measurement artefact, then reported as unreproducible in a
+  clean worktree. All three readings were partly right and wholly misleading:
+  it IS cross-class state leakage through a shared fork, but through a
+  production static holder, not test infrastructure - which is why it depended
+  on whether an earlier class touched the holder before a ROM was mounted, why
+  it vanished in isolation, and why inode-order run scheduling flipped it.
+  A first-error frame that coincides with an oracle case's name (4046) was the
+  clue that finally cracked it.
+- **`TestS1GhzMazeRoundTripChain`'s 810-row skew was a harness stamping bug, not
+  load timing.** `DynamicArtLifecycleService.movieLogicalFrame` self-increments
+  once per `finishProductionIteration`; `TraceSessionLauncher.driveRunPhysicalRow`
+  states the row via `setMovieLogicalFrame(row.movieRow())` in
+  `preparePhysicalRow`, but `AbstractRunChainTest` never did - so every
+  transition-gap, shared-gap and terminal-tail row, none of which run a
+  production iteration, was dropped from the stamp. The deficit accumulated to
+  exactly 810 over the maze movie. Mirroring the launcher's stamp in the chain
+  harness's three `preparePhysicalRow` hooks moves
+  `run_tail.edge[0..1].movie_logical_frame` from 8261 to 9035 against a recorded
+  9071: delta 810 -> 36. **This refutes the long-standing premise** (2026-08-05
+  entries) that the returning level's load sits on the wrong side of the results
+  bridge - it is already on the correct side. The residual 36, plus the
+  `edge_ordinal` delta 12 and `transfer_id` delta 6, are the real remaining
+  frontier.
+
+Sharpened but not yet fixed:
+
+- **Sixth occupancy defect located:** S1 Obj6F (SBZ Spin Platform Conveyor). The
+  ROM holds FOUR at slots 32-35; the engine holds three at 32-34. Because
+  `RLoss_Bounce` probes the floor only when `(v_vblank_byte + d7) & 3 == 0` with
+  `d7 = 127 - slot`, the missing slot changes every spilled ring's bounce
+  cadence and resting position, so Sonic never overlaps the ring the ROM
+  re-collects. All five remaining "rings" survivors (Mz2, Slz3, Sbz1, Cpz, Ooz)
+  were traced to this same class of divergence at the moment of a ring-loss
+  spill - not to the ring or touch code, which is now ROM-correct.
+- **GHZ1's monitor symptom measured on the slot side:** at frames 3111-3115 the
+  ROM has the Obj26 monitor in SST slot 0x24 and the engine does not agree, which
+  is what flips the icon to the wrong side of the parent and shifts the award by
+  one frame.
+
+## 2026-08-07 - S2 special-stage re-record: fixtures now carry run_objects_end
+
+Not yet landed; recorded so the work is not repeated.
+
+- The S2 complete-emeralds run was re-recorded twice with the native harness.
+  All seven ss segments now carry `run_objects_end` (2991/3291/3696/3861/3416/
+  4416/4366 rows) where the committed fixtures have zero, and every level segment
+  plus `run_manifest.json` reproduced byte-identically.
+- Publishing the first capture exposed a SECOND pre-existing run-mode recorder
+  defect: `S2RunCaptureRunner` constructed `S2SpecialStageRunObjectsObserver` with
+  `bk2Offset = frameNow + 1` while the segment publishes
+  `bk2_frame_offset = frameNow`, so every pass reported an `input_sample_frame`
+  one lower than the trace frame its `Vint_S2SS` joypad read belongs to, and
+  `SpecialStageRunObjectsPassBinder` rejected all seven with "BK2 identity
+  mismatch at sequence 0". Proven against the BK2 input log three independent
+  ways: ss_2 matches 6361/6361 rows and ss_5 6690/6690 at the published offset
+  versus 6015 and 6386 at offset+1; under the old offset all 2991 ss passes
+  matched at `bk2_frame_offset + input_sample_frame + 1`; and the standalone
+  `traces/s2/special_stage` fixture (recorded by the separate
+  `S2SpecialStageCaptureRunner`, which passes `offset` unmodified) matches at +0
+  for all 2991 passes. The fix makes run mode agree with the standalone path and
+  with the segment's own published offset.
+- With both recorder fixes, all seven `TestS2SpecialStage1..7TraceReplay` classes
+  load, seed their inherited dynamic-art ledger, and validate every pass's BK2
+  identity and both players' held inputs against the movie. They then fail
+  downstream on genuine engine divergences: six on "cannot complete terminal
+  pre-start pass outside Obj5F WAIT2 boundary" (intro at WAIT2, phaseTimer=30,
+  frameCounter=225) and ss_6 on "rings-to-go artifact is missing initial FF
+  trigger sample". That is real new coverage on a route no test previously
+  touched.
+- **`TestS2EhzHalfpipeRoundTripChain` is NOT unblocked by this**, contrary to the
+  earlier assumption: it replays a DIFFERENT fixture
+  (`traces/s2/runs/s2-ehz-halfpipe-roundtrip/`) whose ss segments still have zero
+  `run_objects_end`, and separately `AbstractRunChainTest`'s uncompared-interior
+  stepper does not consume the pass binder at all - it steps
+  `bk2FrameOffset + localRow` directly (line 2548). Re-recording that fixture
+  alone would not change its result.

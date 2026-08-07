@@ -1398,6 +1398,7 @@ abstract class AbstractRunChainTest {
                                         special.segment().bk2FrameOffset()
                                                 + localRow,
                                         step.movieRow());
+                                stateMovieLogicalRow(step);
                             }
 
                             @Override
@@ -1551,6 +1552,7 @@ abstract class AbstractRunChainTest {
                             @Override
                             public void preparePhysicalRow(
                                     TraceRunFrameDriver.Step step) {
+                                stateMovieLogicalRow(step);
                                 Bk2FrameInput current =
                                         playback.currentFrameOrThrow();
                                 Bk2FrameInput previous = movieRow > 0
@@ -1745,6 +1747,25 @@ abstract class AbstractRunChainTest {
         }
     }
 
+    /**
+     * States the physical BK2 row a dynamic-art gap edge is stamped with, the
+     * way {@code TraceSessionLauncher.driveRunPhysicalRow} does for a live run.
+     *
+     * <p>{@code DynamicArtLifecycleService.movieLogicalFrame} otherwise counts
+     * production iterations, and a chain drives whole spans of rows —
+     * transition gaps, shared gaps, the terminal tail — that run no production
+     * iteration at all. Every such row is silently lost from the stamp, so a
+     * gap edge raised late in a chain reports a row hundreds short of the one
+     * the recorder wrote. The recorder's contract is the movie row it has
+     * consumed ("tools/bizhawk-headless/src/Recording/S1RunCaptureRunner.cs":
+     * 199-215), so the driver states it rather than inferring it.
+     */
+    private static void stateMovieLogicalRow(TraceRunFrameDriver.Step step) {
+        SessionManager.getCurrentGameplayMode()
+                .dynamicArtLifecycle()
+                .setMovieLogicalFrame(step.movieRow());
+    }
+
     private void driveHeadlessTransitionRow(
             TraceRunFrameDriver driver,
             TraceRunFrameDriver.Disposition disposition,
@@ -1761,6 +1782,7 @@ abstract class AbstractRunChainTest {
                     @Override
                     public void preparePhysicalRow(
                             TraceRunFrameDriver.Step step) {
+                        stateMovieLogicalRow(step);
                         Bk2FrameInput current = playback.currentFrameOrThrow();
                         Bk2FrameInput previous = movieRow > 0
                                 ? movie.getFrame(movieRow - 1) : null;
