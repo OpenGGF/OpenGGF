@@ -2449,11 +2449,11 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
                         .showInLevelTitleCard(false)
                         .resetLevelGamestateAtInLevelTitleCardDisplay(true)
                         // The carried results parent mutates into Obj_TitleCard;
-                        // its twelve child SST create/render entries precede
+                        // its six remaining child SST create/render entries precede
                         // Obj_TitleCardWait's display-time gamestate reset. At
                         // module phase 1, the title-card manager already owns
                         // the final six-entry create/render handoff.
-                        .inLevelTitleCardResetAdditionalDispatches(12)
+                        .inLevelTitleCardResetAdditionalDispatches(6)
                         .inLevelTitleCardResetPhaseOneDispatchOverlap(6)
                         // The retained Obj_EndSignControl parent occupies an
                         // earlier SST slot than Obj_TitleCardWait2. Ten parent

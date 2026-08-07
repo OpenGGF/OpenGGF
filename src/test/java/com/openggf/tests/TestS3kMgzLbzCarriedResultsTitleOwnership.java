@@ -67,7 +67,7 @@ class TestS3kMgzLbzCarriedResultsTitleOwnership {
                                 Sonic3kConstants.ARTTILE_MGZ_SPIKER),
                         new KosParent(Sonic3kConstants.ART_KOSM_MGZ_MANTIS_ADDR,
                                 Sonic3kConstants.ARTTILE_MGZ_MANTIS)),
-                38,
+                30,
                 10,
                 true);
 

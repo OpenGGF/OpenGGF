@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K MGZ's carried Act 2 title reset budget now counts only the
+  six child-SST create/render entries that remain after the carried owner
+  publication, matching the ROM's raw frame `16551` ring reset. The MGZ
+  complete-run comparator frontier advances from raw frame `16551`
+  (`rings`, 69 errors) to raw frame `16656` (`camera_y`, 68 errors); AIZ and
+  HCZ remain at their committed frontiers and no trace payloads changed.
 - Fix/Test: S3K MGZ's carried Act 2 title owner now submits the four
   ROM-backed title-card parents on the same `Obj_LevelResultsWait2`
   publication dispatch, while the retained results shell survives for its

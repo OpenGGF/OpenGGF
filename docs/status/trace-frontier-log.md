@@ -64634,3 +64634,40 @@ to synthesize a POST phase on a VBLANK-only row.
 - Route position: AIZ remains green; HCZ remains at direct `#113`; MGZ now
   reaches the raw `16551` comparator edge and expected direct `#183` stop. CNZ,
   ICZ, and LBZ remain pending in gameplay order.
+
+## 2026-08-07 — S3K MGZ carried title reset frontier
+
+- Worktree: `bugfix/s3k-traces` at `a7c4a57d1` before the frontier commit;
+  unrelated edits in `.idea/vcs.xml` and
+  `docs/status/rewind-round-trip-gaps.md` remained unstaged. Validation used
+  JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen` (SHA-1
+  `b711a909cce238ca4af3e517a2edca306228efa5`), without replacing or renaming
+  it.
+- Frontier command: `mvn -Dmse=off
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kMgzCompleteRunTraceReplay#replayMatchesTrace'
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Result: the replay still stops at the expected direct
+  `KOS_DECOMPRESSION_QUEUE#183` completion because the engine's pending
+  fingerprint
+  `sha256:fbfc78d499717cfec6df27fdd04fa4b5293a7147ec7ff7a7a18004e9db801e78`
+  differs from the recorded
+  `sha256:589a478d29f5c788ad304520acc86172ea220a4a68b5a74ac25ee62e80d5899c`.
+- Comparator report: 68 errors, 0 warnings; the first error is raw/frame
+  `16656`, `camera_y`, expected `0x0813`, actual `0x0810`. The previous
+  committed boundary was raw `16551`, `rings`, expected `0` and actual `59
+  (69 errors)`. The ring error is gone at the native reset edge; the remaining
+  later ring comparison at raw `28398` is the pre-existing cascading
+  discrepancy.
+- Regression checks: AIZ standard replay passes with zero comparator errors;
+  AIZ complete and HCZ complete remain at their recorded expected stops,
+  direct `#50` and `#113`, respectively; MGZ still reaches the expected
+  direct `#183` stop. Ring comparison remains enabled with `ToleranceConfig.DEFAULT`
+  `FORCE_ERROR`; no trace payloads changed.
+- Fix scope: `Sonic3kMGZEvents` records the carried title owner's six
+  remaining child-SST entries as a semantic reset budget, and the matching
+  ownership test expects the resulting 30-update manager countdown. No zone,
+  frame, route, or trace branch was added to shared runtime code.
+- Route position: AIZ remains green; HCZ remains at direct `#113`; MGZ now
+  reaches the raw `16656` comparator edge and expected direct `#183` stop. CNZ,
+  ICZ, and LBZ remain pending in gameplay order.
