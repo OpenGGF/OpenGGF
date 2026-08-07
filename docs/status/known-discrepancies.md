@@ -230,58 +230,39 @@ The rendered output is identical to the original - the same graphics appear at t
 
 ---
 
-## HTZ Cloud Scroll Precision Fix
+## HTZ Cloud Scroll — resolved to the shipped `fixBugs = 0` path
 
 **Location:** `SwScrlHtz.java`
-**ROM Reference:** `s2.asm` lines 15823-15831 (fixBugs path) vs line 15833 (original path)
+**ROM Reference:** `s2.asm:15851-15866` and `:15881-15891` (two `if fixBugs`
+conditionals inside `SwScrl_HTZ`)
 
-### Original Implementation
+This entry previously documented a deliberate deviation: the engine implemented
+the **corrected** (`fixBugs = 1`) path so the clouds scrolled smoothly instead of
+with the ROM's periodic 2-frame stutter. That is no longer the case, and the
+deviation is gone.
 
-The original ROM uses `asr.w #4,d1` to initialize the cloud layer scroll delta. This word-sized shift loses the fractional bits that were set up via `swap d1`, causing a visible 2-frame jerkiness in cloud scrolling as the fractional accumulator repeatedly underflows and corrects.
+The disassemblies are assembled with the bug-fix conditional OFF, the traces
+record shipped-ROM behaviour, and the engine models the un-fixed branch even where
+it is plainly a bug — see the `FixBugs` gotcha in CLAUDE.md / AGENTS.md. The
+stutter is what the ROM does.
 
-```asm
-; Original (buggy) path:
-    asr.w   #4,d1          ; word shift discards upper 16 bits (fractional part)
-```
+Two conditionals were involved, and both are now on the shipped path:
 
-### Our Implementation
+1. **The divide.** Shipped: `asr.w #4,d1`, a word shift that discards the
+   remainder. Fixed: `swap d1 / asr.l #4,d1 / swap d1`, widening the divide so the
+   remainder survives in the low half.
+2. **The accumulator init.** Shipped: `moveq #0,d3 / move.w d1,d3`, zero-extending
+   only the low word so the fixed-point accumulator starts with **no fractional
+   part** — this is the actual source of the jerkiness, and the disassembly's own
+   comment says so. Fixed: `move.l d1,d3`, carrying the preserved fraction.
 
-We use the `fixBugs` path from the disassembly, which preserves fractional precision:
+Both `fixBugs = 1` variants are written out in full in the source comments, so the
+site is self-describing if the bug-fixed revisions are ever supported.
 
-```asm
-; fixBugs path:
-    swap    d1
-    asr.l   #4,d1          ; long shift preserves fractional bits across the swap
-```
-
-This is implemented in `SwScrlHtz.java` using a 32-bit arithmetic shift after swapping the high/low words, matching the corrected assembly path.
-
-### Rationale
-
-1. **Known bug in original ROM** - The disassembly explicitly marks this as a bug with a `fixBugs` conditional path.
-2. **Smoother cloud animation** - The fractional bits produce smooth per-frame cloud movement instead of the original's periodic stutter.
-3. **Matches disassembly intent** - The `fixBugs` path represents what the original developers intended before the word/long shift mistake.
-
-### Verification
-
-Cloud layer scrolling in HTZ is smooth across all frames, without the 2-frame jitter visible in the original ROM.
-
-### `fixBugs` deviation — HTZ cloud scroll (open, contradicts current policy)
-
-`SwScrlHtz.java` deliberately implements the **`fixBugs` (corrected)** path for the
-HTZ cloud scroll delta, described above, justified on "smoother cloud animation".
-
-That predates, and now contradicts, the project rule recorded in CLAUDE.md /
-AGENTS.md: the disassemblies are assembled with `fixBugs = 0`, the traces record
-shipped-ROM behaviour, and the engine must model the un-fixed path even where it is
-plainly a bug. The original `asr.w #4,d1` discards the fractional bits on purpose as
-far as the ROM is concerned, and its "2-frame jerkiness" is shipped behaviour.
-
-This has not desynced a trace so far, which most likely means no compared column
-currently observes the cloud layer's scroll accumulator — i.e. it is latent rather
-than harmless. It should either be changed to the `fixBugs = 0` path, or kept as a
-deliberate, explicitly-owned rendering deviation with a note here saying so; it
-should not stay as an unremarked contradiction.
+Note on why this was invisible: HTZ trace replays were green before and after the
+correction, so no compared column currently observes that accumulator. The
+deviation was **latent, not harmless** — it would have desynced the first fixture
+that compared cloud scroll.
 
 ---
 
