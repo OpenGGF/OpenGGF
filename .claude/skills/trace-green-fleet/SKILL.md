@@ -69,6 +69,20 @@ Inside `.worktrees/*`, run Maven through `cmd /c "mvn.cmd ..."` when bare `mvn` 
 Always use `trace-replay-bug-fixing` for actual trace investigation or fixes.
 
 - Comparison-only: trace data is read-only diagnostic input. Never hydrate or sync engine state from trace data in the per-frame test loop.
+- **The bar is any BK2, not this BK2.** A fix must hold for a movie nobody has recorded
+  yet; a green fixture only proves the fixture. A constant derived by measuring the
+  fixture's own rows rather than read out of the disassembly is a fitted model even when
+  every test passes, and it will desync the first different recording. Measuring is a
+  legitimate way to *locate* a problem and never a way to *land* one: the landed value must
+  be traceable to the ROM routine that owns it and cited there. Prefer a structural rule
+  read from the disassembly over any number. A value that is close to the ROM's but not
+  equal is usually absorbing an error elsewhere — chase that instead of keeping it. See
+  *The Other Core Invariant — Any BK2, Not This BK2* in `trace-replay-bug-fixing` for the
+  procedure, red flags, and worked examples both ways.
+- **A worker that reports `no-improvement` with a real root cause has succeeded.** Do not
+  push a worker toward a green it cannot justify; a fitted fix costs more than a red trace,
+  because it hides the defect and desyncs the next recording. Judge fix quality by the
+  fitted-value audit, not by the colour of the test.
 - No zone, route, frame, or "known failing trace" carve-outs. Model ROM state: object id/routine, status/control bits, physics profile, event flag, frame-counter visibility, or data-driven condition.
 - Cite disassembly in code comments and summaries when behavior changes.
 - Cross-game parity: before changing shared physics, collision, sidekick, oscillation, or shared object code, check all three disassemblies. Universal corrections must keep all games green. Real per-game divergences must use the smallest accurate owner from `docs/architecture/per-game-rule-placement.md`, never `gameId`.

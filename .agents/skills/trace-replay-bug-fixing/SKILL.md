@@ -46,6 +46,98 @@ If a trace replay test passes only because engine state is snapped back to ROM-c
 - New aux event types are **diagnostic only**. They feed the divergence report and per-frame comparator; they do not feed engine state.
 - No "elastic windows" or "tolerance bands" introduced to suppress divergence around suspected engine bugs. If a comparison threshold is non-zero, it must reflect a known ROM/engine semantic difference declared as a tolerance because it is not a bug. Otherwise the bug is fixed in the engine and the threshold stays zero.
 
+## The Other Core Invariant — Any BK2, Not This BK2
+
+**A fix must hold for a movie nobody has recorded yet. A green fixture proves the fixture.**
+
+This is hard rule 3. It is the twin of the comparison-only invariant above: that one stops
+the harness from feeding the engine answers, this one stops *you* from feeding the engine
+answers. Both failure modes produce a green test over an engine that is still wrong.
+
+A constant derived by **measuring the fixture's own rows**, rather than read out of the
+disassembly, is a fitted model *even when every test passes*, and it will desync the first
+different recording. Roughly twenty such fixes were reverted in one recent stretch; two of
+them cost whole days before anyone noticed the test was green for the wrong reason.
+
+### The test to apply before landing anything
+
+Ask: *if someone recorded a new BK2 of this same route tomorrow, with different lag, a
+different entry frame, or the player standing somewhere else — would this change still be
+correct?* If the honest answer is "probably, because it happens to line up", it is fitted.
+
+### Red flags
+
+- A number whose provenance is "I measured frames N..M of this fixture and it was 26".
+- A value that is **close to the ROM's but not equal**. That almost always means it is
+  absorbing an error somewhere else. Chase the other error; do not keep the constant.
+- A predicate that mentions a frame index, stage index, zone, route, fixture name, or
+  "the known failing trace". *"ROM-default behaviour except in AIZ"* is still a carve-out.
+- A tolerance, epsilon, or comparison exclusion added so a field stops failing.
+- A local timer standing in for a global ROM clock. If the ROM gates on
+  `Level_frame_counter` or `V_int_run_count`, a per-object counter that "also ticks every
+  other frame" is right only for the recording that entered on the same parity.
+- Reaching for the recorded row to decide *when* something happens. See the
+  hardware-timing exception below for the one narrow, documented case.
+
+### The procedure
+
+1. **Measure the fixture to locate the problem.** This is legitimate and expected — it is
+   how you find which frame and field to study. It is a starting point, never a landing
+   place.
+2. **Find the ROM routine that owns the behaviour**, and read what it actually does.
+3. **Land a structural rule, not a number, wherever possible.** A rule read out of the
+   disassembly generalises; a measured quantity does not.
+4. **Cite the routine** — file and line — in the code comment and the commit message.
+5. **Audit the blast radius.** Re-measure across the whole corpus, not just the target: how
+   many other rows/objects/traces does the new rule change? If a classifier or predicate
+   changed, count exactly which rows now fall on each side.
+6. **State the audit in your report**, including "no constant was introduced" when that is
+   the truth. A reviewer must be able to check step 3 without re-deriving your work.
+
+### Worked examples — rules that generalise
+
+Each of these closed real traces, and each is a *structural* fact about the ROM, which is
+why it holds for any movie:
+
+- *"`Bri_Main` allocates `subtype - 1` display-only child logs"* — from the `dbf` loop
+  structure, not from counting slots in a fixture.
+- *"`SpinC_Main_Spawner` re-uses the spawner's own slot as the group's first platform and
+  calls `FindFreeObj` only for entries 2..N"* — from `movea.l a0,a1 / bra.s .makePlatform`.
+- *"ROM `Obj08` never calls `MarkObjGone`"*, and *"`Pyl_Display` has no out-of-range test,
+  `MarkObjGone`, or `DeleteObject`"* — so neither object can ever unload, whatever the
+  camera does.
+- *"`v_ssangle` is the last unconditional write in the special-stage tick"* — which makes
+  "angle unchanged while velocities advanced" a sound torn-sample witness at every tear
+  point, where the previous witness only caught tears before one particular store.
+- *"`React_CollisionDetected`'s ring branch has no once-only latch; it re-tests
+  `cmpi.w #90,flashtime(a0)` every overlapping frame"* — so the response must be
+  continuous, not edge-triggered.
+
+### Worked examples — fits that were caught
+
+- **CNZ Point Pokey** spawned prizes on a local `prizeSpawnTimer++ >= 2`. The ROM gates on
+  `btst #0,(Level_frame_counter+1).w`. The timer was green for that recording and wrong for
+  any movie entering the cage on the other parity — a textbook this-BK2 construct.
+- **S1 special-stage `ss_angle`** failed on one frame in two stages. Widening the torn-row
+  classifier until they passed would have looked identical to a fix. What made the real fix
+  legitimate: the new witness came from the ROM's write ordering, *and* the blast radius was
+  audited across ~25k rows to confirm exactly two rows changed classification.
+- **A press-edge baseline** was "fitted exactly over rows 1714/1715 and 1731-1736" of one
+  fixture. The ROM answer was `Joypad_Read`'s `pressed = new & ~stored_held` plus the fact
+  that `Vint_Lag` never reaches it — a rule, not a window.
+
+### When it genuinely is not derivable
+
+Sometimes the discriminator is sub-frame 68000 cycle position, or a clock the engine does
+not model at all (for example a free-running `v_vblank_count` that never resets, where the
+engine's counter is level-local). A native model **cannot** predict that from
+frame-granularity state, and no amount of measuring will make it generalise.
+
+In that case the answer is **not** a tuned number. Say so plainly, name the missing piece,
+and either leave the trace red with a written diagnosis or use the documented per-movie
+hardware-timing sidecar under hard rule 4. A `no-improvement` result with a real root cause
+is worth more than a fitted green, and is treated as success.
+
 ### What to do when the engine diverges from ROM
 
 - If the first divergent field starts with `queue.`, stop downstream triage.
