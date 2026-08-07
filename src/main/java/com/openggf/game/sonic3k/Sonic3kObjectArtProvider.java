@@ -1047,7 +1047,19 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         }
 
         reloadStandaloneRegistryForActTransition(zoneIndex);
-        scheduleEnemyKosArt(zoneIndex, currentActIndex);
+        // A resource-owner reload only transfers the work that its handoff
+        // prepared.  The native ICZ1BGE transition enters the target through
+        // Load_Sprites/Process_Sprites; it does not run LoadEnemyArt.  Any
+        // target-owned Queue_Kos_Module request (for example the Starpost
+        // bonus-art request made while the initial target objects execute)
+        // must therefore enter the FIFO from that object owner, rather than
+        // being replaced by a speculative zone enemy batch here.
+        if (policy == RuntimeArtAdmissionPolicy.RESOURCE_HANDOFF_OWNER) {
+            scheduleEnemyKosArt(zoneIndex, currentActIndex);
+            pendingEnemyKosEntries = List.of();
+        } else {
+            scheduleEnemyKosArt(zoneIndex, currentActIndex);
+        }
         RuntimeArtAdmissionOwnerKind ownerKind = switch (policy) {
             case IMMEDIATE -> RuntimeArtAdmissionOwnerKind.IMMEDIATE;
             case TITLE_OWNER -> RuntimeArtAdmissionOwnerKind.TITLE_OWNER;

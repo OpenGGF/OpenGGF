@@ -3,6 +3,14 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K resource-owner act reloads now transfer only the prepared
+  handoff resources; they do not speculate a new `PLCKosM` enemy batch before
+  the target's ROM object owners execute. ICZ's target Starpost consequently
+  submits the recorded Stars 3 module/direct pair at raw frames `12381`/`12380`
+  instead of the ICZ Snowdust batch at raw frame `12352`. The ICZ complete-run
+  frontier advances to its first remaining comparator error at raw frame
+  `15258`; AIZ, HCZ, MGZ, and CNZ remain at their established frontiers and no
+  trace payloads changed.
 - Fix/Test: S3K ICZ's resource-owner KosM parent now keeps a ready child
   pending across a held loop-tail row when the parent is explicitly exportable
   across the in-loop level handoff. The ICZ complete-run replay advances from

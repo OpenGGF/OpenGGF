@@ -64940,3 +64940,41 @@ to synthesize a POST phase on a VBLANK-only row.
   established frontiers; ICZ now reaches its recorded direct `#245` boundary.
   The next ICZ target is the raw `12352` post-handoff module publication;
   LBZ remains pending.
+
+## 2026-08-07 — S3K ICZ target-owner runtime-art frontier
+
+- Worktree: `bugfix/s3k-traces` at `c966fe606` before the frontier commit;
+  unrelated edits in `.idea/vcs.xml` and
+  `docs/status/rewind-round-trip-gaps.md` remained unstaged. Validation used
+  JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen` (SHA-1
+  `b711a909cce238ca4af3e517a2edca306228efa5`), without replacing or renaming
+  it.
+- Frontier command: `mvn -q -Dmse=off -Dsurefire.forkCount=1
+  -DreuseForks=true -Dtrace.frontierOnly=true
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace
+  test`. The committed baseline stopped at direct
+  `KOS_DECOMPRESSION_QUEUE#245`/raw `12380`, with eight comparator errors
+  beginning at raw `12352`. The candidate matches the native Starpost Stars 3
+  module/direct pair (`KOS_MODULE_QUEUE#163`/raw `12381` and
+  `KOS_DECOMPRESSION_QUEUE#245`/raw `12380`) and reaches the next comparator
+  edge at raw `15258`; its report has 22 errors, with the expected next module
+  completion `#167` at raw `15261` still unconsumed.
+- Root cause: the resource-owner ICZ1BGE transition enters the target through
+  `Load_Sprites`/`Process_Sprites`, which lets the overlapping Starpost issue
+  its ROM-owned Stars 3 `Queue_Kos_Module` request. The provider had also
+  armed a speculative target `PLCKosM_ICZ` batch when the transferred terrain
+  was published, so that unrelated batch occupied the FIFO before the
+  Starpost owner. Resource-owner admission now clears that pending enemy
+  batch and leaves target-owned runtime submissions to their producing object;
+  no zone, frame, route, or trace-data branch was added.
+- Regression checks: the combined AIZ/HCZ/MGZ/CNZ/ICZ frontier sweep passed
+  AIZ, HCZ, and MGZ at their established behavior; CNZ stopped only at its
+  pre-existing raw `33755`/direct `#31` hardware edge, and ICZ stopped at the
+  new raw `15261`/module `#167` edge. Ring comparison remains enabled through
+  `ToleranceConfig.DEFAULT` with `RingCountMode.FORCE_ERROR`; no trace payloads
+  changed.
+- Route position: AIZ and HCZ remain green; MGZ and CNZ remain at their
+  established frontiers; ICZ now reaches raw `15258`. The next ICZ target is
+  the raw `15258` comparator/`#167` target-owner edge; LBZ remains pending.
