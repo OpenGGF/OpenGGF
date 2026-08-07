@@ -468,7 +468,6 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         if (act == 0) {
             updateAct1Bg();
         } else if (act == 1) {
-            updateAct2LevelSizeChange();
             // MGZ2_ScreenEvent polls Do_ShakeSound before dispatching any of
             // its foreground screen-event routines.
             updateAct2ContinuousRumble(frameCounter);
@@ -535,6 +534,16 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     /** Advances only the retained title-card/end-sign object work on a held level-counter row. */
     public void advanceInLevelTitleCardState() {
         updateAct2LevelSizeChange();
+    }
+
+    /**
+     * Runs the retained Change_Act2Sizes workers in the object-loop slot before
+     * DeformBgLayer consumes the published camera bounds.
+     */
+    public void updateAct2LevelSizeChangeBeforeCamera(int act) {
+        if (act == 1) {
+            updateAct2LevelSizeChange();
+        }
     }
 
     /**
@@ -2456,10 +2465,10 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
                         .inLevelTitleCardResetAdditionalDispatches(6)
                         .inLevelTitleCardResetPhaseOneDispatchOverlap(6)
                         // The retained Obj_EndSignControl parent occupies an
-                        // earlier SST slot than Obj_TitleCardWait2. Ten parent
+                        // earlier SST slot than Obj_TitleCardWait2. Three parent
                         // dispatches remain after the visual children finish
                         // before the completion flag reaches DoStart.
-                        .inLevelTitleCardExitAdditionalDispatches(10)
+                        .inLevelTitleCardExitAdditionalDispatches(3)
                         .inLevelTitleCardExitPhaseOneDispatchOverlap(5)
                         // Native code subtracts the offsets from the live camera
                         // and all four bounds; it does not recenter after Load_Level.

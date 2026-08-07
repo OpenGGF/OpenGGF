@@ -3,6 +3,14 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K MGZ's retained Act 2 `Change_Act2Sizes` workers now run in
+  the object-loop slot before `DeformBgLayer`, and the carried title owner
+  retains three ROM parent dispatches after visual-child retirement. The MGZ
+  complete-run comparator frontier remains at raw frame `16656` but advances
+  from 68 to 67 errors (`camera_y` actual `0x0810` to `0x0811`), removes the
+  cascading `camera_x` group, and shortens the first error through raw `16670`;
+  AIZ and HCZ remain at their committed frontiers and no trace payloads
+  changed.
 - Fix/Test: S3K MGZ's carried Act 2 title reset budget now counts only the
   six child-SST create/render entries that remain after the carried owner
   publication, matching the ROM's raw frame `16551` ring reset. The MGZ

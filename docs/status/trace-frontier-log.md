@@ -64671,3 +64671,42 @@ to synthesize a POST phase on a VBLANK-only row.
 - Route position: AIZ remains green; HCZ remains at direct `#113`; MGZ now
   reaches the raw `16656` comparator edge and expected direct `#183` stop. CNZ,
   ICZ, and LBZ remain pending in gameplay order.
+
+## 2026-08-07 — S3K MGZ Act 2 boundary-worker order frontier
+
+- Worktree: `bugfix/s3k-traces` at `e9d57311d` before the frontier commit;
+  unrelated edits in `.idea/vcs.xml` and
+  `docs/status/rewind-round-trip-gaps.md` remained unstaged. Validation used
+  JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen` (SHA-1
+  `b711a909cce238ca4af3e517a2edca306228efa5`), without replacing or renaming
+  it.
+- Frontier command: `mvn -Dmse=off
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kMgzCompleteRunTraceReplay#replayMatchesTrace'
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Result: the replay still stops at the expected direct
+  `KOS_DECOMPRESSION_QUEUE#183` completion because the engine's pending
+  fingerprint
+  `sha256:fbfc78d499717cfec6df27fdd04fa4b5293a7147ec7ff7a7a18004e9db801e78`
+  differs from the recorded
+  `sha256:589a478d29f5c788ad304520acc86172ea220a4a68b5a74ac25ee62e80d5899c`.
+- Comparator report: 67 errors, 0 warnings; first error remains raw/frame
+  `16656`, `camera_y`, expected `0x0813`, actual `0x0811`, through raw frame
+  `16670`. The prior committed report had 68 errors through raw `16671`,
+  actual `0x0810`, and a cascading `camera_x` group beginning at raw `16658`;
+  that group is now absent. The later raw `28398` ring discrepancy remains
+  cascading and pre-existing.
+- Regression checks: AIZ standard replay reports zero comparator errors;
+  AIZ complete and HCZ complete remain at their recorded expected stops,
+  direct `#50` and `#113`, respectively. The all-ROM focused transition,
+  title-card, level-transition, and signpost gate passes 38 tests. Ring
+  comparison remains enabled with `ToleranceConfig.DEFAULT` `FORCE_ERROR`;
+  no trace payloads changed.
+- Fix scope: `Sonic3kMGZEvents` publishes the retained Act 2 gradual boundary
+  worker before the camera scroll slot, matching the native child object's
+  `Process_Sprites` ordering; the carried-title ownership test records the
+  three-parent exit budget. No zone, frame, route, or trace branch was added
+  to shared runtime code.
+- Route position: AIZ remains green; HCZ remains at direct `#113`; MGZ now
+  reaches the raw `16656` comparator edge with 67 errors and expected direct
+  `#183` stop. CNZ, ICZ, and LBZ remain pending in gameplay order.

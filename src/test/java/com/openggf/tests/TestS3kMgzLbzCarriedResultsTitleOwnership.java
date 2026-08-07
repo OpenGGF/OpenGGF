@@ -68,14 +68,14 @@ class TestS3kMgzLbzCarriedResultsTitleOwnership {
                         new KosParent(Sonic3kConstants.ART_KOSM_MGZ_MANTIS_ADDR,
                                 Sonic3kConstants.ARTTILE_MGZ_MANTIS)),
                 30,
-                10,
+                5,
                 true);
 
         verifyCarriedResultsLifecycle(route);
     }
 
     @Test
-    void lbzCarriedResultsHoldsEnemyAdmissionUntilItsTitleCompletes()
+    void lbzCarriedResultsHoldsEnemyAdmissionUntilItsTitleOwnerPoll()
             throws Exception {
         Route route = new Route(
                 Sonic3kZoneIds.ZONE_LBZ,
@@ -225,9 +225,10 @@ class TestS3kMgzLbzCarriedResultsTitleOwnership {
                 previousLevelGamestate = currentLevelGamestate;
             }
             previousTitleState = currentTitleState;
-            if (!title.isComplete()) {
+            if (!title.isComplete()
+                    && !title.hasPublishedInLevelRuntimeArtAdmission()) {
                 assertExactParentOccurrences(timing, route.enemyParents(), 0,
-                        "target enemies remain held throughout title ownership");
+                        "target enemies remain held before the title owner's LoadEnemyArt poll");
             }
         }
         assertTrue(title.isComplete());

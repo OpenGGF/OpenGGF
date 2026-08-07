@@ -369,6 +369,11 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                 updatePendingCnzAct2LevelSizeChange();
             }
         }
+        if (currentZone == Sonic3kZoneIds.ZONE_MGZ
+                && currentAct == 1
+                && mgzEvents != null) {
+            mgzEvents.updateAct2LevelSizeChangeBeforeCamera(currentAct);
+        }
     }
 
     @Override
