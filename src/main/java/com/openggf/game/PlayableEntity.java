@@ -68,6 +68,13 @@ public interface PlayableEntity {
     int getAnimationId();
 
     /**
+     * ROM {@code mapping_frame(a0)} - the sprite frame the animation script last published.
+     * The shipped TouchResponse/Touch_Rings ducking test compares this byte, not the
+     * animation id; see {@code ObjectInteractionRules#duckTouchBoxMappingFrame}.
+     */
+    int getMappingFrame();
+
+    /**
      * Returns whether this player's {@code object_control} byte should
      * suppress the per-frame touch-response collision pass.
      * <p>

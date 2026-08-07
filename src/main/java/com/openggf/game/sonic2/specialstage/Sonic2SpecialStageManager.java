@@ -2016,18 +2016,25 @@ public class Sonic2SpecialStageManager {
             throw new IllegalStateException(
                     "unable to load ROM-backed special-stage player DPLC plans", e);
         }
-        if (sonicPlayer != null) {
+        // Every Obj09/Obj10 routine tail branches to LoadSSSonicDynPLC /
+        // LoadSSTailsDynPLC, whose prologue skips the DisplaySprite + DPLC tail
+        // outright while the post-hurt ss_dplc_timer blink is on an odd count
+        // (docs/s2disasm/s2.asm:69193-69200, 70492-70499). Obj88 re-reads its
+        // parent's counter (s2.asm:70575-70581), so Tails and his tails always
+        // skip the same passes.
+        if (sonicPlayer != null && sonicPlayer.dplcLoadRuns()) {
             publishSpecialStageOwner(
                     lifecycle, "ss-sonic", sonicPlayer.getMappingFrame(),
                     dplcRequests(plans.sonic(), sonicPlayer.getMappingFrame()),
                     0x5CA0);
         }
-        if (tailsPlayer != null) {
+        if (tailsPlayer != null && tailsPlayer.dplcLoadRuns()) {
             publishSpecialStageOwner(
                     lifecycle, "ss-tails", tailsPlayer.getMappingFrame(),
                     dplcRequests(plans.tails(), tailsPlayer.getMappingFrame()),
                     0x6000);
-            if (tailsPlayer.shouldRenderTailsTails()) {
+            if (tailsPlayer.tailsTailsDplcLoadRuns()
+                    && tailsPlayer.shouldRenderTailsTails()) {
                 publishSpecialStageOwner(
                         lifecycle, "ss-tails-tails",
                         tailsPlayer.getTailsTailsMappingFrame(),

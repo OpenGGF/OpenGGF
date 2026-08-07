@@ -302,8 +302,25 @@ public class Sonic1SmashBlockObjectInstance extends AbstractObjectInstance
             final int velY = FRAGMENT_SPEEDS[i][1];
 
             final int fragmentIndex = i;
-            spawnFreeChild(() -> new SmashBlockFragmentInstance(
+            SmashBlockFragmentInstance fragment = spawnFreeChild(() -> new SmashBlockFragmentInstance(
                     blockX, blockY, velX, velY, fragmentIndex, piece, fRenderer));
+            // FixBugs = 0 (docs/s1disasm/sonic.asm:20) — the shipped branch, which is
+            // what the traces record. SmashObject
+            // (docs/s1disasm/_incObj/"sub SmashObject.asm":51-65) allocates fragments
+            // with FindFreeObj, which scans the SST from the start, so a fragment can
+            // land BELOW the parent in RAM. ExecuteObjects walks ascending and has
+            // already passed that slot, so the shipped ROM runs a one-off catch-up on
+            // such a fragment — SpeedToPos plus `add.w d2,obVelY` where d2 is that
+            // caller's fragment gravity (MZ green block: gravity,
+            // "51 MZ Smashable Green Block.asm":75) — exactly one extra fall step, so
+            // it stays in sync with the fragments that will still run this frame, and
+            // DisplaySprite2 so it still renders. With FixBugs = 1 the allocator would
+            // be FindNextFreeObj (never below the parent) and this whole block is
+            // omitted as redundant. Effect: a one-frame position offset on debris.
+            if (fragment != null && services().objectManager() != null
+                    && services().objectManager().isSlotAlreadyExecutedThisFrame(fragment)) {
+                fragment.applySmashObjectCatchUpStep();
+            }
         }
 
         // From disassembly SmashObject .playsnd:
@@ -474,6 +491,21 @@ public class Sonic1SmashBlockObjectInstance extends AbstractObjectInstance
                     renderManager, ObjectArtKeys.MZ_SMASH_BLOCK, fragmentIndex);
             return new SmashBlockFragmentInstance(
                     spawn.x(), spawn.y(), 0, 0, fragmentIndex, restoredPiece, restoredRenderer);
+        }
+
+        /**
+         * One extra Smab_Fragment fall step, applied by SmashObject's shipped
+         * (FixBugs = 0) catch-up path to a fragment allocated below the parent's
+         * SST slot (docs/s1disasm/_incObj/"sub SmashObject.asm":51-65). Identical
+         * to the routine-4 body's SpeedToPos + gravity, which is what the ROM's
+         * `bsr SpeedToPos` / `add.w d2,obVelY` pair reproduces by hand.
+         */
+        void applySmashObjectCatchUpStep() {
+            subX += velX;
+            subY += velY;
+            posX = subX >> 8;
+            posY = subY >> 8;
+            velY += FRAGMENT_GRAVITY;
         }
 
         @Override

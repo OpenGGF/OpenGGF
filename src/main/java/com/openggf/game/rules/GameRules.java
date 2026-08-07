@@ -42,14 +42,15 @@ public record GameRules(
                     false,
                     false,
                     new PlayerLandingRules(false, false, false, false),
-                    new PlayerLevelBoundaryRules(false, true, true, false, true, true),
+                    new PlayerLevelBoundaryRules(false, true, true, false, true, true, true),
                     false,
                     false,
                     true,
                     false,
                     false,
                     false,
-                    false
+                    false,
+                    false // tailsRollSpeedUsesEffectiveDecelQuarter: S1 has no Tails_RollSpeed
             ),
             new PlayerCapabilityRules(
                     false,
@@ -127,7 +128,8 @@ public record GameRules(
                     false,
                     true,
                     false,
-                    false
+                    false,
+                    0x39 // duckTouchBoxMappingFrame: S1 fr_Duck ($39)
             ),
             new SidekickCpuRules(
                     16,
@@ -180,14 +182,15 @@ public record GameRules(
                     true,
                     false,
                     new PlayerLandingRules(true, true, false, true),
-                    new PlayerLevelBoundaryRules(false, true, false, true, true, false),
+                    new PlayerLevelBoundaryRules(false, true, false, true, true, false, false),
                     true,
                     false,
                     false,
                     true,
                     true,
                     false,
-                    false
+                    false,
+                    true // tailsRollSpeedUsesEffectiveDecelQuarter: shipped s2.asm:40037 keeps decel>>2
             ),
             new PlayerCapabilityRules(
                     true,
@@ -265,7 +268,8 @@ public record GameRules(
                     true,
                     true,
                     true,
-                    false
+                    false,
+                    0x4D // duckTouchBoxMappingFrame: S2 SonAni_Duck second frame ($4D)
             ),
             new SidekickCpuRules(
                     16,
@@ -318,14 +322,15 @@ public record GameRules(
                     false,
                     true,
                     new PlayerLandingRules(true, true, true, false),
-                    new PlayerLevelBoundaryRules(true, true, false, false, false, false),
+                    new PlayerLevelBoundaryRules(true, true, false, false, false, false, false),
                     false,
                     true,
                     false,
                     true,
                     true,
                     true,
-                    true
+                    true,
+                    false // tailsRollSpeedUsesEffectiveDecelQuarter: S3K Tails_RollSpeed is flat $20
             ),
             new PlayerCapabilityRules(
                     true,
@@ -404,7 +409,8 @@ public record GameRules(
                     false,
                     true,
                     true,
-                    true
+                    true,
+                    ObjectInteractionRules.NO_DUCK_TOUCH_BOX // S3K removed the duck touch-box shrink
             ),
             new SidekickCpuRules(
                     48,

@@ -843,9 +843,14 @@ public class ObjectManager {
 
                 if (instance.isDestroyed()) {
                     int slotIndex = slotIndexForExec(currentExecSlot);
+                    // Release the instance's OWN SST slot; the exec-slot comparison
+                    // only confirms this entry belongs to it. See the note in
+                    // unloadCounterBasedOutOfRange -- an object executing from a
+                    // reserved child slot owns a different slot than it runs from.
                     if (instance instanceof AbstractObjectInstance aoi3
-                            && aoi3.getSlotIndex() == slotIndex) {
-                        releaseSlot(slotIndex);
+                            && executionSlotIndex(aoi3) == slotIndex
+                            && isManagedDynamicSlot(aoi3.getSlotIndex())) {
+                        releaseSlot(aoi3.getSlotIndex());
                     }
                     instance.onUnload();
                     execOrder[currentExecSlot] = null;
@@ -1014,9 +1019,14 @@ public class ObjectManager {
 
                 if (instance.isDestroyed()) {
                     int slotIndex = slotIndexForExec(currentExecSlot);
+                    // Release the instance's OWN SST slot; the exec-slot comparison
+                    // only confirms this entry belongs to it. See the note in
+                    // unloadCounterBasedOutOfRange -- an object executing from a
+                    // reserved child slot owns a different slot than it runs from.
                     if (instance instanceof AbstractObjectInstance aoi3
-                            && aoi3.getSlotIndex() == slotIndex) {
-                        releaseSlot(slotIndex);
+                            && executionSlotIndex(aoi3) == slotIndex
+                            && isManagedDynamicSlot(aoi3.getSlotIndex())) {
+                        releaseSlot(aoi3.getSlotIndex());
                     }
                     instance.onUnload();
                     execOrder[currentExecSlot] = null;
@@ -1741,6 +1751,27 @@ public class ObjectManager {
 
     public void addDynamicObject(ObjectInstance object) {
         addDynamicObjectInternal(object, false, true);
+    }
+
+    /**
+     * True when {@code object} sits in an SST slot this frame's ExecuteObjects walk
+     * has already passed, so the object will not run until the next frame.
+     *
+     * <p>ROM parity: {@code FindFreeObj} scans the SST from the start, so a child
+     * allocated by a parent can land BELOW the parent. Callers that need the ROM's
+     * one-off catch-up for such a child (see {@code SmashObject}) ask this
+     * immediately after spawning it, while the parent is still the executing slot.
+     */
+    public boolean isSlotAlreadyExecutedThisFrame(ObjectInstance object) {
+        if (!updating || currentExecSlot < 0 || !(object instanceof AbstractObjectInstance aoi)) {
+            return false;
+        }
+        int slot = aoi.getSlotIndex();
+        if (slot < 0 || !isManagedDynamicSlot(slot)) {
+            return false;
+        }
+        int execIdx = execIndexForSlot(slot);
+        return execIdx >= 0 && execIdx <= currentExecSlot;
     }
 
     public <T extends ObjectInstance> T createDynamicObject(Supplier<T> factory) {
@@ -3145,8 +3176,17 @@ public class ObjectManager {
         }
         if (instance instanceof AbstractObjectInstance aoi) {
             int slotIndex = aoi.getSlotIndex();
+            // expectedSlotIndex identifies WHICH exec entry is being retired, so it
+            // must be matched against the instance's EXECUTION slot, not its own SST
+            // slot. The two differ for parents that run from a reserved child slot
+            // (ROM Stair_Main keeps the parent block in a0 while its three children
+            // occupy the FindNextFreeObj slots after it,
+            // docs/s1disasm/_incObj/5B SLZ Staircase.asm:30-66), and comparing against
+            // getSlotIndex() silently skipped the release for exactly those objects --
+            // leaking one SST slot per staircase unload for the rest of the act.
             if (isManagedDynamicSlot(slotIndex)
-                    && (expectedSlotIndex < 0 || slotIndex == expectedSlotIndex)) {
+                    && (expectedSlotIndex < 0
+                            || executionSlotIndex(aoi) == expectedSlotIndex)) {
                 releaseSlot(slotIndex);
             }
         }
@@ -3491,6 +3531,18 @@ public class ObjectManager {
     }
 
     private void removeActiveObject(ObjectSpawn spawn) {
+        // ROM parity: an object leaving the SST releases its whole slot block. A
+        // parent that pre-reserved child slots via the ROM's FindNextFreeObj chain
+        // (Stair_Main's four blocks, docs/s1disasm/_incObj/5B SLZ Staircase.asm:30-66)
+        // is deleted together with those children by its out_of_range/DeleteObject
+        // tail (line 11), so the reservation can never outlive the parent. Only the
+        // two "destroyed inside the exec loop" branches used to free them, so every
+        // parent unloaded through unloadCounterBasedOutOfRange leaked its block
+        // permanently -- SLZ1 accumulated 30+ dead reservations by frame 5667, which
+        // pushed every later FindFreeObj pick above ROM's slot. Freeing here covers
+        // all removal paths: this is the single point at which a spawn leaves
+        // activeObjects.
+        freeAllReservedChildSlots(spawn);
         ObjectInstance removed = activeObjects.remove(spawn);
         if (removed != null) {
             if (planeSwitchers != null) {

@@ -131,7 +131,12 @@ public class Sonic2SuperStateController extends SuperStateController {
     @Override
     protected void onTransformationStarted() {
         paletteState = 1;
-        paletteFrame = 0;
+        // ROM Sonic_CheckGoSuper (s2.asm:37476-37477) writes Super_Sonic_palette and
+        // Palette_timer but deliberately does NOT write Palette_frame; the same holds
+        // for the second entry point at s2.asm:26204-26205. Palette_frame therefore
+        // carries over from whatever the previous cycle left - $0000 on a fresh level
+        // (RAM clear), $00F8 after a revert on the shipped ROM (see updatePaletteFade).
+        // Zeroing it here would be the fixBugs = 1 behaviour by proxy.
         paletteTimer = 3;
         transformFramesRemaining = 30;
         // Play transformation SFX
@@ -281,20 +286,32 @@ public class Sonic2SuperStateController extends SuperStateController {
             int frameOffset = paletteFrame;
             paletteFrame -= 8;
 
-            // AUDIT (fixBugs, s2.asm:27 `fixBugs = 0`, block at s2.asm:3175-3181):
-            // `subq.w #8` from 0 borrows, and the SHIPPED branch then does
-            // `move.b #0,(Palette_frame).w` -- a BYTE write to the word address, i.e. to
-            // the high byte only, so $FFF8 becomes $00F8 and Palette_frame is left at
-            // $F8 rather than 0. fixBugs=1 uses `move.w #0`. The engine clears to 0
-            // (the fixBugs=1 result). Left as-is deliberately: Palette_frame is shared
-            // with the zone palette cyclers and is re-seeded to $28 on the next
-            // transformation (s2.asm:37530) and to $30 elsewhere (s2.asm:13036), so
-            // proving what the $F8 residual reaches needs the shared-counter model the
-            // engine does not have yet. Recorded as an audit finding.
-            // ROM: bcc.s + (branch if no borrow)
-            // If paletteFrame went negative, stop cycling
+            // ASSEMBLY FLAG: fixBugs (docs/s2disasm/s2.asm:27), 0 in the shipped ROM.
+            // THE ENGINE IMPLEMENTS THE SHIPPED (UN-FIXED) BRANCH. `subq.w #8` from 0
+            // borrows, and PalCycle_SuperSonic_revert then does
+            //   move.b #0,(Palette_frame).w        (s2.asm:3180)
+            // a BYTE write to a WORD variable, i.e. to the HIGH byte only, so the
+            // underflowed $FFF8 becomes $00F8 and Palette_frame is left at $F8 rather
+            // than 0 -- the disassembly's own note, "This does not clear the full
+            // variable, causing this palette cycle to behave incorrectly the next time
+            // it is activated." With fixBugs = 1 the instruction is
+            // move.w #0,(Palette_frame).w (s2.asm:3176) and the variable is fully
+            // cleared.
+            //
+            // The residual IS observable: Sonic_CheckGoSuper writes Super_Sonic_palette
+            // and Palette_timer but NOT Palette_frame (s2.asm:37476-37481), so a second
+            // transformation resumes PalCycle_SuperSonic_normal from $F8. Only
+            // Sonic_RevertToNormal (s2.asm:37530, $28) and the title-card/Super seed at
+            // s2.asm:13036 ($30) re-seed it, and neither runs on that path.
+            //
+            // Engine divergence noted, not modelled: at $F8 the ROM indexes 8 bytes past
+            // the end of CyclingPal_SSTransformation for one frame; applyPaletteFrame
+            // bounds-checks and leaves the palette untouched instead of reading whatever
+            // follows the table in ROM.
+            //
+            // ROM: bcc.s + (branch if no borrow) -- the clear runs only on underflow.
             if (paletteFrame < 0) {
-                paletteFrame = 0;
+                paletteFrame = paletteFrame & 0x00FF;
                 paletteState = 0;
             }
 

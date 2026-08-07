@@ -1585,6 +1585,16 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 return SecondaryAbility.NONE;
         }
 
+        /**
+         * Whether this character runs the ROM's <em>Tails_RollSpeed</em> subroutine rather
+         * than <em>Sonic_RollSpeed</em>/<em>Knux_RollSpeed</em>. Sonic 2 keeps a separate,
+         * outdated copy for Tails whose controlled roll deceleration differs; see
+         * {@code PlayerMovementRules#tailsRollSpeedUsesEffectiveDecelQuarter}.
+         */
+        public boolean usesTailsRollSpeedRoutine() {
+                return false;
+        }
+
         public void setSuperSonic(boolean superSonic) {
                 this.superSonic = superSonic;
         }

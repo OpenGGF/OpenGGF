@@ -325,6 +325,54 @@ public class Sonic2SpecialStagePlayer {
         if (playerType == PlayerType.TAILS && routine != RoutineState.INIT) {
             updateTailsTailsAnimation();
         }
+
+        consumeDplcLoadGate();
+    }
+
+    /**
+     * Models the LoadSSSonicDynPLC / LoadSSTailsDynPLC prologue
+     * (docs/s2disasm/s2.asm:69193-69200 and 70492-70499), which every Obj09 /
+     * Obj10 routine tail branches to:
+     *
+     * <pre>
+     *   move.b  ss_dplc_timer(a0),d0
+     *   beq.s   +          ; timer idle -> always load
+     *   subq.b  #1,d0
+     *   move.b  d0,ss_dplc_timer(a0)
+     *   andi.b  #1,d0
+     *   beq.s   +
+     *   rts                ; odd result -> no DisplaySprite, no DPLC this pass
+     * </pre>
+     *
+     * <p>So while the post-hurt blink counter runs, the player's mapping-frame
+     * change is not published on the pass it happens; it is published on the
+     * next even pass. Obj88 (tails' tails) reads the same counter out of its
+     * parent without touching it, which is why Tails and his tails always skip
+     * together (s2.asm:70575-70581, {@link #tailsTailsDplcLoadRuns()}).
+     */
+    private void consumeDplcLoadGate() {
+        if (ssDplcTimer == 0) {
+            return;
+        }
+        ssDplcTimer = (ssDplcTimer - 1) & 0xFF;
+    }
+
+    /**
+     * Whether this pass reached the object's own DPLC load. The ROM's skip
+     * predicate is the parity of the post-decrement counter, so the outcome is
+     * derivable from {@code ss_dplc_timer} alone -- no extra engine state.
+     */
+    public boolean dplcLoadRuns() {
+        return ssDplcTimer == 0 || (ssDplcTimer & 1) == 0;
+    }
+
+    /**
+     * Whether Obj88's LoadSSTailsTailsDynPLC reached its DPLC load this pass.
+     * It re-reads the parent's counter after Obj10 already decremented it and
+     * never writes it back (docs/s2disasm/s2.asm:70575-70581).
+     */
+    public boolean tailsTailsDplcLoadRuns() {
+        return dplcLoadRuns();
     }
 
     /**
@@ -869,6 +917,12 @@ public class Sonic2SpecialStagePlayer {
         if (ssHurtTimer == 0) {
             routineSecondary = 0;
             invulnerabilityCountdown = 0x1E;
+            // SSHurt_Animation's exit also arms ss_dplc_timer
+            // (docs/s2disasm/s2.asm:69143-69145) -- the ROM's post-hurt blink
+            // counter. LoadSS*DynPLC decrements it once per pass and skips the
+            // whole DisplaySprite + DPLC tail on the odd results, halving the
+            // player's art-transfer rate until it expires.
+            ssDplcTimer = 0x1E;
         }
 
         int displayAngle = (ssHurtTimer + angle - 0x10) & 0xFF;

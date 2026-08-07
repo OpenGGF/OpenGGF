@@ -64978,3 +64978,56 @@ duck frames are $5B and $C1; the mapping_frame fidelity objection was discharged
 contain duck sequences at the exact ROM frames $4C/$4D); Tails' underwater roll
 deceleration; the Super Sonic palette residual. S3K Knuckles wall climb, the HCZ1
 underwater palette colour, and MGZ1_Resize's fall-through.
+
+## 2026-08-07 - The held FixBugs batch lands; GHZ1 complete run and S2 special stage 4 close
+
+Full three-game sweep (`-Ptrace-replay -Dmse=off -Dsurefire.forkCount=1
+-Dsurefire.runOrder=alphabetical`): S1/S2 17 -> 15 red, S3K 21 (identical to the
+control), zero new failures.
+
+- **The SCZ blocker was the bottom kill plane's SECOND face.** `Sonic_HurtStop`
+  runs its own bottom-boundary kill before the terrain pass (S1
+  _incObj/"01 Sonic.asm":1920-1941; S2 s2.asm:38194-38215; S3K
+  sonic3k.asm:24471-24491), and it is the SAME ROM conditional as
+  `Sonic_LevelBound`'s kill plane - the one deliberately held on the
+  `Math.max(camera.getMaxY(), camera.getMaxYTarget())` expression because it masks
+  a second defect. The held S1 patch took the shipped live-only boundary word at
+  this new site, i.e. **it removed the held mask by the back door at a second
+  location**, and reproduced exactly the defect the mask hides: SCZ 523 errors,
+  first at frame 7109, `x_speed` expected -0x0200 actual 0x0000 - Sonic killed
+  during hurt knockback where the ROM does not kill him.
+  Isolated in one measured step by changing only the boundary sub-expression.
+  Both sites now share the held expression with an in-code note that they are one
+  ROM conditional and must move together. The earlier hypothesis that the
+  signed/unsigned compare was to blame was wrong: S2's compare is `blt`
+  unconditionally, so the only conditional at that site is the boundary word.
+  `hurtStopBottomKillUnsigned` stays (S1's `blo` vs S2/S3K's `blt` is a genuine ROM
+  divergence); `hurtStopBottomKillUsesTargetBoundary` was dropped as
+  unobservable-under-the-mask plumbing, to return when the mask is lifted.
+  All eight other held FixBugs sites landed with zero net regressions.
+- **`TestS1Ghz1CompleteRunTraceReplay` closes.** The collapsing ledge/floor
+  fragment lifetime used invented pixel margins rather than the ROM's BuildSprites
+  render-flag test. `Ledge_FragmentPiece`/`CFlo_FragmentPiece` `.fragmentFall`
+  (FixBugs=0 branch, _incObj/"1A, 53 Collapsing Ledges and Floors.asm":116-129,
+  250-263) is `bsr ObjectFall / bsr DisplaySprite / tst.b obRender(a0) / bpl
+  Delete` - the fragment dies when the LAST BuildSprites pass failed to render it,
+  and that pass's band is the object's own `obActWid`/`obHeight`
+  (_inc/BuildSprites.asm:47-91), not a fixed margin. The engine had the
+  parent-turned-fragment on a zero-margin point test (deleting EARLY) and the
+  children on a hardcoded 128px margin (deleting LATE) - opposite directions, both
+  wrong, which is exactly what the ghz1 slot dump showed.
+  `TestS1Slz3CompleteRunTraceReplay` also advanced: 25 errors at frame 3379 -> 6 at
+  frame 6045. SLZ1's reported frontier is unchanged at 5611 but its underlying
+  occupancy divergence moved from f1644 to f1914 and shrank from a whole-map slot
+  shift to a single ring in slot 40 where the ROM has slot 39.
+- **`TestS2SpecialStage4TraceReplay` closes** (was 109 errors at frame 2674). The
+  engine never modelled `ss_dplc_timer`, the post-hurt blink counter that
+  `LoadSSSonicDynPLC` / `LoadSSTailsDynPLC` / `LoadSSTailsTailsDynPLC` use to SKIP
+  the whole DisplaySprite+DPLC tail on odd counts. ss_3's frontier moved 916 ->
+  1805 and ss_6's 1210 -> 2105, both onto a new `rings_togo_bcd` root; ss_2, ss_5
+  and ss_7 error totals all dropped.
+- Correction to an earlier audit note: the Super Sonic palette residual IS
+  observable. `Sonic_CheckGoSuper` writes `Super_Sonic_palette` and `Palette_timer`
+  but NOT `Palette_frame` (s2.asm:37476-37481); only `Sonic_RevertToNormal` ($28,
+  :37530) and s2.asm:13036 ($30) re-seed it. The previously-landed comment claiming
+  re-seeding on the next transformation was wrong.

@@ -268,6 +268,7 @@ class TestObjectPlayerQuery {
         @Override public boolean getPinballMode() { return false; }
         @Override public boolean isCpuControlled() { return false; }
         @Override public int getAnimationId() { return 0; }
+        @Override public int getMappingFrame() { return 0; }
         @Override public void forceAnimationRestart() {}
         @Override public void setTopSolidBit(byte topSolidBit) {}
         @Override public void setLrbSolidBit(byte lrbSolidBit) {}

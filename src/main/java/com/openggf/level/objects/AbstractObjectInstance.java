@@ -684,6 +684,37 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     }
 
     /**
+     * S1 {@code BuildSprites} render-flag bit 7 test
+     * (docs/s1disasm/_inc/BuildSprites.asm:47-91).
+     * <p>
+     * BuildSprites clears {@code sprite_rendered_bit} for every queued object and
+     * re-sets it only when the object survives two bounds tests, both of which use
+     * the object's own extents rather than a fixed margin:
+     * <ul>
+     *   <li>X (lines 47-58): skip when {@code obX - camX + obActWid} is negative, or
+     *       when {@code obX - camX - obActWid >= 320}. The right edge is rejected
+     *       with {@code bge}, so it is exclusive.</li>
+     *   <li>Y: when {@code sprite_customheight_bit} is set (lines 61-73) the band is
+     *       {@code obHeight} either side of the 224px screen, again with an exclusive
+     *       bottom edge ({@code bge}); otherwise {@code .assumeHeight} (lines 84-91)
+     *       uses a fixed 32px band with an exclusive {@code bhs} bottom edge.</li>
+     * </ul>
+     * Objects whose ROM lifetime is {@code tst.b obRender(a0) / bpl <delete>} must
+     * consume this predicate rather than a hand-picked pixel margin, because the ROM
+     * band is the object's own {@code obActWid}/{@code obHeight} pair.
+     *
+     * @param x            object centre X ({@code obX})
+     * @param y            object centre Y ({@code obY})
+     * @param actWidth     {@code obActWid}, the render half-width
+     * @param heightExtent {@code obHeight} for custom-height objects, or 32 for the
+     *                     {@code .assumeHeight} path
+     */
+    protected static boolean isWithinBuildSpritesBounds(
+            int x, int y, int actWidth, int heightExtent) {
+        return cameraBounds.containsRenderSpriteBounds(x, y, actWidth, heightExtent);
+    }
+
+    /**
      * The frame's camera origin, the engine equivalent of the ROM's
      * {@code Camera_X_pos} / {@code Camera_Y_pos}. Objects that port a ROM
      * offscreen band literally (coarse-masked horizontal distance, +$80
