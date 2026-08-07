@@ -710,6 +710,7 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
                 .preserveMusic(true)
                 .preserveLevelGamestate(true)
                 .showInLevelTitleCard(false)
+                .inLevelTitleCardPreloadedActCameraReleaseDispatches(3)
                 .preserveOffsetCameraPosition(true)
                 .postTransitionMinX(ICZ2_CAMERA_MIN_X)
                 .postTransitionMaxX(ICZ2_CAMERA_MAX_X)

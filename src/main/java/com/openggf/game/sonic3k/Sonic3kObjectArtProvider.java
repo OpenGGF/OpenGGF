@@ -1532,15 +1532,15 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     public void processRuntimeArtQueue() {
         boolean registeredRuntimeSheet = false;
         advanceTitleCardTeardown();
-        if (!enemyKosSubmitAfterPreMainLoop) {
-            processEnemyKosArt();
-        }
         if (enemyKosArmOnNextRuntimePass) {
             // The in-level card owner's LoadEnemyArt dispatch is the level
             // frame after the manager's top-of-frame COMPLETE transition, so
-            // the submission first becomes eligible on the next pass.
+            // the submission first becomes eligible on this following pass.
             enemyKosArmOnNextRuntimePass = false;
             enemyKosSubmissionArmed = true;
+        }
+        if (!enemyKosSubmitAfterPreMainLoop) {
+            processEnemyKosArt();
         }
         if (cnzTeleporterArtState == RuntimeArtState.PENDING) {
             loadCnzTeleporterArt();

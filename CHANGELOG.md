@@ -3,6 +3,13 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K ICZ's retained title-owner handoff now admits the native enemy
+  KosM batch on the following runtime pass and releases the ICZ2 camera-size
+  workers three dispatches after title completion. The complete-run replay
+  consumes the recorded direct/module completions `#253`–`#254` and reaches the
+  next direct completion `#255` at raw frame `21185` with no comparator errors
+  before that boundary; AIZ, HCZ, MGZ, and CNZ retain their established
+  behavior and no trace payloads changed.
 - Fix/Test: S3K ICZ's miniboss defeat flow no longer adds an extra results wait
   entry to a preloaded-act handoff. The native `Obj_LevelResultsWait2` publication
   now mutates the retained owner to `Obj_TitleCard` at raw frame `15258`, while

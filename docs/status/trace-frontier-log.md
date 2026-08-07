@@ -65015,3 +65015,43 @@ to synthesize a POST phase on a VBLANK-only row.
   established frontiers; ICZ now reaches raw `15400`. The next ICZ target is
   the Snowdust direct/module owner pair at raw `15400`/`15401`; LBZ remains
   pending.
+
+## 2026-08-07 — S3K ICZ camera/art handoff frontier
+
+- Worktree: `bugfix/s3k-traces` at `1cdea4d14` before this frontier commit;
+  unrelated edits in `.idea/vcs.xml` and
+  `docs/status/rewind-round-trip-gaps.md` remained unstaged. Validation used
+  JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen` (SHA-1
+  `b711a909cce238ca4af3e517a2edca306228efa5`), without replacing or renaming
+  it.
+- Frontier command: `mvn -q -Dmse=off -Dsurefire.forkCount=1
+  -DreuseForks=true -Dtrace.frontierOnly=true
+  -Dtrace.contextRadius=20
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace
+  test`. The committed baseline reached the expected but unconsumed direct
+  completion `#253` at raw `15400` and first diverged on the ICZ2 camera
+  handoff at raw `15401`. The candidate consumes the recorded direct/module sequence through `#254` at
+  raw `15402`/`15403` and reaches the next direct completion
+  `KOS_DECOMPRESSION_QUEUE#255` at raw `21185` with zero comparator errors
+  before that boundary.
+- Root cause: the ROM's in-level title owner arms `LoadEnemyArt` before the
+  following runtime queue pass, so the provider now arms the deferred enemy
+  admission before processing that pass and submits the native production
+  batch in the correct order. ICZ's transition request also supplies its
+  native three-dispatch preloaded-camera release budget, allowing the retained
+  `Change_Act2Sizes` workers to begin on the correct object-loop boundary.
+  Both changes use owner/request timing state; no zone, frame, route, or trace
+  exception was added.
+- Regression checks: the focused ICZ art/transition/title-card unit set passed.
+  The gameplay-order AIZ/HCZ/MGZ/CNZ/ICZ sweep had no comparator failures and
+  stopped only at its expected hardware edges: AIZ `#8`/raw `1240`, HCZ
+  `#94`/raw `9764`, CNZ `#205`/raw `13962`, and ICZ `#255`/raw `21185`;
+  MGZ completed its recorded segment. Ring comparison remains enabled through
+  `ToleranceConfig.DEFAULT` with `RingCountMode.FORCE_ERROR`; no trace payloads
+  changed.
+- Route position: AIZ, HCZ, and MGZ remain green; CNZ remains green through
+  its established comparison frontier; ICZ now reaches raw `21185`. The next
+  ICZ target is the recorded module completion `#173` at raw `21186`; LBZ
+  remains pending.

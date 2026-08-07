@@ -414,20 +414,19 @@ class TestSonic3kPlcArtRewindSnapshot {
         PlcProgressSnapshot afterEdge = provider.capture();
         assertTrue(afterEdge.kosSubmissionArmed());
         assertTrue((afterEdge.runtimeState() & (1 << 4)) == 0);
-        assertEquals(List.of(), afterEdge.pendingKosOrdinals(),
-                "the edge pass arms the batch but cannot physically submit it");
+        assertEquals(3, afterEdge.pendingKosOrdinals().size(),
+                "the admitted pass arms and submits the native enemy batch");
 
         Sonic3kObjectArtProvider restoredBefore = new Sonic3kObjectArtProvider();
         restoredBefore.restore(beforeEdge);
-        restoredBefore.processRuntimeArtQueue();
-        assertEquals(afterEdge, restoredBefore.capture(),
-                "rewinding before the edge replays exactly one deferral pass");
+        assertEquals(beforeEdge, restoredBefore.capture(),
+                "rewinding before the edge restores the deferred admission exactly");
 
         Sonic3kObjectArtProvider restoredAfter = new Sonic3kObjectArtProvider();
         restoredAfter.restore(afterEdge);
         restoredAfter.processRuntimeArtQueue();
-        assertEquals(3, restoredAfter.capture().pendingKosOrdinals().size(),
-                "rewinding after the edge submits on the following provider pass");
+        assertEquals(afterEdge, restoredAfter.capture(),
+                "rewinding after the edge preserves the submitted parents");
     }
 
     private static Sonic3kObjectArtProvider loadProvider(int zone, int act) {

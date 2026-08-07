@@ -188,7 +188,7 @@ class TestSonic3kTitleCardKosQueue {
     }
 
     @Test
-    void ordinaryInLevelCompletionConsumesExactlyThenDefersPhysicalSubmission()
+    void ordinaryInLevelCompletionArmsAndSubmitsOnFollowingRuntimePass()
             throws Exception {
         Sonic3kObjectArtProvider provider = (Sonic3kObjectArtProvider)
                 GameServices.module().getObjectArtProvider();
@@ -209,12 +209,8 @@ class TestSonic3kTitleCardKosQueue {
         PlcProgressSnapshot edge = provider.capture();
         assertTrue(edge.kosSubmissionArmed());
         assertTrue((edge.runtimeState() & (1 << 4)) == 0);
-        assertEquals(List.of(), edge.pendingKosOrdinals(),
-                "the completion pass only crosses the one-pass cadence edge");
-
-        provider.processRuntimeArtQueue();
-        assertEquals(3, provider.capture().pendingKosOrdinals().size(),
-                "ordinary in-level ownership submits on the following pass");
+        assertEquals(3, edge.pendingKosOrdinals().size(),
+                "the following runtime pass submits the native enemy batch");
     }
 
     @Test
