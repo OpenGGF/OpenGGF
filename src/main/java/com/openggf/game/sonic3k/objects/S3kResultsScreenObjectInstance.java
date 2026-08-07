@@ -147,6 +147,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private boolean exitRetireDispatchesInitialized;
     private boolean exitPublicationComplete;
     private boolean titleInitializationPending;
+    private boolean titleCardInitialized;
     private boolean pendingPreloadedTitleHandoff;
     private boolean pendingAizTitleHandoff;
     private boolean pendingRetainedReloadTitleHandoff;
@@ -746,10 +747,14 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         if (exitPublicationComplete) {
             if (titleInitializationPending) {
                 // ROM Obj_LevelResultsWait2 mutates this SST into
-                // Obj_TitleCard and returns. The title object's init routine
-                // runs on its next object dispatch, not on the publication
-                // dispatch that made the object visible.
-                initializePublishedTitleCard();
+                // Obj_TitleCard and returns. A retained generic title owner
+                // may have submitted Obj_TitleCardInit's art on the
+                // publication dispatch; its following owner pass only retires
+                // the old results shell.
+                if (!titleCardInitialized) {
+                    initializePublishedTitleCard();
+                    titleCardInitialized = true;
+                }
                 titleInitializationPending = false;
                 complete = true;
                 ObjectLifetimeOps.deleteNoRespawn(this);
@@ -873,13 +878,17 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             controlsReleasedAheadOfHandoff = true;
         }
         if (titleInitializationPending && initializeTitleCardOnPublication()) {
-            // This retained owner carries the short native child-retirement
-            // tail. Its Obj_TitleCard init is visible in the same publication
-            // boundary as the parent mutation; keep the ordinary retained
-            // results path on its separately-tested following dispatch.
+            // The native carried title owner submits Obj_TitleCardInit's
+            // ROM-backed jobs on the same dispatch that mutates the results
+            // parent. Keep the generic retained shell for its following
+            // object pass; the short-tail owner retains its existing immediate
+            // retirement contract.
             initializePublishedTitleCard();
-            titleInitializationPending = false;
-            complete = true;
+            titleCardInitialized = true;
+            if (usesShortResultsChildRetireTail) {
+                titleInitializationPending = false;
+                complete = true;
+            }
         }
         if (!titleInitializationPending) {
             ObjectLifetimeOps.deleteNoRespawn(this);
@@ -891,7 +900,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private boolean initializeTitleCardOnPublication() {
         return carriedAcrossSeamlessTransition
                 && titlePublicationOwnedByCarriedObject
-                && usesShortResultsChildRetireTail;
+                && (usesShortResultsChildRetireTail || carriedTitleTimingExplicit);
     }
 
     /**

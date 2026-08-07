@@ -3,6 +3,13 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K MGZ's carried Act 2 title owner now submits the four
+  ROM-backed title-card parents on the same `Obj_LevelResultsWait2`
+  publication dispatch, while the retained results shell survives for its
+  following owner pass. The MGZ complete-run comparator frontier advances
+  from raw frame `16512` (`queue.s3k_kos_direct.busy`, 77 errors) to raw
+  frame `16551` (`rings`, 69 errors); AIZ and HCZ remain at their committed
+  frontiers and no trace payloads changed.
 - Fix/Test: S3K HCZ seamless Act 2 title-card ownership now honors the explicit
   post-reload title-card request while the carried results flag remains active;
   the carried results owner no longer attempts a second title initialization.
