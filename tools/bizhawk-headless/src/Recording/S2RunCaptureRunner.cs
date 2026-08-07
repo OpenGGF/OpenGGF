@@ -683,12 +683,21 @@ namespace OpenGGF.BizHawk.Headless
                 ssAuxEngine = new S2SpecialStageAuxEventEngine(host);
                 WriteLine(
                     auxWriter, ssAuxEngine.FormatPretraceSnapshot(host));
-                // The run port skips the $10 entry frame, so this detour's
-                // trace_frame 0 is emu frame frameNow + 1; that is the offset
-                // the standalone observer's frame arithmetic expects (there
-                // row 0 is written on the arm frame itself).
+                // The observer computes trace_frame = host.CompletedFrame -
+                // bk2Offset, so bk2Offset must be the emu frame carrying this
+                // detour's trace_frame 0 -- the same quantity the segment
+                // publishes as bk2_frame_offset, which is frameNow. Verified
+                // against the BK2 input log: each segment's per-row `input`
+                // column reproduces the P1 mask exactly from bk2_frame_offset
+                // (ss_2 6361/6361, ss_5 6690/6690) and not from +1 (6015,
+                // 6386); the standalone capture path, which passes `offset`
+                // unmodified, matches at +0 for all 2991 of its passes.
+                // frameNow + 1 reported an input_sample_frame one lower than
+                // the trace frame the ROM's Vint_S2SS joypad read belongs to,
+                // which SpecialStageRunObjectsPassBinder rejects as a BK2
+                // identity mismatch at sequence 0.
                 ssRunObjects = new S2SpecialStageRunObjectsObserver(
-                    host, frameNow + 1, () => traceFrame);
+                    host, frameNow, () => traceFrame);
                 ArmDynamicArtSegment();
             }
 
