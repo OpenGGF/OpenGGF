@@ -100,6 +100,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private boolean usesShortResultsChildRetireTail;
     private boolean controlsReleasedAheadOfHandoff;
     private boolean carriedAcrossSeamlessTransition;
+    private boolean titlePublicationOwnedByCarriedObject;
     private boolean carriedTitleTimingExplicit;
     private boolean carriedTitleResetLevelGamestateAtDisplay;
     private int carriedTitleResetAdditionalDispatches;
@@ -607,6 +608,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             CarriedTitlePublicationTiming titleTiming) {
         onCarriedAcrossSeamlessTransition(offsetX, offsetY);
         carriedTitleTimingExplicit = titleTiming.explicitTiming();
+        titlePublicationOwnedByCarriedObject =
+                titleTiming.titlePublicationOwnedByCarriedObject();
         carriedTitleResetLevelGamestateAtDisplay =
                 titleTiming.resetLevelGamestateAtDisplay();
         carriedTitleResetAdditionalDispatches = titleTiming.resetAdditionalDispatches();
@@ -835,7 +838,9 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             // show its own title card after the level reload).
             // ROM lines 62713-62720
             boolean skipTitleCard = (zone == 0x08) || (zone == 0x0B);
-            if (!skipTitleCard && (!hasSeamlessTransition || retainedReloadState)) {
+            if (!skipTitleCard && (!hasSeamlessTransition || retainedReloadState)
+                    && (!carriedAcrossSeamlessTransition
+                    || titlePublicationOwnedByCarriedObject)) {
                 var gameModule = services().gameModule();
                 var objectArtProvider = gameModule == null
                         ? null : gameModule.getObjectArtProvider();
@@ -884,7 +889,9 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     }
 
     private boolean initializeTitleCardOnPublication() {
-        return carriedAcrossSeamlessTransition && usesShortResultsChildRetireTail;
+        return carriedAcrossSeamlessTransition
+                && titlePublicationOwnedByCarriedObject
+                && usesShortResultsChildRetireTail;
     }
 
     /**

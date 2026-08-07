@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K HCZ seamless Act 2 title-card ownership now honors the explicit
+  post-reload title-card request while the carried results flag remains active;
+  the carried results owner no longer attempts a second title initialization.
+  The HCZ complete-run hardware frontier advances from direct `#104` at raw
+  frame `10391` to direct `#113` at raw frame `20697`; AIZ remains green and no
+  trace payloads changed.
 - Fix/Test: S3K signpost results owners now preserve their ROM allocation
   boundary: preserved-grounded and AIZ2 general-AllocateObject paths initialize
   on the following pass, while the ordinary signpost path publishes

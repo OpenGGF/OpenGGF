@@ -301,7 +301,7 @@ public class TestActTransitionHeadless {
         assertTrue(carried.offsetCalled,
                 "the semantic carry hook must run even without a geometric offset");
         assertEquals(new CarriedTitlePublicationTiming(
-                        true, true, 12, 6, true, 10, 5, -1),
+                        true, true, true, 12, 6, true, 10, 5, -1),
                 carried.titleTiming,
                 "the carried object must receive timing from the exact transition request");
     }

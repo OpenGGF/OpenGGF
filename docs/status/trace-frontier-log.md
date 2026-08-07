@@ -64562,3 +64562,39 @@ to synthesize a POST phase on a VBLANK-only row.
 - Route position: AIZ remains green; HCZ remains at direct `#104`; MGZ now
   reaches direct `#182` and the first unresolved comparator edge is raw
   `16512`. CNZ, ICZ, and LBZ remain pending in gameplay order.
+
+## 2026-08-07 — S3K HCZ title-owner admission frontier
+
+- Worktree: `bugfix/s3k-traces` at `f924b6c55` before the frontier commit;
+  unrelated edits in `.idea/vcs.xml` and
+  `docs/status/rewind-round-trip-gaps.md` remained unstaged. Validation used
+  JDK 21.0.11 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen` (SHA-1
+  `b711a909cce238ca4af3e517a2edca306228efa5`), without replacing or renaming
+  it.
+- Frontier command: `mvn -Dmse=off
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay#replayMatchesTrace'
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Result: HCZ advances from direct
+  `KOS_DECOMPRESSION_QUEUE#104` at raw frame `10391`, fingerprint
+  `sha256:fbfc78d499717cfec6df27fdd04fa4b5293a7147ec7ff7a7a18004e9db801e78`,
+  to the next recorded completion, direct `#113` at raw frame `20697`,
+  fingerprint
+  `sha256:c2db2fda975f758607b601f686bc782c7ebe55e2413f540f23b193ba2b6f1741`.
+  Replay stops at that expected completion because the engine has no pending
+  matching work. The comparator report contains 2539 errors at the new stop;
+  the first remains raw frame `9761`, `player_animation_id`, expected `0x0013`
+  and actual `0x0009`.
+- Regression checks: AIZ standard passes with zero comparator errors; AIZ
+  complete and MGZ complete remain at their recorded no-pending / mismatched
+  hardware stops, direct `#50` and `#183`, respectively. Ring comparison
+  remains enabled with `ToleranceConfig.DEFAULT` `FORCE_ERROR`; no trace
+  payloads changed. Focused transition, title-card, signpost, and act-transition
+  tests pass (38 tests).
+- Fix scope: an explicit in-level title-card request is allowed to start while
+  a transition preserves the results owner's end-of-level flag; carried title
+  timing now records which owner publishes the title so HCZ does not duplicate
+  the executor-owned batch. No trace-derived gameplay values were introduced.
+- Route position: AIZ remains green; HCZ now reaches direct `#113`; MGZ remains
+  at direct `#182` admission with its raw `16512` comparator edge; CNZ, ICZ, and
+  LBZ remain pending in gameplay order.

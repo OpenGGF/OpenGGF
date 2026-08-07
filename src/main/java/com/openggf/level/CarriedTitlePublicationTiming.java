@@ -3,6 +3,7 @@ package com.openggf.level;
 /** Immutable title timing handed to objects carried across an in-place reload. */
 public record CarriedTitlePublicationTiming(
         boolean explicitTiming,
+        boolean titlePublicationOwnedByCarriedObject,
         boolean resetLevelGamestateAtDisplay,
         int resetAdditionalDispatches,
         int resetPhaseOneDispatchOverlap,
@@ -12,7 +13,7 @@ public record CarriedTitlePublicationTiming(
         int preloadedActCameraReleaseDispatches) {
 
     public static final CarriedTitlePublicationTiming NONE =
-            new CarriedTitlePublicationTiming(false, false, 0, 0, false, 0, 0, -1);
+            new CarriedTitlePublicationTiming(false, false, false, 0, 0, false, 0, 0, -1);
 
     public CarriedTitlePublicationTiming {
         resetAdditionalDispatches = Math.max(0, resetAdditionalDispatches);
@@ -39,11 +40,14 @@ public record CarriedTitlePublicationTiming(
                 || request.lockPlayerControlForInLevelTitleCard()
                 || request.inLevelTitleCardExitAdditionalDispatches() != 0
                 || request.inLevelTitleCardExitPhaseOneDispatchOverlap() != 0;
-        if (!explicitTiming && preloadedActCameraReleaseDispatches < 0) {
+        boolean titlePublicationOwnedByCarriedObject = !request.showInLevelTitleCard();
+        if (!explicitTiming && preloadedActCameraReleaseDispatches < 0
+                && !titlePublicationOwnedByCarriedObject) {
             return NONE;
         }
         return new CarriedTitlePublicationTiming(
                 explicitTiming,
+                titlePublicationOwnedByCarriedObject,
                 request.resetLevelGamestateAtInLevelTitleCardDisplay(),
                 request.inLevelTitleCardResetAdditionalDispatches(),
                 request.inLevelTitleCardResetPhaseOneDispatchOverlap(),
