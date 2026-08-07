@@ -12,6 +12,7 @@ import com.openggf.tests.trace.TraceReportWriter;
 import com.openggf.trace.DivergenceReport;
 import com.openggf.trace.DynamicArtSpecialStageComparator;
 import com.openggf.trace.DynamicArtSpillNormalization;
+import com.openggf.trace.DynamicArtTransfer;
 import com.openggf.trace.FieldComparison;
 import com.openggf.trace.FrameComparison;
 import com.openggf.trace.Severity;
@@ -21,6 +22,7 @@ import com.openggf.trace.SpecialStageTraceFrame;
 import com.openggf.trace.SpecialStageRunObjectsPassBinder;
 import com.openggf.trace.SpecialStageRunObjectsPassBinder.CompletedPass;
 import com.openggf.trace.TraceEvent;
+import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.SpecialStageTraceFrame.CharacterState;
 import org.junit.jupiter.api.Test;
 
@@ -158,14 +160,17 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
                 "s2.gen ROM required for S2 special-stage trace replay");
 
         Path dir = TraceFixtureRoot.resolve(traceDirectory());
-        SpecialStageTraceData trace = SpecialStageTraceData.load(dir);
+        SegmentContext context = segmentContext(dir);
+        SpecialStageTraceData trace =
+                SpecialStageTraceData.load(dir, context.openingDynamicArtLedger());
 
         // Pipeline assertion: the trace loads with the expected profile + frames.
         assertEquals("s2_special_stage", trace.metadata().traceProfile(),
                 "SS trace must carry the s2_special_stage profile");
         assertTrue(trace.frameCount() > 0, "SS trace should have frames");
 
-        S2SpecialStageReplayHarness harness = bootHarness(trace, dir, romFile);
+        S2SpecialStageReplayHarness harness =
+                bootHarness(trace, context.movieDirectory(), romFile);
         DivergenceReport report = compareReplay(trace, harness);
 
         int ssIndex = specialStageIndex(trace);
@@ -183,6 +188,46 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
      */
     protected void assertNoReleaseBlockingDivergences(DivergenceReport report) {
         assertFalse(report.hasErrors(), report.toAssertionSummary());
+    }
+
+    // ==================== Segment context ====================
+
+    /**
+     * Everything a special-stage trace directory does not carry itself.
+     *
+     * <p>A standalone trace owns its BK2 and opens with an empty dynamic-art
+     * ledger. A special-stage segment recorded inside a run owns neither: the
+     * movie lives once at the run root, and the segment inherits whatever
+     * transfers were still outstanding when the preceding level segment ended.
+     * Both are read from the sibling {@code run_manifest.json}, keyed on the
+     * segment's own directory name — the recorder's own continuity record, not
+     * a route, zone or frame.
+     *
+     * @param movieDirectory directory holding {@code metadata.source_bk2}
+     * @param openingDynamicArtLedger transfers outstanding at segment entry
+     */
+    record SegmentContext(
+            Path movieDirectory,
+            List<DynamicArtTransfer.Descriptor> openingDynamicArtLedger) {
+    }
+
+    static SegmentContext segmentContext(Path traceDir) throws IOException {
+        Path runRoot = traceDir.getParent();
+        Path manifestPath = runRoot == null
+                ? null : runRoot.resolve("run_manifest.json");
+        if (manifestPath == null || !Files.exists(manifestPath)) {
+            return new SegmentContext(traceDir, List.of());
+        }
+        TraceRunManifest manifest = TraceRunManifest.load(manifestPath);
+        String segmentDir = traceDir.getFileName().toString();
+        return manifest.segments().stream()
+                .filter(segment -> segmentDir.equals(segment.dir()))
+                .findFirst()
+                .map(segment -> new SegmentContext(
+                        runRoot, segment.dynamicArtInitialLedgerDescriptors()))
+                .orElseThrow(() -> new IllegalStateException(
+                        "No run_manifest.json segment named '" + segmentDir
+                                + "' in " + manifestPath));
     }
 
     // ==================== Boot ====================

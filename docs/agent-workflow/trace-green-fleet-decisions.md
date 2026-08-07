@@ -17,11 +17,17 @@ messages (per-fix ROM rationale).
    simultaneous full builds overwhelm the shared machine and silently drop
    results (a discovery agent that errors returns an empty list). Run ONE sweep
    over all trace classes, parse `target/surefire-reports/*TraceReplay*.txt`.
-2. **Authoritative verdicts use `-DforkCount=1 -DreuseForks=true`.** The default
-   `forkCount=4` makes the forked JVMs race to extract the lwjgl/glfw natives,
-   erroring most GL-dependent trace tests with `UnsatisfiedLinkError`
-   nondeterministically (25–28 of ~32 classes "flaked" even with nothing else
-   running). One fork = 0 flakes (slower, but trustworthy).
+2. **Authoritative verdicts use `-Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical`.**
+   The default `forkCount=4` makes the forked JVMs race to extract the
+   lwjgl/glfw natives, erroring most GL-dependent trace tests with
+   `UnsatisfiedLinkError` nondeterministically (25–28 of ~32 classes "flaked"
+   even with nothing else running). One fork = 0 flakes (slower, but
+   trustworthy). The property name matters: `pom.xml` binds `<forkCount>` to
+   `${surefire.forkCount}`, so a bare **`-DforkCount` is silently ignored** and the
+   run stays on four forks — `TestBuildToolingGuard` now fails any prescriptive
+   doc that teaches the ignored flag. Pin `runOrder` too: Surefire's default is
+   filesystem order, which differs between checkouts and makes an
+   order-dependent result irreproducible.
 3. **A real parity failure is an `AssertionFailedError` carrying
    `First error: frame N -- <field>`.** Classify on that, NOT on raw
    failure/error counts. Filter two recurring environmental flakes:

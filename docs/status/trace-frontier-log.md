@@ -64587,3 +64587,57 @@ Not yet landed; recorded so the work is not repeated.
   stepper does not consume the pass binder at all - it steps
   `bk2FrameOffset + localRow` directly (line 2548). Re-recording that fixture
   alone would not change its result.
+
+## 2026-08-07 - Harness frame-index guards, Obj6F spawner slot, S2 special-stage fixtures
+
+Sweep: `-Ptrace-replay -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical`.
+
+- **`TestTraceFixtureMovieAlignmentGuard` (new, ROM-free, ~3.6s).** Asserts every
+  committed trace fixture agrees with its source BK2 about which movie frame each
+  row belongs to. Empirical result over the whole corpus: with face-button
+  identity collapsed, **all 124 covered segments match on 100% of rows at the
+  published `bk2_frame_offset`**, and every discriminating segment loses 2-6% of
+  rows at +/-1 - so the guard asserts exact equality rather than a fuzzy margin.
+  Mutation-tested: injecting a +1 offset failed it loudly on 100+ segments with
+  first-mismatch frames. This is the check that would have caught the
+  `frameNow + 1` observer defect the day it was written.
+  It deliberately does NOT assert a BizHawk-column-to-ROM-bit face-button
+  mapping: all six permutations were tested over 789,086 committed rows, the best
+  explains 782,147 and none explains all, so it compares only "some face button
+  held" and documents why.
+- **`TestBuildToolingGuard`** now pins every Surefire `<forkCount>` to
+  `${surefire.forkCount}` and fails any prescriptive doc teaching the ignored
+  `-DforkCount=` flag. On its first real run it flagged ~10 files - all inside
+  `.claude/worktrees/`, which holds whole checkouts of this repository created by
+  agent tooling. Those are copies of some other commit's docs, not this tree's
+  instructions, so the walk now skips `/worktrees/`. No doc in this repository
+  violated the rule.
+- **Sixth SST occupancy instance fixed: S1 Obj6F (SBZ Spin Platform Conveyor).**
+  ROM `SpinC_Main_Spawner` re-uses the spawner's own slot as the group's first
+  platform (`movea.l a0,a1 / bra.s .makePlatform`) and calls `FindFreeObj` only
+  for entries 2..N. The engine allocated a fresh slot for every platform and then
+  freed the spawner's, so the group held a different slot set and de-phased the
+  slot-indexed `RLoss_Bounce` floor probe.
+  `TestS1Sbz1CompleteRunTraceReplay` closes (was 1 error at frame 5752).
+- **S2 special-stage fixtures re-recorded and published.** All seven segments now
+  carry `run_objects_end` (2991/3291/3696/3861/3416/4416/4366). Reproducibility
+  proven: every LEVEL segment reproduces byte-identically, 42 committed level
+  `.gz` payloads are byte-identical at container level, and `run_manifest.json`
+  is unchanged - the only delta anywhere is `recording_date`.
+  `TestS2SpecialStage1..7TraceReplay` added, so **every special stage of both
+  games now has a replay test** (S1 6/6, S2 7/7).
+- **The seven S2 stages are red on a real engine defect, not a fixture problem.**
+  All seven load, seed their inherited dynamic-art ledger, and validate every
+  pass's BK2 identity and both players' held inputs against the movie. Six then
+  fail at `Sonic2SpecialStageManager.completeTerminalPreStartPassWithoutVint`
+  with "cannot complete terminal pre-start pass outside Obj5F WAIT2 boundary";
+  stage 6 fails earlier on a rings-to-go precondition. **Note the intro state in
+  that message is CORRECT** - `INTRO_WAIT2_FRAMES = 31` and
+  `isTerminalPreStartPassPending()` wants `phaseTimer == 30`, which is what is
+  reported. The failing term is `recurringMainPassPending == false`. So it is
+  pass scheduling on run-segment entry, not special-stage physics: the standalone
+  `traces/s2/special_stage` fixture drives the identical stage green.
+
+Red count 12 -> 19, entirely from the seven new S2 special-stage classes; SBZ1
+closed. The remaining pre-existing 11 are unchanged in error count and
+first-error frame/field.
