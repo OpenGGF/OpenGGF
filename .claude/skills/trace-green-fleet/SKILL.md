@@ -83,6 +83,32 @@ Always use `trace-replay-bug-fixing` for actual trace investigation or fixes.
   push a worker toward a green it cannot justify; a fitted fix costs more than a red trace,
   because it hides the defect and desyncs the next recording. Judge fix quality by the
   fitted-value audit, not by the colour of the test.
+- **The recording beats your reasoning.** A ROM-derived argument that a trace
+  contradicts loses to the trace: the recording *is* the shipped ROM executing that
+  input, so a disagreement means the reading has a flaw, not that the fixture is
+  wrong. Three workers in three consecutive batches were caught by this. The weak
+  step is never the assembly reading — it is the claim that *the engine implements
+  the other branch*, which is a judgement about why the Java looks as it does and
+  can be wrong even when the disassembly reading is perfect. See "The Third
+  Invariant" in `trace-replay-bug-fixing`.
+- **Before a worker changes an expression, it must check what else depends on it.**
+  Two call sites of one ROM conditional must move together or not at all. A
+  deliberately-held expression at one site was defeated by "correcting" its sibling,
+  which removed the mask by the back door and regressed a previously-green trace.
+- **Attribution requires a control run.** Never conclude that a change caused (or
+  did not cause) a failure without reproducing the baseline on a clean worktree at
+  the same commit with the same command. Both directions of that mistake happened
+  this week.
+- **Worktrees are deleted after a worker finishes, so a text diff is the only thing
+  that survives by default.** Any worker producing generated or binary artifacts —
+  recorded fixtures, `.gz` payloads, capture output — must copy them somewhere
+  durable outside the worktree and report the path, and must list every new file it
+  created (untracked files do not appear in `git diff`). Two multi-hour re-records
+  were lost to this.
+- **`docs/status/trace-frontier-log.md` is append-only.** Its historic prefix is
+  hash-protected by a commit hook, and a second hook rejects machine-local
+  `/home/...` paths in added lines. Append at the end; never prepend, never edit a
+  historic entry — correct it with a new entry that supersedes it.
 - No zone, route, frame, or "known failing trace" carve-outs. Model ROM state: object id/routine, status/control bits, physics profile, event flag, frame-counter visibility, or data-driven condition.
 - Cite disassembly in code comments and summaries when behavior changes.
 - Cross-game parity: before changing shared physics, collision, sidekick, oscillation, or shared object code, check all three disassemblies. Universal corrections must keep all games green. Real per-game divergences must use the smallest accurate owner from `docs/architecture/per-game-rule-placement.md`, never `gameId`.

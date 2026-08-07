@@ -138,6 +138,84 @@ and either leave the trace red with a written diagnosis or use the documented pe
 hardware-timing sidecar under hard rule 4. A `no-improvement` result with a real root cause
 is worth more than a fitted green, and is treated as success.
 
+## The Third Invariant — The Recording Beats Your Reasoning
+
+**A ROM-derived argument that a trace contradicts loses to the trace.**
+
+The recording *is* the shipped ROM executing that input. So when a disassembly
+reading and a fixture disagree, the reading has a flaw somewhere — you have not
+found a bug in the trace. This bit three separate agents in three consecutive
+batches, each of them reasoning carefully and each of them wrong.
+
+### The failure shape, and where it actually breaks
+
+1. the ROM conditional is read correctly — usually this step is fine;
+2. a claim is made that *the engine implements the other branch*;
+3. the site is assessed *"latent — no committed fixture reaches it"*;
+4. a trace disproves (2) or (3).
+
+**Step 2 is the weak one.** Deciding that some Java expression "is the fixed
+branch transcribed verbatim" is a judgement about *why the code looks that way*,
+and it can be wrong even when your assembly reading is perfect. The expression may
+have been written to compensate for something else entirely — in which case
+removing it does not restore ROM behaviour, it exposes whatever it was propping
+up.
+
+**Step 3 is a claim about coverage**, which is easy to misjudge and cheap to
+check. "No fixture reaches this" was asserted for the SBZ3 wind tunnel; the SBZ3
+complete run reaches it on frame 3157.
+
+### Before you change an expression, ask what depends on it
+
+The bottom kill plane is the cautionary tale. `Sonic_LevelBound` and
+`Sonic_HurtStop` (S1 `_incObj/"01 Sonic.asm":1084-1092` and `:1920-1941`; S2
+`s2.asm:37255-37265` and `:38194-38215`) are **one ROM conditional with two call
+sites**. One site was deliberately left on the bug-fixed expression because it was
+found to mask a second, unrelated defect. A later change "corrected" the *other*
+site — a perfectly sound reading in isolation — and thereby removed the mask by
+the back door, reproducing the masked defect exactly.
+
+So: grep for sibling call sites of the routine you are about to change, and if a
+sibling is deliberately held, say so in a comment at *both* ends. Two sites of one
+conditional must move together or not at all.
+
+### Corollary: a fix that reveals a second defect is still a good fix
+
+Distinguish *moved* from *failed*. A later first-error frame, or fewer errors, with
+nothing else regressing, is success — record the new frontier and continue. But a
+change that makes a trace **worse** is telling you something, and "the trace is
+wrong" is almost never the answer.
+
+## Measurement discipline
+
+These are not style preferences; each one has silently invalidated a day of work.
+
+- **`-Dsurefire.forkCount=1` — the bare `forkCount` property does nothing.** `pom.xml` binds
+  `<forkCount>` to `${surefire.forkCount}` (default 4; only the `ci` profile sets
+  1), so the bare property is *silently ignored* and the run stays on four reused
+  parallel forks. `TestBuildToolingGuard` now fails any prescriptive doc teaching
+  the ignored flag.
+- **Always `-Dsurefire.runOrder=alphabetical`.** Surefire's default is
+  `filesystem` — inode order — which differs between checkouts of the same commit.
+  Without pinning it, red sets are not comparable between runs, machines, or
+  clones, and order-dependent results look like flakiness.
+- **`-Ptrace-replay` and `-Dmse=off` are mandatory**, and every run needs its own
+  `-Dsurefire.reportsDirectory`. A plain `mvn test` runs zero trace tests; the
+  Silent Extension otherwise aggregates stale XML from a previous run.
+- **Measure every game your change can reach.** A shared-code change measured only
+  on S1/S2 shipped a silent S3K regression this week (`TestS3kIcz1SnowboardIntroHeadless`
+  ended its slope ride 193px short). If you touch `LevelManager`, `CollisionSystem`,
+  `PlayableSpriteMovement`, a rules record, or anything under `level/objects/`,
+  run the S3K keep-green set at minimum: `TestS3kAiz1SkipHeadless`,
+  `TestSonic3kLevelLoading`, `TestSonic3kBootstrapResolver`,
+  `TestSonic3kDecodingUtils`.
+- **A control run at the parent commit is the only way to attribute a failure.**
+  Before blaming your change — or absolving it — reproduce the baseline on a clean
+  worktree at the same commit, with the same command. Twice this week a failure
+  was attributed to a patch and turned out to be pre-existing, and once the reverse.
+- **A change that alters no test is the expected outcome for a latent site.** Say
+  so plainly. Do not claim it fixed something, and do not skip landing it.
+
 ### What to do when the engine diverges from ROM
 
 - If the first divergent field starts with `queue.`, stop downstream triage.
