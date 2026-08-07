@@ -1124,6 +1124,20 @@ public class CollisionSystem {
                     sprite.setCentreXPreserveSubpixel((short) centreX);
                 }
                 sprite.setY((short) (sprite.getY() - sprite.getRollHeightAdjustment()));
+                // Sonic_ResetOnFloor's ball branch writes id_Walk before the y_pos
+                // lift (s1disasm/_incObj/01 Sonic.asm:1858-1866). The assembled
+                // FixBugs = 0 branch (sonic.asm:20) is the one modelled here: the
+                // Walk store sits INSIDE `btst #2,obStatus`, so it fires exactly
+                // when the ball flag was set and is skipped otherwise — which is
+                // why a non-rolling S1 landing keeps its Spring/other animation.
+                // (FixBugs = 1 hoists the same store above the btst, making it
+                // unconditional; that is the S2/S3K Player_TouchFloor shape already
+                // covered by publishWalkOnAcceptedLanding.) Without this the
+                // angled ceiling/wall landing left the raw anim byte on Roll for
+                // every game whose angledLandingPublishesWalk is false, so the
+                // player DPLC kept requesting roll mapping frames after the
+                // rolling flag had already been cleared.
+                publishWalkOnRollClearedLanding(sprite);
             }
         }
 
@@ -1158,6 +1172,30 @@ public class CollisionSystem {
             if (walkAnimationId >= 0) {
                 sprite.setAnimationId(walkAnimationId);
             }
+        }
+    }
+
+    /**
+     * The Walk store inside {@code Sonic_ResetOnFloor}'s ball branch
+     * (s1disasm/_incObj/01 Sonic.asm:1863-1865 under {@code FixBugs = 0};
+     * s2.asm's {@code Sonic_ResetOnFloor_Part2} carries the same store). It runs
+     * only where the rolling flag was actually cleared, which is the condition the
+     * caller has already established, and it is independent of the
+     * {@code angledLandingPublishesWalk} rule — that rule describes the FixBugs = 1 /
+     * S3K shape where Walk is published on every accepted landing, rolling or not.
+     */
+    private void publishWalkOnRollClearedLanding(AbstractPlayableSprite sprite) {
+        if (sprite.getSpindash()) {
+            return;
+        }
+        int walkAnimationId = sprite.resolveAnimationId(CanonicalAnimation.WALK);
+        if (walkAnimationId >= 0) {
+            // Looking/crouching are engine-side projections of native anim writes,
+            // not independent ROM status bits, so the explicit Walk store replaces
+            // them here exactly as it does on the floor-landing owner.
+            sprite.setLookingUp(false);
+            sprite.setCrouching(false);
+            sprite.setAnimationId(walkAnimationId);
         }
     }
 

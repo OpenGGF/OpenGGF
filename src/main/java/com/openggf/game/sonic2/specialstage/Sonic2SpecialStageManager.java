@@ -1751,12 +1751,15 @@ public class Sonic2SpecialStageManager {
             player.triggerHit();
             // Original game plays SndID_SlowSmash for bomb explosion
             GameServices.audio().playSfx(GameSound.SLOW_SMASH);
-            // Ring spill sound plays when rings are actually lost
-            int ringsLost = objectManager.loseRingsFromBombHit(player);
-            if (ringsLost > 0) {
+            // SSPlayer_Collision only plays SndID_RingSpill and enters the hurt
+            // state here; it never touches the ring count. The rings are taken
+            // by Obj5B_Init, and Obj5B is not created until SSHurt_Animation
+            // sees ss_hurt_timer reach 8 -- one RunObjects pass later
+            // (s2.asm:69154-69171, 71266-71298). See applyPendingRingSpills.
+            if (player.getRings() > 0) {
                 GameServices.audio().playSfx(GameSound.RING_SPILL);
             }
-            LOGGER.fine("Hit bomb! Lost " + ringsLost + " rings. Remaining: " +
+            LOGGER.fine("Hit bomb! Rings pending spill. Current: " +
                     objectManager.getRingsCollected());
             return true;
         }
@@ -1928,14 +1931,35 @@ public class Sonic2SpecialStageManager {
             sonicPlayer.update(capturedHeldButtons, capturedPressedButtons);
             System.arraycopy(tailsCtrlRecordBuf, 0, tailsCtrlRecordBuf, 1, tailsCtrlRecordBuf.length - 1);
             tailsCtrlRecordBuf[0] = capturedHeldButtons;
-            int delayedInput = tailsCtrlRecordBuf[tailsCtrlRecordBuf.length - 1];
-            if ((capturedP2HeldButtons & 0x7F) != 0) {
-                java.util.Arrays.fill(tailsCtrlRecordBuf, 0);
-                tailsControlCounter = 0xB4;
-                delayedInput = capturedP2LogicalButtons;
-            } else if (tailsControlCounter > 0) {
-                tailsControlCounter--;
-                delayedInput = capturedP2LogicalButtons;
+            // SSTailsCPU_Control is reached from Obj10_MdNormal only, and only
+            // on its non-hurt path: Obj10_MdNormal tests routine_secondary and
+            // branches to Obj10_Hurt before calling it (s2.asm:70408-70412).
+            // While Tails is in Obj10_MdJump / Obj10_MdAir / Obj10_Hurt nothing
+            // overwrites Ctrl_2_Logical after the main loop's own
+            // "move.w (Ctrl_2).w,(Ctrl_2_Logical).w" (s2.asm:6716-6717,6741),
+            // so SSPlayer_ChgJumpDir reads the real port-2 pad rather than the
+            // delayed record buffer -- and the buffer clear and
+            // Tails_control_counter decrement that live inside
+            // SSTailsCPU_Control (s2.asm:70453-70481) do not run either. The
+            // unconditional part is the buffer *shift*, which sits in Obj09
+            // ahead of its routine jump (s2.asm:69048,69063-69069) and so runs
+            // whatever Tails is doing.
+            boolean tailsCpuControlRuns =
+                    tailsPlayer.getRoutine()
+                            == Sonic2SpecialStagePlayer.RoutineState.NORMAL
+                    && !tailsPlayer.isHurt();
+            int delayedInput = tailsCpuControlRuns
+                    ? tailsCtrlRecordBuf[tailsCtrlRecordBuf.length - 1]
+                    : capturedP2LogicalButtons;
+            if (tailsCpuControlRuns) {
+                if ((capturedP2HeldButtons & 0x7F) != 0) {
+                    java.util.Arrays.fill(tailsCtrlRecordBuf, 0);
+                    tailsControlCounter = 0xB4;
+                    delayedInput = capturedP2LogicalButtons;
+                } else if (tailsControlCounter > 0) {
+                    tailsControlCounter--;
+                    delayedInput = capturedP2LogicalButtons;
+                }
             }
             tailsPlayer.setGlobalAnimFrameTimer(animTimer);
             tailsPlayer.update(delayedInput, 0);
@@ -1946,7 +1970,36 @@ public class Sonic2SpecialStageManager {
             tailsPlayer.setGlobalAnimFrameTimer(animTimer);
             tailsPlayer.update(capturedHeldButtons, capturedPressedButtons);
         }
+        applyPendingRingSpills();
         publishPlayerDynamicArt();
+    }
+
+    /**
+     * Runs Obj5B_Init for any player whose SSHurt_Animation just created a ring
+     * spill on this pass.
+     *
+     * <p>SSHurt_Animation adds 8 to {@code ss_hurt_timer} every hurt tick and
+     * only allocates Obj5B on the tick where the result is exactly 8 -- the
+     * first tick after SSPlayer_Collision entered the hurt state -- and only
+     * when the owning player still holds rings (s2.asm:69138-69171). Obj5B is
+     * allocated into the special-stage object region, which RunObjects scans
+     * after the Obj09/Obj10 player slots, so its Init subtracts the rings on
+     * that same pass (s2.asm:71266-71298). Deducting them in the touch response
+     * instead would take them a pass early.
+     */
+    private void applyPendingRingSpills() {
+        applyPendingRingSpill(sonicPlayer);
+        applyPendingRingSpill(tailsPlayer);
+    }
+
+    private void applyPendingRingSpill(Sonic2SpecialStagePlayer player) {
+        if (player == null || objectManager == null) {
+            return;
+        }
+        if (!player.isHurt() || player.getHurtTimer() != 8) {
+            return;
+        }
+        objectManager.loseRingsFromBombHit(player);
     }
 
     private void publishPlayerDynamicArt() {

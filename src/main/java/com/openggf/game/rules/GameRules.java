@@ -79,7 +79,10 @@ public record GameRules(
                     true,
                     false,
                     true,
-                    0x07FF
+                    0x07FF,
+                    // S1 FindNearestTile masks the row index with a constant assembled
+                    // into the routine, so it applies to every collision lookup.
+                    true
             ),
             new PlayerAnimationRules(
                     false,
@@ -214,7 +217,10 @@ public record GameRules(
                     true,
                     false,
                     true,
-                    0x07FF
+                    0x07FF,
+                    // S2 Find_Tile masks the row index with a constant assembled into the
+                    // routine, so it applies to every collision lookup.
+                    true
             ),
             new PlayerAnimationRules(
                     true,
@@ -349,7 +355,11 @@ public record GameRules(
                     false,
                     true,
                     false,
-                    0x0FFF
+                    0x0FFF,
+                    // S3K's Find_Tile_FG masks with the per-level runtime
+                    // Layout_row_index_mask, not a constant, so the mask above may not be
+                    // applied to every lookup. See CollisionRules.layoutYMaskAppliesToAllLookups.
+                    false
             ),
             new PlayerAnimationRules(
                     true,

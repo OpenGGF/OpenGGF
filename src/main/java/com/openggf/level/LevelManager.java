@@ -218,6 +218,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     // ROM: LZ3/SBZ2 vertical wrapping — FG layer wraps Y instead of clamping
     boolean verticalWrapEnabled = false;
 
+    // ROM collision-layout row-index mask (see layoutLookupY). 0 = not modelled.
+    private int collisionLayoutYMask;
+
     // Background rendering support
     ParallaxManager parallaxManager;
     boolean useShaderBackground = true; // Feature flag for shader background
@@ -417,6 +420,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         Rom rom = GameServices.rom().getRom();
         parallaxManager.load(rom);
         gameModule = GameServices.module();
+        collisionLayoutYMask = resolveCollisionLayoutYMask();
         refreshZoneList();
         game = gameModule.createGame(rom);
     }
@@ -518,6 +522,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         currentAct = worldSession.getCurrentAct();
         apparentAct = worldSession.getApparentAct();
         gameModule = worldSession.getGameModule();
+        collisionLayoutYMask = resolveCollisionLayoutYMask();
         rebuildLevelDerivedState();
     }
 
@@ -1701,6 +1706,69 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             cachedBgHeightPx = blockPixelSize;
         }
         blockGrid = new BlockGridIndexer(blockPixelSize);
+        collisionLayoutYMask = resolveCollisionLayoutYMask();
+    }
+
+    private int resolveCollisionLayoutYMask() {
+        GameRules rules = gameRulesFor(gameModule);
+        if (rules == null || rules.collision() == null) {
+            return 0;
+        }
+        if (!rules.collision().layoutYMaskAppliesToAllLookups()) {
+            // The mask is real but is not a constant for this game (S3K writes
+            // Layout_row_index_mask per level: $7C normally, $3C for looping levels,
+            // sonic3k.asm:102207/110071/110322/114224/114253), and it masks an
+            // already-shifted row index rather than a Y position. Treating it as a
+            // constant made ICZ1's snowboard intro end its slope ride 193px short, so
+            // this game keeps its previous lookup behaviour until the runtime variable
+            // is modelled.
+            return 0;
+        }
+        return rules.collision().defaultCollisionLayoutYMask();
+    }
+
+    /**
+     * Maps a world Y onto a collision-layout row the way the ROM's tile lookup does.
+     *
+     * <p>Every game's block lookup <em>masks</em> the layout row index rather than
+     * bounds-checking it, because the layout is a fixed-size RAM buffer:
+     * <ul>
+     *   <li>S1 {@code FindNearestTile}: {@code lsr.w #1,d0 / andi.w #$380,d0} over the
+     *       8-row, {@code layout_row}=$80 buffer — an 0x800px window
+     *       (docs/s1disasm/_incObj/"sub FindNearestTile &amp; FindFloor &amp; FindWall.asm":15-17,
+     *       docs/s1disasm/_Variables.asm:21).</li>
+     *   <li>S2 {@code Find_Tile}: {@code add.w d0,d0 / andi.w #$F00,d0} over 16 rows of
+     *       128px — also an 0x800px window (docs/s2disasm/s2.asm:43366-43368).</li>
+     *   <li>S3K {@code Find_Tile_FG}: {@code lsr.w #5,d0 / and.w (Layout_row_index_mask).w,d0}
+     *       (docs/skdisasm/sonic3k.asm:19143-19145).</li>
+     * </ul>
+     * The per-game window is already carried by
+     * {@code CollisionRules.defaultCollisionLayoutYMask()}, which
+     * {@code GroundSensor.verticalTileLookupY} applies to the negative-Y ceiling probe.
+     * Applying it here makes it what it actually is in the ROM: a property of how the
+     * layout array is indexed, on every lookup, for every object — not a player-only or
+     * upward-only special case.
+     *
+     * <p>Consequence: an object that leaves the level vertically keeps sensing terrain
+     * from a wrapped row instead of falling forever. Rows past the end of the loaded
+     * layout are zero-filled RAM, i.e. the blank-chunk path (with {@code FixBugs = 0} that
+     * is {@code .blanktile -> movea.l d1,a1} pointing at {@code v_chunk0collision}, which
+     * is permanently 0; the {@code FixBugs} branch would instead point at a ROM zero word,
+     * same observable result) — modelled here by returning -1 so callers see no terrain.
+     *
+     * @return the wrapped Y, or -1 when the wrapped row is outside the loaded layout
+     */
+    private int layoutLookupY(int y, int levelHeight) {
+        int mask = collisionLayoutYMask;
+        if (mask <= 0) {
+            // Mask not modelled for this game: retain the pre-existing clamp/wrap.
+            if (verticalWrapEnabled) {
+                return BlockGridIndexer.wrapCoordinate(y, levelHeight);
+            }
+            return (y < 0 || y >= levelHeight) ? -1 : y;
+        }
+        int wrapped = y & mask;
+        return wrapped >= levelHeight ? -1 : wrapped;
     }
 
     /**
@@ -1875,15 +1943,16 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         // Wrap X (always wraps)
         int wrappedX = BlockGridIndexer.wrapCoordinate(x, levelWidth);
 
-        // Wrap or clamp Y depending on layer
-        int wrappedY = y;
-        if (layer == 1 || verticalWrapEnabled) {
-            // Background loops vertically; ROM: LZ3/SBZ2 — FG also wraps vertically
-            wrappedY = BlockGridIndexer.wrapCoordinate(wrappedY, levelHeight);
+        // Wrap Y the way the ROM's layout row index does (see layoutLookupY).
+        int wrappedY;
+        if (layer == 1) {
+            // Background loops vertically
+            wrappedY = BlockGridIndexer.wrapCoordinate(y, levelHeight);
         } else {
-            // Foreground clamps
-            if (wrappedY < 0 || wrappedY >= levelHeight)
+            wrappedY = layoutLookupY(y, levelHeight);
+            if (wrappedY < 0) {
                 return null;
+            }
         }
 
         // Block lookup (inlined from getBlockAtPosition to reuse wrappedX/wrappedY).
@@ -1934,10 +2003,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             return null;
         }
         int wrappedX = BlockGridIndexer.wrapCoordinate(x, levelWidth);
-        int wrappedY = y;
-        if (verticalWrapEnabled) {
-            wrappedY = BlockGridIndexer.wrapCoordinate(wrappedY, levelHeight);
-        } else if (wrappedY < 0 || wrappedY >= levelHeight) {
+        int wrappedY = layoutLookupY(y, levelHeight);
+        if (wrappedY < 0) {
             return null;
         }
 
@@ -3016,6 +3083,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 // GameModuleRegistry has the correct module. Just bootstrap
                 // the zone list for level data lookup.
                 gameModule = GameServices.module();
+                collisionLayoutYMask = resolveCollisionLayoutYMask();
                 refreshZoneList();
             }
             LevelData levelData = levels.get(currentZone).get(currentAct);
@@ -3637,6 +3705,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         level = null;
         game = null;
         gameModule = null;
+        collisionLayoutYMask = 0;
         objectManager = null;
         ringManager = null;
         zoneFeatureProvider = null;

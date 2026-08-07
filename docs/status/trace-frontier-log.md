@@ -64803,3 +64803,71 @@ an exclusion.
   published. The regenerated capture was preserved outside the repository under the agent
   artifact cache (`oggf-artifacts-ehzstepper/regen-halfpipe/`); re-running the
   capture reproduces it.
+
+## 2026-08-07 - Collision-layout row wrap, ceiling-landing animation, S2 SS Tails CPU and ring timing
+
+Sweep: `-Ptrace-replay -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical`
+over `TestS1*,TestS2*,TestS3k*,TestSonic3k*`. S1/S2 18 -> 17 red; S3K 21 red, exactly
+matching a control sweep at the parent commit (zero regressions).
+
+- **The collision layout lookup masks the row index; it does not bounds-check it.**
+  Derived independently from all three disassemblies: S1 `FindNearestTile`
+  `lsr.w #1,d0 / andi.w #$380,d0` over an 8-row/$80 buffer; S2 `Find_Tile`
+  `add.w d0,d0 / andi.w #$F00,d0` over 16 rows of 128px - both an 0x800px window;
+  S3K `Find_Tile_FG` `lsr.w #5,d0 / and.w (Layout_row_index_mask).w,d0`. The
+  0x07FF S1/S2 values already existed in `CollisionRules.defaultCollisionLayoutYMask`
+  but were consumed only by `GroundSensor.verticalTileLookupY`'s negative-Y ceiling
+  probe. Applying the mask at `LevelManager.getChunkDescAt` makes it what the ROM
+  says it is: a property of how the layout array is indexed, on every lookup, for
+  every object. No new constant was introduced.
+  Consequence: an object leaving the level vertically keeps sensing terrain from a
+  wrapped row instead of falling forever. That is why the GHZ1 Moto Bug with no
+  floor beneath it stops at y=0x0AB7 - `0x0AB7 & 0x0700` = layout row 2, which holds
+  real geometry - rather than vanishing. `Moto_Main` runs `ObjectFall`+`ObjFloorDist`
+  while invisible and its `cmpi.w #$7FF,obY(a0) / bhi.w DeleteObject` guard sits
+  inside `if FixBugs`, so REV01 assembles it out.
+  **`TestS1CompleteEmeraldVisualRun` closes (both methods).**
+- **S3K is deliberately excluded, and the reason is a fitted-value error worth
+  recording.** The first version of this fix stored `0x0FFF` as S3K's mask. S3K has
+  no such constant: `Layout_row_index_mask` is a RUNTIME variable written per level -
+  `$7C` normally and `$3C` for looping levels (sonic3k.asm:102207, 110071 "We're in a
+  looping level!", 110322, 114224, 114253) - and it masks an already-shifted row
+  index rather than a Y position, so it is not even the same quantity. The invented
+  constant made `TestS3kIcz1SnowboardIntroHeadless` end its slope ride 193px short
+  (x 4755 vs 4948). This was caught only by running a separate S3K control sweep at
+  the parent commit; an S1/S2-only sweep would have shipped a silent regression into
+  the current delivery priority.
+  New per-game field `CollisionRules.layoutYMaskAppliesToAllLookups` (S1/S2 true,
+  S3K false) keeps S3K on its previous lookup behaviour until the per-level variable
+  is modelled. Both sides are now green together, where before it was strictly one
+  or the other.
+- **GHZ maze chain: the animation divergence is a ceiling landing, not a roll-exit
+  physics bug.** At ghz1 local frame 2082 the engine's rolling flag, ground velocity,
+  angle, position and air all match the recording exactly; only the animation byte
+  differs (recorded anim 00 / map 0x1A vs engine anim 02 / map 0x2E). The landing at
+  0x822 is an ANGLED-CEILING landing (x_vel -0x0E6, y_vel -0x1B8, angle 0xA0), so it
+  routes through `CollisionSystem.doCeilingCollision` ->
+  `resetWallCeilingLandingState`, not `PlayableSpriteMovement.resetOnFloor`, and the
+  walk animation was never set. `mapping_frame` feeds the player DPLC, so the engine
+  kept requesting roll frames 0x2E..0x32 after rolling was already false and emitted
+  17 transfers where the ROM emits 9 - the whole +12 `edge_ordinal` / +6
+  `transfer_id` skew.
+- **Two ROM-derived S2 special-stage fixes.** `SSTailsCPU_Control` is reached only
+  from `Obj10_MdNormal`'s non-hurt path, so while Tails is in MdJump/MdAir/Hurt
+  nothing overwrites `Ctrl_2_Logical` after the main loop's own
+  `move.w (Ctrl_2).w,(Ctrl_2_Logical).w`; `SSPlayer_ChgJumpDir` therefore reads the
+  real port-2 pad, not the delayed CPU record buffer. The engine was feeding airborne
+  Tails the delayed buffer, giving him a phantom +/-$40 x_vel per frame. Separately,
+  `SSPlayer_Collision` never touches the ring count: Obj5B (SSRingSpill) is created by
+  `SSHurt_Animation` only on the tick where `ss_hurt_timer` reaches 8, and `Obj5B_Init`
+  is what subtracts the rings - one RunObjects pass after the bomb touch, where the
+  engine deducted at touch time.
+  ss_4 frontier 1652 -> 2674 with errors 12663 -> 109; ss_6 1147 -> 1210; ss_5 error
+  count 27851 -> 18176.
+- **ss_2 / ss_7 reframed.** The "Tails-owned inherited transfer" is NOT a sidekick
+  dynamic-art defect: the owner, ledger and gap-window machinery all work for Tails,
+  and all three owners (`sonic`, `tails`, `tails-tails`) are observed on the gap rows
+  of both predecessors. The engine's Tails is in a DIFFERENT ANIMATION at the end of
+  the predecessor level segment, so `observeDplc`'s dedupe (the engine's model of
+  `Tails_LastLoadedDPLC`, s2.asm:41659-41690) correctly suppresses submission for a
+  mapping frame that does not match. This is a Tails animation divergence in EHZ/ARZ.
