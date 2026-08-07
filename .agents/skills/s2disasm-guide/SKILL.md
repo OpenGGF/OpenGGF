@@ -323,3 +323,31 @@ Export:  export <type> [prefix] Generate Java constants
 Use this skill to find ROM labels and routines, then use `plc-system` and
 `trace-replay-bug-fixing` for PLC/DPLC queue timing and `dynamic_art.*` report
 interpretation. Trace evidence is zero-tolerance and comparison-only.
+
+## `fixBugs` conditionals — always take the un-fixed path
+
+This disassembly is assembled with `fixBugs = 0` (docs/s2disasm/s2.asm:27), which is what the shipped
+ROM does. The recorded traces capture shipped-ROM behaviour, so **the engine must
+model the un-fixed branch**, including where the disassembly's own comment calls it
+a bug. Taking the fixed branch will desync any trace that compares the affected
+field — and often only much later, when the divergence finally reaches a compared
+column.
+
+There are ~262 blocks (note the lower-case `f` — grepping `FixBugs` finds nothing in s2disasm) in this tree, so this comes up regularly. Two real examples of the
+un-fixed path mattering:
+
+- S1 `Moto_Main` runs `ObjectFall` + `ObjFloorDist` while invisible, and the
+  "fell below max level height -> `DeleteObject`" guard sits inside `if FixBugs`
+  (`_incObj/"40 Badnik - Moto Bug.asm":29-52`), so a Moto Bug with no floor beneath
+  it free-falls instead of being deleted. It then lands on real geometry because
+  `FindNearestTile` *masks* the layout row index (`andi.w #$380`) rather than
+  bounds-checking it, wrapping Y modulo `0x800`.
+- S1 leaves the leftward camera move uncapped because the cap is inside a
+  `if FixBugs` block; S2 and S3K cap it (`Camera.java:122-124`).
+
+**Annotate every one you touch.** When porting code at or near such a conditional,
+write a comment naming the flag, stating which branch the engine implements and why,
+and summarising what the fixed branch would have done. The conditional is invisible
+once the code is in Java, and these notes are the only thing that would make a future
+effort to support the bug-fixed revisions tractable. `Camera.java:122-124` and
+`Sonic1BatbrainBadnikInstance.java:394` show the shape.

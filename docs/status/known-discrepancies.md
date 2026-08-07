@@ -266,6 +266,23 @@ This is implemented in `SwScrlHtz.java` using a 32-bit arithmetic shift after sw
 
 Cloud layer scrolling in HTZ is smooth across all frames, without the 2-frame jitter visible in the original ROM.
 
+### `fixBugs` deviation — HTZ cloud scroll (open, contradicts current policy)
+
+`SwScrlHtz.java` deliberately implements the **`fixBugs` (corrected)** path for the
+HTZ cloud scroll delta, described above, justified on "smoother cloud animation".
+
+That predates, and now contradicts, the project rule recorded in CLAUDE.md /
+AGENTS.md: the disassemblies are assembled with `fixBugs = 0`, the traces record
+shipped-ROM behaviour, and the engine must model the un-fixed path even where it is
+plainly a bug. The original `asr.w #4,d1` discards the fractional bits on purpose as
+far as the ROM is concerned, and its "2-frame jerkiness" is shipped behaviour.
+
+This has not desynced a trace so far, which most likely means no compared column
+currently observes the cloud layer's scroll accumulator — i.e. it is latent rather
+than harmless. It should either be changed to the `fixBugs = 0` path, or kept as a
+deliberate, explicitly-owned rendering deviation with a note here saying so; it
+should not stay as an unremarked contradiction.
+
 ---
 
 ## MCZ Rotating Platforms Child Cleanup

@@ -225,6 +225,23 @@ not a baseline entry, unless the gap is genuinely intentional.
 `@ExtendWith(SingletonResetExtension.class)` over manual teardown. Set
 `startup.legalDisclaimer=false` in tests that boot the full `Engine`.
 
+**`FixBugs` / `fixBugs` assembly paths.** All three disassemblies are built with the
+bug-fix conditional OFF — `FixBugs = 0` (`s1disasm/sonic.asm:20`,
+`skdisasm/sonic3k.asm:38`, `skdisasm/s3.asm:25`) and `fixBugs = 0`
+(`s2disasm/s2.asm:27`) — because that is what the shipped ROMs do, and the traces
+record shipped-ROM behaviour. **Always model the `FixBugs = 0` path**, including
+when it is plainly a bug: the un-fixed path is the accurate one, and taking the
+fixed branch will desync a trace that compares the affected field. There are ~327
+such blocks in s1disasm, ~262 in s2disasm and ~111 in skdisasm, so you will meet
+them often.
+
+When you port code near one of these conditionals, **say so in a comment** — name
+the flag, state which branch the engine takes and why, and describe what the fixed
+branch would do. That costs a line now and is the only thing that will make a
+future "support the bug-fixed revisions" effort tractable, since the sites are
+otherwise invisible once ported. `Camera.java:122-124` and
+`Sonic1BatbrainBadnikInstance.java:394` are existing examples of the shape.
+
 **Audio accuracy:** reference the libvgm chip cores and the SMPSPlay source rather than
 simplified versions. Diagnose against a source of truth instead of twiddling knobs.
 
