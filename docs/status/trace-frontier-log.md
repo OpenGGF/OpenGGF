@@ -64524,3 +64524,41 @@ to synthesize a POST phase on a VBLANK-only row.
   values were introduced.
 - Route position: AIZ and HCZ remain at their committed frontiers; MGZ now
   reaches direct `#162`. CNZ, ICZ, and LBZ remain pending in gameplay order.
+
+## 2026-08-07 — S3K MGZ results-owner allocation frontier
+
+- Worktree: `bugfix/s3k-traces` at `e540b687a` before the frontier commit;
+  unrelated edits in `.idea/vcs.xml` and
+  `docs/status/rewind-round-trip-gaps.md` remained unstaged. Validation used
+  JDK 21.0.11 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen` (SHA-1
+  `b711a909cce238ca4af3e517a2edca306228efa5`), without replacing or renaming
+  it.
+- Frontier command: `mvn -Dmse=off
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kMgzCompleteRunTraceReplay#replayMatchesTrace'
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Result: the MGZ results handoff advances the first comparison error from raw
+  `15974` (`queue.s3k_kos_direct.busy`, expected `true`, actual `false`, 2310
+  errors at the old stop) to raw `16512`
+  (`queue.s3k_kos_direct.busy`, expected `true`, actual `false`, 77 errors in
+  the clean replay). The hardware authority admits direct `#162` at raw
+  `18342` through direct `#182` at raw `34932`; replay stops at the later
+  expected direct `#183` raw `38524` because the engine has the different
+  pending fingerprint
+  `sha256:fbfc78d499717cfec6df27fdd04fa4b5293a7147ec7ff7a7a18004e9db801e78`
+  instead of expected
+  `sha256:589a478d29f5c788ad304520acc86172ea220a4a68b5a74ac25ee62e80d5899c`.
+- Regression status: AIZ standard replay passes with zero comparator errors.
+  AIZ complete and HCZ complete remain at their recorded no-pending stops,
+  direct `#50` and `#104`, respectively; MGZ standard remains at pre-existing
+  raw `13903` / direct `#24`. Ring comparison remains enabled with
+  `ToleranceConfig.DEFAULT` `FORCE_ERROR`; no trace payloads changed.
+- Fix scope: ordinary signpost results use the engine's higher-slot
+  after-current owner placement and same-pass `Obj_LevelResultsInit`; the
+  preserved grounded-owner path retains free-slot/next-pass placement, and
+  AIZ2's `sub_868F8` owner explicitly retains its general-AllocateObject
+  next-pass dispatch. No trace-derived values or gameplay values were
+  introduced.
+- Route position: AIZ remains green; HCZ remains at direct `#104`; MGZ now
+  reaches direct `#182` and the first unresolved comparator edge is raw
+  `16512`. CNZ, ICZ, and LBZ remain pending in gameplay order.

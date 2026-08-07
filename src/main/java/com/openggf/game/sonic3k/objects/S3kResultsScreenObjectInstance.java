@@ -156,11 +156,12 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
 
     @Override
     protected boolean skipsSameFrameUpdateAfterSpawn() {
-        // Obj_LevelResults is published by AllocateObject from an earlier SST
-        // and does not run its init routine until the next Process_Sprites pass.
-        // The slot is visible immediately, but its first KosM submissions are
-        // therefore one frame after publication (sonic3k.asm:62512-62531).
-        return true;
+        // The signpost's Obj_EndSignResults allocation lands in a higher
+        // engine SST while the current owner is still being processed.
+        // ExecuteObjects reaches that slot in the same pass, so
+        // Obj_LevelResultsInit submits its three Queue_Kos_Module jobs before
+        // the loop-tail service (sonic3k.asm:176311-176319, 62512-62531).
+        return false;
     }
 
     S3kResultsScreenObjectInstance(PlayerCharacter character, int act, int waitDurationAdjustment,

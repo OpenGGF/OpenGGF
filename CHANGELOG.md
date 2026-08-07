@@ -3,6 +3,13 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K signpost results owners now preserve their ROM allocation
+  boundary: preserved-grounded and AIZ2 general-AllocateObject paths initialize
+  on the following pass, while the ordinary signpost path publishes
+  ResultsGeneral, the title-card number, and the character name in the same
+  higher-slot pass. The MGZ complete-run comparison advances from raw frame
+  `15974` to `16512` and hardware admission reaches direct `#182` at raw frame
+  `34932`; standard AIZ remains green and no trace payloads changed.
 - Fix/Test: S3K MGZ Act 2 drilling-Robotnik's flee tail now submits the
   ROM-owned primary terrain, secondary terrain, Spiker, and Mantis KosM
   modules in native order, with the runtime coordinator retaining the

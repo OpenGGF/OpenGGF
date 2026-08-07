@@ -220,6 +220,16 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
         }
 
         @Override
+        protected boolean skipsSameFrameUpdateAfterSpawn() {
+            // AIZ2's sub_868F8 publishes Obj_LevelResults through the general
+            // AllocateObject path, so its first Obj_LevelResultsInit dispatch
+            // remains on the following ExecuteObjects pass (sonic3k.asm:
+            // 181976-181996). The signpost-owned results path uses the
+            // after-current allocation contract instead.
+            return true;
+        }
+
+        @Override
         protected void onResultsChildrenRetired() {
             // Obj_LevelResultsWait2 clears _unkFAA8 as soon as the final
             // results child has left the screen.  The AIZ2 controller is an

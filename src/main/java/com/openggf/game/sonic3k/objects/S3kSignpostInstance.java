@@ -23,6 +23,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
+import java.util.function.Supplier;
 import java.util.logging.Logger;
 
 /**
@@ -553,7 +554,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
                 resultsWaitedForPlayerLanding,
                 preservesPostObjectResultDispatchBoundary,
                 preservesGroundedResultsDispatchBoundary);
-        spawnFreeChild(() -> new S3kResultsScreenObjectInstance(
+        Supplier<S3kResultsScreenObjectInstance> resultsFactory = () -> new S3kResultsScreenObjectInstance(
                 getPlayerCharacter(), apparentAct, resultsWaitDurationAdjustment,
                 resultsPostControlHandoffDelayEntries
                         + (preservesPostObjectResultDispatchBoundary ? 1 : 0),
@@ -561,7 +562,16 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
                         preservesPostObjectResultDispatchBoundary,
                         usesShortResultsChildRetireTail),
                 resultsChildTimingAdjustment,
-                usesShortResultsChildRetireTail));
+                usesShortResultsChildRetireTail);
+        if (preservesGroundedResultsDispatchBoundary) {
+            // The preserved grounded-owner path retains FindFreeObj slot
+            // placement, so its results owner begins on the next object pass.
+            // Other signposts use the native higher-slot handoff represented by
+            // AllocateObjectAfterCurrent in this engine's SST layout.
+            spawnFreeChild(resultsFactory);
+        } else {
+            spawnChild(resultsFactory);
+        }
         LOG.fine("S3K Signpost RESULTS -> AFTER (results instance spawned)");
         state = State.AFTER;
         if (preservesPostObjectResultDispatchBoundary && sidekickPoseWasAlreadyArmed) {
