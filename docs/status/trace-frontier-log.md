@@ -65093,3 +65093,41 @@ to synthesize a POST phase on a VBLANK-only row.
 - Route position: AIZ, HCZ, MGZ, and CNZ remain at their established
   frontiers; ICZ now reaches raw `25341`, with the next target the ring
   discrepancy at raw `24179` before direct `#264`; LBZ remains pending.
+
+## 2026-08-07 — S3K ICZ ring-count frontier
+
+- Worktree: `bugfix/s3k-traces` at `cd52b0812` before this frontier commit;
+  unrelated edits in `.idea/vcs.xml`, `docs/status/rewind-round-trip-gaps.md`,
+  and `src/main/java/com/openggf/level/objects/ObjectPlacementController.java`
+  remained unstaged. Validation used JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen` (SHA-1
+  `b711a909cce238ca4af3e517a2edca306228efa5`), without replacing or renaming
+  it.
+- Frontier command: `mvn -q -Dmse=off -DforkCount=0
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace
+  test`. Relative to the committed 74-error report, the candidate has 71
+  errors, removes the first actionable `rings` mismatch at raw `24179`, and
+  leaves `tails_cpu_ctrl2_held` at raw `24576` as the first remaining
+  actionable comparison before the recorded direct completion `#264` at raw
+  `25341`.
+- Root cause: `loc_849D8` selects the detached middle/bottom velocities from
+  `Obj_VelocityIndex` with `d0=0`, without applying the parent's X flip, and
+  its first damaged dispatch changes the routine without moving the child.
+  The folded boss now releases the bottom-hurt reservation immediately and the
+  detached reservations at the native `Obj_FlickerMove` cull, anchors damaged
+  top steam after the top-body SST, and visits folded effects in ascending
+  native slot order. Once the solid child is gone, its retired checkpoint is
+  cleared before a reused slot can publish a frost capture. These are native
+  object lifecycle and allocator semantics; no zone, frame, route, or trace
+  exception was added.
+- Regression checks: the gameplay-order AIZ/HCZ/MGZ/CNZ sweep was run with
+  `-Dsurefire.forkCount=1 -DreuseForks=true -Dtrace.frontierOnly=true`; AIZ,
+  HCZ, and CNZ stopped at their established `#8`/raw `1240`, `#94`/raw
+  `9764`, and `#205`/raw `13962` hardware edges, while MGZ completed its
+  recorded segment. The ICZ object and freezer unit tests and rewind coverage
+  guards passed. Ring comparison remains enabled through `ToleranceConfig.DEFAULT`
+  with `RingCountMode.FORCE_ERROR`; no trace payloads changed.
+- Route position: AIZ, HCZ, MGZ, and CNZ remain at their established
+  frontiers; ICZ's next target is the raw `24576` sidekick control mismatch;
+  LBZ remains pending.

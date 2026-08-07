@@ -3,6 +3,13 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K ICZ's damaged boss children now use the native indexed launch
+  velocities, first-pass detach timing, cull-based slot release, and top-body
+  `AllocateObjectAfterCurrent` anchor. Frost effects are processed by native SST
+  order, and a reused slot no longer retains the retired solid checkpoint. The
+  ICZ complete-run report drops from 74 to 71 errors: the ring-count mismatch at
+  raw frame `24179` is gone and the first remaining actionable comparison is
+  `tails_cpu_ctrl2_held` at raw frame `24576`; no trace payloads changed.
 - Fix/Test: S3K ICZ's bottom solid now uses the native `$18` landing width
   initialized by `word_7231E`, rather than the `$10` width from a later effect
   child. The ICZ complete-run replay now accepts the raw frame `23182` landing,

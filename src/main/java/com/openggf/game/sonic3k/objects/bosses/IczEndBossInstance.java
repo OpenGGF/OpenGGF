@@ -128,7 +128,13 @@ public final class IczEndBossInstance extends AbstractBossInstance
             {0, 0x2D, 2, BOTTOM_CHILD_SHIFT_TIME}
     };
     private static final int FOLDED_NATIVE_CHILD_SST_COUNT = 6;
+    // ChildObjDat_7233E creates the middle, bottom-solid, and bottom-hurt
+    // children in slots 2, 3, and 5 of the folded six-slot group. They delete
+    // themselves when the parent enters its damaged rise; the ship, top body,
+    // and head slots remain live for the rest of the arena.
+    private static final int FOLDED_MIDDLE_CHILD_INDEX = 2;
     private static final int BOTTOM_STRUCTURAL_CHILD_RESERVED_INDEX = 3;
+    private static final int FOLDED_BOTTOM_HURT_CHILD_INDEX = 5;
     private static final int[][] FROST_OFFSETS_FRAME_0 = {
             {-0x50, 0x14}, {-0x40, 0x14}, {-0x48, 0x04}, {-0x40, 0x04},
             {-0x34, 0x0C}, {-0x24, 0x08}, {-0x1C, 0x04}
@@ -191,6 +197,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
     private boolean defeatHandoffComplete;
     private boolean lastSideToggle;
     private int bottomChildWholePixelDelta;
+    private int[] structuralChildSlots;
     private int pendingFrostCaptureMask;
     private int readyFrostCaptureMask;
     private int pendingBeforeSolidFrostCaptureMask;
@@ -276,6 +283,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
         waitCallback = WaitCallback.NONE;
         structuralChildren = createStructuralChildren();
         structuralBottomChildSlot = -1;
+        structuralChildSlots = null;
         effectChildren = new ArrayList<>();
         defeatTimer = 0;
         damagedRiseTimer = 0;
@@ -555,7 +563,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
     }
 
     private void ensureStructuralChildSlots() {
-        if (bottomStructuralChildSlot() >= 0 || tryServices() == null
+        if (structuralChildSlots != null || tryServices() == null
                 || tryServices().objectManager() == null || getSlotIndex() < 0) {
             return;
         }
@@ -567,6 +575,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
         // must retain their allocator pressure and Process_Sprites phase.
         int[] childSlots = tryServices().objectManager().allocateChildSlotsAfter(
                 spawn, FOLDED_NATIVE_CHILD_SST_COUNT, getSlotIndex());
+        structuralChildSlots = childSlots;
         structuralBottomChildSlot = childSlots.length > BOTTOM_STRUCTURAL_CHILD_RESERVED_INDEX
                 ? childSlots[BOTTOM_STRUCTURAL_CHILD_RESERVED_INDEX]
                 : -1;
@@ -585,7 +594,12 @@ public final class IczEndBossInstance extends AbstractBossInstance
         if (offsets.length == 0) {
             return;
         }
-        int predecessorSlot = getSlotIndex();
+        // Parent loc_71D1E uses AllocateObjectAfterCurrent from the boss SST.
+        // Damaged top steam is emitted by the folded top-body child at slot
+        // 26, so it must retain that child's after-current allocation anchor.
+        int predecessorSlot = anchor == EffectAnchor.TOP_CHILD && structuralChildSlots != null
+                && structuralChildSlots.length > 1 && structuralChildSlots[1] >= 0
+                        ? structuralChildSlots[1] : getSlotIndex();
         for (int i = 0; i < offsets.length; i++) {
             int[][] script = frostScriptForSubtype(selector, i);
             int nativeSlot = services().objectManager() == null
@@ -664,6 +678,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
         int currentBottomY = structuralChildren[BOTTOM_CHILD_INDEX].y;
         bottomChildWholePixelDelta = previousBottomY == 0 ? 0 : currentBottomY - previousBottomY;
         updateDamagedTopSteam();
+        releaseDetachedStructuralChildSlots();
     }
 
     private void updateDamagedTopSteam() {
@@ -686,16 +701,30 @@ public final class IczEndBossInstance extends AbstractBossInstance
         if (effectChildren.isEmpty()) {
             return;
         }
-        for (int i = effectChildren.size() - 1; i >= 0; i--) {
-            EffectChild child = effectChildren.get(i);
+        // Process_Sprites visits the real SSTs in ascending slot order. The
+        // folded list is append-ordered, but AllocateObjectAfterCurrent can
+        // reuse an earlier free slot on a later emission, so list order is not
+        // necessarily native execution order. Preserve the public list order
+        // for rewind/test inspection while using a native-order snapshot here.
+        List<EffectChild> updateOrder = new ArrayList<>(effectChildren);
+        updateOrder.sort((left, right) -> Integer.compare(
+                nativeEffectExecutionSlot(left), nativeEffectExecutionSlot(right)));
+        for (EffectChild child : updateOrder) {
+            if (!effectChildren.contains(child)) {
+                continue;
+            }
             AnchorPoint anchor = resolveEffectAnchor(child.anchor);
             child.update(anchor);
             capturePlayersInFrostPuff(child, player);
             if (child.isFinished()) {
                 releaseEffectSlot(child);
-                effectChildren.remove(i);
+                effectChildren.remove(child);
             }
         }
+    }
+
+    private int nativeEffectExecutionSlot(EffectChild child) {
+        return child.nativeSlot >= 0 ? child.nativeSlot : Integer.MAX_VALUE;
     }
 
     private AnchorPoint resolveEffectAnchor(EffectAnchor anchor) {
@@ -728,12 +757,17 @@ public final class IczEndBossInstance extends AbstractBossInstance
                         && child.nativeSlot < bottomStructuralChildSlot();
                 // Native children at/after the bottom structural child run
                 // after its SolidObjectFull call, so their sub_8A9C6 capture
-                // belongs to this pass when the native-visible animation was
-                // already in its active range before the folded child update.
-                // A transition into that range is one folded parent pass ahead
-                // of the native child and retains the pending promotion.
+                // belongs to this pass. The folded boss updates these children
+                // before the manager reaches their native slots, so a
+                // transition into the active animation range is still observed
+                // during the same native pass once the solid child has been
+                // culled. While that checkpoint is live, retain the native
+                // pre/post-solid promotion used by the earlier arena phase.
+                boolean currentSolidCheckpoint = bottomStructuralChildSlot() < 0
+                        ? !beforeBottomSolid
+                        : child.captureWasActiveBeforeUpdate && !beforeBottomSolid;
                 queueFrostCapture(index, child.x, child.nativeSlot,
-                        beforeBottomSolid, child.captureWasActiveBeforeUpdate && !beforeBottomSolid);
+                        beforeBottomSolid, currentSolidCheckpoint);
             }
         }
     }
@@ -983,9 +1017,52 @@ public final class IczEndBossInstance extends AbstractBossInstance
         structuralChildren[0].frame = DAMAGED_TOP_FRAME;
         damagedTopSteamTimer = DAMAGED_TOP_STEAM_INITIAL_TIME;
         damagedTopSteamTimerJustArmed = true;
-        boolean flipped = (state.renderFlags & 1) != 0;
-        structuralChildren[MIDDLE_CHILD_INDEX].detach(flipped);
-        structuralChildren[BOTTOM_CHILD_INDEX].detach(flipped);
+        // loc_849D8 calls Set_IndexedVelocity with d0=0. The native child
+        // subtypes select rows 1 and 2 of Obj_VelocityIndex: middle is
+        // (+$100,-$100), bottom-solid is (-$200,-$200), before the parent's
+        // render-direction X flip is applied.
+        structuralChildren[MIDDLE_CHILD_INDEX].detach(0x100, -0x100);
+        structuralChildren[BOTTOM_CHILD_INDEX].detach(-0x200, -0x200);
+    }
+
+    private void releaseDetachedStructuralChildSlots() {
+        if (structuralChildSlots == null || services().objectManager() == null) {
+            return;
+        }
+        // loc_720D4 deletes the bottom hurt child as soon as the parent enters
+        // the damaged phase. The middle and bottom-solid children instead run
+        // Obj_FlickerMove and free their SSTs only when its native cull test
+        // fires; releasing them at phase entry changes the allocation order of
+        // the frost children created in the meantime.
+        if (damagedFinalPhase) {
+            freeStructuralReservation(FOLDED_BOTTOM_HURT_CHILD_INDEX);
+        }
+        if (structuralChildren == null || services().camera() == null) {
+            return;
+        }
+        int cameraX = Short.toUnsignedInt(services().camera().getX());
+        int cameraY = Short.toUnsignedInt(services().camera().getY());
+        releaseStructuralChildIfGone(
+                FOLDED_MIDDLE_CHILD_INDEX, structuralChildren[MIDDLE_CHILD_INDEX], cameraX, cameraY);
+        releaseStructuralChildIfGone(
+                BOTTOM_STRUCTURAL_CHILD_RESERVED_INDEX, structuralChildren[BOTTOM_CHILD_INDEX], cameraX, cameraY);
+    }
+
+    private void releaseStructuralChildIfGone(
+            int reservedIndex, StructuralChild child, int cameraX, int cameraY) {
+        if (child.detached && child.isOutsideNativeFlickerBounds(cameraX, cameraY)) {
+            freeStructuralReservation(reservedIndex);
+        }
+    }
+
+    private void freeStructuralReservation(int reservedIndex) {
+        if (structuralChildSlots[reservedIndex] >= 0) {
+            services().objectManager().freeReservedChildSlot(spawn, reservedIndex);
+            structuralChildSlots[reservedIndex] = -1;
+            if (reservedIndex == BOTTOM_STRUCTURAL_CHILD_RESERVED_INDEX) {
+                structuralBottomChildSlot = -1;
+            }
+        }
     }
 
     private void startDefeat() {
@@ -1717,6 +1794,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
         private int y;
         private boolean flipX;
         private boolean detached;
+        private boolean detachedMovePending;
         private int xFixed;
         private int yFixed;
         private int xVel;
@@ -1732,23 +1810,35 @@ public final class IczEndBossInstance extends AbstractBossInstance
             this.shiftDuration = shiftDuration;
         }
 
-        private void detach(boolean parentFlipped) {
+        private void detach(int nativeXVelocity, int nativeYVelocity) {
             if (detached) {
                 return;
             }
             detached = true;
+            // loc_849D8 only changes the routine pointer during the damaged
+            // phase's current child pass. Obj_FlickerMove first integrates on
+            // the following pass.
+            detachedMovePending = true;
             xFixed = x << 16;
             yFixed = y << 16;
-            xVel = parentFlipped ? 0x100 : -0x100;
-            yVel = -0x100;
+            xVel = nativeXVelocity;
+            yVel = nativeYVelocity;
         }
 
         private void updateDetached() {
+            if (detachedMovePending) {
+                detachedMovePending = false;
+                return;
+            }
             xFixed += xVel << 8;
             yFixed += yVel << 8;
             x = xFixed >> 16;
             y = yFixed >> 16;
             yVel += DETACHED_GRAVITY;
+        }
+
+        private boolean isOutsideNativeFlickerBounds(int cameraX, int cameraY) {
+            return S3kBossFlickerMove.isOutsideNativeBounds(x, y, cameraX, cameraY);
         }
 
         private void startShift(int velocity) {
