@@ -65094,6 +65094,41 @@ to synthesize a POST phase on a VBLANK-only row.
   frontiers; ICZ now reaches raw `25341`, with the next target the ring
   discrepancy at raw `24179` before direct `#264`; LBZ remains pending.
 
+## 2026-08-07 — S3K ICZ deferred ending-pose latch frontier
+
+- Worktree: `bugfix/s3k-traces` at `6e556793c` before this frontier commit;
+  unrelated edits in `.idea/vcs.xml`,
+  `docs/status/rewind-round-trip-gaps.md`, and
+  `src/main/java/com/openggf/level/objects/ObjectPlacementController.java`
+  remained unstaged. Validation used JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen` (SHA-1
+  `b711a909cce238ca4af3e517a2edca306228efa5`), without replacing or renaming
+  it.
+- Frontier command: `mvn -q -Dmse=off -DforkCount=0
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace
+  test`. Relative to the committed 71-error report, the candidate removes the
+  `tails_cpu_ctrl2_held` mismatch at raw `24576` and reaches the same recorded
+  direct completion `KOS_DECOMPRESSION_QUEUE#264` at raw `25341`; the report
+  has 70 errors and the next actionable comparison is
+  `player_animation_id`/`tails_animation_id` at raw `25093`.
+- Root cause: `Check_TailsEndPose` and `Set_PlayerEndingPose` write
+  `object_control=$81`, pose, and velocities, but do not write
+  `Ctrl_2_logical` (`sonic3k.asm:181919-181940,182058-182069`). The deferred
+  engine handoff was incorrectly calling
+  `mirrorRawController2LogicalForEndingPose`, replacing the preceding CPU
+  word `$04` with raw input `$00`. Removing that mirror preserves the native
+  CPU latch through raw `24576`; the ordinary following bit-7 dispatch then
+  publishes the native `$00` at raw `24577`. This is an ending-pose owner
+  lifecycle correction, not a zone, frame, route, or trace exception.
+- Regression checks: the focused ICZ replay compiled and reached its expected
+  recorded hardware boundary; no earlier comparator groups were added. Ring
+  comparison remains enabled through `ToleranceConfig.DEFAULT` with
+  `RingCountMode.FORCE_ERROR`; no trace payloads changed.
+- Route position: AIZ, HCZ, MGZ, and CNZ remain at their established
+  frontiers; ICZ now reaches raw `25341` with the next target at raw `25093`;
+  LBZ remains pending.
+
 ## 2026-08-07 — S3K ICZ ring-count frontier
 
 - Worktree: `bugfix/s3k-traces` at `cd52b0812` before this frontier commit;

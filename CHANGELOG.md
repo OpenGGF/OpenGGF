@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K ICZ's deferred Tails ending-pose handoff now preserves the
+  CPU-written `Ctrl_2_logical` word through the native `Set_PlayerEndingPose`
+  object-control write; the routine does not mirror raw controller input. The
+  ICZ complete-run report drops from 71 to 70 errors, removing the raw frame
+  `24576` control-latch mismatch and leaving the next actionable comparison at
+  raw frame `25093`; no trace payloads changed.
 - Fix/Test: S3K ICZ's damaged boss children now use the native indexed launch
   velocities, first-pass detach timing, cull-based slot release, and top-body
   `AllocateObjectAfterCurrent` anchor. Frost effects are processed by native SST

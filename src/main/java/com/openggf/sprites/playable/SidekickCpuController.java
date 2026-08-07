@@ -804,7 +804,6 @@ public class SidekickCpuController {
         }
         nativeEndingPosePending = false;
         controller2SignedLocked = false;
-        mirrorRawController2LogicalForEndingPose();
         ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
         sidekick.setControlLocked(false);
         sidekick.setSpindash(false);
