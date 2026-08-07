@@ -3090,7 +3090,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// (docs/skdisasm/sonic3k.asm:23193-23196) -- it only ever reads the live value --
 		// so one shared expression is correct for all three games and no per-game rule
 		// is needed.
-		int maxY = Math.max(camera.getMaxY(), camera.getMaxYTarget()); // TEMP: measured separately
+		// NOT YET CORRECTED -- see the FixBugs note above. Taking the shipped branch
+		// here (camera.getMaxY() alone) regresses TestS2SczLevelSelectTraceReplay,
+		// which means max() is masking a second defect that must be found first.
+		int maxY = Math.max(camera.getMaxY(), camera.getMaxYTarget());
 		if (sprite.isCpuControlled() && sprite.getCpuController() != null) {
 			minX = sprite.getCpuController().getMinXBound(minX);
 			maxX = sprite.getCpuController().getMaxXBound(maxX);

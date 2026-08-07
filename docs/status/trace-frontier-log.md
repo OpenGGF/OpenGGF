@@ -64925,3 +64925,56 @@ sidekick too), Tails' underwater roll deceleration, and the Super Sonic palette
 residual; and S3K's Knuckles wall climb, where `sub_F828` clobbering d1 makes
 `mapping_frame + floor_distance` overflow the `$B7..$BC` loop and clamp back every
 4 frames - the documented "Knuckles resets to his first climbing frame" behaviour.
+
+## 2026-08-07 - The remaining FixBugs=0 sites are written but NOT landed
+
+Nine previously-deferred sites were implemented on the shipped branch (worktrees
+`oggf-fb2-s1`, `-s2`, `-s3k`, based on `65fc9026c`; diffs preserved under the agent
+artifact cache). **The batch is held, because it regresses
+`TestS2SczLevelSelectTraceReplay`, which was green at sweep 14.**
+
+- With the whole batch: SCZ 2682 errors, first at frame 445.
+- With the batch minus the bottom kill plane: SCZ 523 errors, first at frame 7109,
+  `x_speed` expected -0x0200 actual 0x0000.
+- With **only the S1 patch**: the same frame-7109 `x_speed` failure.
+
+So the kill plane is an amplifier, not the cause, and the cause is in the S1
+patch. The prime suspect is its own flagged site: `Sonic_HurtStop`'s unsigned kill
+test (docs/s1disasm/_incObj/"01 Sonic.asm":1935-1941), which the implementing
+agent explicitly warned was "now live for S2 and S3K as well" and asked to have an
+S2 trace sweep run before merging. `x_speed` dropping to 0 is consistent with
+HurtStop firing a frame early. The two S1-object sites (SmashObject /
+collapsing-ledge fragment catch-up) cannot reach an S2 trace, and `React_ChkHurt`
+is the other shared candidate.
+
+**The kill plane itself is therefore also unresolved and stays on the fixBugs=1
+expression for now**, with an in-code note saying so. Taking the shipped branch
+there is still believed correct - `Math.max(camera.getMaxY(), camera.getMaxYTarget())`
+is the flag=1 body transcribed verbatim, and S3K has no such conditional at all -
+but `max()` is demonstrably masking a second defect, and removing a mask before
+fixing what it hides trades one red for a worse one.
+
+Worth recording as a pattern, since it has now happened twice in two batches (the
+other was the SBZ3 wind tunnel):
+1. the ROM conditional is read correctly;
+2. a claim is made that the engine implements the FIXED branch;
+3. the site is assessed "latent, no fixture reaches it";
+4. a trace disproves 2 or 3.
+Step 2 is a judgement about *why* the Java looks as it does, and it can be wrong
+even when the assembly reading is perfect - the expression may exist to compensate
+for something else. Step 3 is a claim about coverage, which is easy to misjudge.
+**The recording is the shipped ROM: a ROM-derived argument that a trace
+contradicts loses to the trace.**
+
+Sites in the held batch, all with ROM citations in their worktree diffs: S1
+`React_ChkHurt` early exit (and the finding that S2 `Touch_NoHurt` s2.asm:85455-85457
+and S3K `Touch_ChkHurt_Return` sonic3k.asm:21016-21018 are both `moveq #-1,d0 / rts`
+UNCONDITIONALLY, so this is not a per-game difference and needs no rules predicate -
+the earlier deferral's premise was wrong); `SmashObject`/collapsing-ledge fragment
+catch-up; `Sonic_HurtStop`. S2 ducking touch box (shipped tests
+`cmpi.b #$4D,mapping_frame` on ONE frame and never for Tails or Super Sonic, whose
+duck frames are $5B and $C1; the mapping_frame fidelity objection was discharged -
+`TraceBinder` compares it as a strict ERROR field and six committed S2 fixtures
+contain duck sequences at the exact ROM frames $4C/$4D); Tails' underwater roll
+deceleration; the Super Sonic palette residual. S3K Knuckles wall climb, the HCZ1
+underwater palette colour, and MGZ1_Resize's fall-through.
