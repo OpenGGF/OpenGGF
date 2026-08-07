@@ -64871,3 +64871,57 @@ matching a control sweep at the parent commit (zero regressions).
   the predecessor level segment, so `observeDplc`'s dedupe (the engine's model of
   `Tails_LastLoadedDPLC`, s2.asm:41659-41690) correctly suppresses submission for a
   mapping frame that does not match. This is a Tails animation divergence in EHZ/ARZ.
+
+## 2026-08-07 - FixBugs audit: 14 wrong-branch sites found across three games
+
+An audit of every ported site near a `FixBugs` conditional, prompted by the HTZ
+cloud-scroll discovery. HTZ was not an isolated mistake: **14 sites were found
+implementing the bug-FIXED branch**, of which 8 were corrected here.
+
+Recall the rule: all three disassemblies assemble with the conditional OFF
+(`FixBugs = 0` s1disasm/sonic.asm:20, skdisasm/sonic3k.asm:38; `fixBugs = 0`
+s2disasm/s2.asm:27, lower-case), so the un-fixed branch is what the ROMs ship and
+what the traces record.
+
+- **The scroll handlers were a family, as suspected.** `SwScrlDez` had the same
+  class of error as `SwScrlHtz`: it applied the boss screen-shake to the
+  background row search, where the shipped ROM runs the shake block AFTER the
+  buffer fill so `d3` does not exist yet and the DEZ background visibly distorts
+  during the final-boss explosion. Six `SwScrl*` classes were audited and
+  annotated in total.
+- Other corrections: the S2 seesaw launch clearing the spindash flag, the
+  Tails-specific rolling camera compensation, the Super Sonic palette wrap
+  comparison, S3K's ICZ Harmful Ice hurting a flashing character
+  (sonic3k.asm:189765-189775 - shipped tests only `Status_Invincible` and
+  `HurtCharacter` performs no invulnerability test of its own), and S1's
+  scattered-ring bottom-boundary delete (shipped `blo` is UNSIGNED, so a ring
+  pushed above the top of the level is deleted; the engine used a signed compare).
+- **One "fix" was wrong, and the trace caught it.** The SBZ3 wind-tunnel suction
+  trigger was changed on the reasoning that SBZ3 runs the same `DynWater` loop as
+  LZ (true - SBZ3 is internally LZ act 4) and so shares the `d0` clobber, and was
+  assessed as latent because "no committed fixture reaches that curve".
+  `TestS1Sbz3CompleteRunTraceReplay` does reach it: the change took that trace
+  green -> 16 errors, first error frame 3157 field `y`, which is exactly the
+  2px/frame suction curve. **The recording is the shipped ROM**, so a
+  ROM-derived argument that a trace contradicts loses to the trace - either the
+  previous code was not the fixed branch as claimed, or the model of the shipped
+  branch is wrong there. Reverted; the site needs re-examination with the SBZ3
+  fixture as evidence rather than the LZ sibling as an analogy.
+- All corrected sites are otherwise latent - no compared column observes them
+  today - so the suite is unchanged at 38 red. That is the expected result for
+  this class of fix and is not a claim that anything was repaired.
+- Every audited site now carries a comment naming the flag, the branch the engine
+  implements and why, and what the other branch would do, whichever way the
+  verdict went.
+
+Still to do (authorised, in progress): the bottom kill plane (LIVE - `Math.max(
+camera.getMaxY(), camera.getMaxYTarget())` is the flag=1 body verbatim, and death,
+routine and position are all compared columns), plus nine further sites previously
+deferred as "needs a model the engine lacks": S1's `React_ChkHurt` early exit,
+`SmashObject`/collapsing-ledge fragment allocation, and `Sonic_HurtStop`'s own
+unsigned kill test; S2's ducking touch box (`cmpi.b #$4D,mapping_frame` on ONE
+frame, and only for Sonic, versus the engine's whole-duck predicate applied to the
+sidekick too), Tails' underwater roll deceleration, and the Super Sonic palette
+residual; and S3K's Knuckles wall climb, where `sub_F828` clobbering d1 makes
+`mapping_frame + floor_distance` overflow the `$B7..$BC` loop and clamp back every
+4 frames - the documented "Knuckles resets to his first climbing frame" behaviour.

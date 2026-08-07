@@ -337,7 +337,16 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         Camera camera = cameraOrNull();
         if (camera != null) {
             int boundary = (camera.getMaxY() & 0xFFFF) + (camera.getHeight() & 0xFFFF);
-            if (getY() > boundary) {
+            // FLAG: FixBugs (docs/s1disasm/sonic.asm:20 -- 0 in the shipped ROM).
+            // ENGINE IMPLEMENTS: the shipped (FixBugs = 0) branch -- `cmp.w y_pos(a0),d0
+            // / blo` is an UNSIGNED word compare, so a scattered ring that rises above
+            // the top of the level (y_pos wraps to $Fxxx) also compares "below the
+            // boundary" and is deleted (docs/s1disasm/_incObj/25, 37 Rings.asm:346-355).
+            // OTHER BRANCH (FixBugs = 1) uses `blt` (signed), keeping such rings alive.
+            // S2's Obj37_CheckBoundary uses the same unsigned `blo` with no conditional
+            // at all (docs/s2disasm/s2.asm:25245-25248), so the unsigned form is correct
+            // for every game this shared class serves.
+            if ((getY() & 0xFFFF) > (boundary & 0xFFFF)) {
                 setDestroyed(true);
                 return;
             }

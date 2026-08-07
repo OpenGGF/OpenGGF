@@ -127,6 +127,13 @@ public interface PlayableEntity {
     boolean applyHurt(int sourceX);
     boolean applyHurt(int sourceX, boolean spikeHit);
     boolean applyHurt(int sourceX, DamageCause cause);
+    /**
+     * Applies hurt while ignoring the post-hit invulnerability (flashing) timer;
+     * debug invulnerability and the invincibility power-up still block it. Used by
+     * the hazards whose retail code omits the {@code invulnerability_timer} test
+     * (S1 spikes, S3K ICZ harmful ice).
+     */
+    boolean applyHurtIgnoringIFrames(int sourceX, DamageCause cause);
     boolean applyHurtOrDeath(int sourceX, boolean spikeHit, boolean hadRings);
     boolean applyHurtOrDeath(int sourceX, DamageCause cause, boolean hadRings);
     boolean applyCrushDeath();

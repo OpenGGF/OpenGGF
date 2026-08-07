@@ -461,8 +461,11 @@ public class SeesawBallObjectInstance extends AbstractObjectInstance
         // ROM: move.b #2,routine(a2) - set to airborne routine
         // Note: This engine manages routines differently; setAir(true) handles this
 
-        // ROM: clr.b spindash_flag(a2) (fixBugs version)
-        player.setSpindash(false);
+        // fixBugs (s2.asm:27 `fixBugs = 0`, block at s2.asm:47739-47744): the shipped
+        // branch does NOT clear spindash_flag here, so a player launched by the seesaw
+        // while charging a Spin Dash keeps the Spin Dash state in the air. fixBugs=1
+        // adds `clr.b spindash_flag(a2)`. The engine models the shipped branch: leave
+        // the spindash flag alone.
 
         // ROM: move.w #SndID_Spring,d0 / jmp (PlaySound).l
         try {

@@ -202,10 +202,13 @@ public class Sonic2SuperStateController extends SuperStateController {
         int frameOffset = paletteFrame;
         paletteFrame += 8;
 
-        // Wrap: when paletteFrame exceeds 0x78, reset to 0x30
-        // ROM (fixBugs): cmpi.w #$78 / bls.s (less or equal -> branch if <= 0x78)
-        // So wrap occurs when paletteFrame > 0x78
-        if (paletteFrame > CYCLE_WRAP_OFFSET) {
+        // fixBugs (s2.asm:27 `fixBugs = 0`, block at s2.asm:3210-3216): after
+        // `addq.w #8,(Palette_frame)` the shipped branch is `cmpi.w #$78 / blo.s`, so the
+        // cycle wraps as soon as the counter REACHES $78 and the $70 entry is the last
+        // one ever displayed -- the $78 frame of the Super Sonic cycle is skipped. The
+        // fixBugs=1 branch uses `bls.s`, which lets $78 display before wrapping. The
+        // engine models the shipped branch.
+        if (paletteFrame >= CYCLE_WRAP_OFFSET) {
             paletteFrame = FADE_COMPLETE_OFFSET;
         }
 
@@ -278,7 +281,17 @@ public class Sonic2SuperStateController extends SuperStateController {
             int frameOffset = paletteFrame;
             paletteFrame -= 8;
 
-            // ROM (fixBugs): bcc.s + (branch if no borrow)
+            // AUDIT (fixBugs, s2.asm:27 `fixBugs = 0`, block at s2.asm:3175-3181):
+            // `subq.w #8` from 0 borrows, and the SHIPPED branch then does
+            // `move.b #0,(Palette_frame).w` -- a BYTE write to the word address, i.e. to
+            // the high byte only, so $FFF8 becomes $00F8 and Palette_frame is left at
+            // $F8 rather than 0. fixBugs=1 uses `move.w #0`. The engine clears to 0
+            // (the fixBugs=1 result). Left as-is deliberately: Palette_frame is shared
+            // with the zone palette cyclers and is re-seeded to $28 on the next
+            // transformation (s2.asm:37530) and to $30 elsewhere (s2.asm:13036), so
+            // proving what the $F8 residual reaches needs the shared-counter model the
+            // engine does not have yet. Recorded as an audit finding.
+            // ROM: bcc.s + (branch if no borrow)
             // If paletteFrame went negative, stop cycling
             if (paletteFrame < 0) {
                 paletteFrame = 0;

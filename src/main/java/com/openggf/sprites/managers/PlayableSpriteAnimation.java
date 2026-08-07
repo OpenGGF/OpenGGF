@@ -731,6 +731,14 @@ public class PlayableSpriteAnimation {
     private int resolveSlopeOffset(SpriteAnimationScript activeScript, int configuredStride) {
         int d0 = sprite.getAngle() & 0xFF;
 
+        // FLAG: FixBugs (docs/s1disasm/sonic.asm:20 -- 0 in the shipped S1 ROM).
+        // ENGINE IMPLEMENTS (for S1): the shipped (FixBugs = 0) branch -- no
+        // off-by-one-radian adjustment, so a descending slope picks the walk/run
+        // sub-frame one radian late (docs/s1disasm/_incObj/01 Sonic.asm:2261-2267
+        // SAnim_WalkRun). OTHER BRANCH (FixBugs = 1) subtracts 1 from positive
+        // angles, matching S2/S3K. S2/S3K ship that subtraction unconditionally, so
+        // it is selected by ScriptedVelocityAnimationProfile.isAnglePreAdjust()
+        // rather than by a game-name branch.
         // S2 only: subtract 1 from positive non-zero angles (s2.asm:38078-38080)
         ScriptedVelocityAnimationProfile velocityProfile = resolveVelocityProfile();
         if (velocityProfile != null && velocityProfile.isAnglePreAdjust()) {

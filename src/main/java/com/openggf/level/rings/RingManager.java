@@ -259,6 +259,12 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         int playerYRadius = Math.max(1, player.getYRadius() - 3);
         int playerTop = player.getCentreY() - playerYRadius;
         int playerHeight = playerYRadius * 2;
+        // AUDIT (fixBugs, s2.asm:27 `fixBugs = 0`; block at s2.asm:31951-31958 in
+        // Touch_Rings): this semantic predicate is the fixBugs=1 branch,
+        // `cmpi.b #AniIDSonAni_Duck,anim(a0)`. The SHIPPED branch tests
+        // `cmpi.b #$4D,mapping_frame(a0)`, so the shifted ring box applies on exactly one
+        // mapping frame and only to Sonic. Left on the fixBugs=1 branch pending a
+        // ROM-accurate mapping_frame; see the accompanying audit finding.
         if (player.getCrouching()) {
             playerTop += 12;
             playerHeight = 20;

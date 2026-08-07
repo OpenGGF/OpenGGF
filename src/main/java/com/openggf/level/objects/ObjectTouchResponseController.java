@@ -256,6 +256,16 @@ final class ObjectTouchResponseController {
         int playerY = player.getCentreY() - baseYRadius;
         int playerHeight = baseYRadius * 2;
         boolean crouching = player.getCrouching();
+        // AUDIT (fixBugs, s2.asm:27 `fixBugs = 0`; blocks at s2.asm:85064-85071
+        // TouchResponse and s2.asm:85207-85216 Touch_Boss): this semantic "is crouching"
+        // predicate is the fixBugs=1 branch, `cmpi.b #AniIDSonAni_Duck,anim(a0)`. The
+        // SHIPPED branch tests `cmpi.b #$4D,mapping_frame(a0)` — a single mapping frame,
+        // the last frame of Sonic's duck animation, left over from Sonic 1 where ducking
+        // was one frame. On the shipped ROM the shifted 20px-tall touch box therefore
+        // applies only on that one frame and only to Sonic, since $4D is not Tails'
+        // ducking frame. Deliberately left on the fixBugs=1 branch for now: correcting it
+        // requires a ROM-accurate mapping_frame for both characters in all three games.
+        // See the audit note in the accompanying finding.
         if (crouching) {
             playerY += 12;
             playerHeight = 20;

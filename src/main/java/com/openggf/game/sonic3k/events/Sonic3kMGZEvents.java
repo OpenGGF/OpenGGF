@@ -464,6 +464,19 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         update(act, frameCounter, false);
     }
 
+    /*
+     * FixBugs audit (docs/skdisasm/sonic3k.asm:38, assembled as 0 in the shipped
+     * ROM). MGZ1_Resize (sonic3k.asm:39336-39342) is an EMPTY label that falls
+     * straight through into MGZ2_Resize; the `rts` that would make Act 1 a no-op
+     * exists only under FixBugs=1 ("Bug: MGZ1 uses a dynamic resize routine meant
+     * for MGZ2. This causes the act 2 boss to spawn in out-of-bounds act 1").
+     * This dispatcher gates updateAct2BossArena() to act == 1, i.e. it implements
+     * the FIXED branch. Matching the shipped ROM would mean running the MGZ2
+     * boss-arena resize state machine in Act 1 too, which can lock the Act 1
+     * camera and allocate Obj_MGZEndBoss out of bounds. Left as-is deliberately:
+     * adopting it changes Act 1 camera bounds and object allocation on the active
+     * release route and needs its own measured change.
+     */
     private void update(int act, int frameCounter, boolean includeBossTransitionObject) {
         if (act == 0) {
             updateAct1Bg();

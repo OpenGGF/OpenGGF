@@ -4286,6 +4286,16 @@ public final class ObjectSolidContactController {
             }
 
 
+            // fixBugs (s2.asm:27 `fixBugs = 0`): the upward-velocity rejection below is
+            // unconditional on the shipped ROM -- `tst.w y_vel(a1) / bmi.s ..._Miss` in
+            // SolidObject_Landed (s2.asm:35615-35616) and the same test in
+            // PlatformObject11_cont, PlatformObject_cont, SlopedPlatform_cont and
+            // PlatformObject2_cont (s2.asm:35920, 35951, 36056, 36095). The fixBugs=1
+            // branch (s2.asm:35599-35619 and the mirrors at 35909-35924, 35935-35950,
+            // 36045-36060, 36084-36099) skips the velocity test entirely when the player
+            // is on the ground with an angle inside [-$10,$10], so a shallow slope meeting
+            // a wall can no longer let HTZ's rising floor pass through the player. The
+            // engine models the shipped branch: no angle bypass anywhere in this family.
             if (topSolidOnly && player.getYSpeed() < 0) {
                 return null;
             }

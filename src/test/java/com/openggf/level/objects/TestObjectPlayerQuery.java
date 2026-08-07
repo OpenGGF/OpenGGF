@@ -288,6 +288,7 @@ class TestObjectPlayerQuery {
         @Override public boolean applyHurt(int sourceX) { return false; }
         @Override public boolean applyHurt(int sourceX, boolean spikeHit) { return false; }
         @Override public boolean applyHurt(int sourceX, DamageCause cause) { return false; }
+        @Override public boolean applyHurtIgnoringIFrames(int sourceX, DamageCause cause) { return false; }
         @Override public boolean applyHurtOrDeath(int sourceX, boolean spikeHit, boolean hadRings) { return false; }
         @Override public boolean applyHurtOrDeath(int sourceX, DamageCause cause, boolean hadRings) { return false; }
         @Override public boolean applyCrushDeath() { return false; }

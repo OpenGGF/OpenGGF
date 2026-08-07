@@ -27,6 +27,12 @@ import static com.openggf.level.scroll.M68KMath.*;
  * 18 lines: gradient 0.50 -> 0.75 speed
  * 45 lines: gradient 0.75 -> 1.00 speed
  * Total: 222 lines (last 2 lines intentionally unwritten - original bug)
+ *
+ * fixBugs (s2.asm:27 `fixBugs = 0`, block at s2.asm:15405-15412): the engine
+ * implements the SHIPPED (fixBugs=0) branch — only 222 of the 224 scanlines get an
+ * H-scroll value, so the bottom two lines keep whatever was left in Horiz_Scroll_Buf.
+ * The fixBugs=1 branch appends the four `move.w` writes that Knuckles in Sonic 2 added
+ * to fill lines 222 and 223. See the partial arraycopy at the end of update().
  */
 public class SwScrlEhz extends AbstractZoneScrollHandler {
 

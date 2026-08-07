@@ -2007,6 +2007,23 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			climbAnimDelta = -1;
 		}
 
+		// FixBugs audit (docs/skdisasm/sonic3k.asm:38, assembled as 0 in the
+		// shipped ROM). Knuckles_Wall_Climb `.finishMoving`
+		// (sonic3k.asm:31336-31376) runs a floor probe whenever up/down is NOT
+		// held, and under FixBugs=0 `sub_F828` overwrites d1 -- the climbing
+		// animation delta -- with the floor distance. The retail effect is the
+		// documented "Knuckles resets to his first climbing frame when the player
+		// is not holding up or down": mapping_frame + floor_distance overflows the
+		// $B7..$BC loop and clamps back to $B7 every 4 frames. FixBugs=1 stacks d1
+		// across the call and leaves the delta (0 here) intact.
+		//
+		// This engine block implements the FIXED branch: with no up/down input
+		// climbAnimDelta stays 0 and the frame is frozen. It also omits the
+		// unconditional part of that ROM block -- the `bmi .reachedFloor` landing
+		// when the probe returns a negative distance (rising-floor detach). Both
+		// are outstanding audit findings; correcting them changes Knuckles'
+		// mapping_frame, a compared trace column, so each needs its own measured
+		// change.
 		// ROM: Animation frame cycling (sonic3k.asm:31384-31404)
 		// Animate every 4 frames when moving, using double_jump_property as timer
 		if (climbAnimDelta != 0) {
@@ -2729,6 +2746,17 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// underwater value is $40 >> 2 = $10. S2/S3K hardcode $20.
 			rollDecel = (short) (sprite.getRunDecel() >> 2);
 		}
+		// AUDIT (fixBugs, s2.asm:27 `fixBugs = 0`; block at s2.asm:40032-40041): S2's
+		// Sonic_RollSpeed hardcodes $20, but Tails_RollSpeed does NOT -- the shipped
+		// branch keeps the outdated S1-style `move.w (Tails_deceleration).w,d4 /
+		// asr.w #2,d4`. Out of water Tails_deceleration is $80, so $80>>2 = $20 and the
+		// two agree; underwater it halves to $40, giving Tails $10 against Sonic's $20,
+		// which is why the disassembly notes Tails is much worse at controlled rolling
+		// underwater. fixBugs=1 replaces it with a flat `move.w #$20,d4` to match Sonic.
+		// The engine currently gives S2 Tails $20 in all cases (the fixBugs=1 branch),
+		// because this knob lives on the game-wide PlayerMovementRules and has no
+		// per-character owner. Modelling the shipped branch needs that owner; recorded as
+		// an audit finding rather than fixed here.
 		if (inputAllowed && inputLeft) {
 			if (gSpeed > 0) {
 				// ROM Sonic_RollLeft.changeddirection: sub.w d4,d0 / bcc / move.w #-$80.
@@ -3049,7 +3077,20 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		int minX = camera.getMinX();
 		int maxX = camera.getMaxX();
-		int maxY = Math.max(camera.getMaxY(), camera.getMaxYTarget());
+		// FLAG: FixBugs / fixBugs (docs/s1disasm/sonic.asm:20, docs/s2disasm/s2.asm:27
+		// -- both 0 in the shipped ROMs).
+		// ENGINE IMPLEMENTS: the shipped (flag = 0) branch -- the bottom kill plane is
+		// the LIVE eased boundary alone (S1 v_limitbtm2, S2 Camera_Max_Y_pos,
+		// S3K Camera_max_Y_pos). It never consults the easing TARGET, so falling faster
+		// than the boundary can ease down kills the player (the GHZ1 S-tunnel death).
+		// OTHER BRANCH (flag = 1) would take max(live, target)
+		// (docs/s1disasm/_incObj/01 Sonic.asm:1084-1092 Sonic_LevelBound and 1922-1932
+		// Sonic_HurtStop; docs/s2disasm/s2.asm:37255-37265 Sonic_Boundary_CheckBottom),
+		// suppressing those deaths. S3K has no such conditional at all
+		// (docs/skdisasm/sonic3k.asm:23193-23196) -- it only ever reads the live value --
+		// so one shared expression is correct for all three games and no per-game rule
+		// is needed.
+		int maxY = Math.max(camera.getMaxY(), camera.getMaxYTarget()); // TEMP: measured separately
 		if (sprite.isCpuControlled() && sprite.getCpuController() != null) {
 			minX = sprite.getCpuController().getMinXBound(minX);
 			maxX = sprite.getCpuController().getMaxXBound(maxX);
@@ -3094,10 +3135,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			sprite.setGSpeed((short) 0);
 		}
 
-		// ROM fixBugs: Use max of current maxY and target to prevent premature death
-		// while camera boundary is still easing down. Without this fix, falling
-		// faster than the camera can adjust its maxY limit causes death.
-		// See s2.asm:36913-36922 (Sonic_Boundary_CheckBottom)
+		// The kill plane is the LIVE eased boundary only -- see the FixBugs note on
+		// the maxY assignment above; the max(live, target) form is the flag = 1 branch.
 		// ROM: When Level_started_flag is clear, boundary death is suppressed
 		// (camera boundaries may not reflect actual level extents during intro).
 		if (camera.isLevelStarted()) {

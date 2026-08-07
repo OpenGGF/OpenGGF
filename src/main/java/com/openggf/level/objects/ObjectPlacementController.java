@@ -1374,6 +1374,16 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         if (remembered.get(index) && !stayActive.get(index)) {
             return true;
         }
+        // FLAG: FixBugs (docs/s1disasm/sonic.asm:20 -- 0 in the shipped ROM).
+        // ENGINE IMPLEMENTS: the shipped (FixBugs = 0) branch of OPL_SpawnObj --
+        // `bset #7,2(a2,d2.w)` TESTS AND SETS in one instruction, so a remembered
+        // entry is marked the first time it is merely scanned, not when it is
+        // actually destroyed. That is the "remember sprite" bug: such an entry
+        // never reloads once the cursor has passed it. The paired FixBugs = 1
+        // corrections (btst-only here, `bset` moved into OPL_MakeItem, and a
+        // `subq.b #1,(a2)` counter roll-back when the scan loop overshoots) are
+        // deliberately NOT implemented -- see docs/s1disasm/_inc/ObjPosLoad.asm:
+        // 203-209, 260-266, 287-291.
         // ROM: bset #7,2(a2,d2.w) — test AND set bit 7
         boolean wasSet = (objState[counter & 0xFF] & 0x80) != 0;
         objState[counter & 0xFF] |= 0x80; // Side effect: always sets bit

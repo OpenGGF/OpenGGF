@@ -349,9 +349,19 @@ public final class CnzBalloonInstance extends AbstractObjectInstance
             animationTimer = POP_FRAME_DELAY;
             frameOffset = POP_FRAME_SEQUENCE[popAnimationIndex++];
         } else {
-            // ROM Anim - Balloon.asm pop sequences end with $FB. The S3K animator
-            // ($FB code) increments routine and the next frame moves x_pos to
-            // $7F00, where Sprite_CheckDeleteTouch3 (sonic3k.asm:37369) calls
+            // ROM Anim - Balloon.asm pop sequences end with $FB, and Animate_Sprite's
+            // $FB handler writes x_pos = $7F00 itself (sonic3k.asm:36223-36227).
+            //
+            // FixBugs audit (docs/skdisasm/sonic3k.asm:38, assembled as 0): the
+            // follow-up test at loc_31776 (sonic3k.asm:66786-66793) reads
+            // `tst.b routine` — absolute address $000024, a vector-table byte that
+            // is $00 in the retail ROM — instead of `tst.b routine(a0)`. Both
+            // branches are behaviourally identical here: the balloon animation never
+            // uses code $FC, so routine(a0) also stays 0 and neither branch takes the
+            // second x_pos write. Audited, no divergence; the engine's $FB-driven
+            // offscreen move is the shipped outcome.
+            //
+            // Sprite_CheckDeleteTouch3 (sonic3k.asm:37369) then calls
             // Delete_Current_Sprite only when the normal offscreen test later
             // decides the balloon is past the camera margin.
             movedOffscreen = true;

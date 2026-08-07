@@ -10,7 +10,6 @@ import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.snapshot.CameraSnapshot;
 import com.openggf.sprites.Sprite;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-import com.openggf.sprites.playable.Tails;
 
 public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	/** Receives invocation-level camera lifecycle events without replacing camera state. */
@@ -230,15 +229,20 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 
 		short yBeforeVerticalScroll = y;
 
-		// ROM: s2.asm:18121-18132 - Rolling height compensation
-		// When rolling, Sonic's center shifts down by ~5px due to height change.
-		// Subtract 5 from the Y delta to prevent camera jolt.
-		// Tails is 4 pixels shorter, so only subtract 1 for Tails.
+		// ROM: ScrollVerti rolling height compensation. When the player is rolling
+		// their height shrinks, so the Y delta is reduced to stop the camera jolting.
+		//
+		// fixBugs (s2.asm:27 `fixBugs = 0`, block at s2.asm:18156-18165): the engine
+		// implements the SHIPPED (fixBugs=0) branch — a flat `subq.w #5,d0` for whoever
+		// the camera is focused on, character-independent. The fixBugs=1 branch adds
+		// `cmpi.b #ObjID_Tails,id(a0) / addq.w #4,d0`, i.e. only 1 for Tails, because
+		// Tails is four pixels shorter and the flat 5 makes his camera jolt slightly on
+		// entering and leaving a roll. The disassembly notes that not even S3K fixed
+		// this; S1 (`_inc/ScrollHoriz & ScrollVertical.asm`, subq.w
+		// #sonic_height-sonic_roll_height) has no Tails at all, so the flat subtraction
+		// is correct for all three games.
 		if (focusedSprite.getRolling()) {
 			focusedSpriteRealY -= 5;
-			if (focusedSprite instanceof Tails) {
-				focusedSpriteRealY += 4; // Net: subtract 1 for Tails
-			}
 		}
 
 		// Vertical scroll logic (ROM: ScrollVerti)
@@ -488,6 +492,15 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		// running right the camera only ever consults v_limitright2, so the raised
 		// left boundary never yanks the camera forward. A symmetric clamp here
 		// clamped the camera UP to the new minX a few frames early (S1 LZ1 f12463).
+		// FLAG: FixBugs (docs/s1disasm/sonic.asm:20 -- 0 in the shipped ROM).
+		// MoveScreenHoriz's two deadzone tests are `bcs`/`bcc` (UNSIGNED) under
+		// FixBugs = 0 and `blt`/`bge` (SIGNED) under FixBugs = 1
+		// (docs/s1disasm/_inc/ScrollHoriz & ScrollVertical.asm:38-52). The engine's
+		// signed int compares below agree with BOTH branches for every reachable
+		// value: the first subtraction cannot borrow unless the result is negative,
+		// and the second test only runs once the first proved the value non-negative,
+		// so the "horizontal wrap" the fix targets is unreachable at S1 level extents.
+		// No behavioural choice is being made here.
 		int deadzoneLeft = DeadzoneGeometry.leftEdge(width, deadzoneMode);
 		int deadzoneRight = DeadzoneGeometry.rightEdge(width);
 		if (focusedSpriteRealX < deadzoneLeft) {
