@@ -353,8 +353,12 @@ public class Sonic1BallHogBadnikInstance extends AbstractObjectInstance
 
     @Override
     public boolean isPersistent() {
-        // RememberState: persists while on screen
-        return !destroyed && isOnScreenX(160);
+        // BHog_Display ends at RememberState, whose out_of_range macro deletes the
+        // object once its chunk-aligned X leaves the [camera-128, camera-128+0x280]
+        // window (docs/s1disasm/_incObj/1E, 20 Badnik - Ball Hog and Cannonball.asm:61
+        // -> _incObj/sub RememberState.asm:9 -> Macros.asm:278-295). The symmetric
+        // isOnScreenX(160) gate freed the SST slot too early on the right.
+        return !destroyed && isInRange();
     }
 
     @Override

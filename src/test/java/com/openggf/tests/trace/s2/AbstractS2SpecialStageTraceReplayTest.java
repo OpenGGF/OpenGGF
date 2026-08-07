@@ -4,6 +4,7 @@ import com.openggf.data.Rom;
 import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageComparisonState;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageComparisonState.PlayerState;
+import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageIntro;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.TestEnvironment;
@@ -288,6 +289,8 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
                 .mapToInt(SpecialStageTraceData.ControlStateTransition::frame)
                 .findFirst()
                 .orElse(Integer.MAX_VALUE);
+        int entryFrame = specialStageEntryFrame(trace);
+        int stageStateVisibleFrame = stageStateVisibleFrame(trace, entryFrame);
 
         for (int f = 0; f < compareEnd; f++) {
             SpecialStageTraceFrame tf = trace.getFrame(f);
@@ -300,7 +303,22 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
                             new LinkedHashMap<>(), dynamicArtCompared, dynamicArt);
                     continue;
                 }
-                harness.stepFrame(f);
+                if (f >= entryFrame) {
+                    harness.stepFrame(f);
+                } else {
+                    // Observed before the ROM's special-stage entry ran: no
+                    // special-stage code executed on this V-int. See
+                    // specialStageEntryFrame.
+                    harness.stepIdleRow(false);
+                }
+                if (f < stageStateVisibleFrame) {
+                    // Special-stage RAM does not exist yet. See
+                    // stageStateVisibleFrame.
+                    addDynamicArtComparison(
+                            comparisons, trace, expectedDynamicArtRows, harness, f,
+                            new LinkedHashMap<>(), dynamicArtCompared, dynamicArt);
+                    continue;
+                }
             } else {
                 harness.stepPasses(
                         completedPasses,
@@ -612,6 +630,82 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
     }
 
     /**
+     * The first observation on which the ROM ran special-stage code.
+     *
+     * <p>The special-stage entry runs {@code Pal_FadeToWhite} and only then
+     * masks interrupts to set up the VDP, DMA-fill VRAM, clear the object and
+     * shared RAM, decompress the stage and run the entry PLC (s2.asm:6543-6625).
+     * That whole initialization span blocks, so the recorder reads it as one
+     * run of lag observations, and the executed V-ints immediately before it
+     * are the fade's -- exactly
+     * {@link Sonic2SpecialStageIntro#PRE_ROLL_FRAMES} of them, because
+     * {@code Pal_FadeToWhite} loads {@code d4=$15} and uses {@code dbf}
+     * (s2.asm:3568-3578).
+     *
+     * <p>Any observation earlier than that window belongs to the game mode the
+     * entry code was called from and executes no special-stage code, so replay
+     * must not tick the special-stage runtime for it. Whether such an
+     * observation is present is a property of where the capture begins, not of
+     * the ROM: a standalone capture opens on the frame the entry code was
+     * reached, while a run segment leaves that frame with the preceding
+     * segment.
+     */
+    static int specialStageEntryFrame(SpecialStageTraceData trace) {
+        int initializationStart = -1;
+        for (int f = 0; f < trace.frameCount(); f++) {
+            if (trace.getFrame(f).lag()) {
+                initializationStart = f;
+                break;
+            }
+        }
+        if (initializationStart < 0) {
+            throw new IllegalStateException(
+                    "special-stage trace has no blocking initialization observation");
+        }
+        int entryFrame =
+                initializationStart - Sonic2SpecialStageIntro.PRE_ROLL_FRAMES;
+        if (entryFrame < 0) {
+            throw new IllegalStateException(
+                    "special-stage trace opens inside Pal_FadeToWhite: blocking"
+                            + " initialization begins at " + initializationStart);
+        }
+        return entryFrame;
+    }
+
+    /**
+     * The first observation whose special-stage columns actually hold
+     * special-stage state.
+     *
+     * <p>The entry code masks interrupts before it clears {@code Object_RAM},
+     * {@code SS_Shared_RAM} and the sprite table and then loads the stage
+     * (s2.asm:6588-6625). Until that initialization completes, the recorder's
+     * special-stage addresses still hold whatever the previous game mode left
+     * there — a run segment captured out of a level opens with that level's
+     * Obj01 bytes sitting in the player slots. Those observations are stepped
+     * for their pacing, but comparing engine special-stage state against them
+     * compares against another mode's RAM.
+     *
+     * <p>The whole initialization runs with interrupts masked or blocking, so
+     * the recorder reads it as one run of lag observations: state becomes
+     * visible on the first executed V-int after it, which is the ROM's first
+     * {@code SSTrack_drawing_index} wait (s2.asm:6626-6631).
+     */
+    private static int stageStateVisibleFrame(SpecialStageTraceData trace, int entryFrame) {
+        int f = entryFrame;
+        while (f < trace.frameCount() && !trace.getFrame(f).lag()) {
+            f++;
+        }
+        while (f < trace.frameCount() && trace.getFrame(f).lag()) {
+            f++;
+        }
+        if (f >= trace.frameCount()) {
+            throw new IllegalStateException(
+                    "special-stage trace never leaves its initialization block");
+        }
+        return f;
+    }
+
+    /**
      * Selects only observations where the ROM cell is known to have been
      * refreshed. Clearing {@code SS_TriggerRingsToGo} enables Obj5A's
      * calculation, so the first completed object pass strictly after that
@@ -624,7 +718,19 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
         List<TriggerSample> triggerSamples = new ArrayList<>();
         List<Integer> checkRingsFlags = new ArrayList<>();
         List<Integer> finishObservedFrames = new ArrayList<>();
+        // SS_TriggerRingsToGo and SS_Check_Rings_flag both live in
+        // SS_Shared_RAM, which the entry code clears only after it masks
+        // interrupts. A sample taken before that reports the byte the previous
+        // game mode left behind rather than this stage's cell, so those
+        // observations read as the cleared value the ROM is about to write.
+        // See stageStateVisibleFrame.
+        int stageStateVisibleFrame =
+                stageStateVisibleFrame(trace, specialStageEntryFrame(trace));
         for (int frame = 0; frame < trace.frameCount(); frame++) {
+            if (frame < stageStateVisibleFrame) {
+                checkRingsFlags.add(0);
+                continue;
+            }
             checkRingsFlags.add(trace.getFrame(frame).checkRingsFlag());
 
             for (TraceEvent event : trace.getEventsForFrame(frame)) {

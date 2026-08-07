@@ -2408,7 +2408,14 @@ abstract class AbstractRunChainTest {
      * fails the checkpoint, and is ejected without the emerald. That is a
      * fixture-data limitation, not an engine defect: nothing the comparison-only
      * chain may do (it must not hydrate engine state from the trace) can recover the
-     * unrecorded V-int sampling. The recorded {@code emeralds_after} therefore
+     * unrecorded V-int sampling. It is also not the ONLY missing piece: even with a
+     * re-recorded pass stream nothing on this path would consume it — this class's
+     * {@link #uncomparedInteriorStep} steps {@code bk2FrameOffset + localRow}
+     * directly, and neither {@code TraceRunSpecialStageRows} nor
+     * {@code TraceRunSpecialStageRowDriver} references {@code run_objects_end} or
+     * {@code SpecialStageRunObjectsPassBinder}. Closing the S2 half-pipe lane needs
+     * the re-record AND a pass-paced interior stepper. The recorded
+     * {@code emeralds_after} therefore
      * stays a diagnostic for an advance-uncompared special stage. The always-safe
      * carry-overs — the ROM's on-return position restore and ring zero-out, which
      * happen whether the stage was won or lost — remain asserted.

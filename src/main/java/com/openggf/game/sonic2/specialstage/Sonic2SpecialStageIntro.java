@@ -36,11 +36,16 @@ public class Sonic2SpecialStageIntro {
     private static final Logger LOGGER = Logger.getLogger(Sonic2SpecialStageIntro.class.getName());
 
     /**
-     * One mode-entry observation plus the 22 {@code Pal_FadeToWhite} VInts
-     * before the ROM exposes initialized special-stage state (s2.asm:3570-3582,
-     * 6546-6547).
+     * The {@code Pal_FadeToWhite} window the special-stage entry code runs
+     * before it masks interrupts and initializes the stage. The routine loads
+     * {@code d4=$15} and uses {@code dbf}, so it executes exactly 22 V-ints
+     * (s2.asm:3568-3578, called from the special-stage entry at s2.asm:6546).
+     * Everything after it -- the VDP setup, DMA fills, RAM clears,
+     * {@code ssLdComprsdData} and the entry PLC -- runs with interrupts masked
+     * or blocking, so no later V-int exposes pre-initialization special-stage
+     * state.
      */
-    public static final int PRE_ROLL_FRAMES = 23;
+    public static final int PRE_ROLL_FRAMES = 22;
 
     /**
      * ROM {@code Pal_FadeFromWhite} loads {@code d4=$15} and uses {@code dbf},

@@ -261,7 +261,24 @@ public class Sonic1MotobugBadnikInstance extends AbstractBadnikInstance implemen
 
     @Override
     public boolean isPersistent() {
-        return !isDestroyed() && isOnScreenX(160);
+        if (isDestroyed()) {
+            return false;
+        }
+        // Moto_Main (routine 0) ends in a bare `rts`: while the Motobug is still
+        // falling to find its floor it never reaches RememberState, so the ROM
+        // cannot delete it for being off-screen and its SST slot stays occupied
+        // (docs/s1disasm/_incObj/40 Badnik - Moto Bug.asm:29-52).
+        if (!initialized) {
+            return true;
+        }
+        // Moto_Action (routine 2) falls through into RememberState, whose
+        // out_of_range macro deletes the object once its chunk-aligned X leaves
+        // the [camera-128, camera-128 + 0x280] window
+        // (docs/s1disasm/_incObj/40 Badnik - Moto Bug.asm:72 ->
+        // _incObj/sub RememberState.asm:9 -> Macros.asm:278-295). The prior
+        // symmetric isOnScreenX(160) gate both freed the slot ~160px too early
+        // on the right and held it ~32px too long on the left.
+        return isInRangeAt(getX());
     }
 
     @Override

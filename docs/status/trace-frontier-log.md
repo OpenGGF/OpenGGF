@@ -64641,3 +64641,94 @@ Sweep: `-Ptrace-replay -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alph
 Red count 12 -> 19, entirely from the seven new S2 special-stage classes; SBZ1
 closed. The remaining pre-existing 11 are unchanged in error count and
 first-error frame/field.
+
+## 2026-08-07 - The S2 special-stage blocker was itself a fitted constant
+
+- **`Sonic2SpecialStageIntro.PRE_ROLL_FRAMES` was 23; the ROM says 22.** It was
+  documented as "one mode-entry observation plus the 22 `Pal_FadeToWhite` VInts",
+  and that "+1" was measured off the standalone fixture - the only S2
+  special-stage capture whose row 0 predates the ROM's special-stage entry.
+  `Pal_FadeToWhite` loads `d4=$15` and uses `dbf`, so it executes exactly 22
+  V-ints (s2.asm:3568-3578, called at s2.asm:6546); everything after it runs with
+  interrupts masked or blocking, so no later V-int exposes pre-init state. Every
+  run-segment fixture supplies exactly 22 leading executed V-ints (verified across
+  all 9 committed segments in two independent captures); only the standalone has
+  23. The engine therefore ran one pre-start tick short and reached the Obj5F
+  WAIT2 boundary with `recurringMainPassPending == false`.
+  **This is a textbook hard-rule-3 violation found in the wild**: green for the
+  one fixture it was measured against, wrong for every other recording.
+- Two supporting changes, both structural rather than numeric:
+  `specialStageEntryFrame` defines the fade window as the 22 executed V-ints
+  immediately before the trace's first blocking observation, which derives the
+  right answer for a standalone capture and a run segment alike with no fixture,
+  route or frame keying; and `stageStateVisibleFrame` stops comparing SS columns
+  on rows before the initialization block ends, because the entry code clears
+  `Object_RAM` / `SS_Shared_RAM` only after masking interrupts
+  (s2.asm:6588-6625). Both are confirmed in the fixtures: ss rows 0-20 still carry
+  EHZ's Obj01 (`sonic_present=1, routine=2`), and ss_6 row 0 still carries special
+  stage 5's `check_rings_flag=0x38`.
+- All seven S2 stages now reach real field comparison (0 of 7 did before: six
+  threw at the intro boundary, one in rings-to-go artifact discovery). ss_3
+  reaches frame 916 and ss_4 frame 1652.
+
+- **Seventh SST occupancy instance, generalised across a family.** S1 Moto Bug
+  used the symmetric visible-X gate `isOnScreenX(160)` ([cam-160, cam+480]) where
+  `Moto_Action` falls through into `RememberState`, whose `out_of_range` macro
+  deletes on the chunk-aligned window [cam-128, cam-128+0x280] (up to cam+639).
+  `Moto_Main` (routine 0) also ends in a bare `rts` and never reaches
+  `RememberState`, so a still-falling Moto Bug cannot be range-deleted at all.
+  Both divergence directions were observed on ghz1_completerun: at frame 333 the
+  engine held an object $40 the ROM had deleted; at frames 1848/1872 the mirror.
+  BallHog(1E), BuzzBomber(22), Crabmeat(1F), Chopper(2B), Newtron(42), Roller(43)
+  and Yadrin(50) all likewise terminate in `RememberState` and were fixed with the
+  same exact-macro helper. `TestS1Ghz1CompleteRunTraceReplay` 2 errors -> 1.
+
+- **Run chains diagnosed, deliberately not fixed.** The GHZ maze `run_tail`
+  residual is TWO independent causes. The +12 `edge_ordinal` / +6 `transfer_id`
+  skew is a Sonic ANIMATION divergence in ghz1 at local frame 2083: the two
+  transfer streams are edge-for-edge identical through transfer 862, then the
+  recorded run leaves the roll (`player_rolling` 1->0, `player_animation_id`
+  02->00) after two airborne frames and steps down the walk DPLC set while the
+  engine stays on the roll set, emitting 17 transfers where the ROM emits 9. The
+  streams re-align immediately afterwards and stay aligned for ~1500 further
+  transfers, so the entire skew is banked in that one window. EHZ half-pipe still
+  needs `AbstractRunChainTest`'s uncompared-interior stepper to consume the pass
+  binder rather than stepping `bk2FrameOffset + localRow` directly.
+
+### OPEN DECISION - inherited dynamic-art ledger on isolated segment replays
+
+Five of the seven S2 special-stage classes now fail at frame 0 with
+`dynamic_art.outstanding_transfer_ids expected=[0] actual=[]`. The `[0]` is a
+segment-relative ordinal, not transfer id 0; the recorded row is
+`{"frame": 0, "edges": [], "outstanding_transfer_ids": [3283]}`.
+
+The correlation with the manifest is exact: ss/ss_2/ss_5/ss_6/ss_7 declare
+`dynamic_art_initial_ledger_descriptors` [3283]/[8984]/[31522]/[49013]/[61078] and
+all five fail at frame 0; ss_3 and ss_4 declare `[]` and are the two that reach
+gameplay. Those transfers were submitted by the PRECEDING level segment and were
+still in flight when the special stage began - these segments are windows into
+one continuous 260k-frame run, so their row 0 is mid-movie, not a boot. An
+isolated replay starts with an empty queue and cannot have them outstanding.
+**This is a scope mismatch, not an engine defect.**
+
+Options, with the rule-4 analysis:
+- **A. Replay the preceding segment first.** Faithful; the engine submits the
+  transfer naturally. This is what the chain tests do. Cost: each stage becomes a
+  multi-segment replay and couples seven tests to unrelated level code.
+- **B. Hydrate the opening ledger from the manifest. REJECTED.** Hard rule 4
+  permits recorded data only to DELAY readiness of matching, prepared,
+  production-submitted ROM-backed work. Injecting a transfer the engine never
+  submitted creates work the engine did not create - outside the exception however
+  well cited.
+- **C. Scope the comparison to what an isolated replay can prove.** Exclude
+  exactly the manifest-declared inherited ids, only until each drains, then
+  compare normally. Comparison-side only; no engine state touched. Must be narrow
+  and loud (fail if an excluded id outlives its declared completion).
+- **D. Re-record standalone captures per stage** so row 0 genuinely has an empty
+  ledger. Clean semantics; needs seven new BK2s reaching stages 2-7, which the
+  existing movie only reaches mid-run.
+- **E. Leave red with this diagnosis.**
+
+C is an exclusion, which is the category this project otherwise refuses, so it
+needs an explicit owner decision rather than being adopted quietly. Recorded here
+undecided.

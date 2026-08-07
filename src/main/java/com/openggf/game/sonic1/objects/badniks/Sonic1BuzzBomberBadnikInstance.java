@@ -239,9 +239,11 @@ public class Sonic1BuzzBomberBadnikInstance extends AbstractBadnikInstance imple
      */
     @Override
     public boolean isPersistent() {
-        // ROM MarkObjGone: ~128px left margin, ~64px right margin.
-        // We use 160px for a symmetric, generous margin.
-        return !isDestroyed() && isOnScreenX(160);
+        // Buzz_Display ends at RememberState, whose out_of_range macro deletes the
+        // object once its chunk-aligned X leaves the [camera-128, camera-128+0x280]
+        // window (docs/s1disasm/_incObj/22, 23 Badnik - Buzz Bomber and Missile.asm:38
+        // -> _incObj/sub RememberState.asm:9 -> Macros.asm:278-295).
+        return !isDestroyed() && isInRange();
     }
 
     @Override

@@ -107,7 +107,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * reloads land at interior rows 1325/1849/3482 while the engine hits checkpoint 1 at
  * row 2029.
  *
- * <p><b>This is not fixable in the harness.</b> Deriving a pass cadence by measuring
+ * <p><b>A re-record alone is necessary but NOT sufficient.</b> Nothing on the chain
+ * path consumes a pass log today: {@link #uncomparedInteriorStep} steps
+ * {@code movie.getFrame(bk2FrameOffset + localRow)} directly, and neither
+ * {@code TraceRunSpecialStageRows} nor {@code TraceRunSpecialStageRowDriver}
+ * references {@code run_objects_end} or {@code SpecialStageRunObjectsPassBinder}
+ * (the binder is referenced only from the standalone
+ * {@code S2SpecialStageReplayHarness}). Re-recording this run with the pass stream
+ * would therefore leave the lane RED until the interior stepper is made pass-paced:
+ * both changes are required and neither substitutes for the other.
+ *
+ * <p><b>This is not fixable in the harness alone.</b> Deriving a pass cadence by measuring
  * this fixture's own rows would be a fitted model (it would desync the first different
  * recording), and reading the interior's pacing out of the trace to drive engine state
  * is barred by the comparison-only rule. Loosening or skipping the remaining-rows
