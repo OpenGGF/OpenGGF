@@ -65055,3 +65055,41 @@ to synthesize a POST phase on a VBLANK-only row.
   its established comparison frontier; ICZ now reaches raw `21185`. The next
   ICZ target is the recorded module completion `#173` at raw `21186`; LBZ
   remains pending.
+
+## 2026-08-07 — S3K ICZ bottom-solid landing-width frontier
+
+- Worktree: `bugfix/s3k-traces` at `d2d341257` before this frontier commit;
+  unrelated edits in `.idea/vcs.xml`,
+  `docs/status/rewind-round-trip-gaps.md`, and
+  `src/main/java/com/openggf/level/objects/ObjectPlacementController.java`
+  remained unstaged. Validation used JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen` (SHA-1
+  `b711a909cce238ca4af3e517a2edca306228efa5`), without replacing or renaming
+  it.
+- Frontier command: `mvn -q -Dmse=off -DforkCount=0
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace
+  test`. The committed baseline rejected the native ICZ bottom-child landing
+  at raw `23182` and stopped at direct `KOS_DECOMPRESSION_QUEUE#257` at raw
+  `24577`, with 645 report errors. The candidate accepts that landing,
+  consumes `#257`, and reaches the next expected direct completion
+  `KOS_DECOMPRESSION_QUEUE#264` at raw `25341`; the clean report has 74 errors,
+  with the first actionable comparator error `rings` at raw `24179`
+  (expected `5`, actual `6`). The known ICZ2 camera handoff errors remain at
+  raw `15401`/`15403`.
+- Root cause: `loc_71F30` initializes the solid child from `word_7231E`,
+  whose `width_pixels` is `$18` (`sonic3k.asm:150928-150939,
+  150957-150962,151337-151339`). The `$10` in `ObjDat3_72324` belongs to
+  later effect children created by `loc_72020`, not this `SolidObjectFull`
+  caller. ICZ now exposes the native `$18` landing width, so the edge contact
+  at player `x=$4478` and child `x=$4490` passes the ROM's unsigned
+  `Solid_Landed` gate. No frame, route, zone, or trace-data branch was added.
+- Regression checks: the gameplay-order AIZ/HCZ/MGZ/CNZ frontier sweep with
+  `-Dsurefire.forkCount=1 -DreuseForks=true -Dtrace.frontierOnly=true` stopped
+  only at the established edges: AIZ `#8`/raw `1240`, HCZ `#94`/raw `9764`,
+  CNZ `#205`/raw `13962`; MGZ completed its recorded segment. Ring comparison
+  remains enabled through `ToleranceConfig.DEFAULT` with
+  `RingCountMode.FORCE_ERROR`; no trace payloads changed.
+- Route position: AIZ, HCZ, MGZ, and CNZ remain at their established
+  frontiers; ICZ now reaches raw `25341`, with the next target the ring
+  discrepancy at raw `24179` before direct `#264`; LBZ remains pending.

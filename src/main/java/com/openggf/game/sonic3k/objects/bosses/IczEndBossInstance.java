@@ -1201,12 +1201,13 @@ public final class IczEndBossInstance extends AbstractBossInstance
     @Override
     public int getTopLandingHalfWidth(PlayableEntity player, int collisionHalfWidth) {
         // ROM Solid_Landed / loc_1E154 (sonic3k.asm:41611-41621) re-reads
-        // width_pixels(a0) for the landing X gate. The solid bottom child uses
-        // ObjDat3_72324 with width_pixels = $10 (sonic3k.asm:151287-151291)
-        // while loc_71F30 passes d1 = $23 (sonic3k.asm:150882-150886), so the
-        // default d1 - $B = $18 heuristic is 8px too WIDE — the ROM rejects
-        // outer-band landings the engine would accept.
-        return 0x10;
+        // width_pixels(a0) for the landing X gate. The solid bottom child is
+        // initialized from word_7231E with width_pixels = $18
+        // (sonic3k.asm:150958-150962,151337-151339); ObjDat3_72324 belongs
+        // to its later effect children, not this SolidObjectFull caller.
+        // loc_71F30 passes d1 = $23 (sonic3k.asm:150928-150939), so the
+        // default d1 - $B = $18 heuristic happens to match the native child.
+        return 0x18;
     }
 
     @Override

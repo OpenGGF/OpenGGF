@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K ICZ's bottom solid now uses the native `$18` landing width
+  initialized by `word_7231E`, rather than the `$10` width from a later effect
+  child. The ICZ complete-run replay now accepts the raw frame `23182` landing,
+  consumes direct completion `#257`, and reaches the next direct completion
+  `#264` at raw frame `25341`; the first actionable comparison is now the ring
+  count at raw frame `24179`. No trace payloads changed.
 - Fix/Test: S3K ICZ's retained title-owner handoff now admits the native enemy
   KosM batch on the following runtime pass and releases the ICZ2 camera-size
   workers three dispatches after title completion. The complete-run replay
