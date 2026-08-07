@@ -64867,3 +64867,39 @@ to synthesize a POST phase on a VBLANK-only row.
   branch was added.
 - Route position: AIZ and HCZ remain green; MGZ and its handoff into CNZ are
   green. CNZ is the next gameplay-order target; ICZ and LBZ remain pending.
+
+## 2026-08-07 — S3K CNZ in-loop oscillator ownership frontier
+
+- Worktree: `bugfix/s3k-traces` at `b99c44096` before the frontier commit;
+  unrelated edits in `.idea/vcs.xml` and
+  `docs/status/rewind-round-trip-gaps.md` remained unstaged. Validation used
+  JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen` (SHA-1
+  `b711a909cce238ca4af3e517a2edca306228efa5`), without replacing or renaming
+  it.
+- Frontier command: `mvn -q -Dmse=off -Dtrace.frontierOnly=true
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace
+  test`. The committed baseline stopped at direct
+  `KOS_DECOMPRESSION_QUEUE#28`/raw `20105`, with two errors and first error
+  raw/frame `19291`, `y` expected `0x0AC1` and actual `0x0AC2`. The candidate
+  reaches direct `#31`/raw `33755`; its report has one comparator error over
+  `25738` frames, first at raw/frame `25743`, `camera_x` expected `0x1D02`
+  and actual `0x1D00`, before the expected direct completion edge.
+- Root cause: CNZ's transition provider performs the ROM-owned
+  `advanceForSeamlessTransition()` dispatch before the destination act loads,
+  while the shared loop tail was advancing the same oscillator a second time.
+  The transition now publishes an owner-scoped semantic marker and the loop
+  tail suppresses only that duplicate dispatch. AIZ/HCZ/MGZ providers retain
+  the ordinary tail, so no zone, frame, route, or trace-data carve-out was
+  added.
+- Regression checks: AIZ standard replay remains zero-error; AIZ complete and
+  MGZ complete remain at their recorded green frontiers. HCZ frontier-only
+  replay still stops at its pre-existing raw `9764`/direct `#94` first-error
+  boundary, while the full HCZ replay reaches its recorded direct `#113`
+  admission edge before the same baseline hardware assertion. Ring comparison
+  remains enabled through `ToleranceConfig.DEFAULT` with
+  `RingCountMode.FORCE_ERROR`; no trace payloads changed.
+- Route position: AIZ and HCZ remain green; MGZ and its handoff into CNZ are
+  green through the CNZ standard replay's raw `25743` comparator edge. ICZ is
+  next in gameplay order; LBZ remains pending.

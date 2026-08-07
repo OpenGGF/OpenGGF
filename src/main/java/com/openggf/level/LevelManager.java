@@ -167,6 +167,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     private boolean sidekickRomVisibleReloadFrameCounterBridgeActive;
     private boolean sidekickRomVisibleReloadFrameCounterBridgePrimed;
     private boolean actTransitionExecutedDuringFrame;
+    private boolean actTransitionOscillationAdvancedDuringFrame;
     private boolean resetCounterPlacementAfterCameraSnap;
     private long completedProductionLoadGeneration;
 
@@ -3475,6 +3476,10 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         actTransitionExecutedDuringFrame = true;
     }
 
+    void markActTransitionOscillationAdvancedDuringFrame() {
+        actTransitionOscillationAdvancedDuringFrame = true;
+    }
+
     /**
      * Consumes the marker set when an in-place act transition ran inside the
      * current level loop. The transition-owned oscillator dispatch replaces
@@ -3484,6 +3489,12 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         boolean executed = actTransitionExecutedDuringFrame;
         actTransitionExecutedDuringFrame = false;
         return executed;
+    }
+
+    public boolean consumeActTransitionOscillationAdvancedDuringFrame() {
+        boolean advanced = actTransitionOscillationAdvancedDuringFrame;
+        actTransitionOscillationAdvancedDuringFrame = false;
+        return advanced;
     }
 
     void restoreCameraBoundsForCurrentLevel(Camera cam) {
@@ -3958,6 +3969,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         sidekickRomVisibleReloadFrameCounterBridgeActive = false;
         sidekickRomVisibleReloadFrameCounterBridgePrimed = false;
         actTransitionExecutedDuringFrame = false;
+        actTransitionOscillationAdvancedDuringFrame = false;
         transitions.resetState();
         verticalWrapEnabled = false;
         touchResponseTable = null;
@@ -3988,6 +4000,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         sidekickRomVisibleReloadFrameCounterBridgeActive = false;
         sidekickRomVisibleReloadFrameCounterBridgePrimed = false;
         actTransitionExecutedDuringFrame = false;
+        actTransitionOscillationAdvancedDuringFrame = false;
     }
 
     public void setClearColor() {

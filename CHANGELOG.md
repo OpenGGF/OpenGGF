@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K CNZ's in-loop act-transition oscillator dispatch is now
+  consumed by the transition owner exactly once, so the shared loop tail no
+  longer double-advances CNZ1→CNZ2. The CNZ standard replay advances from
+  direct completion `#28`/raw `20105` to `#31`/raw `33755`, with its first
+  remaining comparator error at raw frame `25743`; AIZ, HCZ, and MGZ remain
+  at their recorded frontiers and no trace payloads changed.
 - Fix/Test: S3K MGZ's fresh-level title boundary now preserves the native
   destination camera/player handoff, submits the ROM-backed KosM batch at the
   first post-title loop boundary, and releases the retained transition owner

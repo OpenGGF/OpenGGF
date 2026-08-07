@@ -374,13 +374,20 @@ public final class LevelFrameStep {
 
         // OscillateNumDo is the loop-tail update after ScreenEvents. An
         // in-loop act reload has already replaced the level data, but the ROM
-        // still reaches this loop tail on that row (the AIZ1->AIZ2 trace keeps
-        // the oscillator tick at the reload boundary). Outer frame-boundary
-        // reloads consume their own tail in LevelSeamlessTransitionExecutor
-        // before this method is entered.
-        levelManager.consumeActTransitionExecutedDuringFrame();
+        // still reaches this loop tail on that row unless the transition's
+        // provider already performed the ROM-owned oscillator dispatch. The
+        // latter is the CNZ/LBZ-style transition contract; AIZ/HCZ/MGZ retain
+        // the ordinary loop tail. Outer frame-boundary reloads consume their
+        // own dispatch in LevelSeamlessTransitionExecutor before this method
+        // is entered.
+        boolean actTransitionExecutedDuringFrame =
+                levelManager.consumeActTransitionExecutedDuringFrame();
+        boolean actTransitionOscillationAdvancedDuringFrame =
+                levelManager.consumeActTransitionOscillationAdvancedDuringFrame();
         if (!bonusStageExitRequestedThisFrame
-                && !levelManager.isLevelInactiveForTransition()) {
+                && !levelManager.isLevelInactiveForTransition()
+                && !(actTransitionExecutedDuringFrame
+                        && actTransitionOscillationAdvancedDuringFrame)) {
             levelManager.advanceGlobalOscillationAtLevelLoopTail();
         }
 
