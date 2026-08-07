@@ -12,6 +12,7 @@ import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.events.S3kTransitionEventBridge;
 import com.openggf.camera.Camera;
+import com.openggf.level.CarriedTitlePublicationTiming;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectConstructionContext;
@@ -246,7 +247,10 @@ class TestS3kResultsScreenObjectInstance {
         S3kResultsScreenObjectInstance results = transitionShell(
                 services, PlayerCharacter.SONIC_AND_TAILS, 0);
         results.setServices(services);
-        results.onCarriedAcrossSeamlessTransition(-0x3000, 0x0200);
+        results.onCarriedAcrossSeamlessTransition(
+                -0x3000, 0x0200,
+                new CarriedTitlePublicationTiming(
+                        false, true, false, 0, 0, false, 0, 0, 0));
 
         Method onExitReady = S3kResultsScreenObjectInstance.class.getDeclaredMethod("onExitReady");
         onExitReady.setAccessible(true);

@@ -64978,3 +64978,40 @@ to synthesize a POST phase on a VBLANK-only row.
 - Route position: AIZ and HCZ remain green; MGZ and CNZ remain at their
   established frontiers; ICZ now reaches raw `15258`. The next ICZ target is
   the raw `15258` comparator/`#167` target-owner edge; LBZ remains pending.
+
+## 2026-08-07 — S3K ICZ results-publication frontier
+
+- Worktree: `bugfix/s3k-traces` at `af5a056ce` before this frontier commit;
+  unrelated edits in `.idea/vcs.xml` and
+  `docs/status/rewind-round-trip-gaps.md` remained unstaged. Validation used
+  JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen` (SHA-1
+  `b711a909cce238ca4af3e517a2edca306228efa5`), without replacing or renaming
+  it.
+- Frontier command: `mvn -q -Dmse=off -Dsurefire.forkCount=1
+  -DreuseForks=true -Dtrace.frontierOnly=true
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace
+  test`. The committed baseline stopped at the raw `15258` results/title
+  publication boundary with the expected module completion `#167` at raw
+  `15261` unconsumed. The candidate has zero comparator errors through raw
+  `15384` and stops at the next recorded direct completion
+  `KOS_DECOMPRESSION_QUEUE#253` at raw `15400`.
+- Root cause: ICZ's preloaded-act camera policy does not require an additional
+  `Obj_LevelResultsWait2` entry. The extra wait delayed the retained results
+  owner by one object dispatch, leaving the native results object and victory
+  pose visible at raw `15258`. Removing that delay lets the owner publish the
+  title-card transition at the ROM boundary; the live EndSignControl owner now
+  performs its player restore there and consumes the engine signpost's deferred
+  pose tail. These are owner/state contracts, not zone, frame, route, or trace
+  exceptions.
+- Regression checks: the combined AIZ/HCZ/MGZ/CNZ/ICZ frontier sweep retained
+  zero comparator errors for ICZ through raw `15384`; AIZ, HCZ, and MGZ stayed
+  at their established behavior, while CNZ stopped only at its pre-existing
+  raw `33755`/direct `#31` hardware edge. Ring comparison remains enabled
+  through `ToleranceConfig.DEFAULT` with `RingCountMode.FORCE_ERROR`; no trace
+  payloads changed.
+- Route position: AIZ and HCZ remain green; MGZ and CNZ remain at their
+  established frontiers; ICZ now reaches raw `15400`. The next ICZ target is
+  the Snowdust direct/module owner pair at raw `15400`/`15401`; LBZ remains
+  pending.

@@ -676,6 +676,20 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
         }
     }
 
+    /**
+     * Ends the deferred ending-pose tail when the retained native
+     * {@code Obj_EndSignControl} owner restores control after the results
+     * owner publishes its next routine. The engine keeps the signpost's
+     * routine-8 work in this object, so without consuming both pending flags
+     * it can reapply the victory pose after {@code Restore_PlayerControl} in
+     * the same object pass (docs/skdisasm/sonic3k.asm:176229-176272,
+     * 180437-180451).
+     */
+    void completeNativeResultsControlRestore() {
+        mainEndingPosePending = false;
+        sidekickEndingPoseApplied = true;
+    }
+
     private void applyNativeSidekickEndingPose(AbstractPlayableSprite player) {
         if (sidekickEndingPoseApplied) {
             return;

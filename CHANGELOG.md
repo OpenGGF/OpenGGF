@@ -3,6 +3,14 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K ICZ's miniboss defeat flow no longer adds an extra results wait
+  entry to a preloaded-act handoff. The native `Obj_LevelResultsWait2` publication
+  now mutates the retained owner to `Obj_TitleCard` at raw frame `15258`, while
+  the semantic EndSignControl publication restores the player and retires the
+  signpost's deferred pose tail. The ICZ complete-run replay is comparator-green
+  through raw frame `15384` and now stops at the next recorded direct completion
+  `#253`/raw frame `15400`; AIZ, HCZ, MGZ, and CNZ remain at their established
+  frontiers and no trace payloads changed.
 - Fix/Test: S3K resource-owner act reloads now transfer only the prepared
   handoff resources; they do not speculate a new `PLCKosM` enemy batch before
   the target's ROM object owners execute. ICZ's target Starpost consequently

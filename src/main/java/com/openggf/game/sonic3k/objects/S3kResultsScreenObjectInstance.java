@@ -877,6 +877,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             releasePlayerControlsForExit();
             controlsReleasedAheadOfHandoff = true;
         }
+        restoreNativeEndSignControlAtPublication();
         if (titleInitializationPending && initializeTitleCardOnPublication()) {
             // The native carried title owner submits Obj_TitleCardInit's
             // ROM-backed jobs on the same dispatch that mutates the results
@@ -955,6 +956,25 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         pendingPreloadedTitleHandoff = false;
         pendingAizTitleHandoff = false;
         pendingRetainedReloadTitleHandoff = false;
+    }
+
+    /**
+     * Mirrors the later native EndSignControl slot when it follows this
+     * results owner in the same object pass. The owner is discovered by its
+     * live flow state; no zone or trace identity participates in the handoff.
+     */
+    private void restoreNativeEndSignControlAtPublication() {
+        var objectManager = services().objectManager();
+        if (objectManager == null || playerRef == null) {
+            return;
+        }
+        for (S3kBossDefeatSignpostFlow flow :
+                objectManager.activeObjectsOfType(S3kBossDefeatSignpostFlow.class)) {
+            if (!flow.isDestroyed()) {
+                flow.restoreNativeControlAtResultsPublication(playerRef);
+                return;
+            }
+        }
     }
 
     static int mutatedTitleCardResetDispatches(boolean usesShortResultsChildRetireTail) {

@@ -342,6 +342,18 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
         if (!ready) {
             return false;
         }
+        return restoreNativeControlAtResultsPublication(player);
+    }
+
+    /**
+     * Completes the native {@code Obj_EndSignControlAwaitStart} handoff when
+     * the results owner publishes its next routine in the same object pass.
+     * The ordinary polling path uses the same operation when the owner is
+     * observed before publication; this entry point covers the native slot
+     * ordering where {@code Obj_LevelResultsWait2} clears the latch first.
+     */
+    boolean restoreNativeControlAtResultsPublication(AbstractPlayableSprite player) {
+        completeNativeSignpostPoseHandoff();
         if (nativeResultsControlRestored) {
             return true;
         }
@@ -352,6 +364,19 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
         }
         nativeResultsControlRestored = true;
         return true;
+    }
+
+    private void completeNativeSignpostPoseHandoff() {
+        var objectManager = services().objectManager();
+        if (objectManager == null) {
+            return;
+        }
+        for (S3kSignpostInstance signpost :
+                objectManager.activeObjectsOfType(S3kSignpostInstance.class)) {
+            if (!signpost.isDestroyed()) {
+                signpost.completeNativeResultsControlRestore();
+            }
+        }
     }
 
     /**
