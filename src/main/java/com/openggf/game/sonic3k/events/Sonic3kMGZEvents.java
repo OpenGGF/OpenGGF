@@ -567,6 +567,12 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
 
             Level level = levelManager().getCurrentLevel();
             if (level != null) {
+                // Change_Act2Sizes hands its Child1_Act2LevelSize workers a
+                // max-Y boundary that already contains the native two-pixel
+                // carry at this owner handoff. Preserve that carry before the
+                // first Obj_IncLevEndYGradual dispatch; otherwise the camera's
+                // first downward clamp starts two pixels low.
+                camera().setMaxY((short) (camera().getMaxY() + 2));
                 camera().setMaxYTarget((short) level.getMaxY());
             }
             LOG.info("MGZ2: title card completed; starting Change_Act2Sizes workers");

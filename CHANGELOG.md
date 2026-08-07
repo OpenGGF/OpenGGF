@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K MGZ's retained Act 2 boundary handoff now preserves the
+  native two-pixel max-Y carry before the first `Obj_IncLevEndYGradual` worker
+  dispatch. The MGZ complete-run comparator frontier advances from 67 errors
+  with a raw `16656` `camera_y` mismatch to 66 errors with the first error at
+  raw `28398` (`rings`); the full camera error group is gone and no trace
+  payloads changed.
 - Fix/Test: S3K MGZ's retained Act 2 `Change_Act2Sizes` workers now run in
   the object-loop slot before `DeformBgLayer`, and the carried title owner
   retains three ROM parent dispatches after visual-child retirement. The MGZ
