@@ -64747,3 +64747,43 @@ to synthesize a POST phase on a VBLANK-only row.
 - Route position: AIZ remains green; HCZ remains at direct `#113`; MGZ now
   reaches the raw `28398` ring discrepancy with 66 errors and expected direct
   `#183` stop. CNZ, ICZ, and LBZ remain pending in gameplay order.
+
+## 2026-08-07 — S3K MGZ Mantis child-allocation frontier
+
+- Worktree: `bugfix/s3k-traces` at `e87f76dfe` before the frontier commit;
+  unrelated edits in `.idea/vcs.xml` and
+  `docs/status/rewind-round-trip-gaps.md` remained unstaged. Validation used
+  JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen` (SHA-1
+  `b711a909cce238ca4af3e517a2edca306228efa5`), without replacing or renaming
+  it.
+- Frontier command: `mvn -q -Dmse=off
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kMgzCompleteRunTraceReplay
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Result: the replay reaches the expected direct
+  `KOS_DECOMPRESSION_QUEUE#183` completion at raw frame `38524`, but the
+  engine's pending `#183` fingerprint
+  `sha256:fbfc78d499717cfec6df27fdd04fa4b5293a7147ec7ff7a7a18004e9db801e78`
+  differs from the recorded
+  `sha256:589a478d29f5c788ad304520acc86172ea220a4a68b5a74ac25ee62e80d5899c`.
+- Comparator report: 65 errors, 0 warnings, 38456 frames; the first error is
+  raw/frame `38414`, `x`, expected `0x3CFA` and actual `0x3CFB`. The prior
+  committed MGZ report had 66 errors beginning at raw `28398`, `rings`,
+  expected `2` and actual `1`; the earlier ring/object-allocation group is
+  gone and the remaining errors are in the later movement segment.
+- Regression checks: `TestS3kAizTraceReplay#replayMatchesTrace` remains at
+  zero comparator errors; AIZ complete and HCZ complete remain at their
+  expected direct `#50` and `#113` no-pending stops; the MGZ carried-results
+  ownership test passes. The broader AIZ diagnostic class still reports four
+  unrelated camera/sidekick/miniboss assertions. Ring comparison remains
+  enabled with `ToleranceConfig.DEFAULT` `FORCE_ERROR`; no trace payloads
+  changed.
+- Fix scope: the ROM calls `Obj_WaitOffscreen` before `Obj_Mantis` reaches
+  `loc_88E82`, where it calls `CreateChild1_Normal` for `ChildObjDat_88F9C`
+  (`docs/skdisasm/sonic3k.asm:180347-180379,185778-185801,185921-185925`).
+  Deferring the managed visual-child allocation until that visible initializer
+  restores the native SST reservation order. No zone, frame, route, or
+  trace-derived gameplay branch was added.
+- Route position: AIZ remains green; HCZ remains at direct `#113`; MGZ now
+  reaches the raw `38414` movement discrepancy with 65 errors and expected
+  direct `#183` stop. CNZ, ICZ, and LBZ remain pending in gameplay order.

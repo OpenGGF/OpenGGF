@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K MGZ Mantis now creates its visual child only after
+  `Obj_WaitOffscreen` restores normal operation, matching the ROM's
+  `Obj_Mantis` `loc_88E82`/`CreateChild1_Normal` allocation order. The MGZ
+  complete-run comparator frontier advances from 66 errors with its first
+  mismatch at raw frame `28398` (`rings`) to 65 errors with its first mismatch
+  at raw frame `38414` (`x`); no trace payloads changed.
 - Fix/Test: S3K MGZ's retained Act 2 boundary handoff now preserves the
   native two-pixel max-Y carry before the first `Obj_IncLevEndYGradual` worker
   dispatch. The MGZ complete-run comparator frontier advances from 67 errors
