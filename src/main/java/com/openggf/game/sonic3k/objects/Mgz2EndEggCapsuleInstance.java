@@ -32,6 +32,14 @@ public class Mgz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
     }
 
     @Override
+    protected boolean resultsTimerUnderflowsBeforeStart() {
+        // MGZ's floating path dispatches sub_86984, whose pre-decrement
+        // branches until the $40 counter underflows before Obj_LevelResults
+        // is allocated (sonic3k.asm:182027-182046).
+        return true;
+    }
+
+    @Override
     protected int targetYOffset() {
         // loc_8664E raises the shared route-8 hover target by $20 while
         // Current_zone is MGZ (sonic3k.asm:181626-181637).

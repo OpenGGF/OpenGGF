@@ -3298,6 +3298,15 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                         playable.getCode(), playable.captureRewindState(false)));
             }
         }
+        // Level's Get_LevelSizeStart snaps the new camera from the loaded
+        // player's ROM centre before the title-card loop owns the transition.
+        // Reapply that force formula here rather than retaining a camera value
+        // left by the synchronous Java assembly tail.
+        AbstractPlayableSprite destinationPlayer = mainPlayableSprite();
+        if (destinationPlayer != null) {
+            camera.setFocusedSprite(destinationPlayer);
+            camera.updatePosition(true);
+        }
         short destinationCameraX = camera.getX();
         short destinationCameraY = camera.getY();
 
@@ -3353,13 +3362,69 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 playable.setNativeSlotPresent(true);
             }
         }
-        camera.setX(boundary.destinationCameraX());
-        camera.setY(boundary.destinationCameraY());
+        applyFreshLevelTransitionDestinationCamera(boundary);
+        pendingFreshLevelTransitionBoundary = null;
+    }
+
+    /**
+     * Publishes the destination player for the first post-title load row while
+     * retaining the transition boundary for the following ordinary loop. The
+     * ROM's level setup exposes the spawn state with the main object routine
+     * still at zero and without the sidekick slot; the next full loop releases
+     * those setup holds through {@link #completeFreshLevelTransitionBoundary()}.
+     */
+    public void publishFreshLevelTransitionInitialBoundary() {
+        FreshLevelTransitionBoundary boundary = pendingFreshLevelTransitionBoundary;
+        if (boundary == null) {
+            return;
+        }
+        for (TransitionPlayableState playableState : boundary.playableStates()) {
+            Sprite sprite = spriteManager.getSprite(playableState.code());
+            if (sprite instanceof AbstractPlayableSprite playable) {
+                playable.restoreRewindState(playableState.state());
+                playable.setObjectRoutineOverride(null);
+                playable.setNativeSlotPresent(true);
+            }
+        }
+        AbstractPlayableSprite player = mainPlayableSprite();
+        if (player != null) {
+            player.setObjectRoutineOverride(0);
+        }
+        for (AbstractPlayableSprite sidekick : spriteManager.getSidekicks()) {
+            sidekick.setNativeSlotPresent(false);
+        }
+        applyFreshLevelTransitionDestinationCamera(boundary);
+    }
+
+    /** Publishes the native camera handoff while playable slots remain held. */
+    public void completeFreshLevelTransitionCameraBoundary() {
+        FreshLevelTransitionBoundary boundary = pendingFreshLevelTransitionBoundary;
+        if (boundary == null) {
+            return;
+        }
+        applyFreshLevelTransitionDestinationCamera(boundary);
+    }
+
+    private void applyFreshLevelTransitionDestinationCamera(
+            FreshLevelTransitionBoundary boundary) {
         AbstractPlayableSprite player = mainPlayableSprite();
         if (player != null) {
             camera.setFocusedSprite(player);
         }
-        pendingFreshLevelTransitionBoundary = null;
+        // setFocusedSprite() also seeds the camera from the sprite's render
+        // bounds. Publish the ROM Get_LevelSizeStart result after focusing so
+        // that the transition boundary keeps the native centre-based camera
+        // position rather than the sprite's top-left render coordinate.
+        camera.setX(boundary.destinationCameraX());
+        camera.setY(boundary.destinationCameraY());
+    }
+
+    /**
+     * Returns whether the loaded destination is still at the native
+     * pre-title-card player boundary owned by the recording/transition driver.
+     */
+    public boolean hasPendingFreshLevelTransitionBoundary() {
+        return pendingFreshLevelTransitionBoundary != null;
     }
 
     private AbstractPlayableSprite mainPlayableSprite() {

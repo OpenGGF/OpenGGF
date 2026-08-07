@@ -83,6 +83,36 @@ public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator,
     }
 
     /**
+     * Publishes a fresh-level KosM batch before the first post-title loop row.
+     * The ROM's {@code LoadLevelLoadBlock} call queues the parent before the
+     * held transition boundary; the first child is then exposed by the next
+     * loop's VBlank services.
+     */
+    public void submitFreshLevelRuntimeArt(
+            Rom rom, int primarySource, int secondarySource) {
+        Objects.requireNonNull(rom, "rom");
+        List<Integer> sources = new ArrayList<>();
+        sources.add(primarySource);
+        if (secondarySource != primarySource && secondarySource > 0) {
+            sources.add(secondarySource);
+        }
+        if (!moduleQueue.hasCapacityFor(sources.size())) {
+            throw new IllegalStateException(
+                    "S3K fresh-level KosM batch cannot fit in the module FIFO");
+        }
+        try {
+            List<HardwareWorkHandle> handles =
+                    moduleQueue.queueSequentialBatch(rom, sources, 0);
+            for (HardwareWorkHandle handle : handles) {
+                moduleQueue.claimAfterFreshLevelHandoff(handle);
+            }
+        } catch (java.io.IOException exception) {
+            throw new IllegalStateException(
+                    "Unable to submit fresh-level runtime art", exception);
+        }
+    }
+
+    /**
      * ROM {@code LevelLoop} runs {@code Process_Kos_Module_Queue} in the loop
      * tail (sonic3k.asm:7908) and {@code Process_Kos_Queue} (7887) directly
      * after it, still ahead of {@code Wait_VSync} (7888) and the

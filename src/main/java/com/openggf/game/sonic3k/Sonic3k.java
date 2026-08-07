@@ -230,8 +230,18 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
         secondaryArtAddr = overlay.secondaryArtAddr();
 
         S3kRuntimeArtCoordinator coordinator = S3kRuntimeArtCoordinator.current();
-        coordinator.deferFreshLevelRuntimeArt(
-                rom, primaryArtAddr, secondaryArtAddr);
+        // A displayed whole-run load has a retained native transition boundary;
+        // its level-loader parents must already own the first post-title row.
+        // An omitted presentation has no such boundary and publishes through
+        // the ordinary deferred teardown service.
+        if (GameServices.levelOrNull() != null
+                && GameServices.levelOrNull().hasPendingFreshLevelTransitionBoundary()) {
+            coordinator.submitFreshLevelRuntimeArt(
+                    rom, primaryArtAddr, secondaryArtAddr);
+        } else {
+            coordinator.deferFreshLevelRuntimeArt(
+                    rom, primaryArtAddr, secondaryArtAddr);
+        }
     }
 
     @Override

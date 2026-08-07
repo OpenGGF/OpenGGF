@@ -64827,3 +64827,43 @@ to synthesize a POST phase on a VBLANK-only row.
   gameplay/physics green through its expected direct `#183` stop, with the
   remaining frontier at the raw `38517` hardware queue window. CNZ, ICZ, and
   LBZ remain pending in gameplay order.
+
+## 2026-08-07 — S3K MGZ-to-CNZ fresh-level handoff frontier
+
+- Worktree: `bugfix/s3k-traces` at `d2b6df3cd` before the frontier commit;
+  unrelated edits in `.idea/vcs.xml` and
+  `docs/status/rewind-round-trip-gaps.md` remained unstaged. Validation used
+  JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen` (SHA-1
+  `b711a909cce238ca4af3e517a2edca306228efa5`), without replacing or renaming
+  it.
+- Frontier command: `mvn -q -Dmse=off
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kMgzCompleteRunTraceReplay
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Result: all `39183` recorded frames match; the report has zero comparator,
+  bootstrap, and warning errors, with summary `All frames match trace. No
+  divergences.` The MGZ route and its MGZ-to-CNZ handoff are now fully green,
+  including the direct `#183` completion and the subsequent fresh-level
+  queue window.
+- Boundary evidence: at raw frame `39348`, the native state is camera
+  `0000/05A0`, player `0018/0600`, no sidekick, direct owner idle, and the
+  module queue has the prepared batch with `7` remaining units. At raw frame
+  `39349`, the first direct child is active from source `0x3CDC76` with
+  destination `0xD000`, matching the native queue admission boundary.
+- Regression checks: AIZ standard replay remains zero-error; AIZ complete and
+  HCZ complete remain at their expected direct `#50` and `#113` admission
+  stops with no pending engine work; `TestS3kKosModuleQueue`,
+  `TestSonic3kLevelLoading`, `TestMgzEndBossHandoffHeadless`, the focused
+  title-card/PLC lifecycle checks, and the MGZ carried-results ownership check
+  pass. Ring comparison remains enabled with `ToleranceConfig.DEFAULT`
+  `FORCE_ERROR`; no trace payloads changed. Three isolated AIZ end-sequence
+  unit assertions still fail at the committed baseline and are unrelated to
+  this handoff diff.
+- Fix scope: the title-card provider now models the ROM's fresh-level `#$16`
+  hold and lower-slot owner retirement, `LevelManager` preserves the
+  centre-based destination camera and native player-slot boundary, and the
+  S3K runtime-art coordinator submits the matching ROM-backed KosM batch only
+  at that semantic transition boundary. No zone, frame, route, or trace-data
+  branch was added.
+- Route position: AIZ and HCZ remain green; MGZ and its handoff into CNZ are
+  green. CNZ is the next gameplay-order target; ICZ and LBZ remain pending.

@@ -36,6 +36,15 @@ public class Mgz2ResultsScreenObjectInstance extends S3kResultsScreenObjectInsta
     }
 
     @Override
+    protected boolean skipsSameFrameUpdateAfterSpawn() {
+        // MGZ's sub_86984 uses AllocateObject for Obj_LevelResults. The native
+        // allocation lands in a lower free SST slot than the capsule, so its
+        // Obj_LevelResultsInit entry cannot run until the next ExecuteObjects
+        // pass (sonic3k.asm:182027-182046).
+        return true;
+    }
+
+    @Override
     protected boolean shouldRestoreCameraBoundsOnExit(int zone, int act) {
         // ROM loc_6C8F4 retains the MGZ boss camera boundary and hands the
         // post-results flight to Scroll_lock instead of restoring level bounds

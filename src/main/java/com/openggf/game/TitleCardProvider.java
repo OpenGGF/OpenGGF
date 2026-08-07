@@ -23,6 +23,16 @@ public interface TitleCardProvider {
     }
 
     /**
+     * Initializes a title card after the game's level routine has loaded a
+     * destination and entered its native title-card boundary. Games whose
+     * level routine rewrites the title owner's wait value can override this
+     * entry point; ordinary host-level initialization keeps its normal timing.
+     */
+    default void initializeFreshLevelTransition(int zoneIndex, int actIndex) {
+        initialize(zoneIndex, actIndex);
+    }
+
+    /**
      * Defers a fresh level-gamestate install to the native in-level title-card
      * display boundary. Games without that handoff can ignore the request.
      */
@@ -59,6 +69,16 @@ public interface TitleCardProvider {
 
     default boolean shouldLockPlayerControlForInLevelOverlay() {
         return false;
+    }
+
+    /**
+     * Returns whether a fresh level-transition boundary may release its
+     * destination state. Games whose native title owner keeps the loaded
+     * player slots held through the visible exit can defer this beyond the
+     * ordinary control-release point.
+     */
+    default boolean shouldCompleteFreshLevelTransitionBoundary() {
+        return shouldReleaseControl();
     }
 
     /** Releases an in-level lock after its ROM object owner takes over. */
@@ -129,6 +149,16 @@ public interface TitleCardProvider {
     /** Publishes an armed fresh-level handoff when an omitted native owner reaches its exit. */
     default void completeOmittedPresentationFreshLevelRuntimeArtHandoff() {
         // No-op for games without a title-owned fresh-level hardware handoff.
+    }
+
+    /**
+     * Publishes a fresh-level handoff after the destination title owner has
+     * completed its first ordinary level-loop boundary. The recording/live
+     * drivers use this when a game keeps the loaded player slots held through
+     * that boundary; games without such a split can leave it as a no-op.
+     */
+    default void completeFreshLevelRuntimeArtHandoff() {
+        // No-op for games without a split fresh-level title boundary.
     }
 
     /**

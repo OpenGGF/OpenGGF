@@ -212,10 +212,20 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
                 spawnPendingExplosions();
             }
 
-            if (postOpenTimer > 0) {
+            boolean resultsTimerUnderflows = resultsTimerUnderflowsBeforeStart();
+            if (resultsTimerUnderflows) {
+                // The floating MGZ owner uses sub_86984, whose subq.w counter
+                // must underflow before Obj_LevelResults is allocated
+                // (sonic3k.asm:182027-182046).
+                postOpenTimer--;
+            } else if (postOpenTimer > 0) {
+                // The ordinary floating owner reaches results when its
+                // pre-decrement reaches zero (sonic3k.asm:181900-181918).
                 postOpenTimer--;
             }
-            if (postOpenTimer == 0
+            boolean resultsTimerReady = resultsTimerUnderflows
+                    ? postOpenTimer < 0 : postOpenTimer == 0;
+            if (resultsTimerReady
                     && playerEntity instanceof AbstractPlayableSprite player
                     && shouldStartResults(player)) {
                 startResults(player);
@@ -239,6 +249,15 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
 
     protected void onBeforeCapsuleUpdate() {
         // Route-specific pre-dispatch state.
+    }
+
+    /**
+     * Returns the ROM owner's post-open counter contract. MGZ2's floating
+     * capsule uses the signed-underflow branch; the other floating capsule
+     * owners start results when the counter reaches zero.
+     */
+    protected boolean resultsTimerUnderflowsBeforeStart() {
+        return false;
     }
 
     private void initializeRoute8FromCamera() {
@@ -374,10 +393,8 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
         openFrame = buttonTriggerVIntRunCount + 1;
         mappingFrame = 1;
         buttonRecess = BUTTON_RECESS;
-        // ROM sub_865DE stores $2E=$40, then sub_868F8 pre-decrements and
-        // branches while the result is non-negative; this yields 65 routine
-        // entries before Obj_LevelResults can spawn (sonic3k.asm:181556-181570,
-        // 181900-181918).
+        // ROM sub_865DE stores $2E=$40; the owning capsule's results routine
+        // applies its own zero/underflow contract (sonic3k.asm:181556-181570).
         postOpenTimer = POST_OPEN_DELAY;
 
         try {

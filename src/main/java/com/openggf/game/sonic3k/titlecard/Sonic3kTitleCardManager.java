@@ -58,8 +58,14 @@ public class Sonic3kTitleCardManager
     private static final int SLIDE_SPEED_OUT = 32;
 
     // Display hold duration (frames). ROM: Level routine overwrites $2E to $16 (22)
-    // at line 7878, synchronizing the hold with Palette_fade_timer.
+    // at lines 7897-7900, synchronizing the hold with Palette_fade_timer.
     private static final int DISPLAY_HOLD_FRAMES = 90;
+    private static final int FRESH_LEVEL_TRANSITION_HOLD_FRAMES = 22;
+    // Obj_TitleCardWait2 remains in its lower SST slot for the owner dispatches
+    // that follow the visual children leaving the screen. The native owner
+    // reaches LoadEnemyArt only after those three post-exit dispatches in the
+    // fresh-level path (sonic3k.asm:62249-62312).
+    private static final int FRESH_LEVEL_TRANSITION_OWNER_RETIREMENT_FRAMES = 3;
 
     // ROM palette fade duration: 22 frames (sonic3k.asm line 7877, Palette_fade_timer = $16).
     // In the ROM, the title card is already visible for many frames during level loading
@@ -181,6 +187,9 @@ public class Sonic3kTitleCardManager
     private long runtimeArtAdmissionLeaseId = -1;
     private boolean runtimeArtAdmissionConsumed;
     private int freshLevelRuntimeArtHandoffLevelIndex = -1;
+    private int displayHoldFrames = DISPLAY_HOLD_FRAMES;
+    private boolean freshLevelTransitionMode;
+    private int freshLevelTransitionOwnerRetirementFrames;
 
     /**
      * Immutable live-title snapshot. Array accessors clone their payload so a
@@ -192,6 +201,9 @@ public class Sonic3kTitleCardManager
             int phaseCounter,
             boolean exitChildrenGone,
             boolean inLevelMode,
+            int displayHoldFrames,
+            boolean freshLevelTransitionMode,
+            int freshLevelTransitionOwnerRetirementFrames,
             boolean resetLevelGamestateOnInLevelDisplay,
             int resetLevelGamestateCountdown,
             boolean heldLevelCounterDispatchOwned,
@@ -262,6 +274,8 @@ public class Sonic3kTitleCardManager
     public Snapshot capture() {
         return new Snapshot(
                 state, stateTimer, phaseCounter, exitChildrenGone, inLevelMode,
+                displayHoldFrames,
+                freshLevelTransitionMode, freshLevelTransitionOwnerRetirementFrames,
                 resetLevelGamestateOnInLevelDisplay, resetLevelGamestateCountdown,
                 heldLevelCounterDispatchOwned, retainedResultsHeldLevelCounterOwned,
                 inLevelPlayerControlLockOwned, inLevelExitDelayFrames,
@@ -296,6 +310,10 @@ public class Sonic3kTitleCardManager
         phaseCounter = snapshot.phaseCounter();
         exitChildrenGone = snapshot.exitChildrenGone();
         inLevelMode = snapshot.inLevelMode();
+        displayHoldFrames = snapshot.displayHoldFrames();
+        freshLevelTransitionMode = snapshot.freshLevelTransitionMode();
+        freshLevelTransitionOwnerRetirementFrames =
+                snapshot.freshLevelTransitionOwnerRetirementFrames();
         resetLevelGamestateOnInLevelDisplay =
                 snapshot.resetLevelGamestateOnInLevelDisplay();
         resetLevelGamestateCountdown = snapshot.resetLevelGamestateCountdown();
@@ -384,7 +402,17 @@ public class Sonic3kTitleCardManager
 
     @Override
     public void initialize(int zoneIndex, int actIndex) {
-        initInternal(zoneIndex, actIndex, false);
+        initInternal(zoneIndex, actIndex, false, DISPLAY_HOLD_FRAMES);
+    }
+
+    @Override
+    public void initializeFreshLevelTransition(int zoneIndex, int actIndex) {
+        // Obj_TitleCardInit stores 90, then Level overwrites the same owner
+        // with #$16 just before LevelLoop (sonic3k.asm:62187, 7897-7900).
+        initInternal(zoneIndex, actIndex, false, FRESH_LEVEL_TRANSITION_HOLD_FRAMES);
+        freshLevelTransitionMode = true;
+        freshLevelTransitionOwnerRetirementFrames =
+                FRESH_LEVEL_TRANSITION_OWNER_RETIREMENT_FRAMES;
     }
 
     @Override
@@ -397,12 +425,27 @@ public class Sonic3kTitleCardManager
         publishFreshLevelRuntimeArtHandoffIfNeeded();
     }
 
+    @Override
+    public void completeFreshLevelRuntimeArtHandoff() {
+        if (!freshLevelTransitionMode) {
+            return;
+        }
+        // The carried title owner reaches its fresh-level LoadEnemyArt tail
+        // at the first ordinary LevelLoop boundary. Keep this publication
+        // separate from the renderable-art boundary above: the ROM's level
+        // streams do not enter the FIFO until that owner has left its lower
+        // SST slot (sonic3k.asm:62249-62323, 7894-7909).
+        publishFreshLevelRuntimeArtHandoffIfNeeded();
+        freshLevelTransitionMode = false;
+        freshLevelTransitionOwnerRetirementFrames = 0;
+    }
+
     /**
      * Initializes for in-level mode (no black background, control released immediately).
      * Used during AIZ intro when the level is already visible.
      */
     public void initializeInLevel(int zoneIndex, int actIndex) {
-        initInternal(zoneIndex, actIndex, true);
+        initInternal(zoneIndex, actIndex, true, DISPLAY_HOLD_FRAMES);
     }
 
     /**
@@ -544,6 +587,9 @@ public class Sonic3kTitleCardManager
         this.bonusMode = true;
         this.bonusFadeProgress = 0f;
         this.inLevelMode = false;
+        this.freshLevelTransitionMode = false;
+        this.freshLevelTransitionOwnerRetirementFrames = 0;
+        this.displayHoldFrames = DISPLAY_HOLD_FRAMES;
         this.state = Sonic3kTitleCardState.SLIDE_IN;
         this.stateTimer = 0;
         this.phaseCounter = 0;
@@ -571,11 +617,13 @@ public class Sonic3kTitleCardManager
         LOG.info("S3K bonus title card initialized");
     }
 
-    private void initInternal(int zoneIndex, int actIndex, boolean inLevel) {
+    private void initInternal(
+            int zoneIndex, int actIndex, boolean inLevel, int displayHoldFrames) {
         this.currentZone = zoneIndex;
         this.currentAct = actIndex;
         this.bonusMode = false;
         this.inLevelMode = inLevel;
+        this.displayHoldFrames = displayHoldFrames;
         this.resetLevelGamestateOnInLevelDisplay = false;
         this.resetLevelGamestateCountdown = 0;
         this.heldLevelCounterDispatchOwned = false;
@@ -586,6 +634,8 @@ public class Sonic3kTitleCardManager
         this.releasePreloadedActCameraOnComplete = false;
         this.preloadedActCompletionPrepared = false;
         this.runtimeArtAdmissionConsumed = false;
+        this.freshLevelTransitionMode = false;
+        this.freshLevelTransitionOwnerRetirementFrames = 0;
         this.state = Sonic3kTitleCardState.SLIDE_IN;
         this.stateTimer = 0;
         this.phaseCounter = 0;
@@ -636,13 +686,17 @@ public class Sonic3kTitleCardManager
                 }
                 return;
             }
-            publishFreshLevelRuntimeArtHandoffIfNeeded();
+            if (!freshLevelTransitionMode) {
+                publishFreshLevelRuntimeArtHandoffIfNeeded();
+            }
         } else if (artLoaded) {
             // A repeated same-zone load reuses the already-ready title sheet.
             // Publish at the same readiness boundary as the queued-art path
             // instead of waiting for EXIT, where another load could replace
             // the armed level identity.
-            publishFreshLevelRuntimeArtHandoffIfNeeded();
+            if (!freshLevelTransitionMode) {
+                publishFreshLevelRuntimeArtHandoffIfNeeded();
+            }
         }
         if (resetLevelGamestateOnInLevelDisplay && resetLevelGamestateCountdown > 0
                 && --resetLevelGamestateCountdown == 0) {
@@ -663,6 +717,16 @@ public class Sonic3kTitleCardManager
         }
         return state == Sonic3kTitleCardState.EXIT
                 || state == Sonic3kTitleCardState.COMPLETE;
+    }
+
+    @Override
+    public boolean shouldCompleteFreshLevelTransitionBoundary() {
+        if (!freshLevelTransitionMode) {
+            return shouldReleaseControl();
+        }
+        // The loaded player slots remain in the native transition owner until
+        // Obj_TitleCardWait2 reaches its post-child LoadEnemyArt dispatch.
+        return state == Sonic3kTitleCardState.COMPLETE;
     }
 
     @Override
@@ -811,6 +875,7 @@ public class Sonic3kTitleCardManager
         phaseCounter = 0;
         exitChildrenGone = false;
         inLevelMode = false;
+        displayHoldFrames = DISPLAY_HOLD_FRAMES;
         resetLevelGamestateOnInLevelDisplay = false;
         resetLevelGamestateCountdown = 0;
         heldLevelCounterDispatchOwned = false;
@@ -837,6 +902,8 @@ public class Sonic3kTitleCardManager
         runtimeArtAdmissionLeaseId = -1;
         runtimeArtAdmissionConsumed = false;
         freshLevelRuntimeArtHandoffLevelIndex = -1;
+        freshLevelTransitionMode = false;
+        freshLevelTransitionOwnerRetirementFrames = 0;
         Arrays.fill(elemX, 0);
         Arrays.fill(elemY, 0);
         Arrays.fill(elemFrame, 0);
@@ -909,14 +976,14 @@ public class Sonic3kTitleCardManager
         // has already been visible for many frames. Our level loads synchronously, so we
         // use the full 90-frame hold and fade at the end.
         if (bonusMode) {
-            int fadeStart = DISPLAY_HOLD_FRAMES - BONUS_BG_FADE_FRAMES;
+            int fadeStart = displayHoldFrames - BONUS_BG_FADE_FRAMES;
             if (stateTimer > fadeStart) {
                 bonusFadeProgress = Math.min(1f,
                         (float) (stateTimer - fadeStart) / BONUS_BG_FADE_FRAMES);
             }
         }
 
-        if (stateTimer >= DISPLAY_HOLD_FRAMES) {
+        if (stateTimer >= displayHoldFrames) {
             state = Sonic3kTitleCardState.EXIT;
             phaseCounter = 0;
             LOG.fine("S3K title card: EXIT");
@@ -960,6 +1027,15 @@ public class Sonic3kTitleCardManager
                 exitChildrenGone = true;
                 return;
             }
+            if (freshLevelTransitionMode
+                    && freshLevelTransitionOwnerRetirementFrames > 0) {
+                // The native lower-slot Obj_TitleCardWait2 cannot observe the
+                // higher-slot child retirement until its following dispatch;
+                // retain the transition owner through the remaining native
+                // owner passes before publishing the camera handoff.
+                freshLevelTransitionOwnerRetirementFrames--;
+                return;
+            }
             if (inLevelMode && inLevelExitDelayFrames > 0) {
                 // The first owner poll observes the drained child counter;
                 // the following poll reaches LoadEnemyArt. Do not derive this
@@ -989,9 +1065,13 @@ public class Sonic3kTitleCardManager
             // Obj_TitleCardWait2 reaches LoadEnemyArt after the title owner has
             // observed every child retire, which is this sole EXIT -> COMPLETE
             // transition.
-            consumeRuntimeArtAdmissionIfNeeded();
+            if (!freshLevelTransitionMode) {
+                consumeRuntimeArtAdmissionIfNeeded();
+            }
             state = Sonic3kTitleCardState.COMPLETE;
-            publishFreshLevelRuntimeArtHandoffIfNeeded();
+            if (!freshLevelTransitionMode) {
+                publishFreshLevelRuntimeArtHandoffIfNeeded();
+            }
             if (inLevelMode) {
                 // ROM Obj_TitleCardWait2 sets End_of_level_flag only after the
                 // in-level title-card timer has elapsed and its child objects

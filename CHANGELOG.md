@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K MGZ's fresh-level title boundary now preserves the native
+  destination camera/player handoff, submits the ROM-backed KosM batch at the
+  first post-title loop boundary, and releases the retained transition owner
+  on the following loop pass. MGZ's complete-run replay is now zero-error
+  through the MGZ-to-CNZ handoff; AIZ and HCZ remain at their committed
+  frontiers and no trace payloads changed.
 - Fix/Test: S3K MGZ2 now clears a stale `End_of_level_flag` when it publishes
   the new ROM capsule/results window, so the retained boss waiter cannot start
   the MGZ-to-CNZ fade from the preceding act's completion flag. The MGZ

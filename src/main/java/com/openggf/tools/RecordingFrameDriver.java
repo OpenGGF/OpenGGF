@@ -56,6 +56,7 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
     private boolean pendingSeamlessBoundaryCompletion;
     private boolean normalTitleCardActive;
     private boolean freshLevelLoadedThisIteration;
+    private boolean freshLevelTransitionLoopObserved;
     private TraceHardwareTimingBoundaryObserver hardwareTimingReplayObserver;
 
     /**
@@ -219,6 +220,29 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
         if (normalTitleCardActive) {
             return stepNormalTitleCard(snapshot, lifecycleFrame);
         }
+        // The native title owner publishes the fresh-level art at the first
+        // ordinary LevelLoop boundary, but its loaded player slots remain
+        // transition-held for that iteration. Release them on the following
+        // ordinary iteration, after the native loop has crossed the boundary.
+        if (levelManager.hasPendingFreshLevelTransitionBoundary()) {
+            if (freshLevelTransitionLoopObserved) {
+                levelManager.completeFreshLevelTransitionBoundary();
+            } else {
+                freshLevelTransitionLoopObserved = true;
+                TitleCardProvider provider = GameServices.module().getTitleCardProvider();
+                if (provider != null) {
+                    provider.completeFreshLevelRuntimeArtHandoff();
+                }
+                levelManager.publishFreshLevelTransitionInitialBoundary();
+                lastFrameResult = LevelFrameResult.GAMEPLAY_FRAME;
+                lastFrameRanGameplay = false;
+                inputHandler.update();
+                previousDriverSnapshot = snapshot;
+                return lastFrameResult;
+            }
+        } else {
+            freshLevelTransitionLoopObserved = false;
+        }
         startPendingInLevelTitleCardIfRequested();
         LevelFrameContext context =
                 LevelFrameContext.from(SessionManager.getCurrentGameplayMode());
@@ -357,8 +381,13 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
         if (provider == null) {
             return;
         }
-        provider.initialize(
-                levelManager.getTitleCardZone(), levelManager.getTitleCardAct());
+        int titleCardZone = levelManager.getTitleCardZone();
+        int titleCardAct = levelManager.getTitleCardAct();
+        if (levelManager.hasPendingFreshLevelTransitionBoundary()) {
+            provider.initializeFreshLevelTransition(titleCardZone, titleCardAct);
+        } else {
+            provider.initialize(titleCardZone, titleCardAct);
+        }
         normalTitleCardActive = true;
         applyInLevelTitleCardControlLock(true);
     }
@@ -393,8 +422,8 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
                     context, lifecycleFrame, PlcLifecyclePhase.LAG);
         }
 
-        if (provider.shouldReleaseControl()) {
-            levelManager.completeFreshLevelTransitionBoundary();
+        if (provider.shouldCompleteFreshLevelTransitionBoundary()) {
+            levelManager.completeFreshLevelTransitionCameraBoundary();
             normalTitleCardActive = false;
             applyInLevelTitleCardControlLock(false);
         }
@@ -554,7 +583,17 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
         // the next VBlank can admit the same production work as the visible
         // path.
         if (!loadedZoneActTransition) {
+            boolean titleCardWasActive = normalTitleCardActive;
             startPendingNormalTitleCardIfRequested();
+            if (normalTitleCardActive && titleCardWasActive) {
+                // Suppressed trace rows still represent a VBlank while the
+                // fresh-level title owner is locked. Run its hardware-timed
+                // object dispatch here; the row that installed the owner is
+                // left to the generic closure above so its first dispatch
+                // starts on the following VBlank, matching Obj_TitleCardInit.
+                stepNormalTitleCard(previousDriverSnapshot, lifecycleFrame);
+                return mask;
+            }
         }
         TraceSuppressedRowClosure.execute(
                 context,
