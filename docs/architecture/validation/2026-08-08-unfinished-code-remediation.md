@@ -82,7 +82,7 @@ ROM:
 mvn -Dmse=off \
   -Dtest=com.openggf.game.sonic3k.audio.smps.TestSonic3kSmpsMetaCommandReachability \
   -Ds3k.rom.path="<locked-on S3K>" test
-Tests run: 7, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 4, Failures: 0, Errors: 0, Skipped: 0
 ```
 
 That test covers both 173-entry native tables, all 346 native entries, and the
