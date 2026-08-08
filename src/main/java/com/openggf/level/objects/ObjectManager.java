@@ -1056,6 +1056,7 @@ public class ObjectManager {
         slotsFreedDuringObjectPass.clear();
         Arrays.fill(execOrder, null);
         Arrays.fill(playerCentreAtSlotStartValid, false);
+        pendingChildSlotRelease.clear();
         for (ObjectInstance inst : activeObjects.values()) {
             if (initialDispatch.excludesFromDynamicPass(inst)) {
                 continue;
@@ -1082,6 +1083,19 @@ public class ObjectManager {
             // ROM parity: Iterate slots in ascending order, matching ExecuteObjects.
             for (currentExecSlot = 0; currentExecSlot < execOrder.length; currentExecSlot++) {
                 capturePlayerCentreAtSlotStart(player);
+                // A reserved child slot freed earlier in this pass is released
+                // here, at the exec position its own ROM object would have
+                // reached in the ascending ExecuteObjects walk
+                // (docs/s1disasm/_inc/ExecuteObjects.asm:10-30) -- see
+                // releaseChildSlotAtItsOwnExecPosition. Without this (and the
+                // finally-block flush below) the deferred bit set by
+                // releaseChildSlotAtItsOwnExecPosition was never acted on in
+                // this loop, so every parent unloaded on this path leaked its
+                // whole reserved child block for the rest of the act.
+                if (pendingChildSlotRelease.get(currentExecSlot)) {
+                    pendingChildSlotRelease.clear(currentExecSlot);
+                    releaseSlot(slotIndexForExec(currentExecSlot));
+                }
                 ObjectInstance instance = execOrder[currentExecSlot];
                 if (instance == null) continue;
                 processedInExecLoop.add(instance);
@@ -1203,6 +1217,14 @@ public class ObjectManager {
                 }
             }
         } finally {
+            // Child slots whose exec position the walk had already passed when
+            // the parent unloaded: ROM has no remaining position in this frame's
+            // walk at which to free them, so they are released as the pass ends.
+            for (int e = pendingChildSlotRelease.nextSetBit(0); e >= 0;
+                    e = pendingChildSlotRelease.nextSetBit(e + 1)) {
+                releaseSlot(slotIndexForExec(e));
+            }
+            pendingChildSlotRelease.clear();
             currentExecSlot = -1;
             updating = false;
             deferredDynamicExecThisFrame.clear();

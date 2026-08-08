@@ -3,6 +3,15 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: reserved child object slots are released on the Sonic 2 and Sonic 3&K execution
+  path. When a parent unloads after the ascending object walk has already passed its
+  child's slot, the release is deferred to that slot's own execution position; only the
+  Sonic 1 counter-based loop ever consumed the deferral, so on the other loop every such
+  release leaked its slot permanently and each later free-slot search landed one slot
+  high for the rest of the act. ROM frees both slots unconditionally in the parent's
+  out-of-range tail (`s2.asm`:57076-57078) and has no path that lets a child slot
+  outlive its parent. Mystic Cave acts 1 and 2 now match the recorded ring behaviour,
+  whose spilled-ring bounce cadence is slot-gated.
 - Fix: Mystic Cave drawbridges and Crawltons reserve the second object slot the ROM
   allocates for their multi-sprite child. `Obj81_Init` calls
   `AllocateObjectAfterCurrent` and `Obj9E_Init` calls `AllocateObject`

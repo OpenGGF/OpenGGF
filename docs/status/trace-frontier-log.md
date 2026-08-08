@@ -65677,3 +65677,61 @@ defects, which now surface against a CORRECT slot map at MCZ1 f864 and MCZ2 f622
 directly diagnosable for the first time, where previously any bounce investigation
 would have been chasing behaviour on a skewed map. These two frames are the next
 S2 targets.
+
+## 2026-08-08 — round nine: the runExecLoop child-slot leak (MCZ1 + MCZ2 GREEN)
+
+Command: `mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1
+-Dsurefire.runOrder=alphabetical` with all three ROM properties, MCZ measured one
+`-Dtest` per invocation. Base 162b9f174. Result: 213 tests, **10 failures, down from
+12** — `TestS2MczLevelSelectTraceReplay` and `TestS2Mcz2LevelSelectTraceReplay` both
+GREEN, nothing added.
+
+**The round-eight regression was correct and has now paid for itself.** Landing the
+Obj81/Obj9E child-slot reservations did not cause the MCZ ring errors; it was the first
+thing to exercise a dormant engine bug, and holding the fix back would have left that
+bug in place and unfindable.
+
+- **ROOT CAUSE: `pendingChildSlotRelease` was only ever drained by the S1 exec lane.**
+  `ObjectManager.updateCounterBasedExecThenLoad` cleared it per pass (:885), drained it
+  at each slot's own exec position, and flushed it in a `finally` (:1019).
+  `runExecLoop` — the lane S2 and S3K actually use (`LevelFrameStep` ->
+  `LevelManager.updateObjectPositionsPostPhysicsWithoutTouches` ->
+  `ObjectManager.update:681` -> `runExecLoop:1090`) — did none of the three. Every
+  deferred child-slot release on that path leaked its SST slot **permanently**, and once
+  leaked, every later `FindFreeObj` landed one slot high for the rest of the act.
+  Confirmed directly by instrumenting the allocator: no `releaseSlot(28)` call ever
+  occurred at MCZ1 f567.
+- **The trigger, and why it was invisible before.** MCZ1 slot 28 was reserved at f332 by
+  `MCZDrawbridgeObjectInstance.reserveMultiSpriteChildSlot` (landed at 162b9f174) and
+  freed at f567 by `freeAllReservedChildSlots` ->
+  `releaseChildSlotAtItsOwnExecPosition`; parent unloading at exec cursor 11 with the
+  child slot at exec index 12 deferred the release into the bitset, which nothing then
+  consumed. Slot 28 sat allocated-but-instance-less from f568 on.
+- **The ring errors were a symptom, not a bounce defect.** The brief said to check
+  occupancy at f864 first and only then read `RLoss_Bounce` — occupancy did NOT match:
+  MCZ1 matches ROM only to f539 and first diverges at **f587**, 137 of 151 sampled
+  frames divergent, long before the f772 spill. At the spill the engine's 21 spilled
+  rings land in slots {19,33,34,41..58} where ROM uses {19,20,33,34,40..56}. Since
+  Obj37's floor probe gates on `(Vint_runcount+3)+d7` with `d7 = 127-slot`
+  (s2.asm:25209-25232), that skew changes each ring's bounce cadence and hence which are
+  re-collected.
+- ROM basis for freeing at all: s2.asm:57076-57078, the Obj81 out-of-range tail
+  (`movea.l objoff_3C(a0),a1 / DeleteObject2 / DeleteObject`) frees both slots
+  unconditionally. **No ROM path lets the child slot outlive the parent** — which is
+  precisely what the engine was doing. The fix introduces no constant and no
+  zone/route/frame/game predicate; it applies the existing documented
+  `releaseChildSlotAtItsOwnExecPosition` contract to the loop that was missing it.
+  MCZ1 slot-probe divergent frames 137 -> 78 (still not ROM-exact; separate follow-up).
+- **OOZ is NOT this defect.** `TestS2OozLevelSelectTraceReplay` unchanged at 3 errors,
+  first frame 5444. Still open.
+- **REFUTED this round:** ss_2 and ss_7 as special-stage defects. Both are the SAME
+  defect in the uncompared predecessor LEVEL replay — the engine's Tails player-DPLC
+  state is already wrong before the gap frame. ss_7 uses
+  `S2SpecialStagePredecessorReplay` correctly and its chain is complete (it is manifest
+  index 17 of 35, NOT the last segment). Evidence: seg2_ehz1 final row 3376 recording =
+  sonic mf65 + tails mf72 + tails-tails mf81, engine = sonic mf65 + tails mf95 with no
+  tails-tails edge at all; seg9_cpz2 (which feeds the GREEN ss_6) matches exactly. The
+  next S2 special-stage work is in the level-segment Tails DPLC path, not the stage.
+- **Measurement hazard, third one:** `-Dsurefire.reportsDirectory` is **not honoured by
+  this pom** — reports always land in `target/surefire-reports`. Wipe that directory
+  before each run instead; a private reports dir silently does nothing.
