@@ -4,10 +4,10 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
 - Fix/Test: S3K LBZ miniboss arm collision regions now publish each native
-  child's live X while retaining the linked-child Y phase and the native
-  interleaved escape step. This removes the Tails hurt-transition mismatch at
-  raw frame `20519`; the next blocker is the recorded direct
-  `KOS_DECOMPRESSION_QUEUE#283` completion at raw frame `21666`. AIZ, HCZ, MGZ,
+  child's live X/Y through the folded provider, including the routine-$0A
+  one-pixel escape interleave. This removes the Tails hurt-transition mismatch
+  at raw frame `21229` and reaches the next recorded
+  `KOS_DECOMPRESSION_QUEUE#286` completion at raw frame `21696`. AIZ, HCZ, MGZ,
   CNZ, and ICZ retain their established frontiers; no trace payloads changed.
 - Fix/Test: S3K LBZ Robotnik now preserves the ROM's low position words when
   `loc_8CC3C` teleports him, and its post-collapse proximity check selects the

@@ -65324,3 +65324,42 @@ to synthesize a POST phase on a VBLANK-only row.
 - Route position: AIZ, HCZ, MGZ, CNZ, and ICZ retain their established
   gameplay frontiers. LBZ now crosses raw `20519`; the next target is the
   missing direct queue submission before raw `21666`.
+
+## 2026-08-08 — S3K LBZ miniboss live child collision phase frontier
+
+- Worktree: `bugfix/s3k-traces` at `9966ef7a1` before this frontier commit;
+  unrelated edits in `.idea/vcs.xml`,
+  `docs/status/rewind-round-trip-gaps.md`, and
+  `src/main/java/com/openggf/level/objects/ObjectPlacementController.java`
+  remained unstaged. Validation used JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen` (SHA-1
+  `b711a909cce238ca4af3e517a2edca306228efa5`), without replacing or renaming
+  it.
+- Frontier command: `mvn -q -Dmse=off -Dsurefire.forkCount=1
+  -DreuseForks=true -Dmaven.test.failure.ignore=true
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtrace.frontierOnly=true -Dtrace.context.radius=20
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kLbzCompleteRunTraceReplay#replayMatchesTrace
+  test`. The candidate has no comparator errors through the Tails hurt
+  transition and consumes the earlier LBZ queue boundary; normal replay then
+  stops at the next unconsumed hardware completion, `KOS_DECOMPRESSION_QUEUE#286`
+  at raw frame `21696` / `PRE_MAIN_LOOP`.
+- Root cause: `Obj_LBZMiniboss` creates independent arm SST objects. Each arm
+  executes `MoveSprite_CircularSimple` before `loc_728C8`/`loc_72902` calls
+  `Draw_And_Touch_Sprite`, and the native collision list stores the object-RAM
+  pointer. The folded engine provider had exposed stale linked-child
+  coordinates; it now publishes each panel's live X/Y. During parent routine
+  `$0A`, the native `loc_72558` two-pixel Y step is interleaved with those child
+  slots, so the provider preserves the corresponding one-pixel phase. This is
+  native child-publication/order state, not a zone, frame, route, or trace
+  exception.
+- Validation: `TestS3kLbz1MinibossAndTransitionHeadless` (11 tests) and
+  `TestS3kLbz1KnucklesSequenceHeadless` (30 tests) pass. The gameplay-order
+  AIZ/HCZ/MGZ/CNZ/ICZ sweep reports no comparator errors before its established
+  hardware boundaries: AIZ `#19`/raw `1467`, HCZ `#97`/raw `9813`, MGZ
+  `#195`/raw `39371`, CNZ `#205`/raw `13962`, and ICZ `#255`/raw `21185`.
+  Ring comparison remains enabled through `ToleranceConfig.DEFAULT` with
+  `RingCountMode.FORCE_ERROR`; no trace payloads changed.
+- Route position: AIZ, HCZ, MGZ, CNZ, and ICZ retain their established
+  gameplay frontiers. LBZ now crosses the raw `21229` miniboss hurt
+  transition; the next target is hardware completion `#286` at raw `21696`.
