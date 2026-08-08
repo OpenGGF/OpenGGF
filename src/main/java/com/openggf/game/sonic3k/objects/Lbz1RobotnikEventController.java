@@ -19,6 +19,8 @@ import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -429,8 +431,8 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
             facingLeft = true;
             motion.x = TELEPORT_X;
             motion.y = TELEPORT_Y;
-            motion.xSub = 0;
-            motion.ySub = 0;
+            // ROM loc_8CC3C writes the position words only; the low subpixel
+            // words remain part of the MoveSprite2 state across this teleport.
             swingSetup1();
             return;
         }
@@ -457,7 +459,16 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
     private void updateAfterCollapse(AbstractPlayableSprite player) {
         updatePostCollapseCameraMin();
         updatePostCollapseCameraMax();
-        if (isPlayerNear(player, POST_COLLAPSE_NEAR_X, Integer.MAX_VALUE)) {
+        // ROM loc_8CCB4 calls Find_SonicTails, which selects the nearer native
+        // P1/P2 by horizontal distance before testing d2 against $60. The
+        // update argument is only a fallback for isolated object fixtures that
+        // do not expose the injected player roster.
+        ObjectPlayerQuery.NearestPlayerX nearest = services().playerQuery().nearestByRomX(
+                ObjectPlayerParticipationPolicy.NATIVE_P1_P2, motion.x);
+        boolean nativePlayerNear = nearest.player() != null
+                ? nearest.distance() < POST_COLLAPSE_NEAR_X
+                : isPlayerNear(player, POST_COLLAPSE_NEAR_X, Integer.MAX_VALUE);
+        if (nativePlayerNear) {
             routine = ROUTINE_SECOND_RISE;
             motion.yVel = FIRST_RISE_Y_VEL;
             return;

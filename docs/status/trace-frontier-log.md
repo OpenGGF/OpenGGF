@@ -65242,3 +65242,43 @@ to synthesize a POST phase on a VBLANK-only row.
 - Route position: AIZ, HCZ, MGZ, and CNZ retain their established gameplay
   frontiers; ICZ now crosses the ICZ→LBZ handoff at raw `25341`. LBZ is the
   next gameplay-order target.
+
+## 2026-08-08 — S3K LBZ Robotnik frontier
+
+- Worktree: `bugfix/s3k-traces` at `17c800716` before this frontier commit;
+  unrelated edits in `.idea/vcs.xml`,
+  `docs/status/rewind-round-trip-gaps.md`, and
+  `src/main/java/com/openggf/level/objects/ObjectPlacementController.java`
+  remained unstaged. Validation used JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen` (SHA-1
+  `b711a909cce238ca4af3e517a2edca306228efa5`), without replacing or renaming
+  it.
+- Frontier command: `mvn -q -Dmse=off -Dsurefire.forkCount=1
+  -DreuseForks=true -Dmaven.test.failure.ignore=true
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtrace.frontierOnly=true -Dtrace.context.radius=20
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kLbzCompleteRunTraceReplay#replayMatchesTrace
+  test`. The committed baseline stopped at raw frame `19869` with 7
+  Robotnik/miniboss queue fields mismatched. The candidate reports 13 errors
+  over 20528 frames and reaches raw frame `20519`, where the first comparison
+  is `tails_x_speed` (expected `0x0200`, actual `0x01F2`); the terminal
+  unconsumed completion `KOS_DECOMPRESSION_QUEUE#283` is the frontier-only
+  harness's expected segment-close artifact.
+- Root cause: native `loc_8CC3C` writes only Robotnik's high position words
+  before `Swing_Setup1`; the low subpixel words remain part of the
+  `MoveSprite2` state. The engine was clearing both low words, moving the
+  later rise threshold early and admitting the miniboss art one frame early.
+  The post-collapse check also now models native `Find_SonicTails` by selecting
+  the nearest native P1/P2 player before applying the `$60` horizontal test.
+  These are ROM position and player-selection semantics, not a zone, frame,
+  route, or trace exception.
+- Validation: `TestS3kLbz1KnucklesSequenceHeadless` passes. The gameplay-order
+  AIZ/HCZ/MGZ/CNZ/ICZ regression run retains the established AIZ `#50` raw
+  `20376`, HCZ `#113` raw `20697`, MGZ four-field queue mismatch at raw
+  `39348`, CNZ `#205` raw `13962`, and ICZ's two camera errors at raw
+  `15401`/`15403`; no prior frontier regressed. Ring comparison remains
+  enabled through `ToleranceConfig.DEFAULT` with `RingCountMode.FORCE_ERROR`;
+  no trace payloads changed.
+- Route position: AIZ, HCZ, MGZ, CNZ, and ICZ retain their established
+  gameplay frontiers. LBZ now reaches the Tails transition at raw `20519`;
+  that is the next target.

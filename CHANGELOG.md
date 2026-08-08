@@ -3,6 +3,13 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K LBZ Robotnik now preserves the ROM's low position words when
+  `loc_8CC3C` teleports him, and its post-collapse proximity check selects the
+  native nearest P1/P2 player. The LBZ complete-run frontier advances past the
+  Robotnik/miniboss queue mismatch at raw frame `19869`; the first remaining
+  comparison is Tails' transition at raw frame `20519` (`tails_x_speed`,
+  expected `0x0200`, actual `0x01F2`). AIZ, HCZ, MGZ, CNZ, and ICZ retain their
+  established frontiers; no trace payloads changed.
 - Fix/Test: S3K fresh-level title owners now publish the ROM-backed runtime-art
   handoff when their native `#$16` wait reaches `LoadEnemyArt`/EXIT. The
   recording driver restores the destination player and camera on that same
