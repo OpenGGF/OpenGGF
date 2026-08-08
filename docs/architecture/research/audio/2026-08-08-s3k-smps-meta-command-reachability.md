@@ -25,8 +25,10 @@ The S3K Z80 driver defines the extra-coordinate table at
 handler. The native routines define the following contracts:
 
 * `SND_CMD` (`:3865-3878`) calls `zPlaySoundByIndex` with one ID operand. The
-  ID dispatcher classifies music `01-32`, SFX `33-DB`, and fade/control ranges
-  at `:1632-1669`.
+  native dispatch inventory classifies `01-32` as music; on the S&K driver
+  (`SonicDriverVer<>3`) `DC` is the CreditsK music special case, while
+  `33-DB` and aliases `DD-DF` are SFX. The S3 driver omits that special case,
+  so `DC-DF` are SFX. These ranges are defined at `:1632-1669`.
 * `MUS_PAUSE` (`:3880-3919`) stores the operand as `zHaltFlag`. Nonzero clears
   the playing bit and keys off every track, then silences PSG; zero restores
   the playing bit for every track.
@@ -57,11 +59,17 @@ the actual loader tables rather than assuming a filename or a subset of songs:
 Music blobs also contain zero raw `FF 01`, `FF 02`, or `FF 03` pairs. A raw
 scan is not used to classify SFX: `Sonic3kSmpsLoader` returns a bank-backed
 buffer containing voices and unrelated streams, so raw SFX bytes would produce
-false positives. Instead, the test runs every loaded stream through
-`SmpsSequencer` with a recording S3K coordination handler and records only
-subcommands encountered at a live track position. It observes the live `FF 00`
-tempo command and SFX `0xAB`'s `FF 07` command, proving that the instrumentation
-is traversing real meta commands while still finding no `01/02/03` route.
+false positives. Instead, the test starts at every resolved loaded track entry
+and computes a fixed point over note/duration bytes plus jump, call, counted
+loop, conditional loop-exit, continuous, and terminal edges. Calls into a
+shared bank routine outside a per-song loader blob are closed external edges;
+all other edges must close with no unexplored frontier (or a cycle) before recording
+live FF subcommands. The 51 S&K music, 50 S3 music, and 169 named SFX graphs
+observe live `FF 00`/`FF 07` commands but no `01/02/03` route. The `DD-DF`
+aliases are dispatch classifications, not additional named loader streams.
+
+`EB` is the separate native conditional loop-exit command; it is included in
+the graph edges and is not one of the three FF meta-command gaps.
 
 The characterization is maintained by
 `TestSonic3kSmpsMetaCommandReachability`, run with:
