@@ -35,7 +35,7 @@ and traces remain comparison evidence rather than gameplay authority.
 ## Execution status — 2026-08-08
 
 The first remediation swarm is complete on the local human-review branch
-`feature/ai-unfinished-remediation`. It implemented LRZ1 falling startup, the
+`feature/ai-unfinished-remediation-review`. It implemented LRZ1 falling startup, the
 AIZ miniboss napalm route, AIZ2 end-boss splash children, explicit
 special-stage debug capabilities, and authoritative S1 background-scroll
 ownership. The SMPS investigation closed the loader-supported portion while

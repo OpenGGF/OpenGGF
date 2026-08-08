@@ -4,8 +4,8 @@ Date: 2026-08-08
 
 ## Review branch
 
-- Branch: `feature/ai-unfinished-remediation`
-- Worktree: `.worktrees/unfinished-remediation`
+- Branch: `feature/ai-unfinished-remediation-review`
+- Worktree: `.worktrees/unfinished-remediation-review`
 - Updated base: `develop` at `228e2effa`
 - Delivery state: local and unpushed; not merged into `develop`
 
