@@ -671,9 +671,8 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance implements Re
                 // ROM: loc_39AF4 — airborne after jump
                 actionTimer--;
                 if (actionTimer < 0) {
-                    // Timer expired before landing — transition to ground slide
-                    attackPhase = 5;
-                    state.yVel = 0;
+                    // ROM: loc_39AF4 -> loc_39A7C when the airborne timer expires.
+                    transitionToGroundRun();
                     return;
                 }
                 TerrainCheckResult floorADW = ObjectTerrainUtils.checkFloorDist(state.x, state.y, Y_RADIUS);
@@ -774,9 +773,8 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance implements Re
                 // ROM: loc_39B44 — airborne, fire spikeballs at apex
                 actionTimer--;
                 if (actionTimer < 0) {
-                    // Timer expired before landing — transition to ground slide
-                    attackPhase = 5;
-                    state.yVel = 0;
+                    // ROM: loc_39B44 -> loc_39A7C when the airborne timer expires.
+                    transitionToGroundRun();
                     return;
                 }
                 if (!spikeballsFired && state.yVel >= 0) {
@@ -837,6 +835,18 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance implements Re
     // ========================================================================
     // Attack helpers
     // ========================================================================
+
+    /**
+     * ROM loc_39A7C: stop the airborne attack, flip, and enter ground-run before
+     * the outer attack loop performs its single ObjectMove.
+     */
+    private void transitionToGroundRun() {
+        attackPhase = 5;
+        anim = 5;
+        facingLeft = !facingLeft;
+        state.xVel = 0;
+        state.yVel = 0;
+    }
 
     /**
      * Start a dash using the ROM's direction toggle system.

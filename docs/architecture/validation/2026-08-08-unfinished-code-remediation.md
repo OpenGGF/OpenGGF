@@ -116,13 +116,13 @@ No trace frontier advanced. JDK 21 focused validation also passed:
 
 ```text
 mvn -Dmse=off -Dtest=com.openggf.tests.TestDEZMechaSonic test
-Tests run: 28, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 30, Failures: 0, Errors: 0, Skipped: 0
 
 mvn -Dmse=off -Dtest=com.openggf.tests.TestDEZMechaSonic,\
 com.openggf.game.sonic2.objects.bosses.TestS2MechaSonicGraphRewind,\
 com.openggf.game.rewind.TestBossChildNoDoubleSpawnParity,\
 com.openggf.game.rewind.coverage.TestRewindCoverageGuard test
-Tests run: 38, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 40, Failures: 0, Errors: 0, Skipped: 0
 ```
 
 The first run was intentionally red before the production edit (27 tests, one

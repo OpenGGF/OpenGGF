@@ -489,6 +489,36 @@ public class TestDEZMechaSonic {
     }
 
     @Test
+    public void aimDashWalkAirborneTimerExpiryStopsBeforeOuterObjectMove() throws Exception {
+        // ROM loc_39AF4 branches to loc_39A7C when the airborne timer expires.
+        assertAirborneTimerExpiryStopsBeforeMove(0x10);
+    }
+
+    @Test
+    public void aimJumpSpikeballsAirborneTimerExpiryStopsBeforeOuterObjectMove() throws Exception {
+        // ROM loc_39B44 branches to the same loc_39A7C transition.
+        assertAirborneTimerExpiryStopsBeforeMove(0x1E);
+    }
+
+    private void assertAirborneTimerExpiryStopsBeforeMove(int attackSubRoutine) throws Exception {
+        forceAttackState(attackSubRoutine, 4, 0);
+        boss.getState().xVel = 0x400;
+        boss.getState().yVel = -0x200;
+
+        boss.update(1, mock(AbstractPlayableSprite.class));
+
+        // loc_39A7C: advance to ground-run phase, anim 5, flip, and clear both
+        // velocities before loc_398C0's single outer ObjectMove.
+        assertEquals(5, getPrivateInt("attackPhase"));
+        assertEquals(5, getPrivateInt("anim"));
+        assertTrue(getPrivateBoolean("facingLeft"));
+        assertEquals(0, boss.getState().xVel);
+        assertEquals(0, boss.getState().yVel);
+        assertEquals(MECHA_SONIC_X, boss.getState().x);
+        assertEquals(MECHA_SONIC_Y, boss.getState().y);
+    }
+
+    @Test
     public void attackAlignsChildrenBeforeMoveAndRetainsAlignedPositions() throws Exception {
         // ROM loc_398C0 aligns the LED at (0,0) and sensor at (+$C,-$C),
         // then moves the parent. Child routines do not re-align themselves;
@@ -570,6 +600,12 @@ public class TestDEZMechaSonic {
         Field field = Sonic2MechaSonicInstance.class.getDeclaredField(fieldName);
         field.setAccessible(true);
         return field.getInt(boss);
+    }
+
+    private boolean getPrivateBoolean(String fieldName) throws Exception {
+        Field field = Sonic2MechaSonicInstance.class.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.getBoolean(boss);
     }
 
     private void setPrivateInt(String fieldName, int value) throws Exception {

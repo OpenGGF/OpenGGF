@@ -65585,6 +65585,6 @@ S1/S2 12 -> 10 red, zero regressions.
   `mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1
   -Dsurefire.runOrder=alphabetical
   -Dtest=com.openggf.tests.trace.s2.TestS2DezEndingLevelSelectTraceReplay#replayMatchesTrace
-  -Ds2.rom.path=<verified-Sonic-2-REV01> test`.
+  -Dsonic2.rom.path=<verified-Sonic-2-REV01> test`.
 - Controller result: base `5cc94d457`, 1/1 pass; candidate `4b4572cc3`, 1/1
   pass. No new errors, fixture changes, or trace-frontier advancement.
