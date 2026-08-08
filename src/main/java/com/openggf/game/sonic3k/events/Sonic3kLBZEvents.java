@@ -891,10 +891,6 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
                         mutationContext, blocks16x16, chunks128x128, terrainArt),
                 context);
         state.setDeathEggTerrainSwapApplied(true);
-        // ROM LBZ2_DeathEgg_Launch_PLC queues this one-module art stream after
-        // the terrain KosM batch has retired, so its child follows the final
-        // terrain batch entry in the shared physical FIFO.
-        queueDeathEggLaunchArt();
         clearDeathEggTerrainKosOwnership();
     }
 
@@ -918,6 +914,10 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
                     Sonic3kConstants.LBZ2_8X8_DEATH_EGG_KOSM_ADDR,
                     Sonic3kConstants.LBZ2_8X8_DEATH_EGG_DEST_TILE);
             deathEggTerrainArtOrdinal = deathEggTerrainArtHandle.ordinal();
+            // LBZ2_Resize queues the one-module Death Egg 2 art immediately
+            // after the terrain KosM parent, so it remains behind that parent
+            // in the native module FIFO (sonic3k.asm:39529-39543).
+            queueDeathEggLaunchArt();
         } catch (IOException e) {
             throw new IllegalStateException(
                     "Unable to queue LBZ2 Death Egg terrain resources", e);

@@ -3257,7 +3257,23 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				: null;
 	}
 
+	/**
+	 * Copies the angle bytes that the native sidekick control tail reads from
+	 * the shared Primary_Angle/Secondary_Angle registers. The leader's
+	 * AnglePos dispatch owns those registers; a sidekick must consume that pair
+	 * before its own movement routine evaluates edge balance (S3K
+	 * sonic3k.asm:22531-22535, 26243-26244, 27837-27849).
+	 */
 	private void captureTiltAnglesFromLandingProbes(SensorResult[] groundResults) {
+		if (sprite.isCpuControlled()) {
+			SpriteManager sprites = sprite.currentSpriteManagerOrNull();
+			AbstractPlayableSprite leader = sprites != null ? sprites.getMainPlayable() : null;
+			if (leader != null && leader.getMovementManager() instanceof PlayableSpriteMovement leaderMovement) {
+				latchedNextTilt = leaderMovement.latchedNextTilt;
+				latchedTilt = leaderMovement.latchedTilt;
+				return;
+			}
+		}
 		SensorResult left = groundResults != null && groundResults.length > 0 ? groundResults[0] : null;
 		SensorResult right = groundResults != null && groundResults.length > 1 ? groundResults[1] : null;
 		latchedNextTilt = right == null ? 3 : right.angle() & 0xFF;

@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K LBZ now models the ROM's shared-angle landing handoff for
+  Tails, grounded short-tail results-owner publication boundary, and immediate
+  LBZ2 Death Egg launch-art queue order. The LBZ complete-run prefix advances
+  from direct completion `#286` at raw frame `21696` through module completion
+  `#210` at raw frame `39416` with no comparator errors; AIZ, HCZ, MGZ, CNZ, and
+  ICZ retain their established frontiers. No trace payloads changed.
 - Fix/Test: S3K LBZ miniboss arm collision regions now publish each native
   child's live X/Y through the folded provider, including the routine-$0A
   one-pixel escape interleave. This removes the Tails hurt-transition mismatch

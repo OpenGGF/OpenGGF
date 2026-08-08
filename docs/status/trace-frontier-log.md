@@ -65363,3 +65363,51 @@ to synthesize a POST phase on a VBLANK-only row.
 - Route position: AIZ, HCZ, MGZ, CNZ, and ICZ retain their established
   gameplay frontiers. LBZ now crosses the raw `21229` miniboss hurt
   transition; the next target is hardware completion `#286` at raw `21696`.
+
+## 2026-08-08 — S3K LBZ Death Egg/results queue frontier
+
+- Worktree: `bugfix/s3k-traces` at `749aa98d1` before this frontier commit;
+  unrelated edits in `.idea/vcs.xml`,
+  `docs/status/rewind-round-trip-gaps.md`, and
+  `src/main/java/com/openggf/level/objects/ObjectPlacementController.java`
+  remained unstaged. Validation used JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen` (SHA-1
+  `b711a909cce238ca4af3e517a2edca306228efa5`), without replacing or renaming
+  it.
+- Frontier command: the focused LBZ replay was run in frontier mode with a
+  temporary local prefix cap at raw frame `39420` to avoid retaining the
+  clean suffix in the diagnostic report:
+  `mvn -q -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=true
+  -DargLine=-Xmx2g -Dmaven.test.failure.ignore=true
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtrace.frontierOnly=true -Dtrace.maxFrame=39420
+  -Dtrace.context.radius=20
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kLbzCompleteRunTraceReplay#replayMatchesTrace
+  test`. The temporary cap was removed after validation. The cleaned report
+  has `0` errors and `0` warnings through `39388` compared rows (raw frame
+  `39420`), consuming the LBZ2 module completions through `#210` at raw
+  `39416`; the next recorded direct completion is `#314` at raw `43942`.
+  No first-error field exists in the verified prefix.
+- Root cause: the native sidekick control tail consumes the leader's shared
+  `Primary_Angle`/`Secondary_Angle` pair before Tails evaluates landing-edge
+  balance, so the landing handoff now publishes those semantic angle latches
+  at the shared playable-physics boundary. The grounded short-tail results
+  owner keeps its native one-pass publication/init gap and control-release
+  boundary, while ordinary results owners retain same-pass dispatch. Finally,
+  `LBZ2_Resize` queues `ArtKosM_LBZ2DeathEgg2_8x8` immediately after the
+  `LBZ2_8X8_DeathEgg_KosM` parent, preserving the native module FIFO order
+  (`sonic3k.asm:39529-39543`). These are ROM owner/order semantics, not zone,
+  frame, route, or trace-data branches.
+- Validation: `TestS3kLbz1GroundLaunchIntroHeadless`,
+  `TestS3kLbz1KnucklesSequenceHeadless`, and
+  `TestS3kLbz1MinibossAndTransitionHeadless` pass, as do the S3K KosM queue
+  lifecycle/readiness/structural tests. Gameplay-order AIZ/HCZ/MGZ/CNZ/ICZ
+  replays retain their established edges: AIZ `#19`/raw `1467`, HCZ
+  `#97`/raw `9813`, MGZ `#195`/raw `39371`, CNZ `#205`/raw `13962`, and ICZ
+  `#255`/raw `21185`, with no comparator errors before those edges. Ring
+  comparison remains enabled through `ToleranceConfig.DEFAULT` with
+  `RingCountMode.FORCE_ERROR`; no trace payloads changed.
+- Route position: AIZ, HCZ, MGZ, CNZ, and ICZ retain their established
+  gameplay frontiers. LBZ advances from completion `#286`/raw `21696` to
+  completion `#210`/raw `39416`; the next target is direct completion `#314`
+  at raw `43942`.

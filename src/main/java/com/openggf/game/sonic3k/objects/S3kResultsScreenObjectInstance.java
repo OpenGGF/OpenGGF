@@ -121,6 +121,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private boolean artLoaded;
     private boolean artCached;
     private boolean resultsArtLoadPending;
+    private boolean resultsArtLoadDispatchDeferred;
     private Sonic3kObjectArt.QueuedResultsArt queuedResultsArt;
     private long resultsGeneralArtOrdinal = -1;
     private long resultsNumberArtOrdinal = -1;
@@ -158,12 +159,13 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
 
     @Override
     protected boolean skipsSameFrameUpdateAfterSpawn() {
-        // The signpost's Obj_EndSignResults allocation lands in a higher
-        // engine SST while the current owner is still being processed.
-        // ExecuteObjects reaches that slot in the same pass, so
-        // Obj_LevelResultsInit submits its three Queue_Kos_Module jobs before
-        // the loop-tail service (sonic3k.asm:176311-176319, 62512-62531).
-        return false;
+        // The grounded short-tail owner is published by AllocateObject from an
+        // earlier SST and does not run Obj_LevelResultsInit until the next
+        // Process_Sprites pass (sonic3k.asm:62512-62531). Ordinary result
+        // owners retain their native same-pass dispatch.
+        return usesShortResultsChildRetireTail
+                && resultsChildTimingAdjustment
+                == S3kSignpostInstance.ResultsChildTimingAdjustment.UNSUPPORTED_GROUNDED_COMPENSATION;
     }
 
     S3kResultsScreenObjectInstance(PlayerCharacter character, int act, int waitDurationAdjustment,
@@ -442,6 +444,16 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         this.playerRef = player;
         this.frameCounter = vIntRunCount;
         if (resultsArtLoadPending) {
+            if (usesShortResultsChildRetireTail
+                    && resultsChildTimingAdjustment
+                    == S3kSignpostInstance.ResultsChildTimingAdjustment.UNSUPPORTED_GROUNDED_COMPENSATION
+                    && !resultsArtLoadDispatchDeferred) {
+                // Obj_EndSignResults publishes the general-allocation results
+                // owner on its own pass before Obj_LevelResultsInit submits
+                // the three KosM jobs.
+                resultsArtLoadDispatchDeferred = true;
+                return;
+            }
             // Obj_LevelResultsInit runs on the first dispatch after the SST
             // is allocated.  Keep the ROM's one-frame gap between the object
             // publication and its three Kosinski submissions.
@@ -560,11 +572,16 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
      * the one that clears End_of_level_active.
      */
     boolean isEndSignControlRestoreBoundaryReady() {
-        return state == STATE_EXIT
+        boolean deferredGeneralOwnerControlBoundary = resultsArtLoadDispatchDeferred
+                && state == STATE_EXIT
+                && childrenRemaining <= 0
+                && !exitPublicationComplete;
+        boolean ready = deferredGeneralOwnerControlBoundary || (state == STATE_EXIT
                 && childrenRemaining <= 0
                 && exitRetireDispatchesInitialized
                 && carriedResultsRenderRetireDispatches <= 0
-                && !exitPublicationComplete;
+                && !exitPublicationComplete);
+        return ready;
     }
 
     /**
