@@ -6,7 +6,7 @@ Base: `b82056a13`
 
 ## Decision
 
-**DONE_WITH_CONCERNS — retained and narrowed.** `FAST` and `REALISTIC` are not
+**P2 NARROWED / RESERVED — not resolved.** `FAST` and `REALISTIC` are not
 deleted and are not given guessed delays. The existing resolver remains the
 coherent unfinished implementation:
 
@@ -95,3 +95,12 @@ resolver aliases), `aae67bc50` (the S3K-only profile gate), and `420ff09a6`
 (the five-fixture S3K manifest publication). The 2026-07-29 profile design
 already reserved `FAST` and `REALISTIC`; this remediation makes that status
 explicit in the current audit and roadmap rather than deleting the modes.
+
+## Workspace-isolation note
+
+During this load-profile documentation lane, four task-specific unstaged hunks
+appeared in the main `develop` worktree at `5922ee722`. They were byte-identical
+to, or overlapped, this isolated commit's documentation changes. The root worker
+preserved them and never restored or staged them. They are not part of this
+worktree's proof; main was not untouched, and any integration must be validated
+independently.

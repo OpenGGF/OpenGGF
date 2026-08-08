@@ -106,6 +106,17 @@ The Knuckles final-boss handoff creates a persistent object, but it is invisible
 and inert. Big Arm phases, collision, art/PLC ownership, hit/defeat flow, and
 route completion are therefore absent.
 
+### Remediation attempts (2026-08-08)
+
+Two candidate ports were rejected and remain unintegrated. The first was the
+committed `98d968d7f` attempt; review found invented phases, mapping ownership,
+and defeat/capsule flow, with no native articulated arm/grab graph. A second v2
+working-tree attempt was never committed. It proved useful articulated
+anchors/tables (`$AD`/`$9A`), grab, and debris behavior and passed six focused
+tests plus 28 graph/rewind guards, but root choreography, post-capsule
+continuation, and a Knuckles LBZ route trace remained unproven. The v2 was
+therefore not integrated, and the inert handoff remains a P0 blocker.
+
 ### Removal Condition
 
 Implement the ROM boss state machine and assets through the production loading

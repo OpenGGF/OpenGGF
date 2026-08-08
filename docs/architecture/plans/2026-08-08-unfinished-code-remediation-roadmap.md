@@ -35,14 +35,17 @@ and traces remain comparison evidence rather than gameplay authority.
 ## Execution status — 2026-08-08
 
 The first remediation swarm is complete on the local human-review branch
-`feature/ai-unfinished-remediation-review`. It implemented LRZ1 falling startup, the
-AIZ miniboss napalm route, AIZ2 end-boss splash children, explicit
-special-stage debug capabilities, and authoritative S1 background-scroll
-ownership. The no-op `AbstractLevel.markAllDirty()` contract was removed after
-confirming that rewind invalidation is manager-owned. The SMPS investigation
-closed the loader-supported and S3-native SFX portions with ROM-backed
-full-bank proof. The attempted Big Arm port was rejected
-by independent review and was not integrated.
+`feature/ai-unfinished-remediation-review` (local only; not merged or pushed). It
+implemented LRZ1 falling startup, the AIZ miniboss napalm route, AIZ2 end-boss
+splash children, explicit special-stage debug capabilities, authoritative S1
+background-scroll ownership, and the host-owned title-menu audio path including
+presentation-sink recreation after a title exit/reset. The no-op
+`AbstractLevel.markAllDirty()` contract was removed after confirming that rewind
+invalidation is manager-owned. The SMPS investigation closed the loader-supported
+and S3-native SFX portions with ROM-backed full-bank proof. Mecha Sonic ordering
+was corrected and replayed against the existing DEZ fixture/trace. `FAST` and
+`REALISTIC` remain P2 narrowed/reserved aliases, not resolved. Two Big Arm
+attempts were rejected/unintegrated; the inert placeholder remains P0.
 
 Commands, test outcomes, unresolved work, and the rejected-branch rationale
 are recorded in
@@ -54,16 +57,25 @@ that every audited feature is now complete.
 
 ### Wave 1 — route-critical S3K behavior
 
-1. Complete `AizMinibossNapalmProjectile`: native movement/floor behavior,
-   harmful touch response, ROM mappings/art, explosion children, rewind, and a
-   Knuckles AIZ route trace.
-2. Complete `LbzFinalBoss2Instance` / Big Arm: art/PLC, phases, articulated
-   children, collision/damage/defeat/results, rewind, and Knuckles LBZ trace.
-3. Restore LRZ1 non-Knuckles falling-introduction initialization from
-   `SpawnLevelMainSprites` `loc_68A6` with character/zone/act bootstrap tests;
-   SSZ has no corresponding branch in the owning routine.
-4. Add AIZ2 end-boss splash children from `ChildObjDat_69D2E`, including slot
-   order, ROM assets, rendering, allocation, and rewind coverage.
+1. **Open:** `AizMinibossNapalmProjectile` has native movement/floor behavior,
+   harmful touch response, ROM mappings/art, explosion children, rewind, and
+   production barrel routing. Capture a Knuckles AIZ route trace proving the
+   remaining activation, slot, and lifetime behavior.
+2. **P0 open:** `LbzFinalBoss2Instance` / Big Arm remains an inert placeholder.
+   The committed `98d968d7f` candidate was rejected for invented phases,
+   mapping ownership, and defeat flow. A second uncommitted v2 proved
+   articulated anchors/tables (`$AD`/`$9A`), grab, and debris and passed six
+   focused plus 28 graph/rewind guards, but root choreography, post-capsule
+   continuation, and a Knuckles LBZ route trace remain unproven. Reuse only
+   those proven pieces in a ROM-owned port.
+3. **Resolved 2026-08-08:** LRZ1 non-Knuckles falling-introduction
+   initialization is ported from `SpawnLevelMainSprites` `loc_68A6` with
+   character/zone/act bootstrap tests; SSZ has no corresponding branch in the
+   owning routine.
+4. **Resolved 2026-08-08:** AIZ2 end-boss splash children from
+   `ChildObjDat_69D2E` now have native slot order, ROM assets, rendering,
+   allocation, and rewind coverage; an end-to-end trace remains follow-up
+   evidence.
 
 ### Wave 2 — semantic correctness and honest capabilities
 
@@ -72,29 +84,35 @@ that every audited feature is now complete.
    all loader streams have closed full-bank control flow, ROM-asserted alias
    dispatch, and no reached target command; custom-stream handling remains
    operand-alignment-only pending a deliberately supported custom driver.
-2. Replace S1/S3K special-stage shortcut no-ops with an explicit capability
-   contract: a shortcut either works and has tests, or is unavailable.
-3. Resolve `Sonic1.getBackgroundScroll()` ownership against the current
-   parallax/runtime updater. Remove the redundant API or expose authoritative
-   state; do not introduce a second parallax model.
-4. `AbstractLevel.markAllDirty()` is resolved: the unused no-op was removed
-   after existing rewind and tilemap tests proved manager-owned invalidation.
+2. [Resolved 2026-08-08] Replace S1/S3K special-stage shortcut no-ops with an
+   explicit capability contract: a shortcut either works and has tests, or is
+   unavailable.
+3. [Resolved 2026-08-08] Resolve `Sonic1.getBackgroundScroll()` ownership
+   against the current parallax/runtime updater. The redundant query was
+   removed; per-zone handlers remain authoritative and no second parallax model
+   was introduced.
+4. [Resolved 2026-08-08] `AbstractLevel.markAllDirty()` was removed after
+   existing rewind and tilemap tests proved manager-owned invalidation.
 
 ### Wave 3 — polish, configuration, and S2 parity
 
 1. [Resolved 2026-08-08] `MasterTitleScreen` navigation, confirmation, and
    error audio now use injected host-owned cues. Engine startup owns the
-   `AudioManager` route, and the unified presentation fallback synthesizes
-   deterministic PCM without a selected game ROM; interaction tests prove
-   distinct events, boundary silence, and duplicate suppression.
-2. Give FAST/REALISTIC load profiles authoritative timing semantics or migrate
-   them out of the advertised configuration surface.
+   `AudioManager` route, the unified presentation fallback synthesizes
+   deterministic PCM without a selected game ROM, and title-exit/reset
+   lifecycle tests prove the retained backend recreates exactly one closed/
+   replaced presentation sink before re-entry.
+2. **P2 narrowed/reserved — not resolved:** retain `FAST` and `REALISTIC` as
+   warning-emitting aliases until cross-game measurements, explicit semantics,
+   and readiness/rewind/trace-authority tests exist. Do not invent delays or
+   delete the aliases; see the load-time validation report.
 3. **Resolved 2026-08-08:** Corrected Mecha Sonic outer-loop `ObjectMove` and
    child ordering from the S2 disassembly. Focused DEZ phase/child-order tests
    and existing graph rewind tests are green. The dedicated
    `TestS2DezEndingLevelSelectTraceReplay#replayMatchesTrace` is 1/1 green on
-   both base `5cc94d457` and candidate `4b4572cc3` with verified REV01 ROM;
-   ObjAF appears from auxiliary frame 127, and no frontier advanced.
+   both base `5cc94d457` and candidate `4b4572cc3` with the verified REV01 ROM
+   and existing `s2/dez_ending` fixture; ObjAF appears from auxiliary frame
+   127, and no frontier advanced.
 4. **Resolved boundary / explicit deferral 2026-08-08:** Treat CPZ placement
    debug and human-P2 monitor behavior as engine/game-mode capabilities, not
    object-local exceptions. CPZ now rejects the supported engine free-fly debug

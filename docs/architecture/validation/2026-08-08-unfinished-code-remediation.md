@@ -51,6 +51,11 @@ the disassembly-owned topology and covered by tests.
   music and `DD-DF` are SFX, while S3 dispatches `DC-DF` as SFX. The differing
   `9B`/`AD` payloads and all alias targets are covered. Operand alignment
   remains supported for custom streams.
+- Master-title navigation, confirmation, and error audio now use typed
+  host-owned cues and deterministic ROM-independent PCM. The presentation
+  backend is installed before the pre-ROM title and, after title exit/reset,
+  recreates exactly one closed/replaced presentation sink before re-entry;
+  interaction, PCM, and lifecycle tests cover the complete path.
 
 ### S2 capability boundaries (CPZ debug placement and human-P2 monitors)
 
@@ -90,12 +95,29 @@ absent.
 
 ## Independently rejected work
 
-The candidate Big Arm implementation on
-`bugfix/ai-remediate-lbz-big-arm` (`98d968d7f`) was rejected and not
-cherry-picked. Independent review found invented phases, the wrong mapping
-ownership, no native articulated arm/grab graph, and an invented defeat/capsule
-flow. The current inert placeholder therefore remains a P0 blocker, but the
-repository did not trade an honest placeholder for inaccurate gameplay.
+Two Big Arm attempts were rejected and left unintegrated:
+
+1. The first committed candidate on `bugfix/ai-remediate-lbz-big-arm`
+   (`98d968d7f`) invented phases, mapping ownership, and defeat/capsule flow;
+   independent review found no native articulated arm/grab graph.
+2. A second v2 working-tree attempt was never committed. It did establish
+   useful ROM-shaped articulated anchors/tables (`$AD`/`$9A`), grab, and debris,
+   and passed six focused tests plus 28 graph/rewind guards. It did not prove
+   the root choreography, post-capsule continuation, or a Knuckles LBZ route
+   trace, so it was not integrated.
+
+The inert placeholder therefore remains the honest P0 blocker. The v2 test
+counts are supporting evidence for a future port, not proof of a playable boss.
+
+## Workspace-isolation incident
+
+During the load-profile documentation lane, four task-specific unstaged hunks
+appeared in the main `develop` worktree at `5922ee722`. They were
+byte-identical to, or overlapped, the isolated load-profile commit. The root
+worker preserved them and never restored or staged them; they are not part of
+this review-branch proof. This report therefore does not claim that main was
+untouched; the remediation evidence below is branch-local and must be
+integrated and revalidated separately.
 
 ## Validation
 
@@ -130,6 +152,12 @@ note.
 
 The corrected rewind inventory gate also passed 32 focused tests after adding
 `AizEndBossWaterfallChild` to the intentional graph-covered totals.
+
+The dead S3K special-stage results-offset row is resolved by caller-free cleanup
+commit `e0223ed06`: it removed only the six unverified results-art constants and
+size constants from `Sonic3kSpecialStageRomOffsets`. The live manager-local
+alignment/debug hooks, explicit capability profile, and verified results path
+remain; this cleanup does not claim that those live capabilities were deleted.
 
 ## Mecha Sonic parity follow-up
 
@@ -177,23 +205,27 @@ mvn -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
 | Run | Total | Pass | Failure | Error | Skipped |
 |---|---:|---:|---:|---:|---:|
 | `develop` `228e2effa` | 14,342 | 14,263 | 34 | 14 | 31 |
-| remediation branch | 14,388 | 14,309 | 34 | 14 | 31 |
+| remediation branch | 14,404 | 14,325 | 34 | 14 | 31 |
 
 Normalized Surefire comparison by class, invocation name, outcome, and
 exception type found identical failure/error sets and no baseline
-PASS-to-FAIL/ERROR transition. The feature adds 48 passing invocations. Two
-obsolete scalar-only napalm probe invocations disappear because the projectile
-is now parent/sibling graph-linked; their replacement graph classification and
-real `ObjectManager` rewind tests pass. Raw-message-only differences are one
-volatile launcher identity and six Java helpful-NPE messages on already-erroring
-Tornado tests.
+PASS-to-FAIL/ERROR transition. The feature adds 64 passing invocations,
+including the title-audio/sink-lifecycle, Mecha Sonic DEZ-order, and S2
+capability-boundary coverage. Two obsolete scalar-only napalm probe invocations
+disappear because the projectile is now parent/sibling graph-linked; their
+replacement graph classification and real `ObjectManager` rewind tests pass,
+for a net increase of 62 rows. Raw-message-only differences are one volatile
+launcher identity and six Java helpful-NPE messages on already-erroring Tornado
+tests.
 
 ## Still open
 
 Highest-priority remaining work is deliberately visible rather than deleted:
 
-1. Port Big Arm from the native object graph and defeat flow, then validate the
-   Knuckles LBZ route.
+1. Port Big Arm from the native object graph and defeat flow, using only the
+   v2-proven anchors/tables (`$AD`/`$9A`), grab, and debris where they survive
+   source review; then prove the root choreography, post-capsule continuation,
+   and Knuckles LBZ route.
 2. Capture route/trace evidence for the AIZ napalm and AIZ2 splash changes.
 3. Continue the roadmap's load-profile semantics work.
 4. If native S2 debug placement is made a product goal, design its engine-wide
