@@ -86,8 +86,10 @@ that every audited feature is now complete.
    and error audio.
 2. Give FAST/REALISTIC load profiles authoritative timing semantics or migrate
    them out of the advertised configuration surface.
-3. Correct Mecha Sonic outer-loop `ObjectMove` and child ordering from the S2
-   disassembly with phase and DEZ trace tests.
+3. **Resolved 2026-08-08:** Corrected Mecha Sonic outer-loop `ObjectMove` and
+   child ordering from the S2 disassembly. Focused DEZ phase/child-order tests
+   and existing graph rewind tests are green; a DEZ trace rerun remains useful
+   follow-up evidence when the verified ROM/movie lane is available.
 4. Treat CPZ placement debug and human-P2 monitor behavior as engine/game-mode
    capabilities, not object-local exceptions.
 

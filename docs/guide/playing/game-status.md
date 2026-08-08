@@ -59,6 +59,8 @@ expectations honestly -- what works well, what is incomplete, and what you might
 - Water system for ARZ and CPZ.
 - HTZ earthquake and lava systems.
 - Per-zone level events across all zones.
+- Mecha Sonic's DEZ attack loop follows the shipped ROM's outer `ObjectMove`
+  and child-alignment ordering.
 - Demo playback.
 - Broad SMPS audio support; exact command/register parity still has known gaps.
 
@@ -69,8 +71,6 @@ expectations honestly -- what works well, what is incomplete, and what you might
 - Some visual effects (screen distortion, specific palette transitions) may differ
   slightly from the original.
 - Oil Ocean Zone oil surface behavior is partially implemented.
-- Mecha Sonic's outer attack loop currently applies `ObjectMove` in a different
-  order from the ROM and needs a dedicated phase/child-order parity pass.
 
 ### Notable quirks
 

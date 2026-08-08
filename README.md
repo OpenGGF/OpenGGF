@@ -224,8 +224,12 @@ straightforward to add new objects, zones, and game-specific behaviour.
   unwired work—including the S3K special-stage projection, debug primitive/text
   rendering, and ROM-derived CNZ boss animations—was deliberately retained.
   The accompanying audit ranks live unfinished paths without changing runtime
-  behavior, including Big Arm, S3K SMPS
-  meta commands, and Mecha Sonic move ordering.
+  behavior, including Big Arm and S3K SMPS meta commands; the separately tracked
+  Mecha Sonic move-ordering debt is now resolved by the REV01 outer-loop parity fix.
+- **S2 Mecha Sonic outer-loop parity (2026-08-08):** DEZ ObjAF attack phases now
+  align the LED/sensor children before one outer-loop `ObjectMove`, matching the
+  shipped ROM's `loc_398C0`/`loc_39D4A` ordering. Focused tests cover dash-start,
+  deceleration, and child-position timing; the existing graph rewind coverage remains green.
 - **Headless visual-run parity driver (2026-08-05):** whole trace runs can now be
   driven through the production visual-session owners without a window, so a
   Trace Test Mode defect is reproducible in a test rather than a screenshot.

@@ -95,6 +95,31 @@ note.
 The corrected rewind inventory gate also passed 32 focused tests after adding
 `AizEndBossWaterfallChild` to the intentional graph-covered totals.
 
+## Mecha Sonic parity follow-up
+
+On 2026-08-08, branch `bugfix/ai-remediate-mecha-order` (based on reviewed
+remediation HEAD `5cc94d457`) closed the audited Sonic 2 ObjAF movement-order
+debt. The implementation follows shipped REV01 `loc_398C0`/`loc_39D4A` (the
+audit's provisional `loc_398F4`/`loc_39D44` labels resolve to those source
+labels): phase logic runs first, the LED and targeting sensor align, and one
+outer-loop `ObjectMove` runs afterward. Child updates no longer overwrite those
+pre-move positions. JDK 21 focused validation passed:
+
+```text
+mvn -Dmse=off -Dtest=com.openggf.tests.TestDEZMechaSonic test
+Tests run: 28, Failures: 0, Errors: 0, Skipped: 0
+
+mvn -Dmse=off -Dtest=com.openggf.tests.TestDEZMechaSonic,\
+com.openggf.game.sonic2.objects.bosses.TestS2MechaSonicGraphRewind,\
+com.openggf.game.rewind.TestBossChildNoDoubleSpawnParity,\
+com.openggf.game.rewind.coverage.TestRewindCoverageGuard test
+Tests run: 38, Failures: 0, Errors: 0, Skipped: 0
+```
+
+The first run was intentionally red before the production edit (27 tests, one
+dash-start movement failure). No DEZ ROM/movie trace was available in the
+worktree, so end-to-end trace confirmation remains explicitly open.
+
 Deterministic full-suite command for both current `develop` and the feature:
 
 ```bash
@@ -125,8 +150,7 @@ Highest-priority remaining work is deliberately visible rather than deleted:
 1. Port Big Arm from the native object graph and defeat flow, then validate the
    Knuckles LBZ route.
 2. Capture route/trace evidence for the AIZ napalm and AIZ2 splash changes.
-3. Continue the roadmap's title-menu audio, load-profile semantics, and Mecha
-   Sonic movement-order work.
+3. Continue the roadmap's title-menu audio and load-profile semantics work.
 
 The original audit remains the complete disposition ledger; this report records
 only what this remediation branch changed or deliberately rejected.

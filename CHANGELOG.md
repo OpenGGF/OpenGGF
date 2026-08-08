@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Sonic 2 Mecha Sonic (ObjAF) now follows the shipped REV01 outer attack
+  loop: each phase updates velocity and animation, then the LED and targeting
+  sensor align before exactly one `ObjectMove`. Child updates retain those
+  pre-move positions, matching `loc_398C0`/`loc_39D4A`; DEZ tests cover dash
+  start, deceleration, and child ordering.
 - Cleanup: removed the unused `AbstractLevel.markAllDirty()` placeholder. The
   production rewind adapter already invalidates manager-owned tilemaps when
   restored geometry references change, while persistent Plane B state has its
