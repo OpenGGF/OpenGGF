@@ -16,11 +16,16 @@
 
 ## Current Engine Status (2026-08-08)
 
-The engine does not yet model SSZ's native `SpawnLevelMainSprites` falling
-introduction. Existing SSZ event and teleporter work does not substitute for
-that player bootstrap state. Completion requires the `loc_68A6` gates and
-character/act bootstrap plus trace coverage; the omission remains documented
-unfinished functionality rather than a deletion target.
+The earlier claim that SSZ has a native `SpawnLevelMainSprites` falling
+introduction was stale. In the owning S&K routine, `loc_68A6` is reached by the
+LRZ1 `$0900` comparison and the LRZ boss `$1600` comparison
+(`docs/skdisasm/sonic3k.asm:8161-8178`); SSZ's `$0A00/$0A01` values are listed
+separately as SSZ acts (`sonic3k.asm:10154-10157`) and are not compared there.
+The S3 standalone routine likewise has no SSZ branch
+(`docs/skdisasm/s3.asm:6175-6260`). Existing SSZ event and teleporter behavior
+therefore does not need a falling-introduction override. The negative SSZ gate
+is covered by `TestS3kLrzFallingIntroBootstrap` so a future change cannot
+silently reintroduce the stale attribution.
 
 ## Level Boundaries
 

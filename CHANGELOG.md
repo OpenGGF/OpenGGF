@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: S3K LRZ1 now applies the ROM `SpawnLevelMainSprites` `loc_68A6`
+  falling-introduction state to non-Knuckles players (including Player 2),
+  with character/zone/act bootstrap coverage, including negative SSZ Act 1/Act 2
+  gates. The source audit also corrected the stale SSZ claim: SSZ
+  `$0A00/$0A01` has no matching ROM gate.
 - Maintenance/Docs: completed an evidence-tiered dead and unfinished code sweep.
   Seven unreachable Java types (339 lines) were removed after checking callers,
   registries, reflection, resources, service loading, and supported CLIs; the

@@ -26,7 +26,7 @@ Entries should include:
 
 1. [AIZ Miniboss Napalm — Approximate, Non-Harmful, and Invisible](#aiz-miniboss-napalm--approximate-non-harmful-and-invisible)
 2. [Knuckles LBZ Big Arm — Inert Final-Boss Handoff](#knuckles-lbz-big-arm--inert-final-boss-handoff)
-3. [LRZ1 and SSZ — Falling Level Introductions Missing](#lrz1-and-ssz--falling-level-introductions-missing)
+3. [LRZ1 Non-Knuckles — Falling Level Introduction (RESOLVED)](#lrz1-non-knuckles--falling-level-introduction-resolved)
 4. [AIZ2 End Boss — Splash Children Missing](#aiz2-end-boss--splash-children-missing)
 5. [CNZ1 Miniboss Arena Entry — Music Play-In Missing](#cnz1-miniboss-arena-entry--music-play-in-missing)
 6. [AIZ1 Trace F4679 — Sidekick Despawn Velocity & Position Semantic Gap (FIXED)](#aiz1-trace-f4679--sidekick-despawn-velocity--position-semantic-gap-fixed)
@@ -92,21 +92,35 @@ pipeline, add rewind coverage, and complete a Knuckles LBZ trace through defeat.
 
 ---
 
-## LRZ1 and SSZ — Falling Level Introductions Missing
+## LRZ1 Non-Knuckles — Falling Level Introduction (RESOLVED)
 
 **Location:** `Sonic3kLevelEventManager`
-**ROM Reference:** `SpawnLevelMainSprites`, including the `loc_68A6` gates.
+**ROM Reference:** `SpawnLevelMainSprites` `loc_68A6` (`docs/skdisasm/sonic3k.asm:8161-8178`).
 
 ### Symptom
 
-LRZ1 for non-Knuckles characters and SSZ start without the native falling player
-state. Existing zone event and teleporter behavior does not reproduce the
-bootstrap choreography.
+Before remediation, LRZ1 for non-Knuckles characters started without the native
+falling player state. The ROM compares `$0900` (LRZ1) and skips the branch for
+`Player_mode == 3` (Knuckles), then `loc_68A6` writes animation `$1B` and the
+in-air status to Player 1 and, when present, Player 2.
 
-### Removal Condition
+The earlier SSZ attribution was disproven by checking the owning routine:
+SSZ is `$0A00/$0A01` in `LS_Level_Order` (`sonic3k.asm:10154-10157`), while
+`loc_68A6` is reached by `$0900` and `$1600` (`sonic3k.asm:8161-8168`) and
+does not compare either SSZ act. SSZ event and teleporter behavior therefore
+does not require this falling bootstrap state.
 
-Port the semantic character/zone/act gates and falling initialization, then add
-focused bootstrap tests and route traces for each affected start.
+### Resolution
+
+`Sonic3kLevelEventManager` now applies the native LRZ1 non-Knuckles state after
+the normal player spawn. `TestS3kLrzFallingIntroBootstrap` covers Sonic + Tails,
+Tails alone, Knuckles exclusion, LRZ2 exclusion, and the SSZ negative gate.
+LRZ and SSZ complete-run payloads exist under
+`src/test/resources/traces/s3k/{lrz,ssz}_completerun`, but no replay subclasses
+currently own those segments. A direct LRZ replay attempt is presently blocked
+before gameplay by the fixture's final v5 hardware-timing row
+(`unsupported-held-row-POST`, raw frame 38719), so the ROM-backed headless
+bootstrap suite is the available focused validation for this change.
 
 ---
 
