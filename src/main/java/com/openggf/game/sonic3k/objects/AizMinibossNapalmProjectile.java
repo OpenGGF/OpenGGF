@@ -258,7 +258,6 @@ public class AizMinibossNapalmProjectile extends AbstractObjectInstance
         currentY = services().camera().getY() - 0x20;
         xFixed = currentX << 16;
         yFixed = currentY << 16;
-        services().playSfx(Sonic3kSfx.MISSILE_THROW.id);
     }
 
     /** Obj_Wait after SetFallingShotDelay. */

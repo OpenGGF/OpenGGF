@@ -89,6 +89,10 @@ public final class AizMinibossNapalmExplosionChild extends AbstractObjectInstanc
                 }
             }
             case READY -> {
+                // BossExplosionHitbox_Animate is routine 4's first dispatch;
+                // Animate_RawMultiDelay must publish frame 0 before touch and
+                // rendering become observable.
+                advanceAnimation();
                 state = State.ANIMATE;
             }
             case ANIMATE -> advanceAnimation();
@@ -96,7 +100,9 @@ public final class AizMinibossNapalmExplosionChild extends AbstractObjectInstanc
     }
 
     private void advanceAnimation() {
-        if (--animationTimer > 0) {
+        // Animate_RawMultiDelay uses subq then bpl: a zero result still holds
+        // the current mapping, so a delay N occupies N+1 routine-4 dispatches.
+        if (--animationTimer >= 0) {
             return;
         }
         animationIndex++;

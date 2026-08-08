@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.camera.Camera;
+import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.session.SessionManager;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.objects.TouchResponseProvider;
@@ -11,6 +12,9 @@ import com.openggf.physics.TerrainCheckResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -83,7 +87,8 @@ class TestAizMinibossNapalmProjectile {
     void dropUsesNativeShotPositionAndPriorityTransition() {
         AizMinibossNapalmProjectile projectile = new AizMinibossNapalmProjectile(
                 100, 160, 0, false, 0);
-        projectile.setServices(new TestObjectServices().withCamera(camera));
+        RecordingObjectServices services = new RecordingObjectServices().withCamera(camera);
+        projectile.setServices(services);
 
         projectile.update(0, null); // FallingShot_Init
         for (int frame = 1; frame <= 97; frame++) {
@@ -94,6 +99,8 @@ class TestAizMinibossNapalmProjectile {
         }
         assertEquals(36, projectile.getX(), "SetShotPosition selects camera X + $24");
         assertEquals(-0x20, projectile.getY(), "FallingShot_Drop selects camera Y - $20");
+        assertEquals(List.of(Sonic3kSfx.PROJECTILE.id), services.playedSfx,
+                "FallingShot emits only its inherited init/projectile sound; no throw sound");
         assertEquals(5, projectile.getPriorityBucket(),
                 "priority changes only in FallingShot_StartFall after the delay");
 
@@ -106,7 +113,8 @@ class TestAizMinibossNapalmProjectile {
     @Test
     void floorRoutineSnapsByRomDistanceBeforeSpawningExplosion() {
         AizMinibossNapalmProjectile projectile = new AizMinibossNapalmProjectile(100, 160);
-        projectile.setServices(new TestObjectServices().withCamera(camera));
+        RecordingObjectServices services = new RecordingObjectServices().withCamera(camera);
+        projectile.setServices(services);
         for (int frame = 0; frame <= 107; frame++) {
             projectile.update(frame, null);
         }
@@ -120,12 +128,15 @@ class TestAizMinibossNapalmProjectile {
             assertTrue(projectile.isDestroyed(), "ObjHitFloor_DoRoutine calls the explode callback");
             assertEquals(-0x1F, projectile.getY(),
                     "the native floor distance is added after MoveSprite2");
+            assertEquals(List.of(Sonic3kSfx.PROJECTILE.id, Sonic3kSfx.MISSILE_EXPLODE.id),
+                    services.playedSfx,
+                    "floor impact adds only MissileExplode after the projectile init sound");
             terrain.verify(() -> ObjectTerrainUtils.checkFloorDist(36, -0x1C, 8));
         }
     }
 
     @Test
-    void explosionChildrenUseNativeStaggerAndHazardWindow() {
+    void explosionChildrenUseNativeStaggerAndHazardWindow() throws Exception {
         AizMinibossNapalmExplosionChild child =
                 new AizMinibossNapalmExplosionChild(200, 100, 0, true);
         assertInstanceOf(RewindRecreatable.class, child);
@@ -139,13 +150,36 @@ class TestAizMinibossNapalmProjectile {
         }
         assertEquals(0x97, child.getCollisionFlags(),
                 "BossExplosionHitbox becomes harmful when routine 4 starts");
+        assertEquals(0, readIntField(child, "animationIndex"),
+                "first routine-4 dispatch must advance Animate_RawMultiDelay to frame 0");
         assertEquals(200, child.getX());
         assertEquals(100, child.getY());
+
+        child.update(27, null);
+        assertEquals(0, readIntField(child, "animationIndex"),
+                "AniRaw delay 1 holds frame 0 for the next dispatch (N+1 semantics)");
+        child.update(28, null);
+        assertEquals(1, readIntField(child, "animationIndex"));
     }
 
     private static int readIntField(Object target, String fieldName) throws Exception {
         var field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         return field.getInt(target);
+    }
+
+    private static final class RecordingObjectServices extends TestObjectServices {
+        private final List<Integer> playedSfx = new ArrayList<>();
+
+        @Override
+        public RecordingObjectServices withCamera(Camera camera) {
+            super.withCamera(camera);
+            return this;
+        }
+
+        @Override
+        public void playSfx(int soundId) {
+            playedSfx.add(soundId);
+        }
     }
 }
