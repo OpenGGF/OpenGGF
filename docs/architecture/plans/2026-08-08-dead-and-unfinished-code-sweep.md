@@ -384,6 +384,7 @@ special-stage offsets or `areOffsetsVerified()`.
 Run:
 
 ```bash
+WORKTREE=$(pwd)
 mvn clean -Dmse=off -DskipTests test-compile
 mvn clean -Dmse=off \
   "-Ds3k.rom.path=${WORKTREE}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \

@@ -25,9 +25,29 @@ artifact**, and **live reachability**. Marker dispositions are **dead cleanup**,
 **generated output**, **historical/tooling note**, **unsupported broader game
 mode**, and **ambiguous ownership retained**.
 
-The marker scan found 622 hits in 222 files. It is a lexical inventory, not a
-dead-code analyser: a marker can describe a ROM phase, a default contract, or a
-historical/tooling fact.
+The marker scan found 622 hits in 222 files. Its complete line-level inventory
+is [`2026-08-08-dead-unfinished-marker-inventory.tsv.gz`](evidence/2026-08-08-dead-unfinished-marker-inventory.tsv.gz).
+Every row has `path`, `line`, escaped matched text, classification category, and
+disposition. It is a lexical inventory, not a dead-code analyser: a marker can
+describe a ROM phase, a default contract, or a historical/tooling fact.
+
+The inventory is the command-above output transformed deterministically into
+those five columns by ordered ownership rules: generated scaffold, three stale
+comments, duplicate results offsets, ranked P0–P3 owners, unsupported CPZ/2P
+owners, ambiguous S1/dirty-region owners, explicit ROM/default contracts, then
+historical/tooling residue. Validate it with:
+
+```bash
+gzip -dc docs/architecture/audits/evidence/2026-08-08-dead-unfinished-marker-inventory.tsv.gz | wc -l
+rg -n -i --glob 'src/main/**' --glob 'tools/**' \
+  '(TODO|FIXME|\bstub(bed)?\b|\bscaffold\b|not (yet )?implemented|\bno-op\b|Phase [0-9]+)' | wc -l
+gzip -dc docs/architecture/audits/evidence/2026-08-08-dead-unfinished-marker-inventory.tsv.gz | awk -F'\t' 'NF != 5 { exit 1 }'
+```
+
+All three checks must report 622/622/zero respectively. The inventory has 516
+intentional-contract rows, 32 ranked-unfinished rows, 28 historical/tooling
+notes, 24 generated-output rows, 12 stale-cleanup rows, four unsupported-mode
+rows, three dead-cleanup rows, and three ambiguous-ownership rows.
 
 ## Reachability evidence
 

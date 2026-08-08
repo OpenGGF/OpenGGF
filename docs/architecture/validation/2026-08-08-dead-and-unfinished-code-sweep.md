@@ -9,11 +9,16 @@
 match `AGENTS.md` after `cksum -a crc32b`, decimal-to-hex normalization, and
 `sha1sum`:
 
+```bash
+# Run from the discovered-ROM repository root.
+WORKTREE=$(pwd)
+```
+
 | Game | Selected path | CRC32 | SHA-1 |
 |---|---|---|---|
-| S1 World REV01 | `Sonic The Hedgehog (W) (REV01) [!].gen` | `AFE05EEE` | `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B` |
-| S2 World REV01 | `Sonic The Hedgehog 2 (W) (REV01) [!].gen` | `7B905383` | `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9` |
-| S3&K locked-on | `Sonic and Knuckles & Sonic 3 (W) [!].gen` | `63522553` | `CFBF98C36C776677290A872547AC47C53D2761D6` |
+| S1 World REV01 | `${WORKTREE}/Sonic The Hedgehog (W) (REV01) [!].gen` | `AFE05EEE` | `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B` |
+| S2 World REV01 | `${WORKTREE}/Sonic The Hedgehog 2 (W) (REV01) [!].gen` | `7B905383` | `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9` |
+| S3&K locked-on | `${WORKTREE}/Sonic and Knuckles & Sonic 3 (W) [!].gen` | `63522553` | `CFBF98C36C776677290A872547AC47C53D2761D6` |
 
 The initial exploratory `mvn test` regenerated the tracked rewind-gap report.
 Its diff contained generated gap-inventory additions/reordering only, with no

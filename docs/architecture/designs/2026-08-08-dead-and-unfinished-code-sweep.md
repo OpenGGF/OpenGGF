@@ -155,7 +155,8 @@ art-readiness, configuration, and presentation tests. Final comparison must use
 the same JDK 21 command and confirm no new or worsened result. The exploratory
 run was `mvn test`; its Surefire XML is under this worktree's
 `target/surefire-reports`. Delivery evidence is stricter: after discovering and
-hash-checking the actual three ROM files, run:
+hash-checking the actual three ROM files, run from the repository root with
+`WORKTREE=$(pwd)`:
 
 ```bash
 mvn -Dmse=off \
