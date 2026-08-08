@@ -66027,3 +66027,40 @@ to synthesize a POST phase on a VBLANK-only row.
   while CNZ and ICZ retain their established frontiers. The next target is
   HCZ direct queue edge `#125` at raw frame `31443`; the three established
   animation mismatches remain at raw frames `10470`, `10478`, and `10486`.
+
+## 2026-08-09 - S3K HCZ Tails animation frontier
+
+- Worktree: `bugfix/s3k-traces` at `a37ecd651` before this fix; unrelated edits
+  in `.idea/vcs.xml`, `docs/status/rewind-round-trip-gaps.md`,
+  `src/main/java/com/openggf/level/objects/ObjectPlacementController.java`,
+  and `src/main/java/com/openggf/level/rings/RingManager.java` remained
+  unstaged. Validation used JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen`; no trace payloads changed.
+- Frontier command: `env JAVA_HOME=$JDK21_HOME PATH=$JDK21_HOME/bin:$PATH
+  mvn -q -Dmse=off
+  -Dtest=TestS3kHczCompleteRunTraceReplay -Dtrace.verification=all
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Result: 2 tests, 0 failures, 0 errors, 0 skips; HCZ reaches the end of its
+  captured run with zero physics, animation, ring, and hardware errors.
+  The prior Tails mapping mismatches at raw frames `10470`, `10478`, and
+  `10486` are gone.
+- Root cause: the retained `Obj_EndSignControlAwaitStart` owner had already
+  restored Tails' WAIT animation cursor, but the later retained results owner
+  cleared `anim_frame` and `anim_frame_timer` again. The HCZ event handoff now
+  preserves an already-restored WAIT cursor while still applying the native
+  control release, so the fix follows live object-control and animation state
+  rather than a trace, frame, route, or zone exception.
+- Regression command: `env JAVA_HOME=$JDK21_HOME PATH=$JDK21_HOME/bin:$PATH
+  MAVEN_OPTS='-Xmx2g' mvn -q -Dmse=off -Dsurefire.forkCount=1
+  -DforkCount=1 -DreuseForks=true -Dsurefire.argLine='-Xmx3g'
+  -Dtest=TestInGamePause,TestRecordingFrameDriverInputOnly,
+  TestSonic3kHCZEvents,TestS3kMgzCompleteRunTraceReplay,
+  TestS3kLbzCompleteRunTraceReplay
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Result: 16 tests, 0 failures, 0 errors, 0 skips. Ring comparison remains
+  enabled through `ToleranceConfig.DEFAULT` with `RingCountMode.FORCE_ERROR`.
+- Route position: AIZ retains its established gameplay-order frontier and HCZ
+  is now green through its complete-run trace. MGZ and LBZ complete-run
+  traces remain green; the next gameplay-order target is the remaining MGZ
+  trace set, followed by CNZ, ICZ, and LBZ validation. No trace payloads
+  changed.

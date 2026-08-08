@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K HCZ's retained results handoff now leaves the WAIT animation
+  cursor intact when the native signpost owner already restored that player
+  slot. This removes the one-cycle Tails mapping lag at raw frames `10470`,
+  `10478`, and `10486`; the complete HCZ replay now passes all physics,
+  animation, ring, and hardware checks. The gameplay-order canary remains
+  green for HCZ, MGZ, and LBZ, and no trace payloads changed.
 - Fix/Test: S3K HCZ2's geyser handoff now leaves the camera at the ROM's
   pre-dispatch position when `StartNewLevel` suppresses that frame's camera
   step, and fresh-level transitions publish the neutral player slot boundary
