@@ -192,7 +192,6 @@ class TestLevelManagerRewindSnapshot {
                     level.replaceChunks(s.chunks());
                     level.getMap().restoreData(s.mapData());
                     level.bumpEpoch();
-                    level.markAllDirty();
                     if (s.hasLevelHudState()) {
                         levelGamestate.setRings(s.levelRings());
                         levelGamestate.setTimerFrames(s.levelTimerFrames());

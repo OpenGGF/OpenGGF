@@ -3,6 +3,10 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Cleanup: removed the unused `AbstractLevel.markAllDirty()` placeholder. The
+  production rewind adapter already invalidates manager-owned tilemaps when
+  restored geometry references change, while persistent Plane B state has its
+  own rewind adapter; no no-op level-owned dirty contract remains.
 - Fix: special-stage debug routing now uses an explicit game-owned capability
   profile. Sonic 1's direct-movement debug remains available; Sonic 2 keeps
   its sprite/plane/alignment/lag tools; Sonic 3&K keeps stage/layout

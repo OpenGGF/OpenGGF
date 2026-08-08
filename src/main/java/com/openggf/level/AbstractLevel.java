@@ -218,12 +218,4 @@ public abstract class AbstractLevel implements Level {
         this.chunkCount = newChunks.length;
     }
 
-    /**
-     * Marks all level data as dirty for re-upload to GPU.
-     * TODO: wire up dirty-region machinery; LevelManager owns the dirty BitSets.
-     * For v1, this is a no-op placeholder.
-     */
-    public void markAllDirty() {
-        // Placeholder: dirty-region re-upload mechanism to be wired in B.5 if needed.
-    }
 }

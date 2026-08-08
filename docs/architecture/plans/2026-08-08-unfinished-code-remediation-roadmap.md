@@ -38,8 +38,10 @@ The first remediation swarm is complete on the local human-review branch
 `feature/ai-unfinished-remediation-review`. It implemented LRZ1 falling startup, the
 AIZ miniboss napalm route, AIZ2 end-boss splash children, explicit
 special-stage debug capabilities, and authoritative S1 background-scroll
-ownership. The SMPS investigation closed the loader-supported and S3-native
-SFX portions with ROM-backed full-bank proof. The attempted Big Arm port was rejected
+ownership. The no-op `AbstractLevel.markAllDirty()` contract was removed after
+confirming that rewind invalidation is manager-owned. The SMPS investigation
+closed the loader-supported and S3-native SFX portions with ROM-backed
+full-bank proof. The attempted Big Arm port was rejected
 by independent review and was not integrated.
 
 Commands, test outcomes, unresolved work, and the rejected-branch rationale
@@ -75,9 +77,8 @@ that every audited feature is now complete.
 3. Resolve `Sonic1.getBackgroundScroll()` ownership against the current
    parallax/runtime updater. Remove the redundant API or expose authoritative
    state; do not introduce a second parallax model.
-4. Resolve `AbstractLevel.markAllDirty()` by proving the existing restore owner
-   republishes dirty regions and removing the placebo contract, or by wiring it
-   to that owner with a GPU-refresh integration test.
+4. `AbstractLevel.markAllDirty()` is resolved: the unused no-op was removed
+   after existing rewind and tilemap tests proved manager-owned invalidation.
 
 ### Wave 3 — polish, configuration, and S2 parity
 

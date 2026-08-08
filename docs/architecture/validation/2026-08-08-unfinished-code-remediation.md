@@ -41,6 +41,9 @@ the disassembly-owned topology and covered by tests.
   including same-instance rewind recomputation. The legacy runtime query and
   ignored renderer hint were removed; compatibility overloads are explicitly
   equivalence-tested.
+- The unused `AbstractLevel.markAllDirty()` no-op was removed. Geometry restore
+  invalidation remains owned by `LevelRewindSnapshotAdapter` and persistent
+  Plane B restoration remains owned by `LevelTilemapRewindAdapter`.
 - S3K SMPS fixed-point traversal proves `FF 01/02/03` unreachable in all
   loader-supported S&K/S3 music and S&K-loader SFX streams plus both native
   SFX banks (`33-DF`, 173 entries each). Strict full-bank traversal resolves
@@ -122,8 +125,7 @@ Highest-priority remaining work is deliberately visible rather than deleted:
 1. Port Big Arm from the native object graph and defeat flow, then validate the
    Knuckles LBZ route.
 2. Capture route/trace evidence for the AIZ napalm and AIZ2 splash changes.
-3. Resolve `AbstractLevel.markAllDirty()` through its real dirty-region owner.
-4. Continue the roadmap's title-menu audio, load-profile semantics, and Mecha
+3. Continue the roadmap's title-menu audio, load-profile semantics, and Mecha
    Sonic movement-order work.
 
 The original audit remains the complete disposition ledger; this report records
