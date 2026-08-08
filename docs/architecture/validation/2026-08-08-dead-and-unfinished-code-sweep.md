@@ -94,9 +94,12 @@ and 31 SKIPPED. This contextual run is preserved as
 Task 4 had already exposed a shared LWJGL extraction race between default
 forks. When the development default-fork run reproduced it at full-suite scale,
 the design and plan were amended to use the repository's documented CI fork
-mode for both sides of the comparison. The accepted baseline command is the
-same command with `-Dsurefire.forkCount=1`; it reported and normalized exactly
-14,341 tests: 14,263 PASS, 33 FAILURE, 14 ERROR, and 31 SKIPPED. That complete
+mode for both sides of the comparison. The first serial baseline used
+`-Dsurefire.forkCount=1` but remained diagnostic because the default
+`filesystem` class order differed between clean trees; it is preserved as
+`updated-baseline-filesystem-order.tsv.gz`. The accepted baseline adds
+`-Dsurefire.runOrder=alphabetical`. It reported and normalized exactly 14,341
+tests: 14,262 PASS, 34 FAILURE, 14 ERROR, and 31 SKIPPED. That deterministic
 manifest is `updated-baseline.tsv.gz`. After each main run, the only tracked
 change was the generated rewind-gap report, which was inspected and restored.
 
@@ -164,7 +167,7 @@ XML held only 12,256 rows (9,344 PASS, 31 FAILURE, 2,853 ERROR, 28 SKIPPED).
 `development-default-fork-incomplete.tsv.gz` is diagnostic evidence only; no
 missing row is waived.
 
-The accepted development command added `-Dsurefire.forkCount=1` to the exact
+The first serial development command added `-Dsurefire.forkCount=1` to the exact
 clean ROM-backed baseline command. It completed 14,342 normalized rows:
 14,261 PASS, 34 FAILURE, 16 ERROR, and 31 SKIPPED. The baseline/development
 manifest diff was reviewed row by row:
@@ -179,16 +182,57 @@ manifest diff was reviewed row by row:
   violation paths and budget; only filesystem traversal order changed after
   dead source files were removed; and
 - three `TestGameLoopSpecialStageRewindGate` rows changed from PASS to two null
-  focused-sprite errors and one failed rewind-engagement assertion. Full stacks
-  enter unchanged `GameLoop`/camera/rewind code, none of which this branch
-  modifies. The exact class was immediately rerun alone in the same worktree,
-  JDK, and single-fork mode and passed 4/4. This isolates the difference to the
-  class's documented suite-order/global-state fixture limitation rather than a
-  sweep behavior change; no production or test fix was made in this cleanup.
+  focused-sprite errors and one failed rewind-engagement assertion.
 
-The accepted manifest is `development.tsv.gz`. The generated rewind report was
-the only tracked test output and was restored after the run. No baseline test
-disappeared; development has exactly the one intentional added PASS row.
+That serial comparison is rejected, not waived. Full-stack and lifecycle
+inspection showed that default Surefire `filesystem` order placed the already
+failing `TestTraceSessionLauncherProductionFailureCleanup` before the rewind
+gate only in the clean development tree. This focused one-fork order reproduced
+the exact gate outcomes:
+
+```bash
+mvn -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=reversealphabetical \
+  "-Dtest=com.openggf.TestTraceSessionLauncherProductionFailureCleanup,com.openggf.TestGameLoopSpecialStageRewindGate" test
+```
+
+The cleanup class retained its known one failure and three errors, followed by
+the gate's exact two errors and one failure. A separate requested negative
+control ran the spring characterization before the gate in one fork and passed
+21/21; `TestSpecialStageLogicalInput` before the gate also passed 5/5. Finally,
+an exact complete serial development rerun repeated 14,342 rows with the same
+14,261 PASS / 34 FAILURE / 16 ERROR / 31 SKIPPED totals. This establishes
+pre-existing launcher leakage plus unstable filesystem ordering as the cause,
+and rejects both a spring leak and a one-off run. No production or test code
+was changed.
+
+The accepted gate reruns the full baseline and development suites with both
+`-Dsurefire.forkCount=1` and `-Dsurefire.runOrder=alphabetical`. The original
+filesystem-order manifests are retained as diagnostics. The generated rewind
+report is restored after each run. Acceptance requires every baseline PASS row
+to remain PASS, no disappeared test, and exactly the intended added spring PASS.
+
+Both deterministic runs completed. Baseline contained 14,341 rows: 14,262
+PASS, 34 FAILURE, 14 ERROR, and 31 SKIPPED. Development contained 14,342 rows:
+14,263 PASS, 34 FAILURE, 14 ERROR, and 31 SKIPPED. A four-column
+class/name/outcome/type comparison found zero removed or reclassified outcomes
+and exactly one addition, the expected passing reverse-gravity spring
+characterization. A direct baseline-PASS comparison found zero missing rows.
+The raw 60-line diff was reviewed completely and contains only:
+
+- the expected added spring PASS;
+- one volatile launcher object identity hash on the same pre-existing failure;
+- six unchanged Tornado `NullPointerException` errors whose helpful-NPE message
+  is empty in development; and
+- the same 13 raw lifecycle-call guard paths and budget in a different message
+  order.
+
+All four `TestGameLoopSpecialStageRewindGate` rows are PASS in both accepted
+manifests. No baseline-passing test regressed, no executed test disappeared,
+and no red outcome changed status or exception type. The accepted manifests are
+`updated-baseline.tsv.gz` and `development.tsv.gz`; the two repeated rejected
+development manifests are retained as
+`development-filesystem-order.tsv.gz` and
+`development-filesystem-order-rerun.tsv.gz`.
 
 After the living documentation was refreshed, the focused documentation/build
 guard command

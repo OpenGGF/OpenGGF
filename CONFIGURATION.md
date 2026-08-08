@@ -765,18 +765,18 @@ The gamepad Back/Select/View button on the primary connected pad is a hardcoded 
 ### Special Stage Debug
 
 These keys are only active while a Special Stage is running. Enter/complete/fail
-are shared stage controls, but the F12 sprite viewer and F3 plane visibility
-commands require a game-provided debug capability. Today that capability is
-implemented for Sonic 2; Sonic 1 and Sonic 3&K accept the configured shortcuts
-but their providers deliberately do nothing.
+are shared stage controls. Sonic 2 exposes both the F12 sprite viewer and F3
+plane visibility tool. In Sonic 3&K, F12 toggles the manager's persisted debug
+state, but the viewer provider is currently null so no viewer is drawn; F3 is a
+no-op. Sonic 1 leaves both shortcuts as no-ops.
 
 | Key | YAML path | Default | Key Name | Description |
 |-----|-----------|---------|----------|-------------|
 | `SPECIAL_STAGE_KEY` | `debug.keys.specialStage` | `258` | Tab | Enter / exit Special Stage mode (debug). |
 | `SPECIAL_STAGE_COMPLETE_KEY` | `debug.keys.specialStageComplete` | `269` | End | Complete the current Special Stage and award the emerald. |
 | `SPECIAL_STAGE_FAIL_KEY` | `debug.keys.specialStageFail` | `261` | Delete | Fail the current Special Stage without awarding the emerald. |
-| `SPECIAL_STAGE_SPRITE_DEBUG_KEY` | `debug.keys.specialStageSpriteDebug` | `301` | F12 | Toggle the Special Stage sprite debug viewer when the active game exposes it (currently Sonic 2 only). |
-| `SPECIAL_STAGE_PLANE_DEBUG_KEY` | `debug.keys.specialStagePlaneDebug` | `292` | F3 | Cycle Special Stage plane visibility modes when supported (currently Sonic 2 only). |
+| `SPECIAL_STAGE_SPRITE_DEBUG_KEY` | `debug.keys.specialStageSpriteDebug` | `301` | F12 | Toggle the Special Stage sprite debug state. Sonic 2 draws the viewer; S3K records the toggle but has no viewer provider; S1 is a no-op. |
+| `SPECIAL_STAGE_PLANE_DEBUG_KEY` | `debug.keys.specialStagePlaneDebug` | `292` | F3 | Cycle Special Stage plane visibility in Sonic 2. S1 and S3K are no-ops. |
 
 ---
 

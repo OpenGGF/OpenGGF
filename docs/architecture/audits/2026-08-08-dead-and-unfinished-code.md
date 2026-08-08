@@ -25,7 +25,8 @@ artifact**, and **live reachability**. Marker dispositions are **dead cleanup**,
 **generated output**, **historical/tooling note**, **unsupported broader game
 mode**, and **ambiguous ownership retained**.
 
-The marker scan found 622 hits in 222 files. Its complete line-level inventory
+At the pre-mutation audit commit `345fa27c2858b070f7953d3709868ba4697cabe1`,
+the marker scan found 622 hits in 222 files. Its complete line-level inventory
 is [`2026-08-08-dead-unfinished-marker-inventory.tsv.gz`](evidence/2026-08-08-dead-unfinished-marker-inventory.tsv.gz).
 Every row has `path`, `line`, escaped matched text, classification category, and
 disposition. It is a lexical inventory, not a dead-code analyser: a marker can
@@ -35,19 +36,43 @@ The inventory is the command-above output transformed deterministically into
 those five columns by ordered ownership rules: generated scaffold, three stale
 comments, duplicate results offsets, ranked P0–P3 owners, unsupported CPZ/2P
 owners, ambiguous S1/dirty-region owners, explicit ROM/default contracts, then
-historical/tooling residue. Validate it with:
+historical/tooling residue. Validate that pinned inventory with:
 
 ```bash
 gzip -dc docs/architecture/audits/evidence/2026-08-08-dead-unfinished-marker-inventory.tsv.gz | wc -l
-rg -n -i --glob 'src/main/**' --glob 'tools/**' \
-  '(TODO|FIXME|\bstub(bed)?\b|\bscaffold\b|not (yet )?implemented|\bno-op\b|Phase [0-9]+)' | wc -l
 gzip -dc docs/architecture/audits/evidence/2026-08-08-dead-unfinished-marker-inventory.tsv.gz | awk -F'\t' 'NF != 5 { exit 1 }'
 ```
 
-All three checks must report 622/622/zero respectively. The inventory has 516
+These checks report 622 rows and exit zero. The inventory has 516
 intentional-contract rows, 32 ranked-unfinished rows, 28 historical/tooling
 notes, 24 generated-output rows, 12 stale-cleanup rows, four unsupported-mode
 rows, three dead-cleanup rows, and three ambiguous-ownership rows.
+
+The same scan on the post-sweep tree reports 615 rows. To reproduce both
+snapshots without changing branches, extract the pinned commit to a temporary
+directory and compare normalized `path:text` rows so unrelated source line
+movement cannot masquerade as marker churn:
+
+```bash
+SCAN_TMP=$(mktemp -d /tmp/openggf-marker-scan.XXXXXX)
+git archive 345fa27c2858b070f7953d3709868ba4697cabe1 src/main tools | tar -x -C "$SCAN_TMP"
+(cd "$SCAN_TMP" && rg -n -i --glob 'src/main/**' --glob 'tools/**' \
+  '(TODO|FIXME|\bstub(bed)?\b|\bscaffold\b|not (yet )?implemented|\bno-op\b|Phase [0-9]+)' | sort) > /tmp/openggf-markers-pre.txt
+rg -n -i --glob 'src/main/**' --glob 'tools/**' \
+  '(TODO|FIXME|\bstub(bed)?\b|\bscaffold\b|not (yet )?implemented|\bno-op\b|Phase [0-9]+)' | sort > /tmp/openggf-markers-post.txt
+wc -l /tmp/openggf-markers-pre.txt /tmp/openggf-markers-post.txt
+sed -E 's/^([^:]+):[0-9]+:/\1:/' /tmp/openggf-markers-pre.txt | sort > /tmp/openggf-markers-pre-normalized.txt
+sed -E 's/^([^:]+):[0-9]+:/\1:/' /tmp/openggf-markers-post.txt | sort > /tmp/openggf-markers-post-normalized.txt
+comm -23 /tmp/openggf-markers-pre-normalized.txt /tmp/openggf-markers-post-normalized.txt
+comm -13 /tmp/openggf-markers-pre-normalized.txt /tmp/openggf-markers-post-normalized.txt
+```
+
+The counts are exactly 622 before and 615 after. The normalized comparison has
+exactly seven removed rows and no additions: the MCZ stale TODO, the spring
+“currently stubbed” claim, three deleted unverified results-offset TODOs, and
+the two completed sidekick “Stubbed in Task 2” paragraphs. The 622-row artifact
+therefore remains point-in-time classification evidence; it is not claimed as
+a scan of the current source tree.
 
 ## Reachability evidence
 
@@ -149,7 +174,7 @@ its intentional heuristic limits.
 | AIZ gaps | `docs/architecture/research/s3k-zones/aiz-analysis.md` | Dated current-engine notes for napalm and splash, retaining disassembly analysis. |
 | Big Arm | `docs/architecture/research/s3k-zones/lbz-analysis.md` | Replace “verify/re-audit” with inert/invisible blocker and implementation requirement. |
 | Falling initialization | `docs/architecture/research/s3k-zones/lrz-analysis.md`; `docs/architecture/research/s3k-zones/ssz-analysis.md` | Record missing `SpawnLevelMainSprites` gates. |
-| F12/F3 | `CONFIGURATION.md`; `docs/guide/playing/controls.md` | S2-only/capability-dependent; S1/S3K no-op. |
+| F12/F3 | `CONFIGURATION.md`; `docs/guide/playing/controls.md` | S2 exposes both tools. S3K F12 toggles manager state but has no viewer provider; S3K F3 is a no-op. S1 leaves both as no-ops. |
 | SMPS meta commands | `docs/guide/cross-referencing/architecture-overview.md`; `docs/guide/contributing/audio-system.md`; `docs/guide/contributing/architecture.md` | Qualify universal parity; name handler and discarded commands. |
 | Checklist meaning | `S3K_OBJECT_CHECKLIST.md` | Checked means registry coverage, not full ROM parity; dynamic children can be absent. |
 | S3K blockers | `docs/status/s3k-known-bugs.md` | Add napalm, Big Arm, falling intros, splash children; keep historical trace material. |

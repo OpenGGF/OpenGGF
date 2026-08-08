@@ -476,7 +476,7 @@ diff it against `focused-comments-baseline.tsv.gz`. The only permitted added
 row is:
 
 ```text
-com.openggf.game.sonic3k.objects.TestSonic3kSpringObjectInstance	reverseGravitySwapsVerticalSpringDirectionDuringNativeInit	PASS		
+com.openggf.game.sonic3k.objects.TestSonic3kSpringObjectInstance	reverseGravitySwapsVerticalSpringDirectionDuringNativeInit	PASS	<empty type>	<empty message>
 ```
 
 Every pre-existing row must remain identical.
@@ -596,6 +596,21 @@ updated main-workspace baseline and development suite; these complete serial
 manifests replace the default-fork pair as the comparison gate. Use the same
 serial command for post-merge verification.
 
+Second observed execution amendment (2026-08-08): reject the first serial pair
+because default Surefire `filesystem` class order differed across the two clean
+output trees. A focused one-fork sequence that ran the pre-existing failing
+`TestTraceSessionLauncherProductionFailureCleanup` before
+`TestGameLoopSpecialStageRewindGate` reproduced the gate's exact two errors and
+one failure. The requested spring-before-gate negative control passed 21/21,
+and an exact complete serial development rerun reproduced the rejected result.
+Add `-Dsurefire.runOrder=alphabetical` to both complete one-fork full-suite
+commands, regenerate `updated-baseline.tsv.gz` and `development.tsv.gz`, and
+accept only if every baseline PASS is retained and the reverse-gravity spring
+characterization is the expected added PASS. Preserve the filesystem-order
+manifests as diagnostic evidence; do not waive the gate rows or change
+production/tests in this documentation sweep. Post-merge verification must use
+the same deterministic order.
+
 - [ ] **Step 4: Refresh current progress documentation**
 
 Apply the Task 1 documentation freshness map to the exact current
@@ -603,7 +618,8 @@ files listed in File structure:
 
 - qualify README/game-status AIZ claims and add the Mecha Sonic ordering debt;
 - add dated AIZ, concrete LBZ blocker, and LRZ/SSZ falling-intro zone notes;
-- mark F12/F3 special-stage debug controls S2-only/capability-dependent;
+- state that S2 exposes F12/F3, S3K F12 toggles manager state without a viewer
+  provider while S3K F3 is a no-op, and S1 leaves both as no-ops;
 - qualify SMPS parity and name `Sonic3kCoordFlagHandler` plus its three discarded
   meta-command semantics;
 - clarify the S3K checklist's registry-coverage meaning; and

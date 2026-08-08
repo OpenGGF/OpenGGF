@@ -198,6 +198,20 @@ development branch in that repository-documented CI mode. Only that complete,
 like-for-like serial pair is accepted for the pre-merge regression comparison;
 post-merge verification must use the same serial command.
 
+The first serial pair is also diagnostic rather than accepted evidence. Maven
+Surefire's default `filesystem` class order differed between the separately
+clean-built baseline and development trees. In the development order, the
+pre-existing failing `TestTraceSessionLauncherProductionFailureCleanup` ran
+before `TestGameLoopSpecialStageRewindGate` and leaked its active launcher;
+forcing that two-class order reproduced the gate's exact two errors and one
+failure. Conversely, ordering the new spring test before the gate passed all
+21 tests, rejecting the spring-leak hypothesis. The complete serial development
+rerun reproduced the same rejected manifest. Comparable full-suite evidence
+therefore additionally sets `-Dsurefire.runOrder=alphabetical` on both baseline
+and development (and later merged verification). No rewind-gate regression is
+waived: every baseline PASS row must be restored under this deterministic
+one-fork order, with only the expected spring characterization added as PASS.
+
 Clean builds are mandatory for every comparable full-suite run so deleted
 sources cannot survive as stale bytecode in `target/classes` or the packaged
 JAR. `tools/test-reports/surefire-outcome-manifest.xsl` normalizes every
@@ -296,7 +310,7 @@ The initial freshness review requires these corrections:
 | `docs/architecture/research/s3k-zones/aiz-analysis.md` | Add a dated current-engine subsection for napalm and end-boss splash gaps without rewriting the original disassembly analysis. |
 | `docs/architecture/research/s3k-zones/lbz-analysis.md` | Replace “verify/re-audit” Big Arm wording with the concrete inert/invisible blocker and implementation requirement. |
 | `docs/architecture/research/s3k-zones/lrz-analysis.md`, `ssz-analysis.md` | Record missing `SpawnLevelMainSprites` falling initialization for LRZ1 non-Knuckles and SSZ. |
-| `CONFIGURATION.md`, `docs/guide/playing/controls.md` | Mark F12 sprite debug and F3 plane debug as S2-only/capability-dependent while S1/S3K delegate to no-ops. |
+| `CONFIGURATION.md`, `docs/guide/playing/controls.md` | State that S2 exposes F12/F3; S3K F12 toggles manager state without a viewer provider, S3K F3 is a no-op, and S1 leaves both as no-ops. |
 | `docs/guide/cross-referencing/architecture-overview.md`, `docs/guide/contributing/audio-system.md`, `docs/guide/contributing/architecture.md` | Qualify universal SMPS register-write parity, document `Sonic3kCoordFlagHandler`, and record the three discarded meta-command semantics. |
 | `S3K_OBJECT_CHECKLIST.md` | Clarify that checked means concrete registry coverage, not full ROM parity, and that dynamic children may remain absent. |
 | `docs/status/s3k-known-bugs.md` | Add current entries for napalm, Big Arm, falling intros, and splash children; preserve historical trace investigations. |
