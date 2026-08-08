@@ -88,8 +88,10 @@ that every audited feature is now complete.
    them out of the advertised configuration surface.
 3. **Resolved 2026-08-08:** Corrected Mecha Sonic outer-loop `ObjectMove` and
    child ordering from the S2 disassembly. Focused DEZ phase/child-order tests
-   and existing graph rewind tests are green; a DEZ trace rerun remains useful
-   follow-up evidence when the verified ROM/movie lane is available.
+   and existing graph rewind tests are green. The dedicated
+   `TestS2DezEndingLevelSelectTraceReplay#replayMatchesTrace` is 1/1 green on
+   both base `5cc94d457` and candidate `4b4572cc3` with verified REV01 ROM;
+   ObjAF appears from auxiliary frame 127, and no frontier advanced.
 4. Treat CPZ placement debug and human-P2 monitor behavior as engine/game-mode
    capabilities, not object-local exceptions.
 

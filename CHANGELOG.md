@@ -7,7 +7,8 @@ All notable changes to the OpenGGF project are documented in this file.
   loop: each phase updates velocity and animation, then the LED and targeting
   sensor align before exactly one `ObjectMove`. Child updates retain those
   pre-move positions, matching `loc_398C0`/`loc_39D4A`; DEZ tests cover dash
-  start, deceleration, and child ordering.
+  start, deceleration, and child ordering. The dedicated DEZ ending replay
+  remains green on both the reviewed base and candidate with verified REV01 ROM.
 - Cleanup: removed the unused `AbstractLevel.markAllDirty()` placeholder. The
   production rewind adapter already invalidates manager-owned tilemaps when
   restored geometry references change, while persistent Plane B state has its

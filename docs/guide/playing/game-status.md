@@ -60,7 +60,8 @@ expectations honestly -- what works well, what is incomplete, and what you might
 - HTZ earthquake and lava systems.
 - Per-zone level events across all zones.
 - Mecha Sonic's DEZ attack loop follows the shipped ROM's outer `ObjectMove`
-  and child-alignment ordering.
+  and child-alignment ordering; the existing Mecha Sonic and Death Egg Robot
+  implementations pass the dedicated DEZ ending replay.
 - Demo playback.
 - Broad SMPS audio support; exact command/register parity still has known gaps.
 

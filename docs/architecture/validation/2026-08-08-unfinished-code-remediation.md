@@ -103,7 +103,16 @@ debt. The implementation follows shipped REV01 `loc_398C0`/`loc_39D4A` (the
 audit's provisional `loc_398F4`/`loc_39D44` labels resolve to those source
 labels): phase logic runs first, the LED and targeting sensor align, and one
 outer-loop `ObjectMove` runs afterward. Child updates no longer overwrite those
-pre-move positions. JDK 21 focused validation passed:
+pre-move positions. The existing Mecha Sonic and Death Egg Robot implementations
+are covered by the dedicated DEZ ending replay at
+`src/test/resources/traces/s2/dez_ending/`; its auxiliary stream shows ObjAF
+present from frame 127 through the fight. With verified Sonic 2 REV01 ROM and
+`-Ptrace-replay -Dmse=off -Dsurefire.forkCount=1
+-Dsurefire.runOrder=alphabetical`, the dedicated
+`TestS2DezEndingLevelSelectTraceReplay#replayMatchesTrace` passed 1/1 on both
+base `5cc94d457` and candidate `4b4572cc3`. The complete-run fixture remains at
+`src/test/resources/traces/s2/runs/s2-sonic-tails-complete-emeralds/seg28_dez1/`.
+No trace frontier advanced. JDK 21 focused validation also passed:
 
 ```text
 mvn -Dmse=off -Dtest=com.openggf.tests.TestDEZMechaSonic test
@@ -117,8 +126,8 @@ Tests run: 38, Failures: 0, Errors: 0, Skipped: 0
 ```
 
 The first run was intentionally red before the production edit (27 tests, one
-dash-start movement failure). No DEZ ROM/movie trace was available in the
-worktree, so end-to-end trace confirmation remains explicitly open.
+dash-start movement failure). The dedicated DEZ replay was green on both base
+and candidate, so this change introduced no replay regression.
 
 Deterministic full-suite command for both current `develop` and the feature:
 

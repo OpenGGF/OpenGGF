@@ -65568,3 +65568,23 @@ S1/S2 12 -> 10 red, zero regressions.
   errors, ss_5's former 3, and the EHZ chain all depend on that republication, and
   the capture also produces the additive sixth segment `seg4_ehz2` (bk2 22782, 36
   frames) that needs an explicit decision.
+
+## 2026-08-08 - S2 Mecha Sonic outer-loop ordering replay validation (no frontier change)
+
+- Scope: existing `Sonic2MechaSonicInstance` / DEZ Mecha Sonic movement and
+  child-alignment parity; implementation commit `4b4572cc3` was compared with
+  reviewed base `5cc94d457`.
+- Source evidence: shipped Sonic 2 REV01 `loc_398C0` dispatches the attack
+  phase, aligns the LED and targeting sensor through `loc_39D4A`, then performs
+  one outer-loop `ObjectMove`. The dedicated fixture is
+  `src/test/resources/traces/s2/dez_ending/s2-lvl-select-DEZ-Ending.bk2`, with
+  auxiliary state confirming ObjAF from frame 127 through the fight. The
+  complete-run segment is retained at
+  `src/test/resources/traces/s2/runs/s2-sonic-tails-complete-emeralds/seg28_dez1/`.
+- Dedicated replay command (verified Sonic 2 REV01 ROM):
+  `mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1
+  -Dsurefire.runOrder=alphabetical
+  -Dtest=com.openggf.tests.trace.s2.TestS2DezEndingLevelSelectTraceReplay#replayMatchesTrace
+  -Ds2.rom.path=<verified-Sonic-2-REV01> test`.
+- Controller result: base `5cc94d457`, 1/1 pass; candidate `4b4572cc3`, 1/1
+  pass. No new errors, fixture changes, or trace-frontier advancement.
