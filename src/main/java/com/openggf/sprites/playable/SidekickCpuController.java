@@ -3827,8 +3827,6 @@ public class SidekickCpuController {
      * A/B/C/START press, or (b) a 64-frame gate firing while Sonic's
      * object_control sign bit is clear and Sonic is not super. On trigger, teleports Tails to
      * (Sonic.x, Sonic.y - 0xC0), sets routine = 4, and enters flight AI.
-     *
-     * <p>Stubbed in Task 2; body lands in Task 4.
      */
     private void updateCatchUpFlight() {
         // ROM Tails_Catch_Up_Flying (sonic3k.asm:26474-26531)
@@ -3927,8 +3925,6 @@ public class SidekickCpuController {
      * it (X step &le; 0xC, Y step = 1 plus optional -0x20 lead), and transitions
      * to {@code NORMAL} (routine 0x06) once Tails is close enough to Sonic and
      * Sonic isn't hurt/dead.
-     *
-     * <p>Stubbed in Task 2; body lands in Task 5.
      */
     private void updateFlightAutoRecovery() {
         // ROM Tails_FlySwim_Unknown (sonic3k.asm:26534-26653).

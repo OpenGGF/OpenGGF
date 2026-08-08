@@ -481,6 +481,16 @@ com.openggf.game.sonic3k.objects.TestSonic3kSpringObjectInstance	reverseGravityS
 
 Every pre-existing row must remain identical.
 
+Observed execution amendment (2026-08-08): two clean executions of the command
+above ran the new assertion successfully but default-fork native initialization
+terminated with `SIGBUS` after producing only 51 and 53 passing rows. Do not
+accept either partial manifest or waive its missing rows. Re-run the identical
+class set with `-Dsurefire.forkCount=1` before the comment edits and use that
+complete serial manifest as the characterization side of the Task 4 behavioral
+comparison. Record both default-fork attempts and the serial fallback in the
+validation report. The updated full-suite baseline comparison in Task 5 is
+still mandatory.
+
 - [ ] **Step 3: Correct the MCZ comment**
 
 Replace the stale TODO in `onHitTaken(...)` with:
@@ -508,9 +518,11 @@ rg -n 'currently stubbed|Stubbed in Task 2|TODO: Wire boss_hurt_sonic' \
 ```
 
 Expected: no matches. Re-run the focused owner tests from Step 2; outcomes must
-be identical. Create `focused-comments-development.tsv.gz`, diff it against
-`focused-comments-characterization.tsv.gz`, then inspect and restore only a
-suite-generated rewind-report diff.
+be identical, using `-Dsurefire.forkCount=1` to match the amended complete
+characterization run. Create `focused-comments-development.tsv.gz`, diff it
+against `focused-comments-characterization.tsv.gz`, then inspect and restore
+only a suite-generated rewind-report diff. No missing testcase row is an
+acceptable comparison result.
 
 - [ ] **Step 6: Commit the stale-marker cleanup**
 

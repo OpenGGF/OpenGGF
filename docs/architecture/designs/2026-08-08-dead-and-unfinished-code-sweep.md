@@ -175,6 +175,18 @@ parameterized display name appears as a removed/added row keyed by class plus
 Surefire testcase name and requires explicit review; the tool does not infer a
 fallback identity.
 
+Task 4 exposed a host-native concurrency blocker in its focused test set. Two
+clean runs with the default four Surefire forks executed the new reverse-gravity
+assertion successfully, then terminated native-initialization forks with
+`SIGBUS` in `ld-linux-x86-64.so.2`; they emitted only 51 and 53 passing testcase
+rows, respectively. Those incomplete manifests are not accepted as regression
+evidence, and the 84/86 missing baseline rows are not waived. The identical
+focused class set is therefore run before and after the comment-only edit with
+`-Dsurefire.forkCount=1`, the repository's documented CI fork setting. That
+serial pair must contain the same complete testcase identities and outcomes;
+the earlier focused baseline remains contextual only, and the required updated
+full-suite baseline/development/merged comparison remains the delivery gate.
+
 Clean builds are mandatory for every comparable full-suite run so deleted
 sources cannot survive as stale bytecode in `target/classes` or the packaged
 JAR. `tools/test-reports/surefire-outcome-manifest.xsl` normalizes every

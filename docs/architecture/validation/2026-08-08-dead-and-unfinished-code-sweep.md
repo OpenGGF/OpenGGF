@@ -116,6 +116,38 @@ restored. Exact-symbol scans found the removed trace aliases only in the
 intentional guard literals; remaining non-code hits are historical sweep
 evidence.
 
+### Task 4 stale-marker characterization
+
+The new
+`reverseGravitySwapsVerticalSpringDirectionDuringNativeInit` characterization
+passed before any comment edit, proving native UP becomes DOWN and native DOWN
+becomes UP while reverse gravity is active. Two clean executions of the planned
+default-fork focused command did not complete: the first emitted 51 passing
+rows before `SIGBUS` terminated the `TestS3kSpringObjectInstance` and
+`TestSidekickCpuControllerCatchUpFlight` forks; the second emitted 53 passing
+rows before the catch-up fork terminated with the same `SIGBUS` in
+`ld-linux-x86-64.so.2`. Neither partial run had a Java failure or error row,
+but neither manifest is accepted because testcase rows are missing.
+
+The before/after comparison therefore used the identical class set with the
+repository's documented CI fork setting:
+
+```bash
+mvn clean -Dmse=off -Dsurefire.forkCount=1 \
+  "-Dtest=com.openggf.game.sonic2.objects.TestTodo4_MCZBossCollision,com.openggf.tests.TestS3kSpringObjectInstance,com.openggf.game.sonic3k.objects.TestSonic3kSpringObjectInstance,com.openggf.sprites.playable.TestSidekickCpuControllerCatchUpFlight,com.openggf.sprites.playable.TestSidekickCpuControllerFlightAutoRecovery" \
+  test
+```
+
+Both serial runs passed 60 tests with 60 PASS, 0 FAILURE, 0 ERROR, and 0
+SKIPPED. `focused-comments-characterization.tsv.gz` and
+`focused-comments-development.tsv.gz` each contain 60 normalized rows and
+their decompressed diff is empty. The earlier 137-row baseline is not treated
+as equivalent: it contains unrelated `TestBuildToolingGuard` rows and native
+initialization errors, so its removed/reclassified rows remain unaccepted
+environmental differences pending the required Task 5 full-suite comparison.
+The stale-string scan returned no matches, and
+`docs/status/rewind-round-trip-gaps.md` remained clean.
+
 ### Merged result
 
 Not yet run. Task 5 records `merged.tsv.gz`, comparison against the updated
