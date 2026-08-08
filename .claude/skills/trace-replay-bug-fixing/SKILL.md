@@ -361,6 +361,50 @@ must execute its own production lifecycle; trace rows and auxiliary events are
 comparison-only evidence"* — and its removal condition. The direction of travel across all
 three steps is the same: each one removed a trace-derived driver rather than adding one.
 
+## Name the clock, or your "N frames late" is fiction
+
+Two consecutive rounds produced a confident, fully-written-up defect that did not
+exist, from the same mistake: a probe printed one clock and was compared against a
+different one. Both were reported as measured facts and both propagated into the next
+round's brief before being caught.
+
+- Round ten: "the engine creates the Aquis at f5949 but does not run its first
+  `updateMovement` until f5976 -- a 26-frame init deferral". There is no init deferral.
+  f5976 was that object's **creation** frame on a different clock.
+- Round eleven: "the engine LOADS the Aquis 26 frames late, f5975 vs ROM f5949 -- a
+  load-cursor timing defect". There is no load-cursor defect either. Same off-by-27.
+
+The engine has at least three clocks that are NOT aligned:
+
+| Clock | What it is | Where you see it |
+|---|---|---|
+| `ObjectManager.frameCounter` | the manager's own executed-frame count | engine-side probes |
+| `vblaCounter` / `V_int_run_count` | the object-visible ROM clock passed to `update(int vIntRunCount, ...)` | ROM frame gates |
+| trace row index | the fixture's row number | every comparison error message |
+
+At OOZ1 level start `ObjectManager.frameCounter` leads the trace row index by **+27**,
+drifting to +26 by ~row 5500 and +25 by ~7500. A raw comparison therefore invents a
+~26-frame defect out of nothing, and the drift makes it look plausibly variable rather
+than like a constant offset.
+
+**Procedure, mandatory before reporting any timing claim:**
+
+1. State in the write-up WHICH clock each number came from. A timing claim without
+   named clocks on both sides is not a finding.
+2. Anchor before you accuse. Find a value both sides agree on and align there first --
+   post-camera `Camera_X_pos` against the recorded `camera_x` is the cheapest anchor,
+   because it matches value-for-value from frame 0 while the route is still converged.
+   If your two clocks disagree by a constant at frame 0, you have an offset, not a bug.
+3. Prefer a ROM-visible event over a frame number. "The object appears in ROM's
+   `slot_dump` at the same row the engine allocates it" is robust; "f5975 vs f5949" is
+   not.
+4. If the "defect" is a suspiciously round constant across unrelated objects, suspect
+   the clock before the engine.
+
+The corollary for reviewers and orchestrators: when an agent hands you "N frames
+late", the first question is *which clock*, not *why*. Neither of the two retractions
+above would have survived that question.
+
 ## Pipeline Overview
 
 ```
