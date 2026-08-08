@@ -30,7 +30,8 @@ other LRZ1 modes fall through to the animation `$1B` / `Status_InAir` writes at
 `TestS3kLrzFallingIntroBootstrap` covers Sonic + Tails, Tails alone, Knuckles,
 and LRZ2. The `lrz_completerun` payload is present, but a direct replay attempt
 currently stops before gameplay while compiling its final v5 hardware-timing
-row (`unsupported-held-row-POST`, recorded trace `raw_frame=38719`); no route result is claimed
+row (`unsupported-held-row-POST`, trace rows 72/78 continuing through
+`raw_frame=38746`; first unsupported row `raw_frame=38719`); no route result is claimed
 until that fixture-level blocker is resolved.
 
 The same ROM routine also reaches `loc_68A6` for `$1600` (the LRZ boss slot),

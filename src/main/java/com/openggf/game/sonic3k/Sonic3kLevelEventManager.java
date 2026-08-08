@@ -598,11 +598,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
      */
     public void applyZonePlayerState() {
         // ROM Level_FromSavedGame leaves Last_star_post_hit-owned player state
-        // intact on checkpoint/special-stage/bonus returns.  The bootstrap
-        // resolver carries that semantic for intro levels; the live return
-        // flags and restored checkpoint state cover reloads whose resolver
-        // remains NORMAL.  No zone-specific intro branch may run first.
-        if (shouldSkipZonePlayerStateBootstrap()) {
+        // intact on checkpoint/special-stage/bonus returns.  This is runtime
+        // saved-state, distinct from the user-facing skip-intros bootstrap
+        // mode. No zone-specific intro branch may run first.
+        if (hasSavedPlayerReturnState()) {
             return;
         }
         if (currentZone == Sonic3kZoneIds.ZONE_HCZ && currentAct == 0) {
@@ -636,10 +635,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
     }
 
-    private boolean shouldSkipZonePlayerStateBootstrap() {
-        if (bootstrap != null && bootstrap.isSkipIntro()) {
-            return true;
-        }
+    private boolean hasSavedPlayerReturnState() {
         if (!GameServices.hasRuntime() || GameServices.levelOrNull() == null) {
             return false;
         }
@@ -666,7 +662,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         // The title-card release is another caller of the ROM player bootstrap;
         // saved-state returns must suppress the complete seam, including LBZ1's
         // launch intro, before any zone-specific work is attempted.
-        if (shouldSkipZonePlayerStateBootstrap()) {
+        if (hasSavedPlayerReturnState()) {
             return;
         }
         applyZonePlayerState();

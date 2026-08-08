@@ -119,7 +119,8 @@ LRZ and SSZ complete-run payloads exist under
 `src/test/resources/traces/s3k/{lrz,ssz}_completerun`, but no replay subclasses
 currently own those segments. A direct LRZ replay attempt is presently blocked
 before gameplay by the fixture's final v5 hardware-timing row
-(`unsupported-held-row-POST`, recorded trace `raw_frame=38719`), so the ROM-backed headless
+(`unsupported-held-row-POST`, trace rows 72/78 continuing through `raw_frame=38746`;
+the first unsupported row is `raw_frame=38719`), so the ROM-backed headless
 bootstrap suite is the available focused validation for this change.
 
 ---
