@@ -26,7 +26,7 @@ import com.openggf.game.GameServices;
  *   <li>Many new flags: E2, E4, E5, EA, EB, EE, F1, F4, FC, FD, FE</li>
  * </ul>
  *
- * <p>The shipped S3K music and SFX tables do not reach meta subcommands
+ * <p>The S&K-loader-supported S3K music and SFX tables do not reach meta subcommands
  * {@code FF 01} (SND_CMD), {@code FF 02} (MUS_PAUSE), or {@code FF 03}
  * (COPY_MEM). Those cases still consume their documented operands so an
  * imported/custom stream remains aligned, but that is deliberately not
@@ -540,16 +540,16 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
                 }
                 break;
 
-            case 0x01: // SND_CMD - sound command (unreached in shipped S3K ROM)
+            case 0x01: // SND_CMD - absent from loader-supported ROM streams
                 if (t.pos < data.length) {
                     // Preserve the Z80 stream position for imported/custom data.
-                    // No shipped S3K stream reaches FF 01, so dispatching here
+                    // No loader-supported stream reaches FF 01, so dispatching here
                     // would invent behavior without a ROM-owned caller.
                     t.pos++;
                 }
                 break;
 
-            case 0x02: // MUS_PAUSE (MUSP_Z80) - music pause (unreached in shipped S3K ROM)
+            case 0x02: // MUS_PAUSE (MUSP_Z80) - absent from loader-supported streams
                 if (t.pos < data.length) {
                     // Keep the operand consumed for stream alignment. Native
                     // all-track halt/resume has no reached ROM path to model.
@@ -557,11 +557,11 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
                 }
                 break;
 
-            case 0x03: // COPY_MEM - copy memory (unreached in shipped S3K ROM)
+            case 0x03: // COPY_MEM - absent from loader-supported streams
                 if (t.pos + 2 < data.length) {
                     // Preserve the three documented operands. The native
                     // pointer-copy targets shared Z80 RAM, which this sequencer
-                    // does not own; no shipped stream reaches FF 03.
+                    // does not own; no loader-supported stream reaches FF 03.
                     t.pos += 3;
                 }
                 break;

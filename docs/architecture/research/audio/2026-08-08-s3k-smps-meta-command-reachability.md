@@ -59,9 +59,9 @@ scan is not used to classify SFX: `Sonic3kSmpsLoader` returns a bank-backed
 buffer containing voices and unrelated streams, so raw SFX bytes would produce
 false positives. Instead, the test starts at every resolved loaded track entry
 and computes a fixed point over note/duration bytes plus jump, call, counted
-loop, conditional loop-exit, continuous, and terminal edges. Calls into a
-shared bank routine outside a per-song loader blob are closed external edges;
-all other edges must close with no unexplored frontier (or a cycle) before recording
+loop, conditional loop-exit, continuous, and terminal edges across each
+loader-provided full Z80 bank; shared-bank targets are traversed inside the
+same address space. Every edge must close with no unexplored frontier (or a cycle) before recording
 live FF subcommands. The 51 S&K music, 50 S3 music, and 169 S&K-loader SFX
 graphs observe live `FF 00`/`FF 07` commands but no `01/02/03` route. The
 S3-native SFX table (including differing IDs 9B/AD) and DC–DF alias targets

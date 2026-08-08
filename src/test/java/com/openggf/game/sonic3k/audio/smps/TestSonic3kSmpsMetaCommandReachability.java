@@ -38,7 +38,7 @@ public class TestSonic3kSmpsMetaCommandReachability {
     private static final Set<Integer> TARGET_META_SUBCOMMANDS = Set.of(0x01, 0x02, 0x03);
 
     @Test
-    void shippedMusicAndSfxHaveClosedControlFlowAndDoNotReachTargetMetaCommands() {
+    void loaderScopedSkSfxAndSkS3MusicHaveClosedControlFlowAndDoNotReachTargetMetaCommands() {
         Rom rom = TestEnvironment.currentRom();
         Sonic3kSmpsLoader loader = new Sonic3kSmpsLoader(rom);
         Set<Integer> metaSubcommands = new HashSet<>();

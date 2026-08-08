@@ -9,11 +9,11 @@ All notable changes to the OpenGGF project are documented in this file.
   navigation. Unsupported S1/S3K sprite, plane, alignment, and lag shortcuts
   no longer call stage no-op or viewer-less provider state. Global F1/F3/F4/F12
   overlay and screenshot bindings remain active while a stage runs.
-- Docs/Audio: audited every shipped S3K S&K/S3 music and SFX stream for the
+- Docs/Audio: audited every S&K-loader-supported S&K/S3 music and SFX stream for the
   `FF 01` (`SND_CMD`), `FF 02` (`MUS_PAUSE`), and `FF 03` (`COPY_MEM`) meta
   commands. None are reached; the handler now documents and preserves only
   operand alignment for custom streams instead of implying native semantics.
-  Added a ROM-backed sequencing guard and the source-contract inventory under
+  S3-native SFX/alias coverage remains open. Added a ROM-backed sequencing guard and the source-contract inventory under
   `docs/architecture/research/audio/2026-08-08-s3k-smps-meta-command-reachability.md`.
 - Fix: S3K LRZ1 now applies the ROM `SpawnLevelMainSprites` `loc_68A6`
   falling-introduction state to non-Knuckles players (including Player 2),
