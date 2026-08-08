@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: special-stage debug routing now uses an explicit game-owned capability
+  profile. Sonic 1's direct-movement debug remains available; Sonic 2 keeps
+  its sprite/plane/alignment/lag tools; Sonic 3&K keeps stage/layout
+  navigation. Unsupported S1/S3K sprite, plane, alignment, and lag shortcuts
+  no longer call stage no-op or viewer-less provider state. Global F1/F3/F4/F12
+  overlay and screenshot bindings remain active while a stage runs.
 - Fix: S3K LRZ1 now applies the ROM `SpawnLevelMainSprites` `loc_68A6`
   falling-introduction state to non-Knuckles players (including Player 2),
   with production-load character/zone/act coverage. Checkpoint, big-ring, and

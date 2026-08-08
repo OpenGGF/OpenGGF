@@ -197,8 +197,8 @@ debug:
     specialStage: TAB   # Toggle special stage mode
     specialStageComplete: END   # Complete the special stage with an emerald
     specialStageFail: DELETE   # Fail the special stage
-    specialStageSpriteDebug: F12   # Toggle the special stage sprite debug viewer
-    specialStagePlaneDebug: F3   # Cycle special stage plane visibility debug modes
+    specialStageSpriteDebug: F12   # Toggle the S2 special stage sprite debug viewer (unavailable in S1/S3K)
+    specialStagePlaneDebug: F3   # Cycle S2 special stage plane visibility debug modes (unavailable in S1/S3K)
   startup:
     levelSelectOnStartup: false   # Open Level Select on startup instead of loading the first zone
     s3kSkipIntros: false   # Skip S3K zone intro sequences (AIZ biplane, etc.)

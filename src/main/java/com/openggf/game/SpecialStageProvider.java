@@ -25,6 +25,17 @@ public interface SpecialStageProvider extends MiniGameProvider {
     String SPECIAL_STAGE_REWIND_KEY = "special-stage-runtime";
 
     /**
+     * Returns the optional developer controls owned by this special stage.
+     *
+     * <p>Providers opt in to each control explicitly. The game loop consults
+     * this profile before routing a debug key, so an omitted capability is
+     * unavailable rather than a silent default-method call.</p>
+     */
+    default SpecialStageDebugCapabilities debugCapabilities() {
+        return SpecialStageDebugCapabilities.NONE;
+    }
+
+    /**
      * Selects the special-stage index for a new entry and advances any
      * game-owned cursor state. The default matches the S1/S2 sequential
      * cursor; games with different ROM selection policy override here.

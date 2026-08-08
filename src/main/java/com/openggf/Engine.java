@@ -2253,12 +2253,15 @@ public class Engine {
 		boolean renderedDebugRenderer = false;
 		if (!userRecordingSceneSuppressed && getCurrentGameMode() == GameMode.SPECIAL_STAGE) {
 			SpecialStageProvider ssProvider = gameLoop.getActiveSpecialStageProvider();
-			if (ssProvider.isAlignmentTestMode()) {
+			SpecialStageDebugCapabilities debugCapabilities =
+					SpecialStageDebugCapabilities.orNone(ssProvider.debugCapabilities());
+			if (debugCapabilities.alignment() && ssProvider.isAlignmentTestMode()) {
 				if (postFadeRecorder != null) {
 					postFadeRecorder.recordPostFadeDiagnostic("SpecialStageDiagnosticOverlay");
 				}
 				ssProvider.renderAlignmentOverlay(windowWidth, windowHeight);
-			} else if (ssProvider.isLagCompensationDisplayEnabled()) {
+			} else if (debugCapabilities.lagCompensation()
+					&& ssProvider.isLagCompensationDisplayEnabled()) {
 				if (postFadeRecorder != null) {
 					postFadeRecorder.recordPostFadeDiagnostic("SpecialStageDiagnosticOverlay");
 				}
@@ -2573,7 +2576,8 @@ public class Engine {
 
 	private void drawSpecialStage() {
 		SpecialStageProvider ssProvider = gameLoop.getActiveSpecialStageProvider();
-		if (ssProvider.isSpriteDebugMode()) {
+		if (SpecialStageDebugCapabilities.orNone(ssProvider.debugCapabilities()).spriteViewer()
+				&& ssProvider.isSpriteDebugMode()) {
 			SpecialStageDebugProvider debugProvider = ssProvider.getDebugProvider();
 			if (debugProvider != null) {
 				debugProvider.draw();

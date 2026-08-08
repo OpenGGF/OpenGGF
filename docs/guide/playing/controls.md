@@ -119,15 +119,25 @@ These controls are only active when `debug.flags.editor` is `true` in `config.ya
 
 ## Special Stage Debug
 
-These keys are only active during a Special Stage. Sonic 2 implements both
-developer tools. In Sonic 3&K, F12 toggles the manager's persisted state but no
-viewer is drawn because its viewer provider is null; F3 is a no-op. Sonic 1
-leaves both shortcuts as no-ops.
+These keys are only active during a Special Stage. Unsupported tools are
+unavailable for the active game's stage provider and do not silently call a
+stage no-op or consume a stage rewind boundary. The global debug-overlay
+bindings remain active during the stage; F1/F3/F4/F12 can toggle their general
+overlays (and F12 can take a screenshot), so those states may be visible after
+leaving the stage.
+Sonic 2 exposes the sprite, plane, alignment, and lag diagnostics. Sonic 1
+exposes only direct movement through the normal debug-mode key. Sonic 3&K
+exposes stage/layout navigation; its sprite, plane, alignment, and lag tools
+are unavailable.
 
 | Key | Action |
 |-----|--------|
 | Tab | Enter / exit Special Stage mode |
 | End | Complete the current Special Stage (award emerald) |
 | Delete | Fail the current Special Stage |
-| F12 | Toggle Special Stage sprite debug state (viewer in S2; state only/no viewer in S3K; no-op in S1) |
-| F3 | Cycle Special Stage plane visibility debug modes (S2; no-op in S1/S3K) |
+| X | Advance to the next S3K special-stage layout |
+| Z | Switch between S3 and S&K special-stage layout sets (S3K) |
+| F12 | Toggle the Special Stage sprite viewer (S2 only) |
+| F3 | Cycle Special Stage plane visibility debug modes (S2 only) |
+| F4 | Toggle the Special Stage alignment test (S2 only) |
+| F1 | Toggle the Special Stage lag-compensation display (S2 only) |
