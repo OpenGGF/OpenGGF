@@ -13,6 +13,8 @@ import com.openggf.game.BonusStageType;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
 import com.openggf.game.OscillationManager;
+import com.openggf.game.SpecialStageInputMapper;
+import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.resources.DynamicArtGapTransition;
 import com.openggf.game.resources.DynamicArtDiagnosticsSnapshot;
 import com.openggf.game.resources.DynamicArtLifecycleService;
@@ -22,6 +24,7 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
+import com.openggf.trace.SpecialStageRunObjectsPassBinder;
 import com.openggf.trace.ToleranceConfig;
 import com.openggf.trace.FrameComparison;
 import com.openggf.trace.TraceData;
@@ -2404,56 +2407,63 @@ abstract class AbstractRunChainTest {
      * <p>This is compounded, and made unrecoverable in code, by a property of the
      * committed run fixtures: the multi-segment run recorder captured each
      * special-stage segment's {@code physics.csv} (frames + lag column) but wrote
-     * no {@code run_objects_end} pass snapshots. (Correcting an earlier claim on this
-     * comment: the aux stream is <b>not</b> empty — the committed
-     * {@code s2-ehz-halfpipe-roundtrip/ss/aux_state.jsonl.gz} carries 6762 records,
-     * including 5733 {@code dynamic_art_transfer_state} rows, both
-     * {@code control_state} transitions, {@code checkpoint},
+     * no {@code run_objects_end} pass snapshots. (The aux stream is <b>not</b>
+     * empty — the committed {@code s2-ehz-halfpipe-roundtrip/ss/aux_state.jsonl.gz}
+     * carries 6762 records, including 5733 {@code dynamic_art_transfer_state} rows,
+     * both {@code control_state} transitions, {@code checkpoint},
      * {@code stage_finished} and {@code results_started}. Exactly one family is
-     * missing, and it is the pacing one.) The S2 half-pipe in
-     * particular is ROM-object-pass paced: the standalone must-stay-green
-     * {@code TestS2SpecialStageTraceReplay} drives it via
-     * {@code SpecialStageRunObjectsPassBinder}, binding each recurring RunObjects
-     * pass to the exact BK2 row the ROM's V-int sampled. Without those pass records
-     * the chain can only frame-pace the BK2 (one tick per non-lag row), which feeds
-     * the wrong controller sample once the ROM's V-int/RunObjects interleave drifts
-     * from a 1:1 non-lag cadence — the half-pipe player then under-collects rings
-     * (36 vs the recorded 40 at checkpoint 1, at the identical internal frame 939),
-     * fails the checkpoint, and is ejected without the emerald. That is a
-     * fixture-data limitation, not an engine defect: nothing the comparison-only
-     * chain may do (it must not hydrate engine state from the trace) can recover the
-     * unrecorded V-int sampling. It is also not the ONLY missing piece — there are
-     * three, and all three must land together:
+     * missing, and it is the pacing one.) The S2 half-pipe is ROM-object-pass
+     * paced: the standalone must-stay-green {@code TestS2SpecialStageTraceReplay}
+     * drives it via {@code SpecialStageRunObjectsPassBinder}, binding each
+     * recurring RunObjects pass to the exact BK2 row the ROM's V-int sampled.
+     *
+     * <p><b>Superseding the earlier "36-vs-40 is purely a recorder gap" claim.</b>
+     * That was reasoning, not measurement, and a measurement has now been made.
+     * With a scratch re-capture's {@code run_objects_end} stream overlaid onto this
+     * run's {@code ss} segment (uncommitted, local) and this class pass-pacing the
+     * interior from it, the engine ran 1014 object passes over the 2027 rows it
+     * reached instead of the previous ~1600 — pacing demonstrably changed — and yet
+     * checkpoint 1 still evaluated {@code required=40, collected=36} and still
+     * ejected on the same represented row (2027). The recorded stream says the ROM
+     * had cleared that requirement by pass 721 (segment-local frame 1574,
+     * {@code rings_togo} 0x17 at pass 568 counting down to 0), while the engine
+     * reaches its own check around pass ~790 four rings short. So the ring
+     * shortfall is a THIRD, engine-side defect that survives correct pacing; it is
+     * not the fixture and not the stepper. The prime suspect is the interior's
+     * pre-start prefix (rows 0..{@code passPacedFromRow}), which the chain runs
+     * through the production entry choreography while the standalone lane
+     * bootstraps {@code SpecialStageStartupPolicy.TRACE_ACCURATE} — the recorded
+     * first ring group lands at segment-local frames 795-824.
+     *
+     * <p>The pacing pieces themselves are now in place:
      *
      * <ol>
-     *   <li><b>The re-record.</b> Settled: the native harness at HEAD does emit
-     *       run-mode special-stage pass records. A scratch re-capture of this run's
-     *       own movie reproduces all five committed segments' {@code physics.csv}
+     *   <li><b>The re-record.</b> The native harness at HEAD emits run-mode
+     *       special-stage pass records. A scratch re-capture of this run's own
+     *       movie reproduces all five committed segments' {@code physics.csv}
      *       byte-for-byte and every level segment's aux byte-for-byte, and adds
      *       2991 {@code run_objects_end} records to {@code ss} and 3291 to
-     *       {@code ss_2} (plus a sixth, previously untruncated {@code seg4_ehz2}
-     *       tail segment). Publishing those bytes is a fixture-publication decision,
-     *       not a code one.</li>
-     *   <li><b>A pass-paced interior.</b> {@link TraceRunSpecialStageRows} now
-     *       exposes the pass cursor
-     *       ({@code newRunObjectsPassBinder}/{@code passPacedFromRow}) for a
-     *       segment that recorded one, so the pacing authority is available to any
-     *       driver; nothing consumes it yet.</li>
-     *   <li><b>A V-blank body that can run 0..n object passes.</b> This is the piece
-     *       the earlier note missed. Pass pacing cannot be expressed as one
-     *       {@code GameLoop.step()} per pass: a step is one V-blank row, and an
-     *       audited segment's {@code TraceRunSpecialStageRowDriver} requires each
-     *       admitted row to publish exactly one dynamic-art delivery
-     *       ({@code publishAdmittedRow}: "advertised special-stage row N was not
-     *       published atomically"). Measured on the re-capture, {@code ss} rows own
-     *       zero passes 3341 times, one pass 1793 times and two passes 599 times —
-     *       so row-to-step and pass-to-step cannot both hold. The standalone
-     *       harness already separates them, running every pass of an observation
-     *       inside ONE {@code plcFrameLifecycle} iteration
-     *       ({@code S2SpecialStageReplayHarness.stepPasses}); the run path needs the
-     *       same split, i.e. the SS body in {@code GameLoop.updateSpecialStageMode}
-     *       driving the row's completed-pass count inside its single lifecycle
-     *       frame, fed through the existing per-row special-stage admission seam.</li>
+     *       {@code ss_2} — a strict superset, the rest of each aux stream is
+     *       unchanged — plus a sixth {@code seg4_ehz2} tail segment the committed
+     *       fixture stops short of. Publishing those bytes is a fixture-publication
+     *       decision, not a code one, and the sixth segment widens what the fixture
+     *       claims to cover, so it is not folded in silently.</li>
+     *   <li><b>A pass-paced interior.</b> Landed: {@link #uncomparedInteriorStep}
+     *       now consumes {@code newRunObjectsPassBinder}/{@code passPacedFromRow}.
+     *       It is inert on a segment that recorded no passes, so every committed
+     *       fixture keeps its previous one-step-per-row behaviour.</li>
+     *   <li><b>A V-blank body that can run 0..n object passes.</b> Landed: pass
+     *       pacing cannot be one {@code GameLoop.step()} per pass, because a step
+     *       is one V-blank row and an audited segment's
+     *       {@code TraceRunSpecialStageRowDriver} requires each admitted row to
+     *       publish exactly one dynamic-art delivery ({@code publishAdmittedRow}:
+     *       "advertised special-stage row N was not published atomically"). On the
+     *       re-capture, {@code ss} rows own zero passes 3341 times, one pass 1793
+     *       times and two passes 599 times, so row-to-step and pass-to-step cannot
+     *       both hold. {@link GameLoop.SpecialStageObservationPacing} makes the
+     *       special-stage body run the row's completed-pass count inside its single
+     *       PLC lifecycle iteration, the same split
+     *       {@code S2SpecialStageReplayHarness.stepPasses} already makes.</li>
      * </ol>
      *
      * <p>The recorded
@@ -2609,6 +2619,21 @@ abstract class AbstractRunChainTest {
      * {@link #specialStageDrivenStep} (no lag-skip) -- correct as long as the
      * interior's actual outcome carry-over is not asserted, or a lane
      * overrides this.
+     *
+     * <p>When the segment recorded ROM {@code RunObjects} completions, the
+     * interior is <b>pass-paced</b> from {@link
+     * TraceRunSpecialStageRows#passPacedFromRow()} onwards: each admitted row
+     * still costs exactly one {@link GameLoop#step()} (one V-blank row, one
+     * dynamic-art publication, which {@code TraceRunSpecialStageRowDriver}
+     * requires), but that step's special-stage body runs however many object
+     * passes the ROM completed for the row, via
+     * {@link GameLoop.SpecialStageObservationPacing}. This is the same split
+     * the standalone {@code TestS2SpecialStageTraceReplay} makes through
+     * {@code S2SpecialStageReplayHarness.stepPasses}. Frame-pacing instead —
+     * one pass per admitted row — advances the S2 half-pipe track roughly 1.77x
+     * too fast, so the recorded ring-requirement reloads land against the wrong
+     * internal frame and the player under-collects at checkpoint 1. A segment
+     * with no recorded passes keeps the previous one-step-per-row behaviour.
      */
     protected IntConsumer uncomparedInteriorStep(
             GameLoop loop,
@@ -2617,6 +2642,10 @@ abstract class AbstractRunChainTest {
             SegmentPlan interior,
             TraceRunSpecialStageRows rows) {
         int bk2FrameOffset = interior.segment().bk2FrameOffset();
+        SpecialStageRunObjectsPassBinder passBinder =
+                rows.newRunObjectsPassBinder().orElse(null);
+        int passPacedFromRow = passBinder == null
+                ? Integer.MAX_VALUE : rows.passPacedFromRow();
         return localRow -> {
             TraceRunSpecialStageRows.SpecialStageRowAdmission admission =
                     rows.admission(localRow);
@@ -2632,9 +2661,22 @@ abstract class AbstractRunChainTest {
                         ? movie.getFrame(absoluteRow - 1) : null;
                 inputHandler.setLogicalOverride(
                         RecordedInputSnapshots.fromBk2(current, previous));
+                if (localRow >= passPacedFromRow) {
+                    // The recorded pass stream IS the pacing authority for this
+                    // segment, so the runtime's own lag MODEL (which skips an
+                    // update on frames it predicts the ROM lagged) must not also
+                    // pace it -- the standalone S2 special-stage harness turns it
+                    // off for exactly this reason ("Trace-paced replay: disable
+                    // the runtime's own lag compensation").
+                    loop.getActiveSpecialStageProvider().setLagCompensation(0);
+                    loop.setSpecialStageObservationPacing(
+                            recordedPassPacing(
+                                    movie, passBinder.passesForObservation(localRow)));
+                }
                 try {
                     stepEngineFrame(loop);
                 } finally {
+                    loop.setSpecialStageObservationPacing(null);
                     inputHandler.clearLogicalOverride();
                 }
             }
@@ -2642,6 +2684,37 @@ abstract class AbstractRunChainTest {
             if (admission.advancePreservedVblankIfUnchanged()
                     && afterManager.getVblaCounter() == beforeVblank) {
                 afterManager.advanceVblaCounter();
+            }
+        };
+    }
+
+    /**
+     * Pacing for one observation: run each recorded pass with the controller
+     * sample the ROM's {@code ReadJoypads} actually consumed for it (the pass
+     * record identifies the BK2 rows; the button values it also carries are
+     * diagnostics the binder validates, never an engine input). Mirrors
+     * {@code S2SpecialStageReplayHarness.stepPassBody}.
+     */
+    private static GameLoop.SpecialStageObservationPacing recordedPassPacing(
+            Bk2Movie movie, List<SpecialStageRunObjectsPassBinder.CompletedPass> passes) {
+        return new GameLoop.SpecialStageObservationPacing() {
+            @Override
+            public int passCount() {
+                return passes.size();
+            }
+
+            @Override
+            public void applyPassInput(int index, SpecialStageProvider provider) {
+                var pass = passes.get(index);
+                SpecialStageInputMapper.MappedInput mapped = SpecialStageInputMapper.map(
+                        RecordedInputSnapshots.fromBk2(
+                                movie.getFrame(pass.inputSampleBk2Frame()),
+                                movie.getFrame(pass.previousInputSampleBk2Frame())));
+                provider.handleInput(mapped.p1Held(), mapped.p1Pressed());
+                provider.handlePlayer2Input(mapped.p2Held(), mapped.p2Logical());
+                provider.bindPendingRecurringPassInput(
+                        mapped.p1Held(), mapped.p1Pressed(),
+                        mapped.p2Held(), mapped.p2Logical());
             }
         };
     }

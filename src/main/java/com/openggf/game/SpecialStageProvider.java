@@ -193,6 +193,18 @@ public interface SpecialStageProvider extends MiniGameProvider {
         // No-op by default.
     }
 
+    /**
+     * Binds physical controller input to the recurring ROM object pass the next
+     * {@link #update()} executes, for a stage whose object pass is a separate
+     * pacing unit from the V-blank observation (S2's {@code SS_MainLoop} /
+     * {@code RunObjects} split, docs/s2disasm/s2.asm:6694-6721). Stages with no
+     * such split ignore it.
+     */
+    default void bindPendingRecurringPassInput(
+            int p1Held, int p1Pressed, int p2Held, int p2Logical) {
+        // No-op by default.
+    }
+
     // ==================== Debug Methods ====================
 
     /**

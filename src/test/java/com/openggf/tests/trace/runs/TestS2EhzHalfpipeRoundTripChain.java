@@ -102,53 +102,53 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * (special_stage_index 0, Sonic+Tails), driven green for its whole length by
  * {@code TestS2SpecialStageTraceReplay} — carries 2991 {@code run_objects_end} entries
  * over 5299 rows. The half-pipe track is ROM-object-pass paced, so binding one
- * {@code GameLoop.step()} per admitted row (all {@link #uncomparedInteriorStep} can do
- * without a pass log) advances the track ~1.9x too fast; the recorded ring-requirement
+ * {@code GameLoop.step()} per admitted row (what
+ * {@link AbstractRunChainTest#uncomparedInteriorStep} falls back to when the segment
+ * recorded no passes) advances the track ~1.9x too fast; the recorded ring-requirement
  * reloads land at interior rows 1325/1849/3482 while the engine hits checkpoint 1 at
- * row 2029.
+ * row 2029. Pacing is necessary but, as measured below, not sufficient.
  *
- * <p><b>A re-record alone is necessary but NOT sufficient.</b> Nothing on the chain
- * path consumes a pass log today: {@link #uncomparedInteriorStep} steps
- * {@code movie.getFrame(bk2FrameOffset + localRow)} directly, and neither
- * {@code TraceRunSpecialStageRows} nor {@code TraceRunSpecialStageRowDriver}
- * references {@code run_objects_end} or {@code SpecialStageRunObjectsPassBinder}
- * (the binder is referenced only from the standalone
- * {@code S2SpecialStageReplayHarness}). {@code TraceRunSpecialStageRows} now exposes
- * the pass cursor ({@code newRunObjectsPassBinder} / {@code passPacedFromRow}) for a
- * segment that recorded one, but no driver consumes it yet. Re-recording this run
- * with the pass stream therefore still leaves the lane RED.
+ * <p><b>Blocker status, measured 2026-08-08 (supersedes the 2026-08-07 note).</b>
+ * The driver side is now CLOSED: {@link AbstractRunChainTest#uncomparedInteriorStep}
+ * consumes {@code newRunObjectsPassBinder}/{@code passPacedFromRow}, and
+ * {@link com.openggf.GameLoop.SpecialStageObservationPacing} lets one V-blank row's
+ * body run the row's completed-pass count (0, 1 or 2) inside its single PLC lifecycle
+ * iteration — which is what {@code TraceRunSpecialStageRowDriver.publishAdmittedRow}
+ * requires ("advertised special-stage row N was not published atomically"), since
+ * {@code ss} rows own zero passes 3341 times, one pass 1793 times and two passes 599
+ * times. Because the committed fixture records no passes, that path is inert here and
+ * this lane is unchanged by it.
  *
- * <p><b>Status of each blocker, measured 2026-08-07.</b> The recorder side is
- * settled: a scratch native re-capture of this run's own movie reproduces all five
- * committed segments' {@code physics.csv} byte-for-byte and every level segment's
- * aux byte-for-byte, adds 2991 {@code run_objects_end} records to {@code ss} and
- * 3291 to {@code ss_2}, and additionally captures a sixth {@code seg4_ehz2} tail
- * segment the committed fixture stops short of. What is NOT closed is the driver,
- * and the shape it needs is narrower than "one engine step per pass". A
- * {@code GameLoop.step()} is one V-blank row, and this segment advertises
- * {@code dynamic_art_transfer_state_per_frame}, so
- * {@code TraceRunSpecialStageRowDriver.publishAdmittedRow} requires exactly one
- * dynamic-art delivery per admitted row. On the re-capture, {@code ss} rows own zero
- * passes 3341 times, one pass 1793 times and two passes 599 times, so stepping the
- * loop once per pass immediately trips that atomicity check (verified: it throws at
- * row 426, the second consecutive zero-pass row after pass pacing starts at the
- * recorded {@code control_state} rise on row 423). The passes of one observation must
- * run inside ONE lifecycle iteration, exactly as
- * {@code S2SpecialStageReplayHarness.stepPasses} already does for the standalone —
- * i.e. {@code GameLoop.updateSpecialStageMode}'s object-scan body must be able to run
- * the row's completed-pass count (0, 1 or 2) instead of always exactly one.
+ * <p>The recorder side is also settled: a scratch native re-capture of this run's own
+ * movie reproduces all five committed segments' {@code physics.csv} byte-for-byte and
+ * every level segment's aux byte-for-byte, adds 2991 {@code run_objects_end} records
+ * to {@code ss} and 3291 to {@code ss_2} as a strict superset (removing those lines
+ * restores the committed bytes exactly; {@code metadata.json} differs only in
+ * {@code recording_date}), and additionally captures a sixth {@code seg4_ehz2} tail
+ * segment plus its {@code level_advance} transition and gap edges — an ADDITIVE
+ * widening of what this fixture claims to cover, so it is a separate publication
+ * decision rather than something to fold in.
  *
- * <p><b>This is not fixable in the harness alone.</b> Deriving a pass cadence by measuring
- * this fixture's own rows would be a fitted model (it would desync the first different
- * recording), and reading the interior's pacing out of the trace to drive engine state
- * is barred by the comparison-only rule. Loosening or skipping the remaining-rows
- * assertion is likewise not an option: the assertion is correctly detecting a real
- * premature exit. <b>What the recorder must emit</b> to close this: a
- * {@code run_objects_end} aux entry per ROM RunObjects pass for special-stage segments
- * of MULTI-SEGMENT runs, with the same shape the standalone special-stage recording
- * already produces (so {@code SpecialStageRunObjectsPassBinder}/{@code stepPasses} can
- * bind each pass to the BK2 row the ROM's V-int sampled). Until the run is re-recorded
- * with that stream, this lane stays RED for fixture reasons.
+ * <p><b>And a third blocker, newly measured, that neither of those closes.</b> With
+ * the re-capture's pass stream overlaid locally and the interior pass-paced from it,
+ * the engine ran 1014 object passes over the 2027 rows it reached (previously ~1600 —
+ * pacing demonstrably changed) and STILL evaluated checkpoint 1 as
+ * {@code required=40, collected=36}, still ejecting on the identical represented row
+ * 2027. The recorded stream shows the ROM had cleared that requirement by pass 721
+ * (segment-local frame 1574; {@code rings_togo} 0x17 appears at pass 568 and counts to
+ * zero), whereas the engine reaches its own check around pass ~790 four rings short.
+ * So the ring shortfall is an ENGINE defect that survives correct pacing, not the
+ * "fixture-data limitation" this javadoc previously asserted. The prime suspect is the
+ * interior's pre-start prefix (rows 0..423, before the recorded {@code control_state}
+ * rise), which this chain runs through the production special-stage entry choreography
+ * while the green standalone lane bootstraps
+ * {@code SpecialStageStartupPolicy.TRACE_ACCURATE}; the recorded first ring group lands
+ * at segment-local frames 795-824.
+ *
+ * <p>Loosening or skipping the remaining-rows assertion remains not an option: it is
+ * correctly detecting a real premature exit. Deriving a pass cadence by measuring this
+ * fixture's own rows would be a fitted model, and no engine state is hydrated from the
+ * trace anywhere on this path.
  *
  * <h2>Emerald boundary-model correction (retained + tightened)</h2>
  * <p>Asserting the LIVE {@code emeralds_after} count across an <b>advance-uncompared</b>

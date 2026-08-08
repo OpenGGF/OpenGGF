@@ -141,6 +141,43 @@ public class GameLoop {
     private GameplayModeContext gameplayMode;
     private SpecialStageProvider activeSpecialStageProvider = NoOpSpecialStageProvider.INSTANCE;
 
+    /**
+     * Pacing authority for one special-stage V-blank observation.
+     *
+     * <p>The S2 special-stage 68K loop is not one object pass per V-blank:
+     * {@code SS_MainLoop} sets {@code VintID_S2SS}, waits for the V-int, then
+     * runs {@code RunObjects} (docs/s2disasm/s2.asm:6694-6721), so a slow pass
+     * spans several V-blanks while a fast one lets two complete between
+     * observations. A replay driver that knows how many passes the ROM
+     * completed for the row it is about to step supplies that count here; the
+     * V-blank body then runs exactly that many object passes inside its single
+     * PLC lifecycle iteration, which is what the standalone S2 special-stage
+     * harness already does ({@code S2SpecialStageReplayHarness.stepPasses}).
+     *
+     * <p>Comparison-only: an implementation contributes execution ordering and
+     * the identity of the controller sample each pass consumed. It carries no
+     * player, object, track, ring or checkpoint value into the engine, and it
+     * cannot create engine work the stage did not already own.
+     */
+    public interface SpecialStageObservationPacing {
+
+        /** Object passes this observation completes; 0 runs no object pass. */
+        int passCount();
+
+        /** Applies pass {@code index}'s controller sample to {@code provider}. */
+        void applyPassInput(int index, SpecialStageProvider provider);
+    }
+
+    private SpecialStageObservationPacing specialStageObservationPacing;
+
+    /**
+     * Installs (or clears, with {@code null}) the pass pacing consulted by the
+     * next special-stage V-blank body. See {@link SpecialStageObservationPacing}.
+     */
+    public void setSpecialStageObservationPacing(SpecialStageObservationPacing pacing) {
+        this.specialStageObservationPacing = pacing;
+    }
+
     // Title card provider - lazily initialized when GameModule is available
     private TitleCardProvider titleCardProvider;
 
@@ -1335,11 +1372,25 @@ public class GameLoop {
         boolean skipSsTick = ssSession != null
                 && ssSession.shouldSkipCurrentSpecialStageTick();
         if (!skipSsTick) {
+            SpecialStageObservationPacing pacing = specialStageObservationPacing;
             LevelFrameStep.executeHardwareTimedObjectScan(
                     LevelFrameContext.from(gameplayMode), activePlcLifecycleFrame,
                     PlcLifecyclePhase.SPECIAL_STAGE, () -> {
-                        updateSpecialStageInput();
-                        ssProvider.update();
+                        if (pacing == null) {
+                            updateSpecialStageInput();
+                            ssProvider.update();
+                            return;
+                        }
+                        // ROM SS_MainLoop sets VintID_S2SS, waits for the V-int,
+                        // then runs RunObjects (docs/s2disasm/s2.asm:6694-6721),
+                        // so one V-blank observation owns 0..n completed object
+                        // passes, not exactly one. Run this observation's passes
+                        // inside its single lifecycle iteration.
+                        int passes = pacing.passCount();
+                        for (int pass = 0; pass < passes; pass++) {
+                            pacing.applyPassInput(pass, ssProvider);
+                            ssProvider.update();
+                        }
                     });
         } else if (ssSession.skippedSpecialStagePlcPhase().isPresent()) {
             LevelFrameStep.serviceVBlankOnly(LevelFrameContext.from(gameplayMode),

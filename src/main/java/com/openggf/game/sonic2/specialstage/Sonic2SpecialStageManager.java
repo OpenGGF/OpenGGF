@@ -1930,7 +1930,15 @@ public class Sonic2SpecialStageManager {
             sonicPlayer.setGlobalAnimFrameTimer(animTimer);
             sonicPlayer.update(capturedHeldButtons, capturedPressedButtons);
             System.arraycopy(tailsCtrlRecordBuf, 0, tailsCtrlRecordBuf, 1, tailsCtrlRecordBuf.length - 1);
-            tailsCtrlRecordBuf[0] = capturedHeldButtons;
+            // loc_33908 records the whole Ctrl_1_Logical *word* -- held byte in
+            // bits 8-15, press byte in bits 0-7 -- with a single
+            // "move.w (Ctrl_1_Logical).w,-(a1)" (s2.asm:69069). Recording only
+            // the held byte loses the press edge, and SSTailsCPU_Control's
+            // "move.w (a1),(Ctrl_2_Logical).w" (s2.asm:70482) republishes both
+            // bytes, so Obj10_MdNormal's Ctrl_2_Press_Logical jump test
+            // (s2.asm:70426-70429) would never fire.
+            tailsCtrlRecordBuf[0] = ((capturedHeldButtons & 0xFF) << 8)
+                    | (capturedPressedButtons & 0xFF);
             // SSTailsCPU_Control is reached from Obj10_MdNormal only, and only
             // on its non-hurt path: Obj10_MdNormal tests routine_secondary and
             // branches to Obj10_Hurt before calling it (s2.asm:70408-70412).
@@ -1948,21 +1956,30 @@ public class Sonic2SpecialStageManager {
                     tailsPlayer.getRoutine()
                             == Sonic2SpecialStagePlayer.RoutineState.NORMAL
                     && !tailsPlayer.isHurt();
-            int delayedInput = tailsCpuControlRuns
-                    ? tailsCtrlRecordBuf[tailsCtrlRecordBuf.length - 1]
-                    : capturedP2LogicalButtons;
+            int delayedHeld = capturedP2LogicalButtons;
+            int delayedPressed = 0;
             if (tailsCpuControlRuns) {
+                int recorded = tailsCtrlRecordBuf[tailsCtrlRecordBuf.length - 1];
+                delayedHeld = (recorded >> 8) & 0xFF;
+                delayedPressed = recorded & 0xFF;
                 if ((capturedP2HeldButtons & 0x7F) != 0) {
-                    java.util.Arrays.fill(tailsCtrlRecordBuf, 0);
+                    // fixBugs = 0 (s2.asm:27): the clearing loop's
+                    // "move.l d0,(a1)" pair never advances a1, so only the two
+                    // newest words of SS_Ctrl_Record_Buf are zeroed and the
+                    // rest of the record survives (s2.asm:70460-70470).
+                    tailsCtrlRecordBuf[0] = 0;
+                    tailsCtrlRecordBuf[1] = 0;
                     tailsControlCounter = 0xB4;
-                    delayedInput = capturedP2LogicalButtons;
+                    delayedHeld = capturedP2LogicalButtons;
+                    delayedPressed = 0;
                 } else if (tailsControlCounter > 0) {
                     tailsControlCounter--;
-                    delayedInput = capturedP2LogicalButtons;
+                    delayedHeld = capturedP2LogicalButtons;
+                    delayedPressed = 0;
                 }
             }
             tailsPlayer.setGlobalAnimFrameTimer(animTimer);
-            tailsPlayer.update(delayedInput, 0);
+            tailsPlayer.update(delayedHeld, delayedPressed);
         } else if (sonicPlayer != null) {
             sonicPlayer.setGlobalAnimFrameTimer(animTimer);
             sonicPlayer.update(capturedHeldButtons, capturedPressedButtons);

@@ -295,6 +295,7 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
     }
 
     /** Binds physical input to the recurring pass that the next update executes. */
+    @Override
     public void bindPendingRecurringPassInput(
             int p1Held, int p1Pressed, int p2Held, int p2Logical) {
         manager.bindPendingRecurringPassInput(p1Held, p1Pressed, p2Held, p2Logical);

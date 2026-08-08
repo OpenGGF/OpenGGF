@@ -65080,3 +65080,110 @@ removes a confirmed defect with a full green regression set.
   symptoms sit downstream of divergences still open. Note the change is confined to
   `updateCounterBasedExecThenLoad`, which only S1 uses, so the S2 ring targets
   could not have been affected.
+
+## 2026-08-08 - S2 EHZ half-pipe round-trip chain: pass-paced interior landed; ring shortfall is engine-side
+
+Command (run from a worktree at 477bdb4cf, JDK 21):
+`mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+-Dtest='TestS2EhzHalfpipeRoundTripChain,TestS1GhzMazeRoundTripChain,TestS2SpecialStageTraceReplay,
+TestS2SpecialStage4TraceReplay,TestS1SpecialStage1TraceReplay,TestS1CompleteEmeraldRunPrefix,
+TestS1CompleteEmeraldVisualRun,TestTraceFixtureCompressionGuard,TestTraceFixtureMovieAlignmentGuard,
+TestBuildToolingGuard' -Dsurefire.failIfNoSpecifiedTests=false -Dsonic1.rom.path=... -Dsonic2.rom.path=...
+-Ds3k.rom.path=... test`
+
+Before and after are identical: 94 tests, 2 failures - `TestS2EhzHalfpipeRoundTripChain`
+("special stage exited with 3706 represented rows remaining in ss") and the pre-existing
+`TestS1GhzMazeRoundTripChain` (`run_tail.edge[0..1].movie_logical_frame` expected 9071,
+actual 9035). A 200-test run adding the S3K keep-green set and the special-stage/pacing
+unit lanes is also 2 failures, the same two.
+
+Landed (inert on every committed fixture, because none records passes):
+`AbstractRunChainTest.uncomparedInteriorStep` now consumes
+`TraceRunSpecialStageRows.newRunObjectsPassBinder()`/`passPacedFromRow()`, and
+`GameLoop.SpecialStageObservationPacing` lets one V-blank row's body run that row's
+completed-pass count inside its single PLC lifecycle iteration (ROM `SS_MainLoop` sets
+`VintID_S2SS`, waits for the V-int, then runs `RunObjects`, docs/s2disasm/s2.asm:6694-6721).
+No constant was introduced and nothing branches on zone, route, frame or fixture identity.
+
+Fixture blocker reproduced, NOT published: a scratch native run-mode re-capture of this
+run's own movie reproduces all five committed segments' `physics.csv` byte-for-byte and
+every level segment's aux byte-for-byte, and adds 2991 `run_objects_end` records to `ss`
+and 3291 to `ss_2` as a strict superset (deleting those lines restores the committed aux
+bytes exactly; `metadata.json` differs only in `recording_date`). It also produces a sixth
+`seg4_ehz2` segment (bk2 22782, 36 frames) with its `level_advance` transition and gap
+edges - an additive widening of the fixture's coverage, reported separately.
+
+New measurement (local overlay of the re-captured pass stream, uncommitted): with the
+interior pass-paced the engine ran 1014 object passes over the 2027 rows it reached
+instead of ~1600, yet checkpoint 1 still evaluated `required=40, collected=36` and still
+ejected on the same represented row 2027. The recorded stream shows the ROM cleared that
+requirement by pass 721 (segment-local frame 1574; `rings_togo` 0x17 at pass 568 counting
+to zero) while the engine reaches its own check near pass ~790 four rings short. The
+earlier "36-vs-40 is a recorder gap / fixture-data limitation" note is therefore
+superseded: a third, engine-side defect remains. Prime suspect is the interior's pre-start
+prefix (rows 0..423, before the recorded `control_state` rise), which the chain runs
+through the production special-stage entry choreography while the green standalone lane
+bootstraps `SpecialStageStartupPolicy.TRACE_ACCURATE`; the recorded first ring group lands
+at segment-local frames 795-824.
+
+## 2026-08-08 - CPZ closes on the Grabber's ROM child slots; Tails could never jump in the special stage
+
+S1/S2 15 -> 14 red. Targeted sweep (S1/S2 trace classes, both guards, the
+occupancy oracle and the S3K keep-green set) -- this round's changes are an
+S2-only badnik, the S2 special-stage input recording and the chain harness, so
+the only S3K exposure is GameLoop's new pacing seam.
+
+- **`TestS2CpzLevelSelectTraceReplay` CLOSES -- the thirteenth SST occupancy
+  instance.** ROM `ObjA7_Init` (CPZ Grabber) calls `LoadChildObject` three times -
+  GrabberBox ($A9), GrabberLegs ($A8), GrabberString ($AA) - allocating three SST
+  slots via `AllocateObjectAfterCurrent` (s2.asm:76659-76675, child pointers at
+  :77129-77131, allocator at :73012-73023). The engine's `GrabberBadnikInstance`
+  drew all three itself and reserved nothing, so every later `AllocateObject` in
+  the level landed three slots low, shifting Obj37's `d7` floor-probe term
+  (s2.asm:25209-25217) and the ascending `RunObjects` order. Recorded confirmation:
+  the CPZ slot_dump has slot 17=0xA7 with 19-21 free at frame 603, and
+  19=0xA9/20=0xA8/21=0xAA at frame 604. The child count 3 is the literal number of
+  `LoadChildObject` calls in the routine, not a measurement.
+- **CPU-controlled Tails could never jump in the S2 special stage.** The engine
+  recorded only the HELD byte of `Ctrl_1_Logical` into `SS_Ctrl_Record_Buf` and
+  passed `pressed = 0` to Tails. ROM `loc_33908` records the whole logical WORD
+  (`held<<8 | press`, s2.asm:69069) and `SSTailsCPU_Control` republishes both bytes
+  into `Ctrl_2_Logical` (s2.asm:70482), which `Obj10_MdNormal`'s `SSPlayer_Jump`
+  reads via `Ctrl_2_Press_Logical` (s2.asm:70426-70429). Also corrected the buffer
+  clear to the fixBugs=0 branch - only the two newest words are zeroed, because
+  `move.l d0,(a1)` never advances a1 (s2.asm:70460-70470); latent here because P2
+  is idle in every fixture.
+  Error totals roughly halved on five of six stages: ss_1 46137 -> 22009, ss_2
+  22806 -> 15497, ss_7 41090 -> 28935, ss_6 48645 -> 45157, ss_3 39650 -> 39479.
+  Frontiers: ss_3 2460 -> 2503 (`tails_ss_x`), ss_6 2474 -> 2526
+  (`swap_positions_flag`).
+- **The EHZ chain's harness blocker is CLOSED** - `AbstractRunChainTest.
+  uncomparedInteriorStep` now consumes the run-objects pass binder, and a new
+  `GameLoop.SpecialStageObservationPacing` seam lets one V-blank row run that row's
+  completed-pass count (0, 1 or 2) inside its single PLC lifecycle iteration. ROM
+  basis: `SS_MainLoop` sets `VintID_S2SS`, waits for the V-int, then runs
+  `RunObjects` (s2.asm:6694-6721), so a V-blank observation owns 0..n passes, not
+  exactly one. The pacing also disables the runtime's own lag model for a
+  pass-paced segment, as the standalone lane does. **The target still fails at
+  cursor 2027/5733**: a THIRD blocker was measured beyond the two known ones.
+
+Forward diagnoses that change what the next round should target:
+
+- **SLZ1 is NOT another missing-child bug.** At frame 2522 the ROM has a Staircase
+  group (0x5B) at slots 56-58 that the engine has not loaded AT ALL - not even
+  reserved - so its Orbinaut group (0x60) sits at 56-59 instead of 59-62, exactly
+  three slots early, the width of the missing staircase. The engine's staircase
+  child-slot reservation is itself correct at every earlier dump. So this is an
+  object LOAD ORDERING / streaming divergence in the S1 placement pass
+  (`updateCounterBasedExecThenLoad`), materially bigger than the object-local fixes
+  landed so far.
+- **OOZ's next layer is a collapsing platform released early**, not a ring bug: at
+  frame 1456 ROM slot 31 still holds 0x1F (CollapsPform) where the engine has freed
+  and reused it for 0x1C; by 1714 the same object sits at ROM slot 33 vs engine 31,
+  a persistent two-slot lead.
+- **`RingManager.LostRingPool.deactivateRing` is dead code with no callers**
+  (RingManager.java:1810), so legacy pool entries are never deactivated when their
+  `LostRingObjectInstance` twin is destroyed and linger with a stale slotIndex and
+  y. The allocator is unaffected - the slots really are freed and reused - so this
+  is not an occupancy defect, but it makes pool-based diagnostics over-report by up
+  to 30 ghost rings and is a smell for rendering and rewind.
