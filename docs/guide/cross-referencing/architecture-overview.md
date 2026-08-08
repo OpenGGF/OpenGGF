@@ -124,8 +124,11 @@ The Z80 sound driver is not emulated -- it is reimplemented. The `SmpsSequencer`
 processes ROM SMPS sequence data and drives the YM2612 and SN76489 emulation
 cores, but universal register-write parity is still a goal rather than a current
 guarantee. In particular, S3K coordinate flags are owned by
-`Sonic3kCoordFlagHandler`; its `SND_CMD`, `MUS_PAUSE`, and `COPY_MEM` meta
-commands currently consume their operands without applying the native effects.
+`Sonic3kCoordFlagHandler`. The shipped ROM's music and SFX tables never reach
+its `SND_CMD`, `MUS_PAUSE`, or `COPY_MEM` meta commands; their cases preserve
+operand alignment for custom/imported streams without claiming native effects.
+See the ROM inventory and source contract in
+`docs/architecture/research/audio/2026-08-08-s3k-smps-meta-command-reachability.md`.
 
 ## Finding Things
 
