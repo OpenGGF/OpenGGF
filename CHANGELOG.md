@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K fresh-level title owners now publish the ROM-backed KosM
+  handoff at the retained owner boundary instead of the visual display-timer
+  expiry. LBZ consumes direct queue completion `#322` at raw frame `46196` and
+  reaches the trace end at raw frame `46243` with zero errors; the same
+  source-aligned handoff restores the MGZ complete-run queue window through raw
+  frame `39397`. No trace payloads changed.
 - Fix/Test: S3K camera rendering now models the ROM `Camera_*_pos_copy`
   publication before event-owned camera motion. LBZ final fall preserves the
   published Y copy while lowering the physical camera by 2 pixels, advancing

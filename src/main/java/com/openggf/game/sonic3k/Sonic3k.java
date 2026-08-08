@@ -230,15 +230,13 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
         secondaryArtAddr = overlay.secondaryArtAddr();
 
         S3kRuntimeArtCoordinator coordinator = S3kRuntimeArtCoordinator.current();
-        // A displayed whole-run load reaches this call from the title owner's
-        // object dispatch, before that row's loop tail. The ROM's parent batch
-        // becomes visible after the current PRE_MAIN_LOOP service, so defer
-        // publication to that boundary; its first child then starts on the
-        // following iteration. An omitted presentation uses the same
-        // production deferred service because it has no retained boundary.
+        // A displayed whole-run load reaches this call at the native retained
+        // title-owner boundary. Its parent batch is already visible to the
+        // following loop tail; an omitted presentation has no retained owner
+        // and uses the ordinary deferred publication service.
         if (GameServices.levelOrNull() != null
                 && GameServices.levelOrNull().hasPendingFreshLevelTransitionBoundary()) {
-            coordinator.deferFreshLevelRuntimeArt(
+            coordinator.submitFreshLevelRuntimeArt(
                     rom, primaryArtAddr, secondaryArtAddr);
         } else {
             coordinator.deferFreshLevelRuntimeArt(

@@ -65575,3 +65575,47 @@ to synthesize a POST phase on a VBLANK-only row.
 - Route position: AIZ, HCZ, MGZ, CNZ, and ICZ retain their measured current
   frontiers. LBZ advances from raw `46066` to raw `46088`; the next target is
   the Tails CPU respawn-counter owner before queue edge `#318`.
+
+## 2026-08-08 — S3K MGZ restoration and LBZ complete-run frontier
+
+- Worktree: `bugfix/s3k-traces` at `febdc60b2` before this fix; unrelated edits
+  in `.idea/vcs.xml`, `docs/status/rewind-round-trip-gaps.md`, and
+  `src/main/java/com/openggf/level/objects/ObjectPlacementController.java`
+  remained unstaged. Validation used JDK 21.0.12, the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen` (SHA-1
+  `b711a909cce238ca4af3e517a2edca306228efa5`), and a single 3 GB Surefire
+  fork; the ROM was not replaced or renamed.
+- LBZ frontier command: `env MAVEN_OPTS='-Xmx2g' JAVA_HOME=$JDK21_HOME
+  PATH=$JDK21_HOME/bin:$PATH
+  mvn -q -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=true
+  -Dsurefire.argLine='-Xmx3g'
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtrace.verification=physics -Dtrace.frontierOnly=true
+  -Dtrace.context.radius=2
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kLbzCompleteRunTraceReplay#replayMatchesTrace
+  test`. The committed baseline's first remaining LBZ comparison was the
+  four-field direct-queue state at raw `46193`, leaving direct completion
+  `#322` at raw `46196` unconsumed. The candidate consumes direct `#322` at raw
+  `46196`, module `#219` at raw `46211`, and reaches the final recorded raw
+  frame `46243` with zero comparator, bootstrap, and hardware-timing errors.
+- MGZ restoration command: the same clean invocation with
+  `TestS3kMgzCompleteRunTraceReplay#replayMatchesTrace`. It restores the
+  complete-run queue window that had regressed from the earlier green MGZ
+  handoff; the report has zero errors through raw `39397`. The ordered
+  AIZ/HCZ/CNZ/ICZ canaries retain their established boundaries: AIZ `#8`/raw
+  `1240`, HCZ `#94`/raw `9764`, CNZ `#205`/raw `13962`, and ICZ `#255`/raw
+  `21185`. Ring comparison remains enabled through `ToleranceConfig.DEFAULT`
+  with `RingCountMode.FORCE_ERROR`; no trace payloads changed.
+- Root cause: the visual title-card display timer is not the ROM's fresh-level
+  `LoadEnemyArt`/level-loop handoff. The title provider now leaves the
+  production request armed until the recording driver's retained title-owner
+  boundary, and a displayed fresh transition submits its ROM-resolved parent
+  KosM batch at that owner boundary; omitted presentations retain deferred
+  publication. LBZ final-fall reads the pre-event camera at the object pass,
+  and a restart request skips the later event/camera tail, matching the ROM's
+  branch after `Process_Sprites`. These are owner/order rules, not zone, frame,
+  route, or trace-data branches.
+- Route position: AIZ, HCZ, CNZ, and ICZ retain their measured frontiers;
+  MGZ is restored through its complete-run end, and LBZ now reaches the end of
+  its complete-run trace at raw `46243`. The ordered AIZ→HCZ→MGZ→CNZ→ICZ→LBZ
+  validation set has no prior-frontier regression.

@@ -430,10 +430,10 @@ public class Sonic3kTitleCardManager
         if (!freshLevelTransitionMode) {
             return;
         }
-        // The fresh title owner reaches the ROM's LoadEnemyArt boundary when
-        // its $16 wait expires. The visual EXIT state continues to model the
-        // card's presentation, but the native owner has already handed the
-        // loaded level back to the ordinary loop at this point
+        // The recording driver calls this at the native fresh-level loop
+        // boundary, after the title owner has retired. Keep publication
+        // separate from the visual EXIT state: the ROM does not admit the
+        // fresh level stream merely because the card's display timer expired
         // (sonic3k.asm:62274-62323, 7894-7909).
         publishFreshLevelRuntimeArtHandoffIfNeeded();
         freshLevelTransitionMode = false;
@@ -985,9 +985,6 @@ public class Sonic3kTitleCardManager
 
         if (stateTimer >= displayHoldFrames) {
             state = Sonic3kTitleCardState.EXIT;
-            if (freshLevelTransitionMode) {
-                completeFreshLevelRuntimeArtHandoff();
-            }
             phaseCounter = 0;
             LOG.fine("S3K title card: EXIT");
         }

@@ -347,7 +347,7 @@ public final class LevelFrameStep {
         // Some ROM object workers publish camera boundaries before DeformBgLayer
         // consumes them. Keep that ordering at the provider boundary so the
         // shared camera step remains unaware of game- or zone-specific state.
-        if (levelEvents != null) {
+        if (levelEvents != null && !levelExitRequestedDuringObjects) {
             wrapper.wrap("events-pre-camera", levelEvents::updateAfterObjectsBeforeCamera);
         }
 
@@ -362,7 +362,7 @@ public final class LevelFrameStep {
         //     transitions. ROM runs the zone handler (DLE_Index) here, after the
         //     scroll, so camera-X gates and the left-boundary lock see the
         //     post-scroll camera. fixed-in-level objects run alongside.
-        if (levelEvents != null) {
+        if (levelEvents != null && !levelExitRequestedDuringObjects) {
             wrapper.wrap("fixed-objects", levelEvents::updateFixedInLevelObjects);
         }
         if (spriteManager != null && !inlineSolidResolution) {
@@ -370,9 +370,13 @@ public final class LevelFrameStep {
         }
 		// ROM ScreenEvents publishes Camera_*_pos_copy before the zone event
 		// handlers. Event-owned camera motion after this point must not move the
-		// render/visibility camera until the next loop publication.
-		camera.captureRenderCopy();
-        if (levelEvents != null) {
+		// render/visibility camera until the next loop publication. A restart
+		// request branches to Level immediately after Process_Sprites, so that
+		// loop does not reach ScreenEvents at all.
+		if (!levelExitRequestedDuringObjects) {
+		    camera.captureRenderCopy();
+		}
+		if (levelEvents != null && !levelExitRequestedDuringObjects) {
             levelEvents.update();
         }
 

@@ -800,16 +800,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
     /** ROM loc_72CDA: StartNewLevel $0700 when P1 falls past camera.y + $120. */
     private void updateFinalFall(PlayableEntity player) {
         int playerY = player == null ? Integer.MIN_VALUE : player.getCentreY() & 0xFFFF;
-        int thresholdCameraY = cameraY();
-        // LevelFrameStep dispatches objects before ScreenEvents. ROM
-        // LBZ2BGE_Falling lowers the camera by $2 in that same loop, so the
-        // object handoff observes the camera value that the event tail is
-        // about to publish.
-        if (services().zoneRuntimeState() instanceof LbzZoneRuntimeState lbz
-                && lbz.isFinalFallActive()) {
-            thresholdCameraY = (thresholdCameraY - 2) & 0xFFFF;
-        }
-        if (playerY >= ((thresholdCameraY + 0x120) & 0xFFFF)) {
+        if (playerY >= ((cameraY() + 0x120) & 0xFFFF)) {
             services().requestZoneAndAct(Sonic3kZoneIds.ZONE_MHZ, 0, true);
             ObjectLifetimeOps.deleteNoRespawn(this);
         }
