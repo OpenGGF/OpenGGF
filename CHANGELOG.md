@@ -3,6 +3,13 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K HCZ slide terrain now runs after the complete ROM
+  `Process_Sprites` pass, so PathSwap solid-plane publication is visible on
+  the same physics frame. Suppressed replay rows now consume ROM Start pause
+  edges, and StarPost bonus stars follow the disassembly's ring-only `>= 20`
+  threshold. HCZ Sonic physics advances past raw frame `16133` to raw
+  `25508`; the next physical discrepancy is Tails at raw `25526`, with the
+  next hardware boundary at raw `27686`. No trace payloads changed.
 - Fix/Test: S3K HCZ now lets the retained `Obj_LevelResults` owner publish
   the act-2 carrier handoff at the ROM-backed title-owner art-admission
   boundary, rather than waiting for the visual overlay to disappear. The

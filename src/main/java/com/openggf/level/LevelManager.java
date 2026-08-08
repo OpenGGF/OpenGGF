@@ -1190,6 +1190,28 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         }
     }
 
+    /**
+     * Runs zone-event routines whose ROM owner is after the complete object pass.
+     * The native player slots are visited before the sidekick slot, matching the
+     * S3K {@code sub_714E} / {@code sub_71E4} dispatch order.
+     */
+    public void updateZoneFeaturesAfterObjectExecution() {
+        if (zoneFeatureProvider == null || level == null || spriteManager == null) {
+            return;
+        }
+        int cameraX = camera.getX();
+        int zoneIndex = getFeatureZoneId();
+        AbstractPlayableSprite main = spriteManager.getMainPlayable();
+        if (main != null) {
+            zoneFeatureProvider.updateAfterObjectExecution(main, cameraX, zoneIndex);
+        }
+        for (AbstractPlayableSprite sidekick : spriteManager.getRegisteredSidekicks()) {
+            if (sidekick != null && sidekick != main) {
+                zoneFeatureProvider.updateAfterObjectExecution(sidekick, cameraX, zoneIndex);
+            }
+        }
+    }
+
     public void update() {
         // NOTE: OscillationManager and objectManager are now updated via updateObjectPositions()
         // which is called earlier in GameLoop to fix platform riding sync (1-frame lag fix).
