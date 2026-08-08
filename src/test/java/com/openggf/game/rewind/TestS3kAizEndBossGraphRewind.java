@@ -124,20 +124,28 @@ class TestS3kAizEndBossGraphRewind {
                 () -> new AizEndBossFlameColumnChild(boss));
         AizEndBossFlameColumnChild occupiedB = objectManager.createDynamicObject(
                 () -> new AizEndBossFlameColumnChild(boss));
+        assertEquals(occupiedA.getSlotIndex() + 1, occupiedB.getSlotIndex(),
+                "test fixture must occupy contiguous forward slots");
 
         invokeBooleanArg(boss, "beginEmerge", false);
         AizEndBossWaterfallChild emerge = only(objectManager, AizEndBossWaterfallChild.class);
         assertEquals(0, emerge.getSpawn().subtype(),
                 "ChildObjDat_69D2E starts subtype 0 for the first emerge");
         int highestOccupiedSlot = Math.max(occupiedA.getSlotIndex(), occupiedB.getSlotIndex());
-        assertTrue(emerge.getSlotIndex() > highestOccupiedSlot,
-                "CreateChild1_Normal must allocate at the first free slot after occupied slots");
+        assertEquals(highestOccupiedSlot + 1, emerge.getSlotIndex(),
+                "CreateChild1_Normal must allocate the exact first free slot after occupied slots");
         int emergeX = emerge.getX();
         int emergeY = emerge.getY();
+        assertEquals(0x24, emerge.getMappingFrameForTest(),
+                "init dispatch must preserve the ObjDat initial mapping");
         boss.getState().x += 0x40;
         boss.getState().y += 0x20;
 
-        for (int frame = 0; frame < 13; frame++) {
+        emerge.update(0, null);
+        assertEquals(emergeX, emerge.getX());
+        assertEquals(0x24, emerge.getMappingFrameForTest(),
+                "init-only dispatch must not animate the emerge child");
+        for (int frame = 1; frame <= 13; frame++) {
             emerge.update(frame, null);
         }
         assertEquals(emergeX, emerge.getX(), "emerge child must retain CreateChild1_Normal x snapshot");
@@ -150,10 +158,13 @@ class TestS3kAizEndBossGraphRewind {
         AizEndBossWaterfallChild drop = only(objectManager, AizEndBossWaterfallChild.class);
         assertEquals(2, drop.getSpawn().subtype(),
                 "AIZEndBoss_StartSubmerge writes subtype 2 after allocation");
-        assertTrue(drop.getSlotIndex() > highestOccupiedSlot,
-                "the re-submerge splash must use a free slot after the boss");
+        assertEquals(highestOccupiedSlot + 1, drop.getSlotIndex(),
+                "the re-submerge splash must use the exact first free slot after occupied slots");
 
-        for (int frame = 0; frame < 13; frame++) {
+        drop.update(0, null);
+        assertEquals(0x24, drop.getMappingFrameForTest(),
+                "init dispatch must preserve the drop child's initial mapping");
+        for (int frame = 1; frame <= 13; frame++) {
             drop.update(frame, null);
         }
         assertTrue(drop.isDroppingForTest(),
@@ -168,6 +179,7 @@ class TestS3kAizEndBossGraphRewind {
                 .requireIdentityTable().idFor(drop);
         int capturedFrame = drop.getMappingFrameForTest();
         int capturedY = drop.getY();
+        assertNotEquals(0x24, capturedFrame, "rewind fixture must capture a non-default animation frame");
 
         objectManager.removeDynamicObject(drop);
         rewindRegistry.restore(snapshot);
@@ -182,13 +194,15 @@ class TestS3kAizEndBossGraphRewind {
 
         // A restored falling child must continue from the same ROM state as
         // the original, not merely recreate its identity and current position.
-        int restoredBefore = restored.getY();
-        int originalBefore = drop.getY();
-        restored.update(0, null);
-        drop.update(0, null);
-        assertEquals(originalBefore + 8, drop.getY());
-        assertEquals(drop.getY(), restored.getY());
-        assertEquals(restoredBefore + 8, restored.getY());
+        assertEquals(capturedFrame, drop.getMappingFrameForTest());
+        for (int frame = 0; frame < 13; frame++) {
+            restored.update(frame, null);
+            drop.update(frame, null);
+            assertEquals(drop.getY(), restored.getY());
+            assertEquals(drop.getMappingFrameForTest(), restored.getMappingFrameForTest());
+        }
+        assertTrue(drop.isDestroyed(), "original falling child must reach its delete callback");
+        assertTrue(restored.isDestroyed(), "restored falling child must reach its delete callback");
     }
 
     @Test
@@ -202,11 +216,14 @@ class TestS3kAizEndBossGraphRewind {
         assertEquals(0, child.getSpawn().subtype(), "re-emerge also uses ChildObjDat subtype 0");
         int x = child.getX();
         int y = child.getY();
+        assertEquals(0x24, child.getMappingFrameForTest());
         boss.getState().x += 0x30;
         boss.getState().y += 0x18;
         child.update(0, null);
         assertEquals(x, child.getX());
         assertEquals(y, child.getY());
+        assertEquals(0x24, child.getMappingFrameForTest(),
+                "re-emerge init dispatch must not advance the animation");
     }
 
     @Test
@@ -222,6 +239,8 @@ class TestS3kAizEndBossGraphRewind {
 
         AizEndBossWaterfallChild child = new AizEndBossWaterfallChild(boss, 0);
         child.setServices(new TestObjectServices().withLevelManager(levelManager));
+        child.appendRenderCommands(new java.util.ArrayList<>());
+        child.update(0, null);
         child.appendRenderCommands(new java.util.ArrayList<>());
 
         verify(renderer).drawFrameIndex(eq(0x24), eq(0x100), eq(0x100),

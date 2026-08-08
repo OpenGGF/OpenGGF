@@ -60,6 +60,7 @@ public final class AizEndBossWaterfallChild extends AbstractObjectInstance
     // All mutable fields below are ROM object state and are intentionally
     // non-final so the generic rewind capturer restores the active routine.
     private int routine = STATE_EMERGE;
+    private boolean initialized;
     private int animationIndex;
     private int animationTimer;
     private int mappingFrame = INITIAL_MAPPING_FRAME;
@@ -103,6 +104,14 @@ public final class AizEndBossWaterfallChild extends AbstractObjectInstance
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
         if (isDestroyed()) {
+            return;
+        }
+
+        // Obj_AIZEndBossWaterfall_Init only installs attributes and the
+        // callback. The first higher-slot dispatch returns before animation,
+        // movement, or drawing; later dispatches enter the selected routine.
+        if (!initialized) {
+            initialized = true;
             return;
         }
 
@@ -172,7 +181,7 @@ public final class AizEndBossWaterfallChild extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (isDestroyed() || mappingFrame == HIDDEN_MAPPING_FRAME) {
+        if (isDestroyed() || !initialized || mappingFrame == HIDDEN_MAPPING_FRAME) {
             return;
         }
 
