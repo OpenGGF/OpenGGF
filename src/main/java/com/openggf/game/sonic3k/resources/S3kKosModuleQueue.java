@@ -134,10 +134,9 @@ public final class S3kKosModuleQueue {
     /** Makes a held-tail handoff available only after the next direct service. */
     public void finishHeldLoopTailClosure() {
         if (deferredChildSubmissionForNextLoop) {
-            deferredChildSubmissionReady = true;
-            deferredChildSubmissionForNextLoop = false;
-            if (deferChildSubmissionAfterHeldAdmission) {
-                stepDeferredChildAfterDirectTail();
+            if (!deferChildSubmissionAfterHeldAdmission) {
+                deferredChildSubmissionReady = true;
+                deferredChildSubmissionForNextLoop = false;
             }
         }
         heldLoopTailClosure = false;
@@ -167,7 +166,7 @@ public final class S3kKosModuleQueue {
             return;
         }
         deferredChildSubmissionReady = false;
-        stepHeadArchive();
+        stepHeadArchive(deferChildSubmissionAfterHeldAdmission);
     }
 
     private HardwareWorkHandle queueInternal(
@@ -278,6 +277,12 @@ public final class S3kKosModuleQueue {
      */
     public void beforeTimingService(HardwareServiceBoundary boundary) {
         if (boundary == HardwareServiceBoundary.POST_OBJECTS) {
+            if (deferChildSubmissionAfterHeldAdmission
+                    && deferredChildSubmissionForNextLoop
+                    && !heldLoopTailClosure) {
+                deferredChildSubmissionReady = true;
+                deferredChildSubmissionForNextLoop = false;
+            }
             stepHeadArchive();
         }
     }
@@ -296,10 +301,15 @@ public final class S3kKosModuleQueue {
      * shifts it out at 2778-2788), so it is skipped rather than blocking.
      */
     private void stepHeadArchive() {
+        stepHeadArchive(false);
+    }
+
+    private void stepHeadArchive(boolean publishDeferredChild) {
         if (deferredChildSubmissionReady && deferChildSubmissionAfterHeldAdmission) {
             return;
         }
-        boolean deferChildSubmission = deferChildSubmissionForHeldLoopTail;
+        boolean deferChildSubmission = deferChildSubmissionForHeldLoopTail
+                && !publishDeferredChild;
         deferChildSubmissionForHeldLoopTail = false;
         for (HardwareWorkHandle handle : timing.pendingHandles()) {
             if (handle.kind() != HardwareWorkKind.KOS_MODULE_QUEUE
@@ -338,8 +348,37 @@ public final class S3kKosModuleQueue {
                     && !deferChildSubmissionAfterHeldAdmission) {
                 deferredChildSubmissionForNextLoop = true;
             }
+            if (deferChildSubmissionAfterHeldAdmission
+                    && completed
+                    && hasPendingModuleAfter(handle)) {
+                // The first child of the held-admission batch is handed off by
+                // the closure that follows the old parent. Subsequent parents
+                // are shifted by Process_Kos_Module_Queue in this POST tail,
+                // but their first child is not published until the following
+                // loop's direct-queue tail (sonic3k.asm:2778-2790).
+                deferredChildSubmissionForNextLoop = true;
+            }
             return;
         }
+    }
+
+    private boolean hasPendingModuleAfter(HardwareWorkHandle current) {
+        boolean seenCurrent = false;
+        for (HardwareWorkHandle handle : timing.pendingHandles()) {
+            if (handle == current || handle.equals(current)) {
+                seenCurrent = true;
+                continue;
+            }
+            if (seenCurrent
+                    && handle.kind() == HardwareWorkKind.KOS_MODULE_QUEUE
+                    && !timing.isReady(handle)) {
+                S3kKosModulePreparation preparation = preparationFor(handle);
+                if (!preparation.isPrepared()) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private void capturePreparedArchives() {

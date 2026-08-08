@@ -3,6 +3,10 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K AIZ held-admission KosM queue publication now preserves the
+  native next-child direct-tail boundary. The complete-run frontier advances
+  to direct `KOS_DECOMPRESSION_QUEUE#40` at raw frame `11354`; standard AIZ,
+  MGZ, and LBZ remain green. No trace payloads changed.
 - Fix/Test: S3K AIZ post-reload enemy-art admission now preserves the ROM's
   held-tail publication provenance and native KosM child handoff. The complete
   AIZ replay reaches direct `KOS_DECOMPRESSION_QUEUE#50` at raw frame `20376`

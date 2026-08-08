@@ -65695,3 +65695,44 @@ to synthesize a POST phase on a VBLANK-only row.
   direct `#50` at raw `20376`; AIZ standard, HCZ, MGZ, CNZ, ICZ, and LBZ retain
   their previously recorded gameplay-order frontiers. The next target is the
   remaining AIZ2 queue-state mismatch at raw `6349`.
+
+## 2026-08-08 — S3K AIZ held-admission child publication frontier
+
+- Worktree: `bugfix/s3k-traces` at `2a08c51b6` before this fix; unrelated edits
+  in `.idea/vcs.xml`, `docs/status/rewind-round-trip-gaps.md`, and
+  `src/main/java/com/openggf/level/objects/ObjectPlacementController.java`
+  remained unstaged. Validation used JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen` (SHA-1
+  `b711a909cce238ca4af3e517a2edca306228efa5`), without replacing or renaming
+  it.
+- Frontier command: `env JAVA_HOME=$JDK21_HOME PATH=$JDK21_HOME/bin:$PATH
+  MAVEN_OPTS='-Xmx2g' mvn -q -Dmse=off -Dsurefire.forkCount=1
+  -DreuseForks=true -Dsurefire.argLine='-Xmx3g'
+  -Dmaven.test.failure.ignore=true
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtrace.verification=physics -Dtrace.frontierOnly=true
+  -Dtrace.context.radius=3
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay#replayMatchesTrace
+  test`. The frontier-only report retains 8 queue-state errors, with the
+  first at raw `11350` (`queue.s3k_kos_direct.busy`, expected `true`, actual
+  `false`), and reaches the next unconsumed edge `KOS_DECOMPRESSION_QUEUE#40`
+  at raw `11354`, boundary `PRE_MAIN_LOOP`. The full-run report has 2552
+  downstream errors from that first mismatch; its expected final direct #50
+  completion has no pending engine work.
+- Regression commands: the same JDK 21 invocation with
+  `TestS3kAizTraceReplay#replayMatchesTrace` remains green. The combined
+  `TestS3kMgzCompleteRunTraceReplay#replayMatchesTrace` and
+  `TestS3kLbzCompleteRunTraceReplay#replayMatchesTrace` invocation remains
+  green with zero comparator, bootstrap, and hardware-timing errors. Ring
+  comparison remains enabled through `ToleranceConfig.DEFAULT` with
+  `RingCountMode.FORCE_ERROR`; no trace payloads changed.
+- Root cause: after a held-tail AIZ admission, the ROM's subsequent KosM parent
+  is shifted in the module-queue POST step but publishes its first child after
+  the following direct FIFO service. The coordinator now carries that
+  parent-boundary handoff and lets only the explicit post-direct publication
+  bypass the held-tail deferral token; no trace, frame, route, or zone key is
+  used.
+- Route position: the AIZ complete-run frontier advances from the prior raw
+  `6349`/direct `#37` boundary to raw `11354`/direct `#40`; standard AIZ, MGZ,
+  and LBZ retain their green status. The next target is the AIZ queue mismatch
+  at raw `11350`.
