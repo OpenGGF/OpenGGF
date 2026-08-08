@@ -472,11 +472,9 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
             setDestroyed(true);
 
             // loc_6B8C8 enters StartNewLevel without restoring object_control;
-            // the carried position/control state survives this dispatch. ROM
-            // exits before publishing another camera-scroll step; the engine's
-            // camera phase precedes objects, so restore that pre-dispatch Y.
-            var camera = services().camera();
-            camera.setY((short) (camera.getY() + GEYSER_RISE_SPEED));
+            // the carried position/control state survives this dispatch. The
+            // engine observes the transition before its camera step, so the
+            // level-frame executor already preserves the ROM's pre-dispatch Y.
             // The post-results fade is still active here.  Start MGZ1 after
             // its level load, rather than letting that source-zone fade mute
             // the destination's ordinary level-start command.

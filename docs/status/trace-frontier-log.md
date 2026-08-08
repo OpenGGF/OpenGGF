@@ -65977,3 +65977,53 @@ to synthesize a POST phase on a VBLANK-only row.
   complete-run traces, while CNZ and ICZ retain their established frontiers.
   The next target is HCZ `camera_y` at raw `31335`, followed by direct queue
   edge `#120`.
+
+## 2026-08-08 - S3K HCZ fresh transition boundary frontier
+
+- Worktree: `bugfix/s3k-traces` at `d4d0a1069` before this fix; unrelated edits
+  in `.idea/vcs.xml`, `docs/status/rewind-round-trip-gaps.md`,
+  `src/main/java/com/openggf/level/objects/ObjectPlacementController.java`,
+  and `src/main/java/com/openggf/level/rings/RingManager.java` remained
+  unstaged. Validation used JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen`; no trace payloads changed.
+- Frontier command: `env JAVA_HOME=$JDK21_HOME PATH=$JDK21_HOME/bin:$PATH
+  MAVEN_OPTS='-Xmx2g' mvn -q -Dmse=off -Dsurefire.forkCount=1
+  -DforkCount=1 -DreuseForks=false -Dsurefire.argLine='-Xmx3g'
+  -Dmaven.test.failure.ignore=true
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtrace.frontierOnly=true -Dtrace.context.radius=3
+  -Dtrace.verification=physics
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay#replayMatchesTrace'
+  test`. Removing the stale geyser camera compensation and making the generic
+  fresh-level handoff publish its neutral pre-`Process_Sprites` player slot
+  removes the physical `camera_y` error at raw frame `31335` and the
+  destination air/status errors at raw frame `31436`. HCZ now reports three
+  errors, all established Tails mapping errors at raw frames `10470`, `10478`,
+  and `10486`; its physics verification group has zero errors. The replay
+  consumes direct queue edge `#120` at raw frame `31360` and reaches direct
+  `KOS_DECOMPRESSION_QUEUE#125` at raw frame `31443`, fingerprint
+  `sha256:6f2aa2bed64f5c739a97dc41e94051a8852c470453a96bc831a746007f6c0a27`.
+- Root cause: the level executor already suppresses its camera phase when an
+  object requests `StartNewLevel` during the object pass, so the geyser's
+  additional six-pixel camera correction double-counted the ROM handoff. The
+  destination load also retains the prepared MGZ falling-intro state for the
+  later release, but the first visible transition row is the newly allocated
+  player slot before the initial `Process_Sprites` pass initializes its
+  status, animation, mapping, and solid-bit fields. The generic transition
+  boundary now publishes that neutral pre-dispatch state while retaining the
+  assembled state for the following release; no trace, frame, route, or zone
+  condition was added.
+- Regression command: `env JAVA_HOME=$JDK21_HOME PATH=$JDK21_HOME/bin:$PATH
+  MAVEN_OPTS='-Xmx2g' mvn -q -Dmse=off -Dsurefire.forkCount=1
+  -DforkCount=1 -DreuseForks=false -Dsurefire.argLine='-Xmx3g'
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.game.TestInGamePause,com.openggf.tools.TestRecordingFrameDriverInputOnly,com.openggf.game.sonic3k.events.TestSonic3kHCZEvents,com.openggf.tests.trace.s3k.TestS3kMgzCompleteRunTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s3k.TestS3kLbzCompleteRunTraceReplay#replayMatchesTrace'
+  test`. Result: 16 tests, 0 failures, 0 errors, 0 skips. Ring comparison
+  remains enabled through `ToleranceConfig.DEFAULT` with
+  `RingCountMode.FORCE_ERROR`.
+- Route position: AIZ retains its current gameplay-order frontier; HCZ
+  advances through the geyser camera and fresh-transition physical errors to
+  direct queue edge `#125`. MGZ and LBZ remain zero-error complete-run traces,
+  while CNZ and ICZ retain their established frontiers. The next target is
+  HCZ direct queue edge `#125` at raw frame `31443`; the three established
+  animation mismatches remain at raw frames `10470`, `10478`, and `10486`.

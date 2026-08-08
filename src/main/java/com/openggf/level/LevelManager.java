@@ -3411,6 +3411,20 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         }
         AbstractPlayableSprite player = mainPlayableSprite();
         if (player != null) {
+            // The first destination row exposes SpawnLevelMainSprites' newly
+            // allocated player slot before the initial Process_Sprites pass
+            // initializes its status and animation fields. Keep the fully
+            // assembled state above for the following release, but publish
+            // the native pre-dispatch boundary here.
+            player.clearAirForNativeControlRestore();
+            player.setAnimationId(0);
+            player.setMappingFrame(0);
+            player.setAnimationFrameIndex(0);
+            player.setAnimationTick(0);
+            player.setForcedAnimationId(-1);
+            player.setObjectMappingFrameControl(false);
+            player.setTopSolidBit((byte) 0);
+            player.setLrbSolidBit((byte) 0);
             player.setObjectRoutineOverride(0);
         }
         for (AbstractPlayableSprite sidekick : spriteManager.getSidekicks()) {

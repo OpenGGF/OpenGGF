@@ -3,6 +3,16 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K HCZ2's geyser handoff now leaves the camera at the ROM's
+  pre-dispatch position when `StartNewLevel` suppresses that frame's camera
+  step, and fresh-level transitions publish the neutral player slot boundary
+  before releasing the prepared destination state. HCZ removes the physical
+  camera error at raw frame `31335` and the fresh-transition air/status errors
+  at raw frame `31436`, reaching direct `KOS_DECOMPRESSION_QUEUE#125` at raw
+  frame `31443` (`sha256:6f2aa2bed64f5c739a97dc41e94051a8852c470453a96bc831a746007f6c0a27`);
+  only the three established Tails mapping errors remain. AIZ, MGZ, CNZ, ICZ,
+  and LBZ route canaries remain green. Ring comparisons stay forced errors;
+  no trace payloads changed.
 - Fix/Test: S3K HCZ2's post-defeat geyser now preserves the ROM's
   `loc_6B7BC`/`loc_6B7D2` owner-dispatch boundary before starting the shake.
   The HCZ replay advances past the seven-error Tails handoff cluster to one
