@@ -119,6 +119,33 @@ class TestSonic3kTitleCardManagerRewind {
     }
 
     @Test
+    void allocatedInLevelTitleOwnerUsesFollowingWait2PollForArtAdmission()
+            throws Exception {
+        startLevel();
+
+        Sonic3kTitleCardManager title = new Sonic3kTitleCardManager();
+        Sonic3kObjectArtProvider provider = (Sonic3kObjectArtProvider)
+                GameServices.module().getObjectArtProvider();
+        title.initializeInLevel(0, 0);
+        prepareExitForCompletion(title);
+        // The AIZ intro allocates Obj_TitleCard after the current object pass.
+        // Its first dispatch queues the card, and the lower Obj_TitleCardWait2
+        // owner reaches LoadEnemyArt on the following poll.
+        title.requestInLevelExitAdditionalDispatches(1);
+
+        title.update();
+        assertFalse(provider.capture().runtimeArtAdmissionConsumed(),
+                "the allocated owner must retain the first Wait2 poll");
+        assertFalse(title.isComplete());
+        assertEquals(0, title.capture().inLevelExitDelayFrames());
+
+        title.update();
+        assertTrue(provider.capture().runtimeArtAdmissionConsumed(),
+                "LoadEnemyArt belongs to the following Wait2 poll");
+        assertTrue(title.isComplete());
+    }
+
+    @Test
     void productionRegistryRestoresTitleBeforeProviderAndConsumesTheExactLease()
             throws Exception {
         startLevel();

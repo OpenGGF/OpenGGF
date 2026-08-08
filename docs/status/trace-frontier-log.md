@@ -65619,3 +65619,42 @@ to synthesize a POST phase on a VBLANK-only row.
   MGZ is restored through its complete-run end, and LBZ now reaches the end of
   its complete-run trace at raw `46243`. The ordered AIZ→HCZ→MGZ→CNZ→ICZ→LBZ
   validation set has no prior-frontier regression.
+
+## 2026-08-08 — S3K AIZ intro title-owner frontier
+
+- Worktree: `bugfix/s3k-traces` at `370efdc44` before this fix; unrelated edits
+  in `.idea/vcs.xml`, `docs/status/rewind-round-trip-gaps.md`, and
+  `src/main/java/com/openggf/level/objects/ObjectPlacementController.java`
+  remained unstaged. Validation used JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen` (SHA-1
+  `b711a909cce238ca4af3e517a2edca306228efa5`), without replacing or renaming
+  it.
+- AIZ command: `env MAVEN_OPTS='-Xmx2g' JAVA_HOME=$JDK21_HOME
+  PATH=$JDK21_HOME/bin:$PATH mvn -q -Dmse=off -Dsurefire.forkCount=1
+  -DreuseForks=true -Dsurefire.argLine='-Xmx3g'
+  -Dmaven.test.failure.ignore=true
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtrace.verification=physics -Dtrace.frontierOnly=true
+  -Dtrace.context.radius=2
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay#replayMatchesTrace'
+  test`. The standard AIZ trace is green through its HCZ handoff. The complete
+  AIZ trace consumes the prior title-owner `KOS_MODULE_QUEUE#8` edge (raw
+  `1240`) and advances to `7` queue comparison errors, first at raw `6345`
+  (`queue.s3k_kos_direct.busy`, expected `true`, actual `false`); its next
+  unconsumed hardware edge is `KOS_DECOMPRESSION_QUEUE#36` at raw `6350`,
+  boundary `PRE_MAIN_LOOP`.
+- Regression command: the same JDK 21 invocation with
+  `TestS3kMgzCompleteRunTraceReplay#replayMatchesTrace` and
+  `TestS3kLbzCompleteRunTraceReplay#replayMatchesTrace`. Both remain green
+  with zero comparator, bootstrap, and hardware-timing errors. Ring comparison
+  remains enabled through `ToleranceConfig.DEFAULT` with
+  `RingCountMode.FORCE_ERROR`; no trace payloads changed.
+- Root cause: the AIZ intro's allocated `Obj_TitleCard` owner needs one native
+  `Obj_TitleCardWait2` poll after its child retirement before `LoadEnemyArt`.
+  The slotless title manager now receives that owner-boundary delay from the
+  AIZ cutscene object, without a trace-, frame-, route-, or zone-keyed replay
+  condition.
+- Route position: the AIZ standard trace is green and AIZ complete-run work
+  advances from queue edge `#8` to `#36`; MGZ and LBZ complete-run frontiers
+  retain zero-error status. The next target is the AIZ complete-run queue
+  boundary at raw `6345`/edge `#36`.

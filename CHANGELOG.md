@@ -3,6 +3,9 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K AIZ's allocated intro title-card owner now preserves the
+  native `Obj_TitleCardWait2` poll before publishing `LoadEnemyArt`, advancing
+  the AIZ replay handoff without changing trace data.
 - Fix/Test: S3K fresh-level title owners now publish the ROM-backed KosM
   handoff at the retained owner boundary instead of the visual display-timer
   expiry. LBZ consumes direct queue completion `#322` at raw frame `46196` and
