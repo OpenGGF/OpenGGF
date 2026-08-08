@@ -65499,3 +65499,41 @@ to synthesize a POST phase on a VBLANK-only row.
   frontiers. LBZ advances past the FinalBoss1 collision/dispatch mismatch and
   is now stopped immediately before the recorded `#317` queue edge at raw
   frame `44454`; the next target is the queue-owner readiness mismatch.
+
+## 2026-08-08 - S3K LBZ results publication frontier
+
+- Worktree: `bugfix/s3k-traces` at `077d54906` before this fix; unrelated edits
+  in `.idea/vcs.xml`, `docs/status/rewind-round-trip-gaps.md`, and
+  `src/main/java/com/openggf/level/objects/ObjectPlacementController.java`
+  remained unstaged. Validation used JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen` (SHA-1
+  `b711a909cce238ca4af3e517a2edca306228efa5`), without replacing or renaming
+  it.
+- Frontier command: `mvn -q -Dmse=off -Dsurefire.forkCount=1
+  -DreuseForks=true -DargLine=-Xmx1g -Dmaven.test.failure.ignore=true
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtrace.verification=physics -Dtrace.boundedMemory=true
+  -Dtrace.frontierOnly=true -Dtrace.context.radius=20
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kLbzCompleteRunTraceReplay#replayMatchesTrace
+  test`. The candidate consumes the previously unconsumed direct/module
+  `#317` edge at raw frame `44454` and stops at the expected direct
+  `KOS_DECOMPRESSION_QUEUE#318` edge at raw frame `46113`. The bounded-memory
+  property was local validation support and is not part of the committed
+  runtime or replay harness.
+- Root cause: native result child slot 26 retires at raw frame `44417`, then
+  the slot-5 `Obj_LevelResults` parent publishes/removes at raw frame `44418`.
+  The LBZ-specific results subclass had retained two synthetic child-retire
+  dispatches, publishing `End_of_level_flag` two passes late. Removing that
+  stale tail aligns the Java results owner and the FinalBoss1
+  `Obj_Wait`/`Queue_Kos_Module` sequence with the ROM; this is an object-owner
+  lifetime rule, not a zone, frame, route, or trace-data exception.
+- Result: the bounded comparison report contains one later divergence, first
+  `tails_cpu_respawn_counter` at raw frame `46066` (expected `0x0000`, actual
+  `0x0001`), and the replay stops at `#318`. The focused LBZ boss/ride unit set
+  passes 32 tests. Gameplay-order AIZ/HCZ/MGZ/CNZ/ICZ canaries retain their
+  established edges; ring comparison remains enabled through
+  `ToleranceConfig.DEFAULT` with `RingCountMode.FORCE_ERROR`. No trace payloads
+  changed.
+- Route position: AIZ, HCZ, MGZ, CNZ, and ICZ retain their established
+  gameplay frontiers. LBZ now consumes `#317` at raw `44454`; the next target
+  is the Tails CPU respawn-counter mismatch before `#318` at raw `46113`.

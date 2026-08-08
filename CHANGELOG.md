@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K LBZ FinalBoss1 now publishes the results handoff on the native
+  parent pass after its last result child retires, removing two stale
+  retirement dispatches. The LBZ complete-run first mismatch advances from raw
+  frame `44451` to `46066` (`tails_cpu_respawn_counter`), consumes direct/module
+  queue edge `#317` at raw frame `44454`, and stops at the next direct edge
+  `#318` at raw frame `46113`; no trace payloads changed.
 - Fix/Test: S3K LBZ FinalBoss1 now preserves the ROM's pending initialization
   dispatch after its lower-slot allocation, so the first `Obj_Wait` decrement
   occurs on the correct pass. The LBZ complete-run earliest mismatch advances

@@ -90,7 +90,6 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
     private static final int HIT_RECOIL_DROP_FRAMES = 4;
     private static final int SINK_TIMER = 0x3F;
     private static final int POST_RESULTS_DELAY = 0x1F;
-    private static final int RESULTS_CHILD_RETIRE_DISPATCHES = 2;
     /** ROM BossDefeated: moveq #100 -> HUD_AddToScore works in tens. */
     private static final int DEFEAT_SCORE = 1000;
     /** ROM $38 detach bits: 0 = top segment (HP 5), 1 = mid (HP 1), 2 = bottom (defeat). */
@@ -2139,13 +2138,6 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
                     LbzFinalBossResultsScreenObjectInstance::new);
         }
 
-        @Override
-        protected int additionalChildRetireDispatches() {
-            // Obj_LevelResultsWait2 polls the remaining live child SSTs before
-            // loc_2DCE2 publishes End_of_level_flag. The LBZ boss-owned result
-            // set retains two dispatches after the embedded elements retire.
-            return RESULTS_CHILD_RETIRE_DISPATCHES;
-        }
     }
 
     /** ROM loc_863C0/loc_863D6: positive P2 lock plus per-frame logical-word clear. */
