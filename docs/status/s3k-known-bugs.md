@@ -24,7 +24,7 @@ Entries should include:
 
 ## Table of Contents
 
-1. [AIZ Miniboss Napalm — Approximate, Non-Harmful, and Invisible](#aiz-miniboss-napalm--approximate-non-harmful-and-invisible)
+1. [AIZ Miniboss Napalm — Native FallingShot Port (RESOLVED)](#aiz-miniboss-napalm--native-fallingshot-port-resolved)
 2. [Knuckles LBZ Big Arm — Inert Final-Boss Handoff](#knuckles-lbz-big-arm--inert-final-boss-handoff)
 3. [LRZ1 Non-Knuckles — Falling Level Introduction (RESOLVED)](#lrz1-non-knuckles--falling-level-introduction-resolved)
 4. [AIZ2 End Boss — Splash Children Missing](#aiz2-end-boss--splash-children-missing)
@@ -55,22 +55,34 @@ Entries should include:
 
 ---
 
-## AIZ Miniboss Napalm — Approximate, Non-Harmful, and Invisible
+## AIZ Miniboss Napalm — Native FallingShot Port (RESOLVED)
 
 **Location:** `AizMinibossNapalmProjectile`
-**ROM Reference:** `loc_68C96` and the AIZ miniboss child-object data.
+**ROM Reference:** `AIZMiniboss_FallingShot` (`loc_68C96`),
+`ObjDat_AIZMiniboss_BarrelShot`, `ObjDat_BossExplosionHitbox`, and
+`ChildObjDat_690D8` in `docs/skdisasm/sonic3k.asm:137451-137581,137836-137925`.
 
-### Symptom
+### Disposition (2026-08-08)
 
-The live Knuckles miniboss path spawns napalm projectiles, but their motion is
-approximate and they have neither a harmful touch response nor rendering. They
-occupy runtime/rewind state without presenting the native hazard.
+Resolved for the live Knuckles object path in
+`src/main/java/com/openggf/game/sonic3k/objects/AizMinibossNapalmProjectile.java`.
+The port now follows the ROM's `MoveSprite2`/`ObjHitFloor_DoRoutine` sequence,
+the `$60` rise and `$8` pause, camera-relative top-drop slot tables, post-move
+`$98` touch publication, native AIZ miniboss PLC art/mappings, and the seven
+staggered `$97` `BossExplosionHitbox` children. Rewind recreation and scalar
+coverage include both the projectile and its transient children.
 
-### Removal Condition
+Focused tests are in
+`src/test/java/com/openggf/game/sonic3k/objects/TestAizMinibossNapalmProjectile.java`.
+The committed Knuckles complete-run comparison data independently records
+`0x00068C96` FallingShot rows (subtype `$02`, routines `$02/$06/$08`) in
+`src/test/resources/traces/s3k/runs/s3k-knuckles-complete-superemeralds/aiz_2`
+(frames 3338-3589) and `aiz_3` (frames 4486-4698), plus the seven
+`0x00068D88` explosion children. These rows are comparison evidence only; they
+are not loaded as runtime gameplay state.
 
-Port the ROM motion and floor behavior, collision flags/timing, ROM-backed art
-and mappings, explosion children, and rewind recreation, then cover the
-Knuckles AIZ route with focused and trace tests.
+The full Sonic/Tails AIZ replay lane remains red on pre-existing camera/sidekick
+and hardware-timing errors, so no trace-frontier claim is made by this entry.
 
 ---
 

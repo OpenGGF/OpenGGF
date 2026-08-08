@@ -76,6 +76,7 @@ class TestAiz2ObjectRewindCodecs {
                 AizMinibossBarrelShotChild.class,
                 AizMinibossBarrelShotFlareChild.class,
                 AizMinibossFlameChild.class,
+                AizMinibossNapalmExplosionChild.class,
                 AizEndBossPropellerChild.class,
                 AizEndBossFlameChild.class,
                 AizEndBossBombChild.class,

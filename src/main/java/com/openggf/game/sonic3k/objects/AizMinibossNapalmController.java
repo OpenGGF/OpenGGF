@@ -1,6 +1,5 @@
 package com.openggf.game.sonic3k.objects;
 
-import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectSpawn;
@@ -37,6 +36,8 @@ public class AizMinibossNapalmController extends AbstractBossChild implements Re
     // Non-final so the generic rewind field capturer reapplies it after the
     // recreate hook passes a placeholder subtype.
     private int subtype;
+    /** ROM barrel $39 equivalent used by SetShotPosition's four-step cycle. */
+    private int positionCounter;
     private State state = State.IDLE;
     private int timer;
 
@@ -47,6 +48,7 @@ public class AizMinibossNapalmController extends AbstractBossChild implements Re
     public AizMinibossNapalmController(AbstractBossInstance parent, int subtype) {
         super(parent, "AIZMinibossNapalm", 4, 0x91);
         this.subtype = subtype;
+        this.positionCounter = 0;
     }
 
     private AizMinibossNapalmController(ObjectSpawn spawn, AizMinibossInstance parent) {
@@ -103,9 +105,13 @@ public class AizMinibossNapalmController extends AbstractBossChild implements Re
 
     private void updateFire() {
         AizMinibossNapalmProjectile projectile = new AizMinibossNapalmProjectile(
-                currentX, currentY);
+                currentX,
+                currentY,
+                0,
+                parent != null && (parent.getState().renderFlags & 1) != 0,
+                positionCounter);
+        positionCounter = (positionCounter + 4) & 0xFF;
         spawnDynamicObject(projectile);
-        services().playSfx(Sonic3kSfx.PROJECTILE.id);
         state = State.IDLE;
     }
 

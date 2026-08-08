@@ -734,6 +734,8 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
                 impact.setDestroyed(true);
             } else if (obj instanceof AizMinibossNapalmProjectile napalm) {
                 napalm.setDestroyed(true);
+            } else if (obj instanceof AizMinibossNapalmExplosionChild explosion) {
+                explosion.setDestroyed(true);
             } else if (obj instanceof AizMinibossBarrelShotFlareChild flare) {
                 flare.setDestroyed(true);
             }

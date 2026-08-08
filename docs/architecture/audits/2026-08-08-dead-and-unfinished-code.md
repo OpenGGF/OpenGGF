@@ -151,7 +151,7 @@ its intentional heuristic limits.
 
 | Rank | Owner | Runtime impact | Required source/test evidence |
 |---|---|---|---|
-| P0 | `AizMinibossNapalmProjectile` | Knuckles AIZ projectile is approximate, harmless, and unrendered. | Port `loc_68C96`: motion/floor, collision/timing, ROM art/mappings/explosion children, rewind, Knuckles AIZ trace. |
+| P0 → resolved (2026-08-08) | `AizMinibossNapalmProjectile` | Native FallingShot movement/floor handling, harmful touch timing, ROM-backed art/mappings, seven explosion children, and rewind are implemented for the live Knuckles path. | `sonic3k.asm:137451-137581,137836-137925`; focused `TestAizMinibossNapalmProjectile`; rewind/coverage sweep; committed Knuckles AIZ2/AIZ3 rows containing `0x68C96` and `0x68D88`. |
 | P0 | `LbzFinalBoss2Instance` | Big Arm is inert, invisible, and persistent, blocking Knuckles LBZ completion. | Port `Obj_LBZFinalBoss2`: ROM art/PLC, phases, hit/defeat flow, rewind, LBZ Knuckles trace. |
 | P1 (resolved 2026-08-08) | `Sonic3kLevelEventManager` | LRZ1 non-Knuckles omitted native falling-intro state. | Ported `SpawnLevelMainSprites` `loc_68A6`; production-load character/zone/act and checkpoint, big-ring, and bonus-return coverage is in `TestS3kLrzFallingIntroBootstrap`. The semantic saved-state gate runs before every zone branch. Source audit also corrected the stale SSZ attribution: `$A00/$A01` has no `loc_68A6` branch. |
 | P1 | `AizEndBossInstance` | Emerge/re-submerge omit splash children, affecting visual and slot order. | Port `ChildObjDat_69D2E` with ROM assets, allocation, rewind, render, AIZ2 boss trace. |

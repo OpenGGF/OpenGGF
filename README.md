@@ -123,7 +123,7 @@ sound driver.
 |------|--------|
 | Sonic the Hedgehog (S1) | Most complete. Includes all zones, bosses, special stages, title screen, ending, and credits. |
 | Sonic the Hedgehog 2 (S2) | Broadly playable. Includes all zones, bosses, special stages, Tails AI, ending, and credits. |
-| Sonic 3 & Knuckles (S3K) | Work in progress. AIZ through LBZ have substantial route coverage, but this is not full parity: AIZ still lacks accurate napalm and end-boss splash children, and Knuckles' LBZ Big Arm handoff is inert. |
+| Sonic 3 & Knuckles (S3K) | Work in progress. AIZ through LBZ have substantial route coverage, but this is not full parity: the AIZ miniboss napalm FallingShot is now ROM-aligned while AIZ2 end-boss splash children and Knuckles' LBZ Big Arm handoff remain incomplete. |
 
 Work is ongoing across all three games. See `CHANGELOG.md` for detailed, per-merge history.
 
@@ -224,7 +224,7 @@ straightforward to add new objects, zones, and game-specific behaviour.
   unwired work—including the S3K special-stage projection, debug primitive/text
   rendering, and ROM-derived CNZ boss animations—was deliberately retained.
   The accompanying audit ranks live unfinished paths without changing runtime
-  behavior, including AIZ napalm/splashes, Big Arm, falling intros, S3K SMPS
+  behavior, including AIZ end-boss splashes, Big Arm, falling intros, S3K SMPS
   meta commands, and Mecha Sonic move ordering.
 - **Headless visual-run parity driver (2026-08-05):** whole trace runs can now be
   driven through the production visual-session owners without a window, so a

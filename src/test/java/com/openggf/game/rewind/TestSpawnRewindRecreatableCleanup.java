@@ -163,7 +163,8 @@ class TestSpawnRewindRecreatableCleanup {
 
     private static final List<String> SPAWN_COORDINATE_SUBTYPE_DEFAULT_ARGS_RECREATORS = List.of(
             "com.openggf.game.sonic1.objects.Sonic1MonitorPowerUpObjectInstance",
-            "com.openggf.game.sonic3k.objects.AizMinibossImpactFlameChild");
+            "com.openggf.game.sonic3k.objects.AizMinibossImpactFlameChild",
+            "com.openggf.game.sonic3k.objects.AizMinibossNapalmExplosionChild");
 
     private static final List<String> SPAWN_COORDINATE_DEFAULT_ARGS_RECREATORS = List.of(
             "com.openggf.game.sonic1.objects.badniks.Sonic1CrabmeatProjectileInstance",
