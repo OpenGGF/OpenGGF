@@ -48,13 +48,15 @@ The accepted values and initial behavior are:
 |---|---|---|
 | `NONE` | Release prepared work as soon as its production dependencies permit. | None. |
 | `PROFILED` | Use deterministic measured work costs, with a validated estimator for missing fingerprints. | Warn once per missing fingerprint that uses estimation or immediate fallback. |
-| `FAST` | Reserved; behave as `NONE`. | Warn once at session startup that `FAST` is not implemented. |
-| `REALISTIC` | Reserved; behave as `PROFILED`. | Warn once at session startup that `REALISTIC` currently uses `PROFILED`. |
+| `FAST` | Reserved; behave as `NONE`. | Warn on each factory resolution that `FAST` is not implemented. |
+| `REALISTIC` | Reserved; behave as `PROFILED`. | Warn on each factory resolution that `REALISTIC` currently uses `PROFILED`. |
 
 Unknown values are configuration errors that list all accepted values. Existing
 installations and the repository default remain `NONE`, so the feature does not silently
-change established behavior. A gameplay session resolves the configured value once;
-changing configuration does not retime work already pending in that session.
+change established behavior. A gameplay context normally resolves the configured value
+once during construction, but context reconstruction resolves it again and therefore
+emits another reserved-alias warning. Changing configuration does not retime work already
+pending in that context.
 
 `FAST` is intended to provide short safety delays that prevent jarring lifecycle
 compression. `REALISTIC` is reserved for a future higher-confidence model backed by
@@ -267,7 +269,8 @@ job. This prevents an unvalidated estimate from appearing authoritative.
 
 Diagnostics are rate-limited by stable identity:
 
-- `FAST` and `REALISTIC` emit one startup warning describing their effective fallback.
+- `FAST` and `REALISTIC` emit one warning on every factory resolution describing their
+  effective fallback; no global or session-level warn-once registry exists for these aliases.
 - A missing manifest fingerprint emits one warning per session and fingerprint.
 - The warning states whether an estimate or immediate fallback was selected.
 - Debug logging may include kind, fingerprint, boundary, measured/estimated source,
@@ -292,9 +295,10 @@ reroll timing or change behavior after a manifest update during the same process
 hardware-timing factory. The factory constructs `HardwareTimingService` with the resolved
 normal-play policy; shared code never discovers a provider through game-name branching.
 
-Session reset clears resolved configuration, warning suppression, counters, pending
-budgets, and game-provided profile state. Seamless transitions preserve or transfer
-queue work only through the existing production handoff contracts.
+Session reset clears resolved configuration, profile-owned missing-fingerprint warning
+suppression, counters, pending budgets, and game-provided profile state. Reserved-alias
+warnings remain factory-per-resolution. Seamless transitions preserve or transfer queue
+work only through the existing production handoff contracts.
 
 ## Verification
 
