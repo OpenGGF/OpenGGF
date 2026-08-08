@@ -24,7 +24,7 @@ Entries should include:
 
 ## Table of Contents
 
-1. [AIZ Miniboss Napalm — Native FallingShot Port (RESOLVED)](#aiz-miniboss-napalm--native-fallingshot-port-resolved)
+1. [AIZ Miniboss Napalm — FallingShot Route Integration (OPEN)](#aiz-miniboss-napalm--fallingshot-route-integration-open)
 2. [Knuckles LBZ Big Arm — Inert Final-Boss Handoff](#knuckles-lbz-big-arm--inert-final-boss-handoff)
 3. [LRZ1 Non-Knuckles — Falling Level Introduction (RESOLVED)](#lrz1-non-knuckles--falling-level-introduction-resolved)
 4. [AIZ2 End Boss — Splash Children Missing](#aiz2-end-boss--splash-children-missing)
@@ -55,7 +55,7 @@ Entries should include:
 
 ---
 
-## AIZ Miniboss Napalm — Native FallingShot Port (RESOLVED)
+## AIZ Miniboss Napalm — FallingShot Route Integration (OPEN)
 
 **Location:** `AizMinibossNapalmProjectile`
 **ROM Reference:** `AIZMiniboss_FallingShot` (`loc_68C96`),
@@ -64,13 +64,21 @@ Entries should include:
 
 ### Disposition (2026-08-08)
 
-Resolved for the live Knuckles object path in
-`src/main/java/com/openggf/game/sonic3k/objects/AizMinibossNapalmProjectile.java`.
-The port now follows the ROM's `MoveSprite2`/`ObjHitFloor_DoRoutine` sequence,
-the `$60` rise and `$8` pause, camera-relative top-drop slot tables, post-move
-`$98` touch publication, native AIZ miniboss PLC art/mappings, and the seven
-staggered `$97` `BossExplosionHitbox` children. Rewind recreation and scalar
-coverage include both the projectile and its transient children.
+The FallingShot routine is now implemented in
+`src/main/java/com/openggf/game/sonic3k/objects/AizMinibossNapalmProjectile.java`,
+including the ROM `MoveSprite2`/`ObjHitFloor_DoRoutine` sequence, the `$60` rise
+and `$8` pause, camera-relative top-drop slot tables, post-move `$98` touch
+publication, native AIZ miniboss PLC art/mappings, and seven staggered `$97`
+`BossExplosionHitbox` children. The production route begins at each of the
+three existing barrel children, preserving child subtype `$02` separately from
+the barrel subtype and `$39` counter; rewind recreation and scalar coverage
+include the linked projectile and transient children.
+
+The disposition remains **OPEN** until a Knuckles miniboss route trace proves
+the activation gate, per-barrel child ordering, floor impact, and explosion
+lifetime together. Focused native, production `ObjectManager`, slot-exhaustion,
+and rewind tests are comparison/contract evidence only and do not hydrate
+runtime state.
 
 Focused tests are in
 `src/test/java/com/openggf/game/sonic3k/objects/TestAizMinibossNapalmProjectile.java`.
@@ -81,8 +89,9 @@ The committed Knuckles complete-run comparison data independently records
 `0x00068D88` explosion children. These rows are comparison evidence only; they
 are not loaded as runtime gameplay state.
 
-The full Sonic/Tails AIZ replay lane remains red on pre-existing camera/sidekick
-and hardware-timing errors, so no trace-frontier claim is made by this entry.
+The available Sonic/Tails AIZ replay lane remains red on camera/sidekick and
+hardware-timing errors, and this environment has no captured Knuckles miniboss
+route trace, so no trace-frontier claim is made by this entry.
 
 ---
 

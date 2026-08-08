@@ -8,7 +8,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
@@ -16,6 +17,7 @@ import com.openggf.level.objects.TouchOverlapStopPolicy;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchShieldDeflectCapability;
+import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
@@ -23,17 +25,17 @@ import com.openggf.physics.TerrainCheckResult;
 import java.util.List;
 
 /**
- * AIZ miniboss falling shot (ROM {@code AIZMiniboss_FallingShot}, loc_68C96).
+ * AIZ miniboss {@code AIZMiniboss_FallingShot} child (ROM {@code loc_68C96}).
  *
- * <p>The live Knuckles route uses the same object routine as the final barrel
- * shot.  It rises for the barrel-shot wait, is placed at the camera's top edge,
- * then falls with {@code MoveSprite2} until {@code ObjHitFloor_DoRoutine}
- * dispatches the explosion callback.  The routine publishes its collision entry
- * after movement, so the touch projection intentionally uses the post-movement
- * position.</p>
+ * <p>The production object is created by an existing
+ * {@link AizMinibossFlameBarrelChild}, exactly as
+ * {@code ChildObjDat_AIZMiniboss_BarrelShotAndFallingShot} does in the ROM.  The
+ * FallingShot child subtype is always {@code $02}; the parent barrel supplies
+ * its own subtype (0/2/4), its {@code $39} position counter, and its facing when
+ * {@code AIZMiniboss_SetFallingShotDelay} reaches the camera-relative drop.</p>
  */
 public class AizMinibossNapalmProjectile extends AbstractObjectInstance
-        implements TouchResponseProvider, SpawnCoordinateRewindRecreatable {
+        implements TouchResponseProvider, RewindRecreatable {
     private static final int COLLISION_FLAGS_HAZARD = 0x98; // ObjDat_AIZMiniboss_BarrelShot
     private static final int FRAME_RISE_A = 0x0C;
     private static final int FRAME_RISE_B = 0x0D;
@@ -75,6 +77,22 @@ public class AizMinibossNapalmProjectile extends AbstractObjectInstance
         FALL
     }
 
+    /** ROM parent3(a0): the boss that owns the barrel graph. */
+    private final AbstractBossInstance parent;
+    /** ROM parent3(a0) for FallingShot: the existing barrel controller. */
+    private final AizMinibossFlameBarrelChild barrel;
+
+    // These are intentionally separate.  childSubtype is the CreateChild1_Normal
+    // index ($02), while barrelSubtype is read from the parent barrel by the ROM.
+    private int childSubtype;
+    private int barrelSubtype;
+
+    /* Standalone construction is retained for focused object tests.  Production
+     * FallingShots never use these fallback values: the barrel owns the counter
+     * and facing state. */
+    private int standalonePositionCounter;
+    private boolean standaloneHFlip;
+
     /* These are the object-RAM fields needed by the native routine. */
     private int currentX;
     private int currentY;
@@ -84,26 +102,55 @@ public class AizMinibossNapalmProjectile extends AbstractObjectInstance
     private int timer;
     private int mappingFrame;
     private int animTimer;
-    private int barrelSubtype;
-    private int positionCounter;
-    private boolean hFlip;
     private boolean vFlip;
     private boolean needsInitSfx;
     private State state;
 
-    /**
-     * Constructs the live Knuckles shot.  The default source is the first AIZ
-     * barrel slot; the extended constructor is used by tests/route owners that
-     * have the native barrel subtype and facing available.
-     */
+    /** Standalone probe constructor used by focused native-contract tests. */
     public AizMinibossNapalmProjectile(int startX, int startY) {
-        this(startX, startY, 0, false, 0);
+        this(null, null, startX, startY, 2, 0, false, 0);
     }
 
-    AizMinibossNapalmProjectile(int startX, int startY,
-                                int barrelSubtype, boolean hFlip, int positionCounter) {
+    /**
+     * Production constructor for {@code ChildObjDat_...BarrelShotAndFallingShot}.
+     * The child subtype is supplied explicitly because it is not the barrel
+     * subtype read by {@code SetFallingShotDelay}.
+     */
+    public AizMinibossNapalmProjectile(AbstractBossInstance parent,
+                                        AizMinibossFlameBarrelChild barrel,
+                                        int startX,
+                                        int startY,
+                                        int childSubtype) {
+        this(parent, barrel, startX, startY, childSubtype,
+                barrel == null ? 0 : barrel.getBarrelSubtype(),
+                false, 0);
+    }
+
+    /** Legacy standalone seam retained for native movement tests. */
+    AizMinibossNapalmProjectile(int startX,
+                                int startY,
+                                int barrelSubtype,
+                                boolean hFlip,
+                                int positionCounter) {
+        this(null, null, startX, startY, 2, barrelSubtype, hFlip, positionCounter);
+    }
+
+    private AizMinibossNapalmProjectile(AbstractBossInstance parent,
+                                         AizMinibossFlameBarrelChild barrel,
+                                         int startX,
+                                         int startY,
+                                         int childSubtype,
+                                         int barrelSubtype,
+                                         boolean hFlip,
+                                         int positionCounter) {
         super(new ObjectSpawn(startX, startY, Sonic3kObjectIds.AIZ_MINIBOSS,
-                barrelSubtype, 0, false, 0), "AIZNapalmProjectile");
+                childSubtype & 0xFF, 0, false, 0), "AIZNapalmProjectile");
+        this.parent = parent;
+        this.barrel = barrel;
+        this.childSubtype = childSubtype & 0xFF;
+        this.barrelSubtype = barrelSubtype & 0xFF;
+        this.standaloneHFlip = hFlip;
+        this.standalonePositionCounter = positionCounter & 0xFF;
         this.currentX = startX;
         this.currentY = startY;
         this.xFixed = startX << 16;
@@ -111,22 +158,44 @@ public class AizMinibossNapalmProjectile extends AbstractObjectInstance
         this.yVel = 0;
         this.timer = 0;
         this.mappingFrame = FRAME_RISE_A;
-        this.animTimer = 2;
-        this.barrelSubtype = barrelSubtype & 0xFF;
-        this.positionCounter = positionCounter & 0xFF;
-        this.hFlip = hFlip;
+        this.animTimer = 0;
         this.vFlip = false;
         this.needsInitSfx = true;
         this.state = State.INIT;
     }
 
-    /** Probe constructor retained for object construction tests. */
+    /** Probe constructor retained for object-construction tests. */
     AizMinibossNapalmProjectile(ObjectSpawn spawn) {
-        this(spawn.x(), spawn.y(), spawn.subtype(), false, 0);
+        this(null, null, spawn.x(), spawn.y(), spawn.subtype(), 0, false, 0);
+    }
+
+    @Override
+    public AizMinibossNapalmProjectile recreateForRewind(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.spawn() == null) {
+            return null;
+        }
+        AizMinibossInstance boss = AizMinibossRewindLinks.nearestBoss(ctx);
+        AizMinibossFlameBarrelChild restoredBarrel = AizMinibossRewindLinks.nearestBarrel(ctx);
+        if (boss == null || restoredBarrel == null) {
+            return null;
+        }
+        return new AizMinibossNapalmProjectile(
+                boss,
+                restoredBarrel,
+                ctx.spawn().x(),
+                ctx.spawn().y(),
+                ctx.spawn().subtype());
     }
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        if (parent != null && (parent.isDestroyed() || parent.getState().defeated)) {
+            // FallingShot checks parent3(barrel)->parent3(boss).status bit 7
+            // before publishing touch/draw; a defeated boss removes the shot,
+            // while already-spawned explosion children remain independent.
+            setDestroyed(true);
+            return;
+        }
         switch (state) {
             case INIT -> initializeNativeObject();
             case RISE -> updateRise();
@@ -145,7 +214,10 @@ public class AizMinibossNapalmProjectile extends AbstractObjectInstance
         yVel = -0x400;
         timer = RISE_WAIT;
         mappingFrame = FRAME_RISE_A;
-        animTimer = 2;
+        // Animate_Raw is called on the first Rise dispatch.  A zero timer makes
+        // that call consume the initial C/D prefix immediately; a timer of two
+        // would introduce a frame not present in the ROM.
+        animTimer = 0;
         state = State.RISE;
     }
 
@@ -175,9 +247,11 @@ public class AizMinibossNapalmProjectile extends AbstractObjectInstance
         yVel = 0x400;
 
         // SetFallingShotDelay falls through SetShotPosition in the ROM.  The
-        // barrel counter is incremented by four before selecting the slot.
-        positionCounter = (positionCounter + 4) & 0xFF;
-        int slotIndex = ((barrelSubtype >> 1) + (positionCounter & 0x0C)) & 0x0F;
+        // existing barrel, not this child, owns $39 and is incremented by four.
+        int counter = nextPositionCounter();
+        int subtype = barrel == null ? barrelSubtype : barrel.getBarrelSubtype();
+        int slotIndex = ((subtype >> 1) + (counter & 0x0C)) & 0x0F;
+        boolean hFlip = currentHFlip();
         int[] slotTable = hFlip ? SHOT_SLOTS_LEFT : SHOT_SLOTS_RIGHT;
         int[] offsetTable = hFlip ? SHOT_X_OFFSETS_LEFT : SHOT_X_OFFSETS_RIGHT;
         currentX = services().camera().getX() + offsetTable[slotTable[slotIndex]];
@@ -202,8 +276,8 @@ public class AizMinibossNapalmProjectile extends AbstractObjectInstance
         moveSprite2();
         TerrainCheckResult floor = ObjectTerrainUtils.checkFloorDist(currentX, currentY, Y_RADIUS);
         if (floor.hasCollision()) {
-            // ObjHitFloor_DoRoutine adds d1 to the integer y_pos.  Keep the
-            // native subpixel remainder while applying that word adjustment.
+            // ObjHitFloor_DoRoutine adds d1 to the integer y_pos.  Keep the native
+            // subpixel remainder while applying that word adjustment.
             yFixed += floor.distance() << 16;
             currentY = yFixed >> 16;
             explode();
@@ -215,6 +289,26 @@ public class AizMinibossNapalmProjectile extends AbstractObjectInstance
         return index >= 0 && index < FALLING_SHOT_DELAYS.length
                 ? FALLING_SHOT_DELAYS[index]
                 : 0;
+    }
+
+    private int nextPositionCounter() {
+        if (barrel != null) {
+            int value = (barrel.getPositionCounter() + 4) & 0xFF;
+            barrel.setPositionCounter(value);
+            return value;
+        }
+        standalonePositionCounter = (standalonePositionCounter + 4) & 0xFF;
+        return standalonePositionCounter;
+    }
+
+    private boolean currentHFlip() {
+        if (barrel != null) {
+            return barrel.isFacingFlipped();
+        }
+        if (parent != null) {
+            return (parent.getState().renderFlags & 1) != 0;
+        }
+        return standaloneHFlip;
     }
 
     private void explode() {
@@ -243,11 +337,18 @@ public class AizMinibossNapalmProjectile extends AbstractObjectInstance
         mappingFrame = mappingFrame == FRAME_RISE_A ? FRAME_RISE_B : FRAME_RISE_A;
     }
 
+    int getChildSubtype() {
+        return childSubtype;
+    }
+
+    int getBarrelSubtype() {
+        return barrelSubtype;
+    }
+
     @Override
     public int getCollisionFlags() {
         // FallingShot_Init retains ObjDat_AIZMiniboss_BarrelShot's $98 for the
-        // live route.  The cutscene parent clears it in a separate native branch;
-        // this independent Knuckles controller only creates the live variant.
+        // live route.  The cutscene parent clears it in a separate native branch.
         return isDestroyed() ? 0 : COLLISION_FLAGS_HAZARD;
     }
 
@@ -315,6 +416,7 @@ public class AizMinibossNapalmProjectile extends AbstractObjectInstance
         if (renderer == null || !renderer.isReady()) {
             return;
         }
-        renderer.drawFrameIndex(mappingFrame, currentX, currentY, hFlip, vFlip, PROJECTILE_PALETTE);
+        renderer.drawFrameIndex(mappingFrame, currentX, currentY,
+                currentHFlip(), vFlip, PROJECTILE_PALETTE);
     }
 }

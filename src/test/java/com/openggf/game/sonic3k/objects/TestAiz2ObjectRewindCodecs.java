@@ -60,7 +60,6 @@ class TestAiz2ObjectRewindCodecs {
         // Tier 3: boss-relinked children.
         assertGenericBacked(AizMinibossBodyChild.class);
         assertGenericBacked(AizMinibossArmChild.class);
-        assertGenericBacked(AizMinibossNapalmController.class);
         assertGenericBacked(AizMinibossFlameBarrelChild.class);
         assertGenericBacked(AizEndBossShipChild.class);
         assertGenericBacked(AizEndBossFlameColumnChild.class);

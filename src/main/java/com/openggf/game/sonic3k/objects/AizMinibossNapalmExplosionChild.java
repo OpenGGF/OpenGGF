@@ -36,6 +36,7 @@ public final class AizMinibossNapalmExplosionChild extends AbstractObjectInstanc
             TouchResponseProfile.standardEnemy();
 
     private enum State {
+        INIT,
         WAIT,
         READY,
         ANIMATE
@@ -61,7 +62,7 @@ public final class AizMinibossNapalmExplosionChild extends AbstractObjectInstanc
         this.currentY = y;
         this.subtype = subtype & 0xFF;
         this.hazardous = hazardous;
-        this.state = State.WAIT;
+        this.state = State.INIT;
         // BossChild_SetSubtypeDelay: d1=$C; (d1 - subtype) << 1.
         this.delayTimer = Math.max(0, (0x0C - this.subtype) * 2);
         this.animationIndex = -1;
@@ -71,17 +72,24 @@ public final class AizMinibossNapalmExplosionChild extends AbstractObjectInstanc
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         switch (state) {
+            case INIT -> {
+                // BossExplosionHitbox_Init is a real routine-0 dispatch.  It
+                // installs ObjDat_BossExplosionHitbox, the animation script,
+                // and the subtype delay before the first Obj_Wait dispatch.
+                state = State.WAIT;
+            }
             case WAIT -> {
                 if (--delayTimer < 0) {
                     // BossExplosionHitbox_StartAnim changes routine to 4 but
-                    // the current dispatch still uses Draw_Sprite. Touch and
-                    // Animate_RawMultiDelay begin on the following dispatch.
+                    // the current dispatch still has no Draw_And_Touch call.
+                    // Keep a distinct READY state so harmful touch and the
+                    // first Animate_RawMultiDelay step begin on the following
+                    // routine-4 dispatch.
                     state = State.READY;
                 }
             }
             case READY -> {
                 state = State.ANIMATE;
-                advanceAnimation();
             }
             case ANIMATE -> advanceAnimation();
         }

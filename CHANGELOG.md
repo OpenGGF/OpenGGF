@@ -12,9 +12,10 @@ All notable changes to the OpenGGF project are documented in this file.
 - Fix: ported the AIZ Knuckles miniboss napalm FallingShot (`loc_68C96`) to
   native rise/drop/floor timing with harmful post-movement touch, ROM-backed
   PLC art/mappings, staggered explosion children, and rewind coverage. The
-  current S3K status/audit now records this Wave 1 item as resolved; the full
-  AIZ replay lane's unrelated camera/sidekick and hardware-timing failures
-  remain documented.
+  three existing barrel children now own the native flare/FallingShot route;
+  activation, slot ordering, and explosion lifetime remain under Knuckles
+  trace validation. The full AIZ replay lane's camera/sidekick and
+  hardware-timing failures remain documented.
 - Maintenance/Docs: completed an evidence-tiered dead and unfinished code sweep.
   Seven unreachable Java types (339 lines) were removed after checking callers,
   registries, reflection, resources, service loading, and supported CLIs; the

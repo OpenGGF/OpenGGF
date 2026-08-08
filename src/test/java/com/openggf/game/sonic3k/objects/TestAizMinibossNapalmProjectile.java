@@ -61,6 +61,19 @@ class TestAizMinibossNapalmProjectile {
     }
 
     @Test
+    void firstRiseDispatchAdvancesRawAnimationImmediately() throws Exception {
+        AizMinibossNapalmProjectile projectile = new AizMinibossNapalmProjectile(100, 160);
+        projectile.setServices(new TestObjectServices().withCamera(camera));
+
+        projectile.update(0, null); // FallingShot_Init
+        assertEquals(0x0C, readIntField(projectile, "mappingFrame"));
+
+        projectile.update(1, null); // first Rise: Animate_Raw before MoveSprite2
+        assertEquals(0x0D, readIntField(projectile, "mappingFrame"),
+                "the first Rise dispatch must consume AniRaw's initial C/D prefix");
+    }
+
+    @Test
     void rewindUsesGenericRecreateContract() {
         AizMinibossNapalmProjectile projectile = new AizMinibossNapalmProjectile(100, 160);
         assertInstanceOf(RewindRecreatable.class, projectile);
@@ -118,12 +131,21 @@ class TestAizMinibossNapalmProjectile {
         assertInstanceOf(RewindRecreatable.class, child);
         assertEquals(0, child.getCollisionFlags(), "BossExplosionHitbox waits before animation");
 
-        for (int frame = 0; frame < 26; frame++) {
+        // One dispatch is the native routine-0 INIT; the subtype wait then
+        // reaches StartAnim, whose routine-4 animation/touch starts on the
+        // following dispatch.
+        for (int frame = 0; frame < 27; frame++) {
             child.update(frame, null);
         }
         assertEquals(0x97, child.getCollisionFlags(),
                 "BossExplosionHitbox becomes harmful when routine 4 starts");
         assertEquals(200, child.getX());
         assertEquals(100, child.getY());
+    }
+
+    private static int readIntField(Object target, String fieldName) throws Exception {
+        var field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.getInt(target);
     }
 }

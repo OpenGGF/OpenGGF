@@ -187,7 +187,7 @@ class TestGraphCoveredIsolatedProbeClassification {
                 AIZ_MINIBOSS_GRAPH_TEST,
                 "com.openggf.game.sonic3k.objects.AizMinibossFlameChild",
                 AIZ_MINIBOSS_GRAPH_TEST,
-                "com.openggf.game.sonic3k.objects.AizMinibossNapalmController",
+                "com.openggf.game.sonic3k.objects.AizMinibossNapalmProjectile",
                 AIZ_MINIBOSS_GRAPH_TEST);
 
         expected.forEach(this::assertGraphCovered);

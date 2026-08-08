@@ -123,7 +123,7 @@ sound driver.
 |------|--------|
 | Sonic the Hedgehog (S1) | Most complete. Includes all zones, bosses, special stages, title screen, ending, and credits. |
 | Sonic the Hedgehog 2 (S2) | Broadly playable. Includes all zones, bosses, special stages, Tails AI, ending, and credits. |
-| Sonic 3 & Knuckles (S3K) | Work in progress. AIZ through LBZ have substantial route coverage, but this is not full parity: the AIZ miniboss napalm FallingShot is now ROM-aligned while AIZ2 end-boss splash children and Knuckles' LBZ Big Arm handoff remain incomplete. |
+| Sonic 3 & Knuckles (S3K) | Work in progress. AIZ through LBZ have substantial route coverage, but this is not full parity: the AIZ miniboss napalm FallingShot has a native per-barrel implementation under Knuckles route validation, while AIZ2 end-boss splash children and Knuckles' LBZ Big Arm handoff remain incomplete. |
 
 Work is ongoing across all three games. See `CHANGELOG.md` for detailed, per-merge history.
 

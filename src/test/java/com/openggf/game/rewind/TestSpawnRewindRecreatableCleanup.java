@@ -124,7 +124,6 @@ class TestSpawnRewindRecreatableCleanup {
             "com.openggf.game.sonic3k.objects.Aiz2BossEndSequenceController",
             "com.openggf.game.sonic3k.objects.Aiz2EndEggCapsuleInstance",
             "com.openggf.game.sonic3k.objects.AizHollowTreeObjectInstance$AizTreeRevealControlObjectInstance",
-            "com.openggf.game.sonic3k.objects.AizMinibossNapalmProjectile",
             "com.openggf.game.sonic3k.objects.Mgz2EndEggCapsuleInstance",
             "com.openggf.game.sonic3k.objects.S3kBossExplosionChild",
             "com.openggf.game.sonic3k.objects.bosses.HczEndBossGeyserCutscene",

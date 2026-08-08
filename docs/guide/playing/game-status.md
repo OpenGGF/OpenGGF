@@ -123,9 +123,10 @@ that the module can work.
 - Bonus stages are still in active parity work rather than final polish.
 - S3K's more complex PLC/art loading system still has partial parity.
 - Data select visual parity is still in progress (native selector art, emerald display).
-- The AIZ miniboss napalm FallingShot now follows its native rise/drop/floor and
-  harmful-touch path with ROM-backed art; AIZ2 end-boss emerge/submerge still
-  omits splash children.
+- The AIZ miniboss napalm FallingShot now has native movement, harmful touch,
+  ROM-backed art, per-barrel child routing, and rewind coverage; its live
+  Knuckles activation/slot/lifetime route remains under trace validation. AIZ2
+  end-boss emerge/submerge still omits splash children.
 - Knuckles' LBZ Big Arm (`Obj_LBZFinalBoss2`) handoff currently spawns an inert,
   invisible persistent object, blocking an authentic route completion.
 - LRZ1 now gives non-Knuckles players the ROM falling level-introduction state;

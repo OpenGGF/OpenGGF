@@ -167,8 +167,13 @@ public class AizMinibossFlameBarrelChild extends AbstractBossChild implements Re
                 state = State.BETWEEN_SHOTS;
             }
             case FIRING_MINIBOSS -> {
-                // ROM loc_68C64: fire shot and immediately begin close animation
-                spawnShot(AizMinibossBarrelShotChild.Mode.ADVANCED_COLLIDING);
+                // ROM AIZMiniboss_BarrelController_FireFinal (sonic3k.asm:137437-137445):
+                // each existing barrel allocates the flare/FallingShot pair from its
+                // own child slot, then begins the return animation.  The barrel's
+                // subtype, $39 position counter, and parent-facing bit remain the
+                // FallingShot's source state; no center-owned controller exists in
+                // the shipped route.
+                spawnFallingShot();
                 enterClosingAnimation();
             }
             case BETWEEN_SHOTS -> {
@@ -231,6 +236,19 @@ public class AizMinibossFlameBarrelChild extends AbstractBossChild implements Re
         spawnChild(() -> new AizMinibossBarrelShotChild(parent, this, currentX, currentY + 4, mode));
     }
 
+    private void spawnFallingShot() {
+        if (services().objectManager() == null) {
+            return;
+        }
+        // ChildObjDat_AIZMiniboss_BarrelShotAndFallingShot: the flare is child
+        // subtype 0 and FallingShot is child subtype $02.  The latter subtype is
+        // deliberately not the barrel's subtype (0/2/4), which SetFallingShotDelay
+        // reads from parent3(a0) in the ROM.
+        spawnChild(() -> new AizMinibossBarrelShotFlareChild(this));
+        spawnChild(() -> new AizMinibossNapalmProjectile(
+                parent, this, currentX, currentY + 4, 2));
+    }
+
     private void enterClosingAnimation() {
         // ROM byte_69136: close animation (first pair skipped on initial play)
         animIndex = 0;
@@ -242,6 +260,11 @@ public class AizMinibossFlameBarrelChild extends AbstractBossChild implements Re
     /** ROM: subtype(a1) — barrel subtype used by shots for position selection. */
     int getBarrelSubtype() {
         return barrelIndex * 2;
+    }
+
+    /** ROM render_flags(a1) read by AIZMiniboss_SetShotPosition. */
+    boolean isFacingFlipped() {
+        return parent != null && (parent.getState().renderFlags & 1) != 0;
     }
 
     /** ROM: $39(a1) — per-barrel position counter read by shots. */
