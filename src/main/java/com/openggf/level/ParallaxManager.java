@@ -142,6 +142,22 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
         }
     }
 
+    /**
+     * Compatibility overload for callers that supplied the obsolete game-level
+     * background-Y hint. The active zone handler is authoritative.
+     */
+    @Deprecated
+    public void update(int zoneId, int actId, Camera camera, int frameCounter, int ignoredBackgroundY) {
+        update(zoneId, actId, camera, frameCounter);
+    }
+
+    /** Compatibility overload retaining the obsolete background-Y hint. */
+    @Deprecated
+    public void update(int zoneId, int actId, Camera camera, int frameCounter,
+            int ignoredBackgroundY, Level level) {
+        update(zoneId, actId, camera, frameCounter, level);
+    }
+
     public void initZone(int zoneId, int actId, int cameraX, int cameraY) {
         if (zoneId != currentZone || actId != currentAct) {
             currentZone = zoneId;
@@ -300,7 +316,7 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
         GameServices.gameState().setScreenShakeActive(screenShakeFlag);
     }
 
-    public void update(int zoneId, int actId, Camera cam, int frameCounter, int bgScrollY) {
+    public void update(int zoneId, int actId, Camera cam, int frameCounter) {
         // Clear scroll buffer to ensure deterministic state
         // (some zone handlers intentionally leave lines unwritten)
         java.util.Arrays.fill(hScroll, 0);
@@ -402,12 +418,11 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
      * @param actId Act identifier
      * @param cam Camera instance
      * @param frameCounter Current frame counter
-     * @param bgScrollY Background scroll Y value
      * @param level Level instance for dynamic art updates (may be null)
      */
-    public void update(int zoneId, int actId, Camera cam, int frameCounter, int bgScrollY, Level level) {
+    public void update(int zoneId, int actId, Camera cam, int frameCounter, Level level) {
         // Perform standard parallax update
-        update(zoneId, actId, cam, frameCounter, bgScrollY);
+        update(zoneId, actId, cam, frameCounter);
 
         // Update zone-specific dynamic art via the provider
         if (scrollProvider != null && level != null) {

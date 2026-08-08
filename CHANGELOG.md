@@ -15,6 +15,11 @@ All notable changes to the OpenGGF project are documented in this file.
   operand alignment for custom streams instead of implying native semantics.
   S3-native SFX/alias coverage remains open. Added a ROM-backed sequencing guard and the source-contract inventory under
   `docs/architecture/research/audio/2026-08-08-s3k-smps-meta-command-reachability.md`.
+- Fix: removed the unused legacy `Game.getBackgroundScroll()` query from the
+  frame, rewind, and background-shader paths. Sonic 1 background Y remains owned
+  by its per-zone scroll handlers, while the shared API stays available for the
+  Sonic 2/Sonic 3&K implementations. Deprecated callers retain equivalent
+  behavior through compatibility overloads.
 - Fix: S3K LRZ1 now applies the ROM `SpawnLevelMainSprites` `loc_68A6`
   falling-introduction state to non-Knuckles players (including Player 2),
   with production-load character/zone/act coverage. Checkpoint, big-ring, and
