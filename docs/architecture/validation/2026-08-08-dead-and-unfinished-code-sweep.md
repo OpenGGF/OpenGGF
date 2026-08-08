@@ -393,8 +393,29 @@ untracked paths remain protected throughout later integration.
 
 ### Merged result
 
-The renewed pre-integration comparison is green: the exact `a8bfbcd7a`
-baseline and identical development suite completed with the results recorded
-above, after the baseline commit merged without conflict as `d9e552fbc`.
-Integration, the main fast-forward, post-merge validation, evidence commit,
-push, and cleanup remain unexecuted.
+Main `develop` fast-forwarded from `a8bfbcd7a` to the independently reviewed
+feature tip `ea06c006f` with a clean tracked/index state. The unrelated
+untracked-status SHA-256 remained
+`ef8e4e023f712b7b3ec1862430119227968fb687ba562d099c733f33ab783a26`
+before and after the fast-forward.
+
+The exact deterministic JDK 21 / three-ROM command was then run from the clean
+detached post-merge validation worktree. Maven exited 1 for the recorded red
+baseline and reported 14,342 tests: 34 failures, 14 errors, and 31 skipped.
+`merged.tsv.gz` contains 14,342 normalized rows: 14,263 PASS, 34 FAILURE, 14
+ERROR, and 31 SKIPPED.
+
+Machine comparison against the renewed `a8bfbcd7a`
+`updated-baseline.tsv.gz` found zero missing baseline PASS rows and zero
+removed or reclassified class/name/outcome/type rows. The sole added outcome
+is the expected passing
+`TestSonic3kSpringObjectInstance.reverseGravitySwapsVerticalSpringDirectionDuringNativeInit`.
+All four `TestGameLoopSpecialStageRewindGate` rows pass in both manifests.
+The development and merged four-column manifests are identical; their complete
+raw diff is 11 lines and contains only volatile message text in the same
+pre-existing outcomes. The suite-generated rewind report was inspected and
+restored, leaving only this validation update and `merged.tsv.gz` for the
+post-merge evidence commit.
+
+The evidence commit, push, and task-owned worktree/branch cleanup remain to be
+completed.
