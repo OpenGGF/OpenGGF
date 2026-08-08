@@ -83,30 +83,36 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * boundaries and every carry-over assertion still hold. Closing it is a separate
  * title-card-duration parity item and is left for a follow-up.
  *
- * <h2>Current RED: the special-stage interior exits ~3704 rows early
- * (fixture gap — needs a RE-RECORD, not a harness change)</h2>
+ * <h2>Current RED: the special-stage interior exits 519 rows early
+ * (special-stage results/fade phase too short)</h2>
  *
  * <p>The paragraph above ("the earlier fixture-data gap story is wrong") remains true
- * of the {@code seg2} return handoff it was written about, but it is NOT the current
- * failure and must not be read as retiring the fixture gap. The chain now fails in
- * {@link AbstractRunChainTest} with {@code "special stage exited with 3704 represented
- * rows remaining in ss"}: the half-pipe reaches {@code Checkpoint 1 triggered:
- * required=40, collected=36}, FAILS, and is ejected at interior row ~2029 of 5733.
+ * of the {@code seg2} return handoff it was written about. The chain now fails in
+ * {@link AbstractRunChainTest} with {@code "special stage exited with 519 represented
+ * rows remaining in ss"}, at interior row 5213 of 5733 — after the emerald has been
+ * won, not before checkpoint 1.
  *
- * <p>That is exactly the pass-pacing gap documented on
- * {@link AbstractRunChainTest#emeraldCarryOverIsVerifiable(SegmentPlan)}, and the
- * committed fixtures confirm it directly: this run's
- * {@code traces/s2/runs/s2-ehz-halfpipe-roundtrip/ss/aux_state.jsonl.gz} carries 5733
- * {@code dynamic_art_transfer_state} rows and ZERO {@code run_objects_end} entries,
- * while the standalone {@code traces/s2/special_stage/aux_state.jsonl.gz} — same stage
- * (special_stage_index 0, Sonic+Tails), driven green for its whole length by
- * {@code TestS2SpecialStageTraceReplay} — carries 2991 {@code run_objects_end} entries
- * over 5299 rows. The half-pipe track is ROM-object-pass paced, so binding one
- * {@code GameLoop.step()} per admitted row (what
- * {@link AbstractRunChainTest#uncomparedInteriorStep} falls back to when the segment
- * recorded no passes) advances the track ~1.9x too fast; the recorded ring-requirement
- * reloads land at interior rows 1325/1849/3482 while the engine hits checkpoint 1 at
- * row 2029. Pacing is necessary but, as measured below, not sufficient.
+ * <p><b>What the earlier checkpoint eject actually was.</b> Until 2026-08-08 this lane
+ * ejected at row 2027 with {@code Checkpoint 1 triggered: required=40, collected=36},
+ * and that was read first as a fixture gap and then as a pass-pacing gap. Neither was
+ * right. Probing the interior row against the recorded {@code ss} rows showed
+ * {@code current_segment}, {@code speed_factor}, {@code track_anim_frame} and the
+ * combined ring count matching the recording on EVERY row: the engine held 42 rings by
+ * row 1588, exactly as the ROM did. The defect was that the checkpoint was resolved
+ * against the ring count captured when the marker was passed (36, row ~1538) instead
+ * of the count when the rainbow finished. The ROM reads {@code (Ring_count)} and
+ * {@code (Ring_count_2P)} live at {@code loc_35978} (docs/s2disasm/s2.asm:71843-71853),
+ * reached only when the rainbow object's x hits {@code $E8} and it deletes itself, so
+ * rings taken during the rainbow count. {@code Sonic2SpecialStageCheckpoint} now
+ * resolves from a live ring supplier and the interior runs on to row 5213.
+ *
+ * <p><b>The remaining 519 rows.</b> The recorded {@code check_rings_flag} rises at
+ * segment-local frame 5191; the ROM stays in special-stage mode for the rest of the
+ * segment running the post-flag tail of {@code SS_MainLoop} (emerald/perfect
+ * accounting, {@code Pal_FadeToWhite}, the results-screen build and its {@code Obj6F}
+ * tally, s2.asm:6721-6800). The engine finishes at row 5213 — 22 rows late — and then
+ * leaves {@code GameMode.SPECIAL_STAGE} almost at once. Closing this is a
+ * special-stage results/fade duration item, independent of ring collection.
  *
  * <p><b>Blocker status, measured 2026-08-08 (supersedes the 2026-08-07 note).</b>
  * The driver side is now CLOSED: {@link AbstractRunChainTest#uncomparedInteriorStep}
@@ -129,21 +135,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * widening of what this fixture claims to cover, so it is a separate publication
  * decision rather than something to fold in.
  *
- * <p><b>And a third blocker, newly measured, that neither of those closes.</b> With
- * the re-capture's pass stream overlaid locally and the interior pass-paced from it,
- * the engine ran 1014 object passes over the 2027 rows it reached (previously ~1600 —
- * pacing demonstrably changed) and STILL evaluated checkpoint 1 as
- * {@code required=40, collected=36}, still ejecting on the identical represented row
- * 2027. The recorded stream shows the ROM had cleared that requirement by pass 721
- * (segment-local frame 1574; {@code rings_togo} 0x17 appears at pass 568 and counts to
- * zero), whereas the engine reaches its own check around pass ~790 four rings short.
- * So the ring shortfall is an ENGINE defect that survives correct pacing, not the
- * "fixture-data limitation" this javadoc previously asserted. The prime suspect is the
- * interior's pre-start prefix (rows 0..423, before the recorded {@code control_state}
- * rise), which this chain runs through the production special-stage entry choreography
- * while the green standalone lane bootstraps
- * {@code SpecialStageStartupPolicy.TRACE_ACCURATE}; the recorded first ring group lands
- * at segment-local frames 795-824.
+ * <p><b>The third blocker is closed.</b> It was the stale checkpoint ring read
+ * described above, not pacing and not the prefix: with the fix, and with the committed
+ * (pass-free) fixture still frame-paced, the interior reproduces the recording's track
+ * and ring state row for row all the way to the emerald.
  *
  * <p>Loosening or skipping the remaining-rows assertion remains not an option: it is
  * correctly detecting a real premature exit. Deriving a pass cadence by measuring this

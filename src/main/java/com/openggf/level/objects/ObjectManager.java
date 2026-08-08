@@ -139,6 +139,8 @@ public class ObjectManager {
      * {@link #updateCounterBasedExecThenLoad}.
      */
     private final ObjectInstance[] ownSlotRetireOrder;
+    /** Child slots whose release is deferred to their own position in the ascending exec walk. */
+    private final java.util.BitSet pendingChildSlotRelease;
     private final int[] playerCentreXAtSlotStart;
     private final int[] playerCentreYAtSlotStart;
     private final boolean[] playerCentreAtSlotStartValid;
@@ -259,6 +261,7 @@ public class ObjectManager {
         this.placement.setWindowingStrategy(windowingStrategy);
         this.execOrder = new ObjectInstance[slotLayout.dynamicSlotCount()];
         this.ownSlotRetireOrder = new ObjectInstance[slotLayout.dynamicSlotCount()];
+        this.pendingChildSlotRelease = new java.util.BitSet(slotLayout.dynamicSlotCount());
         this.playerCentreXAtSlotStart = new int[execOrder.length];
         this.playerCentreYAtSlotStart = new int[execOrder.length];
         this.playerCentreAtSlotStartValid = new boolean[execOrder.length];
@@ -853,6 +856,7 @@ public class ObjectManager {
         Arrays.fill(execOrder, null);
         Arrays.fill(ownSlotRetireOrder, null);
         Arrays.fill(playerCentreAtSlotStartValid, false);
+        pendingChildSlotRelease.clear();
         for (ObjectInstance inst : activeObjects.values()) {
             if (initialDispatch.excludesFromDynamicPass(inst)) {
                 continue;
@@ -877,6 +881,10 @@ public class ObjectManager {
         try {
             for (currentExecSlot = 0; currentExecSlot < execOrder.length; currentExecSlot++) {
                 capturePlayerCentreAtSlotStart(player);
+                if (pendingChildSlotRelease.get(currentExecSlot)) {
+                    pendingChildSlotRelease.clear(currentExecSlot);
+                    releaseSlot(slotIndexForExec(currentExecSlot));
+                }
                 if (retireBorrowedExecutionSlotOwnerAtOwnSlot(cameraX)) {
                     objectsRemoved = true;
                 }
@@ -1007,6 +1015,11 @@ public class ObjectManager {
                 }
             }
         } finally {
+            for (int e = pendingChildSlotRelease.nextSetBit(0); e >= 0;
+                    e = pendingChildSlotRelease.nextSetBit(e + 1)) {
+                releaseSlot(slotIndexForExec(e));
+            }
+            pendingChildSlotRelease.clear();
             currentExecSlot = -1;
             updating = false;
             deferredDynamicExecThisFrame.clear();
@@ -2634,10 +2647,47 @@ public class ObjectManager {
         if (childSlots != null) {
             for (int slot : childSlots) {
                 if (isManagedDynamicSlot(slot)) {
-                    releaseSlot(slot);
+                    releaseChildSlotAtItsOwnExecPosition(slot);
                 }
             }
         }
+    }
+
+    /**
+     * Releases a reserved child slot at the position its ROM object would have
+     * reached in the ascending {@code ExecuteObjects} walk.
+     *
+     * <p>ROM parity: an engine instance that consolidates a ROM parent plus its
+     * {@code FindNextFreeObj} children is <em>one</em> object holding several SST
+     * slots, but in ROM each of those slots holds a separate object with its own
+     * {@code out_of_range ...,DeleteObject} tail. {@code ExecuteObjects} walks the
+     * SST in ascending slot order (docs/s1disasm/_inc/ExecuteObjects.asm:10-30), so
+     * a group whose blocks share one origin (S1 {@code Staircase} feeds every block
+     * {@code stair_origX(a0)}, docs/s1disasm/_incObj/"5B SLZ Staircase.asm":6-12,
+     * 39-66) goes out of range on the same frame but frees each slot at that
+     * slot's own position in the walk -- the parent slot early, the child slots
+     * later. Allocations made in between (the parent-slot {@code FindNextFreeObj}
+     * of a group loaded further right, {@code Ring_Main}'s per-ring
+     * {@code FindFreeObj}) therefore still see the child slots as occupied.
+     *
+     * <p>Freeing every child slot at the parent's position made those in-between
+     * allocations land in slots ROM still had filled (SLZ1 f2522: the 0xE90
+     * staircase took 51/52/54 instead of ROM's 56/57/58, shifting the 0xEC0
+     * group's four slots down by three).
+     *
+     * <p>Outside the exec pass, or for a slot the walk has already passed this
+     * frame, the release is immediate -- ROM has no remaining position in this
+     * frame's walk at which to free it.
+     */
+    private void releaseChildSlotAtItsOwnExecPosition(int slot) {
+        if (updating) {
+            int execIndex = execIndexForSlot(slot);
+            if (execIndex > currentExecSlot && execIndex < execOrder.length) {
+                pendingChildSlotRelease.set(execIndex);
+                return;
+            }
+        }
+        releaseSlot(slot);
     }
 
     /**

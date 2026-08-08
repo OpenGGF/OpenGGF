@@ -65187,3 +65187,113 @@ Forward diagnoses that change what the next round should target:
   y. The allocator is unaffected - the slots really are freed and reused - so this
   is not an occupancy defect, but it makes pool-based diagnostics over-report by up
   to 30 ghost rings and is a smell for rendering and rewind.
+
+## 2026-08-08 — S2 EHZ half-pipe chain: checkpoint 1 resolved a stale ring count
+
+Command (worktree at 8c6a701dc, JDK 21, own reports dir):
+
+```
+mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+  -Dtest='TestS2EhzHalfpipeRoundTripChain,TestS1GhzMazeRoundTripChain,TestS2SpecialStageTraceReplay,\
+TestS2SpecialStage4TraceReplay,TestS1SpecialStage1TraceReplay,TestS1CompleteEmeraldRunPrefix,\
+TestS1CompleteEmeraldVisualRun,TestTraceFixtureCompressionGuard,TestTraceFixtureMovieAlignmentGuard,\
+TestBuildToolingGuard' -Dsurefire.failIfNoSpecifiedTests=false <three rom paths> test
+```
+
+- BEFORE: 94 tests, 2 failures. `TestS2EhzHalfpipeRoundTripChain` — "special stage
+  exited with 3706 represented rows remaining in ss" (interior cursor 2027 of 5733).
+  `TestS1GhzMazeRoundTripChain` — pre-existing `run_tail.edge[*].movie_logical_frame`
+  9071 vs 9035.
+- AFTER: 94 tests, 2 failures. The half-pipe frontier moves from row 2027 to row
+  **5213 of 5733** ("519 represented rows remaining"). GHZ maze unchanged, field for
+  field.
+
+**Root cause (not the fixture, not the pass stepper).** Probing the interior row by
+row against the recorded `ss` rows showed the engine matching the recording on
+`current_segment`, `speed_factor`, `track_anim_frame` and combined rings on *every*
+row: it held 42 rings by segment-local row 1588, exactly as the ROM did. The engine
+was resolving checkpoint 1 against the ring count captured when the checkpoint marker
+was passed (36, row ~1538). The ROM reads `(Ring_count)` and `(Ring_count_2P)` live at
+`loc_35978` (s2disasm s2.asm:71843-71853), which is only reached when the checkpoint
+rainbow object's x reaches `$E8` and it deletes itself — so rings taken during the
+rainbow still count. `Sonic2SpecialStageCheckpoint` now resolves from a live ring
+supplier bound by the manager; the emerald check (s2.asm:72434-72440) already read
+live. This retires the "36-vs-40 is a recorder gap" and "36-vs-40 survives pacing"
+claims recorded on 2026-08-07/08.
+
+**Next frontier for this lane:** the engine leaves `GameMode.SPECIAL_STAGE` 519 rows
+early. Recorded `check_rings_flag` rises at segment-local frame 5191 and the ROM stays
+in special-stage mode through frame 5732 running the post-flag tail of `SS_MainLoop`
+(emerald/perfect accounting, `Pal_FadeToWhite`, results build and the `Obj6F` tally,
+s2.asm:6721-6800). The engine finishes at row 5213 — 22 rows late — then exits almost
+immediately. That is a special-stage results/fade duration item, independent of ring
+collection.
+
+## 2026-08-08 - Four ROM-cited fixes; large internal movement, no class flips
+
+S1/S2 stays at 14 red with zero regressions. Every change below is verified
+against a control run at the parent commit.
+
+- **S2 special-stage jump order is object-specific, and only in jump mode.**
+  `Obj09_MdJump` (Sonic) runs `SSPlayer_JumpAngle` BEFORE
+  `SSPlayer_DoLevelCollision` (s2.asm:69297-69308); `Obj10_MdJump` (Tails) runs it
+  LAST, after `SSAnglePos` (s2.asm:70517-70526). So on Tails' landing pass
+  `DoLevelCollision`'s `SSObjectMove` uses the angle left over from the PREVIOUS
+  pass, and the engine was feeding it a freshly recomputed one.
+  Two details that make the predicate right, both easy to get wrong:
+  the split exists ONLY in jump mode - `Obj09_MdAir` (s2.asm:69310-69322) and
+  `Obj10_MdAir` (:70528-70541) agree on the Sonic-style order, so a fix keyed on
+  "Tails" rather than "Tails jumping" would break the air routine; and the key is
+  OBJECT IDENTITY, not `MainCharacter`, because in Tails-alone mode `Player_mode`
+  is non-zero and Obj10 occupies the MainCharacter slot while still running
+  Obj10's order and reading Ctrl_1 (s2.asm:70510-70516). `SSPlayerSwapPositions`
+  is the routine that genuinely tests `cmpa.l #MainCharacter,a0` (s2.asm:69542),
+  and it was already correct.
+  **ss_1 22009 -> 620 errors (97.2% reduction);** ss_3's named `tails_ss_x`
+  frontier is fixed (2503 -> 2504, now `tails_hurt`); ss_5 17505 -> 15953.
+- **The EHZ half-pipe checkpoint was a STALE READ, not a missing ring.** Neither
+  the fixture nor the stepper, contrary to both standing theories. Instrumenting
+  the interior showed the engine reproduces the recording EXACTLY over all 2027
+  rows it reached - `current_segment`, `speed_factor`, `track_anim_frame` and the
+  combined ring count agree on every row, and the engine held 42 rings by
+  segment-local row 1588 just as the ROM did (recorded `sonic_rings_bcd` is
+  byte-per-digit: 0x0203 = 23, 0x0400 = 40, and 40 = 23 + the recorded
+  `rings_togo` 0x17 at row 1325, confirming requirement 40).
+  `Sonic2SpecialStageManager.handleCheckpointReached` captured
+  `objectManager.getRingsCollected()` when the checkpoint MARKER was passed (36
+  rings, row ~1538) rather than at the check itself.
+  **Interior cursor 2027 -> 5213 of 5733; checkpoint 1 now PASSES** and the run
+  proceeds through the later checkpoints and the emerald.
+- **Two S1 placement/occupancy defects, and the briefed diagnosis was wrong.**
+  The SLZ1 f2522 group is NOT an `ObjPosLoad` streaming divergence: the fixture's
+  `cursor_state` shows `opl_screen` reached 0x0C80 on frame 2521 and the forward
+  pointer advanced exactly 7 layout entries (0x6E4CE->0x6E4F8 = 7x6 bytes), all 7
+  of which the engine reproduces in the ROM's slots. The 0x5B and 0x60 blocks at
+  f2522 are the CHILDREN those parents allocate from routine 0 on the next
+  `ExecuteObjects` pass. The real defects were:
+  (a) **deferred child-slot release** - ROM child blocks are independent SST
+  objects, each freeing its own slot when the ascending walk reaches THAT slot
+  (_inc/ExecuteObjects.asm:10-30), even though the whole group retires on one
+  frame because they share `stair_origX` ("5B SLZ Staircase.asm":6-12, 39-66).
+  The engine folded parent+children into one instance and released every child
+  slot at the PARENT's walk position, so a later staircase's `FindNextFreeObj`
+  took 51/52/54 instead of 56/57/58 and an Orbinaut's satellites landed three
+  slots low. Releases are now scheduled at each slot's own exec index.
+  (b) **dormant re-arm on cursor trim** - `loc_DA24` (OPL_MovedRight's
+  `.loop_find_left`) and `loc_D9DE` (OPL_MovedLeft's `.loop_find_right`) only walk
+  a pointer; neither calls `OPL_SpawnObj`. The engine cleared the dormant bit in
+  both trims, re-arming an entry the cursor had already passed - producing a
+  phantom Orbinaut in slot 37 that the ROM leaves empty. Removing both clears is
+  safe because `spawnForwardEntry` and `spawnBackwardCountered` clear dormant
+  themselves. Also removed the same duplicate at f3723, f3984, f4545 and f5269.
+  SLZ1 occupancy is now clean at f2522 and through f2921; the next divergences
+  (f2921 extra 0x1C scenery, f3015, f4053/f4060 missing 0x53 CollapsingFloors,
+  and a CirclingPlatform cluster from f4256) are the same "engine materializes a
+  spawn the ROM has retired" family.
+- **S2 Obj1F fragment lifetime** now deletes on the `render_flags.on_screen` bit
+  written by the LAST `BuildSprites` pass (s2.asm:23860-23864, bit cleared per
+  object at :30560), matching the collapsing-ledge fix already landed for S1. OOZ
+  occupancy improves; the trace is unchanged.
+
+None of the four flipped a class. ss_1 at 620 errors and the EHZ chain at
+5213/5733 are the closest either lane has been.

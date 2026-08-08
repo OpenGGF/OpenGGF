@@ -433,15 +433,47 @@ public class Sonic2SpecialStagePlayer {
     }
 
     private void updateJumping(int heldButtons) {
-        // Original Obj09_MdJump does NOT call SSPlayer_SetAnimation
-        // Animation is set to 3 (ball) when entering jump state
+        // Neither Obj09_MdJump nor Obj10_MdJump calls SSPlayer_SetAnimation;
+        // anim is set to 3 (ball) when entering the jump state.
+        //
+        // The two jump-mode routines do NOT share a call order, and the
+        // difference is load-bearing. Sonic's Obj09_MdJump recomputes the angle
+        // before the landing test (docs/s2disasm/s2.asm:69297-69308):
+        //
+        //   ChgJumpDir, ObjectMoveAndFall, JumpAngle, DoLevelCollision,
+        //   SwapPositions, AnglePos, Animate
+        //
+        // Tails' Obj10_MdJump runs SSPlayer_JumpAngle LAST, after SSAnglePos
+        // (docs/s2disasm/s2.asm:70517-70526):
+        //
+        //   ChgJumpDir, ObjectMoveAndFall, DoLevelCollision, SwapPositions,
+        //   AnglePos, JumpAngle, Animate
+        //
+        // So when Tails lands, SSPlayer_DoLevelCollision's SSObjectMove runs on
+        // the angle left over from the previous pass, not on one recomputed from
+        // this pass' position. Both games' MdAir routines (Obj09_MdAir
+        // s2.asm:69310-69322, Obj10_MdAir s2.asm:70528-70541) do agree on the
+        // Sonic-style order, which is why only the jump mode splits here.
+        //
+        // The predicate is the object identity (Obj09 vs Obj10), not
+        // MainCharacter: in Tails-alone mode Player_mode is non-zero and Obj10
+        // occupies the MainCharacter slot, still running Obj10_MdJump's order
+        // while reading Ctrl_1 (s2.asm:70510-70516). SSPlayerSwapPositions is
+        // the routine that genuinely tests cmpa.l #MainCharacter,a0
+        // (s2.asm:69542).
         ssPlayerChgJumpDir(heldButtons);
         ssObjectMoveAndFall();
-        ssPlayerJumpAngle();
-        ssPlayerDoLevelCollision();
-        ssPlayerSwapPositions();
-        ssAnglePos();
-        // Note: No ssPlayerSetAnimation() here - matches original
+        if (playerType == PlayerType.SONIC) {
+            ssPlayerJumpAngle();
+            ssPlayerDoLevelCollision();
+            ssPlayerSwapPositions();
+            ssAnglePos();
+        } else {
+            ssPlayerDoLevelCollision();
+            ssPlayerSwapPositions();
+            ssAnglePos();
+            ssPlayerJumpAngle();
+        }
         ssPlayerAnimate();
     }
 

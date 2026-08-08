@@ -2417,23 +2417,32 @@ abstract class AbstractRunChainTest {
      * drives it via {@code SpecialStageRunObjectsPassBinder}, binding each
      * recurring RunObjects pass to the exact BK2 row the ROM's V-int sampled.
      *
-     * <p><b>Superseding the earlier "36-vs-40 is purely a recorder gap" claim.</b>
-     * That was reasoning, not measurement, and a measurement has now been made.
-     * With a scratch re-capture's {@code run_objects_end} stream overlaid onto this
-     * run's {@code ss} segment (uncommitted, local) and this class pass-pacing the
-     * interior from it, the engine ran 1014 object passes over the 2027 rows it
-     * reached instead of the previous ~1600 — pacing demonstrably changed — and yet
-     * checkpoint 1 still evaluated {@code required=40, collected=36} and still
-     * ejected on the same represented row (2027). The recorded stream says the ROM
-     * had cleared that requirement by pass 721 (segment-local frame 1574,
-     * {@code rings_togo} 0x17 at pass 568 counting down to 0), while the engine
-     * reaches its own check around pass ~790 four rings short. So the ring
-     * shortfall is a THIRD, engine-side defect that survives correct pacing; it is
-     * not the fixture and not the stepper. The prime suspect is the interior's
-     * pre-start prefix (rows 0..{@code passPacedFromRow}), which the chain runs
-     * through the production entry choreography while the standalone lane
-     * bootstraps {@code SpecialStageStartupPolicy.TRACE_ACCURATE} — the recorded
-     * first ring group lands at segment-local frames 795-824.
+     * <p><b>The 36-vs-40 checkpoint failure was neither a recorder gap nor a pacing
+     * gap: it was a stale ring read, and it is now fixed.</b> Probing the interior
+     * row by row against the recorded {@code ss} rows showed the engine reproducing
+     * the recording exactly — {@code current_segment}, {@code speed_factor},
+     * {@code track_anim_frame} and the combined ring count all matched every row up
+     * to the eject. The engine had 42 rings by segment-local row 1588, just as the
+     * ROM did; it simply evaluated checkpoint 1 against the count captured when the
+     * checkpoint marker was passed (36, at row ~1538) rather than the count at the
+     * end of the checkpoint rainbow. The ROM reads {@code (Ring_count)} and
+     * {@code (Ring_count_2P)} live at {@code loc_35978} (docs/s2disasm/s2.asm:
+     * 71843-71853), reached only when the rainbow object's x reaches {@code $E8} and
+     * it deletes itself, so rings picked up during the rainbow still count. With
+     * {@code Sonic2SpecialStageCheckpoint} resolving against a live ring supplier,
+     * checkpoint 1 passes and the interior advances from row 2027 to row 5213 of
+     * 5733.
+     *
+     * <p><b>Remaining, and now the frontier for this lane:</b> the engine leaves
+     * {@code GameMode.SPECIAL_STAGE} 519 represented rows early. The recorded
+     * {@code check_rings_flag} rises at segment-local frame 5191 and the ROM then
+     * spends the rest of the segment (through frame 5732) still in special-stage
+     * mode running the post-flag tail of {@code SS_MainLoop} — emerald/perfect
+     * accounting, {@code Pal_FadeToWhite}, the results screen build and its
+     * {@code Obj6F} tally (s2.asm:6721-6800). The engine reaches its own finish at
+     * row 5213 (22 rows late) and then exits the mode almost immediately. Closing
+     * this needs the special-stage results phase to occupy the ROM's V-blanks; it is
+     * unrelated to ring collection.
      *
      * <p>The pacing pieces themselves are now in place:
      *
