@@ -32,6 +32,22 @@ An audited finding is remediated only when it has one explicit disposition:
 Marker removal alone is never completion. Runtime assets remain ROM-backed,
 and traces remain comparison evidence rather than gameplay authority.
 
+## Execution status — 2026-08-08
+
+The first remediation swarm is complete on the local human-review branch
+`feature/ai-unfinished-remediation`. It implemented LRZ1 falling startup, the
+AIZ miniboss napalm route, AIZ2 end-boss splash children, explicit
+special-stage debug capabilities, and authoritative S1 background-scroll
+ownership. The SMPS investigation closed the loader-supported portion while
+leaving S3-native SFX explicitly open. The attempted Big Arm port was rejected
+by independent review and was not integrated.
+
+Commands, test outcomes, unresolved work, and the rejected-branch rationale
+are recorded in
+`docs/architecture/validation/2026-08-08-unfinished-code-remediation.md`.
+This roadmap remains the path for the unresolved waves rather than implying
+that every audited feature is now complete.
+
 ## Priority waves
 
 ### Wave 1 — route-critical S3K behavior
