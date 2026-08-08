@@ -35,6 +35,7 @@ import com.openggf.game.sonic3k.runtime.MgzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.game.sonic3k.runtime.S3kZoneRuntimeState;
 import com.openggf.game.sonic3k.sidekick.Sonic3kSidekickFollowContext;
+import com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
@@ -381,10 +382,15 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         handleBonusStageTopExit();
         // After HCZ seamless transition to Act 2: start the whirlpool descent
         // cutscene that spirals Sonic down into the Act 2 starting area.
+        var hczTitleCardProvider = GameServices.module().getTitleCardProvider();
+        boolean hczRuntimeArtAdmissionPublished = hczTitleCardProvider
+                instanceof Sonic3kTitleCardManager titleCard
+                && titleCard.hasPublishedInLevelRuntimeArtAdmission();
         if (hczPendingPostTransitionCutscene && hczEvents != null
                 && !GameServices.gameState().isEndOfLevelActive()
-                && GameServices.module().getTitleCardProvider().ownsInLevelPlayerControlLock()
-                && !GameServices.module().getTitleCardProvider().isOverlayActive()) {
+                && hczTitleCardProvider.ownsInLevelPlayerControlLock()
+                && (!hczTitleCardProvider.isOverlayActive()
+                || hczRuntimeArtAdmissionPublished)) {
             hczPendingPostTransitionCutscene = false;
             hczEvents.startPostTransitionCutscene();
         }

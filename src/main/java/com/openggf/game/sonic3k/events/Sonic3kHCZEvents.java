@@ -888,17 +888,20 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
                         // carried results/end-sign objects continue to own them
                         // after HCZ1BGE_DoTransition calls Load_Level.
                         .preserveEndOfLevelState(true)
-                        // Show act 2 title card after the level reloads
-                        .showInLevelTitleCard(true)
+                        // HCZ's retained Obj_LevelResults mutates into the act 2
+                        // title-card owner after the reload. HCZ1BGE_DoTransition
+                        // itself does not create a separate title owner.
+                        .showInLevelTitleCard(false)
                         .resetLevelGamestateAtInLevelTitleCardDisplay(true)
                         // The carried Obj_LevelResults parent becomes
                         // Obj_TitleCard before its four children receive their
-                        // native create/render dispatches. The slotless overlay
-                        // starts after that parent handoff, so retain the seven
-                        // intervening child dispatches before Obj_TitleCardWait.
-                        .inLevelTitleCardResetAdditionalDispatches(7)
+                        // native create/render dispatches. The retained owner
+                        // reaches Obj_TitleCardWait's reset on its next title
+                        // dispatch.
+                        .inLevelTitleCardResetAdditionalDispatches(0)
                         .lockPlayerControlForInLevelTitleCard(true)
-                        .inLevelTitleCardExitAdditionalDispatches(5)
+                        .inLevelTitleCardExitAdditionalDispatches(0)
+                        .carriedResultsRetireDispatches(1)
                         // ROM subtracts $3600 from the live camera and its
                         // bounds; it does not recenter from Player_1 afterward.
                         .preserveOffsetCameraPosition(true)

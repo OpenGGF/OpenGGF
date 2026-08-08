@@ -637,6 +637,9 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         carriedTitleExitPhaseOneDispatchOverlap = titleTiming.exitPhaseOneDispatchOverlap();
         carriedPreloadedActCameraReleaseDispatches =
                 titleTiming.preloadedActCameraReleaseDispatches();
+        if (titleTiming.carriedResultsRetireDispatches() >= 0) {
+            carriedResultsRenderRetireDispatches = titleTiming.carriedResultsRetireDispatches();
+        }
     }
 
     // ---- Pre-tally delay with music trigger ----

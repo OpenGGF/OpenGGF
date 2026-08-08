@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K HCZ now lets the retained `Obj_LevelResults` owner publish
+  the act-2 carrier handoff at the ROM-backed title-owner art-admission
+  boundary, rather than waiting for the visual overlay to disappear. The
+  HCZ complete-run physics frontier reaches the next unconsumed direct
+  `KOS_DECOMPRESSION_QUEUE#113` edge at raw frame `20697`; AIZ, MGZ, and LBZ
+  regression traces remain green and no trace payloads changed.
 - Fix/Test: S3K HCZ results now retain the native first-free results-owner
   allocation and immediate signpost ending-pose handoff where the ROM's owner
   slot is already behind the current dispatch. The HCZ complete-run frontier

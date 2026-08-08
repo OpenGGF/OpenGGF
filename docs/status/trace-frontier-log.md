@@ -65754,3 +65754,42 @@ to synthesize a POST phase on a VBLANK-only row.
   LBZ retain zero-error complete-run status. The next target is the HCZ queue
   boundary at raw `9900`, followed by unconsumed hardware edge `#104` at raw
   `10391`.
+
+## 2026-08-08 - S3K HCZ retained title-owner admission frontier
+
+- Worktree: `bugfix/s3k-traces` at `0140e5908` before this fix; unrelated edits
+  in `.idea/vcs.xml`, `docs/status/rewind-round-trip-gaps.md`, and
+  `src/main/java/com/openggf/level/objects/ObjectPlacementController.java`
+  remained unstaged. Validation used JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen` (SHA-1
+  `b711a909cce238ca4af3e517a2edca306228efa5`), without replacing or renaming
+  it.
+- Frontier command: `env JAVA_HOME=$JDK21_HOME PATH=$JDK21_HOME/bin:$PATH
+  MAVEN_OPTS='-Xmx2g' mvn -q -Dmse=off -Dsurefire.forkCount=1
+  -DreuseForks=true -Dsurefire.argLine='-Xmx3g'
+  -Dmaven.test.failure.ignore=true
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtrace.verification=physics -Dtrace.frontierOnly=true
+  -Dtrace.context.radius=3
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s3k.TestS3kMgzCompleteRunTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s3k.TestS3kLbzCompleteRunTraceReplay#replayMatchesTrace'
+  test`. HCZ has zero physics/comparator errors through raw frame `20697`
+  and stops with one unconsumed hardware completion edge at the segment end:
+  direct `KOS_DECOMPRESSION_QUEUE#113`, boundary `PRE_MAIN_LOOP`. MGZ and LBZ
+  report zero errors.
+- Root cause: `HCZ1BGE_DoTransition` reloads the level without creating a
+  separate title-card object; the retained ROM `Obj_LevelResults` owner
+  becomes `Obj_TitleCard` and its runtime-art admission is the carrier's
+  handoff boundary. The transition now carries that owner boundary and an
+  explicit HCZ one-dispatch results-owner retirement tail, while the default
+  path retains the native results tail for other zones. No trace, frame,
+  route, or zone identity is consulted.
+- Regression checks: the focused transition/results suite passes with all
+  three ROM properties; the AIZ standard trace passes; the combined MGZ/LBZ
+  canary remains green. Ring comparison remains enabled through
+  `ToleranceConfig.DEFAULT` with `RingCountMode.FORCE_ERROR`; no trace
+  payloads changed.
+- Route position: AIZ standard and complete-run frontiers retain their
+  established status; HCZ advances past the prior raw `9900` mismatch and
+  consumes the recorded queue edges through module `#74`, leaving direct
+  `#113` at raw `20697` as the next target. MGZ and LBZ retain zero-error
+  complete-run status. The next target is HCZ direct edge `#113`.
