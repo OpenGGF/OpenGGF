@@ -2,7 +2,7 @@
 
 ## Finding
 
-The shipped Sonic 3&Knuckles ROM does not reach the three meta commands that
+The S&K-loader-supported streams in the locked-on Sonic 3&Knuckles ROM do not reach the three meta commands that
 were previously described as discarded semantics in
 `Sonic3kCoordFlagHandler.handleMetaCommand(...)`:
 
@@ -25,10 +25,8 @@ The S3K Z80 driver defines the extra-coordinate table at
 handler. The native routines define the following contracts:
 
 * `SND_CMD` (`:3865-3878`) calls `zPlaySoundByIndex` with one ID operand. The
-  native dispatch inventory classifies `01-32` as music; on the S&K driver
-  (`SonicDriverVer<>3`) `DC` is the CreditsK music special case, while
-  `33-DB` and aliases `DD-DF` are SFX. The S3 driver omits that special case,
-  so `DC-DF` are SFX. These ranges are defined at `:1632-1669`.
+  native source documents S&K's `DC` CreditsK special case and DD–DF aliases;
+  the S3-native SFX table and alias targets remain open pending offset proof.
 * `MUS_PAUSE` (`:3880-3919`) stores the operand as `zHaltFlag`. Nonzero clears
   the playing bit and keys off every track, then silences PSG; zero restores
   the playing bit for every track.
@@ -54,7 +52,7 @@ the actual loader tables rather than assuming a filename or a subset of songs:
 |---|---:|---:|---:|
 | S&K music | `01-33` | 51 | 0 |
 | S3 music | `01-32` | 50 | 0 |
-| SFX | `33-DB` | 169 | 0 |
+| S&K-loader SFX | `33-DB` | 169 | 0 |
 
 Music blobs also contain zero raw `FF 01`, `FF 02`, or `FF 03` pairs. A raw
 scan is not used to classify SFX: `Sonic3kSmpsLoader` returns a bank-backed
@@ -64,9 +62,10 @@ and computes a fixed point over note/duration bytes plus jump, call, counted
 loop, conditional loop-exit, continuous, and terminal edges. Calls into a
 shared bank routine outside a per-song loader blob are closed external edges;
 all other edges must close with no unexplored frontier (or a cycle) before recording
-live FF subcommands. The 51 S&K music, 50 S3 music, and 169 named SFX graphs
-observe live `FF 00`/`FF 07` commands but no `01/02/03` route. The `DD-DF`
-aliases are dispatch classifications, not additional named loader streams.
+live FF subcommands. The 51 S&K music, 50 S3 music, and 169 S&K-loader SFX
+graphs observe live `FF 00`/`FF 07` commands but no `01/02/03` route. The
+S3-native SFX table (including differing IDs 9B/AD) and DC–DF alias targets
+are deliberately open pending a ROM-offset-verified parser.
 
 `EB` is the separate native conditional loop-exit command; it is included in
 the graph edges and is not one of the three FF meta-command gaps.

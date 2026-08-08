@@ -36,7 +36,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class TestSonic3kSmpsMetaCommandReachability {
 
     private static final Set<Integer> TARGET_META_SUBCOMMANDS = Set.of(0x01, 0x02, 0x03);
-    private static final int NATIVE_SFX_ALIAS_MAX = 0xDF;
 
     @Test
     void shippedMusicAndSfxHaveClosedControlFlowAndDoNotReachTargetMetaCommands() {
@@ -66,48 +65,25 @@ public class TestSonic3kSmpsMetaCommandReachability {
             s3MusicCount++;
         }
 
-        int sfxCount = 0;
+        int skSfxCount = 0;
         for (int id = Sonic3kSfx.ID_BASE; id <= Sonic3kSfx.ID_MAX; id++) {
             AbstractSmpsData data = loader.loadSfx(id);
             assertNotNull(data, "Missing SFX stream 0x" + hex(id));
             ControlFlowInventory inventory = inventory(data);
             assertClosed(inventory, "SFX 0x" + hex(id));
             metaSubcommands.addAll(inventory.metaSubcommands);
-            sfxCount++;
+            skSfxCount++;
         }
 
         assertEquals(0x33, skMusicCount);
         assertEquals(0x32, s3MusicCount);
-        assertEquals(Sonic3kSfx.ID_MAX - Sonic3kSfx.ID_BASE + 1, sfxCount);
+        assertEquals(Sonic3kSfx.ID_MAX - Sonic3kSfx.ID_BASE + 1, skSfxCount);
         assertTrue(metaSubcommands.contains(0x00),
                 "The inventory must observe a live FF00 tempo command");
         assertTrue(metaSubcommands.contains(0x07),
                 "The inventory must observe the live SFX FF07 command");
         assertFalse(metaSubcommands.stream().anyMatch(TARGET_META_SUBCOMMANDS::contains),
                 () -> "Shipped ROM reached an unimplemented meta command: " + metaSubcommands);
-    }
-
-    @Test
-    void nativeSoundDispatchClassifiesLockedOnAliasesThroughDf() {
-        for (int id = 0x01; id <= 0x20; id++) {
-            assertEquals(NativeSoundKind.MUSIC, classify(NativeDriver.SK, id));
-            assertEquals(NativeSoundKind.MUSIC, classify(NativeDriver.S3, id));
-        }
-        for (int id = 0x21; id <= 0x32; id++) {
-            assertEquals(NativeSoundKind.MUSIC, classify(NativeDriver.SK, id));
-            assertEquals(NativeSoundKind.MUSIC, classify(NativeDriver.S3, id));
-        }
-        assertEquals(NativeSoundKind.MUSIC, classify(NativeDriver.SK, 0xDC),
-                "S&K SonicDriverVer != 3 has the special CreditsK music case");
-        assertEquals(NativeSoundKind.SFX, classify(NativeDriver.S3, 0xDC),
-                "S3 driver omits the S&K CreditsK special case");
-        for (int id = 0x33; id <= NATIVE_SFX_ALIAS_MAX; id++) {
-            if (id == 0xDC) {
-                continue;
-            }
-            assertEquals(NativeSoundKind.SFX, classify(NativeDriver.SK, id));
-            assertEquals(NativeSoundKind.SFX, classify(NativeDriver.S3, id));
-        }
     }
 
     private static void assertClosed(ControlFlowInventory inventory, String stream) {
@@ -287,16 +263,6 @@ public class TestSonic3kSmpsMetaCommandReachability {
 
     private static String hex(int value) {
         return String.format("%02X", value & 0xFF);
-    }
-
-    private enum NativeDriver { SK, S3 }
-    private enum NativeSoundKind { MUSIC, SFX, OTHER }
-
-    private static NativeSoundKind classify(NativeDriver driver, int id) {
-        if (id >= 0x01 && id <= 0x32) return NativeSoundKind.MUSIC;
-        if (driver == NativeDriver.SK && id == 0xDC) return NativeSoundKind.MUSIC;
-        if (id >= 0x33 && id <= NATIVE_SFX_ALIAS_MAX) return NativeSoundKind.SFX;
-        return NativeSoundKind.OTHER;
     }
 
     private static final class ControlFlowInventory {

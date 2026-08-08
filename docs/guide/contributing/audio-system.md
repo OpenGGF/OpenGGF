@@ -67,10 +67,10 @@ S3K coordinate-flag commands are decoded by `Sonic3kCoordFlagHandler`. Most
 live commands have engine semantics. The ROM inventory in
 `docs/architecture/research/audio/2026-08-08-s3k-smps-meta-command-reachability.md`
 proves by fixed-point control-flow traversal that shipped S&K music (`01-33`),
-S3 music (`01-32`), and all 169 named SFX streams (`33-DB`) never reach meta
+S3 music (`01-32`), and all 169 S&K-loader SFX streams (`33-DB`) never reach meta
 subcommands `SND_CMD`, `MUS_PAUSE`, or `COPY_MEM`. Native dispatch also has
-S&K's `DC` CreditsK music special case and `DD-DF` SFX aliases; those aliases
-are not additional named loader streams. The handler
+S&K's `DC` CreditsK music special case. S3-native SFX (including its aliases)
+remain an open inventory item. The handler
 consumes their documented operands only to keep a custom/imported stream
 aligned; it does not claim native sound dispatch, all-track halt/resume, or
 shared-Z80-memory copying. If a supported ROM or custom stream reaches one,
