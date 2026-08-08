@@ -65282,3 +65282,45 @@ to synthesize a POST phase on a VBLANK-only row.
 - Route position: AIZ, HCZ, MGZ, CNZ, and ICZ retain their established
   gameplay frontiers. LBZ now reaches the Tails transition at raw `20519`;
   that is the next target.
+
+## 2026-08-08 — S3K LBZ miniboss collision-publication frontier
+
+- Worktree: `bugfix/s3k-traces` at `9b85f91dd` before this frontier commit;
+  unrelated edits in `.idea/vcs.xml`,
+  `docs/status/rewind-round-trip-gaps.md`, and
+  `src/main/java/com/openggf/level/objects/ObjectPlacementController.java`
+  remained unstaged. Validation used JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen` (SHA-1
+  `b711a909cce238ca4af3e517a2edca306228efa5`), without replacing or renaming
+  it.
+- Frontier command: `mvn -q -Dmse=off -Dsurefire.forkCount=1
+  -DreuseForks=true -Dmaven.test.failure.ignore=true
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtrace.frontierOnly=true -Dtrace.context.radius=20
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kLbzCompleteRunTraceReplay#replayMatchesTrace
+  test`. The committed baseline had 13 comparator errors over 20528 frames,
+  beginning at raw frame `20519` with `tails_x_speed` (expected `0x0200`, actual
+  `0x01F2`). The candidate produces no comparator errors through that segment
+  and reaches the next recorded hardware boundary; frontier-only closes with
+  the expected unconsumed `KOS_DECOMPRESSION_QUEUE#283` at raw frame `21666`.
+  A full continuation reaches the same boundary and reports the next blocker
+  as `expected completion ... engine pending: <none>`.
+- Root cause: native LBZ arm children are separate SST objects. Each child
+  calls its draw-and-touch tail after its own `MoveSprite_CircularSimple`, so
+  the collision list publishes the child's live X. The engine folds that child
+  graph into the parent provider and had been using every linked child's stale
+  slot-entry X. The linked-child Y phase remains retained because the native
+  parent escape step is interleaved with later child dispatches; the existing
+  routine-$0A one-pixel correction and outer-pause live-Y rule continue to model
+  that owner boundary. The fix is tied to native child publication/routine
+  state, with no zone, frame, route, or trace-data branch.
+- Validation: `TestS3kLbz1MinibossAndTransitionHeadless` and
+  `TestS3kLbz1KnucklesSequenceHeadless` pass. The gameplay-order AIZ/HCZ/MGZ/
+  CNZ/ICZ regression retains AIZ `#50` raw `20376`, HCZ `#113` raw `20697`,
+  MGZ's four-field queue mismatch at raw `39348`, CNZ `#205` raw `13962`, and
+  ICZ's two camera errors at raw `15401`/`15403`; no prior frontier regressed.
+  Ring comparison remains enabled through `ToleranceConfig.DEFAULT` with
+  `RingCountMode.FORCE_ERROR`; no trace payloads changed.
+- Route position: AIZ, HCZ, MGZ, CNZ, and ICZ retain their established
+  gameplay frontiers. LBZ now crosses raw `20519`; the next target is the
+  missing direct queue submission before raw `21666`.

@@ -184,7 +184,12 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         for (PanelState panel : panels) {
             if (!panel.center && !panel.detached && !panel.deleted) {
                 boolean outerPause = panel.childRoutine == PanelState.ROUTINE_OUTER_PAUSE;
-                int touchX = outerPause ? panel.x : panel.touchX;
+                // Native child tails publish the live X after their circular
+                // move. Linked children retain the slot-entry Y while the
+                // folded parent advances; the outer pause child publishes its
+                // own post-move Y. During the parent's escape step, later
+                // child slots observe the interleaved one-pixel Y phase.
+                int touchX = panel.x;
                 int touchY = outerPause ? panel.y : panel.touchY;
                 if (routine == ROUTINE_ESCAPE) {
                     touchY = (touchY - 1) & 0xFFFF;

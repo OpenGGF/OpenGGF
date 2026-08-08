@@ -210,7 +210,13 @@ class TestS3kLbz1MinibossAndTransitionHeadless {
         miniboss.update(0, player);
         assertNotEquals(miniboss.getPanelXForTest(0, false),
                 miniboss.getPanelTouchXForTest(0, false),
-                "Ordinary linked-child routines retain their slot-entry touch coordinate.");
+                "The ordinary child retains its slot-entry coordinate for the native Y phase.");
+        TouchResponseProvider.TouchRegion[] initialRegions = miniboss.getMultiTouchRegions();
+        assertNotNull(initialRegions);
+        assertEquals(miniboss.getPanelXForTest(0, false), initialRegions[1].x(),
+                "The child tail publishes its live X to the collision response list.");
+        assertEquals(miniboss.getPanelRetainedTouchYForTest(0, false), initialRegions[1].y(),
+                "The linked child retains its slot-entry Y while the aggregate parent advances.");
 
         int frame = 1;
         while (miniboss.getPanelRoutineForTest(5, false) != 0x0A && frame < 0x800) {
@@ -221,6 +227,10 @@ class TestS3kLbz1MinibossAndTransitionHeadless {
         assertEquals(miniboss.getPanelXForTest(5, false),
                 miniboss.getPanelTouchXForTest(5, false),
                 "Routine $0A publishes the coordinate from its MoveSprite_CircularSimple tail.");
+        TouchResponseProvider.TouchRegion[] outerRegions = miniboss.getMultiTouchRegions();
+        assertNotNull(outerRegions);
+        assertEquals(miniboss.getPanelXForTest(5, false), outerRegions[6].x());
+        assertEquals(miniboss.getPanelTouchYForTest(5, false), outerRegions[6].y());
     }
 
     @Test
