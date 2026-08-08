@@ -14,6 +14,14 @@
 - **Character Branching:** Extreme -- Acts are entirely character-segregated. Act 1 = Sonic/Tails, Act 2 = Knuckles. Different level art, layout, objects, bosses, and event systems.
 - **Special Features:** Vertical wrapping (Act 1, Camera_min_Y_pos = -$100), screen shake, Death Egg launch cutscene, teleporter beam intro, roaming cloud sprites, multi-layer parallax clouds, collapsing tower sequence, custom block/chunk/pattern hot-swap mid-level.
 
+## Current Engine Status (2026-08-08)
+
+The engine does not yet model SSZ's native `SpawnLevelMainSprites` falling
+introduction. Existing SSZ event and teleporter work does not substitute for
+that player bootstrap state. Completion requires the `loc_68A6` gates and
+character/act bootstrap plus trace coverage; the omission remains documented
+unfinished functionality rather than a deletion target.
+
 ## Level Boundaries
 
 From `LevelSizes` (sonic3k.asm line 38112-38113):

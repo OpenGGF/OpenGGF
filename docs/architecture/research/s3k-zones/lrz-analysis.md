@@ -19,6 +19,15 @@
 - **Auto-scroll:** Yes (LRZ3 boss act uses Special_events_routine $14 for forced-scroll boss sequence with 7-stage state machine)
 - **FG Deformation (heat shimmer):** Yes (LRZ3 boss act uses AIZ2_SOZ1_LRZ3_FGDeformDelta sine table for per-scanline FG/BG HScroll shimmer)
 
+## Current Engine Status (2026-08-08)
+
+`Sonic3kLevelEventManager` does not yet model the native
+`SpawnLevelMainSprites` falling introduction for LRZ1 when the player is not
+Knuckles. The normal level bootstrap therefore starts without the ROM's falling
+state. This is retained as a level-bootstrap feature gap; completion requires
+porting the `loc_68A6` character/zone/act gates and adding focused bootstrap and
+route-trace coverage.
+
 ## Events
 
 ### Act 1 (Dynamic_Resize)

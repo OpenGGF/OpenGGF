@@ -119,12 +119,14 @@ These controls are only active when `debug.flags.editor` is `true` in `config.ya
 
 ## Special Stage Debug
 
-These keys are only active during a Special Stage.
+These keys are only active during a Special Stage. F12/F3 are capability-based
+developer tools: Sonic 2 currently implements them; Sonic 1 and Sonic 3&K do
+not expose sprite/plane debug behavior yet.
 
 | Key | Action |
 |-----|--------|
 | Tab | Enter / exit Special Stage mode |
 | End | Complete the current Special Stage (award emerald) |
 | Delete | Fail the current Special Stage |
-| F12 | Toggle Special Stage sprite debug viewer |
-| F3 | Cycle Special Stage plane visibility debug modes |
+| F12 | Toggle Special Stage sprite debug viewer (Sonic 2 only) |
+| F3 | Cycle Special Stage plane visibility debug modes (Sonic 2 only) |

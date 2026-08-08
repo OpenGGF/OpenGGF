@@ -1,6 +1,6 @@
 # Game Status
 
-Last updated: 2026-06-12 (v0.6.prerelease development)
+Last updated: 2026-08-08 (v0.6.prerelease development)
 
 This page describes the current state of each supported game. It is intended to set
 expectations honestly -- what works well, what is incomplete, and what you might encounter.
@@ -60,7 +60,7 @@ expectations honestly -- what works well, what is incomplete, and what you might
 - HTZ earthquake and lava systems.
 - Per-zone level events across all zones.
 - Demo playback.
-- Full SMPS audio.
+- Broad SMPS audio support; exact command/register parity still has known gaps.
 
 ### Known gaps
 
@@ -69,6 +69,8 @@ expectations honestly -- what works well, what is incomplete, and what you might
 - Some visual effects (screen distortion, specific palette transitions) may differ
   slightly from the original.
 - Oil Ocean Zone oil surface behavior is partially implemented.
+- Mecha Sonic's outer attack loop currently applies `ObjectMove` in a different
+  order from the ROM and needs a dedicated phase/child-order parity pass.
 
 ### Notable quirks
 
@@ -91,8 +93,8 @@ that the module can work.
 ### What works
 
 - Angel Island Zone intro cutscene, Act 1 gameplay, miniboss defeat flow, signpost, results,
-  fire transition, Flying Battery bombing sequence, AIZ2 end boss, post-boss capsule flow,
-  and AIZ-to-HCZ transition.
+  fire transition, Flying Battery bombing sequence, AIZ2 end-boss main flow, post-boss capsule,
+  and AIZ-to-HCZ transition. This is route coverage, not complete object or visual parity.
 - Hydrocity route coverage including water rush, conveyor, fan, block, door, water skim,
   miniboss, HCZ1-to-HCZ2 transition, HCZ2 moving-wall chase, end-boss/capsule work, and
   complete-run trace diagnostics.
@@ -106,7 +108,8 @@ that the module can work.
 - Shield system, water system, palette cycling, runtime-owned zone state, and broad badnik/object
   coverage.
 - Water state now restores correctly after returning from side stages.
-- SMPS audio with S3K-specific driver configuration (Z80 bank-switching, DPCM).
+- SMPS audio with S3K-specific driver configuration (Z80 bank-switching, DPCM),
+  with known coordinate-flag meta-command gaps.
 
 ### Known gaps
 
@@ -120,6 +123,11 @@ that the module can work.
 - Bonus stages are still in active parity work rather than final polish.
 - S3K's more complex PLC/art loading system still has partial parity.
 - Data select visual parity is still in progress (native selector art, emerald display).
+- The AIZ miniboss napalm projectile uses approximate motion and has no harmful
+  touch response or rendering; AIZ2 end-boss emerge/submerge omits splash children.
+- Knuckles' LBZ Big Arm (`Obj_LBZFinalBoss2`) handoff currently spawns an inert,
+  invisible persistent object, blocking an authentic route completion.
+- LRZ1 for Sonic/Tails and SSZ omit the ROM's falling level-introduction state.
 
 ### Notable quirks
 

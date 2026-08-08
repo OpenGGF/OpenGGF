@@ -123,7 +123,7 @@ sound driver.
 |------|--------|
 | Sonic the Hedgehog (S1) | Most complete. Includes all zones, bosses, special stages, title screen, ending, and credits. |
 | Sonic the Hedgehog 2 (S2) | Broadly playable. Includes all zones, bosses, special stages, Tails AI, ending, and credits. |
-| Sonic 3 & Knuckles (S3K) | Work in progress. The Sonic/Tails path has completed AIZ through LBZ coverage, but S3K remains the main active development area. |
+| Sonic 3 & Knuckles (S3K) | Work in progress. AIZ through LBZ have substantial route coverage, but this is not full parity: AIZ still lacks accurate napalm and end-boss splash children, and Knuckles' LBZ Big Arm handoff is inert. |
 
 Work is ongoing across all three games. See `CHANGELOG.md` for detailed, per-merge history.
 
@@ -216,6 +216,16 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Dead and unfinished code sweep (2026-08-08):** seven unreachable Java
+  types (339 lines) were removed after caller, registry, resource, CLI, and
+  reflection checks; an unused 125-line Kosinski reference moved out of runtime
+  resources into architecture research. Caller-free compatibility members and
+  duplicate unverified results constants were also removed. Coherent but
+  unwired work—including the S3K special-stage projection, debug primitive/text
+  rendering, and ROM-derived CNZ boss animations—was deliberately retained.
+  The accompanying audit ranks live unfinished paths without changing runtime
+  behavior, including AIZ napalm/splashes, Big Arm, falling intros, S3K SMPS
+  meta commands, and Mecha Sonic move ordering.
 - **Headless visual-run parity driver (2026-08-05):** whole trace runs can now be
   driven through the production visual-session owners without a window, so a
   Trace Test Mode defect is reproducible in a test rather than a screenshot.

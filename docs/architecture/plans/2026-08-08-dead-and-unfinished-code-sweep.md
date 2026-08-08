@@ -586,6 +586,16 @@ diff -u \
 Review every diff and record the result. Any unexplained outcome change blocks
 integration.
 
+Observed execution amendment (2026-08-08): the default four-fork development
+full suite reproduced Task 4's shared LWJGL native-extraction race, emitted only
+12,256 normalized testcase rows, and cascaded to 2,853 errors after
+`liblwjgl.so` initialization failed. Preserve that run only as
+`development-default-fork-incomplete.tsv.gz`. Add
+`-Dsurefire.forkCount=1` to the clean ROM-backed command and rerun both the
+updated main-workspace baseline and development suite; these complete serial
+manifests replace the default-fork pair as the comparison gate. Use the same
+serial command for post-merge verification.
+
 - [ ] **Step 4: Refresh current progress documentation**
 
 Apply the Task 1 documentation freshness map to the exact current

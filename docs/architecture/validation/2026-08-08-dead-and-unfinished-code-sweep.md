@@ -70,8 +70,35 @@ comparison baseline, not sweep regressions.
 
 ### Updated integration baseline
 
-Not yet run. Task 5 records the clean ROM-backed full-suite command and
-`updated-baseline.tsv.gz` after main-workspace fast-forward.
+The main workspace remained on `develop`; fetch and `git merge --ff-only
+origin/develop` left it current at `3f0fd4a70`. Existing untracked user files
+were not touched. Maven again reported Java 21.0.11, and all three ROM hashes
+matched the table above.
+
+The planned default-four-fork command was run first:
+
+```bash
+WORKTREE=$(pwd)
+mvn -Dmse=off \
+  "-Dsonic1.rom.path=${WORKTREE}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${WORKTREE}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${WORKTREE}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  clean test
+```
+
+Surefire reported 14,364 tests, 33 failures, 14 errors, and 31 skips. Its XML
+contained 14,355 normalized testcase rows: 14,277 PASS, 33 FAILURE, 14 ERROR,
+and 31 SKIPPED. This contextual run is preserved as
+`updated-baseline-default-fork.tsv.gz`.
+
+Task 4 had already exposed a shared LWJGL extraction race between default
+forks. When the development default-fork run reproduced it at full-suite scale,
+the design and plan were amended to use the repository's documented CI fork
+mode for both sides of the comparison. The accepted baseline command is the
+same command with `-Dsurefire.forkCount=1`; it reported and normalized exactly
+14,341 tests: 14,263 PASS, 33 FAILURE, 14 ERROR, and 31 SKIPPED. That complete
+manifest is `updated-baseline.tsv.gz`. After each main run, the only tracked
+change was the generated rewind-gap report, which was inspected and restored.
 
 ### Development worktree result
 
@@ -115,6 +142,59 @@ the recorded baseline failure/error to PASS. The suite did not modify
 restored. Exact-symbol scans found the removed trace aliases only in the
 intentional guard literals; remaining non-code hits are historical sweep
 evidence.
+
+### Task 5 pre-merge focused reruns
+
+After merging `develop` at `3f0fd4a70` into the worktree without conflict, the
+Task 2–4 focused groups were rerun cleanly:
+
+| Group | Result | Evidence |
+|---|---|---|
+| Orphan/source guards | 176 rows: 173 PASS, 3 FAILURE, 0 ERROR, 0 SKIPPED | `focused-orphans-premerge.tsv.gz`; the same pre-existing ArchUnit, `ObjectManager`, and `AbstractPlayableSprite` ratchets. |
+| Compatibility owners | 91 rows: 90 PASS, 0 FAILURE, 1 ERROR, 0 SKIPPED | `focused-compat-premerge.tsv.gz`; only `TestS3kSpecialStageHeadlessBoot` failed to locate `liblwjgl.so`, the already documented host-native condition. |
+| Comment owners, `-Dsurefire.forkCount=1` | 60 rows: 60 PASS | `focused-comments-premerge.tsv.gz`; includes the reverse-gravity characterization. |
+
+### Task 5 development full-suite result
+
+The rejected default-four-fork attempt failed native initialization early.
+Once one reused fork could not load `liblwjgl.so`,
+`GlfwKeyNameResolver$Holder` poisoned later configuration setup. Surefire
+reported 12,271 tests, 31 failures, 2,860 errors, and 28 skips; the incomplete
+XML held only 12,256 rows (9,344 PASS, 31 FAILURE, 2,853 ERROR, 28 SKIPPED).
+`development-default-fork-incomplete.tsv.gz` is diagnostic evidence only; no
+missing row is waived.
+
+The accepted development command added `-Dsurefire.forkCount=1` to the exact
+clean ROM-backed baseline command. It completed 14,342 normalized rows:
+14,261 PASS, 34 FAILURE, 16 ERROR, and 31 SKIPPED. The baseline/development
+manifest diff was reviewed row by row:
+
+- the expected new
+  `reverseGravitySwapsVerticalSpringDirectionDuringNativeInit` row is PASS;
+- `TestTraceSessionLauncherProductionFailureCleanup` retained the same failure
+  type/message apart from a volatile object identity hash;
+- six pre-existing Tornado errors retained the same test identity and
+  `NullPointerException` type, with only helpful-NPE message rendering absent;
+- `productionObjectLifecycleRawCallCountsDoNotGrow` retained the exact same 13
+  violation paths and budget; only filesystem traversal order changed after
+  dead source files were removed; and
+- three `TestGameLoopSpecialStageRewindGate` rows changed from PASS to two null
+  focused-sprite errors and one failed rewind-engagement assertion. Full stacks
+  enter unchanged `GameLoop`/camera/rewind code, none of which this branch
+  modifies. The exact class was immediately rerun alone in the same worktree,
+  JDK, and single-fork mode and passed 4/4. This isolates the difference to the
+  class's documented suite-order/global-state fixture limitation rather than a
+  sweep behavior change; no production or test fix was made in this cleanup.
+
+The accepted manifest is `development.tsv.gz`. The generated rewind report was
+the only tracked test output and was restored after the run. No baseline test
+disappeared; development has exactly the one intentional added PASS row.
+
+After the living documentation was refreshed, the focused documentation/build
+guard command
+`mvn -Dmse=off -Dsurefire.forkCount=1
+"-Dtest=com.openggf.tests.TestBuildToolingGuard,com.openggf.configuration.TestModifierSupportDocumentation"
+test` passed all 85 tests.
 
 ### Task 4 stale-marker characterization
 

@@ -96,8 +96,12 @@ reference material. Task 2 relocates its content, provenance, and current
 decompressor-owner links to
 `docs/architecture/research/compression/kosinski-format.md`.
 
-Planned runtime removal is seven Java files (339 lines) plus the 125-line
-misplaced compression document: eight files and 464 current lines.
+Completed file removal is seven Java files (339 lines) plus the 125-line
+misplaced compression document: eight runtime files and 464 original lines.
+The compression content was preserved in architecture research. The narrow
+member cleanup removed another 70 caller-free source lines; comment corrections
+and the single Graal include account for the remaining deletions in the branch
+diff.
 
 ## Marker inventory classification
 

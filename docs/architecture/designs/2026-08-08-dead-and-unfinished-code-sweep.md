@@ -187,6 +187,17 @@ serial pair must contain the same complete testcase identities and outcomes;
 the earlier focused baseline remains contextual only, and the required updated
 full-suite baseline/development/merged comparison remains the delivery gate.
 
+Task 5 reproduced the same shared-native-extraction race at full-suite scale in
+the development worktree. The default four-fork run stopped after 12,256
+normalized testcase rows and cascaded to 2,853 errors after
+`GlfwKeyNameResolver` failed to initialize from a missing `liblwjgl.so`; it is
+retained only as `development-default-fork-incomplete.tsv.gz` diagnostic
+evidence. Delivery therefore adds `-Dsurefire.forkCount=1` to the exact clean
+ROM-backed command and reruns both the updated `develop` baseline and the
+development branch in that repository-documented CI mode. Only that complete,
+like-for-like serial pair is accepted for the pre-merge regression comparison;
+post-merge verification must use the same serial command.
+
 Clean builds are mandatory for every comparable full-suite run so deleted
 sources cannot survive as stale bytecode in `target/classes` or the packaged
 JAR. `tools/test-reports/surefire-outcome-manifest.xsl` normalizes every

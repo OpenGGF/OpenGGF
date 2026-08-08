@@ -6,6 +6,18 @@
 - **Zone Index:** 0x00
 - **Zone Set:** S3KL
 - **Acts:** 1 and 2 (with seamless transition from Act 1 fire sequence into Act 2)
+
+## Current Engine Status (2026-08-08)
+
+The principal AIZ-to-HCZ route is implemented and heavily exercised, but AIZ is
+not feature-complete. `AizMinibossNapalmProjectile` is live on the Knuckles
+miniboss route with approximate movement, no harmful touch response, and no
+rendering. Finishing it requires a ROM-backed port of `loc_68C96`, including
+floor behavior, collision timing, art/mappings, explosion children, rewind, and
+trace coverage. `AizEndBossInstance` also plays the emerge/re-submerge sound but
+does not allocate the native `ChildObjDat_69D2E` splash children; that omission
+affects presentation and object-slot ordering. Both implementations are retained
+for focused follow-up rather than treated as dead code.
 - **Water:** Yes (both acts have water with underwater palette transitions and foreground wave deformation)
 - **Palette Cycling:** Yes (2 channels Act 1 normal, 2 channels Act 1 fire, 3 channels Act 2)
 - **Animated Tiles:** Yes (3 scripts Act 1, 5 scripts Act 2)

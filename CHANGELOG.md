@@ -3,6 +3,15 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Maintenance/Docs: completed an evidence-tiered dead and unfinished code sweep.
+  Seven unreachable Java types (339 lines) were removed after checking callers,
+  registries, reflection, resources, service loading, and supported CLIs; the
+  useful 125-line Kosinski format reference moved out of runtime resources.
+  Caller-free compatibility APIs and duplicate unverified S3K results constants
+  were removed, while coherent unwired work (S3K special-stage projection,
+  debug primitive/text rendering, and CNZ boss animations) was retained. A
+  ranked audit and refreshed game/zone/audio/tooling status now identify live
+  unfinished paths without changing gameplay behavior.
 - Fix: a run whose movie spans its first level's load now publishes the player DPLC
   transfer that load stages. `DynamicArtLifecycleService.primePlayerDplc` deliberately
   establishes a freshly loaded playable's art bank without an edge, because a

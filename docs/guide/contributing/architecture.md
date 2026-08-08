@@ -408,6 +408,13 @@ The audio system reimplements the SMPS (Sample Music Playback System) sound driv
 4. **PsgChip** produces PSG audio (square waves and noise).
 5. **DacData** manages PCM drum sample data and playback rates.
 
+This is a reimplementation, not a blanket register-write parity guarantee.
+S3K coordinate flags are handled by `Sonic3kCoordFlagHandler`; meta commands
+`SND_CMD`, `MUS_PAUSE`, and `COPY_MEM` currently consume bytes but discard the
+native dispatch, pause, and memory-copy semantics. Audio work should establish
+ROM-stream reachability and compare with SMPSPlay/libvgm before implementing
+those commands.
+
 Each game has a `SmpsSequencerConfig` that captures driver differences:
 - **Tempo mode:** S3K uses OVERFLOW (overflow = skip), S2 uses OVERFLOW2 (overflow = tick).
 - **Note mapping:** S1 uses a different base note than S2/S3K.

@@ -120,9 +120,12 @@ which selects the correct decompressor based on the compression type.
 
 ### SmpsSequencer = Z80 Sound Driver
 
-The Z80 sound driver is not emulated -- it is reimplemented. The `SmpsSequencer` processes
-the same SMPS sequence data that the Z80 driver would, producing the same register writes
-to the YM2612 and SN76489 emulation cores.
+The Z80 sound driver is not emulated -- it is reimplemented. The `SmpsSequencer`
+processes ROM SMPS sequence data and drives the YM2612 and SN76489 emulation
+cores, but universal register-write parity is still a goal rather than a current
+guarantee. In particular, S3K coordinate flags are owned by
+`Sonic3kCoordFlagHandler`; its `SND_CMD`, `MUS_PAUSE`, and `COPY_MEM` meta
+commands currently consume their operands without applying the native effects.
 
 ## Finding Things
 

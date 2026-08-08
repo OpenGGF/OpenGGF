@@ -63,6 +63,13 @@ are note pitches. Values $E0-$FF are commands:
 The exact command set varies slightly between S1, S2, and S3K, which is why each game has
 its own SMPS configuration.
 
+S3K coordinate-flag commands are decoded by `Sonic3kCoordFlagHandler`. Most
+live commands have engine semantics, but meta subcommands `SND_CMD`,
+`MUS_PAUSE`, and `COPY_MEM` currently only consume and log their operands; they
+do not dispatch a sound command, change music pause state, or copy driver
+memory. Treat those as known parity gaps: first prove which ROM streams reach
+them, then port reached behavior from SMPSPlay/libvgm and the native driver.
+
 ## Per-Game Driver Differences
 
 The three games use subtly different SMPS driver configurations. These are captured in
@@ -154,8 +161,9 @@ mvn exec:java -Dexec.mainClass="com.openggf.tools.disasm.RomOffsetFinder" \
 ## Comparing Against SMPSPlay
 
 [SMPSPlay](https://github.com/ValleyBell/SMPSPlay) by ValleyBell is the reference SMPS
-playback tool. It supports all three games and produces bit-accurate output from the
-same ROM data. To verify the engine's audio accuracy:
+playback tool. It supports all three games and provides the comparison target for
+the same ROM data; OpenGGF does not yet claim bit-accurate output for every command
+or register write. To verify the engine's audio accuracy:
 
 1. Play a song in SMPSPlay and capture the output.
 2. Play the same song in OpenGGF and capture the output.

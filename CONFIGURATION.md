@@ -764,15 +764,19 @@ The gamepad Back/Select/View button on the primary connected pad is a hardcoded 
 
 ### Special Stage Debug
 
-These keys are only active while a Special Stage is running.
+These keys are only active while a Special Stage is running. Enter/complete/fail
+are shared stage controls, but the F12 sprite viewer and F3 plane visibility
+commands require a game-provided debug capability. Today that capability is
+implemented for Sonic 2; Sonic 1 and Sonic 3&K accept the configured shortcuts
+but their providers deliberately do nothing.
 
 | Key | YAML path | Default | Key Name | Description |
 |-----|-----------|---------|----------|-------------|
 | `SPECIAL_STAGE_KEY` | `debug.keys.specialStage` | `258` | Tab | Enter / exit Special Stage mode (debug). |
 | `SPECIAL_STAGE_COMPLETE_KEY` | `debug.keys.specialStageComplete` | `269` | End | Complete the current Special Stage and award the emerald. |
 | `SPECIAL_STAGE_FAIL_KEY` | `debug.keys.specialStageFail` | `261` | Delete | Fail the current Special Stage without awarding the emerald. |
-| `SPECIAL_STAGE_SPRITE_DEBUG_KEY` | `debug.keys.specialStageSpriteDebug` | `301` | F12 | Toggle the Special Stage sprite debug viewer. |
-| `SPECIAL_STAGE_PLANE_DEBUG_KEY` | `debug.keys.specialStagePlaneDebug` | `292` | F3 | Cycle Special Stage plane visibility debug modes. |
+| `SPECIAL_STAGE_SPRITE_DEBUG_KEY` | `debug.keys.specialStageSpriteDebug` | `301` | F12 | Toggle the Special Stage sprite debug viewer when the active game exposes it (currently Sonic 2 only). |
+| `SPECIAL_STAGE_PLANE_DEBUG_KEY` | `debug.keys.specialStagePlaneDebug` | `292` | F3 | Cycle Special Stage plane visibility modes when supported (currently Sonic 2 only). |
 
 ---
 
