@@ -518,15 +518,16 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
         boolean preservesRoutineSixDispatch = resultsWaitedForPlayerLanding
                 || preservesPostObjectResultDispatchBoundary
                 || preservesGroundedResultsDispatchBoundary;
-        if (preservesRoutineSixDispatch) {
-            // Obj_EndSignResults has occupied its native routine-6 slot, either
-            // while waiting for the grounded player or through the preserved
-            // post-object boundary. Apply P1 now; P2 belongs to routine 8.
+        if (preservesRoutineSixDispatch || !usesShortResultsChildRetireTail) {
+            // Obj_EndSignResults calls Set_PlayerEndingPose in its routine-6
+            // dispatch, immediately after the grounded-player check.  The
+            // following routine-8 dispatch owns only the sidekick handoff.
             applyMainPlayerEndingPose(player);
             sidekickEndingPoseCheckArmed = true;
         } else {
-            // Preserve the engine's collapsed owner boundary for ordinary
-            // signposts whose routine 6 did not wait.
+            // The short-tail owner retains the native post-object handoff:
+            // its result owner becomes visible before the signpost's routine-8
+            // pose work reaches the player slots.
             mainEndingPosePending = true;
         }
 
@@ -563,11 +564,12 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
                         usesShortResultsChildRetireTail),
                 resultsChildTimingAdjustment,
                 usesShortResultsChildRetireTail);
-        if (preservesGroundedResultsDispatchBoundary) {
-            // The preserved grounded-owner path retains FindFreeObj slot
-            // placement, so its results owner begins on the next object pass.
-            // Other signposts use the native higher-slot handoff represented by
-            // AllocateObjectAfterCurrent in this engine's SST layout.
+        // Obj_EndSignResults normally calls AllocateObject.  When the native
+        // result owner has already consumed the current object pass, the
+        // retained short-tail/landing path keeps the higher-slot handoff used
+        // by that owner; otherwise the first-free slot determines whether the
+        // new owner runs in this pass.
+        if (useFirstFreeResultsOwner()) {
             spawnFreeChild(resultsFactory);
         } else {
             spawnChild(resultsFactory);
@@ -577,6 +579,11 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
         if (preservesPostObjectResultDispatchBoundary && sidekickPoseWasAlreadyArmed) {
             applyNativeSidekickEndingPose(player);
         }
+    }
+
+    private boolean useFirstFreeResultsOwner() {
+        return preservesGroundedResultsDispatchBoundary
+                || (!resultsWaitedForPlayerLanding && !usesShortResultsChildRetireTail);
     }
 
     static int resultsChildRetireDispatches(boolean waitedForPlayerLanding,

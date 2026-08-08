@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K HCZ results now retain the native first-free results-owner
+  allocation and immediate signpost ending-pose handoff where the ROM's owner
+  slot is already behind the current dispatch. The HCZ complete-run frontier
+  advances past raw frame `9761` to the next independent queue boundary at raw
+  frame `9900`; MGZ and LBZ remain green and no trace payloads changed.
 - Fix/Test: S3K AIZ held-admission KosM queue publication now preserves the
   native next-child direct-tail boundary. The complete-run frontier advances
   to direct `KOS_DECOMPRESSION_QUEUE#40` at raw frame `11354`; standard AIZ,

@@ -65736,3 +65736,21 @@ to synthesize a POST phase on a VBLANK-only row.
   `6349`/direct `#37` boundary to raw `11354`/direct `#40`; standard AIZ, MGZ,
   and LBZ retain their green status. The next target is the AIZ queue mismatch
   at raw `11350`.
+
+## 2026-08-08 — S3K HCZ results-owner allocation frontier
+
+- Worktree: `bugfix/s3k-traces` at `6e466de66` before this fix; unrelated edits
+  in `.idea/vcs.xml`, `docs/status/rewind-round-trip-gaps.md`, and
+  `src/main/java/com/openggf/level/objects/ObjectPlacementController.java`
+  remained unstaged. Validation used JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen` (SHA-1
+  `b711a909cce238ca4af3e517a2edca306228efa5`), without replacing or renaming
+  it.
+- Frontier command: `env JAVA_HOME=$JDK21_HOME PATH=$JDK21_HOME/bin:$PATH MAVEN_OPTS='-Xmx2g' mvn -q -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=true -Dsurefire.argLine='-Xmx3g' -Dmaven.test.failure.ignore=true -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen' -Dtrace.verification=physics -Dtrace.frontierOnly=true -Dtrace.context.radius=3 -Dtest='com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s3k.TestS3kMgzCompleteRunTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s3k.TestS3kLbzCompleteRunTraceReplay#replayMatchesTrace' test`. HCZ retains 12 queue-state errors, first at raw `9900` (`queue.s3k_kos_module.busy`, expected `false`, actual `true`); its next unconsumed hardware edge is `KOS_DECOMPRESSION_QUEUE#104` at raw `10391`, boundary `PRE_MAIN_LOOP`.
+- Root cause: the ROM `Obj_EndSignResults` path allocates the results owner with `AllocateObject`, whose first-free slot can be behind the current signpost owner. The signpost now preserves the native first-free versus higher-slot handoff from its grounded/retained owner state, and applies `Set_PlayerEndingPose` at the routine-6 boundary except for the explicitly retained short-tail owner. No trace, frame, route, or zone identity is consulted.
+- Regression checks: `TestS3kAizTraceReplay#replayMatchesTrace` passes; the same frontier command reports zero errors for MGZ and LBZ. Ring comparison remains enabled through `ToleranceConfig.DEFAULT` with `RingCountMode.FORCE_ERROR`; no trace payloads changed.
+- Route position: AIZ retains its current complete-run boundary at raw
+  `11354`/direct `#40`; HCZ advances from raw `9761` to raw `9900`; MGZ and
+  LBZ retain zero-error complete-run status. The next target is the HCZ queue
+  boundary at raw `9900`, followed by unconsumed hardware edge `#104` at raw
+  `10391`.
