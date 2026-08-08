@@ -169,6 +169,8 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
     /** True once debris children have been spawned. */
     private boolean debrisSpawned;
     private boolean targetsNativeP2;
+    /** Native loc_6B7BC/loc_6B7D2 dispatches before the shake routine starts. */
+    private int initialRoutineDispatchesRemaining;
     private S3kKosModuleQueue artQueue;
     private HardwareWorkHandle artHandle;
     private long artOrdinal = -1;
@@ -201,6 +203,7 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
         this.geyserX    = spawnX;
         this.geyserY    = spawnY;
         this.targetsNativeP2 = targetsNativeP2;
+        this.initialRoutineDispatchesRemaining = targetsNativeP2 ? 0 : 2;
         this.phase = setupDelay > 0 ? PHASE_SETUP_DELAY : PHASE_SHAKE;
         this.timer = setupDelay > 0 ? setupDelay : SHAKE_DURATION;
         this.rumbleTimer = 0;
@@ -220,6 +223,10 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         serviceQueuedArt();
+        if (initialRoutineDispatchesRemaining > 0) {
+            initialRoutineDispatchesRemaining--;
+            return;
+        }
         AbstractPlayableSprite player = resolveTargetPlayer(playerEntity);
 
         switch (phase) {

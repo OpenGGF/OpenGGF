@@ -65934,3 +65934,46 @@ to synthesize a POST phase on a VBLANK-only row.
   zero-error complete-run traces, while CNZ and ICZ retain their established
   frontiers. The next target is the HCZ Tails/geyser handoff mismatch at raw
   `31230`, followed by direct queue edge `#120`.
+
+## 2026-08-08 - S3K HCZ2 geyser owner-dispatch frontier
+
+- Worktree: `bugfix/s3k-traces` at `c35c0c9d3` before this fix; unrelated edits
+  in `.idea/vcs.xml`, `docs/status/rewind-round-trip-gaps.md`,
+  `src/main/java/com/openggf/level/objects/ObjectPlacementController.java`,
+  and `src/main/java/com/openggf/level/rings/RingManager.java` remained
+  unstaged. Validation used JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen`; no trace payloads changed.
+- Frontier command: `env JAVA_HOME=$JDK21_HOME PATH=$JDK21_HOME/bin:$PATH
+  MAVEN_OPTS='-Xmx2g' mvn -q -Dmse=off -Dsurefire.forkCount=1
+  -DforkCount=1 -DreuseForks=false -Dsurefire.argLine='-Xmx3g'
+  -Dmaven.test.failure.ignore=true
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtrace.frontierOnly=true -Dtrace.context.radius=3
+  -Dtrace.verification=physics
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay#replayMatchesTrace'
+  test`. HCZ now reaches the next physical mismatch, `camera_y` at raw frame
+  `31335` (expected `0x0509`, actual `0x050F`), with the three established
+  Tails mapping errors at raw frames `10470`, `10478`, and `10486`. The report
+  has four errors total: one physics and three animation. The replay then
+  reaches the next unconsumed direct `KOS_DECOMPRESSION_QUEUE#120` edge at raw
+  frame `31360` (`sha256:fbfc78d499717cfec6df27fdd04fa4b5293a7147ec7ff7a7a18004e9db801e78`).
+- Root cause: the ROM's geyser owner first runs `loc_6B7BC` to submit its
+  vertical art, then `loc_6B7D2` installs the shake routine; only subsequent
+  dispatches enter `loc_6B7EC`/`loc_6B882`. The engine now retains those two
+  primary-owner routine boundaries while still submitting the ROM-backed art
+  job on the owning dispatch. This removes the secondary-owner's two-frame
+  early grab without a trace, frame, route, or zone condition.
+- Regression command: `env JAVA_HOME=$JDK21_HOME PATH=$JDK21_HOME/bin:$PATH
+  MAVEN_OPTS='-Xmx2g' mvn -q -Dmse=off -Dsurefire.forkCount=1
+  -DforkCount=1 -DreuseForks=false -Dsurefire.argLine='-Xmx3g'
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.game.TestInGamePause,com.openggf.tools.TestRecordingFrameDriverInputOnly,com.openggf.game.sonic3k.events.TestSonic3kHCZEvents,com.openggf.tests.trace.s3k.TestS3kMgzCompleteRunTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s3k.TestS3kLbzCompleteRunTraceReplay#replayMatchesTrace'
+  test`. Result: 16 tests, 0 failures, 0 errors, 0 skips. Ring comparison
+  remains enabled through `ToleranceConfig.DEFAULT` with
+  `RingCountMode.FORCE_ERROR`.
+- Route position: AIZ retains its current gameplay-order frontier; HCZ
+  advances from the Tails/geyser handoff mismatch at raw `31230` to the
+  camera publication mismatch at raw `31335`. MGZ and LBZ remain zero-error
+  complete-run traces, while CNZ and ICZ retain their established frontiers.
+  The next target is HCZ `camera_y` at raw `31335`, followed by direct queue
+  edge `#120`.

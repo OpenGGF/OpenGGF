@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K HCZ2's post-defeat geyser now preserves the ROM's
+  `loc_6B7BC`/`loc_6B7D2` owner-dispatch boundary before starting the shake.
+  The HCZ replay advances past the seven-error Tails handoff cluster to one
+  physical `camera_y` error at raw frame `31335`; AIZ, MGZ, CNZ, ICZ, and LBZ
+  route canaries remain green. No trace payloads changed.
 - Fix/Test: S3K HCZ2 now preserves the ROM's first-free results-owner
   allocation and separates its initial results-art service boundary from the
   nested child handoff. The capsule restores the ROM-visible player pose and
