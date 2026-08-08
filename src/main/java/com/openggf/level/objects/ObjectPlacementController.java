@@ -1257,10 +1257,15 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
             // offscreen check. Cursor advancement past a destroyed badnik
             // must NOT clear the bit; ROM keeps it set permanently after
             // a player kill.
-            // Spawn leaving the cursor window — clear dormant so a
-            // non-destroyed spawn can be normally re-loaded when the
-            // cursor re-enters.
-            dormant.clear(leftCursorIndex);
+            // ROM: loc_DA24 (OPL_MovedRight's .loop_find_left) only walks the
+            // left pointer forward; it never calls OPL_SpawnObj. An entry the
+            // right-moving cursor leaves behind cannot be re-created until a
+            // leftward pass (loc_D9A6) actually scans back over it, and that
+            // path clears dormant itself. Clearing dormant here re-armed the
+            // entry for engine-side materialization while both cursors were
+            // already past it (SLZ1 f2522: a fresh Orbinaut for the 0xB90
+            // layout entry appeared in the slot the 0xB90 staircase had just
+            // freed, which ROM leaves empty).
             leftCursorIndex++;
         }
     }
@@ -1346,10 +1351,10 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
             // Sprite_OnScreen_Test on a LIVE object's offscreen check.
             // Cursor retreat past a destroyed badnik must NOT clear the
             // bit; ROM keeps it set permanently after a kill.
-            // Spawn leaving the cursor window — clear dormant so a
-            // non-destroyed spawn can be normally re-loaded when the
-            // cursor re-enters.
-            dormant.clear(cursorIndex);
+            // ROM: loc_D9DE (OPL_MovedLeft's .loop_find_right) only retreats the
+            // right pointer; it never calls OPL_SpawnObj. Re-arming happens on
+            // the next rightward scan (loc_DA02 -> spawnForwardEntry), which
+            // clears dormant itself. See the note in trimLeftCountered.
         }
     }
 

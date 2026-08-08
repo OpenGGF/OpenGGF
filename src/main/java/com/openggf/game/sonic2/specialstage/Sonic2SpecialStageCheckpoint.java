@@ -2,6 +2,7 @@ package com.openggf.game.sonic2.specialstage;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.IntSupplier;
 import java.util.logging.Logger;
 
 /**
@@ -173,6 +174,20 @@ public class Sonic2SpecialStageCheckpoint {
 
     // Music fade callback
     private Runnable onMusicFadeRequested;
+
+    // Live combined ring count, read at the moment the result is resolved.
+    private IntSupplier liveRingCount;
+
+    /**
+     * Supplies the combined ring count ({@code Ring_count + Ring_count_2P}) as it
+     * stands when the checkpoint result is resolved. The ROM reads those words at
+     * {@code loc_35978} (s2.asm:71843-71853), i.e. after the checkpoint rainbow has
+     * finished and the object deletes itself — not when the checkpoint marker was
+     * passed — so rings collected while the rainbow plays still count.
+     */
+    public void setLiveRingCount(IntSupplier liveRingCount) {
+        this.liveRingCount = liveRingCount;
+    }
 
     /**
      * Sets a callback for when music fade is requested.
@@ -405,7 +420,13 @@ public class Sonic2SpecialStageCheckpoint {
 
     private void resolveCheckpointResult() {
         ringRequirement = pendingRingRequirement;
-        ringsCollected = pendingRingsCollected;
+        // ROM loc_35978 (s2.asm:71843-71853) reads (Ring_count) + (Ring_count_2P)
+        // here, at the end of the rainbow, and compares against
+        // (SS_Ring_Requirement); the count captured when the marker was passed is
+        // already stale by then. Fall back to that capture only when no live
+        // source is bound (standalone construction in unit tests).
+        ringsCollected = liveRingCount != null
+                ? liveRingCount.getAsInt() : pendingRingsCollected;
 
         if (ringsCollected >= ringRequirement) {
             if (pendingFinalCheckpoint) {

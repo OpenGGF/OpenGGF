@@ -579,6 +579,11 @@ public class Sonic2SpecialStageManager {
             LOGGER.info("Music fade requested - fading special stage music");
         });
 
+        // The ROM's checkpoint ring check reads the ring words live at the end of
+        // the rainbow (loc_35978, s2.asm:71843-71853), so rings picked up while the
+        // rainbow plays still count towards the requirement.
+        checkpoint.setLiveRingCount(this::getRingsCollected);
+
         checkpoint.setOnCheckpointResolved((result, checkpointNumber, ringRequirement,
                 ringsCollected, isFinalCheckpoint) -> {
             handleCheckpointResolved(result, checkpointNumber, ringRequirement,
