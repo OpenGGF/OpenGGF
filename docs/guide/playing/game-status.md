@@ -127,7 +127,8 @@ that the module can work.
   touch response or rendering; AIZ2 end-boss emerge/submerge omits splash children.
 - Knuckles' LBZ Big Arm (`Obj_LBZFinalBoss2`) handoff currently spawns an inert,
   invisible persistent object, blocking an authentic route completion.
-- LRZ1 for Sonic/Tails and SSZ omit the ROM's falling level-introduction state.
+- LRZ1 now gives non-Knuckles players the ROM falling level-introduction state;
+  SSZ has no corresponding `SpawnLevelMainSprites` branch.
 
 ### Notable quirks
 

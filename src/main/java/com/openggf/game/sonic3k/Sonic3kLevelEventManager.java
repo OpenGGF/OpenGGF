@@ -597,12 +597,20 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
      * </ul>
      */
     public void applyZonePlayerState() {
+        // ROM Level_FromSavedGame leaves Last_star_post_hit-owned player state
+        // intact on checkpoint/special-stage/bonus returns.  The bootstrap
+        // resolver carries that semantic for intro levels; the live return
+        // flags and restored checkpoint state cover reloads whose resolver
+        // remains NORMAL.  No zone-specific intro branch may run first.
+        if (shouldSkipZonePlayerStateBootstrap()) {
+            return;
+        }
         if (currentZone == Sonic3kZoneIds.ZONE_HCZ && currentAct == 0) {
             applyHcz1IntroState();
         }
         // ROM: sonic3k.asm loc_68A6 — simple falling intro (anim $1B + airborne).
-        // Applied to MGZ1 and LRZ1 when Player_mode != 3. The LRZ1 branch
-        // explicitly skips Knuckles at sonic3k.asm:8161-8165.
+        // MGZ1 is unconditional; LRZ1 explicitly skips Knuckles at
+        // sonic3k.asm:8161-8165 (Player_mode != 3).
         if (currentZone == Sonic3kZoneIds.ZONE_MGZ && currentAct == 0) {
             applySimpleFallingIntro("MGZ1");
         }
@@ -626,6 +634,19 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                 && getPlayerCharacter() != PlayerCharacter.KNUCKLES) {
             applySimpleFallingIntro("LRZ1");
         }
+    }
+
+    private boolean shouldSkipZonePlayerStateBootstrap() {
+        if (bootstrap != null && bootstrap.isSkipIntro()) {
+            return true;
+        }
+        if (!GameServices.hasRuntime() || GameServices.levelOrNull() == null) {
+            return false;
+        }
+        var level = GameServices.level();
+        return level.hasBigRingReturn()
+                || level.isBonusStageReturn()
+                || level.getCheckpointState().isActive();
     }
 
     private void applyIczIntroSidekickDormantMarkersAfterSpawn() {

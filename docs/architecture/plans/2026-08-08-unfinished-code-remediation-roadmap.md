@@ -41,8 +41,9 @@ and traces remain comparison evidence rather than gameplay authority.
    Knuckles AIZ route trace.
 2. Complete `LbzFinalBoss2Instance` / Big Arm: art/PLC, phases, articulated
    children, collision/damage/defeat/results, rewind, and Knuckles LBZ trace.
-3. Restore LRZ1 non-Knuckles and SSZ falling-introduction initialization from
-   `SpawnLevelMainSprites` `loc_68A6` with character/zone/act bootstrap tests.
+3. Restore LRZ1 non-Knuckles falling-introduction initialization from
+   `SpawnLevelMainSprites` `loc_68A6` with character/zone/act bootstrap tests;
+   SSZ has no corresponding branch in the owning routine.
 4. Add AIZ2 end-boss splash children from `ChildObjDat_69D2E`, including slot
    order, ROM assets, rendering, allocation, and rewind coverage.
 

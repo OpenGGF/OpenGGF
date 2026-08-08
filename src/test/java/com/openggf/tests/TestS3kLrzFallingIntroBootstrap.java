@@ -3,7 +3,7 @@ package com.openggf.tests;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
-import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
+import com.openggf.game.CheckpointState;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -40,8 +40,6 @@ class TestS3kLrzFallingIntroBootstrap {
     @Test
     void lrz1SonicAndTailsStartInNativeFallingState() {
         HeadlessTestFixture fixture = load(Sonic3kZoneIds.ZONE_LRZ, ACT_1, "sonic", "tails");
-        Sonic3kLevelEventManager manager = manager();
-        manager.applyZonePlayerState();
 
         AbstractPlayableSprite player = fixture.sprite();
         assertTrue(player.getAir(), "LRZ1 non-Knuckles player must start airborne");
@@ -61,7 +59,6 @@ class TestS3kLrzFallingIntroBootstrap {
     @Test
     void lrz1TailsAloneUsesTheSameNonKnucklesGate() {
         HeadlessTestFixture fixture = load(Sonic3kZoneIds.ZONE_LRZ, ACT_1, "tails", "");
-        manager().applyZonePlayerState();
 
         AbstractPlayableSprite player = fixture.sprite();
         assertTrue(player.getAir(), "LRZ1 Tails-alone must start airborne");
@@ -72,13 +69,23 @@ class TestS3kLrzFallingIntroBootstrap {
     }
 
     @Test
+    void lrz1SonicAloneUsesTheNonKnucklesGate() {
+        HeadlessTestFixture fixture = load(Sonic3kZoneIds.ZONE_LRZ, ACT_1, "sonic", "");
+
+        AbstractPlayableSprite player = fixture.sprite();
+        assertTrue(player.getAir(), "LRZ1 solo Sonic must start airborne");
+        assertEquals(Sonic3kAnimationIds.HURT_FALL.id(), player.getForcedAnimationId(),
+                "LRZ1 solo Sonic must use the ROM $1B falling animation");
+        assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty(),
+                "Sonic-alone must not create a Player_2 sidekick");
+    }
+
+    @Test
     void lrz1KnucklesBypassesLoc68A6() {
         HeadlessTestFixture fixture = load(Sonic3kZoneIds.ZONE_LRZ, ACT_1, "knuckles", "");
         AbstractPlayableSprite player = fixture.sprite();
         player.setAir(false);
         player.setForcedAnimationId(-1);
-
-        manager().applyZonePlayerState();
 
         assertFalse(player.getAir(), "LRZ1 Knuckles must bypass the loc_68A6 falling gate");
         assertEquals(-1, player.getForcedAnimationId(),
@@ -92,8 +99,6 @@ class TestS3kLrzFallingIntroBootstrap {
         player.setAir(false);
         player.setForcedAnimationId(-1);
 
-        manager().applyZonePlayerState();
-
         assertFalse(player.getAir(), "LRZ2 must not inherit LRZ1's falling bootstrap");
         assertEquals(-1, player.getForcedAnimationId(),
                 "LRZ2 must not receive the loc_68A6 animation");
@@ -105,8 +110,6 @@ class TestS3kLrzFallingIntroBootstrap {
         AbstractPlayableSprite player = fixture.sprite();
         player.setAir(false);
         player.setForcedAnimationId(-1);
-
-        manager().applyZonePlayerState();
 
         assertFalse(player.getAir(),
                 "SSZ1 is $0A00, while the ROM loc_68A6 comparison is LRZ boss $1600");
@@ -121,12 +124,54 @@ class TestS3kLrzFallingIntroBootstrap {
         player.setAir(false);
         player.setForcedAnimationId(-1);
 
-        manager().applyZonePlayerState();
-
         assertFalse(player.getAir(),
                 "SSZ2 is $0A01 and must not inherit the LRZ loc_68A6 gate");
         assertEquals(-1, player.getForcedAnimationId(),
                 "SSZ2 must not receive a state absent from SpawnLevelMainSprites");
+    }
+
+    @Test
+    void checkpointReloadSkipsTheFallingBootstrapThroughProductionLoad() {
+        HeadlessTestFixture fixture = load(Sonic3kZoneIds.ZONE_LRZ, ACT_1, "sonic", "");
+        ((CheckpointState) GameServices.level().getCheckpointState())
+                .saveCheckpoint(1, 0x120, 0x180, false);
+
+        GameServices.level().loadCurrentLevel();
+
+        AbstractPlayableSprite player = currentPlayer("sonic");
+        assertFalse(player.getAir(),
+                "checkpoint reload must preserve native state instead of reapplying loc_68A6");
+        assertEquals(-1, player.getForcedAnimationId(),
+                "checkpoint reload must not force the falling animation");
+    }
+
+    @Test
+    void bigRingReturnSkipsTheFallingBootstrapThroughProductionLoad() {
+        HeadlessTestFixture fixture = load(Sonic3kZoneIds.ZONE_LRZ, ACT_1, "sonic", "");
+        GameServices.level().saveBigRingReturn(new com.openggf.level.BigRingReturnState(
+                0x120, 0x180, 0, 0, 0, (byte) 0x0C, (byte) 0x0D, 0, 0));
+
+        GameServices.level().loadCurrentLevel();
+
+        AbstractPlayableSprite player = currentPlayer("sonic");
+        assertFalse(player.getAir(),
+                "big-ring return must preserve native state instead of reapplying loc_68A6");
+        assertEquals(-1, player.getForcedAnimationId(),
+                "big-ring return must not force the falling animation");
+    }
+
+    @Test
+    void bonusReturnSkipsTheFallingBootstrapThroughProductionLoad() {
+        HeadlessTestFixture fixture = load(Sonic3kZoneIds.ZONE_LRZ, ACT_1, "sonic", "");
+        GameServices.level().setBonusStageReturnCheckpointIndex(1);
+
+        GameServices.level().loadCurrentLevel();
+
+        AbstractPlayableSprite player = currentPlayer("sonic");
+        assertFalse(player.getAir(),
+                "bonus return must preserve native state instead of reapplying loc_68A6");
+        assertEquals(-1, player.getForcedAnimationId(),
+                "bonus return must not force the falling animation");
     }
 
     private static HeadlessTestFixture load(int zone, int act,
@@ -142,9 +187,8 @@ class TestS3kLrzFallingIntroBootstrap {
         return fixture;
     }
 
-    private static Sonic3kLevelEventManager manager() {
-        assertTrue(GameServices.module().getLevelEventProvider() instanceof Sonic3kLevelEventManager,
-                "S3K level load must install Sonic3kLevelEventManager");
-        return (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
+    private static AbstractPlayableSprite currentPlayer(String code) {
+        return (AbstractPlayableSprite) GameServices.sprites().getSprite(code);
     }
+
 }
