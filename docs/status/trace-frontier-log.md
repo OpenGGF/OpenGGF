@@ -65814,3 +65814,66 @@ so the Aquis skew put every spilled ring on the wrong bounce frame.
   The award then runs at row 457 instead of 456, and since speed shoes raise
   `Sonic_acceleration` $C -> $18 the airborne accel step doubles 24 -> 48, diverging
   position from there. Both monitor branches are faithful; the SLOT ORDERING is wrong.
+
+## 2026-08-08 — round eleven: the OOZ carve-out removed, and a phantom defect retracted
+
+Command: full `-Ptrace-replay` profile, no `-Dtest` (763 tests, all three games),
+`-Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical`. Base 57dade3af.
+Control and after both 763 tests / 17 failures / 63 errors, the same 30 failing classes
+name-for-name. Nothing moved in either direction at class level.
+
+**RETRACTION: the "object first-pass init deferral" defect recorded last round DOES NOT
+EXIST.** Round ten reported the engine creating an Aquis at f5949 but not running its
+first `updateMovement` until f5976. That was a misreading of its own probe: **f5976 is
+that Aquis's CREATION frame in the engine**, not a delayed first pass. Instrumenting both
+`ObjectManager.registerActiveObject` and `ObjectExecutionController.execute` shows every
+Obj50 in the OOZ1 route first executes on the very next vbla tick after creation, with no
+exceptions — which is exactly ROM order, since `Level_MainLoop` runs `RunObjects ->
+BuildSprites -> ObjectsManager` (s2.asm:5107-5112) so an object loaded on frame N first
+executes on N+1. The engine also already models the mid-pass child case correctly
+(ObjectManager.java:2181-2200: a child allocated ABOVE the current exec slot is spliced
+into `execOrder` and runs the same frame; below it waits, matching the ascending walk).
+The REAL divergence is that the engine **loads** that Aquis ~26 frames late (f5975 vs ROM
+f5949) — a load-cursor / camera-coarse timing difference in the S2 `ObjectsManager` port,
+downstream of an already-diverged route. Different defect, different subsystem.
+
+- **`ca939d50d`'s hard-rule-3 route carve-out is GONE.** That commit changed the Obj50
+  (Aquis) wing from `spawnFreeChild` to `spawnChild` (after-current) explicitly "to
+  preserve the OOZ1 launcher ball slot order". ROM `Obj50_Init` creates the wing with
+  `jsrto JmpTo12_AllocateObject` (s2.asm:60604-60607) = `AllocateObject`, which scans
+  `Dynamic_Object_RAM` UPWARD and returns the lowest free slot, legitimately below the
+  parent (s2.asm:33681-33694). Obj50's bullet uses the identical call (s2.asm:60700) and
+  was already modelled with `spawnFreeChild`. **The carve-out is provably no longer
+  needed: the oracle test ca939d50d itself shipped,
+  `TestS2ObjectOccupancyOracle#ooz1LauncherBallChainKeepsSourceBeforeTargetAtRomFrame5957`,
+  PASSES with `spawnFreeChild` restored.** Other fixes since made it redundant.
+- **Obj3D launcher-block fragments now match ROM lifetimes.** `LauncherFragmentInstance`
+  integrated position into private `currentX/currentY` never written back to the SST, so
+  `getX()/getY()` stayed at the block's origin forever, and its delete test was an
+  invented "fell below camera+224+32". ROM `Obj3D_Fragment` is
+  `ObjectMove; addi.w #$18,y_vel; btst #render_flags.on_screen; beq DeleteObject`
+  (s2.asm:51069-51075) — directionless. `Obj3D_Init` sets `width_pixels=$10`
+  (s2.asm:50964) and never sets an explicit height, so the 0x20 Y margin is the existing
+  documented `AbstractObjectInstance.getOnScreenHalfHeight` band, NOT a fixture-measured
+  number.
+- **OOZ frontier: f5444 -> f8264**, error count 3 -> 7906, class already red so the
+  failing set is unchanged. Reported honestly rather than as a win: the value is that a
+  fitted carve-out is gone and OOZ now points at the real remaining defect (the late
+  Obj50 load, and the Obj48 SST source/target ordering at f8264).
+- **DISPROVED, structurally:** that EHZ1 monitor slot ordering reaches ss_7.
+  `run_manifest.json` puts ss_7 at segment index 17, and
+  `S2SpecialStagePredecessorReplay.inheritedPrefix` walks back only while the entered
+  segment declares a non-empty opening ledger, so ss_7's replayed prefix is segment 16 =
+  **seg11_arz1 (ARZ1)**, which declares an EMPTY ledger. **No EHZ segment is replayed for
+  ss_7 at all.** Further, none of ss_2 / ss_7 / the halfpipe chain asserts on position —
+  all three first errors are `dynamic_art` DPLC fields, so any speed-shoes -> x_speed ->
+  position chain is not what they measure. The halfpipe chain's seg0 (EHZ level) compares
+  CLEAN; only seg1 (the stage itself) is red, with a one-frame-early in-stage DPLC edge
+  ([3,4,5] at f136 that ROM has at f137) and an ss-sonic/ss-tails submission-order swap
+  at f182 — a special-stage DPLC ordering bug with no EHZ1 input.
+- **CONFIRMED and sharpened:** the Tails DPLC divergence is real and is an ANIMATION
+  divergence. Over seg2_ehz1 rows 3365-3376 ROM emits Tails walk DPLC mf 70/71/72 (one
+  request) plus a separate tails-tails edge mf 81/83/84; the engine emits a single
+  2-request tails edge at mf 94/95 (442976/1018/512 + 443488/1034/256) every time and
+  never emits the tails-tails edge. Engine Tails is in the wrong animation for hundreds
+  of frames.

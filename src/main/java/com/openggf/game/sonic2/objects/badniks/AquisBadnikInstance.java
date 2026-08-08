@@ -240,9 +240,13 @@ public class AquisBadnikInstance extends AbstractBadnikInstance implements Rewin
         }
         int wingX = currentX + WING_X_OFFSET;
         int wingY = currentY + WING_Y_OFFSET;
-        // ROM OOZ1 route keeps the Obj50 wing after its parent in the SST
-        // during the launcher-ball cluster, preserving Obj48 source/target order.
-        wingChild = spawnChild(() -> new AquisWingChild(
+        // ROM Obj50 creates the wing with AllocateObject -- the LOWEST free SST slot
+        // from Dynamic_Object_RAM upward, which may be below the parent's own slot
+        // (docs/s2disasm/s2.asm:60606-60607 `jsrto JmpTo12_AllocateObject`; the
+        // allocator itself scans upward from Dynamic_Object_RAM, s2.asm:33681-33694).
+        // Obj50's bullet (s2.asm:60700) uses the same call and already uses
+        // spawnFreeChild, so both children take FindFreeObj semantics.
+        wingChild = spawnFreeChild(() -> new AquisWingChild(
                 new ObjectSpawn(wingX, wingY, spawn.objectId(), 0, spawn.renderFlags(), false, spawn.rawYWord()),
                 this));
         syncWingChild();

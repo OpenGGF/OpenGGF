@@ -3,6 +3,15 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the Oil Ocean Aquis allocates its wing into the lowest free object slot again,
+  matching ROM `AllocateObject`, which scans upward from the start of dynamic object RAM
+  and may legitimately place a child below its parent. A previous change had moved the
+  wing to allocate-after-parent to preserve one route's launcher-ball ordering; that
+  ordering assertion still holds without it.
+- Fix: Oil Ocean launcher-block fragments write their integrated position back to the
+  object slot and are removed when they leave the render box in any direction, matching
+  the ROM's on-screen test, instead of keeping their spawn position forever and being
+  removed only on falling below the camera.
 - Fix: consolidated objects that execute from a borrowed child slot are retired at their
   own slot's position on the Sonic 2 and Sonic 3&K execution path. The retirement
   mechanism and the index it reads existed only on the Sonic 1 loop, so Sonic 3&K's
