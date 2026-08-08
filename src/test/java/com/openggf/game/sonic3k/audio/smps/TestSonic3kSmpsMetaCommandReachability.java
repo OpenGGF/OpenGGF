@@ -83,7 +83,7 @@ public class TestSonic3kSmpsMetaCommandReachability {
         assertTrue(metaSubcommands.contains(0x07),
                 "The inventory must observe the live SFX FF07 command");
         assertFalse(metaSubcommands.stream().anyMatch(TARGET_META_SUBCOMMANDS::contains),
-                () -> "Shipped ROM reached an unimplemented meta command: " + metaSubcommands);
+                () -> "Loader-scoped stream set reached an unimplemented meta command: " + metaSubcommands);
     }
 
     private static void assertClosed(ControlFlowInventory inventory, String stream) {
