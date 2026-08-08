@@ -898,8 +898,9 @@ public final class TraceSessionLauncher {
                     levelManager.getRomZoneId(), levelManager.getCurrentAct(),
                     bonus.getActiveType());
         }
-        Integer specialStageIndex = mode == GameMode.SPECIAL_STAGE
-                ? getActiveSpecialStageIndex() : null;
+        Integer specialStageIndex =
+                RunPlaybackObservation.insideRecordedSpecialStageMode(mode)
+                        ? getActiveSpecialStageIndex() : null;
         long dynamicGeneration = GameServices.captureDynamicArtDiagnostics()
                 .segmentGeneration();
         return new RunPlaybackObservation(
