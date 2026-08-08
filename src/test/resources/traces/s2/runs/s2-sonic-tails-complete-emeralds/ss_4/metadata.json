@@ -12,7 +12,7 @@
   "recorder": "native-bizhawk-headless",
   "recorder_version": "3.0",
   "trace_schema": 5,
-  "recording_date": "2026-08-07",
+  "recording_date": "2026-08-08",
   "run_id": "s2-sonic-tails-complete-emeralds",
   "fresh_load": false,
   "segment_index": 8

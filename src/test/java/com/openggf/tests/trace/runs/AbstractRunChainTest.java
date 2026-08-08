@@ -2686,6 +2686,15 @@ abstract class AbstractRunChainTest {
         int passPacedFromRow = passBinder == null
                 ? Integer.MAX_VALUE : rows.passPacedFromRow();
         return localRow -> {
+            // The recorder hooks both halves of SpecialStage_MainLoop
+            // (docs/s2disasm/s2.asm:6674-6721), so the pre-start loop's passes
+            // are in the stream too. They are already executed by the one-step-
+            // per-row pacing this interior uses before passPacedFromRow, so the
+            // cursor is advanced over them rather than re-stepped -- but it must
+            // be advanced, because the binder rejects a skipped observation.
+            List<SpecialStageRunObjectsPassBinder.CompletedPass> observationPasses =
+                    passBinder == null
+                            ? List.of() : passBinder.passesForObservation(localRow);
             TraceRunSpecialStageRows.SpecialStageRowAdmission admission =
                     rows.admission(localRow);
             var beforeManager = GameServices.level().getObjectManager();
@@ -2720,8 +2729,7 @@ abstract class AbstractRunChainTest {
                     // the runtime's own lag compensation").
                     loop.getActiveSpecialStageProvider().setLagCompensation(0);
                     loop.setSpecialStageObservationPacing(
-                            recordedPassPacing(
-                                    movie, passBinder.passesForObservation(localRow)));
+                            recordedPassPacing(movie, observationPasses));
                 }
                 try {
                     stepEngineFrame(loop);

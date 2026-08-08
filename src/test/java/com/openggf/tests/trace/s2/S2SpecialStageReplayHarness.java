@@ -150,15 +150,22 @@ final class S2SpecialStageReplayHarness {
      */
     void stepPasses(
             List<CompletedPass> passes,
-            boolean completeTerminalPreStartPass,
+            int terminalPreStartPassSequence,
             boolean lagged,
             int observationFrame) {
         runProductionRow(observationPhase(lagged, !passes.isEmpty(), activePhase()), () -> {
-            if (completeTerminalPreStartPass) {
-                completeTerminalPreStartPassBody();
-            }
             for (CompletedPass pass : passes) {
-                stepPassBody(pass);
+                if (pass.sequence() == terminalPreStartPassSequence) {
+                    // The pre-start loop's terminal pass is already pending
+                    // engine-side, and the ROM copies Ctrl_1/Ctrl_2 *before*
+                    // that loop's WaitForVint (docs/s2disasm/s2.asm:6684-6685),
+                    // so it owns no post-V-int controller sample for the
+                    // recurring loop's binding path to consume. Publish it
+                    // through the startup boundary instead.
+                    completeTerminalPreStartPassBody();
+                } else {
+                    stepPassBody(pass);
+                }
                 if (pass.completionCursorFrame() < observationFrame) {
                     // The pass finished before this observation's V-int on
                     // hardware, so that V-blank already ran ProcessDMAQueue

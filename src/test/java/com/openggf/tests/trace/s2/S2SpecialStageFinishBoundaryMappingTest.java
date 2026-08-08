@@ -33,7 +33,7 @@ class S2SpecialStageFinishBoundaryMappingTest {
         assertTrue(report.getContextWindow(5181, 0).contains("rings_togo_bcd"),
                 "the raw finish observation must retain its final rings-to-go comparison");
         assertEquals(1, java.util.Collections.frequency(
-                harness.steppedPassSequencesForTest(), 2990));
+                harness.steppedPassSequencesForTest(), terminalPassSequence(trace)));
     }
 
     @Test
@@ -45,7 +45,7 @@ class S2SpecialStageFinishBoundaryMappingTest {
         SpecialStageTraceData trace = SpecialStageTraceData.load(dir);
         S2SpecialStageReplayHarness harness =
                 AbstractS2SpecialStageTraceReplayTest.bootHarness(trace, dir, romFile);
-        harness.forceFinishedAfterPassForTest(2989);
+        harness.forceFinishedAfterPassForTest(terminalPassSequence(trace) - 1);
 
         DivergenceReport report =
                 AbstractS2SpecialStageTraceReplayTest.compareReplay(trace, harness);
@@ -54,7 +54,22 @@ class S2SpecialStageFinishBoundaryMappingTest {
         assertTrue(report.toAssertionSummary().contains("before-terminal-pass@5180"),
                 report.toAssertionSummary());
         assertEquals(1, java.util.Collections.frequency(
-                harness.steppedPassSequencesForTest(), 2990),
+                harness.steppedPassSequencesForTest(), terminalPassSequence(trace)),
                 "terminal pass must still be consumed through its exact BK2 identity");
+    }
+
+    /**
+     * Sequence of the stage's last recorded {@code RunObjects} pass. Derived
+     * from the stream rather than written out, so it stays the ROM's terminal
+     * pass when the recorder's coverage changes -- adding the pre-start half of
+     * {@code SpecialStage_MainLoop} (docs/s2disasm/s2.asm:6674-6692) shifts
+     * every sequence number by the pre-start pass count.
+     */
+    private static int terminalPassSequence(SpecialStageTraceData trace) {
+        return trace.runObjectsEndSnapshots().stream()
+                .mapToInt(snapshot -> ((Number) snapshot.fields()
+                        .get("pass_sequence")).intValue())
+                .max()
+                .orElseThrow();
     }
 }

@@ -3,6 +3,28 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the Sonic 2 special-stage replay harness now models both halves of
+  `SpecialStage_MainLoop`. The recorder gained the pre-start loop's post-`RunObjects`
+  hook, but the comparator still paced recorded passes only from the
+  `SpecialStage_Started` frame onward and synthesised a terminal boundary pass the
+  recorder now records, executing three engine passes where the ROM runs two. Both
+  boundaries are now derived from ROM semantics rather than a frame index: the
+  pre-start loop tests `SpecialStage_Started` only after `RunObjects` returns
+  (`s2.asm`:6691-6692), so the flag `Obj5F` sets (`s2.asm`:9745) first becomes visible
+  to the next iteration's `ReadJoypads` sample -- making the first recorded pass with
+  `started_at_input_sample` set the recurring loop's first pass, and its predecessor
+  the terminal pre-start pass, matched by sequence rather than by frame. All ten
+  special-stage fixtures are republished with their previously unrecorded pre-start
+  passes, and three stale absolute `pass_sequence` constants are now derived from the
+  stream instead of pinned.
+- Fix: Marble Zone push blocks spawn both lava geyser makers the ROM spawns.
+  `PushB_SpawnLavaGeysers` spawns whenever `obX` equals $DD0/$CC0/$BA0 exactly, and a
+  block drifting on lava advances half a pixel per frame, so each trigger X is held for
+  two consecutive frames and produces two makers. An invented de-duplication guard
+  suppressed the second, and the geyser launch had been fitted to reproduce a
+  two-impulse trajectory from one maker; the launch now uses the ROM's
+  `move.w #-$580,obVelY(a1)`. This removes a ~1300-frame slot-allocation cascade in
+  MZ2, cutting its object-slot occupancy divergence from 111 sampled frames to 65.
 - Maintenance/Docs: completed an evidence-tiered dead and unfinished code sweep.
   Seven unreachable Java types (339 lines) were removed after checking callers,
   registries, reflection, resources, service loading, and supported CLIs; the

@@ -288,10 +288,16 @@ class S2SpecialStageExpectedComparisonTest {
         SpecialStageTraceData trace = SpecialStageTraceData.load(Path.of(
                 "src/test/resources/traces/s2/special_stage"));
 
-        assertFalse(AbstractS2SpecialStageTraceReplayTest.isTerminalPreStartPassFrame(trace, 423));
-        assertEquals(true,
-                AbstractS2SpecialStageTraceReplayTest.isTerminalPreStartPassFrame(trace, 424));
-        assertFalse(AbstractS2SpecialStageTraceReplayTest.isTerminalPreStartPassFrame(trace, 425));
+        // The recorder hooks both halves of SpecialStage_MainLoop
+        // (docs/s2disasm/s2.asm:6674-6721), so the terminal pre-start pass is a
+        // recorded pass — the last one whose Vint_S2SS input sample still saw
+        // SpecialStage_Started clear, because the loop only tests the flag
+        // after RunObjects returns (s2.asm:6691-6692). Pass pacing begins at
+        // the publication observation of the recurring loop's first pass.
+        assertEquals(180,
+                AbstractS2SpecialStageTraceReplayTest.terminalPreStartPassSequence(trace));
+        assertEquals(425,
+                AbstractS2SpecialStageTraceReplayTest.passPacingStart(trace, -1));
     }
 
     /**

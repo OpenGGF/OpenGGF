@@ -171,9 +171,6 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
     private static final int PUSH_SOUND_DURATION = 31;
     private int lastPushSoundFrame = -PUSH_SOUND_DURATION;
 
-    // Last X position where a geyser maker was spawned (prevents repeated spawns)
-    private int lastGeyserSpawnX = Integer.MIN_VALUE;
-
     // Set when the ROM's second out_of_range check falls through to DeleteObject.
     // ObjectManager then performs the actual unload so counter-based respawn state
     // is cleared through the normal manager path.
@@ -621,7 +618,6 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
             yVelocity = 0;
             solidState = 0;
             pushReleasePendingAfterRideExit = false;
-            lastGeyserSpawnX = Integer.MIN_VALUE;
         }
     }
 
@@ -649,7 +645,6 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
         motion.xSub = 0;
         motion.ySub = 0;
         pushMomentum = 0;
-        lastGeyserSpawnX = Integer.MIN_VALUE;
         updateDynamicSpawn(x, y);
     }
 
@@ -892,13 +887,14 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // Guard: prevent spawning multiple makers at the same X position.
-        // The ROM relies on object slot exhaustion to limit this; our engine
-        // has dynamic object lists so we must guard explicitly.
-        if (x == lastGeyserSpawnX) {
-            return;
-        }
-        lastGeyserSpawnX = x;
+        // No de-duplication here. PushB_SpawnLavaGeysers runs every frame from
+        // PushB_LavaPlatform and spawns a GeyserMaker whenever obX equals one of
+        // the hardcoded X-positions exactly (docs/s1disasm/_incObj/33 MZ, LZ
+        // Pushable Blocks.asm:229-269). A block drifting on lava moves at
+        // pblock_lavaspeed>>3 = +/-$80 (half a pixel per frame, same file
+        // lines 157-159/329-331), so obX holds each integer value for two
+        // consecutive frames and the ROM spawns a maker on both of them. The
+        // only thing that stops it is FindFreeObj failing.
 
         // PushB_LoadLava: spawn GeyserMaker object
         // _move.b #id_GeyserMaker,obID(a1)
@@ -926,16 +922,12 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
     void applyLavaGeyserLaunch(int velY) {
         // bset #1,obStatus(a1) -> airborne flag (separate from obSolid)
         airborne = true;
-        // GMake_MakeLava runs from a later SST slot than its parent push block.
-        // The recorded REV01 MZ2 credits trace shows the first parent airborne
-        // frame using the raw #-$580 displacement before loc_C056's +$18 gravity
-        // becomes visible in the next frame's velocity. Seeding the pre-gravity
-        // value plus the compensating subpixel fraction preserves that slot phase.
-        // References:
-        //   docs/s1disasm/_incObj/4C & 4D Lava Geyser Maker.asm (GMake_MakeLava)
-        //   docs/s1disasm/_incObj/33 Pushable Blocks.asm (loc_C056)
-        yVelocity = (short) (velY - FALL_GRAVITY);
-        motion.ySub = (FALL_GRAVITY << 8) & 0xFFFF;
+        // move.w #-$580,obVelY(a1) -- a plain velocity store, no subpixel touch
+        // (docs/s1disasm/_incObj/4C, 4D MZ Lava Geyser and Maker.asm:83-87).
+        // PushB_OnLava's airborne branch already runs SpeedToPos before the
+        // +$18 gravity add (same order as loc_C056), so no phase compensation
+        // is required here.
+        yVelocity = (short) velY;
     }
 
     /**

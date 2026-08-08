@@ -6,6 +6,7 @@ import com.openggf.game.sonic3k.specialstage.S3kSpecialStageTraceData;
 import com.openggf.trace.DynamicArtTransfer;
 import com.openggf.trace.SpecialStageRunObjectsPassBinder;
 import com.openggf.trace.SpecialStageTraceData;
+import com.openggf.trace.TraceEvent;
 import com.openggf.trace.TraceMetadata;
 import com.openggf.trace.timing.HardwareTimingSchedule;
 import com.openggf.trace.timing.HardwareTimingStreamLoader;
@@ -210,13 +211,45 @@ public sealed interface TraceRunSpecialStageRows
                                     && row == finishObserved.getAsInt())));
         }
 
+        /**
+         * The publication row of the recurring loop's first object pass.
+         *
+         * <p>{@code SpecialStage_MainLoop} is two loops (s2.asm:6674-6721) and
+         * both run {@code RunObjects}. The pre-start loop tests
+         * {@code SpecialStage_Started} only after its pass returns
+         * (s2.asm:6691-6692), so the flag Obj5F set (s2.asm:9745) is first seen
+         * by the <em>next</em> iteration's {@code Vint_S2SS ReadJoypads}
+         * sample. The first recorded pass whose {@code started_at_input_sample}
+         * is set is therefore, by construction, the recurring loop's first
+         * pass. Rows before it stay one step per row: there the ROM copies the
+         * pad words before {@code WaitForVint} (s2.asm:6684-6685), so the
+         * recurring pass is not yet the input-binding authority.
+         */
         @Override
         public int passPacedFromRow() {
-            return trace.controlStateTransitions().stream()
-                    .filter(SpecialStageTraceData.ControlStateTransition::started)
-                    .mapToInt(SpecialStageTraceData.ControlStateTransition::frame)
+            return trace.runObjectsEndSnapshots().stream()
+                    .sorted(java.util.Comparator.comparingInt(
+                            snapshot -> passField(snapshot, "pass_sequence")))
+                    .filter(snapshot -> passField(snapshot, "started_at_input_sample") != 0)
+                    .mapToInt(TraceEvent.StateSnapshot::frame)
                     .findFirst()
                     .orElse(Integer.MAX_VALUE);
+        }
+
+        private static int passField(TraceEvent.StateSnapshot snapshot, String name) {
+            Object raw = snapshot.fields().get(name);
+            if (raw == null) {
+                throw new IllegalStateException(
+                        "run_objects_end is missing " + name + " at frame "
+                                + snapshot.frame());
+            }
+            if (raw instanceof Number number) {
+                return number.intValue();
+            }
+            String text = String.valueOf(raw);
+            return text.startsWith("0x") || text.startsWith("0X")
+                    ? Integer.parseUnsignedInt(text.substring(2), 16)
+                    : Integer.parseInt(text);
         }
 
         @Override

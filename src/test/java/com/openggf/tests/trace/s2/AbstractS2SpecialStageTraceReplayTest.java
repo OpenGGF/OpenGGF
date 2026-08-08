@@ -328,11 +328,8 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
                                 && frame == ssFinishedObserved.getAsInt()),
                         trace.metadata().bk2FrameOffset(),
                         harness.movieFrames());
-        int passPacingStart = trace.controlStateTransitions().stream()
-                .filter(SpecialStageTraceData.ControlStateTransition::started)
-                .mapToInt(SpecialStageTraceData.ControlStateTransition::frame)
-                .findFirst()
-                .orElse(Integer.MAX_VALUE);
+        int passPacingStart = passPacingStart(trace, Integer.MAX_VALUE);
+        int terminalPreStartSequence = terminalPreStartPassSequence(trace);
         int entryFrame = specialStageEntryFrame(trace);
         int stageStateVisibleFrame = stageStateVisibleFrame(trace, entryFrame);
 
@@ -366,7 +363,7 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
             } else {
                 harness.stepPasses(
                         completedPasses,
-                        isTerminalPreStartPassFrame(trace, f),
+                        terminalPreStartSequence,
                         tf.lag(),
                         f);
                 if (tf.lag()) {
@@ -416,7 +413,7 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
                     }
                 } else {
                     harness.stepPasses(
-                            completedPasses, false,
+                            completedPasses, terminalPreStartSequence,
                             trace.getFrame(sf).lag(),
                             sf);
                 }
@@ -452,7 +449,7 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
             }
             CompletedPass terminalPass = finishPasses.get(0);
             harness.stepPasses(
-                    List.of(terminalPass), false,
+                    List.of(terminalPass), terminalPreStartSequence,
                     trace.getFrame(observed).lag(),
                     observed);
             Sonic2SpecialStageComparisonState terminalState = harness.capture();
@@ -512,11 +509,7 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
                 states.put(f, state);
             }
         }
-        int pacingStart = trace.controlStateTransitions().stream()
-                .filter(SpecialStageTraceData.ControlStateTransition::started)
-                .mapToInt(SpecialStageTraceData.ControlStateTransition::frame)
-                .findFirst()
-                .orElse(trace.frameCount());
+        int pacingStart = passPacingStart(trace, trace.frameCount());
         java.util.Set<Integer> cursorPrecededRows = new java.util.HashSet<>();
         List<DynamicArtSpillNormalization.PassBinding> passBindings = new ArrayList<>();
         for (TraceEvent.StateSnapshot snapshot : trace.runObjectsEndSnapshots()) {
@@ -663,14 +656,76 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
     }
 
     /**
-     * The observation that first exposes {@code SpecialStage_Started} follows
-     * the terminal pre-start {@code RunObjects} pass which set it. Recorder
-     * pass identity begins with the next VInt sample, so replay must publish
-     * this one semantic boundary pass through the native startup path.
+     * Sequence of the terminal pre-start {@code RunObjects} pass, or -1 when
+     * the stream holds no pre-start pass at all.
+     *
+     * <p>{@code SpecialStage_MainLoop} is two loops, not one
+     * (docs/s2disasm/s2.asm:6674-6721). The pre-start loop runs its own
+     * {@code jsr (RunObjects).l} and only then tests
+     * {@code SpecialStage_Started} at the bottom (s2.asm:6691-6692), so the
+     * flag Obj5F set (s2.asm:9745) is not observed until after that pass
+     * returned. Every pass therefore records the flag as sampled by the
+     * {@code Vint_S2SS ReadJoypads} that preceded it, and the first pass whose
+     * sample already saw the flag set is by construction the first iteration of
+     * the recurring loop; the pass before it is the terminal pre-start pass
+     * that set it. Neither boundary is read off a frame index.
+     *
+     * <p>The engine models the same split: pre-start iterations execute their
+     * pass inline at their own V-int, while the terminal one is held pending so
+     * the recurring loop's binding has a slot
+     * ({@code Sonic2SpecialStageManager.completeTerminalPreStartPassWithoutVint}).
+     * Replay therefore consumes the recorded terminal pass through that
+     * boundary rather than binding recurring-loop input to it.
      */
-    static boolean isTerminalPreStartPassFrame(SpecialStageTraceData trace, int frame) {
-        return trace.controlStateTransitions().stream()
-                .anyMatch(transition -> transition.started() && transition.frame() == frame);
+    static int terminalPreStartPassSequence(SpecialStageTraceData trace) {
+        int terminal = -1;
+        for (TraceEvent.StateSnapshot snapshot : passesInSequenceOrder(trace)) {
+            if (startedAtInputSample(snapshot) != 0) {
+                break;
+            }
+            terminal = numericTraceValue(requireField(snapshot, "pass_sequence"));
+        }
+        return terminal;
+    }
+
+    /**
+     * The observation from which replay is paced by recorded object passes: the
+     * publication observation of the first recurring-loop pass. See
+     * {@link #terminalPreStartPassSequence} for why that pass is identified by
+     * its own {@code SpecialStage_Started} input sample.
+     *
+     * <p>A stream recorded before the pre-start hook existed carries no
+     * pre-start pass; there the first recorded pass is already the recurring
+     * loop's and this reduces to that pass's observation just the same.
+     */
+    static int passPacingStart(SpecialStageTraceData trace, int absent) {
+        for (TraceEvent.StateSnapshot snapshot : passesInSequenceOrder(trace)) {
+            if (startedAtInputSample(snapshot) != 0) {
+                return snapshot.frame();
+            }
+        }
+        return absent;
+    }
+
+    private static List<TraceEvent.StateSnapshot> passesInSequenceOrder(
+            SpecialStageTraceData trace) {
+        return trace.runObjectsEndSnapshots().stream()
+                .sorted(java.util.Comparator.comparingInt(snapshot ->
+                        numericTraceValue(requireField(snapshot, "pass_sequence"))))
+                .toList();
+    }
+
+    private static int startedAtInputSample(TraceEvent.StateSnapshot snapshot) {
+        return numericTraceValue(requireField(snapshot, "started_at_input_sample"));
+    }
+
+    private static Object requireField(TraceEvent.StateSnapshot snapshot, String name) {
+        Object value = snapshot.fields().get(name);
+        if (value == null) {
+            throw new IllegalStateException(
+                    "run_objects_end is missing " + name + " at frame " + snapshot.frame());
+        }
+        return value;
     }
 
     /**

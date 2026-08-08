@@ -65568,3 +65568,67 @@ S1/S2 12 -> 10 red, zero regressions.
   errors, ss_5's former 3, and the EHZ chain all depend on that republication, and
   the capture also produces the additive sixth segment `seg4_ehz2` (bk2 22782, 36
   frames) that needs an explicit decision.
+
+## 2026-08-08 — round eight: special-stage pre-start pass window, MZ2 push-block geysers
+
+Command (all runs): `mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1
+-Dsurefire.runOrder=alphabetical` with all three ROM properties. Base commit
+228e2effa. Result: 211 tests, 11 failures — the 10 standing reds plus
+`S2SpecialStageRecorderContractTest`, which was ALREADY red at 228e2effa with the
+identical message (`expected: <1.4-s2ss-native> but was: <3.0>`) and is a
+`recorder_version` provenance assertion, not a replay divergence. No test moved
+green->red.
+
+- **The special-stage fixtures are republished and the replay side now models both
+  halves of `SpecialStage_MainLoop`.** The recorder's $523A hook (landed at
+  228e2effa) was inert because the comparator paced off `run_objects_end` only from
+  the `SpecialStage_Started` frame onward and free-ran the engine before it. The
+  extra pass was NOT an off-by-one in where the window opens (the engine's 181
+  pre-start executions already matched the 181 recorded passes) — the comparator
+  SYNTHESISED a boundary pass the newly-hooked recorder now records, calling
+  `completeTerminalPreStartPass()` at the control-start frame AND then stepping
+  recorded passes 180 and 181: three engine passes for the ROM's two, hence
+  `track_drawing_index` expected=2 actual=3.
+  Both boundaries are now identified from ROM semantics rather than a frame index:
+  the pre-start loop tests `SpecialStage_Started` only AFTER `RunObjects` returns
+  (s2.asm:6691-6692), so the flag Obj5F sets (s2.asm:9745) is first visible to the
+  NEXT iteration's `Vint_S2SS` `ReadJoypads` sample. The first recorded pass with
+  `started_at_input_sample != 0` is therefore by construction the recurring loop's
+  first pass, and the pass BEFORE it is the terminal pre-start pass — matched by
+  SEQUENCE, not by frame. The three stale absolute `pass_sequence` constants in the
+  recorder-contract and finish-boundary tests (2990, 2989, 318) were rederived from
+  the stream rather than re-pinned.
+  EHZ chain seg1 DPLC errorCount 37933 -> 20702, still red. ss_1/ss_2/ss_7 are
+  byte-identically unchanged (10 errors @393 `sonic_ss_x` -87/-93; 5 @126
+  `dynamic_art.edge[0].mapping_frame` 71/94; 16993 @0 `outstanding_transfer_ids`),
+  which DISPROVES the premise that the pass window gated them — three unrelated
+  residual causes.
+- **MZ2 push-block lava geysers: a fitted constant and an invented guard that were
+  cancelling each other.** `PushB_SpawnLavaGeysers` runs every frame and spawns
+  whenever `obX` equals $DD0/$CC0/$BA0 exactly; a block drifting on lava moves at
+  `pblock_lavaspeed>>3` = $80, half a pixel per frame, so `obX` holds each integer
+  for TWO consecutive frames and the ROM spawns TWO GeyserMakers. The fixture shows
+  this directly — `object_near` has 0x4C in ROM slot 52 at f6365 AND slot 54 at
+  f6366, both at (3504,1152). An invented `lastGeyserSpawnX` de-duplication guard
+  suppressed the second, and `applyLavaGeyserLaunch` had then been fitted to make
+  ONE maker reproduce a two-impulse trajectory — its in-code justification was
+  literally "the recorded REV01 MZ2 credits trace shows...", a rule-3 violation
+  sitting in committed green code. Restoring the second maker and replacing the
+  fitted launch with the ROM's plain `move.w #-$580,obVelY(a1)` matches the
+  hand-verified subpixel trajectory every frame (1136.0 -5.5 -> 1130.5, re-impulse,
+  -5.5 -> 1125.0, then gravity-decayed) where the one-impulse model diverged at
+  f6397. MZ2 occupancy divergence 111 -> 65 samples; the entire f6366-f7671 cascade
+  (2-3 slots skewed for ~1300 frames) is gone. **No test changed colour** — which
+  is the point: the defect was invisible to the suite and would have desynced the
+  first new MZ2 recording.
+  Next MZ2 lead: at f10421 the engine still holds a push-block in slot 36 where the
+  ROM has a ring.
+- **REFUTED this round:** Obj53 CollapsingFloors as the MZ2/SLZ3 cause (MZ2's
+  fixture contains ZERO object 0x53 in any `slot_dump` for the whole act, and
+  neither target shows a single 0x53 occupancy divergence; the engine HAS the
+  object, `Sonic1ObjectRegistry.java:177`). The SLZ1 fragment slot gap is real but
+  SLZ1 is green. Also refuted: the pre-start pass window as the cause of
+  ss_1/ss_2/ss_7.
+- **Measurement hazard, new:** MCZ trace results are FORK-ORDER SENSITIVE.
+  Attribution on MCZ requires one `-Dtest` per `mvn` invocation, not a single
+  batched sweep. This is a second hazard beyond the silently-ignored `-DforkCount`.
