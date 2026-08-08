@@ -18,7 +18,7 @@ display:
 
 # ── Gameplay ──
 gameplay:
-  loadTimeSimulation: "NONE"   # NONE, PROFILED, FAST (currently NONE), or REALISTIC (currently PROFILED)
+  loadTimeSimulation: "NONE"   # NONE, PROFILED, FAST (warns; uses NONE), or REALISTIC (warns; uses PROFILED)
 
 # ── Input ──
 input:

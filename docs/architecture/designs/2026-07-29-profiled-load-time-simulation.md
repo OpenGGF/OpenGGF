@@ -15,6 +15,25 @@ It preserves production ROM bytes, queue ownership, FIFO contention, service bou
 global-empty predicates, rewind, and trace isolation. It is a pacing simulation, not
 cycle-accurate hardware emulation.
 
+## Current status (2026-08-08)
+
+The S3K `PROFILED` implementation is live for the published Kosinski service model.
+`FAST` and `REALISTIC` remain intentionally unfinished and are retained as explicit
+resolver aliases: `FAST` warns and returns the immediate profile, while `REALISTIC`
+warns and returns the supplied profiled profile. The warning is emitted by each
+`LoadTimeProfileFactory.resolve(...)` call; the factory does not maintain a global
+warn-once registry. A normal gameplay context usually resolves once at construction,
+but context reconstruction can resolve again.
+
+No authoritative cross-game semantics can be derived from the current owners. The
+`LoadTimeProfile` submission contract and `HardwareWorkKind` registry currently model
+S3K Kosinski module/direct work only. S1/S2 Nemesis PLC and dynamic-art/DPLC services
+remain game-owned queues and do not submit through `HardwareTimingService`. The
+cross-game hardware-timing contract permits delaying already-submitted production art
+work, but it does not define arbitrary safety delays or allow trace comparison data to
+choose gameplay timing. Implementing either reserved mode therefore requires a new
+model and measurements, not a fitted constant or a trace-specific branch.
+
 ## Configuration
 
 The configuration key is:
