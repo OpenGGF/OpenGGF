@@ -10,6 +10,10 @@ All notable changes to the OpenGGF project are documented in this file.
   start, deceleration, child ordering, and both airborne timer-expiry
   transitions through `loc_39A7C`. The dedicated DEZ ending replay
   remains green on both the reviewed base and candidate with verified REV01 ROM.
+- Fix: the pre-game master title now emits distinct host-owned navigate,
+  confirm, and error feedback. The cues use deterministic presentation PCM and
+  remain independent of whichever game ROM is selected; repeated boundary,
+  confirm, and load-error paths do not replay unwanted cues.
 - Cleanup: removed the unused `AbstractLevel.markAllDirty()` placeholder. The
   production rewind adapter already invalidates manager-owned tilemaps when
   restored geometry references change, while persistent Plane B state has its

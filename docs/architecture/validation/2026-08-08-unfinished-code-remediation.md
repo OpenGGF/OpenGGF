@@ -159,7 +159,32 @@ Highest-priority remaining work is deliberately visible rather than deleted:
 1. Port Big Arm from the native object graph and defeat flow, then validate the
    Knuckles LBZ route.
 2. Capture route/trace evidence for the AIZ napalm and AIZ2 splash changes.
-3. Continue the roadmap's title-menu audio and load-profile semantics work.
+3. Continue the roadmap's load-profile semantics work.
+
+## Follow-up: master-title audio disposition
+
+The Wave 3 title-menu audio item is resolved on the remediation follow-up
+branch. `MasterTitleScreen` now emits typed host-owned `NAVIGATE`, `CONFIRM`,
+and `ERROR` cues through an injected sink. `Engine` connects that sink to the
+existing `AudioManager` command timeline and initializes the normal LWJGL
+presentation backend before the bootstrap title is shown. Because the title
+screen runs before ROM/profile selection, the presentation source factory
+resolves these names to deterministic synthesized PCM (`host/ui/*`) rather
+than asking a game SMPS loader for a fabricated SFX id. The same stable asset
+identity can be regenerated during presentation snapshot restore.
+
+Focused JDK 21 validation:
+
+```text
+mvn -Dmse=off -Dsurefire.forkCount=1 \
+  -Dtest=com.openggf.game.TestMasterTitleScreenAudio,com.openggf.audio.presentation.TestHostUiSfx test
+Tests run: 4, Failures: 0, Errors: 0, Skipped: 0
+```
+
+The interaction tests cover one navigate, one confirm, one missing-ROM error,
+selection-boundary silence, repeated confirm suppression, and repeated
+load-error suppression. The PCM test proves the host cues resolve to stable,
+distinct, non-silent samples and that the navigate sample mixes into output.
 
 The original audit remains the complete disposition ledger; this report records
 only what this remediation branch changed or deliberately rejected.

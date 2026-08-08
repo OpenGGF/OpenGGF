@@ -339,11 +339,14 @@ public final class AudioPresentationSourceFactory
             String name,
             int priority,
             float pitch) throws IOException {
-        String assetId = fallbackSfxAsset(name);
+        DecodedPcm hostPcm = HostUiSfx.forCue(name);
+        DecodedPcm pcm = hostPcm != null
+                ? hostPcm
+                : decode(fallbackSfxAsset(name));
         return SampleBackedVoice.oneShot(
                 voiceId,
                 priority,
-                decode(assetId),
+                pcm,
                 roundedOutputSampleRate(),
                 pitch,
                 1.0f);
@@ -361,6 +364,9 @@ public final class AudioPresentationSourceFactory
     @Override
     public DecodedPcm resolvePcm(String assetId) {
         DecodedPcm pcm = settings.pcmCache().get(assetId);
+        if (pcm == null) {
+            pcm = HostUiSfx.forAsset(assetId);
+        }
         if (pcm == null) {
             throw new IllegalStateException(
                     "no cached PCM for " + assetId);

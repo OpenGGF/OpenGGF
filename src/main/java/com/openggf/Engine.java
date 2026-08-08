@@ -49,6 +49,7 @@ import com.openggf.data.RomManager;
 import com.openggf.game.save.SaveManager;
 import com.openggf.game.save.SaveSlotSummary;
 import com.openggf.game.save.SelectedTeam;
+import com.openggf.game.launch.LaunchProfileStore;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
@@ -111,6 +112,7 @@ public class Engine {
 	private SpriteManager spriteManager;
 	private final GraphicsManager graphicsManager;
 	private final AudioManager audioManager;
+	private boolean audioBackendInitialized;
 	private final RomManager romManager;
 	private final RomDetectionService romDetectionService;
 	private final CrossGameFeatureProvider crossGameFeatureProvider;
@@ -539,6 +541,7 @@ public class Engine {
 		// This line is critical for LWJGL's interoperation with GLFW's
 		// OpenGL context, or any context that is managed externally.
 		GL.createCapabilities();
+		ensureAudioBackend();
 
 		try {
 			initializePresentationGraphics();
@@ -576,7 +579,7 @@ public class Engine {
 			// master title (if enabled) or Phase 2 init is deferred to
 			// exitLegalDisclaimer once the user dismisses the screen.
 		} else if (masterTitleOnStartup) {
-			masterTitleScreen = new MasterTitleScreen(configService);
+			masterTitleScreen = createMasterTitleScreen();
 			masterTitleScreen.initialize();
 			gameLoop.setGameMode(GameMode.MASTER_TITLE_SCREEN);
 			// Skip Phase 2 entirely - will be called on game selection
@@ -863,7 +866,7 @@ public class Engine {
 		if (masterTitleScreen != null) {
 			masterTitleScreen.cleanup();
 		}
-		masterTitleScreen = new MasterTitleScreen(configService);
+		masterTitleScreen = createMasterTitleScreen();
 		if (graphicsManager.isGlInitialized()) {
 			masterTitleScreen.initialize();
 		}
@@ -931,7 +934,7 @@ public class Engine {
 
 		boolean masterTitleOnStartup = configService.getBoolean(SonicConfiguration.MASTER_TITLE_SCREEN_ON_STARTUP);
 		if (masterTitleOnStartup) {
-			masterTitleScreen = new MasterTitleScreen(configService);
+			masterTitleScreen = createMasterTitleScreen();
 			masterTitleScreen.initialize();
 			gameLoop.setGameMode(GameMode.MASTER_TITLE_SCREEN);
 		} else {
@@ -977,7 +980,7 @@ public class Engine {
 		}
 		refreshLaunchSessionCachedConfig();
 		applyResolvedDisplayDimensions();
-		masterTitleScreen = new MasterTitleScreen(configService);
+		masterTitleScreen = createMasterTitleScreen();
 		masterTitleScreen.initialize();
 		gameLoop.setGameMode(GameMode.MASTER_TITLE_SCREEN);
 		// Counter the teardown's fade-to-black. Without this the screen
@@ -1084,9 +1087,7 @@ public class Engine {
 	}
 
 	private void initializeGlobalGameplayServices() {
-		if (configService.getBoolean(SonicConfiguration.AUDIO_ENABLED)) {
-			audioManager.setBackend(new LWJGLAudioBackend(configService, profiler));
-		}
+		ensureAudioBackend();
 
 		if (configService.getBoolean(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED)) {
 			try {
@@ -1097,6 +1098,20 @@ public class Engine {
 						+ "Check that the " + configService.getString(SonicConfiguration.CROSS_GAME_SOURCE)
 						+ " ROM is configured and accessible. Error: " + e.getMessage());
 			}
+		}
+	}
+
+	private MasterTitleScreen createMasterTitleScreen() {
+		return new MasterTitleScreen(configService,
+				new LaunchProfileStore(configService),
+				cue -> audioManager.playSfx(cue.sfxName()));
+	}
+
+	private void ensureAudioBackend() {
+		if (configService.getBoolean(SonicConfiguration.AUDIO_ENABLED)
+				&& !audioBackendInitialized) {
+			audioManager.setBackend(new LWJGLAudioBackend(configService, profiler));
+			audioBackendInitialized = true;
 		}
 	}
 

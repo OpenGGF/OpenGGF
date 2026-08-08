@@ -82,8 +82,11 @@ that every audited feature is now complete.
 
 ### Wave 3 — polish, configuration, and S2 parity
 
-1. Decide and implement/document `MasterTitleScreen` navigation, confirmation,
-   and error audio.
+1. [Resolved 2026-08-08] `MasterTitleScreen` navigation, confirmation, and
+   error audio now use injected host-owned cues. Engine startup owns the
+   `AudioManager` route, and the unified presentation fallback synthesizes
+   deterministic PCM without a selected game ROM; interaction tests prove
+   distinct events, boundary silence, and duplicate suppression.
 2. Give FAST/REALISTIC load profiles authoritative timing semantics or migrate
    them out of the advertised configuration surface.
 3. **Resolved 2026-08-08:** Corrected Mecha Sonic outer-loop `ObjectMove` and

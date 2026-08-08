@@ -103,6 +103,35 @@ public class MasterTitleScreen {
         INACTIVE, FADE_IN, ACTIVE, ERROR_DISPLAY, CONFIRMING, EXITING
     }
 
+    /**
+     * Host-owned feedback events for the bootstrap menu. These deliberately
+     * have no game-ROM sound id: the master title runs before a game profile
+     * or ROM is selected.
+     */
+    public enum AudioCue {
+        NAVIGATE("UI_NAVIGATE"),
+        CONFIRM("UI_CONFIRM"),
+        ERROR("UI_ERROR");
+
+        private final String sfxName;
+
+        AudioCue(String sfxName) {
+            this.sfxName = sfxName;
+        }
+
+        public String sfxName() {
+            return sfxName;
+        }
+    }
+
+    @FunctionalInterface
+    public interface AudioSink {
+        AudioSink NO_OP = cue -> {
+        };
+
+        void play(AudioCue cue);
+    }
+
     // Cloud sprite for parallax animation
     private static class CloudSprite {
         int textureId;
@@ -172,6 +201,7 @@ public class MasterTitleScreen {
     private final List<CloudSprite> clouds = new ArrayList<>();
     private final SonicConfigurationService configService;
     private final LaunchProfileStore launchProfileStore;
+    private final AudioSink audioSink;
     private LaunchConfigPanel launchConfigPanel;
     private boolean programmaticSelection;
 
@@ -195,8 +225,15 @@ public class MasterTitleScreen {
 
     public MasterTitleScreen(SonicConfigurationService configService,
                              LaunchProfileStore launchProfileStore) {
+        this(configService, launchProfileStore, AudioSink.NO_OP);
+    }
+
+    public MasterTitleScreen(SonicConfigurationService configService,
+                             LaunchProfileStore launchProfileStore,
+                             AudioSink audioSink) {
         this.configService = Objects.requireNonNull(configService, "configService");
         this.launchProfileStore = Objects.requireNonNull(launchProfileStore, "launchProfileStore");
+        this.audioSink = Objects.requireNonNull(audioSink, "audioSink");
     }
 
     public void initialize() {
@@ -628,10 +665,17 @@ public class MasterTitleScreen {
         font.drawText(filename, filenameX, 98, filenameScale, 1f, 0.55f, 0.55f, 1f);
     }
 
-    // Audio stubs
-    private void playNavigateSound() { /* TODO: ROM-independent SFX */ }
-    private void playConfirmSound()  { /* TODO: ROM-independent SFX */ }
-    private void playErrorSound()    { /* TODO: ROM-independent SFX */ }
+    private void playNavigateSound() {
+        audioSink.play(AudioCue.NAVIGATE);
+    }
+
+    private void playConfirmSound() {
+        audioSink.play(AudioCue.CONFIRM);
+    }
+
+    private void playErrorSound() {
+        audioSink.play(AudioCue.ERROR);
+    }
 
     /**
      * Returns true when the user has selected a game and confirmed.
@@ -666,6 +710,9 @@ public class MasterTitleScreen {
                     break;
                 }
             }
+        }
+        if (this.state != State.ERROR_DISPLAY) {
+            playErrorSound();
         }
         this.state = State.ERROR_DISPLAY;
         this.errorFrameCounter = 0;
