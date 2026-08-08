@@ -248,11 +248,6 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     private final LevelSeamlessTransitionExecutor seamlessTransitionExecutor;
     private EngineContext engineServices; private EditorSaveManager editorSaveManager;
 
-    @Deprecated(forRemoval = true)
-    protected LevelManager() {
-        throw new IllegalStateException("LevelManager requires explicit gameplay-mode dependencies");
-    }
-
     /**
      * Constructs a LevelManager with explicit manager dependencies.
      * Used by session-owned gameplay-mode construction to inject peers instead of

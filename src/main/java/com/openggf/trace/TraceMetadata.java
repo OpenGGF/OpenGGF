@@ -362,16 +362,6 @@ public record TraceMetadata(
     }
 
     /**
-     * @deprecated Use {@link #hasPerFrameSlotMachineState()}. The current
-     * recorder schema name is still CNZ-specific, but replay policy should
-     * consume the generic feature capability.
-     */
-    @Deprecated
-    public boolean hasPerFrameCnzSlotMachineState() {
-        return hasPerFrameSlotMachineState();
-    }
-
-    /**
      * Whether the trace emits S3K fixed Breathing_bubbles /
      * Breathing_bubbles_P2 controller diagnostics and their visible dynamic
      * {@code Obj_AirCountdown} children.

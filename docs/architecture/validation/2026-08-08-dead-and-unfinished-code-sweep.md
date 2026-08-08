@@ -88,6 +88,34 @@ rewind report was restored. Native resource JSON validated with `jq empty`; the
 Kosinski include is absent and the broad `shaders/.*\\.(glsl|vert|frag)` include
 remains.
 
+### Task 3 compatibility cleanup result
+
+After removing only the caller-free compatibility aliases, the protected
+no-argument `LevelManager` constructor, and the six unverified duplicate S3K
+results constants, Task 3 ran the following commands serially from this
+worktree:
+
+```bash
+mvn clean -Dmse=off -DskipTests test-compile
+WORKTREE=$(pwd)
+mvn clean -Dmse=off \
+  "-Ds3k.rom.path=${WORKTREE}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dtest=com.openggf.tests.TestBuildToolingGuard,com.openggf.tools.disasm.TestRomOffsetFinderIncludedAsmLabels,com.openggf.trace.TestTraceV5LoadingContract,com.openggf.game.sonic3k.objects.TestCnzMinibossDefeatPhase,com.openggf.level.TestLevelManagerInitialPresentationPlcLifecycle,com.openggf.tests.TestS3kSpecialStageHeadlessBoot" \
+  test
+```
+
+Both commands passed. The focused run produced 91 normalized rows: 91 PASS, 0
+FAILURE, 0 ERROR, 0 SKIPPED. Its normalized manifest is
+`focused-compat-development.tsv.gz`. Compared with
+`focused-compat-baseline.tsv.gz`, the only two changes are environmental
+improvements: `TestBuildToolingGuard` can now write its temporary Git config,
+and `TestS3kSpecialStageHeadlessBoot` can load `liblwjgl.so`; both changed from
+the recorded baseline failure/error to PASS. The suite did not modify
+`docs/status/rewind-round-trip-gaps.md`, so no generated rewind report was
+restored. Exact-symbol scans found the removed trace aliases only in the
+intentional guard literals; remaining non-code hits are historical sweep
+evidence.
+
 ### Merged result
 
 Not yet run. Task 5 records `merged.tsv.gz`, comparison against the updated
