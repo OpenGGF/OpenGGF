@@ -153,9 +153,9 @@ bootstrap suite is the available focused validation for this change.
 
 **Status: Fixed (2026-08-08).** `AizEndBossWaterfallChild` now ports the
 subtype-0 emerge and subtype-2 re-submerge/drop paths. The child is allocated
-through the production `ObjectManager` immediately after the boss, uses the
-ROM mapping/flip scripts and production ROM art provider, and has a generic
-rewind recreation path.
+through the production `ObjectManager` first-free-forward slot search from the
+boss, uses the ROM mapping/flip scripts and production ROM art provider, and
+has a generic rewind recreation path.
 
 Owner validation includes `TestS3kAizEndBossGraphRewind` (real child slots and
 rewind round-trip), `TestAiz2ObjectRewindCodecs`, and

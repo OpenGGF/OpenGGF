@@ -110,13 +110,8 @@ public final class AizEndBossWaterfallChild extends AbstractObjectInstance
             moveSprite2();
             animate(DROP_FRAMES);
         } else {
-            // CreateChild1_Normal gives the child a snapshot of the parent's
-            // position. Emerge itself does not move the boss, but keeping the
-            // relationship live also covers a same-frame reposition in tests.
-            currentX = boss.getX();
-            currentY = boss.getY();
-            ySubpixel = 0;
-            updateDynamicSpawn(currentX, currentY);
+            // CreateChild1_Normal gives the child a position snapshot. The ROM
+            // child does not follow later boss movement during this routine.
             animate(EMERGE_FRAMES);
         }
     }
@@ -191,7 +186,7 @@ public final class AizEndBossWaterfallChild extends AbstractObjectInstance
             return;
         }
 
-        renderer.drawFrameIndex(mappingFrame, currentX, currentY, renderFlipX, false);
+        renderer.drawFrameIndex(mappingFrame, currentX, currentY, renderFlipX, false, 0);
     }
 
     @Override

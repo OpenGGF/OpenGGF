@@ -23,6 +23,11 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
+import com.openggf.level.objects.TestObjectServices;
+import com.openggf.level.LevelManager;
+import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.level.render.PatternSpriteRenderer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,6 +45,10 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class TestS3kAizEndBossGraphRewind {
 
@@ -109,16 +118,30 @@ class TestS3kAizEndBossGraphRewind {
         ObjectManager objectManager = harness.objectManager();
         AizEndBossInstance boss = only(objectManager, AizEndBossInstance.class);
 
+        // Occupy two slots after the boss: CreateChild1_Normal scans forward
+        // for the first free slot, rather than assuming bossSlot + 1.
+        AizEndBossFlameColumnChild occupiedA = objectManager.createDynamicObject(
+                () -> new AizEndBossFlameColumnChild(boss));
+        AizEndBossFlameColumnChild occupiedB = objectManager.createDynamicObject(
+                () -> new AizEndBossFlameColumnChild(boss));
+
         invokeBooleanArg(boss, "beginEmerge", false);
         AizEndBossWaterfallChild emerge = only(objectManager, AizEndBossWaterfallChild.class);
         assertEquals(0, emerge.getSpawn().subtype(),
                 "ChildObjDat_69D2E starts subtype 0 for the first emerge");
-        assertEquals(boss.getSlotIndex() + 1, emerge.getSlotIndex(),
-                "CreateChild1_Normal must allocate the splash immediately after the boss");
+        int highestOccupiedSlot = Math.max(occupiedA.getSlotIndex(), occupiedB.getSlotIndex());
+        assertTrue(emerge.getSlotIndex() > highestOccupiedSlot,
+                "CreateChild1_Normal must allocate at the first free slot after occupied slots");
+        int emergeX = emerge.getX();
+        int emergeY = emerge.getY();
+        boss.getState().x += 0x40;
+        boss.getState().y += 0x20;
 
         for (int frame = 0; frame < 13; frame++) {
             emerge.update(frame, null);
         }
+        assertEquals(emergeX, emerge.getX(), "emerge child must retain CreateChild1_Normal x snapshot");
+        assertEquals(emergeY, emerge.getY(), "emerge child must retain CreateChild1_Normal y snapshot");
         assertTrue(emerge.isDestroyed(),
                 "subtype 0 must follow Go_Delete_Sprite at the emerge animation F4 callback");
 
@@ -127,8 +150,8 @@ class TestS3kAizEndBossGraphRewind {
         AizEndBossWaterfallChild drop = only(objectManager, AizEndBossWaterfallChild.class);
         assertEquals(2, drop.getSpawn().subtype(),
                 "AIZEndBoss_StartSubmerge writes subtype 2 after allocation");
-        assertEquals(boss.getSlotIndex() + 1, drop.getSlotIndex(),
-                "the re-submerge splash must reuse the first free child slot after the boss");
+        assertTrue(drop.getSlotIndex() > highestOccupiedSlot,
+                "the re-submerge splash must use a free slot after the boss");
 
         for (int frame = 0; frame < 13; frame++) {
             drop.update(frame, null);
@@ -156,6 +179,53 @@ class TestS3kAizEndBossGraphRewind {
         assertEquals(2, restored.getSpawn().subtype());
         assertEquals(capturedFrame, restored.getMappingFrameForTest());
         assertEquals(capturedY, restored.getY());
+
+        // A restored falling child must continue from the same ROM state as
+        // the original, not merely recreate its identity and current position.
+        int restoredBefore = restored.getY();
+        int originalBefore = drop.getY();
+        restored.update(0, null);
+        drop.update(0, null);
+        assertEquals(originalBefore + 8, drop.getY());
+        assertEquals(drop.getY(), restored.getY());
+        assertEquals(restoredBefore + 8, restored.getY());
+    }
+
+    @Test
+    void reEmergeUsesSubtypeZeroAndKeepsItsSpawnSnapshot() throws Exception {
+        Harness harness = Harness.createWithBoss();
+        ObjectManager objectManager = harness.objectManager();
+        AizEndBossInstance boss = only(objectManager, AizEndBossInstance.class);
+
+        invokeBooleanArg(boss, "beginEmerge", true);
+        AizEndBossWaterfallChild child = only(objectManager, AizEndBossWaterfallChild.class);
+        assertEquals(0, child.getSpawn().subtype(), "re-emerge also uses ChildObjDat subtype 0");
+        int x = child.getX();
+        int y = child.getY();
+        boss.getState().x += 0x30;
+        boss.getState().y += 0x18;
+        child.update(0, null);
+        assertEquals(x, child.getX());
+        assertEquals(y, child.getY());
+    }
+
+    @Test
+    void waterfallUsesRomPaletteZeroAndInitialMappingFrame() {
+        Harness harness = Harness.createWithBoss();
+        AizEndBossInstance boss = only(harness.objectManager(), AizEndBossInstance.class);
+        LevelManager levelManager = mock(LevelManager.class);
+        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
+        when(levelManager.getObjectRenderManager()).thenReturn(renderManager);
+        when(renderManager.getRenderer(Sonic3kObjectArtKeys.AIZ_END_BOSS)).thenReturn(renderer);
+        when(renderer.isReady()).thenReturn(true);
+
+        AizEndBossWaterfallChild child = new AizEndBossWaterfallChild(boss, 0);
+        child.setServices(new TestObjectServices().withLevelManager(levelManager));
+        child.appendRenderCommands(new java.util.ArrayList<>());
+
+        verify(renderer).drawFrameIndex(eq(0x24), eq(0x100), eq(0x100),
+                eq(false), eq(false), eq(0));
     }
 
     private static void assertAllReferencesPointAtRestoredGraph(AizEndBossGraph graph) {

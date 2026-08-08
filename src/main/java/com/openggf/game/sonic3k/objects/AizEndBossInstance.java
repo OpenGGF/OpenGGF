@@ -479,10 +479,10 @@ public class AizEndBossInstance extends AbstractBossInstance
         // Set render-facing from angle using the ROM's render_flags logic.
         facingRight = angle < 8;
 
-        // ROM: ChildObjDat_69D2E -> CreateChild1_Normal. The first emerge
-        // leaves subtype 0; the re-submerge path writes subtype 2 immediately
-        // after allocation so the child enters its falling-drop callback.
-        spawnWaterfallChild(isReEmerge ? 2 : 0);
+        // ROM: ChildObjDat_69D2E -> CreateChild1_Normal. Both the first emerge
+        // and re-emerge leave subtype 0; only AIZEndBoss_StartSubmerge writes
+        // subtype 2 after allocation for the falling-drop callback.
+        spawnWaterfallChild(0);
 
         // Set up emerge animation
         emergeAnimFrame = 0;
