@@ -65877,3 +65877,77 @@ downstream of an already-diverged route. Different defect, different subsystem.
   2-request tails edge at mf 94/95 (442976/1018/512 + 443488/1034/256) every time and
   never emits the tails-tails edge. Engine Tails is in the wrong animation for hundreds
   of frames.
+
+## 2026-08-09 — round twelve: OOZ GREEN, SLZ3 6 -> 1 error, and a second retraction
+
+Command: full `-Ptrace-replay` profile, no `-Dtest` (763 tests, all three games),
+`-Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical`. Base f525ccd67
+(763 / 17 failures / 63 errors / 30 classes). After: **763 / 16 / 63, 29 classes.**
+Moved to green: `TestS2OozLevelSelectTraceReplay`. Moved to red: NONE.
+
+**RETRACTION 2, same root as retraction 1.** Round eleven recorded "the engine loads the
+OOZ1 Aquis ~26 frames late (f5975 vs ROM f5949)". That is FALSE and is the SAME off-by-27
+misread as round ten's retracted "init deferral": the probe used
+`ObjectManager.frameCounter`, which is offset from the trace frame index by **+27** at
+level start (drifting to +26 by ~trace 5500, +25 by ~7500). With the offset applied the
+engine's post-camera `Camera_X_pos` matches the recorded `camera_x` value-for-value from
+frame 0, and the Aquis loads at engine frameCounter 5975 == trace frame 5949 == ROM's
+`object_appeared` frame, into slot 19 == ROM's slot. `ObjectsManager_GoingForward` /
+`ChkLoadObj` were already modelled correctly.
+**Lesson: any claim of the form "the engine does X N frames late" must state WHICH CLOCK
+was read.** The engine has at least three (ObjectManager.frameCounter, the object-visible
+V_int_run_count / vblaCounter, and the trace row index) and they are not aligned.
+
+- **OOZ1 GREEN. ROM `Obj50_Wing` has NO `MarkObjGone` tail** — it ends
+  `jmpto JmpTo32_DisplaySprite` (s2.asm:60642-60653), unlike `Obj50_Main` (s2.asm:60632)
+  and `Obj50_Bullet` (s2.asm:60665), which both tail into `JmpTo33_MarkObjGone`. Its only
+  deletes are the three parent checks at the top of the routine, so the wing holds its SST
+  slot exactly as long as its parent. The engine applied its generic off-screen unload
+  anyway and deleted the wing **on the frame it was created**: the wing spawns at
+  `parent.x + $A` = 0x2582, rounding to chunk 0x2580, and 0x2580 - unloadCoarse(camera
+  0x2310 -> 0x2280) = $300 > $280. Probe: "[slot] f=5976 alloc=21" immediately followed by
+  "[free] f=5976 slot=21". ROM's slot_dump holds 21:0x50 at both f5950 and f5957. With
+  slot 21 wrongly free the f5957 ObjPosLoad burst put the monitor in 21 instead of 24 and
+  the three Obj48 balls in {24,25,26} instead of {25,26,29}; Obj48 captures the player in
+  SST order, so the pair reversed and f8264 gave x_speed -0x1000 against ROM's 0.
+  Modelled with `usesCustomOutOfRangeCheck()=true / isCustomOutOfRange()=false`, the
+  Obj5C Pyl_Display precedent. **This is the fifth instance of the same shape: a ROM
+  object with no unload path where the engine applies a shared camera unload.**
+- **SLZ3 6 errors @f6045 -> 1 error @f6358.** ROM `BossStarLight_Main` allocates FOUR
+  object RAM slots, not one: `moveq #3,d1` / `dbf d1,BossStarLight_Loop` over the 4-entry
+  `BossStarLight_ObjData` table. `Sonic1SLZBossInstance` drew face, flame and pipe as
+  overlays on a single instance, so the three child slots ROM claims via FindNextFreeObj
+  stayed free and every dynamic allocation for the rest of SLZ3 sat three slots low —
+  including every spilled ring, whose floor probe fires only when
+  `(v_vblank_byte + 127 - slot) & 3 == 0`. Reserved via the existing
+  `allocateChildSlotsAfter`, the mechanism a38ba2444 used for the GHZ Bridge. The child
+  count 3 is READ FROM THE ROM table, not measured from the fixture. Occupancy divergence
+  159 -> 132 of 394 sampled frames.
+- **MZ2 unchanged (7 errors @f11906) and its brief DISPROVED.** The push block's
+  `out_of_range` model is already ROM-correct — chunk-aligned, unsigned wrap, both the
+  current-X and origin-X tests (s1disasm/Macros.asm:278-295 vs
+  `AbstractObjectInstance.isInRangeAt:1001-1007`). What is wrong is the LIFETIME predicate
+  around it: `Sonic1PushBlockObjectInstance.isPersistent()` is
+  `!isDestroyed() && !deletePending && isOnScreenX(320)`, and ROM's ONLY lifetime rule for
+  Obj33 is `PushB_Display`'s double `out_of_range` -> `.deleteAndAllowRespawn` ->
+  `DeleteObject` (_incObj/"33 MZ, LZ Pushable Blocks.asm":92-113) — **there is no camera-
+  window persistence rule at all.** Fixture: ROM frees slot 36 at f10420 and that same
+  frame's ObjPosLoad gives it to a placed ring (0x25); the engine still holds the block and
+  puts the ring in s39, after which every MZ2 placement is one slot off.
+- **ss_2 / the EHZ chain: DISPROVED, and the numbers were misread as decimal.** In hex,
+  mapping_frame 94/95 = `$5E/$5F` = `TailsAni_Fly` (s2.asm:41624, anim id $20) and 70/71/72
+  = `$46/$47/$48` = `TailsAni_Roll` (s2.asm:41528) — physics.csv rows 3327-3376 confirm ROM
+  Tails is ROLLING with `sidekick_animation_id=02`. The "tails-tails" edge 81/83/84 =
+  `$51/$53/$54` is `Obj05Ani_Directional` ($49-$4C, s2.asm:41818) plus direction bank d3=8
+  from `TAnim_GetTailFrame` (s2.asm:41509-41516); it is NOT missing —
+  `TailsTailsController.DIRECTIONAL_FRAMES_S2` implements it, and it correctly emits
+  nothing because `Obj05AniSelection` maps parent anim $20 (Fly) to Blank (s2.asm:41791).
+  **Real cause: the EHZ1 Buzzer stinger (Obj4B routine 6) hits Tails in ROM at row 1132
+  and MISSES in the engine.** Rows 0-1131 the engine's Tails matches ROM within 1px; at
+  1132 ROM Tails enters routine 4 (Hurt), x_vel -$200, y_vel -$400, anim $1A. The engine's
+  sails on, eventually goes off-screen and enters TailsCPU_Flying — which is why its
+  run-gap DPLC submission is Fly frame $5E (2 requests) instead of roll frame $47 (one
+  request, tile $35A/512B = the 437856 the manifest expects). The stinger has correct
+  velocity and spawn offsets but its trajectory is displaced: it conserves x+y, and ROM's
+  line is **x+y=2649** where the engine's is **x+y=2634** — 15px apart for the whole
+  flight, so it passes above Tails. That 15px is the next S2 target.

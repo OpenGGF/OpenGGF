@@ -432,6 +432,36 @@ public class AquisBadnikInstance extends AbstractBadnikInstance implements Rewin
                     .orElse(null);
         }
 
+        /**
+         * ROM {@code Obj50_Wing} (docs/s2disasm/s2.asm:60642-60653) ends with
+         * {@code jmpto JmpTo32_DisplaySprite} -- it never calls
+         * {@code MarkObjGone}. Unlike {@code Obj50_Main} (s2.asm:60632) and
+         * {@code Obj50_Bullet} (s2.asm:60665), which both tail into
+         * {@code JmpTo33_MarkObjGone}, the wing has no off-screen delete of its
+         * own: its only deletion paths are the three parent checks at the top of
+         * {@code Obj50_Wing} (empty parent slot, parent id no longer
+         * {@code ObjID_Aquis}, or parent marked destroyed). The wing therefore
+         * holds its SST slot for exactly as long as its parent does.
+         *
+         * <p>Without this, the engine's generic {@code MarkObjGone} window
+         * deletes the wing on the very frame it is created whenever the parent
+         * sits near the right edge of the load window: the wing spawns at
+         * {@code parent.x + $A}, which can round into the next $80 chunk and so
+         * exceed the $280 delete distance while the parent itself is still in
+         * range. The freed slot is then handed to the next
+         * {@code AllocateObject} caller, shifting every subsequent SST
+         * allocation in the region down one slot.
+         */
+        @Override
+        public boolean usesCustomOutOfRangeCheck() {
+            return true;
+        }
+
+        @Override
+        public boolean isCustomOutOfRange(int cameraX) {
+            return false;
+        }
+
         @Override
         public void update(int vIntRunCount, PlayableEntity player) {
             if (parent == null || parent.isDestroyed()) {

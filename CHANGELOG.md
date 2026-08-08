@@ -3,6 +3,17 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the Oil Ocean Aquis wing is exempt from the shared off-screen unload. ROM
+  `Obj50_Wing` ends by drawing and never calls `MarkObjGone`, unlike the Aquis body and
+  its bullet, so the wing holds its object slot for exactly as long as its parent. The
+  engine's generic unload deleted the wing on the frame it was created whenever the
+  parent sat near the right edge of the load window, freeing a slot the ROM keeps held
+  and shifting every later allocation in the region; that reversed the launcher-ball
+  capture order in Oil Ocean act 1.
+- Fix: the Star Light boss reserves the four object slots the ROM allocates for it. The
+  engine draws the boss face, flame and pipe from one instance, so the three child slots
+  were left free and every dynamically allocated object for the rest of the act sat three
+  slots low, including spilled rings, whose bounce probe fires on a slot-derived phase.
 - Fix: the Oil Ocean Aquis allocates its wing into the lowest free object slot again,
   matching ROM `AllocateObject`, which scans upward from the start of dynamic object RAM
   and may legitimately place a child below its parent. A previous change had moved the
