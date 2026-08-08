@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K LBZ FinalBoss1 now preserves the ROM's pending initialization
+  dispatch after its lower-slot allocation, so the first `Obj_Wait` decrement
+  occurs on the correct pass. The LBZ complete-run earliest mismatch advances
+  from raw frame `43563` to raw frame `44451` (`tails_cpu_ctrl2_held`, with the
+  next direct/module queue edge `#317` at raw frame `44454`); no trace payloads
+  changed.
 - Fix/Test: S3K LBZ FinalBoss1 now preserves the ROM's allocation boundary and
   native child ownership across the Death Egg launch: the ship releases its
   exhaust slot before the boss graph is built, turret descendants are deferred

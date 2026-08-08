@@ -65454,3 +65454,48 @@ to synthesize a POST phase on a VBLANK-only row.
 - Route position: AIZ, HCZ, MGZ, CNZ, and ICZ retain their established
   gameplay frontiers. LBZ advances through the Death Egg/results sequence to
   the `#314` edge at raw frame `43942`; the next target is after that boundary.
+
+## 2026-08-08 - S3K LBZ FinalBoss1 pending-init frontier
+
+- Worktree: `bugfix/s3k-traces` at `6c32885cc` before this fix; unrelated edits
+  in `.idea/vcs.xml`, `docs/status/rewind-round-trip-gaps.md`, and
+  `src/main/java/com/openggf/level/objects/ObjectPlacementController.java`
+  remained unstaged. Validation used JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen` (SHA-1
+  `b711a909cce238ca4af3e517a2edca306228efa5`), without replacing or renaming
+  it.
+- Frontier command: `mvn -q -Dmse=off -Dsurefire.forkCount=1
+  -DreuseForks=true -DargLine=-Xmx1g -Dmaven.test.failure.ignore=true
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtrace.verification=physics -Dtrace.boundedMemory=true
+  -Dtrace.frontierOnly=true -Dtrace.debugLbzRow=true
+  -Dtrace.debugLbzTouch=true -Dtrace.debugLbzSpawn=true
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kLbzCompleteRunTraceReplay#replayMatchesTrace
+  test`. The diagnostic run passes through the prior `#314` edge and moves the
+  first comparison error from raw frame `43563` to raw frame `44451`; it stops
+  at the expected unconsumed `KOS_DECOMPRESSION_QUEUE#317` edge at raw frame
+  `44454`. Report result: fail at the next edge, 18 errors; first error
+  `tails_cpu_ctrl2_held`, expected `0x0000`, actual `0x0004` at raw frame
+  `44451` (queue readiness fields are the same boundary mismatch).
+- Root cause: `AllocateObject` places the final boss in lower SST slot 4 while
+  the allocating LBZ2 ship is in slot 5. The native next pass is therefore the
+  boss init entry, which must not consume the `$7F` `Obj_Wait` counter. The
+  engine still builds the child graph at allocation time so subsequent slot
+  allocation sees the ROM occupancy, but now preserves a pending native-init
+  pass for the boss dispatch. This is an SST allocation/dispatch rule, not a
+  zone, frame, route, or trace-data exception.
+- Validation: LBZ raw frames `43558`–`43563` now match the native boss and
+  orbiting-pod positions and Tails' hurt transition; the earliest remaining
+  mismatch is the queue boundary above. The gameplay-order AIZ/HCZ/MGZ/CNZ/ICZ
+  canary reached the established edges AIZ `#19`/raw `1467`, HCZ `#97`/raw
+  `9813`, MGZ `#195`/raw `39371`, CNZ `#205`/raw `13962`, and ICZ `#255`/raw
+  `21185`; its current physics reports retain the known first diagnostics AIZ
+  8 at raw `1237` (`queue.s3k_kos_direct.busy`), HCZ 18 at raw `9761`
+  (`queue.s3k_kos_direct.busy`), MGZ 4 at raw `39348`
+  (`queue.s3k_kos_direct.busy`), CNZ 23 at raw `12024` (`g_speed`), and ICZ 2
+  at raw `15401` (`camera_y`). No trace payloads changed and no LBZ change
+  altered those established non-LBZ frontiers.
+- Route position: AIZ, HCZ, MGZ, CNZ, and ICZ retain their established
+  frontiers. LBZ advances past the FinalBoss1 collision/dispatch mismatch and
+  is now stopped immediately before the recorded `#317` queue edge at raw
+  frame `44454`; the next target is the queue-owner readiness mismatch.

@@ -155,6 +155,8 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
     private boolean initialized;
     private boolean bossMusicStarted;
     private boolean deferChildrenSameFrame;
+    /** The allocation pass has built the graph; the next dispatch is still ROM init. */
+    private boolean nativeInitPassPending;
     private boolean finalBossPaletteLoaded;
     private boolean resultsComplete;
     private boolean launchMilestoneA;
@@ -293,6 +295,15 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
             updateDynamicSpawn(getX(), getY());
             return;
         }
+        if (nativeInitPassPending) {
+            // initializeOnAllocationBeforeParentRelease performs the native init side effects
+            // early so the allocator sees the same child graph. The boss slot is below the
+            // allocating ship, so its first actual dispatch is still the following pass's
+            // init entry and must not consume the Obj_Wait counter (sonic3k.asm:152008-152037).
+            nativeInitPassPending = false;
+            updateDynamicSpawn(getX(), getY());
+            return;
+        }
         if (finalePhase != FinalePhase.NONE) {
             updateFinale(player);
             updateDynamicSpawn(getX(), getY());
@@ -377,6 +388,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         if (initialized) {
             return;
         }
+        nativeInitPassPending = true;
         deferChildrenSameFrame = true;
         ensureInitialized();
     }

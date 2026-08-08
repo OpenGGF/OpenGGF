@@ -520,7 +520,9 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
         // init routine on the next Process_Sprites pass, while the ship remains
         // in the immediately preceding slot; initialize the graph at that same
         // allocation boundary so FindNextFreeObj sees the native occupancy.
-        boss.initializeOnAllocationBeforeParentRelease();
+        if (services().objectManager() != null) {
+            boss.initializeOnAllocationBeforeParentRelease();
+        }
         spawnedChildren.add(boss);
     }
 
