@@ -52,6 +52,42 @@ the disassembly-owned topology and covered by tests.
   `9B`/`AD` payloads and all alias targets are covered. Operand alignment
   remains supported for custom streams.
 
+### S2 capability boundaries (CPZ debug placement and human-P2 monitors)
+
+The two remaining audited S2 ambiguities have separate dispositions. Native
+S2 `Debug_placement_mode` is a ROM-global mode entered through
+`Debug_mode_flag` plus B (`s2.asm:36224-36230`), not the engine's D free-fly
+movement. CPZ Obj1E now rejects a player in the supported engine debug mode at
+the same entry boundary that shared touch/solid controllers use. This prevents
+debug movement from being captured without pretending that native ring/item
+placement exists. `DebugModeProvider.hasLevelDebug()` remains false for S2.
+
+Native human-P2 monitor behavior is not an object-local omission. S2's
+`Touch_Monitor` branch (`s2.asm:85337-85340`) depends on the ROM-global
+`Two_player_mode`, but the engine has no S2 competition-mode owner or human-P2
+slot. Player 2 bindings remain sidekick/manual-input paths.
+`MonitorObjectInstance` was therefore left unchanged beyond its existing
+ROM-faithful lead-player/CPU-sidekick guard.
+
+Focused JDK 21 validation for this boundary:
+
+```text
+mvn -Dmse=off -Dtest=com.openggf.game.sonic2.objects.TestCPZSpinTubeObjectInstance test
+Tests run: 6, Failures: 0, Errors: 0, Skipped: 0
+
+mvn -Dmse=off -Dtest=com.openggf.game.sonic2.TestSonic2SpecialStageModuleGraph test
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0
+```
+
+The first run was intentionally red before the CPZ guard (the new debug-mode
+capture assertion failed); it passed after the source-backed guard was added.
+Existing `TestMonitorObjectInstance` sidekick tests remain the evidence for the
+supported one-player path. Native ring/item placement and human-P2 monitor
+parity remain deferred until an engine-wide S2 debug-placement/competition
+capability has an owner, initialization contract, and ROM-backed route tests.
+No title-provider assertion is treated as evidence that competition mode is
+absent.
+
 ## Independently rejected work
 
 The candidate Big Arm implementation on
@@ -160,6 +196,12 @@ Highest-priority remaining work is deliberately visible rather than deleted:
    Knuckles LBZ route.
 2. Capture route/trace evidence for the AIZ napalm and AIZ2 splash changes.
 3. Continue the roadmap's load-profile semantics work.
+4. If native S2 debug placement is made a product goal, design its engine-wide
+   global mode owner (ring/item placement, object lifecycle, and level-wide
+   gates) before extending CPZ beyond the current free-fly boundary.
+5. If S2 competition/human-P2 parity is made a product goal, add a dedicated
+   mode owner for the second player, initialization, physics, camera, scoring,
+   and competition-zone lifecycle before implementing the monitor branch.
 
 ## Follow-up: master-title audio disposition
 

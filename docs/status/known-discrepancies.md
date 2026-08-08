@@ -36,6 +36,8 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 22. [Frame-0 Trace Bootstrap Snapshot Coverage Debt](#frame-0-trace-bootstrap-snapshot-coverage-debt)
 23. [Sonic 1 Embedded Runtime Data Ratchet](#sonic-1-embedded-runtime-data-ratchet)
 24. [Special-stage Live Rewind Scope](#special-stage-live-rewind-scope)
+25. [S2 CPZ Debug Placement Capability Boundary](#s2-cpz-debug-placement-capability-boundary)
+26. [S2 Native Human-P2 Monitor Branch Unavailable](#s2-native-human-p2-monitor-branch-unavailable)
 
 ---
 
@@ -408,6 +410,72 @@ When cross-game sidekicks are donated into Sonic 1, `Sonic1MonitorObjectInstance
 ### Verification
 
 `TestSonic1MonitorObjectInstance.cpuSidekickCannotBreakSonic1Monitor` covers the donated-sidekick path. The local S1 disassembly also confirms that the static monitor icon mapping (`Map_Monitor` frame `2`) is real art, so no icon-suppression discrepancy entry is needed.
+
+---
+
+## S2 CPZ Debug Placement Capability Boundary
+
+**Location:** `CPZSpinTubeObjectInstance.java`
+**ROM Reference:** `docs/s2disasm/s2.asm:36224-36230,48526-48527`
+
+### Original Implementation
+
+Obj1E checks the ROM-global `Debug_placement_mode` byte before testing the
+player's tube-entry bounds. S2's debug object-placement path is entered from
+`Debug_mode_flag` plus the B button and also owns level-wide ring/item placement
+and related object, signpost, and scroll gates.
+
+### Engine Implementation
+
+OpenGGF does not expose that native level-wide placement mode. Its supported
+level debug capability is the engine free-fly mode toggled by `D`; CPZ's entry
+test now rejects a player in that mode, matching the shared touch/solid debug
+boundary. Normal tube gameplay remains ROM-driven; the existing engine
+free-fly mid-traversal reset is unchanged.
+
+### Rationale and Verification
+
+Mapping free-fly movement to the complete native placement mode would invent
+the missing global mode owner and its ring/item/object lifecycle. The bounded
+guard prevents a visible interaction leak without claiming native placement
+parity. `TestCPZSpinTubeObjectInstance.engineDebugMovementCannotBeCapturedByTube`
+and `TestSonic2SpecialStageModuleGraph.moduleDoesNotAdvertiseNativeLevelDebugPlacement`
+cover the boundary; native ring/item placement remains unavailable until an
+engine-wide placement capability is designed and sourced from the ROM.
+
+---
+
+## S2 Native Human-P2 Monitor Branch Unavailable
+
+**Location:** `MonitorObjectInstance.java`, S2 level-mode ownership
+**ROM Reference:** `docs/s2disasm/s2.asm:85337-85340`
+
+### Original Implementation
+
+`Touch_Monitor` allows a monitor break from above for `MainCharacter`, or for a
+second player only when the ROM-global `Two_player_mode` is nonzero; the roll
+animation check follows at `s2.asm:85342-85343`. CPU Tails
+is therefore blocked from that branch in ordinary one-player gameplay, while a
+human P2 can use it in the native competition mode.
+
+### Engine Implementation
+
+S2 has no competition-mode owner or human-P2 playable slot. Its level-event
+owner keeps the ROM `Two_player_mode` gate explicitly false, and Player 2
+bindings feed the existing CPU-sidekick/manual-input path.
+`MonitorObjectInstance` consequently retains the ROM-faithful
+lead-player/CPU-sidekick behavior; no object-local human-P2 branch is
+advertised or fabricated.
+
+### Rationale and Verification
+
+The missing behavior depends on a complete mode (player slots, initialization,
+physics, art, scoring, camera, and competition-zone lifecycle), not a monitor
+condition. A dedicated S2 competition-mode design must own that state before
+the native branch can be implemented and validated. Existing monitor sidekick
+tests prove the supported path; no title-provider assertion is used as evidence
+of mode absence. Human-P2 monitor parity is deferred as an explicit product-level
+capability gap.
 
 ---
 

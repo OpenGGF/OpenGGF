@@ -344,8 +344,17 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
      * Mode 0: Check if player enters the tube activation zone.
      */
     private void checkEntryCollision(AbstractPlayableSprite player, CharacterState cs) {
-        // Skip if in debug placement mode
-        // (Not implemented in this engine)
+        // The shipped S2 ROM gates Obj1E capture on the global
+        // Debug_placement_mode byte (s2.asm:48526-48527). Native S2 debug
+        // placement is not an engine capability: it also owns ring/item
+        // placement and several other level-wide branches. The supported
+        // engine debug mode is free-fly movement, and the shared touch/solid
+        // controllers already exclude it. Keep this object on that same
+        // capability boundary instead of letting a tube capture a free-fly
+        // player; this does not claim native ring/item placement parity.
+        if (player.isDebugMode()) {
+            return;
+        }
 
         int objX = spawn.x();
         int objY = spawn.y();
@@ -381,8 +390,9 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
             return;
         }
 
-        // ROM loc_225FC (docs/s2disasm/s2.asm:48467-48483) gates capture ONLY on:
-        //   - not Debug_placement_mode (not modelled here)
+        // ROM loc_225FC (docs/s2disasm/s2.asm:48526-48538) gates capture on:
+        //   - not Debug_placement_mode (the engine debug boundary is checked above;
+        //     native S2 placement mode remains unavailable)
         //   - x_pos(a1)-x_pos(a0) < objoff_2A (collisionDistance)  [checked above]
         //   - y_pos(a1)-y_pos(a0) < 0x80                           [checked above]
         //   - anim(a1) != $20 (raw S2 anim index: AniIDSonAni_Lying for Sonic,

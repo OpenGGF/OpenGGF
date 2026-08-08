@@ -95,8 +95,15 @@ that every audited feature is now complete.
    `TestS2DezEndingLevelSelectTraceReplay#replayMatchesTrace` is 1/1 green on
    both base `5cc94d457` and candidate `4b4572cc3` with verified REV01 ROM;
    ObjAF appears from auxiliary frame 127, and no frontier advanced.
-4. Treat CPZ placement debug and human-P2 monitor behavior as engine/game-mode
-   capabilities, not object-local exceptions.
+4. **Resolved boundary / explicit deferral 2026-08-08:** Treat CPZ placement
+   debug and human-P2 monitor behavior as engine/game-mode capabilities, not
+   object-local exceptions. CPZ now rejects the supported engine free-fly debug
+   mode at entry and tests that supported engine boundary; native
+   `Debug_placement_mode`/ring-item placement remains deferred. S2 has no competition-mode owner wired
+   into level gameplay, so Monitor retains the ROM-faithful lead-player/
+   CPU-sidekick gate; human-P2 parity is deferred to a dedicated
+   competition-mode owner/design. The title provider's unconditional default
+   action is not treated as evidence that this mode is absent.
 
 ## Swarm execution model
 

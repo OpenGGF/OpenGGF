@@ -72,6 +72,14 @@ expectations honestly -- what works well, what is incomplete, and what you might
 - Some visual effects (screen distortion, specific palette transitions) may differ
   slightly from the original.
 - Oil Ocean Zone oil surface behavior is partially implemented.
+- Native S2 level debug placement (`Debug_placement_mode`, including ring/item
+  placement) is not exposed. The engine's `D` shortcut is free-fly debug movement;
+  CPZ tubes deliberately do not capture a player using that supported mode.
+- Native S2 two-player/competition gameplay (`Two_player_mode`) is not exposed.
+  Player 2 bindings feed the configured sidekick/manual-input paths, not a human
+  second player; consequently, the ROM's human-P2 monitor-break branch is not
+  reachable. A dedicated S2 competition-mode owner is required before that branch
+  can be implemented and validated.
 
 ### Notable quirks
 

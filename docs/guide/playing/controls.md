@@ -23,6 +23,11 @@ Keyboard B and C action bindings are intentionally unbound by default. All
 three Mega Drive actions act as jump buttons during platforming gameplay when
 bound.
 
+In Sonic 2, these Player 2 bindings control the configured sidekick/manual-input
+path; they do not enable the ROM's native two-player/competition mode. Human-P2
+competition gameplay, including its monitor-break branch, is not currently
+available.
+
 ## Gamepads
 
 Controller input is enabled by default through GLFW's gamepad API. D-pad and
@@ -44,7 +49,7 @@ connected pad:
 
 | Position/Button | Xbox label | PlayStation label | Action |
 |------------------|------------|--------------------|--------|
-| North face button | Y | Triangle | Toggle debug movement mode (`debug.keys.debugMode`) |
+| North face button | Y | Triangle | Toggle debug movement mode (`debug.keys.debugMode`) when `debug.flags.debugView` is enabled |
 | Left bumper | LB | L1 | Hold to rewind live gameplay (`rewind.liveKey`) |
 | Right bumper | RB | R1 | Advance one frame while paused (`debug.keys.frameStep`) |
 | Back button | View | Select | Open/close the per-game options panel on the main menu (stands in for `Tab` in that flow only) |
@@ -100,6 +105,10 @@ These toggle visual debug information drawn over the game scene. They require
 |-----|--------|
 | D | Toggle free-fly debug mode (move camera freely with arrow keys) |
 | C | Teleport to the last checkpoint (furthest 'right') in this act. |
+
+The `D` mode is the engine's free-fly debug movement capability. It is not Sonic
+2's native `Debug_placement_mode`: ring/item placement and the other level-wide
+native placement branches are unavailable.
 
 ## Experimental Editor
 

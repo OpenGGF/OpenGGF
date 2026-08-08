@@ -3,6 +3,14 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Docs: S2 CPZ tubes now honor the engine free-fly debug boundary instead
+  of capturing a debug player. Native S2 `Debug_placement_mode` ring/item
+  placement and `Two_player_mode` human-P2 monitor behavior remain explicitly
+  unavailable until their engine-wide capability owners exist; controls,
+  configuration, status, audit, and validation docs record those boundaries.
+  The gamepad debug toggle follows the same enabled-debug-tools gate; the
+  reviewed ROM anchors are Obj1E `s2.asm:48526-48527` and monitor
+  `s2.asm:85337-85340`.
 - Fix: Sonic 2 Mecha Sonic (ObjAF) now follows the shipped REV01 outer attack
   loop: each phase updates velocity and animation, then the LED and targeting
   sensor align before exactly one `ObjectMove`. Child updates retain those

@@ -200,6 +200,12 @@ global gameplay keys (`rewind.liveEnabled`, `crossGame.*`, `debug.flags.debugVie
 `display.aspect`, or `characters.*`). Programmatic trace launches clear any stale launch
 profile overrides and skip profile application.
 
+Sonic 2 launch profiles do not expose the ROM's native `Two_player_mode`/
+competition mode or `Debug_placement_mode`. Player 2 bindings remain available
+for the configured sidekick/manual-input paths, while `debugTools` enables the
+engine's supported diagnostics and free-fly debug movement; neither setting
+creates a human second player or native ring/item placement.
+
 `crossGameSource: "off"` disables donation for that game launch and restores the built-in
 `crossGame.source` default in the session overlay so the donor choice cannot leak from a
 previous launch. When `crossGameSource` is `"s3k"`, the launch panel hides
@@ -724,14 +730,14 @@ Square/Cross/Circle respectively.
 | `P1_B` | `input.player1.b` | `-1` | unbound | Player 1 action button B. |
 | `P1_C` | `input.player1.c` | `-1` | unbound | Player 1 action button C. |
 | `START` | `input.player1.start` | `259` | Backspace | Player 1 Start: ROM-accurate in-game pause (`Game_paused` / `Pause_Loop`). A press during level gameplay freezes the level update for the frame while the frame counter still advances; press again to resume. Distinct from `PAUSE_KEY`, which is the loop/timing-level pause that also halts audio. Keyboard-only: the gamepad Start button is instead wired to `PAUSE_KEY`'s pause (see below), since this one has no visible feedback. |
-| `P2_A` | `input.player2.a` | `344` | Right Shift | Player 2 action button A / jump. |
+| `P2_A` | `input.player2.a` | `344` | Right Shift | Player 2 action button A / jump. In S2 this feeds the configured sidekick/manual-input path; it does not enable native two-player/competition gameplay. |
 | `P2_B` | `input.player2.b` | `-1` | unbound | Player 2 action button B. |
 | `P2_C` | `input.player2.c` | `-1` | unbound | Player 2 action button C. |
 | `P2_START` | `input.player2.start` | `345` | Right Control | Player 2 Start. |
 | `CONTROLLER_ENABLED` | `input.controller.enabled` | `true` | true | Enable GLFW gamepad/controller input. |
 | `CONTROLLER_DEADZONE` | `input.controller.deadzone` | `0.35` | 0.35 | Left-stick digital direction deadzone. |
 | `CONTROLLER_PLAYER1` | `input.controller.player1` | `"auto"` | auto | Controller assignment for Player 1 (`auto` or `none`). |
-| `CONTROLLER_PLAYER2` | `input.controller.player2` | `"auto"` | auto | Controller assignment for Player 2 (`auto` or `none`). |
+| `CONTROLLER_PLAYER2` | `input.controller.player2` | `"auto"` | auto | Controller assignment for Player 2 (`auto` or `none`). In S2 this does not create a human competition player. |
 
 The gamepad Back/Select/View button on the primary connected pad is a hardcoded (not remappable, no config key) stand-in for the keyboard `Tab` key on the main-menu game-select screen (`MasterTitleScreen`) and its per-game options panel (`LaunchConfigPanel`): it opens the options panel for the selected game and closes it again, mirroring `Tab`'s role in that specific flow only. It has no effect on `Tab`'s other keyboard uses elsewhere (level editor toggle, Special Stage entry, art viewer), which are unrelated screens/modes.
 
@@ -750,7 +756,7 @@ The gamepad Back/Select/View button on the primary connected pad is a hardcoded 
 |-----|-----------|---------|----------|-------------|
 | `NEXT_ACT` | `debug.keys.nextAct` | `266` | PAGE_UP | Skip to the next act within the current zone. |
 | `NEXT_ZONE` | `debug.keys.nextZone` | `267` | PAGE_DOWN | Skip to the first act of the next zone. |
-| `DEBUG_MODE_KEY` | `debug.keys.debugMode` | `68` | D | Toggle free-fly debug movement mode (requires `DEBUG_VIEW_ENABLED`). The gamepad north face button (Y/Triangle) on the primary connected pad also toggles it, unconditionally (not remappable). |
+| `DEBUG_MODE_KEY` | `debug.keys.debugMode` | `68` | D | Toggle engine free-fly debug movement mode (requires `DEBUG_VIEW_ENABLED`). This is not S2's native `Debug_placement_mode`; ring/item placement is unavailable. The gamepad north face button (Y/Triangle) on the primary connected pad also toggles it when `DEBUG_VIEW_ENABLED` is enabled (not remappable). |
 | `DEBUG_LAST_CHECKPOINT_KEY` | `debug.keys.lastCheckpoint` | `67` | C | Teleport the player to the most recently activated checkpoint. |
 | `LEVEL_SELECT_KEY` | `debug.keys.levelSelect` | `298` | F9 | Open the level select screen at runtime. |
 | `TEST` | `debug.keys.test` | `84` | T | Generic test button used during development. |
@@ -842,6 +848,8 @@ input:
     c: ""   # Player 1: action button C
     start: BACKSPACE   # Player 1: start (in-game pause)
   player2:
+    # Player 2 bindings feed the configured sidekick/manual-input path; they do
+    # not enable Sonic 2's native Two_player_mode/competition gameplay.
     up: I   # Player 2: look up
     down: K   # Player 2: crouch/roll
     left: J   # Player 2: move left
@@ -915,7 +923,7 @@ launch:
   s2:
     rewind: false   # Default Sonic 2 launch profile: enable live rewind
     crossGameSource: "off"   # Default Sonic 2 launch profile: cross-game donor
-    debugTools: false   # Default Sonic 2 launch profile: enable debug tools
+    debugTools: false   # Default Sonic 2 launch profile: engine debug tools; native Debug_placement_mode is unavailable
     aspect: "global"   # Default Sonic 2 launch profile: display aspect override
     mainCharacter: "sonic"   # Default Sonic 2 launch profile: main character
     sidekick: "tails"   # Default Sonic 2 launch profile: sidekick character

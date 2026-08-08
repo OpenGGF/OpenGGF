@@ -82,6 +82,13 @@ characters:
 Tails will appear as a CPU-controlled follower alongside Sonic. Set to `""` (empty) to
 disable.
 
+Sonic 2 does not currently expose the ROM's native two-player/competition mode
+(`Two_player_mode`), so Player 2 bindings do not create a human second player.
+They remain available for the configured sidekick/manual-input paths. Native
+S2 level debug placement (`Debug_placement_mode`, including ring/item placement)
+also has no configuration or input route; the `D` shortcut is engine free-fly
+debug movement only.
+
 ## How do I enable cross-game features?
 
 Cross-game feature donation lets a donor game provide player sprites, spindash, and
