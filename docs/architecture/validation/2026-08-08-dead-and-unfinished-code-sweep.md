@@ -75,8 +75,18 @@ Not yet run. Task 5 records the clean ROM-backed full-suite command and
 
 ### Development worktree result
 
-Not yet run. Tasks 2–4 record focused development manifests; Task 5 records
-`development.tsv.gz` and its comparison.
+Task 2 ran serially in `bugfix/ai-dead-unfinished-sweep` after deleting the
+seven proven-obsolete types and relocating the unused Kosinski reference:
+
+| Exact command | Result |
+|---|---|
+| `mvn clean -Dmse=off -DskipTests package` | Passed. Production and test sources compiled; the removed classes and `kosinski.txt` were absent from both `target/classes` and `target/OpenGGF-0.6.prerelease-jar-with-dependencies.jar`. |
+| `mvn clean -Dmse=off "-Dtest=com.openggf.tests.TestBuildToolingGuard,com.openggf.tests.TestArchUnitRules,com.openggf.tests.TestArchitecturalSourceGuard" test` | 98 rows = 98 tests; 95 PASS, 3 FAILURE, 0 ERROR, 0 SKIPPED. `focused-orphans-development.tsv.gz` is byte-equivalent by normalized decompressed rows to `focused-orphans-baseline.tsv.gz`. The same `trace -> graphics`, `ObjectManager`, and `AbstractPlayableSprite` ratchets remain. |
+
+The focused suite did not modify `docs/status/rewind-round-trip-gaps.md`, so no
+rewind report was restored. Native resource JSON validated with `jq empty`; the
+Kosinski include is absent and the broad `shaders/.*\\.(glsl|vert|frag)` include
+remains.
 
 ### Merged result
 

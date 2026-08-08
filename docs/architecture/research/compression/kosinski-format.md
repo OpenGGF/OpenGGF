@@ -1,3 +1,22 @@
+# Kosinski compression format reference
+
+## Provenance and current implementation owners
+
+This reference relocates the former runtime resource
+`src/main/resources/kosinski.txt`. Its original attribution, **"Documented by
+Brett Kosinski"**, is preserved below. It is reference material only; runtime
+assets are decompressed from user-supplied ROMs by the current implementation
+owners:
+
+- [KosinskiReader](../../../../src/main/java/com/openggf/tools/KosinskiReader.java)
+  implements standard and moduled Kosinski decompression.
+- [ResumableKosinskiDecoder](../../../../src/main/java/com/openggf/tools/ResumableKosinskiDecoder.java)
+  owns resumable decoder state for incremental work.
+- [S3kKosDecompressionQueue](../../../../src/main/java/com/openggf/game/sonic3k/resources/S3kKosDecompressionQueue.java)
+  owns the S3K runtime decompression-work queue.
+
+## Original reference transcription
+
 Sonic/SEGA Compression Format  [KOSINSKI FORMAT]
 
 Documented by Brett Kosinski
@@ -38,7 +57,9 @@ The Embedded/Separate compression formats are slightly more complex.
 The next two or three bytes contain data about the compression format.
 The format for these bytes is as follows:
 
+```
 OOOOOCCC OOOOOOOO [CCCCCCCC]  <- optional
+```
 
 O - Offset bit
 C - Count bit
