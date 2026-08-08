@@ -119,9 +119,11 @@ public class TestSonic3kSmpsMetaCommandReachability {
 
     private static ControlFlowInventory inventory(AbstractSmpsData data) {
         byte[] bytes = data.getData();
+        boolean bankSpace = data instanceof Sonic3kSmpsData s3 && s3.getBankData() != null;
+        if (bankSpace) bytes = ((Sonic3kSmpsData) data).getBankData();
         ControlFlowInventory result = new ControlFlowInventory();
         ArrayDeque<Integer> work = new ArrayDeque<>();
-        for (int start : trackStarts(data)) {
+        for (int start : trackStarts(data, bankSpace)) {
             // Zero/foreign pointers are non-track header slots (for example,
             // DAC data owned by the driver); only resolved stream entries are
             // active control-flow roots.
@@ -190,7 +192,8 @@ public class TestSonic3kSmpsMetaCommandReachability {
 
     private static void addPointerEdge(ControlFlowInventory result, ArrayDeque<Integer> work,
             AbstractSmpsData data, int pointerOffset, boolean fallThrough, String edgeName) {
-        byte[] bytes = data.getData();
+        byte[] bytes = data instanceof Sonic3kSmpsData s3 && s3.getBankData() != null
+                ? s3.getBankData() : data.getData();
         int afterPointer = pointerOffset + 2;
         if (afterPointer > bytes.length) {
             result.frontier.add(edgeName + " at 0x" + Integer.toHexString(pointerOffset - 1)
@@ -198,7 +201,9 @@ public class TestSonic3kSmpsMetaCommandReachability {
             return;
         }
         int raw = (bytes[pointerOffset] & 0xFF) | ((bytes[pointerOffset + 1] & 0xFF) << 8);
-        int target = raw - data.getZ80StartAddress();
+        int base = data instanceof Sonic3kSmpsData s3 && s3.getBankData() != null
+                ? s3.getBankZ80Base() : data.getZ80StartAddress();
+        int target = raw - base;
         if (target < 0 || target >= bytes.length) {
             target = raw < bytes.length ? raw : -1;
         }
@@ -229,7 +234,7 @@ public class TestSonic3kSmpsMetaCommandReachability {
         }
     }
 
-    private static List<Integer> trackStarts(AbstractSmpsData data) {
+    private static List<Integer> trackStarts(AbstractSmpsData data, boolean bankSpace) {
         List<Integer> starts = new ArrayList<>();
         if (data instanceof SmpsSfxData sfx) {
             for (SmpsSfxData.SmpsSfxTrack track : sfx.getTrackEntries()) {
@@ -238,16 +243,21 @@ public class TestSonic3kSmpsMetaCommandReachability {
             return starts;
         }
         for (int pointer : data.getFmPointers()) {
-            if (pointer > 0) starts.add(resolvePointer(pointer, data));
+            if (pointer > 0) starts.add(resolvePointer(pointer, data, bankSpace));
         }
         for (int pointer : data.getPsgPointers()) {
-            if (pointer > 0) starts.add(resolvePointer(pointer, data));
+            if (pointer > 0) starts.add(resolvePointer(pointer, data, bankSpace));
         }
         return starts;
     }
 
-    private static int resolvePointer(int pointer, AbstractSmpsData data) {
+    private static int resolvePointer(int pointer, AbstractSmpsData data, boolean bankSpace) {
         if (pointer <= 0) return -1;
+        if (bankSpace) {
+            Sonic3kSmpsData s3 = (Sonic3kSmpsData) data;
+            int relative = pointer - s3.getBankZ80Base();
+            return relative >= 0 && relative < s3.getBankData().length ? relative : -1;
+        }
         if (pointer < data.getData().length) return pointer;
         int relative = pointer - data.getZ80StartAddress();
         return relative >= 0 && relative < data.getData().length ? relative : -1;

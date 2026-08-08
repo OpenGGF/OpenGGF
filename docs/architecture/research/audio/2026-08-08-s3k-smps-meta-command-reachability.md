@@ -80,6 +80,5 @@ mvn -Dmse=off \
   -Ds3k.rom.path="/path/to/Sonic and Knuckles & Sonic 3 (W) [!].gen" test
 ```
 
-The test keeps the `E2` operand advance local to the recording harness so it
-does not invoke the global audio singleton during inventory. It does not use
-trace data or hydrate gameplay/audio state from a trace.
+The inventory is a static ROM-data proof and does not invoke the audio singleton
+or use trace data to hydrate gameplay/audio state.
