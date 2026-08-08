@@ -68,7 +68,7 @@ comparison baseline, not sweep regressions.
 
 ## Reserved delivery comparisons
 
-### Updated integration baseline
+### Previous updated integration baseline (`3f0fd4a70`)
 
 The main workspace remained on `develop`; fetch and `git merge --ff-only
 origin/develop` left it current at `3f0fd4a70`. Existing untracked user files
@@ -102,6 +102,32 @@ mode for both sides of the comparison. The first serial baseline used
 tests: 14,262 PASS, 34 FAILURE, 14 ERROR, and 31 SKIPPED. That deterministic
 manifest is `updated-baseline.tsv.gz`. After each main run, the only tracked
 change was the generated rewind-gap report, which was inspected and restored.
+
+### Renewed integration baseline (`a8bfbcd7a`)
+
+Main and `origin/develop` now both resolve to
+`a8bfbcd7a85e00d760409e0dc9e02d16ef9763c8`. The seven formerly staged files
+were committed there outside this sweep; main has no tracked/index changes.
+Its unrelated untracked files are preserved untouched. Because the new commit
+changes runtime/test owners, the accepted baseline was regenerated with Java
+21.0.11 and the same three-ROM alphabetical one-fork command:
+
+```bash
+MAIN_WORKSPACE=$(pwd)
+mvn clean -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+  "-Dsonic1.rom.path=${MAIN_WORKSPACE}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${MAIN_WORKSPACE}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${MAIN_WORKSPACE}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  test
+```
+
+Surefire and the normalized XML both contained 14,341 tests: 14,262 PASS, 34
+FAILURE, 14 ERROR, and 31 SKIPPED. The renewed manifest is
+`updated-baseline.tsv.gz`. The previous accepted manifests are retained as
+`updated-baseline-3f0fd4a70.tsv.gz` and
+`development-3f0fd4a70.tsv.gz`. The only tracked main change after the suite
+was the generated rewind report; it was inspected and restored. Unrelated
+untracked main files remained untouched.
 
 ### Development worktree result
 
@@ -272,10 +298,10 @@ environmental differences pending the required Task 5 full-suite comparison.
 The stale-string scan returned no matches, and
 `docs/status/rewind-round-trip-gaps.md` remained clean.
 
-### Merged result
+### Historical staged-main blocker (resolved)
 
-Not yet run. Integration is paused before any merge or fast-forward because
-main `develop` contains seven staged user-owned modifications. The planning
+Integration was paused before any merge or fast-forward when main `develop`
+contained seven staged user-owned modifications. The planning
 snapshot was recorded read-only at main
 `3f0fd4a70b00e733b88445be7cf8425d8b431ffc` with:
 
@@ -314,11 +340,27 @@ unstage, stash, reset, check out, or commit these files. It requires a fresh
 binary patch/hash/path/status/HEAD snapshot immediately before each guarded
 fast-forward and byte-for-byte verification afterward.
 
-Once integration is authorized, main may fast-forward to the descendant
-feature tip only if its `HEAD` and staged fingerprint remain unchanged. A
+The superseded contract would have allowed main to fast-forward to the
+descendant feature tip only if its `HEAD` and staged fingerprint remained
+unchanged. A
 separate clean detached worktree at that merged commit owns the exact
 alphabetical one-fork post-merge suite, `merged.tsv.gz`, validation update, and
 evidence commit. Main may then fast-forward to that evidence commit under the
 same disjointness and fingerprint gates. Task 5 will compare every merged row
-against `updated-baseline.tsv.gz`; the seven user modifications must remain
-staged and untouched through push and task-owned worktree cleanup.
+against `updated-baseline.tsv.gz`; the seven user modifications would have
+remained staged and untouched through push and task-owned worktree cleanup.
+
+That staged-state blocker was subsequently resolved outside this sweep. Main
+advanced to `a8bfbcd7a`, which commits exactly the seven paths, matches
+`origin/develop`, and has a clean tracked/index state. The prior fingerprints
+remain historical evidence only. No sweep integration occurred. A renewed
+main baseline and an identical development run after merging `a8bfbcd7a` into
+the feature branch are required before integration readiness can be claimed;
+the unrelated main untracked paths remain protected throughout.
+
+### Merged result
+
+Not yet run. The current gate first regenerates the baseline at `a8bfbcd7a`,
+merges that exact commit into the feature branch, and regenerates the identical
+development suite. Post-merge verification is not authorized until that
+renewed comparison and independent review are green.

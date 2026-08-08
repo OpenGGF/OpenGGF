@@ -212,38 +212,33 @@ and development (and later merged verification). No rewind-gate regression is
 waived: every baseline PASS row must be restored under this deterministic
 one-fork order, with only the expected spring characterization added as PASS.
 
-Task 5 integration later found seven staged user-owned modifications in the
-main `develop` workspace. They are path-disjoint from this sweep, but they must
-remain staged and untouched: no unstage, stash, reset, checkout, or incidental
-commit is permitted. The reviewed immutable snapshot is main
-`3f0fd4a70b00e733b88445be7cf8425d8b431ffc`, seven staged modifications, and
-binary-patch SHA-256
-`a513e9a6804cc5f027636e3406ec3329954ca11fe03a64744553470185ce14ac`.
-Immediately before integration, capture the staged binary
-patch, its SHA-256, staged name/status, complete porcelain status, and main
-`HEAD` under `/tmp`. Independently sort the staged paths and the feature diff
-paths and require their intersection to be empty. Integration may proceed only
-when main `HEAD` is still the reviewed base and the feature tip descends from
-it. Because that ancestry permits a true fast-forward, advance main `develop`
-to the feature tip with `git merge --ff-only`; do not create a merge commit.
-Recreate the binary staged patch and status immediately afterward and require
-byte-for-byte equality and the same SHA-256 before continuing. State explicitly
-in delivery reporting that all seven user changes remain staged.
+Task 5 integration later found seven staged user-owned modifications in main.
+That blocker is resolved outside this sweep: the user committed all seven as
+`a8bfbcd7a85e00d760409e0dc9e02d16ef9763c8`, main and `origin/develop` now
+match that commit, and main has no tracked or staged changes. Its unrelated
+untracked files remain user-owned and must not be added, moved, removed, or
+rewritten. The earlier `3f0fd4a70` staged-patch fingerprints are historical
+blocker evidence only and must not be used as current integration guards.
 
-Post-merge validation must not run in the dirty main workspace. Create a
-task-owned detached worktree at the fast-forwarded feature tip, using the
-repository worktree convention, and run the exact clean ROM-backed suite there
-with `-Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical`. Normalize
-`merged.tsv.gz`, restore only that detached worktree's generated rewind report,
-and compare every row to `updated-baseline.tsv.gz`. Update the validation
-report and commit the merged evidence from detached `HEAD`. Before advancing
-main to that evidence commit, fingerprint main's staged patch/status again,
-require the evidence diff to be path-disjoint, and require main `HEAD` still to
-equal the feature tip. Fast-forward main to the evidence commit and repeat the
-same staged patch/status comparisons. Every command group is fail-closed. Any
-changed fingerprint, unexpected `HEAD`, nonempty overlap, non-fast-forward
-ancestry, or post-merge regression stops integration and requires renewed
-baseline/review without altering the main index.
+Because `a8bfbcd7a` changes test owners and expected outcomes, renew both sides
+of the regression gate. Run the exact clean ROM-backed alphabetical one-fork
+suite on main at `a8bfbcd7a`, normalize a new `updated-baseline.tsv.gz`, and
+restore only the generated rewind report. Merge `a8bfbcd7a` into the feature
+worktree without switching main or touching its untracked files, run the
+identical suite there, and normalize `development.tsv.gz`. Acceptance requires
+zero missing baseline PASS rows, zero removed or reclassified
+class/name/outcome/type rows, and only the sweep's expected added reverse-
+gravity spring PASS; every raw message diff must still be reviewed.
+
+Later integration remains fail-closed. Main must still equal the renewed base,
+have no tracked/staged changes, and be an ancestor of the reviewed feature tip
+before `git merge --ff-only`. Preserve a porcelain snapshot of its unrelated
+untracked files before and after each fast-forward. Run post-merge validation
+in a separate clean detached task worktree at the feature tip with the same
+deterministic full-suite command, commit `merged.tsv.gz` and its validation
+update there, then fast-forward main to that evidence commit only while HEAD,
+ancestry, tracked cleanliness, and untracked status remain unchanged. Any
+mismatch or regression requires renewed review.
 
 Clean builds are mandatory for every comparable full-suite run so deleted
 sources cannot survive as stale bytecode in `target/classes` or the packaged
