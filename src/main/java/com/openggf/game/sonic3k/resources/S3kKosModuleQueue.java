@@ -45,6 +45,7 @@ public final class S3kKosModuleQueue {
     private boolean heldLoopTailClosure;
     private boolean deferredChildSubmissionForNextLoop;
     private boolean deferredChildSubmissionReady;
+    private boolean deferChildSubmissionAfterHeldAdmission;
 
     public S3kKosModuleQueue(
             HardwareTimingService timing,
@@ -135,8 +136,29 @@ public final class S3kKosModuleQueue {
         if (deferredChildSubmissionForNextLoop) {
             deferredChildSubmissionReady = true;
             deferredChildSubmissionForNextLoop = false;
+            if (deferChildSubmissionAfterHeldAdmission) {
+                stepDeferredChildAfterDirectTail();
+            }
         }
         heldLoopTailClosure = false;
+    }
+
+    /**
+     * Retains the ROM queue's held-tail publication shape for the child handoff
+     * created by a batch admitted after an already-held loop tail. Once that
+     * child retires, the next parent resumes the native POST_OBJECTS path.
+     * Ordinary admissions keep that path throughout.
+     */
+    public void deferChildSubmissionAfterHeldAdmission() {
+        deferChildSubmissionAfterHeldAdmission = true;
+        if (deferredChildSubmissionReady) {
+            stepDeferredChildAfterDirectTail();
+        }
+    }
+
+    /** Releases the held-admission shape after its owning batch retires. */
+    public void allowChildSubmissionAfterHeldAdmission() {
+        deferChildSubmissionAfterHeldAdmission = false;
     }
 
     /** Publishes a child after the direct FIFO has serviced this iteration. */
@@ -274,6 +296,9 @@ public final class S3kKosModuleQueue {
      * shifts it out at 2778-2788), so it is skipped rather than blocking.
      */
     private void stepHeadArchive() {
+        if (deferredChildSubmissionReady && deferChildSubmissionAfterHeldAdmission) {
+            return;
+        }
         boolean deferChildSubmission = deferChildSubmissionForHeldLoopTail;
         deferChildSubmissionForHeldLoopTail = false;
         for (HardwareWorkHandle handle : timing.pendingHandles()) {
@@ -309,7 +334,8 @@ public final class S3kKosModuleQueue {
             if (deferChildSubmission && completed) {
                 carryDeferredChildSubmissionForHeldLoopTail = true;
             }
-            if (heldLoopTailClosure && completed) {
+            if (heldLoopTailClosure && completed
+                    && !deferChildSubmissionAfterHeldAdmission) {
                 deferredChildSubmissionForNextLoop = true;
             }
             return;

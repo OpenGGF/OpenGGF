@@ -65658,3 +65658,40 @@ to synthesize a POST phase on a VBLANK-only row.
   advances from queue edge `#8` to `#36`; MGZ and LBZ complete-run frontiers
   retain zero-error status. The next target is the AIZ complete-run queue
   boundary at raw `6345`/edge `#36`.
+
+## 2026-08-08 — S3K AIZ held-admission queue frontier
+
+- Worktree: `bugfix/s3k-traces` at `533aea143` before this fix; unrelated edits
+  in `.idea/vcs.xml`, `docs/status/rewind-round-trip-gaps.md`, and
+  `src/main/java/com/openggf/level/objects/ObjectPlacementController.java`
+  remained unstaged. Validation used JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen` (SHA-1
+  `b711a909cce238ca4af3e517a2edca306228efa5`), without replacing or renaming
+  it.
+- Frontier command: `env JAVA_HOME=$JDK21_HOME PATH=$JDK21_HOME/bin:$PATH
+  MAVEN_OPTS='-Xmx2g' mvn -q -Dmse=off -Dsurefire.forkCount=1
+  -DreuseForks=true -Dsurefire.argLine='-Xmx3g'
+  -Dmaven.test.failure.ignore=true
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtrace.verification=physics -Dtrace.frontierOnly=false
+  -Dtrace.context.radius=2
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay#replayMatchesTrace
+  test`. The complete run reaches the recorded direct
+  `KOS_DECOMPRESSION_QUEUE#50` edge at raw `20376`; the engine has no pending
+  work there. The report retains two queue-state comparison errors in the AIZ2
+  admission window, first at raw `6349` (`queue.s3k_kos_direct.prepared`,
+  expected `false`, actual `true`).
+- Root cause: AIZ2 reaches the ROM `LoadEnemyArt` admission on the penultimate
+  redraw tick. The provider now carries whether that real ROM request first
+  crossed an unheld or held loop tail, and the S3K module queue preserves the
+  matching direct-FIFO child handoff without using trace, frame, route, or zone
+  identity. No trace payloads or gameplay values are read back into the engine.
+- Regression checks: `TestS3kAizTraceReplay#replayMatchesTrace` passes with zero
+  errors; the full MGZ/LBZ complete-run canary command passes with zero
+  comparator, bootstrap, and hardware-timing errors. Ring comparison remains
+  enabled through `ToleranceConfig.DEFAULT` with `RingCountMode.FORCE_ERROR`;
+  no trace payloads changed.
+- Route position: AIZ complete-run advances from the current `#36` boundary to
+  direct `#50` at raw `20376`; AIZ standard, HCZ, MGZ, CNZ, ICZ, and LBZ retain
+  their previously recorded gameplay-order frontiers. The next target is the
+  remaining AIZ2 queue-state mismatch at raw `6349`.

@@ -1400,6 +1400,13 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                     // act2WaitFireDrawActive.
                     act2WaitFireDrawActive = true;
                     firePhaseFrames++;
+                    if (firePhaseFrames == AIZ2_WAIT_FIRE_REDRAW_FRAMES - 1) {
+                        // The ROM reaches LoadEnemyArt on the redraw's penultimate
+                        // visible tick; the following loop-tail boundary publishes
+                        // the batch. The final redraw tick only releases the camera
+                        // clamp and does not submit a second batch.
+                        admitAct2EnemyArt();
+                    }
                     if (firePhaseFrames >= AIZ2_WAIT_FIRE_REDRAW_FRAMES) {
                         // ROM AIZ2BGE_WaitFire releases the post-reload X clamp by
                         // writing Camera_max_X_pos=$6000 once the redraw completes
@@ -1412,7 +1419,6 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                         // Camera_max_X_pos applies to the following frame.
                         camera().setMaxX((short) AIZ2_POST_FIRE_CAMERA_MAX_X);
                         applyPostFireContinuationPaletteLine4(levelManager());
-                        admitAct2EnemyArt();
                         fireSequencePhase = FireSequencePhase.AIZ2_BG_REDRAW;
                         firePhaseFrames = 0;
                     }
@@ -1481,10 +1487,12 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
             case AIZ2_WAIT_FIRE -> {
                 act2WaitFireDrawActive = true;
                 firePhaseFrames++;
+                if (firePhaseFrames == AIZ2_WAIT_FIRE_REDRAW_FRAMES - 1) {
+                    admitAct2EnemyArt();
+                }
                 if (firePhaseFrames >= AIZ2_WAIT_FIRE_REDRAW_FRAMES) {
                     camera().setMaxX((short) AIZ2_POST_FIRE_CAMERA_MAX_X);
                     applyPostFireContinuationPaletteLine4(levelManager());
-                    admitAct2EnemyArt();
                     fireSequencePhase = FireSequencePhase.AIZ2_BG_REDRAW;
                     firePhaseFrames = 0;
                 }

@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K AIZ post-reload enemy-art admission now preserves the ROM's
+  held-tail publication provenance and native KosM child handoff. The complete
+  AIZ replay reaches direct `KOS_DECOMPRESSION_QUEUE#50` at raw frame `20376`
+  with no pending engine work; standard AIZ, MGZ, and LBZ remain green. No trace
+  payloads changed.
 - Fix/Test: S3K AIZ's allocated intro title-card owner now preserves the
   native `Obj_TitleCardWait2` poll before publishing `LoadEnemyArt`, advancing
   the AIZ replay handoff without changing trace data.

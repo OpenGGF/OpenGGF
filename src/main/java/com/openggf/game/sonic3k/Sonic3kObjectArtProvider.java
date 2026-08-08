@@ -70,6 +70,8 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     private final List<HardwareWorkHandle> enemyKosHandles = new ArrayList<>();
     private S3kKosModuleQueue enemyKosQueue;
     private boolean enemyKosSubmissionArmed;
+    /** Whether a pending ROM admission has already crossed an unheld tail. */
+    private boolean enemyKosAdmissionSawUnheldTail;
     private long runtimeArtAdmissionGeneration;
     private long runtimeArtAdmissionNextLeaseId;
     private RuntimeArtAdmissionLease runtimeArtAdmissionLease;
@@ -1573,9 +1575,23 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     /** Completes a late ROM {@code LoadEnemyArt} admission after this frame's queue tail. */
     @Override
     public void processRuntimeArtQueueAfterPreMainLoop() {
+        processRuntimeArtQueueAfterPreMainLoop(true);
+    }
+
+    @Override
+    public void processRuntimeArtQueueAfterPreMainLoop(boolean heldLoopTail) {
         if (!enemyKosSubmitAfterPreMainLoop) {
             return;
         }
+        if (!heldLoopTail) {
+            // The ROM-owned admission has reached a loop tail whose sampled
+            // iteration is still complete. Retain the real pending request for
+            // the next represented tail so it cannot appear one direct-service
+            // boundary early.
+            enemyKosAdmissionSawUnheldTail = true;
+            return;
+        }
+        boolean admittedOnHeldTail = !enemyKosAdmissionSawUnheldTail;
         S3kKosModuleQueue moduleQueue =
                 S3kRuntimeArtCoordinator.current().moduleQueue();
         boolean moduleQueueWasEmpty = !moduleQueue.hasPendingPhysicalModules();
@@ -1585,6 +1601,10 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
             return;
         }
         enemyKosSubmitAfterPreMainLoop = false;
+        enemyKosAdmissionSawUnheldTail = false;
+        if (admittedOnHeldTail) {
+            moduleQueue.deferChildSubmissionAfterHeldAdmission();
+        }
         // Process_Kos_Module_Queue runs once after ScreenEvents. A late
         // LoadEnemyArt publication can therefore start its first parent only
         // when the native module FIFO was empty; if an older parent is already
@@ -1598,6 +1618,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         enemyKosHandles.clear();
         enemyKosQueue = null;
         enemyKosSubmissionArmed = false;
+        enemyKosAdmissionSawUnheldTail = false;
         enemyKosArmOnNextRuntimePass = false;
         enemyKosSubmitAfterPreMainLoop = false;
         titleCardTeardown = null;
@@ -1860,11 +1881,13 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
             return;
         }
         if (enemyKosHandles.stream().allMatch(enemyKosQueue::isReady)) {
+            S3kKosModuleQueue completedQueue = enemyKosQueue;
             for (HardwareWorkHandle handle : enemyKosHandles) {
                 enemyKosQueue.claim(handle);
             }
             enemyKosHandles.clear();
             enemyKosQueue = null;
+            completedQueue.allowChildSubmissionAfterHeldAdmission();
         }
     }
 
@@ -2624,7 +2647,8 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
                 loadEpoch, cnzTeleporterArtState.ordinal()
                         | (cnzEndBossArtState.ordinal() << 2)
                         | (enemyKosArmOnNextRuntimePass ? 1 << 4 : 0)
-                        | (enemyKosSubmitAfterPreMainLoop ? 1 << 5 : 0),
+                        | (enemyKosSubmitAfterPreMainLoop ? 1 << 5 : 0)
+                        | (enemyKosAdmissionSawUnheldTail ? 1 << 6 : 0),
                 pendingModules,
                 enemyKosHandles.stream().map(HardwareWorkHandle::ordinal).toList(),
                 enemyKosSubmissionArmed,
@@ -2653,6 +2677,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         cnzEndBossArtState = decodeRuntimeArtState((packedState >>> 2) & 3);
         enemyKosArmOnNextRuntimePass = (packedState & (1 << 4)) != 0;
         enemyKosSubmitAfterPreMainLoop = (packedState & (1 << 5)) != 0;
+        enemyKosAdmissionSawUnheldTail = (packedState & (1 << 6)) != 0;
         pendingEnemyKosEntries = snap.pendingKosModules().stream()
                 .map(entry -> new EnemyKosEntry(
                         entry.sourceAddress(), entry.destinationTile()))

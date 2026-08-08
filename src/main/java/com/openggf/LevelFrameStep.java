@@ -435,7 +435,8 @@ public final class LevelFrameStep {
         context.runtimeArtCoordinator().finishHeldLoopTailClosure();
         if (context.gameModule().getObjectArtProvider() != null) {
             context.gameModule().getObjectArtProvider()
-                    .processRuntimeArtQueueAfterPreMainLoop();
+                    .processRuntimeArtQueueAfterPreMainLoop(
+                            frame.defersLoopTailPreparation());
         }
         if (frame.isOwnedBy(phase)) {
             frame.prepareAfterLoop(phase);
