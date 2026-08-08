@@ -260,6 +260,38 @@ development manifests are retained as
 `development-filesystem-order.tsv.gz` and
 `development-filesystem-order-rerun.tsv.gz`.
 
+### Renewed `a8bfbcd7a` baseline/development comparison
+
+The exact `a8bfbcd7a` baseline described above was merged into the clean
+feature branch without conflict or data loss as merge commit `d9e552fbc`. The
+feature worktree then ran the identical Java 21.0.11, three-ROM,
+`-Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical` clean suite. Its
+normalized `development.tsv.gz` contains 14,342 rows: 14,263 PASS, 34 FAILURE,
+14 ERROR, and 31 SKIPPED.
+
+Machine comparisons produced:
+
+```text
+missing baseline PASS rows:                         0
+removed/reclassified class/name/outcome/type rows: 0
+added class/name/outcome/type rows:                 1
+```
+
+The sole addition is:
+
+```text
+com.openggf.game.sonic3k.objects.TestSonic3kSpringObjectInstance<TAB>reverseGravitySwapsVerticalSpringDirectionDuringNativeInit<TAB>PASS<TAB><empty type>
+```
+
+The complete raw diff is 28 lines. It contains that expected PASS, the same
+pre-existing `TestTraceSessionLauncherProductionFailureCleanup` failure with
+only a volatile object identity hash changed, and the same 13
+`productionObjectLifecycleRawCallCountsDoNotGrow` violation paths/budget in a
+different message order. Every test identity, outcome, and exception type is
+otherwise identical. No baseline PASS regressed, no test disappeared, and no
+red outcome was reclassified. The generated development rewind report was the
+only tracked test output and was inspected and restored.
+
 After the living documentation was refreshed, the focused documentation/build
 guard command
 `mvn -Dmse=off -Dsurefire.forkCount=1
@@ -335,32 +367,34 @@ M  src/test/java/com/openggf/tests/trace/runs/TestS2EhzHalfpipeRoundTripChain.ja
 Sorting those paths against the 57 paths changed by
 `3f0fd4a70..94f0a2f14` produced an empty intersection, and
 `git merge-base --is-ancestor 3f0fd4a70 94f0a2f14` exited zero. No main index
-or worktree state was changed. The amended integration contract does not
-unstage, stash, reset, check out, or commit these files. It requires a fresh
-binary patch/hash/path/status/HEAD snapshot immediately before each guarded
-fast-forward and byte-for-byte verification afterward.
+or worktree state was changed. The then-amended integration contract would not
+have unstaged, stashed, reset, checked out, or committed these files. It would
+have required a fresh binary patch/hash/path/status/HEAD snapshot immediately
+before each guarded fast-forward and byte-for-byte verification afterward.
+That contract is now superseded.
 
 The superseded contract would have allowed main to fast-forward to the
 descendant feature tip only if its `HEAD` and staged fingerprint remained
-unchanged. A
-separate clean detached worktree at that merged commit owns the exact
+unchanged. A separate clean detached worktree would then have owned the exact
 alphabetical one-fork post-merge suite, `merged.tsv.gz`, validation update, and
-evidence commit. Main may then fast-forward to that evidence commit under the
-same disjointness and fingerprint gates. Task 5 will compare every merged row
-against `updated-baseline.tsv.gz`; the seven user modifications would have
-remained staged and untouched through push and task-owned worktree cleanup.
+evidence commit. Main could have fast-forwarded to that evidence commit under
+the same disjointness and fingerprint gates. Task 5 would have compared every
+merged row against `updated-baseline.tsv.gz`; the seven user modifications
+would have remained staged and untouched through push and task-owned worktree
+cleanup.
 
 That staged-state blocker was subsequently resolved outside this sweep. Main
 advanced to `a8bfbcd7a`, which commits exactly the seven paths, matches
 `origin/develop`, and has a clean tracked/index state. The prior fingerprints
-remain historical evidence only. No sweep integration occurred. A renewed
-main baseline and an identical development run after merging `a8bfbcd7a` into
-the feature branch are required before integration readiness can be claimed;
-the unrelated main untracked paths remain protected throughout.
+remain historical evidence only. No sweep integration occurred during that
+blocker. The renewed main baseline and identical development run after merging
+`a8bfbcd7a` into the feature branch have since completed; the unrelated main
+untracked paths remain protected throughout later integration.
 
 ### Merged result
 
-Not yet run. The current gate first regenerates the baseline at `a8bfbcd7a`,
-merges that exact commit into the feature branch, and regenerates the identical
-development suite. Post-merge verification is not authorized until that
-renewed comparison and independent review are green.
+The renewed pre-integration comparison is green: the exact `a8bfbcd7a`
+baseline and identical development suite completed with the results recorded
+above, after the baseline commit merged without conflict as `d9e552fbc`.
+Integration, the main fast-forward, post-merge validation, evidence commit,
+push, and cleanup remain unexecuted.

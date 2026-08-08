@@ -230,6 +230,15 @@ zero missing baseline PASS rows, zero removed or reclassified
 class/name/outcome/type rows, and only the sweep's expected added reverse-
 gravity spring PASS; every raw message diff must still be reviewed.
 
+The renewed pair completed after merging `a8bfbcd7a` without conflict in
+feature merge commit `d9e552fbc`. Baseline has 14,341 rows (14,262 PASS, 34
+FAILURE, 14 ERROR, 31 SKIPPED); development has 14,342 rows (14,263 PASS, 34
+FAILURE, 14 ERROR, 31 SKIPPED). Four-column comparison has zero removed or
+reclassified outcomes and exactly the added spring PASS; baseline-PASS
+comparison has zero missing rows. The complete 28-line raw diff contains only
+that PASS, one volatile launcher identity, and ordering of the same 13 guard
+paths. This is the accepted renewed pre-integration gate.
+
 Later integration remains fail-closed. Main must still equal the renewed base,
 have no tracked/staged changes, and be an ancestor of the reviewed feature tip
 before `git merge --ff-only`. Preserve a porcelain snapshot of its unrelated
@@ -381,19 +390,20 @@ than hidden by aggregate counts.
   before removing the stale “currently stubbed” text.
 - Run the full JDK 21 suite and compare its exact failures/errors with the
   recorded baseline.
-- Before integration, fetch and fast-forward the main-workspace `develop`
-  branch without overwriting user changes. Run the exact full command on that
-  updated main-workspace integration baseline and store its failure identities.
-- Bring the development worktree up to that baseline and run the exact full
-  suite and focused tests there. If main contains staged user changes, capture
-  their binary patch/hash/path/status/HEAD evidence, prove path disjointness,
-  and fast-forward main to the descendant feature tip only while every guard
-  holds; never unstage, stash, or commit those changes.
+- For this renewed gate, fetch without advancing main, require main and
+  `origin/develop` to remain exactly at reviewed baseline `a8bfbcd7a`, and
+  require its tracked/index state to remain clean. The renewed baseline suite
+  and identical development suite have completed with the accepted results
+  above.
+- Before integration, require main still at `a8bfbcd7a`, preserve and compare
+  its unrelated untracked status, prove ancestry to the reviewed feature tip,
+  and use only a fail-closed fast-forward. Any tracked/index or baseline-HEAD
+  change stops integration for renewed review.
 - Run the post-merge suite in a separate clean detached validation worktree at
   the fast-forwarded feature tip, not in dirty main. Compare it to the newly
   recorded updated baseline, commit only merged validation evidence there,
-  then fingerprint and fast-forward main to that evidence commit under the
-  same disjointness and staged-patch preservation gates.
+  then fast-forward main to that evidence commit only while renewed clean-main
+  HEAD, ancestry, tracked/index, and unrelated-untracked guards still hold.
 - Before each suite, require `docs/status/rewind-round-trip-gaps.md` to have no
   pre-existing user diff in that workspace. After each suite, inspect and
   restore only the test-generated diff to the current workspace `HEAD`; repeat
@@ -410,10 +420,11 @@ than hidden by aggregate counts.
 - Broad mechanical deletion creates noisy conflicts. Mitigation: keep this
   tranche to proven orphan types and narrow members; retain the larger lexical
   inventory as audit evidence only.
-- A dirty main index can be accidentally absorbed, unstaged, or overwritten
-  during integration. Mitigation: binary-patch and status fingerprints before
-  and after each guarded fast-forward, zero path overlap, a detached clean
-  validation worktree, and immediate stop on any mismatch.
+- Main or its remote baseline can change after the renewed comparison.
+  Mitigation: assert the exact `a8bfbcd7a` HEAD, clean tracked/index state,
+  ancestry, and byte-identical unrelated-untracked status before the guarded
+  fast-forward; use a detached clean validation worktree and stop on any
+  mismatch. The prior dirty-index fingerprints are historical evidence only.
 
 ## Delivery documentation and policy
 
