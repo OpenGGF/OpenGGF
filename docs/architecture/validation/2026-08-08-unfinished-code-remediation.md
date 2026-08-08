@@ -42,10 +42,12 @@ the disassembly-owned topology and covered by tests.
   ignored renderer hint were removed; compatibility overloads are explicitly
   equivalence-tested.
 - S3K SMPS fixed-point traversal proves `FF 01/02/03` unreachable in all
-  loader-supported S&K/S3 music and S&K-loader SFX streams. Operand alignment
-  remains supported for custom streams. The separate S3-native SFX table,
-  differing IDs `9B`/`AD`, and `DC`–`DF` aliases remain open and are not called
-  resolved.
+  loader-supported S&K/S3 music and S&K-loader SFX streams plus both native
+  SFX banks (`33-DF`, 173 entries each). Strict full-bank traversal resolves
+  every native root/frontier; ROM type-check bytes prove S&K `DC` is CreditsK
+  music and `DD-DF` are SFX, while S3 dispatches `DC-DF` as SFX. The differing
+  `9B`/`AD` payloads and all alias targets are covered. Operand alignment
+  remains supported for custom streams.
 
 ## Independently rejected work
 
@@ -72,6 +74,20 @@ rewind, AIZ2 splash graph rewind and art, SMPS reachability/operand alignment,
 special-stage capability routing, all eight S1 scroll handlers, and renderer
 source guards. The two skips are the existing environment-dependent renderer
 sampling cases.
+
+The native SFX extension was run separately on JDK 21 with the verified locked-on
+ROM:
+
+```text
+mvn -Dmse=off \
+  -Dtest=com.openggf.game.sonic3k.audio.smps.TestSonic3kSmpsMetaCommandReachability \
+  -Ds3k.rom.path="<locked-on S3K>" test
+Tests run: 7, Failures: 0, Errors: 0, Skipped: 0
+```
+
+That test covers both 173-entry native tables, all 346 native entries, and the
+strict full-bank frontier/dispatch assertions described in the audio research
+note.
 
 The corrected rewind inventory gate also passed 32 focused tests after adding
 `AizEndBossWaterfallChild` to the intentional graph-covered totals.
@@ -106,10 +122,8 @@ Highest-priority remaining work is deliberately visible rather than deleted:
 1. Port Big Arm from the native object graph and defeat flow, then validate the
    Knuckles LBZ route.
 2. Capture route/trace evidence for the AIZ napalm and AIZ2 splash changes.
-3. Inventory the separate S3-native SFX table and native alias targets before
-   closing the SMPS meta-command finding completely.
-4. Resolve `AbstractLevel.markAllDirty()` through its real dirty-region owner.
-5. Continue the roadmap's title-menu audio, load-profile semantics, and Mecha
+3. Resolve `AbstractLevel.markAllDirty()` through its real dirty-region owner.
+4. Continue the roadmap's title-menu audio, load-profile semantics, and Mecha
    Sonic movement-order work.
 
 The original audit remains the complete disposition ledger; this report records

@@ -13,8 +13,16 @@ All notable changes to the OpenGGF project are documented in this file.
   `FF 01` (`SND_CMD`), `FF 02` (`MUS_PAUSE`), and `FF 03` (`COPY_MEM`) meta
   commands. None are reached; the handler now documents and preserves only
   operand alignment for custom streams instead of implying native semantics.
-  S3-native SFX/alias coverage remains open. Added a ROM-backed sequencing guard and the source-contract inventory under
+  Added ROM-backed coverage for both native SFX banks (`33-DF`, 173 entries
+  each), including the differing `9B`/`AD` payloads and `DC-DF` aliases. The
+  ROM type-check proves S&K `DC` is CreditsK music while `DD-DF` are SFX; the
+  S3 driver dispatches `DC-DF` as SFX. Strict full-bank traversal leaves no
+  unresolved roots/frontier and reaches none of the three commands. The
+  sequencing guard and source-contract inventory are under
   `docs/architecture/research/audio/2026-08-08-s3k-smps-meta-command-reachability.md`.
+  The proof also rejects bank-end falloff, malformed roots/pointers, unknown
+  commands/subcommands, and protects the ROM `EB` pointer layout with
+  mutation-sensitive CFG tests.
 - Fix: removed the unused legacy `Game.getBackgroundScroll()` query from the
   frame, rewind, and background-shader paths. Sonic 1 background Y remains owned
   by its per-zone scroll handlers, while the shared API stays available for the

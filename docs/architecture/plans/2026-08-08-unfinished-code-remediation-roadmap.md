@@ -38,8 +38,8 @@ The first remediation swarm is complete on the local human-review branch
 `feature/ai-unfinished-remediation-review`. It implemented LRZ1 falling startup, the
 AIZ miniboss napalm route, AIZ2 end-boss splash children, explicit
 special-stage debug capabilities, and authoritative S1 background-scroll
-ownership. The SMPS investigation closed the loader-supported portion while
-leaving S3-native SFX explicitly open. The attempted Big Arm port was rejected
+ownership. The SMPS investigation closed the loader-supported and S3-native
+SFX portions with ROM-backed full-bank proof. The attempted Big Arm port was rejected
 by independent review and was not integrated.
 
 Commands, test outcomes, unresolved work, and the rejected-branch rationale
@@ -65,9 +65,11 @@ that every audited feature is now complete.
 
 ### Wave 2 — semantic correctness and honest capabilities
 
-1. Inventory ROM reachability of S3K SMPS meta commands `SND_CMD`,
-   `MUS_PAUSE`, and `COPY_MEM`; implement reached behavior from SMPSPlay/Z80
-   evidence and document proven-unreachable commands.
+1. [Resolved 2026-08-08] Inventory ROM reachability of S3K SMPS meta commands
+   `SND_CMD`, `MUS_PAUSE`, and `COPY_MEM`. Both native 173-entry SFX banks and
+   all loader streams have closed full-bank control flow, ROM-asserted alias
+   dispatch, and no reached target command; custom-stream handling remains
+   operand-alignment-only pending a deliberately supported custom driver.
 2. Replace S1/S3K special-stage shortcut no-ops with an explicit capability
    contract: a shortcut either works and has tests, or is unavailable.
 3. Resolve `Sonic1.getBackgroundScroll()` ownership against the current

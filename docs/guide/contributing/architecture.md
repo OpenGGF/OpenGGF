@@ -411,13 +411,17 @@ The audio system reimplements the SMPS (Sample Music Playback System) sound driv
 This is a reimplementation, not a blanket register-write parity guarantee.
 S3K coordinate flags are handled by `Sonic3kCoordFlagHandler`; meta commands
 `SND_CMD`, `MUS_PAUSE`, and `COPY_MEM` are proven absent from the
-S&K-loader-supported S3K music/SFX streams. Their handler cases consume operands only for stream
-alignment and deliberately do not claim the native dispatch, all-track halt,
-or shared-Z80-memory-copy semantics. S3-native SFX/alias coverage remains open.
+S&K-loader-supported S3K music/SFX streams and both native SFX tables
+(`33-DF`, 173 entries each). Strict full-bank traversal covers every native
+root and frontier, including the differing `9B`/`AD` payloads and `DC-DF`
+aliases. ROM type-check bytes prove S&K's `DC` CreditsK music special case and
+S3's `DC-DF` SFX dispatch. Their handler cases consume operands only for
+stream alignment and deliberately do not claim the native dispatch, all-track
+halt, or shared-Z80-memory-copy semantics.
 The ROM inventory and native contracts
 are recorded in
 `docs/architecture/research/audio/2026-08-08-s3k-smps-meta-command-reachability.md`;
-S3-native SFX/alias coverage remains open; future custom-stream support must implement these at the audio driver boundary.
+future custom-stream support must implement these at the audio driver boundary.
 
 Each game has a `SmpsSequencerConfig` that captures driver differences:
 - **Tempo mode:** S3K uses OVERFLOW (overflow = skip), S2 uses OVERFLOW2 (overflow = tick).
