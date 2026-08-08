@@ -3,6 +3,14 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K HCZ2's cutscene button now follows the ROM `Sprite_OnScreen_Test`
+  lifetime instead of remaining persistent after it leaves the camera window.
+  Releasing its slot before the HCZ2 boss child allocations realigns the turbine,
+  Robotnik head, water column, and lost-ring slots, removing the ring-count
+  mismatch at raw frame `29037` and advancing the HCZ physics frontier to the
+  queue-state mismatch at raw frame `30645`; the next recorded edge is
+  `KOS_DECOMPRESSION_QUEUE#116` at raw frame `30649`. Focused pause, recording,
+  HCZ-event, MGZ, and LBZ regressions pass. No trace payloads changed.
 - Fix/Test: S3K recorded replay now preserves the ROM `LevelLoop` boundary
   around `Pause_Game` and `Demo_PlayRecord`: a Start edge on a full row remains
   visible to that row's gameplay body, then enters the following pause loop.

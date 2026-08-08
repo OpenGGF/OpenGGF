@@ -65846,3 +65846,46 @@ to synthesize a POST phase on a VBLANK-only row.
   `29037`, with direct queue edge `#116` at raw `30649` next. MGZ, CNZ, ICZ,
   and LBZ retain their established frontiers. The next target is the HCZ ring
   count discrepancy at raw `29037`.
+
+## 2026-08-08 - S3K HCZ2 cutscene-button lifetime frontier
+
+- Worktree: `bugfix/s3k-traces` at `62c1c4fe8` before this fix; unrelated edits
+  in `.idea/vcs.xml`, `docs/status/rewind-round-trip-gaps.md`,
+  and `src/main/java/com/openggf/level/objects/ObjectPlacementController.java`
+  remained unstaged; temporary probes were removed before validation. Validation
+  used JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen` (SHA-1
+  `b711a909cce238ca4af3e517a2edca306228efa5`), without replacing or renaming
+  it.
+- Frontier command: `env JAVA_HOME=$JDK21_HOME PATH=$JDK21_HOME/bin:$PATH
+  mvn -q -Dmse=off -Dsurefire.forkCount=1 -DforkCount=1
+  -DreuseForks=false -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtrace.frontierOnly=true -Dtrace.context.radius=2
+  -Dtrace.verification=physics
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay#replayMatchesTrace
+  test`. The frontier report has 11 errors: the three established Tails
+  animation mismatches and eight queue-state errors beginning at raw frame
+  `30645` (`queue.s3k_kos_direct.busy`, expected `false`, actual `true`). The
+  prior ring errors at raw `29037` are gone. The run stops at the expected
+  unconsumed `KOS_DECOMPRESSION_QUEUE#116` edge at raw frame `30649`, which is
+  the next hardware boundary after the new physical mismatch.
+- Root cause: ROM `Obj_CutsceneButton` ends with `Sprite_OnScreen_Test`; it is
+  not a persistent arena object. `Hcz2CutsceneButtonInstance` had overridden
+  the engine lifetime to remain persistent, leaving it in SST slot 11 after
+  the HCZ2 cutscene. That shifted the first-free allocations for the boss's
+  turbine, Robotnik head, water column, and the later lost-ring spill. Removing
+  the override restores the ordinary ROM-backed off-screen lifetime; no trace,
+  frame, route, or zone condition is consulted.
+- Regression command: `env JAVA_HOME=$JDK21_HOME PATH=$JDK21_HOME/bin:$PATH
+  MAVEN_OPTS='-Xmx2g' mvn -q -Dmse=off -Dsurefire.forkCount=1
+  -DforkCount=1 -DreuseForks=false -Dsurefire.argLine='-Xmx3g'
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.game.TestInGamePause,com.openggf.tools.TestRecordingFrameDriverInputOnly,com.openggf.game.sonic3k.events.TestSonic3kHCZEvents,com.openggf.tests.trace.s3k.TestS3kMgzCompleteRunTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s3k.TestS3kLbzCompleteRunTraceReplay#replayMatchesTrace'
+  test`. Result: 16 tests, 0 failures, 0 errors, 0 skips. Ring comparison
+  remains enabled through `ToleranceConfig.DEFAULT` with
+  `RingCountMode.FORCE_ERROR`; no trace payloads changed.
+- Route position: AIZ retains its current gameplay-order frontier; HCZ advances
+  from the ring mismatch at raw `29037` to the queue-state mismatch at raw
+  `30645`, with direct queue edge `#116` at raw `30649` next. MGZ and LBZ retain
+  zero-error complete-run status, while CNZ and ICZ retain their established
+  frontiers. The next target is the HCZ queue-state mismatch at raw `30645`.
