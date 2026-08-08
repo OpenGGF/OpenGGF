@@ -430,7 +430,12 @@ public final class TraceRunPlaybackCoordinator {
                     && observation.level().loadGeneration()
                             == currentLevelGeneration;
             case "bonus_stage" -> matchesBonus(segment, observation);
-            case "special_stage" -> observation.mode() == GameMode.SPECIAL_STAGE
+            // A recorded special_stage segment spans the ROM's whole
+            // GameModeID_SpecialStage, results screen included; the engine
+            // splits that mode in two. See
+            // RunPlaybackObservation.insideRecordedSpecialStageMode.
+            case "special_stage" -> RunPlaybackObservation
+                    .insideRecordedSpecialStageMode(observation.mode())
                     && Objects.equals(segment.specialStageIndex(),
                             observation.specialStageIndex());
             default -> false;

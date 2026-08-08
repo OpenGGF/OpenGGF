@@ -1671,6 +1671,25 @@ public class Sonic2SpecialStageManager {
                     continue;
                 }
 
+                // The shared helper both call sites use (Obj60's ring test with
+                // d6=$A and Obj61's bomb test with d6=8) rejects a player unless
+                // its routine is the normal on-track one:
+                //
+                //   tst.b   id(a1)            ; slot occupied
+                //   cmpi.b  #2,routine(a1)    ; Obj09_MdNormal / Obj10_MdNormal
+                //   bne.s   loc_3511A
+                //   tst.b   routine_secondary(a1)
+                //   bne.s   loc_3511A
+                //
+                // (s2.asm:70841-70846). Routine 4 (MdJump) and routine 8 (MdAir)
+                // are therefore immune to both rings and bombs while the player
+                // is off the track, which is also why neither Obj09_MdJump nor
+                // Obj09_MdAir calls SSPlayer_Collision (s2.asm:69297-69322).
+                if (player.getRoutine()
+                        != Sonic2SpecialStagePlayer.RoutineState.NORMAL) {
+                    continue;
+                }
+
                 // Original game checks routine_secondary != 0 (hurt animation) for ALL objects
                 // During hurt animation, no collision with anything
                 if (player.isHurt()) {

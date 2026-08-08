@@ -65297,3 +65297,89 @@ against a control run at the parent commit.
 
 None of the four flipped a class. ss_1 at 620 errors and the EHZ chain at
 5213/5733 are the closest either lane has been.
+
+## 2026-08-08 — S2 EHZ half-pipe chain: the 519-row eject was harness-side
+
+Command (worktree at 3f0fd4a70 + local edits, JDK 21):
+`mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+-Dtest='TestS2EhzHalfpipeRoundTripChain,...' test`
+
+- **Before:** `TestS2EhzHalfpipeRoundTripChain` FAIL — *"special stage exited with
+  519 represented rows remaining in ss"*, interior cursor 5214 of 5733.
+- **After:** interior completes all 5733 rows. New first failure is the
+  previously-unreached interior DPLC assertion: 37933 errors over 4518 rows,
+  first row 136 (`dynamic_art.edges` expected `[]`, actual `[3, 4, 5]`).
+- **Root cause of the eject.** Not a short results/fade phase. A run recorder cuts
+  an `ss` segment on the raw ROM byte — first `Game_Mode == GameModeID_SpecialStage`
+  frame to first frame that is no longer it (`S2RunCaptureRunner` Blocks 1/2) — and
+  the ROM holds that mode through the emerald/perfect accounting, `Pal_FadeToWhite`,
+  the results build and the whole `Obj6F` tally loop, rewriting `Game_Mode` only at
+  the closing `move.b #GameModeID_Level` (s2.asm:6721-6800). The engine splits that
+  one ROM mode into `SPECIAL_STAGE` + `SPECIAL_STAGE_RESULTS`, so the driver gate
+  and `TraceRunPlaybackCoordinator.ownsCurrentSegment` read the engine's internal
+  boundary as a premature exit. Both now use
+  `RunPlaybackObservation.insideRecordedSpecialStageMode`. No constant introduced;
+  no trace field hydrated.
+- Control run at 3f0fd4a70: `TestS1GhzMazeRoundTripChain` (ghz2 `run_tail.edge[*]
+  .movie_logical_frame` 9071 vs 9035) and `TestS2SpecialStage1TraceReplay`
+  (620 errors, first frame 393 `sonic_ss_x`) fail identically before and after —
+  pre-existing, not regressions.
+
+## 2026-08-08 - The special-stage collision gate dropped half a ROM test
+
+S1/S2 stays at 14 red, zero regressions, but the largest single reduction of the
+programme so far. All three agents this round disproved the diagnosis they were
+given, which is worth noting as a pattern rather than an anecdote.
+
+- **`ss_1` 620 -> 10 errors from one 19-line predicate.** The engine's port of the
+  shared special-stage collision helper `loc_350E2` (s2.asm:70841-70846)
+  implemented only the `tst.b routine_secondary(a1)` half of the player
+  eligibility gate and dropped `cmpi.b #2,routine(a1)`. In the ROM a ring (Obj60,
+  d6=$A) or bomb (Obj61, d6=8) rejects any player whose routine is not 2
+  (MdNormal), so a jumping (4) or airborne (8) player is immune to both -- which
+  is also why neither `Obj09_MdJump` (69297-69308) nor `Obj09_MdAir` (69310-69322)
+  calls `SSPlayer_Collision` at all; only MdNormal does (69113-69128). The engine
+  let jumping players collect rings and take bomb hits. Fixture confirmation: at
+  ss_1 frame 4306 the ROM puts Sonic in routine 4 and his ring count stays at 76
+  through 4312, while the engine collected one extra and carried +1 for ~860
+  frames.
+  Both ROM call sites share the helper so they move together; emeralds are
+  excluded upstream (`isCollidable()` false), matching the ROM where emerald
+  collection never enters it.
+  Cascade: ss_3 39764 -> 5600 (frontier 2504 -> 5690), ss_6 44699 -> 14385
+  (frontier 2526 -> 4403), ss_7 29548 -> 16993, ss_2 15314 -> 12488. The assigned
+  `tails_hurt` and `swap_positions_flag` divergences are both fixed by it.
+  NOTE the brief's premise was wrong: the Obj09/Obj10 jump-mode call-order
+  asymmetry it pointed at is already correctly modelled.
+- **`ss_1`'s residual 10 errors are a RECORDER capability gap, not an engine
+  defect.** All are at frames 393/401/417, before control start. The recorder
+  emits `run_objects_end` pass boundaries only from `SpecialStage_Started` (frame
+  424 in both stage-1 fixtures), so before that the comparator paces engine passes
+  off the raw `lag` column -- and the recorded rows prove the V-int clock and the
+  main-loop pass clock are genuinely distinct there: frame 393 (lag=0) advances
+  `SSTrack_drawing_index`/`duration_timer` with no player motion, while 394
+  (lag=1) advances Sonic but not the track. Three such transpositions exist
+  (393/394, 401/402, 417/418). Closing them needs the recorder to emit
+  `run_objects_end` from special-stage ENTRY rather than control start, plus
+  fixture republication. **It cannot be fixed engine-side and must not be fixed by
+  reading recorded physics to decide pacing.**
+- **The EHZ interior now completes all 5733 rows** (was stopping at 5213). Also
+  harness-side, and again not what the brief assumed: a run recorder cuts an `ss`
+  segment on the raw `Game_Mode` byte, opening on the first
+  `GameModeID_SpecialStage` frame and closing on the first frame that is not it.
+  The ROM holds that mode far past the half-pipe -- `SS_MainLoop` leaves its object
+  loop when `SS_Check_Rings_flag` rises, but the emerald/perfect accounting,
+  `Pal_FadeToWhite`, `ClearScreen`, the results build and the entire `Obj6F` tally
+  loop all still run under it, with `Game_Mode` rewritten only by the closing
+  `move.b #GameModeID_Level,(Game_Mode).w` (s2.asm:6721-6800). The engine splits
+  that single ROM mode into `SPECIAL_STAGE` + `SPECIAL_STAGE_RESULTS`, so the
+  interior driver's mode test ended the segment early.
+  The failure has moved to the previously-unreachable interior DPLC assertion:
+  37933 errors over 4518 rows, first at row 136.
+- **SLZ1 f2921 is NOT a defect** -- brief corrected. It is the only frame in the
+  6411-frame trace whose `slot_dump` vfc equals the next dump's, i.e. the
+  mid-`ObjPosLoad` VBlank sample that must be discarded; the next valid sample
+  (f2923) has zero disagreement. The real earliest structural occupancy divergence
+  is **f2297**, ~620 frames earlier, where the ROM materialises three Obj5B the
+  engine does not. Frames 3015, 4053, 4060 and the 4256+ CirclingPlatform cluster
+  are genuine.

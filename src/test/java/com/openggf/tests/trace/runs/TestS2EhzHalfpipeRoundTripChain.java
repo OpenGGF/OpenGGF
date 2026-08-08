@@ -83,8 +83,36 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * boundaries and every carry-over assertion still hold. Closing it is a separate
  * title-card-duration parity item and is left for a follow-up.
  *
- * <h2>Current RED: the special-stage interior exits 519 rows early
- * (special-stage results/fade phase too short)</h2>
+ * <h2>Superseded: "the special-stage interior exits 519 rows early"</h2>
+ *
+ * <p><b>That eject was harness-side, and it is now closed.</b> It was not a short
+ * results/fade phase: the run recorder cuts an {@code ss} segment on the raw ROM
+ * byte, opening on the first {@code Game_Mode == GameModeID_SpecialStage} frame and
+ * closing on the first frame that is no longer it
+ * ({@code S2RunCaptureRunner} Blocks 1 and 2). The ROM keeps that mode well past
+ * the half-pipe — {@code SS_MainLoop} leaves its object loop when
+ * {@code SS_Check_Rings_flag} rises, and the emerald/perfect accounting,
+ * {@code Pal_FadeToWhite}, the results-screen build and the whole {@code Obj6F}
+ * tally loop below it all still run under it, with {@code Game_Mode} rewritten only
+ * by the closing {@code move.b #GameModeID_Level,(Game_Mode).w}
+ * (docs/s2disasm/s2.asm:6721-6800). The engine splits that one ROM mode into
+ * {@code SPECIAL_STAGE} plus {@code SPECIAL_STAGE_RESULTS}, so the driver's
+ * {@code == SPECIAL_STAGE} gate (and the coordinator's matching ownership test)
+ * read the engine's internal boundary as a premature exit. Both now accept either
+ * engine mode via {@code RunPlaybackObservation.insideRecordedSpecialStageMode},
+ * and the interior runs all 5733 represented rows.
+ *
+ * <h2>Current RED: interior DPLC divergence (newly reachable)</h2>
+ *
+ * <p>With the interior completing, the previously unreached
+ * {@code writeDynamicArtInteriorReport} assertion now runs and fails: 37933 errors
+ * over 4518 of the 5733 rows, first at row 136. Two distinct shapes:
+ * in-stage rows publish an edge one row early (row 136 engine {@code edges=[3,4,5]}
+ * where the recording still has {@code outstanding=[0,1,2]}, then the reverse at
+ * 137), and from row 5192 the engine keeps submitting SS player transfers through
+ * the results tail where the ROM has none (it {@code clearRAM Object_RAM} before
+ * loading {@code Obj6F}). Both are engine/comparator work independent of the mode
+ * gate above.
  *
  * <p>The paragraph above ("the earlier fixture-data gap story is wrong") remains true
  * of the {@code seg2} return handoff it was written about. The chain now fails in

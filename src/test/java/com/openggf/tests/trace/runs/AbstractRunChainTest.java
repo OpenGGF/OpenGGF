@@ -628,10 +628,11 @@ abstract class AbstractRunChainTest {
                         levelManager.getCurrentAct(),
                         bonus.getActiveType());
             }
-            Integer specialStageIndex = mode == GameMode.SPECIAL_STAGE
-                    ? GameServices.module().getSpecialStageProvider()
-                            .getCurrentStage()
-                    : null;
+            Integer specialStageIndex =
+                    RunPlaybackObservation.insideRecordedSpecialStageMode(mode)
+                            ? GameServices.module().getSpecialStageProvider()
+                                    .getCurrentStage()
+                            : null;
             DynamicArtLifecycleService lifecycle =
                     SessionManager.getCurrentGameplayMode()
                             .dynamicArtLifecycle();
@@ -1004,7 +1005,8 @@ abstract class AbstractRunChainTest {
                     int segmentIndex = i;
                     stepOneFrame = () -> {
                         if (!rowDriver.isComplete()) {
-                            if (loop.getCurrentGameMode() != GameMode.SPECIAL_STAGE) {
+                            if (!insideRecordedSpecialStageGameMode(
+                                    loop.getCurrentGameMode())) {
                                 throw new AssertionError(
                                         "special stage exited with "
                                                 + (seg.segment().traceFrameCount()
@@ -2644,6 +2646,34 @@ abstract class AbstractRunChainTest {
      * internal frame and the player under-collects at checkpoint 1. A segment
      * with no recorded passes keeps the previous one-step-per-row behaviour.
      */
+    /**
+     * Whether the engine is still inside the game mode a recorded
+     * {@code special_stage} segment represents.
+     *
+     * <p>The run recorder cuts an {@code ss} segment on the raw ROM byte:
+     * it opens on the first {@code Game_Mode == GameModeID_SpecialStage}
+     * ($10) frame and closes on the first frame that is no longer $10
+     * ({@code S2RunCaptureRunner} Blocks 1 and 2). In the ROM that single
+     * mode spans more than the half-pipe: {@code SS_MainLoop} exits its
+     * object loop when {@code SS_Check_Rings_flag} rises, and the
+     * emerald/perfect accounting, {@code Pal_FadeToWhite}, the results-screen
+     * build and the whole {@code Obj6F} tally loop all run below it, still
+     * under $10 — {@code Game_Mode} is not rewritten until the
+     * {@code move.b #GameModeID_Level,(Game_Mode).w} at the very end
+     * (docs/s2disasm/s2.asm:6721-6800). S1 is the same shape
+     * ({@code GM_Special} owns {@code SS_Finish} through
+     * {@code sonic.asm:3419-3421}).
+     *
+     * <p>The engine splits that one ROM mode into two of its own,
+     * {@code SPECIAL_STAGE} and {@code SPECIAL_STAGE_RESULTS}, so a plain
+     * {@code == SPECIAL_STAGE} test reports a premature exit at the internal
+     * boundary even when the engine is faithfully still in the ROM's mode.
+     * Both engine modes therefore map onto the one recorded segment.
+     */
+    private static boolean insideRecordedSpecialStageGameMode(GameMode mode) {
+        return RunPlaybackObservation.insideRecordedSpecialStageMode(mode);
+    }
+
     protected IntConsumer uncomparedInteriorStep(
             GameLoop loop,
             InputHandler inputHandler,
@@ -2663,6 +2693,17 @@ abstract class AbstractRunChainTest {
             admission.syntheticPlcPhase().ifPresent(
                     AbstractRunChainTest::stepUncomparedInteriorLifecycleRow);
             if (admission.executeGameplay()
+                    && loop.getCurrentGameMode()
+                            == GameMode.SPECIAL_STAGE_RESULTS) {
+                // Still inside the recorded segment (ROM Game_Mode is still
+                // GameModeID_SpecialStage; see
+                // insideRecordedSpecialStageGameMode), but past the half-pipe
+                // itself: the ROM's post-flag tail runs RunObjects /
+                // BuildSprites / RunPLC_RAM per V-int and samples no player
+                // control at all (docs/s2disasm/s2.asm:6795-6800), so drive a
+                // bare engine frame with no recorded-input override.
+                stepEngineFrame(loop);
+            } else if (admission.executeGameplay()
                     && loop.getCurrentGameMode() == GameMode.SPECIAL_STAGE) {
                 int absoluteRow = bk2FrameOffset + localRow;
                 Bk2FrameInput current = movie.getFrame(absoluteRow);
