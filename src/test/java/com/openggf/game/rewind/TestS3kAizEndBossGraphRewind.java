@@ -47,6 +47,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -240,7 +241,11 @@ class TestS3kAizEndBossGraphRewind {
         AizEndBossWaterfallChild child = new AizEndBossWaterfallChild(boss, 0);
         child.setServices(new TestObjectServices().withLevelManager(levelManager));
         child.appendRenderCommands(new java.util.ArrayList<>());
+        verifyNoInteractions(renderer);
         child.update(0, null);
+        child.appendRenderCommands(new java.util.ArrayList<>());
+        verifyNoInteractions(renderer);
+        child.update(1, null);
         child.appendRenderCommands(new java.util.ArrayList<>());
 
         verify(renderer).drawFrameIndex(eq(0x24), eq(0x100), eq(0x100),

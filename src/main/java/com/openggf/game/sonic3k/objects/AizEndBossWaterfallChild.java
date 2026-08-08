@@ -61,6 +61,7 @@ public final class AizEndBossWaterfallChild extends AbstractObjectInstance
     // non-final so the generic rewind capturer restores the active routine.
     private int routine = STATE_EMERGE;
     private boolean initialized;
+    private boolean drawEligible;
     private int animationIndex;
     private int animationTimer;
     private int mappingFrame = INITIAL_MAPPING_FRAME;
@@ -123,6 +124,9 @@ public final class AizEndBossWaterfallChild extends AbstractObjectInstance
             // child does not follow later boss movement during this routine.
             animate(EMERGE_FRAMES);
         }
+        if (!isDestroyed()) {
+            drawEligible = true;
+        }
     }
 
     private void animate(int[] frames) {
@@ -181,7 +185,7 @@ public final class AizEndBossWaterfallChild extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (isDestroyed() || !initialized || mappingFrame == HIDDEN_MAPPING_FRAME) {
+        if (isDestroyed() || !drawEligible || mappingFrame == HIDDEN_MAPPING_FRAME) {
             return;
         }
 
