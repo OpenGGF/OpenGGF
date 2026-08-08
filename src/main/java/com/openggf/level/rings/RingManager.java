@@ -431,6 +431,8 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
      */
     public void updateLostRingPhysics(int frameCounter) {
         lostRings.tickSpillAnimation();
+        lostRings.retireEntriesWhoseObjectTwinIsGone(
+                levelManager != null ? levelManager.getObjectManager() : null);
     }
 
     public void draw(int frameCounter) {
@@ -1813,6 +1815,37 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             }
             releaseReservedSlot(ring, objectManager);
             ring.deactivate();
+        }
+
+        /**
+         * Clears pool entries whose {@link LostRingObjectInstance} twin has gone.
+         *
+         * <p>A spilled ring is created as a pair sharing ONE reserved slot: the object
+         * owns physics, collection and rendering, while the pool entry survives only as
+         * bookkeeping. The object retires itself (ROM Obj37 deletes on the shared spill
+         * timer or below the bottom boundary) but nothing retired its twin, so
+         * {@link #getActiveRingsSnapshot} over-reported every ring ever spilled in the
+         * act -- which matters because the slot-occupancy diagnostics read it.
+         *
+         * <p>Deliberately NOT via {@link #deactivateRing}: that also calls
+         * {@code releaseReservedSlot}, and the slot is the OBJECT's to release. Freeing
+         * it a second time here hands back a slot another object may already have taken
+         * -- measured as a regression in TestS1Mz3CompleteRunTraceReplay. This clears
+         * the mirror flag only and cannot change what the engine simulates.
+         */
+        private void retireEntriesWhoseObjectTwinIsGone(ObjectManager objectManager) {
+            if (objectManager == null || activeRingCount == 0) {
+                return;
+            }
+            for (int i = 0; i < activeRingCount; i++) {
+                LostRing ring = ringPool[i];
+                if (ring == null || !ring.isActive() || ring.getSlotIndex() < 0) {
+                    continue;
+                }
+                if (!objectManager.hasLiveLostRingAtSlot(ring.getSlotIndex())) {
+                    ring.deactivate();
+                }
+            }
         }
 
         private void releaseReservedSlots() {

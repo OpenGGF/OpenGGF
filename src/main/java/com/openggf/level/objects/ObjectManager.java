@@ -2177,6 +2177,29 @@ public class ObjectManager {
     }
 
     /**
+     * Whether a live spilled-ring object currently occupies {@code slotIndex}.
+     *
+     * <p>Read-only. The ring manager uses it to clear the legacy pool entry that
+     * mirrors a {@link com.openggf.level.rings.LostRingObjectInstance} once the
+     * object has gone; the pair share one reserved slot, so the object's absence
+     * from that slot is the retirement signal. This does not release anything --
+     * the slot belongs to the object.
+     */
+    public boolean hasLiveLostRingAtSlot(int slotIndex) {
+        if (slotIndex < 0) {
+            return false;
+        }
+        for (ObjectInstance inst : dynamicObjects) {
+            if (inst instanceof com.openggf.level.rings.LostRingObjectInstance ring
+                    && !ring.isDestroyed()
+                    && ring.getSlotIndex() == slotIndex) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Reassigns an already-loaded placement object through the ROM's first-free
      * allocator. This is used when a widened engine placement window materializes
      * an initializer before its native camera gate; once that gate succeeds, the
