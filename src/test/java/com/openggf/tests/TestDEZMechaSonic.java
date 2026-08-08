@@ -497,8 +497,15 @@ public class TestDEZMechaSonic {
         Object targetingSensor = newChild("MechaSonicTargetingSensor");
         addChildComponent(ledWindow);
         addChildComponent(targetingSensor);
+        // Wire the same named child fields used by production spawning. This
+        // makes the test exercise syncAttackChildrenBeforeObjectMove rather
+        // than merely observing constructor-initialized positions.
+        setPrivateObject("ledWindow", ledWindow);
+        setPrivateObject("targetingSensor", targetingSensor);
         forceAttackState(0x10, 3, 0x10);
         boss.getState().xVel = -0x400;
+        setChildPosition(ledWindow, 0x111, 0x222);
+        setChildPosition(targetingSensor, 0x333, 0x444);
 
         boss.update(1, mock(AbstractPlayableSprite.class));
 
@@ -525,6 +532,22 @@ public class TestDEZMechaSonic {
                 .getDeclaredField("childComponents");
         field.setAccessible(true);
         ((List<Object>) field.get(boss)).add(child);
+    }
+
+    private void setPrivateObject(String fieldName, Object value) throws Exception {
+        Field field = Sonic2MechaSonicInstance.class.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(boss, value);
+    }
+
+    private void setChildPosition(Object child, int x, int y) throws Exception {
+        Class<?> childClass = com.openggf.level.objects.boss.AbstractBossChild.class;
+        Field xField = childClass.getDeclaredField("currentX");
+        Field yField = childClass.getDeclaredField("currentY");
+        xField.setAccessible(true);
+        yField.setAccessible(true);
+        xField.setInt(child, x);
+        yField.setInt(child, y);
     }
 
     private void forceAttackState(int attackSubRoutine, int attackPhase, int actionTimer)
