@@ -65632,3 +65632,48 @@ green->red.
 - **Measurement hazard, new:** MCZ trace results are FORK-ORDER SENSITIVE.
   Attribution on MCZ requires one `-Dtest` per `mvn` invocation, not a single
   batched sweep. This is a second hazard beyond the silently-ignored `-DforkCount`.
+
+## 2026-08-08 — round eight, part two: MCZ multi-sprite child slots (ACCEPTED REGRESSION)
+
+Command: one `-Dtest` per `mvn` invocation (MCZ is fork-order sensitive — see the
+hazard note above), `-Ptrace-replay -Dmse=off -Dsurefire.forkCount=1
+-Dsurefire.runOrder=alphabetical`, all three ROM properties. Base 025e7b66c.
+
+Solo-fork measurement, before -> after:
+- `TestS2MczLevelSelectTraceReplay` GREEN -> **4 errors, first frame 864** (opened)
+- `TestS2Mcz2LevelSelectTraceReplay` 1 error @f4145 -> **5 errors @f6221** (frontier
+  moves ~2000 frames later, count rises)
+- `TestS2OozLevelSelectTraceReplay` unchanged, 3 errors @f5444
+- Ooz2, Cnz, Cpz, Arz, Htz, Mtz: green, unaffected
+
+**This is a deliberate net regression, landed because the fix is ROM-correct and the
+errors it exposes are pre-existing.** Obj81 (MCZ Drawbridge) calls
+`AllocateObjectAfterCurrent` and Obj9E (Crawlton) calls `AllocateObject` in their
+init paths, each writing their own id into a second SST slot with
+`render_flags.multi_sprite` set (s2.asm:56973-56998 and :75439-75468). Both children
+are display-only — Obj81's branches straight to `DisplaySprite3` (:56929-56938),
+Obj9E's routine only mirrors the parent's position/flip (:75399-75437) — so the
+engine, which draws all segments from the parent instance, needs to model only the
+SLOT. It previously modelled neither, so every loaded drawbridge and Crawlton
+consumed one slot instead of two and every later `FindFreeObj` allocation in the
+level landed one slot low.
+
+Evidence the slot map is now RIGHT: `SlotOccupancyProbe` (`OGGF_SLOT_PROBE=1`) goes
+from divergent at frame 0 to matching ROM exactly for frames 0..447. The old f4145
+error is gone and its mechanism is fully explained: ROM had the Obj26 monitor shell
+at slot 27 and the Obj2E contents icon at slot 29 (icon ABOVE shell), the engine had
+shell at 32 and icon at 27 (icon BELOW), so `MonitorObjectInstance.java:270-274`'s
+CORRECT "first-execution = break frame + 1 when icon slot < shell slot" rule fired
+and delayed the award by one frame. The rule was right; it was being fed wrong slots.
+Fixture arithmetic independently confirms ROM: the slot-27 monitor flips routine
+02->06 on f4113, the icon spawns and already moves 3px that frame (`Obj2E_Init` falls
+through into `Obj2E_Raise`), y_vel starts at -$300 gaining $18/frame, giving exactly
+32 rising executions (f4113..f4144) and the award on f4145.
+
+**Follow-up path (this is why the regression is acceptable):** S2 ring-loss bounce
+probing gates on `(Vint_runcount+3) + d7` with `d7 = 127 - slot`, so ring outcomes
+are slot-sensitive. The compensating slot skew was masking independent ring-loss
+defects, which now surface against a CORRECT slot map at MCZ1 f864 and MCZ2 f6221 —
+directly diagnosable for the first time, where previously any bounce investigation
+would have been chasing behaviour on a skewed map. These two frames are the next
+S2 targets.

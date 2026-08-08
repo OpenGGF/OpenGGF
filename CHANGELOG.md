@@ -3,6 +3,18 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Mystic Cave drawbridges and Crawltons reserve the second object slot the ROM
+  allocates for their multi-sprite child. `Obj81_Init` calls
+  `AllocateObjectAfterCurrent` and `Obj9E_Init` calls `AllocateObject`
+  (`s2.asm`:56973-56998, :75439-75468), each writing their own id into that slot with
+  `render_flags.multi_sprite` set. Both children are display-only, and the engine
+  already draws every segment from the parent instance, so only the slot occupancy
+  needed modelling -- but without it each loaded drawbridge and Crawlton held one slot
+  instead of two, and every later `FindFreeObj` allocation in the level landed one slot
+  low. Mystic Cave's object-slot map now matches the ROM exactly over the sampled
+  range. This exposes independent, previously masked ring-loss divergences in MCZ act 1
+  and act 2, whose bounce probing is slot-gated; those are now diagnosable against a
+  correct slot map and are tracked as the next Sonic 2 trace targets.
 - Fix: the Sonic 2 special-stage replay harness now models both halves of
   `SpecialStage_MainLoop`. The recorder gained the pre-start loop's post-`RunObjects`
   hook, but the comparator still paced recorded passes only from the

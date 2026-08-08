@@ -33,6 +33,10 @@ import java.util.List;
  * We simulate this by tracking persistent segment positions in arrays.
  */
 public class CrawltonBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
+
+    // ROM Obj9E_Init allocates a second SST slot for the multi-sprite body child
+    // (see reserveMultiSpriteChildSlot). Tracked so it is allocated exactly once.
+    private boolean childSlotReserved;
     // Collision from Obj9E_SubObjData (s2.asm:75380): collision_flags = $0B
     private static final int COLLISION_SIZE_INDEX = 0x0B;
 
@@ -104,8 +108,51 @@ public class CrawltonBadnikInstance extends AbstractBadnikInstance implements Re
         return new CrawltonBadnikInstance(ctx.spawn());
     }
 
+
+    /**
+     * Reserves the SST slot ROM {@code Obj9E_Init} consumes for Crawlton's
+     * multi-sprite body child.
+     *
+     * <p>ROM (docs/s2disasm/s2.asm:75439-75468): {@code Obj9E_Init} falls into
+     * {@code loc_37F74}, which calls {@code AllocateObject} and, on success,
+     * writes {@code ObjID_Crawlton} into that slot with
+     * {@code render_flags.multi_sprite} set, routine ($3B) = $A and seven
+     * sub-sprites. The child is display-only: its routine {@code loc_37EFC}
+     * only mirrors the parent's position/flip and calls {@code DisplaySprite3}
+     * (docs/s2disasm/s2.asm:75399-75437). It deletes itself once its
+     * {@code parent} slot no longer holds a Crawlton.
+     *
+     * <p>This engine instance draws the body segments itself, so only the slot
+     * needs modelling -- but it must be modelled, because every later
+     * {@code FindFreeObj} allocation in the level lands one slot lower without
+     * it, which changes execution order in the ascending {@code ExecuteObjects}
+     * walk.
+     *
+     * <p>{@code AllocateObject} is {@code FindFreeObj} (lowest free dynamic
+     * slot), not {@code AllocateObjectAfterCurrent}, so this uses
+     * {@code allocateChildSlots}. Allocation happens on the first movement
+     * update because ROM runs {@code Obj9E_Init} inside {@code ExecuteObjects},
+     * after {@code ObjPosLoad} placed the parent. A full object RAM yields no
+     * slot, matching the ROM's {@code bne.s +} allocation-failure branch.
+     */
+    private void reserveMultiSpriteChildSlot() {
+        if (childSlotReserved) {
+            return;
+        }
+        if (spawn == null) {
+            return;
+        }
+        var svc = tryServices();
+        if (svc == null || svc.objectManager() == null) {
+            return;
+        }
+        childSlotReserved = true;
+        svc.objectManager().allocateChildSlots(spawn, 1);
+    }
+
     @Override
     protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
+        reserveMultiSpriteChildSlot();
         AbstractPlayableSprite player = playerEntity instanceof AbstractPlayableSprite playable ? playable : null;
         switch (state) {
             case DETECT_PLAYER -> updateDetection(player);
