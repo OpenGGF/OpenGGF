@@ -62,7 +62,7 @@
 - `docs/architecture/research/s3k-zones/aiz-analysis.md` — add dated current napalm/splash status.
 - `docs/architecture/research/s3k-zones/lbz-analysis.md` — identify inert Big Arm as a blocker.
 - `docs/architecture/research/s3k-zones/lrz-analysis.md` — record missing LRZ1 falling intro.
-- `docs/architecture/research/s3k-zones/ssz-analysis.md` — record missing SSZ falling intro.
+- `docs/architecture/research/s3k-zones/ssz-analysis.md` — record the SSZ source correction: `$0A00/$0A01` has no `SpawnLevelMainSprites` `loc_68A6` branch.
 - `CONFIGURATION.md` — qualify special-stage debug controls by supported game.
 - `docs/guide/playing/controls.md` — qualify special-stage debug controls by supported game.
 - `docs/guide/cross-referencing/architecture-overview.md` — qualify SMPS parity.
@@ -643,7 +643,7 @@ Apply the Task 1 documentation freshness map to the exact current
 files listed in File structure:
 
 - qualify README/game-status AIZ claims and add the Mecha Sonic ordering debt;
-- add dated AIZ, concrete LBZ blocker, and LRZ/SSZ falling-intro zone notes;
+- add dated AIZ, concrete LBZ blocker, and LRZ falling-intro/SSZ source-correction zone notes;
 - state that S2 exposes F12/F3, S3K F12 toggles manager state without a viewer
   provider while S3K F3 is a no-op, and S1 leaves both as no-ops;
 - qualify SMPS parity and name `Sonic3kCoordFlagHandler` plus its three discarded
