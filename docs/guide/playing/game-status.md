@@ -126,7 +126,9 @@ that the module can work.
 - The AIZ miniboss napalm FallingShot now has native movement, harmful touch,
   ROM-backed art, per-barrel child routing, and rewind coverage; its live
   Knuckles activation/slot/lifetime route remains under trace validation. AIZ2
-  end-boss emerge/submerge still omits splash children.
+  end-boss emerge/submerge splash children now
+  follow the native allocation, render, lifecycle, and rewind paths; an
+  end-to-end boss trace remains a follow-up.
 - Knuckles' LBZ Big Arm (`Obj_LBZFinalBoss2`) handoff currently spawns an inert,
   invisible persistent object, blocking an authentic route completion.
 - LRZ1 now gives non-Knuckles players the ROM falling level-introduction state;

@@ -63,6 +63,7 @@ class TestAiz2ObjectRewindCodecs {
         assertGenericBacked(AizMinibossFlameBarrelChild.class);
         assertGenericBacked(AizEndBossShipChild.class);
         assertGenericBacked(AizEndBossFlameColumnChild.class);
+        assertGenericBacked(AizEndBossWaterfallChild.class);
         assertGenericBacked(AizEndBossArmChild.class);
     }
 

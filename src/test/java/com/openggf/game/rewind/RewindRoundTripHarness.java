@@ -310,6 +310,9 @@ public final class RewindRoundTripHarness {
                     "com.openggf.game.sonic3k.objects.AizEndBossFlameColumnChild",
                     "TestS3kAizEndBossGraphRewind"),
             Map.entry(
+                    "com.openggf.game.sonic3k.objects.AizEndBossWaterfallChild",
+                    "TestS3kAizEndBossGraphRewind"),
+            Map.entry(
                     "com.openggf.game.sonic3k.objects.AizEndBossShipChild",
                     "TestS3kAizEndBossGraphRewind"),
             Map.entry(

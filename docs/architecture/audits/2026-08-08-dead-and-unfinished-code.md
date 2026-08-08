@@ -154,7 +154,7 @@ its intentional heuristic limits.
 | P0 | `AizMinibossNapalmProjectile` | FallingShot movement/floor handling, harmful touch timing, ROM-backed art/mappings, seven explosion children, and rewind are implemented, but the live Knuckles per-barrel route and slot/lifetime parity remain unproven. | `sonic3k.asm:137451-137581,137836-137925`; focused and production `ObjectManager` route tests; real rewind roundtrip; capture a Knuckles miniboss route proving activation, child ordering, floor impact, and explosion lifetime before resolving. |
 | P0 | `LbzFinalBoss2Instance` | Big Arm is inert, invisible, and persistent, blocking Knuckles LBZ completion. | Port `Obj_LBZFinalBoss2`: ROM art/PLC, phases, hit/defeat flow, rewind, LBZ Knuckles trace. |
 | P1 (resolved 2026-08-08) | `Sonic3kLevelEventManager` | LRZ1 non-Knuckles omitted native falling-intro state. | Ported `SpawnLevelMainSprites` `loc_68A6`; production-load character/zone/act and checkpoint, big-ring, and bonus-return coverage is in `TestS3kLrzFallingIntroBootstrap`. The semantic saved-state gate runs before every zone branch. Source audit also corrected the stale SSZ attribution: `$A00/$A01` has no `loc_68A6` branch. |
-| P1 | `AizEndBossInstance` | Emerge/re-submerge omit splash children, affecting visual and slot order. | Port `ChildObjDat_69D2E` with ROM assets, allocation, rewind, render, AIZ2 boss trace. |
+| P1 (resolved 2026-08-08) | `AizEndBossInstance` / `AizEndBossWaterfallChild` | Emerge/re-submerge now allocate and render the native splash child; full trace parity remains to be exercised. | `ChildObjDat_69D2E` subtype 0/2 is ported with ROM assets, production slot allocation, rewind recreation, and owner tests; no end-to-end AIZ2 boss trace was rerun in this change. |
 | P1 | `Sonic1.getBackgroundScroll()` | API always returns `{0,0}` despite newer parallax owners. | Decide against `LevelFrameRuntimeUpdater`; remove redundant API/caller or source authoritative state, per-zone rewind tests. |
 | P1 | `Sonic3kCoordFlagHandler.handleMetaCommand(...)` | `SND_CMD`, `MUS_PAUSE`, `COPY_MEM` consume bytes but discard semantics. | Inventory reached streams; port reached commands from SMPSPlay/libvgm/Z80 with sequencing tests; document unreachable commands. |
 | P2 | S1 and S3K special-stage providers/managers | Shared debug/alignment shortcuts delegate to scaffold/no-op paths. | Game-owned debug capability or explicit unavailable controls; test operation or absence. |
@@ -171,13 +171,13 @@ its intentional heuristic limits.
 | Finding | Authoritative current document | Correction |
 |---|---|---|
 | AIZ route and Mecha Sonic parity | `README.md`; `docs/guide/playing/game-status.md` | Qualify completion; name napalm, splash, falling intro, Big Arm, Mecha Sonic ordering; refresh date. |
-| AIZ gaps | `docs/architecture/research/s3k-zones/aiz-analysis.md` | Dated current-engine notes for napalm and splash, retaining disassembly analysis. |
+| AIZ gaps | `docs/architecture/research/s3k-zones/aiz-analysis.md` | Dated current-engine notes for napalm and the resolved splash child, retaining disassembly analysis. |
 | Big Arm | `docs/architecture/research/s3k-zones/lbz-analysis.md` | Replace “verify/re-audit” with inert/invisible blocker and implementation requirement. |
 | Falling initialization | `docs/architecture/research/s3k-zones/lrz-analysis.md`; `docs/architecture/research/s3k-zones/ssz-analysis.md` | LRZ1 non-Knuckles is implemented and tested; SSZ is corrected to record that `$A00/$A01` is not a `SpawnLevelMainSprites` `loc_68A6` gate. |
 | F12/F3 | `CONFIGURATION.md`; `docs/guide/playing/controls.md` | S2 exposes both tools. S3K F12 toggles manager state but has no viewer provider; S3K F3 is a no-op. S1 leaves both as no-ops. |
 | SMPS meta commands | `docs/guide/cross-referencing/architecture-overview.md`; `docs/guide/contributing/audio-system.md`; `docs/guide/contributing/architecture.md` | Qualify universal parity; name handler and discarded commands. |
 | Checklist meaning | `S3K_OBJECT_CHECKLIST.md` | Checked means registry coverage, not full ROM parity; dynamic children can be absent. |
-| S3K blockers | `docs/status/s3k-known-bugs.md` | Add napalm, Big Arm, falling intros, splash children; keep historical trace material. |
+| S3K blockers | `docs/status/s3k-known-bugs.md` | Track napalm, Big Arm, and falling intros; mark the splash-child entry resolved while keeping historical trace material. |
 | All other rows | This audit | First durable current record until a feature owner updates its status/roadmap. |
 
 No deferred source deletion follows merely from marker text. Future work needs the

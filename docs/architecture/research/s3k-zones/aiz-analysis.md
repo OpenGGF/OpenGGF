@@ -21,10 +21,12 @@ AIZ2/AIZ3 trace rows contain the native `0x68C96` FallingShot and `0x68D88`
 explosion-child object codes and are recorded as comparison evidence only;
 trace rows never hydrate runtime state. The activation/slot/lifetime route is
 still awaiting a captured Knuckles miniboss trace before this item can be
-marked resolved. `AizEndBossInstance` still plays the emerge/re-submerge sound
-but does not allocate the native `ChildObjDat_69D2E` splash children; that
-omission remains a separate AIZ follow-up affecting presentation and
-object-slot ordering.
+marked resolved. The AIZ2 end-boss splash child is now ported as
+`AizEndBossWaterfallChild`: its subtype-0 emerge and subtype-2 re-submerge/drop
+paths allocate in the native child slot, use ROM mapping/flip scripts, render
+from the production ROM art provider, and participate in generic rewind
+recreation. The owner tests cover the real `ObjectManager` slot/rewind path and
+ROM mapping frames; an end-to-end AIZ2 boss trace was not rerun for this change.
 - **Water:** Yes (both acts have water with underwater palette transitions and foreground wave deformation)
 - **Palette Cycling:** Yes (2 channels Act 1 normal, 2 channels Act 1 fire, 3 channels Act 2)
 - **Animated Tiles:** Yes (3 scripts Act 1, 5 scripts Act 2)

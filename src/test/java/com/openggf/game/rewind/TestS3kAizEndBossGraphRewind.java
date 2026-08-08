@@ -15,6 +15,7 @@ import com.openggf.game.sonic3k.objects.AizEndBossInstance;
 import com.openggf.game.sonic3k.objects.AizEndBossPropellerChild;
 import com.openggf.game.sonic3k.objects.AizEndBossShipChild;
 import com.openggf.game.sonic3k.objects.AizEndBossSmokeChild;
+import com.openggf.game.sonic3k.objects.AizEndBossWaterfallChild;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.ObjectInstance;
@@ -38,6 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestS3kAizEndBossGraphRewind {
 
@@ -99,6 +101,61 @@ class TestS3kAizEndBossGraphRewind {
                 () -> CompactFieldCapturer.capture(fixture, context));
         assertEquals(true, thrown.getMessage().contains("no registered id for object reference"),
                 "non-null required object references must still require registered rewind identities");
+    }
+
+    @Test
+    void waterfallSubtypesUseRomChildSlotOrderAndRestoreThroughRewind() throws Exception {
+        Harness harness = Harness.createWithBoss();
+        ObjectManager objectManager = harness.objectManager();
+        AizEndBossInstance boss = only(objectManager, AizEndBossInstance.class);
+
+        invokeBooleanArg(boss, "beginEmerge", false);
+        AizEndBossWaterfallChild emerge = only(objectManager, AizEndBossWaterfallChild.class);
+        assertEquals(0, emerge.getSpawn().subtype(),
+                "ChildObjDat_69D2E starts subtype 0 for the first emerge");
+        assertEquals(boss.getSlotIndex() + 1, emerge.getSlotIndex(),
+                "CreateChild1_Normal must allocate the splash immediately after the boss");
+
+        for (int frame = 0; frame < 13; frame++) {
+            emerge.update(frame, null);
+        }
+        assertTrue(emerge.isDestroyed(),
+                "subtype 0 must follow Go_Delete_Sprite at the emerge animation F4 callback");
+
+        objectManager.removeDynamicObject(emerge);
+        invokeNoArg(boss, "beginReSubmerge");
+        AizEndBossWaterfallChild drop = only(objectManager, AizEndBossWaterfallChild.class);
+        assertEquals(2, drop.getSpawn().subtype(),
+                "AIZEndBoss_StartSubmerge writes subtype 2 after allocation");
+        assertEquals(boss.getSlotIndex() + 1, drop.getSlotIndex(),
+                "the re-submerge splash must reuse the first free child slot after the boss");
+
+        for (int frame = 0; frame < 13; frame++) {
+            drop.update(frame, null);
+        }
+        assertTrue(drop.isDroppingForTest(),
+                "subtype 2 must enter the independent falling-drop routine at the F4 callback");
+        assertEquals(0x800, drop.getYVelocityForTest(),
+                "AIZEndBossWaterfall_StartDrop uses 8:8 velocity $800");
+
+        RewindRegistry rewindRegistry = new RewindRegistry();
+        rewindRegistry.register(objectManager.rewindSnapshottable());
+        CompositeSnapshot snapshot = rewindRegistry.capture();
+        ObjectRefId capturedId = objectManager.captureIdentityContext()
+                .requireIdentityTable().idFor(drop);
+        int capturedFrame = drop.getMappingFrameForTest();
+        int capturedY = drop.getY();
+
+        objectManager.removeDynamicObject(drop);
+        rewindRegistry.restore(snapshot);
+
+        AizEndBossWaterfallChild restored = only(objectManager, AizEndBossWaterfallChild.class);
+        assertEquals(capturedId, objectManager.captureIdentityContext()
+                .requireIdentityTable().idFor(restored),
+                "rewind must preserve the native splash object's identity");
+        assertEquals(2, restored.getSpawn().subtype());
+        assertEquals(capturedFrame, restored.getMappingFrameForTest());
+        assertEquals(capturedY, restored.getY());
     }
 
     private static void assertAllReferencesPointAtRestoredGraph(AizEndBossGraph graph) {
@@ -471,6 +528,16 @@ class TestS3kAizEndBossGraphRewind {
             Method method = target.getClass().getDeclaredMethod(methodName);
             method.setAccessible(true);
             method.invoke(target);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to invoke " + methodName + " on " + target.getClass(), e);
+        }
+    }
+
+    private static void invokeBooleanArg(Object target, String methodName, boolean value) {
+        try {
+            Method method = target.getClass().getDeclaredMethod(methodName, boolean.class);
+            method.setAccessible(true);
+            method.invoke(target, value);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Unable to invoke " + methodName + " on " + target.getClass(), e);
         }

@@ -16,6 +16,11 @@ All notable changes to the OpenGGF project are documented in this file.
   activation, slot ordering, and explosion lifetime remain under Knuckles
   trace validation. The full AIZ replay lane's camera/sidekick and
   hardware-timing failures remain documented.
+- **S3K AIZ2 end-boss splash children:** `ChildObjDat_69D2E` subtype 0/2 now
+  allocates in native slot order, follows the ROM emerge/drop mapping and flip
+  scripts, renders from ROM-backed art, and restores through rewind. Owner tests
+  cover real `ObjectManager` transitions and ROM mapping frames; end-to-end AIZ2
+  boss trace validation remains a follow-up.
 - Maintenance/Docs: completed an evidence-tiered dead and unfinished code sweep.
   Seven unreachable Java types (339 lines) were removed after checking callers,
   registries, reflection, resources, service loading, and supported CLIs; the

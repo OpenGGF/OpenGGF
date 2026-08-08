@@ -27,7 +27,7 @@ Entries should include:
 1. [AIZ Miniboss Napalm — FallingShot Route Integration (OPEN)](#aiz-miniboss-napalm--fallingshot-route-integration-open)
 2. [Knuckles LBZ Big Arm — Inert Final-Boss Handoff](#knuckles-lbz-big-arm--inert-final-boss-handoff)
 3. [LRZ1 Non-Knuckles — Falling Level Introduction (RESOLVED)](#lrz1-non-knuckles--falling-level-introduction-resolved)
-4. [AIZ2 End Boss — Splash Children Missing](#aiz2-end-boss--splash-children-missing)
+4. [AIZ2 End Boss — Splash Children (FIXED)](#aiz2-end-boss--splash-children-missing)
 5. [CNZ1 Miniboss Arena Entry — Music Play-In Missing](#cnz1-miniboss-arena-entry--music-play-in-missing)
 6. [AIZ1 Trace F4679 — Sidekick Despawn Velocity & Position Semantic Gap (FIXED)](#aiz1-trace-f4679--sidekick-despawn-velocity--position-semantic-gap-fixed)
 7. [CNZ1 Trace F1685 — Tails CPU Spurious Despawn on Barber-Pole→Wire-Cage Object Switch (FIXED)](#cnz1-trace-f1685--tails-cpu-spurious-despawn-on-barber-polewire-cage-object-switch-fixed)
@@ -151,16 +151,28 @@ bootstrap suite is the available focused validation for this change.
 **Location:** `AizEndBossInstance`
 **ROM Reference:** `ChildObjDat_69D2E` and the end-boss emerge/submerge paths.
 
-### Symptom
+**Status: Fixed (2026-08-08).** `AizEndBossWaterfallChild` now ports the
+subtype-0 emerge and subtype-2 re-submerge/drop paths. The child is allocated
+through the production `ObjectManager` immediately after the boss, uses the
+ROM mapping/flip scripts and production ROM art provider, and has a generic
+rewind recreation path.
 
-The boss plays the corresponding sound but does not allocate the native splash
-children when emerging or re-submerging. Presentation and dynamic object-slot
-ordering differ even though the main boss flow continues.
+Owner validation includes `TestS3kAizEndBossGraphRewind` (real child slots and
+rewind round-trip), `TestAiz2ObjectRewindCodecs`, and
+`TestSonic3kObjectArtProvider` against the verified locked-on ROM. An end-to-end
+AIZ2 boss trace was not rerun in this change; retain that as follow-up parity
+validation.
 
-### Removal Condition
+### Historical symptom
+
+The boss previously played the corresponding sound without allocating the native
+splash children, so presentation and dynamic object-slot ordering differed even
+though the main boss flow continued.
+
+### Historical removal condition
 
 Port the splash subtypes with ROM art/mappings, production allocation, rewind
-and render coverage, then validate both transitions in an AIZ2 boss trace.
+and render coverage; full AIZ2 trace validation remains outstanding.
 
 ---
 

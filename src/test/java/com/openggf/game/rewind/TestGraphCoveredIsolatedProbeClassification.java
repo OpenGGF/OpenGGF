@@ -153,6 +153,8 @@ class TestGraphCoveredIsolatedProbeClassification {
                 AIZ_END_BOSS_GRAPH_TEST,
                 "com.openggf.game.sonic3k.objects.AizEndBossFlameColumnChild",
                 AIZ_END_BOSS_GRAPH_TEST,
+                "com.openggf.game.sonic3k.objects.AizEndBossWaterfallChild",
+                AIZ_END_BOSS_GRAPH_TEST,
                 "com.openggf.game.sonic3k.objects.AizEndBossShipChild",
                 AIZ_END_BOSS_GRAPH_TEST);
 
