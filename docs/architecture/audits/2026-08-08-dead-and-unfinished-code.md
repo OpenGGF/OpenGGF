@@ -139,7 +139,7 @@ diff.
 | `ObjectScaffoldTool` TODO vocabulary | Generated output | Generator content, not a runtime claim. |
 | Historical task/phase prose, changelogs, ROM phase labels, signpost stub-art labels | Historical/tooling note | Lineage or ROM terminology only. |
 | `NoOpSpecialStageProvider`, S1/S3K debug hooks, CPZ debug placement, human-P2 monitors | Intentional contract or unsupported broader game mode | Provider defaults are explicit; debug/competition needs an engine-level capability or game-mode design. |
-| `Sonic1.getBackgroundScroll()` and `AbstractLevel.markAllDirty()` | S1 background-scroll ownership resolved; `markAllDirty()` remains ambiguous | The runtime no longer queries S1's zero-return compatibility API. S1 zone scroll handlers own background Y and are recomputed from restored camera/frame state through `ParallaxManager`; the shared API remains for S2/S3K compatibility. |
+| `Sonic1.getBackgroundScroll()` and `AbstractLevel.markAllDirty()` | Resolved | The runtime no longer queries S1's zero-return compatibility API. S1 zone scroll handlers own background Y and are recomputed from restored camera/frame state through `ParallaxManager`; the shared API remains for S2/S3K compatibility. The unused `markAllDirty()` no-op and its unobserved legacy test call were removed; rewind tilemap invalidation remains owned by `LevelRewindSnapshotAdapter` and `LevelTilemapRewindAdapter`. |
 
 Ordinary `Phase N` labels are intentional state-machine descriptions. Explicit
 no-op transitions such as invalid routines, resolved collision callbacks, and
