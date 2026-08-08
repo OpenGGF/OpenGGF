@@ -295,19 +295,26 @@ public class Sonic1CirclingPlatformObjectInstance extends AbstractObjectInstance
 
     // ---- Persistence ----
 
-    @Override
-    public boolean isPersistent() {
-        // Disasm: out_of_range.w DeleteObject,circ_origX(a0)
-        // Uses stored original X (not current X) for range check
-        return !isDestroyed() && isOrigXOnScreen();
-    }
-
     /**
-     * Range check using original X position, matching the disassembly's
-     * out_of_range.w macro applied to circ_origX.
+     * ROM {@code CirclingPlatform} ends with
+     * {@code out_of_range.w DeleteObject,circ_origX(a0)}
+     * (docs/s1disasm/_incObj/5A SLZ Circling Platform.asm:11), so the delete
+     * window is measured against the stored circle ORIGIN (circ_origX =
+     * objoff_32), never the live swung-out {@code obX}.
+     * <p>
+     * The origin anchor previously only fed {@code isPersistent()}, which is a
+     * keep-alive veto layered ON TOP of the shared out_of_range unload — and that
+     * unload still used the default live-X reference, so the platform survived
+     * whenever EITHER anchor was in window. A platform circling back toward the
+     * camera (X offset down to {@code -$50}) therefore chunk-aligned one $80
+     * block nearer than its origin and was retained after ROM had deleted it,
+     * occupying an SST slot ROM had freed (SLZ1 f3015: the engine holds slot 115
+     * with the origin 768 px out of the 640 px window while ROM holds nothing).
+     * Same shape as Obj 6A's {@code saw_origX} reference.
      */
-    private boolean isOrigXOnScreen() {
-        return isInRangeAt(origX);
+    @Override
+    public int getOutOfRangeReferenceX() {
+        return origX;
     }
 
     // ---- Debug rendering ----

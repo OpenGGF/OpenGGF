@@ -5556,6 +5556,29 @@ public class SidekickCpuController {
     }
 
     /**
+     * Re-captures the spawn anchor from the leader's own current position.
+     *
+     * <p>ROM {@code InitPlayers} copies the sidekick's spawn coordinates from
+     * {@code MainCharacter+x_pos/y_pos} and then applies {@code -$20 / +4}
+     * (docs/s2disasm/s2.asm:5191-5195). It reads the leader's <em>actual</em>
+     * position, never the zone's start-location table: {@code LevelSizeLoad}
+     * establishes that position either from {@code StartLocations} or, when
+     * {@code Last_star_pole_hit} is non-zero, from {@code Obj79_LoadData}'s
+     * {@code Saved_x_pos/Saved_y_pos} checkpoint restore
+     * (docs/s2disasm/s2.asm:14773-14790, :44774-44778), and InitPlayers runs
+     * afterwards (docs/s2disasm/s2.asm:4945) without distinguishing the two.
+     * Anchoring to the leader therefore covers both entry kinds with one rule.
+     */
+    /** The leader's current centre X, for spawn-anchor branch selection. */
+    public int leaderCentreX() {
+        return leader.getCentreX();
+    }
+
+    public void captureLevelStartLeaderAnchorFromLeaderPosition() {
+        captureLevelStartLeaderAnchor(leader.getCentreX(), leader.getCentreY());
+    }
+
+    /**
      * Marks that this sidekick entered via a one-time directly-compared frame-0
      * seed that loaded residual mid-run follow state (see
      * {@link #enteredFromSeedCompareFrame0}). Called by the trace-replay

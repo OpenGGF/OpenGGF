@@ -762,15 +762,36 @@ public final class TraceReplaySessionBootstrap {
                 && "s2".equals(trace.metadata().game())
                 && trace.metadata().hasNativePreludeBootstrap()
                 && !tornadoPreludeOrder;
-        int[] levelStart = useMetadataStartAnchor
-                ? resolveCurrentLevelStart()
-                : null;
+        // ROM InitPlayers copies the sidekick's spawn coordinates out of
+        // MainCharacter's live x_pos/y_pos and applies -$20/+4
+        // (docs/s2disasm/s2.asm:5191-5195). LevelSizeLoad has already
+        // established that position by one of two branches: the zone's
+        // StartLocations entry, or -- when Last_star_pole_hit is non-zero --
+        // Obj79_LoadData's Saved_x_pos/Saved_y_pos checkpoint restore
+        // (docs/s2disasm/s2.asm:14773-14790, :44774-44778). InitPlayers itself
+        // does not distinguish them, so the anchor must follow whichever one
+        // placed the leader.
+        //
+        // The engine's own level load runs the StartLocations branch, so the
+        // zone registry is the faithful anchor for a load that entered there.
+        // A load that entered from a checkpoint has the leader somewhere else
+        // along the level, and anchoring it to the start table left the
+        // sidekick a fixed $14px behind for the rest of the level. The engine's
+        // post-load ground snap can move the leader a pixel vertically off the
+        // start table's Y, so the horizontal coordinate is what identifies
+        // which LevelSizeLoad branch ran -- ROM's checkpoint restore always
+        // reinstates a star post's own X, which is never the level's spawn X.
+        int[] levelStart = useMetadataStartAnchor ? resolveCurrentLevelStart() : null;
         for (AbstractPlayableSprite sidekick :
                 gameplayMode.getSpriteManager().getRegisteredSidekicks()) {
             SidekickCpuController cpu = sidekick.getCpuController();
             if (cpu != null) {
-                if (useMetadataStartAnchor && levelStart != null) {
-                    cpu.captureLevelStartLeaderAnchor(levelStart[0], levelStart[1]);
+                if (useMetadataStartAnchor) {
+                    if (levelStart != null && cpu.leaderCentreX() == levelStart[0]) {
+                        cpu.captureLevelStartLeaderAnchor(levelStart[0], levelStart[1]);
+                    } else {
+                        cpu.captureLevelStartLeaderAnchorFromLeaderPosition();
+                    }
                 }
                 cpu.applyLevelStartSidekickPlacementForBootstrap();
             }

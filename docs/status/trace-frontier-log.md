@@ -65462,3 +65462,109 @@ S1/S2 14 -> 12 red, zero regressions.
   the vfc lag-frame filter, the FIRST genuine occupancy disagreement in SLZ1 over
   164 lag-filtered samples is **f3015**; f4053/f4060/f4256+ are real but have a
   different root than briefed.
+
+## 2026-08-08 - S2 special-stage inherited-ledger lanes: sidekick spawn anchor
+
+Worktree at `e534440f3` (detached). Command (all runs):
+`mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+-Dtest='<classes>' -Dsurefire.failIfNoSpecifiedTests=false -Dsonic{1,2}.rom.path=... -Ds3k.rom.path=... test`
+
+**Root cause (engine, not machinery).** The S2 trace-replay bootstrap anchored the
+CPU sidekick's spawn placement to the zone registry's start location
+(`TraceReplaySessionBootstrap.prepareSidekickPreludePlacement` ->
+`resolveCurrentLevelStart`). ROM `InitPlayers` copies the sidekick's spawn from
+`MainCharacter`'s live `x_pos/y_pos` (s2.asm:5191-5195), which `LevelSizeLoad`
+has set either from `StartLocations` or, when `Last_star_pole_hit` is non-zero,
+from `Obj79_LoadData`'s `Saved_x_pos/Saved_y_pos` (s2.asm:14773-14790, :44774-44778).
+For a run segment that re-enters a level at a star post, the zone-start anchor left
+Tails a fixed 0x14 px behind for the whole segment, de-phasing her walk animation by
+one mapping frame, so `observeDplc`'s `Tails_LastLoadedDPLC` dedupe (s2.asm:41659-41690)
+suppressed the run-gap submission the next special stage inherits.
+
+Fix: anchor from the leader when the load did not enter at the zone's start location;
+keep the registry anchor otherwise (the engine's post-load ground snap can shift the
+leader a pixel vertically off the start table, so the horizontal coordinate identifies
+which `LevelSizeLoad` branch ran). No constant was introduced.
+
+| Test | Before | After |
+|---|---|---|
+| `TestS2SpecialStage2TraceReplay` | FAIL 12488 errors, f0 `dynamic_art.outstanding_transfer_ids` | FAIL 5 errors, **f126 `dynamic_art.edge[0].mapping_frame` exp 71 act 94** |
+| `TestS2SpecialStage5TraceReplay` | FAIL 3 errors, f126 `dynamic_art.edge[0].mapping_frame` exp 98 act 97 | **PASS** |
+| `TestS2SpecialStage7TraceReplay` | FAIL 16993 errors, f0 outstanding ids | unchanged (different root, below) |
+
+Regression sweep `TestS2*TraceReplay` + `TestS3kAiz1SkipHeadless` +
+`TestSonic3kLevelLoading` + S1 special stages + guards: only pre-existing reds remain -
+`TestS2SpecialStage1TraceReplay` (10 errors, f393 `sonic_ss_x`),
+`TestS2Mcz2LevelSelectTraceReplay` (1 error, f4145 rings) and
+`TestS2OozLevelSelectTraceReplay` (3 errors, f5444 rings), each reproduced
+byte-identically on a control worktree at the same commit. `TestS2Ehz1TraceReplay`
+stays green (an intermediate leader-always variant regressed it on
+`player_history.y[26]` by one pixel; that variant was discarded).
+
+**New frontiers, both in the uncompared predecessor level replay, not in dynamic art:**
+- `ss_2` / `seg2_ehz1`: Sonic himself diverges from the recording at segment row 484
+  (rec x 3188 vs eng 3190) and is 40 px out by the segment tail, so Tails is in a
+  different animation at the gap row.
+- `ss_7` / `seg11_arz1`: Sonic matches for the whole segment; Tails is exact until
+  row 1961, where the recording holds her at x 2451 for one extra frame before the
+  0x32/0x33 animation begins and the engine does not. She is 9-10 px ahead from there
+  on. Classic missing one-frame state-transition stall in the S2 Tails CPU.
+
+## 2026-08-08 - SLZ1 and ss_5 close; the recorder's missing second RunObjects hook
+
+S1/S2 12 -> 10 red, zero regressions.
+
+- **`TestS1Slz1CompleteRunTraceReplay` GREEN.** Two defects, both the "ROM
+  predicate the engine implements only half of" class.
+  (a) SLZ Circling Platform: ROM `CirclingPlatform` ends with
+  `out_of_range.w DeleteObject,circ_origX(a0)` ("5A SLZ Circling Platform.asm":11)
+  -- the delete window is measured against the circle ORIGIN, written once in
+  Circ_Main (:29) and never updated. The engine encoded origX only in
+  `isPersistent()`, a keep-alive VETO layered on the shared out_of_range unload,
+  which still used the live swung-out X, so the platform survived while EITHER
+  anchor was in window. A platform circling back toward the camera (X offset to
+  -$50) chunk-aligns one $80 block nearer than its origin and was retained after
+  the ROM deleted it. Replaced with `getOutOfRangeReferenceX() -> origX`, the
+  established Obj6A `saw_origX` shape.
+  (b) Monitor contents (Obj2E): ROM `PowerUp` is `jsr Pow_Index / bra.w
+  DisplaySprite` (:217-222) and **none of its three routines has an out_of_range,
+  MarkObjGone or RememberState** -- its only exit is `Pow_Delete`'s
+  `subq.w #1,obTimeFrame / bmi.w DeleteObject` (:402-410, FixBugs=0 branch). The
+  engine's shared camera-distance unload has no ROM counterpart here and fired:
+  the ten-ring icon in slot 39 stopped updating at y_vel = -$18, exactly one step
+  short of `Pow_Checks`, so the contents were never awarded. Modelled with
+  `usesCustomOutOfRangeCheck()=true / isCustomOutOfRange()=false`, the Obj5C
+  Pyl_Display precedent. That is the 27-vs-17 at f5611.
+  SLZ1 occupancy probe: 47 -> 11 divergent frames of 164. The residual is ROM
+  object 0x53 CollapsingFloors at f4053/f4060 (14 slots the engine never spawns --
+  an UNIMPLEMENTED OBJECT, not a lifetime bug) plus nine samples downstream of it.
+- **`TestS2SpecialStage5TraceReplay` GREEN and ss_2 12488 -> 5 errors** (frontier
+  finally off frame 0). The Tails divergence does not develop during the
+  predecessor level at all -- it is established at that segment's frame 0 by an
+  engine bootstrap defect. `TraceReplaySessionBootstrap.prepareSidekickPreludePlacement`
+  anchored the CPU sidekick's spawn to the zone registry's STATIC start location
+  (`resolveCurrentLevelStart`). ROM `InitPlayers` copies the sidekick's spawn from
+  `MainCharacter`'s LIVE `x_pos/y_pos` and applies -$20/+4 (s2.asm:5191-5195), and
+  `LevelSizeLoad` has already placed the leader either at the `StartLocations`
+  entry or, when `Last_star_pole_hit` is non-zero, at `Obj79_LoadData`'s
+  `Saved_x_pos/Saved_y_pos` checkpoint restore (s2.asm:14773-14790, :44774-44778);
+  `InitPlayers` does not distinguish them. `seg2_ehz1` and `seg6_ehz2` are
+  star-post re-entries (start x 0x0DF0 / 0x1280) while `seg9_cpz2` and
+  `seg11_arz1` are level starts (0x0060) -- so Tails spawned in the wrong place on
+  exactly the segments that were failing.
+- **The recorder gap is a MISSING HOOK, not a design limit.**
+  `SpecialStage_MainLoop` is TWO loops (s2.asm:6683-6721) and both run
+  `RunObjects`; the recorder hooked only the recurring loop's $52B2. Adding the
+  pre-start loop's post-RunObjects hook at $523A (its `jsr RunObjects` at $5234,
+  verified against s2.gen bytes) makes the `SpecialStage_Started` gates redundant.
+  Candidate captures prove the delta exactly: standalone `s2/special_stage`
+  physics.csv byte-identical, all 6888 non-pass aux lines byte-identical and in the
+  same order, `run_objects_end` 2991 -> 3172 (+181 pre-start passes), first
+  observation frame 425 -> 162, trailing 2991 passes identical modulo
+  `pass_sequence`. The `s2-ehz-halfpipe-roundtrip` re-record reproduced seg1/2/3
+  byte-identically (metadata differing only in `recording_date`) and added
+  3172/3472 pass rows to `ss`/`ss_2`, which had ZERO.
+  **This is inert until the fixtures are republished** -- ss_1's residual 10
+  errors, ss_5's former 3, and the EHZ chain all depend on that republication, and
+  the capture also produces the additive sixth segment `seg4_ehz2` (bk2 22782, 36
+  frames) that needs an explicit decision.

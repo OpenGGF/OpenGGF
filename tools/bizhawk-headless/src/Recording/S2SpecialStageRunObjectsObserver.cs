@@ -8,6 +8,17 @@ namespace OpenGGF.BizHawk.Headless
     {
         private const uint ReadJoypadsReturn = 0x1156;
         private const uint PostRunObjects = 0x52B2;
+        // s2.asm SpecialStage_MainLoop is two loops, not one. The pre-start
+        // loop (s2.asm:6683-6690, `jsr (RunObjects).l` at ROM $5234, next
+        // instruction $523A) runs the same VintID_S2SS / WaitForVint /
+        // SSTrack_Draw / SSObjectsManager / RunObjects sequence as the
+        // recurring loop and exits only once Obj5F's ring-requirement message
+        // sets SpecialStage_Started (s2.asm:9745). Hooking only the recurring
+        // loop's $52B2 left every pass before control start unobserved, so a
+        // consumer had to pace those frames off the lag column instead --
+        // which the ROM does not: the V-int clock and the main-loop pass clock
+        // are distinct there.
+        private const uint PostRunObjectsBeforeStart = 0x523A;
         private const int GameMode = 0xF600;
         private const int SpecialStageStarted = 0xDB23;
         private const int P1Held = 0xF604;
@@ -18,6 +29,7 @@ namespace OpenGGF.BizHawk.Headless
         private readonly int bk2Offset;
         private readonly IDisposable inputRegistration;
         private readonly IDisposable passRegistration;
+        private readonly IDisposable preStartPassRegistration;
         private readonly List<Pass> pending = new List<Pass>();
         private Sample latest;
         private int nextInputSequence;
@@ -45,6 +57,8 @@ namespace OpenGGF.BizHawk.Headless
                 ReadJoypadsReturn, OnInputSample);
             passRegistration = host.RegisterExecuteCallback(
                 PostRunObjects, OnPassComplete);
+            preStartPassRegistration = host.RegisterExecuteCallback(
+                PostRunObjectsBeforeStart, OnPassComplete);
         }
 
         public IList<string> PublishForRow(int frame, bool lagged)
@@ -115,8 +129,7 @@ namespace OpenGGF.BizHawk.Headless
 
         private void OnPassComplete()
         {
-            if (S2Ram.U8(host, GameMode) != 0x10
-                || S2Ram.U8(host, SpecialStageStarted) == 0)
+            if (S2Ram.U8(host, GameMode) != 0x10)
             {
                 return;
             }
@@ -125,10 +138,6 @@ namespace OpenGGF.BizHawk.Headless
                 throw new InvalidOperationException(
                     "RunObjects return observed without a preceding input"
                     + " sample");
-            }
-            if (latest.Started == 0)
-            {
-                return;
             }
             if (lastCompletedInputSequence.HasValue
                 && latest.Sequence <= lastCompletedInputSequence.Value)
@@ -226,6 +235,7 @@ namespace OpenGGF.BizHawk.Headless
 
         public void Dispose()
         {
+            preStartPassRegistration.Dispose();
             passRegistration.Dispose();
             inputRegistration.Dispose();
         }
