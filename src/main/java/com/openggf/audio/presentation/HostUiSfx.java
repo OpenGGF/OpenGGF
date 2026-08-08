@@ -1,6 +1,7 @@
 package com.openggf.audio.presentation;
 
 import java.util.Locale;
+import java.util.Map;
 
 /**
  * Small deterministic presentation sounds for host UI that runs before a game
@@ -11,6 +12,10 @@ final class HostUiSfx {
     private static final int SAMPLE_RATE = 48_000;
     private static final String ASSET_PREFIX = "host/ui/";
     private static final double TWO_PI = Math.PI * 2.0;
+    private static final Map<String, DecodedPcm> CUES = Map.of(
+            "UI_NAVIGATE", tone("UI_NAVIGATE", new Note(760, 45)),
+            "UI_CONFIRM", tone("UI_CONFIRM", new Note(660, 55), new Note(990, 75)),
+            "UI_ERROR", tone("UI_ERROR", new Note(440, 75), new Note(290, 95)));
 
     private HostUiSfx() {
     }
@@ -19,12 +24,7 @@ final class HostUiSfx {
         if (cue == null) {
             return null;
         }
-        return switch (cue) {
-            case "UI_NAVIGATE" -> tone(cue, new Note(760, 45));
-            case "UI_CONFIRM" -> tone(cue, new Note(660, 55), new Note(990, 75));
-            case "UI_ERROR" -> tone(cue, new Note(440, 75), new Note(290, 95));
-            default -> null;
-        };
+        return CUES.get(cue);
     }
 
     static DecodedPcm forAsset(String assetId) {
@@ -33,7 +33,7 @@ final class HostUiSfx {
         }
         String cue = assetId.substring(ASSET_PREFIX.length())
                 .toUpperCase(Locale.ROOT);
-        return forCue(cue);
+        return CUES.get(cue);
     }
 
     private static DecodedPcm tone(String cue, Note... notes) {

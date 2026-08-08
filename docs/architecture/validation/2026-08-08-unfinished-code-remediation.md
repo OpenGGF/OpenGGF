@@ -183,8 +183,23 @@ Tests run: 4, Failures: 0, Errors: 0, Skipped: 0
 
 The interaction tests cover one navigate, one confirm, one missing-ROM error,
 selection-boundary silence, repeated confirm suppression, and repeated
-load-error suppression. The PCM test proves the host cues resolve to stable,
-distinct, non-silent samples and that the navigate sample mixes into output.
+load-error suppression. The PCM test resolves all three host cues, proves
+stable identity reuse for each immutable sample, distinguishes their content,
+and mixes each cue into nonzero output.
+
+The lifecycle follow-up also passed:
+
+```text
+mvn -Dmse=off -Dsurefire.forkCount=1 \
+  -Dtest=com.openggf.audio.TestAudioManagerRuntimeInstallation,com.openggf.TestEngine test
+Tests run: 33, Failures: 0, Errors: 0, Skipped: 0
+```
+
+That gate proves `AUDIO_ENABLED=false` performs no install, enabled startup
+installs once, and the title-exit reset followed by gameplay initialization
+asks the retained backend to recreate exactly one closed/replaced presentation
+sink. Re-entry then presents a cue through the rebuilt sink without replacing
+the backend.
 
 The original audit remains the complete disposition ledger; this report records
 only what this remediation branch changed or deliberately rejected.

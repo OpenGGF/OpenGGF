@@ -172,6 +172,39 @@ class TestAudioManagerRuntimeInstallation {
     }
 
     @Test
+    void resetStateReinstallsBackendSinkWithoutReplacingTheBackend()
+            throws Exception {
+        AudioManager audio = AudioManager.getInstance();
+        CountingSinkBackend backend = new CountingSinkBackend();
+        audio.resetState();
+        audio.setBackend(backend);
+        audio.presentFrame(PresentationMode.FORWARD);
+
+        AudioPresentationSink first = presentationSink(audio);
+        assertEquals(1, backend.sinkCreates);
+
+        audio.resetState();
+        assertEquals(1, backend.closedSinks,
+                "reset must close the old presentation sink");
+        assertNull(presentationSink(audio),
+                "reset must leave the sink absent until the backend owns a new one");
+
+        audio.ensurePresentationSink();
+        AudioPresentationSink second = presentationSink(audio);
+        assertNotSame(first, second);
+        assertEquals(2, backend.sinkCreates,
+                "reset/re-entry installs exactly one replacement sink");
+        audio.ensurePresentationSink();
+        assertEquals(2, backend.sinkCreates,
+                "repeated ensure does not leak or duplicate the sink");
+
+        audio.playSfx("UI_ERROR");
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertTrue(backend.acceptedFrames > 0,
+                "the rebuilt sink must receive the next presentation frame");
+    }
+
+    @Test
     void failedDeviceInitializationInstallsNoDeviceSink() throws Exception {
         AudioManager audio = AudioManager.getInstance();
         audio.resetState();
@@ -281,6 +314,39 @@ class TestAudioManagerRuntimeInstallation {
         @Override
         public int outputSampleRate() {
             return outputSampleRate;
+        }
+    }
+
+    private static final class CountingSinkBackend extends NullAudioBackend {
+        private int sinkCreates;
+        private int closedSinks;
+        private int acceptedFrames;
+
+        @Override
+        public AudioPresentationSink createPresentationSink(
+                java.util.function.Consumer<Throwable> failureHandler,
+                java.util.function.Consumer<String> warningHandler) {
+            sinkCreates++;
+            return new AudioPresentationSink() {
+                @Override
+                public int sampleRate() {
+                    return 48_000;
+                }
+
+                @Override
+                public void accept(com.openggf.audio.presentation.AudioPresentationFrameView frame) {
+                    acceptedFrames++;
+                }
+
+                @Override
+                public void onReverseBoundary() {
+                }
+
+                @Override
+                public void close() {
+                    closedSinks++;
+                }
+            };
         }
     }
 

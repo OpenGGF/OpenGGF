@@ -10,6 +10,10 @@ All notable changes to the OpenGGF project are documented in this file.
   start, deceleration, child ordering, and both airborne timer-expiry
   transitions through `loc_39A7C`. The dedicated DEZ ending replay
   remains green on both the reviewed base and candidate with verified REV01 ROM.
+- Fix: title-to-game mode resets now recreate the backend-owned presentation
+  sink before gameplay or title re-entry; enabled audio no longer becomes a
+  retained `NoDeviceAudioSink` after the first reset, and cached host cues keep
+  playing through the rebuilt sink.
 - Fix: the pre-game master title now emits distinct host-owned navigate,
   confirm, and error feedback. The cues use deterministic presentation PCM and
   remain independent of whichever game ROM is selected; repeated boundary,

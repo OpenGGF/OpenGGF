@@ -1102,16 +1102,21 @@ public class Engine {
 	}
 
 	private MasterTitleScreen createMasterTitleScreen() {
+		ensureAudioBackend();
 		return new MasterTitleScreen(configService,
 				new LaunchProfileStore(configService),
 				cue -> audioManager.playSfx(cue.sfxName()));
 	}
 
 	private void ensureAudioBackend() {
-		if (configService.getBoolean(SonicConfiguration.AUDIO_ENABLED)
-				&& !audioBackendInitialized) {
+		if (!configService.getBoolean(SonicConfiguration.AUDIO_ENABLED)) {
+			return;
+		}
+		if (!audioBackendInitialized) {
 			audioManager.setBackend(new LWJGLAudioBackend(configService, profiler));
 			audioBackendInitialized = true;
+		} else {
+			audioManager.ensurePresentationSink();
 		}
 	}
 
