@@ -65805,3 +65805,44 @@ to synthesize a POST phase on a VBLANK-only row.
 - Root cause: the ROM runs HCZ/ICZ slide terrain in `Handle_Onscreen_Water_Height` after the complete `Process_Sprites` pass, so the engine now publishes that event after object execution and after PathSwap solid-plane updates. Suppressed VBlank/advance rows also apply the recorded Start edge to the native pause toggle, allowing the recorded HCZ pause/unpause interval to resume before raw `25508`. StarPost bonus-star admission now follows `Obj_StarPost`'s ring-only `Ring_count >= 20` test; special-stage and emerald-count gates were engine-only.
 - Regression checks: the gameplay-order canary ran AIZ, HCZ, MGZ, CNZ, ICZ, and LBZ. AIZ retained its direct `#40` boundary at raw `11354`; MGZ and LBZ remained zero-error; CNZ retained its established raw `12024` physics mismatch and ICZ its two camera errors at raw `15401`/`15403`. The focused pause, recording-driver, and HCZ event tests passed. Ring comparison remains enabled through `ToleranceConfig.DEFAULT` with `RingCountMode.FORCE_ERROR`; no trace payloads changed.
 - Route position: AIZ remains the first active gameplay-order target, HCZ now advances from the prior raw `20697` handoff to the Tails movement frontier at raw `25526` and the queue boundary at raw `27686`; MGZ, CNZ, ICZ, and LBZ retain their established frontiers. The next target is the HCZ Tails movement/object-state mismatch.
+
+## 2026-08-08 - S3K HCZ recorded pause-entry boundary frontier
+
+- Worktree: `bugfix/s3k-traces` at `f371b4633` before this fix; unrelated edits
+  in `.idea/vcs.xml`, `docs/status/rewind-round-trip-gaps.md`, and
+  `src/main/java/com/openggf/level/objects/ObjectPlacementController.java`
+  remained unstaged. Validation used JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen`, without replacing or renaming it.
+- Frontier command: `env JAVA_HOME=$JDK21_HOME PATH=$JDK21_HOME/bin:$PATH
+  MAVEN_OPTS='-Xmx2g' mvn -q -Dmse=off -Dsurefire.forkCount=0
+  -DforkCount=0 -DreuseForks=false -Dmaven.test.failure.ignore=true
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtrace.verification=physics -Dtrace.frontierOnly=true
+  -Dtrace.context.radius=3
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay#replayMatchesTrace
+  test`. HCZ reaches raw frame `30649` before the next unconsumed
+  `KOS_DECOMPRESSION_QUEUE#116` completion at `PRE_MAIN_LOOP`. The frontier
+  report has four errors: the three established Tails animation mismatches at
+  raw `10470`, `10478`, and `10486`, followed by the next physical mismatch,
+  ring count at raw `29037` through `29040` (expected `0`, actual `1`). The
+  prior Tails movement mismatch at raw `25526` is gone.
+- Root cause: the ROM `LevelLoop` calls `Pause_Game` before
+  `Demo_PlayRecord`, so a recorded Start edge on a full row must remain visible
+  to that row's `Process_Sprites` body and only set `Game_paused` for the next
+  iteration. The recording driver now defers an unpaused full-row pause entry
+  until the body completes, while retaining immediate Start handling on
+  suppressed rows for pause-loop/unpause timing. This models the native input
+  boundary without hydrating gameplay state from the trace or keying on a
+  frame, route, or zone.
+- Regression checks: the focused `TestInGamePause`,
+  `TestRecordingFrameDriverInputOnly`, and `TestSonic3kHCZEvents` suite passed.
+  The gameplay-order canary retained the established AIZ, CNZ, and ICZ
+  boundaries; MGZ's standard pre-existing queue edge is unchanged when the new
+  policy is disabled, while MGZ and LBZ complete-run traces remain zero-error.
+  Ring comparison remains enabled through `ToleranceConfig.DEFAULT` with
+  `RingCountMode.FORCE_ERROR`; no trace payloads changed.
+- Route position: AIZ retains its current gameplay-order frontier; HCZ advances
+  from the Tails movement mismatch at raw `25526` to the ring mismatch at raw
+  `29037`, with direct queue edge `#116` at raw `30649` next. MGZ, CNZ, ICZ,
+  and LBZ retain their established frontiers. The next target is the HCZ ring
+  count discrepancy at raw `29037`.

@@ -3,6 +3,14 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K recorded replay now preserves the ROM `LevelLoop` boundary
+  around `Pause_Game` and `Demo_PlayRecord`: a Start edge on a full row remains
+  visible to that row's gameplay body, then enters the following pause loop.
+  HCZ advances past the Tails movement mismatch at raw frame `25526` to the
+  next physical discrepancy, a ring count at raw frame `29037`; its next
+  hardware boundary is `KOS_DECOMPRESSION_QUEUE#116` at raw frame `30649`.
+  Focused pause/recording/HCZ tests and MGZ/LBZ complete-run regressions remain
+  green. No trace payloads changed.
 - Fix/Test: S3K HCZ slide terrain now runs after the complete ROM
   `Process_Sprites` pass, so PathSwap solid-plane publication is visible on
   the same physics frame. Suppressed replay rows now consume ROM Start pause

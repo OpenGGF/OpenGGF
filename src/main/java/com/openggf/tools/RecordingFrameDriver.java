@@ -184,15 +184,21 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
 
     private LevelFrameResult stepFrame(
             LogicalInputSnapshot snapshot, Runnable beforeGameplay) {
-        var gameplayMode = SessionManager.getCurrentGameplayMode();
-        return gameplayMode.plcFrameLifecycle().runLogicalIteration(
-                gameplayMode.getFadeManager()::update,
-                frame -> stepFrame(snapshot, beforeGameplay, frame));
+        return stepFrame(snapshot, beforeGameplay, false);
     }
 
     private LevelFrameResult stepFrame(
             LogicalInputSnapshot snapshot, Runnable beforeGameplay,
-            PlcLifecycleFrame lifecycleFrame) {
+            boolean deferRecordedPauseEntry) {
+        var gameplayMode = SessionManager.getCurrentGameplayMode();
+        return gameplayMode.plcFrameLifecycle().runLogicalIteration(
+                gameplayMode.getFadeManager()::update,
+                frame -> stepFrame(snapshot, beforeGameplay, frame, deferRecordedPauseEntry));
+    }
+
+    private LevelFrameResult stepFrame(
+            LogicalInputSnapshot snapshot, Runnable beforeGameplay,
+            PlcLifecycleFrame lifecycleFrame, boolean deferRecordedPauseEntry) {
         updateActiveTitleCardOverlay();
         if (applyPendingSeamlessTransition()) {
             pendingSeamlessBoundaryCompletion = true;
@@ -246,8 +252,13 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
         startPendingInLevelTitleCardIfRequested();
         LevelFrameContext context =
                 LevelFrameContext.from(SessionManager.getCurrentGameplayMode());
+        boolean deferPauseEntry = deferRecordedPauseEntry
+                && snapshot.player1().startPressed()
+                && context.gameStateManager() != null
+                && !context.gameStateManager().isGamePaused();
         FrameAdmission admission = LevelFrameStep.admit(
-                context, levelManager, snapshot.player1().startPressed());
+                context, levelManager,
+                snapshot.player1().startPressed() && !deferPauseEntry);
         lastFrameResult = admission.result();
         lastFrameRanGameplay = false;
         if (lastFrameResult == LevelFrameResult.SETUP_ONLY) {
@@ -290,6 +301,14 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
                 // exit during this pass starts the in-level title card in the
                 // same frame rather than the next frame's top.
                 startPendingInLevelTitleCardIfRequested();
+                if (deferPauseEntry && lastFrameRanGameplay) {
+                    // ROM LevelLoop calls Pause_Game before Demo_PlayRecord. A
+                    // recorded Start edge therefore supplies the current row's
+                    // input and enters Pause_Loop on the following iteration;
+                    // keep the edge out of admission but publish the resulting
+                    // Game_paused state after this row's body has completed.
+                    context.gameStateManager().applyPauseToggle(true);
+                }
             }
         } finally {
             inputHandler.clearLogicalOverride();
@@ -485,7 +504,7 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
                 stepFrame(RecordedInputSnapshots.fromBk2(frameInput, previousInput), () -> {
                     applyP1ActionPressEdge(currentBk2Index);
                     beforeGameplay.run();
-                });
+                }, true);
         if (result != LevelFrameResult.SETUP_ONLY) {
             currentBk2Index++;
         }
@@ -517,7 +536,7 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
                         driveInput, previousBk2Input(currentBk2Index - 1)), () -> {
                     applyP1ActionPressEdge(currentBk2Index - 1);
                     beforeGameplay.run();
-                });
+                }, true);
         if (result != LevelFrameResult.SETUP_ONLY) {
             currentBk2Index++;
         }
