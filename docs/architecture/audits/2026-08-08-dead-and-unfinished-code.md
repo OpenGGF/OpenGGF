@@ -1,0 +1,137 @@
+# Dead and unfinished code audit
+
+**Date:** 2026-08-08
+**Scope:** reachability and explicit unfinished-code evidence before the source sweep.
+
+## Method and classification
+
+The repository contains 2,312 tracked production Java files. The audit ran:
+
+```bash
+git ls-files 'src/main/**/*.java' | wc -l
+for candidate in DebugSpriteMovementManager NoOpPresenceClient S3kSavePayload Sonic2SpecialStageDebugProvider SpindashCameraTimer VelocityAnimationProfile DebugArtViewer Sonic3kSpecialStageScalars DebugColorShaderProgram DebugPrimitiveRenderer CNZBossAnimations; do
+  git grep -n -w -- "$candidate" || true
+done
+rg -n -i --glob 'src/main/**' --glob 'tools/**' \
+  '(TODO|FIXME|\bstub(bed)?\b|\bscaffold\b|not (yet )?implemented|\bno-op\b|Phase [0-9]+)'
+```
+
+`git grep` is an exact-word search over tracked files. Its scope includes source,
+tests, resources, tooling, scripts, root launchers, `.github`, `.mvn`, Maven and
+configuration files, current docs, `META-INF/services`, and Graal configuration.
+Search classifications are **declaration**, **current evidence**, **historical
+artifact**, and **live reachability**. Marker dispositions are **dead cleanup**,
+**stale cleanup**, **ranked unfinished work**, **intentional contract**,
+**generated output**, **historical/tooling note**, **unsupported broader game
+mode**, and **ambiguous ownership retained**.
+
+The marker scan found 622 hits in 222 files. It is a lexical inventory, not a
+dead-code analyser: a marker can describe a ROM phase, a default contract, or a
+historical/tooling fact.
+
+## Reachability evidence
+
+| Type | Exact-match classification | Disposition |
+|---|---|---|
+| `DebugSpriteMovementManager` | Declaration; 2026-07-29 design is historical. | Delete: no caller, registry, service entry, reflective name, launcher, test, or supported contract. |
+| `NoOpPresenceClient` | Declaration; Discord plan is historical. | Delete: no construction, service loader, configuration, or supported fallback. |
+| `S3kSavePayload` | Declaration only. | Delete: no save serialization or data-select caller. |
+| `Sonic2SpecialStageDebugProvider` | Declaration and constructors only. | Delete: no provider registration or debug shortcut selects it. |
+| `SpindashCameraTimer` | Declaration; runtime-container review is historical. | Delete: no timer registration, factory, configuration, or caller. |
+| `VelocityAnimationProfile` | Declaration only. | Delete: no animation owner constructs it. |
+| `DebugArtViewer` | Declaration plus historical designs/plans; no live source, test, launcher, Maven-exec, resource, or current user-tool reference. | Delete as abandoned scratch CLI. It hard-codes `s2.gen` and directs users to edit `Sonic2ObjectArt`. |
+| `Sonic3kSpecialStageScalars` | Declaration only. | Retain: coherent Blue Sphere projection requires an accuracy/integration decision. |
+| `DebugColorShaderProgram` | Declaration plus historical changelog evidence. | Retain with the collision/sensor debug-rendering path. |
+| `DebugPrimitiveRenderer` | Declaration plus historical changelog evidence. | Retain with `DebugColorShaderProgram`; unwired is not obsolete. |
+| `CNZBossAnimations` | Declaration only. | Retain: ROM-derived scripts need dedicated proof that live CNZ boss code duplicates every command. |
+
+`git log --all --follow --oneline -- src/main/java/com/openggf/debug/DebugArtViewer.java`
+was run. Non-checkpoint commits are default-ROM-filename, BufferedImage/AWT,
+logging, package-move, and tidy changes. They are incidental maintenance, not a
+documented invocation contract or maintained CLI.
+
+Retain `shader_debug_text.vert` and `.frag` with unwired debug rendering.
+`GraphicsManager` directly loads `shader_debug_color.glsl` and `.vert`, so both
+are live. No debug shader is deleted.
+
+## Narrow cleanup contracts
+
+| Owner | Symbol | Disposition |
+|---|---|---|
+| `DisassemblySearchResult` | `hasBinclude()` | Delete caller-free deprecated alias. |
+| `TraceReplayBootstrap` | `usesS2TornadoRideStartForTraceReplay(TraceData)` | Delete caller-free alias; `TestBuildToolingGuard` deliberately keeps a literal that bans new use. |
+| `TraceMetadata` | `hasPerFrameCnzSlotMachineState()` | Delete caller-free alias; retain `hasPerFrameSlotMachineState()` and its guard literal. |
+| `InitialProcessSpritesLevelManagerBase` | `consumePendingInitialObjectSetupPass()` | Delete caller-free `forRemoval` alias. |
+| `CnzMinibossInstance` | `setLower2CounterForTest(int)` | Delete caller-free `forRemoval` shim and its stale comment. |
+| `LevelManager` | protected no-argument constructor | Delete caller-free `forRemoval` constructor that always throws. |
+| `Sonic3kSpecialStageRomOffsets` | `ART_KOS_RESULTS_GENERAL`, `ART_KOS_RESULTS_TK_ICONS`, `PAL_RESULTS`, and three matching size constants | Delete only this unused unverified section; live results use verified `Sonic3kConstants` addresses. |
+
+The stale-comment edits are MCZ `boss_hurt_sonic` (harmful drill contact already
+owns it in `onTouchResponse(...)`), S3K spring “currently stubbed” (native init
+already swaps vertical direction under reverse gravity), and the two completed
+sidekick paragraphs headed “Stubbed in Task 2; body lands in Task 4/5”.
+
+`kosinski.txt` and its sole Graal `kosinski\\.txt` include are unused runtime
+reference material. Task 2 relocates its content, provenance, and current
+decompressor-owner links to
+`docs/architecture/research/compression/kosinski-format.md`.
+
+Planned runtime removal is seven Java files (339 lines) plus the 125-line
+misplaced compression document: eight files and 464 current lines.
+
+## Marker inventory classification
+
+| Category | Disposition | Evidence |
+|---|---|---|
+| Exact obsolete declarations and results constants | Dead cleanup | The seven types and narrow symbols above lack inbound contracts. |
+| MCZ, spring, and sidekick comments | Stale cleanup | Existing owners and tests already implement the claimed missing behavior. |
+| P0–P3 table below | Ranked unfinished work | Live no-op, approximation, or missing ROM behavior. |
+| Default providers, abstract hooks, guarded queue/restore methods, sized-resource overloads, `SK_alone_flag`, camera AIZ ship translation, `FixBugs=0`, test upload sinks | Intentional contract | Deliberate default, guard, or shipped-ROM documentation. |
+| `ObjectScaffoldTool` TODO vocabulary | Generated output | Generator content, not a runtime claim. |
+| Historical task/phase prose, changelogs, ROM phase labels, signpost stub-art labels | Historical/tooling note | Lineage or ROM terminology only. |
+| `NoOpSpecialStageProvider`, S1/S3K debug hooks, CPZ debug placement, human-P2 monitors | Intentional contract or unsupported broader game mode | Provider defaults are explicit; debug/competition needs an engine-level capability or game-mode design. |
+| `Sonic1.getBackgroundScroll()` and `AbstractLevel.markAllDirty()` | Ambiguous ownership retained | Live API/test surface lacks proven authoritative behavior. |
+
+Ordinary `Phase N` labels are intentional state-machine descriptions. Explicit
+no-op transitions such as invalid routines, resolved collision callbacks, and
+drawless controllers are contracts. The scan cannot prove private declarations,
+reflection, resource naming conventions, or generated output unused; those are
+its intentional heuristic limits.
+
+## Ranked unfinished work
+
+| Rank | Owner | Runtime impact | Required source/test evidence |
+|---|---|---|---|
+| P0 | `AizMinibossNapalmProjectile` | Knuckles AIZ projectile is approximate, harmless, and unrendered. | Port `loc_68C96`: motion/floor, collision/timing, ROM art/mappings/explosion children, rewind, Knuckles AIZ trace. |
+| P0 | `LbzFinalBoss2Instance` | Big Arm is inert, invisible, and persistent, blocking Knuckles LBZ completion. | Port `Obj_LBZFinalBoss2`: ROM art/PLC, phases, hit/defeat flow, rewind, LBZ Knuckles trace. |
+| P1 | `Sonic3kLevelEventManager` | LRZ1 non-Knuckles and SSZ omit native falling-intro state. | Port `SpawnLevelMainSprites` `loc_68A6`; zone/act/character bootstrap tests and traces. |
+| P1 | `AizEndBossInstance` | Emerge/re-submerge omit splash children, affecting visual and slot order. | Port `ChildObjDat_69D2E` with ROM assets, allocation, rewind, render, AIZ2 boss trace. |
+| P1 | `Sonic1.getBackgroundScroll()` | API always returns `{0,0}` despite newer parallax owners. | Decide against `LevelFrameRuntimeUpdater`; remove redundant API/caller or source authoritative state, per-zone rewind tests. |
+| P1 | `Sonic3kCoordFlagHandler.handleMetaCommand(...)` | `SND_CMD`, `MUS_PAUSE`, `COPY_MEM` consume bytes but discard semantics. | Inventory reached streams; port reached commands from SMPSPlay/libvgm/Z80 with sequencing tests; document unreachable commands. |
+| P2 | S1 and S3K special-stage providers/managers | Shared debug/alignment shortcuts delegate to scaffold/no-op paths. | Game-owned debug capability or explicit unavailable controls; test operation or absence. |
+| P2 | `MasterTitleScreen` | Called navigate/confirm/error methods are silent. | Host-owned SFX or documented intentional silence; interaction tests. |
+| P2 | `LoadTimeProfileFactory` | FAST/REALISTIC warn and alias to NONE/PROFILED. | Authoritative timing profiles or remove/migrate modes and docs. |
+| P2 | `AbstractLevel.markAllDirty()` | Public TODO/no-op; no production caller; rewind test cannot observe effect. | Prove snapshot restore publishes dirty regions and remove placebo API/test, or route to dirty-region owner with GPU-refresh assertion. Retain in this sweep. |
+| P2 | `Sonic2MechaSonicInstance` | `ObjectMove` ordering differs from ROM outer attack loop. | Refactor from `loc_398F4`/`loc_39D44`; phase/child-order tests and DEZ trace. |
+| P3 | `Sonic3kSpecialStageManager` results/debug remnants | Three results offsets are dead; alignment/debug remains live but empty. | Delete duplicate constants only; apply P2 capability design to live tooling. |
+| P3 | `CPZSpinTubeObjectInstance` debug placement | ROM debug-placement path unsupported; normal tube gameplay unaffected. | Engine-wide placement/debug capability and CPZ debug tests; no object-local carve-out. |
+| P3 | `MonitorObjectInstance` human-P2 | S2 competition/human-P2 monitor behavior absent; one-player and CPU-sidekick separate. | Dedicated S2 competition-mode design; no object-local game-mode branch. |
+
+## Documentation freshness map
+
+| Finding | Authoritative current document | Correction |
+|---|---|---|
+| AIZ route and Mecha Sonic parity | `README.md`; `docs/guide/playing/game-status.md` | Qualify completion; name napalm, splash, falling intro, Big Arm, Mecha Sonic ordering; refresh date. |
+| AIZ gaps | `docs/architecture/research/s3k-zones/aiz-analysis.md` | Dated current-engine notes for napalm and splash, retaining disassembly analysis. |
+| Big Arm | `docs/architecture/research/s3k-zones/lbz-analysis.md` | Replace “verify/re-audit” with inert/invisible blocker and implementation requirement. |
+| Falling initialization | `docs/architecture/research/s3k-zones/lrz-analysis.md`; `docs/architecture/research/s3k-zones/ssz-analysis.md` | Record missing `SpawnLevelMainSprites` gates. |
+| F12/F3 | `CONFIGURATION.md`; `docs/guide/playing/controls.md` | S2-only/capability-dependent; S1/S3K no-op. |
+| SMPS meta commands | `docs/guide/cross-referencing/architecture-overview.md`; `docs/guide/contributing/audio-system.md`; `docs/guide/contributing/architecture.md` | Qualify universal parity; name handler and discarded commands. |
+| Checklist meaning | `S3K_OBJECT_CHECKLIST.md` | Checked means registry coverage, not full ROM parity; dynamic children can be absent. |
+| S3K blockers | `docs/status/s3k-known-bugs.md` | Add napalm, Big Arm, falling intros, splash children; keep historical trace material. |
+| All other rows | This audit | First durable current record until a feature owner updates its status/roadmap. |
+
+No deferred source deletion follows merely from marker text. Future work needs the
+cited source-of-truth proof, owner tests, rewind coverage for object state, and
+route trace evidence where behavior affects a playable path. Runtime assets stay
+ROM-loaded; disassembly is research evidence only.
