@@ -534,17 +534,21 @@ public class Sonic2SpecialStagePlayer {
     }
 
     private void ssPlayerTraction() {
-        if (ssSlideTimer != 0) {
-            return;
+        // SSPlayer_Traction (docs/s2disasm/s2.asm:69725-69747): the
+        // `tst.b ss_slide_timer(a0) / bne.s +` branch target is the
+        // `move.b angle(a0),d0` that begins the fall-off-the-track test, not
+        // the rts. A non-zero slide timer therefore suppresses ONLY the
+        // gravity/traction addition to inertia; the routine=8 (MdAir)
+        // transition below is evaluated on every pass regardless.
+        if (ssSlideTimer == 0) {
+            // Original uses d1 (cosine) from CalcSine, not d0 (sine)
+            // This creates a restoring force: cos(0x40) = 0 at center,
+            // positive on one side, negative on other
+            int cosine = calcCosine(angle);
+
+            int traction = (cosine * TRACTION_FACTOR) >> 8;
+            inertia += traction;
         }
-
-        // Original uses d1 (cosine) from CalcSine, not d0 (sine)
-        // This creates a restoring force: cos(0x40) = 0 at center,
-        // positive on one side, negative on other
-        int cosine = calcCosine(angle);
-
-        int traction = (cosine * TRACTION_FACTOR) >> 8;
-        inertia += traction;
 
         int a = angle & 0xFF;
         if (a >= 0x80) {

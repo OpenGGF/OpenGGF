@@ -65383,3 +65383,82 @@ given, which is worth noting as a pattern rather than an anecdote.
   is **f2297**, ~620 frames earlier, where the ROM materialises three Obj5B the
   engine does not. Frames 3015, 4053, 4060 and the 4256+ CirclingPlatform cluster
   are genuine.
+- **The EHZ interior DPLC red is a FIXTURE gap, not an engine defect** (2026-08-08;
+  `mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+  -Dtest='TestS2EhzHalfpipeRoundTripChain,TestTraceFixtureMovieAlignmentGuard,TestBuildToolingGuard'`
+  at a8bfbcd7a; RED, 37933 errors over 4518 of 5733 rows, first error row 136
+  `dynamic_art.edges`). The brief's lead -- "a phase/ownership offset in when the
+  segment's dynamic art is published" -- does NOT hold. `s2-ehz-halfpipe-roundtrip`'s
+  `ss`/`ss_2` carry zero `run_objects_end` records, so
+  `TraceRunSpecialStageRows.S2Rows.newRunObjectsPassBinder()` is empty and the
+  interior runs one `GameLoop.step()` per non-lag row. The S2 SS 68K loop is not one
+  `RunObjects` pass per V-blank (`SS_MainLoop` sets `VintID_S2SS`, waits for the
+  V-int, then runs the pass -- s2.asm:6694-6721): the committed standalone stage-1
+  fixture has 3328 non-lag rows against 2991 completed passes, an 11% frame-paced
+  overrun. 315 of the `ss` fixture's rows publish DPLC edges stamped with two
+  distinct `logical_frame`s (two ROM passes on one observation), which one-step-per-row
+  cannot reproduce; recorded edge total 5814 against engine 5850, so it is not a
+  constant phase shift. Control: stripping the 2991 pass records from the standalone
+  fixture and re-running `TestS2SpecialStageTraceReplay` with
+  `-Dopenggf.trace.candidate.dir` fails to replay at all ("rings-to-go trigger clear
+  at frame 1324 has no following completed pass"). `DynamicArtSpillNormalization`
+  (which the run-chain comparator also skips) is not the load-bearing half -- applying
+  it in simulation leaves 4603 divergent rows against 4518. Closure is republication
+  of this run's `ss`/`ss_2` with pass records, which also adds a sixth `seg4_ehz2`
+  segment and is a separate publication decision. Deriving pass counts from this
+  fixture's own DPLC rows would be a fitted model under hard rule 3.
+
+## 2026-08-08 - ss_3 and ss_6 close: the slide timer guarded the wrong branch
+
+S1/S2 14 -> 12 red, zero regressions.
+
+- **`Sonic2SpecialStagePlayer.ssPlayerTraction()` returned early on a non-zero
+  slide timer, skipping the fall-off-the-track transition entirely.** In ROM
+  `SSPlayer_Traction` (s2.asm:69725-69747) the `tst.b ss_slide_timer(a0) /
+  bne.s +` branch target is the `move.b angle(a0),d0` that BEGINS the airborne
+  test, NOT the `rts`. So a non-zero slide timer suppresses only the traction
+  addition to inertia; the `move.b #8,routine(a0)` transition to MdAir is
+  evaluated unconditionally on every pass. Narrowing the early return to guard
+  just the inertia add closes **`TestS2SpecialStage3TraceReplay` (5600 -> 0)** and
+  **`TestS2SpecialStage6TraceReplay` (14385 -> 0)**, and drops ss_5 from 16148 to
+  3 errors at the same first-error frame.
+  Third instance in this programme of one class: **a ROM predicate the engine
+  implements only half of.** The others were `loc_350E2` dropping
+  `cmpi.b #2,routine(a1)` from the collision eligibility gate, and the S1
+  `React_ChkHurt` early exit. Worth checking for directly when a state
+  transition is missing rather than wrong.
+- **The EHZ interior DPLC red is a FIXTURE gap, not engine work** - the brief's
+  "publication phase offset" lead is disproved. With no `run_objects_end` records
+  in this run's `ss`/`ss_2` segments, `newRunObjectsPassBinder()` returns empty and
+  `uncomparedInteriorStep` frame-paces one `GameLoop.step()` per non-lag row. But
+  `SS_MainLoop` sets `VintID_S2SS`, waits for the V-int, THEN runs the pass
+  (s2.asm:6694-6721), so passes are not V-blank-paced: the committed standalone
+  stage-1 fixture measures 3328 non-lag rows against 2991 completed passes, an 11%
+  frame-paced overrun, and 315 of the `ss` recording's 5733 rows publish DPLC edges
+  stamped with two distinct `logical_frame`s - two ROM passes surfacing on one
+  observation, which a one-step-per-row engine cannot produce at all.
+  **Decisive control:** stripping the 2991 `run_objects_end` records from the GREEN
+  standalone fixture and replaying it does not merely go red on DPLC - it cannot
+  replay at all ("rings-to-go trigger clear at frame 1324 has no following
+  completed pass"). The green lane is pass-paced by construction.
+  Closure is republishing this run's `ss`/`ss_2` from the already-committed native
+  recorder (a strict superset adding 2991 and 3291 pass records), which also yields
+  the sixth `seg4_ehz2` segment the committed fixture omits - a separate
+  publication decision. Deriving per-observation pass counts from the fixture's own
+  DPLC rows would be a hard-rule-3 fitted model; no frame-granularity ROM state
+  predicts sub-frame 68K pass timing.
+  Secondary, not load-bearing: the run-chain interior comparator also skips
+  `DynamicArtSpillNormalization`, which the standalone lane applies to the 451
+  spilled submission edges; simulating it offline leaves 4603 divergent rows versus
+  4518 without it.
+- **SLZ1 f2297 is NOT a divergence either** - the second corrected entry point in
+  two rounds to be disproved. The three Obj5B reported missing are held by the
+  engine as staircase CHILD RESERVATIONS
+  (`Sonic1StaircaseObjectInstance.reserveChildSlots` ->
+  `ObjectManager.allocateChildSlotsAfter`, modelling Stair_Main's `movea.l a0,a1`
+  + FindNextFreeObj loop, "5B SLZ Staircase.asm":38-66). The earlier probe read
+  `getActiveObjects()` only - the false-"missing object" trap the skill documents.
+  With a probe that folds reserved child slots in as a distinct state and applies
+  the vfc lag-frame filter, the FIRST genuine occupancy disagreement in SLZ1 over
+  164 lag-filtered samples is **f3015**; f4053/f4060/f4256+ are real but have a
+  different root than briefed.

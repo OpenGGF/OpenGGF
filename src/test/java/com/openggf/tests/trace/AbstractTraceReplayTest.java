@@ -87,6 +87,12 @@ public abstract class AbstractTraceReplayTest {
         }
     }
 
+    /**
+     * Env-gated ({@code OGGF_SLOT_PROBE=1}) ROM-vs-engine SST occupancy diff.
+     * Null in every ordinary run; comparison-only when armed.
+     */
+    private SlotOccupancyProbe slotOccupancyProbe;
+
     /** Which game ROM this test requires. */
     protected abstract SonicGame game();
 
@@ -275,6 +281,9 @@ public abstract class AbstractTraceReplayTest {
         TraceBinder binder = null;
         HeadlessTestFixture fixture = null;
         boolean hardwareTimingReplayClosed = false;
+        // Comparison-only, env-gated (OGGF_SLOT_PROBE=1) SST occupancy diff. Off in
+        // every normal run, and it never touches engine or binder state.
+        slotOccupancyProbe = SlotOccupancyProbe.createIfEnabled(trace, game() + "_" + zone() + act());
         try {
             HeadlessTestFixture.Builder fixtureBuilder = HeadlessTestFixture.builder()
                 .withRecording(bk2Path)
@@ -418,6 +427,10 @@ public abstract class AbstractTraceReplayTest {
                             "Check bk2_frame_offset in metadata.json.",
                             i, bk2Input, expected.input()));
                     }
+                    if (slotOccupancyProbe != null && GameServices.level() != null) {
+                        slotOccupancyProbe.observe(
+                                i, GameServices.level().getObjectManager());
+                    }
                     if (!TraceReplayBootstrap.shouldCompareGameplayStateForReplay(phase)) {
                         compareDynamicArtIfAdvertised(
                                 trace, binder, expected.frame());
@@ -529,6 +542,10 @@ public abstract class AbstractTraceReplayTest {
                 } catch (RuntimeException | java.io.IOError ignored) {
                     // diagnostics only
                 }
+            }
+            if (slotOccupancyProbe != null) {
+                slotOccupancyProbe.close();
+                slotOccupancyProbe = null;
             }
             if (fixture != null && !hardwareTimingReplayClosed) {
                 fixture.abortHardwareTimingReplayRun();
@@ -744,6 +761,11 @@ public abstract class AbstractTraceReplayTest {
 
             S3kCheckpointProbe probe = captureS3kProbe(driveFrame.frame(), comparedSprite(fixture));
             TraceEvent.Checkpoint engineCheckpoint = detector.observe(probe);
+
+            if (slotOccupancyProbe != null && GameServices.level() != null) {
+                slotOccupancyProbe.observe(
+                        driveTraceIndex, GameServices.level().getObjectManager());
+            }
 
             if (TraceReplayBootstrap.shouldCompareGameplayStateForReplay(phase)) {
                 TraceFrame comparisonExpected =

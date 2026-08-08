@@ -111,8 +111,49 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * where the recording still has {@code outstanding=[0,1,2]}, then the reverse at
  * 137), and from row 5192 the engine keeps submitting SS player transfers through
  * the results tail where the ROM has none (it {@code clearRAM Object_RAM} before
- * loading {@code Obj6F}). Both are engine/comparator work independent of the mode
- * gate above.
+ * loading {@code Obj6F}).
+ *
+ * <p><b>Root cause (measured 2026-08-08): this is the missing {@code run_objects_end}
+ * pass log, not an engine defect and not a publication-phase offset.</b> The
+ * interior here is FRAME-paced -- {@link AbstractRunChainTest#uncomparedInteriorStep}
+ * runs exactly one {@code GameLoop.step()} per non-lag recorded row, because
+ * {@code TraceRunSpecialStageRows.S2Rows.newRunObjectsPassBinder()} returns empty
+ * for a segment with no recorded passes, and this fixture's {@code ss} / {@code ss_2}
+ * have zero. But the S2 special-stage 68K loop is not one {@code RunObjects} pass
+ * per V-blank ({@code SS_MainLoop} sets {@code VintID_S2SS}, waits for the V-int,
+ * then runs the pass -- docs/s2disasm/s2.asm:6694-6721), so pass count and row count
+ * diverge. The committed standalone stage-1 fixture measures the gap exactly: 3328
+ * non-lag rows against 2991 actually-completed ROM passes, an 11% frame-paced
+ * overrun. The recorded {@code ss} rows show the same shape directly -- 315 of its
+ * 5733 rows carry DPLC edges stamped with TWO distinct {@code logical_frame}s (two
+ * ROM passes surfacing on one observation; row 424 submits {@code ss-sonic} /
+ * {@code ss-tails} on lag frame 423 and completes them on 424, publishing both at
+ * 424), which a one-step-per-row engine cannot produce at all. It submits at 424 and
+ * completes at 426, and is a row behind for the rest of the stage; the totals differ
+ * too (5814 recorded edges against 5850 engine), so it is not a fixable constant
+ * phase shift.
+ *
+ * <p>The control is decisive: stripping the 2991 {@code run_objects_end} records from
+ * the standalone {@code src/test/resources/traces/s2/special_stage} fixture and
+ * re-running {@code TestS2SpecialStageTraceReplay} against the copy via
+ * {@code -Dopenggf.trace.candidate.dir} does not merely go red on DPLC -- it cannot
+ * replay at all ("rings-to-go trigger clear at frame 1324 has no following completed
+ * pass"). The green standalone lane is pass-paced by construction, and additionally
+ * normalizes the 451 spilled submission edges through
+ * {@code DynamicArtSpillNormalization}; the run-chain interior comparator
+ * ({@code TraceRunReplayWalker.DynamicArtSegmentComparison}) compares raw recorded
+ * rows and applies neither. Normalization alone does not close it (simulated: 4603
+ * rows still divergent, against 4518 without it) -- the pass log is the load-bearing
+ * half.
+ *
+ * <p><b>This is therefore a FIXTURE finding.</b> Per-observation pass counts are
+ * sub-frame 68K execution timing; deriving them by measuring this fixture's own DPLC
+ * rows would be a fitted model under hard rule 3, and no frame-granularity ROM state
+ * predicts them. The only correct closure is republishing this run's {@code ss} /
+ * {@code ss_2} segments from the already-committed native recorder (a scratch
+ * re-capture adds 2991 and 3291 pass records as a strict superset, per the recorder
+ * note below) -- which also yields a sixth {@code seg4_ehz2} segment this fixture
+ * omits, so it remains a separate publication decision.
  *
  * <p>The paragraph above ("the earlier fixture-data gap story is wrong") remains true
  * of the {@code seg2} return handoff it was written about. The chain now fails in

@@ -1635,6 +1635,44 @@ public class ObjectManager {
         return occupancy;
     }
 
+    /** Sentinel id for a dynamic slot held by a parent's child reservation with no live instance yet. */
+    public static final int SLOT_STATE_RESERVED_CHILD = -2;
+
+    /** Sentinel id for a dynamic slot the allocator holds that no live instance or reservation explains. */
+    public static final int SLOT_STATE_UNATTRIBUTED = -3;
+
+    /**
+     * Read-only occupancy snapshot that folds in the two non-instance states the
+     * {@link SlotAllocator} bitset tracks but {@link #occupiedDynamicSlotIds()}
+     * cannot see: parent-held child reservations (ROM {@code FindFreeObj} /
+     * {@code FindNextFreeObj} has already consumed the slot even though the child
+     * object has not been constructed yet) and any residual allocator bit with no
+     * owner. Comparison-only diagnostic: mirrors the ROM SST occupancy the
+     * recorder's {@code slot_dump} samples, and never mutates manager state.
+     */
+    public java.util.Map<Integer, Integer> occupiedDynamicSlotIdsWithReservations() {
+        java.util.Map<Integer, Integer> occupancy = occupiedDynamicSlotIds();
+        for (int[] childSlots : reservedChildSlots.values()) {
+            if (childSlots == null) {
+                continue;
+            }
+            for (int slot : childSlots) {
+                if (slotLayout.isDynamicSlot(slot) && !occupancy.containsKey(slot)) {
+                    occupancy.put(slot, SLOT_STATE_RESERVED_CHILD);
+                }
+            }
+        }
+        int lastDynamic = slotLayout.firstDynamicSlot() + slotLayout.dynamicSlotCount();
+        for (int slot = slotLayout.firstDynamicSlot(); slot < lastDynamic; slot++) {
+            if (slotLayout.isDynamicSlot(slot)
+                    && !slotAllocator.isEmpty(slot)
+                    && !occupancy.containsKey(slot)) {
+                occupancy.put(slot, SLOT_STATE_UNATTRIBUTED);
+            }
+        }
+        return occupancy;
+    }
+
     public List<ObjectInstance> snapshotPersistentDynamicObjectsForTransition() {
         List<ObjectInstance> snapshot = new ArrayList<>();
         for (ObjectInstance instance : dynamicObjects) {
