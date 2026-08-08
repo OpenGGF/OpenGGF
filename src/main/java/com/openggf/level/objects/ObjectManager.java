@@ -856,6 +856,11 @@ public class ObjectManager {
         Arrays.fill(execOrder, null);
         Arrays.fill(ownSlotRetireOrder, null);
         Arrays.fill(playerCentreAtSlotStartValid, false);
+        // Per-pass scratch: which managed slots were freed during THIS object
+        // pass. Reset here for the same reason runExecLoop resets it -- bits
+        // left over from an earlier frame would make a later reallocation see
+        // a slot as freed-this-pass when it was not.
+        slotsFreedDuringObjectPass.clear();
         pendingChildSlotRelease.clear();
         for (ObjectInstance inst : activeObjects.values()) {
             if (initialDispatch.excludesFromDynamicPass(inst)) {
@@ -1055,6 +1060,7 @@ public class ObjectManager {
         // ROM parity: Build slot-ordered execution array.
         slotsFreedDuringObjectPass.clear();
         Arrays.fill(execOrder, null);
+        Arrays.fill(ownSlotRetireOrder, null);
         Arrays.fill(playerCentreAtSlotStartValid, false);
         pendingChildSlotRelease.clear();
         for (ObjectInstance inst : activeObjects.values()) {
@@ -1063,6 +1069,7 @@ public class ObjectManager {
             }
             if (inst instanceof AbstractObjectInstance aoi && isManagedDynamicSlot(executionSlotIndex(aoi))) {
                 execOrder[execIndexForSlot(executionSlotIndex(aoi))] = inst;
+                indexOwnSlotRetirement(aoi);
             }
         }
         for (ObjectInstance inst : dynamicObjects) {
@@ -1071,6 +1078,7 @@ public class ObjectManager {
             }
             if (inst instanceof AbstractObjectInstance aoi && isManagedDynamicSlot(executionSlotIndex(aoi))) {
                 execOrder[execIndexForSlot(executionSlotIndex(aoi))] = inst;
+                indexOwnSlotRetirement(aoi);
             }
         }
         updating = true;
@@ -1095,6 +1103,21 @@ public class ObjectManager {
                 if (pendingChildSlotRelease.get(currentExecSlot)) {
                     pendingChildSlotRelease.clear(currentExecSlot);
                     releaseSlot(slotIndexForExec(currentExecSlot));
+                }
+                // A consolidated parent that runs from a borrowed child slot is
+                // retired at its OWN slot's position in the ascending walk -- see
+                // retireBorrowedExecutionSlotOwnerAtOwnSlot. S2/S3K use the same
+                // ascending ExecuteObjects walk as S1, and S3K's consolidated
+                // Obj_AIZGiantRideVine is exactly the S1 staircase shape: the ROM
+                // root's range check and DeleteChain run at the START of
+                // AIZGiantRideVine_Main at the PARENT slot on an x_pos the
+                // routine never writes (docs/skdisasm/sonic3k.asm:46813-46822),
+                // while the engine executes the consolidated object at the handle
+                // child slot for solid-pass ordering. Without this the parent slot
+                // was released later in the walk than ROM, so lowest-free
+                // allocations between the two positions saw it as occupied.
+                if (retireBorrowedExecutionSlotOwnerAtOwnSlot(unloadCameraX)) {
+                    objectsRemoved = true;
                 }
                 ObjectInstance instance = execOrder[currentExecSlot];
                 if (instance == null) continue;

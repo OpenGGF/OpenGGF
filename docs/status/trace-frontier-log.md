@@ -65735,3 +65735,82 @@ bug in place and unfindable.
 - **Measurement hazard, third one:** `-Dsurefire.reportsDirectory` is **not honoured by
   this pom** — reports always land in `target/surefire-reports`. Wipe that directory
   before each run instead; a private reports dir silently does nothing.
+
+## 2026-08-08 — round ten: exec-lane parity guard, and the OOZ route carve-out
+
+Command: `mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1
+-Dsurefire.runOrder=alphabetical` with all three ROM properties, no `-Dtest`
+(the full profile: 763 tests, all three games). Base 5922ee722.
+Control and after are IDENTICAL: 763 tests, 17 failures / 63 errors, 30 failing
+classes, name-for-name the same. Nothing moved, nothing regressed.
+
+**The exec-lane omission class is now a build failure.** `TestExecLoopSlotLifecycle
+ParityGuard` extracts both loop bodies by brace matching, strips comments, and fails on
+any identifier matching the slot-lifecycle vocabulary
+(`slot|retire|release|child|unload|freed|outofrange`) present in one loop but not the
+other, with an `ALLOWED_ASYMMETRIES` map carrying a one-line ROM-cited justification per
+entry. A second test pins the five mechanisms by name so deleting one from BOTH lanes
+cannot restore symmetry-by-absence; a third enforces that every allowlist entry has a
+justification. Negative control verified independently in the main tree: deleting the
+`retireBorrowedExecutionSlotOwnerAtOwnSlot` call from `runExecLoop` fails with
+"Only in updateCounterBasedExecThenLoad (the S1 lane; missing on S2/S3K):
+[retireBorrowedExecutionSlotOwnerAtOwnSlot]".
+
+- **`retireBorrowedExecutionSlotOwnerAtOwnSlot` + `indexOwnSlotRetirement` /
+  `ownSlotRetireOrder`: LIVE, fixed.** Confirmed from the ROM, not from symmetry: exactly
+  two S3K objects override `getExecutionSlotIndex` (`AizGiantRideVineObjectInstance`,
+  `CnzHoverFanInstance`) plus S1's `Sonic1StaircaseObjectInstance`, and neither S3K
+  object overrides `isPersistent()` or `usesCustomOutOfRangeCheck()`, so the path is
+  reachable rather than latent. `Obj_AIZGiantRideVine` is structurally the S1 staircase
+  case the mechanism was written for — the ROM root's range check and `DeleteChain` run
+  at the START of `AIZGiantRideVine_Main`, at the PARENT slot, on an `x_pos` the routine
+  never writes (skdisasm/sonic3k.asm:46813-46822), while the engine executes the
+  consolidated object at the borrowed handle child slot for solid-pass ordering.
+- **`slotsFreedDuringObjectPass`: asymmetric the OTHER way, mirrored.** Cleared per-pass
+  only in `runExecLoop`, so bits accumulated across frames in the counter lane. Its only
+  consumer is an S2 path, so this was latent on S1; mirrored anyway.
+- **`checksOutOfRangeAfterRoutine`: BRIEF DISPROVED, legitimate per-game difference, NOT
+  patched.** The flag selects pre- vs post-routine checking, which is only a choice on
+  S1, where `ExecuteObjects` checks `out_of_range` at the start of most routines. The
+  S2/S3K lane already checks unconditionally AFTER the routine because those objects end
+  with `MarkObjGone_P1`, which tests the CURRENT `x_pos`. The two S2 objects
+  (SlidingSpike, SidewaysPform) and one S3K object (AizDrawBridge) declaring it already
+  get exactly that behaviour — honoured implicitly, not ignored. Wiring it in would have
+  been a behaviour change with no ROM backing. Recorded as an allowlist entry instead.
+
+**HELD, NOT LANDED — and it implicates one of our own commits.** `ca939d50d` "fix:
+preserve OOZ1 launcher ball slot order" is a hard-rule-3 route carve-out: it changed the
+Obj50 (Aquis) wing from `spawnFreeChild` to `spawnChild`, and its own message admits the
+wing was being put in "lower slots that are free only because earlier engine slot
+occupancy already drifted", justified by "the OOZ1 route". ROM `Obj50` creates the wing
+with `jsrto JmpTo12_AllocateObject` (s2.asm:60606-60607) = `AllocateObject`, which scans
+UPWARD and returns the lowest free slot, possibly BELOW the parent (s2.asm:33681-33694);
+Obj50's bullet uses the identical call and the engine already models it with
+`spawnFreeChild`. Restoring it removes the entire early OOZ1 skew (probe divergent-frame
+report 240 -> 187 lines; the whole f2691-f5468 block disappears) and moves OOZ's first
+error f5444 -> f8264.
+That also answers the original question: **the f5444 ring divergence was never ring
+code.** Sonic is hurt at f5368 with 71 rings and spills 32 Obj37s; the bounce gate is
+`(Vint_runcount+3) + d7` & 7 with `d7 = $8F - slot` (s2.asm:25214-25218, 29805-29845),
+so the Aquis skew put every spilled ring on the wrong bounce frame.
+- Second defect also fixed in that held diff: Obj3D fragment lifetimes. ROM
+  `Obj3D_Fragment` does `ObjectMove` then `btst #render_flags.on_screen; beq
+  DeleteObject` (s2.asm:51069-51075); the engine kept position in private fields never
+  written back to the SST and used an invented "fell below camera+224+32" test.
+- **Third defect, IDENTIFIED, blocks landing:** the engine gates an object's first
+  routine pass on activation where ROM runs every loaded slot every frame. ROM loads an
+  Aquis into slot 19 at f5949 and allocates its wing at f5950; the engine creates the
+  instance at f5949 but runs its first `updateMovement` at **f5976**, 26 frames late. Slot
+  21 is then free during the f5957 `ObjPosLoad` burst, the three Obj48 launcher balls land
+  in {24,25,26} instead of {25,26,29}, and since Obj48 captures the player in SST order
+  the pair reverses — x_speed -0x1000 where ROM gives 0, cascading to 7906 errors.
+  **This init deferral is the next fix, and it is what ca939d50d was papering over.**
+- **REFUTED this round:** the Tails-DPLC diagnosis for ss_2/ss_7. The first divergence in
+  seg2_ehz1 is SONIC's, at row 457, and the root is again SST allocation — ROM puts the
+  EHZ1 speed-shoes monitor shell at slot 19 with its Obj2E child at 25 (child ABOVE
+  parent, so `Obj2E_Init` falls through to `Obj2E_Raise` and the icon moves on the break
+  frame); the engine puts the shell at 27 and the child at 22 (child BELOW parent), so
+  `delayFirstIconUpdateForPassedSlot` fires and the rise is permanently one frame late.
+  The award then runs at row 457 instead of 456, and since speed shoes raise
+  `Sonic_acceleration` $C -> $18 the airborne accel step doubles 24 -> 48, diverging
+  position from there. Both monitor branches are faithful; the SLOT ORDERING is wrong.

@@ -3,6 +3,18 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: consolidated objects that execute from a borrowed child slot are retired at their
+  own slot's position on the Sonic 2 and Sonic 3&K execution path. The retirement
+  mechanism and the index it reads existed only on the Sonic 1 loop, so Sonic 3&K's
+  consolidated giant ride vine released its parent slot later in the ascending object
+  walk than the ROM does, and a lowest-free allocation landing between the two positions
+  saw that slot as still occupied. The per-pass reset of the freed-slot scratch set is
+  mirrored in the other direction for the same reason.
+- Testing: a new guard compares the two object-execution loops over slot-lifecycle
+  vocabulary and fails when a mechanism is present in one and missing from the other,
+  with an explicit allowlist in which each entry carries a ROM-cited justification. Two
+  such omissions have now reached the trace suite as unexplained divergences; because the
+  defect is one of omission it has no runtime signal, so the guard is a source scan.
 - Fix: reserved child object slots are released on the Sonic 2 and Sonic 3&K execution
   path. When a parent unloads after the ascending object walk has already passed its
   child's slot, the release is deferred to that slot's own execution position; only the
