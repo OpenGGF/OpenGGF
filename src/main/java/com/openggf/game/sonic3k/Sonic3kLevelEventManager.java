@@ -663,6 +663,12 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     }
 
     public void applyZonePlayerStateAfterTitleCard() {
+        // The title-card release is another caller of the ROM player bootstrap;
+        // saved-state returns must suppress the complete seam, including LBZ1's
+        // launch intro, before any zone-specific work is attempted.
+        if (shouldSkipZonePlayerStateBootstrap()) {
+            return;
+        }
         applyZonePlayerState();
         if (currentZone == Sonic3kZoneIds.ZONE_LBZ && currentAct == 0) {
             spawnLbz1GroundLaunchIntro(true);

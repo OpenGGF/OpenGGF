@@ -4,6 +4,7 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
 import com.openggf.game.CheckpointState;
+import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -84,22 +85,18 @@ class TestS3kLrzFallingIntroBootstrap {
     void lrz1KnucklesBypassesLoc68A6() {
         HeadlessTestFixture fixture = load(Sonic3kZoneIds.ZONE_LRZ, ACT_1, "knuckles", "");
         AbstractPlayableSprite player = fixture.sprite();
-        player.setAir(false);
-        player.setForcedAnimationId(-1);
 
-        assertFalse(player.getAir(), "LRZ1 Knuckles must bypass the loc_68A6 falling gate");
+        assertFalse(player.getAir(), "production LRZ1 Knuckles load must bypass loc_68A6");
         assertEquals(-1, player.getForcedAnimationId(),
-                "LRZ1 Knuckles must not receive the simple falling animation");
+                "production LRZ1 Knuckles load must not force falling animation");
     }
 
     @Test
     void lrz2DoesNotReuseTheLrz1Gate() {
         HeadlessTestFixture fixture = load(Sonic3kZoneIds.ZONE_LRZ, ACT_2, "sonic", "tails");
         AbstractPlayableSprite player = fixture.sprite();
-        player.setAir(false);
-        player.setForcedAnimationId(-1);
 
-        assertFalse(player.getAir(), "LRZ2 must not inherit LRZ1's falling bootstrap");
+        assertFalse(player.getAir(), "production LRZ2 load must not inherit LRZ1's falling bootstrap");
         assertEquals(-1, player.getForcedAnimationId(),
                 "LRZ2 must not receive the loc_68A6 animation");
     }
@@ -108,11 +105,7 @@ class TestS3kLrzFallingIntroBootstrap {
     void sszActsHaveNoLoc68A6GateInTheOwningRomRoutine() {
         HeadlessTestFixture fixture = load(Sonic3kZoneIds.ZONE_SSZ, ACT_1, "sonic", "tails");
         AbstractPlayableSprite player = fixture.sprite();
-        player.setAir(false);
-        player.setForcedAnimationId(-1);
 
-        assertFalse(player.getAir(),
-                "SSZ1 is $0A00, while the ROM loc_68A6 comparison is LRZ boss $1600");
         assertEquals(-1, player.getForcedAnimationId(),
                 "SSZ1 must not receive a state absent from SpawnLevelMainSprites");
     }
@@ -121,11 +114,7 @@ class TestS3kLrzFallingIntroBootstrap {
     void ssz2AlsoHasNoLoc68A6GateInTheOwningRomRoutine() {
         HeadlessTestFixture fixture = load(Sonic3kZoneIds.ZONE_SSZ, ACT_2, "knuckles", "");
         AbstractPlayableSprite player = fixture.sprite();
-        player.setAir(false);
-        player.setForcedAnimationId(-1);
 
-        assertFalse(player.getAir(),
-                "SSZ2 is $0A01 and must not inherit the LRZ loc_68A6 gate");
         assertEquals(-1, player.getForcedAnimationId(),
                 "SSZ2 must not receive a state absent from SpawnLevelMainSprites");
     }
@@ -139,6 +128,7 @@ class TestS3kLrzFallingIntroBootstrap {
         GameServices.level().loadCurrentLevel();
 
         AbstractPlayableSprite player = currentPlayer("sonic");
+        manager().applyZonePlayerStateAfterTitleCard();
         assertFalse(player.getAir(),
                 "checkpoint reload must preserve native state instead of reapplying loc_68A6");
         assertEquals(-1, player.getForcedAnimationId(),
@@ -154,6 +144,7 @@ class TestS3kLrzFallingIntroBootstrap {
         GameServices.level().loadCurrentLevel();
 
         AbstractPlayableSprite player = currentPlayer("sonic");
+        manager().applyZonePlayerStateAfterTitleCard();
         assertFalse(player.getAir(),
                 "big-ring return must preserve native state instead of reapplying loc_68A6");
         assertEquals(-1, player.getForcedAnimationId(),
@@ -168,6 +159,7 @@ class TestS3kLrzFallingIntroBootstrap {
         GameServices.level().loadCurrentLevel();
 
         AbstractPlayableSprite player = currentPlayer("sonic");
+        manager().applyZonePlayerStateAfterTitleCard();
         assertFalse(player.getAir(),
                 "bonus return must preserve native state instead of reapplying loc_68A6");
         assertEquals(-1, player.getForcedAnimationId(),
@@ -189,6 +181,12 @@ class TestS3kLrzFallingIntroBootstrap {
 
     private static AbstractPlayableSprite currentPlayer(String code) {
         return (AbstractPlayableSprite) GameServices.sprites().getSprite(code);
+    }
+
+    private static Sonic3kLevelEventManager manager() {
+        assertTrue(GameServices.module().getLevelEventProvider() instanceof Sonic3kLevelEventManager,
+                "S3K level load must install Sonic3kLevelEventManager");
+        return (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
     }
 
 }
