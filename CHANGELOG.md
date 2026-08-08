@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K camera rendering now models the ROM `Camera_*_pos_copy`
+  publication before event-owned camera motion. LBZ final fall preserves the
+  published Y copy while lowering the physical camera by 2 pixels, advancing
+  the complete-run first mismatch from raw frame `46066` to `46088`
+  (`tails_cpu_respawn_counter`); no trace payloads changed.
 - Fix/Test: S3K LBZ FinalBoss1 now publishes the results handoff on the native
   parent pass after its last result child retires, removing two stale
   retirement dispatches. The LBZ complete-run first mismatch advances from raw

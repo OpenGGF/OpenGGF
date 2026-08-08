@@ -1133,8 +1133,10 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
     private void applyFinalFallFrame() {
         // ROM LBZ2BGE_Falling: Scroll_lock + camera.y -= 2; the launch
         // motion/deform no longer runs once Events_fg_5 (3rd use) is set.
-        camera().setFrozen(true);
-        camera().setY((short) ((camera().getY() & 0xFFFF) + LBZ2_FINAL_FALL_CAMERA_DY));
+        Camera camera = camera();
+        camera.setFrozen(true);
+        camera.captureRenderCopy();
+        camera.setYAfterRenderCopy((short) ((camera.getY() & 0xFFFF) + LBZ2_FINAL_FALL_CAMERA_DY));
     }
 
     private void startLaunch(LbzZoneRuntimeState state) {

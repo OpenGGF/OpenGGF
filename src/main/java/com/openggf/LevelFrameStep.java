@@ -368,6 +368,10 @@ public final class LevelFrameStep {
         if (spriteManager != null && !inlineSolidResolution) {
             wrapper.wrap("fixed-dust", spriteManager::advancePlayableFixedSlotsAfterObjectExecution);
         }
+		// ROM ScreenEvents publishes Camera_*_pos_copy before the zone event
+		// handlers. Event-owned camera motion after this point must not move the
+		// render/visibility camera until the next loop publication.
+		camera.captureRenderCopy();
         if (levelEvents != null) {
             levelEvents.update();
         }

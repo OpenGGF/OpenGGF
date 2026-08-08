@@ -15,6 +15,8 @@ public record CameraSnapshot(
         short minY,
         short maxX,
         short maxY,
+        short renderCopyX,
+        short renderCopyY,
         short shakeOffsetX,
         short shakeOffsetY,
         short minXTarget,

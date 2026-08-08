@@ -23,6 +23,12 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	private short x = 0;
 	private short y = 0;
 
+	// ROM Camera_X/Y_pos_copy: the position published by ScreenEvents for
+	// sprite visibility and screen rendering. Zone event code can move the
+	// physical camera after this publication without changing the copy.
+	private short renderCopyX = 0;
+	private short renderCopyY = 0;
+
 	private short minX;
 	private short minY;
 	private short maxX;
@@ -843,6 +849,8 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		this.focusedSprite = sprite;
 		x = sprite.getX();
 		y = sprite.getY();
+		renderCopyX = x;
+		renderCopyY = y;
 	}
 
 	public AbstractPlayableSprite getFocusedSprite() {
@@ -855,6 +863,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 
 	public void setX(short x) {
 		this.x = x;
+		this.renderCopyX = x;
 	}
 
 	public short getY() {
@@ -862,6 +871,25 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	}
 
 	public void setY(short y) {
+		this.y = y;
+		this.renderCopyY = y;
+	}
+
+	/**
+	 * Publishes the current physical camera position as the ROM render copy.
+	 * ScreenEvents performs this before zone-specific event handlers run.
+	 */
+	public void captureRenderCopy() {
+		renderCopyX = x;
+		renderCopyY = y;
+	}
+
+	/**
+	 * Updates the physical Y position after the render copy has been published.
+	 * This models ROM event routines that move {@code Camera_Y_pos} while
+	 * retaining the already-published {@code Camera_Y_pos_copy}.
+	 */
+	public void setYAfterRenderCopy(short y) {
 		this.y = y;
 	}
 
@@ -895,14 +923,14 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * @return Camera X position with shake offset applied (for rendering)
 	 */
 	public short getXWithShake() {
-		return (short) (x + shakeOffsetX);
+		return (short) (renderCopyX + shakeOffsetX);
 	}
 
 	/**
 	 * @return Camera Y position with shake offset applied (for rendering)
 	 */
 	public short getYWithShake() {
-		return (short) (y + shakeOffsetY);
+		return (short) (renderCopyY + shakeOffsetY);
 	}
 
 	public short getWidth() {
@@ -1253,6 +1281,8 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	public void resetState() {
 		x = 0;
 		y = 0;
+		renderCopyX = 0;
+		renderCopyY = 0;
 		minX = 0;
 		minY = 0;
 		maxX = 0;
@@ -1347,6 +1377,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	public CameraSnapshot capture() {
 		return new CameraSnapshot(
 				x, y, minX, minY, maxX, maxY,
+				renderCopyX, renderCopyY,
 				shakeOffsetX, shakeOffsetY,
 				minXTarget, minYTarget, maxXTarget, maxYTarget, maxXBeforeBoundaryEasing,
 				maxYChanging, horizScrollDelayFrames, frozen, deferHorizontalBoundaryClampOnce,
@@ -1359,6 +1390,8 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	public void restore(CameraSnapshot snapshot) {
 		x = snapshot.x();
 		y = snapshot.y();
+		renderCopyX = snapshot.renderCopyX();
+		renderCopyY = snapshot.renderCopyY();
 		minX = snapshot.minX();
 		minY = snapshot.minY();
 		maxX = snapshot.maxX();

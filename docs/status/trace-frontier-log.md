@@ -65537,3 +65537,41 @@ to synthesize a POST phase on a VBLANK-only row.
 - Route position: AIZ, HCZ, MGZ, CNZ, and ICZ retain their established
   gameplay frontiers. LBZ now consumes `#317` at raw `44454`; the next target
   is the Tails CPU respawn-counter mismatch before `#318` at raw `46113`.
+
+## 2026-08-08 - S3K LBZ camera-copy publication frontier
+
+- Worktree: `bugfix/s3k-traces` at `7bc926be2` before this fix; unrelated edits
+  in `.idea/vcs.xml`, `docs/status/rewind-round-trip-gaps.md`, and
+  `src/main/java/com/openggf/level/objects/ObjectPlacementController.java`
+  remained unstaged. Validation used JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen` (SHA-1
+  `b711a909cce238ca4af3e517a2edca306228efa5`), without replacing or renaming
+  it.
+- Frontier command: `mvn -q -Dmse=off -Dsurefire.forkCount=1
+  -DreuseForks=true -DargLine=-Xmx1g -Dtrace.boundedMemory=true
+  -Dmaven.test.failure.ignore=true
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtrace.verification=physics -Dtrace.frontierOnly=true
+  -Dtrace.context.radius=2
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kLbzCompleteRunTraceReplay#replayMatchesTrace
+  test`. The bounded-memory property was temporary local diagnostic support
+  and was removed after the run. The candidate removes the raw `46066`
+  `tails_cpu_respawn_counter` mismatch and reaches the next first comparison
+  at raw `46088`, expected `0x0016`, actual `0x0015`; the following recorded
+  `KOS_DECOMPRESSION_QUEUE#318` edge remains at raw `46113`.
+- Root cause: native `ScreenEvents` publishes `Camera_*_pos_copy` before the
+  LBZ2 background falling routine lowers physical `Camera_Y_pos` by 2. The
+  camera now keeps a ROM render copy for sprite visibility and rendering,
+  while LBZ owns the post-publication physical-camera write. This is a camera
+  publication/order rule, not a zone-, frame-, route-, or trace-keyed branch.
+- Validation: camera/render-copy and rewind tests pass; the focused LBZ boss/ride
+  set passes. Ordered canaries retain the current worktree results: AIZ
+  `#8`/raw `1240` (A/B identical; first queue diagnostic raw `1237`), HCZ
+  `#94`/raw `9764` (A/B identical; first animation/queue diagnostic raw
+  `9761`), MGZ `#190`/raw `39351` (A/B identical; first queue diagnostic raw
+  `39348`), CNZ `#205`/raw `13962`, and ICZ `#255`/raw `21185`. Ring
+  comparison remains enabled through `ToleranceConfig.DEFAULT` with
+  `RingCountMode.FORCE_ERROR`; no trace payloads changed.
+- Route position: AIZ, HCZ, MGZ, CNZ, and ICZ retain their measured current
+  frontiers. LBZ advances from raw `46066` to raw `46088`; the next target is
+  the Tails CPU respawn-counter owner before queue edge `#318`.
