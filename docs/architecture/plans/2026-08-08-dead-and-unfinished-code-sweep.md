@@ -643,33 +643,251 @@ Have a reviewer check requirements traceability, every deletion proof, audit
 completeness, historical-doc preservation, test evidence, policy trailers, and
 no-regression comparison. Fix every valid finding and repeat until green.
 
-- [ ] **Step 7: Commit final docs and merge**
+- [ ] **Step 7: Commit final docs and fingerprint the staged main changes**
 
 Commit all remaining task artifacts and release docs with required trailers.
-Merge the worktree branch directly into main-workspace `develop` without
-switching the main workspace branch.
+Do not unstage, stash, reset, check out, or commit any main-workspace user
+change. In main, record the exact pre-integration state:
 
-- [ ] **Step 8: Post-merge verification**
+```bash
+set -euo pipefail
+git diff --cached --binary --output=/tmp/openggf-dead-sweep-main-staged-before-feature.patch
+sha256sum /tmp/openggf-dead-sweep-main-staged-before-feature.patch > /tmp/openggf-dead-sweep-main-staged-before-feature.sha256
+git diff --cached --name-status > /tmp/openggf-dead-sweep-main-staged-before-feature.name-status
+git status --porcelain=v1 > /tmp/openggf-dead-sweep-main-before-feature.status
+git rev-parse HEAD > /tmp/openggf-dead-sweep-main-before-feature.head
+git diff --cached --name-only | LC_ALL=C sort > /tmp/openggf-dead-sweep-main-staged-paths.txt
+git diff --name-only HEAD..bugfix/ai-dead-unfinished-sweep | LC_ALL=C sort > /tmp/openggf-dead-sweep-feature-paths.txt
+comm -12 /tmp/openggf-dead-sweep-main-staged-paths.txt /tmp/openggf-dead-sweep-feature-paths.txt > /tmp/openggf-dead-sweep-feature-overlap.txt
+test ! -s /tmp/openggf-dead-sweep-feature-overlap.txt
+test "$(git rev-parse HEAD)" = "3f0fd4a70b00e733b88445be7cf8425d8b431ffc"
+test "$(sha256sum /tmp/openggf-dead-sweep-main-staged-before-feature.patch | awk '{print $1}')" = "a513e9a6804cc5f027636e3406ec3329954ca11fe03a64744553470185ce14ac"
+test "$(git diff --cached --name-status | sha256sum | awk '{print $1}')" = "e60a615e71499365bd84bb60e54b497a8c7a93efc63cf1466f993f6859747d0b"
+test "$(git diff --cached --name-status | wc -l)" -eq 7
+test "$(git status --porcelain=v1 | sha256sum | awk '{print $1}')" = "9972fef2ffde5958fdfbbbabbb47935ee8223bd54f21c90db42edcbcc62788ee"
+git merge-base --is-ancestor HEAD bugfix/ai-dead-unfinished-sweep
+```
 
-The main-workspace copy owns all post-merge evidence edits. Require the rewind
-report clean, run the exact clean ROM-backed suite on merged `develop`, create
-`merged.tsv.gz`, restore only the suite-generated rewind-report diff, and diff
-it against `updated-baseline.tsv.gz`. No baseline-passing test may fail, no red
-baseline outcome may worsen/change due to this work, and no executed test may
-disappear. Record exact results in the main-workspace validation report.
+Expected: the intersection is empty, `HEAD` is still the reviewed updated
+baseline, and the ancestry check exits zero. Record SHA-256, exact staged
+name/status list, porcelain status, and `HEAD` in the validation report. The
+observed blocker snapshot at planning time was main `3f0fd4a70`, seven staged
+modified paths, and patch SHA-256
+`a513e9a6804cc5f027636e3406ec3329954ca11fe03a64744553470185ce14ac`.
+The paths were:
 
-- [ ] **Step 9: Commit post-merge evidence**
+```text
+docs/status/trace-frontier-log.md
+src/main/java/com/openggf/TraceSessionLauncher.java
+src/main/java/com/openggf/game/sonic2/specialstage/Sonic2SpecialStageManager.java
+src/main/java/com/openggf/trace/replay/runs/RunPlaybackObservation.java
+src/main/java/com/openggf/trace/replay/runs/TraceRunPlaybackCoordinator.java
+src/test/java/com/openggf/tests/trace/runs/AbstractRunChainTest.java
+src/test/java/com/openggf/tests/trace/runs/TestS2EhzHalfpipeRoundTripChain.java
+```
 
-On main-workspace `develop`, make an ordinary policy-compliant documentation
-commit containing the updated validation report and `merged.tsv.gz`. Do not
-amend the merge commit or an earlier worktree commit.
+If any asserted value changes before integration, stop. Do not recapture a new
+accepted fingerprint in place; renew the baseline/disjointness review and amend
+the reviewed plan before attempting integration.
 
-- [ ] **Step 10: Push and clean up**
+- [ ] **Step 8: Guarded fast-forward main to the feature tip**
+
+Only after Step 7 passes, advance main without switching branches:
+
+```bash
+set -euo pipefail
+test "$(git rev-parse HEAD)" = "$(cat /tmp/openggf-dead-sweep-main-before-feature.head)"
+git merge --ff-only bugfix/ai-dead-unfinished-sweep
+test "$(git rev-parse HEAD)" = "$(git rev-parse bugfix/ai-dead-unfinished-sweep)"
+git diff --cached --binary --output=/tmp/openggf-dead-sweep-main-staged-after-feature.patch
+sha256sum /tmp/openggf-dead-sweep-main-staged-after-feature.patch
+cmp /tmp/openggf-dead-sweep-main-staged-before-feature.patch /tmp/openggf-dead-sweep-main-staged-after-feature.patch
+git diff --cached --name-status > /tmp/openggf-dead-sweep-main-staged-after-feature.name-status
+git status --porcelain=v1 > /tmp/openggf-dead-sweep-main-after-feature.status
+cmp /tmp/openggf-dead-sweep-main-staged-before-feature.name-status /tmp/openggf-dead-sweep-main-staged-after-feature.name-status
+cmp /tmp/openggf-dead-sweep-main-before-feature.status /tmp/openggf-dead-sweep-main-after-feature.status
+```
+
+Expected: true fast-forward; all three `cmp` checks exit
+zero; SHA-256 remains identical; all seven user paths remain staged. Stop if
+Git refuses, `HEAD` changed before the command, or any fingerprint differs.
+
+- [ ] **Step 9: Create a detached post-merge validation worktree**
+
+Create a separate task-owned clean detached worktree at main's feature-tip
+commit; do not run post-merge verification in dirty main:
+
+```bash
+set -euo pipefail
+SHARED_GIT_DIR=$(git rev-parse --path-format=absolute --git-common-dir)
+MAIN_WORKSPACE=$(dirname "$SHARED_GIT_DIR")
+VALIDATION_WORKTREE="${MAIN_WORKSPACE}/.worktrees/bugfix-ai-dead-unfinished-sweep-postmerge-validation"
+cd "$MAIN_WORKSPACE"
+test ! -e "$VALIDATION_WORKTREE"
+git worktree add --detach "$VALIDATION_WORKTREE" HEAD
+test -z "$(git -C "$VALIDATION_WORKTREE" status --short)"
+```
+
+Expected: the detached worktree is clean. Discover and hash-check the actual
+three ROMs without copying, renaming, deleting, or symlinking them. From the
+detached worktree, require the rewind report clean and run the exact
+deterministic full suite:
+
+```bash
+SHARED_GIT_DIR=$(git rev-parse --path-format=absolute --git-common-dir)
+MAIN_WORKSPACE=$(dirname "$SHARED_GIT_DIR")
+VALIDATION_WORKTREE="${MAIN_WORKSPACE}/.worktrees/bugfix-ai-dead-unfinished-sweep-postmerge-validation"
+(
+  set -euo pipefail
+  cd "$VALIDATION_WORKTREE"
+  test -z "$(git status --short)"
+  set +e
+  mvn -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+    "-Dsonic1.rom.path=${MAIN_WORKSPACE}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+    "-Dsonic2.rom.path=${MAIN_WORKSPACE}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+    "-Ds3k.rom.path=${MAIN_WORKSPACE}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+    clean test
+  MERGED_SUITE_EXIT=$?
+  set -e
+  test "$MERGED_SUITE_EXIT" -eq 1
+)
+```
+
+Create `merged.tsv.gz`, inspect and restore only the suite-generated rewind
+report in the detached worktree, and compare every row with
+`updated-baseline.tsv.gz`. No baseline PASS may regress, no red outcome may
+worsen or change type, and no executed test may disappear. From the detached
+worktree run:
+
+```bash
+set -euo pipefail
+SHARED_GIT_DIR=$(git rev-parse --path-format=absolute --git-common-dir)
+MAIN_WORKSPACE=$(dirname "$SHARED_GIT_DIR")
+VALIDATION_WORKTREE="${MAIN_WORKSPACE}/.worktrees/bugfix-ai-dead-unfinished-sweep-postmerge-validation"
+cd "$VALIDATION_WORKTREE"
+for report in target/surefire-reports/TEST-*.xml; do
+  xsltproc tools/test-reports/surefire-outcome-manifest.xsl "$report"
+done | LC_ALL=C sort | gzip -n > docs/architecture/validation/evidence/dead-code-sweep/merged.tsv.gz
+git diff -- docs/status/rewind-round-trip-gaps.md
+git restore --source=HEAD --worktree -- docs/status/rewind-round-trip-gaps.md
+set +e
+diff -u \
+  <(gzip -dc docs/architecture/validation/evidence/dead-code-sweep/updated-baseline.tsv.gz) \
+  <(gzip -dc docs/architecture/validation/evidence/dead-code-sweep/merged.tsv.gz) \
+  > /tmp/openggf-dead-sweep-merged-manifest.diff
+MERGED_DIFF_EXIT=$?
+set -e
+test "$MERGED_DIFF_EXIT" -le 1
+cat /tmp/openggf-dead-sweep-merged-manifest.diff
+```
+
+Review the complete raw diff and run the same PASS-set and four-column
+class/name/outcome/type comparisons used by the accepted development gate.
+
+- [ ] **Step 10: Commit post-merge evidence on detached HEAD**
+
+In the detached validation worktree, update the validation report and commit it
+with `merged.tsv.gz` as an ordinary policy-compliant documentation commit. Do
+not amend the feature-tip commit and do not stage any other path. Record the
+new evidence commit id and require the detached worktree clean:
+
+```bash
+set -euo pipefail
+SHARED_GIT_DIR=$(git rev-parse --path-format=absolute --git-common-dir)
+MAIN_WORKSPACE=$(dirname "$SHARED_GIT_DIR")
+VALIDATION_WORKTREE="${MAIN_WORKSPACE}/.worktrees/bugfix-ai-dead-unfinished-sweep-postmerge-validation"
+cd "$VALIDATION_WORKTREE"
+git add docs/architecture/validation/2026-08-08-dead-and-unfinished-code-sweep.md \
+  docs/architecture/validation/evidence/dead-code-sweep/merged.tsv.gz
+git diff --cached --check
+git commit -m "docs: record merged sweep verification" \
+  -m "Changelog: n/a: verification evidence only
+Guide: n/a: no guide change
+Known-Discrepancies: n/a: no known-discrepancy document change
+S3K-Known-Discrepancies: n/a: no S3K discrepancy document change
+Agent-Docs: n/a: no agent guidance change
+Configuration-Docs: n/a: no configuration document change
+Skills: n/a: no skill change"
+test -z "$(git status --short)"
+```
+
+- [ ] **Step 11: Guarded fast-forward main to the evidence commit**
+
+Before touching main again, recapture its staged patch/name-status/porcelain
+status and require them to match the Step 8 post-feature files. Require main
+`HEAD` still equals the feature tip, and prove the feature-tip-to-evidence diff
+does not overlap the seven staged paths. Then run:
+
+```bash
+set -euo pipefail
+FEATURE_TIP=$(git rev-parse bugfix/ai-dead-unfinished-sweep)
+SHARED_GIT_DIR=$(git rev-parse --path-format=absolute --git-common-dir)
+MAIN_WORKSPACE=$(dirname "$SHARED_GIT_DIR")
+VALIDATION_WORKTREE="${MAIN_WORKSPACE}/.worktrees/bugfix-ai-dead-unfinished-sweep-postmerge-validation"
+cd "$MAIN_WORKSPACE"
+EVIDENCE_COMMIT=$(git -C "$VALIDATION_WORKTREE" rev-parse HEAD)
+git diff --cached --binary --output=/tmp/openggf-dead-sweep-main-staged-before-evidence.patch
+cmp /tmp/openggf-dead-sweep-main-staged-before-feature.patch /tmp/openggf-dead-sweep-main-staged-before-evidence.patch
+git diff --cached --name-status > /tmp/openggf-dead-sweep-main-staged-before-evidence.name-status
+git status --porcelain=v1 > /tmp/openggf-dead-sweep-main-before-evidence.status
+cmp /tmp/openggf-dead-sweep-main-staged-after-feature.name-status /tmp/openggf-dead-sweep-main-staged-before-evidence.name-status
+cmp /tmp/openggf-dead-sweep-main-after-feature.status /tmp/openggf-dead-sweep-main-before-evidence.status
+test "$(git rev-parse HEAD)" = "$FEATURE_TIP"
+git diff --name-only "$FEATURE_TIP..$EVIDENCE_COMMIT" | LC_ALL=C sort > /tmp/openggf-dead-sweep-evidence-paths.txt
+comm -12 /tmp/openggf-dead-sweep-main-staged-paths.txt /tmp/openggf-dead-sweep-evidence-paths.txt > /tmp/openggf-dead-sweep-evidence-overlap.txt
+test ! -s /tmp/openggf-dead-sweep-evidence-overlap.txt
+git merge --ff-only "$EVIDENCE_COMMIT"
+test "$(git rev-parse HEAD)" = "$EVIDENCE_COMMIT"
+git diff --cached --binary --output=/tmp/openggf-dead-sweep-main-staged-after-evidence.patch
+sha256sum /tmp/openggf-dead-sweep-main-staged-after-evidence.patch
+cmp /tmp/openggf-dead-sweep-main-staged-before-feature.patch /tmp/openggf-dead-sweep-main-staged-after-evidence.patch
+git diff --cached --name-status > /tmp/openggf-dead-sweep-main-staged-after-evidence.name-status
+git status --porcelain=v1 > /tmp/openggf-dead-sweep-main-after-evidence.status
+cmp /tmp/openggf-dead-sweep-main-staged-before-feature.name-status /tmp/openggf-dead-sweep-main-staged-after-evidence.name-status
+cmp /tmp/openggf-dead-sweep-main-before-feature.status /tmp/openggf-dead-sweep-main-after-evidence.status
+```
+
+Expected: the overlap command prints nothing, fast-forward only, and all
+comparisons exit zero; the seven user changes remain staged and untouched.
+Stop on any mismatch.
+
+- [ ] **Step 12: Push and clean up**
 
 Push only main-workspace `develop`. Verify the worktree has no uncommitted or
-unmerged work, remove generated outputs, remove the worktree, delete the fully
-merged local `bugfix/ai-dead-unfinished-sweep` branch, and prune worktree
-metadata.
+unmerged work and verify the pushed tip. Remove both task-owned worktrees (the
+detached validation worktree and feature worktree), delete the fully merged
+local `bugfix/ai-dead-unfinished-sweep` branch, and prune worktree metadata.
+Do not remove or alter any unrelated main untracked path. Finish by reporting
+that the seven main-workspace user modifications remain staged and untouched:
+
+```bash
+set -euo pipefail
+SHARED_GIT_DIR=$(git rev-parse --path-format=absolute --git-common-dir)
+MAIN_WORKSPACE=$(dirname "$SHARED_GIT_DIR")
+VALIDATION_WORKTREE="${MAIN_WORKSPACE}/.worktrees/bugfix-ai-dead-unfinished-sweep-postmerge-validation"
+FEATURE_WORKTREE="${MAIN_WORKSPACE}/.worktrees/bugfix-ai-dead-unfinished-sweep"
+cd "$MAIN_WORKSPACE"
+test -z "$(git -C "$VALIDATION_WORKTREE" status --short)"
+test -z "$(git -C "$FEATURE_WORKTREE" status --short)"
+git merge-base --is-ancestor bugfix/ai-dead-unfinished-sweep develop
+git push origin develop
+test "$(git rev-parse develop)" = "$(git rev-parse origin/develop)"
+git worktree remove "$VALIDATION_WORKTREE"
+git worktree remove "$FEATURE_WORKTREE"
+git branch -d bugfix/ai-dead-unfinished-sweep
+git worktree prune
+git diff --cached --binary --output=/tmp/openggf-dead-sweep-main-staged-final.patch
+cmp /tmp/openggf-dead-sweep-main-staged-before-feature.patch /tmp/openggf-dead-sweep-main-staged-final.patch
+git diff --cached --name-status > /tmp/openggf-dead-sweep-main-staged-final.name-status
+git status --porcelain=v1 > /tmp/openggf-dead-sweep-main-final.status
+cmp /tmp/openggf-dead-sweep-main-staged-before-feature.name-status /tmp/openggf-dead-sweep-main-staged-final.name-status
+cmp /tmp/openggf-dead-sweep-main-before-feature.status /tmp/openggf-dead-sweep-main-final.status
+git diff --cached --name-status
+```
+
+Both worktree status commands must be empty, the branch ancestry check and push
+must succeed, and the final staged binary patch must remain byte-identical
+after cleanup before completion is claimed.
 
 ## Plan self-review
 

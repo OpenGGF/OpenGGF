@@ -274,5 +274,51 @@ The stale-string scan returned no matches, and
 
 ### Merged result
 
-Not yet run. Task 5 records `merged.tsv.gz`, comparison against the updated
-baseline, and review of every outcome difference.
+Not yet run. Integration is paused before any merge or fast-forward because
+main `develop` contains seven staged user-owned modifications. The planning
+snapshot was recorded read-only at main
+`3f0fd4a70b00e733b88445be7cf8425d8b431ffc` with:
+
+```bash
+git diff --cached --binary --output=/tmp/openggf-develop-staged-before-integration.patch
+sha256sum /tmp/openggf-develop-staged-before-integration.patch
+git rev-parse HEAD
+git diff --cached --name-status
+git diff --cached --numstat
+```
+
+The patch SHA-256 was
+`a513e9a6804cc5f027636e3406ec3329954ca11fe03a64744553470185ce14ac`.
+The staged name/status stream SHA-256 was
+`e60a615e71499365bd84bb60e54b497a8c7a93efc63cf1466f993f6859747d0b`,
+and the complete porcelain-status SHA-256 (including unrelated untracked user
+paths that also must remain untouched) was
+`9972fef2ffde5958fdfbbbabbb47935ee8223bd54f21c90db42edcbcc62788ee`.
+All seven entries were staged modifications:
+
+```text
+M  docs/status/trace-frontier-log.md
+M  src/main/java/com/openggf/TraceSessionLauncher.java
+M  src/main/java/com/openggf/game/sonic2/specialstage/Sonic2SpecialStageManager.java
+M  src/main/java/com/openggf/trace/replay/runs/RunPlaybackObservation.java
+M  src/main/java/com/openggf/trace/replay/runs/TraceRunPlaybackCoordinator.java
+M  src/test/java/com/openggf/tests/trace/runs/AbstractRunChainTest.java
+M  src/test/java/com/openggf/tests/trace/runs/TestS2EhzHalfpipeRoundTripChain.java
+```
+
+Sorting those paths against the 57 paths changed by
+`3f0fd4a70..94f0a2f14` produced an empty intersection, and
+`git merge-base --is-ancestor 3f0fd4a70 94f0a2f14` exited zero. No main index
+or worktree state was changed. The amended integration contract does not
+unstage, stash, reset, check out, or commit these files. It requires a fresh
+binary patch/hash/path/status/HEAD snapshot immediately before each guarded
+fast-forward and byte-for-byte verification afterward.
+
+Once integration is authorized, main may fast-forward to the descendant
+feature tip only if its `HEAD` and staged fingerprint remain unchanged. A
+separate clean detached worktree at that merged commit owns the exact
+alphabetical one-fork post-merge suite, `merged.tsv.gz`, validation update, and
+evidence commit. Main may then fast-forward to that evidence commit under the
+same disjointness and fingerprint gates. Task 5 will compare every merged row
+against `updated-baseline.tsv.gz`; the seven user modifications must remain
+staged and untouched through push and task-owned worktree cleanup.

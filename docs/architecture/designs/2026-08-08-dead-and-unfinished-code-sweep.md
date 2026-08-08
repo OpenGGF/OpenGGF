@@ -212,6 +212,39 @@ and development (and later merged verification). No rewind-gate regression is
 waived: every baseline PASS row must be restored under this deterministic
 one-fork order, with only the expected spring characterization added as PASS.
 
+Task 5 integration later found seven staged user-owned modifications in the
+main `develop` workspace. They are path-disjoint from this sweep, but they must
+remain staged and untouched: no unstage, stash, reset, checkout, or incidental
+commit is permitted. The reviewed immutable snapshot is main
+`3f0fd4a70b00e733b88445be7cf8425d8b431ffc`, seven staged modifications, and
+binary-patch SHA-256
+`a513e9a6804cc5f027636e3406ec3329954ca11fe03a64744553470185ce14ac`.
+Immediately before integration, capture the staged binary
+patch, its SHA-256, staged name/status, complete porcelain status, and main
+`HEAD` under `/tmp`. Independently sort the staged paths and the feature diff
+paths and require their intersection to be empty. Integration may proceed only
+when main `HEAD` is still the reviewed base and the feature tip descends from
+it. Because that ancestry permits a true fast-forward, advance main `develop`
+to the feature tip with `git merge --ff-only`; do not create a merge commit.
+Recreate the binary staged patch and status immediately afterward and require
+byte-for-byte equality and the same SHA-256 before continuing. State explicitly
+in delivery reporting that all seven user changes remain staged.
+
+Post-merge validation must not run in the dirty main workspace. Create a
+task-owned detached worktree at the fast-forwarded feature tip, using the
+repository worktree convention, and run the exact clean ROM-backed suite there
+with `-Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical`. Normalize
+`merged.tsv.gz`, restore only that detached worktree's generated rewind report,
+and compare every row to `updated-baseline.tsv.gz`. Update the validation
+report and commit the merged evidence from detached `HEAD`. Before advancing
+main to that evidence commit, fingerprint main's staged patch/status again,
+require the evidence diff to be path-disjoint, and require main `HEAD` still to
+equal the feature tip. Fast-forward main to the evidence commit and repeat the
+same staged patch/status comparisons. Every command group is fail-closed. Any
+changed fingerprint, unexpected `HEAD`, nonempty overlap, non-fast-forward
+ancestry, or post-merge regression stops integration and requires renewed
+baseline/review without altering the main index.
+
 Clean builds are mandatory for every comparable full-suite run so deleted
 sources cannot survive as stale bytecode in `target/classes` or the packaged
 JAR. `tools/test-reports/surefire-outcome-manifest.xsl` normalizes every
@@ -356,11 +389,16 @@ than hidden by aggregate counts.
 - Before integration, fetch and fast-forward the main-workspace `develop`
   branch without overwriting user changes. Run the exact full command on that
   updated main-workspace integration baseline and store its failure identities.
-- Bring the development worktree up to that baseline, run the exact full suite
-  and focused tests there, merge directly into main-workspace `develop`, then
-  rerun the exact full suite on the merged branch. Compare development and
-  post-merge results to the newly recorded updated baseline, not only the
-  original `345fa27c2` exploratory run.
+- Bring the development worktree up to that baseline and run the exact full
+  suite and focused tests there. If main contains staged user changes, capture
+  their binary patch/hash/path/status/HEAD evidence, prove path disjointness,
+  and fast-forward main to the descendant feature tip only while every guard
+  holds; never unstage, stash, or commit those changes.
+- Run the post-merge suite in a separate clean detached validation worktree at
+  the fast-forwarded feature tip, not in dirty main. Compare it to the newly
+  recorded updated baseline, commit only merged validation evidence there,
+  then fingerprint and fast-forward main to that evidence commit under the
+  same disjointness and staged-patch preservation gates.
 - Before each suite, require `docs/status/rewind-round-trip-gaps.md` to have no
   pre-existing user diff in that workspace. After each suite, inspect and
   restore only the test-generated diff to the current workspace `HEAD`; repeat
@@ -377,6 +415,10 @@ than hidden by aggregate counts.
 - Broad mechanical deletion creates noisy conflicts. Mitigation: keep this
   tranche to proven orphan types and narrow members; retain the larger lexical
   inventory as audit evidence only.
+- A dirty main index can be accidentally absorbed, unstaged, or overwritten
+  during integration. Mitigation: binary-patch and status fingerprints before
+  and after each guarded fast-forward, zero path overlap, a detached clean
+  validation worktree, and immediate stop on any mismatch.
 
 ## Delivery documentation and policy
 
