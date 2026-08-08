@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K HCZ2 now preserves the ROM's first-free results-owner
+  allocation and separates its initial results-art service boundary from the
+  nested child handoff. The capsule restores the ROM-visible player pose and
+  saved mapping at the geyser transition, and the geyser cutscene admits its
+  KosM art once. HCZ consumes direct queue edge `#119`; AIZ, MGZ, CNZ, ICZ, and
+  LBZ route canaries remain green. No trace payloads changed.
 - Fix/Test: S3K HCZ2's cutscene button now follows the ROM `Sprite_OnScreen_Test`
   lifetime instead of remaining persistent after it leaves the camera window.
   Releasing its slot before the HCZ2 boss child allocations realigns the turbine,

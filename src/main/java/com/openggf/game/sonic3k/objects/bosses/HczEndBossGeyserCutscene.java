@@ -172,6 +172,7 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
     private S3kKosModuleQueue artQueue;
     private HardwareWorkHandle artHandle;
     private long artOrdinal = -1;
+    private boolean artLoaded;
 
     /** ROM root object uses priority $280. */
     private static final int GEYSER_PRIORITY_BUCKET = 5;
@@ -232,7 +233,7 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
     }
 
     private void serviceQueuedArt() {
-        if (targetsNativeP2) {
+        if (targetsNativeP2 || artLoaded) {
             return;
         }
         rebindArtAfterRestore();
@@ -251,6 +252,7 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
                 artHandle = null;
                 artQueue = null;
                 artOrdinal = -1;
+                artLoaded = true;
             }
         } catch (Exception e) {
             throw new IllegalStateException(

@@ -121,6 +121,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private boolean artLoaded;
     private boolean artCached;
     private boolean resultsArtLoadPending;
+    private boolean initialResultsArtLoadDispatchDeferred;
     private boolean resultsArtLoadDispatchDeferred;
     private Sonic3kObjectArt.QueuedResultsArt queuedResultsArt;
     private long resultsGeneralArtOrdinal = -1;
@@ -444,6 +445,14 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         this.playerRef = player;
         this.frameCounter = vIntRunCount;
         if (resultsArtLoadPending) {
+            if (shouldDeferInitialResultsArtLoadDispatch()
+                    && !initialResultsArtLoadDispatchDeferred) {
+                // Keep the capsule's player/control handoff on its native
+                // dispatch while Obj_LevelResultsInit crosses the separate
+                // result-art service boundary before its three Kosinski jobs.
+                initialResultsArtLoadDispatchDeferred = true;
+                return;
+            }
             if (usesShortResultsChildRetireTail
                     && resultsChildTimingAdjustment
                     == S3kSignpostInstance.ResultsChildTimingAdjustment.UNSUPPORTED_GROUNDED_COMPENSATION
@@ -590,6 +599,14 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
      */
     protected int additionalChildRetireDispatches() {
         return 0;
+    }
+
+    /**
+     * Whether this result owner waits one dispatch before submitting its
+     * initial ROM-backed art jobs.
+     */
+    protected boolean shouldDeferInitialResultsArtLoadDispatch() {
+        return false;
     }
 
     /**
