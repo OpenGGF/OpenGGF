@@ -65411,3 +65411,46 @@ to synthesize a POST phase on a VBLANK-only row.
   gameplay frontiers. LBZ advances from completion `#286`/raw `21696` to
   completion `#210`/raw `39416`; the next target is direct completion `#314`
   at raw `43942`.
+
+## 2026-08-08 - S3K LBZ FinalBoss1 child-allocation frontier
+
+- Worktree: `bugfix/s3k-traces` at `377f6a25a` before this frontier commit;
+  unrelated edits in `.idea/vcs.xml`,
+  `docs/status/rewind-round-trip-gaps.md`, and
+  `src/main/java/com/openggf/level/objects/ObjectPlacementController.java`
+  remained unstaged. Validation used JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen` (SHA-1
+  `b711a909cce238ca4af3e517a2edca306228efa5`), without replacing or renaming
+  it.
+- Frontier command: `mvn -q -Dmse=off -Dsurefire.forkCount=1
+  -DreuseForks=true -DargLine=-Xmx2g -Dmaven.test.failure.ignore=true
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtrace.verification=physics -Dtrace.boundedMemory=true
+  -Dtrace.frontierOnly=true -Dtrace.context.radius=20
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kLbzCompleteRunTraceReplay#replayMatchesTrace
+  test`. The candidate advances from the previous LBZ module completion
+  `#210`/raw frame `39416` to the recorded
+  `KOS_DECOMPRESSION_QUEUE#314` segment edge at raw frame `43942`; the run
+  reports no comparator errors before that boundary and stops on the expected
+  unconsumed edge. The bounded-memory property was local validation support and
+  is not part of the committed runtime or replay harness.
+- Root cause: the native `AllocateObject`/`CreateChild1_Normal` and
+  `CreateChild6_Simple` calls have distinct SST owners. LBZ now releases the
+  ship's exhaust child before the final-boss graph allocation, initializes the
+  boss at the allocating boundary, defers segment descendants to their first
+  segment pass, and allocates laser trails/explosion descendants from their
+  current objects. The LBZ2 Knuckles swing child also expires through its ROM
+  range/deletion path, preventing a stale SST entry from occupying the final
+  boss graph. These are ROM allocation/lifetime semantics, not zone, frame,
+  route, or trace-data exceptions.
+- Validation: gameplay-order complete-run replays retain their established
+  edges AIZ `#19`/raw `1467`, HCZ `#97`/raw `9813`, MGZ `#195`/raw `39371`,
+  CNZ `#205`/raw `13962`, and ICZ `#255`/raw `21185`; standalone AIZ, MGZ,
+  and CNZ fixtures retain `#19`/raw `1548`, `#15`/raw `12097`, and `#31`/raw
+  `33755`. LBZ headless, boss, cutscene-rewind, KosM queue, rewind-coverage,
+  service-migration, and trace-compression tests pass. Ring comparison remains
+  enabled through `ToleranceConfig.DEFAULT` with `RingCountMode.FORCE_ERROR`;
+  no trace payloads changed.
+- Route position: AIZ, HCZ, MGZ, CNZ, and ICZ retain their established
+  gameplay frontiers. LBZ advances through the Death Egg/results sequence to
+  the `#314` edge at raw frame `43942`; the next target is after that boundary.

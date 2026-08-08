@@ -1277,6 +1277,11 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     }
                     return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
                 });
+        factories.put(Sonic3kObjectIds.LBZ_FINAL_BOSS_KNUX,
+                (spawn, registry) -> {
+                    S3kZoneSet zoneSet = getCurrentZoneSet();
+                    return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                });
         factories.put(Sonic3kObjectIds.LBZ_MINIBOSS_BOX,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();

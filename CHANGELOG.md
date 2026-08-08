@@ -3,6 +3,14 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K LBZ FinalBoss1 now preserves the ROM's allocation boundary and
+  native child ownership across the Death Egg launch: the ship releases its
+  exhaust slot before the boss graph is built, turret descendants are deferred
+  to their segment pass, and laser/explosion descendants use their current SST
+  owners. The LBZ complete-run replay reaches the recorded
+  `KOS_DECOMPRESSION_QUEUE#314` edge at raw frame `43942` with no comparator
+  errors before it; AIZ, HCZ, MGZ, CNZ, and ICZ retain their established
+  frontiers. No trace payloads changed.
 - Fix/Test: S3K LBZ now models the ROM's shared-angle landing handoff for
   Tails, grounded short-tail results-owner publication boundary, and immediate
   LBZ2 Death Egg launch-art queue order. The LBZ complete-run prefix advances
