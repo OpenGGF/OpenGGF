@@ -1,8 +1,11 @@
 package com.openggf.audio;
 
 import com.openggf.audio.presentation.AudioPresentationParityProbe;
+import com.openggf.audio.presentation.AudioPresentationProducer;
 import com.openggf.audio.presentation.AudioPresentationSourceFactory;
 import com.openggf.audio.runtime.AudioFrameClock;
+import com.tngtech.archunit.core.domain.Dependency;
+import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.domain.JavaMethodCall;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
@@ -27,8 +30,6 @@ class TestAudioPresentationArchitectureGuard {
             Path.of("src/main/java/com/openggf/audio");
     private static final Path PRODUCTION_ROOT =
             Path.of("src/main/java/com/openggf");
-    private static final Path TIMELINE_ROOT =
-            Path.of("src/main/java/com/openggf/tools/audio/timeline");
     private static final Set<String> BACKEND_COMMANDS = Set.of(
             "playMusic", "playSfx", "playSmps", "playSfxSmps",
             "toggleMute", "toggleSolo", "isMuted", "isSoloed");
@@ -300,34 +301,24 @@ class TestAudioPresentationArchitectureGuard {
     @Test
     void gameplayAudioTimelineIsToolingOnlyAndCannotDriveAudioOrTraceAuthority()
             throws IOException {
-        try (var files = Files.walk(PRODUCTION_ROOT)) {
-            List<Path> imports = files
-                    .filter(path -> path.toString().endsWith(".java"))
-                    .filter(path -> !path.startsWith(TIMELINE_ROOT))
-                    .filter(path -> sourceContains(path,
-                            "import com.openggf.tools.audio.timeline"))
-                    .toList();
-            assertEquals(List.of(), imports,
-                    "production runtime must not import gameplay-audio timeline tooling");
-        }
+        JavaClasses production = new ClassFileImporter()
+                .withImportOption(new ImportOption.DoNotIncludeTests())
+                .importPackages("com.openggf");
+        assertEquals(List.of(), timelineDependenciesOutsideTimeline(production),
+                "production runtime must not depend on gameplay-audio timeline tooling");
 
-        List<String> forbiddenCalls = List.of(
-                "playMusic(", "playSfx(", "restoreLogical", "replayLogical",
-                "advancePresentation", "advanceProducer", "HardwareTiming", "hardwareTiming");
-        try (var files = Files.walk(TIMELINE_ROOT)) {
-            List<String> offenders = files
-                    .filter(path -> path.toString().endsWith(".java"))
-                    .flatMap(path -> forbiddenCalls.stream().filter(token -> {
-                        try {
-                            return Files.readString(path).contains(token);
-                        } catch (IOException failure) {
-                            throw new IllegalStateException(failure);
-                        }
-                    }).map(token -> token + " @ " + path))
-                    .toList();
-            assertEquals(List.of(), offenders,
-                    "timeline tooling must remain a read-only schema boundary");
-        }
+        JavaClasses timeline = new ClassFileImporter()
+                .withImportOption(new ImportOption.DoNotIncludeTests())
+                .importPackages("com.openggf.tools.audio.timeline");
+        assertEquals(List.of(), timelineAuthorityCalls(timeline),
+                "timeline tooling must remain a read-only schema boundary");
+
+        JavaClasses fixture = new ClassFileImporter()
+                .importClasses(RepresentativeTimelineAuthorityBypass.class);
+        assertEquals(1, timelineDependenciesOutsideTimeline(fixture).size(),
+                "fully-qualified timeline references must be visible as class dependencies");
+        assertEquals(5, timelineAuthorityCalls(fixture).size(),
+                "representative direct audio mutation/advance calls must be visible");
     }
 
     /**
@@ -363,12 +354,36 @@ class TestAudioPresentationArchitectureGuard {
                 .anyMatch(suffix -> normalized.endsWith("/" + suffix));
     }
 
-    private static boolean sourceContains(Path path, String token) {
-        try {
-            return Files.readString(path).contains(token);
-        } catch (IOException failure) {
-            throw new IllegalStateException(failure);
+    private static List<String> timelineDependenciesOutsideTimeline(JavaClasses classes) {
+        return classes.stream()
+                .filter(origin -> !origin.getPackageName().startsWith("com.openggf.tools.audio.timeline"))
+                .flatMap(origin -> origin.getDirectDependenciesFromSelf().stream())
+                .filter(dependency -> dependency.getTargetClass().getPackageName()
+                        .startsWith("com.openggf.tools.audio.timeline"))
+                .map(Dependency::getDescription)
+                .sorted()
+                .toList();
+    }
+
+    private static List<String> timelineAuthorityCalls(JavaClasses classes) {
+        return classes.stream()
+                .flatMap(origin -> origin.getMethodCallsFromSelf().stream())
+                .filter(call -> isTimelineAuthorityCall(call, call.getTargetOwner()))
+                .map(JavaMethodCall::getDescription)
+                .sorted()
+                .toList();
+    }
+
+    private static boolean isTimelineAuthorityCall(JavaMethodCall call, JavaClass targetOwner) {
+        if (targetOwner.isEquivalentTo(AudioManager.class)) {
+            return Set.of("playMusic", "playSfx", "replayTimelineCommand",
+                    "replayTimelineCommandLogically", "presentFrame", "update")
+                    .contains(call.getName());
         }
+        if (targetOwner.isEquivalentTo(AudioPresentationProducer.class)) {
+            return call.getName().equals("present");
+        }
+        return targetOwner.getPackageName().startsWith("com.openggf.trace.timing");
     }
 
     @Test
@@ -425,6 +440,19 @@ class TestAudioPresentationArchitectureGuard {
         private void bypass() {
             backend.playMusic(1);
             backend.toggleMute(ChannelType.FM, 0);
+        }
+    }
+
+    private static final class RepresentativeTimelineAuthorityBypass {
+        @SuppressWarnings("unused")
+        private final com.openggf.tools.audio.timeline.S1GameplayAudioTimeline.Metadata metadata = null;
+
+        private void bypass(AudioManager audio, AudioPresentationProducer producer) {
+            audio.replayTimelineCommand(null);
+            audio.replayTimelineCommandLogically(null);
+            audio.presentFrame(null);
+            audio.update();
+            producer.present(0, null);
         }
     }
 }

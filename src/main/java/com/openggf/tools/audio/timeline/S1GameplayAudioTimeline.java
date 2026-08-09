@@ -9,12 +9,16 @@ public final class S1GameplayAudioTimeline {
     public static final String SCHEMA = "s1_gameplay_audio_timeline.v1";
     public static final String REFERENCE_CAPTURE = "s1_ghz_gameplay_audio_reference";
     public static final String OPENGGF_CAPTURE = "s1_ghz_gameplay_audio_openggf";
+    public static final String REFERENCE_PRODUCER = "BizHawk 2.11 / Genesis Plus GX";
+    public static final String OPENGGF_PRODUCER = "OpenGGF";
     public static final String S1_REV01_SHA1 = "69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b";
     public static final String S1_REV01_CRC32 = "afe05eee";
     public static final String BK2_SHA256 = "f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b";
     public static final int SEGMENT_START_BK2_FRAME = 860;
     public static final int SEGMENT_END_BK2_FRAME = 4975;
     public static final int SEGMENT_FRAME_COUNT = 4115;
+    public static final int MAX_REQUESTS_PER_FRAME = 64;
+    public static final int MAX_ROLES_PER_REQUEST = HardwareRole.values().length;
 
     private S1GameplayAudioTimeline() {
     }
@@ -43,7 +47,8 @@ public final class S1GameplayAudioTimeline {
                     || !S1_REV01_SHA1.equals(romSha1.toLowerCase())
                     || !S1_REV01_CRC32.equals(romCrc32.toLowerCase())
                     || !BK2_SHA256.equals(bk2Sha256.toLowerCase())
-                    || producer.isBlank()
+                    || (REFERENCE_CAPTURE.equals(capture) && !REFERENCE_PRODUCER.equals(producer))
+                    || (OPENGGF_CAPTURE.equals(capture) && !OPENGGF_PRODUCER.equals(producer))
                     || segmentStartBk2Frame != SEGMENT_START_BK2_FRAME
                     || segmentEndBk2Frame != SEGMENT_END_BK2_FRAME
                     || terminalFrameCount != SEGMENT_FRAME_COUNT) {
@@ -75,6 +80,9 @@ public final class S1GameplayAudioTimeline {
             nonNegative(diagnosticTick, "diagnosticTick");
             requests = List.copyOf(requests);
             Objects.requireNonNull(owners, "owners");
+            if (requests.size() > MAX_REQUESTS_PER_FRAME) {
+                throw new IllegalArgumentException("frame contains too many requests");
+            }
         }
     }
 
@@ -87,7 +95,8 @@ public final class S1GameplayAudioTimeline {
             Objects.requireNonNull(soundClass, "soundClass");
             requestedRoles = List.copyOf(requestedRoles);
             arbitration = List.copyOf(arbitration);
-            if (requestedRoles.isEmpty() || requestedRoles.size() != EnumSet.copyOf(requestedRoles).size()
+            if (requestedRoles.isEmpty() || requestedRoles.size() > MAX_ROLES_PER_REQUEST
+                    || requestedRoles.size() != EnumSet.copyOf(requestedRoles).size()
                     || !validSoundId(soundClass, soundId)) {
                 throw new IllegalArgumentException("request class, sound ID, or requested roles are invalid");
             }
@@ -96,6 +105,16 @@ public final class S1GameplayAudioTimeline {
                 if (!requestedRoles.contains(decision.role()) || !arbitrationRoles.add(decision.role())) {
                     throw new IllegalArgumentException("arbitration roles must be unique requested roles");
                 }
+                if (decision.acquired()) {
+                    if (!decision.finalOwner().equals(new OwnerRef(ownerClass(soundClass), soundId, requestOrdinal))) {
+                        throw new IllegalArgumentException("acquired role must finish with this request as owner");
+                    }
+                } else if (!decision.displacedOwner().equals(decision.finalOwner())) {
+                    throw new IllegalArgumentException("rejected role must retain its prior owner");
+                }
+            }
+            if (!arbitrationRoles.equals(EnumSet.copyOf(requestedRoles))) {
+                throw new IllegalArgumentException("each requested role requires exactly one arbitration decision");
             }
         }
     }
@@ -139,7 +158,7 @@ public final class S1GameplayAudioTimeline {
                 if (soundId != 0 || requestOrdinal != -1) {
                     throw new IllegalArgumentException("NONE owner must use sound ID 0 and ordinal -1");
                 }
-            } else if (soundId < 0x80 || soundId > 0xff || requestOrdinal < 0) {
+            } else if (!validOwnerSoundId(ownerClass, soundId) || requestOrdinal < 0) {
                 throw new IllegalArgumentException("active owner identity is out of range");
             }
         }
@@ -161,6 +180,54 @@ public final class S1GameplayAudioTimeline {
             case SPECIAL_SFX -> soundId >= 0xd0 && soundId <= 0xdf;
             case COMMAND -> soundId >= 0xe0 && soundId <= 0xff;
         };
+    }
+
+    private static OwnerClass ownerClass(SoundClass soundClass) {
+        return switch (soundClass) {
+            case MUSIC -> OwnerClass.MUSIC;
+            case SFX -> OwnerClass.NORMAL_SFX;
+            case SPECIAL_SFX -> OwnerClass.SPECIAL_SFX;
+            case COMMAND -> throw new IllegalArgumentException("commands cannot acquire hardware ownership");
+        };
+    }
+
+    private static boolean validOwnerSoundId(OwnerClass ownerClass, int soundId) {
+        return switch (ownerClass) {
+            case NONE -> soundId == 0;
+            case MUSIC -> soundId >= 0x81 && soundId <= 0x9f;
+            case NORMAL_SFX -> soundId >= 0xa0 && soundId <= 0xcf;
+            case SPECIAL_SFX -> soundId >= 0xd0 && soundId <= 0xdf;
+        };
+    }
+
+    /** Compares semantic records while deliberately excluding diagnostic tick coordinates. */
+    public static boolean semanticEquals(TimelineRecord first, TimelineRecord second) {
+        if (first == second) {
+            return true;
+        }
+        if (first == null || second == null || first.getClass() != second.getClass()) {
+            return false;
+        }
+        if (first instanceof Baseline left && second instanceof Baseline right) {
+            return left.bk2Frame == right.bk2Frame && left.activeMusicId == right.activeMusicId
+                    && left.owners.equals(right.owners);
+        }
+        if (first instanceof Frame left && second instanceof Frame right) {
+            return left.bk2Frame == right.bk2Frame && left.requests.equals(right.requests)
+                    && left.owners.equals(right.owners);
+        }
+        return first.equals(second);
+    }
+
+    /** Hashes according to {@link #semanticEquals(TimelineRecord, TimelineRecord)}. */
+    public static int semanticHashCode(TimelineRecord record) {
+        if (record instanceof Baseline baseline) {
+            return Objects.hash(baseline.bk2Frame, baseline.activeMusicId, baseline.owners);
+        }
+        if (record instanceof Frame frame) {
+            return Objects.hash(frame.bk2Frame, frame.requests, frame.owners);
+        }
+        return Objects.hashCode(record);
     }
 
     private static void nonNegative(Long value, String name) {

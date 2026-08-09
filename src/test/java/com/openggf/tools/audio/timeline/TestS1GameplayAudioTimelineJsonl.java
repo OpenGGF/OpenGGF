@@ -57,6 +57,12 @@ class TestS1GameplayAudioTimelineJsonl {
         assertThrows(IllegalArgumentException.class, () -> new S1GameplayAudioTimeline.Metadata(
                 metadata.schema(), metadata.capture(), metadata.romSha1(), metadata.romCrc32(),
                 metadata.bk2Sha256(), metadata.producer(), 861, 4975, 4115));
+        assertThrows(IllegalArgumentException.class, () -> new S1GameplayAudioTimeline.Metadata(
+                metadata.schema(), metadata.capture(), metadata.romSha1(), metadata.romCrc32(),
+                metadata.bk2Sha256(), "unreviewed producer", 860, 4975, 4115));
+        assertEquals("OpenGGF", new S1GameplayAudioTimeline.Metadata(metadata.schema(),
+                S1GameplayAudioTimeline.OPENGGF_CAPTURE, metadata.romSha1(), metadata.romCrc32(),
+                metadata.bk2Sha256(), "OpenGGF", 860, 4975, 4115).producer());
         assertThrows(IllegalArgumentException.class, () -> new S1GameplayAudioTimeline.Baseline(
                 860, 0x80, null, baseline.owners()));
     }
@@ -75,6 +81,16 @@ class TestS1GameplayAudioTimelineJsonl {
                 () -> new S1GameplayAudioTimeline.Request(0, SFX, 0xA0, List.of(FM3), List.of(
                         new S1GameplayAudioTimeline.RoleArbitration(
                                 S1GameplayAudioTimeline.HardwareRole.FM4, true, music, music))));
+        assertThrows(IllegalArgumentException.class,
+                () -> new S1GameplayAudioTimeline.Request(0, SFX, 0xA0, List.of(FM3), List.of()));
+        assertThrows(IllegalArgumentException.class,
+                () -> new S1GameplayAudioTimeline.Request(0, SFX, 0xA0, List.of(FM3), List.of(
+                        new S1GameplayAudioTimeline.RoleArbitration(FM3, true, none, none))));
+        assertThrows(IllegalArgumentException.class,
+                () -> new S1GameplayAudioTimeline.Request(0, SFX, 0xA0, List.of(FM3), List.of(
+                        new S1GameplayAudioTimeline.RoleArbitration(FM3, false, none, music))));
+        assertThrows(IllegalArgumentException.class,
+                () -> new S1GameplayAudioTimeline.OwnerRef(MUSIC, 0xA0, 0));
 
         S1GameplayAudioTimeline.Request first = request(0);
         S1GameplayAudioTimeline.Request retrigger = request(1);
@@ -129,7 +145,7 @@ class TestS1GameplayAudioTimelineJsonl {
     }
 
     @Test
-    void readerStreamsWithoutRetainingAtLeastTenThousandRequests() throws Exception {
+    void readerRejectsOversizedNestedRequestArraysBeforeMaterializingThem() throws Exception {
         Path output = temp.resolve("large.jsonl");
         List<S1GameplayAudioTimeline.TimelineRecord> records = records();
         S1GameplayAudioTimeline.Frame first = (S1GameplayAudioTimeline.Frame) records.get(1);
@@ -137,15 +153,23 @@ class TestS1GameplayAudioTimelineJsonl {
         for (int ordinal = 0; ordinal < 10_000; ordinal++) {
             requests.add(request(ordinal));
         }
-        records.set(1, new S1GameplayAudioTimeline.Frame(first.bk2Frame(), first.diagnosticTick(),
-                requests, first.owners()));
-        records.set(records.size() - 1, new S1GameplayAudioTimeline.Terminal(4115, 10_000, 4115));
-        S1GameplayAudioTimelineJsonl.writeNew(output, metadata(), records.iterator());
-        try (S1GameplayAudioTimelineJsonl.Reader reader = S1GameplayAudioTimelineJsonl.read(output)) {
-            assertTrue(reader.hasNext());
-            assertTrue(reader.next() instanceof S1GameplayAudioTimeline.Baseline);
-            assertTrue(reader.next() instanceof S1GameplayAudioTimeline.Frame);
-        }
+        assertThrows(IllegalArgumentException.class,
+                () -> records.set(1, new S1GameplayAudioTimeline.Frame(first.bk2Frame(), first.diagnosticTick(),
+                        requests, first.owners())));
+        assertFalse(Files.exists(output));
+    }
+
+    @Test
+    void semanticEqualityAndHashingExcludeDiagnosticTicks() {
+        S1GameplayAudioTimeline.Frame first = new S1GameplayAudioTimeline.Frame(860, 1L,
+                List.of(request(0)), owners());
+        S1GameplayAudioTimeline.Frame second = new S1GameplayAudioTimeline.Frame(860, 2L,
+                List.of(request(0)), owners());
+
+        assertFalse(first.equals(second));
+        assertTrue(S1GameplayAudioTimeline.semanticEquals(first, second));
+        assertEquals(S1GameplayAudioTimeline.semanticHashCode(first),
+                S1GameplayAudioTimeline.semanticHashCode(second));
     }
 
     private void consume(Path path) {
@@ -160,7 +184,7 @@ class TestS1GameplayAudioTimelineJsonl {
         return new S1GameplayAudioTimeline.Metadata("s1_gameplay_audio_timeline.v1",
                 "s1_ghz_gameplay_audio_reference", "69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b",
                 "afe05eee", "f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b",
-                "bizhawk-2.11-genplus-gx", 860, 4975, 4115);
+                "BizHawk 2.11 / Genesis Plus GX", 860, 4975, 4115);
     }
 
     private List<S1GameplayAudioTimeline.TimelineRecord> records() {
@@ -180,7 +204,9 @@ class TestS1GameplayAudioTimelineJsonl {
 
     private S1GameplayAudioTimeline.Request request(long ordinal) {
         return new S1GameplayAudioTimeline.Request(ordinal, SFX, 0xA0, List.of(FM3), List.of(
-                new S1GameplayAudioTimeline.RoleArbitration(FM3, true, music(), none())));
+                new S1GameplayAudioTimeline.RoleArbitration(FM3, true, music(),
+                        new S1GameplayAudioTimeline.OwnerRef(
+                                S1GameplayAudioTimeline.OwnerClass.NORMAL_SFX, 0xA0, ordinal))));
     }
 
     private S1GameplayAudioTimeline.OwnerVector owners() {

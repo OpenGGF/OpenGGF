@@ -4,7 +4,6 @@ import static com.openggf.tools.audio.timeline.S1GameplayAudioTimeline.*;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.StreamReadFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,7 +17,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -29,6 +27,7 @@ public final class S1GameplayAudioTimelineJsonl {
     private static final JsonFactory FACTORY = JsonFactory.builder()
             .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION).build();
     private static final ObjectMapper JSON = new ObjectMapper(FACTORY);
+    private static final int MAX_JSONL_RECORD_CHARS = 128 * 1024;
     private static final Set<String> METADATA_FIELDS = Set.of("type", "schema", "capture", "rom", "bk2",
             "producer", "segment_start_bk2_frame", "segment_end_bk2_frame", "terminal_frame_count",
             "field_inventory");
@@ -52,7 +51,7 @@ public final class S1GameplayAudioTimelineJsonl {
         try {
             BufferedReader input = Files.newBufferedReader(path, StandardCharsets.UTF_8);
             try {
-                String line = input.readLine();
+                String line = readLine(input);
                 if (line == null || line.isBlank()) {
                     throw invalid("missing metadata JSONL record");
                 }
@@ -138,7 +137,7 @@ public final class S1GameplayAudioTimelineJsonl {
                 return true;
             }
             try {
-                nextLine = input.readLine();
+                nextLine = readLine(input);
             } catch (IOException failure) {
                 throw invalid("cannot read timeline JSONL record: " + failure.getMessage(), failure);
             }
@@ -163,7 +162,7 @@ public final class S1GameplayAudioTimelineJsonl {
             validator.accept(record);
             if (record instanceof Terminal) {
                 try {
-                    if (input.readLine() != null) {
+                    if (readLine(input) != null) {
                         throw invalid("terminal must be the final JSONL record");
                     }
                 } catch (IOException failure) {
@@ -212,6 +211,7 @@ public final class S1GameplayAudioTimelineJsonl {
             case "frame" -> {
                 exact(root, FRAME_FIELDS, "frame");
                 ArrayNode nodes = array(required(root, "requests"), "requests");
+                bounded(nodes, MAX_REQUESTS_PER_FRAME, "requests");
                 List<Request> requests = new ArrayList<>(nodes.size());
                 nodes.forEach(node -> requests.add(request(object(node, "request"))));
                 yield new Frame(integer(root, "bk2_frame"), nullableLong(root, "diagnostic_tick"), requests,
@@ -229,9 +229,11 @@ public final class S1GameplayAudioTimelineJsonl {
     private static Request request(ObjectNode node) {
         exact(node, REQUEST_FIELDS, "request");
         ArrayNode requested = array(required(node, "requested_roles"), "requested_roles");
+        bounded(requested, MAX_ROLES_PER_REQUEST, "requested_roles");
         List<HardwareRole> roles = new ArrayList<>(requested.size());
         requested.forEach(value -> roles.add(enumValue(HardwareRole.class, text(value, "requested role"))));
         ArrayNode arbitration = array(required(node, "arbitration"), "arbitration");
+        bounded(arbitration, MAX_ROLES_PER_REQUEST, "arbitration");
         List<RoleArbitration> decisions = new ArrayList<>(arbitration.size());
         arbitration.forEach(value -> decisions.add(arbitration(object(value, "arbitration"))));
         return new Request(longInteger(node, "request_ordinal"), enumValue(SoundClass.class, text(node, "sound_class")),
@@ -462,6 +464,34 @@ public final class S1GameplayAudioTimelineJsonl {
             throw invalid(name + " must be an array");
         }
         return array;
+    }
+
+    private static void bounded(ArrayNode values, int maximum, String name) {
+        if (values.size() > maximum) {
+            throw invalid(name + " exceeds the v1 bounded-record limit of " + maximum);
+        }
+    }
+
+    /** Reads one bounded physical JSONL record so malformed nesting cannot allocate an unlimited line. */
+    private static String readLine(BufferedReader input) throws IOException {
+        StringBuilder line = new StringBuilder();
+        int character;
+        while ((character = input.read()) != -1) {
+            if (character == '\n') {
+                break;
+            }
+            if (line.length() == MAX_JSONL_RECORD_CHARS) {
+                throw invalid("JSONL record exceeds " + MAX_JSONL_RECORD_CHARS + " characters");
+            }
+            line.append((char) character);
+        }
+        if (character == -1 && line.isEmpty()) {
+            return null;
+        }
+        if (!line.isEmpty() && line.charAt(line.length() - 1) == '\r') {
+            line.setLength(line.length() - 1);
+        }
+        return line.toString();
     }
 
     private static JsonNode required(ObjectNode node, String field) {
