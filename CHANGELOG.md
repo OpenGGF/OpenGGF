@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Sonic 1 GHZ music playback now matches the shipped `FixBugs=0` audio
+  driver for a complete 14,690-tick reference-controlled cycle, including
+  initialization writes, 68k voice upload/TL order, PSG rest and maximum-note
+  semantics, note-fill exit behavior, tied-note keying, and modulation phase.
+  Two independent OpenGGF captures are byte-identical and their ordered
+  normalized state/write projection matches the BizHawk reference exactly.
 - Tooling: add a reproducible Sonic 1 GHZ music-driver parity command that
   validates the pinned ROM, BizHawk 2.11, and controller movie, proves both
   reference and OpenGGF captures deterministic, and emits first-divergence

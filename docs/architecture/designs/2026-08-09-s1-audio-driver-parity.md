@@ -318,7 +318,7 @@ Active roles use this field map (`T` is the slot base):
 | PSG envelope cursor | `T+$0C` | `envPos` | PSG only; unsigned byte |
 | duration countdown | `T+$0E` | `duration` | unsigned byte |
 | duration reload | `T+$0F` | `scaledDuration` | unsigned byte; `rawDuration` is diagnostic |
-| base frequency | `T+$10` | `(baseBlock << 11) | baseFnum` for FM; `baseFnum` for PSG | unsigned word; gate after derivation tests, not `note` |
+| base frequency | FM/PSG `T+$10` | `(baseBlock << 11) | baseFnum` for FM; `baseFnum` for PSG | unsigned word; gate after derivation tests, not `note`; omit for DAC because its `T+$10` aliases `SavedDAC` rather than `Freq` |
 | note-fill countdown/reload | `T+$12/$13` | derived from `fill`, `duration`, `scaledDuration` | gate only after focused transition tests prove the derivation |
 | modulation delay/speed/delta/steps/value | `T+$18..$1D` | `modDelay`, `modRateCounter`, `modCurrentDelta`, `modStepCounter`, `modAccumulator` | signed delta/value; individual fields become gates only after transition tests |
 | detune | `T+$1E` | `detune` | signed byte |

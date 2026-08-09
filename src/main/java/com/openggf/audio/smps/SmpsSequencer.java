@@ -215,7 +215,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             0x0D6, 0x0C9, 0x0BE, 0x0B4, 0x0A9, 0x0A0, 0x097, 0x08F, 0x087, 0x07F, 0x078, 0x071,
             0x06B, 0x065, 0x05F, 0x05A, 0x055, 0x050, 0x04B, 0x047, 0x043, 0x040, 0x03C, 0x039,
             0x036, 0x033, 0x030, 0x02D, 0x02B, 0x028, 0x026, 0x024, 0x022, 0x020, 0x01F, 0x01D,
-            0x01B, 0x01A, 0x018, 0x017, 0x016, 0x015, 0x013, 0x012, 0x011, 0x010
+            0x01B, 0x01A, 0x018, 0x017, 0x016, 0x015, 0x013, 0x012, 0x011, 0x000
     };
     // SMPSPlay DEF_PSGFREQ_Z80_T2 table used by S3K (DefDrv: PSGFreqs=DEF_Z80_T2).
     private static final int[] PSG_FREQ_TABLE_Z80_T2 = {
@@ -263,6 +263,8 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         public int rawDuration;
         public int scaledDuration;
         public int fill; // note-off shortening in ticks
+        public int fillCounter; // live S1/S2 NoteTimeout countdown
+        public boolean resting; // S1/S2 PlaybackControl bit 1
         public int keyOffset; // signed semitone displacement (E9)
         public int volumeOffset; // attenuation applied to TL (FM) or volume (PSG)
         public boolean tieNext; // E7 prevents next attack
@@ -925,8 +927,10 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
 
             nextEvent = Math.min(nextEvent, samplesUntilTempoTicks(t.duration));
 
-            if (t.fill > 0 && !t.tieNext && t.type != TrackType.DAC) {
-                int fillTicks = Math.max(0, t.fill + t.duration - t.scaledDuration);
+            boolean fillPending = config.isDirect68kDriver() ? t.fillCounter > 0 : t.fill > 0;
+            if (fillPending && !t.tieNext && t.type != TrackType.DAC) {
+                int fillTicks = config.isDirect68kDriver()
+                        ? t.fillCounter : Math.max(0, t.fill + t.duration - t.scaledDuration);
                 nextEvent = Math.min(nextEvent, samplesUntilTempoTicks(fillTicks));
             }
         }
@@ -999,9 +1003,18 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             if (t.duration > 0) {
                 t.duration--;
 
-                if (t.fill > 0 && (t.scaledDuration - t.duration) >= t.fill && !t.tieNext
-                        && t.type != TrackType.DAC) {
-                    stopNote(t);
+                if (!t.tieNext && t.type != TrackType.DAC) {
+                    if (config.isDirect68kDriver()) {
+                        if (t.fillCounter > 0 && --t.fillCounter == 0) {
+                            // S1/S2 NoteTimeoutUpdate tampers with the return address:
+                            // after note-off, the rest of this track update is skipped.
+                            stopNote(t);
+                            t.resting = true;
+                            continue;
+                        }
+                    } else if (t.fill > 0 && (t.scaledDuration - t.duration) >= t.fill) {
+                        stopNote(t);
+                    }
                 }
 
                 if (t.duration > 0) {
@@ -1011,14 +1024,19 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                     } else if (t.type == TrackType.FM) {
                         processFmVolEnvelope(t);
                     }
-                    // Skip modulation if track is at rest (0x80). Matches Z80 driver zDoModulation check.
-                    if ((t.type == TrackType.FM || t.type == TrackType.PSG) && t.modEnabled && t.note != 0x80) {
+                    if ((t.type == TrackType.FM || t.type == TrackType.PSG)
+                            && t.modEnabled) {
                         applyModulation(t);
                     }
                     continue;
                 }
             }
 
+            if (t.duration == 0 && config.isDirect68kDriver()) {
+                // S1/S2 clear PlaybackControl bit 4 only when the current duration
+                // expires, before interpreting the next stream unit.
+                t.tieNext = false;
+            }
             while (t.duration == 0 && t.active) {
                 if (t.pos >= data.length) {
                     t.active = false;
@@ -1574,7 +1592,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             t.modPendingDelta = data[t.pos++];
             int steps = data[t.pos++] & 0xFF;
             t.modPendingStepsFull = steps;
-            // Z80 driver (S2): srl a (halve). 68k driver (S1): no halving.
+            // Driver profiles select whether the raw modulation step byte is halved.
             t.modPendingSteps = config.isHalveModSteps() ? steps / 2 : steps;
 
             t.customModEnabled = true;
@@ -1745,7 +1763,10 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             t.baseFnum = 0;
             t.baseBlock = 0;
         } else if (t.type == TrackType.PSG) {
-            t.baseFnum = 0x3FF;
+            // S1 PSGSetFreq and S2 zPSGSetFreq store $FFFF as the invalid
+            // frequency sentinel for a rest. The resting status bit prevents
+            // this value from reaching the PSG period write path.
+            t.baseFnum = 0xFFFF;
         }
     }
 
@@ -1761,11 +1782,9 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             // Clear SSG-EG state: new voice may not use SSG-EG, and the song's
             // coordination flags (FF 05) will re-set it if needed.
             Arrays.fill(t.ssgEg, 0);
-            // ROM parity: when a note is being sustained (tieNext / HOLD),
-            // skip refreshInstrument to avoid the key-off in setInstrument().
-            // Continuous SFX (cfx_*) loop back through smpsSetvoice on every
-            // iteration while the note is tied; re-keying would kill the sound.
-            // The Z80 driver's zSetVoice does not key-off mid-sustain.
+            // Continuous SFX (cfx_*) loop back through smpsSetvoice while tied.
+            // Preserve the existing Z80 HOLD behavior rather than refreshing the
+            // live channel mid-sustain.
             if (!t.tieNext) {
                 refreshInstrument(t);
             }
@@ -1774,6 +1793,16 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
 
     private void playNote(Track t) {
         boolean preventAttack = shouldPreventNoteAttack(t);
+        if (!preventAttack) {
+            t.fillCounter = t.fill;
+            if (t.note != 0x80 || config.isDirect68kDriver()) {
+                if (t.customModEnabled) {
+                    prepareCustomModulation(t);
+                }
+                resetModEnvelopeState(t);
+            }
+        }
+        t.resting = t.note == 0x80;
 
         if (t.note == 0x80) {
             if (t.type != TrackType.DAC) {
@@ -1782,7 +1811,13 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             if (config.getDelayFreq() == SmpsSequencerConfig.DelayFreq.RESET) {
                 resetTrackedFrequency(t);
             }
-            t.tieNext = false;
+            if (config.isDirect68kDriver() && t.type == TrackType.PSG && !preventAttack) {
+                // S1 PSGUpdateTrack still runs PSGDoVolFX after PSGSetFreq marks
+                // a rest. It advances VolEnvIndex, but SetPSGVolume suppresses
+                // the write because the resting bit is set.
+                primePsgRestEnvelope(t);
+            }
+            clearTransientNoAttack(t);
             return;
         }
 
@@ -1791,16 +1826,12 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             t.forceRefresh = false;
         }
 
-        if (!preventAttack) {
-            resetModEnvelopeState(t);
-        }
-
         if (t.type == TrackType.DAC) {
             // Skip DAC playback if muted during fade-in
             if (!t.dacMuted) {
                 synth.playDac(this, t.note);
             }
-            t.tieNext = false;
+            clearTransientNoAttack(t);
             return;
         }
 
@@ -1827,10 +1858,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
 
             t.baseFnum = fnum;
             t.baseBlock = block;
-
-            if (t.customModEnabled && !preventAttack) {
-                prepareCustomModulation(t);
-            }
 
             int packed = (block << 11) | fnum;
             packed += t.detune;
@@ -1863,14 +1890,22 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             }
 
             writeFmFreq(port, ch, fnum, block);
-            applyFmPanAmsFms(t);
+            // S1/S2 FMPrepareNote writes only A4/A0; pan is written by SetVoice
+            // or its coordination flag. Keep the existing Z80 refresh behavior.
+            if (!config.isDirect68kDriver()) {
+                applyFmPanAmsFms(t);
+            }
             // S2 (ModAlgo 68k_a) applies modulation before note-on; S1 (ModAlgo 68k) does not.
             if (t.modEnabled && config.isApplyModOnNote()) {
                 t.forceModulationWrite = true;
                 applyModulation(t);
             }
 
-            if (!preventAttack) {
+            // S1/S2 smpsNoAttack suppresses FMNoteOff and the per-note state
+            // reset, but FMUpdateTrack still branches to FMNoteOn after the
+            // tied frequency has been prepared. Preserve the Z80-family HOLD
+            // behavior, which suppresses its key-on too.
+            if (config.isDirect68kDriver() || !preventAttack) {
                 synth.writeFm(this, 0, 0x28, 0xF0 | chVal); // Key On after latching frequency/pan
                 LOGGER.fine("FM KEY ON: chVal=" + Integer.toHexString(chVal) + " port=" + port + " fnum="
                         + Integer.toHexString(fnum) + " block=" + block + " note=" + Integer.toHexString(t.note));
@@ -1903,10 +1938,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 synth.writePsg(this, 0x80 | (ch << 5) | (0) | data);
                 synth.writePsg(this, (reg >> 4) & 0x3F);
                 // baseFnum stores detune-free period; modulation applies detune dynamically.
-            }
-
-            if (t.customModEnabled && !preventAttack) {
-                prepareCustomModulation(t);
             }
 
             // S2 (ModAlgo 68k_a) applies modulation before PSG volume write; S1 (ModAlgo 68k) does not.
@@ -1944,7 +1975,13 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 refreshVolume(t);
             }
         }
-        t.tieNext = false;
+        clearTransientNoAttack(t);
+    }
+
+    private void clearTransientNoAttack(Track t) {
+        if (!config.isDirect68kDriver()) {
+            t.tieNext = false;
+        }
     }
 
     private void playRawFrequency(Track t) {
@@ -2075,13 +2112,11 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         if (t.type == TrackType.FM) {
             updateFmTotalLevel(t);
         } else if (t.type == TrackType.PSG) {
-            if (t.envAtRest) {
+            if (t.envAtRest || (config.isDirect68kDriver() && t.resting)) {
                 return;
             }
-            int vol = 0x0F;
-            if (t.note != 0x80) {
-                vol = Math.min(0x0F, Math.max(0, t.volumeOffset + t.envValue));
-            }
+            int vol = t.note == 0x80 ? 0x0f
+                    : Math.min(0x0F, Math.max(0, t.volumeOffset + t.envValue));
             int ch = t.channelId;
             if (t.noiseMode && ch == 2) {
                 ch = 3;
@@ -2098,6 +2133,26 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         }
         boolean hasTl = t.voiceData.length >= 25;
         if (!hasTl) {
+            return;
+        }
+        if (config.isDirect68kDriver()) {
+            int port = t.channelId < 3 ? 0 : 1;
+            int channel = t.channelId % 3;
+            int[] operatorOffsets = { 0, 8, 4, 12 };
+            int[] normalizedVoiceIndices = { 0, 2, 1, 3 };
+            int mask = ALGO_OUT_MASK[t.voiceData[0] & 7];
+            for (int operator = 0; operator < 4; operator++) {
+                if ((mask & (1 << operator)) == 0) {
+                    continue;
+                }
+                int rawTl = t.voiceData[21 + normalizedVoiceIndices[operator]] & 0xff;
+                int adjusted = rawTl + (t.volumeOffset & 0xff);
+                // S1/S2 SendVoiceTL skips the write when the byte addition carries.
+                if (adjusted > 0xff) {
+                    continue;
+                }
+                synth.writeFm(this, port, 0x40 + operatorOffsets[operator] + channel, adjusted);
+            }
             return;
         }
         int algo = t.voiceData[0] & 0x07;
@@ -2156,6 +2211,24 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         }
     }
 
+    private void primePsgRestEnvelope(Track t) {
+        t.decayOffset = 0;
+        t.decayTimer = 0;
+        t.envPos = 0;
+        t.envHold = false;
+        t.envAtRest = false;
+        if (t.envData != null && t.envData.length > 0) {
+            int val = t.envData[0] & 0xFF;
+            if (val < 0x80) {
+                t.envValue = val;
+                t.envPos = 1;
+            }
+        } else {
+            t.envData = null;
+            t.envValue = 0;
+        }
+    }
+
     private void processPsgEnvelope(Track t) {
         if (t.envData == null || t.envHold)
             return;
@@ -2182,6 +2255,9 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                         continue;
                     }
                     // S1/S2: HOLD (Sonic 2 driver definition)
+                    // S1 VolEnvHold decrements the already-advanced index so it
+                    // remains on the terminator byte.
+                    t.envPos--;
                     t.envHold = true;
                     t.envAtRest = true;
                     return;
@@ -2313,11 +2389,28 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             for (int op = 0; op < 4; op++) {
                 if ((mask & (1 << op)) != 0) {
                     int idx = tlBase + opMap[op];
-                    int bit7 = bit7Mode ? (voice[idx] & 0x80) : 0; // preserve carrier marker in S3K BIT7 mode only
-                    int tl = computeFmTotalLevel(t, voice[idx] & 0x7F, op);
-                    voice[idx] = (byte) (tl | bit7);
+                    if (bit7Mode) {
+                        int tl = computeFmTotalLevel(t, voice[idx] & 0x7F, op);
+                        voice[idx] = (byte) (tl | (voice[idx] & 0x80));
+                    } else if (config.isDirect68kDriver()) {
+                        // S1 SetVoice performs an 8-bit add on the stored TL byte.
+                        // S1's DEFAULT voice format deliberately leaves bit 7 set on
+                        // carriers, so it is visible on the bus even though YM2612 uses
+                        // only the low seven TL bits.
+                        int tl = (voice[idx] & 0xff) + t.volumeOffset;
+                        if (t.fmVolEnvData != null && (t.fmVolEnvOpMask & (1 << op)) != 0) {
+                            tl += t.fmVolEnvValue;
+                        }
+                        voice[idx] = (byte) tl;
+                    } else {
+                        voice[idx] = (byte) computeFmTotalLevel(t, voice[idx] & 0x7f, op);
+                    }
                 }
             }
+        }
+        if (config.isDirect68kDriver() && hasTl) {
+            write68kInstrument(t, voice);
+            return;
         }
         synth.setInstrument(this, t.channelId, voice);
 
@@ -2338,6 +2431,31 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 }
             }
         }
+    }
+
+    private void write68kInstrument(Track t, byte[] voice) {
+        int port = t.channelId < 3 ? 0 : 1;
+        int channel = t.channelId % 3;
+        int[] operatorOffsets = { 0, 8, 4, 12 };
+        int[] normalizedVoiceIndices = { 0, 2, 1, 3 };
+        int[] parameterRegisters = { 0x30, 0x50, 0x60, 0x70, 0x80 };
+
+        // S1/S2 SetVoice writes by parameter group in stored operator order
+        // (1,3,2,4), sends adjusted TL last, then restores AMS/FMS/panning.
+        // Neither shipped 68k driver injects a key-off or clears SSG-EG here.
+        synth.writeFm(this, port, 0xb0 + channel, voice[0] & 0xff);
+        for (int group = 0; group < 5; group++) {
+            for (int operator = 0; operator < 4; operator++) {
+                synth.writeFm(this, port,
+                        parameterRegisters[group] + operatorOffsets[operator] + channel,
+                        voice[1 + group * 4 + normalizedVoiceIndices[operator]] & 0xff);
+            }
+        }
+        for (int operator = 0; operator < 4; operator++) {
+            synth.writeFm(this, port, 0x40 + operatorOffsets[operator] + channel,
+                    voice[21 + normalizedVoiceIndices[operator]] & 0xff);
+        }
+        applyFmPanAmsFms(t);
     }
 
     private void applyFmPanAmsFms(Track t) {
@@ -2364,9 +2482,9 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     private void applyModulation(Track t) {
         if (!t.modEnabled)
             return;
-        // Match original Z80 driver behavior: skip modulation when track is at rest.
-        // From s2.sounddriver.asm zDoModulation: "bit 1,(ix+zTrack.PlaybackControl) / ret nz"
-        if (t.note == 0x80)  // 0x80 = rest note
+        // Z80-family drivers return before stepping modulation at rest. S1's
+        // 68k DoModulation has no rest check and continues advancing its phase.
+        if (!config.isDirect68kDriver() && t.resting)
             return;
 
         stepCustomModulation(t);
@@ -2386,14 +2504,21 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         if (t.type == TrackType.FM) {
             int packed = getPacked(t, freqDelta);
 
-            int block = (packed >> 11) & 7;
-            int fnum = packed & 0x7FF;
-
             int hwCh = t.channelId;
             int port = (hwCh < 3) ? 0 : 1;
             int ch = (hwCh % 3);
-            writeFmFreq(port, ch, fnum, block);
-        } else if (t.type == TrackType.PSG && t.channelId < 3) {
+            if (config.isDirect68kDriver()) {
+                // S1 FMUpdateFreq moves the high and low bytes of d6 directly;
+                // do not reinterpret a negative rest-frequency modulation as
+                // a masked YM block/f-number pair.
+                synth.writeFm(this, port, 0xA4 + ch, (packed >>> 8) & 0xff);
+                synth.writeFm(this, port, 0xA0 + ch, packed & 0xff);
+            } else {
+                int block = (packed >> 11) & 7;
+                int fnum = packed & 0x7FF;
+                writeFmFreq(port, ch, fnum, block);
+            }
+        } else if (t.type == TrackType.PSG && t.channelId < 3 && !t.resting) {
             boolean noiseUsesTone2 = t.noiseMode && t.channelId == 2 && (t.psgNoiseParam & 0x03) == 0x03;
             if (!t.noiseMode || noiseUsesTone2) {
                 int reg = t.baseFnum + freqDelta + t.detune;
@@ -2595,8 +2720,9 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     }
 
     private static int normalizePsgPeriod(int reg) {
-        int period = reg & 0x3FF;
-        return period == 0 ? 1 : period;
+        // S1/S2 deliberately use period zero for nMaxPSG noise notes. Preserve the
+        // register value here; PsgChip owns the integrated/discrete zero-period rule.
+        return reg & 0x3FF;
     }
 
     private void setDetune(Track t) {
@@ -2912,6 +3038,8 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 track.rawDuration,
                 track.scaledDuration,
                 track.fill,
+                track.fillCounter,
+                track.resting,
                 track.keyOffset,
                 track.volumeOffset,
                 track.tieNext,
@@ -2989,6 +3117,8 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         track.rawDuration = snapshot.rawDuration();
         track.scaledDuration = snapshot.scaledDuration();
         track.fill = snapshot.fill();
+        track.fillCounter = snapshot.fillCounter();
+        track.resting = snapshot.resting();
         track.keyOffset = snapshot.keyOffset();
         track.volumeOffset = snapshot.volumeOffset();
         track.tieNext = snapshot.tieNext();

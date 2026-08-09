@@ -43,15 +43,50 @@ class TestS1OpenGgfAudioCapture {
         assertEquals(2L * 735L, result.advancedSamples());
         assertEquals(List.of(0.0, 0.0, 0.0), result.postTickSampleCounters());
 
-        // The observer is installed after SmpsDriver's constructor silence: the
-        // first observed operation is the sequencer's DAC-enable write.
-        assertEquals(AudioParityChipWrite.ym2612(0, 0x2b, 0x80), ticks.get(0).events().get(0));
+        // The reference epoch begins in S1 InitMusicPlayback, not at chip power-on or
+        // Java object construction. Preserve the shipped driver's descending key-off,
+        // interleaved-port TL silence, then PSG silence ordering exactly.
+        assertEquals(s1GhzMusicLoadWrites(), ticks.get(0).events().subList(0, 49));
         assertFalse(ticks.get(0).events().isEmpty());
         assertFalse(ticks.get(1).events().isEmpty());
         assertEquals(2, ticks.get(0).global().tempoTimeout(),
                 "tick zero must snapshot after the one S1 priming tempo service");
         assertEquals(1, ticks.get(1).global().tempoTimeout(),
                 "the next snapshot must follow exactly one later service");
+    }
+
+    private static List<AudioParityChipWrite> s1GhzMusicLoadWrites() {
+        List<AudioParityChipWrite> writes = new ArrayList<>();
+        for (int channel = 2; channel >= 0; channel--) {
+            writes.add(AudioParityChipWrite.ym2612(0, 0x28, channel));
+            writes.add(AudioParityChipWrite.ym2612(0, 0x28, channel + 4));
+        }
+        for (int channel = 0; channel < 3; channel++) {
+            for (int operator = 0; operator < 4; operator++) {
+                int register = 0x40 + channel + operator * 4;
+                writes.add(AudioParityChipWrite.ym2612(0, register, 0x7f));
+                writes.add(AudioParityChipWrite.ym2612(1, register, 0x7f));
+            }
+        }
+        writes.add(AudioParityChipWrite.psg(0x9f));
+        writes.add(AudioParityChipWrite.psg(0xbf));
+        writes.add(AudioParityChipWrite.psg(0xdf));
+        writes.add(AudioParityChipWrite.psg(0xff));
+        // GHZ defines DAC + five FM tracks. The shipped FixBugs=0 loader silences
+        // the absent FM6, then note-offs six FM slots (the cleared absent slot aliases
+        // FM1's zero channel byte), followed by the three declared PSG slots.
+        writes.add(AudioParityChipWrite.ym2612(0, 0x28, 6));
+        for (int register : List.of(0x42, 0x4a, 0x46, 0x4e)) {
+            writes.add(AudioParityChipWrite.ym2612(1, register, 0x7f));
+        }
+        writes.add(AudioParityChipWrite.ym2612(1, 0xb6, 0xc0));
+        for (int channel : List.of(0, 1, 2, 4, 5, 0)) {
+            writes.add(AudioParityChipWrite.ym2612(0, 0x28, channel));
+        }
+        writes.add(AudioParityChipWrite.psg(0x9f));
+        writes.add(AudioParityChipWrite.psg(0xbf));
+        writes.add(AudioParityChipWrite.psg(0xdf));
+        return List.copyOf(writes);
     }
 
     @Test

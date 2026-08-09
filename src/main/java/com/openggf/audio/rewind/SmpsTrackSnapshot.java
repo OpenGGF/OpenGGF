@@ -15,6 +15,8 @@ public record SmpsTrackSnapshot(
         int rawDuration,
         int scaledDuration,
         int fill,
+        int fillCounter,
+        boolean resting,
         int keyOffset,
         int volumeOffset,
         boolean tieNext,

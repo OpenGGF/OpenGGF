@@ -557,6 +557,7 @@ public final class AudioPresentationSourceFactory
                         sourceConfig.getExtraTrkEndFlags()))
                 .relativePointers(sourceConfig.isRelativePointers())
                 .tempoOnFirstTick(sourceConfig.isTempoOnFirstTick())
+                .direct68kDriver(sourceConfig.isDirect68kDriver())
                 .volMode(sourceConfig.getVolMode())
                 .psgEnvCmd80(sourceConfig.getPsgEnvCmd80())
                 .noteOnPrevent(sourceConfig.getNoteOnPrevent())

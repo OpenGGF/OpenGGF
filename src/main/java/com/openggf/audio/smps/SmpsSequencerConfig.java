@@ -82,6 +82,7 @@ public final class SmpsSequencerConfig {
     private final Set<Integer> extraTrkEndFlags;
     private final boolean relativePointers; // S1: true (68k PC-relative), S2: false (Z80 absolute)
     private final boolean tempoOnFirstTick; // S1: true (DOTEMPO), S2: false (PlayMusic)
+    private final boolean direct68kDriver;
 
     // --- S3K-specific config fields ---
     private final VolMode volMode;
@@ -114,6 +115,7 @@ public final class SmpsSequencerConfig {
                 : Collections.emptySet();
         this.relativePointers = b.relativePointers;
         this.tempoOnFirstTick = b.tempoOnFirstTick;
+        this.direct68kDriver = b.direct68kDriver;
         this.volMode = b.volMode;
         this.psgEnvCmd80 = b.psgEnvCmd80;
         this.noteOnPrevent = b.noteOnPrevent;
@@ -165,7 +167,7 @@ public final class SmpsSequencerConfig {
 
     /**
      * Whether to halve the modulation step count on load.
-     * Z80 driver (S2): true (srl a). 68k driver (S1): false.
+     * Both the S1 68k and S2 Z80 drivers shift the raw count once.
      */
     public boolean isHalveModSteps() {
         return halveModSteps;
@@ -186,6 +188,11 @@ public final class SmpsSequencerConfig {
      */
     public boolean isRelativePointers() {
         return relativePointers;
+    }
+
+    /** Whether playback follows the direct 68k chip-write/update contract. */
+    public boolean isDirect68kDriver() {
+        return direct68kDriver;
     }
 
     /**
@@ -270,6 +277,7 @@ public final class SmpsSequencerConfig {
         private Set<Integer> extraTrkEndFlags = null;
         private boolean relativePointers = false;
         private boolean tempoOnFirstTick = false;
+        private boolean direct68kDriver = false;
 
         // S3K-specific defaults (S2 compatible)
         private VolMode volMode = VolMode.ALGO;
@@ -294,6 +302,7 @@ public final class SmpsSequencerConfig {
         public Builder extraTrkEndFlags(Set<Integer> val) { extraTrkEndFlags = val; return this; }
         public Builder relativePointers(boolean val) { relativePointers = val; return this; }
         public Builder tempoOnFirstTick(boolean val) { tempoOnFirstTick = val; return this; }
+        public Builder direct68kDriver(boolean val) { direct68kDriver = val; return this; }
         public Builder volMode(VolMode val) { volMode = val; return this; }
         public Builder psgEnvCmd80(PsgEnvCmd80 val) { psgEnvCmd80 = val; return this; }
         public Builder noteOnPrevent(NoteOnPrevent val) { noteOnPrevent = val; return this; }

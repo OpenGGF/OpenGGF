@@ -102,8 +102,10 @@ public final class S1AudioStateNormalizer {
         }
 
         boolean psg = role.startsWith("PSG");
-        int baseFrequency;
-        if (psg) {
+        Integer baseFrequency;
+        if (role.equals("DAC")) {
+            baseFrequency = null;
+        } else if (psg) {
             baseFrequency = unsignedWord(track.baseFnum(), "PSG baseFnum");
         } else {
             int block = range(track.baseBlock(), 0, 7, "FM baseBlock");
