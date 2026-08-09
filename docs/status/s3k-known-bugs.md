@@ -26,7 +26,8 @@ Entries should include:
 
 1. [AIZ Miniboss Napalm — FallingShot Route Integration (RESOLVED)](#aiz-miniboss-napalm--fallingshot-route-integration-resolved)
 2. [AIZ2 End-Boss Waterfall Splash — SST Lifecycle (RESOLVED)](#aiz2-end-boss-waterfall-splash--sst-lifecycle-resolved)
-3. [CNZ1 Miniboss Arena Entry — Music Play-In Missing](#cnz1-miniboss-arena-entry--music-play-in-missing)
+3. [Knuckles LBZ Big Arm — ROM Port (IMPLEMENTED; TRACE BOUNDARY OPEN)](#knuckles-lbz-big-arm--rom-port-implemented-trace-boundary-open)
+4. [CNZ1 Miniboss Arena Entry — Music Play-In Missing](#cnz1-miniboss-arena-entry--music-play-in-missing)
 2. [AIZ1 Trace F4679 — Sidekick Despawn Velocity & Position Semantic Gap (FIXED)](#aiz1-trace-f4679--sidekick-despawn-velocity--position-semantic-gap-fixed)
 3. [CNZ1 Trace F1685 — Tails CPU Spurious Despawn on Barber-Pole→Wire-Cage Object Switch (FIXED)](#cnz1-trace-f1685--tails-cpu-spurious-despawn-on-barber-polewire-cage-object-switch-fixed)
 4. [CNZ1 Trace F1740 — Wire Cage restoreObjectLatchIfTerrainClearedIt Overrode Slope-Repel Slip (FIXED)](#cnz1-trace-f1740--wire-cage-restoreobjectlatchifterrainclearedit-overrode-slope-repel-slip-fixed)
@@ -74,6 +75,20 @@ delete-marker row and exact object identity. Native complete-run rows provide
 comparison evidence; the Java complete-run replay remains blocked before
 gameplay at raw frame 6351 by strict hardware-timing schedule admission, so no
 full replay parity claim is made.
+
+---
+
+## Knuckles LBZ Big Arm — ROM Port (IMPLEMENTED; TRACE BOUNDARY OPEN)
+
+The shipped `FixBugs=0` `Obj_LBZFinalBoss2` route is implemented from ROM:
+fight and articulated collision ownership, grab/throw, eight-hit defeat,
+capsule/results two-signal gate, falling-floor escape, carrier/MHZ handoff,
+ROM-loaded assets, and the strict exact-ID rewind graph. Fresh reviewed evidence
+passes 7/7 production-route, 10/10 graph, 957/957 compatibility/rewind, and
+1,483/1,483 consolidated focused checks. The canonical comparison still stops
+before row 0 because raw frame 6314's VBlank-only `post_objects` hardware timing
+cannot be represented by the strict scheduler; full LBZ trace parity remains
+open independently of the bounded boss port.
 
 ---
 

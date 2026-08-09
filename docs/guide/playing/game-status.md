@@ -123,6 +123,11 @@ that the module can work.
 - The Knuckles AIZ miniboss FallingShot has ROM-backed production-route and
   exact rewind-identity coverage. This is bounded evidence and does not claim
   a complete 68-segment AIZ run-chain replay.
+- Knuckles' LBZ Big Arm route now covers the native fight, articulated arm,
+  grab/throw, defeat, capsule/results gate, falling-floor escape, and MHZ
+  handoff with ROM assets and exact-ID rewind. Its canonical replay remains
+  blocked before execution by the raw-frame-6314 timing-schedule limitation,
+  so full LBZ trace parity is not claimed.
 
 ### Notable quirks
 

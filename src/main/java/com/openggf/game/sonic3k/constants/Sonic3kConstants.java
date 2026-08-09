@@ -2049,6 +2049,13 @@ public class Sonic3kConstants {
     public static final int MAP_AIZ_END_BOSS_ADDR = 0x361FD6;
     // Map_RobotnikShip - Robotnik ship sprite mappings (13 frames, shared)
     public static final int MAP_ROBOTNIK_SHIP_ADDR = 0x06820C;
+    /** AniRaw_EggRoboHead / Map_EggRoboHead in the S&K-side shared ship block. */
+    public static final int ANI_RAW_ROBOTNIK_HEAD_ADDR = 0x0681CC;
+    public static final int ANI_RAW_EGG_ROBO_HEAD_ADDR = 0x0681D0;
+    public static final int MAP_EGG_ROBO_HEAD_ADDR = 0x0681D4;
+    public static final int MAP_EGG_ROBO_HEAD_SIZE = 0x28;
+    public static final int ART_KOSM_EGG_ROBO_HEAD_ADDR = 0x15FDDC;
+    public static final int ART_KOSM_EGG_ROBO_HEAD_SIZE = 0x1E2;
     // ArtTile_RobotnikShip - VRAM tile for shared Robotnik ship
     public static final int ART_TILE_ROBOTNIK_SHIP = 0x052E;
     // Map_LBZMinibossBox - LBZ1 carried yellow-box mappings.
@@ -2086,6 +2093,37 @@ public class Sonic3kConstants {
     public static final int MAP_LBZ_FINAL_BOSS_1_ADDR = 0x3645A8; // Map_LBZFinalBoss1 (46 frames)
     public static final int PAL_LBZ_FINAL_BOSS_1_ADDR = 0x073886;
     public static final int ART_TILE_LBZ_FINAL_BOSS_1 = 0x03AA;
+    // Obj_LBZFinalBoss2 code is in the S&K half but directly references these
+    // locked-on S3-half art/motion labels. The inline behavior tables remain
+    // S&K-side addresses alongside the object routine.
+    public static final int ART_KOSM_LBZ_FINAL_BOSS_2_ADDR = 0x376874;
+    public static final int ART_KOSM_LBZ_FINAL_BOSS_2_SIZE = 0x1122;
+    public static final int MAP_LBZ_FINAL_BOSS_2_ADDR = 0x364A96;
+    public static final int MAP_LBZ_FINAL_BOSS_2_SIZE = 0x15C;
+    public static final int PAL_LBZ_FINAL_BOSS_2_ADDR = 0x0751AA;
+    public static final int ART_TILE_LBZ_FINAL_BOSS_2 = 0x03D9;
+    public static final int LBZ_FINAL_BOSS_2_CIRCLE_TABLE_ADDR = 0x360B08;
+    public static final int LBZ_FINAL_BOSS_2_CIRCLE_TABLE_2_ADDR = 0x3629A0;
+    public static final int LBZ_FINAL_BOSS_2_MOTION_TABLE_ADDR = 0x074F72;
+    public static final int LBZ_FINAL_BOSS_2_MOTION_TABLE_2_ADDR = 0x074F7A;
+    public static final int LBZ_FINAL_BOSS_2_ESCAPE_POSITIONS_ADDR = 0x074E7C;
+    public static final int LBZ_FINAL_BOSS_2_FLASH_OFFSETS_ADDR = 0x075092;
+    public static final int LBZ_FINAL_BOSS_2_FLASH_WORDS_ADDR = 0x07509E;
+    public static final int LBZ_FINAL_BOSS_2_SEGMENT_ANIM_ADDR = 0x075194;
+    public static final int LBZ_FINAL_BOSS_2_SEGMENT_ANIM_2_ADDR = 0x07519C;
+    public static final int LBZ_FINAL_BOSS_2_INITIAL_CHILD_TABLE_ADDR = 0x075122;
+    public static final int LBZ_FINAL_BOSS_2_LANDING_CHILD_TABLE_ADDR = 0x07513C;
+    public static final int LBZ_FINAL_BOSS_2_ARM_CHILD_TABLE_ADDR = 0x075144;
+    public static final int LBZ_FINAL_BOSS_2_DEBRIS_CHILD_TABLE_ADDR = 0x07515E;
+    public static final int LBZ_FINAL_BOSS_2_FLOOR_CHILD_TABLE_ADDR = 0x07517E;
+    public static final int LBZ_FINAL_BOSS_2_FOLLOW_CHILD_TABLE_ADDR = 0x075186;
+    public static final int LBZ_FINAL_BOSS_2_EMITTER_CHILD_TABLE_ADDR = 0x07518E;
+    public static final int ANI_RAW_BOSS_EXPLOSION_ADDR = 0x083FCC;
+    public static final int SCREEN_SHAKE_ARRAY_ADDR = 0x04F424;
+    public static final int BOSS_EXPLOSION_HITBOX_CHILD_TABLE_ADDR = 0x0690D8;
+    /** First word of {@code word_72FEA}; copied to {@code _unkFAB0} on Knuckles' LBZ route. */
+    public static final int LBZ_FINAL_BOSS_KNUX_BOUNDS_ADDR = 0x072FEA;
+    public static final int OBJECT_VELOCITY_INDEX_ADDR = 0x0852F4;
     // ArtKosM_LBZ2DeathEggSmall - ending/launch miniature Death Egg art (82 tiles).
     public static final int ART_KOSM_LBZ2_DEATH_EGG_SMALL_ADDR = 0x37921C;
     public static final int ART_KOSM_LBZ2_DEATH_EGG_SMALL_SIZE = 2624;

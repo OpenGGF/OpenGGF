@@ -7,6 +7,8 @@ import com.openggf.game.GameStateManager;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.RuntimeArtCoordinator;
+import com.openggf.game.DynamicWaterHandler;
+import com.openggf.game.WaterDataProvider;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -22,6 +24,8 @@ import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ResultsHardwareTimingFixture;
 import com.openggf.level.objects.StubObjectServices;
+import com.openggf.level.Palette;
+import com.openggf.level.WaterSystem;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.TestablePlayableSprite;
@@ -407,6 +411,18 @@ class TestLbzFinalBoss1Instance {
     }
 
     @Test
+    void knucklesWrapperInitializationClearsStaleLbz2DynamicWaterLock() {
+        HarnessServices services = new HarnessServices(PlayerCharacter.KNUCKLES);
+        services.water.setDynamicWaterLocked(Sonic3kZoneIds.ZONE_LBZ, 1, true);
+        LbzFinalBoss1Instance boss = newBoss(services);
+
+        boss.update(0, null);
+
+        assertFalse(services.water.isDynamicWaterLocked(Sonic3kZoneIds.ZONE_LBZ, 1),
+                "Obj_LBZFinalBoss1 owns the _unkFAA2 clear before handing off to object $CC");
+    }
+
+    @Test
     void resultsCompletionRestoresMusicAndLaunchMilestonesExposeState() {
         HarnessServices services = new HarnessServices(PlayerCharacter.SONIC_AND_TAILS);
         LbzFinalBoss1Instance boss = newBoss(services);
@@ -711,6 +727,7 @@ class TestLbzFinalBoss1Instance {
         private final Camera camera = new Camera();
         private final LbzZoneRuntimeState lbzState;
         private final GameStateManager gameState = new GameStateManager();
+        private final WaterSystem water = new WaterSystem();
         private final List<Integer> musicIds = new ArrayList<>();
         private final List<Integer> sfxIds = new ArrayList<>();
         private final List<PlayableEntity> sidekicks = new ArrayList<>();
@@ -720,6 +737,8 @@ class TestLbzFinalBoss1Instance {
 
         private HarnessServices(PlayerCharacter character) {
             lbzState = new LbzZoneRuntimeState(1, character);
+            water.loadForLevelFromProvider(new StaticWaterProvider(), null,
+                    Sonic3kZoneIds.ZONE_LBZ, 1, character);
             camera.setX((short) 0x4400);
             camera.setY((short) 0x0600);
         }
@@ -776,6 +795,11 @@ class TestLbzFinalBoss1Instance {
         }
 
         @Override
+        public WaterSystem waterSystem() {
+            return water;
+        }
+
+        @Override
         public RuntimeArtCoordinator runtimeArtCoordinator() {
             return TestEnvironment.activeGameplayMode().runtimeArtCoordinator();
         }
@@ -802,5 +826,14 @@ class TestLbzFinalBoss1Instance {
             assertTrue(deactivateLevelNow);
             transitionRequested = true;
         }
+    }
+
+    private static final class StaticWaterProvider implements WaterDataProvider {
+        @Override public boolean hasWater(int zoneId, int actId, PlayerCharacter character) { return true; }
+        @Override public int getStartingWaterLevel(int zoneId, int actId) { return 0x0640; }
+        @Override public Palette[] getUnderwaterPalette(
+                Rom rom, int zoneId, int actId, PlayerCharacter character) { return null; }
+        @Override public DynamicWaterHandler getDynamicHandler(
+                int zoneId, int actId, PlayerCharacter character) { return null; }
     }
 }

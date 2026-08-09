@@ -57,6 +57,27 @@ public final class S3kTransitionWriteSupport {
         }
     }
 
+    public static void prepareLbzBigArmFloorTransition(ObjectServices services) {
+        Object provider = services.levelEventProvider();
+        if (provider instanceof S3kTransitionEventBridge bridge) {
+            bridge.prepareLbzBigArmFloorTransition();
+        }
+    }
+
+    public static void loadLbzBigArmPostGatePlc(ObjectServices services) {
+        Object provider = services.levelEventProvider();
+        if (provider instanceof S3kTransitionEventBridge bridge) {
+            bridge.loadLbzBigArmPostGatePlc();
+        }
+    }
+
+    public static void startLbzBigArmTimedShake(ObjectServices services, int frames) {
+        Object provider = services.levelEventProvider();
+        if (provider instanceof S3kTransitionEventBridge bridge) {
+            bridge.startLbzBigArmTimedShake(frames);
+        }
+    }
+
     public static void requestMgzPostTransitionRelease(LevelEventProvider provider) {
         if (provider instanceof S3kTransitionEventBridge bridge) {
             bridge.requestMgzPostTransitionRelease();

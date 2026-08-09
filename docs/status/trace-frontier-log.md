@@ -55380,3 +55380,19 @@ mvn -q "-Dmse=off" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.trace.s3k.
   retained marker at frame 23856. Production and rewind tests now preserve
   that lifecycle. Full evidence is in
   `docs/architecture/validation/2026-08-09-aiz2-end-boss-splash-evidence.md`.
+
+## 2026-08-09 — Knuckles LBZ2 Big Arm route evidence remains timing-schedule blocked
+
+- Context: reviewed `feature/ai-lbz-big-arm-evidence` commit `f5016292` using
+  the canonical locked-on S3K ROM on Maven JDK 21.
+- Added `TestS3kKnucklesLbz2BigArmTraceReplay` for schema-v5 run
+  `s3k-knuckles-complete-superemeralds/lbz_2` (6,444 rows), using the ordinary
+  comparison path with no hydration or tolerance change.
+- Result: one test error before row 0. The strict schedule compiler cannot
+  represent raw frame 6314's `KOS_MODULE_QUEUE` ordinal 421 `post_objects`
+  completion on a `VBLANK_ONLY` row (`unsupported-held-row-POST`). All 6,444
+  comparison rows remain unexecuted, so no full-LBZ parity claim is made.
+- The committed aux recording reaches Big Arm, while fresh production evidence
+  passes 7/7 route, 10/10 graph, 1,483/1,483 consolidated focused/rewind, and
+  957/957 compatibility/route/graph/rewind checks. The live pressure route
+  observed all 127 qualified emitter attempts and 125 successful children.

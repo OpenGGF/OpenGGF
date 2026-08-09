@@ -463,6 +463,29 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossWaterColumn", "extensionGrabbed"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeImpactExplosion", "boss"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleButton", "parent"), RewindFieldPolicy.CAPTURED),
+            // LBZ Big Arm is a native multi-slot graph. These fields must use
+            // ObjectRefId capture; geometric/nearest reconstruction is
+            // ambiguous for the two arm segments and the later explosion set.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss2Instance", "armController"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss2Instance", "capsuleChild"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss2Instance", "escapeFlame"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss2Instance", "escapeFloor"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss2Instance", "defeatExplosionController"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss2Instance", "children"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss2Instance", "graphChildren"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss2Instance", "childOrder"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss2Instance", "childOrdinals"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss2Instance$BossChild", "boss"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss2Instance$ArmSegmentChild", "controller"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss2Instance$ArmKinematicJointChild", "controller"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss2Instance$GrabOwnerChild", "controller"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss2Instance$GrabOwnerChild", "grabbedPlayer"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss2Instance$EscapeFloorChild", "explosions"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss2Instance$EscapeFloorChild", "emitters"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss2Instance$EscapeFloorExplosionChild", "floor"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss2Instance$EscapeExplosionEmitterChild", "floor"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss2Instance$EscapeExplosionEmitterChild", "explosionController"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss2Instance$BigArmExplosionControllerChild", "emitterParent"), RewindFieldPolicy.CAPTURED),
             // Fixed 2-slot rider array whose RiderState holds a live player reference plus the
             // cross-frame twist angle / horizontal-swing distance. A final array of a
             // reference-bearing plain state holder is not auto-captured by the scalar policy

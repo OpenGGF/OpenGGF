@@ -324,6 +324,13 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
             return;
         }
         initialized = true;
+        if (currentPlayerCharacter() == PlayerCharacter.KNUCKLES
+                && services().waterSystem() != null) {
+            // Obj_LBZFinalBoss1 is the route wrapper that precedes Big Arm;
+            // its Knuckles entry clears the retained ROM _unkFAA2 latch.
+            services().waterSystem().setDynamicWaterLocked(
+                    Sonic3kZoneIds.ZONE_LBZ, 1, false);
+        }
         collisionFlags = COLLISION_FLAGS;
         collisionBackup = COLLISION_FLAGS;
         hp = INITIAL_HP;

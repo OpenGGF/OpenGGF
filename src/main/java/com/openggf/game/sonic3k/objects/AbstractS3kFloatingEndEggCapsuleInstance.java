@@ -195,7 +195,10 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
             if (buttonTriggered) {
                 openCapsule();
             }
-            updateSwingAndMove();
+            // The routine-$08 opening entry changes the callback to LBZ's
+            // table-selected $10, then falls through only the shared
+            // Swing_UpAndDown/MoveSprite2 tail. loc_866F4 starts next entry.
+            updateSwingAndMove(false);
             if (!opened) {
                 // ROM loc_86770 is a separate button child: Refresh_ChildPosition,
                 // sub_86A54, then Check_PlayerInRange/y_vel. Run the collapsed
@@ -220,7 +223,7 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
                     && shouldStartResults(player)) {
                 startResults(player);
             }
-            updateSwingAndMove();
+            updateSwingAndMove(true);
             checkpointAll();
         } else if (resultsStarted && !releaseTriggered) {
             onResultsActiveWait();
@@ -229,10 +232,10 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
                 onEndingPoseLockClear();
                 onResultsComplete();
             }
-            updateSwingAndMove();
+            updateSwingAndMove(true);
             checkpointAll();
         } else {
-            updateSwingAndMove();
+            updateSwingAndMove(true);
             checkpointAll();
         }
     }
@@ -282,9 +285,34 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
         return Y_TARGET_OFFSET;
     }
 
-    private void updateSwingAndMove() {
+    private void updateSwingAndMove(boolean postOpenRouteEntry) {
         updateSwingVelocity();
-        addYLongword(yVelocity << 8);
+        if (!opened || !postOpenRouteEntry || applyPostOpenRouteMovement()) {
+            addYLongword(yVelocity << 8);
+        }
+    }
+
+    /**
+     * Route-specific work performed after {@code Swing_UpAndDown} on each
+     * opened-capsule entry and immediately before the ordinary
+     * {@code MoveSprite2} Y step.
+     *
+     * <p>The shared routes return {@code true}. A route may return
+     * {@code false} only when its native branch replaces that entry's movement;
+     * the swing velocity has already advanced.</p>
+     */
+    protected boolean applyPostOpenRouteMovement() {
+        return true;
+    }
+
+    /** Native capsule {@code x_pos}; exposed for a route-owned movement hook. */
+    protected final int capsuleX() {
+        return currentX & 0xFFFF;
+    }
+
+    /** Native capsule {@code x_pos}; preserves word-width writes. */
+    protected final void setCapsuleX(int x) {
+        currentX = x & 0xFFFF;
     }
 
     private void updateSwingVelocity() {

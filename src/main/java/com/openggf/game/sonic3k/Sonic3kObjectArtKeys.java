@@ -64,10 +64,14 @@ public final class Sonic3kObjectArtKeys {
     // AIZ End Boss (Object 0x92)
     public static final String AIZ_END_BOSS = "aiz_end_boss";
     public static final String ROBOTNIK_SHIP = "robotnik_ship";
+    /** Knuckles-only head selected by Obj_RobotnikHead4. */
+    public static final String EGG_ROBO_HEAD = "egg_robo_head";
     public static final String LBZ_MINIBOSS = "lbz_miniboss";
     public static final String LBZ_MINIBOSS_BOX = "lbz_miniboss_box";
     public static final String LBZ_END_BOSS = "lbz_end_boss";
     public static final String LBZ_FINAL_BOSS_1 = "lbz_final_boss_1";
+    /** Obj_LBZFinalBoss2 / Big Arm body and articulated hand sheet. */
+    public static final String LBZ_FINAL_BOSS_2 = "lbz_final_boss_2";
     public static final String LBZ2_DEATH_EGG_SMALL = "lbz2_death_egg_small";
     public static final String LBZ_KNUX_PILLAR = "lbz_knux_pillar";
     public static final String FBZ_ROBOTNIK_RUN = "fbz_robotnik_run";

@@ -254,6 +254,11 @@ public class AizMinibossFlameBarrelChild extends AbstractBossChild implements Re
         this.positionCounter = value & 0xFF;
     }
 
+    /** ROM render_flags(a1) read by AIZMiniboss_SetShotPosition. */
+    boolean isFacingFlipped() {
+        return parent != null && (parent.getState().renderFlags & 1) != 0;
+    }
+
     private boolean isActivatedByParent() {
         return (parent.getCustomFlag(FLAG_PARENT_BITS) & PARENT_BIT_BARREL_ACTIVATE) != 0;
     }

@@ -12,6 +12,25 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestLbzLaunchRuntimeState {
 
     @Test
+    void timedShakeCountdownPreparedAndAppliedOffsetsRoundTrip() {
+        LbzZoneRuntimeState source = new LbzZoneRuntimeState(
+                1, PlayerCharacter.KNUCKLES);
+        source.startTimedScreenShake(20);
+        source.applyTimedScreenShakeForeground();
+        source.prepareTimedScreenShakeBackground(true, -5);
+        source.applyTimedScreenShakeForeground();
+
+        LbzZoneRuntimeState restored = new LbzZoneRuntimeState(
+                1, PlayerCharacter.KNUCKLES);
+        restored.restoreBytes(source.captureBytes());
+
+        assertEquals(19, restored.getTimedShakeCountdown());
+        assertEquals(-5, restored.getTimedShakePreparedOffset());
+        assertEquals(-5, restored.getTimedShakeAppliedOffset());
+        assertEquals(0x05FB, restored.getCameraYCopy(0x0600));
+    }
+
+    @Test
     void seamlessActReloadRetainsLevelLoopOscillationTail() {
         LbzZoneRuntimeState state =
                 new LbzZoneRuntimeState(0, PlayerCharacter.SONIC_ALONE);

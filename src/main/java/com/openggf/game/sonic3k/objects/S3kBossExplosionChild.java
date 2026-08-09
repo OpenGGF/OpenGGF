@@ -1,35 +1,40 @@
 package com.openggf.game.sonic3k.objects;
 
-import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.data.Rom;
+import com.openggf.data.RomByteReader;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
-import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.io.IOException;
 import java.util.List;
 
 /**
  * S3K boss explosion child (ROM: Obj_BossExplosion1/2).
- * The spawning controller plays sfx_Explode (0xB4); this child animates through
- * AniRaw_BossExplosion.
+ * Established callers retain their existing audio choice. Big Arm uses the
+ * native-init factory because Obj_BossExplosion1 owns sfx_Explode (0xB4) on
+ * the child's first own entry.
  *
- * ROM animation format: Animate_RawMultiDelay — (mapping frame, delay) pairs.
+ * ROM animation format: Animate_RawNoSSTMultiDelay — (delay, frame) pairs.
  * AniRaw_BossExplosion (sonic3k.asm:176871):
  *   dc.b 0,0, 0,1, 1,1, 2,2, 3,3, 4,4, 5,4, $F4
  * $F4 = end (calls Go_Delete_Sprite via $34 callback).
  */
 public class S3kBossExplosionChild extends AbstractObjectInstance implements SpawnCoordinateRewindRecreatable {
-    // The leading 0,0 pair is skipped by Animate_RawMultiDelay's initial +2.
-    private static final int[] FRAMES = {0, 1, 2, 3, 4, 5};
-    private static final int[] DELAYS = {1, 1, 2, 3, 4, 4};
-
-    private int rawIndex;
+    private int rawCursor;
     private int mappingFrame;
-    private int animationFrameTimer;
+    private int rawTimer;
+    private boolean nativeInitSfx;
+    private boolean nativeInitSfxPlayed;
+    private boolean pendingDelete;
+    private transient Rom rawRom;
+    private transient RomByteReader rawReader;
 
     S3kBossExplosionChild() {
         this(0, 0);
@@ -37,23 +42,73 @@ public class S3kBossExplosionChild extends AbstractObjectInstance implements Spa
 
     public S3kBossExplosionChild(int x, int y) {
         super(new ObjectSpawn(x, y, 0, 0, 0, false, 0), "S3kBossExplosion");
-        this.rawIndex = 0;
-        this.mappingFrame = 0;
-        this.animationFrameTimer = 0;
+    }
+
+    public static S3kBossExplosionChild createWithNativeInitSfx(int x, int y) {
+        S3kBossExplosionChild child = new S3kBossExplosionChild(x, y);
+        child.nativeInitSfx = true;
+        return child;
+    }
+
+    /** Native word-position writes performed after CreateChild6_Simple succeeds. */
+    public void writeNativePositionWords(int x, int y) {
+        updateDynamicSpawn(x & 0xFFFF, y & 0xFFFF);
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        // SFX is played by the controller (sub_52850), not each child
-        if (--animationFrameTimer >= 0) return;
-        if (rawIndex >= FRAMES.length) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        if (pendingDelete) {
             setDestroyed(true);
             return;
         }
-        mappingFrame = FRAMES[rawIndex];
-        animationFrameTimer = DELAYS[rawIndex];
-        rawIndex++;
+        if (nativeInitSfx && !nativeInitSfxPlayed) {
+            nativeInitSfxPlayed = true;
+            services().playSfx(Sonic3kSfx.EXPLODE.id);
+        }
+        rawTimer = (rawTimer - 1) & 0xFF;
+        if ((byte) rawTimer >= 0) {
+            return;
+        }
+        rawCursor = (rawCursor + 2) & 0xFF;
+        int value = rawByte(rawCursor);
+        if ((byte) value < 0) {
+            // $F4 selects Go_Delete_Sprite through the native raw callback.
+            rawCursor = 0;
+            rawTimer = 0;
+            pendingDelete = true;
+            return;
+        }
+        mappingFrame = value;
+        rawTimer = rawByte(rawCursor + 1);
+    }
+
+    private int rawByte(int offset) {
+        if (rawRom == null) {
+            try {
+                rawRom = services().rom();
+            } catch (IOException ignored) {
+                // Unit harnesses may expose only the immutable ROM reader.
+            }
+        }
+        if (rawRom != null) {
+            try {
+                return Byte.toUnsignedInt(rawRom.readByte(
+                        Sonic3kConstants.ANI_RAW_BOSS_EXPLOSION_ADDR + offset));
+            } catch (IOException ex) {
+                throw new IllegalStateException("Boss explosion requires the verified S3K ROM", ex);
+            }
+        }
+        if (rawReader == null) {
+            try {
+                rawReader = services().romReader();
+            } catch (IOException ex) {
+                throw new IllegalStateException("Boss explosion requires the verified S3K ROM", ex);
+            }
+            if (rawReader == null) {
+                throw new IllegalStateException("Boss explosion requires the verified S3K ROM");
+            }
+        }
+        return rawReader.readU8(Sonic3kConstants.ANI_RAW_BOSS_EXPLOSION_ADDR + offset);
     }
 
     @Override
@@ -64,10 +119,8 @@ public class S3kBossExplosionChild extends AbstractObjectInstance implements Spa
         // ROM: Obj_BossExplosion1/2 share Map_BossExplosion and AniRaw_BossExplosion.
         PatternSpriteRenderer renderer = rm.getBossExplosionRenderer();
         if (renderer == null || !renderer.isReady()) return;
-        renderer.drawFrameIndex(mappingFrame, spawn.x(), spawn.y(), false, false);
+        renderer.drawFrameIndex(mappingFrame, getX(), getY(), false, false);
     }
-
-    int mappingFrameForTest() { return mappingFrame; }
 
     @Override
     public boolean isHighPriority() {
@@ -81,4 +134,11 @@ public class S3kBossExplosionChild extends AbstractObjectInstance implements Spa
         // ROM: ObjDat_BossExplosion dc.w 0 → sprite_priority $0000 → bucket 0
         return 0;
     }
+
+    public int rawCursorForTest() { return rawCursor; }
+    public int mappingFrameForTest() { return mappingFrame; }
+    public int rawTimerForTest() { return rawTimer; }
+    public boolean nativeInitSfxForTest() { return nativeInitSfx; }
+    public boolean nativeInitSfxPlayedForTest() { return nativeInitSfxPlayed; }
+    public boolean pendingDeleteForTest() { return pendingDelete; }
 }

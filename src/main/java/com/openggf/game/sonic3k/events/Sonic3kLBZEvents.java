@@ -158,9 +158,16 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
     private int postTitleAct2TargetMinY;
     private int postTitleAct2TargetMaxY;
     private boolean postTitleAct2WorkersCreatedThisPass;
+    private boolean postTitleAct2BigArmCreationEntriesSeeded;
     private int act2MaxXAccumulator;
     private int act2MinYAccumulator;
     private int act2MaxYAccumulator;
+    private boolean act2MaxXWorkerActive;
+    private boolean act2MinYWorkerActive;
+    private boolean act2MaxYWorkerActive;
+    private boolean act2MaxXWorkerCompleted;
+    private boolean act2MinYWorkerCompleted;
+    private boolean act2MaxYWorkerCompleted;
     private final PatternDesc lbz2CopiedWindowPatternDesc = new PatternDesc();
     private final int[] endingCollapseFixed = new int[ENDING_COLLAPSE_COLUMN_COUNT];
     private final int[] endingCollapseScroll = new int[ENDING_COLLAPSE_COLUMN_COUNT];
@@ -218,9 +225,16 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         postTitleAct2TargetMinY = 0;
         postTitleAct2TargetMaxY = 0;
         postTitleAct2WorkersCreatedThisPass = false;
+        postTitleAct2BigArmCreationEntriesSeeded = false;
         act2MaxXAccumulator = 0;
         act2MinYAccumulator = 0;
         act2MaxYAccumulator = 0;
+        act2MaxXWorkerActive = false;
+        act2MinYWorkerActive = false;
+        act2MaxYWorkerActive = false;
+        act2MaxXWorkerCompleted = false;
+        act2MinYWorkerCompleted = false;
+        act2MaxYWorkerCompleted = false;
         clearTransitionKosOwnership();
     }
 
@@ -230,9 +244,18 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
             return;
         }
         if (act != 0) {
+            LbzZoneRuntimeState state = currentLbzRuntimeState().orElse(null);
+            if (state != null) {
+                // LBZ2_ScreenEvent consumes the previously prepared offset
+                // into Camera_Y_pos_copy before its BG event runs.
+                state.applyTimedScreenShakeForeground();
+            }
             updateAct2EntryLayout();
             updateAct2DeathEggTerrainSwap();
             updateAct2Launch(frameCounter);
+            if (state != null) {
+                prepareTimedScreenShake(state, camera().getFocusedSprite());
+            }
             return;
         }
         applyRestartFromBossAreaInitIfNeeded();
@@ -279,22 +302,93 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
      * retain the three gradual boundary workers created by the ending sign.
      */
     public void preparePostTitleAct2SizeChange() {
-        if (activeAct != 1 || postTitleAct2SizeChangeActive) {
+        if (activeAct != 1) {
             return;
         }
         Level level = levelManager().getCurrentLevel();
         if (level == null) {
             return;
         }
-        postTitleAct2TargetMaxX = level.getMaxX();
-        postTitleAct2TargetMinY = level.getMinY();
-        postTitleAct2TargetMaxY = level.getMaxY();
+        prepareAct2SizeChange(level.getMaxX(), level.getMinY(), level.getMaxY());
+    }
+
+    /** Native Big Arm {@code loc_74DA4}: literal stored targets, not current bounds. */
+    public void prepareBigArmFloorTransition() {
+        if (activeAct == 1) {
+            boolean alreadyActive = postTitleAct2SizeChangeActive;
+            prepareAct2SizeChange(0x6000, 0, 0x1000);
+            if (!alreadyActive && postTitleAct2SizeChangeActive) {
+                // Child1_Act2LevelSize occupies later SST slots, so all three
+                // creation entries run after the settling floor in this pass.
+                // Their zero high words make these entries accumulator-only;
+                // the first visible integer deltas belong to later entries.
+                act2MaxXAccumulator += 0x4000;
+                act2MinYAccumulator += 0x4000;
+                act2MaxYAccumulator += 0x8000;
+                postTitleAct2BigArmCreationEntriesSeeded = true;
+            }
+        }
+    }
+
+    private void prepareAct2SizeChange(int targetMaxX, int targetMinY, int targetMaxY) {
+        if (postTitleAct2SizeChangeActive) {
+            return;
+        }
+        postTitleAct2TargetMaxX = targetMaxX;
+        postTitleAct2TargetMinY = targetMinY;
+        postTitleAct2TargetMaxY = targetMaxY;
         postTitleAct2SizeChangeActive = true;
         postTitleAct2WorkersCreatedThisPass = true;
+        postTitleAct2BigArmCreationEntriesSeeded = false;
         act2MaxXAccumulator = 0;
         act2MinYAccumulator = 0;
         act2MaxYAccumulator = 0;
+        act2MaxXWorkerActive = true;
+        act2MinYWorkerActive = true;
+        act2MaxYWorkerActive = true;
+        act2MaxXWorkerCompleted = false;
+        act2MinYWorkerCompleted = false;
+        act2MaxYWorkerCompleted = false;
         camera().setMaxYTarget((short) postTitleAct2TargetMaxY);
+    }
+
+    /** Native {@code Load_PLC $71} at Big Arm's autowalk target. */
+    public void loadBigArmPostGatePlc() {
+        if (activeAct == 1) {
+            applyPlc(Sonic3kConstants.PLC_LBZ2_FINAL_BOSS_1);
+        }
+    }
+
+    public void startBigArmTimedShake(int frames) {
+        if (activeAct == 1) {
+            currentLbzRuntimeState().ifPresent(state -> state.startTimedScreenShake(frames));
+        }
+    }
+
+    private void prepareTimedScreenShake(
+            LbzZoneRuntimeState state, AbstractPlayableSprite player) {
+        boolean eligible = player != null && nativePlayerRoutine(player) < 6;
+        int offset = 0;
+        if (eligible && state.getTimedShakeCountdown() > 0) {
+            int index = state.getTimedShakeCountdown() - 1;
+            try {
+                offset = rom().readByte(Sonic3kConstants.SCREEN_SHAKE_ARRAY_ADDR + index);
+            } catch (IOException ex) {
+                throw new IllegalStateException(
+                        "Unable to read ScreenShakeArray from the verified S3K ROM", ex);
+            }
+        }
+        state.prepareTimedScreenShakeBackground(eligible, offset);
+    }
+
+    private static int nativePlayerRoutine(AbstractPlayableSprite player) {
+        if (player.getObjectRoutineOverride() != null) {
+            return player.getObjectRoutineOverride() & 0xFF;
+        }
+        if (player.getDead()) {
+            return 6;
+        }
+        return player.isHurt() ? 4 : 2;
     }
 
     /** Runs the retained {@code Child1_Act2LevelSize} slots before the camera step. */
@@ -304,12 +398,60 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         }
         if (postTitleAct2WorkersCreatedThisPass) {
             postTitleAct2WorkersCreatedThisPass = false;
-            return;
+            if (!postTitleAct2BigArmCreationEntriesSeeded) {
+                // Generic Change_Act2Sizes creates the later SST workers after
+                // ScreenEvents, so its next centralized call is marker-only.
+                return;
+            }
+            // Big Arm already ran those creation entries in its later object
+            // slots; this call must therefore execute their second entries.
+            postTitleAct2BigArmCreationEntriesSeeded = false;
         }
-        boolean maxXDone = updateGradualMaxX();
-        boolean minYDone = updateGradualMinY();
-        boolean maxYDone = updateGradualMaxY();
-        postTitleAct2SizeChangeActive = !(maxXDone && minYDone && maxYDone);
+        updatePostTitleAct2WorkerEntries();
+    }
+
+    private void updatePostTitleAct2WorkerEntries() {
+        if (act2MaxXWorkerActive && updateGradualMaxX()) {
+            act2MaxXWorkerActive = false;
+            act2MaxXWorkerCompleted = true;
+        }
+        if (act2MinYWorkerActive && updateGradualMinY()) {
+            act2MinYWorkerActive = false;
+            act2MinYWorkerCompleted = true;
+        }
+        if (act2MaxYWorkerActive && updateGradualMaxY()) {
+            act2MaxYWorkerActive = false;
+            act2MaxYWorkerCompleted = true;
+        }
+        postTitleAct2SizeChangeActive = act2MaxXWorkerActive
+                || act2MinYWorkerActive || act2MaxYWorkerActive;
+    }
+
+    public boolean isPostTitleAct2SizeChangeActiveForTest() {
+        return postTitleAct2SizeChangeActive;
+    }
+
+    public boolean werePostTitleAct2WorkersCreatedThisPassForTest() {
+        return postTitleAct2WorkersCreatedThisPass;
+    }
+
+    public int[] postTitleAct2TargetsForTest() {
+        return new int[]{
+                postTitleAct2TargetMaxX,
+                postTitleAct2TargetMinY,
+                postTitleAct2TargetMaxY
+        };
+    }
+
+    public int[] postTitleAct2WorkerAccumulatorsForTest() {
+        return new int[]{act2MaxXAccumulator, act2MinYAccumulator, act2MaxYAccumulator};
+    }
+
+    public boolean[] postTitleAct2WorkerPhasesForTest() {
+        return new boolean[]{
+                act2MaxXWorkerActive, act2MinYWorkerActive, act2MaxYWorkerActive,
+                act2MaxXWorkerCompleted, act2MinYWorkerCompleted, act2MaxYWorkerCompleted
+        };
     }
 
     private boolean updateGradualMaxX() {

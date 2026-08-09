@@ -55,6 +55,12 @@ public class SongFadeTransitionInstance extends AbstractObjectInstance implement
     /** Whether initialization must wait until the object pass after allocation. */
     private boolean deferSameFrameUpdateAfterSpawn;
 
+    /** Isolated Obj_Song_Fade_ToLevelMusic pre-decrement contract used by Big Arm. */
+    private boolean nativeLevelMusicFade;
+
+    /** Native $2E value; starts at 120 and is pre-decremented on every own entry. */
+    private int nativeRemaining;
+
     /**
      * @param nativeWaitWord native signed 16-bit wait word; N completes on update N+1
      * @param musicId        music ID to play when the wait word underflows
@@ -63,8 +69,15 @@ public class SongFadeTransitionInstance extends AbstractObjectInstance implement
         this(nativeWaitWord, musicId, false);
     }
 
-    SongFadeTransitionInstance(int nativeWaitWord, int musicId, boolean deferCountdownOnFadeStart) {
-        this(nativeWaitWord, musicId, deferCountdownOnFadeStart, false);
+    public static SongFadeTransitionInstance createNativeLevelMusicFade(int musicId) {
+        SongFadeTransitionInstance transition = new SongFadeTransitionInstance(2 * 60, musicId);
+        transition.nativeLevelMusicFade = true;
+        transition.nativeRemaining = 2 * 60;
+        return transition;
+    }
+
+    SongFadeTransitionInstance(int delayFrames, int musicId, boolean deferCountdownOnFadeStart) {
+        this(delayFrames, musicId, deferCountdownOnFadeStart, false);
     }
 
     SongFadeTransitionInstance(int nativeWaitWord, int musicId,
@@ -131,7 +144,19 @@ public class SongFadeTransitionInstance extends AbstractObjectInstance implement
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        if (nativeLevelMusicFade) {
+            if (!fadeStarted) {
+                services().audioManager().fadeOutMusic(0x28, 6);
+                fadeStarted = true;
+            }
+            nativeRemaining--;
+            if (nativeRemaining < 0) {
+                services().playMusic(musicId);
+                setDestroyed(true);
+            }
+            return;
+        }
         if (!fadeStarted) {
             services().audioManager().fadeOutMusic(0x28, 6);
             fadeStarted = true;

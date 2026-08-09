@@ -1755,6 +1755,29 @@ public final class Sonic3kPlcArtRegistry {
                     -1,
                     46
             ));
+            // Obj_LBZFinalBoss2 queues this S3-half KosM stream at native init.
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.LBZ_FINAL_BOSS_2,
+                    Sonic3kConstants.ART_KOSM_LBZ_FINAL_BOSS_2_ADDR,
+                    CompressionType.KOSINSKI_MODULED,
+                    Sonic3kConstants.ART_KOSM_LBZ_FINAL_BOSS_2_SIZE,
+                    Sonic3kConstants.MAP_LBZ_FINAL_BOSS_2_ADDR,
+                    1,
+                    -1,
+                    18
+            ));
+            // Obj_RobotnikHead4 selects this mapping/art for Knuckles and
+            // queues it over ArtTile_RobotnikShip.
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.EGG_ROBO_HEAD,
+                    Sonic3kConstants.ART_KOSM_EGG_ROBO_HEAD_ADDR,
+                    CompressionType.KOSINSKI_MODULED,
+                    Sonic3kConstants.ART_KOSM_EGG_ROBO_HEAD_SIZE,
+                    Sonic3kConstants.MAP_EGG_ROBO_HEAD_ADDR,
+                    0,
+                    -1,
+                    4
+            ));
             // Death Egg launch miniature art uses Pal_LBZEnding on palette line 1.
             standalone.add(new StandaloneArtEntry(
                     Sonic3kObjectArtKeys.LBZ2_DEATH_EGG_SMALL,

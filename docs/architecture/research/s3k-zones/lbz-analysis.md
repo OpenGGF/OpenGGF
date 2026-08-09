@@ -248,7 +248,7 @@ Confidence: HIGH.
 | `Obj_LBZ2RobotnikShip` | Implemented by `Lbz2RobotnikShipInstance`; owns player grab, camera opening, launch signal, persistent animated-tile gate, exhaust child, and rider delta consumption. | BLOCKER |
 | `Obj_LBZEndBoss` | Implemented by `LbzEndBossInstance`, including art/palette loading, child platforms, spike balls, and defeat flow. | HIGH |
 | `Obj_LBZFinalBoss1` | Implemented by `LbzFinalBoss1Instance`; includes ship, turret, laser children, Death Egg small art, ending palette hooks, explosion/debris children, and Tails/P2 helpers. | BLOCKER |
-| `Obj_LBZFinalBossKnux` / `Obj_LBZFinalBoss2` | Knuckles path is present, but Big Arm/final-boss-2 behavior remains an area to verify further. | HIGH |
+| `Obj_LBZFinalBossKnux` / `Obj_LBZFinalBoss2` | The reviewed port from `sonic3k.asm:154231-155585` (`FixBugs=0`) covers the native `$00-$2A` fight, articulated child/collision graph, grab/throw, defeat, ROM assets/data, floating capsule/results two-signal gate, falling-floor allocation attempts, carrier escape, MHZ handoff, and exact-ID rewind. The earlier `98d968d7f` and uncommitted v2 attempts remain rejected history. Fresh locked-on-ROM/JDK 21 evidence passes 7/7 route, 10/10 graph, 957/957 legacy/route/graph/rewind, and 1,483/1,483 consolidated focused checks; independent final review passed. The canonical replay is separately blocked before execution because the strict compiler cannot represent raw frame 6314's schema-valid VBlank-only `post_objects` timing row. | HIGH |
 | `Obj_LBZ1InvisibleBarrier` | Implemented and spawned during collapse/restart paths. | HIGH |
 | LBZ flame thrower, cup elevator, tunnel, bridge, launcher, grapple, pipe objects | Many are implemented in dedicated object classes or shared S3K object utilities. | MIXED |
 
@@ -305,7 +305,7 @@ Confidence: HIGH.
 
 1. Keep LBZ2 Death Egg launch and animated-tile phase parity stable. This is traversal- and spectacle-critical.
 2. Verify the VDP window-plane special VInt sequence for platform detach. Current gameplay state is modeled, but exact window-plane presentation is not.
-3. Continue object parity work around Knuckles final boss / Big Arm and remaining LBZ gimmicks.
+3. Resolve the retained Knuckles `lbz_2` raw-frame-6314 hardware-timing schedule boundary before claiming full trace parity; the reviewed Big Arm production route and exact-ID rewind graph are fresh-green.
 4. Use trace/screenshot validation for the LBZ2 ride, terrain swap, and final boss route before broadening polish work.
 
 ### Framework Routing
@@ -320,5 +320,5 @@ Confidence: HIGH.
 ### Known Risks
 
 - Special VInt/window-plane presentation is not fully represented yet.
-- Knuckles final boss / Big Arm behavior should be re-audited against `Obj_LBZFinalBossKnux` and `Obj_LBZFinalBoss2`.
+- Knuckles Big Arm has a fresh-green, independently reviewed ROM-owned implementation; its canonical comparison replay still cannot start until the strict compiler can represent the schema-valid raw-frame-6314 VBlank-only `post_objects` hardware-timing row.
 - Act 1 collapse and LBZ2 launch should stay under focused regression tests because they combine layout mutation, scroll effects, object anchoring, palette/art ownership, and rewind-visible runtime state.

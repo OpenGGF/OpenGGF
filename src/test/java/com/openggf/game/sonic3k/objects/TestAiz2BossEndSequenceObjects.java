@@ -438,6 +438,8 @@ class TestAiz2BossEndSequenceObjects {
                 "AIZ routine $0A runs sub_868F8, then Swing_UpAndDown and MoveSprite2 "
                         + "while waiting for results (sonic3k.asm:181656-181667)");
         assertEquals(0xB0, getIntField(capsule, "yVelocity"));
+        assertEquals(0, capsule.getX(),
+                "the shared AIZ/MGZ route must not inherit LBZ's post-open leftward writer");
     }
 
     @Test

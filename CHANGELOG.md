@@ -3,6 +3,10 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Feature: Knuckles' Launch Base Big Arm now ports the shipped `FixBugs=0`
+  `Obj_LBZFinalBoss2` route: the complete fight and articulated collision graph,
+  native grab/throw and eight-hit defeat, ROM-owned assets, capsule/results
+  two-signal gate, falling-floor escape, MHZ handoff, and exact-ID rewind graph.
 - Docs/tests: The S3K `FF 01`, `FF 02`, and `FF 03` SMPS meta commands are now
   explicitly bounded as syntax-width-only for unsupported custom streams.
   ROM reachability and non-effect tests preserve shipped audio behavior; no

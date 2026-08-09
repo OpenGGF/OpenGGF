@@ -21,6 +21,18 @@ public interface S3kTransitionEventBridge {
     default void preparePreloadedActTitleCardCompletion() {
     }
 
+    /** Delegates Big Arm's falling-floor handoff to LBZ2's retained workers. */
+    default void prepareLbzBigArmFloorTransition() {
+    }
+
+    /** Loads the native LBZ post-Big-Arm PLC before the replacement head. */
+    default void loadLbzBigArmPostGatePlc() {
+    }
+
+    /** Publishes Big Arm's positive timed {@code Screen_shake_flag}. */
+    default void startLbzBigArmTimedShake(int frames) {
+    }
+
     void requestMgzPostTransitionRelease();
 
     void requestCnzPostTransitionRelease(int framesUntilRelease);

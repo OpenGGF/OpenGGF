@@ -1144,6 +1144,31 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     }
 
     /**
+     * Creates a dynamic child using FindNextFreeObj semantics anchored to an
+     * explicit SST slot rather than this object's own slot.
+     */
+    protected <T extends AbstractObjectInstance> T spawnChildAfterSlot(
+            int parentSlot, java.util.function.Supplier<T> factory) {
+        ObjectServices svc = services();
+        return ObjectConstructionContext.construct(svc, () -> {
+            T child = factory.get();
+            ObjectManager manager = svc.objectManager();
+            if (manager != null && !ObjectConstructionContext.isProbeConstruction()) {
+                if (ObjectConstructionContext.isRewindActiveRestore()) {
+                    manager.registerRewindReconstructionChild(child);
+                } else if (child.skipsSameFrameUpdateAfterSpawn()) {
+                    manager.addDynamicObjectAfterCurrentNextFrame(child);
+                } else if (parentSlot >= 0) {
+                    manager.addDynamicObjectAfterSlot(child, parentSlot);
+                } else {
+                    manager.addDynamicObjectAfterCurrent(child);
+                }
+            }
+            return child;
+        });
+    }
+
+    /**
      * Shared AllocateObjectAfterCurrent mechanics. Registration determines slot and update
      * ordering only; callers separately define whether the allocated object is structurally owned.
      */

@@ -61,6 +61,7 @@ import com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance;
 import com.openggf.game.sonic3k.objects.Lbz1GroundLaunchIntroInstance;
 import com.openggf.game.sonic3k.objects.MgzDrillingRobotnikInstance;
 import com.openggf.game.sonic3k.objects.MhzPollenSpawnerInstance;
+import com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss2Instance;
 import com.openggf.camera.Camera;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
@@ -1494,6 +1495,27 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     }
 
     @Override
+    public void prepareLbzBigArmFloorTransition() {
+        if (lbzEvents != null) {
+            lbzEvents.prepareBigArmFloorTransition();
+        }
+    }
+
+    @Override
+    public void loadLbzBigArmPostGatePlc() {
+        if (lbzEvents != null) {
+            lbzEvents.loadBigArmPostGatePlc();
+        }
+    }
+
+    @Override
+    public void startLbzBigArmTimedShake(int frames) {
+        if (lbzEvents != null) {
+            lbzEvents.startBigArmTimedShake(frames);
+        }
+    }
+
+    @Override
     public void requestMgzPostTransitionRelease() {
         this.mgzPendingPostTransitionRelease = true;
     }
@@ -1894,6 +1916,11 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (mgzEvents != null && objectManager != null
                 && objectManager.activeObjectsOfType(MgzDrillingRobotnikInstance.class).stream()
                 .anyMatch(MgzDrillingRobotnikInstance::willPublishDeathPlaneDisableThisObjectPass)) {
+            return true;
+        }
+        if (objectManager != null
+                && objectManager.activeObjectsOfType(LbzFinalBoss2Instance.class).stream()
+                .anyMatch(LbzFinalBoss2Instance::hasPublishedDeathPlaneDisable)) {
             return true;
         }
         if (isInBonusStage()) {

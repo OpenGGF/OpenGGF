@@ -123,7 +123,7 @@ sound driver.
 |------|--------|
 | Sonic the Hedgehog (S1) | Most complete. Includes all zones, bosses, special stages, title screen, ending, and credits. |
 | Sonic the Hedgehog 2 (S2) | Broadly playable. Includes all zones, bosses, special stages, Tails AI, ending, and credits. |
-| Sonic 3 & Knuckles (S3K) | Work in progress. The Sonic/Tails path has completed AIZ through LBZ coverage. The AIZ miniboss FallingShot and AIZ2 waterfall splash now have bounded ROM-backed production/rewind evidence, but the AIZ2 complete-run replay remains blocked before gameplay by hardware-timing admission and S3K remains the main active development area. |
+| Sonic 3 & Knuckles (S3K) | Work in progress. AIZ through LBZ have substantial route coverage, including bounded ROM-backed AIZ miniboss/splash evidence and the reviewed Knuckles LBZ Big Arm ROM port. Complete-run replay parity is still limited by open hardware-timing admission boundaries, and S3K remains the main active development area. |
 
 Work is ongoing across all three games. See `CHANGELOG.md` for detailed, per-merge history.
 

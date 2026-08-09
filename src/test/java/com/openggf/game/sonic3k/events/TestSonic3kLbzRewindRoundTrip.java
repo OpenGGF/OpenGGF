@@ -21,6 +21,12 @@ class TestSonic3kLbzRewindRoundTrip {
         setField(original, "act2MaxXAccumulator", 0xC000);
         setField(original, "act2MinYAccumulator", 0x8000);
         setField(original, "act2MaxYAccumulator", 0x18000);
+        setField(original, "act2MaxXWorkerActive", true);
+        setField(original, "act2MinYWorkerActive", false);
+        setField(original, "act2MaxYWorkerActive", true);
+        setField(original, "act2MaxXWorkerCompleted", false);
+        setField(original, "act2MinYWorkerCompleted", true);
+        setField(original, "act2MaxYWorkerCompleted", false);
 
         byte[] first = ZoneEventSchemaSidecar.capture(original);
         Sonic3kLBZEvents restored = new Sonic3kLBZEvents();

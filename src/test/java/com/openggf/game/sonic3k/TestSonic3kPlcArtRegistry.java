@@ -1401,6 +1401,26 @@ public class TestSonic3kPlcArtRegistry {
     }
 
     @Test
+    public void lbz2PlanHasRomBackedBigArmAndEggRoboHeadSheets() {
+        Sonic3kPlcArtRegistry.ZoneArtPlan plan =
+                Sonic3kPlcArtRegistry.getPlan(Sonic3kZoneIds.ZONE_LBZ, 1);
+
+        Sonic3kPlcArtRegistry.StandaloneArtEntry bigArm =
+                requireStandaloneArt(plan, Sonic3kObjectArtKeys.LBZ_FINAL_BOSS_2);
+        assertEquals(Sonic3kConstants.ART_KOSM_LBZ_FINAL_BOSS_2_ADDR, bigArm.artAddr());
+        assertEquals(Sonic3kConstants.ART_KOSM_LBZ_FINAL_BOSS_2_SIZE, bigArm.artSize());
+        assertEquals(Sonic3kConstants.MAP_LBZ_FINAL_BOSS_2_ADDR, bigArm.mappingAddr());
+        assertEquals(18, bigArm.mappingFrameCount());
+
+        Sonic3kPlcArtRegistry.StandaloneArtEntry head =
+                requireStandaloneArt(plan, Sonic3kObjectArtKeys.EGG_ROBO_HEAD);
+        assertEquals(Sonic3kConstants.ART_KOSM_EGG_ROBO_HEAD_ADDR, head.artAddr());
+        assertEquals(Sonic3kConstants.ART_KOSM_EGG_ROBO_HEAD_SIZE, head.artSize());
+        assertEquals(Sonic3kConstants.MAP_EGG_ROBO_HEAD_ADDR, head.mappingAddr());
+        assertEquals(4, head.mappingFrameCount());
+    }
+
+    @Test
     public void mhz2PlanIncludesAct2SpecificRenderedObjectArtKeys() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x07, 1);
 

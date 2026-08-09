@@ -665,6 +665,49 @@ class TestMhzBossObjects {
     }
 
     @Test
+    void weatherMachineExplosionRetainsWeatherSfxWithoutExplode() {
+        List<ObjectInstance> spawned = new ArrayList<>();
+        List<Integer> playedSfx = new ArrayList<>();
+        ObjectManager objectManager = mock(ObjectManager.class);
+        doAnswer(invocation -> {
+            spawned.add(invocation.getArgument(0));
+            return null;
+        }).when(objectManager).addDynamicObjectAfterCurrent(any(ObjectInstance.class));
+        doAnswer(invocation -> {
+            spawned.add(invocation.getArgument(0));
+            return null;
+        }).when(objectManager).addDynamicObject(any(ObjectInstance.class));
+        ObjectServices services = new StubObjectServices() {
+            @Override public ObjectManager objectManager() { return objectManager; }
+            @Override public void playSfx(int soundId) { playedSfx.add(soundId); }
+        };
+        MhzEndBossInstance endBoss = new MhzEndBossInstance(new ObjectSpawn(
+                0x4200, 0x0300, Sonic3kObjectIds.MHZ_END_BOSS, 0, 0, false, 0));
+        endBoss.setServices(services);
+        endBoss.update(0, null);
+        ObjectInstance weatherMachine = spawned.stream()
+                .filter(object -> "MHZEndBossWeatherMachine".equals(object.getName()))
+                .findFirst()
+                .orElseThrow();
+        ((AbstractObjectInstance) weatherMachine).setServices(services);
+
+        weatherMachine.update(1, null);
+        weatherMachine.update(2, null);
+        ((TouchResponseAttackable) weatherMachine).onPlayerAttack(null, null);
+        weatherMachine.update(3, null);
+
+        S3kBossExplosionChild explosion = spawned.stream()
+                .filter(S3kBossExplosionChild.class::isInstance)
+                .map(S3kBossExplosionChild.class::cast)
+                .findFirst()
+                .orElseThrow();
+        assertEquals(List.of(Sonic3kSfx.WEATHER_MACHINE.id), playedSfx,
+                "MHZ's caller-owned weather sound must not gain an invented EXPLODE");
+        assertEquals(false, explosion.nativeInitSfxForTest(),
+                "loc_765F2 keeps the legacy audio-silent explosion-child mode");
+    }
+
+    @Test
     void mhzEndBossWeatherMachineDeletesAfterRomWaitDrawTimer() {
         List<ObjectInstance> spawned = new ArrayList<>();
         ObjectManager objectManager = mock(ObjectManager.class);

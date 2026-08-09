@@ -14,13 +14,15 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
     private static final int LAUNCH_EXTENSION_VERSION_3 = 3;
     private static final int LAUNCH_EXTENSION_VERSION_4 = 4;
     private static final int LAUNCH_EXTENSION_VERSION_5 = 5;
-    private static final int LAUNCH_EXTENSION_VERSION = 6;
+    private static final int LAUNCH_EXTENSION_VERSION_6 = 6;
+    private static final int LAUNCH_EXTENSION_VERSION = 7;
     private static final int LAUNCH_EXTENSION_BYTES_V1 = 34;
     private static final int LAUNCH_EXTENSION_BYTES_V2 = 41;
     private static final int LAUNCH_EXTENSION_BYTES_V3 = 49;
     private static final int LAUNCH_EXTENSION_BYTES_V4 = 53;
     private static final int LAUNCH_EXTENSION_BYTES_V5 = 65;
-    private static final int LAUNCH_EXTENSION_BYTES = 69;
+    private static final int LAUNCH_EXTENSION_BYTES_V6 = 69;
+    private static final int LAUNCH_EXTENSION_BYTES = 81;
     private static final int LAUNCH_FLAG_ACTIVE = 1;
     private static final int LAUNCH_FLAG_DEATH_EGG_RUMBLE = 1 << 1;
     private static final int LAUNCH_FLAG_START_REQUESTED = 1 << 2;
@@ -50,6 +52,9 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
     private int rollingDrumP1Angle;
     private int rollingDrumP2Angle;
     private int pendingScreenShakeOffset;
+    private int timedShakeCountdown;
+    private int timedShakePreparedOffset;
+    private int timedShakeAppliedOffset;
     private boolean launchActive;
     private boolean deathEggRumble;
     private int fgLaunchSpeed;
@@ -177,6 +182,52 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
         int offset = pendingScreenShakeOffset;
         pendingScreenShakeOffset = 0;
         return offset;
+    }
+
+    /** Semantic write for positive {@code Screen_shake_flag} durations. */
+    public void startTimedScreenShake(int frames) {
+        timedShakeCountdown = Math.max(0, frames);
+    }
+
+    /** LBZ foreground: apply the offset prepared by the preceding BG phase. */
+    public void applyTimedScreenShakeForeground() {
+        timedShakeAppliedOffset = timedShakePreparedOffset;
+        if (timedShakeCountdown != 0
+                || timedShakePreparedOffset != 0
+                || timedShakeAppliedOffset != 0) {
+            pendingScreenShakeOffset = timedShakeAppliedOffset;
+        }
+    }
+
+    /** LBZ background {@code ShakeScreen_Setup}: publish the next-frame offset. */
+    public void prepareTimedScreenShakeBackground(boolean playerEligible, int romOffset) {
+        if (timedShakeCountdown <= 0) {
+            timedShakePreparedOffset = 0;
+            return;
+        }
+        if (!playerEligible) {
+            timedShakePreparedOffset = 0;
+            return;
+        }
+        timedShakeCountdown--;
+        timedShakePreparedOffset = romOffset;
+    }
+
+    public int getTimedShakeCountdown() {
+        return timedShakeCountdown;
+    }
+
+    public int getTimedShakePreparedOffset() {
+        return timedShakePreparedOffset;
+    }
+
+    public int getTimedShakeAppliedOffset() {
+        return timedShakeAppliedOffset;
+    }
+
+    /** Semantic {@code Camera_Y_pos_copy} consumed by selected object routines. */
+    public int getCameraYCopy(int baseCameraY) {
+        return (baseCameraY + timedShakeAppliedOffset) & 0xFFFF;
     }
 
     public boolean isLaunchActive() {
@@ -522,6 +573,9 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
         buffer.putInt(lbz2WaterlinePhase);
         buffer.putInt(lbz2ScrollArtPhaseSource);
         buffer.putInt(publishedBgCameraX);
+        buffer.putInt(timedShakeCountdown);
+        buffer.putInt(timedShakePreparedOffset);
+        buffer.putInt(timedShakeAppliedOffset);
         return buffer.array();
     }
 
@@ -569,11 +623,13 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
         if (version == LAUNCH_EXTENSION_VERSION_1) {
             restoreLaunchFlags(buffer.get() & 0xFF);
             restoreLaunchInts(buffer, false, false, false);
+            clearTimedShakeState();
             return;
         }
         if (version == LAUNCH_EXTENSION_VERSION_2) {
             restoreLaunchFlags(buffer.getInt());
             restoreLaunchInts(buffer, true, false, false);
+            clearTimedShakeState();
             return;
         }
         if (version == LAUNCH_EXTENSION_VERSION_3
@@ -581,6 +637,7 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
             restoreLaunchFlags(buffer.getInt());
             restoreLaunchInts(buffer, true, true, false);
             launchRiderDelta = 0;
+            clearTimedShakeState();
             return;
         }
         if (version == LAUNCH_EXTENSION_VERSION_4
@@ -591,6 +648,7 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
             lbz2WaterlinePhase = 0;
             lbz2ScrollArtPhaseSource = 0;
             publishedBgCameraX = 0;
+            clearTimedShakeState();
             return;
         }
         if (version == LAUNCH_EXTENSION_VERSION_5
@@ -601,6 +659,18 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
             lbz2WaterlinePhase = buffer.getInt();
             lbz2ScrollArtPhaseSource = buffer.getInt();
             publishedBgCameraX = buffer.getInt();
+            clearTimedShakeState();
+            return;
+        }
+        if (version == LAUNCH_EXTENSION_VERSION_6
+                && bytes.length >= LEGACY_CAPTURE_BYTES + LAUNCH_EXTENSION_BYTES_V6) {
+            restoreLaunchFlags(buffer.getInt());
+            restoreLaunchInts(buffer, true, true, true);
+            launchRiderDelta = buffer.getInt();
+            lbz2WaterlinePhase = buffer.getInt();
+            lbz2ScrollArtPhaseSource = buffer.getInt();
+            publishedBgCameraX = buffer.getInt();
+            clearTimedShakeState();
             return;
         }
         if (version != LAUNCH_EXTENSION_VERSION || bytes.length < LEGACY_CAPTURE_BYTES + LAUNCH_EXTENSION_BYTES) {
@@ -614,6 +684,9 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
         lbz2WaterlinePhase = buffer.getInt();
         lbz2ScrollArtPhaseSource = buffer.getInt();
         publishedBgCameraX = buffer.getInt();
+        timedShakeCountdown = buffer.getInt();
+        timedShakePreparedOffset = buffer.getInt();
+        timedShakeAppliedOffset = buffer.getInt();
     }
 
     private void restoreLaunchFlags(int flags) {
@@ -689,8 +762,15 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
         lbz2WaterlinePhase = 0;
         lbz2ScrollArtPhaseSource = 0;
         publishedBgCameraX = 0;
+        clearTimedShakeState();
         clearLaunchRiderAnchor();
         clearFinaleCutsceneAnchor();
+    }
+
+    private void clearTimedShakeState() {
+        timedShakeCountdown = 0;
+        timedShakePreparedOffset = 0;
+        timedShakeAppliedOffset = 0;
     }
 
     private int launchFlags() {
