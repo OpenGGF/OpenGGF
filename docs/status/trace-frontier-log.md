@@ -71083,3 +71083,41 @@ landable change, which I implemented directly.
 - Next gameplay-order target: standalone AIZ at raw `16067`. Complete-run AIZ
   remains the no-regression canary. Standalone CNZ follows only after all AIZ
   traces pass; MHZ is beyond the user's requested LBZ cutoff.
+
+## 2026-08-10 — standalone AIZ focused-prefix replay contract
+
+- Context: `bugfix/s3k-traces` at `4b4058f1e`; a fresh `origin/develop` fetch
+  reported the branch `124` commits ahead and `0` behind, so no merge was
+  required. The six protected user edits remained unstaged. Validation used
+  JDK 21.0.12 and `Sonic and Knuckles & Sonic 3 (W) [!].gen`; no trace payload
+  or gameplay source changed. Ring comparison remains error-level through
+  `ToleranceConfig.DEFAULT` / `RingCountMode.FORCE_ERROR`.
+- Root cause: `TestS3kAizTraceReplay`'s focused prefix helper bypassed the v5
+  replay bootstrap used by `replayMatchesTrace`. It admitted hardware jobs in
+  live/immediate mode, omitted each row's recorded timing segment and held-tail
+  markers, and did not align the engine's ROM-visible level frame counter.
+  Transition art therefore became ready 46 rows early, while the sidekick
+  cadence assertion read a different counter phase. The helper now uses the
+  production-submitted recorded-readiness port, shared bootstrap, structural
+  row markers, and the same initial counter alignment as the full replay; it
+  aborts the intentionally partial timing schedule at scope exit.
+- Focused command: `mvn -q -Dmse=off -Dsurefire.forkCount=1
+  -DreuseForks=true -Dsurefire.argLine=-Xmx3g
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#<15 focused methods>'
+  test`. Result: all 15 focused AIZ prefix assertions passed, including the four
+  previously red reload-camera, fire-release, sidekick fallthrough, and
+  miniboss-results checks.
+- Frontier command: `mvn -q -Dmse=off -Dsurefire.forkCount=1
+  -DreuseForks=true -Dsurefire.argLine=-Xmx3g -Dtrace.frontierOnly=true
+  -Dtrace.contextRadius=5
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace'
+  test`. Result: the independent full replay retains 3 comparison errors and
+  0 warnings at raw `16067` (`queue.s3k_kos_direct.busy`, source, and
+  destination), then reports unconsumed direct completion `#55` at raw `16075`.
+  The complete-run AIZ canary passed with 0 errors and 0 warnings across 26041
+  compared frames.
+- Route position: standalone AIZ now has no failing focused assertions; its
+  raw-`16067` intra-frame Kosinski queue sampling mismatch remains the sole AIZ
+  trace blocker. Complete-run AIZ remains green.

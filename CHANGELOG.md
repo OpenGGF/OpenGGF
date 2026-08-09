@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Test: standalone AIZ focused trace prefixes now use the same v5 recorded
+  hardware-readiness admission, production row boundaries, bootstrap, and
+  frame-counter alignment as the full replay. All 15 focused AIZ assertions
+  pass; the full standalone replay retains its independent raw-frame `16067`
+  queue frontier, and complete-run AIZ remains green.
 - Fix/Test: player collision now retains the ROM's shared
   `Primary_Angle`/`Secondary_Angle` registers across player dispatches and
   rewind. Empty airborne landing probes preserve those shared bytes while
