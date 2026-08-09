@@ -78,10 +78,16 @@ public final class Sonic1CreditsDemoBootstrap {
         if (featureProvider != null) {
             featureProvider.setWaterRoutine(Sonic1CreditsDemoData.LZ_LAMP_WATER_ROUTINE);
         }
-        if (GameServices.level().getObjectManager() != null) {
-            GameServices.level().getObjectManager().initVblaCounter(
-                    Sonic1CreditsDemoData.LZ_LAMP_VBLA_COUNTER);
-        }
+        // NOTE: no v_vblank_count value is seeded here. The ROM's
+        // v_vblank_count (s1disasm/_Variables.asm:350) is incremented once per
+        // V-blank at VBlank_Exit (s1disasm/sonic.asm:685) and is written
+        // nowhere else in the entire ROM -- nothing resets it on level load,
+        // and EndDemo_LampVar (sonic.asm:3879) carries no vblank field. Its
+        // value entering a credits demo is therefore a free-running count
+        // since console reset, not level-derived state, and cannot be
+        // reconstructed from the lamppost table. Seeding a measured phase here
+        // is a fitted model; the counter is established once at frame 0 by the
+        // replay entry path, exactly as every other trace-replay entry does.
 
         // Sync player's underwater flag with the water level we just set.
         // Without this, the first frame runs with inWater=false and uses

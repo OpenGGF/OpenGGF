@@ -3,6 +3,22 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the Sonic 1 credits demos run their vertical-interrupt counter free, seeded from the
+  recording's own starting value like every other replay entry path, instead of from a
+  constant measured off an older capture. The counter also advances on lag frames, which the
+  ROM does because every V-blank routine falls through to the same exit that increments it;
+  the credits harness was the only path that skipped it. Labyrinth Zone's wind tunnels read
+  that counter to decide when to play their sound, and under the shipped ROM's unfixed code
+  path that read also decides when the player is pulled downward, so the counter's phase was
+  directly visible as a two-pixel bump.
+- Fix: a character hurt into a landing is still drawn on that frame, as the ROM does -- the
+  invulnerability blink only applies from the following frame's display routine. The engine
+  applied it a frame early, leaving a stale on-screen flag that stopped the sidekick's
+  despawn counter from starting.
+- Testing: a sidekick despawn test asserted a value measured from a capture probe rather than
+  read from the ROM, and outlived the production code it was calibrated against. It now
+  asserts what the ROM does: an on-screen render flag clears the respawn counter on the frame
+  it is seen.
 - Fix: the Chemical Plant spin tube reads the character's live position when deciding whether
   to capture them, as the ROM does. Two tubes can hold the same character, and the engine's
   frame-start fallback made a handoff between them land two frames late.

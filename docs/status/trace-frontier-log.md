@@ -66738,3 +66738,95 @@ After: **769 / 11 / 63.** Green: `S2SpecialStageRecorderContractTest`. Nothing r
   `useCurrentPosition` predicate. **None would have been caught by grepping for
   confession-shaped comments** — only by reading the ROM. That is the standing argument for
   the guards this session added.
+
+## 2026-08-09 — round twenty-three: Credits03Lz3 and CPZ2 seg9 GREEN — two S1/S2 reds left
+
+Command: full `-Ptrace-replay` profile, no `-Dtest`. Base 3c149d6ef (769 / 11 / 63).
+After: **769 / 9 / 63.** Green: `TestS1Credits03Lz3TraceReplay`,
+`TestS2Cpz2Seg9CompleteEmeraldsSegmentTraceReplay`. Nothing regressed.
+**Every S1 and S2 *TraceReplay* class is now green.** The only two S1/S2 reds left are the
+round-trip chains: `TestS1GhzMazeRoundTripChain` and `TestS2EhzHalfpipeRoundTripChain`.
+
+- **Credits03Lz3 GREEN — a FIFTH fitted constant, plus another "two paths that should agree"
+  instance.** The brief's "global free-running v_vblank_count" framing was half right; the
+  mechanism was already modelled correctly and only the clock's PHASE was wrong.
+  ROM `LZWindTunnels` (_inc/LZWaterFeatures.asm:335-437) under FixBugs=0: the sound gate
+  `move.b (v_vblank_byte).w,d0 / andi.b #$3F,d0` clobbers the low byte of d0, which still
+  holds obX from the region test, and d0 is then reused for the suction compare
+  `subi.w #128,d0 / cmp.w (a2),d0` as if it were still obX. On a sound frame
+  (`v_vblank_byte & $3F == 0`) d0 is replaced outright by `sfx_Waterfall`, so the compare
+  always takes `.suck` and `add.w d0,obY(a1)` moves Sonic 2px DOWN wherever he is. For LZ3
+  (`LZWind_Data` left=$A20) the surviving obX high byte alone decides the branch on every
+  non-sound frame, so the +2 bump appears EXACTLY when the global vblank counter is a
+  multiple of $40. Trace row 405 proves it: `vblank_counter=0x0E40` (mod 64 == 0),
+  x=0x1074 (far past left+128), y steps 0x0673 -> 0x0675 on precisely that row.
+  Two independent defects fed it:
+  (1) **FITTED CONSTANT:** `Sonic1CreditsDemoData.LZ_LAMP_VBLA_COUNTER = 52`, commented
+  "preserving the REV01 y-bump cadence", pushed into `ObjectManager.initVblaCounter`.
+  `EndDemo_LampVar` (sonic.asm:3879) has no vblank field and `v_vblank_count` has exactly one
+  writer in the ROM — 52 was measured off an older cadence and is unreachable from ROM data.
+  Removed. Seed is now `trace.initialVblankCounter() - 1`, the identical expression
+  `TraceReplaySessionBootstrap.alignObjectVblankCounterForReplayStart` already uses for every
+  other replay entry path, applied uniformly to all 8 credits demos.
+  (2) **THE REAL CLOCK BUG:** `AbstractCreditsDemoTraceReplayTest`'s VBLANK_ONLY branch
+  `continue`d WITHOUT ticking the counter. ROM increments `v_vblank_count` at `VBlank_Exit`
+  (sonic.asm:685), which EVERY V-blank routine falls through to **including
+  `id_VBlank_Lag`** — a lag frame still bumps it. `GameLoop` and `LevelManager` already tick
+  on their V-blank-only rows; this harness was the odd path out. **Another instance of the
+  skill's "two paths that should agree, but don't".** Probe: row 0 eng=0xCAC rom=0xCAB, row
+  374 eng=0xE01 rom=0xE21 — a monotone loss of 1 per skipped lag row, 33 rows lost by 374.
+  Intermediate measurement worth keeping: the seed fix ALONE took 13 errors -> 7, first error
+  frame 236 -> 374, and that residual being a constant 33 rows early is what exposed defect 2.
+  All eight credits demos now pass.
+- **CPZ2 seg9 GREEN (1 error -> 0) — and it was NOT the respawn-counter start condition.**
+  It was the `render_flags.on_screen` bit the counter reads. ROM `Obj01_Hurt`/`Obj02_Hurt`
+  end in an UNCONDITIONAL `jmp (DisplaySprite)` (s2.asm:38193, :41076); the invulnerability
+  blink skip lives only in `Sonic_Display`/`Tails_Display` (:36280-36285, :39015-39020),
+  which the hurt routine never reaches. `Sonic_HurtStop`/`Tails_HurtStop` reload
+  `invulnerable_time=$78` and restore routine 2 from INSIDE that same hurt frame (:38225,
+  :41112), so the hurt-landing frame is still drawn unconditionally and BuildSprites still
+  refreshes its on-screen bit. The engine had already cleared `hurt` by the time its refresh
+  ran, applied the blink gate one frame early, left a stale `on_screen=true`, and
+  `TailsCPU_CheckDespawn` (:39408-39440) never ticked. Verified frame-by-frame: at f414 Tails
+  lands off-screen (x=0x510, camera=0x3B7, width_pixels=$18 -> relX-24 = 321 >= 320), ROM
+  refreshes -> counter 1 at 415, 2 at 416, then 0 at 417 when x=0x50E returns on-screen
+  (relX-24 = 319). S1 has the identical shape at _incObj/"01 Sonic.asm":1912.
+- **A FITTED MODEL FOUND IN A TEST, not production code — and it was ORPHANED BY OUR OWN
+  FIX.** Round 21 removed `TailsRespawnStrategy.consumesTopEdgeRenderFlagOneStepLate()` (a
+  hand-measured HTZ1 probe window) but left
+  `TestSidekickCpuDespawnParity.s2FlyingRespawnTopEdgeKeepsCounterUntilRomRenderFlagRefreshes`
+  asserting the deleted behaviour, expecting `0x003F` with the message "HTZ1 BizHawk gfc
+  $193F". So the fitted model was deleted from production and PRESERVED IN THE SUITE, where
+  it read as an unrelated red. **That is worse than a fitted constant in production: it would
+  block anyone from implementing the ROM behaviour correctly.**
+  Corrected rather than deleted, because the ROM behaviour it should assert is meaningful:
+  `TailsCPU_Flying` (s2.asm:39141-39158) tests the render flag FIRST and branches to
+  `TailsCPU_FlyingOnscreen`, whose only statement is `move.w #0,(Tails_respawn_counter).w` —
+  no counter gate, no camera-relative gate — so an on-screen flag zeroes the counter on the
+  frame it is observed. Expectation is 0, renamed to
+  `s2FlyingRespawnClearsCounterAsSoonAsTheRenderFlagIsOnScreen`, with the citation in place
+  of the probe reference.
+- **GhzMazeRoundTripChain: DIAGNOSIS CONFIRMED, DECOMPOSED, AND DELIBERATELY NOT FIXED.**
+  The failure is exactly two fields — `run_tail.edge[0]/[1].movie_logical_frame` expected
+  9071 actual 9035, **delta 36**. Ordinals, transfer ids and both ledger fingerprints match,
+  and the class's other test passes.
+  `GM_Level` (sonic.asm:2701-2998) has exactly FOUR frame-counted loops, and **all four are
+  already modelled structurally**: `PaletteFadeOut` 22 rows (`move.w #22-1,d4`,
+  _inc/Palette Fading.asm:134-144) via `LevelInitProfile.preLevelFadeOutFrames`;
+  `Level_TtlCardLoop` (:2814-2842), whose length is NOT constant but the drain time of queued
+  art — `id_VBlank_TitleCards` tails into `ProcessPLC_9Tiles` (:912, :946) decompressing 9
+  tiles/frame (:1430-1440) with `RunPLC` arming only the FIFO head (:1379-1420) — modelled by
+  `Sonic1PlcService.serviceFastVBlank()` and gated by `Sonic1TitleCardManager.plcQueueBusy()`,
+  151 rows in this run; `Level_Delay` 4 rows (:2957-2963) and `PalFadeIn_Alt` 22 (:2966),
+  together the "counted 26-row tail".
+  The 36-frame residual lives in the UN-TIMED straight-line routines — `NemDec` and friends —
+  which call no `WaitForVBlank` at all but cost real CPU time while the VDP keeps scanning,
+  so movie rows advance. **There is no frame-granularity ROM predicate for that**, and every
+  candidate fix is a measured constant under hard rule 3. Nothing landed; the decomposition
+  is the deliverable.
+- **EHZ halfpipe chain unchanged at 45 errors, rows 5191..5230.** The brief's "does the
+  engine reach that code at all" is answered: it does — at interior localRow 5191 the engine
+  is still in SPECIAL_STAGE and runs its paced pass, and pass ordering/binding for rows
+  0..5190 is exact. The missing edges are the LAST SS RunObjects pass: recorded pass 3171
+  completes at 5191 with `check_rings_flag=255` and `sonic_present=0` because `SSClearObjs`
+  (s2.asm:72503) has wiped the object RAM. That is the next lead.

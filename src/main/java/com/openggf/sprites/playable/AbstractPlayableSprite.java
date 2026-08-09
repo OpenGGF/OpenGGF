@@ -396,6 +396,24 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         protected int invulnerableFrames = 0;
         private boolean suppressNextInvulnerabilityDecrement = false;
         private boolean invulnerabilityDisplayTimerTickedThisFrame = false;
+        /**
+         * Set for the frame on which the hurt routine ran, including the frame it
+         * hands control back on landing. ROM {@code Obj01_Hurt} / {@code Obj02_Hurt}
+         * end in an UNCONDITIONAL {@code jmp (DisplaySprite)}
+         * (docs/s2disasm/s2.asm:38193 and :41076) — the invulnerability blink test
+         * lives only in {@code Sonic_Display} / {@code Tails_Display}
+         * (s2.asm:36280-36285, 39015-39020), which the hurt routine never reaches.
+         * {@code Sonic_HurtStop} / {@code Tails_HurtStop} write
+         * {@code invulnerable_time = $78} and restore routine 2 (s2.asm:38225,
+         * :41112) from inside that same hurt frame, so the landing frame is still
+         * drawn unconditionally and BuildSprites still refreshes
+         * {@code render_flags.on_screen} for it. Without this latch the engine
+         * applies the blink gate one frame too early and leaves a stale on-screen
+         * bit, which the sidekick CPU then reads (TailsCPU_CheckDespawn,
+         * s2.asm:39408-39440). S1 has the identical shape
+         * (docs/s1disasm/_incObj/"01 Sonic.asm":1912 Sonic_Hurt tail).
+         */
+        private boolean hurtRoutineOwnedDisplayThisFrame = false;
 
         /**
          * Frames remaining for invincibility power-up.
@@ -1655,8 +1673,17 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         return false;
                 }
                 return isHurt()
+                        || hurtRoutineOwnedDisplayThisFrame
                         || invulnerableFrames <= 0
                         || ((invulnerableFrames + 1) & 0x04) != 0;
+        }
+
+        /**
+         * Consumed by the BuildSprites-equivalent render-flag refresh at the end of
+         * the frame, after which the hurt routine no longer owns the display.
+         */
+        public void clearHurtRoutineOwnedDisplayLatch() {
+                hurtRoutineOwnedDisplayThisFrame = false;
         }
         public boolean hasRenderFlagOnScreenState() {
                 return renderFlagOnScreenValid;
@@ -1817,6 +1844,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         // HurtStop's direct draw path delays decrementing the reset timer by one frame.
                         invulnerableFrames = 0x78;
                         suppressNextInvulnerabilityDecrement = true;
+                        // ...and that same direct draw is unconditional, so this
+                        // frame's BuildSprites still refreshes render_flags.on_screen
+                        // even though the blink counter was just reloaded
+                        // (docs/s2disasm/s2.asm:41076, :41112).
+                        hurtRoutineOwnedDisplayThisFrame = true;
                 }
                 // Reset rolling jump flag when landing
                 if (!air && this.air) {
