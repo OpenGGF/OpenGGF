@@ -269,10 +269,33 @@ local function runCycleSoundQueueDeferral()
         "priority-rejected candidate leaked into a later cycle without PlaySoundID")
 end
 
+local function runDuplicateQueuedIdentityDeferral()
+    -- Break caught: correlating PlaySoundID by sound byte chooses the later
+    -- duplicate, although the first request filled v_sound_id and the second
+    -- request followed the unconditional $71F22 queue0 deferral path.
+    local queueBuffer = Contract.newQueueBuffer()
+    queueBuffer:write(0, 0xA1, 860)
+    queueBuffer:write(1, 0xA1, 860)
+    local firstCycle = queueBuffer:cycle({0xA1, 0xA1, 0}, true, 0x80)
+    equals(#firstCycle, 2, "duplicate-ID cycle did not retain both request identities")
+    equals(firstCycle[1].queue_ordinal, 1, "first duplicate lost source-order ordinal 1")
+    equals(firstCycle[2].queue_ordinal, 2, "second duplicate lost source-order ordinal 2")
+    equals(queueBuffer:consume(0xA1), firstCycle[1],
+        "PlaySoundID selected the later duplicate instead of source-order ordinal 1")
+
+    local secondCycle = queueBuffer:cycle({0xA1, 0, 0}, true, 0x80)
+    equals(#secondCycle, 1, "deferred duplicate did not reappear on the next cycle")
+    equals(secondCycle[1], firstCycle[2], "deferred duplicate lost its original request identity")
+    equals(secondCycle[1].queue_ordinal, 2, "deferred duplicate lost source-order ordinal 2")
+    equals(queueBuffer:consume(0xA1), firstCycle[2],
+        "next PlaySoundID did not consume the original deferred ordinal 2")
+end
+
 runQueueAndContention()
 runLifecycleAndDiagnostics()
 runSourceDerivedDispatchBoundaries()
 runPlaySegaLifecycle()
 runSelectedIdentityAndDormantQueueBoundaries()
 runCycleSoundQueueDeferral()
+runDuplicateQueuedIdentityDeferral()
 print("S1_GAMEPLAY_AUDIO_TIMELINE_CONTRACT_OK")

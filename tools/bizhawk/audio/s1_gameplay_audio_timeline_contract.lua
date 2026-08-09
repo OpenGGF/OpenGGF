@@ -240,10 +240,12 @@ function Contract.newQueueBuffer()
         local candidates = self.pendingCandidates
         self.pendingCandidates = nil
         if not candidates then return nil end
-        -- Equal-priority duplicate IDs replace the prior selection at $71F3A,
-        -- so resolve the final source-order occurrence of the observed ID.
+        -- The first accepted source-order request fills v_sound_id. Every
+        -- later valid request then follows $71F22 and is deferred, including
+        -- requests with the same sound ID, so resolve the first matching
+        -- identity rather than collapsing duplicates by their byte value.
         local selectedIndex = nil
-        for index = #candidates, 1, -1 do
+        for index = 1, #candidates do
             if candidates[index].sound_id == selectedSoundId then selectedIndex = index; break end
         end
         if not selectedIndex then return nil end

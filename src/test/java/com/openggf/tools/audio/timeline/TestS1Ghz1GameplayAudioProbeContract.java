@@ -38,6 +38,8 @@ class TestS1Ghz1GameplayAudioProbeContract {
         assertTrue(source.contains("queueBuffer:consume")
                         && source.contains("cycle(queues, retained, readU8(0x09))"),
                 "probe must give the queue contract pre-cycle v_sound_id and resolve PlaySoundID");
+        assertFalse(source.contains("cycledBySoundId"),
+                "probe must preserve source-order request identity instead of overwriting duplicate IDs");
         assertTrue(source.contains("assertSelectedIdentity") && source.contains("selected_sound_id"),
                 "probe must retain and assert the original selected queue identity through initialization");
         int normalInit = source.indexOf("local function normalRoleInitialized()");
