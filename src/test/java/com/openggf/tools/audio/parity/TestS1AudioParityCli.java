@@ -58,6 +58,17 @@ class TestS1AudioParityCli {
     }
 
     @Test
+    void resolvedMachineProtocolPathsCannotIntroduceDelimiters() {
+        try {
+            S1AudioParityTool.machinePathValue(Path.of("resolved\nOUTPUT_ROOT=/tmp/escape"), "ROM");
+        } catch (IllegalArgumentException error) {
+            assertTrue(error.getMessage().contains("control or protocol delimiter"), error::getMessage);
+            return;
+        }
+        throw new AssertionError("resolved protocol path containing a newline was accepted");
+    }
+
+    @Test
     void validationNamesEachMissingPinnedInput() throws Exception {
         Path repo = Files.createDirectories(temp.resolve("repo"));
         Path output = repo.resolve("target/audio-parity/s1-ghz");

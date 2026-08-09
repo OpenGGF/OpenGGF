@@ -96,7 +96,9 @@ while IFS= read -r record; do
 	key=${record%%=*}
 	value=${record#*=}
 	[ -n "$value" ] || fail "empty validation record: $key"
-	[[ "$value" != *$'\r'* && "$value" != *$'\t'* ]] || fail "control character in validation record: $key"
+	case "$value" in
+		*[$'\001'-$'\037'$'\177']*) fail "control character in validation record: $key" ;;
+	esac
 	case "$key" in
 		ROM_PATH|MOVIE_PATH|BIZHAWK_HOME|OUTPUT_ROOT) ;;
 		*) fail "unknown validation record: $key" ;;

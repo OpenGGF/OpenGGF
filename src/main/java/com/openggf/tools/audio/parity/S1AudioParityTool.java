@@ -114,10 +114,10 @@ public final class S1AudioParityTool {
                 "BizHawk home is not the pinned 2.11 Linux x64 distribution");
 
         Path output = resolveSafeOutputRoot(repo, normalizedRequired(options, "output-root"));
-        out.println("ROM_PATH=" + rom);
-        out.println("MOVIE_PATH=" + movie);
-        out.println("BIZHAWK_HOME=" + bizhawk);
-        out.println("OUTPUT_ROOT=" + output);
+        out.println("ROM_PATH=" + machinePathValue(rom, "ROM_PATH"));
+        out.println("MOVIE_PATH=" + machinePathValue(movie, "MOVIE_PATH"));
+        out.println("BIZHAWK_HOME=" + machinePathValue(bizhawk, "BIZHAWK_HOME"));
+        out.println("OUTPUT_ROOT=" + machinePathValue(output, "OUTPUT_ROOT"));
         return EXIT_MATCH;
     }
 
@@ -177,7 +177,7 @@ public final class S1AudioParityTool {
             }
             String name = option.substring(2);
             String value = args[index + 1];
-            if (value.chars().anyMatch(character -> character == '=' || Character.isISOControl(character))) {
+            if (containsProtocolDelimiter(value)) {
                 throw new UsageException(option + " contains a control or protocol delimiter character");
             }
             if (values.putIfAbsent(name, value) != null) {
@@ -255,6 +255,18 @@ public final class S1AudioParityTool {
         } catch (IOException error) {
             throw new IllegalArgumentException("cannot resolve output path: " + path, error);
         }
+    }
+
+    static String machinePathValue(Path path, String label) {
+        String value = path.toString();
+        if (containsProtocolDelimiter(value)) {
+            throw new IllegalArgumentException(label + " contains a control or protocol delimiter character");
+        }
+        return value;
+    }
+
+    private static boolean containsProtocolDelimiter(String value) {
+        return value.chars().anyMatch(character -> character == '=' || Character.isISOControl(character));
     }
 
     private static Path existingRunChild(Path runRoot, Path requested, String label) {
