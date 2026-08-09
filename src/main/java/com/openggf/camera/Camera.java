@@ -822,9 +822,26 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * Both reduce to {@code ((relY + yMargin) & mask) < height + 2*yMargin}.
 	 */
 	public boolean isVisibleForRenderFlag(AbstractPlayableSprite sprite) {
+		return isVisibleForRenderFlagAtCamera(sprite, getXWithShake(), getYWithShake());
+	}
+
+	/**
+	 * Computes the render-flag window against the physical camera position used
+	 * by the object/CPU pass, before the current frame publishes its shaken
+	 * render copy. ROM sidekick CPU routines can consume the previous
+	 * Render_Sprites flag during this pass, so this is a diagnostic-free timing
+	 * bridge for those consumers rather than a second visibility policy.
+	 */
+	public boolean isVisibleForCpuDispatch(AbstractPlayableSprite sprite) {
+		return isVisibleForRenderFlagAtCamera(sprite, x, y);
+	}
+
+	private boolean isVisibleForRenderFlagAtCamera(
+			AbstractPlayableSprite sprite, int cameraXCopy, int cameraYCopy) {
+		if (sprite == null) {
+			return false;
+		}
 		int widthPixels = sprite.getRenderFlagWidthPixels();
-		int cameraXCopy = getXWithShake();
-		int cameraYCopy = getYWithShake();
 		int relX = sprite.getRenderCentreX() - cameraXCopy;
 		if (relX + widthPixels < 0 || relX - widthPixels >= width) {
 			return false;

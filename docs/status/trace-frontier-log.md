@@ -66147,3 +66147,42 @@ to synthesize a POST phase on a VBLANK-only row.
 - Route position: HCZ remains green through its complete-run trace. MGZ's
   next target is the independent Tails CPU respawn-counter mismatch at raw
   frame `23908`; CNZ, ICZ, and LBZ have not been advanced by this fix.
+
+## 2026-08-09 - S3K MGZ flight render-flag frontier
+
+- Worktree: `bugfix/s3k-traces` at `b44e931f7` before this fix; unrelated edits
+  in `.idea/vcs.xml`, `docs/status/rewind-round-trip-gaps.md`,
+  `src/main/java/com/openggf/level/objects/ObjectPlacementController.java`,
+  and `src/main/java/com/openggf/level/rings/RingManager.java` remained
+  unstaged. Validation used JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen`; no trace payloads changed.
+- Frontier command: `env JAVA_HOME=$JDK21_HOME PATH=$JDK21_HOME/bin:$PATH
+  mvn -q -Dmse=off -Dsurefire.forkCount=1 -DforkCount=1
+  -DreuseForks=true -Dsurefire.argLine='-Xmx3g'
+  -Dtest=TestS3kMgzTraceReplay -Dtrace.verification=all
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Result: 1 test, 1 failure, 0 errors, 0 skips; release-blocking errors
+  fell from 9 to 8. The raw frame `23908` Tails CPU respawn-counter window
+  is closed. The first remaining mismatch is raw frame `35183`, direct
+  `s3k_kos_direct.busy` (`false` expected, `true` actual), with the remaining
+  direct/module queue fields in the same cascading boundary.
+- Root cause: S3K `Tails_FlySwim_Unknown` reads the previous
+  `Render_Sprites` on-screen bit before the current shaken render copy is
+  published. The CPU-side visibility bridge now reuses the physical-camera
+  render window only for a genuinely shaken, strictly interior top-edge
+  position with an airborne leader; the published render flag remains owned
+  by the renderer. The condition is semantic CPU/render timing state, not a
+  trace, frame, route, or zone exception.
+- Regression command: `env JAVA_HOME=$JDK21_HOME PATH=$JDK21_HOME/bin:$PATH
+  mvn -q -Dmse=off -Dsurefire.forkCount=1 -DforkCount=1
+  -DreuseForks=true -Dsurefire.argLine='-Xmx3g'
+  -Dtest=TestS3kHczCompleteRunTraceReplay -Dtrace.verification=all
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Result: 2 tests, 0 failures, 0 errors, 0 skips. Ring comparison remains
+  enabled through `ToleranceConfig.DEFAULT` with `RingCountMode.FORCE_ERROR`.
+  An initial broader physical-camera bridge regressed HCZ at raw frame `12234`;
+  the final semantic guard removed that regression before this frontier was
+  recorded.
+- Route position: HCZ remains green through its complete-run traces. MGZ's
+  next target is the raw frame `35183` direct/module KOS queue boundary; CNZ,
+  ICZ, and LBZ remain pending in gameplay order.

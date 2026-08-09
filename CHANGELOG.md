@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K Tails' flight-timer gate now preserves the ROM's prior
+  Render_Sprites visibility at a shaken top-edge boundary while the leader is
+  airborne. The focused MGZ replay advances from 9 to 8 release-blocking
+  errors, moving its first mismatch to the raw frame `35183` KOS queue
+  boundary; HCZ's two complete-run traces remain green. No trace payloads
+  changed.
 - Fix/Test: S3K MGZ's sinking-mud handoff now preserves the ROM's prior
   adjacent-mud depth on the jump-off frame, when `Status_OnObj` is still set
   at the mud routine entry. The focused MGZ replay advances past the raw
