@@ -675,6 +675,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
     }
 
     private void spawnEndCannon() {
+        cnzArtProvider().queueBadnikExplosionArt();
         cannonSpawned = true;
         endCannon = spawnChild(() -> new CnzCannonInstance(
                 new ObjectSpawn(CANNON_X, CANNON_Y, Sonic3kObjectIds.CNZ_CANNON,

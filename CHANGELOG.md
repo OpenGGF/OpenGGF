@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: CNZ's end-boss cannon handoff now queues the ROM-backed badnik
+  explosion KosM art before allocating the cannon, matching `loc_6E778`.
+  This removes the final seven hardware-queue mismatches and advances the CNZ
+  complete-run frontier from raw frame 39487 to 39937 without regressing the
+  gameplay-order AIZ, HCZ, or MGZ canaries.
 - Fix/Test: CNZ's retained end-boss controller now consumes the results
   owner's global completion publication directly in its own SST dispatch,
   matching `loc_6E724` instead of waiting for an engine-only capsule relay.
