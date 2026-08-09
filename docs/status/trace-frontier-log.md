@@ -69680,3 +69680,44 @@ methods, not classes).
   `TestTraceRunSpecialStageRows.s2WithRecordedPassesExposesAPassCursorFromControlStart` is
   unaffected by the re-record and never could have been — it builds a synthetic `@TempDir`
   fixture whose own helper emits no `started_at_input_sample`. Pure test-data gap.
+
+## 2026-08-09 - S3K AIZ native control-slot results frontier
+
+- Branch: `bugfix/s3k-traces` after merging `origin/develop` at `ac95f5d68`;
+  unrelated user edits in `.idea/vcs.xml`,
+  `docs/status/rewind-round-trip-gaps.md`, `Sonic3k.java`,
+  `Sonic3kStarPostObjectInstance.java`, `ObjectPlacementController.java`, and
+  `RingManager.java` remained unstaged. Validation used JDK 21.0.12 and
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen`; no trace payload changed.
+- Root cause: ROM `Obj_EndSignControl` remains in the defeated boss's SST and
+  `Obj_EndSignResults` calls `AllocateObject`. In the complete route the native
+  pool is occupied through slot 20, so the slot-21 results owner initializes
+  later in the same ascending `Process_Sprites` pass; standard AIZ legitimately
+  finds free slot 4 below the control owner and initializes on the next pass.
+  The engine's separate flow/signpost owners sit later in the pool, so using
+  their physical slot erased this distinction. The fix carries the retained
+  native control slot and compares the live non-consuming `FindFreeObj` result
+  with that boundary; it does not inspect zone, route, trace, frame, or game
+  name.
+- Focused unit command: `mvn -q
+  -Dtest=com.openggf.tests.objects.TestSlotAllocator,com.openggf.game.sonic3k.objects.TestS3kSignpostInstance,com.openggf.game.sonic3k.objects.TestS3kBossDefeatSignpostFlow
+  test`. Result: all focused tests pass.
+- Standard AIZ command: `mvn -q
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace
+  -Dtrace.verification=all -Dtrace.frontierOnly=true
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Result: all `20463` compared frames remain green.
+- Complete AIZ diagnostic command: `mvn -q
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay#replayMatchesTrace
+  -Dtrace.verification=all -Ddebug.allowRecordedTimingMismatch=true
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Result: the first comparison error advances from raw `11350` (8 direct/module
+  Kosinski queue errors) to raw `11999`, `camera_y` (`0x02B8` expected,
+  `0x02BB` actual). The frontier-only recorded-authority run reaches the next
+  unconsumed completion at raw `12002`, `KOS_DECOMPRESSION_QUEUE#46`.
+  Ring comparison remains enabled by `ToleranceConfig.DEFAULT` with
+  `RingCountMode.FORCE_ERROR`.
+- Gameplay-order canaries: MGZ completes its focused replay unchanged. HCZ
+  reaches its established segment-end `KOS_DECOMPRESSION_QUEUE#114` edge at
+  raw `27686`; this AIZ-owned control-slot path is inactive there. The next AIZ
+  target is the raw `11999` camera handoff.

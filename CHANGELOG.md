@@ -3,6 +3,15 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K signpost results allocation now retains the defeated boss's
+  native `Obj_EndSignControl` SST boundary when the engine splits that owner
+  into separate flow and signpost objects. `AllocateObject` still selects the
+  first free ROM-side boundary: lower slots wait for the next object pass,
+  while forward slots initialize results art in the current pass. Complete
+  AIZ advances from raw frame `11350` to the raw `11999` camera handoff
+  (`12002` hardware edge), while standard AIZ remains green for all `20463`
+  compared frames. Ring comparisons stay forced errors; no trace payloads
+  changed.
 - Fix/Test: S3K now runs the fixed Dust/Dust_P2 skid-child allocator after
   dynamic-object execution, matching the ROM's fixed level-object slot order.
   This restores Tails' AIZ skid-dust child and the downstream native slot

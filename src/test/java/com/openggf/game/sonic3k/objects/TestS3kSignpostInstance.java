@@ -163,6 +163,16 @@ class TestS3kSignpostInstance {
     }
 
     @Test
+    void resultsAllocationRetainsNativeControlSlotBoundaryAcrossSplitOwners() {
+        assertTrue(S3kSignpostInstance.usesFirstFreeResultsOwner(
+                false, true, false, 4, 7),
+                "a free slot below Obj_EndSignControl has already executed and must wait for the next pass");
+        assertFalse(S3kSignpostInstance.usesFirstFreeResultsOwner(
+                false, true, false, 5, 4),
+                "a first-free slot above Obj_EndSignControl belongs to the forward same-pass allocation boundary");
+    }
+
+    @Test
     void fallingDispatchAppliesBumpBeforeGravityAndMovement() {
         assertEquals(-0x1F4, S3kSignpostInstance.romVelocityAfterGravity(-0x200),
                 "Obj_EndSignFall checks the player hit before adding $0C gravity "

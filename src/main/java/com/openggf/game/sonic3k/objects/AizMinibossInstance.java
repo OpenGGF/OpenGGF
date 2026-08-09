@@ -643,7 +643,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
                     0,
                     RESULTS_WAIT_DURATION_ADJUSTMENT,
                     RESULTS_POST_CONTROL_HANDOFF_DELAY_ENTRIES,
-                    true));
+                    true).withNativeControlSlot(getSlotIndex()));
         }
     }
 

@@ -71,6 +71,7 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
     private int resultsPostControlHandoffDelayEntries;
     private boolean preservesGroundedResultsDispatchBoundary;
     private boolean usesShortResultsChildRetireTail;
+    private int nativeControlSlot = -1;
     private boolean initialized;
     private boolean nativeResultsControlRestored;
 
@@ -134,6 +135,11 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
 
     private S3kBossDefeatSignpostFlow() {
         this(0, 0, CleanupAction.NONE);
+    }
+
+    S3kBossDefeatSignpostFlow withNativeControlSlot(int slot) {
+        nativeControlSlot = slot;
+        return this;
     }
 
     @Override
@@ -235,6 +241,7 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
                 signpostX, apparentAct, signpostResultsTimerCatchUpEntries, resultsWaitDurationAdjustment,
                 resultsPostControlHandoffDelayEntries, preservesGroundedResultsDispatchBoundary,
                 usesShortResultsChildRetireTail);
+        signpost.preserveNativeControlAllocationBoundary(nativeControlSlot);
         spawnDynamicObject(signpost);
         LOG.fine("S3K defeat flow spawned signpost at X=" + signpostX);
 

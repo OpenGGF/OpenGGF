@@ -151,6 +151,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
     private boolean preservesPostObjectResultDispatchBoundary;
     private boolean preservesGroundedResultsDispatchBoundary;
     private boolean usesShortResultsChildRetireTail;
+    private int nativeControlSlot = -1;
 
     /**
      * Creates the signpost at the given X position.
@@ -205,6 +206,10 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
 
     private S3kSignpostInstance() {
         this(0, 0);
+    }
+
+    void preserveNativeControlAllocationBoundary(int slot) {
+        nativeControlSlot = slot;
     }
 
     @Override
@@ -581,8 +586,30 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
     }
 
     private boolean useFirstFreeResultsOwner() {
-        return preservesGroundedResultsDispatchBoundary
-                || (!resultsWaitedForPlayerLanding && !usesShortResultsChildRetireTail);
+        int firstFreeSlot = services().objectManager() == null
+                ? -1
+                : services().objectManager().firstFreeDynamicSlot();
+        return usesFirstFreeResultsOwner(
+                resultsWaitedForPlayerLanding,
+                preservesGroundedResultsDispatchBoundary,
+                usesShortResultsChildRetireTail,
+                firstFreeSlot,
+                nativeControlSlot);
+    }
+
+    static boolean usesFirstFreeResultsOwner(boolean waitedForPlayerLanding,
+            boolean preservesGroundedBoundary, boolean usesShortRetireTail,
+            int firstFreeSlot, int nativeControlSlot) {
+        // Obj_EndSignControl remains in the defeated boss's SST in the ROM.
+        // The Java flow/sign split can sit later in the pool, so compare
+        // FindFreeObj with that retained native owner boundary: a free slot
+        // after it must stay on the forward, same-pass side of Process_Sprites.
+        if (preservesGroundedBoundary && nativeControlSlot >= 0
+                && firstFreeSlot > nativeControlSlot) {
+            return false;
+        }
+        return preservesGroundedBoundary
+                || (!waitedForPlayerLanding && !usesShortRetireTail);
     }
 
     static int resultsChildRetireDispatches(boolean waitedForPlayerLanding,
