@@ -127,9 +127,9 @@ local function readTrackHeaders()
 end
 
 local timeline, lifecycle = Timeline.newTimeline(0x81), Timeline.newInvocationLifecycle()
-local activeTick, queuedSoundIds, frames = nil, {}, {}
+local queueBuffer, activeTick, frames = Timeline.newQueueBuffer(), nil, {}
 local cycleDiagnostics = nil
-local diagnosticTick, lastPreArmQueue1 = 0, nil
+local diagnosticTick = 0
 local romIdentity = nil
 
 local function frameRecord(frame)
@@ -140,9 +140,7 @@ end
 
 local function queueObserved(slot)
     local soundId = (emu.getregister("M68K D0") or 0) & 0xff
-    local frame = emu.framecount()
-    if frame < SEGMENT_START and slot == 0 and soundId == 0x81 then lastPreArmQueue1 = soundId end
-    queuedSoundIds[slot] = soundId
+    queueBuffer:write(slot, soundId, emu.framecount())
 end
 
 local function addRole(roles, role)
@@ -159,13 +157,13 @@ local function specialRole(voiceControl)
     return (voiceControl & 0x80) ~= 0 and "PSG3" or "FM4"
 end
 
-local function currentD7() return (emu.getregister("M68K D7") or 0) & 0xff end
-
 local function candidateObserved(soundClass)
     if not activeTick or not activeTick.selectedRequest then return end
     local request = activeTick.selectedRequest
     if request.sound_class ~= soundClass then return end
-    local candidate = {accepted = false, request = request, declared_roles = {}, initialized_roles = {}, sound_class = soundClass}
+    local candidate = {accepted = false, request = request, selected_sound_id = request.sound_id,
+        declared_roles = {}, initialized_roles = {}, sound_class = soundClass}
+    Timeline.assertSelectedIdentity(candidate.request, candidate.selected_sound_id)
     activeTick.candidates[#activeTick.candidates + 1] = candidate
     activeTick.currentCandidate = candidate
 end
@@ -178,29 +176,26 @@ local function consumeObserved()
 end
 
 local function cycleObserved()
-    if not activeTick then return end
     -- ROM-only diagnostics are validated here and intentionally never enter
     -- the v1 semantic JSON fields used for cross-producer equality.
-    cycleDiagnostics = {priority = readU8(0x00), queues = {readU8(0x0A), readU8(0x0B), readU8(0x0C)},
-        tick = diagnosticTick}
-    for slot = 0, 2 do
-        assert(queuedSoundIds[slot] == nil or queuedSoundIds[slot] == cycleDiagnostics.queues[slot + 1],
-            "queue write observation disagrees with CycleSoundQueue RAM")
-        if queuedSoundIds[slot] then timeline:queue(slot, queuedSoundIds[slot]) end
-    end
+    local queues = {readU8(0x0A), readU8(0x0B), readU8(0x0C)}
+    local retained = activeTick ~= nil
+    local queued = queueBuffer:cycle(queues, retained)
+    if not retained then return end
+    cycleDiagnostics = {priority = readU8(0x00), queues = queues, tick = diagnosticTick}
+    for _, request in ipairs(queued) do timeline:queue(request.slot, request.sound_id) end
     activeTick.cycledBySoundId = {}
     for _, request in ipairs(timeline:cycle(cycleDiagnostics.priority)) do
         -- Queue slots are cleared regardless of driver priority outcome. The dispatch/init hooks below
         -- are the sole acceptance authority, rather than this diagnostic candidate map.
         activeTick.cycledBySoundId[request.sound_id] = request
     end
-    queuedSoundIds = {}
 end
 
 local function bgmLoadObserved()
     local candidate = activeTick and activeTick.currentCandidate
     if not candidate or candidate.sound_class ~= "MUSIC" then return end
-    candidate.request.sound_id = currentD7() -- after the ROM's actual BGM dispatch path is committed.
+    Timeline.assertSelectedIdentity(candidate.request, candidate.selected_sound_id)
     candidate.accepted = true
     for _, role in ipairs({"FM3", "FM4", "FM5", "PSG1", "PSG2", "PSG3"}) do
         addRole(candidate.declared_roles, role); addRole(candidate.initialized_roles, role)
@@ -215,7 +210,7 @@ end
 local function normalRoleInitialized()
     local candidate = activeTick and activeTick.currentCandidate
     if candidate and candidate.sound_class == "SFX" then
-        candidate.request.sound_id = currentD7()
+        Timeline.assertSelectedIdentity(candidate.request, candidate.selected_sound_id)
         candidate.accepted = true
         addRole(candidate.initialized_roles, assert(normalRole((emu.getregister("M68K D4") or 0) & 0xff), "unknown normal SFX initialized role"))
     end
@@ -229,7 +224,7 @@ end
 local function specialRoleInitialized()
     local candidate = activeTick and activeTick.currentCandidate
     if candidate and candidate.sound_class == "SPECIAL_SFX" then
-        candidate.request.sound_id = currentD7()
+        Timeline.assertSelectedIdentity(candidate.request, candidate.selected_sound_id)
         candidate.accepted = true
         addRole(candidate.initialized_roles, specialRole((emu.getregister("M68K D4") or 0) & 0xff))
     end
@@ -240,6 +235,7 @@ local function closeTick(context)
     local headers = readTrackHeaders()
     if activeTick.restoreMusic then timeline:restoreMusic() end
     for _, candidate in ipairs(activeTick.candidates) do
+        Timeline.assertSelectedIdentity(candidate.request, candidate.selected_sound_id)
         timeline:dispatch(candidate.request, {accepted = candidate.accepted, declared_roles = candidate.declared_roles,
             initialized_roles = candidate.initialized_roles, headers = headers})
     end
@@ -252,7 +248,7 @@ local function closeTick(context)
 end
 
 local function emit(context)
-    assert(lastPreArmQueue1 == 0x81, "frame-860 music baseline lacks preceding queue-1 $81 provenance")
+    assert(queueBuffer:baselineMusicId() == 0x81, "frame-860 music baseline lacks preceding queue-1 $81 provenance")
     context.log(Timeline.canonicalJson({type = "metadata", schema = "s1_gameplay_audio_timeline.v1",
         capture = "s1_ghz_gameplay_audio_reference", rom = romIdentity,
         bk2 = {sha256 = EXPECTED_MOVIE_SHA256}, producer = "BizHawk 2.11 / Genesis Plus GX",

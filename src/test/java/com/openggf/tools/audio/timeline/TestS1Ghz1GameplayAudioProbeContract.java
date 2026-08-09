@@ -33,6 +33,18 @@ class TestS1Ghz1GameplayAudioProbeContract {
         assertTrue(source.contains("Genesis Plus GX") && source.contains("2.11"),
                 "probe must pin BizHawk and core identity");
         assertTrue(source.contains("18"), "probe must read all music, normal, and special ROM track headers");
+        assertTrue(source.contains("newQueueBuffer") && source.contains("baselineMusicId"),
+                "probe must separate dormant queue-cycle cleanup from retained baseline provenance");
+        assertTrue(source.contains("assertSelectedIdentity") && source.contains("selected_sound_id"),
+                "probe must retain and assert the original selected queue identity through initialization");
+        int normalInit = source.indexOf("local function normalRoleInitialized()");
+        int specialInit = source.indexOf("local function specialRoleInitialized()");
+        assertTrue(normalInit >= 0 && specialInit > normalInit
+                        && source.substring(normalInit, specialInit).contains("Timeline.assertSelectedIdentity")
+                        && source.substring(specialInit).contains("Timeline.assertSelectedIdentity"),
+                "normal and special initializers must assert retained selected identity");
+        assertFalse(source.contains("M68K D7"),
+                "init hooks must retain selected queue identity; D7 is the ROM DBF track counter there");
         for (String forbidden : List.of("mainmemory.write", "memory.write", "joypad.set", "savestate.",
                 "emu.setregister", "io.open", "event.onmemoryexecute", "event.onmemorywrite", "client.exit")) {
             assertFalse(source.contains(forbidden), "read-only observer contains forbidden API: " + forbidden);

@@ -166,6 +166,54 @@ function Contract.jsonOwnerVector(values)
         psg1 = cloneOwner(values.PSG1), psg2 = cloneOwner(values.PSG2), psg3 = cloneOwner(values.PSG3)}
 end
 
+-- D7 is the selected sound only at PlaySoundID. Normal and special SMPS
+-- initialization reuse it as their DBF track counter, so retain this byte from
+-- the queue/dispatch boundary and assert it whenever an initializer observes it.
+function Contract.assertSelectedIdentity(request, selectedSoundId)
+    assert(type(request) == "table" and type(request.sound_id) == "number",
+        "selected identity requires a queued sound request")
+    assert(Contract.u8(selectedSoundId) == request.sound_id,
+        "dispatch/init observation changed the original selected queued sound ID")
+    return request.sound_id
+end
+
+-- CycleSoundQueue clears every RAM slot whether or not the enclosing
+-- UpdateMusic invocation is in the retained semantic window. Keep that
+-- observation separate from the pre-window $81 baseline provenance.
+function Contract.newQueueBuffer()
+    local buffer = {slots = {}, baselineMusic = nil}
+
+    function buffer:write(slot, soundId, bk2Frame)
+        local index = integer(slot, "queue slot")
+        local frame = integer(bk2Frame, "BK2 frame")
+        assert(index >= 0 and index <= 2, "S1 queue slot must be 0, 1, or 2")
+        local id = Contract.u8(soundId)
+        self.slots[index] = id
+        if frame < 860 and index == 0 and id == 0x81 then self.baselineMusic = id end
+    end
+
+    function buffer:cycle(observedSlots, retained)
+        assert(type(observedSlots) == "table", "CycleSoundQueue requires observed queue slots")
+        assert(type(retained) == "boolean", "CycleSoundQueue retained flag must be boolean")
+        local candidates = {}
+        for slot = 0, 2 do
+            local observed = Contract.u8(assert(observedSlots[slot + 1], "missing observed queue slot"))
+            local queued = self.slots[slot]
+            assert(queued == nil or queued == observed,
+                "queue write observation disagrees with CycleSoundQueue RAM")
+            if retained and queued and queued >= 0x81 then
+                candidates[#candidates + 1] = {slot = slot, sound_id = queued}
+            end
+            self.slots[slot] = nil
+        end
+        return candidates
+    end
+
+    function buffer:baselineMusicId() return self.baselineMusic end
+
+    return buffer
+end
+
 function Contract.newTimeline(activeMusicId)
     local musicId = Contract.u8(activeMusicId)
     assert(musicId >= 0x81 and musicId <= 0x9f, "timeline requires active music ID")

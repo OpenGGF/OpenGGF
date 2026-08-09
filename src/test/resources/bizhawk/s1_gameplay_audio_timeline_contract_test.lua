@@ -194,8 +194,38 @@ local function runPlaySegaLifecycle()
     lifecycle:close()
 end
 
+local function runSelectedIdentityAndDormantQueueBoundaries()
+    -- Break caught: $72222/$72342 repurpose D7 as DBF's track counter after PlaySoundID,
+    -- replacing the selected queued SFX identity, or a pre-window cycle leaks into GHZ1.
+    local timeline = Contract.newTimeline(0x81)
+    timeline:beginTick(860, 0)
+    timeline:queue(1, 0xA0)
+    local selected = timeline:cycle(4)[1]
+    Contract.assertSelectedIdentity(selected, 0xA0)
+    local dbfTrackCount = 0
+    check(not pcall(function() Contract.assertSelectedIdentity(selected, dbfTrackCount) end),
+        "normal initializer accepted its DBF D7 track count as the selected sound ID")
+    check(timeline:dispatch(selected, {
+        accepted = true, declared_roles = {"FM3"}, initialized_roles = {"FM3"},
+        headers = headers({FM3 = true}), init_loop_d7 = 0 -- realistic DBF loop counter, not a sound ID
+    }), "accepted normal initialization was rejected")
+    equals(timeline:closeTick(headers({FM3 = true})).requests[1].sound_id, 0xA0,
+        "DBF D7 loop counter corrupted the original selected SFX ID")
+
+    local queueBuffer = Contract.newQueueBuffer()
+    queueBuffer:write(0, 0x81, 859)
+    equals(#queueBuffer:cycle({0x81, 0, 0}, false), 0,
+        "dormant pre-window cycle exposed semantic candidates")
+    equals(queueBuffer:baselineMusicId(), 0x81, "dormant cycle lost frame-860 $81 provenance")
+    queueBuffer:write(1, 0xA2, 860)
+    local retained = queueBuffer:cycle({0, 0xA2, 0}, true)
+    equals(#retained, 1, "first retained cycle did not discard dormant queue state")
+    equals(retained[1].sound_id, 0xA2, "dormant queue observation poisoned first retained cycle")
+end
+
 runQueueAndContention()
 runLifecycleAndDiagnostics()
 runSourceDerivedDispatchBoundaries()
 runPlaySegaLifecycle()
+runSelectedIdentityAndDormantQueueBoundaries()
 print("S1_GAMEPLAY_AUDIO_TIMELINE_CONTRACT_OK")
