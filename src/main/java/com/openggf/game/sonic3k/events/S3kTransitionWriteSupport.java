@@ -55,6 +55,15 @@ public final class S3kTransitionWriteSupport {
         }
     }
 
+    public static int preloadedActCameraReleaseAdditionalDispatches(
+            ObjectServices services) {
+        Object provider = services.levelEventProvider();
+        if (provider instanceof S3kTransitionEventBridge bridge) {
+            return bridge.preloadedActCameraReleaseAdditionalDispatches();
+        }
+        return -1;
+    }
+
     public static void requestMgzPostTransitionRelease(LevelEventProvider provider) {
         if (provider instanceof S3kTransitionEventBridge bridge) {
             bridge.requestMgzPostTransitionRelease();

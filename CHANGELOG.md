@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: ICZ's post-miniboss title card now obtains its retained
+  `Obj_TitleCardWait2` camera-release cadence from the live transition event
+  owner when the results object is created after the seamless reload. This
+  removes the raw-frame 15401/15403 camera clusters and advances the ICZ
+  complete-run frontier to the end-boss Kosinski queue at raw frame 24575,
+  with complete AIZ, HCZ, MGZ, and CNZ traces unchanged.
 - Fix/Test: fresh-level title-card boundaries now expose the ROM-cleared
   playable slot before publishing the destination's pre-dispatch player state,
   including zero velocity, roll, jump, status, and animation while preserving

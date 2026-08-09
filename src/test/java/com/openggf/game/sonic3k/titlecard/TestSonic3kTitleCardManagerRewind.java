@@ -165,6 +165,34 @@ class TestSonic3kTitleCardManagerRewind {
     }
 
     @Test
+    void preloadedActCameraReleasesOnThirdPostChildOwnerDispatch()
+            throws Exception {
+        startLevel();
+
+        Sonic3kTitleCardManager title = new Sonic3kTitleCardManager();
+        title.initializeInLevel(5, 1);
+        prepareExitForCompletion(title);
+        GameServices.camera().setScrollLocked(true);
+        // The manager has already observed the drained children. These are
+        // the two remaining Obj_TitleCardWait2 polls before completion.
+        title.requestPreloadedActCameraReleaseOnComplete(2);
+
+        title.update();
+        assertTrue(GameServices.camera().getFrozen());
+        assertEquals(1, title.capture().inLevelExitDelayFrames());
+
+        title.update();
+        assertTrue(GameServices.camera().getFrozen(),
+                "Change_Act2Sizes is prepared while Scroll_lock remains held");
+        assertEquals(0, title.capture().inLevelExitDelayFrames());
+
+        title.update();
+        assertFalse(GameServices.camera().getFrozen(),
+                "the third post-child owner dispatch publishes title completion");
+        assertTrue(title.isComplete());
+    }
+
+    @Test
     void productionRegistryRestoresTitleBeforeProviderAndConsumesTheExactLease()
             throws Exception {
         startLevel();

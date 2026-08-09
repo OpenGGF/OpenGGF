@@ -1250,6 +1250,14 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     }
 
     @Override
+    public int preloadedActCameraReleaseAdditionalDispatches() {
+        return iczEvents == null
+                ? S3kTransitionEventBridge.super
+                        .preloadedActCameraReleaseAdditionalDispatches()
+                : iczEvents.preloadedActCameraReleaseAdditionalDispatches();
+    }
+
+    @Override
     public void requestMgzPostTransitionRelease() {
         this.mgzPendingPostTransitionRelease = true;
     }

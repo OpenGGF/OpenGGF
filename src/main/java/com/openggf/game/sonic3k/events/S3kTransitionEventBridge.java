@@ -28,6 +28,14 @@ public interface S3kTransitionEventBridge {
     default void preparePreloadedActTitleCardRuntimeArtAdmission() {
     }
 
+    /**
+     * Additional title-owner polls retained after the shared drained-child
+     * observation for a preloaded next-act handoff.
+     */
+    default int preloadedActCameraReleaseAdditionalDispatches() {
+        return -1;
+    }
+
     void requestMgzPostTransitionRelease();
 
     void requestCnzPostTransitionRelease();

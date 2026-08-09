@@ -23,6 +23,9 @@ class TestS3kTransitionWriteSupport {
         assertTrue(bridge.actTransitionSignaled);
         assertTrue(bridge.hczPostTransitionCutsceneRequested);
         assertTrue(bridge.cnzPostTransitionReleaseRequested);
+        assertEquals(2,
+                S3kTransitionWriteSupport
+                        .preloadedActCameraReleaseAdditionalDispatches(services));
     }
 
     @Test
@@ -41,6 +44,9 @@ class TestS3kTransitionWriteSupport {
         S3kTransitionWriteSupport.signalActTransition(services);
         S3kTransitionWriteSupport.requestHczPostTransitionCutscene(services.levelEventProvider());
         S3kTransitionWriteSupport.requestCnzPostTransitionRelease(services.levelEventProvider());
+        assertEquals(-1,
+                S3kTransitionWriteSupport
+                        .preloadedActCameraReleaseAdditionalDispatches(services));
     }
 
     private static final class RecordingServices extends TestObjectServices {
@@ -95,6 +101,11 @@ class TestS3kTransitionWriteSupport {
         @Override
         public void requestCnzPostTransitionRelease() {
             cnzPostTransitionReleaseRequested = true;
+        }
+
+        @Override
+        public int preloadedActCameraReleaseAdditionalDispatches() {
+            return 2;
         }
     }
 }

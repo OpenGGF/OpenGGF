@@ -70913,3 +70913,39 @@ landable change, which I implemented directly.
   "the only correct closure". They carry **3172** and 3472 — republished in 025e7b66c — so the
   conclusion was spent. Marked SUPERSEDED with the current cause above, historical text
   retained for provenance.
+
+## 2026-08-09 — S3K ICZ retained title-camera frontier
+
+- Worktree: `bugfix/s3k-traces` at merged-develop context `78670ba5e` before
+  this frontier commit. The existing local edits in `.idea/vcs.xml`,
+  `docs/status/rewind-round-trip-gaps.md`, `Sonic3k.java`,
+  `Sonic3kStarPostObjectInstance.java`, `ObjectPlacementController.java`, and
+  `RingManager.java` remained unstaged. Validation used JDK 21.0.12 and the
+  available S3K ROM `Sonic and Knuckles & Sonic 3 (W) [!].gen`.
+- Frontier command: `mvn -q -Dmse=off -Dsurefire.forkCount=1
+  -DreuseForks=true -Dtrace.contextRadius=20
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace
+  test`. The committed baseline reported 18 errors with first mismatch
+  `camera_y` at raw `15401`; the candidate reports 16 errors, removes both
+  camera clusters (`camera_y` raw `15401` and `camera_x` raw `15403`), and
+  first diverges on the end-boss direct/module Kosinski state at raw `24575`.
+  Replay continues to the existing expected-but-unsubmitted direct completion
+  `#264` at raw `25341`.
+- Root cause: ICZ reloads Act 2 before its miniboss results object exists, so
+  the transition request's carried-object timing could not reach that later
+  owner. The shared results object therefore used the eleven-dispatch fallback
+  intended for longer retained title tails. The transition event bridge now
+  exposes the live owner's semantic additional-poll count; ICZ supplies the two
+  polls remaining after the shared drained-child observation, matching
+  `Obj_TitleCardWait2` and `Obj_EndSignControlDoStart` ordering
+  (`docs/skdisasm/sonic3k.asm:62274-62309,180407-180419`). No trace, frame, or
+  shared zone-name branch was added.
+- Regression command: the combined complete-run AIZ/HCZ/MGZ/CNZ sweep plus
+  standalone MGZ passed. Focused transition bridge, title-card rewind, and ICZ
+  Act 1 transition suites also passed. Ring comparison remains error-level via
+  `ToleranceConfig.DEFAULT` / `RingCountMode.FORCE_ERROR`; no trace payloads
+  changed.
+- Route position: AIZ, HCZ, MGZ, and CNZ complete runs remain green. ICZ now
+  reaches raw `24575`; its next target is the end-boss production queue. LBZ
+  remains pending.

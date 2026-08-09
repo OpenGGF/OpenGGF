@@ -985,11 +985,17 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         titleCardProvider.initializeInLevel(zone, 1);
         if (titleCardProvider instanceof Sonic3kTitleCardManager s3kTitleCard) {
             if (pendingPreloadedTitleHandoff) {
-                if (carriedPreloadedActCameraReleaseDispatches < 0) {
+                int releaseDispatches = carriedPreloadedActCameraReleaseDispatches;
+                if (releaseDispatches < 0) {
+                    releaseDispatches =
+                            S3kTransitionWriteSupport
+                                    .preloadedActCameraReleaseAdditionalDispatches(services());
+                }
+                if (releaseDispatches < 0) {
                     s3kTitleCard.requestPreloadedActCameraReleaseOnComplete();
-                } else if (carriedPreloadedActCameraReleaseDispatches > 0) {
+                } else if (releaseDispatches > 0) {
                     s3kTitleCard.requestPreloadedActCameraReleaseOnComplete(
-                            carriedPreloadedActCameraReleaseDispatches);
+                            releaseDispatches);
                 }
             }
             if (pendingAizTitleHandoff) {
