@@ -13,10 +13,12 @@ local SOUND_RAM = 0xF000
 local QUEUE_PCS = {[0x138E] = 0, [0x1394] = 1, [0x139A] = 2}
 local UPDATE_MUSIC, UPDATE_MUSIC_RETURN = 0x71B4C, 0x71C4C
 local CYCLE_SOUND_QUEUE, PLAY_SOUND_ID = 0x71F02, 0x71F4C
-local PLAY_SEGA_RETURN, PLAY_BGM, BGM_LOAD_MUSIC = 0x71FD0, 0x71FD2, 0x7202C
+local PLAY_SEGA_RETURN, PLAY_BGM, BGM_LOAD_MUSIC, PLAY_BGM_RETURN = 0x71FD0, 0x71FD2, 0x7202C, 0x721B8
 local PLAY_SFX, NORMAL_ROLE_DECLARED, NORMAL_ROLE_INITIALIZED = 0x721C6, 0x7222E, 0x7227C
 local PLAY_SPECIAL, SPECIAL_ROLE_DECLARED, SPECIAL_ROLE_INITIALIZED = 0x7230C, 0x7234C, 0x7236E
-local RESTORE_PREVIOUS_MUSIC = 0x72B14
+local RESTORE_PREVIOUS_MUSIC, RESTORE_PREVIOUS_MUSIC_RETURN = 0x72B14, 0x72B9C
+local STOP_TRACK_RETURN = 0x72E04
+local STOP_ALL_SOUND_CLEARED = 0x725BC
 local SEGMENT_START, SEGMENT_END = 860, 4975
 local EXPECTED_ROM_SHA1 = "69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b"
 local EXPECTED_ROM_CRC32 = "afe05eee"
@@ -30,11 +32,14 @@ local opcodeManifest = {
     {address = 0x139A, expectedOpcode = "11c0f00c"}, {address = 0x71B4C, expectedOpcode = "33fc010000a11100"},
     {address = 0x71C4C, expectedOpcode = "4e75"}, {address = 0x71F02, expectedOpcode = "207900071990"},
     {address = 0x71F4C, expectedOpcode = "7e00"}, {address = 0x71FD0, expectedOpcode = "4e75"},
+    {address = 0x721B8, expectedOpcode = "4e75"},
     {address = 0x71FD2, expectedOpcode = "0c070088"}, {address = 0x7202C, expectedOpcode = "4eba059c"},
     {address = 0x721C6, expectedOpcode = "4a2e0027"}, {address = 0x7222E, expectedOpcode = "1803"},
     {address = 0x7227C, expectedOpcode = "3a99"}, {address = 0x7230C, expectedOpcode = "4a2e0027"},
     {address = 0x7234C, expectedOpcode = "6b0c"}, {address = 0x7236E, expectedOpcode = "3a99"},
-    {address = 0x72B14, expectedOpcode = "204e"}
+    {address = 0x72B14, expectedOpcode = "204e"}, {address = 0x72B9C, expectedOpcode = "4e75"},
+    {address = 0x72E04, expectedOpcode = "4e75"},
+    {address = 0x725BC, expectedOpcode = "1d7c00800009"}
 }
 
 local function verifyOpcodeManifest()
@@ -296,6 +301,9 @@ ProbeRuntime.run({
         end},
         {name = "s1_gameplay_audio_bgm", address = PLAY_BGM, callback = function() candidateObserved("MUSIC") end},
         {name = "s1_gameplay_audio_bgm_load", address = BGM_LOAD_MUSIC, callback = function() bgmLoadObserved() end},
+        {name = "s1_gameplay_audio_bgm_return", address = PLAY_BGM_RETURN, callback = function(context)
+            if lifecycle:playBgmDoubleReturn() == "close" then closeTick(context) end
+        end},
         {name = "s1_gameplay_audio_sfx", address = PLAY_SFX, callback = function() candidateObserved("SFX") end},
         {name = "s1_gameplay_audio_sfx_declared", address = NORMAL_ROLE_DECLARED, callback = function() normalRoleDeclared() end},
         {name = "s1_gameplay_audio_sfx_initialized", address = NORMAL_ROLE_INITIALIZED, callback = function() normalRoleInitialized() end},
@@ -304,6 +312,21 @@ ProbeRuntime.run({
         {name = "s1_gameplay_audio_special_initialized", address = SPECIAL_ROLE_INITIALIZED, callback = function() specialRoleInitialized() end},
         {name = "s1_gameplay_audio_restore_previous_music", address = RESTORE_PREVIOUS_MUSIC, callback = function()
             if activeTick then activeTick.restoreMusic = true end
+        end},
+        {name = "s1_gameplay_audio_restore_previous_music_return", address = RESTORE_PREVIOUS_MUSIC_RETURN,
+            callback = function(context)
+                if lifecycle:fadeInToPreviousDoubleReturn() == "close" then closeTick(context) end
+            end},
+        {name = "s1_gameplay_audio_stop_track_return", address = STOP_TRACK_RETURN, callback = function(context)
+            -- $72E02 addq.w #8,sp skips CoordFlag plus the current track helper.
+            -- Only an RTS target outside the six UpdateMusic track-loop labels
+            -- skips UpdateMusic itself and closes the semantic tick.
+            local stack = (emu.getregister("M68K A7") or 0) & 0xffffffff
+            local returnPc = mainmemory.read_u32_be(stack & 0xffff)
+            if lifecycle:stopTrackDoubleReturn(returnPc) == "close" then closeTick(context) end
+        end},
+        {name = "s1_gameplay_audio_stop_all_cleared", address = STOP_ALL_SOUND_CLEARED, callback = function()
+            queueBuffer:driverRamCleared()
         end},
         {name = "s1_gameplay_audio_update_return", address = UPDATE_MUSIC_RETURN, callback = function(context)
             local action = lifecycle:close(); if action == "close" then closeTick(context) end

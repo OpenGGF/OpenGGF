@@ -113,6 +113,10 @@ local function runLifecycleAndDiagnostics()
     timeline:closeTick(headers())
     local monotonic = pcall(function() timeline:beginTick(861, 2) end)
     check(not monotonic, "diagnostic tick regression was accepted")
+
+    equals(Contract.canonicalJson(Contract.newTimeline(0x81):baseline()),
+        '{"active_music_id":129,"bk2_frame":860,"diagnostic_tick":null,"owners":{"FM3":{"owner_class":"MUSIC","request_ordinal":0,"sound_id":129},"FM4":{"owner_class":"MUSIC","request_ordinal":0,"sound_id":129},"FM5":{"owner_class":"MUSIC","request_ordinal":0,"sound_id":129},"PSG1":{"owner_class":"MUSIC","request_ordinal":0,"sound_id":129},"PSG2":{"owner_class":"MUSIC","request_ordinal":0,"sound_id":129},"PSG3":{"owner_class":"MUSIC","request_ordinal":0,"sound_id":129}},"type":"baseline"}',
+        "baseline omitted the schema-required explicit null diagnostic tick")
 end
 
 local function runSourceDerivedDispatchBoundaries()
@@ -184,6 +188,24 @@ local function runSourceDerivedDispatchBoundaries()
     equals(restored.owners.PSG3.sound_id, 0x81, "$72B14 restoration did not reinstate all fixed roles")
 end
 
+local function runImmutableBaseline()
+    -- The producer emits after frame 4974, but the baseline is the immutable
+    -- frame-860 pre-step snapshot. Later music requests must not rewrite it.
+    local timeline = Contract.newTimeline(0x81)
+    timeline:beginTick(860, 0)
+    timeline:queue(0, 0x87)
+    local music = timeline:cycle(0)[1]
+    check(timeline:dispatch(music, observation(
+        {"FM3", "FM4", "FM5", "PSG1", "PSG2", "PSG3"},
+        {"FM3", "FM4", "FM5", "PSG1", "PSG2", "PSG3"})),
+        "later music request did not dispatch")
+    timeline:closeTick(headers())
+
+    local baseline = timeline:baseline()
+    equals(baseline.owners.FM3.sound_id, 0x81, "late emission rewrote baseline music ID")
+    equals(baseline.owners.FM3.request_ordinal, 0, "late emission rewrote baseline request identity")
+end
+
 local function runPlaySegaLifecycle()
     -- Break caught: PlaySegaSound's return-address tampering bypasses $71C4C but leaves an
     -- UpdateMusic invocation open, corrupting the next complete tick.
@@ -191,6 +213,49 @@ local function runPlaySegaLifecycle()
     lifecycle:entry(0x00FF2000, 12)
     equals(lifecycle:playSegaAbnormalExit(), "reset", "PlaySega abnormal return did not reset lifecycle")
     equals(lifecycle:entry(0x00FF2010, 13), "open", "post-PlaySega UpdateMusic entry remained active")
+    lifecycle:close()
+end
+
+local function runPlayBgmDoubleReturnLifecycle()
+    -- Sound_PlayBGM converges at $721B6/$721B8, which removes PlaySoundID's
+    -- return address and exits UpdateMusic without reaching $71C4C. Unlike
+    -- PlaySega, the accepted music request still closes a semantic tick.
+    local lifecycle = Contract.newInvocationLifecycle()
+    lifecycle:entry(0x00FF3000, 3699)
+    equals(lifecycle:playBgmDoubleReturn(), "close", "BGM double return did not close lifecycle")
+    equals(lifecycle:entry(0x00FF3004, 3700), "open",
+        "post-BGM UpdateMusic entry remained active on the prior stack")
+    lifecycle:close()
+end
+
+local function runFadeInToPreviousDoubleReturnLifecycle()
+    -- cfFadeInToPrevious ends at $72B9A/$72B9C by removing the CoordFlag,
+    -- track-update, and UpdateMusic return addresses. Restoration still closes
+    -- the completed semantic tick instead of abandoning it.
+    local lifecycle = Contract.newInvocationLifecycle()
+    lifecycle:entry(0x00FF4000, 3910)
+    equals(lifecycle:fadeInToPreviousDoubleReturn(), "close",
+        "fade-in-to-previous double return did not close lifecycle")
+    equals(lifecycle:entry(0x00FF4008, 3911), "open",
+        "post-restoration UpdateMusic entry remained active on the prior stack")
+    lifecycle:close()
+end
+
+local function runStopTrackDoubleReturnLifecycle()
+    -- cfStopTrack converges at $72E02/$72E04, where it removes the CoordFlag
+    -- and track-update return addresses. An ordinary track returns to the
+    -- source-defined UpdateMusic loop; only a return outside those loop labels
+    -- closes the semantic tick.
+    local lifecycle = Contract.newInvocationLifecycle()
+    lifecycle:entry(0x00FF5000, 4748)
+    equals(lifecycle:stopTrackDoubleReturn(0x71BF8), "continue",
+        "BGM PSG-loop stop-track return closed UpdateMusic")
+    equals(lifecycle:close(), "close", "normal UpdateMusic return did not close lifecycle")
+    lifecycle:entry(0x00FF5008, 4749)
+    equals(lifecycle:stopTrackDoubleReturn(0x00000B64), "close",
+        "stop-track double return did not close lifecycle")
+    equals(lifecycle:entry(0x00FF5010, 4750), "open",
+        "post-stop-track UpdateMusic entry remained active on the prior stack")
     lifecycle:close()
 end
 
@@ -291,11 +356,31 @@ local function runDuplicateQueuedIdentityDeferral()
         "next PlaySoundID did not consume the original deferred ordinal 2")
 end
 
+local function runStopAllSoundQueueInvalidation()
+    -- Real ROM break at BK2 frame 166: v_sound_id=$00 makes $71F22 defer
+    -- queue1 $E4, then PlaySoundID enters StopAllSound at $7259E. Its
+    -- FixBugs=0 driver-RAM clear erases that queue0 byte before queue1 $E1.
+    local queueBuffer = Contract.newQueueBuffer()
+    queueBuffer:write(1, 0xE4, 165)
+    equals(#queueBuffer:cycle({0, 0xE4, 0}, false, 0x00), 0,
+        "pre-existing v_sound_id exposed the deferred stop command")
+
+    queueBuffer:driverRamCleared()
+    queueBuffer:write(1, 0xE1, 166)
+    equals(#queueBuffer:cycle({0, 0xE1, 0}, false, 0x80), 0,
+        "StopAllSound retained a phantom deferred queue0 request")
+end
+
 runQueueAndContention()
 runLifecycleAndDiagnostics()
 runSourceDerivedDispatchBoundaries()
+runImmutableBaseline()
 runPlaySegaLifecycle()
+runPlayBgmDoubleReturnLifecycle()
+runFadeInToPreviousDoubleReturnLifecycle()
+runStopTrackDoubleReturnLifecycle()
 runSelectedIdentityAndDormantQueueBoundaries()
 runCycleSoundQueueDeferral()
 runDuplicateQueuedIdentityDeferral()
+runStopAllSoundQueueInvalidation()
 print("S1_GAMEPLAY_AUDIO_TIMELINE_CONTRACT_OK")

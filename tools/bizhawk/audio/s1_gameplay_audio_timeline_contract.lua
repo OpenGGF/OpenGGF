@@ -4,6 +4,8 @@
 
 local Contract = {}
 local ROLES = {"FM3", "FM4", "FM5", "PSG1", "PSG2", "PSG3"}
+local JSON_NULL = {}
+Contract.JSON_NULL = JSON_NULL
 
 local function integer(value, name)
     assert(type(value) == "number" and value == math.floor(value), name .. " must be an integer")
@@ -31,6 +33,7 @@ local function isArray(value)
 end
 
 function Contract.canonicalJson(value)
+    if value == JSON_NULL then return "null" end
     local kind = type(value)
     if kind == "nil" then return "null" end
     if kind == "boolean" then return value and "true" or "false" end
@@ -132,6 +135,10 @@ end
 
 function Contract.newInvocationLifecycle()
     local lifecycle = {active = false, stackPointer = nil, emulatorFrame = nil}
+    local updateMusicTrackReturns = {
+        [0x71BE6] = true, [0x71BF8] = true, [0x71C10] = true,
+        [0x71C22] = true, [0x71C38] = true, [0x71C44] = true
+    }
 
     function lifecycle:entry(stackPointer, emulatorFrame)
         local stack = Contract.u32(stackPointer)
@@ -154,6 +161,25 @@ function Contract.newInvocationLifecycle()
         assert(self.active, "PlaySega abnormal exit without active UpdateMusic")
         self.active, self.stackPointer, self.emulatorFrame = false, nil, nil
         return "reset"
+    end
+
+    function lifecycle:playBgmDoubleReturn()
+        assert(self.active, "Sound_PlayBGM double return without active UpdateMusic")
+        self.active, self.stackPointer, self.emulatorFrame = false, nil, nil
+        return "close"
+    end
+
+    function lifecycle:fadeInToPreviousDoubleReturn()
+        assert(self.active, "cfFadeInToPrevious double return without active UpdateMusic")
+        self.active, self.stackPointer, self.emulatorFrame = false, nil, nil
+        return "close"
+    end
+
+    function lifecycle:stopTrackDoubleReturn(returnPc)
+        assert(self.active, "cfStopTrack double return without active UpdateMusic")
+        if updateMusicTrackReturns[Contract.u32(returnPc)] then return "continue" end
+        self.active, self.stackPointer, self.emulatorFrame = false, nil, nil
+        return "close"
     end
 
     return lifecycle
@@ -256,6 +282,15 @@ function Contract.newQueueBuffer()
         return candidates[selectedIndex]
     end
 
+    function buffer:driverRamCleared()
+        -- StopAllSound's shipped FixBugs = 0 clear loop still covers every
+        -- queue field. Retain only the observer's monotonic identity counter.
+        self.slots = {}
+        self.baselineMusic = nil
+        self.deferredQueue0 = nil
+        self.pendingCandidates = nil
+    end
+
     function buffer:baselineMusicId() return self.baselineMusic end
 
     return buffer
@@ -270,11 +305,12 @@ function Contract.newTimeline(activeMusicId)
         normalOwners = {}, specialOwners = {}, musicOwners = {}
     }
     for _, role in ipairs(ROLES) do timeline.musicOwners[role] = owner("MUSIC", musicId, 0) end
+    timeline.initialOwners = copyOwners(timeline.musicOwners)
     timeline.finalOwners = copyOwners(timeline.musicOwners)
 
     function timeline:baseline()
         return {type = "baseline", bk2_frame = 860, active_music_id = musicId,
-            diagnostic_tick = nil, owners = copyOwners(self.musicOwners)}
+            diagnostic_tick = JSON_NULL, owners = copyOwners(self.initialOwners)}
     end
 
     function timeline:beginTick(bk2Frame, diagnosticTick)
