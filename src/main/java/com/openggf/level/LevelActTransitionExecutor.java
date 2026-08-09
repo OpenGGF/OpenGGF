@@ -85,7 +85,9 @@ final class LevelActTransitionExecutor {
         // stayed off until a respawn or another load cleared it).
 
         var transitionRuntime = GameServices.zoneRuntimeRegistry().current();
-        if (transitionRuntime.advancesOscillationOnSeamlessTransition()) {
+        boolean transitionOwnsLoopTail =
+                transitionRuntime.advancesOscillationOnSeamlessTransition();
+        if (transitionOwnsLoopTail) {
             levelManager.markActTransitionOscillationAdvancedDuringFrame();
             OscillationManager.advanceForSeamlessTransition();
         }
@@ -107,7 +109,9 @@ final class LevelActTransitionExecutor {
         }
 
         levelManager.initAnimatedContent();
-        if (levelManager.animatedPatternManager instanceof SeamlessTransitionAnimationClock clock) {
+        if (transitionOwnsLoopTail
+                && levelManager.animatedPatternManager
+                        instanceof SeamlessTransitionAnimationClock clock) {
             clock.advanceForSeamlessTransition();
         }
 

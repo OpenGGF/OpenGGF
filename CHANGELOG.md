@@ -3,6 +3,15 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: seamless S3K act reloads now advance `ChangeRingFrame` at their
+  actual loop-tail owner. In-frame AIZ reloads continue into the ordinary
+  level update instead of also advancing inside the shared reload executor;
+  boundary-owned reloads retain the explicit transition-only tick, and
+  transition-owned loop tails use their runtime semantic predicate. This
+  advances the complete AIZ frontier from raw frame `14301` to `16123`, with
+  errors falling from five to three. HCZ, MGZ, CNZ, ICZ, and LBZ complete-run
+  canaries retain their established frontiers; ring comparisons remain forced
+  errors and no trace payloads changed.
 - Fix/Test: AIZ's retained `Obj_EndSignControl` now carries the consolidated
   results/title SST ownership into `Change_Act2Sizes`. Its first gradual resize
   worker reuses that released owner slot when it lies after the control owner,

@@ -1,6 +1,7 @@
 package com.openggf.level;
 
 import com.openggf.game.GameServices;
+import com.openggf.level.animation.SeamlessTransitionAnimationClock;
 import com.openggf.sprites.managers.SpriteManager;
 
 import java.io.IOException;
@@ -124,6 +125,15 @@ final class LevelSeamlessTransitionExecutor {
         // drops one oscillator tick across the AIZ reload (sonic3k.asm:7889,
         // 7931).
         levelManager.advanceGlobalOscillationAtLevelLoopTail();
+        // This boundary-owned reload returns before the ordinary level update,
+        // so preserve the adjacent ChangeRingFrame dispatch here. In-frame
+        // event reloads continue into LevelManager.update() and advance there;
+        // advancing inside the shared act-transition executor would tick those
+        // paths twice (notably AIZ1BGE_Finish).
+        if (levelManager.animatedPatternManager
+                instanceof SeamlessTransitionAnimationClock clock) {
+            clock.advanceForSeamlessTransition();
+        }
 
         // The pending seamless reload is consumed at frame top, so this row
         // returns before ObjectManager.update() can perform its normal V-int

@@ -69887,3 +69887,35 @@ guard.
   What was measured instead: **the ROM applies `Obj1E_MoveCharacter` TWICE in frame 5053** —
   from row 5052 (x=0x0890 sub=0x6F00, y=0x06F0 sub=0x4400, x_vel=0x009D, y_vel=0xF800) the
   32-bit x delta to row 5053 is two applications, not one. That is the next lead.
+
+## 2026-08-09 - AIZ seamless reload gives ChangeRingFrame one owner
+
+- Branch/worktree: `bugfix/s3k-traces` in the primary worktree, based on
+  merge commit `91e54f808` plus the protected local user edits. Candidate was
+  uncommitted during validation.
+- Root cause: `LevelActTransitionExecutor` advanced the shared S3K animation
+  clock while AIZ's in-frame `AIZ1BGE_Finish` reload then continued into the
+  ordinary `LevelManager.update()` loop tail. The ROM reaches
+  `ChangeRingFrame` once. The engine reached it twice, leaving
+  `AIZ_vine_angle` exactly `$180` ahead throughout Act 2 and making the giant
+  ride-vine grab one frame late.
+- Fix: transition-owned loop tails advance the animation clock only through
+  the existing runtime semantic predicate. Frame-boundary reloads, which
+  return before the ordinary level update, own the explicit transition-only
+  animation tick in `LevelSeamlessTransitionExecutor`.
+- AIZ command: `mvn -q -Ptrace-replay -Dmse=off
+  -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay
+  -Dtrace.verification=all -Dtrace.frontierOnly=true -Ds3k.rom.path=... test`.
+  Result: release-blocking errors fell from five to three and the first error
+  advanced from raw frame `14301` (`x`) to raw frame `16123`
+  (`tails_animation_id`, expected `$05`, actual `$06`). The run still reaches
+  the established terminal unconsumed StarPost completion edge `#50` at raw
+  frame `20376`.
+- Focused transition validation:
+  `TestSonic3kActTransitionZoneFeatures` passes. Serial complete-run canaries
+  for HCZ, MGZ, CNZ, ICZ, and LBZ retain their established outcomes (MGZ has
+  no comparison errors; the known-red routes keep the same first mismatch).
+  A clean pre-change CNZ rerun reproduced its nine-error raw `12024` baseline,
+  confirming that result is unrelated rather than a regression from this fix.
+  Ring comparison remains `RingCountMode.FORCE_ERROR`; no fixture changed.
