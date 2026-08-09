@@ -70949,3 +70949,36 @@ landable change, which I implemented directly.
 - Route position: AIZ, HCZ, MGZ, and CNZ complete runs remain green. ICZ now
   reaches raw `24575`; its next target is the end-boss production queue. LBZ
   remains pending.
+
+## 2026-08-09 — S3K ICZ end-boss results-art frontier
+
+- Worktree: `bugfix/s3k-traces` at `a6ff1bfa7`. The existing local edits in
+  `.idea/vcs.xml`, `docs/status/rewind-round-trip-gaps.md`, `Sonic3k.java`,
+  `Sonic3kStarPostObjectInstance.java`, `ObjectPlacementController.java`, and
+  `RingManager.java` remained unstaged. Validation used JDK 21.0.12 and the
+  available S3K ROM `Sonic and Knuckles & Sonic 3 (W) [!].gen`.
+- Frontier command: `mvn -q -Dmse=off -Ds3k.rom.path='Sonic and Knuckles &
+  Sonic 3 (W) [!].gen'
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace
+  test`. The committed baseline reported 16 errors beginning with the missing
+  direct/module Kosinski submissions at raw `24575`; the candidate reports 8
+  errors and 0 warnings, first diverging at the fresh ICZ-to-LBZ handoff at raw
+  `25338`. Replay then reaches the existing expected-but-unsubmitted LBZ direct
+  completion `#264` at raw `25341`.
+- Root cause: native ICZ runs the capsule from slot 10 and its lowest-free
+  `Obj_LevelResults` allocation from slot 11, so `Obj_LevelResultsInit` executes
+  later in that same `Process_Sprites` pass and submits all three results-art
+  Kosinski jobs (`docs/skdisasm/sonic3k.asm:62542-62557,181976-181990`). The
+  engine folds ICZ's boss/ship/child graph and can place the capsule after the
+  lowest free hole, making the real results object land in an already-visited
+  slot. The ICZ capsule now exposes that native same-pass ownership and consumes
+  the real results object's creation dispatch without copying trace state or
+  changing shared allocator policy.
+- Regression command: the 55-test focused `TestS3kIczEndBossObject` suite
+  passed, followed by the combined complete-run AIZ/HCZ/MGZ/CNZ sweep and
+  standalone MGZ trace. Ring comparison remains error-level via
+  `ToleranceConfig.DEFAULT` / `RingCountMode.FORCE_ERROR`; no trace payloads
+  changed.
+- Route position: AIZ, HCZ, MGZ, and CNZ complete runs remain green. ICZ now
+  reaches the LBZ handoff at raw `25338`; LBZ bootstrap publication is the next
+  gameplay-order target.

@@ -43,6 +43,13 @@ public final class IczEndBossEggCapsuleInstance extends AbstractS3kUprightEggCap
         return new IczEndBossResultsScreenObjectInstance(character, act);
     }
 
+    @Override
+    protected boolean nativeResultsRunsInAllocationPass() {
+        // ICZ's capsule is slot 10 and AllocateObject selects slot 11, so
+        // Obj_LevelResultsInit runs later in the same Process_Sprites pass.
+        return true;
+    }
+
     /** Retained {@code loc_71DE2} owner folded into ICZ's results object. */
     private static final class IczEndBossResultsScreenObjectInstance
             extends S3kResultsScreenObjectInstance {

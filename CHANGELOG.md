@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: ICZ's folded end-boss capsule now preserves the ROM's same-pass
+  `Obj_LevelResultsInit` dispatch when its engine allocation lands in an
+  already-visited SST. This submits the three results-art Kosinski jobs at the
+  native boundary and advances the ICZ complete-run frontier from raw frame
+  24575 to the fresh LBZ handoff at raw frame 25338, with AIZ, HCZ, MGZ, and
+  CNZ complete runs plus standalone MGZ unchanged.
 - Fix/Test: ICZ's post-miniboss title card now obtains its retained
   `Obj_TitleCardWait2` camera-release cadence from the live transition event
   owner when the results object is created after the seamless reload. This
