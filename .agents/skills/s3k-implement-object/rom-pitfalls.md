@@ -760,6 +760,38 @@ test).
 
 ---
 
+## P19 -- AllocateObject ported as FindNextFreeObj changes same-pass dispatch
+
+**Symptom.** A newly created child runs one frame too early, often exposing a
+queue submission, state transition, or collision side effect on the parent's
+trigger frame instead of the following frame.
+
+**Root cause.** ROM `AllocateObject`/`FindFreeObj` scans from the lowest dynamic
+SST, while `FindNextFreeObj` scans forward from the running owner. Replacing an
+`AllocateObject` call with engine `spawnChild()` can place the child after the
+parent, where `Process_Sprites` reaches it in the same pass. The ROM may have
+chosen an already-visited lower slot and deferred the child's first dispatch.
+
+**What to check.** Match the allocation primitive literally:
+
+1. ROM `AllocateObject` or `FindFreeObj` uses `spawnFreeChild()`.
+2. ROM `FindNextFreeObj` uses `spawnChild()` (or `spawnChildAfterSlot()` when
+   the ROM temporarily changes the owner pointer before searching).
+3. Do not replace the distinction with an unconditional one-frame delay. Slot
+   occupancy decides whether a lowest-free child runs now or next pass.
+4. When timing matters, guard both the selected slot and whether it has already
+   been visited in the current object pass.
+
+**ROM citation.** Upright egg-capsule `sub_868F8` calls `AllocateObject` before
+publishing `Obj_LevelResults` (`docs/skdisasm/sonic3k.asm:181978-181990`).
+`Obj_LevelResultsInit` immediately queues three KosM archives on its first
+dispatch (`sonic3k.asm:62542-62575`). Engine equivalents are
+`spawnFreeChild()` and `spawnChild()` in `AbstractObjectInstance`.
+
+**Originating commit.** `fix(s3k): preserve results-owner lowest-free slot`.
+
+---
+
 ## P19 -- HurtCharacter spill may be a next-object-tick effect
 
 **Symptom.** A trace enters hurt on the correct frame but the engine spends

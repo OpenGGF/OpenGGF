@@ -253,7 +253,11 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
         }
         PlayerCharacter character = resolvePlayerCharacter();
         int currentAct = services().currentAct();
-        spawnChild(() -> createResultsScreen(character, currentAct));
+        // sub_868F8 calls AllocateObject, so Obj_LevelResults takes the lowest
+        // free SST. If that slot has already run, Obj_LevelResultsInit and its
+        // three KosM submissions wait for the next Process_Sprites pass
+        // (sonic3k.asm:181978-181990).
+        spawnFreeChild(() -> createResultsScreen(character, currentAct));
     }
 
     /** Allows a retained post-capsule owner to keep control of its native handoff. */

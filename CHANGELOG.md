@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: upright S3K egg capsules now allocate their level-results owner
+  through the ROM's lowest-free-slot `AllocateObject` path. This preserves the
+  next-pass `Obj_LevelResultsInit` dispatch when the chosen SST has already run
+  and advances CNZ's complete-run frontier from raw frame 38793 to 39452 while
+  retaining the green complete-run AIZ, HCZ, and MGZ traces and standalone MGZ
+  trace.
 - Fix/Test: hooks-off S3K traces now recognize the existing sidekick-animation
   hold phase from the ROM's structural position-history advance when the CPU
   hook event is unavailable. This removes CNZ's two transient Tails mapping

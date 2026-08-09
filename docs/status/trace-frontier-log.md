@@ -70686,3 +70686,41 @@ round-trip chains: `TestS1GhzMazeRoundTripChain` and `TestS2EhzHalfpipeRoundTrip
   standalone MGZ pass. Standalone AIZ retains its raw-`16067` queue frontier
   and four focused failures. Standalone CNZ retains its raw-`25743` camera-X
   frontier and unmatched completion `#31`; no earlier-zone frontier regressed.
+
+## 2026-08-09 - S3K CNZ results-owner allocation frontier
+
+- Branch `bugfix/s3k-traces`, candidate over `48dbebd74`. A fresh fetch found
+  `origin/develop` at `2fd54136b`, already included through merge
+  `232049ceb`, so no additional merge was required. Ring comparison remains
+  error-level through `ToleranceConfig.DEFAULT` and
+  `RingCountMode.FORCE_ERROR`.
+- Raw frame `38793` is not a torn queue heartbeat: both recorded S3K queues
+  are idle there, then raw `38794` admits the three results-art KosM parents.
+  The first child is `ArtKosM_ResultsGeneral` at ROM `$0D6A62` to VRAM
+  `$D000`, identifying `Obj_LevelResultsInit` as the queue owner
+  (`sonic3k.asm:62542-62575`).
+- Root cause: upright `Obj_EggCapsule` reaches results through `sub_868F8`,
+  which calls `AllocateObject` and therefore chooses the lowest free SST
+  (`sonic3k.asm:181978-181990`). The engine used `spawnChild`, equivalent to
+  `FindNextFreeObj`, placing the results owner after the capsule and running
+  `Obj_LevelResultsInit` in the same pass. It now uses `spawnFreeChild`; when
+  the lowest free slot has already executed, the three real ROM-backed KosM
+  submissions begin on the following object pass.
+- Focused command selected `TestCnzEggCapsuleInstance`,
+  `TestS3kResultsScreenObjectInstance`, and
+  `TestObjectManagerChildSlotAllocation` on JDK 21. Result: 21 tests, 0
+  failures, 0 errors. The existing slot test guards lowest-free allocation and
+  next-pass execution for an already-visited slot.
+- Frontier command selected `TestS3kCnzCompleteRunTraceReplay` with
+  `-Ptrace-replay -Dmse=off -Dsurefire.forkCount=1
+  -Dsurefire.runOrder=alphabetical` and the discovered S3K ROM. Comparison
+  errors fall from 40 to 32 and the first error advances from raw `38793`
+  (`queue.s3k_kos_direct.busy`) to raw `39452`
+  (`player_animation_id`, expected `0x0005`, actual `0x0013`). Cleanup retains
+  the existing unmatched module Kosinski completion `#222`.
+- Gameplay-order regression command selected complete-run and standalone AIZ,
+  complete-run HCZ, complete-run and standalone MGZ, and complete-run and
+  standalone CNZ. Complete-run AIZ, both HCZ tests, complete-run MGZ, and
+  standalone MGZ pass. Standalone AIZ retains its raw-`16067` queue frontier
+  and four focused failures. Standalone CNZ retains its raw-`25743` camera-X
+  frontier and unmatched completion `#31`; no earlier-zone frontier regressed.
