@@ -196,6 +196,28 @@ function Contract.newCallbackProof()
     return proof
 end
 
+function Contract.selectCaptureSource(forceManifest, callbackReliable, manifestReliable)
+    assert(type(forceManifest) == "boolean", "force-manifest flag must be boolean")
+    assert(type(callbackReliable) == "boolean", "callback reliability must be boolean")
+    assert(type(manifestReliable) == "boolean", "manifest reliability must be boolean")
+    if not forceManifest and callbackReliable then return "memory_callback" end
+    assert(manifestReliable, "no verified audio bus observation source is available")
+    return "pc_manifest"
+end
+
+function Contract.assertNoCommandContamination(armed, soundId, queues)
+    assert(type(armed) == "boolean", "epoch-arm state must be boolean")
+    if not armed then return end
+    assert(Contract.u8(soundId) == 0x80,
+        "sound ID contamination reached PlaySoundID after epoch arm")
+    assert(type(queues) == "table" and #queues == 3,
+        "S1 sound queue inspection requires exactly three entries")
+    for index = 1, 3 do
+        assert(Contract.u8(queues[index]) == 0,
+            string.format("sound queue %d contamination reached CycleSoundQueue after epoch arm", index - 1))
+    end
+end
+
 local S1_MUSIC_SLOTS = {
     {role = "DAC", hardware = "DAC", voiceControl = 6},
     {role = "FM1", hardware = "FM1", voiceControl = 0},

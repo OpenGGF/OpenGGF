@@ -4,9 +4,9 @@
 
 local runtimePath = assert(os.getenv("OGGF_BIZHAWK_PROBE_RUNTIME"),
     "run through run_bizhawk_lua so OGGF_BIZHAWK_PROBE_RUNTIME is absolute")
+runtimePath = runtimePath:gsub("\\", "/")
 local ProbeRuntime = dofile(runtimePath)
-local contractPath = runtimePath:gsub("/probes/probe_runtime.lua$",
-    "/audio/s1_audio_parity_contract.lua")
+local contractPath = ProbeRuntime.siblingPath(runtimePath, "audio/s1_audio_parity_contract.lua")
 local AudioContract = dofile(contractPath)
 
 local SOUND_RAM = 0xF000
@@ -17,7 +17,10 @@ local UPDATE_MUSIC = 0x71B4C
 local UPDATE_MUSIC_RETURN = 0x71C4C
 local PLAY_SEGA_RETURN = 0x71FD0
 local SOUND_PLAY_BGM = 0x71FD2
+local CYCLE_SOUND_QUEUE = 0x71F02
+local PLAY_SOUND_ID = 0x71F4C
 local VALIDATE_ONLY = os.getenv("OGGF_AUDIO_CALLBACK_VALIDATE_ONLY") == "1"
+local FORCE_PC_MANIFEST = os.getenv("OGGF_AUDIO_FORCE_PC_MANIFEST") == "1"
 local CAPTURE_DEBUG = os.getenv("OGGF_AUDIO_CAPTURE_DEBUG") == "1"
 local EXPECTED_ROM_SHA1 = "69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b"
 local EXPECTED_ROM_CRC32 = "afe05eee"
@@ -74,6 +77,37 @@ local function verifyFallbackManifest()
             string.format("opcode mismatch at fallback PC $%06X", site.address))
     end
     assert(#fallbackManifest == 20, "fallback manifest must cover four FM and sixteen PSG write sites")
+end
+
+local contaminationManifest = {
+    {address = CYCLE_SOUND_QUEUE, expectedOpcode = "207900071990"},
+    {address = PLAY_SOUND_ID, expectedOpcode = "7e00"}
+}
+
+local function verifyOpcodeSites(sites, label)
+    for _, site in ipairs(sites) do
+        local bytes = {}
+        for offset = 0, (#site.expectedOpcode / 2) - 1 do
+            bytes[#bytes + 1] = string.format("%02x", memory.read_u8(site.address + offset, "MD CART"))
+        end
+        assert(table.concat(bytes) == site.expectedOpcode,
+            string.format("opcode mismatch at %s PC $%06X", label, site.address))
+    end
+end
+
+local function readManifestValue(site)
+    local dataRegister = ({D0 = "M68K D0", D1 = "M68K D1",
+        D4 = "M68K D4", D6 = "M68K D6"})[site.source]
+    if dataRegister then return (emu.getregister(dataRegister) or 0) & 0xFF end
+    local immediate = ({["#$9F"] = 0x9F, ["#$BF"] = 0xBF,
+        ["#$DF"] = 0xDF, ["#$FF"] = 0xFF})[site.source]
+    if immediate then return immediate end
+    local register, displacement = site.source:match("^%$1F%((A[05])%)$")
+    if register then displacement = 0x1F end
+    if site.source == "-1(A4)" then register, displacement = "A4", -1 end
+    assert(register ~= nil, "unsupported fallback operand " .. tostring(site.source))
+    local address = ((emu.getregister("M68K " .. register) or 0) + displacement) & 0xFFFFFF
+    return memory.read_u8(address, "System Bus")
 end
 
 local function rotateLeft(value, count)
@@ -297,32 +331,92 @@ local validation = {
 local invocationLifecycle = AudioContract.newInvocationLifecycle()
 local currentOrdinal = nil
 local currentOpenFrame = nil
-local currentRawEvents = nil
-local currentDecodedEvents = nil
-local currentDecoder = nil
+local currentStreams = nil
 local records = {}
 local cycleDetector = AudioContract.newCycleDetector()
 local callbackProof = AudioContract.newCallbackProof()
+local manifestProof = AudioContract.newCallbackProof()
+local callbackInvalidReason = nil
+local selectedSource = nil
 local romIdentity
 local movieIdentity
+
+local function newStream()
+    return {raw = {}, decoded = {}, decoder = AudioContract.newYmDecoder()}
+end
 
 local function beginCapturedInvocation(ordinal, openFrame)
     currentOrdinal = ordinal
     currentOpenFrame = openFrame
-    currentRawEvents = {}
-    currentDecodedEvents = {}
-    currentDecoder = AudioContract.newYmDecoder()
+    currentStreams = {}
+    if selectedSource then
+        currentStreams[selectedSource] = newStream()
+    else
+        currentStreams.memory_callback = newStream()
+        currentStreams.pc_manifest = newStream()
+    end
+end
+
+local function invalidateCallback(reason)
+    if selectedSource == "memory_callback" then error(reason, 0) end
+    callbackInvalidReason = callbackInvalidReason or tostring(reason)
+end
+
+local function observeCallbackProof(action)
+    if callbackInvalidReason or selectedSource == "pc_manifest" then return false end
+    local ok, failure = pcall(action)
+    if not ok then invalidateCallback(failure) end
+    return ok
+end
+
+local function recordBusEvent(source, rawEvent, busEvent)
+    if selectedSource and selectedSource ~= source then return end
+    assert(invocationLifecycle:isActive() and currentStreams ~= nil,
+        "audio bus write occurred outside the active captured UpdateMusic invocation")
+    local stream = assert(currentStreams[source], "selected audio stream is not open")
+    local ok, decoded = pcall(function() return stream.decoder:feed(busEvent) end)
+    if not ok and source == "memory_callback" and not selectedSource then
+        invalidateCallback(decoded)
+        return
+    end
+    if not ok then error(decoded, 0) end
+    stream.raw[#stream.raw + 1] = rawEvent
+    if decoded then stream.decoded[#stream.decoded + 1] = decoded end
+end
+
+local function finishInitialStreams()
+    local manifestOk, manifestFailure = pcall(function()
+        currentStreams.pc_manifest.decoder:finishTick()
+        manifestProof:assertVerified()
+    end)
+    local callbackOk = false
+    if not callbackInvalidReason then
+        callbackOk = pcall(function()
+            currentStreams.memory_callback.decoder:finishTick()
+            callbackProof:assertVerified()
+        end)
+    end
+    selectedSource = AudioContract.selectCaptureSource(
+        FORCE_PC_MANIFEST, callbackOk, manifestOk)
+    if selectedSource == "pc_manifest" and not manifestOk then error(manifestFailure, 0) end
+    return currentStreams[selectedSource]
 end
 
 local function emitCapture(context, proof)
     local header = movie.getheader()
-    context.log(AudioContract.canonicalJson({
-        capture = "s1_ghz_music_driver_reference",
-        callback_contract = {
+    local callbackContract
+    if selectedSource == "memory_callback" then
+        callbackContract = {
             arguments = {"address", "value", "flags"},
             proof = callbackProof:counts(),
-            source = callbackProof:assertVerified()
-        },
+            source = "memory_callback"
+        }
+    else
+        callbackContract = {manifest_sites = #fallbackManifest, source = "pc_manifest"}
+    end
+    context.log(AudioContract.canonicalJson({
+        capture = "s1_ghz_music_driver_reference",
+        callback_contract = callbackContract,
         cycle_start = proof.startOrdinal,
         diagnostic_fields = {
             global = {"priority", "pause", "fade flags", "queues", "sound id", "voice selector",
@@ -363,7 +457,13 @@ local function closeCapturedInvocation(context)
     end
     assert(currentOrdinal == #records, "audio-driver ordinal is not continuous")
     debugPhase("decoder_finish")
-    currentDecoder:finishTick()
+    local stream
+    if selectedSource then
+        stream = assert(currentStreams[selectedSource])
+        stream.decoder:finishTick()
+    else
+        stream = finishInitialStreams()
+    end
     debugPhase("contamination")
     assertStableSoundTest()
     debugPhase("snapshot")
@@ -375,7 +475,6 @@ local function closeCapturedInvocation(context)
         error(rawSnapshot, 0)
     end
     if currentOrdinal == 0 then
-        callbackProof:assertVerified()
         local expectedActive = {true, true, true, true, true, true, false, true, true, true}
         for index, expected in ipairs(expectedActive) do
             local active = (rawSnapshot.tracks[index].status & 0x80) ~= 0
@@ -385,7 +484,7 @@ local function closeCapturedInvocation(context)
     debugPhase("normalize")
     local normalized = AudioContract.normalizeRom(rawSnapshot, ACTIVE_LOOP_COUNTERS)
     local stateHash = AudioContract.hashState(normalized)
-    local eventHash = AudioContract.hashEvents(currentDecodedEvents)
+    local eventHash = AudioContract.hashEvents(stream.decoded)
     local record = {
         diagnostic = {
             emulator_frame = emu.framecount(),
@@ -394,21 +493,35 @@ local function closeCapturedInvocation(context)
             invocation_open_frame = currentOpenFrame,
             raw_state = diagnostics
         },
-        events = currentDecodedEvents,
+        events = stream.decoded,
         ordinal = currentOrdinal,
-        raw_bus = currentRawEvents,
+        raw_bus = stream.raw,
         state = normalized,
         type = "tick"
     }
     records[#records + 1] = AudioContract.canonicalJson(record)
     debugPhase("cycle")
     local proof = cycleDetector:observe(stateHash, eventHash)
-    currentOrdinal, currentOpenFrame, currentRawEvents, currentDecodedEvents, currentDecoder = nil, nil, nil, nil, nil
+    currentOrdinal, currentOpenFrame, currentStreams = nil, nil, nil
     if proof then emitCapture(context, proof) end
 end
 
 local hooks = {}
 local function addHook(hook) hooks[#hooks + 1] = hook end
+
+local function finishValidationInvocation(context)
+    local stream = finishInitialStreams()
+    context.log(AudioContract.canonicalJson({
+        callback_count = validation.callbackCount,
+        callback_invalid = callbackInvalidReason,
+        callback_proof = callbackProof:counts(),
+        event = "callback_validation_complete",
+        fm_data_pc_count = validation.pcDataCount,
+        manifest_event_count = #stream.raw,
+        selected_source = selectedSource
+    }))
+    context.finish()
+end
 
 addHook({
     name = "s1_audio_update_music_entry",
@@ -437,7 +550,9 @@ addHook({
             }))
         end
         local action = invocationLifecycle:close()
-        if action == "close_capture" and not VALIDATE_ONLY then closeCapturedInvocation(context) end
+        if action == "close_capture" then
+            if VALIDATE_ONLY then finishValidationInvocation(context) else closeCapturedInvocation(context) end
+        end
     end
 })
 
@@ -466,25 +581,61 @@ addHook({
     end
 })
 
-for pc, port in pairs({[0x72752] = 0, [0x72788] = 1}) do
+addHook({
+    name = "s1_audio_preconsume_cycle_sound_queue",
+    address = CYCLE_SOUND_QUEUE,
+    callback = function()
+        AudioContract.assertNoCommandContamination(invocationLifecycle:isArmed(), readU8(0x09),
+            {readU8(0x0A), readU8(0x0B), readU8(0x0C)})
+    end
+})
+
+addHook({
+    name = "s1_audio_preconsume_play_sound_id",
+    address = PLAY_SOUND_ID,
+    callback = function()
+        AudioContract.assertNoCommandContamination(invocationLifecycle:isArmed(), readU8(0x09),
+            {readU8(0x0A), readU8(0x0B), readU8(0x0C)})
+    end
+})
+
+for _, site in ipairs(fallbackManifest) do
     addHook({
-        name = string.format("s1_audio_callback_validation_pc_%06x", pc),
-        address = pc,
+        name = string.format("s1_audio_pc_manifest_%06x", site.address),
+        address = site.address,
         callback = function(context)
             if not invocationLifecycle:isArmed() then return end
-            validation.pcDataCount = validation.pcDataCount + 1
-            local d0 = (emu.getregister("M68K D0") or 0) & 0xFF
-            local d1 = (emu.getregister("M68K D1") or 0) & 0xFF
-            callbackProof:observeFmDataPc(port, d0, d1)
-            validation.lastDataPc = {
-                d0 = d0,
-                d1 = d1,
-                frame = emu.framecount(),
-                pc = pc
-            }
-            if VALIDATE_ONLY then
-                context.log(AudioContract.canonicalJson({event = "fm_data_pc", observed = validation.lastDataPc}))
+            local value = readManifestValue(site)
+            local kind, port
+            if site.operation == "psg" then
+                kind = "psg"
+                manifestProof:observePsg(value)
+            else
+                port = site.operation:match("^fm1") and 1 or 0
+                kind = site.operation:match("_address$") and "address" or "data"
+                if kind == "address" then
+                    manifestProof:observeYmAddress(port, value)
+                else
+                    validation.pcDataCount = validation.pcDataCount + 1
+                    local d0 = (emu.getregister("M68K D0") or 0) & 0xFF
+                    local d1 = (emu.getregister("M68K D1") or 0) & 0xFF
+                    manifestProof:observeFmDataPc(port, d0, d1)
+                    manifestProof:observeYmData(port, value)
+                    observeCallbackProof(function() callbackProof:observeFmDataPc(port, d0, d1) end)
+                    validation.lastDataPc = {
+                        d0 = d0, d1 = d1, frame = emu.framecount(), pc = site.address
+                    }
+                    if VALIDATE_ONLY then
+                        context.log(AudioContract.canonicalJson({
+                            event = "fm_data_pc", observed = validation.lastDataPc
+                        }))
+                    end
+                end
             end
+            local busEvent = {kind = kind, port = port, value = value}
+            recordBusEvent("pc_manifest", {
+                kind = kind, pc = site.address, port = port, source = "pc_manifest", value = value
+            }, busEvent)
         end
     })
 end
@@ -496,18 +647,22 @@ for address, operation in pairs(callbackAddresses) do
         kind = "write",
         callback = function(context, callbackAddress, value, flags, ...)
             if not invocationLifecycle:isArmed() then return end
-            assert(select("#", ...) == 0, "BizHawk audio write callback argument count changed")
-            assert(callbackAddress == address, "BizHawk audio write callback address mapping changed")
-            assert(type(value) == "number" and value == math.floor(value) and value >= 0 and value <= 0xFF,
-                "BizHawk audio write callback value mapping changed")
+            if selectedSource == "pc_manifest" or callbackInvalidReason then return end
+            if select("#", ...) ~= 0 or callbackAddress ~= address
+                    or type(value) ~= "number" or value ~= math.floor(value)
+                    or value < 0 or value > 0xFF or type(flags) ~= "number"
+                    or flags ~= math.floor(flags) or flags < 0 then
+                invalidateCallback("BizHawk audio write callback arguments are malformed")
+                return
+            end
             validation.callbackCount = validation.callbackCount + 1
             local port = operation:match("port1") and 1 or 0
             if address == 0xC00011 then
-                callbackProof:observePsg(value)
+                observeCallbackProof(function() callbackProof:observePsg(value) end)
             elseif operation:match("_address$") then
-                callbackProof:observeYmAddress(port, value)
+                observeCallbackProof(function() callbackProof:observeYmAddress(port, value) end)
             else
-                callbackProof:observeYmData(port, value)
+                observeCallbackProof(function() callbackProof:observeYmData(port, value) end)
             end
             if VALIDATE_ONLY then
                 context.log(AudioContract.canonicalJson({
@@ -521,8 +676,6 @@ for address, operation in pairs(callbackAddresses) do
                     preceding_data_pc = validation.lastDataPc
                 }))
             else
-                assert(invocationLifecycle:isActive() and currentDecoder ~= nil,
-                    "audio port write occurred outside the active captured UpdateMusic invocation")
                 local busEvent
                 if address == 0xC00011 then
                     busEvent = {kind = "psg", value = value}
@@ -533,37 +686,28 @@ for address, operation in pairs(callbackAddresses) do
                         value = value
                     }
                 end
-                if CAPTURE_DEBUG and #currentRawEvents < 8 then
+                local stream = currentStreams and currentStreams.memory_callback
+                if CAPTURE_DEBUG and stream and #stream.raw < 8 then
                     context.log(AudioContract.canonicalJson({
                         address = callbackAddress, kind = busEvent.kind, port = busEvent.port,
                         type = "debug_bus", value = value
                     }))
                 end
-                currentRawEvents[#currentRawEvents + 1] = {
+                recordBusEvent("memory_callback", {
                     address = callbackAddress,
                     flags = flags,
                     kind = busEvent.kind,
                     port = busEvent.port,
                     source = "memory_callback",
                     value = value
-                }
-                local ok, decoded = pcall(function() return currentDecoder:feed(busEvent) end)
-                if not ok then
-                    if CAPTURE_DEBUG then
-                        context.log(AudioContract.canonicalJson({
-                            address = callbackAddress, decoder_error = tostring(decoded), kind = busEvent.kind,
-                            port = busEvent.port, type = "debug_bus_failure", value = value
-                        }))
-                    end
-                    error(decoded, 0)
-                end
-                if decoded then currentDecodedEvents[#currentDecodedEvents + 1] = decoded end
+                }, busEvent)
             end
         end
     })
 end
 
 verifyFallbackManifest()
+verifyOpcodeSites(contaminationManifest, "contamination")
 romIdentity, movieIdentity = verifyIdentity()
 
 ProbeRuntime.run({
@@ -594,15 +738,7 @@ ProbeRuntime.run({
             requireNeutral(1, joypad.get(1))
             requireNeutral(2, joypad.get(2))
         end
-        if VALIDATE_ONLY and validation.epochReached and callbackProof:isVerified() then
-            context.log(AudioContract.canonicalJson({
-                callback_count = validation.callbackCount,
-                callback_proof = callbackProof:counts(),
-                event = "callback_validation_complete",
-                fm_data_pc_count = validation.pcDataCount
-            }))
-            context.finish()
-        elseif VALIDATE_ONLY and emu.framecount() > 1100 then
+        if VALIDATE_ONLY and emu.framecount() > 1100 then
             error("callback validation did not collect the required GHZ initialization window")
         elseif not VALIDATE_ONLY and invocationLifecycle:isArmed() and #records >= 36000 then
             error("S1 audio recurrence was not proven within 36,000 invocations")

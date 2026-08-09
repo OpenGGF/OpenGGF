@@ -5,6 +5,16 @@ local ProbeRuntime = {}
 local registerHooks
 local unpackArguments = table.unpack or unpack
 
+function ProbeRuntime.siblingPath(runtimePath, relativePath)
+    assert(type(runtimePath) == "string", "runtime path must be a string")
+    assert(type(relativePath) == "string" and not relativePath:match("^[/\\]"),
+        "sibling path must be relative")
+    local normalized = runtimePath:gsub("\\", "/")
+    local root, replacements = normalized:gsub("/probes/probe_runtime%.lua$", "/" .. relativePath)
+    assert(replacements == 1, "runtime path must end in /probes/probe_runtime.lua")
+    return root
+end
+
 local function requireConfig(config)
     assert(type(config) == "table", "ProbeRuntime.run requires a config table")
     assert(type(config.stage) == "function", "probe config requires stage = function")

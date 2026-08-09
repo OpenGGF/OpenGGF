@@ -52,12 +52,31 @@ class TestS1AudioParityProbeContract {
 
         assertTrue(source.contains("expectedOpcode"), "fallback sites must carry exact opcode bytes");
         assertTrue(source.contains("verifyFallbackManifest"), "complete fallback manifest must be verified");
+        assertTrue(source.contains("readManifestValue") && source.contains("pc_manifest"),
+                "fallback manifest sites must observe their reviewed operands and emit manifest provenance");
+        assertTrue(source.contains("OGGF_AUDIO_FORCE_PC_MANIFEST"),
+                "observer must expose a safe real-ROM forced-fallback validation route");
+        assertTrue(source.contains("manifest_sites = #fallbackManifest"),
+                "pc_manifest metadata must advertise the exact verified site count");
+        for (String operand : List.of("M68K D0", "M68K D1", "M68K D4", "M68K D6",
+                "$1F(A0)", "$1F(A5)", "-1(A4)", "#$9F", "#$BF", "#$DF", "#$FF")) {
+            assertTrue(source.contains(operand), "fallback does not encode reviewed operand " + operand);
+        }
+        assertTrue(source.contains("memory.read_u8(address, \"System Bus\")"),
+                "indirect fallback operands must preserve the full 68K RAM-or-ROM address");
+        for (String address : List.of("0x71F02", "0x71F4C")) {
+            assertTrue(source.contains(address), "missing pre-consumption contamination hook " + address);
+        }
+        assertTrue(source.contains("assertNoCommandContamination"),
+                "queue and sound-ID contamination must be rejected before driver consumption");
         assertTrue(source.contains("M68K D7") && source.contains("& 0xFF") && source.contains("acceptBgm"),
                 "observer must arm only from D7 low byte through the tested lifecycle");
         assertTrue(source.contains("newInvocationLifecycle"),
                 "DAC-busy retries require the tested active-invocation lifecycle");
         assertTrue(source.contains("newCallbackProof") && source.contains("assertVerified"),
                 "memory callbacks must be selected only after per-port value correlation plus PSG proof");
+        assertTrue(source.contains("ProbeRuntime.siblingPath(runtimePath"),
+                "observer must derive its contract through the Windows-safe runtime path helper");
         assertTrue(source.contains("OGGF_BIZHAWK_MOVIE_SHA256") && source.contains("requireSha256"),
                 "observer must verify the launcher-computed BK2 content digest");
         assertTrue(source.contains("readU8(0x2A) == 0"),

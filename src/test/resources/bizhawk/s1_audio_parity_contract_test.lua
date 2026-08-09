@@ -212,6 +212,34 @@ local function runCallbackProof()
     check(not ok, "callback proof accepted missing PSG coverage")
 end
 
+local function runCaptureSourceSelection()
+    -- Break caught: an absent or malformed write callback aborts capture instead of
+    -- selecting the independently opcode-verified 20-site execution manifest.
+    equals(Contract.selectCaptureSource(false, true, true), "memory_callback",
+        "proven callbacks did not win normal source selection")
+    equals(Contract.selectCaptureSource(false, false, true), "pc_manifest",
+        "unreliable callbacks did not fail over to the manifest")
+    equals(Contract.selectCaptureSource(true, true, true), "pc_manifest",
+        "forced fallback still selected callbacks")
+    local ok = pcall(function() Contract.selectCaptureSource(false, false, false) end)
+    check(not ok, "capture selected an unverified fallback")
+end
+
+local function runPreConsumptionContaminationGuard()
+    -- Break caught: CycleSoundQueue/PlaySoundID erase a queued SFX or command before
+    -- the post-tick RAM checks can observe it. The launch $81 remains pre-arm.
+    Contract.assertNoCommandContamination(false, 0x81, {0x81, 0, 0})
+    Contract.assertNoCommandContamination(true, 0x80, {0, 0, 0})
+    local ok = pcall(function()
+        Contract.assertNoCommandContamination(true, 0x80, {0, 0xA0, 0})
+    end)
+    check(not ok, "queued SFX was accepted after epoch arm")
+    ok = pcall(function()
+        Contract.assertNoCommandContamination(true, 0xE4, {0, 0, 0})
+    end)
+    check(not ok, "reset/command sound ID was accepted after epoch arm")
+end
+
 local function runLauncherMovieIdentity()
     -- Break caught: metadata publishes the pinned BK2 hash without checking the launcher-supplied bytes.
     local expected = "622ff642d0b0835a4f77bee568f2413f288ead3306a8bc2a93e8d8f77f24ca9c"
@@ -441,6 +469,8 @@ runIntegerNormalization()
 runYmPairing()
 runYmRejections()
 runCallbackProof()
+runCaptureSourceSelection()
+runPreConsumptionContaminationGuard()
 runLauncherMovieIdentity()
 runHashes()
 runCycleProof()

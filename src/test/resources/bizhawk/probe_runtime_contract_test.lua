@@ -98,6 +98,18 @@ local function runCallbackArgumentForwarding()
         "hook callback did not receive context followed by all BizHawk arguments")
 end
 
+local function runWindowsSiblingPath()
+    -- Break caught: Windows supplies backslashes in the runtime path, so the S1
+    -- observer fails to derive its adjacent audio contract before hooks register.
+    newEnvironment()
+    local runtime = dofile(runtimePath)
+    local actual = runtime.siblingPath(
+        [[C:\OpenGGF\tools\bizhawk\probes\probe_runtime.lua]],
+        "audio/s1_audio_parity_contract.lua")
+    check(actual == "C:/OpenGGF/tools/bizhawk/audio/s1_audio_parity_contract.lua",
+        "Windows runtime path did not normalize to the audio contract")
+end
+
 local function runDefaultMovieFinish()
     local state = newEnvironment({ movieFinished = true })
     local runtime = dofile(runtimePath)
@@ -283,6 +295,7 @@ end
 
 runStageGating()
 runCallbackArgumentForwarding()
+runWindowsSiblingPath()
 runDefaultMovieFinish()
 runContinueAfterMovie()
 runOnFrameLifecycle()

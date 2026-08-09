@@ -41,7 +41,13 @@ tools/bizhawk/run_bizhawk_lua.sh \
 Remove `OGGF_AUDIO_CALLBACK_VALIDATE_ONLY` and choose a different `OGGF_OUT`
 file for the full GHZ cycle capture. The observer verifies the ROM, movie,
 core, callback arguments, and complete opcode fallback manifest before it
-records anything. It continues past the end of the movie under verified
+records anything. Tick zero selects memory callbacks only after correlated
+address/data values on both FM ports plus PSG coverage; an absent or malformed
+candidate falls back to the independently observed 20-site PC manifest without
+mixing sources. `OGGF_AUDIO_FORCE_PC_MANIFEST=1` forces that opcode-verified
+real-write route for validation; it never fabricates chip writes. Execute hooks
+also reject queued SFX, reset, or sound commands before the shipped driver can
+clear them. The observer continues past the end of the movie under verified
 neutral input and exits after proving a complete repeated music cycle. Output
 is local diagnostic material under ignored `target/`; never add the detailed
 tick or raw register stream to source control or test resources.
