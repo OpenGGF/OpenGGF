@@ -60,6 +60,7 @@ public class AudioManager implements MusicRestoreSink {
     private Map<GameSound, Integer> soundMap;
     private GameAudioProfile audioProfile;
     private boolean ringLeft = true;
+    private AudioRequestObserver requestObserver = AudioRequestObserver.NONE;
     private int rewindReplaySuppressionDepth;
     private final AudioCommandTimeline commandTimeline = new AudioCommandTimeline();
     /**
@@ -1364,6 +1365,9 @@ public class AudioManager implements MusicRestoreSink {
         if (suppressingRewindReplay()) {
             return;
         }
+        requestObserver.onRequested(musicId >= 0xE0
+                ? AudioRequestObserver.RequestClass.COMMAND
+                : AudioRequestObserver.RequestClass.MUSIC, musicId);
         if (audioProfile != null) {
             if (audioProfile.handleSystemCommand(musicId, this)) {
                 return;
@@ -1462,16 +1466,26 @@ public class AudioManager implements MusicRestoreSink {
         if (suppressingRewindReplay()) {
             return;
         }
+        Integer rawSoundId = sound == GameSound.RING
+                ? soundMap == null ? null : soundMap.get(GameSound.RING_RIGHT)
+                : soundMap == null ? null : soundMap.get(sound);
+        if (rawSoundId != null) {
+            requestObserver.onRequested(sfxRequestClass(rawSoundId), rawSoundId);
+        }
         if (sound == GameSound.RING) {
-            playSfx(ringLeft ? GameSound.RING_LEFT : GameSound.RING_RIGHT, pitch);
+            playGameSfxResolved(ringLeft ? GameSound.RING_LEFT : GameSound.RING_RIGHT, pitch);
             ringLeft = !ringLeft;
             return;
         }
 
+        playGameSfxResolved(sound, pitch);
+    }
+
+    private void playGameSfxResolved(GameSound sound, float pitch) {
         float effectivePitch = audioProfile != null ? audioProfile.adjustSfxPitch(sound, pitch) : pitch;
         boolean played = false;
         if (soundMap != null && soundMap.containsKey(sound)) {
-            played = playSfx(soundMap.get(sound), effectivePitch);
+            played = playSfxResolved(soundMap.get(sound), effectivePitch);
         }
         if (!played) {
             DonorSfxBinding binding = donorSoundBindings.get(sound);
@@ -1520,6 +1534,11 @@ public class AudioManager implements MusicRestoreSink {
         if (suppressingRewindReplay()) {
             return false;
         }
+        requestObserver.onRequested(sfxRequestClass(sfxId), sfxId);
+        return playSfxResolved(sfxId, pitch);
+    }
+
+    private boolean playSfxResolved(int sfxId, float pitch) {
         if (smpsLoader != null) {
             AbstractSmpsData sfx = smpsLoader.loadSfx(sfxId);
             if (sfx != null) {
@@ -1532,6 +1551,17 @@ public class AudioManager implements MusicRestoreSink {
             }
         }
         return false;
+    }
+
+    public void setRequestObserver(AudioRequestObserver observer) {
+        requestObserver = observer == null ? AudioRequestObserver.NONE : observer;
+    }
+
+    private static AudioRequestObserver.RequestClass sfxRequestClass(int soundId) {
+        if (soundId >= 0xD0 && soundId < 0xE0) {
+            return AudioRequestObserver.RequestClass.SPECIAL_SFX;
+        }
+        return AudioRequestObserver.RequestClass.SFX;
     }
 
     /**
@@ -1842,6 +1872,7 @@ public class AudioManager implements MusicRestoreSink {
         this.dacData = null;
         this.rom = null;
         this.soundMap = null;
+        this.requestObserver = AudioRequestObserver.NONE;
         this.audioProfile = null;
         this.ringLeft = true;
         this.rewindReplaySuppressionDepth = 0;

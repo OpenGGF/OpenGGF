@@ -123,6 +123,10 @@ public final class S1GameplayAudioTimelineComparator {
             if (requestDifference != null) {
                 return requestDifference;
             }
+            S1GameplayAudioTimelineReport admissionDifference = admissions(frameLeft, frameRight, beforeLeft, beforeRight);
+            if (admissionDifference != null) {
+                return admissionDifference;
+            }
             if (!frameLeft.owners().equals(frameRight.owners())) {
                 return report(restorationDifference(frameLeft.owners(), frameRight.owners())
                                 ? S1GameplayAudioTimelineReport.Kind.RESTORATION_MISMATCH
@@ -135,7 +139,8 @@ public final class S1GameplayAudioTimelineComparator {
         if (left instanceof S1GameplayAudioTimeline.Terminal terminalLeft
                 && right instanceof S1GameplayAudioTimeline.Terminal terminalRight) {
             if (terminalLeft.frameCount() != terminalRight.frameCount()
-                    || terminalLeft.requestCount() != terminalRight.requestCount()) {
+                    || terminalLeft.requestCount() != terminalRight.requestCount()
+                    || terminalLeft.admissionCount() != terminalRight.admissionCount()) {
                 return report(S1GameplayAudioTimelineReport.Kind.TERMINAL_MISMATCH, "terminal",
                         "semantic terminal counts differ", beforeLeft, beforeRight);
             }
@@ -167,31 +172,61 @@ public final class S1GameplayAudioTimelineComparator {
                 return report(S1GameplayAudioTimelineReport.Kind.REQUEST_CLASS_MISMATCH, location(left, index),
                         "sound class differs", beforeLeft, beforeRight);
             }
-            if (expected.soundId() != actual.soundId()) {
+            if (expected.rawSoundId() != actual.rawSoundId()) {
                 return report(S1GameplayAudioTimelineReport.Kind.REQUEST_ID_MISMATCH, location(left, index),
-                        "sound ID differs", beforeLeft, beforeRight);
+                        "raw caller/queue sound ID differs", beforeLeft, beforeRight);
+            }
+        }
+        return null;
+    }
+
+    private static S1GameplayAudioTimelineReport admissions(S1GameplayAudioTimeline.Frame left,
+            S1GameplayAudioTimeline.Frame right, List<String> beforeLeft, List<String> beforeRight) {
+        int maximum = Math.max(left.admissions().size(), right.admissions().size());
+        for (int index = 0; index < maximum; index++) {
+            if (index == left.admissions().size()) {
+                return report(S1GameplayAudioTimelineReport.Kind.ADMISSION_EXTRA, admissionLocation(left, index),
+                        "OpenGGF admitted an extra ordered request at this frame boundary", beforeLeft, beforeRight);
+            }
+            if (index == right.admissions().size()) {
+                return report(S1GameplayAudioTimelineReport.Kind.ADMISSION_MISSING, admissionLocation(left, index),
+                        "OpenGGF omitted an ordered reference admission at this frame boundary", beforeLeft, beforeRight);
+            }
+            S1GameplayAudioTimeline.Admission expected = left.admissions().get(index);
+            S1GameplayAudioTimeline.Admission actual = right.admissions().get(index);
+            if (expected.requestOrdinal() != actual.requestOrdinal()) {
+                return report(S1GameplayAudioTimelineReport.Kind.ADMISSION_ORDINAL_MISMATCH,
+                        admissionLocation(left, index), "admission request ordinal differs", beforeLeft, beforeRight);
+            }
+            if (expected.soundClass() != actual.soundClass()) {
+                return report(S1GameplayAudioTimelineReport.Kind.ADMISSION_CLASS_MISMATCH,
+                        admissionLocation(left, index), "admission sound class differs", beforeLeft, beforeRight);
+            }
+            if (expected.soundId() != actual.soundId()) {
+                return report(S1GameplayAudioTimelineReport.Kind.ADMISSION_ID_MISMATCH,
+                        admissionLocation(left, index), "resolved/admitted sound ID differs", beforeLeft, beforeRight);
             }
             if (!expected.requestedRoles().equals(actual.requestedRoles())) {
-                return report(S1GameplayAudioTimelineReport.Kind.REQUEST_ROLE_MISMATCH, location(left, index),
+                return report(S1GameplayAudioTimelineReport.Kind.REQUEST_ROLE_MISMATCH, admissionLocation(left, index),
                         "requested hardware roles differ", beforeLeft, beforeRight);
             }
             for (int role = 0; role < expected.arbitration().size(); role++) {
                 S1GameplayAudioTimeline.RoleArbitration expectedDecision = expected.arbitration().get(role);
                 S1GameplayAudioTimeline.RoleArbitration actualDecision = actual.arbitration().get(role);
                 if (expectedDecision.role() != actualDecision.role()) {
-                    return report(S1GameplayAudioTimelineReport.Kind.ROLE_ORDER_MISMATCH, location(left, index),
+                    return report(S1GameplayAudioTimelineReport.Kind.ROLE_ORDER_MISMATCH, admissionLocation(left, index),
                             "arbitration role order differs", beforeLeft, beforeRight);
                 }
                 if (expectedDecision.acquired() != actualDecision.acquired()) {
-                    return report(S1GameplayAudioTimelineReport.Kind.ROLE_ACQUIRED_MISMATCH, location(left, index),
+                    return report(S1GameplayAudioTimelineReport.Kind.ROLE_ACQUIRED_MISMATCH, admissionLocation(left, index),
                             "role " + expectedDecision.role() + " acquisition differs", beforeLeft, beforeRight);
                 }
                 if (!expectedDecision.displacedOwner().equals(actualDecision.displacedOwner())) {
-                    return report(S1GameplayAudioTimelineReport.Kind.ROLE_DISPLACED_OWNER_MISMATCH, location(left, index),
+                    return report(S1GameplayAudioTimelineReport.Kind.ROLE_DISPLACED_OWNER_MISMATCH, admissionLocation(left, index),
                             "role " + expectedDecision.role() + " displaced owner differs", beforeLeft, beforeRight);
                 }
                 if (!expectedDecision.finalOwner().equals(actualDecision.finalOwner())) {
-                    return report(S1GameplayAudioTimelineReport.Kind.ROLE_FINAL_OWNER_MISMATCH, location(left, index),
+                    return report(S1GameplayAudioTimelineReport.Kind.ROLE_FINAL_OWNER_MISMATCH, admissionLocation(left, index),
                             "role " + expectedDecision.role() + " final owner differs", beforeLeft, beforeRight);
                 }
             }
@@ -212,6 +247,10 @@ public final class S1GameplayAudioTimelineComparator {
 
     private static String location(S1GameplayAudioTimeline.Frame frame, int request) {
         return "frame " + frame.bk2Frame() + " request " + request;
+    }
+
+    private static String admissionLocation(S1GameplayAudioTimeline.Frame frame, int admission) {
+        return "frame " + frame.bk2Frame() + " admission " + admission;
     }
 
     private static S1GameplayAudioTimelineReport report(S1GameplayAudioTimelineReport.Kind kind, String location,
@@ -277,6 +316,7 @@ public final class S1GameplayAudioTimelineComparator {
         private final List<String> left = new ArrayList<>();
         private final List<String> right = new ArrayList<>();
         private boolean mismatchSeen;
+        private int remainingAfter;
 
         private List<String> beforeLeft() {
             return List.copyOf(beforeLeft);
@@ -290,12 +330,16 @@ public final class S1GameplayAudioTimelineComparator {
                 S1GameplayAudioTimeline.TimelineRecord rightRecord, boolean mismatch) {
             if (!mismatchSeen && mismatch) {
                 mismatchSeen = true;
+                remainingAfter = CONTEXT_EACH_SIDE;
                 left.addAll(beforeLeft);
                 right.addAll(beforeRight);
             }
             if (mismatchSeen) {
-                addBounded(left, describe(leftRecord), CONTEXT_EACH_SIDE * 2 + 1);
-                addBounded(right, describe(rightRecord), CONTEXT_EACH_SIDE * 2 + 1);
+                if (remainingAfter >= 0) {
+                    addBounded(left, describe(leftRecord), Integer.MAX_VALUE);
+                    addBounded(right, describe(rightRecord), Integer.MAX_VALUE);
+                    remainingAfter--;
+                }
             } else {
                 addBounded(beforeLeft, describe(leftRecord), CONTEXT_EACH_SIDE);
                 addBounded(beforeRight, describe(rightRecord), CONTEXT_EACH_SIDE);
@@ -332,7 +376,8 @@ public final class S1GameplayAudioTimelineComparator {
                 return "baseline frame 860";
             }
             if (record instanceof S1GameplayAudioTimeline.Frame frame) {
-                return "frame " + frame.bk2Frame() + " requests=" + frame.requests().size();
+                return "frame " + frame.bk2Frame() + " requests=" + frame.requests().size()
+                        + " admissions=" + frame.admissions().size();
             }
             if (record instanceof S1GameplayAudioTimeline.Terminal terminal) {
                 return "terminal frames=" + terminal.frameCount() + " requests=" + terminal.requestCount();
@@ -351,19 +396,19 @@ public final class S1GameplayAudioTimelineComparator {
             if (!(record instanceof S1GameplayAudioTimeline.Frame frame)) {
                 return;
             }
-            for (S1GameplayAudioTimeline.Request request : frame.requests()) {
-                for (S1GameplayAudioTimeline.RoleArbitration decision : request.arbitration()) {
+            for (S1GameplayAudioTimeline.Admission admission : frame.admissions()) {
+                for (S1GameplayAudioTimeline.RoleArbitration decision : admission.arbitration()) {
                     if (decision.acquired()
                             && decision.displacedOwner().ownerClass() == S1GameplayAudioTimeline.OwnerClass.MUSIC
                             && decision.finalOwner().ownerClass() != S1GameplayAudioTimeline.OwnerClass.MUSIC) {
                         musicTaken.put(decision.role(), decision.displacedOwner());
                     }
-                    if ((request.soundClass() == S1GameplayAudioTimeline.SoundClass.SFX
-                            || request.soundClass() == S1GameplayAudioTimeline.SoundClass.SPECIAL_SFX)
+                    if ((admission.soundClass() == S1GameplayAudioTimeline.SoundClass.SFX
+                            || admission.soundClass() == S1GameplayAudioTimeline.SoundClass.SPECIAL_SFX)
                             && (decision.displacedOwner().ownerClass() == S1GameplayAudioTimeline.OwnerClass.NORMAL_SFX
                             || decision.displacedOwner().ownerClass() == S1GameplayAudioTimeline.OwnerClass.SPECIAL_SFX)
                             && !decision.displacedOwner().equals(new S1GameplayAudioTimeline.OwnerRef(
-                                    ownerClass(request.soundClass()), request.soundId(), request.requestOrdinal()))) {
+                                    ownerClass(admission.soundClass()), admission.soundId(), admission.requestOrdinal()))) {
                         sfxContention = true;
                     }
                 }

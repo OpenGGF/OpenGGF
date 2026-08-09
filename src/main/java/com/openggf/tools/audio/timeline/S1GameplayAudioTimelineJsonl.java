@@ -19,8 +19,10 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -36,14 +38,15 @@ public final class S1GameplayAudioTimelineJsonl {
     private static final Set<String> BASELINE_FIELDS = Set.of("type", "bk2_frame", "active_music_id",
             "diagnostic_tick", "owners");
     private static final Set<String> FRAME_FIELDS = Set.of("type", "bk2_frame", "diagnostic_tick", "requests",
-            "owners");
-    private static final Set<String> REQUEST_FIELDS = Set.of("request_ordinal", "sound_class", "sound_id",
+            "admissions", "owners");
+    private static final Set<String> REQUEST_FIELDS = Set.of("request_ordinal", "sound_class", "raw_sound_id");
+    private static final Set<String> ADMISSION_FIELDS = Set.of("request_ordinal", "sound_class", "sound_id",
             "requested_roles", "arbitration");
     private static final Set<String> ARBITRATION_FIELDS = Set.of("role", "acquired", "displaced_owner", "final_owner");
     private static final Set<String> OWNER_FIELDS = Set.of("owner_class", "sound_id", "request_ordinal");
     private static final Set<String> OWNER_VECTOR_FIELDS = Set.of("fm3", "fm4", "fm5", "psg1", "psg2", "psg3");
     private static final Set<String> TERMINAL_FIELDS = Set.of("type", "frame_count", "request_count",
-            "diagnostic_tick_count");
+            "admission_count", "diagnostic_tick_count");
 
     private S1GameplayAudioTimelineJsonl() {
     }
@@ -225,12 +228,17 @@ public final class S1GameplayAudioTimelineJsonl {
                 bounded(nodes, MAX_REQUESTS_PER_FRAME, "requests");
                 List<Request> requests = new ArrayList<>(nodes.size());
                 nodes.forEach(node -> requests.add(request(object(node, "request"))));
+                ArrayNode admissionNodes = array(required(root, "admissions"), "admissions");
+                bounded(admissionNodes, MAX_ADMISSIONS_PER_FRAME, "admissions");
+                List<Admission> admissions = new ArrayList<>(admissionNodes.size());
+                admissionNodes.forEach(node -> admissions.add(admission(object(node, "admission"))));
                 yield new Frame(integer(root, "bk2_frame"), nullableLong(root, "diagnostic_tick"), requests,
-                        ownerVector(object(required(root, "owners"), "owners")));
+                        admissions, ownerVector(object(required(root, "owners"), "owners")));
             }
             case "terminal" -> {
                 exact(root, TERMINAL_FIELDS, "terminal");
                 yield new Terminal(integer(root, "frame_count"), longInteger(root, "request_count"),
+                        longInteger(root, "admission_count"),
                         longInteger(root, "diagnostic_tick_count"));
             }
             default -> throw invalid("unknown timeline record type " + type);
@@ -239,6 +247,12 @@ public final class S1GameplayAudioTimelineJsonl {
 
     private static Request request(ObjectNode node) {
         exact(node, REQUEST_FIELDS, "request");
+        return new Request(longInteger(node, "request_ordinal"), enumValue(SoundClass.class, text(node, "sound_class")),
+                integer(node, "raw_sound_id"));
+    }
+
+    private static Admission admission(ObjectNode node) {
+        exact(node, ADMISSION_FIELDS, "admission");
         ArrayNode requested = array(required(node, "requested_roles"), "requested_roles");
         bounded(requested, MAX_ROLES_PER_REQUEST, "requested_roles");
         List<HardwareRole> roles = new ArrayList<>(requested.size());
@@ -247,7 +261,7 @@ public final class S1GameplayAudioTimelineJsonl {
         bounded(arbitration, MAX_ROLES_PER_REQUEST, "arbitration");
         List<RoleArbitration> decisions = new ArrayList<>(arbitration.size());
         arbitration.forEach(value -> decisions.add(arbitration(object(value, "arbitration"))));
-        return new Request(longInteger(node, "request_ordinal"), enumValue(SoundClass.class, text(node, "sound_class")),
+        return new Admission(longInteger(node, "request_ordinal"), enumValue(SoundClass.class, text(node, "sound_class")),
                 integer(node, "sound_id"), roles, decisions);
     }
 
@@ -287,6 +301,7 @@ public final class S1GameplayAudioTimelineJsonl {
     private static ObjectNode inventoryTree() {
         ObjectNode inventory = JsonNodeFactory.instance.objectNode();
         inventory.putArray("record_types").add("baseline").add("frame").add("terminal");
+        inventory.putArray("semantic_event_types").add("request").add("admission");
         inventory.putArray("ownership_roles").add("FM3").add("FM4").add("FM5").add("PSG1").add("PSG2").add("PSG3");
         inventory.putArray("sound_classes").add("MUSIC").add("SFX").add("SPECIAL_SFX").add("COMMAND");
         inventory.putArray("owner_classes").add("NONE").add("MUSIC").add("NORMAL_SFX").add("SPECIAL_SFX");
@@ -304,10 +319,13 @@ public final class S1GameplayAudioTimelineJsonl {
             nullable(root, "diagnostic_tick", frame.diagnosticTick());
             ArrayNode requests = root.putArray("requests");
             frame.requests().forEach(request -> requests.add(requestTree(request)));
+            ArrayNode admissions = root.putArray("admissions");
+            frame.admissions().forEach(admission -> admissions.add(admissionTree(admission)));
             root.set("owners", ownerVectorTree(frame.owners()));
         } else if (record instanceof Terminal terminal) {
             root.put("type", "terminal").put("frame_count", terminal.frameCount())
                     .put("request_count", terminal.requestCount())
+                    .put("admission_count", terminal.admissionCount())
                     .put("diagnostic_tick_count", terminal.diagnosticTickCount());
         } else {
             throw invalid("unknown timeline record implementation");
@@ -318,11 +336,18 @@ public final class S1GameplayAudioTimelineJsonl {
     private static ObjectNode requestTree(Request request) {
         ObjectNode node = JsonNodeFactory.instance.objectNode();
         node.put("request_ordinal", request.requestOrdinal()).put("sound_class", request.soundClass().name())
-                .put("sound_id", request.soundId());
+                .put("raw_sound_id", request.rawSoundId());
+        return node;
+    }
+
+    private static ObjectNode admissionTree(Admission admission) {
+        ObjectNode node = JsonNodeFactory.instance.objectNode();
+        node.put("request_ordinal", admission.requestOrdinal()).put("sound_class", admission.soundClass().name())
+                .put("sound_id", admission.soundId());
         ArrayNode roles = node.putArray("requested_roles");
-        request.requestedRoles().forEach(role -> roles.add(role.name()));
+        admission.requestedRoles().forEach(role -> roles.add(role.name()));
         ArrayNode decisions = node.putArray("arbitration");
-        request.arbitration().forEach(decision -> {
+        admission.arbitration().forEach(decision -> {
             ObjectNode item = decisions.addObject();
             item.put("role", decision.role().name()).put("acquired", decision.acquired());
             item.set("displaced_owner", ownerTree(decision.displacedOwner()));
@@ -345,15 +370,18 @@ public final class S1GameplayAudioTimelineJsonl {
     }
 
     private static void validateInventory(ObjectNode inventory) {
-        exact(inventory, Set.of("record_types", "ownership_roles", "sound_classes", "owner_classes"), "field_inventory");
+        exact(inventory, Set.of("record_types", "semantic_event_types", "ownership_roles", "sound_classes",
+                "owner_classes"), "field_inventory");
         if (!strings(array(required(inventory, "record_types"), "record_types")).equals(List.of("baseline", "frame", "terminal"))
+                || !strings(array(required(inventory, "semantic_event_types"), "semantic_event_types")).equals(
+                        List.of("request", "admission"))
                 || !strings(array(required(inventory, "ownership_roles"), "ownership_roles")).equals(
                         List.of("FM3", "FM4", "FM5", "PSG1", "PSG2", "PSG3"))
                 || !strings(array(required(inventory, "sound_classes"), "sound_classes")).equals(
                         List.of("MUSIC", "SFX", "SPECIAL_SFX", "COMMAND"))
                 || !strings(array(required(inventory, "owner_classes"), "owner_classes")).equals(
                         List.of("NONE", "MUSIC", "NORMAL_SFX", "SPECIAL_SFX"))) {
-            throw invalid("field inventory is not v1");
+            throw invalid("field inventory is not v2");
         }
     }
 
@@ -363,9 +391,12 @@ public final class S1GameplayAudioTimelineJsonl {
         private int expectedFrame = SEGMENT_START_BK2_FRAME;
         private int frames;
         private long requests;
+        private long admissions;
         private long diagnosticTicks;
         private Long lastDiagnosticTick;
         private long lastRequestOrdinal = -1;
+        private long lastAdmissionOrdinal = -1;
+        private final Map<Long, Request> requestsByOrdinal = new HashMap<>();
 
         private void accept(TimelineRecord record) {
             if (terminalSeen) {
@@ -389,11 +420,23 @@ public final class S1GameplayAudioTimelineJsonl {
                         throw invalid("request ordinals must be globally increasing");
                     }
                     lastRequestOrdinal = request.requestOrdinal();
+                    requestsByOrdinal.put(request.requestOrdinal(), request);
                     requests++;
+                }
+                for (Admission admission : frame.admissions()) {
+                    Request request = requestsByOrdinal.get(admission.requestOrdinal());
+                    if (admission.requestOrdinal() <= lastAdmissionOrdinal || request == null
+                            || request.soundClass() != admission.soundClass()) {
+                        throw invalid("admissions must be globally increasing and match a prior request");
+                    }
+                    lastAdmissionOrdinal = admission.requestOrdinal();
+                    requestsByOrdinal.remove(admission.requestOrdinal());
+                    admissions++;
                 }
             } else if (record instanceof Terminal terminal) {
                 if (!baselineSeen || frames != SEGMENT_FRAME_COUNT || terminal.frameCount() != frames
-                        || terminal.requestCount() != requests || terminal.diagnosticTickCount() != diagnosticTicks) {
+                        || terminal.requestCount() != requests || terminal.admissionCount() != admissions
+                        || terminal.diagnosticTickCount() != diagnosticTicks) {
                     throw invalid("terminal counts do not match the complete timeline");
                 }
                 terminalSeen = true;
@@ -479,7 +522,7 @@ public final class S1GameplayAudioTimelineJsonl {
 
     private static void bounded(ArrayNode values, int maximum, String name) {
         if (values.size() > maximum) {
-            throw invalid(name + " exceeds the v1 bounded-record limit of " + maximum);
+            throw invalid(name + " exceeds the v2 bounded-record limit of " + maximum);
         }
     }
 

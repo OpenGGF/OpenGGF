@@ -131,6 +131,30 @@ class TestAudioCommandTimeline {
     }
 
     @Test
+    void observesRawRingRequestOnceBeforeResolvedAlternationWithoutEnteringSnapshots() {
+        AudioTestFixtures.StubSmpsLoader loader = new AudioTestFixtures.StubSmpsLoader();
+        loader.sfxResults.put(0xCE, new AudioTestFixtures.StubSmpsData("left-ring"));
+        audio.setAudioProfile(new AudioTestFixtures.StubAudioProfile(loader));
+        audio.setRom(null);
+        EnumMap<GameSound, Integer> map = new EnumMap<>(GameSound.class);
+        map.put(GameSound.RING_RIGHT, 0xB5);
+        map.put(GameSound.RING_LEFT, 0xCE);
+        audio.setSoundMap(map);
+        var beforeObserver = audio.captureLogicalSnapshot();
+        java.util.List<String> observations = new java.util.ArrayList<>();
+
+        audio.setRequestObserver((requestClass, rawId) ->
+                observations.add(requestClass + ":" + Integer.toHexString(rawId)));
+        assertEquals(beforeObserver, audio.captureLogicalSnapshot(),
+                "the observational callback must not enter logical rewind state");
+        audio.playSfx(GameSound.RING);
+
+        assertEquals(java.util.List.of("SFX:b5"), observations);
+        AudioCommand.PlaySfx resolved = (AudioCommand.PlaySfx) audio.commandTimeline().entryAt(0).command();
+        assertEquals(0xCE, resolved.sfxId());
+    }
+
+    @Test
     void recordsSpeedShoesAsSemanticCommands() {
         audio.beginCommandTimelineFrame(9);
 

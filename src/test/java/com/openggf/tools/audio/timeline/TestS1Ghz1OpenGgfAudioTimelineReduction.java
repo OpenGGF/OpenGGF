@@ -21,10 +21,14 @@ import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import java.lang.reflect.Field;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class TestS1Ghz1OpenGgfAudioTimelineReduction {
+    private static final Map<S1Ghz1OpenGgfAudioTimelineCapture.CaptureState, Long> NEXT_ORDINAL =
+            new IdentityHashMap<>();
 
     @Test
     void semanticOrdinalsReserveZeroForBaselineAndMatchReferenceRequestOrder() throws Exception {
@@ -49,10 +53,10 @@ class TestS1Ghz1OpenGgfAudioTimelineReduction {
         var firstOwner = new S1GameplayAudioTimeline.OwnerRef(NORMAL_SFX, 0xA0, 1);
         var secondOwner = new S1GameplayAudioTimeline.OwnerRef(NORMAL_SFX, 0xA1, 2);
         assertEquals(List.of(
-                new S1GameplayAudioTimeline.Request(1, SFX, 0xA0, List.of(FM3), List.of(
+                new S1GameplayAudioTimeline.Admission(1, SFX, 0xA0, List.of(FM3), List.of(
                         new S1GameplayAudioTimeline.RoleArbitration(
                                 FM3, true, baseline, firstOwner))),
-                new S1GameplayAudioTimeline.Request(2, SFX, 0xA1, List.of(FM3), List.of(
+                new S1GameplayAudioTimeline.Admission(2, SFX, 0xA1, List.of(FM3), List.of(
                         new S1GameplayAudioTimeline.RoleArbitration(
                                 FM3, true, firstOwner, secondOwner)))),
                 List.of(first, second));
@@ -90,14 +94,14 @@ class TestS1Ghz1OpenGgfAudioTimelineReduction {
         state.onRoleArbitrated(new SfxContentionObserver.Arbitration(FM, 2, second, first, true));
         state.onRoleArbitrated(new SfxContentionObserver.Arbitration(FM, 2, first, second, false));
 
-        var firstRequest = requestFor(state, SFX, 0xA0, firstAdmission);
-        var secondRequest = requestFor(state, SFX, 0xA1, secondAdmission);
+        var firstAdmissionRecord = requestFor(state, SFX, 0xA0, firstAdmission);
+        var secondAdmissionRecord = requestFor(state, SFX, 0xA1, secondAdmission);
 
-        assertEquals(20, firstRequest.requestOrdinal());
-        assertTrue(firstRequest.arbitration().getFirst().acquired());
-        assertEquals(MUSIC, firstRequest.arbitration().getFirst().displacedOwner().ownerClass());
-        assertEquals(21, secondRequest.requestOrdinal());
-        assertEquals(0xA0, secondRequest.arbitration().getFirst().displacedOwner().soundId());
+        assertEquals(1, firstAdmissionRecord.requestOrdinal());
+        assertTrue(firstAdmissionRecord.arbitration().getFirst().acquired());
+        assertEquals(MUSIC, firstAdmissionRecord.arbitration().getFirst().displacedOwner().ownerClass());
+        assertEquals(2, secondAdmissionRecord.requestOrdinal());
+        assertEquals(0xA0, secondAdmissionRecord.arbitration().getFirst().displacedOwner().soundId());
     }
 
     @Test
@@ -121,12 +125,12 @@ class TestS1Ghz1OpenGgfAudioTimelineReduction {
 
         var takeover = requestFor(state, SFX, 0xA2, admission(challenger));
 
-        assertEquals(51, restartedRequest.requestOrdinal());
-        assertEquals(51, takeover.arbitration().getFirst().displacedOwner().requestOrdinal());
+        assertEquals(2, restartedRequest.requestOrdinal());
+        assertEquals(2, takeover.arbitration().getFirst().displacedOwner().requestOrdinal());
     }
 
     @Test
-    void musicRequestCannotInheritStaleSfxArbitrationHistory() throws Exception {
+    void musicAdmissionCannotInheritStaleSfxArbitrationHistory() throws Exception {
         // Break caught: null music provenance wildcard-matches the latest unrelated SFX event.
         var state = new S1Ghz1OpenGgfAudioTimelineCapture.CaptureState();
         var stale = source(0xA0, 30);
@@ -138,23 +142,23 @@ class TestS1Ghz1OpenGgfAudioTimelineReduction {
     }
 
     @Test
-    void musicRequestUsesTheCurrentEffectiveOwnerWithoutConsumingSfxEvents() throws Exception {
+    void musicAdmissionUsesTheCurrentEffectiveOwnerWithoutConsumingSfxEvents() throws Exception {
         // Break caught: music reduction defaults to $81 instead of retaining an active SFX owner.
         var state = new S1Ghz1OpenGgfAudioTimelineCapture.CaptureState();
         var sfx = source(0xA0, 40);
         var admission = admission(sfx);
         state.onSfxAdmitted(admission);
         state.onRoleArbitrated(new SfxContentionObserver.Arbitration(FM, 2, sfx, null, true));
-        var sfxRequest = requestFor(state, SFX, 0xA0, admission);
-        assertTrue(sfxRequest.arbitration().getFirst().acquired());
+        var sfxAdmissionRecord = requestFor(state, SFX, 0xA0, admission);
+        assertTrue(sfxAdmissionRecord.arbitration().getFirst().acquired());
         addObservedMusicDriver(state, 0x87);
 
-        var musicRequest = requestFor(state, S1GameplayAudioTimeline.SoundClass.MUSIC, 0x87, null);
+        var musicAdmission = requestFor(state, S1GameplayAudioTimeline.SoundClass.MUSIC, 0x87, null);
 
-        var decision = musicRequest.arbitration().getFirst();
+        var decision = musicAdmission.arbitration().getFirst();
         assertFalse(decision.acquired());
         assertEquals(0xA0, decision.displacedOwner().soundId());
-        assertEquals(40, decision.finalOwner().requestOrdinal());
+        assertEquals(1, decision.finalOwner().requestOrdinal());
     }
 
     @Test
@@ -189,15 +193,15 @@ class TestS1Ghz1OpenGgfAudioTimelineReduction {
                 FM, 2, sfxSource, null, true));
         var sfx = requestFor(state, SFX, 0xA0, sfxAdmission);
 
-        var requests = reconcileMusic(state, List.of(music, sfx),
+        var admissions = reconcileMusic(state, List.of(music, sfx),
                 ownersWithFm3(sfx.arbitration().getFirst().finalOwner()));
 
-        var musicDecision = requests.getFirst().arbitration().getFirst();
+        var musicDecision = admissions.getFirst().arbitration().getFirst();
         assertTrue(musicDecision.acquired());
         assertEquals(0x81, musicDecision.displacedOwner().soundId());
         assertEquals(0x87, musicDecision.finalOwner().soundId());
         assertEquals(music.requestOrdinal(), musicDecision.finalOwner().requestOrdinal());
-        assertEquals(0xA0, requests.get(1).arbitration().getFirst().finalOwner().soundId());
+        assertEquals(0xA0, admissions.get(1).arbitration().getFirst().finalOwner().soundId());
     }
 
     @Test
@@ -226,16 +230,16 @@ class TestS1Ghz1OpenGgfAudioTimelineReduction {
                 FM, 2, secondSfxSource, null, true));
         var secondSfx = requestFor(state, SFX, 0xA1, secondSfxAdmission);
 
-        var requests = reconcileMusic(state,
+        var admissions = reconcileMusic(state,
                 List.of(firstMusic, firstSfx, secondMusic, secondSfx),
                 ownersWithFm3(secondSfx.arbitration().getFirst().finalOwner()));
 
         assertEquals(List.of(0x87, 0xA0, 0x88, 0xA1),
-                requests.stream().map(S1GameplayAudioTimeline.Request::soundId).toList());
-        assertTransition(requests.get(0), true, 0x81, 0x87);
-        assertTransition(requests.get(1), true, 0x87, 0xA0);
-        assertTransition(requests.get(2), true, 0xA0, 0x88);
-        assertTransition(requests.get(3), true, 0x88, 0xA1);
+                admissions.stream().map(S1GameplayAudioTimeline.Admission::soundId).toList());
+        assertTransition(admissions.get(0), true, 0x81, 0x87);
+        assertTransition(admissions.get(1), true, 0x87, 0xA0);
+        assertTransition(admissions.get(2), true, 0xA0, 0x88);
+        assertTransition(admissions.get(3), true, 0x88, 0xA1);
     }
 
     private static SfxContentionObserver.Source source(int soundId, long ordinal) {
@@ -249,12 +253,13 @@ class TestS1Ghz1OpenGgfAudioTimelineReduction {
                 List.of(new SfxContentionObserver.Role(FM, 2)));
     }
 
-    private static S1GameplayAudioTimeline.Request requestFor(
+    private static S1GameplayAudioTimeline.Admission requestFor(
             S1Ghz1OpenGgfAudioTimelineCapture.CaptureState state,
             S1GameplayAudioTimeline.SoundClass soundClass,
             int soundId,
             SfxContentionObserver.Admission admission) throws Exception {
-        return state.requestFor(soundClass, soundId, admission);
+        long ordinal = NEXT_ORDINAL.merge(state, 1L, Long::sum);
+        return state.admissionFor(ordinal, soundClass, soundId, admission);
     }
 
     private static SfxContentionObserver.Arbitration arbitrationFor(
@@ -288,11 +293,11 @@ class TestS1Ghz1OpenGgfAudioTimelineReduction {
         return state.owners(presentation);
     }
 
-    private static List<S1GameplayAudioTimeline.Request> reconcileMusic(
+    private static List<S1GameplayAudioTimeline.Admission> reconcileMusic(
             S1Ghz1OpenGgfAudioTimelineCapture.CaptureState state,
-            List<S1GameplayAudioTimeline.Request> requests,
+            List<S1GameplayAudioTimeline.Admission> admissions,
             S1GameplayAudioTimeline.OwnerVector finalOwners) {
-        return state.reconcileCompletedMusic(requests, finalOwners);
+        return state.reconcileCompletedMusic(admissions, finalOwners);
     }
 
     private static S1GameplayAudioTimeline.OwnerVector ownersWithFm3(
@@ -302,7 +307,7 @@ class TestS1Ghz1OpenGgfAudioTimelineReduction {
                 fm3, baseline, baseline, baseline, baseline, baseline);
     }
 
-    private static void assertTransition(S1GameplayAudioTimeline.Request request,
+    private static void assertTransition(S1GameplayAudioTimeline.Admission request,
             boolean acquired, int displacedSoundId, int finalSoundId) {
         var decision = request.arbitration().getFirst();
         assertEquals(acquired, decision.acquired());

@@ -34,8 +34,8 @@ class TestS1Ghz1OpenGgfAudioTimelineCapture {
             while (reader.hasNext()) {
                 if (reader.next() instanceof S1GameplayAudioTimeline.Frame frame) {
                     frames++;
-                    for (S1GameplayAudioTimeline.Request request : frame.requests()) {
-                        for (S1GameplayAudioTimeline.RoleArbitration decision : request.arbitration()) {
+                    for (S1GameplayAudioTimeline.Admission admission : frame.admissions()) {
+                        for (S1GameplayAudioTimeline.RoleArbitration decision : admission.arbitration()) {
                             if (decision.acquired()) {
                                 assertNotEquals(decision.displacedOwner(), decision.finalOwner(),
                                         "acquired role self-displaced at BK2 frame " + frame.bk2Frame());
@@ -55,11 +55,11 @@ class TestS1Ghz1OpenGgfAudioTimelineCapture {
     }
 
     @Test
-    void v1AcceptsD0OnlyAsSpecialSfxOwnership() {
+    void v2AcceptsD0OnlyAsSpecialSfxOwnership() {
         // Break caught: S1's special $D0 is serialized as an ordinary SFX owner.
         var special = new S1GameplayAudioTimeline.OwnerRef(
                 S1GameplayAudioTimeline.OwnerClass.SPECIAL_SFX, 0xD0, 3);
-        var request = new S1GameplayAudioTimeline.Request(3,
+        var admission = new S1GameplayAudioTimeline.Admission(3,
                 S1GameplayAudioTimeline.SoundClass.SPECIAL_SFX, 0xD0,
                 java.util.List.of(S1GameplayAudioTimeline.HardwareRole.FM3),
                 java.util.List.of(new S1GameplayAudioTimeline.RoleArbitration(
@@ -67,11 +67,11 @@ class TestS1Ghz1OpenGgfAudioTimelineCapture {
                         new S1GameplayAudioTimeline.OwnerRef(
                                 S1GameplayAudioTimeline.OwnerClass.MUSIC, 0x81, 0), special)));
         assertEquals(S1GameplayAudioTimeline.OwnerClass.SPECIAL_SFX,
-                request.arbitration().getFirst().finalOwner().ownerClass());
+                admission.arbitration().getFirst().finalOwner().ownerClass());
     }
 
     @Test
-    void producerClassifiesD0AsSpecialBeforeConstructingRequest() {
+    void producerClassifiesD0AsSpecialBeforeConstructingAdmission() {
         assertEquals(S1GameplayAudioTimeline.SoundClass.SPECIAL_SFX,
                 S1Ghz1OpenGgfAudioTimelineCapture.CaptureState.soundClassForSfx(0xD0));
     }

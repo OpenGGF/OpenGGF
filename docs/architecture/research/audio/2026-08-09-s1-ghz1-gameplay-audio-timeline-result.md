@@ -2,118 +2,97 @@
 
 **Date:** 2026-08-09
 
-**Result:** Deterministic valid mismatch at the gameplay-request boundary
+**Result:** deterministic valid admission-timing mismatch after raw request parity
 
-## Run and identities
+## Run and pinned identities
 
 The hardened runner completed two independent captures from each producer and
-returned its documented mismatch exit code `3`:
+returned the documented semantic-mismatch exit code `3`:
 
 ```bash
-/usr/bin/bash -p tools/audio/run_s1_ghz1_gameplay_audio_timeline.sh \
-  --rom '../../Sonic The Hedgehog (W) (REV01) [!].gen' \
-  --bizhawk-home '../../docs/BizHawk-2.11-linux-x64'
+DISPLAY=:0 tools/audio/run_s1_ghz1_gameplay_audio_timeline.sh \
+  --rom './Sonic The Hedgehog (W) (REV01) [!].gen' \
+  --bizhawk-home docs/BizHawk-2.11-linux-x64
 ```
 
-The final local, ignored evidence is preserved in
-`target/audio-parity/s1-ghz1-gameplay/run.AhiDZDUs/`.
+The final detailed evidence remains ignored under
+`target/audio-parity/s1-ghz1-gameplay/run.avvaEipc/`.
 
 | Input | Verified identity |
 |---|---|
 | ROM | Sonic 1 World REV01; SHA-1 `69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b`; CRC32 `afe05eee` |
-| BK2 | Complete-with-emeralds movie; SHA-256 `f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b`; 225,101 rows |
-| Reference | BizHawk 2.11, Genesis Plus GX |
-| Segment | BK2 frames `[860,4975)`; 4,115 records; GHZ `$81` baseline |
+| BK2 | Complete-with-emeralds; SHA-256 `f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b`; 225,101 rows |
+| EmuHawk | Linux x64 2.11; SHA-256 `b2d4be5e2a766a5161cc26f3af2a90753c39d64c91c54a9884171aed09e21df3` |
+| Core assembly | `BizHawk.Emulation.Cores.dll`; SHA-256 `0144e6e236be68ce126eb771dcb5a9ae7c153a083fa0333f345ac37b4a60acf7` |
+| Genesis Plus GX | `gpgx.wbx.zst`; SHA-256 `c4231296ec5ba59b431df22b68e234ae7bfbbfc87b6e72fa471234ac1b220d12` |
+| Segment | BK2 frames `[860,4975)`; 4,115 frame records; GHZ `$81` baseline |
 
-| Producer | SHA-256 for each duplicate | Bytes each | Requests |
-|---|---|---:|---:|
-| BizHawk reference | `8ab8fd1b052598495e6faecaf505758808e0015ec7762d45225b28baba073e59` | 2,050,831 | 154 |
-| OpenGGF | `337959a8aa9ba4122041cd5700b1fd64069bd4d1315129433244279183815948` | 2,058,662 | 175 |
+| Producer | Duplicate SHA-256 | Bytes | Requests | Admissions |
+|---|---|---:|---:|---:|
+| BizHawk reference | `6696221b907cc37333898d26fa44e9837788e158c6288919b06dadc42ed1f84c` | 2,127,539 | 174 | 154 |
+| OpenGGF | `ab5f1cea17a9a589b9aa7290cb3b222bdd760d26d95d97d848b4023ce683c2fb` | 2,135,765 | 175 | 175 |
 
-`cmp` passed for both duplicate pairs. Detailed JSONL, logs, and reports remain
-ignored and are not repository artifacts.
+`cmp` passed for both duplicate pairs. Detailed streams, logs, and reports are
+not repository artifacts.
 
-## Request inventory
+## Corrected semantic boundary
 
-This is a non-reconstructive inventory: it records counts and first/last BK2
-frames, not the ordered per-frame payload.
+Schema v2 separates the cause from its later presentation:
 
-| ID | Source name | Reference count / span | OpenGGF count / span |
-|---|---|---|---|
-| `$87` | `bgm_Invincible` | 1 / 3219 | 1 / 3218 |
-| `$88` | `bgm_ExtraLife` | 1 / 3699 | 1 / 3698 |
-| `$8E` | `bgm_GotThrough` | 1 / 4386 | 1 / 4385 |
-| `$A0` | `sfx_Jump` | 22 / 959–4292 | 24 / 958–4291 |
-| `$A1` | `sfx_Lamppost` | 1 / 3565 | 1 / 3564 |
-| `$A4` | `sfx_Skid` | absent | 4 / 3969–3972 |
-| `$B5` | `sfx_Ring` | 64 / 973–4109 | 36 / 977–3944 |
-| `$B9` | `sfx_Collapse` | 3 / 2494–2739 | 3 / 2493–2738 |
-| `$BE` | `sfx_Roll` | 1 / 3502 | 1 / 3501 |
-| `$C1` | `sfx_BreakItem` | 11 / 1150–4077 | 14 / 1149–4076 |
-| `$C3` | `sfx_GiantRing` | 1 / 4329 | 1 / 4328 |
-| `$C5` | `sfx_Cash` | 1 / 4795 | 1 / 4794 |
-| `$C9` | `sfx_Bonus` | 3 / 4295–4305 | 3 / 4294–4304 |
-| `$CC` | `sfx_Spring` | 3 / 1240–2403 | 3 / 1239–2402 |
-| `$CD` | `sfx_Switch` | 29 / 4679–4791 | 29 / 4679–4791 |
-| `$CE` | `sfx_RingLeft` | absent | 37 / 972–4108 |
-| `$CF` | `sfx_Signpost` | 1 / 4262 | 1 / 4261 |
-| `$D0` | `sfx_Waterfall` | 11 / 1275–2107 | 14 / 1274–3898 |
+- a request is emitted at `QueueSound` on the ROM and at the numeric
+  `AudioManager.playSfx`/`playMusic` entry in OpenGGF, before any ring transform;
+- an admission is emitted at ROM `PlaySoundID`/SMPS initialization and at the
+  OpenGGF production presentation/contention boundary, with the same ordinal;
+- requests carry `raw_sound_id`; admissions and owners carry the resolved ID,
+  requested roles, arbitration, and final owners.
+
+This removes the former, invalid classification of the first result as a
+gameplay-caller scheduling mismatch. The callers already agree.
+
+## First mismatch
+
+The first result is `ADMISSION_EXTRA` at frame 958, admission 0:
+
+| Event | BizHawk REV01 | OpenGGF |
+|---|---|---|
+| Jump request | frame 958, ordinal 1, raw `$A0` | frame 958, ordinal 1, raw `$A0` |
+| Jump admission | frame 959, ordinal 1, resolved `$A0`, PSG1 | frame 958, ordinal 1, resolved `$A0`, PSG1 |
+
+No event realignment is applied. The comparator therefore stops at the first
+causal difference: OpenGGF presents the already-matching jump request one frame
+earlier than the shipped sound driver's queue consumption. This result does not
+authorize a gameplay timing change or a chip-port change.
+
+Ring resolution independently proves the split identity contract. Both
+producers emit ordinal 2 at frame 972 with raw `$B5`; both admit resolved `$CE`
+on FM4, on frame 973 for REV01 and frame 972 for OpenGGF.
 
 ## Contention evidence
 
-Both acceptance classes are present in both complete streams; otherwise the
-comparator would have returned capture failure instead of the semantic
-mismatch.
+Both required contention classes are present in both complete streams; the
+comparator would otherwise report capture failure before a parity mismatch.
 
-- Music/SFX takeover and restore: reference `$A0` request ordinal 1 takes PSG1
-  from GHZ `$81` at frame 959, and `$81` owns PSG1 again at frame 985. OpenGGF
-  observes the same ordinal-1 ownership transition at 958 and restoration at
-  984.
-- SFX while another SFX is active: reference `$B5` request ordinal 11 takes
-  FM4 from `$CC` ordinal 10 at frame 1250. OpenGGF `$CE` ordinal 11 takes FM4
-  from `$CC` ordinal 10 at frame 1249.
+- Music/SFX takeover and restoration: jump ordinal 1 takes PSG1 from GHZ `$81`
+  (reference frame 959, OpenGGF 958); `$81` owns PSG1 again at reference frame
+  985 and OpenGGF frame 984. Across the complete streams there are 108 and 104
+  acquired music-owner displacements respectively.
+- SFX/SFX contention: resolved ring ordinal 4 displaces the older resolved ring
+  ordinal 2 on FM4 (reference frame 983, OpenGGF 982). The complete streams
+  contain 65 and 86 identity-changing SFX-owner contention decisions respectively.
 
-## First mismatch and stop boundary
+The same-ID OpenGGF path now reports the old SFX ordinal through the existing
+authoritative lock arbitration rather than reporting music/null after releasing
+the old lock.
 
-The first semantic result is `REQUEST_EXTRA`, frame 958 request 0. OpenGGF
-submits `$A0` (`sfx_Jump`) on frame 958; the REV01 driver selects and consumes
-the same queued PSG1 request at `PlaySoundID` on frame 959. The BK2's first B
-press is row/frame 958. In the ROM,
-`Sonic_Jump` reads `v_jpadpress2` and calls `QueueSound2`; OpenGGF's
-`PlayableSpriteMovement.doJump()` calls `AudioManager.playSfx(GameSound.JUMP)`.
-Both baselines own ordinal 0 and both `$A0` requests carry ordinal 1 with the
-same PSG1 arbitration and owner identities; the mismatch is therefore only
-which frame contains that semantic request, not an ordinal incompatibility.
-This is request scheduling at the gameplay/input-to-audio boundary, so the
-planned rule requires stopping before `PlaySoundID`, role arbitration,
-presentation ownership, libvgm chip behavior, or chip-port ordering. No
-gameplay timing or audio-driver behavior was tuned against this movie.
+## Publication and verification notes
 
-Before the observer corrections, no semantic comparison was available: the
-reference producer stopped on shipped driver-RAM clearing and non-local SMPS
-returns. The final lifecycle classification includes `$71BD4`, the DAC
-continuation after `cfStopTrack`; its normal later `$71C4C` return closes the
-same tick exactly once, while a target outside the DAC/track continuations
-still closes immediately. After these source-derived lifecycle/serialization
-corrections, all four captures complete and the request mismatch above is
-stable. OpenGGF's capture producer also reserves ordinal 0 for the shared GHZ
-baseline without altering driver-observer admission ordinals. There is no
-post-behavior-fix result because a behavior fix was not warranted within this
-audio task.
+A preliminary in-sandbox BizHawk launch failed before Lua execution because no
+X display was accessible. The nonzero producer path invoked only the trusted
+`discard-reference` command; no staging capture or output survived. The real run
+then completed on the existing display outside the sandbox. Negative tests also
+prove altered core binaries are rejected and that even a complete staging stream
+cannot publish through the failed-producer path.
 
-## Verification and listening checklist
-
-The explicit driver snapshot, fade, chip observer, YM2612 GPGX parity,
-timeline, reducer, comparator, and authority suite ran 86 tests with zero
-failures or errors and one property-gated capture skip. The real property-gated
-capture was exercised twice by the hardened runner instead.
-
-Structural evidence does not establish audible correctness. Human review
-should still check:
-
-- jump onset against the input and visible take-off;
-- ring stereo alternation, especially `$B5` versus `$CE`;
-- waterfall/SFX and SFX/SFX steals for clicks or stuck voices;
-- invincibility and extra-life takeover/restoration;
-- switch, signpost, and act-clear transitions;
-- YM2612/PSG balance and port-order-sensitive attacks.
+Human listening remains required for jump onset, ring stereo alternation,
+waterfall contention, invincibility/extra-life restoration, and YM2612/PSG
+balance; the semantic result alone does not establish audible parity.

@@ -220,6 +220,7 @@ function Contract.newQueueBuffer()
         -- A normal queue0 write supersedes CycleSoundQueue's internal requeue.
         if index == 0 then self.deferredQueue0 = nil end
         if frame < 860 and index == 0 and id == 0x81 then self.baselineMusic = id end
+        return self.slots[index]
     end
 
     function buffer:cycle(observedSlots, retained, soundIdBeforeCycle)
@@ -300,8 +301,8 @@ function Contract.newTimeline(activeMusicId)
     local musicId = Contract.u8(activeMusicId)
     assert(musicId >= 0x81 and musicId <= 0x9f, "timeline requires active music ID")
     local timeline = {
-        active = false, frame = nil, tick = nil, lastTick = nil, queues = {}, requests = {},
-        requestOrdinal = 0, requestCount = 0, diagnosticTickCount = 0, priority = 0,
+        active = false, frame = nil, tick = nil, lastTick = nil, queues = {}, requests = {}, admissions = {},
+        requestOrdinal = 0, requestCount = 0, admissionCount = 0, diagnosticTickCount = 0, priority = 0,
         normalOwners = {}, specialOwners = {}, musicOwners = {}
     }
     for _, role in ipairs(ROLES) do timeline.musicOwners[role] = owner("MUSIC", musicId, 0) end
@@ -320,7 +321,21 @@ function Contract.newTimeline(activeMusicId)
         assert(frame >= 860 and frame < 4975, "semantic frame is outside [860,4975)")
         assert(tick >= 0 and (self.lastTick == nil or tick > self.lastTick),
             "diagnostic ticks must be monotonic")
-        self.active, self.frame, self.tick, self.requests = true, frame, tick, {}
+        self.active, self.frame, self.tick, self.requests, self.admissions = true, frame, tick, {}, {}
+    end
+
+    function timeline:request(request, bk2Frame)
+        assert(type(request) == "table" and type(request.sound_id) == "number",
+            "semantic request requires a queued raw sound ID")
+        local frame = integer(bk2Frame, "request BK2 frame")
+        assert(frame >= 860 and frame < 4975, "semantic request is outside [860,4975)")
+        assert(request.request_ordinal == nil, "queued request received two semantic ordinals")
+        self.requestOrdinal = self.requestOrdinal + 1
+        self.requestCount = self.requestCount + 1
+        request.request_ordinal = self.requestOrdinal
+        request.sound_class = soundClass(request.sound_id)
+        return {request_ordinal = request.request_ordinal, sound_class = request.sound_class,
+            raw_sound_id = request.sound_id}
     end
 
     function timeline:queue(slot, soundId)
@@ -335,6 +350,9 @@ function Contract.newTimeline(activeMusicId)
             request.queued_tick = request.queued_tick or self.tick
         else
             request = {sound_id = Contract.u8(soundId), queued_tick = self.tick}
+        end
+        if request.request_ordinal == nil then
+            self.requests[#self.requests + 1] = self:request(request, self.frame)
         end
         self.queues[index] = request
     end
@@ -376,12 +394,12 @@ function Contract.newTimeline(activeMusicId)
         assert(type(observation.headers) == "table", "dispatch requires final track headers")
         if not observation.accepted or request.sound_class == "COMMAND" or #roles == 0 or #initialized == 0 then return false end
         for _, role in ipairs(initialized) do assert(declaredSet[role], "initialized role must be declared") end
-        self.requestOrdinal = self.requestOrdinal + 1
-        self.requestCount = self.requestCount + 1
-        local identity = owner(ownerClass(request.sound_class), request.sound_id, self.requestOrdinal)
+        assert(type(request.request_ordinal) == "number", "admission requires a prior semantic request")
+        local admittedSoundId = Contract.u8(observation.admitted_sound_id or request.sound_id)
+        local identity = owner(ownerClass(request.sound_class), admittedSoundId, request.request_ordinal)
         local before = copyOwners(self.finalOwners)
         if request.sound_class == "MUSIC" then
-            if request.sound_id == 0x88 then self.musicStack = self.musicStack or {}; self.musicStack[#self.musicStack + 1] = copyOwners(self.musicOwners) end
+            if admittedSoundId == 0x88 then self.musicStack = self.musicStack or {}; self.musicStack[#self.musicStack + 1] = copyOwners(self.musicOwners) end
             for _, role in ipairs(initialized) do self.musicOwners[role] = cloneOwner(identity) end
         else
             local identities = request.sound_class == "SFX" and self.normalOwners or self.specialOwners
@@ -396,8 +414,9 @@ function Contract.newTimeline(activeMusicId)
         end
         self.finalOwners = after
         if request.sound_class ~= "MUSIC" then self.priority = request.priority end
-        self.requests[#self.requests + 1] = {request_ordinal = self.requestOrdinal,
-            sound_class = request.sound_class, sound_id = request.sound_id,
+        self.admissionCount = self.admissionCount + 1
+        self.admissions[#self.admissions + 1] = {request_ordinal = request.request_ordinal,
+            sound_class = request.sound_class, sound_id = admittedSoundId,
             requested_roles = roles, arbitration = arbitration}
         return true
     end
@@ -413,14 +432,14 @@ function Contract.newTimeline(activeMusicId)
 
     function timeline:abandonTick()
         assert(self.active, "abandon requires an active timeline tick")
-        self.active, self.frame, self.tick, self.requests = false, nil, nil, {}
+        self.active, self.frame, self.tick, self.requests, self.admissions = false, nil, nil, {}, {}
     end
 
     function timeline:closeTick(headers)
         assert(self.active, "timeline tick close without entry")
         self.finalOwners = effectiveOwners(self, headers)
         local record = {type = "frame", bk2_frame = self.frame, diagnostic_tick = self.tick,
-            requests = self.requests, owners = copyOwners(self.finalOwners)}
+            requests = self.requests, admissions = self.admissions, owners = copyOwners(self.finalOwners)}
         self.active, self.lastTick = false, self.tick
         self.diagnosticTickCount = self.diagnosticTickCount + 1
         return record
@@ -431,6 +450,7 @@ function Contract.newTimeline(activeMusicId)
         local count = diagnosticTickCount == nil and self.diagnosticTickCount or integer(diagnosticTickCount, "terminal diagnostic tick count")
         assert(count >= 0, "terminal diagnostic tick count must be non-negative")
         return {type = "terminal", frame_count = 4115, request_count = self.requestCount,
+            admission_count = self.admissionCount,
             diagnostic_tick_count = count}
     end
 

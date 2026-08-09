@@ -3,15 +3,20 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
-- Tooling: complete the first real Sonic 1 GHZ1 gameplay-audio timeline run. The
-  BizHawk observer now follows shipped `StopAllSound` queue invalidation and
-  SMPS non-local return paths, including the DAC continuation after
-  `cfStopTrack`, closely enough to publish deterministic 4,115-frame captures.
-  Both producers reserve request ordinal 0 for the GHZ baseline and identify
-  the first `$A0` jump as ordinal 1. The resulting comparison stops at a
-  gameplay-request boundary: OpenGGF submits it at BK2 frame 958 while REV01
-  consumes it at frame 959, so driver or chip parity is not claimed.
-- Tooling: add the Sonic 1 GHZ1 gameplay-audio timeline comparator and two-producer runner. It pins the complete-run BK2, REV01 ROM, and BizHawk 2.11 identities; validates each bounded JSONL stream before comparison; reports the first ordered request/arbitration/ownership mismatch with compact JSON and bounded context; and only publishes a fully validated BizHawk staging capture through atomic create-new output. Two independent captures from each producer must be byte-identical before a parity conclusion.
+- Tooling: correct the Sonic 1 GHZ1 gameplay-audio timeline's causal boundary.
+  Strict schema v2 records raw caller/ROM queue requests at submission and
+  resolved driver/presentation admissions separately with one stable ordinal.
+  Both producers now agree on the first `$A0` jump request at BK2 frame 958;
+  the first mismatch is `ADMISSION_EXTRA` because OpenGGF admits it on 958 and
+  REV01 on 959. Ring requests likewise compare as raw `$B5` while admission
+  correctly resolves to `$CE`, without modifying gameplay or chip ports.
+- Tooling: harden the GHZ1 timeline runner and contention evidence. Validation
+  pins the exact installed `BizHawk.Emulation.Cores.dll` and `gpgx.wbx.zst`
+  hashes, nonzero BizHawk exits can only discard fresh staging, comparator
+  context is bounded to 8 + mismatch + 8, and same-ID SFX retriggers retain the
+  displaced old SFX ordinal through the authoritative production arbitration.
+  Two reference and two OpenGGF captures remain byte-identical per producer and
+  both music/SFX takeover-restoration and SFX/SFX contention are required.
 - Fix: YM2612 synthesis now keeps the chip's register-slot permutation at the
   register boundary instead of applying it a second time in the FM algorithm
   graph. Envelope reset phase, decay-to-sustain overshoot, and discrete-chip

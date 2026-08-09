@@ -94,8 +94,9 @@ realigns ticks or changes chip-port ordering.
 
 ## Sonic 1 GHZ1 gameplay-audio timeline
 
-The gameplay timeline is a separate, stricter diagnostic: it compares natural
-music/SFX requests, per-role contention decisions, and final ownership over
+The gameplay timeline is a separate, stricter diagnostic: schema v2 compares
+raw caller/ROM queue requests and later resolved admissions at their own frame
+boundaries, followed by per-role contention decisions and final ownership over
 the committed GHZ1 complete-run interval. Run it with the pinned REV01 ROM:
 
 ```bash
@@ -104,12 +105,14 @@ tools/audio/run_s1_ghz1_gameplay_audio_timeline.sh \
 ```
 
 It accepts only an optional `--bizhawk-home` override. The movie, output root,
-ROM hash, and BizHawk 2.11 identity are pinned. A run creates one unique child
+ROM hash, EmuHawk, installed core assembly, and Genesis Plus GX binary identities
+are pinned. A run creates one unique child
 of `target/audio-parity/s1-ghz1-gameplay/`, captures each producer twice, and
 requires byte-identical captures before reporting semantic parity. BizHawk
 writes only a fresh `.staging` child; Java validates the complete strict JSONL
-stream, atomically create-new publishes it, and deletes staging on success or
-failure. The runner rejects Java/Mono command replacement environment seams,
+stream and atomically create-new publishes it after a successful producer. A
+failed producer enters a separate trusted discard path and never invokes
+publication, even for complete staging bytes. The runner rejects Java/Mono command replacement environment seams,
 never overwrites a capture or report, and preserves the four captures, logs,
 and two reports for investigation. Exit status `3` is a valid semantic
 mismatch; `4` is an untrusted/failed capture or tool failure.

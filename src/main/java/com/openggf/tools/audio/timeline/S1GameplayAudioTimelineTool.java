@@ -23,6 +23,10 @@ public final class S1GameplayAudioTimelineTool {
     public static final int EXIT_TOOL_FAILURE = 4;
     private static final String EMUHAWK_SHA256 =
             "b2d4be5e2a766a5161cc26f3af2a90753c39d64c91c54a9884171aed09e21df3";
+    static final String BIZHAWK_CORES_SHA256 =
+            "0144e6e236be68ce126eb771dcb5a9ae7c153a083fa0333f345ac37b4a60acf7";
+    static final String GPGX_WBX_SHA256 =
+            "c4231296ec5ba59b431df22b68e234ae7bfbbfc87b6e72fa471234ac1b220d12";
 
     private S1GameplayAudioTimelineTool() {
     }
@@ -40,6 +44,7 @@ public final class S1GameplayAudioTimelineTool {
             return switch (args[0]) {
                 case "validate" -> validate(parse(args, 1), out);
                 case "publish-reference" -> publishReference(parse(args, 1));
+                case "discard-reference" -> discardReference(parse(args, 1));
                 case "compare" -> compare(parse(args, 1), out);
                 default -> throw new UsageException("unknown command: " + args[0]);
             };
@@ -63,11 +68,7 @@ public final class S1GameplayAudioTimelineTool {
                 "ROM does not match pinned Sonic 1 World REV01 identity");
         verifyDigest(movie, "SHA-256", S1GameplayAudioTimeline.BK2_SHA256,
                 "BK2 does not match the committed S1 complete identity");
-        Path emuHawk = bizhawk.resolve("EmuHawk.exe");
-        if (!Files.isRegularFile(emuHawk) || !Files.isRegularFile(bizhawk.resolve("dll/BizHawk.Emulation.Cores.dll"))) {
-            throw new IllegalArgumentException("BizHawk 2.11 installation is incomplete");
-        }
-        verifyDigest(emuHawk, "SHA-256", EMUHAWK_SHA256, "BizHawk is not the pinned 2.11 Linux x64 build");
+        verifyPinnedBizHawk(bizhawk);
         Path outputRoot = resolveSafeOutputRoot(repository, path(options, "output-root"));
         out.println("ROM_PATH=" + protocolPath(rom));
         out.println("MOVIE_PATH=" + protocolPath(movie));
@@ -119,6 +120,29 @@ public final class S1GameplayAudioTimelineTool {
                 else throw new IllegalArgumentException("reference staging cleanup failed: " + cleanupFailure.getMessage(), cleanupFailure);
             }
         }
+    }
+
+    private static int discardReference(Map<String, String> options) throws IOException {
+        rejectUnknown(options, "repo", "run-root", "staging");
+        Path runRoot = safeRunRoot(repository(options), path(options, "run-root"));
+        Path staging = stagingChild(runRoot, path(options, "staging"));
+        Files.delete(staging);
+        return EXIT_MATCH;
+    }
+
+    static void verifyPinnedBizHawk(Path bizhawk) {
+        Path emuHawk = bizhawk.resolve("EmuHawk.exe");
+        Path cores = bizhawk.resolve("dll/BizHawk.Emulation.Cores.dll");
+        Path gpgx = bizhawk.resolve("dll/gpgx.wbx.zst");
+        if (!Files.isRegularFile(emuHawk) || !Files.isRegularFile(cores) || !Files.isRegularFile(gpgx)) {
+            throw new IllegalArgumentException("BizHawk 2.11 installation is incomplete");
+        }
+        verifyDigest(emuHawk, "SHA-256", EMUHAWK_SHA256,
+                "BizHawk is not the pinned 2.11 Linux x64 build");
+        verifyDigest(cores, "SHA-256", BIZHAWK_CORES_SHA256,
+                "BizHawk.Emulation.Cores.dll is not the pinned installed core assembly");
+        verifyDigest(gpgx, "SHA-256", GPGX_WBX_SHA256,
+                "gpgx.wbx.zst is not the pinned Genesis Plus GX core binary");
     }
 
     private static int compare(Map<String, String> options, PrintStream out) throws IOException {
@@ -319,7 +343,7 @@ public final class S1GameplayAudioTimelineTool {
         return value;
     }
 
-    private static void verifyDigest(Path path, String algorithm, String expected, String error) {
+    static void verifyDigest(Path path, String algorithm, String expected, String error) {
         try (InputStream input = Files.newInputStream(path)) {
             MessageDigest digest = MessageDigest.getInstance(algorithm);
             byte[] bytes = new byte[64 * 1024];
@@ -375,7 +399,7 @@ public final class S1GameplayAudioTimelineTool {
     }
 
     private static void usage(PrintStream output) {
-        output.println("Usage: S1GameplayAudioTimelineTool <validate|publish-reference|compare> [options]");
+        output.println("Usage: S1GameplayAudioTimelineTool <validate|publish-reference|discard-reference|compare> [options]");
         output.println("Exit codes: 0=semantic match, 2=usage, 3=parity mismatch, 4=capture/tool failure.");
     }
 

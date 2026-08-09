@@ -112,6 +112,35 @@ class TestSfxContentionObserver {
     }
 
     @Test
+    void sameIdProductionRetriggerReportsTheDisplacedOldSfxIdentityOnce() {
+        SmpsDriver driver = new SmpsDriver();
+        List<SfxContentionObserver.Admission> admissions = new ArrayList<>();
+        List<SfxContentionObserver.Arbitration> arbitrations = new ArrayList<>();
+        driver.setSfxContentionObserver(new SfxContentionObserver() {
+            @Override public void onSfxAdmitted(SfxContentionObserver.Admission admission) {
+                admissions.add(admission);
+            }
+            @Override public void onRoleArbitrated(SfxContentionObserver.Arbitration arbitration) {
+                arbitrations.add(arbitration);
+            }
+        });
+        SmpsSequencer oldSfx = realTrackSequencer("old", 0xA0, driver);
+        SmpsSequencer retrigger = realTrackSequencer("retrigger", 0xA0, driver);
+        driver.addSequencer(oldSfx, true);
+        oldSfx.writeFm(0, 0xA2, 0x22);
+        driver.addSequencer(retrigger, true);
+        retrigger.writeFm(0, 0xA2, 0x44);
+
+        SfxContentionObserver.Source challenger = admissions.get(1).source();
+        List<SfxContentionObserver.Arbitration> challengerDecisions = arbitrations.stream()
+                .filter(event -> event.challenger().equals(challenger)).toList();
+        assertEquals(1, challengerDecisions.size(), "the production lock path is the sole arbitration authority");
+        assertTrue(challengerDecisions.getFirst().acquired());
+        assertEquals(admissions.getFirst().source(), challengerDecisions.getFirst().previousOwner(),
+                "same-ID replacement must displace the old SFX, not music/null");
+    }
+
+    @Test
     void rollbackPreservesSurvivingAdmissionIdentityWithoutReusingOrdinals() {
         // Break caught: rollback reidentified a surviving sequencer or reused a reverted admission ordinal.
         SmpsDriver driver = new SmpsDriver();

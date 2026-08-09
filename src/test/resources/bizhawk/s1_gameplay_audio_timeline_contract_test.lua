@@ -43,10 +43,11 @@ local function runQueueAndContention()
     equals(request.consumed_tick, 0, "queue consumption tick was not retained as diagnostic")
     check(timeline:dispatch(request, observation({"FM3"}, {"FM3"}, {FM3 = true})), "accepted normal SFX dispatch was rejected")
     local first = timeline:closeTick(headers({FM3 = true}))
-    equals(first.requests[1].request_ordinal, 1, "first accepted request ordinal was not one")
-    equals(first.requests[1].arbitration[1].role, "FM3", "normal SFX did not request FM3")
-    check(first.requests[1].arbitration[1].acquired, "music-owned FM3 was not acquired")
-    equals(first.requests[1].arbitration[1].displaced_owner.owner_class, "MUSIC",
+    equals(first.admissions[1].request_ordinal, 2,
+        "admission did not retain the overwritten queue submission's successor ordinal")
+    equals(first.admissions[1].arbitration[1].role, "FM3", "normal SFX did not request FM3")
+    check(first.admissions[1].arbitration[1].acquired, "music-owned FM3 was not acquired")
+    equals(first.admissions[1].arbitration[1].displaced_owner.owner_class, "MUSIC",
         "music owner was not reported as displaced")
     equals(first.owners.FM3.owner_class, "NORMAL_SFX", "normal SFX did not own FM3")
 
@@ -57,7 +58,7 @@ local function runQueueAndContention()
     rejectedObservation.accepted = false
     check(not timeline:dispatch(lower, rejectedObservation), "lower-priority dispatch was accepted")
     local rejected = timeline:closeTick(headers({FM3 = true}))
-    equals(#rejected.requests, 0, "rejected dispatch became a semantic request")
+    equals(#rejected.admissions, 0, "rejected dispatch became a semantic request")
     equals(rejected.owners.FM3.sound_id, 0xA2, "lower-priority rejection changed final owner")
 
     timeline:beginTick(862, 2)
@@ -65,10 +66,10 @@ local function runQueueAndContention()
     local equal = timeline:consume(0, 4)
     check(timeline:dispatch(equal, observation({"FM3"}, {"FM3"}, {FM3 = true})), "equal-priority replacement was rejected")
     local replacement = timeline:closeTick(headers({FM3 = true}))
-    equals(replacement.requests[1].arbitration[1].displaced_owner.sound_id, 0xA2,
+    equals(replacement.admissions[1].arbitration[1].displaced_owner.sound_id, 0xA2,
         "equal-priority replacement did not retain displaced identity")
     equals(replacement.owners.FM3.sound_id, 0xA4, "equal-priority replacement did not transfer owner")
-    equals(replacement.requests[1].request_ordinal, 2, "accepted requests were not monotonic")
+    equals(replacement.admissions[1].request_ordinal, 4, "admissions did not retain caller request ordinals")
 
     timeline:beginTick(863, 3)
     timeline:queue(1, 0xD0)
@@ -85,7 +86,7 @@ local function runQueueAndContention()
         "normal SFX over special SFX was rejected")
     local normalFrame = timeline:closeTick(headers({FM3 = true, FM4 = true}, {FM4 = true}))
     equals(normalFrame.owners.FM4.owner_class, "NORMAL_SFX", "normal SFX did not outrank special SFX")
-    equals(normalFrame.requests[1].arbitration[2].displaced_owner.owner_class, "SPECIAL_SFX",
+    equals(normalFrame.admissions[1].arbitration[2].displaced_owner.owner_class, "SPECIAL_SFX",
         "normal-over-special arbitration lost the displaced special owner")
 
     timeline:beginTick(865, 5)
@@ -95,7 +96,31 @@ local function runQueueAndContention()
     equals(Contract.canonicalJson(restored.owners),
         '{"FM3":{"owner_class":"MUSIC","request_ordinal":0,"sound_id":129},"FM4":{"owner_class":"MUSIC","request_ordinal":0,"sound_id":129},"FM5":{"owner_class":"MUSIC","request_ordinal":0,"sound_id":129},"PSG1":{"owner_class":"MUSIC","request_ordinal":0,"sound_id":129},"PSG2":{"owner_class":"MUSIC","request_ordinal":0,"sound_id":129},"PSG3":{"owner_class":"MUSIC","request_ordinal":0,"sound_id":129}}',
         "final owner vector was not canonical")
-    equals(timeline:terminal().request_count, 4, "terminal accepted-request count was wrong")
+    equals(timeline:terminal().request_count, 6, "terminal caller-request count was wrong")
+    equals(timeline:terminal().admission_count, 4, "terminal admission count was wrong")
+end
+
+local function runRequestAdmissionFrameSplitAndRingResolution()
+    -- Break caught: queue time is relabeled as driver time, or ring's raw $B5
+    -- queue identity is overwritten by PlaySoundID's resolved $CE alternation.
+    local timeline = Contract.newTimeline(0x81)
+    local queued = {sound_id = 0xB5}
+    local request = timeline:request(queued, 958)
+    equals(request.request_ordinal, 1, "queue request did not receive ordinal one")
+    equals(request.raw_sound_id, 0xB5, "queue request did not retain raw ring ID")
+
+    timeline:beginTick(959, 0)
+    timeline:queue(0, queued)
+    local selected = timeline:consume(0, 4)
+    check(timeline:dispatch(selected, {
+        accepted = true, admitted_sound_id = 0xCE,
+        declared_roles = {"FM3"}, initialized_roles = {"FM3"}, headers = headers({FM3 = true})
+    }), "resolved ring admission was rejected")
+    local admitted = timeline:closeTick(headers({FM3 = true})).admissions[1]
+    equals(admitted.request_ordinal, 1, "admission lost queue request ordinal")
+    equals(admitted.sound_id, 0xCE, "ring admission did not retain resolved ID")
+    equals(timeline:terminal().request_count, 1, "split request count was wrong")
+    equals(timeline:terminal().admission_count, 1, "split admission count was wrong")
 end
 
 local function runLifecycleAndDiagnostics()
@@ -130,7 +155,7 @@ local function runSourceDerivedDispatchBoundaries()
         accepted = true, declared_roles = {"FM4"}, initialized_roles = {"FM4"}, headers = headers({FM3 = true, FM4 = true})
     }), "FM4 initialization boundary was not accepted")
     local fm4Frame = timeline:closeTick(headers({FM3 = true, FM4 = true}))
-    equals(fm4Frame.requests[1].requested_roles[1], "FM4", "declared FM4 role was not retained")
+    equals(fm4Frame.admissions[1].requested_roles[1], "FM4", "declared FM4 role was not retained")
     equals(fm4Frame.owners.FM3.owner_class, "MUSIC", "unrelated final active FM3 was transferred to SFX")
     equals(fm4Frame.owners.FM4.sound_id, 0xA4, "initialized FM4 did not receive SFX identity")
 
@@ -142,9 +167,9 @@ local function runSourceDerivedDispatchBoundaries()
         headers = headers({FM4 = true}, {FM4 = true})
     }), "initialized special SFX was discarded merely because normal SFX owns FM4")
     local blocked = timeline:closeTick(headers({FM4 = true}, {FM4 = true}))
-    check(not blocked.requests[1].arbitration[1].acquired,
+    check(not blocked.admissions[1].arbitration[1].acquired,
         "special FM4 record did not preserve acquired=false while normal SFX owns it")
-    equals(blocked.requests[1].arbitration[1].final_owner.owner_class, "NORMAL_SFX",
+    equals(blocked.admissions[1].arbitration[1].final_owner.owner_class, "NORMAL_SFX",
         "blocked special FM4 did not retain normal final ownership")
 
     timeline:beginTick(862, 2)
@@ -153,7 +178,7 @@ local function runSourceDerivedDispatchBoundaries()
     check(not timeline:dispatch(push, {
         accepted = false, declared_roles = {"FM3"}, initialized_roles = {}, headers = headers({FM4 = true})
     }), "already-playing push early return became an accepted request")
-    equals(#timeline:closeTick(headers({FM4 = true})).requests, 0,
+    equals(#timeline:closeTick(headers({FM4 = true})).admissions, 0,
         "push early-return emitted a semantic request")
 
     timeline:beginTick(863, 3)
@@ -177,7 +202,7 @@ local function runSourceDerivedDispatchBoundaries()
         initialized_roles = {"FM3", "FM4", "FM5", "PSG1", "PSG2", "PSG3"}, headers = headers()
     }), "$88 accepted BGM load did not become a music request")
     local oneUpFrame = timeline:closeTick(headers())
-    equals(oneUpFrame.requests[1].sound_class, "MUSIC", "$88 was not classified as MUSIC")
+    equals(oneUpFrame.admissions[1].sound_class, "MUSIC", "$88 was not classified as MUSIC")
     equals(oneUpFrame.owners.FM3.sound_id, 0x88, "$88 did not take over FM3")
     equals(oneUpFrame.owners.PSG3.sound_id, 0x88, "$88 did not take over PSG3")
 
@@ -285,7 +310,7 @@ local function runSelectedIdentityAndDormantQueueBoundaries()
         accepted = true, declared_roles = {"FM3"}, initialized_roles = {"FM3"},
         headers = headers({FM3 = true}), init_loop_d7 = 0 -- realistic DBF loop counter, not a sound ID
     }), "accepted normal initialization was rejected")
-    equals(timeline:closeTick(headers({FM3 = true})).requests[1].sound_id, 0xA0,
+    equals(timeline:closeTick(headers({FM3 = true})).admissions[1].sound_id, 0xA0,
         "DBF D7 loop counter corrupted the original selected SFX ID")
 
     local queueBuffer = Contract.newQueueBuffer()
@@ -320,7 +345,7 @@ local function runCycleSoundQueueDeferral()
     check(timeline:dispatch(initialCandidates[1], {
         accepted = true, declared_roles = {"FM3"}, initialized_roles = {"FM3"}, headers = headers({FM3 = true})
     }), "selected $A1 did not dispatch")
-    equals(timeline:closeTick(headers({FM3 = true})).requests[1].request_ordinal, 1,
+    equals(timeline:closeTick(headers({FM3 = true})).admissions[1].request_ordinal, 1,
         "selected $A1 did not receive the first semantic request ordinal")
 
     timeline:beginTick(861, 1)
@@ -334,7 +359,7 @@ local function runCycleSoundQueueDeferral()
     check(timeline:dispatch(deferredCandidate, {
         accepted = true, declared_roles = {"FM4"}, initialized_roles = {"FM4"}, headers = headers({FM4 = true})
     }), "deferred $A2 did not dispatch")
-    equals(timeline:closeTick(headers({FM4 = true})).requests[1].request_ordinal, 2,
+    equals(timeline:closeTick(headers({FM4 = true})).admissions[1].request_ordinal, 2,
         "deferred $A2 did not receive the next semantic request ordinal")
 
     local rejected = Contract.newQueueBuffer()
@@ -383,6 +408,7 @@ local function runStopAllSoundQueueInvalidation()
 end
 
 runQueueAndContention()
+runRequestAdmissionFrameSplitAndRingResolution()
 runLifecycleAndDiagnostics()
 runSourceDerivedDispatchBoundaries()
 runImmutableBaseline()

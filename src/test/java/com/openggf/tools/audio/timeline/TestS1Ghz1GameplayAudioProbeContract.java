@@ -21,9 +21,9 @@ class TestS1Ghz1GameplayAudioProbeContract {
         assertTrue(source.contains("ProbeRuntime.run({"), "probe must use ProbeRuntime.run({...})");
         assertTrue(source.contains("s1_gameplay_audio_timeline_contract.lua"), "probe must use pure timeline contract");
         assertTrue(source.contains("context.log("), "probe must write only through ProbeRuntime output");
-        assertTrue(source.contains("s1_gameplay_audio_timeline.v1"), "probe must emit the Task 1 schema");
+        assertTrue(source.contains("s1_gameplay_audio_timeline.v2"), "probe must emit the split request/admission schema");
         for (String required : List.of("0x138E", "0x1394", "0x139A", "0x71F02", "0x71F4C",
-                "0x71FD2", "0x721C6", "0x7230C", "0x71B4C", "0x71C4C", "0x81", "860", "4975",
+                "0x71FD2", "0x721C6", "0x721F4", "0x7230C", "0x71B4C", "0x71C4C", "0x81", "860", "4975",
                 "f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b")) {
             assertTrue(source.contains(required), "probe is missing required pinned observation: " + required);
         }
@@ -48,8 +48,11 @@ class TestS1Ghz1GameplayAudioProbeContract {
                         && source.substring(normalInit, specialInit).contains("Timeline.assertSelectedIdentity")
                         && source.substring(specialInit).contains("Timeline.assertSelectedIdentity"),
                 "normal and special initializers must assert retained selected identity");
-        assertFalse(source.contains("M68K D7"),
-                "init hooks must retain selected queue identity; D7 is the ROM DBF track counter there");
+        int resolvedId = source.indexOf("local function normalIdResolved()");
+        assertTrue(resolvedId >= 0 && source.substring(resolvedId, normalInit).contains("M68K D7"),
+                "the pre-DBF hook must retain the resolved ring ID at actual admission");
+        assertFalse(source.substring(normalInit, specialInit).contains("M68K D7"),
+                "normal init must use retained selected identity after D7 becomes a DBF counter");
         for (String forbidden : List.of("mainmemory.write", "memory.write", "joypad.set", "savestate.",
                 "emu.setregister", "io.open", "event.onmemoryexecute", "event.onmemorywrite", "client.exit")) {
             assertFalse(source.contains(forbidden), "read-only observer contains forbidden API: " + forbidden);

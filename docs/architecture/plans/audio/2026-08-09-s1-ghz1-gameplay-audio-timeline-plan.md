@@ -4,7 +4,15 @@
 
 **Goal:** Compare the natural music and SFX request, priority-decision, and channel-ownership timeline produced by Sonic 1 REV01 and OpenGGF during GHZ1 of the committed complete-game BK2.
 
-**Architecture:** A read-only BizHawk probe records ROM queue and dispatch events around complete sound-driver updates. A strict tooling-only Java contract reduces both producers to one semantic frame per BK2 row: ordered requests, per-role arbitration, and final ownership. A test-side visual-run observer records OpenGGF's existing command timeline and presentation snapshots after the normal outer-frame audio boundary. A deterministic comparator reports the first semantic difference; reference data never drives engine audio.
+**Architecture:** A read-only BizHawk probe records raw ROM queue submissions and
+later sound-driver admissions around complete updates. A strict tooling-only
+Java contract reduces both producers to one semantic frame per BK2 row: ordered
+raw requests, separately ordered resolved admissions with per-role arbitration,
+and final ownership. A test-side visual-run observer records OpenGGF's raw
+`AudioManager` entry requests plus the existing command timeline and
+presentation snapshots after the normal outer-frame audio boundary. A
+deterministic comparator reports the first semantic difference; reference data
+never drives engine audio.
 
 **Tech Stack:** Java 21, JUnit Jupiter, Jackson streaming JSON, Lua 5.4/BizHawk 2.11 Lua, Bash, existing OpenGGF trace replay and audio presentation infrastructure.
 
@@ -65,7 +73,7 @@
                                 OwnerRef displacedOwner, OwnerRef finalOwner) {}
   ```
 
-  Pin the schema string `s1_gameplay_audio_timeline.v1`, identities, segment
+  Pin the corrected schema string `s1_gameplay_audio_timeline.v2`, identities, segment
   bounds, and exact field inventory in metadata validation. Follow
   `AudioParityJsonl`'s record-at-a-time parser and atomic hard-link publication
   pattern; do not reuse its music-only metadata model.
@@ -94,7 +102,7 @@
 - Create: `src/test/java/com/openggf/tools/audio/timeline/TestS1Ghz1GameplayAudioProbeContract.java`
 
 **Interfaces:**
-- Consumes: Task 1's canonical v1 record field names and enum spellings.
+- Consumes: Task 1's canonical v2 record field names and enum spellings.
 - Produces: a BizHawk JSONL stream through `ProbeRuntime`'s `OGGF_OUT` handle, with ROM queue slot/global priority/tick details confined to validated diagnostics.
 - Maintains: an identity-bearing owner per active ROM SFX track: sound class,
   dispatched sound ID, and monotonically increasing request ordinal. Track
@@ -156,7 +164,7 @@
 - Create: `src/test/java/com/openggf/audio/driver/TestSfxContentionObserver.java`
 
 **Interfaces:**
-- Consumes: Task 1 writer and v1 records.
+- Consumes: Task 1 writer and v2 records.
 - Produces: `S1Ghz1OpenGgfAudioTimelineCapture.capture(Path runDirectory, Path output)`.
 - Produces: local-only JUnit entry method `captureRequestedOutput` gated by both
   `s1.audio.timeline.run.path` and `s1.audio.timeline.output`; it skips only
@@ -211,8 +219,8 @@
 - [ ] **Step 5: Implement OpenGGF capture**
 
   Launch the committed run with `stopAfterSegmentBody(0)`. Drain only newly
-  appended `AudioTimelineEntry` values, map `PlayMusic` and `PlaySfx` to v1
-  requests, derive each SFX's declared roles from its loaded tracks, and
+  appended `AudioTimelineEntry` values, map `PlayMusic` and `PlaySfx` to
+  resolved admissions, derive each SFX's declared roles from its loaded tracks, and
   combine ordered contention-observer events with
   `captureLogicalSnapshot().presentation()` into identity-bearing per-role
   acquired/displaced/final arbitration plus the final owner vector. Retain
@@ -275,8 +283,32 @@
   Hash each input during a complete validation pass, compare a second streaming
   pass without realignment, consume both streams to EOF after retaining the
   first mismatch context, and reject a changed digest. Compare baseline,
-  ordered requests, per-role arbitration, and final owner vectors. Validate but
-  exclude ROM-only queue slot/global-priority/audio-tick diagnostics.
+  ordered raw requests, resolved admissions, per-role arbitration, and final
+  owner vectors. Validate but exclude ROM-only queue
+  slot/global-priority/audio-tick diagnostics.
+
+### Final semantic-boundary correction (completed 2026-08-09)
+
+- [x] Bump the strict contract to v2 and split raw caller/ROM queue requests
+  from resolved driver/presentation admissions. Emit each at its own BK2 frame
+  with one shared monotonic ordinal; compare without frame realignment.
+- [x] Add the disabled `AudioManager` request observer before ring alternation,
+  keep it out of rewind snapshots, and correlate normal presentation admission
+  through the existing command and contention observers.
+- [x] Observe S1 ring resolution at ROM PC `$721F4`, retaining queue `$B5` and
+  admitted `$CE`; cover frame-958 request parity and the reference frame-959
+  versus OpenGGF frame-958 jump admission.
+- [x] Preserve the displaced old SFX identity for same-ID production
+  retriggers through `SmpsDriver`'s pending conflict mechanism.
+- [x] Pin the installed core assembly and GPGX binary by full SHA-256; add
+  negative validation coverage.
+- [x] Limit comparator context to at most eight prior records, the mismatch,
+  and exactly eight subsequent records without backfilling a short prefix.
+- [x] Route nonzero BizHawk producer exits only to trusted staging discard;
+  prove a complete failed staging stream cannot publish.
+- [x] Run two real BizHawk and two real OpenGGF captures. Duplicate pairs are
+  byte-identical and the first valid mismatch is `ADMISSION_EXTRA` at frame
+  958, after both streams agree on raw jump request ordinal 1 at frame 958.
 
 - [ ] **Step 4: Implement safe CLI and shell runner**
 
@@ -285,7 +317,7 @@
   OpenGGF twice through
   `mvn -Pci -Dtest=com.openggf.tools.audio.timeline.TestS1Ghz1OpenGgfAudioTimelineCapture#captureRequestedOutput -Ds1.audio.timeline.run.path=<run> -Ds1.audio.timeline.output=<new-output> test`,
   with each probe writing only to a fresh `.staging` child passed to
-  `publish-reference`; gates each published pair
+  `publish-reference` after exit 0 or `discard-reference` after nonzero exit; gates each published pair
   with `cmp`, and then invokes the trusted Java comparator. Preserve all four
   captures, logs, and two reports. Reject command-replacement environment
   variables and never overwrite an existing detailed or report file.
@@ -316,9 +348,9 @@
 
 - [ ] **Step 2: Classify the first causal mismatch**
 
-  Use request equality to separate gameplay scheduling from audio-driver
-  behavior. If requests differ, stop at the gameplay caller. If requested-role
-  or arbitration results differ, verify `PlaySoundID`, `SoundPriorities`, and
+  Use request equality to separate caller/queue submission from audio-driver
+  behavior. If requests differ, stop at the submission boundary. If admission
+  roles or arbitration results differ, verify `PlaySoundID`, `SoundPriorities`, and
   SFX headers in `s1.sounddriver.asm`. If final ownership differs, verify
   `Sound_PlaySFX`, `Sound_PlaySpecial`, `StopSFX`, `StopSpecialSFX`, and
   `cfStopTrack`. Do not tune against observed frames or IDs.

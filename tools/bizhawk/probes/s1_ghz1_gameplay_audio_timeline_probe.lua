@@ -1,6 +1,6 @@
 -- Read-only Sonic 1 REV01 GHZ1 gameplay-audio timeline producer.
 -- Queue slots, global priority, and audio ticks are diagnostics only; semantic
--- output uses the Task 1 v1 request/arbitration/owner vocabulary.
+-- output uses the v2 queue-request/admission/arbitration/owner vocabulary.
 
 local runtimePath = assert(os.getenv("OGGF_BIZHAWK_PROBE_RUNTIME"),
     "run through run_bizhawk_lua so OGGF_BIZHAWK_PROBE_RUNTIME is absolute")
@@ -14,7 +14,7 @@ local QUEUE_PCS = {[0x138E] = 0, [0x1394] = 1, [0x139A] = 2}
 local UPDATE_MUSIC, UPDATE_MUSIC_RETURN = 0x71B4C, 0x71C4C
 local CYCLE_SOUND_QUEUE, PLAY_SOUND_ID = 0x71F02, 0x71F4C
 local PLAY_SEGA_RETURN, PLAY_BGM, BGM_LOAD_MUSIC, PLAY_BGM_RETURN = 0x71FD0, 0x71FD2, 0x7202C, 0x721B8
-local PLAY_SFX, NORMAL_ROLE_DECLARED, NORMAL_ROLE_INITIALIZED = 0x721C6, 0x7222E, 0x7227C
+local PLAY_SFX, NORMAL_ID_RESOLVED, NORMAL_ROLE_DECLARED, NORMAL_ROLE_INITIALIZED = 0x721C6, 0x721F4, 0x7222E, 0x7227C
 local PLAY_SPECIAL, SPECIAL_ROLE_DECLARED, SPECIAL_ROLE_INITIALIZED = 0x7230C, 0x7234C, 0x7236E
 local RESTORE_PREVIOUS_MUSIC, RESTORE_PREVIOUS_MUSIC_RETURN = 0x72B14, 0x72B9C
 local STOP_TRACK_RETURN = 0x72E04
@@ -34,7 +34,8 @@ local opcodeManifest = {
     {address = 0x71F4C, expectedOpcode = "7e00"}, {address = 0x71FD0, expectedOpcode = "4e75"},
     {address = 0x721B8, expectedOpcode = "4e75"},
     {address = 0x71FD2, expectedOpcode = "0c070088"}, {address = 0x7202C, expectedOpcode = "4eba059c"},
-    {address = 0x721C6, expectedOpcode = "4a2e0027"}, {address = 0x7222E, expectedOpcode = "1803"},
+    {address = 0x721C6, expectedOpcode = "4a2e0027"}, {address = 0x721F4, expectedOpcode = "0c0700a7"},
+    {address = 0x7222E, expectedOpcode = "1803"},
     {address = 0x7227C, expectedOpcode = "3a99"}, {address = 0x7230C, expectedOpcode = "4a2e0027"},
     {address = 0x7234C, expectedOpcode = "6b0c"}, {address = 0x7236E, expectedOpcode = "3a99"},
     {address = 0x72B14, expectedOpcode = "204e"}, {address = 0x72B9C, expectedOpcode = "4e75"},
@@ -139,13 +140,17 @@ local romIdentity = nil
 
 local function frameRecord(frame)
     local record = frames[frame]
-    if not record then record = {requests = {}, diagnostic_tick = nil, owners = nil}; frames[frame] = record end
+    if not record then record = {requests = {}, admissions = {}, diagnostic_tick = nil, owners = nil}; frames[frame] = record end
     return record
 end
 
 local function queueObserved(slot)
     local soundId = (emu.getregister("M68K D0") or 0) & 0xff
-    queueBuffer:write(slot, soundId, emu.framecount())
+    local frame = emu.framecount()
+    local queued = queueBuffer:write(slot, soundId, frame)
+    if frame >= SEGMENT_START and frame < SEGMENT_END then
+        frameRecord(frame).requests[#frameRecord(frame).requests + 1] = timeline:request(queued, frame)
+    end
 end
 
 local function addRole(roles, role)
@@ -167,10 +172,17 @@ local function candidateObserved(soundClass)
     local request = activeTick.selectedRequest
     if request.sound_class ~= soundClass then return end
     local candidate = {accepted = false, request = request, selected_sound_id = request.sound_id,
-        declared_roles = {}, initialized_roles = {}, sound_class = soundClass}
+        admitted_sound_id = request.sound_id, declared_roles = {}, initialized_roles = {}, sound_class = soundClass}
     Timeline.assertSelectedIdentity(candidate.request, candidate.selected_sound_id)
     activeTick.candidates[#activeTick.candidates + 1] = candidate
     activeTick.currentCandidate = candidate
+end
+
+local function normalIdResolved()
+    local candidate = activeTick and activeTick.currentCandidate
+    if candidate and candidate.sound_class == "SFX" then
+        candidate.admitted_sound_id = (emu.getregister("M68K D7") or 0) & 0xff
+    end
 end
 
 local function consumeObserved()
@@ -188,7 +200,7 @@ end
 
 local function cycleObserved()
     -- ROM-only diagnostics are validated here and intentionally never enter
-    -- the v1 semantic JSON fields used for cross-producer equality.
+    -- the v2 semantic JSON fields used for cross-producer equality.
     local queues = {readU8(0x0A), readU8(0x0B), readU8(0x0C)}
     local retained = activeTick ~= nil
     local queued = queueBuffer:cycle(queues, retained, readU8(0x09))
@@ -245,11 +257,12 @@ local function closeTick(context)
     for _, candidate in ipairs(activeTick.candidates) do
         Timeline.assertSelectedIdentity(candidate.request, candidate.selected_sound_id)
         timeline:dispatch(candidate.request, {accepted = candidate.accepted, declared_roles = candidate.declared_roles,
-            initialized_roles = candidate.initialized_roles, headers = headers})
+            initialized_roles = candidate.initialized_roles, admitted_sound_id = candidate.admitted_sound_id,
+            headers = headers})
     end
     local tick = timeline:closeTick(headers)
     local frame = frameRecord(tick.bk2_frame)
-    for _, request in ipairs(tick.requests) do frame.requests[#frame.requests + 1] = request end
+    for _, admission in ipairs(tick.admissions) do frame.admissions[#frame.admissions + 1] = admission end
     frame.diagnostic_tick, frame.owners = tick.diagnostic_tick, tick.owners
     activeTick, cycleDiagnostics = nil, nil
     diagnosticTick = diagnosticTick + 1
@@ -257,11 +270,12 @@ end
 
 local function emit(context)
     assert(queueBuffer:baselineMusicId() == 0x81, "frame-860 music baseline lacks preceding queue-1 $81 provenance")
-    context.log(Timeline.canonicalJson({type = "metadata", schema = "s1_gameplay_audio_timeline.v1",
+    context.log(Timeline.canonicalJson({type = "metadata", schema = "s1_gameplay_audio_timeline.v2",
         capture = "s1_ghz_gameplay_audio_reference", rom = romIdentity,
         bk2 = {sha256 = EXPECTED_MOVIE_SHA256}, producer = "BizHawk 2.11 / Genesis Plus GX",
         segment_start_bk2_frame = 860, segment_end_bk2_frame = 4975, terminal_frame_count = 4115,
-        field_inventory = {record_types = {"baseline", "frame", "terminal"}, ownership_roles = {"FM3", "FM4", "FM5", "PSG1", "PSG2", "PSG3"},
+        field_inventory = {record_types = {"baseline", "frame", "terminal"},
+            semantic_event_types = {"request", "admission"}, ownership_roles = {"FM3", "FM4", "FM5", "PSG1", "PSG2", "PSG3"},
             sound_classes = {"MUSIC", "SFX", "SPECIAL_SFX", "COMMAND"}, owner_classes = {"NONE", "MUSIC", "NORMAL_SFX", "SPECIAL_SFX"}}}))
     local baseline = timeline:baseline()
     baseline.owners = Timeline.jsonOwnerVector(baseline.owners)
@@ -272,7 +286,7 @@ local function emit(context)
         assert(record.owners ~= nil, "missing complete UpdateMusic tick for semantic BK2 frame " .. frame)
         if record.diagnostic_tick ~= nil then diagnosticFrameCount = diagnosticFrameCount + 1 end
         context.log(Timeline.canonicalJson({type = "frame", bk2_frame = frame, diagnostic_tick = record.diagnostic_tick,
-            requests = record.requests, owners = Timeline.jsonOwnerVector(record.owners)}))
+            requests = record.requests, admissions = record.admissions, owners = Timeline.jsonOwnerVector(record.owners)}))
     end
     context.log(Timeline.canonicalJson(timeline:terminal(diagnosticFrameCount)))
     context.finish()
@@ -305,6 +319,7 @@ ProbeRuntime.run({
             if lifecycle:playBgmDoubleReturn() == "close" then closeTick(context) end
         end},
         {name = "s1_gameplay_audio_sfx", address = PLAY_SFX, callback = function() candidateObserved("SFX") end},
+        {name = "s1_gameplay_audio_sfx_resolved_id", address = NORMAL_ID_RESOLVED, callback = function() normalIdResolved() end},
         {name = "s1_gameplay_audio_sfx_declared", address = NORMAL_ROLE_DECLARED, callback = function() normalRoleDeclared() end},
         {name = "s1_gameplay_audio_sfx_initialized", address = NORMAL_ROLE_INITIALIZED, callback = function() normalRoleInitialized() end},
         {name = "s1_gameplay_audio_special", address = PLAY_SPECIAL, callback = function() candidateObserved("SPECIAL_SFX") end},

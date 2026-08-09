@@ -44,6 +44,40 @@ class TestS1GameplayAudioTimelineCli {
     }
 
     @Test
+    void nonzeroProducerPathDiscardsEvenCompleteStagingWithoutPublication() throws Exception {
+        Path run = runRoot();
+        Path staging = write(run.resolve("failed-producer.staging"),
+                S1GameplayAudioTimeline.REFERENCE_CAPTURE);
+        Path output = run.resolve("must-not-publish.jsonl");
+
+        assertEquals(0, run("discard-reference", "--repo", temp.toString(), "--run-root", run.toString(),
+                "--staging", staging.toString()));
+
+        assertFalse(Files.exists(staging));
+        assertFalse(Files.exists(output));
+        assertEquals(2, run("publish-reference", "--repo", temp.toString(), "--run-root", run.toString(),
+                "--staging", staging.toString(), "--output", output.toString()));
+        assertFalse(Files.exists(output));
+    }
+
+    @Test
+    void rejectsAlteredPinnedCoreAssemblyAndGenesisPlusGxBinary() throws Exception {
+        assertEquals("0144e6e236be68ce126eb771dcb5a9ae7c153a083fa0333f345ac37b4a60acf7",
+                S1GameplayAudioTimelineTool.BIZHAWK_CORES_SHA256);
+        assertEquals("c4231296ec5ba59b431df22b68e234ae7bfbbfc87b6e72fa471234ac1b220d12",
+                S1GameplayAudioTimelineTool.GPGX_WBX_SHA256);
+        Path alteredCore = temp.resolve("BizHawk.Emulation.Cores.dll");
+        Path alteredGpgx = temp.resolve("gpgx.wbx.zst");
+        Files.writeString(alteredCore, "altered core assembly");
+        Files.writeString(alteredGpgx, "altered Genesis Plus GX core");
+
+        assertThrows(IllegalArgumentException.class, () -> S1GameplayAudioTimelineTool.verifyDigest(
+                alteredCore, "SHA-256", S1GameplayAudioTimelineTool.BIZHAWK_CORES_SHA256, "core changed"));
+        assertThrows(IllegalArgumentException.class, () -> S1GameplayAudioTimelineTool.verifyDigest(
+                alteredGpgx, "SHA-256", S1GameplayAudioTimelineTool.GPGX_WBX_SHA256, "gpgx changed"));
+    }
+
+    @Test
     void comparisonCreatesBothReportsNewAndUsesExitCodes() throws Exception {
         Path run = runRoot();
         Path reference = write(run.resolve("reference.jsonl"), S1GameplayAudioTimeline.REFERENCE_CAPTURE);
@@ -92,6 +126,11 @@ class TestS1GameplayAudioTimelineCli {
         String script = Files.readString(Path.of("tools/audio/run_s1_ghz1_gameplay_audio_timeline.sh"));
         assertTrue(script.contains("unsupported command replacement"));
         assertTrue(script.contains("publish-reference"));
+        String producerFailure = script.substring(script.indexOf("if ! \"${SAFE_ENV[@]}\" BIZHAWK_HOME="),
+                script.indexOf("\tfi", script.indexOf("if ! \"${SAFE_ENV[@]}\" BIZHAWK_HOME=")));
+        assertTrue(producerFailure.contains("discard-reference"));
+        assertFalse(producerFailure.contains("publish-reference"),
+                "a nonzero BizHawk producer must never enter the publication path");
         assertTrue(script.contains("OGGF_BIZHAWK_PROBE_RUNTIME"));
         assertTrue(script.contains("RUN_PATH=\"$REPO/src/test/resources/traces/s1/runs/s1-sonic-complete-withemeralds\""));
         assertTrue(script.contains("-Ds1.audio.timeline.run.path=\"$RUN_PATH\""));
@@ -161,17 +200,24 @@ class TestS1GameplayAudioTimelineCli {
         S1GameplayAudioTimeline.OwnerRef none = new S1GameplayAudioTimeline.OwnerRef(
                 S1GameplayAudioTimeline.OwnerClass.NONE, 0, -1);
         S1GameplayAudioTimeline.OwnerRef firstSfx = new S1GameplayAudioTimeline.OwnerRef(
-                S1GameplayAudioTimeline.OwnerClass.NORMAL_SFX, 0xA0, 0);
+                S1GameplayAudioTimeline.OwnerClass.NORMAL_SFX, 0xA0, 1);
         S1GameplayAudioTimeline.OwnerRef secondSfx = new S1GameplayAudioTimeline.OwnerRef(
-                S1GameplayAudioTimeline.OwnerClass.NORMAL_SFX, 0xA1, 1);
+                S1GameplayAudioTimeline.OwnerClass.NORMAL_SFX, 0xA1, 2);
         S1GameplayAudioTimeline.OwnerVector owners = new S1GameplayAudioTimeline.OwnerVector(music, music, music,
                 none, none, none);
         List<S1GameplayAudioTimeline.TimelineRecord> records = new java.util.ArrayList<>();
         records.add(new S1GameplayAudioTimeline.Baseline(860, 0x81, null, owners));
         for (int frame = 860; frame < 4975; frame++) {
             List<S1GameplayAudioTimeline.Request> requests = switch (frame) {
-                case 900 -> List.of(request(0, 0xA0, music, firstSfx));
-                case 901 -> List.of(request(1, 0xA1, firstSfx, secondSfx));
+                case 900 -> List.of(new S1GameplayAudioTimeline.Request(1,
+                        S1GameplayAudioTimeline.SoundClass.SFX, 0xA0));
+                case 901 -> List.of(new S1GameplayAudioTimeline.Request(2,
+                        S1GameplayAudioTimeline.SoundClass.SFX, 0xA1));
+                default -> List.of();
+            };
+            List<S1GameplayAudioTimeline.Admission> admissions = switch (frame) {
+                case 900 -> List.of(admission(1, 0xA0, music, firstSfx));
+                case 901 -> List.of(admission(2, 0xA1, firstSfx, secondSfx));
                 default -> List.of();
             };
             S1GameplayAudioTimeline.OwnerVector frameOwners = switch (frame) {
@@ -179,16 +225,17 @@ class TestS1GameplayAudioTimelineCli {
                 case 901 -> new S1GameplayAudioTimeline.OwnerVector(secondSfx, music, music, none, none, none);
                 default -> owners;
             };
-            records.add(new S1GameplayAudioTimeline.Frame(frame, (long) frame - 859, requests, frameOwners));
+            records.add(new S1GameplayAudioTimeline.Frame(frame, (long) frame - 859, requests, admissions,
+                    frameOwners));
         }
-        records.add(new S1GameplayAudioTimeline.Terminal(4115, 2, 4115));
+        records.add(new S1GameplayAudioTimeline.Terminal(4115, 2, 2, 4115));
         S1GameplayAudioTimelineJsonl.writeNew(path, metadata, records.iterator());
         return path;
     }
 
-    private S1GameplayAudioTimeline.Request request(long ordinal, int soundId,
+    private S1GameplayAudioTimeline.Admission admission(long ordinal, int soundId,
             S1GameplayAudioTimeline.OwnerRef displaced, S1GameplayAudioTimeline.OwnerRef finalOwner) {
-        return new S1GameplayAudioTimeline.Request(ordinal, S1GameplayAudioTimeline.SoundClass.SFX, soundId,
+        return new S1GameplayAudioTimeline.Admission(ordinal, S1GameplayAudioTimeline.SoundClass.SFX, soundId,
                 List.of(S1GameplayAudioTimeline.HardwareRole.FM3), List.of(
                         new S1GameplayAudioTimeline.RoleArbitration(S1GameplayAudioTimeline.HardwareRole.FM3,
                                 true, displaced, finalOwner)));

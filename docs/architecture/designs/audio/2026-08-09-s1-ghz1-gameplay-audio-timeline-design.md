@@ -17,15 +17,16 @@ contention and SFX/SFX contention.
   frame count `4115`, giving the half-open trace-row interval `[860, 4975)`.
   The following movie row is an intentional gap and the special-stage mode
   transition occurs at frame `4976`.
-- The reference output identifies each music or SFX request, its movie frame,
-  and which requested hardware roles it acquires after arbitration.
+- The reference output identifies each raw music or SFX queue request at its
+  movie frame, then identifies the later driver admission separately with the
+  same ordinal, resolved sound ID, and acquired hardware roles.
 - The output identifies music-track ownership before, during, and after SFX
   overrides, plus replacement between overlapping SFX.
 - OpenGGF runs the committed GHZ1 replay normally and reports commands it
   naturally produces. Reference data never injects sound IDs or other gameplay
   values into the engine.
-- Comparison reports the first mismatch in request timing, request identity,
-  per-role arbitration, channel ownership, or restoration.
+- Comparison reports the first mismatch in request timing/identity, admission
+  timing/resolved identity, per-role arbitration, channel ownership, or restoration.
 - The existing sound-test chip-write parity remains available for follow-up
   diagnosis; gameplay chip-write equality is not part of this MVP.
 - Outputs are deterministic, strictly validated, bounded in memory, and
@@ -48,10 +49,11 @@ contention and SFX/SFX contention.
   required to distinguish gameplay scheduling from driver priority behavior.
 - The ROM has three queue slots and a global SFX priority while OpenGGF admits
   commands directly and arbitrates per hardware role. Queue slot and global
-  priority therefore remain ROM diagnostics. Cross-producer equality uses the
-  requested role set, acquired role set, displaced owner, and final owner for
-  each hardware role. Owners carry class, sound ID, and request ordinal, so
-  normal SFX A replaced by normal SFX B remains observable.
+  priority remain ROM diagnostics, but the raw queue request is semantic and
+  distinct from admission. Cross-producer equality first compares raw request
+  ID/order at submission time, then resolved ID, requested roles, acquired
+  roles, displaced owner, and final owner at admission time. Owners carry the
+  admitted class, resolved sound ID, and original request ordinal.
 - SFX ownership is not equivalent to audible output. The MVP compares logical
   requests, decisions, and ownership; detailed chip writes remain a follow-up
   layer after the causal timeline is trustworthy.
@@ -64,6 +66,12 @@ defines GHZ1 at BK2 frame `860` for `4115` trace frames. Its segment metadata
 names the same committed BK2, so no new fixture or fitted boundary is needed.
 The BK2 has SHA-256
 `f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b`.
+The trusted Java launcher validates the binaries actually loaded from the
+canonical BizHawk home: `BizHawk.Emulation.Cores.dll` SHA-256
+`0144e6e236be68ce126eb771dcb5a9ae7c153a083fa0333f345ac37b4a60acf7`
+and `gpgx.wbx.zst` SHA-256
+`c4231296ec5ba59b431df22b68e234ae7bfbbfc87b6e72fa471234ac1b220d12`,
+in addition to the pinned `EmuHawk.exe`.
 
 On the ROM side, `QueueSound1` (`$00138E`), `QueueSound2` (`$001394`), and
 `QueueSound3` (`$00139A`) write the three bytes at sound RAM offsets
@@ -77,8 +85,11 @@ writes, and reads the global priority plus music-track override bits. The
 gameplay observer should reuse those proven primitives without inheriting the
 sound-test-only `$81` epoch or recurrence assertions.
 
-On the engine side, `AudioManager` already records natural `PlayMusic` and
-`PlaySfx` commands in an `AudioCommandTimeline` after `beginFrame`. The live
+On the engine side, `AudioManager` records resolved `PlayMusic` and `PlaySfx`
+commands in an `AudioCommandTimeline` after `beginFrame`. A separate
+disabled-by-default observer at the numeric `playMusic`/`playSfx` entry records
+the raw caller request before ring alternation (`$B5` remains `$B5` even when
+the presentation command resolves to `$CE`). The live
 SMPS presentation snapshot identifies sequencers and FM/PSG lock owners, but a
 final snapshot cannot reconstruct two same-frame arbitration steps. A
 disabled-by-default observer at `SmpsDriver` sequencer-admission and per-role
@@ -107,9 +118,10 @@ result cannot satisfy this design's end-to-end acceptance criteria.
    and global-priority details are marked diagnostic.
 2. A tooling-only Java schema owns strict parsing and canonical serialization
    of both producers' timeline records.
-3. A GHZ1 replay observer reads OpenGGF's existing command timeline and
-   presentation snapshots after normal frame execution. It never submits a
-   command obtained from reference data.
+3. A GHZ1 replay observer receives raw OpenGGF caller requests at
+   `AudioManager`, then correlates normal command/presentation admission and
+   contention events after frame execution. It never submits a command obtained
+   from reference data.
 4. A comparator owns alignment and first-mismatch reporting. It compares
    semantic events before consulting diagnostic bus writes.
 
@@ -152,10 +164,11 @@ inventories. Subsequent records are one of:
 
 - `baseline`: frame `860`, active music ID, and identity-bearing fixed hardware ownership before
   the first comparable gameplay row;
-- `frame`: BK2 frame and ordered requests, with each SFX request's declared
-  `requested_roles`; ordered per-role arbitration (`acquired`, identity-bearing `displaced_owner`, and
-  `final_owner`); and the final fixed ownership vector after the frame's last
-  sound-driver/presentation update;
+- `frame`: BK2 frame, ordered raw requests (`request_ordinal`, `sound_class`,
+  `raw_sound_id`) at caller/queue submission, and separate ordered admissions
+  carrying the same ordinal, resolved `sound_id`, `requested_roles`, per-role
+  arbitration (`acquired`, identity-bearing `displaced_owner`, `final_owner`),
+  and the final fixed ownership vector after the frame's last driver/presentation update;
 - `writes`: optional ordered decoded YM2612/PSG events for that audio tick.
 
 The GHZ1 MVP requires `baseline` and `frame`. A frame-local representation is
@@ -177,9 +190,10 @@ semantic equality.
 The comparator validates both complete inputs before comparison, then checks:
 
 1. capture identity, frame-860 baseline, and GHZ1 bounds;
-2. each frame's request order, class, ID, and requested roles;
-3. per-role acquired/displaced/final ownership;
-4. final ownership vector and music restoration.
+2. each frame's raw request order, class, and ID;
+3. each frame's admission order, ordinal, class, resolved ID, and requested roles;
+4. per-role acquired/displaced/final ownership;
+5. final ownership vector and music restoration.
 
 There is no event realignment after the first missing, extra, reordered, or
 value-different record. Reports contain at most eight preceding and eight
@@ -195,6 +209,8 @@ between validation and comparison is a capture failure. Producers write to a
 sibling temporary file, validate it, and publish with an atomic create-new
 operation. BizHawk's `OGGF_OUT` is a fresh staging path only; the trusted Java
 boundary strictly validates and atomically create-new publishes it. A failed
+BizHawk process enters a separate trusted discard command and can never invoke
+publication, even if it happened to leave a complete staging stream. A failed
 run preserves prior outputs and deletes its temporary file.
 
 ## Feature behavior and acceptance tests
@@ -204,8 +220,9 @@ run preserves prior outputs and deletes its temporary file.
   music-channel restoration.
 - Java schema tests reject unknown, duplicate, type-invalid, out-of-range, and
   non-monotonic data at every nesting level.
-- Engine observation tests prove that normal `AudioManager` requests are
-  visible while reference records cannot submit commands. A two-request,
+- Engine observation tests prove that raw `AudioManager` requests are visible
+  before resolution, absent from rewind snapshots, and behaviorally inert.
+  Ring coverage proves raw `$B5` with resolved `$CE`. A two-request,
   same-frame overlap proves ordered arbitration is observed rather than
   reconstructed from only the final snapshot.
 - Cadence tests prove 4,115 contiguous semantic frames and exactly 4,115
@@ -217,8 +234,8 @@ run preserves prior outputs and deletes its temporary file.
   tooling, schema, or sidecar readers. A runner test proves the OpenGGF capture
   receives only the committed BK2/run manifest and has no reference-timeline
   path, bytes, loader, or callback.
-- A synthetic comparator test distinguishes request timing, sound-ID,
-  requested-role, per-role acquisition/displacement, ownership, and
+- A synthetic comparator test distinguishes raw-request timing/ID from
+  admission timing/resolved ID, requested-role, per-role acquisition/displacement, ownership, and
   restoration mismatches while proving ROM-only diagnostics do not gate.
 - A real BizHawk GHZ1 discovery run must prove both contention classes: an SFX
   acquires a music-owned role and later restores music, and a new SFX arrives

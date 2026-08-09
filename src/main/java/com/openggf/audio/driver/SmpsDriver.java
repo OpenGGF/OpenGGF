@@ -583,6 +583,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                     }
                 }
                 if (existing != null) {
+                    rememberReplacementConflicts(existing, seq);
                     sequencers.remove(existing);
                     releaseLocks(existing);
                     sfxSequencers.remove(existing);
@@ -1191,6 +1192,22 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                                  SmpsSequencer displaced, SmpsSequencer challenger) {
         if (sfxContentionObserver != SfxContentionObserver.NONE) {
             pendingConflictOwners.put(new ConflictKey(bus, channel, challenger), sourceFor(displaced));
+        }
+    }
+
+    private void rememberReplacementConflicts(SmpsSequencer displaced, SmpsSequencer challenger) {
+        if (sfxContentionObserver == SfxContentionObserver.NONE) {
+            return;
+        }
+        for (int channel = 0; channel < fmLocks.length; channel++) {
+            if (fmLocks[channel] == displaced) {
+                rememberConflict(SfxContentionObserver.Bus.FM, channel, displaced, challenger);
+            }
+        }
+        for (int channel = 0; channel < psgLocks.length; channel++) {
+            if (psgLocks[channel] == displaced) {
+                rememberConflict(SfxContentionObserver.Bus.PSG, channel, displaced, challenger);
+            }
         }
     }
 

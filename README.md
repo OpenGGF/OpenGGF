@@ -216,6 +216,14 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Sonic 1 GHZ1 gameplay-audio causal timeline (2026-08-09):** the pinned
+  complete-game replay now records raw caller/ROM queue requests separately
+  from resolved driver/presentation admissions. Both producers agree on the
+  first jump request (`$A0`, ordinal 1, frame 958); the first mismatch is now
+  the meaningful one-frame admission delay (OpenGGF 958, REV01 959), while
+  ring requests retain raw `$B5` and admit resolved `$CE`. The hardened runner
+  pins the installed BizHawk core assembly and GPGX binary, proves both music/SFX
+  and SFX/SFX contention, and discards failed producer staging without publication.
 - **Sonic 1 GHZ music-driver parity harness (2026-08-09):** a pinned BizHawk
   sound-test movie and read-only driver observer now produce deterministic
   logical-state and ordered YM2612/PSG captures for comparison with OpenGGF.

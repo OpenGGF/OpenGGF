@@ -35,7 +35,7 @@ class TestAudioPresentationArchitectureGuard {
             "playMusic", "playSfx", "playSmps", "playSfxSmps",
             "toggleMute", "toggleSolo", "isMuted", "isSoloed");
     /**
-     * The v1 timeline schema has no production-audio data dependency. Future
+     * The v2 timeline schema has no production-audio data dependency. Future
      * entries need a plan-mandated immutable/read-only interface and an
      * explicit review here; mutating owners are never allow-listed.
      */

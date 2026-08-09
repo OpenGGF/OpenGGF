@@ -6,7 +6,7 @@ import java.util.Objects;
 
 /** Immutable, tooling-only semantic contract for the S1 GHZ1 gameplay-audio timeline. */
 public final class S1GameplayAudioTimeline {
-    public static final String SCHEMA = "s1_gameplay_audio_timeline.v1";
+    public static final String SCHEMA = "s1_gameplay_audio_timeline.v2";
     public static final String REFERENCE_CAPTURE = "s1_ghz_gameplay_audio_reference";
     public static final String OPENGGF_CAPTURE = "s1_ghz_gameplay_audio_openggf";
     public static final String REFERENCE_PRODUCER = "BizHawk 2.11 / Genesis Plus GX";
@@ -18,6 +18,7 @@ public final class S1GameplayAudioTimeline {
     public static final int SEGMENT_END_BK2_FRAME = 4975;
     public static final int SEGMENT_FRAME_COUNT = 4115;
     public static final int MAX_REQUESTS_PER_FRAME = 64;
+    public static final int MAX_ADMISSIONS_PER_FRAME = 64;
     public static final int MAX_ROLES_PER_REQUEST = HardwareRole.values().length;
 
     private S1GameplayAudioTimeline() {
@@ -71,7 +72,8 @@ public final class S1GameplayAudioTimeline {
         }
     }
 
-    public record Frame(int bk2Frame, Long diagnosticTick, List<Request> requests, OwnerVector owners)
+    public record Frame(int bk2Frame, Long diagnosticTick, List<Request> requests,
+            List<Admission> admissions, OwnerVector owners)
             implements TimelineRecord {
         public Frame {
             if (bk2Frame < SEGMENT_START_BK2_FRAME || bk2Frame >= SEGMENT_END_BK2_FRAME) {
@@ -79,26 +81,44 @@ public final class S1GameplayAudioTimeline {
             }
             nonNegative(diagnosticTick, "diagnosticTick");
             requests = List.copyOf(requests);
+            admissions = List.copyOf(admissions);
             Objects.requireNonNull(owners, "owners");
             if (requests.size() > MAX_REQUESTS_PER_FRAME) {
                 throw new IllegalArgumentException("frame contains too many requests");
             }
+            if (admissions.size() > MAX_ADMISSIONS_PER_FRAME) {
+                throw new IllegalArgumentException("frame contains too many admissions");
+            }
         }
     }
 
-    public record Request(long requestOrdinal, SoundClass soundClass, int soundId,
-            List<HardwareRole> requestedRoles, List<RoleArbitration> arbitration) {
+    /** Caller/ROM-queue submission identity before any driver-side transformation. */
+    public record Request(long requestOrdinal, SoundClass soundClass, int rawSoundId) {
         public Request {
-            if (requestOrdinal < 0) {
-                throw new IllegalArgumentException("requestOrdinal must be non-negative");
+            if (requestOrdinal <= 0) {
+                throw new IllegalArgumentException("requestOrdinal must follow baseline ordinal zero");
+            }
+            Objects.requireNonNull(soundClass, "soundClass");
+            if (!validSoundId(soundClass, rawSoundId)) {
+                throw new IllegalArgumentException("request class or raw sound ID is invalid");
+            }
+        }
+    }
+
+    /** Driver/backend admission carrying resolved identity and per-role results. */
+    public record Admission(long requestOrdinal, SoundClass soundClass, int soundId,
+            List<HardwareRole> requestedRoles, List<RoleArbitration> arbitration) {
+        public Admission {
+            if (requestOrdinal <= 0) {
+                throw new IllegalArgumentException("requestOrdinal must follow baseline ordinal zero");
             }
             Objects.requireNonNull(soundClass, "soundClass");
             requestedRoles = List.copyOf(requestedRoles);
             arbitration = List.copyOf(arbitration);
             if (requestedRoles.isEmpty() || requestedRoles.size() > MAX_ROLES_PER_REQUEST
                     || requestedRoles.size() != EnumSet.copyOf(requestedRoles).size()
-                    || !validSoundId(soundClass, soundId)) {
-                throw new IllegalArgumentException("request class, sound ID, or requested roles are invalid");
+                    || soundClass == SoundClass.COMMAND || !validSoundId(soundClass, soundId)) {
+                throw new IllegalArgumentException("admission class, sound ID, or requested roles are invalid");
             }
             EnumSet<HardwareRole> arbitrationRoles = EnumSet.noneOf(HardwareRole.class);
             for (RoleArbitration decision : arbitration) {
@@ -164,10 +184,12 @@ public final class S1GameplayAudioTimeline {
         }
     }
 
-    public record Terminal(int frameCount, long requestCount, long diagnosticTickCount)
+    public record Terminal(int frameCount, long requestCount, long admissionCount,
+            long diagnosticTickCount)
             implements TimelineRecord {
         public Terminal {
-            if (frameCount != SEGMENT_FRAME_COUNT || requestCount < 0 || diagnosticTickCount < 0) {
+            if (frameCount != SEGMENT_FRAME_COUNT || requestCount < 0 || admissionCount < 0
+                    || admissionCount > requestCount || diagnosticTickCount < 0) {
                 throw new IllegalArgumentException("terminal counts are invalid");
             }
         }
@@ -214,6 +236,7 @@ public final class S1GameplayAudioTimeline {
         }
         if (first instanceof Frame left && second instanceof Frame right) {
             return left.bk2Frame == right.bk2Frame && left.requests.equals(right.requests)
+                    && left.admissions.equals(right.admissions)
                     && left.owners.equals(right.owners);
         }
         return first.equals(second);
@@ -225,7 +248,7 @@ public final class S1GameplayAudioTimeline {
             return Objects.hash(baseline.bk2Frame, baseline.activeMusicId, baseline.owners);
         }
         if (record instanceof Frame frame) {
-            return Objects.hash(frame.bk2Frame, frame.requests, frame.owners);
+            return Objects.hash(frame.bk2Frame, frame.requests, frame.admissions, frame.owners);
         }
         return Objects.hashCode(record);
     }
