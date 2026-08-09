@@ -65951,3 +65951,72 @@ V_int_run_count / vblaCounter, and the trace row index) and they are not aligned
   velocity and spawn offsets but its trajectory is displaced: it conserves x+y, and ROM's
   line is **x+y=2649** where the engine's is **x+y=2634** — 15px apart for the whole
   flight, so it passes above Tails. That 15px is the next S2 target.
+
+## 2026-08-09 — round thirteen: MZ2 placement now ROM-exact (MZ3 accepted regression)
+
+Command: full `-Ptrace-replay` profile, no `-Dtest` (763 tests). Base 8c685eb5d
+(763 / 16 / 63, 29 classes). After: **763 / 17 / 63, 30 classes.** Sole change:
+`TestS1Mz3CompleteRunTraceReplay` green -> red. Nothing else moved.
+
+- **`Sonic1PushBlockObjectInstance`: the invented `isOnScreenX(320)` window is GONE, and
+  the check now runs after the routine.** Obj33 has NO camera-window persistence rule in
+  ROM; its only lifetime rule is `PushB_Display`'s double `out_of_range` ->
+  `.deleteAndAllowRespawn` -> `DeleteObject`. Routine 4 (`PushB_ChkVisible`) runs
+  `ChkPartiallyVisible` and `rts` with no `out_of_range` test at all, so a block parked at
+  its origin legitimately survives off-screen forever — which `!deletePending` alone
+  already expresses. `checksOutOfRangeAfterRoutine()` is now true because `PushB_Action`
+  runs `PushB_SolidAction` and the MZ1 stomper alignment BEFORE `PushB_Display`'s
+  `out_of_range`, so the check must see this frame's position; it also lets the
+  `deletePending` latch set at the tail of `updateActive` be consumed the same frame
+  rather than one frame late. S1 uses the counter lane, which honours the flag
+  (ObjectManager.java:914-934); `runExecLoop` and the parity-guard allowlist are untouched.
+- **PROOF the fix is right, at slot level** (`-Dtrace.context.diagnosticChars=full`,
+  control vs after, same worktree). MZ2 f11906 placed-object slots:
+    ROM      s33=0x54 s34=0x37 s36=0x4C s37=0x46 s40=0x4C s41=0x52 s43/47/48=0x46 s49=0x37 s50=0x26
+    CONTROL  s33=0x54 s34=0x37 s37=0x4C s39=0x46 ...   <- 0x4C and 0x46 off by 1 and 2
+    AFTER    identical to ROM on every listed slot.
+  The s36/s37/s39 cascade is gone; **MZ2 placement is now ROM-exact.**
+- **ACCEPTED REGRESSION with an IDENTIFIED cause.** MZ2 still fails at f11906 (7 errors,
+  unchanged) and MZ3 is newly red at f14218 (10 errors). With placement correct, the ONLY
+  remaining slot divergence is the **Obj37 scattered-ring chain itself**. MZ3 f14218 makes
+  this unambiguous because every PLACED object matches ROM there:
+    ROM near: s39=0x14 s42=0x37 s48=0x13 s50=0x37 s52=0x13 | rings s59,66,68,70,71,72,74,76,78 | s80=0x36
+    ENG near: s39=0x14 s42=0x37 s48=0x13 s50=0x37 s52=0x13 | rings s61,67,69,71,72,73,75      | no s80
+  All placed objects agree; the lost-ring chain diverges from the THIRD ring onward (ROM
+  s59 vs engine s61) and the engine ends with fewer rings. `RLoss_Bounce` gates its floor
+  probe on `(v_vblank_byte + object RAM index) & 3`, so a +1/+2 slot offset is a different
+  bounce phase, trajectory and collect/miss outcome. **The lost-ring allocation chain is
+  now the single isolated cause of BOTH MZ2 f11906 and MZ3 f14218** — one target, two
+  tests, and it could not be seen until placement was correct.
+- **SLZ3: an unmodelled ROM mechanism, IN-PLACE obID REWRITE.** `BossSpikeball_Explode`
+  does `move.b #id_Explosion,obID(a0)` — the ball BECOMES an Obj3F explosion in its own
+  slot, keeping its scratch RAM. The engine modelled the explosion but had no live-id
+  concept, so occupancy reporting kept saying 0x7B. Added
+  `AbstractObjectInstance#getLiveObjectId()`. Divergence 132 -> 90 of 394; the whole
+  `rom=0x3F eng=0x7B` family is gone. SLZ3's single f6358 error is unchanged, and its
+  cause is now isolated too: at f6247 ROM slots 44 and 46 are FREE and take the two
+  FindFreeObj lost rings, while the engine's 44/46 are still held by spikeballs so its
+  rings land in 49/50, drift ~200px apart by f6339, and one bounces back into Sonic at
+  f6358. **The engine's spikeballs OUTLIVE ROM's** — next target is
+  `Sonic1SLZBossSpikeball`'s resting/flicker/self-destruct lifetime
+  (`BossSpikeball_CheckFlicker`, subtype==$20 self-destruct), NOT the ring code.
+- **DISPROVED: the EHZ1 Buzzer stinger lead, on two independent grounds.**
+  (a) `TestS2SpecialStage2TraceReplay` replays ONLY the ss_2 segment through
+  `Sonic2SpecialStageProvider` — it never simulates EHZ, Tails-in-level or any Obj4B, so a
+  stinger fix cannot move it BY CONSTRUCTION. The halfpipe chain fails in seg1 at trace
+  frame 2968 on `dynamic_art.frame` 2968 vs 2969 / phase submitted vs completed /
+  `outstanding_transfer_ids` [2585] vs [] — pure DPLC publication timing, one logical frame
+  early. (b) The engine's stinger arithmetic is ALREADY ROM-EXACT: both stingers the
+  halfpipe fixture records match value-for-value (spawn (738,528) -> x+y=1265 after the
+  first ObjectMove vs ROM 1265; 9162 -> 9161 vs ROM 9161), transcribing
+  s2.asm:61049-61076 including the `$18`/`$D` offsets and the x_flip sign convention.
+  The 15px divergence quoted last round lives in
+  `runs/s2-sonic-tails-complete-emeralds/seg2_ehz1`, and **no committed chain test replays
+  that run**, so it is not what makes either target red.
+  Real next targets there: ss_2 `mapping_frame` 71-vs-94 at f126, and the halfpipe seg1
+  one-frame-early edge publication at f2968.
+- **Brief defect, recorded so it is not repeated:** the canary `TestS2Ehz2TraceReplay`
+  named in the round-thirteen brief DOES NOT EXIST in this checkout (only
+  `TestS2Ehz1TraceReplay`). It was assumed from naming symmetry. **Verify a test class
+  exists before naming it as a regression bar** — a canary that does not exist reports a
+  clean regression check while testing nothing.

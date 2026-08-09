@@ -3,6 +3,13 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Marble Zone pushable blocks no longer survive off-screen on an invented camera
+  window. The ROM gives Obj33 no camera-window persistence rule at all -- its only
+  lifetime rule is the double out-of-range test in its display routine -- and the check
+  now runs after the object's routine, matching the ROM order in which the block's solid
+  action and stomper alignment precede that test. Marble Zone act 2's placed-object slot
+  map now matches the ROM exactly, which in turn isolates the remaining ring divergence in
+  acts 2 and 3 to the scattered-ring allocation chain.
 - Fix: objects that rewrite their own id in place are reported under the id they
   currently hold. The Star Light boss spikeball becomes an explosion in its own object
   slot, keeping its scratch memory, and the engine already modelled that behaviour — but
