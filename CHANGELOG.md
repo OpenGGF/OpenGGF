@@ -3,6 +3,10 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Tooling: add a reproducible Sonic 1 GHZ music-driver parity command that
+  validates the pinned ROM, BizHawk 2.11, and controller movie, proves both
+  reference and OpenGGF captures deterministic, and emits first-divergence
+  human and JSON reports without treating a valid mismatch as capture failure.
 - Tooling: add a disabled-by-default diagnostic observer for resolved YM2612 and PSG
   writes, allowing audio parity tools to record the chip-core transaction order without
   changing synthesis state or driver arbitration.

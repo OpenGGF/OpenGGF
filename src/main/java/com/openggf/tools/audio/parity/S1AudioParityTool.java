@@ -1,0 +1,290 @@
+package com.openggf.tools.audio.parity;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HexFormat;
+import java.util.List;
+import java.util.Map;
+
+/** Command-line boundary for validation, OpenGGF capture and S1 parity comparison. */
+public final class S1AudioParityTool {
+    public static final int EXIT_MATCH = 0;
+    public static final int EXIT_USAGE = 2;
+    public static final int EXIT_MISMATCH = 3;
+    public static final int EXIT_TOOL_FAILURE = 4;
+
+    private static final String EMUHAWK_SHA256 =
+            "b2d4be5e2a766a5161cc26f3af2a90753c39d64c91c54a9884171aed09e21df3";
+
+    private S1AudioParityTool() {
+    }
+
+    public static void main(String[] args) {
+        System.exit(run(args, System.out, System.err));
+    }
+
+    static int run(String[] args, PrintStream out, PrintStream err) {
+        try {
+            if (args.length == 0 || isHelp(args[0])) {
+                usage(args.length == 0 ? err : out);
+                return args.length == 0 ? EXIT_USAGE : EXIT_MATCH;
+            }
+            return switch (args[0]) {
+                case "validate" -> validate(parse(args, 1), out);
+                case "capture" -> capture(parse(args, 1), out);
+                case "compare" -> compare(parse(args, 1), out);
+                default -> throw new UsageException("unknown command: " + args[0]);
+            };
+        } catch (UsageException error) {
+            err.println("Argument error: " + error.getMessage());
+            usage(err);
+            return EXIT_USAGE;
+        } catch (Exception error) {
+            err.println("S1 audio parity tool failure: " + message(error));
+            return EXIT_TOOL_FAILURE;
+        }
+    }
+
+    static Path resolveSafeOutputRoot(Path repository, Path requested) {
+        Path repo = canonicalExisting(repository, "repository");
+        Path normalized = requested.toAbsolutePath().normalize();
+        Path resources = repo.resolve("src/test/resources").normalize();
+        if (normalized.startsWith(resources)) {
+            throw new IllegalArgumentException("audio parity output must not be under src/test/resources");
+        }
+        Path allowed = repo.resolve("target/audio-parity").normalize();
+        Path canonical = canonicalCandidate(normalized);
+        if (!canonical.startsWith(allowed)) {
+            throw new IllegalArgumentException("audio parity output is outside repository target/audio-parity");
+        }
+        if (canonical.startsWith(resources)) {
+            throw new IllegalArgumentException("audio parity output must not be under src/test/resources");
+        }
+        return canonical;
+    }
+
+    private static int validate(Map<String, String> options, PrintStream out) {
+        rejectUnknown(options, "repo", "rom", "rom-search-root", "movie", "bizhawk-home", "output-root");
+        Path repo = canonicalExisting(Path.of(required(options, "repo")), "repository");
+        Path rom = options.containsKey("rom")
+                ? Path.of(options.get("rom")).toAbsolutePath().normalize()
+                : discoverRom(options.containsKey("rom-search-root")
+                        ? canonicalExisting(Path.of(options.get("rom-search-root")), "ROM search root") : repo);
+        verifyRegular(rom, "S1 ROM");
+        verifyDigest(rom, "SHA-1", AudioParitySchema.S1_REV01_SHA1,
+                "audio parity requires the pinned S1 World REV01 ROM");
+
+        Path movie = normalizedRequired(options, "movie");
+        verifyRegular(movie, "pinned BK2 movie");
+        verifyDigest(movie, "SHA-256", AudioParitySchema.BK2_SHA256,
+                "BK2 movie does not match the pinned s1-soundtest-ghz.bk2 identity");
+
+        Path bizhawk = normalizedRequired(options, "bizhawk-home");
+        Path emuHawk = bizhawk.resolve("EmuHawk.exe");
+        verifyRegular(emuHawk, "BizHawk 2.11 EmuHawk.exe");
+        verifyRegular(bizhawk.resolve("dll/BizHawk.Emulation.Cores.dll"),
+                "BizHawk 2.11 Genesis core assembly");
+        verifyDigest(emuHawk, "SHA-256", EMUHAWK_SHA256,
+                "BizHawk home is not the pinned 2.11 Linux x64 distribution");
+
+        Path output = resolveSafeOutputRoot(repo, normalizedRequired(options, "output-root"));
+        out.println("ROM_PATH=" + rom);
+        out.println("MOVIE_PATH=" + movie);
+        out.println("BIZHAWK_HOME=" + bizhawk);
+        out.println("OUTPUT_ROOT=" + output);
+        return EXIT_MATCH;
+    }
+
+    private static int capture(Map<String, String> options, PrintStream out) {
+        rejectUnknown(options, "reference", "rom", "output");
+        Path reference = normalizedRequired(options, "reference");
+        Path rom = normalizedRequired(options, "rom");
+        Path output = normalizedRequired(options, "output");
+        S1OpenGgfAudioCapture.CaptureResult result =
+                S1OpenGgfAudioCapture.capture(reference, rom, output);
+        out.println("OpenGGF capture: " + output + " (" + result.recordCount() + " ticks)");
+        return EXIT_MATCH;
+    }
+
+    private static int compare(Map<String, String> options, PrintStream out) throws IOException {
+        rejectUnknown(options, "reference", "openggf", "human-report", "json-report");
+        Path reference = normalizedRequired(options, "reference");
+        Path openGgf = normalizedRequired(options, "openggf");
+        Path human = normalizedRequired(options, "human-report");
+        Path json = normalizedRequired(options, "json-report");
+        AudioParityReport report = AudioParityComparator.compare(reference, openGgf);
+        createParent(human);
+        createParent(json);
+        Files.writeString(human, report.toHumanText() + "\n", StandardCharsets.UTF_8);
+        Files.writeString(json, report.toJsonSummary() + "\n", StandardCharsets.UTF_8);
+        out.println(report.toHumanText());
+        out.println("Human report: " + human);
+        out.println("JSON report: " + json);
+        if (report.matches()) {
+            return EXIT_MATCH;
+        }
+        return isParityDifference(report.kind()) ? EXIT_MISMATCH : EXIT_TOOL_FAILURE;
+    }
+
+    private static boolean isParityDifference(AudioParityReport.Kind kind) {
+        return switch (kind) {
+            case GLOBAL_STATE_MISMATCH, TRACK_STATE_MISMATCH, EVENT_MISSING, EVENT_EXTRA,
+                    EVENT_REORDERED, EVENT_VALUE_DIFFERENT -> true;
+            case MATCH, CAPTURE_FAILURE, METADATA_MISMATCH, TICK_COUNT_MISMATCH,
+                    ORDINAL_MISMATCH -> false;
+        };
+    }
+
+    private static Map<String, String> parse(String[] args, int start) {
+        Map<String, String> values = new HashMap<>();
+        for (int index = start; index < args.length; index += 2) {
+            String option = args[index];
+            if (isHelp(option)) {
+                throw new UsageException("--help must be used without a subcommand");
+            }
+            if (!option.startsWith("--") || option.length() == 2) {
+                throw new UsageException("expected an option, found: " + option);
+            }
+            if (index + 1 >= args.length) {
+                throw new UsageException(option + " requires a value");
+            }
+            String name = option.substring(2);
+            if (values.putIfAbsent(name, args[index + 1]) != null) {
+                throw new UsageException("duplicate option: " + option);
+            }
+        }
+        return values;
+    }
+
+    private static void rejectUnknown(Map<String, String> values, String... allowed) {
+        List<String> accepted = List.of(allowed);
+        values.keySet().stream().filter(key -> !accepted.contains(key)).findFirst()
+                .ifPresent(key -> { throw new UsageException("unknown option: --" + key); });
+    }
+
+    private static String required(Map<String, String> values, String name) {
+        String value = values.get(name);
+        if (value == null || value.isBlank()) {
+            throw new UsageException("--" + name + " is required");
+        }
+        return value;
+    }
+
+    private static Path normalizedRequired(Map<String, String> values, String name) {
+        return Path.of(required(values, name)).toAbsolutePath().normalize();
+    }
+
+    private static Path discoverRom(Path repo) {
+        List<Path> matches = new ArrayList<>();
+        try (var files = Files.list(repo)) {
+            files.filter(Files::isRegularFile)
+                    .filter(path -> path.getFileName().toString().toLowerCase().endsWith(".gen"))
+                    .forEach(path -> {
+                        if (digest(path, "SHA-1").equals(AudioParitySchema.S1_REV01_SHA1)) {
+                            matches.add(path.toAbsolutePath().normalize());
+                        }
+                    });
+        } catch (IOException error) {
+            throw new IllegalArgumentException("cannot search repository root for the S1 ROM", error);
+        }
+        if (matches.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "no pinned S1 World REV01 .gen ROM found at repository root; pass --rom");
+        }
+        return matches.stream().sorted().findFirst().orElseThrow();
+    }
+
+    private static Path canonicalExisting(Path path, String label) {
+        try {
+            if (!Files.isDirectory(path)) {
+                throw new IllegalArgumentException(label + " does not exist or is not a directory: " + path);
+            }
+            return path.toRealPath();
+        } catch (IOException error) {
+            throw new IllegalArgumentException("cannot resolve " + label + ": " + path, error);
+        }
+    }
+
+    private static Path canonicalCandidate(Path path) {
+        Path existing = path;
+        List<Path> suffix = new ArrayList<>();
+        while (existing != null && !Files.exists(existing, LinkOption.NOFOLLOW_LINKS)) {
+            suffix.add(existing.getFileName());
+            existing = existing.getParent();
+        }
+        if (existing == null) {
+            throw new IllegalArgumentException("output path has no existing ancestor: " + path);
+        }
+        try {
+            Path result = existing.toRealPath();
+            for (int index = suffix.size() - 1; index >= 0; index--) {
+                result = result.resolve(suffix.get(index));
+            }
+            return result.normalize();
+        } catch (IOException error) {
+            throw new IllegalArgumentException("cannot resolve output path: " + path, error);
+        }
+    }
+
+    private static void verifyRegular(Path path, String label) {
+        if (!Files.isRegularFile(path)) {
+            throw new IllegalArgumentException(label + " is missing or not a regular file: " + path);
+        }
+    }
+
+    private static void verifyDigest(Path path, String algorithm, String expected, String diagnostic) {
+        String actual = digest(path, algorithm);
+        if (!actual.equals(expected)) {
+            throw new IllegalArgumentException(diagnostic + " (expected " + expected + ", observed " + actual + ")");
+        }
+    }
+
+    private static String digest(Path path, String algorithm) {
+        try (InputStream input = Files.newInputStream(path)) {
+            MessageDigest digest = MessageDigest.getInstance(algorithm);
+            byte[] buffer = new byte[64 * 1024];
+            int count;
+            while ((count = input.read(buffer)) >= 0) {
+                digest.update(buffer, 0, count);
+            }
+            return HexFormat.of().formatHex(digest.digest());
+        } catch (IOException | NoSuchAlgorithmException error) {
+            throw new IllegalArgumentException("cannot compute " + algorithm + " for " + path, error);
+        }
+    }
+
+    private static void createParent(Path path) throws IOException {
+        Path parent = path.toAbsolutePath().getParent();
+        if (parent != null) {
+            Files.createDirectories(parent);
+        }
+    }
+
+    private static String message(Throwable error) {
+        return error.getMessage() == null ? error.getClass().getSimpleName() : error.getMessage();
+    }
+
+    private static boolean isHelp(String value) {
+        return "--help".equals(value) || "-h".equals(value);
+    }
+
+    private static void usage(PrintStream output) {
+        output.println("Usage: S1AudioParityTool <capture|compare|validate> [options]");
+        output.println("Exit codes: 0=match/success, 2=usage, 3=valid parity mismatch, 4=capture/tool failure");
+    }
+
+    private static final class UsageException extends IllegalArgumentException {
+        private UsageException(String message) {
+            super(message);
+        }
+    }
+}
