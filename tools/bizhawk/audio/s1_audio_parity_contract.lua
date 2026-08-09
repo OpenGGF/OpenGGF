@@ -160,16 +160,23 @@ local function liveOpenGgfReturnStack(stack, returnSp)
     return result
 end
 
-local function liveRomReturnStack(stack, stackPointer)
+local function liveRomReturnStack(stack, stackPointer, assetBase, assetEnd)
     local pointer = Contract.u8(stackPointer)
     assert(pointer <= 0x30 and (0x30 - pointer) % 4 == 0,
         "ROM return-stack cursor must be aligned within 0x00..0x30")
+    local base = Contract.u32(assetBase)
+    local ending = Contract.u32(assetEnd)
+    assert(base < ending, "ROM asset range must have a positive extent")
     local count = (0x30 - pointer) / 4
     assert(count <= #stack, "ROM return stack cursor exceeds supplied stack")
     local result = {}
     -- `$F8` decrements StackPointer before storing, so physical top-to-bottom
     -- words run from the current cursor upward; canonical call order is reverse.
-    for index = count, 1, -1 do result[#result + 1] = Contract.u32(stack[index]) end
+    for index = count, 1, -1 do
+        local address = Contract.u32(stack[index])
+        assert(address >= base and address < ending, "ROM return address is outside the GHZ asset range")
+        result[#result + 1] = address - base
+    end
     return result
 end
 
@@ -218,13 +225,13 @@ function Contract.normalizeRom(snapshot, activeLoopIndices)
     local tracks = {}
     for index, track in ipairs(snapshot.tracks) do
         local slot = S1_MUSIC_SLOTS[index]
-        assert(Contract.u8(track.voiceControl) == slot.voiceControl,
-            "ROM voice-control does not match fixed " .. slot.role .. " slot")
         if (Contract.u8(track.status) & 0x80) == 0 then
             tracks[index] = {active = false, hardware = slot.hardware, role = slot.role}
         else
+            assert(Contract.u8(track.voiceControl) == slot.voiceControl,
+                "ROM voice-control does not match active " .. slot.role .. " slot")
             tracks[index] = normalizedActiveTrack(track, slot.role, slot.hardware, activeLoopIndices,
-                liveRomReturnStack(track.returnStack or {}, track.stackPointer))
+                liveRomReturnStack(track.returnStack or {}, track.stackPointer, snapshot.assetBase, snapshot.assetEnd))
         end
     end
     return {global = normalizedGlobal(snapshot.global, true), tracks = tracks}

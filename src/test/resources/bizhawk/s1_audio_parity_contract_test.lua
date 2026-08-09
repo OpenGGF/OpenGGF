@@ -217,6 +217,8 @@ end
 local function runFixedRoleAndDescendingStackNormalization()
     -- Break caught: duplicate hardware channel 6 relabels DAC as FM6 or exposes stale descending stack words.
     local raw = {
+        assetBase = 476636,
+        assetEnd = 478532,
         global = {fadeActive = 0, fadeDelay = 0, fadeOut = 0, fadeSteps = 0, speedUp = 0, tempoReload = 21, tempoTimeout = 3},
         tracks = {
             rawTrack(0, 6), rawTrack(128, 0), rawTrack(0, 1), rawTrack(0, 2), rawTrack(0, 4),
@@ -226,14 +228,21 @@ local function runFixedRoleAndDescendingStackNormalization()
     raw.tracks[2].baseFrequency = 9320
     raw.tracks[2].detune = 253
     raw.tracks[2].loopCounters = {4, 88, 2}
-    raw.tracks[2].returnStack = {11259375, 1193046, 6636321}
+    raw.tracks[2].returnStack = {477746, 476672, 478428}
     raw.tracks[2].stackPointer = 40
     raw.tracks[2].transpose = 254
     raw.tracks[2].volume = 255
     local normalized = Contract.normalizeRom(raw, {0, 2})
     equals(Contract.canonicalJson(normalized.tracks),
-        "[{\"active\":false,\"hardware\":\"DAC\",\"role\":\"DAC\"},{\"active\":true,\"baseFrequency\":9320,\"detune\":-3,\"hardware\":\"FM1\",\"loopCounters\":[4,2],\"returnStack\":[1193046,11259375],\"role\":\"FM1\",\"transpose\":-2,\"volume\":-1},{\"active\":false,\"hardware\":\"FM2\",\"role\":\"FM2\"},{\"active\":false,\"hardware\":\"FM3\",\"role\":\"FM3\"},{\"active\":false,\"hardware\":\"FM4\",\"role\":\"FM4\"},{\"active\":false,\"hardware\":\"FM5\",\"role\":\"FM5\"},{\"active\":false,\"hardware\":\"FM6\",\"role\":\"FM6\"},{\"active\":false,\"hardware\":\"PSG1\",\"role\":\"PSG1\"},{\"active\":false,\"hardware\":\"PSG2\",\"role\":\"PSG2\"},{\"active\":false,\"hardware\":\"PSG3\",\"role\":\"PSG3\"}]",
+        "[{\"active\":false,\"hardware\":\"DAC\",\"role\":\"DAC\"},{\"active\":true,\"baseFrequency\":9320,\"detune\":-3,\"hardware\":\"FM1\",\"loopCounters\":[4,2],\"returnStack\":[36,1110],\"role\":\"FM1\",\"transpose\":-2,\"volume\":-1},{\"active\":false,\"hardware\":\"FM2\",\"role\":\"FM2\"},{\"active\":false,\"hardware\":\"FM3\",\"role\":\"FM3\"},{\"active\":false,\"hardware\":\"FM4\",\"role\":\"FM4\"},{\"active\":false,\"hardware\":\"FM5\",\"role\":\"FM5\"},{\"active\":false,\"hardware\":\"FM6\",\"role\":\"FM6\"},{\"active\":false,\"hardware\":\"PSG1\",\"role\":\"PSG1\"},{\"active\":false,\"hardware\":\"PSG2\",\"role\":\"PSG2\"},{\"active\":false,\"hardware\":\"PSG3\",\"role\":\"PSG3\"}]",
         "fixed slots did not validate S1 voice control and normalize descending return addresses")
+    local expectedInactiveBytesIgnored = Contract.canonicalJson(normalized)
+    raw.tracks[7].voiceControl = 255
+    raw.tracks[7].baseFrequency = 65535
+    raw.tracks[7].returnStack = {0, 0, 0}
+    equals(Contract.canonicalJson(Contract.normalizeRom(raw, {0, 2})), expectedInactiveBytesIgnored,
+        "inactive FM6 stale bytes changed normalized output")
+    raw.tracks[7].voiceControl = 6
     raw.tracks[2].voiceControl = 6
     local ok = pcall(function() Contract.normalizeRom(raw, {0, 2}) end)
     check(not ok, "FM1 accepted DAC/FM6 voice-control value")
@@ -241,6 +250,13 @@ local function runFixedRoleAndDescendingStackNormalization()
     raw.tracks[2].stackPointer = 41
     ok = pcall(function() Contract.normalizeRom(raw, {0, 2}) end)
     check(not ok, "misaligned ROM return-stack cursor was accepted")
+    raw.tracks[2].stackPointer = 40
+    raw.tracks[2].returnStack = {477746, 476635}
+    ok = pcall(function() Contract.normalizeRom(raw, {0, 2}) end)
+    check(not ok, "ROM return address below the GHZ asset base was accepted")
+    raw.tracks[2].returnStack = {477746, 478532}
+    ok = pcall(function() Contract.normalizeRom(raw, {0, 2}) end)
+    check(not ok, "ROM return address outside the GHZ asset range was accepted")
 end
 
 local function runGoldenVector()
