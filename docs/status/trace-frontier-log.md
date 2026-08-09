@@ -70230,3 +70230,40 @@ guard.
   `TestS3kHczCompleteRunTraceReplay#replayMatchesTrace`. Result: AIZ and HCZ
   remain green with zero errors or warnings. Ring comparison remains enabled
   through `ToleranceConfig.DEFAULT` with `RingCountMode.FORCE_ERROR`.
+
+## 2026-08-09 - S3K CNZ standalone comparison frontier reaches segment end
+
+- Branch: `bugfix/s3k-traces` from `f1e629bee`; the six protected user edits
+  remained unstaged. Validation used JDK 21.0.12 and
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen`; no trace fixture changed.
+- Prior standalone frontier: one camera-X error at raw frame `25743`; the next
+  hardware completion edge was queue edge `#31` at raw frame `33755`.
+- Root cause: both `Obj_CNZMinibossCoilClose` and
+  `Obj_CNZMinibossCoilOpen` run `Refresh_ChildPosition` before publishing the
+  coil SST pointer to `Collision_response_list`
+  (`docs/skdisasm/sonic3k.asm:145287-145340`). The engine left the coil on the
+  generic pre-update touch coordinate instead of the live refreshed child
+  coordinate dereferenced by the next player-slot `Touch_Loop`. The coil now
+  opts into that existing semantic coordinate policy; no game, zone, trace,
+  route, or frame identity is used.
+- Focused command: `mvn -Dmse=off
+  -Dtest=com.openggf.game.sonic3k.objects.TestCnzMinibossTopPhysics#productionTouchResponseCoilAttackOpensBossWithoutConsumingHp
+  test`. Result: 1 test, 0 failures, 0 errors; the test also guards the live-SST
+  coordinate contract.
+- CNZ standalone command: `mvn -Ptrace-replay -Dmse=relaxed
+  -Dsurefire.forkCount=1 -Dtrace.verification=all -Dtrace.frontierOnly=true
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' test`. Result:
+  zero comparison errors through the segment; replay reaches the existing
+  unconsumed Kosinski queue edge `#31` at raw frame `33755`. The comparison
+  frontier therefore advances from raw `25743` to the segment-end hardware
+  boundary.
+- Regression command: the same profile and ROM with AIZ, HCZ, and MGZ
+  complete-run traces plus standalone CNZ. Result: all three established
+  complete-run canaries remain green. CNZ complete-run was separately checked
+  and retains its prior 9-error frontier at raw frame `12024`.
+- A one-entry-shorter parent wait was also evaluated: it advanced CNZ
+  complete-run to raw frame `12488` but regressed standalone hardware replay
+  to an unconsumed edge at raw `16663`. It was reverted and is not part of this
+  frontier commit. Ring comparison remains error-level through
+  `ToleranceConfig.DEFAULT` with `RingCountMode.FORCE_ERROR`.

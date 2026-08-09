@@ -788,6 +788,8 @@ class TestCnzMinibossTopPhysics {
                 "The production coil child must receive Touch_Enemy attack callbacks, not just expose flags");
         assertEquals(0x1A, coil.getCollisionFlags());
         assertEquals(0x70, coil.getCollisionProperty());
+        assertTrue(coil.usesCurrentTouchResponseState(),
+                "Refresh_ChildPosition runs before the coil publishes its live SST pointer");
 
         player.setCentreX((short) coil.getX());
         player.setCentreY((short) coil.getY());

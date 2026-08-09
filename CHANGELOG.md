@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: CNZ's miniboss coil now exposes the live child coordinate refreshed
+  immediately before its collision-list publication, matching the SST pointer
+  consumed by the following player pass. The standalone CNZ trace now has zero
+  comparison errors through its segment; AIZ, HCZ, and MGZ complete-run traces
+  remain green, and the CNZ complete-run frontier is unchanged.
 - Fix/Test: MGZ's consolidated floating-capsule button now preserves the
   native later-SST boundary when a later support object owns the triggering
   player's current contact. This restores both MGZ trace variants to zero
