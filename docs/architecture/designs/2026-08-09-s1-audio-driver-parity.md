@@ -26,11 +26,13 @@ The harness is valid when all of the following hold:
    ordinal and contains normalized driver state plus ordered decoded chip
    writes for that invocation.
 4. OpenGGF emits the same normalized contract from its real Sonic 1 ROM loader,
-   SMPS configuration, sequencer, and synthesizer boundary.
+   SMPS configuration, sequencer, driver, and chip-core write boundary.
 5. The comparator distinguishes capture failure, state divergence, and
    register divergence and reports the first mismatch with bounded context.
-6. Two independent BizHawk captures match byte-for-byte after normalization;
-   two independent OpenGGF captures do the same.
+6. Two independent BizHawk captures match byte-for-byte after deterministic
+   normalization; two independent OpenGGF captures do the same. Normalized
+   identity excludes timestamps, absolute paths, process IDs, host-specific
+   emulator fields, and other environment metadata.
 7. The checked interval contains a proven complete musical cycle followed by a
    second identical cycle.
 8. The GHZ music parity claim requires exact logical-state equality and exact
@@ -84,10 +86,19 @@ until the musical-cycle stop contract succeeds. This behavior is opt-in: the
 shared probe runtime continues to exit at movie completion for existing
 diagnostics.
 
+Lua does not manufacture that neutral state. On every post-movie frame the
+observer reads `joypad.get(1)` and `joypad.get(2)` and requires every digital
+control to be false. Any host input after movie completion fails capture.
+
 The runner validates the ROM as Sonic 1 World REV01 using the project's
 documented CRC32/SHA-1 values. The BK2 hash and sync settings are also checked
 before execution. A wrong ROM, movie, core configuration, or movie hash is a
 capture failure rather than a parity mismatch.
+
+The BK2 `Header.txt` field named `SHA1` is opaque BizHawk movie metadata (it is
+32 hexadecimal characters here), not ROM identity. The runner hashes the ROM
+file independently and never substitutes the header value for the documented
+40-character REV01 SHA-1.
 
 ## Capture epoch and clock
 
@@ -105,17 +116,36 @@ Subsequent `UpdateMusic` invocations increment the ordinal by one.
 BizHawk frame count, movie frame, game mode, and interrupt context are retained
 as diagnostics. They never select or realign a comparison record.
 
-The ROM capture records how many `UpdateMusic` invocations occur between title
-music `$8A` being accepted and GHZ `$81` being accepted. The OpenGGF side
-initializes the real Sonic 1 audio profile and ROM loader, starts title music,
-advances it for that recorded invocation count without comparing its output,
-then requests `$81` and labels that initialization service as tick zero. This
-mirrors the real non-empty driver/chip precondition without making Sega, title,
-or Level Select behavior part of the GHZ comparison. The observer advances
-through the same sequencer service boundary and does not render extra frames
-merely to make state line up. If title pre-roll differences affect the GHZ
-transition, the report classifies tick zero as a precondition-sensitive
-divergence instead of silently dropping initialization writes.
+An entry hook alone is insufficient because the DAC-busy path branches back to
+`$71B4C`. The observer therefore keeps an `invocation_active` guard. The first
+entry while the guard is clear opens an invocation; retries while it is set do
+not increment the ordinal. Execution of the final `rts` at `$71C4C` snapshots
+state, closes the invocation, and asserts exactly one close. Re-entry after a
+close opens the next ordinal. A close without an open, a second external entry
+before close, or an invocation crossing an emulator-frame boundary is a capture
+failure.
+
+The ROM capture records the title-to-GHZ `UpdateMusic` count only as launch
+diagnostics. It is not replayed on the engine side. OpenGGF's ordinary music
+replacement currently discards its `SmpsDriver` and `VirtualSynthesizer`, so a
+title pre-roll cannot establish a shared chip precondition and must not be
+claimed to do so.
+
+The MVP deliberately targets the production S1 sequencer/driver output rather
+than backend stream-replacement plumbing. The OpenGGF test host constructs a
+fresh production `SmpsDriver` with observation disarmed during the
+`VirtualSynthesizer` power-on silence, arms observation, and opens tick zero
+immediately before constructing the GHZ `SmpsSequencer`. Tick zero includes all
+constructor writes and exactly the sequencer's first S1 tempo service (the
+existing priming path), then takes its state snapshot. Each later record spans
+exactly one further NTSC tempo-service boundary. On the ROM side tick zero
+likewise discards writes before `$71FD2`, includes `Sound_PlayBGM` initialization
+and the rest of that `UpdateMusic` invocation, and snapshots at `$71C4C`.
+
+This grouping intentionally excludes both hosts' unrelated power-on/title chip
+history while retaining all GHZ driver initialization writes. It neither
+asserts that OpenGGF's backend replacement matches the ROM nor uses a custom
+sequencer. A future backend-transition comparison is a separate layer.
 
 ## Components
 
@@ -140,8 +170,13 @@ savestate mutation APIs, or `emu.setregister`.
 
 A test/tool-only Java observer uses the existing `SmpsDriverSnapshot`,
 `SmpsSequencerSnapshot`, and `SmpsTrackSnapshot` surfaces where they express ROM
-semantics. A narrow observation port records ordered calls at the synthesizer
-boundary without changing their order or chip behavior. It does not add
+semantics. A disabled-by-default observation port sits at
+`Ym2612Chip.write(...)` and `PsgChip.write(...)`, after driver arbitration and
+after high-level operations have expanded into actual chip writes. This is the
+only current boundary that observes direct writes plus the writes hidden inside
+`setInstrument(...)` and `silenceAll()` without reimplementing their ordering.
+The observer receives immutable byte values synchronously and may only append
+them; it cannot suppress, reorder, or alter a chip write. It does not add
 gameplay-visible logging, introduce a second sequencer, or make production
 behavior depend on comparison state.
 
@@ -172,11 +207,19 @@ the real data-write instructions at `$72752` and `$72788`, where `D0` holds the
 register and `D1` holds the value.
 
 If the callback does not expose reliable values, capture falls back to a
-reviewed PC-site manifest. PSG coverage then includes every direct and indirect
-write instruction in the shipped driver, including the four writes through
-`PSGSilenceAll`'s address register. The manifest is verified against the REV01
-ROM bytes and cites `docs/s1disasm/sonic.lst`; it is not inferred from observed
-GHZ execution alone.
+reviewed PC-site manifest. FM uses address/data sites `$7273A/$72752` (port 0,
+`D0`/`D1`) and `$72770/$72788` (port 1, `D0`/`D1`). PSG uses these shipped-ROM
+write sites and operand sources: `$7225E:D0`, `$72268:D0`, `$723B6:D4`,
+`$723C0:D4`, `$7246A:$1F(A0)`, `$724DC:$1F(A5)`, `$72912:D0`, `$72918:D6`,
+`$72984:D6`, `$729AE:D0`, `$729BC:#$9F`, `$729C0:#$BF`, `$729C4:#$DF`,
+`$729C8:#$FF`, `$72DFA:$1F(A0)`, and `$72E16:-1(A4)`.
+
+At startup the fallback verifies the complete opcode bytes at every site
+against the REV01 ROM and refuses partial coverage. It emits synthetic raw bus
+events explicitly marked `source: "pc_manifest"`; the ordinary callback path
+uses `source: "memory_callback"`. Both paths feed the same stateful YM decoder.
+The manifest cites `docs/s1disasm/sonic.lst` and is derived from all shipped
+driver write instructions, not observed GHZ coverage.
 
 The decoder folds valid YM address/data pairs into:
 
@@ -202,17 +245,30 @@ because this is not a trace-replay fixture or gameplay authority.
 
 ### Global state
 
-The shared subset includes:
+The ROM state base is system-bus `$FFF000`; BizHawk `mainmemory` exposes the
+64 KiB 68K work-RAM domain with `$FF0000` stripped, so it is read at `$F000`.
+Before capture, the observer validates that `$F040` is the DAC track start and
+that the ten `$30`-byte music slots at `$F040..$F21F` have the expected channel
+initialization after `$81`. Execution hooks remain 24-bit ROM PCs. Mixing these
+address domains is a capture failure.
 
-- active music ID;
-- tempo reload and current tempo counter;
-- pause state;
-- fade direction, delay, and remaining steps;
-- normal/speed-shoes tempo state; and
-- the driver flags needed to interpret the music-track update.
+Only fields with genuine equivalents gate parity:
 
-Queue bytes are retained as capture-contamination evidence but are not a way to
-hydrate or synchronize OpenGGF.
+| Semantic field | ROM source from `$FFF000` | OpenGGF source | Normalization |
+|---|---:|---|---|
+| tempo countdown | `+$01 v_main_tempo_timeout` | `SmpsSequencerSnapshot.tempoAccumulator` | unsigned byte; S1 timeout phase only |
+| tempo reload | `+$02 v_main_tempo` | `tempoWeight` | unsigned byte after the S1 config transform is proved by a focused test |
+| speed-up enabled | `+$2A f_speedup` | `speedShoes` | ROM bit 7 to boolean |
+| speed-up reload | `+$29 v_speeduptempo` | derived configured speed-shoes tempo | unsigned byte; diagnostic until the derivation test proves identity |
+| fade active/direction | `+$04`, `+$24` | `fade.active`, `fade.fadeOut` | only gate when either side is active; GHZ fixture expects both inactive |
+| fade delay/steps | `+$06`, `+$25`, `+$26` | `fade.delayCounter`, `fade.steps` | compare only for the active fade direction |
+
+Music ID `$81` is epoch metadata, not logical state: the ROM resets
+`v_sound_id` to `$80`. Pause and queue bytes have no OpenGGF snapshot equivalent
+and are capture-integrity diagnostics only. Voice selector, updating-DAC,
+priority, communication, 1-up, and push/ring flags are retained locally for
+diagnosis but do not gate MVP parity unless a later field mapping proves a
+shared semantic.
 
 ### Music tracks
 
@@ -222,37 +278,56 @@ Records use fixed semantic roles:
 DAC, FM1, FM2, FM3, FM4, FM5, FM6, PSG1, PSG2, PSG3
 ```
 
-An unused ROM slot and an absent OpenGGF track both normalize to an explicit
-inactive role. Active roles compare the genuine common subset:
+The ten ROM slots begin at `$FFF040`, are `$30` bytes each, and map in order to
+the roles above. An unused ROM slot and an absent OpenGGF track both normalize
+to an explicit inactive role. For an inactive role only `active=false`, role,
+and expected hardware channel gate parity; stale slot bytes are ignored.
 
-- playback, rest, override, and do-not-attack/tie flags;
-- hardware channel and track type;
-- sequence pointer;
-- duration timeout and saved duration;
-- transpose and volume;
-- current frequency;
-- pan, AMS, and FMS;
-- voice/instrument identity;
-- PSG envelope identity, position, and effective value;
-- note-fill timeout and reload;
-- modulation pointer, delay, speed, delta, steps, and accumulator;
-- detune;
-- loop counters; and
-- return-stack position and values.
+Active roles use this field map (`T` is the slot base):
 
-ROM data pointers are normalized to offsets inside the GHZ SMPS asset. Signed
-byte/word fields use explicit sign extension. Voice bytes, sequence bytes, and
-other runtime asset payloads are never copied into the output.
+| Semantic field | ROM field | OpenGGF snapshot field | Rule |
+|---|---:|---|---|
+| active | `T+$00` bit 7 | `active` | boolean |
+| resting | `T+$00` bit 1 | `note == $80` | gate only after a focused derivation test confirms every GHZ rest path |
+| overridden | `T+$00` bit 2 | `overridden` | boolean |
+| modulation enabled | `T+$00` bit 3 | `modEnabled` | boolean |
+| do-not-attack | `T+$00` bit 4 | `tieNext` | boolean |
+| hardware channel/type | `T+$01 VoiceControl` | `type`, `channelId` | decode S1 channel bits to fixed role |
+| sequence position | `T+$04 DataPointer` | `pos` | ROM pointer minus GHZ asset ROM base |
+| transpose | `T+$08` | `keyOffset` | signed byte |
+| attenuation | `T+$09` | `volumeOffset` | signed/unsigned interpretation tested per S1 operation |
+| pan/AMS/FMS | `T+$0A` | `pan`, `ams`, `fms` | split packed ROM byte |
+| instrument/envelope id | `T+$0B` | FM `voiceId`; PSG `instrumentId` | unsigned byte |
+| PSG envelope cursor | `T+$0C` | `envPos` | PSG only; unsigned byte |
+| duration countdown | `T+$0E` | `duration` | unsigned byte |
+| duration reload | `T+$0F` | `scaledDuration` | unsigned byte; `rawDuration` is diagnostic |
+| base frequency | `T+$10` | `(baseBlock << 11) | baseFnum` for FM; `baseFnum` for PSG | unsigned word; gate after derivation tests, not `note` |
+| note-fill countdown/reload | `T+$12/$13` | derived from `fill`, `duration`, `scaledDuration` | gate only after focused transition tests prove the derivation |
+| modulation delay/speed/delta/steps/value | `T+$18..$1D` | `modDelay`, `modRateCounter`, `modCurrentDelta`, `modStepCounter`, `modAccumulator` | signed delta/value; individual fields become gates only after transition tests |
+| detune | `T+$1E` | `detune` | signed byte |
+| loop counters | `T+$24..$2F` | `loopCounters` | compare only indices referenced by parsed GHZ `$F7` commands |
+| return stack | top grows down from `T+$30`, cursor `T+$0D` | `returnSp`, `returnStack` | normalize only live entries in call order |
 
-OpenGGF-only derived caches and ROM-only unused bytes are diagnostic or ignored.
-They cannot fail parity unless a documented mapping proves they represent the
-same driver state.
+The exact mapping registry is executable and versioned with the schema. A field
+marked as awaiting a derivation test is diagnostic until that test exists; the
+tool cannot silently promote it. ROM `Freq` is not compared with OpenGGF's note
+number, effective PSG envelope values are not inferred from asset bytes, the
+ROM modulation pointer has no current snapshot equivalent, and unused loop or
+stack capacity is never compared.
+
+Voice bytes, sequence bytes, envelopes, and other runtime asset payloads are
+never copied into output. OpenGGF-only caches and ROM-only unused bytes remain
+diagnostic or ignored.
 
 ## Musical-cycle stop contract
 
 The capture does not use an audibly estimated duration. It computes a recurrence
 signature over tempo phase and all active music-track playback state, excluding
 frame numbers, ordinals, and non-musical monotonic metadata.
+
+The signature includes only live return-stack entries and loop-counter indices
+referenced by parsed GHZ loop commands. Stale bytes and unused OpenGGF array
+capacity cannot create or prevent a recurrence.
 
 A repeated signature is only a candidate boundary. The candidate period is
 accepted after the immediately following period has:
@@ -265,6 +340,11 @@ ends at the third occurrence of the accepted boundary, yielding one proven
 cycle plus one identical repeated cycle. Failure to establish the cycle within
 36,000 audio-driver invocations is a capture failure with the candidate history
 included in the report.
+
+The reference metadata publishes the accepted boundary start ordinal, period,
+and exact terminal record count. OpenGGF always runs for that exact record count,
+even if its state never recurs or recurs elsewhere. Engine-side cycle detection
+is diagnostic only and cannot shorten or extend the comparison interval.
 
 ## Comparison order and diagnostics
 
@@ -332,8 +412,9 @@ comparison.
 - Unit-test every signed-field and pointer normalization.
 - Test fixed role mapping, inactive tracks, modulation, envelopes, loop
   counters, and return stacks with synthetic snapshots.
-- Use a recording synthesizer seam to prove observation preserves the exact
-  call order and values.
+- Test the low-level YM/PSG observation seam directly, including direct writes,
+  the complete `setInstrument(...)` expansion, and `silenceAll()`, proving that
+  enabling observation does not change chip state or ordering.
 - Mutation-test the comparator with changed state, changed value, swapped
   events, missing events, and extra events.
 - Run the OpenGGF capture twice and require byte-identical normalized output.
@@ -345,10 +426,15 @@ REV01 ROM. The report must show a valid two-cycle interval. Zero state and
 register mismatches are required before documenting GHZ music parity. A red
 report remains a valid diagnostic result but does not establish parity.
 
-Focused and full Maven verification run on JDK 21. Full-suite delivery compares
-against the integration baseline using the repository's documented
-failure-manifest method; pre-existing failures do not block delivery, but no
-new or worsened result is permitted.
+Focused and full Maven verification run on JDK 21. The full suite uses
+`mvn clean test -Pci`: the repository's single-fork CI profile avoids LWJGL
+native-extraction races, while `clean` prevents Maven Silent Extension from
+summarizing stale Surefire XML. `libglfw.so` is supplied by the activated LWJGL
+Linux natives classifier; a default four-fork extraction race must not be
+reported as a missing system library. Full-suite delivery compares against the
+integration baseline using the repository's documented failure-manifest
+method; pre-existing failures do not block delivery, but no new or worsened
+result is permitted.
 
 ## Repository and copyright boundaries
 
