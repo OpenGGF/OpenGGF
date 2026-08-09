@@ -80,6 +80,8 @@ public final class S1GameplayAudioTimelineComparator {
             return first == null ? S1GameplayAudioTimelineReport.match()
                     : S1GameplayAudioTimelineReport.failure(first.kind(), first.location(), first.detail(),
                             context.left(), context.right());
+        } catch (CaptureException failure) {
+            throw failure;
         } catch (RuntimeException failure) {
             throw new CaptureException("comparison input no longer passes strict validation: " + failure.getMessage(),
                     "stream", failure);
@@ -349,7 +351,8 @@ public final class S1GameplayAudioTimelineComparator {
                             || request.soundClass() == S1GameplayAudioTimeline.SoundClass.SPECIAL_SFX)
                             && (decision.displacedOwner().ownerClass() == S1GameplayAudioTimeline.OwnerClass.NORMAL_SFX
                             || decision.displacedOwner().ownerClass() == S1GameplayAudioTimeline.OwnerClass.SPECIAL_SFX)
-                            && !decision.displacedOwner().equals(decision.finalOwner())) {
+                            && !decision.displacedOwner().equals(new S1GameplayAudioTimeline.OwnerRef(
+                                    ownerClass(request.soundClass()), request.soundId(), request.requestOrdinal()))) {
                         sfxContention = true;
                     }
                 }
@@ -363,6 +366,11 @@ public final class S1GameplayAudioTimelineComparator {
 
         private boolean complete() {
             return musicRestored && sfxContention;
+        }
+
+        private static S1GameplayAudioTimeline.OwnerClass ownerClass(S1GameplayAudioTimeline.SoundClass soundClass) {
+            return soundClass == S1GameplayAudioTimeline.SoundClass.SPECIAL_SFX
+                    ? S1GameplayAudioTimeline.OwnerClass.SPECIAL_SFX : S1GameplayAudioTimeline.OwnerClass.NORMAL_SFX;
         }
     }
 

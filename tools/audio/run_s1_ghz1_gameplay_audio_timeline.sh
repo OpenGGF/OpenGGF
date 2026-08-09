@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/bash
 # Deterministic two-producer capture for the pinned S1 GHZ1 gameplay-audio timeline.
 set -euo pipefail
 
@@ -8,17 +8,12 @@ EXIT_MISMATCH=3
 EXIT_TOOL_FAILURE=4
 
 usage() {
-	cat <<'EOF'
-Usage: tools/audio/run_s1_ghz1_gameplay_audio_timeline.sh --rom PATH [--bizhawk-home PATH]
-
-Records two independent pinned BizHawk reference streams and two independent
-OpenGGF streams beneath target/audio-parity/s1-ghz1-gameplay/. Each reference
-probe writes only to a fresh staging file; the trusted Java boundary validates
-and atomically create-new publishes it. Existing captures and reports are never
-replaced.
-
-Exit codes: 0=match, 2=usage, 3=parity mismatch, 4=capture/tool failure.
-EOF
+	printf '%s\n' 'Usage: tools/audio/run_s1_ghz1_gameplay_audio_timeline.sh --rom PATH [--bizhawk-home PATH]' '' \
+'Records two independent pinned BizHawk reference streams and two independent' \
+'OpenGGF streams beneath target/audio-parity/s1-ghz1-gameplay/. Each reference' \
+'probe writes only to a fresh staging file; the trusted Java boundary validates' \
+'and atomically create-new publishes it. Existing captures and reports are never' \
+'replaced.' '' 'Exit codes: 0=match, 2=usage, 3=parity mismatch, 4=capture/tool failure.'
 }
 
 fail() {
@@ -26,7 +21,7 @@ fail() {
 	exit "$EXIT_TOOL_FAILURE"
 }
 
-SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+SCRIPT_DIR=$(cd "${BASH_SOURCE[0]%/*}" && pwd -P)
 REPO=$(cd "$SCRIPT_DIR/../.." && pwd)
 MOVIE="$REPO/src/test/resources/traces/s1/runs/s1-sonic-complete-withemeralds/sonic1-complete-withemeralds.bk2"
 RUN_PATH="$REPO/src/test/resources/traces/s1/runs/s1-sonic-complete-withemeralds"
@@ -43,11 +38,13 @@ for replacement in OGGF_AUDIO_TIMELINE_JAVA_BIN OGGF_AUDIO_TIMELINE_MONO_BIN \
 	fi
 done
 for replacement in OGGF_BIZHAWK_PROBE_RUNTIME OGGF_BIZHAWK_LIB OGGF_WORKDIR OGGF_TRACE_OUTPUT_DIR \
-	OGGF_NO_LUACONSOLE OGGF_BIZHAWK_SOFTGL BIZHAWK_ALLOW_SLOW_LUA; do
+	OGGF_NO_LUACONSOLE OGGF_BIZHAWK_SOFTGL BIZHAWK_ALLOW_SLOW_LUA JAVA_TOOL_OPTIONS JDK_JAVA_OPTIONS \
+	MAVEN_OPTS MAVEN_ARGS JAVA_HOME; do
 	if [[ -v "$replacement" ]]; then
 		fail "unsupported producer/tool replacement environment variable: $replacement"
 	fi
 done
+PATH=/usr/bin:/bin
 
 while [ "$#" -gt 0 ]; do
 	case "$1" in
@@ -65,19 +62,16 @@ done
 
 [ -n "$ROM_PATH" ] || { echo "Argument error: --rom is required" >&2; usage >&2; exit "$EXIT_USAGE"; }
 if [ -z "$BIZHAWK_DIR" ]; then
-	for candidate in "$REPO/docs/BizHawk-2.11-linux-x64" "$(dirname "$REPO")/OpenGGF/docs/BizHawk-2.11-linux-x64"; do
+	for candidate in "$REPO/docs/BizHawk-2.11-linux-x64" "${REPO%/*}/OpenGGF/docs/BizHawk-2.11-linux-x64"; do
 		if [ -f "$candidate/EmuHawk.exe" ]; then BIZHAWK_DIR=$candidate; break; fi
 	done
 fi
 [ -n "$BIZHAWK_DIR" ] || fail "BizHawk 2.11 home was not found; pass --bizhawk-home"
-MAVEN_BIN=$(command -v mvn) || fail "trusted Maven executable was not found"
-JAVA_BIN=$(command -v java) || fail "trusted Java executable was not found"
-CMP_BIN=$(command -v cmp) || fail "trusted cmp executable was not found"
-MONO_SYSTEM_BIN=$(command -v mono) || fail "trusted Mono executable was not found"
-MAVEN_BIN=$(realpath "$MAVEN_BIN")
-JAVA_BIN=$(realpath "$JAVA_BIN")
-CMP_BIN=$(realpath "$CMP_BIN")
-MONO_SYSTEM_BIN=$(realpath "$MONO_SYSTEM_BIN")
+MAVEN_BIN=/usr/bin/mvn
+JAVA_BIN=/usr/bin/java
+CMP_BIN=/usr/bin/cmp
+MONO_SYSTEM_BIN=/usr/bin/mono
+for trusted in "$MAVEN_BIN" "$JAVA_BIN" "$CMP_BIN" "$MONO_SYSTEM_BIN" /usr/bin/realpath; do [ -x "$trusted" ] || fail "trusted system executable is missing: $trusted"; done
 
 CLASSPATH_FILE="$REPO/target/s1-gameplay-audio-timeline.classpath"
 if ! "$MAVEN_BIN" -q -Dmse=off -Pci -DskipTests compile dependency:build-classpath \
@@ -104,8 +98,8 @@ MOVIE=${validated[MOVIE_PATH]}
 BIZHAWK_DIR=${validated[BIZHAWK_HOME]}
 OUTPUT_ROOT=${validated[OUTPUT_ROOT]}
 
-mkdir -p -- "$OUTPUT_ROOT" || fail "cannot create safe output root"
-RUN_DIR=$(mktemp -d "$OUTPUT_ROOT/run.XXXXXXXX") || fail "cannot create a unique run directory"
+/usr/bin/mkdir -p -- "$OUTPUT_ROOT" || fail "cannot create safe output root"
+RUN_DIR=$(/usr/bin/mktemp -d "$OUTPUT_ROOT/run.XXXXXXXX") || fail "cannot create a unique run directory"
 REFERENCE_1="$RUN_DIR/reference-1.jsonl"
 REFERENCE_2="$RUN_DIR/reference-2.jsonl"
 OPENGGF_1="$RUN_DIR/openggf-1.jsonl"
@@ -115,7 +109,7 @@ JSON_REPORT="$RUN_DIR/parity-report.json"
 
 capture_reference() {
 	local output=$1 log=$2 staging
-	staging=$(mktemp "$RUN_DIR/reference.XXXXXXXX.staging") || return 1
+	staging=$(/usr/bin/mktemp "$RUN_DIR/reference.XXXXXXXX.staging") || return 1
 	if ! BIZHAWK_HOME="$BIZHAWK_DIR" MONO_BIN="$MONO_SYSTEM_BIN" OGGF_OUT="$staging" "$LAUNCHER" "$PROBE" "$MOVIE" "$ROM_PATH" >"$log" 2>&1; then
 		"${JAVA_TOOL[@]}" publish-reference --repo "$REPO" --run-root "$RUN_DIR" --staging "$staging" --output "$output" >/dev/null 2>&1 || true
 		return 1

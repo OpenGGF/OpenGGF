@@ -159,6 +159,20 @@ class TestS1GameplayAudioTimelineComparator {
     }
 
     @Test
+    void acceptsARejectedDistinctSfxChallengerAsRequiredContention() throws Exception {
+        Function<S1GameplayAudioTimeline.Frame, S1GameplayAudioTimeline.Frame> rejected = frame -> {
+            if (frame.bk2Frame() == 901) {
+                return frameWith(frame, request(1, SFX, 0xA1, List.of(FM3), false, owner(0xA0, 0), owner(0xA0, 0)),
+                        owners(owner(0xA0, 0)));
+            }
+            return frame;
+        };
+        Path reference = write("reference-rejected.jsonl", S1GameplayAudioTimeline.REFERENCE_CAPTURE, rejected, 0L);
+        Path engine = write("engine-rejected.jsonl", S1GameplayAudioTimeline.OPENGGF_CAPTURE, rejected, 0L);
+        assertTrue(S1GameplayAudioTimelineComparator.compare(reference, engine).matches());
+    }
+
+    @Test
     void reportsArbitrationRoleOrderBeforeComparingDecisionValues() throws Exception {
         Path reference = write("reference-roles.jsonl", S1GameplayAudioTimeline.REFERENCE_CAPTURE, frame -> {
             if (frame.bk2Frame() != 900) {

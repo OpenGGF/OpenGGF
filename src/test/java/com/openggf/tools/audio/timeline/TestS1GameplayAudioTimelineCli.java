@@ -106,6 +106,24 @@ class TestS1GameplayAudioTimelineCli {
         assertEquals(2, run("unknown"));
     }
 
+    @Test
+    void shellUsesAbsoluteBootstrapToolsAndRejectsInjectedJavaEnvironmentBeforePathLookup() throws Exception {
+        Path fakeBin = temp.resolve("fake-bin");
+        Files.createDirectories(fakeBin);
+        Path marker = temp.resolve("fake-executed");
+        Files.writeString(fakeBin.resolve("mvn"), "#!/usr/bin/bash\ntouch '" + marker + "'\n");
+        Files.writeString(fakeBin.resolve("java"), "#!/usr/bin/bash\ntouch '" + marker + "'\n");
+        fakeBin.resolve("mvn").toFile().setExecutable(true);
+        fakeBin.resolve("java").toFile().setExecutable(true);
+        ProcessBuilder safe = new ProcessBuilder("/usr/bin/bash", "tools/audio/run_s1_ghz1_gameplay_audio_timeline.sh", "--help");
+        safe.environment().put("PATH", fakeBin.toString());
+        assertEquals(0, safe.start().waitFor());
+        assertFalse(Files.exists(marker));
+        ProcessBuilder injected = new ProcessBuilder("/usr/bin/bash", "tools/audio/run_s1_ghz1_gameplay_audio_timeline.sh", "--help");
+        injected.environment().put("JAVA_TOOL_OPTIONS", "-Dunsafe=true");
+        assertEquals(4, injected.start().waitFor());
+    }
+
     private Path runRoot() throws Exception {
         Path run = temp.resolve("target/audio-parity/s1-ghz1-gameplay/run.abcdef12");
         Files.createDirectories(run);
