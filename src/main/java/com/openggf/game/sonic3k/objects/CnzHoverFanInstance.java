@@ -9,6 +9,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
@@ -61,6 +62,60 @@ public final class CnzHoverFanInstance extends AbstractObjectInstance implements
     private int baseY;
     private int currentX;
     private int renderFrame;
+
+    @Override
+    public int getExecutionSlotIndex() {
+        ObjectServices svc = tryServices();
+        if (svc == null || spawn.layoutIndex() < 0 || !activeVariant) {
+            return super.getExecutionSlotIndex();
+        }
+        return resolveActiveVariantExecutionSlot(
+                svc.objectManager().activeObjectsOfType(CnzHoverFanInstance.class));
+    }
+
+    int resolveActiveVariantExecutionSlot(List<CnzHoverFanInstance> activeFans) {
+        // Active fans run loc_31E36/sub_31E96 in native SST order. Each fan writes y_pos before
+        // the next fan tests its influence band, so adjacent overlapping fans must retain their
+        // layout-derived order when dynamic slot ownership reverses them. Static loc_31E68 fans
+        // keep their owned slots; their ROM path does not perform this lift operation.
+        int ownSlot = getSlotIndex();
+        if (ownSlot < 0 || activeFans == null || !activeVariant) {
+            return ownSlot;
+        }
+        for (CnzHoverFanInstance other : activeFans) {
+            if (other == null || other == this || !other.activeVariant
+                    || other.spawn.layoutIndex() < 0
+                    || Math.abs(other.getSlotIndex() - ownSlot) != 1
+                    || !influenceWindowsOverlap(other)) {
+                continue;
+            }
+            boolean slotOrder = ownSlot < other.getSlotIndex();
+            boolean layoutOrder = spawn.layoutIndex() < other.spawn.layoutIndex();
+            if (slotOrder != layoutOrder) {
+                return other.getSlotIndex();
+            }
+        }
+        return ownSlot;
+    }
+
+    private boolean influenceWindowsOverlap(CnzHoverFanInstance other) {
+        int thisX = resolveCurrentX();
+        int otherX = other.resolveCurrentX();
+        int thisLeft = thisX - xWindowMin;
+        int thisRight = thisLeft + xWindowMax - 1;
+        int otherLeft = otherX - other.xWindowMin;
+        int otherRight = otherLeft + other.xWindowMax - 1;
+        if (thisRight < otherLeft || otherRight < thisLeft) {
+            return false;
+        }
+
+        int osc = OscillationManager.getByte(LIFT_OSC_OFFSET);
+        int thisTop = baseY - osc - liftWindowMin;
+        int thisBottom = baseY - osc + 0x2F;
+        int otherTop = other.baseY - osc - other.liftWindowMin;
+        int otherBottom = other.baseY - osc + 0x2F;
+        return thisBottom >= otherTop && otherBottom >= thisTop;
+    }
 
     public CnzHoverFanInstance(ObjectSpawn spawn) {
         super(spawn, "CNZHoverFan");

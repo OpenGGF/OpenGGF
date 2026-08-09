@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: overlapping active CNZ hover fans now preserve the ROM's native
+  object execution order when dynamic object ownership reverses adjacent
+  slots. This retains each fan's write-before-next-test lift semantics and
+  advances the complete-run CNZ frontier from raw frame 16343 to 30486 while
+  the complete-run AIZ, HCZ, and MGZ traces and standalone MGZ trace remain
+  green.
 - Fix/Test: S3K queue comparison now reconciles a held-tail VBlank captured
   between the ROM's module and direct Kosinski services with replay's atomic
   post-service publication. The CNZ complete-run comparison advances from raw

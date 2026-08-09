@@ -70618,3 +70618,37 @@ round-trip chains: `TestS1GhzMazeRoundTripChain` and `TestS2EhzHalfpipeRoundTrip
   0..5190 is exact. The missing edges are the LAST SS RunObjects pass: recorded pass 3171
   completes at 5191 with `check_rings_flag=255` and `sonic_present=0` because `SSClearObjs`
   (s2.asm:72503) has wiped the object RAM. That is the next lead.
+
+## 2026-08-09 - S3K CNZ active hover-fan ordering frontier
+
+- Branch `bugfix/s3k-traces`, candidate over merge `232049ceb`, with
+  `origin/develop` at `2fd54136b`. Ring comparison remains error-level through
+  `ToleranceConfig.DEFAULT` and `RingCountMode.FORCE_ERROR`.
+- Correction to the preceding CNZ atomic queue-snapshot entry: its terminal
+  hardware-timing exception obscured the authoritative comparison JSON. Before
+  this fix the complete-run trace's first comparison error was raw frame
+  `16343`, a three-row Tails Y mismatch (`expected=0x0A2B`,
+  `actual=0x0A2C`), rather than a comparison-clean segment end.
+- Root cause: active hover fans execute `loc_31E36`/`sub_31E96` in native SST
+  order and each fan writes player `y_pos` before the next fan tests its lift
+  band (`sonic3k.asm:67327-67448`). Dynamic object ownership had reversed two
+  adjacent, overlapping active fans, changing both the intermediate Y and the
+  following fan's boundary decision. Active fans now recover their
+  layout-derived order only for that adjacent overlap; static `loc_31E68`
+  variants retain their owned-slot order.
+- Focused command selected `TestCnzHoverFanObjectInstance` on JDK 21. Result:
+  6 tests, 0 failures, 0 errors.
+- Frontier command selected `TestS3kCnzCompleteRunTraceReplay` with
+  `-Ptrace-replay -Dmse=off -Dsurefire.forkCount=1
+  -Dsurefire.runOrder=alphabetical` and the discovered S3K ROM. The comparator
+  advances from raw `16343` to raw `30486`: 42 errors, 0 warnings after 39,451
+  compared rows, first error `tails_mapping_frame` expected `0x0007`, actual
+  `0x0008`. Cleanup then reaches the existing unmatched module Kosinski
+  completion `#222`.
+- Gameplay-order regression command selected complete-run and standalone AIZ,
+  complete-run HCZ, complete-run and standalone MGZ, and complete-run and
+  standalone CNZ. Complete-run AIZ, HCZ, and MGZ plus standalone MGZ pass.
+  Standalone AIZ retains its independent raw-`16067` queue divergence and four
+  focused assertion failures. Standalone CNZ retains its raw-`25743` camera-X
+  frontier and later unmatched completion `#31`; neither pre-existing result
+  moved under this CNZ fan fix.
