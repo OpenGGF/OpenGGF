@@ -86,6 +86,8 @@ class TestSonic3kTitleCardManagerRewind {
 
         assertEquals(30, title.capture().resetLevelGamestateCountdown(),
                 "phase-one title handoff must reach the ROM display reset row");
+        assertFalse(title.retainedControlPollFollowsTitleCompletion(),
+                "the phase-one title owner runs before the retained control slot");
     }
 
     @Test
@@ -99,6 +101,10 @@ class TestSonic3kTitleCardManagerRewind {
 
         assertEquals(30, title.capture().resetLevelGamestateCountdown(),
                 "phase-two title handoff must reach the ROM display reset row");
+        assertEquals(1, title.capture().inLevelExitDelayFrames(),
+                "phase-two child retirement needs the following Wait2 owner poll");
+        assertTrue(title.retainedControlPollFollowsTitleCompletion(),
+                "the phase-two title owner publishes after the retained control slot");
     }
 
     @Test

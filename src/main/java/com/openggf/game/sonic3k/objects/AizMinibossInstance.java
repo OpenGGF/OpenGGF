@@ -101,6 +101,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
     private int defeatHandoffTimer = -1;
     private boolean levelEndUnlockStarted;
     private boolean levelEndSizeChangeStarted;
+    private boolean levelEndControlPollDeferred;
 
     /** Stagger explosion controller for boss defeat (ROM: Child6_CreateBossExplosion subtype 0). */
     private S3kBossExplosionController defeatExplosionController;
@@ -399,6 +400,16 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
         var camera = services().camera();
         var level = services().currentLevel();
         if (!levelEndSizeChangeStarted) {
+            Sonic3kTitleCardManager titleCardManager =
+                    services().gameService(Sonic3kTitleCardManager.class);
+            if (!levelEndControlPollDeferred
+                    && titleCardManager != null
+                    && titleCardManager.retainedControlPollFollowsTitleCompletion()) {
+                // The title owner published End_of_level_flag from a higher
+                // SST slot, after this retained control slot had already run.
+                levelEndControlPollDeferred = true;
+                return;
+            }
             levelEndSizeChangeStarted = true;
             // ROM Change_Act2Sizes copies Act 2 size words into the stored
             // camera-boundary memory and Camera_target_max_Y_pos, then creates
@@ -410,9 +421,11 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
                 camera.setMaxYTarget((short) level.getMaxY());
             }
             spawnDynamicObject(new AizAct2CameraResizeController(
-                    AizAct2CameraResizeController.MAX_X));
+                    AizAct2CameraResizeController.MAX_X,
+                    levelEndControlPollDeferred));
             spawnDynamicObject(new AizAct2CameraResizeController(
-                    AizAct2CameraResizeController.MAX_Y));
+                    AizAct2CameraResizeController.MAX_Y,
+                    levelEndControlPollDeferred));
             // Obj_EndSignControlDoStart calls Change_Act2Sizes and then
             // Delete_Current_Sprite. The two workers above continue from
             // their own slots (sonic3k.asm:180415-180419,180575-180609).

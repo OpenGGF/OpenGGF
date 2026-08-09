@@ -142,6 +142,7 @@ public class Sonic3kTitleCardManager
     private boolean retainedResultsHeldLevelCounterOwned;
     private boolean inLevelPlayerControlLockOwned;
     private int inLevelExitDelayFrames;
+    private boolean retainedControlPollFollowsTitleCompletion;
     // Obj_TitleCardWait2 observes the drained child counter once, then reaches
     // LoadEnemyArt on its following owner dispatch. This poll is independent
     // of any retained camera-release tail that keeps the title owner alive.
@@ -210,6 +211,7 @@ public class Sonic3kTitleCardManager
             boolean retainedResultsHeldLevelCounterOwned,
             boolean inLevelPlayerControlLockOwned,
             int inLevelExitDelayFrames,
+            boolean retainedControlPollFollowsTitleCompletion,
             boolean inLevelArtAdmissionPollObserved,
             boolean releasePreloadedActCameraOnComplete,
             boolean preloadedActCompletionPrepared,
@@ -279,6 +281,7 @@ public class Sonic3kTitleCardManager
                 resetLevelGamestateOnInLevelDisplay, resetLevelGamestateCountdown,
                 heldLevelCounterDispatchOwned, retainedResultsHeldLevelCounterOwned,
                 inLevelPlayerControlLockOwned, inLevelExitDelayFrames,
+                retainedControlPollFollowsTitleCompletion,
                 inLevelArtAdmissionPollObserved,
                 releasePreloadedActCameraOnComplete, preloadedActCompletionPrepared,
                 bonusMode, bonusFadeProgress, currentZone, currentAct,
@@ -322,6 +325,8 @@ public class Sonic3kTitleCardManager
                 snapshot.retainedResultsHeldLevelCounterOwned();
         inLevelPlayerControlLockOwned = snapshot.inLevelPlayerControlLockOwned();
         inLevelExitDelayFrames = snapshot.inLevelExitDelayFrames();
+        retainedControlPollFollowsTitleCompletion =
+                snapshot.retainedControlPollFollowsTitleCompletion();
         inLevelArtAdmissionPollObserved = snapshot.inLevelArtAdmissionPollObserved();
         releasePreloadedActCameraOnComplete =
                 snapshot.releasePreloadedActCameraOnComplete();
@@ -470,8 +475,20 @@ public class Sonic3kTitleCardManager
             // The same child-visibility handoff reaches the later Wait2 poll
             // five updates after the slotless manager would otherwise predict
             // completion when initialization precedes phase 0.
-            inLevelExitDelayFrames = modulePhase == 1 ? 5 : 0;
+            // At phase 2 the final child retirement is visible only after the
+            // retained title owner has crossed one more Process_Sprites poll.
+            // Phase 1 additionally waits for the phase-0 create/render handoff.
+            inLevelExitDelayFrames = modulePhase == 1 ? 5 : modulePhase == 2 ? 1 : 0;
+            retainedControlPollFollowsTitleCompletion = modulePhase == 2;
         }
+    }
+
+    /**
+     * Whether the retained {@code Obj_EndSignControl} slot has already run in
+     * the object pass that publishes the in-level title completion flag.
+     */
+    public boolean retainedControlPollFollowsTitleCompletion() {
+        return retainedControlPollFollowsTitleCompletion;
     }
 
     @Override
@@ -632,6 +649,7 @@ public class Sonic3kTitleCardManager
         this.retainedResultsHeldLevelCounterOwned = false;
         this.inLevelPlayerControlLockOwned = false;
         this.inLevelExitDelayFrames = 0;
+        this.retainedControlPollFollowsTitleCompletion = false;
         this.inLevelArtAdmissionPollObserved = false;
         this.releasePreloadedActCameraOnComplete = false;
         this.preloadedActCompletionPrepared = false;
@@ -883,6 +901,7 @@ public class Sonic3kTitleCardManager
         heldLevelCounterDispatchOwned = false;
         retainedResultsHeldLevelCounterOwned = false;
         inLevelExitDelayFrames = 0;
+        retainedControlPollFollowsTitleCompletion = false;
         inLevelArtAdmissionPollObserved = false;
         releasePreloadedActCameraOnComplete = false;
         preloadedActCompletionPrepared = false;

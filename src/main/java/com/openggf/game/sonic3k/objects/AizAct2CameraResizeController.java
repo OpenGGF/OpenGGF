@@ -28,14 +28,21 @@ final class AizAct2CameraResizeController extends AbstractObjectInstance
     private int boundary;
     private int accumulator;
     private boolean firstUpdate = true;
+    private boolean freshNativeAccumulator;
 
     AizAct2CameraResizeController(int boundary) {
+        this(boundary, false);
+    }
+
+    AizAct2CameraResizeController(int boundary, boolean freshNativeAccumulator) {
         super(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), "AIZAct2CameraResize");
         this.boundary = boundary;
-        // Preserve the already-verified engine/ROM camera phase when moving
-        // this work out of AizMinibossInstance. The newly allocated ROM
-        // workers are eligible later in the same ExecuteObjects pass.
-        this.accumulator = boundary == MAX_X ? 0x4000 : 0x8000;
+        this.freshNativeAccumulator = freshNativeAccumulator;
+        if (!freshNativeAccumulator) {
+            // The slotless engine owner has already crossed the native
+            // creation-pass carry represented by this worker dispatch.
+            this.accumulator = boundary == MAX_X ? 0x4000 : 0x8000;
+        }
     }
 
     AizAct2CameraResizeController(ObjectSpawn spawn) {
@@ -108,10 +115,9 @@ final class AizAct2CameraResizeController extends AbstractObjectInstance
         }
         accumulator += 0x8000;
         int delta = accumulator >>> 16;
-        if (firstUpdate && playerEntity != null) {
-            // DeformBgLayer moves the camera before Do_ResizeEvents. Preserve
-            // the creation-frame carry that the old in-parent implementation
-            // already verified against the trace.
+        if (firstUpdate && playerEntity != null && !freshNativeAccumulator) {
+            // Preserve the creation-pass carry when the retained control owner
+            // observes title completion later in the same object pass.
             delta += 2;
         }
         int nextMax = (camera.getMaxY() & 0xFFFF) + delta;

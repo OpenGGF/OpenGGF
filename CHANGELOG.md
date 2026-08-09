@@ -3,6 +3,14 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K in-level title completion now preserves the retained
+  `Obj_EndSignControl` object-pass boundary. A phase-2 title owner publishes
+  after the lower control slot has already run, so `Change_Act2Sizes` waits for
+  the following pass and its gradual X/Y workers begin with their native zero
+  accumulators. Complete AIZ advances from raw frame `11999` to a separate
+  ring-count mismatch at raw frame `13740` (next hardware edge `#49` at
+  `14171`), while standard AIZ remains green for all `20463` compared frames.
+  Ring comparisons stay forced errors; no trace payloads changed.
 - Fix/Test: S3K signpost results allocation now retains the defeated boss's
   native `Obj_EndSignControl` SST boundary when the engine splits that owner
   into separate flow and signpost objects. `AllocateObject` still selects the

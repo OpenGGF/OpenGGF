@@ -69721,3 +69721,46 @@ methods, not classes).
   reaches its established segment-end `KOS_DECOMPRESSION_QUEUE#114` edge at
   raw `27686`; this AIZ-owned control-slot path is inactive there. The next AIZ
   target is the raw `11999` camera handoff.
+
+## 2026-08-09 - S3K AIZ title/control camera boundary frontier
+
+- Branch: `bugfix/s3k-traces` from `52f36670c`; the six pre-existing user
+  edits remained unstaged. Validation used JDK 21.0.12 and
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen`; no trace payload changed.
+- Root cause: ROM `Obj_TitleCardWait2` publishes `End_of_level_flag`, while
+  the retained `Obj_EndSignControlDoStart` polls that byte from its own SST
+  slot before calling `Change_Act2Sizes` (`sonic3k.asm:62244-62279,
+  180403-180419,180656-180688`). On the complete AIZ route the phase-2 title
+  owner publishes after the lower retained control slot has already run, so
+  the control owner cannot create `Child1_Act2LevelSize` until the next
+  `Process_Sprites` pass. The title manager now retains that live owner-phase
+  fact, gives phase 2 its missing `Wait2` poll, and the AIZ control owner
+  defers exactly that consumed poll. Its `Obj_IncLevEndXGradual` and
+  `Obj_IncLevEndYGradual` workers then begin with the ROM's zero `$30`
+  accumulator instead of the slotless creation-pass carry used when the title
+  owner precedes control. No zone, route, trace, frame, or game-name predicate
+  is involved.
+- Complete AIZ frontier command: `mvn -q -Ptrace-replay -Dmse=off
+  -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay#replayMatchesTrace
+  -Dtrace.verification=all -Dtrace.frontierOnly=true
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Result: the first error advances from raw `11999`, `camera_y` (plus eight
+  queue-state errors), to raw `13740`, `rings` (`1` expected, `2` actual), one
+  grouped error spanning three frames. The next unconsumed hardware edge
+  advances from direct queue `#46` at raw `12002` to `#49` at raw `14171`.
+  Ring comparison is enabled through `ToleranceConfig.DEFAULT` with
+  `RingCountMode.FORCE_ERROR`.
+- Standard AIZ command: the same profile with
+  `TestS3kAizTraceReplay#replayMatchesTrace` and no frontier-only flag.
+  Result: all `20463` compared frames remain green.
+- Focused coverage: `TestSonic3kTitleCardManagerRewind` and
+  `TestRewindCoverageGuard` pass. The S3K loading/bootstrap must-keeps pass:
+  `TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`,
+  `TestSonic3kBootstrapResolver`, and `TestSonic3kDecodingUtils`.
+- Gameplay-order regression sweep: MGZ focused and complete remain green;
+  HCZ retains direct edge `#114` at raw `27686`; CNZ retains its complete-run
+  physical frontier at raw `12024` and direct edge `#205` at `13962`; ICZ
+  retains its raw `15401` camera frontier and edge `#255` at `21185`; LBZ
+  physics remains green through edge `#302` at raw `36951`, with its existing
+  animation-only mismatch at raw `30588`. No established frontier regressed.
