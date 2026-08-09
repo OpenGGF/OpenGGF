@@ -1563,7 +1563,9 @@ public class TestPlayableSpriteMovement {
                                 (Consumer<SensorResult[]>) publisherMethod.invoke(manager);
                 assertNotNull(publisher, "The configured main player owns the native landing-angle copy");
 
-                SensorResult left = new SensorResult((byte) 0xFF, (byte) -7, 0, Direction.DOWN);
+                setMovementField("latchedNextTilt", 0x22);
+                setMovementField("latchedTilt", 0x44);
+                SensorResult left = new SensorResult((byte) 0xFF, (byte) -7, 0x9A, Direction.DOWN);
                 SensorResult right = new SensorResult((byte) 3, (byte) 25, 0, Direction.DOWN);
                 publisher.accept(new SensorResult[]{left, right});
 
@@ -1571,7 +1573,8 @@ public class TestPlayableSpriteMovement {
                 Field tilt = PlayableSpriteMovement.class.getDeclaredField("latchedTilt");
                 nextTilt.setAccessible(true);
                 tilt.setAccessible(true);
-                assertEquals(3, nextTilt.getInt(manager));
+                assertEquals(0x22, nextTilt.getInt(manager),
+                                "an empty FindFloor extension preserves the prior Primary_Angle byte");
                 assertEquals(0xFF, tilt.getInt(manager));
 
                 Tails sidekick = new Tails("tails_p2", (short) 0, (short) 0);
@@ -1591,13 +1594,13 @@ public class TestPlayableSpriteMovement {
                                 "CPU Tails owns its own player-tail next_tilt/tilt copy");
 
                 sidekickPublisher.accept(new SensorResult[]{
-                        new SensorResult((byte) 0x20, (byte) -3, 0, Direction.DOWN),
-                        new SensorResult((byte) 0x40, (byte) 11, 0, Direction.DOWN)});
+                        new SensorResult((byte) 0x20, (byte) -3, 0x81, Direction.DOWN),
+                        new SensorResult((byte) 0x40, (byte) 11, 0x82, Direction.DOWN)});
                 assertEquals(0x40, nextTilt.getInt(sidekickMovement));
                 assertEquals(0x20, tilt.getInt(sidekickMovement));
 
                 // The leader's latched bytes are untouched: separate cadence, no rescan.
-                assertEquals(3, nextTilt.getInt(manager));
+                assertEquals(0x22, nextTilt.getInt(manager));
                 assertEquals(0xFF, tilt.getInt(manager));
         }
 

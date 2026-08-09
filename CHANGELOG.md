@@ -3,6 +3,13 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K airborne landing-angle publication now preserves the prior
+  `Primary_Angle`/`Secondary_Angle` byte when `FindFloor` finds no collision
+  tile, instead of replacing it with the engine's synthetic empty-side angle
+  `3`. This restores the one-frame Wait before ledge Balance after asymmetric
+  landings, advancing AIZ's complete-run frontier from raw frame `16123` to
+  `22935` and LBZ's from `30588` to `30784` without moving the HCZ, MGZ, CNZ,
+  or ICZ frontiers backward.
 - Fix/Test: seamless S3K act reloads now advance `ChangeRingFrame` at their
   actual loop-tail owner. In-frame AIZ reloads continue into the ordinary
   level update instead of also advancing inside the shared reload executor;

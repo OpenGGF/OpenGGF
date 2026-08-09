@@ -69919,3 +69919,48 @@ guard.
   A clean pre-change CNZ rerun reproduced its nine-error raw `12024` baseline,
   confirming that result is unrelated rather than a regression from this fix.
   Ring comparison remains `RingCountMode.FORCE_ERROR`; no fixture changed.
+
+## 2026-08-09 - S3K airborne FindFloor preserves empty-side angle registers
+
+- Branch: `bugfix/s3k-traces` from `689a72a38`; a fresh `origin/develop` fetch
+  reported the branch `95` commits ahead and `0` behind, so there was nothing
+  to merge. The six pre-existing user edits remained unstaged. Validation used
+  JDK 21.0.12 and `Sonic and Knuckles & Sonic 3 (W) [!].gen`; no trace payload
+  changed.
+- Root cause: airborne `Sonic_CheckFloor` does not preload the shared
+  `Primary_Angle`/`Secondary_Angle` bytes. When `FindFloor` finds no solid tile
+  in either the current or extension tile, `sub_F264`/`sub_F30C` return a
+  distance without writing the angle register (sonic3k.asm:19213-19331). The
+  engine's missing-side `SensorResult` uses synthetic angle `3` and tile id
+  zero; the S3K landing publisher copied that synthetic byte over the retained
+  native register. At AIZ raw `16122`, Tails landed with a real `$FF` left
+  probe and an empty right probe. ROM retained the prior `$FF` right angle,
+  wrote Wait on raw `16123`, then grounded `Player_AnglePos` explicitly seeded
+  `3` and selected Balance on raw `16124`. The engine seeded `3` during the
+  landing and balanced one frame early. Landing publication now updates only
+  registers backed by a real collision tile and preserves the prior byte for
+  an empty result; grounded angle probing keeps its existing explicit `3`
+  behavior.
+- Focused test command: `mvn -Dmse=off
+  -Dtest=com.openggf.sprites.managers.TestPlayableSpriteMovement#mainPlayerLandingPublishesNativeTiltBytesWithoutSidekickRescan
+  test`. Result: pass; the test now covers both a real collision-tile write and
+  an empty extension preserving the prior angle byte.
+- AIZ frontier command: `mvn -Ptrace-replay -Dmse=off
+  -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+  -Dtrace.verification=all -Dtrace.frontierOnly=true
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay#replayMatchesTrace
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Result: the three raw-`16123` Tails animation/mapping/status errors are gone;
+  the first comparison error advances to raw `22935`, where three direct
+  Kosinski queue fields differ. Hardware replay reaches the next unconsumed
+  completion, edge `#57` at raw `22942`, advancing from edge `#50` at raw
+  `20376`.
+- Gameplay-order complete-run canaries used the same verification/frontier
+  flags. HCZ remains at one error beginning raw `25486`; MGZ remains fully
+  green across `39183` frames; CNZ remains at nine errors beginning raw
+  `12024`; ICZ remains at two errors beginning raw `15401`. LBZ advances from
+  two errors beginning raw `30588` to three newly exposed errors beginning raw
+  `30784`; its physical comparison remains green through hardware edge `#302`
+  at raw `36951`. No established frontier regressed. Ring comparison remains
+  enabled through `ToleranceConfig.DEFAULT` with
+  `RingCountMode.FORCE_ERROR`.

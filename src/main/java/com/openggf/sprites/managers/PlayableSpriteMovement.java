@@ -3459,13 +3459,23 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 * Primary_Angle/Secondary_Angle registers. Tails_DoLevelCollision reaches
 	 * Sonic_CheckFloor during a landing, so that landing's own pair is the
 	 * shared-register value copied by Tails_Control (S3K sonic3k.asm:
-	 * 26243-26244, 28901-29147). It must not inherit the leader's cached pair.
+	 * 26243-26244, 28901-29147). Unlike grounded Player_AnglePos, the airborne
+	 * Sonic_CheckFloor path does not preload those registers with {@code 3}.
+	 * A completely empty current/extension tile search therefore preserves the
+	 * register's prior byte (FindFloor sub_F264/sub_F30C, sonic3k.asm:19213-19331).
+	 * It must not inherit the leader's cached pair.
 	 */
 	private void captureTiltAnglesFromLandingProbes(SensorResult[] groundResults) {
 		SensorResult left = groundResults != null && groundResults.length > 0 ? groundResults[0] : null;
 		SensorResult right = groundResults != null && groundResults.length > 1 ? groundResults[1] : null;
-		latchedNextTilt = right == null ? 3 : right.angle() & 0xFF;
-		latchedTilt = left == null ? 3 : left.angle() & 0xFF;
+		latchedNextTilt = landingAngleRegisterValue(right, latchedNextTilt);
+		latchedTilt = landingAngleRegisterValue(left, latchedTilt);
+	}
+
+	private static int landingAngleRegisterValue(SensorResult result, int previousValue) {
+		return result == null || result.tileId() == 0
+				? previousValue
+				: result.angle() & 0xFF;
 	}
 
 	private static boolean usesDirectHitFloorLanding(int quadrant) {
