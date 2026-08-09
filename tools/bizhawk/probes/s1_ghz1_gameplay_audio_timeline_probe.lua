@@ -169,10 +169,13 @@ local function candidateObserved(soundClass)
 end
 
 local function consumeObserved()
-    if not activeTick then return end
     -- CycleSoundQueue already cleared every slot; PlaySoundID chooses at most one candidate.
     local soundId = readU8(0x09)
-    activeTick.selectedRequest = activeTick.cycledBySoundId[soundId]
+    local request = queueBuffer:consume(soundId)
+    if not activeTick then return end
+    assert(request == nil or request == activeTick.cycledBySoundId[soundId],
+        "PlaySoundID disagrees with CycleSoundQueue correlated request")
+    activeTick.selectedRequest = request
 end
 
 local function cycleObserved()
@@ -180,10 +183,10 @@ local function cycleObserved()
     -- the v1 semantic JSON fields used for cross-producer equality.
     local queues = {readU8(0x0A), readU8(0x0B), readU8(0x0C)}
     local retained = activeTick ~= nil
-    local queued = queueBuffer:cycle(queues, retained)
+    local queued = queueBuffer:cycle(queues, retained, readU8(0x09))
     if not retained then return end
     cycleDiagnostics = {priority = readU8(0x00), queues = queues, tick = diagnosticTick}
-    for _, request in ipairs(queued) do timeline:queue(request.slot, request.sound_id) end
+    for _, request in ipairs(queued) do timeline:queue(request.slot, request) end
     activeTick.cycledBySoundId = {}
     for _, request in ipairs(timeline:cycle(cycleDiagnostics.priority)) do
         -- Queue slots are cleared regardless of driver priority outcome. The dispatch/init hooks below

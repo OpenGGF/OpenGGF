@@ -181,32 +181,77 @@ end
 -- UpdateMusic invocation is in the retained semantic window. Keep that
 -- observation separate from the pre-window $81 baseline provenance.
 function Contract.newQueueBuffer()
-    local buffer = {slots = {}, baselineMusic = nil}
+    local buffer = {slots = {}, baselineMusic = nil, deferredQueue0 = nil, pendingCandidates = nil,
+        nextQueueOrdinal = 0}
 
     function buffer:write(slot, soundId, bk2Frame)
         local index = integer(slot, "queue slot")
         local frame = integer(bk2Frame, "BK2 frame")
         assert(index >= 0 and index <= 2, "S1 queue slot must be 0, 1, or 2")
         local id = Contract.u8(soundId)
-        self.slots[index] = id
+        self.nextQueueOrdinal = self.nextQueueOrdinal + 1
+        self.slots[index] = {slot = index, sound_id = id, queue_ordinal = self.nextQueueOrdinal}
+        -- A normal queue0 write supersedes CycleSoundQueue's internal requeue.
+        if index == 0 then self.deferredQueue0 = nil end
         if frame < 860 and index == 0 and id == 0x81 then self.baselineMusic = id end
     end
 
-    function buffer:cycle(observedSlots, retained)
+    function buffer:cycle(observedSlots, retained, soundIdBeforeCycle)
         assert(type(observedSlots) == "table", "CycleSoundQueue requires observed queue slots")
         assert(type(retained) == "boolean", "CycleSoundQueue retained flag must be boolean")
+        local soundId = Contract.u8(soundIdBeforeCycle)
+        -- A prior $71F22 internal requeue has no QueueSound callback. Associate
+        -- it only when the next cycle sees the same physical queue0 byte.
+        if self.deferredQueue0 then
+            if self.slots[0] == nil then
+                assert(Contract.u8(assert(observedSlots[1], "missing observed queue0")) == self.deferredQueue0.sound_id,
+                    "CycleSoundQueue deferred queue0 disagrees with observed RAM")
+                self.slots[0] = self.deferredQueue0
+            end
+            self.deferredQueue0 = nil
+        end
+        -- An unresolved candidate list means $71F2C rejected every input by
+        -- priority, so no PlaySoundID callback occurred and no requeue exists.
+        self.pendingCandidates = nil
         local candidates = {}
         for slot = 0, 2 do
             local observed = Contract.u8(assert(observedSlots[slot + 1], "missing observed queue slot"))
-            local queued = self.slots[slot]
-            assert(queued == nil or queued == observed,
+            local request = self.slots[slot]
+            assert(request == nil or request.sound_id == observed,
                 "queue write observation disagrees with CycleSoundQueue RAM")
-            if retained and queued and queued >= 0x81 then
-                candidates[#candidates + 1] = {slot = slot, sound_id = queued}
+            if request and request.sound_id >= 0x81 then
+                request.slot = slot
+                candidates[#candidates + 1] = request
             end
             self.slots[slot] = nil
         end
-        return candidates
+        if soundId ~= 0x80 then
+            -- $71F22 copies every later valid input to queue0, so its final
+            -- value is the last valid candidate observed in source order.
+            self.deferredQueue0 = candidates[#candidates]
+            return {}
+        end
+        self.pendingCandidates = candidates
+        return retained and candidates or {}
+    end
+
+    function buffer:consume(soundId)
+        local selectedSoundId = Contract.u8(soundId)
+        local candidates = self.pendingCandidates
+        self.pendingCandidates = nil
+        if not candidates then return nil end
+        -- Equal-priority duplicate IDs replace the prior selection at $71F3A,
+        -- so resolve the final source-order occurrence of the observed ID.
+        local selectedIndex = nil
+        for index = #candidates, 1, -1 do
+            if candidates[index].sound_id == selectedSoundId then selectedIndex = index; break end
+        end
+        if not selectedIndex then return nil end
+        -- After a source selection, each later input hits $71F22; queue0 keeps
+        -- only the last one for the following UpdateMusic tick.
+        self.deferredQueue0 = candidates[#candidates] ~= candidates[selectedIndex]
+            and candidates[#candidates] or nil
+        return candidates[selectedIndex]
     end
 
     function buffer:baselineMusicId() return self.baselineMusic end
@@ -244,7 +289,16 @@ function Contract.newTimeline(activeMusicId)
         assert(self.active, "queue write occurred outside a complete tick")
         local index = integer(slot, "queue slot")
         assert(index >= 0 and index <= 2, "S1 queue slot must be 0, 1, or 2")
-        self.queues[index] = {sound_id = Contract.u8(soundId), queued_tick = self.tick}
+        local request
+        if type(soundId) == "table" then
+            assert(type(soundId.sound_id) == "number", "correlated queued request requires a sound ID")
+            request = soundId
+            request.sound_id = Contract.u8(request.sound_id)
+            request.queued_tick = request.queued_tick or self.tick
+        else
+            request = {sound_id = Contract.u8(soundId), queued_tick = self.tick}
+        end
+        self.queues[index] = request
     end
 
     function timeline:consume(slot, priority)

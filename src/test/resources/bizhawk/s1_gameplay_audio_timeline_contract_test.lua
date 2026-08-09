@@ -214,13 +214,59 @@ local function runSelectedIdentityAndDormantQueueBoundaries()
 
     local queueBuffer = Contract.newQueueBuffer()
     queueBuffer:write(0, 0x81, 859)
-    equals(#queueBuffer:cycle({0x81, 0, 0}, false), 0,
+    equals(#queueBuffer:cycle({0x81, 0, 0}, false, 0x80), 0,
         "dormant pre-window cycle exposed semantic candidates")
     equals(queueBuffer:baselineMusicId(), 0x81, "dormant cycle lost frame-860 $81 provenance")
     queueBuffer:write(1, 0xA2, 860)
-    local retained = queueBuffer:cycle({0, 0xA2, 0}, true)
+    local retained = queueBuffer:cycle({0, 0xA2, 0}, true, 0x80)
     equals(#retained, 1, "first retained cycle did not discard dormant queue state")
     equals(retained[1].sound_id, 0xA2, "dormant queue observation poisoned first retained cycle")
+end
+
+local function runCycleSoundQueueDeferral()
+    -- FixBugs = 0 source: $71F12 clears every slot; once $71F2C selected
+    -- $A1 into v_sound_id, $71F22 requeues later $A2 into queue0. It must
+    -- remain the same correlated request at the next observed queue0 cycle.
+    local queueBuffer = Contract.newQueueBuffer()
+    queueBuffer:write(0, 0xA1, 860)
+    queueBuffer:write(1, 0xA2, 860)
+    local firstCycle = queueBuffer:cycle({0xA1, 0xA2, 0}, true, 0x80)
+    equals(#firstCycle, 2, "first CycleSoundQueue did not observe both queued requests")
+    equals(firstCycle[1].queue_ordinal, 1, "first queued request ordinal was not retained")
+    equals(firstCycle[2].queue_ordinal, 2, "later queued request ordinal was not retained")
+
+    local timeline = Contract.newTimeline(0x81)
+    timeline:beginTick(860, 0)
+    for _, request in ipairs(firstCycle) do timeline:queue(request.slot, request) end
+    local initialCandidates = timeline:cycle(4)
+    equals(initialCandidates[1], firstCycle[1], "timeline replaced the selected $A1 correlation")
+    equals(queueBuffer:consume(0xA1), firstCycle[1], "PlaySoundID did not resolve original $A1")
+    check(timeline:dispatch(initialCandidates[1], {
+        accepted = true, declared_roles = {"FM3"}, initialized_roles = {"FM3"}, headers = headers({FM3 = true})
+    }), "selected $A1 did not dispatch")
+    equals(timeline:closeTick(headers({FM3 = true})).requests[1].request_ordinal, 1,
+        "selected $A1 did not receive the first semantic request ordinal")
+
+    timeline:beginTick(861, 1)
+    local secondCycle = queueBuffer:cycle({0xA2, 0, 0}, true, 0x80)
+    equals(#secondCycle, 1, "next queue0 cycle did not expose deferred $A2")
+    equals(secondCycle[1], firstCycle[2], "deferred $A2 was recreated instead of correlated")
+    equals(secondCycle[1].queue_ordinal, 2, "deferred $A2 lost its original queue ordinal")
+    timeline:queue(secondCycle[1].slot, secondCycle[1])
+    local deferredCandidate = timeline:cycle(4)[1]
+    equals(queueBuffer:consume(0xA2), firstCycle[2], "next PlaySoundID lost deferred $A2 identity")
+    check(timeline:dispatch(deferredCandidate, {
+        accepted = true, declared_roles = {"FM4"}, initialized_roles = {"FM4"}, headers = headers({FM4 = true})
+    }), "deferred $A2 did not dispatch")
+    equals(timeline:closeTick(headers({FM4 = true})).requests[1].request_ordinal, 2,
+        "deferred $A2 did not receive the next semantic request ordinal")
+
+    local rejected = Contract.newQueueBuffer()
+    rejected:write(0, 0xA3, 862)
+    equals(#rejected:cycle({0xA3, 0, 0}, true, 0x80), 1,
+        "priority-rejected candidate was not initially observed")
+    equals(#rejected:cycle({0, 0, 0}, true, 0x80), 0,
+        "priority-rejected candidate leaked into a later cycle without PlaySoundID")
 end
 
 runQueueAndContention()
@@ -228,4 +274,5 @@ runLifecycleAndDiagnostics()
 runSourceDerivedDispatchBoundaries()
 runPlaySegaLifecycle()
 runSelectedIdentityAndDormantQueueBoundaries()
+runCycleSoundQueueDeferral()
 print("S1_GAMEPLAY_AUDIO_TIMELINE_CONTRACT_OK")

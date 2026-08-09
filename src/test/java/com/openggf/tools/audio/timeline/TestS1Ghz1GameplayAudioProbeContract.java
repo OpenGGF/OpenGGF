@@ -35,6 +35,9 @@ class TestS1Ghz1GameplayAudioProbeContract {
         assertTrue(source.contains("18"), "probe must read all music, normal, and special ROM track headers");
         assertTrue(source.contains("newQueueBuffer") && source.contains("baselineMusicId"),
                 "probe must separate dormant queue-cycle cleanup from retained baseline provenance");
+        assertTrue(source.contains("queueBuffer:consume")
+                        && source.contains("cycle(queues, retained, readU8(0x09))"),
+                "probe must give the queue contract pre-cycle v_sound_id and resolve PlaySoundID");
         assertTrue(source.contains("assertSelectedIdentity") && source.contains("selected_sound_id"),
                 "probe must retain and assert the original selected queue identity through initialization");
         int normalInit = source.indexOf("local function normalRoleInitialized()");
