@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K MGZ's sinking-mud handoff now preserves the ROM's prior
+  adjacent-mud depth on the jump-off frame, when `Status_OnObj` is still set
+  at the mud routine entry. The focused MGZ replay advances past the raw
+  frame `20130` landing/camera/Tails cluster: release-blocking errors fall
+  from 12 to 9 and the first mismatch is now Tails' CPU respawn counter at
+  raw frame `23908`. No trace payloads changed.
 - Fix/Test: S3K MGZ now follows the native miniboss/results owner ordering:
   Tails consumes its own landing collision angles, the retained title owner
   keeps the ROM's single carried-results retirement dispatch, and the native

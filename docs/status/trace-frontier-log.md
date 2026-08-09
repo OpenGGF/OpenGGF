@@ -66103,3 +66103,47 @@ to synthesize a POST phase on a VBLANK-only row.
   followed by its later queue boundary; AIZ's established focused failures
   remain unchanged from baseline. CNZ, ICZ, and LBZ have not been advanced by
   this fix.
+
+## 2026-08-09 - S3K MGZ sinking-mud handoff frontier
+
+- Worktree: `bugfix/s3k-traces` at `fb592e7b4` before this fix; unrelated edits
+  in `.idea/vcs.xml`, `docs/status/rewind-round-trip-gaps.md`,
+  `src/main/java/com/openggf/level/objects/ObjectPlacementController.java`,
+  and `src/main/java/com/openggf/level/rings/RingManager.java` remained
+  unstaged. Validation used JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen`; no trace payloads changed.
+- Frontier command: `env JAVA_HOME=$JDK21_HOME PATH=$JDK21_HOME/bin:$PATH
+  mvn -q -Dmse=off -Dsurefire.forkCount=1 -DforkCount=1
+  -DreuseForks=true -Dsurefire.argLine='-Xmx3g'
+  -Dtest=TestS3kMgzTraceReplay -Dtrace.verification=all
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Result: 1 test, 1 failure, 0 errors, 0 skips; release-blocking errors
+  fell from 12 to 9. The first error advanced from raw frame `20130`, field
+  `y` (`0x051B` expected, `0x051C` actual), to raw frame `23908`, field
+  `tails_cpu_respawn_counter` (`0x0000` expected, `0x0001` actual), spanning
+  raw frames `23908`-`24203`. The remaining queue errors begin at raw frame
+  `35183`.
+- Root cause: `Obj_SinkingMud` runs before the player slot and therefore
+  copies an adjacent mud's depth on the jump-off frame while the ROM's
+  routine-entry `Status_OnObj` is still set. The engine had consulted only
+  the post-movement riding state, so the destination mud began its `+2`
+  recovery one frame early. Cross-mud depth transfer now also consumes the
+  source mud's prior standing-contact state, a semantic pre-update status
+  rather than a trace, frame, route, or zone condition.
+- Regression command: `env JAVA_HOME=$JDK21_HOME PATH=$JDK21_HOME/bin:$PATH
+  mvn -q -Dmse=off -Dsurefire.forkCount=1 -DforkCount=1
+  -DreuseForks=true -Dsurefire.argLine='-Xmx3g'
+  -Dtest=TestS3kHczCompleteRunTraceReplay,TestS3kMgzCompleteRunTraceReplay,
+  TestS3kLbzCompleteRunTraceReplay -Dtrace.verification=all
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Result: 4 tests, 2 failures, 0 errors, 0 skips. HCZ's two tests pass.
+  The separate MGZ complete-run fixture remains at 31 errors beginning at
+  raw frame `16513`, field `player_animation_id` (`0x0000` expected,
+  `0x0005` actual); the separate LBZ complete-run fixture remains at 14
+  errors beginning at raw frame `30588`, field `tails_animation_id`
+  (`0x0005` expected, `0x0006` actual). Isolated reruns reproduce both
+  results. Ring comparison remains enabled through `ToleranceConfig.DEFAULT`
+  with `RingCountMode.FORCE_ERROR`.
+- Route position: HCZ remains green through its complete-run trace. MGZ's
+  next target is the independent Tails CPU respawn-counter mismatch at raw
+  frame `23908`; CNZ, ICZ, and LBZ have not been advanced by this fix.
