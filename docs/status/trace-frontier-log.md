@@ -71121,3 +71121,42 @@ landable change, which I implemented directly.
 - Route position: standalone AIZ now has no failing focused assertions; its
   raw-`16067` intra-frame Kosinski queue sampling mismatch remains the sole AIZ
   trace blocker. Complete-run AIZ remains green.
+
+## 2026-08-10 — standalone AIZ unobserved direct-child frontier
+
+- Context: `bugfix/s3k-traces` at `786e0c993`; the six protected user edits
+  remained unstaged. Validation used JDK 21.0.12 and the available locked-on
+  S3K ROM. No trace payload or gameplay state changed. Ring comparison remains
+  error-level through `ToleranceConfig.DEFAULT` /
+  `RingCountMode.FORCE_ERROR`.
+- Root cause: the native recorder samples physical queue RAM only once after a
+  whole emulated frame. At AIZ raw `16067`, the ROM published direct child
+  `#54` after that sample and retired it before the next frame-end heartbeat;
+  both recorded direct-queue rows are therefore canonically idle even though
+  `hardware_timing.jsonl` records the exact child completion at raw `16068`.
+  This is the short-lived-child observability gap documented in
+  `docs/architecture/designs/2026-07-28-s3k-kos-decompression-queue.md`.
+  Comparison now projects out only that torn heartbeat when the row is a
+  structurally held tail, the pre-existing module parent is unchanged across
+  the following lag row, both native direct heartbeats are idle, and the
+  engine's real pending direct job exactly matches the next-row completion by
+  kind, ordinal, submission fingerprint, source, and destination. The timing
+  port still only releases prepared production work; the projection neither
+  creates nor delays a job and never reads gameplay state.
+- Focused command: `mvn -q -Dmse=off
+  -Dtest='com.openggf.trace.TestLoadQueueTraceComparison,com.openggf.tests.trace.TestHardwareTimingAuthorityGuard'
+  test`. Result: pass. The queue test now covers the idle/idle frame-end shape
+  around an exact next-row direct completion.
+- Frontier command: `mvn -q -Dmse=off -Dsurefire.forkCount=1
+  -DreuseForks=true -Dsurefire.argLine=-Xmx3g -Dtrace.frontierOnly=true
+  -Dtrace.contextRadius=10
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace'
+  test`. Result: the raw-`16067` three-field direct-queue cluster is removed.
+  The standalone AIZ report advances to 13 errors and 0 warnings beginning at
+  raw `19721` (`player_animation_id`, expected `$13`, actual Wait `$05`); the
+  next unconsumed timing completion is direct child `#61` at raw `19725`.
+- Regression command selected complete-run AIZ, HCZ, MGZ, CNZ, ICZ, and LBZ in
+  one isolated-fork sweep with the same ROM and frontier profile. Result: all
+  six passed. Route position remains green through LBZ; standalone AIZ raw
+  `19721` is the next gameplay-order target.

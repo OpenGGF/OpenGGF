@@ -18,6 +18,8 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -247,6 +249,29 @@ class TestLoadQueueTraceComparison {
 
         assertTrue(comparedDirect.busy());
         assertFalse(comparedDirect.prepared());
+    }
+
+    @Test
+    void identifiesDirectChildMissedBetweenIdleFrameEndHeartbeats(
+            @TempDir Path temp) throws Exception {
+        TraceMetadata metadata = s3kQueueMetadata(temp, 3);
+        TraceData trace = new TraceData(metadata, List.of(
+                TraceFrame.executionTestFrame(0, 100, 9, 0),
+                TraceFrame.executionTestFrame(1, 101, 10, 0),
+                TraceFrame.executionTestFrame(2, 102, 10, 1)),
+                Map.of(
+                        0, List.of(directIdle(0), moduleQueue(0)),
+                        1, List.of(directIdle(1), moduleQueue(1)),
+                        2, List.of(directIdle(2), moduleQueue(2))),
+                directCompletionSchedule(2));
+
+        HardwareCompletionEdge edge =
+                trace.unobservedDirectChildForComparisonFrame(1);
+
+        assertNotNull(edge);
+        assertEquals(2, edge.rawFrame());
+        assertEquals(HardwareWorkKind.KOS_DECOMPRESSION_QUEUE, edge.kind());
+        assertNull(trace.unobservedDirectChildForComparisonFrame(0));
     }
 
     private static TraceMetadata s3kQueueMetadata(Path temp, int frameCount)

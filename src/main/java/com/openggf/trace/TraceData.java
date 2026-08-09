@@ -5,6 +5,7 @@ import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.trace.timing.HardwareTimingSchedule;
 import com.openggf.trace.timing.HardwareTimingStreamLoader;
+import com.openggf.trace.timing.HardwareCompletionEdge;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -37,6 +38,7 @@ public class TraceData {
     private final List<Integer> zoneActStateFramesAscending;
     private final Map<Integer, TraceEvent.ZoneActState> zoneActStatesByFrame;
     private final Map<Integer, List<TraceEvent.LoadQueueState>> comparisonLoadQueueStatesByFrame;
+    private final Map<Integer, HardwareCompletionEdge> unobservedDirectChildrenByFrame;
     private List<DynamicArtTransfer.Descriptor> terminalDynamicArtLedger = List.of();
 
     // Package-private so same-package test fixtures in src/test can
@@ -53,7 +55,11 @@ public class TraceData {
         this.zoneActStatesByFrame = new HashMap<>();
         this.zoneActStateFramesAscending = new ArrayList<>();
         this.observedEventTypes = buildLatestEventIndexes();
-        this.comparisonLoadQueueStatesByFrame = buildComparisonLoadQueueStates();
+        LoadQueueComparisonNormalization loadQueueNormalization =
+                buildComparisonLoadQueueStates();
+        this.comparisonLoadQueueStatesByFrame = loadQueueNormalization.states();
+        this.unobservedDirectChildrenByFrame =
+                loadQueueNormalization.unobservedDirectChildren();
     }
 
     public static TraceData load(Path traceDirectory) throws IOException {
@@ -260,13 +266,20 @@ public class TraceData {
                 frame, loadQueueStatesForFrame(frame));
     }
 
-    private Map<Integer, List<TraceEvent.LoadQueueState>>
+    public HardwareCompletionEdge unobservedDirectChildForComparisonFrame(
+            int frame) {
+        return unobservedDirectChildrenByFrame.get(frame);
+    }
+
+    private LoadQueueComparisonNormalization
             buildComparisonLoadQueueStates() {
         if (!"s3k".equals(metadata.game()) || frames.size() < 2
                 || hardwareTimingSchedule == null) {
-            return Map.of();
+            return LoadQueueComparisonNormalization.empty();
         }
         Map<Integer, List<TraceEvent.LoadQueueState>> normalized = new HashMap<>();
+        Map<Integer, HardwareCompletionEdge> unobservedDirectChildren =
+                new HashMap<>();
         boolean moduleBatchActive = false;
         boolean moduleBatchAdmittedOnHeldTail = false;
         for (int index = 0; index < frames.size() - 1; index++) {
@@ -309,16 +322,48 @@ public class TraceData {
                 }
                 normalized.put(currentFrame.frame(), List.copyOf(comparison));
             }
+
+            List<HardwareCompletionEdge> nextDirectCompletions =
+                    directCompletionEdges(nextFrame.frame());
+            if (heldTail && moduleBatchActive
+                    && !moduleBatchAdmittedOnHeldTail
+                    && isIdle(currentDirect)
+                    && isIdle(nextDirect)
+                    && sameQueueStateIgnoringFrame(currentModule, nextModule)
+                    && nextDirectCompletions.size() == 1) {
+                unobservedDirectChildren.put(
+                        currentFrame.frame(), nextDirectCompletions.getFirst());
+            }
         }
-        return Map.copyOf(normalized);
+        return new LoadQueueComparisonNormalization(
+                normalized, unobservedDirectChildren);
     }
 
     private boolean hasDirectCompletionEdge(int rawFrame) {
+        return !directCompletionEdges(rawFrame).isEmpty();
+    }
+
+    private List<HardwareCompletionEdge> directCompletionEdges(int rawFrame) {
         return hardwareTimingSchedule.edgesAt(
                         rawFrame, HardwareServiceBoundary.PRE_MAIN_LOOP)
                 .stream()
-                .anyMatch(edge -> edge.kind()
-                        == HardwareWorkKind.KOS_DECOMPRESSION_QUEUE);
+                .filter(edge -> edge.kind()
+                        == HardwareWorkKind.KOS_DECOMPRESSION_QUEUE)
+                .toList();
+    }
+
+    private record LoadQueueComparisonNormalization(
+            Map<Integer, List<TraceEvent.LoadQueueState>> states,
+            Map<Integer, HardwareCompletionEdge> unobservedDirectChildren) {
+
+        private LoadQueueComparisonNormalization {
+            states = Map.copyOf(states);
+            unobservedDirectChildren = Map.copyOf(unobservedDirectChildren);
+        }
+
+        private static LoadQueueComparisonNormalization empty() {
+            return new LoadQueueComparisonNormalization(Map.of(), Map.of());
+        }
     }
 
     private static boolean isHeldTail(TraceFrame current, TraceFrame next) {

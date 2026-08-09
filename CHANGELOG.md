@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K queue comparison now recognizes a production-submitted direct
+  Kosinski child that the native frame-end heartbeat cannot observe because it
+  is published after one sample and retires before the next. The projection is
+  comparison-only and requires an exact next-row completion match by kind,
+  ordinal, fingerprint, source, and destination. Standalone AIZ advances from
+  raw frame `16067` to `19721`; all complete runs through LBZ remain green.
 - Test: standalone AIZ focused trace prefixes now use the same v5 recorded
   hardware-readiness admission, production row boundaries, bootstrap, and
   frame-counter alignment as the full replay. All 15 focused AIZ assertions

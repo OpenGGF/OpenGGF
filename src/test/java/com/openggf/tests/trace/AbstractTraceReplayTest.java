@@ -36,6 +36,7 @@ import com.openggf.trace.EngineSidekickCpuState;
 import com.openggf.trace.EngineNearbyObject;
 import com.openggf.trace.EngineNearbyObjectFormatter;
 import com.openggf.trace.FrameComparison;
+import com.openggf.trace.LoadQueueComparisonProjection;
 import com.openggf.trace.ToleranceConfig;
 import com.openggf.trace.TouchResponseDebugHitFormatter;
 import com.openggf.trace.TraceBinder;
@@ -927,9 +928,15 @@ public abstract class AbstractTraceReplayTest {
     private static void compareLoadQueuesIfAdvertised(
             TraceData trace, TraceBinder binder, int frame) {
         if (trace.metadata().hasPerFrameLoadQueueState()) {
-            binder.compareLoadQueues(frame,
-                    trace.loadQueueStatesForComparisonFrame(frame),
-                    GameServices.captureQueueDiagnostics());
+            LoadQueueComparisonProjection projection =
+                    LoadQueueComparisonProjection.project(
+                            trace,
+                            frame,
+                            trace.loadQueueStatesForComparisonFrame(frame),
+                            GameServices.captureQueueDiagnostics(),
+                            GameServices.hardwareTiming().capture());
+            binder.compareLoadQueues(
+                    frame, projection.expected(), projection.actual());
         }
     }
 
