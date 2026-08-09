@@ -158,8 +158,12 @@ public final class Sonic1CreditsDemoData {
     public static final int LZ_LAMP_WATER_HEIGHT = 0x0308;
     /** LZ demo water routine at lamppost. ROM: EndDemo_LampVar dc.b 1 (v_wtr_routine) */
     public static final int LZ_LAMP_WATER_ROUTINE = 1;
-    /** LZ credits vblank phase entering the wind tunnel, preserving the REV01 y-bump cadence. */
-    public static final int LZ_LAMP_VBLA_COUNTER = 52;
+    // There is deliberately no LZ vblank-phase constant here. EndDemo_LampVar
+    // (s1disasm/sonic.asm:3879) has no v_vblank_count field, and the ROM's
+    // v_vblank_count is only ever written by VBlank_Exit's addq.l #1
+    // (s1disasm/sonic.asm:685) -- it free-runs from console reset and is never
+    // reset on level load. Any constant here would be measured from one
+    // recording, not read from the ROM.
 
     /** Text display duration (frames). ROM: move.w #120,(v_generictimer).w */
     public static final int TEXT_DISPLAY_FRAMES = 120;
