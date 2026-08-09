@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: YM2612 synthesis now keeps the chip's register-slot permutation at the
+  register boundary instead of applying it a second time in the FM algorithm
+  graph. Envelope reset phase, decay-to-sustain overshoot, and discrete-chip
+  carrier quantization also match Genesis Plus GX, restoring the intended
+  timbre of asymmetric voices such as Sonic 1's badnik explosion.
 - Fix: Sonic 1 GHZ music playback now matches the shipped `FixBugs=0` audio
   driver for a complete 14,690-tick reference-controlled cycle, including
   initialization writes, 68k voice upload/TL order, PSG rest and maximum-note

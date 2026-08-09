@@ -280,11 +280,9 @@ public class Ym2612Chip {
     private static final double YM2612_FREQUENCY = 1.0;
     // Operator slot order matches ym2612.c (S0,S1,S2,S3) mapping to ops[0,2,1,3]
     private static final int[] OP_TO_SLOT = { 0, 2, 1, 3 };
-    // Inverse mapping: slot -> op index (S0,S1,S2,S3 -> ops[0,2,1,3])
-    private static final int[] SLOT_TO_OP = { 0, 2, 1, 3 };
-    // CH3 special mode: A8/A9/AA (and AC/AD/AE) map to ops in hardware order.
-    // A8/AC -> SLOT3 (op index 1), A9/AD -> SLOT1 (op index 0), AA/AE -> SLOT2 (op index 2).
-    private static final int[] CH3_SPECIAL_OP_MAP = { 1, 0, 2 };
+    // CH3 special mode: GPGX maps A8/A9/AA to SLOT3/SLOT1/SLOT2.
+    // ops[] is in logical SLOT1/SLOT2/SLOT3/SLOT4 order.
+    private static final int[] CH3_SPECIAL_OP_MAP = { 2, 0, 1 };
 
     // Debug tracing: set to true to log key on/off envelope state.
     private static final boolean TRACE_KEY_EVENTS = false;
@@ -602,7 +600,7 @@ public class Ym2612Chip {
         lfoPm = 0;
 
         // Reset GPGX EG counter and timer
-        egCnt = 1;
+        egCnt = 0;
         egTimer = 0;
 
         dacEnabled = false;
@@ -976,8 +974,7 @@ public class Ym2612Chip {
     }
 
     private void setOpMaskSlot(int algo, int slot) {
-        int op = SLOT_TO_OP[slot & 3];
-        opMask[algo][op] = -32;
+        opMask[algo][slot & 3] = -32;
     }
 
     private void writeYm(int addr, int val) {
@@ -1020,13 +1017,13 @@ public class Ym2612Chip {
                 else
                     keyOff(ch, 0);
                 if ((mask & 2) != 0)
-                    keyOn(ch, 2);
-                else
-                    keyOff(ch, 2);
-                if ((mask & 4) != 0)
                     keyOn(ch, 1);
                 else
                     keyOff(ch, 1);
+                if ((mask & 4) != 0)
+                    keyOn(ch, 2);
+                else
+                    keyOff(ch, 2);
                 if ((mask & 8) != 0)
                     keyOn(ch, 3);
                 else
@@ -1178,30 +1175,36 @@ public class Ym2612Chip {
                 ch.ops[0].fInc = -1;
                 break;
             case 0xA8:
-                if (nch == 2) {
+                if ((addr & 0x100) == 0) {
                     int regIdx = addr & 3;
                     if (regIdx < 3) {
+                        Channel special = channels[2];
                         int opIdx = CH3_SPECIAL_OP_MAP[regIdx];
-                        ch.slotFnum[opIdx] = (ch.slotFnum[opIdx] & 0x700) | (val & 0xFF);
-                        ch.slotKCode[opIdx] = (ch.slotBlock[opIdx] << 2) | FKEY_TAB[ch.slotFnum[opIdx] >> 7];
-                        ch.slotFc[opIdx] = (ch.slotFnum[opIdx] << ch.slotBlock[opIdx]) >> 1;
-                        ch.slotBlockFnum[opIdx] = (ch.slotBlock[opIdx] << 11) | ch.slotFnum[opIdx];
+                        special.slotFnum[opIdx] = (special.slotFnum[opIdx] & 0x700) | (val & 0xFF);
+                        special.slotKCode[opIdx] = (special.slotBlock[opIdx] << 2)
+                                | FKEY_TAB[special.slotFnum[opIdx] >> 7];
+                        special.slotFc[opIdx] = (special.slotFnum[opIdx] << special.slotBlock[opIdx]) >> 1;
+                        special.slotBlockFnum[opIdx] = (special.slotBlock[opIdx] << 11)
+                                | special.slotFnum[opIdx];
                     }
-                    ch.ops[0].fInc = -1;
+                    channels[2].ops[0].fInc = -1;
                 }
                 break;
             case 0xAC:
-                if (nch == 2) {
+                if ((addr & 0x100) == 0) {
                     int regIdx = addr & 3;
                     if (regIdx < 3) {
+                        Channel special = channels[2];
                         int opIdx = CH3_SPECIAL_OP_MAP[regIdx];
-                        ch.slotFnum[opIdx] = (ch.slotFnum[opIdx] & 0xFF) | ((val & 0x07) << 8);
-                        ch.slotBlock[opIdx] = (val >> 3) & 7;
-                        ch.slotKCode[opIdx] = (ch.slotBlock[opIdx] << 2) | FKEY_TAB[ch.slotFnum[opIdx] >> 7];
-                        ch.slotFc[opIdx] = (ch.slotFnum[opIdx] << ch.slotBlock[opIdx]) >> 1;
-                        ch.slotBlockFnum[opIdx] = (ch.slotBlock[opIdx] << 11) | ch.slotFnum[opIdx];
+                        special.slotFnum[opIdx] = (special.slotFnum[opIdx] & 0xFF) | ((val & 0x07) << 8);
+                        special.slotBlock[opIdx] = (val >> 3) & 7;
+                        special.slotKCode[opIdx] = (special.slotBlock[opIdx] << 2)
+                                | FKEY_TAB[special.slotFnum[opIdx] >> 7];
+                        special.slotFc[opIdx] = (special.slotFnum[opIdx] << special.slotBlock[opIdx]) >> 1;
+                        special.slotBlockFnum[opIdx] = (special.slotBlock[opIdx] << 11)
+                                | special.slotFnum[opIdx];
                     }
-                    ch.ops[0].fInc = -1;
+                    channels[2].ops[0].fInc = -1;
                 }
                 break;
             case 0xB0:
@@ -1410,10 +1413,8 @@ public class Ym2612Chip {
                     }
                     int sustainLevel = SL_VOL_TAB[sl.slReg];
                     if (sl.volume >= sustainLevel) {
-                        sl.volume = sustainLevel;
                         sl.curEnv = EnvState.DECAY2;
                         sl.eCnt = sl.d1l; // Keep legacy eCnt in sync
-                        updateVolOut(sl);
                     }
                 }
                 break;
@@ -1624,10 +1625,11 @@ public class Ym2612Chip {
             calcFIncChannel(ch);
 
         // GET_CURRENT_PHASE - capture fCnt BEFORE incrementing (like libvgm)
-        // Slot order matches ym2612.c: S0=op0, S1=op2, S2=op1, S3=op3
+        // Algorithm order matches ym2612.c: SLOT1, SLOT2, SLOT3, SLOT4.
+        // Register order is SLOT1, SLOT3, SLOT2, SLOT4, hence ops[1]/ops[2].
         in0 = ch.ops[0].fCnt;
-        in1 = ch.ops[2].fCnt;
-        in2 = ch.ops[1].fCnt;
+        in1 = ch.ops[1].fCnt;
+        in2 = ch.ops[2].fCnt;
         in3 = ch.ops[3].fCnt;
 
         // UPDATE_PHASE - increment fCnt AFTER capturing
@@ -1769,12 +1771,12 @@ public class Ym2612Chip {
     private void doAlgo(Channel ch) {
         // Phase values (in0..in3) are already set by renderChannel's GET_CURRENT_PHASE
         // step.
-        // in0..in3 are in slot order S0,S1,S2,S3. Our GET_CURRENT_ENV stores:
-        // en0=S0, en1=S2, en2=S1, en3=S3 (because ops[] is [S0,S2,S1,S3]).
-        // Reorder here to match libvgm's S0,S1,S2,S3 expectations.
+        // in0..in3 and env0..env3 are in algorithm order SLOT1..SLOT4.
+        // ops[] uses that same logical order; writeSlot() handles the YM register-order
+        // permutation (SLOT1, SLOT3, SLOT2, SLOT4) at the bus boundary.
         final int env0 = en0;
-        final int env1 = en2;
-        final int env2 = en1;
+        final int env1 = en1;
+        final int env2 = en2;
         final int env3 = en3;
 
         // GPGX-style: Modulation is now passed separately to opCalc() instead of
@@ -1784,12 +1786,11 @@ public class Ym2612Chip {
         // This causes feedback buffer to naturally decay when notes fade out.
         boolean s0Quiet = env0 >= ENV_QUIET;
 
-        // GPGX mask indices follow SLOT numbers: SLOT1=mask[0], SLOT2=mask[1], SLOT3=mask[2], SLOT4=mask[3]
-        // Our operators: M1=SLOT1 (in0), C1=SLOT2 (in1), M2=SLOT3 (in2), C2=SLOT4 (in3)
+        // GPGX mask indices follow algorithm slot order.
         int[] mask = opMask[ch.algo];
         int maskM1 = mask[0];  // SLOT1
-        int maskC1 = mask[2];  // SLOT3 - for in1/env1
-        int maskM2 = mask[1];  // SLOT2 - for in2/env2
+        int maskC1 = mask[1];  // SLOT2
+        int maskM2 = mask[2];  // SLOT3
         int maskC2 = mask[3];  // SLOT4
 
         // GPGX: feedback uses opCalc1() which applies pm directly (no >> 1 shift)
