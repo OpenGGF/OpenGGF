@@ -66432,3 +66432,31 @@ to synthesize a POST phase on a VBLANK-only row.
 - Regression/canary status: the focused AIZ replay, HCZ complete-run traces,
   and MGZ focused and complete-run traces must be rerun after this commit;
   CNZ remains next in gameplay order, with ICZ and LBZ pending.
+
+## 2026-08-09 - S3K AIZ defeat-flow re-home regression
+
+- Worktree: `bugfix/s3k-traces` at `6c165c976`; the attempted generic owner
+  re-home was tested before retaining the fix. Unrelated edits in
+  `.idea/vcs.xml`, `docs/status/rewind-round-trip-gaps.md`,
+  `src/main/java/com/openggf/level/objects/ObjectPlacementController.java`,
+  and `src/main/java/com/openggf/level/rings/RingManager.java` remained
+  unstaged. Validation used JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen`; no trace payloads changed.
+- Regression command: the isolated
+  `TestS3kAizTraceReplay#replayMatchesTrace` replay with
+  `-Dtrace.verification=all` and the S3K ROM. Result: `12` errors, first
+  error raw frame `8218`, `queue.s3k_kos_direct.busy` (`false` expected,
+  `true` actual). The complete-run frontier-only probe still reached its
+  raw-frame `11999` camera/title boundary, but that advance is rejected
+  because the standard AIZ trace regressed.
+- Root cause: native `Obj_AIZMiniboss` rewrites the defeated object's own SST
+  entry to `Obj_EndSignControl` (sonic3k.asm:137793-137806), whereas the
+  engine's separate flow object was re-homed to the lowest free slot. In the
+  standard trace that lowest slot belongs to `Obj_LevelResults`; consuming it
+  shifted the results owner to slot `12` and submitted its art early. The
+  temporary re-home was removed; the next fix must model the existing owner
+  slot rather than select a generic first-free slot. Ring comparison remains
+  enabled through `ToleranceConfig.DEFAULT` with `RingCountMode.FORCE_ERROR`.
+- Route position: AIZ's retained frontier is the pre-attempt state; HCZ and
+  MGZ committed canaries remain the regression targets, and CNZ remains next
+  only after all AIZ traces are green.
