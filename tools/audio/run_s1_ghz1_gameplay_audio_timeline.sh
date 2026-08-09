@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/bash -p
 # Deterministic two-producer capture for the pinned S1 GHZ1 gameplay-audio timeline.
 set -euo pipefail
 
@@ -39,12 +39,15 @@ for replacement in OGGF_AUDIO_TIMELINE_JAVA_BIN OGGF_AUDIO_TIMELINE_MONO_BIN \
 done
 for replacement in OGGF_BIZHAWK_PROBE_RUNTIME OGGF_BIZHAWK_LIB OGGF_WORKDIR OGGF_TRACE_OUTPUT_DIR \
 	OGGF_NO_LUACONSOLE OGGF_BIZHAWK_SOFTGL BIZHAWK_ALLOW_SLOW_LUA JAVA_TOOL_OPTIONS JDK_JAVA_OPTIONS \
-	MAVEN_OPTS MAVEN_ARGS JAVA_HOME; do
+	_JAVA_OPTIONS MAVEN_OPTS MAVEN_ARGS BASH_ENV ENV MONO_ENV_OPTIONS MONO_PATH CLASSWORLDS_CONF; do
 	if [[ -v "$replacement" ]]; then
 		fail "unsupported producer/tool replacement environment variable: $replacement"
 	fi
 done
+unset JAVA_HOME LD_PRELOAD LD_LIBRARY_PATH
 PATH=/usr/bin:/bin
+SAFE_ENV=(/usr/bin/env -i PATH=/usr/bin:/bin HOME="${HOME:-}" USER="${USER:-}" DISPLAY="${DISPLAY:-}" \
+	XAUTHORITY="${XAUTHORITY:-}" XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-}" DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS:-}")
 
 while [ "$#" -gt 0 ]; do
 	case "$1" in
@@ -74,14 +77,14 @@ MONO_SYSTEM_BIN=/usr/bin/mono
 for trusted in "$MAVEN_BIN" "$JAVA_BIN" "$CMP_BIN" "$MONO_SYSTEM_BIN" /usr/bin/realpath; do [ -x "$trusted" ] || fail "trusted system executable is missing: $trusted"; done
 
 CLASSPATH_FILE="$REPO/target/s1-gameplay-audio-timeline.classpath"
-if ! "$MAVEN_BIN" -q -Dmse=off -Pci -DskipTests compile dependency:build-classpath \
+if ! "${SAFE_ENV[@]}" "$MAVEN_BIN" -q -Dmse=off -Pci -DskipTests compile dependency:build-classpath \
 	-Dmdep.outputFile="$CLASSPATH_FILE" -f "$REPO/pom.xml"; then
 	fail "Maven could not compile the trusted timeline tool"
 fi
 [ -s "$CLASSPATH_FILE" ] || fail "Maven did not produce the timeline tool classpath"
 JAVA_TOOL=("$JAVA_BIN" -cp "$REPO/target/classes:$(<"$CLASSPATH_FILE")" com.openggf.tools.audio.timeline.S1GameplayAudioTimelineTool)
 
-VALIDATED=$("${JAVA_TOOL[@]}" validate --repo "$REPO" --rom "$ROM_PATH" --movie "$MOVIE" \
+VALIDATED=$("${SAFE_ENV[@]}" "${JAVA_TOOL[@]}" validate --repo "$REPO" --rom "$ROM_PATH" --movie "$MOVIE" \
 	--bizhawk-home "$BIZHAWK_DIR" --output-root "$OUTPUT_ROOT") || fail "pinned input validation failed"
 # The Java response is generated only after all pinned identities pass; split only fixed key=value records.
 declare -A validated=()
@@ -110,16 +113,16 @@ JSON_REPORT="$RUN_DIR/parity-report.json"
 capture_reference() {
 	local output=$1 log=$2 staging
 	staging=$(/usr/bin/mktemp "$RUN_DIR/reference.XXXXXXXX.staging") || return 1
-	if ! BIZHAWK_HOME="$BIZHAWK_DIR" MONO_BIN="$MONO_SYSTEM_BIN" OGGF_OUT="$staging" "$LAUNCHER" "$PROBE" "$MOVIE" "$ROM_PATH" >"$log" 2>&1; then
-		"${JAVA_TOOL[@]}" publish-reference --repo "$REPO" --run-root "$RUN_DIR" --staging "$staging" --output "$output" >/dev/null 2>&1 || true
+	if ! "${SAFE_ENV[@]}" BIZHAWK_HOME="$BIZHAWK_DIR" MONO_BIN="$MONO_SYSTEM_BIN" OGGF_OUT="$staging" "$LAUNCHER" "$PROBE" "$MOVIE" "$ROM_PATH" >"$log" 2>&1; then
+		"${SAFE_ENV[@]}" "${JAVA_TOOL[@]}" publish-reference --repo "$REPO" --run-root "$RUN_DIR" --staging "$staging" --output "$output" >/dev/null 2>&1 || true
 		return 1
 	fi
-	"${JAVA_TOOL[@]}" publish-reference --repo "$REPO" --run-root "$RUN_DIR" --staging "$staging" --output "$output"
+	"${SAFE_ENV[@]}" "${JAVA_TOOL[@]}" publish-reference --repo "$REPO" --run-root "$RUN_DIR" --staging "$staging" --output "$output"
 }
 
 capture_openggf() {
 	local output=$1 log=$2
-	"$MAVEN_BIN" -f "$REPO/pom.xml" -Dmse=off -Pci \
+	"${SAFE_ENV[@]}" "$MAVEN_BIN" -f "$REPO/pom.xml" -Dmse=off -Pci \
 		-Dtest=com.openggf.tools.audio.timeline.TestS1Ghz1OpenGgfAudioTimelineCapture#captureRequestedOutput \
 		-Ds1.audio.timeline.run.path="$RUN_PATH" -Ds1.audio.timeline.output="$output" \
 		-Dsonic1.rom.path="$ROM_PATH" test >"$log" 2>&1
@@ -139,7 +142,7 @@ capture_openggf "$OPENGGF_2" "$RUN_DIR/openggf-2.log" || fail "OpenGGF capture 2
 "$CMP_BIN" -s -- "$OPENGGF_1" "$OPENGGF_2" || fail "OpenGGF captures differ byte-for-byte"
 
 set +e
-"${JAVA_TOOL[@]}" compare --repo "$REPO" --run-root "$RUN_DIR" --reference "$REFERENCE_1" --openggf "$OPENGGF_1" \
+"${SAFE_ENV[@]}" "${JAVA_TOOL[@]}" compare --repo "$REPO" --run-root "$RUN_DIR" --reference "$REFERENCE_1" --openggf "$OPENGGF_1" \
 	--human-report "$HUMAN_REPORT" --json-report "$JSON_REPORT"
 RESULT=$?
 set -e

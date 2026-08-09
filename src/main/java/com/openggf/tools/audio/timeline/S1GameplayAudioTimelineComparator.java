@@ -54,9 +54,12 @@ public final class S1GameplayAudioTimelineComparator {
             S1GameplayAudioTimelineReport first = sameComparableMetadata(left.metadata(), right.metadata()) ? null
                     : S1GameplayAudioTimelineReport.failure(S1GameplayAudioTimelineReport.Kind.METADATA_MISMATCH,
                             "metadata", "pinned schema, ROM, BK2, or segment metadata differs", List.of(), List.of());
-            while (left.hasNext() || right.hasNext()) {
-                S1GameplayAudioTimeline.TimelineRecord leftRecord = left.hasNext() ? left.next() : null;
-                S1GameplayAudioTimeline.TimelineRecord rightRecord = right.hasNext() ? right.next() : null;
+            while (true) {
+                S1GameplayAudioTimeline.TimelineRecord leftRecord = next(left, "reference");
+                S1GameplayAudioTimeline.TimelineRecord rightRecord = next(right, "OpenGGF");
+                if (leftRecord == null && rightRecord == null) {
+                    break;
+                }
                 referenceEvidence.accept(leftRecord);
                 openGgfEvidence.accept(rightRecord);
                 if (first == null) {
@@ -85,6 +88,14 @@ public final class S1GameplayAudioTimelineComparator {
         } catch (RuntimeException failure) {
             throw new CaptureException("comparison input no longer passes strict validation: " + failure.getMessage(),
                     "stream", failure);
+        }
+    }
+
+    private static S1GameplayAudioTimeline.TimelineRecord next(S1GameplayAudioTimelineJsonl.Reader reader, String side) {
+        try {
+            return reader.hasNext() ? reader.next() : null;
+        } catch (RuntimeException failure) {
+            throw new CaptureException(side + " stream became malformed during comparison: " + failure.getMessage(), side, failure);
         }
     }
 

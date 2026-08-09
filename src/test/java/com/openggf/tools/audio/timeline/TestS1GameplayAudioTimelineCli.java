@@ -122,6 +122,12 @@ class TestS1GameplayAudioTimelineCli {
         ProcessBuilder injected = new ProcessBuilder("/usr/bin/bash", "tools/audio/run_s1_ghz1_gameplay_audio_timeline.sh", "--help");
         injected.environment().put("JAVA_TOOL_OPTIONS", "-Dunsafe=true");
         assertEquals(4, injected.start().waitFor());
+        Path bashEnv = temp.resolve("bash-env");
+        Files.writeString(bashEnv, "touch '" + marker + "'\n");
+        ProcessBuilder inherited = new ProcessBuilder(Path.of("tools/audio/run_s1_ghz1_gameplay_audio_timeline.sh").toAbsolutePath().toString(), "--help");
+        inherited.environment().put("BASH_ENV", bashEnv.toString());
+        assertEquals(4, inherited.start().waitFor());
+        assertFalse(Files.exists(marker));
     }
 
     private Path runRoot() throws Exception {
