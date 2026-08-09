@@ -3,6 +3,13 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: CNZ's post-object signpost now accounts for the native dispatch
+  already consumed before an unbumped landing countdown, while a real
+  `EndSign_CheckPlayerHit` bounce retains all `$40` countdown entries. This
+  advances the complete-run CNZ frontier from raw frame 13960 to the
+  post-transition animation boundary at raw frame 14512 without moving the
+  standalone CNZ camera frontier or regressing the green complete-run AIZ,
+  HCZ, and MGZ traces and standalone MGZ trace.
 - Fix: the Chemical Plant spin tube reads the character's live position when deciding whether
   to capture them, as the ROM does. Two tubes can hold the same character, and the engine's
   frame-start fallback made a handoff between them land two frames late.

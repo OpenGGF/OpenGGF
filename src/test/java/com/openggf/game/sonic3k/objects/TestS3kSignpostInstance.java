@@ -143,6 +143,16 @@ class TestS3kSignpostInstance {
     }
 
     @Test
+    void postObjectLandingCatchUpPreservesBumpedSignCadence() {
+        assertEquals(0x3F, S3kSignpostInstance.initialPostLandTimer(0, true, false),
+                "an unbumped post-object sign accounts for its already-consumed native dispatch");
+        assertEquals(0x40, S3kSignpostInstance.initialPostLandTimer(0, true, true),
+                "EndSign_CheckPlayerHit re-phases the falling owner, so a bumped sign keeps all $40 entries");
+        assertEquals(0x3E, S3kSignpostInstance.initialPostLandTimer(1, true, false),
+                "an explicit owner catch-up remains additive to the post-object allocation boundary");
+    }
+
+    @Test
     void groundedNoWaitKeepsIsolatedTimingCompensationUntilRealOwnerIsKnown() {
         assertEquals(S3kSignpostInstance.ResultsChildTimingAdjustment.UNSUPPORTED_GROUNDED_COMPENSATION,
                 S3kSignpostInstance.resultsChildTimingAdjustment(false, false, false),

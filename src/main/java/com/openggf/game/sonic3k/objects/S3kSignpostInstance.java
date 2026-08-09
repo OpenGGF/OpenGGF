@@ -147,6 +147,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
     private boolean sidekickEndingPoseApplied;
     private boolean sidekickEndingPoseCheckArmed;
     private boolean landingSparklePending;
+    private boolean bumpedFromBelow;
     private boolean preservesPostLandingSparkleGate;
     private boolean preservesPostObjectResultDispatchBoundary;
     private boolean preservesGroundedResultsDispatchBoundary;
@@ -362,7 +363,10 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
                 return; // No floor contact yet — keep falling
             }
             landed = true;
-            postLandTimer = Math.max(0, POST_LAND_TIMER - resultsTimerCatchUpEntries);
+            postLandTimer = initialPostLandTimer(
+                    resultsTimerCatchUpEntries,
+                    preservesPostObjectResultDispatchBoundary,
+                    bumpedFromBelow);
             yVel = 0;
             xVel = 0;
             subX = 0;
@@ -425,6 +429,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
         // xVel/yVel are 8.8 fixed-point
         xVel = kickX;
         yVel = -0x200;
+        bumpedFromBelow = true;
 
         try {
             services().playSfx(Sonic3kSfx.SIGNPOST.id);
@@ -502,6 +507,18 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
         // Obj_EndSignLanded uses subq.w #1,$2E(a0); bmi.s, so $0000 is still
         // a waiting frame and only $FFFF advances (docs/skdisasm/sonic3k.asm:176198-176208).
         return (short) timerAfterDecrement < 0;
+    }
+
+    static int initialPostLandTimer(int configuredCatchUpEntries,
+            boolean postObjectAllocationBoundary, boolean bumpedFromBelow) {
+        // CNZ's post-object screen event publishes Obj_EndSign after the
+        // engine object walk, so an unbumped sign has already consumed one
+        // native falling/countdown boundary by the time the engine lands it.
+        // A real EndSign_CheckPlayerHit bounce re-phases the falling owner and
+        // retains the full $40 countdown instead (sonic3k.asm:176225-176253,
+        // 176342-176387, 107590-107601).
+        int nativeAllocationCatchUp = postObjectAllocationBoundary && !bumpedFromBelow ? 1 : 0;
+        return Math.max(0, POST_LAND_TIMER - configuredCatchUpEntries - nativeAllocationCatchUp);
     }
 
     // =========================================================================

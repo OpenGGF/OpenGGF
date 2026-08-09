@@ -70427,3 +70427,37 @@ After: **769 / 11 / 63.** Green: `S2SpecialStageRecorderContractTest`. Nothing r
   `useCurrentPosition` predicate. **None would have been caught by grepping for
   confession-shaped comments** — only by reading the ROM. That is the standing argument for
   the guards this session added.
+
+## 2026-08-09 - S3K CNZ post-object signpost countdown frontier
+
+- Branch `bugfix/s3k-traces`, candidate over merge commit `d4f5d3465`
+  (latest `origin/develop`), with ring comparison still error-level through
+  `ToleranceConfig.DEFAULT` and `RingCountMode.FORCE_ERROR`.
+- Root cause: CNZ allocates `Obj_EndSign` from the post-object screen-event
+  pass. For an unbumped sign, the engine publishes that event-owned object
+  after its object walk and has already consumed one native falling/countdown
+  boundary when the sign lands. A real `EndSign_CheckPlayerHit` bounce
+  re-phases the falling owner and retains the full `$40` landed countdown
+  (`sonic3k.asm:107590-107601,176225-176253,176342-176387`). The object now
+  derives the initial countdown from those production states; it does not
+  inspect a route, frame, zone id, or trace value.
+- Focused command: JDK 21 Maven run selecting
+  `TestS3kSignpostInstance` and `TestS3kResultsScreenObjectInstance`.
+  Result: 33 tests, 0 failures, 0 errors.
+- Frontier command: `mvn -Ptrace-replay -Dmse=off
+  -Dsurefire.forkCount=1 -Dtrace.verification=physics
+  -Dtrace.frontierOnly=true
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kCnzCompleteRunTraceReplay#replayMatchesTrace
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Result: the complete-run frontier advances 552 rows from raw `13960` to
+  raw `14512`, where player animation is `05` expected versus `13` actual.
+  The first physics mismatch is `x_sub` at raw `14547`; the next unconsumed
+  hardware edge is direct Kosinski completion `#212` at raw `14656`.
+- Standalone CNZ was run separately with the same profile. Its established
+  one-error camera-X frontier remains unchanged at raw `25743`, and its next
+  unconsumed hardware edge remains `#31` at raw `33755`.
+- Regression command selected complete-run AIZ, HCZ, and MGZ plus standalone
+  MGZ. Result: 4 replay tests, 0 failures, 0 errors. A supplementary standalone
+  AIZ class run retained its existing raw-`16067` queue divergence and four
+  focused assertion failures; the changed CNZ-only constructor is not used by
+  that path.
