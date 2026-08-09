@@ -3,12 +3,17 @@
 
 local ProbeRuntime = {}
 local registerHooks
+local unpackArguments = table.unpack or unpack
 
 local function requireConfig(config)
     assert(type(config) == "table", "ProbeRuntime.run requires a config table")
     assert(type(config.stage) == "function", "probe config requires stage = function")
     assert(type(config.hooks) == "table" and #config.hooks > 0,
         "probe config requires at least one declarative hook")
+    assert(config.continueAfterMovie == nil or type(config.continueAfterMovie) == "boolean",
+        "probe config continueAfterMovie must be a boolean")
+    assert(config.onFrame == nil or type(config.onFrame) == "function",
+        "probe config onFrame must be a function")
     for _, hook in ipairs(config.hooks) do
         assert(type(hook.address) == "number", "probe hook requires a numeric address")
         assert(type(hook.callback) == "function", "probe hook requires a callback")
@@ -77,7 +82,10 @@ function ProbeRuntime.run(config)
             outfile:write(tostring(line), "\n")
             outfile:flush()
         end,
-        finish = finish
+        finish = finish,
+        movieFinished = function()
+            return movie.isloaded() and movie.mode() == "FINISHED"
+        end
     }
 
     local ok, originalError = xpcall(function()
@@ -86,10 +94,12 @@ function ProbeRuntime.run(config)
                 registerHooks(config.hooks, context, registeredNames, finish)
                 hooksRegistered = true
             end
-            if movie.isloaded() and movie.mode() == "FINISHED" then
+            if context.movieFinished() and not config.continueAfterMovie then
                 finish()
                 break
             end
+            if config.onFrame then config.onFrame(context) end
+            if finished then break end
             if client.ispaused() then client.unpause() end
             emu.frameadvance()
         end
@@ -106,9 +116,14 @@ end
 registerHooks = function(hooks, context, registeredNames, finish)
     for index, hook in ipairs(hooks) do
         local name = hook.name or ("adhoc_probe_hook_" .. index)
-        local callback = function()
+        local callback = function(...)
+            local callbackArguments = {...}
+            local callbackArgumentCount = select("#", ...)
             local ok, originalError = xpcall(
-                function() hook.callback(context) end, debug.traceback)
+                function()
+                    hook.callback(context,
+                        unpackArguments(callbackArguments, 1, callbackArgumentCount))
+                end, debug.traceback)
             if not ok then
                 finish()
                 error(originalError, 0)

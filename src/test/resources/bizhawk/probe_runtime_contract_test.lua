@@ -15,7 +15,8 @@ local function newEnvironment(options)
         flushes = 0,
         closes = 0,
         frames = 0,
-        setupCalls = 0
+        setupCalls = 0,
+        callbackArguments = nil
     }
 
     os.getenv = function(name)
@@ -69,11 +70,105 @@ local function newEnvironment(options)
         frameadvance = function()
             state.frames = state.frames + 1
             if options.invokeCallback and state.callbacks[options.invokeCallback] then
-                state.callbacks[options.invokeCallback]()
+                state.callbacks[options.invokeCallback](0x1234, 0x56)
             end
         end
     }
     return state
+end
+
+local function runCallbackArgumentForwarding()
+    local state = newEnvironment({ invokeCallback = "arguments" })
+    local runtime = dofile(runtimePath)
+    runtime.run({
+        stage = function() return true end,
+        hooks = {{
+            name = "arguments",
+            address = 0x100,
+            callback = function(context, address, value)
+                state.callbackArguments = { context, address, value }
+                context.finish()
+            end
+        }}
+    })
+    check(state.callbackArguments ~= nil
+            and type(state.callbackArguments[1].movieFinished) == "function"
+            and state.callbackArguments[2] == 0x1234
+            and state.callbackArguments[3] == 0x56,
+        "hook callback did not receive context followed by all BizHawk arguments")
+end
+
+local function runDefaultMovieFinish()
+    local state = newEnvironment({ movieFinished = true })
+    local runtime = dofile(runtimePath)
+    local onFrameCalls = 0
+    runtime.run({
+        stage = function() return true end,
+        hooks = {{ address = 0x100, callback = function() end }},
+        onFrame = function() onFrameCalls = onFrameCalls + 1 end
+    })
+    check(onFrameCalls == 0 and state.frames == 0 and state.exits == 1 and state.closes == 1,
+        "default probes must finish immediately when the movie finishes")
+end
+
+local function runContinueAfterMovie()
+    local state = newEnvironment({ movieFinished = true })
+    local runtime = dofile(runtimePath)
+    local onFrameCalls = 0
+    runtime.run({
+        stage = function() return true end,
+        hooks = {{ address = 0x100, callback = function() end }},
+        continueAfterMovie = true,
+        onFrame = function(context)
+            onFrameCalls = onFrameCalls + 1
+            check(context.movieFinished(), "movieFinished did not expose movie completion")
+            if onFrameCalls == 2 then context.finish() end
+        end
+    })
+    check(onFrameCalls == 2 and state.frames == 1,
+        "continueAfterMovie did not allow onFrame to run until it finished")
+    check(state.exits == 1 and state.closes == 1,
+        "continued movie probe did not clean up after explicit finish")
+end
+
+local function runOnFrameLifecycle()
+    local state = newEnvironment()
+    local runtime = dofile(runtimePath)
+    local onFrameCalls = 0
+    runtime.run({
+        stage = function() return true end,
+        hooks = {{ address = 0x100, callback = function() end }},
+        onFrame = function(context)
+            onFrameCalls = onFrameCalls + 1
+            if onFrameCalls == 2 then context.finish() end
+        end
+    })
+    check(onFrameCalls == 2 and state.frames == 1,
+        "onFrame must run once before each frameadvance and may finish the probe")
+end
+
+local function runOptionalFieldValidation()
+    local state = newEnvironment()
+    local runtime = dofile(runtimePath)
+    local ok, failure = pcall(runtime.run, {
+        stage = function() return true end,
+        hooks = {{ address = 0x100, callback = function() end }},
+        continueAfterMovie = "yes"
+    })
+    check(not ok and tostring(failure):find("continueAfterMovie", 1, true),
+        "continueAfterMovie type was not validated")
+    check(state.setupCalls == 0, "optional fields were validated after runtime setup")
+
+    state = newEnvironment()
+    runtime = dofile(runtimePath)
+    ok, failure = pcall(runtime.run, {
+        stage = function() return true end,
+        hooks = {{ address = 0x100, callback = function() end }},
+        onFrame = true
+    })
+    check(not ok and tostring(failure):find("onFrame", 1, true),
+        "onFrame type was not validated")
+    check(state.setupCalls == 0, "onFrame was validated after runtime setup")
 end
 
 local function runCleanupFailures()
@@ -187,6 +282,11 @@ local function runCallbackFailure()
 end
 
 runStageGating()
+runCallbackArgumentForwarding()
+runDefaultMovieFinish()
+runContinueAfterMovie()
+runOnFrameLifecycle()
+runOptionalFieldValidation()
 runPrevalidationFailure()
 runStageFailure()
 runPartialRegistrationFailure()
