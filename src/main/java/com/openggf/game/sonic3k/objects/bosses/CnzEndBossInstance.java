@@ -612,6 +612,12 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         if (!defeatHandoffComplete || transitionRequested) {
             return;
         }
+        if (!capsuleResultsComplete && services().gameState().isEndOfLevelFlag()) {
+            // loc_6E724 reads _unkFAA8 itself after the lower-slot
+            // Obj_LevelResults clears it; Obj_EggCapsule is not an
+            // intermediate notification owner (sonic3k.asm:146087-146103).
+            capsuleResultsComplete = true;
+        }
         if (capsuleResultsComplete && !cannonSpawned) {
             releasePostCapsuleStateOnce();
             if (player instanceof AbstractPlayableSprite sprite

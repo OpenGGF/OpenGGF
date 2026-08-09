@@ -70687,6 +70687,41 @@ round-trip chains: `TestS1GhzMazeRoundTripChain` and `TestS2EhzHalfpipeRoundTrip
   and four focused failures. Standalone CNZ retains its raw-`25743` camera-X
   frontier and unmatched completion `#31`; no earlier-zone frontier regressed.
 
+## 2026-08-09 - S3K CNZ direct results-publication frontier
+
+- Branch `bugfix/s3k-traces`, candidate over `20e939b20`. Ring comparison
+  remains error-level through `ToleranceConfig.DEFAULT` and
+  `RingCountMode.FORCE_ERROR`.
+- Root cause: ROM `loc_6E724` in the retained CNZ end-boss slot reads the
+  global `_unkFAA8` publication directly after lower-slot
+  `Obj_LevelResultsWait2` clears it, then calls `Restore_PlayerControl` for P1
+  and P2 in that same dispatch (`sonic3k.asm:146087-146103`). The engine
+  relayed the publication through `CnzEggCapsuleInstance`, deliberately waited
+  one capsule pass, then notified the already-executed boss slot; this delayed
+  control restoration by three compared rows. The boss now consumes the
+  semantic `End_of_level_flag` publication directly, while the capsule's
+  continuation callback retires immediately and remains idempotent.
+- Focused command selected
+  `TestS3kCnzTeleporterRouteHeadless#cnzEndBossDefeatHandoffClearsBossFlagWidensCameraAndSpawnsCapsule`
+  with the discovered S3K ROM on JDK 21. Result: 1 test, 0 failures, 0 errors;
+  it now publishes the global completion flag and verifies one same-dispatch
+  post-capsule release. The full seven-test historical class retains an
+  independent teleporter-art readiness failure in
+  `groundedTeleporterWaitsForArtReadinessAndPublishesRomPalettePatch`.
+- Frontier command selected `TestS3kCnzCompleteRunTraceReplay` with
+  `-Ptrace-replay -Dmse=off -Dsurefire.forkCount=1
+  -Dsurefire.runOrder=alphabetical` and the discovered S3K ROM. Comparison
+  errors fall from 32 to 7 and the first error advances from raw `39452`
+  (`player_animation_id`) to raw `39487`
+  (`queue.s3k_kos_direct.busy`, expected `true`, actual `false`). Cleanup
+  retains the existing unmatched module Kosinski completion `#222`.
+- Gameplay-order regression command selected complete-run and standalone AIZ,
+  complete-run HCZ, complete-run and standalone MGZ, and complete-run and
+  standalone CNZ. Complete-run AIZ, both HCZ tests, complete-run MGZ, and
+  standalone MGZ pass. Standalone AIZ retains its raw-`16067` queue frontier
+  and four focused failures. Standalone CNZ retains its raw-`25743` camera-X
+  frontier and unmatched completion `#31`; no earlier-zone frontier regressed.
+
 ## 2026-08-09 - S3K CNZ results-owner allocation frontier
 
 - Branch `bugfix/s3k-traces`, candidate over `48dbebd74`. A fresh fetch found

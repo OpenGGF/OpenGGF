@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: CNZ's retained end-boss controller now consumes the results
+  owner's global completion publication directly in its own SST dispatch,
+  matching `loc_6E724` instead of waiting for an engine-only capsule relay.
+  This restores both players' control on the ROM frame and advances the CNZ
+  complete-run frontier from raw frame 39452 to 39487 with earlier-zone
+  canaries unchanged.
 - Fix/Test: upright S3K egg capsules now allocate their level-results owner
   through the ROM's lowest-free-slot `AllocateObject` path. This preserves the
   next-pass `Obj_LevelResultsInit` dispatch when the chosen SST has already run

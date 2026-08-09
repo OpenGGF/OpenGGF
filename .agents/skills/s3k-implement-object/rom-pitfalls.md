@@ -792,6 +792,37 @@ dispatch (`sonic3k.asm:62542-62575`). Engine equivalents are
 
 ---
 
+## P20 -- ROM global publication relayed through an engine-only proxy owner
+
+**Symptom.** A control restore, camera change, or follow-up spawn happens one
+or more frames late even though the producer publishes its global flag on the
+correct frame. Each extra engine object in the notification chain commonly
+adds one object-pass delay.
+
+**Root cause.** ROM consumers read a shared RAM flag directly in their own SST
+dispatch. An engine port instead asks an intermediate object to observe the
+flag, latch it, and notify the real consumer. Slot ordering then turns a
+same-pass producer-to-consumer edge into one or more deferred callbacks.
+
+**What to check.** When a ROM object reads a global (`_unkFAA8`,
+`End_of_level_flag`, `Boss_flag`, event bytes, or equivalent):
+
+1. Let the owning engine object consume the semantic shared state directly.
+2. Preserve producer/consumer SST ordering; a lower-slot write must be visible
+   to a later-slot reader in the same object pass.
+3. Keep proxy callbacks only for lifecycle retirement, and make them immediate
+   and idempotent. Do not make gameplay timing depend on them.
+4. Do not replace the shared predicate with a zone/frame timer or trace value.
+
+**ROM citation.** CNZ end-boss `loc_6E724` reads `_unkFAA8` directly after
+`Obj_LevelResultsWait2` clears it, then restores both players in that dispatch
+(`docs/skdisasm/sonic3k.asm:146087-146103`). The egg capsule is not part of
+that publication edge.
+
+**Originating commit.** `fix(s3k): consume CNZ results publication in boss slot`.
+
+---
+
 ## P19 -- HurtCharacter spill may be a next-object-tick effect
 
 **Symptom.** A trace enters hurt on the correct frame but the engine spends

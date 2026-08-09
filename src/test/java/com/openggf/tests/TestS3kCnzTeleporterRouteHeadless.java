@@ -262,11 +262,11 @@ class TestS3kCnzTeleporterRouteHeadless {
         assertTrue(capsule != null,
                 "The bounded Task 8 defeat handoff should spawn the CNZ-local egg capsule wrapper");
 
-        capsule.forceResultsCompleteForTest();
+        GameServices.gameState().setEndOfLevelFlag(true);
         fixture.sprite().setCentreX((short) 0x4A20);
         boss.update(1, fixture.sprite());
         assertEquals(1, boss.getPostCapsuleReleaseCountForTest(),
-                "CNZ post-capsule control/music restore should fire once when results complete");
+                "loc_6E724 should consume the results owner's global completion publication directly");
 
         for (int i = 0; i < 4; i++) {
             boss.update(2 + i, fixture.sprite());
