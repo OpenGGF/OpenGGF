@@ -1673,7 +1673,11 @@ public class ObjectManager {
                     && instance.getSpawn() != null) {
                 int slot = aoi.getSlotIndex();
                 if (slotLayout.isDynamicSlot(slot)) {
-                    occupancy.put(slot, instance.getSpawn().objectId() & 0xFF);
+                    // The LIVE obID, not the spawn id: ROM objects that rewrite obID(a0) in
+                    // place (S1 BossSpikeball_Explode -> id_Explosion) keep their slot and
+                    // report the new id in the SST. See AbstractObjectInstance#getLiveObjectId.
+                    int liveId = aoi.getLiveObjectId();
+                    occupancy.put(slot, liveId >= 0 ? liveId : (instance.getSpawn().objectId() & 0xFF));
                 }
             }
         }

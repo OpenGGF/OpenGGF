@@ -1005,9 +1005,34 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean isPersistent() {
-        // Allow ObjectManager's counter-based unload path to delete the block
-        // when the ROM's second out_of_range check has failed on spawn X.
-        return !isDestroyed() && !deletePending && isOnScreenX(320);
+        // Obj33 has NO camera-window persistence rule. Its only lifetime rule is
+        // PushB_Display's pair of out_of_range checks -- current obX, then
+        // pblock_origX -- reaching .deleteAndAllowRespawn / DeleteObject
+        // (docs/s1disasm/_incObj/"33 MZ, LZ Pushable Blocks.asm":92-113).
+        // Routine 4 (PushB_ChkVisible, ibid.:116-127) runs ChkPartiallyVisible
+        // and rts without ANY out_of_range test, so a block parked at its origin
+        // survives indefinitely off-screen. deletePending is therefore the sole
+        // gate: it is latched only when updateActive has just failed BOTH checks.
+        //
+        // A camera-window term here (previously isOnScreenX(320)) is an invented
+        // rule with more left slack than the ROM's chunk-aligned window, and it
+        // kept blocks alive past the frame ROM freed their SST slot -- which
+        // desynced every subsequent MZ2 ObjPosLoad placement by one slot.
+        return !isDestroyed() && !deletePending;
+    }
+
+    /**
+     * ROM parity: PushB_Action runs PushB_SolidAction and the MZ1 stomper
+     * alignment BEFORE reaching PushB_Display's out_of_range
+     * (docs/s1disasm/_incObj/"33 MZ, LZ Pushable Blocks.asm":66-93), so the
+     * check must observe the position this frame's routine produced. The
+     * counter lane honours this flag at ObjectManager.java:914-934, which also
+     * lets the deletePending latch set at the tail of updateActive be consumed
+     * on the same frame instead of one frame late.
+     */
+    @Override
+    public boolean checksOutOfRangeAfterRoutine() {
+        return true;
     }
 
     @Override

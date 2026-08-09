@@ -591,8 +591,20 @@ public class Sonic1SLZBossInstance extends AbstractS1EggmanBossInstance implemen
         }
 
         // ROM: move.w obY(a0),obY(a1) / addi.w #$20,obY(a1) — spawn +$20 below boss
+        //
+        // Slot allocation is FindNextFreeObj scanning forward from the TARGET SEESAW's slot,
+        // not FindFreeObj and not the boss's own slot: BSLZ_MakeBall pushes the boss pointer,
+        // does "lea (a2),a0" with a2 = the matched seesaw, calls FindNextFreeObj, then restores
+        // a0 (docs/s1disasm/_incObj/"7A, 7B Boss - SLZ Main and Spike Balls.asm":291-295).
+        // In SLZ3 the three seesaws sit at slots 33/37/38 and dynamic allocation starts at 42,
+        // so both rules currently pick the same slot: this is measurably a no-op on the
+        // committed fixture (probe-verified, byte-identical slot occupancy). It is landed as a
+        // correctness fix regardless, because slot number is observable -- RLoss_Bounce probes
+        // the floor only when (VBlank byte + d7) & 3 == 0 with d7 = 127 - slot
+        // (_incObj/"25, 37 Rings.asm":320-324) -- so any layout where a lower dynamic slot
+        // frees while a seesaw is live would diverge under the FindFreeObj rule.
         if (services().objectManager() != null) {
-            spawnFreeChild(() -> new Sonic1SLZBossSpikeball(
+            spawnChildAfterSlot(targetSeesaw.getSlotIndex(), () -> new Sonic1SLZBossSpikeball(
                     this,
                     targetSeesaw,
                     state.x,

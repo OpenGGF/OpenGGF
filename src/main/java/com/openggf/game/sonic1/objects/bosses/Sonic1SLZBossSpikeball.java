@@ -232,6 +232,24 @@ public class Sonic1SLZBossSpikeball extends AbstractObjectInstance
         return currentState == State.FRAGMENT;
     }
 
+    /** ROM id_Explosion (docs/s1disasm/_inc/"Object Pointers.asm":79). */
+    private static final int ROM_ID_EXPLOSION = 0x3F;
+
+    /**
+     * ROM {@code BossSpikeball_Explode} rewrites the ball's own SST id in place --
+     * {@code move.b #id_Explosion,obID(a0)} -- so from routine 8 onward the slot reads
+     * {@code id_Explosion} even though the object, its slot and its objoff_3C seesaw link are
+     * unchanged (docs/s1disasm/_incObj/"7A, 7B Boss - SLZ Main and Spike Balls.asm":883-887).
+     * Fragments are separately allocated and keep {@code id_BossSpikeball} (same file, :896).
+     */
+    @Override
+    public int getLiveObjectId() {
+        if (currentState == State.EXPLODING) {
+            return ROM_ID_EXPLOSION;
+        }
+        return super.getLiveObjectId();
+    }
+
     @Override
     public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         seedCapturedScalars(ctx);

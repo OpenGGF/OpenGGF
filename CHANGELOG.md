@@ -3,6 +3,19 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: objects that rewrite their own id in place are reported under the id they
+  currently hold. The Star Light boss spikeball becomes an explosion in its own object
+  slot, keeping its scratch memory, and the engine already modelled that behaviour — but
+  slot-occupancy reporting still named the spawn id, so the slot looked like it held a
+  spikeball for as long as the explosion ran. Objects now expose a live id that defaults
+  to the spawn id.
+- Fix: the Star Light boss allocates its spikeball from the target seesaw's slot onward,
+  matching the ROM's allocate-after-this-object call, rather than from the lowest free
+  slot.
+- Fix: the Sonic 1 shield now uses the ROM's deliberately empty mapping frame
+  between its three visible frames instead of showing the lower half of the shield.
+  Its `Ani_Shield` sequence also runs from an object-local `AnimateSprite` countdown,
+  keeping each entry for two updates without inheriting an arbitrary global V-int phase.
 - Fix: the Oil Ocean Aquis wing is exempt from the shared off-screen unload. ROM
   `Obj50_Wing` ends by drawing and never calls `MarkObjGone`, unlike the Aquis body and
   its bullet, so the wing holds its object slot for exactly as long as its parent. The
