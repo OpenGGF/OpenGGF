@@ -359,14 +359,34 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // CFlo_TimeZero: ObjectFall + DisplaySprite
+        // ROM CFlo_FragmentPiece `.fragmentFall` (docs/s1disasm/_incObj/1A, 53
+        // Collapsing Ledges and Floors.asm:250-263). FixBugs = 0
+        // (docs/s1disasm/sonic.asm:20) selects `bsr ObjectFall / bsr DisplaySprite /
+        // tst.b obRender(a0) / bpl CFlo_Delete`, so the delete decision is the LAST
+        // BuildSprites pass's render flag -- this frame's pre-fall position. (The
+        // FixBugs = 1 branch only reorders the test ahead of DisplaySprite to avoid
+        // the display-and-delete null dereference; the delete frame is unchanged.)
+        //
+        // CFlo_Main sets obActWid = 136/2 (line 172) and never sets
+        // sprite_customheight_bit, so BuildSprites uses its fixed 32px
+        // `.assumeHeight` Y band (docs/s1disasm/_inc/BuildSprites.asm:84-91).
+        // FragmentatePlatform copies obActWid and obRender to every fragment
+        // (lines 335-340), so parent and fragments share this band.
+        boolean renderedLastFrame =
+                isWithinBuildSpritesBounds(x, y, CFLO_ACT_WIDTH, ASSUMED_HEIGHT);
         applyObjectFall();
-
-        // tst.b obRender(a0) / bpl.s CFlo_Delete
-        if (!isOnScreen()) {
+        if (!renderedLastFrame) {
             destroyWithWindowGatedRespawn();
         }
     }
+
+    // CFlo_Main obActWid: `move.b #136/2,obActWid(a0)`
+    // (docs/s1disasm/_incObj/1A, 53 Collapsing Ledges and Floors.asm:172).
+    private static final int CFLO_ACT_WIDTH = 136 / 2;
+
+    // BuildSprites `.assumeHeight` band, used because CFlo_Main never sets
+    // sprite_customheight_bit (docs/s1disasm/_inc/BuildSprites.asm:84-91).
+    private static final int ASSUMED_HEIGHT = 32;
 
     static boolean exitsPlatform(boolean playerAirborne, int playerX, int objectX) {
         if (playerAirborne) {
@@ -435,6 +455,19 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
         this.routine = 6;
         this.collapseDelay = delays[0];
 
+        // FixBugs = 0 (docs/s1disasm/sonic.asm:20) — the shipped branch, which is what
+        // the traces record. The fragment loop in
+        // docs/s1disasm/_incObj/"1A, 53 Collapsing Ledges and Floors.asm":320-352
+        // allocates with FindFreeObj (scans the SST from the start), so a fragment can
+        // land BELOW the parent, past this frame's ExecuteObjects walk. The shipped
+        // block at lines 344-352 compensates with `bsr.w DisplaySprite2` ONLY — unlike
+        // SmashObject there is no SpeedToPos and no counter-gravity, because these
+        // fragments do not move until their collapsible_timedelay expires, so the
+        // catch-up is purely about getting the piece rendered on its spawn frame.
+        // The engine renders every live object each frame regardless of whether its
+        // slot has already executed, so no extra call is needed here; only the
+        // rendering, not the position, would differ. With FixBugs = 1 the allocator
+        // would be FindNextFreeObj and the block is omitted as redundant.
         // Spawn remaining 7 fragments as dynamic objects
         int maxFragments = Math.min(FRAGMENT_COUNT, delays.length);
         for (int i = 1; i < maxFragments; i++) {
@@ -701,6 +734,21 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
         @Override
         public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
             return new CollapsingFloorFragmentInstance(ctx.spawn());
+        }
+
+        @Override
+        protected boolean shouldDeleteBeforeFall() {
+            // ROM `.fragmentFall` deletes on the previous frame's render flag; see
+            // Sonic1CollapsingFloorObjectInstance.updateFragmentFall for the branch
+            // and the FixBugs note.
+            return !isWithinBuildSpritesBounds(
+                    getX(), getY(), CFLO_ACT_WIDTH, ASSUMED_HEIGHT);
+        }
+
+        @Override
+        protected boolean shouldDeleteAfterFall() {
+            // The ROM lifetime is entirely the render-flag test above.
+            return false;
         }
 
         @Override

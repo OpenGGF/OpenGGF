@@ -130,17 +130,39 @@ class TestIczHarmfulIceObjectInstance {
         });
         PlayableEntity player = mock(PlayableEntity.class);
         when(player.getInvincibleFrames()).thenReturn(0);
-        when(player.getInvulnerable()).thenReturn(false);
 
         ice.onTouchResponse(player, specialResult(), 123);
 
-        verify(player).applyHurt(0x1200, DamageCause.SPIKE);
+        // Shipped FixBugs=0 loc_8B4F8 omits the invulnerability_timer test, so the
+        // hurt path ignores post-hit i-frames (sonic3k.asm:189765-189775).
+        verify(player).applyHurtIgnoringIFrames(0x1200, DamageCause.SPIKE);
         assertTrue(ice.isDestroyed());
         assertEquals(List.of(Sonic3kSfx.ICE_SPIKES.id), sfx);
         ArgumentCaptor<ObjectInstance> captor = ArgumentCaptor.forClass(ObjectInstance.class);
         verify(objectManager, times(12)).addDynamicObjectAfterCurrent(captor.capture());
         assertTrue(captor.getAllValues().stream()
                 .allMatch(IczHarmfulIceObjectInstance.IceDebris.class::isInstance));
+    }
+
+    @Test
+    void flashingPlayerIsStillHurtBecauseRetailOmitsTheInvulnerabilityCheck() {
+        ObjectManager objectManager = mock(ObjectManager.class);
+        IczHarmfulIceObjectInstance ice = new IczHarmfulIceObjectInstance(
+                new ObjectSpawn(0x1200, 0x0680, Sonic3kObjectIds.ICZ_HARMFUL_ICE, 1, 0, false, 0));
+        ice.setServices(new StubObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return objectManager;
+            }
+        });
+        PlayableEntity player = mock(PlayableEntity.class);
+        when(player.getInvincibleFrames()).thenReturn(0);
+
+        ice.onTouchResponse(player, specialResult(), 123);
+
+        // FixBugs=0 (docs/skdisasm/sonic3k.asm:38): loc_8B4F8 has no
+        // invulnerability_timer test, so a flashing character is hurt again.
+        verify(player).applyHurtIgnoringIFrames(0x1200, DamageCause.SPIKE);
     }
 
     @Test
@@ -156,11 +178,11 @@ class TestIczHarmfulIceObjectInstance {
         });
         PlayableEntity player = mock(PlayableEntity.class);
         when(player.getInvincibleFrames()).thenReturn(1);
-        when(player.getInvulnerable()).thenReturn(false);
 
         ice.onTouchResponse(player, specialResult(), 123);
 
-        verify(player, never()).applyHurt(org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.any());
+        verify(player, never()).applyHurtIgnoringIFrames(
+                org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.any());
         assertTrue(ice.isDestroyed());
         verify(objectManager, times(12)).addDynamicObjectAfterCurrent(org.mockito.ArgumentMatchers.any());
     }

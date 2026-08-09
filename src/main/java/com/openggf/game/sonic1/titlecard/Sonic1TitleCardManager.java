@@ -25,20 +25,24 @@ import java.util.logging.Logger;
  *
  * <p>Sonic 1 title cards are simpler than Sonic 2: 4 sprite elements
  * (zone name, "ZONE", act number, oval decoration) slide in from off-screen
- * over a black background, hold for 60 frames, then slide out at double speed.
- * No background planes (blue/yellow/red) are used.
+ * over a black background, hold until the level's queued art has finished
+ * decompressing, then slide out at double speed. No background planes
+ * (blue/yellow/red) are used.
  *
  * <p>From the disassembly (Object 34 - "34 Title Cards.asm"):
  * <ul>
  *   <li>Routine 0 (Card_CheckSBZ3): Initialize 4 elements with ConData positions</li>
  *   <li>Routine 2 (Card_ChkPos): Slide to card_mainX at 16px/frame</li>
- *   <li>Routine 4 (Card_Wait): Wait 60 frames, then slide to card_finalX at 32px/frame</li>
+ *   <li>Routine 4/6 (Card_Wait): Wait obTimeFrame (60) frames, then slide to
+ *       card_finalX at 32px/frame. Nothing reaches this routine until after
+ *       Level_TtlCardLoop has exited and the level has faded in, so the 60
+ *       frames are spent inside Level_MainLoop with gameplay running.</li>
  * </ul>
  *
  * <p>In the original game, the title card loop (Level_TtlCardLoop) runs until
- * the ACT element reaches its target, then level loading continues. The elements
- * continue running in the background during level load, eventually sliding out
- * and being deleted.
+ * every element has reached its target <em>and</em> v_plc_buffer is empty, then
+ * level loading continues. The elements continue running in the background
+ * during level load, eventually sliding out and being deleted.
  *
  * <p>State machine:
  * <pre>
@@ -52,9 +56,6 @@ public class Sonic1TitleCardManager implements TitleCardProvider {
     private static final Logger LOGGER = Logger.getLogger(Sonic1TitleCardManager.class.getName());
 
     private static Sonic1TitleCardManager instance;
-
-    /** Display hold duration: 60 frames (~1 second at 60fps), matching obTimeFrame in disassembly */
-    private static final int DISPLAY_HOLD_DURATION = 60;
 
     /** Pattern base ID for S1 title card art (high to avoid conflicts with S2's 0x40000) */
     private static final int PATTERN_BASE = PatternAtlasRange.MENU_AND_DATA_SELECT.base();
@@ -266,7 +267,7 @@ public class Sonic1TitleCardManager implements TitleCardProvider {
     }
 
     private void updateDisplay() {
-        if (stateTimer >= DISPLAY_HOLD_DURATION && !plcQueueBusy()) {
+        if (!plcQueueBusy()) {
             state = Sonic1TitleCardState.SLIDE_OUT;
             stateTimer = 0;
         }
@@ -279,6 +280,16 @@ public class Sonic1TitleCardManager implements TitleCardProvider {
      * while {@code v_plc_buffer} is non-empty (docs/s1disasm/sonic.asm:
      * 2814-2842). The card's length is therefore the queued art's drain time,
      * not a constant.
+     *
+     * <p>Element arrival plus an empty queue is the loop's <em>whole</em> exit
+     * condition; there is no minimum hold. The ROM's {@code
+     * move.w #1*60,obTimeFrame(a1)} belongs to {@code Card_Wait}, routine 4/6
+     * (docs/s1disasm/_incObj/34 Title Cards.asm:74,118-122), which the routine
+     * bump at docs/s1disasm/sonic.asm:2971-2974 only reaches after the loop,
+     * the four {@code Level_Delay} frames and {@code PalFadeIn_Alt} — i.e.
+     * inside {@code Level_MainLoop} with gameplay already running. Gating the
+     * pre-release loop on it made the level start late whenever the queued art
+     * drained faster than the slide-in plus 60 frames.
      */
     private boolean plcQueueBusy() {
         if (SessionManager.getCurrentWorldSession() == null) {

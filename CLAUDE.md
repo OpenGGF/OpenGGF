@@ -101,6 +101,16 @@ file is guidance you can weigh against the situation in front of you.
    behaviour except in AIZ"* is still a zone carve-out. Zone/event/object providers may
    expose ROM state at the owning boundary, but shared physics/sidekick/object code
    consumes semantic predicates.
+   **The bar is any BK2, not this BK2.** Traces exist to prove engine accuracy, so a fix
+   must hold for a movie nobody has recorded yet — a green fixture proves the fixture.
+   A constant derived by measuring a fixture's own rows, rather than read out of the
+   disassembly, is a fitted model even when every test passes, and it will desync the
+   first different recording. Measuring a fixture is only a legitimate *starting point*:
+   the landed value must be traceable to the ROM routine that owns it and cited there.
+   A value that is close to the ROM's but not equal is usually absorbing an error
+   elsewhere — chase that, don't keep the constant. Where genuine hardware timing cannot
+   be derived from frame-granularity state at all, the answer is a regenerable per-movie
+   timing sidecar under rule 4, never a tuned number.
 4. **Trace data is comparison-only by default.** Engine gameplay state must never be
    hydrated or synced from a trace in committed test code. The sole exception is the
    dedicated hardware-timing input contract documented in
@@ -214,6 +224,23 @@ not a baseline entry, unless the gap is genuinely intentional.
 `Camera.updatePosition(true)` *after* the level load, and prefer
 `@ExtendWith(SingletonResetExtension.class)` over manual teardown. Set
 `startup.legalDisclaimer=false` in tests that boot the full `Engine`.
+
+**`FixBugs` / `fixBugs` assembly paths.** All three disassemblies are built with the
+bug-fix conditional OFF — `FixBugs = 0` (`s1disasm/sonic.asm:20`,
+`skdisasm/sonic3k.asm:38`, `skdisasm/s3.asm:25`) and `fixBugs = 0`
+(`s2disasm/s2.asm:27`) — because that is what the shipped ROMs do, and the traces
+record shipped-ROM behaviour. **Always model the `FixBugs = 0` path**, including
+when it is plainly a bug: the un-fixed path is the accurate one, and taking the
+fixed branch will desync a trace that compares the affected field. There are ~327
+such blocks in s1disasm, ~262 in s2disasm and ~111 in skdisasm, so you will meet
+them often.
+
+When you port code near one of these conditionals, **say so in a comment** — name
+the flag, state which branch the engine takes and why, and describe what the fixed
+branch would do. That costs a line now and is the only thing that will make a
+future "support the bug-fixed revisions" effort tractable, since the sites are
+otherwise invisible once ported. `Camera.java:122-124` and
+`Sonic1BatbrainBadnikInstance.java:394` are existing examples of the shape.
 
 **Audio accuracy:** reference the libvgm chip cores and the SMPSPlay source rather than
 simplified versions. Diagnose against a source of truth instead of twiddling knobs.

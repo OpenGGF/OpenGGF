@@ -74,10 +74,48 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
+import static org.mockito.Mockito.clearInvocations;
 
 class TestEngine {
     @TempDir
     Path tempDir;
+
+    @Test
+    void titleAudioBackendReinstallHonorsAudioEnabledLifecycle() throws Exception {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone();
+        config.setConfigValue(SonicConfiguration.AUDIO_ENABLED, false);
+        AudioManager audio = mock(AudioManager.class);
+        Engine engine = new Engine(new EngineContext(
+                config,
+                new GraphicsManager(),
+                audio,
+                mock(RomManager.class),
+                mock(PerformanceProfiler.class),
+                mock(DebugOverlayManager.class),
+                mock(PlaybackDebugManager.class),
+                mock(RomDetectionService.class),
+                mock(CrossGameFeatureProvider.class)));
+        clearInvocations(audio);
+
+        invokePrivateMethod(engine, "ensureAudioBackend", new Class<?>[]{});
+        verify(audio, never()).setBackend(any());
+
+        config.setConfigValue(SonicConfiguration.AUDIO_ENABLED, true);
+        invokePrivateMethod(engine, "ensureAudioBackend", new Class<?>[]{});
+        verify(audio).setBackend(any());
+
+        clearInvocations(audio);
+        invokePrivateMethod(engine, "resetForGameplayFromMasterTitle", new Class<?>[]{});
+        invokePrivateMethod(engine, "initializeGlobalGameplayServices", new Class<?>[]{});
+        verify(audio).resetState();
+        verify(audio).ensurePresentationSink();
+
+        clearInvocations(audio);
+        invokePrivateMethod(engine, "resetForGameplayFromMasterTitle", new Class<?>[]{});
+        invokePrivateMethod(engine, "showStartupRomError", new Class<?>[]{String.class},
+                "title reconstruction test");
+        verify(audio).ensurePresentationSink();
+    }
 
     @AfterEach
     void tearDown() {

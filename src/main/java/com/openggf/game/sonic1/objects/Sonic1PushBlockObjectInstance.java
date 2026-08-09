@@ -171,9 +171,6 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
     private static final int PUSH_SOUND_DURATION = 31;
     private int lastPushSoundFrame = -PUSH_SOUND_DURATION;
 
-    // Last X position where a geyser maker was spawned (prevents repeated spawns)
-    private int lastGeyserSpawnX = Integer.MIN_VALUE;
-
     // Set when the ROM's second out_of_range check falls through to DeleteObject.
     // ObjectManager then performs the actual unload so counter-based respawn state
     // is cleared through the normal manager path.
@@ -362,16 +359,39 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
             }
         }
 
-        // loc_BFC6 / loc_BFE6: first check current obX; if that fails, the ROM
-        // runs a second out_of_range against objoff_34 (spawn X) to decide
-        // between DeleteObject and routine-4 reset.
+        // PushB_Display: first out_of_range on the current obX; if that fails,
+        // fall into PushB_ChkWithinOrigin
+        // (docs/s1disasm/_incObj/"33 MZ, LZ Pushable Blocks.asm":92-96).
         if (isOutOfRangeCurrentX()) {
-            if (isOutOfRangeSpawnX()) {
-                deletePending = true;
-            } else {
-                handleOutOfRange();
-            }
+            chkWithinOrigin();
         }
+    }
+
+    /**
+     * ROM {@code PushB_ChkWithinOrigin}
+     * (docs/s1disasm/_incObj/"33 MZ, LZ Pushable Blocks.asm":96-113).
+     * <p>
+     * A second {@code out_of_range} against {@code pblock_origX}: when the ORIGIN is
+     * also outside the window the block reaches {@code .deleteAndAllowRespawn}, which
+     * clears the respawn bit and calls {@code DeleteObject}. Only an origin still
+     * inside the window is snapped home and parked on routine 4
+     * ({@code PushB_ChkVisible}, ibid.:116-127), which runs {@code ChkPartiallyVisible}
+     * and {@code rts} with no {@code out_of_range} test of its own.
+     * <p>
+     * Both ROM entry points reach this: {@code PushB_Display}'s fall-through, and
+     * {@code PushB_Sunken}'s {@code bra.w} after a block finishes sinking in lava
+     * (ibid.:213-219). Taking the routine-4 half unconditionally on the sunken path
+     * parks an out-of-range block in a routine that can never delete it, so it holds
+     * its SST slot for the rest of the act and shifts every later {@code ObjPosLoad}
+     * placement -- and with it the {@code FindFreeObj} slots the Obj37 scattered-ring
+     * chain claims, whose {@code d7}-derived bounce phase then diverges.
+     */
+    private void chkWithinOrigin() {
+        if (isOutOfRangeSpawnX()) {
+            deletePending = true;
+            return;
+        }
+        handleOutOfRange();
     }
 
     /**
@@ -446,13 +466,16 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
             y = yPos32 >> 16;
             motion.ySub = yPos32 & 0xFFFF;
 
-            // cmpi.b #$A0,obY+3(a0) / bhs.s loc_C104
+            // cmpi.b #$A0,obY+3(a0) / bhs.s PushB_Sunken
             if ((motion.ySub & 0xFF) >= SLOW_SINK_DELETE_THRESHOLD) {
-                // loc_C104: unlink player and go to out-of-range
+                // PushB_Sunken: unlink Sonic, clear the stood-on flag, then
+                // bra.w PushB_ChkWithinOrigin -- NOT an unconditional park at
+                // the origin (docs/s1disasm/_incObj/"33 MZ, LZ Pushable
+                // Blocks.asm":209-219).
                 if (player != null) {
                     player.setOnObject(false);
                 }
-                handleOutOfRange();
+                chkWithinOrigin();
                 return true;
             }
         }
@@ -621,7 +644,6 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
             yVelocity = 0;
             solidState = 0;
             pushReleasePendingAfterRideExit = false;
-            lastGeyserSpawnX = Integer.MIN_VALUE;
         }
     }
 
@@ -649,7 +671,6 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
         motion.xSub = 0;
         motion.ySub = 0;
         pushMomentum = 0;
-        lastGeyserSpawnX = Integer.MIN_VALUE;
         updateDynamicSpawn(x, y);
     }
 
@@ -892,13 +913,14 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // Guard: prevent spawning multiple makers at the same X position.
-        // The ROM relies on object slot exhaustion to limit this; our engine
-        // has dynamic object lists so we must guard explicitly.
-        if (x == lastGeyserSpawnX) {
-            return;
-        }
-        lastGeyserSpawnX = x;
+        // No de-duplication here. PushB_SpawnLavaGeysers runs every frame from
+        // PushB_LavaPlatform and spawns a GeyserMaker whenever obX equals one of
+        // the hardcoded X-positions exactly (docs/s1disasm/_incObj/33 MZ, LZ
+        // Pushable Blocks.asm:229-269). A block drifting on lava moves at
+        // pblock_lavaspeed>>3 = +/-$80 (half a pixel per frame, same file
+        // lines 157-159/329-331), so obX holds each integer value for two
+        // consecutive frames and the ROM spawns a maker on both of them. The
+        // only thing that stops it is FindFreeObj failing.
 
         // PushB_LoadLava: spawn GeyserMaker object
         // _move.b #id_GeyserMaker,obID(a1)
@@ -926,16 +948,12 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
     void applyLavaGeyserLaunch(int velY) {
         // bset #1,obStatus(a1) -> airborne flag (separate from obSolid)
         airborne = true;
-        // GMake_MakeLava runs from a later SST slot than its parent push block.
-        // The recorded REV01 MZ2 credits trace shows the first parent airborne
-        // frame using the raw #-$580 displacement before loc_C056's +$18 gravity
-        // becomes visible in the next frame's velocity. Seeding the pre-gravity
-        // value plus the compensating subpixel fraction preserves that slot phase.
-        // References:
-        //   docs/s1disasm/_incObj/4C & 4D Lava Geyser Maker.asm (GMake_MakeLava)
-        //   docs/s1disasm/_incObj/33 Pushable Blocks.asm (loc_C056)
-        yVelocity = (short) (velY - FALL_GRAVITY);
-        motion.ySub = (FALL_GRAVITY << 8) & 0xFFFF;
+        // move.w #-$580,obVelY(a1) -- a plain velocity store, no subpixel touch
+        // (docs/s1disasm/_incObj/4C, 4D MZ Lava Geyser and Maker.asm:83-87).
+        // PushB_OnLava's airborne branch already runs SpeedToPos before the
+        // +$18 gravity add (same order as loc_C056), so no phase compensation
+        // is required here.
+        yVelocity = (short) velY;
     }
 
     /**
@@ -1013,9 +1031,34 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean isPersistent() {
-        // Allow ObjectManager's counter-based unload path to delete the block
-        // when the ROM's second out_of_range check has failed on spawn X.
-        return !isDestroyed() && !deletePending && isOnScreenX(320);
+        // Obj33 has NO camera-window persistence rule. Its only lifetime rule is
+        // PushB_Display's pair of out_of_range checks -- current obX, then
+        // pblock_origX -- reaching .deleteAndAllowRespawn / DeleteObject
+        // (docs/s1disasm/_incObj/"33 MZ, LZ Pushable Blocks.asm":92-113).
+        // Routine 4 (PushB_ChkVisible, ibid.:116-127) runs ChkPartiallyVisible
+        // and rts without ANY out_of_range test, so a block parked at its origin
+        // survives indefinitely off-screen. deletePending is therefore the sole
+        // gate: it is latched only when updateActive has just failed BOTH checks.
+        //
+        // A camera-window term here (previously isOnScreenX(320)) is an invented
+        // rule with more left slack than the ROM's chunk-aligned window, and it
+        // kept blocks alive past the frame ROM freed their SST slot -- which
+        // desynced every subsequent MZ2 ObjPosLoad placement by one slot.
+        return !isDestroyed() && !deletePending;
+    }
+
+    /**
+     * ROM parity: PushB_Action runs PushB_SolidAction and the MZ1 stomper
+     * alignment BEFORE reaching PushB_Display's out_of_range
+     * (docs/s1disasm/_incObj/"33 MZ, LZ Pushable Blocks.asm":66-93), so the
+     * check must observe the position this frame's routine produced. The
+     * counter lane honours this flag at ObjectManager.java:914-934, which also
+     * lets the deletePending latch set at the tail of updateActive be consumed
+     * on the same frame instead of one frame late.
+     */
+    @Override
+    public boolean checksOutOfRangeAfterRoutine() {
+        return true;
     }
 
     @Override

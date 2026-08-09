@@ -83,6 +83,137 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * boundaries and every carry-over assertion still hold. Closing it is a separate
  * title-card-duration parity item and is left for a follow-up.
  *
+ * <h2>Superseded: "the special-stage interior exits 519 rows early"</h2>
+ *
+ * <p><b>That eject was harness-side, and it is now closed.</b> It was not a short
+ * results/fade phase: the run recorder cuts an {@code ss} segment on the raw ROM
+ * byte, opening on the first {@code Game_Mode == GameModeID_SpecialStage} frame and
+ * closing on the first frame that is no longer it
+ * ({@code S2RunCaptureRunner} Blocks 1 and 2). The ROM keeps that mode well past
+ * the half-pipe — {@code SS_MainLoop} leaves its object loop when
+ * {@code SS_Check_Rings_flag} rises, and the emerald/perfect accounting,
+ * {@code Pal_FadeToWhite}, the results-screen build and the whole {@code Obj6F}
+ * tally loop below it all still run under it, with {@code Game_Mode} rewritten only
+ * by the closing {@code move.b #GameModeID_Level,(Game_Mode).w}
+ * (docs/s2disasm/s2.asm:6721-6800). The engine splits that one ROM mode into
+ * {@code SPECIAL_STAGE} plus {@code SPECIAL_STAGE_RESULTS}, so the driver's
+ * {@code == SPECIAL_STAGE} gate (and the coordinator's matching ownership test)
+ * read the engine's internal boundary as a premature exit. Both now accept either
+ * engine mode via {@code RunPlaybackObservation.insideRecordedSpecialStageMode},
+ * and the interior runs all 5733 represented rows.
+ *
+ * <h2>Current RED: interior DPLC divergence (newly reachable)</h2>
+ *
+ * <p>With the interior completing, the previously unreached
+ * {@code writeDynamicArtInteriorReport} assertion now runs and fails: 37933 errors
+ * over 4518 of the 5733 rows, first at row 136. Two distinct shapes:
+ * in-stage rows publish an edge one row early (row 136 engine {@code edges=[3,4,5]}
+ * where the recording still has {@code outstanding=[0,1,2]}, then the reverse at
+ * 137), and from row 5192 the engine keeps submitting SS player transfers through
+ * the results tail where the ROM has none (it {@code clearRAM Object_RAM} before
+ * loading {@code Obj6F}).
+ *
+ * <p><b>Root cause (measured 2026-08-08): this is the missing {@code run_objects_end}
+ * pass log, not an engine defect and not a publication-phase offset.</b> The
+ * interior here is FRAME-paced -- {@link AbstractRunChainTest#uncomparedInteriorStep}
+ * runs exactly one {@code GameLoop.step()} per non-lag recorded row, because
+ * {@code TraceRunSpecialStageRows.S2Rows.newRunObjectsPassBinder()} returns empty
+ * for a segment with no recorded passes, and this fixture's {@code ss} / {@code ss_2}
+ * have zero. But the S2 special-stage 68K loop is not one {@code RunObjects} pass
+ * per V-blank ({@code SS_MainLoop} sets {@code VintID_S2SS}, waits for the V-int,
+ * then runs the pass -- docs/s2disasm/s2.asm:6694-6721), so pass count and row count
+ * diverge. The committed standalone stage-1 fixture measures the gap exactly: 3328
+ * non-lag rows against 2991 actually-completed ROM passes, an 11% frame-paced
+ * overrun. The recorded {@code ss} rows show the same shape directly -- 315 of its
+ * 5733 rows carry DPLC edges stamped with TWO distinct {@code logical_frame}s (two
+ * ROM passes surfacing on one observation; row 424 submits {@code ss-sonic} /
+ * {@code ss-tails} on lag frame 423 and completes them on 424, publishing both at
+ * 424), which a one-step-per-row engine cannot produce at all. It submits at 424 and
+ * completes at 426, and is a row behind for the rest of the stage; the totals differ
+ * too (5814 recorded edges against 5850 engine), so it is not a fixable constant
+ * phase shift.
+ *
+ * <p>The control is decisive: stripping the 2991 {@code run_objects_end} records from
+ * the standalone {@code src/test/resources/traces/s2/special_stage} fixture and
+ * re-running {@code TestS2SpecialStageTraceReplay} against the copy via
+ * {@code -Dopenggf.trace.candidate.dir} does not merely go red on DPLC -- it cannot
+ * replay at all ("rings-to-go trigger clear at frame 1324 has no following completed
+ * pass"). The green standalone lane is pass-paced by construction, and additionally
+ * normalizes the 451 spilled submission edges through
+ * {@code DynamicArtSpillNormalization}; the run-chain interior comparator
+ * ({@code TraceRunReplayWalker.DynamicArtSegmentComparison}) compares raw recorded
+ * rows and applies neither. Normalization alone does not close it (simulated: 4603
+ * rows still divergent, against 4518 without it) -- the pass log is the load-bearing
+ * half.
+ *
+ * <p><b>This is therefore a FIXTURE finding.</b> Per-observation pass counts are
+ * sub-frame 68K execution timing; deriving them by measuring this fixture's own DPLC
+ * rows would be a fitted model under hard rule 3, and no frame-granularity ROM state
+ * predicts them. The only correct closure is republishing this run's {@code ss} /
+ * {@code ss_2} segments from the already-committed native recorder (a scratch
+ * re-capture adds 2991 and 3291 pass records as a strict superset, per the recorder
+ * note below) -- which also yields a sixth {@code seg4_ehz2} segment this fixture
+ * omits, so it remains a separate publication decision.
+ *
+ * <p>The paragraph above ("the earlier fixture-data gap story is wrong") remains true
+ * of the {@code seg2} return handoff it was written about. The chain now fails in
+ * {@link AbstractRunChainTest} with {@code "special stage exited with 519 represented
+ * rows remaining in ss"}, at interior row 5213 of 5733 — after the emerald has been
+ * won, not before checkpoint 1.
+ *
+ * <p><b>What the earlier checkpoint eject actually was.</b> Until 2026-08-08 this lane
+ * ejected at row 2027 with {@code Checkpoint 1 triggered: required=40, collected=36},
+ * and that was read first as a fixture gap and then as a pass-pacing gap. Neither was
+ * right. Probing the interior row against the recorded {@code ss} rows showed
+ * {@code current_segment}, {@code speed_factor}, {@code track_anim_frame} and the
+ * combined ring count matching the recording on EVERY row: the engine held 42 rings by
+ * row 1588, exactly as the ROM did. The defect was that the checkpoint was resolved
+ * against the ring count captured when the marker was passed (36, row ~1538) instead
+ * of the count when the rainbow finished. The ROM reads {@code (Ring_count)} and
+ * {@code (Ring_count_2P)} live at {@code loc_35978} (docs/s2disasm/s2.asm:71843-71853),
+ * reached only when the rainbow object's x hits {@code $E8} and it deletes itself, so
+ * rings taken during the rainbow count. {@code Sonic2SpecialStageCheckpoint} now
+ * resolves from a live ring supplier and the interior runs on to row 5213.
+ *
+ * <p><b>The remaining 519 rows.</b> The recorded {@code check_rings_flag} rises at
+ * segment-local frame 5191; the ROM stays in special-stage mode for the rest of the
+ * segment running the post-flag tail of {@code SS_MainLoop} (emerald/perfect
+ * accounting, {@code Pal_FadeToWhite}, the results-screen build and its {@code Obj6F}
+ * tally, s2.asm:6721-6800). The engine finishes at row 5213 — 22 rows late — and then
+ * leaves {@code GameMode.SPECIAL_STAGE} almost at once. Closing this is a
+ * special-stage results/fade duration item, independent of ring collection.
+ *
+ * <p><b>Blocker status, measured 2026-08-08 (supersedes the 2026-08-07 note).</b>
+ * The driver side is now CLOSED: {@link AbstractRunChainTest#uncomparedInteriorStep}
+ * consumes {@code newRunObjectsPassBinder}/{@code passPacedFromRow}, and
+ * {@link com.openggf.GameLoop.SpecialStageObservationPacing} lets one V-blank row's
+ * body run the row's completed-pass count (0, 1 or 2) inside its single PLC lifecycle
+ * iteration — which is what {@code TraceRunSpecialStageRowDriver.publishAdmittedRow}
+ * requires ("advertised special-stage row N was not published atomically"), since
+ * {@code ss} rows own zero passes 3341 times, one pass 1793 times and two passes 599
+ * times. Because the committed fixture records no passes, that path is inert here and
+ * this lane is unchanged by it.
+ *
+ * <p>The recorder side is also settled: a scratch native re-capture of this run's own
+ * movie reproduces all five committed segments' {@code physics.csv} byte-for-byte and
+ * every level segment's aux byte-for-byte, adds 2991 {@code run_objects_end} records
+ * to {@code ss} and 3291 to {@code ss_2} as a strict superset (removing those lines
+ * restores the committed bytes exactly; {@code metadata.json} differs only in
+ * {@code recording_date}), and additionally captures a sixth {@code seg4_ehz2} tail
+ * segment plus its {@code level_advance} transition and gap edges — an ADDITIVE
+ * widening of what this fixture claims to cover, so it is a separate publication
+ * decision rather than something to fold in.
+ *
+ * <p><b>The third blocker is closed.</b> It was the stale checkpoint ring read
+ * described above, not pacing and not the prefix: with the fix, and with the committed
+ * (pass-free) fixture still frame-paced, the interior reproduces the recording's track
+ * and ring state row for row all the way to the emerald.
+ *
+ * <p>Loosening or skipping the remaining-rows assertion remains not an option: it is
+ * correctly detecting a real premature exit. Deriving a pass cadence by measuring this
+ * fixture's own rows would be a fitted model, and no engine state is hydrated from the
+ * trace anywhere on this path.
+ *
  * <h2>Emerald boundary-model correction (retained + tightened)</h2>
  * <p>Asserting the LIVE {@code emeralds_after} count across an <b>advance-uncompared</b>
  * special stage is a boundary-model over-reach (an emerald is awarded only on a WON

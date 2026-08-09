@@ -68,6 +68,13 @@ public interface PlayableEntity {
     int getAnimationId();
 
     /**
+     * ROM {@code mapping_frame(a0)} - the sprite frame the animation script last published.
+     * The shipped TouchResponse/Touch_Rings ducking test compares this byte, not the
+     * animation id; see {@code ObjectInteractionRules#duckTouchBoxMappingFrame}.
+     */
+    int getMappingFrame();
+
+    /**
      * Returns whether this player's {@code object_control} byte should
      * suppress the per-frame touch-response collision pass.
      * <p>
@@ -127,6 +134,13 @@ public interface PlayableEntity {
     boolean applyHurt(int sourceX);
     boolean applyHurt(int sourceX, boolean spikeHit);
     boolean applyHurt(int sourceX, DamageCause cause);
+    /**
+     * Applies hurt while ignoring the post-hit invulnerability (flashing) timer;
+     * debug invulnerability and the invincibility power-up still block it. Used by
+     * the hazards whose retail code omits the {@code invulnerability_timer} test
+     * (S1 spikes, S3K ICZ harmful ice).
+     */
+    boolean applyHurtIgnoringIFrames(int sourceX, DamageCause cause);
     boolean applyHurtOrDeath(int sourceX, boolean spikeHit, boolean hadRings);
     boolean applyHurtOrDeath(int sourceX, DamageCause cause, boolean hadRings);
     boolean applyCrushDeath();

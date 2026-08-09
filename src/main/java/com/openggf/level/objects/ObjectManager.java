@@ -132,6 +132,15 @@ public class ObjectManager {
      */
     private final ObjectWindowingStrategy windowingStrategy;
     private final ObjectInstance[] execOrder;
+    /**
+     * Parallel to {@link #execOrder}, but keyed by an object's OWN SST slot rather
+     * than the slot it executes from. Only objects that borrow a different
+     * execution slot appear here; see the retirement note in
+     * {@link #updateCounterBasedExecThenLoad}.
+     */
+    private final ObjectInstance[] ownSlotRetireOrder;
+    /** Child slots whose release is deferred to their own position in the ascending exec walk. */
+    private final java.util.BitSet pendingChildSlotRelease;
     private final int[] playerCentreXAtSlotStart;
     private final int[] playerCentreYAtSlotStart;
     private final boolean[] playerCentreAtSlotStartValid;
@@ -251,6 +260,8 @@ public class ObjectManager {
         this.placement.setTwoAxisCursorPlacement(slotLayout.twoAxisCursorPlacement());
         this.placement.setWindowingStrategy(windowingStrategy);
         this.execOrder = new ObjectInstance[slotLayout.dynamicSlotCount()];
+        this.ownSlotRetireOrder = new ObjectInstance[slotLayout.dynamicSlotCount()];
+        this.pendingChildSlotRelease = new java.util.BitSet(slotLayout.dynamicSlotCount());
         this.playerCentreXAtSlotStart = new int[execOrder.length];
         this.playerCentreYAtSlotStart = new int[execOrder.length];
         this.playerCentreAtSlotStartValid = new boolean[execOrder.length];
@@ -316,6 +327,70 @@ public class ObjectManager {
         return slotLayout.toSlotIndex(execIndex);
     }
 
+    /**
+     * Records an object that runs from a slot other than the one it owns, so its
+     * {@code out_of_range} retirement can still be evaluated at its OWN slot in
+     * the ascending {@code ExecuteObjects} walk.
+     */
+    private void indexOwnSlotRetirement(AbstractObjectInstance aoi) {
+        int ownSlot = aoi.getSlotIndex();
+        if (ownSlot == executionSlotIndex(aoi) || !isManagedDynamicSlot(ownSlot)) {
+            return;
+        }
+        ownSlotRetireOrder[execIndexForSlot(ownSlot)] = aoi;
+    }
+
+    /**
+     * ROM {@code ExecuteObjects} walks the SST in ascending slot order and each
+     * object's {@code out_of_range ...,DeleteObject} tail therefore frees THAT
+     * object's slot at THAT slot's position in the walk
+     * (docs/s1disasm/_inc/ExecuteObjects.asm:10-30).
+     *
+     * <p>A few engine objects consolidate a ROM parent plus its children into one
+     * instance and borrow a reserved child slot as their execution slot to get
+     * the ROM's solid-pass ordering right (S1 {@code Sonic1StaircaseObjectInstance},
+     * whose blocks share the {@code Staircase} entry that runs
+     * {@code out_of_range.w DeleteObject,stair_origX(a0)} for every block,
+     * docs/s1disasm/_incObj/"5B SLZ Staircase.asm":6-12,39-66). Retiring such an
+     * object only at the borrowed slot moved the ROM parent block's slot release
+     * far later in the walk, so lowest-free {@code FindFreeObj} allocations made
+     * between the two positions — notably {@code Ring_Main}'s per-ring children
+     * (docs/s1disasm/_incObj/"25, 37 Rings.asm":251) — saw the parent slot as
+     * still occupied and skipped it.
+     *
+     * <p>The retirement anchor is the object's own slot; where it runs is
+     * unchanged. This is safe for the same reason ROM's result is
+     * position-independent here: these objects feed {@code out_of_range} a fixed
+     * origin ({@code stair_origX}) that their routine never writes, so the check
+     * yields the same answer either side of the routine.
+     *
+     * @return {@code true} if an object was retired at this slot
+     */
+    private boolean retireBorrowedExecutionSlotOwnerAtOwnSlot(int cameraX) {
+        ObjectInstance owner = ownSlotRetireOrder[currentExecSlot];
+        if (owner == null) {
+            return false;
+        }
+        ownSlotRetireOrder[currentExecSlot] = null;
+        if (!(owner instanceof AbstractObjectInstance aoi) || owner.isDestroyed()) {
+            return false;
+        }
+        int execSlot = executionSlotIndex(aoi);
+        if (!isManagedDynamicSlot(execSlot)) {
+            return false;
+        }
+        int execIndex = execIndexForSlot(execSlot);
+        if (execOrder[execIndex] != owner) {
+            return false;
+        }
+        ObjectSpawn spawn = instanceToSpawn.get(owner);
+        if (!unloadCounterBasedOutOfRange(owner, spawn, execSlot, cameraX)) {
+            return false;
+        }
+        execOrder[execIndex] = null;
+        return true;
+    }
+
     public void reset(int cameraX) { reset(cameraX, null); }
 
     /**
@@ -358,8 +433,9 @@ public class ObjectManager {
         // Materialize the current ObjectPlacementController window immediately after reset.
         // S1 needs this for ROM parity at level start; for S2/S3K it keeps
         // manual camera resets and headless probes from sitting on an empty
-        // active window until a later ObjectPlacementController delta occurs. Initial reset
-        // materialization still honors the camera-Y filter; S2's vertical bypass is runtime-only.
+        // active window until a later ObjectPlacementController delta occurs. The
+        // camera-Y filter is S3K-only (S2's loader has none at all, see
+        // isSpawnVerticallyEligibleForLoad), so it applies here for S3K only.
         syncActiveSpawnsLoad(false);
     }
 
@@ -779,13 +855,21 @@ public class ObjectManager {
         }
 
         Arrays.fill(execOrder, null);
+        Arrays.fill(ownSlotRetireOrder, null);
         Arrays.fill(playerCentreAtSlotStartValid, false);
+        // Per-pass scratch: which managed slots were freed during THIS object
+        // pass. Reset here for the same reason runExecLoop resets it -- bits
+        // left over from an earlier frame would make a later reallocation see
+        // a slot as freed-this-pass when it was not.
+        slotsFreedDuringObjectPass.clear();
+        pendingChildSlotRelease.clear();
         for (ObjectInstance inst : activeObjects.values()) {
             if (initialDispatch.excludesFromDynamicPass(inst)) {
                 continue;
             }
             if (inst instanceof AbstractObjectInstance aoi && isManagedDynamicSlot(executionSlotIndex(aoi))) {
                 execOrder[execIndexForSlot(executionSlotIndex(aoi))] = inst;
+                indexOwnSlotRetirement(aoi);
             }
         }
         for (ObjectInstance inst : dynamicObjects) {
@@ -794,6 +878,7 @@ public class ObjectManager {
             }
             if (inst instanceof AbstractObjectInstance aoi && isManagedDynamicSlot(executionSlotIndex(aoi))) {
                 execOrder[execIndexForSlot(executionSlotIndex(aoi))] = inst;
+                indexOwnSlotRetirement(aoi);
             }
         }
         // Phase 2: ExecuteObjects — run objects in slot order with inline out_of_range.
@@ -802,6 +887,13 @@ public class ObjectManager {
         try {
             for (currentExecSlot = 0; currentExecSlot < execOrder.length; currentExecSlot++) {
                 capturePlayerCentreAtSlotStart(player);
+                if (pendingChildSlotRelease.get(currentExecSlot)) {
+                    pendingChildSlotRelease.clear(currentExecSlot);
+                    releaseSlot(slotIndexForExec(currentExecSlot));
+                }
+                if (retireBorrowedExecutionSlotOwnerAtOwnSlot(cameraX)) {
+                    objectsRemoved = true;
+                }
                 ObjectInstance instance = execOrder[currentExecSlot];
                 if (instance == null) continue;
 
@@ -843,9 +935,14 @@ public class ObjectManager {
 
                 if (instance.isDestroyed()) {
                     int slotIndex = slotIndexForExec(currentExecSlot);
+                    // Release the instance's OWN SST slot; the exec-slot comparison
+                    // only confirms this entry belongs to it. See the note in
+                    // unloadCounterBasedOutOfRange -- an object executing from a
+                    // reserved child slot owns a different slot than it runs from.
                     if (instance instanceof AbstractObjectInstance aoi3
-                            && aoi3.getSlotIndex() == slotIndex) {
-                        releaseSlot(slotIndex);
+                            && executionSlotIndex(aoi3) == slotIndex
+                            && isManagedDynamicSlot(aoi3.getSlotIndex())) {
+                        releaseSlot(aoi3.getSlotIndex());
                     }
                     instance.onUnload();
                     execOrder[currentExecSlot] = null;
@@ -924,6 +1021,11 @@ public class ObjectManager {
                 }
             }
         } finally {
+            for (int e = pendingChildSlotRelease.nextSetBit(0); e >= 0;
+                    e = pendingChildSlotRelease.nextSetBit(e + 1)) {
+                releaseSlot(slotIndexForExec(e));
+            }
+            pendingChildSlotRelease.clear();
             currentExecSlot = -1;
             updating = false;
             deferredDynamicExecThisFrame.clear();
@@ -959,13 +1061,16 @@ public class ObjectManager {
         // ROM parity: Build slot-ordered execution array.
         slotsFreedDuringObjectPass.clear();
         Arrays.fill(execOrder, null);
+        Arrays.fill(ownSlotRetireOrder, null);
         Arrays.fill(playerCentreAtSlotStartValid, false);
+        pendingChildSlotRelease.clear();
         for (ObjectInstance inst : activeObjects.values()) {
             if (initialDispatch.excludesFromDynamicPass(inst)) {
                 continue;
             }
             if (inst instanceof AbstractObjectInstance aoi && isManagedDynamicSlot(executionSlotIndex(aoi))) {
                 execOrder[execIndexForSlot(executionSlotIndex(aoi))] = inst;
+                indexOwnSlotRetirement(aoi);
             }
         }
         for (ObjectInstance inst : dynamicObjects) {
@@ -974,6 +1079,7 @@ public class ObjectManager {
             }
             if (inst instanceof AbstractObjectInstance aoi && isManagedDynamicSlot(executionSlotIndex(aoi))) {
                 execOrder[execIndexForSlot(executionSlotIndex(aoi))] = inst;
+                indexOwnSlotRetirement(aoi);
             }
         }
         updating = true;
@@ -986,6 +1092,34 @@ public class ObjectManager {
             // ROM parity: Iterate slots in ascending order, matching ExecuteObjects.
             for (currentExecSlot = 0; currentExecSlot < execOrder.length; currentExecSlot++) {
                 capturePlayerCentreAtSlotStart(player);
+                // A reserved child slot freed earlier in this pass is released
+                // here, at the exec position its own ROM object would have
+                // reached in the ascending ExecuteObjects walk
+                // (docs/s1disasm/_inc/ExecuteObjects.asm:10-30) -- see
+                // releaseChildSlotAtItsOwnExecPosition. Without this (and the
+                // finally-block flush below) the deferred bit set by
+                // releaseChildSlotAtItsOwnExecPosition was never acted on in
+                // this loop, so every parent unloaded on this path leaked its
+                // whole reserved child block for the rest of the act.
+                if (pendingChildSlotRelease.get(currentExecSlot)) {
+                    pendingChildSlotRelease.clear(currentExecSlot);
+                    releaseSlot(slotIndexForExec(currentExecSlot));
+                }
+                // A consolidated parent that runs from a borrowed child slot is
+                // retired at its OWN slot's position in the ascending walk -- see
+                // retireBorrowedExecutionSlotOwnerAtOwnSlot. S2/S3K use the same
+                // ascending ExecuteObjects walk as S1, and S3K's consolidated
+                // Obj_AIZGiantRideVine is exactly the S1 staircase shape: the ROM
+                // root's range check and DeleteChain run at the START of
+                // AIZGiantRideVine_Main at the PARENT slot on an x_pos the
+                // routine never writes (docs/skdisasm/sonic3k.asm:46813-46822),
+                // while the engine executes the consolidated object at the handle
+                // child slot for solid-pass ordering. Without this the parent slot
+                // was released later in the walk than ROM, so lowest-free
+                // allocations between the two positions saw it as occupied.
+                if (retireBorrowedExecutionSlotOwnerAtOwnSlot(unloadCameraX)) {
+                    objectsRemoved = true;
+                }
                 ObjectInstance instance = execOrder[currentExecSlot];
                 if (instance == null) continue;
                 processedInExecLoop.add(instance);
@@ -1014,9 +1148,14 @@ public class ObjectManager {
 
                 if (instance.isDestroyed()) {
                     int slotIndex = slotIndexForExec(currentExecSlot);
+                    // Release the instance's OWN SST slot; the exec-slot comparison
+                    // only confirms this entry belongs to it. See the note in
+                    // unloadCounterBasedOutOfRange -- an object executing from a
+                    // reserved child slot owns a different slot than it runs from.
                     if (instance instanceof AbstractObjectInstance aoi3
-                            && aoi3.getSlotIndex() == slotIndex) {
-                        releaseSlot(slotIndex);
+                            && executionSlotIndex(aoi3) == slotIndex
+                            && isManagedDynamicSlot(aoi3.getSlotIndex())) {
+                        releaseSlot(aoi3.getSlotIndex());
                     }
                     instance.onUnload();
                     execOrder[currentExecSlot] = null;
@@ -1102,6 +1241,14 @@ public class ObjectManager {
                 }
             }
         } finally {
+            // Child slots whose exec position the walk had already passed when
+            // the parent unloaded: ROM has no remaining position in this frame's
+            // walk at which to free them, so they are released as the pass ends.
+            for (int e = pendingChildSlotRelease.nextSetBit(0); e >= 0;
+                    e = pendingChildSlotRelease.nextSetBit(e + 1)) {
+                releaseSlot(slotIndexForExec(e));
+            }
+            pendingChildSlotRelease.clear();
             currentExecSlot = -1;
             updating = false;
             deferredDynamicExecThisFrame.clear();
@@ -1527,8 +1674,50 @@ public class ObjectManager {
                     && instance.getSpawn() != null) {
                 int slot = aoi.getSlotIndex();
                 if (slotLayout.isDynamicSlot(slot)) {
-                    occupancy.put(slot, instance.getSpawn().objectId() & 0xFF);
+                    // The LIVE obID, not the spawn id: ROM objects that rewrite obID(a0) in
+                    // place (S1 BossSpikeball_Explode -> id_Explosion) keep their slot and
+                    // report the new id in the SST. See AbstractObjectInstance#getLiveObjectId.
+                    int liveId = aoi.getLiveObjectId();
+                    occupancy.put(slot, liveId >= 0 ? liveId : (instance.getSpawn().objectId() & 0xFF));
                 }
+            }
+        }
+        return occupancy;
+    }
+
+    /** Sentinel id for a dynamic slot held by a parent's child reservation with no live instance yet. */
+    public static final int SLOT_STATE_RESERVED_CHILD = -2;
+
+    /** Sentinel id for a dynamic slot the allocator holds that no live instance or reservation explains. */
+    public static final int SLOT_STATE_UNATTRIBUTED = -3;
+
+    /**
+     * Read-only occupancy snapshot that folds in the two non-instance states the
+     * {@link SlotAllocator} bitset tracks but {@link #occupiedDynamicSlotIds()}
+     * cannot see: parent-held child reservations (ROM {@code FindFreeObj} /
+     * {@code FindNextFreeObj} has already consumed the slot even though the child
+     * object has not been constructed yet) and any residual allocator bit with no
+     * owner. Comparison-only diagnostic: mirrors the ROM SST occupancy the
+     * recorder's {@code slot_dump} samples, and never mutates manager state.
+     */
+    public java.util.Map<Integer, Integer> occupiedDynamicSlotIdsWithReservations() {
+        java.util.Map<Integer, Integer> occupancy = occupiedDynamicSlotIds();
+        for (int[] childSlots : reservedChildSlots.values()) {
+            if (childSlots == null) {
+                continue;
+            }
+            for (int slot : childSlots) {
+                if (slotLayout.isDynamicSlot(slot) && !occupancy.containsKey(slot)) {
+                    occupancy.put(slot, SLOT_STATE_RESERVED_CHILD);
+                }
+            }
+        }
+        int lastDynamic = slotLayout.firstDynamicSlot() + slotLayout.dynamicSlotCount();
+        for (int slot = slotLayout.firstDynamicSlot(); slot < lastDynamic; slot++) {
+            if (slotLayout.isDynamicSlot(slot)
+                    && !slotAllocator.isEmpty(slot)
+                    && !occupancy.containsKey(slot)) {
+                occupancy.put(slot, SLOT_STATE_UNATTRIBUTED);
             }
         }
         return occupancy;
@@ -1741,6 +1930,27 @@ public class ObjectManager {
 
     public void addDynamicObject(ObjectInstance object) {
         addDynamicObjectInternal(object, false, true);
+    }
+
+    /**
+     * True when {@code object} sits in an SST slot this frame's ExecuteObjects walk
+     * has already passed, so the object will not run until the next frame.
+     *
+     * <p>ROM parity: {@code FindFreeObj} scans the SST from the start, so a child
+     * allocated by a parent can land BELOW the parent. Callers that need the ROM's
+     * one-off catch-up for such a child (see {@code SmashObject}) ask this
+     * immediately after spawning it, while the parent is still the executing slot.
+     */
+    public boolean isSlotAlreadyExecutedThisFrame(ObjectInstance object) {
+        if (!updating || currentExecSlot < 0 || !(object instanceof AbstractObjectInstance aoi)) {
+            return false;
+        }
+        int slot = aoi.getSlotIndex();
+        if (slot < 0 || !isManagedDynamicSlot(slot)) {
+            return false;
+        }
+        int execIdx = execIndexForSlot(slot);
+        return execIdx >= 0 && execIdx <= currentExecSlot;
     }
 
     public <T extends ObjectInstance> T createDynamicObject(Supplier<T> factory) {
@@ -2065,6 +2275,29 @@ public class ObjectManager {
     public boolean reservedSlotWaitsForNextObjectPass(int slotIndex) {
         return placement.reservedSlotWaitsForNextObjectPass(
                 slotIndex, updating, currentExecSlot, slotLayout);
+    }
+
+    /**
+     * Whether a live spilled-ring object currently occupies {@code slotIndex}.
+     *
+     * <p>Read-only. The ring manager uses it to clear the legacy pool entry that
+     * mirrors a {@link com.openggf.level.rings.LostRingObjectInstance} once the
+     * object has gone; the pair share one reserved slot, so the object's absence
+     * from that slot is the retirement signal. This does not release anything --
+     * the slot belongs to the object.
+     */
+    public boolean hasLiveLostRingAtSlot(int slotIndex) {
+        if (slotIndex < 0) {
+            return false;
+        }
+        for (ObjectInstance inst : dynamicObjects) {
+            if (inst instanceof com.openggf.level.rings.LostRingObjectInstance ring
+                    && !ring.isDestroyed()
+                    && ring.getSlotIndex() == slotIndex) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -2502,10 +2735,47 @@ public class ObjectManager {
         if (childSlots != null) {
             for (int slot : childSlots) {
                 if (isManagedDynamicSlot(slot)) {
-                    releaseSlot(slot);
+                    releaseChildSlotAtItsOwnExecPosition(slot);
                 }
             }
         }
+    }
+
+    /**
+     * Releases a reserved child slot at the position its ROM object would have
+     * reached in the ascending {@code ExecuteObjects} walk.
+     *
+     * <p>ROM parity: an engine instance that consolidates a ROM parent plus its
+     * {@code FindNextFreeObj} children is <em>one</em> object holding several SST
+     * slots, but in ROM each of those slots holds a separate object with its own
+     * {@code out_of_range ...,DeleteObject} tail. {@code ExecuteObjects} walks the
+     * SST in ascending slot order (docs/s1disasm/_inc/ExecuteObjects.asm:10-30), so
+     * a group whose blocks share one origin (S1 {@code Staircase} feeds every block
+     * {@code stair_origX(a0)}, docs/s1disasm/_incObj/"5B SLZ Staircase.asm":6-12,
+     * 39-66) goes out of range on the same frame but frees each slot at that
+     * slot's own position in the walk -- the parent slot early, the child slots
+     * later. Allocations made in between (the parent-slot {@code FindNextFreeObj}
+     * of a group loaded further right, {@code Ring_Main}'s per-ring
+     * {@code FindFreeObj}) therefore still see the child slots as occupied.
+     *
+     * <p>Freeing every child slot at the parent's position made those in-between
+     * allocations land in slots ROM still had filled (SLZ1 f2522: the 0xE90
+     * staircase took 51/52/54 instead of ROM's 56/57/58, shifting the 0xEC0
+     * group's four slots down by three).
+     *
+     * <p>Outside the exec pass, or for a slot the walk has already passed this
+     * frame, the release is immediate -- ROM has no remaining position in this
+     * frame's walk at which to free it.
+     */
+    private void releaseChildSlotAtItsOwnExecPosition(int slot) {
+        if (updating) {
+            int execIndex = execIndexForSlot(slot);
+            if (execIndex > currentExecSlot && execIndex < execOrder.length) {
+                pendingChildSlotRelease.set(execIndex);
+                return;
+            }
+        }
+        releaseSlot(slot);
     }
 
     /**
@@ -3145,8 +3415,17 @@ public class ObjectManager {
         }
         if (instance instanceof AbstractObjectInstance aoi) {
             int slotIndex = aoi.getSlotIndex();
+            // expectedSlotIndex identifies WHICH exec entry is being retired, so it
+            // must be matched against the instance's EXECUTION slot, not its own SST
+            // slot. The two differ for parents that run from a reserved child slot
+            // (ROM Stair_Main keeps the parent block in a0 while its three children
+            // occupy the FindNextFreeObj slots after it,
+            // docs/s1disasm/_incObj/5B SLZ Staircase.asm:30-66), and comparing against
+            // getSlotIndex() silently skipped the release for exactly those objects --
+            // leaking one SST slot per staircase unload for the rest of the act.
             if (isManagedDynamicSlot(slotIndex)
-                    && (expectedSlotIndex < 0 || slotIndex == expectedSlotIndex)) {
+                    && (expectedSlotIndex < 0
+                            || executionSlotIndex(aoi) == expectedSlotIndex)) {
                 releaseSlot(slotIndex);
             }
         }
@@ -3448,15 +3727,24 @@ public class ObjectManager {
             if (spawn == null || placement.isCounterBasedRespawn() || camera == null) {
                 return true;
             }
-            if (skipVerticalSpawnLoadFilterForGame && allowVerticalLoadBypassForS2) {
+            if (skipVerticalSpawnLoadFilterForGame) {
+                // S2 has NO camera-Y load filter anywhere in its object loader.
+                // ObjectsManager_Init falls straight through into
+                // ObjectsManager_Main (docs/s2disasm/s2.asm:33062-33068 falls into
+                // ObjectsManager_Main at s2.asm:33032), and both
+                // ObjectsManager_GoingForward (s2.asm:33101-33124) and
+                // GoingBackward (s2.asm:33047-33075) call ChkLoadObj immediately
+                // after the X-window scan with no Camera_Y_pos test at all. There is
+                // only one loader path, so this holds for the level-start / post-
+                // special-stage reload exactly as it does for the running per-frame
+                // load. Applying the S3K Load_Sprites vertical band at reset dropped
+                // every layout entry whose y sat outside the initial camera band and
+                // re-loaded it later, which reordered FindFreeObj slot assignment.
+                // SCZ depends on the same rule: high-Y badniks are spawned while the
+                // scripted camera is still at y=$0000, then survive until the Tornado
+                // route descends into them.
                 return true;
             }
-            // S2 ObjectsManager_GoingForward/Backward calls ChkLoadObj
-            // directly after the X-window scan and has no Camera_Y_pos
-            // filter (docs/s2disasm/s2.asm:32870-32950). SCZ depends on
-            // this: high-Y badniks are spawned while the scripted camera is
-            // still at y=$0000, then survive until the Tornado route
-            // descends into them.
             int wrapRange = camera.isVerticalWrapEnabled() ? camera.getVerticalWrapRange() : 0;
             return ObjectPlacementController.isNonCounterSpawnVerticallyEligible(
                     spawn, camera.getY(), camera.getMinY(), wrapRange);
@@ -3491,6 +3779,18 @@ public class ObjectManager {
     }
 
     private void removeActiveObject(ObjectSpawn spawn) {
+        // ROM parity: an object leaving the SST releases its whole slot block. A
+        // parent that pre-reserved child slots via the ROM's FindNextFreeObj chain
+        // (Stair_Main's four blocks, docs/s1disasm/_incObj/5B SLZ Staircase.asm:30-66)
+        // is deleted together with those children by its out_of_range/DeleteObject
+        // tail (line 11), so the reservation can never outlive the parent. Only the
+        // two "destroyed inside the exec loop" branches used to free them, so every
+        // parent unloaded through unloadCounterBasedOutOfRange leaked its block
+        // permanently -- SLZ1 accumulated 30+ dead reservations by frame 5667, which
+        // pushed every later FindFreeObj pick above ROM's slot. Freeing here covers
+        // all removal paths: this is the single point at which a spawn leaves
+        // activeObjects.
+        freeAllReservedChildSlots(spawn);
         ObjectInstance removed = activeObjects.remove(spawn);
         if (removed != null) {
             if (planeSwitchers != null) {

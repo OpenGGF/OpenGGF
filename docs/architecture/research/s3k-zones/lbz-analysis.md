@@ -248,7 +248,7 @@ Confidence: HIGH.
 | `Obj_LBZ2RobotnikShip` | Implemented by `Lbz2RobotnikShipInstance`; owns player grab, camera opening, launch signal, persistent animated-tile gate, exhaust child, and rider delta consumption. | BLOCKER |
 | `Obj_LBZEndBoss` | Implemented by `LbzEndBossInstance`, including art/palette loading, child platforms, spike balls, and defeat flow. | HIGH |
 | `Obj_LBZFinalBoss1` | Implemented by `LbzFinalBoss1Instance`; includes ship, turret, laser children, Death Egg small art, ending palette hooks, explosion/debris children, and Tails/P2 helpers. | BLOCKER |
-| `Obj_LBZFinalBossKnux` / `Obj_LBZFinalBoss2` | Knuckles path is present, but Big Arm/final-boss-2 behavior remains an area to verify further. | HIGH |
+| `Obj_LBZFinalBossKnux` / `Obj_LBZFinalBoss2` | The handoff remains intentionally inert, invisible, and persistent because two candidate ports were rejected/unintegrated. The first (`98d968d7f`) invented phases, mapping ownership, and defeat flow; an uncommitted v2 proved articulated anchors/tables (`$AD`/`$9A`), grab, and debris and passed focused/graph/rewind guards, but root choreography, post-capsule continuation, and a Knuckles LBZ route trace remain unproven. | BLOCKER |
 | `Obj_LBZ1InvisibleBarrier` | Implemented and spawned during collapse/restart paths. | HIGH |
 | LBZ flame thrower, cup elevator, tunnel, bridge, launcher, grapple, pipe objects | Many are implemented in dedicated object classes or shared S3K object utilities. | MIXED |
 
@@ -305,7 +305,7 @@ Confidence: HIGH.
 
 1. Keep LBZ2 Death Egg launch and animated-tile phase parity stable. This is traversal- and spectacle-critical.
 2. Verify the VDP window-plane special VInt sequence for platform detach. Current gameplay state is modeled, but exact window-plane presentation is not.
-3. Continue object parity work around Knuckles final boss / Big Arm and remaining LBZ gimmicks.
+3. Implement Knuckles' Big Arm from `Obj_LBZFinalBoss2`; the current inert handoff is a concrete route blocker, not a verification-only item. Reuse only v2 behavior that survives ROM/source review, then prove root choreography, post-capsule continuation, and a Knuckles LBZ trace.
 4. Use trace/screenshot validation for the LBZ2 ride, terrain swap, and final boss route before broadening polish work.
 
 ### Framework Routing
@@ -320,5 +320,5 @@ Confidence: HIGH.
 ### Known Risks
 
 - Special VInt/window-plane presentation is not fully represented yet.
-- Knuckles final boss / Big Arm behavior should be re-audited against `Obj_LBZFinalBossKnux` and `Obj_LBZFinalBoss2`.
+- Knuckles final boss / Big Arm remains an inert handoff after two rejected/unintegrated attempts; port and validate `Obj_LBZFinalBoss2` against the disassembly, post-capsule continuation, and a Knuckles LBZ trace.
 - Act 1 collapse and LBZ2 launch should stay under focused regression tests because they combine layout mutation, scroll effects, object anchoring, palette/art ownership, and rewind-visible runtime state.

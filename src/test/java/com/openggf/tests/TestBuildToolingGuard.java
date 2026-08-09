@@ -43,6 +43,10 @@ class TestBuildToolingGuard {
     private static final String FRONTIER_GRANDFATHER_BASELINE = "53de63da2";
     private static final String FRONTIER_LOG_PATH = "docs/status/trace-frontier-log.md";
 
+    /** {@code -DforkCount=...} — the flag Maven ignores here. */
+    private static final Pattern STALE_FORK_COUNT_FLAG =
+            Pattern.compile("-D\"?forkCount\"?\\s*=");
+
     private static final List<String> TRACE_REPLAY_DIAGNOSTIC_EXCLUDES = List.of(
             "**/Debug*.java",
             "**/*Debug*.java",
@@ -221,6 +225,89 @@ class TestBuildToolingGuard {
         if (!violations.isEmpty()) {
             fail("Surefire should preload Mockito cleanly without runtime self-attach or CDS bootstrap warnings:\n  "
                     + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    /**
+     * Every Surefire {@code <forkCount>} in the POM must read the same
+     * {@code ${surefire.forkCount}} property, and the name of that property is
+     * the only lever that changes fork count on the command line.
+     *
+     * <p>This exists because {@code -DforkCount=1} silently does nothing:
+     * {@code pom.xml} binds {@code <forkCount>} to {@code ${surefire.forkCount}}
+     * (default 4, set to 1 only by the {@code ci} profile), so a user-supplied
+     * {@code forkCount} property is never consulted and the run stays on four
+     * forks. Trace measurements were taken under that misapprehension and had to
+     * be redone; the correction is recorded in
+     * {@code docs/status/trace-frontier-log.md}. The failure mode is the same
+     * one the fixture alignment guard targets — a knob that reads as set but is
+     * not — so this pins the property name and forbids prescriptive
+     * documentation from teaching the flag that does nothing.
+     */
+    @Test
+    void surefireForkCountShouldBeOverridableOnlyBySurefireForkCountProperty() throws Exception {
+        String file = "pom.xml";
+        Document pom = parsePom(file);
+        List<String> violations = new ArrayList<>();
+
+        NodeList forkCounts = pom.getElementsByTagName("forkCount");
+        if (forkCounts.getLength() == 0) {
+            violations.add(file + " defines no Surefire forkCount at all");
+        }
+        for (int i = 0; i < forkCounts.getLength(); i++) {
+            String value = forkCounts.item(i).getTextContent().trim();
+            if (!"${surefire.forkCount}".equals(value)) {
+                violations.add(file + " binds a Surefire forkCount to '" + value
+                        + "'; every one must read ${surefire.forkCount} so that a single"
+                        + " documented property controls fork count everywhere");
+            }
+        }
+        if (property(pom, "surefire.forkCount") == null) {
+            violations.add(file + " does not define a default surefire.forkCount property");
+        }
+
+        // A doc that tells a reader to pass -DforkCount is teaching a no-op.
+        // The frontier log is an append-only historical record of what was
+        // actually run (including the runs that were wrong), so it is read as
+        // evidence rather than instruction and is not rewritten here.
+        List<Path> prescriptive = new ArrayList<>();
+        for (String root : List.of("docs/agent-workflow", "docs/guide", ".agents", ".claude")) {
+            Path base = Path.of(root);
+            if (!Files.isDirectory(base)) {
+                continue;
+            }
+            try (Stream<Path> tree = Files.walk(base)) {
+                tree.filter(Files::isRegularFile)
+                        .filter(candidate -> candidate.toString().endsWith(".md"))
+                        // .claude/worktrees/ holds whole checkouts of this repository
+                        // created by agent tooling. Their docs are copies of some other
+                        // commit's docs, not this tree's instructions, so scanning them
+                        // reports violations nobody here can fix (and that a later
+                        // checkout resurrects). Only this repository's own docs are
+                        // prescriptive.
+                        .filter(candidate -> !candidate.toString()
+                                .replace('\\', '/').contains("/worktrees/"))
+                        .forEach(prescriptive::add);
+            }
+        }
+        for (Path doc : List.of(Path.of("CLAUDE.md"), Path.of("AGENTS.md"),
+                Path.of("AGENTS_S3K.md"))) {
+            if (Files.isRegularFile(doc)) {
+                prescriptive.add(doc);
+            }
+        }
+        for (Path doc : prescriptive) {
+            String text = Files.readString(doc, StandardCharsets.UTF_8);
+            if (STALE_FORK_COUNT_FLAG.matcher(text).find()) {
+                violations.add(doc.toString().replace('\\', '/')
+                        + " prescribes -DforkCount=, which Maven ignores here; use"
+                        + " -Dsurefire.forkCount= instead");
+            }
+        }
+
+        if (!violations.isEmpty()) {
+            fail("Surefire fork configuration does not match what the docs can honestly"
+                    + " promise:\n  " + String.join("\n  ", new TreeSet<>(violations)));
         }
     }
 

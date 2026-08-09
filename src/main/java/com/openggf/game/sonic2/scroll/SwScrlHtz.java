@@ -154,22 +154,45 @@ public class SwScrlHtz extends AbstractZoneScrollHandler {
         // Line 15813: sub.w d0,d2 (delta = -cameraX - cloudScrollValue)
         d2 = (short) (d2 - cloudScrollValue);
 
-        // Lines 15820-15835: Calculate increment value d0
-        // This complex calculation creates d0 which is the per-"step" increment
-        // move.w d2,d0
+        // Lines 15851-15866: reduce the delta to 44% (100/2 - 100/16).
+        //
+        // fixBugs=0 path -- the shipped REV01 behaviour, which is what the traces
+        // record and therefore what the engine models. `d1` is NOT cleared first
+        // (the `moveq #0,d1` lives inside the `if fixBugs`), but `move.w d0,d1`,
+        // `asr.w #4,d1` and `sub.w d1,d0` only ever touch d1's low word, so the
+        // stale upper word cannot reach the result.
+        //
+        //     move.w  d2,d0
+        //     move.w  d0,d1
+        //     asr.w   #1,d0     ; d0 = delta / 2
+        //     asr.w   #4,d1     ; d1 = delta / 16, REMAINDER DISCARDED (word shift)
+        //     sub.w   d1,d0     ; d0 = 44% of delta
+        //
+        // The fixBugs=1 path instead preserves that remainder, by widening the
+        // divide to a longword so the fraction survives in the low half:
+        //
+        //     moveq   #0,d1
+        //     move.w  d0,d1
+        //     asr.w   #1,d0
+        //     swap    d1        ; delta into the high half
+        //     asr.l   #4,d1     ; long shift keeps the remainder in the low half
+        //     swap    d1        ; d1.low = integer part, d1.high = fraction
+        //     sub.w   d1,d0
+        //
+        // Taking the fixed path makes the clouds scroll smoothly instead of with
+        // the ROM's periodic 2-frame stutter, which is why it was once chosen here
+        // -- but the stutter is shipped behaviour and the fixed path desyncs any
+        // trace column that observes this accumulator. See the FixBugs note in
+        // CLAUDE.md / AGENTS.md.
         d0 = d2;
-        // moveq #0,d1; move.w d0,d1 - d1 = delta in low word
-        int d1_full = d0 & 0xFFFF;
+        // move.w d0,d1 (d1 takes the delta before d0 is halved)
+        short d1w = d0;
         // asr.w #1,d0
         d0 = (short) (d0 >> 1);
-        // swap d1 - d1 = delta << 16
-        d1_full = d1_full << 16;
-        // asr.l #4,d1 - d1 = delta << 12 (preserving fractional bits)
-        d1_full = d1_full >> 4;
-        // swap d1 - d1.low = integer part, d1.high = fractional part
-        d1_full = ((d1_full & 0xFFFF) << 16) | ((d1_full >> 16) & 0xFFFF);
-        // sub.w d1,d0 (d0 = d0 - d1.low, the integer part)
-        d0 = (short) (d0 - (short) (d1_full & 0xFFFF));
+        // asr.w #4,d1 -- remainder discarded
+        d1w = (short) (d1w >> 4);
+        // sub.w d1,d0
+        d0 = (short) (d0 - d1w);
         // ext.l d0
         int d0_ext = d0;  // sign-extended to 32 bits
         // asl.l #8,d0
@@ -186,9 +209,18 @@ public class SwScrlHtz extends AbstractZoneScrollHandler {
         // Line 15847: lea (TempArray_LayerDef).w,a2
         int a2_idx = 0;
 
-        // Lines 15849-15860: Initialize d3 accumulator
-        // For fixBugs version: move.l d1,d3 (d1 is the full 32-bit fixed-point value)
-        long d3 = d1_full;  // Use long for 32-bit with overflow handling
+        // Lines 15881-15891: initialise the d3 fixed-point accumulator, whose upper
+        // 16 bits are the integer part and lower 16 bits the fraction.
+        //
+        // fixBugs=0 (shipped): `moveq #0,d3 / move.w d1,d3` -- d1's low word is
+        // zero-extended into d3, so the accumulator starts with NO fractional part.
+        // The disassembly's own comment names this as the cause of the visible
+        // cloud jerkiness; it is nevertheless the behaviour the ROM ships and the
+        // traces record.
+        //
+        // fixBugs=1 would be `move.l d1,d3`, carrying the full 32-bit value whose
+        // low half holds the fraction preserved by the long shift above.
+        long d3 = d1w & 0xFFFFL;
 
         // Lines 15862-15867: First 3 entries (rept 3)
         // Each: swap d3; add.l d0,d3; swap d3; move.w d3,(a2)+

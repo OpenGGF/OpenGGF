@@ -3227,11 +3227,27 @@ public final class ObjectSolidContactController {
                 // frame. The narrow windows are contiguous/non-overlapping, so
                 // exactly one piece owns the player (ROM Solid_Landed obActWid
                 // gate, docs/s1disasm/_incObj/sub SolidObject.asm:307-315).
+                // ROM slot order: each folded piece is its own SST slot and each
+                // landing calls RideObject_SetRide, which overwrites the rider's
+                // stand-on-object with the piece that ran most recently
+                // (docs/s2disasm/s2.asm:35619-35626). Pieces are iterated in slot
+                // order, so the LAST claiming piece owns the rider. For objects
+                // whose narrow Solid_Landed windows are contiguous and
+                // non-overlapping only one piece ever claims, so this is a no-op
+                // for them.
                 if (pieceScopedStanding && ridingCurrentObject && !player.getAir()
-                        && i != currentRidingPieceIndex && overridePieceIndex < 0) {
-                    int narrowHalf = multiPiece.getPieceLandingHalfWidth(i);
-                    int relNarrow = player.getCentreX() - pieceX + narrowHalf;
-                    if (relNarrow >= 0 && relNarrow < narrowHalf * 2) {
+                        && i != currentRidingPieceIndex) {
+                    // Same gate the fresh-landing path uses: ROM
+                    // SolidObject_Landed re-reads width_pixels(a0) and requires
+                    // x_pos(a1) + width_pixels - x_pos(a0) in [0, width_pixels*2)
+                    // (docs/s2disasm/s2.asm:35588-35597; S1's obActWid equivalent
+                    // at docs/s1disasm/_incObj/sub SolidObject.asm:307-315). Going
+                    // through isWithinTopLandingWidth keeps the takeover window
+                    // identical to the landing window instead of re-deriving it.
+                    int relPiece = player.getCentreX() - (pieceX + params.offsetX())
+                            + params.halfWidth();
+                    if (isWithinTopLandingWidth(instance, player, relPiece,
+                            params.halfWidth(), i)) {
                         overridePieceIndex = i;
                         overridePieceX = pieceX;
                         overridePieceY = pieceY;
@@ -4289,6 +4305,16 @@ public final class ObjectSolidContactController {
             }
 
 
+            // fixBugs (s2.asm:27 `fixBugs = 0`): the upward-velocity rejection below is
+            // unconditional on the shipped ROM -- `tst.w y_vel(a1) / bmi.s ..._Miss` in
+            // SolidObject_Landed (s2.asm:35615-35616) and the same test in
+            // PlatformObject11_cont, PlatformObject_cont, SlopedPlatform_cont and
+            // PlatformObject2_cont (s2.asm:35920, 35951, 36056, 36095). The fixBugs=1
+            // branch (s2.asm:35599-35619 and the mirrors at 35909-35924, 35935-35950,
+            // 36045-36060, 36084-36099) skips the velocity test entirely when the player
+            // is on the ground with an angle inside [-$10,$10], so a shallow slope meeting
+            // a wall can no longer let HTZ's rising floor pass through the player. The
+            // engine models the shipped branch: no angle bypass anywhere in this family.
             if (topSolidOnly && player.getYSpeed() < 0) {
                 return null;
             }

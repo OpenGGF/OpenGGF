@@ -13,6 +13,8 @@ import com.openggf.game.BonusStageType;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
 import com.openggf.game.OscillationManager;
+import com.openggf.game.SpecialStageInputMapper;
+import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.resources.DynamicArtGapTransition;
 import com.openggf.game.resources.DynamicArtDiagnosticsSnapshot;
 import com.openggf.game.resources.DynamicArtLifecycleService;
@@ -22,6 +24,7 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
+import com.openggf.trace.SpecialStageRunObjectsPassBinder;
 import com.openggf.trace.ToleranceConfig;
 import com.openggf.trace.FrameComparison;
 import com.openggf.trace.TraceData;
@@ -625,10 +628,11 @@ abstract class AbstractRunChainTest {
                         levelManager.getCurrentAct(),
                         bonus.getActiveType());
             }
-            Integer specialStageIndex = mode == GameMode.SPECIAL_STAGE
-                    ? GameServices.module().getSpecialStageProvider()
-                            .getCurrentStage()
-                    : null;
+            Integer specialStageIndex =
+                    RunPlaybackObservation.insideRecordedSpecialStageMode(mode)
+                            ? GameServices.module().getSpecialStageProvider()
+                                    .getCurrentStage()
+                            : null;
             DynamicArtLifecycleService lifecycle =
                     SessionManager.getCurrentGameplayMode()
                             .dynamicArtLifecycle();
@@ -791,6 +795,16 @@ abstract class AbstractRunChainTest {
                                         .closeComparisonSegment();
                             }
                         });
+        // The run's movie spans the first level's load, so the transfer that
+        // load staged for the player belongs to the run — unlike a
+        // segment-scoped replay, which starts at Level_MainLoop and never owns
+        // it. It lands on the row the counted pre-main-loop tail puts it on:
+        // the first main-loop row minus preLevelMainLoopDelayFrames.
+        gameplayMode.dynamicArtLifecycle()
+                .publishInitialLevelLoadPlayerTransfer(
+                        first.segment().bk2FrameOffset(),
+                        GameServices.module().getLevelInitProfile()
+                                .preLevelMainLoopDelayFrames());
         dynamicArtSegments.beginSegment();
         // The initial standalone bootstrap may omit a recorded pre-level prefix.
         // Keep the read-only dynamic-art publication clock on the same first
@@ -962,9 +976,18 @@ abstract class AbstractRunChainTest {
                 if (uncomparedInterior) {
                     TraceRunSpecialStageRows specialRows;
                     try {
-                        specialRows = TraceRunSpecialStageRows.load(
-                                seg.segment().traceProfile(),
-                                runDir.resolve(seg.segment().dir()));
+                        // The plan already parsed this interior with the
+                        // segment's declared opening dynamic-art ledger; a
+                        // bare re-load restarts that ledger empty and rejects
+                        // a segment whose frame-0 state legitimately carries
+                        // transfers over from the preceding segment.
+                        specialRows = seg.specialStageRows() != null
+                                ? seg.specialStageRows()
+                                : TraceRunSpecialStageRows.load(
+                                        seg.segment().traceProfile(),
+                                        runDir.resolve(seg.segment().dir()),
+                                        seg.segment()
+                                                .dynamicArtInitialLedgerDescriptors());
                     } catch (IOException e) {
                         throw new AssertionError(
                                 "Failed to load special-stage row policy for "
@@ -982,7 +1005,8 @@ abstract class AbstractRunChainTest {
                     int segmentIndex = i;
                     stepOneFrame = () -> {
                         if (!rowDriver.isComplete()) {
-                            if (loop.getCurrentGameMode() != GameMode.SPECIAL_STAGE) {
+                            if (!insideRecordedSpecialStageGameMode(
+                                    loop.getCurrentGameMode())) {
                                 throw new AssertionError(
                                         "special stage exited with "
                                                 + (seg.segment().traceFrameCount()
@@ -1352,10 +1376,17 @@ abstract class AbstractRunChainTest {
         probe.setDelegate(null);
         productionComparator = null;
         try {
+            // Reuse the plan's parse (loaded with the segment's declared
+            // opening dynamic-art ledger); re-loading here would restart the
+            // ledger empty and reject a carried-over frame-0 state.
             TraceRunSpecialStageRows specialRows =
-                    TraceRunSpecialStageRows.load(
-                            special.segment().traceProfile(),
-                            runDir.resolve(special.segment().dir()));
+                    special.specialStageRows() != null
+                            ? special.specialStageRows()
+                            : TraceRunSpecialStageRows.load(
+                                    special.segment().traceProfile(),
+                                    runDir.resolve(special.segment().dir()),
+                                    special.segment()
+                                            .dynamicArtInitialLedgerDescriptors());
             TraceRunSpecialStageRowDriver specialDriver =
                     new TraceRunSpecialStageRowDriver(
                             specialRows, special.trace());
@@ -1382,6 +1413,7 @@ abstract class AbstractRunChainTest {
                                         special.segment().bk2FrameOffset()
                                                 + localRow,
                                         step.movieRow());
+                                stateMovieLogicalRow(step);
                             }
 
                             @Override
@@ -1535,6 +1567,7 @@ abstract class AbstractRunChainTest {
                             @Override
                             public void preparePhysicalRow(
                                     TraceRunFrameDriver.Step step) {
+                                stateMovieLogicalRow(step);
                                 Bk2FrameInput current =
                                         playback.currentFrameOrThrow();
                                 Bk2FrameInput previous = movieRow > 0
@@ -1729,6 +1762,25 @@ abstract class AbstractRunChainTest {
         }
     }
 
+    /**
+     * States the physical BK2 row a dynamic-art gap edge is stamped with, the
+     * way {@code TraceSessionLauncher.driveRunPhysicalRow} does for a live run.
+     *
+     * <p>{@code DynamicArtLifecycleService.movieLogicalFrame} otherwise counts
+     * production iterations, and a chain drives whole spans of rows —
+     * transition gaps, shared gaps, the terminal tail — that run no production
+     * iteration at all. Every such row is silently lost from the stamp, so a
+     * gap edge raised late in a chain reports a row hundreds short of the one
+     * the recorder wrote. The recorder's contract is the movie row it has
+     * consumed ("tools/bizhawk-headless/src/Recording/S1RunCaptureRunner.cs":
+     * 199-215), so the driver states it rather than inferring it.
+     */
+    private static void stateMovieLogicalRow(TraceRunFrameDriver.Step step) {
+        SessionManager.getCurrentGameplayMode()
+                .dynamicArtLifecycle()
+                .setMovieLogicalFrame(step.movieRow());
+    }
+
     private void driveHeadlessTransitionRow(
             TraceRunFrameDriver driver,
             TraceRunFrameDriver.Disposition disposition,
@@ -1745,6 +1797,7 @@ abstract class AbstractRunChainTest {
                     @Override
                     public void preparePhysicalRow(
                             TraceRunFrameDriver.Step step) {
+                        stateMovieLogicalRow(step);
                         Bk2FrameInput current = playback.currentFrameOrThrow();
                         Bk2FrameInput previous = movieRow > 0
                                 ? movie.getFrame(movieRow - 1) : null;
@@ -2355,22 +2408,77 @@ abstract class AbstractRunChainTest {
      *
      * <p>This is compounded, and made unrecoverable in code, by a property of the
      * committed run fixtures: the multi-segment run recorder captured each
-     * special-stage segment's {@code physics.csv} (frames + lag column) but wrote an
-     * <b>empty</b> {@code aux_state.jsonl.gz} — no {@code run_objects_end} pass
-     * snapshots and no control-state transitions (verified across the S2
-     * {@code ss}/{@code ss_2} and the S1 {@code ss} segments). The S2 half-pipe in
-     * particular is ROM-object-pass paced: the standalone must-stay-green
-     * {@code TestS2SpecialStageTraceReplay} drives it via
-     * {@code SpecialStageRunObjectsPassBinder}, binding each recurring RunObjects
-     * pass to the exact BK2 row the ROM's V-int sampled. Without those pass records
-     * the chain can only frame-pace the BK2 (one tick per non-lag row), which feeds
-     * the wrong controller sample once the ROM's V-int/RunObjects interleave drifts
-     * from a 1:1 non-lag cadence — the half-pipe player then under-collects rings
-     * (36 vs the recorded 40 at checkpoint 1, at the identical internal frame 939),
-     * fails the checkpoint, and is ejected without the emerald. That is a
-     * fixture-data limitation, not an engine defect: nothing the comparison-only
-     * chain may do (it must not hydrate engine state from the trace) can recover the
-     * unrecorded V-int sampling. The recorded {@code emeralds_after} therefore
+     * special-stage segment's {@code physics.csv} (frames + lag column) but wrote
+     * no {@code run_objects_end} pass snapshots. (The aux stream is <b>not</b>
+     * empty — the committed {@code s2-ehz-halfpipe-roundtrip/ss/aux_state.jsonl.gz}
+     * carries 6762 records, including 5733 {@code dynamic_art_transfer_state} rows,
+     * both {@code control_state} transitions, {@code checkpoint},
+     * {@code stage_finished} and {@code results_started}. Exactly one family is
+     * missing, and it is the pacing one.) The S2 half-pipe is ROM-object-pass
+     * paced: the standalone must-stay-green {@code TestS2SpecialStageTraceReplay}
+     * drives it via {@code SpecialStageRunObjectsPassBinder}, binding each
+     * recurring RunObjects pass to the exact BK2 row the ROM's V-int sampled.
+     *
+     * <p><b>The 36-vs-40 checkpoint failure was neither a recorder gap nor a pacing
+     * gap: it was a stale ring read, and it is now fixed.</b> Probing the interior
+     * row by row against the recorded {@code ss} rows showed the engine reproducing
+     * the recording exactly — {@code current_segment}, {@code speed_factor},
+     * {@code track_anim_frame} and the combined ring count all matched every row up
+     * to the eject. The engine had 42 rings by segment-local row 1588, just as the
+     * ROM did; it simply evaluated checkpoint 1 against the count captured when the
+     * checkpoint marker was passed (36, at row ~1538) rather than the count at the
+     * end of the checkpoint rainbow. The ROM reads {@code (Ring_count)} and
+     * {@code (Ring_count_2P)} live at {@code loc_35978} (docs/s2disasm/s2.asm:
+     * 71843-71853), reached only when the rainbow object's x reaches {@code $E8} and
+     * it deletes itself, so rings picked up during the rainbow still count. With
+     * {@code Sonic2SpecialStageCheckpoint} resolving against a live ring supplier,
+     * checkpoint 1 passes and the interior advances from row 2027 to row 5213 of
+     * 5733.
+     *
+     * <p><b>Remaining, and now the frontier for this lane:</b> the engine leaves
+     * {@code GameMode.SPECIAL_STAGE} 519 represented rows early. The recorded
+     * {@code check_rings_flag} rises at segment-local frame 5191 and the ROM then
+     * spends the rest of the segment (through frame 5732) still in special-stage
+     * mode running the post-flag tail of {@code SS_MainLoop} — emerald/perfect
+     * accounting, {@code Pal_FadeToWhite}, the results screen build and its
+     * {@code Obj6F} tally (s2.asm:6721-6800). The engine reaches its own finish at
+     * row 5213 (22 rows late) and then exits the mode almost immediately. Closing
+     * this needs the special-stage results phase to occupy the ROM's V-blanks; it is
+     * unrelated to ring collection.
+     *
+     * <p>The pacing pieces themselves are now in place:
+     *
+     * <ol>
+     *   <li><b>The re-record.</b> The native harness at HEAD emits run-mode
+     *       special-stage pass records. A scratch re-capture of this run's own
+     *       movie reproduces all five committed segments' {@code physics.csv}
+     *       byte-for-byte and every level segment's aux byte-for-byte, and adds
+     *       2991 {@code run_objects_end} records to {@code ss} and 3291 to
+     *       {@code ss_2} — a strict superset, the rest of each aux stream is
+     *       unchanged — plus a sixth {@code seg4_ehz2} tail segment the committed
+     *       fixture stops short of. Publishing those bytes is a fixture-publication
+     *       decision, not a code one, and the sixth segment widens what the fixture
+     *       claims to cover, so it is not folded in silently.</li>
+     *   <li><b>A pass-paced interior.</b> Landed: {@link #uncomparedInteriorStep}
+     *       now consumes {@code newRunObjectsPassBinder}/{@code passPacedFromRow}.
+     *       It is inert on a segment that recorded no passes, so every committed
+     *       fixture keeps its previous one-step-per-row behaviour.</li>
+     *   <li><b>A V-blank body that can run 0..n object passes.</b> Landed: pass
+     *       pacing cannot be one {@code GameLoop.step()} per pass, because a step
+     *       is one V-blank row and an audited segment's
+     *       {@code TraceRunSpecialStageRowDriver} requires each admitted row to
+     *       publish exactly one dynamic-art delivery ({@code publishAdmittedRow}:
+     *       "advertised special-stage row N was not published atomically"). On the
+     *       re-capture, {@code ss} rows own zero passes 3341 times, one pass 1793
+     *       times and two passes 599 times, so row-to-step and pass-to-step cannot
+     *       both hold. {@link GameLoop.SpecialStageObservationPacing} makes the
+     *       special-stage body run the row's completed-pass count inside its single
+     *       PLC lifecycle iteration, the same split
+     *       {@code S2SpecialStageReplayHarness.stepPasses} already makes.</li>
+     * </ol>
+     *
+     * <p>The recorded
+     * {@code emeralds_after} therefore
      * stays a diagnostic for an advance-uncompared special stage. The always-safe
      * carry-overs — the ROM's on-return position restore and ring zero-out, which
      * happen whether the stage was won or lost — remain asserted.
@@ -2522,7 +2630,50 @@ abstract class AbstractRunChainTest {
      * {@link #specialStageDrivenStep} (no lag-skip) -- correct as long as the
      * interior's actual outcome carry-over is not asserted, or a lane
      * overrides this.
+     *
+     * <p>When the segment recorded ROM {@code RunObjects} completions, the
+     * interior is <b>pass-paced</b> from {@link
+     * TraceRunSpecialStageRows#passPacedFromRow()} onwards: each admitted row
+     * still costs exactly one {@link GameLoop#step()} (one V-blank row, one
+     * dynamic-art publication, which {@code TraceRunSpecialStageRowDriver}
+     * requires), but that step's special-stage body runs however many object
+     * passes the ROM completed for the row, via
+     * {@link GameLoop.SpecialStageObservationPacing}. This is the same split
+     * the standalone {@code TestS2SpecialStageTraceReplay} makes through
+     * {@code S2SpecialStageReplayHarness.stepPasses}. Frame-pacing instead —
+     * one pass per admitted row — advances the S2 half-pipe track roughly 1.77x
+     * too fast, so the recorded ring-requirement reloads land against the wrong
+     * internal frame and the player under-collects at checkpoint 1. A segment
+     * with no recorded passes keeps the previous one-step-per-row behaviour.
      */
+    /**
+     * Whether the engine is still inside the game mode a recorded
+     * {@code special_stage} segment represents.
+     *
+     * <p>The run recorder cuts an {@code ss} segment on the raw ROM byte:
+     * it opens on the first {@code Game_Mode == GameModeID_SpecialStage}
+     * ($10) frame and closes on the first frame that is no longer $10
+     * ({@code S2RunCaptureRunner} Blocks 1 and 2). In the ROM that single
+     * mode spans more than the half-pipe: {@code SS_MainLoop} exits its
+     * object loop when {@code SS_Check_Rings_flag} rises, and the
+     * emerald/perfect accounting, {@code Pal_FadeToWhite}, the results-screen
+     * build and the whole {@code Obj6F} tally loop all run below it, still
+     * under $10 — {@code Game_Mode} is not rewritten until the
+     * {@code move.b #GameModeID_Level,(Game_Mode).w} at the very end
+     * (docs/s2disasm/s2.asm:6721-6800). S1 is the same shape
+     * ({@code GM_Special} owns {@code SS_Finish} through
+     * {@code sonic.asm:3419-3421}).
+     *
+     * <p>The engine splits that one ROM mode into two of its own,
+     * {@code SPECIAL_STAGE} and {@code SPECIAL_STAGE_RESULTS}, so a plain
+     * {@code == SPECIAL_STAGE} test reports a premature exit at the internal
+     * boundary even when the engine is faithfully still in the ROM's mode.
+     * Both engine modes therefore map onto the one recorded segment.
+     */
+    private static boolean insideRecordedSpecialStageGameMode(GameMode mode) {
+        return RunPlaybackObservation.insideRecordedSpecialStageMode(mode);
+    }
+
     protected IntConsumer uncomparedInteriorStep(
             GameLoop loop,
             InputHandler inputHandler,
@@ -2530,7 +2681,20 @@ abstract class AbstractRunChainTest {
             SegmentPlan interior,
             TraceRunSpecialStageRows rows) {
         int bk2FrameOffset = interior.segment().bk2FrameOffset();
+        SpecialStageRunObjectsPassBinder passBinder =
+                rows.newRunObjectsPassBinder().orElse(null);
+        int passPacedFromRow = passBinder == null
+                ? Integer.MAX_VALUE : rows.passPacedFromRow();
         return localRow -> {
+            // The recorder hooks both halves of SpecialStage_MainLoop
+            // (docs/s2disasm/s2.asm:6674-6721), so the pre-start loop's passes
+            // are in the stream too. They are already executed by the one-step-
+            // per-row pacing this interior uses before passPacedFromRow, so the
+            // cursor is advanced over them rather than re-stepped -- but it must
+            // be advanced, because the binder rejects a skipped observation.
+            List<SpecialStageRunObjectsPassBinder.CompletedPass> observationPasses =
+                    passBinder == null
+                            ? List.of() : passBinder.passesForObservation(localRow);
             TraceRunSpecialStageRows.SpecialStageRowAdmission admission =
                     rows.admission(localRow);
             var beforeManager = GameServices.level().getObjectManager();
@@ -2538,6 +2702,17 @@ abstract class AbstractRunChainTest {
             admission.syntheticPlcPhase().ifPresent(
                     AbstractRunChainTest::stepUncomparedInteriorLifecycleRow);
             if (admission.executeGameplay()
+                    && loop.getCurrentGameMode()
+                            == GameMode.SPECIAL_STAGE_RESULTS) {
+                // Still inside the recorded segment (ROM Game_Mode is still
+                // GameModeID_SpecialStage; see
+                // insideRecordedSpecialStageGameMode), but past the half-pipe
+                // itself: the ROM's post-flag tail runs RunObjects /
+                // BuildSprites / RunPLC_RAM per V-int and samples no player
+                // control at all (docs/s2disasm/s2.asm:6795-6800), so drive a
+                // bare engine frame with no recorded-input override.
+                stepEngineFrame(loop);
+            } else if (admission.executeGameplay()
                     && loop.getCurrentGameMode() == GameMode.SPECIAL_STAGE) {
                 int absoluteRow = bk2FrameOffset + localRow;
                 Bk2FrameInput current = movie.getFrame(absoluteRow);
@@ -2545,9 +2720,21 @@ abstract class AbstractRunChainTest {
                         ? movie.getFrame(absoluteRow - 1) : null;
                 inputHandler.setLogicalOverride(
                         RecordedInputSnapshots.fromBk2(current, previous));
+                if (localRow >= passPacedFromRow) {
+                    // The recorded pass stream IS the pacing authority for this
+                    // segment, so the runtime's own lag MODEL (which skips an
+                    // update on frames it predicts the ROM lagged) must not also
+                    // pace it -- the standalone S2 special-stage harness turns it
+                    // off for exactly this reason ("Trace-paced replay: disable
+                    // the runtime's own lag compensation").
+                    loop.getActiveSpecialStageProvider().setLagCompensation(0);
+                    loop.setSpecialStageObservationPacing(
+                            recordedPassPacing(movie, observationPasses));
+                }
                 try {
                     stepEngineFrame(loop);
                 } finally {
+                    loop.setSpecialStageObservationPacing(null);
                     inputHandler.clearLogicalOverride();
                 }
             }
@@ -2555,6 +2742,37 @@ abstract class AbstractRunChainTest {
             if (admission.advancePreservedVblankIfUnchanged()
                     && afterManager.getVblaCounter() == beforeVblank) {
                 afterManager.advanceVblaCounter();
+            }
+        };
+    }
+
+    /**
+     * Pacing for one observation: run each recorded pass with the controller
+     * sample the ROM's {@code ReadJoypads} actually consumed for it (the pass
+     * record identifies the BK2 rows; the button values it also carries are
+     * diagnostics the binder validates, never an engine input). Mirrors
+     * {@code S2SpecialStageReplayHarness.stepPassBody}.
+     */
+    private static GameLoop.SpecialStageObservationPacing recordedPassPacing(
+            Bk2Movie movie, List<SpecialStageRunObjectsPassBinder.CompletedPass> passes) {
+        return new GameLoop.SpecialStageObservationPacing() {
+            @Override
+            public int passCount() {
+                return passes.size();
+            }
+
+            @Override
+            public void applyPassInput(int index, SpecialStageProvider provider) {
+                var pass = passes.get(index);
+                SpecialStageInputMapper.MappedInput mapped = SpecialStageInputMapper.map(
+                        RecordedInputSnapshots.fromBk2(
+                                movie.getFrame(pass.inputSampleBk2Frame()),
+                                movie.getFrame(pass.previousInputSampleBk2Frame())));
+                provider.handleInput(mapped.p1Held(), mapped.p1Pressed());
+                provider.handlePlayer2Input(mapped.p2Held(), mapped.p2Logical());
+                provider.bindPendingRecurringPassInput(
+                        mapped.p1Held(), mapped.p1Pressed(),
+                        mapped.p2Held(), mapped.p2Logical());
             }
         };
     }
@@ -2633,16 +2851,46 @@ abstract class AbstractRunChainTest {
         };
     }
 
+    /**
+     * Represents one recorded row the ROM's main loop did not complete an
+     * iteration for.
+     *
+     * <p>A LAG row is run through {@code runSuppressedLagIteration}, not the
+     * ordinary logical iteration, because a lag V-blank does not run the mode's
+     * handler at all: {@code V_Int} branches to {@code Vint_Lag} while
+     * {@code Vint_routine} is still 0 (docs/s2disasm/s2.asm:483-484, 529) —
+     * S1's {@code VBlank_Lag} (docs/s1disasm/sonic.asm:709) has the same shape
+     * — so an in-progress blocking fade's per-V-blank work
+     * ({@code Pal_FadeFromWhite}, s2.asm:3460-3482, whose body runs in the main
+     * loop between its own {@code WaitForVint}s) does not advance on that
+     * V-blank and must not claim the row. The ordinary path lets the active
+     * native blocking fade claim {@code PALETTE_FADE} first, which both steals
+     * the row from {@code LAG} and makes it publish as a non-lag row, so any
+     * dynamic-art edge the row's V-blank produced lands one row early instead
+     * of being carried to the next represented closure. This is the same split
+     * {@code TraceRunPresentationClosure} already makes for a carried lag
+     * closure.
+     */
     private static void stepUncomparedInteriorLifecycleRow(
             PlcLifecyclePhase phase) {
-        SessionManager.getCurrentGameplayMode().plcFrameLifecycle()
-                .runLogicalIteration(() -> {
-                }, row -> {
-                    if (row.claim(phase)) {
-                        row.prepareAfterLoop(phase);
-                    }
-                    return null;
-                });
+        var lifecycle =
+                SessionManager.getCurrentGameplayMode().plcFrameLifecycle();
+        if (phase == PlcLifecyclePhase.LAG) {
+            lifecycle.runSuppressedLagIteration(row -> {
+                if (row.claim(phase)) {
+                    row.prepareAfterLoop(phase);
+                }
+                return null;
+            });
+            return;
+        }
+        lifecycle.runLogicalIteration(() -> {
+        }, row -> {
+            if (row.claim(phase)) {
+                row.prepareAfterLoop(phase);
+            }
+            return null;
+        });
     }
 
     private void stepFrames(GameLoop loop, int frameCount) {

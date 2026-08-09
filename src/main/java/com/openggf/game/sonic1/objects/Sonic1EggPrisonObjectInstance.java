@@ -73,6 +73,8 @@ public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
     private static final int SPAWN_PHASE_DURATION = 150;
     // From disassembly: move.w #$C,objoff_36(a1) — animal delay
     private static final int SPAWN_ANIMAL_DELAY = 0xC;
+    // From Pri_SpawnAnimals: addi.w #32,obY(a0)
+    private static final int ANIMAL_SPAWN_Y_OFFSET = 32;
 
     // === Explosion random spread ===
     // ROM: move.b d0,d1 / lsr.b #2,d1 / subi.w #$20,d1 → X range [-32, +31]
@@ -105,6 +107,12 @@ public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
     private boolean buttonTriggered;
     private boolean resultsTriggered;
 
+    // ROM obX/obY of the object that actually drives Pri_Explosion /
+    // Pri_SpawnAnimals / Pri_Animals -- the depressed SWITCH, not the body.
+    // See onButtonTriggered(int,int).
+    private int spawnerX;
+    private int spawnerY;
+
     // Button sub-object
     private Sonic1EggPrisonButtonObjectInstance buttonObject;
 
@@ -128,10 +136,30 @@ public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
      * Corresponds to Pri_Switched first-time trigger path.
      */
     public void onButtonTriggered() {
+        onButtonTriggered(spawn.x(), spawn.y());
+    }
+
+    /**
+     * ROM Pri_Switch is the SWITCH object's own routine: it does
+     * {@code addq.w #8,obY(a0)} and then advances its OWN obRoutine to $A
+     * (Pri_Explosion), $C (Pri_Animals) and $E (Pri_EndAct)
+     * (docs/s1disasm/_incObj/3E Prison Capsule.asm:88-115). Every
+     * {@code obX(a0)}/{@code obY(a0)} that Pri_Explosion, Pri_SpawnAnimals and
+     * Pri_Animals read to place explosions and animals is therefore the
+     * DEPRESSED SWITCH's position, not the capsule body's. The engine splits the
+     * one ROM slot into a body and a button instance, so the button hands its
+     * post-depression origin over here when it fires.
+     *
+     * @param spawnerX the switch's {@code obX}
+     * @param spawnerY the switch's {@code obY} after {@code addq.w #8,obY(a0)}
+     */
+    void onButtonTriggered(int spawnerX, int spawnerY) {
         if (buttonTriggered) {
             return;
         }
         buttonTriggered = true;
+        this.spawnerX = spawnerX;
+        this.spawnerY = spawnerY;
         // ROM Pri_Switch only writes routine=$A/obTimeFrame=60 and returns; the
         // first Pri_Explosion pass is always the FRAME AFTER the trigger,
         // regardless of where the body sits in object RAM
@@ -294,8 +322,10 @@ public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        final int baseX = spawn.x();
-        final int baseY = spawn.y();
+        // ROM: move.w obX(a0),obX(a1) / move.w obY(a0),obY(a1) -- a0 is the
+        // depressed switch (3E Prison Capsule.asm:118-120).
+        final int baseX = spawnerX;
+        final int baseY = spawnerY;
 
         // ROM: move.b d0,d1 / lsr.b #2,d1 / subi.w #$20,d1 → X offset [-32, +31]
         int random = services().rng().nextWord();
@@ -317,8 +347,14 @@ public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        final int baseX = spawn.x();
-        final int baseY = spawn.y();
+        // ROM Pri_SpawnAnimals: addi.w #32,obY(a0) -- "load all animals 32px
+        // below explosions" (3E Prison Capsule.asm:138). This is a permanent
+        // write to the spawner's own obY, so Pri_Animals' later per-8-frame
+        // spawns use the shifted origin too.
+        spawnerY += ANIMAL_SPAWN_Y_OFFSET;
+
+        final int baseX = spawnerX;
+        final int baseY = spawnerY;
         int xOffset = INITIAL_ANIMAL_X_OFFSET_START;
         int delay = INITIAL_ANIMAL_DELAY_BASE;
 
@@ -350,8 +386,10 @@ public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        final int baseX = spawn.x();
-        final int baseY = spawn.y();
+        // Pri_Animals reuses the spawner's obX/obY, which Pri_SpawnAnimals
+        // already pushed 32px down (3E Prison Capsule.asm:138,170-172).
+        final int baseX = spawnerX;
+        final int baseY = spawnerY;
 
         // ROM: jsr (RandomNumber).l / andi.w #$1F,d0 / subq.w #6,d0
         // Exactly one RandomNumber call here; the animal's own init draws again

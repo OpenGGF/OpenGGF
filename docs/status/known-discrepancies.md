@@ -36,6 +36,8 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 22. [Frame-0 Trace Bootstrap Snapshot Coverage Debt](#frame-0-trace-bootstrap-snapshot-coverage-debt)
 23. [Sonic 1 Embedded Runtime Data Ratchet](#sonic-1-embedded-runtime-data-ratchet)
 24. [Special-stage Live Rewind Scope](#special-stage-live-rewind-scope)
+25. [S2 CPZ Debug Placement Capability Boundary](#s2-cpz-debug-placement-capability-boundary)
+26. [S2 Native Human-P2 Monitor Branch Unavailable](#s2-native-human-p2-monitor-branch-unavailable)
 
 ---
 
@@ -230,41 +232,39 @@ The rendered output is identical to the original - the same graphics appear at t
 
 ---
 
-## HTZ Cloud Scroll Precision Fix
+## HTZ Cloud Scroll — resolved to the shipped `fixBugs = 0` path
 
 **Location:** `SwScrlHtz.java`
-**ROM Reference:** `s2.asm` lines 15823-15831 (fixBugs path) vs line 15833 (original path)
+**ROM Reference:** `s2.asm:15851-15866` and `:15881-15891` (two `if fixBugs`
+conditionals inside `SwScrl_HTZ`)
 
-### Original Implementation
+This entry previously documented a deliberate deviation: the engine implemented
+the **corrected** (`fixBugs = 1`) path so the clouds scrolled smoothly instead of
+with the ROM's periodic 2-frame stutter. That is no longer the case, and the
+deviation is gone.
 
-The original ROM uses `asr.w #4,d1` to initialize the cloud layer scroll delta. This word-sized shift loses the fractional bits that were set up via `swap d1`, causing a visible 2-frame jerkiness in cloud scrolling as the fractional accumulator repeatedly underflows and corrects.
+The disassemblies are assembled with the bug-fix conditional OFF, the traces
+record shipped-ROM behaviour, and the engine models the un-fixed branch even where
+it is plainly a bug — see the `FixBugs` gotcha in CLAUDE.md / AGENTS.md. The
+stutter is what the ROM does.
 
-```asm
-; Original (buggy) path:
-    asr.w   #4,d1          ; word shift discards upper 16 bits (fractional part)
-```
+Two conditionals were involved, and both are now on the shipped path:
 
-### Our Implementation
+1. **The divide.** Shipped: `asr.w #4,d1`, a word shift that discards the
+   remainder. Fixed: `swap d1 / asr.l #4,d1 / swap d1`, widening the divide so the
+   remainder survives in the low half.
+2. **The accumulator init.** Shipped: `moveq #0,d3 / move.w d1,d3`, zero-extending
+   only the low word so the fixed-point accumulator starts with **no fractional
+   part** — this is the actual source of the jerkiness, and the disassembly's own
+   comment says so. Fixed: `move.l d1,d3`, carrying the preserved fraction.
 
-We use the `fixBugs` path from the disassembly, which preserves fractional precision:
+Both `fixBugs = 1` variants are written out in full in the source comments, so the
+site is self-describing if the bug-fixed revisions are ever supported.
 
-```asm
-; fixBugs path:
-    swap    d1
-    asr.l   #4,d1          ; long shift preserves fractional bits across the swap
-```
-
-This is implemented in `SwScrlHtz.java` using a 32-bit arithmetic shift after swapping the high/low words, matching the corrected assembly path.
-
-### Rationale
-
-1. **Known bug in original ROM** - The disassembly explicitly marks this as a bug with a `fixBugs` conditional path.
-2. **Smoother cloud animation** - The fractional bits produce smooth per-frame cloud movement instead of the original's periodic stutter.
-3. **Matches disassembly intent** - The `fixBugs` path represents what the original developers intended before the word/long shift mistake.
-
-### Verification
-
-Cloud layer scrolling in HTZ is smooth across all frames, without the 2-frame jitter visible in the original ROM.
+Note on why this was invisible: HTZ trace replays were green before and after the
+correction, so no compared column currently observes that accumulator. The
+deviation was **latent, not harmless** — it would have desynced the first fixture
+that compared cloud scroll.
 
 ---
 
@@ -410,6 +410,72 @@ When cross-game sidekicks are donated into Sonic 1, `Sonic1MonitorObjectInstance
 ### Verification
 
 `TestSonic1MonitorObjectInstance.cpuSidekickCannotBreakSonic1Monitor` covers the donated-sidekick path. The local S1 disassembly also confirms that the static monitor icon mapping (`Map_Monitor` frame `2`) is real art, so no icon-suppression discrepancy entry is needed.
+
+---
+
+## S2 CPZ Debug Placement Capability Boundary
+
+**Location:** `CPZSpinTubeObjectInstance.java`
+**ROM Reference:** `docs/s2disasm/s2.asm:36224-36230,48526-48527`
+
+### Original Implementation
+
+Obj1E checks the ROM-global `Debug_placement_mode` byte before testing the
+player's tube-entry bounds. S2's debug object-placement path is entered from
+`Debug_mode_flag` plus the B button and also owns level-wide ring/item placement
+and related object, signpost, and scroll gates.
+
+### Engine Implementation
+
+OpenGGF does not expose that native level-wide placement mode. Its supported
+level debug capability is the engine free-fly mode toggled by `D`; CPZ's entry
+test now rejects a player in that mode, matching the shared touch/solid debug
+boundary. Normal tube gameplay remains ROM-driven; the existing engine
+free-fly mid-traversal reset is unchanged.
+
+### Rationale and Verification
+
+Mapping free-fly movement to the complete native placement mode would invent
+the missing global mode owner and its ring/item/object lifecycle. The bounded
+guard prevents a visible interaction leak without claiming native placement
+parity. `TestCPZSpinTubeObjectInstance.engineDebugMovementCannotBeCapturedByTube`
+and `TestSonic2SpecialStageModuleGraph.moduleDoesNotAdvertiseNativeLevelDebugPlacement`
+cover the boundary; native ring/item placement remains unavailable until an
+engine-wide placement capability is designed and sourced from the ROM.
+
+---
+
+## S2 Native Human-P2 Monitor Branch Unavailable
+
+**Location:** `MonitorObjectInstance.java`, S2 level-mode ownership
+**ROM Reference:** `docs/s2disasm/s2.asm:85337-85340`
+
+### Original Implementation
+
+`Touch_Monitor` allows a monitor break from above for `MainCharacter`, or for a
+second player only when the ROM-global `Two_player_mode` is nonzero; the roll
+animation check follows at `s2.asm:85342-85343`. CPU Tails
+is therefore blocked from that branch in ordinary one-player gameplay, while a
+human P2 can use it in the native competition mode.
+
+### Engine Implementation
+
+S2 has no competition-mode owner or human-P2 playable slot. Its level-event
+owner keeps the ROM `Two_player_mode` gate explicitly false, and Player 2
+bindings feed the existing CPU-sidekick/manual-input path.
+`MonitorObjectInstance` consequently retains the ROM-faithful
+lead-player/CPU-sidekick behavior; no object-local human-P2 branch is
+advertised or fabricated.
+
+### Rationale and Verification
+
+The missing behavior depends on a complete mode (player slots, initialization,
+physics, art, scoring, camera, and competition-zone lifecycle), not a monitor
+condition. A dedicated S2 competition-mode design must own that state before
+the native branch can be implemented and validated. Existing monitor sidekick
+tests prove the supported path; no title-provider assertion is used as evidence
+of mode absence. Human-P2 monitor parity is deferred as an explicit product-level
+capability gap.
 
 ---
 

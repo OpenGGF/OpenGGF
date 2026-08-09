@@ -42,13 +42,17 @@ public record GameRules(
                     false,
                     false,
                     new PlayerLandingRules(false, false, false, false),
-                    new PlayerLevelBoundaryRules(false, true, true, false, true, true),
+                    new PlayerLevelBoundaryRules(false, true, true, false, true, true, true),
                     false,
                     false,
                     true,
                     false,
                     false,
                     false,
+                    false,
+                    // tailsRollSpeedUsesEffectiveDecelQuarter: S1 has no Tails_RollSpeed
+                    false,
+                    // waterVelocityChangeGatedByObjectControl: S1 Sonic_Water has no object_control test
                     false
             ),
             new PlayerCapabilityRules(
@@ -79,7 +83,10 @@ public record GameRules(
                     true,
                     false,
                     true,
-                    0x07FF
+                    0x07FF,
+                    // S1 FindNearestTile masks the row index with a constant assembled
+                    // into the routine, so it applies to every collision lookup.
+                    true
             ),
             new PlayerAnimationRules(
                     false,
@@ -124,7 +131,8 @@ public record GameRules(
                     false,
                     true,
                     false,
-                    false
+                    false,
+                    0x39 // duckTouchBoxMappingFrame: S1 fr_Duck ($39)
             ),
             new SidekickCpuRules(
                     16,
@@ -177,13 +185,17 @@ public record GameRules(
                     true,
                     false,
                     new PlayerLandingRules(true, true, false, true),
-                    new PlayerLevelBoundaryRules(false, true, false, true, true, false),
+                    new PlayerLevelBoundaryRules(false, true, false, true, true, false, false),
                     true,
                     false,
                     false,
                     true,
                     true,
                     false,
+                    false,
+                    // tailsRollSpeedUsesEffectiveDecelQuarter: shipped s2.asm:40037 keeps decel>>2
+                    true,
+                    // waterVelocityChangeGatedByObjectControl: S2 Obj01_InWater has no object_control test
                     false
             ),
             new PlayerCapabilityRules(
@@ -214,7 +226,10 @@ public record GameRules(
                     true,
                     false,
                     true,
-                    0x07FF
+                    0x07FF,
+                    // S2 Find_Tile masks the row index with a constant assembled into the
+                    // routine, so it applies to every collision lookup.
+                    true
             ),
             new PlayerAnimationRules(
                     true,
@@ -241,7 +256,7 @@ public record GameRules(
                     6,
                     6,
                     false,
-                    false
+                    true
             ),
             new ObjectInteractionRules(
                     false,
@@ -259,7 +274,8 @@ public record GameRules(
                     true,
                     true,
                     true,
-                    false
+                    false,
+                    0x4D // duckTouchBoxMappingFrame: S2 SonAni_Duck second frame ($4D)
             ),
             new SidekickCpuRules(
                     16,
@@ -312,13 +328,17 @@ public record GameRules(
                     false,
                     true,
                     new PlayerLandingRules(true, true, true, false),
-                    new PlayerLevelBoundaryRules(true, true, false, false, false, false),
+                    new PlayerLevelBoundaryRules(true, true, false, false, false, false, false),
                     false,
                     true,
                     false,
                     true,
                     true,
                     true,
+                    true,
+                    // tailsRollSpeedUsesEffectiveDecelQuarter: S3K Tails_RollSpeed is flat $20
+                    false,
+                    // waterVelocityChangeGatedByObjectControl: sonic3k.asm:22235, :27448
                     true
             ),
             new PlayerCapabilityRules(
@@ -349,7 +369,11 @@ public record GameRules(
                     false,
                     true,
                     false,
-                    0x0FFF
+                    0x0FFF,
+                    // S3K's Find_Tile_FG masks with the per-level runtime
+                    // Layout_row_index_mask, not a constant, so the mask above may not be
+                    // applied to every lookup. See CollisionRules.layoutYMaskAppliesToAllLookups.
+                    false
             ),
             new PlayerAnimationRules(
                     true,
@@ -394,7 +418,8 @@ public record GameRules(
                     false,
                     true,
                     true,
-                    true
+                    true,
+                    ObjectInteractionRules.NO_DUCK_TOUCH_BOX // S3K removed the duck touch-box shrink
             ),
             new SidekickCpuRules(
                     48,

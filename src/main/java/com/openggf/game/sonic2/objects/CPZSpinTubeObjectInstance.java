@@ -344,8 +344,17 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
      * Mode 0: Check if player enters the tube activation zone.
      */
     private void checkEntryCollision(AbstractPlayableSprite player, CharacterState cs) {
-        // Skip if in debug placement mode
-        // (Not implemented in this engine)
+        // The shipped S2 ROM gates Obj1E capture on the global
+        // Debug_placement_mode byte (s2.asm:48526-48527). Native S2 debug
+        // placement is not an engine capability: it also owns ring/item
+        // placement and several other level-wide branches. The supported
+        // engine debug mode is free-fly movement, and the shared touch/solid
+        // controllers already exclude it. Keep this object on that same
+        // capability boundary instead of letting a tube capture a free-fly
+        // player; this does not claim native ring/item placement parity.
+        if (player.isDebugMode()) {
+            return;
+        }
 
         int objX = spawn.x();
         int objY = spawn.y();
@@ -381,8 +390,9 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
             return;
         }
 
-        // ROM loc_225FC (docs/s2disasm/s2.asm:48467-48483) gates capture ONLY on:
-        //   - not Debug_placement_mode (not modelled here)
+        // ROM loc_225FC (docs/s2disasm/s2.asm:48526-48538) gates capture on:
+        //   - not Debug_placement_mode (the engine debug boundary is checked above;
+        //     native S2 placement mode remains unavailable)
         //   - x_pos(a1)-x_pos(a0) < objoff_2A (collisionDistance)  [checked above]
         //   - y_pos(a1)-y_pos(a0) < 0x80                           [checked above]
         //   - anim(a1) != $20 (raw S2 anim index: AniIDSonAni_Lying for Sonic,
@@ -970,10 +980,18 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
             frames = (absDx * 256) / speed;
         }
 
-        // Ensure at least 1 frame to prevent getting stuck
-        if (frames < 1) {
-            frames = 1;
-        }
+        // No minimum-frame clamp: the ROM permits a zero-length segment.
+        // loc_22902 stores the quotient with move.w d1,2(a4)
+        // (docs/s2disasm/s2.asm:48846-48848 and :48864-48866) but loc_2271A and
+        // loc_227FE read it back as a byte via subq.b #1,2(a4)
+        // (docs/s2disasm/s2.asm:48574 and :48800), so the counter is the HIGH byte
+        // of |dominant| * $10000 / $800 == |dominant| * 32, i.e. |dominant| >> 3.
+        // Waypoints closer together than 8px on the dominant axis therefore yield a
+        // counter of 0: subq.b drives it straight negative, and the very next frame
+        // snaps to the waypoint and recomputes with no intervening
+        // Obj1E_MoveCharacter frame at all. Clamping to 1 inserted a spurious
+        // movement frame and left every later waypoint one frame late for the rest
+        // of the ride.
 
         player.setXSpeed((short) xVel);
         player.setYSpeed((short) yVel);

@@ -4,6 +4,7 @@ import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelEventProvider;
+import com.openggf.game.LevelState;
 import com.openggf.game.rules.CollisionRules;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.PlayerAnimationRules;
@@ -80,6 +81,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private static final int DEBUG_MOVE_SPEED = 3;
 	// Controlled roll deceleration: derived per-frame from sprite.getRunDecel() >> 2
 	// (s1:01 Sonic.asm:595-601 — rollDecel = decel/4 = $80/4 = $20)
+
+	/**
+	 * ROM {@code move.w #60,restartime(a0)} — the delay armed on the death row
+	 * crossing when the level is going to restart (s1:01 Sonic.asm:2042,
+	 * s2.asm:38281, sonic3k.asm:24583).
+	 */
+	private static final int DEATH_RESTART_DELAY_FRAMES = 60;
 
 	private final CollisionSystem bootstrapCollisionSystem;
 	private final AudioManager audioManager;
@@ -1040,6 +1048,15 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// Hurt routine 4 owns its terrain pass even if a positive object_control
 		// bit remains set until a later object slot releases it. The normal
 		// control routine alone is suppressed by that byte.
+		// ROM Sonic_HurtStop runs its OWN bottom-boundary kill test before it
+		// hands off to Sonic_Floor/DoLevelCollision, and returns without any
+		// terrain pass when it fires (S1 01 Sonic.asm:1930-1941; S2
+		// s2.asm:38200-38215; S3K sub_12318 sonic3k.asm:24477-24491). This is a
+		// separate row from Sonic_LevelBound's kill plane below, which the hurt
+		// routine reaches afterwards.
+		if (hurt && applyHurtStopBottomKill()) {
+			return;
+		}
 		if ((!sprite.isObjectControlSuppressesMovement() || hurt)
 				&& !sprite.isSuppressAirCollision()) {
 			doLevelCollision(sprite.isForceFloorCheck());
@@ -2003,15 +2020,55 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			climbAnimDelta = -1;
 		}
 
-		// ROM: Animation frame cycling (sonic3k.asm:31384-31404)
+		// ROM: Knuckles_Wall_Climb .finishMoving (sonic3k.asm:31330-31377).
+		//
+		// FixBugs conditional (docs/skdisasm/sonic3k.asm:38 -- the shipped ROM
+		// assembles with FixBugs = 0, so THIS is the branch the engine implements).
+		//
+		//   Shipped (FixBugs = 0), implemented here: when neither up nor down is
+		//   held, a floor probe runs through sub_F828 and its return value lands
+		//   in d1 -- the same register that carries the climbing animation delta.
+		//   The delta is destroyed, and the cycling code below adds the FLOOR
+		//   DISTANCE to mapping_frame instead of +/-1. The distance is normally far
+		//   larger than the $B7..$BC climb loop, so the `bls #$BC -> $B7` clamp
+		//   fires and Knuckles snaps back to his first climbing frame every 4
+		//   frames. The disassembly names that exact symptom at
+		//   sonic3k.asm:31369-31373.
+		//
+		//   Fixed (FixBugs = 1), NOT implemented: `move.w d1,-(sp)` before the
+		//   `bsr.w sub_F828` and `move.w d1,d0 / move.w (sp)+,d1` after it, so the
+		//   floor distance is tested in d0 while d1 keeps its delta (0 in the
+		//   no-input case). Knuckles would simply hold his current climbing frame.
+		//
+		// Both branches share the rest of the block: the probe is skipped entirely
+		// while up or down is held (sonic3k.asm:31343-31346 -- similar code already
+		// ran in those branches), and a negative probe result means Knuckles has
+		// reached the floor and detaches (.reachedFloor).
+		if (!inputUp && !inputDown) {
+			// ROM probe point: x_pos, y_pos + 9, top_solid_bit (sonic3k.asm:31349-31352).
+			int probeY = sprite.getCentreY() + 9;
+			int floorDistance = romFloorProbeDistance(
+					ObjectTerrainUtils.checkFloorDist(sprite.getCentreX(), probeY), probeY);
+			if (floorDistance < 0) {
+				// ROM .reachedFloor: add.w d1,y_pos, then detach to the ground.
+				sprite.setY((short) (sprite.getY() + floorDistance));
+				exitWallClimbToGround();
+				return;
+			}
+			// The FixBugs = 0 clobber: d1 now holds the floor distance, not the delta.
+			climbAnimDelta = floorDistance;
+		}
+
+		// ROM: Animation frame cycling (sonic3k.asm:31378-31403)
 		// Animate every 4 frames when moving, using double_jump_property as timer
 		if (climbAnimDelta != 0) {
 			byte timer = (byte) (sprite.getDoubleJumpProperty() - 1);
 			if (timer < 0) {
 				timer = 3;
-				// Advance mapping frame
-				int frame = sprite.getMappingFrame() + climbAnimDelta;
-				// Wrap within range 0xB7-0xBC
+				// ROM: add.b mapping_frame(a0),d1 -- a BYTE add, so the sum wraps
+				// mod 256 before the two unsigned loop compares (sonic3k.asm:31391-31401).
+				int frame = (sprite.getMappingFrame() + climbAnimDelta) & 0xFF;
+				// Wrap within range 0xB7-0xBC (cmpi.b/bhs then cmpi.b/bls)
 				if (frame < 0xB7) frame = 0xBC;
 				if (frame > 0xBC) frame = 0xB7;
 				sprite.setMappingFrame(frame);
@@ -2042,6 +2099,26 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			audioManager.playSfx(GameSound.JUMP);
 			return;
 		}
+	}
+
+	/**
+	 * Maps an {@link ObjectTerrainUtils} floor probe onto the word the ROM's
+	 * {@code FindFloor} chain actually returns in {@code d1}.
+	 *
+	 * <p>The engine reports "nothing solid in either probed tile" with the
+	 * sentinel {@link TerrainCheckResult#NO_COLLISION}; the ROM has no such
+	 * sentinel. Its empty-tile path is {@code loc_F274}
+	 * ({@code add.w a3,d2 / bsr sub_F30C / addi.w #$10,d1}, sonic3k.asm:19273-19278)
+	 * into {@code loc_F31C} ({@code move.w #$F,d1 / move.w d2,d0 / andi.w #$F,d0 /
+	 * sub.w d0,d1}, sonic3k.asm:19306-19310), i.e. {@code $1F - (probeY & $F)} --
+	 * a positive distance in $10..$1F. The exact value matters here because the
+	 * FixBugs = 0 clobber feeds it straight into {@code add.b mapping_frame,d1}.
+	 */
+	private static int romFloorProbeDistance(TerrainCheckResult result, int probeY) {
+		if (result == null || !result.foundSurface()) {
+			return 0x1F - (probeY & 0x0F);
+		}
+		return result.distance();
 	}
 
 	/** Probes wall distance at a given Y position in the facing direction. */
@@ -2720,11 +2797,37 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		PlayerMovementRules movementRules = playerMovementRulesOrNull();
 		short rollDecel = (short) 0x20;
-		if (movementRules != null && movementRules.rollControlledDecelUsesEffectiveDecelQuarter()) {
+		// ASSEMBLY FLAG: fixBugs (docs/s2disasm/s2.asm:27), 0 in the shipped ROM.
+		// THE ENGINE IMPLEMENTS THE SHIPPED (UN-FIXED) BRANCH for Tails_RollSpeed:
+		// s2.asm:40037-40040 keeps the outdated Sonic-1 form
+		//   move.w (Tails_deceleration).w,d4 / asr.w #2,d4
+		// so Tails' controlled roll deceleration is decel>>2 -- $20 on land
+		// ($80>>2) but only $10 underwater ($40>>2), which is why the disassembly
+		// notes Tails is "much worse at this than Sonic when underwater". With
+		// fixBugs = 1 the two lines become move.w #$20,d4, matching
+		// Sonic_RollSpeed. Sonic 2's Sonic_RollSpeed and *both* S3K routines
+		// (sonic3k.asm:22934, :28178) are unconditionally flat $20; S1's single
+		// Sonic_RollSpeed uses the >>2 form for its only character.
+		boolean tailsOutdatedControlledRollDecel = movementRules != null
+				&& movementRules.tailsRollSpeedUsesEffectiveDecelQuarter()
+				&& sprite.usesTailsRollSpeedRoutine();
+		if (tailsOutdatedControlledRollDecel
+				|| movementRules != null && movementRules.rollControlledDecelUsesEffectiveDecelQuarter()) {
 			// S1 Sonic_RollSpeed derives d4 from v_sonspeeddec >> 2, so the
-			// underwater value is $40 >> 2 = $10. S2/S3K hardcode $20.
+			// underwater value is $40 >> 2 = $10. S2 Sonic / S3K hardcode $20.
 			rollDecel = (short) (sprite.getRunDecel() >> 2);
 		}
+		// AUDIT (fixBugs, s2.asm:27 `fixBugs = 0`; block at s2.asm:40032-40041): S2's
+		// Sonic_RollSpeed hardcodes $20, but Tails_RollSpeed does NOT -- the shipped
+		// branch keeps the outdated S1-style `move.w (Tails_deceleration).w,d4 /
+		// asr.w #2,d4`. Out of water Tails_deceleration is $80, so $80>>2 = $20 and the
+		// two agree; underwater it halves to $40, giving Tails $10 against Sonic's $20,
+		// which is why the disassembly notes Tails is much worse at controlled rolling
+		// underwater. fixBugs=1 replaces it with a flat `move.w #$20,d4` to match Sonic.
+		// The engine currently gives S2 Tails $20 in all cases (the fixBugs=1 branch),
+		// because this knob lives on the game-wide PlayerMovementRules and has no
+		// per-character owner. Modelling the shipped branch needs that owner; recorded as
+		// an audit finding rather than fixed here.
 		if (inputAllowed && inputLeft) {
 			if (gSpeed > 0) {
 				// ROM Sonic_RollLeft.changeddirection: sub.w d4,d0 / bcc / move.w #-$80.
@@ -3045,6 +3148,22 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		int minX = camera.getMinX();
 		int maxX = camera.getMaxX();
+		// FLAG: FixBugs / fixBugs (docs/s1disasm/sonic.asm:20, docs/s2disasm/s2.asm:27
+		// -- both 0 in the shipped ROMs).
+		// ENGINE IMPLEMENTS: the shipped (flag = 0) branch -- the bottom kill plane is
+		// the LIVE eased boundary alone (S1 v_limitbtm2, S2 Camera_Max_Y_pos,
+		// S3K Camera_max_Y_pos). It never consults the easing TARGET, so falling faster
+		// than the boundary can ease down kills the player (the GHZ1 S-tunnel death).
+		// OTHER BRANCH (flag = 1) would take max(live, target)
+		// (docs/s1disasm/_incObj/01 Sonic.asm:1084-1092 Sonic_LevelBound and 1922-1932
+		// Sonic_HurtStop; docs/s2disasm/s2.asm:37255-37265 Sonic_Boundary_CheckBottom),
+		// suppressing those deaths. S3K has no such conditional at all
+		// (docs/skdisasm/sonic3k.asm:23193-23196) -- it only ever reads the live value --
+		// so one shared expression is correct for all three games and no per-game rule
+		// is needed.
+		// NOT YET CORRECTED -- see the FixBugs note above. Taking the shipped branch
+		// here (camera.getMaxY() alone) regresses TestS2SczLevelSelectTraceReplay,
+		// which means max() is masking a second defect that must be found first.
 		int maxY = Math.max(camera.getMaxY(), camera.getMaxYTarget());
 		if (sprite.isCpuControlled() && sprite.getCpuController() != null) {
 			minX = sprite.getCpuController().getMinXBound(minX);
@@ -3090,10 +3209,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			sprite.setGSpeed((short) 0);
 		}
 
-		// ROM fixBugs: Use max of current maxY and target to prevent premature death
-		// while camera boundary is still easing down. Without this fix, falling
-		// faster than the camera can adjust its maxY limit causes death.
-		// See s2.asm:36913-36922 (Sonic_Boundary_CheckBottom)
+		// The kill plane is the LIVE eased boundary only -- see the FixBugs note on
+		// the maxY assignment above; the max(live, target) form is the flag = 1 branch.
 		// ROM: When Level_started_flag is clear, boundary death is suppressed
 		// (camera boundaries may not reflect actual level extents during intro).
 		if (camera.isLevelStarted()) {
@@ -3151,6 +3268,86 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				}
 			}
 		}
+	}
+
+	/**
+	 * {@code Sonic_HurtStop}'s own bottom-boundary kill test, run before the hurt
+	 * routine hands off to {@code Sonic_Floor} / {@code DoLevelCollision}.
+	 *
+	 * <p>ROM: S1 {@code Sonic_HurtStop} (docs/s1disasm/_incObj/01 Sonic.asm:1930-1941),
+	 * S2 {@code Sonic_HurtStop} (docs/s2disasm/s2.asm:38194-38215), S3K
+	 * {@code sub_12318} (docs/skdisasm/sonic3k.asm:24471-24491).
+	 *
+	 * <p>S1 assembles with {@code FixBugs = 0} (docs/s1disasm/sonic.asm:20) and the
+	 * engine implements that shipped branch, because the traces record shipped-ROM
+	 * behaviour. Two things follow from the conditional:
+	 * <ul>
+	 *   <li>the boundary word would be {@code v_limitbtm2}, the camera's TARGET
+	 *       bottom boundary, with no consideration of the eased real boundary
+	 *       {@code v_limitbtm1} (S2/S3K read the live boundary instead). The
+	 *       {@code FixBugs = 1} branch takes the lower of the two so that
+	 *       outrunning a still-lowering boundary (the GHZ1 S-tunnel) is not an
+	 *       unfair death. This site does NOT yet take the shipped branch: it runs
+	 *       the same {@code max(live, target)} expression as the sibling kill plane
+	 *       in {@link #doLevelBoundary}, which is deliberately held there because
+	 *       removing it regresses TestS2SczLevelSelectTraceReplay. Measured: with
+	 *       the shipped live-only word here, SCZ fails at frame 7109 (x_speed
+	 *       expected -0x0200, actual 0x0000, 523 errors) — Sonic is killed by this
+	 *       row during hurt knockback where the ROM does not kill him. The two
+	 *       kill planes are the same ROM conditional and must move together;</li>
+	 *   <li>the compare is the UNSIGNED {@code blo}, so a hurt Sonic who leaves the
+	 *       TOP of the level — {@code y_pos} wrapped to {@code $Fxxx}, which reads
+	 *       as a huge unsigned word — also dies. The {@code FixBugs = 1} branch uses
+	 *       a signed {@code blt} and kills only at the bottom.</li>
+	 * </ul>
+	 * The signed/unsigned divergence is carried by {@link PlayerLevelBoundaryRules},
+	 * not by a game name: S2 and S3K ship the signed compare, so this is a real
+	 * per-game difference in the ROMs.
+	 *
+	 * @return true when the player was killed and the hurt routine must return
+	 */
+	private boolean applyHurtStopBottomKill() {
+		PlayerMovementRules movementRules = playerMovementRulesOrNull();
+		if (movementRules == null) {
+			return false;
+		}
+		Camera camera = camera();
+		if (camera == null || !camera.isLevelStarted()) {
+			// Engine-side guard shared with doLevelBoundary: before Level_started_flag
+			// is set the camera boundaries do not yet describe the level.
+			return false;
+		}
+		// Held mask, shared with doLevelBoundary's kill plane — see the javadoc above.
+		int boundary = Math.max(camera.getMaxY(), camera.getMaxYTarget());
+		if (sprite.isCpuControlled() && sprite.getCpuController() != null) {
+			boundary = sprite.getCpuController().getMaxYBound(boundary);
+		}
+		// ROM: addi.w #224,d0 / cmp.w y_pos(a0),d0 — a 16-bit word compare, so both
+		// operands are masked to a word before the unsigned test.
+		int killRow = (boundary + 224) & 0xFFFF;
+		int playerY = sprite.getCentreY();
+		boolean past = movementRules.hurtStopBottomKillUnsigned()
+				? killRow < (playerY & 0xFFFF)
+				: (short) killRow < (short) playerY;
+		if (!past) {
+			return false;
+		}
+		GameModule module = sprite.currentGameModule();
+		LevelEventProvider levelEvents = module != null ? module.getLevelEventProvider() : null;
+		SidekickCpuController cpuController = sprite.getCpuController();
+		if (sprite.isCpuControlled() && cpuController != null) {
+			if (cpuController.usesFlyingCarryMovement()
+					|| (levelEvents != null && levelEvents.interceptPitDeath(sprite))) {
+				return false;
+			}
+			cpuController.despawn(SidekickCpuController.DespawnCause.LEVEL_BOUNDARY);
+			return true;
+		}
+		if (levelEvents != null && levelEvents.interceptPitDeath(sprite)) {
+			return false;
+		}
+		sprite.applyPitDeath();
+		return true;
 	}
 
 	private boolean isPastRightLevelBoundary(int predictedX, int rightBoundary) {
@@ -4150,7 +4347,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// restart delay down. No gravity, no ObjectFall, so the recorded position,
 		// sub-position and y_vel all stand still until the level restarts (S1 MZ1
 		// rows 3,331-3,390).
-		if (sprite.getDeathCountdown() > 0) {
+		if (sprite.isInDeathRestartRoutine()) {
 			tickRestartCountdown();
 			return 0;
 		}
@@ -4167,7 +4364,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				// and leaves it stopped (01 Sonic.asm:2010).
 				sprite.setYSpeed((short) -sprite.getGravity());
 			}
-			sprite.startDeathCountdown();
+			enterDeathRestartRoutine();
 		}
 
 		short oldYSpeed = sprite.getYSpeed();
@@ -4198,6 +4395,57 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		return sprite.getCentreY() > reference + 0x100;
 	}
 
+	/**
+	 * The death row crossing's own bookkeeping, identical in all three games.
+	 *
+	 * <p>S1 {@code Sonic_HandleDeath} (docs/s1disasm/_incObj/01
+	 * Sonic.asm:2011-2049), S2 {@code CheckGameOver}
+	 * (docs/s2disasm/s2.asm:38279-38316) and S3K {@code loc_12432}
+	 * (docs/skdisasm/sonic3k.asm:24581-24616) all do the same three things on
+	 * this one frame: enter the post-fall routine with {@code restartime} armed
+	 * at 60, raise the lives-counter HUD flag and subtract the life, and then
+	 * rewrite {@code restartime} to zero if that subtraction produced a game
+	 * over, or if the time-over flag was already set. The life therefore comes
+	 * off here, not 60 frames later, and the two zero-delay cases never restart
+	 * the level at all: {@code Sonic_ResetLevel} / {@code Obj01_Gone} /
+	 * {@code loc_1257C} only write the restart flag from a non-zero delay.
+	 *
+	 * <p>The two zero-delay cases stay distinct in the ROM even though they
+	 * share the delay: the game-over branch also clears the time-over flag and
+	 * shows GAME/OVER, while the time-over branch keeps it and shows TIME/OVER,
+	 * which is what later lets {@code Over_Wait} restart the level after a time
+	 * over but send a game over to the continue screen
+	 * (docs/s1disasm/_incObj/39 Game Over.asm:57-88).
+	 */
+	private void enterDeathRestartRoutine() {
+		if (sprite.isCpuControlled() && sprite.getCpuController() != null) {
+			// A CPU sidekick's crossing despawns it and never reaches the life
+			// counter: S3K sends Tails to routine 2 instead
+			// (docs/skdisasm/sonic3k.asm:24572-24578).
+			sprite.enterDeathRestartRoutine(DEATH_RESTART_DELAY_FRAMES);
+			return;
+		}
+		GameStateManager gameState = gameState();
+		if (gameState != null) {
+			gameState.loseLife();
+		}
+		boolean gameOver = gameState != null && gameState.getLives() == 0;
+		boolean timeOver = !gameOver && isTimeOverFlagged();
+		sprite.enterDeathRestartRoutine(
+				gameOver || timeOver ? 0 : DEATH_RESTART_DELAY_FRAMES);
+	}
+
+	/**
+	 * The ROM's {@code Time_over_flag} / {@code f_timeover}, owned by the level's
+	 * timer rather than by the player: the HUD's {@code TimeOver} routine both
+	 * kills the player and raises the flag when the timer reaches 9:59:59
+	 * (docs/s1disasm/_inc/HUD Update.asm:103-111).
+	 */
+	private boolean isTimeOverFlagged() {
+		LevelState levelState = sprite.currentLevelState();
+		return levelState != null && levelState.isTimeOver();
+	}
+
 	private void tickRestartCountdown() {
 		if (!sprite.tickDeathCountdown()) {
 			return;
@@ -4207,7 +4455,6 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// instead of causing a level reset
 			sprite.getCpuController().despawn();
 		} else {
-			gameState().loseLife();
 			levelManager().requestRespawn();
 		}
 	}

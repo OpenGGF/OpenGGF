@@ -42,6 +42,15 @@ public class VirtualSynthesizer implements Synthesizer {
         return outputSampleRate;
     }
 
+    /**
+     * Installs one diagnostic observer at both resolved chip-write boundaries.
+     * Passing {@code null} restores the disabled no-op observer.
+     */
+    public void setChipWriteObserver(ChipWriteObserver observer) {
+        ym.setWriteObserver(observer);
+        psg.setWriteObserver(observer);
+    }
+
     public Snapshot captureSynthSnapshot() {
         return new Snapshot(outputSampleRate, ym.captureSnapshot(), psg.captureSnapshot());
     }

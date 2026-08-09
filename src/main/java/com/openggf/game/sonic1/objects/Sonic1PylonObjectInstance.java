@@ -64,6 +64,27 @@ public class Sonic1PylonObjectInstance extends AbstractObjectInstance implements
     }
 
     /**
+     * ROM Pyl_Display recomputes obX/obScreenY from the camera every frame and
+     * ends in {@code bra.w DisplaySprite} — there is no out_of_range test, no
+     * MarkObjGone and no DeleteObject anywhere in the object
+     * (docs/s1disasm/_incObj/5C SLZ Foreground Pylon.asm:28-43), so Obj5C holds
+     * its SST slot for the whole act. Its obX is a screen-fixed parallax value
+     * rather than a level position, so the shared camera-distance unload test
+     * has nothing meaningful to measure against and would free a slot the ROM
+     * keeps occupied — which shifts every later dynamic allocation, and with it
+     * the slot-indexed Obj37 floor-probe cadence.
+     */
+    @Override
+    public boolean usesCustomOutOfRangeCheck() {
+        return true;
+    }
+
+    @Override
+    public boolean isCustomOutOfRange(int cameraX) {
+        return false;
+    }
+
+    /**
      * Calculates the screen-space X position using parallax.
      * From disassembly: obX = -(2 * cameraX), then DisplaySprite subtracts cameraX,
      * giving effective screen X = -(3 * cameraX).

@@ -94,13 +94,13 @@
         {"destination": "s1/lz1_completerun", "source": "lz1"},
         {"destination": "s1/lz2_completerun", "source": "lz2"},
         {"destination": "s1/lz3_completerun", "source": "lz3"},
-        {"destination": "s1/fz_completerun", "source": "lz4"},
+        {"destination": "s1/sbz3_completerun", "source": "lz4"},
         {"destination": "s1/slz1_completerun", "source": "slz1"},
         {"destination": "s1/slz2_completerun", "source": "slz2"},
         {"destination": "s1/slz3_completerun", "source": "slz3"},
         {"destination": "s1/sbz1_completerun", "source": "sbz1"},
         {"destination": "s1/sbz2_completerun", "source": "sbz2"},
-        {"destination": "s1/sbz3_completerun", "source": "sbz3"}
+        {"destination": "s1/fz_completerun", "source": "sbz3"}
       ],
       "movie": "s1/_movies/s1-complete-run.bk2",
       "movie_sha256": "f744c814d8e00d6c367f7fe83bb663cab123b5a4ed385a320d71b74d63146bde",

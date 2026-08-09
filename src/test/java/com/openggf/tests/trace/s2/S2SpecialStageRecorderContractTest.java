@@ -251,10 +251,16 @@ class S2SpecialStageRecorderContractTest {
                         ((Number) pass.fields().get("pass_sequence")).intValue()))
                 .orElseThrow();
         TraceEvent.StateSnapshot precedingPass = trace.runObjectsEndSnapshots().stream()
-                .filter(pass -> ((Number) pass.fields().get("pass_sequence")).intValue() == 2989)
+                .filter(pass -> ((Number) pass.fields().get("pass_sequence")).intValue()
+                        == ((Number) terminalPass.fields().get("pass_sequence")).intValue() - 1)
                 .findFirst().orElseThrow();
         assertEquals(finishObservation, terminalPass.frame());
-        assertEquals(2990, ((Number) terminalPass.fields().get("pass_sequence")).intValue());
+        // The terminal pass is the last one recorded. Stated relatively: the
+        // recorder now also covers the pre-start half of SpecialStage_MainLoop
+        // (docs/s2disasm/s2.asm:6674-6692), which shifts every absolute
+        // sequence number by that half's pass count.
+        assertEquals(trace.runObjectsEndSnapshots().size() - 1,
+                ((Number) terminalPass.fields().get("pass_sequence")).intValue());
         assertEquals(0xff, ((Number) terminalPass.fields().get("check_rings_flag")).intValue());
         assertEquals(finishObservation,
                 ((Number) terminalPass.fields().get("completion_cursor_frame")).intValue());
@@ -281,7 +287,16 @@ class S2SpecialStageRecorderContractTest {
 
         List<TraceEvent.StateSnapshot> f916 = byFrame.getOrDefault(916, List.of());
         assertEquals(1, f916.size());
-        assertEquals(318, ((Number) f916.getFirst().fields().get("pass_sequence")).intValue());
+        // Contiguous with the last pass published before this observation --
+        // an absolute sequence number would only restate the recorder's total
+        // coverage, which the pre-start hook changed.
+        int previousSequence = trace.runObjectsEndSnapshots().stream()
+                .filter(pass -> pass.frame() < 916)
+                .mapToInt(pass -> ((Number) pass.fields().get("pass_sequence")).intValue())
+                .max()
+                .orElseThrow();
+        assertEquals(previousSequence + 1,
+                ((Number) f916.getFirst().fields().get("pass_sequence")).intValue());
         assertEquals(58, ((Number) f916.getFirst().fields().get("sonic_ss_x")).intValue());
         assertTrue(byFrame.getOrDefault(918, List.of()).isEmpty(),
                 "f918 observes no newly completed RunObjects pass");

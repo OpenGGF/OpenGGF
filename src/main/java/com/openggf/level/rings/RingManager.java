@@ -10,6 +10,7 @@ import com.openggf.level.SolidTile;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.spawn.AbstractPlacementManager;
+import com.openggf.level.spawn.PlacementViewportWidth;
 import com.openggf.level.ChunkDesc;
 import com.openggf.level.objects.TouchResponseTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -17,6 +18,7 @@ import com.openggf.game.ShieldType;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.rules.GameRules;
+import com.openggf.game.rules.ObjectInteractionRules;
 import com.openggf.game.rules.PlayerCapabilityRules;
 import com.openggf.game.rules.RingRules;
 import com.openggf.physics.TrigLookupTable;
@@ -258,9 +260,22 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         int playerYRadius = Math.max(1, player.getYRadius() - 3);
         int playerTop = player.getCentreY() - playerYRadius;
         int playerHeight = playerYRadius * 2;
-        if (player.getCrouching()) {
-            playerTop += 12;
-            playerHeight = 20;
+        // ASSEMBLY FLAG: fixBugs (docs/s2disasm/s2.asm:27) / FixBugs
+        // (docs/s1disasm/sonic.asm:20), both 0 in the shipped ROMs. THE ENGINE
+        // IMPLEMENTS THE SHIPPED (UN-FIXED) BRANCH: Touch_Rings tests the mapping
+        // frame (`cmpi.b #$4D,mapping_frame(a0)`, s2.asm:31956; `cmpi.b
+        // #fr_Duck,obFrame(a0)` with fr_Duck = $39, S1 ReactToItem.asm:34), so the
+        // 12px-down / 20px-tall box applies on exactly one frame of the duck
+        // animation and never to Tails. With fixBugs = 1 the test would be the
+        // animation id (AniIDSonAni_Duck), applying for the whole duck and to both
+        // characters. S3K dropped the adjustment entirely
+        // (Test_Ring_Collisions_NoAttraction, sonic3k.asm:18465-18476), which is
+        // NO_DUCK_TOUCH_BOX. See ObjectInteractionRules#duckTouchBoxMappingFrame.
+        ObjectInteractionRules interactionRules = playerObjectInteractionRules(player);
+        if (interactionRules != null
+                && interactionRules.isDuckTouchBoxMappingFrame(player.getMappingFrame())) {
+            playerTop += ObjectInteractionRules.DUCK_TOUCH_BOX_TOP_SHIFT;
+            playerHeight = ObjectInteractionRules.DUCK_TOUCH_BOX_HEIGHT;
         }
         int ringWidth = ringRules != null ? ringRules.ringCollisionWidth() : RING_COLLISION_HALF;
         int ringHeight = ringRules != null ? ringRules.ringCollisionHeight() : RING_COLLISION_HALF;
@@ -318,6 +333,14 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             return rules.ring();
         }
         return moduleRingRules(GameServices.currentOrBootstrapGameModule());
+    }
+
+    private static ObjectInteractionRules playerObjectInteractionRules(AbstractPlayableSprite player) {
+        GameRules rules = player != null ? player.getGameRules() : null;
+        if (rules == null) {
+            rules = moduleGameRules(GameServices.currentOrBootstrapGameModule());
+        }
+        return rules != null ? rules.objectInteraction() : null;
     }
 
     private static boolean lightningShieldEnabled(AbstractPlayableSprite player) {
@@ -408,6 +431,8 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
      */
     public void updateLostRingPhysics(int frameCounter) {
         lostRings.tickSpillAnimation();
+        lostRings.retireEntriesWhoseObjectTwinIsGone(
+                levelManager != null ? levelManager.getObjectManager() : null);
     }
 
     public void draw(int frameCounter) {
@@ -1151,8 +1176,8 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     private static final class RingPlacement extends AbstractPlacementManager<RingSpawn> {
         private static final int EXTRA_AHEAD = 0x140; // 320; native -> 0x280 window
         private static final int UNLOAD_BEHIND = 0x300;
-        private static final int S3K_RAW_WINDOW_BEHIND = 0x08;
-        private static final int S3K_RAW_WINDOW_AHEAD = 0x148;
+        private static final int RAW_WINDOW_BEHIND = 0x08;
+        private static final int RAW_WINDOW_AHEAD_MARGIN = 0x10;
         private static final int NO_SPARKLE = -1;
 
         private final boolean useRawCameraWindow;
@@ -1169,7 +1194,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
 
         private RingPlacement(List<RingSpawn> spawns, boolean useRawCameraWindow) {
             super(spawns, EXTRA_AHEAD, UNLOAD_BEHIND,
-                    com.openggf.level.spawn.PlacementViewportWidth::current);
+                    PlacementViewportWidth::current);
             this.useRawCameraWindow = useRawCameraWindow;
             this.sparkleStartFrames = new int[this.spawns.size()];
             Arrays.fill(this.sparkleStartFrames, NO_SPARKLE);
@@ -1386,22 +1411,32 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             activeIndexMembership.clear();
         }
 
+        // The consolidated ring array is windowed off the raw camera, not off
+        // the chunk-aligned object spawn range: S2 RingsManager_Main walks
+        // Ring_start_addr/Ring_end_addr out to camera_x-8 and camera_x-8 +
+        // screen_width+$10, and S3K Load_Rings uses the same pair of bounds.
+        // Touch_Rings, Test_Ring_Collisions and the ring draw routine all read
+        // those two pointers, so a ring outside them is neither collectable nor
+        // drawn even with a character standing on it.
         private int ringWindowStart(int cameraX) {
             if (!useRawCameraWindow) {
                 return getWindowStart(cameraX);
             }
-            return Math.max(0, cameraX - S3K_RAW_WINDOW_BEHIND);
+            return Math.max(0, cameraX - RAW_WINDOW_BEHIND);
         }
 
         private int ringWindowEnd(int cameraX) {
             if (!useRawCameraWindow) {
                 return getWindowEnd(cameraX);
             }
-            // S3K Load_Rings leaves Ring_end_addr_ROM pointing at the first
-            // record whose X equals camera_x-$8+$150. Render_Rings and
-            // Test_Ring_Collisions treat that pointer as exclusive, so the
-            // integer-coordinate window ends one pixel before that record.
-            return cameraX + S3K_RAW_WINDOW_AHEAD - 1;
+            // Ring_end_addr points at the first record whose X reaches
+            // camera_x-$8 + screen_width+$10; the render and collision walks
+            // treat that pointer as exclusive, so the integer-coordinate window
+            // ends one pixel before it. The ROM's screen_width is the viewport
+            // width, which is 320 (giving the native $148 lead) unless a wider
+            // aspect preset is configured.
+            return cameraX - RAW_WINDOW_BEHIND
+                    + PlacementViewportWidth.current() + RAW_WINDOW_AHEAD_MARGIN - 1;
         }
 
         private boolean areAllCollected() {
@@ -1780,6 +1815,37 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             }
             releaseReservedSlot(ring, objectManager);
             ring.deactivate();
+        }
+
+        /**
+         * Clears pool entries whose {@link LostRingObjectInstance} twin has gone.
+         *
+         * <p>A spilled ring is created as a pair sharing ONE reserved slot: the object
+         * owns physics, collection and rendering, while the pool entry survives only as
+         * bookkeeping. The object retires itself (ROM Obj37 deletes on the shared spill
+         * timer or below the bottom boundary) but nothing retired its twin, so
+         * {@link #getActiveRingsSnapshot} over-reported every ring ever spilled in the
+         * act -- which matters because the slot-occupancy diagnostics read it.
+         *
+         * <p>Deliberately NOT via {@link #deactivateRing}: that also calls
+         * {@code releaseReservedSlot}, and the slot is the OBJECT's to release. Freeing
+         * it a second time here hands back a slot another object may already have taken
+         * -- measured as a regression in TestS1Mz3CompleteRunTraceReplay. This clears
+         * the mirror flag only and cannot change what the engine simulates.
+         */
+        private void retireEntriesWhoseObjectTwinIsGone(ObjectManager objectManager) {
+            if (objectManager == null || activeRingCount == 0) {
+                return;
+            }
+            for (int i = 0; i < activeRingCount; i++) {
+                LostRing ring = ringPool[i];
+                if (ring == null || !ring.isActive() || ring.getSlotIndex() < 0) {
+                    continue;
+                }
+                if (!objectManager.hasLiveLostRingAtSlot(ring.getSlotIndex())) {
+                    ring.deactivate();
+                }
+            }
         }
 
         private void releaseReservedSlots() {

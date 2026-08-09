@@ -24,30 +24,166 @@ Entries should include:
 
 ## Table of Contents
 
-1. [CNZ1 Miniboss Arena Entry — Music Play-In Missing](#cnz1-miniboss-arena-entry--music-play-in-missing)
-2. [AIZ1 Trace F4679 — Sidekick Despawn Velocity & Position Semantic Gap (FIXED)](#aiz1-trace-f4679--sidekick-despawn-velocity--position-semantic-gap-fixed)
-3. [CNZ1 Trace F1685 — Tails CPU Spurious Despawn on Barber-Pole→Wire-Cage Object Switch (FIXED)](#cnz1-trace-f1685--tails-cpu-spurious-despawn-on-barber-polewire-cage-object-switch-fixed)
-4. [CNZ1 Trace F1740 — Wire Cage restoreObjectLatchIfTerrainClearedIt Overrode Slope-Repel Slip (FIXED)](#cnz1-trace-f1740--wire-cage-restoreobjectlatchifterrainclearedit-overrode-slope-repel-slip-fixed)
-5. [CNZ1 Trace F1758 — Wire Cage Airborne-Capture object_control Bit 0 Missing (FIXED)](#cnz1-trace-f1758--wire-cage-airborne-capture-object_control-bit-0-missing-fixed)
-6. [CNZ1 Trace F1791 — Tails CPU Auto-Jump Trigger Bit-7 Object Control Gate (FIXED)](#cnz1-trace-f1791--tails-cpu-auto-jump-trigger-bit-7-object-control-gate-fixed)
-7. [AIZ1 Trace F2590 — Tails CATCH_UP_FLIGHT Trigger Path Mismatch](#aiz1-trace-f2590--tails-catch_up_flight-trigger-path-mismatch)
-8. [AIZ1 Trace F2202 -- Phantom MonkeyDude Respawn Triggers Spurious Sidekick Bounce (FIXED)](#aiz1-trace-f2202----phantom-monkeydude-respawn-triggers-spurious-sidekick-bounce-fixed)
-9. [AIZ1 Trace F5497 — Sidekick CPU Bound Override Stale After Act Transition (FIXED)](#aiz1-trace-f5497--sidekick-cpu-bound-override-stale-after-act-transition-fixed)
-10. [AIZ Trace F5736 — Level_frame_counter Skips Tick on Seamless Act Reload (FIXED)](#aiz-trace-f5736--level_frame_counter-skips-tick-on-seamless-act-reload-fixed)
-11. [AIZ Trace F6066 — CaterKillerJr Missed Obj_WaitOffscreen Gate (FIXED)](#aiz-trace-f6066--caterkillerjr-missed-obj_waitoffscreen-gate-fixed)
-12. [CNZ1 Trace F2222 — Wire Cage Sidekick JUMP_RELEASE Spurious Fire (OPEN — needs ROM-aligned `Ctrl_2_pressed_logical` model)](#cnz1-trace-f2222--wire-cage-sidekick-jump_release-spurious-fire-open--needs-rom-aligned-ctrl_2_pressed_logical-model)
-13. [AIZ Trace F6255 — Tails CPU Freed-Slot Despawn (RESOLVED)](#aiz-trace-f6255--tails-cpu-freed-slot-despawn-resolved)
-14. [CNZ1 Trace F3649 — Tails Air-to-Ground Spring Boost Missed (RESOLVED)](#cnz1-trace-f3649--tails-air-to-ground-spring-boost-missed-resolved)
-15. [CNZ1 Trace F6304 — Tails Misses CNZ Door Re-Land While Following Fast Leader (RESOLVED)](#cnz1-trace-f6304--tails-misses-cnz-door-re-land-while-following-fast-leader)
-16. [CNZ1 Trace F7614 — Tails Spring Bounce Top-Landing 2-Pixel Drift (OPEN — next trace blocker)](#cnz1-trace-f7614--tails-spring-bounce-top-landing-2-pixel-drift)
-17. [AIZ2 Trace F7127 — Tails Phantom Landing While Falling (RESOLVED)](#aiz2-trace-f7127--tails-phantom-landing-while-falling)
-18. [AIZ2 Trace F7171 — Tails Killed Mid-Run vs. Engine Continuing Follow-Steering (OPEN — next AIZ blocker)](#aiz2-trace-f7171--tails-killed-mid-run-vs-engine-continuing-follow-steering)
-19. [AIZ2 Trace F7381 — Engine `Ctrl_1_logical` Not Latched While ROM `Ctrl_1_locked=1` (OPEN — next AIZ blocker)](#aiz2-trace-f7381--engine-ctrl_1_logical-not-latched-while-rom-ctrl_1_locked1-open--next-aiz-blocker)
-20. [CNZ1 Trace F7919 — Tails Triplicate `-0x0800` Velocity Write While Sonic Lands From Rising Platform (OPEN)](#cnz1-trace-f7919--tails-triplicate--0x0800-velocity-write-while-sonic-lands-from-rising-platform-open)
-21. [CNZ F=621 Clamer re-fire — ROM dispatch path narrowing (diagnosis only, round 2)](#cnz-f621-clamer-re-fire--rom-dispatch-path-narrowing-diagnosis-only-round-2)
-22. [CNZ F=621 Clamer re-fire — recorder gap closed; ROM mechanism localised (diagnosis only, round 3)](#cnz-f621-clamer-re-fire--recorder-gap-closed-rom-mechanism-localised-diagnosis-only-round-3)
-23. [CNZ F=621 Clamer re-fire — Touch_Special cprop latch landed (round 4, fixed)](#cnz-f621-clamer-re-fire--touch_special-cprop-latch-landed-round-4-fixed)
-24. [AIZ Trace F8927 — Sonic Air-Roll x_speed Not Cleared by Wall Collision (OPEN — diagnosis only)](#aiz-trace-f8927--sonic-air-roll-x_speed-not-cleared-by-wall-collision-open--diagnosis-only)
+1. [AIZ Miniboss Napalm — FallingShot Route Integration (OPEN)](#aiz-miniboss-napalm--fallingshot-route-integration-open)
+2. [Knuckles LBZ Big Arm — Inert Final-Boss Handoff](#knuckles-lbz-big-arm--inert-final-boss-handoff)
+3. [LRZ1 Non-Knuckles — Falling Level Introduction (RESOLVED)](#lrz1-non-knuckles--falling-level-introduction-resolved)
+4. [AIZ2 End Boss — Splash Children (FIXED)](#aiz2-end-boss--splash-children-missing)
+5. [CNZ1 Miniboss Arena Entry — Music Play-In Missing](#cnz1-miniboss-arena-entry--music-play-in-missing)
+6. [AIZ1 Trace F4679 — Sidekick Despawn Velocity & Position Semantic Gap (FIXED)](#aiz1-trace-f4679--sidekick-despawn-velocity--position-semantic-gap-fixed)
+7. [CNZ1 Trace F1685 — Tails CPU Spurious Despawn on Barber-Pole→Wire-Cage Object Switch (FIXED)](#cnz1-trace-f1685--tails-cpu-spurious-despawn-on-barber-polewire-cage-object-switch-fixed)
+8. [CNZ1 Trace F1740 — Wire Cage restoreObjectLatchIfTerrainClearedIt Overrode Slope-Repel Slip (FIXED)](#cnz1-trace-f1740--wire-cage-restoreobjectlatchifterrainclearedit-overrode-slope-repel-slip-fixed)
+9. [CNZ1 Trace F1758 — Wire Cage Airborne-Capture object_control Bit 0 Missing (FIXED)](#cnz1-trace-f1758--wire-cage-airborne-capture-object_control-bit-0-missing-fixed)
+10. [CNZ1 Trace F1791 — Tails CPU Auto-Jump Trigger Bit-7 Object Control Gate (FIXED)](#cnz1-trace-f1791--tails-cpu-auto-jump-trigger-bit-7-object-control-gate-fixed)
+11. [AIZ1 Trace F2590 — Tails CATCH_UP_FLIGHT Trigger Path Mismatch](#aiz1-trace-f2590--tails-catch_up_flight-trigger-path-mismatch)
+12. [AIZ1 Trace F2202 -- Phantom MonkeyDude Respawn Triggers Spurious Sidekick Bounce (FIXED)](#aiz1-trace-f2202----phantom-monkeydude-respawn-triggers-spurious-sidekick-bounce-fixed)
+13. [AIZ1 Trace F5497 — Sidekick CPU Bound Override Stale After Act Transition (FIXED)](#aiz1-trace-f5497--sidekick-cpu-bound-override-stale-after-act-transition-fixed)
+14. [AIZ Trace F5736 — Level_frame_counter Skips Tick on Seamless Act Reload (FIXED)](#aiz-trace-f5736--level_frame_counter-skips-tick-on-seamless-act-reload-fixed)
+15. [AIZ Trace F6066 — CaterKillerJr Missed Obj_WaitOffscreen Gate (FIXED)](#aiz-trace-f6066--caterkillerjr-missed-obj_waitoffscreen-gate-fixed)
+16. [CNZ1 Trace F2222 — Wire Cage Sidekick JUMP_RELEASE Spurious Fire (OPEN — needs ROM-aligned `Ctrl_2_pressed_logical` model)](#cnz1-trace-f2222--wire-cage-sidekick-jump_release-spurious-fire-open--needs-rom-aligned-ctrl_2_pressed_logical-model)
+17. [AIZ Trace F6255 — Tails CPU Freed-Slot Despawn (RESOLVED)](#aiz-trace-f6255--tails-cpu-freed-slot-despawn-resolved)
+18. [CNZ1 Trace F3649 — Tails Air-to-Ground Spring Boost Missed (RESOLVED)](#cnz1-trace-f3649--tails-air-to-ground-spring-boost-missed-resolved)
+19. [CNZ1 Trace F6304 — Tails Misses CNZ Door Re-Land While Following Fast Leader (RESOLVED)](#cnz1-trace-f6304--tails-misses-cnz-door-re-land-while-following-fast-leader)
+20. [CNZ1 Trace F7614 — Tails Spring Bounce Top-Landing 2-Pixel Drift (OPEN — next trace blocker)](#cnz1-trace-f7614--tails-spring-bounce-top-landing-2-pixel-drift)
+21. [AIZ2 Trace F7127 — Tails Phantom Landing While Falling (RESOLVED)](#aiz2-trace-f7127--tails-phantom-landing-while-falling)
+22. [AIZ2 Trace F7171 — Tails Killed Mid-Run vs. Engine Continuing Follow-Steering (OPEN — next AIZ blocker)](#aiz2-trace-f7171--tails-killed-mid-run-vs-engine-continuing-follow-steering)
+23. [AIZ2 Trace F7381 — Engine `Ctrl_1_logical` Not Latched While ROM `Ctrl_1_locked=1` (OPEN — next AIZ blocker)](#aiz2-trace-f7381--engine-ctrl_1_logical-not-latched-while-rom-ctrl_1_locked1-open--next-aiz-blocker)
+24. [CNZ1 Trace F7919 — Tails Triplicate `-0x0800` Velocity Write While Sonic Lands From Rising Platform (OPEN)](#cnz1-trace-f7919--tails-triplicate--0x0800-velocity-write-while-sonic-lands-from-rising-platform-open)
+25. [CNZ F=621 Clamer re-fire — ROM dispatch path narrowing (diagnosis only, round 2)](#cnz-f621-clamer-re-fire--rom-dispatch-path-narrowing-diagnosis-only-round-2)
+26. [CNZ F=621 Clamer re-fire — recorder gap closed; ROM mechanism localised (diagnosis only, round 3)](#cnz-f621-clamer-re-fire--recorder-gap-closed-rom-mechanism-localised-diagnosis-only-round-3)
+27. [CNZ F=621 Clamer re-fire — Touch_Special cprop latch landed (round 4, fixed)](#cnz-f621-clamer-re-fire--touch_special-cprop-latch-landed-round-4-fixed)
+28. [AIZ Trace F8927 — Sonic Air-Roll x_speed Not Cleared by Wall Collision (OPEN — diagnosis only)](#aiz-trace-f8927--sonic-air-roll-x_speed-not-cleared-by-wall-collision-open--diagnosis-only)
+
+---
+
+## AIZ Miniboss Napalm — FallingShot Route Integration (OPEN)
+
+**Location:** `AizMinibossNapalmProjectile`
+**ROM Reference:** `AIZMiniboss_FallingShot` (`loc_68C96`),
+`ObjDat_AIZMiniboss_BarrelShot`, `ObjDat_BossExplosionHitbox`, and
+`ChildObjDat_690D8` in `docs/skdisasm/sonic3k.asm:137451-137581,137836-137925`.
+
+### Disposition (2026-08-08)
+
+The FallingShot routine is now implemented in
+`src/main/java/com/openggf/game/sonic3k/objects/AizMinibossNapalmProjectile.java`,
+including the ROM `MoveSprite2`/`ObjHitFloor_DoRoutine` sequence, the `$60` rise
+and `$8` pause, camera-relative top-drop slot tables, post-move `$98` touch
+publication, native AIZ miniboss PLC art/mappings, and seven staggered `$97`
+`BossExplosionHitbox` children. The production route begins at each of the
+three existing barrel children, preserving child subtype `$02` separately from
+the barrel subtype and `$39` counter; rewind recreation and scalar coverage
+include the linked projectile and transient children.
+
+The disposition remains **OPEN** until a Knuckles miniboss route trace proves
+the activation gate, per-barrel child ordering, floor impact, and explosion
+lifetime together. Focused native, production `ObjectManager`, slot-exhaustion,
+and rewind tests are comparison/contract evidence only and do not hydrate
+runtime state.
+
+Focused tests are in
+`src/test/java/com/openggf/game/sonic3k/objects/TestAizMinibossNapalmProjectile.java`.
+The committed Knuckles complete-run comparison data independently records
+`0x00068C96` FallingShot rows (subtype `$02`, routines `$02/$06/$08`) in
+`src/test/resources/traces/s3k/runs/s3k-knuckles-complete-superemeralds/aiz_2`
+(frames 3338-3589) and `aiz_3` (frames 4486-4698), plus the seven
+`0x00068D88` explosion children. These rows are comparison evidence only; they
+are not loaded as runtime gameplay state.
+
+The available Sonic/Tails AIZ replay lane remains red on camera/sidekick and
+hardware-timing errors, and this environment has no captured Knuckles miniboss
+route trace, so no trace-frontier claim is made by this entry.
+
+---
+
+## Knuckles LBZ Big Arm — Inert Final-Boss Handoff
+
+**Location:** `LbzFinalBoss2Instance`
+**ROM Reference:** `Obj_LBZFinalBoss2` (`sonic3k.asm:154226`).
+
+### Symptom
+
+The Knuckles final-boss handoff creates a persistent object, but it is invisible
+and inert. Big Arm phases, collision, art/PLC ownership, hit/defeat flow, and
+route completion are therefore absent.
+
+### Remediation attempts (2026-08-08)
+
+Two candidate ports were rejected and remain unintegrated. The first was the
+committed `98d968d7f` attempt; review found invented phases, mapping ownership,
+and defeat/capsule flow, with no native articulated arm/grab graph. A second v2
+working-tree attempt was never committed. It proved useful articulated
+anchors/tables (`$AD`/`$9A`), grab, and debris behavior and passed six focused
+tests plus 28 graph/rewind guards, but root choreography, post-capsule
+continuation, and a Knuckles LBZ route trace remained unproven. The v2 was
+therefore not integrated, and the inert handoff remains a P0 blocker.
+
+### Removal Condition
+
+Implement the ROM boss state machine and assets through the production loading
+pipeline, add rewind coverage, and complete a Knuckles LBZ trace through defeat.
+
+---
+
+## LRZ1 Non-Knuckles — Falling Level Introduction (RESOLVED)
+
+**Location:** `Sonic3kLevelEventManager`
+**ROM Reference:** `SpawnLevelMainSprites` `loc_68A6` (`docs/skdisasm/sonic3k.asm:8161-8178`).
+
+### Symptom
+
+Before remediation, LRZ1 for non-Knuckles characters started without the native
+falling player state. The ROM compares `$0900` (LRZ1) and skips the branch for
+`Player_mode == 3` (Knuckles), then `loc_68A6` writes animation `$1B` and the
+in-air status to Player 1 and, when present, Player 2.
+
+The earlier SSZ attribution was disproven by checking the owning routine:
+SSZ is `$0A00/$0A01` in `LS_Level_Order` (`sonic3k.asm:10154-10157`), while
+`loc_68A6` is reached by `$0900` and `$1600` (`sonic3k.asm:8161-8168`) and
+does not compare either SSZ act. SSZ event and teleporter behavior therefore
+does not require this falling bootstrap state.
+
+### Resolution
+
+`Sonic3kLevelEventManager` now applies the native LRZ1 non-Knuckles state after
+the normal player spawn. `TestS3kLrzFallingIntroBootstrap` covers Sonic + Tails,
+Tails alone, Knuckles exclusion, LRZ2 exclusion, and the SSZ negative gate.
+LRZ and SSZ complete-run payloads exist under
+`src/test/resources/traces/s3k/{lrz,ssz}_completerun`, but no replay subclasses
+currently own those segments. A direct LRZ replay attempt is presently blocked
+before gameplay by the fixture's final v5 hardware-timing row
+(`unsupported-held-row-POST`, trace rows 72/78 continuing through `raw_frame=38746`;
+the first unsupported row is `raw_frame=38719`), so the ROM-backed headless
+bootstrap suite is the available focused validation for this change.
+
+---
+
+## AIZ2 End Boss — Splash Children Missing
+
+**Location:** `AizEndBossInstance`
+**ROM Reference:** `ChildObjDat_69D2E` and the end-boss emerge/submerge paths.
+
+**Status: Fixed (2026-08-08).** `AizEndBossWaterfallChild` now ports the
+subtype-0 emerge and subtype-2 re-submerge/drop paths. The child is allocated
+through the production `ObjectManager` first-free-forward slot search from the
+boss, uses the ROM mapping/flip scripts and production ROM art provider, and
+has a generic rewind recreation path.
+
+Owner validation includes `TestS3kAizEndBossGraphRewind` (real child slots and
+rewind round-trip), `TestAiz2ObjectRewindCodecs`, and
+`TestSonic3kObjectArtProvider` against the verified locked-on ROM. An end-to-end
+AIZ2 boss trace was not rerun in this change; retain that as follow-up parity
+validation.
+
+### Historical symptom
+
+The boss previously played the corresponding sound without allocating the native
+splash children, so presentation and dynamic object-slot ordering differed even
+though the main boss flow continued.
+
+### Historical removal condition
+
+Port the splash subtypes with ROM art/mappings, production allocation, rewind
+and render coverage; full AIZ2 trace validation remains outstanding.
 
 ---
 

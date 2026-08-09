@@ -127,7 +127,6 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
     // its approximate Y culling band instead of y_radius(a0)
     // (docs/s2disasm/s2.asm:30584-30619).
     private static final int APPROX_RENDER_Y_MARGIN = 0x20;
-    private static final int VERTICAL_ONLY_OFFSCREEN_DELETE_TICKS = 2;
 
     private ZoneConfig config;
     private int delayCounter = INITIAL_DELAY;
@@ -142,7 +141,6 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
     private int parentVelY;
     private int parentY;
     private int parentYFrac;
-    private int verticalOnlyOffscreenTicks;
 
     // Orientation from spawn render_flags (inherited by fragments per disassembly)
     private boolean hFlip;
@@ -191,6 +189,17 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
         // deletes when render_flags.on_screen is clear
         // (docs/s2disasm/s2.asm:23860-23864).
         if (collapsed) {
+            // ROM Obj1F_FragmentFall tests render_flags.on_screen, which the
+            // LAST BuildSprites pass wrote (docs/s2disasm/s2.asm:23860-23864,
+            // 30560 for the per-object clear and 30612 for the draw that sets
+            // it). BuildSprites runs after RunObjects and after DeformBgLayer
+            // publishes Camera_X/Y_pos_copy (s2.asm:5095-5111, 15178-15179), so
+            // on this frame the flag describes the object's PREVIOUS-frame
+            // position against the camera the engine is still holding. Sample
+            // the bounds before ObjectMoveAndFall moves the object, exactly as
+            // S1's Obj1A fragment tail already does.
+            boolean renderedLastBuildSpritesPass =
+                    isPreUpdateWithinRenderSpriteBounds(config.halfWidth(), APPROX_RENDER_Y_MARGIN);
             // ROM ObjectMoveAndFall reads the old y_vel for this frame's
             // position update, then adds gravity for the next frame
             // (docs/s2disasm/s2.asm:29945-29960).
@@ -200,14 +209,7 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
             y32 += oldVelY << 8;
             parentY = y32 >> 16;
             parentYFrac = y32 & 0xFFFF;
-            if (isWithinRenderSpriteBounds(config.halfWidth(), APPROX_RENDER_Y_MARGIN)) {
-                verticalOnlyOffscreenTicks = 0;
-            } else if (isOnScreenX(config.halfWidth())
-                    && verticalOnlyOffscreenTicks < VERTICAL_ONLY_OFFSCREEN_DELETE_TICKS) {
-                // The ROM clears render_flags.on_screen in BuildSprites, after
-                // CPU follower code can still see horizontally visible Obj1F slots.
-                verticalOnlyOffscreenTicks++;
-            } else {
+            if (!renderedLastBuildSpritesPass) {
                 setDestroyed(true);
             }
             return;
@@ -229,7 +231,6 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
                     parentY = spawn.y();
                     parentYFrac = 0;
                     parentVelY = 0;
-                    verticalOnlyOffscreenTicks = 0;
                     detachFragmentRiders(batch);
                 }
             }
@@ -602,11 +603,22 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
         protected boolean shouldDeleteAfterFall() {
             // ROM Obj1F_CreateFragments copies the parent's x_pos/y_pos into
             // child slots and advances the mappings pointer per fragment; the
-            // visual offset is in mappings data. Obj1F_FragmentFall then
-            // deletes when BuildSprites clears render_flags.on_screen
-            // (docs/s2disasm/s2.asm:23860-23864, 23880-23906).
+            // visual offset is in mappings data
+            // (docs/s2disasm/s2.asm:23880-23906).
+            //
+            // Obj1F_FragmentFall then deletes on render_flags.on_screen
+            // (s2.asm:23860-23864), which is written by the LAST BuildSprites
+            // pass -- BuildSprites clears the bit per object (s2.asm:30560) and
+            // only DrawSprite re-sets it, and it runs after RunObjects and
+            // after DeformBgLayer publishes Camera_X/Y_pos_copy
+            // (s2.asm:5095-5111, 15178-15179). The deciding position is
+            // therefore this frame's PRE-fall one, matching the same tail in
+            // S1's Obj1A fragments. Testing the post-fall position instead
+            // retired the SST slot up to two frames early, which shifted every
+            // later FindFreeObj/AllocateObject result.
             ZoneConfig activeConfig = config == null ? DEFAULT_CONFIG : config;
-            return !isWithinRenderSpriteBounds(activeConfig.halfWidth(), APPROX_RENDER_Y_MARGIN);
+            return !isPreUpdateWithinRenderSpriteBounds(
+                    activeConfig.halfWidth(), APPROX_RENDER_Y_MARGIN);
         }
 
         @Override

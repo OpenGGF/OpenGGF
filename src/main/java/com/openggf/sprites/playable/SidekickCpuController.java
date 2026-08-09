@@ -1281,7 +1281,7 @@ public class SidekickCpuController {
         sidekick.setXSpeed((short) 0);
         sidekick.setYSpeed((short) 0);
         sidekick.setGSpeed((short) 0);
-        // Preserve zone-event-set in-air state. S3K MGZ1 / HCZ1 / LRZ1 / SSZ
+        // Preserve zone-event-set in-air state. S3K MGZ1 / HCZ1 / LRZ1
         // set status_InAir on the sidekick during applyZonePlayerState
         // (ROM sonic3k.asm:8132-8205 mirrors loc_6886 / loc_68A6 setting
         // Status_InAir on Player_2). Resetting to false here would
@@ -3849,8 +3849,6 @@ public class SidekickCpuController {
      * A/B/C/START press, or (b) a 64-frame gate firing while Sonic's
      * object_control sign bit is clear and Sonic is not super. On trigger, teleports Tails to
      * (Sonic.x, Sonic.y - 0xC0), sets routine = 4, and enters flight AI.
-     *
-     * <p>Stubbed in Task 2; body lands in Task 4.
      */
     private void updateCatchUpFlight() {
         // ROM Tails_Catch_Up_Flying (sonic3k.asm:26474-26531)
@@ -3951,8 +3949,6 @@ public class SidekickCpuController {
      * it (X step &le; 0xC, Y step = 1 plus optional -0x20 lead), and transitions
      * to {@code NORMAL} (routine 0x06) once Tails is close enough to Sonic and
      * Sonic isn't hurt/dead.
-     *
-     * <p>Stubbed in Task 2; body lands in Task 5.
      */
     private void updateFlightAutoRecovery() {
         // ROM Tails_FlySwim_Unknown (sonic3k.asm:26534-26653).
@@ -5603,6 +5599,29 @@ public class SidekickCpuController {
     public void captureLevelStartLeaderAnchor(int leaderCentreX, int leaderCentreY) {
         this.levelStartLeaderCentreX = leaderCentreX;
         this.levelStartLeaderCentreY = leaderCentreY;
+    }
+
+    /**
+     * Re-captures the spawn anchor from the leader's own current position.
+     *
+     * <p>ROM {@code InitPlayers} copies the sidekick's spawn coordinates from
+     * {@code MainCharacter+x_pos/y_pos} and then applies {@code -$20 / +4}
+     * (docs/s2disasm/s2.asm:5191-5195). It reads the leader's <em>actual</em>
+     * position, never the zone's start-location table: {@code LevelSizeLoad}
+     * establishes that position either from {@code StartLocations} or, when
+     * {@code Last_star_pole_hit} is non-zero, from {@code Obj79_LoadData}'s
+     * {@code Saved_x_pos/Saved_y_pos} checkpoint restore
+     * (docs/s2disasm/s2.asm:14773-14790, :44774-44778), and InitPlayers runs
+     * afterwards (docs/s2disasm/s2.asm:4945) without distinguishing the two.
+     * Anchoring to the leader therefore covers both entry kinds with one rule.
+     */
+    /** The leader's current centre X, for spawn-anchor branch selection. */
+    public int leaderCentreX() {
+        return leader.getCentreX();
+    }
+
+    public void captureLevelStartLeaderAnchorFromLeaderPosition() {
+        captureLevelStartLeaderAnchor(leader.getCentreX(), leader.getCentreY());
     }
 
     /**

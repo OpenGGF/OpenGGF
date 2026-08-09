@@ -467,7 +467,15 @@ public class Sonic1AnimalsObjectInstance extends AbstractObjectInstance implemen
         // ObjFloorDist sets d5 to #$D, the object floor/top-solid bit in S1
         // (docs/s1disasm/s1disasm/_incObj/sub ObjFloorDist.asm).
         TerrainCheckResult result = ObjectTerrainUtils.checkFloorDist(currentX, currentY, FLOOR_CHECK_HEIGHT);
-        if (result.hasCollision()) {
+        // Every Anml_* floor test is "jsr ObjFloorDist / tst.w d1 / bpl.s <no hit>"
+        // (docs/s1disasm/_incObj/28, 29 Animals and Points.asm:211-214, 247-250,
+        // 272-275, 495-498), so d1 == 0 -- the animal's bottom exactly level with
+        // the topmost solid pixel -- is NOT a hit: bpl branches on N clear, which
+        // includes zero. The shared TerrainCheckResult#hasCollision() answers
+        // "distance <= 0" instead, which landed the animal one frame early on
+        // every flat-floor bounce and put its bounce cycle in anti-phase with the
+        // ROM's, leaving it on a ledge the ROM had already run off.
+        if (result.distance() < 0) {
             currentY += result.distance();
             return true;
         }

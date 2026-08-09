@@ -83,8 +83,13 @@ public final class DynamicArtSpecialStageComparator {
                     expectedEdge.phase(), actualEdge.phase());
             put(fields, prefix + "owner",
                     expectedEdge.owner(), actualEdge.owner());
+            // The engine records where the transfer was submitted: an edge
+            // for work queued while no comparison window was open (a run gap
+            // between two recorded segments) reports "run_gap", exactly as the
+            // recorder does.
             put(fields, prefix + "submission_origin",
-                    expectedEdge.submissionOrigin(), "segment");
+                    expectedEdge.submissionOrigin(),
+                    actualEdge.submissionOrigin());
             put(fields, prefix + "mapping_frame",
                     expectedEdge.mappingFrame(), actualEdge.mappingFrame());
             put(fields, prefix + "logical_frame",

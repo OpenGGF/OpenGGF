@@ -425,6 +425,23 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     }
 
     /**
+     * The object id currently held in this object's SST slot ({@code obID(a0)}).
+     * <p>
+     * Defaults to the id the object was spawned with. A handful of ROM objects rewrite
+     * {@code obID} in place partway through their life instead of deleting themselves and
+     * allocating a replacement, so the slot keeps its contents (and its scratch RAM) while
+     * reporting a different id. S1 {@code BossSpikeball_Explode} is the canonical case:
+     * {@code move.b #id_Explosion,obID(a0)}
+     * (docs/s1disasm/_incObj/"7A, 7B Boss - SLZ Main and Spike Balls.asm":883-887).
+     * Override this — never the spawn record — when modelling such an object.
+     *
+     * @return the live SST object id, or -1 when the object has no spawn identity
+     */
+    public int getLiveObjectId() {
+        return getSpawn() == null ? -1 : (getSpawn().objectId() & 0xFF);
+    }
+
+    /**
      * Returns the SST slot whose turn should execute this object.
      * <p>
      * Most engine objects map one Java instance to one ROM object slot. A small
@@ -681,6 +698,37 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      */
     protected boolean isOnScreen() {
         return cameraBounds.contains(getX(), getY());
+    }
+
+    /**
+     * S1 {@code BuildSprites} render-flag bit 7 test
+     * (docs/s1disasm/_inc/BuildSprites.asm:47-91).
+     * <p>
+     * BuildSprites clears {@code sprite_rendered_bit} for every queued object and
+     * re-sets it only when the object survives two bounds tests, both of which use
+     * the object's own extents rather than a fixed margin:
+     * <ul>
+     *   <li>X (lines 47-58): skip when {@code obX - camX + obActWid} is negative, or
+     *       when {@code obX - camX - obActWid >= 320}. The right edge is rejected
+     *       with {@code bge}, so it is exclusive.</li>
+     *   <li>Y: when {@code sprite_customheight_bit} is set (lines 61-73) the band is
+     *       {@code obHeight} either side of the 224px screen, again with an exclusive
+     *       bottom edge ({@code bge}); otherwise {@code .assumeHeight} (lines 84-91)
+     *       uses a fixed 32px band with an exclusive {@code bhs} bottom edge.</li>
+     * </ul>
+     * Objects whose ROM lifetime is {@code tst.b obRender(a0) / bpl <delete>} must
+     * consume this predicate rather than a hand-picked pixel margin, because the ROM
+     * band is the object's own {@code obActWid}/{@code obHeight} pair.
+     *
+     * @param x            object centre X ({@code obX})
+     * @param y            object centre Y ({@code obY})
+     * @param actWidth     {@code obActWid}, the render half-width
+     * @param heightExtent {@code obHeight} for custom-height objects, or 32 for the
+     *                     {@code .assumeHeight} path
+     */
+    protected static boolean isWithinBuildSpritesBounds(
+            int x, int y, int actWidth, int heightExtent) {
+        return cameraBounds.containsRenderSpriteBounds(x, y, actWidth, heightExtent);
     }
 
     /**
@@ -1112,6 +1160,27 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * @param <T> the child type
      */
     protected <T extends AbstractObjectInstance> T spawnChild(java.util.function.Supplier<T> factory) {
+        return spawnChildAfterSlot(getSlotIndex(), factory);
+    }
+
+    /**
+     * Creates a dynamic child object with FindNextFreeObj semantics scanning forward from an
+     * <em>explicit</em> parent slot rather than this object's own slot.
+     * <p>
+     * A handful of ROM routines load some <em>other</em> object's SST pointer into {@code a0}
+     * immediately before calling {@code FindNextFreeObj}, so the scan starts at that object's
+     * slot, not the running object's. S1 {@code BSLZ_MakeBall} is the canonical case:
+     * {@code lea (a2),a0 / jsr (FindNextFreeObj).l} with {@code a2} holding the target seesaw
+     * (docs/s1disasm/_incObj/"7A, 7B Boss - SLZ Main and Spike Balls.asm":291-295).
+     *
+     * @param parentSlot the SST slot the scan starts strictly after; negative falls back to the
+     *                   running object's slot
+     * @param factory supplier that constructs the child object
+     * @return the constructed child, already added to the object manager
+     * @param <T> the child type
+     */
+    protected <T extends AbstractObjectInstance> T spawnChildAfterSlot(
+            int parentSlot, java.util.function.Supplier<T> factory) {
         ObjectServices svc = services();
         return ObjectConstructionContext.construct(svc, () -> {
             T child = factory.get();
@@ -1133,8 +1202,8 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
                 } else if (child.skipsSameFrameUpdateAfterSpawn()) {
                     om.addDynamicObjectAfterCurrentNextFrame(child);
                 } else {
-                    if (getSlotIndex() >= 0) {
-                        om.addDynamicObjectAfterSlot(child, getSlotIndex());
+                    if (parentSlot >= 0) {
+                        om.addDynamicObjectAfterSlot(child, parentSlot);
                     } else {
                         // Isolated tests and unmanaged helpers have no SST identity.
                         om.addDynamicObjectAfterCurrent(child);

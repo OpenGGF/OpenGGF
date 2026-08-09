@@ -176,6 +176,21 @@ public class CPZStaircaseObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesPieceScopedStandingBits() {
+        // Obj78 allocates its four steps as four separate SST slots -- the
+        // parent plus three children from Obj78_SubObjectLoop
+        // (docs/s2disasm/s2.asm:55959-55995). SolidObject's continued-ride
+        // branch tests the standing bit in the *object's own* status byte,
+        // `btst d6,status(a0)` (docs/s2disasm/s2.asm:35070-35072), so each step
+        // owns its own standing bit and a landing on a neighbouring step
+        // re-seats the rider onto that step via SolidObject_Landed ->
+        // RideObject_SetRide (docs/s2disasm/s2.asm:35619-35626). Folding the
+        // four slots into one engine instance must keep the bits piece-scoped
+        // or the rider stays latched to the step it first landed on.
+        return true;
+    }
+
+    @Override
     public boolean usesInstanceSolidStateLatchKey() {
         // updateDynamicSpawn() tracks the moving parent surface for placement and
         // diagnostics, but ROM keeps SolidObject standing/pushing bits in the live

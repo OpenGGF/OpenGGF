@@ -266,10 +266,11 @@ public final class LiveTraceComparator implements PlaybackFrameObserver, TraceHu
         int diagnosticCameraX = diagnosticCamera != null ? diagnosticCamera.getX() : -1;
         int diagnosticCameraY = diagnosticCamera != null ? diagnosticCamera.getY() : -1;
         EngineDiagnostics animationDiagnostics =
-                EngineDiagnostics.formattedWithCameraAnimationAndSubpixel(
+                EngineDiagnostics.formattedWithCameraAnimationSubpixelAndRings(
                         diagnosticCameraX, diagnosticCameraY,
                         sprite.getAnimationId(), sprite.getMappingFrame(),
-                        sprite.getXSubpixelRaw(), sprite.getYSubpixelRaw(), engineFrameClock);
+                        sprite.getXSubpixelRaw(), sprite.getYSubpixelRaw(),
+                        sprite.getRingCount(), engineFrameClock);
         TraceFrame comparisonExpected = "s3k".equals(trace.metadata().game())
                 ? TraceReplayBootstrap.s3kFrameForGameplayComparison(
                         trace, cursor, previous, expected, phase)

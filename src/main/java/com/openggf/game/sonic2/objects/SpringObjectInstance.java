@@ -628,7 +628,22 @@ public class SpringObjectInstance extends BoxObjectInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        boolean loadFrame = !initialized;
         ensureInitialized();
+        if (loadFrame) {
+            // ROM Obj41_Init (s2.asm:33824-33888): routine 0 sets mappings, art
+            // tile, width, priority and the subtype-specific routine index, then
+            // returns through Obj41_Init_Common's `rts` (s2.asm:33886). It does
+            // NOT fall through to the action routine, so the frame on which a
+            // spring is loaded runs no SolidObject pass, no push launch, no
+            // loc_18BC6 proximity test and no AnimateSprite call — the action
+            // routine first executes on the following frame.
+            //
+            // This matters wherever a spring is loaded already overlapping a
+            // character: without it the engine resolves the side contact and
+            // fires one frame ahead of the ROM.
+            return;
+        }
         animationState.update();
         mappingFrame = animationState.getMappingFrame();
 

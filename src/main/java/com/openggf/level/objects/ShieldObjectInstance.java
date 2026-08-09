@@ -26,7 +26,7 @@ public class ShieldObjectInstance extends AbstractObjectInstance
     private static final int[] S2_ANIMATION_SEQUENCE = { 5, 0, 5, 1, 5, 2, 5, 3, 5, 4 };
 
     // S1 animation from disassembly (Ani_Shield .shield): 1, 0, 2, 0, 3, 0
-    // Alternates between expanded frames (1,2,3) and contracted frame (0)
+    // Alternates between full frames (1,2,3) and the invisible frame (0)
     private static final int[] S1_ANIMATION_SEQUENCE = { 1, 0, 2, 0, 3, 0 };
 
     // S2 Ani_obj38 delay = 0 → advance every frame; S1 Ani_Shield delay = 1 → advance every 2 frames
@@ -38,6 +38,7 @@ public class ShieldObjectInstance extends AbstractObjectInstance
     @RewindTransient(reason = "animation speed is constructor-selected immutable game/art configuration")
     private final int animationSpeed;
     private int sequenceIndex = 0;
+    private int animationFrameTimer;
     private boolean destroyed = false;
     private boolean visible = true;
 
@@ -61,6 +62,7 @@ public class ShieldObjectInstance extends AbstractObjectInstance
             this.animationSequence = S2_ANIMATION_SEQUENCE;
             this.animationSpeed = S2_ANIMATION_SPEED;
         }
+        this.animationFrameTimer = this.animationSpeed;
     }
 
     public void setVisible(boolean visible) {
@@ -77,12 +79,13 @@ public class ShieldObjectInstance extends AbstractObjectInstance
         if (destroyed) {
             return;
         }
-        // Animation sequence from disassembly - step through the sequence
-        if (vIntRunCount % animationSpeed == 0) {
-            sequenceIndex++;
-            if (sequenceIndex >= animationSequence.length) {
-                sequenceIndex = 0;
-            }
+        // AnimateSprite uses this object's obTimeFrame countdown; it is not
+        // synchronized to the global V-int counter. The script delay is one less
+        // than the number of updates each mapping frame remains displayed.
+        animationFrameTimer--;
+        if (animationFrameTimer < 0) {
+            animationFrameTimer = animationSpeed - 1;
+            sequenceIndex = (sequenceIndex + 1) % animationSequence.length;
         }
     }
 
@@ -92,7 +95,7 @@ public class ShieldObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        int currentFrame = animationSequence[sequenceIndex];
+        int currentFrame = getCurrentFrame();
         renderer.drawFrameIndex(currentFrame, player.getCentreX(), player.getCentreY(), false, false);
     }
 
@@ -128,6 +131,10 @@ public class ShieldObjectInstance extends AbstractObjectInstance
 
     protected int getSequenceIndex() {
         return sequenceIndex;
+    }
+
+    protected int getCurrentFrame() {
+        return animationSequence[sequenceIndex];
     }
 
 }

@@ -10,6 +10,7 @@ import com.openggf.game.GameStateManager;
 import com.openggf.game.NoOpResultsScreen;
 import com.openggf.game.ResultsScreen;
 import com.openggf.game.SpecialStageAccessType;
+import com.openggf.game.SpecialStageDebugCapabilities;
 import com.openggf.game.SpecialStageDebugProvider;
 import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.rewind.LiveRewindManager;
@@ -35,9 +36,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_F1;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_F3;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_F4;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_F6;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_F7;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_F12;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_X;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_Z;
@@ -58,6 +61,7 @@ class TestGameLoopSpecialStageRewindDebugBoundary {
         config = SonicConfigurationService.getInstance();
         config.setConfigValue(SonicConfiguration.DEBUG_VIEW_ENABLED, true);
         config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, true);
+        DebugOverlayManager.getInstance().resetState();
         context = SessionManager.getCurrentGameplayMode();
         input = new InputHandler();
         loop = new GameLoop(input);
@@ -73,6 +77,7 @@ class TestGameLoopSpecialStageRewindDebugBoundary {
 
     @AfterEach
     void tearDown() {
+        DebugOverlayManager.getInstance().resetState();
         config.resetToDefaults();
         SessionManager.clear();
     }
@@ -96,6 +101,79 @@ class TestGameLoopSpecialStageRewindDebugBoundary {
             assertNull(context.getRewindController(),
                     shortcut.name() + " must suppress same-frame special-stage rewind recording");
         }
+    }
+
+    @Test
+    void unavailableSpecialStageDebugCapabilitiesDoNotRouteKeysOrSeverRewind() throws Exception {
+        RecordingProvider provider = new RecordingProvider(order);
+        provider.capabilities = SpecialStageDebugCapabilities.NONE;
+        activateSpecialStage(provider);
+
+        input.handleKeyEvent(GLFW_KEY_X, GLFW_PRESS);
+        input.handleKeyEvent(GLFW_KEY_Z, GLFW_PRESS);
+        input.handleKeyEvent(config.getInt(SonicConfiguration.SPECIAL_STAGE_SPRITE_DEBUG_KEY), GLFW_PRESS);
+        input.handleKeyEvent(config.getInt(SonicConfiguration.SPECIAL_STAGE_PLANE_DEBUG_KEY), GLFW_PRESS);
+        input.handleKeyEvent(config.getInt(SonicConfiguration.DEBUG_MODE_KEY), GLFW_PRESS);
+        input.handleKeyEvent(GLFW_KEY_F4, GLFW_PRESS);
+        input.handleKeyEvent(GLFW_KEY_F1, GLFW_PRESS);
+
+        loop.step();
+
+        assertTrue(boundaries.isEmpty(), "unavailable controls must not create a rewind boundary");
+        assertFalse(order.contains("debugNextStage"));
+        assertFalse(order.contains("debugToggleLayoutSet"));
+        assertFalse(order.contains("toggleSpriteDebugMode"));
+        assertFalse(order.contains("cyclePlaneDebugMode"));
+        assertFalse(order.contains("toggleGameplayDebugMode"));
+        assertFalse(order.contains("toggleAlignmentTestMode"));
+        assertFalse(order.contains("toggleLagCompensationDisplay"));
+    }
+
+    @Test
+    void unavailableProviderControlsLeaveGlobalOverlayBindingsActive() throws Exception {
+        RecordingProvider provider = new RecordingProvider(order);
+        provider.capabilities = SpecialStageDebugCapabilities.NONE;
+        activateSpecialStage(provider);
+        DebugOverlayManager overlays = (DebugOverlayManager) getField(loop, "debugOverlayManager");
+        boolean overlayBefore = overlays.isEnabled(DebugOverlayToggle.OVERLAY);
+        boolean playerPanelBefore = overlays.isEnabled(DebugOverlayToggle.PLAYER_PANEL);
+        boolean sensorLabelsBefore = overlays.isEnabled(DebugOverlayToggle.SENSOR_LABELS);
+        boolean artViewerBefore = overlays.isEnabled(DebugOverlayToggle.OBJECT_ART_VIEWER);
+
+        input.handleKeyEvent(GLFW_KEY_F1, GLFW_PRESS);
+        input.handleKeyEvent(GLFW_KEY_F3, GLFW_PRESS);
+        input.handleKeyEvent(GLFW_KEY_F4, GLFW_PRESS);
+        input.handleKeyEvent(GLFW_KEY_F12, GLFW_PRESS);
+
+        loop.step();
+
+        assertEquals(!overlayBefore, overlays.isEnabled(DebugOverlayToggle.OVERLAY));
+        assertEquals(!playerPanelBefore, overlays.isEnabled(DebugOverlayToggle.PLAYER_PANEL));
+        assertEquals(!sensorLabelsBefore, overlays.isEnabled(DebugOverlayToggle.SENSOR_LABELS));
+        assertEquals(!artViewerBefore, overlays.isEnabled(DebugOverlayToggle.OBJECT_ART_VIEWER));
+        assertTrue(boundaries.isEmpty(), "global overlay toggles must not create a stage rewind boundary");
+        assertFalse(order.contains("toggleAlignmentTestMode"));
+        assertFalse(order.contains("toggleLagCompensationDisplay"));
+    }
+
+    @Test
+    void nullSpecialStageDebugCapabilitiesFailClosedLikeNone() throws Exception {
+        RecordingProvider provider = new RecordingProvider(order);
+        provider.capabilities = null;
+        activateSpecialStage(provider);
+
+        input.handleKeyEvent(GLFW_KEY_X, GLFW_PRESS);
+        input.handleKeyEvent(config.getInt(SonicConfiguration.DEBUG_MODE_KEY), GLFW_PRESS);
+        input.handleKeyEvent(GLFW_KEY_F4, GLFW_PRESS);
+        input.handleKeyEvent(GLFW_KEY_F1, GLFW_PRESS);
+
+        loop.step();
+
+        assertTrue(boundaries.isEmpty(), "null capabilities must fail closed without a rewind boundary");
+        assertFalse(order.contains("debugNextStage"));
+        assertFalse(order.contains("toggleGameplayDebugMode"));
+        assertFalse(order.contains("toggleAlignmentTestMode"));
+        assertFalse(order.contains("toggleLagCompensationDisplay"));
     }
 
     @Test
@@ -300,10 +378,16 @@ class TestGameLoopSpecialStageRewindDebugBoundary {
         private boolean spriteDebugMode;
         private boolean alignmentMode;
         private boolean lagDisplay;
+        private SpecialStageDebugCapabilities capabilities = SpecialStageDebugCapabilities.LEGACY;
 
         private RecordingProvider(List<String> order) {
             this.order = order;
             this.debugProvider = new RecordingDebugProvider(order);
+        }
+
+        @Override
+        public SpecialStageDebugCapabilities debugCapabilities() {
+            return capabilities;
         }
 
         @Override

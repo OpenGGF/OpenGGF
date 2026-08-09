@@ -2,6 +2,7 @@ package com.openggf.level.rings;
 
 import com.openggf.game.rewind.snapshot.RingSnapshot;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.rules.SonicGame;
 import com.openggf.game.session.SessionManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,9 +29,13 @@ class TestRingManagerActiveIndices {
 
     @BeforeEach
     void setUp() {
-        // A leaked fork-mate session could swap the ring window mode (S3K uses
-        // the raw camera window); reset before building the manager.
-        TestEnvironment.resetAll();
+        // The window mode decides which indices enter and leave the active
+        // store, so pin it rather than inheriting whatever module a fork-mate
+        // left behind. S1 keeps rings as objects and windows them with the
+        // chunk-aligned placement range this test's arithmetic assumes; S2 and
+        // S3K use the ROM's raw camera ring window instead. The ordering
+        // machinery under test is shared by both modes.
+        TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_1);
     }
 
     @AfterEach

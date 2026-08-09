@@ -79,6 +79,26 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance implemen
         updatePlayer(player, PLAYER_SLOT_MAIN, true);
         AbstractPlayableSprite sidekick = firstTrackedSidekick();
         if (sidekick != null) {
+            /*
+             * FixBugs audit (docs/skdisasm/sonic3k.asm:38, assembled as 0 in the
+             * shipped ROM). AIZHollowTree_CheckPlayers (sonic3k.asm:43654-43668)
+             * derives Player 2's ride bit as `addq.b #p2_standing_bit-
+             * p1_standing_bit,d6` instead of `moveq #p2_standing_bit,d6`. When
+             * Player 1 was riding, AIZTree_SetPlayerPos ends in
+             * `jmp (Perform_Player_DPLC)` (sonic3k.asm:43822) and leaves d6
+             * clobbered, so the sidekick's `btst d6,status(a0)` reads a dirty bit
+             * (bit 1 rather than bit 4) — the ROM comment's "player 2 behaves
+             * erratically". The FixBugs=1 branch always uses the clean p2 bit.
+             *
+             * This engine slot tracks riders with a per-slot boolean and therefore
+             * implements the FIXED branch. CnzWireCageObjectInstance models the
+             * un-fixed dirty-d6 form (DIRTY_P2_STANDING_BIT there); porting the
+             * same treatment here is an outstanding audit finding, left out of this
+             * pass because it changes sidekick behaviour on AIZ1, the primary
+             * release slice. Note the ROM only dirties d6 on the ground ride path:
+             * AIZHollowTree_FallIfProgressComplete saves and restores d6 around its
+             * AIZTree_SetPlayerPos call (sonic3k.asm:43764-43770).
+             */
             updatePlayer(sidekick, PLAYER_SLOT_SIDEKICK, false);
         }
         updateCameraLock(player);

@@ -12,6 +12,7 @@ import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.objects.TouchResponseTable;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.lang.reflect.Field;
 import java.util.List;
@@ -458,6 +459,159 @@ public class TestDEZMechaSonic {
 
         // Verify it's now hidden
         assertFalse(visibleField.getBoolean(ledWindow), "LED should be hidden after transitionToIdle");
+    }
+
+    @Test
+    public void aimDashWalkDashStartFrameRunsOuterObjectMove() throws Exception {
+        // ROM loc_398C0 dispatches loc_39ABC, then calls ObjectMove once after
+        // child alignment. The dash-start phase must therefore move by the
+        // newly assigned velocity during this same outer update.
+        forceAttackState(0x10, 2, 0);
+
+        boss.update(1, mock(AbstractPlayableSprite.class));
+
+        assertEquals(3, getPrivateInt("attackPhase"));
+        assertEquals(-0x400, boss.getState().xVel);
+        assertEquals(MECHA_SONIC_X - 4, boss.getState().x);
+    }
+
+    @Test
+    public void aimAndDashDecelerationFrameRunsOneObjectMove() throws Exception {
+        // ROM loc_39A68 only changes x_vel; loc_398C0 performs the single
+        // ObjectMove after the phase handler returns.
+        forceAttackState(0x06, 3, 0x10);
+        boss.getState().xVel = -0x800;
+
+        boss.update(1, mock(AbstractPlayableSprite.class));
+
+        assertEquals(-0x7E0, boss.getState().xVel);
+        assertEquals(MECHA_SONIC_X - 8, boss.getState().x);
+    }
+
+    @Test
+    public void aimDashWalkAirborneTimerExpiryStopsBeforeOuterObjectMove() throws Exception {
+        // ROM loc_39AF4 branches to loc_39A7C when the airborne timer expires.
+        assertAirborneTimerExpiryStopsBeforeMove(0x10);
+    }
+
+    @Test
+    public void aimJumpSpikeballsAirborneTimerExpiryStopsBeforeOuterObjectMove() throws Exception {
+        // ROM loc_39B44 branches to the same loc_39A7C transition.
+        assertAirborneTimerExpiryStopsBeforeMove(0x1E);
+    }
+
+    private void assertAirborneTimerExpiryStopsBeforeMove(int attackSubRoutine) throws Exception {
+        forceAttackState(attackSubRoutine, 4, 0);
+        boss.getState().xVel = 0x400;
+        boss.getState().yVel = -0x200;
+
+        boss.update(1, mock(AbstractPlayableSprite.class));
+
+        // loc_39A7C: advance to ground-run phase, anim 5, flip, and clear both
+        // velocities before loc_398C0's single outer ObjectMove.
+        assertEquals(5, getPrivateInt("attackPhase"));
+        assertEquals(5, getPrivateInt("anim"));
+        assertTrue(getPrivateBoolean("facingLeft"));
+        assertEquals(0, boss.getState().xVel);
+        assertEquals(0, boss.getState().yVel);
+        assertEquals(MECHA_SONIC_X, boss.getState().x);
+        assertEquals(MECHA_SONIC_Y, boss.getState().y);
+    }
+
+    @Test
+    public void attackAlignsChildrenBeforeMoveAndRetainsAlignedPositions() throws Exception {
+        // ROM loc_398C0 aligns the LED at (0,0) and sensor at (+$C,-$C),
+        // then moves the parent. Child routines do not re-align themselves;
+        // their positions must retain the pre-ObjectMove coordinates.
+        Object ledWindow = newChild("MechaSonicLEDWindow");
+        Object targetingSensor = newChild("MechaSonicTargetingSensor");
+        addChildComponent(ledWindow);
+        addChildComponent(targetingSensor);
+        // Wire the same named child fields used by production spawning. This
+        // makes the test exercise syncAttackChildrenBeforeObjectMove rather
+        // than merely observing constructor-initialized positions.
+        setPrivateObject("ledWindow", ledWindow);
+        setPrivateObject("targetingSensor", targetingSensor);
+        forceAttackState(0x10, 3, 0x10);
+        boss.getState().xVel = -0x400;
+        setChildPosition(ledWindow, 0x111, 0x222);
+        setChildPosition(targetingSensor, 0x333, 0x444);
+
+        boss.update(1, mock(AbstractPlayableSprite.class));
+
+        assertEquals(MECHA_SONIC_X - 4, boss.getState().x);
+        assertEquals(MECHA_SONIC_X, ((ObjectInstance) ledWindow).getX());
+        assertEquals(MECHA_SONIC_Y, ((ObjectInstance) ledWindow).getY());
+        assertEquals(MECHA_SONIC_X + 0x0C, ((ObjectInstance) targetingSensor).getX());
+        assertEquals(MECHA_SONIC_Y - 0x0C, ((ObjectInstance) targetingSensor).getY());
+    }
+
+    private Object newChild(String simpleName) throws Exception {
+        Class<?> childClass = Class.forName(
+                "com.openggf.game.sonic2.objects.bosses.Sonic2MechaSonicInstance$"
+                        + simpleName);
+        java.lang.reflect.Constructor<?> ctor = childClass.getDeclaredConstructor(
+                Sonic2MechaSonicInstance.class);
+        ctor.setAccessible(true);
+        return ctor.newInstance(boss);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void addChildComponent(Object child) throws Exception {
+        Field field = com.openggf.level.objects.boss.AbstractBossInstance.class
+                .getDeclaredField("childComponents");
+        field.setAccessible(true);
+        ((List<Object>) field.get(boss)).add(child);
+    }
+
+    private void setPrivateObject(String fieldName, Object value) throws Exception {
+        Field field = Sonic2MechaSonicInstance.class.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(boss, value);
+    }
+
+    private void setChildPosition(Object child, int x, int y) throws Exception {
+        Class<?> childClass = com.openggf.level.objects.boss.AbstractBossChild.class;
+        Field xField = childClass.getDeclaredField("currentX");
+        Field yField = childClass.getDeclaredField("currentY");
+        xField.setAccessible(true);
+        yField.setAccessible(true);
+        xField.setInt(child, x);
+        yField.setInt(child, y);
+    }
+
+    private void forceAttackState(int attackSubRoutine, int attackPhase, int actionTimer)
+            throws Exception {
+        boss.getState().routine = 0x0A; // ROUTINE_ATTACK
+        boss.getState().x = MECHA_SONIC_X;
+        boss.getState().y = MECHA_SONIC_Y;
+        boss.getState().xVel = 0;
+        boss.getState().yVel = 0;
+        setPrivateInt("attackSubRoutine", attackSubRoutine);
+        setPrivateInt("attackPhase", attackPhase);
+        setPrivateInt("actionTimer", actionTimer);
+        setPrivateInt("anim", 4);
+        setPrivateInt("prevAnim", 4);
+        setPrivateInt("animFrame", 0);
+        setPrivateInt("animFrameDuration", 2);
+    }
+
+    private int getPrivateInt(String fieldName) throws Exception {
+        Field field = Sonic2MechaSonicInstance.class.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.getInt(boss);
+    }
+
+    private boolean getPrivateBoolean(String fieldName) throws Exception {
+        Field field = Sonic2MechaSonicInstance.class.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.getBoolean(boss);
+    }
+
+    private void setPrivateInt(String fieldName, int value) throws Exception {
+        Field field = Sonic2MechaSonicInstance.class.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.setInt(boss, value);
     }
 
     private static final class NoOpObjectRegistry implements ObjectRegistry {

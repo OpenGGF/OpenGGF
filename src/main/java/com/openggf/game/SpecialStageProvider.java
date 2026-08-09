@@ -25,6 +25,17 @@ public interface SpecialStageProvider extends MiniGameProvider {
     String SPECIAL_STAGE_REWIND_KEY = "special-stage-runtime";
 
     /**
+     * Returns the optional developer controls owned by this special stage.
+     *
+     * <p>Providers opt in to each control explicitly. The game loop consults
+     * this profile before routing a debug key, so an omitted capability is
+     * unavailable rather than a silent default-method call.</p>
+     */
+    default SpecialStageDebugCapabilities debugCapabilities() {
+        return SpecialStageDebugCapabilities.NONE;
+    }
+
+    /**
      * Selects the special-stage index for a new entry and advances any
      * game-owned cursor state. The default matches the S1/S2 sequential
      * cursor; games with different ROM selection policy override here.
@@ -190,6 +201,18 @@ public interface SpecialStageProvider extends MiniGameProvider {
     }
 
     default void handlePlayer2Input(int heldButtons, int logicalButtons) {
+        // No-op by default.
+    }
+
+    /**
+     * Binds physical controller input to the recurring ROM object pass the next
+     * {@link #update()} executes, for a stage whose object pass is a separate
+     * pacing unit from the V-blank observation (S2's {@code SS_MainLoop} /
+     * {@code RunObjects} split, docs/s2disasm/s2.asm:6694-6721). Stages with no
+     * such split ignore it.
+     */
+    default void bindPendingRecurringPassInput(
+            int p1Held, int p1Pressed, int p2Held, int p2Logical) {
         // No-op by default.
     }
 

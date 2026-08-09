@@ -577,12 +577,14 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
 
     private List<SpriteMappingFrame> createShieldMappingsFromRom(Sonic1ObjectArt art) {
         List<SpriteMappingFrame> romFrames = art.loadMappingFrames(Sonic1Constants.MAP_SHIELD_ADDR, 8);
-        if (romFrames.size() < 4 || romFrames.get(1).pieces().size() < 4) {
+        if (romFrames.size() < 4) {
             return List.of();
         }
 
         List<SpriteMappingFrame> shieldFrames = new ArrayList<>(4);
-        shieldFrames.add(new SpriteMappingFrame(List.copyOf(romFrames.get(1).pieces().subList(2, 4))));
+        // Map_Shield's first pointer deliberately targets a zero byte inside .shield1,
+        // producing the completely invisible frame used between the three full frames.
+        shieldFrames.add(romFrames.get(0));
         shieldFrames.add(romFrames.get(1));
         shieldFrames.add(romFrames.get(2));
         shieldFrames.add(romFrames.get(3));

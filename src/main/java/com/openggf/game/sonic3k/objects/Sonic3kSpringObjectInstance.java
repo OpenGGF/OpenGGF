@@ -43,7 +43,7 @@ import java.util.Set;
  * <ul>
  *   <li>Down spring velocity cap: red down springs cap at $D00 (not $1000)</li>
  *   <li>Horizontal approach detection zone (±$28 x, ±$18 y)</li>
- *   <li>Reverse gravity support (DEZ gravity-flip, currently stubbed)</li>
+ *   <li>Reverse gravity support (DEZ gravity-flip)</li>
  *   <li>Art loaded from level patterns (ArtTile_SpikesSprings offsets)</li>
  * </ul>
  * <p>

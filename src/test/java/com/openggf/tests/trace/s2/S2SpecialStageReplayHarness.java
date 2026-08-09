@@ -14,6 +14,7 @@ import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.Sonic2SpecialStageProvider;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageComparisonState;
+import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageIntro;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageReplayTestBridge;
 import com.openggf.trace.SpecialStageRunObjectsPassBinder.CompletedPass;
 import com.openggf.tests.trace.RecordedInputRows;
@@ -108,7 +109,7 @@ final class S2SpecialStageReplayHarness {
      * row advances nothing engine-side (the row is simply skipped).
      */
     void stepFrame(int traceFrame) {
-        runProductionRow(PlcLifecyclePhase.SPECIAL_STAGE,
+        runProductionRow(activePhase(),
                 () -> stepFrameBody(traceFrame));
     }
 
@@ -130,7 +131,7 @@ final class S2SpecialStageReplayHarness {
      * are never used to drive the engine.
      */
     void stepPass(CompletedPass pass) {
-        runProductionRow(PlcLifecyclePhase.SPECIAL_STAGE,
+        runProductionRow(activePhase(),
                 () -> stepPassBody(pass));
     }
 
@@ -149,15 +150,22 @@ final class S2SpecialStageReplayHarness {
      */
     void stepPasses(
             List<CompletedPass> passes,
-            boolean completeTerminalPreStartPass,
+            int terminalPreStartPassSequence,
             boolean lagged,
             int observationFrame) {
-        runProductionRow(observationPhase(lagged, !passes.isEmpty()), () -> {
-            if (completeTerminalPreStartPass) {
-                completeTerminalPreStartPassBody();
-            }
+        runProductionRow(observationPhase(lagged, !passes.isEmpty(), activePhase()), () -> {
             for (CompletedPass pass : passes) {
-                stepPassBody(pass);
+                if (pass.sequence() == terminalPreStartPassSequence) {
+                    // The pre-start loop's terminal pass is already pending
+                    // engine-side, and the ROM copies Ctrl_1/Ctrl_2 *before*
+                    // that loop's WaitForVint (docs/s2disasm/s2.asm:6684-6685),
+                    // so it owns no post-V-int controller sample for the
+                    // recurring loop's binding path to consume. Publish it
+                    // through the startup boundary instead.
+                    completeTerminalPreStartPassBody();
+                } else {
+                    stepPassBody(pass);
+                }
                 if (pass.completionCursorFrame() < observationFrame) {
                     // The pass finished before this observation's V-int on
                     // hardware, so that V-blank already ran ProcessDMAQueue
@@ -177,8 +185,46 @@ final class S2SpecialStageReplayHarness {
     /** Phase for one special-stage observation. See {@link #stepPasses}. */
     static PlcLifecyclePhase observationPhase(
             boolean lagged, boolean ownsCompletedPass) {
+        return observationPhase(lagged, ownsCompletedPass,
+                PlcLifecyclePhase.SPECIAL_STAGE);
+    }
+
+    /**
+     * As above, but for a stage whose active (non-lag) rows are not yet the
+     * stage's own V-int handler — see {@link #activePhase()}.
+     */
+    static PlcLifecyclePhase observationPhase(
+            boolean lagged, boolean ownsCompletedPass,
+            PlcLifecyclePhase activePhase) {
         return lagged && !ownsCompletedPass
                 ? PlcLifecyclePhase.LAG
+                : activePhase;
+    }
+
+    /**
+     * The V-int the ROM is actually running for the row about to be stepped.
+     *
+     * <p>Entering a special stage, the ROM's first act is
+     * {@code Pal_FadeToWhite} (docs/s2disasm/s2.asm:6725-6745), whose V-blanks
+     * are {@code VintID_Fade}; {@code Vint_Fade} never reaches
+     * {@code ProcessDMAQueue} — only the real per-mode handlers do
+     * (s2.asm:781, 899, 1000, 1046, 1083, 1138). The stage's own
+     * {@code VintID_S2SS} handler (s2.asm:837, its {@code ProcessDMAQueue} at
+     * s2.asm:899) is not selected until {@code SpecialStage} has finished
+     * loading and reaches its first {@code WaitForVint}
+     * (s2.asm:6644-6651). So a queued transfer inherited from the level the
+     * stage was entered from survives the whole fade, and every claim before
+     * the stage's own handler must be a non-servicing phase.
+     *
+     * <p>The boundary is read from the engine's own intro state machine, whose
+     * {@code PRE_ROLL} phase <em>is</em> that fade
+     * ({@link Sonic2SpecialStageIntro#PRE_ROLL_FRAMES} = the routine's
+     * {@code d4=$15} {@code dbf}), not from a row count or a recorded row.
+     */
+    PlcLifecyclePhase activePhase() {
+        return provider.getManager().getIntro().getCurrentPhase()
+                        == Sonic2SpecialStageIntro.Phase.PRE_ROLL
+                ? PlcLifecyclePhase.PALETTE_FADE
                 : PlcLifecyclePhase.SPECIAL_STAGE;
     }
 
@@ -197,7 +243,7 @@ final class S2SpecialStageReplayHarness {
 
     /** Publishes Obj5F's terminal pre-start object pass without a new VInt. */
     void completeTerminalPreStartPass() {
-        runProductionRow(PlcLifecyclePhase.SPECIAL_STAGE,
+        runProductionRow(activePhase(),
                 this::completeTerminalPreStartPassBody);
     }
 
@@ -212,7 +258,7 @@ final class S2SpecialStageReplayHarness {
     }
 
     void stepIdleRow(boolean lagged) {
-        stepIdleRow(lagged, PlcLifecyclePhase.SPECIAL_STAGE);
+        stepIdleRow(lagged, activePhase());
     }
 
     /**

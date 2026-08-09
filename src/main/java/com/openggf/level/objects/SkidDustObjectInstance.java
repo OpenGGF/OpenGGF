@@ -104,6 +104,24 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
     }
 
     @Override
+    public boolean usesCustomOutOfRangeCheck() {
+        // ROM Obj08_SkidDust tails through loc_1DEE0 ->
+        // Obj08_LoadDustOrSplashArt -> rts, and the allocated puff itself runs
+        // Obj08_Main -> Obj08_Display -> DisplaySprite
+        // (docs/s2disasm/s2.asm:42796-42800, 42821-42851). Neither path calls
+        // MarkObjGone, so the puff's lifetime is owned entirely by its
+        // animation counter ($FC -> routine 4 -> DeleteObject); it must survive
+        // the camera scrolling away from where it was dropped. The S3K dash
+        // dust draws the same way (docs/skdisasm/sonic3k.asm:34023, 34068).
+        return true;
+    }
+
+    @Override
+    public boolean isCustomOutOfRange(int cameraX) {
+        return false;
+    }
+
+    @Override
     public PerObjectRewindSnapshot captureRewindState() {
         return super.captureRewindState().withObjectSubclassExtra(
                 new SkidDustRewindExtra(animTimer, frameIndex, deleteRoutineDelay, dplcPreloaded));

@@ -142,7 +142,14 @@ final class LevelWaterCoordinator {
         if (playable.isHurt() || isDeferredSidekickDeadFallWaterBypass(playable)) {
             return;
         }
-        if (playable.isObjectControlSuppressesMovement()) {
+        // Only S3K's water routine skips the velocity change under object_control
+        // (sonic3k.asm:22235, :27448). S1's Sonic_Water ("01 Sonic.asm":270-272) and
+        // S2's Obj01_InWater (s2.asm:36393-36395) shift x_vel/y_vel unconditionally,
+        // and Obj01_Control reaches bsr.w Sonic_Water outside the
+        // btst #0,obj_control skip (s2.asm:36236-36251) -- so a character carried
+        // into the water by the CPZ spin tube is still quartered.
+        if (playable.isObjectControlSuppressesMovement()
+                && playable.waterVelocityChangeGatedByObjectControl()) {
             playable.updateWaterStateObjectControlled(waterY);
             return;
         }

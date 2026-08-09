@@ -453,11 +453,25 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         protected Integer objectRoutineOverride = null;
 
         /**
-         * Countdown frames before level reload after death.
-         * Set to 60 when player falls off screen, decrements each frame.
-         * When it reaches 0, triggers level reload.
+         * The ROM's {@code restartime}: frames before the level restarts after
+         * death. Armed with 60 when the corpse falls past the death row, then
+         * decremented each frame; the restart flag is written on the decrement
+         * that reaches zero. A zero value means "do not restart the level" and
+         * is never counted down (S1 {@code Sonic_ResetLevel},
+         * docs/s1disasm/_incObj/01 Sonic.asm:2065-2073).
          */
         protected int deathCountdown = 0;
+
+        /**
+         * Whether the corpse has reached the ROM's post-fall death routine
+         * (S1 routine 8 {@code Sonic_ResetLevel}, S2 {@code Obj01_Gone},
+         * S3K {@code loc_1257C}). That routine only counts {@code restartime}
+         * down, so this — not a non-zero {@link #deathCountdown} — is what
+         * stops gravity being applied to the corpse. The two differ on the
+         * game-over and time-over paths, which enter the routine with
+         * {@code restartime} deliberately left at zero.
+         */
+        protected boolean deathRestartRoutineActive = false;
 
         /**
          * Whether or not this sprite is preparing for a spindash.
@@ -807,6 +821,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.drownPreDeathTimer = 0;
                 this.hurt = false;
                 this.deathCountdown = 0;
+                this.deathRestartRoutineActive = false;
                 this.air = false;
                 this.jumping = false;
                 this.doubleJumpFlag = 0;
@@ -948,7 +963,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         balanceState,
                         springing, springingFrames,
                         dead, drowningDeath, drownPreDeathTimer,
-                        hurt, deathCountdown,
+                        hurt, deathCountdown, deathRestartRoutineActive,
                         invulnerableFrames, suppressNextInvulnerabilityDecrement, invincibleFrames,
                         spindash, spindashCounter,
                         crouching, lookingUp, lookDelayCounter,
@@ -1089,6 +1104,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.drownPreDeathTimer = extra.drownPreDeathTimer();
                 this.hurt = extra.hurt();
                 this.deathCountdown = extra.deathCountdown();
+                this.deathRestartRoutineActive = extra.deathRestartRoutineActive();
                 this.invulnerableFrames = extra.invulnerableFrames();
                 this.suppressNextInvulnerabilityDecrement = extra.suppressNextInvulnerabilityDecrement();
                 this.invincibleFrames = extra.invincibleFrames();
@@ -1567,6 +1583,16 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          */
         public SecondaryAbility getSecondaryAbility() {
                 return SecondaryAbility.NONE;
+        }
+
+        /**
+         * Whether this character runs the ROM's <em>Tails_RollSpeed</em> subroutine rather
+         * than <em>Sonic_RollSpeed</em>/<em>Knux_RollSpeed</em>. Sonic 2 keeps a separate,
+         * outdated copy for Tails whose controlled roll deceleration differs; see
+         * {@code PlayerMovementRules#tailsRollSpeedUsesEffectiveDecelQuarter}.
+         */
+        public boolean usesTailsRollSpeedRoutine() {
+                return false;
         }
 
         public void setSuperSonic(boolean superSonic) {
@@ -2500,16 +2526,36 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public void setDeathCountdown(int frames) {
                 this.deathCountdown = Math.max(0, frames);
+                if (frames <= 0) {
+                        // Every caller that zeroes the countdown is clearing the whole
+                        // death state (respawn, sidekick despawn, rewind reset), so the
+                        // ROM routine number goes back with it. The one caller that means
+                        // "enter the routine but never restart" uses
+                        // enterDeathRestartRoutine(0) instead.
+                        this.deathRestartRoutineActive = false;
+                }
         }
 
         /**
-         * Starts the death sequence countdown (60 frames).
-         * Called when player falls below the level boundaries.
+         * Enters the ROM's post-fall death routine and arms {@code restartime}.
+         *
+         * <p>S1 {@code Sonic_HandleDeath} writes {@code addq.b #2,obRoutine}
+         * (to routine 8) and {@code move.w #60,restartime} together, then
+         * rewrites {@code restartime} to zero for a game over or a time over
+         * (docs/s1disasm/_incObj/01 Sonic.asm:2011-2045). The routine number is
+         * written either way, so a zero delay still stops the corpse falling.
          */
-        public void startDeathCountdown() {
-                if (deathCountdown == 0 && dead) {
-                        deathCountdown = 60;
+        public void enterDeathRestartRoutine(int restartDelayFrames) {
+                if (!dead || deathRestartRoutineActive) {
+                        return;
                 }
+                deathRestartRoutineActive = true;
+                deathCountdown = Math.max(0, restartDelayFrames);
+        }
+
+        /** Whether the corpse is in the ROM's post-fall death routine. */
+        public boolean isInDeathRestartRoutine() {
+                return dead && deathRestartRoutineActive;
         }
 
         /**
@@ -5018,6 +5064,19 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * and CPU routine is not 4, it returns before the velocity quarter/double
          * paths (sonic3k.asm:27416-27470).
          */
+        /**
+         * Whether this game's water routine suppresses the entry/exit velocity
+         * change while {@code object_control} holds the character. True for S3K
+         * only; S1 and S2 apply it unconditionally.
+         *
+         * @see PlayerMovementRules#waterVelocityChangeGatedByObjectControl()
+         */
+        public boolean waterVelocityChangeGatedByObjectControl() {
+                PlayerMovementRules movementRules = playerMovementRulesOrNull();
+                return movementRules != null
+                                && movementRules.waterVelocityChangeGatedByObjectControl();
+        }
+
         public void updateWaterStateObjectControlled(int waterLevelY) {
                 wasInWater = inWater;
 

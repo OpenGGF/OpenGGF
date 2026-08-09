@@ -139,8 +139,13 @@ public class Sonic1PoleThatBreaksObjectInstance extends AbstractObjectInstance
         player.setForcedAnimationId(-1);
         player.setAnimationId(Sonic1AnimationIds.HANG);
 
-        // move.b #1,(f_playerctrl).w
-        ObjectControlState.nativeBit7FullControl().applyTo(player);
+        // move.b #1,(f_playerctrl).w -- bit 0 only, sign bit CLEAR
+        // (docs/s1disasm/_incObj/0B LZ Pole that Breaks.asm:102). Bit 0 makes
+        // Sonic_Control skip Sonic_Modes; the object-interaction gate is the sign
+        // bit (tst.b f_playerctrl / bmi.s .ignoreobjcoll,
+        // docs/s1disasm/_incObj/01 Sonic.asm:94-97), so ReactToItem keeps running
+        // while Sonic hangs on the pole.
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
 
         // move.b #1,(f_wtunnelallow).w
         setWindTunnelDisabled(true);

@@ -804,13 +804,29 @@ Ported events (templates are the standalone's exact `string.format` strings):
    `ObjID_SSResults` (`$6F`) in the 128-slot SST scan; emitted at most once
    per ss segment.
 
-**Not ported:** `run_objects_end` — it requires the standalone's two
-`event.onmemoryexecute` hooks, and the run port's hard rule (§4) is no
-execute hooks. The run-mode ss aux stream is therefore a documented
-**subset** of the standalone's surface (all state-sampled events; no
-per-pass records). At the finish frame the standalone's order is checkpoint
-→ terminal `run_objects_end` → `stage_finished`; the port emits checkpoint →
-`stage_finished` directly.
+**`run_objects_end` — not ported in the Lua v9.13-s2 run mode; ported in the
+native harness.** The Lua port omitted it because it requires the
+standalone's two `event.onmemoryexecute` hooks and the Lua run port's hard
+rule (§4) was no execute hooks. That rule does not bind the native harness:
+`S2DynamicArtObserver` already registers a dozen execute callbacks in run
+mode, and the standalone observer
+(`src/Recording/S2SpecialStageRunObjectsObserver.cs`) works unchanged there.
+`S2RunCaptureRunner` therefore constructs one observer per detour in
+`StartSsSegment` (offset `frameNow + 1`, because the run port skips the `$10`
+entry frame so this detour's `trace_frame` 0 is emu frame `frameNow + 1`),
+publishes each row's completed passes before the state-sampled events, and
+publishes the terminal pass immediately after the checkpoint line — the
+standalone's checkpoint → terminal `run_objects_end` → `stage_finished`
+order. The observer is disposed in `FinalizeSsSegment`.
+
+Without these records the replay side has no RunObjects passes to pace a
+special-stage interior with: `SpecialStageRunObjectsPassBinder` binds
+nothing, `discoverRingsToGoRefreshFrames` cannot resolve a rings-to-go
+trigger clear to a completed pass, and a chain replay runs the interior far
+too fast. **Any run fixture whose ss segments were captured before this
+change carries a `run_objects_end`-free aux stream and must be re-recorded**
+(committed pre-change fixtures: `s2-ehz-halfpipe-roundtrip` ss/ss_2,
+`s2-sonic-tails-complete-emeralds` ss..ss_7).
 
 **Emission points:** in `write_ss_row`, after the physics row write and the
 existing flush(60)/metadata(300) cadence checks, before the `trace_frame`
@@ -880,7 +896,10 @@ correct the design text above, the shipped Lua is the authority.
    bogus record). Both the Lua (`ss_check_checkpoint`) and the native
    `S2SpecialStageAuxEventEngine` keep it, verbatim from
    `s2_ss_trace_recorder.lua`'s `check_checkpoint` error path. Only the
-   `run_objects_end`-machinery assertions are dropped.
+   `run_objects_end`-machinery assertions were dropped in the Lua port; the
+   native harness now ports the pass machinery itself (see §11.3), including
+   `PublishTerminal`'s exactly-one-pending / completion-cursor /
+   `SS_Check_Rings_flag` assertions.
 3. **The canonical halfpipe movie is NOT mode-confined at file length —
    capture-session movie length now matters.** §11.4's "movies confined to
    `{$0C, $10}`" byte-compat claim holds for the canonical halfpipe

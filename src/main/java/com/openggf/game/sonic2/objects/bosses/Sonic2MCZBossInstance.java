@@ -848,8 +848,8 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance
         // by BossCollision_MCZ when the boss's drills hurt Sonic (checks
         // invulnerable_time(a0) == $78 on the player). It is NOT set when
         // Sonic successfully attacks the boss. See s2.asm:85248, 85273.
-        // TODO: Wire boss_hurt_sonic via the collision system (BossCollision_MCZ
-        // equivalent) when drill hitbox contact hurts the player.
+        // Harmful drill contact owns this flag in onTouchResponse(...); a successful
+        // attack on the boss deliberately does not set it.
     }
 
     @Override

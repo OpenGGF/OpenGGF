@@ -1,6 +1,6 @@
 # Game Status
 
-Last updated: 2026-06-12 (v0.6.prerelease development)
+Last updated: 2026-08-08 (v0.6.prerelease development)
 
 This page describes the current state of each supported game. It is intended to set
 expectations honestly -- what works well, what is incomplete, and what you might encounter.
@@ -59,8 +59,11 @@ expectations honestly -- what works well, what is incomplete, and what you might
 - Water system for ARZ and CPZ.
 - HTZ earthquake and lava systems.
 - Per-zone level events across all zones.
+- Mecha Sonic's DEZ attack loop follows the shipped ROM's outer `ObjectMove`
+  and child-alignment ordering; the existing Mecha Sonic and Death Egg Robot
+  implementations pass the dedicated DEZ ending replay.
 - Demo playback.
-- Full SMPS audio.
+- Broad SMPS audio support; exact command/register parity still has known gaps.
 
 ### Known gaps
 
@@ -69,6 +72,14 @@ expectations honestly -- what works well, what is incomplete, and what you might
 - Some visual effects (screen distortion, specific palette transitions) may differ
   slightly from the original.
 - Oil Ocean Zone oil surface behavior is partially implemented.
+- Native S2 level debug placement (`Debug_placement_mode`, including ring/item
+  placement) is not exposed. The engine's `D` shortcut is free-fly debug movement;
+  CPZ tubes deliberately do not capture a player using that supported mode.
+- Native S2 two-player/competition gameplay (`Two_player_mode`) is not exposed.
+  Player 2 bindings feed the configured sidekick/manual-input paths, not a human
+  second player; consequently, the ROM's human-P2 monitor-break branch is not
+  reachable. A dedicated S2 competition-mode owner is required before that branch
+  can be implemented and validated.
 
 ### Notable quirks
 
@@ -91,8 +102,8 @@ that the module can work.
 ### What works
 
 - Angel Island Zone intro cutscene, Act 1 gameplay, miniboss defeat flow, signpost, results,
-  fire transition, Flying Battery bombing sequence, AIZ2 end boss, post-boss capsule flow,
-  and AIZ-to-HCZ transition.
+  fire transition, Flying Battery bombing sequence, AIZ2 end-boss main flow, post-boss capsule,
+  and AIZ-to-HCZ transition. This is route coverage, not complete object or visual parity.
 - Hydrocity route coverage including water rush, conveyor, fan, block, door, water skim,
   miniboss, HCZ1-to-HCZ2 transition, HCZ2 moving-wall chase, end-boss/capsule work, and
   complete-run trace diagnostics.
@@ -106,7 +117,8 @@ that the module can work.
 - Shield system, water system, palette cycling, runtime-owned zone state, and broad badnik/object
   coverage.
 - Water state now restores correctly after returning from side stages.
-- SMPS audio with S3K-specific driver configuration (Z80 bank-switching, DPCM).
+- SMPS audio with S3K-specific driver configuration (Z80 bank-switching, DPCM),
+  with known coordinate-flag meta-command gaps.
 
 ### Known gaps
 
@@ -120,6 +132,16 @@ that the module can work.
 - Bonus stages are still in active parity work rather than final polish.
 - S3K's more complex PLC/art loading system still has partial parity.
 - Data select visual parity is still in progress (native selector art, emerald display).
+- The AIZ miniboss napalm FallingShot now has native movement, harmful touch,
+  ROM-backed art, per-barrel child routing, and rewind coverage; its live
+  Knuckles activation/slot/lifetime route remains under trace validation. AIZ2
+  end-boss emerge/submerge splash children now
+  follow the native allocation, render, lifecycle, and rewind paths; an
+  end-to-end boss trace remains a follow-up.
+- Knuckles' LBZ Big Arm (`Obj_LBZFinalBoss2`) handoff currently spawns an inert,
+  invisible persistent object, blocking an authentic route completion.
+- LRZ1 now gives non-Knuckles players the ROM falling level-introduction state;
+  SSZ has no corresponding `SpawnLevelMainSprites` branch.
 
 ### Notable quirks
 

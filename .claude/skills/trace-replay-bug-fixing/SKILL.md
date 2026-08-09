@@ -46,6 +46,186 @@ If a trace replay test passes only because engine state is snapped back to ROM-c
 - New aux event types are **diagnostic only**. They feed the divergence report and per-frame comparator; they do not feed engine state.
 - No "elastic windows" or "tolerance bands" introduced to suppress divergence around suspected engine bugs. If a comparison threshold is non-zero, it must reflect a known ROM/engine semantic difference declared as a tolerance because it is not a bug. Otherwise the bug is fixed in the engine and the threshold stays zero.
 
+## The Other Core Invariant — Any BK2, Not This BK2
+
+**A fix must hold for a movie nobody has recorded yet. A green fixture proves the fixture.**
+
+This is hard rule 3. It is the twin of the comparison-only invariant above: that one stops
+the harness from feeding the engine answers, this one stops *you* from feeding the engine
+answers. Both failure modes produce a green test over an engine that is still wrong.
+
+A constant derived by **measuring the fixture's own rows**, rather than read out of the
+disassembly, is a fitted model *even when every test passes*, and it will desync the first
+different recording. Roughly twenty such fixes were reverted in one recent stretch; two of
+them cost whole days before anyone noticed the test was green for the wrong reason.
+
+### The test to apply before landing anything
+
+Ask: *if someone recorded a new BK2 of this same route tomorrow, with different lag, a
+different entry frame, or the player standing somewhere else — would this change still be
+correct?* If the honest answer is "probably, because it happens to line up", it is fitted.
+
+### Red flags
+
+- A number whose provenance is "I measured frames N..M of this fixture and it was 26".
+- A value that is **close to the ROM's but not equal**. That almost always means it is
+  absorbing an error somewhere else. Chase the other error; do not keep the constant.
+- A predicate that mentions a frame index, stage index, zone, route, fixture name, or
+  "the known failing trace". *"ROM-default behaviour except in AIZ"* is still a carve-out.
+- A tolerance, epsilon, or comparison exclusion added so a field stops failing.
+- A local timer standing in for a global ROM clock. If the ROM gates on
+  `Level_frame_counter` or `V_int_run_count`, a per-object counter that "also ticks every
+  other frame" is right only for the recording that entered on the same parity.
+- Reaching for the recorded row to decide *when* something happens. See the
+  hardware-timing exception below for the one narrow, documented case.
+
+### The procedure
+
+1. **Measure the fixture to locate the problem.** This is legitimate and expected — it is
+   how you find which frame and field to study. It is a starting point, never a landing
+   place.
+2. **Find the ROM routine that owns the behaviour**, and read what it actually does.
+3. **Land a structural rule, not a number, wherever possible.** A rule read out of the
+   disassembly generalises; a measured quantity does not.
+4. **Cite the routine** — file and line — in the code comment and the commit message.
+5. **Audit the blast radius.** Re-measure across the whole corpus, not just the target: how
+   many other rows/objects/traces does the new rule change? If a classifier or predicate
+   changed, count exactly which rows now fall on each side.
+6. **State the audit in your report**, including "no constant was introduced" when that is
+   the truth. A reviewer must be able to check step 3 without re-deriving your work.
+
+### Worked examples — rules that generalise
+
+Each of these closed real traces, and each is a *structural* fact about the ROM, which is
+why it holds for any movie:
+
+- *"`Bri_Main` allocates `subtype - 1` display-only child logs"* — from the `dbf` loop
+  structure, not from counting slots in a fixture.
+- *"`SpinC_Main_Spawner` re-uses the spawner's own slot as the group's first platform and
+  calls `FindFreeObj` only for entries 2..N"* — from `movea.l a0,a1 / bra.s .makePlatform`.
+- *"ROM `Obj08` never calls `MarkObjGone`"*, and *"`Pyl_Display` has no out-of-range test,
+  `MarkObjGone`, or `DeleteObject`"* — so neither object can ever unload, whatever the
+  camera does.
+- *"`v_ssangle` is the last unconditional write in the special-stage tick"* — which makes
+  "angle unchanged while velocities advanced" a sound torn-sample witness at every tear
+  point, where the previous witness only caught tears before one particular store.
+- *"`React_CollisionDetected`'s ring branch has no once-only latch; it re-tests
+  `cmpi.w #90,flashtime(a0)` every overlapping frame"* — so the response must be
+  continuous, not edge-triggered.
+
+### Worked examples — fits that were caught
+
+- **CNZ Point Pokey** spawned prizes on a local `prizeSpawnTimer++ >= 2`. The ROM gates on
+  `btst #0,(Level_frame_counter+1).w`. The timer was green for that recording and wrong for
+  any movie entering the cage on the other parity — a textbook this-BK2 construct.
+- **S1 special-stage `ss_angle`** failed on one frame in two stages. Widening the torn-row
+  classifier until they passed would have looked identical to a fix. What made the real fix
+  legitimate: the new witness came from the ROM's write ordering, *and* the blast radius was
+  audited across ~25k rows to confirm exactly two rows changed classification.
+- **A press-edge baseline** was "fitted exactly over rows 1714/1715 and 1731-1736" of one
+  fixture. The ROM answer was `Joypad_Read`'s `pressed = new & ~stored_held` plus the fact
+  that `Vint_Lag` never reaches it — a rule, not a window.
+
+### When it genuinely is not derivable
+
+Sometimes the discriminator is sub-frame 68000 cycle position, or a clock the engine does
+not model at all (for example a free-running `v_vblank_count` that never resets, where the
+engine's counter is level-local). A native model **cannot** predict that from
+frame-granularity state, and no amount of measuring will make it generalise.
+
+In that case the answer is **not** a tuned number. Say so plainly, name the missing piece,
+and either leave the trace red with a written diagnosis or use the documented per-movie
+hardware-timing sidecar under hard rule 4. A `no-improvement` result with a real root cause
+is worth more than a fitted green, and is treated as success.
+
+## The Third Invariant — The Recording Beats Your Reasoning
+
+**A ROM-derived argument that a trace contradicts loses to the trace.**
+
+The recording *is* the shipped ROM executing that input. So when a disassembly
+reading and a fixture disagree, the reading has a flaw somewhere — you have not
+found a bug in the trace. This bit three separate agents in three consecutive
+batches, each of them reasoning carefully and each of them wrong.
+
+### The failure shape, and where it actually breaks
+
+1. the ROM conditional is read correctly — usually this step is fine;
+2. a claim is made that *the engine implements the other branch*;
+3. the site is assessed *"latent — no committed fixture reaches it"*;
+4. a trace disproves (2) or (3).
+
+**Step 2 is the weak one.** Deciding that some Java expression "is the fixed
+branch transcribed verbatim" is a judgement about *why the code looks that way*,
+and it can be wrong even when your assembly reading is perfect. The expression may
+have been written to compensate for something else entirely — in which case
+removing it does not restore ROM behaviour, it exposes whatever it was propping
+up.
+
+**Step 3 is a claim about coverage**, which is easy to misjudge and cheap to
+check. "No fixture reaches this" was asserted for the SBZ3 wind tunnel; the SBZ3
+complete run reaches it on frame 3157.
+
+### Before you change an expression, ask what depends on it
+
+The bottom kill plane is the cautionary tale. `Sonic_LevelBound` and
+`Sonic_HurtStop` (S1 `_incObj/"01 Sonic.asm":1084-1092` and `:1920-1941`; S2
+`s2.asm:37255-37265` and `:38194-38215`) are **one ROM conditional with two call
+sites**. One site was deliberately left on the bug-fixed expression because it was
+found to mask a second, unrelated defect. A later change "corrected" the *other*
+site — a perfectly sound reading in isolation — and thereby removed the mask by
+the back door, reproducing the masked defect exactly.
+
+So: grep for sibling call sites of the routine you are about to change, and if a
+sibling is deliberately held, say so in a comment at *both* ends. Two sites of one
+conditional must move together or not at all.
+
+### Corollary: a fix that reveals a second defect is still a good fix
+
+Distinguish *moved* from *failed*. A later first-error frame, or fewer errors, with
+nothing else regressing, is success — record the new frontier and continue. But a
+change that makes a trace **worse** is telling you something, and "the trace is
+wrong" is almost never the answer.
+
+## Measurement discipline
+
+These are not style preferences; each one has silently invalidated a day of work.
+
+- **`-Dsurefire.forkCount=1` — the bare `forkCount` property does nothing.** `pom.xml` binds
+  `<forkCount>` to `${surefire.forkCount}` (default 4; only the `ci` profile sets
+  1), so the bare property is *silently ignored* and the run stays on four reused
+  parallel forks. `TestBuildToolingGuard` now fails any prescriptive doc teaching
+  the ignored flag.
+- **Always `-Dsurefire.runOrder=alphabetical`.** Surefire's default is
+  `filesystem` — inode order — which differs between checkouts of the same commit.
+  Without pinning it, red sets are not comparable between runs, machines, or
+  clones, and order-dependent results look like flakiness.
+- **`-Ptrace-replay` and `-Dmse=off` are mandatory.** A plain `mvn test` runs zero
+  trace tests and counts stale XML as passes.
+- **`-Dsurefire.reportsDirectory` is NOT honoured by this pom.** The property is
+  overridden and reports always land in `target/surefire-reports`, so a "private
+  reports dir per run" silently does nothing and the next run reads the previous
+  run's XML. Two ways to actually get isolation, both proven: `rm -rf
+  target/surefire-reports` immediately before every run, or give each run its own
+  worktree. Do not trust the flag.
+- **Some acts are FORK-ORDER SENSITIVE — MCZ demonstrably is.** Batching several
+  MCZ classes into one `mvn` invocation gives different results from running each
+  alone. When attributing a change on MCZ, use one `-Dtest` per `mvn` invocation.
+  If a result looks unstable, re-measure solo-fork before theorising about the
+  engine.
+- **Measure every game your change can reach.** A shared-code change measured only
+  on S1/S2 shipped a silent S3K regression this week (`TestS3kIcz1SnowboardIntroHeadless`
+  ended its slope ride 193px short). If you touch `LevelManager`, `CollisionSystem`,
+  `PlayableSpriteMovement`, a rules record, or anything under `level/objects/`,
+  run the S3K keep-green set at minimum: `TestS3kAiz1SkipHeadless`,
+  `TestSonic3kLevelLoading`, `TestSonic3kBootstrapResolver`,
+  `TestSonic3kDecodingUtils`.
+- **A control run at the parent commit is the only way to attribute a failure.**
+  Before blaming your change — or absolving it — reproduce the baseline on a clean
+  worktree at the same commit, with the same command. Twice this week a failure
+  was attributed to a patch and turned out to be pre-existing, and once the reverse.
+- **A change that alters no test is the expected outcome for a latent site.** Say
+  so plainly. Do not claim it fixed something, and do not skip landing it.
+
 ### What to do when the engine diverges from ROM
 
 - If the first divergent field starts with `queue.`, stop downstream triage.
@@ -190,6 +370,133 @@ holds the current boundary (S1/S2 fixture compatibility only), its rationale —
 must execute its own production lifecycle; trace rows and auxiliary events are
 comparison-only evidence"* — and its removal condition. The direction of travel across all
 three steps is the same: each one removed a trace-derived driver rather than adding one.
+
+## Traps that have each cost at least one round
+
+Every entry here is a real failure from trace work, not a hypothetical. They cluster
+into three kinds: misreading a value, misreading a test, and misreading a measurement.
+
+### Disassembly values are HEX. Read them as hex.
+
+Two rounds were spent chasing a Tails "animation state machine defect" that did not
+exist, because DPLC `mapping_frame` values were read as decimal:
+
+| As printed | Actually | Which is |
+|---|---|---|
+| 94, 95 | `$5E`, `$5F` | `TailsAni_Fly` (s2.asm:41624, anim id `$20`) |
+| 70, 71, 72 | `$46`, `$47`, `$48` | `TailsAni_Roll` (s2.asm:41528) |
+| 81, 83, 84 | `$51`, `$53`, `$54` | `Obj05Ani_Directional` + direction bank `d3=8` |
+
+Read as decimal, "94 vs 71" looks like an arbitrary numeric skew and invites a
+state-machine hunt. Read as hex it says *the engine's Tails is in the CPU flying state
+where the ROM's is rolling* — a completely different, and much more findable, problem.
+
+**Before theorising about any numeric field, convert it and grep the disassembly for
+the hex value.** If a number does not resolve to a named ROM symbol, you do not yet
+know what it means. This applies to mapping frames, object ids, routine numbers,
+animation ids and status bits — nearly every value the trace carries.
+
+### Verify a test exists, and what it actually replays, before you aim at it
+
+- **A canary that does not exist reports a clean regression check while testing
+  nothing.** `TestS2Ehz2TraceReplay` was named as a required canary in a brief on the
+  assumption that `Ehz1` implies `Ehz2`. There is no such class. `ls` the package
+  before naming any test as a regression bar.
+- **Check the test's SCOPE before assigning a cause to it.** A whole lane was sent to
+  fix an EHZ1 badnik in order to move `TestS2SpecialStage2TraceReplay`. That test
+  replays *only* the ss_2 segment through `Sonic2SpecialStageProvider`; it never
+  simulates a level, a sidekick in a level, or any badnik. No such fix could ever have
+  moved it. Open the test class and its abstract base and establish what it actually
+  drives — segment-only, predecessor-chained, or full run — before believing any causal
+  story about it.
+- Corollary for run-chain reasoning: "segment X is fed by segment Y" describes the
+  *recording*, not necessarily the *test*. Confirm the test replays Y.
+
+### The defect shapes that actually pay off
+
+Ordered by hit rate across this work. When occupancy diverges, check these in order
+against the objects present in the fixture's `slot_dump` at the FIRST divergence:
+
+1. **A ROM object with no `out_of_range`/`MarkObjGone` at all, where the engine applies
+   its shared camera unload anyway.** Five instances: S1 Obj2E PowerUp, S1 Obj5C Pylon,
+   S2 `Obj50_Wing`, and others. Model with
+   `usesCustomOutOfRangeCheck()=true / isCustomOutOfRange()=false`. Highest yield by
+   some distance — always check it first.
+2. **An object that allocates child slots in ROM which the engine never allocates,**
+   because the engine draws the children as overlays on one instance. Three instances:
+   S2 Obj81 Drawbridge, S2 Obj9E Crawlton, S1 SLZ boss (four slots, not one).
+3. **`out_of_range` measured against a stored ORIGIN rather than live `x_pos`** — SLZ
+   Circling Platform's `circ_origX`.
+4. **Lowest-free `AllocateObject` vs after-current `AllocateObjectAfterCurrent`
+   mismatch** — the OOZ Aquis wing.
+5. **An invented window or guard replacing a ROM predicate** — the MZ push block's
+   `isOnScreenX(320)`, the MZ2 `lastGeyserSpawnX` de-duplication guard.
+6. **An in-place `obID` rewrite the engine reports under the spawn id** —
+   `BossSpikeball_Explode` does `move.b #id_Explosion,obID(a0)`; the object *becomes*
+   an explosion in its own slot. See `AbstractObjectInstance#getLiveObjectId()`.
+
+Why this list matters more than it looks: on S1 and S2 the ring-loss floor probe is
+gated on a slot-derived phase (`(v_vblank_byte + 127 - slot) & 3` on S1,
+`(Vint_runcount+3) + d7` on S2). **A ring divergence is therefore usually an occupancy
+divergence wearing a disguise.** Chase the first occupancy divergence, not the ring.
+
+### A fitted fix leaves fingerprints in its own commit message
+
+`ca939d50d` shipped a route carve-out that passed review and stayed on `develop` for
+weeks. Its message said the change kept a child "in lower slots that are free only
+because earlier engine slot occupancy already drifted", justified by "the OOZ1 route".
+
+Both halves are the tell: a justification naming a **route, zone, act or specific
+frame**, and an admission that the change **compensates for drift elsewhere**. Grep for
+that shape when a trace resists explanation — and never write it. The trace suite
+cannot detect a fitted fix; only reading the ROM can. When such a fix is removed, check
+whether the test *that commit itself shipped* still passes: for `ca939d50d` it did,
+meaning later work had made the compensation redundant and nothing would ever have said
+so.
+
+## Name the clock, or your "N frames late" is fiction
+
+Two consecutive rounds produced a confident, fully-written-up defect that did not
+exist, from the same mistake: a probe printed one clock and was compared against a
+different one. Both were reported as measured facts and both propagated into the next
+round's brief before being caught.
+
+- Round ten: "the engine creates the Aquis at f5949 but does not run its first
+  `updateMovement` until f5976 -- a 26-frame init deferral". There is no init deferral.
+  f5976 was that object's **creation** frame on a different clock.
+- Round eleven: "the engine LOADS the Aquis 26 frames late, f5975 vs ROM f5949 -- a
+  load-cursor timing defect". There is no load-cursor defect either. Same off-by-27.
+
+The engine has at least three clocks that are NOT aligned:
+
+| Clock | What it is | Where you see it |
+|---|---|---|
+| `ObjectManager.frameCounter` | the manager's own executed-frame count | engine-side probes |
+| `vblaCounter` / `V_int_run_count` | the object-visible ROM clock passed to `update(int vIntRunCount, ...)` | ROM frame gates |
+| trace row index | the fixture's row number | every comparison error message |
+
+At OOZ1 level start `ObjectManager.frameCounter` leads the trace row index by **+27**,
+drifting to +26 by ~row 5500 and +25 by ~7500. A raw comparison therefore invents a
+~26-frame defect out of nothing, and the drift makes it look plausibly variable rather
+than like a constant offset.
+
+**Procedure, mandatory before reporting any timing claim:**
+
+1. State in the write-up WHICH clock each number came from. A timing claim without
+   named clocks on both sides is not a finding.
+2. Anchor before you accuse. Find a value both sides agree on and align there first --
+   post-camera `Camera_X_pos` against the recorded `camera_x` is the cheapest anchor,
+   because it matches value-for-value from frame 0 while the route is still converged.
+   If your two clocks disagree by a constant at frame 0, you have an offset, not a bug.
+3. Prefer a ROM-visible event over a frame number. "The object appears in ROM's
+   `slot_dump` at the same row the engine allocates it" is robust; "f5975 vs f5949" is
+   not.
+4. If the "defect" is a suspiciously round constant across unrelated objects, suspect
+   the clock before the engine.
+
+The corollary for reviewers and orchestrators: when an agent hands you "N frames
+late", the first question is *which clock*, not *why*. Neither of the two retractions
+above would have survived that question.
 
 ## Pipeline Overview
 

@@ -33,7 +33,10 @@ class TestBizhawkProbeContractGuard {
                 "outfile:flush()",
                 "outfile:close()",
                 "client.exit)",
-                "movie.mode() ==")) {
+                "movie.mode() ==",
+                "config.continueAfterMovie",
+                "config.onFrame",
+                "movieFinished")) {
             assertTrue(executable.contains(required), () -> RUNTIME + " must own `" + required + "`");
         }
         assertTrue(executable.indexOf("config.stage()") < executable.indexOf("event.onmemoryexecute"),

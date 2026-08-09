@@ -88,6 +88,12 @@ public abstract class AbstractTraceReplayTest {
         }
     }
 
+    /**
+     * Env-gated ({@code OGGF_SLOT_PROBE=1}) ROM-vs-engine SST occupancy diff.
+     * Null in every ordinary run; comparison-only when armed.
+     */
+    private SlotOccupancyProbe slotOccupancyProbe;
+
     /** Which game ROM this test requires. */
     protected abstract SonicGame game();
 
@@ -332,6 +338,9 @@ public abstract class AbstractTraceReplayTest {
         TraceBinder binder = null;
         HeadlessTestFixture fixture = null;
         boolean hardwareTimingReplayClosed = false;
+        // Comparison-only, env-gated (OGGF_SLOT_PROBE=1) SST occupancy diff. Off in
+        // every normal run, and it never touches engine or binder state.
+        slotOccupancyProbe = SlotOccupancyProbe.createIfEnabled(trace, game() + "_" + zone() + act());
         try {
             HeadlessTestFixture.Builder fixtureBuilder = HeadlessTestFixture.builder()
                 .withRecording(bk2Path)
@@ -475,6 +484,10 @@ public abstract class AbstractTraceReplayTest {
                             "Check bk2_frame_offset in metadata.json.",
                             i, bk2Input, expected.input()));
                     }
+                    if (slotOccupancyProbe != null && GameServices.level() != null) {
+                        slotOccupancyProbe.observe(
+                                i, GameServices.level().getObjectManager());
+                    }
                     if (!TraceReplayBootstrap.shouldCompareGameplayStateForReplay(phase)) {
                         compareDynamicArtIfAdvertised(
                                 trace, binder, expected.frame());
@@ -519,9 +532,10 @@ public abstract class AbstractTraceReplayTest {
                         sprite.getAngle(),
                         sprite.getAir(), sprite.getRolling(),
                         sprite.getGroundMode().ordinal(), romDiag,
-                        EngineDiagnostics.formattedWithCameraAndAnimation(
+                        EngineDiagnostics.formattedWithCameraAnimationAndRings(
                                 engineDiag.cameraX(), engineDiag.cameraY(),
-                                engineDiag.animationId(), engineDiag.mappingFrame(), engineDiagText),
+                                engineDiag.animationId(), engineDiag.mappingFrame(),
+                                engineDiag.rings(), engineDiagText),
                         secondaryCharacterLabel, actualSidekick,
                         expectedSidekickCpu, actualSidekickCpu, expectedSidekickNormalStep);
                     compareLoadQueuesIfAdvertised(
@@ -593,6 +607,10 @@ public abstract class AbstractTraceReplayTest {
                 } catch (RuntimeException | java.io.IOError ignored) {
                     // diagnostics only
                 }
+            }
+            if (slotOccupancyProbe != null) {
+                slotOccupancyProbe.close();
+                slotOccupancyProbe = null;
             }
             if (fixture != null && !hardwareTimingReplayClosed) {
                 fixture.abortHardwareTimingReplayRun();
@@ -813,6 +831,11 @@ public abstract class AbstractTraceReplayTest {
             S3kCheckpointProbe probe = captureS3kProbe(driveFrame.frame(), comparedSprite(fixture));
             TraceEvent.Checkpoint engineCheckpoint = detector.observe(probe);
 
+            if (slotOccupancyProbe != null && GameServices.level() != null) {
+                slotOccupancyProbe.observe(
+                        driveTraceIndex, GameServices.level().getObjectManager());
+            }
+
             if (TraceReplayBootstrap.shouldCompareGameplayStateForReplay(phase)) {
                 TraceFrame comparisonExpected =
                         TraceReplayBootstrap.s3kFrameForGameplayComparison(
@@ -928,7 +951,34 @@ public abstract class AbstractTraceReplayTest {
             TraceBinder binder,
             com.openggf.trace.replay.TraceReplayFixture fixture,
             boolean replayCompleted) {
-        if (replayCompleted) {
+        // An edge belongs to the frame it is PUBLISHED on. The main-loop
+        // iteration that follows the last recorded row publishes no row, so
+        // whether its work belongs to this recording at all depends on what
+        // came after the recording, and the recorder is the authority on that.
+        //
+        // A standalone trace is the tail of its recording: the capture loop
+        // advances the emulator one frame past the last row and breaks
+        // ("tools/bizhawk-headless/src/Recording/S2TraceCaptureRunner.cs":383-390),
+        // leaving that iteration's callbacks buffered with no further
+        // PublishRow, so PublishTerminal attaches them to the last row
+        // (:520-529 FlushDynamicArtSegment -> S2DynamicArtObserver.cs:268
+        // PublishTerminal, terminalForwarded=true).
+        //
+        // A run segment is a slice with a run gap after it. The run capture
+        // loop marks an advance boundary at the top of every frame
+        // ("S2RunCaptureRunner.cs":219, :441-451 PrepareDynamicArtCursor ->
+        // S2DynamicArtObserver.cs:206 MarkAdvanceBoundary), and closes the
+        // segment with PublishBoundaryTerminal (S2RunCaptureRunner.cs:887),
+        // which forwards only the prefix buffered BEFORE the closing frame
+        // began and reclassifies everything that frame produced into the
+        // following gap (S2DynamicArtObserver.cs:868-899
+        // ReclassifyBoundaryCallbacksAsGap). Its published outstanding set is
+        // the ledger as of the boundary mark, not the current ledger.
+        //
+        // The corpus agrees: across all committed dynamic-art fixtures exactly
+        // 15 recorded edges carry terminal_forwarded=true, all of them on the
+        // final row of a standalone S2 trace, none in any run segment.
+        if (replayCompleted && trace.metadata().runId() == null) {
             fixture.runTerminalDynamicArtIteration();
         }
         fixture.closeDynamicArtComparisonSegment();
@@ -1021,6 +1071,14 @@ public abstract class AbstractTraceReplayTest {
             Path shared = traceDir.getParent().resolve("_movies").resolve(meta.sourceBk2());
             if (Files.exists(shared)) {
                 return shared;
+            }
+            // Run-segment placement: a segment directory of a multi-segment run
+            // sits directly under the run root, and the run's single movie is
+            // committed once at that root (sibling to the segment dirs and to
+            // run_manifest.json) rather than in a game-level _movies/ pool.
+            Path runRoot = traceDir.getParent().resolve(meta.sourceBk2());
+            if (Files.exists(runRoot)) {
+                return runRoot;
             }
         }
         return findBk2File(traceDir);

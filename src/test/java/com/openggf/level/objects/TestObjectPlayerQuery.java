@@ -268,6 +268,7 @@ class TestObjectPlayerQuery {
         @Override public boolean getPinballMode() { return false; }
         @Override public boolean isCpuControlled() { return false; }
         @Override public int getAnimationId() { return 0; }
+        @Override public int getMappingFrame() { return 0; }
         @Override public void forceAnimationRestart() {}
         @Override public void setTopSolidBit(byte topSolidBit) {}
         @Override public void setLrbSolidBit(byte lrbSolidBit) {}
@@ -288,6 +289,7 @@ class TestObjectPlayerQuery {
         @Override public boolean applyHurt(int sourceX) { return false; }
         @Override public boolean applyHurt(int sourceX, boolean spikeHit) { return false; }
         @Override public boolean applyHurt(int sourceX, DamageCause cause) { return false; }
+        @Override public boolean applyHurtIgnoringIFrames(int sourceX, DamageCause cause) { return false; }
         @Override public boolean applyHurtOrDeath(int sourceX, boolean spikeHit, boolean hadRings) { return false; }
         @Override public boolean applyHurtOrDeath(int sourceX, DamageCause cause, boolean hadRings) { return false; }
         @Override public boolean applyCrushDeath() { return false; }

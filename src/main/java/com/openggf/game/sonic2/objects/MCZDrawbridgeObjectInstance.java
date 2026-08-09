@@ -118,6 +118,10 @@ public class MCZDrawbridgeObjectInstance extends AbstractObjectInstance
     private final int[] logX = new int[NUM_LOG_SEGMENTS];
     private final int[] logY = new int[NUM_LOG_SEGMENTS];
 
+    // ROM Obj81_Init allocates a SECOND SST slot for its multi-sprite log child
+    // (see reserveMultiSpriteChildSlot). Tracked so it is allocated exactly once.
+    private boolean childSlotReserved;
+
     public MCZDrawbridgeObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
 
@@ -189,6 +193,8 @@ public class MCZDrawbridgeObjectInstance extends AbstractObjectInstance
             return;
         }
 
+        reserveMultiSpriteChildSlot();
+
         // Check ButtonVine trigger
         // ROM (line 56498-56501): lea (ButtonVine_Trigger).w,a2 / moveq #0,d0
         //                         / move.b subtype(a0),d0 / btst #0,(a2,d0.w)
@@ -238,6 +244,51 @@ public class MCZDrawbridgeObjectInstance extends AbstractObjectInstance
 
         // Update segment positions based on current angle
         updateSegmentPositions();
+    }
+
+    /**
+     * Reserves the second SST slot ROM {@code Obj81_Init} consumes for the
+     * drawbridge's multi-sprite log child.
+     *
+     * <p>ROM (docs/s2disasm/s2.asm:56973-56998): on its first execution Obj81
+     * calls {@code AllocateObjectAfterCurrent} and, on success, writes its own
+     * id ($81) into that slot with {@code render_flags.multi_sprite} set and
+     * eight sub-sprites. That child is display-only — the Obj81 entry point
+     * branches straight to {@code DisplaySprite3} for it
+     * (docs/s2disasm/s2.asm:56929-56938) — and is released only by the parent's
+     * out-of-range tail, which deletes {@code objoff_3C} and then itself
+     * (docs/s2disasm/s2.asm:57019-57023).
+     *
+     * <p>This engine instance already draws all eight log segments itself, so
+     * only the slot needs modelling. Every on-screen drawbridge therefore holds
+     * two SST slots, not one. Without this, MCZ's whole dynamic-slot map ran one
+     * slot low per loaded drawbridge, which changes which slot every later
+     * {@code FindFreeObj} allocation lands in — including the monitor-contents
+     * icon, whose first-execution frame depends on whether its slot sorts above
+     * or below the monitor shell's in the ascending {@code ExecuteObjects} walk.
+     *
+     * <p>Allocation happens on the first {@code update()} because ROM runs
+     * {@code Obj81_Init} inside {@code ExecuteObjects}, after {@code ObjPosLoad}
+     * has placed the parent. {@code allocateChildSlotsAfter} is the engine's
+     * {@code AllocateObjectAfterCurrent}: it scans forward from the parent slot
+     * and yields -1 when object RAM is full, matching the ROM's
+     * {@code bne.s Obj81_BridgeUp} allocation-failure branch (the child is then
+     * simply never created).
+     */
+    private void reserveMultiSpriteChildSlot() {
+        if (childSlotReserved) {
+            return;
+        }
+        int parentSlot = getSlotIndex();
+        if (parentSlot < 0 || spawn == null) {
+            return;
+        }
+        var svc = tryServices();
+        if (svc == null || svc.objectManager() == null) {
+            return;
+        }
+        childSlotReserved = true;
+        svc.objectManager().allocateChildSlotsAfter(spawn, 1, parentSlot);
     }
 
     /**

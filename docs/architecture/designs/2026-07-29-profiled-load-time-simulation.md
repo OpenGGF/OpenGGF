@@ -15,6 +15,25 @@ It preserves production ROM bytes, queue ownership, FIFO contention, service bou
 global-empty predicates, rewind, and trace isolation. It is a pacing simulation, not
 cycle-accurate hardware emulation.
 
+## Current status (2026-08-08)
+
+The S3K `PROFILED` implementation is live for the published Kosinski service model.
+`FAST` and `REALISTIC` remain intentionally unfinished and are retained as explicit
+resolver aliases: `FAST` warns and returns the immediate profile, while `REALISTIC`
+warns and returns the supplied profiled profile. The warning is emitted by each
+`LoadTimeProfileFactory.resolve(...)` call; the factory does not maintain a global
+warn-once registry. A normal gameplay context usually resolves once at construction,
+but context reconstruction can resolve again.
+
+No authoritative cross-game semantics can be derived from the current owners. The
+`LoadTimeProfile` submission contract and `HardwareWorkKind` registry currently model
+S3K Kosinski module/direct work only. S1/S2 Nemesis PLC and dynamic-art/DPLC services
+remain game-owned queues and do not submit through `HardwareTimingService`. The
+cross-game hardware-timing contract permits delaying already-submitted production art
+work, but it does not define arbitrary safety delays or allow trace comparison data to
+choose gameplay timing. Implementing either reserved mode therefore requires a new
+model and measurements, not a fitted constant or a trace-specific branch.
+
 ## Configuration
 
 The configuration key is:
@@ -29,13 +48,15 @@ The accepted values and initial behavior are:
 |---|---|---|
 | `NONE` | Release prepared work as soon as its production dependencies permit. | None. |
 | `PROFILED` | Use deterministic measured work costs, with a validated estimator for missing fingerprints. | Warn once per missing fingerprint that uses estimation or immediate fallback. |
-| `FAST` | Reserved; behave as `NONE`. | Warn once at session startup that `FAST` is not implemented. |
-| `REALISTIC` | Reserved; behave as `PROFILED`. | Warn once at session startup that `REALISTIC` currently uses `PROFILED`. |
+| `FAST` | Reserved; behave as `NONE`. | Warn on each factory resolution that `FAST` is not implemented. |
+| `REALISTIC` | Reserved; behave as `PROFILED`. | Warn on each factory resolution that `REALISTIC` currently uses `PROFILED`. |
 
 Unknown values are configuration errors that list all accepted values. Existing
 installations and the repository default remain `NONE`, so the feature does not silently
-change established behavior. A gameplay session resolves the configured value once;
-changing configuration does not retime work already pending in that session.
+change established behavior. A gameplay context normally resolves the configured value
+once during construction, but context reconstruction resolves it again and therefore
+emits another reserved-alias warning. Changing configuration does not retime work already
+pending in that context.
 
 `FAST` is intended to provide short safety delays that prevent jarring lifecycle
 compression. `REALISTIC` is reserved for a future higher-confidence model backed by
@@ -248,7 +269,8 @@ job. This prevents an unvalidated estimate from appearing authoritative.
 
 Diagnostics are rate-limited by stable identity:
 
-- `FAST` and `REALISTIC` emit one startup warning describing their effective fallback.
+- `FAST` and `REALISTIC` emit one warning on every factory resolution describing their
+  effective fallback; no global or session-level warn-once registry exists for these aliases.
 - A missing manifest fingerprint emits one warning per session and fingerprint.
 - The warning states whether an estimate or immediate fallback was selected.
 - Debug logging may include kind, fingerprint, boundary, measured/estimated source,
@@ -273,9 +295,10 @@ reroll timing or change behavior after a manifest update during the same process
 hardware-timing factory. The factory constructs `HardwareTimingService` with the resolved
 normal-play policy; shared code never discovers a provider through game-name branching.
 
-Session reset clears resolved configuration, warning suppression, counters, pending
-budgets, and game-provided profile state. Seamless transitions preserve or transfer
-queue work only through the existing production handoff contracts.
+Session reset clears resolved configuration, profile-owned missing-fingerprint warning
+suppression, counters, pending budgets, and game-provided profile state. Reserved-alias
+warnings remain factory-per-resolution. Seamless transitions preserve or transfer queue
+work only through the existing production handoff contracts.
 
 ## Verification
 

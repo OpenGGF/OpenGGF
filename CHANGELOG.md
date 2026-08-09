@@ -504,6 +504,396 @@ All notable changes to the OpenGGF project are documented in this file.
   dispatch and pumps the native LoadEnemyArt handoff; CNZ signpost pose and
   post-transition control restoration now follow the ROM dispatch order. The
   canonical CNZ timing frontier advances from direct completion #24 to #28.
+- Fix: the standalone special-stage capture no longer labels every recorded object pass one
+  frame early. The capture runner wrote a row for the entry frame that the run-segment
+  runner correctly skips, so every pass's input-sample frame was off by one against its own
+  physics rows. The committed fixture is regenerated; it records the same execution with
+  correct frame labels.
+- Fix: a trace replay only runs the extra terminal art iteration for captures that recorded
+  one. Run-segment captures do not, so the engine was publishing that iteration's art
+  transfers onto the segment's final compared row.
+- Fix: the Chemical Plant spin tube advances to its next waypoint without an intervening
+  movement frame when the waypoints are less than eight pixels apart on the dominant axis,
+  as the ROM's byte-sized read of a word-sized counter does.
+- Fix: water entry and exit are handled per game while an object controls the player. The
+  object-controlled path is Sonic 3 & Knuckles behaviour and was being applied to all games,
+  so Sonic 2 skipped its water entry and exit speed changes during a spin-tube ride.
+- Fix: the Chemical Plant staircase keeps a standing bit per step, as the ROM does. The
+  engine draws the four steps from one instance, and without per-step standing bits a rider
+  stayed latched to the step they first landed on: their height kept being pulled back to
+  that step's surface, and the step they had walked into never produced the sideways push
+  the ROM applies when a rising step catches them. The shared multi-piece takeover test also
+  now uses the ROM's narrower landing width instead of the full collision width.
+- Fix: trace comparison no longer reports the untouched remainder of the player position
+  history ring when a replay starts mid-act. The ROM pre-fills that ring from the star post
+  the player last touched, which is play history a mid-act segment does not record; the
+  exclusion is gated on the start position differing from the level's own spawn point and on
+  the recorded remainder still carrying its pre-fill signature, so everything the ROM
+  actually wrote during the segment is still compared.
+- Tooling: add a reproducible Sonic 1 GHZ music-driver parity command that
+  validates the pinned ROM, BizHawk 2.11, and controller movie, proves both
+  reference and OpenGGF captures deterministic, and emits first-divergence
+  human and JSON reports without treating a valid mismatch as capture failure.
+  Machine-readable validation rejects delimiter injection, and every detailed
+  capture/report is create-new and confined to its canonical target run root.
+- Tooling: add a disabled-by-default diagnostic observer for resolved YM2612 and PSG
+  writes, allowing audio parity tools to record the chip-core transaction order without
+  changing synthesis state or driver arbitration.
+- Fix: a lag row inside a run chain's uncompared interior is stepped as a lag row even
+  while a blocking palette fade is active, so the fade can no longer claim the frame and
+  publish that row's art transfers a frame early.
+- Testing: five run segments that were replayed in full but never compared now have their
+  own trace tests. They are landed failing, because each discloses a real divergence that
+  previously had no test able to name its frame or field -- including a large physics
+  cascade in the Chemical Plant act 2 segment that runs beneath a passing special-stage
+  test.
+- Fix: Sonic 2 loads objects without a camera-height filter, matching its ROM. Sonic 2's
+  object loader tests only the horizontal window; the vertical band the engine applied is a
+  Sonic 3 & Knuckles rule that had been generalised to all games, so Emerald Hill layout
+  entries sitting outside the starting camera band were skipped at level start and loaded
+  later, shifting the object slot every later allocation received.
+- Fix: a Sonic 2 spring performs only its initialisation on the frame it is loaded, as the
+  ROM's routine 0 does, instead of also running its action routine that frame. A spring
+  re-entering the load window with a character already overlapping it launched them one
+  frame early.
+- Fix: the Sonic 1 egg prison spawns its explosions and animals from the depressed
+  switch's position, as the ROM does, rather than from the capsule body's. Explosions were
+  appearing 29px low and animals 3px high, which shifted each animal's landing frame and
+  with it the frame the act-clear sequence began.
+- Testing: the Emerald Hill act 1 segment of the complete-emeralds run is now compared by
+  its own trace test. It was replayed only as an uncompared prerequisite of a special-stage
+  test, so divergences inside it were invisible.
+- Fix: Sonic 1 animals treat a floor probe distance of exactly zero as no hit, matching the
+  ROM's branch condition. The animal's bottom being exactly level with the topmost solid
+  pixel is not a landing, and treating it as one landed every flat-floor bounce a frame
+  early, putting an animal's bounce cycle out of phase with the ROM's and leaving it alive
+  on a ledge the ROM's had already run off -- which shifted later object slots and, with
+  them, the bounce phase of spilled rings.
+- Fix: Star Light boss explosion fragments are removed on the ROM's render test rather
+  than a camera-bounds check. The ROM frees a fragment's slot when the previous frame's
+  sprite build did not draw it; the engine used a more permissive point-in-camera test on
+  the post-move position, so the two slower fragments outlived their ROM counterparts and
+  held slots that the ROM had already handed to spilled rings.
+- Fix: a Marble Zone pushable block that finishes sinking in lava is deleted when its
+  origin is also off-screen, instead of always being parked at its origin. The ROM
+  branches from the sunken path into the same origin range check the display path falls
+  into, and only an in-range origin is snapped home and parked on the routine that has no
+  range test of its own -- so a block parked there while out of range could never be
+  deleted and held its object slot for the rest of the act, shifting every later placement
+  and, with it, the slots the scattered-ring chain claims.
+- Fix: Marble Zone pushable blocks no longer survive off-screen on an invented camera
+  window. The ROM gives Obj33 no camera-window persistence rule at all -- its only
+  lifetime rule is the double out-of-range test in its display routine -- and the check
+  now runs after the object's routine, matching the ROM order in which the block's solid
+  action and stomper alignment precede that test. Marble Zone act 2's placed-object slot
+  map now matches the ROM exactly, which in turn isolates the remaining ring divergence in
+  acts 2 and 3 to the scattered-ring allocation chain.
+- Fix: objects that rewrite their own id in place are reported under the id they
+  currently hold. The Star Light boss spikeball becomes an explosion in its own object
+  slot, keeping its scratch memory, and the engine already modelled that behaviour — but
+  slot-occupancy reporting still named the spawn id, so the slot looked like it held a
+  spikeball for as long as the explosion ran. Objects now expose a live id that defaults
+  to the spawn id.
+- Fix: the Star Light boss allocates its spikeball from the target seesaw's slot onward,
+  matching the ROM's allocate-after-this-object call, rather than from the lowest free
+  slot.
+- Fix: the Sonic 1 shield now uses the ROM's deliberately empty mapping frame
+  between its three visible frames instead of showing the lower half of the shield.
+  Its `Ani_Shield` sequence also runs from an object-local `AnimateSprite` countdown,
+  keeping each entry for two updates without inheriting an arbitrary global V-int phase.
+- Fix: the Oil Ocean Aquis wing is exempt from the shared off-screen unload. ROM
+  `Obj50_Wing` ends by drawing and never calls `MarkObjGone`, unlike the Aquis body and
+  its bullet, so the wing holds its object slot for exactly as long as its parent. The
+  engine's generic unload deleted the wing on the frame it was created whenever the
+  parent sat near the right edge of the load window, freeing a slot the ROM keeps held
+  and shifting every later allocation in the region; that reversed the launcher-ball
+  capture order in Oil Ocean act 1.
+- Fix: the Star Light boss reserves the four object slots the ROM allocates for it. The
+  engine draws the boss face, flame and pipe from one instance, so the three child slots
+  were left free and every dynamically allocated object for the rest of the act sat three
+  slots low, including spilled rings, whose bounce probe fires on a slot-derived phase.
+- Fix: the Oil Ocean Aquis allocates its wing into the lowest free object slot again,
+  matching ROM `AllocateObject`, which scans upward from the start of dynamic object RAM
+  and may legitimately place a child below its parent. A previous change had moved the
+  wing to allocate-after-parent to preserve one route's launcher-ball ordering; that
+  ordering assertion still holds without it.
+- Fix: Oil Ocean launcher-block fragments write their integrated position back to the
+  object slot and are removed when they leave the render box in any direction, matching
+  the ROM's on-screen test, instead of keeping their spawn position forever and being
+  removed only on falling below the camera.
+- Fix: consolidated objects that execute from a borrowed child slot are retired at their
+  own slot's position on the Sonic 2 and Sonic 3&K execution path. The retirement
+  mechanism and the index it reads existed only on the Sonic 1 loop, so Sonic 3&K's
+  consolidated giant ride vine released its parent slot later in the ascending object
+  walk than the ROM does, and a lowest-free allocation landing between the two positions
+  saw that slot as still occupied. The per-pass reset of the freed-slot scratch set is
+  mirrored in the other direction for the same reason.
+- Testing: a new guard compares the two object-execution loops over slot-lifecycle
+  vocabulary and fails when a mechanism is present in one and missing from the other,
+  with an explicit allowlist in which each entry carries a ROM-cited justification. Two
+  such omissions have now reached the trace suite as unexplained divergences; because the
+  defect is one of omission it has no runtime signal, so the guard is a source scan.
+- Fix: reserved child object slots are released on the Sonic 2 and Sonic 3&K execution
+  path. When a parent unloads after the ascending object walk has already passed its
+  child's slot, the release is deferred to that slot's own execution position; only the
+  Sonic 1 counter-based loop ever consumed the deferral, so on the other loop every such
+  release leaked its slot permanently and each later free-slot search landed one slot
+  high for the rest of the act. ROM frees both slots unconditionally in the parent's
+  out-of-range tail (`s2.asm`:57076-57078) and has no path that lets a child slot
+  outlive its parent. Mystic Cave acts 1 and 2 now match the recorded ring behaviour,
+  whose spilled-ring bounce cadence is slot-gated.
+- Fix: Mystic Cave drawbridges and Crawltons reserve the second object slot the ROM
+  allocates for their multi-sprite child. `Obj81_Init` calls
+  `AllocateObjectAfterCurrent` and `Obj9E_Init` calls `AllocateObject`
+  (`s2.asm`:56973-56998, :75439-75468), each writing their own id into that slot with
+  `render_flags.multi_sprite` set. Both children are display-only, and the engine
+  already draws every segment from the parent instance, so only the slot occupancy
+  needed modelling -- but without it each loaded drawbridge and Crawlton held one slot
+  instead of two, and every later `FindFreeObj` allocation in the level landed one slot
+  low. Mystic Cave's object-slot map now matches the ROM exactly over the sampled
+  range. This exposes independent, previously masked ring-loss divergences in MCZ act 1
+  and act 2, whose bounce probing is slot-gated; those are now diagnosable against a
+  correct slot map and are tracked as the next Sonic 2 trace targets.
+- Fix: the Sonic 2 special-stage replay harness now models both halves of
+  `SpecialStage_MainLoop`. The recorder gained the pre-start loop's post-`RunObjects`
+  hook, but the comparator still paced recorded passes only from the
+  `SpecialStage_Started` frame onward and synthesised a terminal boundary pass the
+  recorder now records, executing three engine passes where the ROM runs two. Both
+  boundaries are now derived from ROM semantics rather than a frame index: the
+  pre-start loop tests `SpecialStage_Started` only after `RunObjects` returns
+  (`s2.asm`:6691-6692), so the flag `Obj5F` sets (`s2.asm`:9745) first becomes visible
+  to the next iteration's `ReadJoypads` sample -- making the first recorded pass with
+  `started_at_input_sample` set the recurring loop's first pass, and its predecessor
+  the terminal pre-start pass, matched by sequence rather than by frame. All ten
+  special-stage fixtures are republished with their previously unrecorded pre-start
+  passes, and three stale absolute `pass_sequence` constants are now derived from the
+  stream instead of pinned.
+- Fix: Marble Zone push blocks spawn both lava geyser makers the ROM spawns.
+  `PushB_SpawnLavaGeysers` spawns whenever `obX` equals $DD0/$CC0/$BA0 exactly, and a
+  block drifting on lava advances half a pixel per frame, so each trigger X is held for
+  two consecutive frames and produces two makers. An invented de-duplication guard
+  suppressed the second, and the geyser launch had been fitted to reproduce a
+  two-impulse trajectory from one maker; the launch now uses the ROM's
+  `move.w #-$580,obVelY(a1)`. This removes a ~1300-frame slot-allocation cascade in
+  MZ2, cutting its object-slot occupancy divergence from 111 sampled frames to 65.
+- Fix: Sonic 2 Special Stage checkpoint `COOL!` wings now stay at their ROM
+  independent peer object's fixed `$48` Y while only the frame-$15
+  handshake peer bobs vertically. The split follows `Obj5A_CreateCheckpointWingedHand`
+  and `Obj5A_Handshake` (`docs/s2disasm/s2.asm:71880-71905,71953-71989`),
+  and derives wings Y from the snapshotted handshake target. Renderer tests
+  cover mutation-sensitive frame movement, deterministic redraw, and rewind.
+- Fix: Sonic 2 DEZ now sources Plane B's initial vertical origin from the
+  ROM-owned `Camera_BG_Y_pos`: `InitCameraValues` seeds it and `InitCam_Null3`
+  preserves it. REV01's first 128px background band is intentionally black;
+  using the handler's zero default hid the ROM star field in the exterior
+  window. ROM-backed tests cover loaded
+  star patterns/palette data, initial screen sampling, frame-to-frame star
+  parallax, and Plane B rewind recomputation.
+- Fix/Docs: S2 CPZ tubes now honor the engine free-fly debug boundary instead
+  of capturing a debug player. Native S2 `Debug_placement_mode` ring/item
+  placement and `Two_player_mode` human-P2 monitor behavior remain explicitly
+  unavailable until their engine-wide capability owners exist; controls,
+  configuration, status, audit, and validation docs record those boundaries.
+  The gamepad debug toggle follows the same enabled-debug-tools gate; the
+  reviewed ROM anchors are Obj1E `s2.asm:48526-48527` and monitor
+  `s2.asm:85337-85340`.
+- Fix: Sonic 2 Mecha Sonic (ObjAF) now follows the shipped REV01 outer attack
+  loop: each phase updates velocity and animation, then the LED and targeting
+  sensor align before exactly one `ObjectMove`. Child updates retain those
+  pre-move positions, matching `loc_398C0`/`loc_39D4A`; DEZ tests cover dash
+  start, deceleration, child ordering, and both airborne timer-expiry
+  transitions through `loc_39A7C`. The dedicated DEZ ending replay
+  remains green on both the reviewed base and candidate with verified REV01 ROM.
+- Fix: title-to-game mode resets now recreate the backend-owned presentation
+  sink before gameplay or title re-entry; enabled audio no longer becomes a
+  retained `NoDeviceAudioSink` after the first reset, and cached host cues keep
+  playing through the rebuilt sink.
+- Fix: the pre-game master title now emits distinct host-owned navigate,
+  confirm, and error feedback. The cues use deterministic presentation PCM and
+  remain independent of whichever game ROM is selected; repeated boundary,
+  confirm, and load-error paths do not replay unwanted cues.
+- Cleanup: removed the unused `AbstractLevel.markAllDirty()` placeholder. The
+  production rewind adapter already invalidates manager-owned tilemaps when
+  restored geometry references change, while persistent Plane B state has its
+  own rewind adapter; no no-op level-owned dirty contract remains.
+- Fix: special-stage debug routing now uses an explicit game-owned capability
+  profile. Sonic 1's direct-movement debug remains available; Sonic 2 keeps
+  its sprite/plane/alignment/lag tools; Sonic 3&K keeps stage/layout
+  navigation. Unsupported S1/S3K sprite, plane, alignment, and lag shortcuts
+  no longer call stage no-op or viewer-less provider state. Global F1/F3/F4/F12
+  overlay and screenshot bindings remain active while a stage runs.
+- Docs/Audio: audited every S&K-loader-supported S&K/S3 music and SFX stream for the
+  `FF 01` (`SND_CMD`), `FF 02` (`MUS_PAUSE`), and `FF 03` (`COPY_MEM`) meta
+  commands. None are reached; the handler now documents and preserves only
+  operand alignment for custom streams instead of implying native semantics.
+  Added ROM-backed coverage for both native SFX banks (`33-DF`, 173 entries
+  each), including the differing `9B`/`AD` payloads and `DC-DF` aliases. The
+  ROM type-check proves S&K `DC` is CreditsK music while `DD-DF` are SFX; the
+  S3 driver dispatches `DC-DF` as SFX. Strict full-bank traversal leaves no
+  unresolved roots/frontier and reaches none of the three commands. The
+  sequencing guard and source-contract inventory are under
+  `docs/architecture/research/audio/2026-08-08-s3k-smps-meta-command-reachability.md`.
+  The proof also rejects bank-end falloff, malformed roots/pointers, unknown
+  commands/subcommands, and protects the ROM `EB` pointer layout with
+  mutation-sensitive CFG tests.
+- Fix: removed the unused legacy `Game.getBackgroundScroll()` query from the
+  frame, rewind, and background-shader paths. Sonic 1 background Y remains owned
+  by its per-zone scroll handlers, while the shared API stays available for the
+  Sonic 2/Sonic 3&K implementations. Deprecated callers retain equivalent
+  behavior through compatibility overloads.
+- Fix: S3K LRZ1 now applies the ROM `SpawnLevelMainSprites` `loc_68A6`
+  falling-introduction state to non-Knuckles players (including Player 2),
+  with production-load character/zone/act coverage. Checkpoint, big-ring, and
+  bonus returns now take the semantic saved-state early return before any zone
+  intro branch. The source audit also corrected the stale SSZ claim: SSZ
+  `$0A00/$0A01` has no matching ROM gate.
+- Fix: ported the AIZ Knuckles miniboss napalm FallingShot (`loc_68C96`) to
+  native rise/drop/floor timing with harmful post-movement touch, ROM-backed
+  PLC art/mappings, staggered explosion children, and rewind coverage. The
+  three existing barrel children now own the native flare/FallingShot route;
+  activation, slot ordering, and explosion lifetime remain under Knuckles
+  trace validation. The full AIZ replay lane's camera/sidekick and
+  hardware-timing failures remain documented.
+- **S3K AIZ2 end-boss splash children:** `ChildObjDat_69D2E` subtype 0/2 now
+  allocates in native slot order, follows the ROM emerge/drop mapping and flip
+  scripts, renders from ROM-backed art, and restores through rewind. Owner tests
+  cover real `ObjectManager` transitions and ROM mapping frames; end-to-end AIZ2
+  boss trace validation remains a follow-up.
+- Maintenance/Docs: completed an evidence-tiered dead and unfinished code sweep.
+  Seven unreachable Java types (339 lines) were removed after checking callers,
+  registries, reflection, resources, service loading, and supported CLIs; the
+  useful 125-line Kosinski format reference moved out of runtime resources.
+  Caller-free compatibility APIs and duplicate unverified S3K results constants
+  were removed, while coherent unwired work (S3K special-stage projection,
+  debug primitive/text rendering, and CNZ boss animations) was retained. A
+  ranked audit and refreshed game/zone/audio/tooling status now identify live
+  unfinished paths without changing gameplay behavior.
+- Fix: a run whose movie spans its first level's load now publishes the player DPLC
+  transfer that load stages. `DynamicArtLifecycleService.primePlayerDplc` deliberately
+  establishes a freshly loaded playable's art bank without an edge, because a
+  segment-scoped trace replay starts at `Level_MainLoop` and never owns that transfer.
+  A manifest-driven run does own it: `Level_LoadObj`'s `ExecuteObjects` pass stages the
+  tiles and sets `f_sonframechg` (`_incObj/01 Sonic.asm`:2391-2398), and the first V-int
+  of the `Level_Delay` / `PalFadeIn_Alt` tail performs it (`sonic.asm`:2956-2969) -- the
+  run's transfer 0, on its first main-loop row minus the counted 26-row tail. Priming now
+  keeps that bank and the run chain publishes it through the new
+  `publishInitialLevelLoadPlayerTransfer`, so every downstream transfer id and edge
+  ordinal in the run matches the recording; `s1-ghz-maze-roundtrip`'s terminal tail edge
+  goes from eight divergent fields to one (the un-modelled level-load span).
+- Fix: Sonic 2 collects stage rings through the ROM's ring-array window instead of the
+  object spawn window. S2 keeps rings in one sorted array rather than in object slots,
+  and `RingsManager_Main` rewalks `Ring_start_addr` / `Ring_end_addr` out to
+  `Camera_X_pos-8` and `Camera_X_pos-8 + screen_width+$10` every frame
+  (`s2.asm`:31847-31881). `Touch_Rings` iterates only that span (`s2.asm`:31932-32005),
+  so a ring outside it is neither collectable nor drawn even with a character standing
+  on it. The engine was windowing S2's rings with the *chunk-aligned object placement*
+  range instead -- `(cameraX & 0xFF80) - 0x300 .. + 0x280`, which reaches 768px further
+  back -- so CPU Tails, who routinely trails hundreds of pixels behind the left edge of
+  the screen, kept banking rings the ROM's window had already scrolled past.
+  `RingRules.stageRingSweepUsesRawCameraWindow` is now true for Sonic 2; it was already
+  true for Sonic 3&K, whose `Load_Rings` derives the identical pair of bounds. The
+  forward extent is now expressed as the ROM's `screen_width+$10` rather than a pinned
+  `$148` so it tracks the configured viewport; at the native 320 it is byte-identical and
+  no S3K behaviour changes.
+- This **refutes the sampling-phase hypothesis** published with the previous entry. The
+  engine is not banking a ring one frame early: it runs +1 to the *end* of the trace, and
+  the ROM's own next ring increment is 20-600 frames later (EHZ1 f1045 against the ROM's
+  next at f1065; CNZ f704 against f1304). At five of the six divergences the ring the
+  engine banked sits left of `Camera_X_pos-8` -- EHZ1 `(1128,693)` with the window
+  starting at 1165, CNZ `(682,881)` against 941, ARZ `(4820,768)` against 5598, CNZ2
+  `(4492,912)` against 4896, MTZ `(2426,1648)` against 3034 -- and is inside the ROM
+  window on *no* frame any character overlaps it. Replaying the ROM's own box test
+  offline across all six traces, the narrow window collects nothing the ROM does not and
+  drops no ring the ROM does.
+- Measured with `-Ptrace-replay -Dmse=off` in a dedicated worktree with a wiped report
+  directory, both sides at the same commit: **749 test cases / 137 classes, 101 red
+  before, 97 red after -- 4 newly green, 0 newly red.** EHZ1, its reference-closure
+  subclass, ARZ and CNZ go green. MTZ and CNZ2 stay red with their ring frontiers moved
+  and their sign flipped (MTZ f2766 `41->42` becomes f7717 `111->101`; CNZ2 f2722
+  `49->50` becomes f5224 `59->58`) -- pre-existing deficits the phantom ring had been
+  compensating for, now unmasked. MCZ is unchanged at f1817 `8->9` and is a **separate
+  root cause**: no placed ring is under either character there, the increments around it
+  are re-collected `Obj37` lost rings from the f1649 hit, and the ROM spawned 29 of them
+  and deleted 28 before expiry, so it is a lost-ring lifetime/bounce divergence rather
+  than a windowing one.
+- Fix: a death that ends the game no longer restarts the level, and the life comes off
+  on the frame the ROM takes it. `PlayableSpriteMovement` did both jobs at the wrong
+  time: it armed a 60-frame countdown on the death-row crossing and then called
+  `loseLife()` plus `requestRespawn()` unconditionally when that countdown expired.
+  All three ROMs instead do the whole decision on the crossing frame — S1
+  `Sonic_HandleDeath` (`docs/s1disasm/_incObj/01 Sonic.asm:2011-2049`), S2
+  `CheckGameOver` (`docs/s2disasm/s2.asm:38279-38316`), S3K `loc_12432`
+  (`docs/skdisasm/sonic3k.asm:24581-24616`) — writing routine 8, arming
+  `restartime` with 60, raising the lives-counter HUD flag and subtracting the life
+  together, then rewriting `restartime` to zero when that subtraction produced a game
+  over *or* when the time-over flag was already set. `Sonic_ResetLevel` / `Obj01_Gone`
+  / `loc_1257C` only write the restart flag from a non-zero delay, so neither case
+  restarts the level at all. The engine's freeze test moved off "countdown non-zero"
+  onto a new `isInDeathRestartRoutine()` modelling the ROM routine number, because the
+  two now differ: the zero-delay cases still enter the routine, so the corpse still
+  stops falling. The two zero-delay paths are kept distinct rather than collapsed —
+  the ROM's game-over branch clears the time-over flag and shows GAME/OVER while the
+  time-over branch keeps it and shows TIME/OVER, which is what later lets `Over_Wait`
+  restart the level after a time over but send a game over to the continue screen.
+  No trace column carries lives or game over, so nothing in the suite covered this;
+  it was found by audit against the any-BK2 bar. What is still missing downstream —
+  the GAME OVER / TIME OVER card object, its music/PLC pair, its 12-second wait, and
+  the continue screen — is recorded in `docs/status/known-bugs.md`.
+- Fix: the S1 title card's release gate no longer holds for a minimum of 60 frames.
+  `Sonic1TitleCardManager` required `stateTimer >= 60` alongside an idle PLC queue,
+  citing `move.w #1*60,obTimeFrame(a1)`. That citation pointed at the wrong routine:
+  the 60 belongs to `Card_Wait`, routine 4/6 (`docs/s1disasm/_incObj/34 Title
+  Cards.asm:74,118-122`), which nothing reaches until the routine bump at
+  `docs/s1disasm/sonic.asm:2971-2974` — after the loop, after `Level_Delay` and after
+  `PalFadeIn_Alt`, i.e. inside `Level_MainLoop` with gameplay already running.
+  `Level_TtlCardLoop`'s own exit condition is only "every element at its target and
+  `v_plc_buffer` empty" (`docs/s1disasm/sonic.asm:2814-2842`); there is no minimum
+  hold. Measured against the ROM, no retail act was actually affected: the title-card
+  queue is the zone's first PLC list followed by `PLC_Main2`, and at
+  `ProcessPLC_9Tiles`' nine patterns per VBlank that drains in 150 (GHZ), 132 (LZ,
+  and so SBZ3), 146 (MZ), 135 (SLZ), 144 (SYZ) and 132 (SBZ, and so FZ) frames against
+  a 44-frame slide-in — the floor never bound, with 28 frames of headroom at the
+  narrowest. The gate was still wrong for any smaller title-card payload, which is the
+  bar. `DISPLAY_HOLD_DURATION` had no other use and is removed; the ROM's genuine
+  post-release `Card_Wait` hold remains unmodelled and is now documented as such.
+- Fix: the per-act `*TraceReplay` lane compares ring count. `AbstractTraceReplayTest`
+  already computed a real count via `captureEngineDiagnostics`, then discarded it by
+  re-wrapping through `formattedWithCameraAndAnimation`, which hardcodes
+  `rings = -1` — the value `TraceBinder` reads as "not captured". The whole family
+  has therefore never compared rings despite `ToleranceConfig.DEFAULT` setting
+  `RingCountMode.FORCE_ERROR`. It now passes the count through a new
+  `formattedWithCameraAnimationAndRings`; the ring-less factory is left intact for
+  the callers that genuinely have no sprite. Deliberately narrow: the binder also
+  scores `routine`, `statusByte` and `xSub`/`ySub` off the same record, all still
+  `-1` on this lane, and forwarding the whole snapshot would have switched on five
+  comparisons at once. Enabling the check turns **21 tests red across the S1 and S2
+  per-act corpus, every one of them with a ring mismatch as its first error** — real
+  pre-existing divergences that were previously invisible, not regressions. They fall
+  into four clusters: engine ring count collapsing to 0 (GHZ3 f6390 81→0, LZ1 f6024
+  28→0, MZ1 f4166 10→0), engine exactly 10 short (GHZ1 f2032 49→39, MCZ2 f4145
+  67→57), engine one short across eight S1/S2 acts, and engine one *ahead* across
+  seven S2 traces. The last cluster's uniformity points at a sampling-phase
+  difference rather than seven independent bugs. Divergences are recorded in
+  `docs/status/trace-frontier-log.md`; none is suppressed.
+- Fix: whole-run replay genuinely compares ring count again. `ToleranceConfig.DEFAULT`
+  has always set `RingCountMode.FORCE_ERROR`, but `LiveTraceComparator` built its
+  per-frame diagnostics through a factory that hardcoded `rings = -1`, and
+  `TraceBinder` reads a negative engine ring count as "not captured" and skips the
+  field — so every run-comparator row passed the ring check silently, and a real
+  gameplay divergence could only surface later as an unrelated-looking failure. The
+  run path now passes `sprite.getRingCount()` through
+  `EngineDiagnostics.formattedWithCameraAnimationSubpixelAndRings`. The negative
+  sentinel is deliberately kept: it is a genuine "no ring context" signal for the
+  callers that collapse diagnostics without a sprite to read (`EMPTY`,
+  `formattedOnly`, `formattedWithCamera`), not a blanket opt-out. A throwaway probe
+  that offset the engine count by 1000 confirmed the field reaches the comparator as
+  an `ERROR`-severity mismatch rather than being skipped. Nothing regressed: no
+  run-chain test fails on `rings` under `-Ptrace-replay`. (The "identical 116 tests"
+  figure first published with this entry was wrong — it came from a default-profile
+  sweep, which excludes `**/tests/trace/**` entirely and so never ran the run-chain
+  tests, over a `target/surefire-reports` still holding stale XML from earlier
+  sessions. Trace deltas must be measured with `-Ptrace-replay`, `-Dmse=off`, and a
+  wiped report directory.)
 - Fix: a whole-run replay's transition gap no longer swallows the source level's
   last main-loop iteration. A gap is a gap in the *recording*: each run recorder
   finalizes a level segment on the first frame whose sampled game mode has left

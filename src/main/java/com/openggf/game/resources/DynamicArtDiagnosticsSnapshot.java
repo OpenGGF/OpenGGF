@@ -114,7 +114,22 @@ public record DynamicArtDiagnosticsSnapshot(
             int logicalEdgeIndex,
             int publicationFrame,
             boolean terminalForwarded,
-            List<Request> requests) {
+            List<Request> requests,
+            String submissionOrigin) {
+
+        /**
+         * Legacy shape for callers that do not model where the transfer was
+         * submitted; defaults to an in-segment submission.
+         */
+        public Edge(long edgeOrdinal, long transferId, String phase,
+                    String owner, int mappingFrame, int logicalFrame,
+                    int logicalEdgeIndex, int publicationFrame,
+                    boolean terminalForwarded, List<Request> requests) {
+            this(edgeOrdinal, transferId, phase, owner, mappingFrame,
+                    logicalFrame, logicalEdgeIndex, publicationFrame,
+                    terminalForwarded, requests, "segment");
+        }
+
         public Edge {
             if (edgeOrdinal < 0 || transferId < 0 || mappingFrame < 0
                     || logicalFrame < 0 || logicalEdgeIndex < 0
@@ -127,6 +142,13 @@ public record DynamicArtDiagnosticsSnapshot(
             }
             owner = Objects.requireNonNull(owner, "owner");
             requests = List.copyOf(Objects.requireNonNull(requests, "requests"));
+            submissionOrigin = Objects.requireNonNull(
+                    submissionOrigin, "submissionOrigin");
+            if (!"segment".equals(submissionOrigin)
+                    && !"run_gap".equals(submissionOrigin)) {
+                throw new IllegalArgumentException(
+                        "unknown submission origin: " + submissionOrigin);
+            }
             if ("submitted".equals(phase) && requests.isEmpty()) {
                 throw new IllegalArgumentException(
                         "submitted edge requires at least one request");

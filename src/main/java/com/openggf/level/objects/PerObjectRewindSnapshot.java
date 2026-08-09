@@ -369,7 +369,7 @@ public record PerObjectRewindSnapshot(
             // Special states / hazards
             boolean springing, int springingFrames,
             boolean dead, boolean drowningDeath, int drownPreDeathTimer,
-            boolean hurt, int deathCountdown,
+            boolean hurt, int deathCountdown, boolean deathRestartRoutineActive,
             int invulnerableFrames, boolean suppressNextInvulnerabilityDecrement, int invincibleFrames,
             // Player abilities
             boolean spindash, short spindashCounter,
