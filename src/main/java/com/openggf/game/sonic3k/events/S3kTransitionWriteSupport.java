@@ -61,9 +61,9 @@ public final class S3kTransitionWriteSupport {
         }
     }
 
-    public static void requestCnzPostTransitionRelease(LevelEventProvider provider, int framesUntilRelease) {
+    public static void requestCnzPostTransitionRelease(LevelEventProvider provider) {
         if (provider instanceof S3kTransitionEventBridge bridge) {
-            bridge.requestCnzPostTransitionRelease(framesUntilRelease);
+            bridge.requestCnzPostTransitionRelease();
         }
     }
 }

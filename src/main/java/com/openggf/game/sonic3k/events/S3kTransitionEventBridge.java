@@ -30,5 +30,5 @@ public interface S3kTransitionEventBridge {
 
     void requestMgzPostTransitionRelease();
 
-    void requestCnzPostTransitionRelease(int framesUntilRelease);
+    void requestCnzPostTransitionRelease();
 }

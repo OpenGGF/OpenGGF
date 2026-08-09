@@ -3,6 +3,13 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: CNZ's event-owned replacement for the discarded
+  `Obj_EndSignControl` now consumes the carried results object's native
+  `_unkFAA8`-clear publication instead of a fixed elapsed-frame estimate, while
+  preserving earlier/later SST ordering. The complete-run frontier advances
+  from raw frame 14512 to 14665, and standalone CNZ advances from its raw-frame
+  25743 camera mismatch to the hardware edge at raw frame 33755; AIZ, HCZ, and
+  both MGZ canaries remain green.
 - Fix/Test: CNZ's post-object signpost now accounts for the native dispatch
   already consumed before an unbumped landing countdown, while a real
   `EndSign_CheckPlayerHit` bounce retains all `$40` countdown entries. This

@@ -439,7 +439,7 @@ class TestS3kCnzAct1EventFlow {
     }
 
     @Test
-    void cnzPostTransitionResultsHandoffRestoresPlayerControlAfterRomDelay() {
+    void cnzPostTransitionResultsHandoffRestoresPlayerControlAtResultsPublication() {
         Sonic3kLevelEventManager manager =
                 (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
         manager.initLevel(Sonic3kZoneIds.ZONE_CNZ, 1);
@@ -458,15 +458,13 @@ class TestS3kCnzAct1EventFlow {
         player.setAir(true);
         tails.setAir(true);
 
-        manager.requestCnzPostTransitionRelease(2);
-
-        manager.update();
+        manager.requestCnzPostTransitionRelease();
         assertTrue(player.isObjectControlled());
         assertTrue(tails.isObjectControlled());
         assertTrue(player.getAir());
         assertTrue(tails.getAir());
 
-        manager.update();
+        manager.restorePendingPostResultsPlayerControl();
         assertFalse(player.isObjectControlled(),
                 "Obj_EndSignControlAwaitStart calls Restore_PlayerControl after "
                         + "Obj_LevelResults loc_2DD06 clears _unkFAA8 "
@@ -492,7 +490,7 @@ class TestS3kCnzAct1EventFlow {
         GameServices.camera().setMaxY((short) 0x1000);
         GameServices.camera().setMaxYTarget((short) 0x1000);
 
-        manager.requestCnzPostTransitionRelease(1);
+        manager.requestCnzPostTransitionRelease();
 
         for (int i = 0; i < 20; i++) {
             updateCnzProductionSlots(manager);

@@ -70461,3 +70461,36 @@ After: **769 / 11 / 63.** Green: `S2SpecialStageRecorderContractTest`. Nothing r
   AIZ class run retained its existing raw-`16067` queue divergence and four
   focused assertion failures; the changed CNZ-only constructor is not used by
   that path.
+
+## 2026-08-09 - S3K CNZ results-control publication frontier
+
+- Branch `bugfix/s3k-traces`, candidate over `0639bac53`, with ring comparison
+  still error-level through `ToleranceConfig.DEFAULT` and
+  `RingCountMode.FORCE_ERROR`.
+- Root cause: the CNZ seamless reload discards the ROM's surviving
+  `Obj_EndSignControl`, so the event manager carried its later control restore
+  with a fixed 608-frame countdown. Queue and object-slot timing changes made
+  that estimate drift. The replacement owner is now armed by the CNZ
+  transition and consumed by the carried `Obj_LevelResults` publication that
+  clears `_unkFAA8`, preserving the earlier/later SST dispatch boundary before
+  calling the ROM-shaped `Restore_PlayerControl` operation
+  (`sonic3k.asm:62708-62720,180407-180412,180437-180447`). No route, frame,
+  trace, or zone-name predicate selects the release.
+- Focused command selected `TestS3kTransitionWriteSupport`,
+  `TestS3kResultsScreenObjectInstance`, `TestSonic3kLevelEventRewindSnapshot`,
+  and `TestS3kCnzAct1EventFlow` on JDK 21. Result: 71 tests, 0 failures, 0
+  errors. A follow-up results/event pair ran 31 tests with the retained slot
+  deferral in place, also with 0 failures and 0 errors.
+- Frontier command: `mvn -Ptrace-replay -Dmse=off
+  -Dsurefire.forkCount=1 -Dtrace.verification=physics
+  -Dtrace.frontierOnly=true
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kCnzCompleteRunTraceReplay#replayMatchesTrace
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Result: the complete-run frontier advances from raw `14512` to the next
+  unconsumed module Kosinski completion `#215` at raw `14665`, with no earlier
+  comparison error.
+- Standalone CNZ was run with the same profile. Its raw-`25743` camera-X error
+  is removed and the trace advances to the next unconsumed module Kosinski
+  completion `#31` at raw `33755`, with no earlier comparison error.
+- Regression command selected complete-run AIZ, HCZ, and MGZ plus standalone
+  MGZ. Result: 4 replay tests, 0 failures, 0 errors.

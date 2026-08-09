@@ -522,7 +522,7 @@ class TestS3kResultsScreenObjectInstance {
             }
 
             @Override
-            public void requestCnzPostTransitionRelease(int framesUntilRelease) {
+            public void requestCnzPostTransitionRelease() {
             }
         }
     }
@@ -617,7 +617,7 @@ class TestS3kResultsScreenObjectInstance {
             return retainedTransitionFlagOwner;
         }
         @Override public void requestMgzPostTransitionRelease() {}
-        @Override public void requestCnzPostTransitionRelease(int framesUntilRelease) {}
+        @Override public void requestCnzPostTransitionRelease() {}
     }
 
     private static final class IczExitRecordingServices extends TestObjectServices {

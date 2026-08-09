@@ -154,6 +154,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private boolean pendingAizTitleHandoff;
     private boolean pendingRetainedReloadTitleHandoff;
     private boolean postControlHandoffPending;
+    private boolean postResultsEventHandoffPending;
 
     public S3kResultsScreenObjectInstance(PlayerCharacter character, int act) {
         this(character, act, 0, 0);
@@ -451,6 +452,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             }
             if (postControlHandoffDelayEntries <= 0) {
                 postControlHandoffPending = false;
+                completePostResultsEventHandoff();
                 restoreNativeEndSignControlAtPublication();
             }
         }
@@ -858,8 +860,17 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         // later in this object pass once _unkFAA8 clears. Route the handoff
         // through the transition bridge so only an armed native event consumes
         // it; no zone or trace identity is consulted here.
-        boolean retainedTransitionFlagOwner =
-                S3kTransitionWriteSupport.completePostResultsHandoff(services());
+        boolean retainedTransitionFlagOwner = false;
+        if (postControlHandoffDelayEntries > 0) {
+            // A retained EndSignControl slot that precedes this results owner
+            // has already run in the current Process_Sprites walk. Preserve
+            // that slot boundary before asking the event-owned replacement to
+            // consume the _unkFAA8-clear publication.
+            postResultsEventHandoffPending = true;
+        } else {
+            retainedTransitionFlagOwner =
+                    S3kTransitionWriteSupport.completePostResultsHandoff(services());
+        }
 
         if (isAct2OrSpecial || retainedTransitionFlagOwner) {
             // ROM loc_2DCF8 sets End_of_level_flag directly for Act 2/Sky
@@ -1032,6 +1043,16 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                 flow.restoreNativeControlAtResultsPublication(playerRef);
                 return;
             }
+        }
+    }
+
+    private void completePostResultsEventHandoff() {
+        if (!postResultsEventHandoffPending) {
+            return;
+        }
+        postResultsEventHandoffPending = false;
+        if (S3kTransitionWriteSupport.completePostResultsHandoff(services())) {
+            services().gameState().setEndOfLevelFlag(true);
         }
     }
 
