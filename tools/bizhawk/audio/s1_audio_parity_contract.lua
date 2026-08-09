@@ -172,10 +172,12 @@ local function liveRomReturnStack(stack, stackPointer, assetBase, assetEnd)
     local result = {}
     -- `$F8` decrements StackPointer before storing, so physical top-to-bottom
     -- words run from the current cursor upward; canonical call order is reverse.
+    -- `$F9` resumes after the two-byte jump operand, matching OpenGGF's +2 pos.
     for index = count, 1, -1 do
         local address = Contract.u32(stack[index])
-        assert(address >= base and address < ending, "ROM return address is outside the GHZ asset range")
-        result[#result + 1] = address - base
+        assert(address >= base and address + 2 <= ending,
+            "ROM return address and jump operand are outside the GHZ asset range")
+        result[#result + 1] = address - base + 2
     end
     return result
 end

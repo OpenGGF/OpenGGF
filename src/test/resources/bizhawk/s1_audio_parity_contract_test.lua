@@ -234,7 +234,7 @@ local function runFixedRoleAndDescendingStackNormalization()
     raw.tracks[2].volume = 255
     local normalized = Contract.normalizeRom(raw, {0, 2})
     equals(Contract.canonicalJson(normalized.tracks),
-        "[{\"active\":false,\"hardware\":\"DAC\",\"role\":\"DAC\"},{\"active\":true,\"baseFrequency\":9320,\"detune\":-3,\"hardware\":\"FM1\",\"loopCounters\":[4,2],\"returnStack\":[36,1110],\"role\":\"FM1\",\"transpose\":-2,\"volume\":-1},{\"active\":false,\"hardware\":\"FM2\",\"role\":\"FM2\"},{\"active\":false,\"hardware\":\"FM3\",\"role\":\"FM3\"},{\"active\":false,\"hardware\":\"FM4\",\"role\":\"FM4\"},{\"active\":false,\"hardware\":\"FM5\",\"role\":\"FM5\"},{\"active\":false,\"hardware\":\"FM6\",\"role\":\"FM6\"},{\"active\":false,\"hardware\":\"PSG1\",\"role\":\"PSG1\"},{\"active\":false,\"hardware\":\"PSG2\",\"role\":\"PSG2\"},{\"active\":false,\"hardware\":\"PSG3\",\"role\":\"PSG3\"}]",
+        "[{\"active\":false,\"hardware\":\"DAC\",\"role\":\"DAC\"},{\"active\":true,\"baseFrequency\":9320,\"detune\":-3,\"hardware\":\"FM1\",\"loopCounters\":[4,2],\"returnStack\":[38,1112],\"role\":\"FM1\",\"transpose\":-2,\"volume\":-1},{\"active\":false,\"hardware\":\"FM2\",\"role\":\"FM2\"},{\"active\":false,\"hardware\":\"FM3\",\"role\":\"FM3\"},{\"active\":false,\"hardware\":\"FM4\",\"role\":\"FM4\"},{\"active\":false,\"hardware\":\"FM5\",\"role\":\"FM5\"},{\"active\":false,\"hardware\":\"FM6\",\"role\":\"FM6\"},{\"active\":false,\"hardware\":\"PSG1\",\"role\":\"PSG1\"},{\"active\":false,\"hardware\":\"PSG2\",\"role\":\"PSG2\"},{\"active\":false,\"hardware\":\"PSG3\",\"role\":\"PSG3\"}]",
         "fixed slots did not validate S1 voice control and normalize descending return addresses")
     local expectedInactiveBytesIgnored = Contract.canonicalJson(normalized)
     raw.tracks[7].voiceControl = 255
@@ -254,9 +254,9 @@ local function runFixedRoleAndDescendingStackNormalization()
     raw.tracks[2].returnStack = {477746, 476635}
     ok = pcall(function() Contract.normalizeRom(raw, {0, 2}) end)
     check(not ok, "ROM return address below the GHZ asset base was accepted")
-    raw.tracks[2].returnStack = {477746, 478532}
+    raw.tracks[2].returnStack = {477746, 478531}
     ok = pcall(function() Contract.normalizeRom(raw, {0, 2}) end)
-    check(not ok, "ROM return address outside the GHZ asset range was accepted")
+    check(not ok, "ROM return address at assetEnd minus one was accepted")
 end
 
 local function runGoldenVector()
