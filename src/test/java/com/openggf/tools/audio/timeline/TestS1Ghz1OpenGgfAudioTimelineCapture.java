@@ -1,6 +1,7 @@
 package com.openggf.tools.audio.timeline;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -64,6 +65,15 @@ class TestS1Ghz1OpenGgfAudioTimelineCapture {
     void producerClassifiesD0AsSpecialBeforeConstructingRequest() {
         assertEquals(S1GameplayAudioTimeline.SoundClass.SPECIAL_SFX,
                 S1Ghz1OpenGgfAudioTimelineCapture.CaptureState.soundClassForSfx(0xD0));
+    }
+
+    @Test
+    void d0FallbackRoleLookupUsesTheLiveSfxSequencer() {
+        // Break caught: SPECIAL_SFX semantic ownership was mistaken for a non-SFX sequencer.
+        assertTrue(S1Ghz1OpenGgfAudioTimelineCapture.CaptureState.matchesLiveSequencerRole(
+                S1GameplayAudioTimeline.SoundClass.SPECIAL_SFX, true));
+        assertFalse(S1Ghz1OpenGgfAudioTimelineCapture.CaptureState.matchesLiveSequencerRole(
+                S1GameplayAudioTimeline.SoundClass.SPECIAL_SFX, false));
     }
 
     private static Path[] requestedPaths(String run, String output) {

@@ -190,7 +190,8 @@ public final class S1Ghz1OpenGgfAudioTimelineCapture {
             for (SmpsDriver driver : observedDrivers) {
                 SmpsDriverSnapshot snapshot = driver.captureSnapshot();
                 for (SmpsDriverSnapshot.SequencerEntry entry : snapshot.sequencers()) {
-                    if (entry.sfx() == (soundClass == SFX) && entry.source().id() == soundId) {
+                    if (matchesLiveSequencerRole(soundClass, entry.sfx())
+                            && entry.source().id() == soundId) {
                         List<S1GameplayAudioTimeline.HardwareRole> roles = new ArrayList<>();
                         for (SmpsTrackSnapshot track : entry.snapshot().tracks()) {
                             S1GameplayAudioTimeline.HardwareRole role = role(track.type(), track.channelId());
@@ -205,6 +206,11 @@ public final class S1Ghz1OpenGgfAudioTimelineCapture {
                 }
             }
             throw new IllegalStateException("no declared SMPS role for sound $%02X".formatted(soundId));
+        }
+
+        static boolean matchesLiveSequencerRole(
+                S1GameplayAudioTimeline.SoundClass soundClass, boolean sequencerSfx) {
+            return sequencerSfx == (soundClass != S1GameplayAudioTimeline.SoundClass.MUSIC);
         }
 
         private SfxContentionObserver.Arbitration latestArbitration(

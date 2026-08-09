@@ -1,6 +1,7 @@
 package com.openggf.audio.driver;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -72,15 +73,15 @@ class TestSfxContentionObserver {
             }
         });
         SmpsSequencer music = sequencer("music", 0x81, driver);
-        SmpsSequencer first = sequencer("first", 0xA0, driver);
-        SmpsSequencer second = sequencer("second", 0xA1, driver);
+        SmpsSequencer first = realTrackSequencer("first", 0xA0, driver);
+        SmpsSequencer second = realTrackSequencer("second", 0xA1, driver);
         first.setSfxPriority(0x20);
         second.setSfxPriority(0x60);
         driver.addSequencer(music, false);
         driver.addSequencer(first, true);
-        driver.writeFm(first, 0, 0xA2, 0x22);
+        first.writeFm(0, 0xA2, 0x22);
         driver.addSequencer(second, true);
-        driver.writeFm(second, 0, 0xA2, 0x44);
+        second.writeFm(0, 0xA2, 0x44);
 
         assertEquals(4, events.size());
         SfxContentionObserver.Admission firstAdmission =
@@ -103,6 +104,62 @@ class TestSfxContentionObserver {
         assertTrue(secondRole.acquired());
         assertEquals(firstAdmission.source(), secondRole.previousOwner());
         assertEquals(secondAdmission.source(), secondRole.challenger());
+        assertEquals(1, events.stream()
+                .filter(SfxContentionObserver.Arbitration.class::isInstance)
+                .map(SfxContentionObserver.Arbitration.class::cast)
+                .filter(event -> event.challenger().equals(secondAdmission.source()))
+                .count(), "one production lock decision reports the same-frame B takeover");
+    }
+
+    @Test
+    void rollbackPreservesSurvivingAdmissionIdentityWithoutReusingOrdinals() {
+        // Break caught: rollback reidentified a surviving sequencer or reused a reverted admission ordinal.
+        SmpsDriver driver = new SmpsDriver();
+        List<SfxContentionObserver.Admission> admissions = new ArrayList<>();
+        driver.setSfxContentionObserver(new SfxContentionObserver() {
+            @Override
+            public void onSfxAdmitted(SfxContentionObserver.Admission admission) {
+                admissions.add(admission);
+            }
+        });
+        SmpsSequencer survivor = sequencer("survivor", 0xA0, driver);
+        driver.addSequencer(survivor, true);
+        SmpsDriver.LiveCommandMutationToken rollback = driver.captureLiveCommandMutation();
+        driver.addSequencer(sequencer("discarded", 0xA1, driver), true);
+
+        driver.rollbackLiveCommandMutation(rollback);
+        driver.addSequencer(sequencer("after-rollback", 0xA2, driver), true);
+
+        assertEquals(0, admissions.getFirst().source().admissionOrdinal());
+        assertEquals(1, admissions.get(1).source().admissionOrdinal());
+        assertEquals(2, admissions.get(2).source().admissionOrdinal());
+        assertEquals(0xA0, admissions.getFirst().source().descriptor().id());
+    }
+
+    @Test
+    void restoreReadmitsSfxInSnapshotOrderWithFreshMonotonicIdentities() {
+        // Break caught: reconstructed SFX inherited -1 or HashSet-order admission identities.
+        SmpsDriver driver = new SmpsDriver();
+        List<SfxContentionObserver.Admission> admissions = new ArrayList<>();
+        driver.setSfxContentionObserver(new SfxContentionObserver() {
+            @Override
+            public void onSfxAdmitted(SfxContentionObserver.Admission admission) {
+                admissions.add(admission);
+            }
+        });
+        driver.addSequencer(sequencer("first", 0xA0, driver), true);
+        driver.addSequencer(sequencer("second", 0xA1, driver), true);
+        SmpsDriverSnapshot snapshot = driver.captureSnapshot();
+        admissions.clear();
+
+        driver.restoreSnapshot(snapshot);
+
+        assertEquals(List.of(0xA0, 0xA1), admissions.stream()
+                .map(admission -> admission.source().descriptor().id()).toList());
+        assertEquals(List.of(2L, 3L), admissions.stream()
+                .map(admission -> admission.source().admissionOrdinal()).toList());
+        assertTrue(admissions.stream().allMatch(admission -> admission.source().admissionOrdinal() >= 0));
+        assertNotEquals(admissions.getFirst().source(), admissions.get(1).source());
     }
 
     private static SmpsSequencer sequencer(String name, int id, SmpsDriver driver) {
@@ -110,5 +167,37 @@ class TestSfxContentionObserver {
         data.setId(id);
         return new SmpsSequencer(data, AudioTestFixtures.EMPTY_DAC, driver,
                 AudioManager.getInstance(), new SmpsSequencerConfig.Builder().build());
+    }
+
+    private static SmpsSequencer realTrackSequencer(String name, int id, SmpsDriver driver) {
+        AbstractSmpsData data = new SingleFmTrackData(name);
+        data.setId(id);
+        return new SmpsSequencer(data, AudioTestFixtures.EMPTY_DAC, driver,
+                AudioManager.getInstance(), new SmpsSequencerConfig.Builder()
+                .fmChannelOrder(new int[] {2}).build());
+    }
+
+    private static final class SingleFmTrackData extends AbstractSmpsData {
+        private final String name;
+
+        private SingleFmTrackData(String name) {
+            super(new byte[] {0}, 0);
+            this.name = name;
+        }
+
+        @Override
+        protected void parseHeader() {
+            channels = 1;
+            tempo = 1;
+            fmPointers = new int[] {0};
+            fmKeyOffsets = new int[] {0};
+            fmVolumeOffsets = new int[] {0};
+        }
+
+        @Override public byte[] getVoice(int voiceId) { return new byte[0]; }
+        @Override public byte[] getPsgEnvelope(int id) { return new byte[0]; }
+        @Override public int read16(int offset) { return 0; }
+        @Override public int getBaseNoteOffset() { return 0; }
+        @Override public String toString() { return name; }
     }
 }
