@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K MGZ's retained signpost flow now leaves players' animation
+  state untouched when the live transition bridge has already restored their
+  control. This closes the complete MGZ run's established 31 animation-only
+  errors at raw frame `16513`; focused MGZ remains green for all `35861`
+  frames and HCZ's two complete-run traces remain green. Ring comparisons stay
+  forced errors; no trace payloads changed.
 - Fix/Test: S3K MGZ's floating results owner now selects its initial
   results-art service boundary from the live carry CPU publication state. The
   focused MGZ replay remains green for all `35861` frames, while the complete

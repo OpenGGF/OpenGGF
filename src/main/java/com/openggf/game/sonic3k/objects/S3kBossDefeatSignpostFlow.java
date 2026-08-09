@@ -321,10 +321,10 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
         }
         if (!services().gameState().isEndOfLevelActive()) {
             if (!nativeResultsControlRestored) {
-                restoreNativePlayerControl(player);
+                restoreNativePlayerControlIfNeeded(player);
                 if (services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite nativeP2
                         && nativeP2 != player) {
-                    restoreNativePlayerControl(nativeP2);
+                    restoreNativePlayerControlIfNeeded(nativeP2);
                 }
             }
             phase = Phase.AWAIT_ACT_TRANSITION;
@@ -357,13 +357,20 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
         if (nativeResultsControlRestored) {
             return true;
         }
-        restoreNativePlayerControl(player);
+        restoreNativePlayerControlIfNeeded(player);
         if (services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite nativeP2
                 && nativeP2 != player) {
-            restoreNativePlayerControl(nativeP2);
+            restoreNativePlayerControlIfNeeded(nativeP2);
         }
         nativeResultsControlRestored = true;
         return true;
+    }
+
+    private static void restoreNativePlayerControlIfNeeded(AbstractPlayableSprite player) {
+        if (player == null || (!player.isObjectControlled() && !player.isControlLocked())) {
+            return;
+        }
+        restoreNativePlayerControl(player);
     }
 
     private void completeNativeSignpostPoseHandoff() {

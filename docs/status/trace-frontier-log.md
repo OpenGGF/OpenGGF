@@ -66259,3 +66259,33 @@ to synthesize a POST phase on a VBLANK-only row.
   complete-run MGZ's next target is the established raw frame `16513`
   animation handoff. HCZ remains green; CNZ is next in gameplay order, with ICZ
   and LBZ pending.
+
+## 2026-08-09 - S3K MGZ complete-run animation frontier
+
+- Worktree: `bugfix/s3k-traces` at `4bd0939ed` before this fix; unrelated edits
+  in `.idea/vcs.xml`, `docs/status/rewind-round-trip-gaps.md`,
+  `src/main/java/com/openggf/level/objects/ObjectPlacementController.java`,
+  and `src/main/java/com/openggf/level/rings/RingManager.java` remained
+  unstaged. Validation used JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen`; no trace payloads changed.
+- Frontier command: `env JAVA_HOME=$JDK21_HOME PATH=$JDK21_HOME/bin:$PATH
+  mvn -q -Dmse=off -Dsurefire.forkCount=1 -DforkCount=1
+  -DreuseForks=true -Dsurefire.argLine='-Xmx3g'
+  -Dtest=TestS3kMgzTraceReplay,TestS3kMgzCompleteRunTraceReplay,
+  TestS3kHczCompleteRunTraceReplay -Dtrace.verification=all
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Result: focused MGZ `35861` frames match; complete MGZ `39183` frames match;
+  HCZ's two complete-run traces pass with 0 failures and 0 errors. The
+  complete MGZ frontier advances from 31 animation-only errors beginning at
+  raw frame `16513`, `player_animation_id` (`0x0000` expected, `0x0005`
+  actual), to green. Ring comparison remains enabled through
+  `ToleranceConfig.DEFAULT` with `RingCountMode.FORCE_ERROR`.
+- Root cause: the MGZ transition bridge had already applied the native
+  `Restore_PlayerControl` state at the retained results publication boundary,
+  but the signpost flow's later polling path applied the same restore again.
+  That second write reset `anim`, `prev_anim`, and the animation cursor to
+  WAIT after the next movement animation had been selected. The flow now
+  restores only players that still own object control or a control lock, using
+  live semantic state rather than a zone, route, frame, or trace condition.
+- Route position: AIZ/HCZ/MGZ committed frontier work remains green where
+  validated; CNZ is next in gameplay order, with ICZ and LBZ pending.

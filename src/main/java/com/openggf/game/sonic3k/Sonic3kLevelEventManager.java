@@ -1187,10 +1187,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             hczEvents.restorePostResultsPlayerControl();
         }
         if (mgzPendingPostTransitionRelease) {
-            // The carried Obj_LevelResults owner calls Restore_PlayerControl
-            // in its later object slot after clearing _unkFAA8. Publish the
-            // armed MGZ release here rather than waiting for the following
-            // ScreenEvents dispatch.
+            // The carried results owner clears its active transition state at
+            // this publication boundary; release the players on that same
+            // native owner pass and let the following player slot select its
+            // movement animation.
             releasePendingMgzPostTransition();
         }
         return titleCardCompletionFlagStillOwned;
