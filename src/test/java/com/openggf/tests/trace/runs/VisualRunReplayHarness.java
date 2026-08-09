@@ -6,6 +6,7 @@ import com.openggf.TraceSessionLauncher;
 import com.openggf.control.InputHandler;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.game.GameServices;
+import com.openggf.game.GameMode;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.GraphicsManager;
@@ -72,6 +73,25 @@ public final class VisualRunReplayHarness {
     }
 
     /**
+     * Read-only outer-frame observation for diagnostic captures. Coordinates
+     * always identify the consumed BK2 row when {@link #semanticRow()} is
+     * true; bootstrap/title-card presentations remain diagnostic-only.
+     */
+    public record FrameView(int consumedBk2Cursor, int segmentIndex,
+                            int segmentRow, int loopStep, boolean lag,
+                            boolean gameplay, boolean semanticRow) {
+    }
+
+    /** Opt-in callback with no access to game-loop or audio mutation owners. */
+    public interface FrameObserver {
+        FrameObserver NONE = new FrameObserver() { };
+
+        default void beforeFirstSegmentRow(FrameView frame) { }
+
+        default void afterOuterFrame(FrameView frame) { }
+    }
+
+    /**
      * One line per change of mode, coordinator phase, segment, or level load
      * generation. A run is tens of thousands of steps and almost all of them
      * are identical, so the interesting question -- what happened, in what
@@ -123,10 +143,32 @@ public final class VisualRunReplayHarness {
      * @throws AssertionError wrapping the replay failure if the session aborts
      */
     public static Result replay(Path runDir, int maxSteps) throws Exception {
-        return replay(runDir, new Stop(maxSteps, -1));
+        return replay(runDir, new Stop(maxSteps, -1), FrameObserver.NONE, false);
     }
 
     public static Result replay(Path runDir, Stop stop) throws Exception {
+        return replay(runDir, stop, FrameObserver.NONE, false);
+    }
+
+    /**
+     * Drives the normal visual route while exposing post-presentation row
+     * coordinates. Fast-forward is rejected because one semantic row must
+     * receive exactly one outer presentation for audio timeline capture.
+     */
+    public static Result replayAudio(Path runDir, Stop stop,
+                                     FrameObserver observer) throws Exception {
+        return replay(runDir, stop, observer, true);
+    }
+
+    public static Result replay(Path runDir, Stop stop,
+                                FrameObserver observer) throws Exception {
+        return replay(runDir, stop, observer, false);
+    }
+
+    private static Result replay(Path runDir, Stop stop,
+                                 FrameObserver observer,
+                                 boolean rejectFastForward) throws Exception {
+        java.util.Objects.requireNonNull(observer, "observer");
         TraceRunManifest manifest =
                 TraceRunManifest.load(runDir.resolve("run_manifest.json"));
         Path bk2 = runDir.resolve(manifest.sourceBk2());
@@ -163,6 +205,9 @@ public final class VisualRunReplayHarness {
         // segment 0's title card and only then reaches finishRunReplayLaunch,
         // so the run starts from the state a windowed session starts from.
         finishRunLaunch(session);
+        if (rejectFastForward && !"< 1x >".equals(session.playbackRateDisplay())) {
+            throw new IllegalStateException("audio timeline capture rejects enabled fast-forward");
+        }
 
         ArrayDeque<String> recent = new ArrayDeque<>();
         List<String> timeline = new ArrayList<>();
@@ -171,9 +216,28 @@ public final class VisualRunReplayHarness {
         int steps = 0;
         boolean stalled = false;
         boolean reachedTarget = false;
+        boolean baselineObserved = false;
         while (steps < stop.maxSteps() && !runFinished(session)) {
+            int cursorBefore = GameServices.playbackDebug().getCursorFrame();
+            FrameView before = frameView(cursorBefore, steps + 1, loop, segments, false);
+            if (!baselineObserved && before.segmentIndex() == 0 && before.segmentRow() == 0) {
+                observer.beforeFirstSegmentRow(before);
+                baselineObserved = true;
+            }
             loop.step();
             steps++;
+            // This is the Engine-owned outer audio placement, deliberately
+            // repeated for bootstrap/title-card diagnostics as well as rows.
+            loop.presentOuterFrame(false, false);
+            GameServices.audio().update();
+            int cursorAfter = GameServices.playbackDebug().getCursorFrame();
+            int consumed = cursorAfter == cursorBefore + 1 ? cursorBefore : cursorAfter;
+            boolean semanticRow = cursorAfter == cursorBefore + 1;
+            if (rejectFastForward && cursorAfter != cursorBefore
+                    && cursorAfter != cursorBefore + 1) {
+                throw new IllegalStateException("audio timeline capture rejects fast-forwarded BK2 rows");
+            }
+            observer.afterOuterFrame(frameView(consumed, steps, loop, segments, semanticRow));
             record(recent, steps, session, loop);
             recordTimeline(timeline, lastKey, steps, session, loop);
             rethrowIfAborted(session, recent);
@@ -213,6 +277,24 @@ public final class VisualRunReplayHarness {
                     + window(recent));
         }
         return result;
+    }
+
+    private static FrameView frameView(int cursor, int loopStep, GameLoop loop,
+                                       List<TraceRunReplayWalker.SegmentPlan> segments,
+                                       boolean semanticRow) {
+        for (int index = 0; index < segments.size(); index++) {
+            TraceRunReplayWalker.SegmentPlan plan = segments.get(index);
+            int start = plan.segment().bk2FrameOffset();
+            int row = cursor - start;
+            if (row >= 0 && row < plan.trace().frameCount()) {
+                var lagState = plan.trace().lagStateForFrame(row);
+                return new FrameView(cursor, index, row, loopStep,
+                        lagState != null && lagState.lagged(),
+                        loop.getCurrentGameMode() == GameMode.LEVEL, semanticRow);
+            }
+        }
+        return new FrameView(cursor, -1, -1, loopStep, false,
+                loop.getCurrentGameMode() == GameMode.LEVEL, semanticRow);
     }
 
     /** Restores the globals the harness installs. Call from {@code @AfterEach}. */

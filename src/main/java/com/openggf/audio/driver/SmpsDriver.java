@@ -32,6 +32,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     private final Object sequencersLock = new Object();
     private final List<SmpsSequencer> sequencers = new ArrayList<>();
     private final Set<SmpsSequencer> sfxSequencers = new HashSet<>();
+    /** Diagnostic-only state; deliberately absent from rewind snapshots. */
+    private final IdentityHashMap<SmpsSequencer, Long> sfxAdmissionOrdinals = new IdentityHashMap<>();
     private final SmpsSequencer[] fmLocks = new SmpsSequencer[6];
     private final SmpsSequencer[] psgLocks = new SmpsSequencer[4];
     private final Map<Object, Integer> psgLatches = new HashMap<>();
@@ -56,6 +58,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     private int continuousSfxId;
     private boolean continuousSfxFlag;
     private int contSfxLoopCnt;
+    private long nextSfxAdmissionOrdinal;
+    private SfxContentionObserver sfxContentionObserver = SfxContentionObserver.NONE;
 
     /**
      * Exact, identity-bearing rollback state for one live presentation command.
@@ -627,12 +631,25 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             sequencers.add(seq);
             if (isSfx) {
                 sfxSequencers.add(seq);
+                sfxAdmissionOrdinals.put(seq, nextSfxAdmissionOrdinal++);
+                sfxContentionObserver.onSfxAdmitted(
+                        new SfxContentionObserver.Admission(sourceFor(seq)));
                 // SFX constructor calls synth.setDacData() which overwrites the music's
                 // DAC sample bank on the shared synthesizer. Restore the music sequencer's
                 // DAC data so donor music (e.g. S3K invincibility) keeps its correct samples.
                 restoreMusicDacData();
             }
         }
+    }
+
+    /** Installs an opt-in listener which receives completed lock decisions only. */
+    public void setSfxContentionObserver(SfxContentionObserver observer) {
+        sfxContentionObserver = Objects.requireNonNull(observer, "observer");
+    }
+
+    /** Returns the installed diagnostic observer, normally {@link SfxContentionObserver#NONE}. */
+    public SfxContentionObserver sfxContentionObserver() {
+        return sfxContentionObserver;
     }
 
     /**
@@ -898,7 +915,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
 
         if (ch >= 0 && ch < 6) {
             if (isSfx(source)) {
-                if (shouldStealLock(fmLocks[ch], (SmpsSequencer) source)) {
+                if (shouldStealLockAndObserve(SfxContentionObserver.Bus.FM, ch,
+                        fmLocks[ch], (SmpsSequencer) source)) {
                     // Silence channel if stealing from music (not from another SFX or self)
                     if (fmLocks[ch] != source && !isSfx(fmLocks[ch])) {
                         silenceFmChannel(ch);
@@ -938,7 +956,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             }
 
             if (isSfx(source)) {
-                if (shouldStealLock(psgLocks[ch], (SmpsSequencer) source)) {
+                if (shouldStealLockAndObserve(SfxContentionObserver.Bus.PSG, ch,
+                        psgLocks[ch], (SmpsSequencer) source)) {
                     // Silence channel if stealing from music (not from another SFX or self)
                     if (psgLocks[ch] != source && !isSfx(psgLocks[ch])) {
                         silencePsgChannel(ch);
@@ -967,7 +986,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             if (ch >= 0) {
                 if (isSfx(source)) {
                     // Update lock just in case? Already locked by Latch.
-                    if (shouldStealLock(psgLocks[ch], (SmpsSequencer) source)) {
+                    if (shouldStealLockAndObserve(SfxContentionObserver.Bus.PSG, ch,
+                            psgLocks[ch], (SmpsSequencer) source)) {
                         // Silence channel if stealing from music (not from another SFX or self)
                         if (psgLocks[ch] != source && !isSfx(psgLocks[ch])) {
                             silencePsgChannel(ch);
@@ -999,7 +1019,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         // Channel ID is passed explicitly.
         if (channelId >= 0 && channelId < 6) {
             if (isSfx(source)) {
-                if (shouldStealLock(fmLocks[channelId], (SmpsSequencer) source)) {
+                if (shouldStealLockAndObserve(SfxContentionObserver.Bus.FM, channelId,
+                        fmLocks[channelId], (SmpsSequencer) source)) {
                     // Silence channel if stealing from music (not from another SFX or self)
                     if (fmLocks[channelId] != source && !isSfx(fmLocks[channelId])) {
                         silenceFmChannel(channelId);
@@ -1024,7 +1045,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         // DAC is on Channel 5 (FM6)
         int ch = 5;
         if (isSfx(source)) {
-            if (shouldStealLock(fmLocks[ch], (SmpsSequencer) source)) {
+            if (shouldStealLockAndObserve(SfxContentionObserver.Bus.FM, ch,
+                    fmLocks[ch], (SmpsSequencer) source)) {
                 // Silence channel if stealing from music (not from another SFX or self)
                 if (fmLocks[ch] != source && !isSfx(fmLocks[ch])) {
                     silenceFmChannel(5);
@@ -1082,6 +1104,23 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             return challengerIdx > currentIdx;
         }
         return false; // Lower priority cannot steal
+    }
+
+    private boolean shouldStealLockAndObserve(SfxContentionObserver.Bus bus,
+                                              int channel,
+                                              SmpsSequencer currentLock,
+                                              SmpsSequencer challenger) {
+        boolean acquired = shouldStealLock(currentLock, challenger);
+        sfxContentionObserver.onRoleArbitrated(new SfxContentionObserver.Arbitration(
+                bus, channel, sourceFor(challenger),
+                currentLock == null ? null : sourceFor(currentLock), acquired));
+        return acquired;
+    }
+
+    private SfxContentionObserver.Source sourceFor(SmpsSequencer sequencer) {
+        return new SfxContentionObserver.Source(sequencer.getSourceDescriptor(),
+                sfxAdmissionOrdinals.getOrDefault(sequencer, -1L), isSfx(sequencer),
+                sequencer.isSpecialSfx());
     }
 
     /**
