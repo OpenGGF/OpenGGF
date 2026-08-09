@@ -20,15 +20,15 @@ import java.nio.file.Path;
  * segment has its own recorded {@code physics.csv}; comparing it turns that
  * class of failure into an ordinary red test.
  *
- * <p><b>Known residual (frontier).</b> Every physics/animation field matches for
- * all 3420 rows. Three {@code dynamic_art} errors remain, all on the final row
- * 3419: the engine has one extra outstanding transfer / ledger edge there. In
- * the run, the recorder attributes that submission to the {@code run_gap}
- * following this segment (which is why {@code ss_7}'s manifest opens with one
- * inherited descriptor), so the recorded row 3419 shows an empty ledger. This
- * is a submission-boundary skew of one frame at the segment's closing edge, not
- * a gameplay divergence, and it is deliberately left failing rather than masked
- * with a tolerance.
+ * <p>The segment's closing edge used to carry three {@code dynamic_art} errors
+ * on row 3419, because the replay ran the ROM's next main-loop iteration and
+ * forwarded its Tails DPLC submission onto that row. The run recorder
+ * attributes that submission to the {@code run_gap} following this segment
+ * (which is why {@code ss_7}'s manifest opens with one inherited descriptor),
+ * so the recorded row 3419 shows an empty ledger. The replay now runs that
+ * trailing iteration only for a standalone trace, which is the only shape the
+ * recorder terminal-forwards; see
+ * {@code AbstractTraceReplayTest#finishDynamicArtComparison}.
  */
 @RequiresRom(SonicGame.SONIC_2)
 public class TestS2Arz1CompleteEmeraldsSegmentTraceReplay extends AbstractTraceReplayTest {

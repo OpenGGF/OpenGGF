@@ -28,9 +28,10 @@ import java.nio.file.Path;
  * ordinary red test with a frame and a field. Modelled on
  * {@link TestS2Arz1CompleteEmeraldsSegmentTraceReplay}.
  *
- * <p><b>Status (landed red, deliberately).</b> 3 errors, all the closing-edge
- * {@code dynamic_art} skew at row 2902 ({@code dynamic_art.edges} expected
- * {@code []} actual {@code [5154]}). No gameplay row diverges.
+ * <p>The three closing-edge {@code dynamic_art} errors this class used to
+ * report on row 2902 were the segment's trailing main-loop iteration being
+ * forwarded onto its last row; see
+ * {@link TestS2Arz1CompleteEmeraldsSegmentTraceReplay}.
  *
  * <p>The 38 frame-0 {@code player_history} bootstrap entries this class
  * reported at b961eae47 were the untouched {@code Obj01_Init_Continued}

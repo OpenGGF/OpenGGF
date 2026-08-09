@@ -34,7 +34,27 @@ public record PlayerMovementRules(
          * and S3K's Tails_RollSpeed is likewise flat $20 (sonic3k.asm:28178 loc_14D46),
          * so this is true for Sonic 2 only.
          */
-        boolean tailsRollSpeedUsesEffectiveDecelQuarter) {
+        boolean tailsRollSpeedUsesEffectiveDecelQuarter,
+        /**
+         * Whether this game's water routine skips the entry velocity quarter/halve
+         * and the exit velocity double while {@code object_control} is holding the
+         * character (a tube, a launcher, a cutscene).
+         *
+         * <p>S3K only. {@code Sonic_Water} tests {@code object_control(a0)} before
+         * {@code asr x_vel / asr y_vel / asr y_vel} (sonic3k.asm:22235-22239) and again
+         * before {@code asl y_vel} on the way out (sonic3k.asm:22264-22270);
+         * {@code Tails_Water} does the same but lets {@code Tails_CPU_routine == 4}
+         * through regardless (sonic3k.asm:27448-27454).
+         *
+         * <p>Sonic 2 has no such test: {@code Obj01_InWater} runs
+         * {@code asr.w x_vel / asr.w y_vel / asr.w y_vel} unconditionally
+         * (s2.asm:36393-36395), and {@code Obj01_Control} reaches
+         * {@code bsr.w Sonic_Water} outside the {@code btst #0,obj_control} skip
+         * (s2.asm:36236-36251). Sonic 1 likewise
+         * ("01 Sonic.asm":270-272). So a character riding the CPZ spin tube into the
+         * water still gets quartered.
+         */
+        boolean waterVelocityChangeGatedByObjectControl) {
 
     public boolean objectSolidHurtLandingRetainsRoutine() {
         return landing.objectSolidHurtLandingRetainsRoutine();

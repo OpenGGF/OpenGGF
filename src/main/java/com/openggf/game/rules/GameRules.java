@@ -50,7 +50,10 @@ public record GameRules(
                     false,
                     false,
                     false,
-                    false // tailsRollSpeedUsesEffectiveDecelQuarter: S1 has no Tails_RollSpeed
+                    // tailsRollSpeedUsesEffectiveDecelQuarter: S1 has no Tails_RollSpeed
+                    false,
+                    // waterVelocityChangeGatedByObjectControl: S1 Sonic_Water has no object_control test
+                    false
             ),
             new PlayerCapabilityRules(
                     false,
@@ -190,7 +193,10 @@ public record GameRules(
                     true,
                     false,
                     false,
-                    true // tailsRollSpeedUsesEffectiveDecelQuarter: shipped s2.asm:40037 keeps decel>>2
+                    // tailsRollSpeedUsesEffectiveDecelQuarter: shipped s2.asm:40037 keeps decel>>2
+                    true,
+                    // waterVelocityChangeGatedByObjectControl: S2 Obj01_InWater has no object_control test
+                    false
             ),
             new PlayerCapabilityRules(
                     true,
@@ -330,7 +336,10 @@ public record GameRules(
                     true,
                     true,
                     true,
-                    false // tailsRollSpeedUsesEffectiveDecelQuarter: S3K Tails_RollSpeed is flat $20
+                    // tailsRollSpeedUsesEffectiveDecelQuarter: S3K Tails_RollSpeed is flat $20
+                    false,
+                    // waterVelocityChangeGatedByObjectControl: sonic3k.asm:22235, :27448
+                    true
             ),
             new PlayerCapabilityRules(
                     true,

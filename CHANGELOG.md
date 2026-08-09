@@ -3,6 +3,20 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the standalone special-stage capture no longer labels every recorded object pass one
+  frame early. The capture runner wrote a row for the entry frame that the run-segment
+  runner correctly skips, so every pass's input-sample frame was off by one against its own
+  physics rows. The committed fixture is regenerated; it records the same execution with
+  correct frame labels.
+- Fix: a trace replay only runs the extra terminal art iteration for captures that recorded
+  one. Run-segment captures do not, so the engine was publishing that iteration's art
+  transfers onto the segment's final compared row.
+- Fix: the Chemical Plant spin tube advances to its next waypoint without an intervening
+  movement frame when the waypoints are less than eight pixels apart on the dominant axis,
+  as the ROM's byte-sized read of a word-sized counter does.
+- Fix: water entry and exit are handled per game while an object controls the player. The
+  object-controlled path is Sonic 3 & Knuckles behaviour and was being applied to all games,
+  so Sonic 2 skipped its water entry and exit speed changes during a spin-tube ride.
 - Fix: the Chemical Plant staircase keeps a standing bit per step, as the ROM does. The
   engine draws the four steps from one instance, and without per-step standing bits a rider
   stayed latched to the step they first landed on: their height kept being pulled back to

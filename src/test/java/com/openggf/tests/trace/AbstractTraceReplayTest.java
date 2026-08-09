@@ -882,7 +882,34 @@ public abstract class AbstractTraceReplayTest {
             TraceBinder binder,
             com.openggf.trace.replay.TraceReplayFixture fixture,
             boolean replayCompleted) {
-        if (replayCompleted) {
+        // An edge belongs to the frame it is PUBLISHED on. The main-loop
+        // iteration that follows the last recorded row publishes no row, so
+        // whether its work belongs to this recording at all depends on what
+        // came after the recording, and the recorder is the authority on that.
+        //
+        // A standalone trace is the tail of its recording: the capture loop
+        // advances the emulator one frame past the last row and breaks
+        // ("tools/bizhawk-headless/src/Recording/S2TraceCaptureRunner.cs":383-390),
+        // leaving that iteration's callbacks buffered with no further
+        // PublishRow, so PublishTerminal attaches them to the last row
+        // (:520-529 FlushDynamicArtSegment -> S2DynamicArtObserver.cs:268
+        // PublishTerminal, terminalForwarded=true).
+        //
+        // A run segment is a slice with a run gap after it. The run capture
+        // loop marks an advance boundary at the top of every frame
+        // ("S2RunCaptureRunner.cs":219, :441-451 PrepareDynamicArtCursor ->
+        // S2DynamicArtObserver.cs:206 MarkAdvanceBoundary), and closes the
+        // segment with PublishBoundaryTerminal (S2RunCaptureRunner.cs:887),
+        // which forwards only the prefix buffered BEFORE the closing frame
+        // began and reclassifies everything that frame produced into the
+        // following gap (S2DynamicArtObserver.cs:868-899
+        // ReclassifyBoundaryCallbacksAsGap). Its published outstanding set is
+        // the ledger as of the boundary mark, not the current ledger.
+        //
+        // The corpus agrees: across all committed dynamic-art fixtures exactly
+        // 15 recorded edges carry terminal_forwarded=true, all of them on the
+        // final row of a standalone S2 trace, none in any run segment.
+        if (replayCompleted && trace.metadata().runId() == null) {
             fixture.runTerminalDynamicArtIteration();
         }
         fixture.closeDynamicArtComparisonSegment();

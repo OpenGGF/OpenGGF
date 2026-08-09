@@ -66471,3 +66471,105 @@ CPZ2 12927 -> 2268; the three mid-act segment tests 41/41/43 -> 3/3/5.
   s2.asm:483-484 was WRONG — the CSV `lag` column is BizHawk's
   `IInputPollable.IsLagFrame` (GpgxHost.cs:82), an emulator input-poll flag, not the ROM's
   `Vint_Lag` branch — and re-recording it unchanged produces a BYTE-IDENTICAL file.
+
+## 2026-08-09 — round twenty: recorder off-by-one FIXED, closing-edge skew closed
+
+Command: full `-Ptrace-replay` profile, no `-Dtest`. Base 9de7ecf72 (769 / 18 / 63).
+After: **769 / 19 / 63** — failing CLASSES down 2 (four segment tests green, two
+special-stage unit classes newly red on old frame labels; the Failures metric counts test
+methods, not classes).
+
+- **THE STANDALONE SPECIAL-STAGE RECORDER OFF-BY-ONE IS FIXED AND THE FIXTURE
+  REGENERATED** (user granted fixture-regeneration permission for this session; note
+  tools/bizhawk-headless/AGENTS.md hard rule 1 makes this a USER decision — the round-twenty
+  brief wrongly directed it without asking, and the agent correctly flagged that the
+  sign-off was not its to give).
+  `S2SpecialStageRunObjectsObserver.cs:107-109` sets
+  `input_sample_frame = host.CompletedFrame - bk2Offset` and the callback fires DURING
+  `host.Advance()`, so `CompletedFrame` is the PRE-increment count. The run path
+  (`S2RunCaptureRunner.cs:248-258`) sets the offset on the entry frame and `continue`s, so
+  row k is emu frame E0+1+k and `input_sample_frame == k`. The standalone path
+  (`S2SpecialStageCaptureRunner.cs:126-149`) set the offset and then FELL THROUGH, writing
+  row 0 for that same frame plus an extra `inputRows.MoveNext()`, so `input_sample_frame ==
+  k-1`.
+  **Attribution was exact:** the agent first reproduced the committed fixture
+  BYTE-IDENTICALLY from the unfixed harness (`cmp`-clean on both payloads) before changing
+  anything.
+  **Verified by an invariant derived from semantics, not measured from a fixture:** a V-int
+  that executed `ReadJoypads` polled the pad, so BizHawk's `IsLagFrame` is false for it and
+  every `input_sample_frame` must land on a `lag=0` row. Committed fixture: 1849 violations
+  / 1323 confirmations at +0, and 0 / 3172 at +1. After the fix: **0 violations / 3172
+  confirmations at +0** — the seven run segments' exact signature. Re-verified independently
+  in the main tree after install.
+  **Same execution, relabelled:** new[k] state == old[k+1] state for 5298/5298 rows, new[k]
+  lag == old[k+1] lag for 5298/5298, input column unchanged for 5299/5299; row count,
+  `bk2_frame_offset` (2754) and `trace_frame_count` (5299) all unchanged.
+- **The recorder fix does NOT touch ss_1, and the earlier brief was wrong to assume it
+  would.** ss_1 is a RUN-path fixture and the run path never had the bug;
+  `TestS2SpecialStage1TraceReplay` is byte-for-byte unchanged at 10 errors.
+  **The real ss_1 mechanism, now established:** all 10 errors sit on exactly two frames, 393
+  and 401. Both are PRE-START rows (`SpecialStage_Started` rises at 424) and both are
+  observations with ZERO bound `RunObjects` passes — 393 is the input sample for pass seq
+  160 whose `completion_cursor_frame` is 394 (a lag frame), so it is observed at 395 with
+  seq 161; 401 is seq 165, cursor 402 (lag), observed at 403 with 166. On those rows the
+  ROM's V-int ran but `RunObjects` had not returned, so the CSV carries PRE-pass object
+  state. The engine publishes anyway:
+  `Sonic2SpecialStageManager.java:1292` unconditionally calls
+  `executePendingRecurringMainPass()` every pre-start iteration, and
+  `AbstractS2SpecialStageTraceReplayTest.java:339-357` paces one engine update per non-lag
+  row. **51 of ss_1's 181 pre-start passes overran the frame**; only two move an object
+  field far enough to trip a compare, which is exactly why it reads as isolated blips.
+  The correct model needs THREE pieces together — (1) one pre-start iteration per row that
+  is some pass's `input_sample_frame` (180 of the 181 non-lag rows in [159,424], the lone
+  exception being 423, the terminal boundary — so `vintSampleRows` is right and `tf.lag()`
+  is wrong); (2) publish each pass's results at its BOUND observation, not in-row; (3) model
+  pass sequence 0, the single pre-fade `RunObjects` at s2.asm:6668 which the engine runs
+  inline at `Sonic2SpecialStageManager.java:1240-1264` outside the pending mechanism, and
+  make `recurringMainPassPending` an int COUNT so a double-bound observation (389, 395) can
+  publish twice instead of silently dropping the second. **That is why r17 could only be
+  made green by fitting, and why "lower passPacingStart" throws.**
+- **CLOSING-EDGE DPLC SKEW CLOSED — it was the TEST HARNESS, not the engine.** Four tests
+  green (ARZ1 row 3419, Ehz1Seg1 3709, Ehz1Seg2 3376, Ehz1Seg2Halfpipe 2902).
+  `AbstractTraceReplayTest` ran `TraceReplayFixture.runTerminalDynamicArtIteration()`
+  UNCONDITIONALLY. That services one more production V-blank and object pass which publishes
+  no row, so `closeComparisonSegment` forwards its edges onto the last published row with
+  `terminalForwarded=true`. In all four cases, and only those, the mismatching edges are
+  exactly the ones with `terminalForwarded=true` and `logicalFrame == lastRow+1`. The
+  recorder draws the line in two places: a STANDALONE capture (`S2TraceCaptureRunner`)
+  advances one frame past the last row and breaks without `PublishRow`, so those callbacks
+  stay buffered and `PublishTerminal` attaches them — the engine must reproduce that
+  iteration; a RUN segment (`S2RunCaptureRunner`) does not, so nothing from the trailing
+  iteration belongs on its last row.
+- **CPZ2 frontier 4859 -> 5052 (193 frames), errors 2268 -> 2983.** Two ROM-derived defects,
+  neither a launch as the brief guessed — the player is riding the CPZ Spin Tube (Obj1E,
+  slot 25 at 0x880,0x680) for the whole 4848-5060 window and Obj1E writes velocity and
+  position directly, so every speed there is a waypoint recompute.
+  (1) `CPZSpinTubeObjectInstance.calculateVelocity` had `if (frames < 1) frames = 1;`
+  ("prevent getting stuck") with NO ROM basis. `loc_22902` stores the segment counter with
+  `move.w d1,2(a4)` but `loc_2271A`/`loc_227FE` read it back with `subq.b #1,2(a4)` — a BYTE
+  read of a WORD store, so the counter is `|dominant| >> 3` and waypoints closer than 8px on
+  the dominant axis give 0, advancing with NO intervening `Obj1E_MoveCharacter` frame.
+  Confirmed: waypoint C(0x04D4,0x06EC) -> D(0x04DB,0x06E8) has |dx|=7, 7>>3 = 0, and the
+  trace shows the recompute at 12FA followed immediately by the snap at 12FB.
+  (2) Exposed by (1): `LevelWaterCoordinator` sent ALL games through
+  `updateWaterStateObjectControlled()` when object_control suppressed movement, skipping the
+  water entry quarter / exit double. **That is S3K-only behaviour — the same per-game
+  generalisation shape as the S2 camera-Y loader filter closed in b961eae47.**
+- **KNOWN FOLLOW-UP, two classes newly red on OLD frame labels:**
+  `S2SpecialStageExpectedComparisonTest` (`startedTransitionPublishesTerminalPreStartObjectPass`
+  expected 425, now 424 — the one-frame relabelling, plus
+  `committedTraceComparesFirstCompletedPassAfterTriggerTransitionOnly`) and
+  `S2SpecialStageFinishBoundaryMappingTest` (both cases). These assert pass-boundary
+  positions against the standalone fixture and were calibrated to the off-by-one labels.
+  They belong with the ss_1 pre-start modelling — same subsystem, same boundary — and
+  should be corrected there rather than by adjusting constants in isolation.
+  `S2SpecialStageRecorderContractTest`'s `assertEquals("1.4-s2ss-native", recorderVersion())`
+  was REMOVED, not bumped: hard rule 4 declares `recorder`/`recorder_version` opaque and
+  behaviour-neutral, so pinning it asserted a recorder identity that no longer exists and
+  gated nothing; bumping the string would only re-arm the same staleness. That unmasked a
+  second stale assertion in the same class (expects 2991 passes, fixture has 3172 — a
+  difference of exactly 181, the pre-start pass count, so it predates the pre-start hook),
+  left in place as a separate claim.
+  `TestTraceRunSpecialStageRows.s2WithRecordedPassesExposesAPassCursorFromControlStart` is
+  unaffected by the re-record and never could have been — it builds a synthetic `@TempDir`
+  fixture whose own helper emits no `started_at_input_sample`. Pure test-data gap.

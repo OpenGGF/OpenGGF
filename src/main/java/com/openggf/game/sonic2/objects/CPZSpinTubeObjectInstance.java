@@ -980,10 +980,18 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
             frames = (absDx * 256) / speed;
         }
 
-        // Ensure at least 1 frame to prevent getting stuck
-        if (frames < 1) {
-            frames = 1;
-        }
+        // No minimum-frame clamp: the ROM permits a zero-length segment.
+        // loc_22902 stores the quotient with move.w d1,2(a4)
+        // (docs/s2disasm/s2.asm:48846-48848 and :48864-48866) but loc_2271A and
+        // loc_227FE read it back as a byte via subq.b #1,2(a4)
+        // (docs/s2disasm/s2.asm:48574 and :48800), so the counter is the HIGH byte
+        // of |dominant| * $10000 / $800 == |dominant| * 32, i.e. |dominant| >> 3.
+        // Waypoints closer together than 8px on the dominant axis therefore yield a
+        // counter of 0: subq.b drives it straight negative, and the very next frame
+        // snaps to the waypoint and recomputes with no intervening
+        // Obj1E_MoveCharacter frame at all. Clamping to 1 inserted a spurious
+        // movement frame and left every later waypoint one frame late for the rest
+        // of the ride.
 
         player.setXSpeed((short) xVel);
         player.setYSpeed((short) yVel);

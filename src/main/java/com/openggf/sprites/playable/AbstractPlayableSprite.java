@@ -5059,6 +5059,19 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * and CPU routine is not 4, it returns before the velocity quarter/double
          * paths (sonic3k.asm:27416-27470).
          */
+        /**
+         * Whether this game's water routine suppresses the entry/exit velocity
+         * change while {@code object_control} holds the character. True for S3K
+         * only; S1 and S2 apply it unconditionally.
+         *
+         * @see PlayerMovementRules#waterVelocityChangeGatedByObjectControl()
+         */
+        public boolean waterVelocityChangeGatedByObjectControl() {
+                PlayerMovementRules movementRules = playerMovementRulesOrNull();
+                return movementRules != null
+                                && movementRules.waterVelocityChangeGatedByObjectControl();
+        }
+
         public void updateWaterStateObjectControlled(int waterLevelY) {
                 wasInWater = inWater;
 
