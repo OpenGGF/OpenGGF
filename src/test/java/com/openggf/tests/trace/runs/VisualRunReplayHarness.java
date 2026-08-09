@@ -231,10 +231,11 @@ public final class VisualRunReplayHarness {
             loop.presentOuterFrame(false, false);
             GameServices.audio().update();
             int cursorAfter = GameServices.playbackDebug().getCursorFrame();
-            int consumed = cursorAfter == cursorBefore + 1 ? cursorBefore : cursorAfter;
-            boolean semanticRow = cursorAfter == cursorBefore + 1;
-            if (rejectFastForward && cursorAfter != cursorBefore
-                    && cursorAfter != cursorBefore + 1) {
+            boolean semanticStart = before.segmentIndex() >= 0 && before.segmentRow() >= 0;
+            int consumed = semanticStart && cursorAfter == cursorBefore + 1
+                    ? cursorBefore : cursorAfter;
+            boolean semanticRow = semanticStart && cursorAfter == cursorBefore + 1;
+            if (rejectFastForward && semanticStart && cursorAfter != cursorBefore + 1) {
                 throw new IllegalStateException("audio timeline capture rejects fast-forwarded BK2 rows");
             }
             observer.afterOuterFrame(frameView(consumed, steps, loop, segments, semanticRow));

@@ -2,6 +2,7 @@ package com.openggf.audio.driver;
 
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
 import java.util.Objects;
+import java.util.List;
 
 /** Opt-in, void-only diagnostic view of SFX admission and channel arbitration. */
 public interface SfxContentionObserver {
@@ -20,12 +21,20 @@ public interface SfxContentionObserver {
         }
     }
 
-    record Admission(Source source) {
+    record Admission(Source source, List<Role> declaredRoles) {
         public Admission {
             Objects.requireNonNull(source, "source");
+            declaredRoles = List.copyOf(Objects.requireNonNull(declaredRoles, "declaredRoles"));
             if (!source.sfx() || source.admissionOrdinal() < 0) {
                 throw new IllegalArgumentException("admission must identify an SFX request");
             }
+        }
+    }
+
+    record Role(Bus bus, int channel) {
+        public Role {
+            Objects.requireNonNull(bus, "bus");
+            if (channel < 0) throw new IllegalArgumentException("channel must be non-negative");
         }
     }
 

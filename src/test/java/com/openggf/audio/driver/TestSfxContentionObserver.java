@@ -41,6 +41,21 @@ class TestSfxContentionObserver {
     }
 
     @Test
+    void observerBookkeepingIsReleasedWithSfxLifecycle() {
+        // Break caught: opt-in diagnostic identities retain dead SFX sequencers.
+        SmpsDriver driver = new SmpsDriver();
+        driver.setSfxContentionObserver(new SfxContentionObserver() { });
+        SmpsSequencer sfx = sequencer("sfx", 0xA0, driver);
+        driver.addSequencer(sfx, true);
+        assertEquals(1, driver.trackedSfxAdmissionCountForTesting());
+        driver.stopAllSfx();
+        assertEquals(0, driver.trackedSfxAdmissionCountForTesting());
+        driver.addSequencer(sequencer("again", 0xA0, driver), true);
+        driver.stopAll();
+        assertEquals(0, driver.trackedSfxAdmissionCountForTesting());
+    }
+
+    @Test
     void reportsOrderedAdmissionAndPerRoleDisplacementForOverlappingSfx() {
         // Break caught: same-frame SFX requests lose source order or a later normal SFX's FM3 steal.
         SmpsDriver driver = new SmpsDriver();

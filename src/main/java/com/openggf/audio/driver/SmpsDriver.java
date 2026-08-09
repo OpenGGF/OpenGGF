@@ -330,6 +330,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                         token.psgLatchChannels[index]);
             }
             pendingRemovals.clear();
+            sfxAdmissionOrdinals.clear();
+            nextSfxAdmissionOrdinal = 0;
             for (SmpsSequencer sequencer : token.pendingRemovals) {
                 pendingRemovals.add(sequencer);
             }
@@ -418,6 +420,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             sfxSequencers.clear();
             psgLatches.clear();
             pendingRemovals.clear();
+            sfxAdmissionOrdinals.clear();
+            nextSfxAdmissionOrdinal = 0;
             Arrays.fill(fmLocks, null);
             Arrays.fill(psgLocks, null);
 
@@ -631,9 +635,17 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             sequencers.add(seq);
             if (isSfx) {
                 sfxSequencers.add(seq);
-                sfxAdmissionOrdinals.put(seq, nextSfxAdmissionOrdinal++);
-                sfxContentionObserver.onSfxAdmitted(
-                        new SfxContentionObserver.Admission(sourceFor(seq)));
+                if (sfxContentionObserver != SfxContentionObserver.NONE) {
+                    sfxAdmissionOrdinals.put(seq, nextSfxAdmissionOrdinal++);
+                    sfxContentionObserver.onSfxAdmitted(new SfxContentionObserver.Admission(
+                            sourceFor(seq), seq.getTracks().stream()
+                                    .filter(track -> track.type == SmpsSequencer.TrackType.FM
+                                            || track.type == SmpsSequencer.TrackType.PSG)
+                                    .map(track -> new SfxContentionObserver.Role(
+                                            track.type == SmpsSequencer.TrackType.FM
+                                                    ? SfxContentionObserver.Bus.FM : SfxContentionObserver.Bus.PSG,
+                                            track.channelId)).toList()));
+                }
                 // SFX constructor calls synth.setDacData() which overwrites the music's
                 // DAC sample bank on the shared synthesizer. Restore the music sequencer's
                 // DAC data so donor music (e.g. S3K invincibility) keeps its correct samples.
@@ -650,6 +662,10 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     /** Returns the installed diagnostic observer, normally {@link SfxContentionObserver#NONE}. */
     public SfxContentionObserver sfxContentionObserver() {
         return sfxContentionObserver;
+    }
+
+    int trackedSfxAdmissionCountForTesting() {
+        return sfxAdmissionOrdinals.size();
     }
 
     /**
@@ -670,6 +686,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         synchronized (sequencersLock) {
             sequencers.clear();
             sfxSequencers.clear();
+            sfxAdmissionOrdinals.clear();
             for (int i = 0; i < 6; i++)
                 fmLocks[i] = null;
             for (int i = 0; i < 4; i++)
@@ -696,6 +713,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 sequencers.remove(sfx);
                 releaseLocks(sfx);
                 sfxSequencers.remove(sfx);
+                sfxAdmissionOrdinals.remove(sfx);
             }
             continuousSfxId = 0;
             continuousSfxFlag = false;
@@ -872,6 +890,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         // Clear cached PSG latch channel and remove from fallback HashMap
         seq.setPsgLatchChannel(-1);
         psgLatches.remove(seq);
+        sfxAdmissionOrdinals.remove(seq);
     }
 
     private void updateOverrides(SmpsSequencer.TrackType type, int ch, boolean overridden) {
