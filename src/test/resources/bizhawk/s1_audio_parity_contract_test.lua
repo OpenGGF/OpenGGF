@@ -259,6 +259,57 @@ local function runFixedRoleAndDescendingStackNormalization()
     check(not ok, "ROM return address at assetEnd minus one was accepted")
 end
 
+local function runInvocationLifecycle()
+    -- Break caught: PlaySegaSound's launch-only abnormal return poisons the next same-stack external call.
+    local lifecycle = Contract.newInvocationLifecycle()
+    equals(lifecycle:entry(0x1000, 166), "open_dormant", "first launch invocation did not open")
+    equals(lifecycle:playSegaAbnormalExit(), "reset_dormant",
+        "pre-epoch PlaySegaSound did not reset its dormant invocation")
+    equals(lifecycle:entry(0x1000, 299), "open_dormant",
+        "later same-stack external call was mistaken for a retry")
+    equals(lifecycle:close(), "close_dormant", "dormant normal invocation did not close")
+
+    -- Break caught: BizHawk frame changes split one DAC-busy invocation into multiple ticks.
+    equals(lifecycle:entry(0x2000, 823), "open_dormant", "epoch invocation did not open dormant")
+    equals(lifecycle:acceptBgm(0x81), "arm_tick_zero", "GHZ did not arm tick zero")
+    equals(lifecycle:entry(0x2000, 824), "retry", "same-stack cross-frame retry opened a second tick")
+    equals(lifecycle:close(), "close_capture", "armed invocation did not close exactly once")
+
+    -- Break caught: a nested external call with a new stack is silently treated as a DAC-busy retry.
+    equals(lifecycle:entry(0x3000, 825), "open_capture", "next captured tick did not open")
+    local ok = pcall(function() lifecycle:entry(0x2FFC, 825) end)
+    check(not ok, "different-stack active entry was accepted")
+    equals(lifecycle:close(), "close_capture", "captured tick did not recover after rejected nested entry")
+
+    -- Break caught: launch-only Sega PCM can bypass the sole normal close after capture arms.
+    equals(lifecycle:entry(0x3000, 826), "open_capture", "post-arm tick did not open")
+    ok = pcall(function() lifecycle:playSegaAbnormalExit() end)
+    check(not ok, "post-epoch PlaySegaSound abnormal exit was not rejected as contamination")
+end
+
+local function runPsg3ToneNoiseAliasNormalization()
+    -- Break caught: GHZ's shipped $F3 noise command relabels or rejects the fixed PSG3 slot.
+    local raw = {
+        assetBase = 476636,
+        assetEnd = 478532,
+        global = {fadeActive = 0, fadeDelay = 0, fadeOut = 0, fadeSteps = 0,
+            speedUp = 0, tempoReload = 21, tempoTimeout = 3},
+        tracks = {
+            rawTrack(0, 6), rawTrack(0, 0), rawTrack(0, 1), rawTrack(0, 2), rawTrack(0, 4),
+            rawTrack(0, 5), rawTrack(0, 6), rawTrack(0, 128), rawTrack(0, 160), rawTrack(128, 192)
+        }
+    }
+    local toneState = Contract.normalizeRom(raw, {})
+    local tone = Contract.canonicalJson(toneState)
+    raw.tracks[10].voiceControl = 224
+    local noiseState = Contract.normalizeRom(raw, {})
+    local noise = Contract.canonicalJson(noiseState)
+    equals(noise, tone, "active PSG3 C0/E0 aliases did not normalize to identical fixed-role bytes")
+    check(noiseState.tracks[10].hardware == "PSG3" and noiseState.tracks[10].role == "PSG3"
+            and toneState.tracks[10].role == "PSG3",
+        "PSG3 noise alias changed fixed slot ordering or role")
+end
+
 local function runGoldenVector()
     -- Break caught: ROM- and OpenGGF-shaped state normalize to divergent bytes or include stale capacity.
     local vector = decodeJson(readFile(vectorPath))
@@ -285,5 +336,7 @@ runCycleProof()
 runCycleLimit()
 runPeriodOneCycleProof()
 runFixedRoleAndDescendingStackNormalization()
+runInvocationLifecycle()
+runPsg3ToneNoiseAliasNormalization()
 runGoldenVector()
 print("S1_AUDIO_PARITY_CONTRACT_OK")

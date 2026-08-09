@@ -230,7 +230,10 @@ function Contract.normalizeRom(snapshot, activeLoopIndices)
         if (Contract.u8(track.status) & 0x80) == 0 then
             tracks[index] = {active = false, hardware = slot.hardware, role = slot.role}
         else
-            assert(Contract.u8(track.voiceControl) == slot.voiceControl,
+            local voiceControl = Contract.u8(track.voiceControl)
+            local voiceControlMatches = voiceControl == slot.voiceControl
+                or (slot.role == "PSG3" and voiceControl == 0xe0)
+            assert(voiceControlMatches,
                 "ROM voice-control does not match active " .. slot.role .. " slot")
             tracks[index] = normalizedActiveTrack(track, slot.role, slot.hardware, activeLoopIndices,
                 liveRomReturnStack(track.returnStack or {}, track.stackPointer, snapshot.assetBase, snapshot.assetEnd))
@@ -254,6 +257,63 @@ function Contract.normalizeOpenGgf(snapshot, activeLoopIndices)
         end
     end
     return {global = normalizedGlobal(snapshot.global, false), tracks = tracks}
+end
+
+function Contract.newInvocationLifecycle()
+    local lifecycle = {active = false, armed = false, stackPointer = nil, openFrame = nil,
+        launchInvocations = 0}
+
+    local function resetActive(self)
+        self.active = false
+        self.stackPointer = nil
+        self.openFrame = nil
+    end
+
+    function lifecycle:entry(stackPointer, emulatorFrame)
+        local stack = Contract.u32(stackPointer)
+        local frame = assertInteger(emulatorFrame, "emulator frame")
+        if self.active then
+            assert(stack == self.stackPointer, "different-stack UpdateMusic entry before close")
+            return "retry"
+        end
+        self.active = true
+        self.stackPointer = stack
+        self.openFrame = frame
+        if self.armed then return "open_capture" end
+        self.launchInvocations = self.launchInvocations + 1
+        return "open_dormant"
+    end
+
+    function lifecycle:acceptBgm(soundId)
+        local id = Contract.u8(soundId)
+        if self.armed then error(string.format("music $%02X accepted after capture epoch", id)) end
+        if id ~= 0x81 then return "ignore" end
+        assert(self.active, "GHZ epoch occurred outside UpdateMusic")
+        self.armed = true
+        return "arm_tick_zero"
+    end
+
+    function lifecycle:playSegaAbnormalExit()
+        assert(self.active, "PlaySegaSound abnormal exit without active UpdateMusic")
+        assert(not self.armed, "PlaySegaSound abnormal exit contaminated captured invocation")
+        resetActive(self)
+        return "reset_dormant"
+    end
+
+    function lifecycle:close()
+        assert(self.active, "UpdateMusic close without active invocation")
+        local action = self.armed and "close_capture" or "close_dormant"
+        resetActive(self)
+        return action
+    end
+
+    function lifecycle:isArmed() return self.armed end
+    function lifecycle:isActive() return self.active end
+    function lifecycle:openStackPointer() return self.stackPointer end
+    function lifecycle:openEmulatorFrame() return self.openFrame end
+    function lifecycle:launchInvocationCount() return self.launchInvocations end
+
+    return lifecycle
 end
 
 function Contract.newCycleDetector()
