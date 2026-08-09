@@ -60,6 +60,12 @@ class TestS1Ghz1OpenGgfAudioTimelineCapture {
                 request.arbitration().getFirst().finalOwner().ownerClass());
     }
 
+    @Test
+    void producerClassifiesD0AsSpecialBeforeConstructingRequest() {
+        assertEquals(S1GameplayAudioTimeline.SoundClass.SPECIAL_SFX,
+                S1Ghz1OpenGgfAudioTimelineCapture.CaptureState.soundClassForSfx(0xD0));
+    }
+
     private static Path[] requestedPaths(String run, String output) {
         if (run == null || output == null) {
             throw new IllegalArgumentException(RUN_PROPERTY + " and " + OUTPUT_PROPERTY

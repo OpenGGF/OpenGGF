@@ -330,8 +330,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                         token.psgLatchChannels[index]);
             }
             pendingRemovals.clear();
-            sfxAdmissionOrdinals.clear();
-            nextSfxAdmissionOrdinal = 0;
+            reidentifyObservedSfx();
             for (SmpsSequencer sequencer : token.pendingRemovals) {
                 pendingRemovals.add(sequencer);
             }
@@ -421,7 +420,6 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             psgLatches.clear();
             pendingRemovals.clear();
             sfxAdmissionOrdinals.clear();
-            nextSfxAdmissionOrdinal = 0;
             Arrays.fill(fmLocks, null);
             Arrays.fill(psgLocks, null);
 
@@ -449,6 +447,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                     sfxSequencers.add(sequencer);
                 }
             }
+            reidentifyObservedSfx();
 
             for (int i = 0; i < entries.size(); i++) {
                 SmpsSourceDescriptor fallbackVoiceSource = entries.get(i).fallbackVoiceSource();
@@ -548,6 +547,11 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             // (S1/S2 jump SFX priority 0x80 allows any SFX to steal the lock,
             // so the old sequencer steals back from the new one every sample).
             if (isSfx) {
+                if (sfxContentionObserver != SfxContentionObserver.NONE) {
+                    sfxAdmissionOrdinals.put(seq, nextSfxAdmissionOrdinal++);
+                    sfxContentionObserver.onSfxAdmitted(new SfxContentionObserver.Admission(
+                            sourceFor(seq), declaredRoles(seq)));
+                }
                 int newId = seq.getSmpsData().getId();
                 SmpsSequencer existing = null;
                 for (SmpsSequencer s : sfxSequencers) {
@@ -585,12 +589,16 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                                 if (existingTrack.type == SmpsSequencer.TrackType.FM
                                         || existingTrack.type == SmpsSequencer.TrackType.DAC) {
                                     if (fmLocks[existingTrack.channelId] == existingSfx) {
+                                        observeConflict(SfxContentionObserver.Bus.FM,
+                                                existingTrack.channelId, existingSfx, seq);
                                         fmLocks[existingTrack.channelId] = null;
                                         updateOverrides(SmpsSequencer.TrackType.FM,
                                                 existingTrack.channelId, false);
                                     }
                                 } else if (existingTrack.type == SmpsSequencer.TrackType.PSG) {
                                     if (psgLocks[existingTrack.channelId] == existingSfx) {
+                                        observeConflict(SfxContentionObserver.Bus.PSG,
+                                                existingTrack.channelId, existingSfx, seq);
                                         psgLocks[existingTrack.channelId] = null;
                                         updateOverrides(SmpsSequencer.TrackType.PSG,
                                                 existingTrack.channelId, false);
@@ -635,17 +643,6 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             sequencers.add(seq);
             if (isSfx) {
                 sfxSequencers.add(seq);
-                if (sfxContentionObserver != SfxContentionObserver.NONE) {
-                    sfxAdmissionOrdinals.put(seq, nextSfxAdmissionOrdinal++);
-                    sfxContentionObserver.onSfxAdmitted(new SfxContentionObserver.Admission(
-                            sourceFor(seq), seq.getTracks().stream()
-                                    .filter(track -> track.type == SmpsSequencer.TrackType.FM
-                                            || track.type == SmpsSequencer.TrackType.PSG)
-                                    .map(track -> new SfxContentionObserver.Role(
-                                            track.type == SmpsSequencer.TrackType.FM
-                                                    ? SfxContentionObserver.Bus.FM : SfxContentionObserver.Bus.PSG,
-                                            track.channelId)).toList()));
-                }
                 // SFX constructor calls synth.setDacData() which overwrites the music's
                 // DAC sample bank on the shared synthesizer. Restore the music sequencer's
                 // DAC data so donor music (e.g. S3K invincibility) keeps its correct samples.
@@ -1140,6 +1137,30 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         return new SfxContentionObserver.Source(sequencer.getSourceDescriptor(),
                 sfxAdmissionOrdinals.getOrDefault(sequencer, -1L), isSfx(sequencer),
                 sequencer.isSpecialSfx());
+    }
+
+    private List<SfxContentionObserver.Role> declaredRoles(SmpsSequencer seq) {
+        return seq.getTracks().stream()
+                .filter(track -> track.type == SmpsSequencer.TrackType.FM || track.type == SmpsSequencer.TrackType.PSG)
+                .map(track -> new SfxContentionObserver.Role(track.type == SmpsSequencer.TrackType.FM
+                        ? SfxContentionObserver.Bus.FM : SfxContentionObserver.Bus.PSG, track.channelId)).toList();
+    }
+
+    private void observeConflict(SfxContentionObserver.Bus bus, int channel,
+                                 SmpsSequencer displaced, SmpsSequencer challenger) {
+        if (sfxContentionObserver != SfxContentionObserver.NONE) {
+            sfxContentionObserver.onRoleArbitrated(new SfxContentionObserver.Arbitration(
+                    bus, channel, sourceFor(challenger), sourceFor(displaced), true));
+        }
+    }
+
+    private void reidentifyObservedSfx() {
+        sfxAdmissionOrdinals.clear();
+        if (sfxContentionObserver != SfxContentionObserver.NONE) {
+            for (SmpsSequencer sequencer : sfxSequencers) {
+                sfxAdmissionOrdinals.put(sequencer, nextSfxAdmissionOrdinal++);
+            }
+        }
     }
 
     /**

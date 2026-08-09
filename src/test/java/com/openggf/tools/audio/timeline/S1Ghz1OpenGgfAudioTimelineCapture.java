@@ -66,7 +66,7 @@ public final class S1Ghz1OpenGgfAudioTimelineCapture {
                 S1GameplayAudioTimeline.SEGMENT_FRAME_COUNT);
     }
 
-    private static final class CaptureState implements VisualRunReplayHarness.FrameObserver,
+    static final class CaptureState implements VisualRunReplayHarness.FrameObserver,
             SfxContentionObserver {
         private final List<S1GameplayAudioTimeline.TimelineRecord> records = new ArrayList<>();
         private final List<SfxContentionObserver.Arbitration> arbitrations = new ArrayList<>();
@@ -143,13 +143,17 @@ public final class S1Ghz1OpenGgfAudioTimelineCapture {
             for (int entryIndex = nextCommandEntry; entryIndex < end; entryIndex++) {
                 AudioTimelineEntry entry = audio.commandTimeline().entryAt(entryIndex);
                 if (entry.command() instanceof AudioCommand.PlaySfx sfx && sfx.sfxId() >= 0) {
-                    requests.add(requestFor(SFX, sfx.sfxId(), takeAdmission(sfx.sfxId())));
+                    requests.add(requestFor(soundClassForSfx(sfx.sfxId()), sfx.sfxId(), takeAdmission(sfx.sfxId())));
                 } else if (entry.command() instanceof AudioCommand.PlayMusic music) {
                     requests.add(requestFor(S1GameplayAudioTimeline.SoundClass.MUSIC, music.musicId(), null));
                 }
             }
             nextCommandEntry = end;
             return List.copyOf(requests);
+        }
+
+        static S1GameplayAudioTimeline.SoundClass soundClassForSfx(int soundId) {
+            return soundId == 0xD0 ? S1GameplayAudioTimeline.SoundClass.SPECIAL_SFX : SFX;
         }
 
         private S1GameplayAudioTimeline.Request requestFor(S1GameplayAudioTimeline.SoundClass soundClass,
