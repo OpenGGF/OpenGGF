@@ -9,6 +9,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
 
@@ -93,7 +94,7 @@ public class S3kCutsceneButtonObjectInstance extends AbstractObjectInstance
             // entered on the following object pass, after Player_1 has
             // consumed the logical word written by loc_69588.
             pressPending = false;
-            pressButton();
+            pressButton(playerEntity);
             return;
         }
         CutsceneKnucklesAiz2Instance knuckles = Aiz2BossEndSequenceState.getActiveKnuckles();
@@ -110,9 +111,17 @@ public class S3kCutsceneButtonObjectInstance extends AbstractObjectInstance
         }
     }
 
-    private void pressButton() {
+    private void pressButton(PlayableEntity playerEntity) {
         pressed = true;
         Aiz2BossEndSequenceState.pressButton();
+        if (playerEntity instanceof AbstractPlayableSprite player) {
+            // loc_65C56 clears Ctrl_1_locked in the button's own SST slot.
+            // Keep the logical UP word already consumed by Player_1 this pass,
+            // but remove the engine's late-write representation so the next
+            // player pass can publish the unlocked physical input.
+            player.setControlLocked(false);
+            player.clearForcedInputMask();
+        }
         if (cutsceneOverride || Aiz2BossEndSequenceState.isButtonBeforeBridgeDispatch()) {
             services().objectManager().activeObjectsOfType(AizDrawBridgeObjectInstance.class)
                     .forEach(AizDrawBridgeObjectInstance::beginCollapseFromEarlierButtonSlot);

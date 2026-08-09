@@ -66318,6 +66318,36 @@ to synthesize a POST phase on a VBLANK-only row.
   animation handoff. HCZ remains green; CNZ is next in gameplay order, with ICZ
   and LBZ pending.
 
+## 2026-08-09 - S3K AIZ cutscene-button control frontier
+
+- Branch: `bugfix/s3k-traces` from `472c38929`; the six protected user edits
+  remained unstaged. A fetch had already confirmed this branch contains all of
+  `origin/develop` (`98` commits ahead, `0` behind), so no empty merge was
+  created. Validation used JDK 21.0.12 and the available S3K ROM; no trace
+  fixture changed.
+- Root cause: subtype 0 of `Obj_CutsceneButton` runs `loc_65C56` in the
+  button's SST slot and clears `Ctrl_1_locked`. The engine button raised only
+  its shared press flag, leaving the later consolidated controller to release
+  Sonic after the next player dispatch. The button now removes the control
+  lock and forced-word representation itself while retaining the logical UP
+  word already consumed in that pass (`sonic3k.asm:133963-134020,138367-138381`).
+- AIZ frontier command: `mvn -q -Ptrace-replay -Dmse=off
+  -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay
+  -Dtrace.verification=all -Dtrace.frontierOnly=true
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' test`. Result:
+  the two animation/mapping errors at raw `25951` are closed. No comparator
+  error remains before the expected unconsumed KOS completion edge `#63` at
+  raw `26109`.
+- The canary sweep kept HCZ at one error from raw `25486`, CNZ at nine from
+  raw `12024`, ICZ at two from raw `15401`, and LBZ at three from raw `30784`.
+  The corrected shared `$40` capsule timer initially exposed MGZ's carried
+  results-art boundary at raw `38518`; preserving the
+  `Flying_carrying_Sonic_flag` branch at `sub_86984` allocation restores the
+  complete MGZ route to green. The focused button/carry-owner tests and both
+  rewind coverage guards pass. Ring comparison remains enabled through
+  `ToleranceConfig.DEFAULT` with `RingCountMode.FORCE_ERROR`.
+
 ## 2026-08-09 - S3K AIZ grounded results dispatch frontier
 
 - Worktree: `bugfix/s3k-traces` at `5d6e883dc` before this fix; unrelated edits

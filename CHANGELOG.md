@@ -3,6 +3,13 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: AIZ's subtype-0 cutscene button now clears Sonic's control lock in
+  its own object dispatch, matching `loc_65C56`, while retaining the logical
+  input already consumed by that player pass. The complete-run comparator is
+  now green through the next hardware boundary at raw frame `26109`. MGZ's
+  carried results owner also retains the allocation-time
+  `Flying_carrying_Sonic_flag` branch across its lower-slot delay, keeping the
+  complete MGZ route green after the shared capsule counter correction.
 - Fix/Test: AIZ's post-results `Child6_IncLevX` is now a real dynamic control
   object with its own slot and `$4000` longword accumulator, instead of being
   folded into the earlier boss-controller dispatch. This advances the

@@ -97,6 +97,10 @@ class TestAiz2BossEndSequenceObjects {
                 new S3kCutsceneButtonObjectInstance(new ObjectSpawn(0x4B18, 0x0189, 0x83, 0, 0, false, 0));
         button.setServices(new TestObjectServices());
 
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        sonic.setControlLocked(true);
+        sonic.setForcedInputMask(AbstractPlayableSprite.INPUT_UP);
+
         CutsceneKnucklesAiz2Instance knuckles = CutsceneKnucklesAiz2Instance.createDefault();
         setField(knuckles, "currentX", 0x4B10);
         setField(knuckles, "currentY", 0x0188);
@@ -104,9 +108,14 @@ class TestAiz2BossEndSequenceObjects {
         setPhase(knuckles, "LAUGH_2");
         Aiz2BossEndSequenceState.setActiveKnuckles(knuckles);
 
-        button.update(0, null);
+        button.update(0, sonic);
+        button.update(1, sonic);
 
         assertTrue(Aiz2BossEndSequenceState.isButtonPressed());
+        assertFalse(sonic.isControlLocked(),
+                "loc_65C56 clears Ctrl_1_locked in the button's own SST slot");
+        assertEquals(0, sonic.getForcedInputMask(),
+                "the next player pass must read physical input instead of loc_69588's late UP write");
     }
 
     @Test

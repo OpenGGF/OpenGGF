@@ -4,7 +4,6 @@ import com.openggf.camera.Camera;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 /**
  * MGZ2 level-results variant.
@@ -16,8 +15,16 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  */
 public class Mgz2ResultsScreenObjectInstance extends S3kResultsScreenObjectInstance {
 
+    private boolean allocatedFromFlyingCarry;
+
     public Mgz2ResultsScreenObjectInstance(PlayerCharacter character, int act) {
+        this(character, act, false);
+    }
+
+    Mgz2ResultsScreenObjectInstance(PlayerCharacter character, int act,
+                                    boolean allocatedFromFlyingCarry) {
         super(character, act);
+        this.allocatedFromFlyingCarry = allocatedFromFlyingCarry;
     }
 
     // Probe-only constructor used by RewindRecreatable generic recreate.
@@ -47,14 +54,10 @@ public class Mgz2ResultsScreenObjectInstance extends S3kResultsScreenObjectInsta
 
     @Override
     protected boolean shouldDeferInitialResultsArtLoadDispatch() {
-        for (var entity : services().playerQuery().sidekicks()) {
-            if (entity instanceof AbstractPlayableSprite sidekick
-                    && sidekick.getCpuController() != null
-                    && sidekick.getCpuController().hasPublishedCarryInput()) {
-                return true;
-            }
-        }
-        return false;
+        // sub_86984 allocates Obj_LevelResults through the
+        // Flying_carrying_Sonic_flag branch. Preserve that allocation-time
+        // ROM state across the lower-slot delay before Obj_LevelResultsInit.
+        return allocatedFromFlyingCarry;
     }
 
     @Override

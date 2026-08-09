@@ -30,6 +30,7 @@ import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
 import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectPlayerQuery;
@@ -855,6 +856,18 @@ class TestMgzDrillingRobotnikInstance {
                 "MGZ must not reuse AIZ2's victory-pose lock because Sonic/Tails keep flying during results");
         assertFalse(player.isControlLocked());
         assertEquals(4, player.getAnimationId());
+    }
+
+    @Test
+    void mgzResultsOwnerRetainsCarryPublicationAcrossLowerSlotDelay() {
+        Mgz2ResultsScreenObjectInstance results = ObjectConstructionContext.construct(
+                TestEnvironment.objectServices(),
+                () -> new Mgz2ResultsScreenObjectInstance(
+                        com.openggf.game.PlayerCharacter.SONIC_AND_TAILS, 1, true));
+
+        assertTrue(results.shouldDeferInitialResultsArtLoadDispatch(),
+                "sub_86984's Flying_carrying_Sonic_flag branch belongs to the allocation boundary, "
+                        + "not the later result-owner pass");
     }
 
     @Test

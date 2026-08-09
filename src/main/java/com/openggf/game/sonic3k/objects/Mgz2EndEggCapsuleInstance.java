@@ -75,7 +75,8 @@ public class Mgz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
 
     @Override
     protected AbstractObjectInstance createResultsScreen() {
-        return new Mgz2ResultsScreenObjectInstance(getPlayerCharacter(), services().currentAct());
+        return new Mgz2ResultsScreenObjectInstance(
+                getPlayerCharacter(), services().currentAct(), isSonicActivelyCarriedByTails());
     }
 
     @Override
