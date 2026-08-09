@@ -157,6 +157,38 @@ class TestAudioParityJsonl {
     }
 
     @Test
+    void exposesTypedContinuityAndCountFailuresWithoutWeakeningMalformedRejection() throws Exception {
+        // Break caught: comparator classification depends on prose or malformed records gain integrity status.
+        AudioParityTick tick = goldenTick();
+        Path ordinal = writeStream(metadataJson(), List.of(tickJson(tick), tickJson(tick.withOrdinal(2)),
+                tickJson(tick.withOrdinal(2))), "typed-ordinal.jsonl");
+        AudioParityJsonl.ValidationException ordinalFailure = assertThrows(
+                AudioParityJsonl.ValidationException.class,
+                () -> AudioParityJsonl.read(ordinal, ignored -> { }));
+        assertEquals(AudioParityJsonl.FailureKind.ORDINAL_CONTINUITY, ordinalFailure.kind());
+        assertEquals(1, ordinalFailure.expected());
+        assertEquals(2, ordinalFailure.observed());
+
+        Path count = writeStream(metadataJson(), List.of(tickJson(tick), tickJson(tick.withOrdinal(1))),
+                "typed-count.jsonl");
+        AudioParityJsonl.ValidationException countFailure = assertThrows(
+                AudioParityJsonl.ValidationException.class,
+                () -> AudioParityJsonl.read(count, ignored -> { }));
+        assertEquals(AudioParityJsonl.FailureKind.TICK_COUNT, countFailure.kind());
+        assertEquals(3, countFailure.expected());
+        assertEquals(2, countFailure.observed());
+
+        ObjectNode malformedTick = tickJson(tick);
+        malformedTick.put("ordinal_note", "ordinal tick records");
+        Path malformed = writeStream(metadataJson(), List.of(malformedTick, tickJson(tick.withOrdinal(1)),
+                tickJson(tick.withOrdinal(2))), "typed-malformed.jsonl");
+        AudioParityJsonl.ValidationException malformedFailure = assertThrows(
+                AudioParityJsonl.ValidationException.class,
+                () -> AudioParityJsonl.read(malformed, ignored -> { }));
+        assertEquals(AudioParityJsonl.FailureKind.MALFORMED, malformedFailure.kind());
+    }
+
+    @Test
     void validatesEveryChipByteAndYmShape() throws Exception {
         // Break caught: malformed decoded writes enter the parity comparison boundary.
         ObjectNode ymValue = tickJson(goldenTick());
@@ -508,12 +540,17 @@ class TestAudioParityJsonl {
     }
 
     private void assertInvalidStream(ObjectNode metadata, List<ObjectNode> ticks, String message) throws Exception {
-        Path stream = temp.resolve("invalid-" + System.nanoTime() + ".jsonl");
-        StringBuilder content = new StringBuilder(metadata.toString()).append('\n');
-        ticks.forEach(tick -> content.append(tick).append('\n'));
-        Files.writeString(stream, content, StandardCharsets.UTF_8);
+        Path stream = writeStream(metadata, ticks, "invalid-" + System.nanoTime() + ".jsonl");
         IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
                 () -> AudioParityJsonl.read(stream, ignored -> { }));
         assertTrue(error.getMessage().toLowerCase().contains(message.toLowerCase()), error::getMessage);
+    }
+
+    private Path writeStream(ObjectNode metadata, List<ObjectNode> ticks, String name) throws Exception {
+        Path stream = temp.resolve(name);
+        StringBuilder content = new StringBuilder(metadata.toString()).append('\n');
+        ticks.forEach(tick -> content.append(tick).append('\n'));
+        Files.writeString(stream, content, StandardCharsets.UTF_8);
+        return stream;
     }
 }

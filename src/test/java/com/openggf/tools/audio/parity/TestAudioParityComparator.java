@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -113,18 +114,98 @@ class TestAudioParityComparator {
     }
 
     @Test
+    void pathIntegrityReportsStructuredSideExpectedAndObservedValues() throws Exception {
+        // Break caught: message parsing guesses the failure kind or reports equal cross-side counts.
+        Path open = temp.resolve("open-integrity.jsonl");
+        AudioParityJsonl.write(open, openGgfMetadata, ticks(baseTick).iterator());
+
+        Path ordinalReference = writeReferenceStream();
+        List<String> ordinalLines = Files.readAllLines(ordinalReference);
+        ordinalLines.set(2, ordinalLines.get(2).replace("\"ordinal\":1", "\"ordinal\":2"));
+        Files.write(ordinalReference, ordinalLines);
+        AudioParityReport ordinal = AudioParityComparator.compare(ordinalReference, open);
+        assertEquals(AudioParityReport.Kind.ORDINAL_MISMATCH, ordinal.kind());
+        assertEquals(AudioParityReport.Side.REFERENCE, ordinal.side());
+        assertEquals(1, ordinal.tickOrdinal());
+        assertEquals("1", ordinal.expectedValue());
+        assertEquals("2", ordinal.observedValue());
+        assertEquals("2", ordinal.referenceValue());
+        assertNull(ordinal.openGgfValue());
+        assertTrue(ordinal.toHumanText().contains("side: reference\nexpected: 1\nobserved: 2"));
+        assertTrue(ordinal.toJsonSummary().contains(
+                "\"side\":\"reference\",\"expected\":\"1\",\"observed\":\"2\""));
+
+        Path countReference = writeReferenceStream();
+        List<String> countLines = Files.readAllLines(countReference);
+        Files.write(countReference, countLines.subList(0, countLines.size() - 1));
+        AudioParityReport count = AudioParityComparator.compare(countReference, open);
+        assertEquals(AudioParityReport.Kind.TICK_COUNT_MISMATCH, count.kind());
+        assertEquals(AudioParityReport.Side.REFERENCE, count.side());
+        assertEquals("3", count.expectedValue());
+        assertEquals("2", count.observedValue());
+        assertEquals("2", count.referenceValue());
+        assertNull(count.openGgfValue());
+    }
+
+    @Test
+    void malformedTickNeverMasqueradesAsOrdinalOrCountIntegrity() throws Exception {
+        // Break caught: exception-message words accidentally classify an unknown/type error as continuity.
+        Path reference = writeReferenceStream();
+        List<String> lines = Files.readAllLines(reference);
+        lines.set(1, lines.get(1).replaceFirst("\\{", "{\"ordinal_note\":\"tick records\","));
+        Files.write(reference, lines);
+        Path open = temp.resolve("open-malformed.jsonl");
+        AudioParityJsonl.write(open, openGgfMetadata, ticks(baseTick).iterator());
+
+        AudioParityReport report = AudioParityComparator.compare(reference, open);
+        assertEquals(AudioParityReport.Kind.CAPTURE_FAILURE, report.kind());
+        assertEquals(AudioParityReport.Side.REFERENCE, report.side());
+    }
+
+    @Test
     void tickCountAndOrdinalIntegrityPrecedeSemanticComparison() {
         // Break caught: the comparator aligns around dropped ticks or reports their state as the root cause.
         AudioParityReport count = AudioParityComparator.compare(referenceMetadata, ticks(baseTick),
                 openGgfMetadata, List.of(baseTick, baseTick.withOrdinal(1)));
         assertEquals(AudioParityReport.Kind.TICK_COUNT_MISMATCH, count.kind());
+        assertEquals(AudioParityReport.Side.OPENGGF, count.side());
+        assertEquals("3", count.expectedValue());
+        assertEquals("2", count.observedValue());
+        assertNull(count.referenceValue());
+        assertEquals("2", count.openGgfValue());
 
         List<AudioParityTick> wrongOrdinal = new ArrayList<>(ticks(baseTick));
         wrongOrdinal.set(1, baseTick.withOrdinal(2));
         AudioParityReport ordinal = AudioParityComparator.compare(referenceMetadata, ticks(baseTick),
                 openGgfMetadata, wrongOrdinal);
         assertEquals(AudioParityReport.Kind.ORDINAL_MISMATCH, ordinal.kind());
+        assertEquals(AudioParityReport.Side.OPENGGF, ordinal.side());
         assertEquals(1, ordinal.tickOrdinal());
+        assertEquals("1", ordinal.expectedValue());
+        assertEquals("2", ordinal.observedValue());
+        assertNull(ordinal.referenceValue());
+        assertEquals("2", ordinal.openGgfValue());
+    }
+
+    @Test
+    void rejectsAtomicReplacementBetweenValidationAndComparison() throws Exception {
+        // Break caught: a valid replacement can turn a validated mismatch into an unvalidated false MATCH.
+        Path reference = writeReferenceStream();
+        Path open = temp.resolve("open-before.jsonl");
+        AudioParityTick changed = new AudioParityTick(0,
+                new AudioParityTick.GlobalState(false, "none", null, null, false,
+                        baseTick.global().tempoReload() + 1, baseTick.global().tempoTimeout()),
+                baseTick.tracks(), baseTick.events());
+        AudioParityJsonl.write(open, openGgfMetadata, ticks(changed).iterator());
+        Path replacement = temp.resolve("open-replacement.jsonl");
+        AudioParityJsonl.write(replacement, openGgfMetadata, ticks(baseTick).iterator());
+
+        AudioParityReport report = AudioParityComparator.compare(reference, open,
+                () -> Files.move(replacement, open, StandardCopyOption.ATOMIC_MOVE,
+                        StandardCopyOption.REPLACE_EXISTING));
+        assertEquals(AudioParityReport.Kind.CAPTURE_FAILURE, report.kind());
+        assertEquals(AudioParityReport.Side.OPENGGF, report.side());
+        assertEquals("source_changed", report.field());
     }
 
     @Test
@@ -168,6 +249,12 @@ class TestAudioParityComparator {
         assertEquals(AudioParityReport.Kind.EVENT_VALUE_DIFFERENT, report.kind());
         assertEquals(0, report.eventIndex());
         assertEquals(baseTick.events().get(0).toString(), report.referenceValue());
+        assertTrue(report.stateContext().referenceTracks().stream().allMatch(AudioParityTrackState::active));
+        assertTrue(report.stateContext().referenceTracks().stream()
+                .anyMatch(track -> track.role().equals("FM1")));
+        assertEquals(report.stateContext().referenceTracks(), report.stateContext().openGgfTracks());
+        assertTrue(report.toHumanText().contains("active track context"));
+        assertTrue(report.toJsonSummary().contains("\"stateContext\""));
     }
 
     @Test

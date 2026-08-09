@@ -2,10 +2,16 @@ package com.openggf.tools.audio.parity;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.DigestInputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
@@ -43,47 +49,149 @@ public final class AudioParityComparator {
      * second pass remains streaming and therefore never retains a complete music stream in memory.
      */
     public static AudioParityReport compare(Path referencePath, Path openGgfPath) {
+        return compare(referencePath, openGgfPath, () -> { });
+    }
+
+    static AudioParityReport compare(Path referencePath, Path openGgfPath,
+            BetweenPassAction betweenPasses) {
         AudioParityMetadata reference;
         AudioParityMetadata openGgf;
         try {
             reference = readMetadata(referencePath);
         } catch (IOException | RuntimeException error) {
-            return captureFailure("reference_stream", error);
+            return captureFailure(AudioParityReport.Side.REFERENCE, "reference_stream", error);
         }
         try {
             openGgf = readMetadata(openGgfPath);
         } catch (IOException | RuntimeException error) {
-            return captureFailure("openggf_stream", error);
+            return captureFailure(AudioParityReport.Side.OPENGGF, "openggf_stream", error);
         }
         AudioParityReport metadata = compareMetadata(reference, openGgf);
         if (metadata != null) {
             return metadata;
         }
+        String referenceDigest;
+        String openGgfDigest;
         try {
-            AudioParityJsonl.read(referencePath, ignored -> { });
-        } catch (RuntimeException error) {
-            return streamFailure("reference", error);
+            referenceDigest = digest(referencePath);
+            AudioParityMetadata validated = AudioParityJsonl.read(referencePath, ignored -> { });
+            if (!validated.equals(reference)) {
+                return sourceChanged(AudioParityReport.Side.REFERENCE);
+            }
+        } catch (AudioParityJsonl.ValidationException error) {
+            return streamFailure(AudioParityReport.Side.REFERENCE, error);
+        } catch (IOException | RuntimeException error) {
+            return captureFailure(AudioParityReport.Side.REFERENCE, "reference_stream", error);
         }
         try {
-            AudioParityJsonl.read(openGgfPath, ignored -> { });
-        } catch (RuntimeException error) {
-            return streamFailure("openggf", error);
+            openGgfDigest = digest(openGgfPath);
+            AudioParityMetadata validated = AudioParityJsonl.read(openGgfPath, ignored -> { });
+            if (!validated.equals(openGgf)) {
+                return sourceChanged(AudioParityReport.Side.OPENGGF);
+            }
+        } catch (AudioParityJsonl.ValidationException error) {
+            return streamFailure(AudioParityReport.Side.OPENGGF, error);
+        } catch (IOException | RuntimeException error) {
+            return captureFailure(AudioParityReport.Side.OPENGGF, "openggf_stream", error);
         }
-        try (BufferedReader referenceInput = Files.newBufferedReader(referencePath, StandardCharsets.UTF_8);
-                BufferedReader openGgfInput = Files.newBufferedReader(openGgfPath, StandardCharsets.UTF_8)) {
-            referenceInput.readLine();
-            openGgfInput.readLine();
-            for (int ordinal = 0; ordinal < reference.terminalRecordCount(); ordinal++) {
-                AudioParityTick referenceTick = AudioParityJsonl.parseTick(referenceInput.readLine());
-                AudioParityTick openGgfTick = AudioParityJsonl.parseTick(openGgfInput.readLine());
-                AudioParityReport difference = compareTick(referenceTick, openGgfTick, ordinal);
-                if (difference != null) {
-                    return difference;
+        try {
+            betweenPasses.run();
+        } catch (IOException error) {
+            return captureFailure(null, "between_passes", error);
+        }
+        try (DigestingReader referenceInput = new DigestingReader(referencePath);
+                DigestingReader openGgfInput = new DigestingReader(openGgfPath)) {
+            AudioParityMetadata secondReference = null;
+            AudioParityMetadata secondOpenGgf = null;
+            AudioParityReport validationFailure = null;
+            try {
+                secondReference = AudioParityJsonl.parseMetadata(referenceInput.readLine());
+            } catch (RuntimeException error) {
+                validationFailure = captureFailure(AudioParityReport.Side.REFERENCE,
+                        "reference_stream", error);
+            }
+            try {
+                secondOpenGgf = AudioParityJsonl.parseMetadata(openGgfInput.readLine());
+            } catch (RuntimeException error) {
+                if (validationFailure == null) {
+                    validationFailure = captureFailure(AudioParityReport.Side.OPENGGF,
+                            "openggf_stream", error);
                 }
             }
-            return match(reference.terminalRecordCount());
+            AudioParityReport firstDifference = null;
+            int referenceObserved = 0;
+            int openGgfObserved = 0;
+            for (int ordinal = 0; ordinal < reference.terminalRecordCount(); ordinal++) {
+                AudioParityTick referenceTick = null;
+                AudioParityTick openGgfTick = null;
+                String referenceLine = referenceInput.readLine();
+                String openGgfLine = openGgfInput.readLine();
+                if (referenceLine != null) {
+                    referenceObserved++;
+                    try {
+                        referenceTick = AudioParityJsonl.parseTick(referenceLine);
+                    } catch (RuntimeException error) {
+                        if (validationFailure == null) {
+                            validationFailure = captureFailure(AudioParityReport.Side.REFERENCE,
+                                    "reference_stream", error);
+                        }
+                    }
+                }
+                if (openGgfLine != null) {
+                    openGgfObserved++;
+                    try {
+                        openGgfTick = AudioParityJsonl.parseTick(openGgfLine);
+                    } catch (RuntimeException error) {
+                        if (validationFailure == null) {
+                            validationFailure = captureFailure(AudioParityReport.Side.OPENGGF,
+                                    "openggf_stream", error);
+                        }
+                    }
+                }
+                if (referenceTick != null && referenceTick.ordinal() != ordinal && validationFailure == null) {
+                    validationFailure = integrityDifference(AudioParityReport.Kind.ORDINAL_MISMATCH,
+                            AudioParityReport.Side.REFERENCE, ordinal, referenceTick.ordinal(), ordinal);
+                }
+                if (openGgfTick != null && openGgfTick.ordinal() != ordinal && validationFailure == null) {
+                    validationFailure = integrityDifference(AudioParityReport.Kind.ORDINAL_MISMATCH,
+                            AudioParityReport.Side.OPENGGF, ordinal, openGgfTick.ordinal(), ordinal);
+                }
+                if (referenceTick != null && openGgfTick != null && firstDifference == null) {
+                    firstDifference = compareTick(referenceTick, openGgfTick, ordinal);
+                }
+            }
+            while (referenceInput.readLine() != null) {
+                referenceObserved++;
+            }
+            while (openGgfInput.readLine() != null) {
+                openGgfObserved++;
+            }
+            String secondReferenceDigest = referenceInput.digest();
+            String secondOpenGgfDigest = openGgfInput.digest();
+            if (!secondReferenceDigest.equals(referenceDigest)
+                    || secondReference != null && !secondReference.equals(reference)) {
+                return sourceChanged(AudioParityReport.Side.REFERENCE);
+            }
+            if (!secondOpenGgfDigest.equals(openGgfDigest)
+                    || secondOpenGgf != null && !secondOpenGgf.equals(openGgf)) {
+                return sourceChanged(AudioParityReport.Side.OPENGGF);
+            }
+            if (validationFailure == null && referenceObserved != reference.terminalRecordCount()) {
+                validationFailure = integrityDifference(AudioParityReport.Kind.TICK_COUNT_MISMATCH,
+                        AudioParityReport.Side.REFERENCE, reference.terminalRecordCount(),
+                        referenceObserved, null);
+            }
+            if (validationFailure == null && openGgfObserved != openGgf.terminalRecordCount()) {
+                validationFailure = integrityDifference(AudioParityReport.Kind.TICK_COUNT_MISMATCH,
+                        AudioParityReport.Side.OPENGGF, openGgf.terminalRecordCount(),
+                        openGgfObserved, null);
+            }
+            if (validationFailure != null) {
+                return validationFailure;
+            }
+            return firstDifference == null ? match(reference.terminalRecordCount()) : firstDifference;
         } catch (IOException | RuntimeException error) {
-            return captureFailure("validated_stream_changed", error);
+            return captureFailure(null, "validated_stream_changed", error);
         }
     }
 
@@ -107,20 +215,28 @@ public final class AudioParityComparator {
         if (metadata != null) {
             return metadata;
         }
-        if (referenceTicks.size() != referenceMetadata.terminalRecordCount()
-                || openGgfTicks.size() != openGgfMetadata.terminalRecordCount()
-                || referenceTicks.size() != openGgfTicks.size()) {
-            return difference(AudioParityReport.Kind.TICK_COUNT_MISMATCH, 0, null, null, null,
-                    "tick_count", Integer.toString(referenceTicks.size()), Integer.toString(openGgfTicks.size()),
-                    null);
+        if (referenceTicks.size() != referenceMetadata.terminalRecordCount()) {
+            return integrityDifference(AudioParityReport.Kind.TICK_COUNT_MISMATCH,
+                    AudioParityReport.Side.REFERENCE, referenceMetadata.terminalRecordCount(),
+                    referenceTicks.size(), null);
+        }
+        if (openGgfTicks.size() != openGgfMetadata.terminalRecordCount()) {
+            return integrityDifference(AudioParityReport.Kind.TICK_COUNT_MISMATCH,
+                    AudioParityReport.Side.OPENGGF, openGgfMetadata.terminalRecordCount(),
+                    openGgfTicks.size(), null);
         }
         for (int ordinal = 0; ordinal < referenceTicks.size(); ordinal++) {
             AudioParityTick referenceTick = referenceTicks.get(ordinal);
+            if (referenceTick.ordinal() != ordinal) {
+                return integrityDifference(AudioParityReport.Kind.ORDINAL_MISMATCH,
+                        AudioParityReport.Side.REFERENCE, ordinal, referenceTick.ordinal(), ordinal);
+            }
+        }
+        for (int ordinal = 0; ordinal < openGgfTicks.size(); ordinal++) {
             AudioParityTick openGgfTick = openGgfTicks.get(ordinal);
-            if (referenceTick.ordinal() != ordinal || openGgfTick.ordinal() != ordinal) {
-                return difference(AudioParityReport.Kind.ORDINAL_MISMATCH, ordinal, ordinal, null, null,
-                        "ordinal", Integer.toString(referenceTick.ordinal()),
-                        Integer.toString(openGgfTick.ordinal()), null);
+            if (openGgfTick.ordinal() != ordinal) {
+                return integrityDifference(AudioParityReport.Kind.ORDINAL_MISMATCH,
+                        AudioParityReport.Side.OPENGGF, ordinal, openGgfTick.ordinal(), ordinal);
             }
         }
         for (int ordinal = 0; ordinal < referenceTicks.size(); ordinal++) {
@@ -192,31 +308,43 @@ public final class AudioParityComparator {
                 return track;
             }
         }
-        return compareEvents(reference.events(), openGgf.events(), reference.ordinal(), ticksCompared);
+        return compareEvents(reference, openGgf, ticksCompared);
     }
 
     private static AudioParityReport compareGlobal(AudioParityTick.GlobalState reference,
             AudioParityTick.GlobalState openGgf, int ordinal, int ticksCompared) {
         AudioParityReport result = stateField(AudioParityReport.Kind.GLOBAL_STATE_MISMATCH,
                 ordinal, ticksCompared, "GLOBAL", "fade_active", reference.fadeActive(), openGgf.fadeActive());
-        if (result != null) return result;
+        if (result != null) {
+            return result;
+        }
         result = stateField(AudioParityReport.Kind.GLOBAL_STATE_MISMATCH,
                 ordinal, ticksCompared, "GLOBAL", "fade_direction", reference.fadeDirection(),
                 openGgf.fadeDirection());
-        if (result != null) return result;
+        if (result != null) {
+            return result;
+        }
         result = stateField(AudioParityReport.Kind.GLOBAL_STATE_MISMATCH,
                 ordinal, ticksCompared, "GLOBAL", "fade_delay", reference.fadeDelay(), openGgf.fadeDelay());
-        if (result != null) return result;
+        if (result != null) {
+            return result;
+        }
         result = stateField(AudioParityReport.Kind.GLOBAL_STATE_MISMATCH,
                 ordinal, ticksCompared, "GLOBAL", "fade_steps", reference.fadeSteps(), openGgf.fadeSteps());
-        if (result != null) return result;
+        if (result != null) {
+            return result;
+        }
         result = stateField(AudioParityReport.Kind.GLOBAL_STATE_MISMATCH,
                 ordinal, ticksCompared, "GLOBAL", "speed_up", reference.speedUp(), openGgf.speedUp());
-        if (result != null) return result;
+        if (result != null) {
+            return result;
+        }
         result = stateField(AudioParityReport.Kind.GLOBAL_STATE_MISMATCH,
                 ordinal, ticksCompared, "GLOBAL", "tempo_reload", reference.tempoReload(),
                 openGgf.tempoReload());
-        if (result != null) return result;
+        if (result != null) {
+            return result;
+        }
         return stateField(AudioParityReport.Kind.GLOBAL_STATE_MISMATCH,
                 ordinal, ticksCompared, "GLOBAL", "tempo_timeout", reference.tempoTimeout(),
                 openGgf.tempoTimeout());
@@ -244,8 +372,10 @@ public final class AudioParityComparator {
                         String.valueOf(reference), String.valueOf(openGgf), null);
     }
 
-    private static AudioParityReport compareEvents(List<AudioParityChipWrite> reference,
-            List<AudioParityChipWrite> openGgf, int ordinal, int ticksCompared) {
+    private static AudioParityReport compareEvents(AudioParityTick referenceTick,
+            AudioParityTick openGgfTick, int ticksCompared) {
+        List<AudioParityChipWrite> reference = referenceTick.events();
+        List<AudioParityChipWrite> openGgf = openGgfTick.events();
         int common = Math.min(reference.size(), openGgf.size());
         int index = 0;
         while (index < common && reference.get(index).equals(openGgf.get(index))) {
@@ -273,8 +403,11 @@ public final class AudioParityComparator {
         String openGgfValue = openGgfFocus == null ? "<missing>" : openGgf.get(openGgfFocus).toString();
         AudioParityReport.EventContext context = context(reference, openGgf, index,
                 referenceFocus != null, openGgfFocus != null);
-        return difference(kind, ticksCompared, ordinal, index, null, "decoded_write",
-                referenceValue, openGgfValue, context);
+        AudioParityReport.StateContext state = new AudioParityReport.StateContext(
+                referenceTick.global(), active(referenceTick.tracks()),
+                openGgfTick.global(), active(openGgfTick.tracks()));
+        return new AudioParityReport(kind, ticksCompared, referenceTick.ordinal(), index, null,
+                "decoded_write", referenceValue, openGgfValue, context, null, null, null, state);
     }
 
     private static boolean isAdjacentSwap(List<AudioParityChipWrite> reference,
@@ -316,20 +449,43 @@ public final class AudioParityComparator {
         return result;
     }
 
-    private static AudioParityReport captureFailure(String field, Exception error) {
-        return difference(AudioParityReport.Kind.CAPTURE_FAILURE, 0, null, null, null, field,
-                error.getMessage() == null ? error.getClass().getSimpleName() : error.getMessage(), null, null);
+    private static List<AudioParityTrackState> active(List<AudioParityTrackState> tracks) {
+        return tracks.stream().filter(AudioParityTrackState::active).toList();
     }
 
-    private static AudioParityReport streamFailure(String side, RuntimeException error) {
+    private static AudioParityReport captureFailure(AudioParityReport.Side side, String field,
+            Exception error) {
         String message = error.getMessage() == null ? error.getClass().getSimpleName() : error.getMessage();
-        String lower = message.toLowerCase(java.util.Locale.ROOT);
-        AudioParityReport.Kind kind = lower.contains("ordinal")
-                ? AudioParityReport.Kind.ORDINAL_MISMATCH
-                : lower.contains("terminal_record_count") || lower.contains("tick records")
-                        ? AudioParityReport.Kind.TICK_COUNT_MISMATCH
-                        : AudioParityReport.Kind.CAPTURE_FAILURE;
-        return difference(kind, 0, null, null, null, side + "_stream", message, null, null);
+        return new AudioParityReport(AudioParityReport.Kind.CAPTURE_FAILURE, 0, null, null,
+                null, field, side == AudioParityReport.Side.REFERENCE ? message : null,
+                side == AudioParityReport.Side.OPENGGF ? message : null, null, side, null, null, null);
+    }
+
+    private static AudioParityReport streamFailure(AudioParityReport.Side side,
+            AudioParityJsonl.ValidationException error) {
+        return switch (error.kind()) {
+            case ORDINAL_CONTINUITY -> integrityDifference(AudioParityReport.Kind.ORDINAL_MISMATCH,
+                    side, error.expected(), error.observed(), error.expected());
+            case TICK_COUNT -> integrityDifference(AudioParityReport.Kind.TICK_COUNT_MISMATCH,
+                    side, error.expected(), error.observed(), null);
+            case MALFORMED -> captureFailure(side,
+                    side == AudioParityReport.Side.REFERENCE ? "reference_stream" : "openggf_stream", error);
+        };
+    }
+
+    private static AudioParityReport integrityDifference(AudioParityReport.Kind kind,
+            AudioParityReport.Side side, int expected, int observed, Integer tick) {
+        String observedText = Integer.toString(observed);
+        return new AudioParityReport(kind, tick == null ? 0 : tick, tick, null, null,
+                kind == AudioParityReport.Kind.ORDINAL_MISMATCH ? "ordinal" : "tick_count",
+                side == AudioParityReport.Side.REFERENCE ? observedText : null,
+                side == AudioParityReport.Side.OPENGGF ? observedText : null, null, side,
+                Integer.toString(expected), observedText, null);
+    }
+
+    private static AudioParityReport sourceChanged(AudioParityReport.Side side) {
+        return new AudioParityReport(AudioParityReport.Kind.CAPTURE_FAILURE, 0, null, null,
+                null, "source_changed", null, null, null, side, null, null, null);
     }
 
     private static AudioParityReport match(int ticks) {
@@ -344,5 +500,49 @@ public final class AudioParityComparator {
     }
 
     private record Field(String name, Function<AudioParityTrackState, Object> value) {
+    }
+
+    @FunctionalInterface
+    interface BetweenPassAction {
+        void run() throws IOException;
+    }
+
+    private static String digest(Path path) throws IOException {
+        MessageDigest digest = sha256();
+        try (InputStream input = new DigestInputStream(Files.newInputStream(path), digest)) {
+            input.transferTo(OutputStream.nullOutputStream());
+        }
+        return HexFormat.of().formatHex(digest.digest());
+    }
+
+    private static MessageDigest sha256() {
+        try {
+            return MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException error) {
+            throw new IllegalStateException("SHA-256 is unavailable", error);
+        }
+    }
+
+    private static final class DigestingReader implements AutoCloseable {
+        private final MessageDigest digest = sha256();
+        private final BufferedReader reader;
+
+        private DigestingReader(Path path) throws IOException {
+            reader = new BufferedReader(new java.io.InputStreamReader(
+                    new DigestInputStream(Files.newInputStream(path), digest), StandardCharsets.UTF_8));
+        }
+
+        private String readLine() throws IOException {
+            return reader.readLine();
+        }
+
+        private String digest() {
+            return HexFormat.of().formatHex(digest.digest());
+        }
+
+        @Override
+        public void close() throws IOException {
+            reader.close();
+        }
     }
 }

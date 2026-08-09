@@ -84,15 +84,13 @@ public final class AudioParityJsonl {
                 }
                 AudioParityTick tick = parseTick(line, expectedRawBusSource, true);
                 if (tick.ordinal() != expectedOrdinal) {
-                    throw invalid("ordinal continuity failure: expected " + expectedOrdinal
-                            + " but found " + tick.ordinal());
+                    throw continuityFailure(expectedOrdinal, tick.ordinal());
                 }
                 tickConsumer.accept(tick);
                 expectedOrdinal++;
             }
             if (expectedOrdinal != metadata.terminalRecordCount()) {
-                throw invalid("terminal_record_count is " + metadata.terminalRecordCount()
-                        + " but stream contains " + expectedOrdinal + " tick records");
+                throw tickCountFailure(metadata.terminalRecordCount(), expectedOrdinal);
             }
             return metadata;
         } catch (IOException error) {
@@ -763,12 +761,58 @@ public final class AudioParityJsonl {
         return node.deepCopy();
     }
 
-    private static IllegalArgumentException invalid(String message) {
-        return new IllegalArgumentException(message);
+    private static ValidationException continuityFailure(int expected, int observed) {
+        return new ValidationException(FailureKind.ORDINAL_CONTINUITY,
+                "ordinal continuity failure: expected " + expected + " but found " + observed,
+                expected, observed, null);
     }
 
-    private static IllegalArgumentException invalid(String message, Throwable cause) {
-        return new IllegalArgumentException(message, cause);
+    private static ValidationException tickCountFailure(int expected, int observed) {
+        return new ValidationException(FailureKind.TICK_COUNT,
+                "terminal_record_count is " + expected + " but stream contains " + observed
+                        + " tick records",
+                expected, observed, null);
+    }
+
+    private static ValidationException invalid(String message) {
+        return new ValidationException(FailureKind.MALFORMED, message, null, null, null);
+    }
+
+    private static ValidationException invalid(String message, Throwable cause) {
+        return new ValidationException(FailureKind.MALFORMED, message, null, null, cause);
+    }
+
+    public enum FailureKind {
+        MALFORMED,
+        ORDINAL_CONTINUITY,
+        TICK_COUNT
+    }
+
+    /** Typed stream-boundary failure; prose remains diagnostic and never selects comparator behavior. */
+    public static final class ValidationException extends IllegalArgumentException {
+        private final FailureKind kind;
+        private final Integer expected;
+        private final Integer observed;
+
+        private ValidationException(FailureKind kind, String message, Integer expected,
+                Integer observed, Throwable cause) {
+            super(message, cause);
+            this.kind = kind;
+            this.expected = expected;
+            this.observed = observed;
+        }
+
+        public FailureKind kind() {
+            return kind;
+        }
+
+        public Integer expected() {
+            return expected;
+        }
+
+        public Integer observed() {
+            return observed;
+        }
     }
 
     @FunctionalInterface

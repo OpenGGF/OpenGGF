@@ -16,7 +16,11 @@ public record AudioParityReport(
         String field,
         String referenceValue,
         String openGgfValue,
-        EventContext eventContext) {
+        EventContext eventContext,
+        Side side,
+        String expectedValue,
+        String observedValue,
+        StateContext stateContext) {
     private static final ObjectMapper JSON = new ObjectMapper();
 
     public enum Kind {
@@ -31,6 +35,18 @@ public record AudioParityReport(
         EVENT_EXTRA,
         EVENT_REORDERED,
         EVENT_VALUE_DIFFERENT
+    }
+
+    public enum Side {
+        REFERENCE,
+        OPENGGF
+    }
+
+    public AudioParityReport(Kind kind, int ticksCompared, Integer tickOrdinal, Integer eventIndex,
+            String role, String field, String referenceValue, String openGgfValue,
+            EventContext eventContext) {
+        this(kind, ticksCompared, tickOrdinal, eventIndex, role, field, referenceValue,
+                openGgfValue, eventContext, null, null, null, null);
     }
 
     public AudioParityReport {
@@ -54,6 +70,9 @@ public record AudioParityReport(
         append(result, "event", eventIndex);
         append(result, "role", role);
         append(result, "field", field);
+        append(result, "side", side == null ? null : label(side));
+        append(result, "expected", expectedValue);
+        append(result, "observed", observedValue);
         append(result, "reference", referenceValue);
         append(result, "openggf", openGgfValue);
         if (eventContext != null) {
@@ -62,6 +81,13 @@ public record AudioParityReport(
                     .append(eventContext.referenceAfter()).append(") openggf(before=")
                     .append(eventContext.openGgfBefore()).append(", after=")
                     .append(eventContext.openGgfAfter()).append(')');
+        }
+        if (stateContext != null) {
+            result.append('\n').append("normalized state context: referenceGlobal=")
+                    .append(stateContext.referenceGlobal()).append(" reference active track context=")
+                    .append(stateContext.referenceTracks()).append(" openggfGlobal=")
+                    .append(stateContext.openGgfGlobal()).append(" openggfActiveTracks=")
+                    .append(stateContext.openGgfTracks());
         }
         return result.toString();
     }
@@ -75,6 +101,9 @@ public record AudioParityReport(
         put(root, "event", eventIndex);
         put(root, "role", role);
         put(root, "field", field);
+        put(root, "side", side == null ? null : label(side));
+        put(root, "expected", expectedValue);
+        put(root, "observed", observedValue);
         put(root, "reference", referenceValue);
         put(root, "openggf", openGgfValue);
         if (eventContext != null) {
@@ -83,6 +112,13 @@ public record AudioParityReport(
             writes(context.putArray("referenceAfter"), eventContext.referenceAfter());
             writes(context.putArray("openggfBefore"), eventContext.openGgfBefore());
             writes(context.putArray("openggfAfter"), eventContext.openGgfAfter());
+        }
+        if (stateContext != null) {
+            ObjectNode context = root.putObject("stateContext");
+            global(context.putObject("referenceGlobal"), stateContext.referenceGlobal());
+            tracks(context.putArray("referenceActiveTracks"), stateContext.referenceTracks());
+            global(context.putObject("openggfGlobal"), stateContext.openGgfGlobal());
+            tracks(context.putArray("openggfActiveTracks"), stateContext.openGgfTracks());
         }
         try {
             return JSON.writeValueAsString(root);
@@ -93,6 +129,10 @@ public record AudioParityReport(
 
     private static String label(Kind kind) {
         return kind.name().toLowerCase(java.util.Locale.ROOT);
+    }
+
+    private static String label(Side side) {
+        return side.name().toLowerCase(java.util.Locale.ROOT);
     }
 
     private static void append(StringBuilder target, String label, Object value) {
@@ -127,6 +167,50 @@ public record AudioParityReport(
         }
     }
 
+    private static void global(ObjectNode target, AudioParityTick.GlobalState global) {
+        target.put("fadeActive", global.fadeActive());
+        target.put("fadeDirection", global.fadeDirection());
+        if (global.fadeDelay() != null) {
+            target.put("fadeDelay", global.fadeDelay());
+            target.put("fadeSteps", global.fadeSteps());
+        }
+        target.put("speedUp", global.speedUp());
+        target.put("tempoReload", global.tempoReload());
+        target.put("tempoTimeout", global.tempoTimeout());
+    }
+
+    private static void tracks(ArrayNode target, List<AudioParityTrackState> tracks) {
+        for (AudioParityTrackState track : tracks) {
+            ObjectNode item = target.addObject();
+            item.put("role", track.role());
+            item.put("hardware", track.hardware());
+            item.put("active", true);
+            item.put("baseFrequency", track.baseFrequency());
+            item.put("detune", track.detune());
+            item.put("doNotAttack", track.doNotAttack());
+            item.put("duration", track.duration());
+            item.put("durationReload", track.durationReload());
+            if (track.envelopeCursor() != null) {
+                item.put("envelopeCursor", track.envelopeCursor());
+            }
+            ArrayNode loops = item.putArray("loopCounters");
+            track.loopCounters().forEach(loops::add);
+            item.put("modulationEnabled", track.modulationEnabled());
+            item.put("overridden", track.overridden());
+            if (track.pan() != null) {
+                item.put("pan", track.pan());
+                item.put("ams", track.ams());
+                item.put("fms", track.fms());
+            }
+            ArrayNode stack = item.putArray("returnStack");
+            track.returnStack().forEach(stack::add);
+            item.put("sequencePosition", track.sequencePosition());
+            item.put("transpose", track.transpose());
+            item.put("voiceOrEnvelope", track.voiceOrEnvelope());
+            item.put("volume", track.volume());
+        }
+    }
+
     public record IndexedWrite(int index, AudioParityChipWrite write) {
         public IndexedWrite {
             if (index < 0 || write == null) {
@@ -149,6 +233,29 @@ public record AudioParityReport(
                     || openGgfBefore.size() > 8 || openGgfAfter.size() > 8) {
                 throw new IllegalArgumentException("event context is limited to eight writes in each direction");
             }
+        }
+    }
+
+    public record StateContext(
+            AudioParityTick.GlobalState referenceGlobal,
+            List<AudioParityTrackState> referenceTracks,
+            AudioParityTick.GlobalState openGgfGlobal,
+            List<AudioParityTrackState> openGgfTracks) {
+        public StateContext {
+            referenceTracks = activeCopy(referenceTracks);
+            openGgfTracks = activeCopy(openGgfTracks);
+            if (referenceGlobal == null || openGgfGlobal == null) {
+                throw new IllegalArgumentException("event state context requires both global states");
+            }
+        }
+
+        private static List<AudioParityTrackState> activeCopy(List<AudioParityTrackState> tracks) {
+            List<AudioParityTrackState> result = List.copyOf(tracks);
+            if (result.size() > AudioParitySchema.ROLES.size()
+                    || result.stream().anyMatch(track -> !track.active())) {
+                throw new IllegalArgumentException("event state context contains only active fixed roles");
+            }
+            return result;
         }
     }
 }
