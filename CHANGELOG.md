@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: AIZ's floating capsule now preserves the native ordering between
+  its later button child and the draw-bridge slot that owns Player 2's
+  standing update. Its shared results counter also stores the ROM's actual
+  `$40` value and waits for signed underflow. This advances the complete-run
+  frontier from raw frame `25037` to `25590` without regressing HCZ, MGZ, CNZ,
+  ICZ, or LBZ.
 - Fix/Test: S3K held-loop Kosinski timing now distinguishes a continuation
   module from a newly shifted KosM parent. An active parent's next child is
   published at the native module-queue tail while its direct-queue preparation

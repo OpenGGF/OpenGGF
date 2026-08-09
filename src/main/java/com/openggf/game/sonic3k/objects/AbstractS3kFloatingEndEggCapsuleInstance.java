@@ -51,7 +51,7 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
     private static final int TRIGGER_X_RIGHT = -0x1A + 0x34;
     private static final int TRIGGER_Y_TOP = -0x1C;
     private static final int TRIGGER_Y_BOTTOM = -0x1C + 0x38;
-    private static final int POST_OPEN_DELAY = 0x41;
+    private static final int POST_OPEN_DELAY = 0x40;
     private static final int ANIMAL_COUNT = 9;
     private static final int SWING_MAX_SPEED = 0xC0;
     private static final int SWING_ACCELERATION = 0x10;
@@ -73,6 +73,7 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
     private int buttonTriggerSource;
     private int buttonTriggerVIntRunCount = -1;
     private int openFrame = -1;
+    private boolean laterSupportOwnerEligibilityDeferred;
     private boolean routeInitPending;
     private S3kBossExplosionController explosionController;
 
@@ -212,20 +213,10 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
                 spawnPendingExplosions();
             }
 
-            boolean resultsTimerUnderflows = resultsTimerUnderflowsBeforeStart();
-            if (resultsTimerUnderflows) {
-                // The floating MGZ owner uses sub_86984, whose subq.w counter
-                // must underflow before Obj_LevelResults is allocated
-                // (sonic3k.asm:182027-182046).
-                postOpenTimer--;
-            } else if (postOpenTimer > 0) {
-                // The ordinary floating owner reaches results when its
-                // pre-decrement reaches zero (sonic3k.asm:181900-181918).
-                postOpenTimer--;
-            }
-            boolean resultsTimerReady = resultsTimerUnderflows
-                    ? postOpenTimer < 0 : postOpenTimer == 0;
-            if (resultsTimerReady
+            // Both sub_868F8 and sub_86984 pre-decrement the $40 word and
+            // branch while the signed result remains non-negative.
+            postOpenTimer--;
+            if (postOpenTimer < 0
                     && playerEntity instanceof AbstractPlayableSprite player
                     && shouldStartResults(player)) {
                 startResults(player);
@@ -249,15 +240,6 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
 
     protected void onBeforeCapsuleUpdate() {
         // Route-specific pre-dispatch state.
-    }
-
-    /**
-     * Returns the ROM owner's post-open counter contract. MGZ2's floating
-     * capsule uses the signed-underflow branch; the other floating capsule
-     * owners start results when the counter reaches zero.
-     */
-    protected boolean resultsTimerUnderflowsBeforeStart() {
-        return false;
     }
 
     private void initializeRoute8FromCamera() {
@@ -334,9 +316,22 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
     private void scanButtonTrigger(int vIntRunCount, PlayableEntity playerEntity) {
         ObjectPlayerQuery query = playerQuery(playerEntity);
         PlayableEntity nativeP1 = query.mainPlayerOrNull();
+        boolean eligibleCandidateFound = false;
         for (PlayableEntity candidate : query.playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
             if (candidate instanceof AbstractPlayableSprite player
                     && shouldTriggerButton(player, candidate == nativeP1)) {
+                eligibleCandidateFound = true;
+                int supportSlot = player.getInteractSlotIndex();
+                if (defersCollapsedButtonPastLaterSupportOwner()
+                        && !laterSupportOwnerEligibilityDeferred
+                        && supportSlot > getSlotIndex()) {
+                    // The ROM button is a child in a later SST slot than both
+                    // the capsule and this support owner. A collapsed child in
+                    // the capsule's earlier engine slot cannot observe that
+                    // owner's current dispatch until its next entry.
+                    laterSupportOwnerEligibilityDeferred = true;
+                    continue;
+                }
                 // ROM loc_86770 only switches the button child to loc_867CA
                 // and sets parent $38 bit 1. The parent Obj_EggCapsule
                 // routine sees that bit on its next object slot and then
@@ -348,6 +343,13 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
                 break;
             }
         }
+        if (!eligibleCandidateFound) {
+            laterSupportOwnerEligibilityDeferred = false;
+        }
+    }
+
+    protected boolean defersCollapsedButtonPastLaterSupportOwner() {
+        return false;
     }
 
     private boolean shouldTriggerButton(AbstractPlayableSprite player, boolean nativeP1) {
@@ -393,8 +395,9 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
         openFrame = buttonTriggerVIntRunCount + 1;
         mappingFrame = 1;
         buttonRecess = BUTTON_RECESS;
-        // ROM sub_865DE stores $2E=$40; the owning capsule's results routine
-        // applies its own zero/underflow contract (sonic3k.asm:181556-181570).
+        // ROM sub_865DE stores $2E=$40. Both results routines pre-decrement
+        // and wait for signed underflow (sonic3k.asm:181556-181570,
+        // 181900-181918,182027-182046).
         postOpenTimer = POST_OPEN_DELAY;
 
         try {

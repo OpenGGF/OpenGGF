@@ -70003,3 +70003,38 @@ guard.
   green through edge `#302` at raw `36951`. No established frontier regressed.
   Ring comparison remains `ToleranceConfig.DEFAULT`
   `RingCountMode.FORCE_ERROR`.
+
+## 2026-08-09 - S3K AIZ capsule child-order frontier
+
+- Branch: `bugfix/s3k-traces` from `d91b312d2`; the six protected user edits
+  remained unstaged. Validation used JDK 21.0.12 and
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen`; no trace fixture changed.
+- Root cause: ROM `Obj_EggCapsule` runs its separate button child after the
+  AIZ draw bridge's SST slot. The engine consolidates that child into the
+  capsule, whose replacement slot precedes the bridge, so it observed Player
+  2's supported position before the bridge's current dispatch and pressed the
+  capsule one frame early. The AIZ capsule now defers the first eligible
+  button observation when the live support owner is in a later engine slot.
+  This is owned by the AIZ capsule subclass and consumes object/support-slot
+  state rather than a trace, frame, or route identity.
+- Counter correction: `sub_865DE` writes `$2E=$40`; both `sub_868F8` and
+  MGZ's `sub_86984` pre-decrement that word and branch while it remains
+  non-negative (`sonic3k.asm:181556-181570,181900-181918,182027-182046`). The
+  shared floating capsule now stores `$40` and tests signed underflow directly
+  instead of representing the same duration as a synthetic `$41`/zero pair.
+- AIZ frontier command: `mvn -q -Ptrace-replay -Dmse=off
+  -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay
+  -Dtrace.verification=all -Dtrace.frontierOnly=true
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' test`. Result:
+  the raw `25037` velocity/ending-pose mismatch and following results-art
+  queue differences are closed. The first error advances to raw `25590`, with
+  12 animation/physics errors at the later `Restore_PlayerControl` boundary;
+  hardware replay reaches unconsumed edge `#63` at raw `26109`.
+- Regression checks: the focused capsule timing/slot-order tests pass. HCZ
+  remains at one error beginning raw `25486`; MGZ remains fully green across
+  all `39183` frames after an isolated rerun; CNZ remains at nine errors from
+  raw `12024`; ICZ remains at two errors from raw `15401`; LBZ remains at
+  three animation errors from raw `30784` while its physical report is green.
+  Ring comparison remains enabled through `ToleranceConfig.DEFAULT` with
+  `RingCountMode.FORCE_ERROR`.

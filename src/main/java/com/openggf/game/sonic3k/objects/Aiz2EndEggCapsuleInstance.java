@@ -87,6 +87,15 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
     }
 
     @Override
+    protected boolean defersCollapsedButtonPastLaterSupportOwner() {
+        // AIZ's native capsule button sits after the draw bridge that still
+        // owns Player_2's standing update. The consolidated engine capsule
+        // precedes its replacement bridge, so consume that publication on
+        // the next capsule entry.
+        return true;
+    }
+
+    @Override
     protected boolean shouldStartResults(AbstractPlayableSprite player) {
         // sub_868F8 only rejects a dead/airborne/non-playable routine. It then
         // calls Set_PlayerEndingPose, which owns the velocity clears itself.

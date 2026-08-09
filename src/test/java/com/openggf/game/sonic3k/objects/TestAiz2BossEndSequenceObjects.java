@@ -443,12 +443,12 @@ class TestAiz2BossEndSequenceObjects {
                 .withCamera(camera)
                 .withGameState(gameState));
         setField(capsule, "opened", 1);
-        setField(capsule, "postOpenTimer", 0x41);
+        setField(capsule, "postOpenTimer", 0x40);
         setField(capsule, "currentY", 0x0100);
 
         capsule.update(0, sonic);
 
-        assertEquals(0x40, getIntField(capsule, "postOpenTimer"));
+        assertEquals(0x3F, getIntField(capsule, "postOpenTimer"));
         assertEquals(0x0100, capsule.getY());
         assertEquals(0xB000, getIntField(capsule, "ySubpixel"),
                 "AIZ routine $0A runs sub_868F8, then Swing_UpAndDown and MoveSprite2 "
@@ -527,6 +527,36 @@ class TestAiz2BossEndSequenceObjects {
     }
 
     @Test
+    void floatingCapsuleDefersCollapsedButtonCheckPastLaterSupportOwner() throws Exception {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        camera.resetState();
+
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        sonic.setCentreX((short) 0x4800);
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        tails.setCentreX((short) 0x49EA);
+        tails.setCentreY((short) 0x0186);
+        tails.setYSpeed((short) -1);
+        tails.setInteractSlotIndex(8);
+
+        Aiz2EndEggCapsuleInstance capsule = new Aiz2EndEggCapsuleInstance(0x49EA, 0x0162);
+        capsule.setSlotIndex(7);
+        capsule.setServices(new QueryOnlyServices(camera, sonic, List.of(tails))
+                .withGameState(new GameStateManager()));
+        setField(capsule, "xDirection", 0);
+
+        capsule.update(0, sonic);
+
+        assertFalse(getBooleanField(capsule, "buttonTriggered"),
+                "The collapsed child cannot observe a later support owner's current SST dispatch");
+
+        capsule.update(1, sonic);
+
+        assertTrue(getBooleanField(capsule, "buttonTriggered"),
+                "The next capsule entry observes the later support owner's published state");
+    }
+
+    @Test
     void floatingCapsuleResultsWaitUsesRomPredecrementCounter() throws Exception {
         Camera camera = TestEnvironment.activeGameplayMode().getCamera();
         camera.resetState();
@@ -539,7 +569,7 @@ class TestAiz2BossEndSequenceObjects {
                 .withCamera(camera)
                 .withGameState(gameState));
         setField(capsule, "opened", 1);
-        setField(capsule, "postOpenTimer", 0x41);
+        setField(capsule, "postOpenTimer", 0x40);
 
         for (int i = 0; i < 0x40; i++) {
             capsule.update(i, sonic);
