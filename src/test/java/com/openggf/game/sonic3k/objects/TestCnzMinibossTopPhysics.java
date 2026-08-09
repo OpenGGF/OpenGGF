@@ -383,14 +383,13 @@ class TestCnzMinibossTopPhysics {
             afterBounceY = top.getY();
             assertTrue(top.usesPreUpdatePositionForSolidContact(p2),
                     "the post-bounce P2 checkpoint samples the prior top publication");
-            p2.setYSpeed((short) 0);
             top.update(1, p1);
         }
 
         assertTrue(top.getY() < afterBounceY,
                 "CNZMinibossTop_CheckPlayerBounce checks native Player_2 after Player_1");
         assertFalse(top.usesPreUpdatePositionForSolidContact(p2),
-                "ordinary P2 checkpoints resume the live top position after vertical contact");
+                "the saved SolidObjectFull position expires after one object dispatch");
     }
 
     @Test

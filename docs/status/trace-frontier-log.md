@@ -70312,3 +70312,41 @@ guard.
   and MGZ. Result: 3 tests, 0 failures, 0 errors; all represented hardware
   edges were consumed. Ring comparison remains error-level through
   `ToleranceConfig.DEFAULT` with `RingCountMode.FORCE_ERROR`.
+
+## 2026-08-09 - S3K CNZ P2 saved-position latch frontier
+
+- Branch: `bugfix/s3k-traces` from `7b7a78779`; the six protected user edits
+  remained unstaged. Validation used JDK 21.0.12 and
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen`; no trace fixture changed.
+- Prior complete-run frontier: 4 errors beginning at raw frame `12488`, where
+  Tails landed on the moving miniboss top one frame before the ROM and lost
+  upward y/ground velocity. The next hardware edge was `#205` at raw `13962`.
+- Root cause: `Obj_CNZMinibossTopMain` saves `x_pos`, runs `MoveSprite2`, and
+  passes the saved word to `SolidObjectFull` in that same object dispatch
+  (`docs/skdisasm/sonic3k.asm:145108-145120`). The engine's folded P2 rebound
+  checkpoint correctly selected the pre-update top position for that dispatch,
+  but retained the selection on later frames until Tails stopped moving
+  upward. The latch now clears at the next top dispatch and can be armed again
+  only by a rebound in the current dispatch; it consumes object/player state,
+  not zone, trace, route, or frame identity.
+- Focused command: `mvn -Dmse=off
+  -Dtest=com.openggf.game.sonic3k.objects.TestCnzMinibossTopPhysics test`.
+  Result: 30 tests, 0 failures, 0 errors. The rebound regression keeps P2's
+  y-speed negative across the next update and proves the saved-position latch
+  has expired.
+- Complete-run CNZ command: `mvn -Ptrace-replay -Dmse=off
+  -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+  -Dtrace.verification=physics -Dtrace.frontierOnly=true
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kCnzCompleteRunTraceReplay#replayMatchesTrace
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' test`. Result:
+  frontier advances 1,472 rows to raw `13960`, with the first mismatches at
+  the CNZ act-transition art-loading/animation boundary; the next unconsumed
+  hardware edge is module-queue edge `#134` at raw `13963`.
+- Standalone CNZ was run separately with the same profile. Result: its prior
+  one-error camera-X frontier at raw `25743` and queue edge `#31` at raw
+  `33755` are unchanged.
+- Regression command: the same profile and ROM with complete-run AIZ, HCZ,
+  and MGZ plus standalone MGZ. Result: 4 tests, 0 failures, 0 errors; all
+  represented hardware edges were consumed. Ring comparison remains
+  error-level through `ToleranceConfig.DEFAULT` with
+  `RingCountMode.FORCE_ERROR`.

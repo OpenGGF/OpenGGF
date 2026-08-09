@@ -237,11 +237,11 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
         diagnosticCurrentVIntRunCount = vIntRunCount;
-        PlayableEntity nativeP2 = services().playerQuery().nativeP2OrNull();
-        if (nativeP2BounceUsesPreUpdateSolidPosition
-                && nativeP2 != null && nativeP2.getYSpeed() >= 0) {
-            nativeP2BounceUsesPreUpdateSolidPosition = false;
-        }
+        // The saved x_pos passed to SolidObjectFull belongs only to this
+        // object's current dispatch. A P2 rebound below may arm the folded
+        // post-update solid checkpoint again for this frame; it must not leak
+        // into the next dispatch while P2 is still travelling upward.
+        nativeP2BounceUsesPreUpdateSolidPosition = false;
         resetTraceFrameFlags();
         // Arena collision seam is still driven by forceArenaCollisionForTest —
         // run it before the state machine so the Task-7 contract (attachBossForTest

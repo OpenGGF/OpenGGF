@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: CNZ's miniboss-top saved-position latch now expires after the
+  single folded `SolidObjectFull` checkpoint that owns it, rather than staying
+  active while Tails continues upward after a rebound. This advances the
+  complete-run CNZ frontier from raw frame 12488 to the act-transition queue
+  boundary at raw frame 13960 while retaining standalone CNZ and the green
+  AIZ, HCZ, and MGZ canaries.
 - Fix/Test: CNZ miniboss body hits blocked by `$38` bit 3 now leave the
   Move/`Obj_Wait` dispatch to the boss's own later SST slot. Removing the
   duplicate timer tick also removes the fitted `$90 + 2` wait compensation,
