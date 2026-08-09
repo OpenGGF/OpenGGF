@@ -65606,3 +65606,26 @@ S1/S2 12 -> 10 red, zero regressions.
   -Dtest=com.openggf.game.sonic2.specialstage.Sonic2SpecialStageCheckpointRenderTest,com.openggf.game.sonic2.specialstage.TestSonic2SpecialStageCheckpointSnapshot test`.
   Result: 4 tests, 0 failures, 0 errors, 0 skips. The pre-fix renderer test
   failed as expected when both wing and hand Y values followed the hand.
+
+## 2026-08-09 - S2 DEZ Plane B star-window initialization fix
+
+- Worktree: `.worktrees/s2-dez-window-stars`, branch
+  `bugfix/ai-s2-dez-window-stars`, candidate based on `dc0892fe0`.
+- Root cause: REV01's `InitCameraValues` seeds `Camera_BG_Y_pos`, and
+  `InitCam_Null3` preserves it (the DEZ start camera is Y=`$00C8`). The Java
+  `BackgroundCamera` held that value, but `SwScrlDez` read its uninitialized
+  handler-local VScroll (`0`), so the renderer sampled the intentional black
+  128px band above the star rows. CPZ_DEZ layout descriptors, star patterns,
+  palette line 2, and renderer-equivalent screen samples were all present.
+- Fix: inject the shared Sonic 2 `BackgroundCamera` into `SwScrlDez` and use
+  its ROM-owned BG-Y value for both the scroll table's segment selection and
+  the VScroll output. The no-camera constructor remains for isolated handler
+  tests that explicitly seed VScroll.
+- Validation command: `mvn -q -Dmse=off -Dorg.lwjgl.librarypath=<LWJGL_NATIVE_PATH>
+  "-Dtest=com.openggf.tests.TestS2DezBackground,com.openggf.game.sonic2.scroll.TestSwScrlDez"
+  test "-Dsonic2.rom.path=<REV01_ROM_PATH>"`
+  Result: 6 tests, 0 failures, 0 errors, 0 skips. The focused DEZ render/resource
+  lane found non-black star patterns and 544 visible star descriptors at the
+  start; the DEZ scroll lane changed rows across consecutive frames and
+  reproduced the same Plane B resources after rewind recomputation. No trace
+  fixture or comparison data was changed.

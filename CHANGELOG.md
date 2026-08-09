@@ -9,6 +9,13 @@ All notable changes to the OpenGGF project are documented in this file.
   and `Obj5A_Handshake` (`docs/s2disasm/s2.asm:71880-71905,71953-71989`),
   and derives wings Y from the snapshotted handshake target. Renderer tests
   cover mutation-sensitive frame movement, deterministic redraw, and rewind.
+- Fix: Sonic 2 DEZ now sources Plane B's initial vertical origin from the
+  ROM-owned `Camera_BG_Y_pos`: `InitCameraValues` seeds it and `InitCam_Null3`
+  preserves it. REV01's first 128px background band is intentionally black;
+  using the handler's zero default hid the ROM star field in the exterior
+  window. ROM-backed tests cover loaded
+  star patterns/palette data, initial screen sampling, frame-to-frame star
+  parallax, and Plane B rewind recomputation.
 - Fix/Docs: S2 CPZ tubes now honor the engine free-fly debug boundary instead
   of capturing a debug player. Native S2 `Debug_placement_mode` ring/item
   placement and `Two_player_mode` human-P2 monitor behavior remain explicitly
