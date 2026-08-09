@@ -2,6 +2,7 @@ package com.openggf.tools.audio.timeline;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -31,8 +32,21 @@ class TestS1Ghz1OpenGgfAudioTimelineCapture {
             assertEquals(S1GameplayAudioTimeline.OPENGGF_CAPTURE, reader.metadata().capture());
             int frames = 0;
             while (reader.hasNext()) {
-                if (reader.next() instanceof S1GameplayAudioTimeline.Frame) {
+                if (reader.next() instanceof S1GameplayAudioTimeline.Frame frame) {
                     frames++;
+                    for (S1GameplayAudioTimeline.Request request : frame.requests()) {
+                        for (S1GameplayAudioTimeline.RoleArbitration decision : request.arbitration()) {
+                            if (decision.acquired()) {
+                                assertNotEquals(decision.displacedOwner(), decision.finalOwner(),
+                                        "acquired role self-displaced at BK2 frame " + frame.bk2Frame());
+                            }
+                            if (request.soundClass() == S1GameplayAudioTimeline.SoundClass.MUSIC) {
+                                assertEquals(frame.owners().owner(decision.role()), decision.finalOwner(),
+                                        "music decision did not use the completed post-request owner at BK2 frame "
+                                                + frame.bk2Frame());
+                            }
+                        }
+                    }
                 }
             }
             assertEquals(4115, frames);

@@ -29,10 +29,9 @@ import java.lang.reflect.Field;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.HashSet;
-import java.util.Set;
 
 /**
  * Local-only OpenGGF producer for the pinned S1 GHZ1 semantic timeline. The
@@ -69,15 +68,30 @@ public final class S1Ghz1OpenGgfAudioTimelineCapture {
     static final class CaptureState implements VisualRunReplayHarness.FrameObserver,
             SfxContentionObserver {
         private final List<S1GameplayAudioTimeline.TimelineRecord> records = new ArrayList<>();
-        private final List<SfxContentionObserver.Arbitration> arbitrations = new ArrayList<>();
+        private final List<SfxContentionObserver.Arbitration> frameArbitrations = new ArrayList<>();
         private final List<SfxContentionObserver.Admission> admissions = new ArrayList<>();
-        private final Set<Long> consumedAdmissions = new HashSet<>();
+        private final List<SfxContentionObserver.Admission> frameAdmissions = new ArrayList<>();
         private final List<SmpsDriver> observedDrivers = new ArrayList<>();
+        private final Map<SfxContentionObserver.Source, S1GameplayAudioTimeline.OwnerRef>
+                semanticSfxOwners = new HashMap<>();
+        private final Map<Long, S1GameplayAudioTimeline.OwnerRef> musicOwnersByVoiceId = new HashMap<>();
+        private final Map<Integer, S1GameplayAudioTimeline.OwnerRef> latestMusicOwnersById = new HashMap<>();
+        private final Map<S1GameplayAudioTimeline.HardwareRole, S1GameplayAudioTimeline.OwnerRef>
+                effectiveOwners = new EnumMap<>(S1GameplayAudioTimeline.HardwareRole.class);
         private int nextCommandEntry;
         private long diagnosticPresentations;
         private long emittedRequestCount;
         private long lastRequestOrdinal = -1;
         private boolean baselineCaptured;
+        private S1GameplayAudioTimeline.OwnerRef currentMusicOwner = musicOwner();
+
+        CaptureState() {
+            latestMusicOwnersById.put(currentMusicOwner.soundId(), currentMusicOwner);
+            for (S1GameplayAudioTimeline.HardwareRole role
+                    : S1GameplayAudioTimeline.HardwareRole.values()) {
+                effectiveOwners.put(role, currentMusicOwner);
+            }
+        }
 
         @Override
         public void beforeFirstSegmentRow(VisualRunReplayHarness.FrameView frame) {
@@ -88,38 +102,49 @@ public final class S1Ghz1OpenGgfAudioTimelineCapture {
             AudioManager audio = GameServices.audio();
             AudioPresentationSnapshot presentation = audio.captureLogicalSnapshot().presentation();
             int activeMusic = presentation.activeMusic() == null ? -1 : presentation.activeMusic().musicId();
+            currentMusicOwner = new S1GameplayAudioTimeline.OwnerRef(MUSIC, activeMusic, 0);
+            latestMusicOwnersById.put(activeMusic, currentMusicOwner);
+            S1GameplayAudioTimeline.OwnerVector baselineOwners = owners(presentation);
             records.add(new S1GameplayAudioTimeline.Baseline(frame.consumedBk2Cursor(), activeMusic,
-                    diagnosticPresentations, owners(presentation)));
+                    diagnosticPresentations, baselineOwners));
             nextCommandEntry = audio.commandTimeline().entryCount();
             baselineCaptured = true;
+            clearFrameObservations();
         }
 
         @Override
         public void afterOuterFrame(VisualRunReplayHarness.FrameView frame) {
             diagnosticPresentations++;
-            if (!baselineCaptured || !frame.semanticRow() || frame.segmentIndex() != 0) {
-                return;
+            try {
+                if (!baselineCaptured || !frame.semanticRow() || frame.segmentIndex() != 0) {
+                    return;
+                }
+                if (frame.consumedBk2Cursor() < S1GameplayAudioTimeline.SEGMENT_START_BK2_FRAME
+                        || frame.consumedBk2Cursor() >= S1GameplayAudioTimeline.SEGMENT_END_BK2_FRAME) {
+                    return;
+                }
+                installOnLiveDrivers();
+                AudioManager audio = GameServices.audio();
+                List<S1GameplayAudioTimeline.Request> requests = drainRequests(audio);
+                AudioPresentationSnapshot presentation = audio.captureLogicalSnapshot().presentation();
+                S1GameplayAudioTimeline.OwnerVector finalOwners = owners(presentation);
+                requests = reconcileCompletedMusic(requests, finalOwners);
+                records.add(new S1GameplayAudioTimeline.Frame(frame.consumedBk2Cursor(),
+                        diagnosticPresentations, requests, finalOwners));
+            } finally {
+                clearFrameObservations();
             }
-            if (frame.consumedBk2Cursor() < S1GameplayAudioTimeline.SEGMENT_START_BK2_FRAME
-                    || frame.consumedBk2Cursor() >= S1GameplayAudioTimeline.SEGMENT_END_BK2_FRAME) {
-                return;
-            }
-            installOnLiveDrivers();
-            AudioManager audio = GameServices.audio();
-            List<S1GameplayAudioTimeline.Request> requests = drainRequests(audio);
-            AudioPresentationSnapshot presentation = audio.captureLogicalSnapshot().presentation();
-            records.add(new S1GameplayAudioTimeline.Frame(frame.consumedBk2Cursor(),
-                    diagnosticPresentations, requests, owners(presentation)));
         }
 
         @Override
         public void onSfxAdmitted(SfxContentionObserver.Admission admission) {
             admissions.add(admission);
+            frameAdmissions.add(admission);
         }
 
         @Override
         public void onRoleArbitrated(SfxContentionObserver.Arbitration arbitration) {
-            arbitrations.add(arbitration);
+            frameArbitrations.add(arbitration);
         }
 
         List<S1GameplayAudioTimeline.TimelineRecord> records() {
@@ -152,11 +177,41 @@ public final class S1Ghz1OpenGgfAudioTimelineCapture {
             return List.copyOf(requests);
         }
 
+        private List<S1GameplayAudioTimeline.Request> reconcileCompletedMusic(
+                List<S1GameplayAudioTimeline.Request> requests,
+                S1GameplayAudioTimeline.OwnerVector finalOwners) {
+            List<S1GameplayAudioTimeline.Request> reconciled = new ArrayList<>(requests.size());
+            for (S1GameplayAudioTimeline.Request request : requests) {
+                if (request.soundClass() != S1GameplayAudioTimeline.SoundClass.MUSIC) {
+                    reconciled.add(request);
+                    continue;
+                }
+                S1GameplayAudioTimeline.OwnerRef identity = new S1GameplayAudioTimeline.OwnerRef(
+                        MUSIC, request.soundId(), request.requestOrdinal());
+                List<S1GameplayAudioTimeline.RoleArbitration> decisions = new ArrayList<>();
+                for (S1GameplayAudioTimeline.RoleArbitration decision : request.arbitration()) {
+                    S1GameplayAudioTimeline.OwnerRef finalOwner = finalOwners.owner(decision.role());
+                    boolean acquired = identity.equals(finalOwner);
+                    S1GameplayAudioTimeline.OwnerRef displaced = acquired
+                            ? decision.displacedOwner() : finalOwner;
+                    if (acquired && displaced.equals(finalOwner)) {
+                        throw new IllegalStateException("acquired music role cannot displace itself: "
+                                + decision.role() + " " + finalOwner);
+                    }
+                    decisions.add(new S1GameplayAudioTimeline.RoleArbitration(
+                            decision.role(), acquired, displaced, finalOwner));
+                }
+                reconciled.add(new S1GameplayAudioTimeline.Request(request.requestOrdinal(),
+                        request.soundClass(), request.soundId(), request.requestedRoles(), decisions));
+            }
+            return List.copyOf(reconciled);
+        }
+
         static S1GameplayAudioTimeline.SoundClass soundClassForSfx(int soundId) {
             return soundId == 0xD0 ? S1GameplayAudioTimeline.SoundClass.SPECIAL_SFX : SFX;
         }
 
-        private S1GameplayAudioTimeline.Request requestFor(S1GameplayAudioTimeline.SoundClass soundClass,
+        S1GameplayAudioTimeline.Request requestFor(S1GameplayAudioTimeline.SoundClass soundClass,
                 int soundId, SfxContentionObserver.Admission admission) {
             SfxContentionObserver.Source source = admission == null ? null : admission.source();
             long ordinal = source == null ? lastRequestOrdinal + 1 : source.admissionOrdinal();
@@ -166,17 +221,37 @@ public final class S1Ghz1OpenGgfAudioTimelineCapture {
             lastRequestOrdinal = ordinal;
             emittedRequestCount++;
             List<S1GameplayAudioTimeline.HardwareRole> roles = declaredRoles(admission, soundId, soundClass);
+            S1GameplayAudioTimeline.OwnerRef identity = new S1GameplayAudioTimeline.OwnerRef(
+                    ownerClass(soundClass, soundId), soundId, ordinal);
+            if (soundClass == S1GameplayAudioTimeline.SoundClass.MUSIC) {
+                currentMusicOwner = identity;
+                latestMusicOwnersById.put(soundId, identity);
+            } else if (source != null) {
+                semanticSfxOwners.put(source, identity);
+            }
             List<S1GameplayAudioTimeline.RoleArbitration> decisions = new ArrayList<>();
             for (S1GameplayAudioTimeline.HardwareRole role : roles) {
-                SfxContentionObserver.Arbitration event = latestArbitration(role, source);
-                boolean acquired = event != null && event.acquired();
-                S1GameplayAudioTimeline.OwnerRef displaced = event == null
-                        ? musicOwner() : owner(event.previousOwner());
-                S1GameplayAudioTimeline.OwnerRef finalOwner = acquired
-                        ? new S1GameplayAudioTimeline.OwnerRef(ownerClass(soundClass, soundId), soundId, ordinal)
-                        : displaced;
+                S1GameplayAudioTimeline.OwnerRef displaced = effectiveOwners.get(role);
+                boolean acquired;
+                S1GameplayAudioTimeline.OwnerRef finalOwner;
+                if (soundClass == S1GameplayAudioTimeline.SoundClass.MUSIC) {
+                    acquired = displaced.ownerClass() == MUSIC;
+                    finalOwner = acquired ? identity : displaced;
+                } else {
+                    SfxContentionObserver.Arbitration event = firstOwnershipTransition(role, source);
+                    acquired = event != null && event.acquired();
+                    if (event != null && event.previousOwner() != null) {
+                        displaced = owner(event.previousOwner());
+                    }
+                    finalOwner = acquired ? identity : displaced;
+                }
+                if (acquired && displaced.equals(finalOwner)) {
+                    throw new IllegalStateException("acquired role cannot displace its final owner: "
+                            + role + " " + finalOwner);
+                }
                 decisions.add(new S1GameplayAudioTimeline.RoleArbitration(role, acquired,
                         displaced, finalOwner));
+                effectiveOwners.put(role, finalOwner);
             }
             return new S1GameplayAudioTimeline.Request(ordinal, soundClass, soundId, roles, decisions);
         }
@@ -213,32 +288,72 @@ public final class S1Ghz1OpenGgfAudioTimelineCapture {
             return sequencerSfx == (soundClass != S1GameplayAudioTimeline.SoundClass.MUSIC);
         }
 
-        private SfxContentionObserver.Arbitration latestArbitration(
+        SfxContentionObserver.Arbitration firstOwnershipTransition(
                 S1GameplayAudioTimeline.HardwareRole role,
                 SfxContentionObserver.Source source) {
-            for (int index = arbitrations.size() - 1; index >= 0; index--) {
-                SfxContentionObserver.Arbitration event = arbitrations.get(index);
+            if (source == null) {
+                return null;
+            }
+            for (SfxContentionObserver.Arbitration event : frameArbitrations) {
                 if (role(event.bus(), event.channel()) == role
-                        && (source == null || source.equals(event.challenger()))) {
+                        && source.equals(event.challenger())
+                        && !source.equals(event.previousOwner())) {
                     return event;
                 }
             }
             return null;
         }
 
-        private S1GameplayAudioTimeline.OwnerVector owners(AudioPresentationSnapshot presentation) {
+        S1GameplayAudioTimeline.OwnerVector owners(AudioPresentationSnapshot presentation) {
             Map<S1GameplayAudioTimeline.HardwareRole, S1GameplayAudioTimeline.OwnerRef> owners =
                     new EnumMap<>(S1GameplayAudioTimeline.HardwareRole.class);
+            rememberMusicSlots(presentation);
+            S1GameplayAudioTimeline.OwnerRef presentedMusic = presentedMusicOwner(presentation);
             for (S1GameplayAudioTimeline.HardwareRole role : S1GameplayAudioTimeline.HardwareRole.values()) {
-                owners.put(role, musicOwner());
+                owners.put(role, presentedMusic);
             }
             for (var voice : presentation.voices()) {
                 if (voice instanceof com.openggf.audio.presentation.PresentationVoiceSnapshot.Smps smps) {
                     applyLocks(smps.driver(), owners);
                 }
             }
+            effectiveOwners.putAll(owners);
             return new S1GameplayAudioTimeline.OwnerVector(owners.get(FM3), owners.get(FM4), owners.get(FM5),
                     owners.get(PSG1), owners.get(PSG2), owners.get(PSG3));
+        }
+
+        private void rememberMusicSlots(AudioPresentationSnapshot presentation) {
+            if (presentation.activeMusic() != null
+                    && presentation.activeMusic().musicId() == currentMusicOwner.soundId()) {
+                musicOwnersByVoiceId.put(presentation.activeMusic().voiceId(), currentMusicOwner);
+            }
+            for (AudioPresentationSnapshot.MusicSlotSnapshot slot : presentation.overrideStack()) {
+                musicOwnersByVoiceId.computeIfAbsent(slot.voiceId(), ignored -> musicOwnerForId(slot.musicId()));
+            }
+        }
+
+        private S1GameplayAudioTimeline.OwnerRef presentedMusicOwner(
+                AudioPresentationSnapshot presentation) {
+            if (presentation.activeMusic() == null) {
+                return noneOwner();
+            }
+            AudioPresentationSnapshot.MusicSlotSnapshot active = presentation.activeMusic();
+            S1GameplayAudioTimeline.OwnerRef owner = musicOwnersByVoiceId.get(active.voiceId());
+            if (owner == null) {
+                owner = musicOwnerForId(active.musicId());
+                musicOwnersByVoiceId.put(active.voiceId(), owner);
+            }
+            currentMusicOwner = owner;
+            return owner;
+        }
+
+        private S1GameplayAudioTimeline.OwnerRef musicOwnerForId(int musicId) {
+            S1GameplayAudioTimeline.OwnerRef known = latestMusicOwnersById.get(musicId);
+            if (known != null) {
+                return known;
+            }
+            throw new IllegalStateException("active music $%02X has no request or baseline identity"
+                    .formatted(musicId));
         }
 
         private void applyLocks(SmpsDriverSnapshot snapshot,
@@ -263,11 +378,17 @@ public final class S1Ghz1OpenGgfAudioTimelineCapture {
         }
 
         private SfxContentionObserver.Admission takeAdmission(int soundId) {
-            for (int index = 0; index < admissions.size(); index++) {
-                if (admissions.get(index).source().descriptor().id() == soundId
-                        && consumedAdmissions.add(admissions.get(index).source().admissionOrdinal())) return admissions.get(index);
+            for (int index = 0; index < frameAdmissions.size(); index++) {
+                if (frameAdmissions.get(index).source().descriptor().id() == soundId) {
+                    return frameAdmissions.remove(index);
+                }
             }
             return null;
+        }
+
+        private void clearFrameObservations() {
+            frameAdmissions.clear();
+            frameArbitrations.clear();
         }
 
         private SfxContentionObserver.Source latestAdmission(int soundId) {
@@ -315,8 +436,15 @@ public final class S1Ghz1OpenGgfAudioTimelineCapture {
             return switch (channel) { case 0 -> PSG1; case 1 -> PSG2; case 2 -> PSG3; default -> null; };
         }
 
-        private static S1GameplayAudioTimeline.OwnerRef owner(SfxContentionObserver.Source source) {
-            return source == null ? musicOwner() : new S1GameplayAudioTimeline.OwnerRef(
+        private S1GameplayAudioTimeline.OwnerRef owner(SfxContentionObserver.Source source) {
+            if (source == null) {
+                return currentMusicOwner;
+            }
+            S1GameplayAudioTimeline.OwnerRef semantic = semanticSfxOwners.get(source);
+            if (semantic != null) {
+                return semantic;
+            }
+            return new S1GameplayAudioTimeline.OwnerRef(
                     source.specialSfx() || source.descriptor().id() == 0xD0 ? SPECIAL_SFX : NORMAL_SFX,
                     source.descriptor().id(), source.admissionOrdinal());
         }
