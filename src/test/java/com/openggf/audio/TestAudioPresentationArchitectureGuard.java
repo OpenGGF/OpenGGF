@@ -27,6 +27,8 @@ class TestAudioPresentationArchitectureGuard {
             Path.of("src/main/java/com/openggf/audio");
     private static final Path PRODUCTION_ROOT =
             Path.of("src/main/java/com/openggf");
+    private static final Path TIMELINE_ROOT =
+            Path.of("src/main/java/com/openggf/tools/audio/timeline");
     private static final Set<String> BACKEND_COMMANDS = Set.of(
             "playMusic", "playSfx", "playSmps", "playSfxSmps",
             "toggleMute", "toggleSolo", "isMuted", "isSoloed");
@@ -295,6 +297,39 @@ class TestAudioPresentationArchitectureGuard {
                 "OpenAL is written to only by the single final-PCM sink");
     }
 
+    @Test
+    void gameplayAudioTimelineIsToolingOnlyAndCannotDriveAudioOrTraceAuthority()
+            throws IOException {
+        try (var files = Files.walk(PRODUCTION_ROOT)) {
+            List<Path> imports = files
+                    .filter(path -> path.toString().endsWith(".java"))
+                    .filter(path -> !path.startsWith(TIMELINE_ROOT))
+                    .filter(path -> sourceContains(path,
+                            "import com.openggf.tools.audio.timeline"))
+                    .toList();
+            assertEquals(List.of(), imports,
+                    "production runtime must not import gameplay-audio timeline tooling");
+        }
+
+        List<String> forbiddenCalls = List.of(
+                "playMusic(", "playSfx(", "restoreLogical", "replayLogical",
+                "advancePresentation", "advanceProducer", "HardwareTiming", "hardwareTiming");
+        try (var files = Files.walk(TIMELINE_ROOT)) {
+            List<String> offenders = files
+                    .filter(path -> path.toString().endsWith(".java"))
+                    .flatMap(path -> forbiddenCalls.stream().filter(token -> {
+                        try {
+                            return Files.readString(path).contains(token);
+                        } catch (IOException failure) {
+                            throw new IllegalStateException(failure);
+                        }
+                    }).map(token -> token + " @ " + path))
+                    .toList();
+            assertEquals(List.of(), offenders,
+                    "timeline tooling must remain a read-only schema boundary");
+        }
+    }
+
     /**
      * @param allowedPaths repo-relative path suffixes (e.g.
      *                     {@code "audio/presentation/X.java"}) permitted to
@@ -326,6 +361,14 @@ class TestAudioPresentationArchitectureGuard {
         String normalized = path.toString().replace('\\', '/');
         return pathSuffixes.stream()
                 .anyMatch(suffix -> normalized.endsWith("/" + suffix));
+    }
+
+    private static boolean sourceContains(Path path, String token) {
+        try {
+            return Files.readString(path).contains(token);
+        } catch (IOException failure) {
+            throw new IllegalStateException(failure);
+        }
     }
 
     @Test
