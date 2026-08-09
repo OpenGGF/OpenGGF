@@ -226,6 +226,11 @@ Highlights:
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S3K SMPS custom meta-command boundary (2026-08-09):** exhaustive ROM
+  reachability keeps `FF 01`, `FF 02`, and `FF 03` as syntax-width-only
+  handling for unsupported custom streams, with explicit non-effect tests and
+  no dormant runtime execution scaffold.
+
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
 - **Special Stage exit crash (2026-07-31):** leaving a Special Stage no longer

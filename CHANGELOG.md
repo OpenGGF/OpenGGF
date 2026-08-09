@@ -3,6 +3,10 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Docs/tests: The S3K `FF 01`, `FF 02`, and `FF 03` SMPS meta commands are now
+  explicitly bounded as syntax-width-only for unsupported custom streams.
+  ROM reachability and non-effect tests preserve shipped audio behavior; no
+  partial runtime command semantics were added.
 - Docs/tests: Define the native Sonic 2 competition and human-P2 capability
   boundary from REV01, including the act-one/results/act-two lifecycle and the
   current engine's CPU-sidekick-only production bootstrap. No partial runtime

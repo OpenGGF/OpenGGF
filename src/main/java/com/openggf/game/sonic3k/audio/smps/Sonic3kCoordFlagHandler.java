@@ -25,6 +25,14 @@ import com.openggf.game.GameServices;
  *   <li>FF = META_CF prefix for sub-commands 00-07</li>
  *   <li>Many new flags: E2, E4, E5, EA, EB, EE, F1, F4, FC, FD, FE</li>
  * </ul>
+ *
+ * <p>The S&K-loader-supported S3K music and SFX tables do not reach meta subcommands
+ * {@code FF 01} (SND_CMD), {@code FF 02} (MUS_PAUSE), or {@code FF 03}
+ * (COPY_MEM). The decoder advances over their documented widths solely to
+ * retain a byte boundary in synthetic or diagnostic data. Custom/imported
+ * streams that execute these commands are unsupported. See
+ * {@code TestSonic3kSmpsMetaCommandReachability} and the audio research note
+ * for the ROM inventory and source contract.</p>
  */
 public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
     private static final Logger LOGGER = Logger.getLogger(Sonic3kCoordFlagHandler.class.getName());
@@ -534,27 +542,25 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
 
             case 0x01: // SND_CMD - sound command
                 if (t.pos < data.length) {
-                    int sndCmd = data[t.pos++] & 0xFF;
-                    // Stub: sound command dispatch
-                    LOGGER.fine("S3K META SND_CMD: " + sndCmd);
+                    // Syntax only: retain the documented byte boundary for
+                    // diagnostics; custom sound dispatch is unsupported.
+                    t.pos++;
                 }
                 break;
 
             case 0x02: // MUS_PAUSE (MUSP_Z80) - music pause
                 if (t.pos < data.length) {
-                    int pauseVal = data[t.pos++] & 0xFF;
-                    // Stub: music pause control
-                    LOGGER.fine("S3K META MUS_PAUSE: " + pauseVal);
+                    // Syntax only: retain the documented byte boundary for
+                    // diagnostics; native song-record halt/resume is unsupported.
+                    t.pos++;
                 }
                 break;
 
             case 0x03: // COPY_MEM - copy memory (3 params after sub)
                 if (t.pos + 2 < data.length) {
-                    int memP1 = data[t.pos++] & 0xFF;
-                    int memP2 = data[t.pos++] & 0xFF;
-                    int memP3 = data[t.pos++] & 0xFF;
-                    // Stub: memory copy not modeled
-                    LOGGER.fine("S3K META COPY_MEM: " + memP1 + ", " + memP2 + ", " + memP3);
+                    // Syntax only: retain the documented byte boundary for
+                    // diagnostics; shared-Z80-memory copy is unsupported.
+                    t.pos += 3;
                 }
                 break;
 

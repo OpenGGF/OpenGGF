@@ -63,6 +63,27 @@ are note pitches. Values $E0-$FF are commands:
 The exact command set varies slightly between S1, S2, and S3K, which is why each game has
 its own SMPS configuration.
 
+S3K coordinate-flag commands are decoded by `Sonic3kCoordFlagHandler`. Most
+live commands have engine semantics. The ROM inventory in
+`docs/architecture/research/audio/2026-08-08-s3k-smps-meta-command-reachability.md`
+proves by fixed-point control-flow traversal that shipped S&K music (`01-33`),
+S3 music (`01-32`), and all 169 S&K-loader SFX streams (`33-DB`) never reach meta
+subcommands `SND_CMD`, `MUS_PAUSE`, or `COPY_MEM`. The same proof covers both
+native SFX tables (`33-DF`, 173 entries each) with strict full-bank traversal,
+including the differing `9B`/`AD` payloads and `DC-DF` aliases. Native dispatch
+has S&K's `DC` CreditsK music special case while S3 dispatches `DC-DF` as SFX.
+The strict CFG also treats bank-end falloff, malformed roots/pointers, and
+unknown commands/subcommands as unresolved rather than silently advancing;
+`EB` follows its ROM index-plus-pointer layout. The handler recognizes and
+consumes the three commands' documented widths only as defensive syntax
+handling; it does not dispatch sound, halt/resume the native nine song-track
+records, or copy shared Z80 memory. Custom/imported execution is unsupported,
+not a partially implemented feature. The current mod-audio design uses streamed
+media and defines neither a custom SMPS format nor an ingestion route. See
+`docs/architecture/designs/2026-08-09-s3k-custom-smps-meta-command-capability.md`
+for the integration, memory, rewind, variant, and validation gates that must
+all exist before this boundary can change.
+
 ## Per-Game Driver Differences
 
 The three games use subtly different SMPS driver configurations. These are captured in
