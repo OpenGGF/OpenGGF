@@ -208,7 +208,7 @@ Require the probe to:
 
 - use `ProbeRuntime.run({...})` and the pure audio module;
 - contain no mutation APIs;
-- register execute hooks at `$71B4C`, `$71C4C`, and `$71FD2`;
+- register execute hooks at `$71B4C`, `$71C4C`, `$71FD0`, and `$71FD2`;
 - define and verify the full FM/PSG fallback manifest from the design;
 - read sound RAM through `mainmemory` offsets rooted at `$F000`;
 - arm only for `D7 & $FF == $81`;
@@ -253,7 +253,12 @@ Implement:
 - exact opcode-byte verification for all fallback sites;
 - dormant launch through title/Level Select;
 - tick zero from `$71FD2` through `$71C4C`;
-- one close per external `UpdateMusic`, ignoring DAC-busy retries;
+- one close per external `UpdateMusic`, identifying DAC-busy retries by the
+  unchanged 68K stack pointer even when the invocation crosses emulator frames;
+- pre-epoch `$71FD0` `PlaySegaSound` abnormal-exit reset without a record, and
+  post-epoch rejection of that abnormal exit;
+- fixed-slot role normalization that treats active PSG3 `VoiceControl` C0/E0
+  as the tone/noise alias while retaining the raw byte diagnostically;
 - global/track normalization with diagnostic-vs-gating fields explicit;
 - contamination checks;
 - reference cycle proof and metadata (`cycle_start`, `period`,
@@ -263,6 +268,11 @@ Implement:
 
 The first line is capture metadata; following lines are tick records. Raw bus
 events may be present in local output but are never copied to test resources.
+
+Lifecycle coverage must include a pre-epoch `$71FD0` abnormal exit followed by
+a later same-stack external call, an armed same-stack retry across emulator
+frames, armed different-stack nested-entry rejection, and both PSG3 C0/E0
+aliases producing fixed role PSG3.
 
 **Step 5: Run source tests and two real captures**
 

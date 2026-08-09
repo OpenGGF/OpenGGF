@@ -117,13 +117,30 @@ BizHawk frame count, movie frame, game mode, and interrupt context are retained
 as diagnostics. They never select or realign a comparison record.
 
 An entry hook alone is insufficient because the DAC-busy path branches back to
-`$71B4C`. The observer therefore keeps an `invocation_active` guard. The first
-entry while the guard is clear opens an invocation; retries while it is set do
-not increment the ordinal. Execution of the final `rts` at `$71C4C` snapshots
+`$71B4C`. The observer therefore keeps an `invocation_active` guard and the 68K
+stack pointer from the external entry. The first entry while the guard is clear
+opens an invocation. Re-entry with the same stack pointer while it is set is a
+DAC-busy retry and does not increment the ordinal; a different stack pointer is
+an invalid nested entry. Execution of the final `rts` at `$71C4C` snapshots
 state, closes the invocation, and asserts exactly one close. Re-entry after a
-close opens the next ordinal. A close without an open, a second external entry
-before close, or an invocation crossing an emulator-frame boundary is a capture
-failure.
+close opens the next ordinal. A close without an open or a different-stack
+entry before close is a capture failure.
+
+An invocation may legitimately cross an emulator-frame boundary while waiting
+for the Z80 DAC side. The supplied movie proves this at tick zero: the `$81`
+epoch opens on BizHawk frame 823, retries at `$71B4C` with the same stack pointer,
+and closes at `$71C4C` on frame 824. Frame changes are diagnostic only and never
+split or reject a driver invocation.
+
+Launch-only Sega PCM has a separate shipped escape path. `PlaySegaSound`
+executes `addq.w #4,sp` and returns at `$71FD0`, deliberately bypassing
+`UpdateMusic`'s normal `$71C4C` close. The observer hooks `$71FD0`; before the
+GHZ epoch it closes/resets the dormant launch invocation without emitting a
+tick. This prevents a later external call that reuses the same stack pointer
+from being mistaken for an endless retry. After `$81` arms capture, `$71FD0` is
+invalid contamination, same-stack `$71B4C` entries are retries across any
+number of emulator frames, different-stack entry-before-close is invalid, and
+`$71C4C` remains the sole normal close.
 
 The ROM capture records the title-to-GHZ `UpdateMusic` count only as launch
 diagnostics. It is not replayed on the engine side. OpenGGF's ordinary music
@@ -292,7 +309,7 @@ Active roles use this field map (`T` is the slot base):
 | overridden | `T+$00` bit 2 | `overridden` | boolean |
 | modulation enabled | `T+$00` bit 3 | `modEnabled` | boolean |
 | do-not-attack | `T+$00` bit 4 | `tieNext` | boolean |
-| hardware channel/type | `T+$01 VoiceControl` | `type`, `channelId` | decode S1 channel bits to fixed role |
+| hardware channel/type | fixed slot plus `T+$01 VoiceControl` | `type`, `channelId` | role comes from slot ordinal; validate active FM/DAC bytes `06,00,01,02,04,05,06`; active PSG bytes `80,A0,C0/E0`, where C0 and E0 are the PSG3 tone/noise alias |
 | sequence position | `T+$04 DataPointer` | `pos` | ROM pointer minus GHZ asset ROM base |
 | transpose | `T+$08` | `keyOffset` | signed byte |
 | attenuation | `T+$09` | `volumeOffset` | signed/unsigned interpretation tested per S1 operation |
