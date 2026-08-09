@@ -54,8 +54,8 @@ Both reference runs reached the recurrence stop and published normally. The
 probe would have failed before publication on a second `$81`, a queued sound,
 pause/fade/reset/Sega-PCM/speed-up contamination, a changed sound-test state,
 or non-neutral post-movie input; none fired. BizHawk emitted non-fatal X11
-`BadMatch` diagnostics during shutdown, but both output streams remained
-byte-identical.
+`BadMatch` diagnostics during window initialization, but both output streams
+remained byte-identical.
 
 ## First divergence
 
