@@ -201,27 +201,35 @@ class TestS1AudioParityCli {
     }
 
     @Test
-    void shellRejectsDuplicateValidationProtocolBeforeCreatingInjectedOutput() throws Exception {
+    void sourceableShellProtocolParserRejectsDuplicateAndInjectedRecords() throws Exception {
+        String valid = "ROM_PATH=/safe/rom.gen\nMOVIE_PATH=/safe/movie.bk2\n"
+                + "BIZHAWK_HOME=/safe/bizhawk\nOUTPUT_ROOT=/safe/output";
+        ShellResult duplicate = parseProtocol(valid + "\nOUTPUT_ROOT=/tmp/escape");
+        assertTrue(duplicate.exitCode() != 0, duplicate.output());
+        assertTrue(duplicate.output().contains("duplicate validation record"), duplicate.output());
+
+        ShellResult injected = parseProtocol(valid + "\nEVIL=/tmp/escape");
+        assertTrue(injected.exitCode() != 0, injected.output());
+        assertTrue(injected.output().contains("unknown validation record"), injected.output());
+    }
+
+    @Test
+    void retiredJavaOverrideCannotReplaceTheTrustedTool() throws Exception {
         Path fake = temp.resolve("fake-java");
-        Path outside = temp.resolve("injected-output");
-        Files.writeString(fake, "#!/usr/bin/env bash\n"
-                + "printf '%s\\n' 'ROM_PATH=/safe/rom.gen' 'MOVIE_PATH=/safe/movie.bk2' "
-                + "'BIZHAWK_HOME=/safe/bizhawk' 'OUTPUT_ROOT=" + temp.resolve("safe") + "' "
-                + "'OUTPUT_ROOT=" + outside + "'\n");
+        Path marker = temp.resolve("fake-was-run");
+        Files.writeString(fake, "#!/usr/bin/env bash\ntouch \"" + marker + "\"\nexit 0\n");
         fake.toFile().setExecutable(true);
-        Path fakeBizHawk = Files.createDirectories(temp.resolve("BizHawk-2.11-linux-x64"));
-        Files.writeString(fakeBizHawk.resolve("EmuHawk.exe"), "stub");
 
         ProcessBuilder builder = new ProcessBuilder("bash", "tools/audio/run_s1_audio_parity.sh",
-                "--rom", temp.resolve("rom.gen").toString(), "--bizhawk-home", fakeBizHawk.toString());
+                "--rom", temp.resolve("missing.gen").toString(), "--bizhawk-home", temp.toString());
         builder.directory(Path.of("").toAbsolutePath().toFile()).redirectErrorStream(true);
         builder.environment().put("OGGF_AUDIO_PARITY_JAVA_BIN", fake.toString());
         Process process = builder.start();
         String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
 
         assertEquals(S1AudioParityTool.EXIT_TOOL_FAILURE, process.waitFor(), output);
-        assertTrue(output.contains("duplicate validation record"), output);
-        assertFalse(Files.exists(outside));
+        assertTrue(output.contains("unsupported"), output);
+        assertFalse(Files.exists(marker));
     }
 
     @Test
@@ -250,6 +258,17 @@ class TestS1AudioParityCli {
         ByteArrayOutputStream err = new ByteArrayOutputStream();
         int exit = S1AudioParityTool.run(args, new PrintStream(out), new PrintStream(err));
         return new Invocation(exit, out.toString(StandardCharsets.UTF_8), err.toString(StandardCharsets.UTF_8));
+    }
+
+    private ShellResult parseProtocol(String protocol) throws Exception {
+        ProcessBuilder builder = new ProcessBuilder("bash", "-c",
+                "source tools/audio/lib/s1_audio_parity_protocol.sh; "
+                        + "s1_audio_parse_validation_records \"$S1_AUDIO_TEST_PROTOCOL\"");
+        builder.directory(Path.of("").toAbsolutePath().toFile()).redirectErrorStream(true);
+        builder.environment().put("S1_AUDIO_TEST_PROTOCOL", protocol);
+        Process process = builder.start();
+        String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        return new ShellResult(process.waitFor(), output);
     }
 
     private void write(Path path, String capture, AudioParityTick tick) {
@@ -288,5 +307,8 @@ class TestS1AudioParityCli {
     }
 
     private record Invocation(int exitCode, String out, String err) {
+    }
+
+    private record ShellResult(int exitCode, String output) {
     }
 }

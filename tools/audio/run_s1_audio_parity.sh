@@ -29,6 +29,8 @@ fail() {
 }
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=lib/s1_audio_parity_protocol.sh
+source "$SCRIPT_DIR/lib/s1_audio_parity_protocol.sh"
 REPO=$(cd "$SCRIPT_DIR/../.." && pwd)
 ROM_PATH=""
 MOVIE_PATH="$REPO/src/test/resources/audio/parity/s1/s1-soundtest-ghz.bk2"
@@ -54,6 +56,9 @@ while [ "$#" -gt 0 ]; do
 	esac
 done
 
+[ -z "${OGGF_AUDIO_PARITY_JAVA_BIN:-}" ] || \
+	fail "OGGF_AUDIO_PARITY_JAVA_BIN is unsupported; the trusted Java tool cannot be replaced"
+
 if [ -z "$BIZHAWK_DIR" ]; then
 	for candidate in "$REPO/docs/BizHawk-2.11-linux-x64" \
 		"$MAIN_REPO/docs/BizHawk-2.11-linux-x64"; do
@@ -65,20 +70,14 @@ if [ -z "$BIZHAWK_DIR" ]; then
 fi
 [ -n "$BIZHAWK_DIR" ] || fail "BizHawk 2.11 home was not found; pass --bizhawk-home or set BIZHAWK_HOME"
 
-if [ -n "${OGGF_AUDIO_PARITY_JAVA_BIN:-}" ]; then
-	# Narrow test/process seam: one executable, never a shell fragment or eval.
-	[ -x "$OGGF_AUDIO_PARITY_JAVA_BIN" ] || fail "OGGF_AUDIO_PARITY_JAVA_BIN is not executable"
-	JAVA_TOOL=("$OGGF_AUDIO_PARITY_JAVA_BIN")
-else
-	CLASSPATH_FILE="$REPO/target/s1-audio-parity.classpath"
-	if ! mvn -q -Pci -DskipTests compile dependency:build-classpath \
-		-Dmdep.outputFile="$CLASSPATH_FILE" -f "$REPO/pom.xml"; then
-		fail "Maven could not compile the parity tool or resolve its runtime classpath"
-	fi
-	[ -s "$CLASSPATH_FILE" ] || fail "Maven did not produce the parity tool classpath"
-	JAVA_CP="$REPO/target/classes:$(<"$CLASSPATH_FILE")"
-	JAVA_TOOL=(java -cp "$JAVA_CP" com.openggf.tools.audio.parity.S1AudioParityTool)
+CLASSPATH_FILE="$REPO/target/s1-audio-parity.classpath"
+if ! mvn -q -Pci -DskipTests compile dependency:build-classpath \
+	-Dmdep.outputFile="$CLASSPATH_FILE" -f "$REPO/pom.xml"; then
+	fail "Maven could not compile the parity tool or resolve its runtime classpath"
 fi
+[ -s "$CLASSPATH_FILE" ] || fail "Maven did not produce the parity tool classpath"
+JAVA_CP="$REPO/target/classes:$(<"$CLASSPATH_FILE")"
+JAVA_TOOL=(java -cp "$JAVA_CP" com.openggf.tools.audio.parity.S1AudioParityTool)
 
 VALIDATE_ARGS=(validate --repo "$REPO" --movie "$MOVIE_PATH" --bizhawk-home "$BIZHAWK_DIR" \
 	--output-root "$OUTPUT_ROOT")
@@ -90,31 +89,13 @@ else
 	VALIDATE_ARGS+=(--rom-search-root "$ROM_SEARCH_ROOT")
 fi
 VALIDATED=$("${JAVA_TOOL[@]}" "${VALIDATE_ARGS[@]}") || fail "input validation failed"
-declare -A VALIDATION_SEEN=()
-while IFS= read -r record; do
-	[[ "$record" == *=* && "${record#*=}" != *=* ]] || fail "malformed validation record"
-	key=${record%%=*}
-	value=${record#*=}
-	[ -n "$value" ] || fail "empty validation record: $key"
-	case "$value" in
-		*[$'\001'-$'\037'$'\177']*) fail "control character in validation record: $key" ;;
-	esac
-	case "$key" in
-		ROM_PATH|MOVIE_PATH|BIZHAWK_HOME|OUTPUT_ROOT) ;;
-		*) fail "unknown validation record: $key" ;;
-	esac
-	[[ ! -v "VALIDATION_SEEN[$key]" ]] || fail "duplicate validation record: $key"
-	case "$key" in
-		ROM_PATH) ROM_PATH=$value ;;
-		MOVIE_PATH) MOVIE_PATH=$value ;;
-		BIZHAWK_HOME) BIZHAWK_DIR=$value ;;
-		OUTPUT_ROOT) OUTPUT_ROOT=$value ;;
-	esac
-	VALIDATION_SEEN[$key]=1
-done <<< "$VALIDATED"
-for key in ROM_PATH MOVIE_PATH BIZHAWK_HOME OUTPUT_ROOT; do
-	[[ -v "VALIDATION_SEEN[$key]" ]] || fail "missing validation record: $key"
-done
+if ! s1_audio_parse_validation_records "$VALIDATED"; then
+	fail "invalid Java validation response"
+fi
+ROM_PATH=$S1_AUDIO_VALIDATED_ROM_PATH
+MOVIE_PATH=$S1_AUDIO_VALIDATED_MOVIE_PATH
+BIZHAWK_DIR=$S1_AUDIO_VALIDATED_BIZHAWK_HOME
+OUTPUT_ROOT=$S1_AUDIO_VALIDATED_OUTPUT_ROOT
 
 mkdir -p -- "$OUTPUT_ROOT" || fail "cannot create safe output root: $OUTPUT_ROOT"
 RUN_DIR=$(mktemp -d "$OUTPUT_ROOT/run.XXXXXXXX") || fail "cannot create a fresh run directory"

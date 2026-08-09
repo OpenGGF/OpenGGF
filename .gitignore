@@ -46,6 +46,8 @@ stable-retro-*.zip
 tools/*
 !tools/audio/
 !tools/audio/run_s1_audio_parity.sh
+!tools/audio/lib/
+!tools/audio/lib/s1_audio_parity_protocol.sh
 !tools/bizhawk/
 !tools/retro/
 !tools/traces/
