@@ -113,6 +113,34 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * the results tail where the ROM has none (it {@code clearRAM Object_RAM} before
  * loading {@code Obj6F}).
  *
+ * <p><b>SUPERSEDED (2026-08-09). The paragraph below was accurate when written and
+ * is no longer true: it states that this fixture's {@code ss} / {@code ss_2} carry
+ * zero {@code run_objects_end} records. They carry 3172 and 3472 -- the recorder's
+ * pre-start {@code SpecialStage_MainLoop} hook was added and both segments were
+ * republished, so the "republish is the only correct closure" conclusion is spent.
+ * The interior is now pass-paced and rows 0..5190 of 5733 compare clean.</b>
+ *
+ * <p><b>Current root cause (measured 2026-08-09): the engine runs the Obj59 emerald
+ * sequence exactly one {@code RunObjects} pass early.</b> Recorded pass 3171 raises
+ * {@code SS_Check_Rings_flag} at row 5191 and submits the ordinary special-stage
+ * player DPLC pair -- ss-tails (mapping frame 0, {@code LoadSSTailsDynPLC}) and
+ * ss-tails-tails (mapping frame 4, {@code LoadSSTailsTailsDynPLC}) -- which then
+ * retire 39 frames later at 5230 only because no V-int services the DMA queue while
+ * {@code Pal_FadeToWhite} / {@code ClearScreen} / {@code NemDec} run; it flushes on
+ * the first {@code VintID_Level} {@code WaitForVint} of the {@code Obj6F} tally loop
+ * (docs/s2disasm/s2.asm:6797-6800). Nothing in the results tail submits them, so
+ * this is not a results/fade-duration item either.
+ * The engine's routine-0 init occupies passes 2949..3008 -- the correct count of 60,
+ * starting one pass early -- so {@code loc_36172}'s 100-decrement countdown raises the
+ * flag on engine pass 3172 (row 5190) instead of recorded pass 3171 (row 5191).
+ * Origin: {@code Sonic2SpecialStageManager.streamSpecialStageObjects()} calls
+ * {@code executeStreamedObjectInitFallthrough()} at the streaming observation, and
+ * that observation's own pass is then deferred to the next observation, so a streamed
+ * object's routine 0 runs twice. Closing it needs that duplicate removed AND the last
+ * scheduled SS pass given an observation inside the compared window; either alone
+ * leaves the count at 45.
+ *
+ * <p><i>Historical, retained for provenance:</i>
  * <p><b>Root cause (measured 2026-08-08): this is the missing {@code run_objects_end}
  * pass log, not an engine defect and not a publication-phase offset.</b> The
  * interior here is FRAME-paced -- {@link AbstractRunChainTest#uncomparedInteriorStep}

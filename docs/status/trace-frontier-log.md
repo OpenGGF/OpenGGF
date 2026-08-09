@@ -70821,3 +70821,95 @@ round-trip chains: `TestS1GhzMazeRoundTripChain` and `TestS2EhzHalfpipeRoundTrip
   standalone MGZ pass. Standalone AIZ retains its raw-`16067` queue frontier
   and four focused failures. Standalone CNZ retains its raw-`25743` camera-X
   frontier and unmatched completion `#31`; no earlier-zone frontier regressed.
+
+## 2026-08-09 — round twenty-four: the chain tests, and a requirement no S3K fixture could satisfy
+
+Command: full `-Ptrace-replay` profile, no `-Dtest`. Base 2fd54136b (769 / 9 / 63).
+After: **769 / 8 / 64** — same failing classes; `TestS3kMegaRunChain` moved from a bogus
+Failure to a real Error. All three lanes DISPROVED their briefs; only one produced a
+landable change, which I implemented directly.
+
+- **`TestS3kMegaRunChain` COULD NEVER HAVE PASSED, however it was recorded.**
+  `TraceRunManifest.validateDynamicArtRun` (:388-393) demanded the dynamic-art capability
+  from every segment GAME-AGNOSTICALLY, while `DynamicArtTransfer.validateCallback` pins
+  ROM-callback PC sets for `s1` and `s2` only and throws
+  `"dynamic-art capability unsupported for game "` for anything else. And the capability does
+  not exist for S3K at the recording end either: `tools/bizhawk-headless/src/Recording/`
+  ships `S1DynamicArtObserver.cs` (711 lines) and `S2DynamicArtObserver.cs` (1117) and NO S3K
+  equivalent; the Lua recorders emit only an empty `dynamic_art_gap_transitions` array for
+  S3K (tools/bizhawk/s3k_complete_run_recorder.lua:1568).
+  **Census:** every segment of both S1 runs (3 + 34) and both S2 runs (5 + 35) carries
+  `dynamic_art_transfer_state_per_frame`; **0 of 117 S3K run segments** across all three S3K
+  runs do. One validator required exactly what its sibling refuses — **the FIFTH instance of
+  "two paths that should agree, but don't", and the most consequential.**
+  Fixed by adding `DynamicArtTransfer.supportsCapability(game)` as the single source of truth
+  for the support matrix and gating the run-level requirement on it. The brief's instruction
+  to "re-record with dynamic art enabled" was impossible — there is no flag to turn on, and a
+  trace that DID carry it would be rejected on load.
+  The test now gets PAST validation and fails on something real:
+  `IllegalStateException: unsupported-row-POST: raw_frame=4571 has no scheduled object/POST
+  phase; phase=VBLANK_ONLY; kind=KOS_MODULE_QUEUE, ordinal=10`
+  (`TraceHardwareTimingScheduleCompiler.requireExecutablePostPhase:64`). Genuine S3K work,
+  visible for the first time.
+- **`TestS3kBonusRoundTripChain` cannot be un-skipped by recording.** Its two run directories
+  were never captured, and **no source movie exists** — a repo-wide `find -name '*.bk2'` shows
+  no `s3k-aiz-gumball-roundtrip.bk2` or `s3k-aiz-pachinko-roundtrip.bk2`; the only S3K movies
+  are `s3k-complete-sonic-tails`, `s3-knux-multibonus-ss` and
+  `s3k-knuckles-complete-superemeralds`. Authoring a new round-trip BK2 is a human
+  input-recording act. The shapes DO exist inside `s3-knux-multibonus-ss.bk2` (segments 0-2
+  aiz -> gumball -> aiz_2, and 20-22 mgz -> pachinko -> mgz_2) if carving them out is ever
+  wanted.
+- **GHZ maze: the hardware-timing contract does NOT fit, for a precise reason.** The diverging
+  field is a **submission** stamp, not a readiness stamp — the run manifest's tail entry is
+  `edge_ordinal 4698 phase "submitted"` — and the contract may only release the readiness of
+  already-submitted work. Stretching it would have been a silent contract change; the lane
+  wrote up the boundary instead, as instructed.
+  **It also independently verified the title-card drain is exact to the frame**, which nobody
+  had done: parsing `ArtLoadCues` from ROM table 0x01DD86 (Sonic1Constants.java:62) and
+  summing Nemesis header tile counts gives `plcid_GHZ` (12 entries)
+  [461,369,4,24,68,55,32,85,29,8,16,14] and `plcid_Main2` (3) [64,27,36]. `ProcessPLC_9Tiles`
+  services 9 tiles/frame of the ARMED HEAD ONLY (sonic.asm:1379-1440), so the drain is
+  `sum(ceil(tiles_i/9))` = **150**, NOT `ceil(1292/9)` = 144 — and the engine's measured
+  TITLE_CARD phase is 151 = 150 + the loop's first prepareHead frame.
+  `NemesisPlcServiceQueue.servicePatterns/prepareHead` reproduce the per-entry semantics
+  exactly. So the residual is genuinely the un-timed span (sonic.asm:2856-2955:
+  PalLoad_Fade, LevelSizeLoad, DeformLayers, LevelDataLoad, LoadTilesFromStart, ColIndexLoad,
+  ObjPosLoad, ExecuteObjects, BuildSprites, Hud_Base/NemDec — **zero** `WaitForVBlank` calls,
+  interrupts still enabled, VDP still scanning, ~36-38 movie rows).
+  **FixBugs note for a future bug-fixed-revision effort:** sonic.asm:2941-2951 is an
+  `if FixBugs` block — the FixBugs=1 path adds exactly one extra `id_VBlank_TitleCards`
+  `WaitForVBlank` before `Hud_Base` to give the load headroom; we model FixBugs=0, which has
+  none. Also sonic.asm:2821-2841: FixBugs=0 exits `Level_TtlCardLoop` on the "ACT" element
+  alone, FixBugs=1 checks all four title-card elements.
+- **EHZ chain root cause found; deliberately NOT half-landed.** The missing pair is NOT
+  results-screen art — it is the ordinary SS player DPLC pair, ss-tails (transfer 5495, mf 0,
+  pc 0x33B3E `LoadSSTailsDynPLC`) and ss-tails-tails (5496, mf 4, pc 0x34B5A), submitted on
+  the ROM's LAST SS pass (recorded pass_sequence 3171, frame 5191) and retiring 39 frames
+  later at 5230 only because no V-int services the DMA queue while `Pal_FadeToWhite` /
+  `ClearScreen` / `NemDec` run — it flushes on the first `VintID_Level` `WaitForVint` of the
+  `Obj6F` tally loop (s2.asm:6797-6800).
+  **The engine never runs recorded pass 3171 at row 5191.** Its recurring passes align exactly
+  (engine 1-based pass N <-> recorded pass_sequence N-2, identical frames through 5190), but
+  the Obj59 emerald sequence runs one pass EARLY: routine-0 init occupies engine passes
+  2949..3008 (60 passes — the correct count, starting one early), so `loc_36172`'s
+  100-decrement countdown raises `SS_Check_Rings_flag` + `SSClearObjs` on engine pass 3172 =
+  row 5190 instead of recorded 3171 = row 5191. Everything downstream is already ROM-exact
+  (byte_35180 depth->anim table, the $CCCC/$CCCD depth decrement in loc_3512A, the $63/100-pass
+  countdown, and the read-anim-before-loc_3512A ordering all verified; measured decs=100).
+  **Origin:** `Sonic2SpecialStageManager.streamSpecialStageObjects()` calls
+  `executeStreamedObjectInitFallthrough()` at the streaming observation, but that
+  observation's own pass is deferred to the next observation, so a streamed object's routine 0
+  executes twice — once inline and once in the deferred pass.
+  **Decisive experiment (run, then reverted):** gating the fallthrough off moved the whole
+  sequence exactly one pass later (init 2949->2950, award 3072->3073, complete 3172->3173) and
+  the new final pass published tailsMf=0 / ttMf=4, **bit-identical to the recorded pair**.
+  Not landed because two fixes are required together — the duplicate execution must be removed
+  at the right half (the ROM DOES run routine 0 in that iteration's RunObjects, so allocate at
+  the streaming point and let the DEFERRED pass run routine 0), AND the last scheduled SS pass
+  must get an observation inside the compared window, or the edges stamp at row 5733 and the
+  count stays at 45.
+- **Stale javadoc struck.** `TestS2EhzHalfpipeRoundTripChain`'s root-cause section claimed
+  this fixture's `ss`/`ss_2` carry ZERO `run_objects_end` records and that republishing was
+  "the only correct closure". They carry **3172** and 3472 — republished in 025e7b66c — so the
+  conclusion was spent. Marked SUPERSEDED with the current cause above, historical text
+  retained for provenance.
