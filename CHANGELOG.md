@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K MGZ's floating results owner now selects its initial
+  results-art service boundary from the live carry CPU publication state. The
+  focused MGZ replay remains green for all `35861` frames, while the complete
+  run returns to its established `31` animation-only errors instead of adding
+  the raw frame `38519` queue cluster; HCZ's two complete-run traces remain
+  green. Ring comparisons stay forced errors; no trace payloads changed.
 - Fix/Test: S3K MGZ's floating results owner now defers its initial
   results-art submissions for the native `Obj_LevelResultsInit` dispatch
   boundary. The focused MGZ replay advances from the raw frame `35183` KOS

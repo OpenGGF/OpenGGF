@@ -66217,3 +66217,45 @@ to synthesize a POST phase on a VBLANK-only row.
   begins at its established raw frame `16513` animation mismatch; CNZ is the
   next gameplay-order zone after that MGZ trace is closed. ICZ and LBZ remain
   pending in gameplay order.
+
+## 2026-08-09 - S3K MGZ results-art boundary regression closure
+
+- Worktree: `bugfix/s3k-traces` at `e199607cc` before this fix; unrelated edits
+  in `.idea/vcs.xml`, `docs/status/rewind-round-trip-gaps.md`,
+  `src/main/java/com/openggf/level/objects/ObjectPlacementController.java`,
+  and `src/main/java/com/openggf/level/rings/RingManager.java` remained
+  unstaged. Validation used JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen`; no trace payloads changed.
+- Focused frontier command: `env JAVA_HOME=$JDK21_HOME
+  PATH=$JDK21_HOME/bin:$PATH mvn -q -Dmse=off -Dsurefire.forkCount=1
+  -DforkCount=1 -DreuseForks=true -Dsurefire.argLine='-Xmx3g'
+  -Dtest=TestS3kMgzTraceReplay -Dtrace.verification=all
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Result: 1 test, 0 failures, 0 errors, 0 skips; all `35861` compared frames
+  match. The raw frame `35183` direct/module KOS queue mismatch remains closed.
+  Ring comparison remains enabled through `ToleranceConfig.DEFAULT` with
+  `RingCountMode.FORCE_ERROR`.
+- Complete-run regression command: `env JAVA_HOME=$JDK21_HOME
+  PATH=$JDK21_HOME/bin:$PATH mvn -q -Dmse=off -Dsurefire.forkCount=1
+  -DforkCount=1 -DreuseForks=true -Dsurefire.argLine='-Xmx3g'
+  -Dtest=TestS3kMgzCompleteRunTraceReplay -Dtrace.verification=all
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Result: the established `31` animation-only errors remain, with first
+  mismatch raw frame `16513`, field `player_animation_id` (expected `0x0000`,
+  actual `0x0005`); the former raw frame `38519` queue cluster is absent.
+- Regression command: `env JAVA_HOME=$JDK21_HOME
+  PATH=$JDK21_HOME/bin:$PATH mvn -q -Dmse=off -Dsurefire.forkCount=1
+  -DforkCount=1 -DreuseForks=true -Dsurefire.argLine='-Xmx3g'
+  -Dtest=TestS3kHczCompleteRunTraceReplay -Dtrace.verification=all
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Result: 2 tests, 0 failures, 0 errors, 0 skips. Ring comparison remains
+  forced error.
+- Root cause: MGZ's `sub_86984` uses the lower-slot `AllocateObject` path, but
+  the required results-art service boundary differs when the S3K carry routine
+  has published a non-zero generated `Ctrl_2_logical` word for that object
+  pass. The results owner now consumes that ROM-owned carry publication state,
+  without reading trace data or branching on zone, route, or frame.
+- Route position: focused MGZ is green and its queue frontier is closed;
+  complete-run MGZ's next target is the established raw frame `16513`
+  animation handoff. HCZ remains green; CNZ is next in gameplay order, with ICZ
+  and LBZ pending.

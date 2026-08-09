@@ -692,6 +692,18 @@ public class SidekickCpuController {
         return diagnosticCtrl2HeldLatch & 0xFF;
     }
 
+    /**
+     * Returns whether the S3K carry routine has published a non-zero generated
+     * Ctrl_2_logical word for the current object pass. This is the live ROM
+     * carry state used by later object owners; it is not raw controller input
+     * or trace comparison data.
+     */
+    public boolean hasPublishedCarryInput() {
+        return state == State.CARRYING
+                && carryController().isCarryingMainCharacter()
+                && (diagnosticCtrl2HeldLatch & MANUAL_HELD_MASK) != 0;
+    }
+
     public int getDiagnosticGeneratedPressedInput() {
         return diagnosticCtrl2PressedLatch & 0xFF;
     }

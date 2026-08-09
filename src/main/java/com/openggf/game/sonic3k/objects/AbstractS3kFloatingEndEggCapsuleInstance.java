@@ -471,11 +471,15 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
                 }
             }
         }
-        spawnChild(this::createResultsScreen);
+        spawnResultsScreen();
     }
 
     protected AbstractObjectInstance createResultsScreen() {
         return new S3kResultsScreenObjectInstance(getPlayerCharacter(), services().currentAct());
+    }
+
+    protected void spawnResultsScreen() {
+        spawnChild(this::createResultsScreen);
     }
 
     protected boolean shouldLockPlayersForResults() {

@@ -4,6 +4,7 @@ import com.openggf.camera.Camera;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 /**
  * MGZ2 level-results variant.
@@ -46,11 +47,14 @@ public class Mgz2ResultsScreenObjectInstance extends S3kResultsScreenObjectInsta
 
     @Override
     protected boolean shouldDeferInitialResultsArtLoadDispatch() {
-        // Keep the three Queue_Kos_Module calls on the dispatch after the
-        // delayed Obj_LevelResultsInit publication, matching the MGZ capsule's
-        // lower-slot AllocateObject path (sonic3k.asm:182027-182046,
-        // 62542-62598).
-        return true;
+        for (var entity : services().playerQuery().sidekicks()) {
+            if (entity instanceof AbstractPlayableSprite sidekick
+                    && sidekick.getCpuController() != null
+                    && sidekick.getCpuController().hasPublishedCarryInput()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override

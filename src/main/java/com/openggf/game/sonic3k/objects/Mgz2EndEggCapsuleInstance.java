@@ -87,6 +87,14 @@ public class Mgz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
     }
 
     @Override
+    protected void spawnResultsScreen() {
+        // sub_86984 uses AllocateObject, so Obj_LevelResults takes the lowest
+        // free SST slot rather than the slot after the capsule. Keep the
+        // delayed child dispatch owned by Mgz2ResultsScreenObjectInstance.
+        spawnFreeChild(this::createResultsScreen);
+    }
+
+    @Override
     protected AbstractObjectInstance createCapsuleAnimal(ObjectSpawn spawn, int delay, int artVariant, int index) {
         return new Mgz2CapsuleAnimalInstance(spawn, delay, artVariant, index);
     }
