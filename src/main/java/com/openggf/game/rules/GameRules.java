@@ -422,7 +422,7 @@ public record GameRules(
                     100,
                     102,
                     8,
-                    false,
+                    true,
                     true,
                     98,
                     99

@@ -66460,3 +66460,48 @@ to synthesize a POST phase on a VBLANK-only row.
 - Route position: AIZ's retained frontier is the pre-attempt state; HCZ and
   MGZ committed canaries remain the regression targets, and CNZ remains next
   only after all AIZ traces are green.
+
+## 2026-08-09 - S3K fixed skid-dust slot-cadence frontier
+
+- Worktree: `bugfix/s3k-traces` at `ab85ba3cf` before this fix; unrelated
+  edits in `.idea/vcs.xml`, `docs/status/rewind-round-trip-gaps.md`,
+  `src/main/java/com/openggf/game/sonic3k/Sonic3k.java`,
+  `src/main/java/com/openggf/game/sonic3k/objects/Sonic3kStarPostObjectInstance.java`,
+  `src/main/java/com/openggf/level/objects/ObjectPlacementController.java`, and
+  `src/main/java/com/openggf/level/rings/RingManager.java` remained unstaged.
+  Validation used JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen`; no trace payloads changed.
+- Frontier command: `env JAVA_HOME=$JDK21_HOME PATH=$JDK21_HOME/bin:$PATH
+  mvn -q -Dmse=off -Dsurefire.forkCount=1 -DforkCount=1
+  -DreuseForks=true -Dsurefire.argLine='-Xmx3g'
+  '-Dtest=TestS3kAizCompleteRunTraceReplay#replayMatchesTrace,
+  TestS3kAizTraceReplay#replayMatchesTrace' -Dtrace.verification=all
+  -Dtrace.frontierOnly=true -Dtrace.context.radius=1
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Result: the focused AIZ replay remains green for all `20463` compared
+  frames. The complete-run frontier remains raw frame `11350`, but its error
+  count falls from 11 to 8: the `player_animation_id` mismatch is removed and
+  every remaining error is in the direct/module Kosinski queue family, first
+  `queue.s3k_kos_direct.busy` (`true` expected, `false` actual). The
+  frontier-only timing check stops on the expected unconsumed
+  `KOS_DECOMPRESSION_QUEUE#39` edge at raw frame `11352`. Ring comparison
+  remains enabled through `ToleranceConfig.DEFAULT` with
+  `RingCountMode.FORCE_ERROR`.
+- Regression command: the S3K keep-green set
+  `TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,
+  TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`, plus
+  `TestPlayableSpriteMovement` and `TestRewindCoverageGuard`, run under JDK 21
+  with the S3K ROM. Result: all passed with 0 failures and 0 errors.
+- Root cause: S3K stores `Dust` and `Dust_P2` after
+  `Dynamic_object_RAM_end`; while Tails holds animation `$0D`, that fixed
+  `Obj_DashDust` slot executes after the dynamic pass and calls
+  `AllocateObject` for a temporary skid child (sonic3k.asm:33984-34023,
+  34084-34128; fixed-slot layout at sonic3k.constants.asm:307-317). The engine
+  had the fixed-slot allocator path and slots 98/99, but its S3K game-wide rule
+  disabled the path. Enabling the semantic rule restores the native temporary
+  slot-4 owner and every downstream placed-object/miniboss allocation without
+  a zone, route, frame, trace, or game-name branch.
+- Route position: AIZ's gameplay occupancy is now aligned through the Act 2
+  miniboss allocation; its next frontier is the raw-frame `11350` results-art
+  queue submission. HCZ and MGZ retained canaries remain green; CNZ, ICZ, and
+  LBZ follow after AIZ in gameplay order.

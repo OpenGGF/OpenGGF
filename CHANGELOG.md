@@ -3,6 +3,13 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K now runs the fixed Dust/Dust_P2 skid-child allocator after
+  dynamic-object execution, matching the ROM's fixed level-object slot order.
+  This restores Tails' AIZ skid-dust child and the downstream native slot
+  cadence: the complete AIZ run falls from 11 errors (including player
+  animation) to 8 queue-only errors at raw frame `11350`, while the focused
+  AIZ replay remains green. Ring comparisons stay forced errors; no trace
+  payloads changed.
 - Diagnostic (reverted): S3K AIZ's defeat-flow owner was temporarily
   re-homed through the native first-free dynamic-slot boundary. It advanced
   the complete-run diagnostic to raw frame `11999`, but regressed the

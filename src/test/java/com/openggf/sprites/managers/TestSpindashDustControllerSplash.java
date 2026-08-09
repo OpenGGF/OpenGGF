@@ -32,6 +32,8 @@ class TestSpindashDustControllerSplash {
                 "S3K Dust is fixed Level_object_RAM slot 98 (sonic3k.constants.asm:309-317)");
         assertEquals(99, GameRules.SONIC_3K.powerUp().fixedDustSlotIndex(true),
                 "S3K Dust_P2 is fixed Level_object_RAM slot 99 (sonic3k.constants.asm:309-317)");
+        assertTrue(GameRules.SONIC_3K.powerUp().fixedSkidDustAllocatesAfterDynamicObjectPass(),
+                "S3K Dust/Dust_P2 execute after Dynamic_object_RAM and may AllocateObject skid children");
         assertFalse(ObjectSlotLayout.SONIC_3K.isDynamicSlot(98),
                 "Dust must not consume S3K AllocateObject dynamic slot pressure");
         assertFalse(ObjectSlotLayout.SONIC_3K.isDynamicSlot(99),
