@@ -96,6 +96,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
     /** Callback for when the current horizontal swing count expires. */
     private HorizontalCallback horizontalCallback = HorizontalCallback.NONE;
     private boolean defeatRenderComplete;
+    private int retainedResultsOwnerSlot = -1;
     private int pendingDefeatTimer = -1;
     private int endSignControlWaitEntriesOwnedByBossBridge;
     private int defeatHandoffTimer = -1;
@@ -279,6 +280,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
     @Override
     protected void updateBossLogic(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        captureRetainedResultsOwnerSlot();
         maintainArenaCameraLock();
         if (pendingDefeatTimer >= 0) {
             if (pendingDefeatTimer > 1) {
@@ -309,6 +311,20 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
             }
         }
         updateCustomFlash();
+    }
+
+    private void captureRetainedResultsOwnerSlot() {
+        ObjectManager objectManager = services().objectManager();
+        if (objectManager == null) {
+            return;
+        }
+        for (S3kResultsScreenObjectInstance results :
+                objectManager.activeObjectsOfType(S3kResultsScreenObjectInstance.class)) {
+            if (!results.isDestroyed() && results.getSlotIndex() >= 0) {
+                retainedResultsOwnerSlot = results.getSlotIndex();
+                return;
+            }
+        }
     }
 
     /**
@@ -420,12 +436,33 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
                 camera.setMinY((short) level.getMinY());
                 camera.setMaxYTarget((short) level.getMaxY());
             }
-            spawnDynamicObject(new AizAct2CameraResizeController(
-                    AizAct2CameraResizeController.MAX_X,
-                    levelEndControlPollDeferred));
-            spawnDynamicObject(new AizAct2CameraResizeController(
-                    AizAct2CameraResizeController.MAX_Y,
-                    levelEndControlPollDeferred));
+            ObjectManager objectManager = services().objectManager();
+            // Obj_LevelResults and its in-level title owner occupy one native SST.
+            // The engine carries that owner in a later consolidated slot. When that
+            // slot lies after this retained control owner, it is the first eligible
+            // representation of the hole Change_Act2Sizes sees; reuse it for the
+            // first Child1 worker, then continue FindNextFreeObj from there.
+            boolean reusedResultsOwnerSlot = retainedResultsOwnerSlot > getSlotIndex()
+                    && objectManager != null
+                    && objectManager.reserveDynamicSlot(retainedResultsOwnerSlot);
+            if (reusedResultsOwnerSlot) {
+                ObjectLifetimeOps.addDynamicAtReservedSlot(objectManager,
+                        new AizAct2CameraResizeController(
+                                AizAct2CameraResizeController.MAX_X,
+                                levelEndControlPollDeferred),
+                        retainedResultsOwnerSlot);
+                spawnChildAfterSlot(retainedResultsOwnerSlot,
+                        () -> new AizAct2CameraResizeController(
+                                AizAct2CameraResizeController.MAX_Y,
+                                levelEndControlPollDeferred));
+            } else {
+                spawnDynamicObject(new AizAct2CameraResizeController(
+                        AizAct2CameraResizeController.MAX_X,
+                        levelEndControlPollDeferred));
+                spawnDynamicObject(new AizAct2CameraResizeController(
+                        AizAct2CameraResizeController.MAX_Y,
+                        levelEndControlPollDeferred));
+            }
             // Obj_EndSignControlDoStart calls Change_Act2Sizes and then
             // Delete_Current_Sprite. The two workers above continue from
             // their own slots (sonic3k.asm:180415-180419,180575-180609).

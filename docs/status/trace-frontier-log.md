@@ -69764,3 +69764,40 @@ methods, not classes).
   retains its raw `15401` camera frontier and edge `#255` at `21185`; LBZ
   physics remains green through edge `#302` at raw `36951`, with its existing
   animation-only mismatch at raw `30588`. No established frontier regressed.
+
+## 2026-08-09 - S3K AIZ complete-run physics frontier
+
+- Branch: `bugfix/s3k-traces` from `3c5fff4bb`; the six pre-existing user
+  edits remained unstaged. Validation used JDK 21.0.12 and
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen`; no trace payload changed.
+- Root cause: ROM `Load_Sprites` and `Process_Sprites` retain the results/title
+  SST allocation boundary through `Obj_EndSignControlDoStart`. When
+  `Change_Act2Sizes` creates `Child1_Act2LevelSize`, the first eligible hole
+  after the lower control owner is the just-released results/title owner; the
+  second worker continues with `FindNextFreeObj`. The engine remembered the
+  native control boundary but discarded the consolidated results owner's
+  physical slot, so both resize workers occupied low placement holes. That
+  shifted later rocks, monitors, and the lost-ring owner by one slot and changed
+  one ring's floor/recollection cadence at raw frame `13740`. The fix carries
+  the live results-owner slot and reuses it only when it is after the retained
+  control owner and still free; otherwise it falls back to ordinary allocator
+  behavior. It does not inspect a trace, route, frame, or slot constant.
+- Complete AIZ frontier command: `mvn -q -Ptrace-replay -Dmse=off
+  -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay#replayMatchesTrace
+  -Dtrace.verification=all -Dtrace.frontierOnly=true
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Result: all `20376` comparison frames match, advancing from the three-frame
+  ring mismatch beginning at raw `13740`. Recorded hardware authority reaches
+  the run-end check, where the next unconsumed completion is
+  `KOS_DECOMPRESSION_QUEUE#50` at raw `20376`.
+- Standard AIZ command: the same profile with
+  `TestS3kAizTraceReplay#replayMatchesTrace`. Result: all `20463` comparison
+  frames and hardware edges remain green.
+- Focused regression command: `mvn -q -Dmse=off
+  -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+  -Dtest='TestAizMiniboss*,TestS3kAizMinibossGraphRewind,TestSonic3kTitleCardManagerRewind,TestRewindCoverageGuard,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils'
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Result: all focused miniboss, rewind, loading, bootstrap, and decoding tests
+  pass. Ring comparison remains enabled through `ToleranceConfig.DEFAULT` with
+  `RingCountMode.FORCE_ERROR`.

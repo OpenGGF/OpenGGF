@@ -3,6 +3,15 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: AIZ's retained `Obj_EndSignControl` now carries the consolidated
+  results/title SST ownership into `Change_Act2Sizes`. Its first gradual resize
+  worker reuses that released owner slot when it lies after the control owner,
+  then allocates the second worker with native `FindNextFreeObj` ordering. This
+  keeps low placement slots available on the Act 2 route and closes the raw
+  frame `13740` ring mismatch: all `20376` complete-run comparison frames now
+  match, with hardware replay reaching the final unconsumed edge `#50` at run
+  completion. Standard AIZ remains green for all `20463` frames; ring
+  comparisons remain forced errors and no trace payloads changed.
 - Fix/Test: S3K in-level title completion now preserves the retained
   `Obj_EndSignControl` object-pass boundary. A phase-2 title owner publishes
   after the lower control slot has already run, so `Change_Act2Sizes` waits for
