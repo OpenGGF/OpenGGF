@@ -8,10 +8,12 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
@@ -62,8 +64,6 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
     private boolean postButtonMaxYReleaseActive;
     private int postButtonMaxYAccumulator;
     private int postResultsControlRestoreDelay = -1;
-    private boolean postResultsMaxXActive;
-    private int postResultsMaxXAccumulator;
 
     public Aiz2BossEndSequenceController(int arenaMaxX, int arenaBaseY) {
         super(new ObjectSpawn(arenaMaxX, arenaBaseY, Sonic3kObjectIds.EGG_CAPSULE, 0, 0, false, 0),
@@ -131,9 +131,6 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
         boolean startedPostCapsuleSequenceNow = !postCapsuleSequenceStarted;
         if (startedPostCapsuleSequenceNow) {
             startPostCapsuleSequence(player);
-        }
-        if (!startedPostCapsuleSequenceNow) {
-            updatePostResultsCameraMaxX();
         }
         clearPositiveLockedSidekickLogicalWord(player);
         if (pendingLookUpInputAfterStop) {
@@ -245,36 +242,17 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
         // Restore_PlayerControl does not clear Ctrl_1_locked; loc_694D4
         // explicitly leaves the main input latch asserted for loc_69526.
         player.setControlLocked(true);
+        spawnChild(() -> new PostResultsGradualMaxX(
+                arenaMaxX + MAX_X_TARGET_OFFSET));
     }
 
     private void startPostCapsuleSequence(AbstractPlayableSprite player) {
         postCapsuleSequenceStarted = true;
-        postResultsMaxXActive = true;
-        // Child6_IncLevX has already reached the last fractional step before
-        // the controller exposes forced-right movement.
-        postResultsMaxXAccumulator = 0xC000;
         ObjectControlState.none().applyTo(player);
         player.setControlLocked(true);
         forceRightLogicalInput(player);
         restoreSidekickPostResultsControl(player);
         setSidekickControlLocked(player, true);
-    }
-
-    private void updatePostResultsCameraMaxX() {
-        if (!postResultsMaxXActive) {
-            return;
-        }
-        Camera camera = services().camera();
-        postResultsMaxXAccumulator += 0x4000;
-        int delta = (postResultsMaxXAccumulator >>> 16) & 0xFFFF;
-        int target = arenaMaxX + MAX_X_TARGET_OFFSET;
-        int next = (camera.getMaxX() & 0xFFFF) + delta;
-        if (next >= target) {
-            next = target;
-            postResultsMaxXActive = false;
-        }
-        camera.setMaxX((short) next);
-        camera.setMaxXTarget((short) next);
     }
 
     private void forceRightLogicalInput(AbstractPlayableSprite player) {
@@ -346,6 +324,42 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
                 // object clears Ctrl_2_logical before the frame is observed.
                 sprite.getCpuController().clearController2LogicalLatch();
             }
+        }
+    }
+
+    /** ROM {@code Child6_IncLevX}/{@code Obj_IncLevEndXGradual}. */
+    static final class PostResultsGradualMaxX extends AbstractObjectInstance
+            implements SpawnRewindRecreatable {
+        private static final int ACCELERATION = 0x4000;
+
+        private int targetMaxX;
+        private int accumulator;
+
+        PostResultsGradualMaxX(int targetMaxX) {
+            super(new ObjectSpawn(targetMaxX, 0, 0, 0, 0, false, 0),
+                    "AIZ2PostResultsGradualMaxX");
+            this.targetMaxX = targetMaxX;
+        }
+
+        PostResultsGradualMaxX(ObjectSpawn spawn) {
+            this(spawn.x());
+        }
+
+        @Override
+        public void update(int vIntRunCount, PlayableEntity player) {
+            Camera camera = services().camera();
+            accumulator += ACCELERATION;
+            int next = (camera.getMaxX() & 0xFFFF) + (accumulator >>> 16);
+            if (next >= targetMaxX) {
+                camera.setMaxX((short) targetMaxX);
+                ObjectLifetimeOps.expireDynamic(this);
+                return;
+            }
+            camera.setMaxX((short) next);
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
         }
     }
 

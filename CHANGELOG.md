@@ -3,6 +3,10 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: AIZ's post-results `Child6_IncLevX` is now a real dynamic control
+  object with its own slot and `$4000` longword accumulator, instead of being
+  folded into the earlier boss-controller dispatch. This advances the
+  complete-run frontier from raw frame `25592` to `25951`.
 - Fix/Test: AIZ's post-results controller now retains the one owner dispatch
   between the embedded-child retirement publication and
   `Obj_LevelResultsWait2`, then restores both players without the former

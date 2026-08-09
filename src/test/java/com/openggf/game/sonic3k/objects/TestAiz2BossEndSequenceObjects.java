@@ -1088,6 +1088,26 @@ class TestAiz2BossEndSequenceObjects {
     }
 
     @Test
+    void postResultsGradualMaxXWorkerOwnsItsRomAccumulator() {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        camera.resetState();
+        camera.setMaxX((short) 0x4880);
+
+        Aiz2BossEndSequenceController.PostResultsGradualMaxX worker =
+                new Aiz2BossEndSequenceController.PostResultsGradualMaxX(0x49D8);
+        worker.setServices(new TestObjectServices().withCamera(camera));
+
+        worker.update(0, null);
+        worker.update(1, null);
+        worker.update(2, null);
+        assertEquals(0x4880, camera.getMaxX() & 0xFFFF);
+
+        worker.update(3, null);
+        assertEquals(0x4881, camera.getMaxX() & 0xFFFF,
+                "Obj_IncLevEndXGradual publishes the accumulator's high word on its own SST dispatch");
+    }
+
+    @Test
     void controllerRestoresSidekickObjectControlWhenPostCapsuleWalkBegins() throws Exception {
         Camera camera = TestEnvironment.activeGameplayMode().getCamera();
         camera.resetState();

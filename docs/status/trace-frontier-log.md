@@ -66265,6 +66265,34 @@ to synthesize a POST phase on a VBLANK-only row.
   The change is AIZ-controller-local, so the unchanged HCZ, CNZ, ICZ, and LBZ
   canary frontiers from the preceding committed sweep remain unaffected. Ring
   comparison remains `ToleranceConfig.DEFAULT` `RingCountMode.FORCE_ERROR`.
+
+## 2026-08-09 - S3K AIZ gradual max-X owner frontier
+
+- Branch: `bugfix/s3k-traces` from `9306c5981`; the six protected user edits
+  remained unstaged. Validation used JDK 21.0.12 and the available S3K ROM;
+  no trace fixture changed.
+- Root cause: `loc_694D4` creates `Child6_IncLevX`, a separate
+  `Obj_IncLevEndXGradual` SST owner whose `$30` longword advances by `$4000`
+  on its own dispatch (`sonic3k.asm:138300-138335,178235-178252`). The engine
+  folded that worker into the earlier AIZ boss controller and pre-seeded its
+  accumulator to `$C000`. At raw `25592`, the recorded VBlank had observed
+  the earlier controller but not yet the later native worker, while the
+  folded engine path had already raised camera X to `$4981`. A real dynamic
+  worker now owns its slot, accumulator, lifetime, and rewind state.
+- AIZ frontier command: `mvn -q -Ptrace-replay -Dmse=off
+  -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay
+  -Dtrace.verification=all -Dtrace.frontierOnly=true
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' test`. Result:
+  the lone raw-`25592` camera error is closed. The first mismatch advances to
+  raw `25951`, with two player animation/mapping errors (`WAIT`/`$BA`
+  expected, `LOOK_UP`/`$C4` actual); hardware reaches unconsumed edge `#63`
+  at raw `26109`.
+- The worker accumulator unit guard and both rewind coverage guards pass.
+  Standard AIZ and complete MGZ remain green. The change is local to the AIZ
+  post-results controller; the other gameplay-order frontiers remain at their
+  preceding committed canary results. Ring comparison remains
+  `ToleranceConfig.DEFAULT` `RingCountMode.FORCE_ERROR`.
 - Complete-run regression command: `env JAVA_HOME=$JDK21_HOME
   PATH=$JDK21_HOME/bin:$PATH mvn -q -Dmse=off -Dsurefire.forkCount=1
   -DforkCount=1 -DreuseForks=true -Dsurefire.argLine='-Xmx3g'
