@@ -3,6 +3,20 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Sonic 2 sidekick respawn no longer suppresses the on-screen render flag inside a
+  hand-measured window. The ROM clears the respawn counter purely on the render flag, with no
+  counter-value or camera-relative condition, and the engine already reads that flag; the
+  extra window was a second authority fitted to one recorded route and it held the counter
+  set where the ROM had cleared it.
+- Testing: special-stage comparison takes its pre-start expectations from the recorded
+  object-pass snapshot rather than the raw V-blank row, which can bisect the ROM's
+  Sonic-then-sidekick object scan and so carry one player's state from before the pass beside
+  the other's from after it. The comparator already applied this rule after the stage starts;
+  the pre-start half of the same loop did not.
+- Testing: a new guard asserts that every recorded object pass's input-sample frame lands on
+  a frame whose input was actually polled, across every committed fixture that records both.
+  A capture runner mislabelling its frames by one is now a build failure rather than
+  something discovered by inspection weeks later.
 - Fix: the standalone special-stage capture no longer labels every recorded object pass one
   frame early. The capture runner wrote a row for the entry frame that the run-segment
   runner correctly skips, so every pass's input-sample frame was off by one against its own

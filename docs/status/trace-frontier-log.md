@@ -66573,3 +66573,90 @@ methods, not classes).
   `TestTraceRunSpecialStageRows.s2WithRecordedPassesExposesAPassCursorFromControlStart` is
   unaffected by the re-record and never could have been — it builds a synthetic `@TempDir`
   fixture whose own helper emits no `started_at_input_sample`. Pure test-data gap.
+
+## 2026-08-09 — round twenty-one: ss_1 GREEN, the lag invariant guarded, another fitted model removed
+
+Command: full `-Ptrace-replay` profile, no `-Dtest`. Base e2aa50cd5 (769 / 19 / 63).
+After: **769 / 13 / 63.** Moved to green: `TestS2SpecialStage1TraceReplay`,
+`S2SpecialStageExpectedComparisonTest`, `S2SpecialStageFinishBoundaryMappingTest`,
+`TestS2Ehz2Seg6CompleteEmeraldsSegmentTraceReplay`. Moved to red: none. +2 tests = the new
+guard.
+
+- **ss_1 GREEN — and the round's model was DISPROVED BY IMPLEMENTING IT.** The brief
+  prescribed three interdependent pieces (one iteration per `input_sample_frame` row;
+  publish each pass at its BOUND observation; model pass seq 0 and make
+  `recurringMainPassPending` a count). The agent implemented exactly that and measured: **all
+  8 S2 special-stage traces went red, 510-648 errors each, first error frame 180** —
+  `dynamic_art.edges expected=[29,30,31] actual=[]`. Frame 180 is pass 15's input sample,
+  cursor 181 (a lag row), bound observation 182, and the recorder's own aux row for 180
+  carries the Sonic DPLC submission with `logical_frame: 180, publication_frame: 180`. So an
+  overrunning pre-start iteration's art submission IS visible on its sample row; the pass is
+  NOT published atomically at one boundary.
+  Measuring all 51 overrunning pre-start passes in ss_1: **44 show the pass's OWN result on
+  its sample row and ZERO show the previous pass's**; only 7 are mixed. "Publish at the bound
+  observation" is false for 44/51.
+  **REAL CAUSE: the CSV row is a TORN SAMPLE.** The 7 mixed rows are mixed one player at a
+  time — seq 165 (frame 401) and seq 176 (frame 417) have every `tails_*` field stale while
+  every `sonic_*` is current; seq 160 (frame 393) has `sonic_*` stale; seq 60/120 have both
+  players' anim/flip/status stale. That is `RunObjects`' object-slot scan (Obj09 Sonic then
+  Obj10 Sidekick) bisected by the frame boundary. **The engine was never wrong at 393/401 —
+  the recorded row is mid-pass.**
+  The comparator ALREADY documents this rule in its own class javadoc ("a raw VBlank row can
+  interrupt the Obj09->Obj10 scan and contain Sonic's post-pass timer beside Tails's
+  pre-pass timer") — it just only applied it for `f >= passPacingStart`. The pre-start half
+  of the identical loop never got it. Fix: for a pre-start observation take the
+  player/ring/Tails-control expectation from the atomic `run_objects_end` snapshot whose
+  `input_sample_frame` is that observation. **ZERO src/main changes.**
+  Sequence 0 is excluded because it is not a wait-loop iteration at all — it is the single
+  pre-fade `RunObjects` (s2.asm:6660-6672) whose whole span overruns, leaving its sample row
+  cleanly pre-pass. That is brief piece 3 answered in the NEGATIVE, proven by the
+  intermediate "5 errors at frame 159" run.
+- **Both calibration classes green with justified assertions, not bumped constants.**
+  `passPacingStart` 425 -> 424 because in the regenerated standalone the first pass with
+  `started_at_input_sample != 0` is sequence 181 at observation frame 424 (verified directly
+  in the aux payload); `terminalPreStartPassSequence` 180 is unchanged and still correct.
+  The refresh-frame triple 1324/1327/1331 -> 1323/1326/1330 are the observations of passes
+  748/749/751, shifted by exactly the recorder's corrected off-by-one. **The finish-boundary
+  numbers were replaced with reads of the trace's own recorded boundary**
+  (`trace.stageFinishedObservedFrame()`, `trace.stageFinishedFrame()`) so they cannot go
+  stale on the next regeneration.
+- **THE LAG INVARIANT IS NOW A PERMANENT GUARD.**
+  `TestTraceFixtureLagPolledInputGuard` walks every committed aux payload, joins it to the
+  sibling physics payload's `lag` column, and asserts every `input_sample_frame` and
+  `previous_input_sample_frame` in every `run_objects_end` lands on a lag=0 row at +0.
+  ROM-free, 0.5s. **Coverage is decided by measurement, never by name** — a fixture is
+  checked iff its physics payload carries a `lag` column and its aux payload carries
+  `run_objects_end` records, so a new producer is picked up with no edit and there is no
+  zone/route/game carve-out. Floors (>=10 fixtures, >=37120 confirmed samples) fail loudly
+  rather than going vacuous, in `TestTraceFixtureMovieAlignmentGuard`'s idiom. The
+  `ALLOWED_VIOLATIONS` map is empty and documented as something that should stay empty — the
+  fix for a violation is re-recording, not allowlisting.
+  **Non-vacuity proven against REAL historical data, and independently re-verified in the
+  main tree:** restoring the pre-e2aa50cd5 payloads from git makes it fail with
+  "3697 of 6344 sampled frames (across 3172 passes) land on a lag row (first: pass 1
+  input_sample_frame=161 but that row has lag=1). Violations at a shifted offset: minus
+  one=1284, plus one=0" — the message names the likely cause and prints the -1/+0/+1 shape
+  so a future failure is diagnosable from the text alone.
+- **AUDIT: no second miscaptured fixture.** Every capture runner under
+  `tools/bizhawk-headless/src/Recording/` was compared against `S2RunCaptureRunner`'s correct
+  entry-frame handling, S1 and S3K included. The off-by-one was isolated to
+  `S2SpecialStageCaptureRunner`; nothing else needed regenerating.
+- **EHZ2 seg6 GREEN: a THIRD fitted model removed from committed code.**
+  `TailsRespawnStrategy.consumesTopEdgeRenderFlagOneStepLate()` forced `onScreen=false`
+  inside a hand-measured window (`offscreenFlightFrames >= 0x3E && <= 0x3F && relY <= -31`)
+  derived from an HTZ1 BizHawk probe. ROM `TailsCPU_Flying` (s2.asm:39141-39158) tests ONLY
+  `_btst #render_flags.on_screen,render_flags(a0)` and branches to
+  `TailsCPU_FlyingOnscreen -> move.w #0,(Tails_respawn_counter).w` — there is no
+  counter-value or camera-relative-Y condition anywhere in the routine. The engine already
+  consults the cached render flag, the ROM-faithful source; the window was a second, fitted
+  authority that fired on EHZ2 at 1278-1279 and held the counter at 0x003F where ROM had
+  zeroed it. **The HTZ1/HTZ2 traces it was originally added for stay green without it.**
+- **CPZ2 seg9 unchanged at 2983 errors, and the brief's entry point is DISPROVED.** The
+  byte-read-of-word-store counter is NOT the defect: the engine's
+  `CPZSpinTubeObjectInstance.calculateVelocity` already computes
+  `frames = (absDom * 256) / 0x800 == absDom >> 3`, bit-identical to the ROM's high-byte read
+  (s2.asm:48819-48874 vs :48635/:48713), and the cross-axis derivation matches too (ROM's two
+  truncating divs collapse to the same rational as the engine's single div).
+  What was measured instead: **the ROM applies `Obj1E_MoveCharacter` TWICE in frame 5053** —
+  from row 5052 (x=0x0890 sub=0x6F00, y=0x06F0 sub=0x4400, x_vel=0x009D, y_vel=0xF800) the
+  32-bit x delta to row 5053 is two applications, not one. That is the next lead.
