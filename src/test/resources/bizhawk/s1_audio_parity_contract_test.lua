@@ -157,6 +157,13 @@ local function runYmRejections()
     check(not ok, "orphan YM data was accepted")
     ok = pcall(function() decoder:feed({kind = "address", port = 2, value = 1}) end)
     check(not ok, "unsupported YM port was accepted")
+    decoder:feed({kind = "address", port = 0, value = 34})
+    ok = pcall(function() decoder:feed({kind = "address", port = 0, value = 35}) end)
+    check(not ok, "same-port YM address overwrite was accepted")
+    decoder = Contract.newYmDecoder()
+    decoder:feed({kind = "address", port = 1, value = 42})
+    ok = pcall(function() decoder:finishTick() end)
+    check(not ok, "orphan YM address survived the tick boundary")
 end
 
 local function runHashes()
@@ -189,6 +196,53 @@ local function runCycleLimit()
     check(not ok, "cycle detector accepted invocation 36,001")
 end
 
+local function runPeriodOneCycleProof()
+    -- Break caught: constant music must prove one full following period before its third boundary.
+    local detector = Contract.newCycleDetector()
+    check(detector:observe("constant", "event") == nil, "first constant state proved a cycle")
+    check(detector:observe("constant", "event") == nil, "second constant state ended capture")
+    local proof = detector:observe("constant", "event")
+    equals(proof.startOrdinal, 0, "period-one proof started at the wrong ordinal")
+    equals(proof.period, 1, "constant stream did not prove period one")
+    equals(proof.terminalRecordCount, 3, "period-one proof did not wait for the third boundary")
+end
+
+local function rawTrack(status, voiceControl)
+    return {
+        baseFrequency = 0, detune = 0, loopCounters = {}, returnStack = {},
+        stackPointer = 48, status = status, transpose = 0, voiceControl = voiceControl, volume = 0
+    }
+end
+
+local function runFixedRoleAndDescendingStackNormalization()
+    -- Break caught: duplicate hardware channel 6 relabels DAC as FM6 or exposes stale descending stack words.
+    local raw = {
+        global = {fadeActive = 0, fadeDelay = 0, fadeOut = 0, fadeSteps = 0, speedUp = 0, tempoReload = 21, tempoTimeout = 3},
+        tracks = {
+            rawTrack(0, 6), rawTrack(128, 0), rawTrack(0, 1), rawTrack(0, 2), rawTrack(0, 4),
+            rawTrack(0, 5), rawTrack(0, 6), rawTrack(0, 128), rawTrack(0, 160), rawTrack(0, 192)
+        }
+    }
+    raw.tracks[2].baseFrequency = 9320
+    raw.tracks[2].detune = 253
+    raw.tracks[2].loopCounters = {4, 88, 2}
+    raw.tracks[2].returnStack = {11259375, 1193046, 6636321}
+    raw.tracks[2].stackPointer = 40
+    raw.tracks[2].transpose = 254
+    raw.tracks[2].volume = 255
+    local normalized = Contract.normalizeRom(raw, {0, 2})
+    equals(Contract.canonicalJson(normalized.tracks),
+        "[{\"active\":false,\"hardware\":\"DAC\",\"role\":\"DAC\"},{\"active\":true,\"baseFrequency\":9320,\"detune\":-3,\"hardware\":\"FM1\",\"loopCounters\":[4,2],\"returnStack\":[1193046,11259375],\"role\":\"FM1\",\"transpose\":-2,\"volume\":-1},{\"active\":false,\"hardware\":\"FM2\",\"role\":\"FM2\"},{\"active\":false,\"hardware\":\"FM3\",\"role\":\"FM3\"},{\"active\":false,\"hardware\":\"FM4\",\"role\":\"FM4\"},{\"active\":false,\"hardware\":\"FM5\",\"role\":\"FM5\"},{\"active\":false,\"hardware\":\"FM6\",\"role\":\"FM6\"},{\"active\":false,\"hardware\":\"PSG1\",\"role\":\"PSG1\"},{\"active\":false,\"hardware\":\"PSG2\",\"role\":\"PSG2\"},{\"active\":false,\"hardware\":\"PSG3\",\"role\":\"PSG3\"}]",
+        "fixed slots did not validate S1 voice control and normalize descending return addresses")
+    raw.tracks[2].voiceControl = 6
+    local ok = pcall(function() Contract.normalizeRom(raw, {0, 2}) end)
+    check(not ok, "FM1 accepted DAC/FM6 voice-control value")
+    raw.tracks[2].voiceControl = 0
+    raw.tracks[2].stackPointer = 41
+    ok = pcall(function() Contract.normalizeRom(raw, {0, 2}) end)
+    check(not ok, "misaligned ROM return-stack cursor was accepted")
+end
+
 local function runGoldenVector()
     -- Break caught: ROM- and OpenGGF-shaped state normalize to divergent bytes or include stale capacity.
     local vector = decodeJson(readFile(vectorPath))
@@ -213,5 +267,7 @@ runYmRejections()
 runHashes()
 runCycleProof()
 runCycleLimit()
+runPeriodOneCycleProof()
+runFixedRoleAndDescendingStackNormalization()
 runGoldenVector()
 print("S1_AUDIO_PARITY_CONTRACT_OK")

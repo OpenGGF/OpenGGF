@@ -17,6 +17,10 @@ function Contract.u16(value)
     return assertInteger(value, "word") & 0xffff
 end
 
+function Contract.u32(value)
+    return assertInteger(value, "longword") & 0xffffffff
+end
+
 function Contract.s8(value)
     local normalized = Contract.u8(value)
     return normalized >= 0x80 and normalized - 0x100 or normalized
@@ -108,6 +112,7 @@ function Contract.newYmDecoder()
         assert(port == 0 or port == 1, "unsupported YM port")
         local value = Contract.u8(busEvent.value)
         if kind == "address" then
+            assert(pending[port] == nil, "orphan YM address")
             pending[port] = value
             return nil
         end
@@ -117,18 +122,25 @@ function Contract.newYmDecoder()
         return event
     end
 
+    function decoder:finishTick()
+        assert(pending[0] == nil and pending[1] == nil, "orphan YM address at tick boundary")
+    end
+
     return decoder
 end
 
-local function roleForVoiceControl(value)
-    local control = Contract.u8(value)
-    if control == 0 then return "DAC", "DAC" end
-    if control >= 1 and control <= 6 then return "FM" .. control, "FM" .. control end
-    if control >= 0x81 and control <= 0x83 then
-        return "PSG" .. (control - 0x80), "PSG" .. (control - 0x80)
-    end
-    error("unsupported S1 voice-control channel: " .. control)
-end
+local S1_MUSIC_SLOTS = {
+    {role = "DAC", hardware = "DAC", voiceControl = 6},
+    {role = "FM1", hardware = "FM1", voiceControl = 0},
+    {role = "FM2", hardware = "FM2", voiceControl = 1},
+    {role = "FM3", hardware = "FM3", voiceControl = 2},
+    {role = "FM4", hardware = "FM4", voiceControl = 4},
+    {role = "FM5", hardware = "FM5", voiceControl = 5},
+    {role = "FM6", hardware = "FM6", voiceControl = 6},
+    {role = "PSG1", hardware = "PSG1", voiceControl = 0x80},
+    {role = "PSG2", hardware = "PSG2", voiceControl = 0xa0},
+    {role = "PSG3", hardware = "PSG3", voiceControl = 0xc0}
+}
 
 local function filteredLoopCounters(counters, activeIndices)
     local result = {}
@@ -140,11 +152,24 @@ local function filteredLoopCounters(counters, activeIndices)
     return result
 end
 
-local function liveReturnStack(stack, returnSp)
+local function liveOpenGgfReturnStack(stack, returnSp)
     local result = {}
     local count = Contract.u8(returnSp)
     assert(count <= #stack, "return stack cursor exceeds supplied stack")
-    for index = 1, count do result[index] = Contract.u16(stack[index]) end
+    for index = 1, count do result[index] = Contract.u32(stack[index]) end
+    return result
+end
+
+local function liveRomReturnStack(stack, stackPointer)
+    local pointer = Contract.u8(stackPointer)
+    assert(pointer <= 0x30 and (0x30 - pointer) % 4 == 0,
+        "ROM return-stack cursor must be aligned within 0x00..0x30")
+    local count = (0x30 - pointer) / 4
+    assert(count <= #stack, "ROM return stack cursor exceeds supplied stack")
+    local result = {}
+    -- `$F8` decrements StackPointer before storing, so physical top-to-bottom
+    -- words run from the current cursor upward; canonical call order is reverse.
+    for index = count, 1, -1 do result[#result + 1] = Contract.u32(stack[index]) end
     return result
 end
 
@@ -172,30 +197,34 @@ local function normalizedGlobal(global, raw)
     }
 end
 
-local function normalizedActiveTrack(track, role, hardware, activeIndices, raw)
+local function normalizedActiveTrack(track, role, hardware, activeIndices, returnStack)
     return {
         active = true,
         baseFrequency = Contract.u16(track.baseFrequency),
-        detune = raw and Contract.s8(track.detune) or Contract.s8(track.detune),
+        detune = Contract.s8(track.detune),
         hardware = hardware,
         loopCounters = filteredLoopCounters(track.loopCounters or {}, activeIndices),
-        returnStack = liveReturnStack(track.returnStack or {}, track.returnSp),
+        returnStack = returnStack,
         role = role,
-        transpose = raw and Contract.s8(track.transpose) or Contract.s8(track.transpose),
-        volume = raw and Contract.s8(track.volume) or Contract.s8(track.volume)
+        transpose = Contract.s8(track.transpose),
+        volume = Contract.s8(track.volume)
     }
 end
 
 function Contract.normalizeRom(snapshot, activeLoopIndices)
     assert(type(snapshot) == "table" and type(snapshot.global) == "table" and type(snapshot.tracks) == "table",
         "ROM snapshot requires global and tracks tables")
+    assert(#snapshot.tracks == #S1_MUSIC_SLOTS, "ROM snapshot requires all ten fixed S1 music slots")
     local tracks = {}
     for index, track in ipairs(snapshot.tracks) do
-        local role, hardware = roleForVoiceControl(track.voiceControl)
+        local slot = S1_MUSIC_SLOTS[index]
+        assert(Contract.u8(track.voiceControl) == slot.voiceControl,
+            "ROM voice-control does not match fixed " .. slot.role .. " slot")
         if (Contract.u8(track.status) & 0x80) == 0 then
-            tracks[index] = {active = false, hardware = hardware, role = role}
+            tracks[index] = {active = false, hardware = slot.hardware, role = slot.role}
         else
-            tracks[index] = normalizedActiveTrack(track, role, hardware, activeLoopIndices, true)
+            tracks[index] = normalizedActiveTrack(track, slot.role, slot.hardware, activeLoopIndices,
+                liveRomReturnStack(track.returnStack or {}, track.stackPointer))
         end
     end
     return {global = normalizedGlobal(snapshot.global, true), tracks = tracks}
@@ -211,7 +240,8 @@ function Contract.normalizeOpenGgf(snapshot, activeLoopIndices)
         if track.active ~= true then
             tracks[index] = {active = false, hardware = track.hardware, role = track.role}
         else
-            tracks[index] = normalizedActiveTrack(track, track.role, track.hardware, activeLoopIndices, false)
+            tracks[index] = normalizedActiveTrack(track, track.role, track.hardware, activeLoopIndices,
+                liveOpenGgfReturnStack(track.returnStack or {}, track.returnSp))
         end
     end
     return {global = normalizedGlobal(snapshot.global, false), tracks = tracks}
@@ -263,6 +293,10 @@ function Contract.newCycleDetector()
                 period = #self.history - previous, progress = 1}
             if eventHash ~= start.eventHash then
                 resetAfterRejectedCandidate(self, ordinal, stateHash, eventHash)
+            elseif self.candidate.progress == self.candidate.period then
+                self.accepted = {startIndex = self.candidate.startIndex,
+                    startOrdinal = self.candidate.startOrdinal, period = self.candidate.period}
+                self.candidate = nil
             end
         end
         return nil

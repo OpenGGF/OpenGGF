@@ -10,16 +10,20 @@
   "openGgf": {
     "global": {"fadeActive": false, "fadeDelay": 0, "fadeDirection": "none", "fadeSteps": 0, "speedUp": false, "tempoReload": 21, "tempoTimeout": 3},
     "tracks": [
-      {"active": true, "baseFrequency": 9320, "detune": -3, "hardware": "FM1", "loopCounters": [4, 88, 2], "returnStack": [4660, 39321, 30583], "returnSp": 2, "role": "FM1", "transpose": -2, "volume": -1},
-      {"active": false, "hardware": "PSG2", "role": "PSG2"}
+      {"active": false, "hardware": "DAC", "role": "DAC"},
+      {"active": true, "baseFrequency": 9320, "detune": -3, "hardware": "FM1", "loopCounters": [4, 88, 2], "returnStack": [1193046, 11259375, 6636321], "returnSp": 2, "role": "FM1", "transpose": -2, "volume": -1},
+      {"active": false, "hardware": "FM2", "role": "FM2"}, {"active": false, "hardware": "FM3", "role": "FM3"}, {"active": false, "hardware": "FM4", "role": "FM4"}, {"active": false, "hardware": "FM5", "role": "FM5"}, {"active": false, "hardware": "FM6", "role": "FM6"},
+      {"active": false, "hardware": "PSG1", "role": "PSG1"}, {"active": false, "hardware": "PSG2", "role": "PSG2"}, {"active": false, "hardware": "PSG3", "role": "PSG3"}
     ]
   },
   "rawRom": {
     "global": {"fadeActive": 0, "fadeDelay": 0, "fadeOut": 0, "fadeSteps": 0, "speedUp": 0, "tempoReload": 21, "tempoTimeout": 3},
     "tracks": [
-      {"baseFrequency": 9320, "detune": 253, "loopCounters": [4, 88, 2], "returnSp": 2, "returnStack": [4660, 39321, 30583], "status": 128, "transpose": 254, "voiceControl": 1, "volume": 255},
-      {"baseFrequency": 65535, "detune": 127, "loopCounters": [99, 99, 99], "returnSp": 3, "returnStack": [1, 2, 3], "status": 0, "transpose": 127, "voiceControl": 130, "volume": 127}
+      {"status": 0, "voiceControl": 6},
+      {"baseFrequency": 9320, "detune": 253, "loopCounters": [4, 88, 2], "returnStack": [11259375, 1193046, 6636321], "stackPointer": 40, "status": 128, "transpose": 254, "voiceControl": 0, "volume": 255},
+      {"status": 0, "voiceControl": 1}, {"status": 0, "voiceControl": 2}, {"status": 0, "voiceControl": 4}, {"status": 0, "voiceControl": 5}, {"status": 0, "voiceControl": 6},
+      {"status": 0, "voiceControl": 128}, {"status": 0, "voiceControl": 160}, {"status": 0, "voiceControl": 192}
     ]
   },
-  "expectedCanonicalJson": "{\"events\":[{\"chip\":\"ym2612\",\"port\":0,\"register\":34,\"value\":17},{\"chip\":\"ym2612\",\"port\":1,\"register\":42,\"value\":128},{\"chip\":\"psg\",\"value\":159}],\"state\":{\"global\":{\"fadeActive\":false,\"fadeDelay\":0,\"fadeDirection\":\"none\",\"fadeSteps\":0,\"speedUp\":false,\"tempoReload\":21,\"tempoTimeout\":3},\"tracks\":[{\"active\":true,\"baseFrequency\":9320,\"detune\":-3,\"hardware\":\"FM1\",\"loopCounters\":[4,2],\"returnStack\":[4660,39321],\"role\":\"FM1\",\"transpose\":-2,\"volume\":-1},{\"active\":false,\"hardware\":\"PSG2\",\"role\":\"PSG2\"}]}}"
+  "expectedCanonicalJson": "{\"events\":[{\"chip\":\"ym2612\",\"port\":0,\"register\":34,\"value\":17},{\"chip\":\"ym2612\",\"port\":1,\"register\":42,\"value\":128},{\"chip\":\"psg\",\"value\":159}],\"state\":{\"global\":{\"fadeActive\":false,\"fadeDelay\":0,\"fadeDirection\":\"none\",\"fadeSteps\":0,\"speedUp\":false,\"tempoReload\":21,\"tempoTimeout\":3},\"tracks\":[{\"active\":false,\"hardware\":\"DAC\",\"role\":\"DAC\"},{\"active\":true,\"baseFrequency\":9320,\"detune\":-3,\"hardware\":\"FM1\",\"loopCounters\":[4,2],\"returnStack\":[1193046,11259375],\"role\":\"FM1\",\"transpose\":-2,\"volume\":-1},{\"active\":false,\"hardware\":\"FM2\",\"role\":\"FM2\"},{\"active\":false,\"hardware\":\"FM3\",\"role\":\"FM3\"},{\"active\":false,\"hardware\":\"FM4\",\"role\":\"FM4\"},{\"active\":false,\"hardware\":\"FM5\",\"role\":\"FM5\"},{\"active\":false,\"hardware\":\"FM6\",\"role\":\"FM6\"},{\"active\":false,\"hardware\":\"PSG1\",\"role\":\"PSG1\"},{\"active\":false,\"hardware\":\"PSG2\",\"role\":\"PSG2\"},{\"active\":false,\"hardware\":\"PSG3\",\"role\":\"PSG3\"}]}}"
 }
