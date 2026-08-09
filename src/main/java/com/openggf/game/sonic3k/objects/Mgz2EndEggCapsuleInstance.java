@@ -74,6 +74,14 @@ public class Mgz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
     }
 
     @Override
+    protected boolean defersCollapsedButtonPastLaterSupportOwner() {
+        // loc_86770 is a later button-child SST. If the triggering player is
+        // supported by an owner after the capsule, that support dispatch must
+        // publish before the button can observe it (sonic3k.asm:181739-181800).
+        return true;
+    }
+
+    @Override
     protected AbstractObjectInstance createResultsScreen() {
         return new Mgz2ResultsScreenObjectInstance(
                 getPlayerCharacter(), services().currentAct(), isSonicActivelyCarriedByTails());

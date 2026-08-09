@@ -3,6 +3,10 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: MGZ's consolidated floating-capsule button now preserves the
+  native later-SST boundary when a later support object owns the triggering
+  player's current contact. This restores both MGZ trace variants to zero
+  errors while retaining the complete-run AIZ and HCZ canaries.
 - Fix/Test: Recorded trace playback now distinguishes ordinary lag rows from
   paused `Pause_Loop` VBlanks when maintaining the controller-poll baseline.
   Paused rows follow `VInt_10` and poll each movie row, preserving the later

@@ -70197,3 +70197,36 @@ guard.
   AIZ rows remain green with zero errors or warnings. Ring comparison remains
   enabled through `ToleranceConfig.DEFAULT` with
   `RingCountMode.FORCE_ERROR`.
+
+## 2026-08-09 - S3K MGZ trace fleet green
+
+- Branch: `bugfix/s3k-traces` from `c4b0e3ca0`; the six protected user edits
+  remained unstaged. Validation used JDK 21.0.12 and
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen`; no trace fixture changed.
+- Prior frontier: the complete-run MGZ trace was green, while the standalone
+  MGZ trace had eight queue errors beginning at raw frame `35183`. The engine
+  had submitted the three results-art Kosinski jobs one object dispatch before
+  the ROM; the next unconsumed hardware edge was direct-queue edge `#64` at
+  raw frame `35188`.
+- Root cause: ROM `Obj_EggCapsule` executes the separate `loc_86770` button
+  child in a later SST slot. When a later support owner publishes the
+  triggering player's contact, that child cannot observe it until its own
+  dispatch (`sonic3k.asm:181739-181800`). The engine consolidates the button
+  into the earlier capsule object, so MGZ now uses the shared support-slot
+  predicate to defer that observation by one capsule entry. The rule consumes
+  live object/support-slot ordering, not zone, trace, route, or frame identity.
+- Focused command: `mvn -Dmse=off
+  -Dtest=com.openggf.game.sonic3k.objects.TestMgzDrillingRobotnikInstance#mgzFloatingCapsuleDefersButtonPastLaterSupportOwner+mgzResultsOwnerRetainsCarryPublicationAcrossLowerSlotDelay
+  test`. Result: 2 tests, 0 failures, 0 errors.
+- MGZ command: `mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1
+  -Dsurefire.runOrder=alphabetical -Dtrace.verification=all
+  -Dtrace.frontierOnly=true
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kMgzTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s3k.TestS3kMgzCompleteRunTraceReplay#replayMatchesTrace
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' test`. Result:
+  both traces pass with zero errors or warnings and all represented hardware
+  completion edges consumed; there is no first-error frame.
+- Regression command: the same profile and ROM with
+  `TestS3kAizCompleteRunTraceReplay#replayMatchesTrace` and
+  `TestS3kHczCompleteRunTraceReplay#replayMatchesTrace`. Result: AIZ and HCZ
+  remain green with zero errors or warnings. Ring comparison remains enabled
+  through `ToleranceConfig.DEFAULT` with `RingCountMode.FORCE_ERROR`.
