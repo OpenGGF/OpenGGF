@@ -599,11 +599,24 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
             mask |= AbstractPlayableSprite.INPUT_JUMP;
         }
 
-        // Lag row: the ROM did not reach Joypad_Read, so the press-edge baseline is
-        // deliberately left where it was. The row is still consumed 1:1.
+        // An ordinary lag row did not reach Joypad_Read, so its press-edge
+        // baseline stays at the last polled movie row. Pause_Loop is different:
+        // VInt_10 polls controllers on every Wait_VSync before checking Start
+        // again (sonic3k.asm:1572-1607,719-725). While already paused, compare
+        // against the immediately preceding movie row and retain this row as
+        // the next poll baseline so a held Start is not repeatedly re-read as
+        // an edge and the later unpause press remains visible.
+        var gameState = GameServices.gameStateOrNull();
+        boolean pauseLoopPolled = gameState != null && gameState.isGamePaused();
+        Bk2FrameInput previousInput = pauseLoopPolled && currentBk2Index > 0
+                ? bk2Movie.getFrame(currentBk2Index - 1)
+                : lastPolledBk2Input();
         LogicalInputSnapshot snapshot =
-                RecordedInputSnapshots.fromBk2(frameInput, lastPolledBk2Input());
+                RecordedInputSnapshots.fromBk2(frameInput, previousInput);
         previousDriverSnapshot = snapshot;
+        if (pauseLoopPolled) {
+            markBk2RowPolled(currentBk2Index);
+        }
         currentBk2Index++;
         applyPauseToggleForSuppressedRow(snapshot);
         LevelFrameContext context =

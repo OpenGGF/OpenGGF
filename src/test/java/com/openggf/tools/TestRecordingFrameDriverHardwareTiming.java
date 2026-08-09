@@ -106,6 +106,39 @@ class TestRecordingFrameDriverHardwareTiming {
     }
 
     @Test
+    void pausedSuppressedRowsPollStartAndExposeTheLaterUnpauseEdge() throws Exception {
+        TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
+        GameplayModeContext context = SessionManager.getCurrentGameplayMode();
+        context.getGameStateManager().setGamePaused(true);
+        RecordingFrameDriver driver =
+                new RecordingFrameDriver(mock(AbstractPlayableSprite.class));
+        LevelManager level = mock(LevelManager.class);
+        when(level.getObjectManager()).thenReturn(mock(ObjectManager.class));
+        setField(driver, "levelManager", level);
+        Bk2Movie movie = new Bk2Movie(
+                Path.of("pause-loop-test.bk2"),
+                "logkey",
+                Map.of(),
+                List.of(
+                        new Bk2FrameInput(0, 0, 0, true, "start"),
+                        new Bk2FrameInput(1, 0, 0, true, "held start"),
+                        new Bk2FrameInput(2, 0, 0, false, "released"),
+                        new Bk2FrameInput(3, 0, 0, true, "unpause")),
+                4);
+        driver.setBk2Movie(movie, 1);
+
+        driver.skipFrameFromRecording();
+        assertTrue(context.getGameStateManager().isGamePaused(),
+                "held Start is not a second press inside Pause_Loop");
+        driver.skipFrameFromRecording();
+        assertTrue(context.getGameStateManager().isGamePaused());
+        driver.skipFrameFromRecording();
+
+        assertFalse(context.getGameStateManager().isGamePaused(),
+                "VInt_10 polls the released row, so the later Start is an unpause edge");
+    }
+
+    @Test
     void beginTraceRowForwardsRawFrameRatherThanTraceIndex() {
         TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
         RecordedCompletionAuthority authority = mock(RecordedCompletionAuthority.class);

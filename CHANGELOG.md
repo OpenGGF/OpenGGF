@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: Recorded trace playback now distinguishes ordinary lag rows from
+  paused `Pause_Loop` VBlanks when maintaining the controller-poll baseline.
+  Paused rows follow `VInt_10` and poll each movie row, preserving the later
+  Start edge that resumes gameplay. This closes the HCZ complete-run trace
+  with all 29,285 compared rows green while retaining the complete AIZ canary.
 - Fix/Test: S3K cutscene buttons now run their subtype action in the same
   object pass that detects the triggering object, matching `loc_65C04`'s
   immediate dispatch through `off_65C40`. This removes the synthetic

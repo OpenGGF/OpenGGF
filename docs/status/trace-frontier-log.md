@@ -70160,3 +70160,40 @@ guard.
   failures. The production change is confined to the AIZ cutscene button, its
   focused test passes, and the complete-run route introduces no new
   divergence.
+
+## 2026-08-09 - S3K HCZ complete-run green
+
+- Branch: `bugfix/s3k-traces` from `e83fbc19e`; the six protected user edits
+  remained unstaged. Validation used JDK 21.0.12 and
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen`; no trace fixture changed.
+- Prior frontier: one animation group began at raw frame `25486`, where the
+  ROM advanced Tails' Balance mapping from `$9A` to `$9B` while the engine
+  remained on `$9A`. The mismatch followed a long paused/VBlank-only span;
+  engine diagnostics showed `Game_paused` still set and the sprite frame
+  counter pinned at `$5B92` after the trace resumed ordinary level frames.
+- Root cause: ordinary lag rows do not run `Joypad_Read`, so replay correctly
+  retains the last polled input baseline. S3K `Pause_Loop` instead arms
+  `VInt_10`, whose `VInt_8` fallthrough calls `Poll_Controllers` on every
+  paused VBlank before checking Start (`sonic3k.asm:719-725,1550-1617`). The
+  shared suppressed-row driver treated those polls as ordinary lag and lost
+  the release-to-Start edge that unpaused the ROM. Paused rows now compare
+  against the immediately preceding movie row and publish that row as the
+  next poll baseline; the rule consumes runtime pause state, not a game,
+  zone, trace, route, or frame identity.
+- Focused command: `mvn -Dmse=off -Dsurefire.forkCount=1
+  -Dsurefire.runOrder=alphabetical
+  -Dtest=com.openggf.tools.TestRecordingFrameDriverHardwareTiming test`.
+  Result: 9 tests, 0 failures, 0 errors. The new regression covers held Start,
+  release polling, and the later unpause edge across suppressed rows.
+- HCZ command: `mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1
+  -Dsurefire.runOrder=alphabetical -Dtrace.verification=all
+  -Dtrace.frontierOnly=true
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kHczCompleteRunTraceReplay#replayMatchesTrace
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Result: all `29285` compared rows match with zero errors or warnings and all
+  represented hardware completion edges consumed.
+- Regression command: the same trace profile and ROM with
+  `TestS3kAizCompleteRunTraceReplay#replayMatchesTrace`. Result: all `26228`
+  AIZ rows remain green with zero errors or warnings. Ring comparison remains
+  enabled through `ToleranceConfig.DEFAULT` with
+  `RingCountMode.FORCE_ERROR`.
