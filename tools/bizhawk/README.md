@@ -92,6 +92,28 @@ usage. A status of `3` is a successful diagnostic run, not a capture failure.
 Inspect the printed run directory before changing audio code; the tool never
 realigns ticks or changes chip-port ordering.
 
+## Sonic 1 GHZ1 gameplay-audio timeline
+
+The gameplay timeline is a separate, stricter diagnostic: it compares natural
+music/SFX requests, per-role contention decisions, and final ownership over
+the committed GHZ1 complete-run interval. Run it with the pinned REV01 ROM:
+
+```bash
+tools/audio/run_s1_ghz1_gameplay_audio_timeline.sh \
+  --rom "/absolute/path/to/Sonic The Hedgehog (W) (REV01) [!].gen"
+```
+
+It accepts only an optional `--bizhawk-home` override. The movie, output root,
+ROM hash, and BizHawk 2.11 identity are pinned. A run creates one unique child
+of `target/audio-parity/s1-ghz1-gameplay/`, captures each producer twice, and
+requires byte-identical captures before reporting semantic parity. BizHawk
+writes only a fresh `.staging` child; Java validates the complete strict JSONL
+stream, atomically create-new publishes it, and deletes staging on success or
+failure. The runner rejects Java/Mono command replacement environment seams,
+never overwrites a capture or report, and preserves the four captures, logs,
+and two reports for investigation. Exit status `3` is a valid semantic
+mismatch; `4` is an untrusted/failed capture or tool failure.
+
 ## Native S1/S2 v5 capture contract
 
 Current S1 and S2 publication runs through

@@ -3,6 +3,7 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Tooling: add the Sonic 1 GHZ1 gameplay-audio timeline comparator and two-producer runner. It pins the complete-run BK2, REV01 ROM, and BizHawk 2.11 identities; validates each bounded JSONL stream before comparison; reports the first ordered request/arbitration/ownership mismatch with compact JSON and bounded context; and only publishes a fully validated BizHawk staging capture through atomic create-new output. Two independent captures from each producer must be byte-identical before a parity conclusion.
 - Fix: YM2612 synthesis now keeps the chip's register-slot permutation at the
   register boundary instead of applying it a second time in the FM algorithm
   graph. Envelope reset phase, decay-to-sustain overshoot, and discrete-chip
