@@ -3,6 +3,19 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the Chemical Plant spin tube reads the character's live position when deciding whether
+  to capture them, as the ROM does. Two tubes can hold the same character, and the engine's
+  frame-start fallback made a handoff between them land two frames late.
+- Fix: a run chain's special-stage interior applies the same dynamic-art normalisation the
+  standalone special-stage replay does. The ROM can service a V-blank part-way through its
+  object scan, so one player's art transfer is recorded a frame before another's from the same
+  pass; that is sub-frame timing with no frame-granularity equivalent, and it is reconciled in
+  comparison rather than imitated.
+- Testing: the special-stage recorder contract no longer asserts a provenance field or
+  absolute fixture frame numbers. Provenance selects no replay behaviour, and the frame
+  assertions now describe the shape they mean -- a non-lag observation row followed by a lag
+  row, with contiguous pass sequencing -- so they cannot go stale when a fixture is
+  regenerated.
 - Fix: Sonic 2 sidekick respawn no longer suppresses the on-screen render flag inside a
   hand-measured window. The ROM clears the respawn counter purely on the render flag, with no
   counter-value or camera-relative condition, and the engine already reads that flag; the

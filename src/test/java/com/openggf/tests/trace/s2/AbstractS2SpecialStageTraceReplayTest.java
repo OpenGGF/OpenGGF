@@ -548,40 +548,14 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
         return snapshot == null ? List.of() : List.of(snapshot);
     }
 
+    /**
+     * Delegates to the shared owner so this lane and the complete-run chain's
+     * special-stage interior compare a segment identically however it was
+     * reached.
+     */
     static Map<Integer, TraceEvent.DynamicArtTransferState> normalizedDynamicArtRows(
             SpecialStageTraceData trace) {
-        if (!trace.metadata().hasPerFrameDynamicArtTransferState()) {
-            return Map.of();
-        }
-        Map<Integer, TraceEvent.DynamicArtTransferState> states = new LinkedHashMap<>();
-        for (int f = 0; f < trace.frameCount(); f++) {
-            TraceEvent.DynamicArtTransferState state =
-                    trace.dynamicArtTransferStateForFrame(f);
-            if (state != null) {
-                states.put(f, state);
-            }
-        }
-        int pacingStart = passPacingStart(trace, trace.frameCount());
-        java.util.Set<Integer> cursorPrecededRows = new java.util.HashSet<>();
-        List<DynamicArtSpillNormalization.PassBinding> passBindings = new ArrayList<>();
-        for (TraceEvent.StateSnapshot snapshot : trace.runObjectsEndSnapshots()) {
-            int boundRow = snapshot.frame();
-            Object cursor = snapshot.fields().get("completion_cursor_frame");
-            if (cursor == null) {
-                continue;
-            }
-            int cursorFrame = Integer.parseInt(String.valueOf(cursor));
-            passBindings.add(new DynamicArtSpillNormalization.PassBinding(
-                    cursorFrame, boundRow));
-            if (cursorFrame < boundRow) {
-                cursorPrecededRows.add(boundRow);
-            }
-        }
-        return DynamicArtSpillNormalization.rebindSubmissionSpills(
-                states, trace.frameCount(), pacingStart,
-                f -> trace.getFrame(f).lag(),
-                cursorPrecededRows::contains,
-                passBindings);
+        return DynamicArtSpillNormalization.forSpecialStage(trace);
     }
 
     private static void addDynamicArtComparison(

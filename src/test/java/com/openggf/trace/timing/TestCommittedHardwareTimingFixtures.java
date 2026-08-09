@@ -344,10 +344,10 @@ class TestCommittedHardwareTimingFixtures {
 
         assertEquals(expected.traceSchema(), metadataJson.path("trace_schema").intValue(),
                 expected.directory());
-        assertEquals("native-bizhawk-headless",
-                metadataJson.path("recorder").textValue(), expected.directory());
-        assertEquals("3.0",
-                metadataJson.path("recorder_version").textValue(), expected.directory());
+        // `recorder` / `recorder_version` are deliberately not asserted: hard rule 4
+        // makes them opaque provenance that selects no replay behaviour, so pinning
+        // their values gates nothing and only goes red the next time a fixture is
+        // re-recorded. `trace_schema` above is the field that does select behaviour.
         assertEquals(expected.frameCount(),
                 metadataJson.path("trace_frame_count").intValue(),
                 expected.directory());
