@@ -2,6 +2,10 @@ package com.openggf.trace;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openggf.game.resources.QueueDiagnosticSnapshot;
+import com.openggf.game.timing.HardwareServiceBoundary;
+import com.openggf.game.timing.HardwareWorkKind;
+import com.openggf.trace.timing.HardwareCompletionEdge;
+import com.openggf.trace.timing.HardwareTimingSchedule;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -10,9 +14,10 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -195,6 +200,96 @@ class TestLoadQueueTraceComparison {
                     trace::validateAdvertisedLoadQueueStates,
                     () -> "accepted destination " + destination);
         }
+    }
+
+    @Test
+    void normalizesPreExistingModuleBatchAtAtomicHeldRowBoundary(
+            @TempDir Path temp) throws Exception {
+        TraceMetadata metadata = s3kQueueMetadata(temp, 3);
+        TraceEvent.LoadQueueState module0 = moduleQueue(0);
+        TraceEvent.LoadQueueState module1 = moduleQueue(1);
+        TraceEvent.LoadQueueState module2 = moduleQueue(2);
+        TraceData trace = new TraceData(metadata, List.of(
+                TraceFrame.executionTestFrame(0, 100, 9, 0),
+                TraceFrame.executionTestFrame(1, 101, 10, 0),
+                TraceFrame.executionTestFrame(2, 102, 10, 1)),
+                Map.of(
+                        0, List.of(directIdle(0), module0),
+                        1, List.of(directChild(1), module1),
+                        2, List.of(directIdle(2), module2)),
+                directCompletionSchedule(2));
+
+        TraceEvent.LoadQueueState comparedDirect = queueState(
+                trace.loadQueueStatesForComparisonFrame(1),
+                "s3k_kos_direct");
+
+        assertFalse(comparedDirect.busy());
+        assertEquals(1, comparedDirect.frame());
+        assertTrue(queueState(trace.loadQueueStatesForFrame(1),
+                "s3k_kos_direct").busy());
+    }
+
+    @Test
+    void retainsBatchFirstAdmittedOnHeldTail(
+            @TempDir Path temp) throws Exception {
+        TraceMetadata metadata = s3kQueueMetadata(temp, 2);
+        TraceData trace = new TraceData(metadata, List.of(
+                TraceFrame.executionTestFrame(0, 100, 10, 0),
+                TraceFrame.executionTestFrame(1, 101, 10, 1)),
+                Map.of(
+                        0, List.of(directChild(0), moduleQueue(0)),
+                        1, List.of(directIdle(1), moduleQueue(1))),
+                directCompletionSchedule(1));
+
+        TraceEvent.LoadQueueState comparedDirect = queueState(
+                trace.loadQueueStatesForComparisonFrame(0),
+                "s3k_kos_direct");
+
+        assertTrue(comparedDirect.busy());
+        assertFalse(comparedDirect.prepared());
+    }
+
+    private static TraceMetadata s3kQueueMetadata(Path temp, int frameCount)
+            throws Exception {
+        Files.writeString(temp.resolve("metadata.json"), """
+                {"game":"s3k","zone":"aiz","act":1,
+                 "bk2_frame_offset":0,"trace_frame_count":%d,
+                 "trace_schema":5,
+                 "aux_schema_extras":["load_queue_state_per_frame"]}
+                """.formatted(frameCount));
+        return TraceMetadata.load(temp.resolve("metadata.json"));
+    }
+
+    private static HardwareTimingSchedule directCompletionSchedule(int frame) {
+        return new HardwareTimingSchedule(List.of(new HardwareCompletionEdge(
+                frame, HardwareServiceBoundary.PRE_MAIN_LOOP,
+                HardwareWorkKind.KOS_DECOMPRESSION_QUEUE, 0, "child")));
+    }
+
+    private static TraceEvent.LoadQueueState directChild(int frame) {
+        return new TraceEvent.LoadQueueState(
+                frame, "s3k_kos_direct", true, false,
+                0x37005A, 0xFFFFD000, -1, -1, List.of(), List.of());
+    }
+
+    private static TraceEvent.LoadQueueState directIdle(int frame) {
+        return new TraceEvent.LoadQueueState(
+                frame, "s3k_kos_direct", false, false,
+                -1, -1, -1, -1, List.of(), List.of());
+    }
+
+    private static TraceEvent.LoadQueueState moduleQueue(int frame) {
+        return new TraceEvent.LoadQueueState(
+                frame, "s3k_kos_module", true, true,
+                -1, -1, -1, 1, List.of("next"), List.of());
+    }
+
+    private static TraceEvent.LoadQueueState queueState(
+            List<TraceEvent.LoadQueueState> states, String kind) {
+        return states.stream()
+                .filter(state -> kind.equals(state.kind()))
+                .findFirst()
+                .orElseThrow();
     }
 
     private static TraceFrame frame(int frame) {

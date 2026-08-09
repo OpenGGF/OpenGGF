@@ -285,7 +285,7 @@ public final class LiveTraceComparator implements PlaybackFrameObserver, TraceHu
                 "sidekick", actualSidekick);
         if (trace.metadata().hasPerFrameLoadQueueState()) {
             binder.compareLoadQueues(expected.frame(),
-                    trace.loadQueueStatesForFrame(expected.frame()),
+                    trace.loadQueueStatesForComparisonFrame(expected.frame()),
                     GameServices.captureQueueDiagnostics());
             result = binder.comparisonForFrame(expected.frame());
         }

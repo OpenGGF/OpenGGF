@@ -273,7 +273,7 @@ public final class TraceStructuralRowComparator implements TraceHudModel {
         if (trace.metadata().hasPerFrameLoadQueueState()) {
             binder.compareLoadQueues(
                     expected.frame(),
-                    trace.loadQueueStatesForFrame(expected.frame()),
+                    trace.loadQueueStatesForComparisonFrame(expected.frame()),
                     queueSnapshots.get());
             result = Objects.requireNonNull(
                     binder.comparisonForFrame(expected.frame()),

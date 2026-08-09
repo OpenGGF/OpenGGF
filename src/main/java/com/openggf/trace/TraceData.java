@@ -1,6 +1,8 @@
 package com.openggf.trace;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.openggf.game.timing.HardwareServiceBoundary;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.trace.timing.HardwareTimingSchedule;
 import com.openggf.trace.timing.HardwareTimingStreamLoader;
 
@@ -34,6 +36,7 @@ public class TraceData {
     private final Map<Integer, TraceEvent.Checkpoint> checkpointsByFrame;
     private final List<Integer> zoneActStateFramesAscending;
     private final Map<Integer, TraceEvent.ZoneActState> zoneActStatesByFrame;
+    private final Map<Integer, List<TraceEvent.LoadQueueState>> comparisonLoadQueueStatesByFrame;
     private List<DynamicArtTransfer.Descriptor> terminalDynamicArtLedger = List.of();
 
     // Package-private so same-package test fixtures in src/test can
@@ -50,6 +53,7 @@ public class TraceData {
         this.zoneActStatesByFrame = new HashMap<>();
         this.zoneActStateFramesAscending = new ArrayList<>();
         this.observedEventTypes = buildLatestEventIndexes();
+        this.comparisonLoadQueueStatesByFrame = buildComparisonLoadQueueStates();
     }
 
     public static TraceData load(Path traceDirectory) throws IOException {
@@ -236,6 +240,136 @@ public class TraceData {
             }
         }
         return List.copyOf(states);
+    }
+
+    /**
+     * Returns the queue heartbeat at the recorder's atomic comparison boundary.
+     *
+     * <p>S3K services its module queue immediately before its direct Kosinski
+     * queue. A VBlank can therefore record a held-tail row after the module
+     * queue has published a child but before the direct queue has serviced it.
+     * Replay publishes queue diagnostics atomically after both services. For a
+     * module batch that was already active before that held tail, compare the
+     * row with the matching post-direct-service heartbeat from the following
+     * lag row. Batches first admitted on the held tail retain their recorded
+     * state because their child admission is itself deferred as one unit.
+     */
+    public List<TraceEvent.LoadQueueState> loadQueueStatesForComparisonFrame(
+            int frame) {
+        return comparisonLoadQueueStatesByFrame.getOrDefault(
+                frame, loadQueueStatesForFrame(frame));
+    }
+
+    private Map<Integer, List<TraceEvent.LoadQueueState>>
+            buildComparisonLoadQueueStates() {
+        if (!"s3k".equals(metadata.game()) || frames.size() < 2
+                || hardwareTimingSchedule == null) {
+            return Map.of();
+        }
+        Map<Integer, List<TraceEvent.LoadQueueState>> normalized = new HashMap<>();
+        boolean moduleBatchActive = false;
+        boolean moduleBatchAdmittedOnHeldTail = false;
+        for (int index = 0; index < frames.size() - 1; index++) {
+            TraceFrame currentFrame = frames.get(index);
+            TraceFrame nextFrame = frames.get(index + 1);
+            List<TraceEvent.LoadQueueState> currentStates =
+                    loadQueueStatesForFrame(currentFrame.frame());
+            List<TraceEvent.LoadQueueState> nextStates =
+                    loadQueueStatesForFrame(nextFrame.frame());
+            TraceEvent.LoadQueueState currentModule = queueState(
+                    currentStates, "s3k_kos_module");
+            TraceEvent.LoadQueueState currentDirect = queueState(
+                    currentStates, "s3k_kos_direct");
+            TraceEvent.LoadQueueState nextModule = queueState(
+                    nextStates, "s3k_kos_module");
+            TraceEvent.LoadQueueState nextDirect = queueState(
+                    nextStates, "s3k_kos_direct");
+
+            boolean heldTail = isHeldTail(currentFrame, nextFrame);
+            if (currentModule != null && currentModule.busy()
+                    && !moduleBatchActive) {
+                moduleBatchActive = true;
+                moduleBatchAdmittedOnHeldTail = heldTail;
+            } else if (currentModule == null || !currentModule.busy()) {
+                moduleBatchActive = false;
+                moduleBatchAdmittedOnHeldTail = false;
+            }
+
+            if (heldTail && moduleBatchActive
+                    && !moduleBatchAdmittedOnHeldTail
+                    && isUnservicedDirectChild(currentDirect)
+                    && isIdle(nextDirect)
+                    && sameQueueStateIgnoringFrame(currentModule, nextModule)
+                    && hasDirectCompletionEdge(nextFrame.frame())) {
+                List<TraceEvent.LoadQueueState> comparison = new ArrayList<>();
+                for (TraceEvent.LoadQueueState state : currentStates) {
+                    comparison.add("s3k_kos_direct".equals(state.kind())
+                            ? withFrame(nextDirect, currentFrame.frame())
+                            : state);
+                }
+                normalized.put(currentFrame.frame(), List.copyOf(comparison));
+            }
+        }
+        return Map.copyOf(normalized);
+    }
+
+    private boolean hasDirectCompletionEdge(int rawFrame) {
+        return hardwareTimingSchedule.edgesAt(
+                        rawFrame, HardwareServiceBoundary.PRE_MAIN_LOOP)
+                .stream()
+                .anyMatch(edge -> edge.kind()
+                        == HardwareWorkKind.KOS_DECOMPRESSION_QUEUE);
+    }
+
+    private static boolean isHeldTail(TraceFrame current, TraceFrame next) {
+        return current.gameplayFrameCounter() >= 0
+                && current.gameplayFrameCounter()
+                        == next.gameplayFrameCounter()
+                && current.lagCounter() >= 0
+                && next.lagCounter() > current.lagCounter()
+                && current.vblankCounter() >= 0
+                && next.vblankCounter() > current.vblankCounter();
+    }
+
+    private static boolean isUnservicedDirectChild(
+            TraceEvent.LoadQueueState state) {
+        return state != null && state.busy() && !state.prepared();
+    }
+
+    private static boolean isIdle(TraceEvent.LoadQueueState state) {
+        return state != null && !state.busy() && !state.prepared();
+    }
+
+    private static TraceEvent.LoadQueueState queueState(
+            List<TraceEvent.LoadQueueState> states, String kind) {
+        return states.stream()
+                .filter(state -> kind.equals(state.kind()))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private static boolean sameQueueStateIgnoringFrame(
+            TraceEvent.LoadQueueState left,
+            TraceEvent.LoadQueueState right) {
+        return left != null && right != null
+                && left.kind().equals(right.kind())
+                && left.busy() == right.busy()
+                && left.prepared() == right.prepared()
+                && left.activeSource() == right.activeSource()
+                && left.activeDestination() == right.activeDestination()
+                && left.totalWork() == right.totalWork()
+                && left.remainingWork() == right.remainingWork()
+                && left.queuedFingerprints().equals(right.queuedFingerprints())
+                && left.serviceObservations().equals(right.serviceObservations());
+    }
+
+    private static TraceEvent.LoadQueueState withFrame(
+            TraceEvent.LoadQueueState state, int frame) {
+        return new TraceEvent.LoadQueueState(
+                frame, state.kind(), state.busy(), state.prepared(),
+                state.activeSource(), state.activeDestination(),
+                state.totalWork(), state.remainingWork(),
+                state.queuedFingerprints(), state.serviceObservations());
     }
 
     public List<TraceEvent.DynamicArtTransferState>

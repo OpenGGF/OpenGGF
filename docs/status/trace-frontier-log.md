@@ -70494,3 +70494,36 @@ After: **769 / 11 / 63.** Green: `S2SpecialStageRecorderContractTest`. Nothing r
   completion `#31` at raw `33755`, with no earlier comparison error.
 - Regression command selected complete-run AIZ, HCZ, and MGZ plus standalone
   MGZ. Result: 4 replay tests, 0 failures, 0 errors.
+
+## 2026-08-09 - S3K CNZ atomic queue-snapshot frontier
+
+- Branch `bugfix/s3k-traces`, candidate over `8a67ce237`, with the latest
+  `origin/develop` already merged (`HEAD...origin/develop` reported `110 0`).
+  Ring comparison remains error-level through `ToleranceConfig.DEFAULT` and
+  `RingCountMode.FORCE_ERROR`.
+- Root cause: S3K calls `Process_Kos_Module_Queue` immediately before
+  `Process_Kos_Queue`. A VBlank can capture a held-tail heartbeat after an
+  already-active module batch publishes its next child but before the direct
+  queue services that child (`sonic3k.asm:2690-2813`). Replay publishes queue
+  diagnostics atomically after both services. Comparison now uses the
+  following lag row's post-direct-service heartbeat for that structurally
+  identified torn row. A module batch first admitted on the held tail retains
+  its recorded state through retirement, preserving the existing AIZ timing
+  contract. The normalization is comparison-only and does not inspect a game
+  route, zone, frame number, or engine gameplay state.
+- Focused command selected `TestLoadQueueTraceComparison` on JDK 21. Result:
+  10 tests, 0 failures, 0 errors, including guards for both an already-active
+  module batch and a held-tail-admitted batch.
+- Frontier command: `mvn -Ptrace-replay -Dmse=off
+  -Dsurefire.forkCount=1 -Dtrace.verification=physics
+  -Dtrace.frontierOnly=true
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kCnzCompleteRunTraceReplay#replayMatchesTrace
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Result: no physics or queue comparison error remains through the end of the
+  complete-run segment, advancing the raw-frame `14662` frontier to terminal
+  hardware verification. The run then reports the existing unconsumed direct
+  Kosinski completion `#216` at raw `21555`; this is the next active blocker.
+- Standalone CNZ retains its established one-error camera-X frontier at raw
+  `25743` and terminal unconsumed direct completion `#31` at raw `33755`.
+- Regression command selected complete-run AIZ, HCZ, and MGZ plus standalone
+  MGZ. Result: 4 replay tests, 0 failures, 0 errors.

@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K queue comparison now reconciles a held-tail VBlank captured
+  between the ROM's module and direct Kosinski services with replay's atomic
+  post-service publication. The CNZ complete-run comparison advances from raw
+  frame 14662 through the end of the segment; AIZ, HCZ, and both MGZ canaries
+  remain green.
 - Fix/Test: CNZ's event-owned replacement for the discarded
   `Obj_EndSignControl` now consumes the carried results object's native
   `_unkFAA8`-clear publication instead of a fixed elapsed-frame estimate, while

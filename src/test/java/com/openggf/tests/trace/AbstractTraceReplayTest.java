@@ -927,7 +927,8 @@ public abstract class AbstractTraceReplayTest {
     private static void compareLoadQueuesIfAdvertised(
             TraceData trace, TraceBinder binder, int frame) {
         if (trace.metadata().hasPerFrameLoadQueueState()) {
-            binder.compareLoadQueues(frame, trace.loadQueueStatesForFrame(frame),
+            binder.compareLoadQueues(frame,
+                    trace.loadQueueStatesForComparisonFrame(frame),
                     GameServices.captureQueueDiagnostics());
         }
     }
