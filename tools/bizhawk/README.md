@@ -62,6 +62,36 @@ Do not substitute BizHawk 2.11.1 for trace recording. BizHawk 2.11.1 removed
 capture. An existing 2.11.1 installation may remain locally, but it must not be
 selected when running the trace tools.
 
+## Sonic 1 GHZ music-driver parity
+
+From the repository root, run the local two-sided driver check with:
+
+```bash
+tools/audio/run_s1_audio_parity.sh \
+  --rom "/absolute/path/to/Sonic The Hedgehog (W) (REV01) [!].gen"
+```
+
+The ROM argument is optional when the pinned World REV01 image is present at
+the main repository root. The command accepts `--movie`, `--bizhawk-home`, and
+`--output-root` overrides; `BIZHAWK_HOME` is also honored. It verifies the ROM,
+the controller-only `s1-soundtest-ghz.bk2` fixture, and the exact BizHawk 2.11
+Linux x64 executable before launching anything.
+
+Each invocation creates a new directory below
+`target/audio-parity/s1-ghz/`. It retains two normalized BizHawk captures, two
+normalized OpenGGF captures, the BizHawk process logs, a human report, and a
+compact JSON report. The two captures from each producer must be byte-identical
+before comparison. Capture and report publication refuses existing paths and
+paths outside that canonical run directory. These detailed files are local, ignored diagnostics and
+must not be copied into test resources or committed.
+
+Exit status `0` means exact parity, `3` means both captures were valid and the
+comparator found a state or ordered-register mismatch, `4` means validation,
+capture, determinism, or tooling failed, and `2` means invalid command-line
+usage. A status of `3` is a successful diagnostic run, not a capture failure.
+Inspect the printed run directory before changing audio code; the tool never
+realigns ticks or changes chip-port ordering.
+
 ## Native S1/S2 v5 capture contract
 
 Current S1 and S2 publication runs through

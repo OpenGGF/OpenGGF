@@ -81,6 +81,11 @@ for p in "$LUA_SCRIPT" "$BK2_PATH" "$ROM_PATH" "$EMUHAWK_EXE" "$MONO_BIN"; do
 	[ -n "$p" ] && [ -e "$p" ] || { echo "Missing: ${p:-mono (set MONO_BIN)}" >&2; exit 2; }
 done
 
+# Hash the exact movie path handed to EmuHawk. Probes that pin a BK2 identity
+# consume this value; callers cannot substitute a claimed digest.
+MOVIE_SHA256_LINE=$(sha256sum -- "$BK2_PATH")
+export OGGF_BIZHAWK_MOVIE_SHA256="${MOVIE_SHA256_LINE%% *}"
+
 # Authoritative shared-lib path for the recorders' oggf_lib_dir() loader —
 # mirrors the OGGF_BIZHAWK_LIB export in run_bizhawk_lua.bat. Trailing slash
 # matches the loader's dir .. "file" concatenation.
@@ -134,6 +139,7 @@ echo "=== BizHawk Lua Launcher (Linux) ==="
 echo "EmuHawk:  $EMUHAWK_EXE"
 echo "Lua:      $LUA_SCRIPT"
 echo "Movie:    $BK2_PATH"
+echo "MovieSHA: $OGGF_BIZHAWK_MOVIE_SHA256"
 echo "ROM:      $ROM_PATH"
 echo "Workdir:  $WORKDIR"
 echo "LibDir:   $OGGF_BIZHAWK_LIB"

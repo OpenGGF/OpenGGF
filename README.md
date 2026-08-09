@@ -216,6 +216,13 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Sonic 1 GHZ music-driver parity harness (2026-08-09):** a pinned BizHawk
+  sound-test movie and read-only driver observer now produce deterministic
+  logical-state and ordered YM2612/PSG captures for comparison with OpenGGF.
+  The local command verifies the ROM, movie, emulator, callback or opcode-manifest
+  capture source, and repeated musical cycle before reporting the first mismatch;
+  the initial reference run identifies DAC base-frequency state at tick zero
+  without authorizing speculative chip-port reordering.
 - **Dead and unfinished code sweep (2026-08-08):** seven unreachable Java
   types (339 lines) were removed after caller, registry, resource, CLI, and
   reflection checks; an unused 125-line Kosinski reference moved out of runtime
