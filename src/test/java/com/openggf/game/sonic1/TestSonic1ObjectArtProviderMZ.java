@@ -12,6 +12,7 @@ import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 
 import java.io.IOException;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -39,6 +40,20 @@ public class TestSonic1ObjectArtProviderMZ {
         ObjectSpriteSheet sheet = provider.getSheet(ObjectArtKeys.MZ_CHAINED_STOMPER);
         assertNotNull(sheet, "MZ chained stomper sheet should be loaded in Marble Zone");
         assertEquals(11, sheet.getFrameCount(), "Expected 11 mapping frames from Map_CStom_internal");
+    }
+
+    @Test
+    public void shieldFrameZeroRemainsInvisible() throws IOException {
+        Sonic1ObjectArtProvider provider = new Sonic1ObjectArtProvider();
+        provider.loadArtForZone(Sonic1Constants.ZONE_MZ);
+
+        ObjectSpriteSheet sheet = provider.getSheet(ObjectArtKeys.SHIELD);
+        assertNotNull(sheet, "S1 shield sheet should be loaded");
+        assertEquals(List.of(0, 4, 4, 4),
+                java.util.stream.IntStream.range(0, sheet.getFrameCount())
+                        .mapToObj(frame -> sheet.getFrame(frame).pieces().size())
+                        .toList(),
+                "Map_Shield should keep its invisible frame followed by all three full ROM frames");
     }
 
     @Test
