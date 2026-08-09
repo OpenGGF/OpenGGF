@@ -59,6 +59,13 @@ expectations honestly -- what works well, what is incomplete, and what you might
 - Water system for ARZ and CPZ.
 - HTZ earthquake and lava systems.
 - Per-zone level events across all zones.
+- Mecha Sonic's DEZ attack loop follows the shipped ROM's outer `ObjectMove`
+  and child-alignment ordering; the existing Mecha Sonic and Death Egg Robot
+  implementations pass the dedicated DEZ ending replay.
+- DEZ's opening exterior window samples the ROM-seeded Plane B camera origin,
+  so its star field is visible and scrolls from level start.
+- Special Stage checkpoint wings remain fixed while the independent hand peer
+  bobs for both successful and failed ring checks.
 - Demo playback.
 - Full SMPS audio.
 

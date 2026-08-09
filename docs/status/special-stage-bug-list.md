@@ -1,6 +1,6 @@
 # Bug List
 
-Last updated: 2026-01-17
+Last updated: 2026-08-09
 
 ## Open Bugs
 
@@ -13,7 +13,12 @@ Last updated: 2026-01-17
 - [ ] Not having enough rings for the emerald should have a proper exit routine. Instead sonic rapidly gets ejected from the stage.
 - [ ] Support Tails
 - [ ] Support Sonic & Tails (GUI changes, Sonic/Tails swapping, delayed movement for Tails, distinct ring count per character, etc.)
-- [ ] "COOL" and "NOT ENOUGH RINGS" emblem should be static, with only the hand animating in front of it
+
+## Resolved Bugs
+
+- [x] "COOL" and "NOT ENOUGH RINGS" checkpoint wings stay fixed while only
+  the independent hand peer bobs (`862ed8689`; ROM Obj5A peer-object split,
+  renderer and rewind coverage).
 
 ## ROM-Accurate Investigation Plan
 
