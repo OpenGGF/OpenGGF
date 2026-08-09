@@ -199,9 +199,19 @@ These are not style preferences; each one has silently invalidated a day of work
   `filesystem` — inode order — which differs between checkouts of the same commit.
   Without pinning it, red sets are not comparable between runs, machines, or
   clones, and order-dependent results look like flakiness.
-- **`-Ptrace-replay` and `-Dmse=off` are mandatory**, and every run needs its own
-  `-Dsurefire.reportsDirectory`. A plain `mvn test` runs zero trace tests; the
-  Silent Extension otherwise aggregates stale XML from a previous run.
+- **`-Ptrace-replay` and `-Dmse=off` are mandatory.** A plain `mvn test` runs zero
+  trace tests and counts stale XML as passes.
+- **`-Dsurefire.reportsDirectory` is NOT honoured by this pom.** The property is
+  overridden and reports always land in `target/surefire-reports`, so a "private
+  reports dir per run" silently does nothing and the next run reads the previous
+  run's XML. Two ways to actually get isolation, both proven: `rm -rf
+  target/surefire-reports` immediately before every run, or give each run its own
+  worktree. Do not trust the flag.
+- **Some acts are FORK-ORDER SENSITIVE — MCZ demonstrably is.** Batching several
+  MCZ classes into one `mvn` invocation gives different results from running each
+  alone. When attributing a change on MCZ, use one `-Dtest` per `mvn` invocation.
+  If a result looks unstable, re-measure solo-fork before theorising about the
+  engine.
 - **Measure every game your change can reach.** A shared-code change measured only
   on S1/S2 shipped a silent S3K regression this week (`TestS3kIcz1SnowboardIntroHeadless`
   ended its slope ride 193px short). If you touch `LevelManager`, `CollisionSystem`,
@@ -360,6 +370,89 @@ holds the current boundary (S1/S2 fixture compatibility only), its rationale —
 must execute its own production lifecycle; trace rows and auxiliary events are
 comparison-only evidence"* — and its removal condition. The direction of travel across all
 three steps is the same: each one removed a trace-derived driver rather than adding one.
+
+## Traps that have each cost at least one round
+
+Every entry here is a real failure from trace work, not a hypothetical. They cluster
+into three kinds: misreading a value, misreading a test, and misreading a measurement.
+
+### Disassembly values are HEX. Read them as hex.
+
+Two rounds were spent chasing a Tails "animation state machine defect" that did not
+exist, because DPLC `mapping_frame` values were read as decimal:
+
+| As printed | Actually | Which is |
+|---|---|---|
+| 94, 95 | `$5E`, `$5F` | `TailsAni_Fly` (s2.asm:41624, anim id `$20`) |
+| 70, 71, 72 | `$46`, `$47`, `$48` | `TailsAni_Roll` (s2.asm:41528) |
+| 81, 83, 84 | `$51`, `$53`, `$54` | `Obj05Ani_Directional` + direction bank `d3=8` |
+
+Read as decimal, "94 vs 71" looks like an arbitrary numeric skew and invites a
+state-machine hunt. Read as hex it says *the engine's Tails is in the CPU flying state
+where the ROM's is rolling* — a completely different, and much more findable, problem.
+
+**Before theorising about any numeric field, convert it and grep the disassembly for
+the hex value.** If a number does not resolve to a named ROM symbol, you do not yet
+know what it means. This applies to mapping frames, object ids, routine numbers,
+animation ids and status bits — nearly every value the trace carries.
+
+### Verify a test exists, and what it actually replays, before you aim at it
+
+- **A canary that does not exist reports a clean regression check while testing
+  nothing.** `TestS2Ehz2TraceReplay` was named as a required canary in a brief on the
+  assumption that `Ehz1` implies `Ehz2`. There is no such class. `ls` the package
+  before naming any test as a regression bar.
+- **Check the test's SCOPE before assigning a cause to it.** A whole lane was sent to
+  fix an EHZ1 badnik in order to move `TestS2SpecialStage2TraceReplay`. That test
+  replays *only* the ss_2 segment through `Sonic2SpecialStageProvider`; it never
+  simulates a level, a sidekick in a level, or any badnik. No such fix could ever have
+  moved it. Open the test class and its abstract base and establish what it actually
+  drives — segment-only, predecessor-chained, or full run — before believing any causal
+  story about it.
+- Corollary for run-chain reasoning: "segment X is fed by segment Y" describes the
+  *recording*, not necessarily the *test*. Confirm the test replays Y.
+
+### The defect shapes that actually pay off
+
+Ordered by hit rate across this work. When occupancy diverges, check these in order
+against the objects present in the fixture's `slot_dump` at the FIRST divergence:
+
+1. **A ROM object with no `out_of_range`/`MarkObjGone` at all, where the engine applies
+   its shared camera unload anyway.** Five instances: S1 Obj2E PowerUp, S1 Obj5C Pylon,
+   S2 `Obj50_Wing`, and others. Model with
+   `usesCustomOutOfRangeCheck()=true / isCustomOutOfRange()=false`. Highest yield by
+   some distance — always check it first.
+2. **An object that allocates child slots in ROM which the engine never allocates,**
+   because the engine draws the children as overlays on one instance. Three instances:
+   S2 Obj81 Drawbridge, S2 Obj9E Crawlton, S1 SLZ boss (four slots, not one).
+3. **`out_of_range` measured against a stored ORIGIN rather than live `x_pos`** — SLZ
+   Circling Platform's `circ_origX`.
+4. **Lowest-free `AllocateObject` vs after-current `AllocateObjectAfterCurrent`
+   mismatch** — the OOZ Aquis wing.
+5. **An invented window or guard replacing a ROM predicate** — the MZ push block's
+   `isOnScreenX(320)`, the MZ2 `lastGeyserSpawnX` de-duplication guard.
+6. **An in-place `obID` rewrite the engine reports under the spawn id** —
+   `BossSpikeball_Explode` does `move.b #id_Explosion,obID(a0)`; the object *becomes*
+   an explosion in its own slot. See `AbstractObjectInstance#getLiveObjectId()`.
+
+Why this list matters more than it looks: on S1 and S2 the ring-loss floor probe is
+gated on a slot-derived phase (`(v_vblank_byte + 127 - slot) & 3` on S1,
+`(Vint_runcount+3) + d7` on S2). **A ring divergence is therefore usually an occupancy
+divergence wearing a disguise.** Chase the first occupancy divergence, not the ring.
+
+### A fitted fix leaves fingerprints in its own commit message
+
+`ca939d50d` shipped a route carve-out that passed review and stayed on `develop` for
+weeks. Its message said the change kept a child "in lower slots that are free only
+because earlier engine slot occupancy already drifted", justified by "the OOZ1 route".
+
+Both halves are the tell: a justification naming a **route, zone, act or specific
+frame**, and an admission that the change **compensates for drift elsewhere**. Grep for
+that shape when a trace resists explanation — and never write it. The trace suite
+cannot detect a fitted fix; only reading the ROM can. When such a fix is removed, check
+whether the test *that commit itself shipped* still passes: for `ca939d50d` it did,
+meaning later work had made the compensation redundant and nothing would ever have said
+so.
 
 ## Name the clock, or your "N frames late" is fiction
 
