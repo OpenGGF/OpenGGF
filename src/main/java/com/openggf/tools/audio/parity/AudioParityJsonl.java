@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -42,6 +43,24 @@ public final class AudioParityJsonl {
     private static final Set<String> PSG_FIELDS = Set.of("chip", "value");
     private static final Set<String> CORE_METADATA_FIELDS = Set.of("type", "schema", "capture", "cycle_start",
             "period", "terminal_record_count", "rom");
+    private static final Set<String> DIAGNOSTIC_FIELDS = Set.of("emulator_frame", "game_mode",
+            "interrupt_mask", "invocation_open_frame", "raw_state");
+    private static final Set<String> RAW_STATE_FIELDS = Set.of("global", "tracks");
+    private static final Set<String> RAW_GLOBAL_FIELDS = Set.of("communication", "fade_in_flag",
+            "fade_out_counter", "one_up", "pause", "priority", "push", "queues", "ring_speaker",
+            "sound_id", "speed_up_reload", "updating_dac", "voice_selector");
+    private static final Set<String> RAW_TRACK_FIELDS = Set.of("ams_fms_pan", "data_position",
+            "duration_countdown", "duration_reload", "envelope_cursor", "envelope_or_voice",
+            "modulation_delay", "modulation_delta", "modulation_enabled", "modulation_speed",
+            "modulation_steps", "modulation_value", "note_fill_countdown", "note_fill_reload",
+            "overridden", "resting", "role", "status", "tie_next", "voice_control");
+    private static final Set<String> MEMORY_RAW_FIELDS = Set.of("address", "flags", "kind", "port",
+            "source", "value");
+    private static final Set<String> PC_RAW_FIELDS = Set.of("kind", "pc", "port", "source", "value");
+    private static final Set<Integer> FM_MANIFEST_PCS = Set.of(0x7273A, 0x72752, 0x72770, 0x72788);
+    private static final Set<Integer> PSG_MANIFEST_PCS = Set.of(0x7225E, 0x72268, 0x723B6, 0x723C0,
+            0x7246A, 0x724DC, 0x72912, 0x72918, 0x72984, 0x729AE, 0x729BC, 0x729C0, 0x729C4,
+            0x729C8, 0x72DFA, 0x72E16);
 
     private AudioParityJsonl() {
     }
@@ -80,13 +99,20 @@ public final class AudioParityJsonl {
 
     /** Writes records directly from the iterator and checks continuity/count while doing so. */
     public static void write(Path path, AudioParityMetadata metadata, Iterator<AudioParityTick> ticks) {
+        validateMetadataDetails(metadata.capture(), object(metadata.details(), "metadata details"));
+        Path absolute = path.toAbsolutePath().normalize();
+        Path parent = absolute.getParent();
+        if (parent == null) {
+            throw invalid("audio parity output must have a parent directory");
+        }
+        String metadataJson = canonicalJson(metadataTree(metadata));
+        parseMetadata(metadataJson);
+        Path temporary = null;
         try {
-            Path parent = path.toAbsolutePath().normalize().getParent();
-            if (parent != null) {
-                Files.createDirectories(parent);
-            }
-            try (BufferedWriter output = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
-                output.write(canonicalJson(metadataTree(metadata)));
+            Files.createDirectories(parent);
+            temporary = Files.createTempFile(parent, ".audio-parity-", ".jsonl.tmp");
+            try (BufferedWriter output = Files.newBufferedWriter(temporary, StandardCharsets.UTF_8)) {
+                output.write(metadataJson);
                 output.newLine();
                 int expectedOrdinal = 0;
                 while (ticks.hasNext()) {
@@ -95,7 +121,9 @@ public final class AudioParityJsonl {
                         throw invalid("ordinal continuity failure while writing: expected " + expectedOrdinal
                                 + " but found " + tick.ordinal());
                     }
-                    output.write(canonicalJson(tickTree(tick)));
+                    String tickJson = canonicalJson(tickTree(tick));
+                    parseTick(tickJson);
+                    output.write(tickJson);
                     output.newLine();
                     expectedOrdinal++;
                 }
@@ -104,8 +132,22 @@ public final class AudioParityJsonl {
                             + " but writer received " + expectedOrdinal + " tick records");
                 }
             }
+            try {
+                Files.move(temporary, absolute, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+            } catch (java.nio.file.AtomicMoveNotSupportedException unsupported) {
+                Files.move(temporary, absolute, StandardCopyOption.REPLACE_EXISTING);
+            }
+            temporary = null;
         } catch (IOException error) {
             throw invalid("cannot write audio parity JSONL: " + error.getMessage(), error);
+        } finally {
+            if (temporary != null) {
+                try {
+                    Files.deleteIfExists(temporary);
+                } catch (IOException ignored) {
+                    // Preserve the original validation/publication failure.
+                }
+            }
         }
     }
 
@@ -127,7 +169,7 @@ public final class AudioParityJsonl {
                 details.set(entry.getKey(), entry.getValue().deepCopy());
             }
         });
-        validateMetadataDetails(details);
+        validateMetadataDetails(capture, details);
         return new AudioParityMetadata(schema, capture, cycleStart, period, terminal,
                 text(rom, "sha1"), text(rom, "crc32"), details);
     }
@@ -161,8 +203,12 @@ public final class AudioParityJsonl {
                 }
                 String field = parser.currentName();
                 parser.nextToken();
-                if (field.equals("diagnostic") || field.equals("raw_bus")) {
-                    parser.skipChildren();
+                if (field.equals("diagnostic")) {
+                    validateDiagnostic(object(JSON.readTree(parser), "diagnostic"));
+                    continue;
+                }
+                if (field.equals("raw_bus")) {
+                    validateRawBus(parser);
                     continue;
                 }
                 root.set(field, JSON.readTree(parser));
@@ -176,76 +222,202 @@ public final class AudioParityJsonl {
         }
     }
 
-    private static void validateMetadataDetails(ObjectNode details) {
-        if (details.has("launch_update_music_invocations")) {
-            int count = integer(details, "launch_update_music_invocations");
-            if (count < 0) {
-                throw invalid("launch_update_music_invocations must be non-negative");
+    private static void validateDiagnostic(ObjectNode diagnostic) {
+        exactFields(diagnostic, DIAGNOSTIC_FIELDS, DIAGNOSTIC_FIELDS, "diagnostic");
+        if (integer(diagnostic, "emulator_frame") < 0 || integer(diagnostic, "invocation_open_frame") < 0) {
+            throw invalid("diagnostic frame counters must be non-negative");
+        }
+        byteValue(integer(diagnostic, "game_mode"), "diagnostic.game_mode");
+        range(integer(diagnostic, "interrupt_mask"), 0, 7, "diagnostic.interrupt_mask");
+        ObjectNode rawState = object(required(diagnostic, "raw_state"), "diagnostic.raw_state");
+        exactFields(rawState, RAW_STATE_FIELDS, RAW_STATE_FIELDS, "diagnostic.raw_state");
+        ObjectNode global = object(required(rawState, "global"), "diagnostic.raw_state.global");
+        exactFields(global, RAW_GLOBAL_FIELDS, RAW_GLOBAL_FIELDS, "diagnostic.raw_state.global");
+        for (String field : RAW_GLOBAL_FIELDS) {
+            if (!field.equals("queues")) {
+                byteValue(integer(global, field), "diagnostic.raw_state.global." + field);
             }
         }
-        if (details.has("callback_contract")) {
-            ObjectNode callback = object(details.get("callback_contract"), "callback_contract");
+        ArrayNode queues = array(required(global, "queues"), "diagnostic.raw_state.global.queues");
+        if (queues.size() != 3) {
+            throw invalid("diagnostic.raw_state.global.queues must contain three bytes");
+        }
+        queues.forEach(value -> byteValue(integral(value, "queues"), "diagnostic queue"));
+        ArrayNode tracks = array(required(rawState, "tracks"), "diagnostic.raw_state.tracks");
+        if (tracks.size() != AudioParitySchema.ROLES.size()) {
+            throw invalid("diagnostic.raw_state.tracks must contain all ten fixed roles");
+        }
+        for (int index = 0; index < tracks.size(); index++) {
+            validateRawTrack(object(tracks.get(index), "diagnostic raw track"), index);
+        }
+    }
+
+    private static void validateRawTrack(ObjectNode track, int index) {
+        exactFields(track, RAW_TRACK_FIELDS, RAW_TRACK_FIELDS, "diagnostic raw track");
+        if (!text(track, "role").equals(AudioParitySchema.ROLES.get(index))) {
+            throw invalid("diagnostic raw track role is absent or out of order at index " + index);
+        }
+        for (String field : List.of("ams_fms_pan", "duration_countdown", "duration_reload",
+                "envelope_cursor", "envelope_or_voice", "modulation_delay", "modulation_speed",
+                "modulation_steps", "note_fill_countdown", "note_fill_reload", "status", "voice_control")) {
+            byteValue(integer(track, field), "diagnostic raw track " + field);
+        }
+        int position = integer(track, "data_position");
+        if (position < -1) {
+            throw invalid("diagnostic raw track data_position must be -1 or non-negative");
+        }
+        range(integer(track, "modulation_delta"), -128, 127, "diagnostic modulation_delta");
+        range(integer(track, "modulation_value"), -32768, 32767, "diagnostic modulation_value");
+        bool(track, "modulation_enabled");
+        bool(track, "overridden");
+        bool(track, "resting");
+        bool(track, "tie_next");
+    }
+
+    private static void validateRawBus(com.fasterxml.jackson.core.JsonParser parser) throws IOException {
+        if (parser.currentToken() != JsonToken.START_ARRAY) {
+            throw invalid("raw_bus must be an array");
+        }
+        while (parser.nextToken() != JsonToken.END_ARRAY) {
+            ObjectNode event = object(JSON.readTree(parser), "raw_bus event");
+            validateRawBusEvent(event);
+        }
+    }
+
+    private static void validateRawBusEvent(ObjectNode event) {
+        String source = text(event, "source");
+        String kind = text(event, "kind");
+        if (!kind.equals("address") && !kind.equals("data") && !kind.equals("psg")) {
+            throw invalid("raw_bus kind is unsupported");
+        }
+        byteValue(integer(event, "value"), "raw_bus value");
+        boolean psg = kind.equals("psg");
+        if (source.equals("memory_callback")) {
+            Set<String> required = psg ? Set.of("address", "flags", "kind", "source", "value")
+                    : MEMORY_RAW_FIELDS;
+            exactFields(event, MEMORY_RAW_FIELDS, required, "memory_callback raw_bus event");
+            int address = integer(event, "address");
+            if (integer(event, "flags") < 0) {
+                throw invalid("raw_bus callback flags must be non-negative");
+            }
+            if (psg) {
+                if (address != 0xC00011) {
+                    throw invalid("PSG raw_bus callback address is invalid");
+                }
+            } else {
+                int port = integer(event, "port");
+                range(port, 0, 1, "raw_bus port");
+                int expected = 0xA04000 + port * 2 + (kind.equals("data") ? 1 : 0);
+                if (address != expected) {
+                    throw invalid("YM raw_bus callback address does not match kind/port");
+                }
+            }
+            return;
+        }
+        if (source.equals("pc_manifest")) {
+            Set<String> required = psg ? Set.of("kind", "pc", "source", "value") : PC_RAW_FIELDS;
+            exactFields(event, PC_RAW_FIELDS, required, "pc_manifest raw_bus event");
+            int pc = integer(event, "pc");
+            if (psg) {
+                if (!PSG_MANIFEST_PCS.contains(pc)) {
+                    throw invalid("PSG raw_bus PC is outside the reviewed manifest");
+                }
+            } else {
+                int port = integer(event, "port");
+                range(port, 0, 1, "raw_bus port");
+                int expectedPc = kind.equals("address") ? (port == 0 ? 0x7273A : 0x72770)
+                        : (port == 0 ? 0x72752 : 0x72788);
+                if (pc != expectedPc || !FM_MANIFEST_PCS.contains(pc)) {
+                    throw invalid("YM raw_bus PC does not match the reviewed kind/port manifest");
+                }
+            }
+            return;
+        }
+        throw invalid("raw_bus source is unsupported");
+    }
+
+    private static void validateMetadataDetails(String capture, ObjectNode details) {
+        if (capture.equals(AudioParitySchema.OPENGGF_CAPTURE)) {
+            if (!details.isEmpty()) {
+                throw invalid("OpenGGF capture metadata cannot contain reference movie/callback fields");
+            }
+            return;
+        }
+        Set<String> referenceFields = Set.of("callback_contract", "diagnostic_fields", "gating_fields",
+                "launch_update_music_invocations", "movie");
+        exactFields(details, referenceFields, referenceFields, "reference metadata");
+        if (integer(details, "launch_update_music_invocations") != 514) {
+            throw invalid("reference launch_update_music_invocations must match the pinned BK2 transport");
+        }
+        validateCallbackContract(object(details.get("callback_contract"), "callback_contract"));
+        validateFieldInventory(details, "diagnostic_fields", AudioParitySchema.DIAGNOSTIC_GLOBAL_FIELDS,
+                AudioParitySchema.DIAGNOSTIC_TRACK_FIELDS);
+        validateFieldInventory(details, "gating_fields", AudioParitySchema.GATING_GLOBAL_FIELDS,
+                AudioParitySchema.GATING_TRACK_FIELDS);
+        ObjectNode movie = object(details.get("movie"), "movie");
+        Set<String> fields = Set.of("archive_sha256", "core", "emulator", "game", "input_rows",
+                "opaque_header_hash");
+        exactFields(movie, fields, fields, "movie");
+        if (!text(movie, "archive_sha256").equals(AudioParitySchema.BK2_SHA256)
+                || !text(movie, "core").equals(AudioParitySchema.BK2_CORE)
+                || !text(movie, "emulator").equals(AudioParitySchema.BK2_EMULATOR)
+                || !text(movie, "game").equals(AudioParitySchema.BK2_GAME)
+                || integer(movie, "input_rows") != AudioParitySchema.BK2_INPUT_ROWS
+                || !text(movie, "opaque_header_hash").equals(AudioParitySchema.BK2_OPAQUE_HASH)) {
+            throw invalid("reference movie metadata does not match the pinned S1 GHZ BK2");
+        }
+    }
+
+    private static void validateCallbackContract(ObjectNode callback) {
+        String source = text(callback, "source");
+        if (source.equals("memory_callback")) {
             Set<String> fields = Set.of("arguments", "proof", "source");
             exactFields(callback, fields, fields, "callback_contract");
             ArrayNode arguments = array(required(callback, "arguments"), "callback_contract.arguments");
-            if (arguments.size() != 3 || !arguments.get(0).isTextual() || !arguments.get(1).isTextual()
-                    || !arguments.get(2).isTextual() || !arguments.get(0).textValue().equals("address")
-                    || !arguments.get(1).textValue().equals("value")
-                    || !arguments.get(2).textValue().equals("flags")) {
+            if (!textArray(arguments).equals(List.of("address", "value", "flags"))) {
                 throw invalid("callback_contract.arguments must be [address,value,flags]");
             }
             ObjectNode proof = object(required(callback, "proof"), "callback_contract.proof");
             Set<String> proofFields = Set.of("fm_port0_pairs", "fm_port1_pairs", "psg_writes");
             exactFields(proof, proofFields, proofFields, "callback_contract.proof");
             for (String field : proofFields) {
-                if (integer(proof, field) < 0) {
-                    throw invalid("callback_contract.proof." + field + " must be non-negative");
+                if (integer(proof, field) <= 0) {
+                    throw invalid("memory_callback proof counts must all be positive");
                 }
             }
-            String source = text(callback, "source");
-            if (!source.equals("memory_callback") && !source.equals("pc_manifest")) {
-                throw invalid("callback_contract.source is unsupported");
-            }
-        }
-        validateFieldInventory(details, "diagnostic_fields");
-        validateFieldInventory(details, "gating_fields");
-        if (details.has("movie")) {
-            ObjectNode movie = object(details.get("movie"), "movie");
-            Set<String> fields = Set.of("archive_sha256", "core", "emulator", "game", "input_rows",
-                    "opaque_header_hash");
-            exactFields(movie, fields, fields, "movie");
-            String sha256 = text(movie, "archive_sha256");
-            if (!sha256.matches("[0-9a-f]{64}")) {
-                throw invalid("movie.archive_sha256 must be 64 lowercase hexadecimal characters");
-            }
-            String opaque = text(movie, "opaque_header_hash");
-            if (!opaque.matches("[0-9A-Fa-f]{32}")) {
-                throw invalid("movie.opaque_header_hash must be 32 hexadecimal characters");
-            }
-            text(movie, "core");
-            text(movie, "emulator");
-            text(movie, "game");
-            if (integer(movie, "input_rows") < 0) {
-                throw invalid("movie.input_rows must be non-negative");
-            }
-        }
-    }
-
-    private static void validateFieldInventory(ObjectNode details, String field) {
-        if (!details.has(field)) {
             return;
         }
+        if (source.equals("pc_manifest")) {
+            Set<String> fields = Set.of("manifest_sites", "source");
+            exactFields(callback, fields, fields, "callback_contract");
+            if (integer(callback, "manifest_sites") != 20) {
+                throw invalid("pc_manifest requires the complete 20-site reviewed manifest");
+            }
+            return;
+        }
+        throw invalid("callback_contract.source is unsupported");
+    }
+
+    private static void validateFieldInventory(ObjectNode details, String field, List<String> expectedGlobal,
+            List<String> expectedTrack) {
         ObjectNode inventory = object(details.get(field), field);
         Set<String> fields = Set.of("global", "track");
         exactFields(inventory, fields, fields, field);
-        for (String category : fields) {
-            ArrayNode values = array(required(inventory, category), field + "." + category);
-            values.forEach(value -> {
-                if (!value.isTextual()) {
-                    throw invalid(field + "." + category + " entries must be strings");
-                }
-            });
+        if (!textArray(array(required(inventory, "global"), field + ".global")).equals(expectedGlobal)
+                || !textArray(array(required(inventory, "track"), field + ".track")).equals(expectedTrack)) {
+            throw invalid(field + " does not match the versioned field inventory");
         }
+    }
+
+    private static List<String> textArray(ArrayNode array) {
+        List<String> result = new ArrayList<>(array.size());
+        array.forEach(value -> {
+            if (!value.isTextual()) {
+                throw invalid("metadata inventory entries must be strings");
+            }
+            result.add(value.textValue());
+        });
+        return result;
     }
 
     /** Parses the shared golden's {events,state} payload without inventing an expected Java string. */
@@ -453,6 +625,16 @@ public final class AudioParityJsonl {
         return value.intValue();
     }
 
+    private static void byteValue(int value, String field) {
+        range(value, 0, 0xff, field);
+    }
+
+    private static void range(int value, int minimum, int maximum, String field) {
+        if (value < minimum || value > maximum) {
+            throw invalid(field + " is out of range");
+        }
+    }
+
     private static long longIntegral(JsonNode value, String field) {
         if (!value.isIntegralNumber() || !value.canConvertToLong()) {
             throw invalid(field + " must be an integer");
@@ -521,8 +703,15 @@ public final class AudioParityJsonl {
     }
 
     private static JsonNode parseTree(String json) {
-        try {
-            return JSON.readTree(json);
+        try (com.fasterxml.jackson.core.JsonParser parser = FACTORY.createParser(json)) {
+            JsonNode root = JSON.readTree(parser);
+            if (root == null) {
+                throw invalid("missing root JSON value");
+            }
+            if (parser.nextToken() != null) {
+                throw invalid("JSON contains more than one root value");
+            }
+            return root;
         } catch (IOException error) {
             throw invalid("malformed or duplicate-field JSON: " + error.getMessage(), error);
         }

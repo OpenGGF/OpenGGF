@@ -42,14 +42,15 @@ class TestAudioParityJsonl {
         AudioParityMetadata metadata = validMetadata();
         Path first = temp.resolve("first.jsonl");
         Path second = temp.resolve("second.jsonl");
-        AudioParityJsonl.write(first, metadata, List.of(tick, tick.withOrdinal(1)).iterator());
-        AudioParityJsonl.write(second, metadata, List.of(tick, tick.withOrdinal(1)).iterator());
+        List<AudioParityTick> ticks = List.of(tick, tick.withOrdinal(1), tick.withOrdinal(2));
+        AudioParityJsonl.write(first, metadata, ticks.iterator());
+        AudioParityJsonl.write(second, metadata, ticks.iterator());
         assertEquals(Files.readString(first), Files.readString(second));
 
         List<AudioParityTick> observed = new ArrayList<>();
         AudioParityMetadata parsed = AudioParityJsonl.read(first, observed::add);
         assertEquals(metadata, parsed);
-        assertEquals(List.of(tick, tick.withOrdinal(1)), observed);
+        assertEquals(ticks, observed);
         assertTrue(Files.readString(first).lines().allMatch(line -> !line.contains("raw_bus")));
     }
 
@@ -76,23 +77,12 @@ class TestAudioParityJsonl {
     @Test
     void validatesNestedLuaReferenceMetadataWithoutAcceptingUnknownFields() throws Exception {
         // Break caught: callback/movie provenance changes shape while the top-level metadata still looks valid.
-        ObjectNode valid = metadataJson();
-        valid.put("launch_update_music_invocations", 514);
-        ObjectNode callback = valid.putObject("callback_contract");
-        callback.putArray("arguments").add("address").add("value").add("flags");
-        callback.putObject("proof").put("fm_port0_pairs", 2).put("fm_port1_pairs", 1).put("psg_writes", 3);
-        callback.put("source", "memory_callback");
-        ObjectNode diagnostic = valid.putObject("diagnostic_fields");
-        diagnostic.putArray("global").add("pause");
-        diagnostic.putArray("track").add("resting");
-        ObjectNode gating = valid.putObject("gating_fields");
-        gating.putArray("global").add("tempo timeout");
-        gating.putArray("track").add("active");
-        addValidMovie(valid);
-        valid.put("terminal_record_count", 1);
+        ObjectNode valid = referenceMetadataJson();
         Path validStream = temp.resolve("valid-lua-metadata.jsonl");
-        Files.writeString(validStream, valid + "\n" + tickJson(goldenTick()) + "\n");
-        assertEquals(1, AudioParityJsonl.read(validStream, ignored -> { }).terminalRecordCount());
+        AudioParityTick tick = goldenTick();
+        Files.writeString(validStream, valid + "\n" + tickJson(tick) + "\n"
+                + tickJson(tick.withOrdinal(1)) + "\n" + tickJson(tick.withOrdinal(2)) + "\n");
+        assertEquals(3, AudioParityJsonl.read(validStream, ignored -> { }).terminalRecordCount());
 
         ObjectNode invalid = valid.deepCopy();
         invalid.withObject("callback_contract").put("unreviewed", true);
@@ -109,6 +99,50 @@ class TestAudioParityJsonl {
         IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
                 () -> AudioParityJsonl.read(stream, ignored -> { }));
         assertTrue(error.getMessage().toLowerCase().contains("duplicate"), error::getMessage);
+    }
+
+    @Test
+    void validatesRecurrenceTupleWithOverflowSafeInclusiveBoundary() {
+        // Break caught: malformed or overflowed cycle proof controls the OpenGGF run length.
+        assertThrows(IllegalArgumentException.class, () -> AudioParityMetadata.openGgf(
+                0, 1, 2, "69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b", "afe05eee"));
+        assertThrows(IllegalArgumentException.class, () -> AudioParityMetadata.openGgf(
+                Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE,
+                "69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b", "afe05eee"));
+        assertThrows(IllegalArgumentException.class, () -> AudioParityMetadata.openGgf(
+                2, 17_999, 36_001, "69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b", "afe05eee"));
+        assertEquals(36_000, AudioParityMetadata.openGgf(1, 17_999, 36_000,
+                "69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b", "afe05eee").terminalRecordCount());
+    }
+
+    @Test
+    void rejectsTrailingRootJsonAndPrevalidatesWriterBeforePublication() throws Exception {
+        // Break caught: a second root value is ignored, or public writer inputs publish unreadable metadata.
+        assertThrows(IllegalArgumentException.class,
+                () -> AudioParityJsonl.parseTick(tickJson(goldenTick()) + "{}"));
+        assertThrows(IllegalArgumentException.class,
+                () -> AudioParityJsonl.parseMetadata(metadataJson() + "{}"));
+
+        Path output = temp.resolve("preserved.jsonl");
+        Files.writeString(output, "existing-output\n");
+        ObjectNode invalidDetails = JSON.createObjectNode();
+        invalidDetails.putObject("movie").put("game", "incomplete");
+        AudioParityMetadata unreadable = new AudioParityMetadata(AudioParitySchema.VERSION,
+                AudioParitySchema.OPENGGF_CAPTURE, 0, 1, 3,
+                "69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b", "afe05eee", invalidDetails);
+        assertThrows(IllegalArgumentException.class,
+                () -> AudioParityJsonl.write(output, unreadable,
+                        List.of(goldenTick(), goldenTick().withOrdinal(1), goldenTick().withOrdinal(2)).iterator()));
+        assertEquals("existing-output\n", Files.readString(output));
+
+        AudioParityMetadata colliding = new AudioParityMetadata(AudioParitySchema.VERSION,
+                AudioParitySchema.OPENGGF_CAPTURE, 0, 1, 3,
+                AudioParitySchema.S1_REV01_SHA1, AudioParitySchema.S1_REV01_CRC32,
+                JSON.createObjectNode().put("schema", "silently-overwritten"));
+        assertThrows(IllegalArgumentException.class,
+                () -> AudioParityJsonl.write(output, colliding,
+                        List.of(goldenTick(), goldenTick().withOrdinal(1), goldenTick().withOrdinal(2)).iterator()));
+        assertEquals("existing-output\n", Files.readString(output));
     }
 
     @Test
@@ -206,11 +240,11 @@ class TestAudioParityJsonl {
     void diagnosticsDoNotParticipateInGatingEquality() throws Exception {
         // Break caught: host frame/raw state diagnostics turn a semantic match into a mismatch.
         ObjectNode firstJson = tickJson(goldenTick());
-        firstJson.putObject("diagnostic").put("emulator_frame", 824);
-        firstJson.putArray("raw_bus").addObject().put("kind", "psg").put("value", 159);
+        firstJson.set("diagnostic", validDiagnostic(824));
+        firstJson.set("raw_bus", validRawBus(159));
         ObjectNode secondJson = tickJson(goldenTick());
-        secondJson.putObject("diagnostic").put("emulator_frame", 9999).put("host", "other");
-        secondJson.putArray("raw_bus").addObject().put("anything", "ignored");
+        secondJson.set("diagnostic", validDiagnostic(9999));
+        secondJson.set("raw_bus", validRawBus(255));
 
         AudioParityTick first = AudioParityJsonl.parseTick(firstJson.toString());
         AudioParityTick second = AudioParityJsonl.parseTick(secondJson.toString());
@@ -220,19 +254,79 @@ class TestAudioParityJsonl {
     }
 
     @Test
+    void streamValidatesDiagnosticAndRawBusShapesWithoutMakingThemGatingData() throws Exception {
+        // Break caught: malformed Task 4 diagnostic/raw events pass because the reader blindly skips them.
+        ObjectNode badDiagnostic = tickJson(goldenTick());
+        badDiagnostic.put("diagnostic", "not-an-object");
+        assertInvalidStream(metadataJson(), badDiagnostic, "diagnostic");
+
+        ObjectNode badRaw = tickJson(goldenTick());
+        ArrayNode bus = validRawBus(159);
+        ((ObjectNode) bus.get(0)).put("value", 256);
+        badRaw.set("raw_bus", bus);
+        assertInvalidStream(metadataJson(), badRaw, "value");
+
+        ObjectNode unknownRaw = tickJson(goldenTick());
+        ArrayNode unknownBus = validRawBus(159);
+        ((ObjectNode) unknownBus.get(0)).put("unknown", true);
+        unknownRaw.set("raw_bus", unknownBus);
+        assertInvalidStream(metadataJson(), unknownRaw, "unknown");
+
+        ObjectNode wrongRole = tickJson(goldenTick());
+        ObjectNode diagnostic = validDiagnostic(824);
+        ((ObjectNode) diagnostic.withObject("raw_state").withArray("tracks").get(0)).put("role", "FM1");
+        wrongRole.set("diagnostic", diagnostic);
+        assertInvalidStream(metadataJson(), wrongRole, "role");
+    }
+
+    @Test
+    void pinsReferenceAndOpenGgfCaptureIdentityVariants() throws Exception {
+        // Break caught: arbitrary capture names or subtly different ROM/movie/probe provenance enter v1.
+        ObjectNode arbitrary = referenceMetadataJson();
+        arbitrary.put("capture", "whatever-host-produced");
+        assertInvalidStream(arbitrary, tickJson(goldenTick()), "capture");
+
+        ObjectNode wrongRom = referenceMetadataJson();
+        wrongRom.withObject("rom").put("crc32", "00000000");
+        assertInvalidStream(wrongRom, tickJson(goldenTick()), "REV01");
+
+        ObjectNode wrongMovie = referenceMetadataJson();
+        wrongMovie.withObject("movie").put("input_rows", 988);
+        assertInvalidStream(wrongMovie, tickJson(goldenTick()), "movie");
+
+        ObjectNode zeroProof = referenceMetadataJson();
+        zeroProof.withObject("callback_contract").withObject("proof").put("fm_port0_pairs", 0);
+        assertInvalidStream(zeroProof, tickJson(goldenTick()), "positive");
+
+        ObjectNode pcManifest = referenceMetadataJson();
+        ObjectNode callback = pcManifest.putObject("callback_contract");
+        callback.put("manifest_sites", 20).put("source", "pc_manifest");
+        AudioParityJsonl.parseMetadata(pcManifest.toString());
+
+        AudioParityMetadata openGgf = AudioParityMetadata.openGgf(0, 1, 3,
+                "69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b", "afe05eee");
+        assertEquals(AudioParitySchema.OPENGGF_CAPTURE, openGgf.capture());
+        ObjectNode pollutedOpenGgf = (ObjectNode) AudioParityJsonl.metadataTree(openGgf);
+        addValidMovie(pollutedOpenGgf);
+        assertInvalidStream(pollutedOpenGgf, tickJson(goldenTick()), "OpenGGF");
+    }
+
+    @Test
     void rejectsHostPathsAndTimestampsAnywhereInMetadata() throws Exception {
         // Break caught: normalized stream identity varies by host path or capture time.
-        ObjectNode path = metadataJson();
-        addValidMovie(path).put("game", "/opt/audio-fixtures/sonic.gen");
-        assertInvalidStream(path, tickJson(goldenTick()), "absolute path");
-
-        ObjectNode timestamp = metadataJson();
-        addValidMovie(timestamp).put("emulator", "2026-08-09T12:34:56Z");
-        assertInvalidStream(timestamp, tickJson(goldenTick()), "timestamp");
+        assertThrows(IllegalArgumentException.class,
+                () -> new AudioParityMetadata(AudioParitySchema.VERSION, AudioParitySchema.REFERENCE_CAPTURE,
+                        0, 1, 3, AudioParitySchema.S1_REV01_SHA1, AudioParitySchema.S1_REV01_CRC32,
+                        JSON.createObjectNode().put("label", "ROM loaded from /opt/audio-fixtures/sonic.gen")));
+        assertThrows(IllegalArgumentException.class,
+                () -> new AudioParityMetadata(AudioParitySchema.VERSION, AudioParitySchema.REFERENCE_CAPTURE,
+                        0, 1, 3, AudioParitySchema.S1_REV01_SHA1, AudioParitySchema.S1_REV01_CRC32,
+                        JSON.createObjectNode().put("label", "captured at 2026-08-09T12:34:56Z")));
 
         assertThrows(IllegalArgumentException.class,
-                () -> AudioParityMetadata.reference("/tmp/input.gen", 0, 1, 1,
-                        "69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b", "afe05eee"));
+                () -> new AudioParityMetadata(AudioParitySchema.VERSION, AudioParitySchema.OPENGGF_CAPTURE,
+                        0, 1, 3, "69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b", "afe05eee",
+                        JSON.createObjectNode().put("label", "from C:\\captures\\audio.jsonl")));
     }
 
     private AudioParityTick goldenTick() throws Exception {
@@ -241,7 +335,7 @@ class TestAudioParityJsonl {
     }
 
     private AudioParityMetadata validMetadata() {
-        return AudioParityMetadata.reference("s1_ghz_music_driver_reference", 0, 1, 2,
+        return AudioParityMetadata.openGgf(0, 1, 3,
                 "69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b", "afe05eee");
     }
 
@@ -262,6 +356,70 @@ class TestAudioParityJsonl {
         movie.put("input_rows", 989);
         movie.put("opaque_header_hash", "09DADB5071EB35050067A32462E39C5F");
         return movie;
+    }
+
+    private ObjectNode referenceMetadataJson() {
+        ObjectNode metadata = metadataJson();
+        metadata.put("capture", AudioParitySchema.REFERENCE_CAPTURE);
+        metadata.put("launch_update_music_invocations", 514);
+        ObjectNode callback = metadata.putObject("callback_contract");
+        callback.putArray("arguments").add("address").add("value").add("flags");
+        callback.putObject("proof").put("fm_port0_pairs", 2).put("fm_port1_pairs", 1).put("psg_writes", 3);
+        callback.put("source", "memory_callback");
+        ObjectNode diagnostic = metadata.putObject("diagnostic_fields");
+        addStrings(diagnostic.putArray("global"), "priority", "pause", "fade flags", "queues", "sound id",
+                "voice selector", "DAC update", "1-up", "speed-up reload", "communication", "ring speaker",
+                "push");
+        addStrings(diagnostic.putArray("track"), "resting", "note fill", "modulation phase", "raw status",
+                "raw voice control");
+        ObjectNode gating = metadata.putObject("gating_fields");
+        addStrings(gating.putArray("global"), "tempo timeout", "tempo reload", "speed-up", "fade state");
+        addStrings(gating.putArray("track"), "active", "role", "hardware", "overridden", "do not attack",
+                "modulation enabled", "sequence position", "transpose", "volume", "pan/AMS/FMS",
+                "voice/envelope", "duration", "duration reload", "PSG envelope cursor", "base frequency",
+                "detune", "live loop counters", "live return stack");
+        addValidMovie(metadata);
+        return metadata;
+    }
+
+    private void addStrings(ArrayNode array, String... values) {
+        for (String value : values) {
+            array.add(value);
+        }
+    }
+
+    private ObjectNode validDiagnostic(int frame) {
+        ObjectNode diagnostic = JSON.createObjectNode();
+        diagnostic.put("emulator_frame", frame).put("game_mode", 4).put("interrupt_mask", 6)
+                .put("invocation_open_frame", frame - 1);
+        ObjectNode rawState = diagnostic.putObject("raw_state");
+        ObjectNode global = rawState.putObject("global");
+        for (String field : List.of("communication", "fade_in_flag", "fade_out_counter", "one_up", "pause",
+                "priority", "push", "ring_speaker", "sound_id", "speed_up_reload", "updating_dac",
+                "voice_selector")) {
+            global.put(field, 0);
+        }
+        global.putArray("queues").add(0).add(0).add(0);
+        ArrayNode tracks = rawState.putArray("tracks");
+        for (String role : AudioParitySchema.ROLES) {
+            ObjectNode track = tracks.addObject();
+            for (String field : List.of("ams_fms_pan", "duration_countdown", "duration_reload",
+                    "envelope_cursor", "envelope_or_voice", "modulation_delay", "modulation_speed",
+                    "modulation_steps", "note_fill_countdown", "note_fill_reload", "status", "voice_control")) {
+                track.put(field, 0);
+            }
+            track.put("data_position", -1).put("modulation_delta", 0).put("modulation_enabled", false)
+                    .put("modulation_value", 0).put("overridden", false).put("resting", false)
+                    .put("role", role).put("tie_next", false);
+        }
+        return diagnostic;
+    }
+
+    private ArrayNode validRawBus(int psgValue) {
+        ArrayNode bus = JSON.createArrayNode();
+        bus.addObject().put("address", 0xC00011).put("flags", 8192).put("kind", "psg")
+                .put("source", "memory_callback").put("value", psgValue);
+        return bus;
     }
 
     private void assertInvalidStream(ObjectNode metadata, ObjectNode tick, String message) throws Exception {
