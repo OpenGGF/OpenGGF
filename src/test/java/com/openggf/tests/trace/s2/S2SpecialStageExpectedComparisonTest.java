@@ -271,15 +271,20 @@ class S2SpecialStageExpectedComparisonTest {
         SpecialStageTraceData trace = SpecialStageTraceData.load(Path.of(
                 "src/test/resources/traces/s2/special_stage"));
 
-        assertFalse(AbstractS2SpecialStageTraceReplayTest.isRingsToGoRefreshFrame(trace, 1324),
+        // Observations of the committed fixture's passes 748, 749 and 751. The
+        // recorder's frame labelling shifted by one when its off-by-one was
+        // corrected, so these are read off the current artifact's own
+        // run_objects_end observations, not carried over from the old one.
+        assertFalse(AbstractS2SpecialStageTraceReplayTest.isRingsToGoRefreshFrame(trace, 1323),
                 "the transition observation still contains the pre-refresh BCD cell");
         assertEquals(true,
-                AbstractS2SpecialStageTraceReplayTest.isRingsToGoRefreshFrame(trace, 1327),
+                AbstractS2SpecialStageTraceReplayTest.isRingsToGoRefreshFrame(trace, 1326),
                 "the next completed RunObjects pass has executed Obj5A_RingsNeeded");
-        assertFalse(AbstractS2SpecialStageTraceReplayTest.isRingsToGoRefreshFrame(trace, 1331),
+        assertFalse(AbstractS2SpecialStageTraceReplayTest.isRingsToGoRefreshFrame(trace, 1330),
                 "later ring collection can occur after Obj5A in slot order and must not compare live subtraction");
         assertEquals(true,
-                AbstractS2SpecialStageTraceReplayTest.isRingsToGoRefreshFrame(trace, 5181),
+                AbstractS2SpecialStageTraceReplayTest.isRingsToGoRefreshFrame(
+                        trace, trace.stageFinishedObservedFrame().getAsInt()),
                 "rising SS_Check_Rings_flag is an explicit refresh observation");
     }
 
@@ -296,7 +301,9 @@ class S2SpecialStageExpectedComparisonTest {
         // the publication observation of the recurring loop's first pass.
         assertEquals(180,
                 AbstractS2SpecialStageTraceReplayTest.terminalPreStartPassSequence(trace));
-        assertEquals(425,
+        // The fixture's first pass whose Vint_S2SS sample already saw
+        // SpecialStage_Started (sequence 181) is observed at 424.
+        assertEquals(424,
                 AbstractS2SpecialStageTraceReplayTest.passPacingStart(trace, -1));
     }
 
