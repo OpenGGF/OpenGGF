@@ -3,6 +3,13 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K grounded results owners now use the ROM `AllocateObject`
+  lower-slot contract for the semantic grounded-results boundary, leaving the
+  lower owner to begin `Obj_LevelResultsInit` on the following object pass.
+  The focused AIZ replay advances from the raw frame `8218` direct/module KOS
+  queue admission mismatch to all `20463` compared frames matching; HCZ's two
+  complete-run traces and both MGZ replays remain green. Ring comparisons stay
+  forced errors; no trace payloads changed.
 - Fix/Test: S3K in-level title-card gamestate reset now preserves the native
   six-dispatch child-visibility handoff for phase-2 initialization as well as
   phase 1. The AIZ complete-run diagnostic frontier advances from raw frame

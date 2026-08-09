@@ -66365,3 +66365,39 @@ to synthesize a POST phase on a VBLANK-only row.
   live semantic state rather than a zone, route, frame, or trace condition.
 - Route position: AIZ/HCZ/MGZ committed frontier work remains green where
   validated; CNZ is next in gameplay order, with ICZ and LBZ pending.
+
+## 2026-08-09 - S3K AIZ grounded results owner frontier
+
+- Worktree: `bugfix/s3k-traces` at `07bba825e` before this fix; unrelated edits
+  in `.idea/vcs.xml`, `docs/status/rewind-round-trip-gaps.md`,
+  `src/main/java/com/openggf/level/objects/ObjectPlacementController.java`,
+  and `src/main/java/com/openggf/level/rings/RingManager.java` remained
+  unstaged. Validation used JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen`; no trace payloads changed.
+- Frontier command: `env JAVA_HOME=$JDK21_HOME PATH=$JDK21_HOME/bin:$PATH
+  mvn -q -Dmse=off -Dsurefire.forkCount=1 -DforkCount=1
+  -DreuseForks=true -Dsurefire.argLine='-Xmx3g'
+  '-Dtest=TestS3kAizTraceReplay#replayMatchesTrace' -Dtrace.verification=all
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Result: `20463` compared frames, 0 errors, and 0 warnings; the prior first
+  error at raw frame `8218`, fields `queue.s3k_kos_direct.busy` and
+  `queue.s3k_kos_module.busy` (both expected `false`, actual `true`), is
+  closed. Ring comparison remains enabled through `ToleranceConfig.DEFAULT`
+  with `RingCountMode.FORCE_ERROR`.
+- Regression command: `env JAVA_HOME=$JDK21_HOME PATH=$JDK21_HOME/bin:$PATH
+  mvn -q -Dmse=off -Dsurefire.forkCount=1 -DforkCount=1
+  -DreuseForks=true -Dsurefire.argLine='-Xmx3g'
+  -Dtest=TestS3kHczCompleteRunTraceReplay,TestS3kMgzTraceReplay,
+  TestS3kMgzCompleteRunTraceReplay -Dtrace.verification=all
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Result: HCZ's 2 complete-run tests and both MGZ replay tests passed with 0
+  failures and 0 errors. Ring comparison remains forced error.
+- Root cause: native `Obj_EndSignResults` calls `AllocateObject`; at this
+  boundary the lower free owner slot has already passed in the current
+  `Process_Sprites` walk, so only the following pass may execute
+  `Obj_LevelResultsInit`. The grounded-results semantic path now uses the
+  first-free allocation API, preserving publication and dispatch order without
+  trace, zone, route, or frame conditions.
+- Route position: AIZ's focused trace is green through its complete
+  AIZ-to-HCZ segment; HCZ and MGZ canaries remain green. CNZ is next in
+  gameplay order, with ICZ and LBZ pending.
