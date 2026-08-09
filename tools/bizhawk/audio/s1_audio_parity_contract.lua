@@ -334,6 +334,10 @@ local function normalizedActiveTrack(track, role, hardware, activeIndices, retur
         normalized.pan = pan
         normalized.ams = ams
         normalized.fms = fms
+    else
+        -- S1 `SMPS_Track.VolEnvIndex` is the unsigned T+$0C cursor consumed and
+        -- advanced by PSGDoVolFX; OpenGGF exposes the same phase as `envPos`.
+        normalized.envelopeCursor = Contract.u8(raw and track.volumeEnvelopeIndex or track.envPos)
     end
     return normalized
 end

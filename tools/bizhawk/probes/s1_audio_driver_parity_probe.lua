@@ -209,7 +209,8 @@ local function readRomSnapshot()
             stackPointer = stackPointer,
             transpose = readU8(base + 0x08),
             voiceOrEnvelope = readU8(base + 0x0B),
-            volume = readU8(base + 0x09)
+            volume = readU8(base + 0x09),
+            volumeEnvelopeIndex = readU8(base + 0x0C)
         }
         trackDiagnostics[index] = {
             ams_fms_pan = readU8(base + 0x0A),
@@ -217,6 +218,7 @@ local function readRomSnapshot()
                 and dataPointer - GHZ_ASSET_BASE or -1,
             duration_countdown = readU8(base + 0x0E),
             duration_reload = readU8(base + 0x0F),
+            envelope_cursor = readU8(base + 0x0C),
             envelope_or_voice = readU8(base + 0x0B),
             modulation_delay = readU8(base + 0x18),
             modulation_delta = AudioContract.s8(readU8(base + 0x1A)),
@@ -331,7 +333,8 @@ local function emitCapture(context, proof)
             global = {"tempo timeout", "tempo reload", "speed-up", "fade state"},
             track = {"active", "role", "hardware", "overridden", "do not attack", "modulation enabled",
                 "sequence position", "transpose", "volume", "pan/AMS/FMS", "voice/envelope", "duration",
-                "duration reload", "base frequency", "detune", "live loop counters", "live return stack"}
+                "duration reload", "PSG envelope cursor", "base frequency", "detune", "live loop counters",
+                "live return stack"}
         },
         launch_update_music_invocations = invocationLifecycle:launchInvocationCount(),
         movie = {

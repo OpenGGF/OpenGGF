@@ -269,7 +269,8 @@ local function rawTrack(status, voiceControl)
     return {
         baseFrequency = 0, dataPointer = 476636, detune = 0, duration = 0, durationReload = 0,
         loopCounters = {}, panAmsFms = 0, returnStack = {}, stackPointer = 48, status = status,
-        transpose = 0, voiceControl = voiceControl, voiceOrEnvelope = 0, volume = 0
+        transpose = 0, voiceControl = voiceControl, voiceOrEnvelope = 0,
+        volume = 0, volumeEnvelopeIndex = 0
     }
 end
 
@@ -423,6 +424,16 @@ local function runGoldenVector()
     end
     equals(Contract.canonicalJson({state = rom, events = events}), vector.expectedCanonicalJson,
         "shared normalization golden vector bytes changed")
+
+    -- Break caught: stale envelope cursors from inactive PSG slots become parity gates.
+    local canonicalRom = Contract.canonicalJson(rom)
+    local canonicalEngine = Contract.canonicalJson(engine)
+    vector.rawRom.tracks[9].volumeEnvelopeIndex = 255
+    vector.openGgf.tracks[9].envPos = 255
+    equals(Contract.canonicalJson(Contract.normalizeRom(vector.rawRom, vector.activeLoopIndices)),
+        canonicalRom, "inactive ROM PSG envelope cursor changed canonical state")
+    equals(Contract.canonicalJson(Contract.normalizeOpenGgf(vector.openGgf, vector.activeLoopIndices)),
+        canonicalEngine, "inactive OpenGGF PSG envelope cursor changed canonical state")
 end
 
 runCanonicalJson()

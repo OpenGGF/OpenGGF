@@ -62,6 +62,8 @@ class TestS1AudioParityProbeContract {
                 "observer must verify the launcher-computed BK2 content digest");
         assertTrue(source.contains("readU8(0x2A) == 0"),
                 "GHZ capture must reject f_speedup activity at $FFF02A");
+        assertTrue(source.contains("readU8(base + 0x0C)") && source.contains("volumeEnvelopeIndex"),
+                "active PSG parity state must read the unsigned T+$0C VolEnvIndex cursor");
         assertTrue(source.contains("continueAfterMovie = true"), "capture must continue after movie input ends");
         assertTrue(source.contains("joypad.get(1)"), "post-movie controller 1 must be checked for neutrality");
         assertTrue(source.contains("joypad.get(2)"), "post-movie controller 2 must be checked for neutrality");
