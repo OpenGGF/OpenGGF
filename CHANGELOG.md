@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K MGZ's floating results owner now defers its initial
+  results-art submissions for the native `Obj_LevelResultsInit` dispatch
+  boundary. The focused MGZ replay advances from the raw frame `35183` KOS
+  queue mismatch to all `35861` frames matching; HCZ's two complete-run
+  traces remain green. Ring comparisons stay forced errors; no trace payloads
+  changed.
 - Fix/Test: S3K Tails' flight-timer gate now preserves the ROM's prior
   Render_Sprites visibility at a shaken top-edge boundary while the leader is
   airborne. The focused MGZ replay advances from 9 to 8 release-blocking

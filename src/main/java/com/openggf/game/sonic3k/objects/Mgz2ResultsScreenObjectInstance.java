@@ -45,6 +45,15 @@ public class Mgz2ResultsScreenObjectInstance extends S3kResultsScreenObjectInsta
     }
 
     @Override
+    protected boolean shouldDeferInitialResultsArtLoadDispatch() {
+        // Keep the three Queue_Kos_Module calls on the dispatch after the
+        // delayed Obj_LevelResultsInit publication, matching the MGZ capsule's
+        // lower-slot AllocateObject path (sonic3k.asm:182027-182046,
+        // 62542-62598).
+        return true;
+    }
+
+    @Override
     protected boolean shouldRestoreCameraBoundsOnExit(int zone, int act) {
         // ROM loc_6C8F4 retains the MGZ boss camera boundary and hands the
         // post-results flight to Scroll_lock instead of restoring level bounds
