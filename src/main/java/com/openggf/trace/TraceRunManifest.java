@@ -386,6 +386,18 @@ public record TraceRunManifest(
                     "dynamic-art run trace count does not match segments");
         }
         for (TraceData trace : traces) {
+            String game = trace.metadata().game();
+            if (!DynamicArtTransfer.supportsCapability(game)) {
+                // The capability is not merely absent from this recording -- it
+                // does not exist for this game at either end of the contract.
+                // DynamicArtTransfer.validateCallback pins a ROM-callback PC set
+                // for s1 and s2 and throws for anything else, and there is no
+                // S3K dynamic-art observer in tools/bizhawk-headless. Requiring
+                // it game-agnostically here demanded something the sibling
+                // validator refuses, so no S3K run fixture could pass chain
+                // validation however it was recorded.
+                return;
+            }
             if (!trace.metadata().hasPerFrameDynamicArtTransferState()) {
                 throw new IllegalStateException(
                         "trace_schema 5 segment omits dynamic-art capability");

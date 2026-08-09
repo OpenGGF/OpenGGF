@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: a recorded run only has to carry the dynamic-art capability for games that have one.
+  The run-manifest validator required it from every segment regardless of game, while the
+  transfer parser recognises Sonic 1 and Sonic 2 profiles only and rejects any other game, and
+  no Sonic 3 & Knuckles dynamic-art recorder exists -- so no Sonic 3 & Knuckles run could pass
+  chain validation however it was captured. The support matrix now lives in one place.
 - Fix: the Sonic 1 credits demos run their vertical-interrupt counter free, seeded from the
   recording's own starting value like every other replay entry path, instead of from a
   constant measured off an older capture. The counter also advances on lag frames, which the
