@@ -109,7 +109,6 @@ class TestAiz2BossEndSequenceObjects {
         Aiz2BossEndSequenceState.setActiveKnuckles(knuckles);
 
         button.update(0, sonic);
-        button.update(1, sonic);
 
         assertTrue(Aiz2BossEndSequenceState.isButtonPressed());
         assertFalse(sonic.isControlLocked(),

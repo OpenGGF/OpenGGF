@@ -70126,3 +70126,37 @@ guard.
   three animation errors from raw `30784` while its physical report is green.
   Ring comparison remains enabled through `ToleranceConfig.DEFAULT` with
   `RingCountMode.FORCE_ERROR`.
+
+## 2026-08-09 - S3K AIZ complete-run green
+
+- Branch: `bugfix/s3k-traces` from `a9313494e`; the six protected user edits
+  remained unstaged. A fresh `origin/develop` fetch before this frontier
+  reported the branch `101` commits ahead and `0` behind. Validation used JDK
+  21.0.12 and `Sonic and Knuckles & Sonic 3 (W) [!].gen`; no trace fixture
+  changed.
+- Root cause: ROM `Obj_CutsceneButton` `loc_65C04` installs `loc_65C50` and
+  immediately dispatches its subtype through `off_65C40` in the same object
+  pass (`docs/skdisasm/sonic3k.asm:133978-134018`). The engine instead stored
+  `pressPending` and delayed subtype 0's `Ctrl_1_locked` clear until the next
+  pass. Sonic therefore entered the following player slot still locked in
+  Look Up (`$07`) instead of selecting Wait (`$05`) at raw frame `25951`.
+  The button now performs its production-owned subtype action immediately on
+  the semantic range hit; no zone, trace, route, or frame identity is used.
+- Focused command: `mvn -Dmse=off
+  -Dtest=com.openggf.game.sonic3k.objects.TestAiz2BossEndSequenceObjects#cutsceneButtonPressesWhenKnucklesReachesIt
+  test`. Result: pass; the test now asserts the lock and forced-input release
+  after the detecting object dispatch itself.
+- AIZ command: `mvn -q -Ptrace-replay -Dsurefire.forkCount=1
+  -Dtrace.verification=all
+  -Dtest=TestS3kAizCompleteRunTraceReplay
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' test`. Result:
+  all `26228` rows match with zero errors or warnings; every recorded hardware
+  completion edge is consumed. This advances the verified frontier from raw
+  `25951` through the segment terminal at raw `26227`. Ring comparison remains
+  enabled through `ToleranceConfig.DEFAULT` with
+  `RingCountMode.FORCE_ERROR`.
+- The older standalone AIZ trace retains its documented queue baseline at raw
+  `16067`; its unrelated focused legacy assertions also retain their existing
+  failures. The production change is confined to the AIZ cutscene button, its
+  focused test passes, and the complete-run route introduces no new
+  divergence.
