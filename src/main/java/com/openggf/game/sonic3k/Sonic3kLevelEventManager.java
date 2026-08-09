@@ -590,16 +590,26 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
      *   <li>MGZ1 ($0200): anim $1B, airborne (loc_68A6)</li>
      *   <li>ICZ1 ($0500): Sonic player modes spawn Obj_LevelIntroICZ1 and
      *       park CPU Tails in routine-$0A dormant marker (loc_690A / loc_13A74)</li>
-     *   <li>LRZ1 ($0900) Knuckles: anim $1B, airborne (loc_68A6)</li>
-     *   <li>SSZ ($1600): anim $1B, airborne (loc_68A6)</li>
+     *   <li>LRZ1 ($0900) non-Knuckles: anim $1B, airborne (loc_68A6); Knuckles
+     *       is explicitly excluded by the ROM's {@code Player_mode} gate</li>
+     *   <li>LRZ3 boss ($1600): anim $1B, airborne (loc_68A6); this manager's
+     *       standard level bootstrap does not expose that boss slot</li>
      * </ul>
      */
     public void applyZonePlayerState() {
+        // ROM Level_FromSavedGame leaves Last_star_post_hit-owned player state
+        // intact on checkpoint/special-stage/bonus returns.  This is runtime
+        // saved-state, distinct from the user-facing skip-intros bootstrap
+        // mode. No zone-specific intro branch may run first.
+        if (hasSavedPlayerReturnState()) {
+            return;
+        }
         if (currentZone == Sonic3kZoneIds.ZONE_HCZ && currentAct == 0) {
             applyHcz1IntroState();
         }
         // ROM: sonic3k.asm loc_68A6 — simple falling intro (anim $1B + airborne).
-        // Applied to MGZ1, SSZ, and LRZ1 (non-Knuckles only).
+        // MGZ1 is unconditional; LRZ1 explicitly skips Knuckles at
+        // sonic3k.asm:8161-8165 (Player_mode != 3).
         if (currentZone == Sonic3kZoneIds.ZONE_MGZ && currentAct == 0) {
             applySimpleFallingIntro("MGZ1");
         }
@@ -618,7 +628,21 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (currentZone == Sonic3kZoneIds.ZONE_CNZ && cnzEvents != null) {
             cnzEvents.spawnSoloLeaderCarryInTailsIfNeeded(currentAct);
         }
-        // TODO: LRZ1 non-Knuckles, SSZ falling intros (same loc_68A6 path)
+        if (currentZone == Sonic3kZoneIds.ZONE_LRZ
+                && currentAct == 0
+                && getPlayerCharacter() != PlayerCharacter.KNUCKLES) {
+            applySimpleFallingIntro("LRZ1");
+        }
+    }
+
+    private boolean hasSavedPlayerReturnState() {
+        if (!GameServices.hasRuntime() || GameServices.levelOrNull() == null) {
+            return false;
+        }
+        var level = GameServices.level();
+        return level.hasBigRingReturn()
+                || level.isBonusStageReturn()
+                || level.getCheckpointState().isActive();
     }
 
     private void applyIczIntroSidekickDormantMarkersAfterSpawn() {
@@ -635,6 +659,12 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     }
 
     public void applyZonePlayerStateAfterTitleCard() {
+        // The title-card release is another caller of the ROM player bootstrap;
+        // saved-state returns must suppress the complete seam, including LBZ1's
+        // launch intro, before any zone-specific work is attempted.
+        if (hasSavedPlayerReturnState()) {
+            return;
+        }
         applyZonePlayerState();
         if (currentZone == Sonic3kZoneIds.ZONE_LBZ && currentAct == 0) {
             spawnLbz1GroundLaunchIntro(true);
@@ -807,7 +837,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     }
 
     /**
-     * Simple falling intro shared by MGZ1, SSZ, and LRZ1 (non-Knuckles).
+     * Simple falling intro shared by MGZ1 and LRZ1 (non-Knuckles).
      * ROM: sonic3k.asm loc_68A6.
      *
      * <p>Sets animation $1B (HURT_FALL) and airborne on both players.

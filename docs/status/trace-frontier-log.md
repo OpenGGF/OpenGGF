@@ -66020,3 +66020,63 @@ Command: full `-Ptrace-replay` profile, no `-Dtest` (763 tests). Base 8c685eb5d
   `TestS2Ehz1TraceReplay`). It was assumed from naming symmetry. **Verify a test class
   exists before naming it as a regression bar** — a canary that does not exist reports a
   clean regression check while testing nothing.
+## 2026-08-08 - S2 Mecha Sonic outer-loop ordering replay validation (no frontier change)
+
+- Scope: existing `Sonic2MechaSonicInstance` / DEZ Mecha Sonic movement and
+  child-alignment parity; implementation commit `4b4572cc3` was compared with
+  reviewed base `5cc94d457`.
+- Source evidence: shipped Sonic 2 REV01 `loc_398C0` dispatches the attack
+  phase, aligns the LED and targeting sensor through `loc_39D4A`, then performs
+  one outer-loop `ObjectMove`. The dedicated fixture is
+  `src/test/resources/traces/s2/dez_ending/s2-lvl-select-DEZ-Ending.bk2`, with
+  auxiliary state confirming ObjAF from frame 127 through the fight. The
+  complete-run segment is retained at
+  `src/test/resources/traces/s2/runs/s2-sonic-tails-complete-emeralds/seg28_dez1/`.
+- Dedicated replay command (verified Sonic 2 REV01 ROM):
+  `mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1
+  -Dsurefire.runOrder=alphabetical
+  -Dtest=com.openggf.tests.trace.s2.TestS2DezEndingLevelSelectTraceReplay#replayMatchesTrace
+  -Dsonic2.rom.path=<verified-Sonic-2-REV01> test`.
+- Controller result: base `5cc94d457`, 1/1 pass; candidate `4b4572cc3`, 1/1
+  pass. No new errors, fixture changes, or trace-frontier advancement.
+
+## 2026-08-09 - S2 Special Stage checkpoint wing/hand render split
+
+- Worktree: `.worktrees/s2-special-cool-thumb`, branch
+  `bugfix/ai-s2-special-cool-thumb`, based on remediation-review `dc0892fe0`.
+- Root cause: the renderer used the animated frame-$15 handshake Y for both
+  checkpoint sprites. Shipped S2 `Obj5A_CreateCheckpointWingedHand` allocates
+  frame-$14 wings and frame-$15 hand as independent peer objects at `$48`,
+  while only `Obj5A_Handshake`'s frame-$15 branch updates Y
+  (`docs/s2disasm/s2.asm:71880-71905,71953-71989`).
+- Fix: checkpoint rendering derives the fixed wings Y from the already
+  snapshotted handshake target Y, preserving the ROM's normal `$48` and VS
+  `$1C` paths without adding redundant mutable state.
+  No trace payload or comparison data is consumed or changed.
+- Focused command: `mvn -Dmse=off
+  -Dtest=com.openggf.game.sonic2.specialstage.Sonic2SpecialStageCheckpointRenderTest,com.openggf.game.sonic2.specialstage.TestSonic2SpecialStageCheckpointSnapshot test`.
+  Result: 4 tests, 0 failures, 0 errors, 0 skips. The pre-fix renderer test
+  failed as expected when both wing and hand Y values followed the hand.
+
+## 2026-08-09 - S2 DEZ Plane B star-window initialization fix
+
+- Worktree: `.worktrees/s2-dez-window-stars`, branch
+  `bugfix/ai-s2-dez-window-stars`, candidate based on `dc0892fe0`.
+- Root cause: REV01's `InitCameraValues` seeds `Camera_BG_Y_pos`, and
+  `InitCam_Null3` preserves it (the DEZ start camera is Y=`$00C8`). The Java
+  `BackgroundCamera` held that value, but `SwScrlDez` read its uninitialized
+  handler-local VScroll (`0`), so the renderer sampled the intentional black
+  128px band above the star rows. CPZ_DEZ layout descriptors, star patterns,
+  palette line 2, and renderer-equivalent screen samples were all present.
+- Fix: inject the shared Sonic 2 `BackgroundCamera` into `SwScrlDez` and use
+  its ROM-owned BG-Y value for both the scroll table's segment selection and
+  the VScroll output. The no-camera constructor remains for isolated handler
+  tests that explicitly seed VScroll.
+- Validation command: `mvn -q -Dmse=off -Dorg.lwjgl.librarypath=<LWJGL_NATIVE_PATH>
+  "-Dtest=com.openggf.tests.TestS2DezBackground,com.openggf.game.sonic2.scroll.TestSwScrlDez"
+  test "-Dsonic2.rom.path=<REV01_ROM_PATH>"`
+  Result: 6 tests, 0 failures, 0 errors, 0 skips. The focused DEZ render/resource
+  lane found non-black star patterns and 544 visible star descriptors at the
+  start; the DEZ scroll lane changed rows across consecutive frames and
+  reproduced the same Plane B resources after rewind recomputation. No trace
+  fixture or comparison data was changed.

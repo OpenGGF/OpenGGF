@@ -272,6 +272,17 @@ class TestLevelRendererBackgroundViewport {
     }
 
     @Test
+    void logicFrameParallaxDoesNotQueryLegacyGameBackgroundScrollApi() throws Exception {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/level/LevelFrameRuntimeUpdater.java"));
+        assertFalse(source.contains("getBackgroundScroll("),
+                "logic-frame parallax must use the active zone handler; the legacy Game background-scroll API is not authoritative");
+
+        String rendererSource = Files.readString(Path.of("src/main/java/com/openggf/level/LevelRenderer.java"));
+        assertFalse(rendererSource.contains("renderBackgroundShader(List<GLCommand> commands,"),
+                "background rendering must not retain a legacy background-Y hint parameter");
+    }
+
+    @Test
     void backgroundTilemapCacheTracksRuntimeFullWidthRequirement() throws Exception {
         String source = Files.readString(Path.of("src/main/java/com/openggf/level/LevelTilemapManager.java"));
 

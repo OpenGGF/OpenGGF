@@ -27,6 +27,7 @@ import com.openggf.level.scroll.compose.ScrollEffectComposer;
 public class SwScrlDez extends AbstractZoneScrollHandler {
 
     private final ParallaxTables tables;
+    private final BackgroundCamera bgCamera;
 
     // Persistent TempArray (36 words). The star/edge/transition words accumulate
     // a fixed amount each frame (ROM TempArray_LayerDef). They are derived from
@@ -62,7 +63,12 @@ public class SwScrlDez extends AbstractZoneScrollHandler {
     private int shakeOffsetY;
 
     public SwScrlDez(ParallaxTables tables) {
+        this(tables, null);
+    }
+
+    public SwScrlDez(ParallaxTables tables, BackgroundCamera bgCamera) {
         this.tables = tables;
+        this.bgCamera = bgCamera;
         loadRowHeights();
     }
 
@@ -90,13 +96,19 @@ public class SwScrlDez extends AbstractZoneScrollHandler {
         shakeOffsetX = 0;
         shakeOffsetY = 0;
 
-        int effectiveBgY = vscrollFactorBG & 0xFFFF;
+        // ROM InitCameraValues seeds Camera_BG_Y_pos and InitCam_Null3 preserves
+        // it. SwScrl_DEZ then reads that shared word after the generic
+        // camera-delta update. Read its owner here rather than using the
+        // handler's zero default.
+        int effectiveBgY = bgCamera != null
+                ? bgCamera.getBgYPos() & 0xFFFF
+                : vscrollFactorBG & 0xFFFF;
         if (shakeTimer >= 0) {
             int rippleIndex = frameCounter & 0x3F;
             shakeOffsetY = tables != null ? tables.getRippleSigned(rippleIndex) : 0;
             shakeOffsetX = tables != null ? tables.getRippleSigned(rippleIndex + 1) : 0;
             composer.setVscrollFactorFG((short) (cameraY + shakeOffsetY));
-            composer.setVscrollFactorBG((short) ((short) vscrollFactorBG + shakeOffsetY));
+            composer.setVscrollFactorBG((short) (effectiveBgY + shakeOffsetY));
             // fixBugs (s2.asm:27 `fixBugs = 0`): the shipped branch does NOT feed the
             // shake's Y component into the row-segment search. `add.w d3,d1` at
             // s2.asm:17566-17569 exists only under fixBugs=1, together with hoisting the
@@ -111,7 +123,7 @@ public class SwScrlDez extends AbstractZoneScrollHandler {
                 GameServices.gameStateOrNull().setScreenShakeActive(false);
             }
         } else {
-            composer.setVscrollFactorBG(vscrollFactorBG);
+            composer.setVscrollFactorBG((short) effectiveBgY);
         }
 
         // ==================== Step 1: Vertical Scroll ====================

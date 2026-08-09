@@ -73,6 +73,27 @@ class TestCPZSpinTubeObjectInstance {
     }
 
     @Test
+    void engineDebugMovementCannotBeCapturedByTube() {
+        ObjectSpawn spawn = new ObjectSpawn(0x0780, 0x0380, 0x1E, 0x02, 0, false, 0);
+        TestablePlayableSprite player = new TestablePlayableSprite(
+                "sonic",
+                (short) spawn.x(),
+                (short) spawn.y());
+        player.setGameRulesForTest(GameRules.SONIC_2);
+        player.setDebugMode(true);
+
+        CPZSpinTubeObjectInstance tube = new CPZSpinTubeObjectInstance(spawn, "CPZSpinTube");
+        tube.setServices(new TestObjectServices());
+
+        tube.update(0, player);
+
+        assertFalse(player.isObjectControlled(),
+                "The supported engine debug movement mode must remain outside Obj1E capture.");
+        assertEquals(0, player.getAnimationId(),
+                "CPZ must not force the roll animation while the player is in engine debug movement.");
+    }
+
+    @Test
     void fullReleaseClearsObjectControlAndPreservesYSubpixel() throws Exception {
         ObjectSpawn spawn = new ObjectSpawn(0x2480, 0x0500, 0x1E, 0x02, 0, false, 0);
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x24E8, (short) 0x0B30);

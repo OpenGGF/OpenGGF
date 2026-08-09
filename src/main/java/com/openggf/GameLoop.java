@@ -1310,13 +1310,17 @@ public class GameLoop {
      */
     private void updateSpecialStageMode() {
         SpecialStageProvider ssProvider = getActiveSpecialStageProvider();
+        SpecialStageDebugCapabilities debugCapabilities =
+                SpecialStageDebugCapabilities.orNone(ssProvider.debugCapabilities());
 
         // Debug: X key = next stage within current set
-        if (isUnmodifiedDebugKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_X)) {
+        if (debugCapabilities.stageSelection()
+                && isUnmodifiedDebugKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_X)) {
             ssProvider.debugNextStage();
         }
         // Debug: Z key = switch layout set (S3 ↔ SK)
-        if (isUnmodifiedDebugKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_Z)) {
+        if (debugCapabilities.layoutSelection()
+                && isUnmodifiedDebugKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_Z)) {
             ssProvider.debugToggleLayoutSet();
         }
 
@@ -1331,17 +1335,19 @@ public class GameLoop {
         }
 
         // Toggle sprite frame debug viewer (shows all animation frames)
-        if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_SPRITE_DEBUG_KEY))) {
+        if (debugCapabilities.spriteViewer()
+                && isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_SPRITE_DEBUG_KEY))) {
             ssProvider.toggleSpriteDebugMode();
         }
 
         // Cycle special stage plane visibility (A/B/both/off)
-        if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_PLANE_DEBUG_KEY))) {
+        if (debugCapabilities.planeVisibility()
+                && isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_PLANE_DEBUG_KEY))) {
             ssProvider.cyclePlaneDebugMode();
         }
 
         // Handle sprite debug viewer navigation (uses configured movement keys)
-        if (ssProvider.isSpriteDebugMode()) {
+        if (debugCapabilities.spriteViewer() && ssProvider.isSpriteDebugMode()) {
             SpecialStageDebugProvider debugProvider = ssProvider.getDebugProvider();
             if (debugProvider != null) {
                 // Left/Right: Change page within current graphics set
@@ -1978,26 +1984,35 @@ public class GameLoop {
         }
 
         SpecialStageProvider ssProvider = getActiveSpecialStageProvider();
+        SpecialStageDebugCapabilities debugCapabilities =
+                SpecialStageDebugCapabilities.orNone(ssProvider.debugCapabilities());
         int leftKey = configService.getInt(SonicConfiguration.LEFT);
         int rightKey = configService.getInt(SonicConfiguration.RIGHT);
         int upKey = configService.getInt(SonicConfiguration.UP);
         int downKey = configService.getInt(SonicConfiguration.DOWN);
 
         if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_KEY))
-                || isUnmodifiedDebugKeyPressed(GLFW_KEY_X)
-                || isUnmodifiedDebugKeyPressed(GLFW_KEY_Z)
+                || (debugCapabilities.stageSelection()
+                && isUnmodifiedDebugKeyPressed(GLFW_KEY_X))
+                || (debugCapabilities.layoutSelection()
+                && isUnmodifiedDebugKeyPressed(GLFW_KEY_Z))
                 || isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_COMPLETE_KEY))
                 || isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_FAIL_KEY))
-                || isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_SPRITE_DEBUG_KEY))
-                || isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_PLANE_DEBUG_KEY))
-                || isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.DEBUG_MODE_KEY))
-                || isUnmodifiedDebugKeyPressed(GLFW_KEY_F4)
-                || isUnmodifiedDebugKeyPressed(GLFW_KEY_F1)) {
+                || (debugCapabilities.spriteViewer()
+                && isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_SPRITE_DEBUG_KEY)))
+                || (debugCapabilities.planeVisibility()
+                && isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_PLANE_DEBUG_KEY)))
+                || (debugCapabilities.gameplayMovement()
+                && isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.DEBUG_MODE_KEY)))
+                || (debugCapabilities.alignment()
+                && isUnmodifiedDebugKeyPressed(GLFW_KEY_F4))
+                || (debugCapabilities.lagCompensation()
+                && isUnmodifiedDebugKeyPressed(GLFW_KEY_F1))) {
             severSpecialStageRewindForLiveOnlyShortcut();
             return;
         }
 
-        if (ssProvider.isSpriteDebugMode()
+        if (debugCapabilities.spriteViewer() && ssProvider.isSpriteDebugMode()
                 && ssProvider.getDebugProvider() != null
                 && (isUnmodifiedDebugKeyPressed(leftKey)
                 || isUnmodifiedDebugKeyPressed(rightKey)
@@ -2007,7 +2022,7 @@ public class GameLoop {
             return;
         }
 
-        if (ssProvider.isAlignmentTestMode()
+        if (debugCapabilities.alignment() && ssProvider.isAlignmentTestMode()
                 && (isUnmodifiedDebugKeyPressed(leftKey)
                 || isUnmodifiedDebugKeyPressed(rightKey)
                 || isUnmodifiedDebugKeyPressed(upKey)
@@ -4083,20 +4098,25 @@ public class GameLoop {
         int debugModeKey = configService.getInt(SonicConfiguration.DEBUG_MODE_KEY);
 
         SpecialStageProvider ssProvider = getActiveSpecialStageProvider();
+        SpecialStageDebugCapabilities debugCapabilities =
+                SpecialStageDebugCapabilities.orNone(ssProvider.debugCapabilities());
 
-        if (isUnmodifiedDebugKeyPressed(debugModeKey)) {
+        if (debugCapabilities.gameplayMovement()
+                && isUnmodifiedDebugKeyPressed(debugModeKey)) {
             ssProvider.toggleGameplayDebugMode();
         }
 
-        if (isUnmodifiedDebugKeyPressed(GLFW_KEY_F4)) {
+        if (debugCapabilities.alignment()
+                && isUnmodifiedDebugKeyPressed(GLFW_KEY_F4)) {
             ssProvider.toggleAlignmentTestMode();
         }
 
-        if (isUnmodifiedDebugKeyPressed(GLFW_KEY_F1)) {
+        if (debugCapabilities.lagCompensation()
+                && isUnmodifiedDebugKeyPressed(GLFW_KEY_F1)) {
             ssProvider.toggleLagCompensationDisplay();
         }
 
-        if (ssProvider.isAlignmentTestMode()) {
+        if (debugCapabilities.alignment() && ssProvider.isAlignmentTestMode()) {
             if (isUnmodifiedDebugKeyPressed(leftKey)) {
                 ssProvider.adjustAlignmentOffset(-1);
             }

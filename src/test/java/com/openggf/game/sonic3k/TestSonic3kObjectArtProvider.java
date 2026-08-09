@@ -140,6 +140,28 @@ public class TestSonic3kObjectArtProvider {
     }
 
     @Test
+    public void aiz2EndBossSheetExposesWaterfallMappingFramesFromRomArt() {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_AIZ, 1)
+                .build();
+
+        Sonic3kObjectArtProvider currentProvider =
+                (Sonic3kObjectArtProvider) GameModuleRegistry.getCurrent().getObjectArtProvider();
+        ObjectSpriteSheet sheet = currentProvider.getSheet(Sonic3kObjectArtKeys.AIZ_END_BOSS);
+
+        assertNotNull(sheet, "AIZ2 end-boss ROM art must register its standalone mapping sheet");
+        assertTrue(sheet.getFrameCount() > 0x31,
+                "Map_AIZEndBoss must expose the waterfall/drop frames through $31");
+        assertTrue(sheet.getFrame(0x2B).pieces().isEmpty(),
+                "AIZEndBossWaterfall frame $2B is the ROM's intentional invisible pose");
+        for (int frame : List.of(0x24, 0x2C, 0x31)) {
+            assertFalse(sheet.getFrame(frame).pieces().isEmpty(),
+                    "AIZEndBossWaterfall frame $" + Integer.toHexString(frame)
+                            + " must be present in the production ROM mapping sheet");
+        }
+    }
+
+    @Test
     public void cnzTraversalSheetsParticipateInLevelArtRefreshTracking() throws Exception {
         HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)

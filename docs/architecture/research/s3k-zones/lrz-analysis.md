@@ -21,12 +21,22 @@
 
 ## Current Engine Status (2026-08-08)
 
-`Sonic3kLevelEventManager` does not yet model the native
+`Sonic3kLevelEventManager` now models the native
 `SpawnLevelMainSprites` falling introduction for LRZ1 when the player is not
-Knuckles. The normal level bootstrap therefore starts without the ROM's falling
-state. This is retained as a level-bootstrap feature gap; completion requires
-porting the `loc_68A6` character/zone/act gates and adding focused bootstrap and
-route-trace coverage.
+Knuckles. The owning ROM path compares `$0900` at
+`sonic3k.asm:8161-8165`; `Player_mode == 3` (Knuckles) skips `loc_68A6`, while
+other LRZ1 modes fall through to the animation `$1B` / `Status_InAir` writes at
+`sonic3k.asm:8172-8178`. The engine mirrors that gate after player spawn and
+`TestS3kLrzFallingIntroBootstrap` covers Sonic + Tails, Tails alone, Knuckles,
+and LRZ2. The `lrz_completerun` payload is present, but a direct replay attempt
+currently stops before gameplay while compiling its final v5 hardware-timing
+row (`unsupported-held-row-POST`, trace rows 72/78 continuing through
+`raw_frame=38746`; first unsupported row `raw_frame=38719`); no route result is claimed
+until that fixture-level blocker is resolved.
+
+The same ROM routine also reaches `loc_68A6` for `$1600` (the LRZ boss slot),
+not for SSZ; that boss slot is outside the standard LRZ1/LRZ2 bootstrap handled
+by this remediation.
 
 ## Events
 

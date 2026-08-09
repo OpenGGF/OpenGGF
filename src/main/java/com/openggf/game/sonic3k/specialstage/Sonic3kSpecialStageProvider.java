@@ -5,6 +5,7 @@ import com.openggf.game.GameStateManager;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.ResultsScreen;
 import com.openggf.game.SpecialStageAccessType;
+import com.openggf.game.SpecialStageDebugCapabilities;
 import com.openggf.game.SpecialStageDebugProvider;
 import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.rewind.RewindSnapshottable;
@@ -30,6 +31,14 @@ public class Sonic3kSpecialStageProvider implements SpecialStageProvider {
 
     public Sonic3kSpecialStageProvider(Sonic3kSpecialStageManager manager) {
         this.manager = manager;
+    }
+
+    @Override
+    public SpecialStageDebugCapabilities debugCapabilities() {
+        // X/Z stage and layout navigation are live manager operations. The
+        // manager's sprite flag has no viewer and the remaining diagnostics
+        // are not implemented, so those keys are intentionally unavailable.
+        return new SpecialStageDebugCapabilities(false, true, true, false, false, false, false);
     }
 
     @Override

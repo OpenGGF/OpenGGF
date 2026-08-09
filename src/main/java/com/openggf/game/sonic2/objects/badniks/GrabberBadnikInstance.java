@@ -162,7 +162,8 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance implements Spa
             return;
         }
         childSlotsReserved = true;
-        var objectManager = services() != null ? services().objectManager() : null;
+        var optionalServices = tryServices();
+        var objectManager = optionalServices != null ? optionalServices.objectManager() : null;
         if (objectManager != null && spawn != null && getSlotIndex() >= 0) {
             objectManager.allocateChildSlotsAfter(spawn, reservedChildSlotCount(), getSlotIndex());
         }

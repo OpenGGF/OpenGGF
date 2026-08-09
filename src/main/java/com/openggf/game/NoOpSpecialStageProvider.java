@@ -12,6 +12,11 @@ public final class NoOpSpecialStageProvider implements SpecialStageProvider {
     private NoOpSpecialStageProvider() {}
 
     @Override
+    public SpecialStageDebugCapabilities debugCapabilities() {
+        return SpecialStageDebugCapabilities.NONE;
+    }
+
+    @Override
     public boolean hasSpecialStages() {
         return false;
     }

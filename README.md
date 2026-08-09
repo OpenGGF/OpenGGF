@@ -123,7 +123,7 @@ sound driver.
 |------|--------|
 | Sonic the Hedgehog (S1) | Most complete. Includes all zones, bosses, special stages, title screen, ending, and credits. |
 | Sonic the Hedgehog 2 (S2) | Broadly playable. Includes all zones, bosses, special stages, Tails AI, ending, and credits. |
-| Sonic 3 & Knuckles (S3K) | Work in progress. AIZ through LBZ have substantial route coverage, but this is not full parity: AIZ still lacks accurate napalm and end-boss splash children, and Knuckles' LBZ Big Arm handoff is inert. |
+| Sonic 3 & Knuckles (S3K) | Work in progress. AIZ through LBZ have substantial route coverage, but this is not full parity: the AIZ miniboss napalm FallingShot and AIZ2 end-boss splash children now have native implementations with route/trace validation still outstanding, while Knuckles' LBZ Big Arm handoff remains inert. |
 
 Work is ongoing across all three games. See `CHANGELOG.md` for detailed, per-merge history.
 
@@ -224,8 +224,19 @@ straightforward to add new objects, zones, and game-specific behaviour.
   unwired work—including the S3K special-stage projection, debug primitive/text
   rendering, and ROM-derived CNZ boss animations—was deliberately retained.
   The accompanying audit ranks live unfinished paths without changing runtime
-  behavior, including AIZ napalm/splashes, Big Arm, falling intros, S3K SMPS
-  meta commands, and Mecha Sonic move ordering.
+  behavior, including Big Arm and S3K SMPS meta commands; the separately tracked
+  Mecha Sonic move-ordering debt is now resolved by the REV01 outer-loop parity fix.
+- **S2 Mecha Sonic outer-loop parity (2026-08-08):** the existing DEZ ObjAF
+  implementation now aligns the LED/sensor children before one outer-loop
+  `ObjectMove`, matching shipped ROM `loc_398C0`/`loc_39D4A`. Focused tests and
+  existing graph rewind coverage remain green; the dedicated DEZ ending replay
+  passes 1/1 on both base `5cc94d457` and candidate `4b4572cc3` with verified
+  REV01 ROM, with ObjAF present from auxiliary frame 127 and no frontier change.
+- **S2 DEZ window and Special Stage checkpoint visuals (2026-08-09):** DEZ now
+  samples Plane B from the ROM-seeded background-camera Y, restoring the moving
+  star field behind the opening exterior window. In Special Stages, the
+  checkpoint wings stay fixed while only the separate hand/thumb sprite bobs,
+  matching the two peer Obj5A objects in the shipped ROM.
 - **Headless visual-run parity driver (2026-08-05):** whole trace runs can now be
   driven through the production visual-session owners without a window, so a
   Trace Test Mode defect is reproducible in a test rather than a screenshot.

@@ -3,6 +3,7 @@ package com.openggf.game.sonic1.specialstage;
 import com.openggf.audio.GameMusic;
 import com.openggf.game.ResultsScreen;
 import com.openggf.game.SpecialStageAccessType;
+import com.openggf.game.SpecialStageDebugCapabilities;
 import com.openggf.game.SpecialStageDebugProvider;
 import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.SpecialStageStartupPolicy;
@@ -29,6 +30,14 @@ import java.util.Optional;
 public final class Sonic1SpecialStageProvider implements SpecialStageProvider {
     private final Sonic1SpecialStageManager manager = new Sonic1SpecialStageManager();
     private boolean resultsPlcSubmitted;
+
+    @Override
+    public SpecialStageDebugCapabilities debugCapabilities() {
+        // S1's scaffold has a real direct-movement debug mode. Its sprite,
+        // plane, alignment, and lag tools remain unavailable until their
+        // game-owned implementations exist.
+        return new SpecialStageDebugCapabilities(true, false, false, false, false, false, false);
+    }
 
     @Override
     public int getTransitionSfxId() {

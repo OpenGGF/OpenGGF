@@ -98,6 +98,89 @@ All notable changes to the OpenGGF project are documented in this file.
   two-impulse trajectory from one maker; the launch now uses the ROM's
   `move.w #-$580,obVelY(a1)`. This removes a ~1300-frame slot-allocation cascade in
   MZ2, cutting its object-slot occupancy divergence from 111 sampled frames to 65.
+- Fix: Sonic 2 Special Stage checkpoint `COOL!` wings now stay at their ROM
+  independent peer object's fixed `$48` Y while only the frame-$15
+  handshake peer bobs vertically. The split follows `Obj5A_CreateCheckpointWingedHand`
+  and `Obj5A_Handshake` (`docs/s2disasm/s2.asm:71880-71905,71953-71989`),
+  and derives wings Y from the snapshotted handshake target. Renderer tests
+  cover mutation-sensitive frame movement, deterministic redraw, and rewind.
+- Fix: Sonic 2 DEZ now sources Plane B's initial vertical origin from the
+  ROM-owned `Camera_BG_Y_pos`: `InitCameraValues` seeds it and `InitCam_Null3`
+  preserves it. REV01's first 128px background band is intentionally black;
+  using the handler's zero default hid the ROM star field in the exterior
+  window. ROM-backed tests cover loaded
+  star patterns/palette data, initial screen sampling, frame-to-frame star
+  parallax, and Plane B rewind recomputation.
+- Fix/Docs: S2 CPZ tubes now honor the engine free-fly debug boundary instead
+  of capturing a debug player. Native S2 `Debug_placement_mode` ring/item
+  placement and `Two_player_mode` human-P2 monitor behavior remain explicitly
+  unavailable until their engine-wide capability owners exist; controls,
+  configuration, status, audit, and validation docs record those boundaries.
+  The gamepad debug toggle follows the same enabled-debug-tools gate; the
+  reviewed ROM anchors are Obj1E `s2.asm:48526-48527` and monitor
+  `s2.asm:85337-85340`.
+- Fix: Sonic 2 Mecha Sonic (ObjAF) now follows the shipped REV01 outer attack
+  loop: each phase updates velocity and animation, then the LED and targeting
+  sensor align before exactly one `ObjectMove`. Child updates retain those
+  pre-move positions, matching `loc_398C0`/`loc_39D4A`; DEZ tests cover dash
+  start, deceleration, child ordering, and both airborne timer-expiry
+  transitions through `loc_39A7C`. The dedicated DEZ ending replay
+  remains green on both the reviewed base and candidate with verified REV01 ROM.
+- Fix: title-to-game mode resets now recreate the backend-owned presentation
+  sink before gameplay or title re-entry; enabled audio no longer becomes a
+  retained `NoDeviceAudioSink` after the first reset, and cached host cues keep
+  playing through the rebuilt sink.
+- Fix: the pre-game master title now emits distinct host-owned navigate,
+  confirm, and error feedback. The cues use deterministic presentation PCM and
+  remain independent of whichever game ROM is selected; repeated boundary,
+  confirm, and load-error paths do not replay unwanted cues.
+- Cleanup: removed the unused `AbstractLevel.markAllDirty()` placeholder. The
+  production rewind adapter already invalidates manager-owned tilemaps when
+  restored geometry references change, while persistent Plane B state has its
+  own rewind adapter; no no-op level-owned dirty contract remains.
+- Fix: special-stage debug routing now uses an explicit game-owned capability
+  profile. Sonic 1's direct-movement debug remains available; Sonic 2 keeps
+  its sprite/plane/alignment/lag tools; Sonic 3&K keeps stage/layout
+  navigation. Unsupported S1/S3K sprite, plane, alignment, and lag shortcuts
+  no longer call stage no-op or viewer-less provider state. Global F1/F3/F4/F12
+  overlay and screenshot bindings remain active while a stage runs.
+- Docs/Audio: audited every S&K-loader-supported S&K/S3 music and SFX stream for the
+  `FF 01` (`SND_CMD`), `FF 02` (`MUS_PAUSE`), and `FF 03` (`COPY_MEM`) meta
+  commands. None are reached; the handler now documents and preserves only
+  operand alignment for custom streams instead of implying native semantics.
+  Added ROM-backed coverage for both native SFX banks (`33-DF`, 173 entries
+  each), including the differing `9B`/`AD` payloads and `DC-DF` aliases. The
+  ROM type-check proves S&K `DC` is CreditsK music while `DD-DF` are SFX; the
+  S3 driver dispatches `DC-DF` as SFX. Strict full-bank traversal leaves no
+  unresolved roots/frontier and reaches none of the three commands. The
+  sequencing guard and source-contract inventory are under
+  `docs/architecture/research/audio/2026-08-08-s3k-smps-meta-command-reachability.md`.
+  The proof also rejects bank-end falloff, malformed roots/pointers, unknown
+  commands/subcommands, and protects the ROM `EB` pointer layout with
+  mutation-sensitive CFG tests.
+- Fix: removed the unused legacy `Game.getBackgroundScroll()` query from the
+  frame, rewind, and background-shader paths. Sonic 1 background Y remains owned
+  by its per-zone scroll handlers, while the shared API stays available for the
+  Sonic 2/Sonic 3&K implementations. Deprecated callers retain equivalent
+  behavior through compatibility overloads.
+- Fix: S3K LRZ1 now applies the ROM `SpawnLevelMainSprites` `loc_68A6`
+  falling-introduction state to non-Knuckles players (including Player 2),
+  with production-load character/zone/act coverage. Checkpoint, big-ring, and
+  bonus returns now take the semantic saved-state early return before any zone
+  intro branch. The source audit also corrected the stale SSZ claim: SSZ
+  `$0A00/$0A01` has no matching ROM gate.
+- Fix: ported the AIZ Knuckles miniboss napalm FallingShot (`loc_68C96`) to
+  native rise/drop/floor timing with harmful post-movement touch, ROM-backed
+  PLC art/mappings, staggered explosion children, and rewind coverage. The
+  three existing barrel children now own the native flare/FallingShot route;
+  activation, slot ordering, and explosion lifetime remain under Knuckles
+  trace validation. The full AIZ replay lane's camera/sidekick and
+  hardware-timing failures remain documented.
+- **S3K AIZ2 end-boss splash children:** `ChildObjDat_69D2E` subtype 0/2 now
+  allocates in native slot order, follows the ROM emerge/drop mapping and flip
+  scripts, renders from ROM-backed art, and restores through rewind. Owner tests
+  cover real `ObjectManager` transitions and ROM mapping frames; end-to-end AIZ2
+  boss trace validation remains a follow-up.
 - Maintenance/Docs: completed an evidence-tiered dead and unfinished code sweep.
   Seven unreachable Java types (339 lines) were removed after checking callers,
   registries, reflection, resources, service loading, and supported CLIs; the

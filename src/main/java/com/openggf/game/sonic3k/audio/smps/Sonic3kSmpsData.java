@@ -84,6 +84,9 @@ public class Sonic3kSmpsData extends AbstractSmpsData {
         this.bankZ80Base = bankZ80Base;
     }
 
+    public byte[] getBankData() { return bankData; }
+    public int getBankZ80Base() { return bankZ80Base; }
+
     @Override
     protected void parseHeader() {
         if (data.length < 8) {

@@ -10,14 +10,23 @@
 ## Current Engine Status (2026-08-08)
 
 The principal AIZ-to-HCZ route is implemented and heavily exercised, but AIZ is
-not feature-complete. `AizMinibossNapalmProjectile` is live on the Knuckles
-miniboss route with approximate movement, no harmful touch response, and no
-rendering. Finishing it requires a ROM-backed port of `loc_68C96`, including
-floor behavior, collision timing, art/mappings, explosion children, rewind, and
-trace coverage. `AizEndBossInstance` also plays the emerge/re-submerge sound but
-does not allocate the native `ChildObjDat_69D2E` splash children; that omission
-affects presentation and object-slot ordering. Both implementations are retained
-for focused follow-up rather than treated as dead code.
+not feature-complete. Wave 1 (2026-08-08) implements the
+`AizMinibossNapalmProjectile` routine through
+`AIZMiniboss_FallingShot` (`loc_68C96`) and wires it through each existing
+barrel child: native rise/pause/top-drop timing,
+`ObjHitFloor_DoRoutine` floor snapping, post-movement `$98` touch publication,
+PLC `$5A` ROM-backed `Map_AIZMiniboss` art, seven staggered `$97`
+`BossExplosionHitbox` children, and rewind recreation. The committed Knuckles
+AIZ2/AIZ3 trace rows contain the native `0x68C96` FallingShot and `0x68D88`
+explosion-child object codes and are recorded as comparison evidence only;
+trace rows never hydrate runtime state. The activation/slot/lifetime route is
+still awaiting a captured Knuckles miniboss trace before this item can be
+marked resolved. The AIZ2 end-boss splash child is now ported as
+`AizEndBossWaterfallChild`: its subtype-0 emerge and subtype-2 re-submerge/drop
+paths allocate in the native child slot, use ROM mapping/flip scripts, render
+from the production ROM art provider, and participate in generic rewind
+recreation. The owner tests cover the real `ObjectManager` slot/rewind path and
+ROM mapping frames; an end-to-end AIZ2 boss trace was not rerun for this change.
 - **Water:** Yes (both acts have water with underwater palette transitions and foreground wave deformation)
 - **Palette Cycling:** Yes (2 channels Act 1 normal, 2 channels Act 1 fire, 3 channels Act 2)
 - **Animated Tiles:** Yes (3 scripts Act 1, 5 scripts Act 2)

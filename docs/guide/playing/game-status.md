@@ -59,6 +59,9 @@ expectations honestly -- what works well, what is incomplete, and what you might
 - Water system for ARZ and CPZ.
 - HTZ earthquake and lava systems.
 - Per-zone level events across all zones.
+- Mecha Sonic's DEZ attack loop follows the shipped ROM's outer `ObjectMove`
+  and child-alignment ordering; the existing Mecha Sonic and Death Egg Robot
+  implementations pass the dedicated DEZ ending replay.
 - Demo playback.
 - Broad SMPS audio support; exact command/register parity still has known gaps.
 
@@ -69,8 +72,14 @@ expectations honestly -- what works well, what is incomplete, and what you might
 - Some visual effects (screen distortion, specific palette transitions) may differ
   slightly from the original.
 - Oil Ocean Zone oil surface behavior is partially implemented.
-- Mecha Sonic's outer attack loop currently applies `ObjectMove` in a different
-  order from the ROM and needs a dedicated phase/child-order parity pass.
+- Native S2 level debug placement (`Debug_placement_mode`, including ring/item
+  placement) is not exposed. The engine's `D` shortcut is free-fly debug movement;
+  CPZ tubes deliberately do not capture a player using that supported mode.
+- Native S2 two-player/competition gameplay (`Two_player_mode`) is not exposed.
+  Player 2 bindings feed the configured sidekick/manual-input paths, not a human
+  second player; consequently, the ROM's human-P2 monitor-break branch is not
+  reachable. A dedicated S2 competition-mode owner is required before that branch
+  can be implemented and validated.
 
 ### Notable quirks
 
@@ -123,11 +132,16 @@ that the module can work.
 - Bonus stages are still in active parity work rather than final polish.
 - S3K's more complex PLC/art loading system still has partial parity.
 - Data select visual parity is still in progress (native selector art, emerald display).
-- The AIZ miniboss napalm projectile uses approximate motion and has no harmful
-  touch response or rendering; AIZ2 end-boss emerge/submerge omits splash children.
+- The AIZ miniboss napalm FallingShot now has native movement, harmful touch,
+  ROM-backed art, per-barrel child routing, and rewind coverage; its live
+  Knuckles activation/slot/lifetime route remains under trace validation. AIZ2
+  end-boss emerge/submerge splash children now
+  follow the native allocation, render, lifecycle, and rewind paths; an
+  end-to-end boss trace remains a follow-up.
 - Knuckles' LBZ Big Arm (`Obj_LBZFinalBoss2`) handoff currently spawns an inert,
   invisible persistent object, blocking an authentic route completion.
-- LRZ1 for Sonic/Tails and SSZ omit the ROM's falling level-introduction state.
+- LRZ1 now gives non-Knuckles players the ROM falling level-introduction state;
+  SSZ has no corresponding `SpawnLevelMainSprites` branch.
 
 ### Notable quirks
 

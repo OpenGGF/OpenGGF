@@ -1270,7 +1270,7 @@ public class SidekickCpuController {
         sidekick.setXSpeed((short) 0);
         sidekick.setYSpeed((short) 0);
         sidekick.setGSpeed((short) 0);
-        // Preserve zone-event-set in-air state. S3K MGZ1 / HCZ1 / LRZ1 / SSZ
+        // Preserve zone-event-set in-air state. S3K MGZ1 / HCZ1 / LRZ1
         // set status_InAir on the sidekick during applyZonePlayerState
         // (ROM sonic3k.asm:8132-8205 mirrors loc_6886 / loc_68A6 setting
         // Status_InAir on Player_2). Resetting to false here would

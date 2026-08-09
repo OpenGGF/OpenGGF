@@ -9,6 +9,7 @@ import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageManager;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -38,6 +39,13 @@ public class TestSonic2SpecialStageModuleGraph {
         assertSame(serviceManager, controller.getManager());
         assertSame(serviceDebug, controller.getSpriteDebug());
     }
+
+    @Test
+    public void moduleDoesNotAdvertiseNativeLevelDebugPlacement() {
+        Sonic2GameModule module = new Sonic2GameModule();
+
+        assertFalse(module.getDebugModeProvider().hasLevelDebug(),
+                "S2 exposes special-stage debug only; native Debug_placement_mode ring/item placement "
+                        + "has no engine capability or input route.");
+    }
 }
-
-

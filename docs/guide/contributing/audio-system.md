@@ -64,11 +64,22 @@ The exact command set varies slightly between S1, S2, and S3K, which is why each
 its own SMPS configuration.
 
 S3K coordinate-flag commands are decoded by `Sonic3kCoordFlagHandler`. Most
-live commands have engine semantics, but meta subcommands `SND_CMD`,
-`MUS_PAUSE`, and `COPY_MEM` currently only consume and log their operands; they
-do not dispatch a sound command, change music pause state, or copy driver
-memory. Treat those as known parity gaps: first prove which ROM streams reach
-them, then port reached behavior from SMPSPlay/libvgm and the native driver.
+live commands have engine semantics. The ROM inventory in
+`docs/architecture/research/audio/2026-08-08-s3k-smps-meta-command-reachability.md`
+proves by fixed-point control-flow traversal that shipped S&K music (`01-33`),
+S3 music (`01-32`), and all 169 S&K-loader SFX streams (`33-DB`) never reach meta
+subcommands `SND_CMD`, `MUS_PAUSE`, or `COPY_MEM`. The same proof covers both
+native SFX tables (`33-DF`, 173 entries each) with strict full-bank traversal,
+including the differing `9B`/`AD` payloads and `DC-DF` aliases. Native dispatch
+has S&K's `DC` CreditsK music special case while S3 dispatches `DC-DF` as SFX.
+The strict CFG also treats bank-end falloff, malformed roots/pointers, and
+unknown commands/subcommands as unresolved rather than silently advancing;
+`EB` follows its ROM index-plus-pointer layout. The handler
+consumes their documented operands only to keep a custom/imported stream
+aligned; it does not claim native sound dispatch, all-track halt/resume, or
+shared-Z80-memory copying. If a supported ROM or custom stream reaches one,
+port the Z80-owned behavior at the sequencer/driver boundary using the native
+contract before treating it as implemented.
 
 ## Per-Game Driver Differences
 

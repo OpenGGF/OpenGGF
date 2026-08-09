@@ -186,6 +186,7 @@ class TestArchitecturalSourceGuard {
             "com/openggf/game/sonic3k/objects/AizEndBossDebrisChild.java",
             "com/openggf/game/sonic3k/objects/AizEndBossFlameChild.java",
             "com/openggf/game/sonic3k/objects/AizEndBossPropellerChild.java",
+            "com/openggf/game/sonic3k/objects/AizEndBossWaterfallChild.java",
             "com/openggf/game/sonic3k/objects/AizBattleshipInstance.java",
             "com/openggf/game/sonic3k/objects/AizBgTreeSpawnerInstance.java",
             "com/openggf/game/sonic3k/objects/AizEndBossInstance.java",

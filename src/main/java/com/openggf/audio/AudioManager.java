@@ -434,6 +434,18 @@ public class AudioManager implements MusicRestoreSink {
         }
     }
 
+    /**
+     * Reinstalls the backend-owned speaker sink after a mode reset. A reset
+     * intentionally closes the presentation producer and its sink while
+     * retaining the backend instance; the next title/game mode must ask the
+     * backend for a fresh sink before the producer is rebuilt.
+     */
+    public void ensurePresentationSink() {
+        if (backend != null && presentationSink == null) {
+            installBackendPresentationSink();
+        }
+    }
+
     private void handlePresentationSinkFailure(Throwable failure) {
         LOGGER.log(Level.WARNING,
                 "Speaker output failed; continuing without audio output",
@@ -1845,9 +1857,10 @@ public class AudioManager implements MusicRestoreSink {
         // A mode transition rebuilds the presentation; it does not end a
         // recording of the window. Entering a game from the master title screen
         // runs Engine.resetForGameplayFromMasterTitle -> resetState() before
-        // initializeGlobalGameplayServices -> setBackend, so retiring the lease
-        // here killed the recording's audio before the backend swap could carry
-        // it. Only destroy() is a genuine teardown.
+        // initializeGlobalGameplayServices -> ensurePresentationSink, so
+        // retiring the lease here killed the recording's audio before the
+        // retained backend could rebuild its sink. Only destroy() is a genuine
+        // teardown.
         detachLiveCaptureAudioHandleForRebuild();
         closeShadowPresentation();
         clearDonorAudio();

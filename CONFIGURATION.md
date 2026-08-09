@@ -70,7 +70,7 @@ The `config.yaml` is organized into the following top-level sections:
 | `SCREEN_HEIGHT` | `display` / `debug.window.height` | int | `448` | Actual window height in OS pixels. |
 | `SCALE` | `debug.window.scale` | double | `1.0` | **DEPRECATED** additional rendering scale factor. |
 | `FPS` | `display.fps` | int | `60` | Target frames per second. Affects game speed — use `60` for NTSC, `50` for PAL. |
-| `LOAD_TIME_SIMULATION` | `gameplay.loadTimeSimulation` | enum | `NONE` | Normal-play ROM-load timing: `NONE` completes as soon as production preparation allows; `PROFILED` uses published deterministic profile data; `FAST` currently warns and falls back to `NONE`; `REALISTIC` currently warns and falls back to `PROFILED`. Trace replay uses its recorded hardware-timing policy and does not consume this setting; queue-state trace diagnostics are comparison-only and never alter this configuration. |
+| `LOAD_TIME_SIMULATION` | `gameplay.loadTimeSimulation` | enum | `NONE` | Normal-play ROM-load timing: `NONE` completes as soon as production preparation allows; `PROFILED` uses published deterministic profile data; `FAST` is a retained reserved alias that warns when the profile is resolved and returns `NONE`; `REALISTIC` is a retained reserved alias that warns when the profile is resolved and returns `PROFILED`. Neither reserved mode has an independent scheduler yet. Trace replay uses its recorded hardware-timing policy and does not consume this setting; queue-state trace diagnostics are comparison-only and never alter this configuration. |
 | `DISPLAY_COLOR_PROFILE` | `display.colorProfile` | string | `"RAW_RGB"` | Palette presentation profile. `"RAW_RGB"` keeps the current direct 8-bit expansion, `"MD_ANALOG"` applies a darker Mega Drive-style analog ramp, and `"NTSC_SOFT"` applies the analog ramp plus mild desaturation. |
 | `DISPLAY_COLOR_PROFILE_TOGGLE_KEY` | `display.colorProfileToggleKey` | key | `V` | Runtime key used to cycle display color profiles. The selected profile is saved to `config.yaml` and shown briefly in the bottom-left corner. |
 | `DISPLAY_ASPECT` | `display.aspect` | string | `"NATIVE_4_3"` | Display aspect preset. Controls the native pixel width used by the renderer. Accepted values: `"NATIVE_4_3"` (320 px, default), `"WIDE_16_10"` (352 px), `"WIDE_16_9"` (400 px), `"ULTRA_21_9"` (528 px), `"SUPER_32_9"` (800 px). **EXPERIMENTAL / INCOMPLETE** — widescreen rendering (UI pillarbox, parallax column extension) is not finished; only `"NATIVE_4_3"` is fully supported. |
@@ -199,6 +199,12 @@ tools, display aspect, main character, and sidekick without writing those values
 global gameplay keys (`rewind.liveEnabled`, `crossGame.*`, `debug.flags.debugView`,
 `display.aspect`, or `characters.*`). Programmatic trace launches clear any stale launch
 profile overrides and skip profile application.
+
+Sonic 2 launch profiles do not expose the ROM's native `Two_player_mode`/
+competition mode or `Debug_placement_mode`. Player 2 bindings remain available
+for the configured sidekick/manual-input paths, while `debugTools` enables the
+engine's supported diagnostics and free-fly debug movement; neither setting
+creates a human second player or native ring/item placement.
 
 `crossGameSource: "off"` disables donation for that game launch and restores the built-in
 `crossGame.source` default in the session overlay so the donor choice cannot leak from a
@@ -724,14 +730,14 @@ Square/Cross/Circle respectively.
 | `P1_B` | `input.player1.b` | `-1` | unbound | Player 1 action button B. |
 | `P1_C` | `input.player1.c` | `-1` | unbound | Player 1 action button C. |
 | `START` | `input.player1.start` | `259` | Backspace | Player 1 Start: ROM-accurate in-game pause (`Game_paused` / `Pause_Loop`). A press during level gameplay freezes the level update for the frame while the frame counter still advances; press again to resume. Distinct from `PAUSE_KEY`, which is the loop/timing-level pause that also halts audio. Keyboard-only: the gamepad Start button is instead wired to `PAUSE_KEY`'s pause (see below), since this one has no visible feedback. |
-| `P2_A` | `input.player2.a` | `344` | Right Shift | Player 2 action button A / jump. |
+| `P2_A` | `input.player2.a` | `344` | Right Shift | Player 2 action button A / jump. In S2 this feeds the configured sidekick/manual-input path; it does not enable native two-player/competition gameplay. |
 | `P2_B` | `input.player2.b` | `-1` | unbound | Player 2 action button B. |
 | `P2_C` | `input.player2.c` | `-1` | unbound | Player 2 action button C. |
 | `P2_START` | `input.player2.start` | `345` | Right Control | Player 2 Start. |
 | `CONTROLLER_ENABLED` | `input.controller.enabled` | `true` | true | Enable GLFW gamepad/controller input. |
 | `CONTROLLER_DEADZONE` | `input.controller.deadzone` | `0.35` | 0.35 | Left-stick digital direction deadzone. |
 | `CONTROLLER_PLAYER1` | `input.controller.player1` | `"auto"` | auto | Controller assignment for Player 1 (`auto` or `none`). |
-| `CONTROLLER_PLAYER2` | `input.controller.player2` | `"auto"` | auto | Controller assignment for Player 2 (`auto` or `none`). |
+| `CONTROLLER_PLAYER2` | `input.controller.player2` | `"auto"` | auto | Controller assignment for Player 2 (`auto` or `none`). In S2 this does not create a human competition player. |
 
 The gamepad Back/Select/View button on the primary connected pad is a hardcoded (not remappable, no config key) stand-in for the keyboard `Tab` key on the main-menu game-select screen (`MasterTitleScreen`) and its per-game options panel (`LaunchConfigPanel`): it opens the options panel for the selected game and closes it again, mirroring `Tab`'s role in that specific flow only. It has no effect on `Tab`'s other keyboard uses elsewhere (level editor toggle, Special Stage entry, art viewer), which are unrelated screens/modes.
 
@@ -750,7 +756,7 @@ The gamepad Back/Select/View button on the primary connected pad is a hardcoded 
 |-----|-----------|---------|----------|-------------|
 | `NEXT_ACT` | `debug.keys.nextAct` | `266` | PAGE_UP | Skip to the next act within the current zone. |
 | `NEXT_ZONE` | `debug.keys.nextZone` | `267` | PAGE_DOWN | Skip to the first act of the next zone. |
-| `DEBUG_MODE_KEY` | `debug.keys.debugMode` | `68` | D | Toggle free-fly debug movement mode (requires `DEBUG_VIEW_ENABLED`). The gamepad north face button (Y/Triangle) on the primary connected pad also toggles it, unconditionally (not remappable). |
+| `DEBUG_MODE_KEY` | `debug.keys.debugMode` | `68` | D | Toggle engine free-fly debug movement mode (requires `DEBUG_VIEW_ENABLED`). This is not S2's native `Debug_placement_mode`; ring/item placement is unavailable. The gamepad north face button (Y/Triangle) on the primary connected pad also toggles it when `DEBUG_VIEW_ENABLED` is enabled (not remappable). |
 | `DEBUG_LAST_CHECKPOINT_KEY` | `debug.keys.lastCheckpoint` | `67` | C | Teleport the player to the most recently activated checkpoint. |
 | `LEVEL_SELECT_KEY` | `debug.keys.levelSelect` | `298` | F9 | Open the level select screen at runtime. |
 | `TEST` | `debug.keys.test` | `84` | T | Generic test button used during development. |
@@ -765,18 +771,26 @@ The gamepad Back/Select/View button on the primary connected pad is a hardcoded 
 ### Special Stage Debug
 
 These keys are only active while a Special Stage is running. Enter/complete/fail
-are shared stage controls. Sonic 2 exposes both the F12 sprite viewer and F3
-plane visibility tool. In Sonic 3&K, F12 toggles the manager's persisted debug
-state, but the viewer provider is currently null so no viewer is drawn; F3 is a
-no-op. Sonic 1 leaves both shortcuts as no-ops.
+are shared stage controls. The stage provider advertises optional tools to the
+game loop, so a key whose tool is not implemented for the active game is
+unavailable for the stage provider and does not call a hidden no-op or consume
+a stage rewind boundary. The separate global debug-overlay bindings remain
+active while a stage runs: F1/F3/F4/F12 may toggle their general overlays (and
+F12 may take a screenshot), with those overlay states visible after leaving
+the stage.
+Sonic 2 exposes the F12 sprite viewer, F3 plane visibility, F4 alignment test,
+and F1 lag-compensation display. Sonic 1 exposes only its direct-movement
+debug mode (the shared `DEBUG_MODE_KEY`/D binding). Sonic 3&K exposes X stage
+navigation and Z layout-set navigation; its sprite/alignment/lag tools are
+currently unavailable.
 
 | Key | YAML path | Default | Key Name | Description |
 |-----|-----------|---------|----------|-------------|
 | `SPECIAL_STAGE_KEY` | `debug.keys.specialStage` | `258` | Tab | Enter / exit Special Stage mode (debug). |
 | `SPECIAL_STAGE_COMPLETE_KEY` | `debug.keys.specialStageComplete` | `269` | End | Complete the current Special Stage and award the emerald. |
 | `SPECIAL_STAGE_FAIL_KEY` | `debug.keys.specialStageFail` | `261` | Delete | Fail the current Special Stage without awarding the emerald. |
-| `SPECIAL_STAGE_SPRITE_DEBUG_KEY` | `debug.keys.specialStageSpriteDebug` | `301` | F12 | Toggle the Special Stage sprite debug state. Sonic 2 draws the viewer; S3K records the toggle but has no viewer provider; S1 is a no-op. |
-| `SPECIAL_STAGE_PLANE_DEBUG_KEY` | `debug.keys.specialStagePlaneDebug` | `292` | F3 | Cycle Special Stage plane visibility in Sonic 2. S1 and S3K are no-ops. |
+| `SPECIAL_STAGE_SPRITE_DEBUG_KEY` | `debug.keys.specialStageSpriteDebug` | `301` | F12 | Toggle the Special Stage sprite viewer (Sonic 2 only; unavailable in S1/S3K). |
+| `SPECIAL_STAGE_PLANE_DEBUG_KEY` | `debug.keys.specialStagePlaneDebug` | `292` | F3 | Cycle Special Stage plane visibility (Sonic 2 only; unavailable in S1/S3K). |
 
 ---
 
@@ -834,6 +848,8 @@ input:
     c: ""   # Player 1: action button C
     start: BACKSPACE   # Player 1: start (in-game pause)
   player2:
+    # Player 2 bindings feed the configured sidekick/manual-input path; they do
+    # not enable Sonic 2's native Two_player_mode/competition gameplay.
     up: I   # Player 2: look up
     down: K   # Player 2: crouch/roll
     left: J   # Player 2: move left
@@ -907,7 +923,7 @@ launch:
   s2:
     rewind: false   # Default Sonic 2 launch profile: enable live rewind
     crossGameSource: "off"   # Default Sonic 2 launch profile: cross-game donor
-    debugTools: false   # Default Sonic 2 launch profile: enable debug tools
+    debugTools: false   # Default Sonic 2 launch profile: engine debug tools; native Debug_placement_mode is unavailable
     aspect: "global"   # Default Sonic 2 launch profile: display aspect override
     mainCharacter: "sonic"   # Default Sonic 2 launch profile: main character
     sidekick: "tails"   # Default Sonic 2 launch profile: sidekick character
@@ -946,8 +962,8 @@ debug:
     specialStage: TAB   # Toggle special stage mode
     specialStageComplete: END   # Complete the special stage with an emerald
     specialStageFail: DELETE   # Fail the special stage
-    specialStageSpriteDebug: F12   # Toggle the special stage sprite debug viewer
-    specialStagePlaneDebug: F3   # Cycle special stage plane visibility debug modes
+    specialStageSpriteDebug: F12   # Toggle the S2 special stage sprite debug viewer (unavailable in S1/S3K)
+    specialStagePlaneDebug: F3   # Cycle S2 special stage plane visibility debug modes (unavailable in S1/S3K)
   startup:
     levelSelectOnStartup: false   # Open Level Select on startup instead of loading the first zone
     s3kSkipIntros: false   # Skip S3K zone intro sequences (AIZ biplane, etc.)

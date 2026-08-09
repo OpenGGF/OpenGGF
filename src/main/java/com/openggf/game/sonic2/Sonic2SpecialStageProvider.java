@@ -7,6 +7,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.ResultsScreen;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.SpecialStageAccessType;
+import com.openggf.game.SpecialStageDebugCapabilities;
 import com.openggf.game.SpecialStageDebugProvider;
 import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.SpecialStageStartupPolicy;
@@ -37,6 +38,11 @@ import java.util.Optional;
 public class Sonic2SpecialStageProvider implements SpecialStageProvider {
     private final Sonic2SpecialStageManager manager;
     private boolean resultsPlcSubmitted;
+
+    @Override
+    public SpecialStageDebugCapabilities debugCapabilities() {
+        return new SpecialStageDebugCapabilities(false, false, false, true, true, true, true);
+    }
 
     public Sonic2SpecialStageProvider() {
         this(new Sonic2SpecialStageManager());

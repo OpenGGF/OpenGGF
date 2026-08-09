@@ -431,6 +431,10 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance implements Re
 
         // ROM: loc_3986A — AnimateSprite_Checked during idle
         animateSpriteChecked();
+        // ROM: loc_39D4A aligns the targeting sensor after idle animation.
+        if (targetingSensor != null) {
+            targetingSensor.syncPositionWithParent();
+        }
     }
 
     private void transitionToIdle() {
@@ -460,16 +464,24 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance implements Re
     // ========================================================================
 
     private void updateAttack(AbstractPlayableSprite player) {
-        // TODO: ROM calls ObjectMove ONCE at the end of the outer attack loop (loc_398F4),
-        // AFTER child alignment via loc_39D44. The current code calls applyVelocity() inside
-        // individual subroutine handlers. Moving it here would require removing all per-phase
-        // applyVelocity() calls and ensuring child sync happens between logic and movement.
-        // This structural difference is minor but noted for future ROM-accuracy improvement.
+        // ROM loc_398C0 dispatches the phase handler first, aligns the LED and targeting
+        // sensor (loc_39D4A), then executes exactly one ObjectMove before display.
         switch (attackSubRoutine) {
             case ATTACK_DASH_ACROSS -> updateDashAcross(player);
             case ATTACK_AIM_AND_DASH -> updateAimAndDash(player);
             case ATTACK_AIM_DASH_WALK -> updateAimDashWalk(player);
             case ATTACK_AIM_JUMP_SPIKEBALLS -> updateAimJumpSpikeballs(player);
+        }
+        syncAttackChildrenBeforeObjectMove();
+        state.applyVelocity();
+    }
+
+    private void syncAttackChildrenBeforeObjectMove() {
+        if (ledWindow != null) {
+            ledWindow.syncPositionWithParent();
+        }
+        if (targetingSensor != null) {
+            targetingSensor.syncPositionWithParent();
         }
     }
 
@@ -579,12 +591,6 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance implements Re
                     actionTimer = 0x40;
                     // ROM: loc_39A56 — start dash, no sound, no anim change
                     startDash(DASH_SPEED);
-                    // ROM: loc_398C0 outer loop calls JmpTo26_ObjectMove once per attack
-                    // frame AFTER the phase handler runs (s2.asm:77583). loc_39A56 sets
-                    // x_vel=$800 and the outer ObjectMove applies it on this same frame,
-                    // so the dash-start frame already advances the boss by one velocity
-                    // step. Apply it here to avoid dropping that 8px step.
-                    state.applyVelocity();
                 } else {
                     animateSpriteChecked();
                 }
@@ -660,34 +666,31 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance implements Re
                 }
                 // ROM: AnimateSprite_Checked every frame in this phase
                 animateSpriteChecked();
-                state.applyVelocity(); // ROM: ObjectMove in outer loop at loc_398C0
             }
             case 4 -> {
                 // ROM: loc_39AF4 — airborne after jump
                 actionTimer--;
                 if (actionTimer < 0) {
-                    // Timer expired before landing — transition to ground slide
-                    attackPhase = 5;
-                    state.yVel = 0;
+                    // ROM: loc_39AF4 -> loc_39A7C when the airborne timer expires.
+                    transitionToGroundRun();
                     return;
                 }
                 TerrainCheckResult floorADW = ObjectTerrainUtils.checkFloorDist(state.x, state.y, Y_RADIUS);
                 if (floorADW.distance() < 0) {
                     // ROM: loc_39B1A — landed, snap Y to floor then fall through
-                    // to loc_39B0A which re-applies gravity and calls ObjectMove.
-                    // On the landing frame: yVel = GRAVITY ($38), ObjectMove pushes
-                    // slightly below floor; next frame's ground-run snap corrects.
+                    // to loc_39B0A which re-applies gravity; the outer attack loop
+                    // performs ObjectMove after child alignment. On the landing frame,
+                    // yVel = GRAVITY ($38) pushes slightly below floor; next frame's
+                    // ground-run snap corrects.
                     state.y += floorADW.distance();
                     state.yFixed = state.y << 16;
                     state.yVel = 0;
                     state.yVel += GRAVITY;
                     animateSpriteChecked();
-                    state.applyVelocity();
                     attackPhase = 5;
                     return;
                 }
                 state.yVel += GRAVITY;
-                state.applyVelocity();
                 // ROM: loc_39B0A — AnimateSprite_Checked
                 animateSpriteChecked();
             }
@@ -705,7 +708,6 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance implements Re
                     state.yVel = 0;
                     facingLeft = !facingLeft;
                 } else {
-                    state.applyVelocity();
                     // ROM: loc_39B28 — ObjCheckFloorDist + add.w d1,y_pos(a0)
                     TerrainCheckResult floor = ObjectTerrainUtils.checkFloorDist(state.x, state.y, Y_RADIUS);
                     if (floor != null) {
@@ -766,15 +768,13 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance implements Re
                     spikeballsFired = false;
                 }
                 animateSpriteChecked();
-                state.applyVelocity(); // ROM: ObjectMove in outer loop at loc_398C0
             }
             case 4 -> {
                 // ROM: loc_39B44 — airborne, fire spikeballs at apex
                 actionTimer--;
                 if (actionTimer < 0) {
-                    // Timer expired before landing — transition to ground slide
-                    attackPhase = 5;
-                    state.yVel = 0;
+                    // ROM: loc_39B44 -> loc_39A7C when the airborne timer expires.
+                    transitionToGroundRun();
                     return;
                 }
                 if (!spikeballsFired && state.yVel >= 0) {
@@ -785,20 +785,19 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance implements Re
                 TerrainCheckResult floorAJS = ObjectTerrainUtils.checkFloorDist(state.x, state.y, Y_RADIUS);
                 if (floorAJS.distance() < 0) {
                     // ROM: landed, snap Y to floor then fall through
-                    // to loc_39B0A which re-applies gravity and calls ObjectMove.
-                    // On the landing frame: yVel = GRAVITY ($38), ObjectMove pushes
-                    // slightly below floor; next frame's ground-run snap corrects.
+                    // to loc_39B0A which re-applies gravity; the outer attack loop
+                    // performs ObjectMove after child alignment. On the landing frame,
+                    // yVel = GRAVITY ($38) pushes slightly below floor; next frame's
+                    // ground-run snap corrects.
                     state.y += floorAJS.distance();
                     state.yFixed = state.y << 16;
                     state.yVel = 0;
                     state.yVel += GRAVITY;
                     animateSpriteChecked();
-                    state.applyVelocity();
                     attackPhase = 5;
                     return;
                 }
                 state.yVel += GRAVITY;
-                state.applyVelocity();
                 animateSpriteChecked();
             }
             case 5 -> {
@@ -815,7 +814,6 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance implements Re
                     state.yVel = 0;
                     facingLeft = !facingLeft;
                 } else {
-                    state.applyVelocity();
                     // ROM: loc_39B28 — ObjCheckFloorDist + add.w d1,y_pos(a0)
                     TerrainCheckResult floor = ObjectTerrainUtils.checkFloorDist(state.x, state.y, Y_RADIUS);
                     if (floor != null) {
@@ -837,6 +835,18 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance implements Re
     // ========================================================================
     // Attack helpers
     // ========================================================================
+
+    /**
+     * ROM loc_39A7C: stop the airborne attack, flip, and enter ground-run before
+     * the outer attack loop performs its single ObjectMove.
+     */
+    private void transitionToGroundRun() {
+        attackPhase = 5;
+        anim = 5;
+        facingLeft = !facingLeft;
+        state.xVel = 0;
+        state.yVel = 0;
+    }
 
     /**
      * Start a dash using the ROM's direction toggle system.
@@ -862,7 +872,6 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance implements Re
         } else {
             state.xVel += DECEL_RATE;
         }
-        state.applyVelocity();
     }
 
     private void fireSpikeballs() {
@@ -1266,7 +1275,6 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance implements Re
         public void update(int vIntRunCount, PlayableEntity playerEntity) {
             AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
             if (!beginUpdate(vIntRunCount)) return;
-            syncPositionWithParent();
             updateDynamicSpawn();
         }
 
@@ -1342,7 +1350,6 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance implements Re
         public void update(int vIntRunCount, PlayableEntity playerEntity) {
             AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
             if (!beginUpdate(vIntRunCount)) return;
-            syncPositionWithParent();
             // ROM: AnimateSprite_Checked — animate with whatever anim was set by parent.
             // Anim selection is event-driven from parent (updateDashAcross, transitionToIdle),
             // not heuristic-based.
