@@ -435,6 +435,24 @@ class TestAudioParityJsonl {
         }
     }
 
+    @Test
+    void createNewPublicationCannotReplaceAnExistingCapture() throws Exception {
+        // Break caught: the CLI's atomic capture publisher replaces evidence from an earlier run.
+        Path output = temp.resolve("existing.jsonl");
+        Files.writeString(output, "preserve-me\n");
+        AudioParityTick tick = goldenTick();
+
+        IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> AudioParityJsonl.writeNew(output, validMetadata(),
+                        List.of(tick, tick.withOrdinal(1), tick.withOrdinal(2)).iterator()));
+
+        assertTrue(failure.getMessage().contains("atomically"), failure::getMessage);
+        assertEquals("preserve-me\n", Files.readString(output));
+        try (var children = Files.list(temp)) {
+            assertEquals(List.of(output), children.toList());
+        }
+    }
+
     private AudioParityTick goldenTick() throws Exception {
         JsonNode vector = JSON.readTree(Files.readString(GOLDEN));
         return AudioParityJsonl.parseCanonicalPayload(vector.required("expectedCanonicalJson").textValue(), 0);

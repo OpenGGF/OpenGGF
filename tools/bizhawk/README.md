@@ -64,7 +64,7 @@ selected when running the trace tools.
 
 ## Sonic 1 GHZ music-driver parity
 
-Run the local two-sided driver check from any directory with:
+From the repository root, run the local two-sided driver check with:
 
 ```bash
 tools/audio/run_s1_audio_parity.sh \
@@ -81,7 +81,8 @@ Each invocation creates a new directory below
 `target/audio-parity/s1-ghz/`. It retains two normalized BizHawk captures, two
 normalized OpenGGF captures, the BizHawk process logs, a human report, and a
 compact JSON report. The two captures from each producer must be byte-identical
-before comparison. These detailed files are local, ignored diagnostics and
+before comparison. Capture and report publication refuses existing paths and
+paths outside that canonical run directory. These detailed files are local, ignored diagnostics and
 must not be copied into test resources or committed.
 
 Exit status `0` means exact parity, `3` means both captures were valid and the

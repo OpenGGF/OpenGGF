@@ -65,14 +65,20 @@ if [ -z "$BIZHAWK_DIR" ]; then
 fi
 [ -n "$BIZHAWK_DIR" ] || fail "BizHawk 2.11 home was not found; pass --bizhawk-home or set BIZHAWK_HOME"
 
-CLASSPATH_FILE="$REPO/target/s1-audio-parity.classpath"
-if ! mvn -q -Pci -DskipTests compile dependency:build-classpath \
-	-Dmdep.outputFile="$CLASSPATH_FILE" -f "$REPO/pom.xml"; then
-	fail "Maven could not compile the parity tool or resolve its runtime classpath"
+if [ -n "${OGGF_AUDIO_PARITY_JAVA_BIN:-}" ]; then
+	# Narrow test/process seam: one executable, never a shell fragment or eval.
+	[ -x "$OGGF_AUDIO_PARITY_JAVA_BIN" ] || fail "OGGF_AUDIO_PARITY_JAVA_BIN is not executable"
+	JAVA_TOOL=("$OGGF_AUDIO_PARITY_JAVA_BIN")
+else
+	CLASSPATH_FILE="$REPO/target/s1-audio-parity.classpath"
+	if ! mvn -q -Pci -DskipTests compile dependency:build-classpath \
+		-Dmdep.outputFile="$CLASSPATH_FILE" -f "$REPO/pom.xml"; then
+		fail "Maven could not compile the parity tool or resolve its runtime classpath"
+	fi
+	[ -s "$CLASSPATH_FILE" ] || fail "Maven did not produce the parity tool classpath"
+	JAVA_CP="$REPO/target/classes:$(<"$CLASSPATH_FILE")"
+	JAVA_TOOL=(java -cp "$JAVA_CP" com.openggf.tools.audio.parity.S1AudioParityTool)
 fi
-[ -s "$CLASSPATH_FILE" ] || fail "Maven did not produce the parity tool classpath"
-JAVA_CP="$REPO/target/classes:$(<"$CLASSPATH_FILE")"
-JAVA_TOOL=(java -cp "$JAVA_CP" com.openggf.tools.audio.parity.S1AudioParityTool)
 
 VALIDATE_ARGS=(validate --repo "$REPO" --movie "$MOVIE_PATH" --bizhawk-home "$BIZHAWK_DIR" \
 	--output-root "$OUTPUT_ROOT")
@@ -84,15 +90,29 @@ else
 	VALIDATE_ARGS+=(--rom-search-root "$ROM_SEARCH_ROOT")
 fi
 VALIDATED=$("${JAVA_TOOL[@]}" "${VALIDATE_ARGS[@]}") || fail "input validation failed"
-while IFS='=' read -r key value; do
+declare -A VALIDATION_SEEN=()
+while IFS= read -r record; do
+	[[ "$record" == *=* && "${record#*=}" != *=* ]] || fail "malformed validation record"
+	key=${record%%=*}
+	value=${record#*=}
+	[ -n "$value" ] || fail "empty validation record: $key"
+	[[ "$value" != *$'\r'* && "$value" != *$'\t'* ]] || fail "control character in validation record: $key"
+	case "$key" in
+		ROM_PATH|MOVIE_PATH|BIZHAWK_HOME|OUTPUT_ROOT) ;;
+		*) fail "unknown validation record: $key" ;;
+	esac
+	[[ ! -v "VALIDATION_SEEN[$key]" ]] || fail "duplicate validation record: $key"
 	case "$key" in
 		ROM_PATH) ROM_PATH=$value ;;
 		MOVIE_PATH) MOVIE_PATH=$value ;;
 		BIZHAWK_HOME) BIZHAWK_DIR=$value ;;
 		OUTPUT_ROOT) OUTPUT_ROOT=$value ;;
 	esac
+	VALIDATION_SEEN[$key]=1
 done <<< "$VALIDATED"
-[ -n "$ROM_PATH" ] || fail "validated ROM path was not returned"
+for key in ROM_PATH MOVIE_PATH BIZHAWK_HOME OUTPUT_ROOT; do
+	[[ -v "VALIDATION_SEEN[$key]" ]] || fail "missing validation record: $key"
+done
 
 mkdir -p -- "$OUTPUT_ROOT" || fail "cannot create safe output root: $OUTPUT_ROOT"
 RUN_DIR=$(mktemp -d "$OUTPUT_ROOT/run.XXXXXXXX") || fail "cannot create a fresh run directory"
@@ -116,7 +136,8 @@ capture_reference() {
 capture_engine() {
 	local reference=$1
 	local output=$2
-	"${JAVA_TOOL[@]}" capture --reference "$reference" --rom "$ROM_PATH" --output "$output"
+	"${JAVA_TOOL[@]}" capture --repo "$REPO" --run-root "$RUN_DIR" \
+		--reference "$reference" --rom "$ROM_PATH" --output "$output"
 }
 
 echo "Run directory: $RUN_DIR"
@@ -134,7 +155,8 @@ cmp -s -- "$OPENGGF_1" "$OPENGGF_2" || fail "normalized OpenGGF captures differ 
 
 HUMAN_REPORT="$RUN_DIR/parity-report.txt"
 JSON_REPORT="$RUN_DIR/parity-report.json"
-"${JAVA_TOOL[@]}" compare --reference "$REFERENCE_1" --openggf "$OPENGGF_1" \
+"${JAVA_TOOL[@]}" compare --repo "$REPO" --run-root "$RUN_DIR" \
+	--reference "$REFERENCE_1" --openggf "$OPENGGF_1" \
 	--human-report "$HUMAN_REPORT" --json-report "$JSON_REPORT"
 RESULT=$?
 echo "Detailed captures preserved: $RUN_DIR"

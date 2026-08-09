@@ -104,6 +104,16 @@ public final class AudioParityJsonl {
                 StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING));
     }
 
+    /** Atomically publishes a new stream and refuses to replace any existing destination. */
+    public static void writeNew(Path path, AudioParityMetadata metadata, Iterator<AudioParityTick> ticks) {
+        write(path, metadata, ticks, (source, destination) -> {
+            // Source and destination share a parent, so linking publishes the fully
+            // written inode atomically while CREATE_NEW semantics come from the link.
+            Files.createLink(destination, source);
+            Files.delete(source);
+        });
+    }
+
     static void write(Path path, AudioParityMetadata metadata, Iterator<AudioParityTick> ticks,
             AtomicPublisher publisher) {
         validateMetadataDetails(metadata.capture(), object(metadata.details(), "metadata details"));

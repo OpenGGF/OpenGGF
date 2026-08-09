@@ -80,7 +80,7 @@ public final class S1OpenGgfAudioCapture {
                     referenceMetadata.romCrc32());
             CaptureIterator ticks = new CaptureIterator(song, dacData, contract,
                     referenceMetadata.terminalRecordCount());
-            AudioParityJsonl.write(output, outputMetadata, ticks);
+            AudioParityJsonl.writeNew(output, outputMetadata, ticks);
             return ticks.result();
         }
     }

@@ -7,6 +7,8 @@ All notable changes to the OpenGGF project are documented in this file.
   validates the pinned ROM, BizHawk 2.11, and controller movie, proves both
   reference and OpenGGF captures deterministic, and emits first-divergence
   human and JSON reports without treating a valid mismatch as capture failure.
+  Machine-readable validation rejects delimiter injection, and every detailed
+  capture/report is create-new and confined to its canonical target run root.
 - Tooling: add a disabled-by-default diagnostic observer for resolved YM2612 and PSG
   writes, allowing audio parity tools to record the chip-core transaction order without
   changing synthesis state or driver arbitration.

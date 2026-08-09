@@ -29,7 +29,13 @@ class TestS1AudioParityCli {
 
         Invocation invalid = invoke("compare", "--reference", "only-one-path");
         assertEquals(S1AudioParityTool.EXIT_USAGE, invalid.exitCode());
-        assertTrue(invalid.err().contains("--openggf is required"));
+        assertTrue(invalid.err().contains("--repo is required"));
+
+        Invocation injected = invoke("validate", "--repo", "safe\nOUTPUT_ROOT=/tmp/escape",
+                "--rom", "rom.gen", "--movie", "movie.bk2", "--bizhawk-home", "bizhawk",
+                "--output-root", "target/audio-parity/s1-ghz");
+        assertEquals(S1AudioParityTool.EXIT_USAGE, injected.exitCode());
+        assertTrue(injected.err().contains("control or protocol delimiter"));
     }
 
     @Test
@@ -95,36 +101,116 @@ class TestS1AudioParityCli {
 
     @Test
     void comparisonUsesDedicatedMismatchAndCaptureFailureCodesAndWritesBothReports() throws Exception {
-        Path reference = temp.resolve("reference.jsonl");
-        Path mismatch = temp.resolve("mismatch.jsonl");
-        Path malformed = temp.resolve("malformed.jsonl");
-        Path human = temp.resolve("report.txt");
-        Path json = temp.resolve("report.json");
+        Path repo = Files.createDirectories(temp.resolve("repo"));
+        Files.createDirectories(repo.resolve("target/audio-parity"));
+        Path run = Files.createDirectories(repo.resolve("target/audio-parity/run.test"));
+        Path reference = run.resolve("reference.jsonl");
+        Path mismatch = run.resolve("mismatch.jsonl");
+        Path malformed = run.resolve("malformed.jsonl");
+        Path human = run.resolve("report.txt");
+        Path json = run.resolve("report.json");
         AudioParityTick tick = tick(0, 1);
         write(reference, AudioParitySchema.REFERENCE_CAPTURE, tick);
         write(mismatch, AudioParitySchema.OPENGGF_CAPTURE, tick(0, 2));
         Files.writeString(malformed, "not-json\n");
 
-        Invocation validMismatch = invoke("compare", "--reference", reference.toString(),
+        Invocation validMismatch = invoke("compare", "--repo", repo.toString(), "--run-root", run.toString(),
+                "--reference", reference.toString(),
                 "--openggf", mismatch.toString(), "--human-report", human.toString(),
                 "--json-report", json.toString());
         assertEquals(S1AudioParityTool.EXIT_MISMATCH, validMismatch.exitCode());
         assertTrue(Files.readString(human).contains("S1 audio parity: MISMATCH"));
         assertTrue(Files.readString(json).contains("\"result\":\"mismatch\""));
 
-        Invocation captureFailure = invoke("compare", "--reference", malformed.toString(),
-                "--openggf", mismatch.toString(), "--human-report", temp.resolve("bad.txt").toString(),
-                "--json-report", temp.resolve("bad.json").toString());
+        Invocation captureFailure = invoke("compare", "--repo", repo.toString(), "--run-root", run.toString(),
+                "--reference", malformed.toString(), "--openggf", mismatch.toString(),
+                "--human-report", run.resolve("bad.txt").toString(),
+                "--json-report", run.resolve("bad.json").toString());
         assertEquals(S1AudioParityTool.EXIT_TOOL_FAILURE, captureFailure.exitCode());
         assertFalse(captureFailure.err().contains("parity mismatch"));
 
-        Path wrongCaptureKind = temp.resolve("wrong-capture-kind.jsonl");
+        Path wrongCaptureKind = run.resolve("wrong-capture-kind.jsonl");
         write(wrongCaptureKind, AudioParitySchema.REFERENCE_CAPTURE, tick);
-        Invocation invalidMetadata = invoke("compare", "--reference", reference.toString(),
-                "--openggf", wrongCaptureKind.toString(), "--human-report", temp.resolve("meta.txt").toString(),
-                "--json-report", temp.resolve("meta.json").toString());
+        Invocation invalidMetadata = invoke("compare", "--repo", repo.toString(), "--run-root", run.toString(),
+                "--reference", reference.toString(), "--openggf", wrongCaptureKind.toString(),
+                "--human-report", run.resolve("meta.txt").toString(),
+                "--json-report", run.resolve("meta.json").toString());
         assertEquals(S1AudioParityTool.EXIT_TOOL_FAILURE, invalidMetadata.exitCode(),
                 "invalid capture identity is not a valid parity mismatch");
+    }
+
+    @Test
+    void captureAndReportOutputsRequireValidatedRunChildrenAndNeverOverwrite() throws Exception {
+        Path repo = Files.createDirectories(temp.resolve("authority-repo"));
+        Files.createDirectories(repo.resolve("target/audio-parity"));
+        Path run = Files.createDirectories(repo.resolve("target/audio-parity/run.authorized"));
+        Path outside = temp.resolve("outside.jsonl");
+        Path reference = run.resolve("reference.jsonl");
+        Path openGgf = run.resolve("openggf.jsonl");
+        AudioParityTick tick = tick(0, 1);
+        write(reference, AudioParitySchema.REFERENCE_CAPTURE, tick);
+        write(openGgf, AudioParitySchema.OPENGGF_CAPTURE, tick(0, 2));
+
+        Invocation outsideCapture = invoke("capture", "--repo", repo.toString(), "--run-root", run.toString(),
+                "--reference", reference.toString(), "--rom", "missing.gen", "--output", outside.toString());
+        assertEquals(S1AudioParityTool.EXIT_TOOL_FAILURE, outsideCapture.exitCode());
+        assertFalse(Files.exists(outside));
+
+        Path resourceOutput = repo.resolve("src/test/resources/audio/parity/leak.jsonl");
+        Invocation resourceCapture = invoke("capture", "--repo", repo.toString(), "--run-root", run.toString(),
+                "--reference", reference.toString(), "--rom", "missing.gen",
+                "--output", resourceOutput.toString());
+        assertEquals(S1AudioParityTool.EXIT_TOOL_FAILURE, resourceCapture.exitCode());
+        assertFalse(Files.exists(resourceOutput));
+
+        Path existingCapture = run.resolve("existing.jsonl");
+        Files.writeString(existingCapture, "preserved-capture\n");
+        Invocation overwriteCapture = invoke("capture", "--repo", repo.toString(), "--run-root", run.toString(),
+                "--reference", reference.toString(), "--rom", "missing.gen",
+                "--output", existingCapture.toString());
+        assertEquals(S1AudioParityTool.EXIT_TOOL_FAILURE, overwriteCapture.exitCode());
+        assertEquals("preserved-capture\n", Files.readString(existingCapture));
+
+        Path existingHuman = run.resolve("existing-report.txt");
+        Files.writeString(existingHuman, "preserved-report\n");
+        Path newJson = run.resolve("new-report.json");
+        Invocation overwriteReport = invoke("compare", "--repo", repo.toString(), "--run-root", run.toString(),
+                "--reference", reference.toString(), "--openggf", openGgf.toString(),
+                "--human-report", existingHuman.toString(), "--json-report", newJson.toString());
+        assertEquals(S1AudioParityTool.EXIT_TOOL_FAILURE, overwriteReport.exitCode());
+        assertEquals("preserved-report\n", Files.readString(existingHuman));
+        assertFalse(Files.exists(newJson));
+
+        Invocation outsideReport = invoke("compare", "--repo", repo.toString(), "--run-root", run.toString(),
+                "--reference", reference.toString(), "--openggf", openGgf.toString(),
+                "--human-report", temp.resolve("outside.txt").toString(),
+                "--json-report", run.resolve("safe.json").toString());
+        assertEquals(S1AudioParityTool.EXIT_TOOL_FAILURE, outsideReport.exitCode());
+        assertFalse(Files.exists(temp.resolve("outside.txt")));
+    }
+
+    @Test
+    void shellRejectsDuplicateValidationProtocolBeforeCreatingInjectedOutput() throws Exception {
+        Path fake = temp.resolve("fake-java");
+        Path outside = temp.resolve("injected-output");
+        Files.writeString(fake, "#!/usr/bin/env bash\n"
+                + "printf '%s\\n' 'ROM_PATH=/safe/rom.gen' 'MOVIE_PATH=/safe/movie.bk2' "
+                + "'BIZHAWK_HOME=/safe/bizhawk' 'OUTPUT_ROOT=" + temp.resolve("safe") + "' "
+                + "'OUTPUT_ROOT=" + outside + "'\n");
+        fake.toFile().setExecutable(true);
+        Path fakeBizHawk = Files.createDirectories(temp.resolve("BizHawk-2.11-linux-x64"));
+        Files.writeString(fakeBizHawk.resolve("EmuHawk.exe"), "stub");
+
+        ProcessBuilder builder = new ProcessBuilder("bash", "tools/audio/run_s1_audio_parity.sh",
+                "--rom", temp.resolve("rom.gen").toString(), "--bizhawk-home", fakeBizHawk.toString());
+        builder.directory(Path.of("").toAbsolutePath().toFile()).redirectErrorStream(true);
+        builder.environment().put("OGGF_AUDIO_PARITY_JAVA_BIN", fake.toString());
+        Process process = builder.start();
+        String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+
+        assertEquals(S1AudioParityTool.EXIT_TOOL_FAILURE, process.waitFor(), output);
+        assertTrue(output.contains("duplicate validation record"), output);
+        assertFalse(Files.exists(outside));
     }
 
     @Test

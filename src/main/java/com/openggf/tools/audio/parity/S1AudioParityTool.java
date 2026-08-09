@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -72,6 +73,22 @@ public final class S1AudioParityTool {
         return canonical;
     }
 
+    static Path resolveSafeRunRoot(Path repository, Path requested) {
+        Path safe = resolveSafeOutputRoot(repository, requested);
+        try {
+            if (!Files.isDirectory(requested, LinkOption.NOFOLLOW_LINKS)) {
+                throw new IllegalArgumentException("run root must be an existing directory: " + requested);
+            }
+            Path actual = requested.toRealPath();
+            if (!actual.equals(safe)) {
+                throw new IllegalArgumentException("run root did not resolve to its validated canonical path");
+            }
+            return actual;
+        } catch (IOException error) {
+            throw new IllegalArgumentException("cannot resolve run root: " + requested, error);
+        }
+    }
+
     private static int validate(Map<String, String> options, PrintStream out) {
         rejectUnknown(options, "repo", "rom", "rom-search-root", "movie", "bizhawk-home", "output-root");
         Path repo = canonicalExisting(Path.of(required(options, "repo")), "repository");
@@ -105,10 +122,12 @@ public final class S1AudioParityTool {
     }
 
     private static int capture(Map<String, String> options, PrintStream out) {
-        rejectUnknown(options, "reference", "rom", "output");
-        Path reference = normalizedRequired(options, "reference");
+        rejectUnknown(options, "repo", "run-root", "reference", "rom", "output");
+        Path repo = canonicalExisting(Path.of(required(options, "repo")), "repository");
+        Path runRoot = resolveSafeRunRoot(repo, normalizedRequired(options, "run-root"));
+        Path reference = existingRunChild(runRoot, normalizedRequired(options, "reference"), "reference");
         Path rom = normalizedRequired(options, "rom");
-        Path output = normalizedRequired(options, "output");
+        Path output = newRunChild(runRoot, normalizedRequired(options, "output"), "capture output");
         S1OpenGgfAudioCapture.CaptureResult result =
                 S1OpenGgfAudioCapture.capture(reference, rom, output);
         out.println("OpenGGF capture: " + output + " (" + result.recordCount() + " ticks)");
@@ -116,16 +135,15 @@ public final class S1AudioParityTool {
     }
 
     private static int compare(Map<String, String> options, PrintStream out) throws IOException {
-        rejectUnknown(options, "reference", "openggf", "human-report", "json-report");
-        Path reference = normalizedRequired(options, "reference");
-        Path openGgf = normalizedRequired(options, "openggf");
-        Path human = normalizedRequired(options, "human-report");
-        Path json = normalizedRequired(options, "json-report");
+        rejectUnknown(options, "repo", "run-root", "reference", "openggf", "human-report", "json-report");
+        Path repo = canonicalExisting(Path.of(required(options, "repo")), "repository");
+        Path runRoot = resolveSafeRunRoot(repo, normalizedRequired(options, "run-root"));
+        Path reference = existingRunChild(runRoot, normalizedRequired(options, "reference"), "reference");
+        Path openGgf = existingRunChild(runRoot, normalizedRequired(options, "openggf"), "OpenGGF capture");
+        Path human = newRunChild(runRoot, normalizedRequired(options, "human-report"), "human report");
+        Path json = newRunChild(runRoot, normalizedRequired(options, "json-report"), "JSON report");
         AudioParityReport report = AudioParityComparator.compare(reference, openGgf);
-        createParent(human);
-        createParent(json);
-        Files.writeString(human, report.toHumanText() + "\n", StandardCharsets.UTF_8);
-        Files.writeString(json, report.toJsonSummary() + "\n", StandardCharsets.UTF_8);
+        writeReportPairNew(human, report.toHumanText() + "\n", json, report.toJsonSummary() + "\n");
         out.println(report.toHumanText());
         out.println("Human report: " + human);
         out.println("JSON report: " + json);
@@ -158,7 +176,11 @@ public final class S1AudioParityTool {
                 throw new UsageException(option + " requires a value");
             }
             String name = option.substring(2);
-            if (values.putIfAbsent(name, args[index + 1]) != null) {
+            String value = args[index + 1];
+            if (value.chars().anyMatch(character -> character == '=' || Character.isISOControl(character))) {
+                throw new UsageException(option + " contains a control or protocol delimiter character");
+            }
+            if (values.putIfAbsent(name, value) != null) {
                 throw new UsageException("duplicate option: " + option);
             }
         }
@@ -235,6 +257,47 @@ public final class S1AudioParityTool {
         }
     }
 
+    private static Path existingRunChild(Path runRoot, Path requested, String label) {
+        Path candidate = canonicalCandidate(requested);
+        if (!candidate.getParent().equals(runRoot) || !Files.isRegularFile(candidate)) {
+            throw new IllegalArgumentException(label + " must be an existing direct child of the validated run root");
+        }
+        return candidate;
+    }
+
+    private static Path newRunChild(Path runRoot, Path requested, String label) {
+        Path candidate = canonicalCandidate(requested);
+        if (!candidate.getParent().equals(runRoot)) {
+            throw new IllegalArgumentException(label + " must be a direct child of the validated run root");
+        }
+        if (Files.exists(candidate, LinkOption.NOFOLLOW_LINKS)) {
+            throw new IllegalArgumentException(label + " already exists and will not be overwritten: " + candidate);
+        }
+        return candidate;
+    }
+
+    private static void writeReportPairNew(Path human, String humanText, Path json, String jsonText)
+            throws IOException {
+        boolean humanCreated = false;
+        boolean jsonCreated = false;
+        try {
+            Files.writeString(human, humanText, StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW,
+                    StandardOpenOption.WRITE);
+            humanCreated = true;
+            Files.writeString(json, jsonText, StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW,
+                    StandardOpenOption.WRITE);
+            jsonCreated = true;
+        } catch (IOException error) {
+            if (jsonCreated) {
+                Files.deleteIfExists(json);
+            }
+            if (humanCreated) {
+                Files.deleteIfExists(human);
+            }
+            throw error;
+        }
+    }
+
     private static void verifyRegular(Path path, String label) {
         if (!Files.isRegularFile(path)) {
             throw new IllegalArgumentException(label + " is missing or not a regular file: " + path);
@@ -259,13 +322,6 @@ public final class S1AudioParityTool {
             return HexFormat.of().formatHex(digest.digest());
         } catch (IOException | NoSuchAlgorithmException error) {
             throw new IllegalArgumentException("cannot compute " + algorithm + " for " + path, error);
-        }
-    }
-
-    private static void createParent(Path path) throws IOException {
-        Path parent = path.toAbsolutePath().getParent();
-        if (parent != null) {
-            Files.createDirectories(parent);
         }
     }
 
