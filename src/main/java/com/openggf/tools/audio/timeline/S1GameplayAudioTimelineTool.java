@@ -80,9 +80,16 @@ public final class S1GameplayAudioTimelineTool {
         rejectUnknown(options, "repo", "run-root", "staging", "output");
         Path runRoot = safeRunRoot(repository(options), path(options, "run-root"));
         Path staging = stagingChild(runRoot, path(options, "staging"));
+        Path snapshot = null;
+        Exception primary = null;
         try {
             Path output = newChild(runRoot, path(options, "output"), "reference output");
-            try (S1GameplayAudioTimelineJsonl.Reader reader = S1GameplayAudioTimelineJsonl.read(staging)) {
+            snapshot = Files.createTempFile(runRoot, ".s1-gameplay-reference-", ".snapshot");
+            String before = copyAndDigest(staging, snapshot);
+            if (!before.equals(digest(staging, "SHA-256"))) {
+                throw new IllegalArgumentException("reference staging changed while its immutable snapshot was created");
+            }
+            try (S1GameplayAudioTimelineJsonl.Reader reader = S1GameplayAudioTimelineJsonl.read(snapshot)) {
                 if (!S1GameplayAudioTimeline.REFERENCE_CAPTURE.equals(reader.metadata().capture())) {
                     throw new IllegalArgumentException("staging capture is not a BizHawk reference stream");
                 }
@@ -90,16 +97,26 @@ public final class S1GameplayAudioTimelineTool {
                     reader.next();
                 }
             }
-            Files.createLink(output, staging);
+            Files.createLink(output, snapshot);
+            Files.delete(snapshot);
+            snapshot = null;
             return EXIT_MATCH;
         } catch (IOException | RuntimeException failure) {
-            throw new IllegalArgumentException("cannot validate and atomically publish reference staging: "
-                    + message(failure), failure);
+            primary = failure;
+            throw new IllegalArgumentException("cannot validate and atomically publish reference staging: " + message(failure), failure);
         } finally {
+            IOException cleanupFailure = null;
+            if (snapshot != null) {
+                try { Files.deleteIfExists(snapshot); } catch (IOException failure) { cleanupFailure = failure; }
+            }
             try {
                 Files.deleteIfExists(staging);
-            } catch (IOException ignored) {
-                // The source capture error is more useful than a cleanup failure.
+            } catch (IOException failure) {
+                if (cleanupFailure == null) cleanupFailure = failure; else cleanupFailure.addSuppressed(failure);
+            }
+            if (cleanupFailure != null) {
+                if (primary != null) primary.addSuppressed(cleanupFailure);
+                else throw new IllegalArgumentException("reference staging cleanup failed: " + cleanupFailure.getMessage(), cleanupFailure);
             }
         }
     }
@@ -314,6 +331,34 @@ public final class S1GameplayAudioTimelineTool {
             }
         } catch (IOException | NoSuchAlgorithmException failure) {
             throw new IllegalArgumentException("cannot verify pinned identity: " + failure.getMessage(), failure);
+        }
+    }
+
+    private static String copyAndDigest(Path source, Path destination) throws IOException {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            try (InputStream input = Files.newInputStream(source);
+                    var output = Files.newOutputStream(destination, StandardOpenOption.TRUNCATE_EXISTING)) {
+                byte[] bytes = new byte[64 * 1024];
+                for (int count; (count = input.read(bytes)) >= 0;) {
+                    digest.update(bytes, 0, count);
+                    output.write(bytes, 0, count);
+                }
+            }
+            return HexFormat.of().formatHex(digest.digest());
+        } catch (NoSuchAlgorithmException failure) {
+            throw new IllegalStateException("SHA-256 is unavailable", failure);
+        }
+    }
+
+    private static String digest(Path path, String algorithm) {
+        try (InputStream input = Files.newInputStream(path)) {
+            MessageDigest digest = MessageDigest.getInstance(algorithm);
+            byte[] bytes = new byte[64 * 1024];
+            for (int count; (count = input.read(bytes)) >= 0;) digest.update(bytes, 0, count);
+            return HexFormat.of().formatHex(digest.digest());
+        } catch (IOException | NoSuchAlgorithmException failure) {
+            throw new IllegalArgumentException("cannot fingerprint reference staging: " + failure.getMessage(), failure);
         }
     }
 

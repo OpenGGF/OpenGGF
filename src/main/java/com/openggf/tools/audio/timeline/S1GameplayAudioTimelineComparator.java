@@ -2,6 +2,7 @@ package com.openggf.tools.audio.timeline;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.security.DigestInputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
@@ -35,11 +36,6 @@ public final class S1GameplayAudioTimelineComparator {
         }
         afterValidation.run();
         try {
-            if (!referenceFingerprint.equalsCurrent() || !openGgfFingerprint.equalsCurrent()) {
-                String side = referenceFingerprint.equalsCurrent() ? "OpenGGF" : "reference";
-                return S1GameplayAudioTimelineReport.failure(S1GameplayAudioTimelineReport.Kind.CAPTURE_FAILURE,
-                        side + " validation", side + " source changed after complete validation", List.of(), List.of());
-            }
             return compareValidated(referenceFingerprint, openGgfFingerprint);
         } catch (CaptureException failure) {
             return S1GameplayAudioTimelineReport.failure(S1GameplayAudioTimelineReport.Kind.CAPTURE_FAILURE,
@@ -48,16 +44,16 @@ public final class S1GameplayAudioTimelineComparator {
     }
 
     private static S1GameplayAudioTimelineReport compareValidated(Fingerprint reference, Fingerprint openGgf) {
-        try (S1GameplayAudioTimelineJsonl.Reader left = S1GameplayAudioTimelineJsonl.read(reference.path);
-                S1GameplayAudioTimelineJsonl.Reader right = S1GameplayAudioTimelineJsonl.read(openGgf.path)) {
-            if (!sameComparableMetadata(left.metadata(), right.metadata())) {
-                return S1GameplayAudioTimelineReport.failure(S1GameplayAudioTimelineReport.Kind.METADATA_MISMATCH,
-                        "metadata", "pinned schema, ROM, BK2, or segment metadata differs", List.of(), List.of());
-            }
+        try (ReadPass leftPass = ReadPass.open(reference.path, "reference");
+                ReadPass rightPass = ReadPass.open(openGgf.path, "OpenGGF")) {
+            S1GameplayAudioTimelineJsonl.Reader left = leftPass.reader;
+            S1GameplayAudioTimelineJsonl.Reader right = rightPass.reader;
             Context context = new Context();
             ContentionEvidence referenceEvidence = new ContentionEvidence();
             ContentionEvidence openGgfEvidence = new ContentionEvidence();
-            S1GameplayAudioTimelineReport first = null;
+            S1GameplayAudioTimelineReport first = sameComparableMetadata(left.metadata(), right.metadata()) ? null
+                    : S1GameplayAudioTimelineReport.failure(S1GameplayAudioTimelineReport.Kind.METADATA_MISMATCH,
+                            "metadata", "pinned schema, ROM, BK2, or segment metadata differs", List.of(), List.of());
             while (left.hasNext() || right.hasNext()) {
                 S1GameplayAudioTimeline.TimelineRecord leftRecord = left.hasNext() ? left.next() : null;
                 S1GameplayAudioTimeline.TimelineRecord rightRecord = right.hasNext() ? right.next() : null;
@@ -68,14 +64,12 @@ public final class S1GameplayAudioTimelineComparator {
                 }
                 context.accept(leftRecord, rightRecord, first != null);
             }
-            if (!reference.equalsCurrent() || !openGgf.equalsCurrent()) {
-                String side = reference.equalsCurrent() ? "OpenGGF" : "reference";
+            boolean referenceStable = leftPass.matches(reference.digest);
+            boolean openGgfStable = rightPass.matches(openGgf.digest);
+            if (!referenceStable || !openGgfStable) {
+                String side = referenceStable ? "OpenGGF" : "reference";
                 return S1GameplayAudioTimelineReport.failure(S1GameplayAudioTimelineReport.Kind.CAPTURE_FAILURE,
                         side + " comparison", side + " source changed during comparison", List.of(), List.of());
-            }
-            if (first != null) {
-                return S1GameplayAudioTimelineReport.failure(first.kind(), first.location(), first.detail(),
-                        context.left(), context.right());
             }
             if (!referenceEvidence.complete() || !openGgfEvidence.complete()) {
                 String side = !referenceEvidence.complete() ? "reference" : "OpenGGF";
@@ -83,7 +77,9 @@ public final class S1GameplayAudioTimelineComparator {
                         side + " contention coverage", side + " stream lacks required music/SFX takeover-and-restore or SFX/SFX contention",
                         List.of(), List.of());
             }
-            return S1GameplayAudioTimelineReport.match();
+            return first == null ? S1GameplayAudioTimelineReport.match()
+                    : S1GameplayAudioTimelineReport.failure(first.kind(), first.location(), first.detail(),
+                            context.left(), context.right());
         } catch (RuntimeException failure) {
             throw new CaptureException("comparison input no longer passes strict validation: " + failure.getMessage(),
                     "stream", failure);
@@ -169,6 +165,10 @@ public final class S1GameplayAudioTimelineComparator {
             for (int role = 0; role < expected.arbitration().size(); role++) {
                 S1GameplayAudioTimeline.RoleArbitration expectedDecision = expected.arbitration().get(role);
                 S1GameplayAudioTimeline.RoleArbitration actualDecision = actual.arbitration().get(role);
+                if (expectedDecision.role() != actualDecision.role()) {
+                    return report(S1GameplayAudioTimelineReport.Kind.ROLE_ORDER_MISMATCH, location(left, index),
+                            "arbitration role order differs", beforeLeft, beforeRight);
+                }
                 if (expectedDecision.acquired() != actualDecision.acquired()) {
                     return report(S1GameplayAudioTimelineReport.Kind.ROLE_ACQUIRED_MISMATCH, location(left, index),
                             "role " + expectedDecision.role() + " acquisition differs", beforeLeft, beforeRight);
@@ -218,48 +218,44 @@ public final class S1GameplayAudioTimelineComparator {
     }
 
     private static Fingerprint validateAndFingerprint(Path path, String side) {
-        try {
-            byte[] before = sha256(path);
-            try (S1GameplayAudioTimelineJsonl.Reader reader = S1GameplayAudioTimelineJsonl.read(path)) {
-                while (reader.hasNext()) {
-                    reader.next();
-                }
+        try (ReadPass pass = ReadPass.open(path, side)) {
+            while (pass.reader.hasNext()) {
+                pass.reader.next();
             }
-            byte[] after = sha256(path);
-            if (!MessageDigest.isEqual(before, after)) {
-                throw new CaptureException(side + " source changed during complete validation", side);
-            }
-            return new Fingerprint(path, after, side);
+            return new Fingerprint(path, pass.digest(), side);
         } catch (CaptureException failure) {
             throw failure;
-        } catch (RuntimeException | IOException failure) {
+        } catch (RuntimeException failure) {
             throw new CaptureException(side + " stream is malformed or incomplete: " + failure.getMessage(), side, failure);
         }
     }
 
-    private static byte[] sha256(Path path) throws IOException {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            try (InputStream input = Files.newInputStream(path)) {
-                byte[] bytes = new byte[64 * 1024];
-                for (int count; (count = input.read(bytes)) >= 0;) {
-                    digest.update(bytes, 0, count);
-                }
-            }
-            return digest.digest();
-        } catch (NoSuchAlgorithmException failure) {
-            throw new IllegalStateException("SHA-256 is unavailable", failure);
-        }
-    }
+    private record Fingerprint(Path path, byte[] digest, String side) { }
 
-    private record Fingerprint(Path path, byte[] digest, String side) {
-        private boolean equalsCurrent() {
+    private static final class ReadPass implements AutoCloseable {
+        private final DigestInputStream input;
+        private final S1GameplayAudioTimelineJsonl.Reader reader;
+        private final MessageDigest digest;
+
+        private ReadPass(DigestInputStream input, S1GameplayAudioTimelineJsonl.Reader reader, MessageDigest digest) {
+            this.input = input;
+            this.reader = reader;
+            this.digest = digest;
+        }
+
+        private static ReadPass open(Path path, String side) {
             try {
-                return MessageDigest.isEqual(digest, sha256(path));
-            } catch (IOException failure) {
-                throw new CaptureException(side + " source cannot be re-read: " + failure.getMessage(), side, failure);
+                MessageDigest digest = MessageDigest.getInstance("SHA-256");
+                DigestInputStream input = new DigestInputStream(Files.newInputStream(path), digest);
+                return new ReadPass(input, S1GameplayAudioTimelineJsonl.read(input), digest);
+            } catch (IOException | NoSuchAlgorithmException | RuntimeException failure) {
+                throw new CaptureException(side + " stream cannot be opened: " + failure.getMessage(), side, failure);
             }
         }
+
+        private byte[] digest() { return digest.digest(); }
+        private boolean matches(byte[] expected) { return MessageDigest.isEqual(expected, digest.digest()); }
+        @Override public void close() { reader.close(); }
     }
 
     private static final class Context {
@@ -333,8 +329,8 @@ public final class S1GameplayAudioTimelineComparator {
     }
 
     private static final class ContentionEvidence {
-        private final java.util.EnumSet<S1GameplayAudioTimeline.HardwareRole> musicTaken =
-                java.util.EnumSet.noneOf(S1GameplayAudioTimeline.HardwareRole.class);
+        private final java.util.EnumMap<S1GameplayAudioTimeline.HardwareRole, S1GameplayAudioTimeline.OwnerRef> musicTaken =
+                new java.util.EnumMap<>(S1GameplayAudioTimeline.HardwareRole.class);
         private boolean musicRestored;
         private boolean sfxContention;
 
@@ -347,16 +343,19 @@ public final class S1GameplayAudioTimelineComparator {
                     if (decision.acquired()
                             && decision.displacedOwner().ownerClass() == S1GameplayAudioTimeline.OwnerClass.MUSIC
                             && decision.finalOwner().ownerClass() != S1GameplayAudioTimeline.OwnerClass.MUSIC) {
-                        musicTaken.add(decision.role());
+                        musicTaken.put(decision.role(), decision.displacedOwner());
                     }
-                    if (decision.displacedOwner().ownerClass() == S1GameplayAudioTimeline.OwnerClass.NORMAL_SFX
-                            || decision.displacedOwner().ownerClass() == S1GameplayAudioTimeline.OwnerClass.SPECIAL_SFX) {
+                    if ((request.soundClass() == S1GameplayAudioTimeline.SoundClass.SFX
+                            || request.soundClass() == S1GameplayAudioTimeline.SoundClass.SPECIAL_SFX)
+                            && (decision.displacedOwner().ownerClass() == S1GameplayAudioTimeline.OwnerClass.NORMAL_SFX
+                            || decision.displacedOwner().ownerClass() == S1GameplayAudioTimeline.OwnerClass.SPECIAL_SFX)
+                            && !decision.displacedOwner().equals(decision.finalOwner())) {
                         sfxContention = true;
                     }
                 }
             }
-            for (S1GameplayAudioTimeline.HardwareRole role : musicTaken) {
-                if (frame.owners().owner(role).ownerClass() == S1GameplayAudioTimeline.OwnerClass.MUSIC) {
+            for (var entry : musicTaken.entrySet()) {
+                if (frame.owners().owner(entry.getKey()).equals(entry.getValue())) {
                     musicRestored = true;
                 }
             }

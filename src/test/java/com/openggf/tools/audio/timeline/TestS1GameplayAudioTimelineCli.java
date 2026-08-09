@@ -92,6 +92,11 @@ class TestS1GameplayAudioTimelineCli {
         String script = Files.readString(Path.of("tools/audio/run_s1_ghz1_gameplay_audio_timeline.sh"));
         assertTrue(script.contains("unsupported command replacement"));
         assertTrue(script.contains("publish-reference"));
+        assertTrue(script.contains("OGGF_BIZHAWK_PROBE_RUNTIME"));
+        assertTrue(script.contains("RUN_PATH=\"$REPO/src/test/resources/traces/s1/runs/s1-sonic-complete-withemeralds\""));
+        assertTrue(script.contains("-Ds1.audio.timeline.run.path=\"$RUN_PATH\""));
+        assertTrue(script.contains("-Dsonic1.rom.path=\"$ROM_PATH\""));
+        assertTrue(script.contains("-f \"$REPO/pom.xml\""));
     }
 
     @Test

@@ -13,6 +13,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -49,7 +51,16 @@ public final class S1GameplayAudioTimelineJsonl {
     /** Opens a bounded reader; records are parsed and validated only as the caller advances it. */
     public static Reader read(Path path) {
         try {
-            BufferedReader input = Files.newBufferedReader(path, StandardCharsets.UTF_8);
+            return read(Files.newInputStream(path));
+        } catch (IOException failure) {
+            throw invalid("cannot read timeline JSONL: " + failure.getMessage(), failure);
+        }
+    }
+
+    /** Opens a bounded reader over caller-owned bytes, including digesting streams. */
+    public static Reader read(InputStream stream) {
+        try {
+            BufferedReader input = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8));
             try {
                 String line = readLine(input);
                 if (line == null || line.isBlank()) {

@@ -29,6 +29,7 @@ fail() {
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 REPO=$(cd "$SCRIPT_DIR/../.." && pwd)
 MOVIE="$REPO/src/test/resources/traces/s1/runs/s1-sonic-complete-withemeralds/sonic1-complete-withemeralds.bk2"
+RUN_PATH="$REPO/src/test/resources/traces/s1/runs/s1-sonic-complete-withemeralds"
 OUTPUT_ROOT="$REPO/target/audio-parity/s1-ghz1-gameplay"
 PROBE="$REPO/tools/bizhawk/probes/s1_ghz1_gameplay_audio_timeline_probe.lua"
 LAUNCHER="$REPO/tools/bizhawk/run_bizhawk_lua.sh"
@@ -39,6 +40,12 @@ for replacement in OGGF_AUDIO_TIMELINE_JAVA_BIN OGGF_AUDIO_TIMELINE_MONO_BIN \
 	OGGF_AUDIO_PARITY_JAVA_BIN MONO_BIN BIZHAWK_EXTRA_ARGS; do
 	if [[ -v "$replacement" ]]; then
 		fail "unsupported command replacement environment variable: $replacement"
+	fi
+done
+for replacement in OGGF_BIZHAWK_PROBE_RUNTIME OGGF_BIZHAWK_LIB OGGF_WORKDIR OGGF_TRACE_OUTPUT_DIR \
+	OGGF_NO_LUACONSOLE OGGF_BIZHAWK_SOFTGL BIZHAWK_ALLOW_SLOW_LUA; do
+	if [[ -v "$replacement" ]]; then
+		fail "unsupported producer/tool replacement environment variable: $replacement"
 	fi
 done
 
@@ -63,14 +70,22 @@ if [ -z "$BIZHAWK_DIR" ]; then
 	done
 fi
 [ -n "$BIZHAWK_DIR" ] || fail "BizHawk 2.11 home was not found; pass --bizhawk-home"
+MAVEN_BIN=$(command -v mvn) || fail "trusted Maven executable was not found"
+JAVA_BIN=$(command -v java) || fail "trusted Java executable was not found"
+CMP_BIN=$(command -v cmp) || fail "trusted cmp executable was not found"
+MONO_SYSTEM_BIN=$(command -v mono) || fail "trusted Mono executable was not found"
+MAVEN_BIN=$(realpath "$MAVEN_BIN")
+JAVA_BIN=$(realpath "$JAVA_BIN")
+CMP_BIN=$(realpath "$CMP_BIN")
+MONO_SYSTEM_BIN=$(realpath "$MONO_SYSTEM_BIN")
 
 CLASSPATH_FILE="$REPO/target/s1-gameplay-audio-timeline.classpath"
-if ! mvn -q -Dmse=off -Pci -DskipTests compile dependency:build-classpath \
+if ! "$MAVEN_BIN" -q -Dmse=off -Pci -DskipTests compile dependency:build-classpath \
 	-Dmdep.outputFile="$CLASSPATH_FILE" -f "$REPO/pom.xml"; then
 	fail "Maven could not compile the trusted timeline tool"
 fi
 [ -s "$CLASSPATH_FILE" ] || fail "Maven did not produce the timeline tool classpath"
-JAVA_TOOL=(java -cp "$REPO/target/classes:$(<"$CLASSPATH_FILE")" com.openggf.tools.audio.timeline.S1GameplayAudioTimelineTool)
+JAVA_TOOL=("$JAVA_BIN" -cp "$REPO/target/classes:$(<"$CLASSPATH_FILE")" com.openggf.tools.audio.timeline.S1GameplayAudioTimelineTool)
 
 VALIDATED=$("${JAVA_TOOL[@]}" validate --repo "$REPO" --rom "$ROM_PATH" --movie "$MOVIE" \
 	--bizhawk-home "$BIZHAWK_DIR" --output-root "$OUTPUT_ROOT") || fail "pinned input validation failed"
@@ -101,7 +116,7 @@ JSON_REPORT="$RUN_DIR/parity-report.json"
 capture_reference() {
 	local output=$1 log=$2 staging
 	staging=$(mktemp "$RUN_DIR/reference.XXXXXXXX.staging") || return 1
-	if ! BIZHAWK_HOME="$BIZHAWK_DIR" OGGF_OUT="$staging" "$LAUNCHER" "$PROBE" "$MOVIE" "$ROM_PATH" >"$log" 2>&1; then
+	if ! BIZHAWK_HOME="$BIZHAWK_DIR" MONO_BIN="$MONO_SYSTEM_BIN" OGGF_OUT="$staging" "$LAUNCHER" "$PROBE" "$MOVIE" "$ROM_PATH" >"$log" 2>&1; then
 		"${JAVA_TOOL[@]}" publish-reference --repo "$REPO" --run-root "$RUN_DIR" --staging "$staging" --output "$output" >/dev/null 2>&1 || true
 		return 1
 	fi
@@ -110,9 +125,10 @@ capture_reference() {
 
 capture_openggf() {
 	local output=$1 log=$2
-	mvn -Dmse=off -Pci \
+	"$MAVEN_BIN" -f "$REPO/pom.xml" -Dmse=off -Pci \
 		-Dtest=com.openggf.tools.audio.timeline.TestS1Ghz1OpenGgfAudioTimelineCapture#captureRequestedOutput \
-		-Ds1.audio.timeline.run.path="$RUN_DIR" -Ds1.audio.timeline.output="$output" test >"$log" 2>&1
+		-Ds1.audio.timeline.run.path="$RUN_PATH" -Ds1.audio.timeline.output="$output" \
+		-Dsonic1.rom.path="$ROM_PATH" test >"$log" 2>&1
 }
 
 echo "Run directory: $RUN_DIR"
@@ -120,13 +136,13 @@ echo "Recording BizHawk reference capture 1/2..."
 capture_reference "$REFERENCE_1" "$RUN_DIR/reference-1.log" || fail "BizHawk capture 1 failed; see $RUN_DIR/reference-1.log"
 echo "Recording BizHawk reference capture 2/2..."
 capture_reference "$REFERENCE_2" "$RUN_DIR/reference-2.log" || fail "BizHawk capture 2 failed; see $RUN_DIR/reference-2.log"
-cmp -s -- "$REFERENCE_1" "$REFERENCE_2" || fail "BizHawk captures differ byte-for-byte"
+"$CMP_BIN" -s -- "$REFERENCE_1" "$REFERENCE_2" || fail "BizHawk captures differ byte-for-byte"
 
 echo "Recording OpenGGF capture 1/2..."
 capture_openggf "$OPENGGF_1" "$RUN_DIR/openggf-1.log" || fail "OpenGGF capture 1 failed; see $RUN_DIR/openggf-1.log"
 echo "Recording OpenGGF capture 2/2..."
 capture_openggf "$OPENGGF_2" "$RUN_DIR/openggf-2.log" || fail "OpenGGF capture 2 failed; see $RUN_DIR/openggf-2.log"
-cmp -s -- "$OPENGGF_1" "$OPENGGF_2" || fail "OpenGGF captures differ byte-for-byte"
+"$CMP_BIN" -s -- "$OPENGGF_1" "$OPENGGF_2" || fail "OpenGGF captures differ byte-for-byte"
 
 set +e
 "${JAVA_TOOL[@]}" compare --repo "$REPO" --run-root "$RUN_DIR" --reference "$REFERENCE_1" --openggf "$OPENGGF_1" \

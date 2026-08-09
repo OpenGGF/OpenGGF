@@ -16,6 +16,7 @@ public record S1GameplayAudioTimelineReport(Kind kind, String location, String d
         REQUEST_CLASS_MISMATCH,
         REQUEST_ID_MISMATCH,
         REQUEST_ROLE_MISMATCH,
+        ROLE_ORDER_MISMATCH,
         ROLE_ACQUIRED_MISMATCH,
         ROLE_DISPLACED_OWNER_MISMATCH,
         ROLE_FINAL_OWNER_MISMATCH,

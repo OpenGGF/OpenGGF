@@ -43,7 +43,7 @@ class TestS1GameplayAudioTimelineComparator {
 
     @Test
     void distinguishesOrderedRequestAndRoleArbitrationDifferences() throws Exception {
-        assertKind(S1GameplayAudioTimelineReport.Kind.REQUEST_MISSING,
+        assertKind(S1GameplayAudioTimelineReport.Kind.CAPTURE_FAILURE,
                 frame -> frame.bk2Frame() == 900 ? empty(frame) : frame);
         assertKind(S1GameplayAudioTimelineReport.Kind.REQUEST_ORDINAL_MISMATCH,
                 frame -> frame.bk2Frame() == 901 ? frameWith(frame, request(2, SFX, 0xA1, List.of(FM3), true,
@@ -59,10 +59,10 @@ class TestS1GameplayAudioTimelineComparator {
         assertKind(S1GameplayAudioTimelineReport.Kind.REQUEST_ROLE_MISMATCH,
                 frame -> frame.bk2Frame() == 900 ? frameWith(frame, request(0, SFX, 0xA0, List.of(FM4), true,
                         music(), owner(0xA0, 0)), frame.owners()) : frame);
-        assertKind(S1GameplayAudioTimelineReport.Kind.ROLE_ACQUIRED_MISMATCH,
+        assertKind(S1GameplayAudioTimelineReport.Kind.CAPTURE_FAILURE,
                 frame -> frame.bk2Frame() == 900 ? frameWith(frame, request(0, SFX, 0xA0, List.of(FM3), false,
                         music(), music()), frame.owners()) : frame);
-        assertKind(S1GameplayAudioTimelineReport.Kind.ROLE_DISPLACED_OWNER_MISMATCH,
+        assertKind(S1GameplayAudioTimelineReport.Kind.CAPTURE_FAILURE,
                 frame -> frame.bk2Frame() == 900 ? frameWith(frame, request(0, SFX, 0xA0, List.of(FM3), true,
                         none(), owner(0xA0, 0)), frame.owners()) : frame);
     }
@@ -124,6 +124,60 @@ class TestS1GameplayAudioTimelineComparator {
     }
 
     @Test
+    void validatesContentionEvidenceBeforeClassifyingAParityMismatch() throws Exception {
+        Function<S1GameplayAudioTimeline.Frame, S1GameplayAudioTimeline.Frame> removeContention = frame ->
+                frame.bk2Frame() == 900 || frame.bk2Frame() == 901 ? empty(frame) : frame;
+        Path reference = write("reference-unproven.jsonl", S1GameplayAudioTimeline.REFERENCE_CAPTURE,
+                removeContention, 0L);
+        Path engine = write("engine-unproven.jsonl", S1GameplayAudioTimeline.OPENGGF_CAPTURE, frame ->
+                frame.bk2Frame() == 1000 ? frameWith(frame, request(0, SFX, 0xA2, List.of(FM3), true,
+                        music(), owner(0xA2, 0)), frame.owners()) : removeContention.apply(frame), 0L);
+
+        assertEquals(S1GameplayAudioTimelineReport.Kind.CAPTURE_FAILURE,
+                S1GameplayAudioTimelineComparator.compare(reference, engine).kind());
+    }
+
+    @Test
+    void rejectsClassOnlyMusicRestoreAndSelfDisplacingSfxAsContentionEvidence() throws Exception {
+        Function<S1GameplayAudioTimeline.Frame, S1GameplayAudioTimeline.Frame> falsePositive = frame -> {
+            if (frame.bk2Frame() == 901) {
+                return frameWith(frame, request(1, SFX, 0xA1, List.of(FM3), true, owner(0xA1, 1), owner(0xA1, 1)),
+                        frame.owners());
+            }
+            if (frame.bk2Frame() == 902) {
+                return frameWith(frame, List.of(), owners(new S1GameplayAudioTimeline.OwnerRef(MUSIC, 0x82, 0)));
+            }
+            return frame;
+        };
+        Path reference = write("reference-false-positive.jsonl", S1GameplayAudioTimeline.REFERENCE_CAPTURE,
+                falsePositive, 0L);
+        Path engine = write("engine-false-positive.jsonl", S1GameplayAudioTimeline.OPENGGF_CAPTURE,
+                falsePositive, 0L);
+
+        assertEquals(S1GameplayAudioTimelineReport.Kind.CAPTURE_FAILURE,
+                S1GameplayAudioTimelineComparator.compare(reference, engine).kind());
+    }
+
+    @Test
+    void reportsArbitrationRoleOrderBeforeComparingDecisionValues() throws Exception {
+        Path reference = write("reference-roles.jsonl", S1GameplayAudioTimeline.REFERENCE_CAPTURE, frame -> {
+            if (frame.bk2Frame() != 900) {
+                return frame;
+            }
+            return frameWith(frame, twoRoleRequest(List.of(FM3, FM4)), frame.owners());
+        }, 0L);
+        Path engine = write("engine-roles.jsonl", S1GameplayAudioTimeline.OPENGGF_CAPTURE, frame -> {
+            if (frame.bk2Frame() != 900) {
+                return frame;
+            }
+            return frameWith(frame, twoRoleRequest(List.of(FM4, FM3)), frame.owners());
+        }, 0L);
+
+        assertEquals(S1GameplayAudioTimelineReport.Kind.ROLE_ORDER_MISMATCH,
+                S1GameplayAudioTimelineComparator.compare(reference, engine).kind());
+    }
+
+    @Test
     void rejectsSourceReplacementAfterCompleteValidation() throws Exception {
         Path reference = write("reference.jsonl", S1GameplayAudioTimeline.REFERENCE_CAPTURE,
                 Function.identity(), 0L);
@@ -146,9 +200,10 @@ class TestS1GameplayAudioTimelineComparator {
 
     private void assertKind(S1GameplayAudioTimelineReport.Kind expected,
             Function<S1GameplayAudioTimeline.Frame, S1GameplayAudioTimeline.Frame> mutate) throws Exception {
-        Path reference = write("reference-" + expected + ".jsonl", S1GameplayAudioTimeline.REFERENCE_CAPTURE,
+        String name = expected + "-" + java.util.UUID.randomUUID();
+        Path reference = write("reference-" + name + ".jsonl", S1GameplayAudioTimeline.REFERENCE_CAPTURE,
                 Function.identity(), 0L);
-        Path engine = write("engine-" + expected + ".jsonl", S1GameplayAudioTimeline.OPENGGF_CAPTURE, mutate, 0L);
+        Path engine = write("engine-" + name + ".jsonl", S1GameplayAudioTimeline.OPENGGF_CAPTURE, mutate, 0L);
         assertEquals(expected, S1GameplayAudioTimelineComparator.compare(reference, engine).kind());
     }
 
@@ -199,6 +254,11 @@ class TestS1GameplayAudioTimelineComparator {
         return new S1GameplayAudioTimeline.Request(ordinal, soundClass, soundId, roles,
                 roles.stream().map(role -> new S1GameplayAudioTimeline.RoleArbitration(role, acquired,
                         displaced, finalOwner)).toList());
+    }
+
+    private S1GameplayAudioTimeline.Request twoRoleRequest(List<S1GameplayAudioTimeline.HardwareRole> order) {
+        return new S1GameplayAudioTimeline.Request(0, SFX, 0xA0, List.of(FM3, FM4), order.stream()
+                .map(role -> new S1GameplayAudioTimeline.RoleArbitration(role, true, music(), owner(0xA0, 0))).toList());
     }
 
     private S1GameplayAudioTimeline.Metadata metadata(String capture) {
