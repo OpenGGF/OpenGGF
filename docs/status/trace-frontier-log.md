@@ -66390,3 +66390,84 @@ for. Read the count with that in mind.
   with the current native harness, then land ss_1.**
   Recorded rejected alternative, so it is not retried blindly: publishing at
   `completion_cursor_frame` instead of the bound observation turns ss_1..ss_7 ALL red.
+
+## 2026-08-09 — round nineteen: CPZ2 -82.5%, mid-act bootstrap scoped, and a RECORDER off-by-one
+
+Command: full `-Ptrace-replay` profile, no `-Dtest`. Base 378aeabe6 (769 / 18 / 63).
+After: **769 / 18 / 63 — the same failing CLASSES, but the error volume collapsed.**
+CPZ2 12927 -> 2268; the three mid-act segment tests 41/41/43 -> 3/3/5.
+
+- **CPZ2 12927 -> 2268 (-82.5%): ONE root cause, not the two the brief described.**
+  `CPZStaircaseObjectInstance` folds Obj78's four SST slots into one instance but did not
+  declare `usesPieceScopedStandingBits()`. ROM keeps the standing bit in each object's OWN
+  status byte (`btst d6,status(a0)`, s2.asm:35070-35072), so landing on a neighbouring step
+  re-seats the rider via `SolidObject_Landed` -> `RideObject_SetRide` (:35619-35626).
+  Without piece scoping the rider stayed latched to step 1 forever: `MvSonicOnPtfm` kept
+  pulling y back to slot 55's surface (05A6 instead of 05A8) and — the detonating part —
+  slot 55 kept taking the continued-ride branch instead of falling through to
+  `SolidObject_cont`, so it never produced the side push to 0FCB at frame 1584.
+  **The brief's geometry was WRONG and the correction matters:** S2's `SolidObject_Landed`
+  RE-READS `width_pixels(a0)` and clamps the landing to a +/-$10 window (s2.asm:35588-35597);
+  `d1=$1B` is the SIDE width only. That is why ROM hands off at x = objX-$10 every time
+  (0FC0 = 0FD0-$10, 0FA0 = 0FB0-$10, 0F81 for slot 23) — a crisp ROM-derived midpoint, not a
+  d5-vs-d1 classification. Verified directly from `object_near` status bits (bit 3
+  p1_standing, bit 4 p2_standing, bit 5 p1_pushing), which show slot 55 gaining p1_pushing
+  (0x30) exactly on frame 1584.
+  Second, smaller fix: the takeover gate re-derived its window from
+  `getPieceLandingHalfWidth()` (default = full collision half-width $1B) instead of
+  `isWithinTopLandingWidth()`, which already models the width_pixels re-read ($1B-$B = $10).
+  **Enabling piece scoping ALONE made things WORSE** (13273 errors, frontier back to 1556);
+  routing the gate through `isWithinTopLandingWidth` is what made it correct. The
+  `overridePieceIndex < 0` first-wins guard was also removed: ROM `RideObject_SetRide`
+  overwrites, so the LAST claiming slot owns the rider.
+  Frame 415 is untouched and remains — as diagnosed, it is 1 of the 12927 and self-heals.
+  **New frontier: frame 4859** (`y_speed` -0600 vs -0492), a different defect ~3300 frames
+  downstream; only 1 error now starts before it.
+- **Mid-act bootstrap scoped, comparator-only, 41/41/43 -> 3/3/5.** The 38 bootstrap errors
+  in each test are the untouched `Obj01_Init_Continued` pre-fill remnant of the
+  `Sonic_Pos_Record_Buf` ring, whose anchor is `Saved_x_pos`/`Saved_y_pos` — **a star post's
+  OWN coordinates** (`Obj79_SaveData`, a0 is the post, s2.asm:44737-44738; an earlier brief
+  said Sonic's position at contact, which is wrong, though the datum is equally underivable
+  either way). It is not derivable from the segment and hydrating it from the trace is what
+  hard rule 4 forbids.
+  `TraceBinder.untouchedPreFillRemnantStart` now excludes `player_history.x/y` for slots at
+  and above the recorded next-free ring index, and ONLY when BOTH ROM-derived facts hold:
+  (1) the replay's start X differs from the loaded zone/act's ROM `StartLocations` X — the
+  same discriminator `TraceReplaySessionBootstrap` already uses and cites for the sidekick
+  anchor, because a star post's X is never the level's spawn X; and (2) the recorded remnant
+  still carries the pre-fill signature (one identical coordinate pair across every remnant
+  slot, zero input, zero status), proving the ring has not wrapped past it. Slots below the
+  next-free index, the full input and status rings, `player_history.pos` and every other
+  bootstrap field stay compared. Three new `TestBootstrapComparator` cases lock the shape,
+  including one asserting the remnant is STILL compared on a start-location entry.
+  **It also unmasked a genuine defect the 38 errors were hiding:** `TestS2Ehz2Seg6` has a
+  real mid-segment divergence at frames 1278-1279 (`tails_cpu_respawn_counter` expected
+  0x0000 actual 0x003F). The other residuals are the closing-edge `dynamic_art` skew family
+  (seg2 row 3376, halfpipe row 2902, seg1 row 3709, arz1 row 3419).
+- **ss_1: NOT an engine bug — the standalone fixture carries a RECORDER OFF-BY-ONE.**
+  `S2SpecialStageRunObjectsObserver.cs:107-109` sets
+  `input_sample_frame = host.CompletedFrame - bk2Offset`, and the callback fires DURING
+  `host.Advance()`, so `CompletedFrame` is the pre-increment count.
+  - RUN path (`S2RunCaptureRunner.cs:248-258`, 673): on the entry frame it sets
+    `bk2FrameOffset = frameNow` and `continue`s ("Entry frame: no ss row"). Row k is emu
+    frame E0+1+k, so during that Advance `CompletedFrame == E0+k` and
+    `input_sample_frame == k`. **CORRECT.**
+  - STANDALONE path (`S2SpecialStageCaptureRunner.cs:118-150`): on the entry frame it sets
+    the offset and then FALLS THROUGH and writes row 0 for that same frame. Row k is emu
+    frame E0+k, so `CompletedFrame == E0+k-1` and `input_sample_frame == k-1`. **OFF BY ONE.**
+  Proved by an invariant derived from semantics, not measured from a fixture: a V-int that
+  ran `ReadJoypads` polled the pad, so BizHawk's `IsLagFrame` is false for it and every
+  `input_sample_frame` must land on a `lag=0` row. Across all eight committed S2
+  special-stage fixtures the seven RUN segments satisfy it exactly at +0 (0 violations each,
+  1847-3068 confirmations); **the standalone violates it on 58% of passes and satisfies it
+  exactly at +1.** Both fixtures record the SAME execution (3172 passes, identical
+  `input_sample_frame` and `sonic_slide_timer` sequences).
+  This is why the held ss_1 patch is fitted: it was being asked to reconcile two fixtures
+  that disagree by one row, one of which is simply wrong. It also explains why
+  `S2SpecialStageRecorderContractTest` and `TestTraceRunSpecialStageRows` have failed at
+  baseline on that fixture all session.
+  **Next: fix `S2SpecialStageCaptureRunner`, re-record the standalone fixture, then land the
+  pre-start pass modelling.** Note the earlier claim that the fixture's lag flags contradict
+  s2.asm:483-484 was WRONG — the CSV `lag` column is BizHawk's
+  `IInputPollable.IsLagFrame` (GpgxHost.cs:82), an emulator input-poll flag, not the ROM's
+  `Vint_Lag` branch — and re-recording it unchanged produces a BYTE-IDENTICAL file.

@@ -28,13 +28,15 @@ import java.nio.file.Path;
  * ordinary red test with a frame and a field. Modelled on
  * {@link TestS2Arz1CompleteEmeraldsSegmentTraceReplay}.
  *
- * <p><b>Status at b961eae47 (landed red, deliberately).</b> 41 errors of which
- * 38 are frame-0 bootstrap {@code player_history} ring-buffer entries (26..63)
- * — the same structural mid-act cold-boot artifact as the complete-emeralds
- * {@code seg2_ehz1}: the ROM ring still holds pre-star-post rows a cold boot
- * cannot have produced. The remaining 3 are the closing-edge
+ * <p><b>Status (landed red, deliberately).</b> 3 errors, all the closing-edge
  * {@code dynamic_art} skew at row 2902 ({@code dynamic_art.edges} expected
  * {@code []} actual {@code [5154]}). No gameplay row diverges.
+ *
+ * <p>The 38 frame-0 {@code player_history} bootstrap entries this class
+ * reported at b961eae47 were the untouched {@code Obj01_Init_Continued}
+ * pre-fill remnant of a mid-act re-entry; the bootstrap comparator now
+ * excludes exactly that remnant — see
+ * {@code TraceBinder.untouchedPreFillRemnantStart}.
  */
 @RequiresRom(SonicGame.SONIC_2)
 public class TestS2Ehz1Seg2HalfpipeSegmentTraceReplay extends AbstractTraceReplayTest {

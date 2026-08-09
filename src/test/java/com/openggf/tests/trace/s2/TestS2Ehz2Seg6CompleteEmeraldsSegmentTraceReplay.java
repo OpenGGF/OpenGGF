@@ -28,10 +28,9 @@ import java.nio.file.Path;
  * ordinary red test with a frame and a field. Modelled on
  * {@link TestS2Arz1CompleteEmeraldsSegmentTraceReplay}.
  *
- * <p><b>Status at b961eae47 (landed red, deliberately).</b> 43 errors: 38
- * frame-0 bootstrap {@code player_history} entries (the mid-act cold-boot
- * artifact described above), 4 closing-edge {@code dynamic_art} errors on row
- * 3793, and <b>one genuine gameplay divergence</b> — at frames 1278..1279 the
+ * <p><b>Status (landed red, deliberately).</b> 5 errors: 3 closing-edge
+ * {@code dynamic_art} errors on row 3793, and <b>one genuine gameplay
+ * divergence</b> spanning two rows — at frames 1278..1279 the
  * engine's {@code tails_cpu_respawn_counter} reads {@code 0x003F} where the
  * ROM reads {@code 0x0000}, i.e. the engine starts the sidekick CPU respawn
  * countdown on two frames the ROM does not. That divergence has been invisible

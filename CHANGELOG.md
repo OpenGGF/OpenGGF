@@ -3,6 +3,18 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the Chemical Plant staircase keeps a standing bit per step, as the ROM does. The
+  engine draws the four steps from one instance, and without per-step standing bits a rider
+  stayed latched to the step they first landed on: their height kept being pulled back to
+  that step's surface, and the step they had walked into never produced the sideways push
+  the ROM applies when a rising step catches them. The shared multi-piece takeover test also
+  now uses the ROM's narrower landing width instead of the full collision width.
+- Fix: trace comparison no longer reports the untouched remainder of the player position
+  history ring when a replay starts mid-act. The ROM pre-fills that ring from the star post
+  the player last touched, which is play history a mid-act segment does not record; the
+  exclusion is gated on the start position differing from the level's own spawn point and on
+  the recorded remainder still carrying its pre-fill signature, so everything the ROM
+  actually wrote during the segment is still compared.
 - Tooling: add a reproducible Sonic 1 GHZ music-driver parity command that
   validates the pinned ROM, BizHawk 2.11, and controller movie, proves both
   reference and OpenGGF captures deterministic, and emits first-divergence
