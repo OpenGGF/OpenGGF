@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Star Light boss explosion fragments are removed on the ROM's render test rather
+  than a camera-bounds check. The ROM frees a fragment's slot when the previous frame's
+  sprite build did not draw it; the engine used a more permissive point-in-camera test on
+  the post-move position, so the two slower fragments outlived their ROM counterparts and
+  held slots that the ROM had already handed to spilled rings.
 - Fix: a Marble Zone pushable block that finishes sinking in lava is deleted when its
   origin is also off-screen, instead of always being parked at its origin. The ROM
   branches from the sunken path into the same origin range check the display path falls

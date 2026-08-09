@@ -66080,3 +66080,77 @@ Command: full `-Ptrace-replay` profile, no `-Dtest` (763 tests). Base 8c685eb5d
   start; the DEZ scroll lane changed rows across consecutive frames and
   reproduced the same Plane B resources after rewind recomputation. No trace
   fixture or comparison data was changed.
+
+## 2026-08-09 — round fourteen: MZ3 and SLZ3 GREEN
+
+Command: full `-Ptrace-replay` profile, no `-Dtest` (763 tests). Base 4f3442143
+(763 / 17 / 63, 30 classes). After: **763 / 15 / 63, 28 classes.**
+Moved to green: `TestS1Mz3CompleteRunTraceReplay`, `TestS1Slz3CompleteRunTraceReplay`.
+Moved to red: none.
+
+**CORRECTION TO 4f3442143's COMMIT MESSAGE.** It claimed "every placed object matches ROM"
+at MZ3 f14218. **That is false.** `SlotOccupancyProbe` shows a persistent **+1 placement
+shift from slot 55 upward**, present from f13504 and traceable back to f5147
+("f13504 s55 rom=0x13 eng=0x33 ... s93 rom=- eng=0x33(PushBlock @752,1680)"). The claim
+came from reading an agent's listing of NEAR objects as if it were exhaustive. It also
+sent round fourteen's Lane A after the wrong subsystem — see below.
+
+- **The Obj37 scattered-ring allocator was NEVER at fault.** ROM's MZ3 spill claims
+  exactly the first 25 free slots ascending (40,42,43,50,56,59,61..79 at the f14133
+  slot_dump) — plain repeated `FindFreeObj` — and
+  `LevelLostRingSpawnCoordinator`/`RingManager` already do exactly that. The chain
+  diverged only because slot 59 was occupied by a shifted lamppost.
+- **MZ3 GREEN: `PushB_Sunken` took only HALF of `PushB_ChkWithinOrigin`.** ROM
+  `PushB_Sunken` ends `bra.w PushB_ChkWithinOrigin`
+  (_incObj/"33 MZ, LZ Pushable Blocks.asm":209-219) and that routine's FIRST instruction
+  is a second `out_of_range` against `pblock_origX`; an out-of-range origin reaches
+  `.deleteAndAllowRespawn` -> clear respawn bit -> `DeleteObject`. Only an IN-range origin
+  is snapped home and parked on routine 4 (`PushB_ChkVisible`), which runs
+  `ChkPartiallyVisible` and `rts` with NO range test — so a block wrongly parked there can
+  never be deleted. The engine's sunken path called `handleOutOfRange()` directly, the
+  second half only. Instrumented: the MZ3 block spawned at (752,1680) sank at x=1648 with
+  BOTH range checks false, went to routine 4 anyway, and held slot 93 for 5690+ frames.
+  **This is the SIXTH "half a predicate" instance, and the first one in code landed
+  earlier in this same session.**
+- **SLZ3 GREEN, and the brief was half wrong in the half that mattered.** Engine slots
+  44/46 at f6247 are NOT spikeballs — they are FOUR EXPLOSION FRAGMENTS of the slot-42
+  self-destruct, which carry `obID = id_BossSpikeball = 0x7B` and so are labelled
+  identically by the probe. The ball lifetime (resting countdown, flicker window,
+  subtype==$20 self-destruct) is already ROM-correct and slot 61 exploded on the identical
+  frame both sides. ROM frees exactly 44 and 46 — `BossSpikeball_FragSpeed` entries 1 and
+  3, `vel_y = -$240`, the SLOW pair, which falls back through the bottom of the viewport
+  ~40 frames before the fast `-$340` pair (43/45). **Root cause: the fragment deletion
+  test.** ROM `BossSpikeball_MoveFrag` ends `tst.b obRender(a0) / bpl.w
+  BossStarLight_Delete` — free the slot when the PREVIOUS frame's `BuildSprites` did not
+  set `sprite_rendered_bit`. The engine used the generic `isOnScreen()` point-in-camera
+  test, far more permissive and reading the POST-move position. Replaced with
+  `isPreUpdateWithinRenderSpriteBounds(24/2, 32)`: `obActWid = 24/2` from
+  `BossSpikeball_MakeFrag`, and BuildSprites' fixed 32px `.assumeHeight` band (the
+  fragment never sets `sprite_customheight_bit`). Arithmetic check: camera_y = 0x210 = 528
+  at f6245 so the Y band is [496,784); fragment 44 reaches y=784 on f6245 and loses its
+  render bit that frame. SLZ3 wall time also dropped 93.6s -> 43.7s.
+- **RETRACTION 3, and it was MY brief's "verified critical structural fact".** Round
+  thirteen reported, and round fourteen's brief asserted, that
+  `TestS2SpecialStage2TraceReplay` "replays ONLY the ss_2 segment and never simulates EHZ,
+  Tails-in-level or any badnik". **FALSE.**
+  `S2SpecialStagePredecessorReplay.replayInheritedPrefix()` walks the manifest back from
+  ss_2 (index 3, non-empty opening ledger) to seg2_ehz1 (index 2, empty ledger) and
+  replays **all 3377 EHZ1 frames plus the 1-frame gap, UNCOMPARED**, before the stage
+  opens — proved by instrumenting `replaySegmentRows()`. So the failure IS level physics,
+  surfacing as a DPLC symptom precisely because the predecessor is never compared.
+  **Lesson: "this test only replays X" is a claim about code, and must be verified by
+  reading the replay path, not inferred from the test's name or its assertions.**
+- **The real ss_2 chain, measured end to end.** (1) seg2_ehz1 row 460: engine SONIC
+  diverges 1px in x (trace 0x0CB8, engine 0x0CB9) while airborne-rolling with left held,
+  and is off on 2371 of 3377 rows thereafter, growing to 2-3px — silently, since nothing
+  compares it. (2) That contaminates the leader position history CPU-Tails follows: ROM
+  `TailsCPU_Normal` reads `Sonic_Pos_Record_Buf` at `Sonic_Pos_Record_Index-$44`
+  (s2.asm:39285-39289). At frame 484 the recorded `cpu_state` has delayed_x=0x0CAA against
+  Tails x_pos 0x0CAB, so d2 = -1 -> FollowLeft; the engine's targetX is 0x0CAD, dx = +1 ->
+  FollowRight. (3) `TailsCPU_Normal_FollowLeft` runs `subq.w #1,x_pos(a0)`
+  (s2.asm:39318); the engine applies nothing. Independently verified: over seg2_ehz1 the
+  sidekick's 16.16 x delta differs from `x_speed*256` by exactly ±0x10000 on 1219 rows,
+  and for frames 475-495 the sign matches sign(d2) row for row. (4) Engine-Tails is
+  permanently 1px right from row 484, which is why the row-1132 Buzzer stinger misses.
+  **The next S2 target is the 1px Sonic divergence at seg2_ehz1 row 460**, not the
+  stinger and not the DPLC.
