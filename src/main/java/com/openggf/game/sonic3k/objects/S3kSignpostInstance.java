@@ -564,11 +564,10 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
                         usesShortResultsChildRetireTail),
                 resultsChildTimingAdjustment,
                 usesShortResultsChildRetireTail);
-        // Obj_EndSignResults normally calls AllocateObject.  When the native
-        // result owner has already consumed the current object pass, the
-        // retained short-tail/landing path keeps the higher-slot handoff used
-        // by that owner; otherwise the first-free slot determines whether the
-        // new owner runs in this pass.
+        // Obj_EndSignResults normally calls AllocateObject.  The engine's
+        // dynamically spawned signpost can occupy a later managed slot than
+        // its native SST owner, so the flagged grounded-boundary path uses the
+        // after-current dispatch to retain the native same-pass handoff.
         if (useFirstFreeResultsOwner()) {
             spawnFreeChild(resultsFactory);
         } else {
@@ -582,8 +581,8 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
     }
 
     private boolean useFirstFreeResultsOwner() {
-        return preservesGroundedResultsDispatchBoundary
-                || (!resultsWaitedForPlayerLanding && !usesShortResultsChildRetireTail);
+        return !preservesGroundedResultsDispatchBoundary
+                && (!resultsWaitedForPlayerLanding && !usesShortResultsChildRetireTail);
     }
 
     static int resultsChildRetireDispatches(boolean waitedForPlayerLanding,

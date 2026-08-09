@@ -66260,6 +66260,44 @@ to synthesize a POST phase on a VBLANK-only row.
   animation handoff. HCZ remains green; CNZ is next in gameplay order, with ICZ
   and LBZ pending.
 
+## 2026-08-09 - S3K AIZ grounded results dispatch frontier
+
+- Worktree: `bugfix/s3k-traces` at `5d6e883dc` before this fix; unrelated edits
+  in `.idea/vcs.xml`, `docs/status/rewind-round-trip-gaps.md`,
+  `src/main/java/com/openggf/level/objects/ObjectPlacementController.java`,
+  and `src/main/java/com/openggf/level/rings/RingManager.java` remained
+  unstaged. Validation used JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen`; no trace payloads changed.
+- Focused unit command: `env JAVA_HOME=$JDK21_HOME PATH=$JDK21_HOME/bin:$PATH
+  mvn -q -Dmse=off -Dsurefire.forkCount=1 -DforkCount=1
+  -DreuseForks=true -Dsurefire.argLine='-Xmx3g'
+  -Dtest=TestS3kSignpostInstance,TestS3kResultsScreenObjectInstance,
+  TestS3kBossDefeatSignpostFlow test`. Result: all focused tests passed.
+- Frontier command: `env JAVA_HOME=$JDK21_HOME PATH=$JDK21_HOME/bin:$PATH
+  mvn -q -Dmse=off -Dsurefire.forkCount=1 -DforkCount=1
+  -DreuseForks=true -Dsurefire.argLine='-Xmx3g'
+  -Dtest=TestS3kAizCompleteRunTraceReplay -Dtrace.verification=all
+  -Ddebug.allowRecordedTimingMismatch=true
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  This property-gated diagnostic completed all `26041` frames with `2994`
+  comparison errors and moved the first error from raw frame `11350`,
+  `queue.s3k_kos_direct.busy`, to raw frame `11891`, `rings` (`9` expected,
+  `0` actual). The temporary diagnostic bypass was removed before commit.
+- Clean authority command: the same replay without the diagnostic property
+  still stops at the established `KOS_DECOMPRESSION_QUEUE#50` admission at raw
+  frame `20376` (`sha256:66961069e564ef707173bbad733f75e3ab034e29e3f4833a02e2e26af452d8fd`)
+  because the engine has no matching StarPost submission. Ring comparison
+  remains enabled through `ToleranceConfig.DEFAULT` with
+  `RingCountMode.FORCE_ERROR`.
+- Root cause: the native `Obj_EndSignResults` uses `AllocateObject`, but the
+  engine's dynamic signpost can occupy a later managed slot than the native
+  signpost. The semantic grounded-results boundary now allocates its results
+  owner after the current signpost so its ROM-backed art submission runs in the
+  native same-pass boundary, without trace, frame, route, or zone branching.
+- Route position: AIZ remains active at the raw frame `11891` ring/control
+  handoff; HCZ and MGZ committed canaries remain green. CNZ, ICZ, and LBZ remain
+  pending in gameplay order.
+
 ## 2026-08-09 - S3K MGZ complete-run animation frontier
 
 - Worktree: `bugfix/s3k-traces` at `4bd0939ed` before this fix; unrelated edits

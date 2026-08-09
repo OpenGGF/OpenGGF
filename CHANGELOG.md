@@ -3,6 +3,13 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K grounded results owners now preserve the native same-pass
+  `Obj_EndSignResults` handoff when their dynamically spawned signpost occupies
+  a later managed slot. The AIZ complete-run diagnostic frontier advances from
+  the raw frame `11350` results-queue mismatch to the raw frame `11891` ring
+  mismatch (`9` expected, `0` actual); the clean recorded authority still
+  reaches the established raw frame `20376` StarPost admission. Ring
+  comparisons stay forced errors; no trace payloads changed.
 - Fix/Test: S3K MGZ's retained signpost flow now leaves players' animation
   state untouched when the live transition bridge has already restored their
   control. This closes the complete MGZ run's established 31 animation-only
