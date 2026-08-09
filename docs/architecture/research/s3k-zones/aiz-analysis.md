@@ -19,6 +19,12 @@ camera-relative terrain impacts, collision lifetime, seven-child explosion
 sequence, and exact boss/barrel/flare rewind identities. This is bounded route
 evidence rather than a claim that the complete 68-segment AIZ run-chain replays.
 
+The AIZ2 end-boss waterfall splash preserves the native one-dispatch delete
+marker, forward SST allocation, same-pass initialization, subtype-2 drop, and
+rewind lifecycle. Native complete-run rows reach both splash subtypes, while
+the Java complete-run replay still stops before gameplay at raw frame 6351 on
+the existing strict hardware-timing schedule admission boundary.
+
 ## Events
 
 ### Act 1 (AIZ1_Resize)

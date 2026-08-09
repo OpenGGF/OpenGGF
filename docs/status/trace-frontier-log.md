@@ -55362,3 +55362,21 @@ mvn -q "-Dmse=off" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.trace.s3k.
   frontier advance; it is being banked explicitly as a route-completion checkpoint
   at the user's wrap-up request. The latest catapult deferral held the measured
   3082 total and passed its focused object suite.
+
+## 2026-08-09 — AIZ2 end-boss splash native evidence and replay admission
+
+- Context: reviewed `feature/ai-aiz2-splash-evidence` commit `fdb74aded`.
+- Command: `mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1
+  -Dsurefire.runOrder=alphabetical
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay
+  -Ds3k.rom.path=s3k.gen test` on JDK 21.
+- Result: 1 test, 0 assertion failures, 1 error before gameplay. First error:
+  `unsupported-row-POST` at raw frame 6351, phase `VBLANK_ONLY`,
+  `KOS_MODULE_QUEUE` ordinal 16, reason `unsupported-held-row-POST`. No replay
+  frontier moved and no splash-specific comparison divergence was observed.
+- Native complete-run rows show subtype 0 in slot 6 at frame 23509 with its
+  `$1ABB6` marker retained at 23522, and subtype 2 in pressure-forced slot 15
+  at frame 23830 with the native `$699EA -> $69A1A` transition, `$8` drop, and
+  retained marker at frame 23856. Production and rewind tests now preserve
+  that lifecycle. Full evidence is in
+  `docs/architecture/validation/2026-08-09-aiz2-end-boss-splash-evidence.md`.

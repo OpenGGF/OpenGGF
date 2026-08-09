@@ -27,6 +27,7 @@ import com.openggf.game.sonic3k.objects.AizBgTreeInstance;
 import com.openggf.game.sonic3k.objects.AizBgTreeSpawnerInstance;
 import com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance;
 import com.openggf.game.sonic3k.objects.AizEndBossInstance;
+import com.openggf.game.sonic3k.objects.AizEndBossWaterfallChild;
 import com.openggf.game.sonic3k.objects.AizIntroArtLoader;
 import com.openggf.game.sonic3k.objects.AizPlaneIntroInstance;
 import com.openggf.level.Chunk;
@@ -36,6 +37,8 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.Pattern;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.level.objects.TestObjectServices;
+import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.sprites.playable.Tails;
@@ -1458,6 +1461,114 @@ public class TestSonic3kAIZEvents {
     }
 
     @Test
+    public void aiz2EndBossSplashChildrenRunThroughLiveEventAndSlotTimeline() throws Exception {
+        HeadlessTestFixture aiz2 = HeadlessTestFixture.builder()
+                .withZoneAndAct(0, 1)
+                .startPosition((short) 0x4860, (short) 0x015A)
+                .startPositionIsCentre()
+                .build();
+        Camera camera = aiz2.camera();
+        camera.setX((short) 0x4880);
+        camera.setY((short) 0x015A);
+
+        Sonic3kLevelEventManager manager =
+                (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
+        Sonic3kAIZEvents events = manager.getAizEvents();
+        assertNotNull(events, "AIZ event handler should be active for AIZ2");
+        ObjectManager objects = GameServices.level().getObjectManager();
+
+        int frame = 0;
+        runAiz2BossFrame(events, aiz2, frame++);
+        List<AizEndBossInstance> liveBosses = objects.getActiveObjects().stream()
+                .filter(AizEndBossInstance.class::isInstance)
+                .map(AizEndBossInstance.class::cast)
+                .toList();
+        assertEquals(1, liveBosses.size(),
+                "the real object pass must materialize the layout boss before the event fallback runs");
+        AizEndBossInstance boss = liveBosses.getFirst();
+
+        AizEndBossWaterfallChild emerge = null;
+        List<Integer> occupiedBeforeEmerge = List.of();
+        while (emerge == null && frame < 140) {
+            List<Integer> occupiedBeforeFrame = liveManagedSlots(objects);
+            runAiz2BossFrame(events, aiz2, frame++);
+            emerge = liveWaterfall(objects, 0);
+            if (emerge != null) {
+                occupiedBeforeEmerge = occupiedBeforeFrame;
+            }
+        }
+        assertNotNull(emerge,
+                "the live event -> boss -> ChildObjDat route must create subtype 0");
+        assertTrue(readPrivateBoolean(emerge, "initialized"),
+                "the higher-slot child must consume init in the allocation pass");
+        assertFalse(readPrivateBoolean(emerge, "drawEligible"),
+                "AIZEndBossWaterfall_Init returns without Draw_Sprite");
+        assertEquals(0x24, emerge.getMappingFrameForTest());
+        assertNthFreeForwardSlot(occupiedBeforeEmerge, boss, emerge, 4);
+        int emergeSlot = emerge.getSlotIndex();
+
+        for (int animationDispatch = 1; animationDispatch <= 12; animationDispatch++) {
+            runAiz2BossFrame(events, aiz2, frame++);
+            assertTrue(objects.getActiveObjects().contains(emerge),
+                    "subtype 0 must remain in its SST through raw-animation entry "
+                            + animationDispatch);
+        }
+        assertTrue(readPrivateBoolean(emerge, "drawEligible"),
+                "the dispatch after init must reach the Draw_Sprite-capable animation routine");
+        runAiz2BossFrame(events, aiz2, frame++);
+        assertTrue(objects.getActiveObjects().contains(emerge),
+                "the $F4 callback must leave Go_Delete_Sprite in the same SST for one pass");
+        assertEquals(emergeSlot, emerge.getSlotIndex());
+        assertFalse(emerge.isDestroyed());
+        assertFalse(readPrivateBoolean(emerge, "drawEligible"),
+                "the Go_Delete marker row must not publish Draw_Sprite");
+        runAiz2BossFrame(events, aiz2, frame++);
+        assertFalse(objects.getActiveObjects().contains(emerge),
+                "Delete_Current_Sprite must clear the subtype-0 SST on its next dispatch");
+
+        AizEndBossWaterfallChild drop = null;
+        List<Integer> occupiedBeforeDrop = List.of();
+        while (drop == null && frame < 520) {
+            List<Integer> occupiedBeforeFrame = liveManagedSlots(objects);
+            runAiz2BossFrame(events, aiz2, frame++);
+            drop = liveWaterfall(objects, 2);
+            if (drop != null) {
+                occupiedBeforeDrop = occupiedBeforeFrame;
+            }
+        }
+        assertNotNull(drop, "the live retreat path must create subtype 2");
+        assertTrue(readPrivateBoolean(drop, "initialized"));
+        assertFalse(readPrivateBoolean(drop, "drawEligible"));
+        assertEquals(0x24, drop.getMappingFrameForTest());
+        assertNthFreeForwardSlot(occupiedBeforeDrop, boss, drop, 1);
+        int dropSlot = drop.getSlotIndex();
+        int dropStartY = drop.getY();
+
+        for (int animationDispatch = 1; animationDispatch <= 13; animationDispatch++) {
+            runAiz2BossFrame(events, aiz2, frame++);
+        }
+        assertTrue(drop.isDroppingForTest(),
+                "the thirteenth emerge-script dispatch must install the falling routine");
+        assertEquals(dropStartY, drop.getY(),
+                "AIZEndBossWaterfall_StartDrop installs velocity without moving on its callback row");
+
+        for (int dropDispatch = 1; dropDispatch <= 13; dropDispatch++) {
+            runAiz2BossFrame(events, aiz2, frame++);
+            assertEquals(dropStartY + dropDispatch * 8, drop.getY(),
+                    "MoveSprite2 must apply y_vel=$800 before each drop-animation dispatch");
+        }
+        assertTrue(objects.getActiveObjects().contains(drop));
+        assertEquals(dropSlot, drop.getSlotIndex());
+        assertFalse(drop.isDestroyed(),
+                "the subtype-2 $F4 callback must retain Go_Delete_Sprite for one pass");
+        assertFalse(drop.isDroppingForTest());
+        assertFalse(readPrivateBoolean(drop, "drawEligible"));
+        runAiz2BossFrame(events, aiz2, frame);
+        assertFalse(objects.getActiveObjects().contains(drop),
+                "Delete_Current_Sprite must clear the subtype-2 SST on its next dispatch");
+    }
+
+    @Test
     public void aiz2EndBossLockKeepsFireLogBridgeLiveForArenaEntry() {
         HeadlessTestFixture aiz2 = HeadlessTestFixture.builder()
                 .withZoneAndAct(0, 1)
@@ -1774,6 +1885,71 @@ public class TestSonic3kAIZEvents {
                 throw new AssertionError(message + " at index " + i);
             }
         }
+    }
+
+    private static void runAiz2BossFrame(
+            Sonic3kAIZEvents events, HeadlessTestFixture aiz2, int frame) {
+        // This focused test enters directly at the Sonic arena. Dynamic_Resize
+        // has not traversed all preceding AIZ2 thresholds, so retain the boss
+        // lock that the production route has already established by this point.
+        aiz2.camera().setX((short) 0x4880);
+        aiz2.camera().setY((short) 0x015A);
+        serviceFireTransitionBoundary(HardwareServiceBoundary.VINT_SERVICE);
+        serviceFireTransitionBoundary(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        GameServices.level().getObjectManager().update(
+                aiz2.camera().getX(),
+                aiz2.sprite(),
+                GameServices.sprites().getSidekicks(),
+                frame,
+                false);
+        // LevelFrameStep runs DynamicLevelEvents after the S3K object pass.
+        // Keeping that order lets the native layout entry win; the event-side
+        // fallback sees the live boss and must not allocate a duplicate.
+        events.update(1, frame);
+        serviceFireTransitionBoundary(HardwareServiceBoundary.POST_OBJECTS);
+    }
+
+    private static AizEndBossWaterfallChild liveWaterfall(ObjectManager objects, int subtype) {
+        return objects.getActiveObjects().stream()
+                .filter(AizEndBossWaterfallChild.class::isInstance)
+                .map(AizEndBossWaterfallChild.class::cast)
+                .filter(child -> !child.isDestroyed() && child.getSpawn().subtype() == subtype)
+                .findFirst()
+                .orElse(null);
+    }
+
+    private static List<Integer> liveManagedSlots(ObjectManager objects) {
+        return objects.getActiveObjects().stream()
+                .filter(AbstractObjectInstance.class::isInstance)
+                .map(AbstractObjectInstance.class::cast)
+                .filter(object -> !object.isDestroyed() && object.getSlotIndex() >= 0)
+                .map(AbstractObjectInstance::getSlotIndex)
+                .toList();
+    }
+
+    private static void assertNthFreeForwardSlot(
+            List<Integer> occupiedBefore,
+            AizEndBossInstance boss,
+            AizEndBossWaterfallChild child,
+            int allocationOrdinal) {
+        int candidate = boss.getSlotIndex() + 1;
+        for (int allocation = 0; allocation < allocationOrdinal; allocation++) {
+            while (occupiedBefore.contains(candidate)) {
+                candidate++;
+            }
+            if (allocation + 1 < allocationOrdinal) {
+                occupiedBefore = new java.util.ArrayList<>(occupiedBefore);
+                occupiedBefore.add(candidate++);
+            }
+        }
+        assertEquals(candidate, child.getSlotIndex(),
+                "CreateChild1_Normal must use the requested first-free-forward allocation");
+    }
+
+    private static boolean readPrivateBoolean(Object target, String fieldName) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.getBoolean(target);
     }
 
     private static void setPrivateBoolean(Object target, String fieldName, boolean value) throws Exception {
