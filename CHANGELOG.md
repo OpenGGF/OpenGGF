@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K held-loop Kosinski timing now distinguishes a continuation
+  module from a newly shifted KosM parent. An active parent's next child is
+  published at the native module-queue tail while its direct-queue preparation
+  remains hidden until the held closure. This advances AIZ's complete-run
+  frontier from raw frame `22935` to `25037` without regressing the HCZ, MGZ,
+  CNZ, ICZ, or LBZ frontiers.
 - Fix/Test: S3K airborne landing-angle publication now preserves the prior
   `Primary_Angle`/`Secondary_Angle` byte when `FindFloor` finds no collision
   tile, instead of replacing it with the engine's synthetic empty-side angle

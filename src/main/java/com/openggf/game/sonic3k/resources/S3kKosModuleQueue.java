@@ -333,14 +333,19 @@ public final class S3kKosModuleQueue {
                     && directQueue.isReady(preparation.activeChild)) {
                 return;
             }
-            if (preparation.activeChild == null && deferChildSubmission) {
+            // Queue_Kos_Module's parent remains active between modules. A lag
+            // closure may hold a newly shifted parent's first publication,
+            // but it cannot send an already-active parent back through Init.
+            boolean deferFirstChild = deferChildSubmission
+                    && preparation.completedModules == 0;
+            if (preparation.activeChild == null && deferFirstChild) {
                 if (heldLoopTailClosure) {
                     deferredChildSubmissionForNextLoop = true;
                 }
                 return;
             }
             boolean completed = preparation.coordinate(
-                    handle, directQueue, deferChildSubmission);
+                    handle, directQueue, deferFirstChild);
             if (deferChildSubmission && completed) {
                 carryDeferredChildSubmissionForHeldLoopTail = true;
             }

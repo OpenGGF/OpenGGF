@@ -163,6 +163,7 @@ public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator,
     @Override
     public void deferProductionSubmissionForHeldLoopTail() {
         moduleQueue.deferChildSubmissionForHeldLoopTail();
+        directQueue.deferNewHeadPreparationVisibilityForHeldLoopTail();
     }
 
     @Override

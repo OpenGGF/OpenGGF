@@ -255,6 +255,47 @@ class TestS3kKosModuleQueue {
     }
 
     @Test
+    void heldTailStillPublishesLaterChildOfActiveParent() throws Exception {
+        Path romPath = tempDir.resolve("held-continuation.gen");
+        Files.write(romPath, TWO_MODULE_KOSM);
+        try (Rom rom = new Rom()) {
+            assertTrue(rom.open(romPath.toString()));
+            HardwareTimingService timing = new HardwareTimingService();
+            S3kKosDecompressionQueue direct =
+                    new S3kKosDecompressionQueue(timing);
+            S3kKosModuleQueue modules =
+                    new S3kKosModuleQueue(timing, direct);
+            modules.queue(rom, 0, 0x500);
+            romFrameModuleStep(modules);
+            HardwareWorkHandle firstChild =
+                    preparation(timing.capture()).activeChild();
+
+            while (!direct.isReady(firstChild)) {
+                modules.prepareQueuedModuleBeforeVSync();
+            }
+            romFrameModuleStep(modules);
+            assertEquals(1, preparation(timing.capture()).completedModules());
+            assertNull(preparation(timing.capture()).activeChild());
+
+            modules.deferChildSubmissionForHeldLoopTail();
+            romFrameModuleStep(modules);
+
+            assertNotNull(preparation(timing.capture()).activeChild(),
+                    "a held boundary cannot re-defer an active parent's next module");
+            assertEquals(1, direct.physicalQueueSize());
+            assertFalse(direct.captureDiagnostics(List.of()).prepared());
+
+            direct.deferNewHeadPreparationVisibilityForHeldLoopTail();
+            direct.afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            assertFalse(direct.captureDiagnostics(List.of()).prepared(),
+                    "the held row publishes the child before its direct service is visible");
+            direct.afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            assertTrue(direct.captureDiagnostics(List.of()).prepared(),
+                    "the held closure exposes the direct service");
+        }
+    }
+
+    @Test
     void decodesTitleCardArchiveFromVerifiedRom() throws Exception {
         String configured = System.getProperty("s3k.rom.path");
         Assumptions.assumeTrue(configured != null && !configured.isBlank());

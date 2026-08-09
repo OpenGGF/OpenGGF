@@ -69964,3 +69964,42 @@ guard.
   at raw `36951`. No established frontier regressed. Ring comparison remains
   enabled through `ToleranceConfig.DEFAULT` with
   `RingCountMode.FORCE_ERROR`.
+
+## 2026-08-09 - S3K held-tail KosM continuation frontier
+
+- Branch: `bugfix/s3k-traces` from `7a1b1bc3a`; the six protected user edits
+  remained unstaged. The branch had already been fetched and confirmed current
+  with `origin/develop` (`95` ahead, `0` behind). Validation used JDK 21.0.12
+  and `Sonic and Knuckles & Sonic 3 (W) [!].gen`; no trace fixture changed.
+- Root cause: the ROM's `Process_Kos_Module_Queue` keeps one KosM parent active
+  between its standard-Kosinski children. The held-loop model correctly
+  delayed the first child of a newly shifted parent, but applied that same
+  initialization delay after an active parent retired one of its children.
+  At AIZ raw `22935`, the ROM had published child source `$365AA2` while its
+  direct `Process_Kos_Queue` service remained on the held closure. The engine
+  instead left the direct FIFO empty for that row. Continuation children now
+  publish without re-entering the parent-init delay, while direct-queue
+  preparation visibility remains deferred through the existing hardware-tail
+  classification.
+- Focused command: `mvn -q -Dmse=off
+  -Dtest=com.openggf.game.sonic3k.resources.TestS3kKosModuleQueue test`.
+  Result: 18 tests, 0 failures, 0 errors, 3 ROM-dependent skips. The new test
+  covers continuation publication and held-closure preparation visibility.
+- AIZ frontier command: `mvn -q -Ptrace-replay -Dmse=off
+  -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+  -Dtrace.verification=all -Dtrace.frontierOnly=true
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Result: the three direct-queue errors at raw `22935` are gone, and hardware
+  children `#57` through `#59` complete at their recorded boundaries. The
+  first comparison error advances to raw `25037`: player `x_speed`/`g_speed`
+  and animation differ during the AIZ end-capsule control handoff. Hardware
+  replay reaches the next unconsumed completion, child `#60` at raw `25042`.
+- Gameplay-order complete-run canaries used the same verification/frontier
+  flags in isolated forks. HCZ remains at one error beginning raw `25486`;
+  MGZ remains fully green across `39183` frames; CNZ remains at nine errors
+  beginning raw `12024`; ICZ remains at two errors beginning raw `15401`;
+  LBZ remains at three errors beginning raw `30784`, with its physical fields
+  green through edge `#302` at raw `36951`. No established frontier regressed.
+  Ring comparison remains `ToleranceConfig.DEFAULT`
+  `RingCountMode.FORCE_ERROR`.
