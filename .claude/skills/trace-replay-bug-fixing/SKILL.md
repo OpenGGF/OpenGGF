@@ -498,6 +498,98 @@ The corollary for reviewers and orchestrators: when an agent hands you "N frames
 late", the first question is *which clock*, not *why*. Neither of the two retractions
 above would have survived that question.
 
+## Two paths that should agree, but don't
+
+Three separate multi-round investigations this session ended at the same shape: **two
+implementations of one contract, where only one got a fix.** Nothing in the suite notices,
+because each path is individually plausible and only their disagreement is wrong.
+
+| Contract | The two paths | What was missing |
+|---|---|---|
+| ROM `ExecuteObjects` slot lifecycle | `updateCounterBasedExecThenLoad` (S1) vs `runExecLoop` (S2/S3K) | `pendingChildSlotRelease` drained on one lane only -- every deferred child-slot release on the other leaked its slot permanently |
+| Special-stage art comparison | `AbstractS2SpecialStageTraceReplayTest` vs the run chain's `DynamicArtSegmentComparison` | `DynamicArtSpillNormalization` applied by one comparator and not the other |
+| Capture entry-frame handling | `S2RunCaptureRunner` vs `S2SpecialStageCaptureRunner` | one skipped the entry frame, the other wrote a row for it -- a whole committed fixture was labelled a frame early |
+
+**When a defect resists explanation, ask whether a second implementation of the same
+contract exists, and diff them.** That is a five-minute check that has repeatedly beaten
+hours of tracing. `TestExecLoopSlotLifecycleParityGuard` now enforces the first case; the
+other two are still enforced only by attention.
+
+Corollary for fixes: after landing anything in a shared contract, ask *where else does this
+contract live*. A fix applied to one of two paths is half a fix and will surface later as an
+unexplained divergence in the other.
+
+## Do not imitate sub-frame timing -- reconcile it
+
+A recorded V-blank row can bisect the ROM's `RunObjects` object scan (Obj09 Sonic, then
+Obj10 sidekick), so one player's state comes from before the pass and the other's from
+after. It is tempting to make the engine reproduce *when* the 68K ran out of time.
+
+**Don't.** Where inside the scan the interrupt landed is sub-frame execution timing with no
+frame-granularity ROM predicate. Deriving it means fitting to one recording, which hard
+rule 3 forbids however well you cite the surrounding routine. It belongs in **comparison
+normalisation** -- take the expectation from the atomic `run_objects_end` snapshot rather
+than the raw row, exactly as `DynamicArtSpillNormalization` and the special-stage pre-start
+comparison now do.
+
+The test for which side of the line you are on: *does the change alter what the engine
+does, or what the comparator expects?* Reproducing real ROM control flow is engine work.
+Reproducing where an interrupt happened to fall is not.
+
+## The first reported error is usually not the cause
+
+The comparator reports the lowest failing frame. That is frequently a self-healing blip
+several thousand frames before the real cascade origin, and chasing it wastes a round.
+
+**Parse the report, do not read the headline.** `target/trace-reports/*.json` carries every
+error's `start_frame`, `end_frame` and `cascading` flag. The question to answer first is
+*how many errors start before frame N*, for each candidate N.
+
+Worked example: CPZ2 seg9 reported "first error frame 415, `tails_cpu_respawn_counter`".
+Parsing showed that entry is a 2-frame, `cascading: false`, self-healing blip and that
+**exactly one of 12927 errors started before frame 1579**. Closing 415 would have removed
+one error. The real origin was 1579, then 1584, then -- after those were fixed -- 5052. At
+each stage the headline still said 415.
+
+Related: a `frame_span == 1` error that re-converges on the next frame is a *phase* or
+*sampling* symptom, not physics drift. Physics drift accumulates; blips do not.
+
+## Green can be coincidental
+
+A passing trace test is evidence about the fields it asserts on, over the rows it compares.
+It is not evidence that the engine is right.
+
+- `TestS2SpecialStage6TraceReplay` was green for sixteen rounds while its uncompared
+  predecessor segment carried **12927 errors** cascading from frame 415. It passed because
+  the divergence never reached the two fields its assertion checks.
+- `TestS1Slz3CompleteRunTraceReplay` was green with a **grossly wrong prison-animal
+  population** (engine Obj28 in slots 51-63 where ROM has 33-50). `Pri_EndAct` fires the
+  frame after the last animal leaves the scan range, so a wrong animal set happened to land
+  on the right end-of-act frame. Any *correct* change to animal lifetime moved it.
+
+So: before treating a green test as a constraint, establish what it actually compares. And
+when a correct fix turns a green test red, the question is not "what did I break" but
+"**was that test green for the right reason**" -- twice this session it was not, and the
+evidence was a probe at the parent commit showing the divergence already present.
+
+## Disprove by implementing
+
+When two models of a mechanism are plausible, implementing the wrong one and measuring is
+often faster than reasoning about which is right -- and the failure output localises the
+real mechanism.
+
+The ss_1 pre-start model was specified as three interdependent pieces and insisted upon.
+Implementing exactly that turned **all eight** special-stage traces red, 510-648 errors
+each, first error frame 180 -- and that failure was the evidence: the recorder's own aux row
+for 180 carried the pass's DPLC submission with `logical_frame == publication_frame == 180`,
+proving an overrunning pass's art *is* visible on its sample row. Measuring all 51
+overrunning passes then showed 44 of 51 carried their own result, refuting the model
+outright and pointing at the torn-row explanation instead.
+
+Budget a measurement rather than an argument. Record rejected experiments in the write-up
+with their error counts, so the next agent does not retry them -- several briefs this
+session carried a "do not retry" list that saved a lane.
+
 ## Pipeline Overview
 
 ```
