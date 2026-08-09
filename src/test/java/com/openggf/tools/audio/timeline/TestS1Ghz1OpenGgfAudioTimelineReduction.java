@@ -143,6 +143,68 @@ class TestS1Ghz1OpenGgfAudioTimelineReduction {
         assertEquals(0x81, afterRestore.fm3().soundId());
     }
 
+    @Test
+    void musicThenSameFrameSfxPreservesTheMusicBoundaryAcquisition() throws Exception {
+        // Break caught: frame-final SFX ownership rewrites an earlier acquired music request.
+        var state = new S1Ghz1OpenGgfAudioTimelineCapture.CaptureState();
+        addObservedMusicDriver(state, 0x87);
+        var music = requestFor(state, S1GameplayAudioTimeline.SoundClass.MUSIC, 0x87, null);
+        var sfxSource = source(0xA0, 10);
+        var sfxAdmission = admission(sfxSource);
+        state.onSfxAdmitted(sfxAdmission);
+        state.onRoleArbitrated(new SfxContentionObserver.Arbitration(
+                FM, 2, sfxSource, null, true));
+        var sfx = requestFor(state, SFX, 0xA0, sfxAdmission);
+
+        var requests = reconcileMusic(state, List.of(music, sfx),
+                ownersWithFm3(sfx.arbitration().getFirst().finalOwner()));
+
+        var musicDecision = requests.getFirst().arbitration().getFirst();
+        assertTrue(musicDecision.acquired());
+        assertEquals(0x81, musicDecision.displacedOwner().soundId());
+        assertEquals(0x87, musicDecision.finalOwner().soundId());
+        assertEquals(music.requestOrdinal(), musicDecision.finalOwner().requestOrdinal());
+        assertEquals(0xA0, requests.get(1).arbitration().getFirst().finalOwner().soundId());
+    }
+
+    @Test
+    void mixedSameFrameRequestsRetainEveryBoundaryTransitionInSourceOrder() throws Exception {
+        // Break caught: a single frame-final owner replaces both intermediate music transitions.
+        var state = new S1Ghz1OpenGgfAudioTimelineCapture.CaptureState();
+        addObservedMusicDriver(state, 0x87);
+        addObservedMusicDriver(state, 0x88);
+        var firstMusic = requestFor(state,
+                S1GameplayAudioTimeline.SoundClass.MUSIC, 0x87, null);
+
+        var firstSfxSource = source(0xA0, 10);
+        var firstSfxAdmission = admission(firstSfxSource);
+        state.onSfxAdmitted(firstSfxAdmission);
+        state.onRoleArbitrated(new SfxContentionObserver.Arbitration(
+                FM, 2, firstSfxSource, null, true));
+        var firstSfx = requestFor(state, SFX, 0xA0, firstSfxAdmission);
+
+        var secondMusic = requestFor(state,
+                S1GameplayAudioTimeline.SoundClass.MUSIC, 0x88, null);
+
+        var secondSfxSource = source(0xA1, 12);
+        var secondSfxAdmission = admission(secondSfxSource);
+        state.onSfxAdmitted(secondSfxAdmission);
+        state.onRoleArbitrated(new SfxContentionObserver.Arbitration(
+                FM, 2, secondSfxSource, null, true));
+        var secondSfx = requestFor(state, SFX, 0xA1, secondSfxAdmission);
+
+        var requests = reconcileMusic(state,
+                List.of(firstMusic, firstSfx, secondMusic, secondSfx),
+                ownersWithFm3(secondSfx.arbitration().getFirst().finalOwner()));
+
+        assertEquals(List.of(0x87, 0xA0, 0x88, 0xA1),
+                requests.stream().map(S1GameplayAudioTimeline.Request::soundId).toList());
+        assertTransition(requests.get(0), true, 0x81, 0x87);
+        assertTransition(requests.get(1), true, 0x87, 0xA0);
+        assertTransition(requests.get(2), true, 0xA0, 0x88);
+        assertTransition(requests.get(3), true, 0x88, 0xA1);
+    }
+
     private static SfxContentionObserver.Source source(int soundId, long ordinal) {
         var descriptor = new SmpsSourceDescriptor(SmpsSourceDescriptor.Kind.BASE_SFX_ID,
                 soundId, null, null, 0, 1, soundId, false);
@@ -191,6 +253,28 @@ class TestS1Ghz1OpenGgfAudioTimelineReduction {
             S1Ghz1OpenGgfAudioTimelineCapture.CaptureState state,
             AudioPresentationSnapshot presentation) throws Exception {
         return state.owners(presentation);
+    }
+
+    private static List<S1GameplayAudioTimeline.Request> reconcileMusic(
+            S1Ghz1OpenGgfAudioTimelineCapture.CaptureState state,
+            List<S1GameplayAudioTimeline.Request> requests,
+            S1GameplayAudioTimeline.OwnerVector finalOwners) {
+        return state.reconcileCompletedMusic(requests, finalOwners);
+    }
+
+    private static S1GameplayAudioTimeline.OwnerVector ownersWithFm3(
+            S1GameplayAudioTimeline.OwnerRef fm3) {
+        var baseline = new S1GameplayAudioTimeline.OwnerRef(MUSIC, 0x81, 0);
+        return new S1GameplayAudioTimeline.OwnerVector(
+                fm3, baseline, baseline, baseline, baseline, baseline);
+    }
+
+    private static void assertTransition(S1GameplayAudioTimeline.Request request,
+            boolean acquired, int displacedSoundId, int finalSoundId) {
+        var decision = request.arbitration().getFirst();
+        assertEquals(acquired, decision.acquired());
+        assertEquals(displacedSoundId, decision.displacedOwner().soundId());
+        assertEquals(finalSoundId, decision.finalOwner().soundId());
     }
 
     private static AudioPresentationSnapshot presentation(

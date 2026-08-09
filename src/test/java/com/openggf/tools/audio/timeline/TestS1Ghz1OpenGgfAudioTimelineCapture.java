@@ -40,11 +40,6 @@ class TestS1Ghz1OpenGgfAudioTimelineCapture {
                                 assertNotEquals(decision.displacedOwner(), decision.finalOwner(),
                                         "acquired role self-displaced at BK2 frame " + frame.bk2Frame());
                             }
-                            if (request.soundClass() == S1GameplayAudioTimeline.SoundClass.MUSIC) {
-                                assertEquals(frame.owners().owner(decision.role()), decision.finalOwner(),
-                                        "music decision did not use the completed post-request owner at BK2 frame "
-                                                + frame.bk2Frame());
-                            }
                         }
                     }
                 }

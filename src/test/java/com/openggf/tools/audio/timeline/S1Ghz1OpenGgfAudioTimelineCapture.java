@@ -177,32 +177,49 @@ public final class S1Ghz1OpenGgfAudioTimelineCapture {
             return List.copyOf(requests);
         }
 
-        private List<S1GameplayAudioTimeline.Request> reconcileCompletedMusic(
+        List<S1GameplayAudioTimeline.Request> reconcileCompletedMusic(
                 List<S1GameplayAudioTimeline.Request> requests,
                 S1GameplayAudioTimeline.OwnerVector finalOwners) {
-            List<S1GameplayAudioTimeline.Request> reconciled = new ArrayList<>(requests.size());
-            for (S1GameplayAudioTimeline.Request request : requests) {
-                if (request.soundClass() != S1GameplayAudioTimeline.SoundClass.MUSIC) {
-                    reconciled.add(request);
-                    continue;
-                }
-                S1GameplayAudioTimeline.OwnerRef identity = new S1GameplayAudioTimeline.OwnerRef(
-                        MUSIC, request.soundId(), request.requestOrdinal());
-                List<S1GameplayAudioTimeline.RoleArbitration> decisions = new ArrayList<>();
-                for (S1GameplayAudioTimeline.RoleArbitration decision : request.arbitration()) {
-                    S1GameplayAudioTimeline.OwnerRef finalOwner = finalOwners.owner(decision.role());
-                    boolean acquired = identity.equals(finalOwner);
-                    S1GameplayAudioTimeline.OwnerRef displaced = acquired
-                            ? decision.displacedOwner() : finalOwner;
-                    if (acquired && displaced.equals(finalOwner)) {
-                        throw new IllegalStateException("acquired music role cannot displace itself: "
-                                + decision.role() + " " + finalOwner);
+            Map<S1GameplayAudioTimeline.HardwareRole, S1GameplayAudioTimeline.OwnerRef>
+                    ownersAfterRequest = new EnumMap<>(S1GameplayAudioTimeline.HardwareRole.class);
+            for (S1GameplayAudioTimeline.HardwareRole role
+                    : S1GameplayAudioTimeline.HardwareRole.values()) {
+                ownersAfterRequest.put(role, finalOwners.owner(role));
+            }
+
+            List<S1GameplayAudioTimeline.Request> reconciled = new ArrayList<>(requests);
+            for (int requestIndex = requests.size() - 1; requestIndex >= 0; requestIndex--) {
+                S1GameplayAudioTimeline.Request request = requests.get(requestIndex);
+                if (request.soundClass() == S1GameplayAudioTimeline.SoundClass.MUSIC) {
+                    S1GameplayAudioTimeline.OwnerRef identity = new S1GameplayAudioTimeline.OwnerRef(
+                            MUSIC, request.soundId(), request.requestOrdinal());
+                    List<S1GameplayAudioTimeline.RoleArbitration> decisions = new ArrayList<>();
+                    for (S1GameplayAudioTimeline.RoleArbitration decision : request.arbitration()) {
+                        S1GameplayAudioTimeline.OwnerRef finalOwner = ownersAfterRequest.get(decision.role());
+                        boolean acquired = identity.equals(finalOwner);
+                        S1GameplayAudioTimeline.OwnerRef displaced = decision.displacedOwner();
+                        if (acquired && displaced.equals(finalOwner)) {
+                            throw new IllegalStateException("acquired music role cannot displace itself: "
+                                    + decision.role() + " " + finalOwner);
+                        }
+                        if (!acquired && !displaced.equals(finalOwner)) {
+                            throw new IllegalStateException("rejected music role changed owner: "
+                                    + decision.role() + " " + displaced + " -> " + finalOwner);
+                        }
+                        decisions.add(new S1GameplayAudioTimeline.RoleArbitration(
+                                decision.role(), acquired, displaced, finalOwner));
                     }
-                    decisions.add(new S1GameplayAudioTimeline.RoleArbitration(
-                            decision.role(), acquired, displaced, finalOwner));
+                    reconciled.set(requestIndex, new S1GameplayAudioTimeline.Request(
+                            request.requestOrdinal(), request.soundClass(), request.soundId(),
+                            request.requestedRoles(), decisions));
                 }
-                reconciled.add(new S1GameplayAudioTimeline.Request(request.requestOrdinal(),
-                        request.soundClass(), request.soundId(), request.requestedRoles(), decisions));
+
+                // Walk back across this request's request-local ownership transition. The
+                // forward reducer captured the owner immediately before each requested role;
+                // reversing later transitions therefore exposes this request's own post-state.
+                for (S1GameplayAudioTimeline.RoleArbitration decision : request.arbitration()) {
+                    ownersAfterRequest.put(decision.role(), decision.displacedOwner());
+                }
             }
             return List.copyOf(reconciled);
         }
@@ -240,7 +257,7 @@ public final class S1Ghz1OpenGgfAudioTimelineCapture {
                 } else {
                     SfxContentionObserver.Arbitration event = firstOwnershipTransition(role, source);
                     acquired = event != null && event.acquired();
-                    if (event != null && event.previousOwner() != null) {
+                    if (event != null) {
                         displaced = owner(event.previousOwner());
                     }
                     finalOwner = acquired ? identity : displaced;
