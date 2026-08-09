@@ -3258,22 +3258,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	}
 
 	/**
-	 * Copies the angle bytes that the native sidekick control tail reads from
-	 * the shared Primary_Angle/Secondary_Angle registers. The leader's
-	 * AnglePos dispatch owns those registers; a sidekick must consume that pair
-	 * before its own movement routine evaluates edge balance (S3K
-	 * sonic3k.asm:22531-22535, 26243-26244, 27837-27849).
+	 * Copies the angle bytes that the native player tail reads from the shared
+	 * Primary_Angle/Secondary_Angle registers. Tails_DoLevelCollision reaches
+	 * Sonic_CheckFloor during a landing, so that landing's own pair is the
+	 * shared-register value copied by Tails_Control (S3K sonic3k.asm:
+	 * 26243-26244, 28901-29147). It must not inherit the leader's cached pair.
 	 */
 	private void captureTiltAnglesFromLandingProbes(SensorResult[] groundResults) {
-		if (sprite.isCpuControlled()) {
-			SpriteManager sprites = sprite.currentSpriteManagerOrNull();
-			AbstractPlayableSprite leader = sprites != null ? sprites.getMainPlayable() : null;
-			if (leader != null && leader.getMovementManager() instanceof PlayableSpriteMovement leaderMovement) {
-				latchedNextTilt = leaderMovement.latchedNextTilt;
-				latchedTilt = leaderMovement.latchedTilt;
-				return;
-			}
-		}
 		SensorResult left = groundResults != null && groundResults.length > 0 ? groundResults[0] : null;
 		SensorResult right = groundResults != null && groundResults.length > 1 ? groundResults[1] : null;
 		latchedNextTilt = right == null ? 3 : right.angle() & 0xFF;
@@ -4822,8 +4813,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// S1: ObjFloorDist probes at CENTER X, not at the ±9 side sensors.
 			// ROM s1.asm:354-356: jsr (ObjFloorDist).l / cmpi.w #$C,d1
 			// ObjFloorDist uses obX(a0) = sprite center X.
-			// Left sensor is at center - 9; scanning with dx=+9 probes at center.
-			SensorResult centerResult = groundSensors[0].scan((short) 9, (short) 0);
+			// Derive the centre probe from the active collision radius instead of
+			// assuming Sonic's nine-pixel standing radius. Tails can use a
+			// seven-pixel radius after a native shape transition.
+			short centerOffset = (short) -groundSensors[0].getX();
+			SensorResult centerResult = groundSensors[0].scan(centerOffset, (short) 0);
 			int centerDist = (centerResult == null) ? 99 : centerResult.distance();
 
 			if (centerDist < EDGE_THRESHOLD) {
@@ -4861,7 +4855,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// !isBalancing), so a held Down+B fired a normal jump instead of charging a
 		// spin-dash (s2.asm:37549-37571 Sonic_CheckSpindash requires anim==Duck).
 		// The S1 (!extended) branch above already applies this center gate.
-		SensorResult centerResult = groundSensors[0].scan((short) 9, (short) 0);
+		short centerOffset = (short) -groundSensors[0].getX();
+		SensorResult centerResult = groundSensors[0].scan(centerOffset, (short) 0);
 		int centerDist = (centerResult == null) ? 99 : centerResult.distance();
 		if (centerDist < EDGE_THRESHOLD) {
 			return; // Center still has ground — ROM branches to Lookup/Duck, no balance.
@@ -4870,8 +4865,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// Primary_Angle/Secondary_Angle, not from a fresh pair of side probes
 		// inside Tails_InputAcceleration_Path (sonic3k.asm:27840-27849).
 		if (latchedNextTilt == 3) {
-			// S2/S3K: precarious check - scan at center - 6 (dx = +3 from left sensor)
-			SensorResult precariousResult = groundSensors[0].scan((short) 3, (short) 0);
+			// S2/S3K: precarious check - scan at center - 6, derived from the
+			// active left sensor rather than assuming a nine-pixel radius.
+			short precariousOffset = (short) (-6 - groundSensors[0].getX());
+			SensorResult precariousResult = groundSensors[0].scan(precariousOffset, (short) 0);
 			int precariousDist = (precariousResult == null) ? 99 : precariousResult.distance();
 			boolean precarious = precariousDist >= EDGE_THRESHOLD;
 			setBalanceForEdge(false, facingRight, precarious ? 0 : 6);
@@ -4879,8 +4876,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 
 		if (latchedTilt == 3) {
-			// S2/S3K: precarious check - scan at center + 6 (dx = -3 from right sensor)
-			SensorResult precariousResult = groundSensors[1].scan((short) -3, (short) 0);
+			// S2/S3K: precarious check - scan at center + 6, derived from the
+			// active right sensor rather than assuming a nine-pixel radius.
+			short precariousOffset = (short) (6 - groundSensors[1].getX());
+			SensorResult precariousResult = groundSensors[1].scan(precariousOffset, (short) 0);
 			int precariousDist = (precariousResult == null) ? 99 : precariousResult.distance();
 			boolean precarious = precariousDist >= EDGE_THRESHOLD;
 			setBalanceForEdge(true, facingRight, precarious ? 0 : 6);

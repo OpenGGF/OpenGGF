@@ -2476,6 +2476,12 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
                         // before the completion flag reaches DoStart.
                         .inLevelTitleCardExitAdditionalDispatches(3)
                         .inLevelTitleCardExitPhaseOneDispatchOverlap(5)
+                        // The embedded results children have already retired
+                        // by the time the retained Obj_LevelResults slot
+                        // mutates into Obj_TitleCard.  Do not add the generic
+                        // carried-results parent tail before that mutation;
+                        // Obj_TitleCardInit runs on the following owner pass.
+                        .carriedResultsRetireDispatches(1)
                         // Native code subtracts the offsets from the live camera
                         // and all four bounds; it does not recenter after Load_Level.
                         .preserveOffsetCameraPosition(true)

@@ -153,6 +153,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private boolean pendingPreloadedTitleHandoff;
     private boolean pendingAizTitleHandoff;
     private boolean pendingRetainedReloadTitleHandoff;
+    private boolean postControlHandoffPending;
 
     public S3kResultsScreenObjectInstance(PlayerCharacter character, int act) {
         this(character, act, 0, 0);
@@ -444,6 +445,15 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         this.playerRef = player;
         this.frameCounter = vIntRunCount;
+        if (postControlHandoffPending) {
+            if (postControlHandoffDelayEntries > 0) {
+                postControlHandoffDelayEntries--;
+            }
+            if (postControlHandoffDelayEntries <= 0) {
+                postControlHandoffPending = false;
+                restoreNativeEndSignControlAtPublication();
+            }
+        }
         if (resultsArtLoadPending) {
             if (shouldDeferInitialResultsArtLoadDispatch()
                     && !initialResultsArtLoadDispatchDeferred) {
@@ -581,6 +591,9 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
      * the one that clears End_of_level_active.
      */
     boolean isEndSignControlRestoreBoundaryReady() {
+        if (postControlHandoffDelayEntries > 0 || postControlHandoffPending) {
+            return false;
+        }
         boolean deferredGeneralOwnerControlBoundary = resultsArtLoadDispatchDeferred
                 && state == STATE_EXIT
                 && childrenRemaining <= 0
@@ -914,7 +927,15 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             releasePlayerControlsForExit();
             controlsReleasedAheadOfHandoff = true;
         }
-        restoreNativeEndSignControlAtPublication();
+        if (postControlHandoffDelayEntries > 0) {
+            // Obj_EndSignControl's lower SST slot restores control on the
+            // following Process_Sprites pass. Keep the results publication
+            // (and its title-art submissions) on this pass, but defer the
+            // player-control writes until that owner pass.
+            postControlHandoffPending = true;
+        } else {
+            restoreNativeEndSignControlAtPublication();
+        }
         if (titleInitializationPending && initializeTitleCardOnPublication()) {
             // The native carried title owner submits Obj_TitleCardInit's
             // ROM-backed jobs on the same dispatch that mutates the results

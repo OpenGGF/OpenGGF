@@ -3,6 +3,14 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K MGZ now follows the native miniboss/results owner ordering:
+  Tails consumes its own landing collision angles, the retained title owner
+  keeps the ROM's single carried-results retirement dispatch, and the native
+  control restore is deferred until the following owner pass. The MGZ focused
+  replay falls from 16 to 12 release-blocking errors, moving its first
+  mismatch from the results animation handoff at raw frame `14384` to Sonic's
+  Y position at raw frame `20130`; HCZ remains fully green. No trace payloads
+  changed.
 - Fix/Test: S3K HCZ's retained results handoff now leaves the WAIT animation
   cursor intact when the native signpost owner already restored that player
   slot. This removes the one-cycle Tails mapping lag at raw frames `10470`,

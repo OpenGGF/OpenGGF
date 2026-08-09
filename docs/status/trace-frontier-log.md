@@ -66064,3 +66064,42 @@ to synthesize a POST phase on a VBLANK-only row.
   traces remain green; the next gameplay-order target is the remaining MGZ
   trace set, followed by CNZ, ICZ, and LBZ validation. No trace payloads
   changed.
+
+## 2026-08-09 - S3K MGZ miniboss/results owner frontier
+
+- Worktree: `bugfix/s3k-traces` at `b6a32153b` before this fix; unrelated edits
+  in `.idea/vcs.xml`, `docs/status/rewind-round-trip-gaps.md`,
+  `src/main/java/com/openggf/level/objects/ObjectPlacementController.java`,
+  and `src/main/java/com/openggf/level/rings/RingManager.java` remained
+  unstaged. Validation used JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen`; no trace payloads changed.
+- Frontier command: `env JAVA_HOME=$JDK21_HOME PATH=$JDK21_HOME/bin:$PATH
+  MAVEN_OPTS='-Xmx2g' mvn -q -Dmse=off -Dsurefire.forkCount=1
+  -DforkCount=1 -DreuseForks=true -Dsurefire.argLine='-Xmx3g'
+  -Dtest=TestS3kMgzTraceReplay -Dtrace.verification=all
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Result: 1 test, 1 failure, 0 errors, 0 skips; release-blocking errors
+  fell from 16 to 12. The first error is raw frame `20130`, field `y`
+  (`0x051B` expected, `0x051C` actual); the earlier raw-frame `14384`
+  results animation mismatch is closed. Remaining errors are the associated
+  camera/Tails landing window, the later Tails CPU respawn counter, and the
+  final title-art queue boundary.
+- Root cause: MGZ's native retained `Obj_EndSignControl` owner restores player
+  control on the owner pass after the results owner publishes its exit state.
+  The MGZ miniboss now supplies that semantic one-dispatch handoff delay, the
+  results owner keeps title publication on its own boundary, and Tails' landing
+  tilt reads the collision pair produced by Tails' own native floor check.
+  The MGZ end-boss fade wait is initialized from `Wait_FadeToLevelMusic`'s
+  ROM `$2E=$3F` entry. No trace, frame, route, or zone condition was added.
+- Regression command: `env JAVA_HOME=$JDK21_HOME PATH=$JDK21_HOME/bin:$PATH
+  mvn -q -Dmse=off -Dsurefire.forkCount=1 -DforkCount=1
+  -DreuseForks=true -Dsurefire.argLine='-Xmx3g'
+  -Dtest=TestS3kHczCompleteRunTraceReplay -Dtrace.verification=all
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Result: 2 tests, 0 failures, 0 errors, 0 skips. Ring comparison remains
+  enabled through `ToleranceConfig.DEFAULT` with `RingCountMode.FORCE_ERROR`.
+- Route position: HCZ remains green through its complete-run trace. MGZ's
+  next target is the physical `y` window beginning at raw frame `20130`,
+  followed by its later queue boundary; AIZ's established focused failures
+  remain unchanged from baseline. CNZ, ICZ, and LBZ have not been advanced by
+  this fix.
