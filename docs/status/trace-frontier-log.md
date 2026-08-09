@@ -66240,3 +66240,75 @@ Command: full `-Ptrace-replay` profile, no `-Dtest` (763 tests). Base 8690294a0
   replay uncompared on every ss_7 run, which is how a one-frame spring error sat there
   indefinitely. The same is true of every predecessor-only segment. Compared tests for
   those segments would convert a class of invisible failures into ordinary red tests.
+
+## 2026-08-09 — round sixteen: ss_2, ss_7 and SLZ3 all GREEN; ARZ1 segment now compared
+
+Command: full `-Ptrace-replay` profile, no `-Dtest`. Base 6c4e50f2b (763 / 15 / 63).
+After: **764 / 13 / 63.** Moved to green: `TestS2SpecialStage2TraceReplay`,
+`TestS2SpecialStage7TraceReplay`, `TestS1Slz3CompleteRunTraceReplay`. Added:
+`TestS2Arz1CompleteEmeraldsSegmentTraceReplay` (new compared coverage, 3203 -> 3 errors,
+landed deliberately red). Nothing else moved.
+
+- **ss_2 GREEN: the engine applied an S3K-SHAPED CAMERA-Y BAND TO S2's LOADER.** S2's
+  object loader has NO `Camera_Y` test anywhere: `ObjectsManager_Init` falls straight
+  through into `ObjectsManager_Main` (s2.asm:33062-33068 -> :33032), and both
+  `ObjectsManager_GoingForward` (:33101-33124) and `GoingBackward` (:33047-33075) test the
+  X window only. S3K's `Load_Sprites` (skdisasm/sonic3k.asm:37545-37588, 37723-37771)
+  genuinely does have that pass — and the engine had generalised it. Every EHZ1 layout
+  entry whose y sat outside the initial camera band (the two Obj49 waterfalls, the Obj36
+  spikes) was dropped from the reset load and re-loaded later, shifting `FindFreeObj` for
+  everything after. Verified against the EHZ_1 layout: with the post-special-stage camera
+  at the star post (player x=0xDF0), d6 = 0xD00, so GoingForward loads entries 35..45 in
+  list order up to d6+0x280 — 0x9D,0x26,0x5C,0x49,0x49,0x36,0x26,0x79,0x26,0x41,0x4B —
+  exactly the recorded ROM slots 16..26. **After: row-0 slots 16-26 match ROM exactly and
+  the entire 3377-row segment replays physics-identical (control diverged at row 457 with
+  the +0x18 x_speed offset).** This is a NEW defect shape: per-game generalisation, one
+  game's ROM rule applied to a game whose ROM does not have it.
+- **Brief's "two spurious child slots" PARTLY DISPROVED.** The Buzzer flame child IS a real
+  ROM SST entry, allocated unconditionally at `Obj4B_Init` via `AllocateObjectAfterCurrent`
+  (s2.asm:60918-60936) — ROM slot 27 is that flame, not a second Buzzer, so the engine was
+  right to allocate it. Only the star-post `CheckpointDongle` is spurious, and it is NOT a
+  load-order defect: `Obj79_Init` allocates no child (s2.asm:44579-44612); the dongle comes
+  from `Obj79_CheckActivation` (:44643-44645), and ROM skips reactivation because
+  `Last_star_pole_hit`(=1) >= `subtype`(=1) (:44627-44632). The engine cold-boots seg2 with
+  empty checkpoint state because the recorded segment carries no `Last_star_pole_hit` in
+  metadata or aux — a **scope artifact of replaying one segment of a run in isolation**,
+  not a defect for a movie played from boot. It costs zero physics divergence across the
+  whole segment, and "fixing" it would mean hydrating engine state from the trace, which
+  hard rule 4 forbids. Deliberately left alone.
+- **ss_7 GREEN, and the brief's diagnosis was WRONG.** It was not push-flag evaluation
+  order: S2 springs use `SolidObject_Always_SingleCharacter` and the push bit is set and
+  consumed inside the same frame, so no ordering skew exists. **The engine ran the spring's
+  full action routine on the frame the object was LOADED.** ROM `Obj41` dispatches routine 0
+  (`Obj41_Init`) on the load frame — mappings, art, width, priority, subtype routine index —
+  and returns via `Obj41_Init_Common`'s `rts`; it does NOT fall through to
+  `Obj41_Horizontal`. The action routine (SolidObject pass, push launch, `loc_18BC6`
+  proximity, AnimateSprite) first runs the FOLLOWING frame. The ARZ1 spring at x=2440
+  scrolls off and is re-loaded at vint 25704 with Tails already overlapping its right edge;
+  the engine resolved side contact and launched on that load frame, ROM on 25705.
+  Structural ROM rule — routine 0 consumes the load frame — not a measured constant.
+- **NEW COMPARED COVERAGE: `TestS2Arz1CompleteEmeraldsSegmentTraceReplay`.** `seg11_arz1`
+  had no compared test anywhere (only the different-route `TestS2Arz*LevelSelect*` exist),
+  so its 3420 rows replayed uncompared on every ss_7 run — which is how a one-frame spring
+  error sat there indefinitely. With the spring fix: 3203 errors -> **3**, first error frame
+  1961 -> 3419 (the final row). All physics and animation fields now match for all 3420
+  rows; the 3 residuals are all `dynamic_art` on the last row
+  (`edges` expected=[5701] actual=[5701,5702]). **Landed deliberately red** — a red test is
+  strictly better than an invisible failure. Other predecessor-only segments still lack
+  compared tests and are worth the same treatment.
+- **SLZ3 GREEN: the capsule spawner read the WRONG ROM OBJECT'S COORDINATES.** In ROM ONE
+  slot drives the whole opening sequence: `Pri_Switch` (routine 4) is the SWITCH's own
+  routine, does `addq.w #8,obY(a0)`, and advances its OWN `obRoutine` to $A `Pri_Explosion`
+  -> $C `Pri_Animals` -> $E `Pri_EndAct`. So every `obX(a0)/obY(a0)` those routines copy
+  into a freshly allocated child is the DEPRESSED SWITCH's position, and
+  `Pri_SpawnAnimals`' `addi.w #32,obY(a0)` ("load all animals 32px below explosions") is a
+  permanent write, so the later per-8-frame spawns use the shifted origin too. The engine
+  splits that one ROM slot into a body and a button instance and ran the spawner on the
+  BODY, using the body's placement and neither offset. SLZ3 objpos: switch=(8704,666),
+  body=(8704,703) — so explosions used base Y=703 where ROM uses 666+8=674 (**29px low**)
+  and animals used 703 where ROM uses 666+8+32=706 (**3px high**). That 3px is exactly what
+  6c4e50f2b (a zero `ObjFloorDist` result is not a hit) made visible: it changes which frame
+  each animal's first `Anml_ChkFloor` succeeds on, hence bounce phase, hence when it leaves
+  BuildSprites range and self-deletes, hence the frame `Pri_EndAct`'s slots-1..63 scan first
+  finds no Obj28. The 8 and 32 are literals in `Pri_Switch` and `Pri_SpawnAnimals`, not
+  measured values, and the fix holds for any BK2 of any of the five S1 capsule acts.

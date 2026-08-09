@@ -3,6 +3,22 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Sonic 2 loads objects without a camera-height filter, matching its ROM. Sonic 2's
+  object loader tests only the horizontal window; the vertical band the engine applied is a
+  Sonic 3 & Knuckles rule that had been generalised to all games, so Emerald Hill layout
+  entries sitting outside the starting camera band were skipped at level start and loaded
+  later, shifting the object slot every later allocation received.
+- Fix: a Sonic 2 spring performs only its initialisation on the frame it is loaded, as the
+  ROM's routine 0 does, instead of also running its action routine that frame. A spring
+  re-entering the load window with a character already overlapping it launched them one
+  frame early.
+- Fix: the Sonic 1 egg prison spawns its explosions and animals from the depressed
+  switch's position, as the ROM does, rather than from the capsule body's. Explosions were
+  appearing 29px low and animals 3px high, which shifted each animal's landing frame and
+  with it the frame the act-clear sequence began.
+- Testing: the Emerald Hill act 1 segment of the complete-emeralds run is now compared by
+  its own trace test. It was replayed only as an uncompared prerequisite of a special-stage
+  test, so divergences inside it were invisible.
 - Fix: Sonic 1 animals treat a floor probe distance of exactly zero as no hit, matching the
   ROM's branch condition. The animal's bottom being exactly level with the topmost solid
   pixel is not a landing, and treating it as one landed every flat-floor bounce a frame

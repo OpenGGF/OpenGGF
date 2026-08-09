@@ -433,8 +433,9 @@ public class ObjectManager {
         // Materialize the current ObjectPlacementController window immediately after reset.
         // S1 needs this for ROM parity at level start; for S2/S3K it keeps
         // manual camera resets and headless probes from sitting on an empty
-        // active window until a later ObjectPlacementController delta occurs. Initial reset
-        // materialization still honors the camera-Y filter; S2's vertical bypass is runtime-only.
+        // active window until a later ObjectPlacementController delta occurs. The
+        // camera-Y filter is S3K-only (S2's loader has none at all, see
+        // isSpawnVerticallyEligibleForLoad), so it applies here for S3K only.
         syncActiveSpawnsLoad(false);
     }
 
@@ -3726,15 +3727,24 @@ public class ObjectManager {
             if (spawn == null || placement.isCounterBasedRespawn() || camera == null) {
                 return true;
             }
-            if (skipVerticalSpawnLoadFilterForGame && allowVerticalLoadBypassForS2) {
+            if (skipVerticalSpawnLoadFilterForGame) {
+                // S2 has NO camera-Y load filter anywhere in its object loader.
+                // ObjectsManager_Init falls straight through into
+                // ObjectsManager_Main (docs/s2disasm/s2.asm:33062-33068 falls into
+                // ObjectsManager_Main at s2.asm:33032), and both
+                // ObjectsManager_GoingForward (s2.asm:33101-33124) and
+                // GoingBackward (s2.asm:33047-33075) call ChkLoadObj immediately
+                // after the X-window scan with no Camera_Y_pos test at all. There is
+                // only one loader path, so this holds for the level-start / post-
+                // special-stage reload exactly as it does for the running per-frame
+                // load. Applying the S3K Load_Sprites vertical band at reset dropped
+                // every layout entry whose y sat outside the initial camera band and
+                // re-loaded it later, which reordered FindFreeObj slot assignment.
+                // SCZ depends on the same rule: high-Y badniks are spawned while the
+                // scripted camera is still at y=$0000, then survive until the Tornado
+                // route descends into them.
                 return true;
             }
-            // S2 ObjectsManager_GoingForward/Backward calls ChkLoadObj
-            // directly after the X-window scan and has no Camera_Y_pos
-            // filter (docs/s2disasm/s2.asm:32870-32950). SCZ depends on
-            // this: high-Y badniks are spawned while the scripted camera is
-            // still at y=$0000, then survive until the Tornado route
-            // descends into them.
             int wrapRange = camera.isVerticalWrapEnabled() ? camera.getVerticalWrapRange() : 0;
             return ObjectPlacementController.isNonCounterSpawnVerticallyEligible(
                     spawn, camera.getY(), camera.getMinY(), wrapRange);

@@ -976,6 +976,14 @@ public abstract class AbstractTraceReplayTest {
             if (Files.exists(shared)) {
                 return shared;
             }
+            // Run-segment placement: a segment directory of a multi-segment run
+            // sits directly under the run root, and the run's single movie is
+            // committed once at that root (sibling to the segment dirs and to
+            // run_manifest.json) rather than in a game-level _movies/ pool.
+            Path runRoot = traceDir.getParent().resolve(meta.sourceBk2());
+            if (Files.exists(runRoot)) {
+                return runRoot;
+            }
         }
         return findBk2File(traceDir);
     }
