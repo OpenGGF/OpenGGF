@@ -3,6 +3,13 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: fresh-level startup controllers can now declare that
+  `SpawnLevelMainSprites` replaces the carried title owner. LBZ's ground-launch
+  intro uses that ROM-owned contract to publish the destination KosM parent
+  when the title wait expires while retaining its first direct child for the
+  following loop. This closes the ICZ complete-run trace, including its LBZ
+  handoff and direct completion `#264`, without regressing AIZ, HCZ, MGZ, or
+  CNZ.
 - Fix/Test: ICZ's folded end-boss capsule now preserves the ROM's same-pass
   `Obj_LevelResultsInit` dispatch when its engine allocation lands in an
   already-visited SST. This submits the three results-art Kosinski jobs at the

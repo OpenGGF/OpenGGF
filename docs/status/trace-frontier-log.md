@@ -70982,3 +70982,34 @@ landable change, which I implemented directly.
 - Route position: AIZ, HCZ, MGZ, and CNZ complete runs remain green. ICZ now
   reaches the LBZ handoff at raw `25338`; LBZ bootstrap publication is the next
   gameplay-order target.
+
+## 2026-08-09 — S3K ICZ→LBZ startup-owner frontier
+
+- Worktree: `bugfix/s3k-traces` at `d13ad2786`. Existing local edits in
+  `.idea/vcs.xml`, `docs/status/rewind-round-trip-gaps.md`, `Sonic3k.java`,
+  `Sonic3kStarPostObjectInstance.java`, `ObjectPlacementController.java`, and
+  `RingManager.java` remained unstaged. Validation used JDK 21.0.12 and the
+  available S3K ROM `Sonic and Knuckles & Sonic 3 (W) [!].gen`.
+- Frontier command: `mvn -q -Dmse=off -Dsurefire.forkCount=1
+  -DreuseForks=true -Dsurefire.argLine=-Xmx3g
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace
+  test`. The committed baseline reported 8 errors at raw `25338` and stopped
+  at the unconsumed direct completion `#264` at raw `25341`. The candidate
+  consumes that completion and finishes all 25,393 recorded rows through raw
+  `25392` with 0 errors and 0 warnings.
+- Root cause: LBZ's `Obj_LevelIntro_PlayerLaunchFromGround` is installed by
+  `SpawnLevelMainSprites` into the carried fresh-level startup ownership path.
+  Unlike destinations that retain the ordinary title children through their
+  visual exit, this controller replaces the title owner when its overwritten
+  `#$16` wait expires. The startup object now exposes that semantic ownership;
+  the title manager publishes the ROM-backed KosM parent on that dispatch and
+  defers only its first direct child to the following loop tail. No zone,
+  frame, route, or trace-data branch was added.
+- Regression command: the combined complete-run AIZ/HCZ/MGZ/CNZ/ICZ sweep plus
+  standalone MGZ passed, as did the focused ten-test title-card Kosinski queue
+  suite. Ring comparison remains error-level through `ToleranceConfig.DEFAULT`
+  and `RingCountMode.FORCE_ERROR`; no trace payloads changed.
+- Route position: AIZ, HCZ, MGZ, CNZ, and ICZ complete runs are green in
+  gameplay order, with standalone MGZ also green. LBZ complete-run validation
+  is the next target.

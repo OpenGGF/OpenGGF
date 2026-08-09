@@ -172,6 +172,45 @@ class TestSonic3kTitleCardKosQueue {
     }
 
     @Test
+    void freshLevelOwnerPublishesParentBeforeDeferringFirstDirectChild()
+            throws Exception {
+        Object previousGame = getLevelManagerGame();
+        setLevelManagerGame(new Sonic3k(rom));
+        try {
+            setPendingFreshLevelTransitionBoundary(true);
+            installCachedTitleArt();
+            setField(manager, "lastLoadedZone", 6);
+            manager.requestFreshLevelRuntimeArtHandoff(
+                    LevelData.S3K_LAUNCH_BASE_1.getLevelIndex());
+            manager.initializeFreshLevelTransition(6, 0);
+            setField(manager, "freshLevelTitleOwnerReplacedAtAssembly", true);
+            setField(manager, "state", Sonic3kTitleCardState.DISPLAY);
+            setField(manager, "stateTimer", 21);
+
+            manager.update();
+
+            assertEquals(Sonic3kTitleCardState.EXIT, manager.capture().state());
+            assertTrue(manager.shouldCompleteFreshLevelTransitionBoundary(),
+                    "the cleared child slots let the retained owner retire with its wait");
+            assertEquals(2, moduleHandles().size());
+            assertFalse(directQueue().decompressionsPending());
+
+            service(HardwareServiceBoundary.POST_OBJECTS);
+            service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            S3kRuntimeArtCoordinator.current().finishHeldLoopTailClosure();
+            assertFalse(directQueue().decompressionsPending(),
+                    "the owner row publishes only the KosM parent");
+
+            service(HardwareServiceBoundary.POST_OBJECTS);
+            assertTrue(directQueue().decompressionsPending(),
+                    "the following loop publishes the first direct child");
+        } finally {
+            setPendingFreshLevelTransitionBoundary(false);
+            setLevelManagerGame(previousGame);
+        }
+    }
+
+    @Test
     void cachedTitleArtDoesNotRetireRuntimeArtAtInitialization() throws Exception {
         CountingObjectArtProvider provider = installCountingProvider();
         setField(manager, "artLoaded", true);
@@ -453,6 +492,23 @@ class TestSonic3kTitleCardKosQueue {
         Field field = GameServices.level().getClass().getDeclaredField("game");
         field.setAccessible(true);
         field.set(GameServices.level(), game);
+    }
+
+    private static void setPendingFreshLevelTransitionBoundary(boolean pending)
+            throws Exception {
+        Field field = GameServices.level().getClass()
+                .getDeclaredField("pendingFreshLevelTransitionBoundary");
+        field.setAccessible(true);
+        if (!pending) {
+            field.set(GameServices.level(), null);
+            return;
+        }
+        var constructor = field.getType().getDeclaredConstructor(
+                short.class, short.class, int.class,
+                short.class, short.class, List.class);
+        constructor.setAccessible(true);
+        field.set(GameServices.level(), constructor.newInstance(
+                (short) 0, (short) 0, 0, (short) 0, (short) 0, List.of()));
     }
 
     private static final class CountingObjectArtProvider extends Sonic3kObjectArtProvider {
