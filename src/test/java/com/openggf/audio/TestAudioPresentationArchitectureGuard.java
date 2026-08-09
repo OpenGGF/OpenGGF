@@ -34,6 +34,12 @@ class TestAudioPresentationArchitectureGuard {
     private static final Set<String> BACKEND_COMMANDS = Set.of(
             "playMusic", "playSfx", "playSmps", "playSfxSmps",
             "toggleMute", "toggleSolo", "isMuted", "isSoloed");
+    /**
+     * The v1 timeline schema has no production-audio data dependency. Future
+     * entries need a plan-mandated immutable/read-only interface and an
+     * explicit review here; mutating owners are never allow-listed.
+     */
+    private static final Set<String> TIMELINE_READ_ONLY_AUDIO_DEPENDENCIES = Set.of();
 
     /**
      * Superseded split-runtime / recording-lease-switch identifiers. None may
@@ -313,6 +319,8 @@ class TestAudioPresentationArchitectureGuard {
                 .importPackages("com.openggf.tools.audio.timeline");
         assertEquals(List.of(), timelineAuthorityCalls(timeline),
                 "timeline tooling must remain a read-only schema boundary");
+        assertEquals(List.of(), timelineAudioOwnerDependencies(timeline),
+                "timeline tooling may not depend on mutation-capable audio owners");
 
         JavaClasses fixture = new ClassFileImporter()
                 .importClasses(RepresentativeTimelineAuthorityBypass.class);
@@ -320,6 +328,11 @@ class TestAudioPresentationArchitectureGuard {
                 "fully-qualified timeline references must be visible as class dependencies");
         assertEquals(13, timelineAuthorityCalls(fixture).size(),
                 "representative direct audio mutation/advance calls must be visible");
+
+        JavaClasses ownerFixture = new ClassFileImporter()
+                .importClasses(RepresentativeTimelineAudioOwnerBypass.class);
+        assertEquals(7, timelineAudioOwnerDependencies(ownerFixture).size(),
+                "fully-qualified mutation-capable audio owners must be denied by ownership");
     }
 
     /**
@@ -371,6 +384,18 @@ class TestAudioPresentationArchitectureGuard {
                 .flatMap(origin -> origin.getMethodCallsFromSelf().stream())
                 .filter(call -> isTimelineAuthorityCall(call, call.getTargetOwner()))
                 .map(JavaMethodCall::getDescription)
+                .sorted()
+                .toList();
+    }
+
+    private static List<String> timelineAudioOwnerDependencies(JavaClasses classes) {
+        return classes.stream()
+                .flatMap(origin -> origin.getDirectDependenciesFromSelf().stream())
+                .filter(dependency -> dependency.getTargetClass().getPackageName()
+                        .startsWith("com.openggf.audio"))
+                .filter(dependency -> !TIMELINE_READ_ONLY_AUDIO_DEPENDENCIES
+                        .contains(dependency.getTargetClass().getFullName()))
+                .map(Dependency::getDescription)
                 .sorted()
                 .toList();
     }
@@ -471,6 +496,17 @@ class TestAudioPresentationArchitectureGuard {
             backend.playMusic(0x81);
             backend.playSfx("ring");
             backend.update();
+        }
+    }
+
+    private static final class RepresentativeTimelineAudioOwnerBypass {
+        private void bypass(com.openggf.audio.AudioManager audio,
+                com.openggf.audio.debug.StandaloneAudioPresentationHost host) {
+            audio.playStandaloneMusic(null, null);
+            audio.playStandaloneSfx(null, null, 1.0f);
+            host.playMusic(null, null);
+            host.playSfx(null, null, 1.0f);
+            host.presentFrame();
         }
     }
 }
