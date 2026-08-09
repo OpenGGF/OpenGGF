@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Sonic 1 animals treat a floor probe distance of exactly zero as no hit, matching the
+  ROM's branch condition. The animal's bottom being exactly level with the topmost solid
+  pixel is not a landing, and treating it as one landed every flat-floor bounce a frame
+  early, putting an animal's bounce cycle out of phase with the ROM's and leaving it alive
+  on a ledge the ROM's had already run off -- which shifted later object slots and, with
+  them, the bounce phase of spilled rings.
 - Fix: Star Light boss explosion fragments are removed on the ROM's render test rather
   than a camera-bounds check. The ROM frees a fragment's slot when the previous frame's
   sprite build did not draw it; the engine used a more permissive point-in-camera test on

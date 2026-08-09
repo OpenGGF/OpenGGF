@@ -66154,3 +66154,89 @@ sent round fourteen's Lane A after the wrong subsystem — see below.
   permanently 1px right from row 484, which is why the row-1132 Buzzer stinger misses.
   **The next S2 target is the 1px Sonic divergence at seg2_ehz1 row 460**, not the
   stinger and not the DPLC.
+
+## 2026-08-09 — round fifteen: MZ2 GREEN (SLZ3 traded back), and three root causes located
+
+Command: full `-Ptrace-replay` profile, no `-Dtest` (763 tests). Base 8690294a0
+(763 / 15 / 63). After: **763 / 15 / 63** — a one-for-one swap:
+`TestS1Mz2CompleteRunTraceReplay` green, `TestS1Slz3CompleteRunTraceReplay` red.
+
+- **MZ2 GREEN: `d1 == 0` is NOT a floor hit for Obj28 Animals.** Every `Anml_*` floor test
+  is `jsr ObjFloorDist / tst.w d1 / bpl.s <no hit>`
+  (_incObj/"28, 29 Animals and Points.asm":211-214, 247-250, 272-275, 495-498), and `bpl`
+  branches on N clear — which includes ZERO. The engine routed the test through the shared
+  `TerrainCheckResult#hasCollision()`, i.e. `distance <= 0`. Measured: at (4491,1235) the
+  probe returned d1=0 and the engine bounced; ROM stayed at y=1235 one more frame then
+  bounced at d1=-1. That single frame put the animal's bounce cycle in ANTI-PHASE with
+  ROM's for the rest of its life, so at x~4332 the engine's animal was mid-air over a
+  ledge the ROM's had already run off. ROM's fell off the bottom and self-deleted
+  (obRender bit 7 clear) at f11757; the engine's landed below, bounced forever, and still
+  held slot 35 at f11799. That +1 shift moved the whole Obj37 lost-ring chain up one slot,
+  and `RLoss_Bounce` gates on `(v_vblank_byte + 127 - slot) & 3`. **A `<=` where the ROM
+  has `<`, surfacing as a missed ring 11,000 frames later.**
+- **ACCEPTED TRADE: SLZ3 red at f13250** (`queue.s1_nemesis_plc.busy` expected=true
+  actual=false — the level-end nemesis PLC one frame late, f13251 vs f13250). This is NOT a
+  second defect the change created. SLZ3's prison-animal population is ALREADY grossly
+  divergent at the base commit: `SlotOccupancyProbe` at 8690294a0 shows engine Obj28 in
+  slots 51-63 plus RESERVED 39-41 where ROM has Obj28 in 33-50 — identical in the control
+  and fix worktrees at f12963-13107. `Pri_EndAct` fires on the frame after the LAST animal
+  disappears from the FixBugs=0 scan range (slots 1..63,
+  _incObj/"3E Prison Capsule.asm":200-212), so with a wrong animal set the end-of-act frame
+  was **green by coincidence**, and any correct perturbation of animal lifetime moves it.
+  The SLZ3 animal population is the follow-up target.
+- **ss_2 ROOT CAUSE FOUND, and it is NOT physics — it is SST occupancy at seg2_ehz1 ROW 0.**
+  The brief's "1px Sonic at row 460" was close but wrong in both frame and field: the first
+  divergence is row **457** in `x_speed`/`x_sub` (recorded FF96, engine FFAE), a constant
+  **+0x18** that never changes again; `x` only rounds apart at row 460. Recorded per-frame
+  x_speed deltas while airborne-rolling with LEFT held are -0x18 on rows 454-456 and -0x30
+  from 457 — and -0x30 = 2 x `Sonic_acceleration` with `Sonic_acceleration = $18`, i.e.
+  SPEED SHOES. The engine applies the identical cadence one frame late. `Sonic_ChgJumpDir`
+  and the air-drag path are correct.
+  The real chain: ROM has the speed-shoes monitor Obj26 at slot 19 and `Obj26_Break`'s
+  `AllocateObject` puts Obj2E at slot 25; 25 > 19, so `ExecuteObjects` reaches it later in
+  the SAME pass and `Obj2E_Init` falls through to `Obj2E_Raise` that frame (recorded: Obj2E
+  appears at row 424 with y already 0x01F5 -> 0x01F2). The engine has the monitor at 27 and
+  its contents at 22; 22 < 27, so `delayFirstIconUpdateForPassedSlot()` correctly fires and
+  the icon skips one update — one frame late from the first icon update, for all 32 rise
+  steps, so the award lands at row 457 instead of 456.
+  **Why the slots differ, from the recorded `slot_dump` at seg2 row 0:** ROM interleaves the
+  two EHZ waterfalls (0x49) and the spikes (0x36) into the layout scan at slots 19-21
+  (16:0x9D 17:0x26 18:0x5C 19:0x49 20:0x49 21:0x36 22:0x26 23:0x79 24:0x26 25:0x41 26:0x4B
+  27:0x4B); the engine loads them LAST at 26-28, and additionally allocates TWO slots the
+  ROM does not have at this point — the star post's dongle at 24 and the Buzzer's flame
+  child at 25. **Next target: make seg2_ehz1 row-0 SST occupancy match the recorded
+  slot_dump.** The `delayFirstIconUpdateForPassedSlot` rule is ROM-correct and must not be
+  touched; its INPUTS are wrong.
+- **ss_7 ROOT CAUSE FOUND, in the uncompared ARZ1 predecessor.** Prefix = [seg11_arz1]
+  (index 16, empty ledger). Sonic matches exactly for all 3420 rows; the sidekick matches
+  through row 1960 and diverges at 1961 as a clean ONE-FRAME PHASE error: engine gs=+2560
+  where the trace has -328, then engine row N == trace row N+1 thereafter. +2560 = $A00 =
+  `Obj41_Strengths` yellow-spring strength, and the trigger is uniquely
+  `ObjectSpawn[x=2440, y=864, objectId=0x41, subtype=0x12]` — a horizontal yellow spring.
+  The fire comes through the PUSH path (contact SIDE, pushingNow=true): the SolidObject-
+  derived pushing flag for the sidekick becomes true one frame before ROM's
+  `p2_pushing_bit`. (The `loc_18BC6` proximity path is correctly inhibited both frames.)
+  From 1961 the CPU sidekick is permanently out of phase and compounds, because
+  `TailsCPU_Normal/Flying` read Sonic's position-record buffer at a fixed delay. By rows
+  3391-3419 ROM Tails is entering `TailsCPU_Flying`'s offscreen respawn (x=$4000, y=0,
+  anim $20, mapping frames alternating 94/95) while the engine has Tails parked idle at
+  (3003,768) on mapping frame 1 for the last ~400 rows. ROM's run-gap frame therefore
+  submits Tails' DPLC for mapping frame 94 (transfer 61078, requests {0x6C2E0/tile
+  1018/512B, 0x6C4E0/tile 1034/256B}) precisely because its mapping frame steps 95 -> 94;
+  the engine's never changes, so `LevelPlayableArtInitializer`'s changed-mapping-frame
+  dedupe correctly declines to submit, the ledger is empty, and the comparator reports
+  `outstanding_transfer_ids expected=[0] actual=[]` at frame 0.
+  **Nothing inside the special stage can move ss_7.**
+- **ss_1 IS genuinely in-stage.** Its prefix is [seg1_ehz1] and that segment replays CLEAN
+  — zero divergences in Sonic or sidekick centre-X/Y across all 3710 rows. All 10 errors
+  have `frame_span == 1`: isolated self-correcting blips at frames 393 (sonic_ss_x/ss_y/
+  angle), 401 and 417 (tails_ss_x/ss_y/ss_z/angle), `cascading=false`. Position AND angle
+  off by one step for exactly one observation, then re-converging, is an object-pass /
+  observation-binding phase error — look at `SpecialStageRunObjectsPassBinder` and the
+  lag-row predicate at those three observations, NOT at `Sonic2SpecialStagePlayer` physics.
+- **COVERAGE GAP, worth its own work item:** `seg11_arz1` has NO compared `*TraceReplay`
+  test anywhere in the tree (only `TestS2ArzLevelSelectTraceReplay` /
+  `TestS2Arz2LevelSelectTraceReplay` exist, which are different routes). Its 3420 rows
+  replay uncompared on every ss_7 run, which is how a one-frame spring error sat there
+  indefinitely. The same is true of every predecessor-only segment. Compared tests for
+  those segments would convert a class of invisible failures into ordinary red tests.
