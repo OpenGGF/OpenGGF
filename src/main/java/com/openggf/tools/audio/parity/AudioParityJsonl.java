@@ -73,13 +73,16 @@ public final class AudioParityJsonl {
                 throw invalid("missing capture metadata line");
             }
             AudioParityMetadata metadata = parseMetadata(metadataLine);
+            String expectedRawBusSource = metadata.capture().equals(AudioParitySchema.REFERENCE_CAPTURE)
+                    ? text(object(metadata.details().get("callback_contract"), "callback_contract"), "source")
+                    : null;
             String line;
             int expectedOrdinal = 0;
             while ((line = input.readLine()) != null) {
                 if (line.isBlank()) {
                     throw invalid("blank JSONL record at ordinal " + expectedOrdinal);
                 }
-                AudioParityTick tick = parseTick(line);
+                AudioParityTick tick = parseTick(line, expectedRawBusSource, true);
                 if (tick.ordinal() != expectedOrdinal) {
                     throw invalid("ordinal continuity failure: expected " + expectedOrdinal
                             + " but found " + tick.ordinal());
@@ -99,6 +102,12 @@ public final class AudioParityJsonl {
 
     /** Writes records directly from the iterator and checks continuity/count while doing so. */
     public static void write(Path path, AudioParityMetadata metadata, Iterator<AudioParityTick> ticks) {
+        write(path, metadata, ticks, (source, destination) -> Files.move(source, destination,
+                StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING));
+    }
+
+    static void write(Path path, AudioParityMetadata metadata, Iterator<AudioParityTick> ticks,
+            AtomicPublisher publisher) {
         validateMetadataDetails(metadata.capture(), object(metadata.details(), "metadata details"));
         Path absolute = path.toAbsolutePath().normalize();
         Path parent = absolute.getParent();
@@ -132,14 +141,10 @@ public final class AudioParityJsonl {
                             + " but writer received " + expectedOrdinal + " tick records");
                 }
             }
-            try {
-                Files.move(temporary, absolute, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
-            } catch (java.nio.file.AtomicMoveNotSupportedException unsupported) {
-                Files.move(temporary, absolute, StandardCopyOption.REPLACE_EXISTING);
-            }
+            publisher.publish(temporary, absolute);
             temporary = null;
         } catch (IOException error) {
-            throw invalid("cannot write audio parity JSONL: " + error.getMessage(), error);
+            throw invalid("cannot publish audio parity JSONL atomically: " + error.getMessage(), error);
         } finally {
             if (temporary != null) {
                 try {
@@ -174,8 +179,18 @@ public final class AudioParityJsonl {
                 text(rom, "sha1"), text(rom, "crc32"), details);
     }
 
+    /**
+     * Parses a standalone tick and validates its structure and ranges. Without a metadata line there is no
+     * trusted capture provenance, so this entry point deliberately does not constrain raw-bus source labels.
+     * {@link #read(Path, Consumer)} additionally cross-validates every raw event against capture metadata.
+     */
     public static AudioParityTick parseTick(String json) {
-        ObjectNode root = parseTickGatingTree(json);
+        return parseTick(json, null, false);
+    }
+
+    private static AudioParityTick parseTick(String json, String expectedRawBusSource,
+            boolean enforceRawBusProvenance) {
+        ObjectNode root = parseTickGatingTree(json, expectedRawBusSource, enforceRawBusProvenance);
         exactFields(root, TICK_FIELDS, Set.of("type", "ordinal", "state", "events"), "tick");
         requireText(root, "type", AudioParitySchema.TICK_TYPE);
         int ordinal = integer(root, "ordinal");
@@ -191,7 +206,8 @@ public final class AudioParityJsonl {
         return new AudioParityTick(ordinal, global, tracks, events);
     }
 
-    private static ObjectNode parseTickGatingTree(String json) {
+    private static ObjectNode parseTickGatingTree(String json, String expectedRawBusSource,
+            boolean enforceRawBusProvenance) {
         try (com.fasterxml.jackson.core.JsonParser parser = FACTORY.createParser(json)) {
             if (parser.nextToken() != JsonToken.START_OBJECT) {
                 throw invalid("tick must be an object");
@@ -208,7 +224,7 @@ public final class AudioParityJsonl {
                     continue;
                 }
                 if (field.equals("raw_bus")) {
-                    validateRawBus(parser);
+                    validateRawBus(parser, expectedRawBusSource, enforceRawBusProvenance);
                     continue;
                 }
                 root.set(field, JSON.readTree(parser));
@@ -274,13 +290,19 @@ public final class AudioParityJsonl {
         bool(track, "tie_next");
     }
 
-    private static void validateRawBus(com.fasterxml.jackson.core.JsonParser parser) throws IOException {
+    private static void validateRawBus(com.fasterxml.jackson.core.JsonParser parser, String expectedSource,
+            boolean enforceProvenance) throws IOException {
         if (parser.currentToken() != JsonToken.START_ARRAY) {
             throw invalid("raw_bus must be an array");
         }
         while (parser.nextToken() != JsonToken.END_ARRAY) {
             ObjectNode event = object(JSON.readTree(parser), "raw_bus event");
             validateRawBusEvent(event);
+            if (enforceProvenance && !text(event, "source").equals(expectedSource)) {
+                String expected = expectedSource == null ? "no raw_bus events" : expectedSource;
+                throw invalid("raw_bus source does not match metadata callback_contract.source; expected "
+                        + expected);
+            }
         }
     }
 
@@ -295,7 +317,7 @@ public final class AudioParityJsonl {
         if (source.equals("memory_callback")) {
             Set<String> required = psg ? Set.of("address", "flags", "kind", "source", "value")
                     : MEMORY_RAW_FIELDS;
-            exactFields(event, MEMORY_RAW_FIELDS, required, "memory_callback raw_bus event");
+            exactFields(event, required, required, "memory_callback raw_bus event");
             int address = integer(event, "address");
             if (integer(event, "flags") < 0) {
                 throw invalid("raw_bus callback flags must be non-negative");
@@ -316,7 +338,7 @@ public final class AudioParityJsonl {
         }
         if (source.equals("pc_manifest")) {
             Set<String> required = psg ? Set.of("kind", "pc", "source", "value") : PC_RAW_FIELDS;
-            exactFields(event, PC_RAW_FIELDS, required, "pc_manifest raw_bus event");
+            exactFields(event, required, required, "pc_manifest raw_bus event");
             int pc = integer(event, "pc");
             if (psg) {
                 if (!PSG_MANIFEST_PCS.contains(pc)) {
@@ -747,5 +769,10 @@ public final class AudioParityJsonl {
 
     private static IllegalArgumentException invalid(String message, Throwable cause) {
         return new IllegalArgumentException(message, cause);
+    }
+
+    @FunctionalInterface
+    interface AtomicPublisher {
+        void publish(Path source, Path destination) throws IOException;
     }
 }

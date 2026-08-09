@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -277,6 +278,46 @@ class TestAudioParityJsonl {
         ((ObjectNode) diagnostic.withObject("raw_state").withArray("tracks").get(0)).put("role", "FM1");
         wrongRole.set("diagnostic", diagnostic);
         assertInvalidStream(metadataJson(), wrongRole, "role");
+
+        ObjectNode memoryPsgPort = tickJson(goldenTick());
+        ArrayNode memoryBus = validRawBus(159);
+        ((ObjectNode) memoryBus.get(0)).put("port", 0);
+        memoryPsgPort.set("raw_bus", memoryBus);
+        assertInvalidStream(metadataJson(), memoryPsgPort, "unknown");
+
+        ObjectNode manifestPsgPort = tickJson(goldenTick());
+        ArrayNode manifestBus = validPcManifestRawBus(159);
+        ((ObjectNode) manifestBus.get(0)).put("port", 0);
+        manifestPsgPort.set("raw_bus", manifestBus);
+        assertInvalidStream(metadataJson(), manifestPsgPort, "unknown");
+    }
+
+    @Test
+    void readCrossValidatesEveryRawBusSourceAgainstCaptureMetadata() throws Exception {
+        // Break caught: callback and PC-manifest events can be mixed or mislabeled under trusted provenance.
+        AudioParityTick tick = goldenTick();
+        ObjectNode reference = referenceMetadataJson();
+        ObjectNode wrongSource = tickJson(tick);
+        wrongSource.set("raw_bus", validPcManifestRawBus(159));
+        assertInvalidStream(reference, List.of(wrongSource, tickJson(tick.withOrdinal(1)),
+                tickJson(tick.withOrdinal(2))), "source");
+
+        ObjectNode manifestMetadata = referenceMetadataJson();
+        manifestMetadata.putObject("callback_contract").put("manifest_sites", 20).put("source", "pc_manifest");
+        ObjectNode memorySource = tickJson(tick);
+        memorySource.set("raw_bus", validRawBus(159));
+        assertInvalidStream(manifestMetadata, List.of(memorySource, tickJson(tick.withOrdinal(1)),
+                tickJson(tick.withOrdinal(2))), "source");
+
+        ObjectNode mixed = tickJson(tick);
+        ArrayNode mixedBus = validRawBus(159);
+        mixedBus.add(validPcManifestRawBus(159).get(0));
+        mixed.set("raw_bus", mixedBus);
+        assertInvalidStream(reference, List.of(mixed, tickJson(tick.withOrdinal(1)),
+                tickJson(tick.withOrdinal(2))), "source");
+
+        // Standalone parsing intentionally validates shape only because no metadata accompanies the tick.
+        AudioParityJsonl.parseTick(mixed.toString());
     }
 
     @Test
@@ -327,6 +368,39 @@ class TestAudioParityJsonl {
                 () -> new AudioParityMetadata(AudioParitySchema.VERSION, AudioParitySchema.OPENGGF_CAPTURE,
                         0, 1, 3, "69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b", "afe05eee",
                         JSON.createObjectNode().put("label", "from C:\\captures\\audio.jsonl")));
+        assertThrows(IllegalArgumentException.class,
+                () -> new AudioParityMetadata(AudioParitySchema.VERSION, AudioParitySchema.OPENGGF_CAPTURE,
+                        0, 1, 3, AudioParitySchema.S1_REV01_SHA1, AudioParitySchema.S1_REV01_CRC32,
+                        JSON.createObjectNode().put("label", "from \\\\server\\share\\audio.jsonl")));
+        assertThrows(IllegalArgumentException.class,
+                () -> new AudioParityMetadata(AudioParitySchema.VERSION, AudioParitySchema.OPENGGF_CAPTURE,
+                        0, 1, 3, AudioParitySchema.S1_REV01_SHA1, AudioParitySchema.S1_REV01_CRC32,
+                        JSON.createObjectNode().put("label", "/")));
+        AudioParityMetadata ordinary = new AudioParityMetadata(AudioParitySchema.VERSION,
+                AudioParitySchema.OPENGGF_CAPTURE, 0, 1, 3, AudioParitySchema.S1_REV01_SHA1,
+                AudioParitySchema.S1_REV01_CRC32,
+                JSON.createObjectNode().put("label", "pan/AMS/FMS and timeout / fade state"));
+        assertEquals(AudioParitySchema.OPENGGF_CAPTURE, ordinary.capture());
+    }
+
+    @Test
+    void atomicMoveFailurePreservesDestinationAndCleansTemporaryFile() throws Exception {
+        // Break caught: unsupported atomic replacement silently falls back and overwrites trusted output.
+        Path output = temp.resolve("atomic.jsonl");
+        Files.writeString(output, "trusted-existing-output\n");
+        AudioParityTick tick = goldenTick();
+        IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> AudioParityJsonl.write(output, validMetadata(),
+                        List.of(tick, tick.withOrdinal(1), tick.withOrdinal(2)).iterator(),
+                        (source, destination) -> {
+                            throw new AtomicMoveNotSupportedException(source.toString(), destination.toString(),
+                                    "test filesystem refuses atomic replacement");
+                        }));
+        assertTrue(failure.getMessage().contains("atomically"), failure::getMessage);
+        assertEquals("trusted-existing-output\n", Files.readString(output));
+        try (var children = Files.list(temp)) {
+            assertEquals(List.of(output), children.toList());
+        }
     }
 
     private AudioParityTick goldenTick() throws Exception {
@@ -419,6 +493,13 @@ class TestAudioParityJsonl {
         ArrayNode bus = JSON.createArrayNode();
         bus.addObject().put("address", 0xC00011).put("flags", 8192).put("kind", "psg")
                 .put("source", "memory_callback").put("value", psgValue);
+        return bus;
+    }
+
+    private ArrayNode validPcManifestRawBus(int psgValue) {
+        ArrayNode bus = JSON.createArrayNode();
+        bus.addObject().put("kind", "psg").put("pc", 0x729BC).put("source", "pc_manifest")
+                .put("value", psgValue);
         return bus;
     }
 

@@ -18,7 +18,8 @@ public record AudioParityMetadata(
     private static final Pattern SHA1 = Pattern.compile("[0-9a-f]{40}");
     private static final Pattern CRC32 = Pattern.compile("[0-9a-f]{8}");
     private static final Pattern ABSOLUTE_PATH = Pattern.compile(
-            "(?i)(?:^|[\\s\\\"'=])(?:/[^/\\s][^\\s]*|[a-z]:[\\\\/][^\\s]+|file:/+[^\\s]+)");
+            "(?i)(?:^|[\\s\\\"'=])(?:/(?:$|[^/\\s][^\\s]*)|\\\\\\\\[^\\\\/\\s]+[\\\\/][^\\s]+"
+                    + "|[a-z]:[\\\\/][^\\s]+|file:/+[^\\s]+)");
     private static final Pattern ISO_TIMESTAMP = Pattern.compile(
             ".*\\d{4}-\\d{2}-\\d{2}[Tt ]\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?(?:[Zz]|[+-]\\d{2}:?\\d{2})?.*");
 
