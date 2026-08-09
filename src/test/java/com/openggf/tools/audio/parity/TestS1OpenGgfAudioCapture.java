@@ -1,6 +1,6 @@
 package com.openggf.tools.audio.parity;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
@@ -20,7 +20,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestS1OpenGgfAudioCapture {
-    private static final ObjectMapper JSON = new ObjectMapper();
     private static final Path REFERENCE = Path.of("target", "audio-parity",
             "s1-reviewfix2-full-1.jsonl");
 
@@ -30,7 +29,7 @@ class TestS1OpenGgfAudioCapture {
     @Test
     void realGhzCaptureStartsAfterPowerOnAndUsesOneNtscServicePerRecord() throws Exception {
         Path rom = requiredRom();
-        Path shortReference = shortReference(REFERENCE, 3);
+        Path shortReference = shortReference(3);
         Path output = temp.resolve("openggf.jsonl");
 
         S1OpenGgfAudioCapture.CaptureResult result =
@@ -58,7 +57,7 @@ class TestS1OpenGgfAudioCapture {
     @Test
     void referenceTerminalCountControlsTheRunAndOutputIsDeterministic() throws Exception {
         Path rom = requiredRom();
-        Path shortReference = shortReference(REFERENCE, 3);
+        Path shortReference = shortReference(3);
         Path first = temp.resolve("first.jsonl");
         Path second = temp.resolve("second.jsonl");
 
@@ -72,7 +71,7 @@ class TestS1OpenGgfAudioCapture {
 
     @Test
     void missingOrWrongRomFailsBeforePublishingOutput() throws Exception {
-        Path shortReference = shortReference(REFERENCE, 3);
+        Path shortReference = shortReference(3);
         Path output = temp.resolve("preserved.jsonl");
         Files.writeString(output, "preserve-me\n");
 
@@ -116,15 +115,42 @@ class TestS1OpenGgfAudioCapture {
         assertEquals(sha256(first), sha256(second));
     }
 
-    private Path shortReference(Path source, int terminalCount) throws Exception {
-        Assumptions.assumeTrue(Files.isRegularFile(source), "local deterministic BizHawk reference required");
-        ObjectNode root = (ObjectNode) JSON.readTree(Files.newBufferedReader(source).readLine());
+    private Path shortReference(int terminalCount) throws Exception {
+        ObjectNode root = (ObjectNode) AudioParityJsonl.metadataTree(AudioParityMetadata.openGgf(
+                0, 1, terminalCount, AudioParitySchema.S1_REV01_SHA1,
+                AudioParitySchema.S1_REV01_CRC32));
+        root.put("capture", AudioParitySchema.REFERENCE_CAPTURE);
         root.put("cycle_start", 0);
         root.put("period", 1);
         root.put("terminal_record_count", terminalCount);
+        root.put("launch_update_music_invocations", 514);
+        ObjectNode callback = root.putObject("callback_contract");
+        callback.putArray("arguments").add("address").add("value").add("flags");
+        callback.putObject("proof")
+                .put("fm_port0_pairs", 26_143)
+                .put("fm_port1_pairs", 4_363)
+                .put("psg_writes", 23_530);
+        callback.put("source", "memory_callback");
+        ObjectNode diagnostic = root.putObject("diagnostic_fields");
+        addStrings(diagnostic.putArray("global"), AudioParitySchema.DIAGNOSTIC_GLOBAL_FIELDS);
+        addStrings(diagnostic.putArray("track"), AudioParitySchema.DIAGNOSTIC_TRACK_FIELDS);
+        ObjectNode gating = root.putObject("gating_fields");
+        addStrings(gating.putArray("global"), AudioParitySchema.GATING_GLOBAL_FIELDS);
+        addStrings(gating.putArray("track"), AudioParitySchema.GATING_TRACK_FIELDS);
+        ObjectNode movie = root.putObject("movie");
+        movie.put("archive_sha256", AudioParitySchema.BK2_SHA256);
+        movie.put("core", AudioParitySchema.BK2_CORE);
+        movie.put("emulator", AudioParitySchema.BK2_EMULATOR);
+        movie.put("game", AudioParitySchema.BK2_GAME);
+        movie.put("input_rows", AudioParitySchema.BK2_INPUT_ROWS);
+        movie.put("opaque_header_hash", AudioParitySchema.BK2_OPAQUE_HASH);
         Path result = temp.resolve("reference-" + terminalCount + ".jsonl");
         Files.writeString(result, root + "\n", StandardCharsets.UTF_8);
         return result;
+    }
+
+    private static void addStrings(ArrayNode target, List<String> values) {
+        values.forEach(target::add);
     }
 
     private static AudioParityMetadata metadata(Path source) throws Exception {
