@@ -76,6 +76,15 @@ public class Sonic1SLZBossSpikeball extends AbstractObjectInstance
     // ROM: fragments use priority 3
     private static final int FRAGMENT_PRIORITY = 3;
 
+    // ROM: move.b #24/2,obActWid(a1) for both the ball (BossSpikeball_Main) and its
+    // fragments (BossSpikeball_MakeFrag). This is the BuildSprites X half-extent.
+    private static final int RENDER_HALF_WIDTH = 24 / 2;
+
+    // ROM BuildSprites .assumeHeight band (docs/s1disasm/_inc/BuildSprites.asm:84-91):
+    // neither the ball nor its fragments set sprite_customheight_bit, so the Y
+    // visibility band is a fixed 32px either side of the 224-line viewport.
+    private static final int RENDER_ASSUMED_HALF_HEIGHT = 32;
+
     // Standard gravity (ObjectFall: addi.w #$38,obVelY(a0))
     private static final int GRAVITY = 0x38;
 
@@ -613,8 +622,34 @@ public class Sonic1SLZBossSpikeball extends AbstractObjectInstance
         fragmentAnimCounter++;
         displayFrame = (fragmentAnimCounter >> 2) & 1;
 
-        // Remove when off-screen
-        if (!isOnScreen()) {
+        // ROM BossSpikeball_MoveFrag ends with:
+        //     tst.b   obRender(a0)
+        //     bpl.w   BossStarLight_Delete        ; FixBugs = 0 path
+        // (docs/s1disasm/_incObj/"7A, 7B Boss - SLZ Main and Spike Balls.asm":932-941).
+        // The test reads obRender bit 7 (sprite_rendered_bit), which the PREVIOUS
+        // frame's BuildSprites pass set only if the fragment survived its bounds
+        // tests, so the fragment is freed one frame after it first fails them.
+        // The bounds are BuildSprites' own: X within obActWid (= 24/2) of the
+        // 320px viewport, Y within the fixed 32px .assumeHeight band of the 224-line
+        // viewport, both with exclusive far edges
+        // (docs/s1disasm/_inc/BuildSprites.asm:47-58,84-91).
+        //
+        // FixBugs = 1 would instead `bmi.s .return / addq.l #4,sp / bra.w
+        // BossStarLight_Delete`, i.e. pop the caller's return address so the deleted
+        // fragment is never handed to DisplaySprite (the display-and-delete bug). The
+        // shipped ROM takes the =0 path, which still queues the just-deleted slot for
+        // display that frame; the engine models the =0 lifetime.
+        //
+        // Using the engine's generic isOnScreen() point test here kept fragments alive
+        // far longer than the ROM: on SLZ3 the two slow fragments (BossSpikeball_FragSpeed
+        // entries 1 and 3, vel_y -$240) fall back past the bottom of the viewport and ROM
+        // frees their slots by f6246, while the engine still held them at f6247. The lost
+        // rings Sonic spills on that frame therefore landed in different FindFreeObj slots
+        // (engine 47-50 vs ROM 44,46,47,48), and RLoss_Bounce's `(v_vblank_byte + d7) & 3`
+        // floor probe -- d7 = 127 - slot -- gave them a different bounce cadence, so one
+        // engine ring bounced back into Sonic at f6358.
+        if (!isPreUpdateWithinRenderSpriteBounds(
+                RENDER_HALF_WIDTH, RENDER_ASSUMED_HALF_HEIGHT)) {
             setDestroyed(true);
         }
     }

@@ -3,6 +3,13 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: a Marble Zone pushable block that finishes sinking in lava is deleted when its
+  origin is also off-screen, instead of always being parked at its origin. The ROM
+  branches from the sunken path into the same origin range check the display path falls
+  into, and only an in-range origin is snapped home and parked on the routine that has no
+  range test of its own -- so a block parked there while out of range could never be
+  deleted and held its object slot for the rest of the act, shifting every later placement
+  and, with it, the slots the scattered-ring chain claims.
 - Fix: Marble Zone pushable blocks no longer survive off-screen on an invented camera
   window. The ROM gives Obj33 no camera-window persistence rule at all -- its only
   lifetime rule is the double out-of-range test in its display routine -- and the check

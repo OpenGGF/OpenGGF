@@ -359,16 +359,39 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
             }
         }
 
-        // loc_BFC6 / loc_BFE6: first check current obX; if that fails, the ROM
-        // runs a second out_of_range against objoff_34 (spawn X) to decide
-        // between DeleteObject and routine-4 reset.
+        // PushB_Display: first out_of_range on the current obX; if that fails,
+        // fall into PushB_ChkWithinOrigin
+        // (docs/s1disasm/_incObj/"33 MZ, LZ Pushable Blocks.asm":92-96).
         if (isOutOfRangeCurrentX()) {
-            if (isOutOfRangeSpawnX()) {
-                deletePending = true;
-            } else {
-                handleOutOfRange();
-            }
+            chkWithinOrigin();
         }
+    }
+
+    /**
+     * ROM {@code PushB_ChkWithinOrigin}
+     * (docs/s1disasm/_incObj/"33 MZ, LZ Pushable Blocks.asm":96-113).
+     * <p>
+     * A second {@code out_of_range} against {@code pblock_origX}: when the ORIGIN is
+     * also outside the window the block reaches {@code .deleteAndAllowRespawn}, which
+     * clears the respawn bit and calls {@code DeleteObject}. Only an origin still
+     * inside the window is snapped home and parked on routine 4
+     * ({@code PushB_ChkVisible}, ibid.:116-127), which runs {@code ChkPartiallyVisible}
+     * and {@code rts} with no {@code out_of_range} test of its own.
+     * <p>
+     * Both ROM entry points reach this: {@code PushB_Display}'s fall-through, and
+     * {@code PushB_Sunken}'s {@code bra.w} after a block finishes sinking in lava
+     * (ibid.:213-219). Taking the routine-4 half unconditionally on the sunken path
+     * parks an out-of-range block in a routine that can never delete it, so it holds
+     * its SST slot for the rest of the act and shifts every later {@code ObjPosLoad}
+     * placement -- and with it the {@code FindFreeObj} slots the Obj37 scattered-ring
+     * chain claims, whose {@code d7}-derived bounce phase then diverges.
+     */
+    private void chkWithinOrigin() {
+        if (isOutOfRangeSpawnX()) {
+            deletePending = true;
+            return;
+        }
+        handleOutOfRange();
     }
 
     /**
@@ -443,13 +466,16 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
             y = yPos32 >> 16;
             motion.ySub = yPos32 & 0xFFFF;
 
-            // cmpi.b #$A0,obY+3(a0) / bhs.s loc_C104
+            // cmpi.b #$A0,obY+3(a0) / bhs.s PushB_Sunken
             if ((motion.ySub & 0xFF) >= SLOW_SINK_DELETE_THRESHOLD) {
-                // loc_C104: unlink player and go to out-of-range
+                // PushB_Sunken: unlink Sonic, clear the stood-on flag, then
+                // bra.w PushB_ChkWithinOrigin -- NOT an unconditional park at
+                // the origin (docs/s1disasm/_incObj/"33 MZ, LZ Pushable
+                // Blocks.asm":209-219).
                 if (player != null) {
                     player.setOnObject(false);
                 }
-                handleOutOfRange();
+                chkWithinOrigin();
                 return true;
             }
         }
