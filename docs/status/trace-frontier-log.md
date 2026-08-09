@@ -66298,6 +66298,44 @@ to synthesize a POST phase on a VBLANK-only row.
   handoff; HCZ and MGZ committed canaries remain green. CNZ, ICZ, and LBZ remain
   pending in gameplay order.
 
+## 2026-08-09 - S3K AIZ phase-2 title reset frontier
+
+- Worktree: `bugfix/s3k-traces` at `33e356f3f` before this fix; unrelated edits
+  in `.idea/vcs.xml`, `docs/status/rewind-round-trip-gaps.md`,
+  `src/main/java/com/openggf/level/objects/ObjectPlacementController.java`,
+  and `src/main/java/com/openggf/level/rings/RingManager.java` remained
+  unstaged. Validation used JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen`; no trace payloads changed.
+- Focused unit command: `env JAVA_HOME=$JDK21_HOME PATH=$JDK21_HOME/bin:$PATH
+  mvn -q -Dmse=off -Dsurefire.forkCount=1 -DforkCount=1
+  -DreuseForks=true -Dsurefire.argLine='-Xmx3g'
+  -Dtest=TestSonic3kTitleCardManagerRewind,
+  TestS3kHeadlessInLevelTitleCardProgression test`. Result: all focused tests
+  passed, including the phase-2 reset assertion.
+- Frontier command: `env JAVA_HOME=$JDK21_HOME PATH=$JDK21_HOME/bin:$PATH
+  mvn -q -Dmse=off -Dsurefire.forkCount=1 -DforkCount=1
+  -DreuseForks=true -Dsurefire.argLine='-Xmx3g'
+  -Dtest=TestS3kAizCompleteRunTraceReplay -Dtrace.verification=all
+  -Ddebug.allowRecordedTimingMismatch=true
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  This property-gated diagnostic completed all `26041` frames with `2993`
+  comparison errors and moved the first error from raw frame `11891`, `rings`,
+  to raw frame `11999`, `camera_y` (`0x02B8` expected, `0x02BB` actual). The
+  temporary diagnostic bypass was removed before commit.
+- Clean authority command: the same replay without the diagnostic property
+  still stops at `KOS_DECOMPRESSION_QUEUE#50` at raw frame `20376`
+  (`sha256:66961069e564ef707173bbad733f75e3ab034e29e3f4833a02e2e26af452d8fd`),
+  unchanged from the preceding frontier. Ring comparison remains enabled
+  through `ToleranceConfig.DEFAULT` with `RingCountMode.FORCE_ERROR`.
+- Root cause: the title manager's phase-1-only child-visibility compensation
+  was six updates short when the AIZ complete-run title owner initialized at
+  module phase 2. Extending the reset compensation to phase 2 models the same
+  native object/render handoff; the phase-1-only exit delay remains separate so
+  queue #49 does not regress.
+- Route position: AIZ's next target is the raw frame `11999` camera/title
+  handoff; HCZ and MGZ committed canaries remain green. CNZ, ICZ, and LBZ remain
+  pending in gameplay order.
+
 ## 2026-08-09 - S3K MGZ complete-run animation frontier
 
 - Worktree: `bugfix/s3k-traces` at `4bd0939ed` before this fix; unrelated edits

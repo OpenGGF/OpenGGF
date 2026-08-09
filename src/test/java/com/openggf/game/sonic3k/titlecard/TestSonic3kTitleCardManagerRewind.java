@@ -89,6 +89,19 @@ class TestSonic3kTitleCardManagerRewind {
     }
 
     @Test
+    void phaseTwoInLevelResetTargetsNativeDisplayBoundary() {
+        startLevel();
+        GameServices.level().getObjectManager().initVblaCounter(2);
+
+        Sonic3kTitleCardManager title = new Sonic3kTitleCardManager();
+        title.initializeInLevel(0, 1);
+        title.requestLevelGamestateResetAtInLevelDisplay();
+
+        assertEquals(30, title.capture().resetLevelGamestateCountdown(),
+                "phase-two title handoff must reach the ROM display reset row");
+    }
+
+    @Test
     void phaseOneInLevelArtAdmissionFollowsTheSecondExitOwnerPoll()
             throws Exception {
         startLevel();

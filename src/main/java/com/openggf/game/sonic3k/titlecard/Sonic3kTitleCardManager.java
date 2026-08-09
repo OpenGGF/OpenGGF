@@ -460,11 +460,13 @@ public class Sonic3kTitleCardManager
             heldLevelCounterDispatchOwned = true;
             int modulePhase = GameServices.level().getObjectManager().getVblaCounter() & 3;
             // The slotless manager reaches its predicted display point after
-            // 24 updates. At module phase 1 the native children are not live
-            // until the next phase-0 handoff, followed by their object/render
-            // visibility pass; preserve those six additional updates. Phase 3
-            // has already crossed that handoff and needs no compensation.
-            resetLevelGamestateCountdown = 24 + (modulePhase == 1 ? 6 : 0);
+            // 24 updates. At module phases 1 and 2 the native children are not
+            // live until the next phase-0 handoff, followed by their
+            // object/render visibility pass; preserve those six additional
+            // updates. Phase 3 has already crossed that handoff and needs no
+            // compensation.
+            boolean needsChildVisibilityCompensation = modulePhase == 1 || modulePhase == 2;
+            resetLevelGamestateCountdown = 24 + (needsChildVisibilityCompensation ? 6 : 0);
             // The same child-visibility handoff reaches the later Wait2 poll
             // five updates after the slotless manager would otherwise predict
             // completion when initialization precedes phase 0.

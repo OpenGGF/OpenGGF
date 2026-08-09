@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K in-level title-card gamestate reset now preserves the native
+  six-dispatch child-visibility handoff for phase-2 initialization as well as
+  phase 1. The AIZ complete-run diagnostic frontier advances from raw frame
+  `11891` rings to raw frame `11999` camera Y, while clean hardware admission
+  remains at direct queue `#50`; ring comparisons stay forced errors and no
+  trace payloads changed.
 - Fix/Test: S3K grounded results owners now preserve the native same-pass
   `Obj_EndSignResults` handoff when their dynamically spawned signpost occupies
   a later managed slot. The AIZ complete-run diagnostic frontier advances from
