@@ -114,6 +114,18 @@ never overwrites a capture or report, and preserves the four captures, logs,
 and two reports for investigation. Exit status `3` is a valid semantic
 mismatch; `4` is an untrusted/failed capture or tool failure.
 
+This runner has an explicit trusted-launch boundary. The kernel, system dynamic
+loader, and parent environment are trusted until the runner process is created;
+callers must launch it without any `LD_*` loader-injection variable. Because
+Bash is dynamically linked, `LD_PRELOAD` or `LD_AUDIT` can execute (or, for an
+inexistent library, make the loader print a diagnostic) before the script gets
+control. The runner does not claim protection for that pre-start interval. Once
+started, it rejects every inherited `LD_*` variable with exit status `4` before
+argument parsing or project/tool work, retains its fixed absolute bootstrap
+tools, and launches all producer/tool children from an `env -i` allowlist. Use
+an external clean launcher or static bootstrap if the parent environment itself
+is not trusted.
+
 ## Native S1/S2 v5 capture contract
 
 Current S1 and S2 publication runs through

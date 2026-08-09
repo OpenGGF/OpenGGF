@@ -168,3 +168,49 @@ Review GREEN commands:
 
 Review concerns: none blocking. The pre-existing Mono ToolsVersion/.NET 4.8
 warning remains unchanged.
+
+## Review follow-up round 4: dynamic-loader boundary
+
+Base: `49350ea3b` (`bugfix/ai-s1-audio-parity-frontier`).
+
+The runner now states and enforces the narrow boundary the final review
+identified:
+
+- The kernel, system dynamic loader, and parent environment through creation of
+  the runner process are trusted. Callers must launch without `LD_*` loader
+  injection. A hostile parent requires an external clean launcher or static
+  bootstrap, which this runner does not claim to provide.
+- A dynamically linked Bash cannot prevent `LD_PRELOAD`/`LD_AUDIT` code or
+  diagnostics before its first instruction. The design, operator README, and
+  `--help` text now say so explicitly; a loader diagnostic for an inexistent
+  library before the runner's own rejection is expected and unavoidable.
+- Once Bash has control, the script's first guard rejects every inherited
+  `LD_*` variable with exit `4`, before arguments, repository paths, or tools.
+  Existing command-replacement rejections, fixed `/usr/bin:/bin` `PATH`,
+  absolute bootstrap tools, and `env -i` child allowlists remain unchanged.
+
+RED:
+
+`mvn -Dmse=off -Dtest=com.openggf.tools.audio.timeline.TestS1GameplayAudioTimelineCli#shellUsesAbsoluteBootstrapToolsAndRejectsInjectedEnvironmentBeforePathLookup test`
+
+Result: exit `1`; the new regression expected `4` for an inexistent
+`LD_PRELOAD`, but the prior runner silently unset it and returned `0` from
+`--help`.
+
+GREEN:
+
+1. The same focused method command: exit `0`; 1 test passed.
+2. `mvn -Dmse=off -Dtest=com.openggf.tools.audio.timeline.TestS1GameplayAudioTimelineCli test`:
+   exit `0`; all 5 CLI tests passed, including the existing fake-`PATH`, Java,
+   and `BASH_ENV` cases plus `LD_PRELOAD`, `LD_AUDIT`, and an unknown `LD_*`
+   name.
+3. `git diff --check` and
+   `bash -n tools/audio/run_s1_ghz1_gameplay_audio_timeline.sh`: exit `0`.
+4. Direct shell matrix: `LD_PRELOAD`, `LD_AUDIT`, and `LD_OPENGGF_TEST` each
+   exited `4`, printed exactly one runner rejection, and wrote zero help bytes;
+   a fake `PATH=/tmp` still returned help with exit `0` through the absolute
+   shebang/bootstrap path.
+
+The Maven runs used JDK `21.0.11`. The existing sandbox-only git-hook install
+warning (`.git/config` read-only) remained non-fatal and did not affect test
+execution.

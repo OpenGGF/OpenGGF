@@ -13,13 +13,26 @@ usage() {
 'OpenGGF streams beneath target/audio-parity/s1-ghz1-gameplay/. Each reference' \
 'probe writes only to a fresh staging file; the trusted Java boundary validates' \
 'and atomically create-new publishes it. Existing captures and reports are never' \
-'replaced.' '' 'Exit codes: 0=match, 2=usage, 3=parity mismatch, 4=capture/tool failure.'
+'replaced.' '' \
+'Trust boundary: the kernel, system dynamic loader, and parent launch environment' \
+'through creation of this runner are trusted. Launch without LD_* loader injection.' \
+'After startup the runner rejects LD_* variables and starts every child with env -i;' \
+'it cannot prevent loader code or diagnostics that run before the script starts.' '' \
+'Exit codes: 0=match, 2=usage, 3=parity mismatch, 4=capture/tool failure.'
 }
 
 fail() {
 	echo "S1 GHZ1 gameplay-audio timeline capture/tool failure: $*" >&2
 	exit "$EXIT_TOOL_FAILURE"
 }
+
+# A dynamically linked shell cannot sanitize its own pre-exec loader environment:
+# the trusted system loader has already acted before the first script instruction.
+# Detect every inherited loader control as soon as Bash starts, before parsing
+# arguments or resolving any repository/tool path. Children receive a fresh env -i.
+for loader_variable in "${!LD_@}"; do
+	fail "unsupported loader environment variable: $loader_variable"
+done
 
 SCRIPT_DIR=$(cd "${BASH_SOURCE[0]%/*}" && pwd -P)
 REPO=$(cd "$SCRIPT_DIR/../.." && pwd)
@@ -44,7 +57,7 @@ for replacement in OGGF_BIZHAWK_PROBE_RUNTIME OGGF_BIZHAWK_LIB OGGF_WORKDIR OGGF
 		fail "unsupported producer/tool replacement environment variable: $replacement"
 	fi
 done
-unset JAVA_HOME LD_PRELOAD LD_LIBRARY_PATH
+unset JAVA_HOME
 PATH=/usr/bin:/bin
 SAFE_ENV=(/usr/bin/env -i PATH=/usr/bin:/bin HOME="${HOME:-}" USER="${USER:-}" DISPLAY="${DISPLAY:-}" \
 	XAUTHORITY="${XAUTHORITY:-}" XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-}" DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS:-}")

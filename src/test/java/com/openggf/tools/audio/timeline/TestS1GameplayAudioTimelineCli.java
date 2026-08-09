@@ -107,7 +107,7 @@ class TestS1GameplayAudioTimelineCli {
     }
 
     @Test
-    void shellUsesAbsoluteBootstrapToolsAndRejectsInjectedJavaEnvironmentBeforePathLookup() throws Exception {
+    void shellUsesAbsoluteBootstrapToolsAndRejectsInjectedEnvironmentBeforePathLookup() throws Exception {
         Path fakeBin = temp.resolve("fake-bin");
         Files.createDirectories(fakeBin);
         Path marker = temp.resolve("fake-executed");
@@ -128,6 +128,19 @@ class TestS1GameplayAudioTimelineCli {
         inherited.environment().put("BASH_ENV", bashEnv.toString());
         assertEquals(4, inherited.start().waitFor());
         assertFalse(Files.exists(marker));
+
+        for (String loaderVariable : List.of("LD_PRELOAD", "LD_AUDIT", "LD_OPENGGF_TEST")) {
+            Path error = temp.resolve(loaderVariable + ".stderr");
+            ProcessBuilder loaderInjected = new ProcessBuilder(
+                    Path.of("tools/audio/run_s1_ghz1_gameplay_audio_timeline.sh").toAbsolutePath().toString(),
+                    "--help");
+            loaderInjected.environment().put(loaderVariable, "/inexistent/openggf-audio-test.so");
+            loaderInjected.redirectError(error.toFile());
+
+            assertEquals(4, loaderInjected.start().waitFor(), loaderVariable + " must fail before help or tool work");
+            String stderr = Files.readString(error);
+            assertTrue(stderr.contains("unsupported loader environment variable: " + loaderVariable), stderr);
+        }
     }
 
     private Path runRoot() throws Exception {
