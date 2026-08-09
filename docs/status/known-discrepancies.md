@@ -37,7 +37,7 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 23. [Special-stage Live Rewind Scope](#special-stage-live-rewind-scope)
 24. [Mod Music Uses PCM Presentation Rather Than Mega Drive SMPS](#mod-music-uses-pcm-presentation-rather-than-mega-drive-smps)
 25. [S2 Native Debug Placement Capability Boundary](#s2-native-debug-placement-capability-boundary)
-26. [S2 Native Human-P2 Monitor Branch Unavailable](#s2-native-human-p2-monitor-branch-unavailable)
+26. [S2 Native Competition and Human-P2 Capability Unavailable](#s2-native-competition-and-human-p2-capability-unavailable)
 
 ---
 
@@ -467,10 +467,12 @@ accepted.
 
 ---
 
-## S2 Native Human-P2 Monitor Branch Unavailable
+## S2 Native Competition and Human-P2 Capability Unavailable
 
-**Location:** `MonitorObjectInstance.java`, S2 level-mode ownership
-**ROM Reference:** `docs/s2disasm/s2.asm:85337-85340`
+**Location:** S2 title, session, player state, camera/render, object lifetime,
+results, special-stage, and monitor owners
+
+**ROM Reference:** `docs/s2disasm/s2.asm:4535-4571,10708-11210,14777-15180,32920-33535,85333-85343`
 
 ### Original Implementation
 
@@ -482,22 +484,36 @@ human P2 can use it in the native competition mode.
 
 ### Engine Implementation
 
-S2 has no competition-mode owner or human-P2 playable slot. Its level-event
-owner keeps the ROM `Two_player_mode` gate explicitly false, and Player 2
-bindings feed the existing CPU-sidekick/manual-input path.
-`MonitorObjectInstance` consequently retains the ROM-faithful
-lead-player/CPU-sidekick behavior; no object-local human-P2 branch is
-advertised or fabricated.
+S2 has no competition session or human-P2 playable slot. The generic
+`TitleActionRoute.TWO_PLAYER` token is not a capability owner and currently
+falls through to the ordinary single-view level start. `GameplayTeamBootstrap`
+constructs every configured secondary as a CPU sidekick, controller-2 bindings
+feed that sidekick's manual-input path, and
+`ObjectPlayerQuery.nativeP2OrNull()` names the first sidekick rather than a
+human slot. Score/lives/rings/time, camera, viewport, object/ring placement,
+and results are still single-owner. `MonitorObjectInstance` therefore retains
+the ROM-faithful lead-player/CPU-sidekick behavior; no object-local human-P2
+branch is advertised or fabricated.
 
 ### Rationale and Verification
 
-The missing behavior depends on a complete mode (player slots, initialization,
-physics, art, scoring, camera, and competition-zone lifecycle), not a monitor
-condition. A dedicated S2 competition-mode design must own that state before
-the native branch can be implemented and validated. Existing monitor sidekick
-tests prove the supported path; no title-provider assertion is used as evidence
-of mode absence. Human-P2 monitor parity is deferred as an explicit product-level
-capability gap.
+The reviewed
+[native competition design](../architecture/designs/2026-08-09-s2-native-competition-human-p2-design.md)
+and [evidence plan](../architecture/plans/2026-08-09-s2-native-competition-human-p2-plan.md)
+narrow the missing product to local competition with forced Sonic P1/Tails P2,
+EHZ/MCZ/CNZ plus the native special-stage entry, two acts per normal zone,
+independent results/state, two views, and two-camera object lifetime. This is
+not shared-screen co-op or arbitrary character pairing.
+
+The next safe production work is to fail-close the unsupported title token,
+then migrate ordinary live paths to explicit participant roles, slot-indexed
+state, and a one-view semantic registry before the complete S2 product is
+activated atomically. The monitor branch is a final consumer of active
+competition plus the P2/HUMAN role, never the first slice. Existing monitor
+sidekick tests prove the supported path; the REV01 boundary test pins the
+native `$008E52` order while the ordinary bootstrap test protects CPU Tails.
+Neither test claims the competition route is implemented, and no title default
+is treated as proof of mode absence.
 
 ---
 

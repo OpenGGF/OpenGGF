@@ -3,6 +3,10 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Docs/tests: Define the native Sonic 2 competition and human-P2 capability
+  boundary from REV01, including the act-one/results/act-two lifecycle and the
+  current engine's CPU-sidekick-only production bootstrap. No partial runtime
+  competition mode is advertised.
 - Fix: Reserved `FAST` and `REALISTIC` load-time modes now report their exact
   hardware-admission fallback on every factory resolution. Their behavior is
   unchanged: `FAST` remains immediate and `REALISTIC` remains profiled.
