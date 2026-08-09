@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: AIZ's post-results controller now retains the one owner dispatch
+  between the embedded-child retirement publication and
+  `Obj_LevelResultsWait2`, then restores both players without the former
+  riding-sidekick delay branch. This advances the complete-run frontier from
+  raw frame `25590` to a single camera mismatch at `25592`.
 - Fix/Test: AIZ's floating capsule now preserves the native ordering between
   its later button child and the draw-bridge slot that owns Player 2's
   standing update. Its shared results counter also stores the ROM's actual

@@ -41,11 +41,10 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
     private static final int PLAYER_STOP_X_OFFSET = 0x1F8;
     // ROM: loc_695A8 — transition when y_pos >= _unkFA86 + $1E6
     private static final int NEXT_LEVEL_Y_OFFSET = 0x1E6;
-    // The capsule publishes the results-owner release before the controller's
-    // next object entry. Keep the one-entry handoff so the following player
-    // pass consumes the first forced-right word at the ROM boundary.
-    private static final int POST_RESULTS_CONTROL_RESTORE_DELAY = 1;
-    private static final int RIDING_SIDEKICK_CONTROL_RESTORE_DELAY = 6;
+    // The embedded-child retirement callback publishes one controller entry
+    // before Obj_LevelResultsWait2 clears _unkFAA8. Retain that entry, then
+    // let loc_694D4 restore control on the following owner dispatch.
+    private static final int POST_RESULTS_CONTROL_RESTORE_DELAY = 2;
     private static final int POST_BUTTON_CAMERA_MAX_Y_TARGET = 0x1000;
     private static final int INC_LEVEL_END_Y_GRADUAL_STEP = 0x8000;
     private static final int AIRBORNE_CAMERA_TARGET_OFFSET = 0x80;
@@ -110,10 +109,7 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
         }
 
         if (postResultsControlRestoreDelay < 0) {
-            boolean ridingSidekick = hasRidingSidekick(player);
-            postResultsControlRestoreDelay = ridingSidekick
-                    ? RIDING_SIDEKICK_CONTROL_RESTORE_DELAY
-                    : POST_RESULTS_CONTROL_RESTORE_DELAY;
+            postResultsControlRestoreDelay = POST_RESULTS_CONTROL_RESTORE_DELAY;
         }
         if (postResultsControlRestoreDelay > 0) {
             postResultsControlRestoreDelay--;
@@ -249,17 +245,6 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
         // Restore_PlayerControl does not clear Ctrl_1_locked; loc_694D4
         // explicitly leaves the main input latch asserted for loc_69526.
         player.setControlLocked(true);
-    }
-
-    private boolean hasRidingSidekick(AbstractPlayableSprite player) {
-        for (PlayableEntity sidekick : services().playerQuery().playersFor(
-                ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
-            if (sidekick != player && sidekick instanceof AbstractPlayableSprite sprite
-                    && sprite.isOnObject()) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private void startPostCapsuleSequence(AbstractPlayableSprite player) {

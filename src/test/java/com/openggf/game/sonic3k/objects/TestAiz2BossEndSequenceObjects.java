@@ -1061,6 +1061,33 @@ class TestAiz2BossEndSequenceObjects {
     }
 
     @Test
+    void controllerRestoreTimingDoesNotBranchOnRidingSidekick() {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        camera.resetState();
+        camera.setMaxX((short) 0x4880);
+        camera.setX((short) 0x4880);
+
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        player.setObjectControlled(true);
+        player.setAnimationId(Sonic3kAnimationIds.VICTORY);
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        tails.setOnObject(true);
+
+        Aiz2BossEndSequenceController controller = new Aiz2BossEndSequenceController(0x4880, 0x0000);
+        controller.setServices(new QueryOnlyServices(camera, player, List.of(tails)));
+        Aiz2BossEndSequenceState.releaseEggCapsule();
+
+        controller.update(1, player);
+        assertTrue(player.isObjectControlled(),
+                "The early embedded-child publication retains one controller entry");
+
+        controller.update(2, player);
+        assertFalse(player.isObjectControlled(),
+                "loc_694D4 does not branch on Player 2's Status_OnObj bit");
+        assertEquals(Sonic3kAnimationIds.WAIT.id(), player.getAnimationId());
+    }
+
+    @Test
     void controllerRestoresSidekickObjectControlWhenPostCapsuleWalkBegins() throws Exception {
         Camera camera = TestEnvironment.activeGameplayMode().getCamera();
         camera.resetState();

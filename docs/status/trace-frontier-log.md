@@ -66235,6 +66235,36 @@ to synthesize a POST phase on a VBLANK-only row.
   match. The raw frame `35183` direct/module KOS queue mismatch remains closed.
   Ring comparison remains enabled through `ToleranceConfig.DEFAULT` with
   `RingCountMode.FORCE_ERROR`.
+
+## 2026-08-09 - S3K AIZ results-control restore frontier
+
+- Branch: `bugfix/s3k-traces` from `357551468`; a fresh fetch confirmed the
+  branch already contains all of `origin/develop` (`98` commits ahead, `0`
+  behind), so no merge commit was created. The six protected user edits
+  remained unstaged; no trace fixture changed.
+- Root cause: AIZ's embedded results-child retirement callback intentionally
+  publishes before the native `Obj_LevelResultsWait2` parent clears
+  `_unkFAA8`. That semantic early publication needs one retained controller
+  dispatch. The controller then follows `loc_694D4`, whose
+  `Restore_PlayerControl/2` path has no branch on Player 2's `Status_OnObj`;
+  the prior six-entry riding-sidekick delay was a stale fitted authority.
+  Restore timing is now uniform and driven only by the results-owner
+  publication boundary (`sonic3k.asm:62693-62705,138300-138326`).
+- AIZ frontier command: `mvn -q -Ptrace-replay -Dmse=off
+  -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay
+  -Dtrace.verification=all -Dtrace.frontierOnly=true
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' test`. Result:
+  the 12 animation/physics errors beginning raw `25590` are closed; one
+  `camera_x` error remains at raw `25592` (`0x4980` expected, `0x4981`
+  actual). Hardware replay still reaches unconsumed edge `#63` at raw
+  `26109`.
+- Focused controller and rewind-coverage tests pass, including a guard that a
+  riding sidekick does not alter `loc_694D4` timing. Standard AIZ remains
+  green and the complete MGZ route remains green across all `39183` frames.
+  The change is AIZ-controller-local, so the unchanged HCZ, CNZ, ICZ, and LBZ
+  canary frontiers from the preceding committed sweep remain unaffected. Ring
+  comparison remains `ToleranceConfig.DEFAULT` `RingCountMode.FORCE_ERROR`.
 - Complete-run regression command: `env JAVA_HOME=$JDK21_HOME
   PATH=$JDK21_HOME/bin:$PATH mvn -q -Dmse=off -Dsurefire.forkCount=1
   -DforkCount=1 -DreuseForks=true -Dsurefire.argLine='-Xmx3g'
