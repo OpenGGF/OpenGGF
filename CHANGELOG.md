@@ -3,6 +3,9 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Tooling: add a disabled-by-default diagnostic observer for resolved YM2612 and PSG
+  writes, allowing audio parity tools to record the chip-core transaction order without
+  changing synthesis state or driver arbitration.
 - Fix: Marble Zone pushable blocks no longer survive off-screen on an invented camera
   window. The ROM gives Obj33 no camera-window persistence rule at all -- its only
   lifetime rule is the double out-of-range test in its display routine -- and the check

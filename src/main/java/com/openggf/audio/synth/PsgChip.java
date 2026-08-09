@@ -81,6 +81,7 @@ public class PsgChip {
     private long clocksPerSampleFixed = 0;
     private boolean hqPsg = false;  // false = fast mode (rawer/brighter, GPGX default), true = HQ sinc filter
     private boolean noiseShiftOnEveryToggle = true; // true=MAME-style, false=GPGX/libvgm positive-edge only
+    private ChipWriteObserver writeObserver = ChipWriteObserver.NONE;
 
     public PsgChip() {
         this(DEFAULT_SAMPLE_RATE, ChipType.INTEGRATED);
@@ -257,6 +258,10 @@ public class PsgChip {
         write(0xFF);
     }
 
+    void setWriteObserver(ChipWriteObserver observer) {
+        writeObserver = observer == null ? ChipWriteObserver.NONE : observer;
+    }
+
     /**
      * Synchronize clock to PSG cycle boundary (matches GPGX psg.clocks sync).
      * This ensures timestamps are aligned to PSG_MCYCLES_RATIO boundaries,
@@ -328,6 +333,7 @@ public class PsgChip {
                 break;
             }
         }
+        writeObserver.onPsgWrite(value & 0xFF);
     }
 
     public void renderStereo(int[] left, int[] right) {
