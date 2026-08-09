@@ -3,6 +3,9 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Reserved `FAST` and `REALISTIC` load-time modes now report their exact
+  hardware-admission fallback on every factory resolution. Their behavior is
+  unchanged: `FAST` remains immediate and `REALISTIC` remains profiled.
 - Fix: The AIZ2 end-boss waterfall splash now preserves the ROM's
   one-dispatch `Go_Delete_Sprite` marker before clearing its SST slot, including
   across rewind, and is no longer removed by a synthetic off-screen cull.

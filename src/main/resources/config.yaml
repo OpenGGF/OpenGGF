@@ -18,7 +18,7 @@ display:
 
 # ── Gameplay ──
 gameplay:
-  loadTimeSimulation: "NONE"   # NONE, PROFILED, FAST (currently NONE), or REALISTIC (currently PROFILED)
+  loadTimeSimulation: "NONE"   # S3K Kos admission: NONE, PROFILED, or reserved FAST/REALISTIC aliases
 
 # ── Input ──
 input:

@@ -44,7 +44,7 @@ class TestLoadTimeProfileContract {
     }
 
     @Test
-    void reservedModesWarnAndUseTheirSpecifiedFallbacks() {
+    void reservedModesWarnOnEveryResolutionAndExposeScopedFallbacks() {
         LoadTimeProfile profiled = (submission, handle) -> new LoadTimeDecision(
                 2,
                 Set.of(HardwareServiceBoundary.PRE_MAIN_LOOP),
@@ -55,9 +55,24 @@ class TestLoadTimeProfileContract {
         assertSame(LoadTimeProfile.IMMEDIATE,
                 LoadTimeProfileFactory.resolve(
                         LoadTimeSimulationMode.FAST, profiled, warnings::add));
+        assertSame(LoadTimeProfile.IMMEDIATE,
+                LoadTimeProfileFactory.resolve(
+                        LoadTimeSimulationMode.FAST, profiled, warnings::add));
         assertSame(profiled,
                 LoadTimeProfileFactory.resolve(
                         LoadTimeSimulationMode.REALISTIC, profiled, warnings::add));
-        assertEquals(2, warnings.size());
+        assertSame(profiled,
+                LoadTimeProfileFactory.resolve(
+                        LoadTimeSimulationMode.REALISTIC, profiled, warnings::add));
+        assertEquals(List.of(
+                "FAST load-time simulation is reserved; no independent FAST "
+                        + "hardware-admission profile exists, using NONE",
+                "FAST load-time simulation is reserved; no independent FAST "
+                        + "hardware-admission profile exists, using NONE",
+                "REALISTIC load-time simulation is reserved; no independent REALISTIC "
+                        + "hardware-admission profile exists, using PROFILED",
+                "REALISTIC load-time simulation is reserved; no independent REALISTIC "
+                        + "hardware-admission profile exists, using PROFILED"),
+                warnings);
     }
 }

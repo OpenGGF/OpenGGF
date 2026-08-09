@@ -15,6 +15,34 @@ It preserves production ROM bytes, queue ownership, FIFO contention, service bou
 global-empty predicates, rewind, and trace isolation. It is a pacing simulation, not
 cycle-accurate hardware emulation.
 
+## Current status (2026-08-09)
+
+The S3K `PROFILED` implementation is live for the published Kosinski service model.
+`FAST` and `REALISTIC` remain intentionally unfinished and are retained as explicit
+resolver aliases: `FAST` warns and returns the immediate profile, while `REALISTIC`
+warns and returns the supplied profiled profile. The warning is emitted by each
+`LoadTimeProfileFactory.resolve(...)` call; the factory does not maintain a global
+warn-once registry. A normal gameplay context usually resolves once at construction,
+but context reconstruction can resolve again.
+
+The `LoadTimeProfile` submission contract and `HardwareWorkKind` registry currently
+model S3K Kosinski module/direct work only. S1/S2 still resolve the selected enum
+through their default module factory, whose supplied profile is immediate, but their
+Nemesis PLC and dynamic-art/DPLC lifecycles do not submit through
+`HardwareTimingService`. Those owners are not missing S3K profile integrations: S1's
+PLC has ROM-derived 3/9-pattern service, S2's PLC has 3/6-pattern service, and dynamic
+art is a separate ordered transfer lifecycle. A future S3K-only mode needs S1/S2
+non-interference evidence rather than a common submission type.
+
+`FAST` still has no approved safety-policy semantics. `REALISTIC` still lacks exact
+top-level S3K direct observations and an approved confidence/context rule; the
+published exact observations cover module-created direct children, while frame-end
+censored top-level observations are excluded. The cross-game hardware-timing contract
+also forbids trace comparison data from choosing normal-play timing. The
+[2026-08-09 boundary design](2026-08-09-load-time-profile-reserved-mode-boundary.md)
+records the exact capture path. Neither alias may gain a fitted constant or a
+trace-specific branch.
+
 ## Configuration
 
 The configuration key is:
@@ -29,8 +57,8 @@ The accepted values and initial behavior are:
 |---|---|---|
 | `NONE` | Release prepared work as soon as its production dependencies permit. | None. |
 | `PROFILED` | Use deterministic measured work costs, with a validated estimator for missing fingerprints. | Warn once per missing fingerprint that uses estimation or immediate fallback. |
-| `FAST` | Reserved; behave as `NONE`. | Warn once at session startup that `FAST` is not implemented. |
-| `REALISTIC` | Reserved; behave as `PROFILED`. | Warn once at session startup that `REALISTIC` currently uses `PROFILED`. |
+| `FAST` | Reserved; behave as `NONE`. | Warn on each factory resolution that no independent `FAST` hardware-admission profile exists. |
+| `REALISTIC` | Reserved; behave as `PROFILED`. | Warn on each factory resolution that no independent `REALISTIC` hardware-admission profile exists. |
 
 Unknown values are configuration errors that list all accepted values. Existing
 installations and the repository default remain `NONE`, so the feature does not silently
@@ -64,10 +92,11 @@ The hardware timing service and game-specific queue coordinators retain ownershi
 
 The profile is not a second queue, decompressor, event timer, sleep, or gameplay callback.
 Events continue to poll their production queue predicates. Shared runtime code does not
-branch on game or zone names. Each game module supplies a manifest and optional
-compression estimator through the profile-provider boundary. This allows the incoming
-Sonic 1 and Sonic 2 PLC queues to adopt the same system without coupling their policies
-to S3K.
+branch on game or zone names. A game module may supply a manifest and optional
+compression estimator through the profile-provider boundary only for work it submits
+to `HardwareTimingService`. S1/S2 PLC and dynamic-art owners remain outside that
+boundary unless a separately reviewed owner-specific design proves an additional
+admission gate is necessary.
 
 ## Normal-play data flow
 
@@ -295,7 +324,8 @@ Required automated coverage includes:
 - rewind with partially consumed measured and estimated budgets;
 - session reset and cross-session isolation;
 - S3K transitions, object lifecycles, and music pacing;
-- a provider contract usable by S1/S2 PLC queues.
+- non-interference coverage for S1/S2 PLC and dynamic-art owners while they remain
+  outside the profile boundary.
 
 Acceptance requires that existing trace replay outcomes are unchanged, `NONE` preserves
 the current normal-play contract, and `PROFILED` produces deterministic results across
@@ -313,6 +343,7 @@ repeated runs.
 5. Check in the initial S3K measured manifest and coverage report.
 6. Implement and validate estimators per supported compression kind.
 7. Enable S3K `PROFILED` normal play and pacing regression tests.
-8. Integrate S1/S2 queue providers after their PLC queue branch lands.
+8. S1/S2 PLC queues landed with game-owned native cadence; retain them outside the
+   profile boundary unless a later owner-specific design proves an additional gate.
 9. Treat `FAST` and `REALISTIC` as explicitly separate future designs before changing
    their fallback behavior.
