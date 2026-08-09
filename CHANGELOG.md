@@ -3,6 +3,13 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K AIZ's defeat-flow owner now re-homes through the native
+  first-free dynamic-slot boundary before dispatching the signpost and
+  results objects. The AIZ complete-run diagnostic frontier advances from
+  the raw frame `11350` results queue boundary to the established raw frame
+  `11999` camera/title boundary; the frontier-only timing check reaches
+  KOS decompression completion edge `#46` at raw frame `12002`. Ring
+  comparisons remain forced errors; no trace payloads changed.
 - Fix/Test: S3K grounded results owners now use the ROM `AllocateObject`
   lower-slot contract for the semantic grounded-results boundary, leaving the
   lower owner to begin `Obj_LevelResultsInit` on the following object pass.

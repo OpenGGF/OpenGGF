@@ -66401,3 +66401,34 @@ to synthesize a POST phase on a VBLANK-only row.
 - Route position: AIZ's focused trace is green through its complete
   AIZ-to-HCZ segment; HCZ and MGZ canaries remain green. CNZ is next in
   gameplay order, with ICZ and LBZ pending.
+
+## 2026-08-09 - S3K AIZ defeat-flow owner frontier
+
+- Worktree: `bugfix/s3k-traces` at `3198a2418` before this fix; unrelated edits
+  in `.idea/vcs.xml`, `docs/status/rewind-round-trip-gaps.md`,
+  `src/main/java/com/openggf/level/objects/ObjectPlacementController.java`,
+  and `src/main/java/com/openggf/level/rings/RingManager.java` remained
+  unstaged. Validation used JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen`; no trace payloads changed.
+- Frontier command: `env JAVA_HOME=$JDK21_HOME PATH=$JDK21_HOME/bin:$PATH
+  mvn -q -Dmse=off -Dsurefire.forkCount=1 -DforkCount=1
+  -DreuseForks=true -Dsurefire.argLine='-Xmx3g'
+  '-Dtest=TestS3kAizCompleteRunTraceReplay' -Dtrace.verification=all
+  -Dtrace.frontierOnly=true -Dtrace.context.radius=1
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Result: the first comparison error advances to raw frame `11999`,
+  `camera_y` (`0x02B8` expected, `0x02BB` actual), with the frontier-only
+  timing check reaching KOS decompression completion edge `#46` at raw frame
+  `12002`; the segment then stops on that intentionally unconsumed edge.
+  Ring comparison remains enabled through `ToleranceConfig.DEFAULT` with
+  `RingCountMode.FORCE_ERROR`.
+- Root cause: native `Obj_AIZMiniboss` rewrites the defeated boss's own SST
+  entry to `Obj_EndSignControl`; the engine's separate defeat-flow object was
+  allocated behind the still-reserved defeat children. Re-homing that generic
+  flow through `ObjectManager.reallocateToFirstFreeDynamicSlot` at the native
+  signpost-dispatch boundary restores the slot pressure seen by the signpost's
+  `AllocateObjectAfterCurrent` child and the results object's `AllocateObject`
+  child, without using zone, route, frame, or trace conditions.
+- Regression/canary status: the focused AIZ replay, HCZ complete-run traces,
+  and MGZ focused and complete-run traces must be rerun after this commit;
+  CNZ remains next in gameplay order, with ICZ and LBZ pending.

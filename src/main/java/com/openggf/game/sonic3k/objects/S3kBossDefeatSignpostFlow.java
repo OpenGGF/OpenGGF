@@ -197,6 +197,14 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
             // ROM: boss_saved_mus played when timer expires (sonic3k.asm:180484-180486).
             // Restore the zone music before the signpost spawns.
             resumeZoneMusic();
+            // Obj_EndSignControl is the defeated boss's own SST routine in the
+            // native flow (sonic3k.asm:137793-137806, 180453-180466).  The
+            // engine keeps the orchestrator as a dynamic object while the
+            // defeat children drain, so re-home that owner through the same
+            // first-free slot boundary before its child signpost is created.
+            if (services().objectManager() != null) {
+                services().objectManager().reallocateToFirstFreeDynamicSlot(this);
+            }
             phase = Phase.SPAWN_SIGNPOST;
             LOG.fine("S3K defeat flow WAIT_FADE -> SPAWN_SIGNPOST");
         }
