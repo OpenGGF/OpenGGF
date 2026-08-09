@@ -3,6 +3,7 @@ package com.openggf.tools.audio.timeline;
 import static com.openggf.audio.driver.SfxContentionObserver.Bus.FM;
 import static com.openggf.tools.audio.timeline.S1GameplayAudioTimeline.HardwareRole.FM3;
 import static com.openggf.tools.audio.timeline.S1GameplayAudioTimeline.OwnerClass.MUSIC;
+import static com.openggf.tools.audio.timeline.S1GameplayAudioTimeline.OwnerClass.NORMAL_SFX;
 import static com.openggf.tools.audio.timeline.S1GameplayAudioTimeline.SoundClass.SFX;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -24,6 +25,38 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class TestS1Ghz1OpenGgfAudioTimelineReduction {
+
+    @Test
+    void semanticOrdinalsReserveZeroForBaselineAndMatchReferenceRequestOrder() throws Exception {
+        // Break caught: the OpenGGF reducer exposes driver-local admission ordinal 0,
+        // colliding with the shared GHZ baseline music identity instead of starting at 1.
+        var state = new S1Ghz1OpenGgfAudioTimelineCapture.CaptureState();
+        var firstSource = source(0xA0, 0);
+        var firstAdmission = admission(firstSource);
+        state.onSfxAdmitted(firstAdmission);
+        state.onRoleArbitrated(new SfxContentionObserver.Arbitration(
+                FM, 2, firstSource, null, true));
+        var first = requestFor(state, SFX, 0xA0, firstAdmission);
+
+        var secondSource = source(0xA1, 1);
+        var secondAdmission = admission(secondSource);
+        state.onSfxAdmitted(secondAdmission);
+        state.onRoleArbitrated(new SfxContentionObserver.Arbitration(
+                FM, 2, secondSource, firstSource, true));
+        var second = requestFor(state, SFX, 0xA1, secondAdmission);
+
+        var baseline = new S1GameplayAudioTimeline.OwnerRef(MUSIC, 0x81, 0);
+        var firstOwner = new S1GameplayAudioTimeline.OwnerRef(NORMAL_SFX, 0xA0, 1);
+        var secondOwner = new S1GameplayAudioTimeline.OwnerRef(NORMAL_SFX, 0xA1, 2);
+        assertEquals(List.of(
+                new S1GameplayAudioTimeline.Request(1, SFX, 0xA0, List.of(FM3), List.of(
+                        new S1GameplayAudioTimeline.RoleArbitration(
+                                FM3, true, baseline, firstOwner))),
+                new S1GameplayAudioTimeline.Request(2, SFX, 0xA1, List.of(FM3), List.of(
+                        new S1GameplayAudioTimeline.RoleArbitration(
+                                FM3, true, firstOwner, secondOwner)))),
+                List.of(first, second));
+    }
 
     @Test
     void repeatedOwnedDecisionRetainsTheFirstAuthoritativeDisplacement() throws Exception {

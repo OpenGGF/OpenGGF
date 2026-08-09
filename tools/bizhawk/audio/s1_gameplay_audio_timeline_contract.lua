@@ -136,7 +136,7 @@ end
 function Contract.newInvocationLifecycle()
     local lifecycle = {active = false, stackPointer = nil, emulatorFrame = nil}
     local updateMusicTrackReturns = {
-        [0x71BE6] = true, [0x71BF8] = true, [0x71C10] = true,
+        [0x71BD4] = true, [0x71BE6] = true, [0x71BF8] = true, [0x71C10] = true,
         [0x71C22] = true, [0x71C38] = true, [0x71C44] = true
     }
 

@@ -5,9 +5,11 @@ All notable changes to the OpenGGF project are documented in this file.
 ## Unreleased
 - Tooling: complete the first real Sonic 1 GHZ1 gameplay-audio timeline run. The
   BizHawk observer now follows shipped `StopAllSound` queue invalidation and
-  SMPS non-local return paths closely enough to publish deterministic 4,115-frame
-  captures. The resulting comparison stops at a gameplay-request boundary:
-  OpenGGF submits the first `$A0` jump request at BK2 frame 958 while REV01
+  SMPS non-local return paths, including the DAC continuation after
+  `cfStopTrack`, closely enough to publish deterministic 4,115-frame captures.
+  Both producers reserve request ordinal 0 for the GHZ baseline and identify
+  the first `$A0` jump as ordinal 1. The resulting comparison stops at a
+  gameplay-request boundary: OpenGGF submits it at BK2 frame 958 while REV01
   consumes it at frame 959, so driver or chip parity is not claimed.
 - Tooling: add the Sonic 1 GHZ1 gameplay-audio timeline comparator and two-producer runner. It pins the complete-run BK2, REV01 ROM, and BizHawk 2.11 identities; validates each bounded JSONL stream before comparison; reports the first ordered request/arbitration/ownership mismatch with compact JSON and bounded context; and only publishes a fully validated BizHawk staging capture through atomic create-new output. Two independent captures from each producer must be byte-identical before a parity conclusion.
 - Fix: YM2612 synthesis now keeps the chip's register-slot permutation at the

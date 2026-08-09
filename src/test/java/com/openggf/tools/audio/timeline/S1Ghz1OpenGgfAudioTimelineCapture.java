@@ -81,7 +81,9 @@ public final class S1Ghz1OpenGgfAudioTimelineCapture {
         private int nextCommandEntry;
         private long diagnosticPresentations;
         private long emittedRequestCount;
-        private long lastRequestOrdinal = -1;
+        // Timeline ordinal 0 belongs to the frame-860 GHZ music baseline. Driver
+        // admission ordinals remain native; this producer maps later requests after it.
+        private long lastRequestOrdinal = 0;
         private boolean baselineCaptured;
         private S1GameplayAudioTimeline.OwnerRef currentMusicOwner = musicOwner();
 

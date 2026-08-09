@@ -15,8 +15,8 @@ returned its documented mismatch exit code `3`:
   --bizhawk-home '../../docs/BizHawk-2.11-linux-x64'
 ```
 
-The local, ignored evidence is preserved in
-`target/audio-parity/s1-ghz1-gameplay/run.dg7NwIAe/`.
+The final local, ignored evidence is preserved in
+`target/audio-parity/s1-ghz1-gameplay/run.AhiDZDUs/`.
 
 | Input | Verified identity |
 |---|---|
@@ -28,7 +28,7 @@ The local, ignored evidence is preserved in
 | Producer | SHA-256 for each duplicate | Bytes each | Requests |
 |---|---|---:|---:|
 | BizHawk reference | `8ab8fd1b052598495e6faecaf505758808e0015ec7762d45225b28baba073e59` | 2,050,831 | 154 |
-| OpenGGF | `d92f8291316862b1e3b6ac1e9006f357d1d74db839962d1e21a0c4252ccb2bff` | 2,058,644 | 175 |
+| OpenGGF | `337959a8aa9ba4122041cd5700b1fd64069bd4d1315129433244279183815948` | 2,058,662 | 175 |
 
 `cmp` passed for both duplicate pairs. Detailed JSONL, logs, and reports remain
 ignored and are not repository artifacts.
@@ -67,10 +67,11 @@ mismatch.
 
 - Music/SFX takeover and restore: reference `$A0` request ordinal 1 takes PSG1
   from GHZ `$81` at frame 959, and `$81` owns PSG1 again at frame 985. OpenGGF
-  observes the corresponding transition at 958 and restoration at 984.
+  observes the same ordinal-1 ownership transition at 958 and restoration at
+  984.
 - SFX while another SFX is active: reference `$B5` request ordinal 11 takes
-  FM4 from `$CC` ordinal 10 at frame 1250. OpenGGF `$CE` ordinal 10 takes FM4
-  from `$CC` ordinal 9 at frame 1249.
+  FM4 from `$CC` ordinal 10 at frame 1250. OpenGGF `$CE` ordinal 11 takes FM4
+  from `$CC` ordinal 10 at frame 1249.
 
 ## First mismatch and stop boundary
 
@@ -80,6 +81,9 @@ the same queued PSG1 request at `PlaySoundID` on frame 959. The BK2's first B
 press is row/frame 958. In the ROM,
 `Sonic_Jump` reads `v_jpadpress2` and calls `QueueSound2`; OpenGGF's
 `PlayableSpriteMovement.doJump()` calls `AudioManager.playSfx(GameSound.JUMP)`.
+Both baselines own ordinal 0 and both `$A0` requests carry ordinal 1 with the
+same PSG1 arbitration and owner identities; the mismatch is therefore only
+which frame contains that semantic request, not an ordinal incompatibility.
 This is request scheduling at the gameplay/input-to-audio boundary, so the
 planned rule requires stopping before `PlaySoundID`, role arbitration,
 presentation ownership, libvgm chip behavior, or chip-port ordering. No
@@ -87,15 +91,20 @@ gameplay timing or audio-driver behavior was tuned against this movie.
 
 Before the observer corrections, no semantic comparison was available: the
 reference producer stopped on shipped driver-RAM clearing and non-local SMPS
-returns. After source-derived lifecycle/serialization corrections, all four
-captures complete and the request mismatch above is stable. There is no
+returns. The final lifecycle classification includes `$71BD4`, the DAC
+continuation after `cfStopTrack`; its normal later `$71C4C` return closes the
+same tick exactly once, while a target outside the DAC/track continuations
+still closes immediately. After these source-derived lifecycle/serialization
+corrections, all four captures complete and the request mismatch above is
+stable. OpenGGF's capture producer also reserves ordinal 0 for the shared GHZ
+baseline without altering driver-observer admission ordinals. There is no
 post-behavior-fix result because a behavior fix was not warranted within this
 audio task.
 
 ## Verification and listening checklist
 
 The explicit driver snapshot, fade, chip observer, YM2612 GPGX parity,
-timeline, reducer, comparator, and authority suite ran 85 tests with zero
+timeline, reducer, comparator, and authority suite ran 86 tests with zero
 failures or errors and one property-gated capture skip. The real property-gated
 capture was exercised twice by the hardened runner instead.
 

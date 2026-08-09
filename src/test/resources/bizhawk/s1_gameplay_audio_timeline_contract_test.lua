@@ -244,13 +244,24 @@ end
 local function runStopTrackDoubleReturnLifecycle()
     -- cfStopTrack converges at $72E02/$72E04, where it removes the CoordFlag
     -- and track-update return addresses. An ordinary track returns to the
-    -- source-defined UpdateMusic loop; only a return outside those loop labels
-    -- closes the semantic tick.
+    -- source-defined UpdateMusic DAC/track continuation; only a return outside
+    -- those labels closes the semantic tick.
     local lifecycle = Contract.newInvocationLifecycle()
     lifecycle:entry(0x00FF5000, 4748)
     equals(lifecycle:stopTrackDoubleReturn(0x71BF8), "continue",
         "BGM PSG-loop stop-track return closed UpdateMusic")
     equals(lifecycle:close(), "close", "normal UpdateMusic return did not close lifecycle")
+
+    local dacLifecycle = Contract.newInvocationLifecycle()
+    dacLifecycle:entry(0x00FF5004, 4748)
+    equals(dacLifecycle:stopTrackDoubleReturn(0x71BD4), "continue",
+        "DAC continuation return closed UpdateMusic")
+    -- The probe binds close() to the normal UpdateMusic RTS at $71C4C.
+    equals(dacLifecycle:close(), "close",
+        "normal $71C4C UpdateMusic return did not close the DAC stop-track lifecycle")
+    local duplicateClose = pcall(function() dacLifecycle:close() end)
+    check(not duplicateClose, "DAC stop-track lifecycle accepted a second $71C4C close")
+
     lifecycle:entry(0x00FF5008, 4749)
     equals(lifecycle:stopTrackDoubleReturn(0x00000B64), "close",
         "stop-track double return did not close lifecycle")

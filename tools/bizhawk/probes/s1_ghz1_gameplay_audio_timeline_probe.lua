@@ -319,7 +319,7 @@ ProbeRuntime.run({
             end},
         {name = "s1_gameplay_audio_stop_track_return", address = STOP_TRACK_RETURN, callback = function(context)
             -- $72E02 addq.w #8,sp skips CoordFlag plus the current track helper.
-            -- Only an RTS target outside the six UpdateMusic track-loop labels
+            -- Only an RTS target outside the DAC and six track-loop continuations
             -- skips UpdateMusic itself and closes the semantic tick.
             local stack = (emu.getregister("M68K A7") or 0) & 0xffffffff
             local returnPc = mainmemory.read_u32_be(stack & 0xffff)
