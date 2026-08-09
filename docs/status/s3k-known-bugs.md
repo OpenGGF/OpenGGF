@@ -24,7 +24,8 @@ Entries should include:
 
 ## Table of Contents
 
-1. [CNZ1 Miniboss Arena Entry — Music Play-In Missing](#cnz1-miniboss-arena-entry--music-play-in-missing)
+1. [AIZ Miniboss Napalm — FallingShot Route Integration (RESOLVED)](#aiz-miniboss-napalm--fallingshot-route-integration-resolved)
+2. [CNZ1 Miniboss Arena Entry — Music Play-In Missing](#cnz1-miniboss-arena-entry--music-play-in-missing)
 2. [AIZ1 Trace F4679 — Sidekick Despawn Velocity & Position Semantic Gap (FIXED)](#aiz1-trace-f4679--sidekick-despawn-velocity--position-semantic-gap-fixed)
 3. [CNZ1 Trace F1685 — Tails CPU Spurious Despawn on Barber-Pole→Wire-Cage Object Switch (FIXED)](#cnz1-trace-f1685--tails-cpu-spurious-despawn-on-barber-polewire-cage-object-switch-fixed)
 4. [CNZ1 Trace F1740 — Wire Cage restoreObjectLatchIfTerrainClearedIt Overrode Slope-Repel Slip (FIXED)](#cnz1-trace-f1740--wire-cage-restoreobjectlatchifterrainclearedit-overrode-slope-repel-slip-fixed)
@@ -48,6 +49,17 @@ Entries should include:
 22. [CNZ F=621 Clamer re-fire — recorder gap closed; ROM mechanism localised (diagnosis only, round 3)](#cnz-f621-clamer-re-fire--recorder-gap-closed-rom-mechanism-localised-diagnosis-only-round-3)
 23. [CNZ F=621 Clamer re-fire — Touch_Special cprop latch landed (round 4, fixed)](#cnz-f621-clamer-re-fire--touch_special-cprop-latch-landed-round-4-fixed)
 24. [AIZ Trace F8927 — Sonic Air-Roll x_speed Not Cleared by Wall Collision (OPEN — diagnosis only)](#aiz-trace-f8927--sonic-air-roll-x_speed-not-cleared-by-wall-collision-open--diagnosis-only)
+
+---
+
+## AIZ Miniboss Napalm — FallingShot Route Integration (RESOLVED)
+
+The Knuckles miniboss route now uses the native FallingShot ownership graph,
+wait gates, after-current allocation order, camera-relative terrain impacts,
+collision lifetime, and seven-child explosion sequence. Rewind restores exact
+boss, barrel, projectile, and flare identities instead of a nearest-live-object
+heuristic. The evidence is deliberately bounded; the complete 68-segment AIZ
+run-chain has not been claimed green by this change.
 
 ---
 

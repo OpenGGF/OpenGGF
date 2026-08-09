@@ -30,7 +30,9 @@ public class AizMinibossBarrelShotFlareChild extends AbstractObjectInstance impl
     //                   10 (timer 3=4t), 11 (timer 3=4t) = 16 ticks
     private static final int[] FRAMES = {7, 8, 9, 10, 11};
     private static final int[] DURATIONS = {2, 2, 4, 4, 4};
-    private final AbstractObjectInstance anchor;
+    // Non-final so phase-two compact restore resolves the exact captured
+    // barrel ObjectRefId after nearestBarrel supplies a construction seed.
+    private AbstractObjectInstance anchor;
     private int currentX;
     private int currentY;
     private int sequenceIndex;

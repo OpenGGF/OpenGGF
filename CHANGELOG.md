@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: AIZ miniboss FallingShot projectiles now restore their exact boss,
+  barrel, and flare identities across rewind instead of relinking to the
+  nearest live barrel. ROM-backed production-route coverage pins the native
+  wait timing, allocation order, terrain impacts, collision lifetime, and
+  seven-child explosion sequence.
 - Fix: Music no longer stops for the rest of an act after an extra life,
   invincibility, or a Super transformation. The 1-up jingle, invincibility and
   Super themes are override music that interrupts the zone music rather than

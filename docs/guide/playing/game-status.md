@@ -1,6 +1,6 @@
 # Game Status
 
-Last updated: 2026-06-12 (v0.6.prerelease development)
+Last updated: 2026-08-09 (v0.6.prerelease development)
 
 This page describes the current state of each supported game. It is intended to set
 expectations honestly -- what works well, what is incomplete, and what you might encounter.
@@ -120,6 +120,9 @@ that the module can work.
 - Bonus stages are still in active parity work rather than final polish.
 - S3K's more complex PLC/art loading system still has partial parity.
 - Data select visual parity is still in progress (native selector art, emerald display).
+- The Knuckles AIZ miniboss FallingShot has ROM-backed production-route and
+  exact rewind-identity coverage. This is bounded evidence and does not claim
+  a complete 68-segment AIZ run-chain replay.
 
 ### Notable quirks
 

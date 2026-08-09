@@ -11,6 +11,14 @@
 - **Animated Tiles:** Yes (3 scripts Act 1, 5 scripts Act 2)
 - **Character Branching:** Yes -- Knuckles has a completely separate resize state machine in Act 2 (different boss position, different arena boundaries, different water targets), and chunk adjustments in both acts
 
+## Current Engine Status (2026-08-09)
+
+The Knuckles AIZ miniboss FallingShot route is production-owned and ROM-backed.
+Focused evidence covers its native wait gates, after-current allocation order,
+camera-relative terrain impacts, collision lifetime, seven-child explosion
+sequence, and exact boss/barrel/flare rewind identities. This is bounded route
+evidence rather than a claim that the complete 68-segment AIZ run-chain replays.
+
 ## Events
 
 ### Act 1 (AIZ1_Resize)
