@@ -253,6 +253,86 @@ public final class DynamicArtSpillNormalization {
                 edge.requests());
     }
 
+    /**
+     * Convenience form for a recorded S2 special-stage segment: derives the
+     * pass-pacing start, the pass bindings and the cursor-preceded rows from
+     * the trace's own {@code run_objects_end} stream and applies
+     * {@link #rebindSubmissionSpills(Map, int, int, IntPredicate, IntPredicate,
+     * List)}.
+     *
+     * <p>This is the single owner of that derivation. Both S2 special-stage
+     * comparison lanes use it -- the standalone {@code
+     * TestS2SpecialStageTraceReplay} and the complete-run chain's
+     * special-stage interior -- so a segment compares identically however it
+     * was reached.
+     *
+     * @return an empty map when the trace advertises no per-frame DPLC state
+     */
+    public static Map<Integer, TraceEvent.DynamicArtTransferState> forSpecialStage(
+            SpecialStageTraceData trace) {
+        Objects.requireNonNull(trace, "trace");
+        if (!trace.metadata().hasPerFrameDynamicArtTransferState()) {
+            return Map.of();
+        }
+        Map<Integer, TraceEvent.DynamicArtTransferState> states = new LinkedHashMap<>();
+        for (int frame = 0; frame < trace.frameCount(); frame++) {
+            TraceEvent.DynamicArtTransferState state =
+                    trace.dynamicArtTransferStateForFrame(frame);
+            if (state != null) {
+                states.put(frame, state);
+            }
+        }
+        List<TraceEvent.StateSnapshot> passes = trace.runObjectsEndSnapshots().stream()
+                .sorted(Comparator.comparingInt(
+                        snapshot -> passField(snapshot, "pass_sequence")))
+                .toList();
+        // Before SpecialStage_Started rises the ROM copies the pad words ahead
+        // of WaitForVint and the recurring object pass is not yet the pacing
+        // authority (docs/s2disasm/s2.asm:6674-6688), so replay is frame-paced
+        // there and every row is eligible for spill rebinding. Absent such a
+        // pass the whole segment is pre-start.
+        int pacingStart = passes.stream()
+                .filter(snapshot -> passField(snapshot, "started_at_input_sample") != 0)
+                .mapToInt(TraceEvent.StateSnapshot::frame)
+                .findFirst()
+                .orElse(trace.frameCount());
+        java.util.Set<Integer> cursorPrecededRows = new java.util.HashSet<>();
+        List<PassBinding> bindings = new ArrayList<>();
+        for (TraceEvent.StateSnapshot snapshot : trace.runObjectsEndSnapshots()) {
+            Object cursor = snapshot.fields().get("completion_cursor_frame");
+            if (cursor == null) {
+                continue;
+            }
+            int cursorFrame = Integer.parseInt(String.valueOf(cursor));
+            int boundRow = snapshot.frame();
+            bindings.add(new PassBinding(cursorFrame, boundRow));
+            if (cursorFrame < boundRow) {
+                cursorPrecededRows.add(boundRow);
+            }
+        }
+        return rebindSubmissionSpills(
+                states, trace.frameCount(), pacingStart,
+                frame -> trace.getFrame(frame).lag(),
+                cursorPrecededRows::contains,
+                bindings);
+    }
+
+    private static int passField(TraceEvent.StateSnapshot snapshot, String name) {
+        Object raw = snapshot.fields().get(name);
+        if (raw == null) {
+            throw new IllegalStateException(
+                    "run_objects_end is missing " + name + " at frame "
+                            + snapshot.frame());
+        }
+        if (raw instanceof Number number) {
+            return number.intValue();
+        }
+        String text = String.valueOf(raw);
+        return text.startsWith("0x") || text.startsWith("0X")
+                ? Integer.parseInt(text.substring(2), 16)
+                : Integer.parseInt(text);
+    }
+
     private static DynamicArtTransfer.SegmentEdge withPassRow(
             DynamicArtTransfer.SegmentEdge edge, int passRow) {
         return new DynamicArtTransfer.SegmentEdge(

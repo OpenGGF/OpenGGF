@@ -3,6 +3,7 @@ package com.openggf.trace.replay.runs;
 import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.sonic1.specialstage.Sonic1SpecialStageTraceData;
 import com.openggf.game.sonic3k.specialstage.S3kSpecialStageTraceData;
+import com.openggf.trace.DynamicArtSpillNormalization;
 import com.openggf.trace.DynamicArtTransfer;
 import com.openggf.trace.SpecialStageRunObjectsPassBinder;
 import com.openggf.trace.SpecialStageTraceData;
@@ -13,6 +14,7 @@ import com.openggf.trace.timing.HardwareTimingStreamLoader;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
@@ -85,6 +87,28 @@ public sealed interface TraceRunSpecialStageRows
      */
     default int passPacedFromRow() {
         return Integer.MAX_VALUE;
+    }
+
+    /**
+     * Per-row expected DPLC transfer states with the recorder's spilled
+     * submission edges rebound to the object pass that produced them, keyed by
+     * local row. An empty map means "compare the raw recorded rows".
+     *
+     * <p>One ROM {@code RunObjects} pass submits every changed player DPLC in
+     * one burst, but a pass can overrun its displayed frame: {@code
+     * SS_MainLoop} waits for the V-int and only then runs the pass
+     * (docs/s2disasm/s2.asm:6694-6721), so a slow pass is bisected by the next
+     * V-blank and the recorder stamps the objects after the split with the
+     * later (lag) frame. The engine publishes each pass atomically, and no
+     * frame-granularity ROM state predicts where the 68K ran out of time, so
+     * the split is an observation artifact compared per pass rather than per
+     * publication row. See {@link DynamicArtSpillNormalization}.
+     *
+     * <p>Comparison-only: this rewrites the expectation, never engine state.
+     */
+    default Map<Integer, TraceEvent.DynamicArtTransferState>
+            normalizedDynamicArtRows() {
+        return Map.of();
     }
 
     static TraceRunSpecialStageRows load(String profile, Path directory)
@@ -209,6 +233,12 @@ public sealed interface TraceRunSpecialStageRows
                     row -> !trace.getFrame(row).lag()
                             || (finishObserved.isPresent()
                                     && row == finishObserved.getAsInt())));
+        }
+
+        @Override
+        public Map<Integer, TraceEvent.DynamicArtTransferState>
+                normalizedDynamicArtRows() {
+            return DynamicArtSpillNormalization.forSpecialStage(trace);
         }
 
         /**

@@ -70350,3 +70350,80 @@ guard.
   represented hardware edges were consumed. Ring comparison remains
   error-level through `ToleranceConfig.DEFAULT` with
   `RingCountMode.FORCE_ERROR`.
+## 2026-08-09 — round twenty-two: CPZ2 2983 -> 1, EHZ chain 20693 -> 45, contract test GREEN
+
+Command: full `-Ptrace-replay` profile, no `-Dtest`. Base f6474feb6 (769 / 13 / 63).
+After: **769 / 11 / 63.** Green: `S2SpecialStageRecorderContractTest`. Nothing regressed.
+**Four S1/S2 reds remain**, two of them known capability gaps.
+
+- **CPZ2 seg9: 2983 errors -> 1. A FOURTH fabricated predicate deleted from committed code.**
+  `CPZSpinTubeObjectInstance` gated its position basis on
+  `useCurrentPosition = !midTraversal || (ownerRanBeforeThisTube &&
+  crossedEntryLowerBoundThisFrame(...))` — three invented conditions with no ROM counterpart,
+  falling back to `getPrePhysicsCentre*`. ROM `loc_225FC` simply reads the character's LIVE
+  `x_pos`/`y_pos` (`move.w x_pos(a1),d0` at s2.asm:48529, `move.w y_pos(a1),d1` at :48533);
+  there is no frame-start snapshot anywhere in Obj1E. `ExecuteObjects` walks in slot order, so
+  a lower-slot Obj1E that already ran `Obj1E_MoveCharacter` (:48661-48671) has already
+  written the position before a higher-slot tube evaluates its gate.
+  **The brief's premise was CONFIRMED and its cause was not.** The double move is real: dX
+  5052->5053 = 80384 = 2*157*256 and dY = -1048576 = 2*(-2048)*256, exactly two applications.
+  But it is not a fall-through — **there are TWO Obj1E instances in CPZ2 and both hold the
+  same character**: the tube at (0x400,0x680) driving main path `word_22FAC`
+  (490,6f0 / 490,730 / 690,730 / 890,730 / 890,6f0, verified byte-for-byte against
+  misc/obj1E_b.asm:111-117) and a second at (0x880,0x680), aux slot 25. Obj1E_Main gives each
+  character one state block per OBJECT, so while both hold it both run MoveCharacter — genuine
+  ROM behaviour once the handoff frame is right. At 5052 the owner moved the player
+  0x0700 -> 0x06F0; ROM sees dy = 0x70 < 0x80 and captures, the engine saw frame-start 0x0700
+  -> dy = 0x80 -> `bhs` reject, so capture landed 2 frames late.
+  **Also recorded because it misled earlier rounds:** the -16px moves at 5051/5052 are NOT the
+  tube. `Sonic_Water` still runs while `obj_control` bit 0 is set (`btst #0,obj_control(a0)`
+  at s2.asm:48236 only skips `Obj01_Modes`), so `Obj01_OutWater`'s `asl y_vel(a0)` (:48422)
+  doubles the tube's -$800 to -$1000 (capped at :48428-48430) when the player leaves water.
+  Status bit 6 clears at exactly 5051 and y_speed goes -0800 -> -1000. The engine already
+  models this correctly.
+  The surviving single error is the frame-415 2-frame self-healing blip.
+- **EHZ halfpipe chain seg1: 20693 errors -> 45, first divergence row 180 -> 5191.** Rows
+  0..5190 of 5733 now compare clean.
+  **THE BRIEF WAS WRONG ON BOTH COUNTS, and this is the important correction.**
+  (a) The stated mechanism was unreachable: `TraceRunSpecialStageRows.S2Rows.passPacedFromRow()`
+  returns the frame of the first pass with `started_at_input_sample != 0`, which is **424**
+  for this fixture (pass_sequence 181). Rows 0..423 are frame-paced one `GameLoop.step()` per
+  non-lag row; `passesForObservation` is never consulted and `SpecialStageObservationPacing`
+  is never installed. No pacing hook of any kind runs at row 180.
+  (b) **"The engine must reproduce WHEN the ROM splits a pass" is FALSE.** Recorded pass 15
+  spans 180->181 (first_eligible 180, cursor 181, bound observation 182); row 181 is a
+  recorded LAG row; ss-sonic's DPLC carries logical_frame 180 while ss-tails and
+  ss-tails-tails from the SAME pass carry 181, published 182. Where inside the
+  Obj09->Obj10->Obj11 scan the 68K ran out of time is **sub-frame execution timing with no
+  frame-granularity ROM predicate — deriving it would be a fitted model under hard rule 3.**
+  The standalone lane already decided this and normalises it on the COMPARISON side via
+  `DynamicArtSpillNormalization`; the run-chain comparator
+  (`TraceRunReplayWalker.DynamicArtSegmentComparison`) compared raw recorded rows and applied
+  none. That asymmetry was the defect.
+  Residue: rows 5191..5230 only — transfer pair [2905,2906] submitted at 5191 completing at
+  5230 in the recording, absent engine-side. Row 5191 is the recorded `check_rings_flag` rise,
+  i.e. the post-flag results tail the chain test's own javadoc already tracks separately.
+- **`S2SpecialStageRecorderContractTest` GREEN, by deleting and relativising rather than
+  re-pinning.**
+  The `recorder_version` assertion was DELETED, not bumped: hard rule 4 makes that field
+  opaque provenance selecting no replay behaviour, so it gated nothing and bumping would
+  re-arm the same staleness at the next capture.
+  `f916BindsOnlyTheCompletedX58PassAndLagRowF918AddsNoPass` verified directly against the
+  artifact — the `sonic_ss_x == 58` pass is at frame 915 (pass_sequence 499), 916 carries no
+  pass, physics confirms 915 lag=0 / 916 lag=1, and the old 916/918 pair no longer exists
+  (both are lag rows with zero passes). Renamed to f915/f916 and, rather than trusting
+  literals, it now asserts the SHAPE it means: observation row non-lag, following row lag,
+  bound `pass_sequence` contiguous with the previous, following lag row binds nothing.
+  The third known-stale assertion (2991 vs the fixture's 3172 — exactly +181, the pre-start
+  pass count) was corrected to `assertEquals(trace.runObjectsEndSnapshots().size(),
+  runObjectsEndCount)`, a self-cross-check that cannot go stale on regeneration. Two
+  neighbouring statistics (595 vs 632 multi-pass frames, 1259 vs 1311 delayed passes) became
+  `> 0`, since their intent is "these binder paths are exercised at all" and no accessor
+  exposes them.
+- **Running tally of fabricated/fitted models removed from committed, previously-green code:
+  FOUR.** The MZ2 geyser launch (justified by "the recorded REV01 MZ2 credits trace shows"),
+  the OOZ1 Aquis wing carve-out (`ca939d50d`, justified by "the OOZ1 route"), the Tails
+  respawn render-flag window (a hand-measured HTZ1 probe range), and now the spin-tube
+  `useCurrentPosition` predicate. **None would have been caught by grepping for
+  confession-shaped comments** — only by reading the ROM. That is the standing argument for
+  the guards this session added.

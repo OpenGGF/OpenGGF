@@ -166,6 +166,25 @@ public class GameLoop {
 
         /** Applies pass {@code index}'s controller sample to {@code provider}. */
         void applyPassInput(int index, SpecialStageProvider provider);
+
+        /**
+         * Runs after pass {@code index}'s object scan, for a pass the ROM
+         * finished BEFORE this observation's V-int.
+         *
+         * <p>{@code SS_MainLoop} waits for the V-int and only then runs
+         * {@code RunObjects} (docs/s2disasm/s2.asm:6694-6721), so a pass that
+         * returned during the preceding frame had its queued work carried
+         * through the V-blank that opened this observation, and that V-blank
+         * already ran {@code ProcessDMAQueue} (s2.asm:1769) over it. Work
+         * queued by a later pass in the same observation stays pending. The
+         * standalone harness models the same boundary
+         * ({@code S2SpecialStageReplayHarness.stepPasses}).
+         *
+         * <p>Default no-op: a driver that cannot distinguish the two cases
+         * leaves every pass's work pending until the next observation.
+         */
+        default void afterPass(int index) {
+        }
     }
 
     private SpecialStageObservationPacing specialStageObservationPacing;
@@ -1396,6 +1415,7 @@ public class GameLoop {
                         for (int pass = 0; pass < passes; pass++) {
                             pacing.applyPassInput(pass, ssProvider);
                             ssProvider.update();
+                            pacing.afterPass(pass);
                         }
                     });
         } else if (ssSession.skippedSpecialStagePlcPhase().isPresent()) {

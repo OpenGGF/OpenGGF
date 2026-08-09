@@ -2729,7 +2729,7 @@ abstract class AbstractRunChainTest {
                     // the runtime's own lag compensation").
                     loop.getActiveSpecialStageProvider().setLagCompensation(0);
                     loop.setSpecialStageObservationPacing(
-                            recordedPassPacing(movie, observationPasses));
+                            recordedPassPacing(movie, observationPasses, localRow));
                 }
                 try {
                     stepEngineFrame(loop);
@@ -2754,7 +2754,8 @@ abstract class AbstractRunChainTest {
      * {@code S2SpecialStageReplayHarness.stepPassBody}.
      */
     private static GameLoop.SpecialStageObservationPacing recordedPassPacing(
-            Bk2Movie movie, List<SpecialStageRunObjectsPassBinder.CompletedPass> passes) {
+            Bk2Movie movie, List<SpecialStageRunObjectsPassBinder.CompletedPass> passes,
+            int observationFrame) {
         return new GameLoop.SpecialStageObservationPacing() {
             @Override
             public int passCount() {
@@ -2773,6 +2774,24 @@ abstract class AbstractRunChainTest {
                 provider.bindPendingRecurringPassInput(
                         mapped.p1Held(), mapped.p1Pressed(),
                         mapped.p2Held(), mapped.p2Logical());
+            }
+
+            @Override
+            public void afterPass(int index) {
+                if (passes.get(index).completionCursorFrame() >= observationFrame) {
+                    return;
+                }
+                // The pass returned before this observation's V-int on
+                // hardware, so that V-blank already ran ProcessDMAQueue
+                // (docs/s2disasm/s2.asm:1769) over its queued work:
+                // submissions and completions surface together on the bound
+                // row, while a later pass's work in this same observation
+                // stays pending. Identical to the standalone harness's rule in
+                // S2SpecialStageReplayHarness.stepPasses.
+                var lifecycle = GameServices.dynamicArtLifecycleOrNull();
+                if (lifecycle != null && lifecycle.isRunActive()) {
+                    lifecycle.serviceVblankBeforeBoundObservation();
+                }
             }
         };
     }
