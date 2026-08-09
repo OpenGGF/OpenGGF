@@ -65,7 +65,7 @@ Its verified properties are:
 | Property | Value |
 |---|---|
 | SHA-256 | `622ff642d0b0835a4f77bee568f2413f288ead3306a8bc2a93e8d8f77f24ca9c` |
-| Recorded frames | 991 |
+| Controller input rows | 989 |
 | Emulator | BizHawk 2.11 |
 | Core | Genesis Plus GX |
 | Game | Sonic The Hedgehog World REV01 |
