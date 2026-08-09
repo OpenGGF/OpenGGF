@@ -6,12 +6,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.List;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 class TestS1AudioParityProbeContract {
     private static final Path PROBE = Path.of("tools", "bizhawk", "probes",
             "s1_audio_driver_parity_probe.lua");
+
+    @TempDir
+    Path temp;
 
     @Test
     void observerIsRuntimeOwnedReadOnlyAndCoversEveryReviewedCaptureSite() throws Exception {
@@ -50,9 +56,44 @@ class TestS1AudioParityProbeContract {
                 "observer must arm only from D7 low byte through the tested lifecycle");
         assertTrue(source.contains("newInvocationLifecycle"),
                 "DAC-busy retries require the tested active-invocation lifecycle");
+        assertTrue(source.contains("newCallbackProof") && source.contains("assertVerified"),
+                "memory callbacks must be selected only after per-port value correlation plus PSG proof");
+        assertTrue(source.contains("OGGF_BIZHAWK_MOVIE_SHA256") && source.contains("requireSha256"),
+                "observer must verify the launcher-computed BK2 content digest");
+        assertTrue(source.contains("readU8(0x2A) == 0"),
+                "GHZ capture must reject f_speedup activity at $FFF02A");
         assertTrue(source.contains("continueAfterMovie = true"), "capture must continue after movie input ends");
         assertTrue(source.contains("joypad.get(1)"), "post-movie controller 1 must be checked for neutrality");
         assertTrue(source.contains("joypad.get(2)"), "post-movie controller 2 must be checked for neutrality");
         assertTrue(source.contains("context.log("), "all output must use the runtime-owned OGGF_OUT stream");
+    }
+
+    @Test
+    void linuxLauncherSuppliesDigestOfActualMovieBytes() throws Exception {
+        // Break caught: the launcher passes a caller-provided or hardcoded movie identity
+        // instead of hashing the exact BK2 path handed to EmuHawk.
+        Assumptions.assumeTrue(Files.isExecutable(Path.of("/bin/bash"))
+                && Files.isExecutable(Path.of("/usr/bin/sha256sum")),
+                "Linux launcher dependencies are unavailable");
+        Path home = Files.createDirectories(temp.resolve("bizhawk"));
+        Files.writeString(home.resolve("EmuHawk.exe"), "");
+        Path lua = Files.writeString(temp.resolve("probe.lua"), "return true\n");
+        Path movie = Files.writeString(temp.resolve("movie.bk2"), "wrong movie content\n");
+        Path rom = Files.writeString(temp.resolve("rom.gen"), "rom\n");
+        Path fakeMono = temp.resolve("fake-mono.sh");
+        Files.writeString(fakeMono, "#!/bin/sh\nprintf 'MOVIE_SHA=%s\\n' \"$OGGF_BIZHAWK_MOVIE_SHA256\"\n");
+        Files.setPosixFilePermissions(fakeMono, PosixFilePermissions.fromString("rwx------"));
+
+        ProcessBuilder builder = new ProcessBuilder("/bin/bash", "tools/bizhawk/run_bizhawk_lua.sh",
+                lua.toString(), movie.toString(), rom.toString());
+        builder.environment().put("BIZHAWK_HOME", home.toString());
+        builder.environment().put("MONO_BIN", fakeMono.toString());
+        builder.environment().put("OGGF_BIZHAWK_MOVIE_SHA256", "caller-value-must-not-win");
+        builder.redirectErrorStream(true);
+        Process process = builder.start();
+        String output = new String(process.getInputStream().readAllBytes());
+        assertTrue(process.waitFor() == 0, () -> "fake launcher run failed:\n" + output);
+        assertTrue(output.contains("MOVIE_SHA=22957c24718a1d19fee7dfecb153002b00c2a35b98662b9548140e9227b784f3"),
+                () -> "launcher did not supply the actual BK2 content digest:\n" + output);
     }
 }

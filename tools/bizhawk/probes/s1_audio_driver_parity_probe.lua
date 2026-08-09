@@ -153,7 +153,11 @@ local function verifyIdentity()
     assert(header.emuVersion == "Version 2.11", "S1 parity BK2 must select BizHawk 2.11")
     assert(header.GameName == "Sonic The Hedgehog (W) (REV01) [!]", "S1 parity BK2 game mismatch")
     assert(header.SHA1 == EXPECTED_MOVIE_OPAQUE_HASH, "S1 parity BK2 opaque identity mismatch")
-    return rom
+    local movieSha256 = AudioContract.requireSha256(
+        assert(os.getenv("OGGF_BIZHAWK_MOVIE_SHA256"),
+            "run_bizhawk_lua must supply the actual BK2 SHA-256"),
+        EXPECTED_MOVIE_SHA256, "launcher BK2")
+    return rom, movieSha256
 end
 
 local function readU8(offset) return mainmemory.read_u8(SOUND_RAM + offset) end
@@ -190,18 +194,23 @@ local function readRomSnapshot()
                 returnStack[#returnStack + 1] = readU32(base + offset)
             end
         end
+        local dataPointer = readU32(base + 0x04)
         tracks[index] = {
             status = status,
             voiceControl = voiceControl,
             baseFrequency = readU16(base + 0x10),
+            dataPointer = dataPointer,
             detune = readU8(base + 0x1E),
+            duration = readU8(base + 0x0E),
+            durationReload = readU8(base + 0x0F),
             loopCounters = loopCounters,
+            panAmsFms = readU8(base + 0x0A),
             returnStack = returnStack,
             stackPointer = stackPointer,
             transpose = readU8(base + 0x08),
+            voiceOrEnvelope = readU8(base + 0x0B),
             volume = readU8(base + 0x09)
         }
-        local dataPointer = readU32(base + 0x04)
         trackDiagnostics[index] = {
             ams_fms_pan = readU8(base + 0x0A),
             data_position = dataPointer >= GHZ_ASSET_BASE and dataPointer < GHZ_ASSET_END
@@ -256,6 +265,9 @@ local function assertStableSoundTest()
     assert(mainmemory.read_u16_be(LEVEL_SELECT_SOUND) == 0x01, "capture changed the selected GHZ sound")
     assert(readU8(0x03) == 0, "pause command contaminated capture")
     assert(readU8(0x04) == 0 and readU8(0x24) == 0, "fade command contaminated capture")
+    -- `f_speedup` is exactly $00 off / $80 on in s1.sounddriver.asm. GHZ sound-test
+    -- capture never requests the speed-up command, so any active or transition byte is contamination.
+    assert(readU8(0x2A) == 0, "speed-up command contaminated capture")
     assert(readU8(0x09) == 0x80, "unexpected sound ID contaminated capture")
     assert(readU8(0x0A) == 0 and readU8(0x0B) == 0 and readU8(0x0C) == 0,
         "sound queue contaminated capture")
@@ -288,7 +300,9 @@ local currentDecodedEvents = nil
 local currentDecoder = nil
 local records = {}
 local cycleDetector = AudioContract.newCycleDetector()
+local callbackProof = AudioContract.newCallbackProof()
 local romIdentity
+local movieIdentity
 
 local function beginCapturedInvocation(ordinal, openFrame)
     currentOrdinal = ordinal
@@ -302,22 +316,26 @@ local function emitCapture(context, proof)
     local header = movie.getheader()
     context.log(AudioContract.canonicalJson({
         capture = "s1_ghz_music_driver_reference",
-        callback_contract = {arguments = {"address", "value", "flags"}, source = "memory_callback"},
+        callback_contract = {
+            arguments = {"address", "value", "flags"},
+            proof = callbackProof:counts(),
+            source = callbackProof:assertVerified()
+        },
         cycle_start = proof.startOrdinal,
         diagnostic_fields = {
             global = {"priority", "pause", "fade flags", "queues", "sound id", "voice selector",
                 "DAC update", "1-up", "speed-up reload", "communication", "ring speaker", "push"},
-            track = {"status bits", "sequence position", "pan/AMS/FMS", "voice/envelope", "duration",
-                "note fill", "modulation", "voice control"}
+            track = {"resting", "note fill", "modulation phase", "raw status", "raw voice control"}
         },
         gating_fields = {
             global = {"tempo timeout", "tempo reload", "speed-up", "fade state"},
-            track = {"active", "role", "hardware", "transpose", "volume", "base frequency", "detune",
-                "live loop counters", "live return stack"}
+            track = {"active", "role", "hardware", "overridden", "do not attack", "modulation enabled",
+                "sequence position", "transpose", "volume", "pan/AMS/FMS", "voice/envelope", "duration",
+                "duration reload", "base frequency", "detune", "live loop counters", "live return stack"}
         },
         launch_update_music_invocations = invocationLifecycle:launchInvocationCount(),
         movie = {
-            archive_sha256 = EXPECTED_MOVIE_SHA256,
+            archive_sha256 = movieIdentity,
             core = header.Core,
             emulator = header.emuVersion,
             game = header.GameName,
@@ -354,6 +372,7 @@ local function closeCapturedInvocation(context)
         error(rawSnapshot, 0)
     end
     if currentOrdinal == 0 then
+        callbackProof:assertVerified()
         local expectedActive = {true, true, true, true, true, true, false, true, true, true}
         for index, expected in ipairs(expectedActive) do
             local active = (rawSnapshot.tracks[index].status & 0x80) ~= 0
@@ -362,7 +381,7 @@ local function closeCapturedInvocation(context)
     end
     debugPhase("normalize")
     local normalized = AudioContract.normalizeRom(rawSnapshot, ACTIVE_LOOP_COUNTERS)
-    local stateHash = AudioContract.hashState({diagnostic = diagnostics, state = normalized})
+    local stateHash = AudioContract.hashState(normalized)
     local eventHash = AudioContract.hashEvents(currentDecodedEvents)
     local record = {
         diagnostic = {
@@ -444,16 +463,19 @@ addHook({
     end
 })
 
-for _, pc in ipairs({0x72752, 0x72788}) do
+for pc, port in pairs({[0x72752] = 0, [0x72788] = 1}) do
     addHook({
         name = string.format("s1_audio_callback_validation_pc_%06x", pc),
         address = pc,
         callback = function(context)
             if not invocationLifecycle:isArmed() then return end
             validation.pcDataCount = validation.pcDataCount + 1
+            local d0 = (emu.getregister("M68K D0") or 0) & 0xFF
+            local d1 = (emu.getregister("M68K D1") or 0) & 0xFF
+            callbackProof:observeFmDataPc(port, d0, d1)
             validation.lastDataPc = {
-                d0 = (emu.getregister("M68K D0") or 0) & 0xFF,
-                d1 = (emu.getregister("M68K D1") or 0) & 0xFF,
+                d0 = d0,
+                d1 = d1,
                 frame = emu.framecount(),
                 pc = pc
             }
@@ -476,6 +498,14 @@ for address, operation in pairs(callbackAddresses) do
             assert(type(value) == "number" and value == math.floor(value) and value >= 0 and value <= 0xFF,
                 "BizHawk audio write callback value mapping changed")
             validation.callbackCount = validation.callbackCount + 1
+            local port = operation:match("port1") and 1 or 0
+            if address == 0xC00011 then
+                callbackProof:observePsg(value)
+            elseif operation:match("_address$") then
+                callbackProof:observeYmAddress(port, value)
+            else
+                callbackProof:observeYmData(port, value)
+            end
             if VALIDATE_ONLY then
                 context.log(AudioContract.canonicalJson({
                     arguments = callbackArguments(callbackAddress, value, flags),
@@ -496,7 +526,7 @@ for address, operation in pairs(callbackAddresses) do
                 else
                     busEvent = {
                         kind = operation:match("_address$") and "address" or "data",
-                        port = operation:match("port1") and 1 or 0,
+                        port = port,
                         value = value
                     }
                 end
@@ -531,7 +561,7 @@ for address, operation in pairs(callbackAddresses) do
 end
 
 verifyFallbackManifest()
-romIdentity = verifyIdentity()
+romIdentity, movieIdentity = verifyIdentity()
 
 ProbeRuntime.run({
     stage = function() return true end,
@@ -561,10 +591,10 @@ ProbeRuntime.run({
             requireNeutral(1, joypad.get(1))
             requireNeutral(2, joypad.get(2))
         end
-        if VALIDATE_ONLY and validation.epochReached and validation.callbackCount >= 24
-                and validation.pcDataCount >= 4 then
+        if VALIDATE_ONLY and validation.epochReached and callbackProof:isVerified() then
             context.log(AudioContract.canonicalJson({
                 callback_count = validation.callbackCount,
+                callback_proof = callbackProof:counts(),
                 event = "callback_validation_complete",
                 fm_data_pc_count = validation.pcDataCount
             }))

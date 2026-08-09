@@ -166,6 +166,64 @@ local function runYmRejections()
     check(not ok, "orphan YM address survived the tick boundary")
 end
 
+local function runCallbackProof()
+    -- Break caught: aggregate callback counts select memory_callback even when FM values are
+    -- misordered, one port is absent, or no PSG write was ever observed.
+    local proof = Contract.newCallbackProof()
+    proof:observeYmAddress(0, 0x22)
+    proof:observeFmDataPc(0, 0x22, 0x11)
+    proof:observeYmData(0, 0x11)
+    proof:observeYmAddress(1, 0x2A)
+    proof:observeFmDataPc(1, 0x2A, 0x80)
+    proof:observeYmData(1, 0x80)
+    proof:observePsg(0x9F)
+    check(proof:isVerified(), "both correlated FM ports plus PSG did not prove callbacks")
+    equals(Contract.canonicalJson(proof:counts()),
+        "{\"fm_port0_pairs\":1,\"fm_port1_pairs\":1,\"psg_writes\":1}",
+        "callback proof counts changed")
+    proof:assertVerified()
+
+    local wrongAddress = Contract.newCallbackProof()
+    wrongAddress:observeYmAddress(0, 0x22)
+    local ok = pcall(function() wrongAddress:observeFmDataPc(0, 0x23, 0x11) end)
+    check(not ok, "FM address callback was not correlated with D0")
+
+    local wrongData = Contract.newCallbackProof()
+    wrongData:observeYmAddress(0, 0x22)
+    wrongData:observeFmDataPc(0, 0x22, 0x11)
+    ok = pcall(function() wrongData:observeYmData(0, 0x12) end)
+    check(not ok, "FM data callback was not correlated with D1")
+
+    local missingPort = Contract.newCallbackProof()
+    missingPort:observeYmAddress(0, 0x22)
+    missingPort:observeFmDataPc(0, 0x22, 0x11)
+    missingPort:observeYmData(0, 0x11)
+    missingPort:observePsg(0x9F)
+    ok = pcall(function() missingPort:assertVerified() end)
+    check(not ok, "callback proof accepted missing FM port 1")
+
+    local missingPsg = Contract.newCallbackProof()
+    for port = 0, 1 do
+        missingPsg:observeYmAddress(port, 0x22 + port)
+        missingPsg:observeFmDataPc(port, 0x22 + port, 0x11 + port)
+        missingPsg:observeYmData(port, 0x11 + port)
+    end
+    ok = pcall(function() missingPsg:assertVerified() end)
+    check(not ok, "callback proof accepted missing PSG coverage")
+end
+
+local function runLauncherMovieIdentity()
+    -- Break caught: metadata publishes the pinned BK2 hash without checking the launcher-supplied bytes.
+    local expected = "622ff642d0b0835a4f77bee568f2413f288ead3306a8bc2a93e8d8f77f24ca9c"
+    equals(Contract.requireSha256(expected, expected, "launcher BK2"), expected,
+        "matching launcher BK2 digest was rejected")
+    local wrongContent = "09075241fd35efefa4ade5a666b8ff80d1942039a8dd336ad24c14bbd8c64f01"
+    local ok = pcall(function() Contract.requireSha256(wrongContent, expected, "launcher BK2") end)
+    check(not ok, "wrong launcher BK2 content digest was accepted")
+    ok = pcall(function() Contract.requireSha256("not-a-digest", expected, "launcher BK2") end)
+    check(not ok, "malformed launcher BK2 digest was accepted")
+end
+
 local function runHashes()
     -- Break caught: a changed byte or event order produces the same recurrence signature.
     equals(Contract.hashState({tempo = 3, track = {active = true, pos = 12}}), "5b5988cb",
@@ -209,9 +267,37 @@ end
 
 local function rawTrack(status, voiceControl)
     return {
-        baseFrequency = 0, detune = 0, loopCounters = {}, returnStack = {},
-        stackPointer = 48, status = status, transpose = 0, voiceControl = voiceControl, volume = 0
+        baseFrequency = 0, dataPointer = 476636, detune = 0, duration = 0, durationReload = 0,
+        loopCounters = {}, panAmsFms = 0, returnStack = {}, stackPointer = 48, status = status,
+        transpose = 0, voiceControl = voiceControl, voiceOrEnvelope = 0, volume = 0
     }
+end
+
+local function runConditionalGlobalGates()
+    -- Break caught: inactive fade counters create false parity mismatches, or an invalid
+    -- f_speedup transition is normalized as ordinary GHZ state.
+    local raw = {fadeActive = 0, fadeDelay = 77, fadeOut = 0, fadeSteps = 66,
+        speedUp = 0, tempoReload = 21, tempoTimeout = 3}
+    local engine = {fadeActive = false, fadeDelay = 11, fadeDirection = "none", fadeSteps = 22,
+        speedUp = false, tempoReload = 21, tempoTimeout = 3}
+    local rawState = Contract.normalizeGlobal(raw, true)
+    local engineState = Contract.normalizeGlobal(engine, false)
+    equals(Contract.canonicalJson(rawState), Contract.canonicalJson(engineState),
+        "inactive fade delay/steps remained canonical gates")
+    check(rawState.fadeDelay == nil and rawState.fadeSteps == nil,
+        "inactive fade conditionals were not omitted")
+
+    raw.fadeActive, raw.fadeOut, raw.fadeDelay, raw.fadeSteps = 1, 1, 7, 8
+    rawState = Contract.normalizeGlobal(raw, true)
+    check(rawState.fadeDirection == "out" and rawState.fadeDelay == 7 and rawState.fadeSteps == 8,
+        "active fade direction/delay/steps were not gated")
+
+    raw.fadeActive, raw.fadeOut, raw.speedUp = 0, 0, 0x80
+    check(Contract.normalizeGlobal(raw, true).speedUp,
+        "shipped f_speedup $80 did not normalize active")
+    raw.speedUp = 1
+    local ok = pcall(function() Contract.normalizeGlobal(raw, true) end)
+    check(not ok, "non-shipped f_speedup transition byte was accepted")
 end
 
 local function runFixedRoleAndDescendingStackNormalization()
@@ -226,20 +312,32 @@ local function runFixedRoleAndDescendingStackNormalization()
         }
     }
     raw.tracks[2].baseFrequency = 9320
+    raw.tracks[2].dataPointer = 476688
     raw.tracks[2].detune = 253
+    raw.tracks[2].duration = 12
+    raw.tracks[2].durationReload = 16
     raw.tracks[2].loopCounters = {4, 88, 2}
+    raw.tracks[2].panAmsFms = 210
     raw.tracks[2].returnStack = {477746, 476672, 478428}
     raw.tracks[2].stackPointer = 40
+    raw.tracks[2].status = 156
     raw.tracks[2].transpose = 254
+    raw.tracks[2].voiceOrEnvelope = 7
     raw.tracks[2].volume = 255
     local normalized = Contract.normalizeRom(raw, {0, 2})
     equals(Contract.canonicalJson(normalized.tracks),
-        "[{\"active\":false,\"hardware\":\"DAC\",\"role\":\"DAC\"},{\"active\":true,\"baseFrequency\":9320,\"detune\":-3,\"hardware\":\"FM1\",\"loopCounters\":[4,2],\"returnStack\":[38,1112],\"role\":\"FM1\",\"transpose\":-2,\"volume\":-1},{\"active\":false,\"hardware\":\"FM2\",\"role\":\"FM2\"},{\"active\":false,\"hardware\":\"FM3\",\"role\":\"FM3\"},{\"active\":false,\"hardware\":\"FM4\",\"role\":\"FM4\"},{\"active\":false,\"hardware\":\"FM5\",\"role\":\"FM5\"},{\"active\":false,\"hardware\":\"FM6\",\"role\":\"FM6\"},{\"active\":false,\"hardware\":\"PSG1\",\"role\":\"PSG1\"},{\"active\":false,\"hardware\":\"PSG2\",\"role\":\"PSG2\"},{\"active\":false,\"hardware\":\"PSG3\",\"role\":\"PSG3\"}]",
+        "[{\"active\":false,\"hardware\":\"DAC\",\"role\":\"DAC\"},{\"active\":true,\"ams\":1,\"baseFrequency\":9320,\"detune\":-3,\"doNotAttack\":true,\"duration\":12,\"durationReload\":16,\"fms\":2,\"hardware\":\"FM1\",\"loopCounters\":[4,2],\"modulationEnabled\":true,\"overridden\":true,\"pan\":192,\"returnStack\":[38,1112],\"role\":\"FM1\",\"sequencePosition\":52,\"transpose\":-2,\"voiceOrEnvelope\":7,\"volume\":-1},{\"active\":false,\"hardware\":\"FM2\",\"role\":\"FM2\"},{\"active\":false,\"hardware\":\"FM3\",\"role\":\"FM3\"},{\"active\":false,\"hardware\":\"FM4\",\"role\":\"FM4\"},{\"active\":false,\"hardware\":\"FM5\",\"role\":\"FM5\"},{\"active\":false,\"hardware\":\"FM6\",\"role\":\"FM6\"},{\"active\":false,\"hardware\":\"PSG1\",\"role\":\"PSG1\"},{\"active\":false,\"hardware\":\"PSG2\",\"role\":\"PSG2\"},{\"active\":false,\"hardware\":\"PSG3\",\"role\":\"PSG3\"}]",
         "fixed slots did not validate S1 voice control and normalize descending return addresses")
     local expectedInactiveBytesIgnored = Contract.canonicalJson(normalized)
     raw.tracks[7].voiceControl = 255
     raw.tracks[7].baseFrequency = 65535
+    raw.tracks[7].dataPointer = 0
+    raw.tracks[7].duration = 255
+    raw.tracks[7].durationReload = 255
+    raw.tracks[7].panAmsFms = 255
     raw.tracks[7].returnStack = {0, 0, 0}
+    raw.tracks[7].status = 0x7F
+    raw.tracks[7].voiceOrEnvelope = 255
     equals(Contract.canonicalJson(Contract.normalizeRom(raw, {0, 2})), expectedInactiveBytesIgnored,
         "inactive FM6 stale bytes changed normalized output")
     raw.tracks[7].voiceControl = 6
@@ -331,10 +429,13 @@ runCanonicalJson()
 runIntegerNormalization()
 runYmPairing()
 runYmRejections()
+runCallbackProof()
+runLauncherMovieIdentity()
 runHashes()
 runCycleProof()
 runCycleLimit()
 runPeriodOneCycleProof()
+runConditionalGlobalGates()
 runFixedRoleAndDescendingStackNormalization()
 runInvocationLifecycle()
 runPsg3ToneNoiseAliasNormalization()

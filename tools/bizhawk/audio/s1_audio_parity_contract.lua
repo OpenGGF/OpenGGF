@@ -97,6 +97,17 @@ function Contract.hashEvents(events)
     return fnv1a(Contract.canonicalJson(events))
 end
 
+function Contract.requireSha256(actual, expected, name)
+    local label = name or "content"
+    assert(type(actual) == "string" and actual:match("^[0-9a-fA-F]+$") and #actual == 64,
+        label .. " SHA-256 must be 64 hexadecimal characters")
+    assert(type(expected) == "string" and expected:match("^[0-9a-fA-F]+$") and #expected == 64,
+        label .. " expected SHA-256 must be 64 hexadecimal characters")
+    local normalized = actual:lower()
+    assert(normalized == expected:lower(), label .. " SHA-256 mismatch")
+    return normalized
+end
+
 function Contract.newYmDecoder()
     local pending = {}
     local decoder = {}
@@ -127,6 +138,62 @@ function Contract.newYmDecoder()
     end
 
     return decoder
+end
+
+function Contract.newCallbackProof()
+    local proof = {pendingAddresses = {}, pendingData = {}, pairs = {[0] = 0, [1] = 0}, psgWrites = 0}
+
+    local function checkedPort(port)
+        local normalized = assertInteger(port, "FM callback port")
+        assert(normalized == 0 or normalized == 1, "unsupported FM callback port")
+        return normalized
+    end
+
+    function proof:observeYmAddress(port, value)
+        local checked = checkedPort(port)
+        assert(self.pendingAddresses[checked] == nil and self.pendingData[checked] == nil,
+            "FM callback address arrived before prior pair completed")
+        self.pendingAddresses[checked] = Contract.u8(value)
+    end
+
+    function proof:observeFmDataPc(port, d0, d1)
+        local checked = checkedPort(port)
+        local address = self.pendingAddresses[checked]
+        assert(address ~= nil, "FM data PC arrived without pending address callback")
+        assert(address == Contract.u8(d0), "FM address callback did not match D0 at data PC")
+        assert(self.pendingData[checked] == nil, "FM data PC arrived before prior data callback")
+        self.pendingData[checked] = Contract.u8(d1)
+    end
+
+    function proof:observeYmData(port, value)
+        local checked = checkedPort(port)
+        local expected = self.pendingData[checked]
+        assert(expected ~= nil, "FM data callback arrived without correlated data PC")
+        assert(expected == Contract.u8(value), "FM data callback did not match D1 at data PC")
+        self.pendingAddresses[checked] = nil
+        self.pendingData[checked] = nil
+        self.pairs[checked] = self.pairs[checked] + 1
+    end
+
+    function proof:observePsg(value)
+        Contract.u8(value)
+        self.psgWrites = self.psgWrites + 1
+    end
+
+    function proof:isVerified()
+        return self.pairs[0] > 0 and self.pairs[1] > 0 and self.psgWrites > 0
+    end
+
+    function proof:assertVerified()
+        assert(self:isVerified(), "memory callbacks require correlated FM pairs on both ports plus PSG coverage")
+        return "memory_callback"
+    end
+
+    function proof:counts()
+        return {fm_port0_pairs = self.pairs[0], fm_port1_pairs = self.pairs[1], psg_writes = self.psgWrites}
+    end
+
+    return proof
 end
 
 local S1_MUSIC_SLOTS = {
@@ -182,42 +249,93 @@ local function liveRomReturnStack(stack, stackPointer, assetBase, assetEnd)
     return result
 end
 
-local function normalizedGlobal(global, raw)
+function Contract.normalizeGlobal(global, raw)
     local active
     local fadeOut
     local speedUp
     if raw then
         active = Contract.u8(global.fadeActive) ~= 0
         fadeOut = Contract.u8(global.fadeOut) ~= 0
-        speedUp = (Contract.u8(global.speedUp) & 0x80) ~= 0
+        local rawSpeedUp = Contract.u8(global.speedUp)
+        assert(rawSpeedUp == 0 or rawSpeedUp == 0x80,
+            "S1 f_speedup must use the shipped $00/$80 values")
+        speedUp = rawSpeedUp == 0x80
     else
         active = global.fadeActive == true
         fadeOut = global.fadeDirection == "out"
         speedUp = global.speedUp == true
     end
-    return {
+    local normalized = {
         fadeActive = active == true,
-        fadeDelay = Contract.u8(global.fadeDelay),
         fadeDirection = active and (fadeOut and "out" or "in") or "none",
-        fadeSteps = Contract.u8(global.fadeSteps),
         speedUp = speedUp,
         tempoReload = Contract.u8(global.tempoReload),
         tempoTimeout = Contract.u8(global.tempoTimeout)
     }
+    if active then
+        normalized.fadeDelay = Contract.u8(global.fadeDelay)
+        normalized.fadeSteps = Contract.u8(global.fadeSteps)
+    end
+    return normalized
 end
 
-local function normalizedActiveTrack(track, role, hardware, activeIndices, returnStack)
-    return {
+local function normalizedActiveTrack(track, role, hardware, activeIndices, returnStack, raw, assetBase, assetEnd)
+    local status = raw and Contract.u8(track.status) or nil
+    local position
+    local voiceOrEnvelope
+    local pan
+    local ams
+    local fms
+    local doNotAttack
+    local modulationEnabled
+    local overridden
+    if raw then
+        local pointer = Contract.u32(track.dataPointer)
+        local base = Contract.u32(assetBase)
+        local ending = Contract.u32(assetEnd)
+        assert(pointer >= base and pointer < ending, "ROM sequence pointer is outside the GHZ asset range")
+        position = pointer - base
+        voiceOrEnvelope = Contract.u8(track.voiceOrEnvelope)
+        local packed = Contract.u8(track.panAmsFms)
+        pan, ams, fms = packed & 0xc0, (packed >> 4) & 3, packed & 7
+        doNotAttack = (status & 0x10) ~= 0
+        modulationEnabled = (status & 0x08) ~= 0
+        overridden = (status & 0x04) ~= 0
+    else
+        position = assertInteger(track.position, "sequence position")
+        assert(position >= 0, "sequence position must be non-negative")
+        voiceOrEnvelope = Contract.u8(role:match("^PSG") and track.instrumentId or track.voiceId)
+        if not role:match("^PSG") then
+            pan, ams, fms = Contract.u8(track.pan), Contract.u8(track.ams), Contract.u8(track.fms)
+        end
+        doNotAttack = track.tieNext == true
+        modulationEnabled = track.modEnabled == true
+        overridden = track.overridden == true
+    end
+    local normalized = {
         active = true,
         baseFrequency = Contract.u16(track.baseFrequency),
         detune = Contract.s8(track.detune),
+        doNotAttack = doNotAttack,
+        duration = Contract.u8(track.duration),
+        durationReload = Contract.u8(raw and track.durationReload or track.scaledDuration),
         hardware = hardware,
         loopCounters = filteredLoopCounters(track.loopCounters or {}, activeIndices),
+        modulationEnabled = modulationEnabled,
+        overridden = overridden,
         returnStack = returnStack,
         role = role,
+        sequencePosition = position,
         transpose = Contract.s8(track.transpose),
+        voiceOrEnvelope = voiceOrEnvelope,
         volume = Contract.s8(track.volume)
     }
+    if not role:match("^PSG") then
+        normalized.pan = pan
+        normalized.ams = ams
+        normalized.fms = fms
+    end
+    return normalized
 end
 
 function Contract.normalizeRom(snapshot, activeLoopIndices)
@@ -236,10 +354,11 @@ function Contract.normalizeRom(snapshot, activeLoopIndices)
             assert(voiceControlMatches,
                 "ROM voice-control does not match active " .. slot.role .. " slot")
             tracks[index] = normalizedActiveTrack(track, slot.role, slot.hardware, activeLoopIndices,
-                liveRomReturnStack(track.returnStack or {}, track.stackPointer, snapshot.assetBase, snapshot.assetEnd))
+                liveRomReturnStack(track.returnStack or {}, track.stackPointer, snapshot.assetBase, snapshot.assetEnd),
+                true, snapshot.assetBase, snapshot.assetEnd)
         end
     end
-    return {global = normalizedGlobal(snapshot.global, true), tracks = tracks}
+    return {global = Contract.normalizeGlobal(snapshot.global, true), tracks = tracks}
 end
 
 function Contract.normalizeOpenGgf(snapshot, activeLoopIndices)
@@ -253,10 +372,10 @@ function Contract.normalizeOpenGgf(snapshot, activeLoopIndices)
             tracks[index] = {active = false, hardware = track.hardware, role = track.role}
         else
             tracks[index] = normalizedActiveTrack(track, track.role, track.hardware, activeLoopIndices,
-                liveOpenGgfReturnStack(track.returnStack or {}, track.returnSp))
+                liveOpenGgfReturnStack(track.returnStack or {}, track.returnSp), false)
         end
     end
-    return {global = normalizedGlobal(snapshot.global, false), tracks = tracks}
+    return {global = Contract.normalizeGlobal(snapshot.global, false), tracks = tracks}
 end
 
 function Contract.newInvocationLifecycle()
