@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: player collision now retains the ROM's shared
+  `Primary_Angle`/`Secondary_Angle` registers across player dispatches and
+  rewind. Empty airborne landing probes preserve those shared bytes while
+  grounded `AnglePos` still seeds the empty-floor sentinel. This closes LBZ's
+  complete-run balance-animation frontier at raw frame 30784 without
+  regressing the green AIZ, HCZ, MGZ, CNZ, or ICZ routes.
 - Fix/Test: fresh-level startup controllers can now declare that
   `SpawnLevelMainSprites` replaces the carried title owner. LBZ's ground-launch
   intro uses that ROM-owned contract to publish the destination KosM parent

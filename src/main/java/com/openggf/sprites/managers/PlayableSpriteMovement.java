@@ -3463,18 +3463,21 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 * Sonic_CheckFloor path does not preload those registers with {@code 3}.
 	 * A completely empty current/extension tile search therefore preserves the
 	 * register's prior byte (FindFloor sub_F264/sub_F30C, sonic3k.asm:19213-19331).
-	 * It must not inherit the leader's cached pair.
+	 * That prior value belongs to the shared collision registers, not to either
+	 * player's private next_tilt/tilt cache.
 	 */
 	private void captureTiltAnglesFromLandingProbes(SensorResult[] groundResults) {
 		SensorResult left = groundResults != null && groundResults.length > 0 ? groundResults[0] : null;
 		SensorResult right = groundResults != null && groundResults.length > 1 ? groundResults[1] : null;
-		latchedNextTilt = landingAngleRegisterValue(right, latchedNextTilt);
-		latchedTilt = landingAngleRegisterValue(left, latchedTilt);
+		latchedNextTilt = landingAngleRegisterValue(
+				right, collisionSystem().getPrimaryAngleRegister());
+		latchedTilt = landingAngleRegisterValue(
+				left, collisionSystem().getSecondaryAngleRegister());
 	}
 
-	private static int landingAngleRegisterValue(SensorResult result, int previousValue) {
+	private static int landingAngleRegisterValue(SensorResult result, int sharedRegisterValue) {
 		return result == null || result.tileId() == 0
-				? previousValue
+				? sharedRegisterValue
 				: result.angle() & 0xFF;
 	}
 
@@ -4732,6 +4735,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		SensorResult right = groundSensors[1].scan();
 		latchedNextTilt = right == null ? 3 : right.angle() & 0xFF;
 		latchedTilt = left == null ? 3 : left.angle() & 0xFF;
+		collisionSystem().publishGroundAngleRegisters(left, right);
 	}
 
 	// ========================================

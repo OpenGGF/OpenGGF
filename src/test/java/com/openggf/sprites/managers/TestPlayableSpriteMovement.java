@@ -1565,6 +1565,9 @@ public class TestPlayableSpriteMovement {
 
                 setMovementField("latchedNextTilt", 0x22);
                 setMovementField("latchedTilt", 0x44);
+                GameServices.collision().publishGroundAngleRegisters(
+                                new SensorResult((byte) 0x44, (byte) 0, 0x80, Direction.DOWN),
+                                new SensorResult((byte) 0x22, (byte) 0, 0x81, Direction.DOWN));
                 SensorResult left = new SensorResult((byte) 0xFF, (byte) -7, 0x9A, Direction.DOWN);
                 SensorResult right = new SensorResult((byte) 3, (byte) 25, 0, Direction.DOWN);
                 publisher.accept(new SensorResult[]{left, right});
@@ -1574,7 +1577,7 @@ public class TestPlayableSpriteMovement {
                 nextTilt.setAccessible(true);
                 tilt.setAccessible(true);
                 assertEquals(0x22, nextTilt.getInt(manager),
-                                "an empty FindFloor extension preserves the prior Primary_Angle byte");
+                                "an empty FindFloor extension preserves the shared Primary_Angle byte");
                 assertEquals(0xFF, tilt.getInt(manager));
 
                 Tails sidekick = new Tails("tails_p2", (short) 0, (short) 0);

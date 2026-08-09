@@ -71013,3 +71013,41 @@ landable change, which I implemented directly.
 - Route position: AIZ, HCZ, MGZ, CNZ, and ICZ complete runs are green in
   gameplay order, with standalone MGZ also green. LBZ complete-run validation
   is the next target.
+
+## 2026-08-09 — S3K LBZ shared collision-angle frontier
+
+- Worktree: `bugfix/s3k-traces` at `ae173839a`. Existing local edits in
+  `.idea/vcs.xml`, `docs/status/rewind-round-trip-gaps.md`, `Sonic3k.java`,
+  `Sonic3kStarPostObjectInstance.java`, `ObjectPlacementController.java`, and
+  `RingManager.java` remained unstaged. A fresh `origin/develop` fetch was
+  already an ancestor of the branch, so no merge commit was required.
+  Validation used JDK 21.0.12 and the available S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen`.
+- Frontier command: `mvn -q -Dmse=off -Dsurefire.forkCount=1
+  -DreuseForks=true -Dsurefire.argLine=-Xmx3g
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kLbzCompleteRunTraceReplay#replayMatchesTrace
+  test`. The committed baseline reported 6 errors and 0 warnings beginning at
+  raw frame `30784` (`player_animation_id`, expected Balance `$06`, actual Wait
+  `$05`). The candidate completes the LBZ trace with 0 errors and 0 warnings.
+- Root cause: `Sonic_CheckFloor` leaves an empty probe's angle register
+  untouched, but `Primary_Angle` and `Secondary_Angle` are global collision
+  registers shared by both player slots. The engine correctly stopped copying
+  its synthetic empty-probe angle during the earlier AIZ fix, but preserved
+  Sonic's private stale `$FF` byte in LBZ rather than the shared `3` left by
+  preceding collision work. Collision now owns and rewinds the shared angle
+  pair, updates it from native-ordered wall/floor probes, and lets grounded
+  `AnglePos` explicitly seed empty sides with `3`. LBZ therefore enters
+  Balance and clears the facing bit on the first grounded control dispatch,
+  matching `Sonic_Balance` and the player-tail angle copy
+  (`docs/skdisasm/sonic3k.asm:22556-22637,24065-24151,25718-25719`).
+- Regression validation: the focused landing-register test passed. The ordered
+  AIZ, HCZ, standalone MGZ, complete-run MGZ, CNZ, ICZ, and LBZ traces all
+  passed. A combined reused-fork invocation encountered transient Surefire
+  `NoClassDefFoundError`s for two present compiled object classes; isolated HCZ
+  and LBZ reruns both passed. Ring comparison remains error-level through
+  `ToleranceConfig.DEFAULT` / `RingCountMode.FORCE_ERROR`; no trace payloads
+  changed.
+- Route position: AIZ, HCZ, MGZ, CNZ, ICZ, and LBZ complete runs are green in
+  gameplay order, with standalone MGZ also green. This closes the requested
+  S3K gameplay-order route through LBZ.
