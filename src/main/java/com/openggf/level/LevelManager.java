@@ -3406,12 +3406,16 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         }
         AbstractPlayableSprite player = mainPlayableSprite();
         if (player != null) {
+            player.setRolling(false);
             player.setCentreX((short) 0);
             player.setCentreY((short) 0);
             player.setXSpeed((short) 0);
             player.setYSpeed((short) 0);
             player.setGSpeed((short) 0);
             player.setAir(false);
+            player.setJumping(false);
+            player.setAnimationId(0);
+            player.setMappingFrame(0);
             player.setObjectRoutineOverride(0);
             player.setNativeSlotPresent(true);
         }
@@ -3480,6 +3484,13 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             // assembled state above for the following release, but publish
             // the native pre-dispatch boundary here.
             player.clearAirForNativeControlRestore();
+            short centreY = player.getCentreY();
+            player.setRolling(false);
+            player.setCentreYPreserveSubpixel(centreY);
+            player.setXSpeed((short) 0);
+            player.setYSpeed((short) 0);
+            player.setGSpeed((short) 0);
+            player.setJumping(false);
             player.setAnimationId(0);
             player.setMappingFrame(0);
             player.setAnimationFrameIndex(0);

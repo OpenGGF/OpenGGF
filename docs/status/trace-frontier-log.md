@@ -70687,6 +70687,37 @@ round-trip chains: `TestS1GhzMazeRoundTripChain` and `TestS2EhzHalfpipeRoundTrip
   and four focused failures. Standalone CNZ retains its raw-`25743` camera-X
   frontier and unmatched completion `#31`; no earlier-zone frontier regressed.
 
+## 2026-08-09 - S3K CNZ complete-run frontier closed
+
+- Branch `bugfix/s3k-traces`, candidate over `5ada45881`. Ring comparison
+  remains error-level through `ToleranceConfig.DEFAULT` and
+  `RingCountMode.FORCE_ERROR`.
+- Root cause: `loadZoneAndActAtFreshTitleCardBoundary` correctly published the
+  ROM's cleared player coordinates and velocities but retained roll/status and
+  animation from CNZ's cannon. Its destination publication then restored the
+  fully assembled ICZ snowboard state one row before `Obj_LevelIntroICZ1`'s
+  first dispatch. Both boundaries now publish zero velocity, roll, jump, and
+  animation as the S3K `Level:` clear/assembly sequence requires. Clearing roll
+  preserves the ROM centre Y so the radius change cannot introduce a 5-pixel
+  coordinate shift.
+- Focused command selected
+  `TestS3kCnzTeleporterRouteHeadless#cnzPostCapsuleRouteSpawnsCannonAndRequestsIczAfterLaunchThreshold`
+  with the discovered S3K ROM on JDK 21. Result: 1 test, 0 failures, 0 errors.
+  It verifies the cleared source slot, ICZ's pre-dispatch destination slot, and
+  the subsequent restoration of the real snowboard-intro state.
+- Frontier command selected `TestS3kCnzCompleteRunTraceReplay` with
+  `-Ptrace-replay -Dmse=off -Dsurefire.forkCount=1` and the discovered S3K
+  ROM. Result: 1 test, 0 failures, 0 errors; the prior 8 errors at raw frames
+  `39937` and `40018` are gone, closing the complete-run CNZ segment through
+  its ICZ handoff with 0 errors and 0 warnings.
+- Gameplay-order regression command selected complete-run and standalone AIZ,
+  complete-run HCZ, complete-run and standalone MGZ, and complete-run and
+  standalone CNZ. Across 49 tests, complete-run AIZ, both HCZ tests,
+  complete-run CNZ, complete-run MGZ, and standalone MGZ pass. Standalone AIZ
+  retains its raw-`16067` queue frontier and four focused failures. Standalone
+  CNZ retains its raw-`25743` camera-X frontier and unmatched completion `#31`;
+  no earlier-zone frontier regressed.
+
 ## 2026-08-09 - S3K CNZ direct results-publication frontier
 
 - Branch `bugfix/s3k-traces`, candidate over `20e939b20`. Ring comparison

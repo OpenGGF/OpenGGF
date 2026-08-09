@@ -446,7 +446,25 @@ class TestS3kCnzTeleporterRouteHeadless {
         assertEquals(launchHidden, fixture.sprite().isHidden(),
                 "CNZ must not invent a hidden neutral transition pose before the destination load");
 
-        GameServices.level().loadZoneAndAct(requestedZone, requestedAct);
+        GameServices.level().loadZoneAndActAtFreshTitleCardBoundary(requestedZone, requestedAct);
+        assertEquals(0, fixture.sprite().getCentreX());
+        assertEquals(0, fixture.sprite().getCentreY(),
+                "Level: clears the old player slot at the pre-title-card boundary");
+        assertEquals(0, fixture.sprite().getXSpeed());
+        assertEquals(0, fixture.sprite().getYSpeed());
+        assertFalse(fixture.sprite().getRolling());
+        assertEquals(0, fixture.sprite().getAnimationId());
+
+        GameServices.level().publishFreshLevelTransitionInitialBoundary();
+        assertEquals(0x0010, fixture.sprite().getCentreX() & 0xFFFF);
+        assertEquals(0x00F0, fixture.sprite().getCentreY() & 0xFFFF);
+        assertEquals(0, fixture.sprite().getXSpeed());
+        assertEquals(0, fixture.sprite().getYSpeed());
+        assertFalse(fixture.sprite().getRolling(),
+                "the first destination row precedes Obj_LevelIntroICZ1's dispatch");
+        assertEquals(0, fixture.sprite().getAnimationId());
+
+        GameServices.level().completeFreshLevelTransitionBoundary();
 
         assertFalse(fixture.sprite().isHidden(),
                 "ICZ load should clear the neutral fade pose and own the new player state");

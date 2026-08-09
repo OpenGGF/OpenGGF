@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: fresh-level title-card boundaries now expose the ROM-cleared
+  playable slot before publishing the destination's pre-dispatch player state,
+  including zero velocity, roll, jump, status, and animation while preserving
+  centre coordinates across radius changes. This closes the CNZ complete-run
+  trace through its ICZ handoff with 0 errors and 0 warnings.
 - Fix/Test: CNZ's end-boss cannon handoff now queues the ROM-backed badnik
   explosion KosM art before allocating the cannon, matching `loc_6E778`.
   This removes the final seven hardware-queue mismatches and advances the CNZ
