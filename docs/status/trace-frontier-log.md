@@ -66312,3 +66312,81 @@ landed deliberately red). Nothing else moved.
   BuildSprites range and self-deletes, hence the frame `Pri_EndAct`'s slots-1..63 scan first
   finds no Obj28. The 8 and 32 are literals in `Pri_Switch` and `Pri_SpawnAnimals`, not
   measured values, and the fix holds for any BK2 of any of the five S1 capsule acts.
+
+## 2026-08-09 — round seventeen: the uncompared-segment blind spot, opened
+
+Command: full `-Ptrace-replay` profile, no `-Dtest`. Base b961eae47 (764 / 13 / 63).
+After: **769 / 18 / 63.** The +5 are ALL new compared tests, landed deliberately red.
+**No existing test regressed.**
+
+**This round deliberately raises the red count.** Five run segments that were replayed in
+full but never compared now have tests. An invisible divergence is worse than a red one,
+and every one of these discloses something no test could previously name a frame or field
+for. Read the count with that in mind.
+
+- **HEADLINE: `TestS2SpecialStage6TraceReplay` has been GREEN for sixteen rounds while its
+  predecessor `seg9_cpz2` carries 12927 errors cascading from frame 415**
+  (`tails_cpu_respawn_counter` expected=0x0001 actual=0x0000). ss_6 passes because that
+  divergence does not happen to reach the two fields the special-stage assertion checks.
+  New: `TestS2Cpz2Seg9CompleteEmeraldsSegmentTraceReplay`.
+- **THREE of the five new tests fail identically at bootstrap frame 0 on
+  `player_history.y[26]`** — 41, 41 and 43 errors
+  (`TestS2Ehz1Seg1CompleteEmeraldsSegmentTraceReplay`,
+  `TestS2Ehz1Seg2CompleteEmeraldsSegmentTraceReplay`,
+  `TestS2Ehz1Seg2HalfpipeSegmentTraceReplay`; expected 0x00AE/0x00AE/0x0370 vs
+  0x00B1/0x00B1/0x0374). That is the position-record buffer CPU-Tails reads at
+  `Sonic_Pos_Record_Index-$44`, so it is very likely ONE cause behind three tests, and it
+  is a bootstrap/seed defect rather than drift.
+  `TestS2Ehz2Seg6CompleteEmeraldsSegmentTraceReplay` is 4 errors at frame 3709
+  (`dynamic_art.edges` [6556] vs [6556,6557,6558]) — the same final-row extra-edge shape as
+  the ARZ1 segment test.
+- **BRIEF PREMISE DISPROVED: the predecessor machinery is S2-ONLY.**
+  `S2SpecialStagePredecessorReplay.replayInheritedPrefix()` is the sole instance in the
+  repo and fires only when a segment declares a non-empty
+  `dynamic_art_initial_ledger_descriptors`. S1 and S3K run manifests carry NO ledger field;
+  grep for `inheritedPrefix|Predecessor` returns nothing outside `tests/trace/s2/`. So no
+  S1/S3K rows are replayed-uncompared by that mechanism, and the exact actionable set was
+  6 segments (b961eae47 covered seg11_arz1; the other five landed here).
+- **A DIFFERENT coverage gap surfaced instead, and it is larger.** Chain tests do compare
+  level segments in full, so "no standalone test" != "uncompared" — but their SCOPE is the
+  real limit: `TestS1CompleteEmeraldRunPrefix` stops at segment 2 row 800 of 34;
+  `TestS3kBonusRoundTripChain` **SKIPS** because its two run directories were never
+  recorded; and **`s3k-multibonus` (25 segments) and `s3k-knuckles-complete-superemeralds`
+  (67 segments) have NO chain test whatsoever.**
+- **EHZ chain seg1 first divergence 136 -> 180, interior DPLC errors 20702 -> 20693.**
+  Recorded row 136 is a ROM lag row (physics.csv lag=1) and the recorder shows the CtrlDMA
+  completions with logical_frame=136 / publication_frame=137. The run chain's synthetic lag
+  row used `runLogicalIteration`, which let the ACTIVE NATIVE BLOCKING FADE claim the frame
+  first — instrumented proof: `[PLC] claim phase=PALETTE_FADE existingOwner=null` followed
+  immediately by `[PLC] claim phase=LAG existingOwner=PALETTE_FADE`, the LAG claim rejected,
+  the row published non-lagged, and three completions landing on 136 instead of 137. Only
+  this trace hits it because the stage had entered `Pal_FadeFromWhite` on row 135, making
+  136 the only lag row inside the fade. Fixed by routing a LAG row through the existing
+  `runSuppressedLagIteration`, the same split `TraceRunPresentationClosure` already makes.
+- **The remaining EHZ chain cause is ARCHITECTURAL, and worth knowing before anyone
+  attacks it.** At rows 180/182 the recording has `ss-sonic` submitted at row 180 but
+  `ss-tails` / `ss-tails-tails` at logical_frame 181 published at 182 — **the ROM's
+  `RunObjects` pass was interrupted by a V-blank between Obj09 and Obj10.** The engine runs
+  an object pass atomically inside one row and structurally cannot split one. Closing it
+  needs the run chain to honour recorded `run_objects_end` completion cursors mid-pass the
+  way `S2SpecialStageReplayHarness.stepPasses` does via
+  `serviceVblankBeforeBoundObservation`; the chain's `recordedPassPacing` never calls it.
+  The frame-2968 row skew is a cumulative consequence of this, not a separate defect.
+- **ss_1 IS FIXED BUT NOT LANDED, pending a fixture re-record.** The three blip frames
+  (393/401/417) are all BELOW `passPacingStart` (=425, the first `run_objects_end` with
+  `started_at_input_sample != 0`). Below that boundary the harness does not use the binder
+  at all: it steps one row per non-lag observation while the ROM runs one iteration per
+  recorded `RunObjects` pass (`SpecialStage_MainLoop`'s pre-start loop, s2.asm:6674-6691,
+  has exactly one `WaitForVint` and one `RunObjects` per iteration). Those counts differ
+  transiently — at frame 393 the recorder binds ZERO passes while the engine still steps an
+  iteration, and at 395 two passes bind to one row and it re-converges. Extending ROM-pass
+  pacing into the pre-start loop takes ss_1 from 10 errors to GREEN with ss_2..ss_7
+  unaffected. **It regresses 3 tests on the legacy standalone `traces/s2/special_stage`
+  fixture, which is internally inconsistent:** 6 of its `input_sample_frame` rows are
+  flagged `lag=1` and 6 non-lag rows carry no sample, which contradicts s2.asm:483-484
+  (`Vint_Lag` is taken only while `Vint_routine` is 0, so a row where `Vint_S2SS` ran
+  `ReadJoypads` cannot be a lag frame). The 3.0 run fixtures have ZERO such rows, and that
+  fixture's own recorder-version contract test already fails at baseline. **Re-record it
+  with the current native harness, then land ss_1.**
+  Recorded rejected alternative, so it is not retried blindly: publishing at
+  `completion_cursor_frame` instead of the bound observation turns ss_1..ss_7 ALL red.

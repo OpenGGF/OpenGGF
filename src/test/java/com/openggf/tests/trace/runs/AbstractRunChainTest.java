@@ -2851,16 +2851,46 @@ abstract class AbstractRunChainTest {
         };
     }
 
+    /**
+     * Represents one recorded row the ROM's main loop did not complete an
+     * iteration for.
+     *
+     * <p>A LAG row is run through {@code runSuppressedLagIteration}, not the
+     * ordinary logical iteration, because a lag V-blank does not run the mode's
+     * handler at all: {@code V_Int} branches to {@code Vint_Lag} while
+     * {@code Vint_routine} is still 0 (docs/s2disasm/s2.asm:483-484, 529) —
+     * S1's {@code VBlank_Lag} (docs/s1disasm/sonic.asm:709) has the same shape
+     * — so an in-progress blocking fade's per-V-blank work
+     * ({@code Pal_FadeFromWhite}, s2.asm:3460-3482, whose body runs in the main
+     * loop between its own {@code WaitForVint}s) does not advance on that
+     * V-blank and must not claim the row. The ordinary path lets the active
+     * native blocking fade claim {@code PALETTE_FADE} first, which both steals
+     * the row from {@code LAG} and makes it publish as a non-lag row, so any
+     * dynamic-art edge the row's V-blank produced lands one row early instead
+     * of being carried to the next represented closure. This is the same split
+     * {@code TraceRunPresentationClosure} already makes for a carried lag
+     * closure.
+     */
     private static void stepUncomparedInteriorLifecycleRow(
             PlcLifecyclePhase phase) {
-        SessionManager.getCurrentGameplayMode().plcFrameLifecycle()
-                .runLogicalIteration(() -> {
-                }, row -> {
-                    if (row.claim(phase)) {
-                        row.prepareAfterLoop(phase);
-                    }
-                    return null;
-                });
+        var lifecycle =
+                SessionManager.getCurrentGameplayMode().plcFrameLifecycle();
+        if (phase == PlcLifecyclePhase.LAG) {
+            lifecycle.runSuppressedLagIteration(row -> {
+                if (row.claim(phase)) {
+                    row.prepareAfterLoop(phase);
+                }
+                return null;
+            });
+            return;
+        }
+        lifecycle.runLogicalIteration(() -> {
+        }, row -> {
+            if (row.claim(phase)) {
+                row.prepareAfterLoop(phase);
+            }
+            return null;
+        });
     }
 
     private void stepFrames(GameLoop loop, int frameCount) {

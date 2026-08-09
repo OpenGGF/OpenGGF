@@ -3,6 +3,14 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: a lag row inside a run chain's uncompared interior is stepped as a lag row even
+  while a blocking palette fade is active, so the fade can no longer claim the frame and
+  publish that row's art transfers a frame early.
+- Testing: five run segments that were replayed in full but never compared now have their
+  own trace tests. They are landed failing, because each discloses a real divergence that
+  previously had no test able to name its frame or field -- including a large physics
+  cascade in the Chemical Plant act 2 segment that runs beneath a passing special-stage
+  test.
 - Fix: Sonic 2 loads objects without a camera-height filter, matching its ROM. Sonic 2's
   object loader tests only the horizontal window; the vertical band the engine applied is a
   Sonic 3 & Knuckles rule that had been generalised to all games, so Emerald Hill layout
