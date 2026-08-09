@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: hooks-off S3K traces now recognize the existing sidekick-animation
+  hold phase from the ROM's structural position-history advance when the CPU
+  hook event is unavailable. This removes CNZ's two transient Tails mapping
+  mismatches and advances its complete-run frontier from raw frame 30486 to
+  the Kosinski queue boundary at raw frame 38793 without regressing the green
+  complete-run AIZ, HCZ, and MGZ traces or standalone MGZ trace.
 - Fix/Test: overlapping active CNZ hover fans now preserve the ROM's native
   object execution order when dynamic object ownership reverses adjacent
   slots. This retains each fan's write-before-next-test lift semantics and

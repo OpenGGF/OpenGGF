@@ -172,7 +172,14 @@ class TestTraceReplayStartPositionPolicy {
         TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s3k/cnz_completerun"));
         TraceFrame previous = trace.getFrame(30485);
         TraceFrame current = trace.getFrame(30486);
+        TraceEvent.CpuState before = trace.cpuStateForFrame(previous.frame(), "tails");
+        TraceEvent.CpuState after = trace.cpuStateForFrame(current.frame(), "tails");
 
+        assertFalse(trace.getEventsForFrame(current.frame()).stream()
+                .anyMatch(TraceEvent.TailsCpuNormalStep.class::isInstance),
+                "The native hooks-off fixture must use the structural history witness.");
+        assertEquals(4, (after.posTableIndex() - before.posTableIndex()) & 0xFF,
+                "Sonic_RecordPos advances after Tails movement and before Animate_Tails.");
         assertFalse(current.sidekick().physicsStateEquals(previous.sidekick()));
         assertEquals(previous.sidekick().animationId(), current.sidekick().animationId());
         assertEquals(previous.sidekick().mappingFrame(), current.sidekick().mappingFrame());

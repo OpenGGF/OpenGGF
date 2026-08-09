@@ -70652,3 +70652,37 @@ round-trip chains: `TestS1GhzMazeRoundTripChain` and `TestS2EhzHalfpipeRoundTrip
   focused assertion failures. Standalone CNZ retains its raw-`25743` camera-X
   frontier and later unmatched completion `#31`; neither pre-existing result
   moved under this CNZ fan fix.
+
+## 2026-08-09 - S3K CNZ hooks-off sidekick animation phase frontier
+
+- Branch `bugfix/s3k-traces`, candidate over `bfbcb967c`. Ring comparison
+  remains error-level through `ToleranceConfig.DEFAULT` and
+  `RingCountMode.FORCE_ERROR`.
+- Root cause: the native hooks-off fixture can expose a VBlank after
+  `Tails_Control` has run movement and `Sonic_RecordPos`, but before its final
+  `Animate_Tails` call (`sonic3k.asm:26238-26284`). The replay scheduler's
+  existing sidekick-animation-held phase required the optional
+  `TailsCpuNormalStep` hook and therefore executed animation too early at raw
+  frames `30486` and `30494`. It now also accepts the structural, input-stable
+  four-byte `Pos_table_index` advance that proves one ROM history entry was
+  written; no recorded gameplay value is copied into engine state.
+- Focused policy command selected
+  `TestTraceReplayStartPositionPolicy#s3kMovingSidekickDuckToWalkCanHoldOnlyItsAnimateDispatch`
+  on JDK 21. Result: 1 test, 0 failures, 0 errors. The test verifies the
+  fixture has no normal-step hook and carries the expected history advance.
+  The full policy class remains independently red because its synthetic
+  fixtures predate required advertised queue-state rows (22 errors), alongside
+  one stale assertion and two references to moved documentation.
+- Frontier command selected `TestS3kCnzCompleteRunTraceReplay` with
+  `-Ptrace-replay -Dmse=off -Dsurefire.forkCount=1
+  -Dsurefire.runOrder=alphabetical` and the discovered S3K ROM. Comparison
+  errors fall from 42 to 40 and the first error advances from raw `30486`
+  (`tails_mapping_frame`) to raw `38793`
+  (`queue.s3k_kos_direct.busy`). Cleanup retains the existing unmatched module
+  Kosinski completion `#222`.
+- Gameplay-order regression command selected complete-run and standalone AIZ,
+  complete-run HCZ, complete-run and standalone MGZ, and complete-run and
+  standalone CNZ. Complete-run AIZ, both HCZ tests, complete-run MGZ, and
+  standalone MGZ pass. Standalone AIZ retains its raw-`16067` queue frontier
+  and four focused failures. Standalone CNZ retains its raw-`25743` camera-X
+  frontier and unmatched completion `#31`; no earlier-zone frontier regressed.
