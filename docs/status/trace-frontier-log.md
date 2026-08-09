@@ -71051,3 +71051,35 @@ landable change, which I implemented directly.
 - Route position: AIZ, HCZ, MGZ, CNZ, ICZ, and LBZ complete runs are green in
   gameplay order, with standalone MGZ also green. This closes the requested
   S3K gameplay-order route through LBZ.
+
+## 2026-08-10 — full trace-fleet audit after LBZ closure
+
+- Context: `bugfix/s3k-traces` at `12cfc6768`; the six protected user edits
+  remained unstaged. Validation used JDK 21.0.12 and all three discovered
+  World REV01/locked-on ROMs. Ring comparison remained error-level through
+  `ToleranceConfig.DEFAULT` / `RingCountMode.FORCE_ERROR`.
+- S1 command: `mvn -q -Dmse=off -Dsurefire.forkCount=1
+  -DreuseForks=true -Dsurefire.argLine=-Xmx3g
+  -Dsonic1.rom.path='./Sonic The Hedgehog (W) (REV01) [!].gen'
+  -Dtest='com.openggf.tests.trace.s1.*TraceReplay' test`. Result: exit 0; the
+  complete-run, credits-demo, standalone, and special-stage trace classes all
+  passed.
+- S2 command: `mvn -q -Dmse=off -Dsurefire.forkCount=1
+  -DreuseForks=true -Dsurefire.argLine=-Xmx3g
+  -Dsonic2.rom.path='./Sonic The Hedgehog 2 (W) (REV01) [!].gen'
+  -Dtest='com.openggf.tests.trace.s2.*TraceReplay' test`. Result: exit 0; all
+  selected level-select, complete-emerald segment, standalone, and
+  special-stage trace classes passed.
+- S3K command: `mvn -q -Dmse=off -Dsurefire.forkCount=1
+  -DreuseForks=true -Dsurefire.argLine=-Xmx3g
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.tests.trace.s3k.*TraceReplay' test`. Green classes:
+  complete-run AIZ, HCZ, MGZ, CNZ, ICZ, and LBZ; standalone MGZ; gumball,
+  pachinko, slots, and special-stage fixtures. Known-red classes reproduced:
+  standalone AIZ (`TestS3kAizTraceReplay`: replay 174 errors, 0 warnings,
+  first raw `16067`, `queue.s3k_kos_direct.busy`, plus four focused lifecycle
+  assertions), standalone CNZ (unconsumed Kosinski completion `#31`), and MHZ
+  complete-run (unconsumed Kosinski completion `#335`).
+- Next gameplay-order target: standalone AIZ at raw `16067`. Complete-run AIZ
+  remains the no-regression canary. Standalone CNZ follows only after all AIZ
+  traces pass; MHZ is beyond the user's requested LBZ cutoff.
