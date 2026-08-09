@@ -93,23 +93,30 @@ local function copyOwners(values)
     return result
 end
 
-local function roleSet(headers, class)
-    assert(type(headers) == "table", "track headers must be a table")
-    local selected = class == "SFX" and headers.normal or headers.special
-    assert(type(selected) == "table", "active track headers must contain normal and special tables")
+local function checkedRoles(values, name)
+    assert(type(values) == "table", name .. " must be a table")
     local result = {}
-    for _, role in ipairs(ROLES) do
-        if selected[role] == true then result[#result + 1] = role
-        elseif selected[role] ~= nil then assert(selected[role] == false, "track activity must be boolean") end
+    local seen = {}
+    for _, role in ipairs(values) do
+        assert(type(role) == "string" and not seen[role], name .. " must contain unique hardware roles")
+        local valid = false
+        for _, expected in ipairs(ROLES) do if role == expected then valid = true break end end
+        assert(valid, name .. " contains an unknown hardware role")
+        seen[role] = true
+        result[#result + 1] = role
     end
-    return result
+    return result, seen
 end
 
 local function effectiveOwners(self, headers)
+    assert(type(headers) == "table" and type(headers.normal) == "table" and type(headers.special) == "table",
+        "track headers must contain normal and special tables")
     local result = {}
-    local normal = headers.normal or {}
-    local special = headers.special or {}
+    local normal = headers.normal
+    local special = headers.special
     for _, role in ipairs(ROLES) do
+        assert(normal[role] == nil or type(normal[role]) == "boolean", "normal track activity must be boolean")
+        assert(special[role] == nil or type(special[role]) == "boolean", "special track activity must be boolean")
         -- The ROM runs normal SFX after special SFX, so an active normal track
         -- wins the effective role even when the special track remains live.
         if normal[role] == true and self.normalOwners[role] then
@@ -141,6 +148,12 @@ function Contract.newInvocationLifecycle()
         assert(self.active, "UpdateMusic close without active invocation")
         self.active, self.stackPointer, self.emulatorFrame = false, nil, nil
         return "close"
+    end
+
+    function lifecycle:playSegaAbnormalExit()
+        assert(self.active, "PlaySega abnormal exit without active UpdateMusic")
+        self.active, self.stackPointer, self.emulatorFrame = false, nil, nil
+        return "reset"
     end
 
     return lifecycle
@@ -198,19 +211,43 @@ function Contract.newTimeline(activeMusicId)
         return request
     end
 
-    function timeline:dispatch(request, headers)
+    function timeline:cycle(priority)
+        assert(self.active, "CycleSoundQueue occurred outside a complete tick")
+        local result = {}
+        for slot = 0, 2 do
+            local request = self.queues[slot]
+            self.queues[slot] = nil -- ROM clears every slot, even when no candidate dispatches.
+            if request and request.sound_id >= 0x81 then
+                request.consumed_tick = self.tick
+                request.priority = Contract.u8(priority)
+                request.sound_class = soundClass(request.sound_id)
+                result[#result + 1] = request
+            end
+        end
+        return result
+    end
+
+    function timeline:dispatch(request, observation)
         assert(self.active and type(request) == "table", "dispatch requires a consumed request in an active tick")
-        if request.sound_class == "COMMAND" or request.sound_class == "MUSIC" then return false end
-        if request.priority < self.priority then return false end
-        local roles = roleSet(headers, request.sound_class)
-        if #roles == 0 then return false end
+        assert(type(observation) == "table", "dispatch requires source-derived initialization observation")
+        assert(type(observation.accepted) == "boolean", "dispatch observation must prove accepted initialization")
+        local roles, declaredSet = checkedRoles(observation.declared_roles, "declared roles")
+        local initialized = checkedRoles(observation.initialized_roles, "initialized roles")
+        assert(type(observation.headers) == "table", "dispatch requires final track headers")
+        if not observation.accepted or request.sound_class == "COMMAND" or #roles == 0 or #initialized == 0 then return false end
+        for _, role in ipairs(initialized) do assert(declaredSet[role], "initialized role must be declared") end
         self.requestOrdinal = self.requestOrdinal + 1
         self.requestCount = self.requestCount + 1
         local identity = owner(ownerClass(request.sound_class), request.sound_id, self.requestOrdinal)
-        local identities = request.sound_class == "SFX" and self.normalOwners or self.specialOwners
         local before = copyOwners(self.finalOwners)
-        for _, role in ipairs(roles) do identities[role] = cloneOwner(identity) end
-        local after = effectiveOwners(self, headers)
+        if request.sound_class == "MUSIC" then
+            if request.sound_id == 0x88 then self.musicStack = self.musicStack or {}; self.musicStack[#self.musicStack + 1] = copyOwners(self.musicOwners) end
+            for _, role in ipairs(initialized) do self.musicOwners[role] = cloneOwner(identity) end
+        else
+            local identities = request.sound_class == "SFX" and self.normalOwners or self.specialOwners
+            for _, role in ipairs(initialized) do identities[role] = cloneOwner(identity) end
+        end
+        local after = effectiveOwners(self, observation.headers)
         local arbitration = {}
         for _, role in ipairs(roles) do
             local acquired = sameOwner(after[role], identity)
@@ -218,11 +255,25 @@ function Contract.newTimeline(activeMusicId)
                 displaced_owner = cloneOwner(before[role]), final_owner = cloneOwner(after[role])}
         end
         self.finalOwners = after
-        self.priority = request.priority
+        if request.sound_class ~= "MUSIC" then self.priority = request.priority end
         self.requests[#self.requests + 1] = {request_ordinal = self.requestOrdinal,
             sound_class = request.sound_class, sound_id = request.sound_id,
             requested_roles = roles, arbitration = arbitration}
         return true
+    end
+
+    function timeline:restoreMusic()
+        assert(self.active, "music restoration occurred outside a complete tick")
+        local stack = self.musicStack
+        if not stack or #stack == 0 then return false end
+        self.musicOwners = table.remove(stack)
+        self.finalOwners = effectiveOwners(self, {normal = {}, special = {}})
+        return true
+    end
+
+    function timeline:abandonTick()
+        assert(self.active, "abandon requires an active timeline tick")
+        self.active, self.frame, self.tick, self.requests = false, nil, nil, {}
     end
 
     function timeline:closeTick(headers)

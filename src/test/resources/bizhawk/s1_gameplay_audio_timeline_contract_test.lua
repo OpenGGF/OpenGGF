@@ -27,6 +27,10 @@ local function headers(normal, special)
     return {normal = normal or {}, special = special or {}}
 end
 
+local function observation(declared, initialized, normal, special)
+    return {accepted = true, declared_roles = declared, initialized_roles = initialized, headers = headers(normal, special)}
+end
+
 local function runQueueAndContention()
     -- Break caught: queue slot overwrites, delayed consumption, priority rejection, or role ownership
     -- are collapsed before a request can be correlated with its accepted dispatch.
@@ -37,7 +41,7 @@ local function runQueueAndContention()
     local request = timeline:consume(1, 4)
     equals(request.sound_id, 0xA2, "queue overwrite did not retain the last request")
     equals(request.consumed_tick, 0, "queue consumption tick was not retained as diagnostic")
-    check(timeline:dispatch(request, headers({FM3 = true})), "accepted normal SFX dispatch was rejected")
+    check(timeline:dispatch(request, observation({"FM3"}, {"FM3"}, {FM3 = true})), "accepted normal SFX dispatch was rejected")
     local first = timeline:closeTick(headers({FM3 = true}))
     equals(first.requests[1].request_ordinal, 1, "first accepted request ordinal was not one")
     equals(first.requests[1].arbitration[1].role, "FM3", "normal SFX did not request FM3")
@@ -49,7 +53,9 @@ local function runQueueAndContention()
     timeline:beginTick(861, 1)
     timeline:queue(2, 0xA3)
     local lower = timeline:consume(2, 3)
-    check(not timeline:dispatch(lower, headers({FM3 = true})), "lower-priority dispatch was accepted")
+    local rejectedObservation = observation({"FM3"}, {"FM3"}, {FM3 = true})
+    rejectedObservation.accepted = false
+    check(not timeline:dispatch(lower, rejectedObservation), "lower-priority dispatch was accepted")
     local rejected = timeline:closeTick(headers({FM3 = true}))
     equals(#rejected.requests, 0, "rejected dispatch became a semantic request")
     equals(rejected.owners.FM3.sound_id, 0xA2, "lower-priority rejection changed final owner")
@@ -57,7 +63,7 @@ local function runQueueAndContention()
     timeline:beginTick(862, 2)
     timeline:queue(0, 0xA4)
     local equal = timeline:consume(0, 4)
-    check(timeline:dispatch(equal, headers({FM3 = true})), "equal-priority replacement was rejected")
+    check(timeline:dispatch(equal, observation({"FM3"}, {"FM3"}, {FM3 = true})), "equal-priority replacement was rejected")
     local replacement = timeline:closeTick(headers({FM3 = true}))
     equals(replacement.requests[1].arbitration[1].displaced_owner.sound_id, 0xA2,
         "equal-priority replacement did not retain displaced identity")
@@ -67,7 +73,7 @@ local function runQueueAndContention()
     timeline:beginTick(863, 3)
     timeline:queue(1, 0xD0)
     local special = timeline:consume(1, 9)
-    check(timeline:dispatch(special, headers({FM3 = true}, {FM4 = true})),
+    check(timeline:dispatch(special, observation({"FM4"}, {"FM4"}, {FM3 = true}, {FM4 = true})),
         "special SFX dispatch was rejected")
     local specialFrame = timeline:closeTick(headers({FM3 = true}, {FM4 = true}))
     equals(specialFrame.owners.FM4.owner_class, "SPECIAL_SFX", "special SFX did not own FM4")
@@ -75,7 +81,7 @@ local function runQueueAndContention()
     timeline:beginTick(864, 4)
     timeline:queue(1, 0xA5)
     local normal = timeline:consume(1, 9)
-    check(timeline:dispatch(normal, headers({FM3 = true, FM4 = true}, {FM4 = true})),
+    check(timeline:dispatch(normal, observation({"FM3", "FM4"}, {"FM3", "FM4"}, {FM3 = true, FM4 = true}, {FM4 = true})),
         "normal SFX over special SFX was rejected")
     local normalFrame = timeline:closeTick(headers({FM3 = true, FM4 = true}, {FM4 = true}))
     equals(normalFrame.owners.FM4.owner_class, "NORMAL_SFX", "normal SFX did not outrank special SFX")
@@ -109,6 +115,87 @@ local function runLifecycleAndDiagnostics()
     check(not monotonic, "diagnostic tick regression was accepted")
 end
 
+local function runSourceDerivedDispatchBoundaries()
+    -- Break caught: dispatch entry and final class-wide headers are mistaken for the ROM's per-track
+    -- initialization boundary, which transfers unrelated SFX roles or accepts early returns.
+    local timeline = Contract.newTimeline(0x81)
+    timeline:beginTick(860, 0)
+    timeline:queue(1, 0xA4)
+    local fm4Only = timeline:cycle(4)[1]
+    check(timeline:dispatch(fm4Only, {
+        accepted = true, declared_roles = {"FM4"}, initialized_roles = {"FM4"}, headers = headers({FM3 = true, FM4 = true})
+    }), "FM4 initialization boundary was not accepted")
+    local fm4Frame = timeline:closeTick(headers({FM3 = true, FM4 = true}))
+    equals(fm4Frame.requests[1].requested_roles[1], "FM4", "declared FM4 role was not retained")
+    equals(fm4Frame.owners.FM3.owner_class, "MUSIC", "unrelated final active FM3 was transferred to SFX")
+    equals(fm4Frame.owners.FM4.sound_id, 0xA4, "initialized FM4 did not receive SFX identity")
+
+    timeline:beginTick(861, 1)
+    timeline:queue(1, 0xD0)
+    local special = timeline:cycle(9)[1]
+    check(timeline:dispatch(special, {
+        accepted = true, declared_roles = {"FM4"}, initialized_roles = {"FM4"},
+        headers = headers({FM4 = true}, {FM4 = true})
+    }), "initialized special SFX was discarded merely because normal SFX owns FM4")
+    local blocked = timeline:closeTick(headers({FM4 = true}, {FM4 = true}))
+    check(not blocked.requests[1].arbitration[1].acquired,
+        "special FM4 record did not preserve acquired=false while normal SFX owns it")
+    equals(blocked.requests[1].arbitration[1].final_owner.owner_class, "NORMAL_SFX",
+        "blocked special FM4 did not retain normal final ownership")
+
+    timeline:beginTick(862, 2)
+    timeline:queue(1, 0xA7) -- Push returns at $722C4 when f_push_playing is already set.
+    local push = timeline:cycle(9)[1]
+    check(not timeline:dispatch(push, {
+        accepted = false, declared_roles = {"FM3"}, initialized_roles = {}, headers = headers({FM4 = true})
+    }), "already-playing push early return became an accepted request")
+    equals(#timeline:closeTick(headers({FM4 = true})).requests, 0,
+        "push early-return emitted a semantic request")
+
+    timeline:beginTick(863, 3)
+    timeline:queue(0, 0xA1)
+    timeline:queue(1, 0xA2)
+    local rejectedCycle = timeline:cycle(3)
+    equals(#rejectedCycle, 2, "CycleSoundQueue did not surface both diagnostic candidates")
+    timeline:queue(2, 0xA3)
+    local later = timeline:cycle(4)
+    equals(#later, 1, "rejected queue candidates were not cleared at CycleSoundQueue")
+    equals(later[1].sound_id, 0xA3, "later slot reused stale rejected queue content")
+    timeline:closeTick(headers({FM4 = true}))
+
+    -- $88 uses Sound_PlayBGM's backup path ($71FD2..$7202C); it is a real request in the
+    -- pinned interval, changes all fixed comparable music roles, then $72B14 restores $81.
+    timeline:beginTick(864, 4)
+    timeline:queue(0, 0x88)
+    local oneUp = timeline:cycle(0)[1]
+    check(timeline:dispatch(oneUp, {
+        accepted = true, declared_roles = {"FM3", "FM4", "FM5", "PSG1", "PSG2", "PSG3"},
+        initialized_roles = {"FM3", "FM4", "FM5", "PSG1", "PSG2", "PSG3"}, headers = headers()
+    }), "$88 accepted BGM load did not become a music request")
+    local oneUpFrame = timeline:closeTick(headers())
+    equals(oneUpFrame.requests[1].sound_class, "MUSIC", "$88 was not classified as MUSIC")
+    equals(oneUpFrame.owners.FM3.sound_id, 0x88, "$88 did not take over FM3")
+    equals(oneUpFrame.owners.PSG3.sound_id, 0x88, "$88 did not take over PSG3")
+
+    timeline:beginTick(865, 5)
+    timeline:restoreMusic()
+    local restored = timeline:closeTick(headers())
+    equals(restored.owners.FM3.sound_id, 0x81, "$72B14 restoration did not reinstate pre-$88 music")
+    equals(restored.owners.PSG3.sound_id, 0x81, "$72B14 restoration did not reinstate all fixed roles")
+end
+
+local function runPlaySegaLifecycle()
+    -- Break caught: PlaySegaSound's return-address tampering bypasses $71C4C but leaves an
+    -- UpdateMusic invocation open, corrupting the next complete tick.
+    local lifecycle = Contract.newInvocationLifecycle()
+    lifecycle:entry(0x00FF2000, 12)
+    equals(lifecycle:playSegaAbnormalExit(), "reset", "PlaySega abnormal return did not reset lifecycle")
+    equals(lifecycle:entry(0x00FF2010, 13), "open", "post-PlaySega UpdateMusic entry remained active")
+    lifecycle:close()
+end
+
 runQueueAndContention()
 runLifecycleAndDiagnostics()
+runSourceDerivedDispatchBoundaries()
+runPlaySegaLifecycle()
 print("S1_GAMEPLAY_AUDIO_TIMELINE_CONTRACT_OK")

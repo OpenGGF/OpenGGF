@@ -13,7 +13,10 @@ local SOUND_RAM = 0xF000
 local QUEUE_PCS = {[0x138E] = 0, [0x1394] = 1, [0x139A] = 2}
 local UPDATE_MUSIC, UPDATE_MUSIC_RETURN = 0x71B4C, 0x71C4C
 local CYCLE_SOUND_QUEUE, PLAY_SOUND_ID = 0x71F02, 0x71F4C
-local PLAY_BGM, PLAY_SFX, PLAY_SPECIAL = 0x71FD2, 0x721C6, 0x7230C
+local PLAY_SEGA_RETURN, PLAY_BGM, BGM_LOAD_MUSIC = 0x71FD0, 0x71FD2, 0x7202C
+local PLAY_SFX, NORMAL_ROLE_DECLARED, NORMAL_ROLE_INITIALIZED = 0x721C6, 0x7222E, 0x7227C
+local PLAY_SPECIAL, SPECIAL_ROLE_DECLARED, SPECIAL_ROLE_INITIALIZED = 0x7230C, 0x7234C, 0x7236E
+local RESTORE_PREVIOUS_MUSIC = 0x72B14
 local SEGMENT_START, SEGMENT_END = 860, 4975
 local EXPECTED_ROM_SHA1 = "69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b"
 local EXPECTED_ROM_CRC32 = "afe05eee"
@@ -26,8 +29,12 @@ local opcodeManifest = {
     {address = 0x138E, expectedOpcode = "11c0f00a"}, {address = 0x1394, expectedOpcode = "11c0f00b"},
     {address = 0x139A, expectedOpcode = "11c0f00c"}, {address = 0x71B4C, expectedOpcode = "33fc010000a11100"},
     {address = 0x71C4C, expectedOpcode = "4e75"}, {address = 0x71F02, expectedOpcode = "207900071990"},
-    {address = 0x71F4C, expectedOpcode = "7e00"}, {address = 0x71FD2, expectedOpcode = "0c070088"},
-    {address = 0x721C6, expectedOpcode = "4a2e0027"}, {address = 0x7230C, expectedOpcode = "4a2e0027"}
+    {address = 0x71F4C, expectedOpcode = "7e00"}, {address = 0x71FD0, expectedOpcode = "4e75"},
+    {address = 0x71FD2, expectedOpcode = "0c070088"}, {address = 0x7202C, expectedOpcode = "4eba059c"},
+    {address = 0x721C6, expectedOpcode = "4a2e0027"}, {address = 0x7222E, expectedOpcode = "1803"},
+    {address = 0x7227C, expectedOpcode = "3a99"}, {address = 0x7230C, expectedOpcode = "4a2e0027"},
+    {address = 0x7234C, expectedOpcode = "6b0c"}, {address = 0x7236E, expectedOpcode = "3a99"},
+    {address = 0x72B14, expectedOpcode = "204e"}
 }
 
 local function verifyOpcodeManifest()
@@ -120,7 +127,7 @@ local function readTrackHeaders()
 end
 
 local timeline, lifecycle = Timeline.newTimeline(0x81), Timeline.newInvocationLifecycle()
-local activeTick, pendingBySoundId, queuedSoundIds, frames = nil, {}, {}, {}
+local activeTick, queuedSoundIds, frames = nil, {}, {}
 local cycleDiagnostics = nil
 local diagnosticTick, lastPreArmQueue1 = 0, nil
 local romIdentity = nil
@@ -138,17 +145,36 @@ local function queueObserved(slot)
     queuedSoundIds[slot] = soundId
 end
 
+local function addRole(roles, role)
+    for _, existing in ipairs(roles) do if existing == role then return end end
+    roles[#roles + 1] = role
+end
+
+local function normalRole(voiceControl)
+    return ({[2] = "FM3", [4] = "FM4", [5] = "FM5", [0x80] = "PSG1", [0xA0] = "PSG2",
+        [0xC0] = "PSG3", [0xE0] = "PSG3"})[voiceControl]
+end
+
+local function specialRole(voiceControl)
+    return (voiceControl & 0x80) ~= 0 and "PSG3" or "FM4"
+end
+
+local function currentD7() return (emu.getregister("M68K D7") or 0) & 0xff end
+
+local function candidateObserved(soundClass)
+    if not activeTick or not activeTick.selectedRequest then return end
+    local request = activeTick.selectedRequest
+    if request.sound_class ~= soundClass then return end
+    local candidate = {accepted = false, request = request, declared_roles = {}, initialized_roles = {}, sound_class = soundClass}
+    activeTick.candidates[#activeTick.candidates + 1] = candidate
+    activeTick.currentCandidate = candidate
+end
+
 local function consumeObserved()
     if not activeTick then return end
-    -- CycleSoundQueue has already selected this slot's candidate at PlaySoundID.
-    local soundId, priority = readU8(0x09), assert(cycleDiagnostics and cycleDiagnostics.priority,
-        "PlaySoundID reached without CycleSoundQueue diagnostics")
-    for slot = 0, 2 do
-        if queuedSoundIds[slot] then timeline:queue(slot, queuedSoundIds[slot]) end
-        local candidate = timeline:consume(slot, priority)
-        if candidate and candidate.sound_id == soundId then pendingBySoundId[soundId] = candidate end
-        queuedSoundIds[slot] = nil
-    end
+    -- CycleSoundQueue already cleared every slot; PlaySoundID chooses at most one candidate.
+    local soundId = readU8(0x09)
+    activeTick.selectedRequest = activeTick.cycledBySoundId[soundId]
 end
 
 local function cycleObserved()
@@ -160,25 +186,68 @@ local function cycleObserved()
     for slot = 0, 2 do
         assert(queuedSoundIds[slot] == nil or queuedSoundIds[slot] == cycleDiagnostics.queues[slot + 1],
             "queue write observation disagrees with CycleSoundQueue RAM")
+        if queuedSoundIds[slot] then timeline:queue(slot, queuedSoundIds[slot]) end
+    end
+    activeTick.cycledBySoundId = {}
+    for _, request in ipairs(timeline:cycle(cycleDiagnostics.priority)) do
+        -- Queue slots are cleared regardless of driver priority outcome. The dispatch/init hooks below
+        -- are the sole acceptance authority, rather than this diagnostic candidate map.
+        activeTick.cycledBySoundId[request.sound_id] = request
+    end
+    queuedSoundIds = {}
+end
+
+local function bgmLoadObserved()
+    local candidate = activeTick and activeTick.currentCandidate
+    if not candidate or candidate.sound_class ~= "MUSIC" then return end
+    candidate.request.sound_id = currentD7() -- after the ROM's actual BGM dispatch path is committed.
+    candidate.accepted = true
+    for _, role in ipairs({"FM3", "FM4", "FM5", "PSG1", "PSG2", "PSG3"}) do
+        addRole(candidate.declared_roles, role); addRole(candidate.initialized_roles, role)
     end
 end
 
-local function dispatchObserved()
-    if not activeTick then return end
-    local soundId = (emu.getregister("M68K D7") or 0) & 0xff
-    local request = pendingBySoundId[soundId]
-    if request then activeTick.dispatches[#activeTick.dispatches + 1] = request end
+local function normalRoleDeclared()
+    local candidate = activeTick and activeTick.currentCandidate
+    if candidate and candidate.sound_class == "SFX" then addRole(candidate.declared_roles, assert(normalRole((emu.getregister("M68K D3") or 0) & 0xff), "unknown normal SFX voice control")) end
+end
+
+local function normalRoleInitialized()
+    local candidate = activeTick and activeTick.currentCandidate
+    if candidate and candidate.sound_class == "SFX" then
+        candidate.request.sound_id = currentD7()
+        candidate.accepted = true
+        addRole(candidate.initialized_roles, assert(normalRole((emu.getregister("M68K D4") or 0) & 0xff), "unknown normal SFX initialized role"))
+    end
+end
+
+local function specialRoleDeclared()
+    local candidate = activeTick and activeTick.currentCandidate
+    if candidate and candidate.sound_class == "SPECIAL_SFX" then addRole(candidate.declared_roles, specialRole((emu.getregister("M68K D4") or 0) & 0xff)) end
+end
+
+local function specialRoleInitialized()
+    local candidate = activeTick and activeTick.currentCandidate
+    if candidate and candidate.sound_class == "SPECIAL_SFX" then
+        candidate.request.sound_id = currentD7()
+        candidate.accepted = true
+        addRole(candidate.initialized_roles, specialRole((emu.getregister("M68K D4") or 0) & 0xff))
+    end
 end
 
 local function closeTick(context)
     if not activeTick then return end
     local headers = readTrackHeaders()
-    for _, request in ipairs(activeTick.dispatches) do timeline:dispatch(request, headers) end
+    if activeTick.restoreMusic then timeline:restoreMusic() end
+    for _, candidate in ipairs(activeTick.candidates) do
+        timeline:dispatch(candidate.request, {accepted = candidate.accepted, declared_roles = candidate.declared_roles,
+            initialized_roles = candidate.initialized_roles, headers = headers})
+    end
     local tick = timeline:closeTick(headers)
     local frame = frameRecord(tick.bk2_frame)
     for _, request in ipairs(tick.requests) do frame.requests[#frame.requests + 1] = request end
     frame.diagnostic_tick, frame.owners = tick.diagnostic_tick, tick.owners
-    activeTick, pendingBySoundId, cycleDiagnostics = nil, {}, nil
+    activeTick, cycleDiagnostics = nil, nil
     diagnosticTick = diagnosticTick + 1
 end
 
@@ -217,14 +286,26 @@ ProbeRuntime.run({
         {name = "s1_gameplay_audio_update_entry", address = UPDATE_MUSIC, callback = function()
             local action = lifecycle:entry((emu.getregister("M68K A7") or 0) & 0xffffffff, emu.framecount())
             if action == "open" and emu.framecount() >= SEGMENT_START and emu.framecount() < SEGMENT_END then
-                timeline:beginTick(emu.framecount(), diagnosticTick); activeTick = {dispatches = {}}
+                timeline:beginTick(emu.framecount(), diagnosticTick)
+                activeTick = {candidates = {}, cycledBySoundId = {}, currentCandidate = nil, selectedRequest = nil}
             end
         end},
         {name = "s1_gameplay_audio_cycle", address = CYCLE_SOUND_QUEUE, callback = function() cycleObserved() end},
         {name = "s1_gameplay_audio_consume", address = PLAY_SOUND_ID, callback = function() consumeObserved() end},
-        {name = "s1_gameplay_audio_bgm", address = PLAY_BGM, callback = function() dispatchObserved() end},
-        {name = "s1_gameplay_audio_sfx", address = PLAY_SFX, callback = function() dispatchObserved() end},
-        {name = "s1_gameplay_audio_special", address = PLAY_SPECIAL, callback = function() dispatchObserved() end},
+        {name = "s1_gameplay_audio_play_sega_return", address = PLAY_SEGA_RETURN, callback = function()
+            if lifecycle:playSegaAbnormalExit() == "reset" and activeTick then timeline:abandonTick(); activeTick = nil end
+        end},
+        {name = "s1_gameplay_audio_bgm", address = PLAY_BGM, callback = function() candidateObserved("MUSIC") end},
+        {name = "s1_gameplay_audio_bgm_load", address = BGM_LOAD_MUSIC, callback = function() bgmLoadObserved() end},
+        {name = "s1_gameplay_audio_sfx", address = PLAY_SFX, callback = function() candidateObserved("SFX") end},
+        {name = "s1_gameplay_audio_sfx_declared", address = NORMAL_ROLE_DECLARED, callback = function() normalRoleDeclared() end},
+        {name = "s1_gameplay_audio_sfx_initialized", address = NORMAL_ROLE_INITIALIZED, callback = function() normalRoleInitialized() end},
+        {name = "s1_gameplay_audio_special", address = PLAY_SPECIAL, callback = function() candidateObserved("SPECIAL_SFX") end},
+        {name = "s1_gameplay_audio_special_declared", address = SPECIAL_ROLE_DECLARED, callback = function() specialRoleDeclared() end},
+        {name = "s1_gameplay_audio_special_initialized", address = SPECIAL_ROLE_INITIALIZED, callback = function() specialRoleInitialized() end},
+        {name = "s1_gameplay_audio_restore_previous_music", address = RESTORE_PREVIOUS_MUSIC, callback = function()
+            if activeTick then activeTick.restoreMusic = true end
+        end},
         {name = "s1_gameplay_audio_update_return", address = UPDATE_MUSIC_RETURN, callback = function(context)
             local action = lifecycle:close(); if action == "close" then closeTick(context) end
         end}
