@@ -65588,3 +65588,21 @@ S1/S2 12 -> 10 red, zero regressions.
   -Dsonic2.rom.path=<verified-Sonic-2-REV01> test`.
 - Controller result: base `5cc94d457`, 1/1 pass; candidate `4b4572cc3`, 1/1
   pass. No new errors, fixture changes, or trace-frontier advancement.
+
+## 2026-08-09 - S2 Special Stage checkpoint wing/hand render split
+
+- Worktree: `.worktrees/s2-special-cool-thumb`, branch
+  `bugfix/ai-s2-special-cool-thumb`, based on remediation-review `dc0892fe0`.
+- Root cause: the renderer used the animated frame-$15 handshake Y for both
+  checkpoint sprites. Shipped S2 `Obj5A_CreateCheckpointWingedHand` allocates
+  frame-$14 wings and frame-$15 hand as independent peer objects at `$48`,
+  while only `Obj5A_Handshake`'s frame-$15 branch updates Y
+  (`docs/s2disasm/s2.asm:71880-71905,71953-71989`).
+- Fix: checkpoint rendering derives the fixed wings Y from the already
+  snapshotted handshake target Y, preserving the ROM's normal `$48` and VS
+  `$1C` paths without adding redundant mutable state.
+  No trace payload or comparison data is consumed or changed.
+- Focused command: `mvn -Dmse=off
+  -Dtest=com.openggf.game.sonic2.specialstage.Sonic2SpecialStageCheckpointRenderTest,com.openggf.game.sonic2.specialstage.TestSonic2SpecialStageCheckpointSnapshot test`.
+  Result: 4 tests, 0 failures, 0 errors, 0 skips. The pre-fix renderer test
+  failed as expected when both wing and hand Y values followed the hand.

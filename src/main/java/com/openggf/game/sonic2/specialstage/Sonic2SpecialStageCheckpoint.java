@@ -123,6 +123,10 @@ public class Sonic2SpecialStageCheckpoint {
     // Original uses objoff_2A = $46 (70 decimal) for most timers
     private static final int MESSAGE_DISPLAY_FRAMES = 120; // Message visible (longer for readability)
     private static final int FADE_OUT_FRAMES = 48;       // $30 = 48 frames for music fade (from Obj5A_RingCheckTrigger)
+    // Obj5A_CreateCheckpointWingedHand starts both independent peer objects at
+    // y_pos = $48; only the frame-$15 hand object changes y_pos in
+    // Obj5A_Handshake. The target is also $1C in the ROM's VS path.
+    private static final int CHECKPOINT_HANDSHAKE_Y = 0x48;
 
     // Checkpoint rainbow animation data (Obj5A_Rainbow_Frames / Obj5A_Rainbow_Positions)
     private static final int[] RAINBOW_FRAMES = {
@@ -155,8 +159,8 @@ public class Sonic2SpecialStageCheckpoint {
     private final List<MessageLetter> messageLetters = new ArrayList<>();
     private boolean showCheckpointHand = false;
     private int handX = 128;
-    private int handY = 72;
-    private int handTargetY = 72;
+    private int handY = CHECKPOINT_HANDSHAKE_Y;
+    private int handTargetY = CHECKPOINT_HANDSHAKE_Y;
     private boolean handThumbsUp = true;
     private boolean handMovingDown = false;
 
@@ -406,8 +410,8 @@ public class Sonic2SpecialStageCheckpoint {
         showCheckpointHand = true;
         handThumbsUp = (lastResult != Result.FAILED);
         handMovingDown = false;
-        handY = 72;  // $48 in original
-        handTargetY = 72;
+        handY = CHECKPOINT_HANDSHAKE_Y;
+        handTargetY = CHECKPOINT_HANDSHAKE_Y;
 
         // Create the appropriate message
         createCheckpointMessage();
@@ -666,6 +670,9 @@ public class Sonic2SpecialStageCheckpoint {
         messageLetters.clear();
         rainbowRings.clear();
         showCheckpointHand = false;
+        handY = CHECKPOINT_HANDSHAKE_Y;
+        handTargetY = CHECKPOINT_HANDSHAKE_Y;
+        handMovingDown = false;
         currentCheckpoint = 0;
         ringRequirement = 0;
         ringsCollected = 0;
@@ -711,6 +718,10 @@ public class Sonic2SpecialStageCheckpoint {
 
     public int getHandX() {
         return handX;
+    }
+
+    public int getWingsY() {
+        return handTargetY;
     }
 
     public int getHandY() {

@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Sonic 2 Special Stage checkpoint `COOL!` wings now stay at their ROM
+  independent peer object's fixed `$48` Y while only the frame-$15
+  handshake peer bobs vertically. The split follows `Obj5A_CreateCheckpointWingedHand`
+  and `Obj5A_Handshake` (`docs/s2disasm/s2.asm:71880-71905,71953-71989`),
+  and derives wings Y from the snapshotted handshake target. Renderer tests
+  cover mutation-sensitive frame movement, deterministic redraw, and rewind.
 - Fix/Docs: S2 CPZ tubes now honor the engine free-fly debug boundary instead
   of capturing a debug player. Native S2 `Debug_placement_mode` ring/item
   placement and `Two_player_mode` human-P2 monitor behavior remain explicitly
