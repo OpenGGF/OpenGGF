@@ -3,6 +3,7 @@ package com.openggf.audio;
 import com.openggf.audio.presentation.AudioPresentationParityProbe;
 import com.openggf.audio.presentation.AudioPresentationProducer;
 import com.openggf.audio.presentation.AudioPresentationSourceFactory;
+import com.openggf.audio.rewind.AudioKeyframeStore;
 import com.openggf.audio.runtime.AudioFrameClock;
 import com.tngtech.archunit.core.domain.Dependency;
 import com.tngtech.archunit.core.domain.JavaClass;
@@ -317,7 +318,7 @@ class TestAudioPresentationArchitectureGuard {
                 .importClasses(RepresentativeTimelineAuthorityBypass.class);
         assertEquals(1, timelineDependenciesOutsideTimeline(fixture).size(),
                 "fully-qualified timeline references must be visible as class dependencies");
-        assertEquals(5, timelineAuthorityCalls(fixture).size(),
+        assertEquals(13, timelineAuthorityCalls(fixture).size(),
                 "representative direct audio mutation/advance calls must be visible");
     }
 
@@ -377,11 +378,17 @@ class TestAudioPresentationArchitectureGuard {
     private static boolean isTimelineAuthorityCall(JavaMethodCall call, JavaClass targetOwner) {
         if (targetOwner.isEquivalentTo(AudioManager.class)) {
             return Set.of("playMusic", "playSfx", "replayTimelineCommand",
-                    "replayTimelineCommandLogically", "presentFrame", "update")
+                    "replayTimelineCommandLogically", "restoreLogicalSnapshot", "presentFrame", "update")
                     .contains(call.getName());
         }
         if (targetOwner.isEquivalentTo(AudioPresentationProducer.class)) {
             return call.getName().equals("present");
+        }
+        if (targetOwner.isEquivalentTo(AudioKeyframeStore.class)) {
+            return call.getName().equals("replayTo") || call.getName().equals("replayToLogicalState");
+        }
+        if (targetOwner.isAssignableTo(AudioBackend.class)) {
+            return Set.of("playMusic", "playSfx", "update").contains(call.getName());
         }
         return targetOwner.getPackageName().startsWith("com.openggf.trace.timing");
     }
@@ -447,12 +454,23 @@ class TestAudioPresentationArchitectureGuard {
         @SuppressWarnings("unused")
         private final com.openggf.tools.audio.timeline.S1GameplayAudioTimeline.Metadata metadata = null;
 
-        private void bypass(AudioManager audio, AudioPresentationProducer producer) {
+        private void bypass(com.openggf.audio.AudioManager audio,
+                com.openggf.audio.presentation.AudioPresentationProducer producer,
+                com.openggf.audio.rewind.AudioKeyframeStore keyframes,
+                com.openggf.audio.AudioBackend backend) {
+            audio.playMusic(0x81);
+            audio.playSfx("ring");
             audio.replayTimelineCommand(null);
             audio.replayTimelineCommandLogically(null);
+            audio.restoreLogicalSnapshot(null);
             audio.presentFrame(null);
             audio.update();
             producer.present(0, null);
+            keyframes.replayTo(null, 0, null);
+            keyframes.replayToLogicalState(null, 0);
+            backend.playMusic(0x81);
+            backend.playSfx("ring");
+            backend.update();
         }
     }
 }
