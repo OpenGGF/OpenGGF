@@ -3,11 +3,15 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: CNZ miniboss body hits blocked by `$38` bit 3 now leave the
+  Move/`Obj_Wait` dispatch to the boss's own later SST slot. Removing the
+  duplicate timer tick also removes the fitted `$90 + 2` wait compensation,
+  advancing the complete-run CNZ frontier from raw frame 12024 to 12488 while
+  retaining standalone CNZ and the green AIZ, HCZ, and MGZ canaries.
 - Fix/Test: CNZ's miniboss coil now exposes the live child coordinate refreshed
   immediately before its collision-list publication, matching the SST pointer
-  consumed by the following player pass. The standalone CNZ trace now has zero
-  comparison errors through its segment; AIZ, HCZ, and MGZ complete-run traces
-  remain green, and the CNZ complete-run frontier is unchanged.
+  consumed by the following player pass. The focused collision contract is now
+  guarded while the standalone CNZ camera frontier remains at raw frame 25743.
 - Fix/Test: MGZ's consolidated floating-capsule button now preserves the
   native later-SST boundary when a later support object owns the triggering
   player's current contact. This restores both MGZ trace variants to zero

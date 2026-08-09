@@ -70267,3 +70267,48 @@ guard.
   to an unconsumed edge at raw `16663`. It was reverted and is not part of this
   frontier commit. Ring comparison remains error-level through
   `ToleranceConfig.DEFAULT` with `RingCountMode.FORCE_ERROR`.
+
+## 2026-08-09 - S3K CNZ blocked body-hit dispatch frontier correction
+
+- Branch: `bugfix/s3k-traces` from `cf70eb421`; the six protected user edits
+  remained unstaged. Validation used JDK 21.0.12 and
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen`; no trace fixture changed.
+- Evidence correction for `cf70eb421`: standalone and complete-run CNZ share
+  the report stem `s3k_cnz1`. The prior combined invocation allowed one class
+  to overwrite the other's report, so the previous section's claim that
+  standalone comparison reached segment end was not authoritative. Fresh
+  per-invocation report directories confirm that standalone CNZ retains one
+  camera-X error at raw `25743` and queue edge `#31` at raw `33755`. The coil
+  live-coordinate contract remains ROM-backed, but did not move that frontier.
+- Prior complete-run frontier: 9 errors beginning at raw frame `12024`, where
+  the engine had already negated Sonic's x/y/ground velocity on a miniboss body
+  rebound that the ROM performs later.
+- Root cause: `CNZMiniboss_CheckPlayerHit` runs after the selected miniboss
+  routine in `Obj_CNZMinibossStart`. While `$38` bit 3 is set, it does not
+  install Opening; the boss's own slot remains the only
+  `Obj_CNZMinibossMove`/`Obj_Wait` dispatch
+  (`docs/skdisasm/sonic3k.asm:144863-144931,145404-145425`). The engine instead
+  manually ran Move in the player-touch callback and then ran it again in the
+  later boss slot. Standalone CNZ has two such blocked hits before Go3 and the
+  complete run has one, which explains the former fitted `$90 + 2` timer and
+  why shortening it alone regressed one route. Blocked hits now leave movement
+  to the boss slot, and Go2 stores the ROM's literal `$90` wait.
+- Focused command: `mvn -Dmse=off -Dsurefire.forkCount=1
+  -Dsurefire.runOrder=alphabetical
+  -Dtest=com.openggf.game.sonic3k.objects.TestCnzMinibossSwingPhase,com.openggf.game.sonic3k.objects.TestCnzMinibossTopPhysics
+  test`. Result: 34 tests, 0 failures, 0 errors. The new regression proves that
+  a blocked player hit does not move the boss until its own later-slot update.
+- Complete-run CNZ command: `mvn -Ptrace-replay -Dmse=off
+  -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+  -Dtrace.verification=all -Dtrace.frontierOnly=true
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kCnzCompleteRunTraceReplay#replayMatchesTrace
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen' test`. Result:
+  frontier advances 464 rows to 4 errors beginning at raw `12488`
+  (`tails_g_speed`, expected `-$98`, actual `0`; next hardware edge `#205` at
+  raw `13962`).
+- Standalone CNZ was run separately with the same profile. Result: its prior
+  raw-`25743` camera frontier and raw-`33755` hardware edge are unchanged.
+- Regression command: the same profile and ROM with complete-run AIZ, HCZ,
+  and MGZ. Result: 3 tests, 0 failures, 0 errors; all represented hardware
+  edges were consumed. Ring comparison remains error-level through
+  `ToleranceConfig.DEFAULT` with `RingCountMode.FORCE_ERROR`.

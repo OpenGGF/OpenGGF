@@ -711,6 +711,32 @@ class TestCnzMinibossTopPhysics {
     }
 
     @Test
+    void blockedBodyHitLeavesMoveDispatchToBossSlot() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build();
+        DefaultObjectServices services = TestEnvironment.objectServices();
+
+        CnzMinibossInstance boss = new CnzMinibossInstance(
+                new ObjectSpawn(0x3300, 0x029B, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
+        boss.setServices(services);
+        boss.forceRoutineForTest(0x04);
+        boss.forceXVelForTest((short) 0x0100);
+
+        boss.onPlayerAttack(fixture.sprite(),
+                new TouchResponseResult(0x0C, 0x14, 0x10, TouchCategory.ENEMY));
+
+        assertEquals(0x3300, boss.getCentreX(),
+                "$38 bit 3 blocks CheckPlayerHit without executing the Move body in the player slot");
+        assertEquals(0x04, boss.getCurrentRoutine());
+
+        boss.update(0, fixture.sprite());
+
+        assertEquals(0x3301, boss.getCentreX(),
+                "the boss's later SST slot remains the sole MoveSprite2/Obj_Wait dispatch");
+    }
+
+    @Test
     void bodyHitOpensAfterCurrentMoveSprite2Step() {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
