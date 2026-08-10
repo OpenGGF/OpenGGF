@@ -604,6 +604,7 @@ class TestEditorRenderingSmoke {
         SessionManager.enterEditorMode(new EditorCursorState(120, 80));
         SessionManager.getCurrentEditorMode().getCamera().setX((short) 32);
         SessionManager.getCurrentEditorMode().getCamera().setY((short) 16);
+        SessionManager.getCurrentEditorMode().getCamera().captureRenderCopy();
 
         LevelEditorController controller = new LevelEditorController();
         controller.attachLevel(level);

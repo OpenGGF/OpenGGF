@@ -76,6 +76,11 @@ single-fork suite. Both classes now use `SingletonResetExtension`; their
 combined 23 tests pass. This retains the zone-set-specific `next` mappings
 instead of weakening the merged registry to satisfy polluted test state.
 
+The editor overlay smoke harness had the same direct-camera omission as MGZ:
+it set the editor camera's live coordinates and then invoked a renderer that
+correctly consumes render-copy coordinates. Publishing the copy before render
+retains its established pixel-position assertions.
+
 The post-merge full invocation reached 13,968 executed methods before the
 Surefire JVM exhausted its heap. At that checkpoint it reported 33 failures,
 6 errors, and 5 skips; comparison against both parent manifests isolated only
