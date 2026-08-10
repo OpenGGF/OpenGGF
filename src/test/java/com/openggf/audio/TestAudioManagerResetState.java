@@ -1,6 +1,9 @@
 package com.openggf.audio;
 
 import com.openggf.audio.rewind.AudioCommand;
+import com.openggf.audio.rewind.AudioLogicalSnapshot;
+import com.openggf.audio.rewind.SmpsSourceDescriptor;
+import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsLoader;
@@ -99,7 +102,7 @@ public class TestAudioManagerResetState {
         StubSmpsLoader baseLoader = new StubSmpsLoader();
         baseLoader.sfxResults.put(0x90, new StubSmpsData("jump"));
         am.setAudioProfile(new StubAudioProfile(baseLoader));
-        am.setRom(null);
+        am.setRom(new Rom());
 
         Map<GameSound, Integer> soundMap = new EnumMap<>(GameSound.class);
         soundMap.put(GameSound.JUMP, 0x90);
@@ -122,6 +125,227 @@ public class TestAudioManagerResetState {
         am.resetState();
     }
 
+    @Test
+    void setRomAndProfilePublishNewGenerationsWithoutRetargetingSnapshots() {
+        Rom firstRom = new Rom();
+        Rom secondRom = new Rom();
+        DacData firstDac = dac(291);
+        DacData secondDac = dac(292);
+        DacData profileDac = dac(293);
+        StubSmpsLoader firstLoader = loader(firstDac, 0x90, (byte) 0x11);
+        StubSmpsLoader secondLoader = loader(secondDac, 0x90, (byte) 0x22);
+        SwitchingAudioProfile firstProfile = new SwitchingAudioProfile(firstLoader);
+        firstProfile.loaders.put(firstRom, firstLoader);
+        firstProfile.loaders.put(secondRom, secondLoader);
+        am.setAudioProfile(firstProfile);
+        am.setRom(firstRom);
+        ObservedSource first = observeBaseSfx(0x90);
+        AudioLogicalSnapshot oldSnapshot = am.captureLogicalSnapshot();
+
+        am.setRom(secondRom);
+        ObservedSource second = observeBaseSfx(0x90);
+        SwitchingAudioProfile replacementProfile =
+                new SwitchingAudioProfile(loader(
+                        profileDac, 0x90, (byte) 0x33));
+        am.setAudioProfile(replacementProfile);
+        ObservedSource replacement = observeBaseSfx(0x90);
+
+        assertTrue(second.descriptor().dependencyGeneration()
+                > first.descriptor().dependencyGeneration());
+        assertTrue(replacement.descriptor().dependencyGeneration()
+                > second.descriptor().dependencyGeneration());
+        assertSame(firstDac, first.dac());
+        assertSame(secondDac, second.dac());
+        assertSame(profileDac, replacement.dac());
+        assertSame(secondRom, replacementProfile.lastRom,
+                "setAudioProfile must rebuild against the currently published ROM");
+        am.restoreLogicalSnapshot(oldSnapshot);
+        assertEquals(first.descriptor(), currentSource().descriptor());
+        assertSame(firstDac, currentSource().dac());
+    }
+
+    @Test
+    void nullRomAndProfileClearIncompatibleLoaderAndDacDependencies() {
+        Rom rom = new Rom();
+        DacData dac = dac(299);
+        SwitchingAudioProfile profile = new SwitchingAudioProfile(
+                loader(dac, 0x9A, (byte) 0x2A));
+        am.setAudioProfile(profile);
+        am.setRom(rom);
+        ObservedSource initial = observeBaseSfx(0x9A);
+
+        am.setRom(null);
+        assertSame(profile, am.getAudioProfile());
+        assertFalse(am.playSfx(0x9A),
+                "a null ROM must clear the loader/DAC pair");
+
+        am.setRom(rom);
+        ObservedSource restored = observeBaseSfx(0x9A);
+        assertEquals(initial.descriptor().dependencyGeneration() + 2,
+                restored.descriptor().dependencyGeneration());
+        assertSame(dac, restored.dac());
+
+        am.setAudioProfile(null);
+        assertNull(am.getAudioProfile());
+        assertFalse(am.playSfx(0x9A),
+                "a null profile must clear the loader/DAC pair");
+        assertNull(backend.profileAttempts.get(
+                backend.profileAttempts.size() - 1));
+    }
+
+    @Test
+    void failedRomLoaderConstructionOrDacLoadLeavesTheWholeTuplePublished() {
+        Rom firstRom = new Rom();
+        Rom throwingCreateRom = new Rom();
+        Rom throwingDacRom = new Rom();
+        DacData oldDac = dac(301);
+        DacData createRetryDac = dac(302);
+        DacData dacRetryDac = dac(303);
+        StubSmpsLoader oldLoader = loader(oldDac, 0x91, (byte) 0x41);
+        StubSmpsLoader createRetry = loader(
+                createRetryDac, 0x91, (byte) 0x42);
+        StubSmpsLoader dacRetry = loader(
+                dacRetryDac, 0x91, (byte) 0x43);
+        SwitchingAudioProfile profile = new SwitchingAudioProfile(oldLoader);
+        profile.loaders.put(firstRom, oldLoader);
+        profile.loaders.put(throwingCreateRom, createRetry);
+        profile.loaders.put(throwingDacRom, dacRetry);
+        am.setAudioProfile(profile);
+        am.setRom(firstRom);
+        ObservedSource initial = observeBaseSfx(0x91);
+
+        profile.throwCreateFor = throwingCreateRom;
+        assertThrows(IllegalStateException.class,
+                () -> am.setRom(throwingCreateRom));
+        assertSame(am.getAudioProfile(), profile);
+        ObservedSource afterCreateFailure = observeBaseSfx(0x91);
+        assertEquals(initial, afterCreateFailure);
+        profile.throwCreateFor = null;
+        am.setRom(throwingCreateRom);
+        ObservedSource afterCreateRetry = observeBaseSfx(0x91);
+        assertEquals(initial.descriptor().dependencyGeneration() + 1,
+                afterCreateRetry.descriptor().dependencyGeneration());
+        assertSame(createRetryDac, afterCreateRetry.dac());
+
+        dacRetry.dacFailure = new IllegalStateException("DAC load failed");
+        assertThrows(IllegalStateException.class,
+                () -> am.setRom(throwingDacRom));
+        assertEquals(afterCreateRetry, observeBaseSfx(0x91));
+        dacRetry.dacFailure = null;
+        am.setRom(throwingDacRom);
+        ObservedSource afterDacRetry = observeBaseSfx(0x91);
+        assertEquals(afterCreateRetry.descriptor().dependencyGeneration() + 1,
+                afterDacRetry.descriptor().dependencyGeneration());
+        assertSame(dacRetryDac, afterDacRetry.dac());
+    }
+
+    @Test
+    void failedProfilePreparationOrBackendPublicationIsAtomicAndRetryable() {
+        Rom currentRom = new Rom();
+        DacData oldDac = dac(311);
+        StubSmpsLoader oldLoader = loader(oldDac, 0x92, (byte) 0x51);
+        SwitchingAudioProfile oldProfile = new SwitchingAudioProfile(oldLoader);
+        am.setAudioProfile(oldProfile);
+        am.setRom(currentRom);
+        ObservedSource initial = observeBaseSfx(0x92);
+
+        SwitchingAudioProfile throwingProfile =
+                new SwitchingAudioProfile(loader(dac(312), 0x92, (byte) 0x52));
+        throwingProfile.throwCreateFor = currentRom;
+        assertThrows(IllegalStateException.class,
+                () -> am.setAudioProfile(throwingProfile));
+        assertSame(oldProfile, am.getAudioProfile());
+        assertEquals(initial, observeBaseSfx(0x92));
+
+        StubSmpsLoader throwingDacLoader =
+                loader(dac(313), 0x92, (byte) 0x53);
+        throwingDacLoader.dacFailure = new IllegalStateException("DAC failed");
+        SwitchingAudioProfile throwingDacProfile =
+                new SwitchingAudioProfile(throwingDacLoader);
+        assertThrows(IllegalStateException.class,
+                () -> am.setAudioProfile(throwingDacProfile));
+        assertSame(oldProfile, am.getAudioProfile());
+        assertEquals(initial, observeBaseSfx(0x92));
+
+        DacData replacementDac = dac(314);
+        SwitchingAudioProfile replacement = new SwitchingAudioProfile(
+                loader(replacementDac, 0x92, (byte) 0x54));
+        backend.failProfile = replacement;
+        assertThrows(IllegalStateException.class,
+                () -> am.setAudioProfile(replacement));
+        assertEquals(java.util.List.of(replacement, oldProfile),
+                backend.lastProfileAttempts(2));
+        assertSame(oldProfile, am.getAudioProfile());
+        assertEquals(initial, observeBaseSfx(0x92));
+
+        backend.failProfile = null;
+        am.setAudioProfile(replacement);
+        ObservedSource retried = observeBaseSfx(0x92);
+        assertEquals(initial.descriptor().dependencyGeneration() + 1,
+                retried.descriptor().dependencyGeneration());
+        assertSame(replacementDac, retried.dac());
+    }
+
+    @Test
+    void backendRestoreFailureIsSuppressedWithoutPublishingTheCandidate() {
+        DacData oldDac = dac(321);
+        SwitchingAudioProfile oldProfile = new SwitchingAudioProfile(
+                loader(oldDac, 0x93, (byte) 0x61));
+        am.setAudioProfile(oldProfile);
+        am.setRom(new Rom());
+        ObservedSource initial = observeBaseSfx(0x93);
+        SwitchingAudioProfile replacement = new SwitchingAudioProfile(
+                loader(dac(322), 0x93, (byte) 0x62));
+        backend.failProfile = replacement;
+        backend.failRestoreProfile = oldProfile;
+
+        IllegalStateException failure = assertThrows(
+                IllegalStateException.class,
+                () -> am.setAudioProfile(replacement));
+
+        assertEquals(1, failure.getSuppressed().length);
+        assertSame(oldProfile, am.getAudioProfile());
+        assertEquals(initial, observeBaseSfx(0x93));
+
+        backend.failProfile = null;
+        backend.failRestoreProfile = null;
+        am.setAudioProfile(replacement);
+        ObservedSource retried = observeBaseSfx(0x93);
+        assertEquals(initial.descriptor().dependencyGeneration() + 1,
+                retried.descriptor().dependencyGeneration());
+    }
+
+    private ObservedSource observeBaseSfx(int sfxId) {
+        assertTrue(am.playSfx(sfxId));
+        am.presentFrame(PresentationMode.SILENT);
+        ObservedSource observed = currentSource();
+        am.update();
+        return observed;
+    }
+
+    private ObservedSource currentSource() {
+        var snapshot = am.shadowSmpsDriverSnapshotForTesting();
+        assertNotNull(snapshot);
+        var sequencer = snapshot.sequencers().get(
+                snapshot.sequencers().size() - 1);
+        return new ObservedSource(sequencer.source(), sequencer.dacData());
+    }
+
+    private static DacData dac(int cycles) {
+        return new DacData(Map.of(), Map.of(), cycles);
+    }
+
+    private static StubSmpsLoader loader(
+            DacData dac, int sfxId, byte marker) {
+        StubSmpsLoader loader = new StubSmpsLoader(dac);
+        loader.sfxResults.put(sfxId, new StubSmpsData("sfx", marker));
+        return loader;
+    }
+
+    private record ObservedSource(
+            SmpsSourceDescriptor descriptor, DacData dac) {
+    }
+
     private String lastSfxName() {
         var entries = am.commandTimeline().entries();
         return ((AudioCommand.PlaySfx) entries.get(entries.size() - 1).command()).sfxName();
@@ -137,6 +361,25 @@ public class TestAudioManagerResetState {
         boolean lastPlayedRingLeft;
         String lastFallbackName;
         String lastSmpsName;
+        final java.util.List<GameAudioProfile> profileAttempts =
+                new java.util.ArrayList<>();
+        GameAudioProfile failProfile;
+        GameAudioProfile failRestoreProfile;
+
+        @Override
+        public void setAudioProfile(GameAudioProfile profile) {
+            profileAttempts.add(profile);
+            if ((failProfile != null && profile == failProfile)
+                    || (failRestoreProfile != null
+                    && profile == failRestoreProfile)) {
+                throw new IllegalStateException("backend rejected profile");
+            }
+        }
+
+        java.util.List<GameAudioProfile> lastProfileAttempts(int count) {
+            return java.util.List.copyOf(profileAttempts.subList(
+                    profileAttempts.size() - count, profileAttempts.size()));
+        }
 
         @Override
         public void playSfx(String sfxName, float pitch) {
@@ -167,7 +410,11 @@ public class TestAudioManagerResetState {
         final String name;
 
         StubSmpsData(String name) {
-            super(new byte[0], 0);
+            this(name, (byte) 0);
+        }
+
+        StubSmpsData(String name, byte marker) {
+            super(new byte[] {marker}, 0);
             this.name = name;
         }
 
@@ -183,21 +430,40 @@ public class TestAudioManagerResetState {
 
     private static class StubSmpsLoader implements SmpsLoader {
         final Map<Integer, AbstractSmpsData> sfxResults = new java.util.HashMap<>();
+        final DacData dac;
+        RuntimeException dacFailure;
+
+        StubSmpsLoader() {
+            this(EMPTY_DAC);
+        }
+
+        StubSmpsLoader(DacData dac) {
+            this.dac = dac;
+        }
 
         @Override public AbstractSmpsData loadMusic(int musicId) { return null; }
         @Override public AbstractSmpsData loadSfx(int sfxId) { return sfxResults.get(sfxId); }
         @Override public AbstractSmpsData loadSfx(String sfxName) { return null; }
-        @Override public DacData loadDacData() { return EMPTY_DAC; }
+        @Override public DacData loadDacData() {
+            if (dacFailure != null) {
+                throw dacFailure;
+            }
+            return dac;
+        }
     }
 
     private static class StubAudioProfile implements GameAudioProfile {
-        private final SmpsLoader loader;
+        protected final SmpsLoader loader;
+        private final SmpsSequencerConfig config =
+                new SmpsSequencerConfig.Builder().build();
 
         StubAudioProfile() { this.loader = new StubSmpsLoader(); }
         StubAudioProfile(SmpsLoader loader) { this.loader = loader; }
 
         @Override public SmpsLoader createSmpsLoader(Rom rom) { return loader; }
-        @Override public SmpsSequencerConfig getSequencerConfig() { return null; }
+        @Override public SmpsSequencerConfig getSequencerConfig() {
+            return config;
+        }
         @Override public int getSpeedShoesOnCommandId() { return -1; }
         @Override public int getSpeedShoesOffCommandId() { return -1; }
         @Override public int getInvincibilityMusicId() { return -1; }
@@ -205,5 +471,23 @@ public class TestAudioManagerResetState {
         @Override public int getDrowningMusicId() { return -1; }
         @Override public Map<GameSound, Integer> getSoundMap() { return Map.of(); }
     }
-}
 
+    private static final class SwitchingAudioProfile extends StubAudioProfile {
+        final Map<Rom, SmpsLoader> loaders = new java.util.IdentityHashMap<>();
+        Rom throwCreateFor;
+        Rom lastRom;
+
+        private SwitchingAudioProfile(SmpsLoader loader) {
+            super(loader);
+        }
+
+        @Override
+        public SmpsLoader createSmpsLoader(Rom rom) {
+            lastRom = rom;
+            if (rom == throwCreateFor) {
+                throw new IllegalStateException("loader construction failed");
+            }
+            return loaders.getOrDefault(rom, loader);
+        }
+    }
+}

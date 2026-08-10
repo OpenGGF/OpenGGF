@@ -1,10 +1,13 @@
 package com.openggf.audio;
 
 import com.openggf.audio.smps.AbstractSmpsData;
+import com.openggf.audio.smps.CoordFlagContext;
+import com.openggf.audio.smps.CoordFlagHandler;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.audio.smps.SmpsLoader;
+import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.presentation.AudioPresentationCommand;
 import com.openggf.audio.presentation.AudioPresentationSourceFactory;
@@ -14,6 +17,8 @@ import com.openggf.audio.presentation.SmpsAssetKey;
 import com.openggf.audio.presentation.SmpsCompositeVoice;
 import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.audio.rewind.AudioCommand;
+import com.openggf.audio.rewind.AudioLogicalSnapshot;
+import com.openggf.audio.rewind.SmpsSourceDescriptor;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.sonic3k.audio.Sonic3kAudioProfile;
 import com.openggf.data.Rom;
@@ -98,10 +103,7 @@ public class TestDonorAudioRouting {
         StubSmpsLoader baseLoader = new StubSmpsLoader();
         baseLoader.sfxResults.put(0xA5, new StubSmpsData("base-roll"));
         audioManager.setAudioProfile(new StubAudioProfile(baseLoader));
-        // setRom triggers smpsLoader creation via audioProfile
-        // We need to manually poke the loader â€” use the profile's createSmpsLoader
-        // Actually setRom(null) will call audioProfile.createSmpsLoader(null) which returns our stub
-        audioManager.setRom(null);
+        audioManager.setRom(new Rom());
 
         // Also register donor with the same sound
         StubSmpsLoader donorLoader = new StubSmpsLoader();
@@ -145,7 +147,7 @@ public class TestDonorAudioRouting {
         // Level load calls setAudioProfile + setRom + setSoundMap
         StubSmpsLoader baseLoader = new StubSmpsLoader();
         audioManager.setAudioProfile(new StubAudioProfile(baseLoader));
-        audioManager.setRom(null);  // This MUST NOT clear donor bindings
+        audioManager.setRom(new Rom());  // This MUST NOT clear donor bindings
 
         Map<GameSound, Integer> baseMap = new EnumMap<>(GameSound.class);
         baseMap.put(GameSound.JUMP, 0x90);
@@ -247,7 +249,7 @@ public class TestDonorAudioRouting {
         audioManager.setBackend(realBackend);
         audioManager.setAudioProfile(
                 new HostAudioProfile(hostGameId, new StubSmpsLoader()));
-        audioManager.setRom(null);
+        audioManager.setRom(new Rom());
 
         StubSmpsLoader donor = new StubSmpsLoader();
         StubSmpsData music = new StubSmpsData("s3k-donor-music");
@@ -289,6 +291,262 @@ public class TestDonorAudioRouting {
                         + "presentation counter");
     }
 
+    @Test
+    void donorReplaceAndClearAdvanceOnlyTheirGenerationAndRetainOldSnapshots() {
+        SmpsSequencerConfig config = new SmpsSequencerConfig.Builder().build();
+        DacData s2FirstDac = dac(301);
+        DacData s2SecondDac = dac(302);
+        DacData s2ThirdDac = dac(303);
+        DacData s3kDac = dac(304);
+        audioManager.registerDonorLoader(
+                "s2", loader(s2FirstDac, 0xE0, (byte) 0x11),
+                s2FirstDac, config);
+        ObservedSource first = observeDonorSfx("s2", 0xE0);
+        AudioLogicalSnapshot oldSnapshot = audioManager.captureLogicalSnapshot();
+        audioManager.registerDonorLoader(
+                "s3k", loader(s3kDac, 0x54, (byte) 0x21),
+                s3kDac, config);
+        ObservedSource unrelated = observeDonorSfx("s3k", 0x54);
+
+        audioManager.registerDonorLoader(
+                "s2", loader(s2SecondDac, 0xE0, (byte) 0x12),
+                s2SecondDac, config);
+        ObservedSource replaced = observeDonorSfx("s2", 0xE0);
+        ObservedSource unrelatedAfterReplace = observeDonorSfx("s3k", 0x54);
+
+        assertTrue(replaced.descriptor().dependencyGeneration()
+                > first.descriptor().dependencyGeneration());
+        assertEquals(unrelated.descriptor().dependencyGeneration(),
+                unrelatedAfterReplace.descriptor().dependencyGeneration());
+        assertSame(s2FirstDac, first.dac());
+        assertSame(s2SecondDac, replaced.dac());
+        assertNotEquals(first.descriptor().dataHash(),
+                replaced.descriptor().dataHash(),
+                "replacement must preserve the new program identity");
+
+        audioManager.clearDonorAudio();
+        audioManager.registerDonorLoader(
+                "s2", loader(s2ThirdDac, 0xE0, (byte) 0x13),
+                s2ThirdDac, config);
+        ObservedSource reregistered = observeDonorSfx("s2", 0xE0);
+        assertTrue(reregistered.descriptor().dependencyGeneration()
+                > replaced.descriptor().dependencyGeneration());
+        assertSame(s2ThirdDac, reregistered.dac());
+
+        audioManager.restoreLogicalSnapshot(oldSnapshot);
+        ObservedSource restored = currentDonorSource("s2", 0xE0);
+        assertEquals(first.descriptor(), restored.descriptor());
+        assertSame(s2FirstDac, restored.dac());
+    }
+
+    @Test
+    void equalBaseAndDonorIdsKeepRouteSpecificDependenciesAndPolicies() {
+        DacData baseDac = dac(307);
+        DacData donorDac = dac(308);
+        SmpsSequencerConfig baseConfig =
+                new SmpsSequencerConfig.Builder()
+                        .tempoMode(SmpsSequencerConfig.TempoMode.TIMEOUT)
+                        .build();
+        SmpsSequencerConfig donorConfig =
+                new SmpsSequencerConfig.Builder()
+                        .tempoMode(SmpsSequencerConfig.TempoMode.OVERFLOW)
+                        .build();
+        StubSmpsLoader baseLoader = loader(
+                baseDac, 0xA7, (byte) 0x27);
+        audioManager.setAudioProfile(new PolicyAudioProfile(
+                "shared", baseLoader, baseConfig));
+        audioManager.setRom(new Rom());
+        audioManager.registerDonorLoader(
+                "shared", loader(donorDac, 0xB7, (byte) 0x37),
+                donorDac, donorConfig);
+
+        assertTrue(audioManager.playSfx(0xA7));
+        audioManager.presentFrame(PresentationMode.SILENT);
+        var baseSnapshot = audioManager.shadowSmpsDriverSnapshotForTesting();
+        assertNotNull(baseSnapshot);
+        var base = baseSnapshot.sequencers().stream()
+                .filter(entry -> entry.source().kind()
+                        == SmpsSourceDescriptor.Kind.BASE_SFX_ID)
+                .findFirst().orElseThrow();
+        audioManager.update();
+
+        audioManager.playDonorSfx("shared", 0xB7);
+        audioManager.presentFrame(PresentationMode.SILENT);
+        var donorSnapshot = audioManager.shadowSmpsDriverSnapshotForTesting();
+        assertNotNull(donorSnapshot);
+        var donor = donorSnapshot.sequencers().stream()
+                .filter(entry -> entry.source().kind()
+                        == SmpsSourceDescriptor.Kind.DONOR_SFX_ID)
+                .findFirst().orElseThrow();
+        assertSame(baseDac, base.dacData());
+        assertSame(donorDac, donor.dacData());
+        assertEquals(SmpsSequencerConfig.TempoMode.TIMEOUT,
+                base.config().getTempoMode());
+        assertEquals(SmpsSequencerConfig.TempoMode.OVERFLOW,
+                donor.config().getTempoMode());
+        assertEquals(0x31, base.snapshot().sfxPriority());
+        assertEquals(0x70, donor.snapshot().sfxPriority());
+        assertTrue(base.snapshot().specialSfx());
+        assertFalse(donor.snapshot().specialSfx());
+        assertNotEquals(base.source().dataHash(), donor.source().dataHash());
+    }
+
+    @Test
+    void donorBackendOrPresentationFailureRetainsThePreviousTupleAndGeneration() {
+        SmpsSequencerConfig config = new SmpsSequencerConfig.Builder().build();
+        DacData oldDac = dac(311);
+        DonorProfile oldProfile = new DonorProfile("s2");
+        audioManager.registerDonorLoader(
+                "s2", loader(oldDac, 0xE1, (byte) 0x31),
+                oldDac, config, oldProfile);
+        ObservedSource initial = observeDonorSfx("s2", 0xE1);
+
+        DacData backendCandidateDac = dac(312);
+        DonorProfile backendCandidate = new DonorProfile("s2");
+        backend.failDonorProfile = backendCandidate;
+        assertThrows(IllegalStateException.class,
+                () -> audioManager.registerDonorLoader(
+                        "s2", loader(backendCandidateDac, 0xE1, (byte) 0x32),
+                        backendCandidateDac, config, backendCandidate));
+        assertEquals(java.util.List.of(backendCandidate, oldProfile),
+                backend.lastDonorProfileAttempts(2));
+        assertEquals(initial, observeDonorSfx("s2", 0xE1));
+
+        backend.failDonorProfile = null;
+        DacData presentationCandidateDac = dac(313);
+        DonorProfile presentationCandidate = new DonorProfile("s2-v2");
+        presentationCandidate.registerBeforeFailure = true;
+        presentationCandidate.configureFailure =
+                new IllegalStateException("presentation config failed");
+        assertThrows(IllegalStateException.class,
+                () -> audioManager.registerDonorLoader(
+                        "s2", loader(presentationCandidateDac,
+                                0xE1, (byte) 0x33),
+                        presentationCandidateDac, config,
+                        presentationCandidate));
+        assertEquals(initial, observeDonorSfx("s2", 0xE1));
+        assertThrows(IllegalArgumentException.class,
+                () -> audioManager.presentationCoordFlagHandlersForTesting()
+                        .handlerFor("s2-v2"),
+                "a handler registered before the profile threw must roll back");
+
+        presentationCandidate.configureFailure = null;
+        audioManager.registerDonorLoader(
+                "s2", loader(presentationCandidateDac, 0xE1, (byte) 0x33),
+                presentationCandidateDac, config, presentationCandidate);
+        ObservedSource retried = observeDonorSfx("s2", 0xE1);
+        assertEquals(initial.descriptor().dependencyGeneration() + 1,
+                retried.descriptor().dependencyGeneration());
+        assertSame(presentationCandidateDac, retried.dac());
+        assertNotNull(audioManager.presentationCoordFlagHandlersForTesting()
+                .handlerFor("s2-v2"));
+    }
+
+    @Test
+    void donorPresentationFailureBeforeOwnerCreationPublishesNothing() {
+        SmpsSequencerConfig config = new SmpsSequencerConfig.Builder().build();
+        DacData candidateDac = dac(319);
+        DonorProfile candidate = new DonorProfile("candidate");
+        candidate.registerBeforeFailure = true;
+        candidate.configureFailure =
+                new IllegalStateException("presentation config failed");
+        int backendAttempts = backend.donorProfileAttempts.size();
+
+        assertThrows(IllegalStateException.class,
+                () -> audioManager.registerDonorLoader(
+                        "candidate", loader(candidateDac,
+                                0xE5, (byte) 0x39),
+                        candidateDac, config, candidate));
+
+        assertEquals(backendAttempts, backend.donorProfileAttempts.size(),
+                "presentation must be prepared before backend publication");
+        int commandCount = audioManager.commandTimeline().entryCount();
+        audioManager.playDonorSfx("candidate", 0xE5);
+        assertEquals(commandCount, audioManager.commandTimeline().entryCount());
+        assertThrows(IllegalArgumentException.class,
+                () -> audioManager.presentationCoordFlagHandlersForTesting()
+                        .handlerFor("candidate"));
+
+        candidate.configureFailure = null;
+        audioManager.registerDonorLoader(
+                "candidate", loader(candidateDac, 0xE5, (byte) 0x39),
+                candidateDac, config, candidate);
+        ObservedSource retried = observeDonorSfx("candidate", 0xE5);
+        assertEquals(1, retried.descriptor().dependencyGeneration());
+        assertNotNull(audioManager.presentationCoordFlagHandlersForTesting()
+                .handlerFor("candidate"));
+    }
+
+    @Test
+    void donorRestoreFailureRemovesStaleEntryAndConsumesOneGeneration() {
+        SmpsSequencerConfig config = new SmpsSequencerConfig.Builder().build();
+        DacData oldDac = dac(321);
+        DonorProfile oldProfile = new DonorProfile("s2");
+        audioManager.registerDonorLoader(
+                "s2", loader(oldDac, 0xE2, (byte) 0x41),
+                oldDac, config, oldProfile);
+        ObservedSource initial = observeDonorSfx("s2", 0xE2);
+        DonorProfile candidate = new DonorProfile("s2");
+        DacData candidateDac = dac(322);
+        backend.failDonorProfile = candidate;
+        backend.failDonorRestoreProfile = oldProfile;
+
+        IllegalStateException failure = assertThrows(
+                IllegalStateException.class,
+                () -> audioManager.registerDonorLoader(
+                        "s2", loader(candidateDac, 0xE2, (byte) 0x42),
+                        candidateDac, config, candidate));
+
+        assertEquals(1, failure.getSuppressed().length);
+        int commandCount = audioManager.commandTimeline().entryCount();
+        audioManager.playDonorSfx("s2", 0xE2);
+        assertEquals(commandCount, audioManager.commandTimeline().entryCount(),
+                "a donor with failed rollback must not remain selectable");
+        backend.failDonorProfile = null;
+        backend.failDonorRestoreProfile = null;
+        audioManager.registerDonorLoader(
+                "s2", loader(candidateDac, 0xE2, (byte) 0x42),
+                candidateDac, config, candidate);
+        ObservedSource retried = observeDonorSfx("s2", 0xE2);
+        assertEquals(initial.descriptor().dependencyGeneration() + 2,
+                retried.descriptor().dependencyGeneration());
+    }
+
+    private ObservedSource observeDonorSfx(String gameId, int sfxId) {
+        audioManager.playDonorSfx(gameId, sfxId);
+        audioManager.presentFrame(PresentationMode.SILENT);
+        ObservedSource observed = currentDonorSource(gameId, sfxId);
+        audioManager.update();
+        return observed;
+    }
+
+    private ObservedSource currentDonorSource(String gameId, int sfxId) {
+        var snapshot = audioManager.shadowSmpsDriverSnapshotForTesting();
+        assertNotNull(snapshot);
+        var sequencer = snapshot.sequencers().stream()
+                .filter(entry -> gameId.equals(entry.source().donorGameId())
+                        && entry.source().id() == sfxId)
+                .reduce((first, second) -> second)
+                .orElseThrow();
+        return new ObservedSource(sequencer.source(), sequencer.dacData());
+    }
+
+    private static DacData dac(int cycles) {
+        return new DacData(Map.of(), Map.of(), cycles);
+    }
+
+    private static StubSmpsLoader loader(
+            DacData dac, int sfxId, byte marker) {
+        StubSmpsLoader loader = new StubSmpsLoader(dac);
+        loader.sfxResults.put(sfxId,
+                new StubSmpsData("donor-" + sfxId, marker));
+        return loader;
+    }
+
+    private record ObservedSource(
+            SmpsSourceDescriptor descriptor, DacData dac) {
+    }
+
     // --- Test doubles ---
 
     private AudioCommand.PlaySfx lastSfx() {
@@ -301,7 +559,11 @@ public class TestDonorAudioRouting {
         final String name;
 
         StubSmpsData(String name) {
-            super(new byte[0], 0);
+            this(name, (byte) 0);
+        }
+
+        StubSmpsData(String name, byte marker) {
+            super(new byte[] {marker}, 0);
             this.name = name;
         }
 
@@ -321,6 +583,15 @@ public class TestDonorAudioRouting {
     private static class StubSmpsLoader implements SmpsLoader {
         final Map<Integer, AbstractSmpsData> musicResults = new HashMap<>();
         final Map<Integer, AbstractSmpsData> sfxResults = new HashMap<>();
+        final DacData dac;
+
+        StubSmpsLoader() {
+            this(EMPTY_DAC);
+        }
+
+        StubSmpsLoader(DacData dac) {
+            this.dac = dac;
+        }
 
         @Override
         public AbstractSmpsData loadMusic(int musicId) {
@@ -339,7 +610,48 @@ public class TestDonorAudioRouting {
 
         @Override
         public DacData loadDacData() {
-            return EMPTY_DAC;
+            return dac;
+        }
+    }
+
+    private static final class DonorProfile extends StubAudioProfile {
+        private final String gameId;
+        RuntimeException configureFailure;
+        boolean registerBeforeFailure;
+
+        private DonorProfile(String gameId) {
+            super(new StubSmpsLoader());
+            this.gameId = gameId;
+        }
+
+        @Override
+        public String presentationGameId() {
+            return gameId;
+        }
+
+        @Override
+        public void configurePresentationCoordFlagHandlers(
+                SmpsCoordFlagHandlerOwner owner) {
+            if (registerBeforeFailure) {
+                owner.register(gameId, ignored -> new ArbitraryHandler());
+            }
+            if (configureFailure != null) {
+                throw configureFailure;
+            }
+        }
+    }
+
+    private static final class ArbitraryHandler implements CoordFlagHandler {
+        @Override
+        public boolean handleFlag(
+                CoordFlagContext context, SmpsSequencer.Track track,
+                int command) {
+            return false;
+        }
+
+        @Override
+        public int flagParamLength(int command) {
+            return -1;
         }
     }
 
@@ -359,6 +671,45 @@ public class TestDonorAudioRouting {
         @Override
         public SmpsSequencerConfig getSequencerConfig() {
             return new SmpsSequencerConfig.Builder().build();
+        }
+    }
+
+    private static final class PolicyAudioProfile extends StubAudioProfile {
+        private final String gameId;
+        private final SmpsSequencerConfig config;
+
+        private PolicyAudioProfile(
+                String gameId,
+                SmpsLoader loader,
+                SmpsSequencerConfig config) {
+            super(loader);
+            this.gameId = gameId;
+            this.config = config;
+        }
+
+        @Override
+        public String presentationGameId() {
+            return gameId;
+        }
+
+        @Override
+        public SmpsSequencerConfig getSequencerConfig() {
+            return config;
+        }
+
+        @Override
+        public int getSfxPriority(int soundId) {
+            return 0x31;
+        }
+
+        @Override
+        public boolean isSpecialSfx(int soundId) {
+            return true;
+        }
+
+        @Override
+        public boolean isContinuousSfx(int soundId) {
+            return true;
         }
     }
 
@@ -406,6 +757,27 @@ public class TestDonorAudioRouting {
         String lastSfxName;
         String lastFallbackName;
         SmpsSequencerConfig lastDonorConfig;
+        final java.util.List<GameAudioProfile> donorProfileAttempts =
+                new java.util.ArrayList<>();
+        GameAudioProfile failDonorProfile;
+        GameAudioProfile failDonorRestoreProfile;
+
+        @Override
+        public void registerAudioProfileCoordHandlers(
+                GameAudioProfile profile) {
+            donorProfileAttempts.add(profile);
+            if (profile == failDonorProfile
+                    || profile == failDonorRestoreProfile) {
+                throw new IllegalStateException(
+                        "backend rejected donor profile");
+            }
+        }
+
+        java.util.List<GameAudioProfile> lastDonorProfileAttempts(int count) {
+            return java.util.List.copyOf(donorProfileAttempts.subList(
+                    donorProfileAttempts.size() - count,
+                    donorProfileAttempts.size()));
+        }
 
         @Override
         public void playSfxSmps(AbstractSmpsData data, DacData dacData, float pitch) {
