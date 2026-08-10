@@ -369,9 +369,20 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
 
     public SmpsSequencer(AbstractSmpsData smpsData, DacData dacData, Synthesizer synth,
             MusicRestoreSink audioManager, SmpsSequencerConfig config) {
+        this(smpsData, dacData, synth, audioManager, config, null);
+    }
+
+    public SmpsSequencer(
+            AbstractSmpsData smpsData,
+            DacData dacData,
+            Synthesizer synth,
+            MusicRestoreSink audioManager,
+            SmpsSequencerConfig config,
+            SmpsSourceDescriptor sourceDescriptor) {
         this.smpsData = Objects.requireNonNull(smpsData, "smpsData");
         this.programView = smpsData;
-        this.sourceDescriptor = SmpsSourceDescriptor.from(smpsData);
+        this.sourceDescriptor = sourceDescriptor != null
+                ? sourceDescriptor : SmpsSourceDescriptor.from(smpsData);
         this.audioManager = Objects.requireNonNull(audioManager, "audioManager");
         this.synth = synth;
         this.config = Objects.requireNonNull(config, "config");
