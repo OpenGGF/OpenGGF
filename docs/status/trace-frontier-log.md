@@ -71301,3 +71301,36 @@ landable change, which I implemented directly.
   earlier command named the nonexistent package `com.openggf.game.rewind` and
   executed no tests, so it supplied no evidence. Standalone and complete AIZ
   plus complete-run HCZ are green; HCZ is the next gameplay-order audit target.
+
+## 2026-08-10 — standalone MGZ support-owner regression restored
+
+- Context: `bugfix/s3k-traces` at `7ef34dae0`; validation used JDK 21.0.12 and
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen`. The six protected user edits
+  remained unstaged, no fixture changed, and ring comparison remained
+  error-level through `ToleranceConfig.DEFAULT` / `RingCountMode.FORCE_ERROR`.
+- Regression discovered: a deterministic gameplay-order sweep found standalone
+  MGZ back at raw `35183`, with 8 errors and 0 warnings; the first mismatch was
+  `queue.s3k_kos_direct.busy` (expected `false`, actual `true`). Complete-run MGZ
+  remained green. A solo-fork rerun reproduced the same result, ruling out fork
+  ordering.
+- Root cause: `b7e6fc8b6` replaced the shared capsule's previously proven
+  later-support-owner deferral with a parent-motion-created-eligibility
+  deferral. Those model different native `loc_86770` child-dispatch boundaries:
+  MGZ needs the later support SST to publish current contact before its later
+  button child observes it, while AIZ needs to prevent parent movement folded
+  into one Java entry from creating same-entry child eligibility. The shared
+  owner now exposes both semantic hooks; MGZ selects support publication and AIZ
+  retains parent motion. No trace, frame, route, zone, or fitted constant is
+  consulted (`docs/skdisasm/sonic3k.asm:181588-181647,181739-181800`).
+- Focused command: `mvn -q -Dmse=off
+  -Dtest='com.openggf.game.sonic3k.objects.TestMgzDrillingRobotnikInstance#mgzFloatingCapsuleDefersButtonPastLaterSupportOwner+mgzResultsOwnerRetainsCarryPublicationAcrossLowerSlotDelay,com.openggf.game.sonic3k.objects.TestAiz2BossEndSequenceObjects#floatingCapsuleDefersEligibilityCreatedByCurrentParentMovement+floatingCapsuleDoesNotDeferPlayerAlreadyEligibleBeforeParentMovement+aizCapsuleButtonTriggerDefersParentOpenUntilNextRoutineEntry'
+  test`. Result: 5 tests passed, covering both independent child boundaries.
+- MGZ command: `mvn -q -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1
+  -Dsurefire.runOrder=alphabetical
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kMgzTraceReplay,com.openggf.tests.trace.s3k.TestS3kMgzCompleteRunTraceReplay'
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Standalone and complete-run MGZ passed with 0 errors and 0 warnings.
+- Gameplay-order regression command used the same profile and ROM with
+  standalone and complete-run AIZ plus complete-run HCZ. All represented tests
+  passed with 0 errors and 0 warnings. `TestRewindCoverageGuard` also passed.
+  AIZ, HCZ, and MGZ are green in gameplay order; CNZ is the next target.

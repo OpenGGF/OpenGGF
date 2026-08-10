@@ -73,6 +73,7 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
     private int buttonTriggerSource;
     private int buttonTriggerVIntRunCount = -1;
     private int openFrame = -1;
+    private boolean laterSupportOwnerEligibilityDeferred;
     private boolean parentMotionEligibilityDeferred;
     private boolean routeInitPending;
     private S3kBossExplosionController explosionController;
@@ -321,6 +322,16 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
             if (candidate instanceof AbstractPlayableSprite player
                     && shouldTriggerButton(player, candidate == nativeP1)) {
                 eligibleCandidateFound = true;
+                int supportSlot = player.getInteractSlotIndex();
+                if (defersCollapsedButtonPastLaterSupportOwner()
+                        && !laterSupportOwnerEligibilityDeferred
+                        && supportSlot > getSlotIndex()) {
+                    // The ROM button is a later child SST. A support owner
+                    // after this folded parent has not published its current
+                    // contact state when the parent-equivalent entry runs.
+                    laterSupportOwnerEligibilityDeferred = true;
+                    continue;
+                }
                 if (defersButtonEligibilityCreatedByParentMotion()
                         && !parentMotionEligibilityDeferred
                         && !shouldTriggerButtonAtX(player, candidate == nativeP1, solidBodyX)) {
@@ -343,8 +354,13 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
             }
         }
         if (!eligibleCandidateFound) {
+            laterSupportOwnerEligibilityDeferred = false;
             parentMotionEligibilityDeferred = false;
         }
+    }
+
+    protected boolean defersCollapsedButtonPastLaterSupportOwner() {
+        return false;
     }
 
     protected boolean defersButtonEligibilityCreatedByParentMotion() {

@@ -74,10 +74,10 @@ public class Mgz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
     }
 
     @Override
-    protected boolean defersButtonEligibilityCreatedByParentMotion() {
-        // loc_86770 is a later button-child SST. Preserve its dispatch
-        // boundary when the folded parent movement creates range eligibility
-        // (sonic3k.asm:181588-181647,181739-181800).
+    protected boolean defersCollapsedButtonPastLaterSupportOwner() {
+        // loc_86770 is a later button-child SST. If the triggering player is
+        // supported by an owner after the capsule, that support dispatch must
+        // publish before the button can observe it (sonic3k.asm:181739-181800).
         return true;
     }
 

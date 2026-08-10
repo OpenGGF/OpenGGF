@@ -3,6 +3,10 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: floating S3K end capsules now compose their separate native child
+  dispatch rules instead of replacing MGZ's later-support-owner publication
+  boundary with AIZ's parent-motion boundary. This restores standalone MGZ's
+  direct-Kosinski queue trace while keeping AIZ, HCZ, and complete MGZ green.
 - Fix/Test: AIZ2's folded drawbridge now preserves the ROM's collapse-init
   return boundary when the semantic lower button owner publishes the trigger
   before the bridge dispatch. Its `$0E` countdown starts on the following SST
