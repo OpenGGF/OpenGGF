@@ -26,7 +26,8 @@ import org.junit.jupiter.api.io.TempDir;
 class TestCompleteRunAudioComparator {
     private static final AtomicInteger PROFILE_SEQUENCE = new AtomicInteger();
     private static final int FIRST_FRAME = 860;
-    private static final OwnerRef NONE = new OwnerRef(OwnerClass.NONE, "none", 0, -1);
+    private static final OwnerRef NONE = new OwnerRef(OwnerClass.NONE, "none", 0,
+            OwnerOrigin.NONE, -1);
 
     @TempDir
     Path temp;
@@ -98,7 +99,8 @@ class TestCompleteRunAudioComparator {
         Path reference = writeCapture("reference", referenceProfile, ProducerKind.REFERENCE, 3,
                 this::plainFrame);
         Path engine = writeCapture("engine", engineProfile, ProducerKind.OPENGGF, 3,
-                row -> row == 1 ? requestFrame(row, request(0, 0xc0)) : plainFrame(row));
+                row -> row == 1 ? requestAndDecisionFrame(row, request(0, 0xc0),
+                        decision(0, 1, 2, owner(0, 0xc0)), 0) : plainFrame(row));
 
         CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
 
@@ -156,16 +158,23 @@ class TestCompleteRunAudioComparator {
         assertEquals(CompleteRunAudioReport.Kind.REQUEST_ORDER,
                 CompleteRunAudioComparator.difference(referenceOrder, engineOrder).kind());
 
-        Baseline namedTempo = new Baseline(FIRST_FRAME,
+        Baseline namedTempo = baseline(
                 new NormalizedState(List.of(new StateField("tempo", 1)), inactiveRoles()));
-        Baseline namedSpeed = new Baseline(FIRST_FRAME,
+        Baseline namedSpeed = baseline(
                 new NormalizedState(List.of(new StateField("speed", 1)), inactiveRoles()));
-        Baseline tempoTwo = new Baseline(FIRST_FRAME,
+        Baseline tempoTwo = baseline(
                 new NormalizedState(List.of(new StateField("tempo", 2)), inactiveRoles()));
         assertEquals(CompleteRunAudioReport.Kind.STATE_FIELD_NAME,
                 CompleteRunAudioComparator.difference(namedTempo, namedSpeed).kind());
         assertEquals(CompleteRunAudioReport.Kind.STATE_FIELD_VALUE,
                 CompleteRunAudioComparator.difference(namedTempo, tempoTwo).kind());
+
+        Baseline emptyOwner = baseline(state(1));
+        Baseline liveBaselineOwner = new Baseline(FIRST_FRAME, state(1), List.of(
+                new RoleOwner(HardwareRole.FM1, new OwnerRef(OwnerClass.MUSIC, "baseline", 0xc0,
+                        OwnerOrigin.BASELINE, 0))));
+        assertEquals(CompleteRunAudioReport.Kind.OWNER,
+                CompleteRunAudioComparator.difference(emptyOwner, liveBaselineOwner).kind());
 
         DriverService ownerReference = service(0, List.of(decision(0, 1, 2, owner(0, 0xc0))),
                 List.of(), state(1));
@@ -253,13 +262,15 @@ class TestCompleteRunAudioComparator {
     void retainsOnlyFirstMismatchAndEightCompleteRecordsBeforeAndAfterEachSide() throws Exception {
         TestProfile profile = registerProfile(30);
         IntFunction<Frame> referenceFrames = row -> {
-            if (row == 12) return requestFrame(row, request(0, 0xc0));
-            if (row == 24) return chipFrame(row, 0x33);
+            if (row == 12) return requestAndDecisionFrame(row, request(0, 0xc0),
+                    decision(0, 1, 2, owner(0, 0xc0)), 0);
+            if (row == 24) return chipFrame(row, 1, 0x33);
             return plainFrame(row);
         };
         IntFunction<Frame> engineFrames = row -> {
-            if (row == 12) return requestFrame(row, request(0, 0xc1));
-            if (row == 24) return chipFrame(row, 0x99);
+            if (row == 12) return requestAndDecisionFrame(row, request(0, 0xc1),
+                    decision(0, 1, 2, owner(0, 0xc1)), 0);
+            if (row == 24) return chipFrame(row, 1, 0x99);
             return plainFrame(row);
         };
         Path reference = writeCapture("reference", profile, ProducerKind.REFERENCE, 30, referenceFrames);
@@ -320,6 +331,19 @@ class TestCompleteRunAudioComparator {
 
         assertSemanticFailure(report, CompleteRunAudioReport.Side.REFERENCE,
                 CompleteRunAudioComparator.ValidationException.Kind.SOURCE_REPLACED);
+    }
+
+    @Test
+    void unavailableFilesystemIdentityFailsClosedThroughInjectedProvider() throws Exception {
+        TestProfile profile = registerProfile(1);
+        Path reference = writeCapture("reference", profile, ProducerKind.REFERENCE, 1, this::plainFrame);
+        Path engine = writeCapture("engine", profile, ProducerKind.OPENGGF, 1, this::plainFrame);
+
+        CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine, () -> { },
+                (path, attributes) -> null);
+
+        assertSemanticFailure(report, CompleteRunAudioReport.Side.REFERENCE,
+                CompleteRunAudioComparator.ValidationException.Kind.PUBLICATION_IDENTITY_UNAVAILABLE);
     }
 
     @Test
@@ -449,29 +473,166 @@ class TestCompleteRunAudioComparator {
 
     @Test
     void sameIdOwnersRemainDistinctByOriginatingRequestOrdinal() throws Exception {
-        TestProfile profile = registerProfile(3);
-        IntFunction<Frame> referenceFrames = row -> {
-            if (row == 0) return requestAndDecisionFrame(row, request(0, 0xc0),
-                    decision(0, 1, 2, owner(0, 0xc0)), 0);
-            if (row == 1) return requestAndDecisionFrame(row, request(1, 0xc0),
-                    decision(1, 2, 2, owner(1, 0xc0)), 1);
-            return plainFrame(row);
-        };
-        IntFunction<Frame> engineFrames = row -> {
-            if (row == 0) return requestAndDecisionFrame(row, request(0, 0xc0),
-                    decision(0, 1, 2, owner(0, 0xc0)), 0);
-            if (row == 1) return requestAndDecisionFrame(row, request(1, 0xc0),
-                    decision(1, 2, 2, owner(0, 0xc0)), 1);
-            return plainFrame(row);
-        };
-        Path reference = writeCapture("reference", profile, ProducerKind.REFERENCE, 3, referenceFrames);
-        Path engine = writeCapture("engine", profile, ProducerKind.OPENGGF, 3, engineFrames);
+        DriverService reference = service(0, List.of(ownershipDecision(1, true, "accepted",
+                owner(0, 0xc0), owner(1, 0xc0))), List.of(), state(1));
+        DriverService engine = service(0, List.of(ownershipDecision(1, true, "accepted",
+                owner(0, 0xc0), owner(0, 0xc0))), List.of(), state(1));
+
+        CompleteRunAudioComparator.Difference difference = CompleteRunAudioComparator.difference(
+                frame(reference), frame(engine));
+
+        assertEquals(CompleteRunAudioReport.Kind.OWNER, difference.kind());
+        assertTrue(difference.referenceValue().contains("originOrdinal=1"));
+        assertTrue(difference.engineValue().contains("originOrdinal=0"));
+    }
+
+    @Test
+    void rejectsRepeatedDisplacedNoneAfterTheRoleHasAnOwner() throws Exception {
+        TestProfile profile = registerProfile(2);
+        Path reference = writeCapture("reference", profile, ProducerKind.REFERENCE, 2, this::plainFrame);
+        Path engine = writeCapture("engine", profile, ProducerKind.OPENGGF, 2, row -> {
+            Decision next = ownershipDecision(row, true, "accepted", NONE, owner(row, 0xc0));
+            return requestAndDecisionFrame(row, request(row, 0xc0), next, row);
+        });
 
         CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
 
-        assertEquals(CompleteRunAudioReport.Kind.OWNER, report.kind());
-        assertTrue(report.referenceValue().contains("requestOrdinal=1"));
-        assertTrue(report.engineValue().contains("requestOrdinal=0"));
+        assertSemanticFailure(report, CompleteRunAudioReport.Side.ENGINE,
+                CompleteRunAudioComparator.ValidationException.Kind.OWNER_INVALID);
+    }
+
+    @Test
+    void rejectsDisplacingAnExistingButNoLongerLiveOwner() throws Exception {
+        TestProfile profile = registerProfile(3);
+        Path reference = writeCapture("reference", profile, ProducerKind.REFERENCE, 3, this::plainFrame);
+        Path engine = writeCapture("engine", profile, ProducerKind.OPENGGF, 3, row -> {
+            OwnerRef displaced = row == 0 ? NONE : row == 1 ? owner(0, 0xc0) : owner(0, 0xc0);
+            Decision next = ownershipDecision(row, true, "accepted", displaced, owner(row, 0xc0));
+            return requestAndDecisionFrame(row, request(row, 0xc0), next, row);
+        });
+
+        CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
+
+        assertSemanticFailure(report, CompleteRunAudioReport.Side.ENGINE,
+                CompleteRunAudioComparator.ValidationException.Kind.OWNER_INVALID);
+    }
+
+    @Test
+    void rejectsAcceptedDecisionWhoseFinalOwnerIsNotTheCurrentAdmission() throws Exception {
+        TestProfile profile = registerProfile(1);
+        Path reference = writeCapture("reference", profile, ProducerKind.REFERENCE, 1, this::plainFrame);
+        Decision invalid = ownershipDecision(0, true, "accepted", NONE, NONE);
+        Path engine = writeCapture("engine", profile, ProducerKind.OPENGGF, 1,
+                row -> requestAndDecisionFrame(row, request(0, 0xc0), invalid, 0));
+
+        CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
+
+        assertSemanticFailure(report, CompleteRunAudioReport.Side.ENGINE,
+                CompleteRunAudioComparator.ValidationException.Kind.OWNER_INVALID);
+    }
+
+    @Test
+    void acceptsSameIdRetriggerOnlyWhenAIsDisplacedByOrdinalDistinctB() throws Exception {
+        TestProfile profile = registerProfile(2);
+        IntFunction<Frame> frames = row -> {
+            OwnerRef displaced = row == 0 ? NONE : owner(0, 0xc0);
+            Decision next = ownershipDecision(row, true, "accepted", displaced, owner(row, 0xc0));
+            return requestAndDecisionFrame(row, request(row, 0xc0), next, row);
+        };
+        Path reference = writeCapture("reference", profile, ProducerKind.REFERENCE, 2, frames);
+        Path engine = writeCapture("engine", profile, ProducerKind.OPENGGF, 2, frames);
+
+        assertEquals(CompleteRunAudioReport.Kind.MATCH,
+                CompleteRunAudioComparator.compare(reference, engine).kind());
+    }
+
+    @Test
+    void rejectedDecisionPreservesTheCurrentLiveOwner() throws Exception {
+        TestProfile profile = registerProfile(2);
+        IntFunction<Frame> frames = row -> {
+            Decision next = row == 0
+                    ? ownershipDecision(0, true, "accepted", NONE, owner(0, 0xc0))
+                    : ownershipDecision(1, false, "rejected", owner(0, 0xc0), owner(0, 0xc0));
+            return requestAndDecisionFrame(row, request(row, 0xc0), next, row);
+        };
+        Path reference = writeCapture("reference", profile, ProducerKind.REFERENCE, 2, frames);
+        Path engine = writeCapture("engine", profile, ProducerKind.OPENGGF, 2, frames);
+
+        assertEquals(CompleteRunAudioReport.Kind.MATCH,
+                CompleteRunAudioComparator.compare(reference, engine).kind());
+    }
+
+    @Test
+    void baselineOwnerCanBeDisplacedWithoutCollidingWithRequestOrdinalZero() throws Exception {
+        OwnerRef baselineOwner = new OwnerRef(OwnerClass.MUSIC, "music.81", 0x81,
+                OwnerOrigin.BASELINE, 0);
+        TestProfile profile = profile("comparator.test." + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        profile.baselineRoleOwners = List.of(new RoleOwner(HardwareRole.FM1, baselineOwner));
+        CompleteRunAudioProfiles.register(profile);
+        IntFunction<Frame> frames = row -> requestAndDecisionFrame(row, request(0, 0xc0),
+                ownershipDecision(0, true, "accepted", baselineOwner, owner(0, 0xc0)), 0);
+        Path reference = writeCapture("reference", profile, ProducerKind.REFERENCE, 1, frames);
+        Path engine = writeCapture("engine", profile, ProducerKind.OPENGGF, 1, frames);
+
+        assertEquals(CompleteRunAudioReport.Kind.MATCH,
+                CompleteRunAudioComparator.compare(reference, engine).kind());
+    }
+
+    @Test
+    void rejectsPendingRequestsBeyondTheProfileBoundAndAtTerminal() throws Exception {
+        TestProfile capacityProfile = registerProfile(1);
+        List<Request> requests = new ArrayList<>();
+        for (int ordinal = 0; ordinal < 5; ordinal++) requests.add(request(ordinal, 0xc0));
+        Path capacityReference = writeCapture("capacity-reference", capacityProfile,
+                ProducerKind.REFERENCE, 1, this::plainFrame);
+        Path overCapacity = writeCapture("over-capacity", capacityProfile, ProducerKind.OPENGGF, 1,
+                row -> new Frame(FIRST_FRAME, "test", false, requests, List.of()));
+
+        assertSemanticFailure(CompleteRunAudioComparator.compare(capacityReference, overCapacity),
+                CompleteRunAudioReport.Side.ENGINE,
+                CompleteRunAudioComparator.ValidationException.Kind.PENDING_CAPACITY_INVALID);
+
+        TestProfile terminalProfile = registerProfile(1);
+        Path terminalReference = writeCapture("terminal-reference", terminalProfile,
+                ProducerKind.REFERENCE, 1, this::plainFrame);
+        Path unresolved = writeCapture("unresolved", terminalProfile, ProducerKind.OPENGGF, 1,
+                row -> requestFrame(row, request(0, 0xc0)));
+
+        assertSemanticFailure(CompleteRunAudioComparator.compare(terminalReference, unresolved),
+                CompleteRunAudioReport.Side.ENGINE,
+                CompleteRunAudioComparator.ValidationException.Kind.PENDING_UNRESOLVED);
+    }
+
+    @Test
+    void explicitBoundedTerminalPendingAllowanceIsHonored() throws Exception {
+        TestProfile profile = profile("comparator.test." + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        profile.pendingPolicy = new PendingRequestPolicy(4, 1,
+                "fixture ends after mailbox submission but before the next service");
+        CompleteRunAudioProfiles.register(profile);
+        IntFunction<Frame> frames = row -> requestFrame(row, request(0, 0xc0));
+        Path reference = writeCapture("reference", profile, ProducerKind.REFERENCE, 1, frames);
+        Path engine = writeCapture("engine", profile, ProducerKind.OPENGGF, 1, frames);
+
+        assertEquals(CompleteRunAudioReport.Kind.MATCH,
+                CompleteRunAudioComparator.compare(reference, engine).kind());
+    }
+
+    @Test
+    void semanticRetentionRemainsConstantAcrossHalfAMillionCompletedRequests() throws Exception {
+        int frames = 500_000;
+        TestProfile profile = profile("comparator.stress." + PROFILE_SEQUENCE.incrementAndGet(), frames);
+        Metadata metadata = metadata(profile, ProducerKind.OPENGGF,
+                profile.producerRuntimeIdentities().get(ProducerKind.OPENGGF));
+
+        CompleteRunAudioComparator.ValidationDiagnostics diagnostics =
+                CompleteRunAudioComparator.validateSemanticsForDiagnostics(metadata, profile,
+                        CompleteRunAudioReport.Side.ENGINE, stressRecords(frames));
+
+        assertEquals(1, diagnostics.peakPendingRequests());
+        assertEquals(0, diagnostics.terminalPendingRequests());
+        assertEquals(0, diagnostics.peakSavedOwners());
+        assertEquals(1, diagnostics.liveRoleOwners());
+        assertEquals(500_000, diagnostics.completedRequests());
     }
 
     @Test
@@ -502,7 +663,7 @@ class TestCompleteRunAudioComparator {
                 profile.producerRuntimeIdentities().get(ProducerKind.OPENGGF));
         Path reference = writeCapture("reference", referenceMetadata, 2, this::plainFrame);
         List<CompleteRunAudioTrace.Record> outside = new ArrayList<>();
-        outside.add(new Baseline(FIRST_FRAME, state(1)));
+        outside.add(baseline(state(1)));
         outside.add(plainFrame(0));
         outside.add(plainFrame(1));
         outside.add(new Lifecycle(0, FIRST_FRAME + 2, "pulse", Map.of("payload", "outside")));
@@ -513,7 +674,7 @@ class TestCompleteRunAudioComparator {
                 CompleteRunAudioComparator.ValidationException.Kind.LIFECYCLE_INVALID);
 
         List<CompleteRunAudioTrace.Record> regressing = new ArrayList<>();
-        regressing.add(new Baseline(FIRST_FRAME, state(1)));
+        regressing.add(baseline(state(1)));
         regressing.add(new Lifecycle(0, FIRST_FRAME + 1, "pulse", Map.of("payload", "later")));
         regressing.add(new Lifecycle(1, FIRST_FRAME, "pulse", Map.of("payload", "earlier")));
         regressing.add(plainFrame(0));
@@ -525,7 +686,7 @@ class TestCompleteRunAudioComparator {
                 CompleteRunAudioComparator.ValidationException.Kind.LIFECYCLE_INVALID);
 
         List<CompleteRunAudioTrace.Record> futureLifecycleBeforeEarlierFrame = new ArrayList<>();
-        futureLifecycleBeforeEarlierFrame.add(new Baseline(FIRST_FRAME, state(1)));
+        futureLifecycleBeforeEarlierFrame.add(baseline(state(1)));
         futureLifecycleBeforeEarlierFrame.add(
                 new Lifecycle(0, FIRST_FRAME + 1, "pulse", Map.of("payload", "future")));
         futureLifecycleBeforeEarlierFrame.add(plainFrame(0));
@@ -548,7 +709,7 @@ class TestCompleteRunAudioComparator {
                 profile.producerRuntimeIdentities().get(ProducerKind.OPENGGF));
         Path reference = writeCapture("reference", referenceMetadata, 1, this::plainFrame);
         List<CompleteRunAudioTrace.Record> records = new ArrayList<>();
-        records.add(new Baseline(FIRST_FRAME, state(1)));
+        records.add(baseline(state(1)));
         records.add(new Lifecycle(0, FIRST_FRAME, "pulse", Map.of("wrong", "field")));
         records.add(plainFrame(0));
         Path engine = writeRecords("engine", engineMetadata, records);
@@ -560,8 +721,8 @@ class TestCompleteRunAudioComparator {
     }
 
     @Test
-    void streamsFiftyThousandHighEntropyFramesInSeparateThirtyTwoMiBJvm() throws Exception {
-        int frames = 50_000;
+    void streamsMaximumCompleteRunHighEntropyFramesInSeparateThirtyTwoMiBJvm() throws Exception {
+        int frames = 434_417;
         TestProfile profile = registerProfile(frames);
         Path reference = writeStreamingCapture("large-reference", profile, ProducerKind.REFERENCE, frames);
         Path engine = writeStreamingCapture("large-engine", profile, ProducerKind.OPENGGF, frames);
@@ -575,7 +736,7 @@ class TestCompleteRunAudioComparator {
                 () -> "engine compressed input was only " + engineCompressedBytes + " bytes");
         assertTrue(compressedBytes > 64L * 1024 * 1024,
                 () -> "combined compressed inputs were only " + compressedBytes + " bytes");
-        assertTrue(uncompressedBytes > 160L * 1024 * 1024,
+        assertTrue(uncompressedBytes > 256L * 1024 * 1024,
                 () -> "combined canonical inputs were only " + uncompressedBytes + " bytes");
 
         String java = Path.of(System.getProperty("java.home"), "bin", "java").toString();
@@ -586,7 +747,7 @@ class TestCompleteRunAudioComparator {
         int status = process.waitFor();
         String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         assertEquals(0, status, output);
-        assertTrue(output.contains("MATCH frames=50000 drained=true"), output);
+        assertTrue(output.contains("MATCH frames=" + frames + " drained=true"), output);
     }
 
     public static void main(String[] args) {
@@ -649,7 +810,8 @@ class TestCompleteRunAudioComparator {
     private Path writeCapture(String name, Metadata metadata, int frames, IntFunction<Frame> framesFactory)
             throws Exception {
         List<CompleteRunAudioTrace.Record> records = new ArrayList<>();
-        records.add(new Baseline(FIRST_FRAME, state(1)));
+        records.add(new Baseline(FIRST_FRAME, state(1),
+                CompleteRunAudioProfiles.require(metadata.profileId()).baselineRoleOwners()));
         for (int row = 0; row < frames; row++) records.add(framesFactory.apply(row));
         records.add(terminal(metadata.fixture().exclusiveEnd(), records));
         Path output = temp.resolve(name);
@@ -676,7 +838,7 @@ class TestCompleteRunAudioComparator {
             @Override public CompleteRunAudioTrace.Record next() {
                 if (!hasNext()) throw new NoSuchElementException();
                 long current = cursor++;
-                if (current == 0) return new Baseline(FIRST_FRAME, state(1));
+                if (current == 0) return baseline(state(1));
                 if (current == 2L * frames + 1) {
                     return new Terminal(FIRST_FRAME + frames, frames, frames, frames, frames,
                             frames, frames, frames, digest);
@@ -693,7 +855,7 @@ class TestCompleteRunAudioComparator {
     private static String streamingRoot(int frames) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            update(digest, new Baseline(FIRST_FRAME, state(1)));
+            update(digest, baseline(state(1)));
             for (int row = 0; row < frames; row++) {
                 update(digest, entropyLifecycle(row, frames));
                 update(digest, entropyFrame(row));
@@ -707,10 +869,10 @@ class TestCompleteRunAudioComparator {
     private static Frame entropyFrame(int row) {
         Request request = request(row, 0xc0);
         OwnerRef owner = owner(row, 0xc0);
-        Decision decision = new Decision(row, 0xc0, "sfx.c0", true,
-                "accepted." + Integer.toUnsignedString(Integer.rotateLeft(row * 0x9e3779b9, 13), 16),
+        Decision decision = new Decision(row, 0xc0, "sfx.c0", true, "accepted",
                 row & 0xff, (row + 1) & 0xff, List.of(HardwareRole.FM1),
-                List.of(new RoleDecision(HardwareRole.FM1, NONE, owner)));
+                List.of(new RoleDecision(HardwareRole.FM1,
+                        row == 0 ? NONE : owner(row - 1L, 0xc0), owner)));
         NormalizedState state = new NormalizedState(List.of(new StateField("tempo", entropy(row))),
                 List.of(new RoleState(HardwareRole.FM1, true,
                         List.of(new StateField("cursor", Integer.toUnsignedLong(row * 0x45d9f3b))))));
@@ -726,10 +888,29 @@ class TestCompleteRunAudioComparator {
         return new Lifecycle(row, FIRST_FRAME + row, "pulse", Map.of("payload", entropy(frames + row)));
     }
 
+    private static Iterator<CompleteRunAudioTrace.Record> stressRecords(int frames) {
+        return new Iterator<>() {
+            private int cursor = -1;
+            @Override public boolean hasNext() { return cursor <= frames; }
+            @Override public CompleteRunAudioTrace.Record next() {
+                if (!hasNext()) throw new NoSuchElementException();
+                if (cursor++ == -1) return baseline(state(1));
+                int row = cursor - 1;
+                if (row == frames) {
+                    return new Terminal(FIRST_FRAME + frames, frames, frames, frames, frames,
+                            0, 0, 0, "a".repeat(64));
+                }
+                OwnerRef displaced = row == 0 ? NONE : owner(row - 1L, 0xc0);
+                return requestAndDecisionFrame(row, request(row, 0xc0),
+                        ownershipDecision(row, true, "accepted", displaced, owner(row, 0xc0)), row);
+            }
+        };
+    }
+
     private static String entropy(int row) {
-        StringBuilder value = new StringBuilder(1_024);
+        StringBuilder value = new StringBuilder(160);
         long state = 0x9e3779b97f4a7c15L ^ row;
-        for (int index = 0; index < 128; index++) {
+        for (int index = 0; index < 20; index++) {
             state += 0x9e3779b97f4a7c15L;
             long mixed = state;
             mixed = (mixed ^ (mixed >>> 30)) * 0xbf58476d1ce4e5b9L;
@@ -836,9 +1017,10 @@ class TestCompleteRunAudioComparator {
                 List.of(service(serviceOrdinal, List.of(decision), List.of(), state(1))));
     }
 
-    private static Frame chipFrame(int row, int value) {
+    private static Frame chipFrame(int row, int serviceOrdinal, int value) {
         return new Frame(FIRST_FRAME + row, "test", false, List.of(),
-                List.of(service(0, List.of(), List.of(new YmWrite(0, 0, 0x22, value)), state(1))));
+                List.of(service(serviceOrdinal, List.of(),
+                        List.of(new YmWrite(0, 0, 0x22, value)), state(1))));
     }
 
     private static Frame frame(DriverService service) {
@@ -856,9 +1038,17 @@ class TestCompleteRunAudioComparator {
                 List.of(new RoleDecision(HardwareRole.FM1, NONE, finalOwner)));
     }
 
+    private static Decision ownershipDecision(long requestOrdinal, boolean accepted, String reason,
+            OwnerRef displacedOwner, OwnerRef finalOwner) {
+        return new Decision(requestOrdinal, 0xc0, "sfx.c0", accepted, reason, 1, accepted ? 2 : 1,
+                List.of(HardwareRole.FM1),
+                List.of(new RoleDecision(HardwareRole.FM1, displacedOwner, finalOwner)));
+    }
+
     private static Decision decisionForKey(long requestOrdinal, String key) {
         int nativeId = key.endsWith("a") ? 0xc0 : 0xc1;
-        OwnerRef finalOwner = new OwnerRef(OwnerClass.SFX, key, nativeId, requestOrdinal);
+        OwnerRef finalOwner = new OwnerRef(OwnerClass.SFX, key, nativeId,
+                OwnerOrigin.REQUEST, requestOrdinal);
         return new Decision(requestOrdinal, nativeId, key, true, "accepted", 1, 2,
                 List.of(HardwareRole.FM1), List.of(new RoleDecision(HardwareRole.FM1, NONE, finalOwner)));
     }
@@ -871,7 +1061,7 @@ class TestCompleteRunAudioComparator {
 
     private static OwnerRef owner(long requestOrdinal, int nativeId) {
         return new OwnerRef(OwnerClass.SFX, "sfx." + Integer.toHexString(nativeId), nativeId,
-                requestOrdinal);
+                OwnerOrigin.REQUEST, requestOrdinal);
     }
 
     private static DriverService service(long ordinal, List<Decision> decisions, List<ChipEvent> chipEvents,
@@ -886,6 +1076,11 @@ class TestCompleteRunAudioComparator {
 
     private static NormalizedState state(int tempo) {
         return new NormalizedState(List.of(new StateField("tempo", tempo)), inactiveRoles());
+    }
+
+    private static Baseline baseline(NormalizedState state) {
+        return new Baseline(FIRST_FRAME, state,
+                List.of(new RoleOwner(HardwareRole.FM1, NONE)));
     }
 
     private static List<RoleState> inactiveRoles() {
@@ -932,6 +1127,8 @@ class TestCompleteRunAudioComparator {
         private final CompleteRunFixture fixture;
         private final Map<ProducerKind, ProducerRuntimeIdentity> runtimes = new LinkedHashMap<>();
         private final Map<ProducerKind, ObserverProof> observers = new LinkedHashMap<>();
+        private List<RoleOwner> baselineRoleOwners = List.of(new RoleOwner(HardwareRole.FM1, NONE));
+        private PendingRequestPolicy pendingPolicy = new PendingRequestPolicy(4, 0, null);
 
         private TestProfile(String id, CompleteRunFixture fixture) {
             this.id = id;
@@ -976,7 +1173,15 @@ class TestCompleteRunAudioComparator {
             NativeSoundIdentity c1 = new NativeSoundIdentity(OwnerClass.SFX, "sfx.c1", 0xc1);
             return Map.of(c0, List.of(c0), c1, List.of(c1));
         }
-        @Override public Map<Long, NativeSoundIdentity> baselineOwnerIdentities() { return Map.of(); }
+        @Override public List<RoleOwner> baselineRoleOwners() { return baselineRoleOwners; }
+        @Override public Map<String, OwnershipTransition> ownershipTransitions() {
+            return Map.of("accepted", OwnershipTransition.ACQUIRE_REQUEST,
+                    "rejected", OwnershipTransition.REJECT_PRESERVE);
+        }
+        @Override public PendingRequestPolicy pendingRequestPolicy() {
+            return pendingPolicy;
+        }
+        @Override public int maximumRestoreDepth() { return 0; }
         @Override public Map<String, LifecycleRule> lifecycleRules() {
             return Map.of("pulse", new LifecycleRule("pulse", List.of("payload")));
         }

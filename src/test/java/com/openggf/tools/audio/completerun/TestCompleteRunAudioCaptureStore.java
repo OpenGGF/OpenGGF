@@ -214,13 +214,13 @@ class TestCompleteRunAudioCaptureStore {
 
     @Test
     void handAuthoredCanonicalBaselineVectorHasItsPinnedBytesAndDigest() throws Exception {
-        String canonical = "{\"type\":\"baseline\",\"value\":{\"absoluteFrame\":860,\"state\":{\"fields\":[{\"name\":\"tempo\",\"value\":1}],\"roles\":[{\"role\":\"FM1\",\"active\":false,\"fields\":[]}]}}}";
-        Baseline baseline = new Baseline(860, new NormalizedState(List.of(new StateField("tempo", 1)),
+        String canonical = "{\"type\":\"baseline\",\"value\":{\"absoluteFrame\":860,\"state\":{\"fields\":[{\"name\":\"tempo\",\"value\":1}],\"roles\":[{\"role\":\"FM1\",\"active\":false,\"fields\":[]}]},\"roleOwners\":[{\"role\":\"FM1\",\"owner\":{\"ownerClass\":\"NONE\",\"contentKey\":\"none\",\"nativeId\":0,\"origin\":\"NONE\",\"originOrdinal\":-1}}]}}";
+        Baseline baseline = baseline(new NormalizedState(List.of(new StateField("tempo", 1)),
                 List.of(new RoleState(HardwareRole.FM1, false, List.of()))));
 
         assertEquals(canonical, CompleteRunAudioJson.writeRecord(baseline));
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
-        assertEquals("31bc0003ce3728fe984a1f569fd67d082bf466c7b4c46759f294a07ded892520",
+        assertEquals("be049d6086f32d9e4a38e54209f7a33cf9610f981330b977485b5720cd0e2158",
                 HexFormat.of().formatHex(digest.digest((canonical + "\n").getBytes(StandardCharsets.UTF_8))));
     }
 
@@ -243,15 +243,15 @@ class TestCompleteRunAudioCaptureStore {
         store.writeNew(output, metadata(1), records(1).iterator());
         // Generated once with RFC 1952/JDK 21 gzip and this literal JSON fixture, then pasted.
         String canonical = """
-                {"type":"baseline","value":{"absoluteFrame":860,"state":{"fields":[{"name":"tempo","value":1}],"roles":[{"role":"FM1","active":false,"fields":[]}]}}}
+                {"type":"baseline","value":{"absoluteFrame":860,"state":{"fields":[{"name":"tempo","value":1}],"roles":[{"role":"FM1","active":false,"fields":[]}]},"roleOwners":[{"role":"FM1","owner":{"ownerClass":"NONE","contentKey":"none","nativeId":0,"origin":"NONE","originOrdinal":-1}}]}}
                 {"type":"frame","value":{"absoluteFrame":860,"segment":"test","lag":false,"requests":[],"services":[]}}
-                {"type":"terminal","value":{"exclusiveEnd":861,"frameCount":1,"requestCount":0,"serviceCount":0,"decisionCount":0,"ymCount":0,"psgCount":0,"lifecycleCount":0,"rootDigest":"7d5d899ef7d5cdd704afbf34da0e9eba8abec5e55fb56e7e8c34bed308b245b4"}}
+                {"type":"terminal","value":{"exclusiveEnd":861,"frameCount":1,"requestCount":0,"serviceCount":0,"decisionCount":0,"ymCount":0,"psgCount":0,"lifecycleCount":0,"rootDigest":"b1e8d623113c86c6661b86981adb17bf85608472f5adeb369e9c1c3343d4cde9"}}
                 """;
-        String gzip = "1f8b08000000000000ff854fbb6e843010ecf3195b53400e8e479bcb75f98288626daf912563136c5010e2df632001ba74b3b3b333b333f8a923a880a123ad0c410423ea2150332073560f9e9e3db68128ee7104cea3df965291160eaacf19ccb6064f6d67cffb64a923e8ada65db4a2207a7e244182dcab318c12b5a3e8f4aa977a599697f9af95dc92ffab444d4bc66f0d9c0f6a8dcd61ddd3d710d8cd7c95f6a3e2b4475d723cf5ad32a8af51f4cdf5e042cd7723d6a424daebbcd9610d4b0eef5f223eec4f4210574e597332537be2ce35e7a095243e717db9eeadf50fd5ac4f55908b4c14654932002e441ea72899bca502632a8961818c784659265976a79c0a7e4b19895b5cb0d7346329847f7f0071bd503eee010000";
+        String gzip = "1f8b08000000000000ff8552416ec32010bcf7199c5d29d409b17d4d13a9aa9a3ca0ca01c3da42c290024e6b59fe7b17dcc63954ea8d9d9ddd99593192305c8054a4e61eb432403272e5ba476824bcf656f7010e8e7708146c95111f7848cd4681969e54ef2331a94d027417bbccd3e99c116735cca4f842d2e18d22858ba0ae58365c7bc8965de7e93ccd43a74f03ee8f491bf1a89f1e3bcd3d92c8f174dc63535813c0845718103336a5313c4abd4852a17beb54abcc3230d7272795e19a548f744203d3c3f87b952625ffef24d076a89a2ee003b2356f6fd11c7cf488a67091eaae4ac01cf54e2780eb92853b29f812baf7e87d6f6454a2d96c6767fb28466fbb7f80d56dfd024810ca2b6b1664e896f7c5b74ba155036210fa6eda591b9e551b43e107a15048f694539a8b8209c618ad0b561694cb9a6eeba6d8b055b1de3e351b2ea1ce5909a5a022cfd7b95c0b0925c1bcdf3fc0b10e6e020000";
         String manifest = """
-                {"schema":"complete_run_audio.v1","metadata":{"schema":"complete_run_audio.v1","profileId":"store.test.1","fixture":{"romSha1":"0000000000000000000000000000000000000000","romCrc32":"11111111","bk2Sha256":"2222222222222222222222222222222222222222222222222222222222222222","bk2RowCount":861,"runManifestSha256":"3333333333333333333333333333333333333333333333333333333333333333","segments":[{"id":"test","firstFrame":860,"exclusiveEnd":861}],"firstFrame":860,"exclusiveEnd":861},"producerKind":"OPENGGF","producerRuntimeIdentity":{"producerName":"OpenGGF","producerVersion":"test","emulatorName":"OpenGGF","emulatorVersion":"test","coreName":"SMPS","coreVersion":"test","artifactSha256":{"OPENGGF_PRODUCER":"4444444444444444444444444444444444444444444444444444444444444444"}},"observerProof":{"observerProfile":"test","callbackSource":"test","callbacks":[{"callback":"service","observations":1}]},"chunkPolicy":{"frameRows":4096,"compression":"gzip","gzipTimestamp":0},"hardwareRoles":["FM1"],"stateInventory":{"globalFields":["tempo"],"activeRoleFields":["cursor"]}},"chunks":[{"file":"000000.jsonl.gz","frame_rows":1,"first_frame":860,"exclusive_end":861,"compressed_sha256":"bf493ec0ed309fbebf1733445986e5875d6dbe4fd135e46b7c6d38075aebdc4c","uncompressed_sha256":"eb37fb31d069b5c15e809d896d03c226d623150d8b9067315bc7c1f9237550dc"}],"root_digest":"7d5d899ef7d5cdd704afbf34da0e9eba8abec5e55fb56e7e8c34bed308b245b4"}""";
+                {"schema":"complete_run_audio.v1","metadata":{"schema":"complete_run_audio.v1","profileId":"store.test.1","fixture":{"romSha1":"0000000000000000000000000000000000000000","romCrc32":"11111111","bk2Sha256":"2222222222222222222222222222222222222222222222222222222222222222","bk2RowCount":861,"runManifestSha256":"3333333333333333333333333333333333333333333333333333333333333333","segments":[{"id":"test","firstFrame":860,"exclusiveEnd":861}],"firstFrame":860,"exclusiveEnd":861},"producerKind":"OPENGGF","producerRuntimeIdentity":{"producerName":"OpenGGF","producerVersion":"test","emulatorName":"OpenGGF","emulatorVersion":"test","coreName":"SMPS","coreVersion":"test","artifactSha256":{"OPENGGF_PRODUCER":"4444444444444444444444444444444444444444444444444444444444444444"}},"observerProof":{"observerProfile":"test","callbackSource":"test","callbacks":[{"callback":"service","observations":1}]},"chunkPolicy":{"frameRows":4096,"compression":"gzip","gzipTimestamp":0},"hardwareRoles":["FM1"],"stateInventory":{"globalFields":["tempo"],"activeRoleFields":["cursor"]}},"chunks":[{"file":"000000.jsonl.gz","frame_rows":1,"first_frame":860,"exclusive_end":861,"compressed_sha256":"332dc171a308bea5b321e61bb194206ca1f1d105612e93e3d6a7416d98860932","uncompressed_sha256":"6a7620780a2777027e612bb7c9791541511a45bff6e77f06febe9f0260b19da2"}],"root_digest":"b1e8d623113c86c6661b86981adb17bf85608472f5adeb369e9c1c3343d4cde9"}""";
         byte[] actual = Files.readAllBytes(output.resolve("chunks/000000.jsonl.gz"));
-        assertArrayEquals(HexFormat.of().parseHex(gzip), actual);
+        assertEquals(gzip, HexFormat.of().formatHex(actual));
         assertEquals(manifest, Files.readString(output.resolve("manifest.json")));
         try (var input = new GZIPInputStream(new java.io.ByteArrayInputStream(actual))) {
             assertEquals(canonical, new String(input.readAllBytes(), StandardCharsets.UTF_8));
@@ -322,7 +322,7 @@ class TestCompleteRunAudioCaptureStore {
         List<CompleteRunAudioTrace.Record> records = new ArrayList<>();
         NormalizedState state = new NormalizedState(List.of(new StateField("tempo", 1)),
                 List.of(new RoleState(HardwareRole.FM1, false, List.of())));
-        records.add(new Baseline(860, state));
+        records.add(baseline(state));
         for (int index = 0; index < frames; index++) {
             records.add(new Frame(860 + index, "test", false, List.of(), List.of()));
         }
@@ -334,14 +334,15 @@ class TestCompleteRunAudioCaptureStore {
         NormalizedState state = new NormalizedState(List.of(new StateField("tempo", 1)),
                 List.of(new RoleState(HardwareRole.FM1, true, List.of(new StateField("cursor", 4)))));
         Request request = new Request(0, OwnerClass.SFX, "sfx.explosion", 0xc0, "mailbox", 0);
-        OwnerRef none = new OwnerRef(OwnerClass.NONE, "none", 0, -1);
-        OwnerRef owner = new OwnerRef(OwnerClass.SFX, "sfx.explosion", 0xc0, 0);
+        OwnerRef none = noneOwner();
+        OwnerRef owner = new OwnerRef(OwnerClass.SFX, "sfx.explosion", 0xc0,
+                OwnerOrigin.REQUEST, 0);
         Decision decision = new Decision(0, 0xc0, "sfx.explosion", true, "accepted", 1, 2,
                 List.of(HardwareRole.FM1), List.of(new RoleDecision(HardwareRole.FM1, none, owner)));
         DriverService service = new DriverService(0, "driver", List.of(decision), state,
                 List.of(new YmWrite(0, 0, 0x22, 0x33), new PsgWrite(1, 0x44)));
         List<CompleteRunAudioTrace.Record> records = new ArrayList<>();
-        records.add(new Baseline(860, state));
+        records.add(baseline(state));
         records.add(new Lifecycle(0, 860, "reset", Map.of("reason", "test")));
         records.add(new Frame(860, "test", false, List.of(request), List.of(service)));
         records.add(new Terminal(861, 1, 1, 1, 1, 1, 1, 1, root(records)));
@@ -358,7 +359,7 @@ class TestCompleteRunAudioCaptureStore {
             @Override public boolean hasNext() { return cursor <= frames; }
             @Override public CompleteRunAudioTrace.Record next() {
                 if (!hasNext()) throw new java.util.NoSuchElementException();
-                if (cursor++ == -1) return new Baseline(860, baselineState);
+                if (cursor++ == -1) return baseline(baselineState);
                 int row = cursor - 1;
                 if (row == frames) return new Terminal(860 + frames, frames, frames / 64, frames / 64,
                         frames / 64, frames / 64, frames / 64, 0, digest);
@@ -370,7 +371,7 @@ class TestCompleteRunAudioCaptureStore {
     private static String hostileRoot(int frames, NormalizedState baselineState) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            digest.update((CompleteRunAudioJson.writeRecord(new Baseline(860, baselineState)) + "\n")
+            digest.update((CompleteRunAudioJson.writeRecord(baseline(baselineState)) + "\n")
                     .getBytes(StandardCharsets.UTF_8));
             for (int row = 0; row < frames; row++) {
                 digest.update((CompleteRunAudioJson.writeRecord(hostileFrame(row)) + "\n")
@@ -388,8 +389,9 @@ class TestCompleteRunAudioCaptureStore {
         NormalizedState state = new NormalizedState(List.of(new StateField("tempo", row)),
                 List.of(new RoleState(HardwareRole.FM1, true, List.of(new StateField("cursor", row)))));
         Request request = new Request(row, OwnerClass.SFX, "sfx." + segment, row & 0xff, "hostile", row);
-        OwnerRef none = new OwnerRef(OwnerClass.NONE, "none", 0, -1);
-        OwnerRef owner = new OwnerRef(OwnerClass.SFX, "sfx." + segment, row & 0xff, row);
+        OwnerRef none = noneOwner();
+        OwnerRef owner = new OwnerRef(OwnerClass.SFX, "sfx." + segment, row & 0xff,
+                OwnerOrigin.REQUEST, row);
         Decision decision = new Decision(row, row & 0xff, "sfx." + segment, true, "accepted", row, row + 1,
                 List.of(HardwareRole.FM1), List.of(new RoleDecision(HardwareRole.FM1, none, owner)));
         DriverService service = new DriverService(row, "hostile." + segment, List.of(decision), state,
@@ -405,6 +407,15 @@ class TestCompleteRunAudioCaptureStore {
         } catch (java.security.NoSuchAlgorithmException failure) {
             throw new AssertionError(failure);
         }
+    }
+
+    private static Baseline baseline(NormalizedState state) {
+        return new Baseline(860, state,
+                List.of(new RoleOwner(HardwareRole.FM1, noneOwner())));
+    }
+
+    private static OwnerRef noneOwner() {
+        return new OwnerRef(OwnerClass.NONE, "none", 0, OwnerOrigin.NONE, -1);
     }
 
     private static String root(List<CompleteRunAudioTrace.Record> records) {

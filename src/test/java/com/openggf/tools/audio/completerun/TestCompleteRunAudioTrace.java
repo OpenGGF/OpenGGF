@@ -28,8 +28,47 @@ class TestCompleteRunAudioTrace {
 
     @Test
     void sameIdOwnersRemainDistinctByRequestOrdinal() {
-        assertNotEquals(new OwnerRef(OwnerClass.SFX, "sfx.explosion", 0xC0, 7),
-                new OwnerRef(OwnerClass.SFX, "sfx.explosion", 0xC0, 8));
+        assertNotEquals(new OwnerRef(OwnerClass.SFX, "sfx.explosion", 0xC0,
+                        OwnerOrigin.REQUEST, 7),
+                new OwnerRef(OwnerClass.SFX, "sfx.explosion", 0xC0,
+                        OwnerOrigin.REQUEST, 8));
+    }
+
+    @Test
+    void baselineAndRequestOriginsCannotCollideAtTheSameNumericOrdinal() {
+        OwnerRef baseline = new OwnerRef(OwnerClass.MUSIC, "music.81", 0x81,
+                OwnerOrigin.BASELINE, 0);
+        OwnerRef request = new OwnerRef(OwnerClass.MUSIC, "music.81", 0x81,
+                OwnerOrigin.REQUEST, 0);
+
+        assertNotEquals(baseline, request);
+    }
+
+    @Test
+    void ownerOriginAndIdentityShapeMustAgree() {
+        assertThrows(IllegalArgumentException.class, () -> new OwnerRef(
+                OwnerClass.NONE, "none", 0, OwnerOrigin.REQUEST, 0));
+        assertThrows(IllegalArgumentException.class, () -> new OwnerRef(
+                OwnerClass.SFX, "sfx.explosion", 0xc0, OwnerOrigin.NONE, -1));
+        assertThrows(IllegalArgumentException.class, () -> new OwnerRef(
+                OwnerClass.SFX, "sfx.explosion", 0xc0, OwnerOrigin.REQUEST, -1));
+    }
+
+    @Test
+    void baselineCarriesAnExplicitOwnerForEveryHardwareRole() {
+        OwnerRef music = new OwnerRef(OwnerClass.MUSIC, "music.81", 0x81,
+                OwnerOrigin.BASELINE, 0);
+        Baseline baseline = new Baseline(860,
+                new NormalizedState(List.of(new StateField("tempo", 1)), List.of(
+                        new RoleState(HardwareRole.FM1, true,
+                                List.of(new StateField("cursor", 4))),
+                        new RoleState(HardwareRole.PSG1, false, List.of()))),
+                List.of(new RoleOwner(HardwareRole.FM1, music),
+                        new RoleOwner(HardwareRole.PSG1,
+                                new OwnerRef(OwnerClass.NONE, "none", 0,
+                                        OwnerOrigin.NONE, -1))));
+
+        assertEquals(music, baseline.roleOwners().getFirst().owner());
     }
 
     @Test
@@ -56,7 +95,7 @@ class TestCompleteRunAudioTrace {
     @Test
     void rejectsEmptyContentKeys() {
         assertThrows(IllegalArgumentException.class,
-                () -> new OwnerRef(OwnerClass.SFX, "", 0xC0, 7));
+                () -> new OwnerRef(OwnerClass.SFX, "", 0xC0, OwnerOrigin.REQUEST, 7));
         assertThrows(IllegalArgumentException.class,
                 () -> new Request(1, OwnerClass.SFX, " ", 0xC0, "mailbox", 0));
     }
@@ -363,8 +402,25 @@ class TestCompleteRunAudioTrace {
         }
 
         @Override
-        public Map<Long, NativeSoundIdentity> baselineOwnerIdentities() {
-            return Map.of();
+        public List<RoleOwner> baselineRoleOwners() {
+            OwnerRef none = new OwnerRef(OwnerClass.NONE, "none", 0, OwnerOrigin.NONE, -1);
+            return roles.stream().map(role -> new RoleOwner(role, none)).toList();
+        }
+
+        @Override
+        public Map<String, OwnershipTransition> ownershipTransitions() {
+            return Map.of("accepted", OwnershipTransition.ACQUIRE_REQUEST,
+                    "rejected", OwnershipTransition.REJECT_PRESERVE);
+        }
+
+        @Override
+        public PendingRequestPolicy pendingRequestPolicy() {
+            return new PendingRequestPolicy(4, 0, null);
+        }
+
+        @Override
+        public int maximumRestoreDepth() {
+            return 0;
         }
 
         @Override

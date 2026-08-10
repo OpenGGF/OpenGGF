@@ -18,9 +18,10 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -30,29 +31,46 @@ import java.util.function.Function;
 /** Validation-first, two-pass, no-realignment comparator for canonical complete-run captures. */
 public final class CompleteRunAudioComparator {
     private static final int CONTEXT_LIMIT = 8;
+    private static final FileIdentityProvider PLATFORM_FILE_IDENTITIES = (path, attributes) -> {
+        Object key = attributes.fileKey();
+        if (key == null || key.toString().isBlank()) {
+            throw new PublicationIdentityUnavailableException(
+                    "filesystem publication identity is unavailable for " + path);
+        }
+        return key.toString();
+    };
 
     private CompleteRunAudioComparator() {
     }
 
     public static CompleteRunAudioReport compare(Path reference, Path engine) {
-        return compare(reference, engine, () -> { });
+        return compare(reference, engine, () -> { }, PLATFORM_FILE_IDENTITIES);
     }
 
     /** Package-visible seam exercises real source replacement between the validation and comparison passes. */
     static CompleteRunAudioReport compare(Path reference, Path engine, PassBoundary boundary) {
+        return compare(reference, engine, boundary, PLATFORM_FILE_IDENTITIES);
+    }
+
+    /** Package-visible seam proves that unavailable filesystem identities fail closed. */
+    static CompleteRunAudioReport compare(Path reference, Path engine, PassBoundary boundary,
+            FileIdentityProvider fileIdentities) {
         Objects.requireNonNull(reference, "reference capture");
         Objects.requireNonNull(engine, "engine capture");
         Objects.requireNonNull(boundary, "pass boundary");
+        Objects.requireNonNull(fileIdentities, "file identity provider");
         Path referenceSource = reference.toAbsolutePath().normalize();
         Path engineSource = engine.toAbsolutePath().normalize();
         CompleteRunAudioCaptureStore store = new CompleteRunAudioCaptureStore();
         Snapshot referenceSnapshot = null;
         Snapshot engineSnapshot = null;
         try {
-            referenceSnapshot = validate(store, referenceSource, Side.REFERENCE, ProducerKind.REFERENCE);
-            engineSnapshot = validate(store, engineSource, Side.ENGINE, ProducerKind.OPENGGF);
+            referenceSnapshot = validate(store, referenceSource, Side.REFERENCE, ProducerKind.REFERENCE,
+                    fileIdentities);
+            engineSnapshot = validate(store, engineSource, Side.ENGINE, ProducerKind.OPENGGF,
+                    fileIdentities);
             boundary.run();
-            return compareValidated(store, referenceSnapshot, engineSnapshot);
+            return compareValidated(store, referenceSnapshot, engineSnapshot, fileIdentities);
         } catch (ValidationException failure) {
             return failure(referenceSnapshot, engineSnapshot, failure, referenceSource, engineSource);
         } catch (IOException failure) {
@@ -65,6 +83,33 @@ public final class CompleteRunAudioComparator {
     @FunctionalInterface
     interface PassBoundary {
         void run() throws IOException;
+    }
+
+    @FunctionalInterface
+    interface FileIdentityProvider {
+        String fileKey(Path path, BasicFileAttributes attributes) throws IOException;
+    }
+
+    /** Package-visible bounded-state evidence for adversarial semantic streams. */
+    record ValidationDiagnostics(int peakPendingRequests, int terminalPendingRequests,
+            int peakSavedOwners, int liveRoleOwners, long completedRequests) { }
+
+    static ValidationDiagnostics validateSemanticsForDiagnostics(Metadata metadata,
+            CompleteRunAudioProfile profile, Side side, java.util.Iterator<CompleteRunAudioTrace.Record> records)
+            throws ValidationException {
+        Objects.requireNonNull(metadata, "metadata");
+        Objects.requireNonNull(profile, "profile");
+        Objects.requireNonNull(records, "records");
+        try {
+            metadata.validateProfile(profile);
+        } catch (RuntimeException failure) {
+            throw new ValidationException(ValidationException.Kind.METADATA_PROFILE_MISMATCH, side,
+                    "diagnostic stream metadata does not match its profile", failure);
+        }
+        StreamValidator validator = new StreamValidator(metadata, profile, side);
+        while (records.hasNext()) validator.accept(records.next());
+        validator.finish();
+        return validator.diagnostics();
     }
 
     /** Typed validation categories are the sole classification source for capture failures. */
@@ -82,8 +127,12 @@ public final class CompleteRunAudioComparator {
             DECISION_REFERENCE_INVALID,
             RESOLUTION_INVALID,
             OWNER_INVALID,
+            OWNERSHIP_TRANSITION_INVALID,
+            PENDING_CAPACITY_INVALID,
+            PENDING_UNRESOLVED,
             SEGMENT_INVALID,
             LIFECYCLE_INVALID,
+            PUBLICATION_IDENTITY_UNAVAILABLE,
             SOURCE_REPLACED
         }
 
@@ -107,10 +156,10 @@ public final class CompleteRunAudioComparator {
     }
 
     private static Snapshot validate(CompleteRunAudioCaptureStore store, Path source, Side side,
-            ProducerKind expectedProducer) throws ValidationException {
+            ProducerKind expectedProducer, FileIdentityProvider fileIdentities) throws ValidationException {
         Path normalized = source.toAbsolutePath().normalize();
         try {
-            PublicationIdentity publication = PublicationIdentity.capture(normalized);
+            PublicationIdentity publication = PublicationIdentity.capture(normalized, fileIdentities);
             Metadata metadata;
             Terminal terminal = null;
             try (CompleteRunAudioCaptureStore.Reader reader = store.read(publication.realSource())) {
@@ -124,7 +173,7 @@ public final class CompleteRunAudioComparator {
                 }
                 validator.finish();
             }
-            if (!publication.equals(PublicationIdentity.capture(normalized))) {
+            if (!publication.equals(PublicationIdentity.capture(normalized, fileIdentities))) {
                 throw new ValidationException(ValidationException.Kind.SOURCE_REPLACED, side,
                         "capture publication changed during validation pass");
             }
@@ -136,6 +185,9 @@ public final class CompleteRunAudioComparator {
                     sha256(CompleteRunAudioJson.writeMetadata(metadata).getBytes(StandardCharsets.UTF_8)));
         } catch (ValidationException failure) {
             throw failure;
+        } catch (PublicationIdentityUnavailableException failure) {
+            throw new ValidationException(ValidationException.Kind.PUBLICATION_IDENTITY_UNAVAILABLE, side,
+                    failure.getMessage(), failure);
         } catch (IOException failure) {
             throw new ValidationException(ValidationException.Kind.IO_FAILURE, side,
                     "capture could not be read", failure);
@@ -168,11 +220,14 @@ public final class CompleteRunAudioComparator {
     }
 
     private static CompleteRunAudioReport compareValidated(CompleteRunAudioCaptureStore store,
-            Snapshot reference, Snapshot engine) throws ValidationException {
+            Snapshot reference, Snapshot engine, FileIdentityProvider fileIdentities)
+            throws ValidationException {
         Difference first = metadataDifference(reference.metadata, engine.metadata);
         ContextCollector context = new ContextCollector(first != null);
-        try (PassStream left = PassStream.open(store, reference, Side.REFERENCE, ProducerKind.REFERENCE);
-                PassStream right = PassStream.open(store, engine, Side.ENGINE, ProducerKind.OPENGGF)) {
+        try (PassStream left = PassStream.open(store, reference, Side.REFERENCE, ProducerKind.REFERENCE,
+                    fileIdentities);
+                PassStream right = PassStream.open(store, engine, Side.ENGINE, ProducerKind.OPENGGF,
+                    fileIdentities)) {
             while (true) {
                 Entry expected = left.next();
                 Entry actual = right.next();
@@ -192,8 +247,8 @@ public final class CompleteRunAudioComparator {
                     context.after(expectedView, actualView);
                 }
             }
-            left.verifyStable();
-            right.verifyStable();
+            left.verifyStable(fileIdentities);
+            right.verifyStable(fileIdentities);
         } catch (ValidationException failure) {
             throw failure;
         }
@@ -258,7 +313,14 @@ public final class CompleteRunAudioComparator {
             if (expected.absoluteFrame() != actual.absoluteFrame()) {
                 return frameCoordinate(expected.absoluteFrame(), actual.absoluteFrame(), "baseline.absolute_frame");
             }
-            return stateDifference(expected.state(), actual.state(), expected.absoluteFrame(), "baseline.state");
+            Difference state = stateDifference(expected.state(), actual.state(), expected.absoluteFrame(),
+                    "baseline.state");
+            if (state != null) return state;
+            if (!expected.roleOwners().equals(actual.roleOwners())) {
+                return diff(Kind.OWNER, expected.absoluteFrame(), "baseline.role_owners",
+                        expected.roleOwners(), actual.roleOwners());
+            }
+            return null;
         }
         if (reference instanceof Frame expected && engine instanceof Frame actual) {
             return frameDifference(expected, actual);
@@ -535,7 +597,7 @@ public final class CompleteRunAudioComparator {
     }
 
     private static OwnerPayload ownerPayload(OwnerRef owner) {
-        return new OwnerPayload(owner.ownerClass(), owner.contentKey(), owner.nativeId());
+        return new OwnerPayload(owner.ownerClass(), owner.contentKey(), owner.nativeId(), owner.origin());
     }
 
     private static Object chipPayload(ChipEvent event) {
@@ -622,7 +684,8 @@ public final class CompleteRunAudioComparator {
             Integer priorityBefore, Integer priorityAfter, List<HardwareRole> requestedRoles,
             List<RoleOrderPayload> roles) { }
     private record RoleOrderPayload(HardwareRole role, OwnerPayload displaced, OwnerPayload finalOwner) { }
-    private record OwnerPayload(OwnerClass ownerClass, String contentKey, int nativeId) { }
+    private record OwnerPayload(OwnerClass ownerClass, String contentKey, int nativeId,
+            OwnerOrigin origin) { }
     private record YmPayload(int port, int register, int value) { }
     private record PsgPayload(int value) { }
     private record FrameCoordinatesPayload(String segment, boolean lag) { }
@@ -647,13 +710,15 @@ public final class CompleteRunAudioComparator {
             Objects.requireNonNull(digest, "publication digest");
         }
 
-        static PublicationIdentity capture(Path source) throws IOException {
+        static PublicationIdentity capture(Path source, FileIdentityProvider fileIdentities)
+                throws IOException {
             Path realSource = source.toRealPath();
             BasicFileAttributes sourceAttributes = Files.readAttributes(realSource, BasicFileAttributes.class);
             if (!sourceAttributes.isDirectory()) {
                 throw new IOException("capture publication is not a directory: " + source);
             }
-            String sourceFileKey = fileKey(sourceAttributes);
+            String sourceFileKey = requireFileKey(realSource,
+                    fileIdentities.fileKey(realSource, sourceAttributes));
             String manifestSha256 = sha256(realSource.resolve("manifest.json"));
             Path chunksDirectory = realSource.resolve("chunks");
             List<Path> paths;
@@ -672,7 +737,8 @@ public final class CompleteRunAudioComparator {
                     throw new IOException("capture chunk is not a regular file: " + path);
                 }
                 chunks.add(new CompleteRunAudioReport.ChunkIdentity(path.getFileName().toString(),
-                        sha256(realPath), realPath.toString(), fileKey(attributes)));
+                        sha256(realPath), realPath.toString(), requireFileKey(realPath,
+                                fileIdentities.fileKey(realPath, attributes))));
             }
             MessageDigest digest = sha256Digest();
             digestField(digest, realSource.toString());
@@ -689,9 +755,19 @@ public final class CompleteRunAudioComparator {
         }
     }
 
-    private static String fileKey(BasicFileAttributes attributes) {
-        Object key = attributes.fileKey();
-        return key == null ? "unavailable" : key.toString();
+    private static String requireFileKey(Path path, String fileKey)
+            throws PublicationIdentityUnavailableException {
+        if (fileKey == null || fileKey.isBlank()) {
+            throw new PublicationIdentityUnavailableException(
+                    "filesystem publication identity is unavailable for " + path);
+        }
+        return fileKey;
+    }
+
+    private static final class PublicationIdentityUnavailableException extends IOException {
+        private PublicationIdentityUnavailableException(String message) {
+            super(message);
+        }
     }
 
     private static String sha256(Path path) throws IOException {
@@ -747,15 +823,18 @@ public final class CompleteRunAudioComparator {
         }
 
         static PassStream open(CompleteRunAudioCaptureStore store, Snapshot expected, Side side,
-                ProducerKind producer) throws ValidationException {
+                ProducerKind producer, FileIdentityProvider fileIdentities) throws ValidationException {
             CompleteRunAudioCaptureStore.Reader reader;
             try {
-                PublicationIdentity current = PublicationIdentity.capture(expected.source);
+                PublicationIdentity current = PublicationIdentity.capture(expected.source, fileIdentities);
                 if (!current.equals(expected.publication)) {
                     throw new ValidationException(ValidationException.Kind.SOURCE_REPLACED, side,
                             "capture publication changed between passes");
                 }
                 reader = store.read(current.realSource());
+            } catch (PublicationIdentityUnavailableException failure) {
+                throw new ValidationException(ValidationException.Kind.PUBLICATION_IDENTITY_UNAVAILABLE, side,
+                        failure.getMessage(), failure);
             } catch (IOException failure) {
                 throw new ValidationException(ValidationException.Kind.IO_FAILURE, side,
                         "comparison pass could not reopen capture", failure);
@@ -801,16 +880,19 @@ public final class CompleteRunAudioComparator {
             }
         }
 
-        void verifyStable() throws ValidationException {
+        void verifyStable(FileIdentityProvider fileIdentities) throws ValidationException {
             if (!finished || terminal == null || !terminal.rootDigest().equals(expected.rootDigest)) {
                 throw new ValidationException(ValidationException.Kind.SOURCE_REPLACED, side,
                         "capture root digest changed between passes");
             }
             try {
-                if (!PublicationIdentity.capture(expected.source).equals(expected.publication)) {
+                if (!PublicationIdentity.capture(expected.source, fileIdentities).equals(expected.publication)) {
                     throw new ValidationException(ValidationException.Kind.SOURCE_REPLACED, side,
                             "capture publication changed during comparison pass");
                 }
+            } catch (PublicationIdentityUnavailableException failure) {
+                throw new ValidationException(ValidationException.Kind.PUBLICATION_IDENTITY_UNAVAILABLE, side,
+                        failure.getMessage(), failure);
             } catch (IOException failure) {
                 throw new ValidationException(ValidationException.Kind.IO_FAILURE, side,
                         "capture publication could not be verified after comparison", failure);
@@ -834,16 +916,21 @@ public final class CompleteRunAudioComparator {
         private final Side side;
         private final Set<HardwareRole> hardwareRoles;
         private final Map<NativeSoundIdentity, List<NativeSoundIdentity>> decisionResolutions;
-        private final Map<Long, NativeSoundIdentity> baselineOwners;
-        private final List<NativeSoundIdentity> requestIdentities = new ArrayList<>();
-        private final List<NativeSoundIdentity> admittedIdentities = new ArrayList<>();
-        private final Set<Long> decidedRequests = new HashSet<>();
+        private final Map<String, OwnershipTransition> ownershipTransitions;
+        private final PendingRequestPolicy pendingPolicy;
+        private final Map<Long, NativeSoundIdentity> pendingRequests = new LinkedHashMap<>();
+        private final Map<HardwareRole, OwnerRef> liveOwners = new EnumMap<>(HardwareRole.class);
+        private final Map<HardwareRole, ArrayDeque<OwnerRef>> savedOwners =
+                new EnumMap<>(HardwareRole.class);
         private long requestOrdinal;
         private long serviceOrdinal;
         private long chipOrdinal;
         private long lifecycleOrdinal;
         private int segmentIndex;
         private int previousSourceFrame = -1;
+        private int peakPendingRequests;
+        private int peakSavedOwners;
+        private long completedRequests;
         private boolean baseline;
         private boolean terminal;
 
@@ -853,7 +940,8 @@ public final class CompleteRunAudioComparator {
             this.side = side;
             hardwareRoles = Set.copyOf(profile.hardwareRoles());
             decisionResolutions = profile.decisionResolutions();
-            baselineOwners = profile.baselineOwnerIdentities();
+            ownershipTransitions = profile.ownershipTransitions();
+            pendingPolicy = profile.pendingRequestPolicy();
         }
 
         void accept(CompleteRunAudioTrace.Record record) throws ValidationException {
@@ -865,14 +953,19 @@ public final class CompleteRunAudioComparator {
                 baseline = true;
                 previousSourceFrame = value.absoluteFrame();
                 state(value.state());
+                baselineOwners(value);
             } else if (record instanceof Frame frame) {
                 if (!baseline) ordinal("frame precedes baseline");
                 sourceCoordinate(frame.absoluteFrame());
                 segment(frame);
                 for (Request request : frame.requests()) {
                     if (request.ordinal() != requestOrdinal++) ordinal("request ordinal is not globally contiguous");
-                    requestIdentities.add(requestIdentity(request));
-                    admittedIdentities.add(null);
+                    if (pendingRequests.size() == pendingPolicy.maximumPending()) {
+                        throw new ValidationException(ValidationException.Kind.PENDING_CAPACITY_INVALID, side,
+                                "unresolved requests exceed the profile-owned bound");
+                    }
+                    pendingRequests.put(request.ordinal(), requestIdentity(request));
+                    peakPendingRequests = Math.max(peakPendingRequests, pendingRequests.size());
                 }
                 for (DriverService service : frame.services()) {
                     if (service.ordinal() != serviceOrdinal++) ordinal("service ordinal is not globally contiguous");
@@ -890,6 +983,10 @@ public final class CompleteRunAudioComparator {
                 }
                 lifecycle(lifecycle);
             } else if (record instanceof Terminal) {
+                if (pendingRequests.size() > pendingPolicy.maximumAtTerminal()) {
+                    throw new ValidationException(ValidationException.Kind.PENDING_UNRESOLVED, side,
+                            "capture terminates with unresolved requests outside the profile allowance");
+                }
                 terminal = true;
             }
         }
@@ -904,6 +1001,17 @@ public final class CompleteRunAudioComparator {
             } catch (RuntimeException failure) {
                 throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
                         "normalized state does not match the exact profile inventory", failure);
+            }
+        }
+
+        private void baselineOwners(Baseline value) throws ValidationException {
+            if (!value.roleOwners().equals(profile.baselineRoleOwners())) {
+                throw new ValidationException(ValidationException.Kind.OWNER_INVALID, side,
+                        "baseline role owners do not match the exact profile baseline");
+            }
+            for (RoleOwner roleOwner : value.roleOwners()) {
+                liveOwners.put(roleOwner.role(), roleOwner.owner());
+                savedOwners.put(roleOwner.role(), new ArrayDeque<>());
             }
         }
 
@@ -977,19 +1085,11 @@ public final class CompleteRunAudioComparator {
                             "role decision is outside the profile hardware inventory");
                 }
             }
-            int requestIndex;
-            try {
-                requestIndex = Math.toIntExact(decision.requestOrdinal());
-            } catch (ArithmeticException failure) {
-                throw new ValidationException(ValidationException.Kind.DECISION_REFERENCE_INVALID, side,
-                        "decision request ordinal cannot address captured history", failure);
-            }
-            if (requestIndex < 0 || requestIndex >= requestIdentities.size()
-                    || !decidedRequests.add(decision.requestOrdinal())) {
+            NativeSoundIdentity requested = pendingRequests.get(decision.requestOrdinal());
+            if (requested == null) {
                 throw new ValidationException(ValidationException.Kind.DECISION_REFERENCE_INVALID, side,
                         "decision does not reference one unique captured request");
             }
-            NativeSoundIdentity requested = requestIdentities.get(requestIndex);
             NativeSoundIdentity resolved = new NativeSoundIdentity(requested.ownerClass(),
                     decision.resolvedContentKey(), decision.resolvedNativeId());
             List<NativeSoundIdentity> allowed = decisionResolutions.get(requested);
@@ -997,24 +1097,65 @@ public final class CompleteRunAudioComparator {
                 throw new ValidationException(ValidationException.Kind.RESOLUTION_INVALID, side,
                         "decision resolution is outside the profile-owned transformation contract");
             }
-            for (RoleDecision role : decision.roleDecisions()) validateOwner(role.displacedOwner());
-            if (decision.accepted()) admittedIdentities.set(requestIndex, resolved);
-            for (RoleDecision role : decision.roleDecisions()) validateOwner(role.finalOwner());
+            OwnershipTransition transition = ownershipTransitions.get(decision.reason());
+            if (transition == null || decision.accepted() != (transition != OwnershipTransition.REJECT_PRESERVE)) {
+                throw new ValidationException(ValidationException.Kind.OWNERSHIP_TRANSITION_INVALID, side,
+                        "decision acceptance and reason do not select an exact profile transition");
+            }
+            OwnerRef admitted = new OwnerRef(resolved.ownerClass(), resolved.contentKey(), resolved.nativeId(),
+                    OwnerOrigin.REQUEST, decision.requestOrdinal());
+            for (RoleDecision role : decision.roleDecisions()) {
+                transition(role, admitted, transition);
+            }
+            pendingRequests.remove(decision.requestOrdinal());
+            completedRequests++;
         }
 
-        private void validateOwner(OwnerRef owner) throws ValidationException {
-            if (owner.ownerClass() == OwnerClass.NONE) return;
-            NativeSoundIdentity expected = baselineOwners.get(owner.requestOrdinal());
-            if (expected == null && owner.requestOrdinal() >= 0
-                    && owner.requestOrdinal() < admittedIdentities.size()) {
-                expected = admittedIdentities.get((int) owner.requestOrdinal());
-            }
-            if (expected == null || expected.ownerClass() != owner.ownerClass()
-                    || expected.nativeId() != owner.nativeId()
-                    || !expected.contentKey().equals(owner.contentKey())) {
+        private void transition(RoleDecision decision, OwnerRef admitted,
+                OwnershipTransition transition) throws ValidationException {
+            OwnerRef current = liveOwners.get(decision.role());
+            if (current == null || !current.equals(decision.displacedOwner())) {
                 throw new ValidationException(ValidationException.Kind.OWNER_INVALID, side,
-                        "owner does not match a baseline or admitted request identity");
+                        "displaced owner is not the role's current live owner");
             }
+            ArrayDeque<OwnerRef> saved = savedOwners.get(decision.role());
+            OwnerRef expectedFinal = switch (transition) {
+                case ACQUIRE_REQUEST -> admitted;
+                case REJECT_PRESERVE -> current;
+                case RELEASE_TO_NONE -> noneOwner();
+                case SAVE_AND_ACQUIRE_REQUEST -> {
+                    if (saved.size() == profile.maximumRestoreDepth()) {
+                        throw new ValidationException(ValidationException.Kind.OWNER_INVALID, side,
+                                "saved owner stack exceeds the profile-owned bound");
+                    }
+                    yield admitted;
+                }
+                case RESTORE_SAVED -> {
+                    if (saved.isEmpty()) {
+                        throw new ValidationException(ValidationException.Kind.OWNER_INVALID, side,
+                                "restore transition has no saved owner");
+                    }
+                    yield saved.peekLast();
+                }
+            };
+            if (!expectedFinal.equals(decision.finalOwner())) {
+                throw new ValidationException(ValidationException.Kind.OWNER_INVALID, side,
+                        "final owner does not match the profile-owned transition");
+            }
+            if (transition == OwnershipTransition.SAVE_AND_ACQUIRE_REQUEST) saved.addLast(current);
+            if (transition == OwnershipTransition.RESTORE_SAVED) saved.removeLast();
+            liveOwners.put(decision.role(), expectedFinal);
+            peakSavedOwners = Math.max(peakSavedOwners,
+                    savedOwners.values().stream().mapToInt(ArrayDeque::size).sum());
+        }
+
+        private static OwnerRef noneOwner() {
+            return new OwnerRef(OwnerClass.NONE, "none", 0, OwnerOrigin.NONE, -1);
+        }
+
+        private ValidationDiagnostics diagnostics() {
+            return new ValidationDiagnostics(peakPendingRequests, pendingRequests.size(), peakSavedOwners,
+                    liveOwners.size(), completedRequests);
         }
 
         private void ordinal(String message) throws ValidationException {

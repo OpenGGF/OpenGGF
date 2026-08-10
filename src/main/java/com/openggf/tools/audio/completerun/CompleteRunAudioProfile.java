@@ -8,10 +8,13 @@ import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.LifecycleRule;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.NativeSoundIdentity;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.NormalizedState;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.ObserverProof;
+import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.OwnershipTransition;
+import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.PendingRequestPolicy;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.ProducerKind;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.ProducerRuntimeIdentity;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.RawAudioRequest;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.RoleState;
+import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.RoleOwner;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.StateInventory;
 import java.util.List;
 import java.util.Map;
@@ -39,8 +42,17 @@ public interface CompleteRunAudioProfile {
     /** Allowed request-to-admission identity transformations, with no game checks in shared code. */
     Map<NativeSoundIdentity, List<NativeSoundIdentity>> decisionResolutions();
 
-    /** Owners already live at the comparison baseline and therefore predating captured requests. */
-    Map<Long, NativeSoundIdentity> baselineOwnerIdentities();
+    /** Exact live owner for every hardware role at the comparison baseline. */
+    List<RoleOwner> baselineRoleOwners();
+
+    /** Generic ownership transition selected by the exact recorded decision reason. */
+    Map<String, OwnershipTransition> ownershipTransitions();
+
+    /** Hard bound for unresolved request identities retained by validation. */
+    PendingRequestPolicy pendingRequestPolicy();
+
+    /** Hard per-role bound for profile-declared save/restore ownership transitions. */
+    int maximumRestoreDepth();
 
     /** Allowed out-of-service lifecycle markers and their exact detail-field inventories. */
     Map<String, LifecycleRule> lifecycleRules();

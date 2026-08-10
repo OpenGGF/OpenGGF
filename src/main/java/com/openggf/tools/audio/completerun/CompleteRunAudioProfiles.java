@@ -5,9 +5,12 @@ import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.HardwareRole;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.LifecycleRule;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.NativeSoundIdentity;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.ObserverProof;
+import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.OwnershipTransition;
+import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.PendingRequestPolicy;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.ProducerKind;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.ProducerRuntimeIdentity;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.RawAudioRequest;
+import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.RoleOwner;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.StateInventory;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
@@ -65,7 +68,10 @@ public final class CompleteRunAudioProfiles {
             Map<ProducerKind, ProducerRuntimeIdentity> producerRuntimeIdentities,
             Map<ProducerKind, ObserverProof> observerProofs,
             Map<NativeSoundIdentity, List<NativeSoundIdentity>> decisionResolutions,
-            Map<Long, NativeSoundIdentity> baselineOwnerIdentities,
+            List<RoleOwner> baselineRoleOwners,
+            Map<String, OwnershipTransition> ownershipTransitions,
+            PendingRequestPolicy pendingRequestPolicy,
+            int maximumRestoreDepth,
             Map<String, LifecycleRule> lifecycleRules)
             implements CompleteRunAudioProfile {
         private FrozenProfile {
@@ -79,8 +85,13 @@ public final class CompleteRunAudioProfiles {
             producerRuntimeIdentities = Map.copyOf(producerRuntimeIdentities);
             observerProofs = Map.copyOf(observerProofs);
             decisionResolutions = freezeResolutions(decisionResolutions);
-            baselineOwnerIdentities = Map.copyOf(baselineOwnerIdentities);
+            baselineRoleOwners = List.copyOf(baselineRoleOwners);
+            ownershipTransitions = Map.copyOf(ownershipTransitions);
+            Objects.requireNonNull(pendingRequestPolicy, "profile pending request policy");
             lifecycleRules = Map.copyOf(lifecycleRules);
+            if (maximumRestoreDepth < 0 || maximumRestoreDepth > 16) {
+                throw new IllegalArgumentException("profile restore depth must be between zero and sixteen");
+            }
             if (!producerRuntimeIdentities.keySet().containsAll(EnumSet.allOf(ProducerKind.class))) {
                 throw new IllegalArgumentException("profile must declare an allowed runtime identity for every producer");
             }
@@ -97,11 +108,26 @@ public final class CompleteRunAudioProfiles {
             if (!decisionResolutions.keySet().containsAll(Set.copyOf(nativeSoundIdentities.values()))) {
                 throw new IllegalArgumentException("profile must declare decision resolutions for every request identity");
             }
-            for (Map.Entry<Long, NativeSoundIdentity> entry : baselineOwnerIdentities.entrySet()) {
-                if (entry.getKey() == null || entry.getKey() < 0 || entry.getValue() == null
-                        || entry.getValue().ownerClass() == CompleteRunAudioTrace.OwnerClass.NONE) {
-                    throw new IllegalArgumentException("baseline owner identities must use non-negative ordinals and live identities");
+            if (baselineRoleOwners.size() != hardwareRoles.size()) {
+                throw new IllegalArgumentException("profile must declare one baseline owner per hardware role");
+            }
+            for (int index = 0; index < hardwareRoles.size(); index++) {
+                if (baselineRoleOwners.get(index).role() != hardwareRoles.get(index)) {
+                    throw new IllegalArgumentException("profile baseline owners must follow hardware-role order");
                 }
+            }
+            for (Map.Entry<String, OwnershipTransition> entry : ownershipTransitions.entrySet()) {
+                if (entry.getKey() == null || entry.getKey().isBlank() || entry.getValue() == null) {
+                    throw new IllegalArgumentException("profile ownership transitions need exact reasons and rules");
+                }
+            }
+            if (ownershipTransitions.isEmpty()) {
+                throw new IllegalArgumentException("profile must declare ownership transitions");
+            }
+            boolean usesRestoreStack = ownershipTransitions.containsValue(OwnershipTransition.SAVE_AND_ACQUIRE_REQUEST)
+                    || ownershipTransitions.containsValue(OwnershipTransition.RESTORE_SAVED);
+            if (usesRestoreStack != (maximumRestoreDepth > 0)) {
+                throw new IllegalArgumentException("restore transitions and restore depth must be declared together");
             }
             for (Map.Entry<String, LifecycleRule> entry : lifecycleRules.entrySet()) {
                 if (!entry.getKey().equals(Objects.requireNonNull(entry.getValue(), "lifecycle rule").kind())) {
@@ -119,7 +145,8 @@ public final class CompleteRunAudioProfiles {
             return new FrozenProfile(profile.id(), fixtureCopy, List.copyOf(profile.hardwareRoles()),
                     profile.stateInventory(), Map.copyOf(profile.nativeSoundIdentities()),
                     Map.copyOf(profile.producerRuntimeIdentities()), Map.copyOf(profile.observerProofs()),
-                    profile.decisionResolutions(), profile.baselineOwnerIdentities(), profile.lifecycleRules());
+                    profile.decisionResolutions(), profile.baselineRoleOwners(), profile.ownershipTransitions(),
+                    profile.pendingRequestPolicy(), profile.maximumRestoreDepth(), profile.lifecycleRules());
         }
 
         private static Map<NativeSoundIdentity, List<NativeSoundIdentity>> freezeResolutions(

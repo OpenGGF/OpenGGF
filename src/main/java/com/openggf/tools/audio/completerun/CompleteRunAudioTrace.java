@@ -36,6 +36,9 @@ public final class CompleteRunAudioTrace {
 
     public enum OwnerClass { NONE, MUSIC, SFX, SPECIAL_SFX, COMMAND }
 
+    /** Numeric owner ordinals are interpreted only within this explicit namespace. */
+    public enum OwnerOrigin { NONE, BASELINE, REQUEST }
+
     /** Complete, profile-owned immutable identity for one pinned ROM/movie/manifest fixture. */
     public record CompleteRunFixture(String romSha1, String romCrc32, String bk2Sha256,
             long bk2RowCount, String runManifestSha256, List<ManifestSegment> segments,
@@ -209,12 +212,14 @@ public final class CompleteRunAudioTrace {
         }
     }
 
-    public record Baseline(int absoluteFrame, NormalizedState state) implements Record {
+    public record Baseline(int absoluteFrame, NormalizedState state, List<RoleOwner> roleOwners)
+            implements Record {
         public Baseline {
             if (absoluteFrame < 0) {
                 throw new IllegalArgumentException("baseline frame must be non-negative");
             }
             Objects.requireNonNull(state, "state");
+            roleOwners = canonicalRoleOwners(roleOwners, "baseline role owners");
         }
     }
 
@@ -272,6 +277,35 @@ public final class CompleteRunAudioTrace {
                     throw new IllegalArgumentException("lifecycle rule fields must be unique and sorted");
                 }
                 previous = field;
+            }
+        }
+    }
+
+    /** Generic role-owner transition selected by a profile from a decision reason. */
+    public enum OwnershipTransition {
+        ACQUIRE_REQUEST,
+        REJECT_PRESERVE,
+        RELEASE_TO_NONE,
+        SAVE_AND_ACQUIRE_REQUEST,
+        RESTORE_SAVED
+    }
+
+    /** Profile-declared hard bounds for unresolved request state. */
+    public record PendingRequestPolicy(int maximumPending, int maximumAtTerminal,
+            String terminalAllowanceReason) {
+        public static final int HARD_MAXIMUM_PENDING = 256;
+
+        public PendingRequestPolicy {
+            if (maximumPending <= 0 || maximumPending > HARD_MAXIMUM_PENDING
+                    || maximumAtTerminal < 0 || maximumAtTerminal > maximumPending) {
+                throw new IllegalArgumentException("pending request bounds are invalid");
+            }
+            if (maximumAtTerminal == 0) {
+                if (terminalAllowanceReason != null) {
+                    throw new IllegalArgumentException("zero terminal allowance must not carry a rationale");
+                }
+            } else {
+                requireText(terminalAllowanceReason, "terminal pending request allowance rationale");
             }
         }
     }
@@ -398,18 +432,35 @@ public final class CompleteRunAudioTrace {
         }
     }
 
+    /** One hardware role's live owner at the comparison epoch. */
+    public record RoleOwner(HardwareRole role, OwnerRef owner) {
+        public RoleOwner {
+            Objects.requireNonNull(role, "role");
+            Objects.requireNonNull(owner, "owner");
+            if (owner.origin() != OwnerOrigin.NONE && owner.origin() != OwnerOrigin.BASELINE) {
+                throw new IllegalArgumentException("baseline role owner must use NONE or BASELINE origin");
+            }
+        }
+    }
+
     /** Ownership includes the originating request so same-native-ID retriggers never collapse. */
-    public record OwnerRef(OwnerClass ownerClass, String contentKey, int nativeId, long requestOrdinal) {
+    public record OwnerRef(OwnerClass ownerClass, String contentKey, int nativeId,
+            OwnerOrigin origin, long originOrdinal) {
         public OwnerRef {
             Objects.requireNonNull(ownerClass, "ownerClass");
             requireText(contentKey, "owner content key");
             unsignedByte(nativeId, "owner native ID");
+            Objects.requireNonNull(origin, "owner origin");
             if (ownerClass == OwnerClass.NONE) {
-                if (!"none".equals(contentKey) || nativeId != 0 || requestOrdinal != -1) {
+                if (!"none".equals(contentKey) || nativeId != 0 || origin != OwnerOrigin.NONE
+                        || originOrdinal != -1) {
                     throw new IllegalArgumentException("none owner must use the canonical none identity");
                 }
             } else {
-                nonNegative(requestOrdinal, "owner request ordinal");
+                if (origin == OwnerOrigin.NONE) {
+                    throw new IllegalArgumentException("live owner must declare a baseline or request origin");
+                }
+                nonNegative(originOrdinal, "owner origin ordinal");
             }
         }
     }
@@ -488,6 +539,22 @@ public final class CompleteRunAudioTrace {
             previous = role;
         }
         return roles;
+    }
+
+    private static List<RoleOwner> canonicalRoleOwners(List<RoleOwner> roleOwners, String name) {
+        roleOwners = List.copyOf(Objects.requireNonNull(roleOwners, name));
+        if (roleOwners.isEmpty()) {
+            throw new IllegalArgumentException(name + " must not be empty");
+        }
+        HardwareRole previous = null;
+        for (RoleOwner roleOwner : roleOwners) {
+            HardwareRole role = Objects.requireNonNull(roleOwner, name + " contains null").role();
+            if (previous != null && role.ordinal() <= previous.ordinal()) {
+                throw new IllegalArgumentException(name + " must be unique and in canonical order");
+            }
+            previous = role;
+        }
+        return roleOwners;
     }
 
     static List<String> canonicalNames(List<String> names, String name) {
