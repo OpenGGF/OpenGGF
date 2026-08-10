@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Sonic 2 and Sonic 3 & Knuckles FM music and sound effects now upload
+  voices using their shipped Z80-driver register tables and write order. Their
+  effective operator assignment remains identical, while Sonic 2 preserves its
+  `FixDriverBugs=0` 8-bit total-level behavior and Sonic 3 & Knuckles preserves
+  its distinct raw voice traversal and SSG-EG register order.
 - Fix: Sonic 1 FM sound effects no longer upload their instrument into a
   still-music-owned channel during construction or forcibly clear the YM2612's
   internal envelope and feedback state on acquisition. The SFX now takes the

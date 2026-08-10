@@ -66,6 +66,16 @@ public final class SmpsSequencerConfig {
         REGISTER_SEQUENCE
     }
 
+    /** Exact shipped-driver sequence used to upload a 25-byte FM voice. */
+    public enum FmVoiceWriteProfile {
+        /** Sonic 1's 68k SetVoice routine. */
+        S1_68K,
+        /** Sonic 2's Z80 zSetVoice routine. */
+        S2_Z80,
+        /** Sonic 3 & Knuckles' Z80 zSendFMInstrument routine. */
+        S3K_Z80
+    }
+
     // -----------------------------------------------------------------------
     // Default constants shared across all three games (S1, S2, S3K)
     // -----------------------------------------------------------------------
@@ -92,6 +102,7 @@ public final class SmpsSequencerConfig {
     private final boolean tempoOnFirstTick; // S1: true (DOTEMPO), S2: false (PlayMusic)
     private final boolean direct68kDriver;
     private final FmSfxTakeoverMode fmSfxTakeoverMode;
+    private final FmVoiceWriteProfile fmVoiceWriteProfile;
 
     // --- S3K-specific config fields ---
     private final VolMode volMode;
@@ -126,6 +137,7 @@ public final class SmpsSequencerConfig {
         this.tempoOnFirstTick = b.tempoOnFirstTick;
         this.direct68kDriver = b.direct68kDriver;
         this.fmSfxTakeoverMode = b.fmSfxTakeoverMode;
+        this.fmVoiceWriteProfile = b.fmVoiceWriteProfile;
         this.volMode = b.volMode;
         this.psgEnvCmd80 = b.psgEnvCmd80;
         this.noteOnPrevent = b.noteOnPrevent;
@@ -207,6 +219,10 @@ public final class SmpsSequencerConfig {
 
     public FmSfxTakeoverMode getFmSfxTakeoverMode() {
         return fmSfxTakeoverMode;
+    }
+
+    public FmVoiceWriteProfile getFmVoiceWriteProfile() {
+        return fmVoiceWriteProfile;
     }
 
     /**
@@ -293,6 +309,7 @@ public final class SmpsSequencerConfig {
         private boolean tempoOnFirstTick = false;
         private boolean direct68kDriver = false;
         private FmSfxTakeoverMode fmSfxTakeoverMode = FmSfxTakeoverMode.FORCE_RESET;
+        private FmVoiceWriteProfile fmVoiceWriteProfile = FmVoiceWriteProfile.S2_Z80;
 
         // S3K-specific defaults (S2 compatible)
         private VolMode volMode = VolMode.ALGO;
@@ -319,6 +336,7 @@ public final class SmpsSequencerConfig {
         public Builder tempoOnFirstTick(boolean val) { tempoOnFirstTick = val; return this; }
         public Builder direct68kDriver(boolean val) { direct68kDriver = val; return this; }
         public Builder fmSfxTakeoverMode(FmSfxTakeoverMode val) { fmSfxTakeoverMode = val; return this; }
+        public Builder fmVoiceWriteProfile(FmVoiceWriteProfile val) { fmVoiceWriteProfile = val; return this; }
         public Builder volMode(VolMode val) { volMode = val; return this; }
         public Builder psgEnvCmd80(PsgEnvCmd80 val) { psgEnvCmd80 = val; return this; }
         public Builder noteOnPrevent(NoteOnPrevent val) { noteOnPrevent = val; return this; }
@@ -336,6 +354,7 @@ public final class SmpsSequencerConfig {
             Objects.requireNonNull(psgChannelOrder, "psgChannelOrder");
             Objects.requireNonNull(tempoMode, "tempoMode");
             Objects.requireNonNull(fmSfxTakeoverMode, "fmSfxTakeoverMode");
+            Objects.requireNonNull(fmVoiceWriteProfile, "fmVoiceWriteProfile");
             return new SmpsSequencerConfig(this);
         }
     }

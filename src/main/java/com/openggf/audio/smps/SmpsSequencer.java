@@ -228,11 +228,13 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             0x01B, 0x01A, 0x018, 0x017, 0x016, 0x015, 0x013, 0x012, 0x011, 0x010, 0x000, 0x000
     };
 
-    // Carrier bitmask per YM2612 algorithm in YM operator order (Op1, Op2, Op3, Op4).
-    // Algo output mask from SMPSPlay is in slot/register order (40/44/48/4C = slots 1/2/3/4).
-    // Our SMPS operator order is Op1, Op3, Op2, Op4, so we convert masks once here.
+    // Carrier bitmask per YM2612 algorithm in register traversal order.
+    // S1's normalized 68k voice needs the converted form; S2 consumes the raw table.
     private static final int[] ALGO_OUT_MASK_SLOT = { 0x08, 0x08, 0x08, 0x08, 0x0C, 0x0E, 0x0E, 0x0F };
     private static final int[] ALGO_OUT_MASK = toSmpsOrderMask(ALGO_OUT_MASK_SLOT);
+    private static final int[] S2_OPERATOR_REGISTER_OFFSETS = { 0, 4, 8, 12 };
+    private static final int[] S3K_OPERATOR_REGISTER_OFFSETS = { 0, 8, 4, 12 };
+    private static final int[] FM_PARAMETER_REGISTERS = { 0x30, 0x50, 0x60, 0x70, 0x80 };
 
     private static int[] toSmpsOrderMask(int[] slotMasks) {
         int[] out = new int[slotMasks.length];
@@ -329,8 +331,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         public boolean fmVolEnvHold;
         public int fmVolEnvOpMask;
         public boolean forceRefresh;
-        // SSG-EG per-operator state (S3K FF 05). Preserved across refreshInstrument() calls
-        // because setInstrument() unconditionally clears SSG-EG registers (0x90-0x9C).
+        // SSG-EG per-operator state (S3K FF 05), preserved across track restoration.
         public final int[] ssgEg = new int[4];
         // DAC mute state for fade-in
         public boolean dacMuted;
@@ -2163,37 +2164,44 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             }
             return;
         }
-        int algo = t.voiceData[0] & 0x07;
-        int[] tlIdx = { 21, 23, 22, 24 };
-        int mask;
-        if (config.getVolMode() == SmpsSequencerConfig.VolMode.BIT7) {
-            // S3K: carrier operators identified by bit 7 set in TL bytes
-            mask = 0;
-            for (int op = 0; op < 4; op++) {
-                int idx = tlIdx[op];
-                if (idx < t.voiceData.length && (t.voiceData[idx] & 0x80) != 0) {
-                    mask |= (1 << op);
-                }
-            }
-        } else {
-            mask = ALGO_OUT_MASK[algo];
-        }
-
         int hwCh = t.channelId;
         int port = (hwCh < 3) ? 0 : 1;
         int ch = hwCh % 3;
 
-        for (int op = 0; op < 4; op++) {
-            if ((mask & (1 << op)) == 0) {
+        int mask = config.getVolMode() == SmpsSequencerConfig.VolMode.BIT7
+                ? bit7CarrierMask(t.voiceData, 21)
+                : ALGO_OUT_MASK_SLOT[t.voiceData[0] & 0x07];
+        int[] registerOffsets = operatorRegisterOffsets();
+        for (int storedOperator = 0; storedOperator < 4; storedOperator++) {
+            if ((mask & (1 << storedOperator)) == 0) {
                 continue;
             }
-            int idx = tlIdx[op];
+            int idx = 21 + storedOperator;
             if (idx >= t.voiceData.length) {
                 continue;
             }
-            int tl = computeFmTotalLevel(t, t.voiceData[idx] & 0x7F, op);
-            synth.writeFm(this, port, 0x40 + (op * 4) + ch, tl);
+            int tl = config.getFmVoiceWriteProfile() == SmpsSequencerConfig.FmVoiceWriteProfile.S2_Z80
+                    ? computeS2TotalLevel(t, t.voiceData[idx] & 0xFF, storedOperator)
+                    : computeFmTotalLevel(t, t.voiceData[idx] & 0x7F, storedOperator);
+            synth.writeFm(this, port, 0x40 + registerOffsets[storedOperator] + ch, tl);
         }
+    }
+
+    private static int bit7CarrierMask(byte[] voice, int tlBase) {
+        int mask = 0;
+        for (int storedOperator = 0; storedOperator < 4; storedOperator++) {
+            int idx = tlBase + storedOperator;
+            if (idx < voice.length && (voice[idx] & 0x80) != 0) {
+                mask |= 1 << storedOperator;
+            }
+        }
+        return mask;
+    }
+
+    private int[] operatorRegisterOffsets() {
+        return config.getFmVoiceWriteProfile() == SmpsSequencerConfig.FmVoiceWriteProfile.S3K_Z80
+                ? S3K_OPERATOR_REGISTER_OFFSETS
+                : S2_OPERATOR_REGISTER_OFFSETS;
     }
 
     private int computeFmTotalLevel(Track t, int baseTl, int op) {
@@ -2202,6 +2210,16 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             tl += t.fmVolEnvValue;
         }
         return tl & 0x7F; // wrap like the Z80 interpreter (7-bit)
+    }
+
+    private int computeS2TotalLevel(Track t, int baseTl, int storedOperator) {
+        int tl = baseTl + t.volumeOffset;
+        if (t.fmVolEnvData != null && (t.fmVolEnvOpMask & (1 << storedOperator)) != 0) {
+            tl += t.fmVolEnvValue;
+        }
+        // Shipped S2 uses FixDriverBugs=0: zSetFMTLs performs an 8-bit add
+        // without forcing bit 7 or clamping attenuation overflow.
+        return tl & 0xFF;
     }
 
     @Override
@@ -2376,56 +2394,49 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         boolean hasTl = t.voiceData.length >= 25;
         // SMPS (S2) stores TL at the end of the 25-byte blob (bytes 21-24).
         int tlBase = hasTl ? 21 : -1;
-        if (tlBase >= 0) {
+        if (tlBase >= 0 && !config.isDirect68kDriver()) {
+            int mask = config.getVolMode() == SmpsSequencerConfig.VolMode.BIT7
+                    ? bit7CarrierMask(voice, tlBase)
+                    : ALGO_OUT_MASK_SLOT[voice[0] & 0x07];
+            for (int storedOperator = 0; storedOperator < 4; storedOperator++) {
+                if ((mask & (1 << storedOperator)) == 0) {
+                    continue;
+                }
+                int idx = tlBase + storedOperator;
+                if (config.getFmVoiceWriteProfile() == SmpsSequencerConfig.FmVoiceWriteProfile.S2_Z80) {
+                    voice[idx] = (byte) computeS2TotalLevel(t, voice[idx] & 0xFF, storedOperator);
+                } else {
+                    int tl = computeFmTotalLevel(t, voice[idx] & 0x7F, storedOperator);
+                    voice[idx] = (byte) (tl | (voice[idx] & 0x80));
+                }
+            }
+        } else if (tlBase >= 0) {
             int algo = voice[0] & 0x07;
             int[] opMap = { 0, 2, 1, 3 };
-            int mask;
-            if (config.getVolMode() == SmpsSequencerConfig.VolMode.BIT7) {
-                // S3K: carrier operators identified by bit 7 set in TL bytes
-                mask = 0;
-                for (int op = 0; op < 4; op++) {
-                    int idx = tlBase + opMap[op];
-                    if (idx < voice.length && (voice[idx] & 0x80) != 0) {
-                        mask |= (1 << op);
-                    }
-                }
-            } else {
-                mask = ALGO_OUT_MASK[algo];
-            }
-
-            boolean bit7Mode = config.getVolMode() == SmpsSequencerConfig.VolMode.BIT7;
+            int mask = ALGO_OUT_MASK[algo];
             for (int op = 0; op < 4; op++) {
                 if ((mask & (1 << op)) != 0) {
                     int idx = tlBase + opMap[op];
-                    if (bit7Mode) {
-                        int tl = computeFmTotalLevel(t, voice[idx] & 0x7F, op);
-                        voice[idx] = (byte) (tl | (voice[idx] & 0x80));
-                    } else if (config.isDirect68kDriver()) {
-                        // S1 SetVoice performs an 8-bit add on the stored TL byte.
-                        // S1's DEFAULT voice format deliberately leaves bit 7 set on
-                        // carriers, so it is visible on the bus even though YM2612 uses
-                        // only the low seven TL bits.
-                        int tl = (voice[idx] & 0xff) + t.volumeOffset;
-                        if (t.fmVolEnvData != null && (t.fmVolEnvOpMask & (1 << op)) != 0) {
-                            tl += t.fmVolEnvValue;
-                        }
-                        voice[idx] = (byte) tl;
-                    } else {
-                        voice[idx] = (byte) computeFmTotalLevel(t, voice[idx] & 0x7f, op);
+                    // S1 SetVoice performs an 8-bit add on the stored TL byte.
+                    // S1's DEFAULT voice format deliberately leaves bit 7 set on
+                    // carriers, so it is visible on the bus even though YM2612 uses
+                    // only the low seven TL bits.
+                    int tl = (voice[idx] & 0xff) + t.volumeOffset;
+                    if (t.fmVolEnvData != null && (t.fmVolEnvOpMask & (1 << op)) != 0) {
+                        tl += t.fmVolEnvValue;
                     }
+                    voice[idx] = (byte) tl;
                 }
             }
         }
-        if (config.isDirect68kDriver() && hasTl) {
-            write68kInstrument(t, voice);
-            return;
+        switch (config.getFmVoiceWriteProfile()) {
+            case S1_68K -> write68kInstrument(t, voice);
+            case S2_Z80 -> writeS2Instrument(t, voice, hasTl);
+            case S3K_Z80 -> writeS3kInstrument(t, voice, hasTl);
         }
-        synth.setInstrument(this, t.channelId, voice);
 
-        // Restore SSG-EG values that setInstrument() cleared (registers 0x90-0x9C).
-        // S3K sets SSG-EG via coordination flag FF 05; without restoring them here,
-        // every voice refresh (SFX restore, fade, forceRefresh) resets the looping
-        // envelope shapes that fundamentally define instrument character.
+        // S3K's coordination flag owns SSG-EG independently of its voice table.
+        // Re-emit active values when restoring a track after shared-channel use.
         boolean hasSsgEg = false;
         for (int v : t.ssgEg) {
             if (v != 0) { hasSsgEg = true; break; }
@@ -2433,9 +2444,11 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         if (hasSsgEg) {
             int port = (t.channelId < 3) ? 0 : 1;
             int ch = t.channelId % 3;
-            for (int slot = 0; slot < 4; slot++) {
-                if (t.ssgEg[slot] != 0) {
-                    synth.writeFm(this, port, 0x90 + slot * 4 + ch, t.ssgEg[slot]);
+            int[] registerOffsets = operatorRegisterOffsets();
+            for (int storedOperator = 0; storedOperator < 4; storedOperator++) {
+                if (t.ssgEg[storedOperator] != 0) {
+                    synth.writeFm(this, port, 0x90 + registerOffsets[storedOperator] + ch,
+                            t.ssgEg[storedOperator]);
                 }
             }
         }
@@ -2448,9 +2461,9 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         int[] normalizedVoiceIndices = { 0, 2, 1, 3 };
         int[] parameterRegisters = { 0x30, 0x50, 0x60, 0x70, 0x80 };
 
-        // S1/S2 SetVoice writes by parameter group in stored operator order
+        // S1 SetVoice writes by parameter group in stored operator order
         // (1,3,2,4), sends adjusted TL last, then restores AMS/FMS/panning.
-        // Neither shipped 68k driver injects a key-off or clears SSG-EG here.
+        // The shipped driver does not inject a key-off or clear SSG-EG here.
         synth.writeFm(this, port, 0xb0 + channel, voice[0] & 0xff);
         for (int group = 0; group < 5; group++) {
             for (int operator = 0; operator < 4; operator++) {
@@ -2464,6 +2477,51 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                     voice[21 + normalizedVoiceIndices[operator]] & 0xff);
         }
         applyFmPanAmsFms(t);
+    }
+
+    private void writeS2Instrument(Track t, byte[] voice, boolean hasTl) {
+        int port = t.channelId < 3 ? 0 : 1;
+        int channel = t.channelId % 3;
+        synth.writeFm(this, port, 0xB0 + channel, voice[0] & 0xFF);
+        writeGroupedOperatorParameters(port, channel, voice, S2_OPERATOR_REGISTER_OFFSETS);
+        applyFmPanAmsFms(t);
+        if (hasTl) {
+            writeTotalLevels(port, channel, voice, S2_OPERATOR_REGISTER_OFFSETS, false);
+        }
+    }
+
+    private void writeS3kInstrument(Track t, byte[] voice, boolean hasTl) {
+        int port = t.channelId < 3 ? 0 : 1;
+        int channel = t.channelId % 3;
+        applyFmPanAmsFms(t);
+        synth.writeFm(this, port, 0xB0 + channel, voice[0] & 0xFF);
+        writeGroupedOperatorParameters(port, channel, voice, S3K_OPERATOR_REGISTER_OFFSETS);
+        if (hasTl) {
+            writeTotalLevels(port, channel, voice, S3K_OPERATOR_REGISTER_OFFSETS, true);
+        }
+    }
+
+    private void writeGroupedOperatorParameters(int port, int channel, byte[] voice, int[] registerOffsets) {
+        for (int group = 0; group < FM_PARAMETER_REGISTERS.length; group++) {
+            for (int storedOperator = 0; storedOperator < 4; storedOperator++) {
+                synth.writeFm(this, port,
+                        FM_PARAMETER_REGISTERS[group] + registerOffsets[storedOperator] + channel,
+                        voice[1 + group * 4 + storedOperator] & 0xFF);
+            }
+        }
+    }
+
+    private void writeTotalLevels(int port, int channel, byte[] voice, int[] registerOffsets,
+            boolean maskToSevenBits) {
+        for (int storedOperator = 0; storedOperator < 4; storedOperator++) {
+            int value = voice[21 + storedOperator] & 0xFF;
+            if (maskToSevenBits) {
+                // S3K fix_sndbugs=0 zSendTL strips bit 7 before every YM write.
+                value &= 0x7F;
+            }
+            synth.writeFm(this, port, 0x40 + registerOffsets[storedOperator] + channel,
+                    value);
+        }
     }
 
     private void applyFmPanAmsFms(Track t) {
