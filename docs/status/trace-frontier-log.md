@@ -66986,3 +66986,57 @@ clean; the divergence is confined to rows 5230..5250.
   "skill documentation only, no src/main change". Caught only because an unrelated sweep
   failure prompted a tree inspection. **Run `git status --short` (or `git reset`) immediately
   before every commit**, rather than trusting a scoped `git add` to define the commit.
+
+## 2026-08-10 — round twenty-six: the results screen does not fade in
+
+Command: full `-Ptrace-replay` profile, no `-Dtest`. Base 0a4642329 (769 / 8 / 64).
+After: **769 / 10 / 64.** EHZ chain seg1 dynamic-art errorCount **26 -> 23**.
+The +2 is `TestS1CompleteEmeraldVisualRun` (both its tests), and it is **the same defect
+already failing `TestS1GhzMazeRoundTripChain`** — verified identical field, row and values:
+`queue.s1_nemesis_plc.remaining_work expected=1 actual=10` at row 69. One identified defect
+in two tests, not two regressions.
+
+- **NEITHER GAME FADES IN ON RESULTS ENTRY. The engine invented one.**
+  `GameLoop.doEnterResultsScreen()` called `GameLoopPlcLifecycle.startFromWhite(...)`, a
+  fade-from-white to "reveal" the results screen. The ROM reveal IS the palette load:
+    S2 (s2.asm:6748-6772): `Pal_FadeToWhite`, then `move #$2700,sr` (interrupts OFF), VDP
+    register setup, `ClearScreen`, `Hud_Base`, VDP command buffer reset, `move #$2300,sr`,
+    then **`moveq #PalID_Result,d0 / bsr.w PalLoad_Now`**. `PalLoad_Now` (s2.asm:3787-3799) is
+    a bare `move.l (a2)+,(a3)+` / `dbf` copy into the active palette — no fade counter, no
+    `VintID_Fade`, no `WaitForVint`. It returns in one frame.
+    S1 (sonic.asm:3376-3387): `NemDec Nem_TitleCard`, `Hud_Base`, `enable_ints`, then
+    `moveq #palid_SSResult,d0 / bsr.w PalLoad`, commented in the disassembly itself
+    **"...directly to active palette"**.
+  So the screen whites out, is rebuilt WHILE white with interrupts disabled, and the palette
+  snaps in. The engine's fade produced approximately the right APPEARANCE — fading up from
+  white to the results palette looks similar to snapping to it — which is why it survived.
+  **21 was never a ROM count: it is `FadeManager.FADE_DURATION` for a "from" fade.** Replaced
+  with `FadeManager.clearOverlayForImmediatePaletteLoad()`, the engine analogue of
+  `PalLoad_Now`, cited to both games.
+- **The invented fade was MASKING 21 rows of the ~36-row S1 results deficit** — the same
+  deficit an earlier round concluded had no sanctioned mechanism and would need either a
+  contract extension or a fitted constant. A third of it was simply engine-invented behaviour.
+  It was also freezing the score tally: the wrapped from-white fade had a pending completion so
+  `shouldFreezeGameplay` held it, where ROM sets `f_scorecount` and `f_endactbonus` to 1
+  immediately (sonic.asm:3389-3390).
+- **What it exposes is IDENTIFIED and already assigned:** `queue.s1_nemesis_plc.remaining_work`
+  expected 1, actual 10 at row 69 — **a PLC queue CONTENT difference, ten outstanding entries
+  against one, not a timing one.** `NewPLC` (reset) versus `AddPLC` (append) at
+  sonic.asm:3384-3387 is the first thing to check, with the drain being 9 tiles/frame of the
+  ARMED HEAD ONLY.
+- **DISPROVED along the way:** the inherited "duplicate routine-0 / 61-pass init" story for
+  Obj59. Instrumentation shows `Obj59_Init`'s countdown runs EXACTLY 60 times, one per pass
+  (passes 3003..3062), matching `subi_.w #1,objoff_2A / cmpi.w #-$3C` (s2.asm:72322-72325), and
+  the `#$63`/`bpl` collected countdown (s2.asm:72440, 72467-72469) is structurally identical to
+  the engine's COLLECT_COUNTDOWN=99. The one-pass offset is UPSTREAM of both Obj59 counters.
+- **Also disproved:** the brief's claim that the first SPECIAL_STAGE_RESULTS claim lands at 5251
+  instead of 5230. With the fade gone it lands at 5213 — 17 rows EARLY, not 21 late. The
+  engine's `Pal_FadeToWhite` window is rows 5191..5212 against the recorded 5192..5213, and rows
+  5214..5229 are the recorder's 16 lag rows, so a one-row shift at the fade's START becomes a
+  17-row shift in retirement. That one-row shift is the same `SS_Check_Rings_flag` pass-early
+  defect tracked separately.
+- **REVIEW NOTE, recorded against my own judgement:** I initially reverted this on seeing
+  failures go 8 -> 10, reporting "+2 undiagnosed reds". That was wrong twice over — the two
+  tests are one class, and its failure is the SAME identified defect already failing GhzMaze.
+  A canary set is a floor, not a ceiling; but equally, a raw failure-count delta is not a
+  regression report. **Diff the failing FIELDS, not just the failing class count.**

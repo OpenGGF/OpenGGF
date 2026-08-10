@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the special-stage results screen appears as the ROM presents it, by loading the results
+  palette directly, instead of fading in from white over 21 frames. Neither game fades in --
+  both white the screen out, rebuild it with interrupts disabled, and then copy the results
+  palette straight into the active palette -- and the engine's fade also held the score tally
+  frozen for its duration, where the ROM begins counting immediately.
 - Testing: a run chain executes any special-stage observation that owns a completed object
   pass, even where the recording marks that frame a lag frame. The stage's own main loop waits
   on its vertical-interrupt routine immediately before running objects, so a frame that ran a

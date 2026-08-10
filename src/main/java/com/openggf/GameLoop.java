@@ -2764,8 +2764,18 @@ public class GameLoop {
             gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);
         }
 
-        // Start fade-from-white to reveal the results screen
-        GameLoopPlcLifecycle.startFromWhite(resolveGameplayModeContext(), fadeManager, null);
+        // Neither game fades back in here. After the stage's whiteout both ROMs
+        // rebuild the screen and then write the results palette straight to the
+        // active palette in one go -- S2 `moveq #PalID_Result,d0 / bsr.w
+        // PalLoad_Now` (docs/s2disasm/s2.asm:6762-6763) and S1
+        // `moveq #palid_SSResult,d0 / bsr.w PalLoad` (docs/s1disasm/sonic.asm:3382-3383)
+        // -- so the results screen appears at full intensity on the very first
+        // V-blank of its tally loop (S2 `VintID_Level` at s2.asm:6797-6800, S1
+        // `SS_NormalExit` at sonic.asm:3403-3406). A fade-from-white here would
+        // instead hold PALETTE_FADE for its whole duration and push the first
+        // results-owned V-blank -- and the ProcessDMAQueue that retires the
+        // stage's last player DPLC pair -- that many rows late.
+        fadeManager.clearOverlayForImmediatePaletteLoad();
 
         LOGGER.info("Entered Special Stage Results Screen (rings=" + ssRingsCollected +
                 ", emerald=" + ssEmeraldCollected + ")");
