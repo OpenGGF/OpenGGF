@@ -17,6 +17,45 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestSmpsDriverSnapshot {
 
     @Test
+    void precomputedTrustRequiresAnExplicitDescriptor() {
+        CountingSmpsData data = new CountingSmpsData(
+                new byte[] {1, 2, 3, 4}, 0x81);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> new SmpsSequencer(
+                        data, AudioTestFixtures.EMPTY_DAC,
+                        new SmpsDriver(), AudioManager.getInstance(),
+                        new SmpsSequencerConfig.Builder().build(), null,
+                        SmpsSequencer.SourceDescriptorTrust
+                                .PRECOMPUTED_IMMUTABLE));
+    }
+
+    @Test
+    void legacyLiveReferenceRestoreRehashesAndRejectsSameObjectMutation() {
+        CountingSmpsData data = new CountingSmpsData(
+                new byte[] {1, 2, 3, 4}, 0x81);
+        SmpsDriver sourceDriver = new SmpsDriver();
+        sourceDriver.addSequencer(new SmpsSequencer(
+                data, AudioTestFixtures.EMPTY_DAC, sourceDriver,
+                AudioManager.getInstance(),
+                new SmpsSequencerConfig.Builder().build()), false);
+        SmpsDriverSnapshot snapshot = sourceDriver.captureSnapshot();
+
+        data.getDataWithoutCounting()[1] = 9;
+        data.resetDataReads();
+
+        IllegalStateException mismatch = assertThrows(
+                IllegalStateException.class,
+                () -> new SmpsDriver().restoreSnapshot(
+                        snapshot, SmpsDriverSnapshot.liveReferences()));
+
+        assertTrue(mismatch.getMessage().contains(
+                "resolved SMPS source does not match"));
+        assertEquals(1, data.dataReads(),
+                "legacy live references must be re-hashed on restore");
+    }
+
+    @Test
     void storedGenerationDescriptorIsReusedWithoutHashingOnConstructionOrRestore() {
         CountingSmpsData data = new CountingSmpsData(
                 new byte[] {1, 2, 3, 4}, 0x81);
@@ -29,12 +68,16 @@ class TestSmpsDriverSnapshot {
 
         SmpsSequencer sequencer = new SmpsSequencer(
                 data, AudioTestFixtures.EMPTY_DAC, sourceDriver,
-                AudioManager.getInstance(), config, descriptor);
+                AudioManager.getInstance(), config, descriptor,
+                SmpsSequencer.SourceDescriptorTrust.PRECOMPUTED_IMMUTABLE);
         sourceDriver.addSequencer(sequencer, false);
         SmpsDriverSnapshot snapshot = sourceDriver.captureSnapshot();
 
         assertEquals(0, data.dataReads());
         assertSame(descriptor, snapshot.sequencers().getFirst().source());
+        assertEquals(
+                SmpsSequencer.SourceDescriptorTrust.PRECOMPUTED_IMMUTABLE,
+                snapshot.sequencers().getFirst().sourceDescriptorTrust());
         assertEquals(9, descriptor.dependencyGeneration());
 
         SmpsDriver restoredDriver = new SmpsDriver();
@@ -45,6 +88,9 @@ class TestSmpsDriverSnapshot {
         assertEquals(0, data.dataReads(),
                 "same registered program identity must not be re-hashed");
         assertSame(descriptor, restored.sequencers().getFirst().source());
+        assertEquals(
+                SmpsSequencer.SourceDescriptorTrust.PRECOMPUTED_IMMUTABLE,
+                restored.sequencers().getFirst().sourceDescriptorTrust());
         assertSame(data, restored.sequencers().getFirst().smpsData());
         assertSame(config, restored.sequencers().getFirst().config());
     }

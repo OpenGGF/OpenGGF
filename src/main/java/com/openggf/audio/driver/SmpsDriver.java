@@ -499,6 +499,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 entries.add(new SmpsDriverSnapshot.SequencerEntry(
                         isSfx(sequencer),
                         sequencer.getSourceDescriptor(),
+                        sequencer.getSourceDescriptorTrust(),
                         fallbackVoiceSource,
                         sequencer.getSmpsData(),
                         sequencer.getDacData(),
@@ -568,7 +569,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                         this,
                         dependency.audioManager(),
                         dependency.config(),
-                        entry.source());
+                        entry.source(),
+                        entry.sourceDescriptorTrust());
                 sequencer.setRegion(region);
                 sequencer.restoreSnapshot(entry.snapshot());
                 sequencer.setIsSfx(entry.sfx());
@@ -615,7 +617,10 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         for (SmpsDriverSnapshot.SequencerEntry entry : entries) {
             AbstractSmpsData smpsData = Objects.requireNonNull(
                     resolver.resolveSmpsData(entry), "resolved SMPS data");
-            SmpsSourceDescriptor resolvedSource = smpsData == entry.smpsData()
+            boolean trustedIdentity = entry.sourceDescriptorTrust()
+                    == SmpsSequencer.SourceDescriptorTrust.PRECOMPUTED_IMMUTABLE
+                    && smpsData == entry.smpsData();
+            SmpsSourceDescriptor resolvedSource = trustedIdentity
                     ? entry.source() : SmpsSourceDescriptor.from(smpsData);
             if (!entry.source().matches(resolvedSource)) {
                 throw new IllegalStateException(

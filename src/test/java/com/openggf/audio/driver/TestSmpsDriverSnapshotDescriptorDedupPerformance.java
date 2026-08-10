@@ -40,15 +40,27 @@ class TestSmpsDriverSnapshotDescriptorDedupPerformance {
 
     private static final int SFX_COUNT = 32;
     private static final int CAPTURES_PER_REPETITION = 20;
+    private static final int ALLOCATION_CONTROL_REPETITIONS = 7;
+    // Residual per-operation VM accounting noise after repeated warmed controls.
+    private static final long VM_ALLOCATION_NOISE_MARGIN_BYTES = 256;
     private static volatile SmpsDriverSnapshot escapedSnapshot;
     private static volatile Object escapedInstantiation;
 
     @Test
+    void allocationToleranceDoesNotHideStableControlsBehindAFixedFloor() {
+        assertEquals(256, controlTolerance(1_000, 1_000));
+    }
+
+    @Test
     void registeredMusicAndSfxInstantiationAllocationDoesNotScaleWithProgramSize() {
-        ThreadMXBean bean = allocationBeanOrSkip();
         InstantiationFixture tiny = instantiationFixture("tiny", 4);
         InstantiationFixture large = instantiationFixture(
                 "large", 1024 * 1024);
+
+        assertInstantiationStructure(tiny);
+        assertInstantiationStructure(large);
+
+        ThreadMXBean bean = allocationBeanOrSkip();
 
         for (int index = 0; index < 40; index++) {
             escapedInstantiation = tiny.instantiateSfx();
@@ -57,27 +69,31 @@ class TestSmpsDriverSnapshotDescriptorDedupPerformance {
             escapedInstantiation = large.instantiateMusic();
         }
 
-        long tinySfxControl = allocationSlope(
+        long[] tinySfxControls = repeatedAllocationSlopes(
                 bean, ignored -> tiny.instantiateSfx());
-        long tinySfxSlope = allocationSlope(
-                bean, ignored -> tiny.instantiateSfx());
-        long largeSfxSlope = allocationSlope(
+        long[] largeSfxSamples = repeatedAllocationSlopes(
                 bean, ignored -> large.instantiateSfx());
-        long tinyMusicControl = allocationSlope(
+        long[] tinyMusicControls = repeatedAllocationSlopes(
                 bean, ignored -> tiny.instantiateMusic());
-        long tinyMusicSlope = allocationSlope(
-                bean, ignored -> tiny.instantiateMusic());
-        long largeMusicSlope = allocationSlope(
+        long[] largeMusicSamples = repeatedAllocationSlopes(
                 bean, ignored -> large.instantiateMusic());
-        long sfxTolerance = controlTolerance(
-                tinySfxControl, tinySfxSlope);
-        long musicTolerance = controlTolerance(
-                tinyMusicControl, tinyMusicSlope);
+        long tinySfxSlope = median(tinySfxControls);
+        long largeSfxSlope = median(largeSfxSamples);
+        long tinyMusicSlope = median(tinyMusicControls);
+        long largeMusicSlope = median(largeMusicSamples);
+        long sfxTolerance = controlTolerance(tinySfxControls);
+        long musicTolerance = controlTolerance(tinyMusicControls);
 
-        System.out.printf("smps catalog instantiation slopes sfx=%d/%d/%d "
-                        + "music=%d/%d/%d tolerances=%d/%d bytes%n",
-                tinySfxControl, tinySfxSlope, largeSfxSlope,
-                tinyMusicControl, tinyMusicSlope, largeMusicSlope,
+        System.out.printf("smps catalog instantiation slopes "
+                        + "sfxControls=%s largeSfx=%s "
+                        + "musicControls=%s largeMusic=%s "
+                        + "medians=%d/%d/%d/%d tolerances=%d/%d bytes%n",
+                Arrays.toString(tinySfxControls),
+                Arrays.toString(largeSfxSamples),
+                Arrays.toString(tinyMusicControls),
+                Arrays.toString(largeMusicSamples),
+                tinySfxSlope, largeSfxSlope,
+                tinyMusicSlope, largeMusicSlope,
                 sfxTolerance, musicTolerance);
         assertTrue(Math.abs(largeSfxSlope - tinySfxSlope) <= sfxTolerance,
                 "registered SFX instantiation must not allocate by program size");
@@ -89,16 +105,6 @@ class TestSmpsDriverSnapshotDescriptorDedupPerformance {
         assertEquals(0, tiny.musicSource.dataReads());
         assertEquals(0, large.musicSource.dataReads());
 
-        SmpsSequencer tinySfx = tiny.instantiateSfx();
-        SmpsSequencer largeSfx = large.instantiateSfx();
-        SmpsSequencer tinyMusic = tiny.instantiateMusic()
-                .driver().firstMusicSequencer();
-        SmpsSequencer largeMusic = large.instantiateMusic()
-                .driver().firstMusicSequencer();
-        assertSame(tiny.sfxDescriptor, tinySfx.getSourceDescriptor());
-        assertSame(large.sfxDescriptor, largeSfx.getSourceDescriptor());
-        assertSame(tiny.musicDescriptor, tinyMusic.getSourceDescriptor());
-        assertSame(large.musicDescriptor, largeMusic.getSourceDescriptor());
     }
 
     @Test
@@ -183,6 +189,15 @@ class TestSmpsDriverSnapshotDescriptorDedupPerformance {
         return (large - small) / 48;
     }
 
+    private static long[] repeatedAllocationSlopes(
+            ThreadMXBean bean, IntFunction<Object> operation) {
+        long[] slopes = new long[ALLOCATION_CONTROL_REPETITIONS];
+        for (int repetition = 0; repetition < slopes.length; repetition++) {
+            slopes[repetition] = allocationSlope(bean, operation);
+        }
+        return slopes;
+    }
+
     private static long allocatedBytes(
             ThreadMXBean bean,
             int operations,
@@ -195,8 +210,36 @@ class TestSmpsDriverSnapshotDescriptorDedupPerformance {
         return bean.getThreadAllocatedBytes(threadId) - before;
     }
 
-    private static long controlTolerance(long first, long second) {
-        return Math.max(4_096, Math.abs(first - second) + 1_024);
+    private static long controlTolerance(long... controls) {
+        if (controls.length == 0) {
+            throw new IllegalArgumentException("controls must not be empty");
+        }
+        long minimum = controls[0];
+        long maximum = controls[0];
+        for (int index = 1; index < controls.length; index++) {
+            minimum = Math.min(minimum, controls[index]);
+            maximum = Math.max(maximum, controls[index]);
+        }
+        return maximum - minimum + VM_ALLOCATION_NOISE_MARGIN_BYTES;
+    }
+
+    private static void assertInstantiationStructure(
+            InstantiationFixture fixture) {
+        SmpsSequencer firstSfx = fixture.instantiateSfx();
+        SmpsSequencer secondSfx = fixture.instantiateSfx();
+        SmpsSequencer firstMusic = fixture.instantiateMusic()
+                .driver().firstMusicSequencer();
+        SmpsSequencer secondMusic = fixture.instantiateMusic()
+                .driver().firstMusicSequencer();
+
+        assertSame(fixture.sfxDescriptor, firstSfx.getSourceDescriptor());
+        assertSame(fixture.sfxDescriptor, secondSfx.getSourceDescriptor());
+        assertSame(fixture.musicDescriptor,
+                firstMusic.getSourceDescriptor());
+        assertSame(fixture.musicDescriptor,
+                secondMusic.getSourceDescriptor());
+        assertEquals(0, fixture.sfxSource.dataReads());
+        assertEquals(0, fixture.musicSource.dataReads());
     }
 
     private static void validateRun(CaptureRun run,

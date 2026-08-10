@@ -23,6 +23,7 @@ import com.openggf.game.sonic3k.audio.smps.Sonic3kSfxData;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -705,7 +706,10 @@ public class TestSonic3kCoordFlagParity {
         final SmpsCoordFlagHandlerOwner handlers;
         final AudioPresentationSourceFactory factory;
         final AudioVoiceRegistry registry;
+        private final Map<Sonic3kSfxData, SmpsAssetKey> sfxAssetKeys =
+                new IdentityHashMap<>();
         private long nextVoiceId = 1;
+        private int nextSfxAssetId = 1;
 
         PresentationFixture(
                 SmpsCoordFlagRuntimeState state,
@@ -743,9 +747,10 @@ public class TestSonic3kCoordFlagParity {
         }
 
         void addSfx(Sonic3kSfxData data, int continuousSfxId) {
-            SmpsAssetKey key = new SmpsAssetKey(
-                    "s3k", SmpsAssetKey.Route.BASE_ID,
-                    data.getId(), null);
+            SmpsAssetKey key = sfxAssetKeys.computeIfAbsent(data,
+                    ignored -> new SmpsAssetKey(
+                            "s3k", SmpsAssetKey.Route.BASE_NAME, -1,
+                            "coord-fixture-" + nextSfxAssetId++));
             factory.warmSmpsSfxAsset(
                     key, data, EMPTY_DAC,
                     Sonic3kSmpsSequencerConfig.CONFIG);
