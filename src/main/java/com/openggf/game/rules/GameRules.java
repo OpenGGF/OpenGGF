@@ -109,6 +109,7 @@ public record GameRules(
                     3,
                     0,
                     false,
+                    false,
                     32,
                     6,
                     6,
@@ -252,6 +253,7 @@ public record GameRules(
                     7,
                     0,
                     true,
+                    false,
                     32,
                     6,
                     6,
@@ -395,6 +397,7 @@ public record GameRules(
             new RingRules(
                     7,
                     4,
+                    true,
                     true,
                     0,
                     6,

@@ -107,27 +107,43 @@ class TestLostRingObjectInstance {
     }
 
     @Test
-    void expiredSpillCounterDeletesOnlyOnNativeBoundaryCheckPath() {
+    void lostRingBoundaryCheckCadenceUsesTypedGameRule() {
+        assertFalse(GameRules.SONIC_1.ring().lostRingBoundaryChecksOnlyOnProbeCadence());
+        assertFalse(GameRules.SONIC_2.ring().lostRingBoundaryChecksOnlyOnProbeCadence());
+        assertTrue(GameRules.SONIC_3K.ring().lostRingBoundaryChecksOnlyOnProbeCadence());
+
         SpillAnimationState expired = new SpillAnimationState();
-        LostRingObjectInstance rising = LostRingObjectInstance.spawn(
-                0x100, 0x100, 0, -0x0400, 0, 0xFF, expired);
+        BoundaryCadenceRing s3kRising = new BoundaryCadenceRing(
+                0x100, 0x100, -0x0400, 0, true, expired);
 
-        rising.update(0, null);
+        s3kRising.update(0, null);
 
-        assertFalse(rising.isDestroyed(),
+        assertFalse(s3kRising.isDestroyed(),
                 "S3K Obj_Bouncing_Ring branches around the counter check while rising");
 
-        LostRingObjectInstance fallingOffCadence = LostRingObjectInstance.spawn(
-                0x100, 0x100, 0, 0x0400, 1, 0xFF, expired);
-        fallingOffCadence.update(0, null);
-        assertFalse(fallingOffCadence.isDestroyed(),
-                "Obj37 branches around the counter check on non-probe cadence phases");
+        BoundaryCadenceRing s3kFallingOffCadence = new BoundaryCadenceRing(
+                0x100, 0x100, 0x0400, 1, true, expired);
+        s3kFallingOffCadence.update(0, null);
+        assertFalse(s3kFallingOffCadence.isDestroyed(),
+                "S3K Obj_Bouncing_Ring branches around the counter check off cadence");
 
-        LostRingObjectInstance fallingOnCadence = LostRingObjectInstance.spawn(
-                0x100, 0x100, 0, 0x0400, 0, 0xFF, expired);
-        fallingOnCadence.update(0, null);
-        assertTrue(fallingOnCadence.isDestroyed(),
-                "the shared counter expires Obj37 once its cadence reaches CheckBoundary");
+        BoundaryCadenceRing s3kFallingOnCadence = new BoundaryCadenceRing(
+                0x100, 0x100, 0x0400, 0, true, expired);
+        s3kFallingOnCadence.update(0, null);
+        assertTrue(s3kFallingOnCadence.isDestroyed(),
+                "S3K expires the ring once its cadence reaches the boundary check");
+
+        BoundaryCadenceRing s1S2Rising = new BoundaryCadenceRing(
+                0x100, 0x100, -0x0400, 0, false, expired);
+        s1S2Rising.update(0, null);
+        assertTrue(s1S2Rising.isDestroyed(),
+                "S1/S2 rising branches still reach their boundary checks");
+
+        BoundaryCadenceRing s1S2FallingOffCadence = new BoundaryCadenceRing(
+                0x100, 0x100, 0x0400, 1, false, expired);
+        s1S2FallingOffCadence.update(0, null);
+        assertTrue(s1S2FallingOffCadence.isDestroyed(),
+                "S1/S2 off-cadence branches still reach their boundary checks");
     }
 
     @Test
@@ -204,6 +220,7 @@ class TestLostRingObjectInstance {
                 0x100, 0x00FF, 0, 0x0200);
 
         ring.update(0, null);
+        ring.refreshPostCameraRenderState();
 
         assertEquals(1, ring.floorProbeCount,
                 "Obj37_Init starts render_flags at $84, so the first cadence hit may probe");
@@ -226,6 +243,7 @@ class TestLostRingObjectInstance {
                 0x100, 0x00E0, 0, 0, GameRules.SONIC_3K.ring().lostRingRenderYMargin());
 
         ring.update(0, null);
+        ring.refreshPostCameraRenderState();
 
         assertFalse(ring.renderFlagForTest(),
                 "S3K Obj37 height_pixels remains zero, making the viewport bottom exclusive");
@@ -383,6 +401,33 @@ class TestLostRingObjectInstance {
         protected int ringCheckCeilingDist(int x, int y) {
             ceilingProbeCount++;
             return 0;
+        }
+    }
+
+    private static final class BoundaryCadenceRing extends LostRingObjectInstance {
+        private final boolean cadenceOnly;
+
+        private BoundaryCadenceRing(int xPixel, int yPixel, int yVel, int phase,
+                                    boolean cadenceOnly, SpillAnimationState spillAnimation) {
+            super(new ObjectSpawn(xPixel & 0xFFFF, yPixel & 0xFFFF, 0x37, 0, 0, false, 0));
+            initFixedPointForTest(xPixel, yPixel, 0, yVel, phase, 0xFF);
+            this.cadenceOnly = cadenceOnly;
+            setSpillAnimation(spillAnimation);
+        }
+
+        @Override
+        protected int resolveFloorCheckMask() {
+            return 7;
+        }
+
+        @Override
+        protected int resolveVblaCounter() {
+            return 0;
+        }
+
+        @Override
+        protected boolean lostRingBoundaryChecksOnlyOnProbeCadence() {
+            return cadenceOnly;
         }
     }
 

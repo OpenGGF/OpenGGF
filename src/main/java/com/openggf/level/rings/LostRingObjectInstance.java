@@ -218,12 +218,14 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         // v_vbla_byte (not the gameplay frame counter) for this gate (RingManager.java:1242-1248).
         int floorCheckMask = resolveFloorCheckMask();
         int vblaCounter = resolveVblaCounter() + resolveFloorCheckCounterPhase();
+        boolean boundaryChecksOnlyOnCadence =
+                lostRingBoundaryChecksOnlyOnProbeCadence();
         boolean movingTowardSurface = reverseGravity ? yVel <= 0 : yVel >= 0;
         if (!movingTowardSurface) {
-            return false;
+            return !boundaryChecksOnlyOnCadence;
         }
         if (((vblaCounter + phaseOffset) & floorCheckMask) != 0) {
-            return false;
+            return !boundaryChecksOnlyOnCadence;
         }
 
         if (!ringFloorProbeRequiresRenderFlag() || hasRomRenderFlagForFloorProbe()) {
@@ -247,9 +249,11 @@ public class LostRingObjectInstance extends AbstractObjectInstance
                 }
             }
         }
-        // Obj37_CheckBoundary is reached only through this movement-direction and
-        // cadence branch. The off-screen render-flag branch skips only the terrain
-        // probe and still falls through to the lifetime/bottom checks.
+        // S1 RLoss_Bounce and S2 Obj37_Main branch to CheckBoundary from their
+        // rising and off-cadence paths. S3K instead branches directly to
+        // Add_SpriteToCollisionResponseList and reaches its boundary check only
+        // through this cadence path. An off-screen render flag skips only the
+        // terrain probe and still falls through to the boundary check.
         return true;
     }
 
@@ -267,15 +271,16 @@ public class LostRingObjectInstance extends AbstractObjectInstance
      * stays frozen at its spawn point. The override mirrors {@code Obj37_Main}:
      * <ol>
      *   <li>{@link #updateMovement()} = ObjectMove + gravity + cadence floor/ceiling probe;</li>
-     *   <li>On the movement-direction/cadence path that reaches
+     *   <li>When the current game's native control flow reaches
      *       {@code Obj37_CheckBoundary}, delete when the shared
      *       {@code Ring_spill_anim_counter} (the {@link SpillAnimationState#counter()})
      *       reaches 0, OR when {@code y_pos} has passed below
      *       {@code Camera_Max_Y_pos + screen_height}.</li>
      * </ol>
      * The shared counter is the lifetime owner (ROM non-{@code fixBugs} path); it is
-     * ticked once per frame by {@code RingManager.LostRingPool}. A ring observes zero
-     * only when its native direction/cadence branch next reaches the boundary check.
+     * ticked once per frame by {@code RingManager.LostRingPool}. S1/S2 reach the
+     * boundary check every object pass; S3K observes zero only when its native
+     * direction/cadence branch next reaches that check.
      */
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
@@ -330,8 +335,8 @@ public class LostRingObjectInstance extends AbstractObjectInstance
 
         boolean checksBoundary = stepPhysics(0x18 /* GRAVITY */, true);
 
-        // Obj37 reaches its lifetime and bottom-boundary checks only while moving
-        // toward the active surface and on the ring's floor-probe cadence phase.
+        // S1/S2 reach this from every movement branch; S3K reaches it only while
+        // moving toward the active surface on the floor-probe cadence phase.
         if (checksBoundary && spillAnimation != null && spillAnimation.counter() == 0) {
             setDestroyed(true);
             return;
@@ -450,6 +455,18 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     protected boolean ringFloorProbeRequiresRenderFlag() {
         RingRules rules = resolveRingRules();
         return rules == null || rules.ringFloorProbeRequiresRenderFlag();
+    }
+
+    /**
+     * S3K's rising/off-cadence branches skip the lifetime and bottom-boundary
+     * checks (sonic3k.asm:35654-35686). S1 and S2 branch to those checks from
+     * both paths (S1 Rings.asm:314-356; s2.asm:25209-25249).
+     */
+    protected boolean lostRingBoundaryChecksOnlyOnProbeCadence() {
+        RingRules rules = resolveRingRules();
+        return rules != null
+                ? rules.lostRingBoundaryChecksOnlyOnProbeCadence()
+                : GameRules.SONIC_2.ring().lostRingBoundaryChecksOnlyOnProbeCadence();
     }
 
     /**

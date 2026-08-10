@@ -71672,3 +71672,47 @@ clean; the divergence is confined to rows 5230..5250.
   "skill documentation only, no src/main change". Caught only because an unrelated sweep
   failure prompted a tree inspection. **Run `git status --short` (or `git reset`) immediately
   before every commit**, rather than trusting a scoped `git add` to define the commit.
+
+## 2026-08-10 — S1 lost-ring boundary branch regression closed
+
+- Context: `bugfix/s3k-traces` at `eb26e2783`; validation used JDK 21.0.12 and
+  all three discovered World REV01/locked-on ROMs. The six protected user edits
+  remained unstaged. Fresh `origin/develop` remained `0a4642329` and was already
+  an ancestor of the branch. Ring comparison remained error-level through
+  `ToleranceConfig.DEFAULT` / `RingCountMode.FORCE_ERROR`.
+- Discovery command: `mvn -Ptrace-replay -Dmse=off
+  -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical -DreuseForks=true
+  -Dsurefire.argLine=-Xmx3g
+  -Dsonic1.rom.path='./Sonic The Hedgehog (W) (REV01) [!].gen'
+  -Dtest='com.openggf.tests.trace.s1.*TraceReplay' test`. At the committed
+  baseline, 34 of 36 classes passed. LZ1 had 1 error and 0 warnings at raw
+  `11474` (`rings`, expected `0`, actual `10`); LZ2 had 536 errors and 0
+  warnings beginning at raw `7800` (`obj_s72_type`, expected `0x64`, actual
+  missing).
+- Root cause: the earlier S3K CNZ correction made every game's spilled-ring
+  lifetime/bottom check cadence-gated. S1 `RLoss_Bounce` and S2 `Obj37_Main`
+  actually branch to `CheckBoundary` while rising and off cadence
+  (`docs/s1disasm/_incObj/25, 37 Rings.asm:314-356`;
+  `docs/s2disasm/s2.asm:25209-25249`). Only S3K branches directly to its
+  collision-list/render tail and reaches the boundary checks through the
+  cadence path (`docs/skdisasm/sonic3k.asm:35654-35686`). `RingRules` now owns
+  that game-wide semantic split explicitly: false for S1/S2, true for S3K. No
+  trace, route, zone, frame, or game-name predicate and no fitted constant was
+  introduced.
+- Focused command: `mvn -Dmse=off -Dsurefire.forkCount=1
+  -Dsurefire.runOrder=alphabetical
+  -Dtest=com.openggf.level.rings.TestLostRingObjectInstance,com.openggf.tests.TestRingManager
+  test`. Result: 62 tests, 0 failures, 0 errors. Targeted LZ1/LZ2 rerun: 2
+  tests, 0 failures, 0 errors.
+- Regression commands repeated the discovery command, then the equivalent S2
+  wildcard command with `-Dsonic2.rom.path='./Sonic The Hedgehog 2 (W)
+  (REV01) [!].gen'`. Results: all 36 S1 replay classes and all 33 S2 replay
+  classes passed.
+- The explicit S3K AIZ-through-LBZ allowlist plus gumball, pachinko, slots, and
+  special-stage traces ran 56 tests. Every selected class except ICZ passed,
+  including standalone and complete-run CNZ. ICZ reproduced in isolation with
+  the pre-existing hardware admission frontier `KOS_DECOMPRESSION_QUEUE#255`,
+  fingerprint `c2db2fda975f758607b601f686bc782c7ebe55e2413f540f23b193ba2b6f1741`,
+  expected completion with no engine job pending. The new rule's S3K value is
+  true and preserves the preceding production branch exactly; ICZ is the next
+  gameplay-order target, not a regression introduced by this change.

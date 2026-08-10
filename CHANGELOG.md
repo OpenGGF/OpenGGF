@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: spilled-ring lifetime and bottom-boundary checks now follow each
+  game's native branch topology: S1/S2 reach them on every object pass, while
+  S3K reaches them only through its movement-direction/cadence path. This
+  restores S1 LZ1's strict ring-loss row and LZ2's lost-ring SST occupancy while
+  retaining the completed standalone CNZ trace.
 - Fix/Test: S3K now republishes sidekick camera bounds after boundary easing,
   matching Tails' live `Camera_max_Y_pos` death-plane read when an event shrinks
   the arena. CNZ's post-boss cannon also uses the native lowest-free-slot
