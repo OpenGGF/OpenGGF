@@ -204,8 +204,16 @@ class TestLoadQueueTraceComparison {
         }
     }
 
+    /**
+     * A child published by {@code Process_Kos_Module_Queue}'s loop tail
+     * (docs/skdisasm/sonic3k.asm:7908) is still an unfinished FIFO head at the
+     * next {@code Wait_VSync} sample (7888): {@code Process_Kos_Queue} (7887)
+     * can be interrupted and bookmarked mid-stream by V-int
+     * (docs/skdisasm/sonic3k.asm:2840-2843, 2957). A held loop tail does not
+     * change that, so the recorded row is compared as sampled.
+     */
     @Test
-    void normalizesPreExistingModuleBatchAtAtomicHeldRowBoundary(
+    void comparesHeldRowDirectChildAsRecorded(
             @TempDir Path temp) throws Exception {
         TraceMetadata metadata = s3kQueueMetadata(temp, 3);
         TraceEvent.LoadQueueState module0 = moduleQueue(0);
@@ -225,10 +233,9 @@ class TestLoadQueueTraceComparison {
                 trace.loadQueueStatesForComparisonFrame(1),
                 "s3k_kos_direct");
 
-        assertFalse(comparedDirect.busy());
+        assertTrue(comparedDirect.busy());
+        assertFalse(comparedDirect.prepared());
         assertEquals(1, comparedDirect.frame());
-        assertTrue(queueState(trace.loadQueueStatesForFrame(1),
-                "s3k_kos_direct").busy());
     }
 
     @Test

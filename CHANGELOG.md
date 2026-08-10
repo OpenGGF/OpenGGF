@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the S3K load-queue comparator no longer rewrites a recorded direct-queue row on a held
+  loop tail. That substitution was itself measured off a single recording -- its unit fixture
+  hardcoded the very Carnival Night child it was written for -- and it hid a real recorded state:
+  `Process_Kos_Queue` decompresses incrementally and resumes through `Set_Kos_Bookmark` /
+  `Restore_Kos_Bookmark`, so an unfinished FIFO head at the `Wait_VSync` sample is exactly as
+  legitimate on a held tail as anywhere else. Recorded rows are now compared as sampled.
 - Fix: Angel Island's fire-curtain background chain no longer advances on a lag frame, and the
   act-two half of it is now driven by the ROM's own gates instead of two frame budgets measured
   off a recording. Every routine in that chain is reached only through the level main loop, so a
