@@ -1657,6 +1657,40 @@ produce spuriously, and keep the opposite polarity a hard error forever. A blank
 "stop comparing this field" throws away the half of the signal that still catches
 real defects.
 
+### A mechanism that would explain the symptom is not evidence that it fires
+
+Twice in one session a confident diagnosis named real code, cited the ROM correctly,
+and was still wrong -- because nobody checked whether the code executes.
+
+The EHZ checkpoint case: `shouldSpawnStars` refuses to spawn while a
+`usedForSpecialStage` flag is set; the flag is level-global and the special-stage
+return path cannot clear it. That explains the symptom exactly -- first entry
+works, later ones cannot. It is also an invention with no ROM counterpart, so
+deleting it was doubly attractive. One `System.err` line settled it: the branch
+**never prints**, and `activate()` fires exactly once in the whole run. The star
+post never activates, so the suppression is never reached. Deleting it would have
+been a no-op shipped as a fix.
+
+Both ROM readings underpinning that diagnosis were correct. The causal step was
+not. Sound ROM work does not transfer its soundness to the conclusion built on it.
+
+Before believing any "X causes Y" where a print can settle it: **print it.** If a
+branch is load-bearing, prove it executes; if a flag matters, log its value at the
+moment you claim it matters. Instrument, then theorise.
+
+Corollaries earned the same day:
+
+- **The first ASSERT to fire is not the first DIVERGENCE.** EHZ's boundary
+  assertion looked like a clean single failure; the segment underneath it had
+  82,176 errors in `target/trace-reports/*_seg2_report.json`. Read the segment
+  report before characterising a failure, and never repeat a "passed green" claim
+  you have not read.
+- **A residual can be several errors that nearly cancel.** GHZ's 35-row tail
+  deficit decomposed into +47, -5, -44 and -34. Landing any single correct fix
+  makes the reported number worse while making the engine more accurate. When a
+  number is small, check it is small because everything is right, not because
+  large errors are cancelling.
+
 ## Why This Matters
 
 The mission is faithful pixel-for-pixel reimplementation. Trace replay tests are the proof. If they're allowed to lean on synced trace data each frame, the proof is hollow — bugs hide behind the synchronisation and the test green-lights anyway. Honest tests force honest engine fixes. That's how progress compounds: every fix makes the next divergence visible instead of building on top of a masked one.
