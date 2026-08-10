@@ -9,7 +9,9 @@ All notable changes to the OpenGGF project are documented in this file.
   concurrent replacement cannot mix generations. Failed source, coordination-handler, or
   backend/profile setup (including fatal error paths) restores the prior configuration, while
   live and rewind voices retain their original generation without allowing new commands to
-  reuse stale programs.
+  reuse stale programs. Source-changing callbacks are rejected if they try to re-enter a base,
+  donor, clear, or reset transaction, preventing nested publications from reusing a generation
+  or invalidating the outer transaction's rollback state.
 - Fix: the Sonic 3 & Knuckles special stage loads its emerald art through the real Kosinski
   module queue and waits on the ROM's own modules-left predicate, instead of a fixed four-frame
   drain measured from a capture. The structural part now comes from the module state machine and

@@ -26,12 +26,16 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -586,6 +590,119 @@ public class TestDonorAudioRouting {
                 retried.descriptor().dependencyGeneration());
     }
 
+    @ParameterizedTest(name = "{0} callback rejects nested donor {1}")
+    @MethodSource("donorMutationCallbackCases")
+    void donorMutationCallbacksRejectNestedRegisterAndClearBeforePublication(
+            DonorCallbackStage callbackStage,
+            NestedDonorMutation nestedMutation) {
+        SmpsSequencerConfig config = new SmpsSequencerConfig.Builder().build();
+        DacData oldDac = dac(331);
+        DonorProfile oldProfile = new DonorProfile("old");
+        audioManager.registerDonorLoader(
+                "s2", loader(oldDac, 0xE6, (byte) 0x51),
+                oldDac, config, oldProfile);
+        ObservedSource initial = observeDonorSfx("s2", 0xE6);
+        DacData candidateDac = dac(332);
+        DonorProfile candidateProfile = new DonorProfile("candidate");
+        candidateProfile.registerBeforeFailure = true;
+        DacData nestedDac = dac(333);
+        Runnable nestedAttempt = switch (nestedMutation) {
+            case REGISTER -> () -> audioManager.registerDonorLoader(
+                    "nested",
+                    loader(nestedDac, 0xE7, (byte) 0x53),
+                    nestedDac, config);
+            case CLEAR -> audioManager::clearDonorAudio;
+        };
+        if (callbackStage == DonorCallbackStage.HANDLER) {
+            candidateProfile.onConfigure = nestedAttempt;
+        } else {
+            backend.callbackDonorProfile = candidateProfile;
+            backend.onDonorProfileSet = nestedAttempt;
+        }
+        Runnable outerAttempt = () -> audioManager.registerDonorLoader(
+                "s2", loader(candidateDac, 0xE6, (byte) 0x52),
+                candidateDac, config, candidateProfile);
+
+        assertThrows(IllegalStateException.class, outerAttempt::run);
+
+        assertEquals(initial, observeDonorSfx("s2", 0xE6));
+        assertSame(oldProfile, backend.activeDonorProfile);
+        assertThrows(IllegalArgumentException.class,
+                () -> audioManager.presentationCoordFlagHandlersForTesting()
+                        .handlerFor("candidate"));
+        int commandCount = audioManager.commandTimeline().entryCount();
+        audioManager.playDonorSfx("nested", 0xE7);
+        assertEquals(commandCount, audioManager.commandTimeline().entryCount(),
+                "the rejected nested register must publish no donor");
+
+        outerAttempt.run();
+        ObservedSource retried = observeDonorSfx("s2", 0xE6);
+        assertEquals(initial.descriptor().dependencyGeneration() + 1,
+                retried.descriptor().dependencyGeneration(),
+                "the rejected nested mutation must consume no generation");
+        assertSame(candidateDac, retried.dac());
+    }
+
+    @Test
+    void rejectedNestedDonorRegistrationDoesNotConsumeItsGeneration() {
+        SmpsSequencerConfig config = new SmpsSequencerConfig.Builder().build();
+        DacData nestedDac = dac(334);
+        StubSmpsLoader nestedLoader = loader(
+                nestedDac, 0xE8, (byte) 0x54);
+        DonorProfile outerProfile = new DonorProfile("outer");
+        outerProfile.registerBeforeFailure = true;
+        outerProfile.onConfigure = () -> audioManager.registerDonorLoader(
+                "nested", nestedLoader, nestedDac, config);
+        DacData outerDac = dac(335);
+
+        assertThrows(IllegalStateException.class,
+                () -> audioManager.registerDonorLoader(
+                        "outer", loader(outerDac, 0xE9, (byte) 0x55),
+                        outerDac, config, outerProfile));
+
+        audioManager.registerDonorLoader(
+                "nested", nestedLoader, nestedDac, config);
+        ObservedSource nested = observeDonorSfx("nested", 0xE8);
+        assertEquals(1, nested.descriptor().dependencyGeneration(),
+                "rejection must precede nested generation-counter publication");
+    }
+
+    @Test
+    void rejectedNestedResetPreservesRetainedGenerationAfterClear() {
+        SmpsSequencerConfig config = new SmpsSequencerConfig.Builder().build();
+        DacData firstDac = dac(336);
+        audioManager.registerDonorLoader(
+                "cleared", loader(firstDac, 0xEA, (byte) 0x56),
+                firstDac, config);
+        ObservedSource first = observeDonorSfx("cleared", 0xEA);
+        audioManager.clearDonorAudio();
+        DonorProfile outerProfile = new DonorProfile("outer");
+        outerProfile.registerBeforeFailure = true;
+        outerProfile.onConfigure = audioManager::resetState;
+        DacData outerDac = dac(337);
+
+        assertThrows(IllegalStateException.class,
+                () -> audioManager.registerDonorLoader(
+                        "outer", loader(outerDac, 0xEB, (byte) 0x57),
+                        outerDac, config, outerProfile));
+
+        DacData replacementDac = dac(338);
+        audioManager.registerDonorLoader(
+                "cleared", loader(replacementDac, 0xEA, (byte) 0x58),
+                replacementDac, config);
+        ObservedSource replacement = observeDonorSfx("cleared", 0xEA);
+        assertEquals(first.descriptor().dependencyGeneration() + 2,
+                replacement.descriptor().dependencyGeneration(),
+                "clear consumes one generation and rejected reset consumes none");
+        assertSame(replacementDac, replacement.dac());
+    }
+
+    private static Stream<Arguments> donorMutationCallbackCases() {
+        return Arrays.stream(DonorCallbackStage.values())
+                .flatMap(stage -> Arrays.stream(NestedDonorMutation.values())
+                        .map(nested -> Arguments.of(stage, nested)));
+    }
+
     private ObservedSource observeDonorSfx(String gameId, int sfxId) {
         audioManager.playDonorSfx(gameId, sfxId);
         audioManager.presentFrame(PresentationMode.SILENT);
@@ -619,6 +736,16 @@ public class TestDonorAudioRouting {
 
     private record ObservedSource(
             SmpsSourceDescriptor descriptor, DacData dac) {
+    }
+
+    private enum DonorCallbackStage {
+        HANDLER,
+        BACKEND
+    }
+
+    private enum NestedDonorMutation {
+        REGISTER,
+        CLEAR
     }
 
     // --- Test doubles ---
@@ -704,6 +831,7 @@ public class TestDonorAudioRouting {
         private final String gameId;
         RuntimeException configureFailure;
         boolean registerBeforeFailure;
+        Runnable onConfigure;
 
         private DonorProfile(String gameId) {
             super(new StubSmpsLoader());
@@ -720,6 +848,11 @@ public class TestDonorAudioRouting {
                 SmpsCoordFlagHandlerOwner owner) {
             if (registerBeforeFailure) {
                 owner.register(gameId, ignored -> new ArbitraryHandler());
+            }
+            Runnable callback = onConfigure;
+            onConfigure = null;
+            if (callback != null) {
+                callback.run();
             }
             if (configureFailure != null) {
                 throw configureFailure;
@@ -849,12 +982,22 @@ public class TestDonorAudioRouting {
         GameAudioProfile failDonorRestoreProfile;
         GameAudioProfile failDonorErrorProfile;
         GameAudioProfile activeDonorProfile;
+        GameAudioProfile callbackDonorProfile;
+        Runnable onDonorProfileSet;
 
         @Override
         public void registerAudioProfileCoordHandlers(
                 GameAudioProfile profile) {
             donorProfileAttempts.add(profile);
             activeDonorProfile = profile;
+            if (profile == callbackDonorProfile) {
+                callbackDonorProfile = null;
+                Runnable callback = onDonorProfileSet;
+                onDonorProfileSet = null;
+                if (callback != null) {
+                    callback.run();
+                }
+            }
             if (profile != null && profile == failDonorErrorProfile) {
                 throw new AssertionError(
                         "backend rejected donor profile");
