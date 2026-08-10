@@ -71451,3 +71451,38 @@ landable change, which I implemented directly.
   complete-run AIZ, both HCZ methods, standalone and complete-run MGZ, and
   complete-run CNZ. Result: 6 tests, 0 failures, 0 errors. The new standalone
   frontier is regression-free and is committed before further diagnosis.
+
+## 2026-08-10 — standalone CNZ Giant Wheel P2 frontier
+
+- Context: `bugfix/s3k-traces` at `3c9c352b0`; validation used JDK 21.0.12 and
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen`. The six protected user edits
+  remained unstaged, no fixture changed, and ring comparison remained
+  error-level through `ToleranceConfig.DEFAULT` / `RingCountMode.FORCE_ERROR`.
+- Prior frontier: standalone CNZ stopped at raw `33116` with 8 errors and 0
+  warnings. Tails landed inside the Giant Wheel controller with engine
+  `ground_vel=-$015C`; retail wrote `$0400`, with the later X and animation
+  mismatches cascading from that missing speed clamp.
+- Root cause: `Obj_CNZGiantWheel` calls `sub_328E8` first for Player 1 and then
+  for Player 2, attaching each grounded player inside its `$60` square and
+  clamping non-flipped `ground_vel` to `$0400..$0F00`
+  (`docs/skdisasm/sonic3k.asm:68356-68452`). The Java object already modeled
+  the range, attachment, animation restart, convex flag, and exact clamp, but
+  invoked them only for the single `update(...)` player. It now consumes the
+  native P1/P2 participation policy in ROM order. No trace, frame, route, game
+  name, or zone predicate is used.
+- Focused command: `mvn -Dmse=off
+  -Dtest=com.openggf.game.sonic3k.objects.TestCnzGiantWheelInstance test`.
+  Result: 6 tests, 0 failures, 0 errors, including a native-P2 landing case at
+  the frontier geometry.
+- Frontier command: `mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1
+  -Dsurefire.runOrder=alphabetical -Dtrace.verification=all
+  -Dtrace.frontierOnly=true
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Comparison advances 6915 rows to raw `40031`, with 1 error and 0 warnings;
+  `rings` is expected `1` and actual `0` for three rows. This confirms ring
+  comparison is enabled at error severity rather than warning/ignore.
+- Gameplay-order regression command used the same profile and ROM with
+  complete-run AIZ, both HCZ methods, standalone and complete-run MGZ, and
+  complete-run CNZ. Result: 6 tests, 0 failures, 0 errors. The new standalone
+  frontier is regression-free and is committed before ring diagnosis.

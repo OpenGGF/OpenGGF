@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: CNZ's Giant Wheel controller now runs its existing grounded-rider
+  attachment and speed clamp for both native player slots. This restores
+  Tails' `$0400` minimum wheel speed and advances standalone CNZ from raw frame
+  `33116` to the error-level ring frontier at `40031`; the green AIZ, HCZ, MGZ,
+  and complete-run CNZ traces remain unchanged.
 - Fix/Test: S3K Tails CPU panic pulses now read the ROM-visible
   `Level_frame_counter` directly instead of projecting it through the retained
   title/history-ring cadence. Standalone CNZ advances from raw frame `29384` to
