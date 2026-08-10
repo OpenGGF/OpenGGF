@@ -1289,7 +1289,7 @@ class TestBuildToolingGuard {
     }
 
     @Test
-    void romGatedTestsShouldUseResolvedRomPathsAndAssumeReferenceFixtures() throws Exception {
+    void romGatedTestsShouldUseResolvedRomPathsWithoutDisassemblyFixtures() throws Exception {
         String file = "src/test/java/com/openggf/game/sonic3k/TestSonic3kLifeIconAddresses.java";
         String source = Files.readString(Path.of(file));
         List<String> violations = new ArrayList<>();
@@ -1300,14 +1300,39 @@ class TestBuildToolingGuard {
         if (!source.contains("RomTestUtils.ensureSonic3kRomAvailable()")) {
             violations.add(file + " does not use RomTestUtils.ensureSonic3kRomAvailable()");
         }
-        if (!source.contains("assumeTrue(Files.exists(TAILS_LIFE_ICON_BIN)")) {
-            violations.add(file + " does not skip cleanly when the disassembly fixture is absent");
+        if (source.contains("docs/skdisasm") || source.contains("TAILS_LIFE_ICON_BIN")) {
+            violations.add(file + " depends on a local disassembly fixture");
         }
 
         if (!violations.isEmpty()) {
-            fail("@RequiresRom tests should honor configured ROM paths and optional local reference fixtures:\n  "
+            fail("@RequiresRom tests should honor configured ROM paths without local disassembly fixtures:\n  "
                     + String.join("\n  ", new TreeSet<>(violations)));
         }
+    }
+
+    @Test
+    void executableTestsMustNotReadLocalDisassemblyTrees() throws Exception {
+        List<String> violations = new ArrayList<>();
+        try (var files = Files.walk(Path.of("src/test/java"))) {
+            for (Path file : files.filter(path -> path.toString().endsWith(".java")).toList()) {
+                String relative = file.toString().replace('\\', '/');
+                if (relative.endsWith("TestBuildToolingGuard.java")
+                        || relative.endsWith("TestArchitecturalSourceGuard.java")) {
+                    continue;
+                }
+                String source = Files.readString(file);
+                if (source.matches("(?s).*Path\\.of\\([^;]{0,300}docs(?:[/\\\", ]+)(?:s1|s2|sk)disasm.*")
+                        || source.matches("(?s).*new File\\([^;]{0,300}docs(?:[/\\\", ]+)(?:s1|s2|sk)disasm.*")
+                        || source.contains("SKDISASM_PATH")
+                        || source.contains("resolveS3kDisassembly")
+                        || source.contains("resolveSaveMenuReferenceDir")) {
+                    violations.add(relative);
+                }
+            }
+        }
+        assertTrue(violations.isEmpty(),
+                "Tests must use configured ROMs or committed test resources, never local disassembly trees: "
+                        + violations);
     }
 
     @Test

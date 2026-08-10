@@ -9,6 +9,10 @@ All notable changes to the OpenGGF project are documented in this file.
   pass cannot have taken the lag branch; the standalone special-stage harness already applied
   that rule and the chain driver did not, so the stage's final pass and the sidekick art it
   submits fell outside the compared window.
+- Tests: ROM-backed source-data checks no longer read optional local disassembly
+  trees. MGZ quake chunks, AIZ KosM streams, save/data-select assets, the S3K
+  life icon, and GHZ mappings now execute from configured canonical ROMs; a
+  tooling guard rejects new executable test dependencies on `docs/*disasm`.
 - Fix: a recorded run only has to carry the dynamic-art capability for games that have one.
   The run-manifest validator required it from every segment regardless of game, while the
   transfer parser recognises Sonic 1 and Sonic 2 profiles only and rejects any other game, and

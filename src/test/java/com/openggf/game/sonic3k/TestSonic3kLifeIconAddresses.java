@@ -8,30 +8,21 @@ import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Arrays;
+import java.security.MessageDigest;
+import java.util.HexFormat;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestSonic3kLifeIconAddresses {
 
-    private static final Path TAILS_LIFE_ICON_BIN =
-            Path.of("docs", "skdisasm", "General", "Sprites", "HUD Icon", "Tails Life Icon.bin");
     private static final int TAILS_ICON_BYTE_COUNT = 32;
+    private static final String TAILS_ICON_SHA1 = "414cb08a2cd2039e0e6b2b4308a84bf5c39a55b1";
 
     @Test
-    void tailsLifeIconAddressMatchesBundledDisassemblyData() throws IOException {
-        assumeTrue(Files.exists(TAILS_LIFE_ICON_BIN),
-                "S3K disassembly fixture is not available");
+    void tailsLifeIconAddressMatchesCanonicalRomPayload() throws Exception {
         File romFile = RomTestUtils.ensureSonic3kRomAvailable();
-        assumeTrue(romFile != null, "S3K ROM is not available");
-
-        byte[] expected = Arrays.copyOf(Files.readAllBytes(TAILS_LIFE_ICON_BIN), TAILS_ICON_BYTE_COUNT);
 
         byte[] actual;
         try (Rom rom = new Rom()) {
@@ -39,7 +30,8 @@ class TestSonic3kLifeIconAddresses {
             actual = rom.readBytes(Sonic3kConstants.ART_NEM_TAILS_LIFE_ICON_ADDR, TAILS_ICON_BYTE_COUNT);
         }
 
-        assertArrayEquals(expected, actual,
+        assertEquals(TAILS_ICON_SHA1,
+                HexFormat.of().formatHex(MessageDigest.getInstance("SHA-1").digest(actual)),
                 "ART_NEM_TAILS_LIFE_ICON_ADDR should point at ArtNem_TailsLifeIcon in the combined S3&K ROM");
     }
 }

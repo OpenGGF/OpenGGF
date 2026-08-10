@@ -2,24 +2,23 @@ package com.openggf.game.sonic3k.dataselect;
 
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.tests.RomTestUtils;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+@RequiresRom(SonicGame.SONIC_3K)
 class TestS3kSaveScreenLayoutObjects {
-    private static final Path S3K_DISASM = resolveS3kDisassembly();
-
 
     @Test
     void original_matchesAuthoredObjDatSaveScreenPositions() {
@@ -56,17 +55,16 @@ class TestS3kSaveScreenLayoutObjects {
     @Test
     void loader_exposesAuthoredLayoutObjectsAndLoadedMappings_fromRealS3kRom() throws Exception {
         File romFile = RomTestUtils.ensureSonic3kRomAvailable();
-        assumeTrue(romFile != null, "S3K ROM not available");
-        assumeTrue(Files.isRegularFile(S3K_DISASM), "S3K disassembly not available");
 
         try (Rom rom = new Rom()) {
             assertTrue(rom.open(romFile.getPath()), "Failed to open S3K ROM");
 
-            S3kDataSelectDataLoader loader = new S3kDataSelectDataLoader(RomByteReader.fromRom(rom));
+            RomByteReader reader = RomByteReader.fromRom(rom);
+            S3kDataSelectDataLoader loader = new S3kDataSelectDataLoader(reader);
             loader.loadData();
 
             S3kSaveScreenLayoutObjects layout = loader.getSaveScreenLayoutObjects();
-            assertEquals(parseObjDatSaveScreenFromAsm(), layout);
+            assertEquals(readObjDatSaveScreenFromRom(reader), layout);
             assertEquals(S3kSaveScreenLayoutObjects.original(), layout);
 
             List<SpriteMappingFrame> mappings = loader.getSaveScreenMappings();
@@ -89,30 +87,16 @@ class TestS3kSaveScreenLayoutObjects {
         assertTrue(frameIndex < mappings.size(), "frame index should resolve against loaded mappings");
     }
 
-    private static S3kSaveScreenLayoutObjects parseObjDatSaveScreenFromAsm() throws Exception {
-        List<String> lines = Files.readAllLines(S3K_DISASM);
-        int labelIndex = -1;
-        for (int i = 0; i < lines.size(); i++) {
-            if (lines.get(i).trim().equals("ObjDat_SaveScreen:")) {
-                labelIndex = i;
-                break;
-            }
-        }
-        assertTrue(labelIndex >= 0, "ObjDat_SaveScreen label should exist in sonic3k.asm");
-
+    private static S3kSaveScreenLayoutObjects readObjDatSaveScreenFromRom(RomByteReader reader) {
         List<int[]> entries = new ArrayList<>();
-        for (int i = labelIndex + 1; i < lines.size() && entries.size() < 12; ) {
-            String pointerLine = lines.get(i).trim();
-            if (!pointerLine.startsWith("dc.l")) {
-                i++;
-                continue;
-            }
-            int x = parseAsmNumber(extractAsmValue(lines.get(++i), "dc.w"));
-            int y = parseAsmNumber(extractAsmValue(lines.get(++i), "dc.w"));
-            int frame = parseAsmNumber(extractAsmValue(lines.get(++i), "dc.b"));
-            int slotOrUnused = parseAsmNumber(extractAsmValue(lines.get(++i), "dc.b"));
+        for (int i = 0; i < 12; i++) {
+            int address = Sonic3kConstants.OBJ_DAT_SAVE_SCREEN_ADDR
+                    + i * Sonic3kConstants.OBJ_DAT_SAVE_SCREEN_ENTRY_SIZE;
+            int x = reader.readU16BE(address + 4);
+            int y = reader.readU16BE(address + 6);
+            int frame = reader.readU8(address + 8);
+            int slotOrUnused = reader.readU8(address + 9);
             entries.add(new int[]{x, y, frame, slotOrUnused});
-            i++;
         }
 
         assertEquals(12, entries.size(), "ObjDat_SaveScreen should define 12 authored objects");
@@ -132,29 +116,4 @@ class TestS3kSaveScreenLayoutObjects {
         return new S3kSaveScreenLayoutObjects(titleText, selector, deleteIcon, noSave, slots);
     }
 
-    private static String extractAsmValue(String line, String directive) {
-        String trimmed = line.trim();
-        assertTrue(trimmed.startsWith(directive), "Expected " + directive + " line, got: " + trimmed);
-        int commentIndex = trimmed.indexOf(';');
-        String payload = commentIndex >= 0 ? trimmed.substring(0, commentIndex) : trimmed;
-        String value = payload.substring(directive.length()).trim();
-        int commaIndex = value.indexOf(',');
-        return commaIndex >= 0 ? value.substring(0, commaIndex).trim() : value;
-    }
-
-    private static int parseAsmNumber(String token) {
-        String value = token.trim();
-        if (value.startsWith("$")) {
-            return Integer.parseInt(value.substring(1), 16);
-        }
-        return Integer.parseInt(value);
-    }
-
-    private static Path resolveS3kDisassembly() {
-        Path local = Path.of("docs", "skdisasm", "sonic3k.asm");
-        if (Files.isRegularFile(local)) {
-            return local;
-        }
-        return Path.of("..", "..", "docs", "skdisasm", "sonic3k.asm").normalize();
-    }
 }
