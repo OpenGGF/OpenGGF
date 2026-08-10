@@ -1642,6 +1642,15 @@ requirement (so a stray `true` would also be excused) must fail
 `keepsInProgressBitComparedWithoutFutureRecordedCompletion`. It does. Restore the
 file afterwards.
 
+**Mutate the thing you actually claim, not a neighbouring guard.** On that same
+excusal, widening the *polarity gate* to accept both directions leaves every test
+green — so "both polarities are pinned by tests" would have been false. The
+asymmetry there is structural: the rewrite only ever raises the *expected* value
+to true, which by construction cannot conceal an actual false. The dangerous
+mutation is changing the rewrite to mirror the actual value, and a different test
+catches that one. Two guards sitting next to each other are not interchangeable
+evidence; name the property, then break precisely it.
+
 Make excusals **asymmetric** wherever the engine's model is a known
 over-approximation in one direction only: excuse the polarity the model can
 produce spuriously, and keep the opposite polarity a hard error forever. A blanket
