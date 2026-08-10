@@ -3,6 +3,15 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the S3K direct-decompression queue's `prepared` heartbeat no longer reports a false
+  divergence when the engine's boundary-granular model of it runs ahead of the ROM. The recorded
+  field is bit 15 of `Kos_decomp_queue_count`, which the ROM sets only once execution is inside
+  `Process_Kos_Queue_Loop`, so a recorded sample reads it set only when that frame's vertical
+  interrupt happened to land mid-decompression -- a sub-frame position no frame-granularity model
+  can reconstruct. The comparator now excuses exactly one polarity, the engine reading true while
+  the recording read false and the head's own completion is still ahead of it; the opposite
+  polarity, which would mean a completion landed early, stays an error, and every other queue
+  field is compared unchanged.
 - Fix: the S3K load-queue comparator no longer rewrites a recorded direct-queue row on a held
   loop tail. That substitution was itself measured off a single recording -- its unit fixture
   hardcoded the very Carnival Night child it was written for -- and it hid a real recorded state:
