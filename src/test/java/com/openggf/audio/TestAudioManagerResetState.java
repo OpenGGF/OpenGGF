@@ -16,11 +16,16 @@ import com.openggf.data.Rom;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
+import java.lang.reflect.Modifier;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.Map;
-import java.lang.reflect.Modifier;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -557,6 +562,148 @@ public class TestAudioManagerResetState {
         assertEquals(initial, observeBaseSfx(0x98));
     }
 
+    @ParameterizedTest(name = "{0} callback {1} rejects nested {2}")
+    @MethodSource("baseMutationCallbackCases")
+    void sourceMutationCallbacksRejectNestedBaseMutatorsBeforePublication(
+            OuterBaseMutation outerMutation,
+            BaseCallbackStage callbackStage,
+            NestedBaseMutation nestedMutation) {
+        Rom currentRom = new Rom();
+        Rom outerRom = new Rom();
+        Rom nestedRom = new Rom();
+        DacData oldDac = dac(381);
+        DacData candidateDac = dac(382);
+        CallbackProfile oldProfile = new CallbackProfile(
+                "old", loader(oldDac, 0x9B, (byte) 0x7C));
+        oldProfile.loaders.put(currentRom, oldProfile.loader);
+        StubSmpsLoader candidateLoader = loader(
+                candidateDac, 0x9B, (byte) 0x7D);
+        oldProfile.loaders.put(outerRom, candidateLoader);
+        CallbackProfile candidateProfile = new CallbackProfile(
+                "candidate", candidateLoader);
+        candidateProfile.loaders.put(currentRom, candidateLoader);
+        CallbackProfile nestedProfile = new CallbackProfile(
+                "nested", loader(dac(383), 0x9B, (byte) 0x7E));
+        am.setAudioProfile(oldProfile);
+        am.setRom(currentRom);
+        ObservedSource initial = observeBaseSfx(0x9B);
+        Runnable nestedAttempt = switch (nestedMutation) {
+            case SET_ROM -> () -> am.setRom(nestedRom);
+            case SET_AUDIO_PROFILE ->
+                    () -> am.setAudioProfile(nestedProfile);
+        };
+        armBaseMutationCallback(
+                outerMutation, callbackStage, oldProfile,
+                candidateProfile, candidateLoader, nestedAttempt);
+        Runnable outerAttempt = switch (outerMutation) {
+            case SET_ROM -> () -> am.setRom(outerRom);
+            case SET_AUDIO_PROFILE ->
+                    () -> am.setAudioProfile(candidateProfile);
+        };
+
+        assertThrows(IllegalStateException.class, outerAttempt::run);
+
+        assertSame(oldProfile, am.getAudioProfile());
+        assertSame(oldProfile, backend.activeProfile);
+        assertEquals(initial, observeBaseSfx(0x9B));
+        assertEquals(0, oldProfile.createCount(nestedRom),
+                "nested setRom must be rejected before loader creation");
+        assertEquals(0, nestedProfile.createCalls,
+                "nested setAudioProfile must be rejected before preparation");
+        if (callbackStage == BaseCallbackStage.HANDLER) {
+            assertThrows(IllegalArgumentException.class,
+                    () -> am.presentationCoordFlagHandlersForTesting()
+                            .handlerFor("candidate"));
+        }
+
+        outerAttempt.run();
+        ObservedSource retried = observeBaseSfx(0x9B);
+        assertEquals(initial.descriptor().dependencyGeneration() + 1,
+                retried.descriptor().dependencyGeneration(),
+                "the rejected nested attempt must not consume a generation");
+        assertSame(candidateDac, retried.dac());
+        assertSame(outerMutation == OuterBaseMutation.SET_ROM
+                        ? oldProfile : candidateProfile,
+                am.getAudioProfile());
+    }
+
+    @Test
+    void sourceMutationGuardClearsAfterOuterErrorFollowingNestedAttempt() {
+        Rom currentRom = new Rom();
+        Rom nestedRom = new Rom();
+        DacData oldDac = dac(384);
+        DacData candidateDac = dac(385);
+        CallbackProfile oldProfile = new CallbackProfile(
+                "old", loader(oldDac, 0x9C, (byte) 0x41));
+        oldProfile.loaders.put(currentRom, oldProfile.loader);
+        am.setAudioProfile(oldProfile);
+        am.setRom(currentRom);
+        ObservedSource initial = observeBaseSfx(0x9C);
+        CallbackProfile candidateProfile = new CallbackProfile(
+                "candidate",
+                loader(candidateDac, 0x9C, (byte) 0x42));
+        candidateProfile.loaders.put(currentRom, candidateProfile.loader);
+        Throwable[] nestedFailure = {null};
+        candidateProfile.onConfig = () -> {
+            try {
+                am.setRom(nestedRom);
+            } catch (RuntimeException | Error failure) {
+                nestedFailure[0] = failure;
+            }
+            throw new AssertionError("outer preparation failed");
+        };
+
+        assertThrows(AssertionError.class,
+                () -> am.setAudioProfile(candidateProfile));
+
+        assertInstanceOf(IllegalStateException.class, nestedFailure[0]);
+        assertEquals(initial, observeBaseSfx(0x9C));
+        assertSame(oldProfile, am.getAudioProfile());
+        am.setAudioProfile(candidateProfile);
+        ObservedSource retried = observeBaseSfx(0x9C);
+        assertEquals(initial.descriptor().dependencyGeneration() + 1,
+                retried.descriptor().dependencyGeneration());
+        assertSame(candidateDac, retried.dac());
+    }
+
+    @Test
+    void resetStateCalledFromSourceMutationIsRejectedBeforeAnyResetEffect() {
+        Rom currentRom = new Rom();
+        DacData oldDac = dac(386);
+        DacData candidateDac = dac(387);
+        CallbackProfile oldProfile = new CallbackProfile(
+                "old", loader(oldDac, 0x9D, (byte) 0x43));
+        oldProfile.loaders.put(currentRom, oldProfile.loader);
+        am.setAudioProfile(oldProfile);
+        am.setRom(currentRom);
+        ObservedSource initial = observeBaseSfx(0x9D);
+        am.registerDonorLoader(
+                "donor", loader(EMPTY_DAC, 0xE0, (byte) 0x45), EMPTY_DAC,
+                new SmpsSequencerConfig.Builder().build());
+        CallbackProfile candidateProfile = new CallbackProfile(
+                "candidate",
+                loader(candidateDac, 0x9D, (byte) 0x44));
+        candidateProfile.loaders.put(currentRom, candidateProfile.loader);
+        backend.callbackProfile = candidateProfile;
+        backend.onProfileSet = am::resetState;
+
+        assertThrows(IllegalStateException.class,
+                () -> am.setAudioProfile(candidateProfile));
+
+        assertEquals(initial, observeBaseSfx(0x9D));
+        assertSame(oldProfile, am.getAudioProfile());
+        assertSame(oldProfile, backend.activeProfile);
+        int beforeDonorPlay = am.commandTimeline().entryCount();
+        am.playDonorSfx("donor", 0xE0);
+        assertEquals(beforeDonorPlay + 1, am.commandTimeline().entryCount(),
+                "the rejected reset must not clear donor sources");
+
+        am.setAudioProfile(candidateProfile);
+        ObservedSource retried = observeBaseSfx(0x9D);
+        assertEquals(initial.descriptor().dependencyGeneration() + 1,
+                retried.descriptor().dependencyGeneration());
+    }
+
     @Test
     void sourceTuplePublicationsUseVolatileImmutableReferences()
             throws Exception {
@@ -564,6 +711,45 @@ public class TestAudioManagerResetState {
                 .getDeclaredField("baseAudioSource").getModifiers()));
         assertTrue(Modifier.isVolatile(AudioManager.class
                 .getDeclaredField("donorAudioSources").getModifiers()));
+    }
+
+    private static Stream<Arguments> baseMutationCallbackCases() {
+        return Arrays.stream(OuterBaseMutation.values())
+                .flatMap(outer -> Arrays.stream(BaseCallbackStage.values())
+                        .filter(stage -> outer
+                                == OuterBaseMutation.SET_AUDIO_PROFILE
+                                || stage == BaseCallbackStage.CREATE_LOADER
+                                || stage == BaseCallbackStage.LOAD_DAC)
+                        .flatMap(stage -> Arrays.stream(
+                                NestedBaseMutation.values())
+                                .map(nested -> Arguments.of(
+                                        outer, stage, nested))));
+    }
+
+    private void armBaseMutationCallback(
+            OuterBaseMutation outerMutation,
+            BaseCallbackStage callbackStage,
+            CallbackProfile oldProfile,
+            CallbackProfile candidateProfile,
+            StubSmpsLoader candidateLoader,
+            Runnable callback) {
+        switch (callbackStage) {
+            case CREATE_LOADER -> {
+                if (outerMutation == OuterBaseMutation.SET_ROM) {
+                    oldProfile.onCreateLoader = callback;
+                } else {
+                    candidateProfile.onCreateLoader = callback;
+                }
+            }
+            case LOAD_DAC -> candidateLoader.onDacLoad = callback;
+            case GET_SEQUENCER_CONFIG ->
+                    candidateProfile.onConfig = callback;
+            case BACKEND -> {
+                backend.callbackProfile = candidateProfile;
+                backend.onProfileSet = callback;
+            }
+            case HANDLER -> candidateProfile.onConfigure = callback;
+        }
     }
 
     private ObservedSource observeBaseSfx(int sfxId) {
@@ -597,6 +783,24 @@ public class TestAudioManagerResetState {
             SmpsSourceDescriptor descriptor, DacData dac) {
     }
 
+    private enum OuterBaseMutation {
+        SET_ROM,
+        SET_AUDIO_PROFILE
+    }
+
+    private enum NestedBaseMutation {
+        SET_ROM,
+        SET_AUDIO_PROFILE
+    }
+
+    private enum BaseCallbackStage {
+        CREATE_LOADER,
+        LOAD_DAC,
+        GET_SEQUENCER_CONFIG,
+        BACKEND,
+        HANDLER
+    }
+
     private String lastSfxName() {
         var entries = am.commandTimeline().entries();
         return ((AudioCommand.PlaySfx) entries.get(entries.size() - 1).command()).sfxName();
@@ -618,11 +822,21 @@ public class TestAudioManagerResetState {
         GameAudioProfile failRestoreProfile;
         GameAudioProfile failProfileError;
         GameAudioProfile activeProfile;
+        GameAudioProfile callbackProfile;
+        Runnable onProfileSet;
 
         @Override
         public void setAudioProfile(GameAudioProfile profile) {
             profileAttempts.add(profile);
             activeProfile = profile;
+            if (profile == callbackProfile) {
+                callbackProfile = null;
+                Runnable callback = onProfileSet;
+                onProfileSet = null;
+                if (callback != null) {
+                    callback.run();
+                }
+            }
             if (failProfileError != null && profile == failProfileError) {
                 throw new AssertionError("backend rejected profile");
             }
@@ -692,6 +906,7 @@ public class TestAudioManagerResetState {
         int sfxLoadCount;
         int runOnSfxLoadNumber = -1;
         Runnable onSfxLoad;
+        Runnable onDacLoad;
 
         StubSmpsLoader() {
             this(EMPTY_DAC);
@@ -716,6 +931,11 @@ public class TestAudioManagerResetState {
         }
         @Override public AbstractSmpsData loadSfx(String sfxName) { return null; }
         @Override public DacData loadDacData() {
+            Runnable callback = onDacLoad;
+            onDacLoad = null;
+            if (callback != null) {
+                callback.run();
+            }
             if (dacFailure != null) {
                 throw dacFailure;
             }
@@ -842,6 +1062,69 @@ public class TestAudioManagerResetState {
             }
             if (configureFailure instanceof Error error) {
                 throw error;
+            }
+        }
+    }
+
+    private static final class CallbackProfile extends StubAudioProfile {
+        private final String gameId;
+        private final Map<Rom, SmpsLoader> loaders =
+                new java.util.IdentityHashMap<>();
+        private final Map<Rom, Integer> createsByRom =
+                new java.util.IdentityHashMap<>();
+        private final SmpsSequencerConfig config =
+                new SmpsSequencerConfig.Builder()
+                        .coordFlagHandler(new ArbitraryHandler())
+                        .build();
+        private int createCalls;
+        private Runnable onCreateLoader;
+        private Runnable onConfig;
+        private Runnable onConfigure;
+
+        private CallbackProfile(String gameId, SmpsLoader loader) {
+            super(loader);
+            this.gameId = gameId;
+        }
+
+        @Override
+        public SmpsLoader createSmpsLoader(Rom rom) {
+            createCalls++;
+            createsByRom.merge(rom, 1, Integer::sum);
+            Runnable callback = onCreateLoader;
+            onCreateLoader = null;
+            if (callback != null) {
+                callback.run();
+            }
+            return loaders.getOrDefault(rom, loader);
+        }
+
+        int createCount(Rom rom) {
+            return createsByRom.getOrDefault(rom, 0);
+        }
+
+        @Override
+        public String presentationGameId() {
+            return gameId;
+        }
+
+        @Override
+        public SmpsSequencerConfig getSequencerConfig() {
+            Runnable callback = onConfig;
+            onConfig = null;
+            if (callback != null) {
+                callback.run();
+            }
+            return config;
+        }
+
+        @Override
+        public void configurePresentationCoordFlagHandlers(
+                SmpsCoordFlagHandlerOwner owner) {
+            owner.register(gameId, ignored -> new ArbitraryHandler());
+            Runnable callback = onConfigure;
+            onConfigure = null;
+            if (callback != null) {
+                callback.run();
             }
         }
     }
