@@ -1608,6 +1608,46 @@ ROM's actual wait loops in the listing, and check whether the fixture already
 pins the quantity as an invariant across zones with very different workloads. An
 elapsed hardware cost varies with payload; a counted loop does not.
 
+### A green test that leaves state behind blames the next class
+
+A test can pass its own assertions and still be broken. Two S3K fixtures drove
+trace rows with hand-rolled loops that never called `fixture.beginTraceRow(...)`,
+the per-row announcement `AbstractTraceReplayTest` makes. The timing port never
+latched a raw frame, so `apply()` returned early at every service boundary and no
+recorded completion edge was ever admitted. Both tests went green. The unconsumed
+edge then detonated in `verifyRunComplete` during the *next* class's teardown, and
+surefire attributed it to whichever class happened to start next in that fork.
+
+Two tells, both cheap:
+
+- **A failing class with an absurd elapsed time.** `Time elapsed: 0.003 s` on a
+  replay that takes 13 s alone means it never ran; you are looking at the previous
+  class's teardown. Run the suspect alone before believing the accusation.
+- **A red set that changes shape while the count stays the same.** Going "9 red
+  classes -> 9 red classes" reads as no change, and hides one class fixed and a
+  different one newly broken. Diff the *names*, not the count — the same discipline
+  as diffing failing fields rather than failing-class counts.
+
+When you fix one, verify with the classes run TOGETHER in one fork in alphabetical
+order. Individual passes are exactly what hid the defect.
+
+### Mutation-test any comparison excusal you add
+
+If you make the comparator excuse a divergence, the test that pins the excusal's
+boundary is the entire safety property — and an assertion nobody has watched fail
+proves nothing. Break the guard on purpose and confirm the test goes red.
+
+For the S3K direct-queue in-progress bit, dropping the future-completion
+requirement (so a stray `true` would also be excused) must fail
+`keepsInProgressBitComparedWithoutFutureRecordedCompletion`. It does. Restore the
+file afterwards.
+
+Make excusals **asymmetric** wherever the engine's model is a known
+over-approximation in one direction only: excuse the polarity the model can
+produce spuriously, and keep the opposite polarity a hard error forever. A blanket
+"stop comparing this field" throws away the half of the signal that still catches
+real defects.
+
 ## Why This Matters
 
 The mission is faithful pixel-for-pixel reimplementation. Trace replay tests are the proof. If they're allowed to lean on synced trace data each frame, the proof is hollow — bugs hide behind the synchronisation and the test green-lights anyway. Honest tests force honest engine fixes. That's how progress compounds: every fix makes the next divergence visible instead of building on top of a masked one.
