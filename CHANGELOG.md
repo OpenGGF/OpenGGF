@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Testing: two trace-harness tests built their derived fixtures incorrectly and were rejecting
+  themselves. One appended a synthetic per-frame art-state stream on top of a recording that
+  already carried a real one, so frame zero legitimately held two states; the other copied a
+  recording's metadata verbatim while filtering its event stream through an allowlist, so a
+  capability the metadata advertised had all its events removed. Both are fixed in the tests; no
+  validator was weakened and no fixture regenerated.
 - Fix: a deferred art-module producer no longer has its first submission suppressed. The
   held-loop-tail signal is meant to delay when work becomes visible, but for a level-loop
   producer it was also skipping the submission itself, so the Angel Island act 2 enemy art
