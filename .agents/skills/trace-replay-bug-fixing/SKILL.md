@@ -440,7 +440,33 @@ gated on a slot-derived phase (`(v_vblank_byte + 127 - slot) & 3` on S1,
 `(Vint_runcount+3) + d7` on S2). **A ring divergence is therefore usually an occupancy
 divergence wearing a disguise.** Chase the first occupancy divergence, not the ring.
 
-### A fitted fix leaves fingerprints in its own commit message
+### Finding a fitted model: measure your detector, do not trust it
+
+**A ROM citation does not mean the value came from the ROM, and can actively hide that it
+did not.** Three detectors were built and their recall measured against git-reconstructed
+pre-fix blobs of five known fitted models:
+
+| Detector | Recall | Notes |
+|---|---|---|
+| Uncited numeric literal in gameplay code | ~0 useful | 2,629 hits; top results are `0xFFFF` masks and array bounds |
+| Uncited `static final` + uncited multi-comparison predicate | **1 of 5** | 8,520 false positives for the one hit |
+| **Observation-authority vocabulary in the attached comment** | **4 of 5** | 189 tree-wide, ~40 after dropping trace/tool/debug infrastructure |
+
+The winning signal is a comment that grounds a value in an **observation** rather than in ROM
+code: *BizHawk*, *"trace shows"*, *"recorded … trace"*, *observed*, *measured*,
+*hand-measured*, *empirical*, *tuned*, *probe*, *"the &lt;ZONE&gt; route"*, `Test*TraceReplay`.
+
+The case that kills the intuitive detector: `TailsRespawnStrategy`'s fitted window
+(`offscreenFlightFrames >= 0x3E && <= 0x3F && relY <= -31`) was classified **CITED**, because
+its comment opens *"ROM TailsCPU_Flying tests render_flags.on_screen…"* and only then derives
+the window from *"At HTZ1 gfc $193F, BizHawk shows y=$04AD, camY=$04CC"*. A correct ROM
+citation sat directly above a fitted constant and camouflaged it.
+
+So when reviewing a citation, read what it actually licenses. *"ROM does X"* followed by
+*"so at frame N we measured Y"* is a fitted model wearing a citation. The citation must
+license **the value**, not merely the surrounding mechanism.
+
+### A fitted fix also leaves fingerprints in its own commit message
 
 `ca939d50d` shipped a route carve-out that passed review and stayed on `develop` for
 weeks. Its message said the change kept a child "in lower slots that are free only
@@ -453,6 +479,31 @@ cannot detect a fitted fix; only reading the ROM can. When such a fix is removed
 whether the test *that commit itself shipped* still passes: for `ca939d50d` it did,
 meaning later work had made the compensation redundant and nothing would ever have said
 so.
+
+### Removing a provably-wrong behaviour can make things worse
+
+Some engine defects are **load-bearing**: a second defect has grown to depend on them, and
+deleting one alone exposes the other. Measure removal, do not assume it.
+
+`Sonic2SpecialStageManager.executeStreamedObjectInitFallthrough` runs a streamed object's
+routine 0 inline, and that observation's own pass then runs it again in the deferred pass.
+The ROM plainly disagrees — `SSObjectsManager` only allocates, and the same iteration's
+`RunObjects` runs routine 0 — so the duplicate execution is wrong on paper. Removing it:
+
+- alone, left the EHZ chain at exactly 45 errors with an identical mismatch set;
+- combined with the correct harness fix, made it **worse** (27 vs 26);
+- turned **all eight** standalone `TestS2SpecialStage*TraceReplay` classes red on
+  `combined_rings` from about frame 700, at 5,287–35,203 errors each, all green beforehand.
+
+It is compensating for something in the ring depth cadence that has not been found yet. The
+rule: **when removing a behaviour you can prove wrong from the ROM makes the numbers worse,
+stop and find what it was propping up.** That is a second defect, not a reason to keep the
+first — but the pair has to come out together, and the write-up should name the pair so the
+next agent does not retry the removal in isolation.
+
+This is the mirror image of the fitted-constant case. There, two wrongs cancelled and both
+came out cleanly (the MZ2 geyser guard and its fitted launch). Here they do not cancel, and
+order matters.
 
 ## Name the clock, or your "N frames late" is fiction
 

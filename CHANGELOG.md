@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Testing: a run chain executes any special-stage observation that owns a completed object
+  pass, even where the recording marks that frame a lag frame. The stage's own main loop waits
+  on its vertical-interrupt routine immediately before running objects, so a frame that ran a
+  pass cannot have taken the lag branch; the standalone special-stage harness already applied
+  that rule and the chain driver did not, so the stage's final pass and the sidekick art it
+  submits fell outside the compared window.
 - Fix/Test: spilled-ring lifetime and bottom-boundary deletion now follow the
   native movement-direction and floor-probe cadence branches instead of polling
   every object update. This preserves an older CNZ boss-arena ring until a

@@ -120,7 +120,41 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * republished, so the "republish is the only correct closure" conclusion is spent.
  * The interior is now pass-paced and rows 0..5190 of 5733 compare clean.</b>
  *
- * <p><b>Current root cause (measured 2026-08-09): the engine runs the Obj59 emerald
+ * <p><b>SUPERSEDED (2026-08-10). The "runs one RunObjects pass early" paragraph
+ * below was wrong on both halves.</b> The row-5191 divergence was purely a row
+ * driver defect: the binder deliberately binds the terminal stage-finished pass
+ * to the raw finish observation even though the recorder marked that row a lag
+ * row, and {@code uncomparedInteriorStep} then refused to execute the row because
+ * {@code admission.executeGameplay()} was false -- so the stage's last
+ * {@code RunObjects} pass, and the ss-tails / ss-tails-tails pair it submits,
+ * never ran inside the compared window. Executing an observation that owns a
+ * completed pass (the rule {@code S2SpecialStageReplayHarness.stepPasses} already
+ * states from docs/s2disasm/s2.asm:6694-6706 and 483-484) closes rows 5191..5229
+ * exactly, with the recorded mapping frames 0 / 4 published bit-identically:
+ * 45 errors -> 26, no engine change involved.
+ * Removing {@code executeStreamedObjectInitFallthrough} was separately tried and
+ * REJECTED: it turns all eight standalone {@code TestS2SpecialStage*TraceReplay}
+ * classes red on {@code combined_rings} from around frame 700, so whatever the
+ * duplicate routine-0 execution is compensating for, it is load-bearing for ring
+ * depth cadence and must be understood before it is removed.
+ *
+ * <p><b>Remaining RED (26 errors, rows 5230..5250): the exit fade is 43 engine
+ * V-blanks where {@code Pal_FadeToWhite} is 22.</b> {@code Pal_FadeToWhite} loads
+ * {@code move.w #$15,d4} and {@code dbf}s, i.e. exactly 22 {@code VintID_Fade}
+ * rows (docs/s2disasm/s2.asm:3570-3582) -- recorded rows 5192..5213. Rows
+ * 5214..5229 are the recorder's 16 lag rows for the straight-line
+ * {@code ClearScreen} / {@code PalLoad_Now} / {@code LoadPLC2} / {@code NemDec}
+ * block (s2.asm:6749-6795), which runs no V-int at all, and row 5230 is the first
+ * {@code VintID_Level WaitForVint} of the {@code Obj6F} tally loop
+ * (s2.asm:6797-6800) -- the {@code ProcessDMAQueue} that retires the pair. The
+ * engine instead claims {@code PALETTE_FADE} for 22 rows (5192..5213) and then a
+ * further 21 (5230..5250), so its first {@code SPECIAL_STAGE_RESULTS} claim, and
+ * with it {@code DynamicArtDmaServiceModel.SONIC_2_PROCESS_DMA_QUEUE}, lands at
+ * 5251 instead of 5230. The owner is the special-stage exit fade duration, not
+ * the emerald sequence.
+ *
+ * <p><i>Historical, retained for provenance (2026-08-09):</i>
+ * <p><b>the engine runs the Obj59 emerald
  * sequence exactly one {@code RunObjects} pass early.</b> Recorded pass 3171 raises
  * {@code SS_Check_Rings_flag} at row 5191 and submits the ordinary special-stage
  * player DPLC pair -- ss-tails (mapping frame 0, {@code LoadSSTailsDynPLC}) and

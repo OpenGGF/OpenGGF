@@ -71524,3 +71524,67 @@ landable change, which I implemented directly.
   complete-run AIZ, both HCZ methods, standalone and complete-run MGZ, and
   complete-run CNZ. Result: 6 tests, 0 failures, 0 errors. The physics frontier
   advance is regression-free and is committed before hardware-edge diagnosis.
+
+## 2026-08-10 — round twenty-five: EHZ 45 -> 26, and two disproved briefs
+
+Command: full `-Ptrace-replay` profile, no `-Dtest`. Base eb619f787 (769 / 8 / 64).
+After: **769 / 8 / 64 — same failing classes**, with `TestS2EhzHalfpipeRoundTripChain`'s
+seg1 dynamic-art errorCount **45 -> 26** (comparisonCount 5733). Rows 0..5229 now compare
+clean; the divergence is confined to rows 5230..5250.
+
+- **ONE change was needed, and it was the harness one — the brief demanded two and was wrong
+  about both.** `TraceRunSpecialStageRows.S2Rows.newRunObjectsPassBinder` deliberately binds
+  the terminal stage-finished pass to the RAW finish observation (row 5191) even though the
+  recorder marks that row a lag row, and `AbstractRunChainTest.uncomparedInteriorStep` then
+  refused to execute it because `admission.executeGameplay()` was false. So the stage's last
+  `RunObjects` pass — and the ss-tails (mf 0) / ss-tails-tails (mf 4) DPLC pair it submits —
+  never ran inside the compared window. Measured directly: row 5191 printed
+  `lagExec=false passes=1`. An observation that owns a completed pass is never a lag V-blank:
+  `SS_MainLoop` sets `VintID_S2SS` and waits on it immediately before the pass
+  (s2.asm:6694-6706), so `V_Int` cannot have taken the `Vint_Lag` branch, which runs only
+  while `Vint_routine` is still 0 (s2.asm:483-484). `S2SpecialStageReplayHarness.stepPasses`
+  already states that rule; the chain driver did not. **Sixth instance of "two paths that
+  should agree, but don't".**
+- **The prescribed engine change is NOT needed and is ACTIVELY HARMFUL.** Removing
+  `Sonic2SpecialStageManager.executeStreamedObjectInitFallthrough`: alone it left the count at
+  exactly 45 with an identical mismatch set; combined with the harness fix it made things
+  WORSE (27 vs 26, adding a 5251 edge error); and it turns all eight standalone
+  `TestS2SpecialStage*TraceReplay` classes red on `combined_rings` from frame 811 —
+  5287/19693/25103/16382/22883/29057/35203/3884 errors — every one green at base. Reverted.
+  The duplicate execution IS wrong on paper (ROM `SSObjectsManager` only allocates; the same
+  iteration's `RunObjects` runs routine 0) but it is **load-bearing**, and this is now a
+  documented rule in the skill.
+- **The counterpart has since been identified (round 26 Lane B), and it is NOT the ring code.**
+  Allocation timing is already exact — engine `frameCounter` equals the ROM non-lag ordinal
+  segment for segment (403/483/563/643/723/883) — depth stepping after removal is exactly one
+  step per pass, and `byte_35180`, the `$CCCC`/`$CCCD` split in `loc_3512A` and the depth->anim
+  table are all transcribed correctly (`Obj60_Init` falls through to `loc_34FF0` and calls
+  `loc_3512A` once, so ROM gives a new ring exactly one depth step on its allocation pass).
+  The real counterpart is a **uniform +1 observation lag on publication**: ROM ring-collection
+  non-lag ordinals 476,481,486,491,496,561,566,571,576,581,586,591 against the engine's
+  477,482,487,487,492,492,497,562,567,572,577,582 — +1 on every one, with correct
+  multiplicities. It lives in the pass-stepping contract shared by
+  `Sonic2SpecialStageManager` and `S2SpecialStageReplayHarness`.
+- **S3K chain blocker: the compiler's throw is CORRECT and must not be "fixed".** Frames
+  4568..4653 of the aiz segment are the S3K level/bonus load spin, `LoadLevelLoadBlock`
+  (skdisasm/sonic3k.asm:9700-9748). Its body `loc_7870` (:9737-9745) is
+  `move.b #$C,(V_int_routine)` / `jsr Process_Kos_Queue` (before `Wait_VSync` => recorded
+  `pre_main_loop`) / `bsr Wait_VSync` / `bsr Process_Nem_Queue_Init` /
+  `jsr Process_Kos_Module_Queue` (after => recorded `post_objects`) / loop while
+  `Kos_modules_left`. One pre + one post per V-blank, **no object dispatch and no counter
+  increment**, and the recorded edges match 1:1 with no gaps (4570 PRE#15 / 4571 POST#10 /
+  4572 PRE#16 / 4573 POST#11 / ...). The capture is correct; regenerating would reproduce the
+  same rows. The `post_objects` label is a position-in-frame label ("after Wait_VSync"), NOT
+  evidence of an object scan — replay executes no POST_OBJECTS production boundary on those
+  rows, because `TraceSuppressedRowClosure.execute` reaches
+  `LevelFrameStep.executeHardwareTimedObjectScan` only when
+  `TitleCardProvider.advancesOnHeldLevelCounter()` is true, which requires `inLevelMode`, and
+  these rows are post-level-teardown. **Admitting the POST edge would release work at a
+  boundary production never executes — a hard-rule-4 violation.** The throw is an intentional,
+  reviewed guard.
+- **PROCESS DEFECT, recorded so it is not repeated:** `git apply --3way` STAGES what it
+  applies. A subsequent scoped `git add` of unrelated files does not unstage it, so a
+  documentation commit silently carried this round's harness fix, with a message reading
+  "skill documentation only, no src/main change". Caught only because an unrelated sweep
+  failure prompted a tree inspection. **Run `git status --short` (or `git reset`) immediately
+  before every commit**, rather than trusting a scoped `git add` to define the commit.
