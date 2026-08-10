@@ -92,7 +92,7 @@ class TestAiz2BossEndSequenceObjects {
     }
 
     @Test
-    void cutsceneButtonPressesWhenKnucklesReachesIt() throws Exception {
+    void cutsceneButtonRetainsUpForLaterPlayerSlotWhenKnucklesReachesIt() throws Exception {
         S3kCutsceneButtonObjectInstance button =
                 new S3kCutsceneButtonObjectInstance(new ObjectSpawn(0x4B18, 0x0189, 0x83, 0, 0, false, 0));
         button.setServices(new TestObjectServices());
@@ -113,8 +113,8 @@ class TestAiz2BossEndSequenceObjects {
         assertTrue(Aiz2BossEndSequenceState.isButtonPressed());
         assertFalse(sonic.isControlLocked(),
                 "loc_65C56 clears Ctrl_1_locked in the button's own SST slot");
-        assertEquals(0, sonic.getForcedInputMask(),
-                "the next player pass must read physical input instead of loc_69588's late UP write");
+        assertEquals(AbstractPlayableSprite.INPUT_UP, sonic.getForcedInputMask(),
+                "the later Player_1 slot still consumes loc_69588's retained logical UP word");
     }
 
     @Test
@@ -1144,6 +1144,36 @@ class TestAiz2BossEndSequenceObjects {
         assertFalse(player.isObjectControlled());
         assertEquals(Sonic3kAnimationIds.WAIT.id(), player.getAnimationId());
         assertFalse(player.isForceInputRight());
+    }
+
+    @Test
+    void controllerReleasesButtonUpWordOnFollowingOwnerEntry() throws Exception {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        camera.resetState();
+        camera.setMaxX((short) 0x4880);
+        camera.setX((short) 0x4880);
+
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        player.setControlLocked(true);
+        player.setForcedInputMask(AbstractPlayableSprite.INPUT_UP);
+
+        Aiz2BossEndSequenceController controller = new Aiz2BossEndSequenceController(0x4880, 0x0000);
+        controller.setServices(new QueryOnlyServices(camera, player, List.of()));
+        setField(controller, "initialized", 1);
+        setField(controller, "postResultsControlRestoreDelay", 0);
+        setField(controller, "postCapsuleSequenceStarted", 1);
+        setField(controller, "knucklesSpawned", 1);
+        Aiz2BossEndSequenceState.releaseEggCapsule();
+        Aiz2BossEndSequenceState.pressButton();
+
+        controller.update(1, player);
+        assertFalse(player.isControlLocked());
+        assertEquals(AbstractPlayableSprite.INPUT_UP, player.getForcedInputMask(),
+                "the later Player_1 slot still consumes the retained logical UP word");
+
+        controller.update(2, player);
+        assertEquals(0, player.getForcedInputMask(),
+                "the following loc_695A8 entry exposes unlocked physical input");
     }
 
     @Test

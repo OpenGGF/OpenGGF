@@ -71234,3 +71234,31 @@ landable change, which I implemented directly.
   complete-run canary also passed independently during the regression audit.
 - Route position: complete-run AIZ and HCZ remain green. Standalone AIZ raw
   `20699` is the next gameplay-order target.
+
+## 2026-08-10 — standalone AIZ button input-lifetime frontier
+
+- Context: `bugfix/s3k-traces` at `849d53739`; validation used JDK 21.0.12 and
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen`. The six protected user edits
+  remained unstaged, no trace fixture changed, and ring comparison remained
+  error-level through `ToleranceConfig.DEFAULT` / `RingCountMode.FORCE_ERROR`.
+- Root cause: `loc_65C56` clears `Ctrl_1_locked` in the cutscene button's native
+  SST slot without clearing the logical UP word last written by `loc_69588`.
+  In standalone AIZ the lower button slot runs before Player_1, so that player
+  dispatch consumes the retained UP word and keeps LOOK_UP for one final entry;
+  the following controller entry exposes unlocked physical input. The complete
+  route's established ordering has already consumed Player_1 and can release
+  immediately. The folded engine owners now preserve those two semantic owner
+  orderings without consulting a trace, frame, or route identifier.
+- Focused command: `mvn -q -Dmse=off
+  -Dtest='com.openggf.game.sonic3k.objects.TestAiz2BossEndSequenceObjects#cutsceneButtonRetainsUpForLaterPlayerSlotWhenKnucklesReachesIt+controllerReleasesButtonUpWordOnFollowingOwnerEntry'
+  test`. Result: 2 tests passed.
+- Frontier/regression command: `mvn -Ptrace-replay -Dmse=off
+  -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay'
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Complete-run AIZ passed with 0 errors and 0 warnings. Standalone AIZ advanced
+  from raw `20699` to raw `20713`, with 37 errors and 0 warnings; the new first
+  mismatch is `air` (expected `0`, actual `1`).
+- Gameplay-order canary: `TestS3kHczCompleteRunTraceReplay` passed independently
+  with the same JDK, ROM, and trace profile. Complete-run AIZ and HCZ therefore
+  remain green; standalone AIZ raw `20713` is the next target.

@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: AIZ2's cutscene button now preserves the native logical UP word
+  when its lower SST slot unlocks control before the later Player_1 dispatch,
+  then releases the engine-side representation on the following controller
+  entry. Standalone AIZ advances from raw frame `20699` to `20713` with
+  complete-run AIZ and HCZ unchanged.
 - Fix/Test: AIZ2's retained post-boss controller now derives its results-exit
   control restore from the cutscene's native SST-ordering mode. This preserves
   the complete-run VICTORY entry when the controller precedes the results owner

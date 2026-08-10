@@ -59,6 +59,7 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
     private boolean buttonHandled;
     private boolean transitionRequested;
     private boolean pendingLookUpInputAfterStop;
+    private boolean pendingButtonInputRelease;
     private boolean postButtonMaxYReleaseActive;
     private int postButtonMaxYAccumulator;
     private int postResultsControlRestoreDelay = -1;
@@ -125,6 +126,12 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
             return;
         }
 
+        if (pendingButtonInputRelease) {
+            pendingButtonInputRelease = false;
+            player.clearForcedInputMask();
+            player.setForceInputRight(false);
+        }
+
         // Start post-capsule sequence (music + walk right)
         boolean startedPostCapsuleSequenceNow = !postCapsuleSequenceStarted;
         if (startedPostCapsuleSequenceNow) {
@@ -173,8 +180,16 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
             // slot. This controller then observes the shared button flag and
             // clears its engine-side forced word so the next player dispatch
             // reads the unlocked raw input, matching loc_65C56/loc_69588.
-            player.clearForcedInputMask();
-            player.setForceInputRight(false);
+            if (Aiz2BossEndSequenceState.isButtonBeforeBridgeDispatch()) {
+                player.clearForcedInputMask();
+                player.setForceInputRight(false);
+            } else {
+                // The lower native button slot clears Ctrl_1_locked before the
+                // later Player_1 slot consumes loc_69588's retained UP word.
+                // Keep the engine's late-write representation through that
+                // player dispatch and release it on the next controller entry.
+                pendingButtonInputRelease = true;
+            }
             player.setControlLocked(false);
             services().camera().setMaxYTarget((short) POST_BUTTON_CAMERA_MAX_Y_TARGET);
             postButtonMaxYReleaseActive = true;

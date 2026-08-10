@@ -108,11 +108,15 @@ public class S3kCutsceneButtonObjectInstance extends AbstractObjectInstance
         Aiz2BossEndSequenceState.pressButton();
         if (playerEntity instanceof AbstractPlayableSprite player) {
             // loc_65C56 clears Ctrl_1_locked in the button's own SST slot.
-            // Keep the logical UP word already consumed by Player_1 this pass,
-            // but remove the engine's late-write representation so the next
-            // player pass can publish the unlocked physical input.
+            // When this native button precedes Player_1, that later slot still
+            // consumes loc_69588's retained logical UP word. The controller
+            // releases the engine's representation on its following entry.
+            // The alternate established ordering has already consumed the
+            // player slot, so it can clear immediately.
             player.setControlLocked(false);
-            player.clearForcedInputMask();
+            if (Aiz2BossEndSequenceState.isButtonBeforeBridgeDispatch()) {
+                player.clearForcedInputMask();
+            }
         }
         if (cutsceneOverride || Aiz2BossEndSequenceState.isButtonBeforeBridgeDispatch()) {
             services().objectManager().activeObjectsOfType(AizDrawBridgeObjectInstance.class)
