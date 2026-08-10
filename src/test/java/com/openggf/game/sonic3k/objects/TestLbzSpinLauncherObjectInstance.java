@@ -13,7 +13,9 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tools.Sonic3kObjectProfile;
+import com.openggf.tests.SingletonResetExtension;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -24,6 +26,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+@ExtendWith(SingletonResetExtension.class)
 class TestLbzSpinLauncherObjectInstance {
     private static final int LAUNCHER_X = 0x1800;
     private static final int LAUNCHER_Y = 0x0520;

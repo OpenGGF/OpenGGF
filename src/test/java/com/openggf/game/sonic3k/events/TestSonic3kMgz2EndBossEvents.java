@@ -84,12 +84,21 @@ class TestSonic3kMgz2EndBossEvents {
     }
 
     private AbstractPlayableSprite triggerBossTransitionWithTailsBelowLine(Sonic3kMGZEvents events) {
-        events.triggerBossCollapseHandoff();
+        triggerBossCollapseHandoff(events);
         events.updateBossTransitionObjectBeforeDynamicObjects(1);
         AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().getFirst();
         tails.setCentreY((short) 0x0780);
         runBossTransitionTimer(events);
         return tails;
+    }
+
+    /**
+     * Direct event tests do not execute ScreenEvents, so publish the camera-copy
+     * words that production publishes before the later transition SST runs.
+     */
+    private static void triggerBossCollapseHandoff(Sonic3kMGZEvents events) {
+        GameServices.camera().captureRenderCopy();
+        events.triggerBossCollapseHandoff();
     }
 
     private void runBossTransitionTimer(Sonic3kMGZEvents events) {
@@ -221,7 +230,7 @@ class TestSonic3kMgz2EndBossEvents {
         Sonic3kMGZEvents events = new Sonic3kMGZEvents();
         events.init(1);
 
-        events.triggerBossCollapseHandoff();
+        triggerBossCollapseHandoff(events);
         events.updateBossTransitionObjectBeforeDynamicObjects(1);
 
         assertEquals(1, GameServices.sprites().getSidekicks().size(),
@@ -242,7 +251,7 @@ class TestSonic3kMgz2EndBossEvents {
         Sonic3kMGZEvents events = new Sonic3kMGZEvents();
         events.init(1);
 
-        events.triggerBossCollapseHandoff();
+        triggerBossCollapseHandoff(events);
         events.updateBossTransitionObjectBeforeDynamicObjects(1);
 
         assertEquals(1, GameServices.sprites().getSidekicks().size(),
@@ -257,7 +266,7 @@ class TestSonic3kMgz2EndBossEvents {
         Sonic3kMGZEvents events = new Sonic3kMGZEvents();
         events.init(1);
 
-        events.triggerBossCollapseHandoff();
+        triggerBossCollapseHandoff(events);
         events.updateBossTransitionObjectBeforeDynamicObjects(1);
 
         AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().getFirst();
@@ -279,7 +288,7 @@ class TestSonic3kMgz2EndBossEvents {
         tails.setCpuControlled(true);
         GameServices.sprites().addSprite(tails, "tails");
 
-        events.triggerBossCollapseHandoff();
+        triggerBossCollapseHandoff(events);
         events.updateBossTransitionObjectBeforeDynamicObjects(1);
 
         assertEquals(1, GameServices.sprites().getSidekicks().size());
@@ -309,7 +318,7 @@ class TestSonic3kMgz2EndBossEvents {
         short initialX = tails.getCentreX();
         short initialY = tails.getCentreY();
 
-        events.triggerBossCollapseHandoff();
+        triggerBossCollapseHandoff(events);
         events.updateBossTransitionObjectBeforeDynamicObjects(1);
 
         assertEquals(initialX, tails.getCentreX());
@@ -333,7 +342,7 @@ class TestSonic3kMgz2EndBossEvents {
         tails.setCpuController(new SidekickCpuController(tails, camera.getFocusedSprite()));
         GameServices.sprites().addSprite(tails);
 
-        events.triggerBossCollapseHandoff();
+        triggerBossCollapseHandoff(events);
         events.updateBossTransitionObjectBeforeDynamicObjects(1);
 
         assertEquals(1, GameServices.sprites().getSidekicks().size(),
@@ -358,7 +367,7 @@ class TestSonic3kMgz2EndBossEvents {
         sonic.setGSpeed((short) 0x0400);
         sonic.setSpindash(true);
 
-        events.triggerBossCollapseHandoff();
+        triggerBossCollapseHandoff(events);
         events.updateBossTransitionObjectBeforeDynamicObjects(1);
         events.update(1, 0);
 
@@ -387,7 +396,7 @@ class TestSonic3kMgz2EndBossEvents {
         sonic.setCentreY((short) 0x0780);
         sonic.setAir(true);
 
-        events.triggerBossCollapseHandoff();
+        triggerBossCollapseHandoff(events);
         events.updateBossTransitionObjectBeforeDynamicObjects(1);
         events.update(1, 0);
         camera.updatePosition();
@@ -414,7 +423,7 @@ class TestSonic3kMgz2EndBossEvents {
         assertTrue(sonic.getDead(), "Sanity check: S3K bottom-boundary physics already put Sonic in pit death");
         assertTrue(camera.getFrozen(), "Pit death freezes the camera before object/event handoff can run");
 
-        events.triggerBossCollapseHandoff();
+        triggerBossCollapseHandoff(events);
         events.updateBossTransitionObjectBeforeDynamicObjects(1);
         events.update(1, 0);
         camera.updatePosition();
@@ -445,7 +454,7 @@ class TestSonic3kMgz2EndBossEvents {
         tails.setSpindash(true);
         tails.setHurt(true);
 
-        events.triggerBossCollapseHandoff();
+        triggerBossCollapseHandoff(events);
         events.updateBossTransitionObjectBeforeDynamicObjects(1);
         events.update(1, 0);
 
@@ -483,7 +492,7 @@ class TestSonic3kMgz2EndBossEvents {
         camera.setX((short) 0x3C80);
         camera.setY((short) 0x0600);
 
-        events.triggerBossCollapseHandoff();
+        triggerBossCollapseHandoff(events);
         events.updateBossTransitionObjectBeforeDynamicObjects(1);
 
         assertEquals(1, GameServices.sprites().getSidekicks().size(),
@@ -538,7 +547,7 @@ class TestSonic3kMgz2EndBossEvents {
         camera.setY((short) 0x0600);
         AbstractPlayableSprite sonic = camera.getFocusedSprite();
 
-        events.triggerBossCollapseHandoff();
+        triggerBossCollapseHandoff(events);
         events.updateBossTransitionObjectBeforeDynamicObjects(1);
         sonic.setCentreY((short) 0x0780);
         sonic.setYSpeed((short) 0x0340);
@@ -711,7 +720,7 @@ class TestSonic3kMgz2EndBossEvents {
         AbstractPlayableSprite sonic = camera.getFocusedSprite();
         GameServices.sprites().addSprite(sonic);
 
-        events.triggerBossCollapseHandoff();
+        triggerBossCollapseHandoff(events);
         events.updateBossTransitionObjectBeforeDynamicObjects(1);
 
         assertEquals(1, GameServices.sprites().getSidekicks().size(),
@@ -747,7 +756,7 @@ class TestSonic3kMgz2EndBossEvents {
         tails.setCpuControlled(true);
         GameServices.sprites().addSprite(tails, "tails");
 
-        events.triggerBossCollapseHandoff();
+        triggerBossCollapseHandoff(events);
         events.updateBossTransitionObjectBeforeDynamicObjects(1);
         sonic.applyHurtOrDeath(0x3D20, DamageCause.NORMAL, false);
         events.update(1, 1);
@@ -809,7 +818,7 @@ class TestSonic3kMgz2EndBossEvents {
         camera.setY((short) 0x0600);
         AbstractPlayableSprite sonic = camera.getFocusedSprite();
 
-        events.triggerBossCollapseHandoff();
+        triggerBossCollapseHandoff(events);
         events.updateBossTransitionObjectBeforeDynamicObjects(1);
         AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().getFirst();
         runBossTransitionTimer(events);
@@ -894,7 +903,7 @@ class TestSonic3kMgz2EndBossEvents {
         camera.setX((short) 0x3C80);
         camera.setY((short) 0x0600);
 
-        events.triggerBossCollapseHandoff();
+        triggerBossCollapseHandoff(events);
         events.updateBossTransitionObjectBeforeDynamicObjects(1);
         AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().getFirst();
         tails.setCentreY((short) 0x0780);
@@ -930,7 +939,7 @@ class TestSonic3kMgz2EndBossEvents {
         tails.setRenderFlagOnScreen(true);
         GameServices.sprites().addSprite(tails, "tails");
 
-        events.triggerBossCollapseHandoff();
+        triggerBossCollapseHandoff(events);
         events.updateBossTransitionObjectBeforeDynamicObjects(1);
         tails.setCentreY((short) 0x0701);
         events.update(1, 0);
@@ -958,7 +967,7 @@ class TestSonic3kMgz2EndBossEvents {
         sonic.setCentreX((short) 0x3CC0);
         sonic.setCentreY((short) 0x0700);
 
-        events.triggerBossCollapseHandoff();
+        triggerBossCollapseHandoff(events);
         events.updateBossTransitionObjectBeforeDynamicObjects(1);
         AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().getFirst();
         tails.setCentreY((short) 0x0780);
@@ -984,7 +993,7 @@ class TestSonic3kMgz2EndBossEvents {
         camera.setX((short) 0x3C80);
         camera.setY((short) 0x0600);
 
-        events.triggerBossCollapseHandoff();
+        triggerBossCollapseHandoff(events);
         events.updateBossTransitionObjectBeforeDynamicObjects(1);
         AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().getFirst();
         tails.setCentreY((short) 0x06D0);
@@ -1036,7 +1045,7 @@ class TestSonic3kMgz2EndBossEvents {
         camera.setX((short) 0x3C70);
         camera.setY((short) 0x05F0);
 
-        events.triggerBossCollapseHandoff();
+        triggerBossCollapseHandoff(events);
         camera.setX((short) 0x3C80);
         camera.setY((short) 0x0600);
         events.updateBossTransitionObjectBeforeDynamicObjects(1);
@@ -1054,7 +1063,7 @@ class TestSonic3kMgz2EndBossEvents {
         events.init(1);
         GameServices.camera().setX((short) 0x3C80);
         GameServices.camera().setY((short) 0x0600);
-        events.triggerBossCollapseHandoff();
+        triggerBossCollapseHandoff(events);
         events.updateBossTransitionObjectBeforeDynamicObjects(1);
         AbstractPlayableSprite first = GameServices.sprites().getSidekicks().getFirst();
         assertTrue(GameServices.sprites().removeTemporarySidekick(first));
@@ -1077,7 +1086,7 @@ class TestSonic3kMgz2EndBossEvents {
         events.init(1);
         GameServices.camera().setX((short) 0x3C80);
         GameServices.camera().setY((short) 0x0600);
-        events.triggerBossCollapseHandoff();
+        triggerBossCollapseHandoff(events);
         events.updateBossTransitionObjectBeforeDynamicObjects(1);
         AbstractPlayableSprite player = GameServices.camera().getFocusedSprite();
         AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().getFirst();
