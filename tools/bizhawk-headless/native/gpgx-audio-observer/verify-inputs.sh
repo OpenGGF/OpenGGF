@@ -1,6 +1,9 @@
-#!/usr/bin/env bash
+#!/usr/bin/bash -p
 set -euo pipefail
 
+script_dir=${BASH_SOURCE[0]%/*}; [[ "$script_dir" != "${BASH_SOURCE[0]}" ]] || script_dir=.
+script_dir=$(cd -P -- "$script_dir" && pwd)
+source "$script_dir/secure-runtime.sh"
 fail() { printf 'verify-inputs: %s\n' "$*" >&2; exit 1; }
 source_dir=
 toolchain_dir=
@@ -11,6 +14,7 @@ while (($#)); do
     *) fail "unknown argument: $1" ;;
   esac
 done
+recipe_sha=$(secure_verify_recipe "$script_dir")
 for pair in "source:$source_dir" "toolchain:$toolchain_dir"; do
   name=${pair%%:*}; value=${pair#*:}
   [[ "$value" = /* && -d "$value" && ! -L "$value" ]] || fail "$name must be an absolute, non-symlink directory"
@@ -74,8 +78,9 @@ complete_tree_digest=$(
 [[ "$complete_tree_digest" = 9caa5c02dcd2d9c01e5d0196956787a0f31760195c6544a2ceafcb771f469521 ]] \
   || fail "wrong complete toolchain tree digest: $complete_tree_digest"
 
-identity=$(printf '%s\n%s\n%s\n' \
+identity=$(printf '%s\n%s\n%s\n%s\n' \
   427556b5ef3ac437eba754d90c5e7e9096c9a8df \
   fc06187ae45bcedeea4f76f33868ccb05a8c80831d5dce19adbd5eee6e6e06e1 \
-  7bc75866617449d384679bd29298a222a458ff0daea0fc4c221122b5513cf307 | sha256sum | cut -d' ' -f1)
+  7bc75866617449d384679bd29298a222a458ff0daea0fc4c221122b5513cf307 \
+  "$recipe_sha" | sha256sum | cut -d' ' -f1)
 printf '%s\n' "$identity"

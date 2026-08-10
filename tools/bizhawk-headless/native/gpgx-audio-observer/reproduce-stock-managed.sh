@@ -1,52 +1,44 @@
-#!/usr/bin/env bash
+#!/usr/bin/bash -p
 set -euo pipefail
 
+script_dir=${BASH_SOURCE[0]%/*}; [[ "$script_dir" != "${BASH_SOURCE[0]}" ]] || script_dir=.
+script_dir=$(cd -P -- "$script_dir" && pwd)
+source "$script_dir/secure-runtime.sh"
 fail() { printf 'reproduce-stock-managed: %s\n' "$*" >&2; exit 1; }
-publish_create_new() {
-  local source=$1 target=$2
-  printf '%s  %s\n' 4dc8719b3b60a5e03b3720f3060415a8dd3b564b74319539b2a0dc52bc50c0df /usr/bin/mv \
-    | sha256sum -c - >/dev/null || fail "host no-replace publisher differs"
-  /usr/bin/mv -T --no-copy --no-clobber -- "$source" "$target"
-  [[ ! -e "$source" && ! -L "$source" ]] || fail "output already exists: $target"
-}
 source_dir=
-sdk_archive=
-nuget_dir=
+managed_inputs=
 stock_dir=
 output=
 while (($#)); do
   case "$1" in
     --source) source_dir=${2-}; shift 2 ;;
-    --sdk-archive) sdk_archive=${2-}; shift 2 ;;
-    --nuget-packages) nuget_dir=${2-}; shift 2 ;;
+    --managed-inputs) managed_inputs=${2-}; shift 2 ;;
     --stock) stock_dir=${2-}; shift 2 ;;
     --output) output=${2-}; shift 2 ;;
     *) fail "unknown argument: $1" ;;
   esac
 done
-[[ "$output" = /* ]] || fail "output must be an absolute path"
-[[ ! -e "$output" && ! -L "$output" ]] || fail "output already exists: $output"
-[[ -d "$(dirname "$output")" ]] || fail "output parent does not exist"
-for pair in "source:$source_dir" "nuget-packages:$nuget_dir" "stock:$stock_dir"; do
+secure_require_absent_output "$output"
+for pair in "source:$source_dir" "managed-inputs:$managed_inputs" "stock:$stock_dir"; do
   name=${pair%%:*}; value=${pair#*:}
   [[ "$value" = /* && -d "$value" && ! -L "$value" ]] || fail "$name must be an absolute, non-symlink directory"
 done
-[[ "$sdk_archive" = /* && -f "$sdk_archive" && ! -L "$sdk_archive" ]] || fail "SDK archive must be an absolute, non-symlink file"
+recipe_sha=$(secure_verify_recipe "$script_dir")
 
-parent=$(dirname "$output")
+parent=${output%/*}; [[ -n "$parent" ]] || parent=/
 stage=$(mktemp -d "$parent/.gpgx-managed-staging.XXXXXX")
 cleanup() { if [[ -n "${stage-}" && -d "$stage" ]]; then rm -rf -- "$stage"; fi; }
 trap cleanup EXIT
-mkdir "$stage/source" "$stage/nuget-input-tree" "$stage/stock-input"
+mkdir "$stage/source" "$stage/managed-input-tree" "$stage/stock-input"
 mkdir "$stage/stock-input/dll"
 cp -a "$source_dir/." "$stage/source/"
-cp -a "$nuget_dir/." "$stage/nuget-input-tree/"
-cp -- "$sdk_archive" "$stage/sdk-archive.tar.gz"
+cp -a "$managed_inputs/." "$stage/managed-input-tree/"
 cp -- "$stock_dir/dll/BizHawk.Emulation.Cores.dll" \
   "$stock_dir/dll/BizHawk.Emulation.Common.dll" "$stage/stock-input/dll/"
 source_dir=$stage/source
-nuget_dir=$stage/nuget-input-tree
-sdk_archive=$stage/sdk-archive.tar.gz
+managed_inputs=$stage/managed-input-tree
+nuget_dir=$managed_inputs/nuget
+sdk_archive=$managed_inputs/dotnet-sdk-8.0.414-linux-x64.tar.gz
 stock_dir=$stage/stock-input
 
 [[ $(git -C "$source_dir" rev-parse HEAD) = 427556b5ef3ac437eba754d90c5e7e9096c9a8df ]] || fail "wrong BizHawk commit"
@@ -64,13 +56,12 @@ printf '%s  %s\n' 7786bbe5093e3a5d354a1ffa56083b6a32ad12837a83170f1f3b51ad7df285
 
 package_count=$(find "$nuget_dir" -type f -name '*.nupkg' | wc -l)
 [[ "$package_count" = 114 ]] || fail "wrong NuGet package count: $package_count"
-nuget_manifest=$(
-  cd "$nuget_dir"
-  find . -type f -name '*.nupkg' -printf '%P\n' | LC_ALL=C sort | while IFS= read -r path; do
-    printf '%s  %s\n' "$(sha256sum "$path" | cut -d' ' -f1)" "$path"
-  done | sha256sum | cut -d' ' -f1
-)
-[[ "$nuget_manifest" = e0afe65b153f1f3cbaed03c8e3987542322a9ea1a220cac3696bc7ba59c42290 ]] || fail "wrong NuGet package manifest: $nuget_manifest"
+while IFS=$'\t' read -r relative expected; do
+  [[ -f "$nuget_dir/$relative" && ! -L "$nuget_dir/$relative" ]] || fail "missing locked package: $relative"
+  observed=$(sha256sum "$nuget_dir/$relative"); observed=${observed%% *}
+  [[ "$observed" = "$expected" ]] || fail "package differs: $relative"
+done < <(/usr/bin/jq -er '.packages[] | [.path,.sha256] | @tsv' "$script_dir/managed-nuget-manifest.json")
+nuget_manifest=$(sha256sum "$script_dir/managed-nuget-manifest.json"); nuget_manifest=${nuget_manifest%% *}
 while read -r expected file; do
   printf '%s  %s\n' "$expected" "$source_dir/$file" | sha256sum -c - >/dev/null || fail "managed source differs: $file"
 done <<'LOCKED_MANAGED_SOURCE'
@@ -149,11 +140,11 @@ cmp -s "$cores" "$stock_dir/dll/BizHawk.Emulation.Cores.dll" && cores_cmp=true
 cmp -s "$common" "$stock_dir/dll/BizHawk.Emulation.Common.dll" && common_cmp=true
 [[ "$cores_cmp" = false || "$common_cmp" = false ]] || fail "managed stock unexpectedly reproduced; adapter lock requires review"
 
-printf '{"schema":"openggf.gpgx-managed-reproduction.v1","status":"BYTE_MISMATCH","sdk_version":"8.0.414","nuget_manifest_sha256":"e0afe65b153f1f3cbaed03c8e3987542322a9ea1a220cac3696bc7ba59c42290","cores_size":%s,"cores_sha256":"%s","cores_stock_cmp":%s,"common_size":%s,"common_sha256":"%s","common_stock_cmp":%s,"selected_adapter":"REFLECTION","patched_managed_dll_permitted":false}\n' \
-  "$cores_size" "$cores_sha" "$cores_cmp" "$common_size" "$common_sha" "$common_cmp" > "$stage/identity.json"
+printf '{"schema":"openggf.gpgx-managed-reproduction.v1","status":"BYTE_MISMATCH","sdk_version":"8.0.414","nuget_manifest_sha256":"%s","build_recipe_sha256":"%s","cores_size":%s,"cores_sha256":"%s","cores_stock_cmp":%s,"common_size":%s,"common_sha256":"%s","common_stock_cmp":%s,"selected_adapter":"REFLECTION","patched_managed_dll_permitted":false}\n' \
+  "$nuget_manifest" "$recipe_sha" "$cores_size" "$cores_sha" "$cores_cmp" "$common_size" "$common_sha" "$common_cmp" > "$stage/identity.json"
 rm -rf -- "$stage/source" "$stage/sdk" "$stage/feed" "$stage/packages" "$stage/dotnet-home" \
-  "$stage/nuget-input-tree" "$stage/sdk-archive.tar.gz" "$stage/stock-input" "$stage/build.log"
-publish_create_new "$stage" "$output"
+  "$stage/managed-input-tree" "$stage/stock-input" "$stage/build.log"
+secure_publish_create_new "$stage" "$output"
 stage=
 printf 'managed bytes did not match stock; reflection remains required\n' >&2
 exit 3

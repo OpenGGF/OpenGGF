@@ -1,14 +1,10 @@
-#!/usr/bin/env bash
+#!/usr/bin/bash -p
 set -euo pipefail
 
+script_dir=${BASH_SOURCE[0]%/*}; [[ "$script_dir" != "${BASH_SOURCE[0]}" ]] || script_dir=.
+script_dir=$(cd -P -- "$script_dir" && pwd)
+source "$script_dir/secure-runtime.sh"
 fail() { printf 'reproduce-stock-core: %s\n' "$*" >&2; exit 1; }
-publish_create_new() {
-  local source=$1 target=$2
-  printf '%s  %s\n' 4dc8719b3b60a5e03b3720f3060415a8dd3b564b74319539b2a0dc52bc50c0df /usr/bin/mv \
-    | sha256sum -c - >/dev/null || fail "host no-replace publisher differs"
-  /usr/bin/mv -T --no-copy --no-clobber -- "$source" "$target"
-  [[ ! -e "$source" && ! -L "$source" ]] || fail "output already exists: $target"
-}
 source_dir=
 toolchain_dir=
 stock_dir=
@@ -22,10 +18,7 @@ while (($#)); do
     *) fail "unknown argument: $1" ;;
   esac
 done
-script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-[[ "$output" = /* ]] || fail "output must be an absolute path"
-[[ ! -e "$output" && ! -L "$output" ]] || fail "output already exists: $output"
-[[ -d "$(dirname "$output")" ]] || fail "output parent does not exist"
+secure_require_absent_output "$output"
 for pair in "source:$source_dir" "toolchain:$toolchain_dir"; do
   name=${pair%%:*}; value=${pair#*:}
   [[ "$value" = /* && -d "$value" && ! -L "$value" ]] \
@@ -33,7 +26,7 @@ for pair in "source:$source_dir" "toolchain:$toolchain_dir"; do
 done
 [[ "$stock_dir" = /* && -d "$stock_dir" && ! -L "$stock_dir" ]] || fail "stock must be an absolute, non-symlink directory"
 
-parent=$(dirname "$output")
+parent=${output%/*}; [[ -n "$parent" ]] || parent=/
 stage=$(mktemp -d "$parent/.gpgx-reproduction-staging.XXXXXX")
 cleanup() { if [[ -n "${stage-}" && -d "$stage" ]]; then rm -rf -- "$stage"; fi; }
 trap cleanup EXIT
@@ -63,7 +56,8 @@ LOCKED_STOCK
 printf '%s  %s\n' e1a35b81e8ba6de2eb11ff5cf82a5521b7b4fa719f425f027c2b0496e8ef62ca /usr/bin/readelf | sha256sum -c - >/dev/null || fail "host readelf differs"
 printf '%s  %s\n' eabbccb0f7f755b96d30834026a9b5d941c606400d097d87c1ff16622edaf68c /usr/bin/bwrap | sha256sum -c - >/dev/null || fail "host bwrap differs"
 
-"$script_dir/verify-inputs.sh" --source "$source_dir" --toolchain "$toolchain_dir" >/dev/null
+recipe_sha=$(secure_verify_recipe "$script_dir")
+verified_identity=$(/usr/bin/bash -p "$script_dir/verify-inputs.sh" --source "$source_dir" --toolchain "$toolchain_dir")
 rm -rf -- "$stage/build-source/waterbox/sysroot" \
   "$stage/build-source/waterbox/emulibc/obj" "$stage/build-source/waterbox/gpgx/obj"
 cp -a "$toolchain_dir/sysroot" "$stage/build-source/waterbox/sysroot"
@@ -105,7 +99,7 @@ cmp -s "$stage/gpgx.wbx.zst" "$stock_compressed" || fail "compressed core does n
 rm -- "$stage/stock-gpgx.wbx"
 rm -rf -- "$stage/build-source" "$stage/toolchain-input" "$stage/stock-input" "$stage/build.log"
 
-printf '%s\n' '{"schema":"openggf.gpgx-stock-reproduction.v1","bizhawk_commit":"427556b5ef3ac437eba754d90c5e7e9096c9a8df","gpgx_commit":"051d430d3d1b54625f9900c8f152d7f232e06daf","musl_commit":"2063abc4e16c84218757b1db10d3cdf9f36ef3f8","verified_input_identity_sha256":"409b9debb122dd5e5d0719874e99d0f3d3f71c25cf8731bfa1ec61462d0c295b","complete_toolchain_tree_sha256":"9caa5c02dcd2d9c01e5d0196956787a0f31760195c6544a2ceafcb771f469521","sysroot_tree_sha256":"fc06187ae45bcedeea4f76f33868ccb05a8c80831d5dce19adbd5eee6e6e06e1","decompressed_size":39558192,"decompressed_sha256":"b4cc6dabc069a6f1b87790212d80f665d216e603aa4990955cc816d5bf98d218","build_id":"7696adca7ad14b79","compressed_size":400161,"compressed_sha256":"c4231296ec5ba59b431df22b68e234ae7bfbbfc87b6e72fa471234ac1b220d12","stock_cmp":true}' > "$stage/identity.json"
-publish_create_new "$stage" "$output"
+printf '{"schema":"openggf.gpgx-stock-reproduction.v1","bizhawk_commit":"427556b5ef3ac437eba754d90c5e7e9096c9a8df","gpgx_commit":"051d430d3d1b54625f9900c8f152d7f232e06daf","musl_commit":"2063abc4e16c84218757b1db10d3cdf9f36ef3f8","build_recipe_sha256":"%s","verified_input_identity_sha256":"%s","complete_toolchain_tree_sha256":"9caa5c02dcd2d9c01e5d0196956787a0f31760195c6544a2ceafcb771f469521","sysroot_tree_sha256":"fc06187ae45bcedeea4f76f33868ccb05a8c80831d5dce19adbd5eee6e6e06e1","decompressed_size":39558192,"decompressed_sha256":"b4cc6dabc069a6f1b87790212d80f665d216e603aa4990955cc816d5bf98d218","build_id":"7696adca7ad14b79","compressed_size":400161,"compressed_sha256":"c4231296ec5ba59b431df22b68e234ae7bfbbfc87b6e72fa471234ac1b220d12","stock_cmp":true}\n' "$recipe_sha" "$verified_identity" > "$stage/identity.json"
+secure_publish_create_new "$stage" "$output"
 stage=
 printf '%s\n' "$output"

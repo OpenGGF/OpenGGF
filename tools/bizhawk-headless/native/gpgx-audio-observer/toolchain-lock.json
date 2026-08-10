@@ -65,8 +65,9 @@
   },
   "build_recipe": {
     "encoding": "UTF-8 LF",
-    "sha256": "fdc7dc98b5a218256c991d712a2909ca244ad482e8996737ea49569cd8643563",
-    "verified_input_identity_sha256": "409b9debb122dd5e5d0719874e99d0f3d3f71c25cf8731bfa1ec61462d0c295b",
+    "file": "build-recipe.json",
+    "sha256": "57ea87848e924904cc3463e6a8b59c80eea62e22fe19f1c0d2c82c7bce33260a",
+    "verified_input_identity_sha256": "36dde84c81429343b2f4425ff66c04f8fbdf54bcaf42a2459e68c52f95e9a0d4",
     "complete_toolchain_tree_sha256": "9caa5c02dcd2d9c01e5d0196956787a0f31760195c6544a2ceafcb771f469521"
   },
   "negative_controls": {

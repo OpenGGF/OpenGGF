@@ -10,7 +10,10 @@ All notable changes to the OpenGGF project are documented in this file.
   exact historical managed release environment was not frozen, and the pinned
   date-adjacent candidate does not reproduce the installed assemblies. The
   distribution is therefore locked to the exact-hash reflection path and
-  cannot ship a replacement managed DLL.
+  cannot ship a replacement managed DLL. Reproduction now rejects ambient
+  shell/toolchain/Git/loader overrides, authenticates a canonical build recipe
+  and all 114 offline NuGet package files, and exposes a registered two-run
+  gate which requires both fresh native outputs to match each other and stock.
 - Fix: Sonic 2 and Sonic 3 & Knuckles FM music and sound effects now upload
   voices using their shipped Z80-driver register tables and write order. Their
   effective operator assignment remains identical, while Sonic 2 preserves its

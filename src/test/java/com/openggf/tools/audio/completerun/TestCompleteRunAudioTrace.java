@@ -282,6 +282,20 @@ class TestCompleteRunAudioTrace {
     }
 
     @Test
+    void metadataReaderRejectsDuplicateRuntimeArtifactKeysWithoutParserDuplicateDetection() throws Exception {
+        String canonical = CompleteRunAudioJson.writeMetadata(fixture.metadata);
+        String duplicate = canonical.replace(
+                "\"OPENGGF_PRODUCER\":\"4444444444444444444444444444444444444444444444444444444444444444\"",
+                "\"OPENGGF_PRODUCER\":\"4444444444444444444444444444444444444444444444444444444444444444\","
+                        + "\"OPENGGF_PRODUCER\":\"5555555555555555555555555555555555555555555555555555555555555555\"");
+
+        try (var parser = new com.fasterxml.jackson.core.JsonFactory().createParser(duplicate)) {
+            parser.nextToken();
+            assertThrows(IllegalArgumentException.class, () -> CompleteRunAudioJson.readMetadata(parser));
+        }
+    }
+
+    @Test
     void bufferedObserverMetadataHasIndependentCanonicalJsonAndStrictParserGates() throws Exception {
         String digest = "a".repeat(64);
         Map<RuntimeArtifact, String> artifacts = new EnumMap<>(RuntimeArtifact.class);
@@ -293,6 +307,8 @@ class TestCompleteRunAudioTrace {
                 RuntimeArtifact.GPGX_OBSERVER_BUILD_RECIPE)) {
             artifacts.put(artifact, digest);
         }
+        artifacts.put(RuntimeArtifact.GPGX_OBSERVER_BUILD_RECIPE,
+                "57ea87848e924904cc3463e6a8b59c80eea62e22fe19f1c0d2c82c7bce33260a");
         Metadata metadata = new Metadata(SCHEMA, "test.profile", fixture.fixture, ProducerKind.REFERENCE,
                 new ProducerRuntimeIdentity("BizHawk", "2.11", "BizHawk", "2.11", "GPGX", "1.0",
                         ManagedObserverAdapter.REFLECTION, artifacts),
@@ -305,7 +321,7 @@ class TestCompleteRunAudioTrace {
                 new ChunkPolicy(4096, "gzip", 0), List.of(HardwareRole.FM1, HardwareRole.PSG1),
                 new StateInventory(List.of("tempo"), List.of("cursor")));
         String canonical = """
-                {"schema":"complete_run_audio.v1","profileId":"test.profile","fixture":{"romSha1":"0123456789abcdef0123456789abcdef01234567","romCrc32":"89abcdef","bk2Sha256":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","bk2RowCount":862,"runManifestSha256":"fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210","segments":[{"id":"green-hill","firstFrame":860,"exclusiveEnd":862}],"firstFrame":860,"exclusiveEnd":862},"producerKind":"REFERENCE","producerRuntimeIdentity":{"producerName":"BizHawk","producerVersion":"2.11","emulatorName":"BizHawk","emulatorVersion":"2.11","coreName":"GPGX","coreVersion":"1.0","observerAdapter":"REFLECTION","artifactSha256":{"BIZHAWK_EXECUTABLE":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","BIZHAWK_CORE_DLL":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","BIZHAWK_COMMON_DLL":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","WATERBOX_HOST":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","GPGX_CORE":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","GPGX_CORE_UNCOMPRESSED":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","GPGX_OBSERVER_PATCH":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","GPGX_OBSERVER_SOURCE_BUNDLE":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","GPGX_OBSERVER_TOOLCHAIN":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","GPGX_OBSERVER_BUILD_RECIPE":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}},"observerRuntimeIdentity":{"kind":"BUFFERED_NATIVE","abiName":"task6-test-sentinel-not-a-runtime-abi","abiVersion":2000006,"eventSize":2000007,"capacity":2000008,"installationId":"bizhawk-2.11-gpgx-audio-observer-v1","coreId":"gpgx-audio-observer-v1","coreBuildId":"7696adca7ad14b79","watchMaskSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","serviceManifestSha256":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","enabled":true,"maximumFrameOccupancy":1,"overflowCount":0},"observerProof":{"observerProfile":"reference.observer.v1","callbackSource":"native.buffer","callbacks":[{"callback":"driver.service","observations":1}]},"chunkPolicy":{"frameRows":4096,"compression":"gzip","gzipTimestamp":0},"hardwareRoles":["FM1","PSG1"],"stateInventory":{"globalFields":["tempo"],"activeRoleFields":["cursor"]}}""";
+                {"schema":"complete_run_audio.v1","profileId":"test.profile","fixture":{"romSha1":"0123456789abcdef0123456789abcdef01234567","romCrc32":"89abcdef","bk2Sha256":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","bk2RowCount":862,"runManifestSha256":"fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210","segments":[{"id":"green-hill","firstFrame":860,"exclusiveEnd":862}],"firstFrame":860,"exclusiveEnd":862},"producerKind":"REFERENCE","producerRuntimeIdentity":{"producerName":"BizHawk","producerVersion":"2.11","emulatorName":"BizHawk","emulatorVersion":"2.11","coreName":"GPGX","coreVersion":"1.0","observerAdapter":"REFLECTION","artifactSha256":{"BIZHAWK_EXECUTABLE":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","BIZHAWK_CORE_DLL":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","BIZHAWK_COMMON_DLL":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","WATERBOX_HOST":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","GPGX_CORE":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","GPGX_CORE_UNCOMPRESSED":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","GPGX_OBSERVER_PATCH":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","GPGX_OBSERVER_SOURCE_BUNDLE":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","GPGX_OBSERVER_TOOLCHAIN":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","GPGX_OBSERVER_BUILD_RECIPE":"57ea87848e924904cc3463e6a8b59c80eea62e22fe19f1c0d2c82c7bce33260a"}},"observerRuntimeIdentity":{"kind":"BUFFERED_NATIVE","abiName":"task6-test-sentinel-not-a-runtime-abi","abiVersion":2000006,"eventSize":2000007,"capacity":2000008,"installationId":"bizhawk-2.11-gpgx-audio-observer-v1","coreId":"gpgx-audio-observer-v1","coreBuildId":"7696adca7ad14b79","watchMaskSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","serviceManifestSha256":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","enabled":true,"maximumFrameOccupancy":1,"overflowCount":0},"observerProof":{"observerProfile":"reference.observer.v1","callbackSource":"native.buffer","callbacks":[{"callback":"driver.service","observations":1}]},"chunkPolicy":{"frameRows":4096,"compression":"gzip","gzipTimestamp":0},"hardwareRoles":["FM1","PSG1"],"stateInventory":{"globalFields":["tempo"],"activeRoleFields":["cursor"]}}""";
 
         assertEquals(canonical, CompleteRunAudioJson.writeMetadata(metadata));
         assertEquals(metadata, readMetadata(canonical));

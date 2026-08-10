@@ -131,6 +131,20 @@ class TestCompleteRunAudioCaptureStore {
     }
 
     @Test
+    void readerRejectsManifestWithDuplicateRuntimeArtifactKey() throws Exception {
+        Path output = temp.resolve("capture");
+        store.writeNew(output, metadata(1), records(1).iterator());
+        Path manifest = output.resolve("manifest.json");
+        String original = Files.readString(manifest);
+        Files.writeString(manifest, original.replace(
+                "\"OPENGGF_PRODUCER\":\"4444444444444444444444444444444444444444444444444444444444444444\"",
+                "\"OPENGGF_PRODUCER\":\"4444444444444444444444444444444444444444444444444444444444444444\","
+                        + "\"OPENGGF_PRODUCER\":\"5555555555555555555555555555555555555555555555555555555555555555\""));
+
+        assertThrows(IllegalArgumentException.class, () -> store.read(output));
+    }
+
+    @Test
     void failedAtomicPublicationCleansOnlyStagingAndNeverFallsBackToReplacement() throws Exception {
         Path output = temp.resolve("capture");
         CompleteRunAudioCaptureStore failingStore = new CompleteRunAudioCaptureStore((source, target) -> {

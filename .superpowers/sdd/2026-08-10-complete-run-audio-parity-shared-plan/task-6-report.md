@@ -220,3 +220,127 @@ and `bash -n` passes for all five scripts. `git diff --check` is clean.
 - Detailed source, SDK, package, toolchain, and build directories remain
   ignored under the task's run roots. Only compact locks/scripts/report are
   intended for the commit.
+
+## Fix round 1: trust boundary and durable two-run proof
+
+This section supersedes the earlier script-count, recipe-identity, direct
+managed-input invocation, and test-count details above. It records the
+post-review implementation and final settled bytes.
+
+### RED evidence
+
+- A direct streaming parser built without Jackson duplicate detection accepted
+  a second `OPENGGF_PRODUCER` artifact key, and the capture-store vector leaked
+  a `JsonParseException`: 2 expected failures. Explicit enum-map duplicate
+  rejection and capture-store error normalization made both green; the two
+  relevant Java classes then passed 51/51.
+- The registered C# source-lock suite was expanded before implementation. It
+  failed 2 of 7 cases because `secure-runtime.sh` and `build-recipe.json` did
+  not exist. The production helper, canonical recipe, managed manifest, and
+  pair gate made the always-on portion green.
+- The first real pair attempt failed closed when the isolated Git HOME/XDG
+  directories were accidentally inside the fetched repository and therefore
+  appeared as untracked input. Moving that configuration stage beside the Git
+  stage made the cleanliness gate meaningful and the next run green.
+
+### Security and provenance result
+
+All reproduction entry points now start with `/usr/bin/bash -p`, source one
+production `secure-runtime.sh`, reject ambient shell, Java/Mono/.NET,
+compiler/make, Git/SSH/config/transport, Bash-function, and loader overrides,
+and terminate conventional command names at readonly absolute utility
+wrappers. Network fetches use empty HOME/XDG configuration, no hooks or
+prompts, an HTTPS-only protocol allowlist, and the three immutable object IDs.
+The documented pre-process trust root is the kernel, ELF loader, libc, Bash,
+and pinned absolute OS utilities.
+
+The shared publisher performs one same-parent
+`/usr/bin/mv -T --no-copy --no-clobber` of a complete sibling stage. Registered
+tests execute that helper for success, racing-empty/no-clobber, cross-device
+post-validation failure without a partial target, and a snapshot whose caller-owned source is
+subsequently mutated. Fake `PATH`, `git`, `sha256sum`, and `cmp` executables are
+not invoked; `BASH_ENV` and `GIT_CONFIG_GLOBAL` are rejected.
+
+`build-recipe.json` is canonical tracked provenance for the normalized
+commands/environment, all relevant non-circular versioned script/lock inputs,
+and the host trust-root bytes. `toolchain-lock.json` pins its SHA-256:
+
+```text
+57ea87848e924904cc3463e6a8b59c80eea62e22fe19f1c0d2c82c7bce33260a
+```
+
+`secure-runtime.sh verify-recipe` recomputes every input and host file.
+`verify-inputs.sh` incorporates the recipe into the verified input identity:
+
+```text
+36dde84c81429343b2f4425ff66c04f8fbdf54bcaf42a2459e68c52f95e9a0d4
+```
+
+Changing a versioned script without updating the recipe now fails the
+registered copied-fixture test. Native and managed reproduction identity JSON
+include the recomputed recipe digest.
+
+`managed-nuget-manifest.json` contains all 114 lowercase package IDs,
+versions, relative filenames, and individual SHA-256 values. Its tracked-file
+digest is:
+
+```text
+b609fa7cf733755415b9b878e53ea25e72cc55dca92a645e9a788f3b8e19ce86
+```
+
+`prepare-managed-inputs.sh` is offline-only, snapshots and verifies the exact
+SDK archive (`7786bbe...`) and the copied destination bytes for all 114
+packages, then publishes a create-new immutable input tree. Package payloads
+remain ignored. Managed reproduction consumes only that prepared tree and
+still emits no DLL.
+
+### Registered standard and real gates
+
+The always-on C# invocation is explicit about the expensive gate:
+
+```text
+BIZHAWK_HOME=<stock-bizhawk> tools/bizhawk-headless/test.sh \
+  --filter GpgxAudioObserverSourceLockTests --jobs 1
+```
+
+It produced 6 passes and one genuine `SKIP`, naming the five required
+`OPENGGF_TASK6_*` inputs. With those variables supplied, the same registered
+slow case invoked `reproduce-stock-pair.sh` and passed. It does not inspect
+script strings as a substitute for reproduction.
+
+The final settled-recipe real output is ignored at
+`target/audio-parity/native/task6-fix-round-pair-e`. The durable pair script
+performed two independent HTTPS fetches, two toolchain preparations, two
+native builds, one immutable managed-input preparation, and two managed
+builds. It compared A/B raw, compressed, and identity bytes, and compared both
+raw and both compressed native outputs to stock:
+
+```text
+native runs:              2
+gpgx.wbx SHA-256:         b4cc6dabc069a6f1b87790212d80f665d216e603aa4990955cc816d5bf98d218
+gpgx.wbx.zst SHA-256:     c4231296ec5ba59b431df22b68e234ae7bfbbfc87b6e72fa471234ac1b220d12
+BuildID:                  7696adca7ad14b79
+native identity SHA-256:  b8ecf7dbc6d866c98ac48c7d65b8081856ee3d4570548f8a77f264a0adc777f9
+managed runs:             2
+managed identity SHA-256: 71223803c8e2d3fd0bf22e878cb8cacbe0990c493186afc0ae61119f7f2ba95c
+managed result:           BYTE_MISMATCH / REFLECTION
+pair identity SHA-256:    65ab6bd7f8557a51771c2a2c2024634054851150c4f47158a6376abbc2604dff
+```
+
+The managed candidates remain the exact locked mismatch (`Cores`
+`f7e7ea11...`, `Common` `96f494af...`), both stock comparisons are false,
+`selected_adapter` is `REFLECTION`, and `patched_managed_dll_permitted` is
+false.
+
+Final Task 1-3 Java regressions ran:
+
+```text
+mvn -Dmse=off \
+  -Dtest='com.openggf.tools.audio.completerun.TestCompleteRunAudioTrace,com.openggf.tools.audio.completerun.TestCompleteRunAudioCaptureStore,com.openggf.tools.audio.completerun.TestCompleteRunAudioComparator' \
+  test
+```
+
+Result: 103 tests, 0 failures, 0 errors, 0 skipped. All eight shell scripts
+pass `bash -n`, all five JSON locks/manifests/recipes parse with `jq -e`, the
+recipe verifier returns the settled digest above, and `git diff --check` is
+clean.

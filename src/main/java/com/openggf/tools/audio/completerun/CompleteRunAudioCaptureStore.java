@@ -525,6 +525,8 @@ public final class CompleteRunAudioCaptureStore {
             if(parser.nextToken()!=com.fasterxml.jackson.core.JsonToken.END_OBJECT||parser.nextToken()!=null)throw new IllegalArgumentException("trailing/unknown manifest fields");
             for (int index = 0; index < chunks.size() - 1; index++) if (chunks.get(index).frames != CompleteRunAudioTrace.CHUNK_FRAME_ROWS) throw new IllegalArgumentException("non-final chunks must contain exactly 4,096 frame rows");
             return new Manifest(metadata, List.copyOf(chunks), root);
+        } catch (com.fasterxml.jackson.core.JsonParseException failure) {
+            throw new IllegalArgumentException("invalid capture manifest JSON", failure);
         }
     }
 

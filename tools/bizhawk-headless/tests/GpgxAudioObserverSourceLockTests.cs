@@ -2,6 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using System.Text;
 using Newtonsoft.Json.Linq;
 
 namespace OpenGGF.BizHawk.Headless.Tests
@@ -9,6 +12,19 @@ namespace OpenGGF.BizHawk.Headless.Tests
     internal static class GpgxAudioObserverSourceLockTests
     {
         private const string ObserverDirectory = "native/gpgx-audio-observer";
+        private const uint InOpen = 0x00000020;
+
+        [DllImport("libc", SetLastError = true)]
+        private static extern int inotify_init1(int flags);
+
+        [DllImport("libc", SetLastError = true)]
+        private static extern int inotify_add_watch(int fd, string pathname, uint mask);
+
+        [DllImport("libc", SetLastError = true)]
+        private static extern IntPtr read(int fd, byte[] buffer, UIntPtr count);
+
+        [DllImport("libc", SetLastError = true)]
+        private static extern int close(int fd);
 
         internal static void Register(ICollection<TestMain.TestCase> tests)
         {
@@ -24,6 +40,15 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "GpgxAudioObserverSourceLockTests scripts are create-new and fail closed",
                 ScriptsAreCreateNewAndFailClosed));
+            tests.Add(new TestMain.TestCase(
+                "GpgxAudioObserverSourceLockTests secure runtime rejects ambient overrides",
+                SecureRuntimeRejectsAmbientOverrides));
+            tests.Add(new TestMain.TestCase(
+                "GpgxAudioObserverSourceLockTests canonical recipe and managed inputs are complete",
+                CanonicalRecipeAndManagedInputsAreComplete));
+            tests.Add(new TestMain.TestCase(
+                "GpgxAudioObserverSourceLockTests slow real stock pair gate",
+                SlowRealStockPairGate));
         }
 
         private static void PinsExactNativeInputs()
@@ -51,7 +76,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "7bc75866617449d384679bd29298a222a458ff0daea0fc4c221122b5513cf307",
                 (string)toolchain["zstd"]["executable_sha256"]);
             AssertEx.Equal(
-                "fdc7dc98b5a218256c991d712a2909ca244ad482e8996737ea49569cd8643563",
+                "57ea87848e924904cc3463e6a8b59c80eea62e22fe19f1c0d2c82c7bce33260a",
                 (string)toolchain["build_recipe"]["sha256"]);
             AssertEx.Equal(
                 "c4231296ec5ba59b431df22b68e234ae7bfbbfc87b6e72fa471234ac1b220d12",
@@ -150,7 +175,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "9b8f89ee3105aad8b2a18805362677b6d983721e9d3706629359ddf7c9ec837b",
                 (string)toolchain["waterbox"]["libc_archive_sha256"]);
             AssertEx.Equal(
-                "409b9debb122dd5e5d0719874e99d0f3d3f71c25cf8731bfa1ec61462d0c295b",
+                "36dde84c81429343b2f4425ff66c04f8fbdf54bcaf42a2459e68c52f95e9a0d4",
                 (string)toolchain["build_recipe"]["verified_input_identity_sha256"]);
             AssertEx.Equal(
                 "9caa5c02dcd2d9c01e5d0196956787a0f31760195c6544a2ceafcb771f469521",
@@ -167,7 +192,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(false, all.Contains("/tmp/"));
             AssertEx.Equal(false, all.Contains("/home/feos"));
             foreach (string script in new[] { "fetch-source.sh", "prepare-toolchain.sh",
-                "verify-inputs.sh", "reproduce-stock-core.sh", "reproduce-stock-managed.sh" })
+                "verify-inputs.sh", "reproduce-stock-core.sh", "reproduce-stock-managed.sh",
+                "prepare-managed-inputs.sh", "reproduce-stock-pair.sh", "secure-runtime.sh" })
             {
                 string scriptText = File.ReadAllText(Path.Combine(
                     EndToEndTests.ToolDirectory, ObserverDirectory, script));
@@ -202,11 +228,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(false, (bool)managed["reproduction"]["stock_cmp"]);
             AssertEx.Equal(114, (int)managed["nuget"]["package_count"]);
             AssertEx.Equal(
-                "e0afe65b153f1f3cbaed03c8e3987542322a9ea1a220cac3696bc7ba59c42290",
+                "b609fa7cf733755415b9b878e53ea25e72cc55dca92a645e9a788f3b8e19ce86",
                 (string)managed["nuget"]["canonical_manifest_sha256"]);
             AssertEx.Equal(
+                "e0afe65b153f1f3cbaed03c8e3987542322a9ea1a220cac3696bc7ba59c42290",
+                (string)managed["nuget"]["package_tree_sha256"]);
+            AssertEx.Equal(
                 "efadaf168670ce0ae5f8f5dc7705ddaa94e898bce96134b9ebc86c31ceb6d6d2",
-                (string)managed["reproduction"]["canonical_identity_sha256"]);
+                (string)managed["reproduction"]["pre_recipe_audit_identity_sha256"]);
         }
 
         private static void ScriptsAreCreateNewAndFailClosed()
@@ -219,19 +248,20 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(true, prepareScript.Contains(completeToolchainTree));
             AssertEx.Equal(true, verifyScript.Contains(completeToolchainTree));
             foreach (string script in new[] { "fetch-source.sh", "prepare-toolchain.sh",
-                "verify-inputs.sh", "reproduce-stock-core.sh", "reproduce-stock-managed.sh" })
+                "verify-inputs.sh", "reproduce-stock-core.sh", "reproduce-stock-managed.sh",
+                "prepare-managed-inputs.sh", "reproduce-stock-pair.sh", "secure-runtime.sh" })
             {
                 string scriptText = File.ReadAllText(Path.Combine(observerRoot, script));
                 AssertEx.Equal(false, scriptText.Contains("--untracked-files=no"));
             }
             foreach (string script in new[] { "fetch-source.sh", "prepare-toolchain.sh",
-                "reproduce-stock-core.sh", "reproduce-stock-managed.sh" })
+                "reproduce-stock-core.sh", "reproduce-stock-managed.sh",
+                "prepare-managed-inputs.sh", "reproduce-stock-pair.sh" })
             {
                 string scriptText = File.ReadAllText(Path.Combine(observerRoot, script));
                 AssertEx.Equal(false, scriptText.Contains("-exec mv -t"));
                 AssertEx.Equal(false, scriptText.Contains("mkdir -- \"$target\""));
-                AssertEx.Equal(true, scriptText.Contains(
-                    "/usr/bin/mv -T --no-copy --no-clobber -- \"$source\" \"$target\""));
+                AssertEx.Equal(true, scriptText.Contains("secure_publish_create_new"));
             }
             AssertEx.Equal(true, prepareScript.Contains("source_dir=$stage/work-source"));
             AssertEx.Equal(true, prepareScript.Contains("packages_dir=$stage/package-input"));
@@ -239,11 +269,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(true, coreScript.Contains("source_dir=$stage/build-source"));
             AssertEx.Equal(true, coreScript.Contains("toolchain_dir=$stage/toolchain-input"));
             AssertEx.Equal(true, coreScript.Contains("verified_input_identity_sha256"));
+            AssertEx.Equal(true, coreScript.Contains("build_recipe_sha256"));
             AssertEx.Equal(true, coreScript.Contains("complete_toolchain_tree_sha256"));
             string managedScript = File.ReadAllText(Path.Combine(observerRoot, "reproduce-stock-managed.sh"));
             AssertEx.Equal(true, managedScript.Contains("source_dir=$stage/source"));
-            AssertEx.Equal(true, managedScript.Contains("nuget_dir=$stage/nuget-input-tree"));
-            AssertEx.Equal(true, managedScript.Contains("sdk_archive=$stage/sdk-archive.tar.gz"));
+            AssertEx.Equal(true, managedScript.Contains("managed_inputs=$stage/managed-input-tree"));
+            AssertEx.Equal(true, managedScript.Contains("sdk_archive=$managed_inputs/dotnet-sdk-8.0.414-linux-x64.tar.gz"));
 
             string root = TestScratch.CreateRootPath("gpgx-source-lock");
             try
@@ -253,32 +284,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 Directory.CreateDirectory(existing);
                 File.WriteAllText(Path.Combine(existing, "sentinel"), "keep");
                 foreach (string script in new[] { "fetch-source.sh", "prepare-toolchain.sh",
-                    "reproduce-stock-core.sh", "reproduce-stock-managed.sh" })
+                    "reproduce-stock-core.sh", "reproduce-stock-managed.sh",
+                    "prepare-managed-inputs.sh", "reproduce-stock-pair.sh" })
                 {
                     ProcessResult result = Run(script, "--output", existing);
                     AssertEx.Equal(false, result.ExitCode == 0);
                     AssertEx.Equal(true, result.Stderr.Contains("output already exists"));
                     AssertEx.Equal("keep", File.ReadAllText(Path.Combine(existing, "sentinel")));
                 }
-
-                string staged = Path.Combine(root, "publication-stage");
-                string racingEmptyTarget = Path.Combine(root, "racing-empty-target");
-                Directory.CreateDirectory(staged);
-                Directory.CreateDirectory(racingEmptyTarget);
-                File.WriteAllText(Path.Combine(staged, "complete"), "complete");
-                ProcessResult noReplace = RunProgram("/usr/bin/mv", "-T", "--no-copy",
-                    "--no-clobber", "--", staged, racingEmptyTarget);
-                AssertEx.Equal(0, noReplace.ExitCode);
-                AssertEx.Equal(true, Directory.Exists(staged));
-                AssertEx.Equal(true, File.Exists(Path.Combine(staged, "complete")));
-                AssertEx.Equal(0, Directory.GetFileSystemEntries(racingEmptyTarget).Length);
-
-                string absentTarget = Path.Combine(root, "absent-target");
-                ProcessResult atomicPublish = RunProgram("/usr/bin/mv", "-T", "--no-copy",
-                    "--no-clobber", "--", staged, absentTarget);
-                AssertEx.Equal(0, atomicPublish.ExitCode);
-                AssertEx.Equal(false, Directory.Exists(staged));
-                AssertEx.Equal("complete", File.ReadAllText(Path.Combine(absentTarget, "complete")));
 
                 string uninitialized = Path.Combine(root, "bizhawk-2.11.1-uninitialized-cache");
                 string emptyToolchain = Path.Combine(root, "empty-toolchain");
@@ -303,16 +316,266 @@ namespace OpenGGF.BizHawk.Headless.Tests
             return JObject.Parse(File.ReadAllText(path));
         }
 
+        private static void SecureRuntimeRejectsAmbientOverrides()
+        {
+            string root = TestScratch.CreateRootPath("gpgx-secure-runtime");
+            try
+            {
+                Directory.CreateDirectory(root);
+                string fakeBin = Path.Combine(root, "fake-bin");
+                Directory.CreateDirectory(fakeBin);
+                string marker = Path.Combine(root, "ambient-tool-ran");
+                foreach (string tool in new[] { "git", "sha256sum", "cmp" })
+                {
+                    string fake = Path.Combine(fakeBin, tool);
+                    File.WriteAllText(fake, "#!/usr/bin/bash\nprintf '%s\\n' invoked >> '"
+                        + marker.Replace("'", "'\\''") + "'\nexit 0\n");
+                    RunProgram("/usr/bin/chmod", "0755", fake);
+                }
+                string left = Path.Combine(root, "left");
+                string right = Path.Combine(root, "right");
+                File.WriteAllText(left, "same");
+                File.WriteAllText(right, "same");
+                ProcessResult safe = RunWithEnvironment("secure-runtime.sh",
+                    new Dictionary<string, string> { { "PATH", fakeBin } },
+                    "equal-files", left, right);
+                AssertEx.Equal(0, safe.ExitCode);
+                AssertEx.Equal(false, File.Exists(marker));
+                string repository = Path.Combine(root, "repository");
+                Directory.CreateDirectory(repository);
+                AssertEx.Equal(0, RunProgram("/usr/bin/git", "-C", repository, "init", "-q").ExitCode);
+                File.WriteAllText(Path.Combine(repository, "locked"), "value");
+                AssertEx.Equal(0, RunProgram("/usr/bin/git", "-C", repository, "add", "locked").ExitCode);
+                AssertEx.Equal(0, RunProgram("/usr/bin/git", "-c", "user.name=Task6",
+                    "-c", "user.email=task6@example.invalid", "-C", repository,
+                    "commit", "-q", "-m", "locked").ExitCode);
+                ProcessResult safeGit = RunWithEnvironment("secure-runtime.sh",
+                    new Dictionary<string, string> { { "PATH", fakeBin } },
+                    "git-head", repository);
+                AssertEx.Equal(0, safeGit.ExitCode);
+                AssertEx.Equal(40, safeGit.Stdout.Trim().Length);
+                AssertEx.Equal(false, File.Exists(marker));
+
+                string hostileStartup = Path.Combine(root, "hostile-bash-env");
+                File.WriteAllText(hostileStartup, "#!/usr/bin/bash\nprintf hostile > '"
+                    + marker.Replace("'", "'\\''") + "'\n");
+                string hostileGitConfig = Path.Combine(root, "hostile-git-config");
+                File.WriteAllText(hostileGitConfig,
+                    "[alias]\n\trev-parse = !printf hostile > " + marker + "\n");
+                foreach (KeyValuePair<string, string> variable in new[]
+                {
+                    new KeyValuePair<string, string>("BASH_ENV", hostileStartup),
+                    new KeyValuePair<string, string>("GIT_CONFIG_GLOBAL", hostileGitConfig)
+                })
+                {
+                    ProcessResult rejected = RunWithEnvironment("secure-runtime.sh",
+                        new Dictionary<string, string> { { variable.Key, variable.Value } },
+                        "equal-files", left, right);
+                    AssertEx.Equal(false, rejected.ExitCode == 0);
+                    AssertEx.Equal(true, rejected.Stderr.Contains("forbidden ambient variable"));
+                    AssertEx.Equal(false, File.Exists(marker));
+                }
+
+                string stage = Path.Combine(root, "stage");
+                string output = Path.Combine(root, "output");
+                Directory.CreateDirectory(stage);
+                File.WriteAllText(Path.Combine(stage, "complete"), "yes");
+                AssertEx.Equal(0, Run("secure-runtime.sh", "publish-create-new", stage, output).ExitCode);
+                AssertEx.Equal("yes", File.ReadAllText(Path.Combine(output, "complete")));
+
+                string racing = Path.Combine(root, "racing");
+                string raceOutput = Path.Combine(root, "race-output");
+                Directory.CreateDirectory(racing);
+                File.WriteAllText(Path.Combine(racing, "complete"), "yes");
+                int inotify = inotify_init1(0);
+                AssertEx.Equal(true, inotify >= 0);
+                try
+                {
+                    AssertEx.Equal(true,
+                        inotify_add_watch(inotify, "/usr/bin/sha256sum", InOpen) >= 0);
+                    string secureRuntime = Path.Combine(
+                        EndToEndTests.ToolDirectory, ObserverDirectory, "secure-runtime.sh");
+                    using (Process race = StartProgramWithEnvironment("/usr/bin/bash", null,
+                        "-p", secureRuntime, "publish-create-new", racing, raceOutput))
+                    {
+                        var eventBytes = new byte[4096];
+                        AssertEx.Equal(true,
+                            read(inotify, eventBytes, new UIntPtr((uint)eventBytes.Length)).ToInt64() >= 16);
+                        Directory.CreateDirectory(raceOutput);
+                        string raceStdout = race.StandardOutput.ReadToEnd();
+                        string raceStderr = race.StandardError.ReadToEnd();
+                        race.WaitForExit();
+                        AssertEx.Equal(false, race.ExitCode == 0);
+                        AssertEx.Equal(true, raceStderr.Contains("publication target appeared concurrently"));
+                        AssertEx.Equal(string.Empty, raceStdout);
+                    }
+                }
+                finally
+                {
+                    close(inotify);
+                }
+                AssertEx.Equal(true, Directory.Exists(racing));
+                AssertEx.Equal(0, Directory.GetFileSystemEntries(raceOutput).Length);
+
+                string partial = Path.Combine(root, "partial-output");
+                string crossDevice = Path.Combine("/dev/shm",
+                    "openggf-task6-" + Guid.NewGuid().ToString("N"));
+                try
+                {
+                    Directory.CreateDirectory(crossDevice);
+                    File.WriteAllText(Path.Combine(crossDevice, "complete"), "yes");
+                    ProcessResult failedMove = Run(
+                        "secure-runtime.sh", "publish-create-new", crossDevice, partial);
+                    AssertEx.Equal(false, failedMove.ExitCode == 0);
+                    AssertEx.Equal(true, Directory.Exists(crossDevice));
+                    AssertEx.Equal(false, Directory.Exists(partial));
+                }
+                finally
+                {
+                    if (Directory.Exists(crossDevice))
+                    {
+                        Directory.Delete(crossDevice, true);
+                    }
+                }
+
+                string mutable = Path.Combine(root, "mutable");
+                string snapshot = Path.Combine(root, "snapshot");
+                Directory.CreateDirectory(mutable);
+                File.WriteAllText(Path.Combine(mutable, "value"), "before");
+                AssertEx.Equal(0, Run("secure-runtime.sh", "snapshot-tree", mutable, snapshot).ExitCode);
+                File.WriteAllText(Path.Combine(mutable, "value"), "after");
+                AssertEx.Equal("before", File.ReadAllText(Path.Combine(snapshot, "value")));
+            }
+            finally
+            {
+                if (Directory.Exists(root))
+                {
+                    Directory.Delete(root, true);
+                }
+            }
+        }
+
+        private static void CanonicalRecipeAndManagedInputsAreComplete()
+        {
+            string root = Path.Combine(EndToEndTests.ToolDirectory, ObserverDirectory);
+            string recipePath = Path.Combine(root, "build-recipe.json");
+            string manifestPath = Path.Combine(root, "managed-nuget-manifest.json");
+            JObject recipe = JObject.Parse(File.ReadAllText(recipePath));
+            JObject toolchain = ReadLock("toolchain-lock.json");
+            AssertEx.Equal(Sha256(recipePath), (string)toolchain["build_recipe"]["sha256"]);
+            AssertEx.Equal("openggf.gpgx-stock-build-recipe.v1", (string)recipe["schema"]);
+            AssertEx.Equal(true, ((JObject)recipe["versioned_inputs"]).Count >= 9);
+            JArray packages = (JArray)JObject.Parse(File.ReadAllText(manifestPath))["packages"];
+            AssertEx.Equal(114, packages.Count);
+            AssertEx.Equal(114, new HashSet<string>(packages.Values<string>("path"),
+                StringComparer.Ordinal).Count);
+            AssertEx.Equal(0, Run("secure-runtime.sh", "verify-recipe", root).ExitCode);
+
+            string scratch = TestScratch.CreateRootPath("gpgx-recipe-mutation");
+            try
+            {
+                Directory.CreateDirectory(scratch);
+                foreach (string file in Directory.GetFiles(root))
+                {
+                    File.Copy(file, Path.Combine(scratch, Path.GetFileName(file)));
+                }
+                File.AppendAllText(Path.Combine(scratch, "verify-inputs.sh"), "# mutation\n");
+                AssertEx.Equal(false,
+                    Run("secure-runtime.sh", "verify-recipe", scratch).ExitCode == 0);
+            }
+            finally
+            {
+                if (Directory.Exists(scratch))
+                {
+                    Directory.Delete(scratch, true);
+                }
+            }
+        }
+
+        private static void SlowRealStockPairGate()
+        {
+            string packages = Environment.GetEnvironmentVariable("OPENGGF_TASK6_PACKAGES");
+            string sdk = Environment.GetEnvironmentVariable("OPENGGF_TASK6_SDK_ARCHIVE");
+            string nuget = Environment.GetEnvironmentVariable("OPENGGF_TASK6_NUGET_PACKAGES");
+            string stock = Environment.GetEnvironmentVariable("OPENGGF_TASK6_STOCK");
+            string output = Environment.GetEnvironmentVariable("OPENGGF_TASK6_PAIR_OUTPUT");
+            if (string.IsNullOrEmpty(packages) || string.IsNullOrEmpty(sdk)
+                || string.IsNullOrEmpty(nuget) || string.IsNullOrEmpty(stock)
+                || string.IsNullOrEmpty(output))
+            {
+                throw new TestMain.SkipTestException(
+                    "set OPENGGF_TASK6_PACKAGES, OPENGGF_TASK6_SDK_ARCHIVE, "
+                    + "OPENGGF_TASK6_NUGET_PACKAGES, OPENGGF_TASK6_STOCK, and "
+                    + "OPENGGF_TASK6_PAIR_OUTPUT to run the full offline/HTTPS reproduction");
+            }
+            ProcessResult result = Run("reproduce-stock-pair.sh",
+                "--packages", packages, "--sdk-archive", sdk,
+                "--nuget-packages", nuget, "--stock", stock, "--output", output);
+            AssertEx.Equal(0, result.ExitCode);
+            AssertEx.Equal(true, File.Exists(Path.Combine(output, "identity.json")));
+        }
+
+        private static string Sha256(string path)
+        {
+            using (SHA256 sha = SHA256.Create())
+            using (FileStream stream = File.OpenRead(path))
+            {
+                var value = new StringBuilder();
+                foreach (byte item in sha.ComputeHash(stream))
+                {
+                    value.Append(item.ToString("x2"));
+                }
+                return value.ToString();
+            }
+        }
+
         private static ProcessResult Run(string script, params string[] arguments)
         {
             string path = Path.Combine(EndToEndTests.ToolDirectory, ObserverDirectory, script);
             var allArguments = new string[arguments.Length + 1];
             allArguments[0] = path;
             Array.Copy(arguments, 0, allArguments, 1, arguments.Length);
-            return RunProgram("bash", allArguments);
+            return RunProgram("/usr/bin/bash", Prepend("-p", allArguments));
+        }
+
+        private static ProcessResult RunWithEnvironment(string script,
+            IDictionary<string, string> environment, params string[] arguments)
+        {
+            string path = Path.Combine(EndToEndTests.ToolDirectory, ObserverDirectory, script);
+            var allArguments = new string[arguments.Length + 2];
+            allArguments[0] = "-p";
+            allArguments[1] = path;
+            Array.Copy(arguments, 0, allArguments, 2, arguments.Length);
+            return RunProgramWithEnvironment("/usr/bin/bash", environment, allArguments);
+        }
+
+        private static string[] Prepend(string value, string[] values)
+        {
+            var result = new string[values.Length + 1];
+            result[0] = value;
+            Array.Copy(values, 0, result, 1, values.Length);
+            return result;
         }
 
         private static ProcessResult RunProgram(string program, params string[] arguments)
+        {
+            return RunProgramWithEnvironment(program, null, arguments);
+        }
+
+        private static ProcessResult RunProgramWithEnvironment(string program,
+            IDictionary<string, string> environment, params string[] arguments)
+        {
+            using (Process process = StartProgramWithEnvironment(program, environment, arguments))
+            {
+                string stdout = process.StandardOutput.ReadToEnd();
+                string stderr = process.StandardError.ReadToEnd();
+                process.WaitForExit();
+                return new ProcessResult(process.ExitCode, stdout, stderr);
+            }
+        }
+
+        private static Process StartProgramWithEnvironment(string program,
+            IDictionary<string, string> environment, params string[] arguments)
         {
             var info = new ProcessStartInfo(program)
             {
@@ -321,17 +584,49 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 RedirectStandardError = true,
                 Arguments = string.Empty
             };
+            var inheritedNames = new List<string>();
+            foreach (System.Collections.DictionaryEntry item in info.EnvironmentVariables)
+            {
+                inheritedNames.Add((string)item.Key);
+            }
+            foreach (string name in inheritedNames)
+            {
+                if (IsForbiddenBuildEnvironment(name))
+                {
+                    info.EnvironmentVariables.Remove(name);
+                }
+            }
+            if (environment != null)
+            {
+                foreach (KeyValuePair<string, string> item in environment)
+                {
+                    info.EnvironmentVariables[item.Key] = item.Value;
+                }
+            }
             foreach (string argument in arguments)
             {
                 info.Arguments += " " + Quote(argument);
             }
-            using (Process process = Process.Start(info))
-            {
-                string stdout = process.StandardOutput.ReadToEnd();
-                string stderr = process.StandardError.ReadToEnd();
-                process.WaitForExit();
-                return new ProcessResult(process.ExitCode, stdout, stderr);
-            }
+            return Process.Start(info);
+        }
+
+        private static bool IsForbiddenBuildEnvironment(string name)
+        {
+            return name == "BASH_ENV" || name == "ENV" || name == "SHELLOPTS"
+                || name == "CDPATH" || name == "GLOBIGNORE"
+                || name.StartsWith("JAVA_", StringComparison.Ordinal)
+                || name.StartsWith("JDK_", StringComparison.Ordinal)
+                || name.StartsWith("_JAVA_", StringComparison.Ordinal)
+                || name.StartsWith("MONO_", StringComparison.Ordinal)
+                || name.StartsWith("DOTNET_", StringComparison.Ordinal)
+                || name.StartsWith("NUGET_", StringComparison.Ordinal)
+                || name.StartsWith("MSBUILD", StringComparison.OrdinalIgnoreCase)
+                || name.StartsWith("GIT_", StringComparison.Ordinal)
+                || name.StartsWith("SSH_", StringComparison.Ordinal)
+                || name.StartsWith("LD_", StringComparison.Ordinal)
+                || name == "CC" || name == "CXX" || name == "CPP"
+                || name == "CFLAGS" || name == "CXXFLAGS" || name == "CPPFLAGS"
+                || name == "LDFLAGS" || name == "MAKEFLAGS" || name == "MFLAGS";
         }
 
         private static string Quote(string value)

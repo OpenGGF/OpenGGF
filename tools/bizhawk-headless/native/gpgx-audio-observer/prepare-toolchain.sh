@@ -1,14 +1,10 @@
-#!/usr/bin/env bash
+#!/usr/bin/bash -p
 set -euo pipefail
 
-fail() { printf 'prepare-toolchain: %s\n' "$*" >&2; exit 1; }
-publish_create_new() {
-  local source=$1 target=$2
-  printf '%s  %s\n' 4dc8719b3b60a5e03b3720f3060415a8dd3b564b74319539b2a0dc52bc50c0df /usr/bin/mv \
-    | sha256sum -c - >/dev/null || fail "host no-replace publisher differs"
-  /usr/bin/mv -T --no-copy --no-clobber -- "$source" "$target"
-  [[ ! -e "$source" && ! -L "$source" ]] || fail "output already exists: $target"
-}
+script_dir=${BASH_SOURCE[0]%/*}; [[ "$script_dir" != "${BASH_SOURCE[0]}" ]] || script_dir=.
+script_dir=$(cd -P -- "$script_dir" && pwd)
+source "$script_dir/secure-runtime.sh"
+fail() { /usr/bin/printf 'prepare-toolchain: %s\n' "$*" >&2; exit 1; }
 source_dir=
 packages_dir=
 output=
@@ -20,20 +16,19 @@ while (($#)); do
     *) fail "unknown argument: $1" ;;
   esac
 done
-[[ "$output" = /* ]] || fail "output must be an absolute path"
-[[ ! -e "$output" && ! -L "$output" ]] || fail "output already exists: $output"
-[[ -d "$(dirname "$output")" ]] || fail "output parent does not exist"
+secure_require_absent_output "$output"
 for pair in "source:$source_dir" "packages:$packages_dir"; do
   name=${pair%%:*}; value=${pair#*:}
   [[ "$value" = /* && -d "$value" && ! -L "$value" ]] || fail "$name must be an absolute, non-symlink directory"
 done
+secure_verify_recipe "$script_dir" >/dev/null
 
-parent=$(dirname "$output")
-stage=$(mktemp -d "$parent/.gpgx-toolchain-staging.XXXXXX")
-cleanup() { if [[ -n "${stage-}" && -d "$stage" ]]; then rm -rf -- "$stage"; fi; }
+parent=${output%/*}; [[ -n "$parent" ]] || parent=/
+stage=$(/usr/bin/mktemp -d "$parent/.gpgx-toolchain-staging.XXXXXX")
+cleanup() { if [[ -n "${stage-}" && -d "$stage" ]]; then /usr/bin/rm -rf -- "$stage"; fi; }
 trap cleanup EXIT
-mkdir -p "$stage/clang" "$stage/deb" "$stage/work-source" "$stage/package-input"
-cp -a "$source_dir/." "$stage/work-source/"
+/usr/bin/mkdir -p "$stage/clang" "$stage/deb" "$stage/work-source" "$stage/package-input"
+/usr/bin/cp -a "$source_dir/." "$stage/work-source/"
 for file in \
   clang-16_16.0.6-15_amd64.deb \
   libclang-cpp16_16.0.6-15_amd64.deb \
@@ -47,26 +42,26 @@ for file in \
   libicu72_72.1-3ubuntu3_amd64.deb \
   zstd-1.5.5.tar.gz; do
   [[ -f "$packages_dir/$file" && ! -L "$packages_dir/$file" ]] || fail "missing locked package: $file"
-  cp -- "$packages_dir/$file" "$stage/package-input/$file"
+  /usr/bin/cp -- "$packages_dir/$file" "$stage/package-input/$file"
 done
 source_dir=$stage/work-source
 packages_dir=$stage/package-input
 
-[[ $(git -C "$source_dir" rev-parse HEAD) = 427556b5ef3ac437eba754d90c5e7e9096c9a8df ]] || fail "wrong BizHawk commit"
-[[ $(git -C "$source_dir" rev-parse HEAD^{tree}) = 7281227ed2f3b89c0962b2792b28539e35361c6b ]] || fail "wrong BizHawk tree"
-[[ $(git -C "$source_dir/waterbox/gpgx/Genesis-Plus-GX" rev-parse HEAD) = 051d430d3d1b54625f9900c8f152d7f232e06daf ]] || fail "wrong GPGX commit"
-[[ $(git -C "$source_dir/waterbox/gpgx/Genesis-Plus-GX" rev-parse HEAD^{tree}) = 1bb96ca74d660d383e70d9cd56b88906a0773519 ]] || fail "wrong GPGX tree"
-[[ $(git -C "$source_dir/waterbox/musl" rev-parse HEAD) = 2063abc4e16c84218757b1db10d3cdf9f36ef3f8 ]] || fail "wrong musl commit"
-[[ $(git -C "$source_dir/waterbox/musl" rev-parse HEAD^{tree}) = a9969a63cd1780cdcc4c09745a8789206a72b8b4 ]] || fail "wrong musl tree"
+[[ $(/usr/bin/git -C "$source_dir" rev-parse HEAD) = 427556b5ef3ac437eba754d90c5e7e9096c9a8df ]] || fail "wrong BizHawk commit"
+[[ $(/usr/bin/git -C "$source_dir" rev-parse 'HEAD^{tree}') = 7281227ed2f3b89c0962b2792b28539e35361c6b ]] || fail "wrong BizHawk tree"
+[[ $(/usr/bin/git -C "$source_dir/waterbox/gpgx/Genesis-Plus-GX" rev-parse HEAD) = 051d430d3d1b54625f9900c8f152d7f232e06daf ]] || fail "wrong GPGX commit"
+[[ $(/usr/bin/git -C "$source_dir/waterbox/gpgx/Genesis-Plus-GX" rev-parse 'HEAD^{tree}') = 1bb96ca74d660d383e70d9cd56b88906a0773519 ]] || fail "wrong GPGX tree"
+[[ $(/usr/bin/git -C "$source_dir/waterbox/musl" rev-parse HEAD) = 2063abc4e16c84218757b1db10d3cdf9f36ef3f8 ]] || fail "wrong musl commit"
+[[ $(/usr/bin/git -C "$source_dir/waterbox/musl" rev-parse 'HEAD^{tree}') = a9969a63cd1780cdcc4c09745a8789206a72b8b4 ]] || fail "wrong musl tree"
 for repository in "$source_dir" "$source_dir/waterbox/gpgx/Genesis-Plus-GX" "$source_dir/waterbox/musl"; do
-  [[ -z $(git -C "$repository" status --short --untracked-files=all --ignore-submodules=none) ]] \
+  [[ -z $(/usr/bin/git -C "$repository" status --short --untracked-files=all --ignore-submodules=none) ]] \
     || fail "source tree is not clean: $repository"
-  [[ -z $(git -C "$repository" clean -ndx) ]] || fail "source tree has untracked or ignored files: $repository"
+  [[ -z $(/usr/bin/git -C "$repository" clean -ndx) ]] || fail "source tree has untracked or ignored files: $repository"
 done
 
 while read -r expected file; do
   [[ -f "$packages_dir/$file" && ! -L "$packages_dir/$file" ]] || fail "missing locked package: $file"
-  printf '%s  %s\n' "$expected" "$packages_dir/$file" | sha256sum -c - >/dev/null
+  /usr/bin/printf '%s  %s\n' "$expected" "$packages_dir/$file" | /usr/bin/sha256sum -c - >/dev/null
 done <<'LOCKED_PACKAGES'
 b9cd4d27a5d1b6c429fccf56a4ac1c4ac5baf2cb9b5a53e2a20fcd6593153e5a clang-16_16.0.6-15_amd64.deb
 39eb3e73119ef0180489c7e594d29398152b3a2d7eec2361cf87d367032f466a libclang-cpp16_16.0.6-15_amd64.deb
@@ -178,6 +173,6 @@ complete_tree_digest=$(
 [[ "$complete_tree_digest" = 9caa5c02dcd2d9c01e5d0196956787a0f31760195c6544a2ceafcb771f469521 ]] \
   || fail "complete toolchain tree differs: $complete_tree_digest"
 
-publish_create_new "$stage" "$output"
+secure_publish_create_new "$stage" "$output"
 stage=
-printf '%s\n' "$output"
+/usr/bin/printf '%s\n' "$output"

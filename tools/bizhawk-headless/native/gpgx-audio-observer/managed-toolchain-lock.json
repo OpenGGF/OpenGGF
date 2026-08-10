@@ -17,8 +17,12 @@
   },
   "nuget": {
     "package_count": 114,
-    "canonical_manifest_algorithm": "LC_ALL=C sorted <sha256><two spaces><lowercase package-id>/<version>/<filename><LF>",
-    "canonical_manifest_sha256": "e0afe65b153f1f3cbaed03c8e3987542322a9ea1a220cac3696bc7ba59c42290"
+    "canonical_manifest_file": "managed-nuget-manifest.json",
+    "canonical_manifest_sha256": "b609fa7cf733755415b9b878e53ea25e72cc55dca92a645e9a788f3b8e19ce86",
+    "package_tree_algorithm": "Sort relative package paths with LC_ALL=C, then emit <sha256><two spaces><lowercase package-id>/<version>/<filename><LF> in that path order",
+    "package_tree_sha256": "e0afe65b153f1f3cbaed03c8e3987542322a9ea1a220cac3696bc7ba59c42290",
+    "preparation_script": "prepare-managed-inputs.sh",
+    "preparation_network_policy": "OFFLINE_ONLY"
   },
   "source_files": {
     "global.json": "885423654996ef60f577d909c28af5a39cbf454b2531c1db649cc4db9595816b",
@@ -51,7 +55,7 @@
     "observed_common_sha256": "96f494af9be13f52dc63ab3d430b15641fc142cf469339a8bf013e67b99b757e",
     "stock_cmp": false,
     "candidate_repeatability": "VERIFIED_TWICE_AT_CANONICAL_PATH",
-    "canonical_identity_sha256": "efadaf168670ce0ae5f8f5dc7705ddaa94e898bce96134b9ebc86c31ceb6d6d2",
+    "pre_recipe_audit_identity_sha256": "efadaf168670ce0ae5f8f5dc7705ddaa94e898bce96134b9ebc86c31ceb6d6d2",
     "first_audit_probe_cores_sha256": "f7bfb7a08185d512a2c28975d917c0a9f6723a7ebb73db4ea8c5c11c2641abf1",
     "first_audit_probe_common_sha256": "d82fb2d2a3b629d0d3f85789f0b22c313f4ce35d1b04aefc2543ee32e2ed8d6f",
     "second_probe_cores_sha256": "5f1f37cf413bf6f676e8e20fbce42871d0b89e43ab3273cd683a9d2df76c91c5",
