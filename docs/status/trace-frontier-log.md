@@ -72321,3 +72321,54 @@ asserted that invented value and now asserts continuity instead.
 **Next frontier for this pair:** row 6349, `queue.s3k_kos_direct.prepared` — ROM
 `Process_Kos_Queue` decompresses incrementally with `Set_Kos_Bookmark`/`Restore_Kos_Bookmark`,
 so a direct blob stays un-prepared across frames where the engine prepares in one step.
+
+## 2026-08-11 - S2 EHZ halfpipe round trip: title-card oscillator overtick closed
+
+- Worktree `wt/r38-halfpipe`, branch
+  `bugfix/ai-title-card-oscillator-overtick`, over base `b7da4a7f4`.
+- Command (control and candidate, identical): `mvn -Ptrace-replay -Dmse=off
+  -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+  "-Dsurefire.argLine=-Xmx4g"` with all three ROM properties and
+  `-Dtest=TestS2*TraceReplay, TestS2Ehz1Seg2HalfpipeSegmentTraceReplay,
+  TestS2EhzHalfpipeRoundTripChain, TestS1GhzMazeRoundTripChain,
+  TestS2Ehz1*Regression, TestS2HtzLiftPlatformSurfaceRegression,
+  TestOscillation*, TestS3kAiz1SkipHeadless, TestSonic3kLevelLoading,
+  TestSonic3kBootstrapResolver, TestSonic3kDecodingUtils,
+  TestLevelFrameHardwareTimingBoundaries, TestRewindParityAgainstTrace`.
+- Control at `b7da4a7f4`: 127 tests, 2 failures -- `TestS2EhzHalfpipeRoundTripChain`
+  ("Segment 2 (seg2_ehz1) exit boundary (starpost_special) was never observed";
+  seg2 comparator `errorCount` 82176, `complete` true, first non-camera mismatch
+  frame 1 `sidekick_x`, rom `0x0DDE` engine `0x0DF9`) and
+  `TestS1GhzMazeRoundTripChain` (`run_tail.edge[*].movie_logical_frame` expected
+  9071, actual 9036).
+- Candidate: 127 tests, 2 failures. `TestS1GhzMazeRoundTripChain` fails with a
+  byte-identical message, so it is pre-existing and untouched. Everything else
+  stays green, including all S2 level-select and special-stage replays,
+  `TestS2Ehz1Seg2HalfpipeSegmentTraceReplay`, the S3K keep-green set,
+  `TestOscillationManagerSnapshot` / `TestOscillationStaticAdapter` and
+  `TestRewindParityAgainstTrace`.
+- Frontier moved: seg2's exit boundary is now observed -- the engine reaches the
+  second star post and enters the special stage. The new first failure is
+  `completePinnedSourceTailAfterBoundary`: "production ownership already left
+  LEVEL at tail step 0, comparator cursor 2900 of 2903", i.e. the special-stage
+  entry happens three recorded level rows early. That is the next frontier and a
+  distinct defect.
+- Root cause, measured. At seg2 frame 907 the recorded Obj18 subtype-2 platform
+  at x=$07C0 is at y=734 (`object_near` slot 20 in
+  `seg2_ehz1/aux_state.jsonl.gz`) while the engine put it at y=610, and the
+  player landed on it instead of falling past. Obj18 subtype 2 is
+  `Obj18_Vertical.normal` (s2.asm:23426): y = y_origin + (osc - $40) with the
+  oscillator byte at `Oscillating_Data+$18`. Simulating `OscillateNumDo` from
+  `OscillateNumInit`'s state reproduces the recorded platform y across seg2 to
+  within a frame, so the ROM's table is freshly initialised at the re-entry and
+  ticked once per main-loop frame. A `LevelManager.frameCounter` probe showed the
+  engine's table exactly 128 ticks ahead: the title card runs 128 passes and each
+  called `advanceGlobalOscillationAtLevelLoopTail()`, which ignored the one-shot
+  `suppressGlobalOscillationForTitleCardPass` flag that the other implementation
+  of the same contract honours. No constant was introduced.
+- Disproved on the way: the briefed claim that the player's g_speed was already
+  wrong before row 907 and that the engine "failed to leave the ground". Measured
+  with a comparator probe, the engine matches the recording exactly through frame
+  906 including the walk-off at 901, and the terrain air-collision probe at 907
+  reports floor distance +29 (no floor found). The landing came from the object
+  solid path, not terrain.

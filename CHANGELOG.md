@@ -3,6 +3,16 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the level title card no longer advances the global oscillation table. `OscillateNumDo`
+  is reached only from the main level loop in all three games (S1 `sonic.asm:3033`, S2
+  `s2.asm:5108`, S3K `sonic3k.asm:7909`), with `OscillateNumInit` running once at level init,
+  so the title-card / level-load passes must not tick it. The title-card lifecycle already
+  raised a one-shot suppression flag, but the canonical level-loop-tail advance -- a second
+  implementation of the same contract -- ignored it, so every title-card frame stepped the
+  table. On the Sonic 2 EHZ 1 star-post re-entry that was 128 extra ticks, which left the
+  Obj18 subtype-2 vertical platform at x=$07C0 at the opposite end of its $80-pixel travel;
+  the player landed on it at seg2 frame 907 where the ROM falls past, and the recorded route
+  to the second star post was never reached.
 - Fix: Sonic 3&K's star-post bonus star now tests the player with the ROM's own touch geometry
   and at the ROM's point in the frame. It had used an invented 16x16 box evaluated after the
   star had already been repositioned; the ROM reads `collision_property` first (`loc_2D47E`)
