@@ -1097,8 +1097,8 @@ class TestLbzFinalBoss2Instance {
         assertEquals(1, fades.size(),
                 "Wait_FadeToLevelMusic allocates the independent fade owner first");
         SongFadeTransitionInstance fade = fades.get(0);
-        assertEquals(120, intField(fade, "delayFrames"));
-        assertEquals(0, intField(fade, "timer"));
+        assertEquals(120, intField(fade, "nativeWaitWord"));
+        assertEquals(0, intField(fade, "elapsedUpdates"));
         assertEquals(120, intField(fade, "nativeRemaining"));
         assertEquals(119, intField(boss, "defeatTimer"),
                 "Wait_FadeToLevelMusic writes root $2E=119 before AllocateObject");

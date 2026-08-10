@@ -293,7 +293,9 @@ class TestLbzFinalBoss2ProductionRoute {
         assertEquals(0x8C, fixture.sprite().getMappingFrame(),
                 "later reloads alternate $8C/$8D every 11 entries");
 
-        for (int frame = 0; frame < 0x200 && !GameServices.level().hasPendingLevelExit(); frame++) {
+        for (int frame = 0;
+             frame < 0x200 && !GameServices.level().isLevelInactiveForTransition();
+             frame++) {
             fixture.stepIdleFrames(1);
         }
         assertTrue(GameServices.level().consumeZoneActRequest());

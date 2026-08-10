@@ -897,7 +897,7 @@ class TestS3kLbzFinalBoss2GraphRewind {
         restoredBoss.update(0, fixture.sprite());
         SongFadeTransitionInstance fade = onlyLive(SongFadeTransitionInstance.class);
         ObjectRefId fadeId = objectId(fade);
-        assertEquals(0, readIntField(fade, "timer"));
+        assertEquals(0, readIntField(fade, "elapsedUpdates"));
         assertEquals(119, readIntField(restoredBoss, "defeatTimer"));
         assertEquals(120, readIntField(fade, "nativeRemaining"));
         CompositeSnapshot fadeBoundary = registry.capture();

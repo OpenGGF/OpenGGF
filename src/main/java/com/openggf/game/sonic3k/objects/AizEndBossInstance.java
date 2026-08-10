@@ -480,9 +480,9 @@ public class AizEndBossInstance extends AbstractBossInstance
         // Set render-facing from angle using the ROM's render_flags logic.
         facingRight = angle < 8;
 
-        // Spawn waterfall splash child
-        // TODO: Spawn splash child when implemented
-        // ROM: ChildObjDat_69D2E, subtype = isReEmerge ? 2 : 0
+        // ChildObjDat_69D2E -> CreateChild1_Normal. Both first emerge and
+        // re-emerge use subtype 0; only StartSubmerge writes subtype 2.
+        spawnWaterfallChild(0);
 
         // Set up emerge animation
         emergeAnimFrame = 0;
@@ -654,8 +654,9 @@ public class AizEndBossInstance extends AbstractBossInstance
         collisionEnablePending = false;
         restoreNormalPalette();
 
-        // Spawn waterfall splash with subtype 2
-        // TODO: Spawn falling splash child
+        // ChildObjDat_69D2E -> CreateChild1_Normal, then subtype 2 selects the
+        // falling-drop callback.
+        spawnWaterfallChild(2);
 
         // Set up emerge animation
         emergeAnimFrame = 0;
@@ -1019,6 +1020,10 @@ public class AizEndBossInstance extends AbstractBossInstance
 
     private void spawnFlameColumnChild() {
         spawnChild(() -> new AizEndBossFlameColumnChild(this));
+    }
+
+    private void spawnWaterfallChild(int subtype) {
+        spawnChild(() -> new AizEndBossWaterfallChild(this, subtype));
     }
 
     void rewindAttachShipChild(AizEndBossShipChild shipChild) {

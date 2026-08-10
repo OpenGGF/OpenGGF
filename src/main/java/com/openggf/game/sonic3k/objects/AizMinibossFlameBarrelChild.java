@@ -167,8 +167,9 @@ public class AizMinibossFlameBarrelChild extends AbstractBossChild implements Re
                 state = State.BETWEEN_SHOTS;
             }
             case FIRING_MINIBOSS -> {
-                // ROM loc_68C64: fire shot and immediately begin close animation
-                spawnShot(AizMinibossBarrelShotChild.Mode.ADVANCED_COLLIDING);
+                // AIZMiniboss_BarrelController_FireFinal allocates the
+                // flare/FallingShot pair from this live barrel's SST slot.
+                spawnFallingShot();
                 enterClosingAnimation();
             }
             case BETWEEN_SHOTS -> {
@@ -229,6 +230,15 @@ public class AizMinibossFlameBarrelChild extends AbstractBossChild implements Re
         // alongside the main shot object.
         spawnChild(() -> new AizMinibossBarrelShotFlareChild(this));
         spawnChild(() -> new AizMinibossBarrelShotChild(parent, this, currentX, currentY + 4, mode));
+    }
+
+    private void spawnFallingShot() {
+        if (services().objectManager() == null) {
+            return;
+        }
+        spawnChild(() -> new AizMinibossBarrelShotFlareChild(this));
+        spawnChild(() -> new AizMinibossNapalmProjectile(
+                parent, this, currentX, currentY + 4, 2));
     }
 
     private void enterClosingAnimation() {

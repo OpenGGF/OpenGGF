@@ -77,8 +77,6 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
     private static final int PARENT_BIT_BARREL_ACTIVATE = 1 << 1;
     private static final int PARENT_BIT_ALT_VERTICAL = 1 << 2;
     private static final int PARENT_BIT_ALT_HORIZONTAL = 1 << 3;
-    /** ROM: bit set by boss when Knuckles fight activates napalm. */
-    private static final int PARENT_BIT_NAPALM_ACTIVATE = 1 << 4;
     private static final int TRIGGER_X_KNUCKLES = 0x10C0;
 
     private static final int[] BREATH_FLAME_X_OFFSETS = {-0x64, -0x54, -0x44, -0x2C};
@@ -265,7 +263,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
 
         services().fadeOutMusic();
 
-        // Clean up all visible children — barrels, body, arm, napalm controller.
+        // Clean up all visible children — barrels, body, arm, and live napalm shots.
         for (var child : childComponents) {
             child.setDestroyed(true);
         }
@@ -443,8 +441,6 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
             int barrelIndex = i;
             spawnBossComponent(() -> new AizMinibossFlameBarrelChild(this, barrelIndex, false));
         }
-        // Napalm controller (stays idle for Sonic, activates for Knuckles)
-        spawnBossComponent(() -> new AizMinibossNapalmController(this, 0));
 
         services().playMusic(Sonic3kMusic.MINIBOSS.id);
     }
@@ -452,13 +448,18 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
     private void onDescendComplete() {
         state.routine = ROUTINE_SWING;
         setCustomFlag(FLAG_PARENT_COUNTER, 3);
-        setCustomFlag(FLAG_PARENT_BITS, getCustomFlag(FLAG_PARENT_BITS) | PARENT_BIT_BARREL_ACTIVATE);
         state.yVel = 0;
         swingMotion.setup1(state);
         setWait(SWING_PREP_TIME, WaitCallback.SWING_PREP_COMPLETE);
     }
 
     private void onSwingPrepComplete() {
+        // AIZMiniboss_SetFlameDelay sets the shared barrel activation bit only
+        // for Knuckles. Each live barrel then applies its own native delay.
+        if (currentPlayerCharacter() == PlayerCharacter.KNUCKLES) {
+            setCustomFlag(FLAG_PARENT_BITS,
+                    getCustomFlag(FLAG_PARENT_BITS) | PARENT_BIT_BARREL_ACTIVATE);
+        }
         setWait(FLAME_PREP_TIME, WaitCallback.FLAME_PREP_COMPLETE);
     }
 
@@ -495,12 +496,6 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
      * second pass moves down → restart attack cycle.
      */
     private void onBreathCycleComplete() {
-        // ROM: loc_68ADE — Knuckles fight triggers napalm after breath cycle
-        PlayerCharacter character = currentPlayerCharacter();
-        if (character == PlayerCharacter.KNUCKLES) {
-            setCustomFlag(FLAG_PARENT_BITS, getCustomFlag(FLAG_PARENT_BITS) | PARENT_BIT_NAPALM_ACTIVATE);
-        }
-
         // ROM: loc_68B34 — routine=6, wait=$5F, toggle bit 2 of $38
         state.routine = ROUTINE_DESCEND;
         int bits = getCustomFlag(FLAG_PARENT_BITS) ^ PARENT_BIT_ALT_VERTICAL;

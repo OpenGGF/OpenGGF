@@ -3,6 +3,10 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Integrating the reviewed AIZ and LBZ work onto `next` now preserves the
+  native boss-owned splash/FallingShot allocation paths and uses the current
+  level-transition/fade state names in their regression tests. The explicit
+  parent-slot allocator restores the reviewed nested Big Arm SST ordering.
 - Feature: Knuckles' Launch Base Big Arm now ports the shipped `FixBugs=0`
   `Obj_LBZFinalBoss2` route: the complete fight and articulated collision graph,
   native grab/throw and eight-hit defeat, ROM-owned assets, capsule/results
