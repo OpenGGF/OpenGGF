@@ -6,6 +6,11 @@ Approved for implementation on the isolated
 `bugfix/ai-s1-audio-parity-frontier` branch. The branch is for human audio
 testing and must not be merged into `develop` without explicit human approval.
 
+Amended after the shared native-host capability audit: stock BizHawk 2.11 has
+no Genesis Z80 callback scope. The earlier proposed managed `Z80 BUS` callback
+extension is superseded by the exact-2.11 buffered native observer specified
+below. No S2/S3K reference implementation may rely on the superseded premise.
+
 ## Requirements
 
 ### Goals
@@ -60,8 +65,10 @@ must not weaken or redefine this driver/chip-transaction contract.
 ### Project constraints
 
 - Build and test with JDK 21.
-- Verify the exact ROM, BK2, run-manifest, BizHawk 2.11 core, and observer
-  identities before capture.
+- Verify the exact ROM, BK2, run-manifest, BizHawk 2.11 managed assemblies,
+  stock or observer-patched GPGX core, native observer ABI, and harness
+  identities before capture. The S2/S3K observer core is a separately installed
+  exact-2.11 derivative; it never replaces the stock distribution in place.
 - Model the shipped `FixBugs = 0`, `fixBugs = 0`, and `fix_sndbugs = 0` paths.
 - Runtime audio assets come from the user-supplied ROM. Disassemblies are
   research sources, never runtime fallbacks.
@@ -76,7 +83,8 @@ For each of S1, S2, and S3K:
 
 1. Metadata pins the correct ROM SHA-1/CRC32, BK2 SHA-256 and row count,
    manifest SHA-256 and segment inventory, emulator/core identities, observer
-   profile, schema, and exact half-open comparison interval.
+   profile and ABI, native source/toolchain/patch/artifact identities when the
+   patched observer is used, schema, and exact half-open comparison interval.
 2. The reference capture contains every absolute BK2 row in the interval once,
    including lag rows and rows outside manifest segments.
 3. The OpenGGF capture contains the same frame coordinates naturally, with one
@@ -182,12 +190,372 @@ SEGA PCM pauses normal driver services.
 ### Observation boundary
 
 S1's driver is 68K-resident and the current verified Lua probe can observe it.
-S2 and S3K drivers are Z80-resident. The native GPGX host currently exposes
-only M68K execute callbacks, even though the pinned core advertises `Z80 RAM`
-and `Z80 BUS`. A runtime proof must establish Z80 execute and write callback
-semantics before any S2/S3K capture contract is trusted. If bus writes are not
-observable, a reviewed, opcode-verified Z80 PC manifest must cover generic
-FM/PSG writers, direct DAC sites, and SEGA PCM sites.
+S2 and S3K drivers are Z80-resident. The exact installed BizHawk 2.11 GPGX core
+advertises an 8 KiB `Z80 RAM` memory domain but **no Genesis `Z80 BUS` callback
+scope**. Its only callback scope is `M68K BUS`; the managed debugger initializes
+that single scope and the native `bk_cpu_hook` routes only M68K
+execute/read/write hook types. `gpgx_peek_z80_bus` and
+`gpgx_write_z80_bus` are SMS paths and are explicitly not valid for Mega Drive
+emulation.
+
+The observed Genesis domain inventory is `68K RAM` 65,536, `Z80 RAM` 8,192,
+`CRAM` 128, `VSRAM` 128, `VRAM` 65,536, `M68K BUS` 16,777,216, and
+`Waterbox PageData` 13,567 bytes. `MD CART` is 1,048,576 bytes for S2 and
+4,194,304 for S3K; S3K additionally exposes 16,384-byte SRAM. These are read
+domains and identity checks, not evidence of callback support.
+
+The negative conclusion rests on the exact runtime scope inventory plus the
+pinned managed IL, native source, and native disassembly: there is no Genesis
+Z80 callback route or export to invoke. Against the exact S2 REV01 and
+locked-on S3K ROMs, 1,000-frame probes that registered the only available
+`M68K BUS` scope at Z80 service PC `$0038` and chip addresses `$4000`-`$4003`
+and `$7F11` returned zero execute and write callbacks. Those zero counts are a
+useful wrong-scope negative control, not the primary proof. Frame-end reads of
+`Z80 pc`, RAM, and chip-facing addresses are snapshots; they cannot distinguish
+zero, one, or multiple services/writes or preserve within-frame order.
+
+The selected correction is a minimal observation-only patch to the
+exact-BizHawk-2.11 `gpgx.wbx.zst`. Native code uses a profile-supplied
+65,536-bit Z80 PC watch mask plus bounded fixed-width kind/hook/range manifests. At
+the Z80 interpreter boundary after interrupt admission and before opcode fetch,
+and at the existing pinned M68K execute boundary, a verified hook action pushes,
+pops, or atomically tail-pops-and-pushes a native service stack. The stack has
+an exact maximum depth of eight. Each push allocates a nonzero 16-bit token
+unique within that video frame and among carried active tokens, records parent
+token, depth, profile service kind, hook token,
+issuing CPU, PC, and global event ordinal, then appends `SERVICE_BEGIN`. Each
+pop checks the expected active kind, synchronously copies that completion
+hook's configured Z80 RAM ranges, appends `SERVICE_END`, and removes the token.
+Multiple exit PCs and a fallthrough hook action are explicit manifest entries;
+no return address or call shape is inferred. Atomic tail composition orders the
+old snapshot/end before the new begin at that same PC.
+
+Every logical Mega Drive FM (`address & 3`, data) and PSG write is appended to
+the same native array before device mutation and carries exactly the innermost
+active service token. A nested child owns its writes exclusively; its parent
+retains only writes issued before the child begins or after it ends. An orphan
+write, token zero, stack underflow, kind mismatch, depth/token overflow, or
+unmatched tail action is fatal. Direct DAC/DPCM/SEGA-PCM paths that are not
+nested under the ordinary update stack require a profile-declared, bounded
+typed asynchronous service for each inner sample/loop iteration. That
+iteration may nest under VInt/update, but one service may not span the whole
+long-lived playback routine or loop: doing so would make continuation
+unbounded and erase the real ownership of individual writes. Every iteration
+has verified CPU-PC begin/end hooks and a synchronous snapshot boundary. There
+is no generic orphan exception.
+
+Each game/revision manifest assigns stable hook tokens and profile service
+kinds to all verified entry/completion PCs/actions, including multiple exits,
+fallthroughs, tail composition, and typed asynchronous paths. Alternative
+actions may share a CPU/PC and are stored in ascending hook-token order. On
+each instruction visit, native code snapshots the pre-action active kind
+(zero means empty), selects exactly one action whose `expected_active_kind`
+matches it, and applies that action atomically. A newly pushed kind can never
+satisfy another alternative at the same PC on the same visit. Zero matches or
+multiple matches are sticky-fatal. Configuration rejects duplicate
+`(cpu, pc, expected_active_kind)` entries, making selection unambiguous. This
+models, for example, S3K `$0121` as `UpdateEverything -> Music` on the normal
+tail path and `Music -> Music` on the later speedup revisit without inventing
+a zero-length nested child. Every hook carries
+the exact expected opcode bytes plus disassembly source/label proof, and every
+completion action indexes one or more source-cited, half-open Z80 RAM snapshot
+ranges. The 8,192-byte watch mask equals the exact union of Z80 hook PCs; M68K
+hooks use the existing execute path. Configuration rejects a missing/extra bit.
+It permits 1-512 hooks, 1-128 ranges, at most 8,192 bytes per completion, and at
+most 65,535 allocated service tokens per frame. Ranges for a completion are
+nonempty, within the 8 KiB Z80 RAM, and nonoverlapping. For a completion with
+ranges `i`, the exact checked reservation is
+`1 + 2 * range_count + sum(ceil(length_i / 8))`: one `SERVICE_END`, one
+`SNAPSHOT_BEGIN`/`SNAPSHOT_END` pair per range, and its chunks. A single 8 KiB
+range therefore needs 1,027 records. The bounded global worst case is 1,393
+records for 128 nonempty ranges totaling 8,192 bytes (1 end, 256 range markers,
+and at most 1,136 chunks after per-range rounding). The writer reserves that
+hook's exact entire snapshot/end group before copying, so it never emits
+partial state. A reset service reserves the same exact range-marker/chunk sum
+plus its separate `RESET_END` rather than `SERVICE_END`; that group is in
+addition to `RESET_BEGIN` and every pre-reset token's independently reserved
+cancellation completion group. Configuration precomputes and stores this exact
+completion reservation for every kind from its canonical cancellation slice.
+At reset entry, before emitting anything, native code overflow-checks
+`current_event_count + 1 + sum(open_kind_completion_reserve) +
+reset_kind_snapshot_end_reserve <= 65,536`.
+At depth eight the structural upper bound is
+`1 + 8 * 1,393 + 1,393 = 12,538` events. The calculation uses the actual kind
+slices and current stack, not that coarse bound.
+
+At `end_frame`, the native stack must be empty by default. A profile may set the
+continuation flag only on named kinds and must set `max_continuation_frames` in
+the range 1-4. Every remaining stack entry must allow continuation, retain the
+same token/parent/depth next frame, and complete before that bound; otherwise
+capture fails. The host delays canonical publication behind the earliest open
+token only within the same bound. A carried token's stable identity is its
+`(begin BK2 row, token)` pair; the next frame's allocator skips every carried
+token. No S2/S3K profile may enable continuation
+unless pinned-source evidence proves that a real service crosses a video-frame
+boundary.
+
+The ABI layout is frozen only after a Task 7 feasibility audit proves the
+pinned Waterbox compiler's packing/alignment and `.invis` placement. The
+reviewed candidate, which becomes ABI v1 only if that proof passes, is:
+
+```c
+uint32_t gpgx_audio_trace_abi_version(void);       /* 1 after freeze */
+uint32_t gpgx_audio_trace_event_size(void);        /* candidate: 32 */
+uint32_t gpgx_audio_trace_capacity(void);          /* 65536 */
+int32_t gpgx_audio_trace_configure(
+    const struct gpgx_audio_trace_config_v1 *config,
+    const uint8_t *z80_pc_mask,
+    const struct gpgx_audio_service_kind_v1 *kinds,
+    const struct gpgx_audio_service_hook_v1 *hooks,
+    const struct gpgx_audio_snapshot_range_v1 *ranges);
+int32_t gpgx_audio_trace_begin_frame(void);
+int32_t gpgx_audio_trace_end_frame(void);
+int32_t gpgx_audio_trace_event_count(
+    uint32_t *required_count, uint32_t *overflow_count);
+int32_t gpgx_audio_trace_drain(
+    struct gpgx_audio_trace_event *out, uint32_t out_capacity,
+    uint32_t *out_count);
+int32_t gpgx_audio_trace_abort_frame(void);
+int32_t gpgx_audio_trace_disable(void);
+```
+
+After the pinned feasibility probe, ABI v1 freezes these packed little-endian
+layouts and compile-time assertions:
+
+- `AudioTraceConfigV1` is 64 bytes: `magic` (`uint32`, offset 0,
+  `0x31544147`), `abi_version` (`uint16`, 4), `struct_size` (`uint16`, 6),
+  `hook_size` (`uint16`, 8), `range_size` (`uint16`, 10), `event_size`
+  (`uint16`, 12), `max_depth` (`uint8`, 14), `max_opcode_bytes` (`uint8`,
+  15), `reset_service_kind` (`uint16`, 16), `max_continuation_frames`
+  (`uint16`, 18), `flags` (`uint32`, 20), `watch_mask_bytes` (`uint32`, 24),
+  `hook_count` (`uint32`, 28), `range_count` (`uint32`, 32),
+  `snapshot_bytes_total` (`uint32`, 36), `event_capacity` (`uint32`, 40),
+  `max_service_tokens_per_frame` (`uint32`, 44), `kind_size` (`uint16`, 48,
+  value 16), `kind_count` (`uint16`, 50, range 1-255), and three zero `uint32`
+  reserved words at 52-63. This replaces the provisional reset-range fields
+  before ABI v1 is frozen; the reset kind's table entry owns that slice.
+- `ServiceKindV1` is 16 bytes: nonzero `kind_id` (`uint8`, 0), `flags`
+  (`uint8`, 1), `cancellation_range_first` (`uint16`, 2), nonzero
+  `cancellation_range_count` (`uint16`, 4), `continuation_frame_limit`
+  (`uint8`, 6), one zero reserved byte at 7, and two zero `uint32` words at 8
+  and 12. Kind flags are `0x01=TYPED_ASYNC`,
+  `0x02=ALLOW_FRAME_CONTINUATION`, and `0x04=ALLOW_CHILD_SERVICES`.
+- `ServiceHookV1` is 32 bytes: `hook_token` (`uint16`, 0), `action`
+  (`uint8`, 2), `cpu` (`uint8`, 3), full `pc` (`uint32`, 4),
+  `service_kind` (`uint8`, 8), `expected_active_kind` (`uint8`, 9), `flags`
+  (`uint8`, 10), `opcode_length` (`uint8`, 11), `range_first` (`uint16`,
+  12), `range_count` (`uint16`, 14), exact `opcode[8]` at 16, and eight zero
+  reserved bytes at 24. Z80 hook PCs must be at most `$FFFF`; M68K hooks use
+  the full 24-bit PC, require the high byte zero, and may not make
+  `pc + opcode_length` exceed `$1000000`. Actions are `PUSH_BEGIN`, `POP_END_AT_PC`,
+  `POP_END_FALLTHROUGH`, and atomic `TAIL_POP_PUSH`; hook `flags` is reserved
+  and must be zero because kind policy lives in `ServiceKindV1`.
+- `SnapshotRangeV1` is 16 bytes: nonzero `range_id` (`uint16`, 0), `start`
+  (`uint16`, 2), `length` (`uint16`, 4), zero `flags` (`uint16`, 6), and two
+  zero `uint32` reserved words at 8 and 12.
+- `AudioTraceEventV1` is 32 bytes: `ordinal` (`uint32`, 0), nonzero
+  `service_token` (`uint16`, 4), `parent_token` (`uint16`, 6), full `pc`
+  (`uint32`, 8), `subject` (`uint16`, 12), `offset` (`uint16`, 14), `kind`
+  (`uint8`, 16), `service_kind` (`uint8`, 17), `depth` (`uint8`, 18),
+  `source_cpu` (`uint8`, 19), `payload_length` (`uint8`, 20), `value`
+  (`uint8`, 21), `flags` (`uint8`, 22), one zero reserved byte at 23,
+  and `payload[8]` at 24.
+
+Static assertions fix every size and offset of all five structs, `CHAR_BIT==8`, fixed integer
+widths, and little-endian compilation. `opcode_length` is 1-8 and unused opcode
+bytes are zero. Hook tokens and range IDs are unique; service kinds are nonzero
+profile IDs intentionally shared by matching begin/end hooks. Kind entries are
+sorted by unique `kind_id`; configuration builds an internal 256-entry lookup
+and every push/tail-created token copies a valid kind ID. Range indices are
+contiguous and in bounds. All
+unknown flags/actions/CPU values and nonzero reserved bytes fail configuration.
+`configure` copies the header, 8,192-byte mask, kinds, hooks, and ranges immediately
+into `.invis`; it retains no host pointer or interior pointer. Counts, products,
+sums, and range ends are checked without overflow, including the declared total
+snapshot bytes, which is at most 1,048,576 and includes every hook completion
+reference plus every kind-owned cancellation reference. Every kind's
+cancellation slice is nonempty, contiguous, in bounds, nonoverlapping, and at
+most 8,192 bytes. `reset_service_kind` is 1-255, resolves to a kind entry, and
+uses that entry's cancellation slice as its post-reset snapshot.
+`max_continuation_frames` is zero if no kind allows continuation and otherwise
+equals the maximum kind limit, which is 1-4 only when that kind has
+`ALLOW_FRAME_CONTINUATION`. A parent may receive a child push only when its kind
+has `ALLOW_CHILD_SERVICES`.
+Configuration validates opcode proofs structurally but does not compare live
+Z80 RAM: pinned `gen_reset` zeroes ZRAM and the game uploads its driver during
+later `FrameAdvance` calls. For Z80 hooks it requires
+`pc + opcode_length <= 0x2000`. Every watched hook compares the proof bytes to
+ZRAM synchronously when it executes, before changing the stack; mismatch is
+sticky and makes `end_frame` fail. M68K hooks apply the equivalent bounded
+24-bit check at execution using only side-effect-free bytes from a direct mapped
+page. A custom-handler or null map page is not proof-capable and fails capture;
+the observer never performs an extra `M68K BUS` read at the execute boundary.
+For `PUSH_BEGIN`, `expected_active_kind` names the required parent kind (zero
+for a root), not an unused field. Pop/tail actions name the kind being ended.
+Push hooks have zero range indices. Every normal pop/tail completion for the
+ended kind must use exactly that kind entry's canonical cancellation range
+first/count; alternate exits may have distinct hook PC/opcode/action but not a
+different state slice. This makes reset cancellation independent of which exit
+would eventually have executed.
+
+The numeric constants are frozen: hook actions 1-4 in the order listed; hook
+CPU `1=Z80`, `2=M68K`; hook flags are zero; kind flag bits are as listed above;
+event source `0=NONE`, `1=Z80`, `2=M68K`,
+`3=RESET`; event kinds `1=SERVICE_BEGIN`, `2=SERVICE_END`, `3=FM_WRITE`,
+`4=PSG_WRITE`, `5=SNAPSHOT_BEGIN`, `6=SNAPSHOT_CHUNK`, `7=SNAPSHOT_END`,
+`8=RESET_BEGIN`, and `9=RESET_END`. Reset event flag `0x01` means Power and
+zero means Reset; `SERVICE_END` flag `0x02` means reset-cancelled. Flags are
+kind-specific and no other event flag is valid. Every event's `ordinal` is its
+zero-based array insertion index for the current frame; the bounded capacity
+prevents wrap. The remaining fields are exact:
+
+- normal `SERVICE_BEGIN`/`SERVICE_END` use the new/ending token and its
+  parent/kind/depth, the hook CPU/PC, and `subject=hook_token`; all other fields
+  are zero. A reset-cancelled `SERVICE_END` instead has `subject=0`, `pc=0`,
+  `source_cpu=RESET`, and flag `0x02`;
+- `FM_WRITE` repeats the innermost token's parent/kind/depth, records the issue
+  source/PC, stores raw `address & 3` in `subject` and data in `value`, and
+  zeros every other field. `PSG_WRITE` has the same ownership/source fields,
+  `subject=0`, and raw data in `value`;
+- each `SNAPSHOT_BEGIN` repeats the completed token's ownership fields and
+  completion CPU/PC, puts `range_id` in `subject`, and has zero offset/payload.
+  `SNAPSHOT_CHUNK` repeats those fields, uses a gap-free byte offset relative to
+  the configured range, sets `payload_length` to 1-8, places bytes in
+  `payload`, and zeros unused payload tail bytes. `SNAPSHOT_END` repeats the
+  fields with `offset=range.length` and no payload. Reset/cancellation snapshots
+  use `source_cpu=RESET` and `pc=0`; and
+- `RESET_BEGIN` has the new root reset token, parent/depth and PC zero,
+  `service_kind=reset_service_kind`, `source_cpu=RESET`,
+  `subject=cancelled_pre_reset_depth`, and the Reset/Power flag. `RESET_END`
+  repeats token/kind/source/flag after the configured reset snapshot with
+  `subject=0`.
+
+Ranges appear in manifest order. Fields not assigned above, including
+`payload_length` outside chunks and every reserved byte, are zero. No
+incomparable native-cycle field exists.
+
+The 65,536-event/2 MiB array, watch mask, copied kind/hook/range manifests,
+256-entry kind lookup, per-kind reservations, counters, phase, and configuration
+are fixed static objects annotated `ECL_INVISIBLE` in the
+Waterbox ELF `.invis` section, not allocations from `alloc_invisible` or the
+existing bitmap/temporary-SRAM heap. Section-offset, alignment, exact size, and
+savestate-exclusion tests are release gates. The objects have no emulation
+authority. Overflow is sticky, its omitted-event count saturates at
+`UINT32_MAX`, and a frame with overflow yields no semantic records.
+
+The ABI phase machine is `DISABLED -> CONFIGURED -> RECORDING -> READY ->
+CONFIGURED`. `configure` is legal only in `DISABLED`, requires non-null config,
+mask, kind, hook, and range pointers, copies them, and enters `CONFIGURED`.
+`begin_frame` is legal only in `CONFIGURED`, resets per-frame counters while
+retaining permitted carried tokens, and enters `RECORDING`. `end_frame` is
+legal only in `RECORDING`, validates the service stack/continuation policy, and
+enters `READY` even when returning a fail-closed runtime error. `event_count`
+is legal only in `READY`, requires non-null outputs, and reports the exact
+retained count plus sticky saturated omitted-event count without copying. On
+overflow the retained count is the fixed-capacity prefix and is never semantic
+output. `drain` is legal only in `READY`, requires non-null `out_count`, and
+copies all-or-nothing into a reusable managed buffer.
+For count zero, `(out=NULL, capacity=0)` succeeds and returns to `CONFIGURED`.
+For nonzero count, output must be non-null; too-small capacity returns `-4`,
+sets `out_count` to required count, copies nothing, and remains `READY` for one
+or more bounded retries. Overflow makes `end_frame`/`event_count` report `-5`; no drain is
+attempted, and the host calls `abort_frame` from `READY` to clear it. The host allocates or
+grows only to the queried bounded count—there is no unconditional 2 MiB copy.
+`abort_frame` is legal only in `RECORDING` or `READY`, discards that frame only
+for host/capture failure, and returns to `CONFIGURED`. `disable` is legal from
+any phase, clears copied observer state, enters `DISABLED`, and is idempotent
+there. Return codes remain `0`, `-1` invalid argument, `-2`
+invalid phase, `-3` ABI/config limit, `-4` capacity, and `-5` overflow.
+Runtime stack/continuation mismatch makes `end_frame` return `-3` in `READY`;
+the host records diagnostics and uses `abort_frame`, never drains semantic data.
+
+The pinned scheduler sets an explicit native issue-source enum around Z80 and
+M68K execution and restores it on exit. At each CPU's prefetch boundary it also
+latches that instruction's start PC: for Z80, after IRQ admission and before
+opcode fetch; for M68K, at the existing execute/prefetch boundary. The common
+FM/PSG dispatch records `Z80`, `M68K`, or `RESET`; it never infers source from a
+plausible Z80 PC. Chip-event `pc` is the latched 16-bit instruction-start PC for
+`source_cpu=Z80`, the latched full 24-bit instruction-start PC for
+`source_cpu=M68K`, and zero for reset. Reading the CPU's current PC at chip
+dispatch is forbidden because operand fetch has already advanced it.
+Every supported chip mode and M68K/Z80 issue path must prove valid source and
+nonzero service token. The host groups stack/snapshot records by token, rejects
+parent/depth/kind/order mismatch or duplicate attribution, and reconstructs one
+completed service per begin/end pair. Canonical `DriverService` order is the
+global `(begin frame, begin ordinal)` order, even when nested children complete
+first; each service contains only its token's chip writes. A separate raw chip
+stream retains global native ordinals and exact bus order, so flattening never
+duplicates or reorders writes. Separate port-0/port-1 YM latches follow the raw
+stream, preserving every `$2A` byte.
+
+The dedicated observer distribution may include a minimal first-class managed
+BizHawk adapter rather than depending permanently on private reflection. Task 7
+chooses it only if a pinned managed toolchain first builds the unmodified 2.11
+managed components twice and byte-compares them to the installed stock DLLs,
+and the adapter exposes only typed departure calls for this ABI without a fake
+generic `Z80 BUS`. Its managed patch/source/toolchain/DLL hashes join the native
+identity and its disabled/enabled parity gates remain identical. Stock BizHawk
+is never overwritten and remains the control distribution.
+
+If byte-exact managed reproduction cannot be established, the already-proven
+fallback is a harness-local departure-only `BizInvoker` proxy over private
+GPGX `_elf`, whose runtime type must be `WaterboxHost`, `IImportResolver`, and
+`ICallbackAdjuster`; every call is inside `_elf.EnterExit()`. Reflection-shape
+tests and exact stock managed hashes are mandatory. Either adapter allocates no
+per-event managed callback, retains the existing M68K callbacks for S1, and is
+recorded as a stable adapter kind plus content hashes in canonical metadata.
+
+`configure` runs before the first `FrameAdvance`. For every bootstrap/capture
+row the host calls `begin_frame`, one `FrameAdvance`, `end_frame`, `event_count`,
+then one successful drain. Bootstrap updates tokens and both YM latches; only
+semantic publication is suppressed. Draining native records is not polling.
+
+Reset and Power inputs occurring inside that `FrameAdvance` do **not** abort or
+split the frame. The patch instruments exact `gpgx_reset` wrapper entry while
+phase remains `RECORDING`: `RESET_BEGIN` records reset-vs-power, current depth,
+and a new reset token allocated through the same nonzero uniqueness/wrap checks
+as a service push. Before appending it reserves the complete checked reset
+boundary inventory above. It then appends each open pre-reset token's exact
+kind-owned cancellation slice plus reset-cancelled `SERVICE_END` in
+deterministic innermost-to-outermost order, independent of the token's
+unselected candidate exit hooks, so those services retain their attributed
+writes and exact cancellation-boundary state. The reset snapshot/`RESET_END`
+reservation remains protected while reset chip writes append: a chip write may
+use only capacity beyond that tail reservation, and an excess increments the
+sticky omitted count rather than consuming it. It clears native stack/source diagnostics, causes the host to clear both
+YM latches, then pushes the root reset service. The wrapper sets source `RESET`,
+attributes every reset FM/PSG write to that token, appends the configured
+synchronous post-reset slice from the reset kind entry, consumes the protected
+reservation, pops it, and appends `RESET_END`. Failure to reserve the entire
+boundary inventory sets overflow before any reset-boundary record is emitted;
+capture fails closed while emulation still resets normally. It preserves
+the existing event array/ordinals/phase, returns normally, and the same
+`gpgx_advance` call continues appending later events. `RESET_BEGIN` carries the
+canceled depth; the host reconstructs those services with completion status
+`RESET_CANCELLED`, not ordinary completion.
+The host emits one reset/power lifecycle marker referencing the reset service
+token and reconstructs `RESET_BEGIN`/`RESET_END` as one `COMPLETED` canonical
+reset `DriverService`; it does not duplicate that service's chip writes. It never calls a
+second begin/end or abort for that row.
+Before configuration, reset is stock behavior with no observer event. In
+`CONFIGURED`, an out-of-frame harness reset clears diagnostics while retaining
+copied configuration and requires the host to clear latches; reset in `READY`
+is invalid because the preceding row has not been drained.
+
+The observer is excluded from savestates. Each core saves/loads only its own
+state at a drained boundary. After load, the host disables/reconfigures
+invisible observer state and latches before the next frame. Disposal or a real
+host/capture failure uses `abort_frame`/`disable`; reset never does.
+
+Stock-frame polling, opcode `LD` interposition, a managed fake `Z80 BUS`, and
+M68K-mapped Z80 callbacks are rejected because they lose or misidentify native
+event order. `LD_PRELOAD` is impossible because the Waterbox ELF is static, has
+no dynamic section, and its Z80/FM/PSG symbols are local. Binary trampoline
+rewriting is rejected because LTO and Waterbox's absolute layout make it
+brittle and unauditable. Per-instruction or per-write managed callbacks are
+also rejected for long-run cost and callback-slot coupling. An opcode-verified
+PC manifest remains useful for selecting the native watch mask, but it is not a
+substitute for the native ordered write log.
 
 ### Explored approaches
 
@@ -277,16 +645,25 @@ record counts.
 The envelope schema is `complete_run_audio.v1`:
 
 - `metadata`: all identities, comparison interval, profile and field
-  inventories, observer/callback proof, chunk policy, and producer kind;
+  inventories, typed observer runtime identity, observer/callback proof, chunk
+  policy, and producer kind;
 - `baseline`: absolute frame and complete normalized audio state;
 - `frame`: absolute BK2 row, segment coordinate if applicable, lag flag,
   ordered raw requests, and ordered driver-service records;
-- `service`: global service ordinal, game-local service kind, ordered decisions,
-  normalized post-service state, and ordered chip events;
+- `service`: global service ordinal, game-local service kind, `COMPLETED` or
+  `RESET_CANCELLED` completion status, ordered decisions, normalized boundary
+  state, and ordered chip events;
 - `lifecycle`: reset, pause, stop-all, save, restore, SEGA-PCM enter/leave, or
   other profile-declared boundary that occurs outside a normal service;
 - `terminal`: frame, request, service, decision, YM, PSG, and lifecycle counts
   plus the canonical root digest.
+
+For buffered Z80 capture, `service.ordinal` is assigned by the token's global
+begin coordinate, not completion order. Parent token and depth remain strict
+diagnostics. Each service's `chipEvents` contains only writes whose native token
+equals that service; a raw ordered-chip diagnostic inventory preserves global
+native ordinals so validation proves flattened services are a duplicate-free
+partition of bus writes.
 
 A request has a stable ordinal, native ID, canonical ROM-backed content key,
 class, queue source/slot, and submission order. A decision references that
@@ -311,6 +688,18 @@ Chip events are:
 
 Raw callback arguments and PCs are diagnostic fields excluded from semantic
 equality but validated strictly.
+
+Observer runtime identity is a sealed callback-only or buffered-native value,
+never an overloaded label. The buffered value carries ABI name/version,
+event size, capacity, core BuildID, PC-watch-mask and service-manifest SHA-256,
+enabled state, maximum per-frame occupancy, and overflow count. Runtime artifact
+hashes have distinct typed entries for the managed assemblies, Waterbox host,
+compressed and uncompressed core, patch, complete source bundle, toolchain,
+build recipe, and harness executable. Profiles pin the exact allowed value for
+each producer. Canonical metadata stores a stable logical installation ID such
+as `bizhawk-2.11-gpgx-audio-observer-v1` and stable core ID plus content hashes.
+The fresh absolute staging/install path is checked locally but is never
+serialized or included in a canonical digest.
 
 ### Storage and publication
 
@@ -355,6 +744,7 @@ public interface CompleteRunAudioProfile {
     List<HardwareRole> hardwareRoles();
     NativeSoundIdentity resolveRequest(RawAudioRequest request);
     StateInventory stateInventory();
+    Map<ProducerKind, ObserverRuntimeIdentity> observerRuntimeIdentities();
 }
 
 public interface CompleteRunAudioRecordSink extends AutoCloseable {
@@ -366,9 +756,12 @@ public interface CompleteRunAudioRecordSink extends AutoCloseable {
 public record DriverService(
         long ordinal,
         String kind,
+        ServiceCompletion completion,
         List<AudioDecision> decisions,
         NormalizedAudioState state,
         List<ChipEvent> chipEvents) { }
+
+public enum ServiceCompletion { COMPLETED, RESET_CANCELLED }
 ```
 
 The exact sealed record types, JSON field names, unsigned bounds, role order,
@@ -412,11 +805,200 @@ is intentional: a naturally wrong route cannot prove naturally correct audio.
 S1 retains the proven memory-callback decoder and opcode-verified fallback,
 extended from GHZ-only lifecycle sites to the full S1 sound driver.
 
-S2 and S3K first add a declarative GPGX callback domain to the native headless
-host. A capability probe records and cross-checks Z80 PC callbacks with native
-YM/PSG writes. The selected callback source and positive proof counts are
-pinned in metadata. Fallback manifests are game/revision-specific, verify every
-opcode/operand before capture, and include direct DAC/SEGA-PCM sites.
+S2 and S3K use the buffered native ABI above; the harness does not add a
+declarative `Z80 BUS` callback domain. Game/revision profiles provide the
+verified PC mask, begin/end manifest, completion snapshot ranges, and opcode
+proof. S2 anchors include `zVInt=$0038`, `zUpdateEverything=$0051`, and
+`zUpdateMusic=$0110`; S3K anchors include `zVInt=$0038`,
+`zUpdateEverything=$011B`, and `zUpdateMusic=$0121`. The exact disassemblies and
+pinned ROM bytes must identify every entry and every possible completion PC,
+including early/multiple exits, and cite why state is final at the completion
+instruction. The host validates proof structure/source citations before
+configuration; native code verifies Z80 proofs against the uploaded 8 KiB ZRAM
+and M68K proofs against side-effect-free bytes from a direct mapped page
+synchronously when each hook fires. Custom-handler/null M68K pages fail proof;
+the hook never adds a `M68K BUS` read.
+Each manifest also defines one `ServiceKindV1` entry per referenced kind. Its
+canonical cancellation slice is source-cited and identical to every normal
+completion hook's slice for that kind, including alternate exits; the reset
+kind uses its slice for post-reset state.
+
+Before choosing the FM/PSG hook, a pinned-source call-path audit enumerates all
+five accepted `GenesisFMSoundChipType` values (`MAME_YM2612`,
+`MAME_ASIC_YM3438`, `MAME_Enhanced_YM3438`, `Nuked_YM2612`, and
+`Nuked_YM3438`) and every Genesis issue path. Both the Z80 `memz80.c` and M68K
+`mem68k.c` paths call the selected `fm_write` function pointer, while PSG is
+issued from the applicable Z80, banked-Z80, and M68K dispatch paths. The patch
+must observe at a common logical call boundary before the selectable chip core,
+or patch and test every audited issue site; it must not hook only
+`YM2612_Write`. Tests cover both M68K- and Z80-issued selectors 0/1/2/3, PSG,
+and address-latch `$2A` followed by every DAC data byte. If complete path
+coverage cannot be proven, capture is narrowed to and metadata-pins
+`MAME_YM2612`; it may not claim chip-core-independent observation.
+
+The exact native source base is BizHawk tag `2.11`, commit
+`427556b5ef3ac437eba754d90c5e7e9096c9a8df`, with GPGX submodule
+`051d430d3d1b54625f9900c8f152d7f232e06daf` and musl submodule
+`2063abc4e16c84218757b1db10d3cdf9f36ef3f8`. BizHawk 2.11.1 and the local
+2.11.1 source cache are not substitutes. The tracked source lock also pins the
+2.11 Waterbox `emulibc`, `common.mak`, and `linkscript.T` bytes; a separately
+tracked toolchain lock pins every compiler/sysroot input and binary hash used by
+`waterbox/sysroot/bin/musl-clang` or `musl-gcc`.
+
+The historical producer is Ubuntu Mantic clang `16.0.6-15`, LLD `16.0.6`, GNU
+Make `4.4.1`, binutils/ar `2.47`, and Zstandard `1.5.5`. The exact embedded ELF
+`STOCK_INTERPRETER_PATH` is reconstructed from pinned UTF-8 hex
+`2f686f6d652f66656f732f7368617265732f73686172652f42697a4861776b2f7761746572626f782f737973726f6f742f7379736c69622f6c642d6d75736c2d7761746572626f782e736f2e31`;
+fresh roots are mounted at the `STOCK_BUILD_ROOT` reconstructed from hex
+`2f686f6d652f66656f732f7368617265732f73686172652f42697a4861776b` to reproduce it.
+The build uses the pinned 2.11 musl scripts, then `waterbox/emulibc` and
+`waterbox/gpgx` with the stock static `-mcmodel=large -fno-pic -fno-pie -O3
+-flto` recipe and custom linkscript. Compression is exactly zstd 1.5.5
+`--ultra -22 --threads=0`. Locale, timezone, umask, `SOURCE_DATE_EPOCH`, and
+ambient flags are fixed.
+
+Before applying the observer patch, Task 6 builds the **unmodified** pinned
+core twice. Each decompressed output must be 39,558,192 bytes, compare byte for
+byte to stock, hash to
+`b4cc6dabc069a6f1b87790212d80f665d216e603aa4990955cc816d5bf98d218`, and
+have BuildID xxHash `7696adca7ad14b79`; each compressed output must be
+400,161 bytes, compare byte for byte to stock, and hash to
+`c4231296ec5ba59b431df22b68e234ae7bfbbfc87b6e72fa471234ac1b220d12`.
+Only this stock-reproduction gate licenses patching. Clang 18 is an explicit
+negative control: its decompressed result is 4,026,152 bytes with SHA-256
+`fa05369287a490b19a9a13e74aff69e3223c091adf320fb7fe1895abe6908269`.
+Zstd 1.5.7 is also rejected; it produces a 399,100-byte stream.
+
+The canonical source bundle is produced from the patched detached tree by
+sorting repository-relative POSIX paths bytewise, normalizing regular files to
+mode `0644`, executable scripts to `0755`, directories to `0755`, uid/gid to
+zero, uname/gname to empty, mtime to `SOURCE_DATE_EPOCH`, and tracked text to LF
+line endings. It excludes `.git`, build/sysroot/output directories, caches,
+logs, and generated binaries. From the root of that normalized staging tree,
+the lock pins the GNU tar executable/version/hash and runs, under
+`LC_ALL=C TZ=UTC`, exactly
+`tar --format=posix --sort=name --mtime=@$SOURCE_DATE_EPOCH --owner=0
+--group=0 --numeric-owner --pax-option=delete=atime,delete=ctime
+--no-recursion --verbatim-files-from --files-from=source-bundle.paths -cf
+source-bundle.tar`, where the manifest has one normalized relative path per line
+and rejects absolute, `..`, newline, or control-character paths. It then
+runs the locked zstd 1.5.5 exactly as
+`zstd --ultra -22 --threads=0 --no-progress --force source-bundle.tar -o
+source-bundle.tar.zst`. Both archive digests and the sorted path/mode manifest
+digest are published.
+
+The installed stock identities are:
+
+- `BizHawk.Emulation.Cores.dll` SHA-256
+  `0144e6e236be68ce126eb771dcb5a9ae7c153a083fa0333f345ac37b4a60acf7`;
+- `BizHawk.Emulation.Common.dll` SHA-256
+  `f20cd009f6f5b0a95bd47b66c48dc8de85afcd7ae0cc6aab3486baf55f501fb4`;
+- `libwaterboxhost.so` SHA-256
+  `d2367818aafb4e520ad5ab005b5762c61506b0c819c4d79687235acfb0fc0c78`;
+- stock `gpgx.wbx.zst` SHA-256
+  `c4231296ec5ba59b431df22b68e234ae7bfbbfc87b6e72fa471234ac1b220d12`;
+  and
+- stock decompressed `gpgx.wbx` SHA-256
+  `b4cc6dabc069a6f1b87790212d80f665d216e603aa4990955cc816d5bf98d218`,
+  Waterbox BuildID xxHash `7696adca7ad14b79`.
+
+The stock-reproduction tool lock contains these literal SHA-256 values; package
+names also pin Ubuntu Mantic version `16.0.6-15` where applicable:
+
+| Input | SHA-256 |
+|---|---|
+| `clang-16` executable | `bb6556bdcdeb00dca0c758da9966a9982542a23ddcaffa784a2de9344ede3fc0` |
+| `ld.lld-16` executable | `f8d0601bf957a1b063e29c3c43613a5b76482f6c14664b9fcac4d596871e14df` |
+| `libLLVM-16.so.1` | `55f9e1b3c3b98853fc31787414064de36a22cc23f870962b45832fc904c498a2` |
+| `libclang-cpp.so.16` | `f9bf97848329b4d444c8c8791b9f8a584b58016852a6ba4b55db164726623ac7` |
+| compiler-rt builtins | `2f257b223dbee10ea0415e5f95385a71dc05bb94505a21a4be1d22ce733e624d` |
+| built zstd 1.5.5 executable | `7bc75866617449d384679bd29298a222a458ff0daea0fc4c221122b5513cf307` |
+| `clang-16_16.0.6-15_amd64.deb` | `b9cd4d27a5d1b6c429fccf56a4ac1c4ac5baf2cb9b5a53e2a20fcd6593153e5a` |
+| `libclang-cpp16_16.0.6-15_amd64.deb` | `39eb3e73119ef0180489c7e594d29398152b3a2d7eec2361cf87d367032f466a` |
+| `libllvm16_16.0.6-15_amd64.deb` | `3353bbe1910cfc99a8ef96e1cd7df45c65e2aaebefcfc801bcb7587bab819a15` |
+| `llvm-16-linker-tools_16.0.6-15_amd64.deb` | `39f6c47b5ecc04c064899a99d224650b2d932e7f27ac02246073395fc8bd1300` |
+| `libclang-common-16-dev_16.0.6-15_all.deb` | `ada57e3ac045bb324397c6d269dbad56a0b0f3608c89d321d1fed38206570ff5` |
+| `lld-16_16.0.6-15_amd64.deb` | `e75a2e784d2da2e3d90a31d7b8002892ac58b90e53073a14c7db1a8d80172204` |
+| `libclang-rt-16-dev_16.0.6-15_amd64.deb` | `20f3b1a105d5b8fba261a03bd6ad531e09a87c929f33f54e5dd4db78f980dda2` |
+| `libedit2` package | `d1c26768f5e108c97d9520c8a19356ddf5a1967222af4f38efb1f5af21da46b5` |
+| `libxml2` package | `7c4d4ec04145f854bb824cb72fb34233c99f7db3eaafaa3d2049bd82800c0f85` |
+| `libicu72` package | `3db0831a7a8da3c8d878fdbc4644d4131ed914b22c8a0cffbcabe68a2c3f6ec4` |
+| `zstd-1.5.5.tar.gz` | `9c4396cc829cfae319a6e2615202e82aad41372073482fce286fac78646d3ee4` |
+
+The observer build is installed into a fresh staging directory beneath ignored
+`target/audio-parity/native/`, alongside the complete patched source bundle,
+patch, licenses, build logs, and identity manifest. Publication is create-new
+and no-replace. It must not write, hard-link, or symlink its patched core over
+`docs/BizHawk-2.11-linux-x64`; the stock hashes are rechecked after build,
+installation, and capture. This also satisfies the GPGX modified-binary source
+distribution obligation: a patched binary is never published without the full
+pinned corresponding source and notices. License guards compare and publish the
+exact pinned BizHawk root `LICENSE`, Genesis Plus GX `LICENSE.txt`, musl
+`COPYRIGHT`, Zstandard `LICENSE`, LLVM/Debian copyright notices, and every
+license file named by the GPGX source tree. The component-to-license notice
+must state verbatim that GPGX redistributions may not be sold or used in a
+commercial product or activity, that a modified binary requires complete
+corresponding source for all binary components subject to its license, and must
+include the full GPGX warranty/liability disclaimer. Missing or summarized
+license text blocks publication.
+
+Reference metadata identifies `observer-patched-gpgx`, not stock GPGX, and
+contains the stable logical installation/core IDs and literal
+BizHawk/GPGX/musl/Waterbox/toolchain/patch hashes, patched compressed and
+uncompressed core hashes and BuildID, ABI/layout/capacity, managed assembly and
+selected adapter kind and managed patch/DLL hash when applicable, harness
+hashes, watch-mask/service-manifest digest, enabled state, maximum
+per-frame occupancy, overflow count, and exact S2/S3K event-count vectors. It
+never contains the staging or installation absolute path. Counts include
+service begins/ends, snapshot groups/chunks/bytes, each raw FM selector, PSG
+writes, `$2A` data writes, and total ordered events. Zero capability counts,
+unreviewed self-derived expectations, or an overflow are capture failures.
+
+Before a real capture is accepted, short S2 and S3K runs must freeze positive
+literal count vectors in independent tests and exercise generic music/SFX, S2
+DAC, and S3K DPCM/SEGA PCM. A synthetic fixture proves depth-eight nesting,
+tail composition, exclusive write ownership, and failure at depth nine. A
+synthetic multi-byte Z80 and M68K instruction fixture proves each chip event
+contains the literal instruction-start PC latched before opcode/operand fetch,
+not the advanced dispatch-time PC, while reset writes contain zero. A real
+S2 slice proves the real `zVInt -> zUpdateEverything -> zUpdateMusic` nesting,
+including repeated `zUpdateMusic` children: outer queue/SFX writes keep the
+appropriate outer token, while each repeated music service owns only its writes
+and synchronous state. A real S3K slice proves its nested and fallthrough
+completion path, both `$0121` pre-action-kind alternatives, outer queue/SFX
+writes, and repeated inner music services with the same invariants. Its
+DAC/DPCM/SEGA-PCM coverage proves a distinct bounded typed service for every
+inner sample-loop iteration, including nesting under VInt/update, with no
+whole-routine service, orphan, or overlong continuation. Canonical services
+sort by begin ordinal while the raw chip stream retains native bus ordinals.
+Frame-end RAM reads are forbidden as the expected value.
+Fixed Reset and Power BK2 rows each prove one-row cadence and one uninterrupted
+native frame containing pre-reset events, typed begin/action/cancellation,
+reset-token writes and synchronous state, typed end, and post-reset advance
+events with no loss, split, or duplication. At least one row resets while a
+nested stack is active with multiple still-possible exit hooks and proves the
+exact kind-owned snapshot bytes and deterministic innermost-to-outermost order,
+exclusive pre-reset write ownership, and `RESET_CANCELLED` canonical
+completion independent of which exit remained possible. A depth-eight fixture
+also proves the checked actual reservation sum, 12,538-event structural bound,
+protected reset tail, and fail-closed overflow without a partial group.
+The observer distribution disabled—including its selected managed adapter—must
+match stock, and enabled must match that disabled distribution,
+for deterministic video and PCM hashes, lag flags, RAM/register checkpoints,
+reset, and post-save/load continuation. Each lane saves and loads its own state;
+raw savestate bytes are never compared or cross-loaded. A forced small-buffer
+build must prove overflow fails closed.
+
+Performance uses the same otherwise-idle host, ROM, movie prefix, core settings,
+and harness process shape for patched-disabled and enabled lanes, with one
+unmeasured warmup followed by at least three measured repetitions per lane.
+The median enabled slowdown must be at most 10% and the worst repetition at
+most 15% relative to patched-disabled. Full-run probes additionally require
+zero overflow and at least four times the observed maximum-frame event
+occupancy in fixed capacity. They also prove each frame copies exactly its
+queried count times 32 bytes into a reused buffer, with no copy/allocation for
+zero events and no unconditional 2 MiB transfer. Failure of either threshold fails the capability
+gate rather than silently weakening capture or increasing managed work.
 
 ### S1 behavior
 
@@ -467,12 +1049,14 @@ The CLI exit contract is common to all games:
 - `0`: duplicate determinism gates and cross-producer parity all match;
 - `2`: invalid arguments or fixture identity;
 - `3`: valid deterministic captures with a first parity mismatch; and
-- `4`: capture, validation, publication, observer-proof, replay, or tooling
+- `4`: capture, validation, native build/identity, publication, observer-proof,
+  replay, or tooling
   failure.
 
 Partial capture, missing terminal, incomplete chunk publication, callback
-fallback without proof, gameplay replay abort, absent contention/1-up evidence,
-or a changed source between comparator passes is exit 4.
+fallback without proof, native ABI/hash mismatch, observer overflow, gameplay
+replay abort, absent contention/1-up evidence, or a changed source between
+comparator passes is exit 4.
 
 ### Acceptance tests by game
 
@@ -510,15 +1094,18 @@ S3K must demonstrate:
 Execution is split into four test-first plans under
 `docs/architecture/plans/audio/`:
 
-1. shared complete-run schema, chunk storage, comparator, authority guards, and
-   reference-host observation capability;
+1. shared complete-run schema, chunk storage, comparator, authority guards,
+   exact-BizHawk-2.11 native observer source/build/install, and reference-host
+   observation capability;
 2. Sonic 1 complete-run producer and source-accurate mailbox/1-up behavior;
 3. Sonic 2 complete-run producer and global-priority/temporary-music behavior;
 4. Sonic 3K complete-run producer and two-slot/tempo/PCM behavior.
 
 Each plan ends with duplicate real captures, cross-producer comparison, compact
 validation evidence, and an independent review gate. The S1 plan executes
-first; S2 and S3K may begin only after the shared Z80 capability gate is green.
+first; S2 and S3K may begin only after the shared patched-core build,
+stock/enabled/disabled identity, real capability-count, overflow, and
+performance gates are green.
 
 ## Human review and integration
 
