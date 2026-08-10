@@ -2719,6 +2719,7 @@ public final class TraceSessionLauncher {
         TraceExecutionPhase rowPhase = TraceExecutionPhase.VBLANK_ONLY;
         boolean observedVblankCounterAdvance = true;
         boolean previousObservedVblankCounterAdvance = true;
+        boolean nextRowCarriesDeferredVblank = false;
         boolean terminalRow = false;
         boolean deferBoundaryCommit = false;
         if (phase == TraceRunPlaybackCoordinator.Phase.CURRENT_SEGMENT
@@ -2757,6 +2758,10 @@ public final class TraceSessionLauncher {
                                     nextRowPolicy
                                             .observedVblankCounterAdvance());
                 }
+                nextRowCarriesDeferredVblank =
+                        localRow + 1 < plan.trace().frameCount()
+                                && TraceReplayRowPolicy.carriesDeferredVblank(
+                                        plan.trace(), localRow + 1);
             }
             terminalRow = localRow == plan.segment().traceFrameCount() - 1;
         } else if (phase
@@ -2769,7 +2774,8 @@ public final class TraceSessionLauncher {
                         observedVblankCounterAdvance,
                         previousObservedVblankCounterAdvance,
                         loop != null
-                                && loop.getCurrentGameMode() == GameMode.LEVEL);
+                                && loop.getCurrentGameMode() == GameMode.LEVEL,
+                        nextRowCarriesDeferredVblank);
         boolean commitDeferredBoundaryAfterClosure = TraceRunFrameDriver
                 .shouldCommitDeferredBoundaryAfterClosure(
                         previousObservedVblankCounterAdvance,

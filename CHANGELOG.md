@@ -3,6 +3,14 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: a run chain's presentation bridge no longer suppresses two consecutive rows where the ROM
+  has one. The classifier treated a row as a lag closure whenever the recorded vertical-interrupt
+  counter had not advanced on both it and its predecessor, but that counter legitimately holds
+  across an interrupts-disabled window, so one pattern-load service was lost.
+- Fix: the Sonic 3 & Knuckles title screen advances its animation on the ROM's own four-iteration
+  counter rather than a table of per-frame durations measured from hardware. The ROM has no such
+  table; the varying durations a capture shows are the synchronous Kosinski decompression
+  overrunning a frame for the larger frames, which belongs to the decompression pipeline.
 - Fix: the special-stage results screen appears as the ROM presents it, by loading the results
   palette directly, instead of fading in from white over 21 frames. Neither game fades in --
   both white the screen out, rebuild it with interrupts disabled, and then copy the results

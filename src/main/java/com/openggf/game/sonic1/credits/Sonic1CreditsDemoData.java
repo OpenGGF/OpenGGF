@@ -168,27 +168,15 @@ public final class Sonic1CreditsDemoData {
     /** Text display duration (frames). ROM: move.w #120,(v_generictimer).w */
     public static final int TEXT_DISPLAY_FRAMES = 120;
 
-    /**
-     * Hidden pacing delay after each credits card's base 120-frame display.
-     * <p>
-     * ROM: {@code Cred_WaitLoop} keeps the card on-screen until both
-     * {@code v_generictimer==0} and the PLC buffer is empty. On modern hardware
-     * our level/object art loads are effectively instantaneous, so the sequence
-     * runs ahead of the credits music. These per-credit shim values emulate the
-     * missing PLC/decompression wait and can be tuned against captures later.
-     * Credit 8 ("PRESENTED BY SEGA") has no following demo, so it uses 0.
-     */
-    public static final int[] TEXT_PACING_DELAY_FRAMES = {
-        48, // Credit 0: GHZ1
-        60, // Credit 1: MZ2
-        54, // Credit 2: SYZ3
-        66, // Credit 3: LZ3
-        54, // Credit 4: SLZ3
-        60, // Credit 5: SBZ1
-        58, // Credit 6: SBZ2
-        48, // Credit 7: GHZ1 (second demo)
-        0   // Credit 8: PRESENTED BY SEGA
-    };
+    // There is deliberately no per-credit text pacing table here. Cred_WaitLoop
+    // (s1disasm/sonic.asm:3880-3889) holds a credits page up on a joint gate --
+    // `tst.w (v_generictimer).w` (TEXT_DISPLAY_FRAMES above) and
+    // `tst.l (v_plc_buffer).w` -- so the extra hold is exactly the residual PLC
+    // drain of the next demo's level PLC plus plcid_Main2, decompressing nine
+    // tiles per frame under VBlank_Title's ProcessPLC_9Tiles (sonic.asm:781).
+    // Sonic1CreditsManager.plcBufferOccupied models that second gate against the
+    // live Sonic1PlcService FIFO; any array here would be measured from one
+    // recording rather than read out of the ROM.
 
     /**
      * ROM: Level_Delay runs 4 hidden frames after level load and before

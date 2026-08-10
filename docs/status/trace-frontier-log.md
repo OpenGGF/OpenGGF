@@ -67040,3 +67040,76 @@ in two tests, not two regressions.
   tests are one class, and its failure is the SAME identified defect already failing GhzMaze.
   A canary set is a floor, not a ceiling; but equally, a raw failure-count delta is not a
   regression report. **Diff the failing FIELDS, not just the failing class count.**
+
+## 2026-08-10 — round twenty-seven: the row-69 classifier, and two fitted constants removed
+
+Command: full `-Ptrace-replay` profile, no `-Dtest`. Base 3eedf0689 (769 / 10 / 64).
+After: **769 / 8 / 64.** Green: `TestS1CompleteEmeraldVisualRun` (both tests) — the exposure
+the fade removal surfaced is now closed. EHZ chain unchanged at 23.
+
+- **CORRECTION TO 3eedf0689's COMMIT MESSAGE (mine).** It claims the results fade was "masking
+  21 rows of the ~36-row S1 results deficit". **That is false and was measured directly:**
+  `run_tail.edge[*].movie_logical_frame` stays at 9035 (expected 9071, delta 36) with the fade
+  PRESENT and with it REMOVED. The fade contributes ZERO rows to that metric. What removing it
+  actually did was expose a different defect at row 69, and I read "first failure moved earlier"
+  as "the terminal deficit shrank". The fade removal remains correct on its ROM evidence; only
+  my justification for the payoff was wrong. The 36 rows are, and always were, what the test's
+  own javadoc says: the un-modelled pre-main-loop level-load span.
+- **The row-69 divergence was TIMING, not queue content — and my brief said the opposite.**
+  `queue.s1_nemesis_plc.remaining_work` expected 1 actual 10, and **10 - 1 = 9 is exactly one
+  `ProcessPLC_9Tiles`**. Queue CONTENT matches the ROM entry for entry, proved by reading the
+  tables: `PLC_Main` (5 entries) + `PLC_SSResult` (2) = the 7 recorded fingerprints, and
+  `RunPLC` stores the raw header word masked `$7FFF` as `v_plc_patternsleft` with NO `+1`
+  (sonic.asm:1388-1396), giving 10, 24, 12, 14, 9, 16. The recorded ghz2 drain is
+  10,1,1,24,15,6,12,3,14,5,9,16 — each entry's arming row shows its full ROM count, each later
+  row subtracts 9, and the row reaching 0 pops and arms the next in the same row. Every value
+  matches.
+  **REAL CAUSE:** `TraceRunFrameDriver.selectDisposition` classified a VBLANK_ONLY bridge row
+  as `PRESENTATION_SUPPRESSED_CLOSURE` (a lag closure, which services no PLC) whenever
+  `!(observedVblankCounterAdvance && previousObservedVblankCounterAdvance)`. In ghz2 the
+  recorded `vblank_counter` holds at 1E72 across rows 59-66 (the `disable_ints` window), so the
+  engine suppressed TWO consecutive rows where the ROM has one, losing exactly one PLC service.
+- **FITTED CONSTANT REMOVED: `Sonic3kTitleScreenManager.ANIM_FRAME_DURATIONS`
+  {16,4,4,4,4,6,16,12,12,10,3}**, commented "Measured from the original hardware".
+  **The ROM has NO title-screen animation duration table at all.** The cadence is a two-part
+  counter: `TitleAnim_FlipBuffer` (V_int routine 4) reloads `Title_anim_delay` to 4-1 when it
+  reads 0 and otherwise decrements, and `Iterate_TitleSonicFrame` advances `SonicFrameIndex`
+  only on the iteration where the counter reads exactly 1 — a **uniform four-iteration cadence
+  for every step**. The fitted array differs from the ROM value on 8 of its 11 entries, because
+  a hardware capture sees the synchronous `Kos_Decomp` inside `TitleSonic_LoadFrame` overrunning
+  a frame for the larger frames. **Someone measured decompression latency and recorded it as
+  animation timing.** Replaced with a faithful port of the counter; the decompression effect
+  belongs to the Kosinski pipeline under the hardware-timing contract. No test covers
+  title-screen animation timing, so nothing moved — a correctness-only fix.
+- **`EMERALD_ART_QUEUE_DRAIN_FRAMES = 4` SCOPED, not landed.** The gate is `loc_9C5C`
+  (skdisasm/sonic3k.asm:12613) on `tst.b (Kos_modules_left).w`. The 4 decomposes: structurally
+  `moduleCount = ceil((uncompressedSize/2) / 0x800)` from `Process_Kos_Module_Queue_Init`'s
+  `lsr.w #1,d3 / rol.w #5,d0 / andi.w #$1F,d0`, with each module costing exactly two
+  `Process_Kos_Module_Queue` calls — one to hand it to the decomp FIFO and set bit 7, one to
+  observe `Kos_decomp_queue_count == 0`, clear it and DMA. For emerald art that is 1 module =
+  **2 frames**; the other 2 are Kosinski decompression latency, i.e. the sanctioned
+  hardware-timing input. The engine has the right home (`S3kKosModuleQueue`,
+  `HardwareWorkKind.KOS_MODULE_QUEUE`) but the special stage loads emerald art synchronously and
+  bypasses it.
+- **THE PUBLICATION-LAG PAIR IS SOLVED BUT HELD.** The counterpart is NOT in the harness: it is
+  one branch in `Sonic2SpecialStageManager.update()` where the gameplay loop's RunObjects
+  publication was gated behind `!intro.isSpecialStageStarted()` and deferred to the next update,
+  while the pre-start loop had already been fixed to publish in-update. The ROM's two loops are
+  identical in shape (s2.asm:6674-6688 and :6694-6721). **SEVENTH instance of "two
+  implementations of one contract, only one got the fix".** It explains the earlier
+  measurements exactly: allocation ran in-update (ordinals EXACT) while RunObjects collision ran
+  an observation later (ring collections +1).
+  Measured: lag fix ALONE turns all eight standalone stages red EARLY (combined_rings expected=0
+  actual=1, frames 626-799) — the mirror of removing the duplicate alone, which turns them red
+  LATE, because the duplicate routine-0 was buying exactly the one extra `loc_3512A` depth step
+  (s2.asm:70914-70957) the deferral was costing. **Together: all eight standalone stages GREEN,
+  TestS2SpecialStageTraceReplay GREEN, all six segment tests GREEN.**
+  HELD because the EHZ chain goes 26 -> 3360 (first error row 5230 -> 428, 448 divergent rows).
+  The shape is identical everywhere: on an observation owning TWO ROM passes the recording has
+  the first pass's transfers RETIRED and the second's still OUTSTANDING; without the deferral
+  the engine publishes both. **The lifecycle cannot express "submitted this row, retired next
+  row" for the last pass of a multi-pass observation** — the deferral produced that state by
+  accident. Patch preserved at r27-PAIR-HELD.patch.
+  REJECTED, do not retry: restating the DMA-service rule (service after every pass except the
+  last of the observation, in both `stepPasses` and `recordedPassPacing.afterPass`) made it
+  worse — chain 3360 -> 12008, and all eight stages red publishing FEWER edges.

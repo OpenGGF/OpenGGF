@@ -1539,7 +1539,12 @@ abstract class AbstractRunChainTest {
                                 bridge.executionPolicy(), rowPolicy.phase(),
                                 rowPolicy.observedVblankCounterAdvance(),
                                 previousObservedVblank,
-                                loop.getCurrentGameMode() == GameMode.LEVEL);
+                                loop.getCurrentGameMode() == GameMode.LEVEL,
+                                localRow + 1 < bridge.trace().frameCount()
+                                        && TraceReplayRowPolicy
+                                                .carriesDeferredVblank(
+                                                        bridge.trace(),
+                                                        localRow + 1));
                 boolean deferBoundaryCommit = false;
                 if (localRow + 1 < bridge.trace().frameCount()) {
                     TraceReplayRowPolicy nextRowPolicy =
