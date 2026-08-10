@@ -1,6 +1,9 @@
 package com.openggf.audio;
 
 import com.openggf.audio.rewind.AudioCommand;
+import com.openggf.audio.driver.SfxContentionObserver;
+import com.openggf.audio.driver.SmpsDriverServiceObserver;
+import com.openggf.audio.driver.SmpsRequestAdmissionPolicy;
 import com.openggf.audio.rewind.AudioCommandTimeline;
 import com.openggf.audio.rewind.AudioLogicalSnapshot;
 import com.openggf.audio.rewind.AudioPresentationPolicy;
@@ -18,6 +21,7 @@ import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.audio.smps.SmpsSequencer;
+import com.openggf.audio.synth.ChipWriteObserver;
 import com.openggf.audio.presentation.AudioPresentationCommand;
 import com.openggf.audio.presentation.AudioPresentationCommandQueue;
 import com.openggf.audio.presentation.AudioPresentationCommandResolver;
@@ -61,6 +65,13 @@ public class AudioManager implements MusicRestoreSink {
     private GameAudioProfile audioProfile;
     private boolean ringLeft = true;
     private AudioRequestObserver requestObserver = AudioRequestObserver.NONE;
+    private AudioAdmissionObserver admissionObserver =
+            AudioAdmissionObserver.NONE;
+    private SmpsDriverServiceObserver driverServiceObserver =
+            SmpsDriverServiceObserver.NONE;
+    private ChipWriteObserver chipWriteObserver = ChipWriteObserver.NONE;
+    private SfxContentionObserver sfxContentionObserver =
+            SfxContentionObserver.NONE;
     private int rewindReplaySuppressionDepth;
     private final AudioCommandTimeline commandTimeline = new AudioCommandTimeline();
     /**
@@ -408,6 +419,7 @@ public class AudioManager implements MusicRestoreSink {
         try {
             this.backend.init();
             this.backend.setAudioProfile(audioProfile);
+            installBackendDiagnosticObservers();
             installBackendPresentationSink();
             LOGGER.info("AudioBackend initialized: " + backend.getClass().getSimpleName());
         } catch (Exception e) {
@@ -416,6 +428,7 @@ public class AudioManager implements MusicRestoreSink {
             this.backend = new NullAudioBackend();
             this.backend.init();
             this.backend.setAudioProfile(audioProfile);
+            installBackendDiagnosticObservers();
             presentationSink =
                     new NoDeviceAudioSink(this.backend.outputSampleRate());
         }
@@ -478,6 +491,9 @@ public class AudioManager implements MusicRestoreSink {
         this.audioProfile = audioProfile;
         if (backend != null) {
             backend.setAudioProfile(audioProfile);
+        }
+        if (shadowFactory != null) {
+            shadowFactory.setSfxAdmissionPolicy(sfxAdmissionPolicy());
         }
     }
 
@@ -1557,6 +1573,66 @@ public class AudioManager implements MusicRestoreSink {
         requestObserver = observer == null ? AudioRequestObserver.NONE : observer;
     }
 
+    public void setAdmissionObserver(AudioAdmissionObserver observer) {
+        admissionObserver = observer == null
+                ? AudioAdmissionObserver.NONE : observer;
+        if (backend != null) {
+            backend.setAdmissionObserver(admissionObserver);
+        }
+        if (shadowFactory != null) {
+            shadowFactory.setAdmissionObserver(admissionObserver);
+        }
+    }
+
+    public void setDriverServiceObserver(
+            SmpsDriverServiceObserver observer) {
+        driverServiceObserver = observer == null
+                ? SmpsDriverServiceObserver.NONE : observer;
+        if (backend != null) {
+            backend.setDriverServiceObserver(driverServiceObserver);
+        }
+        if (shadowFactory != null) {
+            shadowFactory.setDriverServiceObserver(driverServiceObserver);
+        }
+    }
+
+    public void setChipWriteObserver(ChipWriteObserver observer) {
+        chipWriteObserver = observer == null
+                ? ChipWriteObserver.NONE : observer;
+        if (backend != null) {
+            backend.setChipWriteObserver(chipWriteObserver);
+        }
+        if (shadowFactory != null) {
+            shadowFactory.setChipWriteObserver(chipWriteObserver);
+        }
+    }
+
+    public void setSfxContentionObserver(
+            SfxContentionObserver observer) {
+        sfxContentionObserver = observer == null
+                ? SfxContentionObserver.NONE : observer;
+        if (backend != null) {
+            backend.setSfxContentionObserver(sfxContentionObserver);
+        }
+        if (shadowFactory != null) {
+            shadowFactory.setSfxContentionObserver(
+                    sfxContentionObserver);
+        }
+    }
+
+    private void installBackendDiagnosticObservers() {
+        backend.setAdmissionObserver(admissionObserver);
+        backend.setDriverServiceObserver(driverServiceObserver);
+        backend.setChipWriteObserver(chipWriteObserver);
+        backend.setSfxContentionObserver(sfxContentionObserver);
+    }
+
+    private SmpsRequestAdmissionPolicy sfxAdmissionPolicy() {
+        return audioProfile != null
+                ? audioProfile.getSfxAdmissionPolicy()
+                : SmpsRequestAdmissionPolicy.PERMISSIVE;
+    }
+
     private static AudioRequestObserver.RequestClass sfxRequestClass(int soundId) {
         if (soundId >= 0xD0 && soundId < 0xE0) {
             return AudioRequestObserver.RequestClass.SPECIAL_SFX;
@@ -1873,6 +1949,13 @@ public class AudioManager implements MusicRestoreSink {
         this.rom = null;
         this.soundMap = null;
         this.requestObserver = AudioRequestObserver.NONE;
+        this.admissionObserver = AudioAdmissionObserver.NONE;
+        this.driverServiceObserver = SmpsDriverServiceObserver.NONE;
+        this.chipWriteObserver = ChipWriteObserver.NONE;
+        this.sfxContentionObserver = SfxContentionObserver.NONE;
+        if (backend != null) {
+            installBackendDiagnosticObservers();
+        }
         this.audioProfile = null;
         this.ringLeft = true;
         this.rewindReplaySuppressionDepth = 0;
@@ -1912,6 +1995,9 @@ public class AudioManager implements MusicRestoreSink {
             submission.run();
             shadowParity.commandSubmitted();
         } catch (RuntimeException failure) {
+            if (failure instanceof AudioDiagnosticObserverException) {
+                throw failure;
+            }
             LOGGER.log(Level.WARNING,
                     "Presentation shadow command mirror failed", failure);
         }
@@ -1975,6 +2061,11 @@ public class AudioManager implements MusicRestoreSink {
                         AudioManager.class.getClassLoader()::getResourceAsStream);
         shadowFactory = new AudioPresentationSourceFactory(
                 () -> true, presentationCoordFlagHandlers, settings);
+        shadowFactory.setAdmissionObserver(admissionObserver);
+        shadowFactory.setDriverServiceObserver(driverServiceObserver);
+        shadowFactory.setChipWriteObserver(chipWriteObserver);
+        shadowFactory.setSfxContentionObserver(sfxContentionObserver);
+        shadowFactory.setSfxAdmissionPolicy(sfxAdmissionPolicy());
         shadowCommands = new AudioPresentationCommandQueue();
         shadowRegistry = new AudioVoiceRegistry(shadowFactory, shadowFactory,
                 presentationCoordFlagHandlers,
@@ -2275,6 +2366,8 @@ public class AudioManager implements MusicRestoreSink {
         if (presentationSink instanceof OpenAlPcmSink openAlSink) {
             openAlSink.pause();
         }
+        driverServiceObserver.onLifecycle(
+                SmpsDriverServiceObserver.LifecycleKind.PAUSE);
     }
 
     /**
@@ -2284,5 +2377,7 @@ public class AudioManager implements MusicRestoreSink {
         if (presentationSink instanceof OpenAlPcmSink openAlSink) {
             openAlSink.resume();
         }
+        driverServiceObserver.onLifecycle(
+                SmpsDriverServiceObserver.LifecycleKind.RESUME);
     }
 }

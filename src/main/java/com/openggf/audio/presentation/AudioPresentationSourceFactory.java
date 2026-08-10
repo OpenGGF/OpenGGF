@@ -1,8 +1,16 @@
 package com.openggf.audio.presentation;
 
 import com.openggf.audio.AudioManager;
+import com.openggf.audio.AudioAdmissionObserver;
+import com.openggf.audio.AudioAdmissionObserver.AudioAdmissionDecision;
+import com.openggf.audio.AudioDiagnosticObserverException;
 import com.openggf.audio.MusicRestoreSink;
+import com.openggf.audio.driver.SfxContentionObserver;
 import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.driver.SmpsDriverServiceObserver;
+import com.openggf.audio.driver.SmpsRequestAdmissionPolicy;
+import com.openggf.audio.driver.SmpsRequestAdmissionPolicy.AdmissionResult;
+import com.openggf.audio.driver.SmpsRequestAdmissionPolicy.SmpsAdmissionContext;
 import com.openggf.audio.presentation.AudioPresentationCommand.MusicVoiceEntry;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
@@ -13,6 +21,7 @@ import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.smps.SmpsSfxData;
+import com.openggf.audio.synth.ChipWriteObserver;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -100,6 +109,16 @@ public final class AudioPresentationSourceFactory
             new HashMap<>();
     private final Map<Long, String> musicGameIds = new HashMap<>();
     private final AtomicInteger cacheLookupCount = new AtomicInteger();
+    private AudioAdmissionObserver admissionObserver =
+            AudioAdmissionObserver.NONE;
+    private SmpsDriverServiceObserver driverServiceObserver =
+            SmpsDriverServiceObserver.NONE;
+    private SmpsRequestAdmissionPolicy sfxAdmissionPolicy =
+            SmpsRequestAdmissionPolicy.PERMISSIVE;
+    private ChipWriteObserver chipWriteObserver = ChipWriteObserver.NONE;
+    private SfxContentionObserver sfxContentionObserver =
+            SfxContentionObserver.NONE;
+    private long nextServiceOrdinal;
 
     public AudioPresentationSourceFactory(
             BooleanSupplier ownerThreadBoundary,
@@ -117,6 +136,29 @@ public final class AudioPresentationSourceFactory
         this.coordFlagHandlers =
                 Objects.requireNonNull(coordFlagHandlers, "coordFlagHandlers");
         this.settings = Objects.requireNonNull(settings, "settings");
+    }
+
+    public void setAdmissionObserver(AudioAdmissionObserver observer) {
+        admissionObserver = Objects.requireNonNull(observer, "observer");
+    }
+
+    public void setDriverServiceObserver(
+            SmpsDriverServiceObserver observer) {
+        driverServiceObserver = Objects.requireNonNull(observer, "observer");
+    }
+
+    public void setSfxAdmissionPolicy(
+            SmpsRequestAdmissionPolicy policy) {
+        sfxAdmissionPolicy = Objects.requireNonNull(policy, "policy");
+    }
+
+    public void setChipWriteObserver(ChipWriteObserver observer) {
+        chipWriteObserver = Objects.requireNonNull(observer, "observer");
+    }
+
+    public void setSfxContentionObserver(
+            SfxContentionObserver observer) {
+        sfxContentionObserver = Objects.requireNonNull(observer, "observer");
     }
 
     public MusicVoiceEntry musicSmps(
@@ -275,6 +317,63 @@ public final class AudioPresentationSourceFactory
         return new SmpsCompositeVoice(
                 source.standaloneVoiceId(), source.priority(), null, null,
                 source.maxStereoFrames(), newConfiguredDriver());
+    }
+
+    @Override
+    public Admission evaluateAdmission(
+            ResolvedSmpsSfxSource source, SmpsDriver currentOwner) {
+        Objects.requireNonNull(source, "source");
+        CachedSmpsSource cached = sfxAssets.get(source.assetKey());
+        if (cached == null) {
+            return rejectedAdmission(source,
+                    SmpsRequestAdmissionPolicy.RejectionReason.CACHE_MISS);
+        }
+        int requestedId = source.assetKey().sfxId();
+        SmpsAdmissionContext context = new SmpsAdmissionContext(
+                requestedId, cached.data().getId(), source.priority(),
+                SmpsRequestAdmissionPolicy.NO_PRIORITY,
+                cached.specialSfx(), false);
+        AdmissionResult result = Objects.requireNonNull(
+                sfxAdmissionPolicy.evaluate(context),
+                "SFX admission policy returned no result");
+        return new Admission(context, result);
+    }
+
+    @Override
+    public Admission rejectedAdmission(
+            ResolvedSmpsSfxSource source,
+            SmpsRequestAdmissionPolicy.RejectionReason reason) {
+        Objects.requireNonNull(source, "source");
+        CachedSmpsSource cached = sfxAssets.get(source.assetKey());
+        int resolvedId = cached != null
+                ? cached.data().getId() : source.assetKey().sfxId();
+        SmpsAdmissionContext context = new SmpsAdmissionContext(
+                source.assetKey().sfxId(), resolvedId,
+                source.priority(), SmpsRequestAdmissionPolicy.NO_PRIORITY,
+                cached != null && cached.specialSfx(), false);
+        return new Admission(context, new AdmissionResult(false, reason,
+                context.priorityBefore(), context.priorityBefore(),
+                context.resolvedSoundId()));
+    }
+
+    @Override
+    public void observeAdmission(Admission admission) {
+        if (admissionObserver == AudioAdmissionObserver.NONE) {
+            return;
+        }
+        AudioDiagnosticObserverException.invoke(() ->
+                admissionObserver.onDecision(new AudioAdmissionDecision(
+                        admission.context(), admission.result())));
+    }
+
+    @Override
+    public void observeLifecycle(
+            SmpsDriverServiceObserver.LifecycleKind kind) {
+        if (driverServiceObserver == SmpsDriverServiceObserver.NONE) {
+            return;
+        }
+        AudioDiagnosticObserverException.invoke(() ->
+                driverServiceObserver.onLifecycle(kind));
     }
 
     public SmpsCompositeVoice recreateSmps(
@@ -510,12 +609,88 @@ public final class AudioPresentationSourceFactory
     private SmpsDriver newConfiguredDriver() {
         SmpsDriver driver =
                 new SmpsDriver(settings.outputSampleRate());
+        installDiagnosticObservers(driver);
         driver.setRegion(settings.region());
         driver.setDacInterpolate(settings.dacInterpolate());
         driver.setOutputSampleRate(settings.outputSampleRate());
         driver.setPsgNoiseShiftOnEveryToggle(
                 settings.psgNoiseShiftEveryToggle());
+        driver.observeLifecycle(
+                SmpsDriverServiceObserver.LifecycleKind.DRIVER_CREATED);
         return driver;
+    }
+
+    private void installDiagnosticObservers(SmpsDriver driver) {
+        if (chipWriteObserver != ChipWriteObserver.NONE) {
+            driver.setChipWriteObserver(new ChipWriteObserver() {
+                @Override
+                public void onYm2612Write(
+                        int port, int register, int value) {
+                    AudioDiagnosticObserverException.invoke(() ->
+                            chipWriteObserver.onYm2612Write(
+                                    port, register, value));
+                }
+
+                @Override
+                public void onPsgWrite(int value) {
+                    AudioDiagnosticObserverException.invoke(() ->
+                            chipWriteObserver.onPsgWrite(value));
+                }
+            });
+        }
+        if (sfxContentionObserver != SfxContentionObserver.NONE) {
+            driver.setSfxContentionObserver(new SfxContentionObserver() {
+                @Override
+                public void onSfxAdmitted(Admission admission) {
+                    AudioDiagnosticObserverException.invoke(() ->
+                            sfxContentionObserver.onSfxAdmitted(admission));
+                }
+
+                @Override
+                public void onRoleArbitrated(Arbitration arbitration) {
+                    AudioDiagnosticObserverException.invoke(() ->
+                            sfxContentionObserver.onRoleArbitrated(arbitration));
+                }
+            });
+        }
+        if (driverServiceObserver == SmpsDriverServiceObserver.NONE) {
+            return;
+        }
+        driver.setServiceObserver(new SmpsDriverServiceObserver() {
+            private long activeOrdinal = -1;
+
+            @Override
+            public void onServiceBegin(long ignoredDriverOrdinal) {
+                if (activeOrdinal >= 0) {
+                    throw new IllegalStateException(
+                            "SMPS driver service observer was re-entered");
+                }
+                activeOrdinal = nextServiceOrdinal++;
+                AudioDiagnosticObserverException.invoke(() ->
+                        driverServiceObserver.onServiceBegin(activeOrdinal));
+            }
+
+            @Override
+            public void onServiceEnd(
+                    long ignoredDriverOrdinal,
+                    SmpsDriverSnapshot snapshot) {
+                long completedOrdinal = activeOrdinal;
+                if (completedOrdinal < 0) {
+                    throw new IllegalStateException(
+                            "SMPS driver service ended without a begin");
+                }
+                activeOrdinal = -1;
+                AudioDiagnosticObserverException.invoke(() ->
+                        driverServiceObserver.onServiceEnd(
+                                completedOrdinal, snapshot));
+            }
+
+            @Override
+            public void onLifecycle(LifecycleKind kind) {
+                AudioDiagnosticObserverException.invoke(() ->
+                        driverServiceObserver.onLifecycle(kind));
+            }
+        });
     }
 
     private SmpsSequencerConfig copyPresentationConfig(

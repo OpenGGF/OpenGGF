@@ -1,5 +1,6 @@
 package com.openggf.audio;
 
+import com.openggf.audio.driver.SmpsRequestAdmissionPolicy;
 import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
@@ -99,6 +100,15 @@ public interface GameAudioProfile {
      */
     default int getSfxPriority(int soundId) {
         return 0x70; // Default priority
+    }
+
+    /**
+     * Returns the game-owned whole-request SFX admission policy. The shared
+     * default is exactly permissive, leaving existing driver-owned S1
+     * per-role priority behavior unchanged.
+     */
+    default SmpsRequestAdmissionPolicy getSfxAdmissionPolicy() {
+        return SmpsRequestAdmissionPolicy.PERMISSIVE;
     }
 
     /**
