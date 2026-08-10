@@ -19,6 +19,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.zip.GZIPOutputStream;
+import java.util.zip.GZIPInputStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -237,6 +238,27 @@ class TestCompleteRunAudioCaptureStore {
     }
 
     @Test
+    void handAuthoredStoreCaptureVectorPinsRecordsGzipChunkAndManifest() throws Exception {
+        Path output = temp.resolve("vector-capture");
+        store.writeNew(output, metadata(1), records(1).iterator());
+        // Generated once with RFC 1952/JDK 21 gzip and this literal JSON fixture, then pasted.
+        String canonical = """
+                {"type":"baseline","value":{"absoluteFrame":860,"state":{"fields":[{"name":"tempo","value":1}],"roles":[{"role":"FM1","active":false,"fields":[]}]}}}
+                {"type":"frame","value":{"absoluteFrame":860,"segment":"test","lag":false,"requests":[],"services":[]}}
+                {"type":"terminal","value":{"exclusiveEnd":861,"frameCount":1,"requestCount":0,"serviceCount":0,"decisionCount":0,"ymCount":0,"psgCount":0,"lifecycleCount":0,"rootDigest":"7d5d899ef7d5cdd704afbf34da0e9eba8abec5e55fb56e7e8c34bed308b245b4"}}
+                """;
+        String gzip = "1f8b08000000000000ff854fbb6e843010ecf3195b53400e8e479bcb75f98288626daf912563136c5010e2df632001ba74b3b3b333b333f8a923a880a123ad0c410423ea2150332073560f9e9e3db68128ee7104cea3df965291160eaacf19ccb6064f6d67cffb64a923e8ada65db4a2207a7e244182dcab318c12b5a3e8f4aa977a599697f9af95dc92ffab444d4bc66f0d9c0f6a8dcd61ddd3d710d8cd7c95f6a3e2b4475d723cf5ad32a8af51f4cdf5e042cd7723d6a424daebbcd9610d4b0eef5f223eec4f4210574e597332537be2ce35e7a095243e717db9eeadf50fd5ac4f55908b4c14654932002e441ea72899bca502632a8961818c784659265976a79c0a7e4b19895b5cb0d7346329847f7f0071bd503eee010000";
+        String manifest = """
+                {"schema":"complete_run_audio.v1","metadata":{"schema":"complete_run_audio.v1","profileId":"store.test.1","fixture":{"romSha1":"0000000000000000000000000000000000000000","romCrc32":"11111111","bk2Sha256":"2222222222222222222222222222222222222222222222222222222222222222","bk2RowCount":861,"runManifestSha256":"3333333333333333333333333333333333333333333333333333333333333333","segments":[{"id":"test","firstFrame":860,"exclusiveEnd":861}],"firstFrame":860,"exclusiveEnd":861},"producerKind":"OPENGGF","producerRuntimeIdentity":{"producerName":"OpenGGF","producerVersion":"test","emulatorName":"OpenGGF","emulatorVersion":"test","coreName":"SMPS","coreVersion":"test","artifactSha256":{"OPENGGF_PRODUCER":"4444444444444444444444444444444444444444444444444444444444444444"}},"observerProof":{"observerProfile":"test","callbackSource":"test","callbacks":[{"callback":"service","observations":1}]},"chunkPolicy":{"frameRows":4096,"compression":"gzip","gzipTimestamp":0},"hardwareRoles":["FM1"],"stateInventory":{"globalFields":["tempo"],"activeRoleFields":["cursor"]}},"chunks":[{"file":"000000.jsonl.gz","frame_rows":1,"first_frame":860,"exclusive_end":861,"compressed_sha256":"bf493ec0ed309fbebf1733445986e5875d6dbe4fd135e46b7c6d38075aebdc4c","uncompressed_sha256":"eb37fb31d069b5c15e809d896d03c226d623150d8b9067315bc7c1f9237550dc"}],"root_digest":"7d5d899ef7d5cdd704afbf34da0e9eba8abec5e55fb56e7e8c34bed308b245b4"}""";
+        byte[] actual = Files.readAllBytes(output.resolve("chunks/000000.jsonl.gz"));
+        assertArrayEquals(HexFormat.of().parseHex(gzip), actual);
+        assertEquals(manifest, Files.readString(output.resolve("manifest.json")));
+        try (var input = new GZIPInputStream(new java.io.ByteArrayInputStream(actual))) {
+            assertEquals(canonical, new String(input.readAllBytes(), StandardCharsets.UTF_8));
+        }
+    }
+
+    @Test
     void readerUsesBoundedMemoryForTwentyThousandFrameCapture() throws Exception {
         Path output = temp.resolve("large-capture");
         store.writeNew(output, metadata(20_000), records(20_000).iterator());
@@ -253,6 +275,14 @@ class TestCompleteRunAudioCaptureStore {
         int frames = CompleteRunAudioCaptureStore.MAX_CAPTURE_CHUNKS * CHUNK_FRAME_ROWS;
         Path output = temp.resolve("hostile-capture");
         store.writeNew(output, metadata(frames), hostileRecords(frames));
+        long compressedBytes;
+        try (var chunks = Files.list(output.resolve("chunks"))) {
+            compressedBytes = chunks.mapToLong(path -> {
+                try { return Files.size(path); } catch (IOException failure) { throw new java.io.UncheckedIOException(failure); }
+            }).sum();
+        }
+        assertTrue(compressedBytes > 32L * 1024 * 1024,
+                () -> "hostile compressed payload was only " + compressedBytes + " bytes");
         String java = Path.of(System.getProperty("java.home"), "bin", "java").toString();
         Process process = new ProcessBuilder(java, "-Xmx16m", "-cp", System.getProperty("java.class.path"),
                 TestCompleteRunAudioCaptureStore.class.getName(), "hostile-read-probe", output.toString())
@@ -353,7 +383,7 @@ class TestCompleteRunAudioCaptureStore {
     }
 
     private static Frame hostileFrame(int row) {
-        String segment = "chunk-row-" + String.format("%08x", row);
+        String segment = entropy(row) + entropy(row ^ 0x5a5a5a5a);
         if (row % 64 != 0) return new Frame(860 + row, segment, (row & 1) == 0, List.of(), List.of());
         NormalizedState state = new NormalizedState(List.of(new StateField("tempo", row)),
                 List.of(new RoleState(HardwareRole.FM1, true, List.of(new StateField("cursor", row)))));
@@ -366,6 +396,15 @@ class TestCompleteRunAudioCaptureStore {
                 List.of(new YmWrite(row * 2L, 0, row & 0xff, (row * 31) & 0xff),
                         new PsgWrite(row * 2L + 1, (row * 17) & 0xff)));
         return new Frame(860 + row, segment, false, List.of(request), List.of(service));
+    }
+
+    private static String entropy(int row) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                    .digest(("complete-run-audio-hostile-v1:" + row).getBytes(StandardCharsets.US_ASCII)));
+        } catch (java.security.NoSuchAlgorithmException failure) {
+            throw new AssertionError(failure);
+        }
     }
 
     private static String root(List<CompleteRunAudioTrace.Record> records) {
