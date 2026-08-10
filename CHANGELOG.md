@@ -5,7 +5,9 @@ All notable changes to the OpenGGF project are documented in this file.
 ## Unreleased
 - Fix: replacing a base ROM/audio profile or donor SMPS source now publishes its loader,
   DAC, configuration, and monotonically increasing catalog generation as one transaction.
-  Failed source construction or backend/profile setup leaves the prior source usable, while
+  Command resolution captures that complete source and its SFX policy once, so reentrant or
+  concurrent replacement cannot mix generations. Failed source, coordination-handler, or
+  backend/profile setup (including fatal error paths) restores the prior configuration, while
   live and rewind voices retain their original generation without allowing new commands to
   reuse stale programs.
 - Fix: the Sonic 3 & Knuckles special stage loads its emerald art through the real Kosinski
