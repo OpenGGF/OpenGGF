@@ -687,6 +687,13 @@ public final class TraceRunReplayWalker {
     }
 
     /**
+     * @see com.openggf.trace.TraceReplayBootstrap#levelLoopRowCount(TraceData)
+     */
+    public static int levelLoopRowCount(TraceData trace) {
+        return com.openggf.trace.TraceReplayBootstrap.levelLoopRowCount(trace);
+    }
+
+    /**
      * Plans the unrecorded tail after a run's final comparison segment. Only a
      * recorder-declared endpoint opts in; an unspecified endpoint deliberately
      * leaves both tail replay and terminal assertion disabled.

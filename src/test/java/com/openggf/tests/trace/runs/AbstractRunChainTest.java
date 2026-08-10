@@ -856,7 +856,8 @@ abstract class AbstractRunChainTest {
                 dynamicArtGapJournal.sourceClosed(seg.segment().dir());
                 dynamicArtSegments.enterGap();
                 runCoordinator.closeCurrent(
-                        loop.getCurrentGameMode(), activeComparator.isComplete());
+                        loop.getCurrentGameMode(),
+                        sourceComparatorExhausted(seg, activeComparator));
                 maybeWriteReport(run.runId(), i, activeComparator);
                 dynamicArtGapJournal.gapOpened(seg.segment().dir());
                 if (last) {
@@ -1132,7 +1133,8 @@ abstract class AbstractRunChainTest {
                             loop.getCurrentGameMode(), uncomparedInterior
                                     ? dynamicArtGapOpened[0]
                                     : activeComparator != null
-                                            && activeComparator.isComplete());
+                                            && sourceComparatorExhausted(
+                                                    seg, activeComparator));
                 }
                 assertTrue(obs.observed(),
                         "Interior exit boundary (stage_exit) was never observed within the "
@@ -1215,7 +1217,8 @@ abstract class AbstractRunChainTest {
                 dynamicArtGapJournal.sourceClosed(seg.segment().dir());
                 dynamicArtSegments.enterGap();
                 runCoordinator.closeCurrent(
-                        loop.getCurrentGameMode(), activeComparator.isComplete());
+                        loop.getCurrentGameMode(),
+                        sourceComparatorExhausted(seg, activeComparator));
                 maybeWriteReport(run.runId(), i, activeComparator);
                 assertTrue(obs.observed(),
                         "Segment " + i + " (" + seg.segment().dir()
@@ -1264,7 +1267,8 @@ abstract class AbstractRunChainTest {
                 dynamicArtGapJournal.sourceClosed(seg.segment().dir());
                 dynamicArtSegments.enterGap();
                 runCoordinator.closeCurrent(
-                        loop.getCurrentGameMode(), activeComparator.isComplete());
+                        loop.getCurrentGameMode(),
+                        sourceComparatorExhausted(seg, activeComparator));
                 maybeWriteReport(run.runId(), i, activeComparator);
                 assertTrue(obs.observed(), "Segment " + i + " (" + seg.segment().dir()
                         + ") exit boundary (" + exit.entryKind()
@@ -1880,6 +1884,30 @@ abstract class AbstractRunChainTest {
     // Handoffs
     // -------------------------------------------------------------------------
 
+    /**
+     * ENTRY-side twin of the bonus-exit OPTION B fact (see the {@code stage_exit}
+     * branch): a source segment that ends in a level reload records the ROM's
+     * whole {@code Level:} prologue -- {@code Pal_FadeToBlack}, the
+     * {@code Clear_DisplayData} RAM wipe and the DESTINATION's load -- inside the
+     * SOURCE segment, because the recorder cuts at the destination's first
+     * gameplay row. Those rows are not LevelLoop iterations of the source level,
+     * the engine has left LEVEL by then, and it performs the reload synchronously
+     * (loadZoneAndAct is one frame), so demanding the source comparator consume
+     * them is unsatisfiable by construction.
+     *
+     * <p>The row split comes from recorded ROM state (the terminal
+     * {@code zone_act_state} {@code game_mode} reload bit of
+     * {@code bset #7,(Game_mode).w}) -- see
+     * {@link TraceRunReplayWalker#levelLoopRowCount}. Segments that do not end in
+     * a reload are unaffected: their in-level row count is the whole trace.
+     */
+    private static boolean sourceComparatorExhausted(
+            SegmentPlan segment, LiveTraceComparator comparator) {
+        return comparator.isComplete()
+                || comparator.cursor()
+                        >= TraceRunReplayWalker.levelLoopRowCount(segment.trace());
+    }
+
     private void completePinnedSourceTailAfterBoundary(
             GameLoop loop, LiveTraceComparator comparator,
             SegmentPlan segment, int stepCap, int initialCursor,
@@ -1887,7 +1915,7 @@ abstract class AbstractRunChainTest {
         int steps = 0;
         int startCursor = comparator.cursor();
         List<GameMode> modePath = new ArrayList<>();
-        while (!comparator.isComplete() && steps < stepCap) {
+        while (!sourceComparatorExhausted(segment, comparator) && steps < stepCap) {
             GameMode mode = loop.getCurrentGameMode();
             if (modePath.isEmpty() || modePath.getLast() != mode) {
                 modePath.add(mode);
@@ -1925,7 +1953,7 @@ abstract class AbstractRunChainTest {
             }
             steps++;
         }
-        if (!comparator.isComplete()) {
+        if (!sourceComparatorExhausted(segment, comparator)) {
             throw new AssertionError(
                     "source comparator did not exhaust after boundary for "
                             + segment.segment().dir()
@@ -1941,7 +1969,7 @@ abstract class AbstractRunChainTest {
 
     private static void requireComparatorComplete(
             SegmentPlan segment, LiveTraceComparator comparator) {
-        if (!comparator.isComplete()) {
+        if (!sourceComparatorExhausted(segment, comparator)) {
             throw new AssertionError(
                     "source comparator is not complete for "
                             + segment.segment().dir() + ": cursor "

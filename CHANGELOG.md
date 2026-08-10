@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Sonic 3&K's star-post bonus star now tests the player with the ROM's own touch geometry
+  and at the ROM's point in the frame. It had used an invented 16x16 box evaluated after the
+  star had already been repositioned; the ROM reads `collision_property` first (`loc_2D47E`)
+  and the box comes from `collision_flags` $D8 -> `Touch_Sizes` entry $18 = 4x4 against the
+  player's `Touch_NoInstaShield` extents. The star was capturing the player two frames early.
 - Fix: the S3K direct-decompression queue's `prepared` heartbeat no longer reports a false
   divergence when the engine's boundary-granular model of it runs ahead of the ROM. The recorded
   field is bit 15 of `Kos_decomp_queue_count`, which the ROM sets only once execution is inside
