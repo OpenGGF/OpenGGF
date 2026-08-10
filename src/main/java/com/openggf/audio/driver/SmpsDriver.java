@@ -434,7 +434,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                         dependency.audioManager(),
                         dependency.config(),
                         entry.source(),
-                        entry.sourceDescriptorTrust());
+                        dependency.sourceDescriptorTrust());
                 sequencer.setRegion(region);
                 sequencer.restoreSnapshot(entry.snapshot());
                 sequencer.setIsSfx(entry.sfx());
@@ -477,6 +477,9 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             boolean trustedIdentity = entry.sourceDescriptorTrust()
                     == SmpsSequencer.SourceDescriptorTrust.PRECOMPUTED_IMMUTABLE
                     && smpsData == entry.smpsData();
+            SmpsSequencer.SourceDescriptorTrust effectiveTrust = trustedIdentity
+                    ? SmpsSequencer.SourceDescriptorTrust.PRECOMPUTED_IMMUTABLE
+                    : SmpsSequencer.SourceDescriptorTrust.LEGACY_RECOMPUTE;
             SmpsSourceDescriptor resolvedSource = trustedIdentity
                     ? entry.source() : SmpsSourceDescriptor.from(smpsData);
             if (!entry.source().matches(resolvedSource)) {
@@ -488,7 +491,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                     smpsData,
                     Objects.requireNonNull(resolver.resolveDacData(entry), "resolved DAC data"),
                     Objects.requireNonNull(resolver.resolveAudioManager(entry), "resolved audio manager"),
-                    Objects.requireNonNull(resolver.resolveConfig(entry), "resolved config")));
+                    Objects.requireNonNull(resolver.resolveConfig(entry), "resolved config"),
+                    effectiveTrust));
         }
         return resolved;
     }
@@ -510,7 +514,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             AbstractSmpsData smpsData,
             DacData dacData,
             MusicRestoreSink audioManager,
-            SmpsSequencerConfig config) {
+            SmpsSequencerConfig config,
+            SmpsSequencer.SourceDescriptorTrust sourceDescriptorTrust) {
     }
 
     private static int[] captureLockIds(
