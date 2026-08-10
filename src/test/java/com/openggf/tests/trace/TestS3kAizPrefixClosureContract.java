@@ -2,6 +2,7 @@ package com.openggf.tests.trace;
 
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.objects.AizPlaneIntroInstance;
+import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.rules.RequiresRom;
@@ -177,7 +178,16 @@ class TestS3kAizPrefixClosureContract {
                 .withZoneAndAct(zone, act)
                 .withRecording(bk2)
                 .withRecordingStartFrame(
-                        TraceReplayBootstrap.recordingStartFrameForTraceReplay(trace));
+                        TraceReplayBootstrap.recordingStartFrameForTraceReplay(trace))
+                // Same selection AbstractTraceReplayTest makes: when the trace
+                // carries recorded hardware timing input, the gameplay context
+                // must own recorded admission before the level load submits any
+                // hardware work, because applyBootstrap installs the timing
+                // replay port against that authority.
+                .withHardwareReadinessAdmissionPolicy(
+                        trace.hardwareTimingSchedule().hasRecordedInput()
+                                ? HardwareReadinessAdmissionPolicy.RECORDED
+                                : HardwareReadinessAdmissionPolicy.LIVE);
         if (metadataStart) {
             builder.startPosition(trace.metadata().startX(), trace.metadata().startY())
                     .startPositionIsCentre();
