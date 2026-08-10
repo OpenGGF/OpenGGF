@@ -89,10 +89,6 @@ public final class AudioPresentationSourceFactory
             DacData dac, SmpsSequencerConfig config) {
     }
 
-    private record CompatibilityProgram(
-            long generation, SmpsAssetCatalog.ProgramEntry entry) {
-    }
-
     private final BooleanSupplier ownerThreadBoundary;
     private final SmpsCoordFlagHandlerOwner coordFlagHandlers;
     private final Settings settings;
@@ -103,8 +99,6 @@ public final class AudioPresentationSourceFactory
     private final Map<SmpsAssetCatalog.DependencyKey,
             CompatibilityDependencies> compatibilityDependencies =
             new HashMap<>();
-    private final Map<SmpsAssetKey, CompatibilityProgram>
-            compatibilityPrograms = new HashMap<>();
     private final Map<Long, PresentationVoiceSnapshot.Smps> musicBlueprints =
             new HashMap<>();
     private final Map<Long, String> musicGameIds = new HashMap<>();
@@ -356,9 +350,8 @@ public final class AudioPresentationSourceFactory
         SmpsAssetKey resolvedKey = Objects.requireNonNull(key, "key");
         CompatibilityDependencies dependencies = compatibilityDependencies(
                 resolvedKey, dac, config);
-        return registerCompatibilityProgram(
-                resolvedKey, data, dependencies.dac(),
-                dependencies.config(), specialSfx);
+        return register(new SmpsAssetCatalog.ProgramKey(resolvedKey, 0),
+                data, dependencies.dac(), dependencies.config(), specialSfx);
     }
 
     private SmpsAssetCatalog.ProgramEntry registerCompatibilitySmpsMusicAsset(
@@ -366,32 +359,8 @@ public final class AudioPresentationSourceFactory
             AbstractSmpsData data,
             DacData dac,
             SmpsSequencerConfig config) {
-        return registerCompatibilityProgram(key, data, dac, config, false);
-    }
-
-    private SmpsAssetCatalog.ProgramEntry registerCompatibilityProgram(
-            SmpsAssetKey key,
-            AbstractSmpsData data,
-            DacData dac,
-            SmpsSequencerConfig config,
-            boolean specialSfx) {
-        // Pre-generation callers historically replaced synthetic fixtures under
-        // one key. Preserve each immutable version until Tasks 5-6 make their
-        // source generation explicit.
-        CompatibilityProgram current = compatibilityPrograms.get(key);
-        long generation = current != null ? current.generation() : 0;
-        while (true) {
-            try {
-                SmpsAssetCatalog.ProgramEntry entry = register(
-                        new SmpsAssetCatalog.ProgramKey(key, generation),
-                        data, dac, config, specialSfx);
-                compatibilityPrograms.put(
-                        key, new CompatibilityProgram(generation, entry));
-                return entry;
-            } catch (SmpsAssetCatalog.ProgramIdentityConflict conflict) {
-                generation++;
-            }
-        }
+        return register(new SmpsAssetCatalog.ProgramKey(key, 0),
+                data, dac, config, false);
     }
 
     private CompatibilityDependencies compatibilityDependencies(
@@ -636,11 +605,8 @@ public final class AudioPresentationSourceFactory
     private SmpsAssetCatalog.ProgramEntry requireCached(
             ResolvedSmpsSfxSource source) {
         Objects.requireNonNull(source, "source");
-        CompatibilityProgram compatibility =
-                compatibilityPrograms.get(source.assetKey());
-        SmpsAssetCatalog.ProgramEntry cached = compatibility != null
-                ? compatibility.entry()
-                : findRegisteredSmpsSfxAsset(source.assetKey(), 0);
+        SmpsAssetCatalog.ProgramEntry cached =
+                findRegisteredSmpsSfxAsset(source.assetKey(), 0);
         if (cached == null) {
             throw new IllegalStateException(
                     "SMPS SFX asset cache miss: " + source.assetKey());
@@ -653,7 +619,8 @@ public final class AudioPresentationSourceFactory
         SmpsSequencer sequencer = new SmpsSequencer(
                 source.program(), source.dac(), driver,
                 settings.audioManager(),
-                source.staticConfig(), source.sourceDescriptor());
+                source.staticConfig(), source.sourceDescriptor(),
+                SmpsSequencer.SourceDescriptorTrust.PRECOMPUTED_IMMUTABLE);
         sequencer.setSampleRate(driver.getOutputSampleRate());
         sequencer.setFm6DacOff(settings.fm6DacOff());
         return sequencer;

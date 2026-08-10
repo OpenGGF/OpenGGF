@@ -237,6 +237,66 @@ class TestSmpsAssetCatalog {
     }
 
     @Test
+    void unversionedConflictCannotConsumeOrAdvertiseRealGenerationOne() {
+        AudioPresentationSourceFactory factory = factory();
+        SmpsAssetKey key = new SmpsAssetKey(
+                "base", SmpsAssetKey.Route.BASE_ID, 0xA0, null);
+        DacData generationZeroDac = dac(1);
+        SmpsSequencerConfig generationZeroConfig = config();
+        SmpsAssetCatalog.ProgramEntry generationZero =
+                factory.registerSmpsSfxAsset(
+                        key, CountingSfxData.sfx(0xA0, 1),
+                        generationZeroDac, generationZeroConfig, false);
+
+        assertThrows(IllegalStateException.class,
+                () -> factory.registerSmpsSfxAsset(
+                        key, CountingSfxData.sfx(0xA0, 2),
+                        dac(2), config(), false));
+
+        assertEquals(0,
+                generationZero.sourceDescriptor().dependencyGeneration());
+        assertNull(factory.findRegisteredSmpsSfxAsset(key, 1));
+
+        DacData generationOneDac = dac(3);
+        SmpsSequencerConfig generationOneConfig = config();
+        SmpsAssetCatalog.ProgramEntry generationOne =
+                factory.registerSmpsSfxAsset(
+                        key, 1, CountingSfxData.sfx(0xA0, 2),
+                        generationOneDac, generationOneConfig, false);
+
+        assertEquals(1,
+                generationOne.sourceDescriptor().dependencyGeneration());
+        assertSame(generationOneDac, generationOne.dac());
+        assertSame(generationOne,
+                factory.findRegisteredSmpsSfxAsset(key, 1));
+    }
+
+    @Test
+    void rejectedUnversionedReplacementCannotRetargetQueuedSource() {
+        AudioPresentationSourceFactory factory = factory();
+        SmpsAssetKey key = new SmpsAssetKey(
+                "base", SmpsAssetKey.Route.BASE_ID, 0xA0, null);
+        SmpsAssetCatalog.ProgramEntry registeredA =
+                factory.registerSmpsSfxAsset(
+                        key, CountingSfxData.sfx(0xA0, 1),
+                        dac(1), config(), false);
+        ResolvedSmpsSfxSource queuedA = factory.resolveSmpsSfx(
+                1, key, 1 << 16, 0x70, 0, 1, 32);
+
+        assertThrows(IllegalStateException.class,
+                () -> factory.registerSmpsSfxAsset(
+                        key, CountingSfxData.sfx(0xA0, 2),
+                        dac(2), config(), false));
+        SmpsSequencer instantiatedA = factory.instantiateCached(
+                queuedA, new com.openggf.audio.driver.SmpsDriver());
+
+        assertSame(registeredA.program(), instantiatedA.getSmpsData());
+        assertSame(registeredA.sourceDescriptor(),
+                instantiatedA.getSourceDescriptor());
+        assertEquals(1, instantiatedA.programView().dataByteAt(1));
+    }
+
+    @Test
     void repeatedBaseAndDonorMusicShareAssetsButNotMutablePlaybackState() {
         AudioPresentationSourceFactory factory = factory();
         assertMusicSharing(factory, "base", SmpsAssetKey.Route.BASE_MUSIC,

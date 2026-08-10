@@ -26,6 +26,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     private AbstractSmpsData fallbackVoiceData;
     private SmpsProgramView fallbackVoiceView;
     private SmpsSourceDescriptor sourceDescriptor;
+    private SourceDescriptorTrust sourceDescriptorTrust;
     private final SmpsProgramView programView;
     private final Synthesizer synth;
     private final SmpsSequencerConfig config;
@@ -41,6 +42,11 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         Region(double frameRate) {
             this.frameRate = frameRate;
         }
+    }
+
+    public enum SourceDescriptorTrust {
+        LEGACY_RECOMPUTE,
+        PRECOMPUTED_IMMUTABLE
     }
 
     private Region region = Region.NTSC;
@@ -138,6 +144,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         private final SmpsSequencerSnapshot snapshot;
         private final AbstractSmpsData fallbackVoiceData;
         private final SmpsSourceDescriptor sourceDescriptor;
+        private final SourceDescriptorTrust sourceDescriptorTrust;
         private final Runnable onFadeComplete;
 
         private LiveCommandMutationToken(
@@ -145,11 +152,13 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 SmpsSequencerSnapshot snapshot,
                 AbstractSmpsData fallbackVoiceData,
                 SmpsSourceDescriptor sourceDescriptor,
+                SourceDescriptorTrust sourceDescriptorTrust,
                 Runnable onFadeComplete) {
             this.owner = owner;
             this.snapshot = snapshot;
             this.fallbackVoiceData = fallbackVoiceData;
             this.sourceDescriptor = sourceDescriptor;
+            this.sourceDescriptorTrust = sourceDescriptorTrust;
             this.onFadeComplete = onFadeComplete;
         }
     }
@@ -157,7 +166,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     public LiveCommandMutationToken captureLiveCommandMutation() {
         return new LiveCommandMutationToken(
                 this, captureSnapshot(), fallbackVoiceData,
-                sourceDescriptor, onFadeComplete);
+                sourceDescriptor, sourceDescriptorTrust, onFadeComplete);
     }
 
     public void rollbackLiveCommandMutation(
@@ -171,6 +180,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         fallbackVoiceData = token.fallbackVoiceData;
         fallbackVoiceView = token.fallbackVoiceData;
         sourceDescriptor = token.sourceDescriptor;
+        sourceDescriptorTrust = token.sourceDescriptorTrust;
         onFadeComplete = token.onFadeComplete;
     }
 
@@ -369,7 +379,8 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
 
     public SmpsSequencer(AbstractSmpsData smpsData, DacData dacData, Synthesizer synth,
             MusicRestoreSink audioManager, SmpsSequencerConfig config) {
-        this(smpsData, dacData, synth, audioManager, config, null);
+        this(smpsData, dacData, synth, audioManager, config, null,
+                SourceDescriptorTrust.LEGACY_RECOMPUTE);
     }
 
     public SmpsSequencer(
@@ -379,8 +390,27 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             MusicRestoreSink audioManager,
             SmpsSequencerConfig config,
             SmpsSourceDescriptor sourceDescriptor) {
+        this(smpsData, dacData, synth, audioManager, config,
+                sourceDescriptor, SourceDescriptorTrust.LEGACY_RECOMPUTE);
+    }
+
+    public SmpsSequencer(
+            AbstractSmpsData smpsData,
+            DacData dacData,
+            Synthesizer synth,
+            MusicRestoreSink audioManager,
+            SmpsSequencerConfig config,
+            SmpsSourceDescriptor sourceDescriptor,
+            SourceDescriptorTrust sourceDescriptorTrust) {
         this.smpsData = Objects.requireNonNull(smpsData, "smpsData");
         this.programView = smpsData;
+        this.sourceDescriptorTrust = Objects.requireNonNull(
+                sourceDescriptorTrust, "sourceDescriptorTrust");
+        if (sourceDescriptor == null
+                && sourceDescriptorTrust == SourceDescriptorTrust.PRECOMPUTED_IMMUTABLE) {
+            throw new IllegalArgumentException(
+                    "precomputed source descriptor is required for immutable trust");
+        }
         this.sourceDescriptor = sourceDescriptor != null
                 ? sourceDescriptor : SmpsSourceDescriptor.from(smpsData);
         this.audioManager = Objects.requireNonNull(audioManager, "audioManager");
@@ -488,8 +518,13 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         return sourceDescriptor;
     }
 
+    public SourceDescriptorTrust getSourceDescriptorTrust() {
+        return sourceDescriptorTrust;
+    }
+
     public void setSourceDescriptor(SmpsSourceDescriptor sourceDescriptor) {
         this.sourceDescriptor = Objects.requireNonNull(sourceDescriptor, "sourceDescriptor");
+        sourceDescriptorTrust = SourceDescriptorTrust.LEGACY_RECOMPUTE;
     }
 
     public DacData getDacData() {
