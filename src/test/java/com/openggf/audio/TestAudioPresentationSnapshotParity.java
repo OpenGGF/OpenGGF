@@ -19,6 +19,7 @@ import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.data.Rom;
 import com.openggf.debug.PerformanceProfiler;
 import com.openggf.game.sonic3k.audio.Sonic3kSmpsSequencerConfig;
 import com.openggf.game.sonic3k.audio.smps.Sonic3kCoordFlagHandler;
@@ -151,15 +152,17 @@ class TestAudioPresentationSnapshotParity {
         sfx.setId(0xA0);
         loader.musicResults.put(0x81, music);
         loader.sfxResults.put(0xA0, sfx);
+        com.openggf.audio.smps.SmpsSequencerConfig config =
+                new com.openggf.audio.smps.SmpsSequencerConfig.Builder()
+                        .build();
         audio.setAudioProfile(new AudioTestFixtures.StubAudioProfile(loader) {
             @Override
             public com.openggf.audio.smps.SmpsSequencerConfig
                     getSequencerConfig() {
-                return new com.openggf.audio.smps.SmpsSequencerConfig.Builder()
-                        .build();
+                return config;
             }
         });
-        audio.setRom(null);
+        audio.setRom(new Rom());
         AudioKeyframeStore keyframes = new AudioKeyframeStore();
         audio.beginCommandTimelineFrame(10);
         keyframes.capture(10, audio);
@@ -224,7 +227,7 @@ class TestAudioPresentationSnapshotParity {
         sfx.setId(0xA0);
         loader.sfxResults.put(0xA0, sfx);
         audio.setAudioProfile(configuredProfile(loader));
-        audio.setRom(null);
+        audio.setRom(new Rom());
         AudioTestFixtures.RecordingAudioBackend liveBackend =
                 new AudioTestFixtures.RecordingAudioBackend();
         audio.setBackend(liveBackend);
@@ -428,7 +431,7 @@ class TestAudioPresentationSnapshotParity {
             loader.musicResults.put(id, donorOverride);
         }
         audio.setAudioProfile(configuredS3kProfile(loader));
-        audio.setRom(null);
+        audio.setRom(new Rom());
         audio.registerDonorLoader(
                 "s3k", loader, loader.loadDacData(),
                 Sonic3kSmpsSequencerConfig.CONFIG);
@@ -564,7 +567,7 @@ class TestAudioPresentationSnapshotParity {
                 return 0x82;
             }
         });
-        audio.setRom(null);
+        audio.setRom(new Rom());
         audio.registerDonorLoader(
                 "s3k", loader, loader.loadDacData(),
                 Sonic3kSmpsSequencerConfig.CONFIG);
@@ -776,12 +779,14 @@ class TestAudioPresentationSnapshotParity {
 
     private static GameAudioProfile configuredProfile(
             AudioTestFixtures.StubSmpsLoader loader) {
+        com.openggf.audio.smps.SmpsSequencerConfig config =
+                new com.openggf.audio.smps.SmpsSequencerConfig.Builder()
+                        .build();
         return new AudioTestFixtures.StubAudioProfile(loader) {
             @Override
             public com.openggf.audio.smps.SmpsSequencerConfig
                     getSequencerConfig() {
-                return new com.openggf.audio.smps.SmpsSequencerConfig.Builder()
-                        .build();
+                return config;
             }
         };
     }

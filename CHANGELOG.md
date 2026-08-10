@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: replacing a base ROM/audio profile or donor SMPS source now publishes its loader,
+  DAC, configuration, and monotonically increasing catalog generation as one transaction.
+  Failed source construction or backend/profile setup leaves the prior source usable, while
+  live and rewind voices retain their original generation without allowing new commands to
+  reuse stale programs.
 - Fix: the Sonic 3 & Knuckles special stage loads its emerald art through the real Kosinski
   module queue and waits on the ROM's own modules-left predicate, instead of a fixed four-frame
   drain measured from a capture. The structural part now comes from the module state machine and

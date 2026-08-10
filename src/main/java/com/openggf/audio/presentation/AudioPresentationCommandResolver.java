@@ -39,6 +39,8 @@ public final class AudioPresentationCommandResolver {
     public interface Sources {
         String baseGameId();
 
+        long dependencyGeneration(SmpsAssetKey.Route route, String gameId);
+
         AbstractSmpsData loadBaseMusic(int musicId);
 
         AbstractSmpsData loadDonorMusic(String donorGameId, int musicId);
@@ -49,15 +51,19 @@ public final class AudioPresentationCommandResolver {
 
         AbstractSmpsData loadDonorSfx(String donorGameId, int sfxId);
 
-        DacData dacFor(String gameId);
+        DacData dacFor(SmpsAssetKey.Route route, String gameId);
 
-        SmpsSequencerConfig configFor(String gameId);
+        SmpsSequencerConfig configFor(
+                SmpsAssetKey.Route route, String gameId);
 
-        int sfxPriority(String gameId, int sfxId);
+        int sfxPriority(
+                SmpsAssetKey.Route route, String gameId, int sfxId);
 
-        boolean specialSfx(String gameId, int sfxId);
+        boolean specialSfx(
+                SmpsAssetKey.Route route, String gameId, int sfxId);
 
-        boolean continuousSfx(String gameId, int sfxId);
+        boolean continuousSfx(
+                SmpsAssetKey.Route route, String gameId, int sfxId);
 
         int maxStereoFrames();
     }
@@ -148,21 +154,32 @@ public final class AudioPresentationCommandResolver {
         try {
             AudioPresentationCommand.MusicVoiceEntry voice =
                     switch (command.route()) {
-                        case BASE_SMPS -> resolveSmpsMusic(
-                                sources.baseGameId(),
-                                command.musicId(),
-                                sources.loadBaseMusic(command.musicId()),
-                                AudioSourceDescriptor.baseMusic(
-                                        command.musicId()));
-                        case DONOR_SMPS -> resolveSmpsMusic(
-                                requireGameId(command.donorGameId()),
-                                command.musicId(),
-                                sources.loadDonorMusic(
-                                        command.donorGameId(),
-                                        command.musicId()),
-                                AudioSourceDescriptor.donorMusic(
-                                        command.donorGameId(),
-                                        command.musicId()));
+                        case BASE_SMPS -> {
+                            String gameId = sources.baseGameId();
+                            long generation = sources.dependencyGeneration(
+                                    SmpsAssetKey.Route.BASE_MUSIC, gameId);
+                            yield resolveSmpsMusic(
+                                    SmpsAssetKey.Route.BASE_MUSIC,
+                                    gameId, command.musicId(), generation,
+                                    sources.loadBaseMusic(command.musicId()),
+                                    AudioSourceDescriptor.baseMusic(
+                                            command.musicId()));
+                        }
+                        case DONOR_SMPS -> {
+                            String gameId = requireGameId(
+                                    command.donorGameId());
+                            long generation = sources.dependencyGeneration(
+                                    SmpsAssetKey.Route.DONOR_MUSIC, gameId);
+                            yield resolveSmpsMusic(
+                                    SmpsAssetKey.Route.DONOR_MUSIC,
+                                    gameId, command.musicId(), generation,
+                                    sources.loadDonorMusic(
+                                            command.donorGameId(),
+                                            command.musicId()),
+                                    AudioSourceDescriptor.donorMusic(
+                                            command.donorGameId(),
+                                            command.musicId()));
+                        }
                         case FALLBACK_WAV -> factory.fallbackMusic(
                                 allocateVoiceId(),
                                 command.musicId(),
@@ -184,8 +201,10 @@ public final class AudioPresentationCommandResolver {
     }
 
     private AudioPresentationCommand.MusicVoiceEntry resolveSmpsMusic(
+            SmpsAssetKey.Route route,
             String gameId,
             int musicId,
+            long dependencyGeneration,
             AbstractSmpsData data,
             AudioSourceDescriptor descriptor) {
         if (data == null) {
@@ -195,9 +214,10 @@ public final class AudioPresentationCommandResolver {
                 gameId,
                 musicId,
                 allocateVoiceId(),
+                dependencyGeneration,
                 data,
-                requireDac(gameId),
-                requireConfig(gameId),
+                requireDac(route, gameId),
+                requireConfig(route, gameId),
                 descriptor,
                 sources.maxStereoFrames());
     }
@@ -210,38 +230,46 @@ public final class AudioPresentationCommandResolver {
         AudioPresentationCommand resolved;
         try {
             resolved = switch (command.route()) {
-                case BASE_SMPS_ID -> resolveSmpsSfxCommand(
-                        sources.baseGameId(),
-                        new SmpsAssetKey(
-                                sources.baseGameId(),
-                                SmpsAssetKey.Route.BASE_ID,
-                                command.sfxId(), null),
-                        command.sfxId(),
-                        sources.loadBaseSfx(command.sfxId()),
-                        command.pitch());
+                case BASE_SMPS_ID -> {
+                    String gameId = sources.baseGameId();
+                    SmpsAssetKey key = new SmpsAssetKey(
+                            gameId, SmpsAssetKey.Route.BASE_ID,
+                            command.sfxId(), null);
+                    long generation = sources.dependencyGeneration(
+                            key.route(), gameId);
+                    yield resolveSmpsSfxCommand(
+                            gameId, key, generation, command.sfxId(),
+                            sources.loadBaseSfx(command.sfxId()),
+                            command.pitch());
+                }
                 case BASE_SMPS_NAME -> {
+                    String gameId = sources.baseGameId();
+                    SmpsAssetKey key = new SmpsAssetKey(
+                            gameId, SmpsAssetKey.Route.BASE_NAME,
+                            -1, command.sfxName());
+                    long generation = sources.dependencyGeneration(
+                            key.route(), gameId);
                     AbstractSmpsData data =
                             sources.loadBaseSfx(command.sfxName());
                     yield resolveSmpsSfxCommand(
-                            sources.baseGameId(),
-                            new SmpsAssetKey(
-                                    sources.baseGameId(),
-                                    SmpsAssetKey.Route.BASE_NAME,
-                                    -1, command.sfxName()),
+                            gameId, key, generation,
                             data != null ? data.getId() : -1,
                             data,
                             command.pitch());
                 }
-                case DONOR_SMPS -> resolveSmpsSfxCommand(
-                        requireGameId(command.donorGameId()),
-                        new SmpsAssetKey(
-                                command.donorGameId(),
-                                SmpsAssetKey.Route.DONOR_ID,
-                                command.sfxId(), null),
-                        command.sfxId(),
-                        sources.loadDonorSfx(
-                                command.donorGameId(), command.sfxId()),
-                        command.pitch());
+                case DONOR_SMPS -> {
+                    String gameId = requireGameId(command.donorGameId());
+                    SmpsAssetKey key = new SmpsAssetKey(
+                            gameId, SmpsAssetKey.Route.DONOR_ID,
+                            command.sfxId(), null);
+                    long generation = sources.dependencyGeneration(
+                            key.route(), gameId);
+                    yield resolveSmpsSfxCommand(
+                            gameId, key, generation, command.sfxId(),
+                            sources.loadDonorSfx(
+                                    command.donorGameId(), command.sfxId()),
+                            command.pitch());
+                }
                 case FALLBACK_NAME, RING_RESOLVED ->
                         StartSampleSfx.fromVoice(
                                 factory.fallbackSfx(
@@ -262,21 +290,26 @@ public final class AudioPresentationCommandResolver {
     private AudioPresentationCommand resolveSmpsSfxCommand(
             String gameId,
             SmpsAssetKey key,
+            long dependencyGeneration,
             int sfxId,
             AbstractSmpsData data,
             float pitch) {
         if (data == null) {
             throw new IllegalStateException("loader returned no SMPS data");
         }
-        int priority = sources.sfxPriority(gameId, sfxId);
-        factory.warmSmpsSfxAsset(
-                key, data, requireDac(gameId), requireConfig(gameId),
-                sources.specialSfx(gameId, sfxId));
+        int priority = sources.sfxPriority(key.route(), gameId, sfxId);
+        factory.registerSmpsSfxAsset(
+                key, dependencyGeneration, data,
+                requireDac(key.route(), gameId),
+                requireConfig(key.route(), gameId),
+                sources.specialSfx(key.route(), gameId, sfxId));
         int continuousId =
-                sources.continuousSfx(gameId, sfxId) ? sfxId : 0;
+                sources.continuousSfx(key.route(), gameId, sfxId)
+                        ? sfxId : 0;
         return new AddSmpsSfx(factory.resolveSmpsSfx(
                 allocateVoiceId(),
                 key,
+                dependencyGeneration,
                 pitchQ16(pitch),
                 priority,
                 continuousId,
@@ -284,15 +317,17 @@ public final class AudioPresentationCommandResolver {
                 sources.maxStereoFrames()));
     }
 
-    private DacData requireDac(String gameId) {
+    private DacData requireDac(
+            SmpsAssetKey.Route route, String gameId) {
         return Objects.requireNonNull(
-                sources.dacFor(gameId),
+                sources.dacFor(route, gameId),
                 "no DAC data for " + gameId);
     }
 
-    private SmpsSequencerConfig requireConfig(String gameId) {
+    private SmpsSequencerConfig requireConfig(
+            SmpsAssetKey.Route route, String gameId) {
         return Objects.requireNonNull(
-                sources.configFor(gameId),
+                sources.configFor(route, gameId),
                 "no sequencer config for " + gameId);
     }
 
@@ -348,6 +383,12 @@ public final class AudioPresentationCommandResolver {
         }
 
         @Override
+        public long dependencyGeneration(
+                SmpsAssetKey.Route route, String gameId) {
+            return 0;
+        }
+
+        @Override
         public AbstractSmpsData loadBaseMusic(int musicId) {
             return null;
         }
@@ -375,27 +416,32 @@ public final class AudioPresentationCommandResolver {
         }
 
         @Override
-        public DacData dacFor(String gameId) {
+        public DacData dacFor(
+                SmpsAssetKey.Route route, String gameId) {
             return null;
         }
 
         @Override
-        public SmpsSequencerConfig configFor(String gameId) {
+        public SmpsSequencerConfig configFor(
+                SmpsAssetKey.Route route, String gameId) {
             return null;
         }
 
         @Override
-        public int sfxPriority(String gameId, int sfxId) {
+        public int sfxPriority(
+                SmpsAssetKey.Route route, String gameId, int sfxId) {
             return 0;
         }
 
         @Override
-        public boolean specialSfx(String gameId, int sfxId) {
+        public boolean specialSfx(
+                SmpsAssetKey.Route route, String gameId, int sfxId) {
             return false;
         }
 
         @Override
-        public boolean continuousSfx(String gameId, int sfxId) {
+        public boolean continuousSfx(
+                SmpsAssetKey.Route route, String gameId, int sfxId) {
             return false;
         }
 

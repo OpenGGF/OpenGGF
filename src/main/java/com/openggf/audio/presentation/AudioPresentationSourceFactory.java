@@ -403,12 +403,27 @@ public final class AudioPresentationSourceFactory
             int continuousSfxId,
             int trackCount,
             int maxStereoFrames) {
+        return resolveSmpsSfx(standaloneVoiceId, assetKey, 0,
+                pitchQ16, priority, continuousSfxId, trackCount,
+                maxStereoFrames);
+    }
+
+    public ResolvedSmpsSfxSource resolveSmpsSfx(
+            long standaloneVoiceId,
+            SmpsAssetKey assetKey,
+            long dependencyGeneration,
+            int pitchQ16,
+            int priority,
+            int continuousSfxId,
+            int trackCount,
+            int maxStereoFrames) {
         if (pitchQ16 <= 0) {
             throw new IllegalArgumentException("pitchQ16 must be positive");
         }
         validateSfxKey(Objects.requireNonNull(assetKey, "assetKey"));
         return new ResolvedSmpsSfxSource(
-                standaloneVoiceId, assetKey, pitchQ16, priority,
+                standaloneVoiceId, assetKey, dependencyGeneration,
+                pitchQ16, priority,
                 continuousSfxId, trackCount, maxStereoFrames);
     }
 
@@ -606,7 +621,8 @@ public final class AudioPresentationSourceFactory
             ResolvedSmpsSfxSource source) {
         Objects.requireNonNull(source, "source");
         SmpsAssetCatalog.ProgramEntry cached =
-                findRegisteredSmpsSfxAsset(source.assetKey(), 0);
+                findRegisteredSmpsSfxAsset(
+                        source.assetKey(), source.dependencyGeneration());
         if (cached == null) {
             throw new IllegalStateException(
                     "SMPS SFX asset cache miss: " + source.assetKey());

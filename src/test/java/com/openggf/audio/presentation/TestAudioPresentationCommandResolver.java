@@ -50,6 +50,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -124,6 +125,119 @@ class TestAudioPresentationCommandResolver {
         assertEquals(new AudioPresentationCommand.ResetRingAlternation(true),
                 commands.get(6));
         assertInstanceOf(StartSampleSfx.class, commands.get(7));
+    }
+
+    @Test
+    void sourceGenerationSeparatesReplacedBaseProgramsAndRetainsOldCommands() {
+        Fixture fixture = fixture();
+        fixture.sources.baseGeneration = 7;
+        fixture.sources.baseSfx = sfx(0xA0, (byte) 0xF2);
+        fixture.resolver.submit(new AudioCommand.PlaySfx(
+                0xA0, null, AudioCommand.SfxRoute.BASE_SMPS_ID,
+                1.0f, null));
+        AddSmpsSfx oldCommand = assertInstanceOf(
+                AddSmpsSfx.class, drain(fixture.queue).get(0));
+
+        fixture.sources.baseGeneration = 8;
+        fixture.sources.baseSfx = sfx(
+                0xA0, (byte) 0xE9, (byte) 0xF2);
+        fixture.resolver.submit(new AudioCommand.PlaySfx(
+                0xA0, null, AudioCommand.SfxRoute.BASE_SMPS_ID,
+                1.0f, null));
+        AddSmpsSfx newCommand = assertInstanceOf(
+                AddSmpsSfx.class, drain(fixture.queue).get(0));
+
+        assertEquals(7, oldCommand.source().dependencyGeneration());
+        assertEquals(8, newCommand.source().dependencyGeneration());
+        AudioVoiceRegistry oldRegistry = fixture.registry();
+        AudioVoiceRegistry newRegistry = fixture.registry();
+        oldRegistry.apply(oldCommand);
+        newRegistry.apply(newCommand);
+        assertEquals(7, standaloneDescriptor(oldRegistry)
+                .dependencyGeneration());
+        assertEquals(8, standaloneDescriptor(newRegistry)
+                .dependencyGeneration());
+    }
+
+    @Test
+    void baseAndDonorGenerationsRemainRouteSpecificForEqualGameIds() {
+        Fixture fixture = fixture(new SmpsCoordFlagHandlerOwner(
+                new SmpsCoordFlagRuntimeState()), "shared");
+        fixture.sources.baseGeneration = 3;
+        fixture.sources.donorGenerations.put("shared", 11L);
+        fixture.sources.baseSfx = sfx(0xA0, (byte) 0xE9, (byte) 0xF2);
+        fixture.sources.donorSfx = sfx(0xB0, (byte) 0xEA, (byte) 0xF2);
+        fixture.sources.baseDac = new DacData(
+                Collections.emptyMap(), Collections.emptyMap(), 301);
+        DacData donorDac = new DacData(
+                Collections.emptyMap(), Collections.emptyMap(), 302);
+        fixture.sources.donorDacs.put("shared", donorDac);
+        fixture.sources.baseConfig = new SmpsSequencerConfig.Builder()
+                .tempoMode(SmpsSequencerConfig.TempoMode.TIMEOUT)
+                .build();
+        SmpsSequencerConfig donorConfig = new SmpsSequencerConfig.Builder()
+                .tempoMode(SmpsSequencerConfig.TempoMode.OVERFLOW)
+                .build();
+        fixture.sources.donorConfigs.put("shared", donorConfig);
+        fixture.sources.basePriority = 0x31;
+        fixture.sources.donorPriorities.put("shared", 0x42);
+        fixture.sources.baseSpecial = false;
+        fixture.sources.donorSpecial.put("shared", true);
+        fixture.sources.baseContinuous = true;
+        fixture.sources.donorContinuous.put("shared", false);
+
+        fixture.resolver.submit(new AudioCommand.PlaySfx(
+                0xA0, null, AudioCommand.SfxRoute.BASE_SMPS_ID,
+                1.0f, null));
+        fixture.resolver.submit(new AudioCommand.PlaySfx(
+                0xB0, null, AudioCommand.SfxRoute.DONOR_SMPS,
+                1.0f, "shared"));
+
+        List<AudioPresentationCommand> commands = drain(fixture.queue);
+        AddSmpsSfx baseCommand = (AddSmpsSfx) commands.get(0);
+        AddSmpsSfx donorCommand = (AddSmpsSfx) commands.get(1);
+        assertEquals(3, baseCommand.source().dependencyGeneration());
+        assertEquals(11, donorCommand.source().dependencyGeneration());
+        assertEquals(0x31, baseCommand.source().priority());
+        assertEquals(0x42, donorCommand.source().priority());
+        assertEquals(0xA0, baseCommand.source().continuousSfxId());
+        assertEquals(0, donorCommand.source().continuousSfxId());
+
+        SmpsAssetCatalog.ProgramEntry baseEntry =
+                fixture.factory.findRegisteredSmpsSfxAsset(
+                        baseCommand.source().assetKey(), 3);
+        SmpsAssetCatalog.ProgramEntry donorEntry =
+                fixture.factory.findRegisteredSmpsSfxAsset(
+                        donorCommand.source().assetKey(), 11);
+        assertSame(fixture.sources.baseDac, baseEntry.dac());
+        assertSame(donorDac, donorEntry.dac());
+        assertEquals(SmpsSequencerConfig.TempoMode.TIMEOUT,
+                baseEntry.staticConfig().getTempoMode());
+        assertEquals(SmpsSequencerConfig.TempoMode.OVERFLOW,
+                donorEntry.staticConfig().getTempoMode());
+        assertFalse(baseEntry.specialSfx());
+        assertTrue(donorEntry.specialSfx());
+        assertNotEquals(baseEntry.sourceDescriptor().dataHash(),
+                donorEntry.sourceDescriptor().dataHash(),
+                "route-specific catalog entries must retain their program bytes");
+    }
+
+    @Test
+    void queuedGenerationIsRejectedWhenOnlyAnotherGenerationIsRegistered() {
+        Fixture fixture = fixture();
+        SmpsAssetKey key = new SmpsAssetKey(
+                "base", SmpsAssetKey.Route.BASE_ID, 0xA0, null);
+        fixture.factory.registerSmpsSfxAsset(
+                key, 4, sfx(0xA0, (byte) 0xF2), EMPTY_DAC,
+                fixture.sources.baseConfig, false);
+        ResolvedSmpsSfxSource stale = fixture.factory.resolveSmpsSfx(
+                1, key, 5, 1 << 16, 0x70, 0, 1, 64);
+        AudioVoiceRegistry registry = fixture.registry();
+
+        registry.apply(new AddSmpsSfx(stale));
+
+        assertEquals(0, registry.orderedVoiceCount());
+        assertEquals(1, fixture.warnings.size());
     }
 
     @Test
@@ -501,7 +615,7 @@ class TestAudioPresentationCommandResolver {
     void continuousRetriggerExtendsMusicAndStandaloneWithoutDuplicateSequencer() {
         for (boolean withMusic : List.of(false, true)) {
             Fixture fixture = fixture();
-            fixture.sources.continuous = true;
+            fixture.sources.baseContinuous = true;
             fixture.sources.baseSfx = sfx(0xBC, (byte) 0xFC, (byte) 0x40, (byte) 0,
                     (byte) 0xF2);
             if (withMusic) {
@@ -623,6 +737,13 @@ class TestAudioPresentationCommandResolver {
         return fixture(handlers, "s3k");
     }
 
+    private static com.openggf.audio.rewind.SmpsSourceDescriptor
+            standaloneDescriptor(AudioVoiceRegistry registry) {
+        SmpsCompositeVoice voice = (SmpsCompositeVoice)
+                registry.orderedVoiceAt(0);
+        return voice.driver().captureSnapshot().sequencers().get(0).source();
+    }
+
     private static Fixture fixture(
             SmpsCoordFlagHandlerOwner handlers, String baseGameId) {
         AtomicBoolean owner = new AtomicBoolean(true);
@@ -678,7 +799,16 @@ class TestAudioPresentationCommandResolver {
         DacData baseDac = EMPTY_DAC;
         SmpsSequencerConfig baseConfig =
                 new SmpsSequencerConfig.Builder().build();
-        boolean continuous;
+        long baseGeneration;
+        final Map<String, Long> donorGenerations = new HashMap<>();
+        final Map<String, DacData> donorDacs = new HashMap<>();
+        final Map<String, SmpsSequencerConfig> donorConfigs = new HashMap<>();
+        final Map<String, Integer> donorPriorities = new HashMap<>();
+        final Map<String, Boolean> donorSpecial = new HashMap<>();
+        final Map<String, Boolean> donorContinuous = new HashMap<>();
+        int basePriority = 0x70;
+        boolean baseSpecial;
+        boolean baseContinuous;
 
         FakeSources(String baseGameId) {
             this.baseGameId = baseGameId;
@@ -687,6 +817,18 @@ class TestAudioPresentationCommandResolver {
         @Override
         public String baseGameId() {
             return baseGameId;
+        }
+
+        @Override
+        public long dependencyGeneration(
+                SmpsAssetKey.Route route, String gameId) {
+            return switch (route) {
+                case BASE_MUSIC, BASE_ID, BASE_NAME -> baseGeneration;
+                case DONOR_MUSIC, DONOR_ID ->
+                        donorGenerations.getOrDefault(gameId, 0L);
+                case FALLBACK_NAME -> throw new IllegalArgumentException(
+                        "fallback assets have no SMPS dependency");
+            };
         }
 
         @Override
@@ -722,28 +864,54 @@ class TestAudioPresentationCommandResolver {
         }
 
         @Override
-        public DacData dacFor(String gameId) {
-            return baseDac;
+        public DacData dacFor(SmpsAssetKey.Route route, String gameId) {
+            return switch (route) {
+                case BASE_MUSIC, BASE_ID, BASE_NAME -> baseDac;
+                case DONOR_MUSIC, DONOR_ID ->
+                        donorDacs.getOrDefault(gameId, baseDac);
+                case FALLBACK_NAME -> null;
+            };
         }
 
         @Override
-        public SmpsSequencerConfig configFor(String gameId) {
-            return baseConfig;
+        public SmpsSequencerConfig configFor(
+                SmpsAssetKey.Route route, String gameId) {
+            return switch (route) {
+                case BASE_MUSIC, BASE_ID, BASE_NAME -> baseConfig;
+                case DONOR_MUSIC, DONOR_ID ->
+                        donorConfigs.getOrDefault(gameId, baseConfig);
+                case FALLBACK_NAME -> null;
+            };
         }
 
         @Override
-        public int sfxPriority(String gameId, int sfxId) {
-            return 0x70;
+        public int sfxPriority(
+                SmpsAssetKey.Route route, String gameId, int sfxId) {
+            return switch (route) {
+                case BASE_ID, BASE_NAME -> basePriority;
+                case DONOR_ID -> donorPriorities.getOrDefault(gameId, 0x70);
+                default -> 0x70;
+            };
         }
 
         @Override
-        public boolean specialSfx(String gameId, int sfxId) {
-            return false;
+        public boolean specialSfx(
+                SmpsAssetKey.Route route, String gameId, int sfxId) {
+            return switch (route) {
+                case BASE_ID, BASE_NAME -> baseSpecial;
+                case DONOR_ID -> donorSpecial.getOrDefault(gameId, false);
+                default -> false;
+            };
         }
 
         @Override
-        public boolean continuousSfx(String gameId, int sfxId) {
-            return continuous;
+        public boolean continuousSfx(
+                SmpsAssetKey.Route route, String gameId, int sfxId) {
+            return switch (route) {
+                case BASE_ID, BASE_NAME -> baseContinuous;
+                case DONOR_ID -> donorContinuous.getOrDefault(gameId, false);
+                default -> false;
+            };
         }
 
         @Override
