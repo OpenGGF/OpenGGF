@@ -51,7 +51,7 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
     private static final int TRIGGER_X_RIGHT = -0x1A + 0x34;
     private static final int TRIGGER_Y_TOP = -0x1C;
     private static final int TRIGGER_Y_BOTTOM = -0x1C + 0x38;
-    private static final int POST_OPEN_DELAY = 0x41;
+    private static final int POST_OPEN_DELAY = 0x40;
     private static final int ANIMAL_COUNT = 9;
     private static final int SWING_MAX_SPEED = 0xC0;
     private static final int SWING_ACCELERATION = 0x10;
@@ -73,6 +73,8 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
     private int buttonTriggerSource;
     private int buttonTriggerVIntRunCount = -1;
     private int openFrame = -1;
+    private boolean laterSupportOwnerEligibilityDeferred;
+    private boolean parentMotionEligibilityDeferred;
     private boolean routeInitPending;
     private S3kBossExplosionController explosionController;
 
@@ -215,10 +217,10 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
                 spawnPendingExplosions();
             }
 
-            if (postOpenTimer > 0) {
-                postOpenTimer--;
-            }
-            if (postOpenTimer == 0
+            // Both sub_868F8 and sub_86984 pre-decrement the $40 word and
+            // branch while the signed result remains non-negative.
+            postOpenTimer--;
+            if (postOpenTimer < 0
                     && playerEntity instanceof AbstractPlayableSprite player
                     && shouldStartResults(player)) {
                 startResults(player);
@@ -343,9 +345,31 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
     private void scanButtonTrigger(int vIntRunCount, PlayableEntity playerEntity) {
         ObjectPlayerQuery query = playerQuery(playerEntity);
         PlayableEntity nativeP1 = query.mainPlayerOrNull();
+        boolean eligibleCandidateFound = false;
         for (PlayableEntity candidate : query.playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
             if (candidate instanceof AbstractPlayableSprite player
                     && shouldTriggerButton(player, candidate == nativeP1)) {
+                eligibleCandidateFound = true;
+                int supportSlot = player.getInteractSlotIndex();
+                if (defersCollapsedButtonPastLaterSupportOwner()
+                        && !laterSupportOwnerEligibilityDeferred
+                        && supportSlot > getSlotIndex()) {
+                    // The ROM button is a later child SST. A support owner
+                    // after this folded parent has not published its current
+                    // contact state when the parent-equivalent entry runs.
+                    laterSupportOwnerEligibilityDeferred = true;
+                    continue;
+                }
+                if (defersButtonEligibilityCreatedByParentMotion()
+                        && !parentMotionEligibilityDeferred
+                        && !shouldTriggerButtonAtX(player, candidate == nativeP1, solidBodyX)) {
+                    // Parent movement and the later button child occupy
+                    // separate native dispatches. Do not let movement folded
+                    // into this entry create eligibility until the next
+                    // child-equivalent entry.
+                    parentMotionEligibilityDeferred = true;
+                    continue;
+                }
                 // ROM loc_86770 only switches the button child to loc_867CA
                 // and sets parent $38 bit 1. The parent Obj_EggCapsule
                 // routine sees that bit on its next object slot and then
@@ -357,14 +381,31 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
                 break;
             }
         }
+        if (!eligibleCandidateFound) {
+            laterSupportOwnerEligibilityDeferred = false;
+            parentMotionEligibilityDeferred = false;
+        }
+    }
+
+    protected boolean defersCollapsedButtonPastLaterSupportOwner() {
+        return false;
+    }
+
+    protected boolean defersButtonEligibilityCreatedByParentMotion() {
+        return false;
     }
 
     private boolean shouldTriggerButton(AbstractPlayableSprite player, boolean nativeP1) {
+        return shouldTriggerButtonAtX(player, nativeP1, currentX);
+    }
+
+    private boolean shouldTriggerButtonAtX(AbstractPlayableSprite player, boolean nativeP1,
+            int buttonX) {
         // ROM loc_86770 refreshes the button child from parent x/y, runs
         // sub_86A54, then calls Check_PlayerInRange before the parent routine's
         // Swing_UpAndDown render motion (sonic3k.asm:181739-181767,181604-181647).
         int buttonY = currentY + BUTTON_Y_OFFSET;
-        int dx = player.getCentreX() - currentX;
+        int dx = player.getCentreX() - buttonX;
         int dy = player.getCentreY() - buttonY;
         return player.getYSpeed() < 0
                 && isAllowedButtonTriggerCharacterState(player, nativeP1)
@@ -402,10 +443,9 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
         openFrame = buttonTriggerVIntRunCount + 1;
         mappingFrame = 1;
         buttonRecess = BUTTON_RECESS;
-        // ROM sub_865DE stores $2E=$40, then sub_868F8 pre-decrements and
-        // branches while the result is non-negative; this yields 65 routine
-        // entries before Obj_LevelResults can spawn (sonic3k.asm:181556-181570,
-        // 181900-181918).
+        // ROM sub_865DE stores $2E=$40. Both results routines pre-decrement
+        // and wait for signed underflow (sonic3k.asm:181556-181570,
+        // 181900-181918,182027-182046).
         postOpenTimer = POST_OPEN_DELAY;
 
         try {
@@ -482,11 +522,18 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
                 }
             }
         }
-        spawnChild(this::createResultsScreen);
+        spawnResultsScreen();
     }
 
     protected AbstractObjectInstance createResultsScreen() {
-        return new S3kResultsScreenObjectInstance(getPlayerCharacter(), services().currentAct());
+        return com.openggf.level.objects.ObjectConstructionContext.construct(
+                services(),
+                () -> new S3kResultsScreenObjectInstance(
+                        getPlayerCharacter(), services().currentAct()));
+    }
+
+    protected void spawnResultsScreen() {
+        spawnChild(this::createResultsScreen);
     }
 
     protected boolean shouldLockPlayersForResults() {
@@ -504,6 +551,7 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
         sprite.setYSpeed((short) 0);
         sprite.setGSpeed((short) 0);
         sprite.setAnimationId(Sonic3kAnimationIds.VICTORY);
+        sprite.setForcedAnimationId(Sonic3kAnimationIds.VICTORY);
     }
 
     protected PlayerCharacter getPlayerCharacter() {

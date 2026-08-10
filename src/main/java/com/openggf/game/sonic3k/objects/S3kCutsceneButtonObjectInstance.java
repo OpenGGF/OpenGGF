@@ -10,6 +10,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
 
@@ -97,15 +98,32 @@ public class S3kCutsceneButtonObjectInstance extends AbstractObjectInstance
         int dx = knuckles.getX() - x;
         int dy = knuckles.getY() - y;
         if (dx >= RANGE_LEFT && dx < RANGE_RIGHT && dy >= RANGE_TOP && dy < RANGE_BOTTOM) {
-            pressed = true;
-            Aiz2BossEndSequenceState.pressButton();
-            if (services().zoneRuntimeState() instanceof AizZoneRuntimeState aizState
-                    && aizState.isButtonBeforeBridgeDispatch()) {
-                services().objectManager().activeObjectsOfType(AizDrawBridgeObjectInstance.class)
-                        .forEach(AizDrawBridgeObjectInstance::beginCollapseFromEarlierButtonSlot);
-            }
-            services().playSfx(Sonic3kSfx.SWITCH.id);
+            // loc_65C04 installs loc_65C50, then immediately dispatches the
+            // subtype action through off_65C40 in this same object pass.
+            pressButton(playerEntity);
         }
+    }
+
+    private void pressButton(PlayableEntity playerEntity) {
+        pressed = true;
+        Aiz2BossEndSequenceState.pressButton();
+        if (playerEntity instanceof AbstractPlayableSprite player) {
+            // loc_65C56 clears Ctrl_1_locked in the button's own SST slot.
+            // When this native button precedes Player_1, that later slot still
+            // consumes loc_69588's retained logical UP word. The controller
+            // releases the engine's representation on its following entry.
+            // The alternate established ordering has already consumed the
+            // player slot, so it can clear immediately.
+            player.setControlLocked(false);
+            if (Aiz2BossEndSequenceState.isButtonBeforeBridgeDispatch()) {
+                player.clearForcedInputMask();
+            }
+        }
+        if (cutsceneOverride || Aiz2BossEndSequenceState.isButtonBeforeBridgeDispatch()) {
+            services().objectManager().activeObjectsOfType(AizDrawBridgeObjectInstance.class)
+                    .forEach(AizDrawBridgeObjectInstance::beginCollapseFromEarlierButtonSlot);
+        }
+        services().playSfx(Sonic3kSfx.SWITCH.id);
     }
 
     @Override

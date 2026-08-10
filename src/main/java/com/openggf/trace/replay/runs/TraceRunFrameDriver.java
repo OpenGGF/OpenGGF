@@ -196,6 +196,44 @@ public final class TraceRunFrameDriver {
                 previousObservedVblankCounterAdvance, false);
     }
 
+    /**
+     * True when the represented presentation row owns no mode V-int and must
+     * run as a lag closure rather than a real V-blank.
+     *
+     * <p>Two recorded shapes qualify, and both are ROM structure rather than
+     * fixture measurement:
+     * <ul>
+     *   <li>The first row whose counter advances after a span with no advance
+     *       at all. The CPU was inside a {@code disable_ints} span rebuilding
+     *       the screen (S1 special-stage results:
+     *       docs/s1disasm/sonic.asm:3368-3379), and {@code enable_ints} is
+     *       reached while {@code v_vblank_routine} is still 0 -- so the first
+     *       {@code V_Int} back branches to {@code VBlank_Lag}
+     *       (sonic.asm:709) and runs no mode handler. Only the following
+     *       iteration, after {@code SS_NormalExit} stores
+     *       {@code id_VBlank_TitleCards} and waits (sonic.asm:3403-3405), owns
+     *       a real V-int.</li>
+     *   <li>A row whose own counter did not advance and whose successor did not
+     *       consume a deferred tick. No V-blank elapsed for it either.</li>
+     * </ul>
+     *
+     * <p>The row deliberately excluded is the isolated starved row whose
+     * successor consumed two ticks: there the iteration merely overran the
+     * sample, its V-blank did run the active handler -- including
+     * {@code ProcessPLC_9Tiles} (sonic.asm:1430-1440) -- and only the counter
+     * store landed after the sample. Suppressing it costs the row its
+     * nine-tile decode, which is what
+     * {@code TraceRunPresentationClosure} already documents it must keep.
+     */
+    static boolean presentationRowIsCarriedLagClosure(
+            boolean observedVblankCounterAdvance,
+            boolean previousObservedVblankCounterAdvance,
+            boolean nextRowCarriesDeferredVblank) {
+        return !previousObservedVblankCounterAdvance
+                || (!observedVblankCounterAdvance
+                        && !nextRowCarriesDeferredVblank);
+    }
+
     public static Disposition selectDisposition(
             TraceRunPlaybackCoordinator.Phase coordinatorPhase,
             SegmentExecutionPolicy executionPolicy,
@@ -203,6 +241,22 @@ public final class TraceRunFrameDriver {
             boolean observedVblankCounterAdvance,
             boolean previousObservedVblankCounterAdvance,
             boolean destinationGameplayModeReached) {
+        return selectDisposition(
+                coordinatorPhase, executionPolicy, rowPhase,
+                observedVblankCounterAdvance,
+                previousObservedVblankCounterAdvance,
+                destinationGameplayModeReached,
+                false);
+    }
+
+    public static Disposition selectDisposition(
+            TraceRunPlaybackCoordinator.Phase coordinatorPhase,
+            SegmentExecutionPolicy executionPolicy,
+            TraceExecutionPhase rowPhase,
+            boolean observedVblankCounterAdvance,
+            boolean previousObservedVblankCounterAdvance,
+            boolean destinationGameplayModeReached,
+            boolean nextRowCarriesDeferredVblank) {
         Objects.requireNonNull(coordinatorPhase, "coordinatorPhase");
         Objects.requireNonNull(executionPolicy, "executionPolicy");
         Objects.requireNonNull(rowPhase, "rowPhase");
@@ -219,10 +273,12 @@ public final class TraceRunFrameDriver {
                     // but the segment policy has already proven that the
                     // destination is native presentation rather than gameplay.
                     case FULL_LEVEL_FRAME -> Disposition.PRESENTATION_VBLANK;
-                    case VBLANK_ONLY -> observedVblankCounterAdvance
-                            && previousObservedVblankCounterAdvance
-                            ? Disposition.PRESENTATION_VBLANK
-                            : Disposition.PRESENTATION_SUPPRESSED_CLOSURE;
+                    case VBLANK_ONLY -> presentationRowIsCarriedLagClosure(
+                            observedVblankCounterAdvance,
+                            previousObservedVblankCounterAdvance,
+                            nextRowCarriesDeferredVblank)
+                            ? Disposition.PRESENTATION_SUPPRESSED_CLOSURE
+                            : Disposition.PRESENTATION_VBLANK;
                     case ADVANCE_ONLY -> Disposition.PRESENTATION_ADVANCE_ONLY;
                     default -> throw new IllegalStateException(
                             "presentation bridge cannot execute " + rowPhase);

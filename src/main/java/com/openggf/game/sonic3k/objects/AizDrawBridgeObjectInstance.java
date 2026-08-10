@@ -56,6 +56,7 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
     private boolean settled;
     private boolean settledAngleReached;
     private boolean collapseStarted;
+    private boolean collapseInitializedBeforeEntry;
     private int collapseTimer;
 
     private final List<PlayableEntity> standingPlayers = new ArrayList<>(2);
@@ -105,6 +106,7 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
             return;
         }
         collapseStarted = true;
+        collapseInitializedBeforeEntry = !Aiz2BossEndSequenceState.isButtonBeforeBridgeDispatch();
         collapseTimer = COLLAPSE_DELAY;
         spawnFallingSegments();
         services().playSfx(Sonic3kSfx.BRIDGE_COLLAPSE.id);
@@ -257,6 +259,15 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
         }
 
         if (collapseStarted) {
+            if (collapseInitializedBeforeEntry) {
+                // The semantic lower button owner publishes _unkFAA9 before
+                // this folded Java owner runs. Native loc_2B2E8 consumes that
+                // flag, initializes $34=$E, creates the pieces, and returns;
+                // loc_2B452 must not decrement until the next SST entry
+                // (sonic3k.asm:59614-59623, 59764-59791).
+                collapseInitializedBeforeEntry = false;
+                return;
+            }
             if (collapseTimer > 0) {
                 collapseTimer--;
                 // ROM keeps the standing bits alongside the newly-set air/roll

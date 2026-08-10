@@ -7,6 +7,7 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.objects.Aiz2BossEndSequenceState;
 import com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance;
@@ -35,6 +36,7 @@ import com.openggf.trace.EngineSidekickCpuState;
 import com.openggf.trace.EngineNearbyObject;
 import com.openggf.trace.EngineNearbyObjectFormatter;
 import com.openggf.trace.FrameComparison;
+import com.openggf.trace.LoadQueueComparisonProjection;
 import com.openggf.trace.ToleranceConfig;
 import com.openggf.trace.TouchResponseDebugHitFormatter;
 import com.openggf.trace.TraceBinder;
@@ -196,6 +198,62 @@ public abstract class AbstractTraceReplayTest {
      */
     protected Integer semanticTimingPrefixLastRawFrame(TraceData trace) {
         return null;
+    }
+
+    /**
+     * Whether the recorded run deliberately ends with production hardware
+     * work still in flight. Such a trace is a semantic handoff prefix: every
+     * completion edge represented by the stream must still be consumed, but
+     * work whose ROM completion lies beyond the captured rows is detached with
+     * the fixture rather than treated as a replay failure.
+     */
+    protected List<ExpectedPendingHardwareWork> expectedPendingHardwareTimingAtTraceEnd(
+            TraceData trace) {
+        return List.of();
+    }
+
+    protected record ExpectedPendingHardwareWork(
+            HardwareWorkKind kind,
+            long ordinal,
+            int romSourceAddress,
+            String submissionFingerprint) {
+    }
+
+    protected static ExpectedPendingHardwareWork expectedPendingHardwareWork(
+            HardwareWorkKind kind,
+            long ordinal,
+            int romSourceAddress,
+            String submissionFingerprint) {
+        return new ExpectedPendingHardwareWork(
+                kind, ordinal, romSourceAddress, submissionFingerprint);
+    }
+
+    private static void verifyExpectedPendingHardwareTiming(
+            HeadlessTestFixture fixture,
+            List<ExpectedPendingHardwareWork> expected) {
+        var mode = fixture.gameplayMode();
+        var jobsByHandle = mode.hardwareTiming().capture().jobs().stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        job -> job.handle(), job -> job));
+        List<ExpectedPendingHardwareWork> actual = mode
+                .recordedCompletionAuthority()
+                .pendingSubmissions().stream()
+                .map(pending -> {
+                    var job = jobsByHandle.get(pending.handle());
+                    if (job == null) {
+                        throw new AssertionError(
+                                "pending hardware identity has no production job: "
+                                        + pending.handle());
+                    }
+                    return new ExpectedPendingHardwareWork(
+                            pending.handle().kind(),
+                            pending.handle().ordinal(),
+                            job.romSourceAddress(),
+                            pending.handle().submissionFingerprint());
+                })
+                .toList();
+        assertEquals(expected, actual,
+                "terminal pending hardware work must match the declared semantic handoff");
     }
 
     static boolean shouldValidateRewindReferenceClosure(SonicGame game) {
@@ -503,7 +561,15 @@ public abstract class AbstractTraceReplayTest {
                     trace, binder, fixture,
                     !frontierStopper.stoppedEarly());
             if (!hardwareTimingReplayClosed) {
-                fixture.closeHardwareTimingReplayRun();
+                List<ExpectedPendingHardwareWork> expectedPending =
+                        expectedPendingHardwareTimingAtTraceEnd(trace);
+                if (!expectedPending.isEmpty()) {
+                    fixture.verifyHardwareTimingSegmentEdges();
+                    verifyExpectedPendingHardwareTiming(fixture, expectedPending);
+                    fixture.abortHardwareTimingReplayRun();
+                } else {
+                    fixture.closeHardwareTimingReplayRun();
+                }
                 hardwareTimingReplayClosed = true;
             }
 
@@ -710,6 +776,10 @@ public abstract class AbstractTraceReplayTest {
                     TraceReplayBootstrap.phaseForReplay(trace, previousDriveFrame, driveFrame);
             TraceReplayBootstrap.markVblankStarvedIterationForReplay(
                     previousDriveFrame, driveFrame);
+            TraceReplayBootstrap.markIterationHeldIntoNextRowForReplay(
+                    driveFrame,
+                    driveTraceIndex + 1 < trace.frameCount()
+                            ? trace.getFrame(driveTraceIndex + 1) : null);
             int validationTraceIndex = driveTraceIndex;
             int bk2Input = TraceReplayFrameClosureDriver.driveS3k(
                     phase,
@@ -858,8 +928,15 @@ public abstract class AbstractTraceReplayTest {
     private static void compareLoadQueuesIfAdvertised(
             TraceData trace, TraceBinder binder, int frame) {
         if (trace.metadata().hasPerFrameLoadQueueState()) {
-            binder.compareLoadQueues(frame, trace.loadQueueStatesForFrame(frame),
-                    GameServices.captureQueueDiagnostics());
+            LoadQueueComparisonProjection projection =
+                    LoadQueueComparisonProjection.project(
+                            trace,
+                            frame,
+                            trace.loadQueueStatesForComparisonFrame(frame),
+                            GameServices.captureQueueDiagnostics(),
+                            GameServices.hardwareTiming().capture());
+            binder.compareLoadQueues(
+                    frame, projection.expected(), projection.actual());
         }
     }
 

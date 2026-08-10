@@ -167,3 +167,7 @@ mods/
 /sdd/
 /.worktrees/
 /mods/
+
+# Local credentials and disposable diagnostic output (never commit)
+/identity/
+/ghosts/

@@ -542,9 +542,10 @@ public class SidekickCpuController {
         // the ROM-visible word is $22FF, so loc_13F94 keeps DOWN held for one
         // more frame and releases at $2300. Bootstrap/VBlank closure paths can
         // source the stale pre-Process_Sprites LevelManager copy; recover the
-        // already-incremented word using the same source semantic as the other
-        // low-byte CPU gates.
-        return projectRetainedResultsSpriteCadence(romVisibleLevelFrameCounter(), leader);
+        // already-incremented word, but do not project through Sonic_RecordPos:
+        // this routine reads Level_frame_counter itself, not a sprite-cadence
+        // table index.
+        return romVisibleLevelFrameCounter();
     }
 
     public void setController2Input(int held, int logical) {
@@ -702,6 +703,18 @@ public class SidekickCpuController {
         return diagnosticCtrl2HeldLatch & 0xFF;
     }
 
+    /**
+     * Returns whether the S3K carry routine has published a non-zero generated
+     * Ctrl_2_logical word for the current object pass. This is the live ROM
+     * carry state used by later object owners; it is not raw controller input
+     * or trace comparison data.
+     */
+    public boolean hasPublishedCarryInput() {
+        return state == State.CARRYING
+                && carryController().isCarryingMainCharacter()
+                && (diagnosticCtrl2HeldLatch & MANUAL_HELD_MASK) != 0;
+    }
+
     public int getDiagnosticGeneratedPressedInput() {
         return diagnosticCtrl2PressedLatch & 0xFF;
     }
@@ -814,7 +827,6 @@ public class SidekickCpuController {
         }
         nativeEndingPosePending = false;
         controller2SignedLocked = false;
-        mirrorRawController2LogicalForEndingPose();
         ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
         sidekick.setControlLocked(false);
         sidekick.setSpindash(false);
@@ -1909,12 +1921,14 @@ public class SidekickCpuController {
         // FollowRight to preserve the delayed Ctrl_2 word (sonic3k.asm:26702-
         // 26705). A push carrying terrain ground-wall provenance is genuine and
         // must survive to the loc_13DD0 read (AIZ2 reload underwater wall bounce,
-        // trace F14299); only a stale released-object push (no terrain
-        // provenance) is pre-cleared here.
+        // trace F14299). A live SolidObject-owned push is the same native
+        // status source and must also survive; only a stale released-object
+        // push with neither owner provenance is pre-cleared here.
         if (currentPushing
                 && releasedUnderwaterPushConsumed
                 && releasedUnderwaterZeroSpeedPush
-                && !sidekick.isPushFromGroundWallCollision()) {
+                && !sidekick.isPushFromGroundWallCollision()
+                && !hasLiveObjectPushingLatch()) {
             sidekick.setPushing(false);
             currentPushing = false;
         } else if (!releasedUnderwaterObjectSlot) {
@@ -2706,7 +2720,7 @@ public class SidekickCpuController {
             // no trace-profile-gated bridge (sonic3k.asm:26775 loc_13E9C reads the
             // post-increment (Level_frame_counter+1).b low byte).
             int autoJumpFrameCounter = frameCounter;
-            if (titleCardOwnsRetainedResultsHeldLevelCounter()) {
+            if (titleCardOwnsActiveRetainedResultsSpriteCadence()) {
                 // The retained results/title owner continues native
                 // Process_Sprites dispatches while the engine's ordinary
                 // gameplay counter is held. Sonic_RecordPos runs immediately
@@ -3283,6 +3297,15 @@ public class SidekickCpuController {
         GameModule module = sidekick.currentGameModule();
         var titleCardProvider = module != null ? module.getTitleCardProvider() : null;
         return titleCardProvider != null && titleCardProvider.ownsRetainedResultsHeldLevelCounter();
+    }
+
+    private boolean titleCardOwnsActiveRetainedResultsSpriteCadence() {
+        GameModule module = sidekick.currentGameModule();
+        var titleCardProvider = module != null ? module.getTitleCardProvider() : null;
+        return titleCardProvider != null
+                && titleCardProvider.isOverlayActive()
+                && titleCardProvider.ownsRetainedResultsHeldLevelCounter()
+                && titleCardProvider.projectsRetainedResultsSpriteCadence();
     }
 
     private int projectRetainedResultsSpriteCadence(
@@ -3914,7 +3937,9 @@ public class SidekickCpuController {
                             || titleCardOwnsRetainedResultsHeldLevelCounter())
                         ? frameCounter + 1
                         : frameCounter);
-        catchUpFrameCounter = projectRetainedResultsSpriteCadence(catchUpFrameCounter, leader);
+        if (catchUpUsesRomVisibleLevelFrameCounter) {
+            catchUpFrameCounter = projectRetainedResultsSpriteCadence(catchUpFrameCounter, leader);
+        }
         catchUpFrameCounterOverride = -1;
 
         // Ctrl_2_logical A/B/C/START press → immediate trigger

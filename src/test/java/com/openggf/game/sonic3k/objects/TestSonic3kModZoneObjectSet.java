@@ -223,6 +223,7 @@ class TestSonic3kModZoneObjectSet {
                 Sonic3kObjectIds.LBZ_END_BOSS,
                 Sonic3kObjectIds.LBZ_FINAL_BOSS_1,
                 Sonic3kObjectIds.LBZ_FINAL_BOSS_2,
+                Sonic3kObjectIds.LBZ_FINAL_BOSS_KNUX,
                 Sonic3kObjectIds.LBZ_GATE_LASER,
                 Sonic3kObjectIds.LBZ_KNUX_PILLAR,
                 Sonic3kObjectIds.LBZ_LOWERING_GRAPPLE,

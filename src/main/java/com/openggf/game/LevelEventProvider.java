@@ -105,6 +105,16 @@ public interface LevelEventProvider {
     }
 
     /**
+     * Updates event-owned object state after dynamic objects and before the
+     * camera scroll step. This slot models ROM workers that execute in the
+     * object loop but publish camera boundaries consumed by DeformBgLayer in
+     * the same frame.
+     */
+    default void updateAfterObjectsBeforeCamera() {
+        // Default no-op
+    }
+
+    /**
      * Updates fixed in-level object RAM that is outside the dynamic SST scan and
      * executes after dynamic level object slots.
      * <p>

@@ -86,8 +86,11 @@ final class LevelActTransitionExecutor {
         // it latched and silenced the *next* real level load instead (music then
         // stayed off until a respawn or another load cleared it).
 
-        if (GameServices.zoneRuntimeRegistry().current()
-                .advancesOscillationOnSeamlessTransition()) {
+        var transitionRuntime = GameServices.zoneRuntimeRegistry().current();
+        boolean transitionOwnsLoopTail =
+                transitionRuntime.advancesOscillationOnSeamlessTransition();
+        if (transitionOwnsLoopTail) {
+            levelManager.markActTransitionOscillationAdvancedDuringFrame();
             OscillationManager.advanceForSeamlessTransition();
         }
 
@@ -112,7 +115,9 @@ final class LevelActTransitionExecutor {
         }
 
         levelManager.initAnimatedContent();
-        if (levelManager.animatedPatternManager instanceof SeamlessTransitionAnimationClock clock) {
+        if (transitionOwnsLoopTail
+                && levelManager.animatedPatternManager
+                        instanceof SeamlessTransitionAnimationClock clock) {
             clock.advanceForSeamlessTransition();
         }
 

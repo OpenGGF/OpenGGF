@@ -24,6 +24,7 @@ import com.openggf.game.timing.HardwareWorkHandle;
 import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.camera.Camera;
 import com.openggf.game.sonic3k.Sonic3kLevel;
+import com.openggf.data.Rom;
 import com.openggf.level.AbstractLevel;
 import com.openggf.level.Chunk;
 import com.openggf.level.Level;
@@ -34,8 +35,6 @@ import com.openggf.level.PatternDesc;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.game.RuntimeArtAdmissionPolicy;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.resources.LoadOp;
-import com.openggf.level.resources.ResourceLoader;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.data.RomByteReader;
 
@@ -148,6 +147,24 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
     private long lbz2TransitionChunkOrdinal = -1;
     private long lbz2TransitionBlockOrdinal = -1;
     private long lbz2TransitionArtOrdinal = -1;
+    @RewindTransient(reason = "queue facades are rebound from captured ordinals")
+    private S3kKosDecompressionQueue deathEggTerrainDirectQueue;
+    @RewindTransient(reason = "queue facades are rebound from captured ordinals")
+    private S3kKosModuleQueue deathEggTerrainModuleQueue;
+    @RewindTransient(reason = "handles are rebound from captured ordinals")
+    private HardwareWorkHandle deathEggBlocksHandle;
+    @RewindTransient(reason = "handles are rebound from captured ordinals")
+    private HardwareWorkHandle deathEggChunksHandle;
+    @RewindTransient(reason = "handles are rebound from captured ordinals")
+    private HardwareWorkHandle deathEggTerrainArtHandle;
+    @RewindTransient(reason = "queue facades are rebound from captured ordinals")
+    private S3kKosModuleQueue deathEggLaunchArtQueue;
+    @RewindTransient(reason = "handles are rebound from captured ordinals")
+    private HardwareWorkHandle deathEggLaunchArtHandle;
+    private long deathEggBlocksOrdinal = -1;
+    private long deathEggChunksOrdinal = -1;
+    private long deathEggTerrainArtOrdinal = -1;
+    private long deathEggLaunchArtOrdinal = -1;
     private boolean restartInitChecked;
     private int[] lbz2CopiedWindowDescriptors;
     private int lbz2CopiedWindowScreenX;
@@ -237,6 +254,8 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         act2MinYWorkerCompleted = false;
         act2MaxYWorkerCompleted = false;
         clearTransitionKosOwnership();
+        clearDeathEggTerrainKosOwnership();
+        clearDeathEggLaunchArtOwnership();
     }
 
     @Override
@@ -911,6 +930,13 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         lbz2TransitionChunkHandle = null;
         lbz2TransitionBlockHandle = null;
         lbz2TransitionArtHandle = null;
+        deathEggTerrainDirectQueue = null;
+        deathEggTerrainModuleQueue = null;
+        deathEggBlocksHandle = null;
+        deathEggChunksHandle = null;
+        deathEggTerrainArtHandle = null;
+        deathEggLaunchArtQueue = null;
+        deathEggLaunchArtHandle = null;
     }
 
     private void clearTransitionKosOwnership() {
@@ -963,7 +989,10 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
                 || (camera.getY() & 0xFFFF) < LBZ2_DEATH_EGG_SWAP_CAMERA_Y) {
             return;
         }
-        state.setDeathEggTerrainSwapQueued(true);
+        if (!state.isDeathEggTerrainSwapQueued()) {
+            state.setDeathEggTerrainSwapQueued(true);
+            queueDeathEggTerrainResources();
+        }
         applyDeathEggTerrainSwapHook(state);
     }
 
@@ -972,42 +1001,102 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         if (level == null) {
             return;
         }
-
-        byte[] blocks16x16;
-        byte[] chunks128x128;
-        byte[] terrainArt;
-        byte[] deathEgg2Art;
-        try {
-            ResourceLoader loader = new ResourceLoader(rom());
-            blocks16x16 = loader.loadSingle(
-                    LoadOp.kosinskiBase(Sonic3kConstants.LBZ2_16X16_DEATH_EGG_KOS_ADDR));
-            chunks128x128 = loader.loadSingle(
-                    LoadOp.kosinskiBase(Sonic3kConstants.LBZ2_128X128_DEATH_EGG_KOS_ADDR));
-            terrainArt = loader.loadSingle(
-                    LoadOp.kosinskiMBase(Sonic3kConstants.LBZ2_8X8_DEATH_EGG_KOSM_ADDR));
-            deathEgg2Art = loader.loadSingle(
-                    LoadOp.kosinskiMBase(Sonic3kConstants.ART_KOSM_LBZ2_DEATH_EGG_2_8X8_ADDR));
-        } catch (IOException ex) {
-            throw new IllegalStateException("Unable to read LBZ2 Death Egg terrain resources from S3K ROM", ex);
+        rebindDeathEggTerrainKosAfterRewind();
+        if (deathEggTerrainDirectQueue == null
+                || deathEggTerrainModuleQueue == null
+                || deathEggBlocksHandle == null
+                || deathEggChunksHandle == null
+                || deathEggTerrainArtHandle == null
+                || !deathEggTerrainDirectQueue.isReady(deathEggBlocksHandle)
+                || !deathEggTerrainDirectQueue.isReady(deathEggChunksHandle)
+                || !deathEggTerrainModuleQueue.isReady(deathEggTerrainArtHandle)) {
+            return;
         }
+
+        byte[] blocks16x16 = deathEggTerrainDirectQueue.claim(deathEggBlocksHandle);
+        byte[] chunks128x128 = deathEggTerrainDirectQueue.claim(deathEggChunksHandle);
+        byte[] terrainArt = deathEggTerrainModuleQueue.claim(deathEggTerrainArtHandle);
         validateResourceSize("LBZ2_16x16_DeathEgg_Kos",
                 blocks16x16, Sonic3kConstants.LBZ2_16X16_DEATH_EGG_OUTPUT_SIZE);
         validateResourceSize("LBZ2_128x128_DeathEgg_Kos",
                 chunks128x128, Sonic3kConstants.LBZ2_128X128_DEATH_EGG_OUTPUT_SIZE);
         validateResourceSize("LBZ2_8x8_DeathEgg_KosM",
                 terrainArt, Sonic3kConstants.LBZ2_8X8_DEATH_EGG_OUTPUT_SIZE);
-        validateResourceSize("ArtKosM_LBZ2DeathEgg2_8x8",
-                deathEgg2Art, Sonic3kConstants.ART_KOSM_LBZ2_DEATH_EGG_2_8X8_OUTPUT_SIZE);
 
         LayoutMutationContext context = new LayoutMutationContext(
                 LevelMutationSurface.forLevel(level),
                 levelManager()::applyMutationEffects);
         zoneLayoutMutationPipeline().applyImmediately(
                 mutationContext -> applyDeathEggTerrainResources(
-                        mutationContext, blocks16x16, chunks128x128, terrainArt, deathEgg2Art),
+                        mutationContext, blocks16x16, chunks128x128, terrainArt),
                 context);
-        refreshLbzKnuxPillarSheet(level);
         state.setDeathEggTerrainSwapApplied(true);
+        clearDeathEggTerrainKosOwnership();
+    }
+
+    private void queueDeathEggTerrainResources() {
+        try {
+            Rom rom = rom();
+            deathEggTerrainDirectQueue = directKosQueue();
+            deathEggTerrainModuleQueue = moduleKosQueue();
+            deathEggBlocksHandle = deathEggTerrainDirectQueue.queueStandardKos(
+                    rom,
+                    Sonic3kConstants.LBZ2_16X16_DEATH_EGG_KOS_ADDR,
+                    S3kKosRamDestinations.BLOCK_TABLE);
+            deathEggBlocksOrdinal = deathEggBlocksHandle.ordinal();
+            deathEggChunksHandle = deathEggTerrainDirectQueue.queueStandardKos(
+                    rom,
+                    Sonic3kConstants.LBZ2_128X128_DEATH_EGG_KOS_ADDR,
+                    S3kKosRamDestinations.RAM_START);
+            deathEggChunksOrdinal = deathEggChunksHandle.ordinal();
+            deathEggTerrainArtHandle = deathEggTerrainModuleQueue.queue(
+                    rom,
+                    Sonic3kConstants.LBZ2_8X8_DEATH_EGG_KOSM_ADDR,
+                    Sonic3kConstants.LBZ2_8X8_DEATH_EGG_DEST_TILE);
+            deathEggTerrainArtOrdinal = deathEggTerrainArtHandle.ordinal();
+            // LBZ2_Resize queues the one-module Death Egg 2 art immediately
+            // after the terrain KosM parent, so it remains behind that parent
+            // in the native module FIFO (sonic3k.asm:39529-39543).
+            queueDeathEggLaunchArt();
+        } catch (IOException e) {
+            throw new IllegalStateException(
+                    "Unable to queue LBZ2 Death Egg terrain resources", e);
+        }
+    }
+
+    private void rebindDeathEggTerrainKosAfterRewind() {
+        if (deathEggTerrainArtOrdinal < 0 || deathEggTerrainModuleQueue != null) {
+            return;
+        }
+        var timing = hardwareTiming();
+        deathEggBlocksHandle = timing.pendingHandle(
+                        HardwareWorkKind.KOS_DECOMPRESSION_QUEUE, deathEggBlocksOrdinal)
+                .orElseThrow(() -> new IllegalStateException(
+                        "restored LBZ Death Egg terrain owner cannot find block Kos ordinal "
+                                + deathEggBlocksOrdinal));
+        deathEggChunksHandle = timing.pendingHandle(
+                        HardwareWorkKind.KOS_DECOMPRESSION_QUEUE, deathEggChunksOrdinal)
+                .orElseThrow(() -> new IllegalStateException(
+                        "restored LBZ Death Egg terrain owner cannot find chunk Kos ordinal "
+                                + deathEggChunksOrdinal));
+        deathEggTerrainArtHandle = timing.pendingHandle(
+                        HardwareWorkKind.KOS_MODULE_QUEUE, deathEggTerrainArtOrdinal)
+                .orElseThrow(() -> new IllegalStateException(
+                        "restored LBZ Death Egg terrain owner cannot find art KosM ordinal "
+                                + deathEggTerrainArtOrdinal));
+        deathEggTerrainDirectQueue = directKosQueue();
+        deathEggTerrainModuleQueue = moduleKosQueue();
+    }
+
+    private void clearDeathEggTerrainKosOwnership() {
+        deathEggTerrainDirectQueue = null;
+        deathEggTerrainModuleQueue = null;
+        deathEggBlocksHandle = null;
+        deathEggChunksHandle = null;
+        deathEggTerrainArtHandle = null;
+        deathEggBlocksOrdinal = -1;
+        deathEggChunksOrdinal = -1;
+        deathEggTerrainArtOrdinal = -1;
     }
 
     private void refreshLbzKnuxPillarSheet(Level level) {
@@ -1032,18 +1121,12 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
     private MutationEffects applyDeathEggTerrainResources(LayoutMutationContext context,
                                                           byte[] blocks16x16,
                                                           byte[] chunks128x128,
-                                                          byte[] terrainArt,
-                                                          byte[] deathEgg2Art) {
+                                                          byte[] terrainArt) {
         MutationEffects effects = MutationEffects.NONE;
         effects = mergeEffects(effects, copyDeathEgg16x16Blocks(context, blocks16x16));
         effects = mergeEffects(effects, copyDeathEgg128x128Chunks(context, chunks128x128));
         effects = mergeEffects(effects, copyArtToPatternTile(
                 context, terrainArt, Sonic3kConstants.LBZ2_8X8_DEATH_EGG_DEST_TILE));
-        // ROM LBZ2_DeathEgg_Launch_PLC: Queue_Kos_Module ArtKosM_LBZ2DeathEgg2_8x8
-        // to ArtTile_Explosion. ObjDat3_6641A/ObjDat_LBZKnuxPillar then render
-        // Map_LBZKnuxPillar from that slot for Knuckles' swing/platform support.
-        effects = mergeEffects(effects, copyArtToPatternTile(
-                context, deathEgg2Art, Sonic3kConstants.ART_TILE_LBZ_KNUX_PILLAR));
         return mergeEffects(effects, MutationEffects.redrawAllTilemaps());
     }
 
@@ -1131,6 +1214,7 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         if (state == null) {
             return;
         }
+        serviceDeathEggLaunchArt();
         if (state.consumeLaunchStartRequested()) {
             startLaunch(state);
         }
@@ -1189,8 +1273,10 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
     private void applyFinalFallFrame() {
         // ROM LBZ2BGE_Falling: Scroll_lock + camera.y -= 2; the launch
         // motion/deform no longer runs once Events_fg_5 (3rd use) is set.
-        camera().setFrozen(true);
-        camera().setY((short) ((camera().getY() & 0xFFFF) + LBZ2_FINAL_FALL_CAMERA_DY));
+        Camera camera = camera();
+        camera.setFrozen(true);
+        camera.captureRenderCopy();
+        camera.setYAfterRenderCopy((short) ((camera.getY() & 0xFFFF) + LBZ2_FINAL_FALL_CAMERA_DY));
     }
 
     private void startLaunch(LbzZoneRuntimeState state) {
@@ -1219,6 +1305,73 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         camera.setMaxYTarget((short) LBZ2_LAUNCH_CAMERA_MAX_Y);
         camera.setFrozen(true);
         applyDeathEggSmallBackgroundReframe();
+    }
+
+    private void queueDeathEggLaunchArt() {
+        if (deathEggLaunchArtOrdinal >= 0 || deathEggLaunchArtHandle != null) {
+            return;
+        }
+        try {
+            deathEggLaunchArtQueue = moduleKosQueue();
+            deathEggLaunchArtHandle = deathEggLaunchArtQueue.queue(
+                    rom(),
+                    Sonic3kConstants.ART_KOSM_LBZ2_DEATH_EGG_2_8X8_ADDR,
+                    Sonic3kConstants.ART_TILE_LBZ2_DEATH_EGG_2);
+            deathEggLaunchArtOrdinal = deathEggLaunchArtHandle.ordinal();
+        } catch (IOException e) {
+            throw new IllegalStateException(
+                    "Unable to queue LBZ2 Death Egg launch art", e);
+        }
+    }
+
+    private void serviceDeathEggLaunchArt() {
+        if (deathEggLaunchArtOrdinal < 0 && deathEggLaunchArtHandle == null) {
+            return;
+        }
+        rebindDeathEggLaunchArtAfterRewind();
+        if (deathEggLaunchArtQueue == null
+                || deathEggLaunchArtHandle == null
+                || !deathEggLaunchArtQueue.isReady(deathEggLaunchArtHandle)) {
+            return;
+        }
+        Level level = levelManager().getCurrentLevel();
+        if (level == null) {
+            return;
+        }
+        byte[] art = deathEggLaunchArtQueue.claim(deathEggLaunchArtHandle);
+        validateResourceSize("ArtKosM_LBZ2DeathEgg2_8x8",
+                art, Sonic3kConstants.ART_KOSM_LBZ2_DEATH_EGG_2_8X8_OUTPUT_SIZE);
+        LayoutMutationContext context = new LayoutMutationContext(
+                LevelMutationSurface.forLevel(level),
+                levelManager()::applyMutationEffects);
+        zoneLayoutMutationPipeline().applyImmediately(
+                mutationContext -> mergeEffects(
+                        copyArtToPatternTile(
+                                mutationContext,
+                                art,
+                                Sonic3kConstants.ART_TILE_LBZ2_DEATH_EGG_2),
+                        MutationEffects.redrawAllTilemaps()),
+                context);
+        refreshLbzKnuxPillarSheet(level);
+        clearDeathEggLaunchArtOwnership();
+    }
+
+    private void rebindDeathEggLaunchArtAfterRewind() {
+        if (deathEggLaunchArtOrdinal < 0 || deathEggLaunchArtQueue != null) {
+            return;
+        }
+        deathEggLaunchArtHandle = hardwareTiming().pendingHandle(
+                HardwareWorkKind.KOS_MODULE_QUEUE,
+                deathEggLaunchArtOrdinal).orElseThrow(() -> new IllegalStateException(
+                        "restored LBZ Death Egg launch owner cannot find KosM ordinal "
+                                + deathEggLaunchArtOrdinal));
+        deathEggLaunchArtQueue = moduleKosQueue();
+    }
+
+    private void clearDeathEggLaunchArtOwnership() {
+        deathEggLaunchArtQueue = null;
+        deathEggLaunchArtHandle = null;
+        deathEggLaunchArtOrdinal = -1;
     }
 
     private void applyDeathEggSmallBackgroundReframe() {

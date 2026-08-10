@@ -6,6 +6,7 @@ import com.openggf.game.LevelEventProvider;
 import com.openggf.game.TitleCardProvider;
 import com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame;
 import com.openggf.game.resources.PlcLifecyclePhase;
+import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.level.LevelManager;
 import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
 
@@ -92,6 +93,16 @@ public final class TraceSuppressedRowClosure {
                                 && levelEvents != null) {
                             levelEvents.updateFixedInLevelObjects();
                         }
+                        if (titleCardProvider
+                                .ownsRetainedResultsHeldLevelCounter()
+                                && context.gameModule().getObjectArtProvider() != null) {
+                            // Retained Obj_TitleCardWait2 reaches LoadEnemyArt
+                            // during this held object dispatch. Pump the
+                            // production ROM-backed provider before the loop
+                            // tail services the admitted queue work.
+                            context.gameModule().getObjectArtProvider()
+                                    .processRuntimeArtQueue();
+                        }
                     });
             if (titleCardProvider.ownsInLevelPlayerControlLock()) {
                 applyInLevelTitleCardControlLock.accept(
@@ -101,18 +112,26 @@ public final class TraceSuppressedRowClosure {
         } else {
             LevelFrameStep.serviceVBlankOnly(
                     context, lifecycleFrame, PlcLifecyclePhase.LAG);
-            if (context.hardwareTimingBoundaryObserver()
-                    instanceof TraceHardwareTimingBoundaryObserver replayObserver
-                    && replayObserver.applySuppressedRowCompletion()) {
-                context.runtimeArtCoordinator().afterTimingService(
-                        com.openggf.game.timing.HardwareServiceBoundary.PRE_MAIN_LOOP);
+            if (levelEvents != null) {
+                levelEvents.advanceVblankOnlyState();
+            }
+            if (context.runtimeArtCoordinator().ownsHeldLevelCounterHardwareTail()) {
+                LevelFrameStep.serviceHardwarePostObjectsOnly(context);
+                LevelFrameStep.serviceHardwarePreMainLoopOnly(context);
+            } else if (context.hardwareTimingBoundaryObserver()
+                    instanceof TraceHardwareTimingBoundaryObserver replayObserver) {
+                if (replayObserver.applySuppressedRowCompletion()) {
+                    context.runtimeArtCoordinator().afterTimingService(
+                            HardwareServiceBoundary.PRE_MAIN_LOOP);
+                }
             }
         }
 
         if (levelManager.hasPendingInLevelTitleCardHeldCounterDispatch()) {
             startPendingInLevelTitleCard.run();
         }
-        if (levelEvents != null) {
+        if (levelEvents != null && titleCardProvider != null
+                && titleCardProvider.advancesOnHeldLevelCounter()) {
             levelEvents.advanceVblankOnlyState();
         }
         levelManager.getObjectManager().advanceVblaCounter();

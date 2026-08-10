@@ -1639,6 +1639,12 @@ S1 `segment_start - 26` load-pair invariant, live in the `plc-system` skill's
   any level reaches its main loop can never measure the tail back from it and
   takes the earliest legal row instead
   (`releaseUnclaimedPreMainLoopPlayerTransfer`, :680-693).
+- **Fresh-level title-card boundaries expose player RAM before object
+  dispatch.** Do not publish the fully assembled destination intro state on
+  that row: clear velocity, roll/jump/status, and animation first, then restore
+  the assembled state for the following loop. When clearing roll changes sprite
+  radii, preserve the ROM centre coordinate explicitly; otherwise a correct
+  status fix can create a 5-pixel Y mismatch.
 
 ### Prefer derivation over "it needs recorded timing"
 

@@ -269,7 +269,9 @@ class TestTitleCardObjectExecution {
                     "the next ordinary iteration runs exactly one level frame");
             afterRelease = OscillationManager.snapshot();
             OscillationManager.restore(beforeRelease);
-            OscillationManager.update(levelFrameBeforeRelease);
+            // LevelLoop publishes the oscillator table for the next object
+            // pass at its tail, before LevelManager increments this counter.
+            OscillationManager.update(levelFrameBeforeRelease + 1);
             OscillationSnapshot expectedAfterOneUpdate = OscillationManager.snapshot();
             OscillationManager.restore(afterRelease);
             assertOscillationEquals(expectedAfterOneUpdate, afterRelease,

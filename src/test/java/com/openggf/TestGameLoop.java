@@ -1648,7 +1648,7 @@ public class TestGameLoop {
 
         assertEquals(GameMode.DATA_SELECT, gameLoop.getCurrentGameMode());
         assertEquals(1, nativeDelegate.initializeCalls);
-        verify(levelManager, never()).loadZoneAndAct(anyInt(), anyInt());
+        verify(levelManager, never()).loadZoneAndActForFreshRuntime(anyInt(), anyInt());
     }
 
     @Test
@@ -1684,7 +1684,7 @@ public class TestGameLoop {
         invokePrivateMethod(gameLoop, "doExitTitleScreen");
 
         assertEquals(GameMode.DATA_SELECT, gameLoop.getCurrentGameMode());
-        verify(levelManager, never()).loadZoneAndAct(anyInt(), anyInt());
+        verify(levelManager, never()).loadZoneAndActForFreshRuntime(anyInt(), anyInt());
     }
 
     @Test
@@ -1716,7 +1716,7 @@ public class TestGameLoop {
         invokePrivateMethod(gameLoop, "doExitTitleScreen");
 
         assertEquals(GameMode.DATA_SELECT, gameLoop.getCurrentGameMode());
-        verify(levelManager, never()).loadZoneAndAct(anyInt(), anyInt());
+        verify(levelManager, never()).loadZoneAndActForFreshRuntime(anyInt(), anyInt());
     }
 
     @Test
@@ -1747,7 +1747,7 @@ public class TestGameLoop {
 
         assertEquals(GameMode.LEVEL, gameLoop.getCurrentGameMode());
         assertEquals(0, nativeDelegate.initializeCalls);
-        verify(levelManager).loadZoneAndAct(0, 0);
+        verify(levelManager).loadZoneAndActForFreshRuntime(0, 0);
     }
 
     @Test
@@ -1775,7 +1775,7 @@ public class TestGameLoop {
 
         assertEquals(GameMode.LEVEL, gameLoop.getCurrentGameMode());
         verify(titleScreen).reset();
-        verify(levelManager).loadZoneAndAct(0, 0);
+        verify(levelManager).loadZoneAndActForFreshRuntime(0, 0);
         assertTrue(dataSelect.isActive(), "Provider presence alone should not trigger Data Select");
     }
 
@@ -1806,7 +1806,7 @@ public class TestGameLoop {
 
         assertEquals(GameMode.LEVEL, gameLoop.getCurrentGameMode());
         verify(titleScreen).reset();
-        verify(levelManager).loadZoneAndAct(0, 0);
+        verify(levelManager).loadZoneAndActForFreshRuntime(0, 0);
         verify(fadeManager, never()).startFadeToBlack(any());
     }
 
@@ -1837,7 +1837,7 @@ public class TestGameLoop {
 
         assertEquals(GameMode.LEVEL, gameLoop.getCurrentGameMode());
         verify(titleScreen).reset();
-        verify(levelManager).loadZoneAndAct(0, 0);
+        verify(levelManager).loadZoneAndActForFreshRuntime(0, 0);
         verify(fadeManager).startFadeFromBlack(any());
     }
 
@@ -1885,7 +1885,7 @@ public class TestGameLoop {
         titleScreen.triggerExitHandler();
 
         assertEquals(GameMode.LEVEL, gameLoop.getCurrentGameMode());
-        verify(levelManager).loadZoneAndAct(0, 0);
+        verify(levelManager).loadZoneAndActForFreshRuntime(0, 0);
         verify(fadeManager, never()).startFadeToBlack(any());
         assertTrue(dataSelect.isActive(), "Explicit route resolution should prevent OPTIONS from entering Data Select");
     }
@@ -1938,7 +1938,7 @@ public class TestGameLoop {
         assertEquals(GameMode.DATA_SELECT, gameLoop.getCurrentGameMode());
         assertEquals(1, nativeDelegate.initializeCalls);
         verify(fadeManager).startFadeFromBlack(any());
-        verify(levelManager, never()).loadZoneAndAct(anyInt(), anyInt());
+        verify(levelManager, never()).loadZoneAndActForFreshRuntime(anyInt(), anyInt());
     }
 
     @Test
@@ -1977,12 +1977,12 @@ public class TestGameLoop {
 
         assertEquals(GameMode.TITLE_SCREEN, gameLoop.getCurrentGameMode());
         assertNotNull(fadeCallback.get());
-        verify(levelManager, never()).loadZoneAndAct(anyInt(), anyInt());
+        verify(levelManager, never()).loadZoneAndActForFreshRuntime(anyInt(), anyInt());
 
         fadeCallback.get().run();
 
         assertEquals(GameMode.LEVEL, gameLoop.getCurrentGameMode());
-        verify(levelManager).loadZoneAndAct(0, 0);
+        verify(levelManager).loadZoneAndActForFreshRuntime(0, 0);
         verify(fadeManager).startFadeFromBlack(any());
     }
 
@@ -2017,7 +2017,7 @@ public class TestGameLoop {
         invokePrivateMethod(gameLoop, "exitTitleScreen");
 
         assertEquals(GameMode.LEVEL, gameLoop.getCurrentGameMode());
-        verify(levelManager).loadZoneAndAct(0, 0);
+        verify(levelManager).loadZoneAndActForFreshRuntime(0, 0);
         verify(fadeManager, never()).startFadeToBlack(any());
     }
 
@@ -2056,12 +2056,12 @@ public class TestGameLoop {
 
         assertEquals(GameMode.TITLE_SCREEN, gameLoop.getCurrentGameMode());
         assertNotNull(fadeCallback.get());
-        verify(levelManager, never()).loadZoneAndAct(anyInt(), anyInt());
+        verify(levelManager, never()).loadZoneAndActForFreshRuntime(anyInt(), anyInt());
 
         fadeCallback.get().run();
 
         assertEquals(GameMode.LEVEL, gameLoop.getCurrentGameMode());
-        verify(levelManager).loadZoneAndAct(0, 0);
+        verify(levelManager).loadZoneAndActForFreshRuntime(0, 0);
         verify(fadeManager).startFadeFromBlack(any());
     }
 
@@ -2107,13 +2107,13 @@ public class TestGameLoop {
 
         assertEquals(GameMode.TITLE_SCREEN, gameLoop.getCurrentGameMode());
         assertNotNull(fadeCallback.get());
-        verify(levelManager, never()).loadZoneAndAct(anyInt(), anyInt());
+        verify(levelManager, never()).loadZoneAndActForFreshRuntime(anyInt(), anyInt());
         assertEquals(0, nativeDelegate.initializeCalls);
 
         fadeCallback.get().run();
 
         assertEquals(GameMode.LEVEL, gameLoop.getCurrentGameMode());
-        verify(levelManager).loadZoneAndAct(0, 0);
+        verify(levelManager).loadZoneAndActForFreshRuntime(0, 0);
         verify(fadeManager).startFadeFromBlack(any());
     }
 
@@ -2161,7 +2161,7 @@ public class TestGameLoop {
         assertEquals(GameMode.DATA_SELECT, gameLoop.getCurrentGameMode());
         assertEquals(1, nativeDelegate.initializeCalls);
         verify(fadeManager).startFadeFromBlack(any());
-        verify(levelManager, never()).loadZoneAndAct(anyInt(), anyInt());
+        verify(levelManager, never()).loadZoneAndActForFreshRuntime(anyInt(), anyInt());
     }
 
     @Test
@@ -2297,7 +2297,7 @@ public class TestGameLoop {
         assertEquals(GameMode.DATA_SELECT, gameLoop.getCurrentGameMode());
         assertEquals(1, nativeDelegate.initializeCalls);
         verify(fadeManager).startFadeFromBlack(any());
-        verify(levelManager, never()).loadZoneAndAct(anyInt(), anyInt());
+        verify(levelManager, never()).loadZoneAndActForFreshRuntime(anyInt(), anyInt());
     }
 
     @Test
@@ -2324,7 +2324,7 @@ public class TestGameLoop {
         invokePrivateMethod(gameLoop, "doExitTitleScreen");
 
         assertEquals(GameMode.LEVEL, gameLoop.getCurrentGameMode());
-        verify(levelManager).loadZoneAndAct(0, 0);
+        verify(levelManager).loadZoneAndActForFreshRuntime(0, 0);
         assertTrue(dataSelect.isActive(), "Unknown title actions must fail closed instead of entering Data Select");
     }
 
@@ -2357,7 +2357,7 @@ public class TestGameLoop {
         titleScreen.triggerExitHandler();
 
         assertEquals(GameMode.LEVEL_SELECT, gameLoop.getCurrentGameMode());
-        verify(levelManager, never()).loadZoneAndAct(anyInt(), anyInt());
+        verify(levelManager, never()).loadZoneAndActForFreshRuntime(anyInt(), anyInt());
         verify(levelSelect).initializeFromTitleScreen();
         verify(levelSelect, never()).initialize();
         verify((FadeManager) getPrivateField(gameLoop, "fadeManager"), never()).startFadeToBlack(any());

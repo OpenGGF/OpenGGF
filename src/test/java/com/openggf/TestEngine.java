@@ -498,7 +498,7 @@ class TestEngine {
             assertEquals(1, harness.cacheManager.renderTaskRuns.get());
             var order = inOrder(harness.graphics, harness.levelManager);
             order.verify(harness.graphics).runPendingRenderThreadTasks();
-            order.verify(harness.levelManager).loadZoneAndAct(0, 0);
+            order.verify(harness.levelManager).loadZoneAndActForFreshRuntime(0, 0);
             order.verifyNoMoreInteractions();
         }
     }
@@ -512,7 +512,7 @@ class TestEngine {
             assertEquals(0, harness.cacheManager.renderTaskRuns.get());
             var order = inOrder(harness.graphics, harness.levelManager);
             order.verify(harness.graphics).runPendingRenderThreadTasks();
-            order.verify(harness.levelManager).loadZoneAndAct(0, 0);
+            order.verify(harness.levelManager).loadZoneAndActForFreshRuntime(0, 0);
             order.verifyNoMoreInteractions();
         }
     }
@@ -524,7 +524,7 @@ class TestEngine {
 
             assertEquals(GameMode.MASTER_TITLE_SCREEN, harness.engine.getCurrentGameMode());
             assertNotNull(harness.engine.getMasterTitleScreen());
-            verify(harness.levelManager, never()).loadZoneAndAct(0, 0);
+            verify(harness.levelManager, never()).loadZoneAndActForFreshRuntime(0, 0);
         }
     }
 
@@ -780,7 +780,7 @@ class TestEngine {
         doAnswer(invocation -> {
             assertEquals(donorActive ? 1 : 0, cacheManager.renderTaskRuns.get());
             return null;
-        }).when(levelManager).loadZoneAndAct(0, 0);
+        }).when(levelManager).loadZoneAndActForFreshRuntime(0, 0);
         when(romDetectionService.detectAndCreateModule(rom)).thenReturn(detectedModule);
 
         MockedStatic<GameplaySessionFactory> gameplayFactory =

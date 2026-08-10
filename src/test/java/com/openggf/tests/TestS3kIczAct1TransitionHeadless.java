@@ -218,13 +218,9 @@ class TestS3kIczAct1TransitionHeadless {
         assertFalse(heldAdmission.runtimeArtAdmissionConsumed());
         assertFalse(heldAdmission.kosSubmissionArmed());
         assertEquals(List.of(), heldAdmission.pendingKosOrdinals());
-        assertEquals(List.of(
-                        new PlcProgressSnapshot.PendingKosModule(
-                                0x375134, 0x0558),
-                        new PlcProgressSnapshot.PendingKosModule(
-                                0x3751C6, 0x0548)),
+        assertEquals(List.of(),
                 heldAdmission.pendingKosModules(),
-                "the exact ICZ Snowdust/StarPointer batch stays production-owned but unsubmitted");
+                "the resource-owner transition must not speculatively admit ICZ enemy art");
         var beforePost = GameServices.hardwareTiming().capture().jobs();
         assertTrue(beforePost.stream()
                         .filter(job -> job.kind() == HardwareWorkKind.KOS_DECOMPRESSION_QUEUE)
@@ -342,10 +338,10 @@ class TestS3kIczAct1TransitionHeadless {
                 "successful terrain and art publication consumes the exact lease last");
         assertTrue(admitted.kosSubmissionArmed());
         assertEquals(List.of(), admitted.pendingKosOrdinals(),
-                "lease consumption arms the enemy batch but does not submit inside the event scan");
+                "lease consumption arms the resource owner without fabricating enemy work");
         artProvider.processRuntimeArtQueue();
-        assertEquals(2, artProvider.capture().pendingKosOrdinals().size(),
-                "the following provider pump submits Snowdust then StarPointer exactly once");
+        assertEquals(List.of(), artProvider.capture().pendingKosOrdinals(),
+                "the following provider pump must not submit speculative enemy work");
         byte[] publishedOwnerState =
                 ZoneEventSchemaSidecar.capture(icz2Events);
         var providerAfterPublication = artProvider.capture();

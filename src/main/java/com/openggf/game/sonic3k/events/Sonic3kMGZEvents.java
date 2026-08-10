@@ -497,7 +497,6 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             //   (sonic3k.asm:39335-39336), making act 1's resize handler a no-op.
             updateAct2BossArena();
         } else if (act == 1) {
-            updateAct2LevelSizeChange();
             // MGZ2_ScreenEvent polls Do_ShakeSound before dispatching any of
             // its foreground screen-event routines.
             updateAct2ContinuousRumble(frameCounter);
@@ -567,6 +566,16 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     }
 
     /**
+     * Runs the retained Change_Act2Sizes workers in the object-loop slot before
+     * DeformBgLayer consumes the published camera bounds.
+     */
+    public void updateAct2LevelSizeChangeBeforeCamera(int act) {
+        if (act == 1) {
+            updateAct2LevelSizeChange();
+        }
+    }
+
+    /**
      * Ports Change_Act2Sizes and Child1_Act2LevelSize for the MGZ1 -> MGZ2
      * reload: publish Act 2's bottom target immediately, then run the three
      * independent gradual boundary workers at their native 16:16 rates.
@@ -587,6 +596,12 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
 
             Level level = levelManager().getCurrentLevel();
             if (level != null) {
+                // Change_Act2Sizes hands its Child1_Act2LevelSize workers a
+                // max-Y boundary that already contains the native two-pixel
+                // carry at this owner handoff. Preserve that carry before the
+                // first Obj_IncLevEndYGradual dispatch; otherwise the camera's
+                // first downward clamp starts two pixels low.
+                camera().setMaxY((short) (camera().getMaxY() + 2));
                 camera().setMaxYTarget((short) level.getMaxY());
             }
             LOG.info("MGZ2: title card completed; starting Change_Act2Sizes workers");
@@ -1062,14 +1077,6 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         }
     }
 
-    /** ROM: ScreenShakeArray2 — 64-entry continuous-shake table. */
-    private static final byte[] SCREEN_SHAKE_CONTINUOUS = {
-            1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0,
-            2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3,
-            1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0,
-            2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3
-    };
-
     /** ROM: Events_fg_0 / Screen_shake_flag active while Robotnik is on-screen. */
     private boolean screenShakeActive;
 
@@ -1100,14 +1107,12 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         if (state == null) {
             return;
         }
-        int shakeFrameCounter = GameServices.hasRuntime()
-                ? GameServices.level().getFrameCounter()
-                : frameCounter;
-        int offset = isVisualShakeActive()
-                ? SCREEN_SHAKE_CONTINUOUS[shakeFrameCounter & 0x3F]
-                : 0;
-        if (offset != 0) {
-            state.requestScreenShakeOffset(offset);
+        // ROM MGZ2_ScreenEvent raises Screen_shake_flag (st, sonic3k.asm:106395)
+        // and ShakeScreen_Setup samples ScreenShakeArray2 from
+        // Level_frame_counter at the background event's tail
+        // (sonic3k.asm:104200-104209, :106308). Keep both in that single owner.
+        if (isVisualShakeActive()) {
+            state.requestContinuousScreenShake();
         }
     }
 
@@ -2480,18 +2485,24 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
                         .showInLevelTitleCard(false)
                         .resetLevelGamestateAtInLevelTitleCardDisplay(true)
                         // The carried results parent mutates into Obj_TitleCard;
-                        // its twelve child SST create/render entries precede
+                        // its six remaining child SST create/render entries precede
                         // Obj_TitleCardWait's display-time gamestate reset. At
                         // module phase 1, the title-card manager already owns
                         // the final six-entry create/render handoff.
-                        .inLevelTitleCardResetAdditionalDispatches(12)
+                        .inLevelTitleCardResetAdditionalDispatches(6)
                         .inLevelTitleCardResetPhaseOneDispatchOverlap(6)
                         // The retained Obj_EndSignControl parent occupies an
-                        // earlier SST slot than Obj_TitleCardWait2. Ten parent
+                        // earlier SST slot than Obj_TitleCardWait2. Three parent
                         // dispatches remain after the visual children finish
                         // before the completion flag reaches DoStart.
-                        .inLevelTitleCardExitAdditionalDispatches(10)
+                        .inLevelTitleCardExitAdditionalDispatches(3)
                         .inLevelTitleCardExitPhaseOneDispatchOverlap(5)
+                        // The embedded results children have already retired
+                        // by the time the retained Obj_LevelResults slot
+                        // mutates into Obj_TitleCard.  Do not add the generic
+                        // carried-results parent tail before that mutation;
+                        // Obj_TitleCardInit runs on the following owner pass.
+                        .carriedResultsRetireDispatches(1)
                         // Native code subtracts the offsets from the live camera
                         // and all four bounds; it does not recenter after Load_Level.
                         .preserveOffsetCameraPosition(true)

@@ -387,6 +387,22 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
             mgr.ensureZoneRuntimeStateInstalled();
             if (zoneIndex == Sonic3kZoneIds.ZONE_HCZ) {
                 HCZWaterSkimHandler.updateAfterPlayablePhysics(player);
+            }
+        }
+    }
+
+    @Override
+    public void updateAfterObjectExecution(AbstractPlayableSprite player, int cameraX, int zoneIndex) {
+        if (player == null || player.getDead()
+                || (zoneIndex != Sonic3kZoneIds.ZONE_HCZ && zoneIndex != Sonic3kZoneIds.ZONE_ICZ)) {
+            return;
+        }
+        var levelManager = GameServices.levelOrNull();
+        int act = levelManager != null ? levelManager.getFeatureActId() : 0;
+        if (GameServices.module().getLevelEventProvider()
+                instanceof Sonic3kLevelEventManager mgr) {
+            mgr.ensureZoneRuntimeStateInstalled();
+            if (zoneIndex == Sonic3kZoneIds.ZONE_HCZ) {
                 var events = mgr.getHczEvents();
                 if (events != null) {
                     events.updateSlideTerrainAfterPlayablePhysics(act, player);

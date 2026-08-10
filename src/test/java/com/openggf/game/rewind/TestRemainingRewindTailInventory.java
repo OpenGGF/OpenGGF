@@ -116,7 +116,7 @@ class TestRemainingRewindTailInventory {
         // 2026-07-29 super-emerald remediation integration inventory: nine
         // effect/controller classes have focused graph coverage, and every
         // remaining concrete object class probes cleanly.
-        return new TailInventory(1000, 781, 219, 0, buckets);
+        return new TailInventory(1002, 783, 219, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {

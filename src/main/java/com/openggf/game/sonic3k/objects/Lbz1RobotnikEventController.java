@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
@@ -18,6 +19,8 @@ import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -107,10 +110,16 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
     private LbzMinibossBoxRig boxRig;
     private int hitReactionTimer;
     private boolean shipGone;
+    @RewindTransient(reason = "hardware handle is rebound from the captured KosM ordinal")
     private HardwareWorkHandle initialBoxArtHandle;
     private long initialBoxArtOrdinal = -1;
+    @RewindTransient(reason = "hardware handle is rebound from the captured KosM ordinal")
     private HardwareWorkHandle collapseBoxArtHandle;
     private long collapseBoxArtOrdinal = -1;
+    @RewindTransient(reason = "hardware handle is rebound from the captured KosM ordinal")
+    private HardwareWorkHandle minibossArtHandle;
+    private long minibossArtOrdinal = -1;
+    private boolean minibossArtLoaded;
 
     public Lbz1RobotnikEventController(ObjectSpawn spawn) {
         super(spawn, "LBZ1Robotnik");
@@ -150,6 +159,7 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         serviceMinibossBoxArtQueues();
+        serviceMinibossArtQueue();
         if (isPlayerKnuckles()) {
             // ROM loc_8CB90: Knuckles never meets Obj_LBZ1Robotnik here.
             ObjectLifetimeOps.deleteNoRespawn(this);
@@ -322,9 +332,45 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
         }
     }
 
+    /** ROM loc_8CCF6: queue ArtKosM_LBZMiniboss at the second-rise handoff. */
+    private void queueMinibossArt() {
+        if (minibossArtLoaded || minibossArtOrdinal >= 0) {
+            return;
+        }
+        try {
+            S3kKosModuleQueue moduleQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
+            minibossArtHandle = moduleQueue.queue(
+                    services().rom(),
+                    Sonic3kConstants.ART_KOSM_LBZ_MINIBOSS_ADDR,
+                    Sonic3kConstants.ART_TILE_LBZ_MINIBOSS);
+            minibossArtOrdinal = minibossArtHandle.ordinal();
+        } catch (Exception e) {
+            throw new IllegalStateException("Unable to queue LBZ miniboss KosM art", e);
+        }
+    }
+
     private void serviceMinibossBoxArtQueues() {
         serviceInitialMinibossBoxArt();
         serviceCollapseMinibossBoxArt();
+    }
+
+    private void serviceMinibossArtQueue() {
+        if (minibossArtLoaded || minibossArtOrdinal < 0) {
+            return;
+        }
+        S3kKosModuleQueue moduleQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
+        if (minibossArtHandle == null) {
+            minibossArtHandle = services().hardwareTiming().pendingHandle(
+                            HardwareWorkKind.KOS_MODULE_QUEUE, minibossArtOrdinal)
+                    .orElseThrow(() -> new IllegalStateException(
+                            "Missing restored LBZ miniboss KosM job " + minibossArtOrdinal));
+        }
+        if (moduleQueue.isReady(minibossArtHandle)) {
+            moduleQueue.claim(minibossArtHandle);
+            minibossArtHandle = null;
+            minibossArtOrdinal = -1;
+            minibossArtLoaded = true;
+        }
     }
 
     private void serviceInitialMinibossBoxArt() {
@@ -385,8 +431,8 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
             facingLeft = true;
             motion.x = TELEPORT_X;
             motion.y = TELEPORT_Y;
-            motion.xSub = 0;
-            motion.ySub = 0;
+            // ROM loc_8CC3C writes the position words only; the low subpixel
+            // words remain part of the MoveSprite2 state across this teleport.
             swingSetup1();
             return;
         }
@@ -413,7 +459,16 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
     private void updateAfterCollapse(AbstractPlayableSprite player) {
         updatePostCollapseCameraMin();
         updatePostCollapseCameraMax();
-        if (isPlayerNear(player, POST_COLLAPSE_NEAR_X, Integer.MAX_VALUE)) {
+        // ROM loc_8CCB4 calls Find_SonicTails, which selects the nearer native
+        // P1/P2 by horizontal distance before testing d2 against $60. The
+        // update argument is only a fallback for isolated object fixtures that
+        // do not expose the injected player roster.
+        ObjectPlayerQuery.NearestPlayerX nearest = services().playerQuery().nearestByRomX(
+                ObjectPlayerParticipationPolicy.NATIVE_P1_P2, motion.x);
+        boolean nativePlayerNear = nearest.player() != null
+                ? nearest.distance() < POST_COLLAPSE_NEAR_X
+                : isPlayerNear(player, POST_COLLAPSE_NEAR_X, Integer.MAX_VALUE);
+        if (nativePlayerNear) {
             routine = ROUTINE_SECOND_RISE;
             motion.yVel = FIRST_RISE_Y_VEL;
             return;
@@ -429,6 +484,9 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
             motion.xVel = DIAGONAL_ESCAPE_X_VEL;
             motion.yVel = DIAGONAL_ESCAPE_Y_VEL;
             flameVisible = true;
+            // ROM loc_8CCF6 queues ArtKosM_LBZMiniboss before the ship hands
+            // the arena over to Obj_LBZMiniboss.
+            queueMinibossArt();
             ensureRobotnikArtLoaded();
             armDroppedBoxHandoff();
             return;

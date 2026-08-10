@@ -554,7 +554,8 @@ public final class TraceReplaySessionBootstrap {
             return;
         }
         HardwareTimingSchedule schedule =
-                TraceHardwareTimingScheduleCompiler.compileForInstall(trace);
+                TraceHardwareTimingScheduleCompiler.compileForInstall(
+                        trace, fixture.gameplayMode().runtimeArtCoordinator());
         installHardwareTimingReplay(schedule, fixture);
     }
 

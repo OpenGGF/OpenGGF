@@ -87,6 +87,11 @@ public final class HardwareTimingService
         return job != null && !job.isClaimed() && job.isReady();
     }
 
+    /** Returns the production ownership contract attached to a pending job. */
+    public boolean isExportableAcrossSegment(HardwareWorkHandle handle) {
+        return requireKnown(handle).submission().exportableAcrossSegment();
+    }
+
     public byte[] claim(HardwareWorkHandle handle) {
         HardwareTimingJob job = requireKnown(handle);
         return job.claim();

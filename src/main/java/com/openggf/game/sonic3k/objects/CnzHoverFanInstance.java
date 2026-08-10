@@ -66,20 +66,25 @@ public final class CnzHoverFanInstance extends AbstractObjectInstance implements
     @Override
     public int getExecutionSlotIndex() {
         ObjectServices svc = tryServices();
-        if (svc == null || spawn.layoutIndex() < 0) {
+        if (svc == null || spawn.layoutIndex() < 0 || !activeVariant) {
             return super.getExecutionSlotIndex();
         }
-        return resolveNativeExecutionSlot(
+        return resolveActiveVariantExecutionSlot(
                 svc.objectManager().activeObjectsOfType(CnzHoverFanInstance.class));
     }
 
-    int resolveNativeExecutionSlot(List<CnzHoverFanInstance> activeFans) {
+    int resolveActiveVariantExecutionSlot(List<CnzHoverFanInstance> activeFans) {
+        // Active fans run loc_31E36/sub_31E96 in native SST order. Each fan writes y_pos before
+        // the next fan tests its influence band, so adjacent overlapping fans must retain their
+        // layout-derived order when dynamic slot ownership reverses them. Static loc_31E68 fans
+        // keep their owned slots; their ROM path does not perform this lift operation.
         int ownSlot = getSlotIndex();
-        if (ownSlot < 0 || activeFans == null) {
+        if (ownSlot < 0 || activeFans == null || !activeVariant) {
             return ownSlot;
         }
         for (CnzHoverFanInstance other : activeFans) {
-            if (other == null || other == this || other.spawn.layoutIndex() < 0
+            if (other == null || other == this || !other.activeVariant
+                    || other.spawn.layoutIndex() < 0
                     || Math.abs(other.getSlotIndex() - ownSlot) != 1
                     || !influenceWindowsOverlap(other)) {
                 continue;
@@ -87,12 +92,6 @@ public final class CnzHoverFanInstance extends AbstractObjectInstance implements
             boolean slotOrder = ownSlot < other.getSlotIndex();
             boolean layoutOrder = spawn.layoutIndex() < other.spawn.layoutIndex();
             if (slotOrder != layoutOrder) {
-                // S3K's X and Y Load_Sprites passes can allocate two adjacent
-                // layout entries in layout order even when the compatibility
-                // placement window materialized them in the opposite order.
-                // Keep their owned slots intact, but execute the overlapping
-                // routines in the ROM layout order because each routine writes
-                // the player's y_pos before the next one tests its lift band.
                 return other.getSlotIndex();
             }
         }

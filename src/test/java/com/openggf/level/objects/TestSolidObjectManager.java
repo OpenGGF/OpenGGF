@@ -1003,6 +1003,37 @@ public class TestSolidObjectManager {
     }
 
     @Test
+    public void sonic3kOffscreenSolidPushReleasePublishesNativeWalkRunAnimationWord() {
+        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+        ToggleOnScreenSolidObject object = new ToggleOnScreenSolidObject(
+                100, 100, new SolidObjectParams(16, 8, 8));
+        ObjectManager manager = buildManager(object);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.useGameRules(GameRules.SONIC_3K);
+        player.setWidth(20);
+        player.setHeight(20);
+        player.setAir(false);
+        player.setXSpeed((short) 0x100);
+        player.setCentreX((short) 85);
+        player.setCentreY((short) 81);
+        player.setAnimationId(5);
+        player.getAnimationManager().update(0);
+
+        manager.update(0, player, List.of(), 0, false, true, false);
+        assertTrue(player.getPushing(), "the visible solid should own the native push latch");
+
+        object.withinSolidContactBounds = false;
+        manager.update(0, player, List.of(), 1, false, true, false);
+
+        assertFalse(player.getPushing());
+        assertEquals(0, player.getAnimationId(),
+                "S3K offscreen SolidObject_TestClearPush writes Walk to anim");
+        assertEquals(1, player.getAnimationManager().captureRewindState().lastAnimationId(),
+                "the offscreen release writes Run to the adjacent prev_anim byte");
+    }
+
+    @Test
     public void sonic3kSolidPushReleasePreservesSpindashAnimation() {
         GameModuleRegistry.setCurrent(new Sonic3kGameModule());
         TestMultiPieceSolidObject object = new TestMultiPieceSolidObject(
@@ -2570,6 +2601,19 @@ public class TestSolidObjectManager {
         @Override
         public boolean usesInclusiveRightEdge() {
             return true;
+        }
+    }
+
+    private static final class ToggleOnScreenSolidObject extends TestSolidObject {
+        private boolean withinSolidContactBounds = true;
+
+        private ToggleOnScreenSolidObject(int x, int y, SolidObjectParams params) {
+            super(x, y, params);
+        }
+
+        @Override
+        public boolean isWithinSolidContactBounds() {
+            return withinSolidContactBounds;
         }
     }
 

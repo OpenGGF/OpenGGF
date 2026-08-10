@@ -330,6 +330,14 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
     }
 
     /**
+     * The shared title owner already models the first post-child Wait2 poll;
+     * ICZ's retained EndSignControl path has two further polls before release.
+     */
+    public int preloadedActCameraReleaseAdditionalDispatches() {
+        return 2;
+    }
+
+    /**
      * ROM {@code Change_Act2Sizes}: install the three independently allocated
      * gradual level-size workers retained by {@code Obj_EndSignControl}.
      */
@@ -709,6 +717,10 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
                 .preserveMusic(true)
                 .preserveLevelGamestate(true)
                 .showInLevelTitleCard(false)
+                // Obj_TitleCardWait2 has a three-dispatch tail after the last
+                // child retires. The title manager owns the first drained-child
+                // observation, so this request carries the two remaining polls.
+                .inLevelTitleCardPreloadedActCameraReleaseDispatches(2)
                 .preserveOffsetCameraPosition(true)
                 .postTransitionMinX(ICZ2_CAMERA_MIN_X)
                 .postTransitionMaxX(ICZ2_CAMERA_MAX_X)

@@ -186,6 +186,42 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
     }
 
     /**
+     * Publishes the angle bytes left by a grounded player AnglePos dispatch.
+     * Native AnglePos seeds both shared registers with the empty-floor sentinel
+     * before its probes, so a missing side writes {@code 3} rather than retaining
+     * an earlier collision routine's value.
+     */
+    public void publishGroundAngleRegisters(SensorResult left, SensorResult right) {
+        publishGroundAngleOutputs(false, left, right);
+    }
+
+    public int getPrimaryAngleRegister() {
+        return primaryAngleOutput;
+    }
+
+    public int getSecondaryAngleRegister() {
+        return secondaryAngleOutput;
+    }
+
+    private void publishPrimaryAngleIfBackedByTile(SensorResult result) {
+        if (result != null && result.tileId() != 0) {
+            applyPrimaryAngleWrites(result);
+        }
+    }
+
+    private void publishAirFloorAngleRegisters(SensorResult[] results) {
+        if (results == null) {
+            return;
+        }
+        SensorResult left = results.length > 0 ? results[0] : null;
+        SensorResult right = results.length > 1 ? results[1] : null;
+        publishPrimaryAngleIfBackedByTile(right);
+        if (left != null && left.tileId() != 0) {
+            applySecondaryAngleWrites(left);
+        }
+    }
+
+    /**
      * Phase 2: Resolve solid object contacts for the legacy batched path.
      * Inline-order modules resolve object solids during object execution instead.
      */
@@ -887,8 +923,8 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
             case 0x00 -> {
                 doWallCheckBoth(sprite);
                 SensorResult[] groundResult = terrainProbes(sprite, sprite.getGroundSensors(), "ground");
-                applyPairedAngleWrites(groundResult);
-                doTerrainCollisionAir(sprite, groundResult, landingHandler);
+                publishAirFloorAngleRegisters(groundResult);
+                doTerrainCollisionAir(sprite, groundResult, landingHandler, landingProbeHandler);
             }
             case 0x40 -> {
                 boolean wallHit = doWallCheck(sprite, 0);
@@ -898,7 +934,6 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
                     }
                 }
                 SensorResult[] ceilingResult = terrainProbes(sprite, sprite.getCeilingSensors(), "ceiling");
-                applyPairedAngleWrites(ceilingResult);
                 boolean ceilingHit = doCeilingCollisionInternal(sprite, ceilingResult);
                 if (!ceilingHit && (forceFloorCheck || sprite.getYSpeed() >= 0)) {
                     // S3K Tails_DoLevelCollision skips sub_11FD6 entirely while
@@ -906,14 +941,14 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
                     // (sonic3k.asm:29000-29008). Do not publish angles from a
                     // helper the native dispatch never invoked.
                     SensorResult[] groundResult = terrainProbes(sprite, sprite.getGroundSensors(), "ground");
-                    applyPairedAngleWrites(groundResult);
-                    doTerrainCollisionAirDirect(sprite, groundResult, landingHandler, forceFloorCheck);
+                    publishAirFloorAngleRegisters(groundResult);
+                    doTerrainCollisionAirDirect(sprite, groundResult, landingHandler,
+                            landingProbeHandler, forceFloorCheck);
                 }
             }
             case 0x80 -> {
                 doWallCheckBoth(sprite);
                 SensorResult[] ceilingResult = terrainProbes(sprite, sprite.getCeilingSensors(), "ceiling");
-                applyPairedAngleWrites(ceilingResult);
                 doCeilingCollision(sprite, ceilingResult);
             }
             case 0xC0 -> {
@@ -923,13 +958,13 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
                     }
                 }
                 SensorResult[] ceilingResult = terrainProbes(sprite, sprite.getCeilingSensors(), "ceiling");
-                applyPairedAngleWrites(ceilingResult);
                 boolean ceilingHit = doCeilingCollisionInternal(sprite, ceilingResult);
                 if (!ceilingHit && (forceFloorCheck || sprite.getYSpeed() >= 0)) {
                     // Mirrored right-moving branch (sonic3k.asm:29095-29103).
                     SensorResult[] groundResult = terrainProbes(sprite, sprite.getGroundSensors(), "ground");
-                    applyPairedAngleWrites(groundResult);
-                    doTerrainCollisionAirDirect(sprite, groundResult, landingHandler, forceFloorCheck);
+                    publishAirFloorAngleRegisters(groundResult);
+                    doTerrainCollisionAirDirect(sprite, groundResult, landingHandler,
+                            landingProbeHandler, forceFloorCheck);
                 }
             }
             default -> {

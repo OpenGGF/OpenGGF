@@ -136,7 +136,7 @@ class TestLevelSeamlessTransitionExecutor {
         verify(transitions).setSpecialStageReturnLevelReloadRequested(false);
         verify(levelManager).applySeamlessMutation("fire-overlay");
         verify(levelManager, never()).executeActTransition(any());
-        verify(levelManager, never()).advanceGlobalOscillation();
+        verify(levelManager, never()).advanceGlobalOscillationAtLevelLoopTail();
         verify(transitions).setLevelInactiveForTransition(false);
     }
 
@@ -161,7 +161,7 @@ class TestLevelSeamlessTransitionExecutor {
         assertEquals(1, capture.getValue().targetAct());
         assertEquals(9, capture.getValue().playerOffsetX());
         assertEquals(-12, capture.getValue().playerOffsetY());
-        verify(levelManager).advanceGlobalOscillation();
+        verify(levelManager).advanceGlobalOscillationAtLevelLoopTail();
         verify(levelManager.objectManager).advanceVblaCounter();
         verify(levelManager).markSidekickRomVisibleReloadFrameCounterBridge();
         verify(transitions).setLevelInactiveForTransition(false);
@@ -177,7 +177,7 @@ class TestLevelSeamlessTransitionExecutor {
         executor.execute(request);
 
         verify(levelManager).executeActTransition(request);
-        verify(levelManager).advanceGlobalOscillation();
+        verify(levelManager).advanceGlobalOscillationAtLevelLoopTail();
         verify(transitions).setLevelInactiveForTransition(false);
     }
 
@@ -195,7 +195,7 @@ class TestLevelSeamlessTransitionExecutor {
 
         assertEquals("Failed to apply seamless transition", thrown.getMessage());
         assertSame(failure, thrown.getCause());
-        verify(levelManager, never()).advanceGlobalOscillation();
+        verify(levelManager, never()).advanceGlobalOscillationAtLevelLoopTail();
         verify(transitions).setLevelInactiveForTransition(false);
     }
 

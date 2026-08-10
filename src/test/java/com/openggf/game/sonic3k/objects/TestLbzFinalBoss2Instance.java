@@ -2064,7 +2064,7 @@ class TestLbzFinalBoss2Instance {
         @Override public void signalActTransition() { }
         @Override public void requestHczPostTransitionCutscene() { }
         @Override public void requestMgzPostTransitionRelease() { }
-        @Override public void requestCnzPostTransitionRelease(int framesUntilRelease) { }
+        @Override public void requestCnzPostTransitionRelease() { }
         @Override public void loadLbzBigArmPostGatePlc() { postGatePlcLoads++; }
     }
 

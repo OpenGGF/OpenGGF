@@ -457,14 +457,23 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
      */
     public void restorePostResultsPlayerControl() {
         for (AbstractPlayableSprite player : nativeCarrierParticipants()) {
+            // Obj_EndSignControlAwaitStart may have already restored this slot
+            // immediately before Obj_LevelResultsWait2 publishes its next
+            // routine. The later retained results owner repeats the control
+            // clear, but must not clear anim_frame/anim_frame_timer a second
+            // time or the first WAIT cycle is delayed by one object frame.
+            boolean animationAlreadyRestored = !player.isObjectControlled()
+                    && player.getAnimationId() == Sonic3kAnimationIds.WAIT.id();
             ObjectControlState.none().applyTo(player);
             player.setAir(false);
             player.setForcedAnimationId(-1);
-            player.setAnimationId(Sonic3kAnimationIds.WAIT);
-            player.getAnimationManager().publishPreviousAnimationId(
-                    Sonic3kAnimationIds.WAIT.id());
-            player.setAnimationFrameIndex(0);
-            player.setAnimationTick(0);
+            if (!animationAlreadyRestored) {
+                player.setAnimationId(Sonic3kAnimationIds.WAIT);
+                player.getAnimationManager().publishPreviousAnimationId(
+                        Sonic3kAnimationIds.WAIT.id());
+                player.setAnimationFrameIndex(0);
+                player.setAnimationTick(0);
+            }
         }
     }
 
@@ -898,17 +907,20 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
                         // carried results/end-sign objects continue to own them
                         // after HCZ1BGE_DoTransition calls Load_Level.
                         .preserveEndOfLevelState(true)
-                        // Show act 2 title card after the level reloads
-                        .showInLevelTitleCard(true)
+                        // HCZ's retained Obj_LevelResults mutates into the act 2
+                        // title-card owner after the reload. HCZ1BGE_DoTransition
+                        // itself does not create a separate title owner.
+                        .showInLevelTitleCard(false)
                         .resetLevelGamestateAtInLevelTitleCardDisplay(true)
                         // The carried Obj_LevelResults parent becomes
                         // Obj_TitleCard before its four children receive their
-                        // native create/render dispatches. The slotless overlay
-                        // starts after that parent handoff, so retain the seven
-                        // intervening child dispatches before Obj_TitleCardWait.
-                        .inLevelTitleCardResetAdditionalDispatches(7)
+                        // native create/render dispatches. The retained owner
+                        // reaches Obj_TitleCardWait's reset on its next title
+                        // dispatch.
+                        .inLevelTitleCardResetAdditionalDispatches(0)
                         .lockPlayerControlForInLevelTitleCard(true)
-                        .inLevelTitleCardExitAdditionalDispatches(5)
+                        .inLevelTitleCardExitAdditionalDispatches(0)
+                        .carriedResultsRetireDispatches(1)
                         // ROM subtracts $3600 from the live camera and its
                         // bounds; it does not recenter from Player_1 afterward.
                         .preserveOffsetCameraPosition(true)

@@ -207,8 +207,9 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance
             // ROM: tst.b (a1,d0.w) / beq.s loc_31186 — check if already loaded
             if (loadArray[rawSubtype]) {
                 // Another instance is already loaded — delete self
-                // ROM: loc_31180 (sonic3k.asm:66317-66318)
-                setDestroyed(true);
+                // ROM: loc_31180 clears respawn_addr bit 7 before
+                // Delete_Current_Sprite (sonic3k.asm:66317-66323).
+                setDestroyedByOffscreen();
                 return;
             }
             // ROM: move.b #1,(a1,d0.w) — mark as loaded
@@ -664,7 +665,9 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance
         // Release any captured players
         // (In the original, players are released by the state checks in processOnBelt
         //  on the next frame. We proactively release here for safety.)
-        setDestroyed(true);
+        // ROM: loc_31204 clears respawn_addr bit 7 before Delete_Current_Sprite
+        // (sonic3k.asm:66656-66665), so the placement remains re-spawnable.
+        setDestroyedByOffscreen();
     }
 
     /**

@@ -74,11 +74,9 @@ class TestMantisBadnikInstance {
         mantis.update(1, null);
 
         assertFalse((boolean) readField(mantis, "initialized"));
-        assertNotNull(child, "the wait-offscreen Mantis keeps its visual child managed");
-        assertSame(mantis, readField(child, "parent"),
-                "the managed visual child must keep its owning Mantis reference");
-        assertSame(child, readField(mantis, "child"),
-                "repeated wait-offscreen updates must not duplicate the visual child");
+        assertNull(child, "Obj_WaitOffscreen must not allocate the visual child before activation");
+        assertNull(readField(mantis, "child"),
+                "repeated wait-offscreen updates must not consume a child slot");
         assertEquals(0x0490, mantis.getY());
         assertEquals(0, mantis.getCollisionFlags());
 
@@ -88,14 +86,16 @@ class TestMantisBadnikInstance {
 
         assertFalse((boolean) readField(mantis, "initialized"),
                 "Obj_WaitOffscreen only restores the saved Mantis operation on this pass");
-        assertSame(child, readField(mantis, "child"),
-                "the visible handoff must retain the existing managed visual child");
+        assertNull(readField(mantis, "child"),
+                "the visible handoff only restores the saved operation");
 
         mantis.update(3, null);
 
         assertTrue((boolean) readField(mantis, "initialized"));
-        assertSame(child, readField(mantis, "child"),
-                "activation must configure the existing child rather than spawning a second one");
+        AbstractObjectInstance activatedChild = (AbstractObjectInstance) readField(mantis, "child");
+        assertNotNull(activatedChild, "the first initializer allocates the visual child");
+        assertSame(mantis, readField(activatedChild, "parent"),
+                "the activated visual child must keep its owning Mantis reference");
         assertEquals(0x1A, mantis.getCollisionFlags());
     }
 

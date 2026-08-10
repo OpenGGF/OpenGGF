@@ -104,6 +104,13 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             int romZoneId,
             int act,
             FixedSstSlotSink slots) {
+        if (romZoneId == Sonic3kZoneIds.ZONE_HCZ) {
+            // SpawnLevelMainSprites installs Obj_HCZWaterSplash subtype 1 at
+            // Dynamic_object_RAM+2 (absolute SST slot 5). The player-facing
+            // routine is coordinated by HCZWaterSkimHandler, but the native
+            // record must remain allocated before Load_Sprites scans the pool.
+            slots.install(5, HCZWaterSkimSlotObjectInstance::new);
+        }
         if (romZoneId == Sonic3kZoneIds.ZONE_MHZ) {
             slots.install(4, MhzPollenSpawnerInstance::new);
         }
@@ -1336,6 +1343,11 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     if (zoneSet == S3kZoneSet.S3KL && currentRomZoneId() == Sonic3kZoneIds.ZONE_LBZ) {
                         return new LbzFinalBoss2Instance(spawn);
                     }
+                    return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                });
+        registerStockZoneBound(Sonic3kObjectIds.LBZ_FINAL_BOSS_KNUX,
+                (spawn, registry) -> {
+                    S3kZoneSet zoneSet = getCurrentZoneSet();
                     return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
                 });
         registerStockZoneBound(Sonic3kObjectIds.LBZ_MINIBOSS_BOX,

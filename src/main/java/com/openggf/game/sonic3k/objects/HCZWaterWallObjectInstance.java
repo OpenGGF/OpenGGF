@@ -950,7 +950,10 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
             // leaves the screen; there is no short post-splash lifetime.
             SubpixelMotion.moveSprite(motion, SLOW_GRAVITY);
 
-            if (!isOnScreen(0x80)) {
+            // ROM loc_301A8 ends in Sprite_OnScreen_Test.  The debris writes
+            // width/height=$18, so use the sprite render bounds rather than
+            // the manager's wider point-margin unload band.
+            if (!isWithinRenderSpriteBounds(0x18, 0x18)) {
                 setDestroyed(true);
             }
         }
@@ -1062,7 +1065,10 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
             }
 
             // Off-screen check
-            if (!isOnScreen(0x80)) {
+            // ROM loc_301DE ends in Sprite_OnScreen_Test with width/height=$18.
+            // A broad point margin keeps the vertical geyser's two-per-frame
+            // spray allocation alive long after the ROM has recycled it.
+            if (!isWithinRenderSpriteBounds(0x18, 0x18)) {
                 setDestroyed(true);
             }
         }

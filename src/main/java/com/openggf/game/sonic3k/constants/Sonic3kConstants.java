@@ -1506,6 +1506,8 @@ public class Sonic3kConstants {
     public static final int ART_KOSM_HCZ2_SECONDARY_ADDR = 0x3BFA6C;
     public static final int KOS_HCZ2_SECONDARY_BLOCK_ADDR = 0x3BF17C;
     public static final int KOS_HCZ2_SECONDARY_CHUNK_ADDR = 0x3C18EE;
+    // MGZ_8x8_Primary_KosM queued by Obj_MGZ2DrillingRobotnik's flee tail.
+    public static final int ART_KOSM_MGZ_PRIMARY_ADDR = 0x3C3EBE;
     public static final int KOS_MGZ2_SECONDARY_BLOCK_ADDR = 0x3C9CD2;
     public static final int KOSM_MGZ2_SECONDARY_ART_ADDR = 0x3CA132;
     public static final int KOS_MGZ2_SECONDARY_CHUNK_ADDR = 0x3CB1C4;
@@ -1536,6 +1538,9 @@ public class Sonic3kConstants {
     public static final int ART_UNC_MGZ_ENDBOSS_SCALED_SIZE = 0x1000;
     public static final int MAP_SCALED_ART_ADDR = 0x024BE8;
     public static final int ARTTILE_MGZ_ENDBOSS_SCALED = 0x0469;
+    // ROM ArtTile_MGZEndBoss / ArtTile_MGZEndBossDebris.
+    public static final int ART_TILE_MGZ_END_BOSS = 0x033F;
+    public static final int ART_TILE_MGZ_END_BOSS_DEBRIS = 0x045E;
     public static final int MAP_MGZ_ENDBOSS_ADDR = 0x362608;
     public static final int PAL_MGZ_ENDBOSS_ADDR = 0x06D97C;
     public static final int PAL_MGZ_FADE_CNZ_ADDR = 0x364896;

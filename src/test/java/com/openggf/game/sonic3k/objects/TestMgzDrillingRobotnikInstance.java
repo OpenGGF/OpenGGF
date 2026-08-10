@@ -30,6 +30,7 @@ import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
 import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectPlayerQuery;
@@ -197,6 +198,7 @@ class TestMgzDrillingRobotnikInstance {
 
         setPrivateInt(boss, "waitTimer", 0);
         setPrivateInt(boss, "escapeTimer", 1);
+        setPrivateBoolean(boss, "postFleeLevelArtQueued", true);
         boss.getState().routine = staticInt("ROUTINE_ESCAPE_WAIT");
 
         boss.update(1, null);
@@ -864,6 +866,42 @@ class TestMgzDrillingRobotnikInstance {
                 "MGZ must not reuse AIZ2's victory-pose lock because Sonic/Tails keep flying during results");
         assertFalse(player.isControlLocked());
         assertEquals(4, player.getAnimationId());
+    }
+
+    @Test
+    void mgzResultsOwnerRetainsCarryPublicationAcrossLowerSlotDelay() {
+        Mgz2ResultsScreenObjectInstance results = ObjectConstructionContext.construct(
+                TestEnvironment.objectServices(),
+                () -> new Mgz2ResultsScreenObjectInstance(
+                        com.openggf.game.PlayerCharacter.SONIC_AND_TAILS, 1, true));
+
+        assertTrue(results.shouldDeferInitialResultsArtLoadDispatch(),
+                "sub_86984's Flying_carrying_Sonic_flag branch belongs to the allocation boundary, "
+                        + "not the later result-owner pass");
+    }
+
+    @Test
+    void mgzFloatingCapsuleDefersButtonPastLaterSupportOwner() throws Exception {
+        Sonic main = new Sonic("sonic", (short) 0x4800, (short) 0x0100);
+        Tails tails = new Tails("tails", (short) 0x49EA, (short) 0x0186);
+        tails.setYSpeed((short) -1);
+        tails.setInteractSlotIndex(8);
+        RecordingServices services = new RecordingServices(camera)
+                .withQueryOnlyPlayers(main, List.of(tails));
+        services.withGameState(new GameStateManager());
+        Mgz2EndEggCapsuleInstance capsule = new Mgz2EndEggCapsuleInstance(0x49EA, 0x0162);
+        capsule.setSlotIndex(7);
+        capsule.setServices(services);
+
+        capsule.update(0, main);
+
+        assertFalse(getPrivateBoolean(capsule, "buttonTriggered"),
+                "the collapsed loc_86770 child cannot observe a later support owner's current dispatch");
+
+        capsule.update(1, main);
+
+        assertTrue(getPrivateBoolean(capsule, "buttonTriggered"),
+                "the following capsule entry observes the support state published by the later SST");
     }
 
     @Test
@@ -1544,6 +1582,12 @@ class TestMgzDrillingRobotnikInstance {
         Field field = findField(target.getClass(), fieldName);
         field.setAccessible(true);
         return field.getInt(target);
+    }
+
+    private static boolean getPrivateBoolean(Object target, String fieldName) throws Exception {
+        Field field = findField(target.getClass(), fieldName);
+        field.setAccessible(true);
+        return field.getBoolean(target);
     }
 
     private static Field findField(Class<?> type, String fieldName) throws NoSuchFieldException {

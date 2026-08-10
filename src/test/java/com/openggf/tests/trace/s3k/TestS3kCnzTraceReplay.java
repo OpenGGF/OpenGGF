@@ -118,7 +118,11 @@ public class TestS3kCnzTraceReplay extends AbstractTraceReplayTest {
             assertEquals(0, replay.replayStart().startingTraceIndex(),
                     "CNZ lifecycle regression requires the fresh frame-0 start");
 
-            replay.fixture().stepFrameFromRecording();
+            driveReplayToTraceFrame(
+                    replay.trace(),
+                    replay.fixture(),
+                    replay.replayStart(),
+                    0);
 
             AbstractPlayableSprite sonic = replay.fixture().sprite();
             AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().getFirst();
@@ -138,7 +142,8 @@ public class TestS3kCnzTraceReplay extends AbstractTraceReplayTest {
             assertFalse(tailsCpu.isFlyingCarrying(),
                     "frame 0 routine $0C is armed but has not entered the carry body");
 
-            replay.fixture().stepFrameFromRecording();
+            driveReplayFrame(
+                    replay.trace(), replay.fixture(), replay.trace().getFrame(0), 1);
 
             assertEquals(0x22, sonic.getAnimationId(),
                     "frame 1 carry body must select the carried animation");
@@ -160,7 +165,12 @@ public class TestS3kCnzTraceReplay extends AbstractTraceReplayTest {
             assertEquals(0x14A7ABBBL, GameServices.rng().getSeed());
             int vblankBefore = GameServices.level().getObjectManager().getVblaCounter();
 
-            replay.fixture().stepFrameFromRecording();
+            driveReplayFrame(
+                    replay.trace(), replay.fixture(),
+                    replay.replayStart().hasSeededTraceState()
+                            ? replay.trace().getFrame(replay.replayStart().seededTraceIndex())
+                            : null,
+                    replay.replayStart().startingTraceIndex());
 
             List<Integer> recorded = replay.trace().preTraceObjectSnapshots().stream()
                     .filter(snapshot -> snapshot.objectType() == 0x41)
@@ -510,7 +520,9 @@ public class TestS3kCnzTraceReplay extends AbstractTraceReplayTest {
             assertEquals(beforeContact.sidekick().routine(), TraceCharacterState.routineFromSprite(tails),
                     "Frame 15096 must finish the ordinary Tails routine before contact");
 
-            replay.fixture().stepFrameFromRecording();
+            driveReplayFrame(
+                    replay.trace(), replay.fixture(), beforeContact,
+                    FRAME_CNZ_MINIBOSS_TAILS_HURT_CONTACT + 1);
 
             TraceFrame contact =
                     traceFrame(replay.trace(), FRAME_CNZ_MINIBOSS_TAILS_HURT_CONTACT + 1);
@@ -595,15 +607,8 @@ public class TestS3kCnzTraceReplay extends AbstractTraceReplayTest {
             for (int traceIndex = replay.replayStart().startingTraceIndex();
                  traceIndex <= 21031;
                  traceIndex++) {
-                TraceFrame driveFrame = replay.trace().getFrame(traceIndex);
-                TraceExecutionPhase phase =
-                        TraceReplayBootstrap.phaseForReplay(replay.trace(), previousDriveFrame, driveFrame);
-                if (phase == TraceExecutionPhase.VBLANK_ONLY) {
-                    replay.fixture().skipFrameFromRecording();
-                } else {
-                    replay.fixture().stepFrameFromRecording();
-                }
-                previousDriveFrame = driveFrame;
+                previousDriveFrame = driveReplayFrame(
+                        replay.trace(), replay.fixture(), previousDriveFrame, traceIndex);
 
                 if (traceIndex == 20583) {
                     ObjectManager objectManager = GameServices.level().getObjectManager();
@@ -620,19 +625,19 @@ public class TestS3kCnzTraceReplay extends AbstractTraceReplayTest {
                     frame20903Slots = slotDump(objectManager);
                     frame20903SpikeSlot = slotFor(objectManager, "Spikes", 0x1280, 0x09D0);
                     frame20903PathSwapSlot = slotFor(objectManager, "PathSwap", 0x1180, 0x09A0);
-                    frame20903FirstBalloonSlot = slotFor(objectManager, "CNZBalloon", 0x1080, 0x06F8);
+                    frame20903FirstBalloonSlot = slotForSpawn(objectManager, "CNZBalloon", 0x1080, 0x0700);
                 } else if (traceIndex == 20936) {
                     ObjectManager objectManager = GameServices.level().getObjectManager();
                     frame20936Slots = slotDump(objectManager);
                     frame20936SpikeSlot = slotFor(objectManager, "Spikes", 0x1280, 0x09D0);
                     frame20936PathSwapSlot = slotFor(objectManager, "PathSwap", 0x1180, 0x09A0);
-                    frame20936FirstBalloonSlot = slotFor(objectManager, "CNZBalloon", 0x1080, 0x06F8);
+                    frame20936FirstBalloonSlot = slotForSpawn(objectManager, "CNZBalloon", 0x1080, 0x0700);
                 } else if (traceIndex == 21031) {
                     ObjectManager objectManager = GameServices.level().getObjectManager();
                     frame21031Slots = slotDump(objectManager);
                     frame21031SpikeSlot = slotFor(objectManager, "Spikes", 0x1280, 0x09D0);
                     frame21031PathSwapSlot = slotFor(objectManager, "PathSwap", 0x1180, 0x09A0);
-                    frame21031FirstBalloonSlot = slotFor(objectManager, "CNZBalloon", 0x1080, 0x06F8);
+                    frame21031FirstBalloonSlot = slotForSpawn(objectManager, "CNZBalloon", 0x1080, 0x0700);
                 }
             }
 
@@ -732,15 +737,8 @@ public class TestS3kCnzTraceReplay extends AbstractTraceReplayTest {
             for (int traceIndex = replay.replayStart().startingTraceIndex();
                  traceIndex <= 21620;
                  traceIndex++) {
-                TraceFrame driveFrame = replay.trace().getFrame(traceIndex);
-                TraceExecutionPhase phase =
-                        TraceReplayBootstrap.phaseForReplay(replay.trace(), previousDriveFrame, driveFrame);
-                if (phase == TraceExecutionPhase.VBLANK_ONLY) {
-                    replay.fixture().skipFrameFromRecording();
-                } else {
-                    replay.fixture().stepFrameFromRecording();
-                }
-                previousDriveFrame = driveFrame;
+                previousDriveFrame = driveReplayFrame(
+                        replay.trace(), replay.fixture(), previousDriveFrame, traceIndex);
 
                 ObjectManager objectManager = GameServices.level().getObjectManager();
                 if (traceIndex == 17824) {
@@ -817,7 +815,7 @@ public class TestS3kCnzTraceReplay extends AbstractTraceReplayTest {
                 } else if (traceIndex == 21620) {
                     frame21620Slots = slotDump(objectManager);
                     frame21620MonitorSlot = slotFor(objectManager, "Monitor", 0x0F5C, 0x0770);
-                    frame21620FirstBalloonSlot = slotFor(objectManager, "CNZBalloon", 0x1080, 0x06F8);
+                    frame21620FirstBalloonSlot = slotForSpawn(objectManager, "CNZBalloon", 0x1080, 0x0700);
                 }
             }
 
@@ -877,15 +875,8 @@ public class TestS3kCnzTraceReplay extends AbstractTraceReplayTest {
             for (int traceIndex = replay.replayStart().startingTraceIndex();
                  traceIndex <= 18937;
                  traceIndex++) {
-                TraceFrame driveFrame = replay.trace().getFrame(traceIndex);
-                TraceExecutionPhase phase =
-                        TraceReplayBootstrap.phaseForReplay(replay.trace(), previousDriveFrame, driveFrame);
-                if (phase == TraceExecutionPhase.VBLANK_ONLY) {
-                    replay.fixture().skipFrameFromRecording();
-                } else {
-                    replay.fixture().stepFrameFromRecording();
-                }
-                previousDriveFrame = driveFrame;
+                previousDriveFrame = driveReplayFrame(
+                        replay.trace(), replay.fixture(), previousDriveFrame, traceIndex);
 
                 ObjectManager objectManager = GameServices.level().getObjectManager();
                 if (traceIndex == 17824) {
@@ -935,15 +926,8 @@ public class TestS3kCnzTraceReplay extends AbstractTraceReplayTest {
             for (int traceIndex = replay.replayStart().startingTraceIndex();
                  traceIndex <= FRAME_CNZ_CLAMER_SLOT_PRESSURE;
                  traceIndex++) {
-                TraceFrame driveFrame = replay.trace().getFrame(traceIndex);
-                TraceExecutionPhase phase =
-                        TraceReplayBootstrap.phaseForReplay(replay.trace(), previousDriveFrame, driveFrame);
-                if (phase == TraceExecutionPhase.VBLANK_ONLY) {
-                    replay.fixture().skipFrameFromRecording();
-                } else {
-                    replay.fixture().stepFrameFromRecording();
-                }
-                previousDriveFrame = driveFrame;
+                previousDriveFrame = driveReplayFrame(
+                        replay.trace(), replay.fixture(), previousDriveFrame, traceIndex);
 
                 if (traceIndex == 287) {
                     ObjectManager objectManager = GameServices.level().getObjectManager();
@@ -1003,7 +987,7 @@ public class TestS3kCnzTraceReplay extends AbstractTraceReplayTest {
             assertEquals(6, slotFor(objectManager, "Spring", 0x05C8, 0x06B0),
                     "Frame 569: the placed Spring should remain behind Clamer's child in s6. "
                             + "slots=" + frame569Slots);
-            assertEquals(7, slotFor(objectManager, "CNZBalloon", 0x06C0, 0x0618),
+            assertEquals(7, slotForSpawn(objectManager, "CNZBalloon", 0x06C0, 0x0618),
                     "Frame 569: Clamer and intervening low-slot objects should make the first CNZ balloon "
                             + "allocates into s7, preserving later barber-pole slot pressure.");
         }
@@ -1025,6 +1009,23 @@ public class TestS3kCnzTraceReplay extends AbstractTraceReplayTest {
         return -1;
     }
 
+    private static int slotForSpawn(ObjectManager objectManager, String name, int x, int y) {
+        for (ObjectInstance object : objectManager.getActiveObjects()) {
+            if (!(object instanceof AbstractObjectInstance aoi)) {
+                continue;
+            }
+            if (aoi.getSpawn() == null) {
+                continue;
+            }
+            if (name.equals(aoi.getName())
+                    && (aoi.getSpawn().x() & 0xFFFF) == (x & 0xFFFF)
+                    && (aoi.getSpawn().y() & 0xFFFF) == (y & 0xFFFF)) {
+                return aoi.getSlotIndex();
+            }
+        }
+        return -1;
+    }
+
     @Test
     void traceReplayClamerAutoCloseProjectileConsumesRomSlot() throws Exception {
         try (BootstrappedCnzReplay replay = bootstrappedCnzReplay()) {
@@ -1036,15 +1037,8 @@ public class TestS3kCnzTraceReplay extends AbstractTraceReplayTest {
             for (int traceIndex = replay.replayStart().startingTraceIndex();
                  traceIndex <= FRAME_CNZ_BLOOMINATOR_PROJECTILE_PRESSURE;
                  traceIndex++) {
-                TraceFrame driveFrame = replay.trace().getFrame(traceIndex);
-                TraceExecutionPhase phase =
-                        TraceReplayBootstrap.phaseForReplay(replay.trace(), previousDriveFrame, driveFrame);
-                if (phase == TraceExecutionPhase.VBLANK_ONLY) {
-                    replay.fixture().skipFrameFromRecording();
-                } else {
-                    replay.fixture().stepFrameFromRecording();
-                }
-                previousDriveFrame = driveFrame;
+                previousDriveFrame = driveReplayFrame(
+                        replay.trace(), replay.fixture(), previousDriveFrame, traceIndex);
 
                 if (traceIndex == FRAME_CNZ_BLOOMINATOR_PROJECTILE_PRESSURE) {
                     ObjectManager objectManager = GameServices.level().getObjectManager();
@@ -1075,15 +1069,8 @@ public class TestS3kCnzTraceReplay extends AbstractTraceReplayTest {
             for (int traceIndex = replay.replayStart().startingTraceIndex();
                  traceIndex <= 666;
                  traceIndex++) {
-                TraceFrame driveFrame = replay.trace().getFrame(traceIndex);
-                TraceExecutionPhase phase =
-                        TraceReplayBootstrap.phaseForReplay(replay.trace(), previousDriveFrame, driveFrame);
-                if (phase == TraceExecutionPhase.VBLANK_ONLY) {
-                    replay.fixture().skipFrameFromRecording();
-                } else {
-                    replay.fixture().stepFrameFromRecording();
-                }
-                previousDriveFrame = driveFrame;
+                previousDriveFrame = driveReplayFrame(
+                        replay.trace(), replay.fixture(), previousDriveFrame, traceIndex);
 
                 if (traceIndex == 665) {
                     ObjectManager objectManager = GameServices.level().getObjectManager();
@@ -1269,6 +1256,7 @@ public class TestS3kCnzTraceReplay extends AbstractTraceReplayTest {
         if (discardProductionToken) {
             GameServices.level().discardPendingInitialProcessSpritesForStateRestoration();
         }
+        fixture.gameplayMode().activateRecordedHardwareAdmission();
         int objectFrameBefore = GameServices.level().getObjectManager().getFrameCounter();
         TraceReplaySessionBootstrap.BootstrapResult boot =
                 TraceReplaySessionBootstrap.applyBootstrap(trace, fixture, -1);
@@ -1364,8 +1352,9 @@ public class TestS3kCnzTraceReplay extends AbstractTraceReplayTest {
         var configSnapshot = TraceReplaySessionBootstrap.snapshotGameplayConfig();
         TraceReplaySessionBootstrap.prepareConfiguration(trace, trace.metadata());
         SharedLevel sharedLevel = SharedLevel.load(SonicGame.SONIC_3K, 0x03, 0x00);
+        HeadlessTestFixture fixture = null;
         try {
-            HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+            fixture = HeadlessTestFixture.builder()
                     .withSharedLevel(sharedLevel)
                     .withRecording(TRACE_DIR.resolve("s3k-cnz-sonic-tails.bk2"))
                     .withRecordingStartFrame(
@@ -1375,6 +1364,7 @@ public class TestS3kCnzTraceReplay extends AbstractTraceReplayTest {
                     .withFreshLevelStartLifecycle()
                     .build();
             if (bootstrap) {
+                fixture.gameplayMode().activateRecordedHardwareAdmission();
                 TraceReplaySessionBootstrap.applyBootstrap(trace, fixture, -1);
             } else {
                 GameServices.level().getObjectManager().initVIntRunCounterPhaseOffset(
@@ -1388,6 +1378,9 @@ public class TestS3kCnzTraceReplay extends AbstractTraceReplayTest {
                     null, trace.getFrame(0));
             return captureRuntimeState();
         } finally {
+            if (fixture != null) {
+                fixture.abortHardwareTimingReplayRun();
+            }
             sharedLevel.dispose();
             TraceReplaySessionBootstrap.restoreGameplayConfig(configSnapshot);
         }
@@ -1424,25 +1417,33 @@ public class TestS3kCnzTraceReplay extends AbstractTraceReplayTest {
         return trace.getFrame(frame);
     }
 
-    private static void driveReplayToTraceFrame(TraceData trace,
-                                                HeadlessTestFixture fixture,
-                                                TraceReplayBootstrap.ReplayStartState replayStart,
-                                                int targetTraceFrame) {
+    private TraceFrame driveReplayFrame(
+            TraceData trace,
+            HeadlessTestFixture fixture,
+            TraceFrame previousDriveFrame,
+            int traceIndex) {
+        TraceFrame driveFrame = trace.getFrame(traceIndex);
+        fixture.beginTraceRow(traceIndex, driveFrame.frame());
+        TraceExecutionPhase phase =
+                TraceReplayBootstrap.phaseForReplay(trace, previousDriveFrame, driveFrame);
+        TraceReplayBootstrap.markVblankStarvedIterationForReplay(
+                previousDriveFrame, driveFrame);
+        driveScenarioReplayFrame(trace, fixture, phase);
+        return driveFrame;
+    }
+
+    private void driveReplayToTraceFrame(TraceData trace,
+                                         HeadlessTestFixture fixture,
+                                         TraceReplayBootstrap.ReplayStartState replayStart,
+                                         int targetTraceFrame) {
         TraceFrame previousDriveFrame = replayStart.hasSeededTraceState()
                 ? trace.getFrame(replayStart.seededTraceIndex())
                 : null;
         for (int traceIndex = replayStart.startingTraceIndex();
              traceIndex <= targetTraceFrame;
              traceIndex++) {
-            TraceFrame driveFrame = trace.getFrame(traceIndex);
-            TraceExecutionPhase phase =
-                    TraceReplayBootstrap.phaseForReplay(trace, previousDriveFrame, driveFrame);
-            if (phase == TraceExecutionPhase.VBLANK_ONLY) {
-                fixture.skipFrameFromRecording();
-            } else {
-                fixture.stepFrameFromRecording();
-            }
-            previousDriveFrame = driveFrame;
+            previousDriveFrame = driveReplayFrame(
+                    trace, fixture, previousDriveFrame, traceIndex);
         }
     }
 
@@ -1454,6 +1455,7 @@ public class TestS3kCnzTraceReplay extends AbstractTraceReplayTest {
             implements AutoCloseable {
         @Override
         public void close() {
+            fixture.abortHardwareTimingReplayRun();
             sharedLevel.dispose();
             TraceReplaySessionBootstrap.restoreGameplayConfig(configSnapshot);
         }

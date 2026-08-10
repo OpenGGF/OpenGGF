@@ -81,7 +81,9 @@ class TestArchitecturalSourceGuard {
             // rewind-boundary ownership.
             // 2026-07-31: merging next into the S3K super-emerald branch combines both
             // sides' independent one-line growth; freeze the merged shape.
-            "com/openggf/level/LevelManager.java", 2917,
+            // 2026-08-10: the fresh-level title boundary was extracted to
+            // FreshLevelTransitionBoundaryController before freezing the merged surface.
+            "com/openggf/level/LevelManager.java", 3015,
             // 2026-07-02: 2888 -> 2890 for the live-rewind VHS effect envelope tick
             // (RewindEffectEnvelope wiring + intensity/speed accessors).
             // 2026-07-04: 2890 -> 2962. The solo-ghost-racing phase-1 tasks (time

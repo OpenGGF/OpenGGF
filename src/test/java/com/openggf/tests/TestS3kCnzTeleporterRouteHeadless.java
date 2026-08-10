@@ -8,6 +8,7 @@ import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
@@ -18,6 +19,8 @@ import com.openggf.game.sonic3k.objects.CnzTeleporterInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.game.sonic3k.objects.SongFadeTransitionInstance;
 import com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance;
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.level.objects.DefaultObjectServices;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
@@ -262,11 +265,11 @@ class TestS3kCnzTeleporterRouteHeadless {
         assertTrue(capsule != null,
                 "The bounded Task 8 defeat handoff should spawn the CNZ-local egg capsule wrapper");
 
-        capsule.forceResultsCompleteForTest();
+        GameServices.gameState().setEndOfLevelFlag(true);
         fixture.sprite().setCentreX((short) 0x4A20);
         boss.update(1, fixture.sprite());
         assertEquals(1, boss.getPostCapsuleReleaseCountForTest(),
-                "CNZ post-capsule control/music restore should fire once when results complete");
+                "loc_6E724 should consume the results owner's global completion publication directly");
 
         for (int i = 0; i < 4; i++) {
             boss.update(2 + i, fixture.sprite());
@@ -358,13 +361,50 @@ class TestS3kCnzTeleporterRouteHeadless {
         assertTrue(capsule != null,
                 "Obj_CNZEndBoss loc_6E6E4 should create the egg capsule before the launcher route");
 
+        Sonic3kObjectArtProvider artProvider = (Sonic3kObjectArtProvider)
+                GameServices.module().getObjectArtProvider();
+        for (int frame = 0; frame < 10_000
+                && (!artProvider.capture().pendingKosModules().isEmpty()
+                || !S3kRuntimeArtCoordinator.current().moduleQueue().hasCapacityFor(1)); frame++) {
+            fixture.stepFrame(false, false, false, false, false);
+        }
+        assertEquals(java.util.List.of(), artProvider.capture().pendingKosModules(),
+                "pre-existing CNZ art must leave the parent FIFO before the late handoff");
+        assertTrue(S3kRuntimeArtCoordinator.current().moduleQueue().hasCapacityFor(1),
+                "the production KosM FIFO must service existing CNZ art before the late handoff");
         capsule.forceResultsCompleteForTest();
+        fixture.sprite().setCentreX((short) 0x4A2F);
+        boss.update(0, fixture.sprite());
         fixture.sprite().setCentreX((short) 0x4A30);
+        long explosionJobsBeforeCannon = TestEnvironment.activeGameplayMode()
+                .hardwareTiming().capture().jobs().stream()
+                .filter(job -> job.kind() == HardwareWorkKind.KOS_MODULE_QUEUE)
+                .filter(job -> job.romSourceAddress()
+                        == Sonic3kConstants.ART_KOSM_BADNIK_EXPLOSION_ADDR)
+                .filter(job -> job.destinationAddress()
+                        == Sonic3kConstants.ARTTILE_EXPLOSION * 32)
+                .count();
+        int expectedCannonSlot = GameServices.level().getObjectManager().firstFreeDynamicSlot();
         boss.update(1, fixture.sprite());
 
         CnzCannonInstance cannon = findObject(CnzCannonInstance.class);
         assertTrue(cannon != null,
                 "Obj_CNZEndBoss loc_6E778 should spawn Obj_CNZCannon at the launcher handoff");
+        assertEquals(expectedCannonSlot, cannon.getSlotIndex(),
+                "AllocateObject must put the cannon in the lowest free SST");
+        var explosionJobs = TestEnvironment.activeGameplayMode()
+                .hardwareTiming().capture().jobs().stream()
+                .filter(job -> job.kind() == HardwareWorkKind.KOS_MODULE_QUEUE)
+                .filter(job -> job.romSourceAddress()
+                        == Sonic3kConstants.ART_KOSM_BADNIK_EXPLOSION_ADDR)
+                .filter(job -> job.destinationAddress()
+                        == Sonic3kConstants.ARTTILE_EXPLOSION * 32)
+                .toList();
+        assertEquals(explosionJobsBeforeCannon + 1, explosionJobs.size(),
+                "loc_6E778 queues ArtKosM_BadnikExplosion before allocating the cannon");
+        assertEquals("sha256:70da89e553f70fe647a00489dec5f2612854986b444b87a2e8d81ab0f821e431",
+                explosionJobs.getLast().handle().submissionFingerprint(),
+                "the cannon handoff must submit the exact ROM-backed KosM parent");
 
         fixture.sprite().setCentreX((short) 0x4B20);
         fixture.sprite().setCentreY((short) 0x0280);
@@ -411,7 +451,25 @@ class TestS3kCnzTeleporterRouteHeadless {
         assertEquals(launchHidden, fixture.sprite().isHidden(),
                 "CNZ must not invent a hidden neutral transition pose before the destination load");
 
-        GameServices.level().loadZoneAndAct(requestedZone, requestedAct);
+        GameServices.level().loadZoneAndActAtFreshTitleCardBoundary(requestedZone, requestedAct);
+        assertEquals(0, fixture.sprite().getCentreX());
+        assertEquals(0, fixture.sprite().getCentreY(),
+                "Level: clears the old player slot at the pre-title-card boundary");
+        assertEquals(0, fixture.sprite().getXSpeed());
+        assertEquals(0, fixture.sprite().getYSpeed());
+        assertFalse(fixture.sprite().getRolling());
+        assertEquals(0, fixture.sprite().getAnimationId());
+
+        GameServices.level().publishFreshLevelTransitionInitialBoundary();
+        assertEquals(0x0010, fixture.sprite().getCentreX() & 0xFFFF);
+        assertEquals(0x00F0, fixture.sprite().getCentreY() & 0xFFFF);
+        assertEquals(0, fixture.sprite().getXSpeed());
+        assertEquals(0, fixture.sprite().getYSpeed());
+        assertFalse(fixture.sprite().getRolling(),
+                "the first destination row precedes Obj_LevelIntroICZ1's dispatch");
+        assertEquals(0, fixture.sprite().getAnimationId());
+
+        GameServices.level().completeFreshLevelTransitionBoundary();
 
         assertFalse(fixture.sprite().isHidden(),
                 "ICZ load should clear the neutral fade pose and own the new player state");

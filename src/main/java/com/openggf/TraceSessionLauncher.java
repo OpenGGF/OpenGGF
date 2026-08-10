@@ -656,7 +656,8 @@ public final class TraceSessionLauncher {
                             GameServices.module(),
                             GameServices.sprites(),
                             GameServices.configuration());
-                    GameServices.level().loadZoneAndAct(entry.zone(), entry.act());
+                    GameServices.level().loadZoneAndActForFreshRuntime(
+                            entry.zone(), entry.act());
                     loop.setGameMode(GameMode.LEVEL);
                     GameServices.level().consumeTitleCardRequest();
                     GameServices.level().consumeInLevelTitleCardRequest();
@@ -2735,6 +2736,7 @@ public final class TraceSessionLauncher {
         TraceExecutionPhase rowPhase = TraceExecutionPhase.VBLANK_ONLY;
         boolean observedVblankCounterAdvance = true;
         boolean previousObservedVblankCounterAdvance = true;
+        boolean nextRowCarriesDeferredVblank = false;
         boolean terminalRow = false;
         boolean deferBoundaryCommit = false;
         if (phase == TraceRunPlaybackCoordinator.Phase.CURRENT_SEGMENT
@@ -2773,6 +2775,10 @@ public final class TraceSessionLauncher {
                                     nextRowPolicy
                                             .observedVblankCounterAdvance());
                 }
+                nextRowCarriesDeferredVblank =
+                        localRow + 1 < plan.trace().frameCount()
+                                && TraceReplayRowPolicy.carriesDeferredVblank(
+                                        plan.trace(), localRow + 1);
             }
             terminalRow = localRow == plan.segment().traceFrameCount() - 1;
         } else if (phase
@@ -2785,7 +2791,8 @@ public final class TraceSessionLauncher {
                         observedVblankCounterAdvance,
                         previousObservedVblankCounterAdvance,
                         loop != null
-                                && loop.getCurrentGameMode() == GameMode.LEVEL);
+                                && loop.getCurrentGameMode() == GameMode.LEVEL,
+                        nextRowCarriesDeferredVblank);
         boolean commitDeferredBoundaryAfterClosure = TraceRunFrameDriver
                 .shouldCommitDeferredBoundaryAfterClosure(
                         previousObservedVblankCounterAdvance,

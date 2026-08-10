@@ -239,6 +239,10 @@ public class SwScrlMgzTest {
         handler.setScreenShakeOffset(3);
         handler.update(rising, 0x3500, 0x0850, 1, 1);
 
+        assertEquals(0, handler.getShakeOffsetY(),
+                "The sample prepared at the background-event tail is not visible until the next frame");
+        handler.update(rising, 0x3500, 0x0850, 2, 1);
+
         assertEquals(0x0853, handler.getVscrollFactorFG() & 0xFFFF);
         assertEquals(0x0163, handler.getVscrollFactorBG() & 0xFFFF,
                 "MGZ state 8 BG should pick up the same shake offset as the foreground so the cloud/fake-floor plane moves with the camera rumble");
@@ -254,10 +258,14 @@ public class SwScrlMgzTest {
         handler.setScreenShakeOffset(0);
         handler.update(rising, 0x3500, 0x0850, 1, 1);
 
+        assertEquals(0, handler.getShakeOffsetY(),
+                "The current frame publishes the sample prepared by the preceding background-event pass");
+        handler.update(rising, 0x3500, 0x0850, 2, 1);
+
         assertEquals(3, handler.getShakeOffsetY(),
                 "MGZ should preserve the strongest same-frame shake request so MGZ2 events do not clear an active dash-trigger platform shake");
 
-        handler.update(rising, 0x3500, 0x0850, 2, 1);
+        handler.update(rising, 0x3500, 0x0850, 3, 1);
 
         assertEquals(0, handler.getShakeOffsetY(),
                 "Without a new request on the next frame, MGZ shake should clear normally");

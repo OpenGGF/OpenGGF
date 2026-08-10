@@ -280,7 +280,6 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
     private void activate(AbstractPlayableSprite player, CheckpointState checkpointState) {
         activated = true;
         starActive = true;
-
         // 1. ROM: moveq #signextendB(sfx_Starpost),d0 / jsr (Play_SFX).l
         try {
             services().playSfx(Sonic3kSfx.STARPOST.id);

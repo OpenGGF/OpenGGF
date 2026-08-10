@@ -14,6 +14,7 @@ import com.openggf.trace.BootstrapDivergence;
 import com.openggf.trace.EngineDiagnostics;
 import com.openggf.trace.EngineSnapshot;
 import com.openggf.trace.FrameComparison;
+import com.openggf.trace.LoadQueueComparisonProjection;
 import com.openggf.trace.Severity;
 import com.openggf.trace.ToleranceConfig;
 import com.openggf.trace.TraceBinder;
@@ -284,9 +285,15 @@ public final class LiveTraceComparator implements PlaybackFrameObserver, TraceHu
                 null, animationDiagnostics,
                 "sidekick", actualSidekick);
         if (trace.metadata().hasPerFrameLoadQueueState()) {
-            binder.compareLoadQueues(expected.frame(),
-                    trace.loadQueueStatesForFrame(expected.frame()),
-                    GameServices.captureQueueDiagnostics());
+            LoadQueueComparisonProjection projection =
+                    LoadQueueComparisonProjection.project(
+                            trace,
+                            expected.frame(),
+                            trace.loadQueueStatesForComparisonFrame(expected.frame()),
+                            GameServices.captureQueueDiagnostics(),
+                            GameServices.hardwareTiming().capture());
+            binder.compareLoadQueues(
+                    expected.frame(), projection.expected(), projection.actual());
             result = binder.comparisonForFrame(expected.frame());
         }
         result = appendInputAlignment(expected, frame, result);

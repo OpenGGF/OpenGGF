@@ -6,7 +6,9 @@ import java.util.List;
 import java.util.Objects;
 
 /** Physical direct-FIFO membership, separate from timing payload ownership. */
-public record S3kKosDecompressionQueueSnapshot(List<Entry> entries) {
+public record S3kKosDecompressionQueueSnapshot(
+        List<Entry> entries,
+        boolean deferNewHeadPreparationVisibility) {
     public S3kKosDecompressionQueueSnapshot {
         entries = List.copyOf(Objects.requireNonNull(entries, "entries"));
     }

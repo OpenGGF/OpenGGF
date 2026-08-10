@@ -42,6 +42,8 @@ class TestCnzCannonInstance {
         assertTrue(profile.topSolidOnly());
         assertTrue(profile.stickyContactBuffer());
         assertFalse(profile.allowsObjectControlledSolidContacts());
+        assertTrue(cannon.rejectsZeroDistanceTopSolidLanding(null),
+                "SolidObjectTop rejects d0 == 0 before setting the standing bit");
     }
 
     @Test

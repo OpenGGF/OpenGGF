@@ -1048,7 +1048,19 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         }
 
         reloadStandaloneRegistryForActTransition(zoneIndex);
-        scheduleEnemyKosArt(zoneIndex, currentActIndex);
+        // A resource-owner reload only transfers the work that its handoff
+        // prepared.  The native ICZ1BGE transition enters the target through
+        // Load_Sprites/Process_Sprites; it does not run LoadEnemyArt.  Any
+        // target-owned Queue_Kos_Module request (for example the Starpost
+        // bonus-art request made while the initial target objects execute)
+        // must therefore enter the FIFO from that object owner, rather than
+        // being replaced by a speculative zone enemy batch here.
+        if (policy == RuntimeArtAdmissionPolicy.RESOURCE_HANDOFF_OWNER) {
+            scheduleEnemyKosArt(zoneIndex, currentActIndex);
+            pendingEnemyKosEntries = List.of();
+        } else {
+            scheduleEnemyKosArt(zoneIndex, currentActIndex);
+        }
         RuntimeArtAdmissionOwnerKind ownerKind = switch (policy) {
             case IMMEDIATE -> RuntimeArtAdmissionOwnerKind.IMMEDIATE;
             case TITLE_OWNER -> RuntimeArtAdmissionOwnerKind.TITLE_OWNER;
@@ -1065,14 +1077,15 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     }
 
     /**
-     * Issues a fresh title-owner lease when a later in-level title follows a
-     * previously consumed runtime-art admission.
+     * Issues the title owner's next runtime-art lease after a later in-level
+     * title. The results object owns this handoff. The title-card manager
+     * remains a strict consumer of the exact lease and never selects or
+     * fabricates one.
      *
-     * <p>The results object owns this handoff. The title-card manager remains a
-     * strict consumer of the exact lease and never selects or fabricates one.
-     * Any enemy batch already admitted by the previous owner continues through
-     * the provider queue independently; the new presentation lease represents
-     * no replacement enemy batch.
+     * <p>If the previous owner still has admitted work, it continues through
+     * the provider queue independently. Once that work has retired, the ROM's
+     * title-owner {@code LoadEnemyArt} dispatch creates the next zone/act enemy
+     * batch here instead of leaving the queue empty.
      */
     @Override
     public void prepareRuntimeArtForInLevelTitleCard() {
@@ -1089,6 +1102,17 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
                             + runtimeArtAdmissionLease.ownerKind());
         }
 
+        boolean previousBatchStillAdmitted = !pendingEnemyKosEntries.isEmpty()
+                || !enemyKosHandles.isEmpty();
+        if (!previousBatchStillAdmitted) {
+            scheduleEnemyKosArt(currentZoneIndex, currentActIndex);
+            issueRuntimeArtAdmissionLease(RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
+            return;
+        }
+
+        // A carried transition can still own a prepared or active batch. Keep
+        // that exact work independent from the presentation lease; the title
+        // completion callback will arm it at the native LoadEnemyArt boundary.
         issueRuntimeArtAdmissionLease(
                 RuntimeArtAdmissionOwnerKind.TITLE_OWNER,
                 fingerprintEnemyKosBatch(List.of()));
@@ -1536,14 +1560,14 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     @Override
     public void processRuntimeArtQueue() {
         advanceTitleCardTeardown();
-        processEnemyKosArt();
         if (enemyKosArmOnNextRuntimePass) {
             // The in-level card owner's LoadEnemyArt dispatch is the level
             // frame after the manager's top-of-frame COMPLETE transition, so
-            // the submission first becomes eligible on the next pass.
+            // the submission first becomes eligible on this following pass.
             enemyKosArmOnNextRuntimePass = false;
             enemyKosSubmissionArmed = true;
         }
+        processEnemyKosArt();
     }
 
     @Override
@@ -1842,11 +1866,13 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
             return;
         }
         if (enemyKosHandles.stream().allMatch(enemyKosQueue::isReady)) {
+            S3kKosModuleQueue completedQueue = enemyKosQueue;
             for (HardwareWorkHandle handle : enemyKosHandles) {
                 enemyKosQueue.claim(handle);
             }
             enemyKosHandles.clear();
             enemyKosQueue = null;
+            completedQueue.allowChildSubmissionAfterHeldAdmission();
         }
     }
 
@@ -1952,6 +1978,11 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
                 titleCardTeardownLeaseId,
                 RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
         consumeRuntimeArtAdmission(lease, RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
+        var titleCardProvider = GameServices.module().getTitleCardProvider();
+        if (titleCardProvider != null) {
+            titleCardProvider
+                    .completeOmittedPresentationFreshLevelRuntimeArtHandoff();
+        }
         titleCardTeardownLeaseId = -1;
     }
 

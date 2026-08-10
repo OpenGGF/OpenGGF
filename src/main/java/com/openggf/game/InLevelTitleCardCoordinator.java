@@ -47,7 +47,11 @@ public final class InLevelTitleCardCoordinator {
                                            Consumer<Boolean> controlLock) {
         Objects.requireNonNull(levelManager, "levelManager");
         Objects.requireNonNull(controlLock, "controlLock");
-        if (endOfLevelActive || !levelManager.consumeInLevelTitleCardRequest()) {
+        // A pending request is an explicit title-card owner handoff.  Seamless
+        // transitions may preserve End_of_level_active for the carried results
+        // owner while assigning publication to this title-card coordinator;
+        // the request itself is the semantic gate, not the preserved flag.
+        if (!levelManager.consumeInLevelTitleCardRequest()) {
             return false;
         }
         if (provider == null) {

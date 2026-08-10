@@ -118,8 +118,8 @@ class TestRewindBenchmarkSizeEstimator {
                         (short) 7, (short) 8,
                         (short) 9, (short) 10,
                         (short) 11, (short) 12,
-                        (short) 13,
-                        true, 14,
+                        (short) 15,
+                        true, 16,
                         false, false, false, (short) 0, true, false,
                         15, 16, false,
                         (short) 17, (short) 18, (short) 19, false)));

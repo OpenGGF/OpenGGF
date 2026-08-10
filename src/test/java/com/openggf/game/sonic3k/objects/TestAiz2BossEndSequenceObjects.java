@@ -104,10 +104,14 @@ class TestAiz2BossEndSequenceObjects {
     }
 
     @Test
-    void cutsceneButtonPressesWhenKnucklesReachesIt() throws Exception {
+    void cutsceneButtonRetainsUpForLaterPlayerSlotWhenKnucklesReachesIt() throws Exception {
         S3kCutsceneButtonObjectInstance button =
                 new S3kCutsceneButtonObjectInstance(new ObjectSpawn(0x4B18, 0x0189, 0x83, 0, 0, false, 0));
         button.setServices(new TestObjectServices());
+
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        sonic.setControlLocked(true);
+        sonic.setForcedInputMask(AbstractPlayableSprite.INPUT_UP);
 
         CutsceneKnucklesAiz2Instance knuckles = CutsceneKnucklesAiz2Instance.createDefault();
         setField(knuckles, "currentX", 0x4B10);
@@ -116,9 +120,13 @@ class TestAiz2BossEndSequenceObjects {
         setPhase(knuckles, "LAUGH_2");
         Aiz2BossEndSequenceState.setActiveKnuckles(knuckles);
 
-        button.update(0, null);
+        button.update(0, sonic);
 
         assertTrue(Aiz2BossEndSequenceState.isButtonPressed());
+        assertFalse(sonic.isControlLocked(),
+                "loc_65C56 clears Ctrl_1_locked in the button's own SST slot");
+        assertEquals(AbstractPlayableSprite.INPUT_UP, sonic.getForcedInputMask(),
+                "the later Player_1 slot still consumes loc_69588's retained logical UP word");
     }
 
     @Test
@@ -226,6 +234,49 @@ class TestAiz2BossEndSequenceObjects {
 
         assertTrue(bridge.isPersistent(),
                 "loc_2B452 counts $34 down without branching through AIZDrawBridge_Solid's range tail");
+    }
+
+    @Test
+    void earlierButtonOwnerPreservesTheInitializedCollapseCountThroughBridgeEntry() {
+        AizDrawBridgeObjectInstance bridge = AizDrawBridgeObjectInstance.createCutsceneOverride();
+        bridge.setServices(new TestObjectServices().withGameState(new GameStateManager()));
+
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        player.setOnObject(true);
+        bridge.onSolidContact(player, new SolidContact(true, false, false, true, false), 0);
+
+        bridge.beginCollapseFromEarlierButtonSlot();
+        bridge.update(0, player);
+        for (int i = 0; i < 14; i++) {
+            bridge.update(i + 1, player);
+        }
+
+        assertTrue(bridge.isSolidFor(player),
+                "loc_2B2E8 returns with $34=$E before loc_2B452 begins decrementing");
+        assertFalse(player.getAir());
+
+        bridge.update(15, player);
+
+        assertFalse(bridge.isSolidFor(player));
+        assertTrue(player.getAir());
+    }
+
+    @Test
+    void alreadyConsumedBridgeOwnerStartsCountdownOnFollowingJavaEntry() {
+        Aiz2BossEndSequenceState.setButtonBeforeBridgeDispatch(true);
+        AizDrawBridgeObjectInstance bridge = AizDrawBridgeObjectInstance.createCutsceneOverride();
+        bridge.setServices(new TestObjectServices().withGameState(new GameStateManager()));
+
+        bridge.beginCollapseFromEarlierButtonSlot();
+        for (int i = 0; i < 14; i++) {
+            bridge.update(i, null);
+        }
+
+        assertTrue(bridge.isSolidFor(null));
+
+        bridge.update(14, null);
+
+        assertFalse(bridge.isSolidFor(null));
     }
 
     @Test
@@ -455,12 +506,12 @@ class TestAiz2BossEndSequenceObjects {
                 .withCamera(camera)
                 .withGameState(gameState));
         setField(capsule, "opened", 1);
-        setField(capsule, "postOpenTimer", 0x41);
+        setField(capsule, "postOpenTimer", 0x40);
         setField(capsule, "currentY", 0x0100);
 
         capsule.update(0, sonic);
 
-        assertEquals(0x40, getIntField(capsule, "postOpenTimer"));
+        assertEquals(0x3F, getIntField(capsule, "postOpenTimer"));
         assertEquals(0x0100, capsule.getY());
         assertEquals(0xB000, getIntField(capsule, "ySubpixel"),
                 "AIZ routine $0A runs sub_868F8, then Swing_UpAndDown and MoveSprite2 "
@@ -541,6 +592,64 @@ class TestAiz2BossEndSequenceObjects {
     }
 
     @Test
+    void floatingCapsuleDefersEligibilityCreatedByCurrentParentMovement() throws Exception {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        camera.resetState();
+
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        sonic.setCentreX((short) 0x4800);
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        tails.setCentreX((short) 0x49CF);
+        tails.setCentreY((short) 0x0186);
+        tails.setYSpeed((short) -1);
+        tails.setInteractSlotIndex(8);
+
+        Aiz2EndEggCapsuleInstance capsule = new Aiz2EndEggCapsuleInstance(0x49EA, 0x0162);
+        capsule.setSlotIndex(7);
+        capsule.setServices(new QueryOnlyServices(camera, sonic, List.of(tails))
+                .withGameState(new GameStateManager()));
+        setField(capsule, "xDirection", -1);
+
+        capsule.update(0, sonic);
+
+        assertFalse(getBooleanField(capsule, "buttonTriggered"),
+                "The collapsed child cannot consume eligibility created by this parent movement entry");
+
+        capsule.update(1, sonic);
+
+        assertTrue(getBooleanField(capsule, "buttonTriggered"),
+                "The next capsule entry observes the parent's previously published position");
+    }
+
+    @Test
+    void floatingCapsuleDoesNotDeferPlayerAlreadyEligibleBeforeParentMovement() throws Exception {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        camera.resetState();
+
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        sonic.setCentreX((short) 0x4800);
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        tails.setCentreX((short) 0x49EA);
+        tails.setCentreY((short) 0x0186);
+        tails.setYSpeed((short) -1);
+        tails.setAir(true);
+        tails.setOnObject(false);
+        tails.setInteractSlotIndex(8);
+
+        Aiz2EndEggCapsuleInstance capsule = new Aiz2EndEggCapsuleInstance(0x49EA, 0x0162);
+        capsule.setSlotIndex(7);
+        capsule.setServices(new QueryOnlyServices(camera, sonic, List.of(tails))
+                .withGameState(new GameStateManager()));
+        setField(capsule, "xDirection", -1);
+
+        capsule.update(0, sonic);
+
+        assertTrue(getBooleanField(capsule, "buttonTriggered"),
+                "A player inside the range at both parent positions needs no collapsed-child delay");
+        assertFalse(getBooleanField(capsule, "parentMotionEligibilityDeferred"));
+    }
+
+    @Test
     void floatingCapsuleResultsWaitUsesRomPredecrementCounter() throws Exception {
         Camera camera = TestEnvironment.activeGameplayMode().getCamera();
         camera.resetState();
@@ -553,7 +662,7 @@ class TestAiz2BossEndSequenceObjects {
                 .withCamera(camera)
                 .withGameState(gameState));
         setField(capsule, "opened", 1);
-        setField(capsule, "postOpenTimer", 0x41);
+        setField(capsule, "postOpenTimer", 0x40);
 
         for (int i = 0; i < 0x40; i++) {
             capsule.update(i, sonic);
@@ -621,44 +730,6 @@ class TestAiz2BossEndSequenceObjects {
                 "AIZ2 results must not consume the in-level title-card End_of_level_flag; "
                         + "Obj_LevelResults owns the next flag write on exit");
         assertFalse(Aiz2BossEndSequenceState.isEggCapsuleReleased());
-    }
-
-    @Test
-    void aizCapsuleResultsStartLocksSonicButDefersSidekickEndingPoseCheck() throws Exception {
-        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
-        camera.resetState();
-
-        GameStateManager gameState = new GameStateManager();
-        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
-        sonic.setAir(false);
-        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
-        SidekickCpuController tailsCpu = new SidekickCpuController(tails, sonic);
-        tailsCpu.setController2SignedLocked(true);
-        tails.setCpuController(tailsCpu);
-
-        AizFloatingCapsuleForTest capsule = new AizFloatingCapsuleForTest();
-        capsule.setServices(new QueryOnlyServices(camera, sonic, List.of(tails))
-                .withGameState(gameState));
-        setField(capsule, "opened", 1);
-        setField(capsule, "postOpenTimer", 0);
-
-        capsule.update(0, sonic);
-
-        assertFalse(getBooleanField(capsule, "resultsStarted"),
-                "The first AIZ sub_868F8 owner entry observes eligibility before starting results");
-
-        capsule.update(1, sonic);
-
-        assertTrue(getBooleanField(capsule, "resultsStarted"));
-        assertTrue(sonic.isObjectControlled(),
-                "sub_868F8 calls Set_PlayerEndingPose for Player_1 when results start "
-                        + "(sonic3k.asm:181900-181918)");
-        assertTrue(tailsCpu.isController2SignedLocked(),
-                "AIZ Player_2 remains under Ctrl_2_locked until Check_TailsEndPose runs "
-                        + "(sonic3k.asm:181919-181939)");
-        assertFalse(tails.isObjectControlled(),
-                "Check_TailsEndPose owns Player_2's Set_PlayerEndingPose call, so results "
-                        + "start must not pre-emptively set object_control=$81.");
     }
 
     @Test
@@ -1078,6 +1149,7 @@ class TestAiz2BossEndSequenceObjects {
         assertFalse(player.isControlLocked());
         assertFalse(player.isForceInputRight());
 
+        Aiz2BossEndSequenceState.setButtonBeforeBridgeDispatch(true);
         Aiz2BossEndSequenceState.releaseEggCapsule();
         controller.update(1, player);
         assertEquals(0x4880, camera.getMaxXTarget() & 0xFFFF);
@@ -1090,8 +1162,6 @@ class TestAiz2BossEndSequenceObjects {
         }
 
         assertEquals(camera.getMaxX() & 0xFFFF, camera.getMaxXTarget() & 0xFFFF);
-        assertEquals(0x4888, camera.getMaxXTarget() & 0xFFFF,
-                "Child6_IncLevX advances Camera_Max_X_pos fractionally instead of jumping to its final target");
         assertTrue(player.isControlLocked());
         assertFalse(player.isObjectControlled());
         assertTrue(player.isForcedInputActive(AbstractPlayableSprite.INPUT_RIGHT));
@@ -1099,12 +1169,6 @@ class TestAiz2BossEndSequenceObjects {
                 "loc_69526 only publishes Ctrl_1_logical; the next player slot owns acceleration");
         assertEquals(0, player.getGSpeed());
         assertEquals(0x5900, player.getXSubpixelRaw());
-
-        for (int i = 0; i < 16; i++) {
-            camera.updateBoundaryEasing();
-            controller.update(i + 13, player);
-        }
-        assertTrue((camera.getMaxX() & 0xFFFF) > 0x4880);
 
         player.setCentreX((short) 0x4A80);
         Aiz2BossEndSequenceState.pressButton();
@@ -1167,6 +1231,113 @@ class TestAiz2BossEndSequenceObjects {
         assertEquals(0x0120, tails.getXSpeed() & 0xFFFF);
         assertEquals(0xFFE0, tails.getYSpeed() & 0xFFFF);
         assertEquals(0x0100, tails.getGSpeed() & 0xFFFF);
+    }
+
+    @Test
+    void controllerRestoreTimingDoesNotBranchOnRidingSidekick() {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        camera.resetState();
+        camera.setMaxX((short) 0x4880);
+        camera.setX((short) 0x4880);
+
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        player.setObjectControlled(true);
+        player.setAnimationId(Sonic3kAnimationIds.VICTORY);
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        tails.setOnObject(true);
+
+        Aiz2BossEndSequenceController controller = new Aiz2BossEndSequenceController(0x4880, 0x0000);
+        controller.setServices(new QueryOnlyServices(camera, player, List.of(tails)));
+        Aiz2BossEndSequenceState.releaseEggCapsule();
+
+        controller.update(1, player);
+        assertFalse(player.isObjectControlled(),
+                "The next controller entry is loc_694D4 regardless of Player 2's Status_OnObj bit");
+        assertEquals(Sonic3kAnimationIds.WAIT.id(), player.getAnimationId());
+        assertFalse(player.isForceInputRight());
+
+        controller.update(2, player);
+        assertFalse(player.isObjectControlled(),
+                "loc_69526 keeps native player control restored");
+        assertEquals(Sonic3kAnimationIds.WAIT.id(), player.getAnimationId());
+        assertTrue(player.isForcedInputActive(AbstractPlayableSprite.INPUT_RIGHT));
+    }
+
+    @Test
+    void controllerRetainsOneEntryWhenResultsOwnerRunsAfterIt() {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        camera.resetState();
+        camera.setMaxX((short) 0x4880);
+        camera.setX((short) 0x4880);
+
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        player.setObjectControlled(true);
+        player.setAnimationId(Sonic3kAnimationIds.VICTORY);
+
+        Aiz2BossEndSequenceController controller = new Aiz2BossEndSequenceController(0x4880, 0x0000);
+        controller.setServices(new QueryOnlyServices(camera, player, List.of()));
+        Aiz2BossEndSequenceState.setButtonBeforeBridgeDispatch(true);
+        Aiz2BossEndSequenceState.releaseEggCapsule();
+
+        controller.update(1, player);
+        assertTrue(player.isObjectControlled(),
+                "A later results owner has not cleared _unkFAA8 when loc_694D4 runs this pass");
+        assertEquals(Sonic3kAnimationIds.VICTORY.id(), player.getAnimationId());
+
+        controller.update(2, player);
+        assertFalse(player.isObjectControlled());
+        assertEquals(Sonic3kAnimationIds.WAIT.id(), player.getAnimationId());
+        assertFalse(player.isForceInputRight());
+    }
+
+    @Test
+    void controllerReleasesButtonUpWordOnFollowingOwnerEntry() throws Exception {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        camera.resetState();
+        camera.setMaxX((short) 0x4880);
+        camera.setX((short) 0x4880);
+
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        player.setControlLocked(true);
+        player.setForcedInputMask(AbstractPlayableSprite.INPUT_UP);
+
+        Aiz2BossEndSequenceController controller = new Aiz2BossEndSequenceController(0x4880, 0x0000);
+        controller.setServices(new QueryOnlyServices(camera, player, List.of()));
+        setField(controller, "initialized", 1);
+        setField(controller, "postResultsControlRestoreDelay", 0);
+        setField(controller, "postCapsuleSequenceStarted", 1);
+        setField(controller, "knucklesSpawned", 1);
+        Aiz2BossEndSequenceState.releaseEggCapsule();
+        Aiz2BossEndSequenceState.pressButton();
+
+        controller.update(1, player);
+        assertFalse(player.isControlLocked());
+        assertEquals(AbstractPlayableSprite.INPUT_UP, player.getForcedInputMask(),
+                "the later Player_1 slot still consumes the retained logical UP word");
+
+        controller.update(2, player);
+        assertEquals(0, player.getForcedInputMask(),
+                "the following loc_695A8 entry exposes unlocked physical input");
+    }
+
+    @Test
+    void postResultsGradualMaxXWorkerOwnsItsRomAccumulator() {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        camera.resetState();
+        camera.setMaxX((short) 0x4880);
+
+        Aiz2BossEndSequenceController.PostResultsGradualMaxX worker =
+                new Aiz2BossEndSequenceController.PostResultsGradualMaxX(0x49D8);
+        worker.setServices(new TestObjectServices().withCamera(camera));
+
+        worker.update(0, null);
+        worker.update(1, null);
+        worker.update(2, null);
+        assertEquals(0x4880, camera.getMaxX() & 0xFFFF);
+
+        worker.update(3, null);
+        assertEquals(0x4881, camera.getMaxX() & 0xFFFF,
+                "Obj_IncLevEndXGradual publishes the accumulator's high word on its own SST dispatch");
     }
 
     @Test

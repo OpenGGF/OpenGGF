@@ -285,12 +285,6 @@ class TestObjectPhysicsStandardizationGuard {
     @Test
     void c2EventAndFeaturePlayerQueriesDeclareAllEnginePlayerParticipation() throws IOException {
         assertOwnedSourceUsesAllEnginePlayers(
-                "com/openggf/game/sonic3k/events/S3kSeamlessMutationExecutor.java",
-                "processInitialAizTransitionFloorContact");
-        assertOwnedQueryHelperSuppliesSidekicks(
-                "com/openggf/game/sonic3k/events/S3kSeamlessMutationExecutor.java",
-                "playerQueryFromGameServices");
-        assertOwnedSourceUsesAllEnginePlayers(
                 "com/openggf/game/sonic3k/Sonic3kZoneFeatureProvider.java",
                 "update");
         assertOwnedQueryHelperSuppliesSidekicks(

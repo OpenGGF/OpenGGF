@@ -25,7 +25,7 @@ class TestFbzFramePhaseOrdering {
         when(level.objectsExecuteAfterPlayerPhysics()).thenReturn(false);
         doAnswer(i -> { log.add("anpal-fixed-pre"); return null; })
                 .when(events).updateFixedInLevelObjectsBeforeDynamicObjects();
-        doAnswer(i -> { log.add("objects"); return null; }).when(level).updateObjectPositionsWithoutTouches();
+        doAnswer(i -> { log.add("objects"); return null; }).when(level).updateObjectPositionsWithoutTouches(false);
         doAnswer(i -> { log.add("camera"); return null; }).when(camera).updatePosition();
         doAnswer(i -> { log.add("event"); return null; }).when(events).update();
         doAnswer(i -> { log.add("flush"); return null; }).when(level).flushQueuedLayoutMutations();
@@ -50,7 +50,7 @@ class TestFbzFramePhaseOrdering {
                 .when(provider).updateFixedInLevelObjectsBeforeDynamicObjects();
         List<Sonic3kFBZEvents.MagneticPolarity> observed = new ArrayList<>();
         doAnswer(i -> { observed.add(workspace.getMagneticPolarity()); return null; })
-                .when(level).updateObjectPositionsWithoutTouches();
+                .when(level).updateObjectPositionsWithoutTouches(false);
 
         LevelFrameTestStep.execute(context(provider), level, camera, () -> { });
 

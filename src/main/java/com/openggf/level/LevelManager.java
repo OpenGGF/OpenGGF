@@ -27,6 +27,7 @@ import com.openggf.game.palette.PaletteWriteSupport;
 import com.openggf.game.modzone.ModZoneRuntimeContribution;
 import com.openggf.game.modzone.ModZoneRuntimeProfile;
 import com.openggf.game.rewind.RewindSnapshottable;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.rewind.snapshot.LevelSnapshot;
 import com.openggf.game.rewind.snapshot.LevelTilemapSnapshot;
 import com.openggf.game.render.AdvancedRenderModeController;
@@ -69,6 +70,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindClassResolver;
 import com.openggf.level.objects.PersistentRespawnState;
 import com.openggf.level.objects.TouchResponseTable;
+import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.rings.RingManager;
 import com.openggf.level.rings.RingSpriteSheet;
 import com.openggf.level.resources.DeferredLevelResourceTracker;
@@ -202,8 +204,12 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     int currentZone = 0;
     private boolean sidekickRomVisibleReloadFrameCounterBridgeActive;
     private boolean sidekickRomVisibleReloadFrameCounterBridgePrimed;
+    private boolean actTransitionExecutedDuringFrame;
+    private boolean actTransitionOscillationAdvancedDuringFrame;
     private boolean resetCounterPlacementAfterCameraSnap;
     private long completedProductionLoadGeneration;
+
+    private final FreshLevelTransitionBoundaryController freshLevelTransitionBoundary = new FreshLevelTransitionBoundaryController();
 
     void writeCurrentZone(int zone) {
         this.currentZone = zone;
@@ -1124,6 +1130,16 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * visible and animate without hurting/collecting from the frozen player.
      */
     public void updateObjectPositionsWithoutTouches() {
+        updateObjectPositionsWithoutTouches(true);
+    }
+
+    /**
+     * Advances object execution, optionally leaving the global oscillator for
+     * the canonical loop tail. The latter is needed when ScreenEvents can
+     * request a restart after Process_Sprites: the ROM skips OscillateNumDo on
+     * that row along with the rest of the loop tail.
+     */
+    public void updateObjectPositionsWithoutTouches(boolean advanceOscillation) {
         if (objectManager != null) {
             Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
             AbstractPlayableSprite playable = player instanceof AbstractPlayableSprite ? (AbstractPlayableSprite) player : null;
@@ -1137,7 +1153,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         // the previous frame's oscillation values, then OscillateNumDo advances
         // them for the next frame. Placing this call before objectManager.update()
         // caused a 1-frame phase shift in oscillating platform positions.
-        frameRuntimeUpdater.advanceGlobalOscillation();
+        if (advanceOscillation) {
+            advanceGlobalOscillation();
+        }
     }
 
     /**
@@ -1165,6 +1183,15 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
     public void updateObjectPositionsPostPhysicsWithoutTouches(Runnable afterExecBeforePlacement) {
+        updateObjectPositionsPostPhysicsWithoutTouches(afterExecBeforePlacement, true);
+    }
+
+    /**
+     * Executes the post-physics object pass, optionally deferring the global
+     * oscillator until the canonical level-loop tail.
+     */
+    public void updateObjectPositionsPostPhysicsWithoutTouches(
+            Runnable afterExecBeforePlacement, boolean advanceOscillation) {
         if (objectManager != null) {
             Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
             AbstractPlayableSprite playable = player instanceof AbstractPlayableSprite ? (AbstractPlayableSprite) player : null;
@@ -1175,7 +1202,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
         // ROM parity: objects read the previous frame's oscillation values, then
         // OscillateNumDo advances them for the next frame after ExecuteObjects.
-        frameRuntimeUpdater.advanceGlobalOscillation();
+        if (advanceOscillation) {
+            advanceGlobalOscillation();
+        }
     }
 
     /**
@@ -1187,6 +1216,17 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         if (objectManager != null) {
             objectManager.advanceVblaCounter();
         }
+    }
+
+    /** Advances the global oscillator at the canonical level-loop tail. */
+    public void advanceGlobalOscillationAtLevelLoopTail() {
+        // LevelFrameStep calls this before update() increments frameCounter.
+        // OscillateNumDo runs after the current Level_frame_counter tick, so
+        // publish the phase for the frame that the following object pass will
+        // consume rather than reusing the completed frame's counter. This is
+        // the ROM order in LevelLoop (sonic3k.asm:7889, 7928-7931): the next
+        // Process_Sprites pass reads the table after this tail update.
+        OscillationManager.update(frameCounter + 1);
     }
 
     void advanceGlobalOscillation() {
@@ -1249,6 +1289,28 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         if (zoneFeatureProvider != null && level != null && playable != null) {
             playable.capturePreZoneFeatureSnapshot();
             zoneFeatureProvider.updateAfterPlayablePhysics(playable, camera.getX(), getFeatureZoneId());
+        }
+    }
+
+    /**
+     * Runs zone-event routines whose ROM owner is after the complete object pass.
+     * The native player slots are visited before the sidekick slot, matching the
+     * S3K {@code sub_714E} / {@code sub_71E4} dispatch order.
+     */
+    public void updateZoneFeaturesAfterObjectExecution() {
+        if (zoneFeatureProvider == null || level == null || spriteManager == null) {
+            return;
+        }
+        int cameraX = camera.getX();
+        int zoneIndex = getFeatureZoneId();
+        AbstractPlayableSprite main = spriteManager.getMainPlayable();
+        if (main != null) {
+            zoneFeatureProvider.updateAfterObjectExecution(main, cameraX, zoneIndex);
+        }
+        for (AbstractPlayableSprite sidekick : spriteManager.getRegisteredSidekicks()) {
+            if (sidekick != null && sidekick != main) {
+                zoneFeatureProvider.updateAfterObjectExecution(sidekick, cameraX, zoneIndex);
+            }
         }
     }
 
@@ -3126,8 +3188,29 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             completeInitialTitleCardPresentation();
             return;
         }
+        // Runtime-art ownership is a property of the fresh load, not of
+        // whether this process renders the title card. Headless gameplay still
+        // retains the native title owner through its omitted-presentation exit
+        // tail, so arm that owner's handoff before choosing the render path.
+        if (ctx.isQueueFreshLevelRuntimeArt()) {
+            var titleCardProvider = activeGameModule().getTitleCardProvider();
+            if (titleCardProvider != null) {
+                titleCardProvider.requestFreshLevelRuntimeArtHandoff(
+                        ctx.getLevelIndex());
+            }
+        }
+        // GameLoop owns the mandatory bonus/results-return card after the
+        // reload. Keep its lease unbound until that explicit initialization,
+        // even headless.
+        // A re-entry into the game's own Level: routine from a running level
+        // reaches the locked title-card loop by construction — S1's end-of-act
+        // card writes only f_restart and the main loop falls straight back into
+        // GM_Level (docs/s1disasm/_incObj/3A Got Through Card.asm:200-211,
+        // sonic.asm:3041-3055, 2814-2842). Its card is part of the restart, not
+        // of a host entry a headless boundary may omit.
         if (!graphicsManager.isHeadlessMode()
                 || headlessWholeRunHandoff
+                || ctx.isTitleCardRequiredInHeadlessMode()
                 || callerOwnedReturnCard
                 || transitions.isLevelRoutineReentry()) {
             // ROM: title card reads Apparent_act, not Current_act.
@@ -3238,6 +3321,20 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     private void loadCurrentLevel(
             boolean showTitleCard, LevelLoadMode loadMode, boolean runtimeReload) {
+        loadCurrentLevel(showTitleCard, loadMode, runtimeReload, false, false);
+    }
+
+    private void loadCurrentLevel(
+            boolean showTitleCard, LevelLoadMode loadMode, boolean runtimeReload,
+            boolean titleCardRequiredInHeadlessMode) {
+        loadCurrentLevel(showTitleCard, loadMode, runtimeReload,
+                titleCardRequiredInHeadlessMode, false);
+    }
+
+    private void loadCurrentLevel(
+            boolean showTitleCard, LevelLoadMode loadMode, boolean runtimeReload,
+            boolean titleCardRequiredInHeadlessMode,
+            boolean queueFreshLevelRuntimeArt) {
         try {
             // V_int_run_count is global work RAM, outside Dynamic_object_RAM.
             // A full death/results reload rebuilds ObjectManager just like the
@@ -3262,6 +3359,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
             LevelLoadContext ctx = new LevelLoadContext();
             ctx.setShowTitleCard(showTitleCard);
+            ctx.setTitleCardRequiredInHeadlessMode(titleCardRequiredInHeadlessMode);
+            ctx.setQueueFreshLevelRuntimeArt(queueFreshLevelRuntimeArt);
             ctx.setLevelData(levelData);
             ctx.setIncludePostLoadAssembly(true);
             ctx.setAssemblyKind(LevelAssemblyKind.FRESH_LEVEL_ASSEMBLY);
@@ -3407,13 +3506,75 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
     public void loadZoneAndAct(int zone, int act, LevelLoadMode loadMode) throws IOException {
+        loadZoneAndAct(zone, act, loadMode, false, false);
+    }
+
+    /** Loads a production fresh level while leaving presentation ownership to GameLoop. */
+    public void loadZoneAndActForFreshRuntime(int zone, int act) throws IOException {
+        loadZoneAndAct(zone, act, LevelLoadMode.FULL, false, true);
+    }
+
+    /**
+     * Loads a destination reached through a normal zone/act transition while
+     * retaining the production title-card owner in headless mode.
+     *
+     * <p>Ordinary standalone headless level loads intentionally omit the
+     * initial presentation. A whole-run handoff is different: the ROM has
+     * loaded the destination and entered its blocking title-card loop, whose
+     * hardware-timed art work is part of the destination lifecycle.
+     */
+    public void loadZoneAndActWithTitleCard(int zone, int act) throws IOException {
+        loadZoneAndAct(zone, act, LevelLoadMode.FULL, true, true);
+    }
+
+    /** Loads a fresh destination at its native pre-title-card player boundary. */
+    public void loadZoneAndActAtFreshTitleCardBoundary(int zone, int act)
+            throws IOException {
+        freshLevelTransitionBoundary.load(this, zone, act);
+    }
+
+    /** Completes the destination-player assembly after its title-card loop. */
+    public void completeFreshLevelTransitionBoundary() {
+        freshLevelTransitionBoundary.complete(this);
+    }
+
+    /** Publishes the destination player while retaining the setup boundary. */
+    public void publishFreshLevelTransitionInitialBoundary() {
+        freshLevelTransitionBoundary.publishInitial(this);
+    }
+
+    /** Publishes the native camera handoff while playable slots remain held. */
+    public void completeFreshLevelTransitionCameraBoundary() {
+        freshLevelTransitionBoundary.publishCamera(this);
+    }
+
+    public boolean hasPendingFreshLevelTransitionBoundary() {
+        return freshLevelTransitionBoundary.isPending();
+    }
+
+    private AbstractPlayableSprite mainPlayableSprite() {
+        Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
+        return player instanceof AbstractPlayableSprite playable ? playable : null;
+    }
+
+    String transitionMainCharacterCode() { return resolveMainCharacterCode(); }
+
+    private void loadZoneAndAct(
+            int zone, int act, LevelLoadMode loadMode,
+            boolean titleCardRequiredInHeadlessMode,
+            boolean queueFreshLevelRuntimeArt) throws IOException {
         try {
             writeCurrentAct(act);
             writeApparentAct(act);
             writeCurrentZone(zone);
             // Clear checkpoint when manually changing level
             checkpointCoordinator.clear();
-            loadCurrentLevel(loadMode != LevelLoadMode.PREVIEW_CAPTURE, loadMode, false);
+            loadCurrentLevel(
+                    loadMode != LevelLoadMode.PREVIEW_CAPTURE,
+                    loadMode,
+                    false,
+                    titleCardRequiredInHeadlessMode,
+                    queueFreshLevelRuntimeArt);
         } finally {
             // A load that fails before initCameraBounds must not leak a bonus-return
             // respawn table into a later, potentially different, level.
@@ -3438,6 +3599,28 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      */
     public void executeActTransition(SeamlessLevelTransitionRequest request) throws IOException {
         actTransitionExecutor.execute(request);
+        actTransitionExecutedDuringFrame = true;
+    }
+
+    void markActTransitionOscillationAdvancedDuringFrame() {
+        actTransitionOscillationAdvancedDuringFrame = true;
+    }
+
+    /**
+     * Consumes the marker set when an in-place act transition ran inside the
+     * current level loop. The transition-owned oscillator dispatch replaces
+     * this frame's ordinary loop-tail advance.
+     */
+    public boolean consumeActTransitionExecutedDuringFrame() {
+        boolean executed = actTransitionExecutedDuringFrame;
+        actTransitionExecutedDuringFrame = false;
+        return executed;
+    }
+
+    public boolean consumeActTransitionOscillationAdvancedDuringFrame() {
+        boolean advanced = actTransitionOscillationAdvancedDuringFrame;
+        actTransitionOscillationAdvancedDuringFrame = false;
+        return advanced;
     }
 
     void restoreCameraBoundsForCurrentLevel(Camera cam) {
@@ -4008,6 +4191,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         frameCounter = 0;
         sidekickRomVisibleReloadFrameCounterBridgeActive = false;
         sidekickRomVisibleReloadFrameCounterBridgePrimed = false;
+        actTransitionExecutedDuringFrame = false;
+        actTransitionOscillationAdvancedDuringFrame = false;
         transitions.resetState();
         verticalWrapEnabled = false;
         touchResponseTable = null;
@@ -4038,6 +4223,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         this.frameCounter = 0;
         sidekickRomVisibleReloadFrameCounterBridgeActive = false;
         sidekickRomVisibleReloadFrameCounterBridgePrimed = false;
+        actTransitionExecutedDuringFrame = false;
+        actTransitionOscillationAdvancedDuringFrame = false;
     }
 
     public void setClearColor() {
@@ -4228,7 +4415,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         // 104722-104774). The engine applies the pending reload at the next
         // frame top and returns from RecordingFrameDriver/GameLoop, so preserve
         // that native post-ScreenEvents oscillator tick explicitly.
-        frameRuntimeUpdater.advanceGlobalOscillation();
+        advanceGlobalOscillationAtLevelLoopTail();
+        if (animatedPatternManager instanceof com.openggf.level.animation.SeamlessTransitionAnimationClock clock)
+            clock.advanceForSeamlessTransition();
 
         // The pending seamless reload is consumed at frame top, so this row
         // returns before ObjectManager.update() can perform its normal V-int
