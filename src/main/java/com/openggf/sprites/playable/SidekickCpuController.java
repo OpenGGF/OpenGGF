@@ -538,9 +538,10 @@ public class SidekickCpuController {
         // the ROM-visible word is $22FF, so loc_13F94 keeps DOWN held for one
         // more frame and releases at $2300. Bootstrap/VBlank closure paths can
         // source the stale pre-Process_Sprites LevelManager copy; recover the
-        // already-incremented word using the same source semantic as the other
-        // low-byte CPU gates.
-        return projectRetainedResultsSpriteCadence(romVisibleLevelFrameCounter(), leader);
+        // already-incremented word, but do not project through Sonic_RecordPos:
+        // this routine reads Level_frame_counter itself, not a sprite-cadence
+        // table index.
+        return romVisibleLevelFrameCounter();
     }
 
     public void setController2Input(int held, int logical) {

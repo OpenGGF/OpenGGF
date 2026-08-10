@@ -71413,3 +71413,41 @@ landable change, which I implemented directly.
   complete-run AIZ, both HCZ methods, standalone and complete-run MGZ, and
   complete-run CNZ. Result: 6 tests, 0 failures, 0 errors. The new standalone
   frontier is regression-free and is committed before further diagnosis.
+
+## 2026-08-10 — standalone CNZ direct panic-counter frontier
+
+- Context: `bugfix/s3k-traces` at `30b987492`; validation used JDK 21.0.12 and
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen`. The six protected user edits
+  remained unstaged, no fixture changed, and ring comparison remained
+  error-level through `ToleranceConfig.DEFAULT` / `RingCountMode.FORCE_ERROR`.
+  A fresh fetch confirmed `origin/develop` (`eb619f787`) was still an ancestor,
+  so no merge commit was needed.
+- Prior frontier: standalone CNZ stopped at raw `29384` with 2 errors and 0
+  warnings. Retail published `Ctrl_2_logical` jump/down (`held=$12`,
+  `pressed=$10` after comparison normalization) while the engine published only
+  down (`held=$02`, `pressed=$00`).
+- Root cause: `TailsCPU_Panic` reads the low byte of
+  `Level_frame_counter` directly (`docs/skdisasm/sonic3k.asm:26869-26884`). The
+  engine first recovered the ROM-visible post-increment counter correctly, but
+  then projected it through the retained title owner's `Sonic_RecordPos` ring
+  phase. That projection belongs to routines driven by retained sprite cadence,
+  not this direct counter read. At `$72C0` it shifted the `$20`-phase pulse away
+  from zero. Panic now consumes only the ROM-visible counter-source semantic;
+  no trace, frame, route, game-name, or zone predicate is used.
+- Focused command: `mvn -Dmse=off
+  -Dtest=com.openggf.sprites.playable.TestSidekickCpuFollowParity#s3kPanicRevPulseBridgesStoredPreSpriteCounter+s3kPanicRevPulseReadsLevelCounterWithoutRetainedHistoryProjection
+  test`. Result: 2 tests, 0 failures, 0 errors, covering both stale stored-counter
+  recovery and retained-history non-projection.
+- Frontier command: `mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1
+  -Dsurefire.runOrder=alphabetical -Dtrace.verification=all
+  -Dtrace.frontierOnly=true
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Comparison advances 3732 rows to raw `33116`, with 8 errors and 0 warnings;
+  the first mismatch is `tails_g_speed` (expected `$0400`, actual `-$015C`).
+  Segment-close verification still reports the downstream raw-`33755`
+  completion because frontier-only execution has not reached it.
+- Gameplay-order regression command used the same profile and ROM with
+  complete-run AIZ, both HCZ methods, standalone and complete-run MGZ, and
+  complete-run CNZ. Result: 6 tests, 0 failures, 0 errors. The new standalone
+  frontier is regression-free and is committed before further diagnosis.

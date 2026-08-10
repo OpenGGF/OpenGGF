@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K Tails CPU panic pulses now read the ROM-visible
+  `Level_frame_counter` directly instead of projecting it through the retained
+  title/history-ring cadence. Standalone CNZ advances from raw frame `29384` to
+  `33116`; the green AIZ, HCZ, MGZ, and complete-run CNZ traces remain
+  unchanged.
 - Fix/Test: CNZ underwater balloons now preserve retail's clobbered-`a1`
   behavior by overwriting the fourth spawned Bubbler's random offset with the
   balloon position. S3K Bubbler pickups also retain the rolling status bit for

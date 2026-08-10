@@ -15,6 +15,7 @@ import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic2.objects.EggPrisonButtonObjectInstance;
 import com.openggf.game.sonic2.objects.RisingLavaObjectInstance;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
+import com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager;
 import com.openggf.game.sonic3k.objects.IczSwingingPlatformObjectInstance;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -4411,6 +4412,38 @@ class TestSidekickCpuFollowParity {
     }
 
     @Test
+    void s3kPanicRevPulseReadsLevelCounterWithoutRetainedHistoryProjection() throws Exception {
+        GameModule previous = GameModuleRegistry.getBootstrapDefault();
+        try {
+            Sonic3kGameModule module = new Sonic3kGameModule();
+            installStandaloneGameModule(module);
+            Sonic3kTitleCardManager titleCard =
+                    (Sonic3kTitleCardManager) module.getTitleCardProvider();
+            setBooleanField(titleCard, "inLevelMode", true);
+            setBooleanField(titleCard, "retainedResultsHeldLevelCounterOwned", true);
+
+            TestableSprite sonic = new TestableSprite("sonic");
+            sonic.prefillPositionHistoryWithCentre((short) 0, (short) 0);
+            assertEquals(0x3F, sonic.getHistorySlotIndex(0));
+            TestableSprite tails = new TestableSprite("tails_p2");
+            tails.setCpuControlled(true);
+            tails.setGameRulesForTest(GameRules.SONIC_3K);
+            tails.setPinballMode(true);
+            tails.setGSpeed((short) 0);
+
+            SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+            controller.forceStateForTest(SidekickCpuController.State.PANIC, 0);
+            controller.update(0x72C0);
+
+            assertTrue(controller.getInputJumpPress(),
+                    "TailsCPU_Panic reads Level_frame_counter=$72C0 directly; the retained "
+                            + "Sonic_RecordPos slot $3F must not shift its $20-phase pulse");
+        } finally {
+            installStandaloneGameModule(previous);
+        }
+    }
+
+    @Test
     void s3kCatchUpFlightOnlyBlocksOnLeaderObjectControlSignBit() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
@@ -4518,6 +4551,12 @@ class TestSidekickCpuFollowParity {
         GameModuleRegistry.setCurrent(module);
         SessionManager.openGameplaySession(module);
         TestEnvironment.activeGameplayMode();
+    }
+
+    private static void setBooleanField(Object target, String name, boolean value) throws Exception {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        field.setBoolean(target, value);
     }
 
     private static void installEmptyObjectManager() throws Exception {
