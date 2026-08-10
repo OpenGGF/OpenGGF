@@ -18,6 +18,7 @@ import com.openggf.audio.rewind.SmpsSourceDescriptor;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
+import com.openggf.audio.smps.SmpsProgramView;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.smps.SmpsSfxData;
@@ -653,10 +654,9 @@ public final class AudioPresentationSourceFactory
                     SmpsDriverSnapshot.SequencerEntry entry) {
                 CachedSmpsSource cached =
                         sourcesByDescriptor.get(entry.source());
-                AbstractSmpsData data = cached != null
+                return cached != null
                         ? cached.data()
-                        : delegate.resolveSmpsData(entry);
-                return copySmpsData(data);
+                        : copySmpsData(delegate.resolveSmpsData(entry));
             }
 
             @Override
@@ -1069,12 +1069,16 @@ public final class AudioPresentationSourceFactory
 
     private static AbstractSmpsData copySmpsData(
             AbstractSmpsData source) {
+        if (source instanceof FrozenSmpsData) {
+            return source;
+        }
         return source instanceof SmpsSfxData sfx
                 ? new FrozenSfxData(source, sfx)
                 : new FrozenSmpsData(source);
     }
 
-    private static class FrozenSmpsData extends AbstractSmpsData {
+    private static class FrozenSmpsData extends AbstractSmpsData
+            implements SmpsProgramView {
         private final byte[][] voices = new byte[256][];
         private final byte[][] psgEnvelopes = new byte[256][];
         private final byte[][] modEnvelopes = new byte[256][];
@@ -1124,6 +1128,63 @@ public final class AudioPresentationSourceFactory
         }
 
         @Override
+        public byte[] getData() {
+            return data.clone();
+        }
+
+        @Override
+        public int[] getFmPointers() {
+            return fmPointers.clone();
+        }
+
+        @Override
+        public int[] getFmKeyOffsets() {
+            return fmKeyOffsets.clone();
+        }
+
+        @Override
+        public int[] getFmVolumeOffsets() {
+            return fmVolumeOffsets.clone();
+        }
+
+        @Override
+        public int[] getPsgPointers() {
+            return psgPointers.clone();
+        }
+
+        @Override
+        public int[] getPsgKeyOffsets() {
+            return psgKeyOffsets.clone();
+        }
+
+        @Override
+        public int[] getPsgVolumeOffsets() {
+            return psgVolumeOffsets.clone();
+        }
+
+        @Override
+        public int[] getPsgModEnvs() {
+            return psgModEnvs.clone();
+        }
+
+        @Override
+        public int[] getPsgInstruments() {
+            return psgInstruments.clone();
+        }
+
+        @Override
+        public void setId(int id) {
+            throw new UnsupportedOperationException(
+                    "frozen SMPS metadata cannot be changed");
+        }
+
+        @Override
+        public void setPalSpeedupDisabled(boolean disabled) {
+            throw new UnsupportedOperationException(
+                    "frozen SMPS metadata cannot be changed");
+        }
+
+        @Override
         public byte[] getVoice(int voiceId) {
             return copyAt(voices, voiceId);
         }
@@ -1136,6 +1197,36 @@ public final class AudioPresentationSourceFactory
         @Override
         public byte[] getModEnvelope(int id) {
             return copyAt(modEnvelopes, id);
+        }
+
+        @Override
+        public int voiceLength(int voiceId) {
+            return lengthAt(voices, voiceId);
+        }
+
+        @Override
+        public byte voiceByteAt(int voiceId, int index) {
+            return voices[voiceId][index];
+        }
+
+        @Override
+        public int psgEnvelopeLength(int envelopeId) {
+            return lengthAt(psgEnvelopes, envelopeId);
+        }
+
+        @Override
+        public byte psgEnvelopeByteAt(int envelopeId, int index) {
+            return psgEnvelopes[envelopeId][index];
+        }
+
+        @Override
+        public int modEnvelopeLength(int envelopeId) {
+            return lengthAt(modEnvelopes, envelopeId);
+        }
+
+        @Override
+        public byte modEnvelopeByteAt(int envelopeId, int index) {
+            return modEnvelopes[envelopeId][index];
         }
 
         @Override
@@ -1159,6 +1250,14 @@ public final class AudioPresentationSourceFactory
         private static byte[] copyAt(byte[][] values, int index) {
             return index < 0 || index >= values.length
                     ? null : copyNullable(values[index]);
+        }
+
+        private static int lengthAt(byte[][] values, int index) {
+            if (index < 0 || index >= values.length
+                    || values[index] == null) {
+                return 0;
+            }
+            return values[index].length;
         }
     }
 
