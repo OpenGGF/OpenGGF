@@ -56,6 +56,49 @@ class TestSmpsDriverSnapshot {
     }
 
     @Test
+    void validatedEqualReplacementCannotInheritCatalogTrustAcrossSnapshots() {
+        CountingSmpsData catalogData = new CountingSmpsData(
+                new byte[] {1, 2, 3, 4}, 0x81);
+        SmpsSourceDescriptor descriptor = SmpsSourceDescriptor.baseMusic(
+                9, catalogData, catalogData.dataLength(),
+                java.util.Arrays.hashCode(
+                        catalogData.getDataWithoutCounting()));
+        SmpsDriver catalogDriver = new SmpsDriver();
+        catalogDriver.addSequencer(new SmpsSequencer(
+                catalogData, AudioTestFixtures.EMPTY_DAC, catalogDriver,
+                AudioManager.getInstance(),
+                new SmpsSequencerConfig.Builder().build(), descriptor,
+                SmpsSequencer.SourceDescriptorTrust.PRECOMPUTED_IMMUTABLE),
+                false);
+        SmpsDriverSnapshot catalogSnapshot = catalogDriver.captureSnapshot();
+        CountingSmpsData equalReplacement = new CountingSmpsData(
+                new byte[] {1, 2, 3, 4}, 0x81);
+        equalReplacement.resetDataReads();
+
+        SmpsDriver replacementDriver = new SmpsDriver();
+        replacementDriver.restoreSnapshot(
+                catalogSnapshot,
+                replacingProgram(equalReplacement));
+        assertEquals(1, equalReplacement.dataReads(),
+                "a distinct replacement must be validated once");
+        SmpsDriverSnapshot replacementSnapshot =
+                replacementDriver.captureSnapshot();
+
+        equalReplacement.getDataWithoutCounting()[1] = 9;
+        equalReplacement.resetDataReads();
+
+        assertThrows(IllegalStateException.class,
+                () -> new SmpsDriver().restoreSnapshot(
+                        replacementSnapshot,
+                        SmpsDriverSnapshot.liveReferences()));
+        assertEquals(1, equalReplacement.dataReads(),
+                "replacement identity must remain untrusted after capture");
+        assertEquals(SmpsSequencer.SourceDescriptorTrust.LEGACY_RECOMPUTE,
+                replacementSnapshot.sequencers().getFirst()
+                        .sourceDescriptorTrust());
+    }
+
+    @Test
     void storedGenerationDescriptorIsReusedWithoutHashingOnConstructionOrRestore() {
         CountingSmpsData data = new CountingSmpsData(
                 new byte[] {1, 2, 3, 4}, 0x81);
@@ -345,6 +388,35 @@ class TestSmpsDriverSnapshot {
         AbstractSmpsData data = new AudioTestFixtures.StubSmpsData(name);
         data.setId(id);
         return data;
+    }
+
+    private static SmpsDriverSnapshot.DependencyResolver replacingProgram(
+            AbstractSmpsData replacement) {
+        return new SmpsDriverSnapshot.DependencyResolver() {
+            @Override
+            public AbstractSmpsData resolveSmpsData(
+                    SmpsDriverSnapshot.SequencerEntry entry) {
+                return replacement;
+            }
+
+            @Override
+            public DacData resolveDacData(
+                    SmpsDriverSnapshot.SequencerEntry entry) {
+                return entry.dacData();
+            }
+
+            @Override
+            public AudioManager resolveAudioManager(
+                    SmpsDriverSnapshot.SequencerEntry entry) {
+                return AudioManager.getInstance();
+            }
+
+            @Override
+            public SmpsSequencerConfig resolveConfig(
+                    SmpsDriverSnapshot.SequencerEntry entry) {
+                return entry.config();
+            }
+        };
     }
 
     private static final class CountingSmpsData extends AbstractSmpsData {
