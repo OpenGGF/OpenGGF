@@ -31,6 +31,10 @@ class TestTraceReplayStartPositionPolicy {
     @TempDir
     Path tempDir;
 
+    private static final List<String> UNRETAINED_PER_FRAME_CAPABILITIES = List.of(
+            "load_queue_state_per_frame",
+            "dynamic_art_transfer_state_per_frame");
+
     private int policyTraceCopyIndex;
 
     @Test
@@ -256,13 +260,20 @@ class TestTraceReplayStartPositionPolicy {
 
     @Test
     void frameZeroSidekickAndObjectBootstrapCoverageIsDocumentedAsPartial() throws Exception {
-        String testBase = Files.readString(Path.of(
-                "src/test/java/com/openggf/tests/trace/AbstractTraceReplayTest.java"));
+        // The frame-0 projection moved out of the test base into production
+        // code (AbstractTraceReplayTest.captureEngineSnapshot now delegates to
+        // TraceReplayEngineSnapshot.capture), so the coverage-debt note lives
+        // with the code that owns the gap. The empty per-slot SST map is the
+        // structural half of the assertion, not just prose.
+        String snapshot = Files.readString(Path.of(
+                "src/main/java/com/openggf/trace/replay/TraceReplayEngineSnapshot.java"));
         String releaseIssues = Files.readString(Path.of("docs/architecture/audits/release-architecture-review-issues.md"));
 
-        assertTrue(testBase.contains("Sidekick CPU state is now captured")
-                        && testBase.contains("Per-slot SST snapshots are still left empty"),
-                "The trace test base must keep captured sidekick CPU state and missing frame-0 SST views visible.");
+        assertTrue(snapshot.contains("Sidekick CPU state is now")
+                        && snapshot.contains("Per-slot SST snapshots")
+                        && snapshot.contains("Map.of()"),
+                "The frame-zero engine projection must keep captured sidekick CPU state and the "
+                        + "empty per-slot SST view visible.");
         assertTrue(releaseIssues.contains("not a full sidekick/SST parity proof"),
                 "Release notes must not claim warning-only bootstrap gaps prove strict parity.");
     }
@@ -629,8 +640,7 @@ class TestTraceReplayStartPositionPolicy {
         Path target = tempDir.resolve("policy-"
                 + policyTraceCopyIndex++ + "-" + source.getFileName());
         Files.createDirectories(target);
-        Files.copy(source.resolve("metadata.json"), target.resolve("metadata.json"),
-                StandardCopyOption.REPLACE_EXISTING);
+        writePolicyMetadata(source, target);
         copyTraceFile(source, target, "physics.csv");
         try (BufferedReader reader = traceReader(source, "aux_state.jsonl");
              BufferedWriter writer = Files.newBufferedWriter(
@@ -644,6 +654,32 @@ class TestTraceReplayStartPositionPolicy {
             }
         }
         return TraceData.load(target);
+    }
+
+    /**
+     * Copies {@code metadata.json} minus the per-frame aux capabilities whose
+     * event families {@link #isReplayPolicyEvent} deliberately drops.
+     * {@link TraceData#load} enforces one typed heartbeat per stored physics
+     * row for every advertised per-frame family
+     * ({@code validateAdvertisedLoadQueueStates} /
+     * {@code validateAdvertisedDynamicArtTransferStates}), so a derived
+     * fixture that keeps the capability while discarding its events
+     * contradicts itself and fails to load at frame 0. The curated event set
+     * is what these policy assertions are written against, so the capability
+     * list follows the payload rather than the payload following the list.
+     */
+    private static void writePolicyMetadata(Path source, Path target) throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode metadata = (ObjectNode) mapper.readTree(source.resolve("metadata.json").toFile());
+        ArrayNode extras = metadata.withArray("aux_schema_extras");
+        for (int i = extras.size() - 1; i >= 0; i--) {
+            String value = extras.get(i).asText();
+            if (UNRETAINED_PER_FRAME_CAPABILITIES.contains(value)) {
+                extras.remove(i);
+            }
+        }
+        mapper.writerWithDefaultPrettyPrinter()
+                .writeValue(target.resolve("metadata.json").toFile(), metadata);
     }
 
     private static boolean isReplayPolicyEvent(String line) {

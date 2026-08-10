@@ -65545,3 +65545,70 @@ classes. **`TestS3kAizTraceReplay` is GREEN** (was 3 errors).
   `getVblaCounter() & 3` key at all.** The engine already tracks `elemAtTarget[]`, so the
   replacement is mechanical; it is a behavioural change across every S3K title card and deserves
   its own round.
+
+## 2026-08-10 — round thirty: two harness fixture-construction bugs, and two load-bearing pairs named
+
+Base a3fd49166 (post-merge, definitive frontier 769 / 11 failures / 24 errors, 12 red classes).
+
+- **BOTH HARNESS DEFECTS WERE TEST-SIDE FIXTURE CONSTRUCTION, not validators and not the engine.**
+  Established by decoding the payloads directly rather than trusting the exception text.
+  `TestAbstractTraceReplayDynamicArtTerminal` GREEN (2 failures -> 0): the committed
+  `traces/s2/ehz1_fullrun/aux_state.jsonl.gz` carries exactly 5852 `dynamic_art_transfer_state`
+  events, one per stored physics row, and exactly ONE at frame 0
+  (`{"frame": 0, ..., "outstanding_transfer_ids": [4]}`), with
+  `dynamic_art_transfer_state_per_frame` ALREADY in `metadata.json`'s `aux_schema_extras`. The
+  test was written when the fixture had neither, so it unconditionally re-added the capability
+  and appended its own synthetic empty state for every frame on top of the real stream. Frame 0
+  genuinely carried 2 states and `TraceData.validateDynamicArtTransferStates:520` was correctly
+  rejecting a malformed stream. **The validator was right all along.** No validator weakened, no
+  fixture regenerated, no re-record needed.
+  `TestTraceReplayStartPositionPolicy` 22 reds -> 6, all 20 errors closed, and the "one shared
+  cause" hypothesis was correct: `loadPolicyTrace` copies `metadata.json` VERBATIM but filters
+  `aux_state.jsonl` through `isReplayPolicyEvent`, an allowlist of five families. The fixtures
+  have since been regenerated advertising `load_queue_state_per_frame` (and for the S2 ones
+  `dynamic_art_transfer_state_per_frame`), whose events the allowlist drops — so `TraceData.load`
+  then enforced one typed heartbeat per stored row for an advertised capability whose events had
+  been filtered out.
+- **TITLE CARD: the ROM model is 30, which is the OLD TABLE'S phase-1/2 value — so the defect is
+  narrower and worse than the review stated.** `Obj_TitleCardWait` (skdisasm/sonic3k.asm:
+  62220-62223) stalls purely on `$34`; the sliding children set it (:62328, :62377, :62422) on any
+  dispatch where their coordinate is not yet at `$46`, and the owner sits in an earlier object
+  slot than its `CreateNewSprite4` children (:37894), so the reset (:62212-62232) lands exactly
+  TWO owner dispatches after the last child arrives. `ObjArray_TtlCard` (:62450) needs
+  11/20/24/28 slide steps, so the last child stops at 28 and the reset is dispatch 30 — no
+  constant, no vbla key. (`ObjArray_TtlCard2`'s 12-step child at :62479 is reached only when `$44`
+  is set, which `Obj_TitleCardInit` does only for the 2P competition zones $E-$12, :62108-62115.)
+  **So phase-1/2's 24+6=30 was ROM-correct and phase-0/3's 24 is the fitted value — and 24 is
+  IMPOSSIBLE**, firing four updates before the engine's own children have finished sliding, which
+  `Obj_TitleCardWait` can never do.
+  **Where the 6 frames actually live:** with the ROM model the MGZ divergence is `rings` expected
+  0 / actual 3 spanning frames 14424-14429 — a span of exactly 6, exactly the delta the change
+  adds on a phase-0/3 entry. The phase table's 24 was absorbing a ~6-dispatch skew in WHEN the
+  children BEGIN sliding. The ROM gate on that start is `Obj_TitleCardCreate`'s
+  `tst.b (Kos_modules_left)` (:62169-62171) — children are not allocated until the KosM queue
+  drains — and the engine's equivalent is `Sonic3kTitleCardManager.update()`'s `artLoading` early
+  return. **That is the same KosM-readiness frontier already keeping
+  `TestS3kAizCompleteRunTraceReplay` (KOS_DECOMPRESSION_QUEUE#49) and
+  `TestS3kMhzCompleteRunTraceReplay` (#335) red.** FOURTH load-bearing pair this session: the
+  vbla lookup can only be deleted once the create gate matches `Kos_modules_left`. Applying the
+  ROM model alone moves MGZ standalone and complete-run RED with none green — measured, not
+  predicted — so it was correctly not landed. Note two unit tests
+  (`TestSonic3kTitleCardManagerRewind.phase{One,Two}InLevelResetTargetsNativeDisplayBoundary`)
+  assert countdown == 30 at REQUEST time; when the pair lands they should assert 30 at CHILD
+  ARRIVAL instead.
+- **SIDEKICK HURT HOOK: counterpart identified exactly, and my brief's framing was wrong.** I
+  said the ROM's spike-hit path has guards upstream of `HurtCharacter` so the engine's touch
+  dispatch fires where the ROM's does not. **Disproved from the fixture:** at raw frame 10744 the
+  ROM unambiguously DID run `HurtCharacter` for Tails — physics.csv row 0x29F8 shows sidekick
+  routine 02->04, status 0x40->0x42 (`Status_InAir`), x_vel -$100, y_vel -$200, exactly
+  `HurtCharacter`'s underwater branch, and aux shows `tails_invulnerability_timer` 0x00 -> 0x78.
+  The touch dispatch is correct and the hurt byte IS written — then **clobbered later in the same
+  frame**. `object_state` slot 41 is the AIZ spiked-log parent at (0x2130,0x0530); its status is
+  0x40 on frames 10740-10743 and 0x00 on 10744, and bit 6 is `p2_pushing_bit`
+  (sonic3k.constants.asm:133-139). The log runs `SolidObjectFull`
+  (`AIZSpikedLog_SolidAndDraw`, :60148-60163) and objects run AFTER the player slots, so its
+  no-collision release reaches `loc_1E0A2` (:41517-41526), which tests the pushing bit and —
+  because `anim` is `$1A`, neither `$02` Roll nor `$09` Spindash — executes
+  `move.w #1,anim(a1)`. **`anim` and `prev_anim` are adjacent bytes**, so that writes anim=$00 /
+  prev_anim=$01: the hurt byte is erased and the walk script restarted. That is precisely what
+  the `AizSpikedLog` hook fakes. FIFTH load-bearing pair; identified but not landed.

@@ -34,9 +34,30 @@ their inflated total row counts are not treated as executable test inventory.
 Outcome comparisons use matching class/method identities, and the merge result
 comes from `clean test`.
 
-## Remaining integration step
+## Final isolated integration evidence
 
-`develop` advanced after this checkpoint. The later committed tip must be merged
-into the same isolated branch, all conflict-family and portability guards must be
-rerun, and a new clean full-suite manifest must replace the checkpoint counts
-before the real `next` worktree is updated. No push is part of this task.
+The isolated branch subsequently merged committed `develop` through
+`59e59c8fe`, including the follow-up that repairs two derived trace fixtures
+whose metadata no longer matched their filtered event payloads.
+
+- The disassembly-portability guard and its production-source companion pass
+  3/3. Source citations and self-contained scanner fixtures remain permitted;
+  no executable production or test path opens the local disassembly trees.
+- The corrected dynamic-art terminal fixture passes 2/2. The trace start-policy
+  class retains six assertion failures reproduced unchanged at exact
+  `develop` `59e59c8fe`; they are behavioral baseline failures, not missing-file
+  errors or merge regressions.
+- The seven loopback/network classes pass 15/15 when run with local socket
+  access. Their sandbox-only `Operation not permitted` results are not test
+  culling and do not change the committed tests.
+- The partitioned JDK 21 manifest contains 17,708 current method outcomes:
+  17,569 pass, 71 failure, 22 error, and 46 skipped. Every method that passed in
+  the recorded `develop` manifest still passes. Against the exact pre-merge
+  `next` manifest, the only changed passing outcomes are 16 OpenGL methods that
+  skip when no display/context is available; their source and feature paths are
+  retained.
+
+The integration deliberately preserves `next`'s public Mod API 0.7 surface.
+Develop-only runtime/trace/load owners remain engine-internal, while the
+merged runtime behavior, trace-v5 fixes, fixture corrections, and ROM-backed
+test contracts are retained. No push is part of this task.
