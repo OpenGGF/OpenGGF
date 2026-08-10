@@ -218,8 +218,10 @@ Preparing an admission will:
    metadata;
 5. determine same-ID replacement and channel conflicts; and
 6. produce a bounded `PreparedSfxAdmission` containing the new sequencer, the
-   affected driver references/channels, and the diagnostic metadata needed by
-   the existing observer callbacks.
+   affected driver references/channels, and ordered conflict actions in the new
+   program's native track/header order. Action arrays are sized only from the
+   new SFX track count, never the live driver population; exact FM and DAC track
+   types may coexist on hardware channel 5 without sharing a conflict slot.
 
 SFX construction must not write to the shared YM2612/PSG state, replace the
 driver's DAC source, acquire channel locks, publish observer events, or mutate
@@ -233,8 +235,9 @@ coordination runtime's existing narrow snapshot if restoration is needed.
 
 ### 4. Bounded admission commit
 
-`SmpsDriver` will own SFX contention and admission. A prepared admission exposes
-a commit operation whose production steps are non-throwing after validation:
+`SmpsDriver` will own SFX contention and admission. With diagnostic observers
+disabled (the normal runtime path), a prepared admission exposes a commit
+operation whose production steps are non-throwing after validation:
 
 - retire/replace the same-ID SFX when required;
 - deactivate only conflicting existing SFX tracks;
@@ -248,13 +251,25 @@ The generic `mutateVoicesAtomically(... owner)` wrapper will no longer surround
 this path, so admission will not call `captureLiveCommandMutation` on the whole
 music voice.
 
+The develop branch already has optional YM/PSG `ChipWriteObserver` callbacks,
+and Java callbacks can throw after a chip write has mutated state. Until the
+frontier's selective journal is ported, an observer-enabled develop commit uses
+a transitional driver-local fallback: capture the existing full driver/synth
+snapshot immediately before mutation, restore it and release the prepared
+commit claim if a chip callback throws, then rethrow. Coordination state remains
+owned/restored by the registry's narrow snapshot. This fallback is forbidden
+when observers are `NONE`, is excluded from the common-path allocation claim,
+and is replaced—not retained—by the channel-selective journal during the
+frontier reconciliation. Tests inject failures from real YM and PSG writes and
+compare the restored full state exactly.
+
 The implementation must not assume arbitrary frontier observers cannot throw or
 move them before mutation. Frontier observers deliberately inspect committed
 state; for example, contention callbacks assert that the FM lock already points
 at the admitted SFX. Their existing post-mutation timing remains intact.
 
-When any potentially throwing diagnostic observer is enabled, preparation also
-captures a bounded `SfxAdmissionMutationJournal` covering exactly the state the
+On the observer-heavy frontier, the transitional develop fallback is replaced
+by a bounded `SfxAdmissionMutationJournal` covering exactly the state the
 prepared admission can change:
 
 - displaced/replaced sequencer and affected track mutable fields;

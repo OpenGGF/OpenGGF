@@ -400,7 +400,7 @@ private AudioPresentationCommand resolveSmpsSfxCommand(
 
 **Interfaces:**
 - Produces: nullable `PreparedSfxAdmission SmpsDriver.prepareContinuousSfxExtension(int continuousSfxId,int trackCount)`, `PreparedSfxAdmission SmpsDriver.prepareNewSfxAdmission(SmpsSequencer,int continuousSfxId,int trackCount)`, and `void SmpsDriver.commitSfxAdmission(PreparedSfxAdmission)`.
-- `PreparedSfxAdmission` contains the new sequencer, extension/replacement mode, fixed-size affected-FM/PSG arrays or masks, displaced sequencer/track references, and continuous metadata. It exposes no general mutable collection.
+- `PreparedSfxAdmission` contains the new sequencer, extension/replacement mode, affected-FM/PSG masks, ordered displaced sequencer/track action arrays sized from the new SFX track count, and continuous metadata. It exposes no general mutable collection. FM and DAC retain distinct exact-type actions even though both can address hardware channel 5.
 - Produces: explicit `void SmpsSequencer.beginSfxAdmission()` which invokes its bound `CoordFlagHandler.onSfxStart(id)`; the constructor never calls it.
 - Preserves: driver insertion/removal ordering, same-ID replacement, priority/contention rules, channel takeover, DAC selection, and coordination start timing.
 
@@ -434,19 +434,19 @@ public void beginSfxAdmission();
 
 - [ ] **Step 3: Implement allocation-bounded conflict analysis**
 
-  Analyze live SFX using hardware-channel masks and pre-sized arrays sized from the new sequencer's track count; do not use streams, `HashSet`, or a growing list. Scanning unrelated live SFX is allowed, but allocated storage must remain bounded by affected hardware channels/tracks.
+  Analyze live SFX using hardware-channel masks and pre-sized ordered action arrays sized from the new sequencer's track count; do not use streams, `HashSet`, or a growing list. Preserve the new program's header/track order because PSG writes and the final latch are order-sensitive. Represent FM and DAC exact types independently on channel 5, and do not schedule the same displaced track twice for duplicate new entries. Scanning unrelated live SFX is allowed, but allocated storage must remain independent of unrelated live channel/track counts.
 
 - [ ] **Step 4: Separate construction from live chip writes**
 
-  Ensure sequencer construction, dependency binding, descriptor assignment, priority setup, and preparation do not enable DAC, silence channels, write YM/PSG, acquire locks, or publish coordination/observer events. Remove the constructor's `onSfxStart` call and expose it only through `beginSfxAdmission`; driver commit does not own or invoke coordination handlers. In this same commit, update the registry's existing atomic SFX path to invoke `beginSfxAdmission` only after new-sequencer preparation and immediately before driver commit; continuous extension returns without invoking it, preserving current behavior.
+  Ensure sequencer construction, dependency binding, descriptor assignment, priority setup, and preparation do not enable DAC, silence channels, write YM/PSG, acquire locks, or publish coordination/observer events. Remove the constructor's `onSfxStart` call and expose it only through `beginSfxAdmission`; driver commit does not own or invoke coordination handlers. In this same commit, update the registry's existing atomic SFX path to instantiate and prepare first, then capture coordination state, invoke `beginSfxAdmission` immediately before driver commit, and restore only that snapshot if start/commit fails; continuous extension returns without capturing coordination or invoking start.
 
 - [ ] **Step 5: Implement deterministic commit**
 
-  Convert the registry's still-atomic SFX path to call the prepared APIs. Commit in the existing native order: extend when applicable; retire same-ID/displaced tracks; update locks/latches and channel silence/takeover; insert the sequencer; install continuous state. Every driver step must be prevalidated and non-throwing. Guard against committing a prepared object to a different driver or twice; if any production step remains throwable, stop implementation and amend/re-review the design instead of restoring the generic snapshot. Task 8 then removes only the now-unnecessary whole-driver atomic wrapper.
+  Convert the registry's still-atomic SFX path to call the prepared APIs. Commit in the existing native program/header order: extend when applicable; retire same-ID/displaced tracks; update locks/latches and channel silence/takeover; insert the sequencer; install continuous state. Guard against committing a prepared object to a different driver or twice. With chip observers disabled, every post-validation driver step must be internally non-throwing. With a develop chip observer enabled, use the reviewed transitional driver-local full snapshot only around commit, restore/release the claim on callback failure, and rethrow; the observer-free path must not capture it. Task 8 removes the registry whole-voice wrapper, and frontier reconciliation replaces this diagnostic fallback with the selective journal.
 
 - [ ] **Step 6: Verify admission parity**
 
-  Run `mvn -Dtest=TestPreparedSfxAdmission,TestSmpsDriverSnapshot,TestAudioVoiceRegistry,TestMusicOverrideRestore test`. Expect all cases to match the pre-change post-commit state.
+  Run `mvn -Dtest=TestPreparedSfxAdmission,TestSmpsDriverSnapshot,TestAudioVoiceRegistry,TestMusicOverrideRestore,TestChipWriteObserver test`. Expect all cases to match the pre-change post-commit state. Include mixed FM6/DAC conflicts, duplicate exact-type entries, reversed multi-PSG header order with full latch/event comparison, explicit zero-track continuous metadata, complete pre/post preparation snapshots, unrelated-live-set allocation slopes, and real YM/PSG observer exceptions with exact driver/synth rollback and retry.
 
 - [ ] **Step 7: Commit prepared admission**
 
@@ -463,7 +463,7 @@ public void beginSfxAdmission();
 
 **Interfaces:**
 - Consumes: factory program entries and `SmpsDriver.prepareContinuousSfxExtension`/`prepareNewSfxAdmission`/`commitSfxAdmission`.
-- Produces: registry SFX application which completes all throwable factory/validation work before mutation, owns the narrow coordination snapshot/action for new sequencers, and never calls `captureLiveCommandMutation` for a successful/rejected `AddSmpsSfx` on `develop`.
+- Produces: registry SFX application which completes all throwable factory/validation work before mutation, owns the narrow coordination snapshot/action for new sequencers, and never calls `captureLiveCommandMutation` for a successful/rejected `AddSmpsSfx` on `develop`. The optional develop chip-observer rollback is driver-local and absent when observers are `NONE`.
 
 ```java
 PreparedSfxAdmission admission = driver.prepareContinuousSfxExtension(
@@ -476,12 +476,14 @@ if (admission == null) {
             coordFlagHandlers.state().snapshot();
     try {
         sequencer.beginSfxAdmission();
+        driver.commitSfxAdmission(admission);
     } catch (RuntimeException failure) {
         rollbackCoordFlagState(coordState, failure);
         throw failure;
     }
+} else {
+    driver.commitSfxAdmission(admission);
 }
-driver.commitSfxAdmission(admission);
 ```
 
 - [ ] **Step 1: Add rollback-capture spy tests**
@@ -494,15 +496,15 @@ driver.commitSfxAdmission(admission);
 
 - [ ] **Step 3: Rework owner and standalone publication**
 
-  Try continuous extension first and commit it without construction or coordination start. Otherwise instantiate and prepare before registry publication, snapshot `coordFlagHandlers.state()`, invoke `sequencer.beginSfxAdmission()`, restore that snapshot if the action throws, then perform the validated no-throw driver commit. Existing owners use this sequence directly. Standalone drivers remain unpublished until all preparation and coordination work succeeds; on failure dispose only the new unpublished voice and restore the narrow coordination snapshot. Publish `standaloneSmps`/voice id only after commit.
+  Try continuous extension first and commit it without construction or coordination start. Otherwise instantiate and prepare before registry publication, snapshot `coordFlagHandlers.state()`, and wrap both `sequencer.beginSfxAdmission()` and `driver.commitSfxAdmission(admission)` in the same try/catch. On any `RuntimeException`, restore the coordination snapshot (attaching restore failure as suppressed) and rethrow; the driver-local observer fallback owns only driver/synth restoration and prepared-claim release. Existing owners use this sequence directly. Standalone drivers remain unpublished until all preparation, coordination work, and commit succeed; on failure dispose only the new unpublished voice and restore the narrow coordination snapshot. Publish `standaloneSmps`/voice id only after commit. Continuous extension remains outside this scope because it invokes no coordination start.
 
 - [ ] **Step 4: Keep generic atomic mutation for non-SFX commands**
 
-  Remove the wrapper only from SMPS SFX admission. Music override, stop, sample voice, restore, and other live mutations continue using their existing rollback contracts.
+  Remove the registry whole-voice wrapper only from SMPS SFX admission. Music override, stop, sample voice, restore, and other live mutations continue using their existing rollback contracts. Assert observer-free driver commit captures no snapshot; an enabled throwing chip observer uses the reviewed driver-local fallback, restores exactly, leaves the command retryable, and is later replaced by the frontier selective journal.
 
 - [ ] **Step 5: Verify registry and queue semantics**
 
-  Run `mvn -Dtest=TestAudioVoiceRegistry,TestAudioPresentationCommandQueue,TestAudioPresentationSnapshotParity,TestUnifiedAudioPresentationIntegration test`. Expect all selected tests to pass and the SFX rollback-capture spy to remain zero.
+  Run `mvn -Dtest=TestAudioVoiceRegistry,TestAudioPresentationCommandQueue,TestAudioPresentationSnapshotParity,TestUnifiedAudioPresentationIntegration test`. Expect all selected tests to pass and the SFX rollback-capture spy to remain zero. Inject real YM and PSG observer failures through registry/queue admission; assert exact driver/synth and coordination-byte restoration, released prepared claim, the same command retained for retry, and exactly one eventual commit.
 
 - [ ] **Step 6: Commit the common-path optimization**
 
@@ -550,7 +552,7 @@ long slope(long allocationsAt64, long allocationsAt256) {
 
 - [ ] **Step 5: Add production API/write guards**
 
-  Extend architecture guards to reject public raw DAC/SMPS arrays, `freshSource`/`copyDac` reintroduction, resolver load-before-lookup ordering, SFX-path `captureLiveCommandMutation`, and calls to `SmpsSourceDescriptor.from` from warmed instantiation. Allow asset-sized hashing/copy only inside registration/freezing and ordinary rewind snapshot capture where documented.
+  Extend architecture guards to reject public raw DAC/SMPS arrays, `freshSource`/`copyDac` reintroduction, resolver load-before-lookup ordering, observer-free SFX-path `captureLiveCommandMutation`, and calls to `SmpsSourceDescriptor.from` from warmed instantiation. Allow the explicitly observer-gated driver-local transitional snapshot until frontier reconciliation replaces it; allow asset-sized hashing/copy only inside registration/freezing and ordinary rewind snapshot capture where documented.
 
 - [ ] **Step 6: Run the focused ownership and budget suite**
 
