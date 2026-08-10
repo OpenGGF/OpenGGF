@@ -1,12 +1,15 @@
 package com.openggf.tools.audio.completerun;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeMap;
+import java.util.regex.Pattern;
 
 /**
  * Immutable tooling-only envelope for one complete-run audio capture.
@@ -16,6 +19,10 @@ import java.util.Set;
  */
 public final class CompleteRunAudioTrace {
     public static final String SCHEMA = "complete_run_audio.v1";
+    public static final int CHUNK_FRAME_ROWS = 4_096;
+    private static final Pattern SHA1 = Pattern.compile("[0-9a-f]{40}");
+    private static final Pattern CRC32 = Pattern.compile("[0-9a-f]{8}");
+    private static final Pattern SHA256 = Pattern.compile("[0-9a-f]{64}");
 
     private CompleteRunAudioTrace() {
     }
@@ -27,28 +34,118 @@ public final class CompleteRunAudioTrace {
 
     public enum OwnerClass { NONE, MUSIC, SFX, SPECIAL_SFX, COMMAND }
 
-    public record Metadata(String schema, String profileId, int firstFrame, int exclusiveEnd,
-            List<HardwareRole> hardwareRoles, List<String> stateFieldNames) {
+    /** Complete, profile-owned immutable identity for one pinned ROM/movie/manifest fixture. */
+    public record CompleteRunFixture(String romSha1, String romCrc32, String bk2Sha256,
+            long bk2RowCount, String runManifestSha256, List<ManifestSegment> segments,
+            int firstFrame, int exclusiveEnd) {
+        public CompleteRunFixture {
+            lowercaseHex(romSha1, SHA1, "ROM SHA-1");
+            lowercaseHex(romCrc32, CRC32, "ROM CRC32");
+            lowercaseHex(bk2Sha256, SHA256, "BK2 SHA-256");
+            lowercaseHex(runManifestSha256, SHA256, "run manifest SHA-256");
+            if (bk2RowCount <= 0 || firstFrame < 0 || exclusiveEnd <= firstFrame
+                    || exclusiveEnd > bk2RowCount) {
+                throw new IllegalArgumentException("fixture comparison interval is outside the BK2 row count");
+            }
+            segments = List.copyOf(Objects.requireNonNull(segments, "manifest segments"));
+            if (segments.isEmpty()) {
+                throw new IllegalArgumentException("manifest segments must not be empty");
+            }
+            int previousEnd = -1;
+            Set<String> ids = new LinkedHashSet<>();
+            for (ManifestSegment segment : segments) {
+                if (!ids.add(segment.id()) || segment.firstFrame() < previousEnd
+                        || segment.firstFrame() < firstFrame || segment.exclusiveEnd() > exclusiveEnd) {
+                    throw new IllegalArgumentException("manifest segments must be unique, monotonic, and in range");
+                }
+                previousEnd = segment.exclusiveEnd();
+            }
+        }
+    }
+
+    /** One retained manifest segment; gaps are deliberately represented by absent frame segments. */
+    public record ManifestSegment(String id, int firstFrame, int exclusiveEnd) {
+        public ManifestSegment {
+            requireText(id, "manifest segment ID");
+            if (firstFrame < 0 || exclusiveEnd <= firstFrame) {
+                throw new IllegalArgumentException("manifest segment must be a non-empty half-open range");
+            }
+        }
+    }
+
+    public enum ProducerKind { REFERENCE, OPENGGF }
+
+    /** Pinning proof for the observer profile and every callback domain it used. */
+    public record ObserverProof(String observerProfile, String callbackSource,
+            List<CallbackProof> callbacks) {
+        public ObserverProof {
+            requireText(observerProfile, "observer profile");
+            requireText(callbackSource, "callback source");
+            callbacks = List.copyOf(Objects.requireNonNull(callbacks, "callback proofs"));
+            if (callbacks.isEmpty()) {
+                throw new IllegalArgumentException("callback proofs must not be empty");
+            }
+        }
+    }
+
+    public record CallbackProof(String callback, long observations) {
+        public CallbackProof {
+            requireText(callback, "callback proof name");
+            if (observations <= 0) {
+                throw new IllegalArgumentException("callback proof observations must be positive");
+            }
+        }
+    }
+
+    /** The fixed deterministic chunking and compression contract used by the capture store. */
+    public record ChunkPolicy(int frameRows, String compression, int gzipTimestamp) {
+        public ChunkPolicy {
+            if (frameRows != CHUNK_FRAME_ROWS || !"gzip".equals(compression) || gzipTimestamp != 0) {
+                throw new IllegalArgumentException("chunk policy must use 4,096-row deterministic gzip chunks");
+            }
+        }
+    }
+
+    public record Metadata(String schema, String profileId, CompleteRunFixture fixture,
+            ProducerKind producerKind, ObserverProof observerProof, ChunkPolicy chunkPolicy,
+            List<HardwareRole> hardwareRoles, StateInventory stateInventory) {
         public Metadata {
             requireText(schema, "schema");
             requireText(profileId, "profileId");
             if (!SCHEMA.equals(schema)) {
                 throw new IllegalArgumentException("unknown complete-run audio schema: " + schema);
             }
-            if (firstFrame < 0 || exclusiveEnd <= firstFrame) {
-                throw new IllegalArgumentException("comparison interval must be a non-empty half-open range");
-            }
+            Objects.requireNonNull(fixture, "fixture");
+            Objects.requireNonNull(producerKind, "producer kind");
+            Objects.requireNonNull(observerProof, "observer proof");
+            Objects.requireNonNull(chunkPolicy, "chunk policy");
             hardwareRoles = canonicalRoles(hardwareRoles, "metadata hardware roles");
-            stateFieldNames = canonicalNames(stateFieldNames, "metadata state fields");
+            Objects.requireNonNull(stateInventory, "metadata state inventory");
+        }
+
+        /** Binds capture metadata to every fixture and inventory selected by its profile. */
+        public void validateProfile(CompleteRunAudioProfile profile) {
+            Objects.requireNonNull(profile, "profile");
+            if (!profileId.equals(profile.id()) || !fixture.equals(profile.fixture())
+                    || !hardwareRoles.equals(canonicalRoles(profile.hardwareRoles(), "profile hardware roles"))
+                    || !stateInventory.equals(profile.stateInventory())) {
+                throw new IllegalArgumentException("metadata does not match the selected complete-run audio profile");
+            }
         }
 
         /** Verifies the terminal's interval-derived frame count and declared exclusive end. */
         public void validateTerminal(Terminal terminal) {
             Objects.requireNonNull(terminal, "terminal");
-            if (terminal.exclusiveEnd() != exclusiveEnd
-                    || terminal.frameCount() != (long) exclusiveEnd - firstFrame) {
+            if (terminal.exclusiveEnd() != fixture.exclusiveEnd()
+                    || terminal.frameCount() != (long) fixture.exclusiveEnd() - fixture.firstFrame()) {
                 throw new IllegalArgumentException("terminal does not match the metadata comparison interval");
             }
+        }
+
+        /** Called by streaming storage after independently counting the emitted record stream. */
+        public void validateTerminal(Terminal terminal, CaptureCounts observedCounts) {
+            validateTerminal(terminal);
+            terminal.validateObservedCounts(observedCounts);
         }
     }
 
@@ -117,7 +214,44 @@ public final class CompleteRunAudioTrace {
             nonNegative(ymCount, "terminal YM count");
             nonNegative(psgCount, "terminal PSG count");
             nonNegative(lifecycleCount, "terminal lifecycle count");
-            requireText(rootDigest, "terminal root digest");
+            lowercaseHex(rootDigest, SHA256, "terminal root digest");
+            counts().total();
+        }
+
+        public CaptureCounts counts() {
+            return new CaptureCounts(frameCount, requestCount, serviceCount, decisionCount, ymCount,
+                    psgCount, lifecycleCount);
+        }
+
+        /** Compares terminal declarations with independently accumulated streaming counts. */
+        public void validateObservedCounts(CaptureCounts observedCounts) {
+            if (!counts().equals(Objects.requireNonNull(observedCounts, "observed capture counts"))) {
+                throw new IllegalArgumentException("terminal counts do not match independently observed counts");
+            }
+        }
+    }
+
+    /** Aggregate counts maintained by the store while it streams records, not by the producer. */
+    public record CaptureCounts(long frameCount, long requestCount, long serviceCount, long decisionCount,
+            long ymCount, long psgCount, long lifecycleCount) {
+        public CaptureCounts {
+            nonNegative(frameCount, "captured frame count");
+            nonNegative(requestCount, "captured request count");
+            nonNegative(serviceCount, "captured service count");
+            nonNegative(decisionCount, "captured decision count");
+            nonNegative(ymCount, "captured YM count");
+            nonNegative(psgCount, "captured PSG count");
+            nonNegative(lifecycleCount, "captured lifecycle count");
+        }
+
+        /** Uses exact arithmetic so an impossible aggregate cannot silently wrap. */
+        public long total() {
+            long total = Math.addExact(frameCount, requestCount);
+            total = Math.addExact(total, serviceCount);
+            total = Math.addExact(total, decisionCount);
+            total = Math.addExact(total, ymCount);
+            total = Math.addExact(total, psgCount);
+            return Math.addExact(total, lifecycleCount);
         }
     }
 
@@ -133,6 +267,28 @@ public final class CompleteRunAudioTrace {
             if (queueSlot != null && queueSlot < 0) {
                 throw new IllegalArgumentException("request queue slot must be non-negative when present");
             }
+        }
+    }
+
+    /** Profile-facing raw request identity before canonical ROM-backed content resolution. */
+    public record RawAudioRequest(OwnerClass ownerClass, int nativeId, String queueSource,
+            Integer queueSlot) {
+        public RawAudioRequest {
+            Objects.requireNonNull(ownerClass, "raw request owner class");
+            unsignedByte(nativeId, "raw request native ID");
+            requireText(queueSource, "raw request queue source");
+            if (queueSlot != null && queueSlot < 0) {
+                throw new IllegalArgumentException("raw request queue slot must be non-negative when present");
+            }
+        }
+    }
+
+    /** Canonical native/content identity resolved by a profile from a raw request. */
+    public record NativeSoundIdentity(OwnerClass ownerClass, String contentKey, int nativeId) {
+        public NativeSoundIdentity {
+            Objects.requireNonNull(ownerClass, "native sound owner class");
+            requireText(contentKey, "native sound content key");
+            unsignedByte(nativeId, "native sound ID");
         }
     }
 
@@ -299,7 +455,7 @@ public final class CompleteRunAudioTrace {
             requireText(entry.getKey(), name + " key");
             copy.put(entry.getKey(), immutableValue(Objects.requireNonNull(entry.getValue(), name + " value")));
         }
-        return Map.copyOf(copy);
+        return immutableSortedMap(copy);
     }
 
     private static Object immutableValue(Object value) {
@@ -323,7 +479,7 @@ public final class CompleteRunAudioTrace {
                 requireText(key, "state map key");
                 copy.put(key, immutableValue(Objects.requireNonNull(entry.getValue(), "state map value")));
             }
-            return Map.copyOf(copy);
+            return immutableSortedMap(copy);
         }
         throw new IllegalArgumentException("state values must be canonical JSON-compatible values");
     }
@@ -332,6 +488,17 @@ public final class CompleteRunAudioTrace {
         Objects.requireNonNull(value, name);
         if (value.isBlank()) {
             throw new IllegalArgumentException(name + " must be non-blank");
+        }
+    }
+
+    private static Map<String, Object> immutableSortedMap(Map<String, Object> values) {
+        return Collections.unmodifiableMap(new TreeMap<>(values));
+    }
+
+    private static void lowercaseHex(String value, Pattern pattern, String name) {
+        requireText(value, name);
+        if (!pattern.matcher(value).matches()) {
+            throw new IllegalArgumentException(name + " must be canonical lowercase hexadecimal");
         }
     }
 

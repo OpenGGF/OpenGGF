@@ -2,19 +2,36 @@ package com.openggf.tools.audio.completerun;
 
 import static com.openggf.tools.audio.completerun.CompleteRunAudioTrace.HardwareRole;
 
+import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.CompleteRunFixture;
+import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.NativeSoundIdentity;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.NormalizedState;
+import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.RawAudioRequest;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.RoleState;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.StateInventory;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /** Immutable, tooling-side declaration of one game's canonical audio-state inventory. */
 public interface CompleteRunAudioProfile {
     String id();
 
+    CompleteRunFixture fixture();
+
     List<HardwareRole> hardwareRoles();
 
     StateInventory stateInventory();
+
+    /** Complete native request-to-ROM-content resolution owned by this immutable profile. */
+    Map<RawAudioRequest, NativeSoundIdentity> nativeSoundIdentities();
+
+    default NativeSoundIdentity resolveRequest(RawAudioRequest request) {
+        NativeSoundIdentity identity = nativeSoundIdentities().get(Objects.requireNonNull(request, "request"));
+        if (identity == null) {
+            throw new IllegalArgumentException("profile does not resolve raw audio request: " + request);
+        }
+        return identity;
+    }
 
     /** Validates canonical field and role order without consulting a runtime audio owner. */
     default void validateState(NormalizedState state) {
