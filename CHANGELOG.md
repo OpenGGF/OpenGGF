@@ -13,6 +13,14 @@ All notable changes to the OpenGGF project are documented in this file.
   Obj18 subtype-2 vertical platform at x=$07C0 at the opposite end of its $80-pixel travel;
   the player landed on it at seg2 frame 907 where the ROM falls past, and the recorded route
   to the second star post was never reached.
+- Fix: Sonic 1's special-stage results card now runs its `SSR_Exit` frame. The wait that ends
+  the card only advances `obRoutine`; `SSR_Exit` is a routine of its own ("_incObj/7E, 7F Special
+  Stage Results and Chaos Emeralds.asm":156-158), so `ExecuteObjects` has to reach it -- and set
+  `f_restart` -- on a further whole `SS_NormalExit` iteration before that loop's
+  `tst.w (f_restart).w` can see it (sonic.asm:3401-3412). The engine ended the card one row
+  early on both the plain (routine $A) and post-continue (routine $12) exits, so everything
+  downstream of it -- the exit white-out, `GM_Level`'s fade-out, the title card and the
+  returning level's art -- landed one movie row early.
 - Fix: Sonic 3&K's star-post bonus star now tests the player with the ROM's own touch geometry
   and at the ROM's point in the frame. It had used an invented 16x16 box evaluated after the
   star had already been repositioned; the ROM reads `collision_property` first (`loc_2D47E`)

@@ -72372,3 +72372,29 @@ so a direct blob stays un-prepared across frames where the engine prepares in on
   906 including the walk-off at 901, and the terrain air-collision probe at 907
   reports floor distance +29 (no floor found). The landing came from the object
   solid path, not terrain.
+## 2026-08-11 - S1 GHZ/maze round trip: SSR_Exit frame recovered, 34 rows still open
+
+- Worktree a detached round-39 worktree, branch
+  `bugfix/ai-s1-ssr-exit-frame`, over `b7da4a7f4`.
+- Command: `mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1
+  -Dsurefire.runOrder=alphabetical "-Dsurefire.argLine=-Xmx4g"
+  -Dsonic1.rom.path=s1.gen -Dsonic2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen
+  -Dtest=TestS1GhzMazeRoundTripChain,TestS1CompleteEmeraldRunPrefix,TestS1CompleteEmeraldVisualRun,TestS2EhzHalfpipeRoundTripChain,TestS1SpecialStage*TraceReplay,Sonic1SpecialStageResultsScreenTest,TestSonic1SpecialStageResultsPlcReadiness,TestS1SpecialStageHeadlessBoot test`
+  Result: 22 tests, 2 failures, both also failing at the base commit.
+- `TestS1GhzMazeRoundTripChain` still fails on
+  `run_tail.edge[0..1].movie_logical_frame`, expected 9071. Baseline actual
+  9036 (delta 35); with the `SSR_Exit` frame restored, 9037 (delta 34).
+- Measured by per-row instrumentation of the terminal tail (added, read, then
+  reverted) rather than inferred: the engine enters `SPECIAL_STAGE_RESULTS` on
+  row 8116, the same row the recorded physics rows go all-zero for
+  `SS_NormalExit`'s `clearRAM`; the results card runs 705 engine frames against
+  the ROM's 706; the exit `PaletteWhiteOut` occupies rows 8838-8859, a full 22;
+  and `GM_Level`'s `PaletteFadeOut` is already modelled by
+  `Sonic1LevelInitProfile.preLevelFadeOutFrames()` = 22, across rows 8861-8882.
+- The remaining 34 rows all sit in `Level_TtlCardLoop`, whose exit is gated on
+  `tst.l (v_plc_buffer).w` (sonic.asm:2814-2841): engine rows 8884-9034 against
+  the ROM's ~185. That span is decompression-rate bound, not a countable ROM
+  constant, so it belongs to the recorded hardware-timing contract rather than
+  to any value derivable from the disassembly.
+- `TestS2EhzHalfpipeRoundTripChain` fails identically before and after
+  (segment 2 `starpost_special` boundary never observed) - pre-existing.
