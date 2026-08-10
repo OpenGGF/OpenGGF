@@ -146,8 +146,10 @@ class TestSmpsDriverSnapshot {
         sfx.setFallbackVoiceData(music.getSmpsData());
 
         driver.addSequencer(music, false);
-        driver.addSequencer(sfx, true);
-        driver.startContinuousSfx(0xBC, 3);
+        PreparedSfxAdmission admission =
+                driver.prepareNewSfxAdmission(sfx, 0xBC, 3);
+        sfx.beginSfxAdmission();
+        driver.commitSfxAdmission(admission);
         assertTrue(driver.extendContinuousSfx(0xBC, 3));
         driver.decrementContSfxLoopCnt();
         driver.writeFm(sfx, 0, 0xA0, 0x22);

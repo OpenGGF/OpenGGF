@@ -422,10 +422,9 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         this.config = Objects.requireNonNull(config, "config");
         this.tempoModBase = this.config.getTempoModBase();
         this.dacData = dacData;
-        this.synth.setDacData(dacData);
-
-        boolean sfxData = smpsData instanceof SmpsSfxData;
-        if (!sfxData) {
+        boolean sfxProgram = smpsData instanceof SmpsSfxData;
+        if (!sfxProgram) {
+            this.synth.setDacData(dacData);
             // Preserve the existing music-start behavior. Sound_PlaySFX only initializes
             // track state, so an SFX must not mutate the shared chip before admission.
             synth.writeFm(this, 0, 0x2B, 0x80);
@@ -442,12 +441,8 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
 
         int z80Start = smpsData.getZ80StartAddress();
 
-        if (smpsData instanceof SmpsSfxData sfx) {
-            CoordFlagHandler handler = config.getCoordFlagHandler();
-            if (handler != null) {
-                handler.onSfxStart(smpsData.getId());
-            }
-            initSfxTracks(sfx, z80Start);
+        if (smpsData instanceof SmpsSfxData sfxData) {
+            initSfxTracks(sfxData, z80Start);
             setSfxMode(true);
             return;
         }
@@ -732,6 +727,79 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         return Collections.unmodifiableList(tracks);
     }
 
+    public int trackCount() {
+        return tracks.size();
+    }
+
+    public Track trackAt(int index) {
+        return tracks.get(index);
+    }
+
+    /** Returns whether this sequencer writes to the supplied synthesizer. */
+    public boolean isBoundTo(Synthesizer candidate) {
+        return synth == candidate;
+    }
+
+    /**
+     * Publishes the coordination start for a prepared new SFX admission.
+     * Continuous extensions deliberately do not call this method.
+     */
+    public void beginSfxAdmission() {
+        CoordFlagHandler handler = config.getCoordFlagHandler();
+        if (handler != null) {
+            handler.onSfxStart(smpsData.getId());
+        }
+    }
+
+    /**
+     * Applies the chip writes formerly performed by SFX construction.
+     * The owning driver calls this only after admission has been validated.
+     */
+    public void commitSfxAdmissionInitialization() {
+        if (!(smpsData instanceof SmpsSfxData)) {
+            return;
+        }
+        synth.setDacData(dacData);
+        synth.writeFm(this, 0, 0x2B, 0x80);
+        for (int index = 0; index < tracks.size(); index++) {
+            Track track = tracks.get(index);
+            if (track.type == TrackType.FM) {
+                refreshInstrument(track);
+                applyFmPanAmsFms(track);
+            }
+        }
+    }
+
+    /** Validates the raw SFX entries retained by the immutable program. */
+    public void validateSfxAdmissionMetadata() {
+        if (!(smpsData instanceof SmpsSfxData sfxData)) {
+            return;
+        }
+        List<? extends SmpsSfxData.SmpsSfxTrack> entries =
+                sfxData.getTrackEntries();
+        if (entries.size() != tracks.size()) {
+            throw new IllegalArgumentException(
+                    "SFX contains an invalid channel or pointer");
+        }
+        int z80Start = smpsData.getZ80StartAddress();
+        for (int index = 0; index < entries.size(); index++) {
+            SmpsSfxData.SmpsSfxTrack entry = entries.get(index);
+            int pointer = relocate(entry.pointer(), z80Start);
+            if (pointer < 0 || pointer >= programView.dataLength()) {
+                throw new IllegalArgumentException(
+                        "SFX track pointer is outside the program");
+            }
+            int channel = entry.channelMask();
+            boolean valid = channel == 0x16 || channel == 0x10
+                    || mapFmChannel(channel) >= 0
+                    || mapPsgChannel(channel) >= 0;
+            if (!valid) {
+                throw new IllegalArgumentException(
+                        "SFX track has an invalid channel mask");
+            }
+        }
+    }
+
     /** Adds a track to this sequencer's track list. */
     public void addTrack(Track track) {
         tracks.add(track);
@@ -832,9 +900,18 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 t.pan = 0xC0;
                 t.ams = 0;
                 t.fms = 0;
-                selectVoice(t, 0);
+                primeVoice(t, 0);
             }
             tracks.add(t);
+        }
+    }
+
+    private void primeVoice(Track track, int voiceId) {
+        byte[] voice = copyVoice(programView, voiceId);
+        if (voice != null) {
+            track.voiceData = voice;
+            track.voiceId = voiceId;
+            Arrays.fill(track.ssgEg, 0);
         }
     }
 

@@ -244,6 +244,308 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     // --- Continuous SFX API ---
 
     /**
+     * Prepares the continuous-extension fast path without mutating live state.
+     * Returns {@code null} when the current SFX cannot be extended.
+     */
+    public PreparedSfxAdmission prepareContinuousSfxExtension(
+            int sfxId, int trackCount) {
+        validateContinuousMetadata(sfxId, trackCount);
+        if (sfxId == 0) {
+            return null;
+        }
+        synchronized (sequencersLock) {
+            if (continuousSfxId != sfxId) {
+                return null;
+            }
+            for (SmpsSequencer sequencer : sfxSequencers) {
+                if (sequencer.getSmpsData().getId() == sfxId) {
+                    return new PreparedSfxAdmission(
+                            this, null, true, 0, 0, sfxId, trackCount,
+                            null, null, null, null, null);
+                }
+            }
+            return null;
+        }
+    }
+
+    /**
+     * Validates a new SFX and records only same-id/channel-bounded conflicts.
+     */
+    public PreparedSfxAdmission prepareNewSfxAdmission(
+            SmpsSequencer sequencer, int sfxId, int trackCount) {
+        Objects.requireNonNull(sequencer, "sequencer");
+        validateContinuousMetadata(sfxId, trackCount);
+        if (!sequencer.isBoundTo(this)) {
+            throw new IllegalArgumentException(
+                    "SFX sequencer belongs to another SMPS driver");
+        }
+        if (sequencer.getSfxPriority() < 0
+                || sequencer.getSfxPriority() > 0xFF) {
+            throw new IllegalArgumentException(
+                    "SFX priority must fit one unsigned byte");
+        }
+        sequencer.validateSfxAdmissionMetadata();
+
+        synchronized (sequencersLock) {
+            if (sequencers.contains(sequencer)
+                    || sfxSequencers.contains(sequencer)) {
+                throw new IllegalArgumentException(
+                        "SFX sequencer is already attached");
+            }
+
+            SmpsSequencer replaced = null;
+            int newId = sequencer.getSmpsData().getId();
+            for (SmpsSequencer existing : sfxSequencers) {
+                if (existing.getSmpsData().getId() == newId) {
+                    replaced = existing;
+                    break;
+                }
+            }
+
+            SmpsSequencer[] fmOwners = new SmpsSequencer[fmLocks.length];
+            SmpsSequencer.Track[] fmTracks =
+                    new SmpsSequencer.Track[fmLocks.length];
+            SmpsSequencer[] psgOwners = new SmpsSequencer[psgLocks.length];
+            SmpsSequencer.Track[] psgTracks =
+                    new SmpsSequencer.Track[psgLocks.length];
+            int fmMask = 0;
+            int psgMask = 0;
+
+            for (int newIndex = 0;
+                    newIndex < sequencer.trackCount(); newIndex++) {
+                SmpsSequencer.Track newTrack = sequencer.trackAt(newIndex);
+                if (newTrack.type == SmpsSequencer.TrackType.FM
+                        || newTrack.type == SmpsSequencer.TrackType.DAC) {
+                    if (newTrack.channelId < 0
+                            || newTrack.channelId >= fmLocks.length) {
+                        throw new IllegalArgumentException(
+                                "SFX FM channel is outside hardware bounds");
+                    }
+                    fmMask |= 1 << newTrack.channelId;
+                } else if (newTrack.type == SmpsSequencer.TrackType.PSG) {
+                    if (newTrack.channelId < 0
+                            || newTrack.channelId >= psgLocks.length) {
+                        throw new IllegalArgumentException(
+                                "SFX PSG channel is outside hardware bounds");
+                    }
+                    psgMask |= 1 << newTrack.channelId;
+                } else {
+                    throw new IllegalArgumentException(
+                            "SFX track has an unsupported channel type");
+                }
+            }
+
+            for (SmpsSequencer existing : sfxSequencers) {
+                if (existing == replaced) {
+                    continue;
+                }
+                for (int trackIndex = 0;
+                        trackIndex < existing.trackCount(); trackIndex++) {
+                    SmpsSequencer.Track track = existing.trackAt(trackIndex);
+                    if (!track.active) {
+                        continue;
+                    }
+                    if ((track.type == SmpsSequencer.TrackType.FM
+                            || track.type == SmpsSequencer.TrackType.DAC)
+                            && (fmMask & (1 << track.channelId)) != 0
+                            && usesTrack(sequencer, track.type,
+                                    track.channelId)) {
+                        recordDisplacedTrack(fmOwners, fmTracks,
+                                track.channelId, existing, track);
+                    } else if (track.type == SmpsSequencer.TrackType.PSG
+                            && (psgMask & (1 << track.channelId)) != 0
+                            && usesTrack(sequencer, track.type,
+                                    track.channelId)) {
+                        recordDisplacedTrack(psgOwners, psgTracks,
+                                track.channelId, existing, track);
+                    }
+                }
+            }
+
+            return new PreparedSfxAdmission(
+                    this, sequencer, false, fmMask, psgMask,
+                    sfxId, trackCount, replaced,
+                    fmOwners, fmTracks, psgOwners, psgTracks);
+        }
+    }
+
+    /** Applies one already-validated admission in deterministic native order. */
+    public void commitSfxAdmission(PreparedSfxAdmission admission) {
+        Objects.requireNonNull(admission, "admission");
+        if (admission.owner() != this) {
+            throw new IllegalArgumentException(
+                    "prepared SFX admission belongs to another driver");
+        }
+        synchronized (sequencersLock) {
+            admission.claimCommit();
+            if (admission.continuousExtension()) {
+                continuousSfxFlag = true;
+                contSfxLoopCnt = admission.trackCount();
+                return;
+            }
+
+            SmpsSequencer sequencer = admission.sequencer();
+            sequencer.commitSfxAdmissionInitialization();
+            sequencer.setRegion(region);
+            sequencer.setIsSfx(true);
+
+            SmpsSequencer replaced = admission.replacedSequencer;
+            if (replaced != null) {
+                sequencers.remove(replaced);
+                releaseLocks(replaced);
+                sfxSequencers.remove(replaced);
+            }
+
+            boolean killedPsg3Track = false;
+            for (int channel = 0;
+                    channel < admission.displacedFmTracks.length; channel++) {
+                SmpsSequencer.Track track =
+                        admission.displacedFmTracks[channel];
+                if (track == null) {
+                    continue;
+                }
+                SmpsSequencer owner = admission.displacedFmOwners[channel];
+                track.active = false;
+                owner.stopNote(track);
+                if (fmLocks[channel] == owner) {
+                    fmLocks[channel] = null;
+                    updateOverrides(SmpsSequencer.TrackType.FM,
+                            channel, false);
+                }
+            }
+            for (int channel = 0;
+                    channel < admission.displacedPsgTracks.length; channel++) {
+                SmpsSequencer.Track track =
+                        admission.displacedPsgTracks[channel];
+                if (track == null) {
+                    continue;
+                }
+                SmpsSequencer owner = admission.displacedPsgOwners[channel];
+                track.active = false;
+                owner.stopNote(track);
+                if (psgLocks[channel] == owner) {
+                    psgLocks[channel] = null;
+                    updateOverrides(SmpsSequencer.TrackType.PSG,
+                            channel, false);
+                }
+                if (channel == 2) {
+                    killedPsg3Track = true;
+                }
+            }
+
+            removeFullyDisplacedSequencers(admission);
+            if (killedPsg3Track) {
+                writeRawPsg(0xDF);
+                writeRawPsg(0xFF);
+            }
+
+            sequencers.add(sequencer);
+            sfxSequencers.add(sequencer);
+            restoreMusicDacData();
+            if (admission.continuousSfxId() != 0) {
+                continuousSfxFlag = false;
+                continuousSfxId = admission.continuousSfxId();
+                contSfxLoopCnt = admission.trackCount();
+            }
+        }
+    }
+
+    private static void validateContinuousMetadata(
+            int sfxId, int trackCount) {
+        if (sfxId < 0 || sfxId > 0xFF) {
+            throw new IllegalArgumentException(
+                    "continuous SFX id must fit one unsigned byte");
+        }
+        if (trackCount < 0) {
+            throw new IllegalArgumentException(
+                    "continuous SFX track count must not be negative");
+        }
+    }
+
+    private static void recordDisplacedTrack(
+            SmpsSequencer[] owners,
+            SmpsSequencer.Track[] tracks,
+            int channel,
+            SmpsSequencer owner,
+            SmpsSequencer.Track track) {
+        if (owners[channel] != null) {
+            throw new IllegalStateException(
+                    "multiple active SFX tracks own one hardware channel");
+        }
+        owners[channel] = owner;
+        tracks[channel] = track;
+    }
+
+    private static boolean usesTrack(
+            SmpsSequencer sequencer,
+            SmpsSequencer.TrackType type,
+            int channel) {
+        for (int index = 0; index < sequencer.trackCount(); index++) {
+            SmpsSequencer.Track track = sequencer.trackAt(index);
+            if (track.type == type && track.channelId == channel) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void removeFullyDisplacedSequencers(
+            PreparedSfxAdmission admission) {
+        for (int channel = 0;
+                channel < admission.displacedFmOwners.length; channel++) {
+            SmpsSequencer owner = admission.displacedFmOwners[channel];
+            if (owner != null
+                    && firstDisplacedOwner(admission, owner, channel, true)
+                    && allTracksInactive(owner)) {
+                sequencers.remove(owner);
+                releaseLocks(owner);
+                sfxSequencers.remove(owner);
+            }
+        }
+        for (int channel = 0;
+                channel < admission.displacedPsgOwners.length; channel++) {
+            SmpsSequencer owner = admission.displacedPsgOwners[channel];
+            if (owner != null
+                    && firstDisplacedOwner(admission, owner, channel, false)
+                    && allTracksInactive(owner)) {
+                sequencers.remove(owner);
+                releaseLocks(owner);
+                sfxSequencers.remove(owner);
+            }
+        }
+    }
+
+    private static boolean firstDisplacedOwner(
+            PreparedSfxAdmission admission,
+            SmpsSequencer owner,
+            int channel,
+            boolean fm) {
+        int fmLimit = fm ? channel : admission.displacedFmOwners.length;
+        for (int index = 0; index < fmLimit; index++) {
+            if (admission.displacedFmOwners[index] == owner) {
+                return false;
+            }
+        }
+        if (!fm) {
+            for (int index = 0; index < channel; index++) {
+                if (admission.displacedPsgOwners[index] == owner) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private static boolean allTracksInactive(SmpsSequencer sequencer) {
+        for (int index = 0; index < sequencer.trackCount(); index++) {
+            if (sequencer.trackAt(index).active) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
      * Attempt to extend a currently-playing continuous SFX instead of restarting it.
      * ROM: when the same continuous SFX ID is re-triggered, set zContinuousSFXFlag = 0x80
      * and refresh zContSFXLoopCnt, but do NOT restart the SFX.
@@ -253,28 +555,13 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
      * @return true if the SFX was extended (caller should skip creating a new sequencer)
      */
     public boolean extendContinuousSfx(int sfxId, int trackCount) {
-        synchronized (sequencersLock) {
-            if (continuousSfxId == sfxId && continuousSfxId != 0) {
-                // Verify the sequencer is still alive. If the SFX finished its first
-                // playthrough before being re-triggered (flag wasn't set yet when 0xFC
-                // was hit), the sequencer will have been removed — in that case we must
-                // NOT claim to extend, so the caller creates a fresh sequencer.
-                boolean stillAlive = false;
-                for (SmpsSequencer s : sfxSequencers) {
-                    if (s.getSmpsData().getId() == sfxId) {
-                        stillAlive = true;
-                        break;
-                    }
-                }
-                if (stillAlive) {
-                    continuousSfxFlag = true;
-                    contSfxLoopCnt = trackCount;
-                    return true;
-                }
-                // Sequencer already completed — fall through to start fresh
-            }
+        PreparedSfxAdmission admission =
+                prepareContinuousSfxExtension(sfxId, trackCount);
+        if (admission == null) {
             return false;
         }
+        commitSfxAdmission(admission);
+        return true;
     }
 
     /**
@@ -685,8 +972,15 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     }
 
     public void addSequencer(SmpsSequencer seq, boolean isSfx) {
+        if (isSfx) {
+            PreparedSfxAdmission admission =
+                    prepareNewSfxAdmission(seq, 0, 0);
+            seq.beginSfxAdmission();
+            commitSfxAdmission(admission);
+            return;
+        }
         seq.setRegion(region);
-        seq.setIsSfx(isSfx); // Cache isSfx flag on the sequencer for O(1) lookup
+        seq.setIsSfx(false); // Cache isSfx flag on the sequencer for O(1) lookup
         synchronized (sequencersLock) {
             // ROM behavior: re-triggering the same SFX replaces the old one.
             // Without this, two sequencers for the same sound compete for the same
@@ -829,7 +1123,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
 
     /**
      * Restores the music (non-SFX) sequencer's DAC data on the shared synthesizer.
-     * Called after adding an SFX sequencer whose constructor may have overwritten it.
+     * Called after committing an SFX sequencer whose initialization selected its bank.
      */
     private void restoreMusicDacData() {
         for (int i = 0; i < sequencers.size(); i++) {

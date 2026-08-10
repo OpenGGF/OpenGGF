@@ -2,6 +2,7 @@ package com.openggf.audio.presentation;
 
 import com.openggf.audio.AudioDiagnosticObserverException;
 import com.openggf.audio.ChannelType;
+import com.openggf.audio.driver.PreparedSfxAdmission;
 import com.openggf.audio.driver.SmpsDriver;
 import com.openggf.audio.driver.SmpsDriverServiceObserver;
 import com.openggf.audio.driver.SmpsRequestAdmissionPolicy;
@@ -999,11 +1000,12 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                         "SMPS SFX cache miss for " + source.assetKey());
                 return;
             }
-            standalone.driver().addSequencer(sequencer, true);
-            if (source.continuousSfxId() != 0) {
-                standalone.driver().startContinuousSfx(
-                        source.continuousSfxId(), source.trackCount());
-            }
+            PreparedSfxAdmission preparedAdmission =
+                    standalone.driver().prepareNewSfxAdmission(
+                            sequencer, source.continuousSfxId(),
+                            source.trackCount());
+            sequencer.beginSfxAdmission();
+            standalone.driver().commitSfxAdmission(preparedAdmission);
             standaloneSmps = standalone;
             noteVoiceId(standalone);
             published = true;
@@ -1031,8 +1033,11 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
 
     private boolean addSmpsSfxToOwner(
             ResolvedSmpsSfxSource source, SmpsCompositeVoice owner) {
-        if (owner.driver().extendContinuousSfx(
-                source.continuousSfxId(), source.trackCount())) {
+        PreparedSfxAdmission extension =
+                owner.driver().prepareContinuousSfxExtension(
+                        source.continuousSfxId(), source.trackCount());
+        if (extension != null) {
+            owner.driver().commitSfxAdmission(extension);
             return true;
         }
         SmpsSequencer sequencer;
@@ -1047,11 +1052,12 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                     "SMPS SFX cache miss for " + source.assetKey());
             return false;
         }
-        owner.driver().addSequencer(sequencer, true);
-        if (source.continuousSfxId() != 0) {
-            owner.driver().startContinuousSfx(
-                    source.continuousSfxId(), source.trackCount());
-        }
+        PreparedSfxAdmission admission =
+                owner.driver().prepareNewSfxAdmission(
+                        sequencer, source.continuousSfxId(),
+                        source.trackCount());
+        sequencer.beginSfxAdmission();
+        owner.driver().commitSfxAdmission(admission);
         return true;
     }
 
