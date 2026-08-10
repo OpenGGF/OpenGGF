@@ -71749,3 +71749,29 @@ clean; the divergence is confined to rows 5230..5250.
   CNZ, ICZ, and LBZ traces plus gumball, pachinko, slots, and special-stage
   traces. Result: 59 tests, 0 failures, 0 errors, 0 skipped in 260 seconds.
   The gameplay-order frontier through LBZ is green at this tree.
+
+## 2026-08-10 — S1/S2 and S3K-through-LBZ replay fleet completion audit
+
+- Context: `bugfix/s3k-traces` at `1d9df3f00`; validation used JDK 21.0.12 and
+  all three discovered World REV01/locked-on ROMs. Fresh reports were produced
+  after rotating both prior Surefire and trace-report directories. The six
+  protected user edits remained unstaged. `origin/develop` was `0a4642329`,
+  already an ancestor through merge commit `8d940b9a8`.
+- Completion command: `mvn -Ptrace-replay -Dmse=off
+  -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical -DreuseForks=true
+  -Dsurefire.argLine=-Xmx3g
+  -Dsonic1.rom.path='./Sonic The Hedgehog (W) (REV01) [!].gen'
+  -Dsonic2.rom.path='./Sonic The Hedgehog 2 (W) (REV01) [!].gen'
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.tests.trace.s1.*TraceReplay,
+  com.openggf.tests.trace.s2.*TraceReplay,<13-class S3K AIZ-through-LBZ and
+  bonus/special-stage allowlist>' test`.
+- Fresh XML audit: 82 replay classes and 126 tests — 36 S1 classes, 33 S2
+  classes, and 13 selected S3K classes. Result: 0 failures, 0 errors, and 8
+  fixture-contract skips. The skipped cases are the unavailable S2 numbered
+  special-stage fixtures; all executable selected routes passed in the same
+  ordered single-fork process. S3K AIZ, HCZ, MGZ, CNZ, ICZ, and LBZ plus the
+  included bonus/special-stage routes are green without regression elsewhere.
+- Ring comparison remained error-level throughout:
+  `ToleranceConfig.DEFAULT` selects `RingCountMode.FORCE_ERROR`. The full
+  replay fleet has no remaining in-scope failing frontier to select.
