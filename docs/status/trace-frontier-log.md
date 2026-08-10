@@ -71486,3 +71486,41 @@ landable change, which I implemented directly.
   complete-run AIZ, both HCZ methods, standalone and complete-run MGZ, and
   complete-run CNZ. Result: 6 tests, 0 failures, 0 errors. The new standalone
   frontier is regression-free and is committed before ring diagnosis.
+
+## 2026-08-10 — standalone CNZ spilled-ring boundary frontier
+
+- Context: `bugfix/s3k-traces` at `b7b56f224`; validation used JDK 21.0.12 and
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen`. The six protected user edits
+  remained unstaged and no fixture changed. Ring comparison remained enabled
+  at error severity: the prior frontier was raw `40031`, `rings` expected `1`
+  and actual `0`.
+- Root cause: S3K `Obj_Bouncing_Ring` reaches its shared
+  `Ring_spill_anim_counter` and bottom-boundary deletion checks only while
+  moving toward the active surface and on its `V_int_run_count+d7` probe
+  cadence. Rising rings and the other seven cadence phases branch directly to
+  collision publication and drawing (`docs/skdisasm/sonic3k.asm:35650-35693`).
+  The engine polled the counter every object update, deleting the older slot-40
+  ring when the shared counter reached zero. Retail retained it long enough for
+  the raw-`39939` spill to reset the shared counter, then collected it at raw
+  `40031`. The shared lost-ring owner now preserves that native control flow;
+  no trace, frame, route, zone, or game-name predicate is used.
+- Focused command: `mvn -Dmse=off
+  -Dtest=com.openggf.level.rings.TestLostRingObjectInstance#expiredSpillCounterDeletesOnlyOnNativeBoundaryCheckPath+floorCheckCadenceReadsGameRulesMaskS1EveryFourFramesS2EveryEight+s3kReverseGravityProbesCeilingNotFloor+offscreenLostRingSkipsTerrainProbeUntilRenderFlagSet
+  test`. Result: 4 tests, 0 failures, 0 errors. A detached-HEAD audit also
+  confirmed that two unrelated render-latch assertions in the full class were
+  already red before this candidate.
+- Frontier command: `mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1
+  -Dsurefire.runOrder=alphabetical -Dtrace.verification=all
+  -Dtrace.frontierOnly=true -Dtrace.context.diagnosticChars=full
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  All physics comparisons pass with 0 errors and 0 warnings. Segment-close
+  verification then reports one unconsumed completion at raw `41262`, boundary
+  `PRE_MAIN_LOOP`, `KOS_DECOMPRESSION_QUEUE#34`, fingerprint
+  `sha256:589a478d29f5c788ad304520acc86172ea220a4a68b5a74ac25ee62e80d5899c`.
+  The actionable frontier therefore advances 1231 rows from raw `40031` to
+  that terminal hardware-timing edge.
+- Gameplay-order regression command used the same profile and ROM with
+  complete-run AIZ, both HCZ methods, standalone and complete-run MGZ, and
+  complete-run CNZ. Result: 6 tests, 0 failures, 0 errors. The physics frontier
+  advance is regression-free and is committed before hardware-edge diagnosis.

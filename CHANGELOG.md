@@ -3,6 +3,13 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: spilled-ring lifetime and bottom-boundary deletion now follow the
+  native movement-direction and floor-probe cadence branches instead of polling
+  every object update. This preserves an older CNZ boss-arena ring until a
+  later spill resets the shared animation counter, closing all standalone CNZ
+  physics comparisons; the next frontier is the terminal raw-`41262` hardware
+  completion check, and the green AIZ, HCZ, MGZ, and complete-run CNZ traces
+  remain unchanged.
 - Fix/Test: CNZ's Giant Wheel controller now runs its existing grounded-rider
   attachment and speed clamp for both native player slots. This restores
   Tails' `$0400` minimum wheel speed and advances standalone CNZ from raw frame

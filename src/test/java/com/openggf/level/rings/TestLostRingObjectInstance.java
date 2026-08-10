@@ -107,6 +107,30 @@ class TestLostRingObjectInstance {
     }
 
     @Test
+    void expiredSpillCounterDeletesOnlyOnNativeBoundaryCheckPath() {
+        SpillAnimationState expired = new SpillAnimationState();
+        LostRingObjectInstance rising = LostRingObjectInstance.spawn(
+                0x100, 0x100, 0, -0x0400, 0, 0xFF, expired);
+
+        rising.update(0, null);
+
+        assertFalse(rising.isDestroyed(),
+                "S3K Obj_Bouncing_Ring branches around the counter check while rising");
+
+        LostRingObjectInstance fallingOffCadence = LostRingObjectInstance.spawn(
+                0x100, 0x100, 0, 0x0400, 1, 0xFF, expired);
+        fallingOffCadence.update(0, null);
+        assertFalse(fallingOffCadence.isDestroyed(),
+                "Obj37 branches around the counter check on non-probe cadence phases");
+
+        LostRingObjectInstance fallingOnCadence = LostRingObjectInstance.spawn(
+                0x100, 0x100, 0, 0x0400, 0, 0xFF, expired);
+        fallingOnCadence.update(0, null);
+        assertTrue(fallingOnCadence.isDestroyed(),
+                "the shared counter expires Obj37 once its cadence reaches CheckBoundary");
+    }
+
+    @Test
     void floorCheckCadenceReadsGameRulesMaskS1EveryFourFramesS2EveryEight() {
         // ROM: per-game floor-check cadence (relocated from RingManager.LostRingPool.updatePhysics,
         // RingManager.java:1242-1248). S1 probes every 4 frames (andi.b #3), S2/S3K every 8 (andi.b #7).
