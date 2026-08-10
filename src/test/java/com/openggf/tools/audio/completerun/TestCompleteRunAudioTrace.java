@@ -263,8 +263,20 @@ class TestCompleteRunAudioTrace {
         details.put("z", 1);
         details.put("a", 2);
 
-        assertEquals(List.of("a", "z"), new Lifecycle(0, 860, "reset", details)
+        assertEquals(List.of("a", "z"), new Lifecycle(0, 860, "reset", details, List.of())
                 .details().keySet().stream().toList());
+    }
+
+    @Test
+    void lifecycleOwnershipTransitionsRequireCanonicalUniqueRoleOrder() {
+        OwnerRef none = new OwnerRef(OwnerClass.NONE, "none", 0, OwnerOrigin.NONE, -1);
+        LifecycleOwnership fm1 = new LifecycleOwnership(HardwareRole.FM1, none, none);
+        LifecycleOwnership psg1 = new LifecycleOwnership(HardwareRole.PSG1, none, none);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> new Lifecycle(0, 860, "reset", Map.of(), List.of(psg1, fm1)));
+        assertThrows(IllegalArgumentException.class,
+                () -> new Lifecycle(0, 860, "reset", Map.of(), List.of(fm1, fm1)));
     }
 
     private static final class Fixture {
@@ -425,7 +437,8 @@ class TestCompleteRunAudioTrace {
 
         @Override
         public Map<String, LifecycleRule> lifecycleRules() {
-            return Map.of("pulse", new LifecycleRule("pulse", List.of("payload")));
+            return Map.of("pulse", new LifecycleRule("pulse", List.of("payload"),
+                    LifecycleOwnershipAction.NONE));
         }
     }
 }

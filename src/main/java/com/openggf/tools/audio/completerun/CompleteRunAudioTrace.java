@@ -253,8 +253,8 @@ public final class CompleteRunAudioTrace {
         }
     }
 
-    public record Lifecycle(long ordinal, int absoluteFrame, String kind, Map<String, Object> details)
-            implements Record {
+    public record Lifecycle(long ordinal, int absoluteFrame, String kind, Map<String, Object> details,
+            List<LifecycleOwnership> ownershipTransitions) implements Record {
         public Lifecycle {
             nonNegative(ordinal, "lifecycle ordinal");
             if (absoluteFrame < 0) {
@@ -262,14 +262,35 @@ public final class CompleteRunAudioTrace {
             }
             requireText(kind, "lifecycle kind");
             details = immutableMap(details, "lifecycle details");
+            ownershipTransitions = canonicalLifecycleOwnership(ownershipTransitions,
+                    "lifecycle ownership transitions");
         }
     }
 
-    /** Profile-owned exact lifecycle kind and canonical detail-field inventory. */
-    public record LifecycleRule(String kind, List<String> detailFields) {
+    /** One request-independent lifecycle ownership change. */
+    public record LifecycleOwnership(HardwareRole role, OwnerRef displacedOwner, OwnerRef finalOwner) {
+        public LifecycleOwnership {
+            Objects.requireNonNull(role, "lifecycle ownership role");
+            Objects.requireNonNull(displacedOwner, "lifecycle displaced owner");
+            Objects.requireNonNull(finalOwner, "lifecycle final owner");
+        }
+    }
+
+    /** Generic request-independent ownership action selected by a lifecycle rule. */
+    public enum LifecycleOwnershipAction {
+        NONE,
+        SAVE_CURRENT,
+        RESTORE_SAVED,
+        RELEASE_TO_NONE
+    }
+
+    /** Profile-owned exact lifecycle kind, field inventory, and ownership action. */
+    public record LifecycleRule(String kind, List<String> detailFields,
+            LifecycleOwnershipAction ownershipAction) {
         public LifecycleRule {
             requireText(kind, "lifecycle rule kind");
             detailFields = List.copyOf(Objects.requireNonNull(detailFields, "lifecycle rule fields"));
+            Objects.requireNonNull(ownershipAction, "lifecycle ownership action");
             String previous = null;
             for (String field : detailFields) {
                 requireText(field, "lifecycle rule field");
@@ -286,8 +307,7 @@ public final class CompleteRunAudioTrace {
         ACQUIRE_REQUEST,
         REJECT_PRESERVE,
         RELEASE_TO_NONE,
-        SAVE_AND_ACQUIRE_REQUEST,
-        RESTORE_SAVED
+        SAVE_AND_ACQUIRE_REQUEST
     }
 
     /** Profile-declared hard bounds for unresolved request state. */
@@ -555,6 +575,20 @@ public final class CompleteRunAudioTrace {
             previous = role;
         }
         return roleOwners;
+    }
+
+    private static List<LifecycleOwnership> canonicalLifecycleOwnership(
+            List<LifecycleOwnership> transitions, String name) {
+        transitions = List.copyOf(Objects.requireNonNull(transitions, name));
+        HardwareRole previous = null;
+        for (LifecycleOwnership transition : transitions) {
+            HardwareRole role = Objects.requireNonNull(transition, name + " contains null").role();
+            if (previous != null && role.ordinal() <= previous.ordinal()) {
+                throw new IllegalArgumentException(name + " must be unique and in canonical order");
+            }
+            previous = role;
+        }
+        return transitions;
     }
 
     static List<String> canonicalNames(List<String> names, String name) {

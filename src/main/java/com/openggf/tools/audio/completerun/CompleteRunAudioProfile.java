@@ -100,5 +100,14 @@ public interface CompleteRunAudioProfile {
                 || !rule.detailFields().equals(lifecycle.details().keySet().stream().toList())) {
             throw new IllegalArgumentException("lifecycle does not match the profile rule");
         }
+        boolean none = rule.ownershipAction() == CompleteRunAudioTrace.LifecycleOwnershipAction.NONE;
+        if (none != lifecycle.ownershipTransitions().isEmpty()) {
+            throw new IllegalArgumentException("lifecycle ownership payload does not match its profile action");
+        }
+        for (CompleteRunAudioTrace.LifecycleOwnership transition : lifecycle.ownershipTransitions()) {
+            if (!hardwareRoles().contains(transition.role())) {
+                throw new IllegalArgumentException("lifecycle ownership role is outside the profile inventory");
+            }
+        }
     }
 }

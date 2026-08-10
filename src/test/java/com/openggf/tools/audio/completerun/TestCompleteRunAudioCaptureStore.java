@@ -225,6 +225,18 @@ class TestCompleteRunAudioCaptureStore {
     }
 
     @Test
+    void handAuthoredCanonicalLifecycleOwnershipVectorPinsItsExactSchema() throws Exception {
+        String canonical = "{\"type\":\"lifecycle\",\"value\":{\"ordinal\":0,\"absoluteFrame\":860,\"kind\":\"save\",\"details\":{\"slot\":1},\"ownershipTransitions\":[{\"role\":\"FM1\",\"displacedOwner\":{\"ownerClass\":\"MUSIC\",\"contentKey\":\"music.81\",\"nativeId\":129,\"origin\":\"BASELINE\",\"originOrdinal\":0},\"finalOwner\":{\"ownerClass\":\"MUSIC\",\"contentKey\":\"music.81\",\"nativeId\":129,\"origin\":\"BASELINE\",\"originOrdinal\":0}}]}}";
+        OwnerRef music = new OwnerRef(OwnerClass.MUSIC, "music.81", 0x81,
+                OwnerOrigin.BASELINE, 0);
+        Lifecycle lifecycle = new Lifecycle(0, 860, "save", Map.of("slot", 1),
+                List.of(new LifecycleOwnership(HardwareRole.FM1, music, music)));
+
+        assertEquals(canonical, CompleteRunAudioJson.writeRecord(lifecycle));
+        assertEquals(lifecycle, CompleteRunAudioJson.readRecord(canonical));
+    }
+
+    @Test
     void standardGzipNoNameVectorPinsMtimeHeaderAndCompressedBytes() throws Exception {
         // RFC 1952: ID1/ID2/CM/FLG + zero MTIME + XFL=0 + OS=255, then raw DEFLATE of abc\n.
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
@@ -343,7 +355,7 @@ class TestCompleteRunAudioCaptureStore {
                 List.of(new YmWrite(0, 0, 0x22, 0x33), new PsgWrite(1, 0x44)));
         List<CompleteRunAudioTrace.Record> records = new ArrayList<>();
         records.add(baseline(state));
-        records.add(new Lifecycle(0, 860, "reset", Map.of("reason", "test")));
+        records.add(new Lifecycle(0, 860, "reset", Map.of("reason", "test"), List.of()));
         records.add(new Frame(860, "test", false, List.of(request), List.of(service)));
         records.add(new Terminal(861, 1, 1, 1, 1, 1, 1, 1, root(records)));
         return records;

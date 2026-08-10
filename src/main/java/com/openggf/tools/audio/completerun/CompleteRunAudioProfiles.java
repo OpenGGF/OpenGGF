@@ -124,10 +124,18 @@ public final class CompleteRunAudioProfiles {
             if (ownershipTransitions.isEmpty()) {
                 throw new IllegalArgumentException("profile must declare ownership transitions");
             }
-            boolean usesRestoreStack = ownershipTransitions.containsValue(OwnershipTransition.SAVE_AND_ACQUIRE_REQUEST)
-                    || ownershipTransitions.containsValue(OwnershipTransition.RESTORE_SAVED);
+            boolean savesOwner = ownershipTransitions.containsValue(OwnershipTransition.SAVE_AND_ACQUIRE_REQUEST)
+                    || lifecycleRules.values().stream().anyMatch(rule ->
+                            rule.ownershipAction()
+                                    == CompleteRunAudioTrace.LifecycleOwnershipAction.SAVE_CURRENT);
+            boolean restoresOwner = lifecycleRules.values().stream().anyMatch(rule ->
+                    rule.ownershipAction() == CompleteRunAudioTrace.LifecycleOwnershipAction.RESTORE_SAVED);
+            boolean usesRestoreStack = savesOwner || restoresOwner;
             if (usesRestoreStack != (maximumRestoreDepth > 0)) {
                 throw new IllegalArgumentException("restore transitions and restore depth must be declared together");
+            }
+            if (restoresOwner && !savesOwner) {
+                throw new IllegalArgumentException("restore lifecycle needs a profile-owned save action");
             }
             for (Map.Entry<String, LifecycleRule> entry : lifecycleRules.entrySet()) {
                 if (!entry.getKey().equals(Objects.requireNonNull(entry.getValue(), "lifecycle rule").kind())) {

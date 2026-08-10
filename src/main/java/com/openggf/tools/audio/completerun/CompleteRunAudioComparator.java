@@ -931,6 +931,7 @@ public final class CompleteRunAudioComparator {
         private int peakPendingRequests;
         private int peakSavedOwners;
         private long completedRequests;
+        private boolean stateObservationRequired;
         private boolean baseline;
         private boolean terminal;
 
@@ -952,8 +953,8 @@ public final class CompleteRunAudioComparator {
                 }
                 baseline = true;
                 previousSourceFrame = value.absoluteFrame();
-                state(value.state());
                 baselineOwners(value);
+                state(value.state());
             } else if (record instanceof Frame frame) {
                 if (!baseline) ordinal("frame precedes baseline");
                 sourceCoordinate(frame.absoluteFrame());
@@ -987,6 +988,10 @@ public final class CompleteRunAudioComparator {
                     throw new ValidationException(ValidationException.Kind.PENDING_UNRESOLVED, side,
                             "capture terminates with unresolved requests outside the profile allowance");
                 }
+                if (stateObservationRequired) {
+                    throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
+                            "capture terminates before a lifecycle ownership change is observed in state");
+                }
                 terminal = true;
             }
         }
@@ -1002,6 +1007,14 @@ public final class CompleteRunAudioComparator {
                 throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
                         "normalized state does not match the exact profile inventory", failure);
             }
+            for (RoleState role : state.roles()) {
+                OwnerRef owner = liveOwners.get(role.role());
+                if (owner == null || role.active() != (owner.origin() != OwnerOrigin.NONE)) {
+                    throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
+                            "normalized role activity does not match its exact live owner");
+                }
+            }
+            stateObservationRequired = false;
         }
 
         private void baselineOwners(Baseline value) throws ValidationException {
@@ -1045,7 +1058,52 @@ public final class CompleteRunAudioComparator {
                 throw new ValidationException(ValidationException.Kind.LIFECYCLE_INVALID, side,
                         "lifecycle does not match the exact profile rule", failure);
             }
+            LifecycleOwnershipAction action = profile.lifecycleRules().get(lifecycle.kind()).ownershipAction();
+            boolean changed = false;
+            for (LifecycleOwnership ownership : lifecycle.ownershipTransitions()) {
+                changed |= lifecycleTransition(ownership, action);
+            }
+            stateObservationRequired |= changed;
             previousSourceFrame = lifecycle.absoluteFrame();
+        }
+
+        private boolean lifecycleTransition(LifecycleOwnership transition,
+                LifecycleOwnershipAction action) throws ValidationException {
+            OwnerRef current = liveOwners.get(transition.role());
+            if (current == null || !current.equals(transition.displacedOwner())) {
+                throw new ValidationException(ValidationException.Kind.OWNER_INVALID, side,
+                        "lifecycle displaced owner is not the role's current live owner");
+            }
+            ArrayDeque<OwnerRef> saved = savedOwners.get(transition.role());
+            OwnerRef expectedFinal = switch (action) {
+                case SAVE_CURRENT -> current;
+                case RESTORE_SAVED -> {
+                    if (saved.isEmpty()) {
+                        throw new ValidationException(ValidationException.Kind.OWNER_INVALID, side,
+                                "lifecycle restore has no saved owner");
+                    }
+                    yield saved.peekLast();
+                }
+                case RELEASE_TO_NONE -> noneOwner();
+                case NONE -> throw new ValidationException(ValidationException.Kind.LIFECYCLE_INVALID, side,
+                        "no-transition lifecycle carries ownership changes");
+            };
+            if (!expectedFinal.equals(transition.finalOwner())) {
+                throw new ValidationException(ValidationException.Kind.OWNER_INVALID, side,
+                        "lifecycle final owner does not match the profile-owned action");
+            }
+            if (action == LifecycleOwnershipAction.SAVE_CURRENT) {
+                if (saved.size() == profile.maximumRestoreDepth()) {
+                    throw new ValidationException(ValidationException.Kind.OWNER_INVALID, side,
+                            "saved owner stack exceeds the profile-owned bound");
+                }
+                saved.addLast(current);
+            }
+            if (action == LifecycleOwnershipAction.RESTORE_SAVED) saved.removeLast();
+            liveOwners.put(transition.role(), expectedFinal);
+            peakSavedOwners = Math.max(peakSavedOwners,
+                    savedOwners.values().stream().mapToInt(ArrayDeque::size).sum());
+            return !current.equals(expectedFinal);
         }
 
         private void sourceCoordinate(int absoluteFrame) throws ValidationException {
@@ -1130,20 +1188,12 @@ public final class CompleteRunAudioComparator {
                     }
                     yield admitted;
                 }
-                case RESTORE_SAVED -> {
-                    if (saved.isEmpty()) {
-                        throw new ValidationException(ValidationException.Kind.OWNER_INVALID, side,
-                                "restore transition has no saved owner");
-                    }
-                    yield saved.peekLast();
-                }
             };
             if (!expectedFinal.equals(decision.finalOwner())) {
                 throw new ValidationException(ValidationException.Kind.OWNER_INVALID, side,
                         "final owner does not match the profile-owned transition");
             }
             if (transition == OwnershipTransition.SAVE_AND_ACQUIRE_REQUEST) saved.addLast(current);
-            if (transition == OwnershipTransition.RESTORE_SAVED) saved.removeLast();
             liveOwners.put(decision.role(), expectedFinal);
             peakSavedOwners = Math.max(peakSavedOwners,
                     savedOwners.values().stream().mapToInt(ArrayDeque::size).sum());
