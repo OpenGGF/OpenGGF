@@ -38,9 +38,50 @@ final class CompleteRunAudioJson {
     static String writeMetadata(Metadata metadata) throws IOException {
         StringWriter out = new StringWriter();
         try (JsonGenerator json = FACTORY.createGenerator(out)) {
-            WRITER.writeValue(json, metadata);
+            writeMetadata(json, metadata);
         }
         return out.toString();
+    }
+
+    static void writeMetadata(JsonGenerator json, Metadata metadata) throws IOException {
+        json.writeStartObject();
+        json.writeStringField("schema", metadata.schema());
+        json.writeStringField("profileId", metadata.profileId());
+        json.writeFieldName("fixture"); WRITER.writeValue(json, metadata.fixture());
+        json.writeStringField("producerKind", metadata.producerKind().name());
+        json.writeFieldName("producerRuntimeIdentity"); WRITER.writeValue(json, metadata.producerRuntimeIdentity());
+        json.writeFieldName("observerRuntimeIdentity"); writeObserverIdentity(json, metadata.observerRuntimeIdentity());
+        json.writeFieldName("observerProof"); WRITER.writeValue(json, metadata.observerProof());
+        json.writeFieldName("chunkPolicy"); WRITER.writeValue(json, metadata.chunkPolicy());
+        json.writeFieldName("hardwareRoles"); WRITER.writeValue(json, metadata.hardwareRoles());
+        json.writeFieldName("stateInventory"); WRITER.writeValue(json, metadata.stateInventory());
+        json.writeEndObject();
+    }
+
+    private static void writeObserverIdentity(JsonGenerator json, ObserverRuntimeIdentity identity)
+            throws IOException {
+        json.writeStartObject();
+        if (identity instanceof CallbackObserverIdentity callback) {
+            json.writeStringField("kind", "CALLBACK");
+            json.writeStringField("id", callback.id());
+        } else if (identity instanceof BufferedNativeObserverIdentity nativeIdentity) {
+            json.writeStringField("kind", "BUFFERED_NATIVE");
+            json.writeStringField("abiName", nativeIdentity.abiName());
+            json.writeNumberField("abiVersion", nativeIdentity.abiVersion());
+            json.writeNumberField("eventSize", nativeIdentity.eventSize());
+            json.writeNumberField("capacity", nativeIdentity.capacity());
+            json.writeStringField("installationId", nativeIdentity.installationId());
+            json.writeStringField("coreId", nativeIdentity.coreId());
+            json.writeStringField("coreBuildId", nativeIdentity.coreBuildId());
+            json.writeStringField("watchMaskSha256", nativeIdentity.watchMaskSha256());
+            json.writeStringField("serviceManifestSha256", nativeIdentity.serviceManifestSha256());
+            json.writeBooleanField("enabled", nativeIdentity.enabled());
+            json.writeNumberField("maximumFrameOccupancy", nativeIdentity.maximumFrameOccupancy());
+            json.writeNumberField("overflowCount", nativeIdentity.overflowCount());
+        } else {
+            throw new IllegalArgumentException("unknown observer runtime identity type");
+        }
+        json.writeEndObject();
     }
 
     static CompleteRunAudioTrace.Record readRecord(String line) {
@@ -65,11 +106,12 @@ final class CompleteRunAudioJson {
         field(p,"fixture"); CompleteRunFixture fixture=fixture(p);
         field(p,"producerKind"); ProducerKind kind=enumValue(p,ProducerKind.class,"producer kind");
         field(p,"producerRuntimeIdentity"); ProducerRuntimeIdentity runtime=runtime(p);
+        field(p,"observerRuntimeIdentity"); ObserverRuntimeIdentity observerIdentity=observerIdentity(p);
         field(p,"observerProof"); ObserverProof proof=proof(p);
         field(p,"chunkPolicy"); ChunkPolicy policy=policy(p);
         field(p,"hardwareRoles"); List<HardwareRole> roles=enums(p,HardwareRole.class,"hardware roles");
         field(p,"stateInventory"); StateInventory inventory=inventory(p);
-        end(p,"metadata"); return new Metadata(schema,profile,fixture,kind,runtime,proof,policy,roles,inventory);
+        end(p,"metadata"); return new Metadata(schema,profile,fixture,kind,runtime,observerIdentity,proof,policy,roles,inventory);
     }
 
     private static Baseline baseline(JsonParser p) throws IOException { startCurrent(p,"baseline"); field(p,"absoluteFrame"); int frame=intValue(p,"baseline frame"); field(p,"state"); NormalizedState state=state(p); field(p,"roleOwners"); List<RoleOwner> owners=roleOwners(p); end(p,"baseline"); return new Baseline(frame,state,owners); }
@@ -94,9 +136,10 @@ final class CompleteRunAudioJson {
 
     private static CompleteRunFixture fixture(JsonParser p) throws IOException { startCurrent(p,"fixture"); field(p,"romSha1"); String sha1=text(p,"ROM SHA1"); field(p,"romCrc32"); String crc=text(p,"ROM CRC"); field(p,"bk2Sha256"); String bk2=text(p,"BK2 hash"); field(p,"bk2RowCount"); long rows=longValue(p,"BK2 rows"); field(p,"runManifestSha256"); String manifest=text(p,"manifest hash"); field(p,"segments"); List<ManifestSegment> segments=segments(p); field(p,"firstFrame"); int first=intValue(p,"first frame"); field(p,"exclusiveEnd"); int end=intValue(p,"end frame"); end(p,"fixture"); return new CompleteRunFixture(sha1,crc,bk2,rows,manifest,segments,first,end); }
     private static List<ManifestSegment> segments(JsonParser p) throws IOException { array(p,"segments"); List<ManifestSegment> result=new ArrayList<>(); while(p.nextToken()!=JsonToken.END_ARRAY) { startCurrent(p,"segment"); field(p,"id");String id=text(p,"segment ID");field(p,"firstFrame");int first=intValue(p,"segment first");field(p,"exclusiveEnd");int end=intValue(p,"segment end");end(p,"segment");result.add(new ManifestSegment(id,first,end)); } return List.copyOf(result); }
-    private static ProducerRuntimeIdentity runtime(JsonParser p) throws IOException { startCurrent(p,"runtime"); field(p,"producerName");String name=text(p,"runtime producer");field(p,"producerVersion");String pv=text(p,"runtime producer version");field(p,"emulatorName");String en=text(p,"runtime emulator");field(p,"emulatorVersion");String ev=text(p,"runtime emulator version");field(p,"coreName");String cn=text(p,"runtime core");field(p,"coreVersion");String cv=text(p,"runtime core version");field(p,"artifactSha256"); Map<RuntimeArtifact,String> hashes=runtimeHashes(p);end(p,"runtime");return new ProducerRuntimeIdentity(name,pv,en,ev,cn,cv,hashes); }
+    private static ProducerRuntimeIdentity runtime(JsonParser p) throws IOException { startCurrent(p,"runtime"); field(p,"producerName");String name=text(p,"runtime producer");field(p,"producerVersion");String pv=text(p,"runtime producer version");field(p,"emulatorName");String en=text(p,"runtime emulator");field(p,"emulatorVersion");String ev=text(p,"runtime emulator version");field(p,"coreName");String cn=text(p,"runtime core");field(p,"coreVersion");String cv=text(p,"runtime core version");field(p,"observerAdapter"); ManagedObserverAdapter adapter=enumValue(p,ManagedObserverAdapter.class,"managed observer adapter");field(p,"artifactSha256"); Map<RuntimeArtifact,String> hashes=runtimeHashes(p);end(p,"runtime");return new ProducerRuntimeIdentity(name,pv,en,ev,cn,cv,adapter,hashes); }
     private static Map<RuntimeArtifact,String> runtimeHashes(JsonParser p) throws IOException { startCurrent(p,"runtime hashes"); Map<RuntimeArtifact,String> result=new EnumMap<>(RuntimeArtifact.class); while(p.nextToken()!=JsonToken.END_OBJECT){ if(p.currentToken()!=JsonToken.FIELD_NAME)throw invalid("runtime hash field"); RuntimeArtifact artifact;try{artifact=RuntimeArtifact.valueOf(p.currentName());}catch(IllegalArgumentException failure){throw invalid("unknown runtime artifact",failure);} p.nextToken();result.put(artifact,text(p,"runtime hash")); }return Map.copyOf(result); }
     private static ObserverProof proof(JsonParser p) throws IOException { startCurrent(p,"observer proof");field(p,"observerProfile");String profile=text(p,"observer profile");field(p,"callbackSource");String source=text(p,"callback source");field(p,"callbacks");array(p,"callbacks");List<CallbackProof> callbacks=new ArrayList<>();while(p.nextToken()!=JsonToken.END_ARRAY){startCurrent(p,"callback");field(p,"callback");String name=text(p,"callback");field(p,"observations");long count=longValue(p,"callback count");end(p,"callback");callbacks.add(new CallbackProof(name,count));}end(p,"observer proof");return new ObserverProof(profile,source,callbacks); }
+    private static ObserverRuntimeIdentity observerIdentity(JsonParser p) throws IOException { startCurrent(p,"observer runtime identity");field(p,"kind");String kind=text(p,"observer runtime identity kind");if("CALLBACK".equals(kind)){field(p,"id");String id=text(p,"callback observer identity");end(p,"observer runtime identity");return new CallbackObserverIdentity(id);}if(!"BUFFERED_NATIVE".equals(kind))throw invalid("unknown observer runtime identity kind");field(p,"abiName");String abiName=text(p,"native observer ABI name");field(p,"abiVersion");int abiVersion=intValue(p,"native observer ABI version");field(p,"eventSize");int eventSize=intValue(p,"native observer event size");field(p,"capacity");int capacity=intValue(p,"native observer capacity");field(p,"installationId");String installationId=text(p,"native observer installation ID");field(p,"coreId");String coreId=text(p,"native observer core ID");field(p,"coreBuildId");String buildId=text(p,"native observer BuildID");field(p,"watchMaskSha256");String mask=text(p,"native observer mask SHA-256");field(p,"serviceManifestSha256");String manifest=text(p,"native observer manifest SHA-256");field(p,"enabled");boolean enabled=booleanValue(p,"native observer enabled");field(p,"maximumFrameOccupancy");int occupancy=intValue(p,"native observer occupancy");field(p,"overflowCount");long overflow=longValue(p,"native observer overflow");end(p,"observer runtime identity");return new BufferedNativeObserverIdentity(abiName,abiVersion,eventSize,capacity,installationId,coreId,buildId,mask,manifest,enabled,occupancy,overflow); }
     private static ChunkPolicy policy(JsonParser p) throws IOException { startCurrent(p,"chunk policy");field(p,"frameRows");int rows=intValue(p,"chunk rows");field(p,"compression");String compression=text(p,"compression");field(p,"gzipTimestamp");int time=intValue(p,"gzip timestamp");end(p,"chunk policy");return new ChunkPolicy(rows,compression,time); }
     private static StateInventory inventory(JsonParser p) throws IOException { startCurrent(p,"inventory");field(p,"globalFields");List<String> global=texts(p,"global fields");field(p,"activeRoleFields");List<String> active=texts(p,"role fields");end(p,"inventory");return new StateInventory(global,active); }
 

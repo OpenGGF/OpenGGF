@@ -5,6 +5,7 @@ import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.HardwareRole;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.LifecycleRule;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.NativeSoundIdentity;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.ObserverProof;
+import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.ObserverRuntimeIdentity;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.OwnershipTransition;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.PendingRequestPolicy;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.ProducerKind;
@@ -68,6 +69,7 @@ public final class CompleteRunAudioProfiles {
             StateInventory stateInventory, Map<RawAudioRequest, NativeSoundIdentity> nativeSoundIdentities,
             Map<ProducerKind, ProducerRuntimeIdentity> producerRuntimeIdentities,
             Map<ProducerKind, ObserverProof> observerProofs,
+            Map<ProducerKind, ObserverRuntimeIdentity> observerRuntimeIdentities,
             Map<NativeSoundIdentity, List<NativeSoundIdentity>> decisionResolutions,
             List<RoleOwner> baselineRoleOwners,
             Map<String, OwnershipTransition> ownershipTransitions,
@@ -85,6 +87,7 @@ public final class CompleteRunAudioProfiles {
             nativeSoundIdentities = Map.copyOf(nativeSoundIdentities);
             producerRuntimeIdentities = Map.copyOf(producerRuntimeIdentities);
             observerProofs = Map.copyOf(observerProofs);
+            observerRuntimeIdentities = Map.copyOf(observerRuntimeIdentities);
             decisionResolutions = freezeResolutions(decisionResolutions);
             baselineRoleOwners = List.copyOf(baselineRoleOwners);
             ownershipTransitions = Map.copyOf(ownershipTransitions);
@@ -104,8 +107,15 @@ public final class CompleteRunAudioProfiles {
             if (!observerProofs.keySet().containsAll(EnumSet.allOf(ProducerKind.class))) {
                 throw new IllegalArgumentException("profile must declare an observer proof for every producer");
             }
+            if (!observerRuntimeIdentities.keySet().containsAll(EnumSet.allOf(ProducerKind.class))) {
+                throw new IllegalArgumentException(
+                        "profile must declare an observer runtime identity for every producer");
+            }
             for (ProducerKind kind : ProducerKind.values()) {
                 Objects.requireNonNull(observerProofs.get(kind), "profile observer proof");
+                ObserverRuntimeIdentity observerIdentity = Objects.requireNonNull(
+                        observerRuntimeIdentities.get(kind), "profile observer runtime identity");
+                producerRuntimeIdentities.get(kind).validateFor(kind, observerIdentity);
             }
             if (!decisionResolutions.keySet().containsAll(Set.copyOf(nativeSoundIdentities.values()))) {
                 throw new IllegalArgumentException("profile must declare decision resolutions for every request identity");
@@ -168,6 +178,7 @@ public final class CompleteRunAudioProfiles {
             return new FrozenProfile(profile.id(), fixtureCopy, List.copyOf(profile.hardwareRoles()),
                     profile.stateInventory(), Map.copyOf(profile.nativeSoundIdentities()),
                     Map.copyOf(profile.producerRuntimeIdentities()), Map.copyOf(profile.observerProofs()),
+                    Map.copyOf(profile.observerRuntimeIdentities()),
                     profile.decisionResolutions(), profile.baselineRoleOwners(), profile.ownershipTransitions(),
                     profile.pendingRequestPolicy(), profile.restoreStackPolicy(), profile.lifecycleRules());
         }

@@ -3,6 +3,14 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Tooling: complete-run audio captures now bind a typed, profile-owned observer
+  runtime identity and its exact managed adapter/artifact set. The BizHawk 2.11
+  GPGX source, historical Waterbox toolchain, and stock core have reproducible
+  content-addressed locks; two clean builds byte-match the installed core. The
+  exact historical managed release environment was not frozen, and the pinned
+  date-adjacent candidate does not reproduce the installed assemblies. The
+  distribution is therefore locked to the exact-hash reflection path and
+  cannot ship a replacement managed DLL.
 - Fix: Sonic 2 and Sonic 3 & Knuckles FM music and sound effects now upload
   voices using their shipped Z80-driver register tables and write order. Their
   effective operator assignment remains identical, while Sonic 2 preserves its

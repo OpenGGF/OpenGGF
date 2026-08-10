@@ -1,0 +1,77 @@
+{
+  "schema": "openggf.gpgx-observer-toolchain-lock.v1",
+  "platform": "ubuntu-mantic-amd64",
+  "versions": {
+    "clang": "16.0.6-15",
+    "lld": "16.0.6",
+    "make": "4.4.1",
+    "binutils": "2.47",
+    "zstd": "1.5.5"
+  },
+  "packages": {
+    "clang-16": {"file":"clang-16_16.0.6-15_amd64.deb","sha256":"b9cd4d27a5d1b6c429fccf56a4ac1c4ac5baf2cb9b5a53e2a20fcd6593153e5a"},
+    "libclang-cpp16": {"file":"libclang-cpp16_16.0.6-15_amd64.deb","sha256":"39eb3e73119ef0180489c7e594d29398152b3a2d7eec2361cf87d367032f466a"},
+    "libllvm16": {"file":"libllvm16_16.0.6-15_amd64.deb","sha256":"3353bbe1910cfc99a8ef96e1cd7df45c65e2aaebefcfc801bcb7587bab819a15"},
+    "llvm-16-linker-tools": {"file":"llvm-16-linker-tools_16.0.6-15_amd64.deb","sha256":"39f6c47b5ecc04c064899a99d224650b2d932e7f27ac02246073395fc8bd1300"},
+    "libclang-common-16-dev": {"file":"libclang-common-16-dev_16.0.6-15_all.deb","sha256":"ada57e3ac045bb324397c6d269dbad56a0b0f3608c89d321d1fed38206570ff5"},
+    "lld-16": {"file":"lld-16_16.0.6-15_amd64.deb","sha256":"e75a2e784d2da2e3d90a31d7b8002892ac58b90e53073a14c7db1a8d80172204"},
+    "libclang-rt-16-dev": {"file":"libclang-rt-16-dev_16.0.6-15_amd64.deb","sha256":"20f3b1a105d5b8fba261a03bd6ad531e09a87c929f33f54e5dd4db78f980dda2"},
+    "libedit2": {"file":"libedit2_3.1-20221030-2_amd64.deb","sha256":"d1c26768f5e108c97d9520c8a19356ddf5a1967222af4f38efb1f5af21da46b5"},
+    "libxml2": {"file":"libxml2_2.9.14+dfsg-1.3ubuntu0.1_amd64.deb","sha256":"7c4d4ec04145f854bb824cb72fb34233c99f7db3eaafaa3d2049bd82800c0f85"},
+    "libicu72": {"file":"libicu72_72.1-3ubuntu3_amd64.deb","sha256":"3db0831a7a8da3c8d878fdbc4644d4131ed914b22c8a0cffbcabe68a2c3f6ec4"},
+    "zstd-source": {"file":"zstd-1.5.5.tar.gz","sha256":"9c4396cc829cfae319a6e2615202e82aad41372073482fce286fac78646d3ee4"}
+  },
+  "executables": {
+    "clang-16": "bb6556bdcdeb00dca0c758da9966a9982542a23ddcaffa784a2de9344ede3fc0",
+    "ld.lld-16": "f8d0601bf957a1b063e29c3c43613a5b76482f6c14664b9fcac4d596871e14df",
+    "make": "0052cc9e1280ad0874744623d7241afa01f689be9c0d627056876bb254af5c51",
+    "ar": "69c93ee96fe89de9a071010905786a48c136fbabcdafff2fbd5bc4f2d7866f84",
+    "readelf": "e1a35b81e8ba6de2eb11ff5cf82a5521b7b4fa719f425f027c2b0496e8ef62ca",
+    "tar": "23fad77931641e49fc9f6ca955796f1713436b4c00d1da871786f11af460c462",
+    "gcc": "ed4c733407f4a77de4e4e35a89e8575f4efe04823ec07495a02c99a9169baf8b",
+    "bwrap": "eabbccb0f7f755b96d30834026a9b5d941c606400d097d87c1ff16622edaf68c",
+    "mv": "4dc8719b3b60a5e03b3720f3060415a8dd3b564b74319539b2a0dc52bc50c0df",
+    "xxd": "cd606ae3587b4c217839121828984f63ae1586b3ba235d1fc9718295ed466826"
+  },
+  "libraries": {
+    "libLLVM-16.so.1": "55f9e1b3c3b98853fc31787414064de36a22cc23f870962b45832fc904c498a2",
+    "libclang-cpp.so.16": "f9bf97848329b4d444c8c8791b9f8a584b58016852a6ba4b55db164726623ac7",
+    "zstd-build-libz.so.1": "2a252a45a28d93ca2e6a7d2662f6cef5cfa666c9da2f8cfbc90bc521c45a03c5",
+    "zstd-build-liblzma.so.5": "901c835bf040bb531c1801d9e9400cf1181c27db708f9634ca33941e5fd5f0d5",
+    "zstd-build-liblz4.so.1": "2999ba4a7587726402b0ecd4ea970ba6da9bd4ac93f1e63a26d948e37abdf9b5",
+    "zstd-build-libc.so.6": "4804f1729b20c523cd1cc84034a38c80f83db72645c1366bfa2e300e112f193f",
+    "zstd-build-loader": "97c4ef84e2abe44c1ab1f37753f259b00b3f73574fe711b6a123e5fe75ae6b7c"
+  },
+  "waterbox": {
+    "musl_clang_sha256": "08b20f771fa51719ba64c84eb9cfefe54fde05d6a6948ffcd9753fba38da2f5d",
+    "musl_linker_sha256": "8a3b835e2cbdc52db8259d8c03c5e32227fd1c350af22925438cd8b54fd2d2db",
+    "libc_archive_sha256": "9b8f89ee3105aad8b2a18805362677b6d983721e9d3706629359ddf7c9ec837b",
+    "compiler_rt_builtins_sha256": "2f257b223dbee10ea0415e5f95385a71dc05bb94505a21a4be1d22ce733e624d",
+    "emulibc_release_object_sha256": "c787fe4acc581a8b4787f737133425abe65a589200ce049aeec9780626afe620",
+    "sysroot_file_count": 235,
+    "sysroot_tree_algorithm": "LC_ALL=C sorted regular files: f\\t<octal-mode>\\t<sha256>\\t<relative-path>\\n",
+    "sysroot_tree_sha256": "fc06187ae45bcedeea4f76f33868ccb05a8c80831d5dce19adbd5eee6e6e06e1"
+  },
+  "zstd": {
+    "executable_size": 1302704,
+    "executable_sha256": "7bc75866617449d384679bd29298a222a458ff0daea0fc4c221122b5513cf307"
+  },
+  "environment": {
+    "LC_ALL": "C",
+    "TZ": "UTC",
+    "SOURCE_DATE_EPOCH": "1758367997",
+    "umask": "0022",
+    "jobs": 1
+  },
+  "build_recipe": {
+    "encoding": "UTF-8 LF",
+    "sha256": "fdc7dc98b5a218256c991d712a2909ca244ad482e8996737ea49569cd8643563",
+    "verified_input_identity_sha256": "409b9debb122dd5e5d0719874e99d0f3d3f71c25cf8731bfa1ec61462d0c295b",
+    "complete_toolchain_tree_sha256": "9caa5c02dcd2d9c01e5d0196956787a0f31760195c6544a2ceafcb771f469521"
+  },
+  "negative_controls": {
+    "clang18_decompressed_size": 4026152,
+    "clang18_decompressed_sha256": "fa05369287a490b19a9a13e74aff69e3223c091adf320fb7fe1895abe6908269",
+    "zstd_1_5_7_compressed_size": 399100
+  }
+}

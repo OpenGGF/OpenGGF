@@ -8,6 +8,7 @@ import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.LifecycleRule;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.NativeSoundIdentity;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.NormalizedState;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.ObserverProof;
+import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.ObserverRuntimeIdentity;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.OwnershipTransition;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.PendingRequestPolicy;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.ProducerKind;
@@ -39,6 +40,9 @@ public interface CompleteRunAudioProfile {
 
     /** Exact observer/callback proof pinned independently for each producer kind. */
     Map<ProducerKind, ObserverProof> observerProofs();
+
+    /** Typed observer runtime identities explicitly permitted for each capture producer kind. */
+    Map<ProducerKind, ObserverRuntimeIdentity> observerRuntimeIdentities();
 
     /** Allowed request-to-admission identity transformations, with no game checks in shared code. */
     Map<NativeSoundIdentity, List<NativeSoundIdentity>> decisionResolutions();

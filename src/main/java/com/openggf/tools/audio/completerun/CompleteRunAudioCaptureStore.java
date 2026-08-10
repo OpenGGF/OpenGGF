@@ -472,7 +472,7 @@ public final class CompleteRunAudioCaptureStore {
             json.writeStartObject();
             json.writeStringField("schema", CompleteRunAudioTrace.SCHEMA);
             json.writeFieldName("metadata");
-            new com.fasterxml.jackson.databind.ObjectMapper(CompleteRunAudioJson.FACTORY).writeValue(json, metadata);
+            CompleteRunAudioJson.writeMetadata(json, metadata);
             json.writeArrayFieldStart("chunks");
             for (Chunk chunk : chunks) {
                 json.writeStartObject();

@@ -1,0 +1,62 @@
+{
+  "schema": "openggf.gpgx-observer-managed-lock.v1",
+  "bizhawk_commit": "427556b5ef3ac437eba754d90c5e7e9096c9a8df",
+  "bizhawk_tree": "7281227ed2f3b89c0962b2792b28539e35361c6b",
+  "sdk": {
+    "version": "8.0.414",
+    "commit": "62977d44a9",
+    "runtime_version": "8.0.20",
+    "runtime_commit": "574100b692",
+    "msbuild_version": "17.11.41+18f1ecf82",
+    "archive_name": "dotnet-sdk-8.0.414-linux-x64.tar.gz",
+    "archive_url": "https://builds.dotnet.microsoft.com/dotnet/Sdk/8.0.414/dotnet-sdk-8.0.414-linux-x64.tar.gz",
+    "archive_sha256": "7786bbe5093e3a5d354a1ffa56083b6a32ad12837a83170f1f3b51ad7df28516",
+    "archive_sha512": "bdf6b151f787ac57d393e625e8b8fc8e19ac75902e76227da736f20e042cf7ff98bfd1a6669b77fdea7bfe678a0f23103e0cace1db83e9aee568ccd6f1b5b264",
+    "executable_sha256": "37674a9f73c1f531b7dcb26f569692f2c85419c0ba4fb7622d5bfc65bb0f5810",
+    "release_metadata_sha256": "33deab0364142c32768603da1c633f7cb7bc85b702e3ea18690814805e564e1a"
+  },
+  "nuget": {
+    "package_count": 114,
+    "canonical_manifest_algorithm": "LC_ALL=C sorted <sha256><two spaces><lowercase package-id>/<version>/<filename><LF>",
+    "canonical_manifest_sha256": "e0afe65b153f1f3cbaed03c8e3987542322a9ea1a220cac3696bc7ba59c42290"
+  },
+  "source_files": {
+    "global.json": "885423654996ef60f577d909c28af5a39cbf454b2531c1db649cc4db9595816b",
+    ".github/workflows/release.yml": "9683ffbf9905480fca479bda914b56f9b7137cbfefb5491f44ebc531fe51c7b9",
+    "Dist/BuildRelease.sh": "bdd8443737a4f993b38c2e4786deb686a86e99cf6dd8c8f42870e6fe3a94b05d",
+    "Dist/.BuildInConfigX.sh": "c7901d62bfee8a8f8790e11b3776d5caad5c548be3d5a5ea905a63cbaf944241",
+    "Dist/.InvokeCLIOnMainSln.sh": "92588389ff8ea57855217a7b469b73e5b26e2e2e3565b51be6804dfa30c57506",
+    "Dist/UpdateVersionInfoForRelease.sh": "056dd1375264dc985c7c5217d255af286445f5a8409eb42435082389980f2589",
+    "src/BizHawk.Emulation.Cores/BizHawk.Emulation.Cores.csproj": "2d3b851e8fdb4136815242e0a5127ca6650a29cdb38f1064168f40570b61af78",
+    "src/BizHawk.Emulation.Common/BizHawk.Emulation.Common.csproj": "dd2e02606076de7d42a3b1dba42b08d6eedf83a92439f841c587db83bb1a40b5"
+  },
+  "historical_workflow_gap": {
+    "sdk_selector_was_major_only": true,
+    "runner_image_was_mutable": true,
+    "powershell_was_required_but_not_version_locked": true,
+    "reason": "The release workflow selected .NET 8 and the current Ubuntu runner without immutable SDK patch, runner image, or PowerShell identities. The date-adjacent exact SDK candidate cannot reproduce the stock bytes."
+  },
+  "stock": {
+    "cores_size": 8774144,
+    "cores_sha256": "0144e6e236be68ce126eb771dcb5a9ae7c153a083fa0333f345ac37b4a60acf7",
+    "common_size": 422912,
+    "common_sha256": "f20cd009f6f5b0a95bd47b66c48dc8de85afcd7ae0cc6aab3486baf55f501fb4"
+  },
+  "reproduction": {
+    "status": "BYTE_MISMATCH",
+    "attempted_sdk": "8.0.414",
+    "observed_cores_size": 8779776,
+    "observed_cores_sha256": "f7e7ea11f05adb7bcdc1f55c09810f873abfe06debdc3f3b100185f20a69c031",
+    "observed_common_size": 421376,
+    "observed_common_sha256": "96f494af9be13f52dc63ab3d430b15641fc142cf469339a8bf013e67b99b757e",
+    "stock_cmp": false,
+    "candidate_repeatability": "VERIFIED_TWICE_AT_CANONICAL_PATH",
+    "canonical_identity_sha256": "efadaf168670ce0ae5f8f5dc7705ddaa94e898bce96134b9ebc86c31ceb6d6d2",
+    "first_audit_probe_cores_sha256": "f7bfb7a08185d512a2c28975d917c0a9f6723a7ebb73db4ea8c5c11c2641abf1",
+    "first_audit_probe_common_sha256": "d82fb2d2a3b629d0d3f85789f0b22c313f4ce35d1b04aefc2543ee32e2ed8d6f",
+    "second_probe_cores_sha256": "5f1f37cf413bf6f676e8e20fbce42871d0b89e43ab3273cd683a9d2df76c91c5",
+    "second_probe_common_sha256": "395a9360240a6f137eab4505272ff6f379b9d1b7e122a7ac4729ee55eec7c2b4"
+  },
+  "selected_adapter": "REFLECTION",
+  "patched_managed_dll_permitted": false
+}

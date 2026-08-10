@@ -44,6 +44,7 @@
     <Compile Include="tests/S1DynamicArtObserverTests.cs" />
     <Compile Include="tests/S2DynamicArtObserverTests.cs" />
     <Compile Include="tests/GpgxHostTests.cs" />
+    <Compile Include="tests/GpgxAudioObserverSourceLockTests.cs" />
     <Compile Include="tests/NoReplacePublisherTests.cs" />
     <Compile Include="tests/EndToEndTests.cs" />
     <Compile Include="tests/RunSegmentCollector.cs" />

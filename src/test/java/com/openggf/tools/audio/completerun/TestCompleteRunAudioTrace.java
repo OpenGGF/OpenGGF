@@ -7,12 +7,17 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class TestCompleteRunAudioTrace {
+    private static final String TEST_ABI_NAME = "task6-test-sentinel-not-a-runtime-abi";
+    private static final int TEST_ABI_VERSION = 2_000_006;
+    private static final int TEST_EVENT_SIZE = 2_000_007;
+    private static final int TEST_CAPACITY = 2_000_008;
     private final Fixture fixture = new Fixture();
 
     @Test
@@ -190,6 +195,138 @@ class TestCompleteRunAudioTrace {
     }
 
     @Test
+    void metadataPinsAProducerSpecificTypedObserverRuntimeIdentity() {
+        assertDoesNotThrow(() -> fixture.metadata.validateProfile(fixture.profile));
+        TestProfile wrongIdentity = new TestProfile("test.profile", fixture.fixture,
+                List.of(HardwareRole.FM1, HardwareRole.PSG1), List.of("tempo"), List.of("cursor"));
+        wrongIdentity.observerRuntimeIdentities.put(ProducerKind.OPENGGF,
+                new CallbackObserverIdentity("different.callback.v1"));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> fixture.metadata.validateProfile(wrongIdentity));
+    }
+
+    @Test
+    void bufferedObserverIdentityFailsClosedOnEveryRuntimeBound() {
+        String digest = "a".repeat(64);
+        assertThrows(IllegalArgumentException.class, () -> new BufferedNativeObserverIdentity(
+                TEST_ABI_NAME, TEST_ABI_VERSION, TEST_EVENT_SIZE, TEST_CAPACITY,
+                "bizhawk-2.11-gpgx-audio-observer-v1", "gpgx-audio-observer-v1", "7696adca7ad14b79",
+                digest, digest, false, 1, 0));
+        assertThrows(IllegalArgumentException.class, () -> new BufferedNativeObserverIdentity(
+                TEST_ABI_NAME, TEST_ABI_VERSION, TEST_EVENT_SIZE, TEST_CAPACITY,
+                "bizhawk-2.11-gpgx-audio-observer-v1", "gpgx-audio-observer-v1", "7696adca7ad14b79",
+                digest, digest, true, TEST_CAPACITY + 1, 0));
+        assertThrows(IllegalArgumentException.class, () -> new BufferedNativeObserverIdentity(
+                TEST_ABI_NAME, TEST_ABI_VERSION, TEST_EVENT_SIZE, TEST_CAPACITY,
+                "bizhawk-2.11-gpgx-audio-observer-v1", "gpgx-audio-observer-v1", "7696adca7ad14b79",
+                digest, digest, true, 1, 1));
+        assertThrows(IllegalArgumentException.class, () -> new BufferedNativeObserverIdentity(
+                TEST_ABI_NAME, TEST_ABI_VERSION, TEST_EVENT_SIZE, TEST_CAPACITY,
+                "/tmp/observer", "gpgx-audio-observer-v1", "7696adca7ad14b79",
+                digest, digest, true, 1, 0));
+    }
+
+    @Test
+    void managedAdapterAndObserverArtifactsMustMatchExactly() {
+        String digest = "a".repeat(64);
+        Map<RuntimeArtifact, String> nativeArtifacts = new LinkedHashMap<>();
+        for (RuntimeArtifact artifact : List.of(RuntimeArtifact.BIZHAWK_EXECUTABLE,
+                RuntimeArtifact.BIZHAWK_CORE_DLL, RuntimeArtifact.GPGX_CORE,
+                RuntimeArtifact.BIZHAWK_COMMON_DLL, RuntimeArtifact.WATERBOX_HOST,
+                RuntimeArtifact.GPGX_CORE_UNCOMPRESSED, RuntimeArtifact.GPGX_OBSERVER_PATCH,
+                RuntimeArtifact.GPGX_OBSERVER_SOURCE_BUNDLE, RuntimeArtifact.GPGX_OBSERVER_TOOLCHAIN,
+                RuntimeArtifact.GPGX_OBSERVER_BUILD_RECIPE)) {
+            nativeArtifacts.put(artifact, digest);
+        }
+        BufferedNativeObserverIdentity nativeIdentity = new BufferedNativeObserverIdentity(
+                TEST_ABI_NAME, TEST_ABI_VERSION, TEST_EVENT_SIZE, TEST_CAPACITY,
+                "bizhawk-2.11-gpgx-audio-observer-v1", "gpgx-audio-observer-v1", "7696adca7ad14b79",
+                digest, digest, true, 1, 0);
+        ProducerRuntimeIdentity reflection = new ProducerRuntimeIdentity(
+                "BizHawk", "2.11", "BizHawk", "2.11", "GPGX", "1.0",
+                ManagedObserverAdapter.REFLECTION, nativeArtifacts);
+        assertDoesNotThrow(() -> reflection.validateFor(ProducerKind.REFERENCE, nativeIdentity));
+
+        nativeArtifacts.put(RuntimeArtifact.BIZHAWK_OBSERVER_MANAGED_PATCH, digest);
+        assertThrows(IllegalArgumentException.class, () -> new ProducerRuntimeIdentity(
+                "BizHawk", "2.11", "BizHawk", "2.11", "GPGX", "1.0",
+                ManagedObserverAdapter.REFLECTION, nativeArtifacts));
+        nativeArtifacts.put(RuntimeArtifact.BIZHAWK_OBSERVER_CORES_DLL, digest);
+        ProducerRuntimeIdentity firstClass = new ProducerRuntimeIdentity(
+                "BizHawk", "2.11", "BizHawk", "2.11", "GPGX", "1.0",
+                ManagedObserverAdapter.FIRST_CLASS, nativeArtifacts);
+        assertDoesNotThrow(() -> firstClass.validateFor(ProducerKind.REFERENCE, nativeIdentity));
+    }
+
+    @Test
+    void callbackObserverMetadataHasIndependentCanonicalJsonAndStrictParserGates() throws Exception {
+        String canonical = """
+                {"schema":"complete_run_audio.v1","profileId":"test.profile","fixture":{"romSha1":"0123456789abcdef0123456789abcdef01234567","romCrc32":"89abcdef","bk2Sha256":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","bk2RowCount":862,"runManifestSha256":"fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210","segments":[{"id":"green-hill","firstFrame":860,"exclusiveEnd":862}],"firstFrame":860,"exclusiveEnd":862},"producerKind":"OPENGGF","producerRuntimeIdentity":{"producerName":"OpenGGF","producerVersion":"0.6","emulatorName":"OpenGGF","emulatorVersion":"0.6","coreName":"SMPS","coreVersion":"1","observerAdapter":"CALLBACK_ONLY","artifactSha256":{"OPENGGF_PRODUCER":"4444444444444444444444444444444444444444444444444444444444444444"}},"observerRuntimeIdentity":{"kind":"CALLBACK","id":"openggf.callback.v1"},"observerProof":{"observerProfile":"test.observer.v1","callbackSource":"m68k.execute","callbacks":[{"callback":"driver.service","observations":1}]},"chunkPolicy":{"frameRows":4096,"compression":"gzip","gzipTimestamp":0},"hardwareRoles":["FM1","PSG1"],"stateInventory":{"globalFields":["tempo"],"activeRoleFields":["cursor"]}}""";
+
+        assertEquals(canonical, CompleteRunAudioJson.writeMetadata(fixture.metadata));
+        assertEquals(fixture.metadata, readMetadata(canonical));
+        assertThrows(IllegalArgumentException.class,
+                () -> readMetadata(canonical.replace("\"kind\":\"CALLBACK\"", "\"kind\":\"UNKNOWN\"")));
+        assertThrows(IllegalArgumentException.class,
+                () -> readMetadata(canonical.replace("\"observerRuntimeIdentity\":{\"kind\":\"CALLBACK\",\"id\":\"openggf.callback.v1\"},", "")));
+        assertThrows(IllegalArgumentException.class,
+                () -> readMetadata(canonical.replace("\"id\":\"openggf.callback.v1\"",
+                        "\"id\":\"openggf.callback.v1\",\"id\":\"duplicate\"")));
+        assertThrows(IllegalArgumentException.class,
+                () -> readMetadata(canonical.replace("\"observerAdapter\":\"CALLBACK_ONLY\"",
+                        "\"observerAdapter\":\"REFLECTION\"")));
+        assertThrows(IllegalArgumentException.class,
+                () -> readMetadata(canonical.replace("\"id\":\"openggf.callback.v1\"",
+                        "\"id\":\"openggf.callback.v1\",\"unknown\":0")));
+    }
+
+    @Test
+    void bufferedObserverMetadataHasIndependentCanonicalJsonAndStrictParserGates() throws Exception {
+        String digest = "a".repeat(64);
+        Map<RuntimeArtifact, String> artifacts = new EnumMap<>(RuntimeArtifact.class);
+        for (RuntimeArtifact artifact : List.of(RuntimeArtifact.BIZHAWK_EXECUTABLE,
+                RuntimeArtifact.BIZHAWK_CORE_DLL, RuntimeArtifact.BIZHAWK_COMMON_DLL,
+                RuntimeArtifact.WATERBOX_HOST, RuntimeArtifact.GPGX_CORE,
+                RuntimeArtifact.GPGX_CORE_UNCOMPRESSED, RuntimeArtifact.GPGX_OBSERVER_PATCH,
+                RuntimeArtifact.GPGX_OBSERVER_SOURCE_BUNDLE, RuntimeArtifact.GPGX_OBSERVER_TOOLCHAIN,
+                RuntimeArtifact.GPGX_OBSERVER_BUILD_RECIPE)) {
+            artifacts.put(artifact, digest);
+        }
+        Metadata metadata = new Metadata(SCHEMA, "test.profile", fixture.fixture, ProducerKind.REFERENCE,
+                new ProducerRuntimeIdentity("BizHawk", "2.11", "BizHawk", "2.11", "GPGX", "1.0",
+                        ManagedObserverAdapter.REFLECTION, artifacts),
+                new BufferedNativeObserverIdentity(TEST_ABI_NAME, TEST_ABI_VERSION,
+                        TEST_EVENT_SIZE, TEST_CAPACITY,
+                        "bizhawk-2.11-gpgx-audio-observer-v1", "gpgx-audio-observer-v1",
+                        "7696adca7ad14b79", "b".repeat(64), "c".repeat(64), true, 1, 0),
+                new ObserverProof("reference.observer.v1", "native.buffer",
+                        List.of(new CallbackProof("driver.service", 1))),
+                new ChunkPolicy(4096, "gzip", 0), List.of(HardwareRole.FM1, HardwareRole.PSG1),
+                new StateInventory(List.of("tempo"), List.of("cursor")));
+        String canonical = """
+                {"schema":"complete_run_audio.v1","profileId":"test.profile","fixture":{"romSha1":"0123456789abcdef0123456789abcdef01234567","romCrc32":"89abcdef","bk2Sha256":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","bk2RowCount":862,"runManifestSha256":"fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210","segments":[{"id":"green-hill","firstFrame":860,"exclusiveEnd":862}],"firstFrame":860,"exclusiveEnd":862},"producerKind":"REFERENCE","producerRuntimeIdentity":{"producerName":"BizHawk","producerVersion":"2.11","emulatorName":"BizHawk","emulatorVersion":"2.11","coreName":"GPGX","coreVersion":"1.0","observerAdapter":"REFLECTION","artifactSha256":{"BIZHAWK_EXECUTABLE":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","BIZHAWK_CORE_DLL":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","BIZHAWK_COMMON_DLL":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","WATERBOX_HOST":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","GPGX_CORE":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","GPGX_CORE_UNCOMPRESSED":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","GPGX_OBSERVER_PATCH":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","GPGX_OBSERVER_SOURCE_BUNDLE":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","GPGX_OBSERVER_TOOLCHAIN":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","GPGX_OBSERVER_BUILD_RECIPE":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}},"observerRuntimeIdentity":{"kind":"BUFFERED_NATIVE","abiName":"task6-test-sentinel-not-a-runtime-abi","abiVersion":2000006,"eventSize":2000007,"capacity":2000008,"installationId":"bizhawk-2.11-gpgx-audio-observer-v1","coreId":"gpgx-audio-observer-v1","coreBuildId":"7696adca7ad14b79","watchMaskSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","serviceManifestSha256":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","enabled":true,"maximumFrameOccupancy":1,"overflowCount":0},"observerProof":{"observerProfile":"reference.observer.v1","callbackSource":"native.buffer","callbacks":[{"callback":"driver.service","observations":1}]},"chunkPolicy":{"frameRows":4096,"compression":"gzip","gzipTimestamp":0},"hardwareRoles":["FM1","PSG1"],"stateInventory":{"globalFields":["tempo"],"activeRoleFields":["cursor"]}}""";
+
+        assertEquals(canonical, CompleteRunAudioJson.writeMetadata(metadata));
+        assertEquals(metadata, readMetadata(canonical));
+        assertThrows(IllegalArgumentException.class,
+                () -> readMetadata(canonical.replace("\"eventSize\":2000007,", "")));
+        assertThrows(IllegalArgumentException.class,
+                () -> readMetadata(canonical.replace("\"capacity\":2000008",
+                        "\"capacity\":2000008,\"capacity\":2000008")));
+        assertThrows(IllegalArgumentException.class,
+                () -> readMetadata(canonical.replace("\"enabled\":true", "\"enabled\":false")));
+        assertThrows(IllegalArgumentException.class,
+                () -> readMetadata(canonical.replace("\"maximumFrameOccupancy\":1",
+                        "\"maximumFrameOccupancy\":2000009")));
+        assertThrows(IllegalArgumentException.class,
+                () -> readMetadata(canonical.replace("\"overflowCount\":0", "\"overflowCount\":1")));
+        assertThrows(IllegalArgumentException.class,
+                () -> readMetadata(canonical.replace("\"overflowCount\":0}",
+                        "\"overflowCount\":0,\"unknown\":0}")));
+    }
+
+    @Test
     void metadataRejectsTerminalWithWrongFrameCountExclusiveEndOrDerivedCounts() {
         assertThrows(IllegalArgumentException.class,
                 () -> fixture.metadata.validateTerminal(fixture.terminal(1), fixture.counts(1)));
@@ -235,6 +372,15 @@ class TestCompleteRunAudioTrace {
     }
 
     @Test
+    void registryRejectsProfileThatOmitsAnObserverRuntimeIdentity() {
+        TestProfile missingReference = new TestProfile("missing.reference.observer", fixture.fixture,
+                List.of(HardwareRole.FM1, HardwareRole.PSG1), List.of("tempo"), List.of("cursor"));
+        missingReference.observerRuntimeIdentities.remove(ProducerKind.REFERENCE);
+
+        assertThrows(IllegalArgumentException.class, () -> CompleteRunAudioProfiles.register(missingReference));
+    }
+
+    @Test
     void registrySnapshotsProfileIdentityResolutionAndInventories() {
         String id = "registry.snapshot.profile";
         var mutable = new TestProfile(id, fixture.fixture, new ArrayList<>(List.of(HardwareRole.FM1, HardwareRole.PSG1)),
@@ -244,6 +390,7 @@ class TestCompleteRunAudioTrace {
         mutable.globalFields.clear();
         mutable.identities.clear();
         mutable.producerIdentities.clear();
+        mutable.observerRuntimeIdentities.clear();
 
         CompleteRunAudioProfile frozen = CompleteRunAudioProfiles.require(id);
         assertEquals(List.of(HardwareRole.FM1, HardwareRole.PSG1), frozen.hardwareRoles());
@@ -252,6 +399,8 @@ class TestCompleteRunAudioTrace {
                 frozen.resolveRequest(new RawAudioRequest(OwnerClass.SFX, 0xC0, "mailbox", 0)));
         assertEquals(fixture.openGgfRuntimeIdentity(),
                 frozen.producerRuntimeIdentities().get(ProducerKind.OPENGGF));
+        assertEquals(new CallbackObserverIdentity("openggf.callback.v1"),
+                frozen.observerRuntimeIdentities().get(ProducerKind.OPENGGF));
         assertThrows(IllegalArgumentException.class, () -> CompleteRunAudioProfiles.register(
                 new TestProfile(id, fixture.fixture, List.of(HardwareRole.FM1, HardwareRole.PSG1),
                         List.of("tempo"), List.of("cursor"))));
@@ -288,7 +437,8 @@ class TestCompleteRunAudioTrace {
         private final TestProfile profile = new TestProfile("test.profile", fixture,
                 List.of(HardwareRole.FM1, HardwareRole.PSG1), List.of("tempo"), List.of("cursor"));
         private final Metadata metadata = new Metadata("complete_run_audio.v1", "test.profile", fixture,
-                ProducerKind.OPENGGF, openGgfRuntimeIdentity(), new ObserverProof("test.observer.v1", "m68k.execute",
+                ProducerKind.OPENGGF, openGgfRuntimeIdentity(), new CallbackObserverIdentity("openggf.callback.v1"),
+                new ObserverProof("test.observer.v1", "m68k.execute",
                         List.of(new CallbackProof("driver.service", 1))),
                 new ChunkPolicy(4096, "gzip", 0), List.of(HardwareRole.FM1, HardwareRole.PSG1),
                 new StateInventory(List.of("tempo"), List.of("cursor")));
@@ -326,6 +476,7 @@ class TestCompleteRunAudioTrace {
 
         private ProducerRuntimeIdentity referenceRuntimeIdentity() {
             return new ProducerRuntimeIdentity("BizHawk", "2.11", "BizHawk", "2.11", "GPGX", "1.0",
+                    ManagedObserverAdapter.CALLBACK_ONLY,
                     Map.of(RuntimeArtifact.BIZHAWK_EXECUTABLE, "1".repeat(64),
                             RuntimeArtifact.BIZHAWK_CORE_DLL, "2".repeat(64),
                             RuntimeArtifact.GPGX_CORE, "3".repeat(64)));
@@ -333,7 +484,23 @@ class TestCompleteRunAudioTrace {
 
         private ProducerRuntimeIdentity openGgfRuntimeIdentity() {
             return new ProducerRuntimeIdentity("OpenGGF", "0.6", "OpenGGF", "0.6", "SMPS", "1",
+                    ManagedObserverAdapter.CALLBACK_ONLY,
                     Map.of(RuntimeArtifact.OPENGGF_PRODUCER, "4".repeat(64)));
+        }
+    }
+
+    private static Metadata readMetadata(String json) {
+        try (var parser = CompleteRunAudioJson.FACTORY.createParser(json)) {
+            parser.nextToken();
+            Metadata metadata = CompleteRunAudioJson.readMetadata(parser);
+            if (parser.nextToken() != null) {
+                throw new IllegalArgumentException("metadata JSON contains trailing tokens");
+            }
+            return metadata;
+        } catch (IllegalArgumentException failure) {
+            throw failure;
+        } catch (Exception failure) {
+            throw new IllegalArgumentException("invalid metadata JSON", failure);
         }
     }
 
@@ -346,6 +513,7 @@ class TestCompleteRunAudioTrace {
         private final Map<RawAudioRequest, NativeSoundIdentity> identities = new LinkedHashMap<>();
         private final Map<ProducerKind, ProducerRuntimeIdentity> producerIdentities = new LinkedHashMap<>();
         private final Map<ProducerKind, ObserverProof> observerProofs = new LinkedHashMap<>();
+        private final Map<ProducerKind, ObserverRuntimeIdentity> observerRuntimeIdentities = new LinkedHashMap<>();
 
         private TestProfile(String id, CompleteRunFixture fixture, List<HardwareRole> roles,
                 List<String> globalFields, List<String> activeRoleFields) {
@@ -358,12 +526,18 @@ class TestCompleteRunAudioTrace {
                     new NativeSoundIdentity(OwnerClass.SFX, "sfx.explosion", 0xC0));
             producerIdentities.put(ProducerKind.REFERENCE, new ProducerRuntimeIdentity(
                     "BizHawk", "2.11", "BizHawk", "2.11", "GPGX", "1.0",
+                    ManagedObserverAdapter.CALLBACK_ONLY,
                     Map.of(RuntimeArtifact.BIZHAWK_EXECUTABLE, "1".repeat(64),
                             RuntimeArtifact.BIZHAWK_CORE_DLL, "2".repeat(64),
                             RuntimeArtifact.GPGX_CORE, "3".repeat(64))));
             producerIdentities.put(ProducerKind.OPENGGF, new ProducerRuntimeIdentity(
                     "OpenGGF", "0.6", "OpenGGF", "0.6", "SMPS", "1",
+                    ManagedObserverAdapter.CALLBACK_ONLY,
                     Map.of(RuntimeArtifact.OPENGGF_PRODUCER, "4".repeat(64))));
+            observerRuntimeIdentities.put(ProducerKind.REFERENCE,
+                    new CallbackObserverIdentity("bizhawk-s1-callback.v1"));
+            observerRuntimeIdentities.put(ProducerKind.OPENGGF,
+                    new CallbackObserverIdentity("openggf.callback.v1"));
             observerProofs.put(ProducerKind.REFERENCE,
                     new ObserverProof("reference.observer.v1", "m68k.execute",
                             List.of(new CallbackProof("driver.service", 1))));
@@ -405,6 +579,11 @@ class TestCompleteRunAudioTrace {
         @Override
         public Map<ProducerKind, ObserverProof> observerProofs() {
             return observerProofs;
+        }
+
+        @Override
+        public Map<ProducerKind, ObserverRuntimeIdentity> observerRuntimeIdentities() {
+            return observerRuntimeIdentities;
         }
 
         @Override

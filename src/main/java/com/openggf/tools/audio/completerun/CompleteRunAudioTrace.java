@@ -81,7 +81,70 @@ public final class CompleteRunAudioTrace {
     public enum ProducerKind { REFERENCE, OPENGGF }
 
     /** Concrete runtime artifacts whose hashes prove which producer executed the capture. */
-    public enum RuntimeArtifact { BIZHAWK_EXECUTABLE, BIZHAWK_CORE_DLL, GPGX_CORE, OPENGGF_PRODUCER }
+    public enum RuntimeArtifact {
+        BIZHAWK_EXECUTABLE,
+        BIZHAWK_CORE_DLL,
+        BIZHAWK_COMMON_DLL,
+        WATERBOX_HOST,
+        GPGX_CORE,
+        GPGX_CORE_UNCOMPRESSED,
+        GPGX_OBSERVER_PATCH,
+        GPGX_OBSERVER_SOURCE_BUNDLE,
+        GPGX_OBSERVER_TOOLCHAIN,
+        GPGX_OBSERVER_BUILD_RECIPE,
+        BIZHAWK_OBSERVER_MANAGED_PATCH,
+        BIZHAWK_OBSERVER_CORES_DLL,
+        OPENGGF_PRODUCER
+    }
+
+    /** Managed route selected by the producer distribution; callback capture has no managed adapter. */
+    public enum ManagedObserverAdapter { CALLBACK_ONLY, REFLECTION, FIRST_CLASS }
+
+    /** Structured observer identity; no free-form observer label may replace these runtime bounds. */
+    public sealed interface ObserverRuntimeIdentity
+            permits CallbackObserverIdentity, BufferedNativeObserverIdentity {
+    }
+
+    public record CallbackObserverIdentity(String id) implements ObserverRuntimeIdentity {
+        public CallbackObserverIdentity {
+            requireText(id, "callback observer identity");
+            if (id.contains("/") || id.contains("\\")) {
+                throw new IllegalArgumentException("callback observer identity must be a logical ID, not a path");
+            }
+        }
+    }
+
+    public record BufferedNativeObserverIdentity(
+            String abiName,
+            int abiVersion,
+            int eventSize,
+            int capacity,
+            String installationId,
+            String coreId,
+            String coreBuildId,
+            String watchMaskSha256,
+            String serviceManifestSha256,
+            boolean enabled,
+            int maximumFrameOccupancy,
+            long overflowCount) implements ObserverRuntimeIdentity {
+        public BufferedNativeObserverIdentity {
+            requireText(abiName, "native observer ABI name");
+            if (abiVersion <= 0 || eventSize <= 0 || capacity <= 0) {
+                throw new IllegalArgumentException("native observer ABI bounds must be positive");
+            }
+            if (!"bizhawk-2.11-gpgx-audio-observer-v1".equals(installationId)
+                    || !"gpgx-audio-observer-v1".equals(coreId)) {
+                throw new IllegalArgumentException("native observer logical installation/core IDs are not pinned");
+            }
+            lowercaseHex(coreBuildId, Pattern.compile("[0-9a-f]{16}"), "native observer core BuildID");
+            lowercaseHex(watchMaskSha256, SHA256, "native observer watch-mask SHA-256");
+            lowercaseHex(serviceManifestSha256, SHA256, "native observer service-manifest SHA-256");
+            if (!enabled || maximumFrameOccupancy < 1 || maximumFrameOccupancy > capacity
+                    || overflowCount != 0) {
+                throw new IllegalArgumentException("native observer must be enabled, in capacity, and overflow-free");
+            }
+        }
+    }
 
     /**
      * Explicit producer runtime identity; observer labels are intentionally not used as a
@@ -89,7 +152,14 @@ public final class CompleteRunAudioTrace {
      */
     public record ProducerRuntimeIdentity(String producerName, String producerVersion,
             String emulatorName, String emulatorVersion, String coreName, String coreVersion,
-            Map<RuntimeArtifact, String> artifactSha256) {
+            ManagedObserverAdapter observerAdapter, Map<RuntimeArtifact, String> artifactSha256) {
+        public ProducerRuntimeIdentity(String producerName, String producerVersion,
+                String emulatorName, String emulatorVersion, String coreName, String coreVersion,
+                Map<RuntimeArtifact, String> artifactSha256) {
+            this(producerName, producerVersion, emulatorName, emulatorVersion, coreName, coreVersion,
+                    ManagedObserverAdapter.CALLBACK_ONLY, artifactSha256);
+        }
+
         public ProducerRuntimeIdentity {
             requireText(producerName, "producer name");
             requireText(producerVersion, "producer version");
@@ -97,6 +167,7 @@ public final class CompleteRunAudioTrace {
             requireText(emulatorVersion, "emulator version");
             requireText(coreName, "core name");
             requireText(coreVersion, "core version");
+            Objects.requireNonNull(observerAdapter, "managed observer adapter");
             Objects.requireNonNull(artifactSha256, "runtime artifact SHA-256 values");
             EnumMap<RuntimeArtifact, String> hashes = new EnumMap<>(RuntimeArtifact.class);
             for (Map.Entry<RuntimeArtifact, String> entry : artifactSha256.entrySet()) {
@@ -105,6 +176,17 @@ public final class CompleteRunAudioTrace {
                 hashes.put(entry.getKey(), entry.getValue());
             }
             artifactSha256 = Collections.unmodifiableMap(hashes);
+            boolean hasManagedPatch = hashes.containsKey(RuntimeArtifact.BIZHAWK_OBSERVER_MANAGED_PATCH);
+            boolean hasManagedCore = hashes.containsKey(RuntimeArtifact.BIZHAWK_OBSERVER_CORES_DLL);
+            if (hasManagedPatch != hasManagedCore) {
+                throw new IllegalArgumentException("managed observer patch and core DLL hashes must be paired");
+            }
+            if (observerAdapter == ManagedObserverAdapter.FIRST_CLASS && !hasManagedPatch) {
+                throw new IllegalArgumentException("first-class managed adapter requires its paired patch and DLL");
+            }
+            if (observerAdapter != ManagedObserverAdapter.FIRST_CLASS && hasManagedPatch) {
+                throw new IllegalArgumentException("callback/reflection adapters forbid patched managed artifacts");
+            }
         }
 
         /** Validates the required executable/core artifact set for the selected producer. */
@@ -116,6 +198,32 @@ public final class CompleteRunAudioTrace {
             };
             if (!artifactSha256.keySet().containsAll(required)) {
                 throw new IllegalArgumentException("producer runtime identity is missing required artifacts");
+            }
+        }
+
+        /** Validates adapter/artifact shape against the typed observer selected for this capture. */
+        public void validateFor(ProducerKind producerKind, ObserverRuntimeIdentity observerIdentity) {
+            validateFor(producerKind);
+            Objects.requireNonNull(observerIdentity, "observer runtime identity");
+            if (observerIdentity instanceof CallbackObserverIdentity) {
+                if (observerAdapter != ManagedObserverAdapter.CALLBACK_ONLY) {
+                    throw new IllegalArgumentException("callback observer requires callback-only adapter identity");
+                }
+                return;
+            }
+            if (producerKind != ProducerKind.REFERENCE || observerAdapter == ManagedObserverAdapter.CALLBACK_ONLY) {
+                throw new IllegalArgumentException("buffered native observation requires a reference managed adapter");
+            }
+            Set<RuntimeArtifact> nativeRequired = Set.of(
+                    RuntimeArtifact.BIZHAWK_COMMON_DLL,
+                    RuntimeArtifact.WATERBOX_HOST,
+                    RuntimeArtifact.GPGX_CORE_UNCOMPRESSED,
+                    RuntimeArtifact.GPGX_OBSERVER_PATCH,
+                    RuntimeArtifact.GPGX_OBSERVER_SOURCE_BUNDLE,
+                    RuntimeArtifact.GPGX_OBSERVER_TOOLCHAIN,
+                    RuntimeArtifact.GPGX_OBSERVER_BUILD_RECIPE);
+            if (!artifactSha256.keySet().containsAll(nativeRequired)) {
+                throw new IllegalArgumentException("buffered native identity is missing observer artifacts");
             }
         }
     }
@@ -153,7 +261,7 @@ public final class CompleteRunAudioTrace {
 
     public record Metadata(String schema, String profileId, CompleteRunFixture fixture,
             ProducerKind producerKind, ProducerRuntimeIdentity producerRuntimeIdentity,
-            ObserverProof observerProof, ChunkPolicy chunkPolicy,
+            ObserverRuntimeIdentity observerRuntimeIdentity, ObserverProof observerProof, ChunkPolicy chunkPolicy,
             List<HardwareRole> hardwareRoles, StateInventory stateInventory) {
         public Metadata {
             requireText(schema, "schema");
@@ -163,7 +271,9 @@ public final class CompleteRunAudioTrace {
             }
             Objects.requireNonNull(fixture, "fixture");
             Objects.requireNonNull(producerKind, "producer kind");
-            Objects.requireNonNull(producerRuntimeIdentity, "producer runtime identity").validateFor(producerKind);
+            Objects.requireNonNull(producerRuntimeIdentity, "producer runtime identity");
+            Objects.requireNonNull(observerRuntimeIdentity, "observer runtime identity");
+            producerRuntimeIdentity.validateFor(producerKind, observerRuntimeIdentity);
             Objects.requireNonNull(observerProof, "observer proof");
             Objects.requireNonNull(chunkPolicy, "chunk policy");
             hardwareRoles = canonicalRoles(hardwareRoles, "metadata hardware roles");
@@ -177,20 +287,29 @@ public final class CompleteRunAudioTrace {
                     Objects.requireNonNull(profile.producerRuntimeIdentities(), "profile runtime identities");
             Map<ProducerKind, ObserverProof> allowedObserverProofs =
                     Objects.requireNonNull(profile.observerProofs(), "profile observer proofs");
+            Map<ProducerKind, ObserverRuntimeIdentity> allowedObserverRuntimeIdentities =
+                    Objects.requireNonNull(profile.observerRuntimeIdentities(), "profile observer runtime identities");
             if (!allowedRuntimeIdentities.keySet().containsAll(EnumSet.allOf(ProducerKind.class))) {
                 throw new IllegalArgumentException("profile must declare an allowed runtime identity for every producer");
             }
             if (!allowedObserverProofs.keySet().containsAll(EnumSet.allOf(ProducerKind.class))) {
                 throw new IllegalArgumentException("profile must declare an observer proof for every producer");
             }
+            if (!allowedObserverRuntimeIdentities.keySet().containsAll(EnumSet.allOf(ProducerKind.class))) {
+                throw new IllegalArgumentException("profile must declare an observer runtime identity for every producer");
+            }
             for (ProducerKind kind : ProducerKind.values()) {
-                Objects.requireNonNull(allowedRuntimeIdentities.get(kind), "profile runtime identity").validateFor(kind);
+                ObserverRuntimeIdentity allowedObserver = Objects.requireNonNull(
+                        allowedObserverRuntimeIdentities.get(kind), "profile observer runtime identity");
+                Objects.requireNonNull(allowedRuntimeIdentities.get(kind), "profile runtime identity")
+                        .validateFor(kind, allowedObserver);
                 Objects.requireNonNull(allowedObserverProofs.get(kind), "profile observer proof");
             }
             if (!profileId.equals(profile.id()) || !fixture.equals(profile.fixture())
                     || !hardwareRoles.equals(canonicalRoles(profile.hardwareRoles(), "profile hardware roles"))
                     || !stateInventory.equals(profile.stateInventory())
                     || !producerRuntimeIdentity.equals(allowedRuntimeIdentities.get(producerKind))
+                    || !observerRuntimeIdentity.equals(allowedObserverRuntimeIdentities.get(producerKind))
                     || !observerProof.equals(allowedObserverProofs.get(producerKind))) {
                 throw new IllegalArgumentException("metadata does not match the selected complete-run audio profile");
             }

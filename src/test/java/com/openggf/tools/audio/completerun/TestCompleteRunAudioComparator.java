@@ -1459,6 +1459,7 @@ class TestCompleteRunAudioComparator {
     private static Metadata metadata(TestProfile profile, ProducerKind kind,
             ProducerRuntimeIdentity runtime) {
         return new Metadata(SCHEMA, profile.id(), profile.fixture(), kind, runtime,
+                profile.observerRuntimeIdentities().get(kind),
                 new ObserverProof(kind == ProducerKind.REFERENCE ? "reference.test.v1" : "openggf.test.v1",
                         kind == ProducerKind.REFERENCE ? "m68k.execute" : "java.observer",
                         List.of(new CallbackProof("driver.service", 1))),
@@ -1638,6 +1639,7 @@ class TestCompleteRunAudioComparator {
         private final CompleteRunFixture fixture;
         private final Map<ProducerKind, ProducerRuntimeIdentity> runtimes = new LinkedHashMap<>();
         private final Map<ProducerKind, ObserverProof> observers = new LinkedHashMap<>();
+        private final Map<ProducerKind, ObserverRuntimeIdentity> observerRuntimeIdentities = new LinkedHashMap<>();
         private List<HardwareRole> hardwareRoles = List.of(HardwareRole.FM1);
         private List<RoleOwner> baselineRoleOwners = List.of(new RoleOwner(HardwareRole.FM1, NONE));
         private Map<String, OwnershipTransition> ownershipTransitions = Map.of(
@@ -1660,6 +1662,10 @@ class TestCompleteRunAudioComparator {
             runtimes.put(ProducerKind.OPENGGF, new ProducerRuntimeIdentity(
                     "OpenGGF", "test", "OpenGGF", "test", "SMPS", "test",
                     Map.of(RuntimeArtifact.OPENGGF_PRODUCER, "4".repeat(64))));
+            observerRuntimeIdentities.put(ProducerKind.REFERENCE,
+                    new CallbackObserverIdentity("bizhawk.test.callback.v1"));
+            observerRuntimeIdentities.put(ProducerKind.OPENGGF,
+                    new CallbackObserverIdentity("openggf.test.callback.v1"));
             observers.put(ProducerKind.REFERENCE,
                     new ObserverProof("reference.test.v1", "m68k.execute",
                             List.of(new CallbackProof("driver.service", 1))));
@@ -1686,6 +1692,9 @@ class TestCompleteRunAudioComparator {
         }
         @Override public Map<ProducerKind, ObserverProof> observerProofs() {
             return Map.copyOf(observers);
+        }
+        @Override public Map<ProducerKind, ObserverRuntimeIdentity> observerRuntimeIdentities() {
+            return Map.copyOf(observerRuntimeIdentities);
         }
         @Override public Map<NativeSoundIdentity, List<NativeSoundIdentity>> decisionResolutions() {
             NativeSoundIdentity c0 = new NativeSoundIdentity(OwnerClass.SFX, "sfx.c0", 0xc0);
