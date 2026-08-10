@@ -407,6 +407,49 @@ storage uses channel-bounded arrays/pre-sized structures; it must not allocate a
 Conflict discovery may scan existing live SFX, but its allocation may not scale
 with that scan.
 
+The completed work also requires a historical before/after comparison, not only
+an optimized-branch budget. A baseline-compatible benchmark fixture will use
+the same public `AudioManager` repeated-music and repeated-SFX entry points,
+constant loader/program/DAC/driver topology, trigger counts, warmup protocol,
+and JDK/JVM settings on detached updated-`develop` and completed-feature
+worktrees. It will report every raw repetition plus median allocated bytes per
+operation, control spread, loader calls, program materializations, and warmed
+elapsed nanoseconds per operation. The paired counter is implemented entirely
+in the byte-identical test fixture: each fresh instrumented
+`AbstractSmpsData` returned by the loader increments a primitive
+`programMaterializations` counter exactly once on its first program-data/
+defensive-copy access. Feature-only catalog-registration identity is asserted
+separately and is not presented as a paired baseline metric. Allocation is the
+acceptance metric; elapsed time is descriptive because it is more sensitive to
+host noise. The
+benchmark must keep live voice count constant by replacement/retrigger and must
+not invoke a feature-only production API from the measured caller, so the exact
+same workload source can be copied into and compiled against the baseline. The
+source hash covers the complete benchmark manifest, including every test-local
+fixture/helper, not only the main test class.
+
+The paired acceptance rule is fixed before measurement. For every music and SFX
+fixture, feature median allocated bytes per operation must not exceed baseline
+by more than `max(baselineControlSpread, featureControlSpread) + vmNoiseMargin`,
+where the small VM margin is printed by the fixture and documented in the audit.
+For each targeted large-program, large-DAC, and unrelated-music comparison, the
+feature size slope must be within that zero/control tolerance and materially
+below the baseline slope; the feature large-case median must also improve over
+baseline by more than the same tolerance when the baseline exhibits the
+targeted size-dependent cost. Feature loader calls and program materializations
+must equal exactly one per asset key/generation after warmup; catalog identity
+tests separately require one registration per key/generation. Completion
+requires JDK 21 with supported and enabled thread-allocation accounting. An
+unsupported VM may skip ordinary budget assertions, but cannot produce an
+acceptable historical comparison.
+
+The final staged performance audit records both commit ids, JDK/Maven/JVM
+settings, fixture sizes/topology, warmup and measurement counts, exact commands,
+raw repetitions, medians, paired tolerance, pass/fail evaluation, percentage
+deltas, and the program/DAC/music-size slopes. A comparison is invalid if the
+complete workload manifest, constants, environment, route, allocation-counter
+support, or operation counts differ between baseline and optimized runs.
+
 ### Behavioral verification
 
 - Focused audio factory/resolver/registry/driver/sequencer tests.

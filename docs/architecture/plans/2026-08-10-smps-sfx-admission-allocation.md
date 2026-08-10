@@ -512,6 +512,7 @@ driver.commitSfxAdmission(admission);
 
 **Files:**
 - Create: `src/test/java/com/openggf/audio/TestSmpsSfxAdmissionAllocation.java`
+- Create: `src/test/java/com/openggf/audio/TestSmpsRepeatedPlaybackBenchmark.java`
 - Modify: `src/test/java/com/openggf/audio/TestAudioPresentationArchitectureGuard.java`
 - Modify: `src/test/java/com/openggf/audio/TestAudioPresentationAllocationBudget.java`
 - Modify: `src/test/java/com/openggf/audio/presentation/TestAudioPresentationSourceParity.java`
@@ -519,6 +520,7 @@ driver.commitSfxAdmission(admission);
 **Interfaces:**
 - Consumes: the complete warmed command path from resolver through catalog, preparation, driver commit, and replacement cleanup.
 - Produces: a structural regression test that reports per-trigger allocation slopes for program, DAC, unrelated-music, and trigger-count dimensions.
+- Produces: a baseline-compatible end-to-end benchmark manifest using only public `AudioManager` music/SFX submission entry points common to updated `develop` and the feature, with machine-readable raw samples and fixed paired acceptance rules for a historical comparison.
 
 ```java
 long slope(long allocationsAt64, long allocationsAt256) {
@@ -538,15 +540,23 @@ long slope(long allocationsAt64, long allocationsAt256) {
 
   Run `mvn -Dtest=TestSmpsSfxAdmissionAllocation test`. Expect all dimension slopes to remain within the derived tolerance and the absolute slope to reflect only new sequencer/track plus bounded metadata.
 
-- [ ] **Step 4: Add production API/write guards**
+- [ ] **Step 4: Capture an apples-to-apples historical benchmark**
+
+  Add `TestSmpsRepeatedPlaybackBenchmark` as an opt-in benchmark (excluded from ordinary budget assertions) whose measured caller uses only the same public `AudioManager.playMusic`/SFX submission APIs available on updated `develop`. Keep loader/program/DAC/config/driver topology, replacement/retrigger behavior, live voice count, warmup counts, measurement counts (including 64/128/256 operations), and JVM properties constant. The byte-identical test-local loader returns a fresh instrumented `AbstractSmpsData` whose primitive `programMaterializations` counter advances exactly once on its first program-data/defensive-copy access; this paired semantic counter and loader-call counter exist on both commits without a feature API. Assert feature-only catalog registration identity separately outside the paired metric. Record at least five warmed repetitions per music and SFX scenario, plus tiny/large program, DAC, and unrelated-music controls. Emit raw allocated bytes, elapsed nanoseconds, operation count, loader/materialization counts, and GC deltas in a stable line format; calculate median bytes/op, control spread, median warmed ns/op, and percentage delta outside the measured region. Treat allocation as normative and timing as descriptive.
+
+  Fix acceptance before the first measured run: for every fixture, feature median bytes/op must be no greater than baseline median plus `max(baselineControlSpread, featureControlSpread) + vmNoiseMargin`; print and document the VM margin. For targeted large program/DAC/unrelated-music fixtures, require the feature size slope to be within zero/control tolerance and materially below the baseline slope, plus a feature large-case improvement greater than tolerance whenever baseline shows the targeted size-dependent cost. Require feature loader calls and program materializations to equal exactly one per key/generation after warmup. The final historical run must use JDK 21 with supported and enabled `ThreadMXBean` allocation accounting; unlike an ordinary test skip, missing allocation data invalidates the comparison. Timing is report-only.
+
+  Copy the exact benchmark manifest (main class plus every test-local helper/fixture) into a detached clean worktree at the official updated `develop` baseline; it must compile without changing production code. Hash the complete manifest, run it there and archive raw output, then run the byte-identical manifest and command on the completed feature worktree under the same JDK 21/JVM settings. Reject and repeat the comparison if manifest hash, fixture constants, route, environment, allocation-counter support, or operation counts differ. Remove the temporary baseline worktree after archiving results.
+
+- [ ] **Step 5: Add production API/write guards**
 
   Extend architecture guards to reject public raw DAC/SMPS arrays, `freshSource`/`copyDac` reintroduction, resolver load-before-lookup ordering, SFX-path `captureLiveCommandMutation`, and calls to `SmpsSourceDescriptor.from` from warmed instantiation. Allow asset-sized hashing/copy only inside registration/freezing and ordinary rewind snapshot capture where documented.
 
-- [ ] **Step 5: Run the focused ownership and budget suite**
+- [ ] **Step 6: Run the focused ownership and budget suite**
 
-  Run `mvn -Dtest=TestSmpsSfxAdmissionAllocation,TestAudioPresentationArchitectureGuard,TestAudioPresentationAllocationBudget,TestAudioPresentationSourceParity test`. Expect all selected tests to pass.
+  Run `mvn -Dtest=TestSmpsSfxAdmissionAllocation,TestSmpsRepeatedPlaybackBenchmark,TestAudioPresentationArchitectureGuard,TestAudioPresentationAllocationBudget,TestAudioPresentationSourceParity test`. Expect all selected tests to pass and preserve the benchmark source hash used on the detached baseline.
 
-- [ ] **Step 6: Commit performance contracts**
+- [ ] **Step 7: Commit performance contracts**
 
   Commit as `test(audio): guard bounded SFX allocation` with required trailers and `Changelog: n/a: regression coverage for the accompanying performance fix`.
 
@@ -557,6 +567,7 @@ long slope(long allocationsAt64, long allocationsAt256) {
 - Modify: `README.md`
 - Modify: `docs/architecture/designs/2026-08-10-smps-sfx-admission-allocation-design.md`
 - Modify: `docs/architecture/plans/2026-08-10-smps-sfx-admission-allocation.md`
+- Create: `docs/architecture/audits/2026-08-10-smps-repeated-playback-performance.md`
 
 **Interfaces:**
 - Produces: release-note text explaining reduced repeated-SFX GC pressure and the final design/plan status.
@@ -567,7 +578,7 @@ long slope(long allocationsAt64, long allocationsAt256) {
 
 - [ ] **Step 2: Add release documentation**
 
-  Add a concise `CHANGELOG.md` entry for repeated SMPS SFX no longer cloning ROM audio assets/unrelated driver state. Add the required `README.md` release/change-log summary before the branch is merged into `develop`.
+  Add a concise `CHANGELOG.md` entry for repeated SMPS music/SFX no longer cloning ROM audio assets/unrelated driver state. Add the required `README.md` release/change-log summary before the branch is merged into `develop`. Stage a performance audit containing baseline/feature commits, complete manifest hash, exact environment/commands, fixture topology and sizes, allocation-accounting support, all raw repetitions, median allocated bytes/op, paired tolerance/pass-fail result, loader/materialization counts, feature-only catalog identity evidence, control spreads, descriptive warmed ns/op, percentage deltas, and the size-slope evidence; do not summarize incompatible runs.
 
 - [ ] **Step 3: Run the focused develop verification set**
 
@@ -705,4 +716,4 @@ void restoreSfxAdmissionState(VirtualSynthesizer.SfxAdmissionState state);
 
 - [ ] **Step 4: Report exact delivery state**
 
-  Report the root cause, implementation summary, observer/catalog challenges, upstream/conflict reconciliation, every focused/full test command and outcome, allocation slope evidence, pushed `develop` branch/commits, unpushed frontier local commit, preserved dirty user file, and successful temporary worktree/branch cleanup.
+  Report the root cause, implementation summary, observer/catalog challenges, upstream/conflict reconciliation, every focused/full test command and outcome, the reproducible historical music/SFX before/after table and allocation slope evidence, pushed `develop` branch/commits, unpushed frontier local commit, preserved dirty user file, and successful temporary worktree/branch cleanup.
