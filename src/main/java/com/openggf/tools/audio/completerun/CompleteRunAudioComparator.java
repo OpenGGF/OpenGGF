@@ -130,6 +130,7 @@ public final class CompleteRunAudioComparator {
             OWNERSHIP_TRANSITION_INVALID,
             PENDING_CAPACITY_INVALID,
             PENDING_UNRESOLVED,
+            RESTORE_STACK_INVALID,
             SEGMENT_INVALID,
             LIFECYCLE_INVALID,
             PUBLICATION_IDENTITY_UNAVAILABLE,
@@ -320,7 +321,8 @@ public final class CompleteRunAudioComparator {
                 return diff(Kind.OWNER, expected.absoluteFrame(), "baseline.role_owners",
                         expected.roleOwners(), actual.roleOwners());
             }
-            return null;
+            return expected.equals(actual) ? null
+                    : diff(Kind.OWNER, expected.absoluteFrame(), "baseline", expected, actual);
         }
         if (reference instanceof Frame expected && engine instanceof Frame actual) {
             return frameDifference(expected, actual);
@@ -330,12 +332,25 @@ public final class CompleteRunAudioComparator {
                 return diff(Kind.LIFECYCLE_ORDER, Math.min(expected.absoluteFrame(), actual.absoluteFrame()),
                         "lifecycle.ordinal", expected.ordinal(), actual.ordinal());
             }
-            if (expected.absoluteFrame() != actual.absoluteFrame() || !expected.kind().equals(actual.kind())
-                    || !expected.details().equals(actual.details())) {
-                return diff(Kind.LIFECYCLE_VALUE, Math.min(expected.absoluteFrame(), actual.absoluteFrame()),
-                        "lifecycle[" + expected.ordinal() + "]", expected, actual);
+            int frame = Math.min(expected.absoluteFrame(), actual.absoluteFrame());
+            String location = "lifecycle[" + expected.ordinal() + "]";
+            if (expected.absoluteFrame() != actual.absoluteFrame()) {
+                return diff(Kind.LIFECYCLE_VALUE, frame, location + ".absolute_frame",
+                        expected.absoluteFrame(), actual.absoluteFrame());
             }
-            return null;
+            if (!expected.kind().equals(actual.kind())) {
+                return diff(Kind.LIFECYCLE_VALUE, frame, location + ".kind",
+                        expected.kind(), actual.kind());
+            }
+            if (!expected.details().equals(actual.details())) {
+                return diff(Kind.LIFECYCLE_VALUE, Math.min(expected.absoluteFrame(), actual.absoluteFrame()),
+                        location + ".details", expected.details(), actual.details());
+            }
+            Difference ownership = lifecycleOwnershipDifference(expected.ownershipTransitions(),
+                    actual.ownershipTransitions(), frame, location + ".ownership_transitions");
+            if (ownership != null) return ownership;
+            return expected.equals(actual) ? null
+                    : diff(Kind.LIFECYCLE_VALUE, frame, location, expected, actual);
         }
         if (reference instanceof Terminal expected && engine instanceof Terminal actual) {
             if (expected.exclusiveEnd() != actual.exclusiveEnd()
@@ -349,7 +364,13 @@ public final class CompleteRunAudioComparator {
                 return diff(Kind.TERMINAL_COUNT, Math.min(expected.exclusiveEnd(), actual.exclusiveEnd()),
                         "terminal.counts", expected.counts(), actual.counts());
             }
-            return null; // Root digests bind source stability; prior records own semantic differences.
+            // Store roots cover canonical baseline/frame/lifecycle records only, so they are producer-neutral
+            // semantic digests as well as the per-source stability identities checked between passes.
+            if (!expected.rootDigest().equals(actual.rootDigest())) {
+                return diff(Kind.TERMINAL_DIGEST, expected.exclusiveEnd(), "terminal.root_digest",
+                        expected.rootDigest(), actual.rootDigest());
+            }
+            return null;
         }
         if (reference instanceof Lifecycle lifecycle) {
             return diff(Kind.LIFECYCLE_MISSING, lifecycle.absoluteFrame(), "lifecycle",
@@ -367,6 +388,32 @@ public final class CompleteRunAudioComparator {
         }
         return diff(Kind.RECORD_SHAPE, recordFrame(reference, engine), "record.type",
                 reference.getClass().getSimpleName(), engine.getClass().getSimpleName());
+    }
+
+    private static Difference lifecycleOwnershipDifference(List<LifecycleOwnership> reference,
+            List<LifecycleOwnership> engine, int frame, String location) {
+        if (reference.size() != engine.size()) {
+            return diff(Kind.LIFECYCLE_VALUE, frame, location + ".size",
+                    reference.size(), engine.size());
+        }
+        for (int index = 0; index < reference.size(); index++) {
+            LifecycleOwnership expected = reference.get(index);
+            LifecycleOwnership actual = engine.get(index);
+            String item = location + "[" + index + "]";
+            if (expected.role() != actual.role()) {
+                return diff(Kind.LIFECYCLE_VALUE, frame, item + ".role",
+                        expected.role(), actual.role());
+            }
+            if (!expected.displacedOwner().equals(actual.displacedOwner())) {
+                return diff(Kind.OWNER, frame, item + ".displaced_owner",
+                        expected.displacedOwner(), actual.displacedOwner());
+            }
+            if (!expected.finalOwner().equals(actual.finalOwner())) {
+                return diff(Kind.OWNER, frame, item + ".final_owner",
+                        expected.finalOwner(), actual.finalOwner());
+            }
+        }
+        return null;
     }
 
     private static Difference missingRecord(CompleteRunAudioTrace.Record reference,
@@ -396,7 +443,10 @@ public final class CompleteRunAudioComparator {
         }
         Difference requests = requestDifference(reference.requests(), engine.requests(), frame);
         if (requests != null) return requests;
-        return serviceDifference(reference.services(), engine.services(), frame);
+        Difference services = serviceDifference(reference.services(), engine.services(), frame);
+        if (services != null) return services;
+        return reference.equals(engine) ? null
+                : diff(Kind.FRAME_VALUE, frame, "frame", reference, engine);
     }
 
     private static Difference frameCoordinate(int reference, int engine, String location) {
@@ -421,6 +471,9 @@ public final class CompleteRunAudioComparator {
                         expected.ordinal(), actual.ordinal());
             }
             if (!requestPayload(expected).equals(requestPayload(actual))) {
+                return diff(Kind.REQUEST_VALUE, frame, "frame.requests[" + index + "]", expected, actual);
+            }
+            if (!expected.equals(actual)) {
                 return diff(Kind.REQUEST_VALUE, frame, "frame.requests[" + index + "]", expected, actual);
             }
         }
@@ -456,6 +509,9 @@ public final class CompleteRunAudioComparator {
             Difference chips = chipDifference(expected.chipEvents(), actual.chipEvents(), frame,
                     location + ".chip_events");
             if (chips != null) return chips;
+            if (!expected.equals(actual)) {
+                return diff(Kind.SERVICE_VALUE, frame, location, expected, actual);
+            }
         }
         return null;
     }
@@ -498,6 +554,9 @@ public final class CompleteRunAudioComparator {
             if (!decisionPayload(expected).equals(decisionPayload(actual))) {
                 return diff(Kind.DECISION_VALUE, frame, item, expected, actual);
             }
+            if (!expected.equals(actual)) {
+                return diff(Kind.DECISION_VALUE, frame, item, expected, actual);
+            }
         }
         return null;
     }
@@ -520,6 +579,9 @@ public final class CompleteRunAudioComparator {
                         expected.ordinal(), actual.ordinal());
             }
             if (!chipPayload(expected).equals(chipPayload(actual))) {
+                return diff(Kind.CHIP_EVENT_VALUE, frame, location + "[" + index + "]", expected, actual);
+            }
+            if (!expected.equals(actual)) {
                 return diff(Kind.CHIP_EVENT_VALUE, frame, location + "[" + index + "]", expected, actual);
             }
         }
@@ -547,7 +609,8 @@ public final class CompleteRunAudioComparator {
             Difference fields = fieldsDifference(expected.fields(), actual.fields(), frame, role + ".fields");
             if (fields != null) return fields;
         }
-        return null;
+        return reference.equals(engine) ? null
+                : diff(Kind.STATE_FIELD_VALUE, frame, location, reference, engine);
     }
 
     private static Difference fieldsDifference(List<StateField> reference, List<StateField> engine,
@@ -992,6 +1055,14 @@ public final class CompleteRunAudioComparator {
                     throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
                             "capture terminates before a lifecycle ownership change is observed in state");
                 }
+                List<SavedOwnerDepth> terminalDepths = profile.hardwareRoles().stream()
+                        .filter(role -> !savedOwners.get(role).isEmpty())
+                        .map(role -> new SavedOwnerDepth(role, savedOwners.get(role).size()))
+                        .toList();
+                if (!terminalDepths.equals(profile.restoreStackPolicy().terminalDepths())) {
+                    throw new ValidationException(ValidationException.Kind.RESTORE_STACK_INVALID, side,
+                            "capture terminal restore stacks do not match the exact profile allowance");
+                }
                 terminal = true;
             }
         }
@@ -1093,7 +1164,7 @@ public final class CompleteRunAudioComparator {
                         "lifecycle final owner does not match the profile-owned action");
             }
             if (action == LifecycleOwnershipAction.SAVE_CURRENT) {
-                if (saved.size() == profile.maximumRestoreDepth()) {
+                if (saved.size() == profile.restoreStackPolicy().maximumDepth()) {
                     throw new ValidationException(ValidationException.Kind.OWNER_INVALID, side,
                             "saved owner stack exceeds the profile-owned bound");
                 }
@@ -1182,7 +1253,7 @@ public final class CompleteRunAudioComparator {
                 case REJECT_PRESERVE -> current;
                 case RELEASE_TO_NONE -> noneOwner();
                 case SAVE_AND_ACQUIRE_REQUEST -> {
-                    if (saved.size() == profile.maximumRestoreDepth()) {
+                    if (saved.size() == profile.restoreStackPolicy().maximumDepth()) {
                         throw new ValidationException(ValidationException.Kind.OWNER_INVALID, side,
                                 "saved owner stack exceeds the profile-owned bound");
                     }

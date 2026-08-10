@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -197,6 +198,20 @@ class TestCompleteRunAudioComparator {
         Terminal two = new Terminal(FIRST_FRAME + 1, 1, 1, 0, 0, 0, 0, 0, "b".repeat(64));
         assertEquals(CompleteRunAudioReport.Kind.TERMINAL_COUNT,
                 CompleteRunAudioComparator.difference(one, two).kind());
+    }
+
+    @Test
+    void terminalSemanticRootDigestIsComparedAfterAllRecordCounts() {
+        Terminal reference = new Terminal(FIRST_FRAME + 1, 1, 0, 0, 0, 0, 0, 0,
+                "a".repeat(64));
+        Terminal engine = new Terminal(FIRST_FRAME + 1, 1, 0, 0, 0, 0, 0, 0,
+                "b".repeat(64));
+
+        CompleteRunAudioComparator.Difference difference =
+                CompleteRunAudioComparator.difference(reference, engine);
+
+        assertEquals(CompleteRunAudioReport.Kind.TERMINAL_DIGEST, difference.kind());
+        assertEquals("terminal.root_digest", difference.location());
     }
 
     @Test
@@ -587,9 +602,10 @@ class TestCompleteRunAudioComparator {
                 "accepted", OwnershipTransition.ACQUIRE_REQUEST,
                 "rejected", OwnershipTransition.REJECT_PRESERVE,
                 "one-up", OwnershipTransition.SAVE_AND_ACQUIRE_REQUEST);
-        profile.maximumRestoreDepth = 1;
+        profile.restoreStackPolicy = new RestoreStackPolicy(1, List.of(), null);
         profile.lifecycleRules = Map.of("restore",
-                new LifecycleRule("restore", List.of(), LifecycleOwnershipAction.RESTORE_SAVED));
+                new LifecycleRule("restore", List.of(), LifecycleOwnershipAction.RESTORE_SAVED,
+                        List.of(List.of(HardwareRole.FM1))));
         CompleteRunAudioProfiles.register(profile);
         List<CompleteRunAudioTrace.Record> records = List.of(
                 new Baseline(FIRST_FRAME, activeState(1), profile.baselineRoleOwners),
@@ -611,9 +627,12 @@ class TestCompleteRunAudioComparator {
     void lifecycleSaveOnlyReleaseAndRestoreUseTheBoundedRoleStack() throws Exception {
         OwnerRef music = baselineMusic();
         TestProfile profile = lifecycleProfile(2, music, 1, Map.of(
-                "save", new LifecycleRule("save", List.of(), LifecycleOwnershipAction.SAVE_CURRENT),
-                "release", new LifecycleRule("release", List.of(), LifecycleOwnershipAction.RELEASE_TO_NONE),
-                "restore", new LifecycleRule("restore", List.of(), LifecycleOwnershipAction.RESTORE_SAVED)));
+                "save", new LifecycleRule("save", List.of(), LifecycleOwnershipAction.SAVE_CURRENT,
+                        List.of(List.of(HardwareRole.FM1))),
+                "release", new LifecycleRule("release", List.of(), LifecycleOwnershipAction.RELEASE_TO_NONE,
+                        List.of(List.of(HardwareRole.FM1))),
+                "restore", new LifecycleRule("restore", List.of(), LifecycleOwnershipAction.RESTORE_SAVED,
+                        List.of(List.of(HardwareRole.FM1)))));
         List<CompleteRunAudioTrace.Record> records = List.of(
                 new Baseline(FIRST_FRAME, activeState(1), profile.baselineRoleOwners),
                 lifecycle(0, 0, "save", music, music),
@@ -627,6 +646,139 @@ class TestCompleteRunAudioComparator {
     }
 
     @Test
+    void lifecycleOwnershipTransitionsAreComparedForIndividuallyValidCaptures() throws Exception {
+        OwnerRef music = baselineMusic();
+        TestProfile profile = profile("comparator.lifecycle." + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        profile.hardwareRoles = List.of(HardwareRole.FM1, HardwareRole.FM2);
+        profile.baselineRoleOwners = List.of(
+                new RoleOwner(HardwareRole.FM1, music),
+                new RoleOwner(HardwareRole.FM2, music));
+        profile.restoreStackPolicy = new RestoreStackPolicy(1, List.of(), null);
+        profile.lifecycleRules = Map.of(
+                "save",
+                new LifecycleRule("save", List.of(), LifecycleOwnershipAction.SAVE_CURRENT,
+                        List.of(List.of(HardwareRole.FM1), List.of(HardwareRole.FM2))),
+                "restore",
+                new LifecycleRule("restore", List.of(), LifecycleOwnershipAction.RESTORE_SAVED,
+                        List.of(List.of(HardwareRole.FM1), List.of(HardwareRole.FM2))));
+        CompleteRunAudioProfiles.register(profile);
+        NormalizedState active = new NormalizedState(List.of(new StateField("tempo", 1)), List.of(
+                new RoleState(HardwareRole.FM1, true, List.of(new StateField("cursor", 0))),
+                new RoleState(HardwareRole.FM2, true, List.of(new StateField("cursor", 0)))));
+        List<CompleteRunAudioTrace.Record> referenceRecords = List.of(
+                new Baseline(FIRST_FRAME, active, profile.baselineRoleOwners),
+                new Lifecycle(0, FIRST_FRAME, "save", Map.of(), List.of(
+                        new LifecycleOwnership(HardwareRole.FM1, music, music))),
+                new Lifecycle(1, FIRST_FRAME, "restore", Map.of(), List.of(
+                        new LifecycleOwnership(HardwareRole.FM1, music, music))),
+                plainFrame(0));
+        List<CompleteRunAudioTrace.Record> engineRecords = List.of(
+                new Baseline(FIRST_FRAME, active, profile.baselineRoleOwners),
+                new Lifecycle(0, FIRST_FRAME, "save", Map.of(), List.of(
+                        new LifecycleOwnership(HardwareRole.FM2, music, music))),
+                new Lifecycle(1, FIRST_FRAME, "restore", Map.of(), List.of(
+                        new LifecycleOwnership(HardwareRole.FM2, music, music))),
+                plainFrame(0));
+        Path reference = writeRecords("lifecycle-role-reference", metadata(profile,
+                ProducerKind.REFERENCE, profile.producerRuntimeIdentities().get(ProducerKind.REFERENCE)),
+                referenceRecords);
+        Path engine = writeRecords("lifecycle-role-engine", metadata(profile,
+                ProducerKind.OPENGGF, profile.producerRuntimeIdentities().get(ProducerKind.OPENGGF)),
+                engineRecords);
+
+        CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
+
+        assertEquals(CompleteRunAudioReport.Kind.LIFECYCLE_VALUE, report.kind());
+        assertEquals("lifecycle[0].ownership_transitions[0].role", report.location());
+    }
+
+    @Test
+    void lifecycleRulesRequireOneExactProfileOwnedRoleSet() throws Exception {
+        OwnerRef music = baselineMusic();
+        TestProfile profile = profile("comparator.lifecycle." + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        profile.hardwareRoles = List.of(HardwareRole.FM1, HardwareRole.FM2);
+        profile.baselineRoleOwners = List.of(
+                new RoleOwner(HardwareRole.FM1, music),
+                new RoleOwner(HardwareRole.FM2, music));
+        profile.restoreStackPolicy = new RestoreStackPolicy(1, List.of(), null);
+        profile.lifecycleRules = Map.of(
+                "save",
+                new LifecycleRule("save", List.of(), LifecycleOwnershipAction.SAVE_CURRENT,
+                        List.of(List.of(HardwareRole.FM1, HardwareRole.FM2))),
+                "restore",
+                new LifecycleRule("restore", List.of(), LifecycleOwnershipAction.RESTORE_SAVED,
+                        List.of(List.of(HardwareRole.FM1, HardwareRole.FM2))));
+        CompleteRunAudioProfiles.register(profile);
+        NormalizedState active = new NormalizedState(List.of(new StateField("tempo", 1)), List.of(
+                new RoleState(HardwareRole.FM1, true, List.of(new StateField("cursor", 0))),
+                new RoleState(HardwareRole.FM2, true, List.of(new StateField("cursor", 0)))));
+        List<CompleteRunAudioTrace.Record> allRoles = List.of(
+                new Baseline(FIRST_FRAME, active, profile.baselineRoleOwners),
+                new Lifecycle(0, FIRST_FRAME, "save", Map.of(), List.of(
+                        new LifecycleOwnership(HardwareRole.FM1, music, music),
+                        new LifecycleOwnership(HardwareRole.FM2, music, music))),
+                new Lifecycle(1, FIRST_FRAME, "restore", Map.of(), List.of(
+                        new LifecycleOwnership(HardwareRole.FM1, music, music),
+                        new LifecycleOwnership(HardwareRole.FM2, music, music))),
+                plainFrame(0));
+        assertLifecycleMatch(profile, allRoles, "exact-all-lifecycle-roles");
+
+        List<CompleteRunAudioTrace.Record> omittedRole = List.of(
+                new Baseline(FIRST_FRAME, active, profile.baselineRoleOwners),
+                new Lifecycle(0, FIRST_FRAME, "save", Map.of(), List.of(
+                        new LifecycleOwnership(HardwareRole.FM1, music, music))),
+                plainFrame(0));
+        assertInvalidLifecycleCapture(profile, omittedRole, "omitted-lifecycle-role",
+                CompleteRunAudioComparator.ValidationException.Kind.LIFECYCLE_INVALID);
+
+        TestProfile extraProfile = profile("comparator.lifecycle." + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        extraProfile.hardwareRoles = List.of(HardwareRole.FM1, HardwareRole.FM2);
+        extraProfile.baselineRoleOwners = profile.baselineRoleOwners;
+        extraProfile.restoreStackPolicy = new RestoreStackPolicy(1, List.of(), null);
+        extraProfile.lifecycleRules = Map.of("save",
+                new LifecycleRule("save", List.of(), LifecycleOwnershipAction.SAVE_CURRENT,
+                        List.of(List.of(HardwareRole.FM1))));
+        CompleteRunAudioProfiles.register(extraProfile);
+        List<CompleteRunAudioTrace.Record> extraRole = List.of(
+                new Baseline(FIRST_FRAME, active, extraProfile.baselineRoleOwners),
+                new Lifecycle(0, FIRST_FRAME, "save", Map.of(), List.of(
+                        new LifecycleOwnership(HardwareRole.FM1, music, music),
+                        new LifecycleOwnership(HardwareRole.FM2, music, music))),
+                plainFrame(0));
+        assertInvalidLifecycleCapture(extraProfile, extraRole, "extra-lifecycle-role",
+                CompleteRunAudioComparator.ValidationException.Kind.LIFECYCLE_INVALID);
+
+        assertThrows(IllegalArgumentException.class, () -> new Lifecycle(0, FIRST_FRAME, "save", Map.of(),
+                List.of(new LifecycleOwnership(HardwareRole.FM2, music, music),
+                        new LifecycleOwnership(HardwareRole.FM1, music, music))));
+    }
+
+    @Test
+    void lifecycleOwnershipMismatchLocationsDistinguishActionDisplacedAndFinalOwner() {
+        OwnerRef music = baselineMusic();
+        Lifecycle save = lifecycle(0, 0, "save", music, music);
+        Lifecycle restore = lifecycle(0, 0, "restore", music, music);
+        Lifecycle displaced = lifecycle(0, 0, "save", NONE, music);
+        Lifecycle finalOwner = lifecycle(0, 0, "save", music, NONE);
+
+        CompleteRunAudioComparator.Difference actionDifference =
+                CompleteRunAudioComparator.difference(save, restore);
+        assertEquals(CompleteRunAudioReport.Kind.LIFECYCLE_VALUE, actionDifference.kind());
+        assertEquals("lifecycle[0].kind", actionDifference.location());
+
+        CompleteRunAudioComparator.Difference displacedDifference =
+                CompleteRunAudioComparator.difference(save, displaced);
+        assertEquals(CompleteRunAudioReport.Kind.OWNER, displacedDifference.kind());
+        assertEquals("lifecycle[0].ownership_transitions[0].displaced_owner",
+                displacedDifference.location());
+
+        CompleteRunAudioComparator.Difference finalDifference =
+                CompleteRunAudioComparator.difference(save, finalOwner);
+        assertEquals(CompleteRunAudioReport.Kind.OWNER, finalDifference.kind());
+        assertEquals("lifecycle[0].ownership_transitions[0].final_owner", finalDifference.location());
+    }
+
+    @Test
     void lifecycleRestoreRejectsAnEmptyStack() throws Exception {
         OwnerRef music = baselineMusic();
         TestProfile profile = profile("comparator.lifecycle." + PROFILE_SEQUENCE.incrementAndGet(), 1);
@@ -635,9 +787,10 @@ class TestCompleteRunAudioComparator {
                 "accepted", OwnershipTransition.ACQUIRE_REQUEST,
                 "rejected", OwnershipTransition.REJECT_PRESERVE,
                 "save-and-acquire", OwnershipTransition.SAVE_AND_ACQUIRE_REQUEST);
-        profile.maximumRestoreDepth = 1;
+        profile.restoreStackPolicy = new RestoreStackPolicy(1, List.of(), null);
         profile.lifecycleRules = Map.of("restore",
-                new LifecycleRule("restore", List.of(), LifecycleOwnershipAction.RESTORE_SAVED));
+                new LifecycleRule("restore", List.of(), LifecycleOwnershipAction.RESTORE_SAVED,
+                        List.of(List.of(HardwareRole.FM1))));
         CompleteRunAudioProfiles.register(profile);
         List<CompleteRunAudioTrace.Record> invalid = List.of(
                 new Baseline(FIRST_FRAME, activeState(1), profile.baselineRoleOwners),
@@ -648,10 +801,48 @@ class TestCompleteRunAudioComparator {
     }
 
     @Test
+    void terminalRejectsSavedOwnersWhenTheProfileRequiresAnEmptyRestoreStack() throws Exception {
+        OwnerRef music = baselineMusic();
+        TestProfile profile = profile("comparator.lifecycle." + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        profile.baselineRoleOwners = List.of(new RoleOwner(HardwareRole.FM1, music));
+        profile.restoreStackPolicy = new RestoreStackPolicy(1, List.of(), null);
+        profile.lifecycleRules = Map.of("save",
+                new LifecycleRule("save", List.of(), LifecycleOwnershipAction.SAVE_CURRENT,
+                        List.of(List.of(HardwareRole.FM1))));
+        CompleteRunAudioProfiles.register(profile);
+        List<CompleteRunAudioTrace.Record> omittedRestore = List.of(
+                new Baseline(FIRST_FRAME, activeState(1), profile.baselineRoleOwners),
+                lifecycle(0, 0, "save", music, music), plainFrame(0));
+
+        assertInvalidLifecycleCapture(profile, omittedRestore, "omitted-lifecycle-restore",
+                CompleteRunAudioComparator.ValidationException.Kind.RESTORE_STACK_INVALID);
+    }
+
+    @Test
+    void profileCanDeliberatelyPermitOneExactTerminalRestoreStack() throws Exception {
+        OwnerRef music = baselineMusic();
+        TestProfile profile = profile("comparator.lifecycle." + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        profile.baselineRoleOwners = List.of(new RoleOwner(HardwareRole.FM1, music));
+        profile.restoreStackPolicy = new RestoreStackPolicy(1,
+                List.of(new SavedOwnerDepth(HardwareRole.FM1, 1)),
+                "driver deliberately carries one saved FM owner beyond this comparison epoch");
+        profile.lifecycleRules = Map.of("save",
+                new LifecycleRule("save", List.of(), LifecycleOwnershipAction.SAVE_CURRENT,
+                        List.of(List.of(HardwareRole.FM1))));
+        CompleteRunAudioProfiles.register(profile);
+        List<CompleteRunAudioTrace.Record> records = List.of(
+                new Baseline(FIRST_FRAME, activeState(1), profile.baselineRoleOwners),
+                lifecycle(0, 0, "save", music, music), plainFrame(0));
+
+        assertLifecycleMatch(profile, records, "allowed-terminal-restore-stack");
+    }
+
+    @Test
     void lifecycleRuleRejectsMissingPayloadAndRolesOutsideTheProfileInventory() throws Exception {
         OwnerRef music = baselineMusic();
         TestProfile profile = lifecycleProfile(1, music, 1, Map.of("save",
-                new LifecycleRule("save", List.of(), LifecycleOwnershipAction.SAVE_CURRENT)));
+                new LifecycleRule("save", List.of(), LifecycleOwnershipAction.SAVE_CURRENT,
+                        List.of(List.of(HardwareRole.FM1)))));
         List<CompleteRunAudioTrace.Record> missingPayload = List.of(
                 new Baseline(FIRST_FRAME, activeState(1), profile.baselineRoleOwners),
                 new Lifecycle(0, FIRST_FRAME, "save", Map.of(), List.of()), plainFrame(0));
@@ -670,7 +861,8 @@ class TestCompleteRunAudioComparator {
     void lifecycleOwnershipRejectsWrongDisplacedAndFinalOwners() throws Exception {
         OwnerRef music = baselineMusic();
         TestProfile profile = lifecycleProfile(1, music, 1, Map.of("save",
-                new LifecycleRule("save", List.of(), LifecycleOwnershipAction.SAVE_CURRENT)));
+                new LifecycleRule("save", List.of(), LifecycleOwnershipAction.SAVE_CURRENT,
+                        List.of(List.of(HardwareRole.FM1)))));
         List<CompleteRunAudioTrace.Record> wrongDisplaced = List.of(
                 new Baseline(FIRST_FRAME, activeState(1), profile.baselineRoleOwners),
                 lifecycle(0, 0, "save", NONE, music), plainFrame(0));
@@ -688,7 +880,8 @@ class TestCompleteRunAudioComparator {
     void lifecycleSaveRejectsDepthBeyondTheProfileBound() throws Exception {
         OwnerRef music = baselineMusic();
         TestProfile profile = lifecycleProfile(1, music, 1, Map.of("save",
-                new LifecycleRule("save", List.of(), LifecycleOwnershipAction.SAVE_CURRENT)));
+                new LifecycleRule("save", List.of(), LifecycleOwnershipAction.SAVE_CURRENT,
+                        List.of(List.of(HardwareRole.FM1)))));
         List<CompleteRunAudioTrace.Record> invalid = List.of(
                 new Baseline(FIRST_FRAME, activeState(1), profile.baselineRoleOwners),
                 lifecycle(0, 0, "save", music, music),
@@ -702,7 +895,8 @@ class TestCompleteRunAudioComparator {
     void lifecycleReleaseResetRequiresTheNextServiceStateToBeInactive() throws Exception {
         OwnerRef music = baselineMusic();
         TestProfile profile = lifecycleProfile(1, music, 0, Map.of("reset",
-                new LifecycleRule("reset", List.of(), LifecycleOwnershipAction.RELEASE_TO_NONE)));
+                new LifecycleRule("reset", List.of(), LifecycleOwnershipAction.RELEASE_TO_NONE,
+                        List.of(List.of(HardwareRole.FM1)))));
         List<CompleteRunAudioTrace.Record> records = List.of(
                 new Baseline(FIRST_FRAME, activeState(1), profile.baselineRoleOwners),
                 lifecycle(0, 0, "reset", music, NONE),
@@ -716,14 +910,19 @@ class TestCompleteRunAudioComparator {
     void noTransitionLifecycleRequiresAnEmptyOwnershipPayloadAndReportsItCanonically() throws Exception {
         OwnerRef music = baselineMusic();
         TestProfile profile = lifecycleProfile(1, music, 1, Map.of(
-                "save", new LifecycleRule("save", List.of(), LifecycleOwnershipAction.SAVE_CURRENT),
+                "save", new LifecycleRule("save", List.of(), LifecycleOwnershipAction.SAVE_CURRENT,
+                        List.of(List.of(HardwareRole.FM1))),
+                "restore", new LifecycleRule("restore", List.of(), LifecycleOwnershipAction.RESTORE_SAVED,
+                        List.of(List.of(HardwareRole.FM1))),
                 "noop", new LifecycleRule("noop", List.of(), LifecycleOwnershipAction.NONE)));
         List<CompleteRunAudioTrace.Record> referenceRecords = List.of(
                 new Baseline(FIRST_FRAME, activeState(1), profile.baselineRoleOwners),
-                lifecycle(0, 0, "save", music, music), plainFrame(0));
+                lifecycle(0, 0, "save", music, music),
+                lifecycle(1, 0, "restore", music, music), plainFrame(0));
         List<CompleteRunAudioTrace.Record> engineRecords = List.of(
                 new Baseline(FIRST_FRAME, activeState(1), profile.baselineRoleOwners),
-                new Lifecycle(0, FIRST_FRAME, "noop", Map.of(), List.of()), plainFrame(0));
+                new Lifecycle(0, FIRST_FRAME, "noop", Map.of(), List.of()),
+                new Lifecycle(1, FIRST_FRAME, "noop", Map.of(), List.of()), plainFrame(0));
         Path reference = writeRecords("noop-reference", metadata(profile, ProducerKind.REFERENCE,
                 profile.producerRuntimeIdentities().get(ProducerKind.REFERENCE)), referenceRecords);
         Path engine = writeRecords("noop-engine", metadata(profile, ProducerKind.OPENGGF,
@@ -801,7 +1000,8 @@ class TestCompleteRunAudioComparator {
     void terminalRejectsAnUnobservedLifecycleOwnershipStateChange() throws Exception {
         OwnerRef music = baselineMusic();
         TestProfile profile = lifecycleProfile(1, music, 0, Map.of("reset",
-                new LifecycleRule("reset", List.of(), LifecycleOwnershipAction.RELEASE_TO_NONE)));
+                new LifecycleRule("reset", List.of(), LifecycleOwnershipAction.RELEASE_TO_NONE,
+                        List.of(List.of(HardwareRole.FM1)))));
         Metadata referenceMetadata = metadata(profile, ProducerKind.REFERENCE,
                 profile.producerRuntimeIdentities().get(ProducerKind.REFERENCE));
         Metadata engineMetadata = metadata(profile, ProducerKind.OPENGGF,
@@ -1056,7 +1256,7 @@ class TestCompleteRunAudioComparator {
             Map<String, LifecycleRule> lifecycleRules) {
         TestProfile profile = profile("comparator.lifecycle." + PROFILE_SEQUENCE.incrementAndGet(), frames);
         profile.baselineRoleOwners = List.of(new RoleOwner(HardwareRole.FM1, baselineOwner));
-        profile.maximumRestoreDepth = maximumRestoreDepth;
+        profile.restoreStackPolicy = new RestoreStackPolicy(maximumRestoreDepth, List.of(), null);
         profile.lifecycleRules = lifecycleRules;
         CompleteRunAudioProfiles.register(profile);
         return profile;
@@ -1438,12 +1638,13 @@ class TestCompleteRunAudioComparator {
         private final CompleteRunFixture fixture;
         private final Map<ProducerKind, ProducerRuntimeIdentity> runtimes = new LinkedHashMap<>();
         private final Map<ProducerKind, ObserverProof> observers = new LinkedHashMap<>();
+        private List<HardwareRole> hardwareRoles = List.of(HardwareRole.FM1);
         private List<RoleOwner> baselineRoleOwners = List.of(new RoleOwner(HardwareRole.FM1, NONE));
         private Map<String, OwnershipTransition> ownershipTransitions = Map.of(
                 "accepted", OwnershipTransition.ACQUIRE_REQUEST,
                 "rejected", OwnershipTransition.REJECT_PRESERVE);
         private PendingRequestPolicy pendingPolicy = new PendingRequestPolicy(4, 0, null);
-        private int maximumRestoreDepth;
+        private RestoreStackPolicy restoreStackPolicy = new RestoreStackPolicy(0, List.of(), null);
         private Map<String, LifecycleRule> lifecycleRules = Map.of(
                 "pulse", new LifecycleRule("pulse", List.of("payload"),
                         LifecycleOwnershipAction.NONE));
@@ -1469,7 +1670,7 @@ class TestCompleteRunAudioComparator {
 
         @Override public String id() { return id; }
         @Override public CompleteRunFixture fixture() { return fixture; }
-        @Override public List<HardwareRole> hardwareRoles() { return List.of(HardwareRole.FM1); }
+        @Override public List<HardwareRole> hardwareRoles() { return hardwareRoles; }
         @Override public StateInventory stateInventory() {
             return new StateInventory(List.of("tempo"), List.of("cursor"));
         }
@@ -1498,7 +1699,7 @@ class TestCompleteRunAudioComparator {
         @Override public PendingRequestPolicy pendingRequestPolicy() {
             return pendingPolicy;
         }
-        @Override public int maximumRestoreDepth() { return maximumRestoreDepth; }
+        @Override public RestoreStackPolicy restoreStackPolicy() { return restoreStackPolicy; }
         @Override public Map<String, LifecycleRule> lifecycleRules() {
             return lifecycleRules;
         }

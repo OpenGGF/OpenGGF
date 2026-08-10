@@ -15,6 +15,7 @@ import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.ProducerRuntime
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.RawAudioRequest;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.RoleState;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.RoleOwner;
+import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.RestoreStackPolicy;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.StateInventory;
 import java.util.List;
 import java.util.Map;
@@ -51,8 +52,8 @@ public interface CompleteRunAudioProfile {
     /** Hard bound for unresolved request identities retained by validation. */
     PendingRequestPolicy pendingRequestPolicy();
 
-    /** Hard per-role bound for profile-declared save/restore ownership transitions. */
-    int maximumRestoreDepth();
+    /** Hard per-role bound and exact terminal contract for saved ownership stacks. */
+    RestoreStackPolicy restoreStackPolicy();
 
     /** Allowed out-of-service lifecycle markers and their exact detail-field inventories. */
     Map<String, LifecycleRule> lifecycleRules();
@@ -100,14 +101,10 @@ public interface CompleteRunAudioProfile {
                 || !rule.detailFields().equals(lifecycle.details().keySet().stream().toList())) {
             throw new IllegalArgumentException("lifecycle does not match the profile rule");
         }
-        boolean none = rule.ownershipAction() == CompleteRunAudioTrace.LifecycleOwnershipAction.NONE;
-        if (none != lifecycle.ownershipTransitions().isEmpty()) {
-            throw new IllegalArgumentException("lifecycle ownership payload does not match its profile action");
-        }
-        for (CompleteRunAudioTrace.LifecycleOwnership transition : lifecycle.ownershipTransitions()) {
-            if (!hardwareRoles().contains(transition.role())) {
-                throw new IllegalArgumentException("lifecycle ownership role is outside the profile inventory");
-            }
+        List<HardwareRole> payloadRoles = lifecycle.ownershipTransitions().stream()
+                .map(CompleteRunAudioTrace.LifecycleOwnership::role).toList();
+        if (!rule.ownershipRoleSets().contains(payloadRoles)) {
+            throw new IllegalArgumentException("lifecycle ownership roles do not match an exact profile role set");
         }
     }
 }

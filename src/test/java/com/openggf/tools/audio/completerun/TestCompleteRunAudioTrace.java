@@ -431,8 +431,8 @@ class TestCompleteRunAudioTrace {
         }
 
         @Override
-        public int maximumRestoreDepth() {
-            return 0;
+        public RestoreStackPolicy restoreStackPolicy() {
+            return new RestoreStackPolicy(0, List.of(), null);
         }
 
         @Override

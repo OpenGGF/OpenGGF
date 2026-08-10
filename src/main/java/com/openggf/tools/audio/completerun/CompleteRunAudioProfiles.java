@@ -11,6 +11,7 @@ import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.ProducerKind;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.ProducerRuntimeIdentity;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.RawAudioRequest;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.RoleOwner;
+import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.RestoreStackPolicy;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.StateInventory;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
@@ -71,7 +72,7 @@ public final class CompleteRunAudioProfiles {
             List<RoleOwner> baselineRoleOwners,
             Map<String, OwnershipTransition> ownershipTransitions,
             PendingRequestPolicy pendingRequestPolicy,
-            int maximumRestoreDepth,
+            RestoreStackPolicy restoreStackPolicy,
             Map<String, LifecycleRule> lifecycleRules)
             implements CompleteRunAudioProfile {
         private FrozenProfile {
@@ -88,10 +89,11 @@ public final class CompleteRunAudioProfiles {
             baselineRoleOwners = List.copyOf(baselineRoleOwners);
             ownershipTransitions = Map.copyOf(ownershipTransitions);
             Objects.requireNonNull(pendingRequestPolicy, "profile pending request policy");
+            RestoreStackPolicy declaredRestorePolicy = Objects.requireNonNull(restoreStackPolicy,
+                    "profile restore stack policy");
+            restoreStackPolicy = new RestoreStackPolicy(declaredRestorePolicy.maximumDepth(),
+                    declaredRestorePolicy.terminalDepths(), declaredRestorePolicy.terminalAllowanceReason());
             lifecycleRules = Map.copyOf(lifecycleRules);
-            if (maximumRestoreDepth < 0 || maximumRestoreDepth > 16) {
-                throw new IllegalArgumentException("profile restore depth must be between zero and sixteen");
-            }
             if (!producerRuntimeIdentities.keySet().containsAll(EnumSet.allOf(ProducerKind.class))) {
                 throw new IllegalArgumentException("profile must declare an allowed runtime identity for every producer");
             }
@@ -131,15 +133,28 @@ public final class CompleteRunAudioProfiles {
             boolean restoresOwner = lifecycleRules.values().stream().anyMatch(rule ->
                     rule.ownershipAction() == CompleteRunAudioTrace.LifecycleOwnershipAction.RESTORE_SAVED);
             boolean usesRestoreStack = savesOwner || restoresOwner;
-            if (usesRestoreStack != (maximumRestoreDepth > 0)) {
+            if (usesRestoreStack != (restoreStackPolicy.maximumDepth() > 0)) {
                 throw new IllegalArgumentException("restore transitions and restore depth must be declared together");
             }
             if (restoresOwner && !savesOwner) {
                 throw new IllegalArgumentException("restore lifecycle needs a profile-owned save action");
             }
             for (Map.Entry<String, LifecycleRule> entry : lifecycleRules.entrySet()) {
-                if (!entry.getKey().equals(Objects.requireNonNull(entry.getValue(), "lifecycle rule").kind())) {
+                LifecycleRule rule = Objects.requireNonNull(entry.getValue(), "lifecycle rule");
+                if (!entry.getKey().equals(rule.kind())) {
                     throw new IllegalArgumentException("lifecycle rule map key must equal its declared kind");
+                }
+                for (List<HardwareRole> roles : rule.ownershipRoleSets()) {
+                    if (!hardwareRoles.containsAll(roles)) {
+                        throw new IllegalArgumentException(
+                                "lifecycle rule role set is outside the profile hardware inventory");
+                    }
+                }
+            }
+            for (var terminalDepth : restoreStackPolicy.terminalDepths()) {
+                if (!hardwareRoles.contains(terminalDepth.role())) {
+                    throw new IllegalArgumentException(
+                            "terminal restore stack role is outside the profile hardware inventory");
                 }
             }
         }
@@ -154,7 +169,7 @@ public final class CompleteRunAudioProfiles {
                     profile.stateInventory(), Map.copyOf(profile.nativeSoundIdentities()),
                     Map.copyOf(profile.producerRuntimeIdentities()), Map.copyOf(profile.observerProofs()),
                     profile.decisionResolutions(), profile.baselineRoleOwners(), profile.ownershipTransitions(),
-                    profile.pendingRequestPolicy(), profile.maximumRestoreDepth(), profile.lifecycleRules());
+                    profile.pendingRequestPolicy(), profile.restoreStackPolicy(), profile.lifecycleRules());
         }
 
         private static Map<NativeSoundIdentity, List<NativeSoundIdentity>> freezeResolutions(

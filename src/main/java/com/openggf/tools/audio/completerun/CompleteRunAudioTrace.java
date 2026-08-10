@@ -284,9 +284,19 @@ public final class CompleteRunAudioTrace {
         RELEASE_TO_NONE
     }
 
-    /** Profile-owned exact lifecycle kind, field inventory, and ownership action. */
+    /**
+     * Profile-owned exact lifecycle kind, field inventory, ownership action, and finite role sets.
+     * Finite alternatives model boundaries whose complete affected set depends on prior driver state;
+     * validation always matches one whole ordered set and never accepts an arbitrary subset.
+     */
     public record LifecycleRule(String kind, List<String> detailFields,
-            LifecycleOwnershipAction ownershipAction) {
+            LifecycleOwnershipAction ownershipAction, List<List<HardwareRole>> ownershipRoleSets) {
+        public LifecycleRule(String kind, List<String> detailFields,
+                LifecycleOwnershipAction ownershipAction) {
+            this(kind, detailFields, ownershipAction,
+                    ownershipAction == LifecycleOwnershipAction.NONE ? List.of(List.of()) : List.of());
+        }
+
         public LifecycleRule {
             requireText(kind, "lifecycle rule kind");
             detailFields = List.copyOf(Objects.requireNonNull(detailFields, "lifecycle rule fields"));
@@ -298,6 +308,27 @@ public final class CompleteRunAudioTrace {
                     throw new IllegalArgumentException("lifecycle rule fields must be unique and sorted");
                 }
                 previous = field;
+            }
+            List<List<HardwareRole>> roleSets = new ArrayList<>();
+            for (List<HardwareRole> roles : Objects.requireNonNull(ownershipRoleSets,
+                    "lifecycle ownership role sets")) {
+                List<HardwareRole> exact = List.copyOf(Objects.requireNonNull(roles,
+                        "lifecycle ownership role set"));
+                if (!exact.isEmpty()) {
+                    exact = canonicalRoles(exact, "lifecycle ownership role set");
+                }
+                if (roleSets.contains(exact)) {
+                    throw new IllegalArgumentException("lifecycle ownership role sets must be unique");
+                }
+                roleSets.add(exact);
+            }
+            ownershipRoleSets = List.copyOf(roleSets);
+            if (ownershipAction == LifecycleOwnershipAction.NONE) {
+                if (!ownershipRoleSets.equals(List.of(List.of()))) {
+                    throw new IllegalArgumentException("no-transition lifecycle must declare exactly the empty role set");
+                }
+            } else if (ownershipRoleSets.isEmpty() || ownershipRoleSets.stream().anyMatch(List::isEmpty)) {
+                throw new IllegalArgumentException("ownership lifecycle must declare nonempty exact role sets");
             }
         }
     }
@@ -326,6 +357,49 @@ public final class CompleteRunAudioTrace {
                 }
             } else {
                 requireText(terminalAllowanceReason, "terminal pending request allowance rationale");
+            }
+        }
+    }
+
+    /** Exact number of saved owners deliberately permitted for one role at terminal. */
+    public record SavedOwnerDepth(HardwareRole role, int depth) {
+        public SavedOwnerDepth {
+            Objects.requireNonNull(role, "saved-owner role");
+            if (depth <= 0) {
+                throw new IllegalArgumentException("saved-owner terminal depth must be positive");
+            }
+        }
+    }
+
+    /** Profile-owned per-role stack bound and exact terminal saved-owner inventory. */
+    public record RestoreStackPolicy(int maximumDepth, List<SavedOwnerDepth> terminalDepths,
+            String terminalAllowanceReason) {
+        public static final int HARD_MAXIMUM_DEPTH = 16;
+
+        public RestoreStackPolicy {
+            if (maximumDepth < 0 || maximumDepth > HARD_MAXIMUM_DEPTH) {
+                throw new IllegalArgumentException("restore stack depth must be between zero and sixteen");
+            }
+            terminalDepths = List.copyOf(Objects.requireNonNull(terminalDepths,
+                    "terminal restore stack depths"));
+            HardwareRole previous = null;
+            for (SavedOwnerDepth terminalDepth : terminalDepths) {
+                Objects.requireNonNull(terminalDepth, "terminal restore stack depth");
+                if (previous != null && terminalDepth.role().ordinal() <= previous.ordinal()) {
+                    throw new IllegalArgumentException(
+                            "terminal restore stack roles must be unique and in canonical order");
+                }
+                if (terminalDepth.depth() > maximumDepth) {
+                    throw new IllegalArgumentException("terminal restore stack depth exceeds its maximum");
+                }
+                previous = terminalDepth.role();
+            }
+            if (terminalDepths.isEmpty()) {
+                if (terminalAllowanceReason != null) {
+                    throw new IllegalArgumentException("empty terminal restore stack must not carry a rationale");
+                }
+            } else {
+                requireText(terminalAllowanceReason, "terminal restore stack allowance rationale");
             }
         }
     }

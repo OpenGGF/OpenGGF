@@ -45,7 +45,8 @@ public final class CompleteRunAudioReport {
         LIFECYCLE_EXTRA,
         LIFECYCLE_ORDER,
         LIFECYCLE_VALUE,
-        TERMINAL_COUNT
+        TERMINAL_COUNT,
+        TERMINAL_DIGEST
     }
 
     public enum Side { REFERENCE, ENGINE }
