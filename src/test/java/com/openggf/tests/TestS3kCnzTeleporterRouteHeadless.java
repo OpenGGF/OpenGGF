@@ -373,6 +373,8 @@ class TestS3kCnzTeleporterRouteHeadless {
         assertTrue(S3kRuntimeArtCoordinator.current().moduleQueue().hasCapacityFor(1),
                 "the production KosM FIFO must service existing CNZ art before the late handoff");
         capsule.forceResultsCompleteForTest();
+        fixture.sprite().setCentreX((short) 0x4A2F);
+        boss.update(0, fixture.sprite());
         fixture.sprite().setCentreX((short) 0x4A30);
         long explosionJobsBeforeCannon = TestEnvironment.activeGameplayMode()
                 .hardwareTiming().capture().jobs().stream()
@@ -382,11 +384,14 @@ class TestS3kCnzTeleporterRouteHeadless {
                 .filter(job -> job.destinationAddress()
                         == Sonic3kConstants.ARTTILE_EXPLOSION * 32)
                 .count();
+        int expectedCannonSlot = GameServices.level().getObjectManager().firstFreeDynamicSlot();
         boss.update(1, fixture.sprite());
 
         CnzCannonInstance cannon = findObject(CnzCannonInstance.class);
         assertTrue(cannon != null,
                 "Obj_CNZEndBoss loc_6E778 should spawn Obj_CNZCannon at the launcher handoff");
+        assertEquals(expectedCannonSlot, cannon.getSlotIndex(),
+                "AllocateObject must put the cannon in the lowest free SST");
         var explosionJobs = TestEnvironment.activeGameplayMode()
                 .hardwareTiming().capture().jobs().stream()
                 .filter(job -> job.kind() == HardwareWorkKind.KOS_MODULE_QUEUE)

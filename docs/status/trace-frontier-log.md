@@ -71576,6 +71576,39 @@ landable change, which I implemented directly.
   complete-run AIZ, both HCZ methods, standalone and complete-run MGZ, and
   complete-run CNZ. Result: 6 tests, 0 failures, 0 errors.
 
+## 2026-08-10 — standalone CNZ trace closed
+
+- Context: `bugfix/s3k-traces` at `c33d22d04`; validation used JDK 21.0.12 and
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen`. The six protected user edits
+  remained unstaged and no trace fixture changed.
+- Root cause: the frame step ran S3K level events before
+  `Camera.updateBoundaryEasing()`, then cached those pre-easing bounds in
+  `SidekickCpuController`. At frame `41951`, the live camera maximum had eased
+  from `$0240` to `$020C`, making Tails' centre Y `$02F0` exceed the native
+  `$02EC` death plane, but the CPU mirror still tested the old `$0320` plane.
+  `Tails_Check_Screen_Boundaries` reads the live `Camera_max_Y_pos` word plus
+  `$E0` (`docs/skdisasm/sonic3k.asm:28410-28443`), so S3K level events now
+  republish sidekick bounds after boundary easing as well as preserving the
+  existing immediate event-update publication contract. The post-boss cannon
+  also follows `loc_6E778`'s `AllocateObject` call and takes the lowest free SST
+  instead of a child slot. Neither change keys on trace, frame, route, zone, or
+  game-name state.
+- Focused command: `mvn -Dmse=off
+  -Dtest=com.openggf.tests.TestS3kAiz2SidekickBoundsSync,com.openggf.tests.TestS3kCnzTeleporterRouteHeadless#cnzPostCapsuleRouteSpawnsCannonAndRequestsIczAfterLaunchThreshold
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Result: 3 tests, 0 failures, 0 errors.
+- Frontier command: `mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1
+  -Dsurefire.runOrder=alphabetical -Dtrace.verification=all
+  -Dtrace.frontierOnly=true -Dtrace.context.diagnosticChars=full
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  The prior frame-`41951` cluster of 12 errors is gone: all 42,253 standalone
+  CNZ trace frames pass with 0 errors and 0 warnings. Ring comparison remains
+  enabled at error severity, with no ring mismatch in this run.
+- Gameplay-order regression command used the same profile and ROM with
+  complete-run AIZ, both HCZ methods, standalone and complete-run MGZ, and
+  complete-run CNZ. Result: 6 tests, 0 failures, 0 errors.
+
 ## 2026-08-10 — round twenty-five: EHZ 45 -> 26, and two disproved briefs
 
 Command: full `-Ptrace-replay` profile, no `-Dtest`. Base eb619f787 (769 / 8 / 64).

@@ -442,24 +442,22 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         LbzZoneRuntimeState state = registry != null
                 ? S3kRuntimeStates.currentLbz(registry).orElse(null)
                 : null;
-        if (state == null || !state.isLbz1KnucklesBoundaryPublishPending()) {
-            return;
-        }
         Camera camera = GameServices.cameraOrNull();
-        if (camera == null) {
-            return;
+        if (camera != null && state != null && state.isLbz1KnucklesBoundaryPublishPending()) {
+            boolean snapped = sidekickSpritesFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS).stream()
+                    .map(AbstractPlayableSprite::getCpuController)
+                    .filter(java.util.Objects::nonNull)
+                    .anyMatch(cpu -> Math.abs((short) (camera.getMaxY()
+                            - cpu.getMaxYBound(camera.getMaxY()))) > 8);
+            if (snapped || camera.getMaxY() == camera.getMaxYTarget()) {
+                state.clearLbz1KnucklesBoundaryPublishPending();
+            }
         }
-        boolean snapped = sidekickSpritesFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS).stream()
-                .map(AbstractPlayableSprite::getCpuController)
-                .filter(java.util.Objects::nonNull)
-                .anyMatch(cpu -> Math.abs((short) (camera.getMaxY()
-                        - cpu.getMaxYBound(camera.getMaxY()))) > 8);
-        if (snapped) {
-            syncSidekickBoundsToCamera();
-            state.clearLbz1KnucklesBoundaryPublishPending();
-        } else if (camera.getMaxY() == camera.getMaxYTarget()) {
-            state.clearLbz1KnucklesBoundaryPublishPending();
-        }
+        // Tails_Check_Screen_Boundaries reads the live Camera_* words on the
+        // following player slot. Publish their post-DynamicLevelEvents values,
+        // after updateBoundaryEasing(), so the CPU mirror is not one frame
+        // behind a shrinking death plane (sonic3k.asm:28410-28443).
+        syncSidekickBoundsToCamera();
     }
 
     /**

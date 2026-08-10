@@ -677,7 +677,9 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
     private void spawnEndCannon() {
         cnzArtProvider().queueBadnikExplosionArt();
         cannonSpawned = true;
-        endCannon = spawnChild(() -> new CnzCannonInstance(
+        // loc_6E778 calls AllocateObject, so the cannon takes the lowest free
+        // SST even when that slot is behind this retained boss controller.
+        endCannon = spawnFreeChild(() -> new CnzCannonInstance(
                 new ObjectSpawn(CANNON_X, CANNON_Y, Sonic3kObjectIds.CNZ_CANNON,
                         CnzCannonInstance.END_SEQUENCE_SUBTYPE, 0, false, 0)));
     }

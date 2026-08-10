@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K now republishes sidekick camera bounds after boundary easing,
+  matching Tails' live `Camera_max_Y_pos` death-plane read when an event shrinks
+  the arena. CNZ's post-boss cannon also uses the native lowest-free-slot
+  `AllocateObject` contract. Together these changes close all 42,253 frames of
+  the standalone CNZ trace; the green AIZ, HCZ, MGZ, and complete-run CNZ traces
+  remain unchanged.
 - Fix/Test: CNZ cannons now preserve the shared S3K `SolidObjectTop`
   zero-distance rejection before setting the standing bit. This delays the
   end-cannon capture by the one native overlap pixel and advances standalone
