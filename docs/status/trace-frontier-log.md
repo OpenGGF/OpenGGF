@@ -71547,6 +71547,35 @@ landable change, which I implemented directly.
   associated with this regression-free frontier advance; this entry records
   the rerun that exposed it before cannon-launch diagnosis continues.
 
+## 2026-08-10 — standalone CNZ end-cannon contact frontier
+
+- Context: `bugfix/s3k-traces` at `c2d51c583`; validation used JDK 21.0.12 and
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen`. The six protected user edits
+  remained unstaged and no fixture changed.
+- Root cause: `Obj_CNZCannon` calls S3K's shared `SolidObjectTop`, whose new
+  landing gate accepts only signed overlap `d0` in `[-$10,-1]`. Exact contact
+  `d0=0` survives the first `bhi` but is rejected by the unsigned `blo`
+  comparison against `-$10` (`docs/skdisasm/sonic3k.asm:41982-42015`). The
+  cannon had inherited the engine default that accepted zero distance, setting
+  its standing bit and snapping Sonic one object pass early. The cannon now
+  names the native zero-distance policy at its provider boundary; no trace,
+  frame, route, zone, or game-name predicate is used.
+- Focused command: `mvn -Dmse=off
+  -Dtest=com.openggf.game.sonic3k.objects.TestCnzCannonInstance test`.
+  Result: 12 tests, 0 failures, 0 errors.
+- Frontier command: `mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1
+  -Dsurefire.runOrder=alphabetical -Dtrace.verification=all
+  -Dtrace.frontierOnly=true -Dtrace.context.diagnosticChars=full
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  The comparison advances two rows from frame `41949` to `41951`, with 12
+  errors and 0 warnings; the first error is `tails_x_speed`, expected `0x0000`
+  and actual `0x1AFA`. Ring comparison remains enabled at error severity, with
+  no ring mismatch in this run.
+- Gameplay-order regression command used the same profile and ROM with
+  complete-run AIZ, both HCZ methods, standalone and complete-run MGZ, and
+  complete-run CNZ. Result: 6 tests, 0 failures, 0 errors.
+
 ## 2026-08-10 — round twenty-five: EHZ 45 -> 26, and two disproved briefs
 
 Command: full `-Ptrace-replay` profile, no `-Dtest`. Base eb619f787 (769 / 8 / 64).

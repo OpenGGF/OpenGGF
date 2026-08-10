@@ -338,6 +338,16 @@ public final class CnzCannonInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean rejectsZeroDistanceTopSolidLanding(PlayableEntity player) {
+        // Obj_CNZCannon calls the shared SolidObjectTop entry. Its vertical
+        // gate accepts only signed overlap d0 in [-$10,-1]: d0 == 0 survives
+        // the first `bhi`, then the unsigned `blo` against -$10 rejects it
+        // (sonic3k.asm:41982-42015). Waiting for one pixel of overlap keeps
+        // the standing-bit capture in sub_319F4 on the native object pass.
+        return true;
+    }
+
+    @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.CNZ_CANNON);
         if (renderer == null || !renderer.isReady()) {

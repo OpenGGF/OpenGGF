@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: CNZ cannons now preserve the shared S3K `SolidObjectTop`
+  zero-distance rejection before setting the standing bit. This delays the
+  end-cannon capture by the one native overlap pixel and advances standalone
+  CNZ from frame `41949` to `41951`; the green AIZ, HCZ, MGZ, and complete-run
+  CNZ traces remain unchanged.
 - Testing: a run chain executes any special-stage observation that owns a completed object
   pass, even where the recording marks that frame a lag frame. The stage's own main loop waits
   on its vertical-interrupt routine immediately before running objects, so a frame that ran a
