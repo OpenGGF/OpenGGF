@@ -62,11 +62,6 @@ public class Sonic3kTitleCardManager
     // at lines 7897-7900, synchronizing the hold with Palette_fade_timer.
     private static final int DISPLAY_HOLD_FRAMES = 90;
     private static final int FRESH_LEVEL_TRANSITION_HOLD_FRAMES = 22;
-    // Obj_TitleCardWait2 remains in its lower SST slot for the owner dispatches
-    // that follow the visual children leaving the screen. The native owner
-    // reaches LoadEnemyArt only after those three post-exit dispatches in the
-    // fresh-level path (sonic3k.asm:62249-62312).
-    private static final int FRESH_LEVEL_TRANSITION_OWNER_RETIREMENT_FRAMES = 3;
 
     // ROM palette fade duration: 22 frames (sonic3k.asm line 7877, Palette_fade_timer = $16).
     // In the ROM, the title card is already visible for many frames during level loading
@@ -191,7 +186,6 @@ public class Sonic3kTitleCardManager
     private int freshLevelRuntimeArtHandoffLevelIndex = -1;
     private int displayHoldFrames = DISPLAY_HOLD_FRAMES;
     private boolean freshLevelTransitionMode;
-    private int freshLevelTransitionOwnerRetirementFrames;
     private boolean freshLevelTitleOwnerReplacedAtAssembly;
 
     /**
@@ -206,7 +200,6 @@ public class Sonic3kTitleCardManager
             boolean inLevelMode,
             int displayHoldFrames,
             boolean freshLevelTransitionMode,
-            int freshLevelTransitionOwnerRetirementFrames,
             boolean freshLevelTitleOwnerReplacedAtAssembly,
             boolean resetLevelGamestateOnInLevelDisplay,
             int resetLevelGamestateCountdown,
@@ -280,7 +273,7 @@ public class Sonic3kTitleCardManager
         return new Snapshot(
                 state, stateTimer, phaseCounter, exitChildrenGone, inLevelMode,
                 displayHoldFrames,
-                freshLevelTransitionMode, freshLevelTransitionOwnerRetirementFrames,
+                freshLevelTransitionMode,
                 freshLevelTitleOwnerReplacedAtAssembly,
                 resetLevelGamestateOnInLevelDisplay, resetLevelGamestateCountdown,
                 heldLevelCounterDispatchOwned, retainedResultsHeldLevelCounterOwned,
@@ -319,8 +312,6 @@ public class Sonic3kTitleCardManager
         inLevelMode = snapshot.inLevelMode();
         displayHoldFrames = snapshot.displayHoldFrames();
         freshLevelTransitionMode = snapshot.freshLevelTransitionMode();
-        freshLevelTransitionOwnerRetirementFrames =
-                snapshot.freshLevelTransitionOwnerRetirementFrames();
         freshLevelTitleOwnerReplacedAtAssembly =
                 snapshot.freshLevelTitleOwnerReplacedAtAssembly();
         resetLevelGamestateOnInLevelDisplay =
@@ -422,8 +413,6 @@ public class Sonic3kTitleCardManager
         // with #$16 just before LevelLoop (sonic3k.asm:62187, 7897-7900).
         initInternal(zoneIndex, actIndex, false, FRESH_LEVEL_TRANSITION_HOLD_FRAMES);
         freshLevelTransitionMode = true;
-        freshLevelTransitionOwnerRetirementFrames =
-                FRESH_LEVEL_TRANSITION_OWNER_RETIREMENT_FRAMES;
         var objectManager = GameServices.level().getObjectManager();
         freshLevelTitleOwnerReplacedAtAssembly = objectManager != null
                 && objectManager.getActiveObjects().stream()
@@ -451,7 +440,6 @@ public class Sonic3kTitleCardManager
         // wait expires (sonic3k.asm:62249-62323, 7849-7909).
         publishFreshLevelRuntimeArtHandoffIfNeeded();
         freshLevelTransitionMode = false;
-        freshLevelTransitionOwnerRetirementFrames = 0;
         freshLevelTitleOwnerReplacedAtAssembly = false;
     }
 
@@ -617,7 +605,6 @@ public class Sonic3kTitleCardManager
         this.bonusFadeProgress = 0f;
         this.inLevelMode = false;
         this.freshLevelTransitionMode = false;
-        this.freshLevelTransitionOwnerRetirementFrames = 0;
         this.freshLevelTitleOwnerReplacedAtAssembly = false;
         this.displayHoldFrames = DISPLAY_HOLD_FRAMES;
         this.state = Sonic3kTitleCardState.SLIDE_IN;
@@ -666,7 +653,6 @@ public class Sonic3kTitleCardManager
         this.preloadedActCompletionPrepared = false;
         this.runtimeArtAdmissionConsumed = false;
         this.freshLevelTransitionMode = false;
-        this.freshLevelTransitionOwnerRetirementFrames = 0;
         this.freshLevelTitleOwnerReplacedAtAssembly = false;
         this.state = Sonic3kTitleCardState.SLIDE_IN;
         this.stateTimer = 0;
@@ -936,7 +922,6 @@ public class Sonic3kTitleCardManager
         runtimeArtAdmissionConsumed = false;
         freshLevelRuntimeArtHandoffLevelIndex = -1;
         freshLevelTransitionMode = false;
-        freshLevelTransitionOwnerRetirementFrames = 0;
         freshLevelTitleOwnerReplacedAtAssembly = false;
         Arrays.fill(elemX, 0);
         Arrays.fill(elemY, 0);
@@ -1059,19 +1044,19 @@ public class Sonic3kTitleCardManager
         }
 
         if (allExited) {
-            // Obj_TitleCardWait2 runs before its children. It observes the
-            // final child's deletion on its following object dispatch.
+            // Obj_TitleCardWait2 (sonic3k.asm:62249-62262) spins only while
+            // $30(a0) -- the count of card children still on screen -- is
+            // non-zero. Each child clears itself out of that count from a
+            // higher SST slot (Obj_TitleCardCreate uses AllocateObjectAfterCurrent,
+            // sonic3k.asm:62172; Obj_TitleCardRedBanner decrements $30(a1) at
+            // :62311), so the owner cannot see the drained counter until its
+            // following dispatch. On that dispatch loc_2D86E (:62263-62302)
+            // falls straight through to LoadEnemyArt and
+            // Delete_Current_Sprite with no further wait, so exactly one
+            // dispatch separates the last child leaving from retirement --
+            // there is no additional post-exit owner delay to model.
             if (!exitChildrenGone) {
                 exitChildrenGone = true;
-                return;
-            }
-            if (freshLevelTransitionMode
-                    && freshLevelTransitionOwnerRetirementFrames > 0) {
-                // The native lower-slot Obj_TitleCardWait2 cannot observe the
-                // higher-slot child retirement until its following dispatch;
-                // retain the transition owner through the remaining native
-                // owner passes before publishing the camera handoff.
-                freshLevelTransitionOwnerRetirementFrames--;
                 return;
             }
             if (inLevelMode && inLevelExitDelayFrames > 0) {
@@ -1162,7 +1147,7 @@ public class Sonic3kTitleCardManager
             // but their first direct child belongs to the following loop.
             if (freshLevelTitleOwnerReplacedAtAssembly) {
                 GameServices.runtimeArtCoordinator()
-                        .deferProductionSubmissionForHeldLoopTail();
+                        .deferProductionFirstChildForLateProducer();
             }
             GameServices.level().getGame().queueFreshLevelRuntimeArt(levelIndex);
         } catch (java.io.IOException exception) {

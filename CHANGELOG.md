@@ -3,6 +3,13 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: a deferred art-module producer no longer has its first submission suppressed. The
+  held-loop-tail signal is meant to delay when work becomes visible, but for a level-loop
+  producer it was also skipping the submission itself, so the Angel Island act 2 enemy art
+  arrived a loop late and the frame's queue snapshot showed an idle decompression queue. The two
+  producers that set the signal are now distinguished: the ordinary one defers only readiness,
+  and the title-card owner, whose load genuinely runs after that iteration's module step,
+  declares its late ordering explicitly.
 - Fix: the Sonic 3 & Knuckles special stage loads its emerald art through the real Kosinski
   module queue and waits on the ROM's own modules-left predicate, instead of a fixed four-frame
   drain measured from a capture. The structural part now comes from the module state machine and

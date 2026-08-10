@@ -72048,3 +72048,71 @@ After: **769 / 8 / 64, identical failing set** — a correctness-only round.
 - Route position: AIZ, CNZ, HCZ, ICZ, LBZ and both MGZ replays stay green with
   the compensator removed. MHZ's KOS completion boundary remains the next S3K
   target.
+
+## 2026-08-10 — round twenty-nine: the AIZ submission suppression, and two of my own claims retracted
+
+Base d958fc681 (post-merge). S3K package after: 2516 tests, 11 failures / 7 errors across 16
+classes. **`TestS3kAizTraceReplay` is GREEN** (was 3 errors).
+
+- **RETRACTION 1, and it was committed into a permanent document.** The AIZ entry I added to
+  `docs/S3K_KNOWN_DISCREPANCIES.md` claimed the recorded ROM had the direct decompression queue
+  already working on a module inside `ArtKosM_AIZ_Bloominator` (0x367DCA) on the admission frame,
+  implying an older parent owned that iteration's module step. **None of that is in the
+  fixtures.** Decoding the recorded `load_queue_state` rows directly gives
+  `active_source = 0x36800E` on BOTH admission frames (5542 in `aiz1_to_hcz_fullrun`, 6345 in
+  `aiz_completerun`) — that is `ArtKosM_AIZ_MonkeyDude + 2`, module 0 of the FIRST `PLCKosM_AIZ`
+  entry, in plain PLC order (skdisasm/sonic3k.asm:64349-64351). The FIFO was EMPTY; there was no
+  older parent. Bloominator's module 0 is 0x367DCC and publishes four rows LATER (5546 / 6349).
+  **The value 0x367DCE appears nowhere in either fixture.** I took it from a lane report and
+  promoted it to a documented ROM claim without decoding the fixture myself. The entry is
+  rewritten as RESOLVED with the wrong claim stated explicitly rather than deleted.
+- **The real cause: the held-loop-tail deferral suppressed SUBMISSION, not just readiness.**
+  Instrumented at the admission row: the AIZ2 `LoadEnemyArt` batch is submitted correctly during
+  the event pass (3 parents, capacity available); then the same row's POST_OBJECTS step ran with
+  the held-tail flag set, took the `activeChild == null && deferFirstChild` early return, and
+  published nothing. The next POST_OBJECTS — the held-tail closure — submitted 0x36800E. The
+  child arrived one loop late and the row's snapshot showed an idle direct FIFO. That deferral
+  has no ROM basis for a level-loop producer. The two producers that set the flag are now split:
+  the generic held-loop-tail arm defers only readiness/visibility, as its own doc comment always
+  said, while the locked title-card owner — whose `LoadEnemyArt` genuinely runs after that
+  iteration's module step — declares its late ordering explicitly. **The fix removes a
+  suppression rather than adding a compensator.**
+- **RETRACTION 2: the EHZ row-428 defect DOES NOT EXIST.** At d958fc681 the interior-DPLC
+  comparator compares all 5733 frames with no windowing, and rows 428/429/435/438/444 are CLEAN.
+  All 23 remaining errors are exactly the 5213..5230 tail. The round-28 instrumentation that
+  "proved" the pass-phase defect (`retire [2758,2759,2760] lf=428` from `beforePass(index=1)`)
+  was measured **with the retired publication-lag pair applied** — it described behaviour the
+  pair caused, not a defect at base. I carried it into two briefs as established fact.
+  Cross-checked against the recording: at row 428 the observation carries passes 182
+  (completion_cursor 427) and 183 (cursor 428), transfer 2758 is submitted lf 428 / pf 428 ->
+  completed 429, and the engine reproduces that pair. Rows 435 and 444 record submissions with
+  lf 434/443 and pf 435/444 — the ROM genuinely submits on the FIRST pass there and the SECOND
+  at 428, **and the engine already matches both.** The per-pass mapping-frame advance is
+  correctly modelled.
+- **The EHZ 23-error tail is confirmed wall-clock 68000 time.** The last gameplay pass is
+  sequence 3171 at frame 5191; transfers 5495/5496 are submitted lf 5191 / pf 5192, and there is
+  NO run_objects pass at all between 5192 and `results_started` at 5229. ROM completes them at
+  5230; the engine at 5213 = 5192 + 21, i.e. at the end of the 22 `Pal_FadeToWhite` V-blanks
+  (s2.asm:3570-3581). `Vint_Fade` reaches `ProcessDPLC` and never `ProcessDMAQueue`
+  (s2.asm:1068-1071), so an entry submitted before the fade cannot retire during it, and the
+  interrupts-disabled results setup (`ClearScreen`, `PalLoad_Now`, `LoadPLC2`,
+  `LoadTitleCardSS`, `NemDec` of `ArtNem_SpecialStageResults`, s2.asm:6748-6800) then burns the
+  missing 17 rows with no `WaitForVint` until the results loop's first `VintID_Level` at 5230
+  (:6801-6807). **Sidecar territory under rule 4, not a constant.**
+- **`FRESH_LEVEL_TRANSITION_OWNER_RETIREMENT_FRAMES = 3` removed as DEAD WEIGHT, not a
+  compensator.** The S3K trace package is byte-identical before and after — not merely the same
+  pass/fail counts but the same first-error frames, field names and expected/actual values in
+  every failing class. So the "three post-exit dispatches" were never observable on any
+  committed row; the surviving one-dispatch `exitChildrenGone` step already encodes the honest
+  model (children drain `$30`, the owner sees zero on its NEXT dispatch, and that dispatch
+  reaches `LoadEnemyArt` immediately).
+- **A4 scoped with the answer, not landed.** The title-card phase deltas CAN be derived, and the
+  answer is not a table: `Obj_TitleCardWait` (sonic3k.asm:62221-62223) does
+  `tst.w $34(a0) / beq loc_2D810 / clr.w $34(a0) / rts` — it stalls purely on a flag the
+  children set. EVERY sliding child sets it (`st $34(a1)` at :62328 RedBanner, :62377 Element,
+  :62422 Element2) and each stops the frame its coordinate equals its `$46` target. So the
+  in-level HUD/gamestate reset (:62212-62232) fires on the first owner dispatch after the LAST
+  child stops moving — one dispatch after `all elemAtTarget`, **with no constant and no
+  `getVblaCounter() & 3` key at all.** The engine already tracks `elemAtTarget[]`, so the
+  replacement is mechanical; it is a behavioural change across every S3K title card and deserves
+  its own round.
