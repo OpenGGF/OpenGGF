@@ -258,7 +258,7 @@ class TestTraceReplayStartPositionPolicy {
     void frameZeroSidekickAndObjectBootstrapCoverageIsDocumentedAsPartial() throws Exception {
         String testBase = Files.readString(Path.of(
                 "src/test/java/com/openggf/tests/trace/AbstractTraceReplayTest.java"));
-        String releaseIssues = Files.readString(Path.of("docs/release-architecture-review-issues.md"));
+        String releaseIssues = Files.readString(Path.of("docs/architecture/audits/release-architecture-review-issues.md"));
 
         assertTrue(testBase.contains("Sidekick CPU state is now captured")
                         && testBase.contains("Per-slot SST snapshots are still left empty"),
@@ -471,8 +471,8 @@ class TestTraceReplayStartPositionPolicy {
                 "src/main/java/com/openggf/trace/TraceReplayBootstrap.java"));
         String sessionBootstrap = Files.readString(Path.of(
                 "src/main/java/com/openggf/trace/replay/TraceReplaySessionBootstrap.java"));
-        String discrepancies = Files.readString(Path.of("docs/KNOWN_DISCREPANCIES.md"));
-        String releaseIssues = Files.readString(Path.of("docs/release-architecture-review-issues.md"));
+        String discrepancies = Files.readString(Path.of("docs/status/known-discrepancies.md"));
+        String releaseIssues = Files.readString(Path.of("docs/architecture/audits/release-architecture-review-issues.md"));
 
         assertFalse(sessionBootstrap.contains("seedS3kCompleteRunStartState"),
                 "The retired S3K complete-run trace-state seed helper must not return.");

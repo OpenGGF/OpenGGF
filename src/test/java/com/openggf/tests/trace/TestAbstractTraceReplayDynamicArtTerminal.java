@@ -84,8 +84,11 @@ class TestAbstractTraceReplayDynamicArtTerminal
         activeTrace = tempDir.resolve("trace");
         activeReports = tempDir.resolve("reports");
         Files.createDirectories(activeTrace);
-        Files.copy(SOURCE.resolve("physics.csv"),
-                activeTrace.resolve("physics.csv"),
+        // The committed payload is gzipped -- TestTraceFixtureCompressionGuard
+        // forbids an uncompressed physics.csv under src/test/resources/traces,
+        // and the replay loader reads either form. Copy the form that exists.
+        Files.copy(SOURCE.resolve("physics.csv.gz"),
+                activeTrace.resolve("physics.csv.gz"),
                 StandardCopyOption.REPLACE_EXISTING);
         Files.copy(SOURCE.resolve("s2-ehz1.bk2"),
                 activeTrace.resolve("s2-ehz1.bk2"),
