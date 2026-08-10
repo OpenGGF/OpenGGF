@@ -35,6 +35,8 @@ import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -222,9 +224,9 @@ public class TestDonorAudioRouting {
                         .build();
         SmpsAssetKey key = new SmpsAssetKey(
                 "s2", SmpsAssetKey.Route.DONOR_ID, 0xE0, null);
-        factory.warmSmpsSfxAsset(
-                key, new StubSmpsData("donor-spindash"),
-                EMPTY_DAC, donorConfig);
+        factory.registerSmpsSfxAsset(
+                key, 0, new StubSmpsData("donor-spindash"),
+                EMPTY_DAC, donorConfig, false);
         ResolvedSmpsSfxSource source = factory.resolveSmpsSfx(
                 1, key, 1 << 16, 0x70, 0, 0, 2_048);
         AudioVoiceRegistry registry = new AudioVoiceRegistry(
@@ -293,6 +295,87 @@ public class TestDonorAudioRouting {
         assertEquals(0, presentationOwner.state().spindashRevCounter(),
                 "the configured shadow SFX handler must mutate the shared "
                         + "presentation counter");
+    }
+
+    @Test
+    void repeatedDonorMusicLoadsAndFreezesOncePerGeneration() {
+        AtomicInteger materializations = new AtomicInteger();
+        StubSmpsLoader firstLoader = new StubSmpsLoader();
+        firstLoader.musicFactories.put(0x21,
+                () -> new CountingDonorMusicData(
+                        0x21, materializations, (byte) 0x21));
+        SmpsSequencerConfig config =
+                new SmpsSequencerConfig.Builder().build();
+        audioManager.registerDonorLoader(
+                "s3k", firstLoader, EMPTY_DAC, config);
+
+        audioManager.playDonorMusic("s3k", 0x21);
+        audioManager.presentFrame(PresentationMode.SILENT);
+        AudioLogicalSnapshot rewindPoint =
+                audioManager.captureLogicalSnapshot();
+        long firstVoiceId = ((com.openggf.audio.presentation
+                .PresentationVoiceSnapshot.Smps) rewindPoint.presentation()
+                .voices().getFirst()).voiceId();
+        var first = audioManager.shadowSmpsDriverSnapshotForTesting()
+                .sequencers().getFirst();
+        audioManager.update();
+
+        audioManager.playDonorMusic("s3k", 0x21);
+        audioManager.presentFrame(PresentationMode.SILENT);
+        AudioLogicalSnapshot repeated = audioManager.captureLogicalSnapshot();
+        long secondVoiceId = ((com.openggf.audio.presentation
+                .PresentationVoiceSnapshot.Smps) repeated.presentation()
+                .voices().getFirst()).voiceId();
+        var second = audioManager.shadowSmpsDriverSnapshotForTesting()
+                .sequencers().getFirst();
+
+        assertEquals(1, firstLoader.musicLoadCount);
+        assertEquals(1, materializations.get(),
+                "a donor catalog hit must not freeze, hash, or compare again");
+        assertNotEquals(firstVoiceId, secondVoiceId);
+        assertSharedMusicDependencies(first, second);
+        assertNotSame(first.snapshot(), second.snapshot());
+        assertNotSame(first.snapshot().tracks(), second.snapshot().tracks());
+        assertNotSame(first.snapshot().tracks().getFirst(),
+                second.snapshot().tracks().getFirst());
+
+        StubSmpsLoader replacementLoader = new StubSmpsLoader();
+        replacementLoader.musicFactories.put(0x21,
+                () -> new CountingDonorMusicData(
+                        0x21, materializations, (byte) 0x22));
+        audioManager.registerDonorLoader(
+                "s3k", replacementLoader, EMPTY_DAC, config);
+        audioManager.playDonorMusic("s3k", 0x21);
+        audioManager.presentFrame(PresentationMode.SILENT);
+        var replacement = audioManager.shadowSmpsDriverSnapshotForTesting()
+                .sequencers().getFirst();
+
+        assertEquals(1, replacementLoader.musicLoadCount,
+                "the donor generation change must load exactly once");
+        assertEquals(2, materializations.get(),
+                "the donor generation change must freeze exactly once");
+        assertNotEquals(first.source().dependencyGeneration(),
+                replacement.source().dependencyGeneration());
+        assertNotSame(first.smpsData(), replacement.smpsData());
+
+        audioManager.restoreLogicalSnapshot(rewindPoint);
+        var restored = audioManager.shadowSmpsDriverSnapshotForTesting()
+                .sequencers().getFirst();
+        assertSharedMusicDependencies(first, restored);
+    }
+
+    @Test
+    void nullDonorMusicProbeRemainsANoOp() {
+        StubSmpsLoader loader = new StubSmpsLoader();
+        audioManager.registerDonorLoader(
+                "s3k", loader, EMPTY_DAC,
+                new SmpsSequencerConfig.Builder().build());
+        int before = audioManager.commandTimeline().entryCount();
+
+        audioManager.playDonorMusic("s3k", 0x21);
+
+        assertEquals(before, audioManager.commandTimeline().entryCount());
+        assertEquals(1, loader.musicLoadCount);
     }
 
     @Test
@@ -738,6 +821,15 @@ public class TestDonorAudioRouting {
             SmpsSourceDescriptor descriptor, DacData dac) {
     }
 
+    private static void assertSharedMusicDependencies(
+            com.openggf.audio.rewind.SmpsDriverSnapshot.SequencerEntry expected,
+            com.openggf.audio.rewind.SmpsDriverSnapshot.SequencerEntry actual) {
+        assertSame(expected.source(), actual.source());
+        assertSame(expected.smpsData(), actual.smpsData());
+        assertSame(expected.dacData(), actual.dacData());
+        assertSame(expected.config(), actual.config());
+    }
+
     private enum DonorCallbackStage {
         HANDLER,
         BACKEND
@@ -783,8 +875,11 @@ public class TestDonorAudioRouting {
     /** SmpsLoader stub that returns pre-configured results by sfxId. */
     private static class StubSmpsLoader implements SmpsLoader {
         final Map<Integer, AbstractSmpsData> musicResults = new HashMap<>();
+        final Map<Integer, Supplier<AbstractSmpsData>> musicFactories =
+                new HashMap<>();
         final Map<Integer, AbstractSmpsData> sfxResults = new HashMap<>();
         final DacData dac;
+        int musicLoadCount;
         int sfxLoadCount;
         int runOnSfxLoadNumber = -1;
         Runnable onSfxLoad;
@@ -799,7 +894,11 @@ public class TestDonorAudioRouting {
 
         @Override
         public AbstractSmpsData loadMusic(int musicId) {
-            return musicResults.get(musicId);
+            musicLoadCount++;
+            Supplier<AbstractSmpsData> factory =
+                    musicFactories.get(musicId);
+            return factory != null ? factory.get()
+                    : musicResults.get(musicId);
         }
 
         @Override
@@ -825,6 +924,54 @@ public class TestDonorAudioRouting {
         public DacData loadDacData() {
             return dac;
         }
+    }
+
+    private static final class CountingDonorMusicData
+            extends AbstractSmpsData {
+        private final AtomicInteger materializations;
+
+        private CountingDonorMusicData(
+                int id, AtomicInteger materializations, byte marker) {
+            super(musicBytes(marker), 0);
+            this.materializations = materializations;
+            setId(id);
+        }
+
+        private static byte[] musicBytes(byte marker) {
+            byte[] bytes = new byte[0x80];
+            bytes[2] = 1;
+            bytes[4] = 1;
+            bytes[5] = (byte) 0x80;
+            bytes[6] = 0x40;
+            bytes[0x40] = marker;
+            bytes[0x41] = (byte) 0xF2;
+            return bytes;
+        }
+
+        @Override
+        protected void parseHeader() {
+            channels = data[2] & 0xFF;
+            psgChannels = data[3] & 0xFF;
+            dividingTiming = data[4] & 0xFF;
+            tempo = data[5] & 0xFF;
+            fmPointers = new int[] {read16(6)};
+        }
+
+        @Override
+        public byte[] getData() {
+            materializations.incrementAndGet();
+            return super.getData();
+        }
+
+        @Override public byte[] getVoice(int voiceId) { return new byte[25]; }
+        @Override public byte[] getPsgEnvelope(int id) {
+            return new byte[] {(byte) 0x81};
+        }
+        @Override public int read16(int offset) {
+            return (data[offset] & 0xFF)
+                    | ((data[offset + 1] & 0xFF) << 8);
+        }
+        @Override public int getBaseNoteOffset() { return 0; }
     }
 
     private static final class DonorProfile extends StubAudioProfile {

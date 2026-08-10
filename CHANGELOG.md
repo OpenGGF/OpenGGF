@@ -3,6 +3,10 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Performance: repeated SMPS SFX resolution and base/donor music starts now consult the
+  generation-aware asset catalog before invoking a loader. Each program and immutable
+  dependency tuple is frozen once per generation, while every music start still receives
+  distinct mutable playback state and rewind restores reuse the registered identities.
 - Fix: replacing a base ROM/audio profile or donor SMPS source now publishes its loader,
   DAC, configuration, and monotonically increasing catalog generation as one transaction.
   Command resolution captures that complete source and its SFX policy once, so reentrant or

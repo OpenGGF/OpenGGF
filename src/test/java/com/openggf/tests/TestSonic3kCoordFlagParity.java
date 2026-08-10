@@ -751,9 +751,9 @@ public class TestSonic3kCoordFlagParity {
                     ignored -> new SmpsAssetKey(
                             "s3k", SmpsAssetKey.Route.BASE_NAME, -1,
                             "coord-fixture-" + nextSfxAssetId++));
-            factory.warmSmpsSfxAsset(
-                    key, data, EMPTY_DAC,
-                    Sonic3kSmpsSequencerConfig.CONFIG);
+            factory.registerSmpsSfxAsset(
+                    key, 0, data, EMPTY_DAC,
+                    Sonic3kSmpsSequencerConfig.CONFIG, false);
             registry.apply(new AudioPresentationCommand.AddSmpsSfx(
                     factory.resolveSmpsSfx(
                             nextVoiceId++, key, 1 << 16, 0x70,

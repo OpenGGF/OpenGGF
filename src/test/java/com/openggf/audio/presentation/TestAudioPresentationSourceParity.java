@@ -72,7 +72,7 @@ class TestAudioPresentationSourceParity {
         AbstractSmpsData sfx = data("sfx", 0xA0);
         SmpsAssetKey key = new SmpsAssetKey(
                 "base", SmpsAssetKey.Route.BASE_ID, 0xA0, null);
-        fixture.factory.warmSmpsSfxAsset(
+        fixture.factory.registerSmpsSfxAsset(
                 key, sfx, EMPTY_DAC, config());
         registry.apply(new AudioPresentationCommand.AddSmpsSfx(
                 fixture.factory.resolveSmpsSfx(
