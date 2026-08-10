@@ -1005,6 +1005,7 @@ class TestAiz2BossEndSequenceObjects {
         assertFalse(player.isControlLocked());
         assertFalse(player.isForceInputRight());
 
+        Aiz2BossEndSequenceState.setButtonBeforeBridgeDispatch(true);
         Aiz2BossEndSequenceState.releaseEggCapsule();
         controller.update(1, player);
         assertEquals(0x4880, camera.getMaxXTarget() & 0xFFFF);
@@ -1017,8 +1018,6 @@ class TestAiz2BossEndSequenceObjects {
         }
 
         assertEquals(camera.getMaxX() & 0xFFFF, camera.getMaxXTarget() & 0xFFFF);
-        assertEquals(0x4888, camera.getMaxXTarget() & 0xFFFF,
-                "Child6_IncLevX advances Camera_Max_X_pos fractionally instead of jumping to its final target");
         assertTrue(player.isControlLocked());
         assertFalse(player.isObjectControlled());
         assertTrue(player.isForcedInputActive(AbstractPlayableSprite.INPUT_RIGHT));
@@ -1026,12 +1025,6 @@ class TestAiz2BossEndSequenceObjects {
                 "loc_69526 only publishes Ctrl_1_logical; the next player slot owns acceleration");
         assertEquals(0, player.getGSpeed());
         assertEquals(0x5900, player.getXSubpixelRaw());
-
-        for (int i = 0; i < 16; i++) {
-            camera.updateBoundaryEasing();
-            controller.update(i + 13, player);
-        }
-        assertTrue((camera.getMaxX() & 0xFFFF) > 0x4880);
 
         player.setCentreX((short) 0x4A80);
         Aiz2BossEndSequenceState.pressButton();
@@ -1114,13 +1107,43 @@ class TestAiz2BossEndSequenceObjects {
         Aiz2BossEndSequenceState.releaseEggCapsule();
 
         controller.update(1, player);
-        assertTrue(player.isObjectControlled(),
-                "The early embedded-child publication retains one controller entry");
+        assertFalse(player.isObjectControlled(),
+                "The next controller entry is loc_694D4 regardless of Player 2's Status_OnObj bit");
+        assertEquals(Sonic3kAnimationIds.WAIT.id(), player.getAnimationId());
+        assertFalse(player.isForceInputRight());
 
         controller.update(2, player);
         assertFalse(player.isObjectControlled(),
-                "loc_694D4 does not branch on Player 2's Status_OnObj bit");
+                "loc_69526 keeps native player control restored");
         assertEquals(Sonic3kAnimationIds.WAIT.id(), player.getAnimationId());
+        assertTrue(player.isForcedInputActive(AbstractPlayableSprite.INPUT_RIGHT));
+    }
+
+    @Test
+    void controllerRetainsOneEntryWhenResultsOwnerRunsAfterIt() {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        camera.resetState();
+        camera.setMaxX((short) 0x4880);
+        camera.setX((short) 0x4880);
+
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        player.setObjectControlled(true);
+        player.setAnimationId(Sonic3kAnimationIds.VICTORY);
+
+        Aiz2BossEndSequenceController controller = new Aiz2BossEndSequenceController(0x4880, 0x0000);
+        controller.setServices(new QueryOnlyServices(camera, player, List.of()));
+        Aiz2BossEndSequenceState.setButtonBeforeBridgeDispatch(true);
+        Aiz2BossEndSequenceState.releaseEggCapsule();
+
+        controller.update(1, player);
+        assertTrue(player.isObjectControlled(),
+                "A later results owner has not cleared _unkFAA8 when loc_694D4 runs this pass");
+        assertEquals(Sonic3kAnimationIds.VICTORY.id(), player.getAnimationId());
+
+        controller.update(2, player);
+        assertFalse(player.isObjectControlled());
+        assertEquals(Sonic3kAnimationIds.WAIT.id(), player.getAnimationId());
+        assertFalse(player.isForceInputRight());
     }
 
     @Test

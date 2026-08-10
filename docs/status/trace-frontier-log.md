@@ -71194,3 +71194,43 @@ landable change, which I implemented directly.
   long fixture required `-Dsurefire.argLine='-Xshare:off -Xmx4g'`; its first two
   1 GiB attempts exhausted heap before executing a test and produced no trace
   result. The green route remains stable through LBZ.
+
+## 2026-08-10 — standalone AIZ results-owner ordering frontier
+
+- Correction to the preceding entry: `-Dtrace.frontierOnly=true` stopped replay
+  at the first comparison mismatch at raw `20297`, after which terminal timing
+  verification reported the future unconsumed completion `#64` at raw `20794`.
+  A full replay proved that `#64` and the HCZ handoff queues are consumed
+  correctly; raw `20794` was not the reached gameplay frontier. The true prior
+  standalone AIZ frontier was raw `20297` (`player_animation_id`, expected Wait
+  `$05`, actual Victory `$13`).
+- Context: `bugfix/s3k-traces` at `b7e6fc8b6`; `origin/develop` commit
+  `eb619f787` was already an ancestor, so no merge was required. The six
+  protected user edits remained unstaged. Validation used JDK 21.0.12 and
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen`. Ring comparison remained
+  error-level through `ToleranceConfig.DEFAULT` /
+  `RingCountMode.FORCE_ERROR`.
+- Root cause: AIZ's folded results children publish their retirement one owner
+  entry before `Obj_LevelResultsWait2` clears `_unkFAA8`. The complete-run SST
+  ordering has `loc_694D4` before the later lowest-free results owner, so it
+  retains one Victory entry; the standalone ordering has the results owner
+  before `loc_694D4`, so that same controller pass restores WAIT. The engine
+  folds bridge/button children and cannot use its physical Java slot numbers as
+  native authority. The controller now consumes the cutscene's existing
+  allocation-time SST-order marker, which is derived from live object/interact
+  occupancy, rather than a trace, frame, or route identifier
+  (`sonic3k.asm:62709-62720,138313-138331,181978-181990`).
+- Focused command: `mvn -q -Dmse=off
+  -Dtest='com.openggf.game.sonic3k.objects.TestAiz2BossEndSequenceObjects#controllerWaitsForEggCapsuleBeforeStartingWalkAndHydrocityTransition+controllerRestoreTimingDoesNotBranchOnRidingSidekick+controllerRetainsOneEntryWhenResultsOwnerRunsAfterIt+postResultsGradualMaxXWorkerOwnsItsRomAccumulator'
+  test`. Result: 4 tests passed, covering both native owner orderings and the
+  WAIT-to-RIGHT dispatch boundary.
+- Frontier/regression command: `mvn -Ptrace-replay -Dmse=off
+  -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay'
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Complete-run AIZ passed with 0 errors and 0 warnings. Standalone AIZ advanced
+  from raw `20297` to raw `20699`, with 39 errors and 0 warnings; the new first
+  mismatch is `player_animation_id` (expected `$07`, actual Wait `$05`). HCZ's
+  complete-run canary also passed independently during the regression audit.
+- Route position: complete-run AIZ and HCZ remain green. Standalone AIZ raw
+  `20699` is the next gameplay-order target.

@@ -43,10 +43,8 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
     private static final int PLAYER_STOP_X_OFFSET = 0x1F8;
     // ROM: loc_695A8 — transition when y_pos >= _unkFA86 + $1E6
     private static final int NEXT_LEVEL_Y_OFFSET = 0x1E6;
-    // The embedded-child retirement callback publishes one controller entry
-    // before Obj_LevelResultsWait2 clears _unkFAA8. Retain that entry, then
-    // let loc_694D4 restore control on the following owner dispatch.
-    private static final int POST_RESULTS_CONTROL_RESTORE_DELAY = 2;
+    private static final int RELEASE_OWNER_BEFORE_CONTROLLER_DELAY = 1;
+    private static final int RELEASE_OWNER_AFTER_CONTROLLER_DELAY = 2;
     private static final int POST_BUTTON_CAMERA_MAX_Y_TARGET = 0x1000;
     private static final int INC_LEVEL_END_Y_GRADUAL_STEP = 0x8000;
     private static final int AIRBORNE_CAMERA_TARGET_OFFSET = 0x80;
@@ -109,7 +107,7 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
         }
 
         if (postResultsControlRestoreDelay < 0) {
-            postResultsControlRestoreDelay = POST_RESULTS_CONTROL_RESTORE_DELAY;
+            postResultsControlRestoreDelay = postResultsControlRestoreDelay();
         }
         if (postResultsControlRestoreDelay > 0) {
             postResultsControlRestoreDelay--;
@@ -222,6 +220,20 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
         ObjectControlState.nativeBit7FullControl().applyTo(player);
+    }
+
+    private int postResultsControlRestoreDelay() {
+        // The embedded result children publish one owner entry before
+        // Obj_LevelResultsWait2 clears _unkFAA8. The cutscene's allocation-time
+        // SST-order marker distinguishes whether loc_694D4 precedes that later
+        // lowest-free results owner (retain one entry) or follows it (restore
+        // immediately). The engine folds the bridge/button children, so its
+        // physical Java slots are not the native ordering authority
+        // (sonic3k.asm:62709-62720,138313-138331,181978-181990).
+        if (Aiz2BossEndSequenceState.isButtonBeforeBridgeDispatch()) {
+            return RELEASE_OWNER_AFTER_CONTROLLER_DELAY;
+        }
+        return RELEASE_OWNER_BEFORE_CONTROLLER_DELAY;
     }
 
     private void restoreNativePlayerControlsAfterResults(AbstractPlayableSprite player) {

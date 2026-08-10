@@ -3,11 +3,16 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: AIZ2's retained post-boss controller now derives its results-exit
+  control restore from the cutscene's native SST-ordering mode. This preserves
+  the complete-run VICTORY entry when the controller precedes the results owner
+  while restoring WAIT immediately when the results owner precedes it, advancing
+  standalone AIZ from raw frame `20297` to `20699` with complete-run AIZ and HCZ
+  unchanged.
 - Fix/Test: folded S3K route-8 egg capsules now preserve the native parent-to-button-child
   dispatch boundary when the parent's horizontal movement first creates button-range
-  eligibility. Standalone AIZ advances from raw frame `19721`, through the later
-  raw-`20297` ending-control cluster, to hardware completion edge `#64` at raw `20794`;
-  all complete runs from AIZ through LBZ remain green.
+  eligibility. Standalone AIZ advances from raw frame `19721` to the later
+  raw-`20297` ending-control cluster; all complete runs from AIZ through LBZ remain green.
 - Fix/Test: S3K queue comparison now recognizes a production-submitted direct
   Kosinski child that the native frame-end heartbeat cannot observe because it
   is published after one sample and retires before the next. The projection is
