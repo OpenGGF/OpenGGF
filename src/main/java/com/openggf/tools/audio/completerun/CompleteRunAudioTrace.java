@@ -92,6 +92,11 @@ public final class CompleteRunAudioTrace {
         GPGX_OBSERVER_SOURCE_BUNDLE,
         GPGX_OBSERVER_TOOLCHAIN,
         GPGX_OBSERVER_BUILD_RECIPE,
+        GPGX_OBSERVER_IDENTITY,
+        GPGX_OBSERVER_ADAPTER_SOURCE,
+        GPGX_HOST_SOURCE,
+        BIZHAWK_BIZINVOKE_DLL,
+        BIZHAWK_BASE_COMMON_DLL,
         BIZHAWK_OBSERVER_MANAGED_PATCH,
         BIZHAWK_OBSERVER_CORES_DLL,
         OPENGGF_PRODUCER
@@ -224,6 +229,18 @@ public final class CompleteRunAudioTrace {
                     RuntimeArtifact.GPGX_OBSERVER_BUILD_RECIPE);
             if (!artifactSha256.keySet().containsAll(nativeRequired)) {
                 throw new IllegalArgumentException("buffered native identity is missing observer artifacts");
+            }
+            if (observerAdapter == ManagedObserverAdapter.REFLECTION) {
+                Set<RuntimeArtifact> reflectionRequired = Set.of(
+                        RuntimeArtifact.GPGX_OBSERVER_IDENTITY,
+                        RuntimeArtifact.GPGX_OBSERVER_ADAPTER_SOURCE,
+                        RuntimeArtifact.GPGX_HOST_SOURCE,
+                        RuntimeArtifact.BIZHAWK_BIZINVOKE_DLL,
+                        RuntimeArtifact.BIZHAWK_BASE_COMMON_DLL);
+                if (!artifactSha256.keySet().containsAll(reflectionRequired)) {
+                    throw new IllegalArgumentException(
+                            "reflection observer identity is missing proxy or managed dependency artifacts");
+                }
             }
         }
     }

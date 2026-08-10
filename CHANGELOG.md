@@ -3,6 +3,13 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Tooling: add a deterministic, separately installed BizHawk 2.11 GPGX audio
+  observer core. Its bounded native ABI records nested driver-service, FM, PSG,
+  reset, and synchronous Z80-RAM snapshot events without changing emulated
+  results or cycles. The exact patch, core, complete corresponding source,
+  non-commercial notices, Waterbox toolchain, and build recipe are content
+  addressed; the stock managed assemblies remain unchanged and use the locked
+  reflection adapter path.
 - Tooling: complete-run audio captures now bind a typed, profile-owned observer
   runtime identity and its exact managed adapter/artifact set. The BizHawk 2.11
   GPGX source, historical Waterbox toolchain, and stock core have reproducible

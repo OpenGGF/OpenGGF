@@ -1,0 +1,47 @@
+{
+  "schema": "openggf.gpgx-audio-observer-build-recipe.v1",
+  "source_date_epoch": 1758367997,
+  "environment": {
+    "LC_ALL": "C",
+    "TZ": "UTC",
+    "MAKEFLAGS": "-j1",
+    "umask": "0022",
+    "waterbox_path_hex": "2f686f6d652f66656f732f7368617265732f73686172652f42697a4861776b",
+    "compiler_path": "/opt/task6-clang"
+  },
+  "commands": [
+    ["/usr/bin/git", "-c", "core.hooksPath=/dev/null", "-C", "${SOURCE_SNAPSHOT}", "apply", "--check", "${PATCH}"],
+    ["/usr/bin/git", "-c", "core.hooksPath=/dev/null", "-C", "${SOURCE_SNAPSHOT}", "apply", "--whitespace=error-all", "${PATCH}"],
+    ["/usr/bin/bash", "-p", "${RECIPE_ROOT}/selftest/run.sh", "${SOURCE_SNAPSHOT}", "${TOOLCHAIN_SNAPSHOT}", "${BUILD_STAGE}"],
+    ["/usr/bin/make", "-C", "${WATERBOX_BUILD_PATH}/waterbox/emulibc", "-j1"],
+    ["/usr/bin/make", "-C", "${WATERBOX_BUILD_PATH}/waterbox/gpgx", "-j1"],
+    ["${LOCKED_ZSTD}", "--stdout", "--ultra", "-22", "--threads=0", "--no-progress", "--force", "${BUILD_STAGE}/gpgx.wbx"],
+    ["/usr/bin/tar", "--format=posix", "--sort=name", "--mtime=@1758367997", "--owner=0", "--group=0", "--numeric-owner", "--pax-option=delete=atime,delete=ctime", "--no-recursion", "--verbatim-files-from", "--files-from=${BUILD_STAGE}/source-bundle.paths", "-cf", "${BUILD_STAGE}/source-bundle.tar"],
+    ["${LOCKED_ZSTD}", "--ultra", "-22", "--threads=0", "--no-progress", "--force", "${BUILD_STAGE}/source-bundle.tar", "-o", "${BUILD_STAGE}/source-bundle.tar.zst"]
+  ],
+  "versioned_inputs": {
+    "build-core.sh": "b54fb4512326bb10657217efe0082eb72dd9c466ded1b1d7ca72306d16feb6cf",
+    "install-core.sh": "c705a2ecc2c50cd05f49594dc92bbf14899bca7068504c18526a2424eeb4fea6",
+    "0001-buffer-z80-audio-events.patch": "45d85fc19405457c788be4f6c17d2b14281d33fbff163cd42eead76e08f7f6d2",
+    "source-lock.json": "348ffd29471bcd9a0f452b6112a7bed941f0dd43f364a315c5cbd68f918205f9",
+    "toolchain-lock.json": "e40900cda561e1066db1887712cb8219dc0c5b53a9a249f24061181b7bc3420c",
+    "verify-inputs.sh": "33126e725b52d511b8b20360512d054f36666fa23ad884ca4d7c4fe0d99dcef5",
+    "secure-runtime.sh": "5acab791f8f9c6e37cece73f2f48bcb3a6d319fa483fe1aa39a27e9baef94860",
+    "notices/zstd-LICENSE": "7055266497633c9025b777c78eb7235af13922117480ed5c674677adc381c9d8"
+    ,"selftest/run.sh": "8aa7ef97ab612a517d23826c46a15d6570c1dbad9a3ec41cec0b84cb1aada98a"
+    ,"selftest/harness.c": "daf96cf7396e9c3fe82dc99883682107ba51824b8bde15562ff1c03f6f976192"
+    ,"selftest/shared.h": "4ad706c3d360198740914c9e90c17c65ead38350946a21a5c7919b29ec5a8224"
+    ,"selftest/emulibc.h": "449757babbb19ef05cf3d6c859d5bdeba60124ff49a2e0695a28364886c4afc8"
+    ,"selftest/wrap_harness.c": "bc085405267e1ca74c2737b6e00bb7a5415c10d8195be95929f0f938cd08665a"
+    ,"selftest/matrix_harness.c": "83cba22395900f14e2b3391d39d141436e8fa72c1172f4ca02c6e1f2ab2ac660"
+    ,"selftest/cpu_boundary_harness.c": "28363155dc46748d479684c5f617076cb12d9bbabc78d7ce014874c16b815210"
+    ,"selftest/m68k_boundary_harness.c": "22494789511d26c51a8992a7ed73d31d324e87f2c12c026095a1ca0f6c65693d"
+  },
+  "managed_reflection_inputs": {
+    "adapter_source_sha256": "770dfcfef0fabc2eb7211add26d7a3716e33b75ddbe7dd3d7ba1568c8cb3a102",
+    "host_source_sha256": "052090e4a93c6614f3c4465526c47876779dc40ded1897d0cc4d24c3c04ed497",
+    "bizinvoke_sha256": "8d05389bf0e02be1244bdc7a2adcd93b4cff95acf199fc927987ca699760a1b7",
+    "bizhawk_common_sha256": "438a49d6a45d9fcac17016240ae205d1af7a4632865f6f70468b684b82323f33"
+  },
+  "task6_build_recipe_sha256": "57ea87848e924904cc3463e6a8b59c80eea62e22fe19f1c0d2c82c7bce33260a"
+}

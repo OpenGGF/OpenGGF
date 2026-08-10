@@ -24,6 +24,34 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /** Strict process-local profile registry. Registration publishes an immutable snapshot. */
 public final class CompleteRunAudioProfiles {
+    public static final String GPGX_AUDIO_TRACE_ABI_NAME = "gpgx.audio-trace.v1";
+    public static final int GPGX_AUDIO_TRACE_ABI_VERSION = 1;
+    public static final int GPGX_AUDIO_TRACE_EVENT_SIZE = 32;
+    public static final int GPGX_AUDIO_TRACE_CAPACITY = 65_536;
+    public static final String GPGX_AUDIO_TRACE_CORE_BUILD_ID = "8e822239d27df092";
+    public static final String GPGX_AUDIO_TRACE_PATCH_SHA256 =
+            "45d85fc19405457c788be4f6c17d2b14281d33fbff163cd42eead76e08f7f6d2";
+    public static final String GPGX_AUDIO_TRACE_CORE_SHA256 =
+            "ba276573fc7802fb2313c051471dbdd664959c06aaafa6ef73564799886d083f";
+    public static final String GPGX_AUDIO_TRACE_CORE_UNCOMPRESSED_SHA256 =
+            "7807b57ffdfa303465ec2a2e707a5aacc38bd56cd10e201aca2965620eb71fb2";
+    public static final String GPGX_AUDIO_TRACE_SOURCE_BUNDLE_SHA256 =
+            "abd68651d633a0a75d01cb9569cfb9dc15da4a7540eb072fc2d8eb11e548ed0e";
+    public static final String GPGX_AUDIO_TRACE_TOOLCHAIN_SHA256 =
+            "9caa5c02dcd2d9c01e5d0196956787a0f31760195c6544a2ceafcb771f469521";
+    public static final String GPGX_AUDIO_TRACE_BUILD_RECIPE_SHA256 =
+            "eb58429b3b0bb47b337c60055d849f917842b8e973083d23261bdb2e04783d99";
+    public static final String GPGX_AUDIO_TRACE_IDENTITY_SHA256 =
+            "f3721d457aa867559d6ebad16111a4a1d737b9187c8655b144788a685d869e28";
+    public static final String GPGX_AUDIO_TRACE_ADAPTER_SOURCE_SHA256 =
+            "770dfcfef0fabc2eb7211add26d7a3716e33b75ddbe7dd3d7ba1568c8cb3a102";
+    public static final String GPGX_AUDIO_TRACE_HOST_SOURCE_SHA256 =
+            "052090e4a93c6614f3c4465526c47876779dc40ded1897d0cc4d24c3c04ed497";
+    public static final String BIZHAWK_BIZINVOKE_SHA256 =
+            "8d05389bf0e02be1244bdc7a2adcd93b4cff95acf199fc927987ca699760a1b7";
+    public static final String BIZHAWK_BASE_COMMON_SHA256 =
+            "438a49d6a45d9fcac17016240ae205d1af7a4632865f6f70468b684b82323f33";
+
     private static final AtomicReference<Map<String, CompleteRunAudioProfile>> PROFILES =
             new AtomicReference<>(Map.of());
 

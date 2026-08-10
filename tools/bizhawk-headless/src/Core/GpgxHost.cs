@@ -12,6 +12,7 @@ namespace OpenGGF.BizHawk.Headless
         private readonly GPGX core;
         private readonly MutableController controller;
         private readonly MemoryDomain mainRam;
+        private readonly MemoryDomain z80Ram;
         private readonly IMemoryCallbackSystem memoryCallbacks;
         private readonly IDebuggable debugger;
         private readonly List<ExecuteCallbackRegistration>
@@ -44,6 +45,12 @@ namespace OpenGGF.BizHawk.Headless
                 throw new InvalidOperationException(
                     "GPGX memory domain '" + mainRam.Name + "' has size "
                     + mainRam.Size + "; expected exactly 65536 bytes.");
+            }
+            z80Ram = memoryDomains["Z80 RAM"];
+            if (z80Ram == null || z80Ram.Size != 8192L)
+            {
+                core.Dispose();
+                throw new InvalidOperationException("GPGX did not expose the exact 8192-byte Z80 RAM domain.");
             }
             debugger =
                 core.ServiceProvider.GetService<IDebuggable>();
@@ -95,6 +102,30 @@ namespace OpenGGF.BizHawk.Headless
         public long MainRamDomainSize
         {
             get { return mainRam.Size; }
+        }
+
+        internal GpgxAudioObserverAdapter CreateAudioObserverAdapter()
+        {
+            if (disposed) throw new ObjectDisposedException("GpgxHost");
+            return new GpgxAudioObserverAdapter(core);
+        }
+
+        internal byte[] CloneSavestate()
+        {
+            if (disposed) throw new ObjectDisposedException("GpgxHost");
+            return ((IStatable)core).CloneSavestate();
+        }
+
+        internal byte ReadZ80RamByte(int offset)
+        {
+            if (offset < 0 || offset >= z80Ram.Size) throw new ArgumentOutOfRangeException("offset");
+            return z80Ram.PeekByte(offset);
+        }
+
+        internal void LoadSavestate(byte[] state)
+        {
+            if (disposed) throw new ObjectDisposedException("GpgxHost");
+            ((IStatable)core).LoadStateBinary(state);
         }
 
         public static GpgxHost Open(

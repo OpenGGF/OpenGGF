@@ -14,10 +14,10 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class TestCompleteRunAudioTrace {
-    private static final String TEST_ABI_NAME = "task6-test-sentinel-not-a-runtime-abi";
-    private static final int TEST_ABI_VERSION = 2_000_006;
-    private static final int TEST_EVENT_SIZE = 2_000_007;
-    private static final int TEST_CAPACITY = 2_000_008;
+    private static final String TEST_ABI_NAME = CompleteRunAudioProfiles.GPGX_AUDIO_TRACE_ABI_NAME;
+    private static final int TEST_ABI_VERSION = CompleteRunAudioProfiles.GPGX_AUDIO_TRACE_ABI_VERSION;
+    private static final int TEST_EVENT_SIZE = CompleteRunAudioProfiles.GPGX_AUDIO_TRACE_EVENT_SIZE;
+    private static final int TEST_CAPACITY = CompleteRunAudioProfiles.GPGX_AUDIO_TRACE_CAPACITY;
     private final Fixture fixture = new Fixture();
 
     @Test
@@ -211,19 +211,19 @@ class TestCompleteRunAudioTrace {
         String digest = "a".repeat(64);
         assertThrows(IllegalArgumentException.class, () -> new BufferedNativeObserverIdentity(
                 TEST_ABI_NAME, TEST_ABI_VERSION, TEST_EVENT_SIZE, TEST_CAPACITY,
-                "bizhawk-2.11-gpgx-audio-observer-v1", "gpgx-audio-observer-v1", "7696adca7ad14b79",
+                "bizhawk-2.11-gpgx-audio-observer-v1", "gpgx-audio-observer-v1", "9f0e01c17bf47019",
                 digest, digest, false, 1, 0));
         assertThrows(IllegalArgumentException.class, () -> new BufferedNativeObserverIdentity(
                 TEST_ABI_NAME, TEST_ABI_VERSION, TEST_EVENT_SIZE, TEST_CAPACITY,
-                "bizhawk-2.11-gpgx-audio-observer-v1", "gpgx-audio-observer-v1", "7696adca7ad14b79",
+                "bizhawk-2.11-gpgx-audio-observer-v1", "gpgx-audio-observer-v1", "9f0e01c17bf47019",
                 digest, digest, true, TEST_CAPACITY + 1, 0));
         assertThrows(IllegalArgumentException.class, () -> new BufferedNativeObserverIdentity(
                 TEST_ABI_NAME, TEST_ABI_VERSION, TEST_EVENT_SIZE, TEST_CAPACITY,
-                "bizhawk-2.11-gpgx-audio-observer-v1", "gpgx-audio-observer-v1", "7696adca7ad14b79",
+                "bizhawk-2.11-gpgx-audio-observer-v1", "gpgx-audio-observer-v1", "9f0e01c17bf47019",
                 digest, digest, true, 1, 1));
         assertThrows(IllegalArgumentException.class, () -> new BufferedNativeObserverIdentity(
                 TEST_ABI_NAME, TEST_ABI_VERSION, TEST_EVENT_SIZE, TEST_CAPACITY,
-                "/tmp/observer", "gpgx-audio-observer-v1", "7696adca7ad14b79",
+                "/tmp/observer", "gpgx-audio-observer-v1", "9f0e01c17bf47019",
                 digest, digest, true, 1, 0));
     }
 
@@ -236,12 +236,14 @@ class TestCompleteRunAudioTrace {
                 RuntimeArtifact.BIZHAWK_COMMON_DLL, RuntimeArtifact.WATERBOX_HOST,
                 RuntimeArtifact.GPGX_CORE_UNCOMPRESSED, RuntimeArtifact.GPGX_OBSERVER_PATCH,
                 RuntimeArtifact.GPGX_OBSERVER_SOURCE_BUNDLE, RuntimeArtifact.GPGX_OBSERVER_TOOLCHAIN,
-                RuntimeArtifact.GPGX_OBSERVER_BUILD_RECIPE)) {
+                RuntimeArtifact.GPGX_OBSERVER_BUILD_RECIPE, RuntimeArtifact.GPGX_OBSERVER_IDENTITY,
+                RuntimeArtifact.GPGX_OBSERVER_ADAPTER_SOURCE, RuntimeArtifact.GPGX_HOST_SOURCE,
+                RuntimeArtifact.BIZHAWK_BIZINVOKE_DLL, RuntimeArtifact.BIZHAWK_BASE_COMMON_DLL)) {
             nativeArtifacts.put(artifact, digest);
         }
         BufferedNativeObserverIdentity nativeIdentity = new BufferedNativeObserverIdentity(
                 TEST_ABI_NAME, TEST_ABI_VERSION, TEST_EVENT_SIZE, TEST_CAPACITY,
-                "bizhawk-2.11-gpgx-audio-observer-v1", "gpgx-audio-observer-v1", "7696adca7ad14b79",
+                "bizhawk-2.11-gpgx-audio-observer-v1", "gpgx-audio-observer-v1", "9f0e01c17bf47019",
                 digest, digest, true, 1, 0);
         ProducerRuntimeIdentity reflection = new ProducerRuntimeIdentity(
                 "BizHawk", "2.11", "BizHawk", "2.11", "GPGX", "1.0",
@@ -299,37 +301,53 @@ class TestCompleteRunAudioTrace {
     void bufferedObserverMetadataHasIndependentCanonicalJsonAndStrictParserGates() throws Exception {
         String digest = "a".repeat(64);
         Map<RuntimeArtifact, String> artifacts = new EnumMap<>(RuntimeArtifact.class);
-        for (RuntimeArtifact artifact : List.of(RuntimeArtifact.BIZHAWK_EXECUTABLE,
-                RuntimeArtifact.BIZHAWK_CORE_DLL, RuntimeArtifact.BIZHAWK_COMMON_DLL,
-                RuntimeArtifact.WATERBOX_HOST, RuntimeArtifact.GPGX_CORE,
-                RuntimeArtifact.GPGX_CORE_UNCOMPRESSED, RuntimeArtifact.GPGX_OBSERVER_PATCH,
-                RuntimeArtifact.GPGX_OBSERVER_SOURCE_BUNDLE, RuntimeArtifact.GPGX_OBSERVER_TOOLCHAIN,
-                RuntimeArtifact.GPGX_OBSERVER_BUILD_RECIPE)) {
-            artifacts.put(artifact, digest);
-        }
+        artifacts.put(RuntimeArtifact.BIZHAWK_EXECUTABLE, digest);
+        artifacts.put(RuntimeArtifact.BIZHAWK_CORE_DLL, digest);
+        artifacts.put(RuntimeArtifact.BIZHAWK_COMMON_DLL, digest);
+        artifacts.put(RuntimeArtifact.WATERBOX_HOST, digest);
+        artifacts.put(RuntimeArtifact.GPGX_CORE, CompleteRunAudioProfiles.GPGX_AUDIO_TRACE_CORE_SHA256);
+        artifacts.put(RuntimeArtifact.GPGX_CORE_UNCOMPRESSED,
+                CompleteRunAudioProfiles.GPGX_AUDIO_TRACE_CORE_UNCOMPRESSED_SHA256);
+        artifacts.put(RuntimeArtifact.GPGX_OBSERVER_PATCH,
+                CompleteRunAudioProfiles.GPGX_AUDIO_TRACE_PATCH_SHA256);
+        artifacts.put(RuntimeArtifact.GPGX_OBSERVER_SOURCE_BUNDLE,
+                CompleteRunAudioProfiles.GPGX_AUDIO_TRACE_SOURCE_BUNDLE_SHA256);
+        artifacts.put(RuntimeArtifact.GPGX_OBSERVER_TOOLCHAIN,
+                CompleteRunAudioProfiles.GPGX_AUDIO_TRACE_TOOLCHAIN_SHA256);
         artifacts.put(RuntimeArtifact.GPGX_OBSERVER_BUILD_RECIPE,
-                "57ea87848e924904cc3463e6a8b59c80eea62e22fe19f1c0d2c82c7bce33260a");
+                CompleteRunAudioProfiles.GPGX_AUDIO_TRACE_BUILD_RECIPE_SHA256);
+        artifacts.put(RuntimeArtifact.GPGX_OBSERVER_IDENTITY,
+                CompleteRunAudioProfiles.GPGX_AUDIO_TRACE_IDENTITY_SHA256);
+        artifacts.put(RuntimeArtifact.GPGX_OBSERVER_ADAPTER_SOURCE,
+                CompleteRunAudioProfiles.GPGX_AUDIO_TRACE_ADAPTER_SOURCE_SHA256);
+        artifacts.put(RuntimeArtifact.GPGX_HOST_SOURCE,
+                CompleteRunAudioProfiles.GPGX_AUDIO_TRACE_HOST_SOURCE_SHA256);
+        artifacts.put(RuntimeArtifact.BIZHAWK_BIZINVOKE_DLL,
+                CompleteRunAudioProfiles.BIZHAWK_BIZINVOKE_SHA256);
+        artifacts.put(RuntimeArtifact.BIZHAWK_BASE_COMMON_DLL,
+                CompleteRunAudioProfiles.BIZHAWK_BASE_COMMON_SHA256);
         Metadata metadata = new Metadata(SCHEMA, "test.profile", fixture.fixture, ProducerKind.REFERENCE,
                 new ProducerRuntimeIdentity("BizHawk", "2.11", "BizHawk", "2.11", "GPGX", "1.0",
                         ManagedObserverAdapter.REFLECTION, artifacts),
                 new BufferedNativeObserverIdentity(TEST_ABI_NAME, TEST_ABI_VERSION,
                         TEST_EVENT_SIZE, TEST_CAPACITY,
                         "bizhawk-2.11-gpgx-audio-observer-v1", "gpgx-audio-observer-v1",
-                        "7696adca7ad14b79", "b".repeat(64), "c".repeat(64), true, 1, 0),
+                        CompleteRunAudioProfiles.GPGX_AUDIO_TRACE_CORE_BUILD_ID,
+                        "b".repeat(64), "c".repeat(64), true, 1, 0),
                 new ObserverProof("reference.observer.v1", "native.buffer",
                         List.of(new CallbackProof("driver.service", 1))),
                 new ChunkPolicy(4096, "gzip", 0), List.of(HardwareRole.FM1, HardwareRole.PSG1),
                 new StateInventory(List.of("tempo"), List.of("cursor")));
         String canonical = """
-                {"schema":"complete_run_audio.v1","profileId":"test.profile","fixture":{"romSha1":"0123456789abcdef0123456789abcdef01234567","romCrc32":"89abcdef","bk2Sha256":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","bk2RowCount":862,"runManifestSha256":"fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210","segments":[{"id":"green-hill","firstFrame":860,"exclusiveEnd":862}],"firstFrame":860,"exclusiveEnd":862},"producerKind":"REFERENCE","producerRuntimeIdentity":{"producerName":"BizHawk","producerVersion":"2.11","emulatorName":"BizHawk","emulatorVersion":"2.11","coreName":"GPGX","coreVersion":"1.0","observerAdapter":"REFLECTION","artifactSha256":{"BIZHAWK_EXECUTABLE":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","BIZHAWK_CORE_DLL":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","BIZHAWK_COMMON_DLL":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","WATERBOX_HOST":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","GPGX_CORE":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","GPGX_CORE_UNCOMPRESSED":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","GPGX_OBSERVER_PATCH":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","GPGX_OBSERVER_SOURCE_BUNDLE":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","GPGX_OBSERVER_TOOLCHAIN":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","GPGX_OBSERVER_BUILD_RECIPE":"57ea87848e924904cc3463e6a8b59c80eea62e22fe19f1c0d2c82c7bce33260a"}},"observerRuntimeIdentity":{"kind":"BUFFERED_NATIVE","abiName":"task6-test-sentinel-not-a-runtime-abi","abiVersion":2000006,"eventSize":2000007,"capacity":2000008,"installationId":"bizhawk-2.11-gpgx-audio-observer-v1","coreId":"gpgx-audio-observer-v1","coreBuildId":"7696adca7ad14b79","watchMaskSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","serviceManifestSha256":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","enabled":true,"maximumFrameOccupancy":1,"overflowCount":0},"observerProof":{"observerProfile":"reference.observer.v1","callbackSource":"native.buffer","callbacks":[{"callback":"driver.service","observations":1}]},"chunkPolicy":{"frameRows":4096,"compression":"gzip","gzipTimestamp":0},"hardwareRoles":["FM1","PSG1"],"stateInventory":{"globalFields":["tempo"],"activeRoleFields":["cursor"]}}""";
+{"schema":"complete_run_audio.v1","profileId":"test.profile","fixture":{"romSha1":"0123456789abcdef0123456789abcdef01234567","romCrc32":"89abcdef","bk2Sha256":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","bk2RowCount":862,"runManifestSha256":"fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210","segments":[{"id":"green-hill","firstFrame":860,"exclusiveEnd":862}],"firstFrame":860,"exclusiveEnd":862},"producerKind":"REFERENCE","producerRuntimeIdentity":{"producerName":"BizHawk","producerVersion":"2.11","emulatorName":"BizHawk","emulatorVersion":"2.11","coreName":"GPGX","coreVersion":"1.0","observerAdapter":"REFLECTION","artifactSha256":{"BIZHAWK_EXECUTABLE":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","BIZHAWK_CORE_DLL":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","BIZHAWK_COMMON_DLL":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","WATERBOX_HOST":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","GPGX_CORE":"ba276573fc7802fb2313c051471dbdd664959c06aaafa6ef73564799886d083f","GPGX_CORE_UNCOMPRESSED":"7807b57ffdfa303465ec2a2e707a5aacc38bd56cd10e201aca2965620eb71fb2","GPGX_OBSERVER_PATCH":"45d85fc19405457c788be4f6c17d2b14281d33fbff163cd42eead76e08f7f6d2","GPGX_OBSERVER_SOURCE_BUNDLE":"abd68651d633a0a75d01cb9569cfb9dc15da4a7540eb072fc2d8eb11e548ed0e","GPGX_OBSERVER_TOOLCHAIN":"9caa5c02dcd2d9c01e5d0196956787a0f31760195c6544a2ceafcb771f469521","GPGX_OBSERVER_BUILD_RECIPE":"eb58429b3b0bb47b337c60055d849f917842b8e973083d23261bdb2e04783d99","GPGX_OBSERVER_IDENTITY":"f3721d457aa867559d6ebad16111a4a1d737b9187c8655b144788a685d869e28","GPGX_OBSERVER_ADAPTER_SOURCE":"770dfcfef0fabc2eb7211add26d7a3716e33b75ddbe7dd3d7ba1568c8cb3a102","GPGX_HOST_SOURCE":"052090e4a93c6614f3c4465526c47876779dc40ded1897d0cc4d24c3c04ed497","BIZHAWK_BIZINVOKE_DLL":"8d05389bf0e02be1244bdc7a2adcd93b4cff95acf199fc927987ca699760a1b7","BIZHAWK_BASE_COMMON_DLL":"438a49d6a45d9fcac17016240ae205d1af7a4632865f6f70468b684b82323f33"}},"observerRuntimeIdentity":{"kind":"BUFFERED_NATIVE","abiName":"gpgx.audio-trace.v1","abiVersion":1,"eventSize":32,"capacity":65536,"installationId":"bizhawk-2.11-gpgx-audio-observer-v1","coreId":"gpgx-audio-observer-v1","coreBuildId":"8e822239d27df092","watchMaskSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","serviceManifestSha256":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","enabled":true,"maximumFrameOccupancy":1,"overflowCount":0},"observerProof":{"observerProfile":"reference.observer.v1","callbackSource":"native.buffer","callbacks":[{"callback":"driver.service","observations":1}]},"chunkPolicy":{"frameRows":4096,"compression":"gzip","gzipTimestamp":0},"hardwareRoles":["FM1","PSG1"],"stateInventory":{"globalFields":["tempo"],"activeRoleFields":["cursor"]}}""";
 
         assertEquals(canonical, CompleteRunAudioJson.writeMetadata(metadata));
         assertEquals(metadata, readMetadata(canonical));
         assertThrows(IllegalArgumentException.class,
-                () -> readMetadata(canonical.replace("\"eventSize\":2000007,", "")));
+                () -> readMetadata(canonical.replace("\"eventSize\":32,", "")));
         assertThrows(IllegalArgumentException.class,
-                () -> readMetadata(canonical.replace("\"capacity\":2000008",
-                        "\"capacity\":2000008,\"capacity\":2000008")));
+                () -> readMetadata(canonical.replace("\"capacity\":65536",
+                        "\"capacity\":65536,\"capacity\":65536")));
         assertThrows(IllegalArgumentException.class,
                 () -> readMetadata(canonical.replace("\"enabled\":true", "\"enabled\":false")));
         assertThrows(IllegalArgumentException.class,

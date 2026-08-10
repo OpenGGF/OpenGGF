@@ -61,6 +61,7 @@
     <Compile Include="src/Bk2/Bk2Movie.cs" />
     <Compile Include="src/Bk2/Bk2Reader.cs" />
     <Compile Include="src/Core/GpgxHost.cs" />
+    <Compile Include="src/Core/GpgxAudioObserverAdapter.cs" />
     <Compile Include="src/Core/IGpgxHost.cs" />
     <Compile Include="src/Core/IMainRamWriter.cs" />
     <Compile Include="src/Core/MutableController.cs" />
