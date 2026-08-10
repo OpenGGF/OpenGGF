@@ -106,7 +106,7 @@ public final class S3kBadnikProjectileInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // MoveSprite / MoveSprite_LightGravity order:
         // use old y_vel for movement this frame, then apply gravity.

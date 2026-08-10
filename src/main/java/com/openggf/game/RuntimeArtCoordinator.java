@@ -16,6 +16,13 @@ public interface RuntimeArtCoordinator extends QueueDiagnosticsProvider {
     RuntimeArtCoordinator NONE = new RuntimeArtCoordinator() {
     };
 
+    /**
+     * Runs before the timing ledger is serviced at a production boundary, for
+     * coordinator work the ROM performs in the previous loop iteration's tail.
+     */
+    default void beforeTimingService(HardwareServiceBoundary boundary) {
+    }
+
     default void afterTimingService(HardwareServiceBoundary boundary) {
     }
 

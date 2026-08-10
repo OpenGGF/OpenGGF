@@ -1,22 +1,16 @@
 package com.openggf.tests.trace.runs;
 
-import com.openggf.GameLoop;
-import com.openggf.control.InputHandler;
-import com.openggf.debug.playback.Bk2Movie;
-import com.openggf.game.GameServices;
-import com.openggf.game.GameMode;
-import com.openggf.game.sonic1.specialstage.Sonic1SpecialStageTraceData;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
-import com.openggf.trace.TraceRunManifest;
-import com.openggf.trace.replay.runs.TraceRunReplayWalker.SegmentPlan;
-import com.openggf.tests.trace.RecordedInputRows;
+import com.openggf.trace.replay.runs.TraceRunPlaybackCoordinator.AdmitDestination;
+import com.openggf.trace.replay.runs.TraceRunPlaybackCoordinator.BeginTerminalTail;
+import com.openggf.trace.replay.runs.TraceRunPlaybackCoordinator.CloseSegment;
+import com.openggf.trace.replay.runs.TraceRunPlaybackCoordinator.CompleteRun;
+import com.openggf.trace.replay.runs.TraceRunPlaybackCoordinator.EnterTransitionGap;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.file.Path;
-import java.util.function.IntConsumer;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -28,6 +22,58 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * shared {@link AbstractRunChainTest} base and asserts the S1 special-stage
  * return-boundary shape: a NEXT-ACT advance (no positional restore) plus the
  * emerald-count increment.
+ *
+ * <h2>Current RED: the {@code run_tail} dynamic-art edge — one residual left</h2>
+ *
+ * <p>{@code dynamicArtGapJournal.verifyTerminal} compares the run's LAST
+ * dynamic-art gap edge against {@code run_manifest.json}'s
+ * {@code dynamic_art_gap_transitions} tail entry. The recorded tail edge is
+ * {@code edge_ordinal 4698/4699}, {@code transfer_id 2349},
+ * {@code movie_logical_frame 9071}. Ordinals, transfer ids and both ledger
+ * fingerprints now match; only {@code movie_logical_frame} still diverges
+ * (engine 9035, delta 36).
+ *
+ * <p>Two earlier theories are REFUTED and must not be reopened: the
+ * row-stamping deficit ({@code stateMovieLogicalRow}), and the returning
+ * level's load sitting on the wrong side of the results bridge. A third — a
+ * {@code ghz1} rolling-animation divergence at local frame 2083 — was real and
+ * has been fixed (the landing at 0x822 is an angled-CEILING landing routed
+ * through {@code CollisionSystem.doCeilingCollision} ->
+ * {@code resetWallCeilingLandingState}, so the walk animation was never set).
+ *
+ * <p>The former {@code +12} ordinal / {@code +6} transfer skew that fix left
+ * behind resolved to a single missing transfer at the run's FIRST level load.
+ * A fresh playable's art is established through
+ * {@code DynamicArtLifecycleService.primePlayerDplc}, which deliberately
+ * publishes no edge because a segment-scoped replay starts at
+ * {@code Level_MainLoop} and never owns that transfer. A run's movie DOES span
+ * that load: the recorder's transfer 0 is exactly it — {@code mapping_frame 1},
+ * {@code submission_origin run_gap}, {@code movie_logical_frame 748}, i.e. the
+ * {@code ghz1} offset 774 minus the ROM-counted pre-main-loop tail of 26
+ * ({@code Level_Delay} 4 + {@code PalFadeIn_Alt} 22,
+ * docs/s1disasm/sonic.asm:2956-2969). Priming now stages that bank and the run
+ * publishes it before opening its first segment, which advances the counters by
+ * the one transfer / two ordinals the whole run was short.
+ *
+ * <p>The remaining {@code -36} movie rows are the un-modelled S1 level-load
+ * span. Instrumenting the terminal tail gives the engine's phase lengths:
+ * {@code SPECIAL_STAGE_RESULTS} 22 rows (8861-8882), {@code TITLE_CARD} 151
+ * rows (8883-9033), then {@code LEVEL} to the movie's last row 9092. The ROM's
+ * stamp of 9071 implies its first main-loop row is 9097 — BEYOND the movie's
+ * end — so on hardware the level was still inside its pre-main-loop load when
+ * the recording stopped. The engine spends ZERO rows on {@code ClearScreen} /
+ * {@code LevelDataLoad} / {@code LoadTilesFromStart} / {@code ObjPosLoad} /
+ * {@code NemDec}; only the trailing {@code Level_Delay} 4 +
+ * {@code PalFadeIn_Alt} 22 are modelled. That is the level-load-span strand of
+ * docs/architecture/plans/trace/2026-08-06-trace-validation-roadmap.md (section
+ * 4), whose stated prerequisite is a RECORDED level-load span segment plus an
+ * engine-counted load model. It cannot be closed from frame-granularity ROM
+ * control flow — the span's length is cycle cost — and any constant fitted to
+ * this fixture's 36 would desync the first different recording.
+ *
+ * <p>Note the level segments' {@code LiveTraceComparator} does not compare
+ * {@code dynamic_art.edges} (only {@code DynamicArtSpecialStageComparator}
+ * does), which is why a transfer-stream divergence surfaces only here.
  */
 @RequiresRom(SonicGame.SONIC_1)
 class TestS1GhzMazeRoundTripChain extends AbstractRunChainTest {
@@ -39,12 +85,29 @@ class TestS1GhzMazeRoundTripChain extends AbstractRunChainTest {
     private Path activeRunDir;
 
     @Test
+    void ghzMazeSpecialStageReturnPresentationBridge() throws Exception {
+        assertChainReplayThroughSegmentRow(
+                DEFAULT_RUN_DIR, 2, 812);
+    }
+
+    @Test
     void ghzMazeRoundTrip() throws Exception {
         String configuredRunDir = System.getProperty(EXTERNAL_RUN_DIR_PROPERTY);
         activeRunDir = configuredRunDir == null || configuredRunDir.isBlank()
                 ? DEFAULT_RUN_DIR
                 : Path.of(configuredRunDir).toAbsolutePath().normalize();
         DynamicArtGapJournalEvidence evidence = assertChainReplay(activeRunDir);
+        assertEquals(List.of(
+                        AdmitDestination.class,
+                        CloseSegment.class, EnterTransitionGap.class,
+                        AdmitDestination.class,
+                        CloseSegment.class, EnterTransitionGap.class,
+                        AdmitDestination.class,
+                        CloseSegment.class, BeginTerminalTail.class,
+                        CompleteRun.class),
+                evidence.coordinatorActions().stream()
+                        .map(Object::getClass).toList(),
+                "the real headless chain must follow the shared coordinator transcript");
         DynamicArtStructuralGapEvidence returnGap =
                 evidence.structuralGap("ss", "ghz2");
         assertTrue(returnGap.transitionCountAfterNextArm()
@@ -70,91 +133,4 @@ class TestS1GhzMazeRoundTripChain extends AbstractRunChainTest {
                         + "inside its structural gap");
     }
 
-    /**
-     * S1-specific ring semantics: skip the ring-count comparison (still assert
-     * emeralds). ROM's {@code Level_LoadObj} unconditionally clears
-     * {@code v_rings} on any fresh act entry when {@code v_lastlamp == 0}
-     * (docs/s1disasm/sonic.asm:2898-2900 -- "are we starting from a
-     * lamppost?"), and {@code Got_NextLevel} clears {@code v_lastlamp} for
-     * BOTH the normal sign-post route AND the giant-ring route
-     * (docs/s1disasm/_incObj/3A Got Through Card.asm:198, run before the
-     * {@code f_bigring} branch). So S1, unlike S2/S3K, never carries rings
-     * across an act transition -- the settled post-transition ring count is
-     * deterministically 0 regardless of the Special Stage outcome.
-     * <p>
-     * The manifest's recorded {@code rings_after} (67) is the Special Stage's
-     * own ring tally at the instant ROM's {@code v_gamemode} first flips back
-     * to {@code id_Level} (docs/s1disasm/sonic.asm:3332, inside
-     * {@code SS_ChkEnd} -- well before the results-screen/title-card sequence
-     * and {@code Level_LoadObj}'s clear, which run afterward under that SAME
-     * coarse {@code v_gamemode} value). Our engine models that same window
-     * with distinct {@code GameMode} values ({@code SPECIAL_STAGE_RESULTS} ->
-     * {@code TITLE_CARD} -> {@code LEVEL}), so {@code currentMode()==LEVEL}
-     * only becomes observable AFTER the ROM-faithful reload has already run
-     * and organically produced rings=0 -- the recorded 67 is not reproducible
-     * at that later observation point by construction, not by an engine bug.
-     */
-    @Override
-    protected void assertRingsAndEmeralds(
-            TraceRunManifest.Transition exit, Path runDir, boolean assertEmeralds) {
-        if (assertEmeralds && exit.emeraldsAfter() != null) {
-            int actualEmeralds = GameServices.gameState().getEmeraldCount();
-            assertEquals(exit.emeraldsAfter().intValue(), actualEmeralds,
-                    "Emerald count after stage exit for " + runDir);
-        }
-    }
-
-    /**
-     * S1-specific lag-aware special-stage stepper. The generic base's
-     * {@link AbstractRunChainTest#specialStageDrivenStep} feeds every
-     * recorded BK2 row as a full {@code Sonic1SpecialStageProvider.update()}
-     * tick, but a BizHawk "lag" row is a real elapsed console VBlank where
-     * the ROM's OWN game logic did NOT advance (the same reason
-     * {@code S1SpecialStageReplayHarness.stepFrame} /
-     * {@code AbstractS1SpecialStageTraceReplayTest}'s comparator loop skip
-     * lag rows rather than stepping them -- see that class's "VBlank-paced"
-     * javadoc section). Stepping the provider on a lag row runs an EXTRA
-     * physics tick beyond what the recorded outcome reflects; over this
-     * fixture's 72 lag rows (of 3091) that is enough drift in a
-     * rotation-driven maze to miss the emerald entirely. Loads the same
-     * {@code Sonic1SpecialStageTraceData} the standalone harness uses,
-     * purely as a read-only lag/pacing signal (comparison-only invariant:
-     * no field from it is ever hydrated into engine state) and skips lag
-     * rows without stepping the engine, mirroring the harness's
-     * {@code if (tf.lag()) continue;}.
-     */
-    @Override
-    protected IntConsumer uncomparedInteriorStep(
-            GameLoop loop, InputHandler inputHandler, Bk2Movie movie, SegmentPlan interior) {
-        Path ssDir = activeRunDir.resolve(interior.segment().dir());
-        Sonic1SpecialStageTraceData trace;
-        try {
-            trace = Sonic1SpecialStageTraceData.load(ssDir);
-        } catch (IOException e) {
-            throw new UncheckedIOException("Failed to load S1 special-stage lag trace: " + ssDir, e);
-        }
-        int bk2FrameOffset = interior.segment().bk2FrameOffset();
-        RecordedInputRows recordedInputs = new RecordedInputRows(movie, bk2FrameOffset);
-        return traceRow -> {
-            boolean lagged = traceRow < trace.frameCount()
-                    && trace.getFrame(traceRow).lag();
-            if (lagged || loop.getCurrentGameMode()
-                    != GameMode.SPECIAL_STAGE) {
-                if (trace.metadata()
-                        .hasPerFrameDynamicArtTransferState()) {
-                    stepUncomparedInteriorLifecycleRow(lagged);
-                }
-                GameServices.level().getObjectManager().advanceVblaCounter();
-                return;
-            }
-            int beforeVblank = GameServices.level().getObjectManager().getVblaCounter();
-            recordedInputs.withLogicalOverride(traceRow, inputHandler, () -> {
-                AbstractRunChainTest.stepEngineFrame(loop);
-            });
-            var objectManager = GameServices.level().getObjectManager();
-            if (objectManager.getVblaCounter() == beforeVblank) {
-                objectManager.advanceVblaCounter();
-            }
-        };
-    }
 }

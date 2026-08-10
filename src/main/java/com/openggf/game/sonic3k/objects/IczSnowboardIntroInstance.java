@@ -140,7 +140,7 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance implements
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = focusedPlayer();
         if (player == null) {
             setDestroyed(true);
@@ -154,7 +154,7 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance implements
             case STARTUP_LOCK -> updateStartupLock(player);
             case WAIT_FOR_BOARD_JUMP -> updateWaitForBoardJump(player);
             case BOARD_LAUNCH -> updateBoardLaunch(player);
-            case SNOWBOARDING -> updateSnowboarding(player, frameCounter);
+            case SNOWBOARDING -> updateSnowboarding(player, vIntRunCount);
             case SCRIPTED_SLOPE -> updateScriptedSlope(player);
             case CRASHED -> setDestroyed(true);
         }
@@ -333,7 +333,7 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance implements
         currentY = boardMotion.y;
     }
 
-    private void updateSnowboarding(AbstractPlayableSprite player, int frameCounter) {
+    private void updateSnowboarding(AbstractPlayableSprite player, int vIntRunCount) {
         holdPlayerControlLock(player);
         player.clearForcedInputMask();
         currentX = player.getCentreX();
@@ -343,7 +343,7 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance implements
         queueSnowboardJump(player);
         currentMappingFrame = resolveSonicSnowboardMappingFrame(player);
 
-        if ((frameCounter & (QUIET_SKID_INTERVAL - 1)) == 0 && !player.getAir()) {
+        if ((vIntRunCount & (QUIET_SKID_INTERVAL - 1)) == 0 && !player.getAir()) {
             services().playSfx(Sonic3kSfx.SLIDE_SKID_QUIET.id);
         }
         if (speedMaintenanceActive) {
@@ -647,7 +647,7 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance implements
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             if (--frameTimer < 0) {
                 frameTimer = 1;
                 if (++mappingFrame >= BOARD_FLY_AWAY_MAX_MAPPING_FRAME) {
@@ -701,7 +701,7 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance implements
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             xSub += xVel;
             ySub += yVel;
             x += xSub >> 8;

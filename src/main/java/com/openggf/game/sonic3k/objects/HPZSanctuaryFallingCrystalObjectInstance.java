@@ -82,8 +82,8 @@ public final class HPZSanctuaryFallingCrystalObjectInstance extends AbstractObje
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
-        lastFrameCounter = frameCounter;
+    public void update(int vIntRunCount, PlayableEntity player) {
+        lastFrameCounter = vIntRunCount;
         if (screenShakeTimer > 0 && --screenShakeTimer == 0 && tryServices() != null) {
             services().gameState().setScreenShakeActive(false);
         }

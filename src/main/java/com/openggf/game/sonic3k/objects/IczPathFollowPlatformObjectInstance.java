@@ -134,7 +134,7 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (isDestroyed()) {
             return;
         }
@@ -152,7 +152,7 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
                     waitTimer = JITTER_TIMER;
                 }
             }
-            case JITTER_WAIT -> updateJitterWait(frameCounter);
+            case JITTER_WAIT -> updateJitterWait(vIntRunCount);
             case WAIT_PUSH -> updateWaitPush(pushing, pusherX);
             case FOLLOW_FLOOR -> updateFollowFloor(playerEntity);
             case FALLING -> updateFalling();
@@ -186,12 +186,12 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
         };
     }
 
-    private void updateJitterWait(int frameCounter) {
+    private void updateJitterWait(int vIntRunCount) {
         // loc_89FD6 reads V_int_run_count+3, not Level_frame_counter.
         // ObjectManager supplies its VBlank clock; the service resolves the
         // independent low-bit phase retained for legacy S3K replay starts.
         ObjectServices svc = tryServices();
-        int vIntLowByte = svc != null ? svc.vIntRunCounter(frameCounter) : frameCounter;
+        int vIntLowByte = svc != null ? svc.resolveVIntRunCount(vIntRunCount) : vIntRunCount;
         x += (vIntLowByte & 1) == 0 ? 1 : -1;
         if (waitTimer-- <= 0) {
             phase = Phase.FALLING;
@@ -612,9 +612,9 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             animateRaw();
-            super.update(frameCounter, player);
+            super.update(vIntRunCount, player);
         }
 
         private void animateRaw() {

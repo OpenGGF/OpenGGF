@@ -11,6 +11,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SlopedSolidProvider;
@@ -75,6 +76,15 @@ public class Sonic1BridgeObjectInstance extends AbstractObjectInstance
     // surfacing it one frame early. landingDeferred reproduces the ROM's
     // detect-this-pass / apply-next-pass staging for a fresh airborne catch.
     private boolean landingDeferred;
+    // ROM Bri_Main allocates one object RAM slot per child log during
+    // ExecuteObjects (docs/s1disasm/_incObj/"11 GHZ Bridge.asm":51-97): the
+    // .loopBuildBridge dbf runs subtype-1 times (subq.b #2,d1 before dbf), one
+    // fewer than the log count because the parent IS the middle log. Each child
+    // is a display-only log at routine $A. This engine draws every log from the
+    // parent, but the slots must still be reserved so the ascending FindFreeObj
+    // scan — and therefore every later dynamic object's slot number, which feeds
+    // the (v_vblank_byte + 127 - slot) & 3 cadence gates — matches the ROM.
+    private boolean childSlotsReserved;
 
     public Sonic1BridgeObjectInstance(ObjectSpawn spawn) {
         this(spawn, null);
@@ -89,6 +99,35 @@ public class Sonic1BridgeObjectInstance extends AbstractObjectInstance
         }
         this.logYOffsets = new int[logCount];
         this.slopeData = new byte[getHalfWidth() + 1];
+    }
+
+    /**
+     * Number of child log objects ROM Bri_Main creates. It works from the raw
+     * subtype, not the bend-table-clamped log count: d1 = subtype,
+     * subq.b #2,d1, bcs (no children for a 1-log bridge), then dbf, giving
+     * subtype-1 iterations.
+     */
+    private int romChildLogCount() {
+        return Math.max(0, (spawn.subtype() & 0xFF) - 1);
+    }
+
+    /**
+     * Reserves the child-log object RAM slots ROM Bri_Main allocates on its
+     * first pass (docs/s1disasm/_incObj/"11 GHZ Bridge.asm":51-97). The ROM uses
+     * FindFreeObj (the non-FixBugs branch), an ascending first-free scan, and
+     * aborts the loop when object RAM is full — {@code allocateChildSlots}
+     * matches both.
+     */
+    private void reserveChildSlots() {
+        if (childSlotsReserved || romChildLogCount() <= 0) {
+            return;
+        }
+        childSlotsReserved = true;
+        ObjectServices svc = tryServices();
+        if (svc == null || svc.objectManager() == null || spawn == null) {
+            return;
+        }
+        svc.objectManager().allocateChildSlots(spawn, romChildLogCount());
     }
 
     static BridgeBendData loadBendData(RomByteReader reader) {
@@ -180,7 +219,9 @@ public class Sonic1BridgeObjectInstance extends AbstractObjectInstance
     // ---- Update logic ----
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        // ROM Bri_Main runs once, on the object's first ExecuteObjects pass.
+        reserveChildSlots();
         if (playerOnBridge) {
             AbstractPlayableSprite currentRider = currentRidingPlayer();
             if (currentRider != null) {

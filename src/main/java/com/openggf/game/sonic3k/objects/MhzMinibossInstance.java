@@ -191,7 +191,7 @@ public final class MhzMinibossInstance extends AbstractBossInstance implements S
     }
 
     @Override
-    protected void updateBossLogic(int frameCounter, PlayableEntity player) {
+    protected void updateBossLogic(int vIntRunCount, PlayableEntity player) {
         if (state.defeated) {
             updateDefeatHandoff();
             return;
@@ -949,7 +949,7 @@ public final class MhzMinibossInstance extends AbstractBossInstance implements S
             // 176198-176238, 62708-62720).
             spawnChild(() -> new S3kBossDefeatSignpostFlow(
                     state.x, svc.currentAct(), S3kBossDefeatSignpostFlow.CleanupAction.NONE,
-                    0, 1, 0, 0, false, true, false));
+                    0, 1, 0, 0, false, true, true));
         }
         defeatHandoffQueued = true;
         setDestroyed(true);

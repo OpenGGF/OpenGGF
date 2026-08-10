@@ -17,6 +17,7 @@ import com.openggf.level.Pattern;
 import com.openggf.level.animation.AnimatedPaletteManager;
 import com.openggf.level.resources.LoadOp;
 import com.openggf.level.resources.ResourceLoader;
+import com.openggf.tests.HardwareBoundaryPump;
 import com.openggf.tests.SharedLevel;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -30,10 +31,8 @@ import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-import com.openggf.game.timing.HardwareServiceBoundary;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static com.openggf.game.sonic3k.events.AizEventTestFixtures.newFireTransitionEvents;
 
 @RequiresRom(SonicGame.SONIC_3K)
 public class TestAizFireCurtainRendererRom {
@@ -327,19 +326,14 @@ public class TestAizFireCurtainRendererRom {
         }
     }
 
-    /**
-     * AIZ's fire phases are paced by the hardware timing service, so a bare
-     * {@code events.update} never advances art readiness and the curtain stays
-     * inactive. Mirrors {@code TestSonic3kAIZEvents#updateWithHardware}.
-     */
     private static void updateWithHardware(
-            com.openggf.game.sonic3k.events.Sonic3kAIZEvents events, int act, int frame) {
-        var timing = com.openggf.game.GameServices.hardwareTiming();
-        timing.service(HardwareServiceBoundary.VINT_SERVICE);
-        timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            Sonic3kAIZEvents events, int act, int frame) {
+        HardwareBoundaryPump.service(HardwareServiceBoundary.VINT_SERVICE);
+        HardwareBoundaryPump.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
         events.update(act, frame);
-        timing.service(HardwareServiceBoundary.POST_OBJECTS);
+        HardwareBoundaryPump.service(HardwareServiceBoundary.POST_OBJECTS);
     }
+
     private static void stageFireOverlay(Sonic3kAIZEvents events) {
         for (int frame = 0;
                 frame < 100_000 && !events.isFireOverlayTilesLoaded();

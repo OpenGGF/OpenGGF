@@ -126,13 +126,13 @@ public class Sonic1BatbrainBadnikInstance extends AbstractBadnikInstance impleme
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (state) {
-            case STATE_DROP_CHECK -> updateDropCheck(frameCounter, player);
-            case STATE_DROP_FLY -> updateDropFly(frameCounter, player);
-            case STATE_FLAP_SOUND -> updateFlapSound(frameCounter, player);
-            case STATE_FLY_UP -> updateFlyUp(frameCounter);
+            case STATE_DROP_CHECK -> updateDropCheck(vIntRunCount, player);
+            case STATE_DROP_FLY -> updateDropFly(vIntRunCount, player);
+            case STATE_FLAP_SOUND -> updateFlapSound(vIntRunCount, player);
+            case STATE_FLY_UP -> updateFlyUp(vIntRunCount);
         }
     }
 
@@ -158,7 +158,7 @@ public class Sonic1BatbrainBadnikInstance extends AbstractBadnikInstance impleme
      * addq.b  #2,ob2ndRout(a0)
      * </pre>
      */
-    private void updateDropCheck(int frameCounter, AbstractPlayableSprite player) {
+    private void updateDropCheck(int vIntRunCount, AbstractPlayableSprite player) {
         if (player == null) {
             return;
         }
@@ -197,7 +197,7 @@ public class Sonic1BatbrainBadnikInstance extends AbstractBadnikInstance impleme
         // slots, so slot N sees d7 = 127 - N. Different slots fire their timing
         // gates at different points in the 8-frame cycle.
         int d7 = Math.max(0, 127 - getSlotIndex());
-        if (((frameCounter + d7) & RANDOM_MASK) != 0) {
+        if (((vIntRunCount + d7) & RANDOM_MASK) != 0) {
             return;
         }
 
@@ -228,7 +228,7 @@ public class Sonic1BatbrainBadnikInstance extends AbstractBadnikInstance impleme
      * addq.b  #2,ob2ndRout(a0)    ; transition to flapsound state
      * </pre>
      */
-    private void updateDropFly(int frameCounter, AbstractPlayableSprite player) {
+    private void updateDropFly(int vIntRunCount, AbstractPlayableSprite player) {
         // SpeedToPos: apply velocity to position
         applyVelocity();
 
@@ -279,9 +279,9 @@ public class Sonic1BatbrainBadnikInstance extends AbstractBadnikInstance impleme
      * addq.b  #2,ob2ndRout(a0)    ; transition to flyup
      * </pre>
      */
-    private void updateFlapSound(int frameCounter, AbstractPlayableSprite player) {
+    private void updateFlapSound(int vIntRunCount, AbstractPlayableSprite player) {
         // Play flapping sound every 16 frames
-        if ((frameCounter & FLAP_SOUND_MASK) == 0) {
+        if ((vIntRunCount & FLAP_SOUND_MASK) == 0) {
             services().playSfx(Sonic1Sfx.BASARAN_FLAP.id);
         }
 
@@ -299,7 +299,7 @@ public class Sonic1BatbrainBadnikInstance extends AbstractBadnikInstance impleme
                 // d7 comes from ExecuteObjects' loop counter (same as dropcheck):
                 // slot N sees d7 = 127 - N.
                 int d7 = Math.max(0, 127 - getSlotIndex());
-                if (((frameCounter + d7) & RANDOM_MASK) == 0) {
+                if (((vIntRunCount + d7) & RANDOM_MASK) == 0) {
                     state = STATE_FLY_UP;
                 }
             }
@@ -322,7 +322,7 @@ public class Sonic1BatbrainBadnikInstance extends AbstractBadnikInstance impleme
      * clr.b   ob2ndRout(a0)       ; back to dropcheck state
      * </pre>
      */
-    private void updateFlyUp(int frameCounter) {
+    private void updateFlyUp(int vIntRunCount) {
         // SpeedToPos: apply velocity
         applyVelocity();
 
@@ -419,7 +419,7 @@ public class Sonic1BatbrainBadnikInstance extends AbstractBadnikInstance impleme
     }
 
     @Override
-    protected void updateAnimation(int frameCounter) {
+    protected void updateAnimation(int vIntRunCount) {
         animTickCounter++;
     }
 

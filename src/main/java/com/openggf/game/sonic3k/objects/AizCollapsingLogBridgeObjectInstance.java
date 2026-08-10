@@ -194,7 +194,7 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         fireCollapseSolidFrame = false;
         boolean collapseStartedThisFrame = false;
         if (state == STATE_IDLE && !isFireBridge && collapseArmedByStanding) {
@@ -499,7 +499,7 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             if (isDestroyed()) {
                 return;
             }

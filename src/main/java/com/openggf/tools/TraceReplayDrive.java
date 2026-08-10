@@ -223,6 +223,19 @@ final class TraceReplayDrive {
         }
 
         @Override
+        public void abortHardwareTimingReplayRun() {
+            if (hardwareTimingReplayPort == null || hardwareTimingReplayClosed) {
+                return;
+            }
+            hardwareTimingReplayClosed = true;
+            driver.clearHardwareTimingReplayObserver();
+            gameplayMode().setHardwareTimingBoundaryObserver(null);
+            gameplayMode().getRewindRegistry()
+                    .deregister(HardwareTimingReplayPort.REWIND_KEY);
+            gameplayMode().clearHardwareTimingReplayCloseHook();
+        }
+
+        @Override
         public int stepFrameFromRecording() {
             return driver.stepFrameFromRecording();
         }
@@ -230,11 +243,6 @@ final class TraceReplayDrive {
         @Override
         public int skipFrameFromRecording() {
             return driver.skipFrameFromRecording();
-        }
-
-        @Override
-        public void advancePlayableAnimationsOnly() {
-            driver.advancePlayableAnimationsOnly();
         }
 
         @Override

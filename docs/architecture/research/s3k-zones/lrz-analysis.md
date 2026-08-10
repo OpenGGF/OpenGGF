@@ -19,6 +19,25 @@
 - **Auto-scroll:** Yes (LRZ3 boss act uses Special_events_routine $14 for forced-scroll boss sequence with 7-stage state machine)
 - **FG Deformation (heat shimmer):** Yes (LRZ3 boss act uses AIZ2_SOZ1_LRZ3_FGDeformDelta sine table for per-scanline FG/BG HScroll shimmer)
 
+## Current Engine Status (2026-08-08)
+
+`Sonic3kLevelEventManager` now models the native
+`SpawnLevelMainSprites` falling introduction for LRZ1 when the player is not
+Knuckles. The owning ROM path compares `$0900` at
+`sonic3k.asm:8161-8165`; `Player_mode == 3` (Knuckles) skips `loc_68A6`, while
+other LRZ1 modes fall through to the animation `$1B` / `Status_InAir` writes at
+`sonic3k.asm:8172-8178`. The engine mirrors that gate after player spawn and
+`TestS3kLrzFallingIntroBootstrap` covers Sonic + Tails, Tails alone, Knuckles,
+and LRZ2. The `lrz_completerun` payload is present, but a direct replay attempt
+currently stops before gameplay while compiling its final v5 hardware-timing
+row (`unsupported-held-row-POST`, trace rows 72/78 continuing through
+`raw_frame=38746`; first unsupported row `raw_frame=38719`); no route result is claimed
+until that fixture-level blocker is resolved.
+
+The same ROM routine also reaches `loc_68A6` for `$1600` (the LRZ boss slot),
+not for SSZ; that boss slot is outside the standard LRZ1/LRZ2 bootstrap handled
+by this remediation.
+
 ## Events
 
 ### Act 1 (Dynamic_Resize)

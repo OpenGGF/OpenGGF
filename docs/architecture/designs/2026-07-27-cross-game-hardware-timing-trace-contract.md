@@ -12,6 +12,21 @@ owned by
 [`2026-07-28-s3k-kos-decompression-queue.md`](2026-07-28-s3k-kos-decompression-queue.md);
 this document remains the cross-game authority boundary.
 
+### 2026-08-03 v5 grammar supersession
+
+The trace-v5 consolidation supersedes the schema-selection mechanics below,
+without changing this document's authority boundary. Current metadata declares
+only `trace_schema: 5`; `hardware_timing_schema` is removed. Presence of
+`hardware_timing.jsonl` enables the one current registry, covering both
+`kos_module_queue` and `kos_decompression_queue`. Every event still admits only
+matching, prepared, production-submitted ROM work after kind, ordinal, stable
+submission fingerprint, and service-boundary checks succeed.
+
+Historical schema-1/schema-2 names and recorder stamps later in this document
+describe the evidence and decisions that led to v5. They are not live parser
+choices or compatibility obligations. `recorder` and `recorder_version` are
+opaque provenance; `lua_script_version` was removed rather than renamed.
+
 The governing principle is:
 
 > Record the smallest scheduling outcome observable to the game, not the
@@ -22,6 +37,67 @@ its only gameplay-visible consequence is that the 68K main loop missed a
 frame, the existing lag-row contract is sufficient. A new completion event is
 reserved for work that remains pending while the main loop continues and the
 ROM explicitly polls a hardware-owned readiness gate.
+
+### Historical pre-v5 wire format (not live)
+
+The schema-1/schema-2 grammar, selectors, and recorder stamps described later
+in this document are retained as migration evidence only. They are not parser
+fallbacks or compatibility obligations. The sole live contract is v5: an
+absent timing file means no recorded timing port; a present file, including an
+explicitly empty file, uses the complete module-and-direct registry. No
+admission policy is inferred from which event kinds happen to be present.
+
+### 2026-08-02 suppressed-row boundary clarification
+
+Schema-2 capture can observe a loop-tail completion on a physical row whose
+`Level_frame_counter` remains held. In that case the CPU has already traversed
+`Process_Kos_Queue` and reached `Wait_VSync`, but the stored row owns only the
+resulting VBlank closure and no gameplay dispatch. A `pre_main_loop` edge
+explicitly recorded on that row is structural evidence for the completion's
+deferred visibility. Replay may expose that exact edge to the timing observer
+after the row's VInt closure, without executing another production service,
+main loop, object scan, or producer.
+
+When that admission succeeds, the suppressed-row closure completes only the
+production coordinator's post-service half for `pre_main_loop`. This is the
+ordinary queue-owned observation of newly ready work: for S3K it retires the
+ready direct FIFO head so the KosM parent can claim it at its next
+`post_objects` state step. Replay does not repeat the coordinator pre-step or
+`HardwareTimingService.service`, and therefore cannot create work, advance
+preparation, or invent a consumer. The timing observer returns only whether it
+consumed an exact edge; it never receives or calls the coordinator itself.
+
+The ordinary admission operation proves its boundary from the production
+service's `lastServicedBoundary`. That proof is intentionally unavailable after
+the suppressed row has serviced VInt. The recorded-completion authority may
+therefore expose one distinct suppressed-row admission operation. It accepts
+only `pre_main_loop`, and only the replay port may invoke it after proving that
+the next unconsumed edge belongs to the latched current raw row. It bypasses
+only the stale `lastServicedBoundary` equality; it reuses every pending-head,
+kind, ordinal, fingerprint, preparation, release, and deduplication check.
+Source guards confine the operation to the replay port and confine the port's
+suppressed-row entry to the stateless timing observer.
+
+This is not elapsed-row reconciliation: advancing to the next raw row never
+authorizes a stale edge. An ordinary lag row without a current-row
+`pre_main_loop` edge remains VInt-only. The exception still releases only an
+already-submitted, already-prepared FIFO head after kind, ordinal, fingerprint,
+and boundary all match; missing, unprepared, reordered, mismatched, or
+gap-crossing work fails closed.
+
+This clarification does not authorize a module-parent completion merely because
+the recorder first observes its RAM retirement on a held-counter row. The
+schema-2 native recorder currently classifies every newly observed module-head
+retirement from a duplicate `Level_frame_counter` sample as `vint_service`.
+That classifier and the published `6.40-s3k-completerun` timing streams predate
+the production loop-tail phase correction in `ddaf8e152`. If such an edge names
+a parent that production has not prepared, replay must fail closed. The next
+owner is an audited native-recorder observation-row/service-row attribution
+review. If it finds the capture attribution stale, correction requires a
+separately approved fixture publication; if it validates the current stamp, a
+broader partial-CPU-prefix replay contract requires its own design and review.
+Neither outcome authorizes timing authority to run `Process_Kos_Module_Queue`,
+backdate an edge ad hoc, or prepare the parent.
 
 ## Goals
 
@@ -219,9 +295,10 @@ The container contract is exact:
 - metadata discovery key: `"hardware_timing_schema": 1` or
   `"hardware_timing_schema": 2`;
 - fixture trace schema: `trace_schema: 7`;
-- native S3K standard recorder version for schema 2: `6.38-s3k`;
+- current native S3K standard recorder version for schema 2: `6.41-s3k`;
 - native S3K complete-run recorder version for schema 2:
-  `6.38-s3k-completerun`; and
+  `6.42-s3k-completerun` (schema 2 was introduced in both native recorder
+  families at version `6.38`); and
 - the frozen Lua recorders remain at `6.37-s3k` and
   `6.37-s3k-completerun`, emitting schema 1 only.
 
@@ -233,8 +310,8 @@ without the metadata key, the key without the file, a value other than integer
 empty stream is valid in either hardware-timing schema.
 
 Events use UTF-8, one compact JSON object per LF-terminated line, and canonical
-ordering by `raw_frame`, then boundary order `vint_service`,
-`pre_main_loop`, `post_objects`, then `kind`, then `ordinal`. Duplicate event
+ordering by `raw_frame`, then ROM loop-tail boundary order `vint_service`,
+`post_objects`, `pre_main_loop`, then `kind`, then `ordinal`. Duplicate event
 identities and out-of-order lines are rejected rather than normalized.
 
 The kind registry is selected by the metadata version:
@@ -266,11 +343,21 @@ timeline; runtime code never infers a boundary from row contents.
 
 - `vint_service`: apply inside the row's selected VInt service, before any
   post-VInt main-loop consumer.
-- `pre_main_loop`: apply after the row's VInt service and immediately before
-  an admitted main-loop dispatch.
 - `post_objects`: apply after the row's object scan. A consumer in that scan
   cannot observe it until its next admitted dispatch.
+- `pre_main_loop`: normally apply after `post_objects` as the current frame's
+  final loop-tail boundary, ahead of `Wait_VSync` and the next admitted
+  iteration. A held-counter row may instead expose a `pre_main_loop` completion
+  edge explicitly compiled for that same raw row after its VInt closure. This
+  represents deferred observation of the prior loop tail; it does not admit a
+  main loop or traverse production queue service. On exact admission, replay
+  runs only the production coordinator's `pre_main_loop` post-service hook so
+  its normal queue metadata observes readiness. Its dedicated admission
+  bypasses only the ordinary service's now-`vint_service` last-boundary check
+  and remains confined to the compiled current row.
 - Lag rows execute eligible VInt service but no main-loop or object consumer.
+  They expose no other boundary unless the compiled current row contains the
+  held-counter `pre_main_loop` completion described above.
 - Setup-only and advance-only rows execute only the service boundaries named
   by their production lifecycle; they never gain an implied gameplay pass.
 - The first raw row has no synthetic predecessor. An edge on it must match a
@@ -391,8 +478,8 @@ For the S3K Kos queues:
 - assign independent per-kind ordinals from observed FIFO lifecycles;
 - retain direct slot identity across bit-15 busy progress and reconcile
   retirement plus append without requiring a sampled zero;
-- emit direct retirement at `pre_main_loop` before any same-frame module
-  retirement at `post_objects`;
+- emit module retirement at `post_objects` before any same-frame direct
+  retirement at the later loop-tail `pre_main_loop` boundary;
 - keep stage gating ahead of any optional diagnostic hook;
 - retain invisible, sound-disabled, maximum-speed operation; and
 - terminate within a bounded window.
@@ -406,7 +493,7 @@ Lua/native byte equivalence is optional corroboration, not a publication
 prerequisite. Version-1 differential coverage includes `6.37-s3k` standard and
 `6.37-s3k-completerun` captures and byte-exact empty streams for routes with no
 eligible completion. The maintained native schema-2 recorders are
-`6.38-s3k` and `6.38-s3k-completerun`; they emit both module and direct
+`6.41-s3k` and `6.42-s3k-completerun`; they emit both module and direct
 retirements. Recorder 6.37 treats an unchanged
 `Level_frame_counter` as `vint_service` unless the ROM is inside its
 held-counter title-card load loop. That loop is armed only by the fixed
@@ -416,6 +503,15 @@ raw `objoff_48` or `Nem_decomp_queue` exit predicates. An advancing counter
 also admits `post_objects`. A Nemesis job alone cannot arm the exception, so
 ordinary lag rows remain VInt-only. The stream is not declared through
 `aux_schema_extras`.
+
+Native 6.41/6.42 no longer uses the generic row heuristic for a module parent
+whose prior modules-left byte is exactly `0x81`: a canonical one-head FIFO
+removal/shift, including exact active identity, trailing entries, cardinality,
+and reset/mode fencing, proves the ROM POST owner even when the observation row
+holds `Level_frame_counter`. Duplicate/no-retirement rows remain VInt-only;
+stale, malformed, multi-head, append-during-shift, and reset-crossing shapes
+fail closed. Frozen Lua 6.37 behavior is unchanged and may therefore differ at
+this one native state-proven attribution.
 
 After capture, publication records and pins the native candidate's digests,
 lengths, event counts, ordering, ranges, and semantic inventory as immutable
@@ -440,6 +536,11 @@ The first implementation is accepted only when:
 5. Missing, duplicate, reordered, mismatched, wrong-boundary, and unprepared
    edges fail structurally; a shifted valid edge causes strict downstream
    comparison failure.
+   Suppressed-row coverage additionally proves that an exact prepared
+   current-row `pre_main_loop` edge succeeds without production service or
+   gameplay, while absent, unprepared, wrong-kind, wrong-ordinal,
+   wrong-fingerprint, wrong-boundary, stale, and unrepresented-gap cases fail
+   closed. Rewind consumes the edge exactly once again after restore.
 6. Every gameplay row remains compared.
 7. Live play uses a deterministic non-wall-clock scheduler.
 8. Rewind across pending and completed work is deterministic.

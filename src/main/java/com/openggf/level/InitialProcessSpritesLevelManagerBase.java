@@ -15,11 +15,6 @@ public abstract class InitialProcessSpritesLevelManagerBase {
         return lifecycle.consume(this::executeInitialProcessSprites);
     }
 
-    @Deprecated(forRemoval = true)
-    public final boolean consumePendingInitialObjectSetupPass() {
-        return consumePendingInitialProcessSpritesPass();
-    }
-
     public final void discardPendingInitialProcessSpritesForStateRestoration() {
         lifecycle.discard();
     }

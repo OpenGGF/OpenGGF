@@ -87,8 +87,8 @@ public final class HPZSanctuarySmallEmeraldCeremonyObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
-        lastFrameCounter = frameCounter;
+    public void update(int vIntRunCount, PlayableEntity player) {
+        lastFrameCounter = vIntRunCount;
         if (riseTimer == 0x7F && tryServices() != null) {
             services().playSfx(Sonic3kSfx.SIGNPOST.id);
         }

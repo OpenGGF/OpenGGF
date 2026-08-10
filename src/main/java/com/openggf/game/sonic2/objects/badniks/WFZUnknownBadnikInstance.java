@@ -37,12 +37,12 @@ public class WFZUnknownBadnikInstance extends AbstractBadnikInstance implements 
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity player) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity player) {
         // ObjBB_Main only calls MarkObjGone; off-screen lifetime is handled by ObjectManager.
     }
 
     @Override
-    protected void updateAnimation(int frameCounter) {
+    protected void updateAnimation(int vIntRunCount) {
         animFrame = 0;
     }
 

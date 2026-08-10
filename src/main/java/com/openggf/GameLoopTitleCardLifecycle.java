@@ -2,8 +2,8 @@ package com.openggf;
 
 import com.openggf.camera.Camera;
 import com.openggf.control.InputHandler;
-import com.openggf.game.OscillationManager;
 import com.openggf.game.TitleCardProvider;
+import com.openggf.game.OscillationManager;
 import com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame;
 import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.session.GameplayModeContext;
@@ -71,7 +71,6 @@ final class GameLoopTitleCardLifecycle {
         // advances inside Level_MainLoop (s2.asm:5108). Suppress the oscillator
         // advance for this locked title-card object pass so it holds at its
         // OscillateNumInit baseline until gameplay unlocks.
-        OscillationManager.suppressNextFrames(1);
         if (titleCard.shouldRunPlayerPhysics()) {
             OscillationManager.suppressNextFrames(1);
             spriteManager.publishHeldInputForLevelEvents(input);

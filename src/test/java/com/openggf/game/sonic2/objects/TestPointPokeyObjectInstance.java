@@ -155,7 +155,7 @@ class TestPointPokeyObjectInstance {
     }
 
     @Test
-    void childPrizeCounterEmptyReleasesCapturedPlayerInSameFrame() throws Exception {
+    void emptyPrizeCounterReleasesCapturedPlayerOnTheCagesOwnUpdate() throws Exception {
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x1DC0, (short) 0x0368);
         player.setGameRulesForTest(GameRules.SONIC_2);
         PointPokeyObjectInstance pokey = new PointPokeyObjectInstance(
@@ -166,11 +166,11 @@ class TestPointPokeyObjectInstance {
         setIntField(pokey, "playerState", 3);
         setIntField(pokey, "prizesToSpawn", 0);
 
-        pokey.onPrizeCounterChanged(player);
+        pokey.update(1, player);
 
         assertEquals(0x0400, player.getYSpeed() & 0xFFFF,
-                "ObjDC/ObjD3 decrement ObjD6's shared prize counter; when it reaches zero, ObjD6 must take "
-                        + "the loc_2BE2E release path in that same frame.");
+                "ObjDC/ObjD3 decrement ObjD6's shared prize counter; ObjD6 reads it at its own point in the "
+                        + "object update order (tst.w objoff_2C(a0) in loc_2BD4E) and then takes loc_2BE2E.");
         assertFalse(player.isObjectControlled());
         assertTrue(player.getAir());
     }

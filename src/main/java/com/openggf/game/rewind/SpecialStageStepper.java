@@ -40,7 +40,7 @@ final class SpecialStageStepper implements RewindSeekAwareEngineStepper {
         if (liveInput == null || provider == null || gameplayMode == null) {
             return LevelFrameResult.PAUSED;
         }
-        return gameplayMode.plcFrameLifecycle().runLogicalIteration(
+        return gameplayMode.plcFrameLifecycle().runReplayedLogicalIteration(
                 gameplayMode.getFadeManager()::update,
                 frame -> step(input, liveInput, provider, gameplayMode, frame));
     }

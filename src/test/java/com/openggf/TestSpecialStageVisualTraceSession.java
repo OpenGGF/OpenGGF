@@ -9,6 +9,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.Sonic2SpecialStageProvider;
+import com.openggf.game.sonic3k.specialstage.S3kSpecialStageTraceData;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.FadeManager;
 import com.openggf.tests.RomTestUtils;
@@ -16,6 +17,7 @@ import com.openggf.tests.TestEnvironment;
 import com.openggf.trace.SpecialStageTraceData;
 import com.openggf.trace.TraceMetadata;
 import com.openggf.trace.catalog.TraceEntry;
+import com.openggf.trace.replay.runs.TraceRunSpecialStageRows;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -62,6 +64,56 @@ class TestSpecialStageVisualTraceSession {
     void tearDown() {
         setStaticActiveSession(null);
         SessionManager.clear();
+    }
+
+    @Test
+    void sonicOneStandaloneRowsUseTheirTypedFourteenColumnParser()
+            throws Exception {
+        Path directory = Path.of("src", "test", "resources", "traces",
+                "s1", "special_stage");
+
+        TraceRunSpecialStageRows rows = TraceRunSpecialStageRows.load(
+                "s1_special_stage", directory);
+
+        assertEquals("s1", rows.metadata().game());
+        assertTrue(rows.rowCount() > 0);
+        assertEquals(rows.rowCount() - 1, rows.terminalRow().orElseThrow());
+        assertFalse(rows.hardwareTimingSchedule().edges().size() > 0);
+        rows.admission(0);
+    }
+
+    @Test
+    void sonicTwoStandaloneRowsUseTheSharedProfilePolymorphicView()
+            throws Exception {
+        TraceRunSpecialStageRows rows = TraceRunSpecialStageRows.load(
+                "s2_special_stage", TRACE_DIRECTORY);
+        SpecialStageTraceData typed = SpecialStageTraceData.load(TRACE_DIRECTORY);
+
+        assertEquals("s2", rows.metadata().game());
+        assertEquals(typed.frameCount(), rows.rowCount());
+        assertEquals(typed.stageFinishedFrame().orElseThrow(),
+                rows.terminalRow().orElseThrow());
+        assertEquals(typed.getFrame(0).lag(),
+                !rows.admission(0).executeGameplay());
+    }
+
+    @Test
+    void sonicThreeStandaloneRowsPreserveRecordedLagAdmission()
+            throws Exception {
+        Path directory = Path.of("src", "test", "resources", "traces",
+                "s3k", "special_stage");
+        TraceRunSpecialStageRows rows = TraceRunSpecialStageRows.load(
+                "s3k_special_stage", directory);
+        S3kSpecialStageTraceData typed =
+                S3kSpecialStageTraceData.load(directory);
+        int lagRow = java.util.stream.IntStream.range(0, typed.frameCount())
+                .filter(index -> typed.getFrame(index).lag())
+                .findFirst()
+                .orElseThrow();
+
+        assertFalse(rows.admission(lagRow).executeGameplay());
+        assertEquals(typed.getFrame(lagRow).lag(),
+                !rows.admission(lagRow).executeGameplay());
     }
 
     @Test

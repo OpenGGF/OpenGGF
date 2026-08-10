@@ -71,7 +71,7 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
     private int postOpenTimer;
     private int buttonRecess;
     private int buttonTriggerSource;
-    private int buttonTriggerFrame = -1;
+    private int buttonTriggerVIntRunCount = -1;
     private int openFrame = -1;
     private boolean routeInitPending;
     private S3kBossExplosionController explosionController;
@@ -129,7 +129,7 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
                     case 2 -> "p2";
                     default -> "--";
                 },
-                buttonTriggerFrame & 0xFFFF,
+                buttonTriggerVIntRunCount & 0xFFFF,
                 openFrame & 0xFFFF);
     }
 
@@ -171,7 +171,7 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         // Obj_EggCapsule saves x_pos in d4 before dispatching its routine and
         // passes that saved coordinate to SolidObjectFull after movement. The
         // separate button child refreshes from the parent's current position.
@@ -205,7 +205,7 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
                 // child solid checkpoint before testing the trigger bit
                 // (sonic3k.asm:181739-181767,182049-182054).
                 checkpointAll();
-                scanButtonTrigger(frameCounter, playerEntity);
+                scanButtonTrigger(vIntRunCount, playerEntity);
             } else {
                 checkpointAll();
             }
@@ -340,7 +340,7 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
         ySubpixel = full & 0xFFFF;
     }
 
-    private void scanButtonTrigger(int frameCounter, PlayableEntity playerEntity) {
+    private void scanButtonTrigger(int vIntRunCount, PlayableEntity playerEntity) {
         ObjectPlayerQuery query = playerQuery(playerEntity);
         PlayableEntity nativeP1 = query.mainPlayerOrNull();
         for (PlayableEntity candidate : query.playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
@@ -353,7 +353,7 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
                 buttonTriggered = true;
                 buttonRecess = BUTTON_RECESS;
                 buttonTriggerSource = candidate == nativeP1 ? 1 : 2;
-                buttonTriggerFrame = frameCounter;
+                buttonTriggerVIntRunCount = vIntRunCount;
                 break;
             }
         }
@@ -399,7 +399,7 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
             return;
         }
         opened = true;
-        openFrame = buttonTriggerFrame + 1;
+        openFrame = buttonTriggerVIntRunCount + 1;
         mappingFrame = 1;
         buttonRecess = BUTTON_RECESS;
         // ROM sub_865DE stores $2E=$40, then sub_868F8 pre-decrements and

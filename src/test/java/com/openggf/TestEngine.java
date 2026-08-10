@@ -31,6 +31,7 @@ import com.openggf.game.session.GameplaySessionFactory;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.WorldSession;
+import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.camera.Camera;
 import com.openggf.level.LevelManager;
@@ -38,6 +39,7 @@ import com.openggf.sprites.playable.Knuckles;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.game.RomDetectionService;
 import com.openggf.graphics.TilemapGpuRenderer;
+import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.api.Test;
@@ -57,6 +59,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -72,11 +75,49 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
+import static org.mockito.Mockito.clearInvocations;
 
 @Isolated
 class TestEngine {
     @TempDir
     Path tempDir;
+
+    @Test
+    void titleAudioBackendReinstallHonorsAudioEnabledLifecycle() throws Exception {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone();
+        config.setConfigValue(SonicConfiguration.AUDIO_ENABLED, false);
+        AudioManager audio = mock(AudioManager.class);
+        Engine engine = new Engine(new EngineContext(
+                config,
+                new GraphicsManager(),
+                audio,
+                mock(RomManager.class),
+                mock(PerformanceProfiler.class),
+                mock(DebugOverlayManager.class),
+                mock(PlaybackDebugManager.class),
+                mock(RomDetectionService.class),
+                mock(CrossGameFeatureProvider.class)));
+        clearInvocations(audio);
+
+        invokePrivateMethod(engine, "ensureAudioBackend", new Class<?>[]{});
+        verify(audio, never()).setBackend(any());
+
+        config.setConfigValue(SonicConfiguration.AUDIO_ENABLED, true);
+        invokePrivateMethod(engine, "ensureAudioBackend", new Class<?>[]{});
+        verify(audio).setBackend(any());
+
+        clearInvocations(audio);
+        invokePrivateMethod(engine, "resetForGameplayFromMasterTitle", new Class<?>[]{});
+        invokePrivateMethod(engine, "initializeGlobalGameplayServices", new Class<?>[]{});
+        verify(audio).resetState();
+        verify(audio).ensurePresentationSink();
+
+        clearInvocations(audio);
+        invokePrivateMethod(engine, "resetForGameplayFromMasterTitle", new Class<?>[]{});
+        invokePrivateMethod(engine, "showStartupRomError", new Class<?>[]{String.class},
+                "title reconstruction test");
+        verify(audio).ensurePresentationSink();
+    }
 
     @AfterEach
     void tearDown() {
@@ -87,6 +128,23 @@ class TestEngine {
         Engine.clearGlobalInstance();
         SessionManager.clear();
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+    }
+
+    @Test
+    void visualTraceReplayActivationKeepsPreparedRenderManagers() throws Exception {
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
+        GameplayModeContext presentation = SessionManager.getCurrentGameplayMode();
+        Engine engine = new Engine(EngineServices.current());
+
+        GameplayModeContext replay = presentation;
+        replay.activateRecordedHardwareAdmission();
+
+        assertSame(presentation, replay);
+        assertTrue(presentation.isGameplayRuntimeReady());
+        assertSame(replay, SessionManager.getCurrentGameplayMode());
+        assertEquals(HardwareReadinessAdmissionPolicy.RECORDED,
+                replay.hardwareTiming().admissionPolicy());
     }
 
     @Test

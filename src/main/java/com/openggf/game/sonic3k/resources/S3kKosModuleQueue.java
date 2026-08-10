@@ -122,38 +122,86 @@ public final class S3kKosModuleQueue {
     }
 
     public void processModuleQueueAfterObjects() {
+        beforeTimingService(HardwareServiceBoundary.POST_OBJECTS);
         timing.service(HardwareServiceBoundary.POST_OBJECTS);
         afterTimingService(HardwareServiceBoundary.POST_OBJECTS);
     }
 
-    /** Runs after generic timing and direct retirement at a production boundary. */
-    public void afterTimingService(HardwareServiceBoundary boundary) {
-        if (boundary != HardwareServiceBoundary.POST_OBJECTS) {
-            return;
+    /**
+     * Runs the frame's module state step, before the timing ledger is serviced.
+     *
+     * <p>ROM {@code LevelLoop} calls {@code Process_Kos_Module_Queue} in the loop
+     * tail (sonic3k.asm:7908), after {@code ScreenEvents} (7898) and before
+     * {@code Process_Kos_Queue} (7887) — which reads as the head of the next
+     * iteration but runs ahead of {@code Wait_VSync} (7888) and its
+     * {@code addq.w #1,(Level_frame_counter)} (7889), so both calls belong to the
+     * tail of the frame whose objects just ran. The step therefore sits at
+     * {@code POST_OBJECTS}, immediately ahead of the direct FIFO's own
+     * {@code PRE_MAIN_LOOP} service: an archive queued by an object this frame
+     * hands its first module to the direct FIFO and sees that child decompressed
+     * on the same frame, while an archive whose child is still outstanding is
+     * only retired by the next frame's step.
+     *
+     * <p>Readiness is captured at the same boundary: the archive parent's
+     * completion edge is recorded at {@code POST_OBJECTS}, and
+     * {@link HardwareTimingService#captureCoordinatorPreparation} requires the
+     * capture to name the boundary production last serviced.
+     */
+    public void beforeTimingService(HardwareServiceBoundary boundary) {
+        if (boundary == HardwareServiceBoundary.POST_OBJECTS) {
+            stepHeadArchive();
         }
+    }
+
+    public void afterTimingService(HardwareServiceBoundary boundary) {
+        if (boundary == HardwareServiceBoundary.POST_OBJECTS) {
+            capturePreparedArchives();
+        }
+    }
+
+    /**
+     * Performs the single {@code Process_Kos_Module_Queue} state step this frame
+     * (sonic3k.asm:2726-2790): either submit the head archive's current module to
+     * the direct FIFO, or — once that FIFO has drained — claim it. An archive that
+     * has already been retired no longer occupies a queue slot (the DMA branch
+     * shifts it out at 2778-2788), so it is skipped rather than blocking.
+     */
+    private void stepHeadArchive() {
         for (HardwareWorkHandle handle : timing.pendingHandles()) {
             if (handle.kind() != HardwareWorkKind.KOS_MODULE_QUEUE
                     || timing.isReady(handle)) {
                 continue;
             }
-            HardwareWorkPreparation generic =
-                    timing.coordinatorPreparation(handle);
-            if (!(generic instanceof S3kKosModulePreparation preparation)) {
-                throw new IllegalStateException(
-                        "KosM parent has an unexpected preparation owner");
-            }
-            descriptors.putIfAbsent(handle, preparation.descriptor);
+            S3kKosModulePreparation preparation = preparationFor(handle);
             if (preparation.isPrepared()) {
                 continue;
             }
-            boolean becamePrepared = preparation.coordinate(
-                    handle, directQueue);
-            if (becamePrepared) {
+            preparation.coordinate(handle, directQueue);
+            return;
+        }
+    }
+
+    private void capturePreparedArchives() {
+        for (HardwareWorkHandle handle : timing.pendingHandles()) {
+            if (handle.kind() != HardwareWorkKind.KOS_MODULE_QUEUE
+                    || timing.isReady(handle)) {
+                continue;
+            }
+            if (preparationFor(handle).isPrepared()) {
                 timing.captureCoordinatorPreparation(
                         handle, HardwareServiceBoundary.POST_OBJECTS);
             }
-            return;
         }
+    }
+
+    private S3kKosModulePreparation preparationFor(HardwareWorkHandle handle) {
+        HardwareWorkPreparation generic = timing.coordinatorPreparation(handle);
+        if (!(generic instanceof S3kKosModulePreparation preparation)) {
+            throw new IllegalStateException(
+                    "KosM parent has an unexpected preparation owner");
+        }
+        descriptors.putIfAbsent(handle, preparation.descriptor);
+        return preparation;
     }
 
     int physicalQueueSize() {

@@ -1790,9 +1790,10 @@ public class TestSolidObjectManager {
             TestSolidObject object = new TestSolidObject(100, 100, params, true);
             ObjectManager manager = buildManager(object);
 
-            // S1 uses obActWid = halfWidth - 0x0B = 21px as the top-landing half-width.
-            // Player at 5px inside the COLLISION edge (X = 100 - 32 + 5 = 73) is OUTSIDE
-            // the 21px landing zone (valid range: [79, 121]). Landing must fail.
+            // S1 PlatformObject lands on the caller's d1 directly (obActWid is the
+            // platform's own half-width, _incObj/sub PlatformObject & SlopeObject.asm);
+            // the -$B narrowing exists only in full-solid Solid_Landed. A player just
+            // OUTSIDE the collision edge (X = 100 - 32 - 5 = 63) must be rejected.
             TestPlayableSprite playerOutside = new TestPlayableSprite((short) 0, (short) 0);
             playerOutside.setWidth(20);
             playerOutside.setHeight(20);
@@ -1801,7 +1802,7 @@ public class TestSolidObjectManager {
             int maxTop = params.groundHalfHeight() + playerOutside.getYRadius();
             int targetDistY = 10;
             int centreY = 100 - 4 - maxTop + targetDistY;
-            playerOutside.setCentreX((short) (100 - params.halfWidth() + 5)); // X = 73
+            playerOutside.setCentreX((short) (100 - params.halfWidth() - 5)); // X = 63
             playerOutside.setCentreY((short) centreY);
 
             manager.updateSolidContacts(playerOutside);
@@ -1809,9 +1810,9 @@ public class TestSolidObjectManager {
             assertFalse(playerOutside.isOnObject());
             assertTrue(playerOutside.getAir());
 
-            // Player at 5px inside the LANDING ZONE edge (X = 100 - 21 + 5 = 84) is INSIDE
-            // the 21px landing zone. Landing must succeed.
-            int landingHalfWidth = params.halfWidth() - 0x0B; // 32 - 11 = 21
+            // Player at 5px inside the platform's own half-width (X = 100 - 32 + 5 = 73)
+            // is INSIDE the top-solid landing zone. Landing must succeed.
+            int landingHalfWidth = params.halfWidth();
             TestPlayableSprite playerInside = new TestPlayableSprite((short) 0, (short) 0);
             playerInside.setWidth(20);
             playerInside.setHeight(20);
@@ -2520,7 +2521,7 @@ public class TestSolidObjectManager {
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             // No-op for tests.
         }
 
@@ -2551,7 +2552,8 @@ public class TestSolidObjectManager {
 
         @Override
         public int getTopLandingHalfWidth(PlayableEntity player, int collisionHalfWidth) {
-            return topLandingHalfWidth != null ? topLandingHalfWidth : collisionHalfWidth;
+            return topLandingHalfWidth != null ? topLandingHalfWidth
+                    : SolidObjectProvider.super.getTopLandingHalfWidth(player, collisionHalfWidth);
         }
 
         @Override
@@ -2944,7 +2946,7 @@ public class TestSolidObjectManager {
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             PlayerSolidContactResult result = services().solidExecution().resolveSolidNow(player);
             standingSeenInsideUpdate = result.standingNow();
             manualCheckpointCount++;
@@ -3012,7 +3014,7 @@ public class TestSolidObjectManager {
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             if (skipNextCheckpoint) {
                 skipNextCheckpoint = false;
                 return;
@@ -3056,7 +3058,7 @@ public class TestSolidObjectManager {
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             // No-op for tests.
         }
 
@@ -3110,7 +3112,7 @@ public class TestSolidObjectManager {
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             // No-op for tests.
         }
 

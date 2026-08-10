@@ -90,7 +90,7 @@ public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         if (isDestroyed()) {
             return;
         }
@@ -420,7 +420,7 @@ public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (isDestroyed() || parent.isDestroyed()) {
                 ObjectLifetimeOps.expireDynamic(this);
                 return;
@@ -570,7 +570,7 @@ public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (isDestroyed() || parent.isDestroyed()) {
                 ObjectLifetimeOps.expireDynamic(this);
                 return;
@@ -689,7 +689,7 @@ public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             int xPos24 = (currentX << 8) | (xSubpixel & 0xFF);
             int yPos24 = (currentY << 8) | (ySubpixel & 0xFF);
             xPos24 += xVelocity;

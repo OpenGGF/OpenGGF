@@ -83,7 +83,7 @@ public class SpikerBadnikInstance extends AbstractBadnikInstance implements Rewi
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         animateThisFrame = false;
 
@@ -200,7 +200,7 @@ public class SpikerBadnikInstance extends AbstractBadnikInstance implements Rewi
     }
 
     @Override
-    protected void updateAnimation(int frameCounter) {
+    protected void updateAnimation(int vIntRunCount) {
         if (!animateThisFrame) {
             return;
         }

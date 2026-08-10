@@ -93,6 +93,23 @@ public class Sonic1SLZBossInstance extends AbstractS1EggmanBossInstance implemen
     // Target seesaw index for ball spawn (obSubtype stores seesaw index 0-2)
     private int targetSeesawIndex;
 
+    // ROM BossStarLight_Main builds the boss from a 4-entry table
+    // (BossStarLight_ObjData) with `moveq #3,d1` / `dbf d1,BossStarLight_Loop`
+    // (docs/s1disasm/_incObj/"7A, 7B Boss - SLZ Main and Spike Balls.asm":30-74).
+    // The first pass writes into the boss's own slot (movea.l a0,a1); the three
+    // remaining passes each call FindNextFreeObj and claim a further object RAM
+    // slot -- the face (routine 4), flame (routine 6) and pipe (routine 8).
+    // This engine draws face/flame/pipe as overlays on the single ship instance,
+    // so those three slots would otherwise stay free and every later dynamically
+    // allocated object would sit three slots low. Slot number is observable
+    // behaviour: RLoss_Bounce probes the floor only when
+    // (v_vblank_byte + d7) & 3 == 0 with d7 = 127 - slot
+    // (docs/s1disasm/_incObj/"25, 37 Rings.asm":334-339,
+    // docs/s1disasm/_inc/ExecuteObjects.asm:10-30), so a shifted slot changes
+    // each spilled ring's bounce cadence and the frame it is collected on.
+    private static final int ROM_CHILD_OBJECT_COUNT = 3;
+    private boolean childSlotsReserved;
+
     public Sonic1SLZBossInstance(ObjectSpawn spawn) {
         super(spawn, "SLZ Boss");
     }
@@ -176,9 +193,34 @@ public class Sonic1SLZBossInstance extends AbstractS1EggmanBossInstance implemen
         timer = DEFEAT_TIMER; // $78 = 120 frames
     }
 
+    /**
+     * Claims the three sub-object RAM slots BossStarLight_Main allocates on its
+     * first pass. The ROM uses FindNextFreeObj -- an ascending scan starting at
+     * the parent's own slot (docs/s1disasm/_incObj/"sub FindFreeObj.asm":36-51)
+     * -- restarted from the parent for each of the three children; because each
+     * child fills the slot it found, that is the same sequence as chaining the
+     * scan from the previous child, which is what allocateChildSlotsAfter does.
+     * A full object RAM aborts the loop in both.
+     */
+    private void reserveChildSlots() {
+        if (childSlotsReserved) {
+            return;
+        }
+        childSlotsReserved = true;
+        com.openggf.level.objects.ObjectServices svc = tryServices();
+        if (getSpawn() == null || svc == null || svc.objectManager() == null) {
+            return;
+        }
+        svc.objectManager().allocateChildSlotsAfter(
+                getSpawn(), ROM_CHILD_OBJECT_COUNT, getSlotIndex());
+    }
+
     @Override
-    protected void updateBossLogic(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateBossLogic(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        // ROM BossStarLight_Main runs once, on the boss's first ExecuteObjects
+        // pass, and claims its three sub-object slots there.
+        reserveChildSlots();
         // Lazy seesaw scanning — ensures seesaws are loaded before scanning.
         // Re-scan whenever the cache is empty (not a separate "already
         // scanned" flag) so a rewind-recreated instance repopulates it
@@ -203,7 +245,7 @@ public class Sonic1SLZBossInstance extends AbstractS1EggmanBossInstance implemen
                 runSine = timerExpired;
             }
             case STATE_DEFEAT_WAIT -> {
-                updateDefeatWait(frameCounter);
+                updateDefeatWait(vIntRunCount);
                 runBossMove = false;
                 runSine = false;
             }
@@ -344,7 +386,7 @@ public class Sonic1SLZBossInstance extends AbstractS1EggmanBossInstance implemen
 
     // === State 6: DEFEAT_WAIT ===
     // ROM: loc_18B48
-    private void updateDefeatWait(int frameCounter) {
+    private void updateDefeatWait(int vIntRunCount) {
         timer--;
         if (timer < 0) {
             // Timer expired — start exit jump (loc_18B52)
@@ -359,7 +401,7 @@ public class Sonic1SLZBossInstance extends AbstractS1EggmanBossInstance implemen
             services().gameState().setCurrentBossId(0);
         } else {
             // Spawn explosions every 8 frames (BossDefeated)
-            if ((frameCounter & 7) == 0) {
+            if ((vIntRunCount & 7) == 0) {
                 spawnDefeatExplosion();
             }
         }
@@ -549,8 +591,20 @@ public class Sonic1SLZBossInstance extends AbstractS1EggmanBossInstance implemen
         }
 
         // ROM: move.w obY(a0),obY(a1) / addi.w #$20,obY(a1) — spawn +$20 below boss
+        //
+        // Slot allocation is FindNextFreeObj scanning forward from the TARGET SEESAW's slot,
+        // not FindFreeObj and not the boss's own slot: BSLZ_MakeBall pushes the boss pointer,
+        // does "lea (a2),a0" with a2 = the matched seesaw, calls FindNextFreeObj, then restores
+        // a0 (docs/s1disasm/_incObj/"7A, 7B Boss - SLZ Main and Spike Balls.asm":291-295).
+        // In SLZ3 the three seesaws sit at slots 33/37/38 and dynamic allocation starts at 42,
+        // so both rules currently pick the same slot: this is measurably a no-op on the
+        // committed fixture (probe-verified, byte-identical slot occupancy). It is landed as a
+        // correctness fix regardless, because slot number is observable -- RLoss_Bounce probes
+        // the floor only when (VBlank byte + d7) & 3 == 0 with d7 = 127 - slot
+        // (_incObj/"25, 37 Rings.asm":320-324) -- so any layout where a lower dynamic slot
+        // frees while a seesaw is live would diverge under the FindFreeObj rule.
         if (services().objectManager() != null) {
-            spawnFreeChild(() -> new Sonic1SLZBossSpikeball(
+            spawnChildAfterSlot(targetSeesaw.getSlotIndex(), () -> new Sonic1SLZBossSpikeball(
                     this,
                     targetSeesaw,
                     state.x,

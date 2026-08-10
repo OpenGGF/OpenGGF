@@ -84,7 +84,7 @@ public final class MhzMushroomParachuteObjectInstance extends AbstractObjectInst
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ObjectPlayerQuery query = playerQuery(playerEntity);
         AbstractPlayableSprite nativeP2 = query.nativeP2OrNull() instanceof AbstractPlayableSprite sprite
                 ? sprite

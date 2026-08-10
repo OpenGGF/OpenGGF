@@ -98,10 +98,10 @@ public class EggPrisonAnimalInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         switch (state) {
-            case PRISON_WAIT -> updatePrisonWait(frameCounter);
-            case MAIN -> updateMain(frameCounter);
+            case PRISON_WAIT -> updatePrisonWait(vIntRunCount);
+            case MAIN -> updateMain(vIntRunCount);
             case WALK -> updateWalk();
             case FLY -> updateFly();
         }
@@ -111,7 +111,7 @@ public class EggPrisonAnimalInstance extends AbstractObjectInstance
      * ROM: Obj28_Prison (loc_11BF4)
      * Waits for delay, then activates.
      */
-    private void updatePrisonWait(int frameCounter) {
+    private void updatePrisonWait(int vIntRunCount) {
         // Check if still on screen
         if (!isOnScreen(64)) {
             setDestroyed(true);
@@ -134,7 +134,7 @@ public class EggPrisonAnimalInstance extends AbstractObjectInstance
      * ROM: Obj28_Main (loc_11ADE)
      * Falling after initial spawn.
      */
-    private void updateMain(int frameCounter) {
+    private void updateMain(int vIntRunCount) {
         objectMoveAndFall();
 
         if (yVelocity >= 0 && checkFloorCollision()) {
@@ -146,7 +146,7 @@ public class EggPrisonAnimalInstance extends AbstractObjectInstance
             // Prison animals sample Vint_runcount only after floor contact,
             // while Obj28_Main switches to the walking/flying routine
             // (docs/s2disasm/s2.asm:24644-24667).
-            if ((frameCounter & 0x10) != 0) {
+            if ((vIntRunCount & 0x10) != 0) {
                 xVelocity = -xVelocity;
                 groundXVelocity = -groundXVelocity;
             }

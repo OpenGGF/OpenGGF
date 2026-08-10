@@ -73,7 +73,7 @@ public class TornadoSmokeObjectInstance extends AbstractObjectInstance implement
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (!initialized) {
             initializeWithOffset(Sonic2Rng.nextTornadoSmokeOffset(services().rng()));
             return;

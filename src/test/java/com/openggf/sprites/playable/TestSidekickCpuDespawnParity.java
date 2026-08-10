@@ -91,7 +91,7 @@ class TestSidekickCpuDespawnParity {
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             // Test sentinel only.
         }
 
@@ -107,7 +107,7 @@ class TestSidekickCpuDespawnParity {
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             // Test sentinel only.
         }
 
@@ -260,7 +260,7 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
-    void s2FlyingRespawnTopEdgeKeepsCounterUntilRomRenderFlagRefreshes() {
+    void s2FlyingRespawnClearsCounterAsSoonAsTheRenderFlagIsOnScreen() {
         TestableSprite sonic = new TestableSprite("sonic");
         sonic.setCentreX((short) 0x1CAE);
         sonic.setCentreY((short) 0x052C);
@@ -294,9 +294,21 @@ class TestSidekickCpuDespawnParity {
         controller.update(0x193F);
 
         assertEquals(SidekickCpuController.State.APPROACHING, controller.getState());
-        assertEquals(0x003F, controller.getDiagnosticRespawnCounter(),
-                "HTZ1 BizHawk gfc $193F: TailsCPU_Flying still sees render_flags=$04 at relY=-31 "
-                        + "and increments Tails_respawn_counter before BuildSprites refreshes it to $84");
+        // ROM TailsCPU_Flying (docs/s2disasm/s2.asm:39141-39158) tests the render
+        // flag FIRST and branches straight to TailsCPU_FlyingOnscreen, whose only
+        // statement is move.w #0,(Tails_respawn_counter).w. There is no
+        // counter-value gate and no camera-relative-Y gate anywhere in the
+        // routine, so an on-screen render flag zeroes the counter on the frame it
+        // is observed -- it never "keeps" a prior count for a frame.
+        //
+        // This assertion previously expected 0x003F, a value measured from an
+        // HTZ1 BizHawk probe rather than read from the ROM, and it partnered a
+        // fitted window in TailsRespawnStrategy that has since been removed. The
+        // HTZ traces that window was added for stay green without it.
+        assertEquals(0, controller.getDiagnosticRespawnCounter(),
+                "TailsCPU_Flying branches to TailsCPU_FlyingOnscreen on an on-screen "
+                        + "render flag and zeroes Tails_respawn_counter that frame "
+                        + "(docs/s2disasm/s2.asm:39142-39158)");
     }
 
     @Test
@@ -1406,7 +1418,8 @@ class TestSidekickCpuDespawnParity {
                 objectRules.animalObjectUsesRenderFlagDeleteBounds(),
                 objectRules.solidPushReleaseWritesWalkRunAnimationWord(),
                 objectRules.solidPushReleaseSkipsWalkRunWhenRolling(),
-                objectRules.solidPushReleaseSkipsWalkRunWhenSpindashing())));
+                objectRules.solidPushReleaseSkipsWalkRunWhenSpindashing(),
+                objectRules.duckTouchBoxMappingFrame())));
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x02BC);
         tails.setCentreY((short) 0x0250);

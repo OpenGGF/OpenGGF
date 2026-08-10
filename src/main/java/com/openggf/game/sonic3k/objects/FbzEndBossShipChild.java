@@ -40,7 +40,7 @@ public final class FbzEndBossShipChild extends AbstractFbzEndBossChild {
         return child == null || child.getSlotIndex() < 0 ? null : child;
     }
 
-    @Override public void update(int frameCounter, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         if (!headSpawnAttempted) {
             headSpawnAttempted = true;
             FbzRobotnikHeadChild child = spawnHead(boss.nativeCharacter());

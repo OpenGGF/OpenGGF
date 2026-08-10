@@ -231,9 +231,9 @@ public class AizFlippingBridgeObjectInstance extends AbstractObjectInstance
     // ===== Update =====
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         reserveNativeMultispriteSlot();
-        updateAnimation(frameCounter);
+        updateAnimation(vIntRunCount);
 
         // Check riding players: eject any standing on non-solid segments.
         // ROM: sub_2AC08 riding check — if segment frame < 5, eject.
@@ -274,7 +274,7 @@ public class AizFlippingBridgeObjectInstance extends AbstractObjectInstance
      * Updates the animation timer and cycles segment mapping frames.
      * ROM: sub_2AA7E
      */
-    private void updateAnimation(int frameCounter) {
+    private void updateAnimation(int vIntRunCount) {
         // ROM: subq.b #1,anim_frame_timer(a0); bpl.s return
         animTimer--;
         if (animTimer >= 0) {
@@ -301,7 +301,7 @@ public class AizFlippingBridgeObjectInstance extends AbstractObjectInstance
 
         // ROM: play sfx_GlideLand every 8th frame when on-screen.
         // Condition: (Level_frame_counter_low_byte + 3) & 7 == 0, i.e., frameCounter & 7 == 5
-        if (isOnScreen(0) && ((frameCounter + 3) & 7) == 0) {
+        if (isOnScreen(0) && ((vIntRunCount + 3) & 7) == 0) {
             services().playSfx(Sonic3kSfx.GLIDE_LAND.id);
         }
     }

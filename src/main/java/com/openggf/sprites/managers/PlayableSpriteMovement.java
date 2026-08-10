@@ -3,12 +3,14 @@ package com.openggf.sprites.managers;
 import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.LevelState;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.rules.CollisionRules;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.PlayerAnimationRules;
 import com.openggf.game.rules.PlayerCapabilityRules;
 import com.openggf.game.rules.PlayerMovementRules;
+import com.openggf.game.rules.PlayerLevelBoundaryRules;
 import com.openggf.game.rules.PowerUpRules;
 
 import com.openggf.camera.Camera;
@@ -74,6 +76,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private static final int SKID_SPEED_THRESHOLD = 0x400;
 	private static final short YSPEED_LANDING_CAP = (short) 0xFC0;
 	private static final int UPWARD_VELOCITY_CAP = -0xFC0;
+	private static final int DEATH_RESTART_DELAY_FRAMES = 60;
 	private static final short HYPER_DASH_SPEED = (short) 0x800;
 	/** ROM {@code Sonic_HyperDash_Velocities}, indexed by raw D-pad mask minus one. */
 	private static final short[] HYPER_DASH_VELOCITIES = {
@@ -4197,27 +4200,71 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
     }
 
 	private short applyDeathMovement() {
+		if (sprite.isInDeathRestartRoutine()) {
+			tickRestartCountdown();
+			return 0;
+		}
+
+		if (hasFallenPastDeathRestartRow()) {
+			PlayerMovementRules movementRules = playerMovementRulesOrNull();
+			if (movementRules != null && movementRules.levelBoundary() != null
+					&& movementRules.levelBoundary().deathFallRestartHandoffCancelsGravity()) {
+				sprite.setYSpeed((short) -sprite.getGravity());
+			}
+			enterDeathRestartRoutine();
+		}
+
 		short oldYSpeed = sprite.getYSpeed();
 		applyGravity();  // Gated on isObjectControlled(); a controlled sprite never enters the death routine anyway but keep gates consistent
 		sprite.setGSpeed((short) 0);
 		sprite.setXSpeed((short) 0);
-
-		Camera camera = camera();
-		if (camera != null && sprite.getY() > camera.getY() + camera.getHeight() + 256) {
-			sprite.startDeathCountdown();
-		}
-
-		if (sprite.tickDeathCountdown()) {
-			if (sprite.isCpuControlled() && sprite.getCpuController() != null) {
-				// CPU-controlled sprites (Tails) despawn and respawn near the main player
-				// instead of causing a level reset
-				sprite.getCpuController().despawn();
-			} else {
-				gameState().loseLife();
-				levelManager().requestRespawn();
-			}
-		}
 		return oldYSpeed;
+	}
+
+	private boolean hasFallenPastDeathRestartRow() {
+		Camera camera = camera();
+		if (camera == null) {
+			return false;
+		}
+		PlayerMovementRules movementRules = playerMovementRulesOrNull();
+		PlayerLevelBoundaryRules boundaryRules =
+				movementRules != null ? movementRules.levelBoundary() : null;
+		int reference = boundaryRules != null
+				&& boundaryRules.deathFallBottomReferenceIsCameraBottomBoundary()
+				? camera.getMaxY()
+				: camera.getY();
+		return sprite.getCentreY() > reference + 0x100;
+	}
+
+	private void enterDeathRestartRoutine() {
+		if (sprite.isCpuControlled() && sprite.getCpuController() != null) {
+			sprite.enterDeathRestartRoutine(DEATH_RESTART_DELAY_FRAMES);
+			return;
+		}
+		GameStateManager gameState = gameState();
+		if (gameState != null) {
+			gameState.loseLife();
+		}
+		boolean gameOver = gameState != null && gameState.getLives() == 0;
+		boolean timeOver = !gameOver && isTimeOverFlagged();
+		sprite.enterDeathRestartRoutine(
+				gameOver || timeOver ? 0 : DEATH_RESTART_DELAY_FRAMES);
+	}
+
+	private boolean isTimeOverFlagged() {
+		LevelState levelState = sprite.currentLevelState();
+		return levelState != null && levelState.isTimeOver();
+	}
+
+	private void tickRestartCountdown() {
+		if (!sprite.tickDeathCountdown()) {
+			return;
+		}
+		if (sprite.isCpuControlled() && sprite.getCpuController() != null) {
+			sprite.getCpuController().despawn();
+		} else {
+			levelManager().requestRespawn();
+		}
 	}
 
 	/**

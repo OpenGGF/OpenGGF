@@ -208,8 +208,8 @@ public class HczEndBossBlade extends AbstractBossChild implements TouchResponseP
     // =========================================================================
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
-        if (!beginUpdate(frameCounter)) {
+    public void update(int vIntRunCount, PlayableEntity player) {
+        if (!beginUpdate(vIntRunCount)) {
             return;
         }
 

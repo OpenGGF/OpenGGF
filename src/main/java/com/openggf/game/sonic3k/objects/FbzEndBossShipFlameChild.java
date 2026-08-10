@@ -19,9 +19,9 @@ public final class FbzEndBossShipFlameChild extends AbstractObjectInstance
                 "FBZEndBossShipFlame"); this.boss = boss; this.ship = ship;
     }
     public FbzEndBossShipFlameChild(ObjectSpawn spawn) { super(spawn, "FBZEndBossShipFlame"); }
-    @Override public void update(int frameCounter, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         if (ship == null || ship.isDestroyed()) { ObjectLifetimeOps.expireDynamic(this); return; }
-        renderThisFrame = (frameCounter & 1) == 0 && ship.hasHorizontalEscapeVelocity();
+        renderThisFrame = (vIntRunCount & 1) == 0 && ship.hasHorizontalEscapeVelocity();
     }
     @Override public int getX() { return ship == null ? spawn.x() : ship.getX() - 0x1E; }
     @Override public int getY() { return ship == null ? spawn.y() : ship.getY(); }

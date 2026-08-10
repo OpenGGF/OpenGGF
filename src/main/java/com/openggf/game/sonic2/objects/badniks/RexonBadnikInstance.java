@@ -88,7 +88,7 @@ public class RexonBadnikInstance extends AbstractBadnikInstance
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (state) {
             case WAIT_FOR_PLAYER -> updatePatrol(player);
@@ -292,7 +292,7 @@ public class RexonBadnikInstance extends AbstractBadnikInstance
     }
 
     @Override
-    protected void updateAnimation(int frameCounter) {
+    protected void updateAnimation(int vIntRunCount) {
         // Body uses frame 2 (s2.asm:73691: move.b #2,mapping_frame(a0))
         animFrame = 2;
     }

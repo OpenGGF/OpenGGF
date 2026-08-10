@@ -27,7 +27,7 @@ final class MgzEndBossKnuxCollapseEmitter extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (emissionsRemaining <= 0) {
             ObjectLifetimeOps.expireDynamic(this);
             return;
@@ -66,7 +66,7 @@ final class MgzEndBossKnuxCollapseEmitter extends AbstractObjectInstance
             this.xFixed = x << 8; this.yFixed = y << 8;
             this.xVel = xVel; this.yVel = yVel; this.frame = frame;
         }
-        @Override public void update(int frameCounter, PlayableEntity player) {
+        @Override public void update(int vIntRunCount, PlayableEntity player) {
             xFixed += xVel; yFixed += yVel; yVel += 0x18;
             if (getY() > services().camera().getY() + 0x140) ObjectLifetimeOps.expireDynamic(this);
         }

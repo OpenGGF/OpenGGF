@@ -1,16 +1,42 @@
 package com.openggf.trace.catalog;
 
+import com.openggf.trace.StoredPhysicsFrameDomain;
+import com.openggf.trace.TraceData;
+import com.openggf.tests.trace.TraceV5TestFixture;
+import com.openggf.tests.trace.TraceV5RunFixture;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TraceCatalogTest {
+
+    @Test
+    void everyCurrentV5RunManifestHasOneLaunchableCatalogEntry(@TempDir Path root)
+            throws Exception {
+        Path run = TraceV5RunFixture.writeS3kBonusRun(root.resolve("s3k/runs"));
+        TraceV5RunFixture.writeMovie(root.resolve("s3k/_movies/synthetic.bk2"));
+
+        List<TraceEntry> entries = TraceCatalog.scan(root).stream()
+                .filter(TraceEntry::isRun)
+                .toList();
+
+        assertEquals(1, entries.size());
+        assertEquals(run.toAbsolutePath().normalize(),
+                entries.getFirst().runDir().toAbsolutePath().normalize());
+        TraceCatalog.RunLaunchValidation validation =
+                TraceCatalog.validateRunLaunch(entries.getFirst());
+        assertTrue(validation.launchable(),
+                () -> "current v5 visual run is not launchable: "
+                        + validation.diagnostic());
+    }
 
     @Test
     void scanFiltersInvalidDirsAndSortsByGameZoneAct(@TempDir Path tmp) throws Exception {
@@ -90,9 +116,10 @@ class TraceCatalogTest {
     }
 
     @Test
-    void scanFallsBackToPerDirBk2WhenSharedMovieMissing(@TempDir Path tmp) throws Exception {
-        // source_bk2 declared but the shared movie is absent — a legacy per-dir
-        // copy must still resolve so older traces keep working.
+    void scanUsesPerDirBk2MoviePlacementWhenSharedMovieMissing(@TempDir Path tmp) throws Exception {
+        // source_bk2 declared but the shared movie is absent — the retained
+        // per-directory movie placement resolves the otherwise valid v5
+        // fixture. This does not make an older trace schema loadable.
         Path dir = tmp.resolve("s1/ghz1");
         writeTraceWithoutBk2(dir, "s1", 0, 0, "s1-complete-run.bk2");
         Files.writeString(dir.resolve("trace.bk2"), "stub");
@@ -127,6 +154,54 @@ class TraceCatalogTest {
         assertEquals(2, entries.getFirst().frameCount());
     }
 
+    @Test
+    void scanDoesNotCountRecorderCsvHeaderAsAFrame(@TempDir Path tmp)
+            throws Exception {
+        Path dir = tmp.resolve("s1/ghz1");
+        writeValidTrace(dir, "s1", 0, 1);
+        Files.writeString(dir.resolve("physics.csv"),
+                "frame,input,camera_x\n"
+                        + "0000,0000,0000\n"
+                        + "0001,0000,0000\n");
+
+        List<TraceEntry> entries = TraceCatalog.scan(tmp);
+
+        assertEquals(2, entries.getFirst().frameCount());
+    }
+
+    @Test
+    void scanPreservesEveryHeaderlessV5CsvRow(@TempDir Path tmp)
+            throws Exception {
+        Path dir = tmp.resolve("s1/ghz1");
+        writeValidTrace(dir, "s1", 0, 1);
+
+        List<TraceEntry> entries = TraceCatalog.scan(tmp);
+
+        assertEquals(2, entries.getFirst().frameCount());
+        assertEquals(2, TraceData.load(dir).frameCount());
+        assertEquals(List.of(0, 1), StoredPhysicsFrameDomain.scan(
+                dir.resolve("physics.csv")).frames());
+    }
+
+    @Test
+    void malformedEqualOffsetLegacyCohortIsOmittedWithoutAbortingScan(
+            @TempDir Path tmp) throws Exception {
+        Path first = tmp.resolve("s1/first_completerun");
+        Path second = tmp.resolve("s1/second_completerun");
+        writeTraceWithoutBk2(first, "s1", 0, 1, "legacy.bk2");
+        writeTraceWithoutBk2(second, "s1", 1, 1, "legacy.bk2");
+        Files.writeString(first.resolve("physics.csv"), "");
+        Files.writeString(second.resolve("physics.csv"), "");
+        Files.createDirectories(tmp.resolve("s1/_movies"));
+        Files.writeString(tmp.resolve("s1/_movies/legacy.bk2"), "movie");
+
+        List<TraceEntry> entries = assertDoesNotThrow(
+                () -> TraceCatalog.scan(tmp));
+
+        assertEquals(2, entries.size());
+        assertTrue(entries.stream().noneMatch(TraceEntry::isRun));
+    }
+
     private static void writeValidTrace(Path dir, String game, int zoneId, int act)
             throws Exception {
         Files.createDirectories(dir);
@@ -136,7 +211,7 @@ class TraceCatalogTest {
               "zone": "ZONE",
               "zone_id": %d,
               "act": %d,
-              "trace_schema": 3,
+              "trace_schema": 5,
               "bk2_frame_offset": 100,
               "pre_trace_osc_frames": 12,
               "main_character": "sonic",
@@ -144,7 +219,8 @@ class TraceCatalogTest {
             }
             """, game, zoneId, act));
         Files.writeString(dir.resolve("physics.csv"),
-                "0,0,0,0,0,0,0,0,0,0,0\n1,0,0,0,0,0,0,0,0,0,0\n");
+                TraceV5TestFixture.levelRow(0) + "\n"
+                        + TraceV5TestFixture.levelRow(1) + "\n");
         Files.writeString(dir.resolve("trace.bk2"), "stub");
     }
 
@@ -162,7 +238,7 @@ class TraceCatalogTest {
               "zone": "ZONE",
               "zone_id": %d,
               "act": %d,
-              "trace_schema": 3,
+              "trace_schema": 5,
               "bk2_frame_offset": 100,
               "pre_trace_osc_frames": 12,
               "main_character": "sonic",
@@ -171,6 +247,7 @@ class TraceCatalogTest {
             }
             """, game, zoneId, act, sourceBk2));
         Files.writeString(dir.resolve("physics.csv"),
-                "0,0,0,0,0,0,0,0,0,0,0\n1,0,0,0,0,0,0,0,0,0,0\n");
+                TraceV5TestFixture.levelRow(0) + "\n"
+                        + TraceV5TestFixture.levelRow(1) + "\n");
     }
 }

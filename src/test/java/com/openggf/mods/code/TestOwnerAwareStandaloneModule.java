@@ -449,7 +449,7 @@ class TestOwnerAwareStandaloneModule {
             super(spawn, "throwing");
             this.callback = callback;
         }
-        @Override public void update(int frameCounter, com.openggf.game.PlayableEntity player) {
+        @Override public void update(int vIntRunCount, com.openggf.game.PlayableEntity player) {
             if (callback == Callback.UPDATE) throw new IllegalStateException("update");
             if (callback == Callback.SPAWN_HOSTILE_DYNAMIC) {
                 services().objectManager().createDynamicObject(HostileSetupChild::new);
@@ -504,7 +504,7 @@ class TestOwnerAwareStandaloneModule {
             super(spawn, "spawning-parent");
             this.manager = manager;
         }
-        @Override public void update(int frameCounter, com.openggf.game.PlayableEntity player) {
+        @Override public void update(int vIntRunCount, com.openggf.game.PlayableEntity player) {
             if (!spawned) {
                 spawned = true;
                 manager.get().createDynamicObject(() -> new NullSpawnChild());
@@ -516,7 +516,7 @@ class TestOwnerAwareStandaloneModule {
     private static final class NullSpawnChild extends AbstractObjectInstance {
         private boolean armed;
         private NullSpawnChild() { super(null, "null-spawn-child"); }
-        @Override public void update(int frameCounter, com.openggf.game.PlayableEntity player) {
+        @Override public void update(int vIntRunCount, com.openggf.game.PlayableEntity player) {
             if (!armed) { armed = true; return; }
             throw new IllegalStateException("child");
         }
@@ -533,7 +533,7 @@ class TestOwnerAwareStandaloneModule {
 
     private static final class HostileUpdateChild extends AbstractObjectInstance {
         private HostileUpdateChild() { super(null, "hostile-update-child"); }
-        @Override public void update(int frameCounter, com.openggf.game.PlayableEntity player) {
+        @Override public void update(int vIntRunCount, com.openggf.game.PlayableEntity player) {
             throw new IllegalStateException("provider-child");
         }
         @Override public void appendRenderCommands(List<GLCommand> commands) { }

@@ -41,7 +41,7 @@ public final class MhzMinibossTreeInstance extends AbstractObjectInstance implem
     }
 
     @Override
-    public void update(int frameCounter, com.openggf.game.PlayableEntity player) {
+    public void update(int vIntRunCount, com.openggf.game.PlayableEntity player) {
         MhzMinibossInstance miniboss = findActiveMiniboss();
         if (miniboss == null) {
             return;
@@ -130,9 +130,9 @@ public final class MhzMinibossTreeInstance extends AbstractObjectInstance implem
         private static final int COLLISION_FLAGS = 0x86;
         private final SubpixelMotion.State motion;
         private boolean bounceEnabled;
-        private int animationTimer = ANIMATION_DELAY;
+        private int animationTimer;
         private int animationIndex;
-        private int chipMappingFrame = ANIMATION_FRAMES[0];
+        private int chipMappingFrame = 6;
         private boolean initialDispatchPending = true;
         private boolean touchPublished;
 
@@ -170,12 +170,8 @@ public final class MhzMinibossTreeInstance extends AbstractObjectInstance implem
         }
 
         @Override
-        public void update(int frameCounter, com.openggf.game.PlayableEntity player) {
+        public void update(int vIntRunCount, com.openggf.game.PlayableEntity player) {
             if (initialDispatchPending) {
-                // The constructor materializes CreateChild6_Simple's copied SST
-                // fields. Its first object dispatch is loc_75AD4, which performs
-                // SetUp_ObjAttributes and Draw_Sprite only; loc_75B34 movement
-                // begins on the following dispatch (sonic3k.asm:156353-156429).
                 initialDispatchPending = false;
                 return;
             }

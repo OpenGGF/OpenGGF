@@ -113,7 +113,7 @@ public class SpiralObjectInstance extends AbstractObjectInstance implements Post
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         List<PlayableEntity> participants = services().playerQuery().playersFor(
                 ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
         if (playerEntity instanceof AbstractPlayableSprite player && !participants.contains(player)) {
@@ -124,7 +124,7 @@ public class SpiralObjectInstance extends AbstractObjectInstance implements Post
         }
         for (PlayableEntity participant : participants) {
             if (participant instanceof AbstractPlayableSprite player) {
-                processPlayer(frameCounter, player);
+                processPlayer(vIntRunCount, player);
             }
         }
     }
@@ -139,17 +139,17 @@ public class SpiralObjectInstance extends AbstractObjectInstance implements Post
         }
     }
 
-    private void processPlayer(int frameCounter, AbstractPlayableSprite player) {
+    private void processPlayer(int vIntRunCount, AbstractPlayableSprite player) {
         if (ridingPlayers.contains(player)) {
-            updateRidingPlayer(frameCounter, player);
+            updateRidingPlayer(vIntRunCount, player);
             return;
         }
-        tryActivate(frameCounter, player);
+        tryActivate(vIntRunCount, player);
     }
 
-    private void tryActivate(int frameCounter, AbstractPlayableSprite player) {
+    private void tryActivate(int vIntRunCount, AbstractPlayableSprite player) {
         if (isCylinder()) {
-            tryActivateCylinder(frameCounter, player);
+            tryActivateCylinder(vIntRunCount, player);
             return;
         }
 
@@ -167,7 +167,7 @@ public class SpiralObjectInstance extends AbstractObjectInstance implements Post
         int vx = player.getXSpeed();
         boolean onObject = player.isOnObject();
         // Debug range
-        if (Math.abs(dx) < 250 && frameCounter % 30 == 0) {
+        if (Math.abs(dx) < 250 && vIntRunCount % 30 == 0) {
             LOGGER.fine("Spiral candidate: dx=" + dx + " vx=" + vx + " air=" + player.getAir());
         }
 
@@ -201,7 +201,7 @@ public class SpiralObjectInstance extends AbstractObjectInstance implements Post
             return;
         }
 
-        engagePlayer(frameCounter, player);
+        engagePlayer(vIntRunCount, player);
     }
 
     private void tryActivateCylinder(int frameCounter, AbstractPlayableSprite player) {
@@ -300,9 +300,9 @@ public class SpiralObjectInstance extends AbstractObjectInstance implements Post
         }
     }
 
-    private void updateRidingPlayer(int frameCounter, AbstractPlayableSprite player) {
+    private void updateRidingPlayer(int vIntRunCount, AbstractPlayableSprite player) {
         if (isCylinder()) {
-            updateCylinderRider(frameCounter, player);
+            updateCylinderRider(vIntRunCount, player);
             return;
         }
 
@@ -336,10 +336,10 @@ public class SpiralObjectInstance extends AbstractObjectInstance implements Post
             return;
         }
 
-        updateMovement(player, frameCounter, offset);
+        updateMovement(player, vIntRunCount, offset);
     }
 
-    private void updateMovement(AbstractPlayableSprite player, int frameCounter, int tableIndex) {
+    private void updateMovement(AbstractPlayableSprite player, int vIntRunCount, int tableIndex) {
         ObjectManager objectManager = services().objectManager();
         if (objectManager != null) {
             objectManager.markObjectSupportThisFrame(player);
@@ -353,10 +353,10 @@ public class SpiralObjectInstance extends AbstractObjectInstance implements Post
         if (angleIndex >= 0 && angleIndex < FLIP_ANGLE_TABLE.length) {
             player.setFlipAngle(FLIP_ANGLE_TABLE[angleIndex] & 0xFF);
         }
-        player.markSpiralActive(frameCounter);
+        player.markSpiralActive(vIntRunCount);
     }
 
-    private void updateCylinderRider(int frameCounter, AbstractPlayableSprite player) {
+    private void updateCylinderRider(int vIntRunCount, AbstractPlayableSprite player) {
         boolean latchedToThisCylinder = player.getLatchedSolidObjectId() == Sonic2ObjectIds.SPIRAL
                 && player.getLatchedSolidObjectInstance() == this;
         if (latchedToThisCylinder) {
@@ -399,7 +399,7 @@ public class SpiralObjectInstance extends AbstractObjectInstance implements Post
         if (player.getGSpeed() == 0) {
             player.setGSpeed((short) 1);
         }
-        player.markSpiralActive(frameCounter);
+        player.markSpiralActive(vIntRunCount);
     }
 
     private void fallOff(AbstractPlayableSprite player) {

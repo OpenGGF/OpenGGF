@@ -24,7 +24,7 @@ public final class FbzExitHallInstance extends AbstractObjectInstance implements
         hallRecord = spawn.subtype() == 4;
     }
 
-    @Override public void update(int frameCounter, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         if (tryServices() != null && services().camera() != null
                 && isCoarseXOutOfRange(spawn.x(), services().camera().getX(), 0x280)) {
             destroyedByOffscreen = true;

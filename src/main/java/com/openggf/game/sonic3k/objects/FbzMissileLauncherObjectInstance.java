@@ -24,7 +24,7 @@ public final class FbzMissileLauncherObjectInstance
     targeting = companion;
     liveImpacts = companion ? 5 : 0;
   }
-  public void update(int frame, PlayableEntity p) {
+  public void update(int vIntRunCount, PlayableEntity p) {
     if (!initialized) {
       initialized = true;
       if (companion)
@@ -50,7 +50,7 @@ public final class FbzMissileLauncherObjectInstance
       // free-running VBla counter used to execute ObjectManager callbacks.
       // Keeping these clock domains separate preserves the native projectile
       // burst phase across trace bootstrap, lag, and seamless transitions.
-      int levelFrame = resolveLevelFrameCounter(frame);
+      int levelFrame = resolveLevelFrameCounter(vIntRunCount);
       if (((levelFrame + phase) & 0xFF) != 0 || !isOnScreen(0x20)) {
         coarseCull();
         return;

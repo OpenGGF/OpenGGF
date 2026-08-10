@@ -129,7 +129,7 @@ public class Sonic1BumperObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         // ROM Bump_Hit consumes obColProp after ReactToItem increments it for
         // $D7: docs/s1disasm/_incObj/47 Bumper.asm:24-40 and
         // docs/s1disasm/_incObj/sub ReactToItem.asm:377-427.

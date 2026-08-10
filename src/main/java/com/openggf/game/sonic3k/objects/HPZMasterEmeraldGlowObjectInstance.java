@@ -37,7 +37,7 @@ public final class HPZMasterEmeraldGlowObjectInstance
         return new HPZMasterEmeraldGlowObjectInstance(ctx.spawn());
     }
 
-    @Override public void update(int frameCounter, PlayableEntity player) {}
+    @Override public void update(int vIntRunCount, PlayableEntity player) {}
     @Override public int getX() { return parentRef == null ? 0x1640 : parentRef.getX(); }
     @Override public int getY() { return parentRef == null ? 0x340 : parentRef.getY(); }
     @Override public int getOutOfRangeReferenceX() { return getX(); }

@@ -887,6 +887,10 @@ public class TestTornadoObjectInstance {
         ObjectSpawn spawn = new ObjectSpawn(x, y, Sonic2ObjectIds.TORNADO, subtype, 0, false, 0);
         TornadoObjectInstance t = new TornadoObjectInstance(spawn);
         t.setServices(services);
+        // These cases exercise the main routines, so consume the object's
+        // routine-0 frame (ObjB2_Init, docs/s2disasm/s2.asm:78799-78813) that
+        // ROM spends before ever reaching them.
+        t.consumePendingInitRoutine();
         return t;
     }
 

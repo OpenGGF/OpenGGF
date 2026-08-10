@@ -2337,6 +2337,7 @@ public class Sonic2SpecialStageRenderer {
      */
     private void renderCheckpointHand(int screenCenterOffset) {
         int handX = screenCenterOffset + checkpoint.getHandX();
+        int wingsY = checkpoint.getWingsY();
         int handY = checkpoint.getHandY();
         boolean thumbsUp = checkpoint.isHandThumbsUp();
 
@@ -2344,7 +2345,7 @@ public class Sonic2SpecialStageRenderer {
         final int handPalette = 1;
 
         // Render wings first (Frame $14 = Map_obj5A_00F4) - behind hand
-        renderCheckpointWingsFrame20(handX, handY, handPalette);
+        renderCheckpointWingsFrame20(handX, wingsY, handPalette);
 
         // Render hand (Frame $15 = Map_obj5A_0136)
         // vFlip = !thumbsUp (thumbs down when failing)

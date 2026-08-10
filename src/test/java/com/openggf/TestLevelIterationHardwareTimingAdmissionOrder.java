@@ -19,7 +19,7 @@ import com.openggf.game.solid.DefaultSolidExecutionRegistry;
 import com.openggf.timer.TimerManager;
 import com.openggf.trace.timing.HardwareCompletionEdge;
 import com.openggf.trace.timing.HardwareTimingReplayPort;
-import com.openggf.trace.timing.HardwareTimingSchedule;
+import com.openggf.trace.timing.HardwareTimingScheduleTestFactory;
 import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -27,6 +27,7 @@ import org.junit.jupiter.api.io.TempDir;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 
 import static com.openggf.game.timing.HardwareServiceBoundary.VINT_SERVICE;
 import static com.openggf.game.timing.HardwareServiceBoundary.POST_OBJECTS;
@@ -134,7 +135,12 @@ class TestLevelIterationHardwareTimingAdmissionOrder {
     private Harness harness(int edgeRawFrame) throws Exception {
         GameplayModeContext context = new GameplayModeContext(
                 new WorldSession(new Sonic3kGameModule()),
-                HardwareReadinessAdmissionPolicy.RECORDED);
+                HardwareReadinessAdmissionPolicy.RECORDED,
+                Map.of(
+                        com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE,
+                        HardwareReadinessAdmissionPolicy.RECORDED,
+                        com.openggf.game.timing.HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
+                        HardwareReadinessAdmissionPolicy.LIVE));
         context.attachGameplayManagers(
                 new Camera(),
                 new TimerManager(),
@@ -151,12 +157,9 @@ class TestLevelIterationHardwareTimingAdmissionOrder {
             for (int frame = 0;
                     frame < 16 && !hasPreparedPayload(context, handle);
                     frame++) {
-                context.hardwareTiming().service(
+                context.serviceHardwareTimingBoundary(
                         com.openggf.game.timing.HardwareServiceBoundary.PRE_MAIN_LOOP);
-                context.afterHardwareTimingService(
-                        com.openggf.game.timing.HardwareServiceBoundary.PRE_MAIN_LOOP);
-                context.hardwareTiming().service(POST_OBJECTS);
-                context.afterHardwareTimingService(POST_OBJECTS);
+                context.serviceHardwareTimingBoundary(POST_OBJECTS);
             }
         }
         assertTrue(hasPreparedPayload(context, handle),
@@ -169,7 +172,13 @@ class TestLevelIterationHardwareTimingAdmissionOrder {
                 handle.submissionFingerprint());
         HardwareTimingReplayPort port = new HardwareTimingReplayPort(
                 context.recordedCompletionAuthority());
-        port.install(new HardwareTimingSchedule(List.of(edge)));
+        port.install(HardwareTimingScheduleTestFactory.withAdmissionPolicies(
+                List.of(edge),
+                Map.of(
+                        com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE,
+                        HardwareReadinessAdmissionPolicy.RECORDED,
+                        com.openggf.game.timing.HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
+                        HardwareReadinessAdmissionPolicy.LIVE)));
         TraceHardwareTimingBoundaryObserver observer =
                 new TraceHardwareTimingBoundaryObserver(port);
         context.setHardwareTimingBoundaryObserver(observer);

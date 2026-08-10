@@ -21,23 +21,34 @@ public final class HardwareTimingSchedule {
                     .thenComparingInt(edge -> edge.kind().ordinal())
                     .thenComparingLong(HardwareCompletionEdge::ordinal);
 
-    private static final HardwareTimingSchedule EMPTY = new HardwareTimingSchedule(1, List.of());
+    private static final HardwareTimingSchedule EMPTY = new HardwareTimingSchedule(false, List.of());
 
-    private final int schema;
+    private final boolean recordedInput;
     private final Map<HardwareWorkKind, HardwareReadinessAdmissionPolicy> admissionPolicies;
     private final List<HardwareCompletionEdge> edges;
     private final Map<FrameBoundary, List<HardwareCompletionEdge>> edgesByFrameAndBoundary;
 
     public HardwareTimingSchedule(List<HardwareCompletionEdge> edges) {
-        this(1, edges);
+        this(true, edges);
     }
 
-    public HardwareTimingSchedule(int schema, List<HardwareCompletionEdge> edges) {
-        if (schema != 1 && schema != 2) {
-            throw new IllegalArgumentException("unsupported hardware timing schema: " + schema);
-        }
-        this.schema = schema;
-        this.admissionPolicies = admissionPoliciesFor(schema);
+    private HardwareTimingSchedule(boolean recordedInput, List<HardwareCompletionEdge> edges) {
+        this(recordedInput, edges, recordedAdmissionPolicies());
+    }
+
+    /** Explicit mixed-policy seam for generic unit tests; v5 loading never uses it. */
+    static HardwareTimingSchedule withAdmissionPolicies(
+            List<HardwareCompletionEdge> edges,
+            Map<HardwareWorkKind, HardwareReadinessAdmissionPolicy> policies) {
+        return new HardwareTimingSchedule(true, edges, Map.copyOf(policies));
+    }
+
+    private HardwareTimingSchedule(
+            boolean recordedInput,
+            List<HardwareCompletionEdge> edges,
+            Map<HardwareWorkKind, HardwareReadinessAdmissionPolicy> policies) {
+        this.recordedInput = recordedInput;
+        this.admissionPolicies = Map.copyOf(policies);
         this.edges = List.copyOf(edges);
         for (HardwareCompletionEdge edge : this.edges) {
             Objects.requireNonNull(edge, "hardware completion edge");
@@ -45,12 +56,6 @@ public final class HardwareTimingSchedule {
                     && edge.boundary() != HardwareServiceBoundary.PRE_MAIN_LOOP) {
                 throw new IllegalArgumentException(
                         "direct decompression completion edges require PRE_MAIN_LOOP");
-            }
-            if (admissionPolicies.get(edge.kind())
-                    != HardwareReadinessAdmissionPolicy.RECORDED) {
-                throw new IllegalArgumentException(
-                        "hardware completion edge kind is not recorded by schema "
-                                + schema + ": " + edge.kind());
             }
         }
         Map<FrameBoundary, List<HardwareCompletionEdge>> indexed = new HashMap<>();
@@ -67,12 +72,18 @@ public final class HardwareTimingSchedule {
         return EMPTY;
     }
 
+    /** A present, explicitly empty v5 timing stream with the complete registry. */
+    public static HardwareTimingSchedule recordedEmpty() {
+        return new HardwareTimingSchedule(true, List.of());
+    }
+
     public List<HardwareCompletionEdge> edges() {
         return edges;
     }
 
-    public int schema() {
-        return schema;
+    /** Whether a v5 hardware_timing.jsonl stream was present. */
+    public boolean hasRecordedInput() {
+        return recordedInput;
     }
 
     public Map<HardwareWorkKind, HardwareReadinessAdmissionPolicy> admissionPolicies() {
@@ -88,15 +99,14 @@ public final class HardwareTimingSchedule {
     }
 
     private static Map<HardwareWorkKind, HardwareReadinessAdmissionPolicy>
-            admissionPoliciesFor(int schema) {
+            recordedAdmissionPolicies() {
         EnumMap<HardwareWorkKind, HardwareReadinessAdmissionPolicy> policies =
                 new EnumMap<>(HardwareWorkKind.class);
         policies.put(HardwareWorkKind.KOS_MODULE_QUEUE,
                 HardwareReadinessAdmissionPolicy.RECORDED);
         policies.put(HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
-                schema == 2
-                        ? HardwareReadinessAdmissionPolicy.RECORDED
-                        : HardwareReadinessAdmissionPolicy.LIVE);
+                HardwareReadinessAdmissionPolicy.RECORDED);
         return Map.copyOf(policies);
     }
+
 }

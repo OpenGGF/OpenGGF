@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -17,6 +18,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import com.openggf.level.objects.RomObjectSnapshot;
+import com.openggf.trace.live.LiveTraceComparator;
+import com.openggf.trace.replay.runs.TraceRunExternalDiagnostics;
 
 /**
  * Frame-0 bootstrap comparator. Verifies engine state at frame 0 already
@@ -69,6 +72,82 @@ class TestBootstrapComparator {
 
         assertTrue(divergences.isEmpty(),
                 () -> "Expected no bootstrap divergences but found: " + divergences);
+    }
+
+    @Test
+    void liveComparatorPublishesBootstrapMismatchWithoutAdvancingCursor() {
+        TraceData trace = traceWithSnapshots(
+                0x34,
+                shorts(64, 0x0500),
+                shorts(64, 0x0300),
+                shorts(64, 0x0000),
+                bytes(64, (byte) 0x00),
+                null,
+                List.of());
+        EngineSnapshot snapshot = new EngineSnapshot(
+                shorts(64, 0x0500),
+                shorts(64, 0x0300),
+                shorts(64, 0x0000),
+                bytes(64, (byte) 0x00),
+                13,
+                null,
+                Map.of());
+        AtomicInteger firstError = new AtomicInteger();
+        LiveTraceComparator comparator = new LiveTraceComparator(
+                trace, ToleranceConfig.DEFAULT, 0, () -> null,
+                firstError::incrementAndGet);
+
+        List<BootstrapDivergence> divergences =
+                comparator.compareBootstrap(snapshot);
+
+        assertEquals(1, divergences.size());
+        assertEquals(1, comparator.errorCount());
+        assertEquals(0, comparator.warningCount());
+        assertEquals(1, firstError.get());
+        assertEquals(0, comparator.cursor());
+        assertEquals("player_history.pos",
+                comparator.recentMismatches().getFirst().field());
+        assertEquals(divergences, comparator.bootstrapDivergences());
+    }
+
+    @Test
+    void bootstrapObserverPublishesEveryDivergenceBeforeLaterGapErrors() {
+        TraceData trace = traceWithSnapshots(
+                0x34,
+                shorts(64, 0x0500),
+                shorts(64, 0x0300),
+                shorts(64, 0x0000),
+                bytes(64, (byte) 0x00),
+                null,
+                List.of());
+        EngineSnapshot snapshot = new EngineSnapshot(
+                shorts(64, 0x0600),
+                shorts(64, 0x0300),
+                shorts(64, 0x0000),
+                bytes(64, (byte) 0x00),
+                13,
+                null,
+                Map.of());
+        AtomicInteger pauses = new AtomicInteger();
+        TraceRunExternalDiagnostics runDiagnostics =
+                new TraceRunExternalDiagnostics(pauses::incrementAndGet);
+        LiveTraceComparator comparator = new LiveTraceComparator(
+                trace, ToleranceConfig.DEFAULT, 0, () -> null,
+                pauses::incrementAndGet, runDiagnostics::acceptDisplayed);
+
+        List<BootstrapDivergence> divergences =
+                comparator.compareBootstrap(snapshot);
+        runDiagnostics.acceptBootstrap(divergences);
+        runDiagnostics.accept(new FrameComparison(1, Map.of(
+                "run_gap.edge_count", new FieldComparison(
+                        "run_gap.edge_count", "0", "1",
+                        Severity.ERROR, 1))));
+
+        assertTrue(divergences.size() > 5,
+                "coverage requires more mismatches than the HUD ring retains");
+        assertEquals(divergences.size() + 1, runDiagnostics.errorCount());
+        assertEquals(1, pauses.get(),
+                "the later gap error must not toggle pause a second time");
     }
 
     /**
@@ -284,6 +363,94 @@ class TestBootstrapComparator {
         assertTrue(divergences.isEmpty(),
                 () -> "Legacy traces must skip the comparator entirely; divergences: "
                         + divergences);
+    }
+
+    // ---- Untouched Obj01_Init pre-fill remnant (mid-act re-entry) ----
+
+    /**
+     * A replay whose level load ran ROM {@code LevelSizeLoad}'s checkpoint
+     * branch (start X differs from the zone's {@code StartLocations} X,
+     * docs/s2disasm/s2.asm:14773-14778) cannot reproduce
+     * {@code Obj01_Init_Continued}'s pre-fill anchor, because that anchor is
+     * {@code Saved_x_pos}/{@code Saved_y_pos} from a star post touched before
+     * the segment began (docs/s2disasm/s2.asm:36202-36218, :44737-44738).
+     * The untouched remnant slots -- at and above the next-free ring index --
+     * must therefore be excluded.
+     */
+    @Test
+    void checkpointEntryExcludesUntouchedPreFillRemnant() {
+        List<BootstrapDivergence> divergences =
+                comparePreFillRemnantCase(0x0060, 0x00AE, 0x00B1, 0x0500);
+
+        assertTrue(divergences.isEmpty(),
+                () -> "Pre-fill remnant must not be compared for a checkpoint "
+                        + "entry; divergences: " + divergences);
+    }
+
+    /**
+     * The same snapshot, but with the replay starting at the zone's
+     * {@code StartLocations} X: the engine ran the same {@code Obj01_Init}
+     * branch as the ROM, so every remnant slot stays compared.
+     */
+    @Test
+    void startLocationEntryStillComparesPreFillRemnant() {
+        List<BootstrapDivergence> divergences =
+                comparePreFillRemnantCase(0x0000, 0x00AE, 0x00B1, 0x0500);
+
+        assertEquals(38, divergences.size(),
+                () -> "Expected all 38 remnant slots compared; got: " + divergences);
+        assertEquals("player_history.y[26]", divergences.getFirst().field());
+    }
+
+    /**
+     * The exclusion must never swallow a slot the ROM actually wrote during
+     * the segment. Slot 5 is below the next-free index, so it is compared even
+     * on a checkpoint entry.
+     */
+    @Test
+    void checkpointEntryStillComparesWrittenSlots() {
+        List<BootstrapDivergence> divergences =
+                comparePreFillRemnantCase(0x0060, 0x00AE, 0x00B1, 0x0501);
+
+        assertEquals(1, divergences.size(),
+                () -> "Written slots must stay compared; got: " + divergences);
+        assertEquals("player_history.y[5]", divergences.getFirst().field());
+    }
+
+    /**
+     * Builds the mid-act shape: 26 genuine {@code Sonic_RecordPos} writes
+     * (next-free byte offset 26*4 = 0x68) followed by 38 untouched pre-fill
+     * slots carrying one identical coordinate pair with zero input and status.
+     *
+     * @param levelStartX zone {@code StartLocations} X seen by the engine; the
+     *                    fixture metadata's own start X is 0x0000
+     * @param romRemnantY pre-fill anchor Y the ROM recorded
+     * @param engineRemnantY pre-fill anchor Y the cold-booted engine produced
+     * @param engineSlot5Y engine Y for written slot 5 (the ROM's is 0x0500)
+     */
+    private static List<BootstrapDivergence> comparePreFillRemnantCase(
+            int levelStartX, int romRemnantY, int engineRemnantY, int engineSlot5Y) {
+        short[] romX = shorts(64, 0x0DD0);
+        short[] romY = shorts(64, romRemnantY);
+        short[] engineX = shorts(64, 0x0DD0);
+        short[] engineY = shorts(64, engineRemnantY);
+        short[] input = shorts(64, 0x0000);
+        byte[] status = bytes(64, (byte) 0x00);
+        for (int i = 0; i < 26; i++) {
+            romY[i] = (short) 0x0500;
+            engineY[i] = (short) 0x0500;
+            input[i] = (short) 0x0020;
+            status[i] = (byte) 0x02;
+        }
+        engineY[5] = (short) engineSlot5Y;
+
+        TraceData trace = traceWithSnapshots(0x68, romX, romY, input, status,
+                null, List.of());
+        EngineSnapshot snapshot = new EngineSnapshot(
+                engineX, engineY, input, status, 25, null, Map.of(), levelStartX);
+
+        return new TraceBinder(ToleranceConfig.DEFAULT)
+                .compareBootstrapFrame0(trace, snapshot);
     }
 
     // ---- Test helpers ----

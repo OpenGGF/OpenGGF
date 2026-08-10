@@ -84,7 +84,7 @@ public class SmallMetalPformObjectInstance extends AbstractObjectInstance implem
     private int spawnTimer;
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // ROM: loc_3BC3C (routine 2)
         // subq.w #1,objoff_2A(a0)
@@ -283,12 +283,12 @@ public class SmallMetalPformObjectInstance extends AbstractObjectInstance implem
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
             switch (state) {
                 case INIT -> updateInit();
                 case UNFOLD -> updateUnfold();
-                case MOVE -> updateMove(frameCounter, player);
+                case MOVE -> updateMove(vIntRunCount, player);
                 case FOLD -> updateFold();
                 case DELETE -> updateDelete();
             }
@@ -334,7 +334,7 @@ public class SmallMetalPformObjectInstance extends AbstractObjectInstance implem
         // ROM: Timer countdown, ObjectMove (Y velocity only), PlatformObject
         // ================================================================
 
-        private void updateMove(int frameCounter, AbstractPlayableSprite player) {
+        private void updateMove(int vIntRunCount, AbstractPlayableSprite player) {
             // subq.w #1,objoff_2A(a0) / bmi.s loc_3BCC0
             moveTimer--;
             if (moveTimer < 0) {

@@ -179,7 +179,7 @@ public final class FbzEndBossInstance extends AbstractBossInstance
         positionFractionY = 0;
     }
 
-    @Override protected void updateBossLogic(int frameCounter, PlayableEntity player) {
+    @Override protected void updateBossLogic(int vIntRunCount, PlayableEntity player) {
         if (!nativeStarted) {
             nativeStarted = true;
             if (services().gameState() != null) services().gameState().setCurrentBossId(OBJECT_ID);

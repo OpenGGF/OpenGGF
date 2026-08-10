@@ -133,7 +133,7 @@ public class CluckerBadnikInstance extends AbstractBadnikInstance implements Rew
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (state) {
             case CHECK_DISTANCE -> updateCheckDistance(player);
@@ -290,7 +290,7 @@ public class CluckerBadnikInstance extends AbstractBadnikInstance implements Rew
     }
 
     @Override
-    protected void updateAnimation(int frameCounter) {
+    protected void updateAnimation(int vIntRunCount) {
         // Animation is driven by the state machine in updateMovement
     }
 

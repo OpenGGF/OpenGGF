@@ -106,7 +106,12 @@ public class S3kSignpostInstance extends AbstractObjectInstance
     private static final int POST_LAND_TIMER = 0x40;
     private static final int BUMP_COOLDOWN = 0x20;
     private static final int RESULTS_CARRIED_RETIRE_DISPATCHES = 3;
-    private static final int RESULTS_WAITED_LANDING_RETIRE_DISPATCHES = 2;
+    // ROM Obj_LevelResultsWait2 observes $30(a0) reaching zero one pass after
+    // the last child SST deletes (children allocate after the parent,
+    // docs/skdisasm/sonic3k.asm:62600, 62691-62693); the player-visible control
+    // release lands on the following dispatch. onExitReady's next-dispatch
+    // scheduling supplies the first pass, so one retained dispatch remains.
+    private static final int RESULTS_WAITED_LANDING_RETIRE_DISPATCHES = 1;
 
     // Bump detection box relative to signpost center
     private static final int BUMP_LEFT = -0x20;
@@ -254,19 +259,19 @@ public class S3kSignpostInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = resolveUpdatePlayer(playerEntity);
         if (isDestroyed()) {
             return;
         }
-        if (landingSparklePending && isRomSparkleFrame(frameCounter)) {
+        if (landingSparklePending && isRomSparkleFrame(vIntRunCount)) {
             spawnRomSparkle();
             landingSparklePending = false;
         }
 
         switch (state) {
             case INIT -> updateInit(player);
-            case FALLING -> updateFalling(frameCounter, player);
+            case FALLING -> updateFalling(vIntRunCount, player);
             case LANDED -> updateLanded(player);
             case RESULTS -> updateResults(player);
             case AFTER -> updateAfter(player);
@@ -305,10 +310,10 @@ public class S3kSignpostInstance extends AbstractObjectInstance
     // FALLING
     // =========================================================================
 
-    private void updateFalling(int frameCounter, AbstractPlayableSprite player) {
+    private void updateFalling(int vIntRunCount, AbstractPlayableSprite player) {
         // ROM Obj_EndSignFall owns interaction before gravity and MoveSprite2:
         // sparkle -> EndSign_CheckPlayerHit -> addi #$C,y_vel -> movement.
-        if (isRomSparkleFrame(frameCounter)) {
+        if (isRomSparkleFrame(vIntRunCount)) {
             spawnRomSparkle();
         }
         if (romBumpCheckAvailableAfterCooldownEntry(bumpCooldown)) {
@@ -358,7 +363,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance
             subY = 0;
             state = State.LANDED;
             landingSparklePending = preservesPostLandingSparkleGate
-                    && isRomSparkleFrame(frameCounter + 1);
+                    && isRomSparkleFrame(vIntRunCount + 1);
             LOG.fine("S3K Signpost FALLING -> LANDED at Y=" + worldY);
         }
     }
@@ -533,9 +538,10 @@ public class S3kSignpostInstance extends AbstractObjectInstance
             applyMainPlayerEndingPose(player);
             sidekickEndingPoseCheckArmed = true;
         } else {
-            // Preserve the engine's collapsed owner boundary for ordinary
-            // signposts whose routine 6 did not wait.
-            mainEndingPosePending = true;
+            // Routine 6 owns Set_PlayerEndingPose even when the engine did not
+            // need to preserve an earlier wait/allocation boundary.
+            applyMainPlayerEndingPose(player);
+            sidekickEndingPoseCheckArmed = true;
         }
 
         // ROM Obj_EndSignLanded writes only Ctrl_2_locked before this routine;

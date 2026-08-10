@@ -138,6 +138,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     // Cleared per-player when they land (air → ground transition).
     private boolean introFallActiveOnPlayer;
     private boolean introFallActiveOnSidekick;
+    private boolean skipSimpleFallingIntroForLoad;
 
     // Set by HCZ Act 1 transition: after the seamless reload to Act 2, the
     // whirlpool descent cutscene should play. Consumed on the first onUpdate()
@@ -207,6 +208,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         bootstrap = Sonic3kBootstrapResolver.resolve(zone, act);
         introFallActiveOnPlayer = false;
         introFallActiveOnSidekick = false;
+        skipSimpleFallingIntroForLoad = false;
         boolean seamlessActAdvance = fixedAirCountdownZone == zone
                 && fixedAirCountdownAct + 1 == act;
         // Capture before replacing the Act-1 handler and its typed adapter.
@@ -773,6 +775,15 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
      * </ul>
      */
     public void applyZonePlayerState() {
+        applyZonePlayerStateInternal();
+    }
+
+    public void applyZonePlayerStateForLoad(boolean checkpointReload) {
+        skipSimpleFallingIntroForLoad = checkpointReload || bootstrap.isSkipIntro();
+        applyZonePlayerStateInternal();
+    }
+
+    private void applyZonePlayerStateInternal() {
         if (currentZone == Sonic3kZoneIds.ZONE_HCZ && currentAct == 0) {
             applyHcz1IntroState();
         }
@@ -780,6 +791,11 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         // Applied to MGZ1, SSZ, and LRZ1 (non-Knuckles only).
         if (currentZone == Sonic3kZoneIds.ZONE_MGZ && currentAct == 0) {
             applySimpleFallingIntro("MGZ1");
+        }
+        if (currentZone == Sonic3kZoneIds.ZONE_LRZ && currentAct == 0
+                && getPlayerCharacter() != PlayerCharacter.KNUCKLES
+                && !skipSimpleFallingIntroForLoad) {
+            applySimpleFallingIntro("LRZ1");
         }
         if (currentZone == Sonic3kZoneIds.ZONE_ICZ && currentAct == 0
                 && iczEvents != null && iczEvents.hasSonicSnowboardIntroPlayerMode()) {
@@ -796,7 +812,6 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (currentZone == Sonic3kZoneIds.ZONE_CNZ && cnzEvents != null) {
             cnzEvents.spawnSoloLeaderCarryInTailsIfNeeded(currentAct);
         }
-        // TODO: LRZ1 non-Knuckles, SSZ falling intros (same loc_68A6 path)
     }
 
     private void applyIczIntroSidekickDormantMarkersAfterSpawn() {
@@ -813,7 +828,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     }
 
     public void applyZonePlayerStateAfterTitleCard() {
-        applyZonePlayerState();
+        applyZonePlayerStateInternal();
         if (currentZone == Sonic3kZoneIds.ZONE_LBZ && currentAct == 0) {
             spawnLbz1GroundLaunchIntro(true);
         }

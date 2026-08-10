@@ -209,7 +209,7 @@ public class BadnikProjectileInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (loadSubObjectInitPending) {
             loadSubObjectInitPending = false;
@@ -221,7 +221,7 @@ public class BadnikProjectileInstance extends AbstractObjectInstance
         // Initial delay: projectile stays stationary (Octus bullet: 16 frames)
         if (initialDelay > 0) {
             initialDelay--;
-            animFrame = ((frameCounter >> 2) & 1);
+            animFrame = ((vIntRunCount >> 2) & 1);
             return;
         }
 
@@ -266,7 +266,7 @@ public class BadnikProjectileInstance extends AbstractObjectInstance
             }
             animFrame = cluckerAnimIndex;
         } else {
-            animFrame = ((frameCounter >> 2) & 1);
+            animFrame = ((vIntRunCount >> 2) & 1);
         }
 
         // Nebula bomb: toggle palette every frame (ROM: bchg #palette_bit_0)

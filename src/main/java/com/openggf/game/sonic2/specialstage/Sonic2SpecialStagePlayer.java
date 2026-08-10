@@ -325,6 +325,68 @@ public class Sonic2SpecialStagePlayer {
         if (playerType == PlayerType.TAILS && routine != RoutineState.INIT) {
             updateTailsTailsAnimation();
         }
+
+        consumeDplcLoadGate();
+    }
+
+    /**
+     * Models the LoadSSSonicDynPLC / LoadSSTailsDynPLC prologue
+     * (docs/s2disasm/s2.asm:69193-69200 and 70492-70499), which every Obj09 /
+     * Obj10 routine tail branches to:
+     *
+     * <pre>
+     *   move.b  ss_dplc_timer(a0),d0
+     *   beq.s   +          ; timer idle -> always load
+     *   subq.b  #1,d0
+     *   move.b  d0,ss_dplc_timer(a0)
+     *   andi.b  #1,d0
+     *   beq.s   +
+     *   rts                ; odd result -> no DisplaySprite, no DPLC this pass
+     * </pre>
+     *
+     * <p>So while the post-hurt blink counter runs, the player's mapping-frame
+     * change is not published on the pass it happens; it is published on the
+     * next even pass. Obj88 (tails' tails) reads the same counter out of its
+     * parent without touching it, which is why Tails and his tails always skip
+     * together (s2.asm:70575-70581, {@link #tailsTailsDplcLoadRuns()}).
+     */
+    private void consumeDplcLoadGate() {
+        if (ssDplcTimer == 0) {
+            return;
+        }
+        ssDplcTimer = (ssDplcTimer - 1) & 0xFF;
+    }
+
+    /**
+     * Whether this pass reached the object's own DPLC load. The ROM's skip
+     * predicate is the parity of the post-decrement counter, so the outcome is
+     * derivable from {@code ss_dplc_timer} alone -- no extra engine state.
+     */
+    public boolean dplcLoadRuns() {
+        return ssDplcTimer == 0 || (ssDplcTimer & 1) == 0;
+    }
+
+    /**
+     * Whether Obj88's LoadSSTailsTailsDynPLC reached its DPLC load this pass.
+     * It re-reads the parent's counter after Obj10 already decremented it and
+     * never writes it back (docs/s2disasm/s2.asm:70575-70581).
+     */
+    public boolean tailsTailsDplcLoadRuns() {
+        return dplcLoadRuns();
+    }
+
+    /**
+     * Runs one tails' tails animation tick outside a full player update.
+     * ROM Obj88 is a separate object with no routine gate: its whole body —
+     * including the generic AnimateSprite call on Ani_obj88 — executes on the
+     * same startup RunObjects pass that created it (s2.asm:70394,70549-70563),
+     * unlike Obj09/Obj10 whose init routine returns via LoadSS*DynPLC before
+     * SSPlayer_Animate. That startup tick loads the tails' tails frame
+     * duration, so its first visible advance lands on the same post-fade pass
+     * as the players' (stage-1 fixture row 165), not one pass later.
+     */
+    public void tickTailsTailsStartupAnimation() {
+        updateTailsTailsAnimation();
     }
 
     private void updateTailsTailsAnimation() {
@@ -371,15 +433,47 @@ public class Sonic2SpecialStagePlayer {
     }
 
     private void updateJumping(int heldButtons) {
-        // Original Obj09_MdJump does NOT call SSPlayer_SetAnimation
-        // Animation is set to 3 (ball) when entering jump state
+        // Neither Obj09_MdJump nor Obj10_MdJump calls SSPlayer_SetAnimation;
+        // anim is set to 3 (ball) when entering the jump state.
+        //
+        // The two jump-mode routines do NOT share a call order, and the
+        // difference is load-bearing. Sonic's Obj09_MdJump recomputes the angle
+        // before the landing test (docs/s2disasm/s2.asm:69297-69308):
+        //
+        //   ChgJumpDir, ObjectMoveAndFall, JumpAngle, DoLevelCollision,
+        //   SwapPositions, AnglePos, Animate
+        //
+        // Tails' Obj10_MdJump runs SSPlayer_JumpAngle LAST, after SSAnglePos
+        // (docs/s2disasm/s2.asm:70517-70526):
+        //
+        //   ChgJumpDir, ObjectMoveAndFall, DoLevelCollision, SwapPositions,
+        //   AnglePos, JumpAngle, Animate
+        //
+        // So when Tails lands, SSPlayer_DoLevelCollision's SSObjectMove runs on
+        // the angle left over from the previous pass, not on one recomputed from
+        // this pass' position. Both games' MdAir routines (Obj09_MdAir
+        // s2.asm:69310-69322, Obj10_MdAir s2.asm:70528-70541) do agree on the
+        // Sonic-style order, which is why only the jump mode splits here.
+        //
+        // The predicate is the object identity (Obj09 vs Obj10), not
+        // MainCharacter: in Tails-alone mode Player_mode is non-zero and Obj10
+        // occupies the MainCharacter slot, still running Obj10_MdJump's order
+        // while reading Ctrl_1 (s2.asm:70510-70516). SSPlayerSwapPositions is
+        // the routine that genuinely tests cmpa.l #MainCharacter,a0
+        // (s2.asm:69542).
         ssPlayerChgJumpDir(heldButtons);
         ssObjectMoveAndFall();
-        ssPlayerJumpAngle();
-        ssPlayerDoLevelCollision();
-        ssPlayerSwapPositions();
-        ssAnglePos();
-        // Note: No ssPlayerSetAnimation() here - matches original
+        if (playerType == PlayerType.SONIC) {
+            ssPlayerJumpAngle();
+            ssPlayerDoLevelCollision();
+            ssPlayerSwapPositions();
+            ssAnglePos();
+        } else {
+            ssPlayerDoLevelCollision();
+            ssPlayerSwapPositions();
+            ssAnglePos();
+            ssPlayerJumpAngle();
+        }
         ssPlayerAnimate();
     }
 
@@ -440,17 +534,21 @@ public class Sonic2SpecialStagePlayer {
     }
 
     private void ssPlayerTraction() {
-        if (ssSlideTimer != 0) {
-            return;
+        // SSPlayer_Traction (docs/s2disasm/s2.asm:69725-69747): the
+        // `tst.b ss_slide_timer(a0) / bne.s +` branch target is the
+        // `move.b angle(a0),d0` that begins the fall-off-the-track test, not
+        // the rts. A non-zero slide timer therefore suppresses ONLY the
+        // gravity/traction addition to inertia; the routine=8 (MdAir)
+        // transition below is evaluated on every pass regardless.
+        if (ssSlideTimer == 0) {
+            // Original uses d1 (cosine) from CalcSine, not d0 (sine)
+            // This creates a restoring force: cos(0x40) = 0 at center,
+            // positive on one side, negative on other
+            int cosine = calcCosine(angle);
+
+            int traction = (cosine * TRACTION_FACTOR) >> 8;
+            inertia += traction;
         }
-
-        // Original uses d1 (cosine) from CalcSine, not d0 (sine)
-        // This creates a restoring force: cos(0x40) = 0 at center,
-        // positive on one side, negative on other
-        int cosine = calcCosine(angle);
-
-        int traction = (cosine * TRACTION_FACTOR) >> 8;
-        inertia += traction;
 
         int a = angle & 0xFF;
         if (a >= 0x80) {
@@ -855,6 +953,12 @@ public class Sonic2SpecialStagePlayer {
         if (ssHurtTimer == 0) {
             routineSecondary = 0;
             invulnerabilityCountdown = 0x1E;
+            // SSHurt_Animation's exit also arms ss_dplc_timer
+            // (docs/s2disasm/s2.asm:69143-69145) -- the ROM's post-hurt blink
+            // counter. LoadSS*DynPLC decrements it once per pass and skips the
+            // whole DisplaySprite + DPLC tail on the odd results, halving the
+            // player's art-transfer rate until it expires.
+            ssDplcTimer = 0x1E;
         }
 
         int displayAngle = (ssHurtTimer + angle - 0x10) & 0xFF;

@@ -2,11 +2,19 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Produce a `next` tree that contains committed `develop` through `9f46d1b58` and preserves every reviewed remediation feature currently at `next` commit `f53942a33`.
+**Goal:** Produce a `next` tree that contains committed `develop` and preserves every reviewed remediation feature currently at `next` commit `f53942a33`.
 
 **Architecture:** Build the result on top of `develop`, then replay the ten `next` commits in their original order. Resolve conflicts within the feature commit that owns the behavior, using the disassembly and existing focused tests as authority; never resolve the integration with a blanket `ours` or `theirs` choice. After all replayed commits pass, record the original `next` tip as an ancestor without changing the already-reviewed tree, fast-forward `next`, and compare the merged suite against clean baselines.
 
 **Tech Stack:** Git worktrees and cherry-pick, Java 21, Maven Surefire/JUnit 5, canonical S1/S2/S3K ROM fixtures, repository policy hooks.
+
+> **Execution note (2026-08-10):** The isolated implementation kept `next` as the
+> first parent and merged `develop` directly. This retains the original feature
+> commits without rewriting them and made conflict decisions inspectable in one
+> integration commit. The first reviewed merge used `develop` `9f46d1b58`; because
+> `develop` advanced concurrently, the final integration also merges the later
+> committed tip and repeats the complete regression comparison before updating
+> the real `next` worktree.
 
 ## Global Constraints
 

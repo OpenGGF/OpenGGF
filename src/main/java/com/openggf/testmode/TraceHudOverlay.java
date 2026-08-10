@@ -2,13 +2,16 @@ package com.openggf.testmode;
 
 import com.openggf.Engine;
 import com.openggf.GameLoop;
+import com.openggf.TraceSessionLauncher;
 import com.openggf.debug.DebugColor;
+import com.openggf.debug.playback.PlaybackDebugManager;
 import com.openggf.configuration.GlfwKeyNameResolver;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.game.GameServices;
 import com.openggf.graphics.PixelFontTextRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.trace.Severity;
+import com.openggf.trace.TraceHudModel;
 import com.openggf.trace.live.LiveTraceComparator;
 import com.openggf.trace.live.MismatchEntry;
 
@@ -22,9 +25,11 @@ import java.util.function.Supplier;
  * (A/B/C/U/D/L/R/S); and the last five mismatch entries, severity
  * coloured, with repeat counts.
  */
-public final class TraceHudOverlay {
+public final class TraceHudOverlay implements TraceSessionOverlay {
 
-    private final LiveTraceComparator comparator;
+    private final TraceHudModel model;
+    private Supplier<TracePlaybackStatus> playbackStatusSupplier =
+            TraceHudOverlay::currentPlaybackStatus;
     private final Supplier<String> pauseKeyLabelSupplier;
     private final BooleanSupplier pausedSupplier;
     private final Supplier<String> focusLabelSupplier;
@@ -49,12 +54,32 @@ public final class TraceHudOverlay {
                 TraceHudOverlay::isGameLoopPaused, focusLabelSupplier, rewindStatusSupplier);
     }
 
+    public TraceHudOverlay(TraceHudModel model,
+                           Supplier<String> focusLabelSupplier,
+                           Supplier<String> rewindStatusSupplier) {
+        this(model, TraceHudOverlay::configuredPauseKeyLabel,
+                TraceHudOverlay::isGameLoopPaused,
+                focusLabelSupplier, rewindStatusSupplier);
+    }
+
     TraceHudOverlay(LiveTraceComparator comparator,
                     Supplier<String> pauseKeyLabelSupplier,
                     BooleanSupplier pausedSupplier,
                     Supplier<String> focusLabelSupplier,
                     Supplier<String> rewindStatusSupplier) {
-        this.comparator = comparator;
+        this.model = comparator;
+        this.pauseKeyLabelSupplier = pauseKeyLabelSupplier;
+        this.pausedSupplier = pausedSupplier;
+        this.focusLabelSupplier = focusLabelSupplier;
+        this.rewindStatusSupplier = rewindStatusSupplier;
+    }
+
+    TraceHudOverlay(TraceHudModel model,
+                    Supplier<String> pauseKeyLabelSupplier,
+                    BooleanSupplier pausedSupplier,
+                    Supplier<String> focusLabelSupplier,
+                    Supplier<String> rewindStatusSupplier) {
+        this.model = model;
         this.pauseKeyLabelSupplier = pauseKeyLabelSupplier;
         this.pausedSupplier = pausedSupplier;
         this.focusLabelSupplier = focusLabelSupplier;
@@ -80,34 +105,40 @@ public final class TraceHudOverlay {
     private static final int RIGHT_MARGIN = 4;
     private static final int NATIVE_WIDTH = 320;
 
+    // Genuine top-right corner, clear of both the ROM's top-bar HUD (which is
+    // left-anchored) and the paused camera-focus block down at TOP_Y.
+    private static final int STATUS_TOP_Y = 8;
+
+    @Override
     public void render(PixelFontTextRenderer text) {
         text.beginBatch();
         try {
+            renderPlaybackStatus(text);
             int y = TOP_Y;
             boolean paused = pausedSupplier.getAsBoolean();
             if (desyncPauseMessageShown && !paused) {
                 desyncPauseMessageDismissed = true;
             }
-            if (comparator.hasRecordingDesync() && paused && !desyncPauseMessageDismissed) {
+            if (model.hasRecordingDesync() && paused && !desyncPauseMessageDismissed) {
                 desyncPauseMessageShown = true;
                 text.drawShadowedText("Game Paused due to recording desync. Press "
                                 + pauseKeyLabelSupplier.get() + " to resume",
                         X, TOP_Y - LINE_HEIGHT, DebugColor.RED, SCALE);
             }
 
-            text.drawShadowedText(String.format("ERRORS %4d", comparator.errorCount()),
+            text.drawShadowedText(String.format("ERRORS %4d", model.errorCount()),
                     X, y, DebugColor.RED, SCALE);
             y += LINE_HEIGHT;
-            text.drawShadowedText(String.format("WARN   %4d", comparator.warningCount()),
+            text.drawShadowedText(String.format("WARN   %4d", model.warningCount()),
                     X, y, DebugColor.ORANGE, SCALE);
             y += LINE_HEIGHT;
-            text.drawShadowedText(String.format("LAG    %4d", comparator.laggedFrames()),
+            text.drawShadowedText(String.format("LAG    %4d", model.laggedFrames()),
                     X, y, DebugColor.GRAY, SCALE);
             y += SECTION_GAP;
 
-            int actionMask = comparator.recentActionMask();
-            int inputMask = comparator.recentInputMask();
-            boolean start = comparator.recentStartPressed();
+            int actionMask = model.recentActionMask();
+            int inputMask = model.recentInputMask();
+            boolean start = model.recentStartPressed();
             StringBuilder active = new StringBuilder();
             active.append(bit(actionMask, 0x01, 'A'));
             active.append(bit(actionMask, 0x02, 'B'));
@@ -128,7 +159,7 @@ public final class TraceHudOverlay {
 
             text.drawShadowedText("Last mismatches:", X, y, DebugColor.LIGHT_GRAY, SCALE);
             y += LINE_HEIGHT;
-            List<MismatchEntry> recent = comparator.recentMismatches();
+            List<MismatchEntry> recent = model.recentMismatches();
             for (MismatchEntry m : recent) {
                 String line = String.format("f %04X %s rom=%s eng=%s \u0394%s%s",
                         m.frame(), m.field(), m.romValue(),
@@ -140,7 +171,7 @@ public final class TraceHudOverlay {
                 y += LINE_HEIGHT;
             }
 
-            if (comparator.isComplete()) {
+            if (model.isComplete()) {
                 text.drawShadowedText("TRACE COMPLETE", X, COMPLETE_BANNER_Y,
                         DebugColor.YELLOW, SCALE);
             }
@@ -186,16 +217,77 @@ public final class TraceHudOverlay {
         return NATIVE_WIDTH;
     }
 
+    /**
+     * Paints the transport summary this HUD took over from the legacy
+     * {@code == PLAYBACK ==} panel, right-anchored in the top-right corner.
+     * Each line is measured and placed individually so the block stays flush
+     * to the right edge with a proportional font.
+     */
+    private void renderPlaybackStatus(PixelFontTextRenderer text) {
+        TracePlaybackStatus status = playbackStatusSupplier.get();
+        if (status == null) {
+            return;
+        }
+        int right = projectionWidth() - RIGHT_MARGIN;
+        int y = STATUS_TOP_Y;
+        y = drawRightAligned(text, status.movieName(), right, y, DebugColor.LIGHT_GRAY);
+        y = drawRightAligned(text, "Mode: " + status.mode(), right, y, DebugColor.GRAY);
+        y = drawRightAligned(text,
+                "Frame: " + status.frame() + "/" + status.frameCount(),
+                right, y, DebugColor.GRAY);
+        drawRightAligned(text, "Rate: " + status.rateLabel(), right, y, DebugColor.CYAN);
+    }
+
+    /** Draws one right-anchored line and returns the next line's y. */
+    private int drawRightAligned(
+            PixelFontTextRenderer text, String line, int right, int y, DebugColor color) {
+        if (line == null || line.isBlank()) {
+            return y;
+        }
+        text.drawShadowedText(line, right - text.measureWidth(line, SCALE), y, color, SCALE);
+        return y + LINE_HEIGHT;
+    }
+
+    /**
+     * Resolves the transport summary from the live playback session and the
+     * active trace session's speed ladder. Static by the same pattern as
+     * {@link #configuredPauseKeyLabel()} and {@link #isGameLoopPaused()};
+     * tests substitute their own through
+     * {@link #setPlaybackStatusSupplier(Supplier)}.
+     */
+    static TracePlaybackStatus currentPlaybackStatus() {
+        TraceSessionLauncher session = TraceSessionLauncher.active();
+        if (session == null) {
+            return null;
+        }
+        PlaybackDebugManager playback = GameServices.playbackDebug();
+        String movieName = playback.movieName();
+        if (movieName == null) {
+            return null;
+        }
+        return new TracePlaybackStatus(
+                movieName,
+                playback.observedMode().name(),
+                playback.getCursorFrame(),
+                Math.max(0, playback.getMovieFrameCount() - 1),
+                session.playbackRateDisplay());
+    }
+
+    /** Test seam for the transport summary. */
+    void setPlaybackStatusSupplier(Supplier<TracePlaybackStatus> supplier) {
+        this.playbackStatusSupplier = supplier;
+    }
+
     private static char bit(int mask, int flag, char letter) {
         return (mask & flag) != 0 ? letter : '.';
     }
 
-    private static String configuredPauseKeyLabel() {
+    static String configuredPauseKeyLabel() {
         int pauseKey = GameServices.configuration().getInt(SonicConfiguration.PAUSE_KEY);
         return GlfwKeyNameResolver.nameOf(pauseKey);
     }
 
-    private static boolean isGameLoopPaused() {
+    static boolean isGameLoopPaused() {
         GameLoop loop = Engine.currentGameLoop();
         return loop != null && loop.isPaused();
     }

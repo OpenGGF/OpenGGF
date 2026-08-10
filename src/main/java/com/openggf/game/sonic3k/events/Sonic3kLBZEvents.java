@@ -32,6 +32,7 @@ import com.openggf.level.Map;
 import com.openggf.level.Pattern;
 import com.openggf.level.PatternDesc;
 import com.openggf.level.SeamlessLevelTransitionRequest;
+import com.openggf.game.RuntimeArtAdmissionPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.resources.LoadOp;
 import com.openggf.level.resources.ResourceLoader;
@@ -807,9 +808,12 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         SeamlessLevelTransitionRequest request = SeamlessLevelTransitionRequest.builder(
                         SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
                 .targetZoneAct(Sonic3kZoneIds.ZONE_LBZ, 1)
+                .runtimeArtAdmissionPolicy(RuntimeArtAdmissionPolicy.TITLE_OWNER)
                 .deactivateLevelNow(false)
                 .preserveMusic(true)
                 .preserveLevelGamestate(true)
+                .objectSurvivalPolicy(
+                        SeamlessLevelTransitionRequest.ObjectSurvivalPolicy.PERSISTENT_EXACT_SST)
                 // Obj_LevelResults and Obj_EndSignControl survive
                 // LBZ1BGE_DoTransition's Load_Level. Level_end_flag therefore
                 // remains set until the carried results owner finishes, while

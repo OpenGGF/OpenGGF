@@ -7,9 +7,14 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
 import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
+import com.openggf.game.timing.HardwareWorkHandle;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
@@ -102,6 +107,10 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
     private LbzMinibossBoxRig boxRig;
     private int hitReactionTimer;
     private boolean shipGone;
+    private HardwareWorkHandle initialBoxArtHandle;
+    private long initialBoxArtOrdinal = -1;
+    private HardwareWorkHandle collapseBoxArtHandle;
+    private long collapseBoxArtOrdinal = -1;
 
     public Lbz1RobotnikEventController(ObjectSpawn spawn) {
         super(spawn, "LBZ1Robotnik");
@@ -139,7 +148,8 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        serviceMinibossBoxArtQueues();
         if (isPlayerKnuckles()) {
             // ROM loc_8CB90: Knuckles never meets Obj_LBZ1Robotnik here.
             ObjectLifetimeOps.deleteNoRespawn(this);
@@ -167,13 +177,14 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
                     // accumulator step here even though it has no integer
                     // carry yet.
                     updatePostCollapseCameraMax();
+                    queueCollapseMinibossBoxArt();
                     routine = ROUTINE_AFTER_COLLAPSE;
                 }
             }
             case ROUTINE_AFTER_COLLAPSE -> updateAfterCollapse(player);
             case ROUTINE_SECOND_RISE -> updateSecondRise();
-            case ROUTINE_DIAGONAL_ESCAPE -> updateDiagonalEscape(frameCounter);
-            case ROUTINE_POST_HANDOFF -> updatePostHandoff(frameCounter);
+            case ROUTINE_DIAGONAL_ESCAPE -> updateDiagonalEscape(vIntRunCount);
+            case ROUTINE_POST_HANDOFF -> updatePostHandoff(vIntRunCount);
             default -> {
             }
         }
@@ -264,6 +275,7 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
     }
 
     private void initialize() {
+        queueInitialMinibossBoxArt();
         ensureRobotnikArtLoaded();
         routine = ROUTINE_APPROACH_HOVER;
         swingSetup1();
@@ -276,6 +288,81 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
             lbz.setRobotnikIntroActive(true);
         }
         boxRig = new LbzMinibossBoxRig(getX(), getY() + BOX_ANCHOR_Y_OFFSET);
+    }
+
+    private void queueInitialMinibossBoxArt() {
+        if (initialBoxArtOrdinal >= 0) {
+            return;
+        }
+        try {
+            S3kKosModuleQueue moduleQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
+            initialBoxArtHandle = moduleQueue.queue(
+                    services().rom(),
+                    Sonic3kConstants.ART_KOSM_LBZ_MINIBOSS_BOX_ADDR,
+                    Sonic3kConstants.ART_TILE_LBZ_MINIBOSS_BOX);
+            initialBoxArtOrdinal = initialBoxArtHandle.ordinal();
+        } catch (Exception e) {
+            throw new IllegalStateException("Unable to queue LBZ initial miniboss-box KosM art", e);
+        }
+    }
+
+    private void queueCollapseMinibossBoxArt() {
+        if (collapseBoxArtOrdinal >= 0) {
+            return;
+        }
+        try {
+            S3kKosModuleQueue moduleQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
+            collapseBoxArtHandle = moduleQueue.queue(
+                    services().rom(),
+                    Sonic3kConstants.ART_KOSM_LBZ_MINIBOSS_BOX_ADDR,
+                    Sonic3kConstants.ART_TILE_LBZ_MINIBOSS_BOX);
+            collapseBoxArtOrdinal = collapseBoxArtHandle.ordinal();
+        } catch (Exception e) {
+            throw new IllegalStateException("Unable to queue LBZ collapse miniboss-box KosM art", e);
+        }
+    }
+
+    private void serviceMinibossBoxArtQueues() {
+        serviceInitialMinibossBoxArt();
+        serviceCollapseMinibossBoxArt();
+    }
+
+    private void serviceInitialMinibossBoxArt() {
+        if (initialBoxArtOrdinal < 0) {
+            return;
+        }
+        S3kKosModuleQueue moduleQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
+        if (initialBoxArtHandle == null) {
+            initialBoxArtHandle = services().hardwareTiming().pendingHandle(
+                            HardwareWorkKind.KOS_MODULE_QUEUE, initialBoxArtOrdinal)
+                    .orElseThrow(() -> new IllegalStateException(
+                            "Missing restored LBZ initial miniboss-box KosM job "
+                                    + initialBoxArtOrdinal));
+        }
+        if (moduleQueue.isReady(initialBoxArtHandle)) {
+            moduleQueue.claim(initialBoxArtHandle);
+            initialBoxArtHandle = null;
+            initialBoxArtOrdinal = -1;
+        }
+    }
+
+    private void serviceCollapseMinibossBoxArt() {
+        if (collapseBoxArtOrdinal < 0) {
+            return;
+        }
+        S3kKosModuleQueue moduleQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
+        if (collapseBoxArtHandle == null) {
+            collapseBoxArtHandle = services().hardwareTiming().pendingHandle(
+                            HardwareWorkKind.KOS_MODULE_QUEUE, collapseBoxArtOrdinal)
+                    .orElseThrow(() -> new IllegalStateException(
+                            "Missing restored LBZ collapse miniboss-box KosM job "
+                                    + collapseBoxArtOrdinal));
+        }
+        if (moduleQueue.isReady(collapseBoxArtHandle)) {
+            moduleQueue.claim(collapseBoxArtHandle);
+            collapseBoxArtHandle = null;
+            collapseBoxArtOrdinal = -1;
+        }
     }
 
     private void updateApproachHover(AbstractPlayableSprite player) {
@@ -349,9 +436,9 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
         moveSprite2();
     }
 
-    private void updateDiagonalEscape(int frameCounter) {
+    private void updateDiagonalEscape(int vIntRunCount) {
         moveSprite2();
-        flameVisible = (frameCounter & 1) == 0 && motion.xVel != 0;
+        flameVisible = (vIntRunCount & 1) == 0 && motion.xVel != 0;
         updateDroppedBoxHandoff();
         if ((motion.y & 0xFFFF) >= DIAGONAL_ESCAPE_HANDOFF_Y) {
             routine = ROUTINE_POST_HANDOFF;
@@ -359,11 +446,11 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
         }
     }
 
-    private void updatePostHandoff(int frameCounter) {
+    private void updatePostHandoff(int vIntRunCount) {
         // ROM loc_8CD4C: keep moving and delete once coarse-off-screen; the
         // floating box panels are independent and stay behind.
         moveSprite2();
-        flameVisible = !shipGone && (frameCounter & 1) == 0 && motion.xVel != 0;
+        flameVisible = !shipGone && (vIntRunCount & 1) == 0 && motion.xVel != 0;
         updateDroppedBoxHandoff();
         if (!shipGone && isShipCoarseOffscreen()) {
             shipGone = true;

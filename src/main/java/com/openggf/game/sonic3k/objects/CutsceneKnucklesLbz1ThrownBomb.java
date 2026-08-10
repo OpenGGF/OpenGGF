@@ -48,7 +48,7 @@ public final class CutsceneKnucklesLbz1ThrownBomb extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (!initialized) {
             initialized = true;
             services().playSfx(Sonic3kSfx.MISSILE_THROW.id);

@@ -201,7 +201,7 @@ class S2SpecialStageExpectedComparisonTest {
     void refreshDiscoveryRejectsMissingInitialTriggerSample() {
         IllegalStateException ex = assertThrows(IllegalStateException.class,
                 () -> AbstractS2SpecialStageTraceReplayTest.discoverRingsToGoRefreshFrames(
-                        List.of(), List.of(3), List.of(0, 0, 0, 0xFF), List.of(3)));
+                        List.of(), passes(3), List.of(0, 0, 0, 0xFF), List.of(3)));
         assertTrue(ex.getMessage().contains("initial"), ex.getMessage());
     }
 
@@ -211,7 +211,7 @@ class S2SpecialStageExpectedComparisonTest {
                 new AbstractS2SpecialStageTraceReplayTest.TriggerSample(0, 0xFF));
         IllegalStateException ex = assertThrows(IllegalStateException.class,
                 () -> AbstractS2SpecialStageTraceReplayTest.discoverRingsToGoRefreshFrames(
-                        samples, List.of(3), List.of(0, 0, 0, 0xFF), List.of(3)));
+                        samples, passes(3), List.of(0, 0, 0, 0xFF), List.of(3)));
         assertTrue(ex.getMessage().contains("clear"), ex.getMessage());
     }
 
@@ -223,7 +223,7 @@ class S2SpecialStageExpectedComparisonTest {
                 new AbstractS2SpecialStageTraceReplayTest.TriggerSample(1, 0));
         assertThrows(IllegalStateException.class,
                 () -> AbstractS2SpecialStageTraceReplayTest.discoverRingsToGoRefreshFrames(
-                        samples, List.of(2), List.of(0, 0, 0xFF), List.of(2)));
+                        samples, passes(2), List.of(0, 0, 0xFF), List.of(2)));
     }
 
     @Test
@@ -233,13 +233,13 @@ class S2SpecialStageExpectedComparisonTest {
                 new AbstractS2SpecialStageTraceReplayTest.TriggerSample(1, 0));
         assertThrows(IllegalStateException.class,
                 () -> AbstractS2SpecialStageTraceReplayTest.discoverRingsToGoRefreshFrames(
-                        samples, List.of(2), List.of(0, 0, 0), List.of(2)));
+                        samples, passes(2), List.of(0, 0, 0), List.of(2)));
         assertThrows(IllegalStateException.class,
                 () -> AbstractS2SpecialStageTraceReplayTest.discoverRingsToGoRefreshFrames(
-                        samples, List.of(2), List.of(0, 0, 0xFF), List.of(2, 2)));
+                        samples, passes(2), List.of(0, 0, 0xFF), List.of(2, 2)));
         assertThrows(IllegalStateException.class,
                 () -> AbstractS2SpecialStageTraceReplayTest.discoverRingsToGoRefreshFrames(
-                        samples, List.of(2), List.of(0, 0, 0xFF), List.of(1)));
+                        samples, passes(2), List.of(0, 0, 0xFF), List.of(1)));
     }
 
     @Test
@@ -251,7 +251,7 @@ class S2SpecialStageExpectedComparisonTest {
                 new AbstractS2SpecialStageTraceReplayTest.TriggerSample(6, 0));
         assertEquals(java.util.Set.of(2, 7, 9),
                 AbstractS2SpecialStageTraceReplayTest.discoverRingsToGoRefreshFrames(
-                        samples, List.of(2, 3, 7),
+                        samples, passes(2, 3, 7),
                         List.of(0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF), List.of(9)));
     }
 
@@ -262,7 +262,7 @@ class S2SpecialStageExpectedComparisonTest {
                 new AbstractS2SpecialStageTraceReplayTest.TriggerSample(1, 0));
         IllegalStateException ex = assertThrows(IllegalStateException.class,
                 () -> AbstractS2SpecialStageTraceReplayTest.discoverRingsToGoRefreshFrames(
-                        samples, List.of(2, 2), List.of(0, 0, 0xFF), List.of(2)));
+                        samples, passes(2, 2), List.of(0, 0, 0xFF), List.of(2)));
         assertTrue(ex.getMessage().contains("multiple completed passes"), ex.getMessage());
     }
 
@@ -271,15 +271,20 @@ class S2SpecialStageExpectedComparisonTest {
         SpecialStageTraceData trace = SpecialStageTraceData.load(Path.of(
                 "src/test/resources/traces/s2/special_stage"));
 
-        assertFalse(AbstractS2SpecialStageTraceReplayTest.isRingsToGoRefreshFrame(trace, 1324),
+        // Observations of the committed fixture's passes 748, 749 and 751. The
+        // recorder's frame labelling shifted by one when its off-by-one was
+        // corrected, so these are read off the current artifact's own
+        // run_objects_end observations, not carried over from the old one.
+        assertFalse(AbstractS2SpecialStageTraceReplayTest.isRingsToGoRefreshFrame(trace, 1323),
                 "the transition observation still contains the pre-refresh BCD cell");
         assertEquals(true,
-                AbstractS2SpecialStageTraceReplayTest.isRingsToGoRefreshFrame(trace, 1327),
+                AbstractS2SpecialStageTraceReplayTest.isRingsToGoRefreshFrame(trace, 1326),
                 "the next completed RunObjects pass has executed Obj5A_RingsNeeded");
-        assertFalse(AbstractS2SpecialStageTraceReplayTest.isRingsToGoRefreshFrame(trace, 1331),
+        assertFalse(AbstractS2SpecialStageTraceReplayTest.isRingsToGoRefreshFrame(trace, 1330),
                 "later ring collection can occur after Obj5A in slot order and must not compare live subtraction");
         assertEquals(true,
-                AbstractS2SpecialStageTraceReplayTest.isRingsToGoRefreshFrame(trace, 5181),
+                AbstractS2SpecialStageTraceReplayTest.isRingsToGoRefreshFrame(
+                        trace, trace.stageFinishedObservedFrame().getAsInt()),
                 "rising SS_Check_Rings_flag is an explicit refresh observation");
     }
 
@@ -288,10 +293,46 @@ class S2SpecialStageExpectedComparisonTest {
         SpecialStageTraceData trace = SpecialStageTraceData.load(Path.of(
                 "src/test/resources/traces/s2/special_stage"));
 
-        assertFalse(AbstractS2SpecialStageTraceReplayTest.isTerminalPreStartPassFrame(trace, 423));
-        assertEquals(true,
-                AbstractS2SpecialStageTraceReplayTest.isTerminalPreStartPassFrame(trace, 424));
-        assertFalse(AbstractS2SpecialStageTraceReplayTest.isTerminalPreStartPassFrame(trace, 425));
+        // The recorder hooks both halves of SpecialStage_MainLoop
+        // (docs/s2disasm/s2.asm:6674-6721), so the terminal pre-start pass is a
+        // recorded pass — the last one whose Vint_S2SS input sample still saw
+        // SpecialStage_Started clear, because the loop only tests the flag
+        // after RunObjects returns (s2.asm:6691-6692). Pass pacing begins at
+        // the publication observation of the recurring loop's first pass.
+        assertEquals(180,
+                AbstractS2SpecialStageTraceReplayTest.terminalPreStartPassSequence(trace));
+        // The fixture's first pass whose Vint_S2SS sample already saw
+        // SpecialStage_Started (sequence 181) is observed at 424.
+        assertEquals(424,
+                AbstractS2SpecialStageTraceReplayTest.passPacingStart(trace, -1));
+    }
+
+    /**
+     * Synthetic completed passes whose object work finished on their own frame.
+     */
+    private static List<AbstractS2SpecialStageTraceReplayTest.PassSample> passes(int... frames) {
+        List<AbstractS2SpecialStageTraceReplayTest.PassSample> passes = new java.util.ArrayList<>();
+        for (int frame : frames) {
+            passes.add(new AbstractS2SpecialStageTraceReplayTest.PassSample(frame, frame));
+        }
+        return passes;
+    }
+
+    @Test
+    void refreshDiscoverySkipsPassesThatCompletedOnTheTransitionFrame() {
+        var samples = List.of(
+                new AbstractS2SpecialStageTraceReplayTest.TriggerSample(0, 0xFF),
+                new AbstractS2SpecialStageTraceReplayTest.TriggerSample(4, 0));
+        // The pass published on frame 5 completed its object work against frame
+        // 4 -- the same frame the cleared trigger was first observed -- so it
+        // still carries the pre-clear cell. Frame 7 is the first refreshed one.
+        var passList = List.of(
+                new AbstractS2SpecialStageTraceReplayTest.PassSample(5, 4),
+                new AbstractS2SpecialStageTraceReplayTest.PassSample(7, 6));
+        assertEquals(java.util.Set.of(7, 9),
+                AbstractS2SpecialStageTraceReplayTest.discoverRingsToGoRefreshFrames(
+                        samples, passList,
+                        List.of(0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF), List.of(9)));
     }
 
     private static Sonic2SpecialStageComparisonState engine(int rings) {

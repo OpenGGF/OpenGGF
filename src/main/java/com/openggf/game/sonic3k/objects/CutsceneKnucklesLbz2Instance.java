@@ -101,7 +101,7 @@ public final class CutsceneKnucklesLbz2Instance extends AbstractObjectInstance i
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         initializeAfterServices();
         if (isDestroyed()) {
             return;
@@ -481,7 +481,7 @@ public final class CutsceneKnucklesLbz2Instance extends AbstractObjectInstance i
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             if (freeFalling) {
                 updateFreeFall();
             } else if (!swinging) {

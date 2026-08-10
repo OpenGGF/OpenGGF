@@ -36,7 +36,7 @@ public final class FbzEndBossJointChild extends AbstractFbzEndBossChild {
         FbzEndBossChainLinkChild child = spawnChild(() -> new FbzEndBossChainLinkChild(boss, arm, this, index));
         return child == null || child.getSlotIndex() < 0 ? null : child;
     }
-    @Override public void update(int frameCounter, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         if (!linksSpawnAttempted) {
             linksSpawnAttempted = true;
             for (int i = 0; i < 4; i++) {

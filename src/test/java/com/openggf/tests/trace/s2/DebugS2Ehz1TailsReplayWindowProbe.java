@@ -289,7 +289,7 @@ class DebugS2Ehz1TailsReplayWindowProbe {
                 slot,
                 readField(signpost, "routineState"),
                 readField(signpost, "resultsSpawned"),
-                readField(signpost, "walkOffEnteredFrame"));
+                readField(signpost, "walkOffEnteredVIntRunCount"));
     }
 
     private static Object readField(Object target, String fieldName) {

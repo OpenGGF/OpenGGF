@@ -62,7 +62,9 @@ class Sonic2SpecialStagePreRollTest {
     void suppressesTrackSpeedDrawingAndBannerForRomPreRollWindow() {
         int initialBannerY = manager.getIntro().getBannerY();
         int preRollFrames = Sonic2SpecialStageIntro.PRE_ROLL_FRAMES;
-        assertEquals(23, preRollFrames);
+        // Pal_FadeToWhite loads d4=$15 and uses dbf: 22 executed V-ints
+        // (docs/s2disasm/s2.asm:3568-3578, called at s2.asm:6546).
+        assertEquals(22, preRollFrames);
 
         for (int frame = 0; frame < preRollFrames; frame++) {
             Sonic2SpecialStageComparisonState before = manager.captureComparisonState();

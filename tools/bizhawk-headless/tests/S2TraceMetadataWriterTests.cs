@@ -3,25 +3,24 @@ using System.Collections.Generic;
 namespace OpenGGF.BizHawk.Headless.Tests
 {
     /// <summary>
-    /// Literal-byte tests for the S2 metadata writer against the shapes of
-    /// the three canonical level fixtures (ehz1_fullrun / arz / arz2). The
-    /// expected strings are the fixture bytes with lua_script_version
-    /// switched to the native port's "9.13-s2" and the injected recording
-    /// date — exactly the two normalizations the differential gate permits.
+    /// Strict-v5 assertions for the S2 metadata writer. The current expected
+    /// strings cover EHZ1, ARZ, and ARZ2 shapes with an injected recording
+    /// date, required recorder fields, and absence of removed version
+    /// fields; historical version fields are not permitted.
     /// </summary>
     internal static class S2TraceMetadataWriterTests
     {
         public static void Register(ICollection<TestMain.TestCase> tests)
         {
             tests.Add(new TestMain.TestCase(
-                "S2TraceMetadataWriter matches ehz1_fullrun fixture bytes",
-                MatchesEhz1FullrunFixtureBytes));
+                "S2TraceMetadataWriter asserts the EHZ1 strict v5 shape",
+                AssertsEhz1StrictV5Shape));
             tests.Add(new TestMain.TestCase(
-                "S2TraceMetadataWriter matches arz fixture bytes",
-                MatchesArzFixtureBytes));
+                "S2TraceMetadataWriter asserts the ARZ strict v5 shape",
+                AssertsArzStrictV5Shape));
             tests.Add(new TestMain.TestCase(
-                "S2TraceMetadataWriter matches arz2 fixture bytes",
-                MatchesArz2FixtureBytes));
+                "S2TraceMetadataWriter asserts the ARZ2 strict v5 shape",
+                AssertsArz2StrictV5Shape));
             tests.Add(new TestMain.TestCase(
                 "S2TraceMetadataWriter renders sonic-alone character lists",
                 RendersSonicAloneCharacterLists));
@@ -36,7 +35,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 JsonEscapesProfileAndSource));
         }
 
-        private static void MatchesEhz1FullrunFixtureBytes()
+        private static void AssertsEhz1StrictV5Shape()
         {
             AssertEx.Equal(
                 "{\n"
@@ -55,9 +54,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 + "  \"sidekicks\": [\"tails\"],\n"
                 + "  \"rng_seed\": \"0x00000000\",\n"
                 + "  \"recording_date\": \"2026-07-13\",\n"
-                + "  \"lua_script_version\": \"9.13-s2\",\n"
-                + "  \"trace_schema\": 9,\n"
-                + "  \"csv_version\": 7,\n"
+                + "  \"recorder\": \"native-bizhawk-headless\",\n"
+                + "  \"recorder_version\": \"3.0\",\n"
+                + "  \"trace_schema\": 5,\n"
                 + "  \"aux_schema_extras\": "
                 + "[\"cnz_slot_machine_state_per_frame\", "
                 + "\"cpu_state_per_frame\"],\n"
@@ -84,7 +83,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     "2026-07-13"));
         }
 
-        private static void MatchesArzFixtureBytes()
+        private static void AssertsArzStrictV5Shape()
         {
             AssertEx.Equal(
                 "{\n"
@@ -103,9 +102,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 + "  \"sidekicks\": [\"tails\"],\n"
                 + "  \"rng_seed\": \"0x00000000\",\n"
                 + "  \"recording_date\": \"2026-07-13\",\n"
-                + "  \"lua_script_version\": \"9.13-s2\",\n"
-                + "  \"trace_schema\": 9,\n"
-                + "  \"csv_version\": 7,\n"
+                + "  \"recorder\": \"native-bizhawk-headless\",\n"
+                + "  \"recorder_version\": \"3.0\",\n"
+                + "  \"trace_schema\": 5,\n"
                 + "  \"aux_schema_extras\": "
                 + "[\"cnz_slot_machine_state_per_frame\", "
                 + "\"cpu_state_per_frame\"],\n"
@@ -132,7 +131,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     "2026-07-13"));
         }
 
-        private static void MatchesArz2FixtureBytes()
+        private static void AssertsArz2StrictV5Shape()
         {
             string metadata = S2TraceMetadataWriter.Format(
                 0x0F,

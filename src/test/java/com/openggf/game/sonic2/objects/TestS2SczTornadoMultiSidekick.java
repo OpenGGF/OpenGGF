@@ -193,6 +193,7 @@ class TestS2SczTornadoMultiSidekick {
         TornadoObjectInstance tornado = new TornadoObjectInstance(
                 new ObjectSpawn(0x1500, 0x300, 0xB2, 0x50, 0, false, 0));
         tornado.setServices(services);
+        tornado.consumePendingInitRoutine();
         return tornado;
     }
 

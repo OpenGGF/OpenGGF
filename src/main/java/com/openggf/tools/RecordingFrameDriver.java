@@ -21,8 +21,9 @@ import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.level.LevelManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
+import com.openggf.trace.replay.TraceSuppressedRowClosure;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker.DynamicArtSegmentWindow;
+import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
 
 /**
  * Deterministic per-frame gameplay drive shared by headless trace tests and the
@@ -48,6 +49,8 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
 
     private int frameCounter = 0;
     private LogicalInputSnapshot previousDriverSnapshot = LogicalInputSnapshot.neutral();
+    /** Last BK2 row the engine polled; the ROM press-edge baseline. See {@link #lastPolledBk2Input()}. */
+    private Bk2FrameInput lastPolledBk2Input;
     private LevelFrameResult lastFrameResult = LevelFrameResult.GAMEPLAY_FRAME;
     private boolean lastFrameRanGameplay = true;
     private boolean pendingSeamlessBoundaryCompletion;
@@ -230,6 +233,14 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
                         stepWrapper);
                 lastFrameRanGameplay =
                         lastFrameResult == LevelFrameResult.GAMEPLAY_FRAME;
+                // ROM: a retained Obj_LevelResults that mutates into
+                // Obj_TitleCard runs Obj_TitleCardInit and queues its KosM art
+                // within the same object pass that observed the cleared
+                // End_of_level state (docs/skdisasm/sonic3k.asm:62703-62734,
+                // 62120-62166). Poll again after the frame body so a results
+                // exit during this pass starts the in-level title card in the
+                // same frame rather than the next frame's top.
+                startPendingInLevelTitleCardIfRequested();
             }
         } finally {
             inputHandler.clearLogicalOverride();
@@ -305,6 +316,12 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
         this.bk2Movie = movie;
         this.bk2StartIndex = bk2FrameOffset;
         this.currentBk2Index = bk2StartIndex;
+        // The ROM has been polling this movie since its own frame 0 -- the replay
+        // simply joins it at bk2FrameOffset -- so Ctrl_1_Held is NOT neutral here.
+        // Seed the press-edge baseline from the row before the join point, which is
+        // the last row the ROM polled before the engine takes over.
+        this.lastPolledBk2Input =
+                bk2StartIndex > 0 ? movie.getFrame(bk2StartIndex - 1) : null;
     }
 
     public boolean hasBk2Movie() {
@@ -324,7 +341,7 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
         }
 
         Bk2FrameInput frameInput = bk2Movie.getFrame(currentBk2Index);
-        Bk2FrameInput previousInput = previousBk2Input(currentBk2Index);
+        Bk2FrameInput previousInput = lastPolledBk2Input();
         int mask = inputMask(frameInput);
 
         LevelFrameResult result =
@@ -333,6 +350,9 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
                     beforeGameplay.run();
                 });
         if (result != LevelFrameResult.SETUP_ONLY) {
+            // SETUP_ONLY re-drives this same row next call, so the poll baseline
+            // advances only once the row is actually consumed.
+            markBk2RowPolled(currentBk2Index);
             currentBk2Index++;
         }
 
@@ -357,14 +377,16 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
         Bk2FrameInput validationInput = bk2Movie.getFrame(currentBk2Index);
         Bk2FrameInput driveInput = bk2Movie.getFrame(currentBk2Index - 1);
         int validationMask = inputMask(validationInput);
+        Bk2FrameInput pollBaseline = lastPolledBk2Input();
 
         LevelFrameResult result = stepFrame(
                 RecordedInputSnapshots.fromBk2(
-                        driveInput, previousBk2Input(currentBk2Index - 1)), () -> {
+                        driveInput, pollBaseline), () -> {
                     applyP1ActionPressEdge(currentBk2Index - 1);
                     beforeGameplay.run();
                 });
         if (result != LevelFrameResult.SETUP_ONLY) {
+            markBk2RowPolled(currentBk2Index - 1);
             currentBk2Index++;
         }
 
@@ -413,26 +435,18 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
             mask |= AbstractPlayableSprite.INPUT_JUMP;
         }
 
-        previousDriverSnapshot = RecordedInputSnapshots.fromBk2(frameInput, previousBk2Input(currentBk2Index));
+        // Lag row: the ROM did not reach Joypad_Read, so the press-edge baseline is
+        // deliberately left where it was. The row is still consumed 1:1.
+        previousDriverSnapshot = RecordedInputSnapshots.fromBk2(frameInput, lastPolledBk2Input());
         currentBk2Index++;
         LevelFrameContext context =
                 LevelFrameContext.from(SessionManager.getCurrentGameplayMode());
-        // S3K's in-level title-card wait runs Process_Sprites while the level
-        // gameplay counter is held at zero. Such rows are VBlank-only to the
-        // physics driver, but the title-card parent/children still dispatch.
-        // Keep this overlay-only work moving without ticking player physics.
-        if (!updateHeldCounterTitleCardOverlay(context, lifecycleFrame)) {
-            LevelFrameStep.serviceVBlankOnly(
-                    context, lifecycleFrame, PlcLifecyclePhase.LAG);
-        }
-        if (levelManager.hasPendingInLevelTitleCardHeldCounterDispatch()) {
-            startPendingInLevelTitleCardIfRequested();
-        }
-        var levelEvents = GameServices.module().getLevelEventProvider();
-        if (levelEvents != null) {
-            levelEvents.advanceVblankOnlyState();
-        }
-        levelManager.getObjectManager().advanceVblaCounter();
+        TraceSuppressedRowClosure.execute(
+                context,
+                lifecycleFrame,
+                levelManager,
+                this::startPendingInLevelTitleCardIfRequested,
+                this::applyInLevelTitleCardControlLock);
         return mask;
     }
 
@@ -440,36 +454,15 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
         GameServices.sprites().advancePlayableSlotPrefix();
     }
 
+    public void advancePlayableFixedSlotsOnly() {
+        GameServices.sprites().advanceTailsTailsAfterObjectExecution();
+    }
+
     public void suppressFirstSidekickAnimationOnce() {
         var sprites = GameServices.sprites();
         if (!sprites.getSidekicks().isEmpty()) {
             sprites.getSidekicks().getFirst().getAnimationManager().suppressNextUpdate();
         }
-    }
-
-    private boolean updateHeldCounterTitleCardOverlay(
-            LevelFrameContext context, PlcLifecycleFrame lifecycleFrame) {
-        TitleCardProvider titleCardProvider = GameServices.module().getTitleCardProvider();
-        if (titleCardProvider != null && titleCardProvider.advancesOnHeldLevelCounter()) {
-            LevelFrameStep.executeHardwareTimedObjectScan(
-                    context, lifecycleFrame, PlcLifecyclePhase.LEVEL_TITLE_CARD, () -> {
-                titleCardProvider.update();
-                if (titleCardProvider.ownsRetainedResultsHeldLevelCounter()) {
-                    var levelEvents = GameServices.module().getLevelEventProvider();
-                    if (levelEvents != null) {
-                        // The retained Obj_LevelResults -> Obj_TitleCard path still
-                        // runs fixed SST entries while Level_frame_counter is held.
-                        levelEvents.updateFixedInLevelObjects();
-                    }
-                }
-            });
-            if (titleCardProvider.ownsInLevelPlayerControlLock()) {
-                applyInLevelTitleCardControlLock(
-                        titleCardProvider.shouldLockPlayerControlForInLevelOverlay());
-            }
-            return true;
-        }
-        return false;
     }
 
     private static int inputMask(Bk2FrameInput frameInput) {
@@ -492,7 +485,8 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
         int mask = inputMask(frameInput);
         applyP1ActionPressEdge(currentBk2Index);
         previousDriverSnapshot =
-                RecordedInputSnapshots.fromBk2(frameInput, previousBk2Input(currentBk2Index));
+                RecordedInputSnapshots.fromBk2(frameInput, lastPolledBk2Input());
+        markBk2RowPolled(currentBk2Index);
         currentBk2Index++;
         return mask;
     }
@@ -567,8 +561,31 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
         return LogicalInputSnapshot.ofPlayers(p1, p2);
     }
 
-    private Bk2FrameInput previousBk2Input(int index) {
-        return index > 0 ? bk2Movie.getFrame(index - 1) : null;
+    /**
+     * ROM {@code Joypad_Read} computes {@code pressed = new & ~stored_held} and only
+     * then overwrites {@code stored_held} (s2.asm:1361-1387, sonic.asm:1088-1119). It
+     * is reached only from the polling V-int routines: {@code Vint_Level} calls
+     * {@code ReadJoypads} (s2.asm:706) while {@code Vint_Lag}/{@code VintSub0} does not
+     * (s2.asm:528-543), and identically {@code VBlank_Lag} in S1 (sonic.asm:711-712).
+     * So on a lag frame {@code Ctrl_1_Held} is not refreshed, and the next polled frame
+     * computes its press edge against the older held byte — the press survives the lag
+     * frame rather than being swallowed.
+     * <p>
+     * The baseline is therefore the last row the engine actually <em>polled</em>, not
+     * the immediately preceding BK2 row. A VBLANK_ONLY row is consumed 1:1 by
+     * {@link #skipFrameFromRecording()} (the recorder's {@code input} column is the raw
+     * BK2 row even on lag rows, and the binder compares it), but it must not become the
+     * edge baseline. This is a cursor-independent change: only the baseline moves.
+     */
+    private Bk2FrameInput lastPolledBk2Input() {
+        return lastPolledBk2Input;
+    }
+
+    /** Records that {@code index} was polled, so it becomes the next press-edge baseline. */
+    private void markBk2RowPolled(int index) {
+        if (index >= 0 && index < bk2Movie.getFrameCount()) {
+            lastPolledBk2Input = bk2Movie.getFrame(index);
+        }
     }
 
     private static int directionMask(boolean up, boolean down, boolean left, boolean right) {

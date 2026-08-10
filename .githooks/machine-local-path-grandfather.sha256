@@ -10,7 +10,6 @@
 07ca68bab57fa6c3d6f3abc40da9bd7a2a4aa46282cd79c6a46fb9c1d91e0797	1	docs/status/trace-frontier-log.md
 08e645396b7515d3d9677e84b81b560b947eeaa47f08ed410782e40d6f78c1a9	1	docs/status/trace-frontier-log.md
 0921972f29ab98ad23e56cf33ff9dc6fd6af828705b34ed9781910720d87e470	1	docs/status/trace-frontier-log.md
-096c56ee1180d71f62c2d78f19c38bcb4042442beb1d43a0907089380f1d4d44	4	docs/architecture/validation/2026-07-29-medium-risk-reuse-consolidation.md
 0a4f8132bf327a05dccd08792c89b01e2e7a9c3daca96569f8faf31ced176288	1	docs/status/trace-frontier-log.md
 0a55817a87607dd8512a4473239fc6079b4f6c3fac192415c0dac73295cff029	1	docs/status/trace-frontier-log.md
 0adaab924f14b0b35ee039210ccd17c679deb461bedf38ef5d34d82ad39b0f36	1	docs/status/trace-frontier-log.md
@@ -24,14 +23,12 @@
 113e92c3229506dd8cf68335e9ed173d161416b40d6fa6caa315635d376d18d3	1	docs/status/trace-frontier-log.md
 13143229a89eda551a9c38880231acd3ed730735c64c4607452becc52b471bc0	1	docs/status/trace-frontier-log.md
 132b833c4ca8ce4e251f18588e2675394f1e6cbe4a4eb233f35aad0d4a0d8944	1	docs/status/trace-frontier-log.md
-14089062abcea977c9127aa2306c9d8558a2598f4b1824890e7738adea133cc4	1	docs/architecture/plans/2026-07-16-native-flappy-death-titlecard-fixes.md
 14b797dea9dcd11c160e1e5f5a2893af345033e17c083839653ec74bd5884a48	2	docs/status/trace-frontier-log.md
 154b27c0593b82ed90e5373ff49abdb351181047d29989292b113707b14788cd	1	docs/status/trace-frontier-log.md
 165fc9e3e4111b5f53cb57b05f00e9283caa5c793690fac83112e063210ee72e	1	docs/status/trace-frontier-log.md
 168ffa06b34e458508cb33b0e3dbefea07ccce4a5681cf2e7c9e9952539591fb	2	docs/status/trace-frontier-log.md
 16b50dd2c670e3a4fe4d1684434352189d73164b04e100978d0f5ad10543acc7	1	docs/status/trace-frontier-log.md
 172c5275b28e978029cf8132eeb349934ec09c5d563d330c2814eb24fb1ede79	1	docs/status/trace-frontier-log.md
-17b778a708efa6aa9eba470784016a807cfc562d1ee94fa6016e51345a069d1b	2	docs/architecture/validation/2026-07-29-rom-location-resolver.md
 180ddec70f9cf86cc03bc70d1402d04f013937eeda6c495ce1fa817902939277	1	docs/status/trace-frontier-log.md
 1814cc255b4806f82950c3bdc3892db58b94034841e0ab3c72b0b7770d446e3d	2	docs/status/trace-frontier-log.md
 18dff073e280142caa63d1b699856ff72873d0e012df5b5c6e1498fa356cdcff	1	docs/status/trace-frontier-log.md
@@ -40,7 +37,6 @@
 1920d6968828ae18430f7a924de9dbd31b319ef583d08f508f04688bf9a7a263	2	docs/status/trace-frontier-log.md
 19c1fabd7da12dadb765cce96f9b05217d5906aad9201cec8020725e6696757a	1	docs/status/trace-frontier-log.md
 1a0e8739c12933e332fbc8964855ddb73eebdbeca5c3c20dd128253a99ca3e01	1	docs/status/trace-frontier-log.md
-1a507963c19924db2b12b2b7a5f1b48e54d1e519616a0040b6400c88fde7c826	1	docs/architecture/validation/2026-07-29-rom-location-resolver.md
 1ab68b7150a6cccf7ca27adc052af58a0f1d7541caa5f8d56f2c6e82deab1563	1	docs/status/trace-frontier-log.md
 1b17df7064e58d4e5b16fdeca1cfdb224a7ec4d82cbb8114e03088edfd06d80f	1	docs/status/trace-frontier-log.md
 1c6b9a1558e41b38aafe0c1318462edb89bb9d71a622cefddc595a6b71806be2	2	docs/status/trace-frontier-log.md
@@ -58,7 +54,6 @@
 21f49f40d0d8be5f4f1aa23e2237e59e7f8739f8b5cd65f700b7844339e6c28a	1	docs/status/trace-frontier-log.md
 230a265bd1e6c9a717e8308ef3abe18afa1f5f3aca883207db779be7fc535861	1	docs/status/trace-frontier-log.md
 230a463bf2f4f7c9bdc96dd1ecd6e116d66ccaf8c86ba6435d60484a13c13bce	2	docs/status/trace-frontier-log.md
-241ee95f0e402883b098b297af89cad07e1b4298f7cf3783a10d50deb88feb48	1	docs/architecture/validation/2026-07-29-rom-location-resolver.md
 26b36ecf6ddc31c26326d266b29182982a96e8d84b777f1cd4de990149056fa5	1	docs/status/trace-frontier-log.md
 28bfc676a669c6da847c71e7ed9f588c72de0413e3e57cafe3c064f9d75d807a	1	docs/status/trace-frontier-log.md
 28e525e5a3012dfc82eed8aa4c333ebced6bbc1ca1fdfe1ea1ad2b5e25f0d5b3	1	docs/status/trace-frontier-log.md
@@ -98,7 +93,6 @@
 4456ff939dbc36f9bc4bcd2a58f628908edb471c379a9677303439ee3b5ac27e	2	docs/status/trace-frontier-log.md
 45d90dd5440cbae1d6fac42cf7a314a18663efefeefb95b8baf63b0d0fa3cefe	1	docs/status/trace-frontier-log.md
 45e25900b1fc3dda675694cfe7ee05b6dbfb0e362446a30dca9fb54ff3a2bbad	1	docs/status/trace-frontier-log.md
-47290f24c7e9d6a73f388073a158d0cc14719e0dbb7648ec6c3dd459bc05bb35	1	docs/architecture/research/2026-07-12-s3k-zone-bring-up-skill-forward-test.md
 47d952fdb01e5720b67cd47fd7719aeaf9d31a3f4a1b594db5bdc5f408a8f080	1	docs/status/trace-frontier-log.md
 47ddbbbf5cc54481d9a5e0de78a851012968c715a59cde8d885bd2cbed547165	1	docs/status/trace-frontier-log.md
 47e1009549ebb7d964148768f3589dcd4c68c6cd0b384986c011beffadfd44ec	1	docs/status/trace-frontier-log.md
@@ -113,12 +107,6 @@
 51857967b4c2772812bfc6ee1ee740c5a1ce56bae551204259091246df886d09	1	docs/status/trace-frontier-log.md
 519a61ebcd344a91672d09aadf2d744d4fc57c364f6cf0598efbfa8554573b81	1	docs/status/trace-frontier-log.md
 5317b2f7e05d5a9dfae4010354aa5f2a9533a3660798e8bfbecd466bd64626de	1	docs/status/trace-frontier-log.md
-532bd9a4123b4abbaaa6599e7ecc5fbcfe674c1131ce546555b1ca4595b4a32e	1	docs/architecture/research/2026-07-12-s3k-zone-bring-up-skill-architecture-baseline.md
-532bd9a4123b4abbaaa6599e7ecc5fbcfe674c1131ce546555b1ca4595b4a32e	1	docs/architecture/research/2026-07-12-s3k-zone-bring-up-skill-architecture-forward-test.md
-53ce89da6645dfc072fa166d0bb358ad8428d249e59aeeb33ae4d509830008ab	2	docs/architecture/research/trace/2026-07-28-s1-s2-plc-readiness-evidence.md
-5480e67718a0a60437c161118cd485158c85375bdf12d61a12d871ed1343564a	1	MERGE-STATUS-develop-into-next.md
-54961a85c6f2afedc6a001ee285c7338facdd27edf815d67c4d2ae348c090865	1	docs/architecture/validation/2026-07-29-s1-s2-plc-queue-trace-policy-validation.md
-54961a85c6f2afedc6a001ee285c7338facdd27edf815d67c4d2ae348c090865	4	docs/architecture/validation/2026-07-29-medium-risk-reuse-consolidation.md
 559d464c33e39c63fbc31b73d73bfd48f83c040861f0405506d75967a85cc5d4	14	docs/status/trace-frontier-log.md
 55c02f99af4d12ac4d7a776f5b8b11921718ba2edc84d638e12e206dba2c759d	1	docs/status/trace-frontier-log.md
 5670ef9bc11a1ccdd5146d5af859ad64df72075303fe69361b248c27ad678922	2	docs/status/trace-frontier-log.md
@@ -149,7 +137,6 @@
 67e7c8cdb4b5681d1a40405bc523140c758a6d86d0e57fc5626a36925f7835d2	6	docs/status/trace-frontier-log.md
 68421eba338cdf05006ea22c31ddbc0397a6c22673063b9eac2869f033b7a14b	1	docs/status/trace-frontier-log.md
 6889b6d84a2a3971570eaacc5f0243cf9c9171fb6c67531e70e73762e8b1badd	1	docs/status/trace-frontier-log.md
-68a99b2139fe3e8e30d1a3fbe1c3d248d32d073bf02c436221e7b96a72343936	1	docs/architecture/research/2026-07-12-s3k-zone-bring-up-skill-anpal-forward-test.md
 68e32cf7b7e1a0c4354dfda461a3c1f953617fc926890df6fb3808bd67308543	1	docs/status/trace-frontier-log.md
 6a8a2df82e9d1834a6452fdbc3257af1c8a0c31b2e9506d69815d33906f35b7a	1	docs/status/trace-frontier-log.md
 6c72cbfaba869c701c616b642f1288782f7346e8ba4b11769b8d4e9786e28282	1	docs/status/trace-frontier-log.md
@@ -163,7 +150,6 @@
 710d0b2db664c5e4ed77cab97e30da3edc95f8dc6f8fac4c84a907dac54310f5	1	docs/status/trace-frontier-log.md
 74171f32d84604b0105558ed9de6a6ed6d8437f327bcc15bb843fb68d13ddb2e	1	docs/status/trace-frontier-log.md
 748d4dff773c4cf1b6eee01e4187234de66b267b4d41239c8ca112ab2dfaf85f	1	docs/status/trace-frontier-log.md
-74af1bfc0457aedb2e878880969b92e18dc61e87a13fb42aa114c6de75879741	2	docs/architecture/validation/2026-07-29-rom-location-resolver.md
 74de0b3cbe579f5b3ae3b88c8aacc0ab65a5408ba77ae8d6e7dca16c1a1aadb3	2	docs/status/trace-frontier-log.md
 75badd4cfaaf31e17bbae20223329468ded1dd71f0f912e0e68c99b09a6de5e5	1	docs/status/trace-frontier-log.md
 7627e19aee8c25482ed55c9ecc327730a1b501f501d9569734c21d10cafa387a	1	docs/status/trace-frontier-log.md
@@ -173,7 +159,6 @@
 7c4e4427b89b78ac41f584ae0f167313bbb29fb7462de6749c59233ac6838007	3	docs/status/trace-frontier-log.md
 7c6b81145dfb10e60dd25f0cea0f9555fae2b111a155f2e700ed8cfc14ec9dd2	1	docs/status/trace-frontier-log.md
 7c817c7d54231a2c8e41b4a44233087930b92e92b4a7c311a17371a3b7744ebd	1	docs/status/trace-frontier-log.md
-7c8d55ec9fda88851ce44f6ad8f11bcab4f2e3819d9cf41b6d4a9a293d0018ae	1	docs/architecture/validation/2026-07-29-rom-location-resolver.md
 7cb20fe0cae7412ed2cbe6a349fd5dfc4b9f0a1ffca7934b684e80082eda3517	1	docs/status/trace-frontier-log.md
 7e0e587058a8cfcb27b429e49ac10991170e5d38a0378c7166fb4c4a1814477e	1	docs/status/trace-frontier-log.md
 7e4e1eab07bde5344f4246381d3052e14c2bac663f18224d324e067397889f98	1	docs/status/trace-frontier-log.md
@@ -194,7 +179,6 @@
 8586097d5bf0f7456509038fc3043a4b5f75357e8ba98efdab39ec7745abc57f	1	docs/status/trace-frontier-log.md
 86241759442a27f7fe279edada0de39983da7e004edb91e7cd0a2ca0c0ba21cc	1	docs/status/trace-frontier-log.md
 868de51ebb98a2b1dfd2f1593376a35304a588a9ae18b44a45d314cec4f90f85	1	docs/status/trace-frontier-log.md
-87413ead2291e794980edc5bb2eb38c98fc9b923e416115bd9609583325360c0	1	docs/architecture/validation/2026-07-29-medium-risk-reuse-consolidation.md
 8763d35ec9a3d538345030806e3f4dec8f1d7daf41998a45df3235d4a9c6bf40	1	docs/status/trace-frontier-log.md
 88cef27fc15f982c0ea61a97fb154a464b04eb70e33a892e9bacba42124ad472	11	docs/status/trace-frontier-log.md
 896b2731a070f86ad407406690eb069c94130fc0b78331136e12732339b07eff	1	docs/status/trace-frontier-log.md
@@ -209,7 +193,6 @@
 8fe99c6806d18e876510740444034569e65053b6af882b9b190259a8e87f1656	2	docs/status/trace-frontier-log.md
 901616f131e9fcd75bf5d511389080ec859d1198d3171a5dacfdbc7ebaf73383	1	docs/status/trace-frontier-log.md
 915a824aa3e8027f1050ff1e7176f0fd4c7f04048d34dd92f554fbb1e8c610f8	2	docs/status/trace-frontier-log.md
-93e8c05ba2078ba263fafd130dcb341cd800d5e27792749901d03ce4e35c689a	2	docs/architecture/validation/2026-07-29-rom-location-resolver.md
 93f0510f96b061142f7b55067f630eab1684ff22fba7ffff1d06e83eccbba5c7	1	docs/status/trace-frontier-log.md
 94c83a55ea4b9b03cfb9db58653da603820910a05149123eed7a620a4d66ae27	1	docs/status/trace-frontier-log.md
 95381ed0113c998b924cdf040807de38f5db28d66a645f168e9364b32ede92c5	2	docs/status/trace-frontier-log.md
@@ -221,13 +204,10 @@
 9b64305a83e75954c9ead54fca04f25e8e4a2daf26c9b1a4328188c1373cc8fb	1	docs/status/trace-frontier-log.md
 9bbf40c7a789c3daa4e1f8649f2fe7d19fbac2bfa2305af5a6c886fb4ab8224e	1	docs/status/trace-frontier-log.md
 9cec6da8933fe71034d4da314564d40c66b1988b77e69b9051a223f6ba181ef4	3	docs/status/trace-frontier-log.md
-9e11f37085ba339a564f646b86a8a3797121f935887e6ebf1fe40b0d07ac47ca	1	docs/architecture/validation/2026-07-29-medium-risk-reuse-consolidation.md
 9e9307cc07afdcd5905f545305a94651c2ba34986ec4ce1f5f2c6d89a4afbf95	1	docs/status/trace-frontier-log.md
 9eca909a6288f9c799fd4ca5aacf86b2065f6e1820562811055191f7067cb5ec	2	docs/status/trace-frontier-log.md
 9f0defbc794c067743dada7f9bbfe202646766e256a97fcae56e87f63dfba4cb	1	docs/status/trace-frontier-log.md
 9f4d7f09ac0b3fc72f284fedcaa8ee64f7901701f37a2285b6fd416fbd9a3f32	2	docs/status/trace-frontier-log.md
-a02421eccb16e2b7081ff7256b64037b84bd934754cd6dcb1d55efe1590b1870	1	docs/architecture/validation/2026-07-29-s1-s2-plc-queue-trace-policy-validation.md
-a02421eccb16e2b7081ff7256b64037b84bd934754cd6dcb1d55efe1590b1870	4	docs/architecture/validation/2026-07-29-medium-risk-reuse-consolidation.md
 a0bc3a9d294fe38190c53ce135ddbb92a92541aba3c691ba5b0c6a5115735bb9	1	docs/status/trace-frontier-log.md
 a18e9f2f8849584d9acbf949226189178a516137c4bf5a27e20ac3e3e680c6bc	1	docs/status/trace-frontier-log.md
 a462a5de6eaa6f7a58442879c05576c835f1facbf6a2493fdfb280873b5c051c	1	docs/status/trace-frontier-log.md
@@ -247,7 +227,6 @@ ad2f10527aee5ef722d993a2830a528e9db53c40b0f99b108258c5dbf6ce3972	1	docs/status/t
 ae1ca7a8552fa3feb41f321d786eb59fb5ec5b3bc776f38776774a8df29ae0c0	1	docs/status/trace-frontier-log.md
 aec5081527f55579552ea50eba4798f771e435afea6a711a1154dee1b4fd144e	1	docs/status/trace-frontier-log.md
 af1e6f8bca9d95e209328d50f04cbe92cf0243f641a601432481b19b6799bded	3	docs/status/trace-frontier-log.md
-afff624ef4fc56b24881a1ef1d7fd74f980e7cd883232bcca9747fd449c04098	1	docs/architecture/research/2026-07-13-s3k-zone-bring-up-skill-signed-mapping-forward-test.md
 b036ef887ba9f2b43e64608f80c0a9755f903f2a2f01f8acdac50efdba1c6b02	1	docs/status/trace-frontier-log.md
 b219bd9c2bcb420b90fc2e1570db8f179b93a402fed0a4de8a784e6966058194	8	docs/status/trace-frontier-log.md
 b2263e4122557427121e65f2d6080334a20629d9336766050f29681bc35eed49	1	docs/status/trace-frontier-log.md
@@ -259,7 +238,6 @@ b537232e9907275fcb2a9dbc59f0b7cf63428c3788015080787143d1b35fbf5a	1	docs/status/t
 b627c5734af550bcfe10c6ea62603505d7d2c40fd6f59eb50dc3a136976c9939	1	docs/status/trace-frontier-log.md
 b679acc58ad60f3dc79293b55bd874d322b5580659409ed762ace326c472d08d	1	docs/status/trace-frontier-log.md
 b6ef918c16c9a5b61ae71118cfaa75e45278d351133fa62ae81fa12e8d8703e3	1	docs/status/trace-frontier-log.md
-b749743fa7d6037144e6a0e2f42365f18f1084e0ad1a68518de5517a0eff03d4	1	docs/architecture/research/2026-07-13-s3k-zone-bring-up-skill-boss-runtime-forward-test.md
 b7b5b27d94594b1951314065de1561e22703b5aa237d2af0f1ce2e476fe2f758	1	docs/status/trace-frontier-log.md
 b8224f2c073d9671e8e97b2e97341fb51bdef7fbbdf408c2de75e77f4eabbf0c	1	docs/status/trace-frontier-log.md
 b85e6516c318d3b95e609b94b30fe67ecc565c91b569808ce047d9407398eae4	1	docs/status/trace-frontier-log.md
@@ -279,7 +257,6 @@ c215384720cd4c25c8f8f22b608306da06c1f5d32016defe5dde582d1d919552	1	docs/status/t
 c28b3f31feb1d2c57c6f98084b04cb41146cf2399235424d7a77baa415d390d5	1	docs/status/trace-frontier-log.md
 c545957bec881f6ecca71abd0113dcc714457124b38509e7072ce55deef94ca9	1	docs/status/trace-frontier-log.md
 c5cdac26de92f1ba7a64e6a7b9bf208717c4a31ae5827ac25122b70f818187cb	1	docs/status/trace-frontier-log.md
-c6facd6c6fb426b651e7066ec97206f954c4f409d81c904d27f9a9fe01adbd0d	1	docs/architecture/plans/2026-07-16-native-flappy-death-titlecard-fixes.md
 c70b0e67f9117b5dc9a9030ebaa07cc45de95b815a865e5f89cd9d070dc58674	2	docs/status/trace-frontier-log.md
 c8257b07166f0760f06bd3cd3c69a79ca9d060967926eb3bfebbf580ad8d0f54	1	docs/status/trace-frontier-log.md
 cb43326faaad303a3f003919190155d7ed7d2951f4593bff16104b0e50a50350	1	docs/status/trace-frontier-log.md
@@ -308,7 +285,6 @@ d66990af33f4f01aa5e9b4505098b0e856e74bdbed9abd62442dc0a9dbd35503	3	docs/status/t
 d6b547bc3d3c324cf0cc0d160144a4fd9592b7e7f8189b05135844c1846f8857	1	docs/status/trace-frontier-log.md
 d740dd5edf1337b95abc482758f74f22a66df358d260265776a23ad8e3bb6db0	1	docs/status/trace-frontier-log.md
 d76e8d4c6fe93d955077e07535c4c046aca8acdbd6451a26a604e3edcdcac1da	1	docs/status/trace-frontier-log.md
-d7b86dab6cda0bf353749a16dae5cdbd85b9abd524d4dd350b33dc3825815482	1	docs/architecture/validation/2026-07-29-medium-risk-reuse-consolidation.md
 d8299834014a5c1eb1fbc51e08111b7fd206bd7f0c512b06e8146aa561fa85a7	1	docs/status/trace-frontier-log.md
 d87ee3c7fc7a9d84f7acd205463a8bf21be012abf929ee4a98d453d9a41fa964	1	docs/status/trace-frontier-log.md
 d902f76b9ba21bfc02475d10e79b738a330b40e50c8c5fc6fc48126e7c28b628	1	docs/status/trace-frontier-log.md
@@ -340,7 +316,6 @@ e6de32c8f416c17161371760f2a6ca9f5fd188064f2aca2f17c379e6012acdf1	2	docs/status/t
 e71aa46a9c492b887100d0e63c1d1ce911f55a1b1bf6750def11158473594bda	2	docs/status/trace-frontier-log.md
 e740299c0e420b5bc258443916897f530a6f5ac27630a5e5e0bf847f26de314e	4	docs/status/trace-frontier-log.md
 e9aef46040daaecd598b4587df07a6600f75ef1606a4d180c3df73c499dae8a2	1	docs/status/trace-frontier-log.md
-ea1fafc2bc29ed4f99e94c4a44759d7e2fef6e3d6b710940308c760b864c7a55	1	docs/architecture/research/2026-07-13-s3k-zone-bring-up-skill-boss-runtime-forward-test.md
 eafc4e61200b604f3f410d13b1b14e0064ba4f061abfef9c6d1804c952426066	1	docs/status/trace-frontier-log.md
 eaffd98285e1a5f4ba92a0a638e3ed354ac4e41d69579bc0eb861d6e7a6cc06f	1	docs/status/trace-frontier-log.md
 ec3d038344010bd6cb2d1dcefc8c8cbf3578006feef3ab01441552444cbabbff	1	docs/status/trace-frontier-log.md
@@ -360,7 +335,6 @@ f2cffc55d799466b38114e844e0839ecd57d7af11847ebc09c422f94d5b8077b	1	docs/status/t
 f353b10a0932a21d8f30006e3b1afcfc83a53c87c3d1882a07bd505dd1d616e0	1	docs/status/trace-frontier-log.md
 f3958be437fcb78c4de819936fb8b2ea9502eed75fb2c0bce740f3c8c53ec030	1	docs/status/trace-frontier-log.md
 f3a4cd7b09ec5f9598e8ee5627022906a77552c8d6a77a00110042efd7213fa4	1	docs/status/trace-frontier-log.md
-f3f485439b73103bf89cc18f12d1f8063b16b46b24e394acb45919f60a36afd1	1	docs/architecture/research/2026-07-12-s3k-zone-bring-up-skill-forward-test.md
 f4444f81393d95a8aa6c8d0e402a98b6f2cdd27d1accd616f937aa7d6e46d2bf	1	docs/status/trace-frontier-log.md
 f4dc77d071f9caf296d4cb439a671e55edfdbec7cf854e6fd82b88efc2412965	1	docs/status/trace-frontier-log.md
 f5a140a00022655473a51a86832523a05cc2982097ce283db998988126b4dccc	1	docs/status/trace-frontier-log.md

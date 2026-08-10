@@ -38,9 +38,36 @@ public final class Sonic1MonitorPowerUpObjectInstance extends AbstractMonitorObj
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         updateDynamicSpawn(spawn.x(), iconSubY >> 8);
         updateIcon();
+    }
+
+    /**
+     * ROM {@code PowerUp} (Obj2E) is {@code jsr Pow_Index / bra.w DisplaySprite}
+     * (docs/s1disasm/_incObj/"26, 2E Monitors and Power-Ups.asm":217-222) — none
+     * of its three routines contains an {@code out_of_range} test, a
+     * {@code MarkObjGone} or a {@code RememberState}. Its ONLY exit is
+     * {@code Pow_Delete}'s {@code subq.w #1,obTimeFrame / bmi.w DeleteObject}
+     * (asm:402-410, the FixBugs=0 branch), so the icon holds its SST slot for
+     * the full rise-plus-half-second regardless of where the camera goes.
+     * <p>
+     * The shared camera-distance unload therefore has no ROM counterpart here,
+     * and it fired: a monitor broken as the camera scrolled away had its icon
+     * freed one frame BEFORE {@code Pow_Checks} would have run, so the contents
+     * were never awarded and the slot was released early (SLZ1 f5611: ROM 27
+     * rings, engine 17 — the ten-ring monitor's icon in slot 39 stopped
+     * updating at {@code y_vel = -$18}, one step short of the apex).
+     * Same shape as Obj5C {@code Pyl_Display}.
+     */
+    @Override
+    public boolean usesCustomOutOfRangeCheck() {
+        return true;
+    }
+
+    @Override
+    public boolean isCustomOutOfRange(int cameraX) {
+        return false;
     }
 
     @Override

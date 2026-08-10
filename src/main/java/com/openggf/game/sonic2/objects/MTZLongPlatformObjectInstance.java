@@ -280,13 +280,13 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (pendingChildCogSpawn) {
             pendingChildCogSpawn = false;
             spawnChildCog();
         }
-        executeMovement(frameCounter, player);
+        executeMovement(vIntRunCount, player);
         updateDynamicSpawn(x, y);
         // ROM loc_26C1C tail (s2.asm:52469-52484) marks the object gone + clears
         // its respawn bit from objoff_34; getOutOfRangeReferenceX exposes that
@@ -458,13 +458,13 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
                 fChildX, childY, fChildXFlip, this));
     }
 
-    private void executeMovement(int frameCounter, AbstractPlayableSprite player) {
+    private void executeMovement(int vIntRunCount, AbstractPlayableSprite player) {
         switch (moveSubtype) {
             case 0 -> { /* Stationary - return_26C8E */ }
             case 1 -> moveButtonTriggered();
             case 2 -> moveTimerTriggered();
             case 3 -> movePlayerProximity(player);
-            case 4 -> moveStepOnAdvance(frameCounter);
+            case 4 -> moveStepOnAdvance(vIntRunCount);
             case 5 -> moveConveyor();
             case 6 -> moveTimerTriggeredWithDelay();
             case 7 -> moveButtonTriggeredBack();
@@ -658,7 +658,7 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
      * Subtype 4: Step-on advance (loc_26E3C).
      * Increments subtype when player stands on it.
      */
-    private void moveStepOnAdvance(int frameCounter) {
+    private void moveStepOnAdvance(int vIntRunCount) {
         // s2.asm lines 52676-52684: btst #p1_standing_bit,status(a0); beq +; addq.b #1,subtype.
         // p1_standing_bit reflects ONLY the main character, so advance solely on the main
         // character standing — a riding sidekick must not trigger the step-on.

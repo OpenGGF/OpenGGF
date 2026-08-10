@@ -82,7 +82,7 @@ public final class PenguinatorBadnikInstance extends AbstractS3kBadnikInstance i
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity player) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity player) {
         if (isDestroyed()) {
             return;
         }
@@ -431,7 +431,7 @@ public final class PenguinatorBadnikInstance extends AbstractS3kBadnikInstance i
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             frameTimer--;
             if (frameTimer >= 0) {
                 return;

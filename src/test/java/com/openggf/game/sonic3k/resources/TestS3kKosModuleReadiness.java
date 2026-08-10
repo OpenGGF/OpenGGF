@@ -37,10 +37,18 @@ class TestS3kKosModuleReadiness {
             S3kKosModuleQueue queue = new S3kKosModuleQueue(timing, direct);
             HardwareWorkHandle handle = queue.queue(rom, 0, 0x500);
 
+            // Process_Kos_Module_Queue (sonic3k.asm:7908) runs immediately after the
+            // object pass and hands the head archive's current module to the direct
+            // FIFO through Queue_Kos (2741). Process_Kos_Queue (7887) follows it in the
+            // same LevelLoop tail and takes that direct entry to completion
+            // (2840-2954), so the submitting iteration is also the one that retires it.
             queue.processModuleQueueAfterObjects();
             HardwareWorkHandle child = ((S3kKosModuleSnapshot) timing.capture()
                     .jobs().getFirst().preparationSnapshot()).activeChild();
-            while (!direct.isReady(child)) {
+            for (int frame = 0; !direct.isReady(child); frame++) {
+                assertTrue(frame < 16,
+                        "the direct FIFO must retire the submitted module within a "
+                                + "bounded number of LevelLoop iterations");
                 queue.prepareQueuedModuleBeforeVSync();
             }
             HardwareTimingSnapshot snapshot = timing.capture();
@@ -66,8 +74,8 @@ class TestS3kKosModuleReadiness {
             S3kKosModuleQueue queue,
             HardwareWorkHandle handle) {
         for (int frame = 0; frame < 16 && !queue.isReady(handle); frame++) {
-            queue.prepareQueuedModuleBeforeVSync();
             queue.processModuleQueueAfterObjects();
+            queue.prepareQueuedModuleBeforeVSync();
         }
         assertTrue(queue.isReady(handle));
     }

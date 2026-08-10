@@ -107,7 +107,7 @@ public final class CluckoidBadnikInstance extends AbstractS3kBadnikInstance impl
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         if (isDestroyed()) {
             return;
         }
@@ -129,7 +129,7 @@ public final class CluckoidBadnikInstance extends AbstractS3kBadnikInstance impl
 
         switch (state) {
             case IDLE -> updateIdle(playerEntity);
-            case BREATHING -> updateBreathing(frameCounter, playerEntity);
+            case BREATHING -> updateBreathing(vIntRunCount, playerEntity);
             case COOLDOWN -> updateCooldown();
         }
 
@@ -159,7 +159,7 @@ public final class CluckoidBadnikInstance extends AbstractS3kBadnikInstance impl
         state = State.BREATHING;
     }
 
-    private void updateBreathing(int frameCounter, PlayableEntity playerEntity) {
+    private void updateBreathing(int vIntRunCount, PlayableEntity playerEntity) {
         if (mappingFrame >= 7) {
             if (!windActive) {
                 services().playSfx(Sonic3kSfx.ENEMY_BREATH.id);
@@ -168,7 +168,7 @@ public final class CluckoidBadnikInstance extends AbstractS3kBadnikInstance impl
             applyWindPressure(playerEntity);
             PlayableEntity sidekick = tryServices() != null ? tryServices().playerQuery().nativeP2OrNull() : null;
             applyWindPressure(sidekick);
-            if (((frameCounter + 3) & 0x07) == 0) {
+            if (((vIntRunCount + 3) & 0x07) == 0) {
                 spawnBreathDebris();
                 breathProjectileCount++;
             }
@@ -334,7 +334,7 @@ public final class CluckoidBadnikInstance extends AbstractS3kBadnikInstance impl
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (floating) {
                 xVelocity = TrigLookupTable.sinHex(angle);
                 angle = (angle + 4) & 0xFF;
@@ -505,7 +505,7 @@ public final class CluckoidBadnikInstance extends AbstractS3kBadnikInstance impl
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (parent.isDestroyed()) {
                 setDestroyed(true);
             }

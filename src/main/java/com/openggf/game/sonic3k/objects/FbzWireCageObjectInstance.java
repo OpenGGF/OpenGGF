@@ -33,7 +33,7 @@ public final class FbzWireCageObjectInstance extends AbstractObjectInstance impl
         verticalMode = (spawn.subtype() & 0x80) != 0;
     }
 
-    @Override public void update(int frameCounter, PlayableEntity ignored) {
+    @Override public void update(int vIntRunCount, PlayableEntity ignored) {
         services().playerQuery().visitPlayers(participationPolicy(),this,UPDATE_PLAYER);
         if (!isOnScreen(0x180) && !anyHeld()) setDestroyedByOffscreen();
     }

@@ -7,6 +7,7 @@ import com.openggf.game.sonic1.specialstage.Sonic1SpecialStageTraceFrame;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.trace.TraceFixtureRoot;
 import com.openggf.tests.trace.TraceReportWriter;
 import com.openggf.trace.DivergenceReport;
 import com.openggf.trace.DynamicArtSpecialStageComparator;
@@ -179,7 +180,7 @@ public abstract class AbstractS1SpecialStageTraceReplayTest {
         assumeTrue(romFile != null,
                 "s1.gen ROM required for S1 special-stage trace replay");
 
-        Path dir = traceDirectory();
+        Path dir = TraceFixtureRoot.resolve(traceDirectory());
         assumeTrue(Files.exists(dir.resolve("metadata.json")),
                 "No S1 special-stage trace committed yet at " + dir);
 
@@ -230,8 +231,37 @@ public abstract class AbstractS1SpecialStageTraceReplayTest {
 
         int offset = trace.metadata().bk2FrameOffset();
         int ssIndex = specialStageIndex(trace);
-        Path bk2 = dir.resolve(trace.metadata().sourceBk2());
-        return new S1SpecialStageReplayHarness(bk2, offset, ssIndex);
+        return new S1SpecialStageReplayHarness(
+                resolveSourceBk2(dir, trace.metadata().sourceBk2()), offset, ssIndex);
+    }
+
+    /**
+     * Resolves the recorded input movie named by {@code metadata.source_bk2}.
+     * A standalone fixture stores the BK2 beside its own metadata; a run
+     * segment ({@code <run>/<segment>/}) shares one movie stored once at the
+     * run root, with the segment's {@code bk2_frame_offset} indexing into it.
+     * Falls back to the shared {@code _movies/} store used by the generic
+     * trace tests. This resolves an <em>input source</em> only -- the movie is
+     * controller data, never engine state, so the comparison-only invariant
+     * (hard rule 4) is untouched.
+     */
+    static Path resolveSourceBk2(Path dir, String sourceBk2) {
+        Path local = dir.resolve(sourceBk2);
+        if (Files.exists(local)) {
+            return local;
+        }
+        Path runRoot = dir.getParent();
+        if (runRoot != null) {
+            Path atRunRoot = runRoot.resolve(sourceBk2);
+            if (Files.exists(atRunRoot)) {
+                return atRunRoot;
+            }
+            Path shared = runRoot.resolve("_movies").resolve(sourceBk2);
+            if (Files.exists(shared)) {
+                return shared;
+            }
+        }
+        return local;
     }
 
     // ==================== Comparator ====================
@@ -242,6 +272,9 @@ public abstract class AbstractS1SpecialStageTraceReplayTest {
         int baselineEmeralds = trace.getFrame(0).emeralds();
 
         List<FrameComparison> comparisons = new ArrayList<>();
+        // One replay owns one dynamic-art delivery-id origin.
+        DynamicArtSpecialStageComparator dynamicArt =
+                new DynamicArtSpecialStageComparator();
         Sonic1SpecialStageComparisonState lastState = null;
         int lastFrame = -1;
 
@@ -250,7 +283,7 @@ public abstract class AbstractS1SpecialStageTraceReplayTest {
             if (tf.lag()) {
                 harness.stepLagRow();
                 addDynamicArtComparison(
-                        comparisons, trace, harness, f, new LinkedHashMap<>());
+                        comparisons, trace, harness, f, new LinkedHashMap<>(), dynamicArt);
                 continue;
             }
             harness.stepFrame(f);
@@ -271,13 +304,14 @@ public abstract class AbstractS1SpecialStageTraceReplayTest {
             // the report rather than scored against a whole engine frame.
             if (isTornLagBoundaryRow(trace, f, compareEnd)) {
                 addDynamicArtComparison(
-                        comparisons, trace, harness, f, new LinkedHashMap<>());
+                        comparisons, trace, harness, f, new LinkedHashMap<>(), dynamicArt);
                 continue;
             }
 
             Map<String, FieldComparison> fields = new LinkedHashMap<>();
             addFields(fields, tf, state, baselineEmeralds);
-            addDynamicArtComparison(comparisons, trace, harness, f, fields);
+            addDynamicArtComparison(
+                    comparisons, trace, harness, f, fields, dynamicArt);
         }
 
         if (lastState != null) {
@@ -296,12 +330,13 @@ public abstract class AbstractS1SpecialStageTraceReplayTest {
             Sonic1SpecialStageTraceData trace,
             S1SpecialStageReplayHarness harness,
             int frame,
-            Map<String, FieldComparison> fields) {
+            Map<String, FieldComparison> fields,
+            DynamicArtSpecialStageComparator dynamicArt) {
         if (trace.metadata().hasPerFrameDynamicArtTransferState()) {
             if (frame == trace.frameCount() - 1) {
                 harness.finishDynamicArtSegment();
             }
-            fields.putAll(new DynamicArtSpecialStageComparator().compare(
+            fields.putAll(dynamicArt.compare(
                     trace.dynamicArtTransferStateForFrame(frame),
                     harness.captureDynamicArt()).fields());
         }
@@ -329,24 +364,41 @@ public abstract class AbstractS1SpecialStageTraceReplayTest {
      * {@code vel_x}/{@code vel_y}/{@code inertia} are written earlier in
      * {@code SonicSS_Display}'s tick (by {@code SonicSS_Jump}/{@code
      * SonicSS_Move}/{@code SonicSS_Fall}, docs/s1disasm/_incObj/09 Sonic in
-     * Special Stage.asm:96-106) than {@code y_pos}/{@code ss_angle} (written
-     * later, by {@code SpeedToPos} at asm:114 and the {@code v_ssangle} update
-     * at asm:117-119) -- so a row genuinely torn mid-tick shows the velocity
-     * fields already advanced to the next step while {@code y_pos}/
-     * {@code ss_angle} still hold the previous step's values verbatim. (
-     * {@code x_pos} is excluded from the staleness half of this check: unlike
-     * {@code y_pos}, it can land partway between two steps rather than cleanly
-     * at one or the other -- see the frame-1767 values below -- so requiring it
-     * to equal the previous row would under-detect the real tear.) Only a row
-     * satisfying BOTH the lag-run shape AND this field-level inconsistency is
-     * dropped; a row that merely precedes a &ge;2 lag run but is internally
-     * coherent is scored normally. The committed maze trace's sole such row is
-     * frame 1767 (preceding the 1768-1769 lag burst): vel_x/vel_y/inertia
-     * ({@code $FB1C}/{@code $016A}/{@code $FE28} at frame 1766 &rarr;
-     * {@code $FB01}/{@code $018A}/{@code $FE34} at frame 1767, already changed)
-     * versus y_pos/ss_angle ({@code $519CA00}/{@code $E640} at both 1766 and
-     * 1767, unchanged) -- not a coherent ROM frame, and not reproducible by any
-     * single engine tick.
+     * Special Stage.asm:96-106) than the position stores and the
+     * {@code v_ssangle} update ({@code SpeedToPos} at asm:114 --
+     * {@code move.l d2,obX} then {@code move.l d3,obY},
+     * {@code _incObj/sub ObjectFall & SpeedToPos.asm:47-48} -- followed by the
+     * {@code v_ssangle} update at asm:117-119).
+     *
+     * <p>{@code v_ssangle} is the <em>last</em> of those writes, and
+     * {@code SonicSS_Display} performs it unconditionally
+     * ({@code d0 = v_ssangle + v_ssrotate}). So whenever {@code v_ssrotate} is
+     * non-zero the angle must differ from the previous tick's in any coherent
+     * sample, and an unchanged angle next to already-advanced velocities can
+     * only be a sample straddling the tick. That single witness covers every
+     * tear point inside the tick, whereas also demanding {@code y_pos} still be
+     * previous would only catch tears landing before the {@code obY} store and
+     * would misclassify the (equally real) later ones as coherent rows. The
+     * {@code ss_rotate != 0} qualifier is what keeps the angle a valid witness:
+     * the pre-setup fade and the exit ramp's {@code v_ssrotate = 0} window
+     * ({@code sonic.asm:3268}, {@code _incObj/09 asm:394}) legitimately hold
+     * the angle still, and are excluded rather than misread as tears.
+     * {@code x_pos} is not used at all -- a longword store is two word writes
+     * on the 68k, so it can be caught half-written and equal neither step.
+     *
+     * <p>Only a row satisfying BOTH the lag-run shape AND this field-level
+     * inconsistency is dropped; a row that merely precedes a &ge;2 lag run but
+     * is internally coherent is scored normally. Observed instances: the
+     * committed maze trace's frame 1767 (tear before the {@code obY} store --
+     * vel_x/vel_y/inertia {@code $FB1C}/{@code $016A}/{@code $FE28} &rarr;
+     * {@code $FB01}/{@code $018A}/{@code $FE34}, y_pos/ss_angle
+     * {@code $519CA00}/{@code $E640} unchanged), and the complete-run
+     * segments' {@code ss_2} frame 3120 and {@code ss_4} frame 1148 (tear
+     * after both position stores -- x_pos and ss_angle still previous, y_pos
+     * and the velocities already advanced; in both the engine's coherent frame
+     * matches the settled post-lag row exactly on x_pos, y_pos and ss_angle).
+     * None is a coherent ROM frame, and none is reproducible by any single
+     * engine tick.
      */
     private static boolean isTornLagBoundaryRow(Sonic1SpecialStageTraceData trace,
                                                 int f, int compareEnd) {
@@ -364,10 +416,19 @@ public abstract class AbstractS1SpecialStageTraceReplayTest {
         boolean velocityAlreadyAdvanced = (cur.velX() & 0xFFFF) != (prev.velX() & 0xFFFF)
                 || (cur.velY() & 0xFFFF) != (prev.velY() & 0xFFFF)
                 || (cur.inertia() & 0xFFFF) != (prev.inertia() & 0xFFFF);
-        boolean lateTickFieldsStillPrevious = (cur.yPos() & 0xFFFFFFFFL) == (prev.yPos() & 0xFFFFFFFFL)
+        // v_ssangle is the LAST of the compared per-tick writes (updated at
+        // asm:117-119, after SpeedToPos at asm:114) and SonicSS_Display
+        // updates it unconditionally: d0 = v_ssangle + v_ssrotate. So while
+        // v_ssrotate is non-zero the angle MUST differ from the previous
+        // tick's in any coherent sample, and an unchanged angle alongside
+        // already-advanced velocities can only be a sample taken after the
+        // early-tick velocity writes and before that final angle write --
+        // regardless of which of SpeedToPos's two position stores
+        // (obX at asm:47, obY at asm:48) the tear happened to fall between.
+        boolean lateTickAngleStillPrevious = (cur.ssRotate() & 0xFFFF) != 0
                 && (cur.ssAngle() & 0xFFFF) == (prev.ssAngle() & 0xFFFF);
 
-        return velocityAlreadyAdvanced && lateTickFieldsStillPrevious;
+        return velocityAlreadyAdvanced && lateTickAngleStillPrevious;
     }
 
     private static void addFields(Map<String, FieldComparison> fields,

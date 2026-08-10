@@ -160,8 +160,8 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
-        bodyVisibleThisFrame = hitInvulnerabilityTimer <= 0 || (frameCounter & 1) == 0;
+    public void update(int vIntRunCount, PlayableEntity player) {
+        bodyVisibleThisFrame = hitInvulnerabilityTimer <= 0 || (vIntRunCount & 1) == 0;
         if (hitInvulnerabilityTimer > 0) {
             applyHitFlash(hitInvulnerabilityTimer);
             hitInvulnerabilityTimer--;
@@ -171,7 +171,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
             updateNativeBoss(player);
         }
         updateDefeatWait();
-        updatePostDefeatSequence(frameCounter, player);
+        updatePostDefeatSequence(vIntRunCount, player);
     }
 
     private void updateNativeBoss(PlayableEntity player) {
@@ -608,7 +608,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
                 CnzEggCapsuleInstance.CompletionContinuation.CNZ_END_BOSS_SEQUENCE));
     }
 
-    private void updatePostDefeatSequence(int frameCounter, PlayableEntity player) {
+    private void updatePostDefeatSequence(int vIntRunCount, PlayableEntity player) {
         if (!defeatHandoffComplete || transitionRequested) {
             return;
         }

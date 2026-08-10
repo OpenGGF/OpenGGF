@@ -71,11 +71,11 @@ public class Sonic1BurrobotBadnikInstance extends AbstractBadnikInstance impleme
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (state) {
             case STATE_CHANGEDIR -> updateChangeDir();
-            case STATE_MOVE -> updateMove(frameCounter);
+            case STATE_MOVE -> updateMove(vIntRunCount);
             case STATE_JUMP -> updateJump(player);
             case STATE_CHECK_SONIC -> updateCheckSonic(player);
             default -> {
@@ -97,10 +97,10 @@ public class Sonic1BurrobotBadnikInstance extends AbstractBadnikInstance impleme
         xVelocity = facingLeft ? -WALK_SPEED : WALK_SPEED;
     }
 
-    private void updateMove(int frameCounter) {
+    private void updateMove(int vIntRunCount) {
         stateTimer--;
         if (stateTimer < 0) {
-            enterMoveEndBranch(frameCounter);
+            enterMoveEndBranch(vIntRunCount);
             return;
         }
 
@@ -115,7 +115,7 @@ public class Sonic1BurrobotBadnikInstance extends AbstractBadnikInstance impleme
             // Burro_Move .checkLedgeAhead: ObjFloorDist2 then cmpi.w #$C,d1 / bge NextAction.
             // docs/s1disasm/_incObj/2D Badnik - Burrobot.asm:75-85
             if (objFloorDist(probeX) >= 0x0C) {
-                enterMoveEndBranch(frameCounter);
+                enterMoveEndBranch(vIntRunCount);
             }
             return;
         }
@@ -149,8 +149,8 @@ public class Sonic1BurrobotBadnikInstance extends AbstractBadnikInstance impleme
         return 0x1F - (sensorY & 0x0F);
     }
 
-    private void enterMoveEndBranch(int frameCounter) {
-        if ((frameCounter & 0x04) != 0) {
+    private void enterMoveEndBranch(int vIntRunCount) {
+        if ((vIntRunCount & 0x04) != 0) {
             state = STATE_CHANGEDIR;
             stateTimer = 59;
             xVelocity = 0;
@@ -256,7 +256,7 @@ public class Sonic1BurrobotBadnikInstance extends AbstractBadnikInstance impleme
     }
 
     @Override
-    protected void updateAnimation(int frameCounter) {
+    protected void updateAnimation(int vIntRunCount) {
         animationTick++;
     }
 

@@ -28,8 +28,6 @@ public record TraceEntry(
         Path runDir,
         TraceRunManifest runManifest) {
 
-    private static final String SPECIAL_STAGE_PROFILE = "s2_special_stage";
-
     /**
      * Legacy constructor for ordinary (single-segment) trace entries. Leaves
      * the run-specific trailing components null.
@@ -108,11 +106,17 @@ public record TraceEntry(
         if (isRun()) {
             return "RUN " + runManifest.runId() + " (" + runManifest.segments().size() + " segments)";
         }
-        if (SPECIAL_STAGE_PROFILE.equals(metadata.traceProfile())) {
+        if (isSpecialStageProfile(metadata.traceProfile())) {
             Integer index = metadata.specialStageIndex();
             int oneIndexed = (index != null ? index : 0) + 1;
-            return "S2 SPECIAL STAGE " + oneIndexed;
+            return gameId.toUpperCase() + " SPECIAL STAGE " + oneIndexed;
         }
         return String.format("Zone: %02X  Act: %d", zone, act);
+    }
+
+    private static boolean isSpecialStageProfile(String profile) {
+        return "s1_special_stage".equals(profile)
+                || "s2_special_stage".equals(profile)
+                || "s3k_special_stage".equals(profile);
     }
 }

@@ -58,6 +58,7 @@ class TestSonic2SpecialStageCheckpointSnapshot {
         assertEquals(80, checkpoint.getRingRequirement());
         assertEquals(64, checkpoint.getRingsCollected());
         assertEquals(123, get(checkpoint, "handX"));
+        assertEquals(91, checkpoint.getWingsY());
         assertEquals(99, checkpoint.getHandY());
         assertEquals(91, get(checkpoint, "handTargetY"));
         assertEquals(false, checkpoint.isHandThumbsUp());

@@ -39,7 +39,7 @@ public final class FbzMagneticPendulumEndpointObjectInstance extends AbstractObj
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity ignored) {
+    public void update(int vIntRunCount, PlayableEntity ignored) {
         if (cascadeDelete || parent == null || parent.isDestroyed()) {
             if (chain != null) chain.requestCascadeDelete();
             ObjectLifetimeOps.expireDynamic(this);

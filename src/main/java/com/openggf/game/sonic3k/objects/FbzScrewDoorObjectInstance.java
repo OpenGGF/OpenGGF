@@ -32,7 +32,7 @@ public final class FbzScrewDoorObjectInstance extends AbstractObjectInstance
     legacy = (s.subtype() & 0x80) != 0;
     mappingFrame = FRAMES[Math.min(animation, 5)][0];
   }
-  public void update(int f, PlayableEntity p) {
+  public void update(int vIntRunCount, PlayableEntity p) {
     if (!initialized) {
       initialized = true;
       if (legacy && services().objectManager() != null &&

@@ -41,7 +41,7 @@ public final class CnzMinibossCoilInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (boss != null && boss.isDefeatedForChild()) {
             setDestroyed(true);
             return;

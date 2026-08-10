@@ -157,7 +157,7 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
     private int[] bossAnimArray;  // ROM: Boss_AnimationArray (10 bytes = 5 entries × 2)
 
     // Render state
-    private int lastFrameCounter;
+    private int lastVIntRunCount;
     private int touchCollisionX;
     private int touchCollisionY;
     private boolean touchCollisionSnapshotReady;
@@ -280,13 +280,28 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
     }
 
     @Override
-    protected void updateBossLogic(int frameCounter, PlayableEntity playerEntity) {
+    protected boolean defeatDeferralAppliesToThisBoss() {
+        // ObjA7/Obj51 reads boss_routine(a0) once at the top of its update and jumps
+        // through off_31A2A (docs/s2disasm/s2.asm:66554-66566). The hit bookkeeping runs
+        // in loc_31CDC (docs/s2disasm/s2.asm:66781-66792), called from the tail of the
+        // already-selected routine, and loc_31D42 only awards points, sets
+        // Boss_Countdown = $B3 and boss_routine = 6 before returning
+        // (docs/s2disasm/s2.asm:66818-66826). So the defeat routine loc_31D5C's first
+        // `subq.w #1,(Boss_Countdown).w` lands on the NEXT frame
+        // (docs/s2disasm/s2.asm:66828-66830). The engine applies touch responses before
+        // this object's own update(), so opt into the existing per-boss routine-read-once
+        // deferral to restore that one-frame offset.
+        return true;
+    }
+
+    @Override
+    protected void updateBossLogic(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        lastFrameCounter = frameCounter;
+        lastVIntRunCount = vIntRunCount;
 
         // ROM: loc_31A04 - Zap SFX tick every 32 frames when collision is active
         if (bossCollisionRoutine != COLLISION_OFF) {
-            if ((frameCounter & 0x1F) == 0) {
+            if ((vIntRunCount & 0x1F) == 0) {
                 services().playSfx(Sonic2Sfx.CNZ_BOSS_ZAP.id);
             }
         }
@@ -296,7 +311,7 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
             case ROUTINE_PATROL -> updatePatrol(player);
             case ROUTINE_POST_TRIGGER -> updatePostTrigger();
             case ROUTINE_VERTICAL_DROP -> updateVerticalDrop();
-            case ROUTINE_DEFEAT_EXPLODE -> updateDefeatExplode(frameCounter);
+            case ROUTINE_DEFEAT_EXPLODE -> updateDefeatExplode(vIntRunCount);
             case ROUTINE_DEFEAT_BOUNCE -> updateDefeatBounce();
             case ROUTINE_FLEE -> updateFlee();
         }
@@ -548,7 +563,7 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
     /**
      * ROM: loc_31D5C - Defeat exploding state.
      */
-    private void updateDefeatExplode(int frameCounter) {
+    private void updateDefeatExplode(int vIntRunCount) {
         bossCountdown--;
 
         if (bossCountdown >= 0) {
@@ -556,7 +571,7 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
             mainMapFrame = FRAME_NO_OVERLAY;
 
             // Spawn explosions every 8 frames
-            if ((frameCounter & 7) == 0) {
+            if ((vIntRunCount & 7) == 0) {
                 spawnDefeatExplosion();
             }
         } else {
@@ -619,7 +634,10 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
 
         Camera camera = services().camera();
         if (camera.getMaxX() < CAMERA_MAX_X_TARGET) {
-            camera.setMaxXTarget((short) (camera.getMaxX() + 2));
+            // ROM loc_31E2A writes Camera_Max_X_pos directly on the same frame
+            // (`addq.w #2,(Camera_Max_X_pos).w`, docs/s2disasm/s2.asm:66919-66925), so the
+            // bound opens immediately rather than being eased in on the following frame.
+            camera.setMaxX((short) (camera.getMaxX() + 2));
         } else if (!isOnScreen()) {
             // Clear boss ID so palette cycling stops
             services().gameState().setCurrentBossId(0);
@@ -767,7 +785,7 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
      * later ROM slot would have read instead of delaying BALL_FALL by one pass.</p>
      */
     public int getBossCountdownVisibleToBall(int objectFrameCounter) {
-        if (state.routine == ROUTINE_POST_TRIGGER && lastFrameCounter != objectFrameCounter) {
+        if (state.routine == ROUTINE_POST_TRIGGER && lastVIntRunCount != objectFrameCounter) {
             return bossCountdown - 1;
         }
         return bossCountdown;
@@ -897,7 +915,7 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
         boolean flipped = (state.renderFlags & 1) != 0;
 
         // ROM: sub4_mapframe starts at frame 6 and animates to frame 7 on the 8-frame cadence.
-        int currentPropellerFrame = ((lastFrameCounter >> 3) & 1) == 0
+        int currentPropellerFrame = ((lastVIntRunCount >> 3) & 1) == 0
                 ? FRAME_PROPELLER_1 : FRAME_PROPELLER_2;
 
         // Note: electrode/generator frames are controlled by collision mode in updatePeriodicModeToggle()

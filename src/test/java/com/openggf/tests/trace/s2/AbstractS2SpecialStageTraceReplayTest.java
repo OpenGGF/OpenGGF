@@ -1,14 +1,19 @@
 package com.openggf.tests.trace.s2;
 
 import com.openggf.data.Rom;
+import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageComparisonState;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageComparisonState.PlayerState;
+import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageIntro;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.trace.TraceFixtureRoot;
 import com.openggf.tests.trace.TraceReportWriter;
 import com.openggf.trace.DivergenceReport;
 import com.openggf.trace.DynamicArtSpecialStageComparator;
+import com.openggf.trace.DynamicArtSpillNormalization;
+import com.openggf.trace.DynamicArtTransfer;
 import com.openggf.trace.FieldComparison;
 import com.openggf.trace.FrameComparison;
 import com.openggf.trace.Severity;
@@ -18,6 +23,7 @@ import com.openggf.trace.SpecialStageTraceFrame;
 import com.openggf.trace.SpecialStageRunObjectsPassBinder;
 import com.openggf.trace.SpecialStageRunObjectsPassBinder.CompletedPass;
 import com.openggf.trace.TraceEvent;
+import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.SpecialStageTraceFrame.CharacterState;
 import org.junit.jupiter.api.Test;
 
@@ -128,6 +134,23 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
     private static final String ABSENT = "absent";
     private static final int CONTEXT_RADIUS = 8;
 
+    /**
+     * Iterations of {@code Pal_FadeToWhite}, the ROM's first act once the
+     * special stage's {@code SS_Check_Rings_flag} breaks the main loop
+     * (docs/s2disasm/s2.asm:6725-6745). The routine loads {@code d4} with
+     * {@code $15} and runs one {@code VintID_Fade} V-blank per {@code dbf}
+     * iteration (s2.asm:3570-3581) — {@code $15 + 1} of them. {@code Vint_Fade}
+     * never reaches {@code ProcessDMAQueue} (only the real per-mode handlers do:
+     * s2.asm:781, 899, 1000, 1046, 1083, 1138), so the terminal pass's queued
+     * player art survives the whole fade, and then the interrupts-disabled
+     * results-screen setup that follows (s2.asm:3546-3600 region: {@code move
+     * #$2700,sr}, ClearScreen, PalLoad_Now, LoadPLC2, NemDec, clearRAM), until
+     * the results loop asks for {@code VintID_Level} and waits on it
+     * (s2.asm:6800-6806). That first {@code Vint_Level} is the retirement
+     * V-blank.
+     */
+    static final int PAL_FADE_TO_WHITE_FRAMES = 0x15 + 1;
+
     /** Directory of the trace to replay. */
     protected abstract Path traceDirectory();
 
@@ -137,15 +160,17 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
         assumeTrue(romFile != null && Files.exists(Path.of("s2.gen")),
                 "s2.gen ROM required for S2 special-stage trace replay");
 
-        Path dir = traceDirectory();
-        SpecialStageTraceData trace = SpecialStageTraceData.load(dir);
+        Path dir = TraceFixtureRoot.resolve(traceDirectory());
+        SegmentContext context = segmentContext(dir);
+        SpecialStageTraceData trace =
+                SpecialStageTraceData.load(dir, context.openingDynamicArtLedger());
 
         // Pipeline assertion: the trace loads with the expected profile + frames.
         assertEquals("s2_special_stage", trace.metadata().traceProfile(),
                 "SS trace must carry the s2_special_stage profile");
         assertTrue(trace.frameCount() > 0, "SS trace should have frames");
 
-        S2SpecialStageReplayHarness harness = bootHarness(trace, dir, romFile);
+        S2SpecialStageReplayHarness harness = bootHarness(trace, context, romFile);
         DivergenceReport report = compareReplay(trace, harness);
 
         int ssIndex = specialStageIndex(trace);
@@ -165,11 +190,90 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
         assertFalse(report.hasErrors(), report.toAssertionSummary());
     }
 
+    // ==================== Segment context ====================
+
+    /**
+     * Everything a special-stage trace directory does not carry itself.
+     *
+     * <p>A standalone trace owns its BK2 and opens with an empty dynamic-art
+     * ledger. A special-stage segment recorded inside a run owns neither: the
+     * movie lives once at the run root, and the segment inherits whatever
+     * transfers were still outstanding when the preceding level segment ended.
+     * Both are read from the sibling {@code run_manifest.json}, keyed on the
+     * segment's own directory name — the recorder's own continuity record, not
+     * a route, zone or frame.
+     *
+     * <p>A run segment also carries its own place in the run, because a segment
+     * whose opening ledger is non-empty inherits engine state from the segments
+     * before it: see {@link S2SpecialStagePredecessorReplay}.
+     *
+     * @param movieDirectory directory holding {@code metadata.source_bk2}
+     * @param openingDynamicArtLedger transfers outstanding at segment entry
+     * @param manifest the run manifest, or null for a standalone trace
+     * @param segmentIndex this segment's manifest index, or -1 when standalone
+     */
+    record SegmentContext(
+            Path movieDirectory,
+            List<DynamicArtTransfer.Descriptor> openingDynamicArtLedger,
+            TraceRunManifest manifest,
+            int segmentIndex) {
+
+        SegmentContext(Path movieDirectory,
+                       List<DynamicArtTransfer.Descriptor> openingDynamicArtLedger) {
+            this(movieDirectory, openingDynamicArtLedger, null, -1);
+        }
+    }
+
+    static SegmentContext segmentContext(Path traceDir) throws IOException {
+        Path runRoot = traceDir.getParent();
+        Path manifestPath = runRoot == null
+                ? null : runRoot.resolve("run_manifest.json");
+        if (manifestPath == null || !Files.exists(manifestPath)) {
+            return new SegmentContext(traceDir, List.of());
+        }
+        TraceRunManifest manifest = TraceRunManifest.load(manifestPath);
+        String segmentDir = traceDir.getFileName().toString();
+        for (int index = 0; index < manifest.segments().size(); index++) {
+            TraceRunManifest.Segment segment = manifest.segments().get(index);
+            if (segmentDir.equals(segment.dir())) {
+                return new SegmentContext(
+                        runRoot, segment.dynamicArtInitialLedgerDescriptors(),
+                        manifest, index);
+            }
+        }
+        throw new IllegalStateException(
+                "No run_manifest.json segment named '" + segmentDir
+                        + "' in " + manifestPath);
+    }
+
     // ==================== Boot ====================
+
+    /**
+     * Boots the special stage, first replaying any run segments whose engine
+     * state this one inherits (see {@link S2SpecialStagePredecessorReplay}).
+     * The prefix runs after the ROM/module install and before the special-stage
+     * provider is created, so the dynamic-art lifecycle the prefix populated is
+     * the one the stage starts from.
+     */
+    static S2SpecialStageReplayHarness bootHarness(SpecialStageTraceData trace,
+                                                   SegmentContext context,
+                                                   File romFile) throws IOException {
+        S2SpecialStageReplayHarness harness =
+                bootHarness(trace, context.movieDirectory(), romFile, context);
+        return harness;
+    }
 
     static S2SpecialStageReplayHarness bootHarness(SpecialStageTraceData trace,
                                                    Path dir,
                                                    File romFile) throws IOException {
+        return bootHarness(trace, dir, romFile, null);
+    }
+
+    private static S2SpecialStageReplayHarness bootHarness(
+            SpecialStageTraceData trace,
+            Path dir,
+            File romFile,
+            SegmentContext context) throws IOException {
         // Headless graphics so the SS manager's pattern/renderer setup is safe
         // without a GL context.
         GraphicsManager.getInstance().resetState();
@@ -182,6 +286,12 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
         // (re)applied inside the harness ctor afterwards.
         TestEnvironment.configureRomFixture(rom);
         GraphicsManager.getInstance().initHeadless();
+
+        if (context != null && context.manifest() != null) {
+            S2SpecialStagePredecessorReplay.replayInheritedPrefix(
+                    context.movieDirectory(), context.manifest(),
+                    context.segmentIndex());
+        }
 
         int offset = trace.metadata().bk2FrameOffset();
         int ssIndex = specialStageIndex(trace);
@@ -199,6 +309,14 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
         Set<Integer> ringsToGoRefreshFrames = ringsToGoRefreshFrames(trace);
 
         List<FrameComparison> comparisons = new ArrayList<>();
+        // One replay owns one dynamic-art delivery-id origin.
+        DynamicArtSpecialStageComparator dynamicArt =
+                new DynamicArtSpecialStageComparator();
+        // Rebind recorder submission edges that spilled past a frame boundary
+        // (lag rows) back to the pass that produced them; the engine publishes
+        // each RunObjects pass atomically. See DynamicArtSpillNormalization.
+        Map<Integer, TraceEvent.DynamicArtTransferState> expectedDynamicArtRows =
+                normalizedDynamicArtRows(trace);
         boolean[] dynamicArtCompared = new boolean[trace.frameCount()];
         int firstEngineFinished = -1;
         SpecialStageRunObjectsPassBinder passBinder =
@@ -210,11 +328,12 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
                                 && frame == ssFinishedObserved.getAsInt()),
                         trace.metadata().bk2FrameOffset(),
                         harness.movieFrames());
-        int passPacingStart = trace.controlStateTransitions().stream()
-                .filter(SpecialStageTraceData.ControlStateTransition::started)
-                .mapToInt(SpecialStageTraceData.ControlStateTransition::frame)
-                .findFirst()
-                .orElse(Integer.MAX_VALUE);
+        int passPacingStart = passPacingStart(trace, Integer.MAX_VALUE);
+        Map<Integer, TraceEvent.StateSnapshot> preStartPassesBySampleFrame =
+                preStartPassesBySampleFrame(trace, passPacingStart);
+        int terminalPreStartSequence = terminalPreStartPassSequence(trace);
+        int entryFrame = specialStageEntryFrame(trace);
+        int stageStateVisibleFrame = stageStateVisibleFrame(trace, entryFrame);
 
         for (int f = 0; f < compareEnd; f++) {
             SpecialStageTraceFrame tf = trace.getFrame(f);
@@ -223,20 +342,36 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
                 if (tf.lag()) {
                     harness.stepLagRow();
                     addDynamicArtComparison(
-                            comparisons, trace, harness, f,
-                            new LinkedHashMap<>(), dynamicArtCompared);
+                            comparisons, trace, expectedDynamicArtRows, harness, f,
+                            new LinkedHashMap<>(), dynamicArtCompared, dynamicArt);
                     continue;
                 }
-                harness.stepFrame(f);
+                if (f >= entryFrame) {
+                    harness.stepFrame(f);
+                } else {
+                    // Observed before the ROM's special-stage entry ran: no
+                    // special-stage code executed on this V-int. See
+                    // specialStageEntryFrame.
+                    harness.stepIdleRow(false);
+                }
+                if (f < stageStateVisibleFrame) {
+                    // Special-stage RAM does not exist yet. See
+                    // stageStateVisibleFrame.
+                    addDynamicArtComparison(
+                            comparisons, trace, expectedDynamicArtRows, harness, f,
+                            new LinkedHashMap<>(), dynamicArtCompared, dynamicArt);
+                    continue;
+                }
             } else {
                 harness.stepPasses(
                         completedPasses,
-                        isTerminalPreStartPassFrame(trace, f),
-                        tf.lag());
+                        terminalPreStartSequence,
+                        tf.lag(),
+                        f);
                 if (tf.lag()) {
                     addDynamicArtComparison(
-                            comparisons, trace, harness, f,
-                            new LinkedHashMap<>(), dynamicArtCompared);
+                            comparisons, trace, expectedDynamicArtRows, harness, f,
+                            new LinkedHashMap<>(), dynamicArtCompared, dynamicArt);
                     continue;
                 }
             }
@@ -251,7 +386,7 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
                             .map(CompletedPass::snapshot)
                             .<List<TraceEvent>>map(List::of)
                             .orElseGet(List::of)
-                    : List.of();
+                    : preStartPassStartedOn(preStartPassesBySampleFrame, f);
             SpecialStageExpectedState expected =
                     SpecialStageExpectedState.from(tf, passEnd);
             addManagerFields(fields, expected, state, false,
@@ -261,8 +396,8 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
             addPlayerFields(fields, "tails", expected.tails(), state.tails(),
                     expected.hasRunObjectsEnd());
             addDynamicArtComparison(
-                    comparisons, trace, harness, f, fields,
-                    dynamicArtCompared);
+                    comparisons, trace, expectedDynamicArtRows, harness, f, fields,
+                    dynamicArtCompared, dynamicArt);
         }
 
         // Tier-1 finish transition: step the recorded finish frame so we can
@@ -280,12 +415,13 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
                     }
                 } else {
                     harness.stepPasses(
-                            completedPasses, false,
-                            trace.getFrame(sf).lag());
+                            completedPasses, terminalPreStartSequence,
+                            trace.getFrame(sf).lag(),
+                            sf);
                 }
                 addDynamicArtComparison(
-                        comparisons, trace, harness, sf,
-                        new LinkedHashMap<>(), dynamicArtCompared);
+                        comparisons, trace, expectedDynamicArtRows, harness, sf,
+                        new LinkedHashMap<>(), dynamicArtCompared, dynamicArt);
             }
             // The recorder labels finish with the last logical non-lag frame,
             // while publishing the finish-causing pass at the following raw lag
@@ -304,8 +440,8 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
             for (int frame = sf + 1; frame < observed; frame++) {
                 harness.stepIdleRow(trace.getFrame(frame).lag());
                 addDynamicArtComparison(
-                        comparisons, trace, harness, frame,
-                        new LinkedHashMap<>(), dynamicArtCompared);
+                        comparisons, trace, expectedDynamicArtRows, harness, frame,
+                        new LinkedHashMap<>(), dynamicArtCompared, dynamicArt);
             }
             List<CompletedPass> finishPasses = passBinder.passesForObservation(observed);
             if (finishPasses.size() != 1) {
@@ -315,8 +451,9 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
             }
             CompletedPass terminalPass = finishPasses.get(0);
             harness.stepPasses(
-                    List.of(terminalPass), false,
-                    trace.getFrame(observed).lag());
+                    List.of(terminalPass), terminalPreStartSequence,
+                    trace.getFrame(observed).lag(),
+                    observed);
             Sonic2SpecialStageComparisonState terminalState = harness.capture();
             if (!finishedBeforeTerminal && harness.isFinished()) {
                 finishTransitionActual = String.valueOf(sf);
@@ -337,37 +474,106 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
             Map<String, FieldComparison> terminalFields = new LinkedHashMap<>();
             addRingsToGoField(terminalFields, terminalExpected, terminalState);
             addDynamicArtComparison(
-                    comparisons, trace, harness, observed, terminalFields,
-                    dynamicArtCompared);
+                    comparisons, trace, expectedDynamicArtRows, harness, observed, terminalFields,
+                    dynamicArtCompared, dynamicArt);
         }
 
         if (trace.metadata().hasPerFrameDynamicArtTransferState()) {
+            int fadeRowsLeft = ssFinished.isPresent() ? PAL_FADE_TO_WHITE_FRAMES : 0;
             for (int frame = 0; frame < trace.frameCount(); frame++) {
                 if (dynamicArtCompared[frame]) {
                     continue;
                 }
-                harness.stepIdleRow(trace.getFrame(frame).lag());
+                PlcLifecyclePhase phase = PlcLifecyclePhase.SPECIAL_STAGE_RESULTS;
+                if (fadeRowsLeft > 0 && !trace.getFrame(frame).lag()) {
+                    phase = PlcLifecyclePhase.PALETTE_FADE;
+                    fadeRowsLeft--;
+                }
+                harness.stepIdleRow(trace.getFrame(frame).lag(), phase);
                 addDynamicArtComparison(
-                        comparisons, trace, harness, frame,
-                        new LinkedHashMap<>(), dynamicArtCompared);
+                        comparisons, trace, expectedDynamicArtRows, harness, frame,
+                        new LinkedHashMap<>(), dynamicArtCompared, dynamicArt);
             }
         }
         return new DivergenceReport(comparisons);
     }
 
+    /**
+     * Pre-start {@code RunObjects} passes indexed by the observation whose
+     * {@code Vint_S2SS} sampled their input.
+     *
+     * <p>The pre-start wait loop runs one {@code WaitForVint} and one
+     * {@code jsr (RunObjects).l} per iteration (docs/s2disasm/s2.asm:6674-6691),
+     * and the engine publishes that pass inside the same displayed frame. The
+     * observation's own atomic {@code run_objects_end} snapshot is therefore the
+     * expectation for its player/ring/Tails-control fields — the raw VBlank row
+     * is not, because it can bisect the pass's Obj09→Obj10 scan and hold one
+     * player's post-pass state beside the other's pre-pass state. That is the
+     * rule this comparator already applies once the recurring loop takes over;
+     * the pre-start half of the same loop gets it for the same reason.
+     */
+    private static Map<Integer, TraceEvent.StateSnapshot> preStartPassesBySampleFrame(
+            SpecialStageTraceData trace, int passPacingStart) {
+        Map<Integer, TraceEvent.StateSnapshot> bySample = new LinkedHashMap<>();
+        for (TraceEvent.StateSnapshot snapshot : trace.runObjectsEndSnapshots()) {
+            if (snapshot.frame() >= passPacingStart) {
+                continue;
+            }
+            if (numericTraceValue(requireField(snapshot, "pass_sequence")) == 0) {
+                // Sequence 0 is not a wait-loop iteration. The special-stage
+                // entry runs exactly one RunObjects before the fade
+                // (docs/s2disasm/s2.asm:6660-6672): after the SSObjectsManager
+                // duration loop's last WaitForVint it does
+                // Obj5A_CreateRingsToGoText, SS_ScrollBG, RunObjects,
+                // BuildSprites and RunPLC_RAM before Pal_FadeFromWhite. That
+                // whole span overruns its displayed frame, so the row that
+                // sampled its input still holds clean pre-pass state -- it is
+                // not a bisected row, and the engine's own startup pass
+                // publishes at the same boundary. Its results belong to the
+                // observation the binder already gives it.
+                continue;
+            }
+            Object sample = snapshot.fields().get("input_sample_frame");
+            if (sample == null) {
+                continue;
+            }
+            bySample.put(numericTraceValue(sample), snapshot);
+        }
+        return bySample;
+    }
+
+    private static List<TraceEvent> preStartPassStartedOn(
+            Map<Integer, TraceEvent.StateSnapshot> bySampleFrame, int frame) {
+        TraceEvent.StateSnapshot snapshot = bySampleFrame.get(frame);
+        return snapshot == null ? List.of() : List.of(snapshot);
+    }
+
+    /**
+     * Delegates to the shared owner so this lane and the complete-run chain's
+     * special-stage interior compare a segment identically however it was
+     * reached.
+     */
+    static Map<Integer, TraceEvent.DynamicArtTransferState> normalizedDynamicArtRows(
+            SpecialStageTraceData trace) {
+        return DynamicArtSpillNormalization.forSpecialStage(trace);
+    }
+
     private static void addDynamicArtComparison(
             List<FrameComparison> comparisons,
             SpecialStageTraceData trace,
+            Map<Integer, TraceEvent.DynamicArtTransferState> expectedDynamicArt,
             S2SpecialStageReplayHarness harness,
             int frame,
             Map<String, FieldComparison> fields,
-            boolean[] compared) {
+            boolean[] compared,
+            DynamicArtSpecialStageComparator dynamicArt) {
         if (trace.metadata().hasPerFrameDynamicArtTransferState()) {
             if (frame == trace.frameCount() - 1) {
                 harness.finishDynamicArtSegment();
             }
-            fields.putAll(new DynamicArtSpecialStageComparator().compare(
-                    trace.dynamicArtTransferStateForFrame(frame),
+            fields.putAll(dynamicArt.compare(
+                    expectedDynamicArt.getOrDefault(frame,
+                            trace.dynamicArtTransferStateForFrame(frame)),
                     harness.captureDynamicArt()).fields());
             compared[frame] = true;
         }
@@ -476,14 +682,152 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
     }
 
     /**
-     * The observation that first exposes {@code SpecialStage_Started} follows
-     * the terminal pre-start {@code RunObjects} pass which set it. Recorder
-     * pass identity begins with the next VInt sample, so replay must publish
-     * this one semantic boundary pass through the native startup path.
+     * Sequence of the terminal pre-start {@code RunObjects} pass, or -1 when
+     * the stream holds no pre-start pass at all.
+     *
+     * <p>{@code SpecialStage_MainLoop} is two loops, not one
+     * (docs/s2disasm/s2.asm:6674-6721). The pre-start loop runs its own
+     * {@code jsr (RunObjects).l} and only then tests
+     * {@code SpecialStage_Started} at the bottom (s2.asm:6691-6692), so the
+     * flag Obj5F set (s2.asm:9745) is not observed until after that pass
+     * returned. Every pass therefore records the flag as sampled by the
+     * {@code Vint_S2SS ReadJoypads} that preceded it, and the first pass whose
+     * sample already saw the flag set is by construction the first iteration of
+     * the recurring loop; the pass before it is the terminal pre-start pass
+     * that set it. Neither boundary is read off a frame index.
+     *
+     * <p>The engine models the same split: pre-start iterations execute their
+     * pass inline at their own V-int, while the terminal one is held pending so
+     * the recurring loop's binding has a slot
+     * ({@code Sonic2SpecialStageManager.completeTerminalPreStartPassWithoutVint}).
+     * Replay therefore consumes the recorded terminal pass through that
+     * boundary rather than binding recurring-loop input to it.
      */
-    static boolean isTerminalPreStartPassFrame(SpecialStageTraceData trace, int frame) {
-        return trace.controlStateTransitions().stream()
-                .anyMatch(transition -> transition.started() && transition.frame() == frame);
+    static int terminalPreStartPassSequence(SpecialStageTraceData trace) {
+        int terminal = -1;
+        for (TraceEvent.StateSnapshot snapshot : passesInSequenceOrder(trace)) {
+            if (startedAtInputSample(snapshot) != 0) {
+                break;
+            }
+            terminal = numericTraceValue(requireField(snapshot, "pass_sequence"));
+        }
+        return terminal;
+    }
+
+    /**
+     * The observation from which replay is paced by recorded object passes: the
+     * publication observation of the first recurring-loop pass. See
+     * {@link #terminalPreStartPassSequence} for why that pass is identified by
+     * its own {@code SpecialStage_Started} input sample.
+     *
+     * <p>A stream recorded before the pre-start hook existed carries no
+     * pre-start pass; there the first recorded pass is already the recurring
+     * loop's and this reduces to that pass's observation just the same.
+     */
+    static int passPacingStart(SpecialStageTraceData trace, int absent) {
+        for (TraceEvent.StateSnapshot snapshot : passesInSequenceOrder(trace)) {
+            if (startedAtInputSample(snapshot) != 0) {
+                return snapshot.frame();
+            }
+        }
+        return absent;
+    }
+
+    private static List<TraceEvent.StateSnapshot> passesInSequenceOrder(
+            SpecialStageTraceData trace) {
+        return trace.runObjectsEndSnapshots().stream()
+                .sorted(java.util.Comparator.comparingInt(snapshot ->
+                        numericTraceValue(requireField(snapshot, "pass_sequence"))))
+                .toList();
+    }
+
+    private static int startedAtInputSample(TraceEvent.StateSnapshot snapshot) {
+        return numericTraceValue(requireField(snapshot, "started_at_input_sample"));
+    }
+
+    private static Object requireField(TraceEvent.StateSnapshot snapshot, String name) {
+        Object value = snapshot.fields().get(name);
+        if (value == null) {
+            throw new IllegalStateException(
+                    "run_objects_end is missing " + name + " at frame " + snapshot.frame());
+        }
+        return value;
+    }
+
+    /**
+     * The first observation on which the ROM ran special-stage code.
+     *
+     * <p>The special-stage entry runs {@code Pal_FadeToWhite} and only then
+     * masks interrupts to set up the VDP, DMA-fill VRAM, clear the object and
+     * shared RAM, decompress the stage and run the entry PLC (s2.asm:6543-6625).
+     * That whole initialization span blocks, so the recorder reads it as one
+     * run of lag observations, and the executed V-ints immediately before it
+     * are the fade's -- exactly
+     * {@link Sonic2SpecialStageIntro#PRE_ROLL_FRAMES} of them, because
+     * {@code Pal_FadeToWhite} loads {@code d4=$15} and uses {@code dbf}
+     * (s2.asm:3568-3578).
+     *
+     * <p>Any observation earlier than that window belongs to the game mode the
+     * entry code was called from and executes no special-stage code, so replay
+     * must not tick the special-stage runtime for it. Whether such an
+     * observation is present is a property of where the capture begins, not of
+     * the ROM: a standalone capture opens on the frame the entry code was
+     * reached, while a run segment leaves that frame with the preceding
+     * segment.
+     */
+    static int specialStageEntryFrame(SpecialStageTraceData trace) {
+        int initializationStart = -1;
+        for (int f = 0; f < trace.frameCount(); f++) {
+            if (trace.getFrame(f).lag()) {
+                initializationStart = f;
+                break;
+            }
+        }
+        if (initializationStart < 0) {
+            throw new IllegalStateException(
+                    "special-stage trace has no blocking initialization observation");
+        }
+        int entryFrame =
+                initializationStart - Sonic2SpecialStageIntro.PRE_ROLL_FRAMES;
+        if (entryFrame < 0) {
+            throw new IllegalStateException(
+                    "special-stage trace opens inside Pal_FadeToWhite: blocking"
+                            + " initialization begins at " + initializationStart);
+        }
+        return entryFrame;
+    }
+
+    /**
+     * The first observation whose special-stage columns actually hold
+     * special-stage state.
+     *
+     * <p>The entry code masks interrupts before it clears {@code Object_RAM},
+     * {@code SS_Shared_RAM} and the sprite table and then loads the stage
+     * (s2.asm:6588-6625). Until that initialization completes, the recorder's
+     * special-stage addresses still hold whatever the previous game mode left
+     * there — a run segment captured out of a level opens with that level's
+     * Obj01 bytes sitting in the player slots. Those observations are stepped
+     * for their pacing, but comparing engine special-stage state against them
+     * compares against another mode's RAM.
+     *
+     * <p>The whole initialization runs with interrupts masked or blocking, so
+     * the recorder reads it as one run of lag observations: state becomes
+     * visible on the first executed V-int after it, which is the ROM's first
+     * {@code SSTrack_drawing_index} wait (s2.asm:6626-6631).
+     */
+    private static int stageStateVisibleFrame(SpecialStageTraceData trace, int entryFrame) {
+        int f = entryFrame;
+        while (f < trace.frameCount() && !trace.getFrame(f).lag()) {
+            f++;
+        }
+        while (f < trace.frameCount() && trace.getFrame(f).lag()) {
+            f++;
+        }
+        if (f >= trace.frameCount()) {
+            throw new IllegalStateException(
+                    "special-stage trace never leaves its initialization block");
+        }
+        return f;
     }
 
     /**
@@ -499,7 +843,19 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
         List<TriggerSample> triggerSamples = new ArrayList<>();
         List<Integer> checkRingsFlags = new ArrayList<>();
         List<Integer> finishObservedFrames = new ArrayList<>();
+        // SS_TriggerRingsToGo and SS_Check_Rings_flag both live in
+        // SS_Shared_RAM, which the entry code clears only after it masks
+        // interrupts. A sample taken before that reports the byte the previous
+        // game mode left behind rather than this stage's cell, so those
+        // observations read as the cleared value the ROM is about to write.
+        // See stageStateVisibleFrame.
+        int stageStateVisibleFrame =
+                stageStateVisibleFrame(trace, specialStageEntryFrame(trace));
         for (int frame = 0; frame < trace.frameCount(); frame++) {
+            if (frame < stageStateVisibleFrame) {
+                checkRingsFlags.add(0);
+                continue;
+            }
             checkRingsFlags.add(trace.getFrame(frame).checkRingsFlag());
 
             for (TraceEvent event : trace.getEventsForFrame(frame)) {
@@ -524,11 +880,20 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
             }
         }
 
+        List<PassSample> passSamples = new ArrayList<>();
+        for (TraceEvent.StateSnapshot snapshot : trace.runObjectsEndSnapshots()) {
+            Object rawCursor = snapshot.fields().get("completion_cursor_frame");
+            if (rawCursor == null) {
+                throw new IllegalStateException(
+                        "run_objects_end is missing completion_cursor_frame at frame "
+                                + snapshot.frame());
+            }
+            passSamples.add(new PassSample(
+                    snapshot.frame(), numericTraceValue(rawCursor)));
+        }
         return discoverRingsToGoRefreshFrames(
                 triggerSamples,
-                trace.runObjectsEndSnapshots().stream()
-                        .map(TraceEvent.StateSnapshot::frame)
-                        .toList(),
+                passSamples,
                 checkRingsFlags,
                 finishObservedFrames);
     }
@@ -536,9 +901,16 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
     record TriggerSample(int frame, int value) {
     }
 
+    /**
+     * A completed {@code run_objects_end} pass: the frame the row is published
+     * on, and the frame its object work actually completed against.
+     */
+    record PassSample(int frame, int completionCursorFrame) {
+    }
+
     static Set<Integer> discoverRingsToGoRefreshFrames(
             List<TriggerSample> triggerSamples,
-            List<Integer> completedPassFrames,
+            List<PassSample> completedPasses,
             List<Integer> checkRingsFlags,
             List<Integer> finishObservedFrames) {
         if (triggerSamples.isEmpty() || triggerSamples.get(0).value() != 0xFF) {
@@ -580,15 +952,21 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
 
         Set<Integer> refreshFrames = new LinkedHashSet<>();
         for (int gateFrame : triggerClearFrames) {
-            int refreshFrame = completedPassFrames.stream()
-                    .mapToInt(Integer::intValue)
-                    .filter(frame -> frame > gateFrame)
+            // Obj5A_RingsNeeded reads SS_TriggerRingsToGo during the object
+            // pass, so a pass that completed on the same frame the cleared
+            // trigger was first observed still ran with the trigger set and
+            // left SS_RingsToGoBCD at its stale value (s2.asm:71568-71574).
+            // Only a pass whose completion cursor is strictly past the
+            // observation recomputed the cell.
+            int refreshFrame = completedPasses.stream()
+                    .filter(pass -> pass.completionCursorFrame() > gateFrame)
+                    .mapToInt(PassSample::frame)
                     .min()
                     .orElseThrow(() -> new IllegalStateException(
                             "rings-to-go trigger clear at frame " + gateFrame
                                     + " has no following completed pass"));
-            long passCountAtObservation = completedPassFrames.stream()
-                    .filter(frame -> frame == refreshFrame)
+            long passCountAtObservation = completedPasses.stream()
+                    .filter(pass -> pass.frame() == refreshFrame)
                     .count();
             if (passCountAtObservation != 1) {
                 throw new IllegalStateException(

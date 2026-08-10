@@ -18,7 +18,7 @@ public final class FbzPlatformBlocksObjectInstance
     width = WIDTH[Math.min(frame, 3)];
     travel = (s.subtype() & 0xF) << 4;
   }
-  public void update(int f, PlayableEntity p) {
+  public void update(int vIntRunCount, PlayableEntity p) {
     if (travel != 0 && p != null) {
       int dy = (short)(p.getCentreY() - spawn.y());
       if (dy >= 0x20 && offset < travel)

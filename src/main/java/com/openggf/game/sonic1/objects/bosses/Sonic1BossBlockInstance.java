@@ -261,7 +261,7 @@ public class Sonic1BossBlockInstance extends AbstractObjectInstance
     // ========================================================================
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (blockState) {
             case STATE_SOLID -> { /* Solid collision handled by engine */ }

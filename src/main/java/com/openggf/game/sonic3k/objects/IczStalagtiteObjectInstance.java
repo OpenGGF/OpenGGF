@@ -99,14 +99,14 @@ public class IczStalagtiteObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (isDestroyed()) {
             return;
         }
 
         switch (phase) {
             case WAITING -> updateWaiting(player);
-            case SHAKING -> updateShaking(frameCounter);
+            case SHAKING -> updateShaking(vIntRunCount);
             case FALLING -> updateFalling();
             case LANDED -> {
                 // loc_8B228 returns to the solid idle body after impact.
@@ -121,8 +121,8 @@ public class IczStalagtiteObjectInstance extends AbstractObjectInstance
         }
     }
 
-    private void updateShaking(int frameCounter) {
-        int dx = ((frameCounter & 1) == 0) ? SHAKE_STEP : -SHAKE_STEP;
+    private void updateShaking(int vIntRunCount) {
+        int dx = ((vIntRunCount & 1) == 0) ? SHAKE_STEP : -SHAKE_STEP;
         motion.x += dx;
 
         // Obj_Wait decrements $2E and calls the callback only after it goes negative.
@@ -304,9 +304,9 @@ public class IczStalagtiteObjectInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             animateRaw();
-            super.update(frameCounter, player);
+            super.update(vIntRunCount, player);
         }
 
         private void animateRaw() {

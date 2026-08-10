@@ -25,7 +25,20 @@ class TestTracePlaybackProfile {
     }
 
     @Test
+    void sonic1ProfilesSevenNonAdvancingRowsAtItsStageResultsEntry() {
+        var profile = new Sonic1GameModule().getTracePlaybackProfile();
+        assertTrue(profile.alignsStageResultsPresentationVblank());
+        // SS_Finish's disable_ints ... ClearScreen / NemDec Nem_TitleCard /
+        // Hud_Base ... enable_ints block (docs/s1disasm/sonic.asm:3369-3383).
+        assertEquals(7, profile.stageResultsEntryNonAdvancingMovieRows());
+    }
+
+    @Test
     void otherGamesLeaveMovieClockAlignmentDisabledUntilMeasured() {
+        assertFalse(new Sonic2GameModule().getTracePlaybackProfile()
+                .alignsStageResultsPresentationVblank());
+        assertFalse(new Sonic3kGameModule().getTracePlaybackProfile()
+                .alignsStageResultsPresentationVblank());
         assertFalse(new Sonic2GameModule().getTracePlaybackProfile().alignsInterLevelVblank());
         assertFalse(new Sonic3kGameModule().getTracePlaybackProfile().alignsInterLevelVblank());
         assertFalse(new Sonic2GameModule().getTracePlaybackProfile()

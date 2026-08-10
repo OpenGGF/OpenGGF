@@ -37,7 +37,7 @@ public final class CnzEndBossRobotnikFlameChild extends AbstractObjectInstance
     @Override public boolean isPersistent() { return true; }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (ship.isDestroyed() || !ship.isEscaping()) {
             ObjectLifetimeOps.expireDynamic(this);
             return;
@@ -45,7 +45,7 @@ public final class CnzEndBossRobotnikFlameChild extends AbstractObjectInstance
         int offset = ship.isFacingRight() ? 0x1E : -0x1E;
         centreX = ship.getCentreX() + offset;
         centreY = ship.getCentreY();
-        visible = (frameCounter & 1) == 0;
+        visible = (vIntRunCount & 1) == 0;
         updateDynamicSpawn(centreX, centreY);
     }
 

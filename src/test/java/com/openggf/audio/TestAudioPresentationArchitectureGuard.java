@@ -264,6 +264,7 @@ class TestAudioPresentationArchitectureGuard {
                     "beginReversePresentation",
                     "endReversePresentation",
                     "setReversePlaybackRate",
+                    "setForwardPlaybackRate",
                     "setRewindHistoryArmed")) {
                 assertFalse(source.contains(forbidden),
                         backendFile + " still owns " + forbidden);

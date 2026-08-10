@@ -64,7 +64,7 @@ final class FbzMinibossAnimalChild extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (!active) {
             waitDelay = (short) (waitDelay - 1);
             if (waitDelay >= 0) {
@@ -91,7 +91,7 @@ final class FbzMinibossAnimalChild extends AbstractObjectInstance
             yVelocity = bounceYVelocity;
         }
 
-        mappingFrame = (frameCounter & 8) == 0 ? 1 : 0;
+        mappingFrame = (vIntRunCount & 8) == 0 ? 1 : 0;
         cullByX();
     }
 

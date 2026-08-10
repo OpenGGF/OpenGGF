@@ -89,6 +89,35 @@ public interface TitleCardProvider {
     }
 
     /**
+     * Hands the title card off to its gameplay-phase object lifetime when the
+     * locked presentation itself was omitted.
+     *
+     * <p>The native locked title-card loop exits as soon as the zone-name piece
+     * has reached its target and the pattern load cue is empty, but the title
+     * card <em>objects</em> survive that exit and keep running on ordinary
+     * gameplay frames: they idle for {@code anim_frame_duration} frames, then
+     * slide back out and load the standard-water plus per-zone animal art on
+     * the frame they leave. Omitting the presentation must not skip that tail,
+     * because it is where the native game reclaims the VRAM the card occupied.
+     *
+     * <p>docs/s2disasm/s2.asm:4914-4925 (Level_TtlCard exit condition),
+     * docs/s2disasm/s2.asm:5066-5080 (routine $16 + $2D handed to the pieces
+     * immediately before the main level loop),
+     * docs/s2disasm/s2.asm:27605-27637 (Obj34_WaitAndGoAway →
+     * Obj34_LoadStandardWaterAndAnimalArt).
+     *
+     * <p>Games whose omitted-presentation art boundary is already reached
+     * eagerly leave this a no-op.
+     *
+     * @param zoneIndex Zone index the card would have shown (the art the tail
+     *                  loads is per-zone)
+     * @param actIndex  Act index the card would have shown
+     */
+    default void beginOmittedPresentationExitTail(int zoneIndex, int actIndex) {
+        // No-op unless the game models a gameplay-phase title-card exit tail.
+    }
+
+    /**
      * Initializes the title card for a bonus stage entry.
      * S3K shows "BONUS STAGE" text; S1/S2 have no bonus stages so this is a no-op.
      */

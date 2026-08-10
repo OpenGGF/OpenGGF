@@ -75,7 +75,7 @@ public class AizEndBossDebrisChild extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         // ROM: MoveSprite — apply 8:8 fixed-point velocity then add gravity
         int xPos24 = (posX << 8) | (xSub & 0xFF);
         xPos24 += xVel;

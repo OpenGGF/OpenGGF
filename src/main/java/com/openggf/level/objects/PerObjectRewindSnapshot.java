@@ -406,7 +406,7 @@ public record PerObjectRewindSnapshot(
             // Special states / hazards
             boolean springing, int springingFrames,
             boolean dead, boolean drowningDeath, int drownPreDeathTimer,
-            boolean hurt, int deathCountdown,
+            boolean hurt, int deathCountdown, boolean deathRestartRoutineActive,
             int invulnerableFrames, boolean suppressNextInvulnerabilityDecrement,
             boolean invulnerabilityDisplayTimerDecrementedThisFrame, int invincibleFrames,
             // Player abilities
@@ -433,7 +433,7 @@ public record PerObjectRewindSnapshot(
             int objectControlReleasedFrame,
             boolean suppressAirCollision, boolean suppressGroundWallCollision, boolean forceFloorCheck,
             int suppressedObjectMoveAndFallAxes,
-            boolean hidden,
+            boolean hidden, boolean nativeSlotPresent,
             boolean renderFlagOnScreen, boolean renderFlagOnScreenValid,
             boolean renderHFlip, boolean renderVFlip,
             // MGZ-specific

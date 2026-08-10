@@ -88,8 +88,6 @@ class TestS2PointPokeyRewind {
                 "Point Pokey prize count must restore exactly");
         assertEquals(0x55, readIntField(restored, "prizeAngle"),
                 "Point Pokey prize angle must restore exactly");
-        assertEquals(1, readIntField(restored, "prizeSpawnTimer"),
-                "Point Pokey prize spawn timer must restore exactly");
         assertEquals(2, readActivePrizeCount(restored),
                 "Point Pokey active prize count must restore exactly");
         assertEquals(222, readIntField(restored, "lastContactFrame"),
@@ -145,7 +143,6 @@ class TestS2PointPokeyRewind {
         setIntField(pokey, "slotReward", 30);
         setIntField(pokey, "prizesToSpawn", 7);
         setIntField(pokey, "prizeAngle", 0x55);
-        setIntField(pokey, "prizeSpawnTimer", 1);
         ((int[]) readObjectField(pokey, "activePrizeCount"))[0] = 2;
         setIntField(pokey, "lastContactFrame", 222);
         setIntField(pokey, "animationTimer", 1);

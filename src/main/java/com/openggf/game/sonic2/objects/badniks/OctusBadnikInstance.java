@@ -94,7 +94,7 @@ public class OctusBadnikInstance extends AbstractBadnikInstance implements Rewin
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         resolveInitialFacing(player);
         switch (state) {
@@ -120,7 +120,7 @@ public class OctusBadnikInstance extends AbstractBadnikInstance implements Rewin
     }
 
     @Override
-    protected void updateAnimation(int frameCounter) {
+    protected void updateAnimation(int vIntRunCount) {
         animationState.update();
         animFrame = animationState.getMappingFrame();
     }

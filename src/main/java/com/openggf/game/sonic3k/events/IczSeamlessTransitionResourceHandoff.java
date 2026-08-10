@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.events;
 
+import com.openggf.game.RuntimeArtAdmissionLease;
+import com.openggf.game.RuntimeArtAdmissionOwnerKind;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.resources.S3kKosDecompressionQueue;
 import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
@@ -20,6 +22,7 @@ final class IczSeamlessTransitionResourceHandoff
     private final HardwareWorkHandle artHandle;
     private final Sonic3kLevelEventManager eventManager;
     private final DeferredLevelResourceManifest deferredResources;
+    private final RuntimeArtAdmissionLease admissionLease;
 
     IczSeamlessTransitionResourceHandoff(
             S3kKosDecompressionQueue directQueue,
@@ -28,12 +31,25 @@ final class IczSeamlessTransitionResourceHandoff
             S3kKosModuleQueue artQueue,
             HardwareWorkHandle artHandle,
             Sonic3kLevelEventManager eventManager) {
+        this(directQueue, chunkHandle, blockHandle, artQueue, artHandle,
+                eventManager, null);
+    }
+
+    private IczSeamlessTransitionResourceHandoff(
+            S3kKosDecompressionQueue directQueue,
+            HardwareWorkHandle chunkHandle,
+            HardwareWorkHandle blockHandle,
+            S3kKosModuleQueue artQueue,
+            HardwareWorkHandle artHandle,
+            Sonic3kLevelEventManager eventManager,
+            RuntimeArtAdmissionLease admissionLease) {
         this.directQueue = directQueue;
         this.chunkHandle = chunkHandle;
         this.blockHandle = blockHandle;
         this.artQueue = artQueue;
         this.artHandle = artHandle;
         this.eventManager = eventManager;
+        this.admissionLease = admissionLease;
         Sonic3kDeferredLevelResourceProfile profile =
                 Sonic3kDeferredLevelResourceProfile.forLevelLoadBlock(
                         ICZ2_LEVEL_LOAD_BLOCK_INDEX);
@@ -53,6 +69,24 @@ final class IczSeamlessTransitionResourceHandoff
     }
 
     @Override
+    public SeamlessTransitionResourceHandoff withAdmissionLease(
+            RuntimeArtAdmissionLease lease) {
+        if (admissionLease != null) {
+            throw new IllegalStateException(
+                    "ICZ seamless handoff already owns an admission lease");
+        }
+        if (lease == null
+                || lease.ownerKind()
+                        != RuntimeArtAdmissionOwnerKind.RESOURCE_HANDOFF_OWNER) {
+            throw new IllegalArgumentException(
+                    "ICZ seamless handoff requires a resource-owner lease");
+        }
+        return new IczSeamlessTransitionResourceHandoff(
+                directQueue, chunkHandle, blockHandle,
+                artQueue, artHandle, eventManager, lease);
+    }
+
+    @Override
     public void transferAfterTargetInit() {
         Sonic3kICZEvents target = eventManager.getIczEvents();
         if (target == null) {
@@ -64,6 +98,7 @@ final class IczSeamlessTransitionResourceHandoff
                 chunkHandle,
                 blockHandle,
                 artQueue,
-                artHandle);
+                artHandle,
+                admissionLease);
     }
 }

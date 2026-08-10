@@ -3,6 +3,7 @@ package com.openggf.tests;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.IczSwingingPlatformObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.graphics.GLCommand;
@@ -34,12 +35,12 @@ class TestS3kIczSwingingPlatformObject {
     // resolves the S3KL zone set (not a leaked SKL zone). Parallel-suite flake fix.
     @BeforeEach
     void clearLeakedGameplaySession() {
-        com.openggf.game.session.SessionManager.clear();
+        TestEnvironment.resetAll();
     }
 
     @Test
     void registryCreatesIczSwingingPlatformInstance() {
-        ObjectInstance instance = new Sonic3kObjectRegistry().create(
+        ObjectInstance instance = new IczRegistry().create(
                 new ObjectSpawn(0x1200, 0x0700, Sonic3kObjectIds.ICZ_SWINGING_PLATFORM, 0, 0, false, 0));
 
         assertInstanceOf(IczSwingingPlatformObjectInstance.class, instance);
@@ -217,6 +218,18 @@ class TestS3kIczSwingingPlatformObject {
         protected PatternSpriteRenderer getRenderer(String artKey) {
             assertEquals(Sonic3kObjectArtKeys.ICZ_PLATFORMS, artKey);
             return renderer;
+        }
+    }
+
+    private static final class IczRegistry extends Sonic3kObjectRegistry {
+        @Override
+        protected com.openggf.level.Level currentLevel() {
+            return null;
+        }
+
+        @Override
+        protected int currentRomZoneId() {
+            return Sonic3kZoneIds.ZONE_ICZ;
         }
     }
 }

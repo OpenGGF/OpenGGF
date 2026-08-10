@@ -120,7 +120,8 @@ class TestSonic3kSpecialStageManagerSnapshot {
         assertFalse(gameState.hasEmerald(2));
         assertTrue(gameState.hasSuperEmerald(1));
         assertFalse(gameState.hasSuperEmerald(3));
-        assertEquals(1, gameState.getEmeraldCount());
+        assertEquals(2, gameState.getEmeraldCount(),
+                "the durable count includes the restored chaos and super emerald identities");
     }
 
     @Test

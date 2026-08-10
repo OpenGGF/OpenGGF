@@ -652,22 +652,52 @@ public interface SolidObjectProvider {
     /**
      * Whether the right edge of the full solid X window is inclusive.
      * <p>
-     * Most engine objects keep the established exclusive bound. S3K horizontal
-     * springs use {@code SolidObjectFull2_1P}, whose initial X gate rejects with
-     * {@code bhi}; that makes {@code relX == width * 2} a valid contact.
+     * Inclusivity is a property of the ROM routine family, not the object.
+     * Every full-solid X gate rejects with {@code bhi}, making
+     * {@code relX == width * 2} a valid zero-distance side contact: S1
+     * {@code SolidObject} ({@code _incObj/sub SolidObject.asm:122-123,167-168}),
+     * S2 {@code SolidObject_cont} ({@code s2.asm:35344+}) and
+     * {@code SlopedSolid_cont} ({@code s2.asm:35263-35271}), S3K
+     * {@code SolidObject_cont} ({@code sonic3k.asm:41393-41399}). Top-solid
+     * platform gates instead reject with {@code bhs}/{@code blo} — exclusive:
+     * S1 {@code _incObj/sub PlatformObject & SlopeObject.asm:34-35}, S2
+     * {@code PlatformObject_cont} ({@code s2.asm:35960}), S3K
+     * {@code SolidObjectTop_1P} ({@code sonic3k.asm:41808}) and
+     * {@code loc_1E42E} ({@code sonic3k.asm:41995-41996}).
      */
     default boolean usesInclusiveRightEdge() {
-        return false;
+        return !isTopSolidOnly();
     }
 
     /**
-     * Half-width of the standable top surface used by landing checks.
+     * Half-width of the standable top surface used by landing checks — the
+     * engine's {@code width_pixels(a0)} equivalent, consumed directly by the
+     * landing X gate.
      * <p>
-     * Defaults to the full collision half-width. Override for objects whose
-     * side/body collision is intentionally wider than their top landing area.
+     * Like {@link #usesInclusiveRightEdge()}, the default is a property of the
+     * ROM routine family, not the object. The full-solid landing clamp
+     * re-reads the object's own width byte rather than the caller's collision
+     * {@code d1}: S1 {@code Solid_Landed} re-reads {@code obActWid}
+     * ({@code _incObj/sub SolidObject.asm:318-336}), S2
+     * {@code SolidObject_Landed} re-reads {@code width_pixels(a0)}
+     * ({@code s2.asm:35588+}), S3K {@code Solid_Landed} / {@code loc_1E154}
+     * re-reads {@code width_pixels(a0)} ({@code sonic3k.asm:41611-41621}).
+     * Because nearly every full-solid caller passes
+     * {@code d1 = width_pixels + $B}, the default reconstructs the width byte
+     * as {@code collisionHalfWidth - $B}. Top-solid platform routines instead
+     * land on the caller's {@code d1} directly — S1 {@code PlatformObject}
+     * passes {@code obActWid} unpadded, S2 {@code PlatformObject_cont}
+     * ({@code s2.asm:35960}) and S3K {@code SolidObjectTop_1P}
+     * ({@code sonic3k.asm:41798-41825}) use {@code d1} as-is — so the
+     * top-solid family default is the collision half-width itself.
+     * <p>
+     * Override with the disassembly-backed {@code width_pixels} when the
+     * caller's {@code d1} is not {@code width_pixels + $B} (e.g. the MHZ1
+     * cutscene button passes {@code d1 = $1B} while its ObjDat width is
+     * {@code $80}); the returned value is used verbatim, narrower or wider.
      */
     default int getTopLandingHalfWidth(PlayableEntity player, int collisionHalfWidth) {
-        return collisionHalfWidth;
+        return isTopSolidOnly() ? collisionHalfWidth : Math.max(0, collisionHalfWidth - 0x0B);
     }
 
     /**
@@ -676,9 +706,15 @@ public interface SolidObjectProvider {
      * <p>
      * Most solid helpers pass {@code d1 = obActWid + $B} into the generic solid
      * routines, so the landing check must narrow back down to {@code obActWid}.
-     * Platform-style helpers such as Sonic 1's {@code PlatformObject} instead pass
-     * {@code d1 = obActWid} directly, so the collision half-width is already the
-     * correct landing width and should not be narrowed again.
+     * Callers whose {@code d1} already equals the object's own width byte need
+     * no narrowing: top-solid platform helpers (S1 {@code PlatformObject}, S2
+     * {@code PlatformObject_cont}, S3K {@code SolidObjectTop_1P}) — now covered
+     * by {@link #getTopLandingHalfWidth}'s family default — and full-solid
+     * callers that skip the {@code +$B} idiom (e.g. S2 Obj70's
+     * {@code d1 = width_pixels = $10}, s2.asm:55111, 35588-35620). This flag
+     * takes precedence over {@link #getTopLandingHalfWidth} in the landing
+     * gate; existing top-solid setters are redundant with the family default
+     * and retained as documentation.
      */
     default boolean usesCollisionHalfWidthForTopLanding() {
         return false;

@@ -25,7 +25,7 @@ public final class FbzRotatingPlatformObjectInstance extends AbstractObjectInsta
     private int angle,x,y;
     public FbzRotatingPlatformObjectInstance(ObjectSpawn spawn){this(spawn,definitions(spawn)[0],isSpecial(spawn,0),false,null);}
     private FbzRotatingPlatformObjectInstance(ObjectSpawn spawn,int radius,boolean special,boolean child,FbzRotatingPlatformObjectInstance parent){super(spawn,"FBZRotatingPlatform");anchorX=x=spawn.x();anchorY=y=spawn.y();this.radius=radius;this.special=special;this.child=child;this.parent=parent;this.familySlot=parent==null?-1:parent.familySlot;}
-    @Override public void update(int frameCounter,PlayableEntity player){
+    @Override public void update(int vIntRunCount,PlayableEntity player){
         if(child&&parent!=null&&parent.isDestroyed()){ObjectLifetimeOps.expireDynamic(this);return;}
         if(!child&&!childrenSpawned){childrenSpawned=true;if(familySlot<0)familySlot=getSlotIndex();int[] rr=definitions(spawn);int member=1;for(int attempt=1;attempt<rr.length;attempt++){final int j=member;FbzRotatingPlatformObjectInstance made=spawnChild(()->new FbzRotatingPlatformObjectInstance(spawn,rr[j],isSpecial(spawn,j),true,this));if(!made.isDestroyed())member++;}}
         x=positionX(anchorX,radius,angle);y=positionY(anchorY,radius,angle);angle=(angle+angleStep())&255;updateDynamicSpawn(x,y);if(!isOnScreen(0x380))setDestroyedByOffscreen();

@@ -187,7 +187,7 @@ public class HPropellerObjectInstance extends AbstractObjectInstance implements 
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         // Only check players in WFZ mode (routine 2 = ObjB5_Main)
         // ROM order: player push check THEN animation update
         if (routineMode == ROUTINE_WFZ_MAIN) {

@@ -324,7 +324,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
     }
 
     @Override
-    protected void updateBossLogic(int frameCounter, PlayableEntity player) {
+    protected void updateBossLogic(int vIntRunCount, PlayableEntity player) {
         resetTraceFrameFlags();
         Sonic3kCNZEvents cnz = getCnzEvents();
         if (cnz != null) {
@@ -1494,9 +1494,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
             case ROUTINE_LOWER2 -> {
                 // ROM: Lower2 has no Obj_Wait tail (subq.b $43 directly in
                 // the body). Clear any stale wait state so it can't fire a
-                // stray callback during the per-frame y++/$43 dance. Tests
-                // that force Lower2 must follow up with
-                // setLower2CounterForTest() to seed the $43 value.
+                // stray callback during the per-frame y++/$43 dance.
                 waitTimer = -1;
                 waitCallback = WaitCallback.NONE;
             }
@@ -1582,21 +1580,6 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
         state.routine = ROUTINE_LOWER2;
         lower2Counter = frames;
         lower2PreviousRoutine = restoreRoutine;
-    }
-
-    /**
-     * @deprecated Use {@link #armLower2CounterForTest(int, int)} — the
-     *     previous-routine inference is counterintuitive once the test
-     *     has already forced the routine to {@link #ROUTINE_LOWER2}.
-     *     This shim preserves the historical MOVE_DUP restore target
-     *     so existing callers keep passing. Marked {@code forRemoval}
-     *     so the next test-cleanup pass can drop the shim once the
-     *     remaining caller in {@code TestCnzMinibossDefeatPhase}
-     *     migrates to the explicit two-arg form.
-     */
-    @Deprecated(forRemoval = true)
-    void setLower2CounterForTest(int frames) {
-        armLower2CounterForTest(frames, ROUTINE_MOVE_DUP);
     }
 
     @Override

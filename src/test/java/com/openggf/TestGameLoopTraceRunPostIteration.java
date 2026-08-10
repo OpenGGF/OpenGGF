@@ -35,6 +35,68 @@ class TestGameLoopTraceRunPostIteration {
     }
 
     @Test
+    void runObservationWrapsEveryHostStepInsteadOfGameplayOnlyTail() throws Exception {
+        String source = Files.readString(
+                Path.of("src/main/java/com/openggf/GameLoop.java"));
+        int publicStep = source.indexOf("public void step()");
+        int step = source.indexOf("private void stepInternal()", publicStep);
+        int body = source.indexOf("private void stepInternalBody()", step);
+        String wrapper = source.substring(publicStep, step);
+        String bodySource = source.substring(body,
+                source.indexOf("public boolean ownsGameplayFadeLifecycle()", body));
+
+        assertTrue(wrapper.contains(
+                "LevelIterationAdmissionController.runTraceObservedStep("),
+                "all-mode run observation must execute from the outer step wrapper");
+        assertFalse(bodySource.contains(
+                "LevelIterationAdmissionController.driveTraceRunSession("),
+                "early-returning modes must not rely on the gameplay-only tail");
+    }
+
+    @Test
+    void runEscapeIsNotRestrictedToLevelMode() throws Exception {
+        String source = Files.readString(Path.of(
+                "src/main/java/com/openggf/LevelIterationAdmissionController.java"));
+        assertTrue(source.contains("mode == GameMode.LEVEL || session.isRunSession()"),
+                "an active run must own Escape while crossing non-level modes");
+    }
+
+    @Test
+    void destinationTimingHandoffPrecedesDynamicArtAndComparatorOwners()
+            throws Exception {
+        String source = Files.readString(
+                Path.of("src/main/java/com/openggf/TraceSessionLauncher.java"));
+        int method = source.indexOf(
+                "private void applyRunDestinationAdmission(");
+        int end = source.indexOf(
+                "private void installRunComparator(", method);
+        String admission = source.substring(method, end);
+
+        int timing = admission.indexOf("runHardwareTiming.handoffToSegment(");
+        int dynamicArt = admission.indexOf("runDynamicArtSegments.beginSegment()");
+        int comparator = admission.indexOf("installRunComparator(");
+        assertTrue(timing >= 0 && dynamicArt > timing && comparator > timing,
+                "source timing verification/handoff must complete before "
+                        + "destination dynamic-art and comparator owners open");
+    }
+
+    @Test
+    void titleCardReleaseAdmitsRunBeforeLevelFallThroughInput() throws Exception {
+        String source = Files.readString(
+                Path.of("src/main/java/com/openggf/GameLoop.java"));
+        int release = source.indexOf(
+                "if (currentGameMode == GameMode.LEVEL) {",
+                source.indexOf("private void exitTitleCard()"));
+        int admission = source.indexOf(
+                "TraceSessionLauncher.admitRunDestinationBeforeProductionIfActive(",
+                release);
+        int sync = source.indexOf("syncPlaybackInputBridge();", admission);
+        assertTrue(release >= 0 && admission > release && sync > admission,
+                "title-card release must admit the destination before its "
+                        + "same-step playback/input fall-through");
+    }
+
+    @Test
     void diagnosticsServiceExposesNoRegistrationOrCapableReference() {
         assertTrue(Arrays.stream(
                         DynamicArtDiagnosticsProvider.class
@@ -48,7 +110,7 @@ class TestGameLoopTraceRunPostIteration {
                         DynamicArtLifecycleService.class.getDeclaredFields())
                 .anyMatch(field -> field.getType().getName()
                         .startsWith("com.openggf.trace")));
-        assertEquals(2, DynamicArtDiagnosticsProvider.class
+        assertEquals(3, DynamicArtDiagnosticsProvider.class
                 .getDeclaredMethods().length);
     }
 }

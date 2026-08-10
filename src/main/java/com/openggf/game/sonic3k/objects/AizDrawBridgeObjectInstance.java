@@ -122,7 +122,31 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean isPersistent() {
-        return !isDestroyed();
+        // Normal/wait routines reach AIZDrawBridge_Solid's range tail, but
+        // loc_2B452 only counts down then deletes (sonic3k.asm:59769-59791).
+        return collapseStarted && !isDestroyed();
+    }
+
+    @Override
+    public boolean checksOutOfRangeAfterRoutine() {
+        // AIZDrawBridge_WaitCollapseTrigger consumes _unkFAA9 before the
+        // normal Solid/range tail. If collapse begins this dispatch, the new
+        // loc_2B452 operation must already suppress that tail.
+        return true;
+    }
+
+    @Override
+    public boolean usesCustomOutOfRangeCheck() {
+        return true;
+    }
+
+    @Override
+    public boolean isCustomOutOfRange(int cameraX) {
+        // $30(a0) keeps the pivot x_pos while the displayed bridge moves.
+        // The ROM compares it with Camera_X_pos_coarse_back at fixed $280.
+        int coarseBack = (cameraX - 0x80) & 0xFF80;
+        int distance = ((pivotX & 0xFF80) - coarseBack) & 0xFFFF;
+        return distance > 0x280;
     }
 
     @Override
@@ -191,7 +215,7 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (!cutsceneOverride && Aiz2BossEndSequenceState.isCutsceneOverrideObjectsActive()) {
             ObjectLifetimeOps.deleteNoRespawn(this);
             return;
@@ -348,7 +372,7 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (delay > 0) {
                 delay--;
                 return;

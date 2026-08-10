@@ -16,7 +16,7 @@ public final class FbzPistonObjectInstance extends AbstractObjectInstance
     travel = s.subtype() << 3;
     cull = (travel & 0xFF80) + 0x200;
   }
-  public void update(int f, PlayableEntity p) {
+  public void update(int vIntRunCount, PlayableEntity p) {
     displacement += retracting ? -2 : 2;
     if (displacement >= travel) {
       displacement = travel;

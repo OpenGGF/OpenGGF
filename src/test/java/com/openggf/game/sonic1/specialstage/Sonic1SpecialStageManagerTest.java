@@ -1,6 +1,7 @@
 package com.openggf.game.sonic1.specialstage;
 
 import com.openggf.control.InputActionMasks;
+import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
 import com.openggf.graphics.WaterShaderProgram;
 import com.openggf.physics.TrigLookupTable;
 import org.junit.jupiter.api.AfterEach;
@@ -107,6 +108,19 @@ public class Sonic1SpecialStageManagerTest {
     }
 
     @Test
+    public void finishLoopTimerStartsOnTheFollowingVblank() {
+        int timer = Sonic1SpecialStageManager.advanceFinishLoopTimer(60, true);
+        assertEquals(60, timer,
+                "SS_Finish sets v_generictimer after the threshold row's VBlank");
+        for (int i = 0; i < 59; i++) {
+            timer = Sonic1SpecialStageManager.advanceFinishLoopTimer(timer, false);
+        }
+        assertEquals(1, timer);
+        assertEquals(0, Sonic1SpecialStageManager.advanceFinishLoopTimer(
+                timer, false));
+    }
+
+    @Test
     public void testBackdropColorUsesResolvedSpecialPalette() throws Exception {
         manager.initialize(0);
         Palette.Color backdrop = manager.getBackdropColor();
@@ -130,6 +144,38 @@ public class Sonic1SpecialStageManagerTest {
         }
 
         assertTrue(seenFrames.size() > 1, "Sonic special-stage roll animation should advance through multiple frames");
+    }
+
+    @Test
+    public void testRollSpeedScriptSwitchPreservesSpecialAnimationPosition()
+            throws Exception {
+        manager.initialize(0);
+        Field inertia = field("sonicInertia");
+        Field animation = field("sonicAnimId");
+        Field frameIndex = field("sonicAnimFrameIndex");
+        Field frameTimer = field("sonicAnimFrameTimer");
+        Field spriteFrame = field("sonicSpriteFrame");
+        Method updateAnimation = Sonic1SpecialStageManager.class
+                .getDeclaredMethod("updateSonicAnimation");
+        updateAnimation.setAccessible(true);
+
+        inertia.setInt(manager, 0x600);
+        animation.setInt(manager, Sonic1AnimationIds.ROLL.id());
+        frameIndex.setInt(manager, 1);
+        frameTimer.setInt(manager, 0);
+
+        updateAnimation.invoke(manager);
+
+        assertEquals(Sonic1AnimationIds.ROLL2.id(), animation.getInt(manager));
+        assertEquals(0x2F, spriteFrame.getInt(manager),
+                "Roll2 must continue at the shared second special-animation position");
+        assertEquals(2, frameIndex.getInt(manager));
+    }
+
+    private static Field field(String name) throws NoSuchFieldException {
+        Field field = Sonic1SpecialStageManager.class.getDeclaredField(name);
+        field.setAccessible(true);
+        return field;
     }
 
     @Test
@@ -301,6 +347,81 @@ public class Sonic1SpecialStageManagerTest {
         assertEquals(0x2E, layout[layoutIndex] & 0xFF, "After one full glass animation, block should advance by one hit state");
     }
 
+    /**
+     * {@code SonicSS_ChkUP}/{@code SonicSS_ChkDOWN} skip the block rewrite with
+     * the same branch that skips the speed change (docs/s1disasm/_incObj/09
+     * Sonic in Special Stage.asm:853-862, 888-897), so a block that could not
+     * act -- because the stage is already at that speed -- stays what it was.
+     * Rewriting it regardless left the layout one toggle out of step for the
+     * rest of the stage, which is invisible until a later crossing of the SAME
+     * cell takes the other branch.
+     */
+    @Test
+    public void testUpDownBlockOnlyFlipsWhenItActuallyChangesRotation() throws Exception {
+        manager.initialize(0);
+
+        Field layoutField = Sonic1SpecialStageManager.class.getDeclaredField("layout");
+        Field blockIdField = Sonic1SpecialStageManager.class.getDeclaredField("lastCollisionBlockId");
+        Field rowField = Sonic1SpecialStageManager.class.getDeclaredField("lastCollisionRow");
+        Field colField = Sonic1SpecialStageManager.class.getDeclaredField("lastCollisionCol");
+        Field rotateField = Sonic1SpecialStageManager.class.getDeclaredField("ssRotate");
+        Field cooldownField = Sonic1SpecialStageManager.class.getDeclaredField("upDownCooldown");
+        Method processItemInteraction =
+                Sonic1SpecialStageManager.class.getDeclaredMethod("processItemInteraction");
+        for (Field f : new Field[]{layoutField, blockIdField, rowField, colField,
+                rotateField, cooldownField}) {
+            f.setAccessible(true);
+        }
+        processItemInteraction.setAccessible(true);
+
+        byte[] layout = (byte[]) layoutField.get(manager);
+        int index = SS_LAYOUT_STRIDE + 1;
+        rowField.setInt(manager, 1);
+        colField.setInt(manager, 1);
+
+        // UP block while the stage is already at fast speed: no speed-up, and
+        // therefore no rewrite either.
+        layout[index] = 0x29;
+        blockIdField.setInt(manager, 0x29);
+        rotateField.setInt(manager, -0x80);
+        cooldownField.setInt(manager, 0);
+        processItemInteraction.invoke(manager);
+        assertEquals(-0x80, rotateField.getInt(manager),
+                "An UP block must not speed up a stage already at fast speed");
+        assertEquals(0x29, layout[index] & 0xFF,
+                "An UP block that could not act must stay an UP block");
+
+        // UP block while the stage is slow: doubles, and becomes a DOWN block.
+        rotateField.setInt(manager, 0x40);
+        cooldownField.setInt(manager, 0);
+        processItemInteraction.invoke(manager);
+        assertEquals(0x80, rotateField.getInt(manager),
+                "An UP block should double a slow stage's rotation speed");
+        assertEquals(0x2A, layout[index] & 0xFF,
+                "An UP block that acted becomes a DOWN block");
+
+        // DOWN block while the stage is already at slow speed: no halving, and
+        // therefore no rewrite.
+        layout[index] = 0x2A;
+        blockIdField.setInt(manager, 0x2A);
+        rotateField.setInt(manager, 0x40);
+        cooldownField.setInt(manager, 0);
+        processItemInteraction.invoke(manager);
+        assertEquals(0x40, rotateField.getInt(manager),
+                "A DOWN block must not slow a stage already at slow speed");
+        assertEquals(0x2A, layout[index] & 0xFF,
+                "A DOWN block that could not act must stay a DOWN block");
+
+        // DOWN block while the stage is fast: halves, and becomes an UP block.
+        rotateField.setInt(manager, -0x80);
+        cooldownField.setInt(manager, 0);
+        processItemInteraction.invoke(manager);
+        assertEquals(-0x40, rotateField.getInt(manager),
+                "A DOWN block should halve a fast stage's rotation speed");
+        assertEquals(0x29, layout[index] & 0xFF,
+                "A DOWN block that acted becomes an UP block");
+    }
+
     @Test
     public void testHeldJumpActionMakesGroundedSonicAirborneWithJumpForceVelocity() throws Exception {
         manager.initialize(0);
@@ -359,5 +480,3 @@ public class Sonic1SpecialStageManagerTest {
                 "The pressed edge should be cleared after being consumed by a single update()");
     }
 }
-
-

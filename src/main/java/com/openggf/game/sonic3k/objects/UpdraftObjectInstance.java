@@ -54,10 +54,10 @@ public final class UpdraftObjectInstance extends AbstractObjectInstance implemen
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         carrierObjectLiftedThisUpdate = false;
         if (playerEntity instanceof AbstractPlayableSprite player) {
-            applyAirflow(player, frameCounter);
+            applyAirflow(player, vIntRunCount);
         }
 
         ObjectServices objectServices = tryServices();
@@ -65,7 +65,7 @@ public final class UpdraftObjectInstance extends AbstractObjectInstance implemen
             for (PlayableEntity participant : objectServices.playerQuery().playersFor(
                     ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED)) {
                 if (participant != playerEntity && participant instanceof AbstractPlayableSprite sprite) {
-                    applyAirflow(sprite, frameCounter);
+                    applyAirflow(sprite, vIntRunCount);
                 }
             }
         }
@@ -87,7 +87,7 @@ public final class UpdraftObjectInstance extends AbstractObjectInstance implemen
                 + " negativeSubtype=" + negativeSubtype;
     }
 
-    private void applyAirflow(AbstractPlayableSprite player, int frameCounter) {
+    private void applyAirflow(AbstractPlayableSprite player, int vIntRunCount) {
         if (player.getDead() || player.isHurt() || player.isDebugMode()) {
             return;
         }
@@ -117,7 +117,7 @@ public final class UpdraftObjectInstance extends AbstractObjectInstance implemen
         player.setDoubleJumpFlag(0);
         player.setJumping(false);
 
-        maybePlayWindSfx(frameCounter);
+        maybePlayWindSfx(vIntRunCount);
         player.setGSpeed((short) 1);
 
         if (negativeSubtype) {
@@ -130,8 +130,8 @@ public final class UpdraftObjectInstance extends AbstractObjectInstance implemen
         }
     }
 
-    private void maybePlayWindSfx(int frameCounter) {
-        if (((frameCounter & 0xFF) & SFX_INTERVAL_MASK) != 0) {
+    private void maybePlayWindSfx(int vIntRunCount) {
+        if (((vIntRunCount & 0xFF) & SFX_INTERVAL_MASK) != 0) {
             return;
         }
         ObjectServices objectServices = tryServices();

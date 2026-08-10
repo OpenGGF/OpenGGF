@@ -30,7 +30,7 @@ public final class FbzSpinningPoleObjectInstance
     super(s, "FBZSpinningPole");
     height = s.subtype() << 3;
   }
-  public void update(int f, PlayableEntity p) {
+  public void update(int vIntRunCount, PlayableEntity p) {
     services().playerQuery().visitPlayers(
         ObjectPlayerParticipationPolicy
             .MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED,

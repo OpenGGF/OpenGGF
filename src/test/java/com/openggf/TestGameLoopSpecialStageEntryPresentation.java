@@ -6,11 +6,15 @@ import com.openggf.control.InputHandler;
 import com.openggf.game.GameMode;
 import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.SpecialStageStartupPolicy;
+import com.openggf.game.GameStateManager;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic1.specialstage.Sonic1SpecialStageProvider;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageProvider;
 import com.openggf.graphics.FadeManager;
+import com.openggf.graphics.GraphicsManager;
+import com.openggf.level.LevelManager;
+import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,6 +52,12 @@ class TestGameLoopSpecialStageEntryPresentation {
 
     @BeforeEach
     void setUp() throws Exception {
+        // The entry tests below reach the real module provider's
+        // initializeStage, whose palette setup calls straight into GL. Without
+        // headless mode GraphicsManager issues glGenTextures with no current
+        // context, which aborts the whole forked JVM rather than failing a test.
+        GraphicsManager.getInstance().resetState();
+        GraphicsManager.getInstance().initHeadless();
         TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
         loop = new GameLoop(new InputHandler());
         fade = mock(FadeManager.class);
@@ -78,6 +88,74 @@ class TestGameLoopSpecialStageEntryPresentation {
         order.verify(listener).onGameModeChanged(GameMode.LEVEL, GameMode.SPECIAL_STAGE);
         verify(fade, never()).holdWhite();
         assertEquals(GameMode.SPECIAL_STAGE, loop.getCurrentGameMode());
+    }
+
+    @Test
+    void alreadyFadedSpecialStageEntryDoesNotReplayTransitionSfx() {
+        assertTrue(GameLoop.shouldPlaySpecialStageEntrySfx(false));
+        assertFalse(GameLoop.shouldPlaySpecialStageEntrySfx(true));
+    }
+
+    @Test
+    void normalEntryEmitsTransitionSfxExactlyOnce() throws Exception {
+        loop.setGameMode(GameMode.LEVEL);
+        setField(loop, "spriteManager", new SpriteManager());
+        setField(loop, "gameState", new GameStateManager());
+        when(fade.isActive()).thenReturn(false);
+
+        loop.enterSpecialStage();
+
+        verify(audio, times(1)).playSfx(anyInt());
+    }
+
+    @Test
+    void heldWhiteEntryDoesNotEmitGenericTransitionSfxAgain() throws Exception {
+        loop.setGameMode(GameMode.LEVEL);
+        setField(loop, "spriteManager", new SpriteManager());
+        setField(loop, "gameState", new GameStateManager());
+        when(fade.isActive()).thenReturn(true);
+        when(fade.getState()).thenReturn(FadeManager.FadeState.HOLD_WHITE);
+
+        GameLoop dispatch = spy(loop);
+        doNothing().when(dispatch).doEnterSpecialStage(
+                any(SpecialStageProvider.class), anyInt(), eq(false));
+
+        dispatch.enterSpecialStage();
+
+        verify(audio, never()).playSfx(anyInt());
+    }
+
+    @Test
+    void heldBlackEntryRetainsGenericTransitionSfxOwnership() throws Exception {
+        loop.setGameMode(GameMode.LEVEL);
+        setField(loop, "spriteManager", new SpriteManager());
+        setField(loop, "gameState", new GameStateManager());
+        when(fade.isActive()).thenReturn(true);
+        when(fade.getState()).thenReturn(FadeManager.FadeState.HOLD_BLACK);
+
+        GameLoop dispatch = spy(loop);
+        doNothing().when(dispatch).doEnterSpecialStage(
+                any(SpecialStageProvider.class), anyInt(), eq(true));
+
+        dispatch.enterSpecialStage();
+
+        verify(audio, times(1)).playSfx(anyInt());
+    }
+
+    @Test
+    void suppressedRunLevelRowStillConsumesPendingSpecialStageRequest()
+            throws Exception {
+        LevelManager levelManager = mock(LevelManager.class);
+        when(levelManager.consumeSpecialStageRequest()).thenReturn(true);
+        setField(loop, "levelManager", levelManager);
+        loop.setGameMode(GameMode.LEVEL);
+        GameLoop dispatch = spy(loop);
+        doNothing().when(dispatch).enterSpecialStage();
+
+        assertTrue(dispatch.consumeSpecialStageRequestDuringSuppressedRunRow());
+
+        verify(levelManager).consumeSpecialStageRequest();
+        verify(dispatch).enterSpecialStage();
     }
 
     @Test
@@ -132,6 +210,7 @@ class TestGameLoopSpecialStageEntryPresentation {
         Sonic1SpecialStageProvider s1 = spy(new Sonic1SpecialStageProvider());
         doNothing().when(s1).reset();
         doNothing().when(s1).initializeStage(anyInt(), eq(SpecialStageStartupPolicy.FAST));
+        doReturn(true).when(s1).isEntryPresentationReady();
         doReturn(false).when(s1).supportsRewind();
         doReturn(Optional.empty()).when(s1).rewindAdapter();
 
@@ -143,6 +222,7 @@ class TestGameLoopSpecialStageEntryPresentation {
         Sonic3kSpecialStageProvider s3k = spy(new Sonic3kSpecialStageProvider());
         doNothing().when(s3k).reset();
         doNothing().when(s3k).initializeStage(anyInt(), eq(SpecialStageStartupPolicy.FAST));
+        doReturn(true).when(s3k).isEntryPresentationReady();
         doReturn(false).when(s3k).supportsRewind();
         doReturn(Optional.empty()).when(s3k).rewindAdapter();
 

@@ -307,7 +307,7 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
     }
 
     @Override
-    protected void updateBossLogic(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateBossLogic(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Spawn children after the parent is already inserted in ObjectManager.
         // This preserves parent-before-child collision order for FZ boss solids.
@@ -316,12 +316,12 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
         switch (state.routineSecondary) {
             case STATE_WAIT -> updateWait();
             case STATE_CYLINDER_ATTACK -> updateCylinderAttack(player);
-            case STATE_PLASMA_PHASE -> updatePlasmaPhase(frameCounter);
+            case STATE_PLASMA_PHASE -> updatePlasmaPhase(vIntRunCount);
             case STATE_DEFEAT_FALL -> updateDefeatFall();
             case STATE_RUNNING_ESCAPE -> updateRunningEscape(player);
             case STATE_FINAL_ASCENT -> updateFinalAscent();
             case STATE_SHIP_TRANSFORM -> updateShipTransform();
-            case STATE_FINAL_FLIGHT -> updateFinalFlight(player, frameCounter);
+            case STATE_FINAL_FLIGHT -> updateFinalFlight(player, vIntRunCount);
         }
     }
 
@@ -493,7 +493,7 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
     }
 
     // === State 4: PLASMA_PHASE (loc_19FE6) ===
-    private void updatePlasmaPhase(int frameCounter) {
+    private void updatePlasmaPhase(int vIntRunCount) {
         if (cylinderState < 0) {
             // ROM: Activate plasma launcher
             cylinderState = 0;
@@ -503,7 +503,7 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
         }
 
         // ROM: play electricity sound every 16 frames
-        if ((frameCounter & 0xF) == 0) {
+        if ((vIntRunCount & 0xF) == 0) {
             services().playSfx(Sonic1Sfx.ELECTRIC.id);
         }
 
@@ -697,7 +697,7 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
 
     // === State 14: FINAL_FLIGHT (loc_1A1D4) ===
     // Escape flight with player control lock and ending trigger
-    private void updateFinalFlight(AbstractPlayableSprite player, int frameCounter) {
+    private void updateFinalFlight(AbstractPlayableSprite player, int vIntRunCount) {
         state.renderFlags |= 1; // bset #0,obStatus
 
         // ROM: SpeedToPos
@@ -767,7 +767,7 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
 
         // ROM: sub-object routine 6 keeps calling BossDefeated while damaged escape sprite is active.
         if (showDamaged) {
-            triggerBossDefeatedExplosion(frameCounter);
+            triggerBossDefeatedExplosion(vIntRunCount);
         }
 
         updateSeggAnimation();
@@ -1104,7 +1104,9 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
         if (state.routineSecondary == STATE_CYLINDER_ATTACK) {
             return COMBAT_TOP_LANDING_HALF_WIDTH;
         }
-        return collisionHalfWidth;
+        // Escape phases follow the full-solid family default: Solid_Landed
+        // re-reads obActWid = d1 - $B (_incObj/sub SolidObject.asm:318-336).
+        return Math.max(0, collisionHalfWidth - 0x0B);
     }
 
     // === Rendering ===
@@ -1165,7 +1167,7 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
                 PatternSpriteRenderer damagedRenderer = renderManager.getRenderer(ObjectArtKeys.FZ_DAMAGED);
                 if (damagedRenderer != null && damagedRenderer.isReady()) {
                     boolean flipped = (state.renderFlags & 1) != 0;
-                    damagedRenderer.drawFrameIndex((state.lastUpdatedFrame >> 2) & 1, state.x, state.y, flipped, false);
+                    damagedRenderer.drawFrameIndex((state.lastUpdatedVIntRunCount >> 2) & 1, state.x, state.y, flipped, false);
                 }
             }
         }

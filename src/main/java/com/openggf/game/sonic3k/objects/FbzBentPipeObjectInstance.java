@@ -16,7 +16,7 @@ public final class FbzBentPipeObjectInstance extends AbstractObjectInstance
     private final int sizeIndex;
     public FbzBentPipeObjectInstance(ObjectSpawn spawn){super(spawn,"FBZBentPipe");frame=spawn.subtype()&0xFF;sizeIndex=spawn.subtype()&3;if(sizeIndex==3)throw new IllegalArgumentException("FBZ bent-pipe subtype has undefined ROM size-table index 3: $"+Integer.toHexString(frame));}
     int mappingFrame(){return frame;}
-    @Override public void update(int frameCounter,PlayableEntity player){if(!isOnScreen(0x180))setDestroyedByOffscreen();}
+    @Override public void update(int vIntRunCount,PlayableEntity player){if(!isOnScreen(0x180))setDestroyedByOffscreen();}
     @Override public int getPriorityBucket(){return 4;}@Override public SolidObjectParams getSolidParams(){return new SolidObjectParams(SIZE[sizeIndex][0]+0x0B,SIZE[sizeIndex][1],SIZE[sizeIndex][1]+1);}
     @Override public int getBalanceWidthPixels(){
         // Sonic_Balance reads width_pixels(a1) from byte_3B6D8. The +$B

@@ -9,6 +9,12 @@ import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.timing.HardwareTimingBoundaryObserver;
+import com.openggf.game.timing.HardwareSubmissionFingerprint;
+import com.openggf.game.timing.HardwareWorkHandle;
+import com.openggf.game.timing.HardwareWorkKind;
+import com.openggf.game.timing.HardwareWorkPreparation;
+import com.openggf.game.timing.HardwareWorkPreparationSnapshot;
+import com.openggf.game.timing.HardwareWorkSubmission;
 import com.openggf.game.timing.RecordedCompletionAuthority;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectManager;
@@ -20,6 +26,7 @@ import com.openggf.trace.TraceFrame;
 import com.openggf.trace.TraceReplayBootstrap;
 import com.openggf.trace.timing.HardwareTimingReplayPort;
 import com.openggf.trace.timing.HardwareTimingSchedule;
+import com.openggf.trace.timing.HardwareCompletionEdge;
 import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -180,6 +187,57 @@ class TestRecordingFrameDriverHardwareTiming {
     }
 
     @Test
+    void vblankOnlyRowAdmitsExactPreparedCurrentRowCompletionWithoutMoreWork()
+            throws Exception {
+        TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
+        GameplayModeContext context = SessionManager.getCurrentGameplayMode();
+        RecordedCompletionAuthority authority =
+                context.hardwareTiming().beginRecordedAdmission();
+        CountingPreparation preparation = new CountingPreparation(new byte[] {35});
+        HardwareWorkSubmission submission = new HardwareWorkSubmission(
+                HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
+                0x36800E,
+                0x100,
+                0x5000,
+                1,
+                "KosM",
+                1,
+                false,
+                preparation);
+        HardwareCompletionEdge edge = new HardwareCompletionEdge(
+                0x18CA,
+                com.openggf.game.timing.HardwareServiceBoundary.PRE_MAIN_LOOP,
+                submission.kind(),
+                0,
+                HardwareSubmissionFingerprint.compute(submission));
+        HardwareTimingReplayPort port = new HardwareTimingReplayPort(authority);
+        port.install(new HardwareTimingSchedule(List.of(edge)));
+        HardwareWorkHandle handle = context.hardwareTiming().submit(submission);
+        context.hardwareTiming().service(
+                com.openggf.game.timing.HardwareServiceBoundary.POST_OBJECTS);
+        int preparationSteps = preparation.steps();
+        TraceHardwareTimingBoundaryObserver observer =
+                new TraceHardwareTimingBoundaryObserver(port);
+        context.setHardwareTimingBoundaryObserver(observer);
+        RecordingFrameDriver driver =
+                new RecordingFrameDriver(mock(AbstractPlayableSprite.class));
+        LevelManager level = mock(LevelManager.class);
+        when(level.getObjectManager()).thenReturn(mock(ObjectManager.class));
+        setField(driver, "levelManager", level);
+        driver.installHardwareTimingReplayObserver(observer);
+        driver.setBk2Movie(oneFrameMovie(), 0);
+        driver.beginTraceRow(0, 0x18CA);
+
+        driver.skipFrameFromRecording();
+
+        assertTrue(context.hardwareTiming().isReady(handle));
+        assertEquals(List.of(handle), context.hardwareTiming().pendingHandles());
+        assertEquals(preparationSteps, preparation.steps(),
+                "the suppressed completion must not advance production preparation");
+        assertEquals(1, port.capture().consumedIdentities().size());
+    }
+
+    @Test
     void heldS3kTitleCardSkipSurroundsActualProviderScanWithBoundaries()
             throws Exception {
         TitleCardProvider provider = mock(TitleCardProvider.class);
@@ -205,9 +263,9 @@ class TestRecordingFrameDriverHardwareTiming {
 
         assertEquals(List.of(
                 "VINT_SERVICE",
-                "PRE_MAIN_LOOP",
                 "TITLE_CARD_SCAN",
-                "POST_OBJECTS"), events);
+                "POST_OBJECTS",
+                "PRE_MAIN_LOOP"), events);
     }
 
     private static List<String> observe(GameplayModeContext context) {
@@ -231,5 +289,67 @@ class TestRecordingFrameDriverHardwareTiming {
         Field field = target.getClass().getDeclaredField(name);
         field.setAccessible(true);
         field.set(target, value);
+    }
+
+    private record CountingPreparationSnapshot(byte[] payload)
+            implements HardwareWorkPreparationSnapshot {
+        private CountingPreparationSnapshot {
+            payload = payload.clone();
+        }
+
+        @Override
+        public byte[] payload() {
+            return payload.clone();
+        }
+
+        @Override
+        public HardwareWorkPreparation recreatePreparation() {
+            return new CountingPreparation(payload);
+        }
+    }
+
+    private static final class CountingPreparation
+            implements HardwareWorkPreparation {
+        private final byte[] payload;
+        private boolean prepared;
+        private int steps;
+
+        private CountingPreparation(byte[] payload) {
+            this.payload = payload.clone();
+        }
+
+        @Override
+        public boolean stepOneWorkUnit() {
+            steps++;
+            prepared = true;
+            return true;
+        }
+
+        @Override
+        public boolean isPrepared() {
+            return prepared;
+        }
+
+        @Override
+        public byte[] preparedPayload() {
+            if (!prepared) {
+                throw new IllegalStateException("payload requested before preparation");
+            }
+            return payload.clone();
+        }
+
+        @Override
+        public HardwareWorkPreparationSnapshot snapshot() {
+            return new CountingPreparationSnapshot(payload);
+        }
+
+        @Override
+        public void restore(HardwareWorkPreparationSnapshot snapshot) {
+            prepared = true;
+        }
+
+        private int steps() {
+            return steps;
+        }
     }
 }

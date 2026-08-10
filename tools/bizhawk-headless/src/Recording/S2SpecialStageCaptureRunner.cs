@@ -142,10 +142,30 @@ namespace OpenGGF.BizHawk.Headless
                                 rowBuffer = new DynamicArtCaptureRowBuffer(
                                     physicsCsv, auxStateJsonl, "\r\n");
                             }
-                            if (!inputRows.MoveNext())
-                            {
-                                break;
-                            }
+                            // Entry frame: no row (mirrors the run path's
+                            // `continue` at S2RunCaptureRunner Block 1).
+                            // `offset` is the emulator frame on which
+                            // Game_Mode first read $10, and the observer
+                            // computes input_sample_frame =
+                            // host.CompletedFrame - offset from INSIDE
+                            // host.Advance(), where CompletedFrame is still
+                            // the PRE-increment count. So the V-int that
+                            // polls the pad during the Advance producing
+                            // emulator frame offset+1+k reports
+                            // input_sample_frame == k, and row k must
+                            // therefore be the state sampled AFTER that same
+                            // Advance -- i.e. emulator frame offset+1+k, one
+                            // later than the entry frame. Writing a row here
+                            // as well made row k the state at offset+k, so
+                            // every input_sample_frame pointed at the row
+                            // before the frame that actually polled the pad
+                            // (SpecialStage_MainLoop's WaitForVint ->
+                            // ReadJoypads, s2.asm:6674-6691). Dropping the
+                            // extra inputRows.MoveNext() with the row keeps
+                            // the two enumerators aligned, so row k still
+                            // carries BK2 input index offset+k -- the input
+                            // that produced it.
+                            continue;
                         }
                         if (gameMode != SpecialStageGameMode
                             || offset + traceFrame >= movie.FrameCount)

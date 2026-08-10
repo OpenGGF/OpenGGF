@@ -117,7 +117,7 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance implements
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (isDestroyed()) {
             return;
         }
@@ -467,7 +467,7 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance implements
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             SubpixelMotion.objectFallXY(motion, LIGHT_GRAVITY);
             if (!isOnScreen()) {
                 setDestroyed(true);
@@ -550,7 +550,7 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance implements
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             if (!initialized) {
                 SnowdustSpec spec = parent.buildSnowdustSpec(parent.tryCamera());
                 if (spec == null) {

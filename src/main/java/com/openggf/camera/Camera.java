@@ -10,7 +10,6 @@ import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.snapshot.CameraSnapshot;
 import com.openggf.sprites.Sprite;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-import com.openggf.sprites.playable.Tails;
 
 @com.openggf.game.ModApi
 public class Camera implements RewindSnapshottable<CameraSnapshot> {
@@ -236,22 +235,27 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 
 		short yBeforeVerticalScroll = y;
 
-		// ROM: s2.asm:18121-18132 - Rolling height compensation
-		// When rolling, Sonic's center shifts down by ~5px due to height change.
-		// Subtract 5 from the Y delta to prevent camera jolt.
-		// Tails is 4 pixels shorter, so only subtract 1 for Tails.
-		// loc_1BFEC does not merely substitute two coordinates into Player_1.
+        // loc_1BFEC does not merely substitute two coordinates into Player_1.
 		// It repoints a0 at Scroll_forced_X_pos-x_pos, a synthetic RAM record whose
 		// status and ground-velocity fields are zero for this model. Consequently a
 		// traversal object may set Player_1 airborne while forced MoveCameraY still
 		// follows the grounded path (FBZ spinning-pole capture is the observable
-		// four-pixel case). Do not leak the real player's movement state into it.
-		boolean forcedCoordinateRecord = forcedScrollRequested;
-		if (!forcedCoordinateRecord && focusedSprite.getRolling()) {
+        // four-pixel case). Do not leak the real player's movement state into it.
+        boolean forcedCoordinateRecord = forcedScrollRequested;
+        // ROM: ScrollVerti rolling height compensation. When the player is rolling
+		// their height shrinks, so the Y delta is reduced to stop the camera jolting.
+		//
+		// fixBugs (s2.asm:27 `fixBugs = 0`, block at s2.asm:18156-18165): the engine
+		// implements the SHIPPED (fixBugs=0) branch — a flat `subq.w #5,d0` for whoever
+		// the camera is focused on, character-independent. The fixBugs=1 branch adds
+		// `cmpi.b #ObjID_Tails,id(a0) / addq.w #4,d0`, i.e. only 1 for Tails, because
+		// Tails is four pixels shorter and the flat 5 makes his camera jolt slightly on
+		// entering and leaving a roll. The disassembly notes that not even S3K fixed
+		// this; S1 (`_inc/ScrollHoriz & ScrollVertical.asm`, subq.w
+		// #sonic_height-sonic_roll_height) has no Tails at all, so the flat subtraction
+		// is correct for all three games.
+        if (!forcedCoordinateRecord && focusedSprite.getRolling()) {
 			focusedSpriteRealY -= 5;
-			if (focusedSprite instanceof Tails) {
-				focusedSpriteRealY += 4; // Net: subtract 1 for Tails
-			}
 		}
 
 		// Vertical scroll logic (ROM: ScrollVerti)
@@ -503,6 +507,15 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		// running right the camera only ever consults v_limitright2, so the raised
 		// left boundary never yanks the camera forward. A symmetric clamp here
 		// clamped the camera UP to the new minX a few frames early (S1 LZ1 f12463).
+		// FLAG: FixBugs (docs/s1disasm/sonic.asm:20 -- 0 in the shipped ROM).
+		// MoveScreenHoriz's two deadzone tests are `bcs`/`bcc` (UNSIGNED) under
+		// FixBugs = 0 and `blt`/`bge` (SIGNED) under FixBugs = 1
+		// (docs/s1disasm/_inc/ScrollHoriz & ScrollVertical.asm:38-52). The engine's
+		// signed int compares below agree with BOTH branches for every reachable
+		// value: the first subtraction cannot borrow unless the result is negative,
+		// and the second test only runs once the first proved the value non-negative,
+		// so the "horizontal wrap" the fix targets is unreachable at S1 level extents.
+		// No behavioural choice is being made here.
 		int deadzoneLeft = DeadzoneGeometry.leftEdge(width, deadzoneMode);
 		int deadzoneRight = DeadzoneGeometry.rightEdge(width);
 		if (focusedSpriteRealX < deadzoneLeft) {
@@ -572,14 +585,21 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * ROM SV_BottomBoundary clamp: enforce only the bottom boundary (v_limitbtm2 /
 	 * maxY) when the camera scrolled down (or the bottom boundary is moving). The
 	 * top boundary is never consulted on the down path
-	 * (docs/s1disasm/_inc/ScrollHoriz & ScrollVertical.asm:248-261). Mirror
-	 * {@link #clampAxisWithWrap}'s degenerate handling: if the bottom bound is
-	 * transiently above the top bound, enforce only the top bound.
+	 * (docs/s1disasm/_inc/ScrollHoriz & ScrollVertical.asm:258-271): the routine
+	 * compares d1 against v_limitbtm2 alone and, on the no-wrap branch, writes
+	 * v_limitbtm2 straight into d1.
+	 * <p>
+	 * That holds even when the bottom bound sits ABOVE the top bound. The state is
+	 * ordinary rather than degenerate: DynamicLevelEvents' move-up branch snaps
+	 * v_limitbtm2 to {@code (v_screenposy & $FFFE) - 2} whenever the camera is
+	 * below the new v_limitbtm1 (DynamicLevelEvents.asm:17-28), which drops the
+	 * bottom bound below a v_limittop2 the zone handler left in place. The camera
+	 * then rides the bottom bound upward past the top bound, two pixels per frame,
+	 * and never touches SV_MoveCameraUp's top clamp on the way (S1 MZ1 row 3,220:
+	 * v_limittop2 $340, v_limitbtm2 $33E, recorded camera $33E). Consulting minY
+	 * here left the camera unclamped for the whole ascent.
 	 */
 	private short clampBottomBoundary(short value) {
-		if (maxY < minY) {
-			return value < minY ? minY : value;
-		}
 		return value > maxY ? maxY : value;
 	}
 

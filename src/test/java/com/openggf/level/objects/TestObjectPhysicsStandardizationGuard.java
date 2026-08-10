@@ -298,7 +298,7 @@ class TestObjectPhysicsStandardizationGuard {
                 "playerQueryFromRuntime");
         assertOwnedSourceUsesAllEnginePlayers(
                 "com/openggf/game/sonic2/events/Sonic2OOZEvents.java",
-                "update");
+                "updateReservedObjectSlots");
         assertOwnedQueryHelperSuppliesSidekicks(
                 "com/openggf/game/sonic2/events/Sonic2OOZEvents.java",
                 "playerQueryFromRuntime");

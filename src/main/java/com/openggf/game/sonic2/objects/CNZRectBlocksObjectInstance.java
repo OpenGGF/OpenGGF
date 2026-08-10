@@ -129,7 +129,7 @@ public class CNZRectBlocksObjectInstance extends BoxObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Phase 1: If invisible, count down and skip everything else
         if (invisibleTimer > 0) {

@@ -124,7 +124,7 @@ public class Sonic1CrabmeatBadnikInstance extends AbstractBadnikInstance impleme
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (!initialized) {
             initialize();
@@ -376,7 +376,7 @@ public class Sonic1CrabmeatBadnikInstance extends AbstractBadnikInstance impleme
     }
 
     @Override
-    protected void updateAnimation(int frameCounter) {
+    protected void updateAnimation(int vIntRunCount) {
         // Animation is driven by state in updateMovement, using ROM animation scripts.
         // Walking animations alternate between two frames at speed $0F (15 frames).
         if (secondaryState == STATE_WALK) {
@@ -415,7 +415,11 @@ public class Sonic1CrabmeatBadnikInstance extends AbstractBadnikInstance impleme
 
     @Override
     public boolean isPersistent() {
-        return !isDestroyed() && isOnScreenX(160);
+        // Crab_Action ends at RememberState, whose out_of_range macro deletes the
+        // object once its chunk-aligned X leaves the [camera-128, camera-128+0x280]
+        // window (docs/s1disasm/_incObj/1F Badnik - Crabmeat.asm:59 ->
+        // _incObj/sub RememberState.asm:9 -> Macros.asm:278-295).
+        return !isDestroyed() && isInRange();
     }
 
     @Override

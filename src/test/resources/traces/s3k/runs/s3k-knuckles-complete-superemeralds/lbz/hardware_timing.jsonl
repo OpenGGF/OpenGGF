@@ -65,4 +65,4 @@
 {"event":"hardware_work_completed","raw_frame":24923,"boundary":"pre_main_loop","kind":"kos_decompression_queue","ordinal":576,"submission_fingerprint":"sha256:b82e0acc95809cc73347804f911b9848989654a068a9caae19e1ce947bc217d0"}
 {"event":"hardware_work_completed","raw_frame":24927,"boundary":"pre_main_loop","kind":"kos_decompression_queue","ordinal":577,"submission_fingerprint":"sha256:be87b23064db743f77dda57b95513f164a2eec0822f1f79afc832a96d8d79e77"}
 {"event":"hardware_work_completed","raw_frame":24930,"boundary":"pre_main_loop","kind":"kos_decompression_queue","ordinal":578,"submission_fingerprint":"sha256:549df42397a9275aacbdbb2b9de7dd30e45e75f67f7b7082859ac2b6f1dbe485"}
-{"event":"hardware_work_completed","raw_frame":24931,"boundary":"vint_service","kind":"kos_module_queue","ordinal":401,"submission_fingerprint":"sha256:366bb3460cdb69f6eb1dca8ca39e2ea9f06b0ef5dc657ec93d03eace44e28726"}
+{"event":"hardware_work_completed","raw_frame":24931,"boundary":"post_objects","kind":"kos_module_queue","ordinal":401,"submission_fingerprint":"sha256:366bb3460cdb69f6eb1dca8ca39e2ea9f06b0ef5dc657ec93d03eace44e28726"}

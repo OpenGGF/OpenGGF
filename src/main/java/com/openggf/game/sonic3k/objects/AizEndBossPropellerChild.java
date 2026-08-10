@@ -150,8 +150,8 @@ public class AizEndBossPropellerChild extends AbstractBossChild implements Rewin
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
-        if (!beginUpdate(frameCounter)) return;
+    public void update(int vIntRunCount, PlayableEntity player) {
+        if (!beginUpdate(vIntRunCount)) return;
 
         // ROM Refresh_ChildPositionAdjusted negates child_dx when the parent is X-flipped.
         int signedDx = boss.isFacingRight() ? -childDx : childDx;

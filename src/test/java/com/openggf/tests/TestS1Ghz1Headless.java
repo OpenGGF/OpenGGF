@@ -935,7 +935,7 @@ public class TestS1Ghz1Headless {
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             // Static object.
         }
     }
@@ -1235,7 +1235,7 @@ public class TestS1Ghz1Headless {
         @Override public SolidObjectParams getSolidParams() { return params; }
         @Override public boolean isTopSolidOnly() { return topSolidOnly; }
         @Override public void appendRenderCommands(List<GLCommand> commands) {}
-        @Override public void update(int frameCounter, PlayableEntity player) {}
+        @Override public void update(int vIntRunCount, PlayableEntity player) {}
     }
 
     // ========================================================================
@@ -1569,7 +1569,7 @@ public class TestS1Ghz1Headless {
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             // Static object.
         }
     }

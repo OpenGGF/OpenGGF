@@ -92,7 +92,7 @@ public final class MhzMushroomCatapultObjectInstance extends AbstractObjectInsta
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         updateCompressionState();
         updateCenterCap();
         parentStanding = false;

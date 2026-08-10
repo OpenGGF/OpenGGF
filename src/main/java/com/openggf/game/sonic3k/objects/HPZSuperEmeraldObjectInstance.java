@@ -96,8 +96,8 @@ public final class HPZSuperEmeraldObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
-        lastFrameCounter = frameCounter;
+    public void update(int vIntRunCount, PlayableEntity player) {
+        lastFrameCounter = vIntRunCount;
         ensureState();
         if (isDestroyed() || requestPublished) {
             return;

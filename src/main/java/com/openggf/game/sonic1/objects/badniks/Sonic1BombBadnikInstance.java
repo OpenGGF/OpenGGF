@@ -182,25 +182,25 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (destroyed) {
             return;
         }
-        updateMovement(frameCounter, player);
-        updateAnimation(frameCounter);
+        updateMovement(vIntRunCount, player);
+        updateAnimation(vIntRunCount);
     }
 
     /**
      * Bom_Action: Main update dispatches to state-specific handler, then
      * AnimateSprite + RememberState.
      */
-    private void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    private void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (state) {
-            case STATE_WALK -> updateWalk(frameCounter, player);
-            case STATE_WAIT -> updateWait(frameCounter, player);
-            case STATE_EXPLODE -> updateExplode(frameCounter);
+            case STATE_WALK -> updateWalk(vIntRunCount, player);
+            case STATE_WAIT -> updateWait(vIntRunCount, player);
+            case STATE_EXPLODE -> updateExplode(vIntRunCount);
         }
     }
 
@@ -221,7 +221,7 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
      *     neg.w   obVelX(a0)
      * </pre>
      */
-    private void updateWalk(int frameCounter, AbstractPlayableSprite player) {
+    private void updateWalk(int vIntRunCount, AbstractPlayableSprite player) {
         checkSonic(player);
 
         // ROM Bom_Action_Waiting decrements bom_time on the SAME frame, AFTER
@@ -273,7 +273,7 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
      *     move.b  #0,obAnim(a0)
      * </pre>
      */
-    private void updateWait(int frameCounter, AbstractPlayableSprite player) {
+    private void updateWait(int vIntRunCount, AbstractPlayableSprite player) {
         checkSonic(player);
 
         // ROM Bom_Action_Walking likewise decrements bom_time on the SAME frame
@@ -310,7 +310,7 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
      *     move.b  #0,obRoutine(a0)
      * </pre>
      */
-    private void updateExplode(int frameCounter) {
+    private void updateExplode(int vIntRunCount) {
         timer--;
         if (timer < 0) {
             // Timer expired: change the bomb into an explosion (object $3F).
@@ -555,7 +555,7 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
         }
     }
 
-    private void updateAnimation(int frameCounter) {
+    private void updateAnimation(int vIntRunCount) {
         animTickCounter++;
     }
 

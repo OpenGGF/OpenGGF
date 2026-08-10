@@ -9,6 +9,7 @@ import com.openggf.trace.TraceEvent;
 import com.openggf.trace.TraceFixtures;
 import com.openggf.trace.TraceFrame;
 import com.openggf.tests.SingletonResetExtension;
+import com.openggf.tests.trace.TraceV5TestFixture;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -58,7 +59,7 @@ class LiveTraceComparatorTest {
     }
 
     @Test
-    void skippedTickAdvancesVblankOnlyWhenRecordedCounterAdvanced() {
+    void skippedStoredRowOwnsExactlyOneClosureRegardlessOfCounterDelta() {
         Bk2FrameInput empty = new Bk2FrameInput(0, 0, 0, false, "0");
         LiveTraceComparator repeated = new LiveTraceComparator(
                 stubTrace(List.of(
@@ -76,11 +77,11 @@ class LiveTraceComparatorTest {
                         TraceFrame.executionTestFrame(1, 12, 0x100, 1))),
                 ToleranceConfig.DEFAULT, 1, () -> null);
 
-        assertFalse(repeated.shouldAdvanceVblankOnSkippedTick(empty));
+        assertTrue(repeated.shouldAdvanceVblankOnSkippedTick(empty));
         assertTrue(advanced.shouldAdvanceVblankOnSkippedTick(empty));
-        assertEquals(0, repeated.vblankAdvanceCountOnSkippedTick(empty));
+        assertEquals(1, repeated.vblankAdvanceCountOnSkippedTick(empty));
         assertEquals(1, advanced.vblankAdvanceCountOnSkippedTick(empty));
-        assertEquals(2, doubleAdvanced.vblankAdvanceCountOnSkippedTick(empty));
+        assertEquals(1, doubleAdvanced.vblankAdvanceCountOnSkippedTick(empty));
     }
 
     @Test
@@ -198,8 +199,7 @@ class LiveTraceComparatorTest {
         when(sprite.getGroundMode()).thenReturn(GroundMode.GROUND);
         when(sprite.getXSubpixelRaw()).thenReturn(1);
         when(sprite.getYSubpixelRaw()).thenReturn(0);
-        TraceFrame frame = TraceFrame.parseCsvRow(
-                "0000,0000,0000,0000,0000,0000,0000,00,0,0,0,0000,0000,02,0000,0000,0,00,0000,FF,0000,0000");
+        TraceFrame frame = TraceFrame.parseCsvRow(TraceV5TestFixture.levelRow(0));
         LiveTraceComparator c = new LiveTraceComparator(
                 stubTrace(List.of(frame)), ToleranceConfig.DEFAULT, 0, () -> sprite);
 
@@ -207,6 +207,26 @@ class LiveTraceComparatorTest {
 
         assertEquals(1, c.errorCount(),
                 "live whole-movie replay must surface subpixel drift before it carries into x/y");
+    }
+
+    @Test
+    void inputMisalignmentIsAnExplicitLiveErrorWithoutMovingTheCursorTwice() {
+        TraceFrame expected = TraceFrame.of(
+                0, AbstractPlayableSprite.INPUT_JUMP,
+                (short) 0, (short) 0,
+                (short) 0, (short) 0, (short) 0,
+                (byte) 0, false, false, 0);
+        LiveTraceComparator comparator = new LiveTraceComparator(
+                stubTrace(List.of(expected)),
+                ToleranceConfig.DEFAULT, 0, () -> null);
+
+        comparator.afterFrameAdvanced(
+                new Bk2FrameInput(0, 0, 0, false, "misaligned"), false);
+
+        assertEquals(1, comparator.errorCount());
+        assertEquals("input_alignment",
+                comparator.recentMismatches().getFirst().field());
+        assertEquals(1, comparator.cursor());
     }
 
     @Test

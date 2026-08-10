@@ -181,7 +181,7 @@ class TestSonic3kMHZEvents {
         RepeatShiftProbeObject probe = new RepeatShiftProbeObject(0x4308, 0x0710);
         GameServices.level().getObjectManager().addDynamicObject(probe);
 
-        events.update(0, 1);
+        events.updateSpecialEvents(0);
 
         assertEquals(0x0200, events.getLevelRepeatOffset(),
                 "MHZ1 loc_54CB0 should publish Level_repeat_offset=$0200 at Camera_X_pos >= $4400");
@@ -212,7 +212,7 @@ class TestSonic3kMHZEvents {
         events.setSpecialEventsRoutine(0x08);
         GameServices.level().getObjectManager().addDynamicObject(new SpawnlessDynamicProbeObject());
 
-        events.update(0, 1);
+        events.updateSpecialEvents(0);
 
         assertEquals(0x0200, events.getLevelRepeatOffset(),
                 "MHZ1 loc_54CB0 should still publish Level_repeat_offset while spawnless helpers are present");
@@ -940,8 +940,13 @@ class TestSonic3kMHZEvents {
 
             Sonic3kMHZEvents events = getMhzEvents();
             Camera camera = fixture.camera();
-            events.setEventRoutine(0x14);
-            events.setSpecialEventsRoutine(0x0C);
+            events.setEventRoutine(0x10);
+            events.setAct2BackgroundRoutineForTest(0x10);
+            camera.setX((short) 0x3F00);
+            camera.setMinX((short) 0x3F00);
+            camera.setMaxX((short) 0x3F00);
+            events.update(1, 1);
+
             camera.setX((short) 0x427C);
             camera.setMinX((short) 0x427C);
             camera.setMaxX((short) 0x427C);
@@ -952,7 +957,7 @@ class TestSonic3kMHZEvents {
             sidekick.setCentreX((short) 0x4300);
             sidekick.setCentreY((short) 0x0280);
 
-            events.update(1, 1);
+            events.updateSpecialEvents(1);
 
             assertEquals(0x4080, camera.getX() & 0xFFFF,
                     "MHZ2 loc_5560C should subtract $0200 from Camera_X_pos once Camera_X_pos+4 reaches $4280");
@@ -990,12 +995,12 @@ class TestSonic3kMHZEvents {
         camera.setMinX((short) 0x427C);
         camera.setMaxX((short) 0x427C);
 
-        events.update(1, 1);
+        events.updateSpecialEvents(1);
         assertEquals(0x0200, events.getLevelRepeatOffset(),
                 "MHZ2 loc_5560C should publish Level_repeat_offset for same-frame boss object processing");
 
         LevelEventSnapshot snapshot = manager.capture();
-        events.update(1, 2);
+        events.updateSpecialEvents(1);
         assertEquals(0, events.getLevelRepeatOffset(),
                 "MHZ clears Level_repeat_offset at the start of each event update");
 
@@ -1019,7 +1024,7 @@ class TestSonic3kMHZEvents {
         camera.setX((short) 0x427C);
         fixture.sprite().setAnimationId(5);
 
-        events.update(1, 1);
+        events.updateSpecialEvents(1);
 
         assertEquals(0, fixture.sprite().getAnimationId(),
                 "MHZ2 sub_556B8 should clear anim=$05 before applying the arena player clamp");
@@ -1043,7 +1048,7 @@ class TestSonic3kMHZEvents {
         camera.setMaxX((short) 0x441C);
         camera.setFrozen(false);
 
-        events.update(1, 1);
+        events.updateSpecialEvents(1);
 
         assertEquals(0x4420, camera.getX() & 0xFFFF,
                 "MHZ2 loc_5560C should clamp Camera_X_pos to $4420 once the restored arena reaches the escape edge");
@@ -1231,6 +1236,7 @@ class TestSonic3kMHZEvents {
         events.update(1, 7);
 
         camera.setX((short) 0x427C);
+        events.updateSpecialEvents(1);
         events.update(1, 8);
 
         assertArrayEquals(new boolean[] {true, false, true, false, true, false},
@@ -1266,6 +1272,7 @@ class TestSonic3kMHZEvents {
                 "loc_5583E should publish _unkFAA9 when the ship controller reaches its scroll-lock threshold");
 
         camera.setX((short) 0x427C);
+        events.updateSpecialEvents(1);
         events.update(1, 8);
 
         assertFalse(events.isShipControllerSignalFlagSet(),
@@ -1300,6 +1307,7 @@ class TestSonic3kMHZEvents {
         GameServices.level().getObjectManager().addDynamicObject(probe);
 
         camera.setX((short) 0x427C);
+        events.updateSpecialEvents(1);
         events.update(1, 8);
 
         assertEquals(0x4108, probe.getX(),
@@ -2071,7 +2079,7 @@ class TestSonic3kMHZEvents {
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
         }
 
         @Override
@@ -2085,7 +2093,7 @@ class TestSonic3kMHZEvents {
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
         }
 
         @Override

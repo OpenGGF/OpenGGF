@@ -21,7 +21,7 @@ final class Fbz2SubbossSolidSideChild extends AbstractFbz2SubbossChild
     static Fbz2SubbossSolidSideChild forTest(Fbz2SubbossInstance r,int s){return new Fbz2SubbossSolidSideChild(r,s);}
     static int[] nativeSubtypes(){return SUBTYPES.clone();}
     int nativeSubtype(){return nativeSubtype;} Fbz2SubbossCornerChild corner(){return corner;} void setCorner(Fbz2SubbossCornerChild c){corner=c;}
-    @Override public void update(int frameCounter,PlayableEntity p){lastFrameCounter=frameCounter;if(root!=null&&root.controlBit(Fbz2SubbossInstance.CONTROL_RELEASE_SOLIDS)){ObjectLifetimeOps.deleteNoRespawn(this);return;}if(corner!=null)x=corner.getX();}
+    @Override public void update(int vIntRunCount,PlayableEntity p){lastFrameCounter=vIntRunCount;if(root!=null&&root.controlBit(Fbz2SubbossInstance.CONTROL_RELEASE_SOLIDS)){ObjectLifetimeOps.deleteNoRespawn(this);return;}if(corner!=null)x=corner.getX();}
     @Override public SolidObjectParams getSolidParams(){return SOLID;}
     @Override public boolean isSolidFor(PlayableEntity p){return root==null||!root.controlBit(Fbz2SubbossInstance.CONTROL_RELEASE_SOLIDS);}
     @Override public Fbz2SubbossSolidSideChild recreateForRewind(RewindRecreateContext c){return new Fbz2SubbossSolidSideChild(c.spawn());}

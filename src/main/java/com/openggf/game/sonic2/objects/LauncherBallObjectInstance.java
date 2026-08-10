@@ -136,7 +136,7 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance implement
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (player == null) {
             return;
@@ -152,14 +152,14 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance implement
         }
 
         for (PlayableEntity participant : participants) {
-            processPlayer((AbstractPlayableSprite) participant, frameCounter);
+            processPlayer((AbstractPlayableSprite) participant, vIntRunCount);
         }
     }
 
-    private void processPlayer(AbstractPlayableSprite player, int frameCounter) {
+    private void processPlayer(AbstractPlayableSprite player, int vIntRunCount) {
         int state = playerStates.getOrDefault(player, STATE_DETECTION);
         switch (state) {
-            case STATE_DETECTION -> processDetection(player, frameCounter);
+            case STATE_DETECTION -> processDetection(player, vIntRunCount);
             case STATE_ANIMATION -> processAnimation(player);
             case STATE_MOVEMENT -> processMovement(player);
             case STATE_COOLDOWN -> processCooldown(player);
@@ -170,7 +170,7 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance implement
      * State 0: Detection (ROM: loc_252F0).
      * Check 32x32 bounding box for player entry.
      */
-    private void processDetection(AbstractPlayableSprite player, int frameCounter) {
+    private void processDetection(AbstractPlayableSprite player, int vIntRunCount) {
         // Skip if debug mode
         if (player.isDebugMode()) {
             return;
@@ -195,7 +195,7 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance implement
             return;
         }
         if (OOZLauncherObjectInstance.crossedIntoLauncherBallThisFrame(
-                player, frameCounter, spawn.x(), spawn.y())) {
+                player, vIntRunCount, spawn.x(), spawn.y())) {
             return;
         }
 

@@ -57,6 +57,31 @@ public class Sonic1LevelInitProfile extends AbstractLevelInitProfile {
     }
 
     @Override
+    public int preLevelFadeOutFrames() {
+        // GM_Level runs ClearPLC then PaletteFadeOut before it decompresses
+        // the title-card art and queues the level PLCs (sonic.asm:2710-2737).
+        // PaletteFadeOut is an unconditional 22-frame WaitForVBlank loop
+        // (move.w #22-1,d4 — docs/s1disasm/_inc/Palette Fading.asm:134-149)
+        // whose RunPLC calls only ever see the just-cleared queue, so the
+        // returning level's drain begins 22 rows after the game-mode handoff.
+        return 22;
+    }
+
+    @Override
+    public int preLevelMainLoopDelayFrames() {
+        // Level_Delay runs 4 WaitForVBlank rows (move.w #4-1,d1 —
+        // docs/s1disasm/sonic.asm:2957-2963) and the PalFadeIn_Alt call that
+        // follows it (docs/s1disasm/sonic.asm:2966) runs 22 more
+        // (move.w #22-1,d4 — docs/s1disasm/_inc/Palette Fading.asm:32-51),
+        // with no further wait between the fade and Level_MainLoop. The
+        // Level_LoadObj ExecuteObjects pass that stages Sonic's tiles
+        // (docs/s1disasm/sonic.asm:2895-2897) sits immediately before the
+        // delay loop, so the V-int that performs the transfer is the tail's
+        // first row: the level's first main-loop row minus 26.
+        return 4 + 22;
+    }
+
+    @Override
     public List<InitStep> levelLoadSteps(LevelLoadContext ctx) {
         List<InitStep> steps = buildCoreSteps(ctx);
         // GM_Level clears v_misc_variables before resource setup
@@ -122,6 +147,15 @@ public class Sonic1LevelInitProfile extends AbstractLevelInitProfile {
             completeInitialPresentationPlcs(
                     GameServices.rom().getRom(),
                     plcService,
+                    levelManager.getCurrentLevel().getZoneIndex());
+            // Level_StartGame bumps the fixed title-card elements out of their
+            // move-in routine and enters Level_MainLoop with them still alive
+            // (docs/s1disasm/sonic.asm:2969-2995). Their post-release tail
+            // re-queues the explosion/animal art 69 ordinary level frames later
+            // (docs/s1disasm/_incObj/34 Title Cards.asm:122-168), so arm it here
+            // rather than from the card renderer, which a headless run omits.
+            levelEventManager.armTitleCardArtReloadAtLevelStart(
+                    levelManager.getCurrentZone(), levelManager.getCurrentAct(),
                     levelManager.getCurrentLevel().getZoneIndex());
         } catch (IOException failure) {
             throw new IllegalStateException(

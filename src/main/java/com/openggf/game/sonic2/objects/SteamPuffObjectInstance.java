@@ -77,7 +77,7 @@ public class SteamPuffObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // ROM: loc_2683A (routine 4)
         // subq.b #1,anim_frame_duration(a0) / bpl.s ++

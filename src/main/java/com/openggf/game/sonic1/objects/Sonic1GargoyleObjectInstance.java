@@ -107,7 +107,7 @@ public class Sonic1GargoyleObjectInstance extends AbstractObjectInstance
     // ========================================================================
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // ROM: Gar_MakeFire (Routine 2)
         // subq.b #1,obTimeFrame(a0)
@@ -302,14 +302,14 @@ public class Sonic1GargoyleObjectInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
             // ROM: Gar_AniFire (Routine 6)
 
             // Animation: toggle frame every 8 game frames
             // move.b (v_framebyte).w,d0 / andi.b #7,d0 / bne.s .nochg
             // bchg #0,obFrame(a0) ; change every 8 frames
-            if ((frameCounter & ANIM_TOGGLE_MASK) == 0) {
+            if ((vIntRunCount & ANIM_TOGGLE_MASK) == 0) {
                 // Toggle between frames 2 and 3
                 currentFrame = (currentFrame == FIREBALL_FRAME_1)
                         ? FIREBALL_FRAME_2 : FIREBALL_FRAME_1;

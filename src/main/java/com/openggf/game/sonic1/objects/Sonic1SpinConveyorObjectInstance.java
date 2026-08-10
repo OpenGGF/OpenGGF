@@ -132,6 +132,17 @@ public class Sonic1SpinConveyorObjectInstance extends AbstractObjectInstance
     private boolean initialized;     // lazy-init guard for services() deferral
 
     /**
+     * True on the one platform that occupies the group spawner's own SST slot,
+     * i.e. the ROM's {@code spinc_groupid} (objoff_2F) still carrying the
+     * spawner subtype with bit 7 set. Only that platform runs the
+     * {@code bclr #0,(v_obj63,slot)} in {@code SpinConvey}'s despawn path
+     * (docs/s1disasm/_incObj/6F SBZ Spin Platform Conveyor.asm:30-34); every
+     * other platform has objoff_2F = 0 from cleared object RAM, so
+     * {@code bpl.s .delete} sends it straight to DeleteObject.
+     */
+    private boolean spawnerOwnsGroupLatch;
+
+    /**
      * Creates a spin conveyor object instance.
      *
      * @param spawn the object spawn data from the level
@@ -150,6 +161,26 @@ public class Sonic1SpinConveyorObjectInstance extends AbstractObjectInstance
             this.spawnerSlotIndex = subtype & 0x7F;
             this.spawnerDone = false;
         } else {
+            configureAsPlatform(subtype);
+        }
+
+        updateDynamicSpawn(x, y);
+    }
+
+    /**
+     * Applies the ROM's {@code SpinC_Main} platform branch to this SST slot
+     * (docs/s1disasm/_incObj/6F SBZ Spin Platform Conveyor.asm:63-133).
+     * <p>
+     * Factored out of the constructor because the ROM reaches this branch twice
+     * for the same slot: once for a platform placed directly by the level's
+     * objpos data, and once for the spawner's own slot, which
+     * {@code SpinC_Main_Spawner} re-uses as its group's first platform
+     * ({@code movea.l a0,a1 / bra.s .makePlatform}, same file lines 200-201).
+     * That slot is left with {@code obRoutine} 0 and re-enters
+     * {@code SpinC_Main} as a platform on its next execution.
+     */
+    private void configureAsPlatform(int subtype) {
+        {
             // Platform mode (subtype 0x00-0x7F)
             this.mode = Mode.PLATFORM;
 
@@ -195,8 +226,6 @@ public class Sonic1SpinConveyorObjectInstance extends AbstractObjectInstance
             this.xFrac = 0;
             this.yFrac = 0;
         }
-
-        updateDynamicSpawn(x, y);
     }
 
     /**
@@ -279,12 +308,12 @@ public class Sonic1SpinConveyorObjectInstance extends AbstractObjectInstance
         return y;
     }
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ensureInitialized();
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (mode) {
             case SPAWNER -> updateSpawner();
-            case PLATFORM -> updatePlatform(frameCounter, player);
+            case PLATFORM -> updatePlatform(vIntRunCount, player);
         }
     }
 
@@ -340,6 +369,11 @@ public class Sonic1SpinConveyorObjectInstance extends AbstractObjectInstance
             return;
         }
 
+        if (positionData.length == 0) {
+            ObjectLifetimeOps.deleteNoRespawn(this);
+            return;
+        }
+
         // Spawn child platforms
         // From disassembly SpinC_LoadPform loop:
         //   _move.b #id_SpinConvey,obID(a1)
@@ -347,18 +381,45 @@ public class Sonic1SpinConveyorObjectInstance extends AbstractObjectInstance
         //   move.w  (a2)+,obY(a1)
         //   move.w  (a2)+,d0
         //   move.b  d0,obSubtype(a1)
-        for (int[] entry : positionData) {
-            final int childX = entry[0];
-            final int childY = entry[1];
-            final int childSubtype = entry[2];
+        //
+        // The FIRST entry is written into the spawner's OWN slot: the ROM enters
+        // the write block via `movea.l a0,a1 / bra.s .makePlatform`
+        // (docs/s1disasm/_incObj/6F SBZ Spin Platform Conveyor.asm:200-201) and
+        // only calls FindFreeObj for entries 2..N (`.loopMakePlatforms`, line
+        // 206). The spawner slot therefore stays occupied and becomes platform
+        // #0, and only N-1 fresh slots are allocated. Allocating a slot for
+        // every entry and freeing the spawner's instead leaves the group holding
+        // a different set of SST slots, which de-phases every slot-indexed ROM
+        // behaviour downstream (ExecuteObjects' ascending walk, and the
+        // `(v_vblank_byte + 127 - slot) & 3` floor probe in RLoss_Bounce,
+        // docs/s1disasm/_incObj/"25, 37 Rings.asm":334-339).
+        for (int i = 1; i < positionData.length; i++) {
+            final int childX = positionData[i][0];
+            final int childY = positionData[i][1];
+            final int childSubtype = positionData[i][2];
 
             spawnFreeChild(() -> new Sonic1SpinConveyorObjectInstance(
                     childX, childY, childSubtype));
         }
 
-        // Spawner itself is consumed after spawning
-        // From disassembly: addq.l #4,sp / rts (pops return address, skips back to main)
-        ObjectLifetimeOps.deleteNoRespawn(this);
+        // Re-use this slot as the group's first platform, exactly as the ROM
+        // does. obRoutine is left at 0, so the ROM re-runs SpinC_Main here on
+        // the slot's next execution; the `addq.l #4,sp / rts` at the end of
+        // SpinC_Main_Spawner (line 226) exits without running platform logic
+        // this frame, which is what returning from updateSpawner() does here.
+        //
+        // objoff_2F (spinc_groupid) keeps the spawner's subtype with bit 7 set,
+        // because .makePlatform never writes it. That is the ROM reason only
+        // THIS platform clears the v_obj63 latch on despawn
+        // (SpinConvey .despawn: `bpl.s .delete`, lines 30-34) -- the children
+        // allocated from cleared object RAM have objoff_2F = 0 and take the
+        // plain delete path. See onUnload().
+        this.spawnerOwnsGroupLatch = true;
+        this.initialized = false;
+        this.x = positionData[0][0];
+        this.y = positionData[0][1];
+        configureAsPlatform(positionData[0][2]);
+        updateDynamicSpawn(x, y);
     }
 
     private int[][] loadSpawnerPositionData(int slotIndex) {
@@ -399,7 +460,7 @@ public class Sonic1SpinConveyorObjectInstance extends AbstractObjectInstance
      *   bra.w   loc_16424              ; movement only
      * </pre>
      */
-    private void updatePlatform(int frameCounter, AbstractPlayableSprite player) {
+    private void updatePlatform(int vIntRunCount, AbstractPlayableSprite player) {
         // Step 1: Animate
         animate();
 
@@ -759,13 +820,15 @@ public class Sonic1SpinConveyorObjectInstance extends AbstractObjectInstance
      */
     @Override
     public void onUnload() {
-        if (mode == Mode.PLATFORM && initialized && !isDestroyed()) {
+        if (mode == Mode.PLATFORM && spawnerOwnsGroupLatch && initialized && !isDestroyed()) {
             // Reached here via the counter-based out_of_range unload path
             // (ObjectManager calls onUnload() before freeing the slot). A
             // platform reaching out_of_range is the ROM SpinC_OutOfRange case.
             Sonic1ConveyorState conveyorState = services().gameService(Sonic1ConveyorState.class);
             if (conveyorState != null) {
-                conveyorState.clearSpawned(pathIndex);
+                // ROM: andi.w #$7F,d0 on spinc_groupid, i.e. the spawner's own
+                // slot index, not the platform's path index.
+                conveyorState.clearSpawned(spawnerSlotIndex);
             }
         }
     }

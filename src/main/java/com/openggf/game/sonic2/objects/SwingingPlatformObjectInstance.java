@@ -286,28 +286,28 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (isDestroyed()) {
             return;
         }
 
         switch (bit7State) {
-            case BIT7_STATE_ARMED -> updateBit7State4(frameCounter, player);
-            case BIT7_STATE_TRIGGERED_PARENT -> updateTriggeredParent(frameCounter, player);
+            case BIT7_STATE_ARMED -> updateBit7State4(vIntRunCount, player);
+            case BIT7_STATE_TRIGGERED_PARENT -> updateTriggeredParent(vIntRunCount, player);
             case BIT7_STATE_FALLING_CHILD -> updateState6FallingChild();
             case BIT7_STATE_BOBBING_CHILD -> updateState6BobbingChild();
-            default -> updateByBehavior(frameCounter, player);
+            default -> updateByBehavior(vIntRunCount, player);
         }
 
         updateDynamicSpawn(x, y);
     }
 
-    private void updateByBehavior(int frameCounter, AbstractPlayableSprite player) {
+    private void updateByBehavior(int vIntRunCount, AbstractPlayableSprite player) {
         ensureDisplayChild();
 
         switch (behaviorMode) {
-            case NORMAL -> updateNormalSwing(frameCounter);
+            case NORMAL -> updateNormalSwing(vIntRunCount);
             case BOUNCE_LEFT -> updateBounceSwing(player, true);
             case BOUNCE_RIGHT -> updateBounceSwing(player, false);
             case TRAP -> updateTrapMode(player);
@@ -315,11 +315,11 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
         }
     }
 
-    private void updateBit7State4(int frameCounter, AbstractPlayableSprite player) {
+    private void updateBit7State4(int vIntRunCount, AbstractPlayableSprite player) {
         // ROM Obj15_State4 (s2.asm:22753-22831): run normal Obj15 swing math,
         // then split when the previous SolidObject standing bits are set and
         // Oscillating_Data+$18 reaches zero.
-        updateByBehavior(frameCounter, player);
+        updateByBehavior(vIntRunCount, player);
         boolean standing = playerStanding || safeIsPlayerRiding();
         playerStanding = false;
         if (standing && OscillationManager.getByte(0x18) == 0) {
@@ -327,8 +327,8 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
         }
     }
 
-    private void updateTriggeredParent(int frameCounter, AbstractPlayableSprite player) {
-        updateByBehavior(frameCounter, player);
+    private void updateTriggeredParent(int vIntRunCount, AbstractPlayableSprite player) {
+        updateByBehavior(vIntRunCount, player);
         playerStanding = false;
     }
 
@@ -418,7 +418,7 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
     /**
      * Normal swing mode: Uses global oscillation data at offset 0x18.
      */
-    private void updateNormalSwing(int frameCounter) {
+    private void updateNormalSwing(int vIntRunCount) {
         // Get oscillation value from offset 0x18 (Oscillating_Data+0x18)
         int oscValue = OscillationManager.getByte(0x18);
         updatePositions(oscValue);
@@ -815,7 +815,7 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (parent.isDestroyed()) {
                 setDestroyed(true);
                 return;

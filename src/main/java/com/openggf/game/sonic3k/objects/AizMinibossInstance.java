@@ -276,7 +276,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
     }
 
     @Override
-    protected void updateBossLogic(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateBossLogic(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         maintainArenaCameraLock();
         if (pendingDefeatTimer >= 0) {
@@ -303,7 +303,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
             case ROUTINE_BREATH -> updateBreathSwingCount();
             case ROUTINE_HOLD -> updateWaitOnly();
             case ROUTINE_HORIZONTAL_SWING -> updateHorizontalSwingCount();
-            case ROUTINE_DEFEATED -> updateDefeated(frameCounter);
+            case ROUTINE_DEFEATED -> updateDefeated(vIntRunCount);
             default -> {
             }
         }

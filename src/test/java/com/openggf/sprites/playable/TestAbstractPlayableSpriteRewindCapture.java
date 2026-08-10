@@ -143,6 +143,7 @@ class TestAbstractPlayableSpriteRewindCapture {
         sonic.forceFloorCheck = true;
         sonic.suppressNextObjectMoveAndFall();
         sonic.hidden = true;
+        sonic.setNativeSlotPresent(false);
         sonic.setRenderFlagOnScreen(false);
         sonic.setMgzTopPlatformCarrySolidContactObject(
                 org.mockito.Mockito.mock(com.openggf.level.objects.ObjectInstance.class));
@@ -256,6 +257,7 @@ class TestAbstractPlayableSpriteRewindCapture {
         assertTrue(e1.forceFloorCheck(), "forceFloorCheck mismatch");
         assertEquals(0x3, e1.suppressedObjectMoveAndFallAxes(), "suppressedObjectMoveAndFallAxes mismatch");
         assertTrue(e1.hidden(), "hidden mismatch");
+        assertFalse(e1.nativeSlotPresent(), "nativeSlotPresent mismatch");
         assertFalse(e1.renderFlagOnScreen(), "renderFlagOnScreen mismatch");
         assertTrue(e1.renderFlagOnScreenValid(), "renderFlagOnScreenValid mismatch");
         assertTrue(e1.mgzTopPlatformSpringHandoffPending(), "mgzTopPlatformSpringHandoffPending mismatch");
@@ -352,6 +354,7 @@ class TestAbstractPlayableSpriteRewindCapture {
         sonic.suppressGroundWallCollision = false;
         sonic.forceFloorCheck = false;
         sonic.hidden = false;
+        sonic.setNativeSlotPresent(true);
         sonic.setRenderFlagOnScreen(true);
         sonic.clearMgzTopPlatformSpringHandoff();
         sonic.jumpInputPressed = false;
@@ -478,6 +481,7 @@ class TestAbstractPlayableSpriteRewindCapture {
         assertEquals(e1.forceFloorCheck(), e2.forceFloorCheck(), "forceFloorCheck not restored");
         assertEquals(e1.suppressedObjectMoveAndFallAxes(), e2.suppressedObjectMoveAndFallAxes(), "suppressedObjectMoveAndFallAxes not restored");
         assertEquals(e1.hidden(), e2.hidden(), "hidden not restored");
+        assertEquals(e1.nativeSlotPresent(), e2.nativeSlotPresent(), "nativeSlotPresent not restored");
         assertEquals(e1.renderFlagOnScreen(), e2.renderFlagOnScreen(), "renderFlagOnScreen not restored");
         assertEquals(e1.renderFlagOnScreenValid(), e2.renderFlagOnScreenValid(), "renderFlagOnScreenValid not restored");
         assertEquals(e1.mgzTopPlatformSpringHandoffPending(), e2.mgzTopPlatformSpringHandoffPending(), "mgzTopPlatformSpringHandoffPending not restored");

@@ -33,7 +33,7 @@ public final class TechnoSqueekAttachmentObjectInstance extends AbstractObjectIn
         currentY = spawn.y();
     }
 
-    @Override public void update(int frameCounter, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         if (!initialized) { initialized = true; return; } // creation frame draws frame 2 only.
         if (parent == null || parent.isDestroyed()) {
             ObjectLifetimeOps.expireDynamic(this);

@@ -146,13 +146,13 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         registerLaunchAnchor();
         applyLaunchRiderDelta();
         AbstractPlayableSprite player = playerEntity instanceof AbstractPlayableSprite sprite ? sprite : carriedPlayer;
         boolean wasCarryingPlayer = carryingPlayer;
         switch (phase) {
-            case WAIT -> updateWait(player, frameCounter);
+            case WAIT -> updateWait(player, vIntRunCount);
             case RISE -> updateRise();
             case RIDE_INITIAL -> updateTimedRide(Phase.PAUSE_BEFORE_RESUME);
             case PAUSE_BEFORE_RESUME -> updatePause(Phase.RIDE_TO_KNUCKLES);
@@ -161,7 +161,7 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
             case THUMP -> updateThump();
             case POST_THUMP_PAUSE -> updatePause(Phase.LAUNCH_RUMBLE);
             case LAUNCH_RUMBLE -> updateLaunchRumble();
-            case RIDE_TO_RELEASE -> updateRideToRelease(frameCounter);
+            case RIDE_TO_RELEASE -> updateRideToRelease(vIntRunCount);
             case FLY_AWAY -> updateFlyAway();
         }
         if (wasCarryingPlayer && carryingPlayer && carriedPlayer != null) {
@@ -205,7 +205,7 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
         return List.copyOf(spawnedChildren);
     }
 
-    private void updateWait(AbstractPlayableSprite player, int frameCounter) {
+    private void updateWait(AbstractPlayableSprite player, int vIntRunCount) {
         int touchValue = collisionProperty;
         collisionProperty = 0;
         if (touchValue == 0 || touchValue == 2
@@ -319,7 +319,7 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
     }
 
     /** ROM loc_8D47C. */
-    private void updateRideToRelease(int frameCounter) {
+    private void updateRideToRelease(int vIntRunCount) {
         swing();
         move();
         if (unsigned(x) >= RELEASE_X) {
@@ -328,7 +328,7 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
             if (carriedPlayer != null) {
                 pinPlayer(carriedPlayer);
             }
-            releasePlayer(frameCounter);
+            releasePlayer(vIntRunCount);
             phase = Phase.FLY_AWAY;
         }
     }
@@ -383,7 +383,7 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
         player.setObjectMappingFrameControl(true);
     }
 
-    private void releasePlayer(int frameCounter) {
+    private void releasePlayer(int vIntRunCount) {
         if (!carryingPlayer || carriedPlayer == null) {
             return;
         }
@@ -394,7 +394,7 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
         if (services().gameState() != null) {
             services().gameState().setScreenShakeActive(false);
         }
-        player.releaseFromObjectControl(frameCounter);
+        player.releaseFromObjectControl(vIntRunCount);
         player.setObjectMappingFrameControl(false);
         player.setAir(true);
         player.setJumping(false);
@@ -547,7 +547,7 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             if (parent.isDestroyed()) {
                 ObjectLifetimeOps.expireDynamic(this);
                 return;
@@ -599,12 +599,12 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             if (parent.isDestroyed()) {
                 ObjectLifetimeOps.expireDynamic(this);
                 return;
             }
-            visibleThisFrame = (frameCounter & 1) == 0;
+            visibleThisFrame = (vIntRunCount & 1) == 0;
             updateDynamicSpawn(getCentreX(), getCentreY());
         }
 

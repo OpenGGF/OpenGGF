@@ -7,10 +7,62 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestObjectPlacementManager {
+    @Test
+    void twoAxisCursorKeepsOrderedLoadsOwnedUntilConstructionOutcome() {
+        ObjectSpawn remembered = new ObjectSpawn(0x0100, 0x0100, 0x01, 0, 0, false, 0);
+        ObjectSpawn dormant = new ObjectSpawn(0x0180, 0x0100, 0x02, 0, 0, false, 0);
+        ObjectSpawn firstLater = new ObjectSpawn(0x0280, 0x0900, 0x03, 0, 0, false, 0);
+        ObjectSpawn laterEligible = new ObjectSpawn(0x02C0, 0x0100, 0x04, 0, 0, false, 0);
+        ObjectPlacementController manager = new ObjectPlacementController(
+                List.of(remembered, dormant, firstLater, laterEligible), () -> 320);
+        manager.setTwoAxisCursorPlacement(true);
+
+        manager.reset(0);
+        manager.pendingCursorLoadSpawns();
+        manager.completePendingCursorLoad(remembered);
+        manager.completePendingCursorLoad(dormant);
+        manager.finishPendingCursorLoadBatch();
+        manager.markRemembered(remembered);
+        manager.markDormant(dormant);
+
+        // Exercise the controller-level post-camera rejection seam without committing
+        // the primary cursor. Production two-axis Y eligibility/order is covered in
+        // TestObjectManagerVerticalPlacement; this seam proves rejected observations
+        // cannot leave stale order entries before the next primary cursor crossing.
+        manager.extendForPostCamera(0x80, (spawn, counter) -> false);
+        var beforeCrossing = manager.captureRewindState(0, Integer.MIN_VALUE);
+        ObjectPlacementController restoredBeforeCrossing = new ObjectPlacementController(
+                List.of(remembered, dormant, firstLater, laterEligible), () -> 320);
+        restoredBeforeCrossing.setTwoAxisCursorPlacement(true);
+        restoredBeforeCrossing.restoreRewindState(beforeCrossing);
+
+        manager.update(0x80);
+        List<ObjectSpawn> pending = manager.pendingCursorLoadSpawns();
+        assertEquals(List.of(firstLater, laterEligible), pending);
+        restoredBeforeCrossing.update(0x80);
+        assertEquals(pending, restoredBeforeCrossing.pendingCursorLoadSpawns(),
+                "restore immediately before the cursor crossing must reproduce pending ROM order");
+
+        // Draining is only a read of the cursor-owned work. ObjectManager has not yet
+        // reported whether either entry was constructed, vertically deferred, or
+        // blocked by FindFreeObj, so rewind must retain the exact ordered ownership.
+        var snapshot = manager.captureRewindState(0, Integer.MIN_VALUE);
+        assertArrayEquals(new int[] {2, 3}, snapshot.pendingCursorLoadOrder());
+
+        ObjectPlacementController restored = new ObjectPlacementController(
+                List.of(remembered, dormant, firstLater, laterEligible), () -> 320);
+        restored.setTwoAxisCursorPlacement(true);
+        restored.restoreRewindState(snapshot);
+        assertEquals(List.of(firstLater, laterEligible),
+                restored.pendingCursorLoadSpawns(),
+                "restore immediately before construction must preserve pending ROM order");
+    }
+
     @Test
     public void testWindowingAndRememberedObjects() {
         ObjectSpawn spawnA = new ObjectSpawn(0, 0, 0x01, 0, 0, false, 0);

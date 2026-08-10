@@ -81,7 +81,7 @@ public final class MhzMushroomPlatformObjectInstance extends AbstractObjectInsta
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (fallingArmed) {
             updateFalling();
         } else if (fallingSubtype && standingContact) {

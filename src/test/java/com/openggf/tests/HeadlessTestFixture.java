@@ -82,11 +82,6 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
     }
 
     @Override
-    public void advancePlayableAnimationsOnly() {
-        runner.advancePlayableAnimationsOnly();
-    }
-
-    @Override
     public void suppressFirstSidekickAnimationOnce() {
         runner.suppressFirstSidekickAnimationOnce();
     }
@@ -194,11 +189,34 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
     }
 
     /**
+     * Closes recorded timing at a verified semantic trace prefix while leaving
+     * later, unrepresented schedule edges untouched.
+     */
+    public void closeHardwareTimingReplayPrefix(int inclusiveRawFrame) {
+        if (hardwareTimingReplayClosed || hardwareTimingReplayPort == null) {
+            return;
+        }
+        hardwareTimingReplayClosed = true;
+        try {
+            hardwareTimingReplayPort.verifyPrefixComplete(inclusiveRawFrame);
+        } finally {
+            runner.clearHardwareTimingReplayObserver();
+            gameplayMode.setHardwareTimingBoundaryObserver(null);
+            if (gameplayMode.getRewindRegistry() != null) {
+                gameplayMode.getRewindRegistry()
+                        .deregister(HardwareTimingReplayPort.REWIND_KEY);
+            }
+            gameplayMode.clearHardwareTimingReplayCloseHook();
+        }
+    }
+
+    /**
      * Detaches recorded timing after another replay assertion has already
      * failed. Teardown must preserve that primary failure instead of replacing
      * it with the expected "unconsumed edge" consequence of an interrupted
      * run.
      */
+    @Override
     public void abortHardwareTimingReplayRun() {
         if (hardwareTimingReplayClosed || hardwareTimingReplayPort == null) {
             return;
@@ -460,7 +478,7 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
             // ROM's SpawnLevelMainSprites_SpawnPlayers (sonic3k.asm:8335-8427)
             // sets sidekick position FIRST, then SpawnLevelMainSprites
             // (sonic3k.asm:8132-8205) sets the in-air status for zones like
-            // MGZ1 / HCZ1 / LRZ1 / SSZ. repositionRegisteredSidekicks at step
+            // MGZ1 / HCZ1 / LRZ1 non-Knuckles. repositionRegisteredSidekicks at step
             // 7 clears the in-air bit via spawnSidekicks, so the zone-event
             // handler must run again to restore the falling-intro state.
             var levelEventProvider = GameServices.module().getLevelEventProvider();

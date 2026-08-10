@@ -33,6 +33,7 @@ import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
+import com.openggf.game.RuntimeArtAdmissionPolicy;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
@@ -463,9 +464,38 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         update(act, frameCounter, false);
     }
 
+    /*
+     * FixBugs audit (docs/skdisasm/sonic3k.asm:38, assembled as 0 in the shipped
+     * ROM). MGZ1_Resize (sonic3k.asm:39336-39342) is an EMPTY label that falls
+     * straight through into MGZ2_Resize; the `rts` that would make Act 1 a no-op
+     * exists only under FixBugs=1 ("Bug: MGZ1 uses a dynamic resize routine meant
+     * for MGZ2. This causes the act 2 boss to spawn in out-of-bounds act 1").
+     * This dispatcher gates updateAct2BossArena() to act == 1, i.e. it implements
+     * the FIXED branch. Matching the shipped ROM would mean running the MGZ2
+     * boss-arena resize state machine in Act 1 too, which can lock the Act 1
+     * camera and allocate Obj_MGZEndBoss out of bounds. Left as-is deliberately:
+     * adopting it changes Act 1 camera bounds and object allocation on the active
+     * release route and needs its own measured change.
+     */
     private void update(int act, int frameCounter, boolean includeBossTransitionObject) {
         if (act == 0) {
             updateAct1Bg();
+            // ROM: MGZ1_Resize (sonic3k.asm:39334-39343).
+            //
+            // FixBugs conditional (sonic3k.asm:38 -- the shipped ROM assembles
+            // with FixBugs = 0, so THIS is the branch the engine implements).
+            //   Shipped (FixBugs = 0), implemented here: MGZ1_Resize has NO body
+            //   and NO rts, so it falls straight through into MGZ2_Resize. Act 1
+            //   therefore runs Act 2's end-boss dynamic-resize gate every frame,
+            //   and the disassembly's own comment records the consequence: "This
+            //   causes the act 2 boss to spawn in out-of-bounds act 1"
+            //   (sonic3k.asm:39339-39340). The gate is state-driven, not
+            //   act-driven -- it fires only if the camera actually reaches
+            //   Y $600..$700 and X >= $3A00 -- so on layouts where act 1's camera
+            //   never gets there this is latent, exactly as on hardware.
+            //   Fixed (FixBugs = 1), NOT implemented: a bare `rts`
+            //   (sonic3k.asm:39335-39336), making act 1's resize handler a no-op.
+            updateAct2BossArena();
         } else if (act == 1) {
             updateAct2LevelSizeChange();
             // MGZ2_ScreenEvent polls Do_ShakeSound before dispatching any of
@@ -2432,19 +2462,22 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
                 SeamlessLevelTransitionRequest.builder(
                                 SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
                         .targetZoneAct(Sonic3kZoneIds.ZONE_MGZ, 1)
+                        .runtimeArtAdmissionPolicy(RuntimeArtAdmissionPolicy.TITLE_OWNER)
                         .deactivateLevelNow(false)
                         // Results screen already started act 2 music.
                         .preserveMusic(true)
                         // Obj_LevelResults and its ring/time globals remain live
                         // while MGZ1BGE_Transition reloads the act behind them.
                         .preserveLevelGamestate(true)
+                        .objectSurvivalPolicy(
+                                SeamlessLevelTransitionRequest.ObjectSurvivalPolicy.PERSISTENT_EXACT_SST)
                         // The live results owner keeps Level_end_flag, while
                         // Load_Level clears the old End_of_level_flag before
                         // Obj_TitleCardWait2 publishes the new completion edge.
                         .preserveEndOfLevelActive(true)
-                        // Title card skipped during the results path for seamless
-                        // transitions; show it after the reload completes.
-                        .showInLevelTitleCard(true)
+                        // The carried Obj_LevelResults mutates into Obj_TitleCard
+                        // and is the sole publisher after the reload.
+                        .showInLevelTitleCard(false)
                         .resetLevelGamestateAtInLevelTitleCardDisplay(true)
                         // The carried results parent mutates into Obj_TitleCard;
                         // its twelve child SST create/render entries precede

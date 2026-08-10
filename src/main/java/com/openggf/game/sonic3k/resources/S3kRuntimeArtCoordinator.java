@@ -47,6 +47,20 @@ public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator {
         return moduleQueue;
     }
 
+    /**
+     * ROM {@code LevelLoop} runs {@code Process_Kos_Module_Queue} in the loop
+     * tail (sonic3k.asm:7908) and {@code Process_Kos_Queue} (7887) directly
+     * after it, still ahead of {@code Wait_VSync} (7888) and the
+     * {@code Level_frame_counter} increment (7889). Both are tail work for the
+     * frame whose objects just ran, so the module step lands at
+     * {@code POST_OBJECTS} and the direct FIFO service at {@code PRE_MAIN_LOOP},
+     * in that order, at the end of the same frame.
+     */
+    @Override
+    public void beforeTimingService(HardwareServiceBoundary boundary) {
+        moduleQueue.beforeTimingService(boundary);
+    }
+
     @Override
     public void afterTimingService(HardwareServiceBoundary boundary) {
         directQueue.afterTimingService(boundary);

@@ -329,12 +329,12 @@ class TestLevelRendererBackgroundSamplingPerformance {
         }
 
         private void enqueue() {
-            renderer.renderBackgroundShader(NO_COLLISION_COMMANDS, parallax.getVscrollFactorBG());
+            renderer.renderBackgroundShader(NO_COLLISION_COMMANDS);
             assertEquals(3, graphics.commandCount);
         }
 
         private void enqueueAndDiscard() {
-            renderer.renderBackgroundShader(NO_COLLISION_COMMANDS, parallax.getVscrollFactorBG());
+            renderer.renderBackgroundShader(NO_COLLISION_COMMANDS);
             graphics.discardCommands();
         }
 

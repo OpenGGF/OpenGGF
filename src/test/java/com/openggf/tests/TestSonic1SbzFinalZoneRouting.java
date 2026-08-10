@@ -114,6 +114,9 @@ public class TestSonic1SbzFinalZoneRouting {
         levelManager.loadZoneAndAct(Sonic1ZoneConstants.ZONE_SBZ, 2);
 
         assertEquals(Sonic1Constants.ZONE_LZ, levelManager.getRomZoneId(), "SBZ3 map/art should come from LZ ROM slot");
+        // SBZ3 is id_LZ_act4 ($0103): v_zone=id_LZ, v_act=act4. Gates ported from
+        // the disassembly read that, not the logical act. (_Constants.asm:87,112)
+        assertEquals(3, levelManager.getRomActId(), "SBZ3 v_act should be act4");
         assertEquals(Sonic1Constants.WATER_HEIGHT_SBZ3, GameServices.water().getWaterLevelY(Sonic1Constants.ZONE_SBZ, 2), "SBZ3 water should use SBZ3 height from ROM behavior");
     }
 
@@ -124,7 +127,15 @@ public class TestSonic1SbzFinalZoneRouting {
         levelManager.loadZoneAndAct(Sonic1ZoneConstants.ZONE_FZ, 0);
 
         assertEquals(Sonic1Constants.ZONE_SBZ, levelManager.getRomZoneId(), "Final Zone map/art should come from SBZ ROM slot");
+        // id_FZ = (id_SBZ<<8)+act3 ($0502): v_zone=id_SBZ, v_act=act3
+        // (_Constants.asm:113). sonic.asm:2755 gates water on v_zone=id_LZ only,
+        // so FZ is dry however its v_act reads.
+        assertEquals(2, levelManager.getRomActId(), "Final Zone v_act should be act3");
         assertFalse(GameServices.water().hasWater(Sonic1Constants.ZONE_SBZ, 0), "Final Zone must not be treated as water");
+        // Query the pair the water system is actually keyed by, so an act remap
+        // that collides FZ with SBZ3 cannot slip through as it did before.
+        assertFalse(GameServices.water().hasWater(levelManager.getFeatureZoneId(), levelManager.getFeatureActId()),
+                "Final Zone must not be treated as water under its own feature zone/act");
     }
 
     @Test

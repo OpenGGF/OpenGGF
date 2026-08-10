@@ -112,7 +112,7 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (!childSpawned) {
             childSpawned = true;
             try {
@@ -648,7 +648,7 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (parent.isDestroyed()
                     || !services().objectManager().isActiveObjectInstance(parent)) {
                 ObjectLifetimeOps.expireDynamic(this);

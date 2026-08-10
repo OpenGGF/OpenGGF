@@ -31,7 +31,7 @@ final class FbzMinibossPlungerChild extends AbstractObjectInstance
         x = spawn.x(); baseY = y = spawn.y();
     }
 
-    @Override public void update(int frameCounter, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         if (boss == null) return;
         if (boss.isDefeated()) {
             if (!defeatDropApplied) {

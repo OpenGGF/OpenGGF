@@ -188,7 +188,7 @@ class TestModObjectKeyRegistry {
     }
 
     private record StubObject(ObjectSpawn getSpawn, String getName) implements ObjectInstance {
-        @Override public void update(int frameCounter, PlayableEntity player) {}
+        @Override public void update(int vIntRunCount, PlayableEntity player) {}
         @Override public void appendRenderCommands(List<GLCommand> commands) {}
         @Override public boolean isHighPriority() { return false; }
         @Override public boolean isDestroyed() { return false; }

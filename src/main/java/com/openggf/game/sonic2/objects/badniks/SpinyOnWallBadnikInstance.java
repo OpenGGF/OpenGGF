@@ -113,7 +113,7 @@ public class SpinyOnWallBadnikInstance extends AbstractBadnikInstance implements
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (state) {
             case PATROLLING -> updatePatrolling(player);
@@ -274,13 +274,13 @@ public class SpinyOnWallBadnikInstance extends AbstractBadnikInstance implements
     }
 
     @Override
-    protected void updateAnimation(int frameCounter) {
+    protected void updateAnimation(int vIntRunCount) {
         if (state == State.ATTACKING) {
             // Attack pose (frame 5) for wall variant
             animFrame = 5;
         } else {
             // Wall-climbing animation (frames 3-4, 9-frame delay)
-            animFrame = 3 + ((frameCounter / CLIMB_ANIM_DELAY) & 1);
+            animFrame = 3 + ((vIntRunCount / CLIMB_ANIM_DELAY) & 1);
         }
     }
 

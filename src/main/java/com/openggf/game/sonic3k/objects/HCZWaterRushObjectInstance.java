@@ -86,7 +86,7 @@ public class HCZWaterRushObjectInstance extends AbstractObjectInstance implement
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         switch (phase) {
             case PHASE_WAITING -> updateWaiting();
             case PHASE_RUSHING -> updateRushing();
@@ -229,7 +229,7 @@ public class HCZWaterRushObjectInstance extends AbstractObjectInstance implement
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             switch (phase) {
                 case PHASE_WAITING -> updateWaiting();
                 case PHASE_RISING -> updateRising();

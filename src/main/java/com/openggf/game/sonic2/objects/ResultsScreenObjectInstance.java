@@ -107,16 +107,16 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen
     }
 
     @Override
-    public void update(int frameCounter, com.openggf.game.PlayableEntity player) {
+    public void update(int vIntRunCount, com.openggf.game.PlayableEntity player) {
         if (!plcReadinessPassed) {
             Sonic2PlcService plcService = services().gameService(Sonic2PlcService.class);
             if (plcService != null && plcService.isBusy()) {
-                this.frameCounter = frameCounter;
+                this.frameCounter = vIntRunCount;
                 return;
             }
             plcReadinessPassed = true;
         }
-        super.update(frameCounter, player);
+        super.update(vIntRunCount, player);
     }
 
     @Override

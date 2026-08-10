@@ -53,7 +53,7 @@ public class Sonic1SplashObjectInstance extends AbstractObjectInstance implement
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // ROM (Spla_Display): move.w (v_waterpos1).w,obY(a0)
         // Track water surface Y each frame

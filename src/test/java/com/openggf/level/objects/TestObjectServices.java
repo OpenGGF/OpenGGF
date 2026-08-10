@@ -510,7 +510,7 @@ public class TestObjectServices implements ObjectServices {
     }
 
     @Override
-    public void requestSpecialStageFromCheckpoint() {
+    public void advanceToSpecialStageEntryRoutine() {
     }
 
     @Override

@@ -75,7 +75,7 @@ public final class LbzInvisibleBarrierInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if ((services().camera().getX() & 0xFFFF) >= RELEASE_CAMERA_X) {
             ObjectLifetimeOps.deleteNoRespawn(this);
         }

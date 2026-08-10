@@ -85,7 +85,7 @@ public class IczIceSpikesObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (subtypeZero) {
             spawnHurtChildOnce();
             return;
@@ -100,7 +100,7 @@ public class IczIceSpikesObjectInstance extends AbstractObjectInstance
             }
             case SHAKING -> {
                 // ROM loc_8B310 alternates +2/-2 using V_int_run_count bit 0.
-                int delta = (frameCounter & 1) == 0 ? 2 : -2;
+                int delta = (vIntRunCount & 1) == 0 ? 2 : -2;
                 x = (x + delta) & 0xFFFF;
                 waitTimer--;
                 if (waitTimer < 0) {
@@ -300,7 +300,7 @@ public class IczIceSpikesObjectInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             if (parent == null || parent.isDestroyed()) {
                 setDestroyed(true);
             }

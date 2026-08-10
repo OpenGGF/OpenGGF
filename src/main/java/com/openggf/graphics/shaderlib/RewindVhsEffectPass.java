@@ -32,9 +32,20 @@ public final class RewindVhsEffectPass {
     /** Per-frame tear-band scroll advance at base tape speed (fraction of screen height). */
     private static final float SCROLL_RATE_PER_FRAME = 0.006f;
 
-    /** Advance the 0..1 band scroll phase by one frame at the given tape speed. */
-    static float advanceScrollPhase(float phase, float speed) {
-        float advanced = phase + SCROLL_RATE_PER_FRAME * Math.max(speed, 0.0f);
+    /** Tear-band scroll direction for a tape running backward. */
+    public static final float REWIND_SCROLL_DIRECTION = 1.0f;
+
+    /** Tear-band scroll direction for a tape running forward faster than play. */
+    public static final float FAST_FORWARD_SCROLL_DIRECTION = -1.0f;
+
+    /**
+     * Advance the 0..1 band scroll phase by one frame at the given signed tape
+     * speed. The sign is the transport direction: positive scrolls the bands
+     * the way a rewinding tape does, negative the way a fast-forwarding one
+     * does. Wraps either way, so the phase stays in 0..1.
+     */
+    static float advanceScrollPhase(float phase, float signedSpeed) {
+        float advanced = phase + SCROLL_RATE_PER_FRAME * signedSpeed;
         return advanced - (float) Math.floor(advanced);
     }
 
@@ -67,8 +78,13 @@ public final class RewindVhsEffectPass {
     /**
      * Apply the effect over the current default-framebuffer viewport contents.
      * No-op unless prewarmed, healthy, and intensity is above zero.
+     *
+     * @param scrollDirection transport direction for the tear-band scroll:
+     *        {@code +1} for rewind, {@code -1} for fast-forward. Only the band
+     *        motion is signed — the tape damage itself is the same either way,
+     *        so {@code speed} stays the unsigned magnitude the shader clamps.
      */
-    public void apply(float intensity, float speed, boolean tearBands,
+    public void apply(float intensity, float speed, float scrollDirection, boolean tearBands,
                       int sourceW, int sourceH,
                       int vpX, int vpY, int vpW, int vpH) {
         if (!activated || failed || intensity <= 0.0f || vpW <= 0 || vpH <= 0) {
@@ -77,7 +93,8 @@ public final class RewindVhsEffectPass {
         pipeline.resize(sourceW, sourceH, vpW, vpH);
         // Integrate the band scroll phase CPU-side: the shader must not derive it
         // from FrameCount * speed, or a speed change would teleport the bands.
-        scrollPhase = advanceScrollPhase(scrollPhase, speed);
+        scrollPhase = advanceScrollPhase(
+                scrollPhase, Math.max(speed, 0.0f) * scrollDirection);
         pipeline.apply(vpX, vpY, vpW, vpH, frameCounter,
                 Map.of("RewindIntensity", intensity, "RewindSpeed", speed,
                         "RewindScroll", scrollPhase, "RewindTearBands", tearBands ? 1.0f : 0.0f));

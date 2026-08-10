@@ -1,5 +1,27 @@
 # S3K complete-run recorder — profiles and aux events
 
+## Current v5 contract
+
+The maintained native complete-run recorder emits only
+`recorder: native-bizhawk-headless`, `recorder_version: 3.0`, and
+`trace_schema: 5`.
+Provenance is opaque and never selects parser or replay behavior. Level and
+bonus segments use the 42-column level row; S3K special-stage segments use the
+game-owned 20-column row. Optional hardware timing uses one module-plus-direct
+timing grammar. No numbered Lua stamp, CSV version, or secondary timing-schema
+axis is emitted or accepted.
+
+Current profile and aux behavior is resolved against the ROM/disassembly and
+native tests. The detailed material below is retained as porting and fixture
+provenance history only.
+
+## Pre-v5 historical evidence
+
+Everything below this heading describes predecessor Lua recorders and their
+fixtures. Any “current”, “canonical”, “authoritative”, or normative wording is
+historical within that recorder state and does not define live v5 output or
+legacy compatibility.
+
 Authoritative behavioural spec for the native port of
 `tools/bizhawk/s3k_complete_run_recorder.lua`
 (`LUA_SCRIPT_VERSION = "6.33-s3k-completerun"`, line 357).

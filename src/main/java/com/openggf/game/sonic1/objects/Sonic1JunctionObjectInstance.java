@@ -189,7 +189,7 @@ public class Sonic1JunctionObjectInstance extends AbstractObjectInstance
     // ========================================================================
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (isDestroyed()) {
             return;
@@ -481,7 +481,13 @@ public class Sonic1JunctionObjectInstance extends AbstractObjectInstance
         grabFrame = gapFrame;
         routine = Routine.RELEASE;
         controlledPlayer = player;
-        ObjectControlState.nativeBit7FullControl().applyTo(player);
+        // ROM: move.b #1,(f_playerctrl).w -- bit 0 only, sign bit CLEAR
+        // (docs/s1disasm/_incObj/66 SBZ Rotating Junction.asm:82). Bit 0 makes
+        // Sonic_Control skip Sonic_Modes, but the object-interaction gate is the
+        // sign bit (tst.b f_playerctrl / bmi.s .ignoreobjcoll,
+        // docs/s1disasm/_incObj/01 Sonic.asm:94-97), so ReactToItem keeps running
+        // every frame Sonic is riding the junction.
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
         player.setControlLocked(true);
         player.setRolling(false);
         player.setAnimationId(Sonic1AnimationIds.ROLL);
@@ -603,7 +609,7 @@ public class Sonic1JunctionObjectInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
             // Jun_Display (Routine 4): bra.w RememberState
             // No logic, just display. RememberState is handled by the engine persistence system.

@@ -11,6 +11,7 @@ import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchCategory;
 import com.openggf.level.objects.TouchResponseListener;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.rings.RingManager;
@@ -117,7 +118,7 @@ public class Sonic1RingInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         switch (state) {
             case INIT -> {
                 RingManager ringManager = services().ringManager();
@@ -154,7 +155,7 @@ public class Sonic1RingInstance extends AbstractObjectInstance
             }
             case SPARKLE -> {
                 RingManager ringManager = services().ringManager();
-                int gameplayFrameCounter = frameCounter;
+                int gameplayFrameCounter = vIntRunCount;
                 ObjectManager objectManager = services().objectManager();
                 if (objectManager != null) {
                     // ROM parity: Ring_Sparkle advances only when ExecuteObjects runs.
@@ -278,6 +279,29 @@ public class Sonic1RingInstance extends AbstractObjectInstance
     @Override
     public int getCollisionProperty() {
         return 0;
+    }
+
+    /**
+     * ROM parity: {@code React_CollisionDetected}'s {@code col_item} ring branch
+     * (docs/s1disasm/_incObj/"Sonic ReactToItem.asm":191-203) is re-evaluated on
+     * every frame the hitboxes overlap. It carries no "already touched" latch:
+     * the only gate is {@code cmpi.w #90,flashtime(a0) / bhs .return}, and when
+     * that gate blocks the pickup the ring stays at {@code Ring_Animate} with its
+     * {@code obColType} intact, so the very next frame checks again. The engine's
+     * default edge-trigger would consume the overlap on the blocked frame and
+     * never re-arm while Sonic stands still, losing the pickup entirely. Once the
+     * ring is collected it advances to {@code Ring_Sparkle} and stops reporting
+     * collision flags, which is what actually latches the response — exactly as
+     * {@link #getCollisionFlags()} models above.
+     */
+    @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return TouchResponseProfile.fromProvider(this);
+    }
+
+    @Override
+    public boolean requiresContinuousTouchCallbacks() {
+        return true;
     }
 
     @Override

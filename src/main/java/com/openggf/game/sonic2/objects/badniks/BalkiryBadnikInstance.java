@@ -88,7 +88,7 @@ public class BalkiryBadnikInstance extends AbstractBadnikInstance implements Rew
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         if (!initialized) {
             initialized = true;
             return;
@@ -134,7 +134,7 @@ public class BalkiryBadnikInstance extends AbstractBadnikInstance implements Rew
     }
 
     @Override
-    protected void updateAnimation(int frameCounter) {
+    protected void updateAnimation(int vIntRunCount) {
         // Balkiry has no animation state machine - always displays mapping_frame 1
         animFrame = 1;
     }

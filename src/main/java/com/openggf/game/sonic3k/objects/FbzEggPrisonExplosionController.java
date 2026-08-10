@@ -18,7 +18,7 @@ public final class FbzEggPrisonExplosionController extends AbstractObjectInstanc
     }
     private FbzEggPrisonExplosionController(){this(0,0);}
 
-    @Override public void update(int frameCounter, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         if (waitCounter-- > 0) return;
         if (--remaining == 0) { ObjectLifetimeOps.expireDynamic(this); return; }
         waitCounter=2;

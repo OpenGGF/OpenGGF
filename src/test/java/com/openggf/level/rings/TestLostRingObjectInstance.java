@@ -181,6 +181,7 @@ class TestLostRingObjectInstance {
                 GameRules.SONIC_2.ring().lostRingRenderVerticalMargin());
 
         ring.update(0, null);
+        ring.refreshPostCameraRenderState();
 
         assertEquals(1, ring.floorProbeCount,
                 "Obj37_Init starts render_flags at $84, so the first cadence hit may probe");
@@ -204,6 +205,7 @@ class TestLostRingObjectInstance {
                 GameRules.SONIC_3K.ring().lostRingRenderVerticalMargin());
 
         ring.update(0, null);
+        ring.refreshPostCameraRenderState();
 
         assertEquals(1, ring.floorProbeCount,
                 "Obj37_Init starts with render_flags=$84, so the first cadence hit may probe");

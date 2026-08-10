@@ -121,6 +121,30 @@ public class MasterTitleScreen {
         INACTIVE, FADE_IN, ACTIVE, ERROR_DISPLAY, CONFIRMING, EXITING
     }
 
+    /** Host-owned feedback events emitted before any game ROM is selected. */
+    public enum AudioCue {
+        NAVIGATE("UI_NAVIGATE"),
+        CONFIRM("UI_CONFIRM"),
+        ERROR("UI_ERROR");
+
+        private final String sfxName;
+
+        AudioCue(String sfxName) {
+            this.sfxName = sfxName;
+        }
+
+        public String sfxName() {
+            return sfxName;
+        }
+    }
+
+    @FunctionalInterface
+    public interface AudioSink {
+        AudioSink NO_OP = cue -> { };
+
+        void play(AudioCue cue);
+    }
+
     // Cloud sprite for parallax animation
     private static class CloudSprite {
         int textureId;
@@ -195,6 +219,7 @@ public class MasterTitleScreen {
     private final List<CloudSprite> clouds = new ArrayList<>();
     private final SonicConfigurationService configService;
     private final LaunchProfileStore launchProfileStore;
+    private final AudioSink audioSink;
     private LaunchConfigPanel launchConfigPanel;
     private boolean programmaticSelection;
     private final MasterTitleSecondaryActions secondaryActions = new MasterTitleSecondaryActions();
@@ -237,15 +262,32 @@ public class MasterTitleScreen {
         this(configService, launchProfileStore, List.of(
                 new MasterTitleEntry.Stock(GameEntry.SONIC_1),
                 new MasterTitleEntry.Stock(GameEntry.SONIC_2),
-                new MasterTitleEntry.Stock(GameEntry.SONIC_3K)));
+                new MasterTitleEntry.Stock(GameEntry.SONIC_3K)), AudioSink.NO_OP);
+    }
+
+    public MasterTitleScreen(SonicConfigurationService configService,
+                             LaunchProfileStore launchProfileStore,
+                             AudioSink audioSink) {
+        this(configService, launchProfileStore, List.of(
+                new MasterTitleEntry.Stock(GameEntry.SONIC_1),
+                new MasterTitleEntry.Stock(GameEntry.SONIC_2),
+                new MasterTitleEntry.Stock(GameEntry.SONIC_3K)), audioSink);
     }
 
     public MasterTitleScreen(SonicConfigurationService configService,
                              LaunchProfileStore launchProfileStore,
                              List<MasterTitleEntry> entries) {
+        this(configService, launchProfileStore, entries, AudioSink.NO_OP);
+    }
+
+    public MasterTitleScreen(SonicConfigurationService configService,
+                             LaunchProfileStore launchProfileStore,
+                             List<MasterTitleEntry> entries,
+                             AudioSink audioSink) {
         this.configService = Objects.requireNonNull(configService, "configService");
         this.launchProfileStore = Objects.requireNonNull(launchProfileStore, "launchProfileStore");
         this.entries = List.copyOf(Objects.requireNonNull(entries, "entries"));
+        this.audioSink = Objects.requireNonNull(audioSink, "audioSink");
         if (this.entries.isEmpty()) throw new IllegalArgumentException("Master title requires entries");
         this.selectedIndex = defaultSelectionIndex(this.entries);
         for (GameEntry game : GameEntry.values()) stockAvailability.put(game, false);
@@ -802,10 +844,9 @@ public class MasterTitleScreen {
         }
     }
 
-    // Audio stubs
-    private void playNavigateSound() { /* TODO: ROM-independent SFX */ }
-    private void playConfirmSound()  { /* TODO: ROM-independent SFX */ }
-    private void playErrorSound()    { /* TODO: ROM-independent SFX */ }
+    private void playNavigateSound() { audioSink.play(AudioCue.NAVIGATE); }
+    private void playConfirmSound()  { audioSink.play(AudioCue.CONFIRM); }
+    private void playErrorSound()    { audioSink.play(AudioCue.ERROR); }
 
     /**
      * Returns true when the user has selected a game and confirmed.
@@ -851,6 +892,9 @@ public class MasterTitleScreen {
                     break;
                 }
             }
+        }
+        if (this.state != State.ERROR_DISPLAY) {
+            playErrorSound();
         }
         this.state = State.ERROR_DISPLAY;
         this.errorFrameCounter = 0;

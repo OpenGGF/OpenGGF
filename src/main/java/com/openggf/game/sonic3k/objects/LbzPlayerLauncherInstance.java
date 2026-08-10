@@ -50,7 +50,7 @@ public final class LbzPlayerLauncherInstance extends AbstractObjectInstance impl
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         int left = spawn.x() - DETECT_HALF_SIZE;
         int right = spawn.x() + DETECT_HALF_SIZE;
         int top = spawn.y() - DETECT_HALF_SIZE;
@@ -271,7 +271,7 @@ public final class LbzPlayerLauncherInstance extends AbstractObjectInstance impl
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             if (routine == 0) {
                 angle += EXPAND_STEP;
                 if (angle == EXPAND_END) {

@@ -76,20 +76,20 @@ public final class LbzLoweringGrappleObjectInstance extends AbstractObjectInstan
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (isDestroyed()) {
             return;
         }
 
         List<PlayableEntity> participants = participants(playerEntity);
         bindNativeOwners(participants);
-        releaseOmittedExtensions(participants, frameCounter);
+        releaseOmittedExtensions(participants, vIntRunCount);
         updateExtension();
-        updatePlayerSlot(asSprite(participants, 0), 0, frameCounter);
-        updatePlayerSlot(asSprite(participants, 1), 1, frameCounter);
+        updatePlayerSlot(asSprite(participants, 0), 0, vIntRunCount);
+        updatePlayerSlot(asSprite(participants, 1), 1, vIntRunCount);
         for (int i = 2; i < participants.size(); i++) {
             if (participants.get(i) instanceof AbstractPlayableSprite player) {
-                updateExtensionPlayer(player, frameCounter);
+                updateExtensionPlayer(player, vIntRunCount);
             }
         }
         updateDynamicSpawn(anchorX, currentY);
@@ -218,9 +218,9 @@ public final class LbzLoweringGrappleObjectInstance extends AbstractObjectInstan
         mappingFrame = currentExtension == 0 ? 0 : (currentExtension >> 4) + 1;
     }
 
-    private void updatePlayerSlot(AbstractPlayableSprite player, int slot, int frameCounter) {
+    private void updatePlayerSlot(AbstractPlayableSprite player, int slot, int vIntRunCount) {
         if (grabbed[slot]) {
-            updateGrabbedPlayer(player, slot, frameCounter);
+            updateGrabbedPlayer(player, slot, vIntRunCount);
             return;
         }
 
@@ -235,9 +235,9 @@ public final class LbzLoweringGrappleObjectInstance extends AbstractObjectInstan
         }
     }
 
-    private void updateGrabbedPlayer(AbstractPlayableSprite player, int slot, int frameCounter) {
+    private void updateGrabbedPlayer(AbstractPlayableSprite player, int slot, int vIntRunCount) {
         if (player == null || !isCaptureEligible(player)) {
-            releaseInvalidPlayer(player, slot, frameCounter);
+            releaseInvalidPlayer(player, slot, vIntRunCount);
             return;
         }
 
@@ -245,7 +245,7 @@ public final class LbzLoweringGrappleObjectInstance extends AbstractObjectInstan
         // ROM sub_290F2 receives Ctrl_1/2_logical: the low byte is the A/B/C
         // press edge, while directional release speed comes from held bits.
         if (player.isLogicalJumpPressActive()) {
-            releaseJumpingPlayer(player, slot, frameCounter, input);
+            releaseJumpingPlayer(player, slot, vIntRunCount, input);
             return;
         }
 
@@ -280,15 +280,15 @@ public final class LbzLoweringGrappleObjectInstance extends AbstractObjectInstan
         return !player.getDead() && !player.isDebugMode() && !player.isHurt();
     }
 
-    private void releaseInvalidPlayer(AbstractPlayableSprite player, int slot, int frameCounter) {
-        clearGrab(player, slot, frameCounter, DIRECTIONAL_RELEASE_COOLDOWN);
+    private void releaseInvalidPlayer(AbstractPlayableSprite player, int slot, int vIntRunCount) {
+        clearGrab(player, slot, vIntRunCount, DIRECTIONAL_RELEASE_COOLDOWN);
     }
 
-    private void releaseJumpingPlayer(AbstractPlayableSprite player, int slot, int frameCounter, int input) {
+    private void releaseJumpingPlayer(AbstractPlayableSprite player, int slot, int vIntRunCount, int input) {
         boolean left = (input & AbstractPlayableSprite.INPUT_LEFT) != 0;
         boolean right = (input & AbstractPlayableSprite.INPUT_RIGHT) != 0;
         int releaseCooldown = (left || right) ? DIRECTIONAL_RELEASE_COOLDOWN : NEUTRAL_RELEASE_COOLDOWN;
-        clearGrab(player, slot, frameCounter, releaseCooldown);
+        clearGrab(player, slot, vIntRunCount, releaseCooldown);
 
         if (left) {
             player.setXSpeed((short) -RELEASE_X_SPEED);
@@ -311,13 +311,13 @@ public final class LbzLoweringGrappleObjectInstance extends AbstractObjectInstan
         player.suppressNextJumpPress();
     }
 
-    private void clearGrab(AbstractPlayableSprite player, int slot, int frameCounter, int releaseCooldown) {
+    private void clearGrab(AbstractPlayableSprite player, int slot, int vIntRunCount, int releaseCooldown) {
         grabbed[slot] = false;
         cooldown[slot] = releaseCooldown;
         if (player == null) {
             return;
         }
-        player.releaseFromObjectControl(frameCounter);
+        player.releaseFromObjectControl(vIntRunCount);
     }
 
     private NativePlayerSlots nativePlayerSlots(PlayableEntity updatePlayer) {

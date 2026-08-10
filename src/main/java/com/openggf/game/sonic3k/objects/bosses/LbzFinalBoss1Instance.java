@@ -274,7 +274,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         boolean wasInitialized = initialized;
         ensureInitialized();
         if (!wasInitialized) {
@@ -1255,7 +1255,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             if (boss.isDestroyed() || (boss.statusBits & STATUS_DEFEATED) != 0) {
                 ObjectLifetimeOps.expireDynamic(this);
                 return;
@@ -1312,7 +1312,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             if (boss.isDestroyed()) {
                 ObjectLifetimeOps.expireDynamic(this);
                 return;
@@ -1386,7 +1386,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             if (detached || isDestroyed()) {
                 return;
             }
@@ -1479,7 +1479,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             if (boss.isDestroyed() || (boss.statusBits & STATUS_DEFEATED) != 0
                     || segment == null) {
                 ObjectLifetimeOps.expireDynamic(this);
@@ -1573,7 +1573,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             if (!fired) {
                 if (boss.isDestroyed() || (boss.statusBits & STATUS_DEFEATED) != 0) {
                     ObjectLifetimeOps.expireDynamic(this);
@@ -1590,7 +1590,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
             int next = ((getX() << 8) | (xSubFixed & 0xFF)) + xVelocity;
             x = (next >> 8) & 0xFFFF;
             xSubFixed = next & 0xFF;
-            spawnTrail(frameCounter);
+            spawnTrail(vIntRunCount);
             updateDynamicSpawn(getX(), getY());
             if (!isInRangeAt(x)) {
                 ObjectLifetimeOps.expireDynamic(this);
@@ -1646,8 +1646,8 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         }
 
         /** ROM loc_732F6: one trail child per frame, anim variant by frame parity. */
-        private void spawnTrail(int frameCounter) {
-            boolean variantB = (frameCounter & 1) != 0;
+        private void spawnTrail(int vIntRunCount) {
+            boolean variantB = (vIntRunCount & 1) != 0;
             LaserTrailChild trail = boss.spawnChild(
                     () -> new LaserTrailChild(boss, x, y, variantB));
             boss.recordChild(ChildKind.LASER_TRAIL, trail);
@@ -1725,7 +1725,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             animIndex++;
             if (animIndex >= frames.length) {
                 ObjectLifetimeOps.expireDynamic(this);
@@ -1762,7 +1762,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             if (boss.isDestroyed() || (boss.statusBits & STATUS_DEFEATED) != 0) {
                 ObjectLifetimeOps.expireDynamic(this);
                 return;
@@ -1832,7 +1832,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             if (boss.isDestroyed() || segment == null || segment.isDestroyed()) {
                 ObjectLifetimeOps.expireDynamic(this);
                 return;
@@ -1886,7 +1886,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             if ((boss.statusBits & STATUS_HIT_FLASH) == 0) {
                 ObjectLifetimeOps.expireDynamic(this);
                 return;
@@ -1915,7 +1915,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             // ROM MoveSprite: move by old velocity, then gravity $38.
             xFixed += xVelocity << 8;
             yFixed += yVelocity << 8;
@@ -1946,7 +1946,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             if (controller.isFinished()) {
                 ObjectLifetimeOps.expireDynamic(this);
                 return;
@@ -1969,7 +1969,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
 
         /** ROM loc_72CFA: pose P2 once grounded and alive, then delete. */
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             PlayableEntity main = boss.mainPlayer();
             boolean allPosed = true;
             for (PlayableEntity candidate : boss.services().playerQuery()
@@ -2027,7 +2027,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             boss.updatePositiveSidekickControlLock(!playerControlRestored);
             playerControlRestored = true;
         }
@@ -2140,7 +2140,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             // ROM loc_72D5A: every 4 frames spawn one explosion at ±$10.
             if (--emitTimer < 0) {
                 emitTimer = 3;
@@ -2190,7 +2190,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             if (milestoneWait >= 0) {
                 if (milestoneWait-- <= 0) {
                     boss.signalLaunchMilestoneA();
@@ -2232,7 +2232,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             // MoveChkDel = MoveSprite (gravity $38) + delete out of range.
             moveSprite2();
             yVel += 0x38;
@@ -2269,10 +2269,10 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             if (index == 0) {
                 // ROM loc_72EF8: every $10 frames spawn a smoke cluster.
-                if ((frameCounter & 0x0F) == 0) {
+                if ((vIntRunCount & 0x0F) == 0) {
                     spawnSmoke();
                 }
                 // ROM loc_72F2C: milestone B once the cluster passes below
@@ -2313,7 +2313,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             if (!puffSpawned) {
                 puffSpawned = true;
                 int puffX = getX();
@@ -2347,7 +2347,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             moveSprite2();
             if (--animTimer < 0) {
                 animTimer = 2;

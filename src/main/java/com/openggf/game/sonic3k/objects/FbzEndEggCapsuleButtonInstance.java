@@ -25,7 +25,7 @@ public final class FbzEndEggCapsuleButtonInstance extends AbstractObjectInstance
         return new FbzEndEggCapsuleButtonInstance(ctx.spawn(), null);
     }
 
-    @Override public void update(int frameCounter, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         if (!initialized) { initialized = true; return; }
         activeUpdates++;
         var contacts = checkpointAll();

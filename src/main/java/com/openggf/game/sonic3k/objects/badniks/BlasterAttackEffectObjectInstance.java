@@ -31,7 +31,7 @@ public final class BlasterAttackEffectObjectInstance extends AbstractObjectInsta
         currentY = spawn.y();
     }
 
-    @Override public void update(int frameCounter, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         if (!initialized) { initialized = true; return; } // loc_89626 does not draw on creation tick.
         refreshFromParent();
         if (scriptIndex < SCRIPT.length - 1) mappingFrame = SCRIPT[scriptIndex++];

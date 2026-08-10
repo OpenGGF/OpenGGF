@@ -34,6 +34,8 @@ import com.openggf.game.save.SaveSessionContext;
 import com.openggf.game.save.SelectedTeam;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
+import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.solid.DefaultSolidExecutionRegistry;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameRng;
@@ -296,7 +298,7 @@ public class TestGameLoop {
     }
 
     @Test
-    public void traceRealtimeRewindRunsBeforePlaybackInputBridge() throws Exception {
+    public void traceRealtimeRewindRunsBeforePreparedPlaybackAdmission() throws Exception {
         String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
         int rewind = source.indexOf("TraceSessionLauncher.active().handleRealtimeRewindInput(");
         int admission = source.indexOf("LevelFrameResult admission = levelIterationAdmission.admit");
@@ -305,8 +307,24 @@ public class TestGameLoop {
         assertTrue(bridge >= 0, "GameLoop must bridge playback input");
         assertTrue(rewind < bridge,
                 "Rewind release must seek/play the playback timeline before forced input is sampled");
-        assertTrue(admission >= 0 && admission < bridge,
-                "playback forced input must not be published before setup admission");
+        assertTrue(admission > bridge,
+                "prepared playback Start and held input must be published before ROM admission");
+    }
+
+    @Test
+    public void levelAndBonusTraceSuppressionIsClassifiedBeforeGenericTimers()
+            throws Exception {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
+        int classification = source.indexOf(
+                "playbackDebugManager.shouldSkipCurrentGameplayTick();");
+        int timers = source.indexOf("timerManager.update();", classification);
+        String prefix = source.substring(Math.max(0, classification - 180), classification);
+
+        assertTrue(prefix.contains("currentGameMode == GameMode.LEVEL"));
+        assertTrue(prefix.contains("currentGameMode == GameMode.BONUS_STAGE"),
+                "bonus-stage trace rows must classify suppression before generic timers");
+        assertTrue(classification >= 0 && timers > classification,
+                "trace suppression must be known before TimerManager advances");
     }
 
     @Test
@@ -969,6 +987,44 @@ public class TestGameLoop {
                 "module reset must clear cached title-card provider so the new module supplies it");
     }
 
+    @Test
+    void traceReplayActivationPreservesPresentationAndRetainedModuleState() {
+        Sonic2GameModule module = spy(new Sonic2GameModule());
+        @SuppressWarnings("unchecked")
+        RewindSnapshottable<Object> retained = mock(RewindSnapshottable.class);
+        when(retained.key()).thenReturn("test-retained-plc");
+        when(module.rewindAdapters()).thenReturn(List.of(retained));
+        TitleCardProvider titleCard = mock(TitleCardProvider.class);
+        when(module.getTitleCardProvider()).thenReturn(titleCard);
+        TestEnvironment.configureGameModuleFixture(module);
+        GameLoop loop = new GameLoop(mockInputHandler);
+        assertSame(titleCard, loop.getTitleCardProvider());
+        GameplayModeContext presentation =
+                SessionManager.getCurrentGameplayMode();
+        presentation.dynamicArtLifecycle().observeRamDplc(
+                "sonic", 1,
+                List.of(new com.openggf.level.render.TileLoadRequest(0, 1)),
+                0x1000, 0xF000);
+        assertFalse(presentation.dynamicArtLifecycle()
+                .capture().ledger().isEmpty());
+        assertEquals(HardwareReadinessAdmissionPolicy.LIVE,
+                presentation.hardwareTiming().admissionPolicy());
+
+        GameplayModeContext replay = presentation;
+        replay.activateRecordedHardwareAdmission();
+
+        assertSame(presentation, replay);
+        assertTrue(presentation.isGameplayRuntimeReady());
+        verify(titleCard, never()).reset();
+        verify(retained, never()).resetForMissingSnapshot();
+        assertEquals(HardwareReadinessAdmissionPolicy.RECORDED,
+                replay.hardwareTiming().admissionPolicy());
+        assertTrue(replay.isGameplayRuntimeReady());
+        assertFalse(replay.dynamicArtLifecycle().capture().ledger().isEmpty(),
+                "production dynamic-art state must remain in the same context");
+        assertSame(replay, SessionManager.getCurrentGameplayMode());
+    }
+
     // ==================== Game Mode Listener Tests ====================
 
     @Test
@@ -1006,7 +1062,7 @@ public class TestGameLoop {
         handler.handleKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_PRESS);
         handler.handleKeyEvent(GLFW_KEY_B, GLFW_PRESS);
 
-        assertEquals(BonusStageType.GUMBALL, GameLoop.resolveBonusStageDebugShortcut(handler));
+        assertEquals(BonusStageType.GUMBALL, GameLoopDebugShortcuts.resolveBonusStageDebugShortcut(handler));
     }
 
     @Test
@@ -1015,7 +1071,7 @@ public class TestGameLoop {
         handler.handleKeyEvent(GLFW_KEY_LEFT_CONTROL, GLFW_PRESS);
         handler.handleKeyEvent(GLFW_KEY_B, GLFW_PRESS);
 
-        assertEquals(BonusStageType.GLOWING_SPHERE, GameLoop.resolveBonusStageDebugShortcut(handler));
+        assertEquals(BonusStageType.GLOWING_SPHERE, GameLoopDebugShortcuts.resolveBonusStageDebugShortcut(handler));
     }
 
     @Test
@@ -1024,7 +1080,7 @@ public class TestGameLoop {
         handler.handleKeyEvent(GLFW_KEY_LEFT_ALT, GLFW_PRESS);
         handler.handleKeyEvent(GLFW_KEY_B, GLFW_PRESS);
 
-        assertEquals(BonusStageType.SLOT_MACHINE, GameLoop.resolveBonusStageDebugShortcut(handler));
+        assertEquals(BonusStageType.SLOT_MACHINE, GameLoopDebugShortcuts.resolveBonusStageDebugShortcut(handler));
     }
 
     @Test
@@ -1034,7 +1090,7 @@ public class TestGameLoop {
         handler.handleKeyEvent(GLFW_KEY_LEFT_CONTROL, GLFW_PRESS);
         handler.handleKeyEvent(GLFW_KEY_B, GLFW_PRESS);
 
-        assertEquals(BonusStageType.NONE, GameLoop.resolveBonusStageDebugShortcut(handler));
+        assertEquals(BonusStageType.NONE, GameLoopDebugShortcuts.resolveBonusStageDebugShortcut(handler));
     }
 
     @Test
@@ -1042,7 +1098,7 @@ public class TestGameLoop {
         InputHandler handler = new InputHandler();
         handler.handleKeyEvent(GLFW_KEY_B, GLFW_PRESS);
 
-        assertEquals(BonusStageType.NONE, GameLoop.resolveBonusStageDebugShortcut(handler));
+        assertEquals(BonusStageType.NONE, GameLoopDebugShortcuts.resolveBonusStageDebugShortcut(handler));
     }
 
     /**
@@ -1064,7 +1120,7 @@ public class TestGameLoop {
         handler.setLogicalOverride(LogicalInputSnapshot.neutral()
                 .withDebugInput(false, false, false, true, false));
 
-        assertEquals(BonusStageType.SLOT_MACHINE, GameLoop.resolveBonusStageDebugShortcut(handler));
+        assertEquals(BonusStageType.SLOT_MACHINE, GameLoopDebugShortcuts.resolveBonusStageDebugShortcut(handler));
     }
 
     @Test
@@ -1075,7 +1131,7 @@ public class TestGameLoop {
         handler.setLogicalOverride(LogicalInputSnapshot.neutral()
                 .withDebugInput(false, false, false, false, false));
 
-        assertEquals(BonusStageType.NONE, GameLoop.resolveBonusStageDebugShortcut(handler));
+        assertEquals(BonusStageType.NONE, GameLoopDebugShortcuts.resolveBonusStageDebugShortcut(handler));
     }
 
     @Test

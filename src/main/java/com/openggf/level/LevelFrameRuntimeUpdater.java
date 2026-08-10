@@ -28,14 +28,12 @@ final class LevelFrameRuntimeUpdater {
     }
 
     void updateParallaxAndAnimatedContent() {
-        int bgScrollY = computeBackgroundScrollY();
         if (levelManager.parallaxManager != null) {
             levelManager.parallaxManager.update(
                     levelManager.currentZone,
                     levelManager.currentAct,
                     levelManager.camera,
                     levelManager.frameCounter,
-                    bgScrollY,
                     levelManager.level);
         }
         if (levelManager.animatedPatternManager != null) {
@@ -83,13 +81,11 @@ final class LevelFrameRuntimeUpdater {
         if (levelManager.parallaxManager == null || levelManager.camera == null) {
             return;
         }
-        int bgScrollY = computeBackgroundScrollY();
         levelManager.parallaxManager.update(
                 levelManager.currentZone,
                 levelManager.currentAct,
                 levelManager.camera,
                 levelManager.frameCounter,
-                bgScrollY,
                 levelManager.level);
         levelManager.camera.setShakeOffsets(
                 levelManager.parallaxManager.getShakeOffsetX(),

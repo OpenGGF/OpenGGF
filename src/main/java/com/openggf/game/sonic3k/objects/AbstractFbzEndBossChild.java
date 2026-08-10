@@ -37,5 +37,5 @@ abstract class AbstractFbzEndBossChild extends AbstractObjectInstance
     @Override public int getX() { return x; }
     @Override public int getY() { return y; }
     @Override public boolean isPersistent() { return true; }
-    @Override public void update(int frameCounter, PlayableEntity mainPlayer) { }
+    @Override public void update(int vIntRunCount, PlayableEntity mainPlayer) { }
 }

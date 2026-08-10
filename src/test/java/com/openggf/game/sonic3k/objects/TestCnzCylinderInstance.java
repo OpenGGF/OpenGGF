@@ -321,7 +321,6 @@ class TestCnzCylinderInstance {
         TestEnvironment.activeGameplayMode();
         CnzCylinderInstance cylinder = new CnzCylinderInstance(
                 spawnAtWithSubtype(0x1BDF, 0x07E0, 0x41));
-        cylinder.setServices(new TestObjectServices());
         TestPlayableSprite tails = new TestPlayableSprite();
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x1A4F);
@@ -329,6 +328,7 @@ class TestCnzCylinderInstance {
         tails.setRenderFlagOnScreen(false);
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(tails);
         tails.setAir(false);
+        cylinder.setServices(new TestObjectServices().withSidekicks(List.of(tails)));
 
         Object slot = playerTwoSlot(cylinder);
         setSlotField(slot, "player", tails);

@@ -131,7 +131,7 @@ public class RisingLavaObjectInstance extends AbstractObjectInstance
     private int currentY;
 
     /** Cached frame counter from last update for use in onSolidContact. */
-    private int lastFrameCounter;
+    private int lastVIntRunCount;
 
     public RisingLavaObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
@@ -183,7 +183,7 @@ public class RisingLavaObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ensureInitialized();
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (!routeEnabled) {
@@ -191,7 +191,7 @@ public class RisingLavaObjectInstance extends AbstractObjectInstance
         }
 
         // Store frame counter for use in onSolidContact callback
-        this.lastFrameCounter = frameCounter;
+        this.lastVIntRunCount = vIntRunCount;
 
         // ROM: Obj30_Main (s2.asm:49083-49086)
         // y_pos = objoff_32 + Camera_BG_Y_offset (ONLY bgYOffset, no shake)
@@ -226,7 +226,7 @@ public class RisingLavaObjectInstance extends AbstractObjectInstance
         // Check if player has rings
         boolean hadRings = player.getRingCount() > 0;
         if (hadRings && !player.hasShield()) {
-            services().spawnLostRings(player, lastFrameCounter);
+            services().spawnLostRings(player, lastVIntRunCount);
         }
         // Apply hurt - lava uses DamageCause.FIRE for fire shield immunity
         player.applyHurtOrDeath(getX(), DamageCause.FIRE, hadRings);

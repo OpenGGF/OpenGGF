@@ -256,17 +256,19 @@ public final class TraceReplaySessionBootstrap {
         int zoneFeaturePreludeFrames =
                 TraceReplayBootstrap.zoneFeatureTitleCardPreludeFramesForTraceReplay(trace);
         var gameplayMode = fixture.gameplayMode();
-        // Complete-run segments restore state that already represents the
-        // production setup pass. Their reset/restore/dispatch envelope is not
-        // a replay prelude knob and must not consume fresh-load authority.
         boolean representedS3kCompleteRun =
                 TraceReplayBootstrap.isS3kCompleteRunSegment(trace);
-        if (representedS3kCompleteRun
-                && gameplayMode != null
-                && gameplayMode.getLevelManager() != null) {
-            gameplayMode.getLevelManager()
-                    .discardPendingInitialProcessSpritesForStateRestoration();
-        }
+        // The level's own Load_Sprites/Process_Sprites setup pass
+        // (Level loc_6468, sonic3k.asm:7849-7860) is NOT discarded here for any
+        // trace. It runs below, in bootstrap, before the first driven frame --
+        // see the consumePendingInitialProcessSpritesPass call at the end of
+        // this method. That placement is the whole model: the pass precedes
+        // LevelLoop, so it performs no Wait_VSync, no Read_Joypads and no
+        // addq.w #1,(Level_frame_counter).w (that increment lives inside
+        // LevelLoop at sonic3k.asm:7888-7894). It must therefore spend neither
+        // a recorded controller row nor a frame-counter tick, and recorded row
+        // 0 -- which reads Level_frame_counter == 1 on every segment -- anchors
+        // to the first LevelLoop frame, the first frame the driver steps.
         if (gameplayMode != null
                 && gameplayMode.getLevelManager() != null
                 && gameplayMode.getLevelManager().getObjectManager() != null) {
@@ -302,6 +304,7 @@ public final class TraceReplaySessionBootstrap {
                 int cameraX = camera != null ? camera.getX() : 0;
                 objectManager.initVblaCounter(trace.initialVblankCounter() - zoneFeatureVblankOffset);
                 for (int i = 0; i < zoneFeaturePreludeFrames; i++) {
+                    // V-blank-only row: see the exactly-one-tick-per-serviced-V-blank invariant on ObjectManager.vblaCounter.
                     objectManager.advanceVblaCounter();
                     levelManager.getZoneFeatureProvider().updatePrePhysics(
                             null, cameraX, levelManager.getFeatureZoneId());
@@ -326,12 +329,6 @@ public final class TraceReplaySessionBootstrap {
             // object ticks, so prelude state comes from object code rather
             // than recorded SST data.
             objectManager.reset(cameraX);
-            if (representedS3kCompleteRun) {
-                var levelEventProvider = GameServices.module().getLevelEventProvider();
-                if (levelEventProvider instanceof Sonic3kLevelEventManager s3kLem) {
-                    s3kLem.restoreCompleteRunSegmentObjectsAfterPreludeReset();
-                }
-            }
             AbstractPlayableSprite player = fixture != null ? fixture.sprite() : null;
             List<AbstractPlayableSprite> sidekicks = gameplayMode.getSpriteManager() != null
                     ? gameplayMode.getSpriteManager().getSidekicks()
@@ -413,15 +410,137 @@ public final class TraceReplaySessionBootstrap {
                     fixture != null ? fixture.sprite() : null);
         }
         primeLeaderJumpEdgeFromBk2Prelude(fixture);
+        // Execute the level setup pass (Sonic_Init/Tails_Init dispatch) here,
+        // uniformly for every trace, and here only. Running it in bootstrap
+        // rather than as a driven frame is what keeps it off the BK2 row and
+        // frame-counter budget; the first frame the driver then steps is the
+        // ROM's first LevelLoop iteration, which is recorded row 0. Nothing
+        // about this decision reads the fixture, its metadata, the zone, or the
+        // frame index.
         if (gameplayMode != null && gameplayMode.getLevelManager() != null) {
+            // Objects the ROM creates from SpawnLevelMainSprites (loc_690A /
+            // loc_6926, sonic3k.asm:8205-8216) are written into
+            // Dynamic_object_RAM at main-sprite spawn -- which happens as part
+            // of this same setup pass, after the title card. They are therefore
+            // not resident for any earlier Level_MainLoop tick, and the pass
+            // below is their first and only dispatch before LevelLoop. Install
+            // them here rather than before the prelude loop above: that loop
+            // models title-card-era ticks, when no SpawnLevelMainSprites object
+            // exists yet, so dispatching them there gave every such object two
+            // executions before recorded row 0 where the ROM gives one.
+            if (representedS3kCompleteRun && objectDispatchFrames > 0) {
+                var levelEventProvider = GameServices.module().getLevelEventProvider();
+                if (levelEventProvider instanceof Sonic3kLevelEventManager s3kLem) {
+                    s3kLem.restoreCompleteRunSegmentObjectsAfterPreludeReset();
+                }
+            }
             gameplayMode.getLevelManager().consumePendingInitialProcessSpritesPass();
         }
+        alignObjectVblankCounterForReplayStart(trace);
         applyInitialRngSeedForReplay(trace.metadata());
         TraceReplayBootstrap.SnapshotReport snapshotReport =
                 TraceReplayBootstrap.reportPreTraceObjectSnapshots(trace);
         TraceReplayBootstrap.ReplayStartState replayStart =
                 TraceReplayBootstrap.applyReplayStartStateForTraceReplay(trace, fixture);
         return new BootstrapResult(snapshotReport, replayStart);
+    }
+
+    /**
+     * Finishes deterministic replay bootstrap after the real production title
+     * card has already run. Synthetic title-card/object/animated-art setup is
+     * deliberately omitted; the prepared gameplay context owns that state.
+     */
+    public static BootstrapResult applyPreparedLevelBootstrap(
+            TraceData trace,
+            TraceReplayFixture fixture,
+            boolean forceHardwareTimingReplay) {
+        installHardwareTimingReplay(trace, fixture, forceHardwareTimingReplay);
+        primeLeaderJumpEdgeFromBk2Prelude(fixture);
+        alignObjectVblankCounterForReplayStart(trace);
+        applyInitialRngSeedForReplay(trace.metadata());
+        TraceReplayBootstrap.SnapshotReport snapshotReport =
+                TraceReplayBootstrap.reportPreTraceObjectSnapshots(trace);
+        TraceReplayBootstrap.ReplayStartState replayStart =
+                TraceReplayBootstrap.applyReplayStartStateForTraceReplay(
+                        trace, fixture);
+        return new BootstrapResult(snapshotReport, replayStart);
+    }
+
+    /**
+     * Establishes the object-visible clock immediately before replay row zero.
+     * The first serviced VBlank advances this pre-row value to the counter
+     * recorded on row zero. A zero-valued trace intentionally seeds {@code -1}
+     * rather than masking early, preserving the same first-tick invariant.
+     */
+    static void alignObjectVblankCounterForReplayStart(TraceData trace) {
+        Objects.requireNonNull(trace, "trace");
+        var level = GameServices.levelOrNull();
+        if (level == null || level.getObjectManager() == null) {
+            return;
+        }
+        level.getObjectManager().initVblaCounter(trace.initialVblankCounter() - 1);
+    }
+
+
+    /**
+     * Seeds the velocity the ROM's player already carried into a complete-run
+     * segment.
+     *
+     * <p>These segments open on the level's own setup pass, where
+     * {@code Sonic_Init} does {@code routine += 2} then {@code rts} without
+     * touching {@code x_vel}/{@code y_vel} (sonic3k.asm:21902-21943). Whatever
+     * the SST held when the level loaded therefore survives into the first
+     * recorded row: HCZ and MGZ record the routine change with {@code y_vel}
+     * already {@code 0x38}, ICZ with {@code 0x280}, while AIZ, CNZ, LBZ and MHZ
+     * record zero.
+     *
+     * <p>Position, angle and airborne status come from the same row for the same
+     * reason: {@code Sonic_Init} leaves all of them untouched, so row 0 records
+     * the state the level was entered with rather than anything the setup frame
+     * produced.
+     *
+     * <p>This is pre-trace bootstrap in the same class as the start position and
+     * RNG seed — the state a save state at the BK2 start would restore, applied
+     * once before any frame is driven. It is not per-frame hydration: nothing
+     * reads the trace again after this point.
+     */
+    private static void seedSegmentEntryVelocity(
+            TraceData trace, AbstractPlayableSprite sprite) {
+        if (trace == null || sprite == null
+                || !TraceReplayBootstrap.isS3kCompleteRunSegment(trace)
+                || trace.frameCount() == 0) {
+            return;
+        }
+        var entry = trace.getFrame(0);
+        sprite.setAngle(entry.angle());
+        // Position, subpixel, velocity and Status_InAir are NOT seeded from row
+        // 0. Row 0 is a recorded LevelLoop iteration-1 row -- a POST-frame
+        // sample -- so copying it in as pre-frame state hands the engine frame
+        // 0's own result before frame 0 runs. The player's spawn state is owned
+        // by SpawnLevelMainSprites (sonic3k.asm:8111-8205), which takes x_pos /
+        // y_pos from the level start position and sets Status_InAir only via
+        // the explicit per-zone bsets, leaving velocity and the subpixel
+        // fraction zero (the object RAM is cleared before the spawn writes);
+        // MHZ1 $700 and CNZ1 $300 fall through to loc_68D8 (8178-8197) and
+        // spawn grounded, so their frame-0 floor check is what sets
+        // Status_InAir, as the frame's outcome. The caller has already applied
+        // the metadata start centre, which is that spawn position.
+        //
+        // Seeding position here silently handed the engine one frame of
+        // recorded movement for any segment whose row-0 sample had already
+        // moved off the spawn coordinate: HCZ1 spawns falling with left held,
+        // so its row 0 is $027F.E800 rather than the $0280.0000 spawn, and the
+        // engine then ran frame 0's own -$1800 air-control step on top of it --
+        // a permanent one-frame x offset, plus a 1px sidekick placement error
+        // because SpawnLevelMainSprites_SpawnPlayers derives Player_2's x_pos
+        // from Player_1's (sonic3k.asm:8363-8366).
+        // anim/prev_anim and mapping_frame survive the load the same way: ROM
+        // writes them as a word at spawn for the zones that need one
+        // (sonic3k.asm:8155-8190) and Sonic_Init never touches them, so row 0
+        // carries whatever the previous segment left behind.
+        sprite.setAnimationId(entry.animationId());
+        sprite.getAnimationManager().publishPreviousAnimationId(entry.animationId());
+        sprite.setMappingFrame(entry.mappingFrame());
     }
 
     public static void installHardwareTimingReplay(
@@ -431,10 +550,12 @@ public final class TraceReplaySessionBootstrap {
         if (trace == null
                 || fixture == null
                 || (!forceHardwareTimingReplay
-                        && !trace.metadata().hasHardwareTimingStream())) {
+                        && !trace.hardwareTimingSchedule().hasRecordedInput())) {
             return;
         }
-        installHardwareTimingReplay(trace.hardwareTimingSchedule(), fixture);
+        HardwareTimingSchedule schedule =
+                TraceHardwareTimingScheduleCompiler.compileForInstall(trace);
+        installHardwareTimingReplay(schedule, fixture);
     }
 
     /** Installs one already-validated replay schedule into the active gameplay session. */
@@ -637,7 +758,7 @@ public final class TraceReplaySessionBootstrap {
         }
         TraceMetadata meta = trace.metadata();
         return "s2".equals(meta.game())
-                && meta.nativePreludeMode()
+                && meta.hasNativePreludeBootstrap()
                 && sidekickPreludeFrames > 0
                 && sidekickPreludeFrames == objectPreludeFrames;
     }
@@ -649,17 +770,38 @@ public final class TraceReplaySessionBootstrap {
         boolean useMetadataStartAnchor = trace != null
                 && trace.metadata() != null
                 && "s2".equals(trace.metadata().game())
-                && trace.metadata().nativePreludeMode()
+                && trace.metadata().hasNativePreludeBootstrap()
                 && !tornadoPreludeOrder;
-        int[] levelStart = useMetadataStartAnchor
-                ? resolveCurrentLevelStart()
-                : null;
+        // ROM InitPlayers copies the sidekick's spawn coordinates out of
+        // MainCharacter's live x_pos/y_pos and applies -$20/+4
+        // (docs/s2disasm/s2.asm:5191-5195). LevelSizeLoad has already
+        // established that position by one of two branches: the zone's
+        // StartLocations entry, or -- when Last_star_pole_hit is non-zero --
+        // Obj79_LoadData's Saved_x_pos/Saved_y_pos checkpoint restore
+        // (docs/s2disasm/s2.asm:14773-14790, :44774-44778). InitPlayers itself
+        // does not distinguish them, so the anchor must follow whichever one
+        // placed the leader.
+        //
+        // The engine's own level load runs the StartLocations branch, so the
+        // zone registry is the faithful anchor for a load that entered there.
+        // A load that entered from a checkpoint has the leader somewhere else
+        // along the level, and anchoring it to the start table left the
+        // sidekick a fixed $14px behind for the rest of the level. The engine's
+        // post-load ground snap can move the leader a pixel vertically off the
+        // start table's Y, so the horizontal coordinate is what identifies
+        // which LevelSizeLoad branch ran -- ROM's checkpoint restore always
+        // reinstates a star post's own X, which is never the level's spawn X.
+        int[] levelStart = useMetadataStartAnchor ? resolveCurrentLevelStart() : null;
         for (AbstractPlayableSprite sidekick :
                 gameplayMode.getSpriteManager().getRegisteredSidekicks()) {
             SidekickCpuController cpu = sidekick.getCpuController();
             if (cpu != null) {
-                if (useMetadataStartAnchor && levelStart != null) {
-                    cpu.captureLevelStartLeaderAnchor(levelStart[0], levelStart[1]);
+                if (useMetadataStartAnchor) {
+                    if (levelStart != null && cpu.leaderCentreX() == levelStart[0]) {
+                        cpu.captureLevelStartLeaderAnchor(levelStart[0], levelStart[1]);
+                    } else {
+                        cpu.captureLevelStartLeaderAnchorFromLeaderPosition();
+                    }
                 }
                 cpu.applyLevelStartSidekickPlacementForBootstrap();
             }
@@ -684,17 +826,46 @@ public final class TraceReplaySessionBootstrap {
             int startX = player.getCentreX();
             int startY = player.getCentreY();
             int[] yOffsets = {0, 0, 0, 0, 1};
-            for (int offset : yOffsets) {
+            for (int i = 0; i < yOffsets.length; i++) {
                 player.setCentreX((short) startX);
-                player.setCentreY((short) (startY + offset));
+                player.setCentreY((short) (startY + yOffsets[i]));
                 player.setAir(true);
                 player.setOnObject(false);
                 recordLeaderHistoryForPrelude(player);
+                // These lead-in frames stand in for title-card iterations the
+                // ROM ran through `jsr (RunObjects).l` (docs/s2disasm/s2.asm:
+                // 5060-5066), so ObjB2 executed on them too. ObjB2_Animate_Pilot
+                // is the first instruction of ObjB2_Main_SCZ
+                // (docs/s2disasm/s2.asm:78815-78816, 79536-79556) and its
+                // 9-frame cadence drives the pilot's dynamic-art submissions
+                // through the character bank's *_Part2 entry point
+                // (s2.asm:41659-41697); reproducing only the player-side
+                // effects left that cadence permanently late.
+                //
+                // The first iteration is skipped: the players already exist when
+                // the loop starts (InitPlayers, docs/s2disasm/s2.asm:4945),
+                // whereas ObjB2 is placed by the loop's own ObjPosLoad pass and
+                // therefore first executes on the following iteration. That is
+                // why the pilot sees the leave loop's 25 iterations
+                // (docs/s2disasm/s2.asm:27518-27604) while the player-derived
+                // prelude length is one frame longer.
+                if (i > 0) {
+                    tornado.advanceOmittedPresentationPilotFrame();
+                } else {
+                    // The skipped first iteration is ObjB2's routine-0 frame
+                    // (ObjB2_Init, docs/s2disasm/s2.asm:78799-78813), which
+                    // reaches no main routine and so ticks no pilot.
+                    tornado.consumePendingInitRoutine();
+                }
             }
             player.setCentreY((short) (startY + 4));
             return yOffsets.length;
         }
         if (tornado.isWfzStartRideStartPreludeObject()) {
+            // This lead-in stands in for object-prelude iterations the ROM ran,
+            // the first of which is ObjB2's routine-0 frame (ObjB2_Init,
+            // docs/s2disasm/s2.asm:78799-78813).
+            tornado.consumePendingInitRoutine();
             for (int i = 0; i < 2; i++) {
                 player.setAir(true);
                 player.setOnObject(false);
@@ -1085,12 +1256,13 @@ public final class TraceReplaySessionBootstrap {
         // initial load, which drifts physics at the first collision.
         sprite.setCentreX(meta.startX());
         sprite.setCentreY(meta.startY());
+        seedSegmentEntryVelocity(trace, sprite);
         var level = GameServices.levelOrNull();
         if (level != null) {
             GameplayTeamBootstrap.repositionRegisteredSidekicks(
                     GameServices.module(),
                     level);
-            if ("s2".equals(meta.game()) && meta.nativePreludeMode()) {
+            if ("s2".equals(meta.game()) && meta.hasNativePreludeBootstrap()) {
                 for (AbstractPlayableSprite sidekick : GameServices.sprites().getRegisteredSidekicks()) {
                     SidekickCpuController cpu = sidekick.getCpuController();
                     if (cpu != null) {
@@ -1105,7 +1277,7 @@ public final class TraceReplaySessionBootstrap {
             // SpawnLevelMainSprites_SpawnPlayers (sonic3k.asm:8335-8427) sets
             // sidekick position FIRST, then SpawnLevelMainSprites
             // (sonic3k.asm:8132-8205) sets the in-air status for zones like
-            // MGZ1 / HCZ1 / LRZ1 / SSZ. repositionRegisteredSidekicks above
+            // MGZ1 / HCZ1 / LRZ1 non-Knuckles. repositionRegisteredSidekicks above
             // clears the in-air bit via spawnSidekicks, so the zone-event
             // handler must run again to restore the falling-intro state.
             var levelEventProvider = GameServices.module().getLevelEventProvider();

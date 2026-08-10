@@ -19,7 +19,7 @@ public final class FbzDezPlayerLauncherObjectInstance extends AbstractObjectInst
     private boolean returnCompletedThisFrame;
     private boolean normalCallbackEligible = true;
     public FbzDezPlayerLauncherObjectInstance(ObjectSpawn spawn){super(spawn,"FBZDEZPlayerLauncher");anchorX=x=spawn.x();xFixed=x<<8;}
-    @Override public void update(int frameCounter,PlayableEntity ignored){
+    @Override public void update(int vIntRunCount,PlayableEntity ignored){
         stepMotion();
         updateDynamicSpawn(x,spawn.y());
         // loc_3B9AC tests the standing bits before SolidObjectTop runs. A
@@ -28,7 +28,7 @@ public final class FbzDezPlayerLauncherObjectInstance extends AbstractObjectInst
         ObjectPlayerQuery query=services().playerQuery();
         query.visitPlayers(participationPolicy(),this,(launcher,player)->{
             if(launcher.services().solidExecutionRegistry().previousStanding(launcher,player).standing()){
-                launcher.applyStandingRider(player,frameCounter);
+                launcher.applyStandingRider(player,vIntRunCount);
             }
         });
         checkpointAll();

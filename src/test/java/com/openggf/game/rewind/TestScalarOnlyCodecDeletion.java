@@ -111,7 +111,6 @@ import com.openggf.game.sonic3k.objects.AizMinibossBodyChild;
 import com.openggf.game.sonic3k.objects.AizMinibossFlameBarrelChild;
 import com.openggf.game.sonic3k.objects.AizMinibossFlameChild;
 import com.openggf.game.sonic3k.objects.AizMinibossInstance;
-import com.openggf.game.sonic3k.objects.AizMinibossNapalmController;
 import com.openggf.game.sonic3k.objects.AizPlaneIntroInstance;
 import com.openggf.game.sonic3k.objects.AizShipBombInstance;
 import com.openggf.game.sonic3k.objects.AizSpikedLogObjectInstance;
@@ -253,7 +252,6 @@ public class TestScalarOnlyCodecDeletion {
             "com.openggf.game.sonic3k.objects.AizBgTreeSpawnerInstance";
     private static final String AIZ_MINIBOSS_NAPALM_FQN =
             "com.openggf.game.sonic3k.objects.AizMinibossNapalmProjectile";
-
     /**
      * Batch-2 scalar-only classes whose dynamic rewind codec was deleted in favour
      * of the {@link RewindRecreatable} {@code genericRecreate} Path 1. Each must:
@@ -1528,7 +1526,6 @@ public class TestScalarOnlyCodecDeletion {
     private static final List<CodecDeletionCandidate> AIZ_MINIBOSS_GRAPH_DELETED_CODECS = List.of(
             new CodecDeletionCandidate(AizMinibossBodyChild.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(AizMinibossArmChild.class.getName(), GameId.S3K),
-            new CodecDeletionCandidate(AizMinibossNapalmController.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(AizMinibossFlameBarrelChild.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(AizMinibossFlameChild.class.getName(), GameId.S3K),
             new CodecDeletionCandidate(AizMinibossBarrelShotChild.class.getName(), GameId.S3K),
@@ -3542,7 +3539,9 @@ public class TestScalarOnlyCodecDeletion {
         assertEquals(AIZ_BG_TREE_SPAWNER_FQN, result.getClass().getName());
     }
 
-    // AIZ Miniboss Napalm Projectile (S3K) - RED until RewindRecreatable is added
+    // AIZ Miniboss Napalm Projectile (S3K) is parent/sibling-linked. Its real
+    // rewind roundtrip is covered by TestS3kAizMinibossGraphRewind rather than
+    // the isolated scalar-only probe used for the standalone classes here.
 
     @Test
     void aizMinibossNapalmIsRewindRecreatable() {
@@ -3553,18 +3552,13 @@ public class TestScalarOnlyCodecDeletion {
                 AIZ_MINIBOSS_NAPALM_FQN + " must implement RewindRecreatable");
     }
 
-    @Test
-    void aizMinibossNapalmGenericRecreateProducesInstance() {
-        ObjectInstance result = invokeGenericRecreate(AIZ_MINIBOSS_NAPALM_FQN, 0x300, 0x400, GameId.S3K);
-        assertNotNull(result, "genericRecreate must return non-null for AizMinibossNapalmProjectile");
-        assertEquals(AIZ_MINIBOSS_NAPALM_FQN, result.getClass().getName());
-    }
-
-    // Integration anchor: after codec deletion, all three must pass via harness
+    // Integration anchor: the two standalone classes pass the isolated harness;
+    // the graph-linked AIZ projectile is asserted by the graph classification and
+    // real ObjectManager roundtrip tests in the AIZ miniboss rewind suite.
 
     @Test
-    void allThreeClassesRoundTripPassedAfterCodecDeletion() {
-        for (String fqn : List.of(HTZ_GROUND_FIRE_FQN, AIZ_BG_TREE_SPAWNER_FQN, AIZ_MINIBOSS_NAPALM_FQN)) {
+    void standaloneClassesRoundTripPassedAfterCodecDeletion() {
+        for (String fqn : List.of(HTZ_GROUND_FIRE_FQN, AIZ_BG_TREE_SPAWNER_FQN)) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(fqn);
             assertInstanceOf(RoundTripSweepResult.Passed.class, result,
                     fqn + " must round-trip as Passed via RewindRecreatable path; got: " + result);

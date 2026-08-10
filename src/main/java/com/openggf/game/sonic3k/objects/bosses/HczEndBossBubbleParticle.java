@@ -37,8 +37,8 @@ final class HczEndBossBubbleParticle extends AbstractBossChild implements Rewind
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
-        if (!beginUpdate(frameCounter)) {
+    public void update(int vIntRunCount, PlayableEntity player) {
+        if (!beginUpdate(vIntRunCount)) {
             return;
         }
         HczEndBossWaterColumn column = activeColumn();

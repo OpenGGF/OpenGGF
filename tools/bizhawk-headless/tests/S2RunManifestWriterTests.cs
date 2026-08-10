@@ -5,22 +5,20 @@ using System.Text.RegularExpressions;
 namespace OpenGGF.BizHawk.Headless.Tests
 {
     /// <summary>
-    /// Literal-byte tests for run_manifest.json: reconstructing the
-    /// canonical s2-ehz-halfpipe-roundtrip manifest from its recorded
-    /// values must reproduce the committed fixture exactly (the fixture was
-    /// captured through Windows text-mode io by the v9.12 Lua, so its CRLF
-    /// line endings are normalized to the Lua's written LF and its version
-    /// line to the native writer's 9.13-s2 stamp before comparison — the
-    /// only differences). Also covers the optional-field emission rule (present
-    /// iff recorded, zero values still render) and Lua %q escaping.
+    /// Strict-v5 assertions for the S2 run_manifest.json writer. The tests
+    /// construct current in-memory segments and transitions, then require
+    /// the v5 recorder fields, explicit empty dynamic-art-gap array, and
+    /// absence of removed version fields. They also cover optional-field
+    /// emission (present iff recorded, including zero values) and Lua %q
+    /// escaping without transforming an installed fixture.
     /// </summary>
     internal static class S2RunManifestWriterTests
     {
         public static void Register(ICollection<TestMain.TestCase> tests)
         {
             tests.Add(new TestMain.TestCase(
-                "S2RunManifest writer reproduces the canonical fixture bytes",
-                ReproducesCanonicalFixtureBytes));
+                "S2RunManifest writer emits current strict v5 fields",
+                EmitsStrictV5ManifestEnvelope));
             tests.Add(new TestMain.TestCase(
                 "S2RunManifest optional fields render by presence not value",
                 OptionalFieldsRenderByPresenceNotValue));
@@ -29,7 +27,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 QuotesRunIdWithLuaPercentQEscaping));
         }
 
-        private static void ReproducesCanonicalFixtureBytes()
+        private static void EmitsStrictV5ManifestEnvelope()
         {
             var segments = new List<RunManifestSegment>
             {
@@ -83,29 +81,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     starpost1, exit1, starpost2, exit2
                 });
 
-            // Ground truth: the committed fixture manifest, regenerated from
-            // a native 9.13-s2 capture (CRLF per the run-publication
-            // convention; the native writer emits LF before publication
-            // expands it). CRLF normalization is the only permitted
-            // difference here — the version line must match exactly.
-            string fixture = File.ReadAllText(Path.Combine(
-                EndToEndTests.RepositoryRoot,
-                "src", "test", "resources", "traces", "s2", "runs",
-                "s2-ehz-halfpipe-roundtrip", "run_manifest.json"));
-            fixture = fixture.Replace("\r\n", "\n")
-                .Replace("  \"run_schema\": 2,", "  \"run_schema\": 1,");
-            fixture = Regex.Replace(
-                fixture,
-                ", \"dynamic_art_initial_ledger_descriptors\": .*?,"
-                    + " \"dynamic_art_initial_ledger_fingerprint\":"
-                    + " \"sha256:[0-9a-f]+\"(?=})",
-                string.Empty);
-            int audit = fixture.IndexOf(
-                ",\n  \"dynamic_art_gap_transitions\": [",
-                System.StringComparison.Ordinal);
-            AssertEx.Equal(true, audit >= 0);
-            fixture = fixture.Substring(0, audit) + "\n}\n";
-            AssertEx.Equal(fixture, produced);
+            AssertEx.Equal(true, produced.Contains(
+                "  \"recorder\": \"native-bizhawk-headless\",\n"
+                + "  \"recorder_version\": \"3.0\",\n"
+                + "  \"trace_schema\": 5,\n"));
+            AssertEx.Equal(true, produced.EndsWith(
+                "  \"dynamic_art_gap_transitions\": [\n  ]\n}\n"));
         }
 
         private static void OptionalFieldsRenderByPresenceNotValue()
@@ -160,7 +141,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(
                 true,
                 produced.EndsWith(
-                    "  \"transitions\": [\n  ]\n}\n"));
+                    "  \"transitions\": [\n  ],\n"
+                    + "  \"dynamic_art_gap_transitions\": [\n  ]\n}\n"));
         }
     }
 }

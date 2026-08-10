@@ -42,13 +42,13 @@ public final class FbzFloatingPlatformObjectInstance extends AbstractObjectInsta
         anchorX = x = spawn.x(); anchorY = y = spawn.y();
     }
     @Override public int romObjectCodePointerHighWord() { return 0x0003; }
-    @Override public void update(int frameCounter, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         switch (movementMode) {
             case 0 -> y = anchorY + (TrigLookupTable.sinHex(localAngle++) >> 5);
             case 1 -> y = anchorY + signedOscillation(MODE_1_OSCILLATION_DATA_OFFSET,0x20);
             case 2 -> y = anchorY + signedOscillation(MODE_2_OSCILLATION_DATA_OFFSET,0x40);
             case 3 -> {
-                int counter=resolveLevelFrameCounter(frameCounter)&0xFF;
+                int counter=resolveLevelFrameCounter(vIntRunCount)&0xFF;
                 if((spawn.renderFlags()&1)!=0)counter=(-counter)&0xFF;
                 int a=(counter+phase)&0xFF;
                 x=anchorX+(TrigLookupTable.sinHex(a)>>2);

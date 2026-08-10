@@ -77,6 +77,53 @@ public interface LevelInitProfile {
     }
 
     /**
+     * Number of omitted presentation iterations that ran the ROM's object loop
+     * with the player objects already created, and so advanced player
+     * animation and the persistent last-loaded-DPLC byte before gameplay.
+     *
+     * <p>Zero for a game whose omitted presentation carries no player object
+     * loop.
+     */
+    default int skippedPresentationPlayableFrames() {
+        return 0;
+    }
+
+    /**
+     * Frames the game's {@code Level:} routine spends fading out the previous
+     * screen before it queues the returning level's initial PLCs.
+     *
+     * <p>Each such frame is a real {@code WaitForVBlank} row that runs
+     * {@code RunPLC} against the just-cleared queue, so the level art's drain
+     * starts this many rows after the game-mode handoff rather than at it.
+     *
+     * <p>Zero for a game whose return-load fade has not been verified against
+     * its disassembly; the shared results-exit path then keeps its established
+     * immediate-load sequencing.
+     */
+    default int preLevelFadeOutFrames() {
+        return 0;
+    }
+
+    /**
+     * Counted {@code WaitForVBlank} rows the game's {@code Level:} routine
+     * spends between its last un-timed load step and the first iteration of
+     * the level main loop.
+     *
+     * <p>The routine's own object prelude stages the player's tiles and raises
+     * the "graphics changed" flag; the very next V-int — the first row of this
+     * tail — performs the transfer. The tail is frame-counted in the listing,
+     * so the transfer's row is the level's first main-loop row minus this
+     * count regardless of how long the un-timed load steps before it took.
+     *
+     * <p>Zero for a game whose tail has not been transcribed from its
+     * disassembly; its staged transfer then belongs to the presentation
+     * boundary that prepared it.
+     */
+    default int preLevelMainLoopDelayFrames() {
+        return 0;
+    }
+
+    /**
      * Ordered steps for entering a level (title card through control unlock).
      * <p>
      * Maps to the game's {@code Level:} routine: S1 has 44 steps (phases A-L),

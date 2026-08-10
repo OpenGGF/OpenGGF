@@ -5,6 +5,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Text;
+using System.Runtime.InteropServices;
 using BizHawk.Headless.Gpgx;
 
 namespace OpenGGF.BizHawk.Headless.Tests
@@ -29,6 +30,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "TraceCli trace mode rejects smoke-only arguments",
                 TraceModeRejectsSmokeOnlyArguments));
+            tests.Add(new TestMain.TestCase(
+                "TraceCli accepts movie-free S1 credits selectors and rejects incompatible input",
+                CreditsDemoSelectorsAreStrict));
+            tests.Add(new TestMain.TestCase(
+                "TraceCli credits candidates cannot resolve into canonical fixtures",
+                CreditsCandidatePathIsCanonicalSafe));
             tests.Add(new TestMain.TestCase(
                 "TraceCli trace mode refuses each existing final output",
                 TraceModeRefusesEachExistingFinalOutput));
@@ -130,6 +137,158 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 serial: true));
         }
 
+        private static void CreditsDemoSelectorsAreStrict()
+        {
+            string root = TestScratch.CreateRootPath("credits-cli");
+            CommandLineOptions options = CommandLineOptions.Parse(new[]
+            {
+                "--mode", "trace", "--rom", "s1.gen", "--output", root,
+                "--trace-profile", "credits_demo", "--credits-target", "7"
+            });
+            AssertEx.Equal(null, options.MoviePath);
+            AssertEx.Equal(7, options.CreditsTarget.Value);
+            AssertEx.Equal(0L, options.CompressThresholdBytes);
+
+            string sidecar = root + "-raw.jsonl";
+            CommandLineOptions audited = CommandLineOptions.Parse(new[]
+            {
+                "--mode", "trace", "--rom", "s1.gen", "--output", root + "-all",
+                "--trace-profile", "credits_demo", "--credits-target", "all",
+                "--credits-raw-observations", sidecar,
+                "--credits-raw-observation-id", "task9-credits-a"
+            });
+            AssertEx.Equal(Path.GetFullPath(sidecar),
+                audited.CreditsRawObservationsPath);
+            AssertEx.Equal("task9-credits-a", audited.CreditsRawObservationId);
+            AssertEx.Throws<ArgumentException>(
+                () => CommandLineOptions.Parse(new[]
+                {
+                    "--mode", "trace", "--rom", "s1.gen", "--movie", "x.bk2",
+                    "--output", root + "-movie", "--trace-profile", "credits_demo",
+                    "--credits-target", "all"
+                }), "--movie is forbidden");
+            AssertEx.Throws<ArgumentOutOfRangeException>(
+                () => CommandLineOptions.Parse(new[]
+                {
+                    "--mode", "trace", "--rom", "s1.gen", "--output", root + "-bad",
+                    "--trace-profile", "credits_demo", "--credits-target", "8"
+                }), "all or 0 through 7");
+            AssertEx.Throws<ArgumentException>(
+                () => CommandLineOptions.Parse(new[]
+                {
+                    "--mode", "trace", "--rom", "s1.gen", "--movie", "x.bk2",
+                    "--output", root + "-other", "--credits-target", "0"
+                }), "requires --trace-profile credits_demo");
+
+            AssertEx.Throws<ArgumentException>(
+                () => CommandLineOptions.Parse(new[]
+                {
+                    "--mode", "trace", "--rom", "s1.gen", "--output", root + "-missing-id",
+                    "--trace-profile", "credits_demo", "--credits-target", "all",
+                    "--credits-raw-observations", root + "-missing-id.jsonl"
+                }), "must be supplied together");
+            AssertEx.Throws<ArgumentException>(
+                () => CommandLineOptions.Parse(new[]
+                {
+                    "--mode", "trace", "--rom", "s1.gen", "--output", root + "-single",
+                    "--trace-profile", "credits_demo", "--credits-target", "7",
+                    "--credits-raw-observations", root + "-single.jsonl",
+                    "--credits-raw-observation-id", "single"
+                }), "credits-target all");
+
+            foreach (string identity in new[] { ".", "..", "has/slash", "has\\slash", "line\nbreak", "\u007f" })
+            {
+                AssertEx.Throws<ArgumentException>(
+                    () => CommandLineOptions.Parse(new[]
+                    {
+                        "--mode", "trace", "--rom", "s1.gen", "--output", root + "-identity",
+                        "--trace-profile", "credits_demo", "--credits-target", "all",
+                        "--credits-raw-observations", root + "-identity.jsonl",
+                        "--credits-raw-observation-id", identity
+                    }), "printable ASCII");
+            }
+        }
+
+        private static void CreditsCandidatePathIsCanonicalSafe()
+        {
+            string canonical = Path.Combine(EndToEndTests.RepositoryRoot,
+                "src", "test", "resources", "traces");
+            AssertEx.Equal(false, Program.IsCreditsCandidatePathSafe(canonical));
+            AssertEx.Equal(false, Program.IsCreditsCandidatePathSafe(
+                Path.Combine(canonical, "s1", "..", "s1", "candidate")));
+            string scratch = TestScratch.CreateRootPath("credits-path");
+            Directory.CreateDirectory(scratch);
+            try
+            {
+                string alias = Path.Combine(scratch, "canonical-alias");
+                if (CreateSymlink(canonical, alias) != 0)
+                {
+                    throw new InvalidOperationException("Unable to create test symlink.");
+                }
+                AssertEx.Equal(false, Program.IsCreditsCandidatePathSafe(
+                    Path.Combine(alias, "candidate")));
+                AssertEx.Equal(true, Program.IsCreditsCandidatePathSafe(
+                    Path.Combine(scratch, "candidate")));
+
+                string candidate = Path.Combine(scratch, "candidate");
+                string raw = Path.Combine(scratch, "evidence", "raw.jsonl");
+                CreditsRawObservationPathPolicy.Validate(
+                    candidate, raw, canonical);
+                AssertEx.Throws<ArgumentException>(
+                    () => CreditsRawObservationPathPolicy.Validate(
+                        candidate, Path.Combine(candidate, "raw.jsonl"), canonical),
+                    "outside the candidate");
+                AssertEx.Throws<ArgumentException>(
+                    () => CreditsRawObservationPathPolicy.Validate(
+                        candidate, Path.Combine(canonical, "raw.jsonl"), canonical),
+                    "outside the installed");
+
+                string outside = Path.Combine(scratch, "outside");
+                Directory.CreateDirectory(outside);
+                string evidenceAlias = Path.Combine(scratch, "evidence-alias");
+                if (CreateSymlink(outside, evidenceAlias) != 0)
+                {
+                    throw new InvalidOperationException("Unable to create evidence symlink.");
+                }
+                AssertEx.Throws<ArgumentException>(
+                    () => CreditsRawObservationPathPolicy.Validate(
+                        candidate, Path.Combine(evidenceAlias, "raw.jsonl"), canonical),
+                    "symlink traversal");
+                File.Delete(evidenceAlias);
+
+                Directory.CreateDirectory(Path.GetDirectoryName(raw));
+                File.WriteAllText(raw, "occupied");
+                AssertEx.Throws<IOException>(
+                    () => CreditsRawObservationPathPolicy.Validate(
+                        candidate, raw, canonical),
+                    "already exists");
+
+                string originalDirectory = Directory.GetCurrentDirectory();
+                string unrelated = Path.Combine(Path.GetTempPath(),
+                    "openggf-credits-path-cwd-" + Guid.NewGuid().ToString("N"));
+                Directory.CreateDirectory(unrelated);
+                try
+                {
+                    Directory.SetCurrentDirectory(unrelated);
+                    AssertEx.Equal(Path.GetFullPath(canonical),
+                        Path.GetFullPath(Program.FindInstalledTraceRoot()));
+                }
+                finally
+                {
+                    Directory.SetCurrentDirectory(originalDirectory);
+                    Directory.Delete(unrelated, true);
+                }
+                File.Delete(alias);
+            }
+            finally
+            {
+                if (Directory.Exists(scratch)) Directory.Delete(scratch, true);
+            }
+        }
+
+        [DllImport("libc", EntryPoint = "symlink", SetLastError = true)]
+        private static extern int CreateSymlink(string target, string linkPath);
+
         /// <summary>
         /// S3K standard trace (auto-detected from the locked-on ROM's
         /// SHA-1): the shared four-file publication pipeline with the
@@ -228,9 +387,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
                             + "  \"zone\": \"cnz\",\n");
                         AssertContains(
                             metadata,
-                            "  \"lua_script_version\": \"6.38-s3k\",\n"
-                            + "  \"trace_schema\": 7,\n"
-                            + "  \"hardware_timing_schema\": 2,\n");
+                            "  \"recorder\": \"native-bizhawk-headless\",\n"
+                            + "  \"recorder_version\": \"3.0\",\n"
+                            + "  \"trace_schema\": 5,\n");
+                        AssertEx.Equal(false, metadata.Contains("run_schema"));
+                        AssertEx.Equal(false, metadata.Contains("lua_script_version"));
+                        AssertEx.Equal(false, metadata.Contains("csv_version"));
+                        AssertEx.Equal(false, metadata.Contains("ss_csv_version"));
+                        AssertEx.Equal(false, metadata.Contains("hardware_timing_schema"));
                         AssertContains(
                             metadata,
                             "  \"trace_profile\": \"gameplay_unlock\",\n");
@@ -528,9 +692,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
                             + "  \"zone\": \"aiz\",\n");
                         AssertContains(
                             metadata,
-                            "  \"lua_script_version\": \""
-                            + S3KCompleteRunMetadataWriter.LuaScriptVersion
-                            + "\",\n");
+                            "  \"recorder\": \"native-bizhawk-headless\",\n"
+                            + "  \"recorder_version\": \"3.0\",\n"
+                            + "  \"trace_schema\": 5,\n");
+                        AssertEx.Equal(
+                            false, metadata.Contains("lua_script_version"));
+                        AssertEx.Equal(false, metadata.Contains("csv_version"));
+                        AssertEx.Equal(
+                            false, metadata.Contains("hardware_timing_schema"));
                         AssertContains(
                             metadata,
                             "  \"trace_profile\": \"complete_run\",\n"
@@ -556,7 +725,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
                             + " \"trace_frame_count\": 8, \"zone_id\": 0,"
                             + " \"act\": 1}\n");
                         AssertContains(
-                            manifest, "  \"transitions\": [\n  ]\n}\n");
+                            manifest,
+                            "  \"transitions\": [\n  ],\n"
+                            + "  \"dynamic_art_gap_transitions\": [\n"
+                            + "  ]\n}\n");
                     }));
         }
 
@@ -1104,9 +1276,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
                             + "  \"trace_frame_count\": 4,\n");
                         AssertContains(
                             metadata,
-                            "  \"lua_script_version\": \""
-                            + S1CompleteRunMetadataWriter.LuaScriptVersion
-                            + "\",\n");
+                            "  \"recorder\": \"native-bizhawk-headless\",\n"
+                            + "  \"recorder_version\": \"3.0\",\n"
+                            + "  \"trace_schema\": 5,\n");
+                        AssertEx.Equal(
+                            false, metadata.Contains("lua_script_version"));
+                        AssertEx.Equal(false, metadata.Contains("csv_version"));
+                        AssertEx.Equal(
+                            false, metadata.Contains("hardware_timing_schema"));
                         AssertContains(
                             metadata,
                             "  \"source_bk2\": \"synthetic.bk2\"\n}\n");
@@ -1747,7 +1924,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                             "\"load_queue_state_per_frame\"");
                         AssertContains(
                             metadata,
-                            "\"dynamic_art_transfer_state_per_frame_v1\"");
+                            "\"dynamic_art_transfer_state_per_frame\"");
                         AssertContains(
                             metadata,
                             "  \"source_bk2\": \"synthetic.bk2\",\n"
@@ -2348,7 +2525,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                             "\"load_queue_state_per_frame\"");
                         AssertContains(
                             metadata,
-                            "\"dynamic_art_transfer_state_per_frame_v1\"");
+                            "\"dynamic_art_transfer_state_per_frame\"");
                         AssertContains(
                             metadata,
                             "  \"start_x\": \"0x0103\",\n");

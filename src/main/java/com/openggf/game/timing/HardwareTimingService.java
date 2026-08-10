@@ -188,7 +188,7 @@ public final class HardwareTimingService
      * provide payload bytes.
      */
     public RecordedCompletionAuthority beginRecordedAdmission() {
-        return beginRecordedAdmission(schemaOneAdmissionPolicies());
+        return beginRecordedAdmission(recordedAdmissionPolicies());
     }
 
     /** Begins recorded readiness with one complete policy for every known work kind. */
@@ -203,6 +203,41 @@ public final class HardwareTimingService
         }
         installAdmissionPolicies(policies);
         recordedAdmissionActive = true;
+        return recordedAuthority;
+    }
+
+    /**
+     * Crosses from a completed live prelude into recorded readiness on this
+     * same session-owned service. Only claimed diagnostic history is retired;
+     * any live job still owned by production rejects the transition.
+     */
+    public RecordedCompletionAuthority beginRecordedAdmissionAfterLiveEpoch() {
+        return beginRecordedAdmissionAfterLiveEpoch(
+                recordedAdmissionPolicies());
+    }
+
+    public RecordedCompletionAuthority beginRecordedAdmissionAfterLiveEpoch(
+            Map<HardwareWorkKind, HardwareReadinessAdmissionPolicy> policies) {
+        if (recordedAdmissionActive) {
+            throw new IllegalStateException(
+                    "recorded hardware admission is already active");
+        }
+        List<HardwareWorkHandle> pending = pendingHandles();
+        if (!pending.isEmpty()) {
+            throw new IllegalStateException(
+                    "live hardware admission still owns pending work: "
+                            + pendingDescription());
+        }
+        EnumMap<HardwareWorkKind, HardwareReadinessAdmissionPolicy> checked =
+                validateAdmissionPolicies(policies);
+
+        jobs.clear();
+        nextOrdinals.clear();
+        admissionPolicies.clear();
+        admissionPolicies.putAll(checked);
+        recordedAdmissionActive = true;
+        hasSubmitted = false;
+        lastServicedBoundary = null;
         return recordedAuthority;
     }
 
@@ -431,6 +466,31 @@ public final class HardwareTimingService
                 HardwareWorkKind kind,
                 long ordinal,
                 String submissionFingerprint) {
+            admitRecordedCompletion(
+                    boundary, kind, ordinal, submissionFingerprint, true);
+        }
+
+        @Override
+        public void admitRecordedSuppressedRowCompletion(
+                HardwareServiceBoundary boundary,
+                HardwareWorkKind kind,
+                long ordinal,
+                String submissionFingerprint) {
+            if (boundary != HardwareServiceBoundary.PRE_MAIN_LOOP) {
+                throw new IllegalArgumentException(
+                        "suppressed-row completion requires PRE_MAIN_LOOP: "
+                                + boundary);
+            }
+            admitRecordedCompletion(
+                    boundary, kind, ordinal, submissionFingerprint, false);
+        }
+
+        private void admitRecordedCompletion(
+                HardwareServiceBoundary boundary,
+                HardwareWorkKind kind,
+                long ordinal,
+                String submissionFingerprint,
+                boolean requireServicedBoundary) {
             requireRecordedAdmission();
             Objects.requireNonNull(boundary, "boundary");
             Objects.requireNonNull(kind, "kind");
@@ -439,7 +499,7 @@ public final class HardwareTimingService
                 throw new IllegalStateException(
                         "recorded completion kind is not recorded by this stream: " + kind);
             }
-            if (lastServicedBoundary != boundary) {
+            if (requireServicedBoundary && lastServicedBoundary != boundary) {
                 throw new IllegalStateException(
                         "recorded completion boundary mismatch: expected " + boundary
                                 + ", production serviced " + lastServicedBoundary);
@@ -496,6 +556,15 @@ public final class HardwareTimingService
 
     private void installAdmissionPolicies(
             Map<HardwareWorkKind, HardwareReadinessAdmissionPolicy> policies) {
+        EnumMap<HardwareWorkKind, HardwareReadinessAdmissionPolicy> checked =
+                validateAdmissionPolicies(policies);
+        admissionPolicies.clear();
+        admissionPolicies.putAll(checked);
+    }
+
+    private static EnumMap<HardwareWorkKind, HardwareReadinessAdmissionPolicy>
+            validateAdmissionPolicies(
+                    Map<HardwareWorkKind, HardwareReadinessAdmissionPolicy> policies) {
         Objects.requireNonNull(policies, "admissionPolicies");
         EnumMap<HardwareWorkKind, HardwareReadinessAdmissionPolicy> checked =
                 new EnumMap<>(HardwareWorkKind.class);
@@ -512,8 +581,7 @@ public final class HardwareTimingService
             throw new IllegalArgumentException(
                     "recorded admission policy cannot leave every kind live");
         }
-        admissionPolicies.clear();
-        admissionPolicies.putAll(checked);
+        return checked;
     }
 
     private static EnumMap<HardwareWorkKind, HardwareReadinessAdmissionPolicy>
@@ -527,11 +595,12 @@ public final class HardwareTimingService
     }
 
     private static Map<HardwareWorkKind, HardwareReadinessAdmissionPolicy>
-            schemaOneAdmissionPolicies() {
+            recordedAdmissionPolicies() {
         EnumMap<HardwareWorkKind, HardwareReadinessAdmissionPolicy> policies =
-                liveAdmissionPolicies();
-        policies.put(HardwareWorkKind.KOS_MODULE_QUEUE,
-                HardwareReadinessAdmissionPolicy.RECORDED);
+                new EnumMap<>(HardwareWorkKind.class);
+        for (HardwareWorkKind kind : HardwareWorkKind.values()) {
+            policies.put(kind, HardwareReadinessAdmissionPolicy.RECORDED);
+        }
         return Map.copyOf(policies);
     }
 }

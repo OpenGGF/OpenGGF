@@ -133,7 +133,7 @@ public final class MhzEndBossWeatherVisualChild extends AbstractObjectInstance i
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (parent.isDestroyed()) {
             setDestroyed(true);
             return;

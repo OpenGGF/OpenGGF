@@ -129,7 +129,7 @@ public final class FbzEndBossEventControlInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity mainPlayer) {
+    public void update(int vIntRunCount, PlayableEntity mainPlayer) {
         if (!initialized) initializeNativeBounds();
         Phase before = phase();
         NativeState next = stepNative(state(), mainPlayer == null ? 0 : mainPlayer.getCentreX(),

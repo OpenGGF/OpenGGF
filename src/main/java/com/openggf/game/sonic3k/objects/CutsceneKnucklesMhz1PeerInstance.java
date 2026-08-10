@@ -94,7 +94,7 @@ public final class CutsceneKnucklesMhz1PeerInstance extends AbstractObjectInstan
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         switch (state) {
             case MOVE_OUT -> updateMoveOut();
             case ANIMATING -> updateAnimation();

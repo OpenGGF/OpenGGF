@@ -21,7 +21,7 @@ abstract class AbstractS3kBossExplosionObjectInstance extends AbstractObjectInst
     }
 
     @Override
-    public final void update(int frameCounter, PlayableEntity player) {
+    public final void update(int vIntRunCount, PlayableEntity player) {
         waitCounter = (short) (waitCounter - 1);
         if (waitCounter >= 0) return;
 

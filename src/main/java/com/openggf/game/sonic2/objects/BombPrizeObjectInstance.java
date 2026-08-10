@@ -89,7 +89,7 @@ public class BombPrizeObjectInstance extends AbstractObjectInstance implements S
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (isDestroyed()) {
             return;
@@ -129,9 +129,6 @@ public class BombPrizeObjectInstance extends AbstractObjectInstance implements S
                 // Decrement prize counter
                 if (prizeCounter != null && prizeCounter.length > 0) {
                     prizeCounter[0]--;
-                }
-                if (parent != null) {
-                    parent.onPrizeCounterChanged(player);
                 }
                 setDestroyed(true);
             }

@@ -38,7 +38,7 @@ public final class FbzEndBossChainLinkChild extends AbstractFbzEndBossChild {
         return rootX + (armIndex == 0 ? -0x1C : 0x1C);
     }
     public static boolean nativeFlipX(int armIndex) { return armIndex != 0; }
-    @Override public void update(int frameCounter, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         if (arm == null || joint == null || arm.isDestroyed() || joint.isDestroyed()) {
             com.openggf.level.objects.ObjectLifetimeOps.expireDynamic(this); return;
         }

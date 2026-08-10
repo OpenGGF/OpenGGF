@@ -49,9 +49,9 @@ public final class Sonic3kRetractingSpringObjectInstance extends Sonic3kSpringOb
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         updateRetractionCycle();
-        super.update(frameCounter, playerEntity);
+        super.update(vIntRunCount, playerEntity);
     }
 
     private void updateRetractionCycle() {

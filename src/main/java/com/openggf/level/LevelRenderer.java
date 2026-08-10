@@ -992,7 +992,6 @@ public final class LevelRenderer {
         cacheViewportForFrame();
 
         Camera camera = lm.camera;
-        int bgScrollY = lm.frameRuntimeUpdater.computeBackgroundScrollY();
         resolvePendingPaletteOwnershipWrites();
         resolveAdvancedRenderFrameState(lm.frameCounter);
 
@@ -1009,7 +1008,7 @@ public final class LevelRenderer {
         // Draw Background (Layer 1)
         profiler.beginSection("render.bg");
         if (lm.useShaderBackground && lm.graphicsManager.getBackgroundRenderer() != null) {
-            renderBackgroundShader(collisionCommands, bgScrollY);
+            renderBackgroundShader(collisionCommands);
         }
         profiler.endSection("render.bg");
 
@@ -1177,7 +1176,7 @@ public final class LevelRenderer {
         // rendering
     }
 
-    void renderBackgroundShader(List<GLCommand> commands, int bgScrollY) {
+    void renderBackgroundShader(List<GLCommand> commands) {
         if (lm.level == null || lm.level.getMap() == null)
             return;
 
@@ -1534,21 +1533,32 @@ public final class LevelRenderer {
             return;
         }
 
-        graphicsManager.flushPatternBatch();
-        graphicsManager.setCurrentSpriteHighPriority(false);
-        graphicsManager.beginPatternBatch();
-        ringManager.draw(lm.frameCounter);
+        Camera camera = lm.camera;
+        boolean verticalWrapEnabled = camera != null && camera.isVerticalWrapEnabled();
+        if (verticalWrapEnabled) {
+            graphicsManager.enableVerticalWrapAdjust(camera.getVerticalWrapRange(), camera.getY());
+        }
+        try {
+            graphicsManager.flushPatternBatch();
+            graphicsManager.setCurrentSpriteHighPriority(false);
+            graphicsManager.beginPatternBatch();
+            ringManager.draw(lm.frameCounter);
 
-        // ROM: Lost rings (Ring_LostRing) use art_tile with priority bit set,
-        // rendering them in front of both playfield layers (including waterfalls).
-        graphicsManager.flushPatternBatch();
-        graphicsManager.setCurrentSpriteHighPriority(true);
-        graphicsManager.beginPatternBatch();
-        ringManager.drawLostRings(lm.frameCounter);
+            // ROM: Lost rings (Ring_LostRing) use art_tile with priority bit set,
+            // rendering them in front of both playfield layers (including waterfalls).
+            graphicsManager.flushPatternBatch();
+            graphicsManager.setCurrentSpriteHighPriority(true);
+            graphicsManager.beginPatternBatch();
+            ringManager.drawLostRings(lm.frameCounter);
 
-        graphicsManager.flushPatternBatch();
-        graphicsManager.setCurrentSpriteHighPriority(false);
-        graphicsManager.beginPatternBatch();
+            graphicsManager.flushPatternBatch();
+            graphicsManager.setCurrentSpriteHighPriority(false);
+            graphicsManager.beginPatternBatch();
+        } finally {
+            if (verticalWrapEnabled) {
+                graphicsManager.disableVerticalWrapAdjust();
+            }
+        }
     }
 
     /**
@@ -1591,7 +1601,7 @@ public final class LevelRenderer {
         // Render using the existing shader pipeline
         List<GLCommand> endingCollisionCommands = lm.debugRenderer != null
                 ? lm.debugRenderer.getCollisionCommands() : new ArrayList<>();
-        renderBackgroundShader(endingCollisionCommands, bgVscroll);
+        renderBackgroundShader(endingCollisionCommands);
 
         // Override backdrop color for ending cutscene palette fade.
         // The deferred commands read bgRenderer fields at execution time, so

@@ -44,7 +44,7 @@ public final class CnzLightBulbInstance extends AbstractObjectInstance implement
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         WaterSystem waterSystem = services().waterSystem();
         if (waterSystem == null) {
             return;

@@ -144,7 +144,16 @@ public class SwScrlMcz extends AbstractZoneScrollHandler {
         short fgScroll = M68KMath.negWord(cameraX + this.shakeOffsetX);
 
         // Treat bgY as vertical position in 512-pixel cycle
-        // The parallax bands are based on the UNSHAKEN camera Y
+        // The parallax bands are based on the UNSHAKEN camera Y.
+        //
+        // fixBugs (s2.asm:27 `fixBugs = 0`): this is the SHIPPED (fixBugs=0) branch.
+        // The three conditionals at s2.asm:16474-16479, 16492-16495 and 16581-16584
+        // together introduce a d3 that carries the shake's Y component into the
+        // row-segment search (`add.w d3,d1`). On the shipped ROM d3 does not exist, the
+        // segment walk uses the unshaken Camera_BG_Y_pos, and the background parallax
+        // visibly distorts during the boss's screen shake. That distortion is the
+        // behaviour to reproduce; only the Vscroll factors and the camera copies take
+        // the shake.
         int yInCycle = bgY % MCZ_CYCLE_HEIGHT;
         if (yInCycle < 0) {
             yInCycle += MCZ_CYCLE_HEIGHT;

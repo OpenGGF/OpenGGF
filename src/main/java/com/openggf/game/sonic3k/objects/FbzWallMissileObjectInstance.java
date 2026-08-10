@@ -17,7 +17,7 @@ public final class FbzWallMissileObjectInstance
     interval = s.subtype() << 2;
     timer = interval;
   }
-  public void update(int f, PlayableEntity p) {
+  public void update(int vIntRunCount, PlayableEntity p) {
     if (muzzle) {
       if (--muzzleTimer < 0) {
         muzzleTimer = 7;

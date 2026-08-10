@@ -27,6 +27,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "Bk2Reader validates the canonical GHZ1 archive",
                 ValidatesCanonicalGhz1Archive));
             tests.Add(new TestMain.TestCase(
+                "Bk2Reader accepts recorded SMS FM sound chip models",
+                AcceptsRecordedSmsFmSoundChipModels));
+            tests.Add(new TestMain.TestCase(
                 "Bk2Reader reads the canonical S3K fixture movies",
                 ReadsCanonicalS3kFixtureMovies));
             tests.Add(new TestMain.TestCase(
@@ -96,6 +99,23 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(
                 "8f4130ebee1f1593080371f1d257477fbb2cc68c1cb691620736639e768c97bc",
                 actual);
+        }
+
+        private static void AcceptsRecordedSmsFmSoundChipModels()
+        {
+            string sync = Fixture("ghz1-sync-settings.json")
+                .Replace("\"SMSFMSoundChip\":1", "\"SMSFMSoundChip\":2");
+            WithMovie(
+                Fixture("ghz1-header.txt"),
+                sync,
+                Fixture("ghz1-input-prefix.txt"),
+                path =>
+                {
+                    Bk2Movie movie = Bk2Reader.Read(path);
+                    AssertEx.Equal(
+                        LibGPGX.InitSettings.SMSFMSoundChipType.YM2413_NUKED,
+                        movie.SyncSettings.SMSFMSoundChip);
+                });
         }
 
         private static void ReadsTrackedGhz1Prefix()

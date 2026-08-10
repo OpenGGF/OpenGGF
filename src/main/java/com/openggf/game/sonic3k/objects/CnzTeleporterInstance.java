@@ -103,7 +103,7 @@ public final class CnzTeleporterInstance extends AbstractObjectInstance implemen
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (!(playerEntity instanceof AbstractPlayableSprite player)) {
             return;
         }

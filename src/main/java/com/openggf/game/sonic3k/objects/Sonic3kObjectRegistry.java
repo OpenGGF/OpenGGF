@@ -47,6 +47,7 @@ import com.openggf.game.sonic3k.objects.bosses.MhzEndBossDefeatFragmentChild;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossEggCapsuleInstance;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance;
 import com.openggf.level.objects.AbstractObjectRegistry;
+import com.openggf.level.objects.FixedSstSlotSink;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectFactory;
 import com.openggf.level.objects.ObjectSlotLayout;
@@ -54,8 +55,10 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PlaceholderObjectInstance;
 import com.openggf.level.LevelOrigin;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -76,6 +79,7 @@ import java.util.function.Predicate;
  */
 public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
     private final Map<Integer, FactoryEntry> factoryEntries = new HashMap<>();
+    private final Map<Integer, List<FactoryEntry>> stockRomZoneFactoryEntries = new HashMap<>();
     private final Set<Integer> stockZoneBoundFactoryIds = new HashSet<>();
     private S3kObjectCreationContext activeCreationContext;
 
@@ -93,6 +97,16 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
     @Override
     public ObjectSlotLayout objectSlotLayout() {
         return ObjectSlotLayout.SONIC_3K;
+    }
+
+    @Override
+    public void installFixedSstObjects(
+            int romZoneId,
+            int act,
+            FixedSstSlotSink slots) {
+        if (romZoneId == Sonic3kZoneIds.ZONE_MHZ) {
+            slots.install(4, MhzPollenSpawnerInstance::new);
+        }
     }
 
     @Override
@@ -737,7 +751,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     }
                     return new IczFreezerObjectInstance(spawn);
                 });
-        factories.put(Sonic3kObjectIds.ICZ_PATH_FOLLOW_PLATFORM,
+        registerZoneSetBound(Sonic3kObjectIds.ICZ_PATH_FOLLOW_PLATFORM, S3kZoneSet.S3KL,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
@@ -761,7 +775,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     }
                     return new IczSegmentColumnObjectInstance(spawn);
                 });
-        factories.put(Sonic3kObjectIds.ICZ_SWINGING_PLATFORM,
+        registerZoneSetBound(Sonic3kObjectIds.ICZ_SWINGING_PLATFORM, S3kZoneSet.S3KL,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
@@ -769,7 +783,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     }
                     return new IczSwingingPlatformObjectInstance(spawn);
                 });
-        factories.put(Sonic3kObjectIds.ICZ_STALAGTITE,
+        registerZoneSetBound(Sonic3kObjectIds.ICZ_STALAGTITE, S3kZoneSet.S3KL,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
@@ -1420,11 +1434,14 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
     @Override
     public ObjectInstance create(ObjectSpawn spawn) {
         ensureLoaded();
-        FactoryEntry entry = factoryEntries.get(spawn.objectId());
+        S3kObjectCreationContext context = currentCreationContext();
+        FactoryEntry entry = stockRomZoneFactoryEntries.getOrDefault(spawn.objectId(), List.of()).stream()
+                .filter(candidate -> candidate.compatibility().test(context))
+                .findFirst()
+                .orElseGet(() -> factoryEntries.get(spawn.objectId()));
         if (entry == null) {
             return defaultFactory.create(spawn, this);
         }
-        S3kObjectCreationContext context = currentCreationContext();
         if (!entry.compatibility().test(context)) {
             return new PlaceholderObjectInstance(spawn,
                     getPrimaryName(spawn.objectId(), context.zoneSet()));
@@ -1470,11 +1487,11 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
 
     private void registerStockRomZoneBound(int objectId, S3kZoneSet zoneSet,
                                            int romZoneId, ObjectFactory factory) {
-        factories.put(objectId, factory);
-        factoryEntries.put(objectId, new FactoryEntry(factory,
-                context -> context.source() == S3kObjectCreationContext.Source.STOCK
-                        && context.zoneSet() == zoneSet
-                        && context.stockRomZoneId().orElse(-1) == romZoneId));
+        stockRomZoneFactoryEntries.computeIfAbsent(objectId, ignored -> new ArrayList<>())
+                .add(new FactoryEntry(factory,
+                        context -> context.source() == S3kObjectCreationContext.Source.STOCK
+                                && context.zoneSet() == zoneSet
+                                && context.stockRomZoneId().orElse(-1) == romZoneId));
         stockZoneBoundFactoryIds.add(objectId);
     }
 

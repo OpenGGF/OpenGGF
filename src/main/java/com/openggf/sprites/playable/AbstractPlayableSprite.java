@@ -470,6 +470,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * When it reaches 0, triggers level reload.
          */
         protected int deathCountdown = 0;
+        protected boolean deathRestartRoutineActive = false;
 
         /**
          * Whether or not this sprite is preparing for a spindash.
@@ -661,6 +662,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * ROM: move.b #id_Null,(v_player+obAnim).w
          */
         protected boolean hidden = false;
+        private boolean nativeSlotPresent = true;
         /**
          * Frame number when the player was last released from object control.
          * Used to prevent immediate re-capture by nearby objects (e.g., spin tubes).
@@ -814,6 +816,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.drownPreDeathTimer = 0;
                 this.hurt = false;
                 this.deathCountdown = 0;
+                this.deathRestartRoutineActive = false;
                 this.air = false;
                 this.jumping = false;
                 this.doubleJumpFlag = 0;
@@ -869,6 +872,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.suppressedObjectMoveAndFallAxes = 0;
                 controller.setObjectControlledSolidContactOwner(null);
                 this.hidden = false;
+                this.nativeSlotPresent = true;
                 this.objectControlReleasedFrame = Integer.MIN_VALUE;
                 this.jumpInputPressed = false;
                 this.jumpInputJustPressed = false;
@@ -956,7 +960,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         balanceState,
                         springing, springingFrames,
                         dead, drowningDeath, drownPreDeathTimer,
-                        hurt, deathCountdown,
+                        hurt, deathCountdown, deathRestartRoutineActive,
                         invulnerableFrames, suppressNextInvulnerabilityDecrement,
                         invulnerabilityDisplayTimerDecrementedThisFrame, invincibleFrames,
                         spindash, spindashCounter,
@@ -975,7 +979,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         objectControlReleasedFrame,
                         suppressAirCollision, suppressGroundWallCollision, forceFloorCheck,
                         suppressedObjectMoveAndFallAxes,
-                        hidden,
+                        hidden, nativeSlotPresent,
                         renderFlagOnScreen, renderFlagOnScreenValid,
                         renderHFlip, renderVFlip,
                         controller.isSpringHandoffPending(),
@@ -1107,6 +1111,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.drownPreDeathTimer = extra.drownPreDeathTimer();
                 this.hurt = extra.hurt();
                 this.deathCountdown = extra.deathCountdown();
+                this.deathRestartRoutineActive = extra.deathRestartRoutineActive();
                 this.invulnerableFrames = extra.invulnerableFrames();
                 this.suppressNextInvulnerabilityDecrement = extra.suppressNextInvulnerabilityDecrement();
                 this.invulnerabilityDisplayTimerDecrementedThisFrame =
@@ -1146,6 +1151,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.forceFloorCheck = extra.forceFloorCheck();
                 this.suppressedObjectMoveAndFallAxes = extra.suppressedObjectMoveAndFallAxes();
                 this.hidden = extra.hidden();
+                this.nativeSlotPresent = extra.nativeSlotPresent();
                 this.renderFlagOnScreen = extra.renderFlagOnScreen();
                 this.renderFlagOnScreenValid = extra.renderFlagOnScreenValid();
                 this.renderHFlip = extra.renderHFlip();
@@ -1642,6 +1648,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          */
         public SecondaryAbility getSecondaryAbility() {
                 return SecondaryAbility.NONE;
+        }
+
+        /** ROM dispatch hook for Tails' distinct rolling-speed routine. */
+        public boolean usesTailsRollSpeedRoutine() {
+                return false;
         }
 
         /**
@@ -2603,6 +2614,21 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public void setDeathCountdown(int frames) {
                 this.deathCountdown = Math.max(0, frames);
+                if (frames <= 0) {
+                        this.deathRestartRoutineActive = false;
+                }
+        }
+
+        public void enterDeathRestartRoutine(int restartDelayFrames) {
+                if (!dead || deathRestartRoutineActive) {
+                        return;
+                }
+                deathRestartRoutineActive = true;
+                deathCountdown = Math.max(0, restartDelayFrames);
+        }
+
+        public boolean isInDeathRestartRoutine() {
+                return dead && deathRestartRoutineActive;
         }
 
         /**
@@ -3170,6 +3196,12 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         public boolean isHidden() { return hidden; }
+
+        public boolean isNativeSlotPresent() { return nativeSlotPresent; }
+
+        public void setNativeSlotPresent(boolean nativeSlotPresent) {
+                this.nativeSlotPresent = nativeSlotPresent;
+        }
 
         public void setHidden(boolean hidden) { this.hidden = hidden; }
 
@@ -5115,6 +5147,12 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * and CPU routine is not 4, it returns before the velocity quarter/double
          * paths (sonic3k.asm:27416-27470).
          */
+        public boolean waterVelocityChangeGatedByObjectControl() {
+                PlayerMovementRules movementRules = playerMovementRulesOrNull();
+                return movementRules != null
+                                && movementRules.waterVelocityChangeGatedByObjectControl();
+        }
+
         public void updateWaterStateObjectControlled(int waterLevelY) {
                 wasInWater = inWater;
 

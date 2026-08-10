@@ -34,7 +34,7 @@ public final class FbzTrapSpringObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity mainPlayer) {
+    public void update(int vIntRunCount, PlayableEntity mainPlayer) {
         if (mainPlayer != null) {
             int relativeY = (short) (mainPlayer.getCentreY() - spawn.y());
             if (relativeY >= 0x20) animation = 1;

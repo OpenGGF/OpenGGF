@@ -33,7 +33,7 @@ public final class FbzEggPrisonInstance extends AbstractObjectInstance
 
     public FbzEggPrisonInstance(ObjectSpawn spawn) { super(spawn, "FBZEggPrison"); }
 
-    @Override public void update(int frameCounter, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         routineEntries++;
         if (!initialized) {
             initialized = true;

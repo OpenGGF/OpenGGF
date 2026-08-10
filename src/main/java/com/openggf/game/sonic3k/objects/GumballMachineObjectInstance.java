@@ -431,7 +431,7 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
     // ===== State machine =====
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         // Initialize drift state on first update (separated from child spawning
         // so tests can exercise drift logic without requiring services()).
         if (!driftInitialized) {
@@ -451,16 +451,10 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
             // established state on this tick, and modeling the reseed here is a
             // read of that same value -- i.e. a no-op.
             //
-            // The one value that is NOT V_int_run_count is the frameCounter argument:
-            // it is ObjectManager's per-gameplay-session object-dispatch counter
-            // (vblaCounter), which resets on every session rebuild and lives in a
-            // materially smaller range than the hardware run counter (observed 0x0400
-            // vs 0x1598 for the same recorded frame-0 tick). Re-deriving the reseed
-            // from vblaCounter therefore CLOBBERS the correct run-history seed with a
-            // wrong per-session count, flipping the ball subtype (e.g. awarding 10
-            // rings for a ball the recorded run never dispensed as a reward). This is
-            // applied uniformly to live play and trace replay -- it is not gated on
-            // trace identity and reads no trace data at simulation time.
+            // The update parameter is now named vIntRunCount because it represents this
+            // ROM clock. This terminology-only refactor deliberately does not change the
+            // established shared-RNG ownership or add a reseed here; that behavior needs
+            // separate ROM-parity validation before it can change safely.
             initDrift();
         }
 
@@ -828,7 +822,7 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (springBitSet) {
                 // ROM loc_60D96: spawn 16 ejection effects + delete self.
                 for (int i = 0; i < 16; i++) {
@@ -932,7 +926,7 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
         @Override public boolean isPersistent() { return false; }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             timer--;
             if (timer < 0) {
                 // ROM loc_61032: `subq.b #1,$2E(a0) / bpl draw / move.l #MoveChkDel,(a0)`.
@@ -1054,7 +1048,7 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (state == State.DORMANT) {
                 if (parent.isBit3Set()) {
                     state = State.ANIMATING;
@@ -1152,7 +1146,7 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (playerEntity == null || exitFired) {
                 return;
             }
@@ -1235,7 +1229,7 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             // Static platform — no per-frame logic
         }
 
@@ -1333,7 +1327,7 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             // ROM loc_610C6 just copies parent position; rendering reads the
             // machine's current Y live, so no per-frame state updates needed.
         }
@@ -1463,7 +1457,7 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             // Falling state: apply gravity until off-screen, then destroy.
             if (falling) {
                 fallYVel += FALL_GRAVITY;

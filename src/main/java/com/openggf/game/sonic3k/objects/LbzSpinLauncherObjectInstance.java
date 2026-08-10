@@ -57,7 +57,7 @@ public final class LbzSpinLauncherObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         // Native loc_28DE4 tests the byte before decrementing it and skips
         // sub_1DD24 for that whole object pass, including the 1 -> 0 tick.
         p1SolidSuppressedThisFrame = p1Cooldown > 0;

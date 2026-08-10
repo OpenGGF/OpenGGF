@@ -132,7 +132,7 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ensureInitialized();
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Handle falling state first (ROM: Obj26_Main routine_secondary check)
@@ -226,7 +226,7 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
         // monitor down from below (handled above) but cannot break it in
         // single-player mode — only the lead character, or a human-controlled
         // player in 2P/competition mode, may. 2P mode is unimplemented, so the
-        // sidekick is always blocked here. (s2.asm:85245-85249; S1/S3K match.)
+        // sidekick is always blocked here. (s2.asm:85337-85340; S1/S3K match.)
         if (isSidekick(player)) {
             lastTouchBranch = "sidekick-no-break";
             return;
@@ -378,9 +378,9 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
         //
         // ROM keys this on the anim(a1) BYTE, not on the status.rolling bit. The two
         // agree on the ground, but a rolling jump stays anim==Roll for its whole
-        // airborne arc (Sonic_Jump writes anim=Roll, Sonic_MdAir never re-runs
-        // Sonic_Move; s2.asm:37387-37388,36791+). Touch_Monitor's break gate also
-        // tests anim==Roll (s2.asm:85245-85255), so both the solidity gate and the
+        // airborne arc (Sonic_Jump writes anim=Roll, Obj01_MdAir never re-runs
+        // Sonic_Move; s2.asm:37392,36494-36506). Touch_Monitor's break gate also
+        // tests anim==Roll (s2.asm:85337-85343), so both the solidity gate and the
         // break gate MUST consume the same anim signal or a rolling-jump player can
         // land-without-breaking when the engine's rolling status bit is cleared a
         // frame before the anim. Using getAnimationId() here keeps land-vs-break

@@ -138,7 +138,7 @@ public class Sonic1NewtronBadnikInstance extends AbstractBadnikInstance implemen
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (secondaryState) {
             case STATE_CHECK_DISTANCE -> updateCheckDistance(player);
@@ -369,7 +369,7 @@ public class Sonic1NewtronBadnikInstance extends AbstractBadnikInstance implemen
     }
 
     @Override
-    protected void updateAnimation(int frameCounter) {
+    protected void updateAnimation(int vIntRunCount) {
         animTickCounter++;
 
         int speed = getAnimSpeed();
@@ -462,8 +462,11 @@ public class Sonic1NewtronBadnikInstance extends AbstractBadnikInstance implemen
 
     @Override
     public boolean isPersistent() {
-        // RememberState: persists while on screen
-        return !isDestroyed() && isOnScreenX(160);
+        // Newt_Action ends at RememberState, whose out_of_range macro deletes the
+        // object once its chunk-aligned X leaves the [camera-128, camera-128+0x280]
+        // window (docs/s1disasm/_incObj/42 Badnik - Newtron.asm:38 ->
+        // _incObj/sub RememberState.asm:9 -> Macros.asm:278-295).
+        return !isDestroyed() && isInRange();
     }
 
     @Override

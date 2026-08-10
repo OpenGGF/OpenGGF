@@ -11,6 +11,13 @@ public final class RecordedInputSnapshots {
     }
 
     public static LogicalInputSnapshot fromBk2(Bk2FrameInput current, Bk2FrameInput previous) {
+        return fromBk2(current, previous, 0);
+    }
+
+    public static LogicalInputSnapshot fromBk2(
+            Bk2FrameInput current,
+            Bk2FrameInput previous,
+            int pendingP1ActionPressMask) {
         Objects.requireNonNull(current, "current");
         Bk2FrameInput previousFrame = previous != null
                 ? previous
@@ -19,7 +26,8 @@ public final class RecordedInputSnapshots {
                 current.p1InputMask(),
                 current.p1InputMask() & ~previousFrame.p1InputMask(),
                 current.p1ActionMask(),
-                current.p1ActionMask() & ~previousFrame.p1ActionMask(),
+                (current.p1ActionMask() & ~previousFrame.p1ActionMask())
+                        | pendingP1ActionPressMask,
                 current.p1StartPressed(),
                 current.p1StartPressed() && !previousFrame.p1StartPressed());
         PlayerInputState p2 = PlayerInputState.of(

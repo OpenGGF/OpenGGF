@@ -382,8 +382,7 @@ class TestS3kLbz1MinibossAndTransitionHeadless {
     }
 
     private static void serviceRuntimeArt(HardwareServiceBoundary boundary) {
-        GameServices.hardwareTiming().service(boundary);
-        GameServices.runtimeArtCoordinator().afterTimingService(boundary);
+        HardwareBoundaryPump.service(boundary);
     }
 
     private static final class LbzCorridor {

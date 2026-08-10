@@ -1,10 +1,11 @@
 {
-  "run_schema": 1,
   "game": "s3k",
   "run_id": "s3k-knuckles-complete-superemeralds",
   "source_bk2": "s3k-knuckles-complete-superemeralds.bk2",
   "rom_checksum": "C5B1C655C19F462ADE0AC4E17A844D10",
-  "lua_script_version": "6.38-s3k-completerun",
+  "recorder": "native-bizhawk-headless",
+  "recorder_version": "3.0",
+  "trace_schema": 5,
   "segments": [
     {"dir": "aiz", "kind": "level", "trace_profile": "complete_run", "bk2_frame_offset": 810, "trace_frame_count": 1653, "zone_id": 0, "act": 1},
     {"dir": "ss", "kind": "special_stage", "trace_profile": "s3k_special_stage", "bk2_frame_offset": 2464, "trace_frame_count": 4479, "zone_id": 0, "act": 0, "special_stage_index": 0},
@@ -123,5 +124,7 @@
     {"from_segment": 61, "to_segment": 62, "entry_kind": "stage_exit", "mode_change_bk2_frame": 393340, "rings_after": 150, "emeralds_after": 7},
     {"from_segment": 62, "to_segment": 63, "entry_kind": "starpost_bonus", "mode_change_bk2_frame": 402286, "special_bonus_entry_flag": 2, "saved_x_pos": 4992, "saved_y_pos": 2440, "last_star_post_hit": 0, "rings_before": 37, "emeralds_before": 7},
     {"from_segment": 63, "to_segment": 64, "entry_kind": "stage_exit", "mode_change_bk2_frame": 404495, "rings_after": 75, "emeralds_after": 7}
+  ],
+  "dynamic_art_gap_transitions": [
   ]
 }

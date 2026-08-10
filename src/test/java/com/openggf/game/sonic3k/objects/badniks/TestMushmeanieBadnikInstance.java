@@ -21,6 +21,9 @@ import com.openggf.physics.TerrainCheckResult;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import com.openggf.tests.FullReset;
+import com.openggf.tests.SingletonResetExtension;
 import org.mockito.MockedStatic;
 
 import java.util.ArrayList;
@@ -40,6 +43,8 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+@ExtendWith(SingletonResetExtension.class)
+@FullReset
 class TestMushmeanieBadnikInstance {
 
     @BeforeEach

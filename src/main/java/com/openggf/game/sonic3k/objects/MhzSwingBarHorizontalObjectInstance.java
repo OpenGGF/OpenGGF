@@ -52,7 +52,7 @@ public final class MhzSwingBarHorizontalObjectInstance extends AbstractObjectIns
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (playerEntity instanceof AbstractPlayableSprite player) {
             updatePlayer(player);
         }
@@ -164,6 +164,13 @@ public final class MhzSwingBarHorizontalObjectInstance extends AbstractObjectIns
         if ((state.animationPhase & 0xFF) == UPWARD_AUTO_RELEASE_PHASE) {
             releaseAutomatically(player, amplifiedStoredYVelocity(state.storedIncomingYVelocity),
                     Sonic3kAnimationIds.SPRING);
+            // ROM loc_3EE7A (sonic3k.asm:83389-83390): move.w #$10<<8,anim(a1) writes anim and
+            // prev_anim as one word, landing prev_anim on 0 so Animate_Sonic
+            // (sonic3k.asm:24739-24749) sees the mismatch and restarts the script. The grab path
+            // (sonic3k.asm:83451) writes the anim byte alone, leaving prev_anim stale at the
+            // pre-grab animation; a player who was already spring-jumping into the bar otherwise
+            // keeps the expired script state and never publishes mapping frame $8E.
+            player.getAnimationManager().publishPreviousAnimationId(0);
             return;
         }
         if ((state.animationPhase & 0xFF) == DOWNWARD_AUTO_RELEASE_PHASE) {

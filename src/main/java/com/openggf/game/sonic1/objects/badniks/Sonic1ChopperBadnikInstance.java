@@ -83,7 +83,7 @@ public class Sonic1ChopperBadnikInstance extends AbstractBadnikInstance implemen
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Chop_ChgSpeed: SpeedToPos - apply velocity to Y position, then add gravity
         // (matches ROM order: move with current velocity, then add gravity for next frame).
@@ -145,7 +145,7 @@ public class Sonic1ChopperBadnikInstance extends AbstractBadnikInstance implemen
     }
 
     @Override
-    protected void updateAnimation(int frameCounter) {
+    protected void updateAnimation(int vIntRunCount) {
         animTickCounter++;
     }
 
@@ -187,8 +187,11 @@ public class Sonic1ChopperBadnikInstance extends AbstractBadnikInstance implemen
 
     @Override
     public boolean isPersistent() {
-        // RememberState: persists while on screen
-        return !isDestroyed() && isOnScreenX(160);
+        // Chop_Main ends at RememberState, whose out_of_range macro deletes the
+        // object once its chunk-aligned X leaves the [camera-128, camera-128+0x280]
+        // window (docs/s1disasm/_incObj/2B Badnik - Chopper.asm:11 ->
+        // _incObj/sub RememberState.asm:9 -> Macros.asm:278-295).
+        return !isDestroyed() && isInRange();
     }
 
     @Override

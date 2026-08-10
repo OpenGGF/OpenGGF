@@ -257,7 +257,7 @@ public class SeesawObjectInstance extends BoxObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Spawn ball on first update
         ensureBallSpawned();

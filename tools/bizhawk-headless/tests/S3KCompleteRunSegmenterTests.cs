@@ -21,15 +21,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
     ///    state machine, the dir suffixes, the transition pushes and every
     ///    stop terminator's row arithmetic.
     ///
-    /// 2. Fixture-literal replays that reproduce the committed (A) and (B)
-    ///    offset / frame-count tables end to end. These are built from the
-    ///    fixtures' bk2_frame_offsets (plus, for the three special stages,
-    ///    their published last-row frames) and the REAL movie length, so
-    ///    every trace_frame_count is DERIVED by the segmenter and then
-    ///    asserted against the fixture literal rather than fed in. Set
-    ///    (B)'s movie length 114622 is the actual
-    ///    s3-knux-multibonus-ss.bk2 input-row count, which makes its
-    ///    terminal mgz_3 count (8517) a fully independent derivation.
+    /// 2. Current strict-v5 frame-stream assertions that derive segment
+    ///    offsets and row counts end to end. The plans use published frame
+    ///    boundaries and real movie lengths, so every trace_frame_count is
+    ///    derived by the segmenter rather than hydrated from a fixture.
+    ///    The multi-bonus stream's 114622 input rows make the terminal
+    ///    mgz_3 count (8517) an independent derivation.
     ///
     /// The tests are hermetic: no ROM, no BizHawk, no fixture file I/O.
     /// </summary>
@@ -483,14 +480,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S3K complete-run absolute frame cap matches the Lua",
                 AbsoluteFrameCapMatchesTheLua));
             tests.Add(new TestMain.TestCase(
-                "S3K complete-run reproduces the set (A) fixture table",
-                ReproducesSetAFixtureTable));
+                "S3K complete-run derives the current set (A) table",
+                AssertsSetATable));
             tests.Add(new TestMain.TestCase(
-                "S3K complete-run reproduces the set (B) fixture table",
-                ReproducesSetBFixtureTable));
+                "S3K complete-run derives the current set (B) table",
+                AssertsSetBTable));
             tests.Add(new TestMain.TestCase(
-                "S3K complete-run reproduces the set (B) transition table",
-                ReproducesSetBTransitionTable));
+                "S3K complete-run derives the current set (B) transitions",
+                AssertsSetBTransitionTable));
         }
 
         // ------------------------------------------------------------------
@@ -1072,7 +1069,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             return plan;
         }
 
-        private static void AssertMatchesFixtureTable(
+        private static void AssertExpectedTable(
             ExpectedSegment[] expected, S3KCompleteRunSegmenter segmenter)
         {
             AssertEx.Equal(expected.Length, segmenter.Segments.Count);
@@ -1152,7 +1149,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
         }
 
-        private static void ReproducesSetAFixtureTable()
+        private static void AssertsSetATable()
         {
             SyntheticPlan plan = BuildFixturePlan(
                 SetA, new int[0], SetAPredictedFbzArmFrame);
@@ -1162,7 +1159,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 plan,
                 SetAPredictedFbzArmFrame + 10);
 
-            AssertMatchesFixtureTable(SetA, segmenter);
+            AssertExpectedTable(SetA, segmenter);
             AssertSuccessionIdentity(segmenter);
             // No detour and no bonus zone in the whole pass, so the Lua's
             // manifest emission gate (#transitions == 0 and no run id) is
@@ -1186,7 +1183,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
         }
 
-        private static void ReproducesSetBFixtureTable()
+        private static void AssertsSetBTable()
         {
             SyntheticPlan plan = BuildFixturePlan(
                 SetB, SetBSpecialStageLastRowFrames, SetBMovieFrameCount);
@@ -1196,7 +1193,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 plan,
                 SetBMovieFrameCount + 10);
 
-            AssertMatchesFixtureTable(SetB, segmenter);
+            AssertExpectedTable(SetB, segmenter);
             AssertSuccessionIdentity(segmenter);
             for (var index = 0; index < SetB.Length; index++)
             {
@@ -1211,7 +1208,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
         }
 
-        private static void ReproducesSetBTransitionTable()
+        private static void AssertsSetBTransitionTable()
         {
             SyntheticPlan plan = BuildFixturePlan(
                 SetB, SetBSpecialStageLastRowFrames, SetBMovieFrameCount);

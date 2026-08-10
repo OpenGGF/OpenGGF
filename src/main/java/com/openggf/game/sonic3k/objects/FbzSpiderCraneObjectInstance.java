@@ -37,7 +37,7 @@ public final class FbzSpiderCraneObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity ignored) {
+    public void update(int vIntRunCount, PlayableEntity ignored) {
         PlayableEntity main = services().playerQuery().mainPlayerOrNull();
         switch (state) {
             case WAIT -> {

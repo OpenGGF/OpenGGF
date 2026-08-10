@@ -65,7 +65,7 @@ public final class BlasterBadnikInstance extends AbstractS3kBadnikInstance
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity updatePlayer) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity updatePlayer) {
         if (state == State.WAIT_OFFSCREEN) {
             if (isWithinRenderSpriteBounds(0x20, 0x20)) {
                 state = State.INIT; // Obj_WaitOffscreen restores code only.

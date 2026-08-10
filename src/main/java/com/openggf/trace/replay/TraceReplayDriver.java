@@ -5,7 +5,6 @@ import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.PlaybackDebugManager;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
-import com.openggf.game.TitleCardProvider;
 import com.openggf.game.session.GameplayTeamBootstrap;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.trace.ToleranceConfig;
@@ -13,8 +12,10 @@ import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceFrame;
 import com.openggf.trace.TraceMetadata;
 import com.openggf.trace.TraceReplayBootstrap;
+import com.openggf.trace.FrameComparison;
 import com.openggf.trace.live.LiveTraceComparator;
 
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
@@ -40,6 +41,7 @@ public final class TraceReplayDriver {
     private final Supplier<AbstractPlayableSprite> spriteSupplier;
     private final Runnable onComparatorPause;
     private final boolean forceHardwareTimingReplay;
+    private final Consumer<FrameComparison> comparisonObserver;
 
     private LiveTraceComparator comparator;
     private int initialCursor;
@@ -72,6 +74,19 @@ public final class TraceReplayDriver {
             Supplier<AbstractPlayableSprite> spriteSupplier,
             Runnable onComparatorPause,
             boolean forceHardwareTimingReplay) {
+        this(trace, movie, fixture, loop, spriteSupplier, onComparatorPause,
+                forceHardwareTimingReplay, null);
+    }
+
+    public TraceReplayDriver(
+            TraceData trace,
+            Bk2Movie movie,
+            TraceReplayFixture fixture,
+            GameLoop loop,
+            Supplier<AbstractPlayableSprite> spriteSupplier,
+            Runnable onComparatorPause,
+            boolean forceHardwareTimingReplay,
+            Consumer<FrameComparison> comparisonObserver) {
         this.trace = trace;
         this.movie = movie;
         this.fixture = fixture;
@@ -79,6 +94,7 @@ public final class TraceReplayDriver {
         this.spriteSupplier = spriteSupplier;
         this.onComparatorPause = onComparatorPause;
         this.forceHardwareTimingReplay = forceHardwareTimingReplay;
+        this.comparisonObserver = comparisonObserver;
     }
 
     /**
@@ -122,19 +138,40 @@ public final class TraceReplayDriver {
         // in-level variant. Headless trace tests bypass both via
         // the headless graphics mode; we do it explicitly.
         //
-        // Relies on TitleCardProvider.reset() being a simple state
-        // wipe that can't throw — true for all three game modules
-        // today (S1/S2/S3K TitleCardManager.reset are field resets).
+        // Swallowing the requests is enough: nothing here may wipe the
+        // provider's post-slide-in phase. The native game's title-card pieces
+        // outlive the locked loop and run Obj34_WaitAndGoAway on ordinary
+        // gameplay frames, loading the standard-water and per-zone animal art
+        // as they leave (docs/s2disasm/s2.asm:4914-4925, 5066-5080,
+        // 27605-27637); resetting the provider here deleted that tail and the
+        // PLC queue never saw the append.
         GameServices.level().skipPendingInitialTitleCardPresentation();
         GameServices.level().consumeInLevelTitleCardRequest();
-        TitleCardProvider titleCardProvider =
-                GameServices.module() != null
-                        ? GameServices.module().getTitleCardProvider()
-                        : null;
-        if (titleCardProvider != null && titleCardProvider.isOverlayActive()) {
-            titleCardProvider.reset();
-        }
 
+        startPlayback(playback, false);
+    }
+
+    /**
+     * Adopts the level and title-card state already owned by the visual game
+     * session. This path never resets, registers a team, loads a level, or
+     * clears the production title-card provider.
+     */
+    public void startPreparedLevel() throws Exception {
+        PlaybackDebugManager playback = GameServices.playbackDebug();
+        if (loop.getCurrentGameMode() != GameMode.LEVEL) {
+            throw new IllegalStateException(
+                    "prepared visual trace requires released LEVEL mode");
+        }
+        if (forceHardwareTimingReplay
+                || trace.hardwareTimingSchedule().hasRecordedInput()) {
+            fixture.gameplayMode().activateRecordedHardwareAdmission();
+        }
+        startPlayback(playback, true);
+    }
+
+    private void startPlayback(
+            PlaybackDebugManager playback, boolean preparedLevel)
+            throws Exception {
         int startIndex = TraceReplayBootstrap
                 .recordingStartFrameForTraceReplay(trace);
         playback.startSession(movie, startIndex);
@@ -188,8 +225,10 @@ public final class TraceReplayDriver {
             }
         }
         TraceReplaySessionBootstrap.applyStartPositionAndGroundSnap(trace, fixture);
-        TraceReplaySessionBootstrap.BootstrapResult boot =
-                TraceReplaySessionBootstrap.applyBootstrap(
+        TraceReplaySessionBootstrap.BootstrapResult boot = preparedLevel
+                ? TraceReplaySessionBootstrap.applyPreparedLevelBootstrap(
+                        trace, fixture, forceHardwareTimingReplay)
+                : TraceReplaySessionBootstrap.applyBootstrap(
                         trace, fixture, -1, forceHardwareTimingReplay);
 
         this.initialCursor = boot.replayStart().startingTraceIndex();
@@ -206,7 +245,10 @@ public final class TraceReplayDriver {
                 ToleranceConfig.DEFAULT,
                 initialCursor,
                 spriteSupplier::get,
-                onComparatorPause);
+                onComparatorPause,
+                comparisonObserver);
+        comparator.compareBootstrap(
+                TraceReplayEngineSnapshot.capture(spriteSupplier.get()));
         playback.setFrameObserver(comparator);
     }
 

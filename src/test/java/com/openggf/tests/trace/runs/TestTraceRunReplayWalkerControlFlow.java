@@ -13,15 +13,22 @@ import com.openggf.trace.DynamicArtTransfer;
 import com.openggf.trace.FrameComparison;
 import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceEvent;
+import com.openggf.trace.TraceFrame;
 import com.openggf.trace.TraceFixtures;
 import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker;
+import com.openggf.tests.trace.TraceV5RunFixture;
+import com.openggf.trace.replay.runs.RunBoundarySignal;
+import com.openggf.trace.replay.runs.RunLevelLoadCause;
+import com.openggf.trace.replay.runs.RunPlaybackObservation;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker.BoundaryEntryMode;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker.BoundaryPairing;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker.ReturnAssertionMode;
+import com.openggf.trace.replay.runs.TraceRunReplayWalker.SegmentExecutionPolicy;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -30,14 +37,6 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestTraceRunReplayWalkerControlFlow {
-
-    private static final Path RUN_DIR =
-        Path.of("src", "test", "resources", "traces", "synthetic", "run_aiz_gumball_3seg");
-
-    /** The committed 25-segment S3K run (with plain level->level gaps + repeat dirs). */
-    private static final Path S3K_RUN_MANIFEST = Path.of(
-        "src", "test", "resources", "traces", "s3k", "runs",
-        "s3-knux-multibonus-ss", "run_manifest.json");
 
     // A high cap so the frozen-cursor guard never trips in tests that exercise
     // the window-edge / peek / persistent-mode paths instead.
@@ -167,15 +166,21 @@ class TestTraceRunReplayWalkerControlFlow {
     }
 
     @Test
-    void plansSegmentsWithExplicitTransitionPairing() throws Exception {
-        TraceRunManifest run = TraceRunManifest.load(RUN_DIR.resolve("run_manifest.json"));
-        List<TraceRunReplayWalker.SegmentPlan> plans = TraceRunReplayWalker.plan(run, RUN_DIR);
+    void plansGeneratedV5SegmentsWithExplicitTransitionPairing(@TempDir Path root)
+            throws Exception {
+        Path runDir = TraceV5RunFixture.writeS3kBonusRun(root);
+        TraceRunManifest run = TraceRunManifest.load(runDir.resolve("run_manifest.json"));
+        List<TraceRunReplayWalker.SegmentPlan> plans = TraceRunReplayWalker.plan(run, runDir);
         assertEquals(3, plans.size());
         assertNull(plans.get(0).entryBoundary());
         assertEquals("starpost_bonus", plans.get(0).exitBoundary().entryKind());
         assertEquals("starpost_bonus", plans.get(1).entryBoundary().entryKind());
         assertEquals("stage_exit", plans.get(1).exitBoundary().entryKind());
         assertEquals("stage_exit", plans.get(2).entryBoundary().entryKind());
+        assertEquals(SegmentExecutionPolicy.GAMEPLAY,
+                plans.get(2).executionPolicy(),
+                "a generated S3K stage-exit destination with an advancing "
+                        + "gameplay clock remains ordinary gameplay");
         assertNull(plans.get(2).exitBoundary());
     }
 
@@ -187,25 +192,24 @@ class TestTraceRunReplayWalkerControlFlow {
         Files.writeString(segment.resolve("metadata.json"), """
                 {"game":"s2","zone":"special_stage","act":1,
                  "bk2_frame_offset":0,"trace_frame_count":2,
-                 "trace_schema":6,"trace_profile":"s2_special_stage",
+                 "trace_schema":5,"trace_profile":"s2_special_stage",
                  "start_x":"0000","start_y":"0000"}
                 """);
         Files.writeString(segment.resolve("physics.csv"),
                 "frame,anything\n0,a\n2,c\n");
         Files.writeString(runDir.resolve("run_manifest.json"), """
-                {"run_schema":1,"game":"s2","run_id":"gap",
+                {"trace_schema":5,"game":"s2","run_id":"gap",
                  "source_bk2":"gap.bk2","rom_checksum":"x",
-                 "lua_script_version":"legacy",
                  "segments":[{"dir":"ss","kind":"special_stage",
                    "trace_profile":"s2_special_stage","bk2_frame_offset":0,
                    "trace_frame_count":2,"special_stage_index":1}],
-                 "transitions":[]}
+                 "transitions":[],"dynamic_art_gap_transitions":[]}
                 """);
 
         TraceRunManifest manifest = TraceRunManifest.load(
                 runDir.resolve("run_manifest.json"));
-        IllegalArgumentException error = assertThrows(
-                IllegalArgumentException.class,
+        IOException error = assertThrows(
+                IOException.class,
                 () -> TraceRunReplayWalker.plan(manifest, runDir));
         assertTrue(error.getMessage().contains("contiguous"), error.getMessage());
     }
@@ -217,34 +221,40 @@ class TestTraceRunReplayWalkerControlFlow {
      * (AIZ->HCZ seg 8->9, HCZ->MGZ seg 18->19). Pure -- no ROM, no trace load.
      */
     @Test
-    void pairBoundariesHandlesGapsAndRepeatDirsForFullRun() throws Exception {
-        TraceRunManifest run = TraceRunManifest.load(S3K_RUN_MANIFEST);
-        assertEquals(25, run.segments().size(), "sanity: the committed S3K run has 25 segments");
+    void pairBoundariesHandlesGeneratedV5GapsAndTransitions() {
+        List<TraceRunManifest.Segment> segments = List.of(
+                segmentAt("aiz", "level", 0),
+                segmentAt("gumball", "bonus_stage", 100),
+                segmentAt("aiz_return", "level", 200),
+                segmentAt("ss", "special_stage", 300));
+        TraceRunManifest run = new TraceRunManifest(
+                "s3k", "generated", "movie.bk2", "checksum", segments,
+                List.of(new TraceRunManifest.Transition(0, 1, "starpost_bonus", 50,
+                                null, null, null, null, null, null, null, null),
+                        new TraceRunManifest.Transition(2, 3, "giant_ring", 250,
+                                null, null, null, null, null, null, null, null)));
 
         BoundaryPairing pairing = TraceRunReplayWalker.pairBoundaries(run);
-        assertEquals(25, pairing.entryBoundaries().length);
-        assertEquals(25, pairing.exitBoundaries().length);
+        assertEquals(4, pairing.entryBoundaries().length);
+        assertEquals(4, pairing.exitBoundaries().length);
 
         // Segment 0 is the run start: no entry boundary; exits via starpost_bonus.
         assertNull(pairing.entryBoundaries()[0]);
         assertEquals("starpost_bonus", pairing.exitBoundaries()[0].entryKind());
 
-        // Interior 1 (gumball) is bounded by starpost_bonus (entry) / stage_exit.
+        // Interior 1 (gumball) has the explicit starpost bonus entry.
         assertEquals("starpost_bonus", pairing.entryBoundaries()[1].entryKind());
-        assertEquals("stage_exit", pairing.exitBoundaries()[1].entryKind());
 
         // Plain level->level gaps carry NO transition record -> null both sides.
-        assertNull(pairing.exitBoundaries()[8], "AIZ->HCZ (8->9) is a plain level boundary");
-        assertNull(pairing.entryBoundaries()[9], "HCZ has no entry transition record");
-        assertNull(pairing.exitBoundaries()[19], "HCZ->MGZ (19->20) is a plain level boundary");
-        assertNull(pairing.entryBoundaries()[20], "MGZ has no entry transition record");
+        assertNull(pairing.exitBoundaries()[1], "gumball->AIZ is a plain boundary");
+        assertNull(pairing.entryBoundaries()[2], "AIZ has no entry transition record");
 
-        // A giant_ring special-stage entry is paired by explicit index (11->12).
-        assertEquals("giant_ring", pairing.exitBoundaries()[11].entryKind());
-        assertEquals("giant_ring", pairing.entryBoundaries()[12].entryKind());
+        // A giant_ring special-stage entry is paired by explicit index.
+        assertEquals("giant_ring", pairing.exitBoundaries()[2].entryKind());
+        assertEquals("giant_ring", pairing.entryBoundaries()[3].entryKind());
 
         // Last segment ends the run: no exit boundary.
-        assertNull(pairing.exitBoundaries()[24]);
+        assertNull(pairing.exitBoundaries()[3]);
     }
 
     @Test
@@ -258,6 +268,10 @@ class TestTraceRunReplayWalkerControlFlow {
             TraceRunReplayWalker.boundaryEntryMode("starpost_special"));
         assertEquals(BoundaryEntryMode.LEVEL_MODE,
             TraceRunReplayWalker.boundaryEntryMode("stage_exit"));
+        assertEquals(BoundaryEntryMode.LEVEL_LOAD,
+            TraceRunReplayWalker.boundaryEntryMode("level_advance"));
+        assertEquals(BoundaryEntryMode.LEVEL_LOAD,
+            TraceRunReplayWalker.boundaryEntryMode("death_restart"));
         assertThrows(IllegalArgumentException.class,
             () -> TraceRunReplayWalker.boundaryEntryMode("nonsense"));
     }
@@ -289,6 +303,43 @@ class TestTraceRunReplayWalkerControlFlow {
         assertTrue(TraceRunReplayWalker.isUncomparedInterior(segment("special_stage")));
         assertFalse(TraceRunReplayWalker.isUncomparedInterior(segment("bonus_stage")));
         assertFalse(TraceRunReplayWalker.isUncomparedInterior(segment("level")));
+    }
+
+    @Test
+    void segmentExecutionPolicyRecognizesStageExitPresentationBridgeByRowShape() {
+        TraceRunManifest.Segment destination = segmentAt("return", "level", 1200);
+        TraceRunManifest.Transition stageExit = boundaryOfKind("stage_exit", 1100);
+        TraceData bridge = executionTrace(100, 100, 100);
+
+        assertEquals(SegmentExecutionPolicy.LEVEL_PRESENTATION_BRIDGE,
+                TraceRunReplayWalker.segmentExecutionPolicy(
+                        destination, stageExit, bridge));
+        assertEquals(com.openggf.trace.TraceExecutionPhase.FULL_LEVEL_FRAME,
+                com.openggf.trace.replay.TraceReplayRowPolicy.resolve(
+                        bridge, 0, destination.bk2FrameOffset()).phase(),
+                "row zero is synthetic FULL only because it has no predecessor");
+        assertEquals(com.openggf.trace.TraceExecutionPhase.VBLANK_ONLY,
+                com.openggf.trace.replay.TraceReplayRowPolicy.resolve(
+                        bridge, 1, destination.bk2FrameOffset() + 1).phase());
+    }
+
+    @Test
+    void segmentExecutionPolicyKeepsGameplayStageExitDestinationsAndSpecialLocalsDistinct() {
+        TraceRunManifest.Transition stageExit = boundaryOfKind("stage_exit", 1100);
+
+        assertEquals(SegmentExecutionPolicy.GAMEPLAY,
+                TraceRunReplayWalker.segmentExecutionPolicy(
+                        segmentAt("return", "level", 1200), stageExit,
+                        executionTrace(100, 101, 102)));
+        assertEquals(SegmentExecutionPolicy.GAMEPLAY,
+                TraceRunReplayWalker.segmentExecutionPolicy(
+                        segmentAt("ordinary", "level", 1200), null,
+                        executionTrace(100, 100, 100)));
+        assertEquals(SegmentExecutionPolicy.SPECIAL_LOCAL,
+                TraceRunReplayWalker.segmentExecutionPolicy(
+                        segmentAt("ss", "special_stage", 800), null,
+                        TraceFixtures.trace(
+                                TraceFixtures.metadata("s1", 0, 1), List.of())));
     }
 
     @Test
@@ -327,7 +378,7 @@ class TestTraceRunReplayWalkerControlFlow {
     @Test
     void interSegmentStepCapIsMaxGapPlusWindow() {
         TraceRunManifest run = new TraceRunManifest(
-            1, "s3k", "syn", "syn.bk2", "cs", "lua",
+            "s3k", "syn", "syn.bk2", "cs",
             List.of(segmentAt("a", "level", 0),
                     segmentAt("b", "bonus_stage", 100),
                     segmentAt("c", "level", 1000)),
@@ -424,6 +475,43 @@ class TestTraceRunReplayWalkerControlFlow {
         assertEquals(2850, obs.observedBk2Frame());  // not vacuous at window start
     }
 
+    @Test
+    void probeLatchesSemanticLevelAdvanceAndDeathRestartSignals() {
+        var hooks = new StubHooks();
+        var probe = new TraceRunReplayWalker.BoundaryProbe(hooks);
+        RunPlaybackObservation.LevelIdentity destination =
+                new RunPlaybackObservation.LevelIdentity(2, 1, 1, 0);
+
+        probe.arm(boundaryOfKind("level_advance", 500));
+        probe.observeSignal(new RunBoundarySignal.LevelLoaded(
+                500, RunLevelLoadCause.LEVEL_ADVANCE, destination));
+        assertTrue(probe.latched());
+        assertEquals(500, probe.observation().observedBk2Frame());
+
+        probe.arm(boundaryOfKind("death_restart", 700));
+        probe.observeSignal(new RunBoundarySignal.LevelLoaded(
+                700, RunLevelLoadCause.DEATH_RESTART, destination));
+        assertTrue(probe.latched());
+        assertEquals(700, probe.observation().observedBk2Frame());
+    }
+
+    @Test
+    void probeRejectsWrongOrLateSemanticLoadSignal() {
+        var hooks = new StubHooks();
+        var probe = new TraceRunReplayWalker.BoundaryProbe(hooks);
+        RunPlaybackObservation.LevelIdentity destination =
+                new RunPlaybackObservation.LevelIdentity(2, 1, 1, 0);
+        probe.arm(boundaryOfKind("death_restart", 700));
+
+        probe.observeSignal(new RunBoundarySignal.LevelLoaded(
+                700, RunLevelLoadCause.LEVEL_ADVANCE, destination));
+        assertFalse(probe.latched());
+        probe.observeSignal(new RunBoundarySignal.LevelLoaded(
+                700 + TraceRunReplayWalker.LATE_BOUNDARY_GRACE_FRAMES + 1,
+                RunLevelLoadCause.DEATH_RESTART, destination));
+        assertFalse(probe.latched());
+    }
+
     /**
      * Step-cap firing: a FROZEN cursor (never advances) with a mode that never
      * settles must throw a diagnostic {@code BoundaryStepCapExceededException}
@@ -450,11 +538,64 @@ class TestTraceRunReplayWalkerControlFlow {
     void probeDelegatesSkipGateToAttachedComparator() {
         var hooks = new StubHooks();
         var probe = new TraceRunReplayWalker.BoundaryProbe(hooks);
-        assertFalse(probe.shouldSkipGameplayTick(null),
+        Bk2FrameInput detachedRow = new Bk2FrameInput(0, 0, 0, false, "detached");
+        assertFalse(probe.shouldSkipGameplayTick(detachedRow),
             "detached probe must not skip gameplay ticks");
+        probe.afterFrameAdvanced(detachedRow, false);
         probe.setDelegate(new AlwaysSkipDelegate());   // tiny inline stub delegate
-        assertTrue(probe.shouldSkipGameplayTick(null),
+        assertTrue(probe.shouldSkipGameplayTick(
+                        new Bk2FrameInput(1, 0, 0, false, "attached")),
             "attached delegate's lag gating must flow through the probe");
+    }
+
+    @Test
+    void probeForwardsPurePreparationAndAppliedOffsetOnlyWhileAttached() {
+        var hooks = new StubHooks();
+        var probe = new TraceRunReplayWalker.BoundaryProbe(hooks);
+        var delegate = new PreparedOffsetDelegate();
+        Bk2FrameInput frame = new Bk2FrameInput(
+                23, 0, 0, false, "row");
+        probe.setDelegate(delegate);
+
+        probe.prepareFrame(frame);
+        assertEquals(-1, probe.appliedInputOffset(frame));
+        assertEquals(1, delegate.prepareCalls);
+        assertEquals(1, delegate.offsetCalls);
+
+        probe.afterFrameAdvanced(frame, false);
+        probe.setDelegate(null);
+        Bk2FrameInput gapFrame = new Bk2FrameInput(
+                24, 0, 0, false, "gap");
+        probe.prepareFrame(gapFrame);
+        assertEquals(0, probe.appliedInputOffset(gapFrame),
+                "a structural run gap must retain ordinary current-row input");
+        assertEquals(1, delegate.prepareCalls);
+        assertEquals(1, delegate.offsetCalls);
+    }
+
+    @Test
+    void probePinsPreparedRowToItsOriginalDelegateAcrossHandoff() {
+        var hooks = new StubHooks();
+        var probe = new TraceRunReplayWalker.BoundaryProbe(hooks);
+        var source = new RecordingDelegate(false);
+        var destination = new RecordingDelegate(true);
+        Bk2FrameInput sourceRow = new Bk2FrameInput(10, 0, 0, false, "source");
+        Bk2FrameInput destinationRow = new Bk2FrameInput(20, 0, 0, false, "destination");
+
+        probe.setDelegate(source);
+        probe.prepareFrame(sourceRow);
+        probe.setDelegate(destination);
+        assertFalse(probe.shouldSkipGameplayTick(sourceRow),
+                "the prepared source row must retain source lag policy");
+        probe.afterFrameAdvanced(sourceRow, false);
+        assertEquals(List.of(10), source.publishedFrames);
+        assertTrue(destination.publishedFrames.isEmpty(),
+                "a mid-row handoff must not redirect source publication");
+
+        probe.prepareFrame(destinationRow);
+        assertTrue(probe.shouldSkipGameplayTick(destinationRow));
+        probe.afterFrameAdvanced(destinationRow, true);
+        assertEquals(List.of(20), destination.publishedFrames);
     }
 
     @Test
@@ -593,6 +734,16 @@ class TestTraceRunReplayWalkerControlFlow {
             dir, kind, "profile", bk2FrameOffset, 10, 0, 1, null, null);
     }
 
+    private static TraceData executionTrace(int... gameplayCounters) {
+        List<TraceFrame> frames = new java.util.ArrayList<>();
+        for (int index = 0; index < gameplayCounters.length; index++) {
+            frames.add(TraceFrame.executionTestFrame(
+                    index, 0x300 + index, gameplayCounters[index], 0));
+        }
+        return TraceFixtures.trace(
+                TraceFixtures.metadata("s1", 0, 1), frames);
+    }
+
     /**
      * Models the real coordinator's TRANSIENT peek semantics: the bonus stage
      * request is visible ONLY during the observer callback of the frame that
@@ -658,6 +809,52 @@ class TestTraceRunReplayWalkerControlFlow {
         @Override
         public void afterFrameAdvanced(Bk2FrameInput frame, boolean wasSkipped) {
             // Unused by this test.
+        }
+    }
+
+    private static final class PreparedOffsetDelegate
+            implements PlaybackDebugManager.PlaybackFrameObserver {
+        private int prepareCalls;
+        private int offsetCalls;
+
+        @Override
+        public void prepareFrame(Bk2FrameInput frame) {
+            prepareCalls++;
+        }
+
+        @Override
+        public int appliedInputOffset(Bk2FrameInput frame) {
+            offsetCalls++;
+            return -1;
+        }
+
+        @Override
+        public boolean shouldSkipGameplayTick(Bk2FrameInput frame) {
+            return false;
+        }
+
+        @Override
+        public void afterFrameAdvanced(Bk2FrameInput frame, boolean wasSkipped) {
+        }
+    }
+
+    private static final class RecordingDelegate
+            implements PlaybackDebugManager.PlaybackFrameObserver {
+        private final boolean skip;
+        private final List<Integer> publishedFrames = new java.util.ArrayList<>();
+
+        private RecordingDelegate(boolean skip) {
+            this.skip = skip;
+        }
+
+        @Override
+        public boolean shouldSkipGameplayTick(Bk2FrameInput frame) {
+            return skip;
+        }
+
+        @Override
+        public void afterFrameAdvanced(Bk2FrameInput frame, boolean wasSkipped) {
+            publishedFrames.add(frame.frameIndex());
         }
     }
 

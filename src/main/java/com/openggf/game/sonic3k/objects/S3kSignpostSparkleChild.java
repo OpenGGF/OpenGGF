@@ -47,7 +47,7 @@ public class S3kSignpostSparkleChild extends AbstractObjectInstance implements S
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         animTimer++;
         if (animTimer >= FRAME_DELAY) {
             animTimer = 0;

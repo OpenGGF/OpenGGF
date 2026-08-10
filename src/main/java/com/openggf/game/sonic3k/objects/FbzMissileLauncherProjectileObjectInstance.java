@@ -30,7 +30,7 @@ public final class FbzMissileLauncherProjectileObjectInstance
     yFixed = y << 8;
     xDelta = xv;
   }
-  public void update(int f, PlayableEntity p) {
+  public void update(int vIntRunCount, PlayableEntity p) {
     if (converted)
       return;
     if (pendingImpact) {

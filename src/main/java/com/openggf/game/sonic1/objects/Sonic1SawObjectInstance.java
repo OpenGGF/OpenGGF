@@ -174,14 +174,14 @@ public class Sonic1SawObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Reset the ROM `addq.l #4,sp` out_of_range-skip each frame; only the
         // dormant ground-saw X-fail/activation paths re-arm it below.
         skipOutOfRangeThisFrame = false;
         switch (sawType) {
             case 0 -> updateType00();
-            case 1 -> updateType01(frameCounter);
+            case 1 -> updateType01(vIntRunCount);
             case 2 -> updateType02();
             case 3 -> updateType03(player);
             case 4 -> updateType04(player);
@@ -219,7 +219,7 @@ public class Sonic1SawObjectInstance extends AbstractObjectInstance
      *     move.w  d1,obX(a0)
      * </pre>
      */
-    private void updateType01(int frameCounter) {
+    private void updateType01(int vIntRunCount) {
         int amplitude = TYPE01_AMPLITUDE;
         int d0 = OscillationManager.getByte(OSC_TYPE01_OFFSET) & 0xFF;
 
@@ -237,7 +237,7 @@ public class Sonic1SawObjectInstance extends AbstractObjectInstance
         // Sound: play every 16 frames when on screen
         // tst.b obRender(a0) / bpl.s .nosound01
         // move.w (v_framecount).w,d0 / andi.w #$F,d0 / bne.s .nosound01
-        if (isOnScreen() && (frameCounter & TYPE01_SOUND_MASK) == 0) {
+        if (isOnScreen() && (vIntRunCount & TYPE01_SOUND_MASK) == 0) {
             services().playSfx(Sonic1Sfx.SAW.id);
         }
     }

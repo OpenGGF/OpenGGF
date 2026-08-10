@@ -23,6 +23,18 @@ import java.util.Arrays;
  * Offset 0x0C: Medium cloud accumulator (+0x4000/frame, ~0.25 px/frame)
  * Offset 0x10: Small cloud accumulator (+0x2000/frame, ~0.125 px/frame)
  *
+ * fixBugs (s2.asm:27 `fixBugs = 0`): two conditionals live in this routine and the
+ * engine implements the SHIPPED (fixBugs=0) branch of both.
+ * 1. s2.asm:15654-15672 — the cloud accumulators are advanced by a bare
+ *    `addi.l #$8000/$4000/$2000` with no camera term. The fixBugs=1 branch first adds
+ *    `Camera_X_pos_diff` sign-extended and shifted left 5 into each accumulator, so the
+ *    clouds move relative to the camera instead of against it.
+ * 2. s2.asm:15804-15808 — SwScrl_WFZ_Normal_Array is short by three (lineCount,
+ *    layerIndex) pairs relative to the transition array, so an exhausted segment reader
+ *    would run on into SwScrl_HTZ's code bytes. fixBugs=1 appends $20/$08, $30/$0C,
+ *    $30/$10. The table is read from the ROM at its shipped size (ParallaxTables
+ *    SWSCRL_WFZ_NORMAL_SIZE), so the shipped layout is what the engine sees.
+ *
  * Note: The cloud accumulators are bugged in the original ROM - they only
  * tally cloud speeds without subtracting camera movement. This makes clouds
  * move faster when going right and slower when going left, opposite to what

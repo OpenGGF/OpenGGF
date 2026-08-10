@@ -175,7 +175,7 @@ public class CutsceneKnucklesHcz2Instance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         // ROM Check_CameraInRange aborts setup until the camera enters
         // word_62150. On success it copies the JSR return address into (a0),
         // permanently replacing the operation pointer with the code after the

@@ -4,6 +4,10 @@ import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
 
 import com.openggf.data.Rom;
 import com.openggf.game.GameServices;
+import com.openggf.game.RuntimeArtAdmissionLease;
+import com.openggf.game.RuntimeArtAdmissionOwnerKind;
+import com.openggf.game.RuntimeArtAdmissionPolicy;
+import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.rewind.snapshot.PlcProgressSnapshot;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
@@ -14,6 +18,7 @@ import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.game.timing.HardwareTimingSnapshot;
 import com.openggf.game.timing.HardwareWorkHandle;
+import com.openggf.tests.HardwareBoundaryPump;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -21,7 +26,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -50,12 +54,14 @@ class TestSonic3kTitleCardKosQueue {
     private Sonic3kTitleCardManager manager;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
         timing = GameServices.hardwareTiming();
         timing.resetForMissingSnapshot();
         rom = TestEnvironment.currentRom();
         manager = new Sonic3kTitleCardManager();
         manager.reset();
+        prepareTitleLease((Sonic3kObjectArtProvider) GameServices.module()
+                .getObjectArtProvider());
     }
 
     @Test
@@ -108,12 +114,7 @@ class TestSonic3kTitleCardKosQueue {
 
     @Test
     void readyUnclaimedTitleJobsDoNotSubmitEnemyArt() throws Exception {
-        Sonic3kObjectArtProvider provider =
-                (Sonic3kObjectArtProvider) GameServices.module().getObjectArtProvider();
-        Method schedule = Sonic3kObjectArtProvider.class.getDeclaredMethod(
-                "scheduleEnemyKosArt", int.class, int.class);
-        schedule.setAccessible(true);
-        schedule.invoke(provider, 0, 0);
+        CountingObjectArtProvider provider = installCountingProvider();
 
         manager.initialize(0, 0);
         List<HardwareWorkHandle> titleHandles = moduleHandles();
@@ -132,11 +133,102 @@ class TestSonic3kTitleCardKosQueue {
         manager.update();
         provider.processRuntimeArtQueue();
 
-        assertEquals(List.of(4L, 5L, 6L),
-                moduleHandles().stream()
-                        .map(HardwareWorkHandle::ordinal)
-                        .toList(),
-                "LoadEnemyArt submits explicitly after the four title jobs retire");
+        assertEquals(0, provider.titleCardRetirementCount,
+                "claiming title payloads is not title-owner retirement");
+        assertTrue(moduleHandles().isEmpty(),
+                "enemy art remains held until the title owner reaches COMPLETE");
+    }
+
+    @Test
+    void cachedTitleArtDoesNotRetireRuntimeArtAtInitialization() throws Exception {
+        CountingObjectArtProvider provider = installCountingProvider();
+        setField(manager, "artLoaded", true);
+        setField(manager, "lastLoadedZone", 0);
+        setField(manager, "lastLoadedAct", 0);
+        setField(manager, "combinedPatterns", new com.openggf.level.Pattern[0x100]);
+
+        manager.initialize(0, 0);
+        manager.update();
+
+        assertEquals(0, provider.titleCardRetirementCount,
+                "cached title art has no payload-readiness retirement edge");
+        assertFalse(provider.capture().runtimeArtAdmissionConsumed());
+    }
+
+    @Test
+    void ordinaryInLevelCompletionConsumesExactlyThenDefersPhysicalSubmission()
+            throws Exception {
+        Sonic3kObjectArtProvider provider = (Sonic3kObjectArtProvider)
+                GameServices.module().getObjectArtProvider();
+        installCachedTitleArt();
+        manager.initializeInLevel(0, 0);
+        prepareExitForCompletion(manager);
+
+        manager.update();
+
+        PlcProgressSnapshot completed = provider.capture();
+        assertTrue(manager.isComplete());
+        assertTrue(completed.runtimeArtAdmissionConsumed());
+        assertFalse(completed.kosSubmissionArmed());
+        assertTrue((completed.runtimeState() & (1 << 4)) != 0);
+        assertEquals(List.of(), completed.pendingKosOrdinals());
+
+        provider.processRuntimeArtQueue();
+        PlcProgressSnapshot edge = provider.capture();
+        assertTrue(edge.kosSubmissionArmed());
+        assertTrue((edge.runtimeState() & (1 << 4)) == 0);
+        assertEquals(List.of(), edge.pendingKosOrdinals(),
+                "the completion pass only crosses the one-pass cadence edge");
+
+        provider.processRuntimeArtQueue();
+        assertEquals(3, provider.capture().pendingKosOrdinals().size(),
+                "ordinary in-level ownership submits on the following pass");
+    }
+
+    @Test
+    void heldResultsTitleCompletionConsumesDirectlyWithoutDeferral()
+            throws Exception {
+        Sonic3kObjectArtProvider provider = (Sonic3kObjectArtProvider)
+                GameServices.module().getObjectArtProvider();
+        installCachedTitleArt();
+        manager.initializeInLevel(0, 0);
+        manager.requestLevelGamestateResetAfterCreateDispatches(1);
+        prepareExitForCompletion(manager);
+
+        manager.update();
+
+        PlcProgressSnapshot completed = provider.capture();
+        assertTrue(manager.isComplete());
+        assertTrue(completed.runtimeArtAdmissionConsumed());
+        assertTrue(completed.kosSubmissionArmed());
+        assertTrue((completed.runtimeState() & (1 << 4)) == 0,
+                "held/carried title owners consume directly on their SST dispatch");
+
+        provider.processRuntimeArtQueue();
+        assertEquals(3, provider.capture().pendingKosOrdinals().size());
+    }
+
+    @Test
+    void titleOwnerRetiresRuntimeArtExactlyOnceOnCompleteTransition() throws Exception {
+        CountingObjectArtProvider provider = installCountingProvider();
+        setField(manager, "artLoaded", true);
+        setField(manager, "lastLoadedZone", 0);
+        setField(manager, "lastLoadedAct", 0);
+        setField(manager, "combinedPatterns", new com.openggf.level.Pattern[0x100]);
+        manager.initialize(0, 0);
+        prepareExitForCompletion(manager);
+
+        manager.update();
+
+        assertTrue(manager.isComplete());
+        assertEquals(1, provider.titleCardRetirementCount,
+                "the EXIT to COMPLETE transition is the sole title-owner release");
+
+        manager.update();
+        manager.reset();
+
+        assertEquals(1, provider.titleCardRetirementCount,
+                "later COMPLETE updates and reset do not replay retirement");
     }
 
     @Test
@@ -145,10 +237,6 @@ class TestSonic3kTitleCardKosQueue {
         Sonic3kObjectArtProvider provider =
                 (Sonic3kObjectArtProvider) GameServices.module()
                         .getObjectArtProvider();
-        Method schedule = Sonic3kObjectArtProvider.class.getDeclaredMethod(
-                "scheduleEnemyKosArt", int.class, int.class);
-        schedule.setAccessible(true);
-        schedule.invoke(provider, 0, 0);
 
         manager.initialize(0, 0);
         List<HardwareWorkHandle> titleHandles =
@@ -159,6 +247,8 @@ class TestSonic3kTitleCardKosQueue {
             service(HardwareServiceBoundary.PRE_MAIN_LOOP);
             service(HardwareServiceBoundary.POST_OBJECTS);
         }
+        manager.update();
+        prepareExitForCompletion(manager);
         manager.update();
         provider.processRuntimeArtQueue();
 
@@ -199,29 +289,48 @@ class TestSonic3kTitleCardKosQueue {
     }
 
     private void drainThroughPostObjects(List<HardwareWorkHandle> handles) throws Exception {
+        // Kos_modules_left is decremented at exactly one site,
+        // Process_Kos_Module_Queue (docs/skdisasm/sonic3k.asm:2750-2752), which LevelLoop
+        // reaches at 7908 -- immediately after the object pass (ExecuteObjects,
+        // 7900-7906), i.e. POST_OBJECTS. Process_Kos_Queue (7887) follows it in the same
+        // loop tail and services only the decompression queue, so it can never retire an
+        // archive. The object pass therefore observes readiness; it cannot create it.
         boolean sawPostObjectsPublication = false;
         for (int frame = 0; frame < 4096 && readyCount(handles) < handles.size(); frame++) {
             int readyBefore = readyCount(handles);
-            service(HardwareServiceBoundary.PRE_MAIN_LOOP);
-            assertEquals(readyBefore, readyCount(handles),
-                    "PRE_MAIN_LOOP must not publish newly completed KosM work");
 
             manager.update();
             assertTrue(isArtLoading(manager),
                     "the title-card consumer must keep polling until every archive is ready");
+            assertEquals(readyBefore, readyCount(handles),
+                    "the object pass observes KosM readiness, it cannot create it");
 
             service(HardwareServiceBoundary.POST_OBJECTS);
-            int readyAfter = readyCount(handles);
-            if (readyAfter > readyBefore) {
+            int readyAfterPost = readyCount(handles);
+            assertTrue(readyAfterPost >= readyBefore,
+                    "module readiness must never regress across a LevelLoop iteration");
+            // One call to Process_Kos_Module_Queue per iteration, taking one of two
+            // mutually exclusive branches: submit (2741) or DMA-and-decrement
+            // (2750-2752). The shift-out tail (2778-2788) re-enters
+            // Process_Kos_Module_Queue_Init (2694-2713) for the next archive, which
+            // reloads Kos_modules_left rather than retiring a second archive.
+            assertTrue(readyAfterPost - readyBefore <= 1,
+                    "at most one archive may retire per LevelLoop iteration");
+            if (readyAfterPost > readyBefore) {
                 sawPostObjectsPublication = true;
             }
+
+            service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            assertEquals(readyAfterPost, readyCount(handles),
+                    "Process_Kos_Queue (7887) advances only the decompression queue and "
+                            + "must not publish newly completed KosM work");
         }
 
         assertEquals(handles.size(), readyCount(handles));
         assertTrue(sawPostObjectsPublication,
-                "at least one archive must publish readiness at POST_OBJECTS");
+                "at least one archive must publish readiness at the module state step");
         assertTrue(isArtLoading(manager),
-                "final POST_OBJECTS publishes readiness without running the consumer");
+                "the state step publishes readiness without running the consumer");
 
         manager.update();
 
@@ -241,9 +350,8 @@ class TestSonic3kTitleCardKosQueue {
     }
 
     private void service(HardwareServiceBoundary boundary) {
-        timing.service(boundary);
-        directQueue().afterTimingService(boundary);
-        S3kRuntimeArtCoordinator.current().moduleQueue().afterTimingService(boundary);
+        HardwareBoundaryPump.service(
+                timing, S3kRuntimeArtCoordinator.current(), boundary);
     }
 
     private S3kKosDecompressionQueue directQueue() {
@@ -261,5 +369,61 @@ class TestSonic3kTitleCardKosQueue {
         Field field = Sonic3kTitleCardManager.class.getDeclaredField("artLoading");
         field.setAccessible(true);
         return field.getBoolean(manager);
+    }
+
+    private static CountingObjectArtProvider installCountingProvider() throws Exception {
+        Sonic3kGameModule module = (Sonic3kGameModule) GameServices.module();
+        Field field = Sonic3kGameModule.class.getDeclaredField("objectArtProvider");
+        field.setAccessible(true);
+        CountingObjectArtProvider provider = new CountingObjectArtProvider();
+        field.set(module, provider);
+        prepareTitleLease(provider);
+        return provider;
+    }
+
+    private static void prepareTitleLease(Sonic3kObjectArtProvider provider)
+            throws Exception {
+        provider.prepareRuntimeArtForActTransition(
+                0, RuntimeArtAdmissionPolicy.TITLE_OWNER);
+    }
+
+    private static void prepareExitForCompletion(Sonic3kTitleCardManager manager)
+            throws Exception {
+        setField(manager, "state", Sonic3kTitleCardState.EXIT);
+        setField(manager, "exitChildrenGone", true);
+        setField(manager, "actNumberVisible", true);
+        boolean[] exited = (boolean[]) getField(manager, "elemExited");
+        java.util.Arrays.fill(exited, true);
+    }
+
+    private void installCachedTitleArt() throws Exception {
+        setField(manager, "artLoaded", true);
+        setField(manager, "lastLoadedZone", 0);
+        setField(manager, "lastLoadedAct", 0);
+        setField(manager, "combinedPatterns", new com.openggf.level.Pattern[0x100]);
+    }
+
+    private static void setField(Object target, String name, Object value) throws Exception {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        field.set(target, value);
+    }
+
+    private static Object getField(Object target, String name) throws Exception {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        return field.get(target);
+    }
+
+    private static final class CountingObjectArtProvider extends Sonic3kObjectArtProvider {
+        private int titleCardRetirementCount;
+
+        @Override
+        public void consumeRuntimeArtAdmission(
+                RuntimeArtAdmissionLease lease,
+                RuntimeArtAdmissionOwnerKind ownerKind) {
+            super.consumeRuntimeArtAdmission(lease, ownerKind);
+            titleCardRetirementCount++;
+        }
     }
 }

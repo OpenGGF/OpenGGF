@@ -260,7 +260,7 @@ class TestS3kResultsKosQueueAndChildren {
         }
 
         @Override
-        public void update(int frameCounter, com.openggf.game.PlayableEntity player) {
+        public void update(int vIntRunCount, com.openggf.game.PlayableEntity player) {
         }
 
         @Override

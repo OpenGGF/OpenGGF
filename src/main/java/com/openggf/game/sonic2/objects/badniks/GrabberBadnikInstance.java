@@ -98,6 +98,9 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance implements Spa
     private int xSubpixel;          // X subpixel position (0-255)
     private int ySubpixel;          // Y subpixel position (0-255)
 
+    // ObjA7_Init's three LoadChildObject calls (see reserveRomChildSlots).
+    private boolean childSlotsReserved;
+
     public GrabberBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Grabber", Sonic2BadnikConfig.DESTRUCTION);
         this.currentX = spawn.x();
@@ -129,8 +132,46 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance implements Spa
         this.ySubpixel = 0;
     }
 
+    /**
+     * ROM {@code ObjA7_Init} calls {@code LoadChildObject} three times, for
+     * {@code ChildObject_391E0} (ObjID_GrabberBox, $A9), {@code ChildObject_391E4}
+     * (ObjID_GrabberLegs, $A8) and {@code ChildObject_391E8}
+     * (ObjID_GrabberString, $AA) — s2.asm:76659-76675 and the child-object data at
+     * s2.asm:77129-77131. {@code LoadChildObject} allocates via
+     * {@code AllocateObjectAfterCurrent} (s2.asm:73012-73023), an ascending
+     * first-free scan that starts after the parent's own slot.
+     * <p>
+     * The engine draws the legs, box and string from this instance rather than as
+     * separate objects, so the three SST slots the ROM consumes must still be
+     * reserved: every later {@code AllocateObject} in the level lands on a
+     * different slot otherwise, which shifts the {@code d7} spreading term that
+     * gates Obj37's floor probe (s2.asm:25209-25217) and the ascending
+     * {@code RunObjects} execution order.
+     */
+    private int reservedChildSlotCount() {
+        return 3;
+    }
+
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    public int getReservedChildSlotCount() {
+        return reservedChildSlotCount();
+    }
+
+    private void reserveRomChildSlots() {
+        if (childSlotsReserved) {
+            return;
+        }
+        childSlotsReserved = true;
+        var optionalServices = tryServices();
+        var objectManager = optionalServices != null ? optionalServices.objectManager() : null;
+        if (objectManager != null && spawn != null && getSlotIndex() >= 0) {
+            objectManager.allocateChildSlotsAfter(spawn, reservedChildSlotCount(), getSlotIndex());
+        }
+    }
+
+    @Override
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
+        reserveRomChildSlots();
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (state) {
             case PATROL -> updatePatrol(player);
@@ -636,7 +677,7 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance implements Spa
     }
 
     @Override
-    protected void updateAnimation(int frameCounter) {
+    protected void updateAnimation(int vIntRunCount) {
         // Animation is simple: frame 0 = open claws, frame 1 = closed claws
         // Already handled in state transitions
         if (state == State.CARRYING) {
@@ -644,7 +685,7 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance implements Spa
         } else {
             // Animate between frames 0 and 1 when patrolling
             if (state == State.PATROL) {
-                animFrame = ((frameCounter / 8) & 1);
+                animFrame = ((vIntRunCount / 8) & 1);
             }
         }
     }

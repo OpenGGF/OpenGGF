@@ -77,11 +77,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
         public static void Register(ICollection<TestMain.TestCase> tests)
         {
             tests.Add(new TestMain.TestCase(
-                "S1TraceCsvWriter header matches canonical fixture header",
-                HeaderMatchesCanonicalFixtureHeader));
+                "S1TraceCsvWriter emits the current header contract",
+                HeaderMatchesCurrentContract));
             tests.Add(new TestMain.TestCase(
-                "S1TraceCsvWriter reproduces ghz1_fullrun fixture row 0",
-                ReproducesGhz1FullrunFixtureRowZero));
+                "S1TraceCsvWriter emits the current GHZ1 row-zero contract",
+                EmitsGhz1RowZeroContract));
             tests.Add(new TestMain.TestCase(
                 "S1TraceCsvWriter renders negative speeds as two's complement",
                 RendersNegativeSpeedsAsTwosComplement));
@@ -93,7 +93,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 InputMaskCollapsesBk2ButtonsAndExcludesStart));
         }
 
-        private static void HeaderMatchesCanonicalFixtureHeader()
+        private static void HeaderMatchesCurrentContract()
         {
             // LITERAL header line of
             // src/test/resources/traces/s1/ghz1_fullrun/physics.csv.
@@ -113,7 +113,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 S1TraceCsvWriter.Header);
         }
 
-        private static void ReproducesGhz1FullrunFixtureRowZero()
+        private static void EmitsGhz1RowZeroContract()
         {
             var host = new RamBackedHost();
             host.SetWord(S1Ram.CameraX, 0x0000);

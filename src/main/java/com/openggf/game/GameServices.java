@@ -16,6 +16,7 @@ import com.openggf.game.render.AdvancedRenderModeController;
 import com.openggf.game.render.SpecialRenderEffectRegistry;
 import com.openggf.game.resources.DynamicArtDiagnosticsSnapshot;
 import com.openggf.game.resources.DynamicArtLifecycleService;
+import com.openggf.game.resources.PlcFrameLifecycleCoordinator;
 import com.openggf.game.resources.QueueDiagnosticSnapshot;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
@@ -203,6 +204,11 @@ public final class GameServices {
     public static DynamicArtLifecycleService dynamicArtLifecycleOrNull() {
         GameplayModeContext mode = gameplayModeOrNull();
         return mode != null ? mode.dynamicArtLifecycle() : null;
+    }
+
+    public static PlcFrameLifecycleCoordinator plcFrameLifecycleOrNull() {
+        GameplayModeContext mode = gameplayModeOrNull();
+        return mode != null ? mode.plcFrameLifecycle() : null;
     }
 
     public static SeamlessTransitionResourceHandoffRegistry

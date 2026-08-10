@@ -27,7 +27,9 @@ public class PlayableSpriteAnimation {
     private int groundMovementAnimSpeedSnapshot = Integer.MIN_VALUE;
     private boolean groundMovementAnimationSuppressed;
     private boolean nextUpdateSuppressed;
+    private boolean animationUpdateSuppressedThisFrame;
     private DynamicArtDecisionOwner dynamicArtDecisionOwner;
+    private boolean bootstrapDynamicArtPrime;
 
     /**
      * Holds one animation dispatch while the rest of the playable tick runs.
@@ -67,6 +69,10 @@ public class PlayableSpriteAnimation {
 
     public boolean hasDynamicArtDecisionOwner() {
         return dynamicArtDecisionOwner != null;
+    }
+
+    public void setBootstrapDynamicArtPrime(boolean bootstrapDynamicArtPrime) {
+        this.bootstrapDynamicArtPrime = bootstrapDynamicArtPrime;
     }
 
     private PlayerAnimationRules playerAnimationRulesOrNull() {
@@ -132,25 +138,38 @@ public class PlayableSpriteAnimation {
     }
 
     public void update(int frameCounter) {
+        if (sprite != null && !sprite.isNativeSlotPresent()) {
+            return;
+        }
         updateAnimation(frameCounter);
         if (dynamicArtDecisionOwner != null) {
-            dynamicArtDecisionOwner.observe(sprite.getMappingFrame());
+            if (bootstrapDynamicArtPrime) {
+                dynamicArtDecisionOwner.prime(sprite.getMappingFrame());
+            } else {
+                dynamicArtDecisionOwner.observe(sprite.getMappingFrame());
+            }
         }
+        // Obj05 (Tails' tails) is NOT dispatched here. Its SST lives in
+        // LevelOnly_Object_RAM, which starts after Object_RAM_End /
+        // Dynamic_Object_RAM_End (docs/s2disasm/s2.constants.asm:1144-1152), so
+        // ROM executes it after EVERY dynamic level object, not immediately after
+        // Obj02. S3K places Tails_tails identically in Level_object_RAM after
+        // Dynamic_object_RAM_end (docs/skdisasm/sonic3k.constants.asm:307-315).
+        // SpriteManager.advanceTailsTailsAfterObjectExecution() owns that slot.
     }
 
     private void updateAnimation(int frameCounter) {
+        animationUpdateSuppressedThisFrame = false;
         if (sprite == null) {
             return;
         }
         if (nextUpdateSuppressed) {
             nextUpdateSuppressed = false;
+            animationUpdateSuppressedThisFrame = true;
             return;
         }
         if (sprite.getSpindashDustController() != null) {
             sprite.getSpindashDustController().update();
-        }
-        if (sprite.getTailsTailsController() != null) {
-            sprite.getTailsTailsController().update();
         }
 
         SpriteAnimationProfile profile = sprite.getAnimationProfile();
@@ -714,6 +733,14 @@ public class PlayableSpriteAnimation {
     private int resolveSlopeOffset(SpriteAnimationScript activeScript, int configuredStride) {
         int d0 = sprite.getAngle() & 0xFF;
 
+        // FLAG: FixBugs (docs/s1disasm/sonic.asm:20 -- 0 in the shipped S1 ROM).
+        // ENGINE IMPLEMENTS (for S1): the shipped (FixBugs = 0) branch -- no
+        // off-by-one-radian adjustment, so a descending slope picks the walk/run
+        // sub-frame one radian late (docs/s1disasm/_incObj/01 Sonic.asm:2261-2267
+        // SAnim_WalkRun). OTHER BRANCH (FixBugs = 1) subtracts 1 from positive
+        // angles, matching S2/S3K. S2/S3K ship that subtraction unconditionally, so
+        // it is selected by ScriptedVelocityAnimationProfile.isAnglePreAdjust()
+        // rather than by a game-name branch.
         // S2 only: subtract 1 from positive non-zero angles (s2.asm:38078-38080)
         ScriptedVelocityAnimationProfile velocityProfile = resolveVelocityProfile();
         if (velocityProfile != null && velocityProfile.isAnglePreAdjust()) {

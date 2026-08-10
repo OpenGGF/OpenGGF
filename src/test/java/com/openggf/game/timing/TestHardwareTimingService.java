@@ -8,6 +8,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.openggf.game.timing.HardwareServiceBoundary.POST_OBJECTS;
+import static com.openggf.game.timing.HardwareServiceBoundary.PRE_MAIN_LOOP;
 import static com.openggf.game.timing.HardwareServiceBoundary.VINT_SERVICE;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -16,6 +17,72 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestHardwareTimingService {
+
+    @Test
+    void completedLiveEpochCanBecomeRecordedWithANonzeroOrdinalBase() {
+        HardwareTimingService service = new HardwareTimingService();
+        HardwareWorkHandle live = service.submit(
+                submission(1, new byte[] {31}));
+        service.service(POST_OBJECTS);
+        service.claim(live);
+
+        RecordedCompletionAuthority authority =
+                service.beginRecordedAdmissionAfterLiveEpoch();
+        assertEquals(HardwareReadinessAdmissionPolicy.RECORDED,
+                service.admissionPolicyFor(HardwareWorkKind.KOS_MODULE_QUEUE));
+        assertEquals(HardwareReadinessAdmissionPolicy.RECORDED,
+                service.admissionPolicyFor(HardwareWorkKind.KOS_DECOMPRESSION_QUEUE));
+        authority.initializeOrdinalBases(
+                Map.of(HardwareWorkKind.KOS_MODULE_QUEUE, 37L));
+        HardwareWorkHandle recorded = service.submit(
+                submission(1, new byte[] {32}));
+        service.service(POST_OBJECTS);
+
+        assertEquals(37, recorded.ordinal());
+        assertFalse(service.isReady(recorded));
+        authority.admitRecordedCompletion(
+                POST_OBJECTS, recorded.kind(), recorded.ordinal(),
+                recorded.submissionFingerprint());
+        assertTrue(service.isReady(recorded));
+    }
+
+    @Test
+    void liveToRecordedEpochRejectsPendingWorkAndInvalidPolicyWithoutMutation() {
+        HardwareTimingService service = new HardwareTimingService();
+        HardwareWorkHandle pending = service.submit(
+                submission(1, new byte[] {33}));
+        HardwareTimingSnapshot beforePendingRejection = service.capture();
+
+        assertThrows(IllegalStateException.class,
+                service::beginRecordedAdmissionAfterLiveEpoch);
+        assertEquals(beforePendingRejection.nextOrdinals(),
+                service.capture().nextOrdinals());
+        assertEquals(beforePendingRejection.admissionPolicies(),
+                service.capture().admissionPolicies());
+        assertEquals(List.of(pending), service.pendingHandles());
+
+        service.service(POST_OBJECTS);
+        service.claim(pending);
+        HardwareTimingSnapshot beforePolicyRejection = service.capture();
+        assertThrows(IllegalArgumentException.class,
+                () -> service.beginRecordedAdmissionAfterLiveEpoch(Map.of()));
+        assertEquals(beforePolicyRejection.nextOrdinals(),
+                service.capture().nextOrdinals());
+        assertEquals(beforePolicyRejection.jobs().size(),
+                service.capture().jobs().size());
+        assertEquals(beforePolicyRejection.admissionPolicies(),
+                service.capture().admissionPolicies());
+        assertFalse(service.capture().recordedAdmissionActive());
+    }
+
+    @Test
+    void liveToRecordedEpochCannotBeActivatedTwice() {
+        HardwareTimingService service = new HardwareTimingService();
+        service.beginRecordedAdmissionAfterLiveEpoch();
+
+        assertThrows(IllegalStateException.class,
+                service::beginRecordedAdmissionAfterLiveEpoch);
+    }
 
     @Test
     void liveReadinessWaitsForPreparationAndProfileCountdown() {
@@ -209,6 +276,61 @@ class TestHardwareTimingService {
     }
 
     @Test
+    void suppressedRowAdmissionAcceptsOnlyPreparedPreMainLoopWorkAfterVint() {
+        HardwareTimingService service = new HardwareTimingService();
+        RecordedCompletionAuthority authority = service.beginRecordedAdmission();
+        HardwareWorkHandle handle = service.submit(submission(1, new byte[] {46}));
+        service.service(POST_OBJECTS);
+        service.service(VINT_SERVICE);
+
+        authority.admitRecordedSuppressedRowCompletion(
+                PRE_MAIN_LOOP, handle.kind(), handle.ordinal(),
+                handle.submissionFingerprint());
+
+        assertTrue(service.isReady(handle));
+    }
+
+    @Test
+    void suppressedRowAdmissionRejectsNonPreMainLoopBoundaries() {
+        for (HardwareServiceBoundary boundary : List.of(VINT_SERVICE, POST_OBJECTS)) {
+            HardwareTimingService service = new HardwareTimingService();
+            RecordedCompletionAuthority authority = service.beginRecordedAdmission();
+            HardwareWorkHandle handle = service.submit(submission(1, new byte[] {47}));
+            service.service(POST_OBJECTS);
+            service.service(VINT_SERVICE);
+
+            IllegalArgumentException error = assertThrows(
+                    IllegalArgumentException.class,
+                    () -> authority.admitRecordedSuppressedRowCompletion(
+                            boundary, handle.kind(), handle.ordinal(),
+                            handle.submissionFingerprint()));
+
+            assertTrue(error.getMessage().contains("PRE_MAIN_LOOP"), error::getMessage);
+            assertFalse(service.isReady(handle));
+        }
+    }
+
+    @Test
+    void ordinaryAdmissionStillRequiresTheProductionServiceBoundary() {
+        HardwareTimingService service = new HardwareTimingService();
+        RecordedCompletionAuthority authority = service.beginRecordedAdmission();
+        HardwareWorkHandle handle = service.submit(submission(1, new byte[] {48}));
+        service.service(POST_OBJECTS);
+        service.service(VINT_SERVICE);
+
+        IllegalStateException error = assertThrows(
+                IllegalStateException.class,
+                () -> authority.admitRecordedCompletion(
+                        PRE_MAIN_LOOP, handle.kind(), handle.ordinal(),
+                        handle.submissionFingerprint()));
+
+        assertTrue(error.getMessage().contains(
+                "expected PRE_MAIN_LOOP, production serviced VINT_SERVICE"),
+                error::getMessage);
+        assertFalse(service.isReady(handle));
+    }
+
+    @Test
     void recordedAdmissionStartsOnlyBeforeFirstSubmissionAndEndsOnlyWhenEmpty() {
         HardwareTimingService service = new HardwareTimingService();
         RecordedCompletionAuthority authority = service.beginRecordedAdmission();
@@ -233,7 +355,7 @@ class TestHardwareTimingService {
     }
 
     @Test
-    void schemaOneRecordsOnlyModuleWorkWhileDirectWorkRemainsLive() {
+    void v5RecordedAdmissionAuthorizesBothQueueKindsOnlyAtRecordedEdges() {
         HardwareTimingService service = new HardwareTimingService();
         RecordedCompletionAuthority authority = service.beginRecordedAdmission();
         HardwareWorkHandle direct = service.submit(submission(
@@ -243,13 +365,12 @@ class TestHardwareTimingService {
 
         service.service(POST_OBJECTS);
 
-        assertTrue(service.isReady(direct));
+        assertFalse(service.isReady(direct));
         assertFalse(service.isReady(module));
-        IllegalStateException rejected = assertThrows(IllegalStateException.class,
-                () -> authority.admitRecordedCompletion(
-                        POST_OBJECTS, direct.kind(), direct.ordinal(),
-                        direct.submissionFingerprint()));
-        assertTrue(rejected.getMessage().contains("not recorded"), rejected::getMessage);
+        authority.admitRecordedCompletion(
+                POST_OBJECTS, direct.kind(), direct.ordinal(),
+                direct.submissionFingerprint());
+        assertTrue(service.isReady(direct));
 
         authority.admitRecordedCompletion(
                 POST_OBJECTS, module.kind(), module.ordinal(),

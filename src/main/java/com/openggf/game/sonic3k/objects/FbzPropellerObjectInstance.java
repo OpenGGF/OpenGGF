@@ -11,7 +11,7 @@ public final class FbzPropellerObjectInstance extends AbstractObjectInstance
   private static final int[] FLAGS = {0xB6, 0, 0xB6, 0xB7};
   private int frame, flags = 0xB6;
   public FbzPropellerObjectInstance(ObjectSpawn s) { super(s, "FBZPropeller"); }
-  public void update(int f, PlayableEntity p) {
+  public void update(int vIntRunCount, PlayableEntity p) {
     frame = (frame + 1) & 3;
     flags = FLAGS[frame];
     coarseXCull(spawn.x(), 0x280);

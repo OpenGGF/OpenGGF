@@ -148,6 +148,7 @@ public class Engine {
 	private SpriteManager spriteManager;
 	private final GraphicsManager graphicsManager;
 	private final AudioManager audioManager;
+	private boolean audioBackendInitialized;
 	private final RomManager romManager;
 	private final RomDetectionService romDetectionService;
 	private final CrossGameFeatureProvider crossGameFeatureProvider;
@@ -1594,6 +1595,7 @@ public class Engine {
 	}
 
 	private MasterTitleScreen createMasterTitleScreen() {
+		ensureMasterTitleAudioBackend();
 		ModuleResolutionService.LaunchPolicy policy =
 				configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)
 						? ModuleResolutionService.LaunchPolicy.DETERMINISTIC
@@ -1603,11 +1605,24 @@ public class Engine {
 		MasterTitleScreen screen = new MasterTitleScreen(configService,
 				new com.openggf.game.launch.LaunchProfileStore(
 						configService, moduleResolutionService, preparedLaunch),
-				masterTitleEntries());
+				masterTitleEntries(),
+				cue -> audioManager.playSfx(cue.sfxName()));
 		if (ModSubsystem.current().policy().mayScanAtBoot()) {
 			screen.setModManagerScreenFactory(font -> ModSubsystem.current().createManager(font));
 		}
 		return screen;
+	}
+
+	private void ensureMasterTitleAudioBackend() {
+		if (!configService.getBoolean(SonicConfiguration.AUDIO_ENABLED)) {
+			return;
+		}
+		if (!audioBackendInitialized) {
+			audioManager.setBackend(new LWJGLAudioBackend(configService, profiler));
+			audioBackendInitialized = true;
+		} else {
+			audioManager.ensurePresentationSink();
+		}
 	}
 
 	private List<com.openggf.game.MasterTitleEntry> masterTitleEntries() {
@@ -2864,6 +2879,7 @@ public class Engine {
 				rewindVhsEffectPass.apply(
 						rewindEffectIntensity,
 						gameLoop.liveRewindEffectSpeed(),
+						-1.0f,
 						configService.getBoolean(SonicConfiguration.LIVE_REWIND_VHS_TEAR_BANDS),
 						configService.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS),
 						configService.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS),

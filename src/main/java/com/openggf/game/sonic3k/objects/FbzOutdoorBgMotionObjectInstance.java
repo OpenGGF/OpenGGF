@@ -36,7 +36,7 @@ public final class FbzOutdoorBgMotionObjectInstance extends AbstractObjectInstan
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         int offset = advanceMotion();
         S3kRuntimeStates.currentFbz(services().zoneRuntimeRegistry())
                 .ifPresent(state -> state.setOutdoorBobOffset(offset));

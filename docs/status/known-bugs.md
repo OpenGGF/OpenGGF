@@ -27,23 +27,31 @@ Entries should include:
 
 ### Symptom
 
-When the main player loses the last life, OpenGGF currently clamps the life count at zero and runs the normal
-respawn flow. The ROMs instead leave normal gameplay for a Game Over / Continue sequence.
+A death that produces a game over (the life subtraction reaches zero) or that follows a time over now stops the
+level, matching the ROM's `restartime = 0`, but nothing takes over from there. The ROMs load the GAME OVER /
+TIME OVER card object, play the game over music, queue the game over PLC, and then — after that object's own
+12-second wait or an A/B/C press — restart the level on a time over or enter the continue screen on a game over
+(`docs/s1disasm/_incObj/01 Sonic.asm:2019-2049`, `docs/s1disasm/_incObj/39 Game Over.asm:57-88`). OpenGGF has
+none of that, so the corpse is held off-screen indefinitely.
 
-This affects Sonic 1, Sonic 2, and Sonic 3&K. Continues are tracked in `GameStateManager`, but no current gameplay
-flow consumes them.
+This affects Sonic 1, Sonic 2, and Sonic 3&K; all three ROMs share the structure
+(`docs/s2disasm/s2.asm:38279-38316`, `docs/skdisasm/sonic3k.asm:24581-24616`). Continues are tracked in
+`GameStateManager`, but no gameplay flow consumes them.
 
 ### Current State
 
-Until the Game Over / Continue state exists, zero-life gameplay remains pausable. This is a deliberate release
-compromise to avoid the previous broken hybrid state where the player could respawn forever at zero lives but could
-no longer pause.
+The crossing-frame half is modelled: the life comes off on the frame the corpse falls past the death row, and the
+restart delay is armed with 60 frames only when the ROM would restart the level. What is missing is everything
+downstream of that decision — the card object, the music/PLC pair, the wait, the time-over restart, and the
+continue screen.
+
+Zero-life gameplay remains pausable, a deliberate release compromise made while the Game Over state was absent.
 
 ### Removal Condition
 
-Remove this entry once last-life death branches into a ROM-appropriate Game Over / Continue flow for each supported
-game, continues are consumed where applicable, and zero-life normal gameplay no longer persists after the death
-sequence.
+Remove this entry once a game over or time over branches into a ROM-appropriate GAME OVER / TIME OVER card and
+Continue flow for each supported game, a time over restarts the level from that flow rather than from
+`restartime`, and continues are consumed where applicable.
 
 ---
 

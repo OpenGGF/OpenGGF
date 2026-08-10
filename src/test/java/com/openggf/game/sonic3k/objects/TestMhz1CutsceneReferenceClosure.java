@@ -68,13 +68,14 @@ class TestMhz1CutsceneReferenceClosure {
     }
 
     @Test
-    void persistentDoorTreatsItsUnloadedButtonLinkAsStructural() {
+    void buttonUnloadRetiresItsStructuralDoorBeforeClosureValidation() {
         Harness harness = Harness.create();
         ObjectManager objectManager = harness.objectManager();
         Mhz1CutsceneButtonInstance button = objectManager.createDynamicObject(
                 () -> new Mhz1CutsceneButtonInstance(BUTTON_SPAWN));
         Mhz1CutsceneDoorInstance door = objectManager.createDynamicObject(
                 () -> new Mhz1CutsceneDoorInstance(button));
+        setObjectField(button, "spawnedDoor", door);
         button.setDestroyed(true);
 
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x80, (short) 0x80);
@@ -82,7 +83,7 @@ class TestMhz1CutsceneReferenceClosure {
         objectManager.update(0, player, List.of(), 0, false);
 
         assertFalse(objectManager.getActiveObjects().contains(button));
-        assertTrue(objectManager.getActiveObjects().contains(door));
+        assertFalse(objectManager.getActiveObjects().contains(door));
         assertDoesNotThrow(objectManager::validateRewindReferenceClosure);
     }
 

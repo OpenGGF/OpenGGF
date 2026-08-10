@@ -42,8 +42,8 @@ public final class MgzEndBossRenderChild extends AbstractBossChild implements Re
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
-        if (!shouldUpdate(frameCounter)) return;
+    public void update(int vIntRunCount, PlayableEntity player) {
+        if (!shouldUpdate(vIntRunCount)) return;
         syncPositionWithParent();
         updateDynamicSpawn();
     }

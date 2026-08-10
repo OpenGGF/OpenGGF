@@ -3,6 +3,7 @@ package com.openggf;
 import com.openggf.camera.Camera;
 import com.openggf.game.BonusStageProvider;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.HardwareBoundaryDispatch;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame;
@@ -122,6 +123,15 @@ public final class LevelFrameStep {
         }
         frame.claim(phase);
         serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
+
+        // Complete runtime-art work submitted by an earlier object pass before
+        // this frame's objects poll readiness. Requests made during this frame
+        // remain pending until the next frame, matching Queue_Kos_Module's
+        // producer/consumer boundary without making the synchronous ROM loader
+        // complete a newly submitted job in its request frame.
+        if (context.gameModule().getObjectArtProvider() != null) {
+            context.gameModule().getObjectArtProvider().processRuntimeArtQueueBeforeObjects();
+        }
     }
 
     public static void serviceHardwareVBlankOnly(LevelFrameContext context) {
@@ -143,9 +153,9 @@ public final class LevelFrameStep {
         Objects.requireNonNull(objectScan, "objectScan");
         frame.claim(phase);
         serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
-        serviceBoundary(context, HardwareServiceBoundary.PRE_MAIN_LOOP);
         objectScan.run();
         serviceBoundary(context, HardwareServiceBoundary.POST_OBJECTS);
+        serviceBoundary(context, HardwareServiceBoundary.PRE_MAIN_LOOP);
         if (frame.isOwnedBy(phase)) {
             frame.prepareAfterLoop(phase);
         }
@@ -180,7 +190,13 @@ public final class LevelFrameStep {
 
         frame.claim(phase);
         serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
-        serviceBoundary(context, HardwareServiceBoundary.PRE_MAIN_LOOP);
+
+        // Retire runtime-art work submitted by an earlier object pass before
+        // this frame's objects poll it. A request made below during object
+        // execution remains pending until the following frame.
+        if (context.gameModule().getObjectArtProvider() != null) {
+            context.gameModule().getObjectArtProvider().processRuntimeArtQueueBeforeObjects();
+        }
 
         // 0a. Drain the per-frame palette-write accumulator at frame top, before
         //     any submitter (object palette writes in steps 2-3, zone palette
@@ -195,17 +211,8 @@ public final class LevelFrameStep {
         PaletteOwnershipRegistry paletteRegistry = context.paletteOwnershipRegistry();
         if (paletteRegistry != null) {
             paletteRegistry.beginFrame();
-            LevelPaletteBridgeAccess.submitCustomZonePaletteClaims(levelManager, paletteRegistry);
-        }
-
-        // Runtime art queues are consumed once per active gameplay frame. S3K
-        // uses this for Queue_Kos_Module workloads whose object routines poll
-        // Kos_modules_left on later frames.
-        if (context.gameModule().getObjectArtProvider() != null) {
-            if (context.gameModule().getObjectArtProvider()
-                    instanceof com.openggf.game.internal.RuntimeObjectArtQueue runtimeQueue) {
-                runtimeQueue.processRuntimeArtQueue();
-            }
+            LevelPaletteBridgeAccess.submitCustomZonePaletteClaims(
+                    levelManager, paletteRegistry);
         }
 
         // 0. Process dirty regions from MutableLevel (editor mutations).
@@ -258,7 +265,7 @@ public final class LevelFrameStep {
             // 3. Object execution after player physics, with inline solid checkpoints
             //    so later objects see earlier contact adjustments.
             Runnable afterExecBeforePlacement = spriteManager != null
-                    ? spriteManager::advanceFixedSkidDustAfterObjectExecution
+                    ? spriteManager::advancePlayableFixedSlotsAfterObjectExecution
                     : null;
             wrapper.wrap("objects",
                     () -> levelManager.updateObjectPositionsPostPhysicsWithoutTouches(
@@ -342,10 +349,14 @@ public final class LevelFrameStep {
             wrapper.wrap("fixed-objects", levelEvents::updateFixedInLevelObjects);
         }
         if (spriteManager != null && !inlineSolidResolution) {
-            wrapper.wrap("fixed-dust", spriteManager::advanceFixedSkidDustAfterObjectExecution);
+            wrapper.wrap("fixed-dust", spriteManager::advancePlayableFixedSlotsAfterObjectExecution);
         }
         if (levelEvents != null) {
             levelEvents.update();
+        }
+
+        if (context.gameModule().getObjectArtProvider() != null) {
+            context.gameModule().getObjectArtProvider().processRuntimeArtQueue();
         }
 
         // ROM LevelLoop runs ScreenEvents before Process_Kos_Module_Queue
@@ -353,6 +364,15 @@ public final class LevelFrameStep {
         // therefore first observable by object/event consumers on their next
         // dispatch, never by this frame's ScreenEvents pass.
         serviceBoundary(context, HardwareServiceBoundary.POST_OBJECTS);
+
+        // ROM LevelLoop's Process_Kos_Queue (docs/skdisasm/sonic3k.asm:7887)
+        // runs after this iteration's Process_Kos_Module_Queue (7908) and before
+        // Wait_VSync (7888) increments Level_frame_counter (7889), so the direct
+        // FIFO service is the tail of THIS frame. Servicing it here lets a
+        // Queue_Kos_Module issued by an object during this frame's pass have its
+        // first child decompressed on the same frame, which the frame-top
+        // placement could not represent.
+        serviceBoundary(context, HardwareServiceBoundary.PRE_MAIN_LOOP);
         if (frame.isOwnedBy(phase)) {
             frame.prepareAfterLoop(phase);
         }
@@ -400,9 +420,20 @@ public final class LevelFrameStep {
         // 6. Level scroll / parallax / animation update.
         wrapper.wrap("level", levelManager::update);
 
-        // 6b. ROM LevelLoop calls Process_Kos_Module_Queue after Animate_Tiles.
-        // One call performs either module start or completed-module DMA; it must
-        // never drain multiple phases in one engine frame.
+        // 6b. ROM Level_MainLoop tail slot, after SynchroAnimate
+        //     (docs/s1disasm/sonic.asm:3028-3032). S1 runs SignpostArtLoad here;
+        //     other games default to a no-op. Position matters: this runs after
+        //     RunPLC in the same frame, so work queued here is only serviced
+        //     from the next frame.
+        LevelEventProvider loopTailEvents = context.levelEventProvider();
+        if (loopTailEvents != null) {
+            wrapper.wrap("level-loop-tail", loopTailEvents::updateAtLevelLoopTail);
+        }
+
+        // S3K LevelLoop's Process_Kos_Module_Queue slot follows the level
+        // animation work. The session-owned generic queue is distinct from the
+        // game module's hardware-timed runtime-art coordinator and must advance
+        // exactly once per gameplay frame.
         if (context.kosinskiModuleQueue() != null) {
             wrapper.wrap("kosinski-modules", context.kosinskiModuleQueue()::processNativeFrame);
         }
@@ -421,14 +452,11 @@ public final class LevelFrameStep {
         if (context == null) {
             throw new NullPointerException("context");
         }
-        context.hardwareTiming().service(boundary);
-        if (boundary == HardwareServiceBoundary.PRE_MAIN_LOOP) {
-            context.hardwareTimingBoundaryObserver().onBoundary(boundary);
-        }
-        context.runtimeArtCoordinator().afterTimingService(boundary);
-        if (boundary != HardwareServiceBoundary.PRE_MAIN_LOOP) {
-            context.hardwareTimingBoundaryObserver().onBoundary(boundary);
-        }
+        HardwareBoundaryDispatch.serviceBoundary(
+                boundary,
+                context.runtimeArtCoordinator(),
+                context.hardwareTiming(),
+                context.hardwareTimingBoundaryObserver());
     }
 
 }

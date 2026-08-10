@@ -75,7 +75,7 @@ final class CnzEndBossArmChild extends AbstractObjectInstance
     public int getCentreY() { return centreY; }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (scattered) {
             updateScatter();
             return;

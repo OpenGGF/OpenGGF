@@ -135,8 +135,8 @@ public class HczEndBossTurbine extends AbstractBossChild implements TouchRespons
     // =========================================================================
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
-        if (!beginUpdate(frameCounter)) {
+    public void update(int vIntRunCount, PlayableEntity player) {
+        if (!beginUpdate(vIntRunCount)) {
             return;
         }
 
@@ -155,8 +155,8 @@ public class HczEndBossTurbine extends AbstractBossChild implements TouchRespons
         switch (routine) {
             case ROUTINE_INIT -> updateInit();
             case ROUTINE_WAIT -> updateWait();
-            case ROUTINE_ACTIVE -> updateActive(frameCounter);
-            case ROUTINE_WIND_DOWN -> updateWindDown(frameCounter);
+            case ROUTINE_ACTIVE -> updateActive(vIntRunCount);
+            case ROUTINE_WIND_DOWN -> updateWindDown(vIntRunCount);
             case ROUTINE_STOPPING -> updateStopping();
             default -> { }
         }
@@ -200,8 +200,8 @@ public class HczEndBossTurbine extends AbstractBossChild implements TouchRespons
      * Its loc_6B212 callback, not entry to routine 4, creates the water column
      * and advances to routine 6 (sonic3k.asm:141040-141058, 177749-177792).
      */
-    private void updateActive(int frameCounter) {
-        if ((frameCounter & (FAN_SFX_INTERVAL - 1)) == 0 && isOnScreen()) {
+    private void updateActive(int vIntRunCount) {
+        if ((vIntRunCount & (FAN_SFX_INTERVAL - 1)) == 0 && isOnScreen()) {
             services().playSfx(Sonic3kSfx.FAN_BIG.id);
         }
 
@@ -228,12 +228,12 @@ public class HczEndBossTurbine extends AbstractBossChild implements TouchRespons
      * ROM routine 6: steady full-speed animation while propellerActive stays
      * set; clearing it advances to routine 8 (loc_6B22A/loc_6B244).
      */
-    private void updateWindDown(int frameCounter) {
+    private void updateWindDown(int vIntRunCount) {
         animFrame = (animFrame + 1) % SPIN_FRAMES.length;
 
         if (boss.isPropellerActive()) {
             collisionFlags = ACTIVE_COLLISION_FLAGS;
-            if ((frameCounter & (FAN_SFX_INTERVAL - 1)) == 0 && isOnScreen()) {
+            if ((vIntRunCount & (FAN_SFX_INTERVAL - 1)) == 0 && isOnScreen()) {
                 services().playSfx(Sonic3kSfx.FAN_BIG.id);
             }
             return;

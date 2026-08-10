@@ -87,8 +87,8 @@ public class AizDisappearingFloorObjectInstance extends AbstractObjectInstance
     }
 
     // ROM: sonic3k.asm:58343-58353
-    private void applyInitTimingCheck(int frameCounter) {
-        int masked = (frameCounter + phaseOffset) & periodMask;
+    private void applyInitTimingCheck(int vIntRunCount) {
+        int masked = (vIntRunCount + phaseOffset) & periodMask;
         if (masked == 0) return;
         int diff = masked - 0xC8;
         if (diff >= 0) return;
@@ -99,14 +99,14 @@ public class AizDisappearingFloorObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (!initApplied) {
             initApplied = true;
-            applyInitTimingCheck(frameCounter);
+            applyInitTimingCheck(vIntRunCount);
         }
 
         // ROM: sonic3k.asm:58358-58368
-        int masked = (frameCounter + phaseOffset) & periodMask;
+        int masked = (vIntRunCount + phaseOffset) & periodMask;
         if (masked == 0) {
             animIndex = 1;
             animStep = 0;
@@ -223,11 +223,21 @@ public class AizDisappearingFloorObjectInstance extends AbstractObjectInstance
         }
 
         @Override
+        public int getTopLandingHalfWidth(PlayableEntity player, int collisionHalfWidth) {
+            // ROM Solid_Landed / loc_1E154 (sonic3k.asm:41611-41621) re-reads
+            // width_pixels(a0) for the landing X gate. The border child is
+            // spawned with width_pixels = $28 (sonic3k.asm:58390) while its
+            // solid call passes d1 = $2B (sonic3k.asm:58413-58418), so the
+            // default d1 - $B = $20 heuristic is 8px too narrow.
+            return 0x28;
+        }
+
+        @Override
         public void onSolidContact(PlayableEntity player, SolidContact contact, int fc) {
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             // ROM: cmpi.b #3,mapping_frame(a1) — check parent
             if (parent.mappingFrame == 3) {
                 setDestroyed(true);

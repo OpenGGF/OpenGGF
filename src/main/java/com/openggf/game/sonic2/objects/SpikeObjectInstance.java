@@ -25,7 +25,7 @@ public class SpikeObjectInstance extends AbstractSpikeObjectInstance implements 
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (!mainRoutineReached) {
             // Obj36_Init initializes the routine, dimensions, and saved origin,
             // then returns through Adjust2PArtPointer without calling MoveSpikes
@@ -34,7 +34,7 @@ public class SpikeObjectInstance extends AbstractSpikeObjectInstance implements 
             mainRoutineReached = true;
             return;
         }
-        super.update(frameCounter, player);
+        super.update(vIntRunCount, player);
     }
 
     @Override

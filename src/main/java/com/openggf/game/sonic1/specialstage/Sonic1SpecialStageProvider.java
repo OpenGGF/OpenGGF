@@ -3,6 +3,7 @@ package com.openggf.game.sonic1.specialstage;
 import com.openggf.audio.GameMusic;
 import com.openggf.game.ResultsScreen;
 import com.openggf.game.SpecialStageAccessType;
+import com.openggf.game.SpecialStageDebugCapabilities;
 import com.openggf.game.SpecialStageDebugProvider;
 import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.SpecialStageStartupPolicy;
@@ -29,6 +30,14 @@ import java.util.Optional;
 public final class Sonic1SpecialStageProvider implements SpecialStageProvider {
     private final Sonic1SpecialStageManager manager = new Sonic1SpecialStageManager();
     private boolean resultsPlcSubmitted;
+
+    @Override
+    public SpecialStageDebugCapabilities debugCapabilities() {
+        // S1's scaffold has a real direct-movement debug mode. Its sprite,
+        // plane, alignment, and lag tools remain unavailable until their
+        // game-owned implementations exist.
+        return new SpecialStageDebugCapabilities(true, false, false, false, false, false, false);
+    }
 
     @Override
     public int getTransitionSfxId() {
@@ -123,14 +132,16 @@ public final class Sonic1SpecialStageProvider implements SpecialStageProvider {
         onEnterResults();
     }
 
-    // isEntryPresentationReady() intentionally keeps the SpecialStageProvider
-    // default (always true): S1's entry reveal timing is owned entirely by
-    // GM_Special's own PaletteWhiteIn fade in GameLoop's transition path, not
-    // gated on Obj09's physics hold (see
-    // TestGameLoopSpecialStageEntryPresentation#concreteS1AndS3kProvidersRetainImmediateWhiteAndBlackEntry).
-    // The pre-physics hold modeled by SS_STARTUP_HOLD_TICKS only matters to
-    // the frame-accurate trace-replay harness, which drives the manager
-    // directly and never consults this readiness gate.
+    /**
+     * The ROM reveal cannot begin until GM_Special's startup hold has reached
+     * its presentation boundary. FAST initialization consumes that hold before
+     * returning; TRACE_ACCURATE leaves it observable to the GameLoop so visual
+     * complete-run playback keeps the fade and recorded lag rows aligned.
+     */
+    @Override
+    public boolean isEntryPresentationReady() {
+        return manager.isEntryPresentationReady();
+    }
 
     @Override
     public int getCurrentStage() {

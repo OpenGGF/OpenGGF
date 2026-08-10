@@ -17,8 +17,11 @@ import com.openggf.level.objects.TestObjectServices;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
+import com.openggf.tests.FullReset;
+import com.openggf.tests.SingletonResetExtension;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -33,13 +36,21 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
+@FullReset
+@ExtendWith(SingletonResetExtension.class)
 class TestS3kSignpostInstance {
 
     @Test
-    void shortNativeResultsTailUsesTwoChildRetireDispatches() {
-        assertEquals(2, S3kSignpostInstance.resultsChildRetireDispatches(false, false, true));
-        assertEquals(2, S3kSignpostInstance.resultsChildRetireDispatches(true, false, false));
-        assertEquals(2, S3kSignpostInstance.resultsChildRetireDispatches(false, true, false));
+    void shortNativeResultsTailUsesOneChildRetireDispatch() {
+        // ROM Obj_LevelResultsWait2 sees $30(a0) reach zero one pass after the
+        // last child SST deletes (children allocate after the parent,
+        // docs/skdisasm/sonic3k.asm:62600, 62691-62693), and the player-visible
+        // release lands on the following dispatch. The engine's next-dispatch
+        // onExitReady supplies the first pass; one retained retire dispatch
+        // models the second.
+        assertEquals(1, S3kSignpostInstance.resultsChildRetireDispatches(false, false, true));
+        assertEquals(1, S3kSignpostInstance.resultsChildRetireDispatches(true, false, false));
+        assertEquals(1, S3kSignpostInstance.resultsChildRetireDispatches(false, true, false));
         assertEquals(3, S3kSignpostInstance.resultsChildRetireDispatches(false, false, false));
     }
 

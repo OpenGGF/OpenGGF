@@ -2,6 +2,8 @@ package com.openggf.game.sonic3k;
 
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.GameServices;
+import com.openggf.game.RuntimeArtAdmissionLease;
+import com.openggf.game.RuntimeArtAdmissionOwnerKind;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.snapshot.PlcProgressSnapshot;
 import com.openggf.game.session.EngineContext;
@@ -210,7 +212,7 @@ class TestSonic3kPlcArtRewindSnapshot {
                 beforeRetirement.pendingKosModules().get(0).sourceAddress());
         assertFalse(beforeRetirement.kosSubmissionArmed());
 
-        provider.onTitleCardArtRetired();
+        retirePreparedTitle(provider);
         PlcProgressSnapshot afterRetirement = provider.capture();
         assertTrue(afterRetirement.kosSubmissionArmed());
 
@@ -240,7 +242,7 @@ class TestSonic3kPlcArtRewindSnapshot {
                         + "(sonic3k.asm:64392-64395)");
         assertFalse(scheduled.kosSubmissionArmed());
 
-        provider.onTitleCardArtRetired();
+        retirePreparedTitle(provider);
         assertTrue(provider.capture().kosSubmissionArmed(),
                 "LoadEnemyArt runs when the normal title-card owner retires "
                         + "(sonic3k.asm:62287-62300)");
@@ -287,7 +289,7 @@ class TestSonic3kPlcArtRewindSnapshot {
                 "LoadEnemyArt must not submit before title-card retirement");
         assertFalse(beforeRetirement.kosSubmissionArmed());
 
-        provider.onTitleCardArtRetired();
+        retirePreparedTitle(provider);
         PlcProgressSnapshot armed = provider.capture();
         assertTrue(armed.kosSubmissionArmed());
 
@@ -298,5 +300,14 @@ class TestSonic3kPlcArtRewindSnapshot {
         assertEquals(armed.pendingKosOrdinals(),
                 restored.capture().pendingKosOrdinals());
         assertTrue(restored.capture().kosSubmissionArmed());
+    }
+
+    private static void retirePreparedTitle(Sonic3kObjectArtProvider provider) {
+        RuntimeArtAdmissionLease lease = provider.issueRuntimeArtAdmissionLease(
+                RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
+        provider.bindRuntimeArtAdmission(
+                lease.id(), RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
+        provider.consumeRuntimeArtAdmission(
+                lease, RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
     }
 }

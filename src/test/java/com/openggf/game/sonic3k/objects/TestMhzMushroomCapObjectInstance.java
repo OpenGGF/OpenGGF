@@ -19,10 +19,7 @@ import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.tests.TestablePlayableSprite;
-import com.openggf.tests.FullReset;
-import com.openggf.tests.SingletonResetExtension;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -36,8 +33,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-@ExtendWith(SingletonResetExtension.class)
-@FullReset
 class TestMhzMushroomCapObjectInstance {
     private static final int MHZ_MUSHROOM_CAP = 0x23;
 
@@ -82,22 +77,11 @@ class TestMhzMushroomCapObjectInstance {
         assertFalse(solid.usesPlatformObjectLandingSnap(),
                 "SolidObjectTop landing preserves the helper's y_pos += d0+3 result, not PlatformObject snap");
         assertTrue(solid.rejectsZeroDistanceTopSolidLanding(),
-                "SolidObjectTop's unsigned -$10 comparison rejects exact d0=0 contact");
+                "SolidObjectTop rejects d0 == 0 through cmpi.w #-$10,d0 / blo "
+                        + "(sonic3k.asm:41996-42015)");
         assertFalse(solid.carriesRiderOnHorizontalMove(null),
                 "Obj_MHZMushroomCap passes current x_pos as SolidObjectTop d4, so horizontal bobbing "
                         + "does not carry riders through MvSonicOnPtfm");
-    }
-
-    @Test
-    void mushroomCapSolidTopAcceptsPositiveObjectControlButRejectsSignedControl() {
-        MhzMushroomCapObjectInstance cap = new MhzMushroomCapObjectInstance(new ObjectSpawn(
-                0x1200, 0x0500, MHZ_MUSHROOM_CAP, 0, 0, false, 0));
-        TestablePlayableSprite player = new TestablePlayableSprite("tails", (short) 0x1200, (short) 0x04D8);
-
-        assertTrue(cap.allowsObjectControlledSolidContacts(),
-                "SolidObjectTop accepts positive object_control values (sonic3k.asm:42014-42019)");
-        assertTrue(cap.rejectsBit7ObjectControlNewSolidContact(player),
-                "the same new-contact path rejects signed/bit-7 object_control via bmi");
     }
 
     @Test

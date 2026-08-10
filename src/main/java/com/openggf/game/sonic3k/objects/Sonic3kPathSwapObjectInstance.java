@@ -6,6 +6,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.InlinePlaneSwitcher;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 
@@ -33,7 +34,7 @@ public final class Sonic3kPathSwapObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         // Obj_PathSwap executes in its SST slot. Earlier slots in the same pass
         // must still observe the old path bits (sonic3k.asm:39764-39887).
         services().objectManager().applyInlinePlaneSwitcher(getSpawn(), playerEntity);

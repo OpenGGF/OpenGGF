@@ -19,12 +19,13 @@ class TestTraceRunManifest {
 
     private static final String VALID_MANIFEST = """
         {
-          "run_schema": 1,
+          "trace_schema": 5,
           "game": "s3k",
           "run_id": "s3k-aiz-gumball-roundtrip",
           "source_bk2": "s3k-aiz-gumball.bk2",
           "rom_checksum": "C5B1C655C19F462ADE0AC4E17A844D10",
-          "lua_script_version": "6.30-s3k-completerun",
+          "recorder": "native-bizhawk-headless",
+          "recorder_version": "3.0",
           "segments": [
             {"dir": "seg00_aiz", "kind": "level", "trace_profile": "complete_run",
              "bk2_frame_offset": 500, "trace_frame_count": 1200, "zone_id": 0, "act": 1},
@@ -41,7 +42,8 @@ class TestTraceRunManifest {
              "rings_before": 25, "emeralds_before": 0},
             {"from_segment": 1, "to_segment": 2, "entry_kind": "stage_exit",
              "mode_change_bk2_frame": 2800, "rings_after": 40, "emeralds_after": 0}
-          ]
+          ],
+          "dynamic_art_gap_transitions": []
         }
         """;
 
@@ -173,26 +175,30 @@ class TestTraceRunManifest {
     }
 
     @Test
-    void acceptsLegacySchemaOneOmissionAndRequiresSchemaTwoGapArray(
-            @TempDir Path dir) throws IOException {
-        TraceRunManifest legacy = TraceRunManifest.load(writeRun(
-                dir.resolve("legacy"), VALID_MANIFEST,
-                "seg00_aiz", "seg01_gumball", "seg02_aiz"));
-        legacy.validate(dir.resolve("legacy"));
-        assertTrue(legacy.dynamicArtGapTransitions().isEmpty());
+    void requiresCurrentTraceSchemaAndExplicitGapArray(@TempDir Path dir) {
+        for (String invalid : java.util.List.of(
+                VALID_MANIFEST.replace("\"trace_schema\": 5,\n", ""),
+                VALID_MANIFEST.replace("\"dynamic_art_gap_transitions\": []", ""),
+                VALID_MANIFEST.replace("\"dynamic_art_gap_transitions\": []",
+                        "\"dynamic_art_gap_transitions\": {}"))) {
+            assertThrows(IOException.class, () -> TraceRunManifest.load(writeRun(
+                    dir.resolve("invalid-" + invalid.hashCode()), invalid,
+                    "seg00_aiz", "seg01_gumball", "seg02_aiz")));
+        }
+    }
 
-        String schemaTwo = VALID_MANIFEST
-                .replace("\"run_schema\": 1", "\"run_schema\": 2")
-                .replace("\n}", ",\n  \"dynamic_art_gap_transitions\": []\n}");
-        TraceRunManifest current = TraceRunManifest.load(writeRun(
-                dir.resolve("current"), schemaTwo,
-                "seg00_aiz", "seg01_gumball", "seg02_aiz"));
-        current.validate(dir.resolve("current"));
-        assertTrue(current.dynamicArtGapTransitions().isEmpty());
+    @Test
+    void rejectsDuplicateSchemaFieldsAndTrailingJson(@TempDir Path dir) {
+        String duplicateSchema = VALID_MANIFEST.replace(
+                "\"trace_schema\": 5,",
+                "\"trace_schema\": 5,\n  \"trace_schema\": 5,");
+        String trailingJson = VALID_MANIFEST + "\n{}";
 
-        String omitted = VALID_MANIFEST.replace("\"run_schema\": 1", "\"run_schema\": 2");
         assertThrows(IOException.class, () -> TraceRunManifest.load(writeRun(
-                dir.resolve("omitted"), omitted,
+                dir.resolve("duplicate"), duplicateSchema,
+                "seg00_aiz", "seg01_gumball", "seg02_aiz")));
+        assertThrows(IOException.class, () -> TraceRunManifest.load(writeRun(
+                dir.resolve("trailing"), trailingJson,
                 "seg00_aiz", "seg01_gumball", "seg02_aiz")));
     }
 
@@ -210,10 +216,10 @@ class TestTraceRunManifest {
                 gapEdgeJson(4, 9, "completed", "run_gap", 19, 0, 5292),
                 pendingHash, "[]");
         String schemaTwo = VALID_MANIFEST
-                .replace("\"run_schema\": 1", "\"run_schema\": 2")
                 .replace("\"game\": \"s3k\"", "\"game\": \"s2\"")
-                .replace("\n}", ",\n  \"dynamic_art_gap_transitions\": ["
-                        + submission + "," + completion + "]\n}");
+                .replace("\"dynamic_art_gap_transitions\": []",
+                        "\"dynamic_art_gap_transitions\": ["
+                        + submission + "," + completion + "]");
 
         TraceRunManifest manifest = TraceRunManifest.load(writeRun(
                 dir, schemaTwo, "seg00_aiz", "seg01_gumball", "seg02_aiz"));
@@ -233,10 +239,10 @@ class TestTraceRunManifest {
                 gapEdgeJson(3, 9, "submitted", "run_gap", 18, 0, 5290),
                 EMPTY_LEDGER_HASH, "[" + descriptor + "]");
         String schemaTwo = VALID_MANIFEST
-                .replace("\"run_schema\": 1", "\"run_schema\": 2")
                 .replace("\"game\": \"s3k\"", "\"game\": \"s2\"")
-                .replace("\n}", ",\n  \"dynamic_art_gap_transitions\": ["
-                        + submission + "]\n}");
+                .replace("\"dynamic_art_gap_transitions\": []",
+                        "\"dynamic_art_gap_transitions\": ["
+                        + submission + "]");
         TraceRunManifest pending = TraceRunManifest.load(writeRun(
                 dir.resolve("pending"), schemaTwo,
                 "seg00_aiz", "seg01_gumball", "seg02_aiz"));

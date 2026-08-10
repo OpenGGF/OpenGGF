@@ -4,6 +4,8 @@ import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
 
 import com.openggf.data.Rom;
 import com.openggf.game.GameServices;
+import com.openggf.game.RuntimeArtAdmissionLease;
+import com.openggf.game.RuntimeArtAdmissionOwnerKind;
 import com.openggf.game.TitleCardProvider;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.sonic3k.events.S3kTransitionWriteSupport;
@@ -173,6 +175,7 @@ public class Sonic3kTitleCardManager
     private final List<HardwareWorkHandle> artHandles = new ArrayList<>();
     private final List<Integer> artDestinations = new ArrayList<>();
     private boolean artLoading;
+    private long runtimeArtAdmissionLeaseId = -1;
 
     /**
      * Immutable live-title snapshot. Array accessors clone their payload so a
@@ -212,7 +215,8 @@ public class Sonic3kTitleCardManager
             int lastLoadedAct,
             List<HardwareWorkHandle> artHandles,
             List<Integer> artDestinations,
-            boolean artLoading) {
+            boolean artLoading,
+            long runtimeArtAdmissionLeaseId) {
         public Snapshot {
             Objects.requireNonNull(state, "state");
             elemX = elemX.clone();
@@ -259,7 +263,8 @@ public class Sonic3kTitleCardManager
                 currentZone, currentAct, elemX, elemY, elemFrame, elemAtTarget,
                 elemExiting, elemOutsideViewport, elemExited, actNumberVisible,
                 combinedPatterns, artLoaded, artCached, lastLoadedZone,
-                lastLoadedAct, artHandles, artDestinations, artLoading);
+                lastLoadedAct, artHandles, artDestinations, artLoading,
+                runtimeArtAdmissionLeaseId);
     }
 
     @Override
@@ -309,6 +314,7 @@ public class Sonic3kTitleCardManager
         artHandles.clear();
         artDestinations.clear();
         artLoading = snapshot.artLoading();
+        runtimeArtAdmissionLeaseId = snapshot.runtimeArtAdmissionLeaseId();
         if (!snapshot.artHandles().isEmpty()) {
             var timing = GameServices.hardwareTiming();
             for (HardwareWorkHandle captured : snapshot.artHandles()) {
@@ -568,6 +574,11 @@ public class Sonic3kTitleCardManager
         this.stateTimer = 0;
         this.phaseCounter = 0;
         this.exitChildrenGone = false;
+        RuntimeArtAdmissionLease admissionLease = GameServices.module()
+                .getObjectArtProvider()
+                .bindPendingRuntimeArtAdmission(
+                        RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
+        this.runtimeArtAdmissionLeaseId = admissionLease.id();
 
         // Load art if needed
         if (!artLoaded || lastLoadedZone != zoneIndex || lastLoadedAct != actIndex) {
@@ -780,6 +791,7 @@ public class Sonic3kTitleCardManager
         artHandles.clear();
         artDestinations.clear();
         artLoading = false;
+        runtimeArtAdmissionLeaseId = -1;
         Arrays.fill(elemX, 0);
         Arrays.fill(elemY, 0);
         Arrays.fill(elemFrame, 0);
@@ -920,6 +932,26 @@ public class Sonic3kTitleCardManager
                             GameServices.module().getLevelEventProvider());
                 }
                 return;
+            }
+            // Title KosM payload readiness only makes the card renderable.
+            // Obj_TitleCardWait2 reaches LoadEnemyArt after the title owner has
+            // observed every child retire, which is this sole EXIT -> COMPLETE
+            // transition.
+            if (!bonusMode) {
+                var provider = GameServices.module().getObjectArtProvider();
+                if (provider == null || runtimeArtAdmissionLeaseId < 0) {
+                    throw new IllegalStateException(
+                            "title owner is missing its runtime-art admission lease");
+                }
+                RuntimeArtAdmissionLease lease = provider.rebindRuntimeArtAdmission(
+                        runtimeArtAdmissionLeaseId,
+                        RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
+                if (inLevelMode && !heldLevelCounterDispatchOwned) {
+                    provider.onInLevelTitleCardCompleted(lease);
+                } else {
+                    provider.consumeRuntimeArtAdmission(
+                            lease, RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
+                }
             }
             state = Sonic3kTitleCardState.COMPLETE;
             if (inLevelMode && !inLevelGameplayOwnedExternally) {
@@ -1132,10 +1164,6 @@ public class Sonic3kTitleCardManager
         artLoading = false;
         artLoaded = true;
         artCached = false;
-        if (GameServices.module().getObjectArtProvider() != null) {
-            GameServices.module().getObjectArtProvider()
-                    .onTitleCardArtRetired();
-        }
         return true;
     }
 

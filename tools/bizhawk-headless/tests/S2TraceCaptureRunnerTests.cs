@@ -129,7 +129,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         "\"load_queue_state_per_frame\"");
                     AssertContains(
                         metadata.ToString(),
-                        "\"dynamic_art_transfer_state_per_frame_v1\"");
+                        "\"dynamic_art_transfer_state_per_frame\"");
                 });
         }
 
@@ -251,12 +251,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         + "  \"sidekicks\": [],\n"
                         + "  \"rng_seed\": \"0x12345678\",\n"
                         + "  \"recording_date\": \"2026-07-13\",\n"
-                        + "  \"lua_script_version\": \"9.13-s2\",\n"
-                        + "  \"trace_schema\": 9,\n"
-                        + "  \"csv_version\": 7,\n"
+                        + "  \"recorder\": \"native-bizhawk-headless\",\n"
+                        + "  \"recorder_version\": \"3.0\",\n"
+                        + "  \"trace_schema\": 5,\n"
                         + "  \"aux_schema_extras\": "
                         + "[\"cnz_slot_machine_state_per_frame\", "
-                        + "\"cpu_state_per_frame\"],\n"
+                        + "\"cpu_state_per_frame\", "
+                        + "\"native_prelude_bootstrap\"],\n"
                         + "  \"trace_profile\": \"gameplay_unlock\",\n"
                         + "  \"bizhawk_version\": \"2.11\",\n"
                         + "  \"genesis_core\": \"Genplus-gx\",\n"

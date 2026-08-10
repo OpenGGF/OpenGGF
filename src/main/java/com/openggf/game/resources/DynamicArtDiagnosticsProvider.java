@@ -12,4 +12,6 @@ public interface DynamicArtDiagnosticsProvider {
     DynamicArtDiagnosticsSnapshot latestSnapshot();
 
     List<DynamicArtGapTransition> gapTransitions();
+
+    DynamicArtGapDiagnosticsSnapshot gapSnapshot();
 }

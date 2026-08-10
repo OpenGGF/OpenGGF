@@ -95,7 +95,7 @@ public class ARZBossPillar extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (isDestroyed()) {
             return;
@@ -107,8 +107,8 @@ public class ARZBossPillar extends AbstractObjectInstance
         }
 
         switch (routineSecondary) {
-            case PILLAR_SUB_RAISING -> updatePillarRaise(frameCounter);
-            case PILLAR_SUB_IDLE -> updatePillarIdle(frameCounter);
+            case PILLAR_SUB_RAISING -> updatePillarRaise(vIntRunCount);
+            case PILLAR_SUB_IDLE -> updatePillarIdle(vIntRunCount);
             case PILLAR_SUB_LOWERING -> updatePillarLower(player);
         }
     }
@@ -117,8 +117,8 @@ public class ARZBossPillar extends AbstractObjectInstance
      * Pillar raising state.
      * ROM: Obj89_Pillar_Sub0 (lines 64813-64828)
      */
-    private void updatePillarRaise(int frameCounter) {
-        if ((frameCounter & 0x1F) == 0) {
+    private void updatePillarRaise(int vIntRunCount) {
+        if ((vIntRunCount & 0x1F) == 0) {
             services().playSfx(Sonic2Sfx.RUMBLING_2.id);
         }
         y -= 1;
@@ -135,7 +135,7 @@ public class ARZBossPillar extends AbstractObjectInstance
      * Pillar idle state.
      * ROM: Obj89_Pillar_Sub2 (lines 64831-64857)
      */
-    private void updatePillarIdle(int frameCounter) {
+    private void updatePillarIdle(int vIntRunCount) {
         if (mainBoss != null && mainBoss.isHammerActive()) {
             boolean isLeftPillar = (renderFlags & 1) == 0;
             boolean hammerTargetingLeft = !mainBoss.isTargetingRight();
@@ -146,7 +146,7 @@ public class ARZBossPillar extends AbstractObjectInstance
                 pillarShaking = true;
             }
         }
-        updatePillarShake(frameCounter);
+        updatePillarShake(vIntRunCount);
         mappingFrame = 0;
     }
 
@@ -178,7 +178,7 @@ public class ARZBossPillar extends AbstractObjectInstance
         }
     }
 
-    private void updatePillarShake(int frameCounter) {
+    private void updatePillarShake(int vIntRunCount) {
         if (!pillarShaking) {
             return;
         }
@@ -193,7 +193,7 @@ public class ARZBossPillar extends AbstractObjectInstance
             return;
         }
         int baseX = isRightPillar() ? RIGHT_PILLAR_X : LEFT_PILLAR_X;
-        int offset = ((frameCounter & 1) == 0) ? 1 : -1;
+        int offset = ((vIntRunCount & 1) == 0) ? 1 : -1;
         x = baseX + offset;
         y = PILLAR_TARGET_Y + offset;
     }

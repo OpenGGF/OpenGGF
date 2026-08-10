@@ -238,7 +238,7 @@ public class BreathingBubbleInstance extends AbstractObjectInstance implements R
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (spawnFrameSkipPending) {
             spawnFrameSkipPending = false;
             return;

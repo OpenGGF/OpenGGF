@@ -222,9 +222,9 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ensureInitialized();
-        expireRecentlyClearedP2Contact(frameCounter);
+        expireRecentlyClearedP2Contact(vIntRunCount);
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (revealed && !broken) {
             updateRevealed();
@@ -236,7 +236,7 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         }
         if (pendingBreakContactRelease) {
             pendingBreakContactRelease = false;
-            releaseTouchingPlayersOnBreak(player, frameCounter);
+            releaseTouchingPlayersOnBreak(player, vIntRunCount);
         }
         updateIcon();
     }
@@ -712,9 +712,9 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         }
     }
 
-    private void releaseTouchingPlayersOnBreak(AbstractPlayableSprite breaker, int frameCounter) {
+    private void releaseTouchingPlayersOnBreak(AbstractPlayableSprite breaker, int vIntRunCount) {
         int contactBits = solidStatusBits & PLAYER_CONTACT_MASK;
-        PlayableEntity sameFrameClearedP2Contact = p2SolidContactClearedFrame == frameCounter
+        PlayableEntity sameFrameClearedP2Contact = p2SolidContactClearedFrame == vIntRunCount
                 ? p2RecentlyClearedSolidContact
                 : null;
         PlayableEntity inferredP2Contact = inferSidekickMonitorStandingBitOnBreak();
@@ -763,8 +763,8 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         return Math.abs(sidekick.getCentreY() - posY()) <= SOLID_D3;
     }
 
-    private void expireRecentlyClearedP2Contact(int frameCounter) {
-        if (p2RecentlyClearedSolidContact != null && p2SolidContactClearedFrame != frameCounter) {
+    private void expireRecentlyClearedP2Contact(int vIntRunCount) {
+        if (p2RecentlyClearedSolidContact != null && p2SolidContactClearedFrame != vIntRunCount) {
             p2RecentlyClearedSolidContact = null;
             p2SolidContactClearedFrame = Integer.MIN_VALUE;
         }
@@ -799,7 +799,7 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             if (!parent.isMonitorContentsSlotActive()) {
                 setDestroyed(true);
             }

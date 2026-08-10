@@ -1,5 +1,22 @@
 # S2 Trace Recorder — Byte-Level Behavioral Specification (Level Gameplay)
 
+## Current native v5 contract
+
+The maintained writer emits `recorder: native-bizhawk-headless`,
+`recorder_version: 3.0`, and `trace_schema: 5`. Level payloads use the shared
+42-column physics grammar. The predecessor keys `lua_script_version`,
+`csv_version`, `ss_csv_version`, `hardware_timing_schema`, and `run_schema`
+are absent. They are not accepted aliases and do not select behavior.
+`native_prelude_bootstrap`, not recorder provenance, declares frame-zero
+bootstrap evidence.
+
+## Pre-v5 historical evidence
+
+Everything below records the predecessor Lua-to-native port and its fixture
+evidence. Its old version literals, exact metadata templates, and byte-parity
+claims are retained for provenance only; they do not describe current output
+or a compatibility path.
+
 Authoritative specification for porting the LEVEL-GAMEPLAY behavior of
 `tools/bizhawk/s2_trace_recorder.lua` (v9.12-s2, using
 `tools/bizhawk/lib/oggf_trace_common.lua`) to the C# headless harness

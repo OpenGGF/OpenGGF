@@ -23,7 +23,7 @@ public final class FbzEndBossShipExplosionController extends AbstractObjectInsta
         super(spawn, "FBZEndBossShipExplosionController");
     }
 
-    @Override public void update(int frameCounter, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         if (ship == null || ship.isDestroyed()) { ObjectLifetimeOps.expireDynamic(this); return; }
         if (waitCounter-- > 0) return;
         waitCounter = 2;

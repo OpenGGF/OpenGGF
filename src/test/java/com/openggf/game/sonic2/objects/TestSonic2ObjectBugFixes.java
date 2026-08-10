@@ -1191,10 +1191,10 @@ class TestSonic2ObjectBugFixes {
         platform.setServices(services);
         setBooleanField(platform, "collapsed", true);
         setIntField(platform, "parentY", 0x0700);
-        setIntField(platform, "verticalOnlyOffscreenTicks", 2);
 
         AbstractObjectInstance.updateCameraBounds(0x0200, 0x052C, 0x0340, 0x060C, 0);
 
+        platform.snapshotPreUpdatePosition();
         platform.update(222, new TestablePlayableSprite("sonic", (short) 0x0330, (short) 0x058C));
 
         assertTrue(platform.isDestroyed(),
@@ -1214,6 +1214,7 @@ class TestSonic2ObjectBugFixes {
 
         AbstractObjectInstance.updateCameraBounds(0x0285, 0x052C, 0x03C5, 0x060C, 0);
 
+        platform.snapshotPreUpdatePosition();
         platform.update(221, new TestablePlayableSprite("sonic", (short) 0x0330, (short) 0x058C));
 
         assertTrue(platform.isDestroyed(),
@@ -1234,6 +1235,7 @@ class TestSonic2ObjectBugFixes {
         setBooleanField(platform, "collapsed", true);
         setIntField(platform, "parentY", 0x05FA);
 
+        platform.snapshotPreUpdatePosition();
         platform.update(321, new TestablePlayableSprite("sonic", (short) 0x04C0, (short) 0x0555));
 
         assertFalse(platform.isDestroyed(),
@@ -1241,7 +1243,7 @@ class TestSonic2ObjectBugFixes {
     }
 
     @Test
-    void collapsingPlatformFragmentFallKeepsVerticalOnlyOffscreenParentForCpuSlotRefresh() throws Exception {
+    void collapsingPlatformFragmentFallDeletesOnFirstVerticallyOffscreenBuildResult() throws Exception {
         StubObjectServices services = new StubObjectServices();
         CollapsingPlatformObjectInstance platform = ObjectConstructionContext.construct(services,
                 () -> new CollapsingPlatformObjectInstance(
@@ -1253,17 +1255,10 @@ class TestSonic2ObjectBugFixes {
 
         AbstractObjectInstance.updateCameraBounds(0x0428, 0x0506, 0x0568, 0x05E6, 0);
 
+        platform.snapshotPreUpdatePosition();
         platform.update(324, new TestablePlayableSprite("sonic", (short) 0x04C0, (short) 0x0555));
-        assertFalse(platform.isDestroyed(),
-                "A vertically clipped but horizontally visible Obj1F parent must survive the first CPU refresh tick");
-
-        platform.update(325, new TestablePlayableSprite("sonic", (short) 0x04C0, (short) 0x0555));
-        assertFalse(platform.isDestroyed(),
-                "The second CPU refresh still observes the Obj1F id before the ROM slot clears");
-
-        platform.update(326, new TestablePlayableSprite("sonic", (short) 0x04C0, (short) 0x0555));
         assertTrue(platform.isDestroyed(),
-                "Once the vertical-only grace expires, Obj1F_FragmentFall deletes the parent slot");
+                "Obj1F_FragmentFall consumes the prior BuildSprites on-screen bit without an artificial CPU grace period");
     }
 
     @Test

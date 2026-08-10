@@ -34,7 +34,7 @@ public final class FbzEggPrisonButtonInstance extends AbstractObjectInstance
         return new FbzEggPrisonButtonInstance(context.spawn(), null);
     }
 
-    @Override public void update(int frameCounter, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         routineEntries++;
         if (parentRef == null || parentRef.isDestroyed()) ObjectLifetimeOps.expireDynamic(this);
     }

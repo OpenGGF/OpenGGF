@@ -627,7 +627,7 @@ public class SpringObjectInstance extends BoxObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ensureInitialized();
         animationState.update();
         mappingFrame = animationState.getMappingFrame();

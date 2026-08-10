@@ -54,7 +54,7 @@ public class MhzShipPropellerInstance extends AbstractObjectInstance implements 
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         S3kRuntimeStates.currentMhz(services().zoneRuntimeRegistry()).ifPresent(state -> {
             int x = propellerIndex == 0 ? state.shipPropellerOneX() : state.shipPropellerTwoX();
             updateDynamicSpawn(x, state.shipPropellerY());

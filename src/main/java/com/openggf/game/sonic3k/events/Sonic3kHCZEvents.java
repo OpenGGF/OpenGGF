@@ -23,6 +23,7 @@ import com.openggf.game.sonic3k.scroll.SwScrlHcz;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
+import com.openggf.game.RuntimeArtAdmissionPolicy;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.scroll.ZoneScrollHandler;
@@ -86,9 +87,17 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
     private static final int PAL_MUT_CAM_Y_PAST = 0x500;
     private static final int PAL_MUT_CAM_X_PAST = 0x900;
 
-    // Underwater palette colors: $0680, $0240, $0220
-    // ROM bug: writes $0B80 instead of $0680; FixBugs corrects to $0680.
-    private static final int[] PALETTE_UNDERWATER = {0x0680, 0x0240, 0x0220};
+    // HCZ1 underwater palette mutation, ROM loc_1C892 (sonic3k.asm:39261-39273).
+    //
+    // FixBugs conditional (sonic3k.asm:38 -- the shipped ROM assembles with
+    // FixBugs = 0, so THIS is the branch the engine implements).
+    //   Shipped (FixBugs = 0), implemented here: the first colour written is
+    //   $B80 (sonic3k.asm:39270-39271, whose own comment reads "Bug: this should
+    //   be $680"). The second and third colours, $240 and $220, are outside the
+    //   conditional and are the same either way.
+    //   Fixed (FixBugs = 1), NOT implemented: $680 instead of $B80
+    //   (sonic3k.asm:39267-39268), a darker first colour in the underwater ramp.
+    private static final int[] PALETTE_UNDERWATER = {0x0B80, 0x0240, 0x0220};
     // Revert palette colors: $0CEE, $0ACE, $008A
     private static final int[] PALETTE_NORMAL = {0x0CEE, 0x0ACE, 0x008A};
     // Target: Normal_palette_line_4+$10 = palette line 3 (0-indexed), color offset 8 (3 colors)
@@ -876,12 +885,15 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
                 SeamlessLevelTransitionRequest.builder(
                                 SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
                         .targetZoneAct(Sonic3kZoneIds.ZONE_HCZ, 1)
+                        .runtimeArtAdmissionPolicy(RuntimeArtAdmissionPolicy.TITLE_OWNER)
                         .deactivateLevelNow(false)
                         // Results screen already started act 2 music
                         .preserveMusic(true)
                         // Load_Level swaps HCZ resources without clearing the
                         // running act-results ring/time globals.
                         .preserveLevelGamestate(true)
+                        .objectSurvivalPolicy(
+                                SeamlessLevelTransitionRequest.ObjectSurvivalPolicy.PERSISTENT_EXACT_SST)
                         // _unkFAA8 / End_of_level_flag are global RAM, and the
                         // carried results/end-sign objects continue to own them
                         // after HCZ1BGE_DoTransition calls Load_Level.

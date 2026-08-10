@@ -39,7 +39,7 @@ public final class FbzExitDoorInstance extends AbstractObjectInstance
         currentY = spawn.y();
     }
 
-    @Override public void update(int frameCounter, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         if (flying) {
             SubpixelMotion.State motion = new SubpixelMotion.State(
                     currentX, currentY, xSub, ySub, xVelocity, yVelocity);

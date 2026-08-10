@@ -503,7 +503,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 						frameCounter,
 						currentObjectDispatchOrdinal()),
 				new InitialPlayableInput(
-						p1Held, p1Pressed, p2Held, p2Logical, true),
+						p1Held, p1Pressed, p1Pressed, p2Held, p2Logical, true),
 				testButton,
 				speedUp,
 				slowDown,
@@ -843,6 +843,20 @@ public class SpriteManager implements PlayableSstDispatcher {
 				continue;
 			}
 			movement.advanceFixedSkidDustWhileStopAnimPersists(frameCounter);
+		}
+	}
+
+	/** Advances the playable fixed slots in native order after dynamic objects. */
+	public void advancePlayableFixedSlotsAfterObjectExecution() {
+		advanceTailsTailsAfterObjectExecution();
+		advanceFixedSkidDustAfterObjectExecution();
+	}
+
+	public void advanceTailsTailsAfterObjectExecution() {
+		for (AbstractPlayableSprite sidekick : sidekicks) {
+			if (sidekick != null && sidekick.getTailsTailsController() != null) {
+				sidekick.getTailsTailsController().update();
+			}
 		}
 	}
 

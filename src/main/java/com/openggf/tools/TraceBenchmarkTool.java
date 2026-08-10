@@ -191,7 +191,7 @@ public final class TraceBenchmarkTool {
                 entry.gameId(), GameServices.configuration(), Path.of(""));
         HeadlessGameBoot boot = new HeadlessGameBoot(SCREEN_WIDTH, SCREEN_HEIGHT);
         HardwareReadinessAdmissionPolicy admissionPolicy =
-                admissionPolicyFor(meta);
+                admissionPolicyFor(trace);
         boot.boot(romPath, entry.zone(), entry.act(), admissionPolicy);
 
         List<BenchmarkReport.Iteration> iterations = new ArrayList<>();
@@ -227,9 +227,13 @@ public final class TraceBenchmarkTool {
         return boot;
     }
 
+    static HardwareReadinessAdmissionPolicy admissionPolicyFor(TraceData trace) {
+        return admissionPolicyFor(trace.hardwareTimingSchedule());
+    }
+
     static HardwareReadinessAdmissionPolicy admissionPolicyFor(
-            TraceMetadata metadata) {
-        return metadata.hasHardwareTimingStream()
+            com.openggf.trace.timing.HardwareTimingSchedule schedule) {
+        return schedule.hasRecordedInput()
                 ? HardwareReadinessAdmissionPolicy.RECORDED
                 : HardwareReadinessAdmissionPolicy.LIVE;
     }

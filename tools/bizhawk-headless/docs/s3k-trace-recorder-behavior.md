@@ -15,44 +15,35 @@ Two sibling documents own the remaining STANDARD surface:
 Scope: the STANDARD recorder in lightweight capture mode and the timing
 ledger/stream shared by the native complete-run recorder. Complete-run
 segmentation and metadata extensions remain owned by
-[s3k-complete-run-behavior.md](s3k-complete-run-behavior.md). The frozen Lua
-recorders remain the historical authority for the physics/aux surface they
-published, but they stop at version 6.37 and hardware-timing schema 1. The
-native implementations are the maintained behavior and publication authority
-for version 6.38 and schema 2.
+[s3k-complete-run-behavior.md](s3k-complete-run-behavior.md). Frozen Lua
+recorders and their numbered schema axes are predecessor evidence only. They
+do not define accepted output or replay compatibility.
 
 The S1 spec's frame-alignment / `IGpgxHost` translation model (S1
 §2.3–§2.4) and file-encoding rules (S1 §8) carry over unchanged: LF-only
 newlines, no BOM, ASCII output, CSV flushed every 60 rows, aux flushed
 per line.
 
-## 6. Current version and container contract
+## Current v5 container contract
 
-| producer/data | version | trace schema | hardware-timing schema | timing kinds |
-|---|---|---:|---:|---|
-| Current native STANDARD writer | `6.38-s3k` | 7 | 2 | module and direct |
-| Current native complete-run writer | `6.39-s3k-completerun` | 7 | 2 | module and direct |
-| Committed S3K fixtures | `6.37-s3k` / `6.37-s3k-completerun` | 7 | 1 | module only |
-| Frozen Lua recorders | `6.37-s3k` / `6.37-s3k-completerun` | 7 | 1 | module only |
+The only supported S3K trace envelope is `recorder: native-bizhawk-headless`,
+`recorder_version: 3.0`, and `trace_schema: 5`. Recorder provenance is opaque:
+it identifies the producer but never selects parser or replay behavior. No
+legacy stamp or secondary schema axis is emitted or accepted.
 
-Current native output contains `physics.csv`, `aux_state.jsonl`,
-`metadata.json`, and `hardware_timing.jsonl` before the publication layer
-applies fixture compression. `trace_schema` stays 7 because the timing
-container and event shape did not change. `hardware_timing_schema` selects
-the authority registry:
+Native output contains `physics.csv`, `aux_state.jsonl`, `metadata.json`, and,
+when hardware completions occur, `hardware_timing.jsonl`, before publication
+compression. Ordinary level rows have exactly 42 columns. Hardware timing has
+one module-plus-direct timing grammar: module completions use
+`kos_module_queue` at `post_objects`, and direct completions use
+`kos_decompression_queue` at `pre_main_loop`. Unknown kinds or boundaries are
+invalid. A timing event only delays readiness of matching production-submitted
+work; it never submits work or supplies compressed or decoded bytes.
 
-- schema 1 records and authorizes `KOS_MODULE_QUEUE`; the direct queue remains
-  live production timing;
-- schema 2 records and authorizes `KOS_MODULE_QUEUE` and
-  `KOS_DECOMPRESSION_QUEUE`; and
-- either schema rejects unknown event kinds. An event never submits work or
-  supplies compressed/decoded bytes.
+### Current STANDARD metadata bytes
 
-### 6.1 Current STANDARD metadata bytes
-
-`S3KTraceMetadataWriter` writes two-space indentation, the following fixed key
-order, LF line endings, and one trailing LF. Schema 2 is the production
-default; schema 1 is accepted only for explicit compatibility tests.
+`S3KTraceMetadataWriter` writes two-space indentation, fixed key order, LF line
+endings, and one trailing LF:
 
 ```json
 {
@@ -69,10 +60,9 @@ default; schema 1 is accepted only for explicit compatibility tests.
   "sidekicks": ["tails"],
   "rng_seed": "0x<hex8>",
   "recording_date": "<YYYY-MM-DD>",
-  "lua_script_version": "6.38-s3k",
-  "trace_schema": 7,
-  "hardware_timing_schema": 2,
-  "csv_version": 7,
+  "recorder": "native-bizhawk-headless",
+  "recorder_version": "3.0",
+  "trace_schema": 5,
   "capture_mode": "physics_animation_aux_without_diagnostic_hooks",
   "aux_schema_extras": [<profile-owned entries>],
   "trace_profile": "<TRACE_PROFILE>",
@@ -83,13 +73,12 @@ default; schema 1 is accepted only for explicit compatibility tests.
 }
 ```
 
-The recording date is the only nondeterministic value. Standard native
-captures use `6.38-s3k`; complete-run, bonus, and special-stage metadata use
-`6.39-s3k-completerun` and their complete-run-owned key set. The committed
-fixtures intentionally retain their published 6.37/schema-1 metadata and
-must not be rewritten merely to match this template.
+The recording date is the only nondeterministic value. Complete-run, bonus,
+and special-stage metadata add their profile-owned keys but use the same v5
+envelope. Pre-v5 fixture stamps are not compatibility inputs; publication
+regenerates candidates and validates them as v5 before installation.
 
-### 6.2 Current hardware-timing bytes
+### Current hardware-timing bytes
 
 `hardware_timing.jsonl` is UTF-8 without BOM, with one compact object and one
 LF per event:
@@ -99,9 +88,12 @@ LF per event:
 ```
 
 Fields and field order are exact. Events sort by `raw_frame`, boundary order
-`vint_service`, `pre_main_loop`, `post_objects`, kind, then ordinal. On a raw
-frame where both physical owners retire, the direct `pre_main_loop` event is
-written before the module `post_objects` event.
+`vint_service`, `post_objects`, `pre_main_loop`, kind, then ordinal. On a raw
+frame where both physical owners retire, the module `post_objects` event is
+written before the direct `pre_main_loop` event. A held-counter final-parent
+retirement is attributed from the canonical FIFO transition described below;
+this does not change event identity, queue ownership, measurement, or ordinal
+reconciliation.
 
 The fingerprint is independently derived from length-prefixed UTF-8 kind,
 big-endian signed 32-bit canonical source, compressed length, canonical
@@ -110,7 +102,7 @@ variant, and module count. The SHA-256 prefix is literal `sha256:`. Direct
 destinations retain their exact ROM longword bits, including sign-extended
 `0xFFFFxxxx` RAM addresses.
 
-### 6.3 Current direct and module ledgers
+### Current direct and module ledgers
 
 The recorder owns independent, run-wide ordinals for the two physical queues:
 
@@ -125,24 +117,62 @@ survives active decoder progress. While the previous head remains busy, slot
 zero must not change. Busy transitions plus longest suffix/prefix overlap
 prove a retirement and every append, including unchanged-count and adjacent
 identical replacements. One proven head may retire between represented
-samples; loss of more than one or unexplained mutation is fatal. Schema 2
-emits that retirement at `pre_main_loop`; schema 1 keeps the ledger current
-but suppresses the direct event.
+samples; loss of more than one or unexplained mutation is fatal. A proven
+direct retirement emits at `pre_main_loop`.
 
 The module ledger normalizes an active source to its two-byte archive header,
 retains that canonical identity while the active pointer advances, and
-recognizes final retirement only from the tracked final-module state plus
-head removal/shift. Per-module busy-bit falls are not archive completion.
-Module retirement emits at `post_objects`, or `vint_service` for a genuine
-held-counter row without an admitted object loop. The exact title-card parent
-state is the sole held-counter exception that preserves `post_objects`.
+recognizes final retirement only when the prior modules-left byte is exactly
+`0x81` and one observation interval contains the canonical one-head FIFO
+removal/shift. The shifted active source/destination, every trailing entry,
+physical/logical cardinality, and mode/reset fence must all agree. The ROM may
+also append a new tail in that same interval, including leaving the shifted
+head's busy bit set; that is accepted only when the full shifted prefix and
+unchanged cardinality prove the retirement-plus-append transition. Per-module
+busy-bit falls, stale final-active state, multi-head loss, malformed shifts,
+and reset crossings cannot manufacture completion. This transition proves the
+ROM's `Process_Kos_Module_Queue` owner, so the module retirement emits at
+`post_objects` even when `Level_frame_counter` is held. A duplicate counter
+without that transition remains VInt-only for other observations.
+
+Every observed game-mode transition fences and clears the logical module
+mirror before unchanged-queue and empty-queue fast paths. The ROM bulk clear
+may become observable one sample after the mode byte changes; clearing the
+mirror at the transition prevents that delayed physical clear from being
+mistaken for a queue retirement. The fence emits no event and leaves the
+run-wide ordinal ledger monotonic. Outside the Level-loading exception below,
+a queue first visible on the transition is ledgered only after the old mirror
+is cleared, so its ordinal is consumed, but the reset fence remains pending:
+its subsequent physical disappearance is suppressed as an ambiguous delayed
+clear rather than emitted as completion. Level's `$0C->$8C` loading entry and
+`$8C->$0C` loading-bit exit are stronger ROM-owned cases. The bulk clear
+precedes the first observable loading sample;
+queues first visible at those two boundaries contain post-clear submissions,
+so they are reconciled without a pending fence and retain their ordinals across
+normal multi-entry FIFO retirement.
+
+For the canonical 15-segment Sonic-and-Tails complete run, the v5 writer
+changes exactly 27 predecessor event lines across 14 segments from
+`vint_service` to `post_objects`; raw frame, kind, ordinal, fingerprint, line
+position, and order remain unchanged, and the ending segment is byte-identical.
+The differential gate attests both the committed predecessor files and the
+prospective files by byte length, line count, and SHA-256 before applying this
+exact semantic-delta check. It does not install either output.
+The test suite also sums the 15 per-segment reviewed counts and pins their
+aggregate at 27, with a deliberately wrong-26 negative vector.
 
 Segment handoffs may pass a null timing writer while keeping both ledgers and
 ordinals alive. A standard-recorder discard/reset clears both ledgers and
 resets both ordinal bases atomically. A module-created Kosinski child is a
 real direct submission with its own direct ordinal and fingerprint.
 
-## 0. Published schema-1 fixtures (read-only; gunzip to temp)
+## Pre-v5 historical evidence
+
+Everything in this section records predecessor fixture and migration history.
+It is not a supported container contract and must not be used to add parser,
+recorder, or replay compatibility.
+
+### Published predecessor fixtures (read-only; gunzip to temp)
 
 | Fixture | Profile | `bk2_frame_offset` | Rows | physics.csv sha256 | aux_state.jsonl sha256 |
 |---|---|---|---|---|---|
@@ -161,12 +191,14 @@ exact movie end (511 + 20798 = 21309); CNZ finalised on zone-leave at row
 42253 (final zone 5 = ICZ handoff); MGZ on zone-leave at row 35912
 (final zone 3 = CNZ handoff).
 
-These immutable fixtures are stamped `6.37-s3k`, `trace_schema: 7`, and
-`hardware_timing_schema: 1`. Their published physics/aux bytes and
-schema-1 timing stream are protected by frozen hashes. Current native
-6.38/schema-2 output is a publication candidate, not byte-identical metadata
-or timing data; no differential normalization may conceal payload changes or
-install schema-2 bytes without explicit publication approval.
+These immutable predecessor fixtures used numbered producer stamps,
+`trace_schema: 7`, and a secondary timing axis. Their physics/aux bytes and
+timing streams remain frozen comparison evidence only. A v5 candidate must
+keep physics and aux byte-identical except for reviewed recorder corrections;
+timing must be byte-identical unless the only difference is the canonical
+same-frame module-POST-before-direct-PRE reorder with the exact event-line
+multiset preserved. Differential tests fail closed on any other payload or
+event change.
 
 ---
 
@@ -339,7 +371,7 @@ reintroduce it. Facts the core files depend on:
 
 ---
 
-## 3. physics.csv (CSV v7, dual-character)
+## 3. physics.csv (42-column dual-character rows)
 
 ### 3.1 Header (exact, single line, then `\n`; written at arm)
 
@@ -400,10 +432,10 @@ rewritten on rows where `N % 300 == 0` (evaluated after writing row N).
 ## 4. Input mask (CSV `input` column)
 
 Shared lib `bk2_input_mask(fallback_raw, trace_row, bk2_frame_offset,
-0)`. **v6.30 rule: BK2 index = `bk2_frame_offset + trace_row` for EVERY
-profile, no profile-dependent adjustment** (v6.29 and earlier applied
-`-1` for `aiz_end_to_end`; the AIZ fixture's physics.csv was regenerated
-when this changed — never resurrect the adjustment).
+0)`. **Current rule: BK2 index = `bk2_frame_offset + trace_row` for every
+profile, with no profile-dependent adjustment.** The predecessor recorder
+applied `-1` for `aiz_end_to_end` before v6.30; that history is not a supported
+alternative and the adjustment must never be resurrected.
 
 - Movie loaded (always in practice): `movie.getinput(index, 1)` (P1
   pad). Mask: `0x01` Up, `0x02` Down, `0x04` Left, `0x08` Right, `0x10`
@@ -469,8 +501,8 @@ bind this document's files together:
 ## Appendix A. Historical metadata layout (trace schema 6, superseded)
 
 This section preserves the exact pre-hardware-timing porting history. It is
-not the current metadata contract; current native metadata is defined above
-and uses recorder 6.38, trace schema 7, and hardware-timing schema 2.
+not the current metadata contract. Current native metadata is the sole v5
+envelope defined above.
 
 ### A.1 v6.30 output (VERBATIM; `\n` line ends, 2-space indent)
 
@@ -585,7 +617,7 @@ Shared (reuse existing native infrastructure verbatim):
 - `oggf_trace_common.lua` helpers: `bk2_input_mask` (S3K passes
   adjustment 0 like S1/S2 since v6.30), `rom_joypad_to_mask`, `hex`,
   `angle_to_ground_mode`, `uhex` semantics, per-line aux flush.
-- CSV v7 42-column dual-character header and row format string —
+- The 42-column dual-character header and row format string —
   identical characters to the S2 recorder's (S2 §4); only RAM sources
   differ.
 - `state_snapshot` / `mode_change` / checkpoint-dedupe patterns.
@@ -618,12 +650,11 @@ Different (S3K-specific — never copy S1/S2 values):
 - Much larger poll-driven aux vocabulary, including per-frame full-OST
   proximity scans against BOTH players (`object_state`) alongside the
   Player-1-only legacy scan (`object_near`).
-- Metadata: the current native contract is `6.38-s3k`, `trace_schema` 7,
-  `hardware_timing_schema` 2, plus hardcoded characters/sidekicks,
-  `aux_schema_extras`, `capture_mode`, and constant `rom_checksum`.
-  Committed `6.37-s3k` / trace-schema-7 / hardware-schema-1 metadata is
-  historical load-only compatibility; Appendix A preserves the still older
-  pre-hardware trace-schema-6 layout.
+- Metadata: the current native contract is `recorder:
+  native-bizhawk-headless`, `recorder_version: 3.0`, and `trace_schema: 5`,
+  plus hardcoded characters/sidekicks, `aux_schema_extras`, `capture_mode`,
+  and constant `rom_checksum`. The numbered predecessor stamps and secondary
+  timing axis survive only in the historical sections above and below.
 
 ---
 

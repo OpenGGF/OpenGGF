@@ -14,6 +14,7 @@ import com.openggf.level.objects.AbstractResultsScreen;
 import com.openggf.game.sonic3k.Sonic3kObjectArt;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager;
+import com.openggf.level.CarriedTitlePublicationTiming;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.events.S3kTransitionWriteSupport;
@@ -101,6 +102,13 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private boolean usesShortResultsChildRetireTail;
     private boolean controlsReleasedAheadOfHandoff;
     private boolean carriedAcrossSeamlessTransition;
+    private boolean carriedTitleTimingExplicit;
+    private boolean carriedTitleResetLevelGamestateAtDisplay;
+    private int carriedTitleResetAdditionalDispatches;
+    private int carriedTitleResetPhaseOneDispatchOverlap;
+    private boolean carriedTitleLockPlayerControl;
+    private int carriedTitleExitAdditionalDispatches;
+    private int carriedTitleExitPhaseOneDispatchOverlap;
 
     // Tally values
     private int timeBonus;
@@ -418,14 +426,14 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
      * queue each frame until all children are off-screen, THEN transitions.
      */
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         this.playerRef = player;
         if (carriedTitlePhase != CarriedTitlePhase.RESULTS) {
             updateCarriedTitleCard();
             return;
         }
-        this.frameCounter = frameCounter;
+        this.frameCounter = vIntRunCount;
         if (!updateCreateGate()) {
             return;
         }
@@ -562,13 +570,28 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
 
     @Override
     public void onCarriedAcrossSeamlessTransition(int offsetX, int offsetY) {
-        carriedAcrossSeamlessTransition = true;
         // HCZ/MGZ-style Load_Level paths retain Obj_LevelResults and its ROM
         // child SSTs. The engine carries the parent but renders its twelve
         // children as embedded elements, so preserve the final three child
         // retirement dispatches that occur after the embedded set is gone.
         carriedResultsRenderRetireDispatches = carriedResultsRetireDispatches;
         carriedAcrossSeamlessTransition = true;
+    }
+
+    @Override
+    public void onCarriedAcrossSeamlessTransition(
+            int offsetX,
+            int offsetY,
+            CarriedTitlePublicationTiming titleTiming) {
+        onCarriedAcrossSeamlessTransition(offsetX, offsetY);
+        carriedTitleTimingExplicit = titleTiming.explicitTiming();
+        carriedTitleResetLevelGamestateAtDisplay =
+                titleTiming.resetLevelGamestateAtDisplay();
+        carriedTitleResetAdditionalDispatches = titleTiming.resetAdditionalDispatches();
+        carriedTitleResetPhaseOneDispatchOverlap = titleTiming.resetPhaseOneDispatchOverlap();
+        carriedTitleLockPlayerControl = titleTiming.lockPlayerControl();
+        carriedTitleExitAdditionalDispatches = titleTiming.exitAdditionalDispatches();
+        carriedTitleExitPhaseOneDispatchOverlap = titleTiming.exitPhaseOneDispatchOverlap();
     }
 
     // ---- Pre-tally delay with music trigger ----
@@ -821,7 +844,12 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             // show its own title card after the level reload).
             // ROM lines 62713-62720
             boolean skipTitleCard = (zone == 0x08) || (zone == 0x0B);
-            if (!skipTitleCard && (!hasSeamlessTransition || fbzCarriedTitleOwner)) {
+            if (!skipTitleCard
+                    && (!hasSeamlessTransition || retainedReloadState || fbzCarriedTitleOwner)) {
+                var objectArtProvider = services().gameModule().getObjectArtProvider();
+                if (objectArtProvider != null) {
+                    objectArtProvider.prepareRuntimeArtForInLevelTitleCard();
+                }
                 titleInitializationPending = true;
                 pendingPreloadedTitleHandoff = preloadedNextActHandoff;
                 pendingAizTitleHandoff = aizAct1MinibossTitleHandoff;
@@ -883,9 +911,23 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                 // This Obj_LevelResults survived an earlier Load_Level and now
                 // dispatches as Obj_TitleCard. The title owner resets the
                 // counters after its native create dispatches.
-                s3kTitleCard.requestLevelGamestateResetAfterCreateDispatches(
-                        mutatedTitleCardResetDispatches(
-                                usesShortResultsChildRetireTail));
+                if (carriedTitleTimingExplicit) {
+                    if (carriedTitleResetLevelGamestateAtDisplay) {
+                        s3kTitleCard.requestLevelGamestateResetAtInLevelDisplay(
+                                carriedTitleResetAdditionalDispatches,
+                                carriedTitleResetPhaseOneDispatchOverlap);
+                    }
+                    if (carriedTitleLockPlayerControl) {
+                        s3kTitleCard.requestInLevelPlayerControlLock();
+                    }
+                    s3kTitleCard.requestInLevelExitAdditionalDispatches(
+                            carriedTitleExitAdditionalDispatches,
+                            carriedTitleExitPhaseOneDispatchOverlap);
+                } else {
+                    s3kTitleCard.requestLevelGamestateResetAfterCreateDispatches(
+                            mutatedTitleCardResetDispatches(
+                                    usesShortResultsChildRetireTail));
+                }
             }
         }
         pendingPreloadedTitleHandoff = false;

@@ -132,7 +132,7 @@ public abstract class AbstractSpikeObjectInstance extends AbstractObjectInstance
     // ---- Lifecycle ----
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         moveSpikes(player);
         updateDynamicSpawn(currentX, currentY);
     }

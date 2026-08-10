@@ -1,10 +1,11 @@
 package com.openggf.game.sonic1.specialstage;
 
+import com.openggf.trace.DynamicArtTransfer;
+import com.openggf.trace.StoredPhysicsFrameDomain;
 import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceEvent;
 import com.openggf.trace.TraceFiles;
 import com.openggf.trace.TraceMetadata;
-import com.openggf.trace.StoredPhysicsFrameDomain;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -41,14 +42,21 @@ public final class Sonic1SpecialStageTraceData {
     }
 
     public static Sonic1SpecialStageTraceData load(Path traceDirectory) throws IOException {
+        return load(traceDirectory, List.of());
+    }
+
+    public static Sonic1SpecialStageTraceData load(
+            Path traceDirectory,
+            List<DynamicArtTransfer.Descriptor> openingDynamicArtLedger)
+            throws IOException {
         Path metadataPath = traceDirectory.resolve("metadata.json");
         TraceMetadata metadata = TraceMetadata.load(metadataPath);
 
         String traceProfile = metadata.traceProfile();
-        if (!REQUIRED_TRACE_PROFILE.equals(traceProfile)) {
+        if (!"s1".equals(metadata.game()) || !REQUIRED_TRACE_PROFILE.equals(traceProfile)) {
             throw new IllegalArgumentException(
-                "Expected trace_profile '" + REQUIRED_TRACE_PROFILE + "', got '"
-                    + traceProfile + "' in " + metadataPath);
+                "Expected s1 trace_profile '" + REQUIRED_TRACE_PROFILE + "', got game '"
+                    + metadata.game() + "' profile '" + traceProfile + "' in " + metadataPath);
         }
 
         Path physicsPath = TraceFiles.resolve(traceDirectory, "physics.csv");
@@ -67,7 +75,7 @@ public final class Sonic1SpecialStageTraceData {
             : Collections.emptyMap();
         if (metadata.hasPerFrameDynamicArtTransferState()) {
             TraceData.validateDynamicArtTransferStates(
-                    metadata, frameDomain, events);
+                    metadata, frameDomain, events, openingDynamicArtLedger);
         }
 
         return new Sonic1SpecialStageTraceData(metadata, frames, events);
@@ -112,13 +120,19 @@ public final class Sonic1SpecialStageTraceData {
     private static List<Sonic1SpecialStageTraceFrame> loadPhysicsCsv(Path csvPath) throws IOException {
         List<Sonic1SpecialStageTraceFrame> frames = new ArrayList<>();
         try (BufferedReader reader = TraceFiles.openReader(csvPath)) {
-            String line = reader.readLine(); // skip header
-            if (line == null) return frames;
+            boolean firstMeaningfulLine = true;
+            String line;
             while ((line = reader.readLine()) != null) {
                 String trimmed = line.trim();
-                if (!trimmed.isEmpty()) {
-                    frames.add(Sonic1SpecialStageTraceFrame.parseCsvRow(trimmed));
+                if (trimmed.isEmpty() || trimmed.startsWith("#")) {
+                    continue;
                 }
+                if (firstMeaningfulLine && TraceFiles.isCsvHeader(trimmed)) {
+                    firstMeaningfulLine = false;
+                    continue;
+                }
+                firstMeaningfulLine = false;
+                frames.add(Sonic1SpecialStageTraceFrame.parseCsvRow(trimmed));
             }
         }
         return frames;

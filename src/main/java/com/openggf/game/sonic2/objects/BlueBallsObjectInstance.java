@@ -283,7 +283,7 @@ public class BlueBallsObjectInstance extends AbstractObjectInstance implements T
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // MarkObjGone check: destroy if too far from camera
         // ROM: s2.asm lines 29993-30011

@@ -409,7 +409,7 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
     // ===== Update =====
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         transitionFrameSlopeSkip = pendingTransitionSkip;
         pendingTransitionSkip = false;
         switch (state) {

@@ -129,7 +129,7 @@ public class ShellcrackerBadnikInstance extends AbstractBadnikInstance implement
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (state) {
             case WALKING -> updateWalking(player);
@@ -347,7 +347,7 @@ public class ShellcrackerBadnikInstance extends AbstractBadnikInstance implement
     }
 
     @Override
-    protected void updateAnimation(int frameCounter) {
+    protected void updateAnimation(int vIntRunCount) {
         // Animation state is set directly in state machine methods
     }
 

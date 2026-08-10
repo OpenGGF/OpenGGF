@@ -82,6 +82,7 @@ public abstract class AbstractBonusStageCoordinator implements BonusStageProvide
     @Override
     public BonusStageState getSavedState() { return savedState; }
 
+    @Override
     public BonusStageType getActiveType() { return activeType; }
 
     /** Accumulate rings during the bonus stage. Called by gumball item objects. */

@@ -86,7 +86,7 @@ public final class Fbz2SubbossInstance extends AbstractObjectInstance
         yFixed = y << 8;
     }
 
-    @Override public void update(int frameCounter, PlayableEntity mainPlayer) {
+    @Override public void update(int vIntRunCount, PlayableEntity mainPlayer) {
         if (!initialized) { initialize(); return; }
         if (!defeated && !cameraInActivationRange()) {
             destroyRespawnableIfPastNativeCameraWindow();
@@ -109,7 +109,7 @@ public final class Fbz2SubbossInstance extends AbstractObjectInstance
                 if (bit(controlBits, CONTROL_LASER_READY)) {
                     controlBits &= ~(1 << CONTROL_LASER_READY);
                     phaseOrdinal = Phase.CYCLE_WAIT.ordinal(); timer = 0x7F;
-                } else if ((frameCounter & 0x1F) == 0 && mainPlayer != null) {
+                } else if ((vIntRunCount & 0x1F) == 0 && mainPlayer != null) {
                     aimAt(mainPlayer);
                 }
                 moveWithinCorners();

@@ -121,17 +121,34 @@ public class Sonic1AnimalsObjectInstance extends AbstractObjectInstance implemen
     private boolean romRenderOnScreen = true;
 
     private boolean initialized;
+    private int prisonDelay;
+    private boolean fromPrison;
 
     public Sonic1AnimalsObjectInstance(ObjectSpawn spawn) {
         this(spawn, 100);
     }
 
     public Sonic1AnimalsObjectInstance(ObjectSpawn spawn, int pointsValue) {
+        this(spawn, pointsValue, 0);
+    }
+
+    /**
+     * Capsule-spawned animal. The prison capsule writes {@code animal_prisondelay}
+     * into the freshly allocated animal slot and sets {@code v_bossstatus} to 2, so
+     * the animal's own init takes the {@code .fromPrison} branch and waits that many
+     * frames before hopping out
+     * (docs/s1disasm/_incObj/3E Prison Capsule.asm:133,152-160,180-181;
+     * docs/s1disasm/_incObj/28, 29 Animals and Points.asm:190-192,311-324).
+     * A non-zero delay is exactly the ROM state that marks a capsule animal.
+     */
+    public Sonic1AnimalsObjectInstance(ObjectSpawn spawn, int pointsValue, int prisonDelay) {
         super(spawn, "Animals");
         this.currentX = spawn.x();
         this.currentY = spawn.y();
         this.subtype = spawn.subtype() & 0xFF;
         this.pointsValue = pointsValue;
+        this.prisonDelay = prisonDelay;
+        this.fromPrison = prisonDelay > 0;
     }
 
     private void ensureInitialized() {
@@ -181,9 +198,9 @@ public class Sonic1AnimalsObjectInstance extends AbstractObjectInstance implemen
         this.xVelocity = 0;
         this.yVelocity = INITIAL_POP_Y_VELOCITY;
 
-        if (services().gameState().isBossFightActive()) {
+        if (fromPrison || services().gameState().isBossFightActive()) {
             this.routine = ROUTINE_PRISON_WAIT;
-            this.prisonWaitTimer = PRISON_WAIT_FRAMES;
+            this.prisonWaitTimer = prisonDelay > 0 ? prisonDelay : PRISON_WAIT_FRAMES;
             this.xVelocity = 0;
             return;
         }
@@ -200,7 +217,7 @@ public class Sonic1AnimalsObjectInstance extends AbstractObjectInstance implemen
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (!initialized) {
             ensureInitialized();
             // ROM Anml_Main (routine 0) sets obRoutine (addq.b #2,obRoutine for
@@ -219,7 +236,7 @@ public class Sonic1AnimalsObjectInstance extends AbstractObjectInstance implemen
         }
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (routine) {
-            case 0x02 -> updateRoutine912A(frameCounter);
+            case 0x02 -> updateRoutine912A(vIntRunCount);
             case 0x04, 0x08, 0x0A, 0x0C, 0x10 -> updateRoutine9184(player);
             case 0x06, 0x0E -> updateRoutine91C0(player);
             case 0x12 -> updateRoutine9240();
@@ -237,7 +254,7 @@ public class Sonic1AnimalsObjectInstance extends AbstractObjectInstance implemen
     /**
      * loc_912A: initial falling state for enemy-spawned animals.
      */
-    private void updateRoutine912A(int frameCounter) {
+    private void updateRoutine912A(int vIntRunCount) {
         if (!romRenderOnScreen) {
             setDestroyed(true);
             return;
@@ -250,7 +267,8 @@ public class Sonic1AnimalsObjectInstance extends AbstractObjectInstance implemen
             animFrame = 1;
             routine = (fromEnemyVariantIndex << 1) + 4;
 
-            if (services().gameState().isBossFightActive() && (frameCounter & 0x10) != 0) {
+            if ((fromPrison || services().gameState().isBossFightActive())
+                    && (vIntRunCount & 0x10) != 0) {
                 xVelocity = -xVelocity;
                 hFlip = !hFlip;
             }
@@ -449,7 +467,15 @@ public class Sonic1AnimalsObjectInstance extends AbstractObjectInstance implemen
         // ObjFloorDist sets d5 to #$D, the object floor/top-solid bit in S1
         // (docs/s1disasm/s1disasm/_incObj/sub ObjFloorDist.asm).
         TerrainCheckResult result = ObjectTerrainUtils.checkFloorDist(currentX, currentY, FLOOR_CHECK_HEIGHT);
-        if (result.hasCollision()) {
+        // Every Anml_* floor test is "jsr ObjFloorDist / tst.w d1 / bpl.s <no hit>"
+        // (docs/s1disasm/_incObj/28, 29 Animals and Points.asm:211-214, 247-250,
+        // 272-275, 495-498), so d1 == 0 -- the animal's bottom exactly level with
+        // the topmost solid pixel -- is NOT a hit: bpl branches on N clear, which
+        // includes zero. The shared TerrainCheckResult#hasCollision() answers
+        // "distance <= 0" instead, which landed the animal one frame early on
+        // every flat-floor bounce and put its bounce cycle in anti-phase with the
+        // ROM's, leaving it on a ledge the ROM had already run off.
+        if (result.distance() < 0) {
             currentY += result.distance();
             return true;
         }

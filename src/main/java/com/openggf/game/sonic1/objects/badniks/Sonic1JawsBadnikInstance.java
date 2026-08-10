@@ -94,7 +94,7 @@ public class Sonic1JawsBadnikInstance extends AbstractBadnikInstance implements 
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Jaws_Turn (Routine 2):
 
@@ -128,7 +128,7 @@ public class Sonic1JawsBadnikInstance extends AbstractBadnikInstance implements 
     }
 
     @Override
-    protected void updateAnimation(int frameCounter) {
+    protected void updateAnimation(int vIntRunCount) {
         // AnimateSprite: advance swim animation
         animTickCounter++;
     }

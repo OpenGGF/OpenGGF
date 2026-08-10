@@ -201,6 +201,34 @@ class TestAiz2BossEndSequenceObjects {
     }
 
     @Test
+    void drawBridgeUsesSavedPivotForTheUnconditionalRomRangeTail() {
+        AizDrawBridgeObjectInstance bridge =
+                new AizDrawBridgeObjectInstance(new ObjectSpawn(0x4B48, 0x0218, 0x32, 0, 2, true, 0));
+
+        assertFalse(bridge.isPersistent(),
+                "Obj_AIZDrawBridge normal/wait routines reach the Camera_X_pos_coarse_back tail");
+        assertTrue(bridge.checksOutOfRangeAfterRoutine(),
+                "the wait routine consumes _unkFAA9 before choosing the range tail or loc_2B452");
+        assertTrue(bridge.usesCustomOutOfRangeCheck(),
+                "sonic3k.asm:59649-59676 uses saved pivot $30 and the fixed native $280 threshold");
+        assertFalse(bridge.isCustomOutOfRange(0x4900),
+                "pivot bucket $4B00 minus coarse-back $4880 is exactly the in-range $280 boundary");
+        assertTrue(bridge.isCustomOutOfRange(0x4D80),
+                "after the camera passes the saved pivot, the unsigned coarse distance wraps out of range");
+    }
+
+    @Test
+    void drawBridgeCollapseCountdownSuppressesTheNormalRangeTailUntilTimedDeletion() {
+        AizDrawBridgeObjectInstance bridge = AizDrawBridgeObjectInstance.createCutsceneOverride();
+        bridge.setServices(new TestObjectServices().withGameState(new GameStateManager()));
+
+        bridge.beginCollapseFromEarlierButtonSlot();
+
+        assertTrue(bridge.isPersistent(),
+                "loc_2B452 counts $34 down without branching through AIZDrawBridge_Solid's range tail");
+    }
+
+    @Test
     void eggCapsuleReleasesControllerAfterResultsFinish() throws Exception {
         Camera camera = TestEnvironment.activeGameplayMode().getCamera();
         camera.resetState();
@@ -270,7 +298,7 @@ class TestAiz2BossEndSequenceObjects {
         setField(capsule, "mappingFrame", 1);
         setField(capsule, "buttonRecess", 8);
         setField(capsule, "buttonTriggerSource", 2);
-        setField(capsule, "buttonTriggerFrame", 0x1234);
+        setField(capsule, "buttonTriggerVIntRunCount", 0x1234);
         setField(capsule, "openFrame", 0x1235);
 
         assertEquals("cap=open/0020 t=1 o=1 r=0 mf=01 btn=08 src=p2 tf=1234 of=1235",

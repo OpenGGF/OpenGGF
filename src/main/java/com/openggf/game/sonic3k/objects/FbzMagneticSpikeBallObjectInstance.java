@@ -42,7 +42,7 @@ public final class FbzMagneticSpikeBallObjectInstance extends AbstractObjectInst
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity ignored) {
+    public void update(int vIntRunCount, PlayableEntity ignored) {
         boolean active = magneticActive();
         lastMagneticActive = active;
         if (kind == Kind.BALL) {
@@ -71,7 +71,7 @@ public final class FbzMagneticSpikeBallObjectInstance extends AbstractObjectInst
         } else if (kind == Kind.FIELD_WIDE && active) {
             mappingFrame++;
             if (mappingFrame >= 5) mappingFrame = 1;
-            if ((frameCounter & 0xF) == 0 && isOnScreen(0)) {
+            if ((vIntRunCount & 0xF) == 0 && isOnScreen(0)) {
                 services().playSfx(Sonic3kSfx.MAGNETIC_SPIKE.id);
             }
         } else if (kind == Kind.FIELD_NARROW && active) {

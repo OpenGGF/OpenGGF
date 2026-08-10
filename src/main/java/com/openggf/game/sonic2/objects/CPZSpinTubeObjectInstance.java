@@ -220,7 +220,7 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
     private int timerSecond = 0;
 
     // Current frame counter (stored from update for use in sub-methods)
-    private int currentFrameCounter = 0;
+    private int currentVIntRunCount = 0;
 
     public CPZSpinTubeObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
@@ -241,9 +241,9 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         // Store frame counter for use in sub-methods
-        this.currentFrameCounter = frameCounter;
+        this.currentVIntRunCount = vIntRunCount;
         // Update timer second (used for path variant selection).
         // ROM loc_2265E reads the live level-time seconds via
         // move.b (Timer_second).w,d2 / andi.b #1,d2 (docs/s2disasm/s2.asm:48499-48503),
@@ -258,7 +258,7 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
         var levelGamestate = services().levelGamestate();
         int timerSeconds = levelGamestate != null
                 ? levelGamestate.getElapsedSeconds()
-                : (frameCounter / 60);
+                : (vIntRunCount / 60);
         timerSecond = timerSeconds & 0xFF;
 
         // ROM Obj1E_Main runs the routine once per playable character each frame:
@@ -344,8 +344,13 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
      * Mode 0: Check if player enters the tube activation zone.
      */
     private void checkEntryCollision(AbstractPlayableSprite player, CharacterState cs) {
-        // Skip if in debug placement mode
-        // (Not implemented in this engine)
+        // The shipped S2 ROM gates Obj1E capture on Debug_placement_mode.
+        // Native placement is not yet an engine capability, but the supported
+        // engine debug/free-fly mode must stay outside the normal object-touch
+        // route just as it does for shared solids and touch responses.
+        if (player.isDebugMode()) {
+            return;
+        }
 
         int objX = spawn.x();
         int objY = spawn.y();
@@ -421,7 +426,7 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
         LOGGER.fine("Tube 0x" + Integer.toHexString(spawn.subtype()) + " at (" + objX + "," + objY +
                 ") capturing: playerPos=(" + playerX + "," + playerY +
                 "), dx=" + dx + ", adjustedDx=" + adjustedDx + ", isNearEntry=" + isNearEntry +
-                ", frame=" + currentFrameCounter);
+                ", frame=" + currentVIntRunCount);
 
         // Determine entry frame based on position
         int d2;
@@ -549,7 +554,7 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
     private boolean activeOwnerRanBefore(AbstractPlayableSprite player) {
         CPZSpinTubeObjectInstance owner = activeTubeOwners.get(player);
         return owner != null
-                && owner.currentFrameCounter == currentFrameCounter
+                && owner.currentVIntRunCount == currentVIntRunCount
                 && owner.getSlotIndex() < getSlotIndex();
     }
 
@@ -630,7 +635,7 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
         if (cs.frame >= 4) {
             // Exit tube
             LOGGER.fine("Exiting tube early: entryFrame >= 4");
-            exitTube(player, cs, currentFrameCounter);
+            exitTube(player, cs, currentVIntRunCount);
             return;
         }
 
@@ -638,7 +643,7 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
         int routingIndex = (spawn.subtype() & 0xFC) + cs.frame;
         if (routingIndex >= MAIN_PATH_ROUTING.length) {
             LOGGER.fine("Exiting tube: routingIndex " + routingIndex + " out of bounds");
-            exitTube(player, cs, currentFrameCounter);
+            exitTube(player, cs, currentVIntRunCount);
             return;
         }
 
@@ -647,7 +652,7 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
             // No main path - exit
             LOGGER.fine("Exiting tube: no main path for routingIndex " + routingIndex +
                     " (subtype=0x" + Integer.toHexString(spawn.subtype()) + ", frame=" + cs.frame + ")");
-            exitTube(player, cs, currentFrameCounter);
+            exitTube(player, cs, currentVIntRunCount);
             return;
         }
 
@@ -666,7 +671,7 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
         // Adjust for 1-based indexing in routing table
         pathId--;
         if (pathId < 0 || pathId >= MAIN_PATHS.length) {
-            exitTube(player, cs, currentFrameCounter);
+            exitTube(player, cs, currentVIntRunCount);
             return;
         }
 

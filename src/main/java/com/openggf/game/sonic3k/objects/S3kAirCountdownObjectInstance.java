@@ -149,7 +149,7 @@ public final class S3kAirCountdownObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (routine == ROUTINE_DELETE || routine == ROUTINE_NUMBER_DELETE) {
             setDestroyed(true);
             return;

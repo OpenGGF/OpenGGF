@@ -89,7 +89,7 @@ public class ArrowShooterObjectInstance extends AbstractObjectInstance implement
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (shootArrowRoutinePending) {
             runShootArrowRoutine();
             return;

@@ -77,6 +77,8 @@ When the engine starts, you will see:
 
 1. **Master title screen** -- An engine-wide title screen with animated clouds and a game
    selection menu. Use the arrow keys to highlight a game and press Space to select it.
+   When audio is enabled, navigation, confirmation, and missing-ROM errors use short
+   host-owned cues that do not depend on the selected game's ROM.
 2. **Game title screen** -- The selected game's original title screen (e.g., the Sonic 2
    "PRESS START BUTTON" screen).
 3. **Gameplay** -- The first zone of the selected game.

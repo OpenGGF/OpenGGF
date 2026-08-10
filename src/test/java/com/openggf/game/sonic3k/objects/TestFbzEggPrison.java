@@ -237,7 +237,7 @@ class TestFbzEggPrison {
             super(spawn, "FBZPlungerUnrelatedP2Owner");
         }
 
-        @Override public void update(int frameCounter, PlayableEntity player) { }
+        @Override public void update(int vIntRunCount, PlayableEntity player) { }
         @Override public void appendRenderCommands(List<GLCommand> commands) { }
     }
 

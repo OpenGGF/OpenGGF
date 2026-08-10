@@ -1,5 +1,7 @@
 package com.openggf.level;
 
+import com.openggf.game.RuntimeArtAdmissionPolicy;
+
 /**
  * In-place transition request for seamless level events.
  */
@@ -15,6 +17,8 @@ public final class SeamlessLevelTransitionRequest {
     @com.openggf.game.ModApi
     public enum ObjectSurvivalPolicy {
         PERSISTENT_ONLY,
+        /** Carry only persistent occupants, retaining their exact native SST slots. */
+        PERSISTENT_EXACT_SST,
         ALL_LIVE_SST
     }
 
@@ -33,6 +37,7 @@ public final class SeamlessLevelTransitionRequest {
     private final boolean preserveEndOfLevelActive;
     private final boolean preserveEndOfLevelFlag;
     private final boolean showInLevelTitleCard;
+    private final RuntimeArtAdmissionPolicy runtimeArtAdmissionPolicy;
     private final boolean resetLevelGamestateAtInLevelTitleCardDisplay;
     private final int inLevelTitleCardResetAdditionalDispatches;
     private final int inLevelTitleCardResetPhaseOneDispatchOverlap;
@@ -75,6 +80,7 @@ public final class SeamlessLevelTransitionRequest {
         this.preserveEndOfLevelActive = builder.preserveEndOfLevelActive;
         this.preserveEndOfLevelFlag = builder.preserveEndOfLevelFlag;
         this.showInLevelTitleCard = builder.showInLevelTitleCard;
+        this.runtimeArtAdmissionPolicy = builder.runtimeArtAdmissionPolicy;
         this.resetLevelGamestateAtInLevelTitleCardDisplay =
                 builder.resetLevelGamestateAtInLevelTitleCardDisplay;
         this.inLevelTitleCardResetAdditionalDispatches =
@@ -151,6 +157,10 @@ public final class SeamlessLevelTransitionRequest {
 
     public boolean showInLevelTitleCard() {
         return showInLevelTitleCard;
+    }
+
+    public RuntimeArtAdmissionPolicy runtimeArtAdmissionPolicy() {
+        return runtimeArtAdmissionPolicy;
     }
 
     public boolean resetLevelGamestateAtInLevelTitleCardDisplay() {
@@ -273,8 +283,12 @@ public final class SeamlessLevelTransitionRequest {
                         resetLevelGamestateAtInLevelTitleCardDisplay)
                 .inLevelTitleCardResetAdditionalDispatches(
                         inLevelTitleCardResetAdditionalDispatches)
+                .inLevelTitleCardResetPhaseOneDispatchOverlap(
+                        inLevelTitleCardResetPhaseOneDispatchOverlap)
                 .lockPlayerControlForInLevelTitleCard(lockPlayerControlForInLevelTitleCard)
                 .inLevelTitleCardExitAdditionalDispatches(inLevelTitleCardExitAdditionalDispatches)
+                .inLevelTitleCardExitPhaseOneDispatchOverlap(
+                        inLevelTitleCardExitPhaseOneDispatchOverlap)
                 .forceAirOnStaleObjectSupportLoss(forceAirOnStaleObjectSupportLoss)
                 .preserveOffsetCameraPosition(preserveOffsetCameraPosition)
                 .postTransitionMinXIfPresent(postTransitionMinX)
@@ -316,6 +330,8 @@ public final class SeamlessLevelTransitionRequest {
         private boolean preserveEndOfLevelActive;
         private boolean preserveEndOfLevelFlag;
         private boolean showInLevelTitleCard;
+        private RuntimeArtAdmissionPolicy runtimeArtAdmissionPolicy =
+                RuntimeArtAdmissionPolicy.IMMEDIATE;
         private boolean resetLevelGamestateAtInLevelTitleCardDisplay;
         private int inLevelTitleCardResetAdditionalDispatches;
         private int inLevelTitleCardResetPhaseOneDispatchOverlap;
@@ -392,6 +408,13 @@ public final class SeamlessLevelTransitionRequest {
 
         public Builder showInLevelTitleCard(boolean showInLevelTitleCard) {
             this.showInLevelTitleCard = showInLevelTitleCard;
+            return this;
+        }
+
+        public Builder runtimeArtAdmissionPolicy(
+                RuntimeArtAdmissionPolicy runtimeArtAdmissionPolicy) {
+            this.runtimeArtAdmissionPolicy = java.util.Objects.requireNonNull(
+                    runtimeArtAdmissionPolicy, "runtimeArtAdmissionPolicy");
             return this;
         }
 

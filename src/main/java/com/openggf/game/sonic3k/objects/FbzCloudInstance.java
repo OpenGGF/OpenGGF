@@ -32,7 +32,7 @@ public final class FbzCloudInstance extends AbstractObjectInstance implements Sp
         mappingFrame = SwScrlFbz.cloudMappingFrameForSelector(selector);
     }
 
-    @Override public void update(int frameCounter, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         resolveWorldPosition();
     }
 

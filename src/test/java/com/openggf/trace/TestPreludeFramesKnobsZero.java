@@ -97,7 +97,8 @@ class TestPreludeFramesKnobsZero {
         TraceFrame next = buildFrame(1, /* gfc */ 2,
                 (short) 0, (short) 0, (short) 0, 0, 0);
         TraceData trace = TraceFixtures.trace(
-                metadata("s2", "ehz", 0, 0, List.of("sonic", "tails")),
+                metadata("s2", "ehz", 0, 0, List.of("sonic", "tails"),
+                        List.of("native_prelude_bootstrap")),
                 List.of(seed, next));
 
         assertEquals(26, TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace),
@@ -238,9 +239,9 @@ class TestPreludeFramesKnobsZero {
                 /* startXHex */ "0x0000",
                 /* startYHex */ "0x0000",
                 /* recordingDate */ null,
-                /* luaScriptVersion */ "9.2-s2",
-                /* traceSchema */ 3,
-                /* csvVersion */ null,
+                /* recorder */ null,
+                /* recorderVersion */ null,
+                /* traceSchema */ 5,
                 traceProfile,
                 /* bizhawkVersion */ null,
                 /* genesisCore */ null,
@@ -266,7 +267,6 @@ class TestPreludeFramesKnobsZero {
                 /* segmentIndex */ null,
                 /* bonusStageType */ null,
                 /* freshLoad */ null,
-                /* vIntRunCount */ null,
-                /* hardwareTimingSchema */ null);
+                /* vIntRunCount */ null);
     }
 }

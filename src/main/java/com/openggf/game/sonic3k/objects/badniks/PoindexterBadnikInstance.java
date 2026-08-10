@@ -98,7 +98,7 @@ public final class PoindexterBadnikInstance extends AbstractS3kBadnikInstance im
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         if (isDestroyed()) return;
 
         // Obj_Poindexter starts with Obj_WaitOffscreen. The helper installs a

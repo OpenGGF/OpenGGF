@@ -123,17 +123,17 @@ public class GameLoop {
 
     private static final Logger LOGGER = Logger.getLogger(GameLoop.class.getName());
     private final EngineContext engineServices;
-    private final SonicConfigurationService configService;
+    final SonicConfigurationService configService;
     private final AudioManager audioManager;
     private final OuterFramePresentation outerFramePresentation;
     private final RomManager romManager;
     private final DebugOverlayManager debugOverlayManager;
-    private SpriteManager spriteManager;
-    private Camera camera;
+    SpriteManager spriteManager;
+    Camera camera;
     private TimerManager timerManager;
-    private LevelManager levelManager;
-    private GameStateManager gameState;
-    private FadeManager fadeManager;
+    LevelManager levelManager;
+    GameStateManager gameState;
+    FadeManager fadeManager;
     private WaterSystem waterSystem;
     private final PerformanceProfiler profiler;
     private final PlaybackDebugManager playbackDebugManager;
@@ -152,6 +152,21 @@ public class GameLoop {
     // The active session-owned gameplay mode. Cached fields above are sourced from this context.
     private GameplayModeContext gameplayMode;
     private SpecialStageProvider activeSpecialStageProvider = NoOpSpecialStageProvider.INSTANCE;
+
+    /** Comparison-only pacing for special-stage object passes observed per V-blank. */
+    interface SpecialStageObservationPacing {
+        int passCount();
+
+        void applyPassInput(int index, SpecialStageProvider provider);
+
+        default void afterPass(int index) { }
+    }
+
+    private SpecialStageObservationPacing specialStageObservationPacing;
+
+    void setSpecialStageObservationPacing(SpecialStageObservationPacing pacing) {
+        this.specialStageObservationPacing = pacing;
+    }
 
     // Title card provider - lazily initialized when GameModule is available
     private TitleCardProvider titleCardProvider;
@@ -187,9 +202,9 @@ public class GameLoop {
 
     // Special stage results screen
     private ResultsScreen resultsScreen;
-    private int ssRingsCollected;
-    private boolean ssEmeraldCollected;
-    private int ssStageIndex;
+    int ssRingsCollected;
+    boolean ssEmeraldCollected;
+    int ssStageIndex;
     private EmeraldRewardKind activeSpecialStageRewardKind = EmeraldRewardKind.CHAOS_EMERALD;
     private int resultsFrameCounter = 0;
 
@@ -447,7 +462,7 @@ public class GameLoop {
         }
     }
 
-    private GameplayModeContext resolveGameplayModeContext() {
+    GameplayModeContext resolveGameplayModeContext() {
         return gameplayMode != null ? gameplayMode : SessionManager.getCurrentGameplayMode();
     }
 
@@ -1268,104 +1283,34 @@ public class GameLoop {
      */
     private void updateSpecialStageMode() {
         SpecialStageProvider ssProvider = getActiveSpecialStageProvider();
-
-        // Debug: X key = next stage within current set
-        if (isUnmodifiedDebugKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_X)) {
-            ssProvider.debugNextStage();
-        }
-        // Debug: Z key = switch layout set (S3 ↔ SK)
-        if (isUnmodifiedDebugKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_Z)) {
-            ssProvider.debugToggleLayoutSet();
-        }
-
-        // Debug complete special stage with emerald (for testing results screen)
-        if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_COMPLETE_KEY))) {
-            debugCompleteSpecialStageWithEmerald();
-        }
-
-        // Debug fail special stage (for testing results screen without emerald)
-        if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_FAIL_KEY))) {
-            debugFailSpecialStage();
-        }
-
-        // Toggle sprite frame debug viewer (shows all animation frames)
-        if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_SPRITE_DEBUG_KEY))) {
-            ssProvider.toggleSpriteDebugMode();
-        }
-
-        // Cycle special stage plane visibility (A/B/both/off)
-        if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_PLANE_DEBUG_KEY))) {
-            ssProvider.cyclePlaneDebugMode();
-        }
-
-        // Handle sprite debug viewer navigation (uses configured movement keys)
-        if (ssProvider.isSpriteDebugMode()) {
-            SpecialStageDebugProvider debugProvider = ssProvider.getDebugProvider();
-            if (debugProvider != null) {
-                // Left/Right: Change page within current graphics set
-                if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.RIGHT))) {
-                    debugProvider.nextPage();
-                }
-                if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.LEFT))) {
-                    debugProvider.previousPage();
-                }
-                // Up/Down: Cycle between graphics sets
-                if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.DOWN))) {
-                    debugProvider.nextSet();
-                }
-                if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.UP))) {
-                    debugProvider.previousSet();
-                }
-            }
-        }
-
-        // Visual SS trace session: feed the recorded row's input and skip the
-        // engine tick on a lag row (mirrors the LEVEL-mode playback skip gate).
-        // The trace cursor advances one row per engine frame regardless of lag,
-        // so lag rows render as authentic no-motion frames.
-        TraceSessionLauncher ssSession = TraceSessionLauncher.active();
-        if (ssSession != null) {
-            ssSession.applySpecialStageTraceInputIfActive(inputHandler);
-        }
-        boolean skipSsTick = ssSession != null
-                && ssSession.shouldSkipCurrentSpecialStageTick();
-        if (!skipSsTick) {
-            LevelFrameStep.executeHardwareTimedObjectScan(
-                    LevelFrameContext.from(gameplayMode), activePlcLifecycleFrame,
-                    PlcLifecyclePhase.SPECIAL_STAGE, () -> {
-                        updateSpecialStageInput();
-                        ssProvider.update();
-                    });
-        } else {
-            LevelFrameStep.serviceVBlankOnly(LevelFrameContext.from(gameplayMode),
-                    activePlcLifecycleFrame, PlcLifecyclePhase.LAG);
-        }
-        specialStageEntryPresentation.update(ssProvider, fadeManager,
-                () -> playSpecialStageStageMusic(ssProvider),
-                gameplayMode.plcFrameLifecycle());
-        if (ssSession != null) {
-            ssSession.advanceSpecialStageTraceCursorIfActive(inputHandler);
-        }
-
-        if (isSpecialStageRewindable() && ssSession == null) {
-            liveRewindManager.recordExternalFrame(currentGameMode, false, inputHandler);
-        }
-
-        // Check for special stage completion or failure. A visual SS trace
-        // session owns its own end (fade-out at the recorded stage-finished
-        // frame), so an early engine isFinished() must not hijack it into the
-        // results screen.
-        if (ssProvider.isFinished()
-                && (ssSession == null || !ssSession.isSpecialStageSession())) {
-            boolean gotEmerald = ssProvider.isEmeraldCollected();
-            enterResultsScreen(gotEmerald);
-        }
+        GameLoopSpecialStageLifecycle.update(ssProvider, configService,
+                this::isUnmodifiedDebugKeyPressed,
+                this::debugCompleteSpecialStageWithEmerald, this::debugFailSpecialStage,
+                inputHandler, gameplayMode, activePlcLifecycleFrame,
+                specialStageObservationPacing, this::updateSpecialStageInput,
+                specialStageEntryPresentation, fadeManager,
+                () -> playSpecialStageStageMusic(ssProvider), this::isSpecialStageRewindable,
+                liveRewindManager, currentGameMode, this::enterResultsScreen);
     }
 
     /**
      * SPECIAL_STAGE_RESULTS per-frame update: advances the results screen and
      * exits when complete. Falls through to the shared post-update tail.
      */
+    public boolean commitDeferredTraceRunModeBoundaryIfReady() {
+        return TraceSessionLauncher.commitDeferredRunModeBoundary(
+                currentGameMode, getActiveSpecialStageProvider(), this::enterResultsScreen);
+    }
+
+    boolean consumeSpecialStageRequestDuringSuppressedRunRow() {
+        if (currentGameMode != GameMode.LEVEL || levelManager == null
+                || !levelManager.consumeSpecialStageRequest()) {
+            return false;
+        }
+        enterSpecialStage();
+        return true;
+    }
+
     private void updateSpecialStageResultsMode() {
         activePlcLifecycleFrame.claim(PlcLifecyclePhase.SPECIAL_STAGE_RESULTS);
         // Update results screen
@@ -1947,6 +1892,10 @@ public class GameLoop {
         return true;
     }
 
+    public void applyScheduledPlaybackInputImmediately() {
+        syncPlaybackInputBridge();
+    }
+
     private void syncPlaybackInputBridge() {
         boolean shouldDrive = playbackDebugManager.isDriving(currentGameMode);
         if (spriteManager == null) {
@@ -1994,7 +1943,7 @@ public class GameLoop {
         return null;
     }
 
-    private String resolveMainCharacterCode() {
+    String resolveMainCharacterCode() {
         return ActiveGameplayTeamResolver.resolveMainCharacterCode(configService);
     }
 
@@ -2299,6 +2248,7 @@ public class GameLoop {
         FadeManager fadeManager = this.fadeManager;
         boolean screenAlreadyFaded = false;
         boolean fadeFromBlack = false;
+        boolean transitionSfxAlreadyPlayed = false;
 
         if (fadeManager.isActive()) {
             FadeManager.FadeState fadeState = fadeManager.getState();
@@ -2307,6 +2257,7 @@ public class GameLoop {
                 // Take over and enter special stage directly with fade-from-white.
                 screenAlreadyFaded = true;
                 fadeFromBlack = false;
+                transitionSfxAlreadyPlayed = true;
             } else if (fadeState == FadeManager.FadeState.HOLD_BLACK) {
                 // Screen is held black. Enter special stage with fade-from-black.
                 screenAlreadyFaded = true;
@@ -2330,8 +2281,9 @@ public class GameLoop {
             playable.clearPowerUps();
         }
 
-        // Play special stage entry sound
-        playSpecialStageTransitionSfx(ssProvider);
+        if (shouldPlaySpecialStageEntrySfx(transitionSfxAlreadyPlayed)) {
+            playSpecialStageTransitionSfx(ssProvider);
+        }
 
         // Fade out the current music gradually (ROM: MusID_FadeOut / zFadeOutMusic)
         // This preserves the SFX we just started, unlike stopMusic() which silences all
@@ -2931,7 +2883,7 @@ public class GameLoop {
     /**
      * Actually enters the results screen after fade-to-white completes.
      */
-    private void doEnterResultsScreen() {
+    void doEnterResultsScreen() {
         // Reset special stage provider
         SpecialStageProvider ssProvider = getActiveSpecialStageProvider();
         ssProvider.resetForResults();
@@ -3215,7 +3167,7 @@ public class GameLoop {
         LOGGER.info("Entered Title Card for zone " + zoneIndex + " act " + actIndex);
     }
 
-    private void startPendingInLevelTitleCard() {
+    void startPendingInLevelTitleCard() {
         InLevelTitleCardCoordinator.startIfRequested(
                 levelManager, getTitleCardProviderLazy(),
                 GameServices.gameState().isEndOfLevelActive(), this::applyTitleCardControlLock);
@@ -3241,7 +3193,7 @@ public class GameLoop {
      * canonical {@code LevelFrameStep} sprite update path reads no input
      * while the title card is on screen.
      */
-    private void applyTitleCardControlLock(boolean locked) {
+    void applyTitleCardControlLock(boolean locked) {
         if (spriteManager == null) {
             return;
         }
@@ -4337,6 +4289,11 @@ public class GameLoop {
         if (sfxId >= 0) {
             audioManager.playSfx(sfxId);
         }
+    }
+
+    /** Transition SFX is emitted by the owner that starts the fade. */
+    static boolean shouldPlaySpecialStageEntrySfx(boolean transitionSfxAlreadyPlayed) {
+        return !transitionSfxAlreadyPlayed;
     }
 
     private void playSpecialStageStageMusic(SpecialStageProvider ssProvider) {

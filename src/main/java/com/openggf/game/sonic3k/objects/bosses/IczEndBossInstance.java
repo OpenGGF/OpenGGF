@@ -324,7 +324,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
     }
 
     @Override
-    protected void updateBossLogic(int frameCounter, PlayableEntity player) {
+    protected void updateBossLogic(int vIntRunCount, PlayableEntity player) {
         // Native smoke children execute after the bottom solid child. Promote
         // last pass's folded overlap so this pass's solid checkpoint can carry
         // the rider before the later-slot capture publishes object_control.
@@ -1200,6 +1200,17 @@ public final class IczEndBossInstance extends AbstractBossInstance
     }
 
     @Override
+    public int getTopLandingHalfWidth(PlayableEntity player, int collisionHalfWidth) {
+        // ROM Solid_Landed / loc_1E154 (sonic3k.asm:41611-41621) re-reads
+        // width_pixels(a0) for the landing X gate. The solid bottom child uses
+        // ObjDat3_72324 with width_pixels = $10 (sonic3k.asm:151287-151291)
+        // while loc_71F30 passes d1 = $23 (sonic3k.asm:150882-150886), so the
+        // default d1 - $B = $18 heuristic is 8px too WIDE — the ROM rejects
+        // outer-band landings the engine would accept.
+        return 0x10;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity player) {
         return arenaGateComplete && !state.defeated && !defeatStarted && !damagedFinalPhase;
     }
@@ -1594,9 +1605,9 @@ public final class IczEndBossInstance extends AbstractBossInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             visible = !visible;
-            super.update(frameCounter, player);
+            super.update(vIntRunCount, player);
         }
 
         @Override
@@ -1641,7 +1652,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             if (!flyingRight) {
                 int targetY = services().camera() != null
                         ? (services().camera().getY() & 0xFFFF) + 0x40

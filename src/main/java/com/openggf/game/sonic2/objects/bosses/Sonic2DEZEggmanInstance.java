@@ -203,7 +203,7 @@ public class Sonic2DEZEggmanInstance extends AbstractObjectInstance implements R
     // ========================================================================
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (isDestroyed()) return;
 
@@ -484,7 +484,7 @@ public class Sonic2DEZEggmanInstance extends AbstractObjectInstance implements R
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (isDestroyed()) return;
 
             timer--;
@@ -600,7 +600,7 @@ public class Sonic2DEZEggmanInstance extends AbstractObjectInstance implements R
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
             if (isDestroyed()) return;
 

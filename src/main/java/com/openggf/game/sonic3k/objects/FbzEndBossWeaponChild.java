@@ -31,7 +31,7 @@ public final class FbzEndBossWeaponChild extends AbstractFbzEndBossChild {
         super(spawn, "weapon", "FBZEndBossWeapon");
     }
     public static int nativeCount() { return 1; }
-    @Override public void update(int frameCounter, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         if (!initialized) {
             initialized = true;
             boss.clearWeaponTrigger();

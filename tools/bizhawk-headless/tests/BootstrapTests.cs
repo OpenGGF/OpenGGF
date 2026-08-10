@@ -58,6 +58,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "ROM identity rejects unknown ROM in game detection",
                 RejectsUnknownRomInGameDetection));
+            tests.Add(new TestMain.TestCase(
+                "S1 credits pre-capture registry selects only safe evidence",
+                CreditsPreCaptureRegistrySelectsOnlySafeEvidence));
         }
 
         private static void AcceptsPinnedDistribution()
@@ -214,6 +217,46 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Throws<InvalidOperationException>(
                 () => RomIdentity.DetectGame(unknown),
                 RomIdentity.ComputeSha1(unknown));
+        }
+
+        private static void CreditsPreCaptureRegistrySelectsOnlySafeEvidence()
+        {
+            var credits = new List<TestMain.TestCase>();
+            S1CreditsDemoDifferentialTests.RegisterPreCapture(credits);
+
+            AssertEx.Equal(6, credits.Count);
+            AssertEx.Equal(
+                "S1 credits predecessor evidence keeps eight 20-column fixtures\n"
+                + "S1 credits raw-host sidecar streams canonical independent observations\n"
+                + "S1 credits raw-host sidecar rejects order limits and seal failure\n"
+                + "S1 credits CLI publication failure removes raw sidecar spool\n"
+                + "S1 credits CLI seal failure quarantines published output\n"
+                + "S1 credits captures twice with deterministic logical evidence",
+                string.Join("\n", credits.ConvertAll(item => item.Name).ToArray()));
+            AssertEx.Equal(TestKind.Unit, credits[0].Kind);
+            AssertEx.Equal(TestKind.Unit, credits[1].Kind);
+            AssertEx.Equal(TestKind.Unit, credits[2].Kind);
+            AssertEx.Equal(TestKind.Unit, credits[3].Kind);
+            AssertEx.Equal(TestKind.Unit, credits[4].Kind);
+            AssertEx.Equal(TestKind.Gate, credits[5].Kind);
+            AssertEx.Equal(true, credits[5].Serial);
+            foreach (TestMain.TestCase test in credits)
+            {
+                AssertEx.Equal(false,
+                    test.Name.IndexOf("candidate", StringComparison.OrdinalIgnoreCase) >= 0);
+                AssertEx.Equal(false,
+                    test.Name.IndexOf("diagnostic", StringComparison.OrdinalIgnoreCase) >= 0);
+            }
+
+            List<TestMain.TestCase> registry = TestMain.BuildRegistry();
+            foreach (TestMain.TestCase expected in credits)
+            {
+                AssertEx.Equal(1, registry.FindAll(
+                    item => item.Name == expected.Name).Count);
+            }
+            AssertEx.Equal(0, registry.FindAll(item =>
+                item.Name == "S1 credits native candidate preserves every predecessor column"
+                || item.Name == "S1 credits diagnostic candidate reports literal common-field deltas").Count);
         }
 
         private static byte[] ReadSonic2Rom()

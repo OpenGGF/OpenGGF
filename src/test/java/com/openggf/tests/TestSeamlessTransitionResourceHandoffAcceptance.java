@@ -19,6 +19,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestSeamlessTransitionResourceHandoffAcceptance {
@@ -118,12 +119,25 @@ class TestSeamlessTransitionResourceHandoffAcceptance {
 
         assertThrows(IllegalStateException.class,
                 () -> GameServices.level().applySeamlessTransition(request));
+        assertTrue(GameServices.seamlessTransitionResourceHandoffs()
+                        .hasFailedTransfer(id),
+                "a destructive claim followed by load failure must retain a terminal fence");
+        CompositeSnapshot failedTransfer =
+                fixture.gameplayMode().getRewindRegistry().capture();
         assertThrows(IllegalStateException.class,
                 () -> GameServices.seamlessTransitionResourceHandoffs()
                         .peek(id));
         assertThrows(IllegalStateException.class,
                 () -> GameServices.level().applySeamlessTransition(request));
         assertEquals(0, handoff.transferCount.get());
+
+        fixture.gameplayMode().getRewindRegistry().restore(failedTransfer);
+        assertTrue(GameServices.seamlessTransitionResourceHandoffs()
+                .hasFailedTransfer(id));
+        assertThrows(IllegalStateException.class,
+                () -> GameServices.level().applySeamlessTransition(request));
+        assertEquals(0, handoff.transferCount.get(),
+                "restoring a failed-transfer fence cannot retry target publication");
     }
 
     private static final class TestHandoff
