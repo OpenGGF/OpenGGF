@@ -228,7 +228,6 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
         ResolvedGameplayOverlay overlay = resolveGameplayOverlay(
                 zone, act, bootstrap, llbIndex, secondaryArtAddr, -1);
         secondaryArtAddr = overlay.secondaryArtAddr();
-
         S3kRuntimeArtCoordinator coordinator = S3kRuntimeArtCoordinator.current();
         // A displayed whole-run load reaches this call at the native retained
         // title-owner boundary. Its parent batch is already visible to the
