@@ -920,15 +920,10 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             return;
         }
         if (owner != null) {
-            SmpsCoordFlagRuntimeState.Snapshot coordState =
-                    coordFlagHandlers.state().snapshot();
-            boolean[] attached = {false};
+            boolean attached;
             try {
-                mutateVoicesAtomically(
-                        () -> attached[0] = addSmpsSfxToOwner(
-                                source, owner), owner);
+                attached = addSmpsSfxToOwner(source, owner);
             } catch (RuntimeException cacheFailure) {
-                rollbackCoordFlagState(coordState, cacheFailure);
                 AudioDiagnosticObserverException.rethrowIfPresent(
                         cacheFailure);
                 if (!(cacheFailure instanceof SfxCacheRejection)) {
@@ -941,20 +936,17 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                         "SMPS SFX cache rejected " + source.assetKey());
                 return;
             }
-            sfxInstantiation.observeAdmission(attached[0]
+            sfxInstantiation.observeAdmission(attached
                     ? admission
                     : sfxInstantiation.rejectedAdmission(admission,
                             SmpsRequestAdmissionPolicy.RejectionReason.CACHE_MISS));
             return;
         }
 
-        SmpsCoordFlagRuntimeState.Snapshot coordState =
-                coordFlagHandlers.state().snapshot();
         SmpsCompositeVoice standalone;
         try {
             standalone = sfxInstantiation.instantiateStandaloneCached(source);
         } catch (RuntimeException cacheFailure) {
-            rollbackCoordFlagState(coordState, cacheFailure);
             AudioDiagnosticObserverException.rethrowIfPresent(cacheFailure);
             sfxInstantiation.observeAdmission(
                     sfxInstantiation.rejectedAdmission(admission,
@@ -964,7 +956,6 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             return;
         }
         if (standalone == null) {
-            coordFlagHandlers.state().restore(coordState);
             sfxInstantiation.observeAdmission(
                     sfxInstantiation.rejectedAdmission(admission,
                             SmpsRequestAdmissionPolicy.RejectionReason.CACHE_MISS));
@@ -981,7 +972,6 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                 sequencer = sfxInstantiation.instantiateCached(
                         source, standalone.driver());
             } catch (RuntimeException cacheFailure) {
-                rollbackCoordFlagState(coordState, cacheFailure);
                 AudioDiagnosticObserverException.rethrowIfPresent(
                         cacheFailure);
                 sfxInstantiation.observeAdmission(
@@ -992,7 +982,6 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                 return;
             }
             if (sequencer == null) {
-                coordFlagHandlers.state().restore(coordState);
                 sfxInstantiation.observeAdmission(
                         sfxInstantiation.rejectedAdmission(admission,
                                 SmpsRequestAdmissionPolicy.RejectionReason.CACHE_MISS));
@@ -1004,15 +993,14 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                     standalone.driver().prepareNewSfxAdmission(
                             sequencer, source.continuousSfxId(),
                             source.trackCount());
-            sequencer.beginSfxAdmission();
-            standalone.driver().commitSfxAdmission(preparedAdmission);
+            beginAndCommitSfxAdmission(
+                    standalone.driver(), sequencer, preparedAdmission);
             standaloneSmps = standalone;
             noteVoiceId(standalone);
             published = true;
             sfxInstantiation.observeAdmission(admission);
         } catch (RuntimeException failure) {
             primaryFailure = failure;
-            rollbackCoordFlagState(coordState, failure);
             throw failure;
         } finally {
             if (!published) {
@@ -1056,9 +1044,23 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                 owner.driver().prepareNewSfxAdmission(
                         sequencer, source.continuousSfxId(),
                         source.trackCount());
-        sequencer.beginSfxAdmission();
-        owner.driver().commitSfxAdmission(admission);
+        beginAndCommitSfxAdmission(owner.driver(), sequencer, admission);
         return true;
+    }
+
+    private void beginAndCommitSfxAdmission(
+            SmpsDriver driver,
+            SmpsSequencer sequencer,
+            PreparedSfxAdmission admission) {
+        SmpsCoordFlagRuntimeState.Snapshot coordState =
+                coordFlagHandlers.state().snapshot();
+        try {
+            sequencer.beginSfxAdmission();
+            driver.commitSfxAdmission(admission);
+        } catch (RuntimeException failure) {
+            rollbackCoordFlagState(coordState, failure);
+            throw failure;
+        }
     }
 
     private static final class SfxCacheRejection extends RuntimeException {

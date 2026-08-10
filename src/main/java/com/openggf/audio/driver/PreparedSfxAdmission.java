@@ -6,8 +6,8 @@ import com.openggf.audio.smps.SmpsSequencer;
  * A validated, channel-bounded SMPS SFX admission plan.
  *
  * <p>The referenced sequencers and tracks are live identities, but preparation
- * does not mutate them. Conflict storage is fixed by the Genesis hardware
- * channel counts rather than by the number of unrelated live sequencers.</p>
+ * does not mutate them. Conflict storage is bounded by the new program's
+ * track count rather than by the number of unrelated live sequencers.</p>
  */
 public final class PreparedSfxAdmission {
     private final SmpsDriver owner;
@@ -18,10 +18,8 @@ public final class PreparedSfxAdmission {
     private final int continuousSfxId;
     private final int trackCount;
     final SmpsSequencer replacedSequencer;
-    final SmpsSequencer[] displacedFmOwners;
-    final SmpsSequencer.Track[] displacedFmTracks;
-    final SmpsSequencer[] displacedPsgOwners;
-    final SmpsSequencer.Track[] displacedPsgTracks;
+    final SmpsSequencer[] displacedOwners;
+    final SmpsSequencer.Track[] displacedTracks;
     private boolean committed;
 
     PreparedSfxAdmission(
@@ -33,10 +31,8 @@ public final class PreparedSfxAdmission {
             int continuousSfxId,
             int trackCount,
             SmpsSequencer replacedSequencer,
-            SmpsSequencer[] displacedFmOwners,
-            SmpsSequencer.Track[] displacedFmTracks,
-            SmpsSequencer[] displacedPsgOwners,
-            SmpsSequencer.Track[] displacedPsgTracks) {
+            SmpsSequencer[] displacedOwners,
+            SmpsSequencer.Track[] displacedTracks) {
         this.owner = owner;
         this.sequencer = sequencer;
         this.continuousExtension = continuousExtension;
@@ -45,10 +41,8 @@ public final class PreparedSfxAdmission {
         this.continuousSfxId = continuousSfxId;
         this.trackCount = trackCount;
         this.replacedSequencer = replacedSequencer;
-        this.displacedFmOwners = displacedFmOwners;
-        this.displacedFmTracks = displacedFmTracks;
-        this.displacedPsgOwners = displacedPsgOwners;
-        this.displacedPsgTracks = displacedPsgTracks;
+        this.displacedOwners = displacedOwners;
+        this.displacedTracks = displacedTracks;
     }
 
     public SmpsDriver owner() {
@@ -85,5 +79,9 @@ public final class PreparedSfxAdmission {
                     "prepared SFX admission was already committed");
         }
         committed = true;
+    }
+
+    void releaseCommit() {
+        committed = false;
     }
 }
