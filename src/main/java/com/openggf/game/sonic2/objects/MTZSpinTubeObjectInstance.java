@@ -197,7 +197,7 @@ public class MTZSpinTubeObjectInstance extends AbstractObjectInstance implements
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         // ROM Obj67_Main (s2.asm:52978-52994): run the per-character routine once
         // for MainCharacter (a1 = MainCharacter, a4 = objoff_2C) and once for the
         // Sidekick (a1 = Sidekick, a4 = objoff_36). Resolve both engine players via

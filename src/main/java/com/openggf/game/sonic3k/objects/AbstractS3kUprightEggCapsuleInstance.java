@@ -84,7 +84,7 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         boolean buttonWasTriggered = buttonTriggered;
         checkpointAll();
         if (!opened) {
@@ -96,7 +96,7 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
 
         tickExplosionController();
         if (resultsStarted) {
-            updateAfterResultsStarted(frameCounter, player);
+            updateAfterResultsStarted(vIntRunCount, player);
             return;
         }
         postOpenTimer--;
@@ -179,6 +179,14 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
     protected void updateAfterResultsStarted(int frameCounter, PlayableEntity player) {
     }
 
+    /**
+     * Whether a folded route's native {@code Obj_LevelResults} slot is known to
+     * execute later than the capsule during the allocation pass.
+     */
+    protected boolean nativeResultsRunsInAllocationPass() {
+        return false;
+    }
+
     protected PlayerCharacter resolvePlayerCharacter() {
         if (services().configuration() == null) {
             return PlayerCharacter.SONIC_ALONE;
@@ -253,7 +261,21 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
         }
         PlayerCharacter character = resolvePlayerCharacter();
         int currentAct = services().currentAct();
-        spawnChild(() -> createResultsScreen(character, currentAct));
+        // sub_868F8 calls AllocateObject, so Obj_LevelResults takes the lowest
+        // free SST. If that slot has already run, Obj_LevelResultsInit and its
+        // three KosM submissions wait for the next Process_Sprites pass
+        // (sonic3k.asm:181978-181990).
+        S3kResultsScreenObjectInstance result =
+                spawnFreeChild(() -> createResultsScreen(character, currentAct));
+        if (nativeResultsRunsInAllocationPass()
+                && services().objectManager().reservedSlotWaitsForNextObjectPass(result.getSlotIndex())) {
+            // A folded native object graph can leave the engine capsule in a
+            // later SST than the ROM capsule even though the ROM's newly
+            // allocated results slot is still ahead of its execution cursor.
+            // Consume that real Obj_LevelResultsInit dispatch here; the child
+            // remains in its allocated SST for all subsequent passes.
+            result.update(services().objectManager().getVblaCounter(), player);
+        }
     }
 
     /** Allows a retained post-capsule owner to keep control of its native handoff. */

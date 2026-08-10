@@ -46,7 +46,7 @@ public final class FbzEndBossArmChild extends AbstractFbzEndBossChild implements
         return child == null || child.getSlotIndex() < 0 ? null : child;
     }
 
-    @Override public void update(int frameCounter, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         if (!jointSpawnAttempted) {
             jointSpawnAttempted = true;
             FbzEndBossJointChild joint = spawnJoint();

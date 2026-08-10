@@ -38,7 +38,7 @@ public final class FbzSnakePlatformObjectInstance extends AbstractObjectInstance
         super(spawn,"FBZSnakePlatform");this.route=spawn.subtype()&7;this.delay=delay;this.delayRemaining=delay;this.child=child;this.parent=parent;this.familySlot=parent==null?-1:parent.familySlot;
         int[] r=ROUTES[route];cullRight=r[1];cullWidth=((r[1]-r[0])&0xFF80)+0x300;routeIndex=2;snapToFirstAndTarget();
     }
-    @Override public void update(int frameCounter,PlayableEntity player){
+    @Override public void update(int vIntRunCount,PlayableEntity player){
         if(child&&parent!=null&&parent.isDestroyed()){ObjectLifetimeOps.expireDynamic(this);return;}
         if(!child&&!childrenSpawned){childrenSpawned=true;if(familySlot<0)familySlot=getSlotIndex();int nextDelay=0x19;for(int attempt=0;attempt<3;attempt++){final int d=nextDelay;FbzSnakePlatformObjectInstance made=spawnChild(()->new FbzSnakePlatformObjectInstance(spawn,d,true,this));if(!made.isDestroyed())nextDelay+=0x18;}}
         if(delayRemaining>0){delayRemaining--;if(delayRemaining>0)return;}if(wait>0){wait--;if(wait>0)return;}

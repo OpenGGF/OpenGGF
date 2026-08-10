@@ -186,13 +186,13 @@ public class Sonic1SYZBossInstance extends AbstractS1EggmanBossInstance
     }
 
     @Override
-    protected void updateBossLogic(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateBossLogic(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (state.routineSecondary) {
             case STATE_APPROACH -> updateApproach();
             case STATE_PATROL -> updatePatrol(player);
             case STATE_BLOCK_DROP -> updateBlockDrop();
-            case STATE_DEFEAT_WAIT -> updateDefeatWait(frameCounter);
+            case STATE_DEFEAT_WAIT -> updateDefeatWait(vIntRunCount);
             case STATE_ASCENT -> updateAscent();
             case STATE_ESCAPE -> updateEscape();
         }
@@ -447,7 +447,7 @@ public class Sonic1SYZBossInstance extends AbstractS1EggmanBossInstance
     // State 6: DEFEAT_WAIT — explosions countdown
     // ROM: loc_19474
     // ========================================================================
-    private void updateDefeatWait(int frameCounter) {
+    private void updateDefeatWait(int vIntRunCount) {
         timer--;
         if (timer < 0) {
             // ROM: loc_1947E — Start ascent
@@ -469,7 +469,7 @@ public class Sonic1SYZBossInstance extends AbstractS1EggmanBossInstance
             // x_speed at the boundary x=0x2E68, engine kept running).
         } else {
             // ROM: BossDefeated — spawn explosions every 8 frames
-            if ((frameCounter & 7) == 0) {
+            if ((vIntRunCount & 7) == 0) {
                 spawnDefeatExplosion();
             }
         }

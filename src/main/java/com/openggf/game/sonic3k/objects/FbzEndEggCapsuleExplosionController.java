@@ -17,7 +17,7 @@ public final class FbzEndEggCapsuleExplosionController extends AbstractObjectIns
         super(spawn, "FBZEndEggCapsuleExplosionController");
     }
 
-    @Override public void update(int frameCounter, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         if (waitCounter-- > 0) return;
         if (--remaining == 0) { ObjectLifetimeOps.expireDynamic(this); return; }
         waitCounter = 2;

@@ -5044,13 +5044,16 @@ class TestMhzBossObjects {
         ObjectInstance chip = spawned.get(0);
         chip.update(1, null);
 
+        assertEquals(0x1810, chip.getX(),
+                "loc_75AD4 initializes and draws the slow chip without running MoveSprite2");
+        chip.update(2, null);
         assertEquals(0x180E, chip.getX(),
-                "loc_75AD4 keeps Random_Number bit 0 for Knuckles and uses x_vel=-$200 when $42 is nonzero");
+                "loc_75B34 keeps Random_Number bit 0 for Knuckles and uses x_vel=-$200 when $42 is nonzero");
         assertEquals(0x0430, chip.getY(),
                 "loc_75B34 applies the slow-chip y_vel after the first MoveSprite2 position step");
-        chip.update(2, null);
         chip.update(3, null);
         chip.update(4, null);
+        chip.update(5, null);
         assertEquals(0x0431, chip.getY(),
                 "the Knuckles slow-chip branch sets $3A, so loc_75B34 accumulates +$20 y_vel before MoveSprite2");
     }
@@ -5094,7 +5097,7 @@ class TestMhzBossObjects {
         chip.update(2, null);
         chip.appendRenderCommands(new ArrayList<>());
 
-        verify(logRenderer).drawFrameIndex(1, 0x1808, 0x0410, false, false);
+        verify(logRenderer).drawFrameIndex(1, 0x180C, 0x0410, false, false);
     }
 
     @Test
@@ -5445,6 +5448,11 @@ class TestMhzBossObjects {
         @Override
         protected int currentRomZoneId() {
             return zoneId;
+        }
+
+        @Override
+        protected com.openggf.level.Level currentLevel() {
+            return null;
         }
     }
 }

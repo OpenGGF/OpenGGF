@@ -495,7 +495,7 @@ class TestDynamicArtTransferTrace {
             throws IOException {
         Files.writeString(dir.resolve("metadata.json"), """
                 {"game":"s1","zone":"ghz","act":1,"bk2_frame_offset":0,
-                 "trace_frame_count":1,"trace_schema":6,"csv_version":7,
+                 "trace_frame_count":1,"trace_schema":5,
                  "start_x":"0000","start_y":"0000","aux_schema_extras":[]}
                 """);
         Files.writeString(dir.resolve("physics.csv"), physicsCsv(1));
@@ -556,17 +556,17 @@ class TestDynamicArtTransferTrace {
             Path dir, String game, int frameCount) throws IOException {
         Files.writeString(dir.resolve("metadata.json"), """
                 {"game":"%s","zone":"ghz","act":1,"bk2_frame_offset":0,
-                 "trace_frame_count":%d,"trace_schema":6,"csv_version":7,
+                 "trace_frame_count":%d,"trace_schema":5,
                  "start_x":"0000","start_y":"0000",
                  "aux_schema_extras":["pre_level_intro_prefix",
-                   "dynamic_art_transfer_state_per_frame_v1"]}
+                   "dynamic_art_transfer_state_per_frame"]}
                 """.formatted(game, frameCount));
     }
 
     private static TraceRunManifest runManifest(
             List<DynamicArtTransfer.GapTransition> gaps, int frameCount) {
         return new TraceRunManifest(
-                2, "s2", "synthetic", "synthetic.bk2", "checksum", "lua",
+                "s2", "synthetic", "synthetic.bk2", "checksum",
                 List.of(new TraceRunManifest.Segment(
                         "segment", "level", "complete_run", 0, frameCount,
                         0, 1, null, null)),
@@ -579,9 +579,9 @@ class TestDynamicArtTransferTrace {
         Files.writeString(dir.resolve("metadata.json"), """
                 {"game":"%s","trace_profile":"%s","act":1,
                  "bk2_frame_offset":0,"trace_frame_count":%d,
-                 "trace_schema":6,"csv_version":7,
+                 "trace_schema":5,
                  "start_x":"0000","start_y":"0000",
-                 "aux_schema_extras":["dynamic_art_transfer_state_per_frame_v1"]}
+                 "aux_schema_extras":["dynamic_art_transfer_state_per_frame"]}
                 """.formatted(game, profile, frameCount));
     }
 

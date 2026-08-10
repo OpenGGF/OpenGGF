@@ -78,7 +78,7 @@ public class IczHarmfulIceObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         // Obj_WaitOffscreen can keep the object alive in the placement load
         // window before Render_Sprites marks it visible. ObjectManager owns the
         // MarkObjGone-style out-of-range unload for layout objects.
@@ -131,8 +131,17 @@ public class IczHarmfulIceObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        if (player != null && player.getInvincibleFrames() <= 0 && !player.getInvulnerable()) {
-            player.applyHurt(x, DamageCause.SPIKE);
+        // FixBugs (docs/skdisasm/sonic3k.asm:38) is assembled as 0 in the shipped
+        // ROM. loc_8B4F8 (sonic3k.asm:189765-189775) gates the hit on
+        // `btst #Status_Invincible,status_secondary(a1)` ALONE and then calls
+        // HurtCharacter, which performs no invulnerability_timer test of its own
+        // (sonic3k.asm:21065-21095). The engine implements that shipped branch: a
+        // flashing (post-hit invulnerable) character IS hurt again by the ice. The
+        // FixBugs=1 branch inserts `tst.b invulnerability_timer(a1); bne` and would
+        // skip the hurt while flashing. Either branch still breaks the ice, so only
+        // the hurt/ring-loss/death differs.
+        if (player != null && player.getInvincibleFrames() <= 0) {
+            player.applyHurtIgnoringIFrames(x, DamageCause.SPIKE);
         }
 
         broken = true;
@@ -243,9 +252,9 @@ public class IczHarmfulIceObjectInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             animateRaw();
-            super.update(frameCounter, player);
+            super.update(vIntRunCount, player);
         }
 
         private void animateRaw() {

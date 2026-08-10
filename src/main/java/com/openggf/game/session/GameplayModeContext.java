@@ -10,6 +10,7 @@ import com.openggf.game.GameMode;
 import com.openggf.game.GameRng;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.GameplayInputFilter;
+import com.openggf.game.HardwareBoundaryDispatch;
 import com.openggf.game.NoOpBonusStageProvider;
 import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.RuntimeArtCoordinator;
@@ -44,6 +45,7 @@ import com.openggf.game.solid.SolidExecutionRegistry;
 import com.openggf.game.timing.HardwareTimingBoundaryObserver;
 import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.game.timing.LoadTimeProfile;
 import com.openggf.level.SeamlessTransitionResourceHandoffRegistry;
@@ -71,10 +73,13 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Logger;
+import com.openggf.trace.replay.runs.RunLevelLoadTracker;
+import com.openggf.trace.replay.runs.TraceRunFrameDriver;
 
 @com.openggf.game.ModApi
 public final class GameplayModeContext implements ModeContext {
@@ -94,9 +99,11 @@ public final class GameplayModeContext implements ModeContext {
     private final RuntimeArtCoordinator runtimeArtCoordinator;
     private final SeamlessTransitionResourceHandoffRegistry
             seamlessTransitionResourceHandoffs;
-    private final RecordedCompletionAuthority recordedCompletionAuthority;
+    private RecordedCompletionAuthority recordedCompletionAuthority;
     private final PlcFrameLifecycleCoordinator plcFrameLifecycle;
     private final DynamicArtLifecycleService dynamicArtLifecycle;
+    private final RunLevelLoadTracker runLevelLoads = new RunLevelLoadTracker();
+    private TraceRunFrameDriver traceRunFrameDriver;
 
     private Camera camera;
     private TimerManager timerManager;
@@ -166,6 +173,24 @@ public final class GameplayModeContext implements ModeContext {
             int spawnY,
             EditorPlaytestStash resumeStash,
             HardwareReadinessAdmissionPolicy admissionPolicy) {
+        this(worldSession, spawnX, spawnY, resumeStash, admissionPolicy, null);
+    }
+
+    /** Test/tool seam for an explicit per-kind recorded policy map. */
+    public GameplayModeContext(
+            WorldSession worldSession,
+            HardwareReadinessAdmissionPolicy admissionPolicy,
+            Map<HardwareWorkKind, HardwareReadinessAdmissionPolicy> recordedPolicies) {
+        this(worldSession, 0, 0, null, admissionPolicy, recordedPolicies);
+    }
+
+    private GameplayModeContext(
+            WorldSession worldSession,
+            int spawnX,
+            int spawnY,
+            EditorPlaytestStash resumeStash,
+            HardwareReadinessAdmissionPolicy admissionPolicy,
+            Map<HardwareWorkKind, HardwareReadinessAdmissionPolicy> recordedPolicies) {
         this.worldSession = Objects.requireNonNull(worldSession, "worldSession");
         this.spawnX = spawnX;
         this.spawnY = spawnY;
@@ -184,10 +209,9 @@ public final class GameplayModeContext implements ModeContext {
                 com.openggf.game.timing.RomWorkBudgetScheduler.oneWorkUnitAt(
                         HardwareServiceBoundary.POST_OBJECTS),
                 profile);
-        this.runtimeArtCoordinator = Objects.requireNonNull(
-                worldSession.getGameModule()
-                        .createRuntimeArtCoordinator(hardwareTiming),
-                "runtimeArtCoordinator");
+        this.runtimeArtCoordinator = Objects.requireNonNullElse(
+                worldSession.getGameModule().createRuntimeArtCoordinator(hardwareTiming),
+                RuntimeArtCoordinator.NONE);
         this.seamlessTransitionResourceHandoffs =
                 new SeamlessTransitionResourceHandoffRegistry();
         this.dynamicArtLifecycle = new DynamicArtLifecycleService();
@@ -196,7 +220,9 @@ public final class GameplayModeContext implements ModeContext {
                         worldSession.getGameModule(), dynamicArtLifecycle);
         this.recordedCompletionAuthority =
                 checkedPolicy == HardwareReadinessAdmissionPolicy.RECORDED
-                        ? hardwareTiming.beginRecordedAdmission()
+                        ? (recordedPolicies == null
+                                ? hardwareTiming.beginRecordedAdmission()
+                                : hardwareTiming.beginRecordedAdmission(recordedPolicies))
                         : null;
     }
 
@@ -566,6 +592,31 @@ public final class GameplayModeContext implements ModeContext {
         return dynamicArtLifecycle;
     }
 
+    public RunLevelLoadTracker runLevelLoads() {
+        return runLevelLoads;
+    }
+
+    public Optional<TraceRunFrameDriver> traceRunFrameDriver() {
+        return Optional.ofNullable(traceRunFrameDriver);
+    }
+
+    public void installTraceRunFrameDriver(TraceRunFrameDriver driver) {
+        traceRunFrameDriver = Objects.requireNonNull(driver, "driver");
+    }
+
+    public void clearTraceRunFrameDriver(TraceRunFrameDriver driver) {
+        if (traceRunFrameDriver == driver) {
+            traceRunFrameDriver = null;
+        }
+    }
+
+    public void serviceTerminalDynamicArtVBlank() {
+        if (dynamicArtLifecycle.isRunActive()
+                && dynamicArtLifecycle.isComparisonSegmentOpen()) {
+            dynamicArtLifecycle.serviceTerminalProductionVBlank();
+        }
+    }
+
     /**
      * Closes an open dynamic-art comparison window at a structural replay
      * boundary. Expected trace values never cross this production-owned seam.
@@ -611,12 +662,43 @@ public final class GameplayModeContext implements ModeContext {
         runtimeArtCoordinator.afterTimingService(boundary);
     }
 
+    /** Traverses a hardware boundary in the same order as the production frame. */
+    public void serviceHardwareTimingBoundary(HardwareServiceBoundary boundary) {
+        HardwareBoundaryDispatch.serviceBoundary(
+                boundary, runtimeArtCoordinator, hardwareTiming,
+                hardwareTimingBoundaryObserver);
+    }
+
     public RecordedCompletionAuthority recordedCompletionAuthority() {
         if (recordedCompletionAuthority == null) {
             throw new IllegalStateException(
                     "gameplay context was not constructed for recorded hardware admission");
         }
         return recordedCompletionAuthority;
+    }
+
+    public RecordedCompletionAuthority activateRecordedHardwareAdmission() {
+        if (recordedCompletionAuthority != null) {
+            throw new IllegalStateException(
+                    "gameplay context already owns recorded hardware admission");
+        }
+        requireQueuesIdleForRecordedAdmission(captureQueueDiagnostics());
+        RecordedCompletionAuthority activated =
+                hardwareTiming.beginRecordedAdmissionAfterLiveEpoch();
+        recordedCompletionAuthority = activated;
+        return activated;
+    }
+
+    static void requireQueuesIdleForRecordedAdmission(
+            List<QueueDiagnosticSnapshot> snapshots) {
+        Objects.requireNonNull(snapshots, "queue diagnostics");
+        for (QueueDiagnosticSnapshot snapshot : snapshots) {
+            Objects.requireNonNull(snapshot, "queue diagnostic");
+            if (snapshot.busy()) {
+                throw new IllegalStateException(
+                        "runtime-art queue is not idle: " + snapshot.kind().wireName());
+            }
+        }
     }
 
     public HardwareTimingBoundaryObserver hardwareTimingBoundaryObserver() {
@@ -781,6 +863,21 @@ public final class GameplayModeContext implements ModeContext {
         }
         rewindRegistry.deregister("rings");
         rewindRegistry.register(ringManager);
+    }
+
+    public void rebindActTransitionManagerAdapters(
+            ObjectManager objectManager, RingManager ringManager) {
+        if (rewindRegistry == null) {
+            return;
+        }
+        rewindRegistry.deregister("object-manager");
+        rewindRegistry.deregister("rings");
+        if (objectManager != null) {
+            rewindRegistry.register(objectManager.rewindSnapshottable());
+        }
+        if (ringManager != null) {
+            rewindRegistry.register(ringManager);
+        }
     }
 
     /**

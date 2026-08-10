@@ -173,7 +173,7 @@ public class CrawlBadnikInstance extends AbstractBadnikInstance implements Touch
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
 
         // ROM: each routine handles its own state transitions; proximity check
@@ -474,7 +474,7 @@ public class CrawlBadnikInstance extends AbstractBadnikInstance implements Touch
     }
 
     @Override
-    protected void updateAnimation(int frameCounter) {
+    protected void updateAnimation(int vIntRunCount) {
         // If showing impact animation, keep that frame
         if (impactTimer > 0) {
             return; // animFrame already set by applyBounce

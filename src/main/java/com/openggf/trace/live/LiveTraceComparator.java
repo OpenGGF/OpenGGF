@@ -10,9 +10,11 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.trace.FieldComparison;
+import com.openggf.trace.BootstrapDivergence;
 import com.openggf.trace.EngineDiagnostics;
-import com.openggf.trace.DynamicArtSpecialStageComparator;
+import com.openggf.trace.EngineSnapshot;
 import com.openggf.trace.FrameComparison;
+import com.openggf.trace.LoadQueueComparisonProjection;
 import com.openggf.trace.Severity;
 import com.openggf.trace.ToleranceConfig;
 import com.openggf.trace.TraceBinder;
@@ -25,8 +27,11 @@ import com.openggf.trace.TraceMetadata;
 import com.openggf.trace.VerificationGroup;
 import com.openggf.trace.TraceReplayBootstrap;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
+import com.openggf.trace.replay.TraceReplayRowPolicy;
+import com.openggf.trace.TraceHudModel;
 
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -38,7 +43,7 @@ import java.util.function.Supplier;
  * divergences into a ring buffer plus counters.
  */
 @com.openggf.game.ModApi
-public final class LiveTraceComparator implements PlaybackFrameObserver {
+public final class LiveTraceComparator implements PlaybackFrameObserver, TraceHudModel {
     private static final int RING_CAPACITY = 5;
 
     private final TraceData trace;
@@ -62,6 +67,16 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
     private boolean complete;
     private TraceFrame currentVisualFrame;
     private TraceFrame deferredTerminalDynamicArtFrame;
+    private TraceFrame pendingDynamicArtFrame;
+    private FrameComparison pendingDynamicArtBaseComparison;
+    private boolean pendingDynamicArtRequiresPublication;
+    private boolean pendingPlayableAnimationOnly;
+    private Bk2FrameInput pendingPlayableAnimationInput;
+    private List<BootstrapDivergence> bootstrapDivergences = List.of();
+    private TraceReplayRowPolicy preparedRowPolicy;
+    private boolean preparedRowActivated;
+    private boolean preparedProductionMarkerActivated;
+    private boolean pendingVblankStarvedProductionMarker;
 
     public LiveTraceComparator(TraceData trace,
                                ToleranceConfig tolerances,
@@ -107,23 +122,52 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
     }
 
     @Override
-    public boolean shouldSkipGameplayTick(Bk2FrameInput frame) {
+    public void prepareFrame(Bk2FrameInput frame) {
         if (cursor >= trace.frameCount()) {
-            return false;
+            preparedRowPolicy = null;
+            preparedRowActivated = false;
+            preparedProductionMarkerActivated = false;
+            return;
         }
-        TraceFrame current = trace.getFrame(cursor);
-        TraceFrame previous = cursor > 0 ? trace.getFrame(cursor - 1) : null;
-        TraceExecutionPhase phase =
-                TraceReplayBootstrap.phaseForReplay(trace, previous, current);
-        if (phase == TraceExecutionPhase.FULL_LEVEL_FRAME_WITH_SIDEKICK_ANIMATION_HELD) {
+        if (preparedRowPolicy != null
+                && preparedRowPolicy.traceIndex() == cursor
+                && preparedRowPolicy.validationBk2Index() == frame.frameIndex()) {
+            return;
+        }
+        preparedRowPolicy = TraceReplayRowPolicy.resolve(
+                trace, cursor, frame.frameIndex());
+        preparedRowActivated = false;
+        preparedProductionMarkerActivated = false;
+    }
+
+    @Override
+    public int appliedInputOffset(Bk2FrameInput frame) {
+        prepareFrame(frame);
+        return preparedRowPolicy != null
+                ? preparedRowPolicy.appliedInputOffset() : 0;
+    }
+
+    /** Commits structural side effects once the prepared row is represented. */
+    public void activatePreparedRow() {
+        if (preparedRowPolicy == null || preparedRowActivated) {
+            return;
+        }
+        preparedRowActivated = true;
+        if (preparedRowPolicy.holdFirstSidekickAnimation()) {
             SpriteManager sprites = GameServices.spritesOrNull();
             if (sprites != null && !sprites.getSidekicks().isEmpty()) {
                 sprites.getSidekicks().getFirst().getAnimationManager().suppressNextUpdate();
             }
         }
-        return phase == TraceExecutionPhase.VBLANK_ONLY
-                || phase == TraceExecutionPhase.ADVANCE_ONLY
-                || phase == TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY;
+    }
+
+    @Override
+    public boolean shouldSkipGameplayTick(Bk2FrameInput frame) {
+        prepareFrame(frame);
+        activatePreparedProductionMarker();
+        return preparedRowPolicy != null
+                && (preparedRowPolicy.suppressedClosureCount() > 0
+                || preparedRowPolicy.phase() == TraceExecutionPhase.ADVANCE_ONLY);
     }
 
     @Override
@@ -133,22 +177,9 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
 
     @Override
     public int vblankAdvanceCountOnSkippedTick(Bk2FrameInput frame) {
-        if (cursor >= trace.frameCount()) {
-            return 1;
-        }
-        TraceFrame previous = cursor > 0 ? trace.getFrame(cursor - 1) : null;
-        TraceFrame current = trace.getFrame(cursor);
-        if (TraceReplayBootstrap.phaseForReplay(trace, previous, current)
-                == TraceExecutionPhase.ADVANCE_ONLY) {
-            return 0;
-        }
-        if (previous == null) {
-            return 1;
-        }
-        if (previous.vblankCounter() < 0 || current.vblankCounter() < 0) {
-            return 1;
-        }
-        return (current.vblankCounter() - previous.vblankCounter()) & 0xFFFF;
+        prepareFrame(frame);
+        return preparedRowPolicy != null
+                ? preparedRowPolicy.suppressedClosureCount() : 1;
     }
 
     @Override
@@ -169,17 +200,29 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
                 currentVisualFrame = trace.getFrame(cursor);
             }
             if (skippedPhase == TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY) {
-                advancePlayableAnimationsOnly();
+                pendingPlayableAnimationOnly = true;
+                pendingPlayableAnimationInput = frame;
+                return;
             } else {
                 if (skippedPhase != TraceExecutionPhase.ADVANCE_ONLY) {
                     laggedFrames++;
                 }
-                compareDynamicArtAndPublish(skipped);
-                cursor++;
+                FrameComparison skippedBase = skipped != null
+                        ? binder.comparisonForFrame(skipped.frame()) : null;
+                if (skipped != null) {
+                    skippedBase = appendInputAlignment(skipped, frame, skippedBase);
+                    compareDynamicArtOrQueueForPostProduction(
+                            skipped, skippedBase, skippedPhase);
+                }
+                advanceComparisonCursor();
                 checkComplete();
                 return;
             }
         }
+        compareCurrentRow(frame);
+    }
+
+    private void compareCurrentRow(Bk2FrameInput frame) {
         if (cursor >= trace.frameCount()) {
             checkComplete();
             return;
@@ -190,15 +233,19 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
         TraceExecutionPhase phase =
                 TraceReplayBootstrap.phaseForReplay(trace, previous, expected);
         if (!TraceReplayBootstrap.shouldCompareGameplayStateForReplay(phase)) {
-            compareDynamicArtAndPublish(expected);
-            cursor++;
+            compareDynamicArtOrQueueForPostProduction(
+                    expected, binder.comparisonForFrame(expected.frame()), phase);
+            advanceComparisonCursor();
             checkComplete();
             return;
         }
         AbstractPlayableSprite sprite = spriteProvider.get();
         if (sprite == null) {
-            compareDynamicArtAndPublish(expected);
-            cursor++;
+            FrameComparison inputComparison = appendInputAlignment(
+                    expected, frame, binder.comparisonForFrame(expected.frame()));
+            compareDynamicArtOrQueueForPostProduction(
+                    expected, inputComparison, phase);
+            advanceComparisonCursor();
             checkComplete();
             return;
         }
@@ -221,11 +268,17 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
         int diagnosticCameraX = diagnosticCamera != null ? diagnosticCamera.getX() : -1;
         int diagnosticCameraY = diagnosticCamera != null ? diagnosticCamera.getY() : -1;
         EngineDiagnostics animationDiagnostics =
-                EngineDiagnostics.formattedWithCameraAnimationAndSubpixel(
+                EngineDiagnostics.formattedWithCameraAnimationSubpixelAndRings(
                         diagnosticCameraX, diagnosticCameraY,
                         sprite.getAnimationId(), sprite.getMappingFrame(),
-                        sprite.getXSubpixelRaw(), sprite.getYSubpixelRaw(), engineFrameClock);
-        FrameComparison result = binder.compareFrame(expected,
+                        sprite.getXSubpixelRaw(), sprite.getYSubpixelRaw(),
+                        sprite.getRingCount(), engineFrameClock);
+        TraceFrame comparisonExpected = "s3k".equals(trace.metadata().game())
+                ? TraceReplayBootstrap.s3kFrameForGameplayComparison(
+                        trace, cursor, previous, expected, phase)
+                : TraceReplayBootstrap.frameForGameplayComparison(
+                        trace, cursor, previous, expected, phase);
+        FrameComparison result = binder.compareFrame(comparisonExpected,
                 sprite.getCentreX(), sprite.getCentreY(),
                 sprite.getXSpeed(), sprite.getYSpeed(), sprite.getGSpeed(),
                 sprite.getAngle(), sprite.getAir(), sprite.getRolling(),
@@ -233,48 +286,174 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
                 null, animationDiagnostics,
                 "sidekick", actualSidekick);
         if (trace.metadata().hasPerFrameLoadQueueState()) {
-            binder.compareLoadQueues(expected.frame(),
-                    trace.loadQueueStatesForFrame(expected.frame()),
-                    GameServices.captureQueueDiagnostics());
+            LoadQueueComparisonProjection projection =
+                    LoadQueueComparisonProjection.project(
+                            trace,
+                            expected.frame(),
+                            trace.loadQueueStatesForComparisonFrame(expected.frame()),
+                            GameServices.captureQueueDiagnostics(),
+                            GameServices.hardwareTiming().capture());
+            binder.compareLoadQueues(
+                    expected.frame(), projection.expected(), projection.actual());
             result = binder.comparisonForFrame(expected.frame());
         }
-        result = compareDynamicArtIfAdvertised(expected, result);
-        if (perFrameObserver != null) {
-            perFrameObserver.accept(result);
-        }
-        absorbDivergentFields(result, expected.frame());
-        cursor++;
+        result = appendInputAlignment(expected, frame, result);
+        compareDynamicArtOrQueueForPostProduction(expected, result, phase);
+        advanceComparisonCursor();
         checkComplete();
     }
 
-    private FrameComparison compareDynamicArtIfAdvertised(
+    private void advanceComparisonCursor() {
+        cursor++;
+        preparedRowPolicy = null;
+        preparedRowActivated = false;
+        preparedProductionMarkerActivated = false;
+    }
+
+    /** Applies deferred no-VBlank state only when a real service closure is admitted. */
+    public void activatePreparedProductionMarker() {
+        if (preparedRowPolicy == null || preparedProductionMarkerActivated) {
+            return;
+        }
+        preparedProductionMarkerActivated = true;
+        TraceFrame current = trace.getFrame(preparedRowPolicy.traceIndex());
+        TraceFrame previous = preparedRowPolicy.traceIndex() > 0
+                ? trace.getFrame(preparedRowPolicy.traceIndex() - 1) : null;
+        boolean vblankStarved =
+                TraceReplayBootstrap.isVblankStarvedIterationForReplay(previous, current);
+        TraceFrame next = preparedRowPolicy.traceIndex() + 1 < trace.frameCount()
+                ? trace.getFrame(preparedRowPolicy.traceIndex() + 1) : null;
+        TraceReplayBootstrap.markIterationHeldIntoNextRowForReplay(current, next);
+        if (!preparedRowPolicy.productionPublicationClaim()) {
+            pendingVblankStarvedProductionMarker |= vblankStarved;
+            return;
+        }
+        if (pendingVblankStarvedProductionMarker || vblankStarved) {
+            TraceReplayBootstrap.markReplayProductionIterationWithoutVblank();
+        }
+        pendingVblankStarvedProductionMarker = false;
+    }
+
+    private FrameComparison appendInputAlignment(
             TraceFrame expected,
+            Bk2FrameInput frame,
             FrameComparison existing) {
-        if (!trace.metadata().hasPerFrameDynamicArtTransferState()) {
+        int validationMask = frame.p1InputMask();
+        if (frame.p1ActionMask() != 0) {
+            validationMask |= AbstractPlayableSprite.INPUT_JUMP;
+        }
+        if (binder.validateInput(expected, validationMask)) {
             return existing;
+        }
+        LinkedHashMap<String, FieldComparison> fields = new LinkedHashMap<>();
+        if (existing != null) {
+            fields.putAll(existing.fields());
+        }
+        fields.put("input_alignment", new FieldComparison(
+                "input_alignment",
+                String.format("0x%04X", expected.input() & 0xFFFF),
+                String.format("0x%04X", validationMask & 0xFFFF),
+                Severity.ERROR,
+                Math.abs((expected.input() & 0xFFFF) - validationMask)));
+        return new FrameComparison(
+                expected.frame(), fields,
+                existing != null ? existing.romDiagnostics() : "",
+                existing != null ? existing.engineDiagnostics() : "");
+    }
+
+    private void compareDynamicArtOrQueueForPostProduction(
+            TraceFrame expected,
+            FrameComparison existing,
+            TraceExecutionPhase phase) {
+        if (!trace.metadata().hasPerFrameDynamicArtTransferState()) {
+            publishComparison(existing, expected.frame());
+            return;
         }
         if (expected.frame()
                 == trace.getFrame(trace.frameCount() - 1).frame()) {
             deferredTerminalDynamicArtFrame = expected;
-            return existing;
+            publishComparison(existing, expected.frame());
+            return;
         }
-        TraceEvent.DynamicArtTransferState expectedDynamicArt =
-                trace.dynamicArtTransferStateForFrame(expected.frame());
-        DynamicArtDiagnosticsSnapshot actual =
-                dynamicArtSnapshots.get();
-        return binder.compareDynamicArt(expectedDynamicArt, actual);
+        if (pendingDynamicArtFrame != null) {
+            throw new IllegalStateException(
+                    "dynamic-art comparison row was not drained after production: "
+                            + pendingDynamicArtFrame.frame());
+        }
+        pendingDynamicArtFrame = expected;
+        pendingDynamicArtBaseComparison = existing;
+        pendingDynamicArtRequiresPublication =
+                phase != TraceExecutionPhase.ADVANCE_ONLY;
     }
 
-    private void compareDynamicArtAndPublish(TraceFrame expected) {
-        FrameComparison result = compareDynamicArtIfAdvertised(
-                expected, binder.comparisonForFrame(expected.frame()));
+    private void publishComparison(FrameComparison result, int frameNumber) {
         if (result == null) {
             return;
         }
         if (perFrameObserver != null) {
             perFrameObserver.accept(result);
         }
-        absorbDivergentFields(result, expected.frame());
+        absorbDivergentFields(result, frameNumber);
+    }
+
+    /**
+     * Drains one nonterminal dynamic-art comparison after the production
+     * lifecycle has finished publishing the represented row.
+     */
+    public FrameComparison publishPendingDynamicArtComparison(
+            DynamicArtDiagnosticsSnapshot before,
+            DynamicArtDiagnosticsSnapshot after) {
+        TraceFrame expected = pendingDynamicArtFrame;
+        if (expected == null) {
+            return null;
+        }
+        Objects.requireNonNull(before, "before");
+        Objects.requireNonNull(after, "after");
+        if (pendingDynamicArtRequiresPublication) {
+            if (after.deliverySerial() <= before.deliverySerial()
+                    || !after.published()
+                    || after.segmentGeneration() != before.segmentGeneration()
+                    || after.frame() != expected.frame()) {
+                throw new IllegalStateException(
+                        "dynamic-art row " + expected.frame()
+                                + " was not published atomically after production"
+                                + " (serial " + before.deliverySerial() + "->"
+                                + after.deliverySerial()
+                                + ", published=" + after.published()
+                                + ", generation " + before.segmentGeneration()
+                                + "->" + after.segmentGeneration()
+                                + ", frame=" + after.frame() + ")");
+            }
+        } else if (!after.equals(before)) {
+            throw new IllegalStateException(
+                    "input-only trace row changed dynamic-art publication");
+        }
+        FrameComparison merged = binder.compareDynamicArt(
+                trace.dynamicArtTransferStateForFrame(expected.frame()), after);
+        // binder.compareDynamicArt merges with an existing binder comparison;
+        // retain a synthetic base comparison when no binder row existed.
+        if (merged == null) {
+            merged = pendingDynamicArtBaseComparison;
+        }
+        pendingDynamicArtFrame = null;
+        pendingDynamicArtBaseComparison = null;
+        pendingDynamicArtRequiresPublication = false;
+        publishComparison(merged, expected.frame());
+        return merged;
+    }
+
+    /** Runs the S3K playable-prefix slice after the represented row published. */
+    public boolean consumePostProductionPlayableAnimationAction() {
+        if (!pendingPlayableAnimationOnly) {
+            return false;
+        }
+        pendingPlayableAnimationOnly = false;
+        Bk2FrameInput frame = pendingPlayableAnimationInput;
+        pendingPlayableAnimationInput = null;
+        advancePlayableAnimationsOnly();
+        compareCurrentRow(Objects.requireNonNull(
+                frame, "playable-animation row input"));
+        return true;
     }
 
     /**
@@ -293,14 +472,24 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
         TraceEvent.DynamicArtTransferState expectedDynamicArt =
                 trace.dynamicArtTransferStateForFrame(expected.frame());
         DynamicArtDiagnosticsSnapshot actual = dynamicArtSnapshots.get();
-        FrameComparison dynamicOnly =
-                new DynamicArtSpecialStageComparator().compare(
-                        expectedDynamicArt, actual);
         FrameComparison merged =
                 binder.compareDynamicArt(expectedDynamicArt, actual);
+        // Project the dynamic-art subset out of the binder's own comparison
+        // rather than recomparing: a second comparator would carry a second
+        // delivery-id origin (see DynamicArtIdEpoch) anchored on this terminal
+        // row alone.
+        java.util.Map<String, FieldComparison> dynamicFields =
+                new java.util.LinkedHashMap<>();
+        merged.fields().forEach((name, field) -> {
+            if (name.startsWith("dynamic_art.")) {
+                dynamicFields.put(name, field);
+            }
+        });
+        FrameComparison dynamicOnly =
+                new FrameComparison(expectedDynamicArt.frame(), dynamicFields);
         deferredTerminalDynamicArtFrame = null;
         if (perFrameObserver != null) {
-            perFrameObserver.accept(merged);
+            perFrameObserver.accept(dynamicOnly);
         }
         absorbDivergentFields(dynamicOnly, expected.frame());
         return merged;
@@ -308,6 +497,36 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
 
     public boolean hasDeferredTerminalDynamicArt() {
         return deferredTerminalDynamicArtFrame != null;
+    }
+
+    /** Compares native-prelude frame-zero state without advancing replay. */
+    public List<BootstrapDivergence> compareBootstrap(EngineSnapshot snapshot) {
+        bootstrapDivergences = binder.compareBootstrapFrame0(trace, snapshot);
+        for (BootstrapDivergence divergence : bootstrapDivergences) {
+            Severity severity = divergence.severity()
+                    == BootstrapDivergence.Severity.ERROR
+                    ? Severity.ERROR : Severity.WARNING;
+            if (severity == Severity.ERROR) {
+                errorCount++;
+                if (!firstErrorLogged) {
+                    firstErrorLogged = true;
+                    if (firstErrorCallback != null) {
+                        firstErrorCallback.run();
+                    }
+                }
+            } else {
+                warningCount++;
+            }
+            mismatches.push(new MismatchEntry(
+                    0,
+                    divergence.field(),
+                    divergence.expected(),
+                    divergence.actual(),
+                    divergence.context(),
+                    severity,
+                    1));
+        }
+        return bootstrapDivergences;
     }
 
     /**
@@ -415,12 +634,11 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
             // the interface getX()/getY() default would NPE on them. They
             // also have no meaningful placement coordinate to show in a
             // "nearby objects" summary, so skip them.
-            var spawn = com.openggf.level.objects.ObjectCallbackDispatch.call(om, inst, aoi::getSpawn);
-            if (spawn == null) {
+            if (aoi.getSpawn() == null) {
                 continue;
             }
-            int ox = com.openggf.level.objects.ObjectCallbackDispatch.call(om, inst, aoi::getX) & 0xFFFF;
-            int oy = com.openggf.level.objects.ObjectCallbackDispatch.call(om, inst, aoi::getY) & 0xFFFF;
+            int ox = aoi.getX() & 0xFFFF;
+            int oy = aoi.getY() & 0xFFFF;
             int dx = Math.abs(ox - px);
             int dy = Math.abs(oy - py);
             // Include anything within a ~screen-width horizontal box —
@@ -429,10 +647,10 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
             if (dx > 0x180 || dy > 0x100) {
                 continue;
             }
-            int id = spawn.objectId();
+            int id = aoi.getSpawn().objectId();
             sb.append(String.format(
                     "    slot=%3d id=0x%02X %s @%04X,%04X (dx=%d dy=%d)%n",
-                    com.openggf.level.objects.ObjectCallbackDispatch.call(om, inst, aoi::getSlotIndex),
+                    aoi.getSlotIndex(),
                     id & 0xFF,
                     aoi.getClass().getSimpleName(),
                     ox, oy,
@@ -471,6 +689,8 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
             return;
         }
         cursor = Math.max(0, Math.min(targetCursor, trace.frameCount() - 1));
+        preparedRowPolicy = null;
+        preparedRowActivated = false;
         int visualCursor = targetCursor <= 0
                 ? 0
                 : Math.min(targetCursor - 1, trace.frameCount() - 1);
@@ -491,4 +711,7 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
     public boolean recentStartPressed() { return lastStartPressed; }
     public TraceMetadata metadata() { return trace.metadata(); }
     public TraceFrame currentVisualFrame() { return currentVisualFrame; }
+    public List<BootstrapDivergence> bootstrapDivergences() {
+        return bootstrapDivergences;
+    }
 }

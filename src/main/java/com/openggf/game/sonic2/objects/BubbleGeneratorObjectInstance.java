@@ -109,7 +109,7 @@ public class BubbleGeneratorObjectInstance extends AbstractObjectInstance implem
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         visible = false;
         boolean observedRomRenderOnScreen = romRenderOnScreen;
@@ -137,7 +137,7 @@ public class BubbleGeneratorObjectInstance extends AbstractObjectInstance implem
             return;
         }
 
-        displayFrame = GENERATOR_FRAMES[(frameCounter / GENERATOR_ANIMATION_TICKS) & 1];
+        displayFrame = GENERATOR_FRAMES[(vIntRunCount / GENERATOR_ANIMATION_TICKS) & 1];
 
         // ROM state machine logic (loc_1F9C0)
         if ((stateFlags & FLAG_ACTIVE_BURST) == 0) {

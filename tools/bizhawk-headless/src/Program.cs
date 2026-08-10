@@ -53,7 +53,10 @@ namespace BizHawk.Headless.Gpgx
             int effectiveMovieLength,
             bool loadQueueState,
             bool compress,
-            long compressThresholdBytes)
+            long compressThresholdBytes,
+            int? creditsTarget = null,
+            string creditsRawObservationsPath = null,
+            string creditsRawObservationId = null)
         {
             Mode = mode;
             RomPath = romPath;
@@ -68,6 +71,9 @@ namespace BizHawk.Headless.Gpgx
             LoadQueueState = loadQueueState;
             Compress = compress;
             CompressThresholdBytes = compressThresholdBytes;
+            CreditsTarget = creditsTarget;
+            CreditsRawObservationsPath = creditsRawObservationsPath;
+            CreditsRawObservationId = creditsRawObservationId;
         }
 
         public CaptureMode Mode { get; private set; }
@@ -138,6 +144,10 @@ namespace BizHawk.Headless.Gpgx
         /// </summary>
         public bool Compress { get; private set; }
         public long CompressThresholdBytes { get; private set; }
+        /// <summary>Null selects all eight ROM ending demos.</summary>
+        public int? CreditsTarget { get; private set; }
+        public string CreditsRawObservationsPath { get; private set; }
+        public string CreditsRawObservationId { get; private set; }
 
         /// <summary>
         /// The compressor for this invocation, or null under --no-compress.
@@ -203,17 +213,19 @@ namespace BizHawk.Headless.Gpgx
             }
 
             string romPath = Required(values, "--rom");
-            string moviePath = Required(values, "--movie");
             string outputDirectory = Required(values, "--output");
             CaptureMode mode = ParseMode(values);
             if (mode == CaptureMode.Trace)
             {
+                string traceMoviePath;
+                values.TryGetValue("--movie", out traceMoviePath);
                 return ParseTrace(
                     values,
                     romPath,
-                    moviePath,
+                    traceMoviePath,
                     outputDirectory);
             }
+            string moviePath = Required(values, "--movie");
             if (mode == CaptureMode.LoadTime)
             {
                 return ParseLoadTime(
@@ -225,6 +237,8 @@ namespace BizHawk.Headless.Gpgx
             RejectInSmokeMode(values, "--run-id");
             RejectInSmokeMode(values, "--effective-movie-length");
             RejectInSmokeMode(values, "--load-queue-state");
+            RejectInSmokeMode(values, "--credits-raw-observations");
+            RejectInSmokeMode(values, "--credits-raw-observation-id");
             // Smoke mode publishes smoke.csv, which is not a trace payload,
             // so every compression argument would silently do nothing.
             RejectInSmokeMode(values, "--compress");
@@ -291,7 +305,8 @@ namespace BizHawk.Headless.Gpgx
                 "--gameplay-segment", "--run-id",
                 "--effective-movie-length", "--compress",
                 "--no-compress", "--compress-threshold",
-                "--load-queue-state"
+                "--load-queue-state", "--credits-raw-observations",
+                "--credits-raw-observation-id"
             };
             foreach (string name in unsupported)
             {
@@ -332,6 +347,65 @@ namespace BizHawk.Headless.Gpgx
 
             string traceProfile;
             values.TryGetValue("--trace-profile", out traceProfile);
+            bool credits = traceProfile == "credits_demo";
+            bool hasRawPath = values.ContainsKey("--credits-raw-observations");
+            bool hasRawId = values.ContainsKey("--credits-raw-observation-id");
+            if (hasRawPath != hasRawId)
+            {
+                throw new ArgumentException(
+                    "Arguments --credits-raw-observations and --credits-raw-observation-id must be supplied together.");
+            }
+            if (hasRawPath && !credits)
+            {
+                throw new ArgumentException(
+                    "Credits raw-observation arguments require --trace-profile credits_demo.");
+            }
+            int? creditsTarget = null;
+            if (values.ContainsKey("--credits-target"))
+            {
+                if (!credits)
+                {
+                    throw new ArgumentException(
+                        "Argument --credits-target requires --trace-profile credits_demo.");
+                }
+                string value = values["--credits-target"];
+                if (value != "all")
+                {
+                    int parsed;
+                    if (!int.TryParse(value, NumberStyles.Integer,
+                        CultureInfo.InvariantCulture, out parsed)
+                        || parsed < 0 || parsed > 7)
+                    {
+                        throw new ArgumentOutOfRangeException(
+                            "--credits-target", "Argument --credits-target must be all or 0 through 7.");
+                    }
+                    creditsTarget = parsed;
+                }
+            }
+            else if (credits)
+            {
+                throw new ArgumentException(
+                    "Argument --credits-target is required for --trace-profile credits_demo.");
+            }
+            if (hasRawPath && creditsTarget.HasValue)
+            {
+                throw new ArgumentException(
+                    "Credits raw observations require --credits-target all.");
+            }
+            if (hasRawId)
+            {
+                S1CreditsRawHostEvidenceCollector.ValidateIdentity(
+                    values["--credits-raw-observation-id"]);
+            }
+            if (credits && moviePath != null)
+            {
+                throw new ArgumentException(
+                    "Argument --movie is forbidden for ROM-owned credits_demo capture.");
+            }
+            if (!credits && moviePath == null)
+            {
+                throw new ArgumentException("Required argument is missing: --movie.");
+            }
             string runId;
             values.TryGetValue("--run-id", out runId);
             int? gameplaySegment = null;
@@ -352,6 +426,13 @@ namespace BizHawk.Headless.Gpgx
                     "Argument --run-id cannot be combined with"
                     + " --trace-profile: run mode always records"
                     + " gameplay_unlock level segments.");
+            }
+            if (credits && (runId != null || gameplaySegment.HasValue
+                || values.ContainsKey("--effective-movie-length")
+                || values.ContainsKey("--load-queue-state")))
+            {
+                throw new ArgumentException(
+                    "credits_demo cannot be combined with run, segment, movie-length or load-queue arguments.");
             }
             if (runId != null && gameplaySegment.HasValue)
             {
@@ -419,6 +500,35 @@ namespace BizHawk.Headless.Gpgx
 
             string fullOutputDirectory =
                 Path.GetFullPath(outputDirectory);
+            if (credits)
+            {
+                if (values.ContainsKey("--no-compress")
+                    || values.ContainsKey("--compress-threshold"))
+                {
+                    throw new ArgumentException(
+                        "credits_demo always uses canonical forced compression.");
+                }
+                if (LinuxPathEntry.Exists(fullOutputDirectory))
+                {
+                    throw new IOException(
+                        "Credits candidate output root must not already exist: "
+                        + fullOutputDirectory);
+                }
+                string rawPath = hasRawPath
+                    ? Path.GetFullPath(values["--credits-raw-observations"])
+                    : null;
+                if (rawPath != null)
+                {
+                    CreditsRawObservationPathPolicy.Validate(
+                        fullOutputDirectory, rawPath,
+                        Program.FindInstalledTraceRoot());
+                }
+                return new CommandLineOptions(
+                    CaptureMode.Trace, Path.GetFullPath(romPath), null,
+                    fullOutputDirectory, 0, 0, traceProfile, null, null, 0,
+                    false, true, 0, creditsTarget, rawPath,
+                    hasRawId ? values["--credits-raw-observation-id"] : null);
+            }
             if (runId != null)
             {
                 // Run mode writes run_manifest.json at the output root and
@@ -540,6 +650,9 @@ namespace BizHawk.Headless.Gpgx
                 || name == "--bk2-frame-offset"
                 || name == "--max-frames"
                 || name == "--trace-profile"
+                || name == "--credits-target"
+                || name == "--credits-raw-observations"
+                || name == "--credits-raw-observation-id"
                 || name == "--gameplay-segment"
                 || name == "--run-id"
                 || name == "--effective-movie-length"
@@ -676,13 +789,16 @@ namespace BizHawk.Headless.Gpgx
                 {
                     romSha1 = RomIdentity.ValidateSonic1Rev01(romBytes);
                 }
-                if (!File.Exists(options.MoviePath))
+                Bk2Movie movie = null;
+                if (options.MoviePath != null)
                 {
-                    throw new FileNotFoundException(
-                        "BK2 movie does not exist.",
-                        options.MoviePath);
+                    if (!File.Exists(options.MoviePath))
+                    {
+                        throw new FileNotFoundException(
+                            "BK2 movie does not exist.", options.MoviePath);
+                    }
+                    movie = Bk2Reader.Read(options.MoviePath);
                 }
-                Bk2Movie movie = Bk2Reader.Read(options.MoviePath);
                 if (options.Mode != CaptureMode.Smoke)
                 {
                     if (options.Mode == CaptureMode.LoadTime)
@@ -705,6 +821,12 @@ namespace BizHawk.Headless.Gpgx
                     }
                     if (traceGame == "s1")
                     {
+                        if (options.TraceProfile == "credits_demo")
+                        {
+                            return RunS1CreditsDemo(
+                                options, installation, romSha1, romBytes,
+                                stdout, stderr, openHost);
+                        }
                         if (options.GameplaySegment.HasValue)
                         {
                             throw new ArgumentException(
@@ -975,6 +1097,249 @@ namespace BizHawk.Headless.Gpgx
                 new NoReplacePublisher(options.CreateCompressor()));
         }
 
+        private static int RunS1CreditsDemo(
+            CommandLineOptions options,
+            BizHawkInstallation installation,
+            string romSha1,
+            byte[] romBytes,
+            TextWriter stdout,
+            TextWriter stderr,
+            Func<string, GPGX.GPGXSyncSettings, IGpgxHost> openHost)
+        {
+            return RunS1CreditsDemoCore(
+                options, installation.ManagedVersion, romSha1, romBytes,
+                stdout, stderr, openHost,
+                () => new NoReplacePublisher(new TracePayloadCompressor(0)),
+                (path, id, candidateRoot, sha1) =>
+                    new S1CreditsRawHostEvidenceCollector(
+                        path, id, candidateRoot, sha1),
+                null);
+        }
+
+        internal static int RunS1CreditsDemoForTests(
+            CommandLineOptions options,
+            Version managedVersion,
+            string romSha1,
+            byte[] romBytes,
+            TextWriter stdout,
+            TextWriter stderr,
+            Func<NoReplacePublisher> publisherFactory,
+            Func<string, string, string, string,
+                S1CreditsRawHostEvidenceCollector> rawEvidenceFactory,
+            Func<S1CreditsRawHostEvidenceCollector,
+                S1CreditsDemoCollectionSink,
+                S1CreditsDemoCaptureResult> capture)
+        {
+            return RunS1CreditsDemoCore(
+                options, managedVersion, romSha1, romBytes,
+                stdout, stderr, null, publisherFactory,
+                rawEvidenceFactory, capture);
+        }
+
+        private static int RunS1CreditsDemoCore(
+            CommandLineOptions options,
+            Version managedVersion,
+            string romSha1,
+            byte[] romBytes,
+            TextWriter stdout,
+            TextWriter stderr,
+            Func<string, GPGX.GPGXSyncSettings, IGpgxHost> openHost,
+            Func<NoReplacePublisher> publisherFactory,
+            Func<string, string, string, string,
+                S1CreditsRawHostEvidenceCollector> rawEvidenceFactory,
+            Func<S1CreditsRawHostEvidenceCollector,
+                S1CreditsDemoCollectionSink,
+                S1CreditsDemoCaptureResult> capture)
+        {
+            NoReplacePublisher.IncrementalStagingSession session = null;
+            NoReplacePublisher.StagedPublicationSet staged = null;
+            S1CreditsRawHostEvidenceCollector rawEvidence = null;
+            try
+            {
+                if (!IsCreditsCandidatePathSafe(options.OutputDirectory))
+                {
+                    throw new ArgumentException(
+                        "credits_demo candidate output must not be a canonical fixture path.");
+                }
+                if (managedVersion == null)
+                {
+                    throw new ArgumentNullException("managedVersion");
+                }
+                if (publisherFactory == null)
+                {
+                    throw new ArgumentNullException("publisherFactory");
+                }
+                if (capture != null && openHost != null)
+                {
+                    throw new ArgumentException(
+                        "Credits test capture cannot be combined with a host opener.");
+                }
+                var publisher = publisherFactory();
+                if (publisher == null)
+                {
+                    throw new InvalidOperationException(
+                        "Credits publisher factory returned null.");
+                }
+                if (options.CreditsRawObservationsPath != null)
+                {
+                    if (rawEvidenceFactory == null)
+                    {
+                        throw new ArgumentNullException("rawEvidenceFactory");
+                    }
+                    rawEvidence = rawEvidenceFactory(
+                        options.CreditsRawObservationsPath,
+                        options.CreditsRawObservationId,
+                        options.OutputDirectory,
+                        romSha1);
+                    if (rawEvidence == null)
+                    {
+                        throw new InvalidOperationException(
+                            "Credits raw-evidence factory returned null.");
+                    }
+                }
+                session = publisher.OpenSession(options.OutputDirectory);
+                S1CreditsDemoCaptureResult result;
+                using (var sink = new S1CreditsDemoCollectionSink(session))
+                {
+                    if (capture != null)
+                    {
+                        result = capture(rawEvidence, sink);
+                    }
+                    else
+                    {
+                        if (openHost == null)
+                        {
+                            throw new ArgumentNullException("openHost");
+                        }
+                        using (new NativeStandardOutputSilencer())
+                        using (IGpgxHost host = openHost(
+                            options.RomPath, GpgxHost.CreateGhz1SyncSettings()))
+                        {
+                            var writer = host as IMainRamWriter;
+                            result = S1CreditsDemoCaptureRunner.Capture(
+                                host, writer, options.CreditsTarget,
+                                DateTime.Now.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                                sink, romBytes, rawEvidence);
+                        }
+                    }
+                }
+                if (result == null)
+                {
+                    throw new InvalidOperationException(
+                        "Credits capture returned null.");
+                }
+                staged = session.Complete();
+                session = null;
+                staged.Publish();
+                staged = null;
+                if (rawEvidence != null)
+                {
+                    SealCreditsRawEvidenceAfterCandidatePublication(
+                        rawEvidence, result, options.OutputDirectory);
+                    rawEvidence.Dispose();
+                    rawEvidence = null;
+                }
+                stdout.Write("BizHawk: " + managedVersion + "\n"
+                    + "ROM SHA-1: " + romSha1 + "\n"
+                    + "Credits demos: " + result.CapturedIndices.Count + "\n"
+                    + "Candidate root: " + options.OutputDirectory + "\n");
+                if (options.CreditsRawObservationsPath != null)
+                {
+                    stdout.Write("Credits raw observations: "
+                        + options.CreditsRawObservationsPath + "\n");
+                }
+                stdout.Flush();
+                return 0;
+            }
+            catch (Exception exception)
+            {
+                if (staged != null) staged.Dispose();
+                ReportFailure(stderr, exception);
+                return 1;
+            }
+            finally
+            {
+                if (session != null) session.Dispose();
+                if (rawEvidence != null)
+                {
+                    try
+                    {
+                        rawEvidence.Dispose();
+                    }
+                    catch (Exception cleanup)
+                    {
+                        ReportFailure(
+                            stderr,
+                            new InvalidOperationException(
+                                "Raw-observation cleanup failed; publication state is not reusable and the candidate is QUARANTINED.",
+                                cleanup));
+                    }
+                }
+            }
+        }
+
+        internal static void SealCreditsRawEvidenceAfterCandidatePublication(
+            S1CreditsRawHostEvidenceCollector rawEvidence,
+            S1CreditsDemoCaptureResult result,
+            string candidateRoot)
+        {
+            if (rawEvidence == null) throw new ArgumentNullException("rawEvidence");
+            try
+            {
+                rawEvidence.Seal(result);
+            }
+            catch (Exception exception)
+            {
+                throw new InvalidOperationException(
+                    "Raw-observation seal failed after candidate publication; candidate is QUARANTINED and must not be reused: "
+                    + candidateRoot + ". " + exception.Message,
+                    exception);
+            }
+        }
+
+        internal static bool IsCreditsCandidatePathSafe(string outputDirectory)
+        {
+            if (string.IsNullOrEmpty(outputDirectory)) return false;
+            string canonical = LinuxPathEntry.ResolveExistingAncestor(
+                FindInstalledTraceRoot());
+            string candidateAncestor = LinuxPathEntry.ResolveExistingAncestor(
+                outputDirectory);
+            string canonicalPrefix = canonical.TrimEnd(Path.DirectorySeparatorChar)
+                + Path.DirectorySeparatorChar;
+            return !candidateAncestor.Equals(
+                    canonical.TrimEnd(Path.DirectorySeparatorChar),
+                    StringComparison.Ordinal)
+                && !candidateAncestor.StartsWith(
+                    canonicalPrefix, StringComparison.Ordinal);
+        }
+
+        internal static string FindInstalledTraceRoot()
+        {
+            string found = FindInstalledTraceRootFrom(
+                AppDomain.CurrentDomain.BaseDirectory);
+            if (found != null) return found;
+            found = FindInstalledTraceRootFrom(Directory.GetCurrentDirectory());
+            if (found != null) return found;
+            throw new InvalidOperationException(
+                "Unable to locate the installed trace fixture root from the executable or current directory.");
+        }
+
+        private static string FindInstalledTraceRootFrom(string start)
+        {
+            string root = Path.GetFullPath(start);
+            while (!Directory.Exists(Path.Combine(
+                root, "src", "test", "resources", "traces")))
+            {
+                string parent = Path.GetDirectoryName(root);
+                if (string.IsNullOrEmpty(parent) || parent == root)
+                {
+                    return null;
+                }
+                root = parent;
+            }
+            return Path.Combine(root, "src", "test", "resources", "traces");
+        }
+
         /// <summary>
         /// S1 complete-run capture (--trace-profile complete_run or
         /// --run-id): one movie pass through S1RunCaptureRunner — the full
@@ -989,17 +1354,13 @@ namespace BizHawk.Headless.Gpgx
         /// supplied (Lua gate) — a stage-free pass without --run-id
         /// publishes exactly the per-level directories.
         ///
-        /// Line-ending policy follows the canonical fixture set each
-        /// invocation reproduces (per-fixture-set, see
-        /// docs/s1-complete-run-behavior.md section 8 and
-        /// docs/s1-run-mode-behavior.md section 9): --run-id captures get
-        /// the Windows text-mode CRLF expansion of the canonical
-        /// runs/s1-ghz-maze-roundtrip capture; --trace-profile complete_run
-        /// captures stay LF like the 19 *_completerun fixtures. The
-        /// session's version stamp is the current Lua's
-        /// (S1CompleteRunMetadataWriter.LuaScriptVersion); the Lua's
-        /// OGGF_TRACE_SOURCE_BK2 env input is derived from the movie file
-        /// itself.
+        /// Line endings are an output-mode policy: a named --run-id capture
+        /// expands staged newlines to CRLF, while --trace-profile
+        /// complete_run remains LF. Every published metadata and manifest
+        /// document uses the current TraceContract envelope — recorder
+        /// native-bizhawk-headless, recorder_version 3.0, and trace_schema
+        /// 5 — with removed version fields omitted. source_bk2 is derived
+        /// from the movie file itself.
         /// </summary>
         private static int RunS1CompleteRun(
             CommandLineOptions options,
@@ -1053,7 +1414,7 @@ namespace BizHawk.Headless.Gpgx
                         DateTime.Now.ToString(
                             "yyyy-MM-dd",
                             CultureInfo.InvariantCulture),
-                        S1CompleteRunMetadataWriter.LuaScriptVersion,
+                        TraceContract.RecorderVersion,
                         0,
                         sink,
                         File.ReadAllBytes(options.RomPath));

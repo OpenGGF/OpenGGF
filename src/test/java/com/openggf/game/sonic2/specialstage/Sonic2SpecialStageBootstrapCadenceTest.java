@@ -340,7 +340,8 @@ class Sonic2SpecialStageBootstrapCadenceTest {
         manager.update(); // publishes the RunObjects pass scheduled above
 
         assertEquals(-0x60, manager.getSonicPlayer().getInertia());
-        assertEquals(0x08, manager.captureRewindSnapshot().tailsCtrlRecordBuf[0]);
+        assertEquals(0x0808, manager.captureRewindSnapshot().tailsCtrlRecordBuf[0],
+                "the Tails record buffer stores the full held/pressed logical word");
     }
 
     @Test
@@ -418,6 +419,52 @@ class Sonic2SpecialStageBootstrapCadenceTest {
         assertEquals(0x10, rebound.pendingMainPressedButtons);
         assertEquals(0x04, rebound.pendingMainP2HeldButtons);
         assertEquals(0x08, rebound.pendingMainP2LogicalButtons);
+    }
+
+    @Test
+    void replayObservationCompletionSkipsSlowFirstAndTerminalPreStartPasses() {
+        advanceThroughStartupRunObjects();
+        for (int fadeUpdate = 0;
+             fadeUpdate < Sonic2SpecialStageIntro.FADE_FROM_WHITE_FRAMES;
+             fadeUpdate++) {
+            manager.update();
+        }
+
+        manager.update();
+        Sonic2SpecialStageSnapshot slowFirstPass = manager.captureRewindSnapshot();
+        assertEquals(Sonic2SpecialStageIntro.Phase.DROP,
+                slowFirstPass.intro.currentPhase());
+        assertEquals(0, slowFirstPass.intro.phaseTimer());
+        assertTrue(slowFirstPass.recurringMainPassPending);
+        assertFalse(manager.completeObservablePreStartPassWithoutVint(),
+                "the first post-fade redraw overruns its observation");
+        assertTerminalBoundaryStateUnchanged(
+                slowFirstPass, manager.captureRewindSnapshot());
+
+        manager.update();
+        Sonic2SpecialStageSnapshot ordinaryPass = manager.captureRewindSnapshot();
+        assertEquals(1, ordinaryPass.intro.phaseTimer(),
+                "the next update publishes the prior slow pass");
+        assertTrue(ordinaryPass.recurringMainPassPending);
+        assertTrue(manager.completeObservablePreStartPassWithoutVint());
+        Sonic2SpecialStageSnapshot completedOrdinaryPass = manager.captureRewindSnapshot();
+        assertEquals(ordinaryPass.frameCounter, completedOrdinaryPass.frameCounter,
+                "main-thread completion must not execute another VInt");
+        assertEquals(2, completedOrdinaryPass.intro.phaseTimer());
+        assertFalse(completedOrdinaryPass.recurringMainPassPending);
+
+        int updatesRemaining = 1_000;
+        while ((manager.getIntro().getCurrentPhase() != Sonic2SpecialStageIntro.Phase.WAIT2
+                || manager.captureRewindSnapshot().intro.phaseTimer()
+                < Sonic2SpecialStageConstants.INTRO_WAIT2_FRAMES - 1)
+                && updatesRemaining-- > 0) {
+            manager.update();
+        }
+        Sonic2SpecialStageSnapshot terminalPass = manager.captureRewindSnapshot();
+        assertFalse(manager.completeObservablePreStartPassWithoutVint(),
+                "Obj5F's terminal pass belongs to the explicit started boundary");
+        assertTerminalBoundaryStateUnchanged(
+                terminalPass, manager.captureRewindSnapshot());
     }
 
     @Test

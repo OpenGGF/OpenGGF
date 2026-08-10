@@ -25,11 +25,11 @@ final class Fbz2SubbossRumbleController extends AbstractObjectInstance implement
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         boolean active;
         if (!initialized) {
             initialized = true;
-            S3kFbzEventWriteSupport.setScreenShakeState(services(), true, 0, frameCounter & 0x3F);
+            S3kFbzEventWriteSupport.setScreenShakeState(services(), true, 0, vIntRunCount & 0x3F);
             active = true;
         } else {
             active = S3kFbzEventWriteSupport.isScreenShakeActive(services());
@@ -38,7 +38,7 @@ final class Fbz2SubbossRumbleController extends AbstractObjectInstance implement
             ObjectLifetimeOps.deleteNoRespawn(this);
             return;
         }
-        if ((frameCounter & 0x0F) == 0) services().playSfx(Sonic3kSfx.RUMBLE_2.id);
+        if ((vIntRunCount & 0x0F) == 0) services().playSfx(Sonic3kSfx.RUMBLE_2.id);
     }
 
     @Override public void appendRenderCommands(List<GLCommand> commands) { }

@@ -38,7 +38,7 @@ public final class FbzSpiderCraneCompanionObjectInstance extends AbstractObjectI
     void releaseToInertFrame() { owner = null; ownerSlot = -1; mappingFrame = 0; }
     int ownerSlot() { return ownerSlot; }
     FbzSpiderCraneObjectInstance ownerMember() { return owner; }
-    @Override public void update(int frameCounter, PlayableEntity player) { }
+    @Override public void update(int vIntRunCount, PlayableEntity player) { }
     @Override public int getX() { return x; }
     @Override public int getY() { return y; }
     @Override public int getPriorityBucket() { return 5; }

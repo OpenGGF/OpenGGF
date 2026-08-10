@@ -39,7 +39,8 @@ import java.util.logging.Logger;
  *   6  (0x06) - Stand: wait 0x7F frames, then flip facing and start pacing
  *   8  (0x08) - Pace: walk left then right, collecting emeralds, then laugh
  *  10  (0x0A) - Laugh: animate laugh for 0x3F frames, then start exit walk
- *  12  (0x0C) - Exit: walk offscreen, unlock controls, spawn title card, delete self
+ *  12  (0x0C) - Exit: walk offscreen, unlock controls, install the title card slot
+ *  14  (engine) - Allocated Obj_TitleCard slot's first dispatch: queue title card art, delete self
  */
 public class CutsceneKnucklesAiz1Instance extends AbstractObjectInstance implements SpawnRewindRecreatable {
 
@@ -204,7 +205,7 @@ public class CutsceneKnucklesAiz1Instance extends AbstractObjectInstance impleme
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (routine) {
             case 0  -> routine0Init();
@@ -214,6 +215,7 @@ public class CutsceneKnucklesAiz1Instance extends AbstractObjectInstance impleme
             case 8  -> routine8Pace();
             case 10 -> routine10Laugh();
             case 12 -> routine12Exit();
+            case 14 -> routine14TitleCardInstallDispatch();
             default -> {
                 // Invalid routine - no-op
             }
@@ -657,10 +659,9 @@ public class CutsceneKnucklesAiz1Instance extends AbstractObjectInstance impleme
         LOG.fine("Routine 12: offscreen, cleaning up");
 
         unlockPlayerControls();
-
-        if (services().titleCardProvider() != null) {
-            services().titleCardProvider().initializeInLevel(0, 0);
-        }
+        // ROM deletes the Knuckles sprite this frame (Go_Delete_Sprite,
+        // sonic3k.asm:128757); only the slot lives on as Obj_TitleCard.
+        visible = false;
 
         if (services().camera() != null) {
             // ROM: Level_started_flag = 0x91 — re-enable camera tracking.
@@ -673,6 +674,33 @@ public class CutsceneKnucklesAiz1Instance extends AbstractObjectInstance impleme
             services().levelGamestate().setTimerFrames(0);
         }
 
+        // ROM loc_61F22 only allocates the Obj_TitleCard slot here
+        // (sonic3k.asm:128743-128750); AllocateObject returns a slot the
+        // current ExecuteObjects pass has already walked, so Obj_TitleCardInit
+        // — which queues the four KosM title-card modules
+        // (sonic3k.asm:62109-62152) — first dispatches on the NEXT frame's
+        // pass. This slot stands in for the allocated Obj_TitleCard slot:
+        // hold one more dispatch (routine 14) to perform that init instead of
+        // queueing the art synchronously here.
+        routine = 14;
+    }
+
+    /**
+     * Models the allocated Obj_TitleCard slot's first dispatch
+     * (Obj_TitleCardInit, sonic3k.asm:62109-62152): queue the four KosM
+     * title-card modules during the next ExecuteObjects pass, then free the
+     * slot.
+     */
+    private void routine14TitleCardInstallDispatch() {
+        var titleCardProvider = services().titleCardProvider();
+        if (titleCardProvider != null) {
+            titleCardProvider.initializeInLevel(0, 0);
+            // Obj_TitleCardWait2 (sonic3k.asm:62274-62309) remains in the
+            // allocated title owner's slot for the poll after its child
+            // objects retire. Keep the slotless owner alive for that same
+            // native dispatch before it reaches LoadEnemyArt.
+            titleCardProvider.requestInLevelExitAdditionalDispatches(1);
+        }
         setDestroyed(true);
     }
 

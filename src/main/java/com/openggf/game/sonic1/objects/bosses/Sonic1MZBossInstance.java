@@ -92,7 +92,10 @@ public class Sonic1MZBossInstance extends AbstractS1EggmanBossInstance
 
         sineAngle = 0;
         timer = 0;
-        lavaDropTimer = randomLavaDelay();
+        // ROM Obj73 init draws no RandomNumber; BossMarble_ParentObj stays 0
+        // until the descent's per-frame store (docs/s1disasm/_incObj/73, 74
+        // Boss - MZ Main and Fire.asm:107-109) overwrites it on frame one.
+        lavaDropTimer = 0;
         combatSubtype = 0;
         faceAnim = Sonic1BossAnimations.ANIM_FACE_NORMAL_1;
         flameAnim = Sonic1BossAnimations.ANIM_BLANK;
@@ -155,12 +158,12 @@ public class Sonic1MZBossInstance extends AbstractS1EggmanBossInstance
     }
 
     @Override
-    protected void updateBossLogic(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateBossLogic(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (state.routineSecondary) {
             case STATE_DESCENT -> updateDescent();
             case STATE_COMBAT -> updateCombat();
-            case STATE_DEFEAT_WAIT -> updateDefeatWait(frameCounter);
+            case STATE_DEFEAT_WAIT -> updateDefeatWait(vIntRunCount);
             case STATE_ASCENT -> updateAscent();
             case STATE_ESCAPE -> updateEscape();
         }
@@ -194,8 +197,13 @@ public class Sonic1MZBossInstance extends AbstractS1EggmanBossInstance
             state.yVel = 0;
         }
 
-        // ROM: loc_18334 — store random for lava timer
-        lavaDropTimer = randomLavaDelay();
+        // ROM: loc_18334 — every ShipStart frame draws RandomNumber and stores
+        // the RAW low byte as the lava countdown (move.b d0,BossMarble_ParentObj,
+        // docs/s1disasm/_incObj/73, 74 Boss - MZ Main and Fire.asm:107-109) —
+        // range 0-255, unlike the $40-$5F reroll used after each lava spawn
+        // (.generateTimer, :227-231). The last descent frame's byte is the
+        // countdown the combat phase starts with.
+        lavaDropTimer = services().rng().nextByte();
     }
 
     // === State 2: COMBAT ===
@@ -372,7 +380,7 @@ public class Sonic1MZBossInstance extends AbstractS1EggmanBossInstance
 
     // === State 4: DEFEAT_WAIT ===
     // ROM: loc_184F6
-    private void updateDefeatWait(int frameCounter) {
+    private void updateDefeatWait(int vIntRunCount) {
         timer--;
         if (timer < 0) {
             // loc_18500: Timer expired — start ascent
@@ -386,7 +394,7 @@ public class Sonic1MZBossInstance extends AbstractS1EggmanBossInstance
             state.yVel = 0;
         } else {
             // BossDefeated: Spawn explosions every 8 frames
-            if ((frameCounter & 7) == 0) {
+            if ((vIntRunCount & 7) == 0) {
                 spawnDefeatExplosion();
             }
         }

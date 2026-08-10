@@ -30,6 +30,9 @@ import com.openggf.sprites.render.PlayerSpriteRenderer;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.SEVERE;
@@ -50,6 +53,7 @@ final class LevelPlayableArtInitializer {
     private int sidekickPatternBankCursor;
     private int legacyDustBankCount;
     private int legacyTailsTailBankCount;
+    private final Map<String, DynamicArtDecisionOwner> playerArtDplcOwners = new HashMap<>();
 
     LevelPlayableArtInitializer(LevelManager levelManager,
                                 SpriteManager spriteManager,
@@ -199,6 +203,49 @@ final class LevelPlayableArtInitializer {
         initializeMainPlayableLegacy(playable, artProvider, crossGame);
         initializeSidekicksLegacy(artProvider, crossGame);
         RenderContext.uploadDonorPalettes(graphicsManager);
+    }
+
+    DynamicArtDecisionOwner createAbsentCharacterBankOwner(String character) {
+        PlayerSpriteArtProvider artProvider;
+        Game game = levelManager.game;
+        if (CrossGameFeatureProvider.isActive()) {
+            artProvider = crossGameFeatures;
+        } else if (game instanceof PlayerSpriteArtProvider p) {
+            artProvider = p;
+        } else {
+            return null;
+        }
+        try {
+            SpriteArtSet artSet = artProvider.loadPlayerSpriteArt(character);
+            if (artSet == null || artSet.bankSize() <= 0 || artSet.dplcFrames().isEmpty()) {
+                return null;
+            }
+            return createDynamicArtOwner(character, new PlayerSpriteRenderer(artSet));
+        } catch (IOException e) {
+            LOGGER.log(SEVERE, "Failed to load art bank for absent character: "
+                    + character, e);
+            return null;
+        }
+    }
+
+    DynamicArtDecisionOwner playerArtDplcOwner(String character) {
+        if (character == null) return null;
+        String key = character.toLowerCase(Locale.ROOT);
+        if (!playerArtDplcOwners.containsKey(key)) {
+            playerArtDplcOwners.put(key, createAbsentCharacterBankOwner(key));
+        }
+        return playerArtDplcOwners.get(key);
+    }
+
+    void registerPlayerArtDplcOwner(String character, DynamicArtDecisionOwner owner) {
+        if (character == null) return;
+        String key = character.toLowerCase(Locale.ROOT);
+        if (owner == null) playerArtDplcOwners.remove(key);
+        else playerArtDplcOwners.put(key, owner);
+    }
+
+    void clearPlayerArtDplcOwners() {
+        playerArtDplcOwners.clear();
     }
 
     int reserveSidekickPatternBank(int bankSize) {

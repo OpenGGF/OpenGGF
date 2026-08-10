@@ -223,6 +223,7 @@ class TestSonic3kModZoneObjectSet {
                 Sonic3kObjectIds.LBZ_END_BOSS,
                 Sonic3kObjectIds.LBZ_FINAL_BOSS_1,
                 Sonic3kObjectIds.LBZ_FINAL_BOSS_2,
+                Sonic3kObjectIds.LBZ_FINAL_BOSS_KNUX,
                 Sonic3kObjectIds.LBZ_GATE_LASER,
                 Sonic3kObjectIds.LBZ_KNUX_PILLAR,
                 Sonic3kObjectIds.LBZ_LOWERING_GRAPPLE,
@@ -255,10 +256,24 @@ class TestSonic3kModZoneObjectSet {
     @Test
     void stockZoneDependencyInventoryRemainsExplicitFactoryMetadata() {
         Sonic3kObjectRegistry registry = new Sonic3kObjectRegistry();
+        Set<Integer> pointerTableCollisionIds = Set.of(
+                Sonic3kObjectIds.HPZ_MASTER_EMERALD,
+                Sonic3kObjectIds.HPZ_SUPER_EMERALD,
+                Sonic3kObjectIds.HPZ_SS_ENTRY_CONTROL);
 
         for (int objectId : registry.stockZoneBoundFactoryIds()) {
-            assertFalse(registry.canCreateInCustomZone(S3kZoneSet.S3KL, objectId));
-            assertFalse(registry.canCreateInCustomZone(S3kZoneSet.SKL, objectId));
+            if (pointerTableCollisionIds.contains(objectId)) {
+                assertTrue(registry.canCreateInCustomZone(S3kZoneSet.S3KL, objectId),
+                        () -> "S3KL must retain its ICZ pointer-table object at slot $"
+                                + Integer.toHexString(objectId));
+            } else {
+                assertFalse(registry.canCreateInCustomZone(S3kZoneSet.S3KL, objectId),
+                        () -> "S3KL custom-compatible collision at object $"
+                                + Integer.toHexString(objectId));
+            }
+            assertFalse(registry.canCreateInCustomZone(S3kZoneSet.SKL, objectId),
+                    () -> "SKL custom-compatible collision at object $"
+                            + Integer.toHexString(objectId));
         }
     }
 

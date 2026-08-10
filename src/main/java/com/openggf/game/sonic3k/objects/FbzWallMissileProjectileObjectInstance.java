@@ -20,12 +20,12 @@ public final class FbzWallMissileProjectileObjectInstance
   public FbzWallMissileProjectileObjectInstance(ObjectSpawn s) {
     this(s, (short)(((s.renderFlags() & 1) != 0) ? 0x400 : -0x400));
   }
-  public void update(int counter, PlayableEntity p) {
+  public void update(int vIntRunCount, PlayableEntity p) {
     if (!isOnScreen(0x20)) {
       ObjectLifetimeOps.expireDynamic(this);
       return;
     }
-    if ((counter & 3) == 0)
+    if ((vIntRunCount & 3) == 0)
       frame ^= 1;
     xFixed += velocity;
     x = xFixed >> 8;

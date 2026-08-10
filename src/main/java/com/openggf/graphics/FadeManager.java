@@ -738,6 +738,30 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
         exactToFadeDuration = false;
     }
 
+    /**
+     * Clears any held or in-flight overlay immediately, modelling a ROM routine
+     * that writes a whole new palette straight to the active palette instead of
+     * fading back into it — {@code PalLoad_Now} in Sonic 2
+     * (docs/s2disasm/s2.asm:3799) and {@code PalLoad} in Sonic 1
+     * (docs/s1disasm/sonic.asm:3383). Unlike {@link #cancel()} this leaves the
+     * reverse-presentation depth alone, so a rewind restore in flight keeps
+     * owning fade advancement.
+     */
+    public void clearOverlayForImmediatePaletteLoad() {
+        holdRestoredFrameForNextUpdate = false;
+        state = FadeState.NONE;
+        fadeType = FadeType.WHITE;
+        frameCount = 0;
+        fadeR = 0f;
+        fadeG = 0f;
+        fadeB = 0f;
+        fadeAlpha = 0f;
+        onFadeComplete = null;
+        holdDuration = 0;
+        holdFrameCount = 0;
+        exactToFadeDuration = false;
+    }
+
     public void cleanup() {
         quadRenderer.cleanup();
     }

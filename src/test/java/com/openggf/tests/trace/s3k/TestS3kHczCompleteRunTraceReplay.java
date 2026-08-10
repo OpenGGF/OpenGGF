@@ -1,6 +1,7 @@
 package com.openggf.tests.trace.s3k;
 
 import com.openggf.game.GameServices;
+import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
@@ -48,11 +49,14 @@ public class TestS3kHczCompleteRunTraceReplay extends AbstractTraceReplayTest {
         Assumptions.assumeTrue(bk2Path != null, "No BK2 found for " + TRACE_DIR);
         TraceReplaySessionBootstrap.prepareConfiguration(trace, meta);
 
+        HeadlessTestFixture fixture = null;
         try {
-            HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+            fixture = HeadlessTestFixture.builder()
                     .withRecording(bk2Path)
                     .withRecordingStartFrame(TraceReplayBootstrap.recordingStartFrameForTraceReplay(trace))
                     .withZoneAndAct(zone(), act())
+                    .withHardwareReadinessAdmissionPolicy(
+                            HardwareReadinessAdmissionPolicy.RECORDED)
                     .startPosition(meta.startX(), meta.startY())
                     .startPositionIsCentre()
                     .build();
@@ -72,15 +76,12 @@ public class TestS3kHczCompleteRunTraceReplay extends AbstractTraceReplayTest {
             StringBuilder observations = new StringBuilder();
             while (driveTraceIndex <= POINDEXTER_PRE_HIT_FRAME) {
                 TraceFrame driveFrame = trace.getFrame(driveTraceIndex);
+                fixture.beginTraceRow(driveTraceIndex, driveFrame.frame());
                 TraceExecutionPhase phase =
                         TraceReplayBootstrap.phaseForReplay(trace, previousDriveFrame, driveFrame);
-                if (phase == TraceExecutionPhase.VBLANK_ONLY) {
-                    fixture.skipFrameFromRecording();
-                } else if (TraceReplayBootstrap.shouldUsePreviousRecordingInputForTraceReplay(trace)) {
-                    fixture.stepFrameFromRecordingUsingPreviousInput();
-                } else {
-                    fixture.stepFrameFromRecording();
-                }
+                TraceReplayBootstrap.markVblankStarvedIterationForReplay(
+                        previousDriveFrame, driveFrame);
+                driveScenarioReplayFrame(trace, fixture, phase);
                 previousDriveFrame = driveFrame;
                 if (POINDEXTER_OBSERVATION_FRAMES.contains(driveTraceIndex)) {
                     appendPoindexterObservation(observations, driveTraceIndex);
@@ -96,6 +97,9 @@ public class TestS3kHczCompleteRunTraceReplay extends AbstractTraceReplayTest {
                             + "poindexters=" + describePoindexters(objectManager)
                             + "\nobservations:\n" + observations);
         } finally {
+            if (fixture != null) {
+                fixture.abortHardwareTimingReplayRun();
+            }
             TestEnvironment.resetAll();
         }
     }

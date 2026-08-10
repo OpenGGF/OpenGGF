@@ -57,7 +57,7 @@ public class PachinkoBumperObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (animTimer > 0) {
             animTimer--;
             if (animTimer == 0) {
@@ -114,7 +114,7 @@ public class PachinkoBumperObjectInstance extends AbstractObjectInstance
         // touch-box overlap test the rest of the engine's enemy/object touch
         // system already gets right, and defers the resolved touch to this
         // update() call exactly as sub_32F34's own per-routine bounce does.
-        processPendingTouches(frameCounter);
+        processPendingTouches(vIntRunCount);
     }
 
     @Override
@@ -154,8 +154,8 @@ public class PachinkoBumperObjectInstance extends AbstractObjectInstance
         }
     }
 
-    private void processPendingTouches(int frameCounter) {
-        int romFrameCounter = resolveRomFrameCounter(frameCounter);
+    private void processPendingTouches(int vIntRunCount) {
+        int romFrameCounter = resolveRomFrameCounter(vIntRunCount);
         AbstractPlayableSprite primary = pendingPrimaryTouch;
         AbstractPlayableSprite sidekick = pendingSidekickTouch;
         pendingPrimaryTouch = null;
@@ -202,9 +202,8 @@ public class PachinkoBumperObjectInstance extends AbstractObjectInstance
         // Level_frame_counter word (no +1 offset, unlike the many call sites that
         // read `(Level_frame_counter+1).w` for the low/fast-changing byte), then
         // `andi.w #3,d1` keeps only its bottom 2 bits -- i.e. bits 8-9 of the full
-        // word counter, not the raw per-object update() frameCounter parameter
-        // (which is ObjectManager's internal vblaCounter, offset from
-        // Level_frame_counter by a large non-multiple-of-4 constant -- see
+        // word counter, not the distinct per-object V-int run count
+        // (which can de-phase from Level_frame_counter -- see
         // PachinkoItemOrbObjectInstance.resolveRomFrameCounter). Mirrors the S2
         // CNZ Obj_Bumper port (BumperObjectInstance.applyBounce, s2.asm:44675-44677)
         // which reads the same ROM-aligned counter for the identical bias term.
@@ -241,13 +240,13 @@ public class PachinkoBumperObjectInstance extends AbstractObjectInstance
      * bias. Falls back to the raw {@code update()} parameter only when the object manager is
      * unavailable (e.g. bare unit-test construction without full services wiring). See
      * {@link PachinkoItemOrbObjectInstance#resolveRomFrameCounter} for why the per-object
-     * {@code update()} frameCounter parameter is not ROM-aligned in this zone.
+     * object-visible V-int run count is not the ROM level-frame counter used here.
      */
-    private int resolveRomFrameCounter(int updateParamFrameCounter) {
+    private int resolveRomFrameCounter(int vIntRunCount) {
         try {
             return services().objectManager().getFrameCounter();
         } catch (Exception e) {
-            return updateParamFrameCounter;
+            return vIntRunCount;
         }
     }
 

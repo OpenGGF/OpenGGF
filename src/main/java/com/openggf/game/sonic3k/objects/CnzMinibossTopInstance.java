@@ -130,7 +130,7 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
     private final String[] diagnosticBranchHistoryBranch = new String[DIAGNOSTIC_BRANCH_HISTORY_SIZE];
     private int diagnosticBranchHistoryCursor;
     private int diagnosticBranchHistoryCount;
-    private int diagnosticCurrentFrameCounter;
+    private int diagnosticCurrentVIntRunCount;
 
     // ---- Arena collision seam preserved from Task 7 scaffold ----
     private boolean arenaCollisionPending;
@@ -235,13 +235,13 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
-        diagnosticCurrentFrameCounter = frameCounter;
-        PlayableEntity nativeP2 = services().playerQuery().nativeP2OrNull();
-        if (nativeP2BounceUsesPreUpdateSolidPosition
-                && nativeP2 != null && nativeP2.getYSpeed() >= 0) {
-            nativeP2BounceUsesPreUpdateSolidPosition = false;
-        }
+    public void update(int vIntRunCount, PlayableEntity player) {
+        diagnosticCurrentVIntRunCount = vIntRunCount;
+        // The saved x_pos passed to SolidObjectFull belongs only to this
+        // object's current dispatch. A P2 rebound below may arm the folded
+        // post-update solid checkpoint again for this frame; it must not leak
+        // into the next dispatch while P2 is still travelling upward.
+        nativeP2BounceUsesPreUpdateSolidPosition = false;
         resetTraceFrameFlags();
         // Arena collision seam is still driven by forceArenaCollisionForTest —
         // run it before the state machine so the Task-7 contract (attachBossForTest
@@ -663,7 +663,7 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
         if ("none".equals(diagnosticLastMainBranch) || "main_free".equals(diagnosticLastMainBranch)) {
             return;
         }
-        diagnosticBranchHistoryFrame[diagnosticBranchHistoryCursor] = diagnosticCurrentFrameCounter;
+        diagnosticBranchHistoryFrame[diagnosticBranchHistoryCursor] = diagnosticCurrentVIntRunCount;
         diagnosticBranchHistoryX[diagnosticBranchHistoryCursor] = motion.x;
         diagnosticBranchHistoryY[diagnosticBranchHistoryCursor] = motion.y;
         diagnosticBranchHistoryXVel[diagnosticBranchHistoryCursor] = motion.xVel;
@@ -860,6 +860,16 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         return SOLID_PARAMS;
+    }
+
+    @Override
+    public int getTopLandingHalfWidth(PlayableEntity player, int collisionHalfWidth) {
+        // ROM Solid_Landed / loc_1E154 (sonic3k.asm:41611-41621) re-reads
+        // width_pixels(a0) for the landing X gate. ObjDat3_CNZMinibossTop sets
+        // width_pixels = $18 (sonic3k.asm:145662-145664) while
+        // Obj_CNZMinibossTopMain passes d1 = $13 (sonic3k.asm:145064-145068),
+        // so the default d1 - $B = $8 heuristic is $10px too narrow.
+        return 0x18;
     }
 
     @Override

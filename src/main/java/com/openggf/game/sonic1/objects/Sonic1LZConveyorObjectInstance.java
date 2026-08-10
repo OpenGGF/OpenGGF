@@ -303,13 +303,13 @@ public class Sonic1LZConveyorObjectInstance extends AbstractObjectInstance
         return y;
     }
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ensureInitialized();
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (mode) {
             case SPAWNER -> updateSpawner();
-            case PLATFORM -> updatePlatform(frameCounter, player);
-            case WHEEL -> updateWheel(frameCounter);
+            case PLATFORM -> updatePlatform(vIntRunCount, player);
+            case WHEEL -> updateWheel(vIntRunCount);
         }
     }
 
@@ -420,8 +420,15 @@ public class Sonic1LZConveyorObjectInstance extends AbstractObjectInstance
             return false;
         }
         if (mode == Mode.WHEEL) {
-            // Wheel uses RememberState: always persistent
-            return true;
+            // ROM LCon_Wheel ends with bra.w RememberState
+            // (docs/s1disasm/_incObj/63 LZ Conveyor.asm:213-215). RememberState
+            // still DELETES the sprite once it leaves the out_of_range window and
+            // only preserves the placement's respawn flag — the SST slot frees.
+            // Treating it as always-persistent kept every wheel alive (and its
+            // dynamic slot pinned) through the end of the act, pushing the LZ3
+            // capsule animals above the released-game Pri_EndAct slot-63 scan
+            // ceiling. Fall through to the standard remembered-object culling.
+            return false;
         }
         if (mode == Mode.SPAWNER) {
             // Spawner is transient - only needs one frame to spawn children
@@ -595,7 +602,7 @@ public class Sonic1LZConveyorObjectInstance extends AbstractObjectInstance
      * loc_124C2 (routine 4): ExitPlatform + sub_12502 + MvSonicOnPtfm2
      * </pre>
      */
-    private void updatePlatform(int frameCounter, AbstractPlayableSprite player) {
+    private void updatePlatform(int vIntRunCount, AbstractPlayableSprite player) {
         // Check for player standing (transitions between routine 2 and 4)
         boolean playerRiding = isPlayerRiding();
         if (playerRiding) {
@@ -736,9 +743,9 @@ public class Sonic1LZConveyorObjectInstance extends AbstractObjectInstance
      *   andi.b  #3,obFrame(a0)         ; wrap to 0-3
      * </pre>
      */
-    private void updateWheel(int frameCounter) {
+    private void updateWheel(int vIntRunCount) {
         // Every 4th frame: advance animation
-        if ((frameCounter & WHEEL_ANIM_FRAME_MASK) == 0) {
+        if ((vIntRunCount & WHEEL_ANIM_FRAME_MASK) == 0) {
             int step = 1;
             if (services().gameService(Sonic1ConveyorState.class).isReversed()) {
                 step = -1;

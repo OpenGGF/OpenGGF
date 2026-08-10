@@ -79,7 +79,7 @@ public final class BlasterProjectileObjectInstance extends AbstractObjectInstanc
         return new BlasterProjectileObjectInstance(spawn, owner, false, x, y, right ? -0x100 : 0x100, -0x200);
     }
 
-    @Override public void update(int frameCounter, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         if (!initialized) initialized = true;
         xFixed += xVelocity << 8;
         yFixed += yVelocity << 8;

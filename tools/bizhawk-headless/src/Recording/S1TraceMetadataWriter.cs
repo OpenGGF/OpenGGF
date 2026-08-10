@@ -80,16 +80,15 @@ namespace OpenGGF.BizHawk.Headless
                 .Append(Hex8(rngSeed)).Append("\",\n");
             json.Append("  \"recording_date\": \"")
                 .Append(recordingDate).Append("\",\n");
-            json.Append("  \"lua_script_version\": \"3.5\",\n");
-            json.Append("  \"trace_schema\": ")
-                .Append(loadQueueState ? "5" : "4").Append(",\n");
-            json.Append("  \"csv_version\": 7,\n");
+            TraceContract.AppendNativeEnvelope(json);
             json.Append("  \"aux_schema_extras\": [\"s1_obj64_state_per_frame\"");
             if (loadQueueState)
             {
                 json.Append(", \"load_queue_state_per_frame\"");
                 json.Append(
-                    ", \"dynamic_art_transfer_state_per_frame_v1\"");
+                    ", \"").Append(
+                        TraceContract.DynamicArtTransferStatePerFrame)
+                    .Append("\"");
             }
             json.Append("],\n");
             json.Append("  \"rom_checksum\": \"\",\n");

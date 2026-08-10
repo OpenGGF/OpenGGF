@@ -18,6 +18,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.util.function.BooleanSupplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -198,9 +199,8 @@ class TestIczSnowboardArtLoader {
                 .withZoneAndAct(ZONE_ICZ, ACT_1)
                 .build();
 
-        while (!"BOARD_LAUNCH".equals(snowboardIntro().stateNameForTest())) {
-            fixture.stepFrame(false, false, false, false, false);
-        }
+        advanceUntil(fixture, () -> "BOARD_LAUNCH".equals(snowboardIntro().stateNameForTest()),
+                "Obj_LevelIntroICZ1 must reach BOARD_LAUNCH within a bounded number of frames");
 
         assertEquals(0x00C0, fixture.sprite().getCentreX(),
                 "ROM loc_39796 should first launch the board when Sonic reaches x=$00C0");
@@ -214,9 +214,8 @@ class TestIczSnowboardArtLoader {
                 .withZoneAndAct(ZONE_ICZ, ACT_1)
                 .build();
 
-        while (!"BOARD_LAUNCH".equals(snowboardIntro().stateNameForTest())) {
-            fixture.stepFrame(false, false, false, false, false);
-        }
+        advanceUntil(fixture, () -> "BOARD_LAUNCH".equals(snowboardIntro().stateNameForTest()),
+                "Obj_LevelIntroICZ1 must reach BOARD_LAUNCH within a bounded number of frames");
 
         assertTrue(fixture.sprite().getAir(),
                 "Sonic should still have Status_InAir when Obj_LevelIntroICZ1 applies the board bounce");
@@ -229,9 +228,8 @@ class TestIczSnowboardArtLoader {
                 .build();
         IczSnowboardIntroInstance intro = snowboardIntro();
 
-        while (!"WAIT_FOR_BOARD_JUMP".equals(intro.stateNameForTest())) {
-            fixture.stepFrame(false, false, false, false, false);
-        }
+        advanceUntil(fixture, () -> "WAIT_FOR_BOARD_JUMP".equals(intro.stateNameForTest()),
+                "Obj_LevelIntroICZ1 must reach WAIT_FOR_BOARD_JUMP within a bounded number of frames");
 
         fixture.sprite().setCentreX((short) IczSnowboardIntroInstance.INITIAL_SNOWBOARD_X);
         fixture.sprite().setCentreY((short) 0x0120);
@@ -249,9 +247,9 @@ class TestIczSnowboardArtLoader {
                 .build();
         IczSnowboardIntroInstance intro = snowboardIntro();
 
-        while (!intro.isSonicSnowboardOverlayActiveForTest() || fixture.sprite().getAir()) {
-            fixture.stepFrame(false, false, false, false, false);
-        }
+        advanceUntil(fixture,
+                () -> intro.isSonicSnowboardOverlayActiveForTest() && !fixture.sprite().getAir(),
+                "the snowboard overlay must hand off and land within a bounded number of frames");
         fixture.stepFrame(false, false, false, false, true);
 
         assertFalse(fixture.sprite().getAir(),
@@ -271,9 +269,9 @@ class TestIczSnowboardArtLoader {
                 .build();
         IczSnowboardIntroInstance intro = snowboardIntro();
 
-        while (!intro.isSonicSnowboardOverlayActiveForTest() || fixture.sprite().getAir()) {
-            fixture.stepFrame(false, false, false, false, false);
-        }
+        advanceUntil(fixture,
+                () -> intro.isSonicSnowboardOverlayActiveForTest() && !fixture.sprite().getAir(),
+                "the snowboard overlay must hand off and land within a bounded number of frames");
         queueAndConsumeSnowboardJump(fixture);
 
         assertEquals(6, intro.getCurrentMappingFrame(),
@@ -296,9 +294,9 @@ class TestIczSnowboardArtLoader {
                 .build();
         IczSnowboardIntroInstance intro = snowboardIntro();
 
-        while (!intro.isSonicSnowboardOverlayActiveForTest() || fixture.sprite().getAir()) {
-            fixture.stepFrame(false, false, false, false, false);
-        }
+        advanceUntil(fixture,
+                () -> intro.isSonicSnowboardOverlayActiveForTest() && !fixture.sprite().getAir(),
+                "the snowboard overlay must hand off and land within a bounded number of frames");
         queueAndConsumeSnowboardJump(fixture);
         fixture.sprite().setCentreY((short) (fixture.sprite().getCentreY() - 0x80));
         fixture.sprite().setYSpeed((short) -0x0200);
@@ -324,9 +322,8 @@ class TestIczSnowboardArtLoader {
                 .build();
         IczSnowboardIntroInstance intro = snowboardIntro();
 
-        while (!intro.isSonicSnowboardOverlayActiveForTest()) {
-            fixture.stepFrame(false, false, false, false, false);
-        }
+        advanceUntil(fixture, intro::isSonicSnowboardOverlayActiveForTest,
+                "the snowboard overlay must become active within a bounded number of frames");
 
         assertTrue(fixture.sprite().getAir(),
                 "The snowboard overlay handoff should happen while Sonic is still airborne");
@@ -344,9 +341,8 @@ class TestIczSnowboardArtLoader {
                 .build();
         IczSnowboardIntroInstance intro = snowboardIntro();
 
-        while (!intro.isSonicSnowboardOverlayActiveForTest()) {
-            fixture.stepFrame(false, false, false, false, false);
-        }
+        advanceUntil(fixture, intro::isSonicSnowboardOverlayActiveForTest,
+                "the snowboard overlay must become active within a bounded number of frames");
         fixture.sprite().setCentreX((short) 0x3880);
         fixture.sprite().setXSpeed((short) 0x0400);
         fixture.stepFrame(false, false, false, false, false);
@@ -406,4 +402,18 @@ class TestIczSnowboardArtLoader {
             }
         }
     }
+
+    /**
+     * Pumps frames until {@code condition} holds. Bounded so an intro sequence that
+     * stops advancing fails fast instead of spinning the fork forever.
+     */
+    private static void advanceUntil(
+            HeadlessTestFixture fixture, BooleanSupplier condition, String description) {
+        int frames = 0;
+        while (!condition.getAsBoolean()) {
+            assertTrue(frames++ < 4096, description);
+            fixture.stepFrame(false, false, false, false, false);
+        }
+    }
+
 }

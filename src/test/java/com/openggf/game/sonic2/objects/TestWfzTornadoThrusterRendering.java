@@ -146,6 +146,9 @@ class TestWfzTornadoThrusterRendering {
         // LoadChildObject sequence. The child is then discovered in the live manager.
         setField(parent, "leaderWaitCounter", 0x3F);
         objectManager.update(GameServices.camera().getX(), player, List.of(), 0, false);
+        // ObjB2's first own entry is init-only; the WFZ ending routine creates
+        // its $5C child on the following Process_Sprites pass.
+        objectManager.update(GameServices.camera().getX(), player, List.of(), 1, false);
 
         TornadoObjectInstance child = findLiveTornadoSubtype(SUBTYPE_THRUSTER);
         assertNotNull(child, "the real WFZ ending parent must spawn its $5C child");

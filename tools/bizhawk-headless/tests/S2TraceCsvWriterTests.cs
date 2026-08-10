@@ -8,11 +8,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
         public static void Register(ICollection<TestMain.TestCase> tests)
         {
             tests.Add(new TestMain.TestCase(
-                "S2TraceCsvWriter header matches canonical fixture header",
-                HeaderMatchesCanonicalFixtureHeader));
+                "S2TraceCsvWriter emits the current header contract",
+                HeaderMatchesCurrentContract));
             tests.Add(new TestMain.TestCase(
-                "S2TraceCsvWriter reproduces ehz1_fullrun fixture row 0",
-                ReproducesEhz1FullrunFixtureRowZero));
+                "S2TraceCsvWriter emits the current EHZ1 row-zero contract",
+                EmitsEhz1RowZeroContract));
             tests.Add(new TestMain.TestCase(
                 "S2TraceCsvWriter renders absent sidekick as constant zero block",
                 RendersAbsentSidekickAsConstantZeroBlock));
@@ -55,7 +55,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             return host;
         }
 
-        private static void HeaderMatchesCanonicalFixtureHeader()
+        private static void HeaderMatchesCurrentContract()
         {
             // LITERAL header line of
             // src/test/resources/traces/s2/ehz1_fullrun/physics.csv
@@ -76,7 +76,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 S2TraceCsvWriter.Header);
         }
 
-        private static void ReproducesEhz1FullrunFixtureRowZero()
+        private static void EmitsEhz1RowZeroContract()
         {
             RamBackedHost host = BuildEhz1RowZeroHost();
 

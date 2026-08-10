@@ -875,7 +875,8 @@ public class TestRingManager {
                 ringRules.ringFloorCheckMask(),
                 ringRules.ringFloorCheckCounterPhase(),
                 ringRules.ringFloorProbeRequiresRenderFlag(),
-                ringRules.lostRingRenderVerticalMargin(),
+                ringRules.lostRingBoundaryChecksOnlyOnProbeCadence(),
+                ringRules.lostRingRenderYMargin(),
                 ringCollisionHalfSize,
                 ringCollisionHalfSize,
                 ringRules.stageRingsUseObjectTouchCollection(),
@@ -1010,4 +1011,3 @@ public class TestRingManager {
         }
     }
 }
-

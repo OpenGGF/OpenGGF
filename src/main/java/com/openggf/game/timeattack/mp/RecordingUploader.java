@@ -22,7 +22,12 @@ public final class RecordingUploader implements AutoCloseable {
 
     private final String sessionToken;
     private final ExecutorService executor;
-    private final HttpClient client;
+    private final UploadTransport transport;
+
+    @FunctionalInterface
+    interface UploadTransport {
+        int send(HttpRequest request, byte[] body) throws Exception;
+    }
 
     public RecordingUploader(String sessionToken, boolean trustInsecure) {
         this.sessionToken = Objects.requireNonNull(sessionToken, "sessionToken");
@@ -36,7 +41,19 @@ public final class RecordingUploader implements AutoCloseable {
         if (trustInsecure) {
             builder.sslContext(insecureSslContext());
         }
-        client = builder.build();
+        HttpClient client = builder.build();
+        transport = (request, body) -> client.send(request,
+                HttpResponse.BodyHandlers.discarding()).statusCode();
+    }
+
+    RecordingUploader(String sessionToken, UploadTransport transport) {
+        this.sessionToken = Objects.requireNonNull(sessionToken, "sessionToken");
+        this.transport = Objects.requireNonNull(transport, "transport");
+        executor = Executors.newSingleThreadExecutor(runnable -> {
+            Thread thread = new Thread(runnable, "recording-uploader");
+            thread.setDaemon(true);
+            return thread;
+        });
     }
 
     public void upload(String uploadUrl, byte[] recording, Consumer<Boolean> onDone) {
@@ -127,8 +144,7 @@ public final class RecordingUploader implements AutoCloseable {
                     .header("Content-Type", "application/octet-stream")
                     .PUT(HttpRequest.BodyPublishers.ofByteArray(recording))
                     .build();
-            int status = client.send(request,
-                    HttpResponse.BodyHandlers.discarding()).statusCode();
+            int status = transport.send(request, recording);
             return status / 100 == 2;
         } catch (Exception failure) {
             if (failure instanceof InterruptedException) {

@@ -5,6 +5,7 @@ import com.openggf.graphics.PixelFont;
 import com.openggf.trace.catalog.TraceEntry;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_END;
@@ -29,6 +30,9 @@ public final class TestModeTracePicker {
     private int cursor;
     private int firstVisible;
     private Result pendingResult = Result.NONE;
+    private TraceEntry loadingEntry;
+    private boolean loadingPresented;
+    private boolean launchIssued;
 
     public TestModeTracePicker(List<TraceEntry> entries, PixelFont font) {
         this.entries = entries;
@@ -36,6 +40,17 @@ public final class TestModeTracePicker {
     }
 
     public void update(InputHandler input) {
+        if (hasHeldFailure()) {
+            updateHeldFailure(input);
+            return;
+        }
+        if (loadingEntry != null) {
+            if (loadingPresented && !launchIssued) {
+                launchIssued = true;
+                pendingResult = Result.LAUNCH;
+            }
+            return;
+        }
         if (entries.isEmpty()) {
             if (input.isKeyPressedWithoutModifiers(GLFW_KEY_ESCAPE)) {
                 pendingResult = Result.BACK;
@@ -64,10 +79,46 @@ public final class TestModeTracePicker {
         // so the selected entry is always within the visible viewport.
         firstVisible = computeFirstVisible(firstVisible, cursor);
         if (input.isKeyPressedWithoutModifiers(GLFW_KEY_ENTER)) {
-            pendingResult = Result.LAUNCH;
+            loadingEntry = entries.get(cursor);
+            loadingPresented = false;
+            launchIssued = false;
         }
         if (input.isKeyPressedWithoutModifiers(GLFW_KEY_ESCAPE)) {
             pendingResult = Result.BACK;
+        }
+    }
+
+    private void updateHeldFailure(InputHandler input) {
+        if (input.isKeyPressedWithoutModifiers(GLFW_KEY_ENTER)
+                || input.isKeyPressedWithoutModifiers(GLFW_KEY_ESCAPE)) {
+            clearHeldFailure();
+            return;
+        }
+        if (entries.isEmpty()) {
+            return;
+        }
+        int previousCursor = cursor;
+        if (input.isKeyPressedWithoutModifiers(GLFW_KEY_DOWN)) {
+            cursor = Math.min(entries.size() - 1, cursor + 1);
+        }
+        if (input.isKeyPressedWithoutModifiers(GLFW_KEY_UP)) {
+            cursor = Math.max(0, cursor - 1);
+        }
+        if (input.isKeyPressedWithoutModifiers(GLFW_KEY_HOME)) {
+            cursor = 0;
+        }
+        if (input.isKeyPressedWithoutModifiers(GLFW_KEY_END)) {
+            cursor = entries.size() - 1;
+        }
+        if (input.isKeyPressedWithoutModifiers(GLFW_KEY_PAGE_DOWN)) {
+            cursor = nextGroupStart(cursor);
+        }
+        if (input.isKeyPressedWithoutModifiers(GLFW_KEY_PAGE_UP)) {
+            cursor = prevGroupStart(cursor);
+        }
+        firstVisible = computeFirstVisible(firstVisible, cursor);
+        if (cursor != previousCursor) {
+            clearHeldFailure();
         }
     }
 
@@ -80,11 +131,29 @@ public final class TestModeTracePicker {
     // virtual screen. Entries are windowed so the list never spills into it.
     private static final int LIST_TOP = 18;
     private static final int LIST_AREA_BOTTOM = 184;
+    private static final int FAILURE_MAX_CHARS = 68;
 
     public void render() {
         // Entire screen is pure text on the font atlas — mega-batch into one GL draw.
         font.beginMegaBatch();
         try {
+            Optional<TraceRunFailureStatus.Failure> failure =
+                    TraceRunFailureStatus.current();
+            if (failure.isPresent()) {
+                renderFailure(failure.get());
+                return;
+            }
+            Optional<TraceLaunchStatus.Failure> launchFailure =
+                    TraceLaunchStatus.current();
+            if (launchFailure.isPresent()) {
+                renderLaunchFailure(launchFailure.get());
+                return;
+            }
+            if (loadingEntry != null) {
+                renderLoading();
+                loadingPresented = true;
+                return;
+            }
             if (entries.isEmpty()) {
                 font.drawText("TRACE TEST MODE", 8, 6, SCALE, 1f, 1f, 1f, 1f);
                 font.drawText("No traces found.", 8, 24, SCALE, 1f, 0.5f, 0.5f, 1f);
@@ -122,7 +191,9 @@ public final class TestModeTracePicker {
                 boolean selected = (i == cursor);
                 float brightness = selected ? 1.0f : 0.6f;
                 String prefix = selected ? ">" : " ";
-                String line = prefix + " " + e.dir().getFileName();
+                String line = prefix + " " + (e.isRun()
+                        ? e.displayLabel()
+                        : e.dir().getFileName());
                 font.drawText(line, 12, y, SCALE, brightness, brightness, brightness, 1f);
                 y += LINE_HEIGHT;
             }
@@ -135,6 +206,74 @@ public final class TestModeTracePicker {
         } finally {
             font.endMegaBatch();
         }
+    }
+
+    private void renderFailure(TraceRunFailureStatus.Failure failure) {
+        int y = 28;
+        font.drawText("TRACE FAILED", 8, y, SCALE, 1f, 0.35f, 0.35f, 1f);
+        y += 16;
+        font.drawText("Segment: " + failure.segmentIndex(), 8, y, SCALE,
+                1f, 1f, 1f, 1f);
+        y += LINE_HEIGHT;
+        if (failure.isComparison()) {
+            y = drawFailureText("Expected: " + failure.expectedIdentity(), y);
+            y = drawFailureText("Actual: " + failure.actualIdentity(), y);
+        } else {
+            y = drawFailureText("Reason: " + failure.reason(), y);
+        }
+        font.drawText("Cursor: " + failure.cursor() + "   Steps: " + failure.stepCount(),
+                8, y, SCALE, 0.9f, 0.9f, 0.9f, 1f);
+        y += 18;
+        font.drawText("ENTER/ESC to acknowledge", 8, y, SCALE,
+                1f, 1f, 0.6f, 1f);
+        y += LINE_HEIGHT;
+        if (!entries.isEmpty()) {
+            font.drawText("Move selection to dismiss", 8, y, SCALE,
+                    0.7f, 0.7f, 0.7f, 1f);
+        }
+    }
+
+    private void renderLaunchFailure(TraceLaunchStatus.Failure failure) {
+        int y = 28;
+        font.drawText("TRACE LAUNCH FAILED", 8, y, SCALE,
+                1f, 0.35f, 0.35f, 1f);
+        y += 16;
+        y = drawFailureText("Trace: " + failure.traceLabel(), y);
+        y = drawFailureText("Reason: " + failure.reason(), y);
+        y += 12;
+        font.drawText("ENTER/ESC to acknowledge", 8, y, SCALE,
+                1f, 1f, 0.6f, 1f);
+    }
+
+    private void renderLoading() {
+        font.drawText("LOADING TRACE...", 8, 80, SCALE,
+                1f, 1f, 0.6f, 1f);
+        font.drawText(TraceLaunchStatus.catalogLabel(loadingEntry), 8, 94, SCALE,
+                1f, 1f, 1f, 1f);
+        font.drawText("Parsing replay data", 8, 108, SCALE,
+                0.75f, 0.75f, 0.75f, 1f);
+    }
+
+    private static boolean hasHeldFailure() {
+        return TraceRunFailureStatus.current().isPresent()
+                || TraceLaunchStatus.current().isPresent();
+    }
+
+    private static void clearHeldFailure() {
+        TraceRunFailureStatus.clear();
+        TraceLaunchStatus.clear();
+    }
+
+    private int drawFailureText(String text, int y) {
+        int offset = 0;
+        while (offset < text.length()) {
+            int end = Math.min(text.length(), offset + FAILURE_MAX_CHARS);
+            font.drawText(text.substring(offset, end), 8, y, SCALE,
+                    0.9f, 0.9f, 0.9f, 1f);
+            offset = end;
+            y += LINE_HEIGHT;
+        }
+        return y;
     }
 
     /**
@@ -188,7 +327,7 @@ public final class TestModeTracePicker {
 
     private void renderInfoPanel(TraceEntry e) {
         int y = 192;
-        font.drawText("SELECTED: " + e.gameId() + "/" + e.dir().getFileName(),
+        font.drawText("SELECTED: " + TraceLaunchStatus.catalogLabel(e),
                 4, y, SCALE, 1f, 1f, 1f, 1f);
         y += LINE_HEIGHT;
         font.drawText(String.format("%s   Frames: %d   BK2 offset: %d",
@@ -265,6 +404,15 @@ public final class TestModeTracePicker {
     }
 
     public TraceEntry selectedEntry() {
-        return cursor < entries.size() ? entries.get(cursor) : null;
+        return loadingEntry != null
+                ? loadingEntry
+                : cursor < entries.size() ? entries.get(cursor) : null;
+    }
+
+    /** Returns the picker to its selected entry after a synchronous launch failure. */
+    public void launchFailed() {
+        loadingEntry = null;
+        loadingPresented = false;
+        launchIssued = false;
     }
 }

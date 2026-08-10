@@ -73,7 +73,7 @@ public final class Flybot767BadnikInstance extends AbstractS3kBadnikInstance imp
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         publishedTouchResponseListEntryThisFrame = false;
         if (isDestroyed()) {
             return;

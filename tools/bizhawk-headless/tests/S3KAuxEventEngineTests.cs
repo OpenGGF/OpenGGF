@@ -100,11 +100,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
         public static void Register(List<TestMain.TestCase> tests)
         {
             tests.Add(new TestMain.TestCase(
-                "S3K aux: cpu_state_snapshot matches the CNZ fixture literal",
-                CpuStateSnapshotMatchesFixture));
+                "S3K aux: cpu_state_snapshot asserts the current CNZ contract",
+                CpuStateSnapshotMatchesCurrentContract));
             tests.Add(new TestMain.TestCase(
                 "S3K aux: object_state_snapshot emits the CNZ balloon literal for balloon slots only",
-                ObjectStateSnapshotMatchesFixture));
+                ObjectStateSnapshotMatchesCurrentContract));
             tests.Add(new TestMain.TestCase(
                 "S3K aux: zone_act_state baseline and gameplay_start match CNZ literals and dedup",
                 ZoneActStateAndGameplayStart));
@@ -131,10 +131,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 RoutineChangeWithStandContext));
             tests.Add(new TestMain.TestCase(
                 "S3K aux: cpu_state matches the CNZ frame-0 literal",
-                CpuStateMatchesFixture));
+                CpuStateMatchesCurrentContract));
             tests.Add(new TestMain.TestCase(
                 "S3K aux: oscillation_state matches the CNZ frame-0 literal",
-                OscillationStateMatchesFixture));
+                OscillationStateMatchesCurrentContract));
             tests.Add(new TestMain.TestCase(
                 "S3K aux: control_lock_state baseline literal, change suppression, 60-frame force",
                 ControlLockState));
@@ -172,14 +172,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S3K aux: aiz_handoff_terrain_state emits the hook-less skeleton literal in-window",
                 AizHandoffTerrainState));
             tests.Add(new TestMain.TestCase(
-                "S3K aux: scan_objects appeared/near/removed/slot_dump match fixture literals",
+                "S3K aux: scan_objects asserts the current lifecycle contract",
                 ScanObjectsLiterals));
             tests.Add(new TestMain.TestCase(
-                "S3K aux: frame-0 emission order matches the CNZ fixture event sequence",
+                "S3K aux: frame-0 emission order asserts the current CNZ contract",
                 Frame0EmissionOrder));
         }
 
-        private static void CpuStateSnapshotMatchesFixture()
+        private static void CpuStateSnapshotMatchesCurrentContract()
         {
             var host = NewHost();
             host.SetU16(0xF708, 12);
@@ -196,7 +196,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 lines[0]);
         }
 
-        private static void ObjectStateSnapshotMatchesFixture()
+        private static void ObjectStateSnapshotMatchesCurrentContract()
         {
             var host = NewHost();
             host.SetU16(0xF708, 12);
@@ -415,7 +415,15 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 + "\"status_byte\":\"0x02\",\"routine\":\"0x02\","
                 + "\"y_radius\":19,\"x_radius\":9,\"on_object\":false,"
                 + "\"pushing\":false,\"underwater\":false,"
-                + "\"roll_jumping\":false}";
+                + "\"roll_jumping\":false,"
+                // Collision-plane diagnostic context. StageCnzFrame0 stages
+                // only the fields this case asserts, so the five new sources
+                // read zero from the synthetic host; ROM-plausibility of the
+                // real values is covered by the ROM-backed gates.
+                + "\"top_solid_bit\":\"0x00\",\"lrb_solid_bit\":\"0x00\","
+                + "\"stick_to_convex\":\"0x00\","
+                + "\"primary_collision_addr\":\"0x00000000\","
+                + "\"secondary_collision_addr\":\"0x00000000\"}";
             AssertEx.Equal(expectedSnapshot, snapshots[0]);
             AssertEx.Equal(expectedSnapshot, snapshots[1]);
 
@@ -478,7 +486,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(1, Of(lines, "state_snapshot").Count);
         }
 
-        private static void CpuStateMatchesFixture()
+        private static void CpuStateMatchesCurrentContract()
         {
             var host = NewHost();
             StageCnzFrame0(host);
@@ -497,7 +505,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 lines[0]);
         }
 
-        private static void OscillationStateMatchesFixture()
+        private static void OscillationStateMatchesCurrentContract()
         {
             var host = NewHost();
             StageCnzFrame0(host);

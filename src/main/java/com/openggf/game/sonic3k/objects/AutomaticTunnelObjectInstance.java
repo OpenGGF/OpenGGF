@@ -298,7 +298,7 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         // ROM: loc_295E8 — process both players independently
         AbstractPlayableSprite player1 = (AbstractPlayableSprite) playerEntity;
         if (player1 != null) {
@@ -407,7 +407,6 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
 
         // ROM: move.b #$81,object_control(a1)
         ObjectControlState.nativeBit7FullControl().applyTo(player);
-        player.setControlLocked(true);
         state.controlGeneration = player.getObjectControlGeneration();
 
         // ROM: move.b #2,anim(a1)
@@ -719,7 +718,6 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
     private void releasePlayer(AbstractPlayableSprite player, CharState state) {
         if (state.phase != 0 && ownsTunnelControl(player, state)) {
             ObjectControlState.none().applyTo(player);
-            player.setControlLocked(false);
         }
         state.reset();
     }
@@ -728,7 +726,6 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
         return player.isObjectControlled()
                 && player.isObjectControlSuppressesMovement()
                 && !player.isObjectControlAllowsCpu()
-                && player.isControlLocked()
                 && player.getObjectControlGeneration() == state.controlGeneration;
     }
 

@@ -41,7 +41,7 @@ public final class CnzMinibossCoilInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (boss != null && boss.isDefeatedForChild()) {
             setDestroyed(true);
             return;
@@ -67,6 +67,15 @@ public final class CnzMinibossCoilInstance extends AbstractObjectInstance
     @Override
     public int getCollisionProperty() {
         return boss != null && boss.isOpenForTopHit() ? 0 : CLOSED_COLLISION_PROPERTY;
+    }
+
+    @Override
+    public boolean usesCurrentTouchResponseState() {
+        // Both coil routines refresh the child position before tail-calling
+        // Add_SpriteToCollisionResponseList. The next player-slot Touch_Loop
+        // dereferences that live SST position, not the snapshot from before the
+        // preceding object pass (sonic3k.asm:145287-145340).
+        return true;
     }
 
     @Override

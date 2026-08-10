@@ -169,9 +169,12 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
     /** True once debris children have been spawned. */
     private boolean debrisSpawned;
     private boolean targetsNativeP2;
+    /** Native loc_6B7BC/loc_6B7D2 dispatches before the shake routine starts. */
+    private int initialRoutineDispatchesRemaining;
     private S3kKosModuleQueue artQueue;
     private HardwareWorkHandle artHandle;
     private long artOrdinal = -1;
+    private boolean artLoaded;
 
     /** ROM root object uses priority $280. */
     private static final int GEYSER_PRIORITY_BUCKET = 5;
@@ -200,6 +203,7 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
         this.geyserX    = spawnX;
         this.geyserY    = spawnY;
         this.targetsNativeP2 = targetsNativeP2;
+        this.initialRoutineDispatchesRemaining = targetsNativeP2 ? 0 : 2;
         this.phase = setupDelay > 0 ? PHASE_SETUP_DELAY : PHASE_SHAKE;
         this.timer = setupDelay > 0 ? setupDelay : SHAKE_DURATION;
         this.rumbleTimer = 0;
@@ -217,8 +221,12 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
     // =========================================================================
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         serviceQueuedArt();
+        if (initialRoutineDispatchesRemaining > 0) {
+            initialRoutineDispatchesRemaining--;
+            return;
+        }
         AbstractPlayableSprite player = resolveTargetPlayer(playerEntity);
 
         switch (phase) {
@@ -232,7 +240,7 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
     }
 
     private void serviceQueuedArt() {
-        if (targetsNativeP2) {
+        if (targetsNativeP2 || artLoaded) {
             return;
         }
         rebindArtAfterRestore();
@@ -251,6 +259,7 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
                 artHandle = null;
                 artQueue = null;
                 artOrdinal = -1;
+                artLoaded = true;
             }
         } catch (Exception e) {
             throw new IllegalStateException(
@@ -463,11 +472,9 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
             setDestroyed(true);
 
             // loc_6B8C8 enters StartNewLevel without restoring object_control;
-            // the carried position/control state survives this dispatch. ROM
-            // exits before publishing another camera-scroll step; the engine's
-            // camera phase precedes objects, so restore that pre-dispatch Y.
-            var camera = services().camera();
-            camera.setY((short) (camera.getY() + GEYSER_RISE_SPEED));
+            // the carried position/control state survives this dispatch. The
+            // engine observes the transition before its camera step, so the
+            // level-frame executor already preserves the ROM's pre-dispatch Y.
             // The post-results fade is still active here.  Start MGZ1 after
             // its level load, rather than letting that source-zone fade mute
             // the destination's ordinary level-start command.
@@ -606,7 +613,7 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (isDestroyed()) return;
 
             switch (state) {

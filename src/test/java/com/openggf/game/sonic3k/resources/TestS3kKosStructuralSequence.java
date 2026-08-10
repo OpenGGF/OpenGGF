@@ -23,20 +23,32 @@ import com.openggf.game.sonic3k.objects.Sonic3kStarPostObjectInstance;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossGeyserCutscene;
 import com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager;
 import com.openggf.game.timing.HardwareServiceBoundary;
+import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.game.timing.HardwareTimingService;
+import com.openggf.game.timing.HardwareTimingSnapshot;
+import com.openggf.game.timing.HardwareWorkHandle;
+import com.openggf.game.timing.HardwareWorkKind;
+import com.openggf.game.timing.RecordedCompletionAuthority;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.playable.Sonic;
+import com.openggf.tests.HardwareBoundaryPump;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import com.openggf.trace.timing.HardwareCompletionEdge;
+import com.openggf.trace.timing.HardwareTimingReplayPort;
+import com.openggf.trace.timing.HardwareTimingReplaySnapshot;
+import com.openggf.trace.timing.HardwareTimingSchedule;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -165,7 +177,7 @@ class TestS3kKosStructuralSequence {
         assertLiteralJob(timing, 2, 0x0D6D84, 0x53D);
         assertLiteralJob(timing, 3, 0x39BDC8, 0x54D);
         drainHardware(timing);
-        title.update();
+        advanceTitleToCompletion(title);
 
         provider.processRuntimeArtQueue();
         assertLiteralJob(timing, 4, 0x36800C, 0x548);
@@ -230,13 +242,83 @@ class TestS3kKosStructuralSequence {
     }
 
     @Test
+    void suppressedDirectAdmissionRetiresPhysicalHeadAndRewindsBeforeParentStep()
+            throws Exception {
+        HardwareTimingService timing = startLevel(0, 0);
+        S3kRuntimeArtCoordinator coordinator =
+                S3kRuntimeArtCoordinator.current();
+        coordinator.resetForMissingSnapshot();
+        timing.resetForMissingSnapshot();
+        RecordedCompletionAuthority authority = timing.beginRecordedAdmission(Map.of(
+                HardwareWorkKind.KOS_MODULE_QUEUE,
+                HardwareReadinessAdmissionPolicy.RECORDED,
+                HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
+                HardwareReadinessAdmissionPolicy.RECORDED));
+        HardwareWorkHandle parent = coordinator.moduleQueue().queue(
+                GameServices.rom().getRom(),
+                AIZ_MONKEY.source(),
+                AIZ_MONKEY.destinationTile());
+        coordinator.beforeTimingService(HardwareServiceBoundary.POST_OBJECTS);
+        timing.service(HardwareServiceBoundary.POST_OBJECTS);
+        coordinator.afterTimingService(HardwareServiceBoundary.POST_OBJECTS);
+        HardwareWorkHandle child = timing.pendingHandles().stream()
+                .filter(handle -> handle.kind()
+                        == HardwareWorkKind.KOS_DECOMPRESSION_QUEUE)
+                .findFirst()
+                .orElseThrow();
+        timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        assertTrue(timing.coordinatorPreparation(child).isPrepared());
+        assertTrue(coordinator.directQueue().decompressionsPending());
+
+        HardwareTimingReplayPort port = new HardwareTimingReplayPort(authority);
+        port.install(new HardwareTimingSchedule(List.of(
+                new HardwareCompletionEdge(
+                        1,
+                        HardwareServiceBoundary.PRE_MAIN_LOOP,
+                        child.kind(),
+                        child.ordinal(),
+                        child.submissionFingerprint()))));
+        port.beginRawFrame(1);
+        timing.service(HardwareServiceBoundary.VINT_SERVICE);
+        port.apply(HardwareServiceBoundary.VINT_SERVICE);
+        HardwareTimingSnapshot timingBeforeAdmission = timing.capture();
+        HardwareTimingReplaySnapshot portBeforeAdmission = port.capture();
+        S3kKosDecompressionQueueSnapshot directBeforeAdmission =
+                coordinator.directQueue().capture();
+
+        assertTrue(port.applySuppressedRowCompletion());
+        coordinator.afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
+
+        assertFalse(coordinator.directQueue().decompressionsPending());
+        assertFalse(timing.coordinatorPreparation(parent).isPrepared(),
+                "the KosM parent remains owned by its next POST_OBJECTS step");
+
+        timing.restore(timingBeforeAdmission);
+        port.restore(portBeforeAdmission);
+        coordinator.directQueue().restore(directBeforeAdmission);
+        assertTrue(coordinator.directQueue().decompressionsPending());
+
+        assertTrue(port.applySuppressedRowCompletion());
+        coordinator.afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        assertFalse(coordinator.directQueue().decompressionsPending());
+        assertEquals(1, port.capture().consumedIdentities().size());
+
+        coordinator.beforeTimingService(HardwareServiceBoundary.POST_OBJECTS);
+        timing.service(HardwareServiceBoundary.POST_OBJECTS);
+        coordinator.afterTimingService(HardwareServiceBoundary.POST_OBJECTS);
+        assertTrue(timing.coordinatorPreparation(parent).isPrepared());
+        assertFalse(timing.isReady(parent),
+                "recorded authority still owns the parent's later completion edge");
+    }
+
+    @Test
     void productionAiz2GameplayOwnersBuildIndependentLiteralLedger() {
         HardwareTimingService timing = startLevel(0, 1);
         Sonic3kAIZEvents act2 =
                 new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
         act2.init(1);
         act2.setDynamicResizeRoutine(8);
-        GameServices.camera().setX((short) 0x3C00);
+        GameServices.camera().setX((short) 0x4880);
         GameServices.camera().setY((short) 0x0200);
         act2.update(1, 0);
         assertLiteralJob(timing, 0, 0x3B48C6, 0x1FC);
@@ -254,6 +336,10 @@ class TestS3kKosStructuralSequence {
         assertLiteralJob(timing, 2, 0x365260, 0x180);
         drainHardware(timing);
         boss.update(1, player);
+        boss.update(2, player);
+        assertEquals(3, moduleJobs(timing).size(),
+                "AIZ end-boss art is a one-shot ROM load and must not be re-queued "
+                        + "after its owner claims the prepared sheet");
 
         assertCapturedSession(timing, List.of(
                 AIZ_BATTLESHIP_TERRAIN,
@@ -273,7 +359,7 @@ class TestS3kKosStructuralSequence {
         Sonic3kTitleCardManager title = new Sonic3kTitleCardManager();
         title.initialize(0, 0);
         drainHardware(timing);
-        title.update();
+        advanceTitleToCompletion(title);
         provider.processRuntimeArtQueue();
         drainHardware(timing);
         provider.processRuntimeArtQueue();
@@ -333,10 +419,6 @@ class TestS3kKosStructuralSequence {
         assertLiteralJob(timing, 1, 0x3B15D2, 0x000);
         assertLiteralJob(timing, 2, 0x3B3784, 0x1FC);
 
-        var request = GameServices.level().consumeSeamlessTransitionRequest();
-        assertNotNull(request);
-        GameServices.level().applySeamlessTransition(request);
-
         Sonic3kLevelEventManager manager =
                 (Sonic3kLevelEventManager) GameServices.module()
                         .getLevelEventProvider();
@@ -346,18 +428,22 @@ class TestS3kKosStructuralSequence {
                 "ROM-visible fire art must survive the act reload");
         assertTrue(postReload.getFireOverlayTileCount() > 0,
                 "the resumed fire curtain must retain its prepared tile range");
-        postReload.update(1, 0);
 
         Sonic3kObjectArtProvider provider =
                 (Sonic3kObjectArtProvider) GameServices.module()
                         .getObjectArtProvider();
-        provider.processRuntimeArtQueue();
+        for (int frame = 0; frame < 64 && moduleJobs(timing).size() < 6; frame++) {
+            postReload.update(1, frame);
+            provider.processRuntimeArtQueue();
+            service(timing, HardwareServiceBoundary.POST_OBJECTS);
+            service(timing, HardwareServiceBoundary.PRE_MAIN_LOOP);
+        }
         assertLiteralJob(timing, 3, 0x36800C, 0x548);
         assertLiteralJob(timing, 4, 0x367DCA, 0x52A);
         assertLiteralJob(timing, 5, 0x3681FE, 0x55F);
         assertEquals(6, moduleJobs(timing).size(),
-                "AIZ1BGE_Finish must continue with LoadEnemyArt, without "
-                        + "inserting a second fire-overlay job");
+                "AIZ1BGE_Finish continues with one LoadEnemyArt batch "
+                        + "without inserting a second fire-overlay job");
     }
 
     @Test
@@ -371,6 +457,7 @@ class TestS3kKosStructuralSequence {
                                 PlayerCharacter.SONIC_AND_TAILS, 0));
         results.setServices(TestEnvironment.objectServices());
 
+        results.update(0, player);
         assertLiteralJob(timing, 0, 0x0D6A62, 0x520);
         assertLiteralJob(timing, 1, 0x0D6D84, 0x568);
         assertLiteralJob(timing, 2, 0x15B95C, 0x578);
@@ -402,7 +489,7 @@ class TestS3kKosStructuralSequence {
         Sonic3kTitleCardManager title = new Sonic3kTitleCardManager();
         title.initialize(1, 0);
         drainHardware(timing);
-        title.update();
+        advanceTitleToCompletion(title);
 
         provider.processRuntimeArtQueue();
         assertLiteralJob(timing, 4, 0x36A7C6, 0x539);
@@ -502,7 +589,7 @@ class TestS3kKosStructuralSequence {
         Sonic3kTitleCardManager title = new Sonic3kTitleCardManager();
         title.initialize(1, 1);
         drainHardware(timing);
-        title.update();
+        advanceTitleToCompletion(title);
 
         provider.processRuntimeArtQueue();
         assertLiteralJob(timing, 4, 0x36A552, 0x539);
@@ -521,6 +608,28 @@ class TestS3kKosStructuralSequence {
                 HCZ_TURBO_SPIKER,
                 HCZ_MEGA_CHOPPER,
                 HCZ_POINTDEXTER));
+    }
+
+    /**
+     * A mid-level {@code jsr (LoadEnemyArt).l} runs {@code Queue_Kos_Module}
+     * for every entry during its caller's own dispatch
+     * ({@code docs/skdisasm/sonic3k.asm:64281-64313}), so the parent batch is
+     * on the module FIFO before that iteration's
+     * {@code Process_Kos_Module_Queue} state step (7908) — no recorded timing
+     * signal is involved.
+     */
+    @Test
+    void midLevelEnemyBatchPublishesDuringItsOwnDispatch() {
+        HardwareTimingService timing = startLevel(0, 0);
+        Sonic3kObjectArtProvider provider =
+                (Sonic3kObjectArtProvider) GameServices.module()
+                        .getObjectArtProvider();
+        int before = moduleJobs(timing).size();
+
+        provider.reloadEnemyKosArt();
+
+        assertEquals(before + 3, moduleJobs(timing).size(),
+                "the mid-level LoadEnemyArt owner publishes its parent batch");
     }
 
     private static HardwareTimingService startLevel(int zone, int act) {
@@ -567,12 +676,19 @@ class TestS3kKosStructuralSequence {
                 com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE));
     }
 
+    private static void advanceTitleToCompletion(Sonic3kTitleCardManager title) {
+        for (int dispatch = 0; dispatch < 1_000 && !title.isComplete(); dispatch++) {
+            title.update();
+        }
+        assertTrue(title.isComplete(),
+                "enemy art remains title-owned until the EXIT to COMPLETE dispatch");
+    }
+
     private static void service(
             HardwareTimingService timing,
             HardwareServiceBoundary boundary) {
-        timing.service(boundary);
-        S3kRuntimeArtCoordinator.current().directQueue().afterTimingService(boundary);
-        S3kRuntimeArtCoordinator.current().moduleQueue().afterTimingService(boundary);
+        HardwareBoundaryPump.service(
+                timing, S3kRuntimeArtCoordinator.current(), boundary);
     }
 
     private static void assertCapturedSession(

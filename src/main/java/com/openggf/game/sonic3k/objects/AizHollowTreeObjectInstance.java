@@ -81,7 +81,7 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance implemen
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         bindMainPlayer(player);
         updatePlayer(player, nativeRideStates[PLAYER_SLOT_MAIN], PLAYER_SLOT_MAIN, true);
@@ -532,7 +532,7 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance implemen
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
             if (timer2EWord != 0 && eventsFg4 == 0) {
                 setDestroyed(true);

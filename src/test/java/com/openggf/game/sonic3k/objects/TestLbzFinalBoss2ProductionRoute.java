@@ -328,7 +328,8 @@ class TestLbzFinalBoss2ProductionRoute {
                         LbzFinalBoss2Instance.class).isEmpty(),
                 0x1000, SAFE_PLAYER_X, SAFE_PLAYER_Y, false);
         LbzFinalBoss2Instance boss = onlyLive(objectManager, LbzFinalBoss2Instance.class);
-        stepPinnedUntil(() -> boss.getCollisionFlags() == 0x0F, 0x400,
+        stepPinnedUntil(() -> boss.getCollisionFlags() == 0x0F
+                        && boss.publishesTouchResponseListEntryThisFrame(), 0x400,
                 SAFE_PLAYER_X, SAFE_PLAYER_Y, false);
         assertTrue(wrapper.getSlotIndex() < boss.getSlotIndex());
 
@@ -339,7 +340,7 @@ class TestLbzFinalBoss2ProductionRoute {
                     "overlap without a native attack state must not decrement Big Arm HP");
         }
 
-        attackThroughOrdinaryTouch(boss, 1);
+        attackThroughOrdinaryTouch(boss, 1, 16);
         assertEquals(7, boss.getCollisionProperty(),
                 "ObjectTouchResponseController must deliver exactly one ordinary attack");
     }
@@ -810,11 +811,18 @@ class TestLbzFinalBoss2ProductionRoute {
 
     private void attackThroughOrdinaryTouch(
             com.openggf.level.objects.TouchResponseProvider target, int hitNumber) {
+        attackThroughOrdinaryTouch(target, hitNumber, 0);
+    }
+
+    private void attackThroughOrdinaryTouch(
+            com.openggf.level.objects.TouchResponseProvider target, int hitNumber,
+            int playerXOffset) {
         ObjectInstance instance = assertInstanceOf(ObjectInstance.class, target);
         ObjectManager manager = GameServices.level().getObjectManager();
-        manager.getTouchResponseDebugState().setEnabled(true);
+        GameServices.debugOverlay().setEnabled(
+                com.openggf.debug.DebugOverlayToggle.TOUCH_RESPONSE, true);
         int before = target.getCollisionProperty();
-        pinAttackingAt(instance.getX(), instance.getY());
+        pinAttackingAt(instance.getX() + playerXOffset, instance.getY());
         fixture.stepIdleFrames(1);
         assertEquals(before - 1, target.getCollisionProperty(),
                 "ordinary touch hit " + hitNumber + " must decrement exactly once; player="

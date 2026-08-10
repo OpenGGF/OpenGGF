@@ -63,7 +63,7 @@ public class PachinkoItemOrbObjectInstance extends AbstractObjectInstance
             TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
             TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
 
-    private int animationFrameCounter;
+    private int animationVIntRunCount;
 
     /**
      * Mirrors ROM {@code collision_property}: set by {@link #onTouchResponse} whenever the
@@ -88,10 +88,10 @@ public class PachinkoItemOrbObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
-        animationFrameCounter = frameCounter;
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        animationVIntRunCount = vIntRunCount;
         if (rewardItem != null) {
-            rewardItem.update(frameCounter, playerEntity);
+            rewardItem.update(vIntRunCount, playerEntity);
             if (rewardItem.isDestroyed()) {
                 setDestroyed(true);
             }
@@ -122,33 +122,23 @@ public class PachinkoItemOrbObjectInstance extends AbstractObjectInstance
         // ROM loc_4A238 fallthrough (sonic3k.asm:96792-96804): touch has been released —
         // resolve the reward subtype from Level_frame_counter and convert.
         //
-        // NOTE: this method's own `frameCounter` parameter is ObjectManager's internal
-        // `vblaCounter` (ObjectManager.java: `instance.update(vblaCounter, player)`), which
-        // carries a large constant bootstrap offset relative to ObjectManager's own
-        // `frameCounter` field (empirically ~3071 frames in a representative trace run, not a
-        // multiple of 4), corrupting the `&3` phase used by the REWARD_TABLE lookup below and
-        // selecting an entirely wrong reward subtype. Other Level_frame_counter-driven S3K
-        // objects read the ROM-aligned counter explicitly (e.g. HczMinibossInstance uses
-        // services().objectManager().getFrameCounter()) instead of trusting a raw per-object
-        // update() parameter — do the same here. (LevelManager also exposes a getFrameCounter(),
-        // used by CnzBumperObjectInstance/AizFallingLogObjectInstance, but it is a separate
-        // field from ObjectManager's and is not interchangeable with it — this call site needs
-        // ObjectManager's counter, which is what advances alongside this object's own vblaCounter
-        // dispatch.)
-        int romFrameCounter = resolveRomFrameCounter(frameCounter);
+        // The object-visible vIntRunCount is ROM V_int_run_count, but this lookup reads the
+        // distinct Level_frame_counter. Those clocks de-phase across lag frames, so resolve
+        // the ROM-aligned level counter explicitly instead of substituting the update clock.
+        int romFrameCounter = resolveRomFrameCounter(vIntRunCount);
         convertToReward(romFrameCounter);
     }
 
     /**
      * Resolves the ROM-aligned {@code Level_frame_counter} equivalent for subtype selection.
-     * Falls back to the raw {@code update()} parameter only when the object manager is
+     * Falls back to the object-visible V-int run count only when the object manager is
      * unavailable (e.g. bare unit-test construction without full services wiring).
      */
-    private int resolveRomFrameCounter(int updateParamFrameCounter) {
+    private int resolveRomFrameCounter(int vIntRunCount) {
         try {
             return services().objectManager().getFrameCounter();
         } catch (Exception e) {
-            return updateParamFrameCounter;
+            return vIntRunCount;
         }
     }
 
@@ -254,7 +244,7 @@ public class PachinkoItemOrbObjectInstance extends AbstractObjectInstance
         }
         boolean hFlip = (spawn.renderFlags() & 0x1) != 0;
         boolean vFlip = (spawn.renderFlags() & 0x2) != 0;
-        int frame = ANIMATION[animationFrameCounter & 0x7];
+        int frame = ANIMATION[animationVIntRunCount & 0x7];
         renderer.drawFrameIndex(frame, spawn.x(), spawn.y(), hFlip, vFlip);
     }
 }

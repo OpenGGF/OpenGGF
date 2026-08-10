@@ -66,7 +66,7 @@ public class MgzEndBossDefeatDebrisChild extends AbstractObjectInstance implemen
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         xFixed += xVel;
         yFixed += yVel;
         int cameraX = services().camera().getX();

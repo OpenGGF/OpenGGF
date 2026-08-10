@@ -84,7 +84,7 @@ public class SignpostObjectInstance extends BoxObjectInstance implements PostPla
     private int spinTimer = 0;
     private int sparkleTimer = 0;
     private int sparkleIndex = 0;
-    private int walkOffEnteredFrame = Integer.MIN_VALUE;
+    private int walkOffEnteredVIntRunCount = Integer.MIN_VALUE;
 
     private boolean resultsSpawned = false;
     private boolean initialized;
@@ -132,7 +132,7 @@ public class SignpostObjectInstance extends BoxObjectInstance implements PostPla
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ensureInitialized();
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Don't update if destroyed (disabled in Act 2+)
@@ -149,10 +149,10 @@ public class SignpostObjectInstance extends BoxObjectInstance implements PostPla
                 // Obj0D_Main falls through into Obj0D_Main_State2 on the same
                 // frame that the signpost is activated.
                 if (checkPlayerPass(player)) {
-                    updateSpinning(frameCounter);
+                    updateSpinning(vIntRunCount);
                 }
             }
-            case STATE_SPINNING -> updateSpinning(frameCounter);
+            case STATE_SPINNING -> updateSpinning(vIntRunCount);
             case STATE_WALK_OFF -> {
                 // Inline-order modules (S2/S3K collision-model path) already run
                 // ExecuteObjects after playable movement, so the regular object
@@ -237,7 +237,7 @@ public class SignpostObjectInstance extends BoxObjectInstance implements PostPla
         }
     }
 
-    private void updateSpinning(int frameCounter) {
+    private void updateSpinning(int vIntRunCount) {
         // ROM: subq.w #1,obj0D_spinframe(a0) / bpl.s ...
         spinTimer--;
         if (spinTimer < 0) {
@@ -245,7 +245,7 @@ public class SignpostObjectInstance extends BoxObjectInstance implements PostPla
             int nextAnimId = currentAnimId + 1;
             if (nextAnimId >= ANIM_FINAL_SONIC) {
                 routineState = STATE_WALK_OFF;
-                walkOffEnteredFrame = frameCounter;
+                walkOffEnteredVIntRunCount = vIntRunCount;
                 setAnimationId(finalAnimId);
                 LOGGER.fine("Signpost spin complete, entering walk-off state");
             } else {
@@ -266,7 +266,7 @@ public class SignpostObjectInstance extends BoxObjectInstance implements PostPla
         if (usesInlineWalkOffUpdate(player)) {
             return;
         }
-        if (routineState != STATE_WALK_OFF || frameCounter <= walkOffEnteredFrame) {
+        if (routineState != STATE_WALK_OFF || frameCounter <= walkOffEnteredVIntRunCount) {
             return;
         }
         updateWalkOff(player);

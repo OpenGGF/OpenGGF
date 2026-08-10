@@ -29,7 +29,7 @@ public final class FbzChainLinkObjectInstance extends AbstractObjectInstance imp
         rangePixels=horizontalMode?(spawn.subtype()&0x3F)<<4:(spawn.subtype()&0x7F)<<3;
         currentLength=horizontalMode?rangePixels:0;
     }
-    @Override public void update(int frameCounter, PlayableEntity ignored){
+    @Override public void update(int vIntRunCount, PlayableEntity ignored){
         if(!horizontalMode){currentLength+=anyGrabbed()?2:-2;if(currentLength<0)currentLength=0;if(currentLength>rangePixels)currentLength=rangePixels;}
         services().playerQuery().visitPlayers(participationPolicy(),this,UPDATE_PLAYER);
         if(!isOnScreen(0x180)&&!anyGrabbed())setDestroyedByOffscreen();

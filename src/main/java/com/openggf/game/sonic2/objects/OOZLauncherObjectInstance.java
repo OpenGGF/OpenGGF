@@ -151,20 +151,20 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (isDestroyed()) {
             return;
         }
 
         if (invisibleLauncherOnly) {
-            if (launcherActive && frameCounter != sameFrameLauncherScanFrame) {
-                updateInvisibleLauncher(frameCounter, player);
+            if (launcherActive && vIntRunCount != sameFrameLauncherScanFrame) {
+                updateInvisibleLauncher(vIntRunCount, player);
             }
         } else if (parentFragmentActive) {
             updateParentFragment();
         } else if (!broken) {
-            updateMainBlock(frameCounter, player);
+            updateMainBlock(vIntRunCount, player);
         }
     }
 
@@ -173,7 +173,7 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
      * Saves player animation/velocity before solid collision check,
      * then checks if rolling player is standing on block.
      */
-    private void updateMainBlock(int frameCounter, AbstractPlayableSprite player) {
+    private void updateMainBlock(int vIntRunCount, AbstractPlayableSprite player) {
         if (player == null) {
             return;
         }
@@ -685,7 +685,13 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
     public static class LauncherFragmentInstance extends AbstractObjectInstance implements RewindRecreatable {
 
         private static final int GRAVITY = 0x18;  // ROM: addi.w #$18,y_vel(a0)
+        /** Obj3D_Init sets width_pixels = $10; BreakObjectToPieces copies it to each piece. */
+        private static final int FRAGMENT_WIDTH_PIXELS = 0x10;
+        /** BuildSprites_ApproxYCheck assumed radius (Obj3D never sets explicit_height). */
+        private static final int FRAGMENT_APPROX_RENDER_Y_MARGIN = 0x20;
 
+        /** render_flags.on_screen as latched by the previous BuildSprites pass. */
+        private boolean romRenderFlag = true;
         private int currentX;
         private int currentY;
         private int subX;   // 8.8 fixed point
@@ -720,7 +726,7 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
             if (isDestroyed()) {
                 return;
@@ -732,12 +738,36 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
             currentX = subX >> 8;
             currentY = subY >> 8;
             velY += GRAVITY;
+            // ObjectMove writes x_pos/y_pos, so the piece's SST position (and therefore
+            // everything downstream of it, including the BuildSprites on_screen latch)
+            // must follow the integrated position rather than stay at the block's origin.
+            updateDynamicSpawn(currentX & 0xFFFF, currentY & 0xFFFF);
 
-            // ROM: btst #render_flags.on_screen; beq JmpTo26_DeleteObject
-            Camera camera = services().camera();
-            if (camera != null && currentY > camera.getY() + 224 + 32) {
+            // ROM Obj3D_Fragment (docs/s2disasm/s2.asm:51069-51075):
+            //   btst #render_flags.on_screen,render_flags(a0); beq -> DeleteObject.
+            // The bit is the one the previous BuildSprites pass latched, so a piece that
+            // left the render box in ANY direction is deleted on its next step. The
+            // previous predicate only deleted pieces that fell below the camera, so
+            // pieces thrown sideways or upward held their SST slot indefinitely and
+            // skewed every later AllocateObject in the act.
+            if (!romRenderFlag) {
                 setDestroyed(true);
             }
+        }
+
+        @Override
+        public void refreshPostCameraRenderState() {
+            romRenderFlag = isWithinRenderSpriteBounds(getOnScreenHalfWidth(), getOnScreenHalfHeight());
+        }
+
+        @Override
+        public int getOnScreenHalfWidth() {
+            return FRAGMENT_WIDTH_PIXELS;
+        }
+
+        @Override
+        public int getOnScreenHalfHeight() {
+            return FRAGMENT_APPROX_RENDER_Y_MARGIN;
         }
 
         @Override

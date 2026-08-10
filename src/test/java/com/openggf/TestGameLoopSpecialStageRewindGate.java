@@ -36,7 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
 
 /**
- * A special/bonus-stage entry sets a {@code GameLoop}-local "transition pending"
+ * A bonus-stage entry sets a {@code GameLoop}-local "transition pending"
  * flag and starts a fade, but {@code currentGameMode} stays {@code GameMode.LEVEL}
  * until the fade's completion callback runs. Live rewind's engagement gate in
  * {@code GameLoop.stepInternal()} historically only checked
@@ -46,12 +46,18 @@ import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
  * rewind-restorable -- orphaning the pending flag forever (softlock: everything
  * frozen except the music). See ssentry-rewind-report.md.
  *
+ * <p>Special-stage entry no longer has that window at all: every ROM writes the
+ * game mode in the level-side object tick with no fade of its own, so
+ * {@code GameLoop.enterSpecialStage()} lands {@code GameMode.SPECIAL_STAGE}
+ * within a single tick and the mode check alone covers it. What remains for the
+ * special stage is the fade-with-pending-completion case below, which the
+ * results card's act-advance path still produces.
+ *
  * <p><strong>Known coverage gap:</strong> these tests prove the gate itself
  * (held rewind cleanly disengages once the pending flag is set) by reflectively
- * flipping {@code specialStageTransitionPending}/{@code bonusStageTransitionPending}
- * directly, rather than driving a real {@link GameLoop#enterSpecialStage()} all the
- * way through its fade-to-white completion callback to an actual
- * {@code GameMode.SPECIAL_STAGE} landing. That end-to-end path was attempted and
+ * flipping {@code bonusStageTransitionPending} directly, rather than driving a
+ * real transition all the way through its fade's completion callback to an
+ * actual mode landing. That end-to-end path was attempted and
  * found infeasible in this lightweight fixture: {@code GameLoop.step()} reaches
  * {@code Camera.updatePosition()} inside the normal (non-frozen) gameplay tick,
  * which NPEs on a null focused sprite because no level/player is loaded here (this
@@ -85,11 +91,6 @@ class TestGameLoopSpecialStageRewindGate {
         SessionManager.clear();
     }
 
-    @Test
-    void heldRewindDisengagesWhenSpecialStageTransitionBecomesPending() throws Exception {
-        assertHeldRewindDisengagesWhenPending("specialStageTransitionPending");
-    }
-
     /**
      * Companion case for the S3K/S2-shared bonus-stage twin of the same bug
      * ({@code GameLoop.enterBonusStage}, same pending-flag/fade shape). Cheap to
@@ -103,13 +104,11 @@ class TestGameLoopSpecialStageRewindGate {
     }
 
     /**
-     * Wave 3, Fix 3: the S1 giant-ring special-stage entry
-     * ({@code Sonic1ResultsScreenObjectInstance.triggerFadeToWhiteForSpecialStage()}) starts its
-     * fade-to-white directly from object code with its OWN completion callback --
-     * {@code specialStageTransitionPending} is never set for this path (it is only set by
-     * {@code GameLoop.enterSpecialStage()}'s NORMAL, non-big-ring branch, which this path reaches
-     * only AFTER the callback below has already run). So unlike the two cases above, this gap is
-     * NOT reproducible by flipping a {@code GameLoop} field -- it requires a real
+     * Wave 3, Fix 3: an object-owned transition fade
+     * ({@code Sonic1ResultsScreenObjectInstance.triggerFadeToBlack()}, the results card's
+     * act-advance path) starts its fade directly from object code with its OWN completion
+     * callback, and sets no {@code GameLoop} pending flag at all. So unlike the case
+     * above, this gap is NOT reproducible by flipping a {@code GameLoop} field -- it requires a real
      * {@link FadeManager} fade with a live completion callback in flight, which is exactly what
      * {@link FadeManager#hasPendingCompletion()} (folded into
      * {@code GameLoop.isRewindBlocked()}, NOT into {@code isNonRewindableTransitionPending()} --
@@ -119,8 +118,8 @@ class TestGameLoopSpecialStageRewindGate {
      * {@code FadeManager} fade rather than the full {@code Sonic1ResultsScreenObjectInstance}
      * object/results-screen machinery.
      *
-     * <p><strong>Additional fixture limitation (post-review split):</strong> unlike the two
-     * cases above, a pending-completion fade correctly does NOT freeze the gameplay-tick block
+     * <p><strong>Additional fixture limitation (post-review split):</strong> unlike the case
+     * above, a pending-completion fade correctly does NOT freeze the gameplay-tick block
      * (see the companion test below and {@code isRewindBlocked()}'s javadoc) -- so once rewind
      * is rejected on the second frame, {@code stepInternal()} now falls through into a REAL,
      * unfrozen gameplay tick, which this lightweight fixture cannot support (no level/player

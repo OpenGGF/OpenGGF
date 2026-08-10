@@ -91,7 +91,7 @@ public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         switch (workspaceRoutine) {
             case ROUTINE_INIT -> routineInit();
             case ROUTINE_WAIT_PLAYER -> routineWaitPlayer(playerEntity);
@@ -339,7 +339,7 @@ public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (!(services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick)) {
                 setDestroyed(true);
                 return;

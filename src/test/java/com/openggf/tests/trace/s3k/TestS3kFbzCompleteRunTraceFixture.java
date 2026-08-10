@@ -51,9 +51,9 @@ public class TestS3kFbzCompleteRunTraceFixture {
         assertEquals(List.of("tails"), metadata.recordedSidekicks());
 
         assertEquals(5, metadata.traceSchema());
-        assertEquals(5, metadata.csvVersion());
         assertEquals("complete_run", metadata.traceProfile());
-        assertEquals("6.28-s3k-completerun", metadata.luaScriptVersion());
+        assertFalse(metadata.recorder().isBlank());
+        assertFalse(metadata.recorderVersion().isBlank());
         assertEquals("2.11", metadata.bizhawkVersion());
         assertEquals("Genplus-gx", metadata.genesisCore());
         assertEquals("C5B1C655C19F462ADE0AC4E17A844D10", metadata.romChecksum());

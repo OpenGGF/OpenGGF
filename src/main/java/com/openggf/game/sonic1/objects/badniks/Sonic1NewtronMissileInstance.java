@@ -71,7 +71,7 @@ public class Sonic1NewtronMissileInstance extends AbstractProjectileInstance
     }
 
     @Override
-    protected void updateExtra(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateExtra(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Animate: alternate frames 2-3 (Ball1/Ball2) at speed 1
         animTimer++;

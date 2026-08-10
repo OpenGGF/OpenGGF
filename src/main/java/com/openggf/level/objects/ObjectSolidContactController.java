@@ -1832,9 +1832,12 @@ public final class ObjectSolidContactController {
                 && !instance.isWithinSolidContactBounds()) {
             // ROM sub_1E0C2 (sonic3k.asm:41528-41532): off-screen / no-contact
             // path clears the player's push status and the object's pushing-bit
-            // bookkeeping but does not touch ground_vel/x_vel. Matches both
-            // S2 SolidObject_TestClearPush and S1 Solid_NotPushing.
+            // bookkeeping but does not touch ground_vel/x_vel. It still enters
+            // SolidObject_TestClearPush, whose paired Walk/Run word write is
+            // visible before the player animation slot runs. Matches both S2
+            // SolidObject_TestClearPush and S1 Solid_NotPushing.
             if (clearObjectPushingBit(player, instance)) {
+                publishSolidPushReleaseAnimationWord(player, instance);
                 player.setPushing(false);
                 provider.setPlayerPushing(player, false);
             }
@@ -3239,11 +3242,27 @@ public final class ObjectSolidContactController {
                 // frame. The narrow windows are contiguous/non-overlapping, so
                 // exactly one piece owns the player (ROM Solid_Landed obActWid
                 // gate, docs/s1disasm/_incObj/sub SolidObject.asm:307-315).
+                // ROM slot order: each folded piece is its own SST slot and each
+                // landing calls RideObject_SetRide, which overwrites the rider's
+                // stand-on-object with the piece that ran most recently
+                // (docs/s2disasm/s2.asm:35619-35626). Pieces are iterated in slot
+                // order, so the LAST claiming piece owns the rider. For objects
+                // whose narrow Solid_Landed windows are contiguous and
+                // non-overlapping only one piece ever claims, so this is a no-op
+                // for them.
                 if (pieceScopedStanding && ridingCurrentObject && !player.getAir()
-                        && i != currentRidingPieceIndex && overridePieceIndex < 0) {
-                    int narrowHalf = multiPiece.getPieceLandingHalfWidth(i);
-                    int relNarrow = player.getCentreX() - pieceX + narrowHalf;
-                    if (relNarrow >= 0 && relNarrow < narrowHalf * 2) {
+                        && i != currentRidingPieceIndex) {
+                    // Same gate the fresh-landing path uses: ROM
+                    // SolidObject_Landed re-reads width_pixels(a0) and requires
+                    // x_pos(a1) + width_pixels - x_pos(a0) in [0, width_pixels*2)
+                    // (docs/s2disasm/s2.asm:35588-35597; S1's obActWid equivalent
+                    // at docs/s1disasm/_incObj/sub SolidObject.asm:307-315). Going
+                    // through isWithinTopLandingWidth keeps the takeover window
+                    // identical to the landing window instead of re-deriving it.
+                    int relPiece = player.getCentreX() - (pieceX + params.offsetX())
+                            + params.halfWidth();
+                    if (isWithinTopLandingWidth(instance, player, relPiece,
+                            params.halfWidth(), i)) {
                         overridePieceIndex = i;
                         overridePieceX = pieceX;
                         overridePieceY = pieceY;
@@ -4302,6 +4321,16 @@ public final class ObjectSolidContactController {
             }
 
 
+            // fixBugs (s2.asm:27 `fixBugs = 0`): the upward-velocity rejection below is
+            // unconditional on the shipped ROM -- `tst.w y_vel(a1) / bmi.s ..._Miss` in
+            // SolidObject_Landed (s2.asm:35615-35616) and the same test in
+            // PlatformObject11_cont, PlatformObject_cont, SlopedPlatform_cont and
+            // PlatformObject2_cont (s2.asm:35920, 35951, 36056, 36095). The fixBugs=1
+            // branch (s2.asm:35599-35619 and the mirrors at 35909-35924, 35935-35950,
+            // 36045-36060, 36084-36099) skips the velocity test entirely when the player
+            // is on the ground with an angle inside [-$10,$10], so a shallow slope meeting
+            // a wall can no longer let HTZ's rising floor pass through the player. The
+            // engine models the shipped branch: no angle bypass anywhere in this family.
             if (topSolidOnly && player.getYSpeed() < 0) {
                 return null;
             }
@@ -4553,21 +4582,22 @@ public final class ObjectSolidContactController {
                 : provider.getTopLandingHalfWidth(player, collisionHalfWidth);
         int allowedHalfWidth;
         if (provider.getSolidRoutineProfile().usesCollisionHalfWidthForTopLanding()) {
+            // Caller's d1 already equals the object's own width byte (e.g. S2
+            // Obj70 passes d1 = width_pixels = $10, s2.asm:55111, 35588-35620).
             allowedHalfWidth = collisionHalfWidth;
-        } else if (pieceConfigured || configuredHalfWidth != collisionHalfWidth) {
-            // Provider explicitly set a landing width distinct from its side/body
-            // collision half-width — use it directly (narrower OR wider). ROM
-            // SolidObjectFull's top-slice clamp (loc_1E154 / Solid_Landed) re-reads
-            // width_pixels(a0) for the landing X gate, which is NOT always
-            // collision_d1 - $B: e.g. the MHZ1 cutscene button (sub_65DEC passes
-            // d1 = $1B but ObjDat sets width_pixels = $80), so the landing gate is
-            // far wider than the side-collision box. The default heuristic below
-            // only holds when the caller passed d1 = width_pixels + $B.
-            allowedHalfWidth = configuredHalfWidth;
         } else {
-            // ROM: SolidObjectFull's Solid_Landed re-reads obActWid (= width_pixels),
-            // which is narrower than collision halfWidth (= width_pixels + $B).
-            allowedHalfWidth = Math.max(0, collisionHalfWidth - 0x0B);
+            // ROM's landing clamp re-reads the object's own width byte, not the
+            // caller's collision d1: S1 Solid_Landed re-reads obActWid
+            // (_incObj/sub SolidObject.asm:318-336), S2 SolidObject_Landed and
+            // S3K Solid_Landed / loc_1E154 re-read width_pixels(a0)
+            // (s2.asm:35588+, sonic3k.asm:41611-41621). The provider models that
+            // field first-class: its family default reconstructs the width byte
+            // (full-solid d1 = width_pixels + $B; top-solid d1 used directly per
+            // SolidObjectTop_1P, sonic3k.asm:41798-41825), and objects whose
+            // caller broke the idiom override with the ObjDat width — used
+            // verbatim, narrower OR wider (e.g. the MHZ1 cutscene button's
+            // d1 = $1B against width_pixels = $80).
+            allowedHalfWidth = configuredHalfWidth;
         }
 
         // ROM: Solid_Landed checks: d1 = playerX + obActWid - objX,

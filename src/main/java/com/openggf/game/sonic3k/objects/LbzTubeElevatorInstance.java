@@ -131,7 +131,7 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ensureOverlayChild();
         AbstractPlayableSprite player1 = playableSprite(playerEntity);
         AbstractPlayableSprite player2 = nativeP2OrNull();
@@ -446,6 +446,7 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
             if (state == STATE_WAIT_EXIT) {
                 player.setDirection(Direction.LEFT);
                 ObjectControlState.none().applyTo(player);
+                player.setControlLocked(false);
                 player.setObjectMappingFrameControl(false);
                 player.setLatchedSolidObjectId(0);
                 tubeState.phase = 4;
@@ -835,7 +836,7 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (parent.isDestroyed() || parent.closedOnly) {
                 setDestroyed(true);
             }

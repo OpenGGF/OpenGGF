@@ -204,7 +204,7 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
     private boolean waitingForOnscreen = true;
 
     // Frame counter from update (for vibration)
-    private int globalFrameCounter;
+    private int vIntRunCount;
 
     public TunnelbotBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Tunnelbot");
@@ -262,8 +262,8 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
      * </pre>
      */
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
-        this.globalFrameCounter = frameCounter;
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        this.vIntRunCount = vIntRunCount;
 
         // ROM: Obj_Tunnelbot begins with jsr (Obj_WaitOffscreen).l
         // (sonic3k.asm:184710-184717). Obj_WaitOffscreen keeps the SST slot
@@ -506,7 +506,7 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
         animateRaw();
 
         // Vibrate: odd frames +1, even frames -2
-        int d1 = globalFrameCounter & 0xFF;
+        int d1 = vIntRunCount & 0xFF;
         int dy = ((d1 & 1) != 0) ? 1 : -2;
         currentY += dy;
 
@@ -593,27 +593,19 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
     // ── Screen shake ────────────────────────────────────────────────────
 
     /**
-     * ROM: ScreenShakeArray2 (sonic3k.asm ~104229).
-     * 64-entry table for continuous shake (Screen_shake_flag = -1).
-     * Indexed by {@code Level_frame_counter & 0x3F}. Values are unsigned 0-3 pixels.
-     */
-    private static final int[] SCREEN_SHAKE_CONTINUOUS = {
-            1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0,
-            2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3,
-            1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0,
-            2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3
-    };
-
-    /**
-     * Apply screen shake offset through the MGZ scroll handler.
-     * ROM: ShakeScreen with Screen_shake_flag = -1 (constant mode).
-     * Uses ScreenShakeArray2 indexed by {@code frameCounter & 0x3F}.
+     * ROM {@code st (Screen_shake_flag).w} (docs/skdisasm/sonic3k.asm:184784,
+     * :184886, :184907) — the Tunnelbot only raises the continuous-shake flag.
+     * The offset itself is {@code ShakeScreen_Setup}'s
+     * {@code ScreenShakeArray2[Level_frame_counter & $3F]}
+     * (sonic3k.asm:104200-104209), computed once per frame by the zone's
+     * background event, not by this object. Indexing the table here with the
+     * object clock ({@code V_int_run_count}) de-phased the shake by the
+     * accumulated lag count, which is not the clock the ROM routine reads.
      */
     private void applyShakeOffset() {
         MgzZoneRuntimeState mgzHandler = resolveMgzRuntimeState();
         if (mgzHandler == null) return;
-        int offset = SCREEN_SHAKE_CONTINUOUS[globalFrameCounter & 0x3F];
-        mgzHandler.requestScreenShakeOffset(offset);
+        mgzHandler.requestContinuousScreenShake();
     }
 
     private void setScreenShake(boolean active) {
@@ -872,7 +864,7 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             // Check if parent is destroyed
             if (TunnelbotBadnikInstance.this.isDestroyed()) {
                 setDestroyed(true);
@@ -982,7 +974,7 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             // MoveSprite: apply gravity and velocity
             yVelocity += GRAVITY;
 

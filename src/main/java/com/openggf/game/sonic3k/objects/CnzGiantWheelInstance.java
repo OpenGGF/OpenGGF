@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
@@ -40,7 +41,22 @@ public final class CnzGiantWheelInstance extends AbstractObjectInstance implemen
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        var objectServices = tryServices();
+        if (objectServices != null) {
+            List<PlayableEntity> players = objectServices.playerQuery().playersFor(
+                    ObjectPlayerParticipationPolicy.NATIVE_P1_P2);
+            if (!players.isEmpty()) {
+                for (PlayableEntity player : players) {
+                    updatePlayer(player);
+                }
+                return;
+            }
+        }
+        updatePlayer(playerEntity);
+    }
+
+    private void updatePlayer(PlayableEntity playerEntity) {
         if (playerEntity == null) {
             return;
         }

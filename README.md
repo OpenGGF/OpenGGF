@@ -223,13 +223,77 @@ Highlights:
 - **`develop` 0.6 merged into `next` (2026-07-28):** the 0.6 line — hardware-timing replay and the ROM work ledger, the rebuilt audio presentation producer/sink pipeline, `LevelIterationAdmissionController`, `ObjectExecutionController`, and the initial-`Process_Sprites` assembly — is now under the 0.7 Mod API, multiplayer, editor and FBZ work. 146 conflicts, resolved on one rule throughout: `develop` wins on shared runtime, `next` re-engineers onto it. Audio was re-implemented rather than reverted — creator streamed music now hosts as an ordinary `StreamedMusicVoice` so mod tracks participate in the presentation clock, rewind and capture leases like SMPS and sample music do, and the sample-mod PCM tests were rewritten to drive `AudioPresentationMixer` instead of the retired backend upload hook. Production code is now AWT-free (`PngCodec`/`PixelImage` replace `ImageIO`/`BufferedImage` in the mod SDK) so a native image stays buildable; that half is already backported to `develop` as PR #175. Two ROM-accuracy corrections came out of the merge rather than going in: the S3K dynamic slot count is **90**, not 89 (`Dynamic_object_RAM ds.b object_size*90`, and `Offset_ObjectsDuringTransition` runs exactly 90 `dbf` iterations over absolute slots 4-93), and `isManagedDynamicSlot` was split from a new execution-order predicate after widening it was found to let objects seat below `firstDynamicSlot`. Reds are scored against the union of both parents, since `origin/develop`'s own tip carries 77 red methods and a test tree that does not compile: merge-introduced failures stand at 18 of 16,063 tests, each triaged in `MERGE-STATUS-develop-into-next.md`, with backports to `develop` tracked separately.
 - **Time Attack:** solo Time Attack is available from the master title menu with curated S1/S2/S3K signpost tracks, best-ghost racing, split deltas, instant retry, hash-bound input files, and local Ed25519 player identity; multiplayer Time Attack is planned as the next extension of this system.
 - **Mod support:** Mod API 0.7 is the first creator contract, covering patch composition, restart-scoped discovery, WAV/Ogg music overrides, trusted objects and reskins, ROM-art intake, complete Sonic 2 and host-adapted Sonic 3&K zones, tagged saves, owner-tagged playable characters, no-ROM standalone games, playable-subclass rewind hooks, and destination-scoped game-start, team, input, and HUD policies. Deterministic hardened Tiled TMX import, a source-first [creator handbook](docs/modding/index.md), and a CI-built sample gallery support the workflow. The [backlog decision record](docs/modding/BACKLOG.md) preserves historical scope provenance and current scheduled/parked work; the [compatibility guide](docs/architecture/mod-api-compatibility.md) is the sole current version authority. The [GUI evaluation](docs/modding/GUI_TOOLING_EVALUATION.md) keeps `ggfmod` authoritative and makes no GUI build commitment.
-
-### v0.6.prerelease (Current development snapshot)
-
 - **S3K SMPS custom meta-command boundary (2026-08-09):** exhaustive ROM
   reachability keeps `FF 01`, `FF 02`, and `FF 03` as syntax-width-only
   handling for unsupported custom streams, with explicit non-effect tests and
   no dormant runtime execution scaffold.
+- **Sonic 3 & Knuckles trace parity (`bugfix/s3k-traces`, merged 2026-08-10):** brings 15 of 16 previously-failing S3K trace-replay classes to green — AIZ, CNZ, HCZ, ICZ, LBZ and MGZ (standalone and complete-run), the gumball, pachinko and slots bonus stages, the special stage, and the hardware-timing replay — with no previously-green class regressing. Merged after a three-lane review (`docs/architecture/audits/2026-08-10-s3k-traces-branch-review.md`) whose two blocking findings were fixed first: a sidekick on-screen predicate that added three conditions the ROM does not have, and an art submission that only ran when a trace was driving the replay.
+
+### v0.6.prerelease (Current development snapshot)
+
+- **Shared movement and S3K trace-parity corrections (2026-08-06):** the
+  shared movement path now keeps ROM `move_lock` semantics through a full
+  dispatch, and the shared oscillator no longer gains a duplicate transition
+  tick. S3K replay work also corrects Bubbler/Air Countdown off-screen
+  lifetimes, results/title-card queue ownership, and fresh-level destination
+  terrain admission without changing trace fixtures.
+- **Sonic 1 GHZ music-driver parity harness (2026-08-09):** a pinned BizHawk
+  sound-test movie and read-only driver observer now produce deterministic
+  logical-state and ordered YM2612/PSG captures for comparison with OpenGGF.
+  The local command verifies the ROM, movie, emulator, callback or opcode-manifest
+  capture source, and repeated musical cycle before reporting the first mismatch;
+  the initial reference run identifies DAC base-frequency state at tick zero
+  without authorizing speculative chip-port reordering.
+- **Dead and unfinished code sweep (2026-08-08):** seven unreachable Java
+  types (339 lines) were removed after caller, registry, resource, CLI, and
+  reflection checks; an unused 125-line Kosinski reference moved out of runtime
+  resources into architecture research. Caller-free compatibility members and
+  duplicate unverified results constants were also removed. Coherent but
+  unwired work—including the S3K special-stage projection, debug primitive/text
+  rendering, and ROM-derived CNZ boss animations—was deliberately retained.
+  The accompanying audit ranks live unfinished paths without changing runtime
+  behavior, including Big Arm and S3K SMPS meta commands; the separately tracked
+  Mecha Sonic move-ordering debt is now resolved by the REV01 outer-loop parity fix.
+- **S2 Mecha Sonic outer-loop parity (2026-08-08):** the existing DEZ ObjAF
+  implementation now aligns the LED/sensor children before one outer-loop
+  `ObjectMove`, matching shipped ROM `loc_398C0`/`loc_39D4A`. Focused tests and
+  existing graph rewind coverage remain green; the dedicated DEZ ending replay
+  passes 1/1 on both base `5cc94d457` and candidate `4b4572cc3` with verified
+  REV01 ROM, with ObjAF present from auxiliary frame 127 and no frontier change.
+- **S2 DEZ window and Special Stage checkpoint visuals (2026-08-09):** DEZ now
+  samples Plane B from the ROM-seeded background-camera Y, restoring the moving
+  star field behind the opening exterior window. In Special Stages, the
+  checkpoint wings stay fixed while only the separate hand/thumb sprite bobs,
+  matching the two peer Obj5A objects in the shipped ROM.
+- **Headless visual-run parity driver (2026-08-05):** whole trace runs can now be
+  driven through the production visual-session owners without a window, so a
+  Trace Test Mode defect is reproducible in a test rather than a screenshot.
+  Its first find: a run can now cross from a special stage's return
+  presentation bridge back into its own act's gameplay.
+- **Special Stage entry frame parity (2026-08-04):** the game mode now changes on
+  the frame the ROM changes it, with the white-out owned by the special stage
+  rather than the level it was entered from. The S1 giant-ring handoff no longer
+  arrives 22 frames late, which had aborted complete-run visual playback at the
+  destination row.
+- **Visual run presentation clock parity (2026-08-04):** complete-run playback now
+  keeps the shared input, PLC, dynamic-art, and trace HUD clocks continuous across
+  title cards, special stages, inter-act gaps, and the terminal movie tail.
+- **Visual special-stage handoff parity (2026-08-04):** held-white S1 entry
+  no longer replays the transition SFX, and complete-run returns rebind the
+  BK2 input cursor at level load so GHZ2 consumes and compares the same
+  fall-through rows as headless replay.
+- **Visual complete-run special-stage parity (2026-08-04):** S1 trace-accurate
+  startup now waits for the ROM readiness boundary; special stages share the
+  normal trace HUD and recorded input display; GHZ2 rebinds through the run
+  boundary probe; and the live capture chord remains usable during playback.
+- **Visual Special Stage physical-row handoff (2026-08-04):** giant-ring
+  transitions retain the destination BK2 row until local Special Stage
+  admission, keeping white-screen inputs, lag rows, and the trace HUD on one
+  clock.
+- **Visual Special Stage transition dispatch (2026-08-04):** shared transition
+  gaps now consume engine-raised Special Stage requests even while native level
+  gameplay is suppressed, so the held-white S1 results fade enters the stage
+  instead of replaying inputs behind a stuck white screen.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 

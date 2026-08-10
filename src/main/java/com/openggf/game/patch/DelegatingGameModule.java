@@ -12,6 +12,9 @@ import com.openggf.game.modzone.ModZoneRuntimeContribution;
 import com.openggf.game.palette.CustomZonePaletteBridge;
 import com.openggf.game.save.SaveSnapshotProvider;
 import com.openggf.game.startup.DonatedDataSelectWarmupTask;
+import com.openggf.game.timing.HardwareTimingService;
+import com.openggf.game.timing.LoadTimeProfile;
+import com.openggf.game.timing.LoadTimeSimulationMode;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRegistry;
@@ -23,8 +26,10 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCarryTrigger;
 import com.openggf.sprites.playable.SuperStateController;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
@@ -61,6 +66,29 @@ public class DelegatingGameModule implements GameModule {
     }
 
     @Override public Game createGame(GameDataSource source) { return base.createGame(source); }
+
+    @Override public RuntimeArtCoordinator createRuntimeArtCoordinator(HardwareTimingService timing) {
+        return base.createRuntimeArtCoordinator(timing);
+    }
+
+    @Override public List<com.openggf.game.rewind.RewindSnapshottable<?>> rewindAdapters() {
+        return base.rewindAdapters();
+    }
+
+    @Override public LoadTimeProfile createLoadTimeProfile(
+            LoadTimeSimulationMode mode, LoadTimeProfile profiled,
+            Consumer<String> warningSink) {
+        return base.createLoadTimeProfile(mode, profiled, warningSink);
+    }
+
+    @Override public LoadTimeProfile createLoadTimeProfile(
+            LoadTimeSimulationMode mode, Consumer<String> warningSink) {
+        return base.createLoadTimeProfile(mode, warningSink);
+    }
+
+    @Override public int getRomAct(int logicalZone, int act, int levelZoneIndex) {
+        return base.getRomAct(logicalZone, act, levelZoneIndex);
+    }
 
     @Override public TouchResponseTable createTouchResponseTable(GameDataSource source)
             throws java.io.IOException { return base.createTouchResponseTable(source); }

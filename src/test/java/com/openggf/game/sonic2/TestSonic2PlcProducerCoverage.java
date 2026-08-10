@@ -220,7 +220,7 @@ class TestSonic2PlcProducerCoverage {
     }
 
     @Test
-    void initialPresentationOwnerPublishesHeaderSecondaryAfterLockedTitleDrain()
+    void initialPresentationOwnerServicesHeaderSecondaryAcrossTheTitleCardLeaveLoop()
             throws Exception {
         Sonic2PlcService queue =
                 GameServices.module().getGameService(Sonic2PlcService.class);
@@ -232,9 +232,11 @@ class TestSonic2PlcProducerCoverage {
         Sonic2LevelInitProfile.completeInitialPresentationPlcs(
                 GameServices.rom().getRom(), queue, 0);
 
-        assertEquals(expectedDescriptors(Sonic2Constants.PLC_EHZ2),
-                queue.capture().queuedEntries(),
-                "loadZoneBlockMaps must append the header secondary after the locked title drain");
+        // loadZoneBlockMaps appends the header secondary (docs/s2disasm/s2.asm:20103-20110)
+        // while still inside the title-card sequence, and the 25-frame leave loop
+        // (s2.asm:5060-5066) services it before Level_MainLoop (s2.asm:5082-5087).
+        assertEquals(List.of(), queue.capture().queuedEntries(),
+                "the header secondary must be appended AND serviced by the title-card leave loop");
     }
 
     @Test

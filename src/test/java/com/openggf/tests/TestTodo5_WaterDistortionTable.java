@@ -1,6 +1,5 @@
 package com.openggf.tests;
 
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import com.openggf.data.Rom;
@@ -14,6 +13,7 @@ import java.io.IOException;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * TODO #5 coverage: WaterSystem.getDistortionTable() uses a generated sine wave
@@ -60,11 +60,8 @@ public class TestTodo5_WaterDistortionTable {
         // The first 16 bytes are: 01 02 01 03 01 02 02 01 02 03 01 02 01 02 00 00
         // We search for this pattern starting from a reasonable range (0xC000-0xD000).
         int rippleAddr = findRippleData(rom);
-        if (rippleAddr < 0) {
-            // If we can't find it, the test documents the expected data
-            Assumptions.assumeTrue(false, "Could not locate SwScrl_RippleData in ROM - skipping ROM comparison");
-            return;
-        }
+        assertTrue(rippleAddr >= 0,
+                "Could not locate SwScrl_RippleData in the required Sonic 2 ROM");
 
         byte[] romData = rom.readBytes(rippleAddr, EXPECTED_RIPPLE_DATA.length);
         for (int i = 0; i < EXPECTED_RIPPLE_DATA.length; i++) {
@@ -144,6 +141,5 @@ public class TestTodo5_WaterDistortionTable {
         return -1;
     }
 }
-
 
 

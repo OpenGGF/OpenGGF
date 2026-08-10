@@ -14,6 +14,19 @@ import com.openggf.level.scroll.compose.ScrollEffectComposer;
  * - BG2 (lower "underwater" region): X scrolls at 1/2 camera, Y same as BG1
  *
  * The screen is processed in 16-line blocks (14 blocks for 224 lines).
+ *
+ * fixBugs (s2.asm:27 `fixBugs = 0`, blocks at s2.asm:17329-17339 and 17349-17370):
+ * the shipped (fixBugs=0) branch loops `screen_height/block_height + 1` blocks so a
+ * partially-offscreen top block still leaves a full block for the bottom, which writes
+ * up to 16 longwords past the 224 visible entries of Horiz_Scroll_Buf. Those extra
+ * longwords land in the reserved `ds.l 16` slack that the HorizontalScrollBuffer struct
+ * declares for exactly this overrun (s2.constants.asm:1191-1195), so nothing else in
+ * RAM is touched and no visible line reads them. The engine therefore fills exactly
+ * VISIBLE_LINES and stops: behaviourally identical to the shipped branch, not an
+ * implementation of the fixBugs=1 branch (which instead splits the run into a
+ * remainder pass so no overrun occurs at all). The same pair of conditionals guards
+ * the unused SwScrl_HPZ_Continued at s2.asm:17944-17984.
+ *
  * Each block uses either BG1 or BG2 based on lineBlockIndex comparison:
  * - lineBlockIndex < 18: Use BG1 X (slow)
  * - lineBlockIndex > 18: Use BG2 X (fast)

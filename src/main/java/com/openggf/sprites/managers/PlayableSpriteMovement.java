@@ -3,12 +3,14 @@ package com.openggf.sprites.managers;
 import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.LevelState;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.rules.CollisionRules;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.PlayerAnimationRules;
 import com.openggf.game.rules.PlayerCapabilityRules;
 import com.openggf.game.rules.PlayerMovementRules;
+import com.openggf.game.rules.PlayerLevelBoundaryRules;
 import com.openggf.game.rules.PowerUpRules;
 
 import com.openggf.camera.Camera;
@@ -74,6 +76,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private static final int SKID_SPEED_THRESHOLD = 0x400;
 	private static final short YSPEED_LANDING_CAP = (short) 0xFC0;
 	private static final int UPWARD_VELOCITY_CAP = -0xFC0;
+	private static final int DEATH_RESTART_DELAY_FRAMES = 60;
 	private static final short HYPER_DASH_SPEED = (short) 0x800;
 	/** ROM {@code Sonic_HyperDash_Velocities}, indexed by raw D-pad mask minus one. */
 	private static final short[] HYPER_DASH_VELOCITIES = {
@@ -790,9 +793,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	/** Obj01_MdNormal: Ground walking state */
 	private void modeNormal() {
 		if (doWaitBlinkInterruptCheck()) return;
-
 		short originalX = sprite.getX();
 		short originalY = sprite.getY();
+		// Sonic_Move/Tails_Move test move_lock before the ground-input and
+		// balance/lookup tail. SlopeRepel decrements the live timer later in
+		// this dispatch, so retain the entry decision for updateCrouchState.
+		boolean moveLockActiveAtDispatch = sprite.getMoveLockTimer() > 0;
 
 		if (doCheckSpindash()) return;
 		if (inputJumpPress && doJump()) {
@@ -823,7 +829,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (applyFatalBackgroundFloorOverlap()) return;
 		collisionSystem().resolvePostMovementBackgroundWallClamp(
 				FrameCollisionPlan.terrainOnly(), sprite);
-		updateCrouchState();
+		updateCrouchState(moveLockActiveAtDispatch);
 	}
 
 	static boolean controlLockBlocksScriptedMovement(AbstractPlayableSprite sprite) {
@@ -3315,6 +3321,50 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		captureTiltAnglesFromCollisionSystem(collisionSystem);
 	}
 
+	private Consumer<SensorResult[]> landingTiltPublisher() {
+		PlayerAnimationRules animationRules = playerAnimationRulesOrNull();
+		// The next_tilt/tilt copy from Primary_Angle/Secondary_Angle sits in the
+		// character control tail, and the sidekick's tail carries the identical
+		// pair as the leader's: S3K Sonic_Control sonic3k.asm:25718-25719 and
+		// Tails_Control sonic3k.asm:26243-26244; S2 Obj01 s2.asm:36253-36254 and
+		// Obj02 s2.asm:38988-38989. Both run unconditionally every frame, so a
+		// landing frame publishes the fresh floor angles for either character.
+		// Restricting this to the leader left the sidekick consuming a stale
+		// airborne tilt on its first grounded control frame, which deferred the
+		// Tails_InputAcceleration_Path edge-balance branch (sonic3k.asm:27837-27849)
+		// by one frame - Wait (anim 5) instead of Balance (anim 6).
+		return animationRules != null && animationRules.airLandingPublishesTiltAngles()
+				? this::captureTiltAnglesFromLandingProbes
+				: null;
+	}
+
+	/**
+	 * Copies the angle bytes that the native player tail reads from the shared
+	 * Primary_Angle/Secondary_Angle registers. Tails_DoLevelCollision reaches
+	 * Sonic_CheckFloor during a landing, so that landing's own pair is the
+	 * shared-register value copied by Tails_Control (S3K sonic3k.asm:
+	 * 26243-26244, 28901-29147). Unlike grounded Player_AnglePos, the airborne
+	 * Sonic_CheckFloor path does not preload those registers with {@code 3}.
+	 * A completely empty current/extension tile search therefore preserves the
+	 * register's prior byte (FindFloor sub_F264/sub_F30C, sonic3k.asm:19213-19331).
+	 * That prior value belongs to the shared collision registers, not to either
+	 * player's private next_tilt/tilt cache.
+	 */
+	private void captureTiltAnglesFromLandingProbes(SensorResult[] groundResults) {
+		SensorResult left = groundResults != null && groundResults.length > 0 ? groundResults[0] : null;
+		SensorResult right = groundResults != null && groundResults.length > 1 ? groundResults[1] : null;
+		latchedNextTilt = landingAngleRegisterValue(
+				right, collisionSystem().getPrimaryAngleRegister());
+		latchedTilt = landingAngleRegisterValue(
+				left, collisionSystem().getSecondaryAngleRegister());
+	}
+
+	private static int landingAngleRegisterValue(SensorResult result, int sharedRegisterValue) {
+		return result == null || result.tileId() == 0
+				? sharedRegisterValue
+				: result.angle() & 0xFF;
+	}
+
 	private static boolean usesDirectHitFloorLanding(int quadrant) {
 		return quadrant == 0x40 || quadrant == 0xC0;
 	}
@@ -4099,7 +4149,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		sprite.setSkidDustTimer(dustTimer);
 	}
 
-	private void updateCrouchState() {
+	private void updateCrouchState(boolean moveLockActiveAtDispatch) {
 		// S3K: allow ducking while moving at speeds below the roll threshold.
 		// ROM: sonic3k.asm:23223-23240 (SonicKnux_Roll) — down pressed + |gSpeed| < $100
 		// + not left/right + not on object → enter duck animation.
@@ -4163,7 +4213,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		// Update balance state (checks for ledge edges)
 		// ROM: Balance check happens before crouch/lookup in Obj01_LookUpDown
-		if (standingStill
+		if (!moveLockActiveAtDispatch && standingStill
 				&& ((!inputLeft && !inputRight) || directionalBrakeReachedZero)) {
 			if (preMoveBalanceEvaluated) {
 				// doGroundMove evaluated the ROM balance branch before SpeedToPos
@@ -4197,27 +4247,71 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
     }
 
 	private short applyDeathMovement() {
+		if (sprite.isInDeathRestartRoutine()) {
+			tickRestartCountdown();
+			return 0;
+		}
+
+		if (hasFallenPastDeathRestartRow()) {
+			PlayerMovementRules movementRules = playerMovementRulesOrNull();
+			if (movementRules != null && movementRules.levelBoundary() != null
+					&& movementRules.levelBoundary().deathFallRestartHandoffCancelsGravity()) {
+				sprite.setYSpeed((short) -sprite.getGravity());
+			}
+			enterDeathRestartRoutine();
+		}
+
 		short oldYSpeed = sprite.getYSpeed();
 		applyGravity();  // Gated on isObjectControlled(); a controlled sprite never enters the death routine anyway but keep gates consistent
 		sprite.setGSpeed((short) 0);
 		sprite.setXSpeed((short) 0);
-
-		Camera camera = camera();
-		if (camera != null && sprite.getY() > camera.getY() + camera.getHeight() + 256) {
-			sprite.startDeathCountdown();
-		}
-
-		if (sprite.tickDeathCountdown()) {
-			if (sprite.isCpuControlled() && sprite.getCpuController() != null) {
-				// CPU-controlled sprites (Tails) despawn and respawn near the main player
-				// instead of causing a level reset
-				sprite.getCpuController().despawn();
-			} else {
-				gameState().loseLife();
-				levelManager().requestRespawn();
-			}
-		}
 		return oldYSpeed;
+	}
+
+	private boolean hasFallenPastDeathRestartRow() {
+		Camera camera = camera();
+		if (camera == null) {
+			return false;
+		}
+		PlayerMovementRules movementRules = playerMovementRulesOrNull();
+		PlayerLevelBoundaryRules boundaryRules =
+				movementRules != null ? movementRules.levelBoundary() : null;
+		int reference = boundaryRules != null
+				&& boundaryRules.deathFallBottomReferenceIsCameraBottomBoundary()
+				? camera.getMaxY()
+				: camera.getY();
+		return sprite.getCentreY() > reference + 0x100;
+	}
+
+	private void enterDeathRestartRoutine() {
+		if (sprite.isCpuControlled() && sprite.getCpuController() != null) {
+			sprite.enterDeathRestartRoutine(DEATH_RESTART_DELAY_FRAMES);
+			return;
+		}
+		GameStateManager gameState = gameState();
+		if (gameState != null) {
+			gameState.loseLife();
+		}
+		boolean gameOver = gameState != null && gameState.getLives() == 0;
+		boolean timeOver = !gameOver && isTimeOverFlagged();
+		sprite.enterDeathRestartRoutine(
+				gameOver || timeOver ? 0 : DEATH_RESTART_DELAY_FRAMES);
+	}
+
+	private boolean isTimeOverFlagged() {
+		LevelState levelState = sprite.currentLevelState();
+		return levelState != null && levelState.isTimeOver();
+	}
+
+	private void tickRestartCountdown() {
+		if (!sprite.tickDeathCountdown()) {
+			return;
+		}
+		if (sprite.isCpuControlled() && sprite.getCpuController() != null) {
+			sprite.getCpuController().despawn();
+		} else {
+			levelManager().requestRespawn();
+		}
 	}
 
 	/**
@@ -4846,8 +4940,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// S1: ObjFloorDist probes at CENTER X, not at the ±9 side sensors.
 			// ROM s1.asm:354-356: jsr (ObjFloorDist).l / cmpi.w #$C,d1
 			// ObjFloorDist uses obX(a0) = sprite center X.
-			// Left sensor is at center - 9; scanning with dx=+9 probes at center.
-			SensorResult centerResult = groundSensors[0].scan((short) 9, (short) 0);
+			// Derive the centre probe from the active collision radius instead of
+			// assuming Sonic's nine-pixel standing radius. Tails can use a
+			// seven-pixel radius after a native shape transition.
+			short centerOffset = (short) -groundSensors[0].getX();
+			SensorResult centerResult = groundSensors[0].scan(centerOffset, (short) 0);
 			int centerDist = (centerResult == null) ? 99 : centerResult.distance();
 
 			if (centerDist < EDGE_THRESHOLD) {
@@ -4885,7 +4982,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// !isBalancing), so a held Down+B fired a normal jump instead of charging a
 		// spin-dash (s2.asm:37549-37571 Sonic_CheckSpindash requires anim==Duck).
 		// The S1 (!extended) branch above already applies this center gate.
-		SensorResult centerResult = groundSensors[0].scan((short) 9, (short) 0);
+		short centerOffset = (short) -groundSensors[0].getX();
+		SensorResult centerResult = groundSensors[0].scan(centerOffset, (short) 0);
 		int centerDist = (centerResult == null) ? 99 : centerResult.distance();
 		if (centerDist < EDGE_THRESHOLD) {
 			return; // Center still has ground — ROM branches to Lookup/Duck, no balance.
@@ -4894,8 +4992,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// Primary_Angle/Secondary_Angle, not from a fresh pair of side probes
 		// inside Tails_InputAcceleration_Path (sonic3k.asm:27840-27849).
 		if (latchedNextTilt == 3) {
-			// S2/S3K: precarious check - scan at center - 6 (dx = +3 from left sensor)
-			SensorResult precariousResult = groundSensors[0].scan((short) 3, (short) 0);
+			// S2/S3K: precarious check - scan at center - 6, derived from the
+			// active left sensor rather than assuming a nine-pixel radius.
+			short precariousOffset = (short) (-6 - groundSensors[0].getX());
+			SensorResult precariousResult = groundSensors[0].scan(precariousOffset, (short) 0);
 			int precariousDist = (precariousResult == null) ? 99 : precariousResult.distance();
 			boolean precarious = precariousDist >= EDGE_THRESHOLD;
 			setBalanceForEdge(false, facingRight, precarious ? 0 : 6);
@@ -4903,8 +5003,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 
 		if (latchedTilt == 3) {
-			// S2/S3K: precarious check - scan at center + 6 (dx = -3 from right sensor)
-			SensorResult precariousResult = groundSensors[1].scan((short) -3, (short) 0);
+			// S2/S3K: precarious check - scan at center + 6, derived from the
+			// active right sensor rather than assuming a nine-pixel radius.
+			short precariousOffset = (short) (6 - groundSensors[1].getX());
+			SensorResult precariousResult = groundSensors[1].scan(precariousOffset, (short) 0);
 			int precariousDist = (precariousResult == null) ? 99 : precariousResult.distance();
 			boolean precarious = precariousDist >= EDGE_THRESHOLD;
 			setBalanceForEdge(true, facingRight, precarious ? 0 : 6);

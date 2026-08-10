@@ -108,7 +108,7 @@ public final class CutsceneKnucklesSkIntroInstance extends AbstractObjectInstanc
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (!initialized) {
             initialized = true;
             if (!isKnucklesAlone() || lastStarPostHitIsSet()) {
@@ -385,7 +385,7 @@ final class CutsceneKnucklesSkIntroBombInstance extends AbstractObjectInstance {
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (routine == ROUTINE_IMPACT_WAIT) {
             timer--;
             if (timer >= 0) {
@@ -569,7 +569,7 @@ final class CutsceneKnucklesSkIntroEggRoboEntryInstance extends AbstractObjectIn
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (routine == ROUTINE_DROP_IN) {
             y++;
             int cameraY = services().camera() != null ? services().camera().getY() & 0xFFFF : 0x0948;
@@ -578,7 +578,7 @@ final class CutsceneKnucklesSkIntroEggRoboEntryInstance extends AbstractObjectIn
                 timer = EXIT_DELAY;
                 swingSetup1();
             }
-            updateMappingFrame(frameCounter);
+            updateMappingFrame(vIntRunCount);
             updateDynamicSpawn(x, y);
             return;
         }
@@ -589,7 +589,7 @@ final class CutsceneKnucklesSkIntroEggRoboEntryInstance extends AbstractObjectIn
         }
         swingUpAndDown();
         moveSprite2();
-        updateMappingFrame(frameCounter);
+        updateMappingFrame(vIntRunCount);
         updateDynamicSpawn(x, y);
         if (!isOnScreen()) {
             setDestroyed(true);
@@ -627,8 +627,8 @@ final class CutsceneKnucklesSkIntroEggRoboEntryInstance extends AbstractObjectIn
         ySubpixel = motion.ySub;
     }
 
-    private void updateMappingFrame(int frameCounter) {
-        mappingFrame = (frameCounter & 1) == 0 ? 1 : 3;
+    private void updateMappingFrame(int vIntRunCount) {
+        mappingFrame = (vIntRunCount & 1) == 0 ? 1 : 3;
     }
 
     int getYVelocityForChild() {
@@ -690,7 +690,7 @@ final class CutsceneKnucklesSkIntroEggRoboLowerVisualChild extends AbstractObjec
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         refreshPosition();
         int parentYVelocity = parent.getYVelocityForChild();
         if (parentYVelocity < 0) {
@@ -749,7 +749,7 @@ final class CutsceneKnucklesSkIntroEggRoboUpperVisualChild extends AbstractObjec
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         refreshPosition();
         if (laserCooldown >= 0) {
             laserCooldown--;
@@ -817,9 +817,9 @@ final class CutsceneKnucklesSkIntroEggRoboLaserChild extends AbstractObjectInsta
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (routine == ROUTINE_CHARGE) {
-            mappingFrame = (frameCounter & 1) == 0 ? 0 : 7;
+            mappingFrame = (vIntRunCount & 1) == 0 ? 0 : 7;
             timer--;
             if (timer < 0) {
                 routine = ROUTINE_FIRE;

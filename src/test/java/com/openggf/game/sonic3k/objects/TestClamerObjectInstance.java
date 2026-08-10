@@ -36,6 +36,37 @@ import static org.mockito.Mockito.mock;
 class TestClamerObjectInstance {
 
     @Test
+    void waitOffscreenHandoffRunsInitializationBeforeStateDispatch() {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+        try {
+            ClamerObjectInstance clamer =
+                    new ClamerObjectInstance(new ObjectSpawn(0x0100, 0x0070, 0xA3, 0, 1, false, 0));
+            RecordingServices services = new RecordingServices();
+            clamer.setServices(services);
+            AbstractPlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+            player.setCentreX((short) (0x0100 + 0x40));
+            player.setCentreY((short) 0x0070);
+
+            clamer.update(0x1000, player);
+            assertEquals(0, services.spawnedChildren.size(),
+                    "Obj_WaitOffscreen must only release the wrapper on its first visible pass");
+            assertEquals(0x02, clamer.testRoutine());
+
+            clamer.update(0x1001, player);
+            assertEquals(1, services.spawnedChildren.size(),
+                    "Clamer initialization must create its spring child on the pass after the wait wrapper");
+            assertEquals(0x02, clamer.testRoutine(),
+                    "the initialization pass must return before dispatching the idle state");
+
+            clamer.update(0x1002, player);
+            assertEquals(0x06, clamer.testRoutine(),
+                    "the idle gate must run only after the ROM-style initialization pass");
+        } finally {
+            AbstractObjectInstance.resetCameraBoundsForTests();
+        }
+    }
+
+    @Test
     void updateAllocatesRomSpringChildSlotAtChildObjDat89148Offset() {
         ClamerObjectInstance clamer =
                 new ClamerObjectInstance(new ObjectSpawn(0x0578, 0x0690, 0xA3, 0, 0, false, 0));
@@ -43,7 +74,7 @@ class TestClamerObjectInstance {
         clamer.setServices(services);
         AbstractPlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
 
-        clamer.testReleaseWaitOffscreen();
+        clamer.testRunProductionInitializationAfterOffscreenWait();
 
         assertEquals(1, services.spawnedChildren.size(),
                 "Obj_Clamer loc_88FDC creates one ChildObjDat_89148 child slot");
@@ -63,7 +94,7 @@ class TestClamerObjectInstance {
         ClamerObjectInstance clamer =
                 new ClamerObjectInstance(new ObjectSpawn(0x0578, 0x0690, 0xA3, 0, 0, false, 0));
         clamer.setServices(new TestObjectServices());
-        clamer.testReleaseWaitOffscreen();
+        clamer.testRunProductionInitializationAfterOffscreenWait();
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
                 .build();
@@ -118,7 +149,7 @@ class TestClamerObjectInstance {
         ClamerObjectInstance clamer =
                 new ClamerObjectInstance(new ObjectSpawn(0x0578, 0x0690, 0xA3, 0, 1, false, 0));
         clamer.setServices(new TestObjectServices());
-        clamer.testReleaseWaitOffscreen();
+        clamer.testRunProductionInitializationAfterOffscreenWait();
         AbstractPlayableSprite player = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
                 .build()
@@ -152,7 +183,7 @@ class TestClamerObjectInstance {
         player.setCentreX((short) (0x0C98 + 0x40));
         player.setCentreY((short) 0x0470);
 
-        clamer.testReleaseWaitOffscreen();
+        clamer.testRunProductionInitializationAfterOffscreenWait();
         assertEquals(0x02, clamer.testRoutine());
         clamer.update(0x1000, player);
         // Facing right, player on the right (d0=2, then -=2 = 0): close.
@@ -172,7 +203,7 @@ class TestClamerObjectInstance {
         player.setCentreX((short) (0x0C98 - 0x40));
         player.setCentreY((short) 0x0470);
 
-        clamer.testReleaseWaitOffscreen();
+        clamer.testRunProductionInitializationAfterOffscreenWait();
         clamer.update(0x1000, player);
         assertEquals(0x02, clamer.testRoutine());
     }
@@ -190,7 +221,7 @@ class TestClamerObjectInstance {
         player.setCentreX((short) (0x0C98 + 0x60));
         player.setCentreY((short) 0x0470);
 
-        clamer.testReleaseWaitOffscreen();
+        clamer.testRunProductionInitializationAfterOffscreenWait();
         clamer.update(0x1000, player);
         assertEquals(0x02, clamer.testRoutine());
     }
@@ -207,7 +238,7 @@ class TestClamerObjectInstance {
         player.setCentreX((short) (0x0C98 + 0x40));
         player.setCentreY((short) 0x0470);
 
-        clamer.testReleaseWaitOffscreen();
+        clamer.testRunProductionInitializationAfterOffscreenWait();
         clamer.update(0x1000, player);
         assertEquals(0x06, clamer.testRoutine());
 
@@ -230,7 +261,7 @@ class TestClamerObjectInstance {
         player.setCentreX((short) (0x0100 + 0x40));
         player.setCentreY((short) 0x0070);
 
-        clamer.testReleaseWaitOffscreen();
+        clamer.testRunProductionInitializationAfterOffscreenWait();
         clamer.update(0x1000, player);
         assertEquals(0x06, clamer.testRoutine());
 
@@ -267,7 +298,7 @@ class TestClamerObjectInstance {
             player.setCentreX((short) 0x0140);
             player.setCentreY((short) 0x0400);
 
-            clamer.testReleaseWaitOffscreen();
+            clamer.testRunProductionInitializationAfterOffscreenWait();
             clamer.update(0x1000, player);
             for (int i = 0; i < 55; i++) {
                 clamer.update(0x1001 + i, player);
@@ -290,7 +321,7 @@ class TestClamerObjectInstance {
         player.setCentreX((short) (0x0100 - 0x40));
         player.setCentreY((short) 0x0070);
 
-        clamer.testReleaseWaitOffscreen();
+        clamer.testRunProductionInitializationAfterOffscreenWait();
         clamer.update(0x0260, player);
         assertEquals(0x06, clamer.testRoutine());
 
@@ -321,7 +352,7 @@ class TestClamerObjectInstance {
         main.setCentreX((short) (0x0C98 - 0x80));
         nativeP2.setCentreX((short) (0x0C98 + 0x40));
         clamer.setServices(new QueryOnlyServices(main, nativeP2));
-        clamer.testReleaseWaitOffscreen();
+        clamer.testRunProductionInitializationAfterOffscreenWait();
 
         clamer.testStepIdle(main);
 
@@ -362,7 +393,7 @@ class TestClamerObjectInstance {
         TestablePlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0, (short) 0);
         nativeP2.setCpuControlled(true);
         clamer.setServices(new QueryOnlyServices(queriedMain, List.of(nativeP2)));
-        clamer.testReleaseWaitOffscreen();
+        clamer.testRunProductionInitializationAfterOffscreenWait();
 
         clamer.onTouchResponse(updatePrimary, new TouchResponseResult(0x17, 8, 8, TouchCategory.SPECIAL), 0);
         clamer.update(0, updatePrimary);

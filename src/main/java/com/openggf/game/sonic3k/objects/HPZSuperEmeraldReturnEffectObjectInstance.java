@@ -72,7 +72,7 @@ public final class HPZSuperEmeraldReturnEffectObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         S3kSanctuaryRuntimeState runtime = runtime();
         if (completed || runtime == null) {
             return;

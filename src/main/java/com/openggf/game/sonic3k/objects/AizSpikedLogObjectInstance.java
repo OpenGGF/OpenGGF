@@ -101,7 +101,7 @@ public class AizSpikedLogObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         ensureInitialized();
         updateSwingState();
         updateYPosition();
@@ -371,7 +371,7 @@ public class AizSpikedLogObjectInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             if (parent.isDestroyed()) {
                 setDestroyed(true);
                 return;
@@ -439,6 +439,14 @@ public class AizSpikedLogObjectInstance extends AbstractObjectInstance
         @Override
         public int getCollisionProperty() {
             return 0;
+        }
+
+        @Override
+        public boolean sidekickTouchHurtPublishesAnimation() {
+            // ROM's spiked-log child reaches the generic touch-hurt owner with
+            // Tails' existing anim byte still live; Animate_Tails advances the
+            // prior script during the two-frame hurt window.
+            return false;
         }
     }
 }

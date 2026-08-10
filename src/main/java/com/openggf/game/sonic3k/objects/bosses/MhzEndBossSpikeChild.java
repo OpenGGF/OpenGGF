@@ -83,13 +83,13 @@ public final class MhzEndBossSpikeChild extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (parent.isDestroyed()) {
             setDestroyed(true);
             return;
         }
         refreshFromParent();
-        collisionFlags = resolveCollisionFlags(frameCounter);
+        collisionFlags = resolveCollisionFlags(vIntRunCount);
         updateDynamicSpawn(x, y);
     }
 
@@ -98,11 +98,11 @@ public final class MhzEndBossSpikeChild extends AbstractObjectInstance
         y = parent.getY() + yOffset;
     }
 
-    private int resolveCollisionFlags(int frameCounter) {
+    private int resolveCollisionFlags(int vIntRunCount) {
         if ((parent.getCustomFlag(DASH_PHASE_FLAG_OFFSET) & DASH_PHASE_FLAG) == 0) {
             return 0;
         }
-        boolean oddFrame = (frameCounter & 1) != 0;
+        boolean oddFrame = (vIntRunCount & 1) != 0;
         boolean subtypeActive = subtype == 0 ? !oddFrame : oddFrame;
         return subtypeActive ? ACTIVE_COLLISION_FLAGS : 0;
     }

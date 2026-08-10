@@ -71,7 +71,7 @@ public final class MhzEndBossRobotnikHeadChild extends AbstractObjectInstance im
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         refreshFromParent();
         if ((parent.getCustomFlag(PARENT_FLAGS_OFFSET) & DELETE_WHEN_PARENT_FLAG) != 0) {
             setDestroyed(true);

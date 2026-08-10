@@ -96,7 +96,7 @@ public class WFZPalSwitcherObjectInstance extends BoxObjectInstance implements R
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (playerEntity == null) {
             return;
         }

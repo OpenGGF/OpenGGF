@@ -43,12 +43,12 @@ public class WFZStickBadnikInstance extends AbstractBadnikInstance implements Re
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity player) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity player) {
         // ObjBF has no movement logic; MarkObjGone/offscreen lifetime is handled by ObjectManager.
     }
 
     @Override
-    protected void updateAnimation(int frameCounter) {
+    protected void updateAnimation(int vIntRunCount) {
         if (animTimer-- > 0) {
             return;
         }

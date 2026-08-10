@@ -157,7 +157,7 @@ class TestTraceReplayInvariantGuard {
     void s3kTraceReplayValidatesBk2InputAlignment() throws IOException {
         String text = Files.readString(Path.of(
                 "src/test/java/com/openggf/tests/trace/AbstractTraceReplayTest.java"));
-        String method = methodBody(text, "private void replayS3kTrace(");
+        String method = methodBody(text, "private boolean replayS3kTrace(");
 
         assertTrue(method.contains("binder.validateInput(driveFrame, bk2Input)"),
                 "S3K trace replay must validate BK2 input against each trace row "
@@ -168,7 +168,7 @@ class TestTraceReplayInvariantGuard {
     void s3kTraceReplayKeepsRingDiagnosticsRowStrictBeforeComparison() throws IOException {
         String text = Files.readString(Path.of(
                 "src/test/java/com/openggf/tests/trace/AbstractTraceReplayTest.java"));
-        String method = methodBody(text, "private void replayS3kTrace(");
+        String method = methodBody(text, "private boolean replayS3kTrace(");
 
         assertTrue(method.contains("s3kFrameForGameplayComparison("),
                 "S3K trace replay must normalize split-row camera sampling explicitly.");

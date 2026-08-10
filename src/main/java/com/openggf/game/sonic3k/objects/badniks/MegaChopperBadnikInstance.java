@@ -97,7 +97,7 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         if (isDestroyed()) {
             return;
         }
@@ -105,9 +105,9 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
 
         switch (state) {
-            case SWIM -> updateSwim(frameCounter, player);
+            case SWIM -> updateSwim(vIntRunCount, player);
             case LEAP -> updateLeap(player);
-            case CARRY -> updateCarry(frameCounter);
+            case CARRY -> updateCarry(vIntRunCount);
             case RELEASED -> updateReleased();
         }
     }
@@ -149,7 +149,7 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
         capturedPlayer = null;
     }
 
-    private void updateSwim(int frameCounter, AbstractPlayableSprite player) {
+    private void updateSwim(int vIntRunCount, AbstractPlayableSprite player) {
         processPendingCollisionProperty();
         if (isDestroyed() || state != State.SWIM) {
             return;
@@ -157,7 +157,7 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
 
         AbstractPlayableSprite target = findNearestTarget(player);
         tickSwimAnimation();
-        applyVerticalBob(frameCounter, target);
+        applyVerticalBob(vIntRunCount, target);
 
         if (shouldLeapAtPlayer(target)) {
             enterLeap(target);
@@ -194,8 +194,8 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
         moveWithVelocity();
     }
 
-    private void updateCarry(int frameCounter) {
-        mappingFrame = ((frameCounter >> 2) & 1) == 0 ? FRAME_SWIM_A : FRAME_CARRY_ALT;
+    private void updateCarry(int vIntRunCount) {
+        mappingFrame = ((vIntRunCount >> 2) & 1) == 0 ? FRAME_SWIM_A : FRAME_CARRY_ALT;
         if (capturedPlayer == null) {
             startReleasedFlight();
             return;
@@ -341,8 +341,8 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
         mappingFrame = (mappingFrame == FRAME_SWIM_A) ? FRAME_SWIM_B : FRAME_SWIM_A;
     }
 
-    private void applyVerticalBob(int frameCounter, AbstractPlayableSprite player) {
-        if ((frameCounter & BOB_INTERVAL_MASK) != 0 || player == null) {
+    private void applyVerticalBob(int vIntRunCount, AbstractPlayableSprite player) {
+        if ((vIntRunCount & BOB_INTERVAL_MASK) != 0 || player == null) {
             return;
         }
         // ROM Find_SonicTails: d1=0 when object at or below player → bob UP (-1),

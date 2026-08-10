@@ -570,6 +570,7 @@ public class Ym2612Chip {
     private int in0, in1, in2, in3;
     private int en0, en1, en2, en3;
     private int traceEvents;
+    private ChipWriteObserver writeObserver = ChipWriteObserver.NONE;
 
     public Ym2612Chip() {
         for (int i = 0; i < 6; i++) {
@@ -907,6 +908,10 @@ public class Ym2612Chip {
         return status;
     }
 
+    void setWriteObserver(ChipWriteObserver observer) {
+        writeObserver = observer == null ? ChipWriteObserver.NONE : observer;
+    }
+
     public void write(int port, int reg, int val) {
         int resolvedPort = port & 1;
         int resolvedReg = reg & 0x1FF;
@@ -916,6 +921,7 @@ public class Ym2612Chip {
         }
         writeAddress(resolvedPort, resolvedReg);
         writeData(resolvedPort, val);
+        writeObserver.onYm2612Write(resolvedPort, resolvedReg, val & 0xFF);
     }
 
     public void writeAddress(int port, int reg) {

@@ -31,7 +31,7 @@ public final class FbzRobotnikHeadChild extends AbstractFbzEndBossChild {
         return character == PlayerCharacter.KNUCKLES;
     }
 
-    @Override public void update(int frameCounter, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         if (ship == null || ship.isDestroyed()) {
             com.openggf.level.objects.ObjectLifetimeOps.expireDynamic(this); return;
         }

@@ -62,5 +62,19 @@ namespace OpenGGF.BizHawk.Headless
             }
             return mask;
         }
+
+        /// <summary>
+        /// Converts the ROM's held-controller byte for ending demos. Start
+        /// is intentionally excluded; bits 4-6 (B/C/A) collapse to jump.
+        /// </summary>
+        public static int FromRomControllerByte(byte raw)
+        {
+            int mask = raw & 0x0F;
+            if ((raw & 0x70) != 0)
+            {
+                mask |= Jump;
+            }
+            return mask;
+        }
     }
 }

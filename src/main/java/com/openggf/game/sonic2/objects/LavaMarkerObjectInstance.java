@@ -121,7 +121,7 @@ public class LavaMarkerObjectInstance extends AbstractObjectInstance
     // ========================================================================
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // ROM Obj31_Main (line 46058) only does off-screen culling via MarkObjGone.
         // The ObjectManager.Placement system handles this automatically,

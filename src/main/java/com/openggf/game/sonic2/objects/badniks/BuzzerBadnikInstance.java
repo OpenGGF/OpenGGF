@@ -87,7 +87,7 @@ public class BuzzerBadnikInstance extends AbstractBadnikInstance implements Rewi
     }
 
     @Override
-    protected void updateMovement(int vblaFrame, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         if (initPending) {
             runInitRoutine();
             return;
@@ -97,7 +97,7 @@ public class BuzzerBadnikInstance extends AbstractBadnikInstance implements Rewi
                 ? sprite
                 : null;
         switch (state) {
-            case ROAMING -> updateRoaming(vblaFrame, player);
+            case ROAMING -> updateRoaming(vIntRunCount, player);
             case SHOOTING -> updateShooting();
         }
     }
@@ -114,8 +114,8 @@ public class BuzzerBadnikInstance extends AbstractBadnikInstance implements Rewi
         spawnChild(() -> new BuzzerFlameChild(buildSpawnAt(currentX, currentY), this));
     }
 
-    private void updateRoaming(int vblaFrame, AbstractPlayableSprite player) {
-        checkPlayerForShooting(vblaFrame, player);
+    private void updateRoaming(int vIntRunCount, AbstractPlayableSprite player) {
+        checkPlayerForShooting(vIntRunCount, player);
 
         turnDelay--;
         int delay = turnDelay;
@@ -137,12 +137,12 @@ public class BuzzerBadnikInstance extends AbstractBadnikInstance implements Rewi
         }
     }
 
-    private void checkPlayerForShooting(int vblaFrame, AbstractPlayableSprite mainPlayer) {
+    private void checkPlayerForShooting(int vIntRunCount, AbstractPlayableSprite mainPlayer) {
         if (shootingDisabled) {
             return;
         }
 
-        AbstractPlayableSprite target = selectTargetPlayer(vblaFrame, mainPlayer);
+        AbstractPlayableSprite target = selectTargetPlayer(vIntRunCount, mainPlayer);
         if (target == null) {
             return;
         }
@@ -163,8 +163,8 @@ public class BuzzerBadnikInstance extends AbstractBadnikInstance implements Rewi
         shotTimer = SHOT_TIMER_INIT;
     }
 
-    private AbstractPlayableSprite selectTargetPlayer(int vblaFrame, AbstractPlayableSprite mainPlayer) {
-        if ((vblaFrame & 1) == 0) {
+    private AbstractPlayableSprite selectTargetPlayer(int vIntRunCount, AbstractPlayableSprite mainPlayer) {
+        if ((vIntRunCount & 1) == 0) {
             return mainPlayer;
         }
 
@@ -204,7 +204,7 @@ public class BuzzerBadnikInstance extends AbstractBadnikInstance implements Rewi
     }
 
     @Override
-    protected void updateAnimation(int frameCounter) {
+    protected void updateAnimation(int vIntRunCount) {
         animFrame = state == State.SHOOTING ? 1 : 0;
     }
 
@@ -343,7 +343,7 @@ public class BuzzerBadnikInstance extends AbstractBadnikInstance implements Rewi
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             ObjectInstance slotOccupant = findParentSlotOccupant();
             if (slotOccupant == null) {
                 setDestroyed(true);
@@ -356,7 +356,7 @@ public class BuzzerBadnikInstance extends AbstractBadnikInstance implements Rewi
                 facingLeft = parent.facingLeft;
             }
 
-            animFrame = 3 + ((frameCounter / 3) & 1);
+            animFrame = 3 + ((vIntRunCount / 3) & 1);
             updateDynamicSpawn(currentX, currentY);
         }
 

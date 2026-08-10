@@ -161,7 +161,7 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (!passesNativeCameraRangeGate()) {
             return;
         }
@@ -216,31 +216,12 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
 
     private void routineCameraLock() {
         animateRaw();
-        constrainUpcomingHorizontalScrollToNativeLock();
         if (!cameraGate.update(services().camera(),
                 () -> services().playMusic(Sonic3kMusic.KNUCKLES.id))) {
             return;
         }
         timer = PRE_JUMP_WAIT;
         phase = Phase.PRE_JUMP_WAIT;
-    }
-
-    /**
-     * Object execution precedes {@code ScrollHoriz} in the engine frame, so the
-     * current camera word may still be just left of the target while the pending
-     * scroll would cross it. The CNZ2 ROM trace reaches {@code Camera_X_pos=$1D00}
-     * exactly (frame $5494) and loc_85CA4 then installs $1D00 as both horizontal
-     * limits. Publish that right limit for the pending scroll when it would reach
-     * or cross the same target; the gate still observes and completes the native
-     * lock on the following object pass.
-     */
-    private void constrainUpcomingHorizontalScrollToNativeLock() {
-        Camera camera = services().camera();
-        int cameraX = camera.getX() & 0xFFFF;
-        int nextCameraX = camera.previewNextX() & 0xFFFF;
-        if (cameraX < CAMERA_LOCK_X && nextCameraX >= CAMERA_LOCK_X) {
-            camera.setMaxX((short) CAMERA_LOCK_X);
-        }
     }
 
     private void routinePreJumpWait() {
@@ -409,7 +390,6 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
     private boolean passesNativeCameraRangeGate() {
         Camera camera = services().camera();
         if (isCameraInActivationRange()) {
-            cameraGate.refreshApproachFlags(camera);
             return true;
         }
         if (isOutsideNativeDeleteRange(camera)) {

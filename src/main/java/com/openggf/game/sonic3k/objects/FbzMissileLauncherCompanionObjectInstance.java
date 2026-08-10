@@ -24,7 +24,7 @@ public final class FbzMissileLauncherCompanionObjectInstance
     familySlot = p == null ? -1 : p.getSlotIndex();
     anchorX = p == null ? s.x() : p.getX();
   }
-  public void update(int f, PlayableEntity p) {
+  public void update(int vIntRunCount, PlayableEntity p) {
     if (!detonated && parent != null && parent.liveImpacts() == 0) {
       detonated = true;
       int member = 0;

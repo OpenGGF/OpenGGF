@@ -1,10 +1,13 @@
 package com.openggf.game.sonic3k.resources;
 
 import com.openggf.data.Rom;
+import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareTimingSnapshot;
+import com.openggf.game.timing.HardwareTimingJob;
 import com.openggf.game.timing.HardwareWorkHandle;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.tools.KosinskiReader;
 import com.openggf.game.resources.QueueDiagnosticSnapshot;
@@ -14,6 +17,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -40,6 +44,95 @@ class TestS3kKosModuleQueue {
 
     @TempDir
     Path tempDir;
+
+    @Test
+    void sequentialBatchPreflightsEveryArchiveBeforeSubmitting() throws Exception {
+        byte[] fixture = new byte[ABC_KOSM.length + 2];
+        System.arraycopy(ABC_KOSM, 0, fixture, 0, ABC_KOSM.length);
+        Path romPath = tempDir.resolve("atomic-batch.gen");
+        Files.write(romPath, fixture);
+        try (Rom rom = new Rom()) {
+            assertTrue(rom.open(romPath.toString()));
+            HardwareTimingService timing = new HardwareTimingService();
+            S3kKosModuleQueue modules = new S3kKosModuleQueue(
+                    timing, new S3kKosDecompressionQueue(timing));
+
+            assertThrows(java.io.IOException.class, () ->
+                    modules.queueSequentialBatch(
+                            rom, List.of(0, fixture.length - 1), 0));
+
+            assertEquals(List.of(), timing.pendingHandles(),
+                    "a bad second archive must not leave the first parent submitted");
+        }
+    }
+
+    @Test
+    void deferredFreshBatchRetainsRequestUntilTwoQueueSlotsAreAvailable()
+            throws Exception {
+        byte[] fixture = new byte[ABC_KOSM.length * 5];
+        for (int index = 0; index < 5; index++) {
+            System.arraycopy(ABC_KOSM, 0, fixture,
+                    index * ABC_KOSM.length, ABC_KOSM.length);
+        }
+        Path romPath = tempDir.resolve("fresh-capacity.gen");
+        Files.write(romPath, fixture);
+        try (Rom rom = new Rom()) {
+            assertTrue(rom.open(romPath.toString()));
+            HardwareTimingService timing = new HardwareTimingService();
+            S3kRuntimeArtCoordinator coordinator =
+                    new S3kRuntimeArtCoordinator(timing);
+            for (int index = 0; index < 3; index++) {
+                coordinator.moduleQueue().queue(
+                        rom, index * ABC_KOSM.length, index);
+            }
+            coordinator.deferFreshLevelRuntimeArt(
+                    rom, 3 * ABC_KOSM.length, 4 * ABC_KOSM.length);
+
+            coordinator.afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
+
+            assertEquals(3, timing.pendingHandles().size());
+            assertEquals(3 * ABC_KOSM.length,
+                    coordinator.capture().deferredPrimarySource());
+        }
+    }
+
+    @Test
+    void replacingAndRewindingDeferredFreshBatchReplaysExactOrdinals()
+            throws Exception {
+        byte[] fixture = new byte[ABC_KOSM.length * 3];
+        for (int index = 0; index < 3; index++) {
+            System.arraycopy(ABC_KOSM, 0, fixture,
+                    index * ABC_KOSM.length, ABC_KOSM.length);
+        }
+        Path romPath = tempDir.resolve("fresh-rewind.gen");
+        Files.write(romPath, fixture);
+        try (Rom rom = new Rom()) {
+            assertTrue(rom.open(romPath.toString()));
+            HardwareTimingService timing = new HardwareTimingService();
+            S3kRuntimeArtCoordinator coordinator =
+                    new S3kRuntimeArtCoordinator(timing);
+            coordinator.deferFreshLevelRuntimeArt(rom, 0, ABC_KOSM.length);
+            coordinator.deferFreshLevelRuntimeArt(
+                    rom, ABC_KOSM.length, 2 * ABC_KOSM.length);
+            HardwareTimingSnapshot timingBefore = timing.capture();
+            S3kRuntimeArtCoordinator.Snapshot coordinatorBefore = coordinator.capture();
+
+            coordinator.afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            List<HardwareWorkHandle> first =
+                    coordinator.capture().freshLevelHandoffHandles();
+
+            timing.restore(timingBefore);
+            coordinator.restore(coordinatorBefore);
+            coordinator.afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
+
+            assertEquals(first,
+                    coordinator.capture().freshLevelHandoffHandles());
+            assertEquals(List.of(1 * ABC_KOSM.length, 2 * ABC_KOSM.length),
+                    timing.capture().jobs().stream()
+                            .map(HardwareTimingJob.Snapshot::romSourceAddress)
+                            .toList());
+        }
+    }
 
     @Test
     void transitionPreflightRejectsInvalidBatchBeforeSubmittingAnyWork() throws Exception {
@@ -83,7 +176,7 @@ class TestS3kKosModuleQueue {
 
             for (int frame = 0; frame < 32 && !modules.isReady(first); frame++) {
                 modules.prepareQueuedModuleBeforeVSync();
-                modules.processModuleQueueAfterObjects();
+                romFrameModuleStep(modules);
             }
 
             assertTrue(modules.isReady(first));
@@ -93,14 +186,14 @@ class TestS3kKosModuleQueue {
 
             while (modules.modulesLeft()) {
                 modules.prepareQueuedModuleBeforeVSync();
-                modules.processModuleQueueAfterObjects();
+                romFrameModuleStep(modules);
             }
             assertTrue(modules.isReady(later));
         }
     }
 
     @Test
-    void submitsCanonicalArchiveSpanAndPublishesAfterPostObjects() throws Exception {
+    void submitsCanonicalArchiveSpanAndPublishesAfterPostObjectsCapture() throws Exception {
         Path romPath = tempDir.resolve("fixture.gen");
         Files.write(romPath, ABC_KOSM);
         try (Rom rom = new Rom()) {
@@ -122,7 +215,7 @@ class TestS3kKosModuleQueue {
                 queue.prepareQueuedModuleBeforeVSync();
                 assertFalse(queue.isReady(handle),
                         "pre-VSync preparation must not publish readiness");
-                queue.processModuleQueueAfterObjects();
+                romFrameModuleStep(queue);
             }
 
             assertTrue(queue.isReady(handle));
@@ -144,7 +237,7 @@ class TestS3kKosModuleQueue {
             S3kKosModuleQueue modules =
                     new S3kKosModuleQueue(timing, direct);
             modules.queue(rom, 0, 0x500);
-            modules.processModuleQueueAfterObjects();
+            romFrameModuleStep(modules);
 
             QueueDiagnosticSnapshot snapshot = modules.captureDiagnostics(
                     java.util.List.of());
@@ -157,7 +250,48 @@ class TestS3kKosModuleQueue {
             assertEquals(1, direct.physicalQueueSize(),
                     "active child belongs only to the direct queue");
             assertFalse(direct.captureDiagnostics(java.util.List.of()).prepared(),
-                    "a KosM child queued at POST_OBJECTS is not armed until PRE_MAIN_LOOP");
+                    "a KosM child queued by the module step is not armed until the direct FIFO is serviced");
+        }
+    }
+
+    @Test
+    void heldTailStillPublishesLaterChildOfActiveParent() throws Exception {
+        Path romPath = tempDir.resolve("held-continuation.gen");
+        Files.write(romPath, TWO_MODULE_KOSM);
+        try (Rom rom = new Rom()) {
+            assertTrue(rom.open(romPath.toString()));
+            HardwareTimingService timing = new HardwareTimingService();
+            S3kKosDecompressionQueue direct =
+                    new S3kKosDecompressionQueue(timing);
+            S3kKosModuleQueue modules =
+                    new S3kKosModuleQueue(timing, direct);
+            modules.queue(rom, 0, 0x500);
+            romFrameModuleStep(modules);
+            HardwareWorkHandle firstChild =
+                    preparation(timing.capture()).activeChild();
+
+            while (!direct.isReady(firstChild)) {
+                modules.prepareQueuedModuleBeforeVSync();
+            }
+            romFrameModuleStep(modules);
+            assertEquals(1, preparation(timing.capture()).completedModules());
+            assertNull(preparation(timing.capture()).activeChild());
+
+            modules.deferChildSubmissionForHeldLoopTail();
+            romFrameModuleStep(modules);
+
+            assertNotNull(preparation(timing.capture()).activeChild(),
+                    "a held boundary cannot re-defer an active parent's next module");
+            assertEquals(1, direct.physicalQueueSize());
+            assertFalse(direct.captureDiagnostics(List.of()).prepared());
+
+            direct.deferNewHeadPreparationVisibilityForHeldLoopTail();
+            direct.afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            assertFalse(direct.captureDiagnostics(List.of()).prepared(),
+                    "the held row publishes the child before its direct service is visible");
+            direct.afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            assertTrue(direct.captureDiagnostics(List.of()).prepared(),
+                    "the held closure exposes the direct service");
         }
     }
 
@@ -178,7 +312,7 @@ class TestS3kKosModuleQueue {
 
             for (int frame = 0; frame < 512 && !queue.isReady(handle); frame++) {
                 queue.prepareQueuedModuleBeforeVSync();
-                queue.processModuleQueueAfterObjects();
+                romFrameModuleStep(queue);
             }
 
             assertTrue(queue.isReady(handle));
@@ -206,7 +340,7 @@ class TestS3kKosModuleQueue {
                     rom,
                     Sonic3kConstants.ART_KOSM_AIZ_INTRO_PLANE_ADDR,
                     Sonic3kConstants.ARTTILE_AIZ_INTRO_PLANE);
-            queue.processModuleQueueAfterObjects();
+            romFrameModuleStep(queue);
 
             var child = timing.capture().jobs().stream()
                     .filter(job -> job.kind()
@@ -227,14 +361,18 @@ class TestS3kKosModuleQueue {
     }
 
     @Test
-    void schemaOneLiveChildrenPrepareParentBeforeRecordedAdmission()
+    void explicitMixedPolicyMapAllowsLiveChildrenBeforeRecordedParentAdmission()
             throws Exception {
         String configured = System.getProperty("s3k.rom.path");
         Assumptions.assumeTrue(configured != null && !configured.isBlank());
         try (Rom rom = new Rom()) {
             assertTrue(rom.open(configured));
             HardwareTimingService timing = new HardwareTimingService();
-            var recorded = timing.beginRecordedAdmission();
+            var recorded = timing.beginRecordedAdmission(java.util.Map.of(
+                    HardwareWorkKind.KOS_MODULE_QUEUE,
+                    HardwareReadinessAdmissionPolicy.RECORDED,
+                    HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
+                    HardwareReadinessAdmissionPolicy.LIVE));
             S3kKosDecompressionQueue direct = new S3kKosDecompressionQueue(timing);
             S3kKosModuleQueue queue = new S3kKosModuleQueue(timing, direct);
             HardwareWorkHandle handle = queue.queue(
@@ -244,11 +382,15 @@ class TestS3kKosModuleQueue {
 
             assertEquals(5, queue.descriptor(handle).moduleCount(),
                     "the archive header pins five service modules");
-            queue.processModuleQueueAfterObjects();
+            romFrameModuleStep(queue);
             for (int module = 1; module <= 5; module++) {
                 S3kKosModuleSnapshot submitted = preparation(timing.capture());
                 assertNotNull(submitted.activeChild());
+                int preparations = 0;
                 while (!direct.isReady(submitted.activeChild())) {
+                    assertTrue(preparations++ < 4096,
+                            "module " + module + "'s direct child must finish decompressing"
+                                    + " within a bounded number of preparation steps");
                     queue.prepareQueuedModuleBeforeVSync();
                 }
                 S3kKosModuleSnapshot beforeRetirement = preparation(timing.capture());
@@ -257,10 +399,10 @@ class TestS3kKosModuleQueue {
                 assertFalse(queue.isReady(handle),
                         "preparation cannot admit recorded readiness");
 
-                queue.processModuleQueueAfterObjects();
+                romFrameModuleStep(queue);
                 assertEquals(module, preparation(timing.capture()).completedModules());
                 if (module < 5) {
-                    queue.processModuleQueueAfterObjects();
+                    romFrameModuleStep(queue);
                 }
             }
 
@@ -272,7 +414,7 @@ class TestS3kKosModuleQueue {
 
             for (int frame = 6; frame <= 131; frame++) {
                 queue.prepareQueuedModuleBeforeVSync();
-                queue.processModuleQueueAfterObjects();
+                romFrameModuleStep(queue);
                 assertFalse(queue.isReady(handle),
                         "service cadence cannot admit readiness before the trace edge");
             }
@@ -286,7 +428,7 @@ class TestS3kKosModuleQueue {
     }
 
     @Test
-    void postRetiresOneChildBeforeFollowingPostSubmitsNextModule() throws Exception {
+    void stepRetiresOneChildBeforeFollowingStepSubmitsNextModule() throws Exception {
         Path romPath = tempDir.resolve("two-modules.gen");
         Files.write(romPath, TWO_MODULE_KOSM);
         try (Rom rom = new Rom()) {
@@ -296,23 +438,27 @@ class TestS3kKosModuleQueue {
             S3kKosModuleQueue queue = new S3kKosModuleQueue(timing, direct);
             HardwareWorkHandle parent = queue.queue(rom, 0, 0x500);
 
-            queue.processModuleQueueAfterObjects();
+            romFrameModuleStep(queue);
             S3kKosModuleSnapshot submittedFirst = preparation(timing.capture());
             assertEquals(0, submittedFirst.completedModules());
             assertNotNull(submittedFirst.activeChild());
             assertEquals(1, direct.physicalQueueSize());
 
+            int firstPreparations = 0;
             while (!direct.isReady(submittedFirst.activeChild())) {
+                assertTrue(firstPreparations++ < 4096,
+                        "the first module's direct child must finish decompressing"
+                                + " within a bounded number of preparation steps");
                 queue.prepareQueuedModuleBeforeVSync();
             }
-            queue.processModuleQueueAfterObjects();
+            romFrameModuleStep(queue);
             S3kKosModuleSnapshot retiredFirst = preparation(timing.capture());
             assertEquals(1, retiredFirst.completedModules());
             assertEquals(null, retiredFirst.activeChild());
             assertEquals(0, direct.physicalQueueSize());
             assertFalse(queue.isReady(parent));
 
-            queue.processModuleQueueAfterObjects();
+            romFrameModuleStep(queue);
             S3kKosModuleSnapshot submittedSecond = preparation(timing.capture());
             assertNotNull(submittedSecond.activeChild());
             assertEquals(1, submittedSecond.completedModules());
@@ -335,7 +481,7 @@ class TestS3kKosModuleQueue {
             }
             queue.queue(rom, 0, 0x500);
 
-            queue.processModuleQueueAfterObjects();
+            romFrameModuleStep(queue);
 
             assertEquals(4, direct.physicalQueueSize());
             assertEquals(null, preparation(timing.capture()).activeChild());
@@ -353,22 +499,30 @@ class TestS3kKosModuleQueue {
             S3kKosDecompressionQueue direct = new S3kKosDecompressionQueue(timing);
             S3kKosModuleQueue queue = new S3kKosModuleQueue(timing, direct);
             HardwareWorkHandle parent = queue.queue(rom, 0, 0x500);
-            queue.processModuleQueueAfterObjects();
+            romFrameModuleStep(queue);
             HardwareWorkHandle child = preparation(timing.capture()).activeChild();
             HardwareWorkHandle ordinary = direct.queueStandardKos(
                     rom, 2, S3kKosRamDestinations.BLOCK_TABLE);
 
+            int childPreparations = 0;
             while (!direct.isReady(child)) {
+                assertTrue(childPreparations++ < 4096,
+                        "the module child must finish decompressing within a bounded"
+                                + " number of preparation steps");
                 queue.prepareQueuedModuleBeforeVSync();
             }
-            queue.processModuleQueueAfterObjects();
+            romFrameModuleStep(queue);
             assertEquals(0, preparation(timing.capture()).completedModules());
             assertFalse(queue.isReady(parent));
 
+            int ordinaryPreparations = 0;
             while (!direct.isReady(ordinary)) {
+                assertTrue(ordinaryPreparations++ < 4096,
+                        "the ordinary direct entry behind the module child must finish"
+                                + " decompressing within a bounded number of preparation steps");
                 queue.prepareQueuedModuleBeforeVSync();
             }
-            queue.processModuleQueueAfterObjects();
+            romFrameModuleStep(queue);
 
             assertTrue(queue.isReady(parent));
             assertEquals(1, timing.capture().jobs().stream()
@@ -383,7 +537,7 @@ class TestS3kKosModuleQueue {
     }
 
     @Test
-    void zeroModuleParentCanOnlyPrepareAtPostObjects() throws Exception {
+    void zeroModuleParentCanOnlyPrepareAtItsModuleStep() throws Exception {
         Path romPath = tempDir.resolve("empty-kosm.gen");
         Files.write(romPath, EMPTY_KOSM);
         try (Rom rom = new Rom()) {
@@ -402,7 +556,7 @@ class TestS3kKosModuleQueue {
             assertNull(timing.capture().jobs().getFirst().preparedPayload());
             assertFalse(queue.isReady(parent));
 
-            queue.processModuleQueueAfterObjects();
+            romFrameModuleStep(queue);
             assertTrue(queue.isReady(parent));
             assertArrayEquals(new byte[0], queue.claim(parent));
         }
@@ -425,7 +579,7 @@ class TestS3kKosModuleQueue {
             for (int index = 0; index < 4; index++) {
                 HardwareWorkHandle parent =
                         queue.queue(rom, 0, 0x500 + index);
-                queue.processModuleQueueAfterObjects();
+                romFrameModuleStep(queue);
                 assertFalse(queue.isReady(parent),
                         "recorded admission must retain prepared results");
                 assertNotNull(timing.capture().jobs().get(index)
@@ -463,23 +617,27 @@ class TestS3kKosModuleQueue {
             }
             HardwareWorkHandle parent = queue.queue(rom, 0, 0x500);
 
-            queue.processModuleQueueAfterObjects();
+            romFrameModuleStep(queue);
             assertNull(preparation(timing.capture()).activeChild());
 
             while (direct.physicalQueueSize() == 4) {
                 queue.prepareQueuedModuleBeforeVSync();
             }
-            queue.processModuleQueueAfterObjects();
+            romFrameModuleStep(queue);
             HardwareWorkHandle child =
                     preparation(timing.capture()).activeChild();
             assertNotNull(child);
             assertEquals(4, direct.physicalQueueSize(),
                     "the module child must join behind three ordinary entries");
 
+            int queuedChildPreparations = 0;
             while (!direct.isReady(child)) {
+                assertTrue(queuedChildPreparations++ < 4096,
+                        "the module child queued behind three ordinary entries must finish"
+                                + " decompressing within a bounded number of preparation steps");
                 queue.prepareQueuedModuleBeforeVSync();
                 if (!direct.isReady(child)) {
-                    queue.processModuleQueueAfterObjects();
+                    romFrameModuleStep(queue);
                     assertEquals(0,
                             preparation(timing.capture()).completedModules());
                     assertFalse(queue.isReady(parent));
@@ -490,10 +648,22 @@ class TestS3kKosModuleQueue {
             assertFalse(queue.isReady(parent),
                     "PRE retirement cannot advance the module parent");
 
-            queue.processModuleQueueAfterObjects();
+            romFrameModuleStep(queue);
             assertTrue(queue.isReady(parent),
                     "the following POST owns the one parent transition");
         }
+    }
+
+    /**
+     * Drives one ROM module-queue transition: the {@code
+     * Process_Kos_Module_Queue} state step the previous {@code LevelLoop}
+     * iteration left in its tail (sonic3k.asm:7908), then the {@code
+     * POST_OBJECTS} readiness capture. The direct FIFO is deliberately not
+     * serviced in between, so a just-submitted child stays observable.
+     */
+    private static void romFrameModuleStep(S3kKosModuleQueue queue) {
+        queue.beforeTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        queue.processModuleQueueAfterObjects();
     }
 
     private static S3kKosModuleSnapshot preparation(HardwareTimingSnapshot snapshot) {

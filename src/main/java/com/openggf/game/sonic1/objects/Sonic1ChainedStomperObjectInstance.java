@@ -345,7 +345,7 @@ public class Sonic1ChainedStomperObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
 
         // ROM parity: CStom_MakeParts runs on the first ExecuteObjects pass.
@@ -363,7 +363,7 @@ public class Sonic1ChainedStomperObjectInstance extends AbstractObjectInstance
 
         // Main block behavior: loc_B798 (routine 2)
         // bsr.w CStom_Types
-        updateBehavior(frameCounter, player);
+        updateBehavior(vIntRunCount, player);
 
         // Update all sub-object positions based on current yOffset
         updatePositions();
@@ -380,11 +380,11 @@ public class Sonic1ChainedStomperObjectInstance extends AbstractObjectInstance
      * jmp    CStom_TypeIndex(pc,d1.w)
      * </pre>
      */
-    private void updateBehavior(int frameCounter, AbstractPlayableSprite player) {
+    private void updateBehavior(int vIntRunCount, AbstractPlayableSprite player) {
         int typeIndex = subtype & 0x0F;
         switch (typeIndex) {
-            case 0 -> updateType00(frameCounter);
-            case 1, 2, 4, 6 -> updateType01(frameCounter);
+            case 0 -> updateType00(vIntRunCount);
+            case 1, 2, 4, 6 -> updateType01(vIntRunCount);
             case 3, 5 -> updateType03(player);
             default -> updateRestart();
         }
@@ -396,16 +396,16 @@ public class Sonic1ChainedStomperObjectInstance extends AbstractObjectInstance
      * When switch is pressed: rises (subtracts $80 from offset).
      * When switch not pressed: falls with gravity until maxFallDistance.
      */
-    private void updateType00(int frameCounter) {
+    private void updateType00(int vIntRunCount) {
         // In ROM: tst.b (f_switch+switchNumber) / beq.s loc_B8A8
         boolean switchPressed = services().gameService(Sonic1SwitchManager.class).isPressed(switchNumber);
 
         if (switchPressed) {
             // Rising behavior
-            riseBlock(frameCounter);
+            riseBlock(vIntRunCount);
         } else {
             // Fall behavior: loc_B8A8
-            fallBlock(frameCounter);
+            fallBlock(vIntRunCount);
         }
         updateRestart();
     }
@@ -420,18 +420,18 @@ public class Sonic1ChainedStomperObjectInstance extends AbstractObjectInstance
      * subq.w #1,objoff_38(a0) ; decrement timer
      * </pre>
      */
-    private void updateType01(int frameCounter) {
+    private void updateType01(int vIntRunCount) {
         if (hasHitBottom) {
             if (waitTimer > 0) {
                 // Waiting at bottom
                 waitTimer--;
             } else {
                 // Rising: loc_B902
-                riseBlockType01(frameCounter);
+                riseBlockType01(vIntRunCount);
             }
         } else {
             // Falling: loc_B938
-            fallBlockType01(frameCounter);
+            fallBlockType01(vIntRunCount);
         }
         updateRestart();
     }
@@ -476,7 +476,7 @@ public class Sonic1ChainedStomperObjectInstance extends AbstractObjectInstance
      * move.w #0,obVelY(a0)            ; stop
      * </pre>
      */
-    private void fallBlock(int frameCounter) {
+    private void fallBlock(int vIntRunCount) {
         if (yOffset >= maxFallDistance) {
             return;
         }
@@ -502,13 +502,13 @@ public class Sonic1ChainedStomperObjectInstance extends AbstractObjectInstance
      * move.w #0,obVelY(a0)
      * </pre>
      */
-    private void riseBlock(int frameCounter) {
+    private void riseBlock(int vIntRunCount) {
         if (yOffset <= 0) {
             yVelocity = 0;
             return;
         }
         // Play rise sound every 16 frames when on-screen
-        if ((frameCounter & SOUND_INTERVAL_MASK) == 0 && isOnScreen(128)) {
+        if ((vIntRunCount & SOUND_INTERVAL_MASK) == 0 && isOnScreen(128)) {
             services().playSfx(Sonic1Sfx.CHAIN_RISE.id);
         }
         yOffset -= RISE_SPEED;
@@ -522,7 +522,7 @@ public class Sonic1ChainedStomperObjectInstance extends AbstractObjectInstance
      * Fall with gravity for Type 1 auto-cycling.
      * Same as fallBlock but sets hasHitBottom and waitTimer on landing.
      */
-    private void fallBlockType01(int frameCounter) {
+    private void fallBlockType01(int vIntRunCount) {
         if (yOffset >= maxFallDistance) {
             return;
         }
@@ -551,9 +551,9 @@ public class Sonic1ChainedStomperObjectInstance extends AbstractObjectInstance
      * move.w #0,objoff_36(a0)         ; clear hit-bottom flag
      * </pre>
      */
-    private void riseBlockType01(int frameCounter) {
+    private void riseBlockType01(int vIntRunCount) {
         // Play rise sound every 16 frames when on-screen
-        if ((frameCounter & SOUND_INTERVAL_MASK) == 0 && isOnScreen(128)) {
+        if ((vIntRunCount & SOUND_INTERVAL_MASK) == 0 && isOnScreen(128)) {
             services().playSfx(Sonic1Sfx.CHAIN_RISE.id);
         }
         yOffset -= RISE_SPEED;

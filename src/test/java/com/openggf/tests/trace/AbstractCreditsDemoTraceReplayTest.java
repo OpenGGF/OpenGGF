@@ -78,7 +78,7 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
         assertTrue(idx >= 0 && idx < Sonic1CreditsDemoData.DEMO_CREDITS, "creditsDemoIndex must be 0-7");
 
         // 0. Skip if trace directory or required files are missing
-        Path traceDir = traceDirectory();
+        Path traceDir = TraceFixtureRoot.resolve(traceDirectory());
         Assumptions.assumeTrue(Files.isDirectory(traceDir), "Trace directory not found: " + traceDir);
         Assumptions.assumeTrue(Files.exists(traceDir.resolve("metadata.json")), "metadata.json not found in " + traceDir);
         Assumptions.assumeTrue(hasTracePayload(traceDir, "physics.csv"), "physics.csv(.gz) not found in " + traceDir);
@@ -132,6 +132,22 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
                 Sonic1CreditsDemoBootstrap.applyLzLampostState(
                         fixture.sprite(), fixture.camera());
             }
+            // 3b. Establish the object-visible V-blank clock once, before row
+            //     zero. S1's v_vblank_count (s1disasm/_Variables.asm:350) is
+            //     incremented only by VBlank_Exit (s1disasm/sonic.asm:685) and
+            //     is never reset, so entering a credits demo it holds a
+            //     free-running count since console reset that no level-side
+            //     ROM data encodes. This is the sanctioned one-shot frame-0
+            //     bootstrap ("load a save state at the BK2 starting point"),
+            //     identical to alignObjectVblankCounterForReplayStart used by
+            //     every other trace-replay entry path; the first serviced
+            //     V-blank advances it to the counter recorded on row zero. It
+            //     is not per-frame hydration and it carries no gameplay value.
+            if (GameServices.level() != null
+                    && GameServices.level().getObjectManager() != null) {
+                GameServices.level().getObjectManager()
+                        .initVblaCounter(trace.initialVblankCounter() - 1);
+            }
             resetStreamingWindows(fixture);
             // Per-demo starting animation/direction are intentionally NOT
             // forced here. The engine's normal post-spawn init + first
@@ -163,6 +179,18 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
                 // keep the engine and demo-input cursor aligned with the
                 // ROM's cursor across the replay.
                 if (phase == TraceExecutionPhase.VBLANK_ONLY) {
+                    // The ROM's v_vblank_count is incremented by VBlank_Exit
+                    // (s1disasm/sonic.asm:685), which every V-blank routine
+                    // falls through to -- including id_VBlank_Lag, the routine
+                    // a lag frame runs. So the counter advances on a lag frame
+                    // even though the main loop did not complete. Honour the
+                    // exactly-one-tick-per-serviced-V-blank invariant on
+                    // ObjectManager.vblaCounter here, as GameLoop and
+                    // LevelManager already do for their V-blank-only rows.
+                    if (GameServices.level() != null
+                            && GameServices.level().getObjectManager() != null) {
+                        GameServices.level().getObjectManager().advanceVblaCounter();
+                    }
                     // Still compare â€” engine state should match previous
                     // trace frame since neither side advanced.
                     var sprite = fixture.sprite();

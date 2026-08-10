@@ -20,7 +20,7 @@ public final class FbzSpringPlungerInstance extends AbstractObjectInstance
 
     public FbzSpringPlungerInstance(ObjectSpawn spawn) { super(spawn, "FBZSpringPlunger"); }
 
-    @Override public void update(int frameCounter, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         // loc_89C86 calls sub_86A3E (SolidObjectFull) and immediately tests the
         // standing bits established by that same call before returning from the
         // object's SST entry (sonic3k.asm:187094-187119). Manual checkpoints

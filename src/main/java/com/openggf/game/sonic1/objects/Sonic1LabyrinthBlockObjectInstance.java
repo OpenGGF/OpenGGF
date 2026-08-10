@@ -185,7 +185,7 @@ public class Sonic1LabyrinthBlockObjectInstance extends AbstractObjectInstance
         return y;
     }
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // LBlk_Action: save X on stack, dispatch movement, then SolidObject + sink effect
         int prevX = x;

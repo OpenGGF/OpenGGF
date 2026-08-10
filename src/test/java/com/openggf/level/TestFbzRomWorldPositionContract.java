@@ -23,7 +23,7 @@ class TestFbzRomWorldPositionContract {
         NativeObject slot94 = objectAt(94, 0x3400, 0xDEF0, true);
         NativeObject bit2Clear = objectAt(20, 0x3500, 0x1357, false);
 
-        LevelManager.offsetCarriedObjectsForTransition(
+        LevelActTransitionExecutor.offsetCarriedObjectsForTransition(
                 List.of(new TransitionSstOccupant(slot3, 3),
                         new TransitionSstOccupant(slot4, 4),
                         new TransitionSstOccupant(slot93, 93),
@@ -43,7 +43,7 @@ class TestFbzRomWorldPositionContract {
         unsupported.setSlotIndex(4);
 
         assertThrows(IllegalStateException.class,
-                () -> LevelManager.offsetCarriedObjectsForTransition(
+                () -> LevelActTransitionExecutor.offsetCarriedObjectsForTransition(
                         List.of(new TransitionSstOccupant(unsupported, 4)), request()));
     }
 
@@ -56,7 +56,7 @@ class TestFbzRomWorldPositionContract {
         // slot field.  Offset_ObjectsDuringTransition scans the original SST address,
         // so eligibility must remain attached to the capture tuple.
         identity.setSlotIndex(94);
-        LevelManager.offsetCarriedObjectsForTransition(List.of(carried), request());
+        LevelActTransitionExecutor.offsetCarriedObjectsForTransition(List.of(carried), request());
 
         assertState(identity, 0x0400, 0x5678, 1);
     }
@@ -114,7 +114,7 @@ class TestFbzRomWorldPositionContract {
             anchorCalls++;
         }
 
-        @Override public void update(int frameCounter, PlayableEntity player) { }
+        @Override public void update(int vIntRunCount, PlayableEntity player) { }
         @Override public void appendRenderCommands(List<GLCommand> commands) { }
         @Override public boolean isHighPriority() { return false; }
     }
@@ -124,7 +124,7 @@ class TestFbzRomWorldPositionContract {
             super(new ObjectSpawn(0x3200, 0x540, 1, 0, 0, false, 0), "unsupported");
         }
 
-        @Override public void update(int frameCounter, PlayableEntity player) { }
+        @Override public void update(int vIntRunCount, PlayableEntity player) { }
         @Override public void appendRenderCommands(List<GLCommand> commands) { }
         @Override public boolean isHighPriority() { return false; }
     }

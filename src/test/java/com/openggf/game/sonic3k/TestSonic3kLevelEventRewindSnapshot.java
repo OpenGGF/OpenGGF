@@ -290,7 +290,7 @@ class TestSonic3kLevelEventRewindSnapshot {
 
         mgr.requestHczPostTransitionCutscene();
         mgr.requestMgzPostTransitionRelease();
-        mgr.requestCnzPostTransitionRelease(12);
+        mgr.requestCnzPostTransitionRelease();
         set(mgr, "cnzPostTransitionAct2SizeActive", true);
         set(mgr, "cnzAct2MinXAccumulator", 1);
         set(mgr, "cnzAct2MaxXAccumulator", 2);
@@ -301,7 +301,7 @@ class TestSonic3kLevelEventRewindSnapshot {
 
         assertFalse((boolean) get(mgr, "hczPendingPostTransitionCutscene"));
         assertFalse((boolean) get(mgr, "mgzPendingPostTransitionRelease"));
-        assertEquals(0, get(mgr, "cnzPendingPostTransitionReleaseFrames"));
+        assertEquals(false, get(mgr, "cnzPendingPostTransitionRelease"));
         assertEquals(0, get(mgr, "cnzPendingPostTransitionAct2SizeFrames"));
         assertFalse((boolean) get(mgr, "cnzPostTransitionAct2SizeActive"));
         assertEquals(0, get(mgr, "cnzAct2MinXAccumulator"));
@@ -635,7 +635,7 @@ class TestSonic3kLevelEventRewindSnapshot {
     void malformedHczLengthPrefixDoesNotPartiallyRestoreManagerOrLaterSidecars() throws Exception {
         Sonic3kLevelEventManager cnzSource = new Sonic3kLevelEventManager();
         cnzSource.initLevel(Sonic3kZoneIds.ZONE_CNZ, 0);
-        cnzSource.requestCnzPostTransitionRelease(12);
+        cnzSource.requestCnzPostTransitionRelease();
         var cnz = cnzSource.getCnzEventsForTest();
         assertNotNull(cnz);
         cnz.setBossScrollState(120, -4);
@@ -659,7 +659,7 @@ class TestSonic3kLevelEventRewindSnapshot {
 
         assertDoesNotThrow(() -> target.restore(malformedSnapshot),
                 "framing-invalid HCZ sidecar should be rejected before any partial restore");
-        assertEquals(0, get(target, "cnzPendingPostTransitionReleaseFrames"),
+        assertEquals(false, get(target, "cnzPendingPostTransitionRelease"),
                 "framing-invalid HCZ sidecar must not mutate manager-level fields");
         assertEquals(0, cnzTarget.getBossScrollOffsetY(),
                 "framing-invalid HCZ sidecar must not apply later sidecars with unknown offsets");
@@ -671,7 +671,7 @@ class TestSonic3kLevelEventRewindSnapshot {
     void underreportedHczLengthPrefixDoesNotPartiallyRestoreManagerOrLaterSidecars() throws Exception {
         Sonic3kLevelEventManager cnzSource = new Sonic3kLevelEventManager();
         cnzSource.initLevel(Sonic3kZoneIds.ZONE_CNZ, 0);
-        cnzSource.requestCnzPostTransitionRelease(12);
+        cnzSource.requestCnzPostTransitionRelease();
         var cnz = cnzSource.getCnzEventsForTest();
         assertNotNull(cnz);
         cnz.setBossScrollState(120, -4);
@@ -695,7 +695,7 @@ class TestSonic3kLevelEventRewindSnapshot {
 
         assertDoesNotThrow(() -> target.restore(malformedSnapshot),
                 "short-but-bounded HCZ sidecar length should be rejected before any partial restore");
-        assertEquals(0, get(target, "cnzPendingPostTransitionReleaseFrames"),
+        assertEquals(false, get(target, "cnzPendingPostTransitionRelease"),
                 "short-but-bounded HCZ sidecar length must not mutate manager-level fields");
         assertEquals(0, cnzTarget.getBossScrollOffsetY(),
                 "short-but-bounded HCZ sidecar length must not apply later sidecars with unknown offsets");
@@ -814,7 +814,7 @@ class TestSonic3kLevelEventRewindSnapshot {
     void malformedCnzLengthPrefixDoesNotPartiallyRestoreManagerOrLaterSidecars() throws Exception {
         Sonic3kLevelEventManager mgzSource = new Sonic3kLevelEventManager();
         mgzSource.initLevel(Sonic3kZoneIds.ZONE_MGZ, 1);
-        mgzSource.requestCnzPostTransitionRelease(12);
+        mgzSource.requestCnzPostTransitionRelease();
         var mgz = mgzSource.getMgzEventsForTest();
         assertNotNull(mgz);
         mgz.setCollapseRequested(true);
@@ -838,7 +838,7 @@ class TestSonic3kLevelEventRewindSnapshot {
 
         assertDoesNotThrow(() -> target.restore(malformedSnapshot),
                 "framing-invalid CNZ sidecar should be rejected before any partial restore");
-        assertEquals(0, get(target, "cnzPendingPostTransitionReleaseFrames"),
+        assertEquals(false, get(target, "cnzPendingPostTransitionRelease"),
                 "framing-invalid CNZ sidecar must not mutate manager-level fields");
         assertFalse(mgzTarget.isCollapseRequested(),
                 "framing-invalid CNZ sidecar must not apply later sidecars with unknown offsets");
@@ -850,7 +850,7 @@ class TestSonic3kLevelEventRewindSnapshot {
     void underreportedCnzLengthPrefixDoesNotPartiallyRestoreManagerOrLaterSidecars() throws Exception {
         Sonic3kLevelEventManager mgzSource = new Sonic3kLevelEventManager();
         mgzSource.initLevel(Sonic3kZoneIds.ZONE_MGZ, 1);
-        mgzSource.requestCnzPostTransitionRelease(12);
+        mgzSource.requestCnzPostTransitionRelease();
         var mgz = mgzSource.getMgzEventsForTest();
         assertNotNull(mgz);
         mgz.setCollapseRequested(true);
@@ -874,7 +874,7 @@ class TestSonic3kLevelEventRewindSnapshot {
 
         assertDoesNotThrow(() -> target.restore(malformedSnapshot),
                 "short-but-bounded CNZ sidecar length should be rejected before any partial restore");
-        assertEquals(0, get(target, "cnzPendingPostTransitionReleaseFrames"),
+        assertEquals(false, get(target, "cnzPendingPostTransitionRelease"),
                 "short-but-bounded CNZ sidecar length must not mutate manager-level fields");
         assertFalse(mgzTarget.isCollapseRequested(),
                 "short-but-bounded CNZ sidecar length must not apply later sidecars with unknown offsets");
@@ -975,7 +975,7 @@ class TestSonic3kLevelEventRewindSnapshot {
     void malformedMgzLengthPrefixDoesNotPartiallyRestoreManagerOrLaterSidecars() throws Exception {
         Sonic3kLevelEventManager mhzSource = new Sonic3kLevelEventManager();
         mhzSource.initLevel(Sonic3kZoneIds.ZONE_MHZ, 0);
-        mhzSource.requestCnzPostTransitionRelease(12);
+        mhzSource.requestCnzPostTransitionRelease();
         var mhz = mhzSource.getMhzEventsForTest();
         assertNotNull(mhz);
         mhz.setBossFlag(true);
@@ -999,7 +999,7 @@ class TestSonic3kLevelEventRewindSnapshot {
 
         assertDoesNotThrow(() -> target.restore(malformedSnapshot),
                 "framing-invalid MGZ sidecar should be rejected before any partial restore");
-        assertEquals(0, get(target, "cnzPendingPostTransitionReleaseFrames"),
+        assertEquals(false, get(target, "cnzPendingPostTransitionRelease"),
                 "framing-invalid MGZ sidecar must not mutate manager-level fields");
         assertFalse(mhzTarget.isBossFlag(),
                 "framing-invalid MGZ sidecar must not apply later sidecars with unknown offsets");
@@ -1011,7 +1011,7 @@ class TestSonic3kLevelEventRewindSnapshot {
     void underreportedMgzLengthPrefixDoesNotPartiallyRestoreManagerOrLaterSidecars() throws Exception {
         Sonic3kLevelEventManager mhzSource = new Sonic3kLevelEventManager();
         mhzSource.initLevel(Sonic3kZoneIds.ZONE_MHZ, 0);
-        mhzSource.requestCnzPostTransitionRelease(12);
+        mhzSource.requestCnzPostTransitionRelease();
         var mhz = mhzSource.getMhzEventsForTest();
         assertNotNull(mhz);
         mhz.setBossFlag(true);
@@ -1035,7 +1035,7 @@ class TestSonic3kLevelEventRewindSnapshot {
 
         assertDoesNotThrow(() -> target.restore(malformedSnapshot),
                 "short-but-bounded MGZ sidecar length should be rejected before any partial restore");
-        assertEquals(0, get(target, "cnzPendingPostTransitionReleaseFrames"),
+        assertEquals(false, get(target, "cnzPendingPostTransitionRelease"),
                 "short-but-bounded MGZ sidecar length must not mutate manager-level fields");
         assertFalse(mhzTarget.isBossFlag(),
                 "short-but-bounded MGZ sidecar length must not apply later sidecars with unknown offsets");
@@ -1184,7 +1184,7 @@ class TestSonic3kLevelEventRewindSnapshot {
     void malformedMhzLengthPrefixDoesNotPartiallyRestoreManagerOrLaterSidecars() throws Exception {
         Sonic3kLevelEventManager iczSource = new Sonic3kLevelEventManager();
         iczSource.initLevel(Sonic3kZoneIds.ZONE_ICZ, 0);
-        iczSource.requestCnzPostTransitionRelease(12);
+        iczSource.requestCnzPostTransitionRelease();
         Sonic3kICZEvents icz = (Sonic3kICZEvents) get(iczSource, "iczEvents");
         assertNotNull(icz);
         icz.setEventsFg5(true);
@@ -1208,7 +1208,7 @@ class TestSonic3kLevelEventRewindSnapshot {
 
         assertDoesNotThrow(() -> target.restore(malformedSnapshot),
                 "framing-invalid MHZ sidecar should be rejected before any partial restore");
-        assertEquals(0, get(target, "cnzPendingPostTransitionReleaseFrames"),
+        assertEquals(false, get(target, "cnzPendingPostTransitionRelease"),
                 "framing-invalid MHZ sidecar must not mutate manager-level fields");
         assertFalse(iczTarget.isEventsFg5(),
                 "framing-invalid MHZ sidecar must not apply later sidecars with unknown offsets");
@@ -1220,7 +1220,7 @@ class TestSonic3kLevelEventRewindSnapshot {
     void underreportedMhzLengthPrefixDoesNotPartiallyRestoreManagerOrLaterSidecars() throws Exception {
         Sonic3kLevelEventManager iczSource = new Sonic3kLevelEventManager();
         iczSource.initLevel(Sonic3kZoneIds.ZONE_ICZ, 0);
-        iczSource.requestCnzPostTransitionRelease(12);
+        iczSource.requestCnzPostTransitionRelease();
         Sonic3kICZEvents icz = (Sonic3kICZEvents) get(iczSource, "iczEvents");
         assertNotNull(icz);
         icz.setEventsFg5(true);
@@ -1244,7 +1244,7 @@ class TestSonic3kLevelEventRewindSnapshot {
 
         assertDoesNotThrow(() -> target.restore(malformedSnapshot),
                 "short-but-bounded MHZ sidecar length should be rejected before any partial restore");
-        assertEquals(0, get(target, "cnzPendingPostTransitionReleaseFrames"),
+        assertEquals(false, get(target, "cnzPendingPostTransitionRelease"),
                 "short-but-bounded MHZ sidecar length must not mutate manager-level fields");
         assertFalse(iczTarget.isEventsFg5(),
                 "short-but-bounded MHZ sidecar length must not apply later sidecars with unknown offsets");
@@ -1508,7 +1508,7 @@ class TestSonic3kLevelEventRewindSnapshot {
         set(iczPayloadSource, "backgroundRoutine", 8);
 
         Sonic3kLevelEventManager source = new Sonic3kLevelEventManager();
-        source.requestCnzPostTransitionRelease(12);
+        source.requestCnzPostTransitionRelease();
         Object sourceFixed = fixedAirCountdownManager(source);
         Object sourceP1 = fixedController(sourceFixed, "p1");
         setFixedControllerState(sourceP1, true, 0x0A, 0x81, 0x1234, 0x02, 0x01, 0xFF, 0x8040, 0x0032, 0x0016);
@@ -1532,7 +1532,7 @@ class TestSonic3kLevelEventRewindSnapshot {
         assertDoesNotThrow(() -> target.restore(malformedSnapshot),
                 "framing-invalid ICZ sidecar should be rejected before any partial restore");
 
-        assertEquals(0, get(target, "cnzPendingPostTransitionReleaseFrames"),
+        assertEquals(false, get(target, "cnzPendingPostTransitionRelease"),
                 "framing-invalid ICZ sidecar must not mutate manager-level fields");
         assertFalse(iczTarget.isEventsFg5(),
                 "framing-invalid ICZ sidecar must not mutate ICZ fields");

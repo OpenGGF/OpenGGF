@@ -20,7 +20,7 @@ class TestMhzPollenLevelInit {
     void mhzLevelInitInstallsPersistentPollenSpawner() {
         HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_MHZ, 0)
-                .startPosition((short) 0x1200, (short) 0x0700)
+                .startPosition((short) 0x00D8, (short) 0x0500)
                 .startPositionIsCentre()
                 .build();
 
@@ -33,6 +33,18 @@ class TestMhzPollenLevelInit {
                 "S3K Level init installs Obj_MHZ_Pollen_Spawner at Dynamic_object_RAM+object_size for MHZ");
         assertTrue(spawners.get(0).isPersistent(),
                 "The pollen spawner is a persistent fixed dynamic object, not a placement-window object");
+        assertEquals(4, spawners.get(0).getExecutionSlotIndex(),
+                "ROM level init installs Obj_MHZ_Pollen_Spawner in absolute SST slot 4 before Load_Sprites");
+
+        MhzMushroomCapObjectInstance firstCap = GameServices.level().getObjectManager()
+                .getActiveObjects().stream()
+                .filter(MhzMushroomCapObjectInstance.class::isInstance)
+                .map(MhzMushroomCapObjectInstance.class::cast)
+                .min((left, right) -> Integer.compare(
+                        left.getExecutionSlotIndex(), right.getExecutionSlotIndex()))
+                .orElseThrow();
+        assertEquals(5, firstCap.getExecutionSlotIndex(),
+                "Load_Sprites must materialize the first MHZ mushroom cap after fixed SST slot 4");
     }
 
     @Test
@@ -45,13 +57,13 @@ class TestMhzPollenLevelInit {
 
         ObjectManager objectManager = GameServices.level().getObjectManager();
         objectManager.reset(GameServices.camera().getX());
-        assertEquals(0, pollenSpawnerCount(objectManager),
-                "the placement reset clears fixed dynamic objects before the provider restores them");
+        assertEquals(1, pollenSpawnerCount(objectManager),
+                "the fixed-SST installer restores the pollen spawner as part of the placement reset");
 
         GameServices.module().getLevelEventProvider().restoreEventOwnedObjectsAfterPlacementReset();
 
         assertEquals(1, pollenSpawnerCount(objectManager),
-                "Obj_MHZ_Pollen_Spawner must be restored for title-card object prelude execution");
+                "the legacy event-owned restore hook must remain idempotent after fixed-SST installation");
     }
 
     @Test

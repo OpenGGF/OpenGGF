@@ -66,10 +66,10 @@ public class SpikyBlockObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (!childSpawned) {
-            spawnSpikeChild(frameCounter);
+            spawnSpikeChild(vIntRunCount);
             childSpawned = true;
         }
     }
@@ -79,13 +79,13 @@ public class SpikyBlockObjectInstance extends AbstractObjectInstance
      * Spawns the spike child object with initial direction synchronized to
      * the level frame counter and subtype.
      */
-    private void spawnSpikeChild(int frameCounter) {
+    private void spawnSpikeChild(int vIntRunCount) {
         // ROM: move.w (Level_frame_counter).w,d0 / lsr.w #6,d0
         // ObjectManager's update argument is the VBlank-style object counter;
         // Obj68 reads the ROM-visible level counter instead.
         int levelFrameCounter = services().levelManager() != null
                 ? services().levelManager().getFrameCounter() + 1
-                : frameCounter;
+                : vIntRunCount;
         int d0 = levelFrameCounter >> 6;
         int d1 = d0;
 

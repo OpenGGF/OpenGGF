@@ -102,8 +102,8 @@ public abstract class AbstractResultsScreen extends AbstractObjectInstance imple
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
-        this.frameCounter = frameCounter;
+    public void update(int vIntRunCount, PlayableEntity player) {
+        this.frameCounter = vIntRunCount;
         stateTimer++;
         totalFrames++;
 

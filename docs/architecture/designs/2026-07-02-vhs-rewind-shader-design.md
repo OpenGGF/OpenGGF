@@ -4,6 +4,17 @@
 **Status:** Approved
 **Scope:** Live held-key rewind only (`LiveRewindManager`), not debug/trace playback seeks.
 
+> **Superseded 2026-08-04.** Visual Trace Test Mode now drives the same pass through its
+> own `RewindEffectEnvelope`, for both its held rewind and its Left/Right fast-forward
+> ladder. `GameLoop.tapeEffectIntensity()/tapeEffectSpeed()/tapeEffectScrollDirection()`
+> select the trace session's envelope over `LiveRewindManager`'s whenever a session is
+> active — the two are mutually exclusive, since `stepInternalBody()` already routes
+> rewind to one or the other. `apply(...)` gained a signed `scrollDirection` so a
+> fast-forwarding transport scrolls its tear bands the opposite way from a rewinding one.
+> Debug playback seeks and user recording capture are still unaffected: the live-capture
+> presentation state deliberately keys off `liveRewindEffectIntensity()` rather than the
+> combined accessor. See [the fast-forward design](2026-08-04-visual-trace-fast-forward-design.md).
+
 ## Goal
 
 While live rewind is active, present the frame like a VCR in picture-search (rewind/review)
@@ -120,7 +131,8 @@ New boolean key `LIVE_REWIND_VHS_EFFECT` mapped to YAML path `rewind.vhsEffect` 
   during LEVEL-mode live rewind, and zero intensity means no `apply(...)` call.
   Activation must NOT be deferred to LEVEL entry — that would reintroduce the
   first-rewind compile hitch the prewarm exists to avoid.
-- No effect on trace replay, playback seeks, or user recording capture.
+- No effect on playback seeks or user recording capture. (Trace replay: see the
+  supersession note at the top of this document.)
 
 ## Testing
 

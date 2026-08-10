@@ -213,7 +213,7 @@ public class MovingVineObjectInstance extends AbstractObjectInstance implements 
         return currentY;  // Y position varies with extension
     }
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (isDestroyed()) {
             return;
         }

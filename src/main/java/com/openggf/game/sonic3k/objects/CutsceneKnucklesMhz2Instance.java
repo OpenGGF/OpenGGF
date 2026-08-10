@@ -125,7 +125,7 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (!initialized && isKnucklesPlayer()) {
             spawnSwitchChildOnce();
             setDestroyed(true);
@@ -136,11 +136,9 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
             return;
         }
         if (!initialized && !cameraIsInsideRomTriggerRange()) {
-            // A widened viewport can materialize this placement before the
-            // native Check_CameraInRange gate. ROM's out-of-range helper leaves
-            // the not-yet-native-loadable entry available for the later cursor
-            // pass; keep the initializer dormant until the camera enters the
-            // exact rectangle instead of permanently latching its placement.
+            // Check_CameraInRange rejects this SST; the placement cursor may
+            // materialize it again when the native camera window reaches it.
+            setDestroyed(true);
             return;
         }
 
@@ -158,7 +156,7 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
             case ROUTINE_INIT -> routineInit();
             case ROUTINE_CAMERA_LOCK -> routineCameraLock(playerEntity);
             case ROUTINE_WAIT_GROUNDED -> routineWaitGrounded(playerEntity);
-            case ROUTINE_PRESS -> routinePress(frameCounter);
+            case ROUTINE_PRESS -> routinePress(vIntRunCount);
             case ROUTINE_LAUNCH_PLAYERS -> routineLaunchPlayers();
             default -> routine = ROUTINE_CAMERA_LOCK;
         }
@@ -539,7 +537,7 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             y += yVelocity;
             Camera camera = services().camera();
             int deleteY = (camera != null ? camera.getY() : 0) + LEAF_DELETE_CAMERA_Y_OFFSET;
@@ -604,7 +602,7 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (player == null) {
                 setDestroyed(true);
                 return;
@@ -623,6 +621,7 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
             carrierYFixed += carrierYVelocity << 8;
             carrierYVelocity = (short) (carrierYVelocity + LIGHT_GRAVITY);
             NativePositionOps.writeYPosPreserveSubpixel(player, carrierYFixed >> 16);
+            player.setYSpeed((short) carrierYVelocity);
             if ((short) carrierYVelocity >= 0) {
                 parent.releasePlayerAfterLift(player);
             }
@@ -643,6 +642,7 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
             initializationDispatchPending = true;
             carrierYFixed = (player.getCentreY() & 0xFFFF) << 16;
             carrierYVelocity = PLAYER_LAUNCH_Y_VEL;
+            player.setYSpeed((short) PLAYER_LAUNCH_Y_VEL);
             player.setControlLocked(true);
             ObjectControlState.nativeBit7FullControl().applyTo(player);
             player.setObjectMappingFrameControl(false);

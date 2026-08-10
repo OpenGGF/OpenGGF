@@ -5,8 +5,8 @@ using System.Text;
 namespace OpenGGF.BizHawk.Headless
 {
     /// <summary>
-    /// Byte-exact port of the S2 Lua trace recorder's metadata.json layout
-    /// (tools/bizhawk/s2_trace_recorder.lua v9.12-s2, trace_schema 9;
+    /// Byte-exact port of the S2 Lua trace recorder's strict-v5 metadata.json layout
+    /// (tools/bizhawk/s2_trace_recorder.lua;
     /// spec tools/bizhawk-headless/docs/s2-trace-recorder-behavior.md §8):
     /// 2-space indent, fixed key order, LF line endings, and a trailing
     /// newline after the closing brace. The Lua rewrites the file at arm,
@@ -14,9 +14,8 @@ namespace OpenGGF.BizHawk.Headless
     /// matter, so the native port formats once at finish. The recording
     /// date is injected (production passes DateTime.Now as yyyy-MM-dd;
     /// tests pass a fixed value) — it is the only nondeterministic field.
-    /// The native port always stamps lua_script_version "9.13-s2"; the
-    /// v9.12 and v9.13 Lua headers declare plain-mode output byte-identical
-    /// to 9.11-s2 except this string.
+    /// Removed script-version fields are never emitted by the strict-v5
+    /// writer.
     /// </summary>
     public static class S2TraceMetadataWriter
     {
@@ -45,7 +44,8 @@ namespace OpenGGF.BizHawk.Headless
             string traceProfile,
             string sourceBk2,
             string recordingDate,
-            bool loadQueueState = false)
+            bool loadQueueState = false,
+            bool nativePreludeBootstrap = false)
         {
             return Format(
                 romZoneId,
@@ -62,7 +62,8 @@ namespace OpenGGF.BizHawk.Headless
                 recordingDate,
                 null,
                 0,
-                loadQueueState);
+                loadQueueState,
+                nativePreludeBootstrap);
         }
 
         /// <summary>
@@ -89,7 +90,8 @@ namespace OpenGGF.BizHawk.Headless
             string recordingDate,
             string runId,
             int segmentIndex,
-            bool loadQueueState = false)
+            bool loadQueueState = false,
+            bool nativePreludeBootstrap = false)
         {
             if (traceProfile == null)
             {
@@ -137,10 +139,7 @@ namespace OpenGGF.BizHawk.Headless
                 .Append(Hex8(rngSeed)).Append("\",\n");
             json.Append("  \"recording_date\": \"")
                 .Append(recordingDate).Append("\",\n");
-            json.Append("  \"lua_script_version\": \"9.13-s2\",\n");
-            json.Append("  \"trace_schema\": ")
-                .Append(loadQueueState ? "10" : "9").Append(",\n");
-            json.Append("  \"csv_version\": 7,\n");
+            TraceContract.AppendNativeEnvelope(json);
             json.Append("  \"aux_schema_extras\": "
                 + "[\"cnz_slot_machine_state_per_frame\", "
                 + "\"cpu_state_per_frame\"");
@@ -148,7 +147,14 @@ namespace OpenGGF.BizHawk.Headless
             {
                 json.Append(", \"load_queue_state_per_frame\"");
                 json.Append(
-                    ", \"dynamic_art_transfer_state_per_frame_v1\"");
+                    ", \"").Append(
+                        TraceContract.DynamicArtTransferStatePerFrame)
+                    .Append("\"");
+            }
+            if (nativePreludeBootstrap)
+            {
+                json.Append(", \"").Append(
+                    TraceContract.NativePreludeBootstrap).Append("\"");
             }
             json.Append("],\n");
             json.Append("  \"trace_profile\": \"")

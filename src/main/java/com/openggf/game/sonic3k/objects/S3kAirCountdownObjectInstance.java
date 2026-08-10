@@ -149,7 +149,7 @@ public final class S3kAirCountdownObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (routine == ROUTINE_DELETE || routine == ROUTINE_NUMBER_DELETE) {
             setDestroyed(true);
             return;
@@ -425,6 +425,18 @@ public final class S3kAirCountdownObjectInstance extends AbstractObjectInstance
     @Override
     public int getPriorityBucket() {
         return 1;
+    }
+
+    /**
+     * {@code Obj_AirCountdown} writes {@code width_pixels=$10} but never
+     * initializes {@code height_pixels}; the cleared SST field remains zero
+     * (sonic3k.asm:33324-33330). Render_Sprites therefore uses no vertical
+     * margin when refreshing this child's on-screen bit, which is also the
+     * delete gate in {@code AirCountdown_Wobble} (sonic3k.asm:33400-33408).
+     */
+    @Override
+    public int getOnScreenHalfHeight() {
+        return 0;
     }
 
     @Override

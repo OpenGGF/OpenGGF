@@ -871,11 +871,14 @@ public final class Sonic1SpecialStageManager {
                 // If rotation is slow (bit 6 of low byte set), double speed
                 if ((ssRotate & 0x40) != 0) {
                     ssRotate <<= 1;
-                }
-                // Change block to DOWN
-                int idx = lastCollisionRow * SS_LAYOUT_STRIDE + lastCollisionCol;
-                if (idx >= 0 && idx < layout.length) {
-                    layout[idx] = 0x2A;
+                    // Only a block that ACTUALLY sped the stage up becomes a
+                    // DOWN block: SonicSS_ChkUP's beq skips the asl.w AND the
+                    // move.b #id_SS_DOWN together (09 Sonic in Special
+                    // Stage.asm:853-862), so a rotation already at fast speed
+                    // leaves the block an UP block. Converting it regardless
+                    // put the layout one toggle out of step with the ROM for
+                    // the rest of the stage.
+                    flipUpDownBlock(0x2A);
                 }
                 playSfx(Sonic1Sfx.SS_ITEM);
             }
@@ -889,11 +892,10 @@ public final class Sonic1SpecialStageManager {
                 // If rotation is fast (bit 6 not set), halve speed
                 if ((ssRotate & 0x40) == 0) {
                     ssRotate >>= 1;
-                }
-                // Change block to UP
-                int idx = lastCollisionRow * SS_LAYOUT_STRIDE + lastCollisionCol;
-                if (idx >= 0 && idx < layout.length) {
-                    layout[idx] = 0x29;
+                    // Same gate as the UP block above: SonicSS_ChkDOWN's bne
+                    // skips the asr.w and the move.b #id_SS_UP together
+                    // (09 Sonic in Special Stage.asm:888-897).
+                    flipUpDownBlock(0x29);
                 }
                 playSfx(Sonic1Sfx.SS_ITEM);
             }
@@ -921,6 +923,21 @@ public final class Sonic1SpecialStageManager {
                 startGlassAnimation(idx, nextState);
             }
             playSfx(Sonic1Sfx.SS_GLASS);
+        }
+    }
+
+    /**
+     * Rewrites the just-touched UP/DOWN block as its counterpart, the way the
+     * ROM's {@code movea.l sonss_touchedblock_ram(a0),a1 / subq.l #1,a1 /
+     * move.b #id_SS_*,(a1)} tail does (09 Sonic in Special Stage.asm:859-862,
+     * 894-897). The touched cell is the one {@code SonicSS_FindWall_CheckType}
+     * last recorded, which is what {@link #lastCollisionRow}/
+     * {@link #lastCollisionCol} track.
+     */
+    private void flipUpDownBlock(int replacementId) {
+        int idx = lastCollisionRow * SS_LAYOUT_STRIDE + lastCollisionCol;
+        if (idx >= 0 && idx < layout.length) {
+            layout[idx] = (byte) replacementId;
         }
     }
 
@@ -1256,15 +1273,18 @@ public final class Sonic1SpecialStageManager {
         // At rotation threshold, start concurrent fade (SS_ChkEnd / SS_Finish)
         // ROM: v_ssrotate == $1800 sets v_gamemode = id_Level, triggering SS_Finish
         // which runs WhiteOut_ToWhite alongside ExecuteObjects for 60 frames.
+        boolean enteredFinishLoop = false;
         if (ssRotate >= 0x1800 && !exitFadeStarted) {
             exitFadeStarted = true;
             exitFadeTimer = 60; // v_generictimer = 60
             GameServices.fade().startFadeToWhite(null, Integer.MAX_VALUE);
+            enteredFinishLoop = true;
         }
 
         // Count down fade timer (SS_FinLoop: dbf d1,SS_FinLoop)
-        if (exitFadeStarted) {
-            exitFadeTimer--;
+        if (exitFadeStarted && !enteredFinishLoop) {
+            exitFadeTimer = advanceFinishLoopTimer(
+                    exitFadeTimer, enteredFinishLoop);
             if (exitFadeTimer <= 0) {
                 finished = true;
             }
@@ -1279,6 +1299,11 @@ public final class Sonic1SpecialStageManager {
         // Update animation
         updateAnimCounters();
         updateBgAnimate();
+    }
+
+    static int advanceFinishLoopTimer(
+            int currentTimer, boolean enteredFinishLoop) {
+        return enteredFinishLoop ? currentTimer : currentTimer - 1;
     }
 
     // ---- Camera (from SS_FixCamera) ----
@@ -1569,7 +1594,17 @@ public final class Sonic1SpecialStageManager {
         sonicAnimFrameIndex = 0;
         sonicAnimFrameTimer = 0;
         sonicSpriteFrame = resolveSpecialStageSonicFrame(sonicArt);
-        publishSonicDynamicArt();
+        // No dynamic-art publication here: GM_Special
+        // (docs/s1disasm/sonic.asm:3222-3292) never runs Sonic_LoadGfx while
+        // setting the stage up. It clears v_levelvariables
+        // (sonic.asm:3245), and v_sonframenum -- the "frame already in VRAM"
+        // latch Sonic_LoadGfx compares against
+        // (docs/s1disasm/_incObj/01 Sonic.asm:2394-2398) -- lives inside that
+        // block (docs/s1disasm/_Variables.asm:174, 225, 296). So the SS Sonic
+        // object's first main-loop Sonic_LoadGfx always sees a changed frame
+        // and sets f_sonframechg (01 Sonic.asm:2408) for VBlank_SpecialStage
+        // to DMA (sonic.asm:890-894). Publishing the initial frame here would
+        // consume that first change and swallow the ROM's first transfer.
     }
 
     private int resolveSpecialStageSonicFrame(SpriteArtSet sonicArt) {
@@ -1598,9 +1633,14 @@ public final class Sonic1SpecialStageManager {
         SpriteAnimationScript activeScript = useRoll2 ? sonicRoll2Script : rollScript;
 
         if (sonicAnimId != targetAnimId) {
+            // SAnim_RollJump selects SonAni_Roll/SonAni_Roll2 without changing
+            // obAniFrame or obTimeFrame. Both are special six-position
+            // animations specifically shaped so the script can change at the
+            // $600 speed threshold without restarting the roll cycle
+            // (01 Sonic.asm SAnim_RollJump; _anim/Sonic.asm special-animation
+            // contract). Restarting here duplicated fr_Roll1 at the threshold
+            // and delayed every subsequent S1 DPLC transfer by one frame.
             sonicAnimId = targetAnimId;
-            sonicAnimFrameIndex = 0;
-            sonicAnimFrameTimer = 0;
         }
 
         if (sonicAnimFrameTimer > 0) {

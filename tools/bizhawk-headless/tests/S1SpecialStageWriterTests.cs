@@ -9,11 +9,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
     /// else lowercase unpadded hex, u32 x/y, unsigned u16 velocities) and
     /// the distinct ss metadata.json shape (solo-Sonic hardcoded
     /// characters, %q source_bk2, raw optional run_id, segment_index
-    /// last). The metadata test reproduces the canonical run fixture's
-    /// ss/metadata.json bytes with the session values injected, and pins
-    /// the standalone special_stage/ fixture as a byte-identical copy of
-    /// the same segment (spec s1-run-mode-behavior.md §11 — there is no
-    /// separate standalone writer).
+    /// last). Current strict-v5 metadata assertions require recorder-owned
+    /// fields, an explicit dynamic-art audit when requested, and absence of
+    /// removed version fields. The standalone special-stage path shares this
+    /// writer (spec s1-run-mode-behavior.md §11).
     /// </summary>
     internal static class S1SpecialStageWriterTests
     {
@@ -23,11 +22,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S1SpecialStage csv header matches the recorder's 14 columns",
                 CsvHeaderMatchesRecorder));
             tests.Add(new TestMain.TestCase(
-                "S1SpecialStage csv row reproduces the ss fixture row 0",
-                CsvRowReproducesSsFixtureRowZero));
+                "S1SpecialStage csv row matches the current row contract",
+                CsvRowMatchesCurrentContract));
             tests.Add(new TestMain.TestCase(
-                "S1SpecialStage metadata reproduces the ss fixture bytes",
-                MetadataReproducesSsFixtureBytes));
+                "S1SpecialStage metadata emits current strict v5 fields",
+                MetadataEmitsStrictV5Fields));
             tests.Add(new TestMain.TestCase(
                 "S1SpecialStage metadata omits run_id when no run id was set",
                 MetadataOmitsRunIdWhenNoRunIdWasSet));
@@ -44,7 +43,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 S1SpecialStageCsvWriter.Header.Split(',').Length);
         }
 
-        private static void CsvRowReproducesSsFixtureRowZero()
+        private static void CsvRowMatchesCurrentContract()
         {
             // Canonical ss fixture row 0:
             // 0,0,0,25ab0300,44d8300,ffde,48,13c,7,0,0,0,55,0
@@ -72,38 +71,31 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 S1SpecialStageCsvWriter.FormatRow(12, 0x18, true, host));
         }
 
-        private static void MetadataReproducesSsFixtureBytes()
+        private static void MetadataEmitsStrictV5Fields()
         {
             string produced = S1SpecialStageMetadataWriter.Format(
                 0,
                 4957,
                 3091,
                 "s1-ghz-maze-roundtrip.bk2",
-                "3.18",
                 "2026-07-30",
                 "s1-ghz-maze-roundtrip",
                 1,
                 true);
 
-            string runsDir = Path.Combine(
-                EndToEndTests.RepositoryRoot,
-                "src", "test", "resources", "traces", "s1");
-            string ssFixture = File.ReadAllText(Path.Combine(
-                runsDir, "runs", "s1-ghz-maze-roundtrip", "ss",
-                "metadata.json"));
-            AssertEx.Equal(ssFixture.Replace("\r\n", "\n"), produced);
-
-            // The standalone special_stage/ fixture is a published copy of
-            // the same run segment — identical bytes, same writer.
-            string standaloneFixture = File.ReadAllText(Path.Combine(
-                runsDir, "special_stage", "metadata.json"));
-            AssertEx.Equal(ssFixture, standaloneFixture);
+            AssertEx.Equal(true, produced.Contains(
+                "  \"recorder\": \"native-bizhawk-headless\",\n"
+                + "  \"recorder_version\": \"3.0\",\n"
+                + "  \"trace_schema\": 5,\n"));
+            AssertEx.Equal(false, produced.Contains("ss_csv_version"));
+            AssertEx.Equal(false, produced.Contains("lua_script_version"));
+            AssertEx.Equal(false, produced.Contains("csv_version"));
         }
 
         private static void MetadataOmitsRunIdWhenNoRunIdWasSet()
         {
             string produced = S1SpecialStageMetadataWriter.Format(
-                3, 100, 200, "movie.bk2", "3.17", "2026-07-24", null, 2);
+                3, 100, 200, "movie.bk2", "2026-07-24", null, 2);
             AssertEx.Equal(false, produced.Contains("run_id"));
             AssertEx.Equal(
                 true,

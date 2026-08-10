@@ -92,7 +92,7 @@ class TestGameLoopSpecialStageRewindBoundary {
         assertEquals(0, camera.y(), "special-stage frame zero must capture camera reset to screen-space origin");
         FadeManagerSnapshot fade = (FadeManagerSnapshot) snapshot.get("fademanager");
         assertEquals(FadeManager.FadeState.FADING_FROM_WHITE, fade.state(),
-                "special-stage frame zero must capture the reveal fade after entry setup, not the pre-entry level fade");
+                "special-stage frame zero must capture the reveal fade after entry setup, not a pre-entry level fade");
     }
 
     @Test

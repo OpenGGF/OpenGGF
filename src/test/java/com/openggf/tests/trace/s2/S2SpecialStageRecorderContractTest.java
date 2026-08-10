@@ -31,7 +31,11 @@ class S2SpecialStageRecorderContractTest {
     void recorderDeclaresBoundedRev01RecurringPassAndControlHooks() throws Exception {
         String lua = Files.readString(LUA);
 
-        assertTrue(lua.contains("local LUA_SCRIPT_VERSION = \"1.4-s2ss\""));
+        // No assertion on the script's declared version string: recorder identity is
+        // opaque provenance (hard rule 4 -- `recorder`/`recorder_version` select no
+        // replay behaviour, and `lua_script_version` was removed outright). Pinning a
+        // version literal gates nothing and re-arms staleness at the next bump; the
+        // hook addresses and emitted field names below are the contract that matters.
         assertTrue(lua.contains("local PC_READ_JOYPADS_RETURN = 0x1156"));
         assertTrue(lua.contains("local VINT_S2SS_READ_JOYPADS_RETURN_PC = 0x88E"));
         assertTrue(lua.contains("local CTRL_2_READ_COMPLETE_A0 = 0xF608"));
@@ -138,7 +142,10 @@ class S2SpecialStageRecorderContractTest {
                 frame -> !trace.getFrame(frame).lag() || frame == finishObservation,
                 trace.metadata().bk2FrameOffset(), movie.getFrames());
 
-        assertEquals("1.4-s2ss", trace.metadata().luaScriptVersion());
+        // Deliberately no assertion on trace.metadata().recorder()/recorderVersion():
+        // per hard rule 4 those fields are opaque provenance and no provenance field
+        // selects replay behaviour, so pinning one gates nothing while guaranteeing a
+        // red test the next time the recorder is versioned. Assert emitted content.
         assertFalse(trace.controlStateTransitions().isEmpty());
         assertEquals(0, trace.controlStateTransitions().get(0).frame());
         assertFalse(trace.controlStateTransitions().get(0).started());
@@ -227,9 +234,18 @@ class S2SpecialStageRecorderContractTest {
         long multiPassObservationFrames = runObjectsPassesByFrame.values().stream()
                 .filter(count -> count > 1)
                 .count();
-        assertEquals(2991, runObjectsEndCount);
-        assertEquals(595, multiPassObservationFrames);
-        assertEquals(1259, delayedRunObjectsPassCount);
+        // Stated relatively: the per-frame scan must see exactly the passes the
+        // accessor exposes. An absolute total would only restate the recorder's
+        // coverage, which the pre-start SpecialStage_MainLoop hook
+        // (docs/s2disasm/s2.asm:6674-6692) shifted by that half's pass count.
+        assertEquals(trace.runObjectsEndSnapshots().size(), runObjectsEndCount);
+        // These two characterise the committed fixture: RunObjects can complete more
+        // than once between two eligible observations, and a completion can be
+        // published later than the row it completed on. Both must stay non-zero or
+        // the binder's multi-pass/delay handling is untested; the exact totals move
+        // with any regeneration of traces/s2/special_stage.
+        assertTrue(multiPassObservationFrames > 0);
+        assertTrue(delayedRunObjectsPassCount > 0);
         assertEquals(1, runObjectsPassesByFrame.getOrDefault(finishObservation, 0),
                 "raw finish observation must own exactly one terminal pass");
         assertEquals(1, stageFinished.size());
@@ -251,10 +267,16 @@ class S2SpecialStageRecorderContractTest {
                         ((Number) pass.fields().get("pass_sequence")).intValue()))
                 .orElseThrow();
         TraceEvent.StateSnapshot precedingPass = trace.runObjectsEndSnapshots().stream()
-                .filter(pass -> ((Number) pass.fields().get("pass_sequence")).intValue() == 2989)
+                .filter(pass -> ((Number) pass.fields().get("pass_sequence")).intValue()
+                        == ((Number) terminalPass.fields().get("pass_sequence")).intValue() - 1)
                 .findFirst().orElseThrow();
         assertEquals(finishObservation, terminalPass.frame());
-        assertEquals(2990, ((Number) terminalPass.fields().get("pass_sequence")).intValue());
+        // The terminal pass is the last one recorded. Stated relatively: the
+        // recorder now also covers the pre-start half of SpecialStage_MainLoop
+        // (docs/s2disasm/s2.asm:6674-6692), which shifts every absolute
+        // sequence number by that half's pass count.
+        assertEquals(trace.runObjectsEndSnapshots().size() - 1,
+                ((Number) terminalPass.fields().get("pass_sequence")).intValue());
         assertEquals(0xff, ((Number) terminalPass.fields().get("check_rings_flag")).intValue());
         assertEquals(finishObservation,
                 ((Number) terminalPass.fields().get("completion_cursor_frame")).intValue());
@@ -271,7 +293,7 @@ class S2SpecialStageRecorderContractTest {
     }
 
     @Test
-    void f916BindsOnlyTheCompletedX58PassAndLagRowF918AddsNoPass() throws Exception {
+    void f915BindsOnlyTheCompletedX58PassAndLagRowF916AddsNoPass() throws Exception {
         SpecialStageTraceData trace = SpecialStageTraceData.load(
                 AbstractS2SpecialStageTraceReplayTest.TRACE_DIRECTORY);
         Map<Integer, List<TraceEvent.StateSnapshot>> byFrame = new HashMap<>();
@@ -279,11 +301,30 @@ class S2SpecialStageRecorderContractTest {
             byFrame.computeIfAbsent(pass.frame(), ignored -> new java.util.ArrayList<>()).add(pass);
         }
 
-        List<TraceEvent.StateSnapshot> f916 = byFrame.getOrDefault(916, List.of());
-        assertEquals(1, f916.size());
-        assertEquals(318, ((Number) f916.getFirst().fields().get("pass_sequence")).intValue());
-        assertEquals(58, ((Number) f916.getFirst().fields().get("sonic_ss_x")).intValue());
-        assertTrue(byFrame.getOrDefault(918, List.of()).isEmpty(),
-                "f918 observes no newly completed RunObjects pass");
+        // Frame labels moved by one when e2aa50cd5 corrected a recorder off-by-one
+        // and regenerated traces/s2/special_stage: the sampled observation is the
+        // non-lag row 915 and the lag row that follows it is 916.
+        int observation = 915;
+        int followingLagRow = observation + 1;
+        assertFalse(trace.getFrame(observation).lag(),
+                "the sampled observation must be a logical (non-lag) row");
+        assertTrue(trace.getFrame(followingLagRow).lag(),
+                "the row under test must be the lag row after that observation");
+
+        List<TraceEvent.StateSnapshot> f915 = byFrame.getOrDefault(observation, List.of());
+        assertEquals(1, f915.size());
+        // Contiguous with the last pass published before this observation --
+        // an absolute sequence number would only restate the recorder's total
+        // coverage, which the pre-start hook changed.
+        int previousSequence = trace.runObjectsEndSnapshots().stream()
+                .filter(pass -> pass.frame() < observation)
+                .mapToInt(pass -> ((Number) pass.fields().get("pass_sequence")).intValue())
+                .max()
+                .orElseThrow();
+        assertEquals(previousSequence + 1,
+                ((Number) f915.getFirst().fields().get("pass_sequence")).intValue());
+        assertEquals(58, ((Number) f915.getFirst().fields().get("sonic_ss_x")).intValue());
+        assertTrue(byFrame.getOrDefault(followingLagRow, List.of()).isEmpty(),
+                "the following lag row observes no newly completed RunObjects pass");
     }
 }

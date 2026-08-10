@@ -8,6 +8,7 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.FreshLevelTitleOwnerReplacement;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -28,7 +29,7 @@ import java.util.List;
  * above {@code $05C0}.
  */
 public final class Lbz1GroundLaunchIntroInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, FreshLevelTitleOwnerReplacement {
     private static final int PRE_LAUNCH_DELAY_FRAMES = 30;
     private static final int RELEASE_Y = 0x05C0;
     private static final short LAUNCH_Y_SPEED = (short) -0x0B00;
@@ -46,7 +47,7 @@ public final class Lbz1GroundLaunchIntroInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (!armed) {
             return;
         }

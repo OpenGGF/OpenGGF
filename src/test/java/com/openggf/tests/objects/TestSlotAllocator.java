@@ -66,11 +66,14 @@ class TestSlotAllocator {
         // full). hasFreeSlot() must agree with whether allocate() would succeed.
         SlotAllocator a = s2();
         assertTrue(a.hasFreeSlot());
+        assertEquals(16, a.firstFreeSlot());
+        assertEquals(16, a.firstFreeSlot(), "probing must not consume the slot");
         for (int i = 0; i < ObjectSlotLayout.SONIC_2.dynamicSlotCount(); i++) {
             assertTrue(a.hasFreeSlot());   // true while a slot remains
             assertTrue(a.allocate() >= 0);
         }
         assertFalse(a.hasFreeSlot());      // pool full → matches allocate()==-1
+        assertEquals(-1, a.firstFreeSlot());
         assertEquals(-1, a.allocate());
         a.release(16);
         assertTrue(a.hasFreeSlot());       // freeing one slot re-enables it

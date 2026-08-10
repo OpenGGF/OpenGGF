@@ -16,9 +16,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Coordinator for S3K's four-entry {@code Queue_Kos_Module} FIFO.
@@ -37,6 +39,14 @@ public final class S3kKosModuleQueue {
     private final S3kKosDecompressionQueue directQueue;
     private final Map<HardwareWorkHandle, S3kKosModuleDescriptor> descriptors =
             new HashMap<>();
+    private final Set<HardwareWorkHandle> freshLevelHandoffHandles = new HashSet<>();
+    private boolean deferChildSubmissionForHeldLoopTail;
+    private boolean deferFirstChildForLateProducer;
+    private boolean carryDeferredChildSubmissionForHeldLoopTail;
+    private boolean heldLoopTailClosure;
+    private boolean deferredChildSubmissionForNextLoop;
+    private boolean deferredChildSubmissionReady;
+    private boolean deferChildSubmissionAfterHeldAdmission;
 
     public S3kKosModuleQueue(
             HardwareTimingService timing,
@@ -65,12 +75,114 @@ public final class S3kKosModuleQueue {
                 rom, source, destinationPatternAddress, true);
     }
 
+    /**
+     * Appends one native sequential batch only after every archive has been
+     * validated and the physical FIFO has room for the whole batch.
+     */
+    public List<HardwareWorkHandle> queueSequentialBatch(
+            Rom rom, List<Integer> sources, int destinationPatternAddress)
+            throws IOException {
+        Objects.requireNonNull(rom, "rom");
+        List<Integer> stableSources = List.copyOf(sources);
+        if (!hasCapacityFor(stableSources.size())) {
+            throw new IllegalStateException(
+                    "S3K KosM module FIFO cannot fit batch of "
+                            + stableSources.size());
+        }
+        List<PreparedSubmission> prepared = new java.util.ArrayList<>();
+        int destination = destinationPatternAddress;
+        for (int source : stableSources) {
+            PreparedSubmission submission = prepareSubmission(
+                    rom, source, destination, false);
+            prepared.add(submission);
+            destination = Math.addExact(
+                    destination,
+                    submission.descriptor().destinationLength() / PATTERN_BYTES);
+        }
+        List<HardwareWorkHandle> handles = new java.util.ArrayList<>();
+        for (PreparedSubmission submission : prepared) {
+            handles.add(submitPrepared(submission));
+        }
+        return List.copyOf(handles);
+    }
+
     /** Whether a producer can append an entire native FIFO batch without partial submission. */
     public boolean hasCapacityFor(int submissions) {
         if (submissions < 0) {
             throw new IllegalArgumentException("submissions must not be negative");
         }
         return physicalQueueSize() + submissions <= MAX_QUEUE_DEPTH;
+    }
+
+    /** Whether the ROM module FIFO already owns an unprepared parent. */
+    public boolean hasPendingPhysicalModules() {
+        return physicalQueueSize() != 0;
+    }
+
+    /** Defers only the next child publication; a ready child may still retire. */
+    public void deferChildSubmissionForHeldLoopTail() {
+        deferChildSubmissionForHeldLoopTail = true;
+    }
+
+    /**
+     * Declares that the parents queued by the current producer were published
+     * after this iteration's {@code Process_Kos_Module_Queue} had already run,
+     * so their first module reaches the direct FIFO on the following loop.
+     *
+     * <p>Used by the locked title-card owner, whose {@code LoadEnemyArt} sits
+     * in {@code Obj_TitleCardWait2}'s dispatch
+     * ({@code docs/skdisasm/sonic3k.asm:62295-62312}), not in the level loop's
+     * {@code ScreenEvents} pass ahead of the module step (7898/7908).
+     */
+    public void deferFirstChildForLateProducer() {
+        deferFirstChildForLateProducer = true;
+        deferChildSubmissionForHeldLoopTail = true;
+    }
+
+    /** Carries the module FIFO's held-tail handoff into the next closure. */
+    public void deferChildSubmissionForHeldLoopTailClosure() {
+        heldLoopTailClosure = true;
+        deferChildSubmissionForHeldLoopTail =
+                carryDeferredChildSubmissionForHeldLoopTail;
+        carryDeferredChildSubmissionForHeldLoopTail = false;
+    }
+
+    /** Makes a held-tail handoff available only after the next direct service. */
+    public void finishHeldLoopTailClosure() {
+        if (deferredChildSubmissionForNextLoop) {
+            if (!deferChildSubmissionAfterHeldAdmission) {
+                deferredChildSubmissionReady = true;
+                deferredChildSubmissionForNextLoop = false;
+            }
+        }
+        heldLoopTailClosure = false;
+    }
+
+    /**
+     * Retains the ROM queue's held-tail publication shape for the child handoff
+     * created by a batch admitted after an already-held loop tail. Once that
+     * child retires, the next parent resumes the native POST_OBJECTS path.
+     * Ordinary admissions keep that path throughout.
+     */
+    public void deferChildSubmissionAfterHeldAdmission() {
+        deferChildSubmissionAfterHeldAdmission = true;
+        if (deferredChildSubmissionReady) {
+            stepDeferredChildAfterDirectTail();
+        }
+    }
+
+    /** Releases the held-admission shape after its owning batch retires. */
+    public void allowChildSubmissionAfterHeldAdmission() {
+        deferChildSubmissionAfterHeldAdmission = false;
+    }
+
+    /** Publishes a child after the direct FIFO has serviced this iteration. */
+    public void stepDeferredChildAfterDirectTail() {
+        if (!deferredChildSubmissionReady || !directQueue.hasCapacity()) {
+            return;
+        }
+        deferredChildSubmissionReady = false;
+        stepHeadArchive(deferChildSubmissionAfterHeldAdmission);
     }
 
     private HardwareWorkHandle queueInternal(
@@ -82,6 +194,16 @@ public final class S3kKosModuleQueue {
         if (physicalQueueSize() >= MAX_QUEUE_DEPTH) {
             throw new IllegalStateException("S3K KosM module FIFO is full");
         }
+        return submitPrepared(prepareSubmission(
+                rom, source, destinationPatternAddress, exportableAcrossSegment));
+    }
+
+    private PreparedSubmission prepareSubmission(
+            Rom rom,
+            int source,
+            int destinationPatternAddress,
+            boolean exportableAcrossSegment) throws IOException {
+        Objects.requireNonNull(rom, "rom");
         long remaining = rom.getSize() - source;
         if (source < 0 || remaining < 2) {
             throw new IOException("KosM source is outside ROM: 0x"
@@ -102,6 +224,12 @@ public final class S3kKosModuleQueue {
                 info.moduleCount());
         S3kKosModulePreparation preparation =
                 new S3kKosModulePreparation(descriptor, archive);
+        return new PreparedSubmission(descriptor, preparation,
+                exportableAcrossSegment);
+    }
+
+    private HardwareWorkHandle submitPrepared(PreparedSubmission prepared) {
+        S3kKosModuleDescriptor descriptor = prepared.descriptor();
         HardwareWorkHandle handle = timing.submit(new HardwareWorkSubmission(
                 HardwareWorkKind.KOS_MODULE_QUEUE,
                 descriptor.sourceAddress(),
@@ -110,10 +238,16 @@ public final class S3kKosModuleQueue {
                 descriptor.destinationLength(),
                 COMPRESSION_VARIANT,
                 descriptor.moduleCount(),
-                exportableAcrossSegment,
-                preparation));
+                prepared.exportableAcrossSegment(),
+                prepared.preparation()));
         descriptors.put(handle, descriptor);
         return handle;
+    }
+
+    private record PreparedSubmission(
+            S3kKosModuleDescriptor descriptor,
+            S3kKosModulePreparation preparation,
+            boolean exportableAcrossSegment) {
     }
 
     public void prepareQueuedModuleBeforeVSync() {
@@ -122,38 +256,192 @@ public final class S3kKosModuleQueue {
     }
 
     public void processModuleQueueAfterObjects() {
+        beforeTimingService(HardwareServiceBoundary.POST_OBJECTS);
         timing.service(HardwareServiceBoundary.POST_OBJECTS);
         afterTimingService(HardwareServiceBoundary.POST_OBJECTS);
     }
 
-    /** Runs after generic timing and direct retirement at a production boundary. */
+    /**
+     * Runs the native module state step for a parent published by ScreenEvents
+     * after this iteration's direct-queue service, without inventing another
+     * hardware timing boundary. The child remains unprepared until the next
+     * iteration's direct tail.
+     */
+    public void stepHeadModuleAfterDirectTail() {
+        stepHeadArchive();
+    }
+
+    /**
+     * Runs the frame's module state step, before the timing ledger is serviced.
+     *
+     * <p>ROM {@code LevelLoop} calls {@code Process_Kos_Module_Queue} in the loop
+     * tail (sonic3k.asm:7908), after {@code ScreenEvents} (7898) and before
+     * {@code Process_Kos_Queue} (7887) — which reads as the head of the next
+     * iteration but runs ahead of {@code Wait_VSync} (7888) and its
+     * {@code addq.w #1,(Level_frame_counter)} (7889), so both calls belong to the
+     * tail of the frame whose objects just ran. The step therefore sits at
+     * {@code POST_OBJECTS}, immediately ahead of the direct FIFO's own
+     * {@code PRE_MAIN_LOOP} service: an archive queued by an object this frame
+     * hands its first module to the direct FIFO and sees that child decompressed
+     * on the same frame, while an archive whose child is still outstanding is
+     * only retired by the next frame's step.
+     *
+     * <p>Readiness is captured at the same boundary: the archive parent's
+     * completion edge is recorded at {@code POST_OBJECTS}, and
+     * {@link HardwareTimingService#captureCoordinatorPreparation} requires the
+     * capture to name the boundary production last serviced.
+     */
+    public void beforeTimingService(HardwareServiceBoundary boundary) {
+        if (boundary == HardwareServiceBoundary.POST_OBJECTS) {
+            if (deferChildSubmissionAfterHeldAdmission
+                    && deferredChildSubmissionForNextLoop
+                    && !heldLoopTailClosure) {
+                deferredChildSubmissionReady = true;
+                deferredChildSubmissionForNextLoop = false;
+            }
+            stepHeadArchive();
+        }
+    }
+
     public void afterTimingService(HardwareServiceBoundary boundary) {
-        if (boundary != HardwareServiceBoundary.POST_OBJECTS) {
+        if (boundary == HardwareServiceBoundary.POST_OBJECTS) {
+            capturePreparedArchives();
+        }
+    }
+
+    /**
+     * Performs the single {@code Process_Kos_Module_Queue} state step this frame
+     * (sonic3k.asm:2726-2790): either submit the head archive's current module to
+     * the direct FIFO, or — once that FIFO has drained — claim it. An archive that
+     * has already been retired no longer occupies a queue slot (the DMA branch
+     * shifts it out at 2778-2788), so it is skipped rather than blocking.
+     */
+    private void stepHeadArchive() {
+        stepHeadArchive(false);
+    }
+
+    private void stepHeadArchive(boolean publishDeferredChild) {
+        if (deferredChildSubmissionReady && deferChildSubmissionAfterHeldAdmission) {
             return;
         }
+        boolean deferChildSubmission = deferChildSubmissionForHeldLoopTail
+                && !publishDeferredChild;
+        deferChildSubmissionForHeldLoopTail = false;
+        boolean deferFirstChildForLateProducer =
+                this.deferFirstChildForLateProducer && !publishDeferredChild;
+        this.deferFirstChildForLateProducer = false;
         for (HardwareWorkHandle handle : timing.pendingHandles()) {
             if (handle.kind() != HardwareWorkKind.KOS_MODULE_QUEUE
                     || timing.isReady(handle)) {
                 continue;
             }
-            HardwareWorkPreparation generic =
-                    timing.coordinatorPreparation(handle);
-            if (!(generic instanceof S3kKosModulePreparation preparation)) {
-                throw new IllegalStateException(
-                        "KosM parent has an unexpected preparation owner");
-            }
-            descriptors.putIfAbsent(handle, preparation.descriptor);
+            S3kKosModulePreparation preparation = preparationFor(handle);
             if (preparation.isPrepared()) {
                 continue;
             }
-            boolean becamePrepared = preparation.coordinate(
-                    handle, directQueue);
-            if (becamePrepared) {
-                timing.captureCoordinatorPreparation(
-                        handle, HardwareServiceBoundary.POST_OBJECTS);
+            // A resource-owner parent may survive an in-loop level reload.
+            // When that reload's represented iteration is held into the next
+            // row, the native queue tail has not yet retired a ready child
+            // across the handoff boundary. The closure owns that state step;
+            // ordinary parents retain the normal ready-child retirement.
+            if (deferChildSubmission
+                    && !heldLoopTailClosure
+                    && timing.isExportableAcrossSegment(handle)
+                    && preparation.activeChild != null
+                    && !directQueue.decompressionsPending()
+                    && directQueue.isReady(preparation.activeChild)) {
+                return;
+            }
+            // Process_Kos_Module_Queue's bit-7-clear branch has exactly two
+            // gates: Kos_modules_left must be non-zero, and
+            // Kos_decomp_queue_count must be below 4
+            // (docs/skdisasm/sonic3k.asm:2734-2741). It then calls Queue_Kos
+            // for the current module unconditionally. Nothing in that branch
+            // consults the frame counter, so a held loop tail defers only
+            // *when* an already-submitted child becomes ready — the
+            // decompressor's own progress — and can never skip the state step
+            // that submits a head archive's first module. A mid-level
+            // LoadEnemyArt (sonic3k.asm:64281-64313) runs in ScreenEvents
+            // (7898) ahead of the same iteration's Process_Kos_Module_Queue
+            // (7908), so its first PLCKosM entry is in the direct FIFO by the
+            // tail of the admission row itself.
+            //
+            // The one producer whose first child genuinely belongs to the
+            // following loop is the locked title-card owner, whose
+            // LoadEnemyArt runs in Obj_TitleCardWait2's dispatch
+            // (sonic3k.asm:62295-62312) after that iteration's module step has
+            // already executed. That ordering is declared by the producer.
+            boolean deferFirstChild = deferFirstChildForLateProducer
+                    && preparation.completedModules == 0;
+            if (preparation.activeChild == null && deferFirstChild) {
+                if (heldLoopTailClosure) {
+                    deferredChildSubmissionForNextLoop = true;
+                }
+                return;
+            }
+            boolean completed = preparation.coordinate(
+                    handle, directQueue, deferFirstChild);
+            if (deferChildSubmission && completed) {
+                carryDeferredChildSubmissionForHeldLoopTail = true;
+            }
+            if (heldLoopTailClosure && completed
+                    && !deferChildSubmissionAfterHeldAdmission) {
+                deferredChildSubmissionForNextLoop = true;
+            }
+            if (deferChildSubmissionAfterHeldAdmission
+                    && completed
+                    && hasPendingModuleAfter(handle)) {
+                // The first child of the held-admission batch is handed off by
+                // the closure that follows the old parent. Subsequent parents
+                // are shifted by Process_Kos_Module_Queue in this POST tail,
+                // but their first child is not published until the following
+                // loop's direct-queue tail (sonic3k.asm:2778-2790).
+                deferredChildSubmissionForNextLoop = true;
             }
             return;
         }
+    }
+
+    private boolean hasPendingModuleAfter(HardwareWorkHandle current) {
+        boolean seenCurrent = false;
+        for (HardwareWorkHandle handle : timing.pendingHandles()) {
+            if (handle == current || handle.equals(current)) {
+                seenCurrent = true;
+                continue;
+            }
+            if (seenCurrent
+                    && handle.kind() == HardwareWorkKind.KOS_MODULE_QUEUE
+                    && !timing.isReady(handle)) {
+                S3kKosModulePreparation preparation = preparationFor(handle);
+                if (!preparation.isPrepared()) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private void capturePreparedArchives() {
+        for (HardwareWorkHandle handle : timing.pendingHandles()) {
+            if (handle.kind() != HardwareWorkKind.KOS_MODULE_QUEUE
+                    || timing.isReady(handle)) {
+                continue;
+            }
+            if (preparationFor(handle).isPrepared()) {
+                timing.captureCoordinatorPreparation(
+                        handle, HardwareServiceBoundary.POST_OBJECTS);
+            }
+        }
+    }
+
+    private S3kKosModulePreparation preparationFor(HardwareWorkHandle handle) {
+        HardwareWorkPreparation generic = timing.coordinatorPreparation(handle);
+        if (!(generic instanceof S3kKosModulePreparation preparation)) {
+            throw new IllegalStateException(
+                    "KosM parent has an unexpected preparation owner");
+        }
+        descriptors.putIfAbsent(handle, preparation.descriptor);
+        return preparation;
     }
 
     int physicalQueueSize() {
@@ -220,7 +508,53 @@ public final class S3kKosModuleQueue {
     public byte[] claim(HardwareWorkHandle handle) {
         byte[] payload = timing.claim(handle);
         descriptors.remove(handle);
+        freshLevelHandoffHandles.remove(handle);
         return payload;
+    }
+
+    /** Marks a fresh-level parent for the synchronous loader's handoff owner. */
+    public void claimAfterFreshLevelHandoff(HardwareWorkHandle handle) {
+        if (!descriptors.containsKey(handle)) {
+            throw new IllegalArgumentException(
+                    "fresh-level handoff handle is not a KosM parent");
+        }
+        freshLevelHandoffHandles.add(handle);
+    }
+
+    /** Claims marked parents immediately after the boundary admits readiness. */
+    public void claimReadyFreshLevelHandoffs() {
+        for (HardwareWorkHandle handle : List.copyOf(freshLevelHandoffHandles)) {
+            if (timing.isReady(handle)) {
+                claim(handle);
+            }
+        }
+    }
+
+    List<HardwareWorkHandle> captureFreshLevelHandoffHandles() {
+        return freshLevelHandoffHandles.stream()
+                .sorted(java.util.Comparator.comparingLong(HardwareWorkHandle::ordinal))
+                .toList();
+    }
+
+    void restoreFreshLevelHandoffHandles(List<HardwareWorkHandle> handles) {
+        freshLevelHandoffHandles.clear();
+        for (HardwareWorkHandle captured : handles) {
+            HardwareWorkHandle rebound = timing.pendingHandle(
+                            captured.kind(), captured.ordinal())
+                    .orElseThrow(() -> new IllegalStateException(
+                            "missing restored fresh-level handoff "
+                                    + captured.kind() + "#" + captured.ordinal()));
+            if (!captured.equals(rebound)) {
+                throw new IllegalStateException(
+                        "restored fresh-level handoff identity mismatch: expected "
+                                + captured + ", actual " + rebound);
+            }
+            if (captured.kind() != HardwareWorkKind.KOS_MODULE_QUEUE) {
+                throw new IllegalStateException(
+                        "fresh-level handoff is not a KosM parent: " + captured);
+            }
+            freshLevelHandoffHandles.add(rebound);
+        }
     }
 
     public S3kKosModuleDescriptor descriptor(HardwareWorkHandle handle) {
@@ -241,6 +575,7 @@ public final class S3kKosModuleQueue {
 
     void resetForMissingSnapshot() {
         descriptors.clear();
+        freshLevelHandoffHandles.clear();
     }
 
     static HardwareWorkPreparation recreatePreparation(
@@ -286,7 +621,8 @@ public final class S3kKosModuleQueue {
 
         private boolean coordinate(
                 HardwareWorkHandle parent,
-                S3kKosDecompressionQueue directQueue) {
+                S3kKosDecompressionQueue directQueue,
+                boolean deferChildSubmission) {
             if (prepared) {
                 return false;
             }
@@ -295,6 +631,9 @@ public final class S3kKosModuleQueue {
                 return true;
             }
             if (activeChild == null) {
+                if (deferChildSubmission) {
+                    return false;
+                }
                 if (!directQueue.hasCapacity()) {
                     return false;
                 }

@@ -21,6 +21,7 @@ import com.openggf.level.LevelConstants;
 import com.openggf.level.LevelManager;
 import com.openggf.level.Pattern;
 import com.openggf.level.SeamlessLevelTransitionRequest;
+import com.openggf.game.RuntimeArtAdmissionPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.resources.LoadOp;
 import com.openggf.level.resources.ResourceLoader;
@@ -387,12 +388,15 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
                 SeamlessLevelTransitionRequest.builder(
                                 SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
                         .targetZoneAct(Sonic3kZoneIds.ZONE_MHZ, 1)
+                        .runtimeArtAdmissionPolicy(RuntimeArtAdmissionPolicy.TITLE_OWNER)
                         .deactivateLevelNow(false)
                         .preserveMusic(true)
                         // Load_Level swaps resources behind the still-live
                         // Obj_LevelResults owner; its rings/time and _unkFAA8
                         // remain global work RAM until the title-card handoff.
                         .preserveLevelGamestate(true)
+                        .objectSurvivalPolicy(
+                                SeamlessLevelTransitionRequest.ObjectSurvivalPolicy.PERSISTENT_EXACT_SST)
                         .preserveEndOfLevelActive(true)
                         .showInLevelTitleCard(true)
                         .resetLevelGamestateAtInLevelTitleCardDisplay(true)

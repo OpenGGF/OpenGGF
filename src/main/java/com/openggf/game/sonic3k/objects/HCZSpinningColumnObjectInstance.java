@@ -95,7 +95,7 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         switch (motionMode) {
             case MOTION_STATIONARY -> {
                 currentX = baseX;
@@ -109,13 +109,13 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
             }
         }
         for (RiderState rider : riders) {
-            updateRider(rider, frameCounter);
+            updateRider(rider, vIntRunCount);
             rider.standingLastFrame = false;
         }
         updateAnimation();
     }
 
-    private void updateRider(RiderState rider, int frameCounter) {
+    private void updateRider(RiderState rider, int vIntRunCount) {
         AbstractPlayableSprite player = rider.player;
         if (player == null) {
             return;
@@ -123,10 +123,10 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
 
         if (rider.active) {
             if (player.getDead() || player.isHurt() || !rider.standingLastFrame) {
-                releaseRider(rider, frameCounter, false);
+                releaseRider(rider, vIntRunCount, false);
                 return;
             }
-            holdRider(rider, frameCounter);
+            holdRider(rider, vIntRunCount);
             return;
         }
 
@@ -168,7 +168,7 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
         applyTwistAnimation(player, rider.swingAngle);
     }
 
-    private void holdRider(RiderState rider, int frameCounter) {
+    private void holdRider(RiderState rider, int vIntRunCount) {
         AbstractPlayableSprite player = rider.player;
         if (rider.horizontalDistance > 0) {
             rider.horizontalDistance--;
@@ -192,7 +192,7 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
         // contains newly pressed A/B/C bits rather than the held byte
         // (sonic3k.asm:68136-68148,68264-68276).
         if (player.isJumpJustPressed()) {
-            releaseRider(rider, frameCounter, true);
+            releaseRider(rider, vIntRunCount, true);
             return;
         }
         // The jump branch returns through loc_325F2 before loc_3260A can
@@ -201,7 +201,7 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
         applyTwistAnimation(player, rider.swingAngle);
     }
 
-    private void releaseRider(RiderState rider, int frameCounter, boolean jumpedOff) {
+    private void releaseRider(RiderState rider, int vIntRunCount, boolean jumpedOff) {
         AbstractPlayableSprite player = rider.player;
         if (player == null) {
             rider.active = false;

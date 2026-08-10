@@ -90,7 +90,16 @@ public final class FfmpegEncoder implements CaptureEncoder {
      *         configuration fails before a recording starts
      */
     public void setCodecs(String video, String audio) {
-        this.videoCodec = CaptureCodecs.video(video);
+        setCodecs(video, audio, 0, "");
+    }
+
+    /**
+     * @param threads {@code -threads} for the encode pass; 0 lets ffmpeg choose
+     * @param preset x264/x265 speed preset, blank for the encoder default
+     * @see CaptureCodecs#video(String, int, String)
+     */
+    public void setCodecs(String video, String audio, int threads, String preset) {
+        this.videoCodec = CaptureCodecs.video(video, threads, preset);
         this.audioCodec = CaptureCodecs.audio(audio);
     }
 

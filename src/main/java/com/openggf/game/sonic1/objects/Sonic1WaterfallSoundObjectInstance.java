@@ -37,10 +37,10 @@ public class Sonic1WaterfallSoundObjectInstance extends AbstractObjectInstance i
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // WSnd_PlaySnd: play waterfall SFX every 64 frames
-        if ((frameCounter & PLAY_INTERVAL_MASK) == 0) {
+        if ((vIntRunCount & PLAY_INTERVAL_MASK) == 0) {
             services().playSfx(Sonic1Sfx.WATERFALL.id);
         }
     }

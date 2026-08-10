@@ -63,7 +63,7 @@ public final class Mgz2LevelCollapseSolidInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (deleteSupplier.getAsBoolean()) {
             setDestroyed(true);
             return;

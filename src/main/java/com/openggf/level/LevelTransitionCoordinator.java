@@ -19,7 +19,10 @@ public class LevelTransitionCoordinator {
 
     // ── Special stage ──────────────────────────────────────────────────
     private SpecialStageEntryRequest specialStageEntryRequest;
+    private boolean specialStageEntryRoutineArmed;
+    private boolean levelRoutineReentry;
     private boolean specialStageReturnLevelReloadRequested;
+    private boolean resultsReturnCardOwnedByCaller;
 
     // ── S3K big ring return (ROM: Saved2_* variables) ──────────
     private BigRingReturnState bigRingReturn;
@@ -117,7 +120,31 @@ public class LevelTransitionCoordinator {
     public SpecialStageEntryRequest consumeSpecialStageEntryRequest() {
         SpecialStageEntryRequest request = specialStageEntryRequest;
         specialStageEntryRequest = null;
+        if (request == null && specialStageEntryRoutineArmed) {
+            specialStageEntryRoutineArmed = false;
+            specialStageEntryRequest = SpecialStageEntryRequest.ordinary();
+        }
         return request;
+    }
+
+    public void advanceToSpecialStageEntryRoutine() {
+        specialStageEntryRoutineArmed = true;
+    }
+
+    public void setLevelRoutineReentry(boolean reentry) {
+        levelRoutineReentry = reentry;
+    }
+
+    public boolean isLevelRoutineReentry() {
+        return levelRoutineReentry;
+    }
+
+    public void setResultsReturnCardOwnedByCaller(boolean owned) {
+        resultsReturnCardOwnedByCaller = owned;
+    }
+
+    public boolean isResultsReturnCardOwnedByCaller() {
+        return resultsReturnCardOwnedByCaller;
     }
 
     /**
@@ -816,7 +843,10 @@ public class LevelTransitionCoordinator {
      */
     public void resetState() {
         specialStageEntryRequest = null;
+        specialStageEntryRoutineArmed = false;
+        levelRoutineReentry = false;
         specialStageReturnLevelReloadRequested = false;
+        resultsReturnCardOwnedByCaller = false;
         bigRingReturn = null;
         sanctuaryReturnContext = null;
         sanctuaryReturnContextExplicit = false;

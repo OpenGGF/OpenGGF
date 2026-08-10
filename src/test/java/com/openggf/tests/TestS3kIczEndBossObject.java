@@ -18,6 +18,8 @@ import com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance;
 import com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossGradualMaxXExtender;
 import com.openggf.game.sonic3k.objects.bosses.IczEndBossEggCapsuleInstance;
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
+import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.level.Level;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -1856,6 +1858,8 @@ class TestS3kIczEndBossObject {
 
     private static final class RecordingServices extends StubObjectServices {
         private final ResultsHardwareTimingFixture resultsTiming = new ResultsHardwareTimingFixture();
+        private final RuntimeArtCoordinator runtimeArt =
+                new S3kRuntimeArtCoordinator(resultsTiming.hardwareTiming());
         private final Camera camera = new Camera();
         private final GameStateManager gameState = new GameStateManager();
         private final List<ObjectInstance> spawnedChildren = new ArrayList<>();
@@ -1890,6 +1894,16 @@ class TestS3kIczEndBossObject {
         @Override
         public GameStateManager gameState() {
             return gameState;
+        }
+
+        @Override
+        public HardwareTimingService hardwareTiming() {
+            return resultsTiming.hardwareTiming();
+        }
+
+        @Override
+        public RuntimeArtCoordinator runtimeArtCoordinator() {
+            return runtimeArt;
         }
 
         @Override

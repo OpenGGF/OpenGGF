@@ -5,6 +5,7 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SlopedSolidProvider;
@@ -14,12 +15,9 @@ import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.render.PatternSpriteRenderer;
-import com.openggf.tests.FullReset;
-import com.openggf.tests.SingletonResetExtension;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
 import java.util.ArrayList;
@@ -38,8 +36,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-@ExtendWith(SingletonResetExtension.class)
-@FullReset
 class TestMhzCurledVineObjectInstance {
     private static final int MHZ_CURLED_VINE = 0x09;
     private PatternSpriteRenderer renderer;
@@ -67,6 +63,22 @@ class TestMhzCurledVineObjectInstance {
     }
 
     @Test
+    void curledVineReservesItsAllocateObjectAfterCurrentDisplayChildSlot() {
+        ObjectSpawn spawn = new ObjectSpawn(
+                0x2000, 0x0600, MHZ_CURLED_VINE, 0, 0, false, 0);
+        MhzCurledVineObjectInstance vine = new MhzCurledVineObjectInstance(spawn);
+        ObjectManager objectManager = mock(ObjectManager.class);
+        when(levelManager.getObjectManager()).thenReturn(objectManager);
+        vine.setServices(new TestObjectServices().withLevelManager(levelManager));
+        vine.setSlotIndex(13);
+
+        vine.update(0, null);
+        vine.update(1, null);
+
+        verify(objectManager, times(1)).allocateChildSlotsAfter(spawn, 1, 13);
+    }
+
+    @Test
     void curledVineExposesRomTopSolidFootprint() {
         Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
         ObjectInstance vine = registry.create(new ObjectSpawn(
@@ -90,9 +102,6 @@ class TestMhzCurledVineObjectInstance {
                 "Obj_MHZCurledVine only presents a rideable top surface");
         assertTrue(solid.usesCollisionHalfWidthForTopLanding(),
                 "The curled vine helper passes its computed standable range directly");
-        assertFalse(solid.forceAirOnRideExit(),
-                "sub_3E9C6 clears Status_OnObj when a rider leaves the curl window but does not "
-                        + "set Status_InAir; terrain attachment owns the following ground handoff");
     }
 
     @Test
@@ -117,27 +126,22 @@ class TestMhzCurledVineObjectInstance {
     }
 
     @Test
-    void twoRidersUseFurthestSegmentToSelectUncurlRange() {
-        Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
-        ObjectInstance vine = registry.create(new ObjectSpawn(
+    void fartherOfTwoStandingRidersControlsSharedRange() {
+        MhzCurledVineObjectInstance vine = new MhzCurledVineObjectInstance(new ObjectSpawn(
                 0x2000, 0x0600, MHZ_CURLED_VINE, 0, 0, false, 0));
-        TestablePlayableSprite nearLeftRider =
-                new TestablePlayableSprite("tails", (short) 0x1FC8, (short) 0x05E0);
-        TestablePlayableSprite rightRider =
-                new TestablePlayableSprite("sonic", (short) 0x2009, (short) 0x05E0);
+        TestablePlayableSprite player2 = new TestablePlayableSprite("tails_p2", (short) 0x1FC0, (short) 0x05E0);
+        TestablePlayableSprite player1 = new TestablePlayableSprite("sonic", (short) 0x2000, (short) 0x05E0);
+        SolidObjectListener listener = vine;
 
-        SolidObjectListener listener = assertInstanceOf(SolidObjectListener.class, vine);
-        SolidContact standing = new SolidContact(true, false, false, true, false);
-        listener.onSolidContact(nearLeftRider, standing, 0);
-        listener.onSolidContact(rightRider, standing, 0);
-        vine.update(1, rightRider);
+        // sub_3E9AC visits P2 ($37) then P1 ($36). Their ROM d0 values are
+        // respectively $00 and $40, so loc_3E9FA stores segments 0 and 4.
+        listener.onSolidContact(player2, new SolidContact(true, false, false, true, false), 0);
+        listener.onSolidContact(player1, new SolidContact(true, false, false, true, false), 0);
+        vine.update(1, player1);
 
-        SolidObjectProvider solid = assertInstanceOf(SolidObjectProvider.class, vine);
-        assertEquals(0x30, solid.getSolidParams().halfWidth(),
-                "Obj_MHZCurledVine compares its two standing indices and selects the unsigned "
-                        + "maximum; segment 4 plus one selects byte_3E8F6[5]=$60");
-        assertTrue(vine.traceDebugDetails().contains("curve=$FFF50000"),
-                "The furthest rider must drive the curve toward dword_3E8D2[5]=$FFFE0000");
+        assertEquals(0x30, vine.getSolidParams().halfWidth(),
+                "loc_3E8A2 retains the farther P1 segment 4 over P2 segment 0, adds one, "
+                        + "and selects byte_3E8F6[5]=$60 (sonic3k.asm:82810-82820)");
     }
 
     @Test

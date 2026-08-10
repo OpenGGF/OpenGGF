@@ -76,7 +76,7 @@ public final class FbzFlameObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity ignored) {
+    public void update(int vIntRunCount, PlayableEntity ignored) {
         if (--animationTimer < 0) {
             animationTimer = 5;
             animationBase -= 4;

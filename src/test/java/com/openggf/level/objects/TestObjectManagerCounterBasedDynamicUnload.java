@@ -4,6 +4,8 @@ import com.openggf.tests.TestEnvironment;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.game.sonic1.objects.badniks.Sonic1BurrobotBadnikInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1OrbinautBadnikInstance;
+import com.openggf.game.sonic3k.objects.Aiz2BossEndSequenceState;
+import com.openggf.game.sonic3k.objects.AizDrawBridgeObjectInstance;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.EngineServices;
 import com.openggf.debug.DebugRenderContext;
@@ -196,6 +198,78 @@ public class TestObjectManagerCounterBasedDynamicUnload {
         assertFalse(objectManager.getActiveObjects().contains(burrobot),
                 "Burrobot uses RememberState; docs/s1disasm/s1disasm/Macros.asm out_of_range "
                         + "deletes x=$0650 when screen x=$0704 rounds the window base to $0680");
+    }
+
+    @Test
+    public void s3kAizDrawBridgeUnloadsAndClearsItsRespawnLatchAtTheRomTail() {
+        ObjectSpawn spawn = new ObjectSpawn(0x0200, 0x0100, 0x32, 0, 2, true, 0x8100, 0);
+        AizDrawBridgeRegistry registry = new AizDrawBridgeRegistry();
+        GameServices.camera().setMinY((short) 0);
+        GameServices.camera().setMaxY((short) 0x0300);
+        GameServices.camera().setY((short) 0x0080);
+        objectManager = new ObjectManager(List.of(spawn), registry, 0, null, null,
+                null, GameServices.camera(), new StubObjectServices() {
+                    @Override
+                    public com.openggf.camera.Camera camera() {
+                        return GameServices.camera();
+                    }
+        });
+        objectManager.enableExecThenLoadPlacement();
+        objectManager.reset(0);
+        objectManager.postCameraPlacementUpdate(0);
+
+        AizDrawBridgeObjectInstance bridge = registry.instance;
+        assertNotNull(bridge, "the AIZ2 layout bridge should load inside its native range window");
+        assertEquals(1, registry.createCount, "the initial S3K X/Y cursor pass should allocate one bridge");
+
+        objectManager.update(0x0480, null, List.of(), 1);
+
+        assertFalse(objectManager.getActiveObjects().contains(bridge),
+                "Obj_AIZDrawBridge's unconditional coarse-X tail must release the dynamic slot");
+
+        objectManager.update(0, null, List.of(), 2);
+
+        assertEquals(2, registry.createCount,
+                "AIZDrawBridge_ClearRespawn lets the S3K two-axis cursor recreate the layout entry");
+        assertTrue(objectManager.getActiveObjects().contains(registry.instance),
+                "the recreated bridge must own a live dynamic slot after the camera returns");
+    }
+
+    @Test
+    public void s3kAizDrawBridgeCollapseCountdownSurvivesOutOfRangeUntilItsTimedDelete() {
+        AizDrawBridgeRegistry registry = new AizDrawBridgeRegistry();
+        objectManager = new ObjectManager(List.of(), registry, 0, null, null,
+                null, GameServices.camera(), new StubObjectServices() {
+                    @Override
+                    public com.openggf.camera.Camera camera() {
+                        return GameServices.camera();
+                    }
+                });
+        objectManager.enableExecThenLoadPlacement();
+        objectManager.reset(0x4D80);
+
+        AizDrawBridgeObjectInstance bridge = AizDrawBridgeObjectInstance.createCutsceneOverride();
+        objectManager.addDynamicObject(bridge);
+        try {
+            Aiz2BossEndSequenceState.pressButton();
+
+            objectManager.update(0x4D80, null, List.of(), 0);
+            assertTrue(objectManager.getActiveObjects().contains(bridge),
+                    "the out-of-range bridge must enter loc_2B452 before post-routine culling");
+
+            for (int frame = 1; frame <= 14; frame++) {
+                objectManager.update(0x4D80, null, List.of(), frame);
+            }
+            assertTrue(objectManager.getActiveObjects().contains(bridge),
+                    "loc_2B452 has no range tail during its $0E-entry collapse countdown");
+
+            objectManager.update(0x4D80, null, List.of(), 15);
+
+            assertFalse(objectManager.getActiveObjects().contains(bridge),
+                    "loc_2B45E ejects riders and deletes the parent when the countdown reaches zero");
+        } finally {
+            Aiz2BossEndSequenceState.reset();
+        }
     }
 
     @Test
@@ -411,7 +485,7 @@ public class TestObjectManagerCounterBasedDynamicUnload {
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             updated = true;
         }
 
@@ -455,6 +529,32 @@ public class TestObjectManagerCounterBasedDynamicUnload {
         }
     }
 
+    private static final class AizDrawBridgeRegistry implements ObjectRegistry {
+        private AizDrawBridgeObjectInstance instance;
+        private int createCount;
+
+        @Override
+        public ObjectInstance create(ObjectSpawn spawn) {
+            createCount++;
+            instance = new AizDrawBridgeObjectInstance(spawn);
+            return instance;
+        }
+
+        @Override
+        public void reportCoverage(List<ObjectSpawn> spawns) {
+        }
+
+        @Override
+        public String getPrimaryName(int objectId) {
+            return "AIZDrawBridge";
+        }
+
+        @Override
+        public ObjectSlotLayout objectSlotLayout() {
+            return ObjectSlotLayout.SONIC_3K;
+        }
+    }
+
     private static final class TrackingObjectInstance extends AbstractObjectInstance {
         private int updateCount;
 
@@ -463,7 +563,7 @@ public class TestObjectManagerCounterBasedDynamicUnload {
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             updateCount++;
         }
 

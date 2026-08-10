@@ -21,7 +21,10 @@ class TestSolidRoutineProfiles {
         assertFalse(profile.topSolidOnly());
         assertFalse(profile.monitorSolidity());
         assertEquals(0, profile.monitorVerticalOffset());
-        assertFalse(profile.inclusiveRightEdge());
+        // ROM full-solid X gates reject with bhi (S1 SolidObject.asm:122-123,
+        // s2.asm:35344+, sonic3k.asm:41393-41399): inclusive right edge is the
+        // routine-family default.
+        assertTrue(profile.inclusiveRightEdge());
         assertTrue(profile.stickyContactBuffer());
         assertTrue(profile.usesPlatformLandingSnap());
         assertFalse(profile.usesCollisionHalfWidthForTopLanding());

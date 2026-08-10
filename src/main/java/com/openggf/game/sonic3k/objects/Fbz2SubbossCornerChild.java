@@ -31,7 +31,7 @@ final class Fbz2SubbossCornerChild extends AbstractFbz2SubbossChild
     static int[] nativeSubtypes() { return SUBTYPES.clone(); }
     int nativeSubtype() { return nativeSubtype; }
 
-    @Override public void update(int frameCounter, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         if (root != null && root.statusBit(Fbz2SubbossInstance.STATUS_CHARACTER_DEFEAT)) detached = true;
         // loc_6FF70 skips subtypes whose bit 1 is set: only native roles 0/4 move.
         boolean enteredMoveState = false;

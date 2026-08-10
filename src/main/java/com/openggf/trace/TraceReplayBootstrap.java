@@ -281,7 +281,7 @@ public final class TraceReplayBootstrap {
             return 0;
         }
         TraceMetadata meta = trace.metadata();
-        if (!"s2".equals(meta.game()) || !meta.nativePreludeMode()) {
+        if (!"s2".equals(meta.game()) || !meta.hasNativePreludeBootstrap()) {
             return 0;
         }
         if (!meta.hasPerFrameSlotMachineState()) {
@@ -349,7 +349,7 @@ public final class TraceReplayBootstrap {
         TraceMetadata meta = trace.metadata();
         if (meta == null
                 || !"s2".equals(meta.game())
-                || !meta.nativePreludeMode()
+                || !meta.hasNativePreludeBootstrap()
                 || meta.recordedSidekicks().isEmpty()
                 || replaySeedTraceIndexForTraceReplay(trace) != 0) {
             return 0;
@@ -368,7 +368,7 @@ public final class TraceReplayBootstrap {
         if (meta == null || !"s2".equals(meta.game())) {
             return 0;
         }
-        if (!meta.nativePreludeMode()) {
+        if (!meta.hasNativePreludeBootstrap()) {
             return 0;
         }
         if (meta.recordedSidekicks().isEmpty()) {
@@ -530,18 +530,9 @@ public final class TraceReplayBootstrap {
                 || replaySeedTraceIndexForTraceReplay(trace) != 0) {
             return false;
         }
-        return metadata.nativePreludeMode()
+        return metadata.hasNativePreludeBootstrap()
                 && "level_gated_reset_aware".equals(metadata.traceProfile())
                 && !metadata.recordedSidekicks().isEmpty();
-    }
-
-    /**
-     * @deprecated Use {@link #isS2TornadoRideStartMetadataCandidate(TraceData)}.
-     * This metadata-only predicate is not live ObjB2 authority.
-     */
-    @Deprecated
-    public static boolean usesS2TornadoRideStartForTraceReplay(TraceData trace) {
-        return isS2TornadoRideStartMetadataCandidate(trace);
     }
 
     public static int strictStartTraceIndexForTraceReplay(TraceData trace) {
@@ -561,6 +552,68 @@ public final class TraceReplayBootstrap {
             throw new IllegalArgumentException("sprite must not be null");
         }
         return ReplayPrimaryState.fromSprite(sprite);
+    }
+
+    /**
+     * Forwards the hardware-timing classification of the row about to be driven
+     * to the PLC frame-closure boundary when no V-blank elapsed for it. Same
+     * category of input as {@link #phaseForReplay} itself: recorder counters
+     * only, no gameplay value and no queue readiness.
+     *
+     * @see TraceExecutionModel#isVblankStarvedRow
+     */
+    public static void markVblankStarvedIterationForReplay(
+            TraceFrame previous, TraceFrame current) {
+        if (!isVblankStarvedIterationForReplay(previous, current)) {
+            return;
+        }
+        markReplayProductionIterationWithoutVblank();
+    }
+
+    /** Marks the next represented production closure as having no VBlank. */
+    public static void markReplayProductionIterationWithoutVblank() {
+        var gameplayMode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        if (gameplayMode != null && gameplayMode.plcFrameLifecycle() != null) {
+            gameplayMode.plcFrameLifecycle().markRepresentedIterationWithoutVblank();
+        }
+    }
+
+    /** Returns the structural no-VBlank classification used by replay closure. */
+    public static boolean isVblankStarvedIterationForReplay(
+            TraceFrame previous, TraceFrame current) {
+        return TraceExecutionModel.isVblankStarvedRow(previous, current);
+    }
+
+    /**
+     * Forwards the hardware-timing classification of a row whose main-loop
+     * iteration is still in flight when the next row is sampled, so the PLC
+     * frame closure represents the iteration's loop tail on the closure where
+     * the ROM actually ran it. Same category of input as
+     * {@link #phaseForReplay}: recorder counters only.
+     *
+     * @see TraceExecutionModel#isIterationHeldIntoNextRow
+     */
+    public static void markIterationHeldIntoNextRowForReplay(
+            TraceFrame current, TraceFrame next) {
+        if (!isIterationHeldIntoNextRowForReplay(current, next)) {
+            return;
+        }
+        markReplayIterationDefersLoopTailPreparation();
+    }
+
+    /** Holds the represented row's loop-tail PLC preparation for a later closure. */
+    public static void markReplayIterationDefersLoopTailPreparation() {
+        var gameplayMode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        if (gameplayMode != null && gameplayMode.plcFrameLifecycle() != null) {
+            gameplayMode.plcFrameLifecycle()
+                    .markRepresentedIterationDefersLoopTailPreparation();
+        }
+    }
+
+    /** Returns the structural in-flight-iteration classification used by replay closure. */
+    public static boolean isIterationHeldIntoNextRowForReplay(
+            TraceFrame current, TraceFrame next) {
+        return TraceExecutionModel.isIterationHeldIntoNextRow(current, next);
     }
 
     public static TraceExecutionPhase phaseForReplay(TraceData trace,
@@ -656,19 +709,22 @@ public final class TraceReplayBootstrap {
      * Detects a VBlank sample that lands after CPU-sidekick movement selected a
      * new raw animation but before the following {@code Animate_Tails} call.
      *
-     * <p>The normal-step hook proves the CPU path executed, the changed
-     * sidekick physics proves this is still a full playable tick, and the
-     * three-row animation transition proves the first mapping remained visible
-     * for the interrupted dispatch. This is native execution scheduling; no
-     * recorded value is copied into engine state.
+     * <p>The normal-step hook or one {@code Pos_table_index} entry proves the
+     * playable prefix executed: {@code Tails_Control} runs CPU control and
+     * movement, then {@code Sonic_RecordPos}, then {@code Animate_Tails}
+     * (sonic3k.asm:26238-26284). The changed sidekick physics and three-row
+     * animation transition prove the first mapping remained visible when the
+     * sample interrupted that final animation dispatch. This is native
+     * execution scheduling; no recorded value is copied into engine state.
      */
     private static boolean isSidekickAnimationHeldAfterRawTransition(
             TraceData trace, TraceFrame previous, TraceFrame current) {
         if (trace == null || previous == null || current == null
                 || !"s3k".equals(trace.metadata().game())
                 || current.input() != previous.input()
-                || !executionCountersEqual(previous, current)
-                || !hasTailsCpuNormalStep(trace, current)
+                || !(hasTailsCpuNormalStep(trace, current)
+                        || hasPlayableSlotHistoryAdvanceWithoutInputEdge(
+                                trace, previous, current))
                 || current.sidekick() == null || previous.sidekick() == null
                 || current.sidekick().physicsStateEquals(previous.sidekick())) {
             return false;

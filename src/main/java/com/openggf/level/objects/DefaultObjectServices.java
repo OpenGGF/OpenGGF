@@ -565,8 +565,8 @@ public class DefaultObjectServices implements ObjectServices {
     }
 
     @Override
-    public void requestSpecialStageFromCheckpoint() {
-        lm().requestSpecialStageFromCheckpoint();
+    public void advanceToSpecialStageEntryRoutine() {
+        lm().advanceToSpecialStageEntryRoutine();
     }
 
     @Override

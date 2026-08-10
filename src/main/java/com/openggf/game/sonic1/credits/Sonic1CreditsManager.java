@@ -46,7 +46,6 @@ public class Sonic1CreditsManager {
     private State state;
     private int creditsNum;
     private int timer;
-    private int textPacingDelay;
     private int demoLoadDelay;
     private boolean scrollFrozen;
 
@@ -90,7 +89,6 @@ public class Sonic1CreditsManager {
     public void initialize() {
         creditsNum = 0;
         scrollFrozen = false;
-        textPacingDelay = 0;
         demoLoadDelay = 0;
         demoInputPlayer = null;
         requestDemoLoad = false;
@@ -114,7 +112,6 @@ public class Sonic1CreditsManager {
         fadeManager().startFadeFromBlack(nativeCompletion(() -> {
             state = State.TEXT_DISPLAY;
             timer = Sonic1CreditsDemoData.TEXT_DISPLAY_FRAMES;
-            textPacingDelay = getTextPacingDelayFrames(creditsNum);
         }));
 
         LOGGER.info("Credits sequence initialized, starting credit 0");
@@ -161,8 +158,13 @@ public class Sonic1CreditsManager {
             return;
         }
 
-        if (textPacingDelay > 0) {
-            textPacingDelay--;
+        // Cred_WaitLoop (s1disasm/sonic.asm:3880-3889) holds the page up until
+        // BOTH gates clear: `tst.w (v_generictimer).w` (the 120 frames counted
+        // above, decremented by VBlank_Title, sonic.asm:784) and
+        // `tst.l (v_plc_buffer).w` -- the next demo's level PLC plus plcid_Main2,
+        // queued by queueNextDemoPlcs, still decompressing at the nine tiles per
+        // frame ProcessPLC_9Tiles gives VBlank routine 4 (sonic.asm:781).
+        if (plcBufferOccupied()) {
             return;
         }
 
@@ -278,7 +280,6 @@ public class Sonic1CreditsManager {
         fadeManager().startFadeFromBlack(nativeCompletion(() -> {
             state = State.TEXT_DISPLAY;
             timer = Sonic1CreditsDemoData.TEXT_DISPLAY_FRAMES;
-            textPacingDelay = getTextPacingDelayFrames(creditsNum);
         }));
 
         LOGGER.info("Showing credit text " + creditsNum);
@@ -453,11 +454,13 @@ public class Sonic1CreditsManager {
         return creditsNum == 3;
     }
 
-    private static int getTextPacingDelayFrames(int creditIndex) {
-        if (creditIndex < 0 || creditIndex >= Sonic1CreditsDemoData.TEXT_PACING_DELAY_FRAMES.length) {
-            return 0;
-        }
-        return Sonic1CreditsDemoData.TEXT_PACING_DELAY_FRAMES[creditIndex];
+    /**
+     * ROM {@code tst.l (v_plc_buffer).w} (s1disasm/sonic.asm:3888): whether any
+     * PLC descriptor or in-flight Nemesis decode remains in the logical FIFO.
+     */
+    private boolean plcBufferOccupied() {
+        Sonic1PlcService plcService = GameServices.module().getGameService(Sonic1PlcService.class);
+        return plcService != null && plcService.isBusy();
     }
 
     private Sonic1TitleScreenDataLoader resolveTitleScreenDataLoader() {

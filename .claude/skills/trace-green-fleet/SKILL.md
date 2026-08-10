@@ -69,6 +69,46 @@ Inside `.worktrees/*`, run Maven through `cmd /c "mvn.cmd ..."` when bare `mvn` 
 Always use `trace-replay-bug-fixing` for actual trace investigation or fixes.
 
 - Comparison-only: trace data is read-only diagnostic input. Never hydrate or sync engine state from trace data in the per-frame test loop.
+- **The bar is any BK2, not this BK2.** A fix must hold for a movie nobody has recorded
+  yet; a green fixture only proves the fixture. A constant derived by measuring the
+  fixture's own rows rather than read out of the disassembly is a fitted model even when
+  every test passes, and it will desync the first different recording. Measuring is a
+  legitimate way to *locate* a problem and never a way to *land* one: the landed value must
+  be traceable to the ROM routine that owns it and cited there. Prefer a structural rule
+  read from the disassembly over any number. A value that is close to the ROM's but not
+  equal is usually absorbing an error elsewhere — chase that instead of keeping it. See
+  *The Other Core Invariant — Any BK2, Not This BK2* in `trace-replay-bug-fixing` for the
+  procedure, red flags, and worked examples both ways.
+- **A worker that reports `no-improvement` with a real root cause has succeeded.** Do not
+  push a worker toward a green it cannot justify; a fitted fix costs more than a red trace,
+  because it hides the defect and desyncs the next recording. Judge fix quality by the
+  fitted-value audit, not by the colour of the test.
+- **The recording beats your reasoning.** A ROM-derived argument that a trace
+  contradicts loses to the trace: the recording *is* the shipped ROM executing that
+  input, so a disagreement means the reading has a flaw, not that the fixture is
+  wrong. Three workers in three consecutive batches were caught by this. The weak
+  step is never the assembly reading — it is the claim that *the engine implements
+  the other branch*, which is a judgement about why the Java looks as it does and
+  can be wrong even when the disassembly reading is perfect. See "The Third
+  Invariant" in `trace-replay-bug-fixing`.
+- **Before a worker changes an expression, it must check what else depends on it.**
+  Two call sites of one ROM conditional must move together or not at all. A
+  deliberately-held expression at one site was defeated by "correcting" its sibling,
+  which removed the mask by the back door and regressed a previously-green trace.
+- **Attribution requires a control run.** Never conclude that a change caused (or
+  did not cause) a failure without reproducing the baseline on a clean worktree at
+  the same commit with the same command. Both directions of that mistake happened
+  this week.
+- **Worktrees are deleted after a worker finishes, so a text diff is the only thing
+  that survives by default.** Any worker producing generated or binary artifacts —
+  recorded fixtures, `.gz` payloads, capture output — must copy them somewhere
+  durable outside the worktree and report the path, and must list every new file it
+  created (untracked files do not appear in `git diff`). Two multi-hour re-records
+  were lost to this.
+- **`docs/status/trace-frontier-log.md` is append-only.** Its historic prefix is
+  hash-protected by a commit hook, and a second hook rejects machine-local
+  `/home/...` paths in added lines. Append at the end; never prepend, never edit a
+  historic entry — correct it with a new entry that supersedes it.
 - No zone, route, frame, or "known failing trace" carve-outs. Model ROM state: object id/routine, status/control bits, physics profile, event flag, frame-counter visibility, or data-driven condition.
 - Cite disassembly in code comments and summaries when behavior changes.
 - Cross-game parity: before changing shared physics, collision, sidekick, oscillation, or shared object code, check all three disassemblies. Universal corrections must keep all games green. Real per-game divergences must use the smallest accurate owner from `docs/architecture/per-game-rule-placement.md`, never `gameId`.
@@ -574,16 +614,24 @@ Classify queue-aware traces before assigning fixes:
 
 - `queue.*` is a zero-tolerance physical-queue comparator frontier;
 - `dynamic_art.*` is a zero-tolerance DPLC/player-art lifecycle frontier;
-- a hardware-timing admission error means the schema-2 authority could not
-  match a production-submitted prepared S3K job, not that the comparator found
+- a hardware-timing admission error means the timing authority could not
+  match a production-submitted prepared job, not that the comparator found
   an ordinary field mismatch.
+
+Recorded hardware timing may drive a **delay** in S1 PLC, S2 DPLC and S3K
+Kosinski queue readiness — deferring or releasing *when* already-submitted,
+engine-created work becomes ready. That is the whole of the exception. It must
+never carry gameplay values, create work the engine did not submit, fabricate
+readiness, use physics/aux comparison data as the signal, or key on a frame
+index, zone, route or game name. Do not reject a delay-only timing latch as
+hydration, and do not stretch the exception past *when*.
 
 For every affected trace preserve the first frame, exact field or admission
 reason, and total error count. Queue/DPLC failures take precedence over
 downstream physics, object, event, or audio symptoms. Do not promote a fixture
 to audited status unless native capture used `--load-queue-state` and metadata
 advertises `load_queue_state_per_frame`; DPLC/player-art evidence additionally
-requires `dynamic_art_transfer_state_per_frame_v1`.
+requires `dynamic_art_transfer_state_per_frame`.
 
 Update `docs/status/trace-frontier-log.md` whenever the first queue or
 `dynamic_art` frontier moves, a green regresses, or an admission error changes.

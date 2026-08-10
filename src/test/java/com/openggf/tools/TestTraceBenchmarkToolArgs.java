@@ -128,10 +128,8 @@ class TestTraceBenchmarkToolArgs {
 
     @Test
     void benchmarkUsesRecordedAdmissionOnlyForTimedFixtures() throws IOException {
-        var timed = TraceData.loadMetadataOnly(Path.of(
-                "src/test/resources/traces/s3k/aiz_completerun")).metadata();
-        var legacy = TraceData.loadMetadataOnly(Path.of(
-                "src/test/resources/traces/s1/ghz1_completerun")).metadata();
+        var timed = new com.openggf.trace.timing.HardwareTimingSchedule(java.util.List.of());
+        var legacy = com.openggf.trace.timing.HardwareTimingSchedule.empty();
 
         assertEquals(HardwareReadinessAdmissionPolicy.RECORDED,
                 TraceBenchmarkTool.admissionPolicyFor(timed));

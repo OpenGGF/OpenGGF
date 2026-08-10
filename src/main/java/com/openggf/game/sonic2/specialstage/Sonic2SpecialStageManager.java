@@ -3,6 +3,7 @@ package com.openggf.game.sonic2.specialstage;
 import com.openggf.game.SpecialStageDebugProvider;
 import com.openggf.game.GameServices;
 import com.openggf.game.resources.DynamicArtLifecycleService;
+import com.openggf.game.resources.PlcFrameLifecycleCoordinator;
 
 import com.openggf.audio.GameSound;
 import com.openggf.configuration.SonicConfiguration;
@@ -576,6 +577,11 @@ public class Sonic2SpecialStageManager {
             GameServices.audio().fadeOutMusic();
             LOGGER.info("Music fade requested - fading special stage music");
         });
+
+        // The ROM's checkpoint ring check reads the ring words live at the end of
+        // the rainbow (loc_35978, s2.asm:71843-71853), so rings picked up while the
+        // rainbow plays still count towards the requirement.
+        checkpoint.setLiveRingCount(this::getRingsCollected);
 
         checkpoint.setOnCheckpointResolved((result, checkpointNumber, ringRequirement,
                 ringsCollected, isFinalCheckpoint) -> {
@@ -1231,6 +1237,28 @@ public class Sonic2SpecialStageManager {
             // (s2.asm:29805-29846, 6651-6663). Apply player scalar init first,
             // then execute/project/collide active special-stage objects once.
             completePlayerScalarInitializationBootstrap();
+            // That first player-slot scan runs Obj09/Obj10's display code,
+            // which ends in LoadSSSonicDynPLC / LoadSSTailsDynPLC /
+            // LoadSSTailsTailsDynPLC (docs/s2disasm/s2.asm:69194, 70493,
+            // 70575). Their "already loaded" latch was cleared with the rest
+            // of the special-stage object RAM, so the bootstrap pass is where
+            // the players' first art transfer is queued -- not the first
+            // recurring V-int pass.
+            if (tailsPlayer != null) {
+                // ROM Obj88 (tails' tails) animates on this same startup pass
+                // (s2.asm:70549-70563); see tickTailsTailsStartupAnimation.
+                tailsPlayer.tickTailsTailsStartupAnimation();
+            }
+            publishPlayerDynamicArt();
+            // The startup sequence then waits on a DMA-queue-only V-int
+            // (s2.asm:6665-6668 -> Vint_CtrlDMA, s2.asm:998-1001), so that
+            // V-blank retires what the pass just queued even though the
+            // Pal_FadeFromWhite loop around it never polls the joypad.
+            PlcFrameLifecycleCoordinator plcFrameLifecycle =
+                    GameServices.plcFrameLifecycleOrNull();
+            if (plcFrameLifecycle != null) {
+                plcFrameLifecycle.markNextVblankServicesDmaQueue();
+            }
             executeActiveSpecialStageObjects();
             intro.beginFadeFromWhite();
         } else if (recurringVintTick) {
@@ -1285,6 +1313,27 @@ public class Sonic2SpecialStageManager {
         pendingMainP2HeldButtons = 0;
         pendingMainP2LogicalButtons = 0;
         pendingMainCheckpointStep = false;
+    }
+
+    /**
+     * Completes an ordinary pre-start object pass at the end of its displayed
+     * observation without executing another VInt. The first post-fade pass is
+     * excluded because its full redraw overruns that observation; Obj5F's
+     * terminal pass is excluded because it owns the separate started boundary
+     * below (s2.asm:6674-6694, 9734-9746).
+     *
+     * @return whether an ordinary pending pass was completed
+     */
+    boolean completeObservablePreStartPassWithoutVint() {
+        if (!recurringMainPassPending
+                || intro == null
+                || intro.isSpecialStageStarted()
+                || intro.isSlowFirstPostFadePassPending()
+                || intro.isTerminalPreStartPassPending()) {
+            return false;
+        }
+        executePendingRecurringMainPass();
+        return true;
     }
 
     /**
@@ -1619,6 +1668,25 @@ public class Sonic2SpecialStageManager {
                     continue;
                 }
 
+                // The shared helper both call sites use (Obj60's ring test with
+                // d6=$A and Obj61's bomb test with d6=8) rejects a player unless
+                // its routine is the normal on-track one:
+                //
+                //   tst.b   id(a1)            ; slot occupied
+                //   cmpi.b  #2,routine(a1)    ; Obj09_MdNormal / Obj10_MdNormal
+                //   bne.s   loc_3511A
+                //   tst.b   routine_secondary(a1)
+                //   bne.s   loc_3511A
+                //
+                // (s2.asm:70841-70846). Routine 4 (MdJump) and routine 8 (MdAir)
+                // are therefore immune to both rings and bombs while the player
+                // is off the track, which is also why neither Obj09_MdJump nor
+                // Obj09_MdAir calls SSPlayer_Collision (s2.asm:69297-69322).
+                if (player.getRoutine()
+                        != Sonic2SpecialStagePlayer.RoutineState.NORMAL) {
+                    continue;
+                }
+
                 // Original game checks routine_secondary != 0 (hurt animation) for ALL objects
                 // During hurt animation, no collision with anything
                 if (player.isHurt()) {
@@ -1704,12 +1772,15 @@ public class Sonic2SpecialStageManager {
             player.triggerHit();
             // Original game plays SndID_SlowSmash for bomb explosion
             GameServices.audio().playSfx(GameSound.SLOW_SMASH);
-            // Ring spill sound plays when rings are actually lost
-            int ringsLost = objectManager.loseRingsFromBombHit(player);
-            if (ringsLost > 0) {
+            // SSPlayer_Collision only plays SndID_RingSpill and enters the hurt
+            // state here; it never touches the ring count. The rings are taken
+            // by Obj5B_Init, and Obj5B is not created until SSHurt_Animation
+            // sees ss_hurt_timer reach 8 -- one RunObjects pass later
+            // (s2.asm:69154-69171, 71266-71298). See applyPendingRingSpills.
+            if (player.getRings() > 0) {
                 GameServices.audio().playSfx(GameSound.RING_SPILL);
             }
-            LOGGER.fine("Hit bomb! Lost " + ringsLost + " rings. Remaining: " +
+            LOGGER.fine("Hit bomb! Rings pending spill. Current: " +
                     objectManager.getRingsCollected());
             return true;
         }
@@ -1867,6 +1938,7 @@ public class Sonic2SpecialStageManager {
         }
     }
 
+
     private void updatePlayers(
             int capturedHeldButtons,
             int capturedPressedButtons,
@@ -1879,18 +1951,56 @@ public class Sonic2SpecialStageManager {
             sonicPlayer.setGlobalAnimFrameTimer(animTimer);
             sonicPlayer.update(capturedHeldButtons, capturedPressedButtons);
             System.arraycopy(tailsCtrlRecordBuf, 0, tailsCtrlRecordBuf, 1, tailsCtrlRecordBuf.length - 1);
-            tailsCtrlRecordBuf[0] = capturedHeldButtons;
-            int delayedInput = tailsCtrlRecordBuf[tailsCtrlRecordBuf.length - 1];
-            if ((capturedP2HeldButtons & 0x7F) != 0) {
-                java.util.Arrays.fill(tailsCtrlRecordBuf, 0);
-                tailsControlCounter = 0xB4;
-                delayedInput = capturedP2LogicalButtons;
-            } else if (tailsControlCounter > 0) {
-                tailsControlCounter--;
-                delayedInput = capturedP2LogicalButtons;
+            // loc_33908 records the whole Ctrl_1_Logical *word* -- held byte in
+            // bits 8-15, press byte in bits 0-7 -- with a single
+            // "move.w (Ctrl_1_Logical).w,-(a1)" (s2.asm:69069). Recording only
+            // the held byte loses the press edge, and SSTailsCPU_Control's
+            // "move.w (a1),(Ctrl_2_Logical).w" (s2.asm:70482) republishes both
+            // bytes, so Obj10_MdNormal's Ctrl_2_Press_Logical jump test
+            // (s2.asm:70426-70429) would never fire.
+            tailsCtrlRecordBuf[0] = ((capturedHeldButtons & 0xFF) << 8)
+                    | (capturedPressedButtons & 0xFF);
+            // SSTailsCPU_Control is reached from Obj10_MdNormal only, and only
+            // on its non-hurt path: Obj10_MdNormal tests routine_secondary and
+            // branches to Obj10_Hurt before calling it (s2.asm:70408-70412).
+            // While Tails is in Obj10_MdJump / Obj10_MdAir / Obj10_Hurt nothing
+            // overwrites Ctrl_2_Logical after the main loop's own
+            // "move.w (Ctrl_2).w,(Ctrl_2_Logical).w" (s2.asm:6716-6717,6741),
+            // so SSPlayer_ChgJumpDir reads the real port-2 pad rather than the
+            // delayed record buffer -- and the buffer clear and
+            // Tails_control_counter decrement that live inside
+            // SSTailsCPU_Control (s2.asm:70453-70481) do not run either. The
+            // unconditional part is the buffer *shift*, which sits in Obj09
+            // ahead of its routine jump (s2.asm:69048,69063-69069) and so runs
+            // whatever Tails is doing.
+            boolean tailsCpuControlRuns =
+                    tailsPlayer.getRoutine()
+                            == Sonic2SpecialStagePlayer.RoutineState.NORMAL
+                    && !tailsPlayer.isHurt();
+            int delayedHeld = capturedP2LogicalButtons;
+            int delayedPressed = 0;
+            if (tailsCpuControlRuns) {
+                int recorded = tailsCtrlRecordBuf[tailsCtrlRecordBuf.length - 1];
+                delayedHeld = (recorded >> 8) & 0xFF;
+                delayedPressed = recorded & 0xFF;
+                if ((capturedP2HeldButtons & 0x7F) != 0) {
+                    // fixBugs = 0 (s2.asm:27): the clearing loop's
+                    // "move.l d0,(a1)" pair never advances a1, so only the two
+                    // newest words of SS_Ctrl_Record_Buf are zeroed and the
+                    // rest of the record survives (s2.asm:70460-70470).
+                    tailsCtrlRecordBuf[0] = 0;
+                    tailsCtrlRecordBuf[1] = 0;
+                    tailsControlCounter = 0xB4;
+                    delayedHeld = capturedP2LogicalButtons;
+                    delayedPressed = 0;
+                } else if (tailsControlCounter > 0) {
+                    tailsControlCounter--;
+                    delayedHeld = capturedP2LogicalButtons;
+                    delayedPressed = 0;
+                }
             }
             tailsPlayer.setGlobalAnimFrameTimer(animTimer);
-            tailsPlayer.update(delayedInput, 0);
+            tailsPlayer.update(delayedHeld, delayedPressed);
         } else if (sonicPlayer != null) {
             sonicPlayer.setGlobalAnimFrameTimer(animTimer);
             sonicPlayer.update(capturedHeldButtons, capturedPressedButtons);
@@ -1898,7 +2008,36 @@ public class Sonic2SpecialStageManager {
             tailsPlayer.setGlobalAnimFrameTimer(animTimer);
             tailsPlayer.update(capturedHeldButtons, capturedPressedButtons);
         }
+        applyPendingRingSpills();
         publishPlayerDynamicArt();
+    }
+
+    /**
+     * Runs Obj5B_Init for any player whose SSHurt_Animation just created a ring
+     * spill on this pass.
+     *
+     * <p>SSHurt_Animation adds 8 to {@code ss_hurt_timer} every hurt tick and
+     * only allocates Obj5B on the tick where the result is exactly 8 -- the
+     * first tick after SSPlayer_Collision entered the hurt state -- and only
+     * when the owning player still holds rings (s2.asm:69138-69171). Obj5B is
+     * allocated into the special-stage object region, which RunObjects scans
+     * after the Obj09/Obj10 player slots, so its Init subtracts the rings on
+     * that same pass (s2.asm:71266-71298). Deducting them in the touch response
+     * instead would take them a pass early.
+     */
+    private void applyPendingRingSpills() {
+        applyPendingRingSpill(sonicPlayer);
+        applyPendingRingSpill(tailsPlayer);
+    }
+
+    private void applyPendingRingSpill(Sonic2SpecialStagePlayer player) {
+        if (player == null || objectManager == null) {
+            return;
+        }
+        if (!player.isHurt() || player.getHurtTimer() != 8) {
+            return;
+        }
+        objectManager.loseRingsFromBombHit(player);
     }
 
     private void publishPlayerDynamicArt() {
@@ -1915,18 +2054,25 @@ public class Sonic2SpecialStageManager {
             throw new IllegalStateException(
                     "unable to load ROM-backed special-stage player DPLC plans", e);
         }
-        if (sonicPlayer != null) {
+        // Every Obj09/Obj10 routine tail branches to LoadSSSonicDynPLC /
+        // LoadSSTailsDynPLC, whose prologue skips the DisplaySprite + DPLC tail
+        // outright while the post-hurt ss_dplc_timer blink is on an odd count
+        // (docs/s2disasm/s2.asm:69193-69200, 70492-70499). Obj88 re-reads its
+        // parent's counter (s2.asm:70575-70581), so Tails and his tails always
+        // skip the same passes.
+        if (sonicPlayer != null && sonicPlayer.dplcLoadRuns()) {
             publishSpecialStageOwner(
                     lifecycle, "ss-sonic", sonicPlayer.getMappingFrame(),
                     dplcRequests(plans.sonic(), sonicPlayer.getMappingFrame()),
                     0x5CA0);
         }
-        if (tailsPlayer != null) {
+        if (tailsPlayer != null && tailsPlayer.dplcLoadRuns()) {
             publishSpecialStageOwner(
                     lifecycle, "ss-tails", tailsPlayer.getMappingFrame(),
                     dplcRequests(plans.tails(), tailsPlayer.getMappingFrame()),
                     0x6000);
-            if (tailsPlayer.shouldRenderTailsTails()) {
+            if (tailsPlayer.tailsTailsDplcLoadRuns()
+                    && tailsPlayer.shouldRenderTailsTails()) {
                 publishSpecialStageOwner(
                         lifecycle, "ss-tails-tails",
                         tailsPlayer.getTailsTailsMappingFrame(),

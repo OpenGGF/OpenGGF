@@ -57,7 +57,7 @@ public final class FbzEndBossDebrisChild extends AbstractObjectInstance
     public static List<Spec> armDebrisTable() { return ARM; }
     @Override public int getX() { return x; }
     @Override public int getY() { return y; }
-    @Override public void update(int frameCounter, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         if (!initialized) { initialized = true; return; }
         xFixed += velocityX << 8;
         yFixed += velocityY << 8;

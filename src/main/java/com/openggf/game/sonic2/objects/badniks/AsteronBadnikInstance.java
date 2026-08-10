@@ -98,7 +98,7 @@ public class AsteronBadnikInstance extends AbstractBadnikInstance implements Rew
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = resolveRomOrientationTarget(playerEntity);
         switch (state) {
             case IDLE -> updateIdle(player);
@@ -274,11 +274,11 @@ public class AsteronBadnikInstance extends AbstractBadnikInstance implements Rew
     }
 
     @Override
-    protected void updateAnimation(int frameCounter) {
+    protected void updateAnimation(int vIntRunCount) {
         if (state == State.MOVING) {
             // Animation from Ani_objA4: dc.b 1, 0, 1, $FF
             // Alternates frames 0 and 1 with delay of 1 (every 2 frames)
-            animFrame = ((frameCounter >> 1) & 1);
+            animFrame = ((vIntRunCount >> 1) & 1);
         } else {
             animFrame = 0;
         }

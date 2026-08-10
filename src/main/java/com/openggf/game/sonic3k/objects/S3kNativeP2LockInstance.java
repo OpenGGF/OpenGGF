@@ -20,7 +20,7 @@ public final class S3kNativeP2LockInstance extends AbstractObjectInstance
         super(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), "S3kNativeP2Lock");
     }
 
-    @Override public void update(int frameCounter, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         PlayableEntity nativeP2 = services().playerQuery().nativeP2OrNull();
         if (!(nativeP2 instanceof AbstractPlayableSprite nativeSidekick)) {
             ObjectLifetimeOps.expireDynamic(this);

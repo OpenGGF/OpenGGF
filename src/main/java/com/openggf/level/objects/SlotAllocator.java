@@ -38,6 +38,12 @@ public final class SlotAllocator {
         return used.nextClearBit(0) < layout.dynamicSlotCount();
     }
 
+    /** ROM FindFreeObj without consuming the slot. Returns -1 when the pool is full. */
+    public int firstFreeSlot() {
+        int bit = used.nextClearBit(0);
+        return bit < layout.dynamicSlotCount() ? layout.toSlotIndex(bit) : -1;
+    }
+
     /** ROM FindNextFreeObj: first empty slot strictly after {@code parentSlot}. -1 if none. */
     public int allocateAfter(int parentSlot) {
         int startExec = Math.max(0, layout.toExecIndex(parentSlot) + 1);

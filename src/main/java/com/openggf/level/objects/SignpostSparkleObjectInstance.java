@@ -44,7 +44,7 @@ public class SignpostSparkleObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         animTimer++;
         if (animTimer >= FRAME_DELAY) {
             animTimer = 0;

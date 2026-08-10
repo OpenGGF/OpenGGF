@@ -57,7 +57,7 @@ public final class OrbinautBadnikInstance extends AbstractS3kBadnikInstance impl
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         if (isDestroyed()) {
             return;
         }
@@ -290,7 +290,7 @@ public final class OrbinautBadnikInstance extends AbstractS3kBadnikInstance impl
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (isDestroyed() || parent.isDestroyed()) {
                 setDestroyed(true);
                 return;

@@ -158,7 +158,7 @@ class TestFbzElevatorObjectManagerIntegration {
 
     private static final class DummyObject extends AbstractObjectInstance {
         private DummyObject(ObjectSpawn spawn) { super(spawn, "FBZElevatorSlotPressure"); }
-        @Override public void update(int frameCounter, PlayableEntity player) { }
+        @Override public void update(int vIntRunCount, PlayableEntity player) { }
         @Override public void appendRenderCommands(List<GLCommand> commands) { }
     }
 }

@@ -46,7 +46,7 @@ public final class CnzEndBossExplosionControllerChild extends AbstractObjectInst
     @Override public int getY() { return centreY; }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (ship != null) {
             if (ship.isDestroyed()) {
                 ObjectLifetimeOps.expireDynamic(this);

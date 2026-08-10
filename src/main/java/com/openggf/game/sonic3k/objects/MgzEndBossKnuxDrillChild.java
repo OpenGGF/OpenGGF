@@ -38,7 +38,7 @@ final class MgzEndBossKnuxDrillChild extends AbstractObjectInstance implements R
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         x = parent.getX();
         y = parent.getY() + 0x2D;
         int parentRoutine = parent.getNativeRoutineForTesting();

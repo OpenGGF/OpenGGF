@@ -116,7 +116,7 @@ public class WhispBadnikInstance extends AbstractBadnikInstance implements Rewin
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (state) {
             case INIT -> updateInit();
@@ -289,9 +289,9 @@ public class WhispBadnikInstance extends AbstractBadnikInstance implements Rewin
     }
 
     @Override
-    protected void updateAnimation(int frameCounter) {
+    protected void updateAnimation(int vIntRunCount) {
         // Fast wing flapping - toggle between frames every tick
-        animFrame = frameCounter & 1;
+        animFrame = vIntRunCount & 1;
     }
 
     @Override

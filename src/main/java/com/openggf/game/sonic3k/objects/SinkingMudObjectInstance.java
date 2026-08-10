@@ -149,7 +149,7 @@ public class SinkingMudObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         killedThisFrame.clear();
         ObjectServices svc = tryServices();
         List<PlayableEntity> participants = svc != null
@@ -222,17 +222,32 @@ public class SinkingMudObjectInstance extends AbstractObjectInstance
     }
 
     private Integer copiedSurfaceFromAdjacentMud(PlayableEntity player) {
-        if (player == null || !player.isOnObject()) {
+        if (player == null) {
             return null;
         }
         ObjectServices svc = tryServices();
         if (svc == null || svc.objectManager() == null) {
             return null;
         }
+        ObjectManager objectManager = svc.objectManager();
 
-        ObjectInstance riding = svc.objectManager().getRidingObject(player);
-        if (riding instanceof SinkingMudObjectInstance mud && riding != this) {
-            return mud.rawSurfaceByPlayer.getOrDefault(player, MAX_RAW_SURFACE);
+        if (player.isOnObject()) {
+            ObjectInstance riding = objectManager.getRidingObject(player);
+            if (riding instanceof SinkingMudObjectInstance mud && riding != this) {
+                return mud.rawSurfaceByPlayer.getOrDefault(player, MAX_RAW_SURFACE);
+            }
+        }
+
+        // The ROM mud routine runs before the player slot. On the frame Sonic
+        // jumps off a mud patch, Status_OnObj is still set when the adjacent
+        // mud runs, even though the engine's object update sees the cleared
+        // post-movement status. The source mud's prior standing contact is
+        // the engine-owned equivalent of that routine-entry standing bit.
+        for (SinkingMudObjectInstance mud
+                : objectManager.activeObjectsOfType(SinkingMudObjectInstance.class)) {
+            if (mud != this && mud.standingNextUpdate.getOrDefault(player, false)) {
+                return mud.rawSurfaceByPlayer.getOrDefault(player, MAX_RAW_SURFACE);
+            }
         }
         return null;
     }

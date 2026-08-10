@@ -322,10 +322,23 @@ final class ObjectTouchResponseController {
         // ROM: playerY = y_pos - (y_radius - 3). Do NOT subtract 8 from Y (only X).
         int playerY = player.getCentreY() - baseYRadius;
         int playerHeight = baseYRadius * 2;
-        boolean crouching = player.getCrouching();
+        // ASSEMBLY FLAG: fixBugs (docs/s2disasm/s2.asm:27) / FixBugs
+        // (docs/s1disasm/sonic.asm:20), both 0 in the shipped ROMs. THE ENGINE
+        // IMPLEMENTS THE SHIPPED (UN-FIXED) BRANCH: TouchResponse (s2.asm:85069)
+        // and Touch_Boss (s2.asm:85212) test the mapping frame
+        // (`cmpi.b #$4D,mapping_frame(a0)`; S1 uses fr_Duck = $39), so the
+        // 12px-down / 20px-tall box applies on exactly one frame of the duck
+        // animation, and never to Tails or Super Sonic whose duck frames are $5B
+        // and $C1. With fixBugs = 1 the test would be the animation id
+        // (AniIDSonAni_Duck) and the smaller box would cover the whole duck for
+        // every character. S3K removed the adjustment outright
+        // (sonic3k.asm:20649-20650). See ObjectInteractionRules#duckTouchBoxMappingFrame.
+        ObjectInteractionRules duckRulesMain = objectInteractionRulesOrNull(player);
+        boolean crouching = duckRulesMain != null
+                && duckRulesMain.isDuckTouchBoxMappingFrame(player.getMappingFrame());
         if (crouching) {
-            playerY += 12;
-            playerHeight = 20;
+            playerY += ObjectInteractionRules.DUCK_TOUCH_BOX_TOP_SHIFT;
+            playerHeight = ObjectInteractionRules.DUCK_TOUCH_BOX_HEIGHT;
         }
         // ROM (sonic3k.asm:20620-20640): Insta-shield expands hitbox to 48x48
         instaShieldActive = false;
@@ -405,10 +418,20 @@ final class ObjectTouchResponseController {
         int baseYRadius = Math.max(1, sidekick.getYRadius() - 3);
         int playerY = sidekick.getCentreY() - baseYRadius;
         int playerHeight = baseYRadius * 2;
-        boolean crouching = sidekick.getCrouching();
+        // ASSEMBLY FLAG: fixBugs / FixBugs, 0 in the shipped ROMs. Same shipped
+        // mapping-frame test as the main-player path above; because it is a frame
+        // compare rather than an animation-id compare, it structurally never fires
+        // for Tails (TailsAni_Duck uses frame $5B, s2.asm:41575) even though the
+        // ROM runs the identical instruction for whichever object is in a0. With
+        // fixBugs = 1 (`cmpi.b #AniIDSonAni_Duck,anim(a0)`) the sidekick's duck
+        // WOULD shrink the box. Kept as the shared predicate so the behaviour
+        // follows the ROM data rather than a per-character carve-out.
+        ObjectInteractionRules duckRules = objectInteractionRulesOrNull(sidekick);
+        boolean crouching = duckRules != null
+                && duckRules.isDuckTouchBoxMappingFrame(sidekick.getMappingFrame());
         if (crouching) {
-            playerY += 12;
-            playerHeight = 20;
+            playerY += ObjectInteractionRules.DUCK_TOUCH_BOX_TOP_SHIFT;
+            playerHeight = ObjectInteractionRules.DUCK_TOUCH_BOX_HEIGHT;
         }
         debugState.setPlayer(playerX, playerY, playerHeight, baseYRadius, crouching);
         debugState.clear();
@@ -621,15 +644,34 @@ final class ObjectTouchResponseController {
                         sizeIndex, width, height, category, touchProfile.shieldReactionFlags());
                 TouchResponseListener listener = instance instanceof TouchResponseListener casted ? casted : null;
                 if (isSidekick) {
-                    handleTouchResponseSidekick(player, instance, listener, result, touchProfile);
+                    handleTouchResponseSidekick(player, instance, listener, result, touchProfile, objY);
                 } else {
-                    handleTouchResponse(player, instance, listener, result, touchProfile);
+                    handleTouchResponse(player, instance, listener, result, touchProfile, objY);
                 }
             }
             // ROM parity: ReactToItem ALWAYS exits after the first overlapping
             // object, regardless of category, player slot, or whether a response
             // was triggered. The ROM's handler returns via rts which exits the
             // entire ReactToItem subroutine.
+            //
+            // This break is also what implements S1's FixBugs = 0 branch at
+            // React_ChkHurt (docs/s1disasm/_incObj/"Sonic ReactToItem.asm":341-350).
+            // S1 assembles with FixBugs = 0 (docs/s1disasm/sonic.asm:20) and the
+            // traces record shipped-ROM behaviour, so the shipped branch is the
+            // accurate one: when the player is invincible or still flashing, the
+            // damaging object's handler does `moveq #-1,d0 / rts`, which returns
+            // from ReactToItem ENTIRELY, so objects later in the RAM scan are never
+            // examined that frame. That is the "can't pick up lost rings while
+            // standing on Marble Zone lava" bug, and it is exactly this break: the
+            // engine has already added the object to buildingSet and dispatched (or
+            // suppressed) its response, and then stops scanning. Assembling with
+            // FixBugs = 1 would instead `bra.w React_CheckNext` and keep walking the
+            // RAM scan, so a lost ring behind the lava would still be collected.
+            // Not a per-game divergence: S2's Touch_NoHurt (docs/s2disasm/s2.asm:
+            // 85455-85457) and S3K's Touch_ChkHurt_Return
+            // (docs/skdisasm/sonic3k.asm:21016-21018) both do the same
+            // `moveq #-1,d0 / rts`, so all three games abandon the touch loop on a
+            // suppressed damaging contact and no rules record is warranted.
             break;
         }
     }
@@ -716,14 +758,20 @@ final class ObjectTouchResponseController {
                         sizeIndex, width, height, category, region.shieldReactionFlags(), region.x());
                 TouchResponseListener listener = instance instanceof TouchResponseListener casted ? casted : null;
                 if (isSidekick) {
-                    handleTouchResponseSidekick(player, instance, listener, result, profile);
+                    handleTouchResponseSidekick(player, instance, listener, result, profile, region.y());
                 } else {
-                    handleTouchResponse(player, instance, listener, result, profile);
+                    handleTouchResponse(player, instance, listener, result, profile, region.y());
                 }
             }
             // ROM parity: ReactToItem ALWAYS exits on first overlap, even
             // when the response is edge-trigger suppressed. Match the
             // single-region break-on-first-overlap behaviour.
+            //
+            // Same FixBugs = 0 branch as the single-region path — see the long
+            // note at the corresponding `break` in processCollisionLoop
+            // (React_ChkHurt, docs/s1disasm/_incObj/"Sonic ReactToItem.asm":341-350;
+            // shipped `moveq #-1,d0 / rts` versus the FixBugs = 1
+            // `bra.w React_CheckNext`).
             return true;
         }
         return false; // No region overlapped
@@ -770,7 +818,8 @@ final class ObjectTouchResponseController {
      * - Special category objects still interact normally
      */
     private void handleTouchResponseSidekick(PlayableEntity sidekick, ObjectInstance instance,
-            TouchResponseListener listener, TouchResponseResult result, TouchResponseProfile profile) {
+            TouchResponseListener listener, TouchResponseResult result, TouchResponseProfile profile,
+            int resolvedTouchY) {
         if (sidekick == null) {
             return;
         }
@@ -826,7 +875,7 @@ final class ObjectTouchResponseController {
                         boolean isNowDestroyed = instance instanceof AbstractObjectInstance postAoi
                                 && postAoi.isDestroyed();
                         if (isNowDestroyed) {
-                            applyEnemyBounce(sidekick, instance);
+                            applyEnemyBounce(sidekick, resolvedTouchY);
                         }
                     }
                 } else {
@@ -860,8 +909,27 @@ final class ObjectTouchResponseController {
         int sourceX = (result != null && result.hasRegionX())
                 ? result.regionX()
                 : instance != null ? objectCallbacks.call(instance, instance::getX) : sidekick.getCentreX();
-        // ROM: Hurt_Sidekick in 1P mode - just apply hurt knockback, no ring scatter
-        sidekick.applyHurt(sourceX);
+        int previousAnimationId = sidekick.getAnimationId();
+        boolean applied = sidekick.applyHurt(sourceX);
+        // Object-owned touch providers can preserve the prior raw animation
+        // when their ROM touch owner leaves anim untouched. Direct object-owned
+        // HurtCharacter calls still use applyHurt() and publish $1A; this
+        // provider rule therefore applies only to the generic touch dispatcher.
+        TouchResponseProvider provider = instance instanceof TouchResponseProvider
+                ? (TouchResponseProvider) instance
+                : null;
+        if (applied
+                && provider != null
+                && !provider.sidekickTouchHurtPublishesAnimation()
+                && sidekick instanceof AbstractPlayableSprite playable) {
+            playable.setAnimationId(previousAnimationId);
+            playable.setForcedAnimationId(previousAnimationId);
+            // The shared applyHurt path briefly published $1A and the ROM
+            // sidekick touch owner restarts the retained raw script on the
+            // following Animate_Tails pass. Reset the manager's private
+            // prev_anim/script cursor without changing the comparison state.
+            playable.forceAnimationRestart();
+        }
     }
 
     private boolean isOverlapping(int playerX, int playerY, int playerHeight,
@@ -991,7 +1059,8 @@ final class ObjectTouchResponseController {
     }
 
     private void handleTouchResponse(PlayableEntity player, ObjectInstance instance,
-            TouchResponseListener listener, TouchResponseResult result, TouchResponseProfile profile) {
+            TouchResponseListener listener, TouchResponseResult result, TouchResponseProfile profile,
+            int resolvedTouchY) {
         if (player == null) {
             return;
         }
@@ -1053,7 +1122,7 @@ final class ObjectTouchResponseController {
                         boolean isNowDestroyed = instance instanceof AbstractObjectInstance postAoi
                                 && postAoi.isDestroyed();
                         if (isNowDestroyed) {
-                            applyEnemyBounce(player, instance);
+                            applyEnemyBounce(player, resolvedTouchY);
                         }
                     }
                 } else {
@@ -1142,7 +1211,7 @@ final class ObjectTouchResponseController {
         return angle & 0xFF;
     }
 
-    private void applyEnemyBounce(PlayableEntity player, ObjectInstance instance) {
+    private void applyEnemyBounce(PlayableEntity player, int enemyY) {
         // ROM-accurate: React_Enemy (s1.asm) only modifies obVelY, it does NOT
         // set the air flag. Letting the collision system handle air state naturally
         // preserves rolling through enemy bounces (ground roll into badnik).
@@ -1153,8 +1222,10 @@ final class ObjectTouchResponseController {
         }
         // Use center coordinates to match ROM y_pos behavior
         int playerY = player.getCentreY();
-        // ROM: cmp.w y_pos(a1),d0 — use current position, not spawn
-        int enemyY = instance != null ? objectCallbacks.call(instance, instance::getY) : playerY;
+        // The overlap and bounce both dereference the same object slot in all three
+        // ROMs; keep the already-resolved touch Y instead of re-reading a later
+        // engine projection (S1 ReactToItem.asm:163,301-304; S2 s2.asm:
+        // 85127,85414-85420; S3K sonic3k.asm:20697,20974-20989).
         if (playerY < enemyY) {
             player.setYSpeed((short) -ySpeed);
         } else {

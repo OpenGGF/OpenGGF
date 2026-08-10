@@ -68,7 +68,7 @@ public class CNZConveyorBeltObjectInstance extends AbstractObjectInstance implem
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // From disassembly Obj72_Main:
         // lea (MainCharacter).w,a1

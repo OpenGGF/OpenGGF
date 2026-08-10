@@ -3,6 +3,8 @@ package com.openggf.game.sonic3k;
 import com.openggf.game.sonic3k.scroll.Sonic3kZoneConstants;
 import com.openggf.game.sonic3k.constants.S3kZoneSet;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager;
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,6 +21,7 @@ import com.openggf.level.Block;
 import com.openggf.level.Chunk;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
+import com.openggf.level.LevelData;
 import com.openggf.level.Palette;
 import com.openggf.physics.GroundSensor;
 import com.openggf.sprites.managers.SpriteManager;
@@ -40,6 +43,50 @@ class TestSonic3kLevelLoading {
     private LevelManager levelManager;
     private String mainCharacter;
     private Object oldSkipIntros;
+
+    @Test
+    void headlessFreshRuntimeLoadArmsHandoffWithoutRetainingRenderedTitleCard()
+            throws Exception {
+        preparePlayable();
+
+        levelManager.loadZoneAndActForFreshRuntime(
+                Sonic3kZoneConstants.ZONE_HCZ, 0);
+
+        Sonic3kTitleCardManager titleCard = (Sonic3kTitleCardManager)
+                GameServices.module().getTitleCardProvider();
+        assertEquals(LevelData.S3K_HYDROCITY_1.getLevelIndex(),
+                titleCard.capture().freshLevelRuntimeArtHandoffLevelIndex());
+        assertFalse(levelManager.consumeTitleCardRequest(),
+                "headless rendering is omitted while its native owner tail is retained");
+
+        Sonic3kObjectArtProvider objectArt = (Sonic3kObjectArtProvider)
+                GameServices.module().getObjectArtProvider();
+        for (int tick = 0; tick < 35; tick++) {
+            objectArt.processRuntimeArtQueue();
+        }
+        assertEquals(-1,
+                titleCard.capture().freshLevelRuntimeArtHandoffLevelIndex(),
+                "the omitted owner publishes the armed handoff at native teardown");
+        assertTrue(S3kRuntimeArtCoordinator.current().capture()
+                        .deferredPrimarySource() >= 0,
+                "headless suppression must still create fresh terrain work");
+    }
+
+    @Test
+    void headlessTitleCardLoadArmsTheSameFreshRuntimeHandoffExactlyOnce()
+            throws Exception {
+        preparePlayable();
+
+        levelManager.loadZoneAndActWithTitleCard(
+                Sonic3kZoneConstants.ZONE_HCZ, 0);
+
+        Sonic3kTitleCardManager titleCard = (Sonic3kTitleCardManager)
+                GameServices.module().getTitleCardProvider();
+        assertEquals(LevelData.S3K_HYDROCITY_1.getLevelIndex(),
+                titleCard.capture().freshLevelRuntimeArtHandoffLevelIndex());
+        assertTrue(levelManager.consumeTitleCardRequest(),
+                "whole-run headless load retains the rendered title-card request");
+    }
 
     @BeforeEach
     void setUp() {
@@ -70,6 +117,14 @@ class TestSonic3kLevelLoading {
 
         assertNotNull(sprite.getSpriteRenderer(),
                 "Sprite renderer should be set after loading S3K level");
+    }
+
+    private void preparePlayable() {
+        Sonic sprite = new Sonic(mainCharacter, (short) 100, (short) 400);
+        GameServices.sprites().addSprite(sprite);
+        Camera camera = GameServices.camera();
+        camera.setFocusedSprite(sprite);
+        camera.setFrozen(false);
     }
 
     @Test

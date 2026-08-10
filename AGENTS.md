@@ -101,18 +101,37 @@ file is guidance you can weigh against the situation in front of you.
    behaviour except in AIZ"* is still a zone carve-out. Zone/event/object providers may
    expose ROM state at the owning boundary, but shared physics/sidekick/object code
    consumes semantic predicates.
+   **The bar is any BK2, not this BK2.** Traces exist to prove engine accuracy, so a fix
+   must hold for a movie nobody has recorded yet — a green fixture proves the fixture.
+   A constant derived by measuring a fixture's own rows, rather than read out of the
+   disassembly, is a fitted model even when every test passes, and it will desync the
+   first different recording. Measuring a fixture is only a legitimate *starting point*:
+   the landed value must be traceable to the ROM routine that owns it and cited there.
+   A value that is close to the ROM's but not equal is usually absorbing an error
+   elsewhere — chase that, don't keep the constant. Where genuine hardware timing cannot
+   be derived from frame-granularity state at all, the answer is a regenerable per-movie
+   timing sidecar under rule 4, never a tuned number.
 4. **Trace data is comparison-only by default.** Engine gameplay state must never be
    hydrated or synced from a trace in committed test code. The sole exception is the
    dedicated hardware-timing input contract documented in
-   [docs/architecture/designs/2026-07-27-cross-game-hardware-timing-trace-contract.md](docs/architecture/designs/2026-07-27-cross-game-hardware-timing-trace-contract.md):
-   it may release only the readiness of a matching, prepared, production-submitted
-   ROM-backed hardware job after kind, ordinal, stable submission fingerprint, and service
-   boundary all match. It must not use physics/aux comparison data, carry gameplay values,
-   call gameplay owners, or create work the engine did not submit. Guard tests must keep
-   this exception confined to the timing port. `TestHardwareTimingAuthorityGuard` enforces
-   parser/authority isolation and forbids physics/aux/gameplay and reflective mutation paths.
-   S3K schema 1 records only module-queue readiness; schema 2 records module and direct
-   Kosinski readiness, while both schemas still require production-submitted ROM work.
+   [docs/architecture/designs/2026-07-27-cross-game-hardware-timing-trace-contract.md](docs/architecture/designs/2026-07-27-cross-game-hardware-timing-trace-contract.md).
+   That contract is **cross-game**: recorded hardware timing may drive a **delay** in the
+   art-loading pipelines of all three games — S1 PLC, S2 DPLC, and S3K Kosinski queues. It
+   it may release only the readiness of a matching, prepared, production-submitted ROM-backed
+   hardware job after kind, ordinal, stable submission fingerprint, and service boundary all
+   match. It must not use physics/aux comparison data, carry gameplay values, call gameplay
+   owners, or create work the engine did not submit, and it must not key on a frame index,
+   zone, route, or game name. The test is whether the change only affects *when* real,
+   engine-created work becomes ready; anything deciding *what* happens is outside the
+   exception however well the ROM behaviour is cited. Guard tests must keep this exception
+   confined to the timing port. `TestHardwareTimingAuthorityGuard` enforces parser/authority
+   isolation and forbids physics/aux/gameplay and reflective mutation paths. A v5
+   `hardware_timing.jsonl` stream records module-queue and direct Kosinski readiness;
+   either still requires matching production-submitted ROM work. V5 is the sole live
+   trace contract: `trace_schema: 5` owns metadata, rows, timing, and run manifests.
+   `recorder` and `recorder_version` are opaque provenance only;
+   `lua_script_version` was removed, not renamed, and no provenance field selects
+   replay behaviour.
 5. **Objects never call `getInstance()`.** Use the injected `services()`.
 6. **Gameplay tile edits route through `ZoneLayoutMutationPipeline` / a
    `LevelMutationSurface`** — never a direct `getMap().setValue(...)`. Editor commands and
@@ -180,6 +199,12 @@ against a disassembly trace without converting. Y increases downward (Mega Drive
 convention). VDP coordinates in the disassembly are offset by +128; the engine uses direct
 screen coordinates.
 
+**Object clocks.** `ObjectInstance.update(int vIntRunCount, ...)` receives the
+object-visible ROM `V_int_run_count`, stored by `ObjectManager` as `vblaCounter`. It is not
+the manager's executed-frame counter or the ROM `Level_frame_counter`; lag frames can
+de-phase those clocks. When porting a frame gate, name and read the clock the disassembly
+actually uses instead of treating the update parameter as a generic frame number.
+
 **Terminology** differs from standard Sonic 2 naming: **Pattern** = 8x8 tile, **Chunk** =
 16x16 (composed of Patterns), **Block** = 128x128 (composed of Chunks).
 
@@ -209,6 +234,23 @@ not a baseline entry, unless the gap is genuinely intentional.
 `Camera.updatePosition(true)` *after* the level load, and prefer
 `@ExtendWith(SingletonResetExtension.class)` over manual teardown. Set
 `startup.legalDisclaimer=false` in tests that boot the full `Engine`.
+
+**`FixBugs` / `fixBugs` assembly paths.** All three disassemblies are built with the
+bug-fix conditional OFF — `FixBugs = 0` (`s1disasm/sonic.asm:20`,
+`skdisasm/sonic3k.asm:38`, `skdisasm/s3.asm:25`) and `fixBugs = 0`
+(`s2disasm/s2.asm:27`) — because that is what the shipped ROMs do, and the traces
+record shipped-ROM behaviour. **Always model the `FixBugs = 0` path**, including
+when it is plainly a bug: the un-fixed path is the accurate one, and taking the
+fixed branch will desync a trace that compares the affected field. There are ~327
+such blocks in s1disasm, ~262 in s2disasm and ~111 in skdisasm, so you will meet
+them often.
+
+When you port code near one of these conditionals, **say so in a comment** — name
+the flag, state which branch the engine takes and why, and describe what the fixed
+branch would do. That costs a line now and is the only thing that will make a
+future "support the bug-fixed revisions" effort tractable, since the sites are
+otherwise invisible once ported. `Camera.java:122-124` and
+`Sonic1BatbrainBadnikInstance.java:394` are existing examples of the shape.
 
 **Audio accuracy:** reference the libvgm chip cores and the SMPSPlay source rather than
 simplified versions. Diagnose against a source of truth instead of twiddling knobs.

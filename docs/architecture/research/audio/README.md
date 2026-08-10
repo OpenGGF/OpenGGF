@@ -12,3 +12,8 @@ OpenGGF's audio implementation. It contains:
 These files are documentation and research evidence, not runtime assets.
 Gameplay and runtime asset bytes must continue to come from the user-supplied
 ROM through the ROM-loading pipeline.
+
+Current investigation notes include
+`2026-08-08-s3k-smps-meta-command-reachability.md`, which records the
+ROM-backed reachability inventory and native Z80 contract for S3K `FF` meta
+commands.

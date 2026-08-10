@@ -66,7 +66,7 @@ public final class CnzTrapDoorInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         boolean triggerOccupied = isTriggerOccupied(playerEntity);
 
         for (PlayableEntity participant : services().playerQuery().playersFor(

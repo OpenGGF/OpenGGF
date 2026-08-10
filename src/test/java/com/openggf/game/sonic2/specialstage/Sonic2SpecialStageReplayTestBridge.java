@@ -9,4 +9,9 @@ public final class Sonic2SpecialStageReplayTestBridge {
             Sonic2SpecialStageManager manager) {
         manager.completeTerminalPreStartPassWithoutVint();
     }
+
+    public static boolean completeObservablePreStartPassWithoutVint(
+            Sonic2SpecialStageManager manager) {
+        return manager.completeObservablePreStartPassWithoutVint();
+    }
 }

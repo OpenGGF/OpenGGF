@@ -107,7 +107,7 @@ public final class LbzRideGrappleInstance extends AbstractObjectInstance impleme
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         reserveRomChildSlot();
         AbstractPlayableSprite player1 = playerEntity instanceof AbstractPlayableSprite sprite ? sprite : null;
         AbstractPlayableSprite player2 = nativeP2OrNull();

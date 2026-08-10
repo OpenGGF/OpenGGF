@@ -538,7 +538,7 @@ public class FlipperObjectInstance extends BoxObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ensureInitialized();
         // Per-player cooldown decrement (mirrors ROM's independent objoff_36/37
         // tracking in s2.asm:57870-57879).

@@ -65,7 +65,7 @@ public final class FbzEndBossFlameChild extends AbstractFbzEndBossChild implemen
     @Override public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
         return TOUCH_RESPONSE_PROFILE;
     }
-    @Override public void update(int frameCounter, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         if (weapon == null || weapon.isDestroyed()) { ObjectLifetimeOps.expireDynamic(this); return; }
         if (!initialized) { initialized = true; return; }
         if (!active) {

@@ -33,7 +33,22 @@ public interface S3kTransitionEventBridge {
     default void startLbzBigArmTimedShake(int frames) {
     }
 
+    /**
+     * Runs any transition-specific handoff that the native owner publishes at
+     * the title card's runtime-art admission boundary.
+     */
+    default void preparePreloadedActTitleCardRuntimeArtAdmission() {
+    }
+
+    /**
+     * Additional title-owner polls retained after the shared drained-child
+     * observation for a preloaded next-act handoff.
+     */
+    default int preloadedActCameraReleaseAdditionalDispatches() {
+        return -1;
+    }
+
     void requestMgzPostTransitionRelease();
 
-    void requestCnzPostTransitionRelease(int framesUntilRelease);
+    void requestCnzPostTransitionRelease();
 }

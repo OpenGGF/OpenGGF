@@ -1,8 +1,11 @@
 package com.openggf.trace;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.openggf.game.timing.HardwareServiceBoundary;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.trace.timing.HardwareTimingSchedule;
 import com.openggf.trace.timing.HardwareTimingStreamLoader;
+import com.openggf.trace.timing.HardwareCompletionEdge;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -15,8 +18,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Logger;
 
 /**
  * Reads and holds the contents of a trace directory:
@@ -25,10 +26,8 @@ import java.util.logging.Logger;
  * The primary CSV is loaded entirely into memory (small: ~100 bytes/frame).
  * Auxiliary events are lazy-loaded and indexed by frame number.
  */
+@com.openggf.game.ModApi
 public class TraceData {
-
-    private static final Logger LOGGER = Logger.getLogger(TraceData.class.getName());
-    private static final Set<Path> LEGACY_TRACE_WARNINGS = ConcurrentHashMap.newKeySet();
 
     private final TraceMetadata metadata;
     private final HardwareTimingSchedule hardwareTimingSchedule;
@@ -39,6 +38,8 @@ public class TraceData {
     private final Map<Integer, TraceEvent.Checkpoint> checkpointsByFrame;
     private final List<Integer> zoneActStateFramesAscending;
     private final Map<Integer, TraceEvent.ZoneActState> zoneActStatesByFrame;
+    private final Map<Integer, List<TraceEvent.LoadQueueState>> comparisonLoadQueueStatesByFrame;
+    private final Map<Integer, HardwareCompletionEdge> unobservedDirectChildrenByFrame;
     private List<DynamicArtTransfer.Descriptor> terminalDynamicArtLedger = List.of();
 
     // Package-private so same-package test fixtures in src/test can
@@ -55,14 +56,31 @@ public class TraceData {
         this.zoneActStatesByFrame = new HashMap<>();
         this.zoneActStateFramesAscending = new ArrayList<>();
         this.observedEventTypes = buildLatestEventIndexes();
+        LoadQueueComparisonNormalization loadQueueNormalization =
+                buildComparisonLoadQueueStates();
+        this.comparisonLoadQueueStatesByFrame = loadQueueNormalization.states();
+        this.unobservedDirectChildrenByFrame =
+                loadQueueNormalization.unobservedDirectChildren();
     }
 
     public static TraceData load(Path traceDirectory) throws IOException {
+        return load(traceDirectory, List.of());
+    }
+
+    /**
+     * Loads a run segment whose first recorded row may inherit production-owned
+     * dynamic-art work submitted in the preceding native transition gap.
+     */
+    public static TraceData load(
+            Path traceDirectory,
+            List<DynamicArtTransfer.Descriptor> openingDynamicArtLedger)
+            throws IOException {
         Path metadataPath = traceDirectory.resolve("metadata.json");
         Path physicsPath = TraceFiles.resolve(traceDirectory, "physics.csv");
         Path auxPath = TraceFiles.resolve(traceDirectory, "aux_state.jsonl");
 
         TraceMetadata metadata = TraceMetadata.load(metadataPath);
+        rejectSpecialStageProfile(metadata, metadataPath);
         if (physicsPath == null) {
             throw new NoSuchFileException(traceDirectory.resolve("physics.csv").toString());
         }
@@ -72,12 +90,11 @@ public class TraceData {
             : Collections.emptyMap();
         HardwareTimingSchedule hardwareTimingSchedule = HardwareTimingStreamLoader.load(traceDirectory, metadata);
 
-        warnIfLegacyExecutionCounters(traceDirectory, metadata, frames);
-
         TraceData trace = new TraceData(metadata, frames, events, hardwareTimingSchedule);
         trace.validateAdvertisedLoadQueueStates();
         trace.validateAdvertisedDynamicArtTransferStates(
-                StoredPhysicsFrameDomain.fromTraceFrames(frames));
+                StoredPhysicsFrameDomain.fromTraceFrames(frames),
+                openingDynamicArtLedger);
         return trace;
     }
 
@@ -98,6 +115,33 @@ public class TraceData {
      * the manifest instead.
      */
     public static TraceData loadMetadataOnly(Path traceDirectory) throws IOException {
+        return loadMetadataOnly(
+                traceDirectory, StoredPhysicsFrameDomain.FrameEncoding.HEXADECIMAL,
+                List.of());
+    }
+
+    /**
+     * Metadata-only load with the trace profile's physical frame encoding.
+     * Primary level traces use hexadecimal frame labels; special-stage
+     * profiles use decimal labels even when their dynamic-art journal is
+     * validated through this shared path.
+     */
+    public static TraceData loadMetadataOnly(
+            Path traceDirectory,
+            StoredPhysicsFrameDomain.FrameEncoding frameEncoding)
+            throws IOException {
+        return loadMetadataOnly(traceDirectory, frameEncoding, List.of());
+    }
+
+    /**
+     * Metadata-only variant for a run segment with a manifest-validated
+     * dynamic-art opening ledger.
+     */
+    public static TraceData loadMetadataOnly(
+            Path traceDirectory,
+            StoredPhysicsFrameDomain.FrameEncoding frameEncoding,
+            List<DynamicArtTransfer.Descriptor> openingDynamicArtLedger)
+            throws IOException {
         Path metadataPath = traceDirectory.resolve("metadata.json");
         Path auxPath = TraceFiles.resolve(traceDirectory, "aux_state.jsonl");
 
@@ -112,14 +156,14 @@ public class TraceData {
         Path physicsPath = TraceFiles.resolve(traceDirectory, "physics.csv");
         StoredPhysicsFrameDomain frameDomain = physicsPath == null
                 ? null
-                : StoredPhysicsFrameDomain.scan(physicsPath);
+                : StoredPhysicsFrameDomain.scan(physicsPath, frameEncoding);
         if (metadata.hasPerFrameDynamicArtTransferState()) {
             if (frameDomain == null) {
                 throw new NoSuchFileException(
                         traceDirectory.resolve("physics.csv").toString());
             }
             trace.validateAdvertisedDynamicArtTransferStates(
-                    frameDomain);
+                    frameDomain, openingDynamicArtLedger);
         }
         return trace;
     }
@@ -139,10 +183,8 @@ public class TraceData {
     /**
      * Returns the ROM VBlank counter value that corresponds to trace frame 0.
      *
-     * <p>Schema v3 traces record the real ROM VBlank counter per frame. Older
-     * traces do not, so fall back to the historical BK2 frame offset metadata.
-     * That fallback preserves legacy replay behaviour until all fixtures carry
-     * explicit execution counters.
+     * <p>V5 rows record the ROM VBlank counter directly. Metadata-only loads
+     * retain their explicit BK2 offset because they have no physics row.
      */
     public int initialVblankCounter() {
         if (!frames.isEmpty()) {
@@ -155,46 +197,12 @@ public class TraceData {
     }
 
     /**
-     * Returns the initial clock for ROM object routines that read
-     * {@code V_int_run_count}. S3K schema-v6 captures wrote the adjacent
-     * life-count word (for example $0800/$0A00) into the CSV counter
-     * column. A repeated value across changing gameplay rows identifies that
-     * recorder layout. Complete-run captures that carry an independently
-     * measured lost-ring floor-check phase expose the same low three bits of
-     * {@code V_int_run_count}; use those bits directly. Older fixtures fall
-     * back to BK2 parity while the recorded word retains the established
-     * higher-bit replay phase.
+     * Returns the explicitly recorded low-bit phase for ROM object routines
+     * that read {@code V_int_run_count}; absent evidence means no adjustment.
      */
     public int initialVIntRunCounterPhaseOffset() {
-        int recorded = initialVblankCounter();
-        if (!usesBk2VblankCounterFallback()) {
-            return 0;
-        }
         Integer recordedCounterPhase = metadata.ringFloorCheckCounterPhase();
-        if (recordedCounterPhase != null) {
-            return recordedCounterPhase & 7;
-        }
-        return (metadata.bk2FrameOffset() - recorded) & 1;
-    }
-
-    private boolean usesBk2VblankCounterFallback() {
-        if (!"s3k".equals(metadata.game()) || frames.size() < 2
-                || frames.get(0).vblankCounter() < 0) {
-            return false;
-        }
-        int recorded = frames.get(0).vblankCounter();
-        boolean gameplayChanged = false;
-        int sampleCount = Math.min(frames.size(), 1024);
-        for (int i = 1; i < sampleCount; i++) {
-            TraceFrame current = frames.get(i);
-            if (current.vblankCounter() != recorded) {
-                return false;
-            }
-            if (!current.stateEquals(frames.get(i - 1))) {
-                gameplayChanged = true;
-            }
-        }
-        return gameplayChanged;
+        return recordedCounterPhase == null ? 0 : recordedCounterPhase & 7;
     }
 
     public TraceFrame getFrame(int traceFrame) {
@@ -239,6 +247,178 @@ public class TraceData {
             }
         }
         return List.copyOf(states);
+    }
+
+    /**
+     * Returns the queue heartbeat at the recorder's atomic comparison boundary.
+     *
+     * <p>S3K services its module queue immediately before its direct Kosinski
+     * queue. A VBlank can therefore record a held-tail row after the module
+     * queue has published a child but before the direct queue has serviced it.
+     * Replay publishes queue diagnostics atomically after both services. For a
+     * module batch that was already active before that held tail, compare the
+     * row with the matching post-direct-service heartbeat from the following
+     * lag row. Batches first admitted on the held tail retain their recorded
+     * state because their child admission is itself deferred as one unit.
+     */
+    public List<TraceEvent.LoadQueueState> loadQueueStatesForComparisonFrame(
+            int frame) {
+        return comparisonLoadQueueStatesByFrame.getOrDefault(
+                frame, loadQueueStatesForFrame(frame));
+    }
+
+    public HardwareCompletionEdge unobservedDirectChildForComparisonFrame(
+            int frame) {
+        return unobservedDirectChildrenByFrame.get(frame);
+    }
+
+    private LoadQueueComparisonNormalization
+            buildComparisonLoadQueueStates() {
+        // Selection below is by queue-kind wire name (s3k_kos_module /
+        // s3k_kos_direct) and by KOS_DECOMPRESSION_QUEUE completion edges, which
+        // no other game emits; a trace without those rows normalizes to an empty
+        // map on its own, so no game-name gate belongs here.
+        if (frames.size() < 2 || hardwareTimingSchedule == null) {
+            return LoadQueueComparisonNormalization.empty();
+        }
+        Map<Integer, List<TraceEvent.LoadQueueState>> normalized = new HashMap<>();
+        Map<Integer, HardwareCompletionEdge> unobservedDirectChildren =
+                new HashMap<>();
+        boolean moduleBatchActive = false;
+        boolean moduleBatchAdmittedOnHeldTail = false;
+        for (int index = 0; index < frames.size() - 1; index++) {
+            TraceFrame currentFrame = frames.get(index);
+            TraceFrame nextFrame = frames.get(index + 1);
+            List<TraceEvent.LoadQueueState> currentStates =
+                    loadQueueStatesForFrame(currentFrame.frame());
+            List<TraceEvent.LoadQueueState> nextStates =
+                    loadQueueStatesForFrame(nextFrame.frame());
+            TraceEvent.LoadQueueState currentModule = queueState(
+                    currentStates, "s3k_kos_module");
+            TraceEvent.LoadQueueState currentDirect = queueState(
+                    currentStates, "s3k_kos_direct");
+            TraceEvent.LoadQueueState nextModule = queueState(
+                    nextStates, "s3k_kos_module");
+            TraceEvent.LoadQueueState nextDirect = queueState(
+                    nextStates, "s3k_kos_direct");
+
+            boolean heldTail = isHeldTail(currentFrame, nextFrame);
+            if (currentModule != null && currentModule.busy()
+                    && !moduleBatchActive) {
+                moduleBatchActive = true;
+                moduleBatchAdmittedOnHeldTail = heldTail;
+            } else if (currentModule == null || !currentModule.busy()) {
+                moduleBatchActive = false;
+                moduleBatchAdmittedOnHeldTail = false;
+            }
+
+            if (heldTail && moduleBatchActive
+                    && !moduleBatchAdmittedOnHeldTail
+                    && isUnservicedDirectChild(currentDirect)
+                    && isIdle(nextDirect)
+                    && sameQueueStateIgnoringFrame(currentModule, nextModule)
+                    && hasDirectCompletionEdge(nextFrame.frame())) {
+                List<TraceEvent.LoadQueueState> comparison = new ArrayList<>();
+                for (TraceEvent.LoadQueueState state : currentStates) {
+                    comparison.add("s3k_kos_direct".equals(state.kind())
+                            ? withFrame(nextDirect, currentFrame.frame())
+                            : state);
+                }
+                normalized.put(currentFrame.frame(), List.copyOf(comparison));
+            }
+
+            List<HardwareCompletionEdge> nextDirectCompletions =
+                    directCompletionEdges(nextFrame.frame());
+            if (heldTail && moduleBatchActive
+                    && !moduleBatchAdmittedOnHeldTail
+                    && isIdle(currentDirect)
+                    && isIdle(nextDirect)
+                    && sameQueueStateIgnoringFrame(currentModule, nextModule)
+                    && nextDirectCompletions.size() == 1) {
+                unobservedDirectChildren.put(
+                        currentFrame.frame(), nextDirectCompletions.getFirst());
+            }
+        }
+        return new LoadQueueComparisonNormalization(
+                normalized, unobservedDirectChildren);
+    }
+
+    private boolean hasDirectCompletionEdge(int rawFrame) {
+        return !directCompletionEdges(rawFrame).isEmpty();
+    }
+
+    private List<HardwareCompletionEdge> directCompletionEdges(int rawFrame) {
+        return hardwareTimingSchedule.edgesAt(
+                        rawFrame, HardwareServiceBoundary.PRE_MAIN_LOOP)
+                .stream()
+                .filter(edge -> edge.kind()
+                        == HardwareWorkKind.KOS_DECOMPRESSION_QUEUE)
+                .toList();
+    }
+
+    private record LoadQueueComparisonNormalization(
+            Map<Integer, List<TraceEvent.LoadQueueState>> states,
+            Map<Integer, HardwareCompletionEdge> unobservedDirectChildren) {
+
+        private LoadQueueComparisonNormalization {
+            states = Map.copyOf(states);
+            unobservedDirectChildren = Map.copyOf(unobservedDirectChildren);
+        }
+
+        private static LoadQueueComparisonNormalization empty() {
+            return new LoadQueueComparisonNormalization(Map.of(), Map.of());
+        }
+    }
+
+    private static boolean isHeldTail(TraceFrame current, TraceFrame next) {
+        return current.gameplayFrameCounter() >= 0
+                && current.gameplayFrameCounter()
+                        == next.gameplayFrameCounter()
+                && current.lagCounter() >= 0
+                && next.lagCounter() > current.lagCounter()
+                && current.vblankCounter() >= 0
+                && next.vblankCounter() > current.vblankCounter();
+    }
+
+    private static boolean isUnservicedDirectChild(
+            TraceEvent.LoadQueueState state) {
+        return state != null && state.busy() && !state.prepared();
+    }
+
+    private static boolean isIdle(TraceEvent.LoadQueueState state) {
+        return state != null && !state.busy() && !state.prepared();
+    }
+
+    private static TraceEvent.LoadQueueState queueState(
+            List<TraceEvent.LoadQueueState> states, String kind) {
+        return states.stream()
+                .filter(state -> kind.equals(state.kind()))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private static boolean sameQueueStateIgnoringFrame(
+            TraceEvent.LoadQueueState left,
+            TraceEvent.LoadQueueState right) {
+        return left != null && right != null
+                && left.kind().equals(right.kind())
+                && left.busy() == right.busy()
+                && left.prepared() == right.prepared()
+                && left.activeSource() == right.activeSource()
+                && left.activeDestination() == right.activeDestination()
+                && left.totalWork() == right.totalWork()
+                && left.remainingWork() == right.remainingWork()
+                && left.queuedFingerprints().equals(right.queuedFingerprints())
+                && left.serviceObservations().equals(right.serviceObservations());
+    }
+
+    private static TraceEvent.LoadQueueState withFrame(
+            TraceEvent.LoadQueueState state, int frame) {
+        return new TraceEvent.LoadQueueState(
+                frame, state.kind(), state.busy(), state.prepared(),
+                state.activeSource(), state.activeDestination(),
+                state.totalWork(), state.remainingWork(),
+                state.queuedFingerprints(), state.serviceObservations());
     }
 
     public List<TraceEvent.DynamicArtTransferState>
@@ -286,12 +466,18 @@ public class TraceData {
      */
     public void validateAdvertisedDynamicArtTransferStates(
             StoredPhysicsFrameDomain frameDomain) {
+        validateAdvertisedDynamicArtTransferStates(frameDomain, List.of());
+    }
+
+    public void validateAdvertisedDynamicArtTransferStates(
+            StoredPhysicsFrameDomain frameDomain,
+            List<DynamicArtTransfer.Descriptor> openingLedger) {
         if (!metadata.hasPerFrameDynamicArtTransferState()) {
             terminalDynamicArtLedger = List.of();
             return;
         }
         terminalDynamicArtLedger = validateDynamicArtTransferStates(
-                metadata, frameDomain, eventsByFrame);
+                metadata, frameDomain, eventsByFrame, openingLedger);
     }
 
     public static List<DynamicArtTransfer.Descriptor>
@@ -299,6 +485,16 @@ public class TraceData {
                     TraceMetadata metadata,
                     StoredPhysicsFrameDomain frameDomain,
                     Map<Integer, List<TraceEvent>> eventsByFrame) {
+        return validateDynamicArtTransferStates(
+                metadata, frameDomain, eventsByFrame, List.of());
+    }
+
+    public static List<DynamicArtTransfer.Descriptor>
+            validateDynamicArtTransferStates(
+                    TraceMetadata metadata,
+                    StoredPhysicsFrameDomain frameDomain,
+                    Map<Integer, List<TraceEvent>> eventsByFrame,
+                    List<DynamicArtTransfer.Descriptor> openingLedger) {
         Set<Integer> domain = new HashSet<>(frameDomain.frames());
         List<TraceEvent.DynamicArtTransferState> ordered =
                 new ArrayList<>(frameDomain.frames().size());
@@ -328,7 +524,7 @@ public class TraceData {
         }
         return DynamicArtTransfer.validateSegment(
                 ordered, frameDomain, metadata.game(),
-                new DynamicArtTransfer.LifecycleIdentity());
+                new DynamicArtTransfer.LifecycleIdentity(), openingLedger);
     }
 
     public List<DynamicArtTransfer.Descriptor> terminalDynamicArtLedger() {
@@ -1073,16 +1269,19 @@ public class TraceData {
             throws IOException {
         List<TraceFrame> frames = new ArrayList<>();
         try (BufferedReader reader = TraceFiles.openReader(csvPath)) {
-            String line = reader.readLine(); // skip header
-            if (line == null) return frames;
+            boolean firstMeaningfulLine = true;
+            String line;
             while ((line = reader.readLine()) != null) {
                 String trimmed = line.trim();
-                if (!trimmed.isEmpty()) {
-                    Integer csvVersion = metadata.csvVersion() != null
-                            ? metadata.csvVersion()
-                            : metadata.traceSchema();
-                    frames.add(TraceFrame.parseCsvRow(trimmed, csvVersion));
+                if (trimmed.isEmpty() || trimmed.startsWith("#")) {
+                    continue;
                 }
+                if (firstMeaningfulLine && TraceFiles.isCsvHeader(trimmed)) {
+                    firstMeaningfulLine = false;
+                    continue;
+                }
+                firstMeaningfulLine = false;
+                frames.add(TraceFrame.parseCsvRow(trimmed));
             }
         }
         return frames;
@@ -1133,19 +1332,12 @@ public class TraceData {
         return TraceFiles.openReader(path);
     }
 
-    private static void warnIfLegacyExecutionCounters(Path traceDirectory,
-            TraceMetadata metadata, List<TraceFrame> frames) {
-        Integer traceSchema = metadata.traceSchema();
-        if (traceSchema != null && traceSchema >= 3) {
-            return;
-        }
-        if (!frames.isEmpty() && frames.get(0).vblankCounter() >= 0) {
-            return;
-        }
-        Path normalized = traceDirectory.toAbsolutePath().normalize();
-        if (LEGACY_TRACE_WARNINGS.add(normalized)) {
-            LOGGER.info(() -> "Trace " + normalized
-                    + " is pre-v3; replay is using the legacy lag heuristic.");
+    private static void rejectSpecialStageProfile(TraceMetadata metadata, Path metadataPath) {
+        if ("s1_special_stage".equals(metadata.traceProfile())
+                || "s2_special_stage".equals(metadata.traceProfile())
+                || "s3k_special_stage".equals(metadata.traceProfile())) {
+            throw new IllegalArgumentException("special-stage trace profile must use its game-owned "
+                    + "reader: " + metadataPath);
         }
     }
 }

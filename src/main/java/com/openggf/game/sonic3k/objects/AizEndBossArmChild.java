@@ -80,8 +80,8 @@ public class AizEndBossArmChild extends AbstractBossChild implements RewindRecre
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
-        if (!shouldUpdate(frameCounter)) return;
+    public void update(int vIntRunCount, PlayableEntity player) {
+        if (!shouldUpdate(vIntRunCount)) return;
 
         // ROM Refresh_ChildPositionAdjusted negates child_dx when the parent is X-flipped.
         int signedOffsetX = boss.isFacingRight() ? -offsetX : offsetX;

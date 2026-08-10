@@ -84,7 +84,7 @@ public final class FbzMinibossInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity mainPlayer) {
+    public void update(int vIntRunCount, PlayableEntity mainPlayer) {
         if (!ensureInitialized()) return;
         switch (phase()) {
             case CAMERA_APPROACH -> updateCameraApproach();

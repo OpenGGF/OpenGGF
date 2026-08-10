@@ -94,7 +94,7 @@ class TestObjectRewindExactAdoption {
             super(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), "ExactAdoptionProbe");
         }
 
-        @Override public void update(int frameCounter, PlayableEntity player) { }
+        @Override public void update(int vIntRunCount, PlayableEntity player) { }
         @Override public int getX() { return 0; }
         @Override public int getY() { return 0; }
         @Override public void appendRenderCommands(List<GLCommand> commands) { }

@@ -160,8 +160,8 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
-        bodyVisibleThisFrame = hitInvulnerabilityTimer <= 0 || (frameCounter & 1) == 0;
+    public void update(int vIntRunCount, PlayableEntity player) {
+        bodyVisibleThisFrame = hitInvulnerabilityTimer <= 0 || (vIntRunCount & 1) == 0;
         if (hitInvulnerabilityTimer > 0) {
             applyHitFlash(hitInvulnerabilityTimer);
             hitInvulnerabilityTimer--;
@@ -171,7 +171,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
             updateNativeBoss(player);
         }
         updateDefeatWait();
-        updatePostDefeatSequence(frameCounter, player);
+        updatePostDefeatSequence(vIntRunCount, player);
     }
 
     private void updateNativeBoss(PlayableEntity player) {
@@ -608,9 +608,15 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
                 CnzEggCapsuleInstance.CompletionContinuation.CNZ_END_BOSS_SEQUENCE));
     }
 
-    private void updatePostDefeatSequence(int frameCounter, PlayableEntity player) {
+    private void updatePostDefeatSequence(int vIntRunCount, PlayableEntity player) {
         if (!defeatHandoffComplete || transitionRequested) {
             return;
+        }
+        if (!capsuleResultsComplete && services().gameState().isEndOfLevelFlag()) {
+            // loc_6E724 reads _unkFAA8 itself after the lower-slot
+            // Obj_LevelResults clears it; Obj_EggCapsule is not an
+            // intermediate notification owner (sonic3k.asm:146087-146103).
+            capsuleResultsComplete = true;
         }
         if (capsuleResultsComplete && !cannonSpawned) {
             releasePostCapsuleStateOnce();
@@ -631,6 +637,8 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
             cannonArmed = true;
             cannonLaunchTimer = CANNON_LAUNCH_WAIT;
             services().camera().setMaxYTarget((short) 0x0200);
+            S3kCnzEventWriteSupport.requestSidekickBoundsPublishAfterCameraEasing(
+                    services());
             sprite.setControlLocked(true);
             return;
         }
@@ -669,8 +677,11 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
     }
 
     private void spawnEndCannon() {
+        cnzArtProvider().queueBadnikExplosionArt();
         cannonSpawned = true;
-        endCannon = spawnChild(() -> new CnzCannonInstance(
+        // loc_6E778 calls AllocateObject, so the cannon takes the lowest free
+        // SST even when that slot is behind this retained boss controller.
+        endCannon = spawnFreeChild(() -> new CnzCannonInstance(
                 new ObjectSpawn(CANNON_X, CANNON_Y, Sonic3kObjectIds.CNZ_CANNON,
                         CnzCannonInstance.END_SEQUENCE_SUBTYPE, 0, false, 0)));
     }

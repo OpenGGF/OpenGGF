@@ -32,7 +32,6 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
     private boolean tailsOpenControllerLockApplied;
     private int tailsOpenControllerLockDelay;
     private int resultsActiveWaitEntries;
-    private boolean resultsStartEligibilityObserved;
     private boolean endingPoseControlsReleased;
     private AbstractPlayableSprite nativeP2EndingPoseOwner;
     private boolean nativeP2EndingPoseUsesExtensionState;
@@ -105,13 +104,17 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
     }
 
     @Override
+    protected boolean defersButtonEligibilityCreatedByParentMotion() {
+        // The route-8 parent and button child are distinct native dispatches.
+        // Preserve that boundary when the parent's horizontal step is what
+        // first moves the button range over a player.
+        return true;
+    }
+
+    @Override
     protected boolean shouldStartResults(AbstractPlayableSprite player) {
         // sub_868F8 only rejects a dead/airborne/non-playable routine. It then
         // calls Set_PlayerEndingPose, which owns the velocity clears itself.
-        if (!resultsStartEligibilityObserved) {
-            resultsStartEligibilityObserved = true;
-            return false;
-        }
         return !player.getAir() && !player.getDead();
     }
 
@@ -369,6 +372,25 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
             // Restore_PlayerControl/2 after Check_TailsEndPose observes that
             // flag clear (sonic3k.asm:166696-166703).
             return false;
+        }
+
+        @Override
+        protected boolean skipsSameFrameUpdateAfterSpawn() {
+            // AIZ2's sub_868F8 publishes Obj_LevelResults through the general
+            // AllocateObject path, so its first Obj_LevelResultsInit dispatch
+            // remains on the following ExecuteObjects pass (sonic3k.asm:
+            // 181976-181996). The signpost-owned results path uses the
+            // after-current allocation contract instead.
+            return true;
+        }
+
+        @Override
+        protected void onResultsChildrenRetired() {
+            // Obj_LevelResultsWait2 clears _unkFAA8 as soon as the final
+            // results child has left the screen.  The AIZ2 controller is an
+            // earlier SST slot, so it consumes this release on the following
+            // object pass while the results owner performs its final delete.
+            Aiz2BossEndSequenceState.releaseEggCapsule();
         }
 
         @Override

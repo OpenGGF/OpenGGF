@@ -84,8 +84,11 @@ class TestAbstractTraceReplayDynamicArtTerminal
         activeTrace = tempDir.resolve("trace");
         activeReports = tempDir.resolve("reports");
         Files.createDirectories(activeTrace);
-        Files.copy(SOURCE.resolve("physics.csv"),
-                activeTrace.resolve("physics.csv"),
+        // The committed payload is gzipped -- TestTraceFixtureCompressionGuard
+        // forbids an uncompressed physics.csv under src/test/resources/traces,
+        // and the replay loader reads either form. Copy the form that exists.
+        Files.copy(SOURCE.resolve("physics.csv.gz"),
+                activeTrace.resolve("physics.csv.gz"),
                 StandardCopyOption.REPLACE_EXISTING);
         Files.copy(SOURCE.resolve("s2-ehz1.bk2"),
                 activeTrace.resolve("s2-ehz1.bk2"),
@@ -97,22 +100,41 @@ class TestAbstractTraceReplayDynamicArtTerminal
                 new TypeReference<>() {});
         List<String> extras = new ArrayList<>(
                 (List<String>) metadata.get("aux_schema_extras"));
-        extras.add("dynamic_art_transfer_state_per_frame_v1");
+        if (!extras.contains("dynamic_art_transfer_state_per_frame")) {
+            extras.add("dynamic_art_transfer_state_per_frame");
+        }
         metadata.put("aux_schema_extras", extras);
         mapper.writeValue(activeTrace.resolve("metadata.json").toFile(),
                 metadata);
 
-        try (var input = new GZIPInputStream(Files.newInputStream(
-                    SOURCE.resolve("aux_state.jsonl.gz")));
-             var output = Files.newOutputStream(
-                     activeTrace.resolve("aux_state.jsonl"))) {
-            input.transferTo(output);
+        // The committed fixture already advertises
+        // dynamic_art_transfer_state_per_frame and carries one real heartbeat
+        // per stored row. This probe substitutes its own empty per-frame
+        // states, so the recorded ones must be dropped rather than appended
+        // to: TraceData.validateDynamicArtTransferStates requires exactly one
+        // state per stored physics frame, and two at frame 0 is a malformed
+        // stream, not a validator defect.
+        try (var input = new java.io.BufferedReader(new java.io.InputStreamReader(
+                    new GZIPInputStream(Files.newInputStream(
+                            SOURCE.resolve("aux_state.jsonl.gz"))),
+                    java.nio.charset.StandardCharsets.UTF_8));
+             var output = Files.newBufferedWriter(
+                     activeTrace.resolve("aux_state.jsonl"),
+                     java.nio.charset.StandardCharsets.UTF_8)) {
+            String line;
+            while ((line = input.readLine()) != null) {
+                if (line.contains("\"event\": \"dynamic_art_transfer_state\"")
+                        || line.contains("\"event\":\"dynamic_art_transfer_state\"")) {
+                    continue;
+                }
+                output.write(line);
+                output.write("\n");
+            }
             for (int frame = 0; frame <= FINAL_FRAME; frame++) {
                 output.write(("""
                         {"frame":%d,"event":"dynamic_art_transfer_state",\
 "edges":[],"outstanding_transfer_ids":[]}
-                        """.formatted(frame)).getBytes(
-                        java.nio.charset.StandardCharsets.UTF_8));
+                        """.formatted(frame)));
             }
         }
     }

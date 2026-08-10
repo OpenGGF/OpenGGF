@@ -103,7 +103,7 @@ public class MTZLavaBubbleObjectInstance extends AbstractObjectInstance implemen
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // ROM: Obj71_Main just calls AnimateSprite then MarkObjGone
         animationState.update();

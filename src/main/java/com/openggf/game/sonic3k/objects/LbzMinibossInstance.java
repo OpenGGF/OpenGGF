@@ -183,11 +183,16 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         }
         for (PanelState panel : panels) {
             if (!panel.center && !panel.detached && !panel.deleted) {
-                boolean outerPause = panel.childRoutine == PanelState.ROUTINE_OUTER_PAUSE;
-                int touchX = outerPause ? panel.x : panel.touchX;
-                int touchY = outerPause ? panel.y : panel.touchY;
+                // Each native arm is a separate SST object. Its circular move
+                // runs before Draw_And_Touch_Sprite publishes the pointer, so
+                // the folded provider must expose the panel's live position.
+                int touchX = panel.x;
+                int touchY = panel.y;
                 if (routine == ROUTINE_ESCAPE) {
-                    touchY = (touchY - 1) & 0xFFFF;
+                    // The parent subtracts two from y_pos before the linked
+                    // child slots run. Preserve the one-pixel interleave those
+                    // native slots expose through the shared object pointers.
+                    touchY = (touchY + 1) & 0xFFFF;
                 }
                 regions.add(new TouchRegion(touchX, touchY, ARM_COLLISION_FLAGS));
             }
@@ -225,7 +230,7 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (isDestroyed()) {
             return;
         }
@@ -312,19 +317,14 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         return panelForTest(index, secondRing).x;
     }
 
-    public int getPanelTouchXForTest(int index, boolean secondRing) {
-        PanelState panel = panelForTest(index, secondRing);
-        return panel.childRoutine == PanelState.ROUTINE_OUTER_PAUSE ? panel.x : panel.touchX;
-    }
-
-    public int getPanelRetainedTouchYForTest(int index, boolean secondRing) {
-        return panelForTest(index, secondRing).touchY;
+    public int getPanelYForTest(int index, boolean secondRing) {
+        return panelForTest(index, secondRing).y;
     }
 
     public int getPanelTouchYForTest(int index, boolean secondRing) {
         PanelState panel = panelForTest(index, secondRing);
-        int touchY = panel.childRoutine == PanelState.ROUTINE_OUTER_PAUSE ? panel.y : panel.touchY;
-        return routine == ROUTINE_ESCAPE ? (touchY - 1) & 0xFFFF : touchY;
+        int touchY = panel.y;
+        return routine == ROUTINE_ESCAPE ? (touchY + 1) & 0xFFFF : touchY;
     }
 
     private PanelState panelForTest(int index, boolean secondRing) {
@@ -716,8 +716,6 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         private final boolean secondRing;
         private int x;
         private int y;
-        private int touchX;
-        private int touchY;
         private int xSub;
         private int ySub;
         private int xVel;
@@ -759,12 +757,6 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
             if (deleted) {
                 return;
             }
-            if (initialized) {
-                // Each native child publishes its slot pointer before the
-                // folded aggregate advances that child's circular position.
-                touchX = x;
-                touchY = y;
-            }
             if (detached) {
                 SubpixelMotion.State state = new SubpixelMotion.State(x, y, xSub, ySub, xVel, yVel);
                 SubpixelMotion.moveSprite(state, SubpixelMotion.S3K_GRAVITY);
@@ -797,8 +789,6 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
                 // dispatch.
                 initialized = true;
                 moveCircular();
-                touchX = x;
-                touchY = y;
                 return;
             }
             // ROM loc_728C8 (subtype 0) / loc_72902 (others): a marked panel

@@ -79,7 +79,7 @@ public final class SuperTailsFlickyFlockObjectInstance extends AbstractObjectIns
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity ignored) {
+    public void update(int vIntRunCount, PlayableEntity ignored) {
         if (owner == null) {
             ObjectLifetimeOps.expireDynamic(this);
             return;

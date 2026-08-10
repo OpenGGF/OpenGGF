@@ -117,7 +117,7 @@ public class Sonic1BreakableWallObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ensureInitialized();
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (broken || player == null) {
@@ -287,8 +287,25 @@ public class Sonic1BreakableWallObjectInstance extends AbstractObjectInstance
 
             final int wallFrameIndex = frameIndex;
             final int fragmentIndex = i;
-            spawnFreeChild(() -> new WallFragmentInstance(
+            WallFragmentInstance fragment = spawnFreeChild(() -> new WallFragmentInstance(
                     wallX, wallY, velX, velY, wallFrameIndex, fragmentIndex, piece, renderer));
+            // FixBugs = 0 (docs/s1disasm/sonic.asm:20) — the shipped branch, which is
+            // what the traces record. SmashObject
+            // (docs/s1disasm/_incObj/"sub SmashObject.asm":51-65) allocates fragments
+            // with FindFreeObj, which scans the SST from the start, so a fragment can
+            // land BELOW the parent in RAM. ExecuteObjects walks ascending and has
+            // already passed that slot, so the shipped ROM runs a one-off catch-up on
+            // such a fragment — SpeedToPos plus `add.w d2,obVelY` where d2 is that
+            // caller's fragment gravity (GHZ/SLZ wall: gravity*2,
+            // "3C GHZ, SLZ Smashable Wall.asm":72) — exactly one extra fall step, so
+            // it stays in sync with the fragments that will still run this frame, and
+            // DisplaySprite2 so it still renders. With FixBugs = 1 the allocator would
+            // be FindNextFreeObj (never below the parent) and this whole block is
+            // omitted as redundant. Effect: a one-frame position offset on debris.
+            if (fragment != null
+                    && objectManager.isSlotAlreadyExecutedThisFrame(fragment)) {
+                fragment.applySmashObjectCatchUpStep();
+            }
         }
 
         // From disassembly: move.w #sfx_WallSmash,d0 / jmp (QueueSound2).l
@@ -389,8 +406,23 @@ public class Sonic1BreakableWallObjectInstance extends AbstractObjectInstance
                     spawn.x(), spawn.y(), 0, 0, wallFrameIndex, fragmentIndex, restoredPiece, restoredRenderer);
         }
 
+        /**
+         * One extra Smash_Fragment fall step, applied by SmashObject's shipped
+         * (FixBugs = 0) catch-up path to a fragment allocated below the parent's
+         * SST slot (docs/s1disasm/_incObj/"sub SmashObject.asm":51-65). Identical
+         * to the routine-4 body's SpeedToPos + gravity, which is what the ROM's
+         * `bsr SpeedToPos` / `add.w d2,obVelY` pair reproduces by hand.
+         */
+        void applySmashObjectCatchUpStep() {
+            subX += velX;
+            subY += velY;
+            posX = subX >> 8;
+            posY = subY >> 8;
+            velY += FRAGMENT_GRAVITY;
+        }
+
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
             if (isDestroyed()) {
                 return;

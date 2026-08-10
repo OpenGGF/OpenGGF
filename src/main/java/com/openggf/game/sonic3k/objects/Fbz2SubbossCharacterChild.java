@@ -27,7 +27,7 @@ final class Fbz2SubbossCharacterChild extends AbstractFbz2SubbossChild implement
     int frameForTest(){return frame;}
     boolean runningForTest(){return running;}
     Sonic3kPlcLoader.RawPlcApplyResult rawPlcResultForTest(){return new Sonic3kPlcLoader.RawPlcApplyResult(rawPlcAttempted,rawPlcApplied,rawPlcFailure);}
-    @Override public void update(int f,PlayableEntity p){
+    @Override public void update(int vIntRunCount,PlayableEntity p){
         if(!running&&root!=null&&root.controlBit(Fbz2SubbossInstance.CONTROL_CHARACTER_ESCAPE)){
             running=true;y-=4;frame=0;animCursor=0;animTimer=0;return;
         }

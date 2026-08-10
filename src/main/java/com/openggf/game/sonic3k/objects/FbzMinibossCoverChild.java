@@ -47,7 +47,7 @@ final class FbzMinibossCoverChild extends AbstractObjectInstance
 
     static int[] waitUpdates() { return WAIT_UPDATES.clone(); }
 
-    @Override public void update(int frameCounter, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         if (boss != null && boss.rootBit(FbzMinibossInstance.ROOT_DEFEAT_RELEASE)) {
             ObjectLifetimeOps.expireDynamic(this);
             return;

@@ -115,7 +115,7 @@ public final class MhzEndBossDefeatFragmentChild extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         xFixed += xVel;
         yFixed += yVel;
         yVel += GRAVITY;

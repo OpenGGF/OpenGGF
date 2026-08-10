@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.camera.Camera;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelState;
 import com.openggf.game.PlayableEntity;
@@ -101,6 +102,23 @@ public class TestSonic3kSSEntryRingFormation {
         assertTrue(ring.isForming(), "Ring should start in forming state");
         assertTrue(ring.isMainState(), "Ring should be in MAIN state");
         assertEquals(0, ring.getMappingFrame(), "Initial mapping frame should be 0");
+    }
+
+    @Test
+    void offscreenRetirementReleasesPlacementForLaterCursorReentry() {
+        Camera camera = mock(Camera.class);
+        services.withCamera(camera);
+        when(camera.getX()).thenReturn((short) 0x1000);
+        when(camera.getY()).thenReturn((short) 0);
+        Sonic3kSSEntryRingObjectInstance ring = createRing(0);
+
+        ring.update(1, null);
+        AbstractObjectInstance.updateCameraBounds(0x1000, 0, 320, 224, 0);
+        ring.update(2, null);
+
+        assertTrue(ring.isDestroyed());
+        assertTrue(ring.isDestroyedRespawnable(),
+                "SSEntryRing_Display offscreen loc_6196A clears placement ownership");
     }
 
     @Test
@@ -250,6 +268,8 @@ public class TestSonic3kSSEntryRingFormation {
         assertFalse(ring.isForming(), "Ring should no longer be forming");
         // With all emeralds, onTouched awards 50 rings and destroys the ring
         assertTrue(ring.isDestroyed(), "Ring should be destroyed after player triggered it");
+        assertTrue(ring.isDestroyedRespawnable(),
+                "the marked display tail reaches Go_Delete_SpriteSlotted and clears placement ownership");
     }
 
     /**
@@ -528,6 +548,8 @@ public class TestSonic3kSSEntryRingFormation {
         // One update call triggers the collected-state check and sets destroyed=true.
         ring.update(1, null);
         assertTrue(ring.isDestroyed(), "Collected ring should be immediately destroyed");
+        assertFalse(ring.isDestroyedRespawnable(),
+                "the initial collected-bit precheck uses Delete_Current_Sprite, not the slotted display tail");
     }
 
     @Test

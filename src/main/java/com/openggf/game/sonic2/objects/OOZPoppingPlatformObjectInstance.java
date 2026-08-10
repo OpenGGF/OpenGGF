@@ -191,7 +191,7 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ensureFlameChildSpawned();
         List<PlayableEntity> participants = participants(playerEntity);
         AbstractPlayableSprite player = participants.isEmpty() ? null
@@ -201,8 +201,8 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
         switch (mode) {
             case TIMER_COUNTDOWN -> updateTimerCountdown();
             case POP_PHYSICS -> updatePopPhysics();
-            case WAIT_FOR_PLAYER -> updateWaitForPlayer(participants, frameCounter);
-            case RISE_AND_LAUNCH -> updateRiseAndLaunch(participants, frameCounter);
+            case WAIT_FOR_PLAYER -> updateWaitForPlayer(participants, vIntRunCount);
+            case RISE_AND_LAUNCH -> updateRiseAndLaunch(participants, vIntRunCount);
             case IDLE -> { /* rts - do nothing */ }
         }
         updateDynamicSpawn(x, currentY);

@@ -67,7 +67,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     private final BitSet destroyedInWindow = new BitSet();
     private final BitSet pendingCursorLoad = new BitSet();
     private final ArrayList<Integer> pendingCursorLoadOrder = new ArrayList<>();
-    /** Reused result buffer for {@link #drainPendingCursorLoadSpawns()}; see its contract. */
+    /** Reused result buffer for {@link #pendingCursorLoadSpawns()}; see its contract. */
     private final ArrayList<ObjectSpawn> drainedCursorLoadScratch = new ArrayList<>();
     private final BitSet deferredVerticalLoad = new BitSet();
     /**
@@ -1003,7 +1003,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
                 && spawns.get(leftCursorIndex).x() < windowStart) {
             active.remove(spawns.get(leftCursorIndex));
             dormant.clear(leftCursorIndex);
-            pendingCursorLoad.clear(leftCursorIndex);
+            removePendingCursorLoad(leftCursorIndex);
             deferredVerticalLoad.clear(leftCursorIndex);
             leftCursorIndex++;
         }
@@ -1056,7 +1056,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
             cursorIndex--;
             active.remove(previous);
             dormant.clear(cursorIndex);
-            pendingCursorLoad.clear(cursorIndex);
+            removePendingCursorLoad(cursorIndex);
             deferredVerticalLoad.clear(cursorIndex);
         }
         // ROM parity: do NOT clear destroyedInWindow here (see update()).
@@ -1094,7 +1094,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
                 // setting the respawn bit or preserving X-pass priority; the
                 // later loc_1B982 Y-camera pass scans the cursor-passed range
                 // in object-list order (docs/skdisasm/sonic3k.asm:37723-37762).
-                pendingCursorLoad.clear(index);
+                removePendingCursorLoad(index);
                 if (created) {
                     deferredVerticalLoad.clear(index);
                 } else {
@@ -1113,14 +1113,15 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     }
 
     /**
-     * Drains the queued S3K X-cursor loads in queue order. Returns a reused
+     * Exposes the queued S3K X-cursor loads in queue order. Returns a reused
      * scratch list valid only until the next call: the sole consumer
      * ({@code ObjectManager.syncActiveSpawnsLoad}) iterates it synchronously
-     * and must not retain the reference. The pending queue itself is cleared
-     * before returning, so loads queued while the caller iterates land in the
-     * next drain, not in the returned list.
+     * and must not retain the reference. Cursor ownership is retained until the
+     * consumer reports a terminal construction outcome. In particular,
+     * FindFreeObj failure must leave the entry pending for the next loader pass
+     * instead of advancing past it permanently.
      */
-    List<ObjectSpawn> drainPendingCursorLoadSpawns() {
+    List<ObjectSpawn> pendingCursorLoadSpawns() {
         drainedCursorLoadScratch.clear();
         for (int i = 0; i < pendingCursorLoadOrder.size(); i++) {
             int index = pendingCursorLoadOrder.get(i);
@@ -1128,9 +1129,28 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
                 drainedCursorLoadScratch.add(spawns.get(index));
             }
         }
-        pendingCursorLoad.clear();
-        pendingCursorLoadOrder.clear();
         return drainedCursorLoadScratch;
+    }
+
+    void completePendingCursorLoad(ObjectSpawn spawn) {
+        if (spawn == null) {
+            return;
+        }
+        int index = getSpawnIndex(spawn);
+        if (index >= 0) {
+            pendingCursorLoad.clear(index);
+        }
+    }
+
+    void finishPendingCursorLoadBatch() {
+        pendingCursorLoadOrder.removeIf(index -> index < 0
+                || index >= spawns.size()
+                || !pendingCursorLoad.get(index));
+    }
+
+    private void removePendingCursorLoad(int index) {
+        pendingCursorLoad.clear(index);
+        pendingCursorLoadOrder.removeIf(candidate -> candidate == index);
     }
 
     List<ObjectSpawn> getDeferredVerticalLoadSpawns() {
@@ -1162,7 +1182,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     private void clearCursorLoadState(ObjectSpawn spawn) {
         int index = getSpawnIndex(spawn);
         if (index >= 0) {
-            pendingCursorLoad.clear(index);
+            removePendingCursorLoad(index);
             deferredVerticalLoad.clear(index);
         }
     }
@@ -1261,10 +1281,15 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
             // offscreen check. Cursor advancement past a destroyed badnik
             // must NOT clear the bit; ROM keeps it set permanently after
             // a player kill.
-            // Spawn leaving the cursor window — clear dormant so a
-            // non-destroyed spawn can be normally re-loaded when the
-            // cursor re-enters.
-            dormant.clear(leftCursorIndex);
+            // ROM: loc_DA24 (OPL_MovedRight's .loop_find_left) only walks the
+            // left pointer forward; it never calls OPL_SpawnObj. An entry the
+            // right-moving cursor leaves behind cannot be re-created until a
+            // leftward pass (loc_D9A6) actually scans back over it, and that
+            // path clears dormant itself. Clearing dormant here re-armed the
+            // entry for engine-side materialization while both cursors were
+            // already past it (SLZ1 f2522: a fresh Orbinaut for the 0xB90
+            // layout entry appeared in the slot the 0xB90 staircase had just
+            // freed, which ROM leaves empty).
             leftCursorIndex++;
         }
     }
@@ -1350,10 +1375,10 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
             // Sprite_OnScreen_Test on a LIVE object's offscreen check.
             // Cursor retreat past a destroyed badnik must NOT clear the
             // bit; ROM keeps it set permanently after a kill.
-            // Spawn leaving the cursor window — clear dormant so a
-            // non-destroyed spawn can be normally re-loaded when the
-            // cursor re-enters.
-            dormant.clear(cursorIndex);
+            // ROM: loc_D9DE (OPL_MovedLeft's .loop_find_right) only retreats the
+            // right pointer; it never calls OPL_SpawnObj. Re-arming happens on
+            // the next rightward scan (loc_DA02 -> spawnForwardEntry), which
+            // clears dormant itself. See the note in trimLeftCountered.
         }
     }
 
@@ -1378,6 +1403,16 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         if (remembered.get(index) && !stayActive.get(index)) {
             return true;
         }
+        // FLAG: FixBugs (docs/s1disasm/sonic.asm:20 -- 0 in the shipped ROM).
+        // ENGINE IMPLEMENTS: the shipped (FixBugs = 0) branch of OPL_SpawnObj --
+        // `bset #7,2(a2,d2.w)` TESTS AND SETS in one instruction, so a remembered
+        // entry is marked the first time it is merely scanned, not when it is
+        // actually destroyed. That is the "remember sprite" bug: such an entry
+        // never reloads once the cursor has passed it. The paired FixBugs = 1
+        // corrections (btst-only here, `bset` moved into OPL_MakeItem, and a
+        // `subq.b #1,(a2)` counter roll-back when the scan loop overshoots) are
+        // deliberately NOT implemented -- see docs/s1disasm/_inc/ObjPosLoad.asm:
+        // 203-209, 260-266, 287-291.
         // ROM: bset #7,2(a2,d2.w) — test AND set bit 7
         boolean wasSet = (objState[counter & 0xFF] & 0x80) != 0;
         objState[counter & 0xFF] |= 0x80; // Side effect: always sets bit

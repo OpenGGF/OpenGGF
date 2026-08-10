@@ -204,7 +204,7 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (playerEntity instanceof AbstractPlayableSprite)
                 ? (AbstractPlayableSprite) playerEntity : null;
 
@@ -225,19 +225,19 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
             return;
         }
 
-        updateFanRoutine(frameCounter, player);
+        updateFanRoutine(vIntRunCount, player);
     }
 
-    private void updateFanRoutine(int frameCounter, AbstractPlayableSprite player) {
+    private void updateFanRoutine(int vIntRunCount, AbstractPlayableSprite player) {
         // ROM: tst.b $42(a0) — latched-on flag (sonic3k.asm:65368-65370)
         if (latchedOn) {
-            updateRampUp(frameCounter, player);
+            updateRampUp(vIntRunCount, player);
             return;
         }
 
         // ROM: btst #4,subtype(a0) — always-on fan (sonic3k.asm:65372-65374)
         if ((subtype & BIT_ALWAYS_ON) != 0) {
-            updatePlayerInteraction(frameCounter, player);
+            updatePlayerInteraction(vIntRunCount, player);
             return;
         }
 
@@ -256,10 +256,10 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
         // ROM: tst.b $32(a0) / beq.w loc_306C2
         if (toggleFlag == 0) {
             // Fan is active — do player interaction
-            updatePlayerInteraction(frameCounter, player);
+            updatePlayerInteraction(vIntRunCount, player);
         } else {
             // Fan is ramping down/idle
-            updateRampUp(frameCounter, player);
+            updateRampUp(vIntRunCount, player);
         }
     }
 
@@ -269,7 +269,7 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
      * ROM: loc_306A2 (sonic3k.asm:65384-65392).
      * Gradually increases frame delay as speedRamp increases, creating a slowing effect.
      */
-    private void updateRampUp(int frameCounter, AbstractPlayableSprite player) {
+    private void updateRampUp(int vIntRunCount, AbstractPlayableSprite player) {
         animFrameTimer--;
         if (animFrameTimer >= 0) {
             return;
@@ -291,7 +291,7 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
      * <p>
      * ROM: loc_306C2 (sonic3k.asm:65394-65447).
      */
-    private void updatePlayerInteraction(int frameCounter, AbstractPlayableSprite player) {
+    private void updatePlayerInteraction(int vIntRunCount, AbstractPlayableSprite player) {
         List<PlayableEntity> participants = services().playerQuery().playersFor(
                 ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
         if (player != null && !participants.contains(player)) {
@@ -302,7 +302,7 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
         }
         for (PlayableEntity participant : participants) {
             if (participant instanceof AbstractPlayableSprite sprite) {
-                applyFanPush(sprite, frameCounter);
+                applyFanPush(sprite, vIntRunCount);
             }
         }
 
@@ -318,7 +318,7 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
         // ROM: tst.b render_flags(a0) / bpl.s — only if on-screen
         if (isOnScreen()) {
             // ROM: move.b (Level_frame_counter+1).w,d0 / addq.b #1,d0 / andi.b #$F,d0
-            int fc = (frameCounter & 0xFF) + 1;
+            int fc = (vIntRunCount & 0xFF) + 1;
             if ((fc & SFX_INTERVAL_MASK) == 0) {
                 try {
                     services().playSfx(Sonic3kSfx.FAN_SMALL.id);
@@ -330,7 +330,7 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
 
         // Underwater bubble spawning (sonic3k.asm:65420-65447)
         if (isUnderwater) {
-            spawnBubbles(frameCounter);
+            spawnBubbles(vIntRunCount);
         }
     }
 
@@ -340,7 +340,7 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
      * ROM: loc_3077E (sonic3k.asm:65453-65520).
      * Distance-dependent upward force with oscillation wobble.
      */
-    private void applyFanPush(AbstractPlayableSprite player, int frameCounter) {
+    private void applyFanPush(AbstractPlayableSprite player, int vIntRunCount) {
         // ROM: cmpi.b #4,routine(a1) — player dead/hurt?
         if (player.isHurt()) {
             return;
@@ -433,15 +433,18 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
      * ROM: loc_3070C (sonic3k.asm:65420-65447).
      * Spawns a bubble every 4 frames that rises until it reaches the water surface.
      */
-    private void spawnBubbles(int frameCounter) {
+    private void spawnBubbles(int vIntRunCount) {
         // ROM: andi.b #3,d0 / bne.s — every 4 frames
-        if ((frameCounter & BUBBLE_SPAWN_INTERVAL_MASK) != 0) {
+        if ((vIntRunCount & BUBBLE_SPAWN_INTERVAL_MASK) != 0) {
             return;
         }
         // ROM: jsr (AllocateObject).l
         try {
             int bubbleX = x + services().rng().nextInt(16) - 8;  // ROM: random X offset -8..+7
-            spawnChild(() -> new FanBubbleChild(
+            // ROM: Obj_HCZCGZFan uses AllocateObject here, not
+            // AllocateObjectAfterCurrent. Bubbles therefore take the lowest
+            // free dynamic SST slot, which can be below their fan parent.
+            spawnFreeChild(() -> new FanBubbleChild(
                     new ObjectSpawn(bubbleX, y, Sonic3kObjectIds.HCZ_CGZ_FAN, 0, 0, false, 0)));
         } catch (Exception e) {
             // Object allocation failed
@@ -589,7 +592,7 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             AbstractPlayableSprite player = (playerEntity instanceof AbstractPlayableSprite)
                     ? (AbstractPlayableSprite) playerEntity : null;
 
@@ -639,7 +642,7 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
             fanParent.setFanX(x);
 
             checkpointAll();
-            fanParent.updateFanRoutine(frameCounter, player);
+            fanParent.updateFanRoutine(vIntRunCount, player);
         }
 
         private void extendPlatform() {
@@ -732,7 +735,7 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             // Safety: force-destroy after max lifetime to prevent object leaks
             lifetime++;
             if (lifetime >= MAX_LIFETIME) {
@@ -764,9 +767,10 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
                 return;
             }
 
-            // ROM: jsr (MoveSprite2).l — apply velocity AFTER water check
-            // $800 = 8.00 in 8.8 fixed point = 8 pixels per frame upward
-            y += (yVelocity >> 8);
+            // ROM: Obj_HCZCGZFan's bubble routine calls MoveSprite2 twice
+            // after the water check. $800 is 8 pixels per call, so the native
+            // bubble advances 16 pixels upward per frame.
+            y += 2 * (yVelocity >> 8);
         }
 
         @Override

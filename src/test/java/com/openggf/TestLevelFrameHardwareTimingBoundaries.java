@@ -37,7 +37,7 @@ import static org.mockito.Mockito.when;
 class TestLevelFrameHardwareTimingBoundaries {
 
     @Test
-    void legacyFrameRetiresPostObjectsAfterScreenEventsAndOnTheNextDispatch() {
+    void frameRetiresPostObjectsAndDirectTailAfterScreenEvents() {
         List<String> events = new ArrayList<>();
         HardwareTimingService timing = spy(new HardwareTimingService(
                 new RomWorkBudgetScheduler(Map.of(
@@ -57,7 +57,11 @@ class TestLevelFrameHardwareTimingBoundaries {
         doAnswer(ignored -> {
             events.add("objects:ready=" + timing.isReady(handle));
             return null;
-        }).when(level).updateObjectPositionsWithoutTouches();
+        }).when(level).updateObjectPositionsWithoutTouches(false);
+        doAnswer(ignored -> {
+            events.add("oscillation-tail");
+            return null;
+        }).when(level).advanceGlobalOscillationAtLevelLoopTail();
         Camera camera = mock(Camera.class);
         doAnswer(ignored -> {
             events.add("camera");
@@ -79,19 +83,21 @@ class TestLevelFrameHardwareTimingBoundaries {
 
         assertEquals(List.of(
                         "observer:VINT_SERVICE:ready=false",
-                        "observer:PRE_MAIN_LOOP:ready=false",
                         "objects:ready=false",
                         "physics",
                         "camera",
                         "screen-events:ready=false",
-                        "observer:POST_OBJECTS:ready=true",
-                        "observer:VINT_SERVICE:ready=true",
+                        "oscillation-tail",
+                        "observer:POST_OBJECTS:ready=false",
                         "observer:PRE_MAIN_LOOP:ready=true",
+                        "observer:VINT_SERVICE:ready=true",
                         "objects:ready=true",
                         "physics",
                         "camera",
                         "screen-events:ready=true",
-                        "observer:POST_OBJECTS:ready=true"),
+                        "oscillation-tail",
+                        "observer:POST_OBJECTS:ready=true",
+                        "observer:PRE_MAIN_LOOP:ready=true"),
                 events);
         assertEquals(LevelFrameResult.GAMEPLAY_FRAME, firstResult);
         assertEquals(LevelFrameResult.GAMEPLAY_FRAME, secondResult);
@@ -103,7 +109,7 @@ class TestLevelFrameHardwareTimingBoundaries {
     }
 
     @Test
-    void inlineSolidFrameRunsPhysicsBeforeObjectsAndStillRetiresAfterScreenEvents() {
+    void inlineSolidFrameRunsPhysicsBeforeObjectsAndRetiresAtLoopTail() {
         List<String> events = new ArrayList<>();
         HardwareTimingService timing = new HardwareTimingService(
                 new RomWorkBudgetScheduler(Map.of(
@@ -123,7 +129,12 @@ class TestLevelFrameHardwareTimingBoundaries {
         doAnswer(ignored -> {
             events.add("objects:ready=" + timing.isReady(handle));
             return null;
-        }).when(level).updateObjectPositionsPostPhysicsWithoutTouches(any());
+        }).when(level).updateObjectPositionsPostPhysicsWithoutTouches(
+                any(), org.mockito.ArgumentMatchers.eq(false));
+        doAnswer(ignored -> {
+            events.add("oscillation-tail");
+            return null;
+        }).when(level).advanceGlobalOscillationAtLevelLoopTail();
         Camera camera = mock(Camera.class);
         doAnswer(ignored -> {
             events.add("camera");
@@ -140,17 +151,18 @@ class TestLevelFrameHardwareTimingBoundaries {
         assertEquals(LevelFrameResult.GAMEPLAY_FRAME, result);
         assertEquals(List.of(
                         "observer:VINT_SERVICE:ready=false",
-                        "observer:PRE_MAIN_LOOP:ready=false",
                         "physics",
                         "objects:ready=false",
                         "camera",
                         "screen-events:ready=false",
-                        "observer:POST_OBJECTS:ready=true"),
+                        "oscillation-tail",
+                        "observer:POST_OBJECTS:ready=false",
+                        "observer:PRE_MAIN_LOOP:ready=true"),
                 events);
     }
 
     @Test
-    void schemaTwoDirectReadinessIsVisibleToSameFrameObjectsAfterPreBoundary() {
+    void directTailReadinessIsVisibleToNextFrameObjects() {
         HardwareTimingService timing = new HardwareTimingService(
                 RomWorkBudgetScheduler.oneWorkUnitAt(HardwareServiceBoundary.PRE_MAIN_LOOP));
         var authority = timing.beginRecordedAdmission(Map.of(
@@ -165,19 +177,27 @@ class TestLevelFrameHardwareTimingBoundaries {
                 HardwareWorkKind.KOS_DECOMPRESSION_QUEUE, 0,
                 com.openggf.game.timing.HardwareSubmissionFingerprint.compute(submission));
         HardwareTimingReplayPort port = new HardwareTimingReplayPort(authority);
-        port.install(new HardwareTimingSchedule(2, List.of(edge)));
+        port.install(new HardwareTimingSchedule(List.of(edge)));
         HardwareWorkHandle direct = timing.submit(submission);
         port.beginRawFrame(0);
         LevelFrameContext context = context(timing,
                 new TraceHardwareTimingBoundaryObserver(port));
 
-        LevelFrameTestStep.execute(context, mock(LevelManager.class), mock(Camera.class), () -> { },
-                (name, step) -> {
-                    if ("objects".equals(name)) {
-                        assertTrue(timing.isReady(direct));
-                    }
-                    step.run();
-                });
+        List<Boolean> objectReadiness = new ArrayList<>();
+        LevelFrameStep.StepWrapper wrapper = (name, step) -> {
+            if ("objects".equals(name)) {
+                objectReadiness.add(timing.isReady(direct));
+            }
+            step.run();
+        };
+
+        LevelFrameTestStep.execute(context, mock(LevelManager.class),
+                mock(Camera.class), () -> { }, wrapper);
+        port.beginRawFrame(1);
+        LevelFrameTestStep.execute(context, mock(LevelManager.class),
+                mock(Camera.class), () -> { }, wrapper);
+
+        assertEquals(List.of(false, true), objectReadiness);
     }
 
     @Test

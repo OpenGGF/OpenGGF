@@ -15,6 +15,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
+import com.openggf.tests.HardwareBoundaryPump;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.TestablePlayableSprite;
 import com.openggf.tests.rules.RequiresRom;
@@ -127,39 +128,43 @@ class TestHCZWaterWallObjectInstance {
         assertEquals(playerInitialY - 8, player.getCentreY());
         assertEquals(wallInitialY, waterWall.getY());
 
+        // ROM Process_Kos_Module_Queue retires the last module and clears
+        // Kos_modules_left (sonic3k.asm:2752) from the LevelLoop tail (7908), after
+        // Process_Sprites (7889). The polling object therefore first observes zero on
+        // the following iteration's object pass — the update immediately after the
+        // module state step, which the engine runs at the frame top.
         int pullUpdates = 1;
         int frame = 1;
-        while (timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE) > 0
-                && frame < 10_000) {
+        boolean roseAfterQueueCleared = false;
+        while (frame < 10_000) {
             serviceBoundary(timing, coordinator, HardwareServiceBoundary.PRE_MAIN_LOOP);
             int incompleteBeforeObject = timing.incompleteCount(
                     HardwareWorkKind.KOS_MODULE_QUEUE);
             waterWall.update(frame, player);
             pullUpdates++;
-            assertEquals(playerInitialY - (pullUpdates * 8), player.getCentreY(),
-                    "loc_302E6 should pull the player while Kos_modules_left is nonzero");
-            assertEquals(wallInitialY, waterWall.getY(),
-                    "vertical geyser must not enter loc_30338 while queued art is pending");
             assertEquals(incompleteBeforeObject,
                     timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE),
                     "object polling must not publish hardware readiness");
+            assertEquals(playerInitialY - (pullUpdates * 8), player.getCentreY(),
+                    "loc_302E6 should pull the player while Kos_modules_left is nonzero,"
+                            + " and loc_302FA keeps pulling through the fall-through tick");
+            if (incompleteBeforeObject == 0) {
+                assertEquals(wallInitialY - 8, waterWall.getY(),
+                        "loc_302FA falls through into the first loc_30338 rise tick on the"
+                                + " first object pass that observes Kos_modules_left == 0");
+                roseAfterQueueCleared = true;
+                serviceBoundary(timing, coordinator, HardwareServiceBoundary.POST_OBJECTS);
+                break;
+            }
+            assertEquals(wallInitialY, waterWall.getY(),
+                    "vertical geyser must not enter loc_30338 while queued art is pending");
             serviceBoundary(timing, coordinator, HardwareServiceBoundary.POST_OBJECTS);
             frame++;
         }
 
-        assertEquals(0, timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE),
-                "the final module must become ready at POST_OBJECTS");
-        assertEquals(wallInitialY, waterWall.getY(),
-                "POST_OBJECTS publishes readiness but does not run the object consumer");
-
-        serviceBoundary(timing, coordinator, HardwareServiceBoundary.PRE_MAIN_LOOP);
-        waterWall.update(frame, player);
-        serviceBoundary(timing, coordinator, HardwareServiceBoundary.POST_OBJECTS);
-
-        assertEquals(playerInitialY - ((pullUpdates + 1) * 8), player.getCentreY(),
-                "loc_302FA falls through into the first loc_30338 rise tick when the queue clears");
-        assertEquals(wallInitialY - 8, waterWall.getY(),
-                "the first rise tick should happen in the same update that finishes queued-art setup");
+        assertTrue(roseAfterQueueCleared,
+                "the seeded module queue must drain and release the geyser");
+        assertEquals(0, timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE));
         assertEquals(Sonic3kAnimationIds.BLANK.id(), player.getAnimationId());
         assertEquals(-1, player.getForcedAnimationId(),
                 "water-wall object control must supersede the prior tunnel override");
@@ -214,8 +219,11 @@ class TestHCZWaterWallObjectInstance {
             HardwareTimingService timing,
             RuntimeArtCoordinator coordinator,
             HardwareServiceBoundary boundary) {
-        timing.service(boundary);
-        coordinator.afterTimingService(boundary);
+        // Mirrors LevelFrameStep.serviceBoundary: the module state step runs at the
+        // frame top, ahead of the ledger service, modelling LevelLoop's tail call to
+        // Process_Kos_Module_Queue (sonic3k.asm:7908) reaching the next iteration's
+        // Process_Kos_Queue (7887) across Wait_VSync (7888).
+        HardwareBoundaryPump.service(timing, coordinator, boundary);
     }
 
     private static void assertNoControl(TestablePlayableSprite player) {

@@ -1088,6 +1088,18 @@ public class Sonic3kConstants {
     public static final int MAP_MHZ_MINIBOSS_TREE_ADDR = 0x186A88;
     public static final int MAP_MHZ_MINIBOSS_LOG_ADDR = 0x186B18;
     public static final int MAP_MHZ_KNUX_PEER_ADDR = 0x066A52;
+    // MHZ1CutsceneButton_LoadKnucklesPeer queues ArtKosM_MHZKnuxPeer to
+    // ArtTile_MHZKnuxPeer (sonic3k.asm:130077-130081;
+    // sonic3k.constants.asm:1272).
+    public static final int ARTTILE_MHZ_KNUX_PEER = 0x0500;
+
+    // Shared badnik-explosion art. Obj_SSEntryRing draws over ArtTile_Explosion
+    // through its own DPLC, so SSEntryRing_Display re-queues this archive when
+    // the ring retires (sonic3k.asm:128448-128490;
+    // sonic3k.constants.asm:1404). Offset verified with RomOffsetFinder:
+    // ArtKosM_BadnikExplosion -> 0xDB406, 2176 decompressed bytes.
+    public static final int ART_KOSM_BADNIK_EXPLOSION_ADDR = 0x0DB406;
+    public static final int ARTTILE_EXPLOSION = 0x05A0;
     public static final int MAP_MHZ_KNUX_DOOR_ADDR = 0x066A9C;
     public static final int MAP_MHZ_KNUX_PULL_SWITCH_ADDR = 0x066AD0;
     public static final int DPLC_MHZ_KNUX_PRESS_ADDR = 0x066B10;
@@ -1494,6 +1506,8 @@ public class Sonic3kConstants {
     public static final int ART_KOSM_HCZ2_SECONDARY_ADDR = 0x3BFA6C;
     public static final int KOS_HCZ2_SECONDARY_BLOCK_ADDR = 0x3BF17C;
     public static final int KOS_HCZ2_SECONDARY_CHUNK_ADDR = 0x3C18EE;
+    // MGZ_8x8_Primary_KosM queued by Obj_MGZ2DrillingRobotnik's flee tail.
+    public static final int ART_KOSM_MGZ_PRIMARY_ADDR = 0x3C3EBE;
     public static final int KOS_MGZ2_SECONDARY_BLOCK_ADDR = 0x3C9CD2;
     public static final int KOSM_MGZ2_SECONDARY_ART_ADDR = 0x3CA132;
     public static final int KOS_MGZ2_SECONDARY_CHUNK_ADDR = 0x3CB1C4;
@@ -1524,6 +1538,9 @@ public class Sonic3kConstants {
     public static final int ART_UNC_MGZ_ENDBOSS_SCALED_SIZE = 0x1000;
     public static final int MAP_SCALED_ART_ADDR = 0x024BE8;
     public static final int ARTTILE_MGZ_ENDBOSS_SCALED = 0x0469;
+    // ROM ArtTile_MGZEndBoss / ArtTile_MGZEndBossDebris.
+    public static final int ART_TILE_MGZ_END_BOSS = 0x033F;
+    public static final int ART_TILE_MGZ_END_BOSS_DEBRIS = 0x045E;
     public static final int MAP_MGZ_ENDBOSS_ADDR = 0x362608;
     public static final int PAL_MGZ_ENDBOSS_ADDR = 0x06D97C;
     public static final int PAL_MGZ_FADE_CNZ_ADDR = 0x364896;
@@ -1657,6 +1674,12 @@ public class Sonic3kConstants {
     public static final int MAP_RIBOT_ADDR = 0x3604B8;
     public static final int ART_KOSM_CORKEY_ADDR = 0x377DFC;
     public static final int MAP_CORKEY_ADDR = 0x3605C2;
+    // PLCKosM_LBZ destination tiles (sonic3k.asm:64397-64402,
+    // sonic3k.constants.asm:1259-1262)
+    public static final int ARTTILE_SNALE_BLASTER = 0x0524;
+    public static final int ARTTILE_ORBINAUT = 0x056E;
+    public static final int ARTTILE_RIBOT = 0x0547;
+    public static final int ARTTILE_CORKEY = 0x0558;
     // Obj_Flybot767 (sonic3k.asm:191981), LockOn data include.
     // Map, DPLC, and ArtUnc_Flybot767 verified by S&K-side ROM byte search.
     public static final int ART_UNC_FLYBOT_767_ADDR = 0x377EBE;
@@ -1681,6 +1704,15 @@ public class Sonic3kConstants {
     public static final int MAP_CLUCKOID_ARROW_ADDR = 0x08E536;
     public static final int MAP_CLUCKOID_ADDR = 0x08E546;
     public static final int DPLC_CLUCKOID_ADDR = 0x08E4B8;
+
+    // LoadEnemyArt destinations for PLCKosM_MHZ1 / PLCKosM_MHZ2
+    // (sonic3k.constants.asm:1270,1276-1278; sonic3k.asm:64404-64415).
+    public static final int ARTTILE_CLUCKOID = 0x0500;
+    public static final int ARTTILE_CLUCKOID_ARROW = ARTTILE_CLUCKOID + 0x22;
+    public static final int ARTTILE_DRAGONFLY = 0x0538;
+    public static final int ARTTILE_MADMOLE = 0x0545;
+    public static final int ARTTILE_MUSHMEANIE = 0x056D;
+
     public static final int MAP_MHZ_PULLEY_LIFT_ADDR = 0x03E720;
     public static final int MAP_MHZ_CURLED_VINE_ADDR = 0x03EA4C;
     public static final int MAP_MHZ_STICKY_VINE_ADDR = 0x03ED10;

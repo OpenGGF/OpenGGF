@@ -91,9 +91,9 @@ public class FloorSpikeObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        updateAction(frameCounter);
+        updateAction(vIntRunCount);
 
         // ROM: moveq #0,d0 / move.b floorspike_offset(a0),d0 / neg.w d0
         //      add.w floorspike_initial_y_pos(a0),d0 / move.w d0,y_pos(a0)
@@ -110,7 +110,7 @@ public class FloorSpikeObjectInstance extends AbstractObjectInstance
      * ROM: Obj6D_Action (s2.asm line 53442-53477)
      * Handles the expand/retract/wait cycle.
      */
-    private void updateAction(int frameCounter) {
+    private void updateAction(int vIntRunCount) {
         // ROM: tst.w floorspike_delay(a0) / beq.s + / subq.w #1,floorspike_delay(a0) / rts
         if (delay > 0) {
             delay--;
@@ -121,7 +121,7 @@ public class FloorSpikeObjectInstance extends AbstractObjectInstance
         if (waiting != 0) {
             // ROM: move.b (Level_frame_counter+1).w,d0 / sub.b subtype(a0),d0
             //      andi.b #$7F,d0 / bne.s Obj6D_Action_End
-            int timingValue = (frameCounter & 0xFF) - (spawn.subtype() & 0xFF);
+            int timingValue = (vIntRunCount & 0xFF) - (spawn.subtype() & 0xFF);
             if ((timingValue & TIMING_MASK) != 0) {
                 return;
             }

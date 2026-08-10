@@ -622,7 +622,7 @@ class TestFbzWireCages {
     private static final class OrdinarySolid extends AbstractObjectInstance implements SolidObjectProvider {
         OrdinarySolid(int x,int y){super(new ObjectSpawn(x,y,0x71,0,0,true,1),"OrdinarySolid");}
         @Override public SolidObjectParams getSolidParams(){return new SolidObjectParams(0x20,8,8);}
-        @Override public void update(int frameCounter,PlayableEntity player){}
+        @Override public void update(int vIntRunCount,PlayableEntity player){}
         @Override public void appendRenderCommands(List<GLCommand> commands){}
     }
 }

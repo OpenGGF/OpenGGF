@@ -92,6 +92,14 @@ if not exist "%ROM_PATH%" (
     exit /b 1
 )
 
+REM Hash the exact movie path handed to EmuHawk. Always overwrite any caller
+REM value so identity-pinning probes verify bytes, not a claimed digest.
+for /f "usebackq delims=" %%H in (`powershell -NoProfile -Command "(Get-FileHash -Algorithm SHA256 -LiteralPath $env:BK2_PATH).Hash.ToLowerInvariant()"`) do set "OGGF_BIZHAWK_MOVIE_SHA256=%%H"
+if "%OGGF_BIZHAWK_MOVIE_SHA256%"=="" (
+    echo ERROR: Failed to hash BK2 movie: %BK2_PATH%
+    exit /b 1
+)
+
 if not "%BIZHAWK_ALLOW_SLOW_LUA%"=="1" (
     powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0prepare_bizhawk_fast_lua.ps1" -LuaScript "%LUA_SCRIPT%" -WrapperPath "%BIZHAWK_FAST_WRAPPER%"
     if errorlevel 1 (
@@ -105,6 +113,7 @@ echo EmuHawk: %BIZHAWK_EXE%
 echo Lua:     %LUA_SCRIPT%
 if not "%BIZHAWK_EFFECTIVE_LUA%"=="%LUA_SCRIPT%" echo Wrapper: %BIZHAWK_EFFECTIVE_LUA%
 echo Movie:   %BK2_PATH%
+echo MovieSHA: %OGGF_BIZHAWK_MOVIE_SHA256%
 echo ROM:     %ROM_PATH%
 if "%BIZHAWK_ALLOW_SLOW_LUA%"=="1" (echo Mode:    visible/slow Lua allowed ^(explicitly confirmed^)) else (echo Mode:    no-audio config + fast no-render Lua wrapper)
 if not "%BIZHAWK_EXTRA_ARGS%"=="" echo Extra:   %BIZHAWK_EXTRA_ARGS%

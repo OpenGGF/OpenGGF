@@ -37,7 +37,7 @@ public final class FbzWireCageStationaryObjectInstance extends AbstractObjectIns
         travelExtent = travelAngle << 2;
     }
 
-    @Override public void update(int frameCounter, PlayableEntity ignored) {
+    @Override public void update(int vIntRunCount, PlayableEntity ignored) {
         visitOrdinal=0;primaryDplcDirtiedD6=false;
         try{services().playerQuery().visitPlayers(ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED,this,UPDATE_PLAYER);}
         finally{visitOrdinal=0;primaryDplcDirtiedD6=false;}

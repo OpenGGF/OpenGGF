@@ -25,6 +25,14 @@ public final class DynamicArtLifecycleService
         implements DynamicArtDiagnosticsProvider,
         RewindSnapshottable<DynamicArtLifecycleService.RewindState> {
 
+    /** Graceful close cannot publish buffered edges without an observed row. */
+    public static final class UnpublishedComparisonRowException
+            extends IllegalStateException {
+        public UnpublishedComparisonRowException() {
+            super("cannot forward dynamic-art edges without a production row");
+        }
+    }
+
     public static final String REWIND_KEY = "dynamic-art-diagnostics";
     private static final Set<String> OWNERS = Set.of(
             "sonic", "tails", "tails-tails",
@@ -52,6 +60,11 @@ public final class DynamicArtLifecycleService
     private final List<Long> pendingS2TransferIds = new ArrayList<>();
     private final List<DynamicArtGapTransition> gapTransitions = new ArrayList<>();
     private Preparation s1Preparation;
+    /**
+     * Level-load player bank staged by a fresh playable's priming, held
+     * until a run whose movie spans the load publishes it.
+     */
+    private Preparation initialLoadPreparation;
     private List<Long> publishedOutstanding = List.of();
     private DynamicArtDiagnosticsSnapshot latest =
             DynamicArtDiagnosticsSnapshot.empty();
@@ -59,13 +72,31 @@ public final class DynamicArtLifecycleService
     private long segmentGeneration;
     private boolean runActive;
     private boolean comparisonSegmentOpen;
+    private boolean comparisonSegmentReserved;
     private long nextTransferId;
     private long nextEdgeOrdinal;
     private int logicalFrame;
     private int nextLogicalEdgeIndex;
     private int nextPublicationFrame;
     private int movieLogicalFrame;
-    private int nextGapEdgeIndex;
+    private boolean movieLogicalFrameSuppliedExternally;
+    /**
+     * Counted V-int rows separating a staged pre-main-loop player transfer
+     * from the level's first main-loop row, or {@code -1} when no staged
+     * transfer is waiting on that tail.
+     */
+    private int preMainLoopTailRows = -1;
+    /** Movie row the held transfer was staged on, i.e. the tail's lower bound. */
+    private int preMainLoopHoldBoundaryRow;
+    /**
+     * Gap-edge numbering is per LOGICAL FRAME, not per gap. The recorder keys
+     * its counter on the edge's frame
+     * ("tools/bizhawk-headless/src/Recording/S1DynamicArtObserver.cs":247-252),
+     * so two edges sharing a frame are 0 and 1 while a later frame in the same
+     * gap restarts at 0.
+     */
+    private final Map<Integer, Integer> nextGapEdgeIndexByFrame =
+            new HashMap<>();
 
     private record ProductionArtProfile(
             int romArtBase,
@@ -97,6 +128,7 @@ public final class DynamicArtLifecycleService
             long transferId,
             String owner,
             int mappingFrame,
+            String submissionOrigin,
             List<DynamicArtDiagnosticsSnapshot.Request> requests) {
         public Descriptor {
             requests = List.copyOf(requests);
@@ -120,9 +152,12 @@ public final class DynamicArtLifecycleService
             int mappingFrame,
             int logicalFrame,
             int logicalEdgeIndex,
-            List<DynamicArtDiagnosticsSnapshot.Request> requests) {
+            List<DynamicArtDiagnosticsSnapshot.Request> requests,
+            String submissionOrigin) {
         public BufferedEdge {
             requests = List.copyOf(requests);
+            submissionOrigin = submissionOrigin == null
+                    ? "segment" : submissionOrigin;
         }
     }
 
@@ -138,14 +173,17 @@ public final class DynamicArtLifecycleService
             List<Long> latestOutstandingTransferIds,
             boolean latestPublished,
             Preparation s1Preparation,
+            Preparation initialLoadPreparation,
             boolean runActive,
             boolean comparisonSegmentOpen,
+            boolean comparisonSegmentReserved,
             long nextTransferId,
             long nextEdgeOrdinal,
             int logicalFrame,
             int nextLogicalEdgeIndex,
             int nextPublicationFrame,
             int movieLogicalFrame,
+            int preMainLoopTailRows,
             int nextGapEdgeIndex) {
         public RewindState {
             lastMappingFrames = Map.copyOf(lastMappingFrames);
@@ -160,6 +198,22 @@ public final class DynamicArtLifecycleService
         }
     }
 
+    @Override
+    public DynamicArtGapDiagnosticsSnapshot gapSnapshot() {
+        return new DynamicArtGapDiagnosticsSnapshot(
+                movieLogicalFrame,
+                gapTransitions,
+                ledger.values().stream()
+                        .map(descriptor ->
+                                new DynamicArtGapDiagnosticsSnapshot.Descriptor(
+                                        descriptor.transferId(),
+                                        descriptor.owner(),
+                                        descriptor.mappingFrame(),
+                                        descriptor.submissionOrigin(),
+                                        descriptor.requests()))
+                        .toList());
+    }
+
     public void beginRun() {
         if (runActive) {
             throw new IllegalStateException("dynamic-art run is already active");
@@ -170,10 +224,86 @@ public final class DynamicArtLifecycleService
 
     public void openComparisonSegment() {
         requireRunActive();
-        if (comparisonSegmentOpen) {
+        if (comparisonSegmentOpen || comparisonSegmentReserved) {
             throw new IllegalStateException(
-                    "dynamic-art comparison segment is already open");
+                    "dynamic-art comparison segment is already open or reserved");
         }
+        validateComparisonSegmentActivation();
+        comparisonSegmentOpen = true;
+        initializeComparisonSegment();
+    }
+
+    /**
+     * Allocates the unpublished generation observed immediately before an
+     * externally managed row zero. Production remains gap-owned until the
+     * coordinator services the opening V-blank and activates the reservation.
+     */
+    public void reserveComparisonSegment() {
+        requireRunActive();
+        if (comparisonSegmentOpen || comparisonSegmentReserved) {
+            throw new IllegalStateException(
+                    "dynamic-art comparison segment is already open or reserved");
+        }
+        if (!bufferedEdges.isEmpty()) {
+            throw new IllegalStateException(
+                    "cannot open dynamic-art segment with unpublished production work");
+        }
+        comparisonSegmentReserved = true;
+        initializeComparisonSegment();
+    }
+
+    /** Activates a reserved window without changing its observed generation. */
+    public void activateReservedComparisonSegment() {
+        requireRunActive();
+        if (!comparisonSegmentReserved || comparisonSegmentOpen) {
+            throw new IllegalStateException(
+                    "dynamic-art comparison segment is not reserved");
+        }
+        validateComparisonSegmentActivation();
+        comparisonSegmentReserved = false;
+        comparisonSegmentOpen = true;
+    }
+
+    /**
+     * Advances a newly opened comparison window past destination rows already
+     * produced while the run was still structurally in the preceding gap.
+     * This moves only the segment-local publication/edge cursors: the shared
+     * movie clock already advanced when those production rows ran and must not
+     * be counted twice.
+     */
+    public void advanceComparisonCursor(int consumedRows) {
+        requireComparisonSegmentOpen();
+        if (consumedRows < 0) {
+            throw new IllegalArgumentException("consumedRows must be nonnegative");
+        }
+        if (nextPublicationFrame != 0 || latest.published()
+                || !bufferedEdges.isEmpty()) {
+            throw new IllegalStateException(
+                    "comparison cursor can advance only before its first publication");
+        }
+        logicalFrame = Math.addExact(logicalFrame, consumedRows);
+        nextPublicationFrame = Math.addExact(
+                nextPublicationFrame, consumedRows);
+        nextLogicalEdgeIndex = 0;
+    }
+
+    /** Cancels an unpublished reservation without publishing a synthetic row. */
+    public void cancelReservedComparisonSegment() {
+        requireRunActive();
+        if (!comparisonSegmentReserved || comparisonSegmentOpen) {
+            throw new IllegalStateException(
+                    "dynamic-art comparison segment is not reserved");
+        }
+        comparisonSegmentReserved = false;
+        publishedOutstanding = List.copyOf(ledger.keySet());
+        latest = DynamicArtDiagnosticsSnapshot.unpublished(
+                deliverySerial, segmentGeneration);
+        logicalFrame = 0;
+        nextLogicalEdgeIndex = 0;
+        nextPublicationFrame = 0;
+    }
+
+    private void validateComparisonSegmentActivation() {
         if (!bufferedEdges.isEmpty()) {
             throw new IllegalStateException(
                     "cannot open dynamic-art segment with unpublished production work");
@@ -182,7 +312,9 @@ public final class DynamicArtLifecycleService
             throw new IllegalStateException(
                     "cannot open dynamic-art segment with pending production work");
         }
-        comparisonSegmentOpen = true;
+    }
+
+    private void initializeComparisonSegment() {
         segmentGeneration++;
         publishedOutstanding = List.copyOf(ledger.keySet());
         latest = new DynamicArtDiagnosticsSnapshot(
@@ -197,11 +329,19 @@ public final class DynamicArtLifecycleService
         requireComparisonSegmentOpen();
         if (!bufferedEdges.isEmpty()) {
             if (nextPublicationFrame == 0) {
-                throw new IllegalStateException(
-                        "cannot forward dynamic-art edges without a production row");
+                throw new UnpublishedComparisonRowException();
             }
             int terminalFrame = nextPublicationFrame - 1;
-            latest = publishBuffered(terminalFrame, true);
+            // The forwarded edges land on a row that was already published,
+            // so they extend that row rather than replacing it: the recorder
+            // reports one row per publication frame carrying both its own
+            // edges and anything the following main-loop iteration forwarded
+            // back onto it.
+            List<DynamicArtDiagnosticsSnapshot.Edge> alreadyPublished =
+                    latest.published() && latest.frame() == terminalFrame
+                            ? latest.edges()
+                            : List.of();
+            latest = publishBuffered(terminalFrame, true, alreadyPublished);
         }
         comparisonSegmentOpen = false;
     }
@@ -210,8 +350,31 @@ public final class DynamicArtLifecycleService
         requireRunActive();
         if (comparisonSegmentOpen) {
             closeComparisonSegment();
+        } else if (comparisonSegmentReserved) {
+            cancelReservedComparisonSegment();
         }
         runActive = false;
+    }
+
+    /**
+     * Abandons an observer window that never published its first row.
+     * Production mapping decisions, preparations, outstanding transfers, and
+     * monotonic identities survive so ordinary lifecycle ownership can resume.
+     */
+    public void abandonComparisonSegment() {
+        requireComparisonSegmentOpen();
+        if (nextPublicationFrame != 0) {
+            throw new IllegalStateException(
+                    "only an unpublished dynamic-art segment may be abandoned");
+        }
+        bufferedEdges.clear();
+        comparisonSegmentOpen = false;
+        publishedOutstanding = List.copyOf(ledger.keySet());
+        latest = DynamicArtDiagnosticsSnapshot.unpublished(
+                deliverySerial, segmentGeneration);
+        logicalFrame = 0;
+        nextLogicalEdgeIndex = 0;
+        nextPublicationFrame = 0;
     }
 
     public ArtUpdate observeRomDplc(
@@ -265,6 +428,83 @@ public final class DynamicArtLifecycleService
             pendingS2TransferIds.add(update.transferId());
         }
         return update;
+    }
+
+    /**
+     * Primes a freshly loaded playable's ROM-backed art without publishing a
+     * runtime transfer edge. Native level setup establishes this initial bank
+     * before the compared presentation/main-loop stream begins.
+     */
+    public ArtUpdate primePlayerDplc(
+            GameId gameId,
+            String owner,
+            int mappingFrame,
+            SpriteDplcFrame dplcFrame) {
+        requireRunActive();
+        validateOwner(owner);
+        if (mappingFrame < 0) {
+            throw new IllegalArgumentException(
+                    "mappingFrame must be nonnegative");
+        }
+        Map<String, ProductionArtProfile> gameProfiles =
+                PLAYER_PROFILES.get(gameId);
+        ProductionArtProfile profile =
+                gameProfiles != null ? gameProfiles.get(owner) : null;
+        if (profile == null) {
+            return new ArtUpdate(false, -1, List.of());
+        }
+        List<TileLoadRequest> requests = dplcFrame != null
+                && dplcFrame.requests() != null
+                ? List.copyOf(dplcFrame.requests()) : List.of();
+        Integer previous = lastMappingFrames.put(owner, mappingFrame);
+        if (previous != null && previous == mappingFrame) {
+            return new ArtUpdate(false, -1, List.of());
+        }
+        if (gameId == GameId.S1 && !requests.isEmpty()) {
+            // The ROM does not skip this transfer: Level_LoadObj's
+            // ExecuteObjects pass stages the fresh player's tiles and sets
+            // f_sonframechg (docs/s1disasm/_incObj/01 Sonic.asm:2391-2398), and
+            // the first V-int of the Level_Delay / PalFadeIn_Alt tail performs
+            // it (docs/s1disasm/sonic.asm:2956-2969). A segment-scoped replay
+            // starts at Level_MainLoop, so that transfer happened before its
+            // recorded window and stays unpublished; a run whose movie spans
+            // the load owns the row it lands on. Keep the staged bank here and
+            // let a run publish it explicitly.
+            initialLoadPreparation = new Preparation(owner, mappingFrame,
+                    toDiagnosticRequests(requests, profile.romArtBase(), -1,
+                            profile.vramDestination()));
+        }
+        return new ArtUpdate(true, -1, requests);
+    }
+
+    /**
+     * Publishes the level-load player transfer a fresh playable's priming
+     * staged, for a run whose movie clock spans the load that produced it.
+     *
+     * <p>The transfer's row is the level's first main-loop row minus the
+     * game's counted pre-main-loop tail
+     * ({@link com.openggf.game.LevelInitProfile#preLevelMainLoopDelayFrames()}),
+     * the same relation {@link #settlePendingPlayerPreparationBeforeLevelMainLoop()}
+     * settles a mid-run load on. Nothing is published when no priming staged a
+     * bank, so a segment-scoped replay is unaffected.
+     *
+     * @param firstMainLoopRow movie row of the level's first main-loop row
+     * @param tailRows         counted V-int rows between the transfer and it
+     */
+    public void publishInitialLevelLoadPlayerTransfer(
+            int firstMainLoopRow, int tailRows) {
+        requireRunActive();
+        if (firstMainLoopRow < 0 || tailRows < 0) {
+            throw new IllegalArgumentException(
+                    "row and tail counts must be nonnegative");
+        }
+        if (initialLoadPreparation == null || s1Preparation != null) {
+            return;
+        }
+        s1Preparation = initialLoadPreparation;
+        initialLoadPreparation = null;
+        preMainLoopTailRows = tailRows;
+        flushS1PreparationIfPending(firstMainLoopRow);
     }
 
     public void completePlayerDplc(
@@ -349,9 +589,11 @@ public final class DynamicArtLifecycleService
         long transferId = nextTransferId++;
         List<Long> before = List.copyOf(ledger.keySet());
         Descriptor descriptor =
-                new Descriptor(transferId, owner, mappingFrame, requests);
+                new Descriptor(transferId, owner, mappingFrame,
+                        comparisonSegmentOpen ? "segment" : "run_gap", requests);
         ledger.put(transferId, descriptor);
-        buffer(transferId, "submitted", owner, mappingFrame, requests, before);
+        buffer(transferId, "submitted", owner, mappingFrame, requests, before,
+                descriptor.submissionOrigin());
         return new ArtUpdate(true, transferId, checked);
     }
 
@@ -403,32 +645,181 @@ public final class DynamicArtLifecycleService
         List<Long> before = List.copyOf(ledger.keySet());
         ledger.remove(update.transferId());
         buffer(update.transferId(), "completed", descriptor.owner(),
-                descriptor.mappingFrame(), requests, before);
+                descriptor.mappingFrame(), requests, before,
+                descriptor.submissionOrigin());
     }
 
     /** Retires the S2 DMA FIFO at the production ProcessDMAQueue boundary. */
+    /**
+     * Supplies the physical movie row a gap edge should carry. The recorder
+     * stamps gap edges with the BK2 row it has consumed
+     * ("tools/bizhawk-headless/src/Recording/S1RunCaptureRunner.cs":199-215,
+     * whose {@code rowsConsumed} counts every movie row from zero, and
+     * S1DynamicArtObserver:483, which replaces a gap edge's frame with it).
+     * Counting production iterations instead loses a row for every suppressed
+     * one, so a driver that knows the row states it.
+     */
+    public void setMovieLogicalFrame(int movieRow) {
+        if (movieRow < 0) {
+            throw new IllegalArgumentException("movieRow must be nonnegative");
+        }
+        movieLogicalFrame = movieRow;
+        movieLogicalFrameSuppliedExternally = true;
+    }
+
     public void serviceProductionVBlank() {
         requireRunActive();
-        if (s1Preparation != null) {
-            Preparation preparation = s1Preparation;
-            s1Preparation = null;
-            long transferId = nextTransferId++;
-            List<Long> before = List.copyOf(ledger.keySet());
-            Descriptor descriptor = new Descriptor(
-                    transferId, preparation.owner(),
-                    preparation.mappingFrame(), preparation.requests());
-            ledger.put(transferId, descriptor);
-            buffer(transferId, "submitted", descriptor.owner(),
-                    descriptor.mappingFrame(), descriptor.requests(), before);
-            completeApplied(new ArtUpdate(true, transferId, List.of()),
-                    List.of(DynamicArtDiagnosticsSnapshot.Request.ram(
-                            PLAYER_PROFILES.get(GameId.S1).get("sonic")
-                                    .stagingRamAddress(),
-                            PLAYER_PROFILES.get(GameId.S1).get("sonic")
-                                    .vramDestination(),
-                            PLAYER_PROFILES.get(GameId.S1).get("sonic")
-                                    .stagingByteLength())));
+        // A held tail is released by the level's first main-loop row, which is
+        // announced, not observed here. An ordinary service therefore keeps
+        // its own row: whatever is still pending belongs to this V-blank.
+        preMainLoopTailRows = -1;
+        flushS1PreparationIfPending(movieLogicalFrame);
+        retireSubmittedTransfers();
+    }
+
+    /**
+     * Holds a staged S1 player DPLC preparation for the level routine's
+     * counted pre-main-loop tail.
+     *
+     * <p>The presentation boundary's object prelude staged the player's tiles
+     * and set {@code f_sonframechg}
+     * (docs/s1disasm/_incObj/01 Sonic.asm:2391-2398), but the V-int that
+     * performs the transfer is the first row of the {@code Level_Delay} /
+     * {@code PalFadeIn_Alt} tail that ends on the frame before
+     * {@code Level_MainLoop} (docs/s1disasm/sonic.asm:2956-2969). Every load
+     * step between the two — {@code Hud_Base}, {@code LevelDataLoad},
+     * {@code LoadTilesFromStart}, {@code ObjPosLoad} — is straight-line code
+     * with no wait of its own, so the transfer's row is fixed relative to the
+     * main loop and not to the boundary that prepared it. The engine reaches
+     * the main loop without spending those load rows, so the preparation waits
+     * here until the level's first main-loop V-int settles it.
+     *
+     * @param tailRows counted V-int rows between the transfer and the first
+     *                 main-loop row; zero settles at the boundary itself
+     */
+    public void holdPendingPlayerPreparationForPreMainLoopTail(int tailRows) {
+        requireRunActive();
+        if (tailRows < 0) {
+            throw new IllegalArgumentException("tailRows must be nonnegative");
         }
+        if (s1Preparation == null) {
+            return;
+        }
+        if (tailRows == 0) {
+            flushS1PreparationIfPending(movieLogicalFrame);
+            return;
+        }
+        preMainLoopTailRows = tailRows;
+        preMainLoopHoldBoundaryRow = movieLogicalFrame;
+    }
+
+    /**
+     * Settles a held pre-main-loop player transfer from the row that precedes
+     * the level's first main-loop row, i.e. the tail's last row.
+     *
+     * <p>A run admits a destination while the shared movie clock still reads
+     * the row the transition gap ended on; the level's first main-loop row is
+     * the next one, so the tail's first row — the transfer's — is
+     * {@code movieLogicalFrame + 1 - tailRows}.
+     */
+    public void settlePendingPlayerPreparationBeforeLevelMainLoop() {
+        requireRunActive();
+        if (preMainLoopTailRows < 0) {
+            // Nothing was staged for a tail: an ordinary submission still
+            // belongs to the V-blank that services it, not to this boundary.
+            return;
+        }
+        flushS1PreparationIfPending(Math.addExact(movieLogicalFrame, 1));
+    }
+
+    /**
+     * Settles a held pre-main-loop player transfer for a run that ends before
+     * the level reaches its main loop, so the tail's length can never be
+     * measured back from it. The transfer then takes the earliest row its tail
+     * can occupy: the row after the one the prelude staged it on.
+     */
+    public void releaseUnclaimedPreMainLoopPlayerTransfer() {
+        if (!runActive || preMainLoopTailRows < 0) {
+            return;
+        }
+        int boundaryRow = preMainLoopHoldBoundaryRow;
+        preMainLoopTailRows = -1;
+        flushS1PreparationIfPending(Math.addExact(boundaryRow, 1));
+    }
+
+    private void flushS1PreparationIfPending(int firstMainLoopRow) {
+        if (s1Preparation == null) {
+            preMainLoopTailRows = -1;
+            return;
+        }
+        int tailRows = Math.max(0, preMainLoopTailRows);
+        preMainLoopTailRows = -1;
+        int restore = movieLogicalFrame;
+        movieLogicalFrame = Math.max(0, firstMainLoopRow - tailRows);
+        try {
+            flushS1Preparation();
+        } finally {
+            movieLogicalFrame = restore;
+        }
+    }
+
+    private void flushS1Preparation() {
+        Preparation preparation = s1Preparation;
+        s1Preparation = null;
+        long transferId = nextTransferId++;
+        List<Long> before = List.copyOf(ledger.keySet());
+        Descriptor descriptor = new Descriptor(
+                transferId, preparation.owner(),
+                preparation.mappingFrame(),
+                comparisonSegmentOpen ? "segment" : "run_gap",
+                preparation.requests());
+        ledger.put(transferId, descriptor);
+        buffer(transferId, "submitted", descriptor.owner(),
+                descriptor.mappingFrame(), descriptor.requests(), before,
+                descriptor.submissionOrigin());
+        completeApplied(new ArtUpdate(true, transferId, List.of()),
+                List.of(DynamicArtDiagnosticsSnapshot.Request.ram(
+                        PLAYER_PROFILES.get(GameId.S1).get("sonic")
+                                .stagingRamAddress(),
+                        PLAYER_PROFILES.get(GameId.S1).get("sonic")
+                                .vramDestination(),
+                        PLAYER_PROFILES.get(GameId.S1).get("sonic")
+                                .stagingByteLength())));
+    }
+
+    /**
+     * Retires already-submitted transfers at the V-blank of the main-loop
+     * iteration that follows the last sampled frame
+     * (docs/s2disasm/s2.asm:5091 WaitForVint reaching ProcessDMAQueue at
+     * docs/s2disasm/s2.asm:1769). It deliberately does not flush art that a
+     * display pass has only staged into a RAM buffer: that art is not queued
+     * work yet (docs/s1disasm/_incObj/01 Sonic.asm:2392 Sonic_LoadGfx copies
+     * tiles into v_sgfx_buffer and merely sets f_sonframechg; the transfer
+     * itself is issued by the V-int at docs/s1disasm/sonic.asm:831), and the
+     * boundary this models ends before that issue.
+     */
+    public void serviceTerminalProductionVBlank() {
+        requireRunActive();
+        retireSubmittedTransfers();
+    }
+
+    /**
+     * Retires already-submitted transfers for a ROM object pass that finished
+     * BEFORE the V-int of the observation it is bound to. On hardware the
+     * pass ran during the preceding (lag) frame, so the V-blank that opens
+     * the bound observation had already run {@code ProcessDMAQueue}
+     * (docs/s2disasm/s2.asm:1769) over its queued work: the pass's
+     * submissions and completions surface on the same observation (stage-1
+     * special-stage fixture rows 435-436, pass 5 — completion cursor 435,
+     * bound row 436). Work queued by a later pass in the same observation
+     * stays pending, exactly as on hardware.
+     */
+    public void serviceVblankBeforeBoundObservation() {
+        requireRunActive();
+        retireSubmittedTransfers();
+    }
+
+    private void retireSubmittedTransfers() {
         List<Long> retiring = List.copyOf(pendingS2TransferIds);
         pendingS2TransferIds.clear();
         for (long transferId : retiring) {
@@ -443,13 +834,19 @@ public final class DynamicArtLifecycleService
             boolean lagged) {
         requireComparisonSegmentOpen();
         requirePublicationFrame(publicationFrame);
-        if (lagged) {
-            latest = new DynamicArtDiagnosticsSnapshot(
-                    publicationFrame, List.of(), publishedOutstanding,
-                    ++deliverySerial, segmentGeneration, true);
-            return latest;
-        }
-        latest = publishBuffered(publicationFrame, false);
+        // A ROM lag frame publishes a heartbeat with no edges, but the logical
+        // row cursor still advances: VBlank still ran and dispatched its lag
+        // handler (docs/s1disasm/sonic.asm:651-655 tst.b v_vblank_routine /
+        // beq.s VBlank_Lag, :709 VBlank_Lag; docs/s2disasm/s2.asm:484,513,529
+        // Vint_Lag) even though the main loop did not complete an iteration and
+        // v_framecount was not bumped (docs/s1disasm/sonic.asm:2995-2999). The
+        // logical frame is therefore the publication row index, not a count of
+        // non-lag iterations.
+        latest = lagged
+                ? new DynamicArtDiagnosticsSnapshot(
+                        publicationFrame, List.of(), publishedOutstanding,
+                        ++deliverySerial, segmentGeneration, true)
+                : publishBuffered(publicationFrame, false);
         logicalFrame++;
         nextLogicalEdgeIndex = 0;
         return latest;
@@ -468,20 +865,31 @@ public final class DynamicArtLifecycleService
         if (comparisonSegmentOpen) {
             publishRow(nextPublicationFrame++, lagged);
         }
-        movieLogicalFrame++;
+        if (!movieLogicalFrameSuppliedExternally) {
+            movieLogicalFrame++;
+        }
     }
 
     private DynamicArtDiagnosticsSnapshot publishBuffered(
             int publicationFrame,
             boolean terminalForwarded) {
+        return publishBuffered(publicationFrame, terminalForwarded, List.of());
+    }
+
+    private DynamicArtDiagnosticsSnapshot publishBuffered(
+            int publicationFrame,
+            boolean terminalForwarded,
+            List<DynamicArtDiagnosticsSnapshot.Edge> alreadyPublished) {
         List<DynamicArtDiagnosticsSnapshot.Edge> edges =
-                new ArrayList<>(bufferedEdges.size());
+                new ArrayList<>(alreadyPublished.size() + bufferedEdges.size());
+        edges.addAll(alreadyPublished);
         for (BufferedEdge edge : bufferedEdges) {
             edges.add(new DynamicArtDiagnosticsSnapshot.Edge(
                     edge.edgeOrdinal(), edge.transferId(), edge.phase(),
                     edge.owner(), edge.mappingFrame(), edge.logicalFrame(),
                     edge.logicalEdgeIndex(), publicationFrame,
-                    terminalForwarded, edge.requests()));
+                    terminalForwarded, edge.requests(),
+                    edge.submissionOrigin()));
         }
         bufferedEdges.clear();
         publishedOutstanding = List.copyOf(ledger.keySet());
@@ -517,11 +925,13 @@ public final class DynamicArtLifecycleService
                 pendingS2TransferIds, gapTransitions,
                 publishedOutstanding, latest.frame(), latest.edges(),
                 latest.outstandingTransferIds(), latest.published(),
-                s1Preparation, runActive,
+                s1Preparation, initialLoadPreparation, runActive,
                 comparisonSegmentOpen,
+                comparisonSegmentReserved,
                 nextTransferId, nextEdgeOrdinal,
                 logicalFrame, nextLogicalEdgeIndex, nextPublicationFrame,
-                movieLogicalFrame, nextGapEdgeIndex);
+                movieLogicalFrame, preMainLoopTailRows,
+                nextGapEdgeIndexByFrame.getOrDefault(movieLogicalFrame, 0));
     }
 
     @Override
@@ -545,15 +955,24 @@ public final class DynamicArtLifecycleService
                 snapshot.latestOutstandingTransferIds(), deliverySerial,
                 segmentGeneration, snapshot.latestPublished());
         s1Preparation = snapshot.s1Preparation();
+        initialLoadPreparation = snapshot.initialLoadPreparation();
         runActive = snapshot.runActive();
         comparisonSegmentOpen = snapshot.comparisonSegmentOpen();
+        comparisonSegmentReserved = snapshot.comparisonSegmentReserved();
         nextTransferId = snapshot.nextTransferId();
         nextEdgeOrdinal = snapshot.nextEdgeOrdinal();
         logicalFrame = snapshot.logicalFrame();
         nextLogicalEdgeIndex = snapshot.nextLogicalEdgeIndex();
         nextPublicationFrame = snapshot.nextPublicationFrame();
         movieLogicalFrame = snapshot.movieLogicalFrame();
-        nextGapEdgeIndex = snapshot.nextGapEdgeIndex();
+        preMainLoopTailRows = snapshot.preMainLoopTailRows();
+        // The snapshot carries the counter for the frame it was taken on,
+        // which is the only one a restore inside a gap can continue.
+        nextGapEdgeIndexByFrame.clear();
+        if (snapshot.nextGapEdgeIndex() > 0) {
+            nextGapEdgeIndexByFrame.put(
+                    movieLogicalFrame, snapshot.nextGapEdgeIndex());
+        }
     }
 
     @Override
@@ -568,18 +987,22 @@ public final class DynamicArtLifecycleService
         pendingS2TransferIds.clear();
         gapTransitions.clear();
         s1Preparation = null;
+        initialLoadPreparation = null;
         publishedOutstanding = List.of();
         latest = DynamicArtDiagnosticsSnapshot.unpublished(
                 deliverySerial, segmentGeneration);
         runActive = false;
         comparisonSegmentOpen = false;
+        comparisonSegmentReserved = false;
         nextTransferId = 0;
         nextEdgeOrdinal = 0;
         logicalFrame = 0;
         nextLogicalEdgeIndex = 0;
         nextPublicationFrame = 0;
         movieLogicalFrame = 0;
-        nextGapEdgeIndex = 0;
+        movieLogicalFrameSuppliedExternally = false;
+        preMainLoopTailRows = -1;
+        nextGapEdgeIndexByFrame.clear();
     }
 
     public boolean isSegmentArmed() {
@@ -594,24 +1017,31 @@ public final class DynamicArtLifecycleService
         return comparisonSegmentOpen;
     }
 
+    public boolean isComparisonSegmentReserved() {
+        return comparisonSegmentReserved;
+    }
+
     private void buffer(
             long transferId,
             String phase,
             String owner,
             int mappingFrame,
             List<DynamicArtDiagnosticsSnapshot.Request> requests,
-            List<Long> beforeOutstanding) {
+            List<Long> beforeOutstanding,
+            String submissionOrigin) {
         long edgeOrdinal = nextEdgeOrdinal++;
         if (comparisonSegmentOpen) {
             bufferedEdges.add(new BufferedEdge(edgeOrdinal, transferId,
                     phase, owner, mappingFrame, logicalFrame,
-                    nextLogicalEdgeIndex++, requests));
+                    nextLogicalEdgeIndex++, requests, submissionOrigin));
             return;
         }
         DynamicArtGapTransition.GapEdge edge =
                 new DynamicArtGapTransition.GapEdge(
                         edgeOrdinal, transferId, phase, owner,
-                mappingFrame, movieLogicalFrame, nextGapEdgeIndex++, requests);
+                mappingFrame, movieLogicalFrame,
+                nextGapEdgeIndexByFrame.merge(movieLogicalFrame, 1, Integer::sum) - 1,
+                requests);
         gapTransitions.add(new DynamicArtGapTransition(edge, beforeOutstanding,
                 List.copyOf(ledger.keySet())));
     }

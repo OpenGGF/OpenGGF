@@ -254,7 +254,7 @@ public class TestS2Ehz1Headless {
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             // Static object.
         }
     }

@@ -100,7 +100,7 @@ final class CnzEndBossMagnetChild extends AbstractObjectInstance
     public int getCentreY() { return centreY; }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (boss.isDestroyed()) {
             boss.unlinkMagnetChild(this);
             ObjectLifetimeOps.expireDynamic(this);
@@ -259,7 +259,7 @@ final class CnzEndBossMagnetChild extends AbstractObjectInstance
         int getCentreY() { return yFixed >> 8; }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             xFixed = S3kBossFlickerMove.integrate(xFixed, xVelocity);
             yFixed = S3kBossFlickerMove.integrate(yFixed, yVelocity);
             yVelocity += 0x38;

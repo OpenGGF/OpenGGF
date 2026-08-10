@@ -13,12 +13,15 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.SpawnAndCoordinateZeroScalarArgsRewindRecreatable;
 import com.openggf.level.objects.SpawnRewindRecreatable;
+import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.Knuckles;
+import com.openggf.sprites.playable.Tails;
 
 import java.util.List;
 
@@ -61,12 +64,14 @@ import java.util.List;
  * X offset/velocity negated when parent faces right. Alternates mapping frames
  * 2 and 3 every tick. Shield bounce deflectable (bit 3).
  */
-public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
+public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance
+        implements SpawnRewindRecreatable, TouchResponseListener {
 
     // --- Constants from ObjDat_Blastoid ---
 
     // collision_flags = $D7: size = $D7 & $3F = $17 (23)
     private static final int COLLISION_SIZE_INDEX = 0x17;
+    private static final int COLLISION_FLAGS = 0xD7;
 
     // dc.w $280 → priority bucket 5
     private static final int PRIORITY_BUCKET = 5;
@@ -75,6 +80,10 @@ public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance impl
 
     // loc_87952: cmpi.w #$80,d2
     private static final int DETECT_RANGE = 0x80;
+
+    // Obj_WaitOffscreen installs a $20-by-$20 placeholder and only restores
+    // Obj_Blastoid after Render_Sprites sets render_flags bit 7.
+    private static final int WAIT_OFFSCREEN_MARGIN = 0x20;
 
     // --- Projectile constants (ChildObjDat_879F8) ---
 
@@ -115,6 +124,10 @@ public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance impl
     // so re-entry to ATTACK always starts with timer=0 → immediate advance.
     private int animTimer;
     private int animIndex;
+    private boolean waitingForOnscreen = true;
+    private boolean placeholderRenderedOnscreen;
+    private boolean publishedTouchResponseListEntryThisFrame;
+    private int collisionProperty;
 
     public BlastoidBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Blastoid",
@@ -126,19 +139,163 @@ public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance impl
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
+        publishedTouchResponseListEntryThisFrame = false;
         if (isDestroyed()) return;
 
-        // Obj_WaitOffscreen parity: the ROM entry point begins with
-        // jsr (Obj_WaitOffscreen).l which suppresses all logic every frame
-        // until render_flags bit 7 (on-screen X) is set. Without this guard
-        // the ObjectManager's spawn window activates the Blastoid before it
-        // is visible, letting it detect the player and enter ATTACK early.
-        if (!isOnScreenX()) return;
+        // Obj_WaitOffscreen parity: the ROM entry point begins with a
+        // retained placeholder routine. The dispatch that observes the
+        // placeholder rendered on-screen only restores Obj_Blastoid and
+        // returns; Blastoid's normal routine resumes on the next pass.
+        if (waitingForOnscreen) {
+            if (!placeholderRenderedOnscreen) {
+                return;
+            }
+            placeholderRenderedOnscreen = false;
+            waitingForOnscreen = false;
+            return;
+        }
 
         switch (state) {
             case DETECT -> updateDetect((AbstractPlayableSprite) playerEntity);
             case ATTACK -> updateAttack();
+        }
+        // Obj_Blastoid calls Check_PlayerCollision after its state routine.
+        // Touch_Special has already latched the player selector in the
+        // collision property during the player pass.
+        processPendingTouch();
+        // Obj_Blastoid's normal tail is Sprite_CheckDeleteTouch, which adds
+        // the object to Collision_response_list after the wait routine has
+        // returned. The list is built from this per-pass publication state.
+        publishedTouchResponseListEntryThisFrame = true;
+    }
+
+    @Override
+    public void refreshPostCameraRenderState() {
+        if (waitingForOnscreen) {
+            placeholderRenderedOnscreen = isWithinRenderSpriteBounds(
+                    WAIT_OFFSCREEN_MARGIN, WAIT_OFFSCREEN_MARGIN);
+        }
+    }
+
+    @Override
+    public int getCollisionFlags() {
+        // Obj_WaitOffscreen returns before SetUp_ObjAttributes has been
+        // reached and before Sprite_CheckDeleteTouch can publish this object.
+        return waitingForOnscreen ? 0 : COLLISION_FLAGS;
+    }
+
+    @Override
+    public boolean publishesTouchResponseListEntryThisFrame() {
+        return publishedTouchResponseListEntryThisFrame;
+    }
+
+    @Override
+    public int getCollisionProperty() {
+        return collisionProperty;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return TouchResponseProfile.fromProvider(this);
+    }
+
+    @Override
+    public boolean usesS3kTouchSpecialPropertyResponse() {
+        // ObjDat_Blastoid uses collision_flags $D7. S3K Touch_Special handles
+        // size index $17 by incrementing collision_property rather than
+        // dispatching the generic boss response.
+        return true;
+    }
+
+    @Override
+    public boolean requiresContinuousTouchCallbacks() {
+        // Touch_Special is polled every frame while the overlap remains; the
+        // object consumes the resulting property on its next routine pass.
+        return true;
+    }
+
+    @Override
+    public void onTouchResponse(PlayableEntity player, TouchResponseResult result, int frameCounter) {
+        if (result.sizeIndex() != COLLISION_SIZE_INDEX || player == null) {
+            return;
+        }
+        PlayableEntity main = services().playerQuery().mainPlayerOrNull();
+        PlayableEntity nativeP2 = services().playerQuery().nativeP2OrNull();
+        if (player == main) {
+            collisionProperty = (collisionProperty + 1) & 0xFF;
+        } else if (player == nativeP2) {
+            collisionProperty = (collisionProperty + 2) & 0xFF;
+        }
+    }
+
+    /**
+     * ROM: {@code Check_PlayerCollision} selects the player from the latched
+     * property and {@code sub_879A8} immediately tests attack state before
+     * either defeating the Blastoid or calling {@code HurtCharacter_Directly}.
+     */
+    private void processPendingTouch() {
+        int property = collisionProperty & 0xFF;
+        if (property == 0) {
+            return;
+        }
+        collisionProperty = 0;
+
+        PlayableEntity target = property == 1
+                ? services().playerQuery().mainPlayerOrNull()
+                : services().playerQuery().nativeP2OrNull();
+        if (!(target instanceof AbstractPlayableSprite player)) {
+            return;
+        }
+
+        if (isPlayerAttacking(player)) {
+            int enemyY = currentY;
+            onPlayerAttack(player, null);
+            applyEnemyDefeatedBounce(player, enemyY);
+            return;
+        }
+        if (player.getInvulnerable()) {
+            return;
+        }
+
+        boolean hadRings = player.getRingCount() > 0;
+        player.applyHurtOrDeath(currentX, com.openggf.game.DamageCause.NORMAL, hadRings);
+    }
+
+    private boolean isPlayerAttacking(AbstractPlayableSprite player) {
+        // Check_PlayerAttack first accepts the invincible status and the raw
+        // spindash/roll animation IDs before character-specific abilities.
+        if (player.isSuperSonic()
+                || player.getInvincibleFrames() > 0
+                || player.getAnimationId() == 9
+                || player.getAnimationId() == 2) {
+            return true;
+        }
+        if (player instanceof Knuckles) {
+            int ability = player.getDoubleJumpFlag();
+            return ability == 1 || ability == 3;
+        }
+        if (player instanceof Tails tails) {
+            if (player.getDoubleJumpFlag() == 0 || tails.isInWater()) {
+                return false;
+            }
+            int dx = (short) (player.getCentreX() - currentX);
+            int dy = (short) (player.getCentreY() - currentY);
+            int angle = (int) Math.round(Math.atan2(dy, dx) * 128.0 / Math.PI) & 0xFF;
+            return ((angle - 0x20) & 0xFF) < 0x40;
+        }
+        return false;
+    }
+
+    private void applyEnemyDefeatedBounce(AbstractPlayableSprite player, int enemyY) {
+        // EnemyDefeated adjusts only y_vel; it does not set the air flag.
+        int ySpeed = player.getYSpeed();
+        if (ySpeed < 0) {
+            player.setYSpeed((short) (ySpeed + 0x100));
+        } else if (player.getCentreY() >= enemyY) {
+            player.setYSpeed((short) (ySpeed - 0x100));
+        } else {
+            player.setYSpeed((short) -ySpeed);
         }
     }
 
@@ -163,7 +320,11 @@ public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance impl
         // move.l #byte_87A10,$30(a0)  — reset animation script pointer
         // move.l #loc_879A0,$34(a0)   — set end-of-animation callback
         state = State.ATTACK;
-        animIndex = -1; // Will advance to 0 on first tick
+        // The ROM anim_frame is a byte offset into the pair table. It starts
+        // at zero, and Animate_RawMultiDelay advances it by two before
+        // loading the first entry, so the first attack pass loads frame 1
+        // and fires immediately.
+        animIndex = 0;
         // animTimer is NOT reset — ROM preserves anim_frame_timer across transitions
     }
 
@@ -245,7 +406,10 @@ public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance impl
         int finalXVel = xVel;
         ObjectServices svc = tryServices();
         if (svc != null && svc.objectManager() != null) {
-            spawnFreeChild(() -> new BlastoidProjectile(
+            // ROM CreateChild5_ComplexAdjusted uses AllocateObjectAfterCurrent,
+            // so the projectile burst occupies the slots immediately after
+            // this Blastoid in SST order.
+            spawnChild(() -> new BlastoidProjectile(
                     spawn,
                     currentX + finalXOff,
                     currentY + PROJECTILE_Y_OFFSET,
@@ -363,7 +527,7 @@ public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance impl
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             // Move_AnimateRaw → MoveSprite2: velocity to position, no gravity
             int xPos24 = (currentX << 8) | (xSubpixel & 0xFF);
             int yPos24 = (currentY << 8) | (ySubpixel & 0xFF);

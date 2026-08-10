@@ -38,7 +38,7 @@ public final class S3kIncLevelEndXGradualInstance extends AbstractObjectInstance
         return deferFirstUpdate;
     }
 
-    @Override public void update(int frameCounter, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         var camera = services().camera();
         camera.claimCustomMaxXBoundaryEasing();
         accumulator += ACCELERATION;

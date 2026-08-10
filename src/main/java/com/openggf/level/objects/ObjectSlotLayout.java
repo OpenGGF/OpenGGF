@@ -16,7 +16,17 @@ public record ObjectSlotLayout(
         boolean twoAxisCursorPlacement,
         boolean preallocatesLostRingOwnerSlot,
         boolean lostRingRemainderAllocatesAfterOwnerSlot) {
-    public static final ObjectSlotLayout SONIC_1 = new ObjectSlotLayout(32, 96);
+    // S1 HurtSonic reserves the Obj37 owner slot with FindFreeObj and only stamps
+    // id_RingLoss into it; v_rings is untouched when HurtSonic returns
+    // (docs/s1disasm/_incObj/Sonic ReactToItem.asm:375-387). The clear happens in the
+    // owner's own routine 0: RLoss_Count -> .resetcounter -> move.w #0,(v_rings).w
+    // (docs/s1disasm/_incObj/25, 37 Rings.asm:234,250-251,297-298), so it lands the same
+    // frame only when the object loop still reaches that slot. FindFreeObj scans upward
+    // from v_lvlobjspace (docs/s1disasm/_incObj/sub FindFreeObj.asm:10-20), so a hit
+    // taken inside a higher-numbered object's own tick — Obj36 Spikes calling HurtSonic
+    // (docs/s1disasm/_incObj/36 Spikes.asm:129-154) — leaves the owner behind the live
+    // cursor and slips both the spill and the ring clear to the next pass.
+    public static final ObjectSlotLayout SONIC_1 = new ObjectSlotLayout(32, 96, false, true);
     // S2 HurtCharacter allocates the first Obj37 owner slot before Obj37_Init
     // fills the spill with plain AllocateObject from that owner
     // (docs/s2disasm/s2.asm:85444-85461, 25125-25146).

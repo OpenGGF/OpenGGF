@@ -18,6 +18,125 @@ class TestDynamicArtLifecycleService {
     private static final int SONIC_VRAM = 0xF000;
 
     @Test
+    void freshPlayablePrimeUpdatesTheDedupeBankWithoutPublishingAnEdge() {
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        startOpen(service);
+        SpriteDplcFrame frame = new SpriteDplcFrame(
+                List.of(new TileLoadRequest(0, 3)));
+
+        DynamicArtLifecycleService.ArtUpdate prime =
+                service.primePlayerDplc(
+                        GameId.S1, "sonic", 1, frame);
+        DynamicArtLifecycleService.ArtUpdate repeated =
+                service.observePlayerDplc(
+                        GameId.S1, "sonic", 1, frame);
+        service.finishProductionIteration(false);
+
+        assertTrue(prime.mappingChanged());
+        assertEquals(frame.requests(), prime.tileRequests());
+        assertFalse(repeated.mappingChanged());
+        assertTrue(service.latestSnapshot().edges().isEmpty());
+    }
+
+    @Test
+    void consumedDestinationRowsAdvanceOnlyTheComparisonCursor() {
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        startOpen(service);
+        int movieFrameBefore = service.gapSnapshot().movieLogicalFrame();
+
+        service.advanceComparisonCursor(1);
+        service.finishProductionIteration(false);
+
+        assertEquals(1, service.latestSnapshot().frame());
+        assertEquals(movieFrameBefore + 1,
+                service.gapSnapshot().movieLogicalFrame(),
+                "the consumed row already advanced the run clock in the preceding gap");
+    }
+
+    @Test
+    void reservedComparisonSegmentOwnsGenerationBeforeActivation() {
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        startOpen(service);
+        service.finishProductionIteration(false);
+        service.closeComparisonSegment();
+        long automaticGeneration =
+                service.latestSnapshot().segmentGeneration();
+
+        service.reserveComparisonSegment();
+        DynamicArtDiagnosticsSnapshot reserved = service.latestSnapshot();
+
+        assertTrue(service.isComparisonSegmentReserved());
+        assertFalse(service.isComparisonSegmentOpen());
+        assertFalse(reserved.published());
+        assertEquals(automaticGeneration + 1,
+                reserved.segmentGeneration());
+
+        service.activateReservedComparisonSegment();
+        service.finishProductionIteration(false);
+
+        assertFalse(service.isComparisonSegmentReserved());
+        assertTrue(service.isComparisonSegmentOpen());
+        assertEquals(0, service.latestSnapshot().frame());
+        assertEquals(reserved.segmentGeneration(),
+                service.latestSnapshot().segmentGeneration(),
+                "activation and row zero must retain the reserved generation");
+    }
+
+    @Test
+    void reservedComparisonSegmentRejectsInvalidTransitionsAtomically() {
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        service.beginRun();
+        service.reserveComparisonSegment();
+        long generation = service.latestSnapshot().segmentGeneration();
+
+        assertThrows(IllegalStateException.class,
+                service::reserveComparisonSegment);
+        assertEquals(generation,
+                service.latestSnapshot().segmentGeneration());
+
+        service.observeRomDplc("sonic", 1,
+                List.of(new TileLoadRequest(0, 1)), SONIC_ART, SONIC_VRAM);
+        assertThrows(IllegalStateException.class,
+                service::activateReservedComparisonSegment);
+        assertTrue(service.isComparisonSegmentReserved());
+        assertEquals(generation,
+                service.latestSnapshot().segmentGeneration());
+    }
+
+    @Test
+    void cancellingAndRewindingReservedComparisonSegmentNeverPublishesIt() {
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        service.beginRun();
+        service.reserveComparisonSegment();
+        DynamicArtLifecycleService.RewindState reserved = service.capture();
+        long generation = service.latestSnapshot().segmentGeneration();
+
+        service.activateReservedComparisonSegment();
+        service.finishProductionIteration(false);
+        service.restore(reserved);
+
+        assertTrue(service.isComparisonSegmentReserved());
+        assertFalse(service.isComparisonSegmentOpen());
+        assertFalse(service.latestSnapshot().published());
+        assertEquals(generation,
+                service.latestSnapshot().segmentGeneration());
+
+        service.activateReservedComparisonSegment();
+        assertEquals(generation,
+                service.latestSnapshot().segmentGeneration());
+        service.abandonComparisonSegment();
+
+        service.reserveComparisonSegment();
+        long cancelledGeneration =
+                service.latestSnapshot().segmentGeneration();
+        service.cancelReservedComparisonSegment();
+        assertFalse(service.isComparisonSegmentReserved());
+        assertFalse(service.latestSnapshot().published());
+        assertEquals(cancelledGeneration,
+                service.latestSnapshot().segmentGeneration());
+    }
+
+    @Test
     void duplicateAndEmptyDplcsAdvanceTheOwnerCursorWithoutSubmittingWork() {
         DynamicArtLifecycleService service = new DynamicArtLifecycleService();
         startOpen(service);
@@ -160,6 +279,55 @@ class TestDynamicArtLifecycleService {
     }
 
     @Test
+    void terminalVblankCompletionExtendsTheLastPublishedRow() {
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        startOpen(service);
+        DynamicArtLifecycleService.ArtUpdate pending =
+                service.observePlayerDplc(GameId.S2, "sonic", 1,
+                        new SpriteDplcFrame(List.of(new TileLoadRequest(0, 1))));
+        service.finishProductionIteration(false);
+
+        // The main-loop iteration after the last sampled frame still services
+        // its V-int (docs/s2disasm/s2.asm:5091 WaitForVint ->
+        // docs/s2disasm/s2.asm:1769 ProcessDMAQueue), retiring the transfer
+        // submitted on that frame.
+        service.serviceTerminalProductionVBlank();
+        service.closeComparisonSegment();
+
+        DynamicArtDiagnosticsSnapshot terminal = service.latestSnapshot();
+        assertEquals(0, terminal.frame());
+        assertEquals(List.of("submitted", "completed"),
+                terminal.edges().stream()
+                        .map(DynamicArtDiagnosticsSnapshot.Edge::phase).toList());
+        assertFalse(terminal.edges().getFirst().terminalForwarded());
+        assertTrue(terminal.edges().getLast().terminalForwarded());
+        assertEquals(0, terminal.edges().getLast().publicationFrame());
+        assertEquals(1, terminal.edges().getLast().logicalFrame());
+        assertEquals(pending.transferId(),
+                terminal.edges().getLast().transferId());
+        assertTrue(terminal.outstandingTransferIds().isEmpty());
+    }
+
+    @Test
+    void terminalVblankLeavesStagedArtUnsubmitted() {
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        startOpen(service);
+        service.observePlayerDplc(GameId.S1, "sonic", 1,
+                new SpriteDplcFrame(List.of(new TileLoadRequest(0, 1))));
+        service.finishProductionIteration(false);
+
+        // Staged-only art is not queued work
+        // (docs/s1disasm/_incObj/01 Sonic.asm:2392 Sonic_LoadGfx writes
+        // v_sgfx_buffer and sets f_sonframechg; the V-int issues the transfer
+        // at docs/s1disasm/sonic.asm:831), so the terminal boundary emits none.
+        service.serviceTerminalProductionVBlank();
+        service.closeComparisonSegment();
+
+        assertTrue(service.latestSnapshot().edges().isEmpty());
+        assertTrue(service.latestSnapshot().outstandingTransferIds().isEmpty());
+    }
+
+    @Test
     void closingCannotInventATerminalRowBeforeAnyProductionIteration() {
         DynamicArtLifecycleService service = new DynamicArtLifecycleService();
         startOpen(service);
@@ -168,6 +336,37 @@ class TestDynamicArtLifecycleService {
 
         assertThrows(IllegalStateException.class,
                 service::closeComparisonSegment);
+    }
+
+    @Test
+    void abandoningUnpublishedWindowPreservesProductionIdentityAndPendingWork() {
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        startOpen(service);
+        DynamicArtLifecycleService.ArtUpdate pending = service.observeRamDplc(
+                GameId.S2, "sonic", 1,
+                List.of(new TileLoadRequest(0, 1)), 0x1000, SONIC_VRAM);
+
+        service.abandonComparisonSegment();
+
+        assertFalse(service.isComparisonSegmentOpen());
+        assertFalse(service.observeRamDplc(
+                GameId.S2, "sonic", 1,
+                List.of(new TileLoadRequest(0, 1)), 0x1000, SONIC_VRAM)
+                .submitted(), "mapping identity must prevent duplicate submission");
+        assertEquals(List.of(pending.transferId()),
+                service.gapSnapshot().ledger().stream()
+                        .map(DynamicArtGapDiagnosticsSnapshot.Descriptor::transferId)
+                        .toList());
+
+        service.serviceProductionVBlank();
+        assertTrue(service.gapSnapshot().ledger().isEmpty(),
+                "pre-abort pending work must retire at its normal VBlank");
+        service.openComparisonSegment();
+        DynamicArtLifecycleService.ArtUpdate next = service.observeRamDplc(
+                GameId.S2, "sonic", 2,
+                List.of(new TileLoadRequest(1, 1)), 0x1000, SONIC_VRAM);
+        assertEquals(pending.transferId() + 1, next.transferId(),
+                "abandon must preserve stable monotonic transfer identities");
     }
 
     @Test
@@ -387,6 +586,24 @@ class TestDynamicArtLifecycleService {
                 service.observePlayerDplc(GameId.S2, "tails", 5,
                         new SpriteDplcFrame(List.of(new TileLoadRequest(1, 1))));
         assertFalse(duplicate.mappingChanged());
+    }
+
+    @Test
+    void immutableGapLedgerPreservesProductionSubmissionOrigin() {
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        service.beginRun();
+
+        service.observePlayerDplc(GameId.S2, "sonic", 9,
+                new SpriteDplcFrame(List.of(new TileLoadRequest(2, 1))));
+
+        DynamicArtGapDiagnosticsSnapshot.Descriptor pending =
+                service.gapSnapshot().ledger().getFirst();
+        assertEquals("run_gap", pending.submissionOrigin());
+
+        service.openComparisonSegment();
+        assertEquals("run_gap",
+                service.gapSnapshot().ledger().getFirst().submissionOrigin(),
+                "opening a destination must not relabel pending gap work");
     }
 
     @Test

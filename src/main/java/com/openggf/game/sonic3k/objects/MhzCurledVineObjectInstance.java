@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SlopedSolidProvider;
@@ -57,6 +58,7 @@ public final class MhzCurledVineObjectInstance extends AbstractObjectInstance
     private final int[] segmentXs = new int[SEGMENT_COUNT];
     private final int[] segmentYs = new int[SEGMENT_COUNT];
     private boolean hFlip;
+    private boolean displayChildSlotReserved;
     private int curveState = INITIAL_CURVE_STATE;
     private int rangeWidth = INITIAL_RANGE_WIDTH;
 
@@ -72,11 +74,30 @@ public final class MhzCurledVineObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        reserveDisplayChildSlot();
         int tableIndex = selectStandingTableIndex();
         rangeWidth = RANGE_WIDTHS[tableIndex];
         curveState = approachCurveState(curveState, CURVE_TARGETS[tableIndex]);
         updateSegmentPositions();
+    }
+
+    @Override
+    public int getReservedChildSlotCount() {
+        return 1;
+    }
+
+    private void reserveDisplayChildSlot() {
+        if (displayChildSlotReserved || getSlotIndex() < 0) {
+            return;
+        }
+        ObjectServices objectServices = tryServices();
+        if (objectServices == null || objectServices.objectManager() == null) {
+            return;
+        }
+        displayChildSlotReserved = true;
+        objectServices.objectManager().allocateChildSlotsAfter(
+                spawn, getReservedChildSlotCount(), getSlotIndex());
     }
 
     @Override

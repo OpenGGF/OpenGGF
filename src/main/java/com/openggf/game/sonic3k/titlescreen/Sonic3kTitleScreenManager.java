@@ -146,13 +146,25 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
     private int palTransitionStep = 0;
 
     /**
-     * Per-frame durations for each animation step (indices 0-10 in SONIC_FRAME_INDEX_TABLE).
-     * Measured from the original hardware: frame 1=16, 2=4, 3=4, 4=4, 5=4, 6=6,
-     * 7=16, 8=12, 9=12, 10=10, 11=3 then white flash.
+     * Reload value written to {@code Title_anim_delay} by {@code TitleAnim_FlipBuffer}
+     * (skdisasm/sonic3k.asm:5746 and :5749, {@code move.b #4-1,(Title_anim_delay).w}).
+     *
+     * <p>The ROM owns no per-frame duration table for the title Sonic animation.
+     * {@code TitleAnim_FlipBuffer} runs as V_int routine 4 once per
+     * {@code Wait_TitleS3K} iteration (sonic3k.asm:5533-5536): when the counter
+     * reads zero it flips the makeshift double buffer and reloads 3, otherwise it
+     * decrements (loc_43AC, sonic3k.asm:5771-5772).
+     * {@code Iterate_TitleSonicFrame} then advances to the next frame only on the
+     * iteration where the counter reads 1 (sonic3k.asm:5793). Reload-3 plus that
+     * single-value test gives a uniform four-iteration cadence for every step of
+     * {@code SonicFrameIndex}, not the varying durations a hardware capture shows.
+     * The variation visible on real hardware comes from the synchronous
+     * {@code Kos_Decomp} inside {@code TitleSonic_LoadFrame} (sonic3k.asm:5834)
+     * overrunning a frame for the larger frames -- a decompression-timing effect,
+     * which under the hardware-timing trace contract belongs to the Kosinski
+     * pipeline, never to a transcribed duration table.
      */
-    private static final int[] ANIM_FRAME_DURATIONS = {
-            16, 4, 4, 4, 4, 6, 16, 12, 12, 10, 3
-    };
+    private static final int TITLE_ANIM_DELAY_RELOAD = 4 - 1;
 
     /** Duration of the white flash (frames). */
     private static final int WHITE_FLASH_DURATION = 8;
@@ -184,7 +196,11 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
     /** Current animation frame index (1-based, 1 through 0xD). */
     private int currentAnimFrame = 1;
 
-    /** Frames remaining before advancing to the next animation frame. */
+    /**
+     * ROM {@code Title_anim_delay} (sonic3k.constants.asm:953). Reloaded by
+     * {@code TitleAnim_FlipBuffer} and decremented once per title-loop iteration;
+     * {@code Iterate_TitleSonicFrame} advances the frame when it reads 1.
+     */
     private int animFrameTimer = 0;
 
     /** Whether SEGA sound has been played. */
@@ -620,15 +636,20 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
             return;
         }
 
-        animFrameTimer++;
+        // TitleAnim_FlipBuffer, V_int routine 4 (sonic3k.asm:5744-5772). Zero
+        // reloads the delay (and, on hardware, flips the nametable buffer and
+        // copies Target_palette over Normal_palette); anything else decrements.
+        // The buffer flip itself is not modelled here -- the engine draws the
+        // cached frame directly rather than alternating two nametables.
+        if (animFrameTimer == 0) {
+            animFrameTimer = TITLE_ANIM_DELAY_RELOAD;
+        } else {
+            animFrameTimer--;
+        }
 
-        // Look up duration for current animation step from the measured table
-        int frameDuration = (animTableIndex < ANIM_FRAME_DURATIONS.length)
-                ? ANIM_FRAME_DURATIONS[animTableIndex]
-                : 4; // fallback
-
-        if (animFrameTimer >= frameDuration) {
-            animFrameTimer = 0;
+        // Iterate_TitleSonicFrame (sonic3k.asm:5792-5800): advance only on the
+        // iteration where Title_anim_delay reads exactly 1.
+        if (animFrameTimer == 1) {
             animTableIndex++;
 
             if (animTableIndex >= SONIC_FRAME_INDEX_TABLE.length) {

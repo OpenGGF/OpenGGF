@@ -41,7 +41,7 @@ public final class FbzEndEggCapsuleAnimalInstance extends AbstractObjectInstance
         mappingBase=((definition.mappingSet().ordinal()*2)+artVariant)*3;
     }
 
-    @Override public void update(int frameCounter, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         if (!initialized) { initializeNative(); return; }
         activeUpdates++;
         if (!active) {
@@ -58,7 +58,7 @@ public final class FbzEndEggCapsuleAnimalInstance extends AbstractObjectInstance
             yVelocity=savedYVelocity;
             retargetAfterNegativeFloorHit();
         }
-        mappingFrame=(frameCounter&8)==0?1:0;
+        mappingFrame=(vIntRunCount&8)==0?1:0;
         coarseXCull(x,0x280);
     }
     @Override public int getX(){return x;}

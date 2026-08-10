@@ -143,7 +143,7 @@ public class GrounderBadnikInstance extends AbstractBadnikInstance implements Re
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (state) {
             case INIT -> updateInit();
@@ -404,7 +404,7 @@ public class GrounderBadnikInstance extends AbstractBadnikInstance implements Re
     }
 
     @Override
-    protected void updateAnimation(int frameCounter) {
+    protected void updateAnimation(int vIntRunCount) {
         switch (state) {
             case INIT, DETECTION -> {
                 // Static frame (hidden or not yet detected)
@@ -412,7 +412,7 @@ public class GrounderBadnikInstance extends AbstractBadnikInstance implements Re
             }
             case IDLE_ANIMATE -> {
                 // Idle animation: frames 0,1, duration 7
-                animFrame = ((frameCounter / IDLE_ANIM_DURATION) % 2 == 0) ? FRAME_IDLE_1 : FRAME_IDLE_2;
+                animFrame = ((vIntRunCount / IDLE_ANIM_DURATION) % 2 == 0) ? FRAME_IDLE_1 : FRAME_IDLE_2;
             }
             case MOVEMENT_SETUP, MOVEMENT, ROCK_THROW -> {
                 // Walking animation: frames 2,3,4, duration 3

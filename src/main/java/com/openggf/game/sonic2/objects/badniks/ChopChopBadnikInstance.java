@@ -102,11 +102,11 @@ public class ChopChopBadnikInstance extends AbstractBadnikInstance implements Re
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (state) {
-            case PATROLLING -> updatePatrolling(frameCounter, player);
-            case WAITING -> updateWaiting(frameCounter, player);
+            case PATROLLING -> updatePatrolling(vIntRunCount, player);
+            case WAITING -> updateWaiting(vIntRunCount, player);
             case CHARGING -> updateCharging(player);
         }
     }
@@ -117,7 +117,7 @@ public class ChopChopBadnikInstance extends AbstractBadnikInstance implements Re
      * - Switch direction every 512 frames
      * - Check for player detection
      */
-    private void updatePatrolling(int frameCounter, AbstractPlayableSprite player) {
+    private void updatePatrolling(int vIntRunCount, AbstractPlayableSprite player) {
         if (initFrame) {
             // Obj91_Init (s2.asm:73672-73684) sets timers/x_vel and returns.
             // Obj91_Main's ObjectMove starts on the following ExecuteObjects pass.
@@ -187,7 +187,7 @@ public class ChopChopBadnikInstance extends AbstractBadnikInstance implements Re
      * The ROM waits while the byte timer is >= 0 and only crosses into
      * Obj91_MoveTowardsPlayer when the decrement makes it negative.
      */
-    private void updateWaiting(int frameCounter, AbstractPlayableSprite player) {
+    private void updateWaiting(int vIntRunCount, AbstractPlayableSprite player) {
         waitTimer--;
         if (waitTimer < 0) {
             // Obj91_MoveTowardsPlayer (s2.asm:73664-73675) runs ONCE at the
@@ -335,17 +335,17 @@ public class ChopChopBadnikInstance extends AbstractBadnikInstance implements Re
     }
 
     @Override
-    protected void updateAnimation(int frameCounter) {
+    protected void updateAnimation(int vIntRunCount) {
         // Animation based on state and frame counter
         // Frame 0 = mouth closed, Frame 1 = mouth open
         switch (state) {
             case PATROLLING -> {
                 // Slow animation during patrol
-                animFrame = ((frameCounter >> 3) & 1); // Toggle every 8 frames
+                animFrame = ((vIntRunCount >> 3) & 1); // Toggle every 8 frames
             }
             case WAITING -> {
                 // Fast mouth animation during wait
-                animFrame = ((frameCounter >> 2) & 1); // Toggle every 4 frames
+                animFrame = ((vIntRunCount >> 2) & 1); // Toggle every 4 frames
             }
             case CHARGING -> {
                 // Mouth open during charge

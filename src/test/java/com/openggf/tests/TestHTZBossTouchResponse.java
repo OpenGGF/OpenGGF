@@ -114,7 +114,7 @@ public class TestHTZBossTouchResponse {
     }
 
     @Test
-    public void firstFleeFrameStagesCameraReleaseForNextFrame() throws Exception {
+    public void firstFleeFrameAlsoAdvancesCameraRelease() throws Exception {
         boss.getState().defeated = true;
         boss.getState().routineSecondary = 8;
         writePrivateInt(boss, "defeatTimer", -0x3B);
@@ -125,14 +125,17 @@ public class TestHTZBossTouchResponse {
         objectManager.addDynamicObject(boss);
         objectManager.update(GameServices.camera().getX(), player, List.of(), 1);
 
+        // ROM Obj52_Mobile_Flee (docs/s2disasm/s2.asm:64598-64606) falls through to
+        // loc_30170 (docs/s2disasm/s2.asm:64608-64612) in the SAME frame it sets
+        // Boss_defeated_flag, so y_pos and Camera_Max_X_pos advance immediately.
         assertTrue(GameServices.gameState().isBossDefeatedFlag());
-        assertEquals(initialY, boss.getState().y);
-        assertEquals((short) 0x2F5E, GameServices.camera().getMaxX());
+        assertEquals(initialY + 2, boss.getState().y);
+        assertEquals((short) 0x2F60, GameServices.camera().getMaxX());
 
         objectManager.update(GameServices.camera().getX(), player, List.of(), 2);
 
-        assertEquals(initialY + 2, boss.getState().y);
-        assertEquals((short) 0x2F60, GameServices.camera().getMaxX());
+        assertEquals(initialY + 4, boss.getState().y);
+        assertEquals((short) 0x2F62, GameServices.camera().getMaxX());
     }
 
     @Test

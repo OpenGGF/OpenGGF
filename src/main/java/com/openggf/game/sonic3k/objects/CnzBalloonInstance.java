@@ -112,7 +112,7 @@ public final class CnzBalloonInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (isDestroyed()) {
             return;
         }
@@ -121,7 +121,7 @@ public final class CnzBalloonInstance extends AbstractObjectInstance
         int dispatchCounter = getSlotIndex() >= 0
                 && objectServices != null && objectServices.objectManager() != null
                 ? objectServices.objectManager().getFrameCounter()
-                : frameCounter;
+                : vIntRunCount;
         if (pendingUnderwaterBubblerSpawn) {
             pendingUnderwaterBubblerSpawn = false;
             spawnUnderwaterBubblerChildren();
@@ -285,16 +285,26 @@ public final class CnzBalloonInstance extends AbstractObjectInstance
     }
 
     private void spawnUnderwaterBubblerChildren() {
-        for (int childSubtype : UNDERWATER_BUBBLER_CHILD_SUBTYPES) {
+        for (int childIndex = 0; childIndex < UNDERWATER_BUBBLER_CHILD_SUBTYPES.length; childIndex++) {
+            int childSubtype = UNDERWATER_BUBBLER_CHILD_SUBTYPES[childIndex];
             int random = services().rng().nextWord();
             int offset = (random & 0x0F) - 8;
             int childX = getX() + offset;
             int childY = getY() + offset;
+            if (childIndex == UNDERWATER_BUBBLER_CHILD_SUBTYPES.length - 1) {
+                // After the fourth sub_3181E call, a1 still addresses that child.
+                // Retail's intended player-position snap therefore overwrites the
+                // fourth bubble's random offset with the balloon position.
+                childX = getX();
+                childY = getY();
+            }
+            final int spawnX = childX;
+            final int spawnY = childY;
             // sub_3181E uses AllocateObject for each Obj_Bubbler child, so these
             // effects consume the lowest free SST slots before later placement
             // loads (docs/skdisasm/sonic3k.asm:66829-66841).
             spawnFreeChild(() -> new BubblerObjectInstance(
-                    new ObjectSpawn(childX, childY, 0x54, childSubtype, 0, false, 0)));
+                    new ObjectSpawn(spawnX, spawnY, 0x54, childSubtype, 0, false, 0)));
         }
     }
 
@@ -349,9 +359,19 @@ public final class CnzBalloonInstance extends AbstractObjectInstance
             animationTimer = POP_FRAME_DELAY;
             frameOffset = POP_FRAME_SEQUENCE[popAnimationIndex++];
         } else {
-            // ROM Anim - Balloon.asm pop sequences end with $FB. The S3K animator
-            // ($FB code) increments routine and the next frame moves x_pos to
-            // $7F00, where Sprite_CheckDeleteTouch3 (sonic3k.asm:37369) calls
+            // ROM Anim - Balloon.asm pop sequences end with $FB, and Animate_Sprite's
+            // $FB handler writes x_pos = $7F00 itself (sonic3k.asm:36223-36227).
+            //
+            // FixBugs audit (docs/skdisasm/sonic3k.asm:38, assembled as 0): the
+            // follow-up test at loc_31776 (sonic3k.asm:66786-66793) reads
+            // `tst.b routine` — absolute address $000024, a vector-table byte that
+            // is $00 in the retail ROM — instead of `tst.b routine(a0)`. Both
+            // branches are behaviourally identical here: the balloon animation never
+            // uses code $FC, so routine(a0) also stays 0 and neither branch takes the
+            // second x_pos write. Audited, no divergence; the engine's $FB-driven
+            // offscreen move is the shipped outcome.
+            //
+            // Sprite_CheckDeleteTouch3 (sonic3k.asm:37369) then calls
             // Delete_Current_Sprite only when the normal offscreen test later
             // decides the balloon is past the camera margin.
             movedOffscreen = true;

@@ -55,9 +55,31 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
     private static final int STATE_PRE_TALLY_DELAY = 1;
     private static final int STATE_RING_TALLY = 2;
     private static final int STATE_POST_TALLY_DELAY = 3;
+    private static final int STATE_CONTINUE_JINGLE = 4;
+    private static final int STATE_CONTINUE_DELAY = 5;
     private static final int SLIDE_SPEED_PIXELS_PER_FRAME = 16;
     private static final int PRE_TALLY_DELAY_FRAMES = 180;
     private static final int POST_TALLY_DELAY_FRAMES = 180;
+    /**
+     * ROM {@code SSR_RingBonus.finished}
+     * ("_incObj/7E, 7F Special Stage Results and Chaos Emeralds.asm":143-151):
+     * with {@code ss_continue_rings} or more rings the card does NOT take the
+     * plain three-second exit wait. {@code SSR_Wait} counts one second,
+     * {@code SSR_Continue} spends a frame of its own on the jingle and the
+     * mini-Sonic element, and {@code SSR_Wait} then counts six more seconds --
+     * 421 frames where the ordinary path spends 180.
+     * <p>
+     * The recorded bridge confirms each boundary. Its aux stream shows the
+     * card's root object appearing on frame 67, the remaining FIVE elements
+     * (four plus the continue tally, {@code SSR_Loop}'s {@code addq.w #1,d1})
+     * on frame 85, and the emerald object that {@code SSR_Move.reachedXTarget}
+     * spawns on frame 121: an 18-frame {@code SSR_ChkPLC} and a 36-frame
+     * slide, which with these waits accounts for all 800 rows.
+     */
+    private static final int CONTINUE_RINGS = 50;
+    private static final int PRE_CONTINUE_DELAY_FRAMES = 60;
+    private static final int CONTINUE_JINGLE_FRAMES = 1;
+    private static final int POST_CONTINUE_DELAY_FRAMES = 360;
     private static final int TALLY_DECREMENT = 10;
     private static final int TALLY_TICK_INTERVAL = 4;
 
@@ -123,7 +145,9 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
     private final Scenario scenario;
     private final int stageIndex;
 
+    private final int ringsCollected;
     private int state = STATE_SLIDE_IN;
+    private boolean continueAwarded;
     private int stateTimer;
     private int totalFrames;
     private boolean complete;
@@ -154,7 +178,8 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
     public Sonic1SpecialStageResultsScreen(int ringsCollected, boolean gotEmerald,
             int stageIndex, int totalEmeraldCount) {
         this.stageIndex = stageIndex;
-        this.ringBonus = Math.max(0, ringsCollected) * 10;
+        this.ringsCollected = Math.max(0, ringsCollected);
+        this.ringBonus = this.ringsCollected * 10;
         if (!gotEmerald) {
             this.scenario = Scenario.FAILED_TO_GET_EMERALD;
             this.textX = TEXT_START_X;
@@ -193,6 +218,8 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
             case STATE_PRE_TALLY_DELAY -> updatePreTallyDelay();
             case STATE_RING_TALLY -> updateRingTally();
             case STATE_POST_TALLY_DELAY -> updatePostTallyDelay();
+            case STATE_CONTINUE_JINGLE -> updateContinueJingle();
+            case STATE_CONTINUE_DELAY -> updateContinueDelay();
             default -> complete = true;
         }
     }
@@ -235,8 +262,55 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
     }
 
     private void updatePostTallyDelay() {
-        if (stateTimer >= POST_TALLY_DELAY_FRAMES) {
+        if (stateTimer < postTallyDelayFrames()) {
+            return;
+        }
+        if (ringsCollected < CONTINUE_RINGS) {
             complete = true;
+            return;
+        }
+        state = STATE_CONTINUE_JINGLE;
+        stateTimer = 0;
+    }
+
+    /** One second before the continue jingle, three seconds without one. */
+    private int postTallyDelayFrames() {
+        return ringsCollected >= CONTINUE_RINGS
+                ? PRE_CONTINUE_DELAY_FRAMES : POST_TALLY_DELAY_FRAMES;
+    }
+
+    /**
+     * {@code SSR_Continue}, which owns a frame of its own before the six-second
+     * wait it arms. The continue itself was already awarded inside the stage
+     * ("_incObj/09 Sonic in Special Stage.asm":638), so this owns only the
+     * jingle, the mini-Sonic element, and that frame.
+     */
+    private void updateContinueJingle() {
+        if (stateTimer < CONTINUE_JINGLE_FRAMES) {
+            return;
+        }
+        continueAwarded = true;
+        playContinueSound();
+        state = STATE_CONTINUE_DELAY;
+        stateTimer = 0;
+    }
+
+    private void updateContinueDelay() {
+        if (stateTimer >= POST_CONTINUE_DELAY_FRAMES) {
+            complete = true;
+        }
+    }
+
+    /** True once the continue jingle has played, for the mini-Sonic element. */
+    public boolean isContinueAwarded() {
+        return continueAwarded;
+    }
+
+    private void playContinueSound() {
+        try {
+            GameServices.audio().playSfx(Sonic1Sfx.GOT_CONTINUE.id);
+        } catch (RuntimeException e) {
+            // Audio failure must not stall the card's timing.
         }
     }
 

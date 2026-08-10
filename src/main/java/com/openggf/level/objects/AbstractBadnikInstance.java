@@ -54,12 +54,12 @@ public abstract class AbstractBadnikInstance extends AbstractObjectInstance
     }
 
     @Override
-    public final void update(int frameCounter, PlayableEntity player) {
+    public final void update(int vIntRunCount, PlayableEntity player) {
         if (isDestroyed()) {
             return;
         }
-        updateMovement(frameCounter, player);
-        updateAnimation(frameCounter);
+        updateMovement(vIntRunCount, player);
+        updateAnimation(vIntRunCount);
         updateDynamicSpawn(resolveDynamicSpawnX(), resolveDynamicSpawnY());
     }
 
@@ -93,13 +93,13 @@ public abstract class AbstractBadnikInstance extends AbstractObjectInstance
     /**
      * Subclasses implement their specific movement and AI logic.
      */
-    protected abstract void updateMovement(int frameCounter, PlayableEntity player);
+    protected abstract void updateMovement(int vIntRunCount, PlayableEntity player);
 
     /**
      * Subclasses can override to implement custom animation logic.
      * Default implementation is a simple frame timer.
      */
-    protected void updateAnimation(int frameCounter) {
+    protected void updateAnimation(int vIntRunCount) {
         // Default: no animation. Subclasses override.
     }
 

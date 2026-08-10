@@ -85,16 +85,16 @@ public class CnzBumperObjectInstance extends AbstractObjectInstance
      */
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (initialAngle == 0) {
-            updateOrbit(frameCounter);
-            processPendingTouches(frameCounter);
+            updateOrbit(vIntRunCount);
+            processPendingTouches(vIntRunCount);
             updateAnimation();
             return;
         }
 
-        updateOrbit(frameCounter);
-        processPendingTouches(frameCounter);
+        updateOrbit(vIntRunCount);
+        processPendingTouches(vIntRunCount);
         touchX = currentX;
         touchY = currentY;
         updateAnimation();
@@ -169,7 +169,7 @@ public class CnzBumperObjectInstance extends AbstractObjectInstance
         }
     }
 
-    private void updateOrbit(int frameCounter) {
+    private void updateOrbit(int vIntRunCount) {
         if (initialAngle == 0) {
             currentX = originX;
             currentY = originY;
@@ -177,7 +177,8 @@ public class CnzBumperObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        int phase = resolveLevelFrameCounter(frameCounter) & 0xFF;
+        int resolvedFrame = resolveLevelFrameCounter(vIntRunCount);
+        int phase = resolvedFrame & 0xFF;
         if (reverseOrbit) {
             phase = (-phase) & 0xFF;
         }
@@ -187,21 +188,18 @@ public class CnzBumperObjectInstance extends AbstractObjectInstance
         updateDynamicSpawn(currentX, currentY);
     }
 
-    private int resolveLevelFrameCounter(int objectFrameCounter) {
+    private int resolveLevelFrameCounter(int vIntRunCount) {
         ObjectServices svc = tryServices();
         LevelManager levelManager = svc != null ? svc.levelManager() : null;
         if (levelManager != null) {
             // The fresh-load Process_Sprites setup dispatch is represented by
             // ObjectManager's production setup lifecycle. The stored counter
             // therefore owns the adjacent Level_frame_counter epoch read by
-            // Obj_Bumper. A retained results owner that has mutated into the Act 2
-            // title card holds the native counter while engine dispatch continues;
-            // its provenance exposes the additional visible owner dispatch.
-            int retainedResultsDispatch = svc.titleCardProvider() != null
-                    && svc.titleCardProvider().ownsRetainedResultsHeldLevelCounter() ? 1 : 0;
-            return levelManager.getFrameCounter() + 1 + retainedResultsDispatch;
+            // Obj_Bumper. The retained results owner must not add another
+            // orbit tick after its title-card handoff has been published.
+            return levelManager.getFrameCounter() + 1;
         }
-        return objectFrameCounter + 1;
+        return vIntRunCount + 1;
     }
 
     private void updateAnimation() {
@@ -214,8 +212,8 @@ public class CnzBumperObjectInstance extends AbstractObjectInstance
         }
     }
 
-    private void processPendingTouches(int objectFrameCounter) {
-        int levelFrameCounter = resolveLevelFrameCounterForBounce(objectFrameCounter);
+    private void processPendingTouches(int vIntRunCount) {
+        int levelFrameCounter = resolveLevelFrameCounterForBounce(vIntRunCount);
         AbstractPlayableSprite primary = pendingPrimaryTouch;
         AbstractPlayableSprite sidekick = pendingSidekickTouch;
         pendingPrimaryTouch = null;
@@ -229,7 +227,7 @@ public class CnzBumperObjectInstance extends AbstractObjectInstance
         }
     }
 
-    private int resolveLevelFrameCounterForBounce(int objectFrameCounter) {
+    private int resolveLevelFrameCounterForBounce(int vIntRunCount) {
         ObjectServices svc = tryServices();
         LevelManager levelManager = svc != null ? svc.levelManager() : null;
         int orbitFrameOffset = initialAngle == 0 ? 0 : 1;
@@ -240,7 +238,7 @@ public class CnzBumperObjectInstance extends AbstractObjectInstance
             // touch response uses that same visible tick.
             return levelManager.getFrameCounter() + orbitFrameOffset;
         }
-        return objectFrameCounter + orbitFrameOffset;
+        return vIntRunCount + orbitFrameOffset;
     }
 
     private void applyBounce(AbstractPlayableSprite player, int frameCounter) {

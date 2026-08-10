@@ -69,11 +69,11 @@ public final class S3kSlotBonusCageObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (suppressObjectManagerUpdate) {
             return;
         }
-        tickSlotRuntime(frameCounter, playerEntity);
+        tickSlotRuntime(vIntRunCount, playerEntity);
     }
 
     public void tickSlotRuntime(int frameCounter, PlayableEntity playerEntity) {

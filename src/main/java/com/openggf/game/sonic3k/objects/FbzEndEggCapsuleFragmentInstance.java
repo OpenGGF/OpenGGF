@@ -25,7 +25,7 @@ public final class FbzEndEggCapsuleFragmentInstance extends AbstractObjectInstan
         xVelocity = VELOCITIES[index][0]; yVelocity = VELOCITIES[index][1];
     }
 
-    @Override public void update(int frameCounter, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         if (!initialized) {
             initialized = true;
             drawVisible = true; // loc_867D6 tail-jumps to Draw_Sprite on its creation SST entry.

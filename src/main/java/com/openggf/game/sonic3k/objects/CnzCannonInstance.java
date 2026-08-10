@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.events.S3kCnzEventWriteSupport;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -100,7 +101,7 @@ public final class CnzCannonInstance extends AbstractObjectInstance
      */
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = playerEntity instanceof AbstractPlayableSprite sprite
                 ? sprite
                 : null;
@@ -108,10 +109,10 @@ public final class CnzCannonInstance extends AbstractObjectInstance
         updateReleasedPlayerPriority();
 
         switch (state) {
-            case STATE_IDLE -> updateIdle(frameCounter, player);
+            case STATE_IDLE -> updateIdle(vIntRunCount, player);
             case STATE_PULLING_PLAYER -> updatePullingPlayer(player);
-            case STATE_READY_TO_LAUNCH -> updateReadyToLaunch(frameCounter, player);
-            case STATE_COOLDOWN -> updateCooldown(frameCounter);
+            case STATE_READY_TO_LAUNCH -> updateReadyToLaunch(vIntRunCount, player);
+            case STATE_COOLDOWN -> updateCooldown(vIntRunCount);
             default -> {
                 state = STATE_IDLE;
                 chamberFrame = FRAME_CHAMBER_IDLE;
@@ -133,7 +134,7 @@ public final class CnzCannonInstance extends AbstractObjectInstance
         }
     }
 
-    private void updateIdle(int frameCounter, AbstractPlayableSprite player) {
+    private void updateIdle(int vIntRunCount, AbstractPlayableSprite player) {
         chamberFrame = FRAME_CHAMBER_IDLE;
         if (player == null || player.isObjectControlled()) {
             return;
@@ -164,14 +165,14 @@ public final class CnzCannonInstance extends AbstractObjectInstance
         activePlayer.setAir(true);
     }
 
-    private void updateReadyToLaunch(int frameCounter, AbstractPlayableSprite player) {
+    private void updateReadyToLaunch(int vIntRunCount, AbstractPlayableSprite player) {
         // ROM sub_3192C runs before sub_319F4. On the first ready dispatch,
         // $34(a0) is still zero while sub_3192C checks it, then sub_319F4 sees
         // player state word $0200/$0202 and arms $34 for the following frame.
         // Keep that read-before-write ordering so ordinary cannons retain their
         // idle chamber frame for the first ready dispatch.
         if (spinArmed) {
-            advanceSpin(frameCounter);
+            advanceSpin(vIntRunCount);
         } else {
             spinArmed = true;
         }
@@ -194,13 +195,13 @@ public final class CnzCannonInstance extends AbstractObjectInstance
                 ? (activePlayer.getForcedInputMask() & AbstractPlayableSprite.INPUT_JUMP) != 0
                 : activePlayer.isJumpPressed();
         if (jumpPressed) {
-            launchPlayer(activePlayer, frameCounter);
+            launchPlayer(activePlayer, vIntRunCount);
         }
     }
 
-    private void updateCooldown(int frameCounter) {
+    private void updateCooldown(int vIntRunCount) {
         advanceSpin(-1);
-        if (stateTimer >= 0 && (frameCounter & 0x03) == 0) {
+        if (stateTimer >= 0 && (vIntRunCount & 0x03) == 0) {
             spawnLaunchPuff();
         }
         stateTimer--;
@@ -271,6 +272,8 @@ public final class CnzCannonInstance extends AbstractObjectInstance
             // in the same SST pass. Publish the watched-slot consequence here;
             // the boss owner still owns the timer and control-lock transition.
             services().camera().setMaxYTarget((short) 0x0200);
+            S3kCnzEventWriteSupport.requestSidekickBoundsPublishAfterCameraEasing(
+                    services());
         }
     }
 
@@ -335,6 +338,16 @@ public final class CnzCannonInstance extends AbstractObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         return SOLID_PARAMS;
+    }
+
+    @Override
+    public boolean rejectsZeroDistanceTopSolidLanding(PlayableEntity player) {
+        // Obj_CNZCannon calls the shared SolidObjectTop entry. Its vertical
+        // gate accepts only signed overlap d0 in [-$10,-1]: d0 == 0 survives
+        // the first `bhi`, then the unsigned `blo` against -$10 rejects it
+        // (sonic3k.asm:41982-42015). Waiting for one pixel of overlap keeps
+        // the standing-bit capture in sub_319F4 on the native object pass.
+        return true;
     }
 
     @Override
@@ -445,7 +458,7 @@ public final class CnzCannonInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             xSubpixel += xVelocity;
             ySubpixel += yVelocity;
             x += xSubpixel >> 8;

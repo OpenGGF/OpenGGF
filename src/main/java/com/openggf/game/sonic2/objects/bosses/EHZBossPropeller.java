@@ -51,9 +51,9 @@ public class EHZBossPropeller extends AbstractBossChild implements RewindRecreat
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        if (isDestroyed() || !shouldUpdate(frameCounter)) {
+        if (isDestroyed() || !shouldUpdate(vIntRunCount)) {
             return;
         }
 
@@ -71,21 +71,21 @@ public class EHZBossPropeller extends AbstractBossChild implements RewindRecreat
         }
 
         if (reloading) {
-            updateReloading(frameCounter, parentFlags);
+            updateReloading(vIntRunCount, parentFlags);
             updateDynamicSpawn();
             return;
         }
 
         switch (routineSecondary) {
-            case 0 -> updateAirborne(frameCounter, parentFlags);
+            case 0 -> updateAirborne(vIntRunCount, parentFlags);
             case 2 -> updateLanding();
-            default -> updateAirborne(frameCounter, parentFlags);
+            default -> updateAirborne(vIntRunCount, parentFlags);
         }
 
         updateDynamicSpawn();
     }
 
-    private void updateAirborne(int frameCounter, int parentFlags) {
+    private void updateAirborne(int vIntRunCount, int parentFlags) {
         Sonic2EHZBossInstance ehzParent = (Sonic2EHZBossInstance) parent;
         boolean grounded = (parentFlags & FLAG_GROUNDED) != 0;
 
@@ -95,7 +95,7 @@ public class EHZBossPropeller extends AbstractBossChild implements RewindRecreat
             routineSecondary = 2;
         } else {
             // Only play helicopter SFX when not flying off
-            if ((parentFlags & FLAG_FLYING_OFF) == 0 && (frameCounter & (HELICOPTER_SOUND_INTERVAL - 1)) == 0) {
+            if ((parentFlags & FLAG_FLYING_OFF) == 0 && (vIntRunCount & (HELICOPTER_SOUND_INTERVAL - 1)) == 0) {
                 services().playSfx(Sonic2Sfx.WING_FORTRESS.id);
             }
         }
@@ -119,7 +119,7 @@ public class EHZBossPropeller extends AbstractBossChild implements RewindRecreat
         animationState.update();
     }
 
-    private void updateReloading(int frameCounter, int parentFlags) {
+    private void updateReloading(int vIntRunCount, int parentFlags) {
         currentY -= 1;
         timer--;
         if (timer < 0) {
@@ -128,7 +128,7 @@ public class EHZBossPropeller extends AbstractBossChild implements RewindRecreat
         }
 
         // Play helicopter SFX during reload if not flying off
-        if ((parentFlags & FLAG_FLYING_OFF) == 0 && (frameCounter & (HELICOPTER_SOUND_INTERVAL - 1)) == 0) {
+        if ((parentFlags & FLAG_FLYING_OFF) == 0 && (vIntRunCount & (HELICOPTER_SOUND_INTERVAL - 1)) == 0) {
             services().playSfx(Sonic2Sfx.WING_FORTRESS.id);
         }
 

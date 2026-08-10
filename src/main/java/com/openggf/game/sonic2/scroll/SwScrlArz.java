@@ -235,6 +235,13 @@ public class SwScrlArz extends AbstractZoneScrollHandler {
 
         // ==================== Step 6: Fill Scroll Buffer ====================
         // Check for screen shake (ROM: Screen_Shaking_Flag)
+        //
+        // fixBugs (s2.asm:27 `fixBugs = 0`): this is the SHIPPED (fixBugs=0) branch. The
+        // conditionals at s2.asm:17703-17708, 17722-17725 and 17793-17796 add a d3 that
+        // carries the shake's Y component into the row-height walk (`add.w d3,d1`). The
+        // shipped ROM has no d3: the row search below uses the unshaken BG Y, so the ARZ
+        // boss shake distorts the background parallax. Reproduce that; the shake reaches
+        // only the Vscroll factors and the camera position copies.
         boolean shaking = GameServices.gameState().isScreenShakeActive();
 
         // Reset shake offsets each frame

@@ -34,8 +34,8 @@ public final class Sonic3kPlacedRingObjectInstance extends AbstractObjectInstanc
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
-        lastFrameCounter = frameCounter;
+    public void update(int vIntRunCount, PlayableEntity player) {
+        lastFrameCounter = vIntRunCount;
         if (state == State.SPARKLE) {
             if (sparkleTicks >= SPARKLE_FRAMES * SPARKLE_FRAME_DELAY) {
                 setDestroyed(true);

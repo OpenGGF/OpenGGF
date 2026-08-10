@@ -4,6 +4,8 @@ import com.openggf.trace.*;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
+import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.TouchResponseProvider;
@@ -18,18 +20,22 @@ import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceExecutionPhase;
 import com.openggf.trace.TraceFrame;
 import com.openggf.trace.TraceReplayBootstrap;
+import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_3K)
 public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
+    private int scenarioTraceIndex;
+    private HeadlessTestFixture scenarioFixture;
     private static final int GIANT_RIDE_VINE_WINDOW_START = 2876;
     private static final int GIANT_RIDE_VINE_WINDOW_END = 2892;
     private static final int AIZ1_RHINOBOT_TRACE_FRAME = 2529;
@@ -69,6 +75,37 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
     @Override
     protected Path traceDirectory() {
         return Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun");
+    }
+
+    @Override
+    protected List<ExpectedPendingHardwareWork> expectedPendingHardwareTimingAtTraceEnd(
+            TraceData trace) {
+        // The fixture ends on the HCZ handoff row immediately after the
+        // destination title owner submits its four native KosM parents. The
+        // recorder captures the first two completions, but the prefix ends
+        // before their title owner polls and claims them; the remaining two
+        // parents are still in the ROM FIFO beyond the represented prefix.
+        return List.of(
+                expectedPendingHardwareWork(
+                        HardwareWorkKind.KOS_MODULE_QUEUE,
+                        38,
+                        0x0D6F28,
+                        "sha256:10eb568a70724c579f022914f56227c2c7fa421aafa8578aebaa874f0cffb0ca"),
+                expectedPendingHardwareWork(
+                        HardwareWorkKind.KOS_MODULE_QUEUE,
+                        39,
+                        0x15C3A2,
+                        "sha256:05324378670c6afa8c6d99f6e5313d625d2d926e6bc16f25cd9d8d1a5a195bf8"),
+                expectedPendingHardwareWork(
+                        HardwareWorkKind.KOS_MODULE_QUEUE,
+                        40,
+                        0x0D6D84,
+                        "sha256:7059802f2a045495d22a16d8c858c1758b786bf5d5f46c45838fa10bc0d1f6aa"),
+                expectedPendingHardwareWork(
+                        HardwareWorkKind.KOS_MODULE_QUEUE,
+                        41,
+                        0x39BEDA,
+                        "sha256:2c17b1dba426e8b37a9b4dd2e2fc175f78010f755f4d1d43d7b0a9948eee4ba2"));
     }
 
     @Override
@@ -775,35 +812,52 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
     }
 
     private HeadlessTestFixture buildReplayFixture(TraceData trace, Path bk2Path) throws Exception {
-        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+        TraceReplaySessionBootstrap.prepareConfiguration(
+                trace, trace.metadata());
+        HeadlessTestFixture.Builder builder = HeadlessTestFixture.builder()
                 .withZoneAndAct(zone(), act())
                 .withRecording(bk2Path)
                 .withRecordingStartFrame(TraceReplayBootstrap.recordingStartFrameForTraceReplay(trace))
-                .build();
-
-        ObjectManager objectManager = GameServices.level().getObjectManager();
-        if (objectManager != null) {
-            // Match TraceReplaySessionBootstrap.applyBootstrap(): the first
-            // driven row advances from the preceding native VBlank value.
-            objectManager.initVblaCounter(trace.initialVblankCounter() - 1);
+                .withHardwareReadinessAdmissionPolicy(
+                        HardwareReadinessAdmissionPolicy.RECORDED);
+        if (TraceReplayBootstrap.shouldGroundSnapMetadataStartForTraceReplay(trace)
+                || TraceReplayBootstrap.replaySeedTraceIndexForTraceReplay(trace) == 0) {
+            builder.withFreshLevelStartLifecycle();
         }
-
-        int preTraceOsc = trace.metadata().preTraceOscillationFrames();
-        for (int i = 0; i < preTraceOsc; i++) {
-            com.openggf.game.OscillationManager.update(-(preTraceOsc - i));
-        }
-        com.openggf.game.OscillationManager.suppressNextFrames(
-                TraceReplayBootstrap.initialOscillationSuppressionFramesForTraceReplay(trace));
-        return fixture;
+        scenarioFixture = builder.build();
+        return scenarioFixture;
     }
 
     private TraceReplayBootstrap.ReplayStartState primeReplayFixture(TraceData trace, HeadlessTestFixture fixture) {
-        TraceReplayBootstrap.applyPreTraceState(trace, fixture);
-        return TraceReplayBootstrap.applyReplayStartStateForTraceReplay(trace, fixture);
+        TraceReplaySessionBootstrap.applyStartPositionAndGroundSnap(trace, fixture);
+        TraceReplayBootstrap.ReplayStartState replayStart =
+                TraceReplaySessionBootstrap.applyBootstrap(trace, fixture, -1)
+                        .replayStart();
+        TraceFrame previous = replayStart.hasSeededTraceState()
+                ? trace.getFrame(replayStart.seededTraceIndex())
+                : null;
+        scenarioTraceIndex = replayStart.startingTraceIndex();
+        TraceReplaySessionBootstrap.alignFrameCountersForReplayStart(
+                        trace,
+                        replayStart,
+                        previous,
+                        scenarioTraceIndex < trace.frameCount()
+                                ? trace.getFrame(scenarioTraceIndex) : null);
+        return replayStart;
     }
 
     private void stepReplayFrame(TraceData trace, HeadlessTestFixture fixture, TraceExecutionPhase phase) {
+        TraceFrame current = trace.getFrame(scenarioTraceIndex);
+        TraceFrame previous = scenarioTraceIndex > 0
+                ? trace.getFrame(scenarioTraceIndex - 1) : null;
+        fixture.beginTraceRow(scenarioTraceIndex, current.frame());
+        TraceReplayBootstrap.markVblankStarvedIterationForReplay(previous, current);
+        TraceReplayBootstrap.markIterationHeldIntoNextRowForReplay(
+                current,
+                scenarioTraceIndex + 1 < trace.frameCount()
+                        ? trace.getFrame(scenarioTraceIndex + 1) : null);
         driveScenarioReplayFrame(trace, fixture, phase);
+        scenarioTraceIndex++;
     }
 
     private ObjectInstance findActiveObjectByIdNear(int objectId, int x, int y, int maxDistance) {
@@ -886,7 +940,7 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
      * the exact values applied and restored, and the trailing
      * {@code TestEnvironment.resetAll()}, are unchanged.
      */
-    private static final class ReplayConfigScope implements AutoCloseable {
+    private final class ReplayConfigScope implements AutoCloseable {
         private final SonicConfigurationService config;
         private final Object oldSkip;
         private final Object oldMain;
@@ -904,6 +958,10 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
 
         @Override
         public void close() {
+            if (scenarioFixture != null) {
+                scenarioFixture.abortHardwareTimingReplayRun();
+                scenarioFixture = null;
+            }
             config.setConfigValue(
                     SonicConfiguration.S3K_SKIP_INTROS,
                     oldSkip != null ? oldSkip : false);

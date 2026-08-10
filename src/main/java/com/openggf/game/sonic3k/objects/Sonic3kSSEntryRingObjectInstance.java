@@ -1,7 +1,9 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.camera.Camera;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
@@ -147,6 +149,8 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
 
     /** Which animation is active: formation (false) or idle (true). */
     private boolean inIdleAnim;
+    /** ROM: Obj_WaitOffscreen has released the ring into its own routine. */
+    private boolean displayReleased;
 
     public Sonic3kSSEntryRingObjectInstance(ObjectSpawn spawn) {
         super(spawn, "SSEntryRing");
@@ -186,19 +190,48 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ensureInitialized();
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (state) {
             case MAIN -> updateMain(player);
             case ENTERED -> { /* Ring continues displaying; flash controls deletion */ }
-            case MARKED_DELETE -> {
-                // ROM restores palette + reloads ArtKosM_BadnikExplosion here because
-                // the ring's DPLC overwrites shared VRAM at ArtTile_Explosion. Our engine
-                // uses standalone Pattern[] arrays so no restoration is needed.
-                setDestroyed(true);
-            }
+            case MARKED_DELETE -> { /* Retired by the display pass below, as in ROM. */ }
         }
+        runDisplayPass();
+    }
+
+    private void runDisplayPass() {
+        if (isDestroyed()) {
+            return;
+        }
+        if (state == State.MARKED_DELETE) {
+            retireRing();
+            return;
+        }
+        if (!displayReleased
+                || isWithinRenderSpriteBounds(OFFSCREEN_HALF_EXTENT, OFFSCREEN_HALF_EXTENT)) {
+            return;
+        }
+        Camera camera = services().camera();
+        if (camera == null) {
+            return;
+        }
+        int coarseBack = (camera.getX() - 0x80) & 0xFF80;
+        int bandX = ((getX() & 0xFF80) - coarseBack) & 0xFFFF;
+        int bandY = ((getY() - camera.getY()) + 0x80) & 0xFFFF;
+        if (bandX > OFFSCREEN_BAND_X || bandY > OFFSCREEN_BAND_Y) {
+            retireRing();
+        }
+    }
+
+    private void retireRing() {
+        ObjectRenderManager renderManager = services().renderManager();
+        if (renderManager != null
+                && renderManager.getArtProvider() instanceof Sonic3kObjectArtProvider provider) {
+            provider.queueBadnikExplosionArt();
+        }
+        setDestroyedByOffscreen();
     }
 
     /**
@@ -220,8 +253,11 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
         // restore the normal object routine until Render_Sprites sets bit 7.
         // The ring therefore starts forming only when that box overlaps the
         // viewport, rather than at the wider placement/spawn boundary.
-        if (!isWithinRenderSpriteBounds(OFFSCREEN_HALF_EXTENT, OFFSCREEN_HALF_EXTENT)) {
-            return;
+        if (!displayReleased) {
+            if (!isWithinRenderSpriteBounds(OFFSCREEN_HALF_EXTENT, OFFSCREEN_HALF_EXTENT)) {
+                return;
+            }
+            displayReleased = true;
         }
         updateSuperEmeraldPalette();
 
@@ -248,6 +284,8 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
 
     /** ROM Obj_WaitOffscreen width_pixels/height_pixels values. */
     private static final int OFFSCREEN_HALF_EXTENT = 0x20;
+    private static final int OFFSCREEN_BAND_X = 0x280;
+    private static final int OFFSCREEN_BAND_Y = 0x200;
 
     /**
      * Advances animation matching ROM's Animate_Raw down-counter pattern.
@@ -356,7 +394,7 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
             gameState.markSpecialRingCollected(bitIndex);
             player.addRings(RING_REWARD);
             restoreRingPalette();
-            setDestroyed(true);
+            state = State.MARKED_DELETE;
         } else {
             // Path A: Enter Special Stage — full flash sequence
             // ROM: loc_61774 — lock player, spawn flash

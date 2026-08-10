@@ -154,7 +154,7 @@ class TestObjectManagerFixedSstExecution {
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             updateCount++;
             executionOrder.add(marker);
         }
@@ -170,8 +170,8 @@ class TestObjectManagerFixedSstExecution {
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
-            super.update(frameCounter, player);
+        public void update(int vIntRunCount, PlayableEntity player) {
+            super.update(vIntRunCount, player);
             setDestroyed(true);
         }
     }
@@ -186,8 +186,8 @@ class TestObjectManagerFixedSstExecution {
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
-            super.update(frameCounter, player);
+        public void update(int vIntRunCount, PlayableEntity player) {
+            super.update(vIntRunCount, player);
             if (!published) {
                 published = true;
                 services().objectManager().addDynamicObjectAtSlot(replacement, 3);

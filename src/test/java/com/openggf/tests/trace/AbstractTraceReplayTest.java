@@ -7,6 +7,7 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.objects.Aiz2BossEndSequenceState;
 import com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance;
@@ -35,6 +36,7 @@ import com.openggf.trace.EngineSidekickCpuState;
 import com.openggf.trace.EngineNearbyObject;
 import com.openggf.trace.EngineNearbyObjectFormatter;
 import com.openggf.trace.FrameComparison;
+import com.openggf.trace.LoadQueueComparisonProjection;
 import com.openggf.trace.ToleranceConfig;
 import com.openggf.trace.TouchResponseDebugHitFormatter;
 import com.openggf.trace.TraceBinder;
@@ -48,6 +50,7 @@ import com.openggf.trace.TraceMetadata;
 import com.openggf.trace.TraceReplayBootstrap;
 import com.openggf.trace.TraceVerificationScope;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
+import com.openggf.trace.replay.TraceReplayEngineSnapshot;
 import com.openggf.tests.trace.s3k.S3kRequiredCheckpointGuard;
 import com.openggf.tests.trace.s3k.S3kReplayCheckpointDetector;
 import com.openggf.physics.Sensor;
@@ -85,6 +88,12 @@ public abstract class AbstractTraceReplayTest {
             quietJavaUtilLogging();
         }
     }
+
+    /**
+     * Env-gated ({@code OGGF_SLOT_PROBE=1}) ROM-vs-engine SST occupancy diff.
+     * Null in every ordinary run; comparison-only when armed.
+     */
+    private SlotOccupancyProbe slotOccupancyProbe;
 
     /** Which game ROM this test requires. */
     protected abstract SonicGame game();
@@ -182,6 +191,71 @@ public abstract class AbstractTraceReplayTest {
         return false;
     }
 
+    /**
+     * Optional semantic end for the hardware-timing schedule. Returning a raw
+     * frame asks the S3K replay loop to drive and compare through that
+     * represented frame, then close the timing prefix.
+     */
+    protected Integer semanticTimingPrefixLastRawFrame(TraceData trace) {
+        return null;
+    }
+
+    /**
+     * Whether the recorded run deliberately ends with production hardware
+     * work still in flight. Such a trace is a semantic handoff prefix: every
+     * completion edge represented by the stream must still be consumed, but
+     * work whose ROM completion lies beyond the captured rows is detached with
+     * the fixture rather than treated as a replay failure.
+     */
+    protected List<ExpectedPendingHardwareWork> expectedPendingHardwareTimingAtTraceEnd(
+            TraceData trace) {
+        return List.of();
+    }
+
+    protected record ExpectedPendingHardwareWork(
+            HardwareWorkKind kind,
+            long ordinal,
+            int romSourceAddress,
+            String submissionFingerprint) {
+    }
+
+    protected static ExpectedPendingHardwareWork expectedPendingHardwareWork(
+            HardwareWorkKind kind,
+            long ordinal,
+            int romSourceAddress,
+            String submissionFingerprint) {
+        return new ExpectedPendingHardwareWork(
+                kind, ordinal, romSourceAddress, submissionFingerprint);
+    }
+
+    private static void verifyExpectedPendingHardwareTiming(
+            HeadlessTestFixture fixture,
+            List<ExpectedPendingHardwareWork> expected) {
+        var mode = fixture.gameplayMode();
+        var jobsByHandle = mode.hardwareTiming().capture().jobs().stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        job -> job.handle(), job -> job));
+        List<ExpectedPendingHardwareWork> actual = mode
+                .recordedCompletionAuthority()
+                .pendingSubmissions().stream()
+                .map(pending -> {
+                    var job = jobsByHandle.get(pending.handle());
+                    if (job == null) {
+                        throw new AssertionError(
+                                "pending hardware identity has no production job: "
+                                        + pending.handle());
+                    }
+                    return new ExpectedPendingHardwareWork(
+                            pending.handle().kind(),
+                            pending.handle().ordinal(),
+                            job.romSourceAddress(),
+                            pending.handle().submissionFingerprint());
+                })
+                .toList();
+        assertEquals(expected, actual,
+                "terminal pending hardware work must match the declared semantic handoff");
+    }
+
     static boolean shouldValidateRewindReferenceClosure(SonicGame game) {
         return game == SonicGame.SONIC_2 || game == SonicGame.SONIC_3K;
     }
@@ -221,7 +295,7 @@ public abstract class AbstractTraceReplayTest {
     @Test
     public void replayMatchesTrace() throws Exception {
         // 0. Skip if trace directory or required files are missing
-        Path traceDir = traceDirectory();
+        Path traceDir = TraceFixtureRoot.resolve(traceDirectory());
         Assumptions.assumeTrue(Files.isDirectory(traceDir), "Trace directory not found: " + traceDir);
         Assumptions.assumeTrue(Files.exists(traceDir.resolve("metadata.json")), "metadata.json not found in " + traceDir);
         Assumptions.assumeTrue(hasTracePayload(traceDir, "physics.csv"), "physics.csv(.gz) not found in " + traceDir);
@@ -241,13 +315,14 @@ public abstract class AbstractTraceReplayTest {
         }
 
         // 2. Resolve BK2: prefer a shared movie referenced by metadata.source_bk2 (stored once
-        //    under <game>/_movies/), else a legacy per-dir .bk2 copy.
+        //    under <game>/_movies/), else use the retained per-directory movie placement.
+        //    This is a v5 movie-location fallback, not legacy trace-schema support.
         Path bk2Path = resolveBk2File(traceDir, meta);
         Assumptions.assumeTrue(bk2Path != null,
                 "No BK2 found for " + traceDir + " (no _movies/<source_bk2> and no .bk2 in dir)");
         boolean requiresFreshLevelLoad =
                 TraceReplayBootstrap.requiresFreshLevelLoadForTraceReplay(trace)
-                        || meta.hasHardwareTimingStream();
+                        || trace.hardwareTimingSchedule().hasRecordedInput();
 
         // 3. Validate test configuration matches metadata
         validateMetadata(meta);
@@ -264,12 +339,15 @@ public abstract class AbstractTraceReplayTest {
         TraceBinder binder = null;
         HeadlessTestFixture fixture = null;
         boolean hardwareTimingReplayClosed = false;
+        // Comparison-only, env-gated (OGGF_SLOT_PROBE=1) SST occupancy diff. Off in
+        // every normal run, and it never touches engine or binder state.
+        slotOccupancyProbe = SlotOccupancyProbe.createIfEnabled(trace, game() + "_" + zone() + act());
         try {
             HeadlessTestFixture.Builder fixtureBuilder = HeadlessTestFixture.builder()
                 .withRecording(bk2Path)
                 .withRecordingStartFrame(TraceReplayBootstrap.recordingStartFrameForTraceReplay(trace))
                 .withHardwareReadinessAdmissionPolicy(
-                        meta.hasHardwareTimingStream()
+                        trace.hardwareTimingSchedule().hasRecordedInput()
                                 ? HardwareReadinessAdmissionPolicy.RECORDED
                                 : HardwareReadinessAdmissionPolicy.LIVE);
             if (sharedLevel != null) {
@@ -282,7 +360,19 @@ public abstract class AbstractTraceReplayTest {
                         .startPosition(meta.startX(), meta.startY())
                         .startPositionIsCentre();
             }
-            if (TraceReplayBootstrap.shouldGroundSnapMetadataStartForTraceReplay(trace)) {
+            // The lifecycle claim is about ROM state, not fixture mechanics: it
+            // asks whether the ROM has just run SpawnLevelMainSprites and no
+            // LevelLoop iteration has been dispatched yet. A replay that begins
+            // at trace row 0 is exactly that -- row 0 is LevelLoop iteration 1,
+            // so the player still carries its spawn-determined Status_InAir
+            // (set only by the explicit per-zone bsets at sonic3k.asm:8132-8177;
+            // MHZ1 $700 and CNZ1 $300 fall through to loc_68D8 at 8178-8197 and
+            // spawn grounded). Whether the fixture also ground-snaps the
+            // metadata start is a separate question, and gating on it let the
+            // fixture's synthetic pre-frame terrain probe consume the floor
+            // check that ROM performs during row 0 itself.
+            if (TraceReplayBootstrap.shouldGroundSnapMetadataStartForTraceReplay(trace)
+                    || TraceReplayBootstrap.replaySeedTraceIndexForTraceReplay(trace) == 0) {
                 fixtureBuilder.withFreshLevelStartLifecycle();
             }
             fixture = fixtureBuilder.build();
@@ -339,7 +429,7 @@ public abstract class AbstractTraceReplayTest {
 
             // Frame-0 bootstrap comparison. Active only for traces recorded
             // against the post-universal-title-card engine (TraceMetadata
-            // .nativePreludeMode() derived from lua_script_version >= 9.2-s2);
+            // .hasNativePreludeBootstrap() derived from explicit metadata);
             // a no-op return for legacy traces. Surfaces a BootstrapDivergence
             // category in the final DivergenceReport for any mismatch between
             // engine state at frame 0 and the recorded ROM frame-0 snapshot
@@ -349,7 +439,8 @@ public abstract class AbstractTraceReplayTest {
 
             FrontierReplayStopper frontierStopper = FrontierReplayStopper.fromSystemProperties();
             if ("s3k".equals(meta.game())) {
-                replayS3kTrace(trace, meta, fixture, binder, replayStart, frontierStopper);
+                hardwareTimingReplayClosed = replayS3kTrace(
+                        trace, meta, fixture, binder, replayStart, frontierStopper);
             } else {
                 int startTraceIndex = replayStart.startingTraceIndex();
                 for (int i = startTraceIndex; i < trace.frameCount(); i++) {
@@ -362,6 +453,7 @@ public abstract class AbstractTraceReplayTest {
                     TraceFrame previous = i > 0 ? trace.getFrame(i - 1) : null;
                     TraceExecutionPhase phase =
                         TraceReplayBootstrap.phaseForReplay(trace, previous, expected);
+                    TraceReplayBootstrap.markVblankStarvedIterationForReplay(previous, expected);
                     int validationTraceIndex = i;
                     bk2Input = TraceReplayFrameClosureDriver.driveGeneral(
                             phase,
@@ -392,6 +484,10 @@ public abstract class AbstractTraceReplayTest {
                             "BK2 input=0x%04X, trace input=0x%04X. " +
                             "Check bk2_frame_offset in metadata.json.",
                             i, bk2Input, expected.input()));
+                    }
+                    if (slotOccupancyProbe != null && GameServices.level() != null) {
+                        slotOccupancyProbe.observe(
+                                i, GameServices.level().getObjectManager());
                     }
                     if (!TraceReplayBootstrap.shouldCompareGameplayStateForReplay(phase)) {
                         compareDynamicArtIfAdvertised(
@@ -437,9 +533,10 @@ public abstract class AbstractTraceReplayTest {
                         sprite.getAngle(),
                         sprite.getAir(), sprite.getRolling(),
                         sprite.getGroundMode().ordinal(), romDiag,
-                        EngineDiagnostics.formattedWithCameraAndAnimation(
+                        EngineDiagnostics.formattedWithCameraAnimationAndRings(
                                 engineDiag.cameraX(), engineDiag.cameraY(),
-                                engineDiag.animationId(), engineDiag.mappingFrame(), engineDiagText),
+                                engineDiag.animationId(), engineDiag.mappingFrame(),
+                                engineDiag.rings(), engineDiagText),
                         secondaryCharacterLabel, actualSidekick,
                         expectedSidekickCpu, actualSidekickCpu, expectedSidekickNormalStep);
                     compareLoadQueuesIfAdvertised(
@@ -463,8 +560,18 @@ public abstract class AbstractTraceReplayTest {
             finishDynamicArtComparison(
                     trace, binder, fixture,
                     !frontierStopper.stoppedEarly());
-            fixture.closeHardwareTimingReplayRun();
-            hardwareTimingReplayClosed = true;
+            if (!hardwareTimingReplayClosed) {
+                List<ExpectedPendingHardwareWork> expectedPending =
+                        expectedPendingHardwareTimingAtTraceEnd(trace);
+                if (!expectedPending.isEmpty()) {
+                    fixture.verifyHardwareTimingSegmentEdges();
+                    verifyExpectedPendingHardwareTiming(fixture, expectedPending);
+                    fixture.abortHardwareTimingReplayRun();
+                } else {
+                    fixture.closeHardwareTimingReplayRun();
+                }
+                hardwareTimingReplayClosed = true;
+            }
 
             // 6. Build report
             DivergenceReport report = buildDivergenceReport(binder, meta, trace);
@@ -491,13 +598,20 @@ public abstract class AbstractTraceReplayTest {
             // Best-effort: report regeneration must not suppress the real failure.
             if (binder != null) {
                 try {
-                    DivergenceReport finalReport = buildDivergenceReport(binder, meta, trace);
-                    if (finalReport.hasErrors() || finalReport.hasWarnings()) {
-                        writeReport(finalReport, meta);
-                    }
+                    // Unconditional: a run that aborts mid-replay with a clean
+                    // comparison so far (e.g. a hardware-timing admission throw)
+                    // has zero divergences, and a divergence-gated write left no
+                    // report at all -- indistinguishable from a run that never
+                    // started. The report's total_frames is the only record of
+                    // how far the replay actually reached.
+                    writeReport(buildDivergenceReport(binder, meta, trace), meta);
                 } catch (RuntimeException | java.io.IOError ignored) {
                     // diagnostics only
                 }
+            }
+            if (slotOccupancyProbe != null) {
+                slotOccupancyProbe.close();
+                slotOccupancyProbe = null;
             }
             if (fixture != null && !hardwareTimingReplayClosed) {
                 fixture.abortHardwareTimingReplayRun();
@@ -517,28 +631,16 @@ public abstract class AbstractTraceReplayTest {
 
     /**
      * Capture a read-only snapshot of engine state at frame 0 for the
-     * bootstrap comparator. The comparator only activates for traces with
-     * {@code lua_script_version >= 9.2-s2} (see
-     * {@link TraceMetadata#nativePreludeMode()}); for legacy traces this
-     * snapshot is built but discarded. Captures whatever is readily
+     * bootstrap comparator. The comparator only activates for v5 traces that
+     * advertise the {@code native_prelude_bootstrap} semantic capability (see
+     * {@link TraceMetadata#hasNativePreludeBootstrap()}); for traces without it
+     * this snapshot is built but discarded. Captures whatever is readily
      * available from the fixture; fields without an accessible source are
      * left null/empty (the comparator emits WARNING entries for those).
      */
     private EngineSnapshot captureEngineSnapshot(HeadlessTestFixture fixture) {
-        AbstractPlayableSprite sprite = fixture != null ? comparedSprite(fixture) : null;
-        short[] xHistory = sprite != null ? sprite.copyXHistory() : null;
-        short[] yHistory = sprite != null ? sprite.copyYHistory() : null;
-        short[] inputHistory = sprite != null ? sprite.copyInputHistory() : null;
-        byte[] statusHistory = sprite != null ? sprite.copyStatusHistory() : null;
-        int historyPos = sprite != null ? sprite.historyPos() : 0;
-
-        EngineSnapshot.SidekickCpuView tailsCpu = captureFirstSidekickCpuSnapshot();
-
-        // Per-slot SST snapshots are still left empty; they require a stable
-        // ObjectManager slot extraction path. Sidekick CPU state is now captured
-        // read-only so bootstrap reports can flag native-prelude CPU drift.
-        return EngineSnapshot.capture(xHistory, yHistory, inputHistory, statusHistory,
-                historyPos, tailsCpu, java.util.Map.of());
+        return TraceReplayEngineSnapshot.capture(
+                fixture != null ? comparedSprite(fixture) : null);
     }
 
     /**
@@ -569,7 +671,7 @@ public abstract class AbstractTraceReplayTest {
         return TraceReplayBootstrap.shouldApplyMetadataStartPositionForTraceReplay(trace);
     }
 
-    private void replayS3kTrace(TraceData trace, TraceMetadata meta,
+    private boolean replayS3kTrace(TraceData trace, TraceMetadata meta,
                                 HeadlessTestFixture fixture, TraceBinder binder,
                                 TraceReplayBootstrap.ReplayStartState replayStart,
                                 FrontierReplayStopper frontierStopper) {
@@ -579,6 +681,7 @@ public abstract class AbstractTraceReplayTest {
                 : driveTraceIndex > 0 ? trace.getFrame(driveTraceIndex - 1) : null;
         S3kReplayCheckpointDetector detector = new S3kReplayCheckpointDetector();
         S3kRequiredCheckpointGuard checkpointGuard = new S3kRequiredCheckpointGuard();
+        Integer semanticTimingPrefixLastRawFrame = semanticTimingPrefixLastRawFrame(trace);
 
         if (replayStart.hasSeededTraceState()) {
             TraceFrame seededFrame = trace.getFrame(replayStart.seededTraceIndex());
@@ -671,6 +774,12 @@ public abstract class AbstractTraceReplayTest {
             fixture.beginTraceRow(driveTraceIndex, driveFrame.frame());
             TraceExecutionPhase phase =
                     TraceReplayBootstrap.phaseForReplay(trace, previousDriveFrame, driveFrame);
+            TraceReplayBootstrap.markVblankStarvedIterationForReplay(
+                    previousDriveFrame, driveFrame);
+            TraceReplayBootstrap.markIterationHeldIntoNextRowForReplay(
+                    driveFrame,
+                    driveTraceIndex + 1 < trace.frameCount()
+                            ? trace.getFrame(driveTraceIndex + 1) : null);
             int validationTraceIndex = driveTraceIndex;
             int bk2Input = TraceReplayFrameClosureDriver.driveS3k(
                     phase,
@@ -723,6 +832,11 @@ public abstract class AbstractTraceReplayTest {
             S3kCheckpointProbe probe = captureS3kProbe(driveFrame.frame(), comparedSprite(fixture));
             TraceEvent.Checkpoint engineCheckpoint = detector.observe(probe);
 
+            if (slotOccupancyProbe != null && GameServices.level() != null) {
+                slotOccupancyProbe.observe(
+                        driveTraceIndex, GameServices.level().getObjectManager());
+            }
+
             if (TraceReplayBootstrap.shouldCompareGameplayStateForReplay(phase)) {
                 TraceFrame comparisonExpected =
                         TraceReplayBootstrap.s3kFrameForGameplayComparison(
@@ -761,14 +875,14 @@ public abstract class AbstractTraceReplayTest {
                 compareDynamicArtIfAdvertised(
                         trace, binder, driveFrame.frame());
                 if (observeFrontierAndShouldStop(frontierStopper, binder, driveFrame.frame())) {
-                    break;
+                    return false;
                 }
             } else {
                 compareDynamicArtIfAdvertised(
                         trace, binder, driveFrame.frame());
                 if (observeFrontierAndShouldStop(
                         frontierStopper, binder, driveFrame.frame())) {
-                    break;
+                    return false;
                 }
             }
 
@@ -781,20 +895,48 @@ public abstract class AbstractTraceReplayTest {
                         detector.requiredCheckpointNamesReached());
             }
 
-            if (replayTerminalReached()) {
-                break;
+            if (semanticTimingPrefixLastRawFrame != null) {
+                if (validateSemanticTimingPrefix(
+                        driveFrame.frame(), semanticTimingPrefixLastRawFrame)) {
+                    fixture.closeHardwareTimingReplayPrefix(semanticTimingPrefixLastRawFrame);
+                    return true;
+                }
+            } else if (replayTerminalReached()) {
+                return false;
             }
 
             driveTraceIndex++;
             previousDriveFrame = driveFrame;
         }
+        return false;
+    }
+
+    protected boolean validateSemanticTimingPrefix(
+            int currentRawFrame, int lastPrefixRawFrame) {
+        if (currentRawFrame < lastPrefixRawFrame) {
+            return false;
+        }
+        if (currentRawFrame > lastPrefixRawFrame) {
+            throw new IllegalStateException(
+                    "trace replay advanced beyond semantic timing prefix boundary: "
+                            + "current_raw_frame=" + currentRawFrame
+                            + ", last_prefix_raw_frame=" + lastPrefixRawFrame);
+        }
+        return true;
     }
 
     private static void compareLoadQueuesIfAdvertised(
             TraceData trace, TraceBinder binder, int frame) {
         if (trace.metadata().hasPerFrameLoadQueueState()) {
-            binder.compareLoadQueues(frame, trace.loadQueueStatesForFrame(frame),
-                    GameServices.captureQueueDiagnostics());
+            LoadQueueComparisonProjection projection =
+                    LoadQueueComparisonProjection.project(
+                            trace,
+                            frame,
+                            trace.loadQueueStatesForComparisonFrame(frame),
+                            GameServices.captureQueueDiagnostics(),
+                            GameServices.hardwareTiming().capture());
+            binder.compareLoadQueues(
+                    frame, projection.expected(), projection.actual());
         }
     }
 
@@ -817,6 +959,36 @@ public abstract class AbstractTraceReplayTest {
             TraceBinder binder,
             com.openggf.trace.replay.TraceReplayFixture fixture,
             boolean replayCompleted) {
+        // An edge belongs to the frame it is PUBLISHED on. The main-loop
+        // iteration that follows the last recorded row publishes no row, so
+        // whether its work belongs to this recording at all depends on what
+        // came after the recording, and the recorder is the authority on that.
+        //
+        // A standalone trace is the tail of its recording: the capture loop
+        // advances the emulator one frame past the last row and breaks
+        // ("tools/bizhawk-headless/src/Recording/S2TraceCaptureRunner.cs":383-390),
+        // leaving that iteration's callbacks buffered with no further
+        // PublishRow, so PublishTerminal attaches them to the last row
+        // (:520-529 FlushDynamicArtSegment -> S2DynamicArtObserver.cs:268
+        // PublishTerminal, terminalForwarded=true).
+        //
+        // A run segment is a slice with a run gap after it. The run capture
+        // loop marks an advance boundary at the top of every frame
+        // ("S2RunCaptureRunner.cs":219, :441-451 PrepareDynamicArtCursor ->
+        // S2DynamicArtObserver.cs:206 MarkAdvanceBoundary), and closes the
+        // segment with PublishBoundaryTerminal (S2RunCaptureRunner.cs:887),
+        // which forwards only the prefix buffered BEFORE the closing frame
+        // began and reclassifies everything that frame produced into the
+        // following gap (S2DynamicArtObserver.cs:868-899
+        // ReclassifyBoundaryCallbacksAsGap). Its published outstanding set is
+        // the ledger as of the boundary mark, not the current ledger.
+        //
+        // The corpus agrees: across all committed dynamic-art fixtures exactly
+        // 15 recorded edges carry terminal_forwarded=true, all of them on the
+        // final row of a standalone S2 trace, none in any run segment.
+        if (replayCompleted && trace.metadata().runId() == null) {
+            fixture.runTerminalDynamicArtIteration();
+        }
         fixture.closeDynamicArtComparisonSegment();
         if (!replayCompleted
                 || !trace.metadata()
@@ -900,13 +1072,22 @@ public abstract class AbstractTraceReplayTest {
      * Resolve the BK2 movie for a trace. Prefers a shared, deduplicated movie named by
      * {@code metadata.source_bk2} and stored once under {@code <game>/_movies/} (sibling to the
      * per-act trace dirs) — so a complete-run movie used by 18 acts is committed once, not 18×.
-     * Falls back to a legacy {@code .bk2} copy inside the trace dir.
+     * Falls back to the retained per-directory {@code .bk2} movie placement
+     * for v5 fixtures; this is not legacy trace-schema support.
      */
     private Path resolveBk2File(Path traceDir, TraceMetadata meta) throws IOException {
         if (meta != null && meta.sourceBk2() != null && !meta.sourceBk2().isBlank()) {
             Path shared = traceDir.getParent().resolve("_movies").resolve(meta.sourceBk2());
             if (Files.exists(shared)) {
                 return shared;
+            }
+            // Run-segment placement: a segment directory of a multi-segment run
+            // sits directly under the run root, and the run's single movie is
+            // committed once at that root (sibling to the segment dirs and to
+            // run_manifest.json) rather than in a game-level _movies/ pool.
+            Path runRoot = traceDir.getParent().resolve(meta.sourceBk2());
+            if (Files.exists(runRoot)) {
+                return runRoot;
             }
         }
         return findBk2File(traceDir);
@@ -934,25 +1115,6 @@ public abstract class AbstractTraceReplayTest {
             return null;
         }
         return captureCharacterState(spriteManager.getSidekicks().getFirst());
-    }
-
-    private EngineSnapshot.SidekickCpuView captureFirstSidekickCpuSnapshot() {
-        SpriteManager spriteManager = GameServices.sprites();
-        if (spriteManager == null || spriteManager.getSidekicks().isEmpty()) {
-            return null;
-        }
-        SidekickCpuController controller = spriteManager.getSidekicks().getFirst().getCpuController();
-        if (controller == null) {
-            return null;
-        }
-        return new EngineSnapshot.SidekickCpuView(
-                controller.getDiagnosticControlCounter(),
-                controller.getDiagnosticRespawnCounter(),
-                controller.getDiagnosticRomCpuRoutine(),
-                (short) controller.targetX(),
-                (short) controller.targetY(),
-                controller.getDiagnosticInteractId(),
-                controller.getDiagnosticJumpingFlag() != 0);
     }
 
     private EngineSidekickCpuState captureFirstSidekickCpuState() {

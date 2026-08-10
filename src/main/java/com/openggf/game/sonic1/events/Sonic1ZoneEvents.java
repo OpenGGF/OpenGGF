@@ -52,7 +52,15 @@ abstract class Sonic1ZoneEvents {
     }
 
     protected <T> T gameService(Class<T> type) {
+        return currentGameService(type);
+    }
+
+    static <T> T currentGameService(Class<T> type) {
         return GameServices.module().getGameService(type);
+    }
+
+    static Camera cameraOrNull() {
+        return GameServices.cameraOrNull();
     }
 
     /** Retries rejected one-shot work without consuming the current DLE frame. */

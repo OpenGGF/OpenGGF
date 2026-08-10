@@ -188,7 +188,7 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance implem
     // ===== Update =====
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (broken) return;
 
         AbstractPlayableSprite updatePlayer =
@@ -735,7 +735,7 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance implem
         public int getY() { return currentY; }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             // ROM: frame delay countdown before movement starts
             if (frameDelay > 0) {
                 frameDelay--;

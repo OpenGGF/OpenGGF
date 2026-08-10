@@ -44,7 +44,7 @@ the stated order.
 | `DLE_SBZ2_Blocks` | `30` / append | `Sonic1SBZEvents.updateSBZ2Boss`, camera reaches `boss_sbz2_x - 0x1a0` (`0x1eb0`) and spawns the false floor | `Sonic1ObjectArtProvider.loadArtForZone` | Route |
 | `DLE_FZ_Main` | `31` / append | `Sonic1SBZEvents.updateFZMain`, camera reaches `boss_fz_x - 0x308` (`0x2148`) | `Sonic1ObjectArtProvider.loadArtForZone` | Route, with Task 6 replacing the legacy `Sonic1FzPlcTimingQueue` consumer |
 | `GotThroughAct` (`_incObj/0D Signpost.asm`) | `16` / replace | `Sonic1SignpostObjectInstance.triggerGotThroughAct` and `Sonic1EggPrisonObjectInstance.triggerGotThroughAct` | `Sonic1ObjectArtProvider.loadArtForZone` | Route at both existing result-entry owners |
-| `Card_ChangeArt` (`_incObj/34 Title Cards.asm`) | `2` (explode), then zone animal `21`–`26` / append | `Sonic1TitleCardManager.updateSlideOut`, exactly when the level-name card first leaves the screen (not when every title element is complete) | `Sonic1ObjectArtProvider.loadArtForZone` | Route once, in that order |
+| `Card_ChangeArt` (`_incObj/34 Title Cards.asm`) | `2` (explode), then zone animal `21`–`26` / append | `Sonic1FixedTitleCardManager.update`, on the ordinary level frame the level-name element is already at `card_finalX` (the routine-4 element only), armed at the `Level_StartGame` release boundary so a headless load submits it on the same logical frame as a presented one | `Sonic1ObjectArtProvider.loadArtForZone` | Route once, in that order |
 | special-stage result setup (`sonic.asm`) | `0` / replace, then `27` / append | `GameLoop.doEnterResultsScreen` through `Sonic1SpecialStageProvider.createResultsScreen` | `Sonic1SpecialStageResultsScreen` self-contained ROM renderer | Route, in this order |
 
 ### Sonic 2

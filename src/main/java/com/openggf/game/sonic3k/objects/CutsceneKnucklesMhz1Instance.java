@@ -104,7 +104,7 @@ public final class CutsceneKnucklesMhz1Instance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         switch (routine) {
             case INIT -> routineInit();
             case WAIT_BEFORE_WALK -> routineWaitBeforeWalk();

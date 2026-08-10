@@ -553,7 +553,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 null,
                 "synthetic.bk2",
                 "2026-07-24",
-                S1CompleteRunMetadataWriter.LuaScriptVersion,
+                TraceContract.RecorderVersion,
                 stopAtFrame,
                 collector);
             segments = collector.Segments;

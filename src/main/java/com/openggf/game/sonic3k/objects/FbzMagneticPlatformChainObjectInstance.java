@@ -29,7 +29,7 @@ public final class FbzMagneticPlatformChainObjectInstance extends AbstractObject
         this(spawn, null);
     }
 
-    @Override public void update(int frameCounter, PlayableEntity player) { }
+    @Override public void update(int vIntRunCount, PlayableEntity player) { }
     int visiblePieces() {
         if (parent == null) return 0;
         return Math.min(8, ((parent.displacement() + 0x18) >>> 5) + 1);

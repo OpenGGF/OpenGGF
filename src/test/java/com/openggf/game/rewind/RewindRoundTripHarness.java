@@ -353,6 +353,9 @@ public final class RewindRoundTripHarness {
                     "com.openggf.game.sonic3k.objects.AizEndBossFlameColumnChild",
                     "TestS3kAizEndBossGraphRewind"),
             Map.entry(
+                    "com.openggf.game.sonic3k.objects.AizEndBossWaterfallChild",
+                    "TestS3kAizEndBossGraphRewind"),
+            Map.entry(
                     "com.openggf.game.sonic3k.objects.AizEndBossShipChild",
                     "TestS3kAizEndBossGraphRewind"),
             Map.entry(
@@ -383,7 +386,7 @@ public final class RewindRoundTripHarness {
                     "com.openggf.game.sonic3k.objects.AizMinibossFlameChild",
                     "TestS3kAizMinibossGraphRewind"),
             Map.entry(
-                    "com.openggf.game.sonic3k.objects.AizMinibossNapalmController",
+                    "com.openggf.game.sonic3k.objects.AizMinibossNapalmProjectile",
                     "TestS3kAizMinibossGraphRewind"),
             Map.entry(
                     "com.openggf.game.sonic3k.objects.AizShipBombInstance",
@@ -715,9 +718,6 @@ public final class RewindRoundTripHarness {
             Map.entry(
                     "com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance$MonitorContentsSlot",
                     "TestS3kMonitorGraphRewind"),
-            Map.entry(
-                    "com.openggf.game.sonic3k.objects.AizEndBossWaterfallChild",
-                    "TestS3kAizEndBossGraphRewind"),
             Map.entry(
                     "com.openggf.level.objects.ShieldObjectInstance",
                     "com.openggf.level.objects.TestShieldRewindPendingRestore"));

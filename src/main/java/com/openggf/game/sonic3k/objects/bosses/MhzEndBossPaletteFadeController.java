@@ -55,7 +55,7 @@ public final class MhzEndBossPaletteFadeController extends AbstractObjectInstanc
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (isDestroyed()) {
             return;
         }

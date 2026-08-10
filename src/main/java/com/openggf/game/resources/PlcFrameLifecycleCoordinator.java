@@ -18,6 +18,12 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
     private NativeBlockingFadeImpl activeFade;
     private PlcLifecycleFrame activeFrame;
     private boolean comparisonSegmentsExternallyManaged;
+    private boolean externalComparisonSegmentOpenDeferred;
+    private boolean representedIterationWithoutVblank;
+    private boolean vblankOverrunCarry;
+    private boolean nextVblankServicesDmaQueue;
+    private boolean representedIterationDefersLoopTailPreparation;
+    private PlcLifecyclePhase heldLoopTailPreparation;
 
     public PlcFrameLifecycleCoordinator(GameModule module) {
         this(() -> module.getGameService(PlcLifecycleService.class), null,
@@ -109,7 +115,82 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
             throw failure;
         } finally {
             try {
-                frame.finish();
+                // A live rewind can replace the unclaimed outer frame with a
+                // replay frame while the iteration callback is running. The
+                // outer wrapper still owns the Java finally, but its token was
+                // deliberately finished before the replay token was latched.
+                if (!frame.finished) {
+                    frame.finish();
+                }
+            } catch (RuntimeException | Error validationFailure) {
+                if (primaryFailure != null) {
+                    primaryFailure.addSuppressed(validationFailure);
+                } else {
+                    throw validationFailure;
+                }
+            }
+        }
+    }
+
+    /**
+     * Runs one logical iteration while an outer live iteration is still on the
+     * Java call stack. Live rewind is checked before the outer frame claims a
+     * phase, so that unclaimed token is only a placeholder for the visual
+     * frame; replay must own the represented logical VBlank instead. A claimed
+     * frame is never replaceable and retains the normal lifecycle guard.
+     *
+     * <p>The method is also used by visual trace rewind, whose replay callback
+     * has the same nesting shape. It is intentionally separate from
+     * {@link #runLogicalIteration(Runnable, Function)} so ordinary lifecycle
+     * callers cannot silently mask a real phase-ownership error.</p>
+     */
+    public <T> T runReplayedLogicalIteration(
+            Runnable fadeUpdate, Function<PlcLifecycleFrame, T> iteration) {
+        Objects.requireNonNull(fadeUpdate, "fadeUpdate");
+        Objects.requireNonNull(iteration, "iteration");
+        if (activeFrame != null && !activeFrame.finished) {
+            if (activeFrame.owner != null) {
+                throw new IllegalStateException(
+                        "a replayed PLC lifecycle frame cannot replace a claimed frame");
+            }
+            // The outer runLogicalIteration() finally remains responsible for
+            // its token, so it observes the finished state and does not finish
+            // the placeholder a second time after replay returns.
+            activeFrame.finish();
+        }
+        return runLogicalIteration(fadeUpdate, iteration);
+    }
+
+    /**
+     * Runs a represented lag closure without advancing or assigning ownership
+     * to an active native blocking fade. A ROM lag handler leaves that fade's
+     * mode-specific PLC work paused until the next ordinary VBlank.
+     */
+    public <T> T runSuppressedLagIteration(
+            Function<PlcLifecycleFrame, T> iteration) {
+        Objects.requireNonNull(iteration, "iteration");
+        if (activeFrame != null && !activeFrame.finished) {
+            throw new IllegalStateException(
+                    "previous PLC lifecycle frame is still active");
+        }
+        PlcLifecycleFrame frame = new PlcLifecycleFrame(serviceSupplier.get());
+        activeFrame = frame;
+        Throwable primaryFailure = null;
+        try {
+            T result = iteration.apply(frame);
+            if (!frame.isOwnedBy(PlcLifecyclePhase.LAG)) {
+                throw new IllegalStateException(
+                        "suppressed lag iteration did not claim LAG");
+            }
+            return result;
+        } catch (RuntimeException | Error failure) {
+            primaryFailure = failure;
+            throw failure;
+        } finally {
+            try {
+                if (!frame.finished) {
+                    frame.finish();
+                }
             } catch (RuntimeException | Error validationFailure) {
                 if (primaryFailure != null) {
                     primaryFailure.addSuppressed(validationFailure);
@@ -129,8 +210,96 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
         return activeFade;
     }
 
+    /**
+     * Declares that the iteration about to run is represented without any
+     * V-blank having elapsed for it. Live play never sets this: every live
+     * iteration is closed by a real V-blank. It is a hardware-timing
+     * classification only -- no gameplay value, queue readiness or transfer
+     * identity crosses this call.
+     *
+     * <p>ROM basis: {@code Vint_runcount} is bumped once per V-blank at
+     * {@code VintRet} (docs/s2disasm/s2.asm:507-508) regardless of which
+     * handler ran, and {@code ProcessDMAQueue} (s2.asm:1770) is reached only
+     * from the real per-mode V-int handlers (the {@code Vint_Level} call at
+     * s2.asm:781, reached from s2.asm:698), never from {@code Vint_Lag}
+     * (s2.asm:529-580) -- S1's {@code VBlank_Lag}
+     * (docs/s1disasm/sonic.asm:709-730) has the same shape.
+     *
+     * <p>Crucially the real handler calls {@code ProcessDMAQueue} <em>before</em>
+     * {@code VintRet} bumps the counter, so a sample taken with neither counter
+     * advanced still sits after the queue was drained: this iteration's own
+     * closure IS a dynamic-art publication boundary. What is still mid-flight is
+     * the <em>gameplay</em> iteration, so only physics stays suppressed, and it
+     * is the following iteration -- the one that overran its V-blank and
+     * consumes two {@code Vint_runcount} ticks -- that publishes on a later
+     * boundary instead of its own.
+     */
+    public void markRepresentedIterationWithoutVblank() {
+        representedIterationWithoutVblank = true;
+    }
+
+    /**
+     * Declares that the V-blank opening the next represented iteration runs a
+     * DMA-queue-only V-int instead of the mode's ordinary handler, so it
+     * services the dynamic-art queue whatever phase that row carries.
+     *
+     * <p>ROM basis: the S2 special stage's startup sequence queues the player
+     * objects' art from its one-off {@code RunObjects} pass
+     * (docs/s2disasm/s2.asm:6662) and then explicitly asks for
+     * {@code VintID_CtrlDMA} before waiting (s2.asm:6665-6668).
+     * {@code Vint_CtrlDMA} is nothing but {@code ProcessDMAQueue}
+     * (s2.asm:998-1001, routine at s2.asm:1770), so that V-blank retires the
+     * queued transfers even though the main loop it belongs to
+     * ({@code Pal_FadeFromWhite}, s2.asm:3460-3482) never polls the joypad and
+     * therefore reads as a lag frame.
+     *
+     * <p>This carries no gameplay value and no transfer identity -- it only
+     * classifies which V-blank ran a real DMA handler. It is a one-shot
+     * consumed by the very next claim.
+     */
+    public void markNextVblankServicesDmaQueue() {
+        nextVblankServicesDmaQueue = true;
+    }
+
+    /**
+     * Declares that the represented iteration about to run is still in flight
+     * when its row is sampled, so its loop tail belongs to a later closure.
+     *
+     * <p>ROM basis: the loop-tail PLC preparation ({@code RunPLC},
+     * docs/s1disasm/sonic.asm:3032) sits after every expensive call in
+     * {@code Level_MainLoop} -- {@code ExecuteObjects} (3010),
+     * {@code DeformLayers} (3025), {@code BuildSprites} (3028),
+     * {@code ObjPosLoad} (3029), {@code PaletteCycle} (3031). An iteration that
+     * has not reached the loop top's {@code move.b #id_VBlank_Levels,
+     * (v_vblank_routine).w} (3000) by the next V-blank takes {@code VBlank_Lag}
+     * (sonic.asm:709) instead of the level handler, and has essentially always
+     * not reached {@code RunPLC} either: only {@code OscillateNumDo},
+     * {@code SynchroAnimate} and {@code SignpostArtLoad} separate 3032 from the
+     * re-arm. So the ROM's own {@code RunPLC} for that iteration executes
+     * during the closure that consumes the lag V-blank, and the
+     * still-decompressing head is what the previous row's sample observes.
+     *
+     * <p>This only moves <em>when</em> the engine's own already-submitted queue
+     * head is armed between two represented closures of one ROM iteration. It
+     * carries no gameplay value, no queue identity, and creates no work.
+     */
+    public void markRepresentedIterationDefersLoopTailPreparation() {
+        representedIterationDefersLoopTailPreparation = true;
+    }
+
     public void reset() {
+        if (externalComparisonSegmentOpenDeferred
+                && dynamicArtLifecycle != null
+                && dynamicArtLifecycle.isComparisonSegmentReserved()) {
+            dynamicArtLifecycle.cancelReservedComparisonSegment();
+        }
         activeFrame = null;
+        representedIterationWithoutVblank = false;
+        vblankOverrunCarry = false;
+        nextVblankServicesDmaQueue = false;
+        representedIterationDefersLoopTailPreparation = false;
+        heldLoopTailPreparation = null;
+        externalComparisonSegmentOpenDeferred = false;
         if (activeFade != null) {
             activeFade.closed = true;
             activeFade = null;
@@ -142,7 +311,87 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
      * not accept expected events or any gameplay value.
      */
     public void setComparisonSegmentsExternallyManaged(boolean externallyManaged) {
+        if (!externallyManaged && externalComparisonSegmentOpenDeferred
+                && dynamicArtLifecycle != null
+                && dynamicArtLifecycle.isComparisonSegmentReserved()) {
+            dynamicArtLifecycle.cancelReservedComparisonSegment();
+        }
         comparisonSegmentsExternallyManaged = externallyManaged;
+        if (!externallyManaged) {
+            externalComparisonSegmentOpenDeferred = false;
+        }
+    }
+
+    /**
+     * Transfers a completed automatically managed diagnostics window to an
+     * external run-segment owner. The caller opens the new external window
+     * after this operation returns.
+     */
+    public void acquireExternalComparisonSegmentOwnership() {
+        acquireExternalComparisonSegmentOwnership(false);
+    }
+
+    /**
+     * Transfers comparison ownership now but opens the first external window
+     * only after the next production service decision. This matches automatic
+     * ownership's service-before-open ordering while still guaranteeing that
+     * the same logical iteration publishes external row zero.
+     */
+    public void acquireExternalComparisonSegmentOwnershipAfterNextService() {
+        acquireExternalComparisonSegmentOwnership(true);
+    }
+
+    private void acquireExternalComparisonSegmentOwnership(
+            boolean deferWindowUntilAfterService) {
+        if (comparisonSegmentsExternallyManaged) {
+            throw new IllegalStateException(
+                    "dynamic-art comparison segments are already externally managed");
+        }
+        if (dynamicArtLifecycle != null
+                && dynamicArtLifecycle.isComparisonSegmentOpen()
+                && !dynamicArtLifecycle.latestSnapshot().published()) {
+            throw new IllegalStateException(
+                    "automatic dynamic-art comparison segment has not published a row");
+        }
+        comparisonSegmentsExternallyManaged = true;
+        externalComparisonSegmentOpenDeferred = deferWindowUntilAfterService;
+        try {
+            if (dynamicArtLifecycle != null
+                    && dynamicArtLifecycle.isComparisonSegmentOpen()) {
+                dynamicArtLifecycle.closeComparisonSegment();
+            }
+            if (deferWindowUntilAfterService
+                    && dynamicArtLifecycle != null) {
+                dynamicArtLifecycle.reserveComparisonSegment();
+            }
+        } catch (RuntimeException | Error failure) {
+            comparisonSegmentsExternallyManaged = false;
+            externalComparisonSegmentOpenDeferred = false;
+            throw failure;
+        }
+    }
+
+    /**
+     * Closes the current externally managed comparison window, or cancels its
+     * not-yet-serviced initial open. External ownership itself remains active
+     * so a run gap cannot fall back to automatic windows.
+     */
+    public void closeExternallyManagedComparisonSegment() {
+        if (!comparisonSegmentsExternallyManaged) {
+            throw new IllegalStateException(
+                    "dynamic-art comparison segments are not externally managed");
+        }
+        if (externalComparisonSegmentOpenDeferred) {
+            externalComparisonSegmentOpenDeferred = false;
+            if (dynamicArtLifecycle != null
+                    && dynamicArtLifecycle.isComparisonSegmentReserved()) {
+                dynamicArtLifecycle.cancelReservedComparisonSegment();
+            }
+            return;
+        }
+        if (dynamicArtLifecycle != null) {
+            dynamicArtLifecycle.closeComparisonSegment();
+        }
     }
 
     public final class PlcLifecycleFrame {
@@ -150,6 +399,7 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
         private PlcLifecyclePhase owner;
         private boolean prepared;
         private boolean finished;
+        private boolean consumedHeldLoopTailPreparation;
 
         private PlcLifecycleFrame(PlcLifecycleService service) {
             this.service = service;
@@ -165,12 +415,41 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
             if (service != null) {
                 service.serviceVBlank(phase);
             }
+            // The loop tail held by an in-flight iteration runs on the closure
+            // that consumed its lag V-blank, after that V-blank's own service
+            // -- which for a lag handler decompresses nothing. A closure that
+            // is itself still mid-iteration keeps holding it.
+            if (heldLoopTailPreparation != null
+                    && !representedIterationDefersLoopTailPreparation) {
+                PlcLifecyclePhase held = heldLoopTailPreparation;
+                heldLoopTailPreparation = null;
+                consumedHeldLoopTailPreparation = true;
+                if (service != null) {
+                    service.prepareAfterLoop(held);
+                }
+            }
             if (dynamicArtLifecycle != null
                     && dynamicArtLifecycle.isRunActive()) {
-                if (dynamicArtDmaService.services(phase)) {
+                // A represented iteration whose V-blank had not yet bumped
+                // Vint_runcount still ran a real per-mode handler, and that
+                // handler calls ProcessDMAQueue (docs/s2disasm/s2.asm:781,
+                // routine at s2.asm:1770) long before VintRet increments the
+                // counter (s2.asm:507-508). So the DMA queue was serviced for
+                // the row being closed even though the phase handed here had to
+                // be LAG to keep gameplay suppressed. A genuine Vint_Lag row
+                // (Vint_routine still 0, s2.asm:483-484) never reaches
+                // ProcessDMAQueue and keeps the per-game phase policy's answer.
+                boolean declaredDmaVblank = nextVblankServicesDmaQueue;
+                nextVblankServicesDmaQueue = false;
+                if (dynamicArtDmaService.services(phase)
+                        || representedIterationWithoutVblank
+                        || declaredDmaVblank) {
                     dynamicArtLifecycle.serviceProductionVBlank();
                 }
-                if (!comparisonSegmentsExternallyManaged
+                if (externalComparisonSegmentOpenDeferred) {
+                    dynamicArtLifecycle.activateReservedComparisonSegment();
+                    externalComparisonSegmentOpenDeferred = false;
+                } else if (!comparisonSegmentsExternallyManaged
                         && !dynamicArtLifecycle.isComparisonSegmentOpen()) {
                     dynamicArtLifecycle.openComparisonSegment();
                 }
@@ -186,8 +465,16 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
             if (prepared) {
                 throw new IllegalStateException("PLC lifecycle frame was already prepared");
             }
+            if (representedIterationDefersLoopTailPreparation) {
+                // The ROM had not reached this iteration's loop tail when the
+                // row was sampled. A runtime-art coordinator without a PLC
+                // service still owns that same held tail.
+                heldLoopTailPreparation = phase;
+            }
             if (service != null && service.hasPreparationBoundary(phase)) {
-                service.prepareAfterLoop(phase);
+                if (!representedIterationDefersLoopTailPreparation) {
+                    service.prepareAfterLoop(phase);
+                }
                 prepared = true;
             }
         }
@@ -196,16 +483,50 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
             return owner == phase;
         }
 
+        /** Whether this represented iteration's loop-tail work belongs to a later closure. */
+        public boolean defersLoopTailPreparation() {
+            return representedIterationDefersLoopTailPreparation;
+        }
+
+        /** Whether this closure consumed a loop tail held by the preceding row. */
+        public boolean consumedHeldLoopTailPreparation() {
+            return consumedHeldLoopTailPreparation;
+        }
+
         public void finish() {
             requireOpen();
             if (service != null && owner != null
                     && service.hasPreparationBoundary(owner) && !prepared) {
                 throw new IllegalStateException("missing PLC preparation for " + owner);
             }
+            // A dynamic-art edge publishes on the V-blank that closes the
+            // iteration which produced it. Two shapes reach no such boundary:
+            //   * a lag V-blank -- V_Int branched to Vint_Lag because
+            //     Vint_routine was still 0 (docs/s2disasm/s2.asm:483-484, 529;
+            //     docs/s1disasm/sonic.asm:709 VBlank_Lag), and Vint_Lag never
+            //     calls ProcessDMAQueue (only the real handlers do:
+            //     s2.asm:781, 899, 1000, 1046, 1083, 1138); and
+            //   * the iteration that overran its V-blank. Its predecessor was
+            //     sampled mid-V-int -- after ProcessDMAQueue (s2.asm:781) but
+            //     before VintRet bumped Vint_runcount (s2.asm:507-508) -- so
+            //     that predecessor did reach a publication boundary and must
+            //     not be carried, while this iteration is
+            //     still mid-flight at the boundary and its queue-add
+            //     (s2.asm:1705 "to be issued the next time ProcessDMAQueue is
+            //     called") lands after it. The carry is a one-shot consumed by
+            //     the very next closure, never a frame number or route.
+            boolean withoutVblank = representedIterationWithoutVblank;
+            representedIterationWithoutVblank = false;
+            representedIterationDefersLoopTailPreparation = false;
+            // A row sampled mid-V-int is never carried: its real handler already
+            // ran ProcessDMAQueue. That holds however many such rows occur in a
+            // row, so the guard is on the row's own shape, not on a one-shot.
+            boolean carried = (vblankOverrunCarry
+                    || owner == PlcLifecyclePhase.LAG) && !withoutVblank;
+            vblankOverrunCarry = withoutVblank;
             if (dynamicArtLifecycle != null && owner != null
                     && dynamicArtLifecycle.isRunActive()) {
-                dynamicArtLifecycle.finishProductionIteration(
-                        owner == PlcLifecyclePhase.LAG);
+                dynamicArtLifecycle.finishProductionIteration(carried);
             }
             finished = true;
         }

@@ -2,6 +2,13 @@
 
 Generated: 2026-06-04 15:26:08
 
+> **Coverage meaning (2026-08-08):** “Implemented” means the object ID has a
+> concrete registry/runtime owner. It does not certify full ROM behavior,
+> rendering, collision, every subtype, boss phase, or rewind/trace parity.
+> Dynamically allocated child objects can also remain absent even when their
+> registered parent is checked; use the current status and known-bugs documents
+> for route-completion claims.
+
 ## Summary
 
 - **Total unique objects found:** 303

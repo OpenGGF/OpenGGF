@@ -4,6 +4,7 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.physics.Direction;
@@ -74,6 +75,24 @@ class TestS3kLbzPlayerLauncher {
         sonic.setMoveLockTimer(0);
         sonic.setDirection(Direction.RIGHT);
         sonic.setPushing(true);
+    }
+
+    @Test
+    void skipIntrosStillRunsLbzGroundLaunchAtTitleCardSeam() {
+        ObjectInstance intro = GameServices.level().getObjectManager().getActiveObjects().stream()
+                .filter(object -> "LBZ1GroundLaunchIntro".equals(object.getName()))
+                .findFirst()
+                .orElse(null);
+        assertTrue(intro != null, "production LBZ1 load must install the ground launch intro");
+        GameServices.level().getObjectManager().removeDynamicObject(intro);
+
+        assertTrue(GameServices.module().getLevelEventProvider() instanceof Sonic3kLevelEventManager);
+        ((Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider())
+                .applyZonePlayerStateAfterTitleCard();
+
+        assertTrue(GameServices.level().getObjectManager().getActiveObjects().stream()
+                        .anyMatch(object -> "LBZ1GroundLaunchIntro".equals(object.getName())),
+                "generic skip-intros must not suppress LBZ1 ground launch setup");
     }
 
     @Test

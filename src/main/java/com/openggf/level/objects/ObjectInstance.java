@@ -1,6 +1,7 @@
 package com.openggf.level.objects;
 
 import com.openggf.debug.DebugRenderContext;
+import com.openggf.level.CarriedTitlePublicationTiming;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.game.PlayableEntity;
@@ -163,7 +164,7 @@ public interface ObjectInstance {
         // Default no-op.
     }
 
-    void update(int frameCounter, PlayableEntity player);
+    void update(int vIntRunCount, PlayableEntity player);
 
     void appendRenderCommands(List<GLCommand> commands);
 
@@ -222,6 +223,17 @@ public interface ObjectInstance {
      */
     default boolean participatesInRomWorldTransitionOffset() {
         return false;
+    }
+
+    /**
+     * Carries both the world delta and semantic title timing. The default
+     * preserves the established offset-only hook for existing objects.
+     */
+    default void onCarriedAcrossSeamlessTransition(
+            int offsetX,
+            int offsetY,
+            CarriedTitlePublicationTiming titleTiming) {
+        onCarriedAcrossSeamlessTransition(offsetX, offsetY);
     }
 
     /**

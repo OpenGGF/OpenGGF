@@ -26,7 +26,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Regression test for the MZ2 credits demo trace divergence at frame 341
- * (TestS1Credits01Mz2TraceReplay): {@code expected=0x0E1A, actual=0x0E19}.
+ * (TestS1Credits01Mz2TraceReplay): the engine trailed the recording by one
+ * pixel across the lava slide. Expected X is read from the current fixture
+ * row, not hardcoded — the pre-v5 literals quoted in this file's history
+ * (0x0E1A / 0x0E19) belong to a recording that has since been re-timed.
  *
  * <p>ROM behaviour: when an MZ Push Block (object 0x33) is in solidState 4
  * (falling) or solidState 6 (sliding-to-align), ROM's loc_C1AA / loc_C1F2
@@ -60,9 +63,20 @@ public class TestS1PushBlockSideContact {
 
     private static final int CREDITS_DEMO_IDX = 1; // MZ Act 2
 
-    /** First trace divergence frame. ROM expected centreX = 0x0E1A. */
+    /**
+     * Trace row index for the lava-slide frame this regression guards.
+     *
+     * <p>The expected X is read from the fixture itself
+     * ({@code src/test/resources/traces/s1/credits_01_mz2/physics.csv.gz}, row
+     * index {@value #FRAME_341}) rather than hardcoded. The v5 fixture
+     * republish re-timed this recording by one row relative to the pre-v5
+     * capture — the old literal 0x0E1A is now row 340, and row 341 records
+     * 0x0E18 — so a hardcoded number silently asserted the previous
+     * recording. Reading the row keeps this test pinned to the same ROM
+     * evidence {@code TestS1Credits01Mz2TraceReplay} compares against, using
+     * the same "compare after stepping row i" convention.
+     */
     private static final int FRAME_341 = 341;
-    private static final int EXPECTED_PLAYER_X_FRAME_341 = 0x0E1A;
 
     private static SharedLevel sharedLevel;
 
@@ -128,8 +142,9 @@ public class TestS1PushBlockSideContact {
      * Reproduces the MZ2 credits demo frame 341 divergence directly: replays
      * the demo input through frame 341 and asserts the player X matches ROM.
      *
-     * <p>Without the fix, this test fails with X = 0x0E19 (1px left of ROM's
-     * 0x0E1A). With the fix, X matches ROM exactly.
+     * <p>Without the fix the player sits 1px left of the recorded X because of
+     * the premature platform-rider carry; with the fix X matches the recorded
+     * row exactly.
      */
     @Test
     public void mz2PushBlockLavaSlideMatchesRomThroughFrame341() {
@@ -161,12 +176,13 @@ public class TestS1PushBlockSideContact {
             fixture.stepFrame(up, down, left, right, jump);
         }
 
+        int expectedX = trace.getFrame(FRAME_341).x() & 0xFFFF;
         int actualX = player.getCentreX() & 0xFFFF;
-        assertEquals(EXPECTED_PLAYER_X_FRAME_341, actualX,
+        assertEquals(expectedX, actualX,
                 "Player centre X at frame " + FRAME_341
                         + " (lava push block first slide frame after state-4 → state-0"
-                        + " transition) should match ROM = 0x"
-                        + Integer.toHexString(EXPECTED_PLAYER_X_FRAME_341)
+                        + " transition) should match the recorded ROM value 0x"
+                        + Integer.toHexString(expectedX)
                         + " but got 0x" + Integer.toHexString(actualX)
                         + " (1-pixel drift indicates a premature platform-rider carry"
                         + " on the lava landing transition).");

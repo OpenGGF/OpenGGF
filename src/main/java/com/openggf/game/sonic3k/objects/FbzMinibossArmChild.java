@@ -75,7 +75,7 @@ final class FbzMinibossArmChild extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (boss == null) return;
         if (boss.isDefeated()) {
             updateDefeatFlicker();

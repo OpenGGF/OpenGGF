@@ -242,6 +242,31 @@ class TestTraceRunHardwareTimingCoordinator {
     }
 
     @Test
+    void destinationScheduleCanHandoffBeforeItsFirstRowIsLatched() {
+        HardwareTimingService service = new HardwareTimingService();
+        HardwareTimingReplayPort port =
+                new HardwareTimingReplayPort(service.beginRecordedAdmission());
+        port.install(HardwareTimingSchedule.empty());
+        TimingFixture fixture = new TimingFixture(port);
+        fixture.installHardwareTimingReplay(port);
+        var coordinator = new TraceRunReplayWalker.HardwareTimingCoordinator(
+                fixture,
+                List.of(
+                        new TraceRunReplayWalker.HardwareTimingSegment(
+                                10, List.of(100), HardwareTimingSchedule.empty()),
+                new TraceRunReplayWalker.HardwareTimingSegment(
+                        20, List.of(200), HardwareTimingSchedule.recordedEmpty())));
+
+        coordinator.beginSegmentRow(0, 0);
+        coordinator.handoffToSegment(1);
+        assertEquals(List.of(100), fixture.latchedRawFrames,
+                "schedule handoff must not admit a destination production row");
+
+        coordinator.beginSegmentRow(1, 0);
+        assertEquals(List.of(100, 200), fixture.latchedRawFrames);
+    }
+
+    @Test
     void metadataOnlySpecialStageUsesAuditedSegmentLocalRawFrames() {
         var segment = new TraceRunManifest.Segment(
                 "ss", "special_stage", "special_stage", 900, 3,
@@ -249,7 +274,7 @@ class TestTraceRunHardwareTimingCoordinator {
         var trace = TraceFixtures.trace(
                 TraceFixtures.metadataWithHardwareTiming("s3k", 0, 0, 3),
                 List.of(),
-                HardwareTimingSchedule.empty());
+                HardwareTimingSchedule.recordedEmpty());
         var plans = List.of(new TraceRunReplayWalker.SegmentPlan(
                 segment, trace, null, null));
 
@@ -273,7 +298,7 @@ class TestTraceRunHardwareTimingCoordinator {
         var later = TraceFixtures.trace(
                 TraceFixtures.metadataWithHardwareTiming("s3k", 0, 0, 1),
                 List.of(),
-                HardwareTimingSchedule.empty());
+                HardwareTimingSchedule.recordedEmpty());
 
         assertTrue(TraceRunReplayWalker.hasHardwareTimingStream(List.of(
                 new TraceRunReplayWalker.SegmentPlan(
@@ -378,6 +403,12 @@ class TestTraceRunHardwareTimingCoordinator {
         }
 
         @Override
+        public void abortHardwareTimingReplayRun() {
+            closed = true;
+            observer = null;
+        }
+
+        @Override
         public AbstractPlayableSprite sprite() {
             return null;
         }
@@ -399,6 +430,10 @@ class TestTraceRunHardwareTimingCoordinator {
 
         @Override
         public void advancePlayableAnimationsOnly() {
+        }
+
+        @Override
+        public void advancePlayableFixedSlotsOnly() {
         }
 
         @Override
@@ -464,6 +499,13 @@ class TestTraceRunHardwareTimingCoordinator {
         }
 
         @Override
+        public void abortHardwareTimingReplayRun() {
+            context.setHardwareTimingBoundaryObserver(null);
+            context.getRewindRegistry().deregister(
+                    HardwareTimingReplayPort.REWIND_KEY);
+        }
+
+        @Override
         public int stepFrameFromRecording() {
             throw new UnsupportedOperationException();
         }
@@ -475,6 +517,10 @@ class TestTraceRunHardwareTimingCoordinator {
 
         @Override
         public void advancePlayableAnimationsOnly() {
+        }
+
+        @Override
+        public void advancePlayableFixedSlotsOnly() {
         }
 
         @Override

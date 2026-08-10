@@ -4,6 +4,7 @@ import com.openggf.trace.SpecialStageTraceData;
 import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceRunManifest;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
 
@@ -21,13 +22,11 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class TestS2SyntheticRunFixture {
 
-    private static final Path RUN_DIR =
-        Path.of("src", "test", "resources", "traces", "synthetic", "run_ehz_ss_3seg");
-
     @Test
-    void manifestLoadsAndValidates() throws Exception {
-        TraceRunManifest run = TraceRunManifest.load(RUN_DIR.resolve("run_manifest.json"));
-        run.validate(RUN_DIR);
+    void manifestLoadsAndValidates(@TempDir Path root) throws Exception {
+        Path runDir = TraceV5RunFixture.writeS2SpecialStageRun(root);
+        TraceRunManifest run = TraceRunManifest.load(runDir.resolve("run_manifest.json"));
+        run.validate(runDir);
 
         assertEquals("s2", run.game());
         assertEquals(3, run.segments().size());
@@ -71,8 +70,10 @@ class TestS2SyntheticRunFixture {
     }
 
     @Test
-    void specialStageSegmentParsesThroughSpecialStageTraceData() throws Exception {
-        SpecialStageTraceData ss = SpecialStageTraceData.load(RUN_DIR.resolve("ss"));
+    void specialStageSegmentParsesThroughSpecialStageTraceData(@TempDir Path root)
+            throws Exception {
+        Path runDir = TraceV5RunFixture.writeS2SpecialStageRun(root);
+        SpecialStageTraceData ss = SpecialStageTraceData.load(runDir.resolve("ss"));
 
         assertEquals(2, ss.frameCount());
         assertEquals("run_ehz_ss_3seg", ss.metadata().runId());
@@ -80,15 +81,17 @@ class TestS2SyntheticRunFixture {
     }
 
     @Test
-    void bothLevelSegmentsParseThroughTraceDataWithMatchingFrameCounts() throws Exception {
-        TraceRunManifest run = TraceRunManifest.load(RUN_DIR.resolve("run_manifest.json"));
-        run.validate(RUN_DIR);
+    void bothLevelSegmentsParseThroughTraceDataWithMatchingFrameCounts(@TempDir Path root)
+            throws Exception {
+        Path runDir = TraceV5RunFixture.writeS2SpecialStageRun(root);
+        TraceRunManifest run = TraceRunManifest.load(runDir.resolve("run_manifest.json"));
+        run.validate(runDir);
 
         for (TraceRunManifest.Segment seg : run.segments()) {
             if (!"level".equals(seg.kind())) {
                 continue;
             }
-            TraceData data = TraceData.load(RUN_DIR.resolve(seg.dir()));
+            TraceData data = TraceData.load(runDir.resolve(seg.dir()));
             assertEquals(seg.traceFrameCount(), data.frameCount(), "segment " + seg.dir());
             assertEquals("run_ehz_ss_3seg", data.metadata().runId(), "segment " + seg.dir());
             assertNotNull(data.metadata().segmentIndex(), "segment " + seg.dir());

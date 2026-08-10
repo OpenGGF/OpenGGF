@@ -27,7 +27,6 @@ public final class CnzEggCapsuleInstance extends AbstractS3kUprightEggCapsuleIns
 
     private CompletionContinuation completionContinuation;
     private boolean resultsCompleteNotified;
-    private boolean resultsCompletionObserved;
 
     public CnzEggCapsuleInstance(ObjectSpawn spawn) {
         this(spawn, CompletionContinuation.NONE);
@@ -43,14 +42,10 @@ public final class CnzEggCapsuleInstance extends AbstractS3kUprightEggCapsuleIns
     @Override
     protected void updateAfterResultsStarted(int frameCounter, com.openggf.game.PlayableEntity player) {
         if (services().gameState() != null && services().gameState().isEndOfLevelFlag()) {
-            if (resultsCompletionObserved) {
-                notifyResultsComplete();
-            } else {
-                // Obj_LevelResults occupies a later native slot than the boss
-                // owner. Its _unkFAA8 clear is therefore consumable by
-                // loc_6E724 only on the following SST object pass.
-                resultsCompletionObserved = true;
-            }
+            // Obj_LevelResults has already published the global completion
+            // state. The boss's loc_6E724 consumes that state directly; this
+            // capsule callback only retires the engine continuation.
+            notifyResultsComplete();
         }
     }
 

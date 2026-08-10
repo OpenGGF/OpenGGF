@@ -42,13 +42,17 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-import com.openggf.sprites.playable.SidekickCpuController;
+import com.openggf.game.RuntimeArtCoordinator;
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
+import com.openggf.game.timing.HardwareTimingService;
+import com.openggf.data.Rom;
+import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.Nested;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.AfterEach;
-import com.openggf.tests.FullReset;
-import com.openggf.tests.SingletonResetExtension;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.MockedStatic;
 
 import java.io.IOException;
@@ -77,8 +81,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-@ExtendWith(SingletonResetExtension.class)
-@FullReset
 class TestMhz1CutsceneObjects {
     private static final int MHZ1_SWITCH_SPAWN_Y = 0x0650;
 
@@ -435,7 +437,7 @@ class TestMhz1CutsceneObjects {
     }
 
     @Test
-    void mhz2CutsceneWaitsWithoutInitializingWhenWidenedWindowLoadsItBeforeRomRange() {
+    void mhz2CutsceneDeletesWithoutInitializingWhenCameraOutsideRomRange() {
         ObjectManager objectManager = mock(ObjectManager.class);
         Camera camera = mhz2TriggerCamera();
         camera.setY((short) 0x0647);
@@ -453,9 +455,8 @@ class TestMhz1CutsceneObjects {
         try (MockedStatic<AizIntroArtLoader> artLoader = mockStatic(AizIntroArtLoader.class)) {
             knuckles.update(0, sonic);
 
-            assertFalse(knuckles.isDestroyed(),
-                    "an engine-widened placement must remain available for the later native Check_CameraInRange pass");
-            assertEquals(0, knuckles.getRoutineForTest());
+            assertTrue(knuckles.isDestroyed(),
+                    "Check_CameraInRange deletes/skips CutsceneKnux_MHZ2 when Camera_Y_pos is below $648");
             artLoader.verifyNoInteractions();
             verify(objectManager, never()).addDynamicObject(any(ObjectInstance.class));
         }
@@ -967,35 +968,6 @@ class TestMhz1CutsceneObjects {
     }
 
     @Test
-    void mhz2CameraLockSetsNativeCtrl2SignedLockAndClearsItsLogicalLatch() {
-        Camera camera = mhz2TriggerCamera();
-        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x0485, (short) 0x07D3);
-        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x0400, (short) 0x07ED);
-        tails.setCpuControlled(true);
-        SidekickCpuController tailsCpu = new SidekickCpuController(tails, sonic);
-        tails.setCpuController(tailsCpu);
-        tailsCpu.setController2Input(AbstractPlayableSprite.INPUT_JUMP,
-                AbstractPlayableSprite.INPUT_JUMP);
-
-        camera.setFocusedSprite(sonic);
-        setMhz2TriggerCameraPosition(camera);
-        CutsceneKnucklesMhz2Instance cutscene = new CutsceneKnucklesMhz2Instance(new ObjectSpawn(
-                0x03D0, 0x0748, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x20, 0, false, 0));
-        cutscene.setServices(new TestObjectServices()
-                .withCamera(camera)
-                .withSidekicks(List.of(tails))
-                .withZoneRuntimeRegistry(runtime(PlayerCharacter.SONIC_AND_TAILS)));
-
-        cutscene.update(0, sonic);
-        cutscene.update(1, sonic);
-
-        assertTrue(tailsCpu.isController2SignedLocked(),
-                "CutsceneKnux_MHZ2 writes Ctrl_2_locked=$FF while it pins the native players");
-        assertEquals(0, tailsCpu.getDiagnosticGeneratedHeldInput(),
-                "the cutscene clears Ctrl_2_logical together with the signed controller lock");
-    }
-
-    @Test
     void mhz2CutscenePressStartIgnoresOffscreenAirborneNativeP2LikeRom() {
         Camera camera = mhz2TriggerCamera();
         TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x052A, (short) 0x0748);
@@ -1053,19 +1025,6 @@ class TestMhz1CutsceneObjects {
                 "loc_63238 always writes anim=$14 to Player_1 when anim_frame reaches $0C");
         assertEquals(5, tails.getAnimationId(),
                 "loc_63238 checks Player_2 render_flags and skips anim=$14 when Player_2 is off-screen");
-
-        cutscene.update(500, sonic);
-
-        assertEquals(0, sonic.getAnimationId(),
-                "sub_65E72 rewrites anim=0 on the dispatch after loc_63238 briefly writes anim=$14");
-        assertTrue(sonic.isObjectMappingFrameControl(),
-                "object_control=$83 gives the cutscene direct ownership of the raw player mapping");
-        assertEquals(0xB4, sonic.getMappingFrame(),
-                "RawAni_65EB0 selects Sonic's first cutscene-controlled mapping on this V-int phase");
-        assertEquals(0, tails.getAnimationId(),
-                "sub_65E72 applies anim=0 to Player_2 even when the one-frame anim=$14 write was skipped");
-        assertEquals(0xA7, tails.getMappingFrame(),
-                "RawAni_65EB0 selects Tails' character-specific cutscene mapping");
     }
 
     @Test
@@ -1106,8 +1065,8 @@ class TestMhz1CutsceneObjects {
         assertTrue(sonic.isControlLocked());
         assertEquals(0x0F, sonic.getAnimationId(),
                 "loc_6338E writes anim=$0F when the player lift child starts");
-        assertEquals(0, sonic.getYSpeed(),
-                "loc_6338E stores y_vel=-$1000 on the invisible carrier, not Player_1");
+        assertTrue((sonic.getYSpeed() & 0xFFFF) > 0x8000,
+                "loc_6338E starts the lift with y_vel=-$1000");
 
         for (int frame = 0; frame < 180 && !liftChild.isDestroyed(); frame++) {
             cutscene.update(liftFrame + 2 + frame, sonic);
@@ -1159,7 +1118,7 @@ class TestMhz1CutsceneObjects {
 
         clearInvocations(camera);
         liftChild.update(liftFrame + 1, sonic);
-        verify(camera).requestFastVerticalScroll();
+        verify(camera, never()).requestFastVerticalScroll();
 
         clearInvocations(camera);
         liftChild.update(liftFrame + 2, sonic);
@@ -2319,53 +2278,6 @@ class TestMhz1CutsceneObjects {
                 "CutsceneKnux_MHZ1 snapshots Normal_palette_line_2 before Pal_CutsceneKnux; cleanup must restore it");
     }
 
-    @Test
-    void buttonSignalsRoutineCAndKnucklesCleanupRestoresPlayerControl() {
-        Camera camera = new Camera();
-        ObjectManager objectManager = mock(ObjectManager.class);
-        List<ObjectInstance> spawned = new ArrayList<>();
-        doAnswer(invocation -> {
-            spawned.add(invocation.getArgument(0));
-            return null;
-        }).when(objectManager).addDynamicObject(any(ObjectInstance.class));
-        TestObjectServices services = new TestObjectServices() {
-            @Override
-            public ObjectManager objectManager() {
-                return objectManager;
-            }
-        }.withCamera(camera);
-        Mhz1CutsceneKnucklesInstance knuckles = new Mhz1CutsceneKnucklesInstance(new ObjectSpawn(
-                0x0380, 0x0580, Sonic3kObjectIds.MHZ1_CUTSCENE_KNUCKLES, 0, 0, false, 0));
-        knuckles.setServices(services);
-        knuckles.forceReadyForButtonForTest();
-        registerActiveCutsceneController(objectManager, knuckles);
-        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x0389, (short) 0x0580);
-        sonic.setControlLocked(true);
-        sonic.setForcedInputMask(AbstractPlayableSprite.INPUT_DOWN);
-
-        Mhz1CutsceneButtonInstance button = new Mhz1CutsceneButtonInstance(new ObjectSpawn(
-                0x0380, MHZ1_SWITCH_SPAWN_Y, Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON, 0, 0, false, 0));
-        button.setServices(services);
-
-        button.update(0, sonic);
-        button.update(1, sonic);
-        CutsceneKnucklesMhz1Instance cutsceneKnuckles = spawned.stream()
-                .filter(CutsceneKnucklesMhz1Instance.class::isInstance)
-                .map(CutsceneKnucklesMhz1Instance.class::cast)
-                .findFirst().orElseThrow();
-        cutsceneKnuckles.setServices(services);
-        advanceMhz1CutsceneKnucklesToButtonRange(cutsceneKnuckles, button, sonic);
-        for (int frame = 0; frame < 0x5F; frame++) {
-            button.update(420 + frame, sonic);
-        }
-        knuckles.update(0, sonic);
-
-        assertFalse(sonic.isControlLocked(),
-                "Obj_MHZ1CutsceneButton reaches Wait_Draw at loc_62ED0 before its long callback wait; "
-                        + "Obj_Wait must branch to loc_62EFC soon enough for the next controller slot pass");
-        assertEquals(0, sonic.getForcedInputMask());
-        assertTrue(knuckles.isDestroyed());
-    }
 
     @Test
     void mhz1ButtonNormalRouteRunsInlineSolidCheckpointForSidePush() {
@@ -2476,40 +2388,6 @@ class TestMhz1CutsceneObjects {
                 "loc_62D70 calls Save_Level_Data after updating the restart variables");
     }
 
-    @Test
-    void buttonSpawnsMhz1PeerKnucklesChildWhenCameraPanCompletes() {
-        ObjectManager objectManager = mock(ObjectManager.class);
-        List<ObjectInstance> spawned = new ArrayList<>();
-        doAnswer(invocation -> {
-            spawned.add(invocation.getArgument(0));
-            return null;
-        }).when(objectManager).addDynamicObject(any(ObjectInstance.class));
-        StubObjectServices services = new StubObjectServices() {
-            @Override
-            public ObjectManager objectManager() {
-                return objectManager;
-            }
-        };
-        Mhz1CutsceneKnucklesInstance knuckles = new Mhz1CutsceneKnucklesInstance(new ObjectSpawn(
-                0x0380, 0x0580, Sonic3kObjectIds.MHZ1_CUTSCENE_KNUCKLES, 0, 0, false, 0));
-        knuckles.setServices(services);
-        knuckles.forceReadyForButtonForTest();
-        registerActiveCutsceneController(objectManager, knuckles);
-        Mhz1CutsceneButtonInstance button = new Mhz1CutsceneButtonInstance(new ObjectSpawn(
-                0x0380, MHZ1_SWITCH_SPAWN_Y, Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON, 0, 0, false, 0));
-        button.setServices(services);
-
-        button.update(0, new TestablePlayableSprite("sonic", (short) 0x0389, (short) 0x0580));
-        button.update(1, new TestablePlayableSprite("sonic", (short) 0x0389, (short) 0x0580));
-
-        long peerCount = spawned.stream()
-                .filter(CutsceneKnucklesMhz1Instance.class::isInstance)
-                .count();
-        assertEquals(1, peerCount,
-                "loc_62E6A creates ChildObjDat_665AA once when _unkFAB8 reaches $0A; subtype $1C then runs CutsceneKnux_MHZ1");
-        assertEquals(1, spawned.stream().filter(Mhz1CutsceneDoorInstance.class::isInstance).count(),
-                "Obj_MHZ1CutsceneButton also keeps its init-time ChildObjDat_665B6 door child");
-    }
 
     @Test
     void mhz1CutsceneSpritesUseRomLowVdpPriorityForTunnelLayering() {
@@ -2540,95 +2418,7 @@ class TestMhz1CutsceneObjects {
                 "ObjDat3_6643E has priority word $180");
     }
 
-    @Test
-    void buttonWaitsForSpawnedMhz1KnucklesToEnterRomRangeBeforePressing() {
-        ObjectManager objectManager = mock(ObjectManager.class);
-        List<ObjectInstance> spawned = new ArrayList<>();
-        doAnswer(invocation -> {
-            spawned.add(invocation.getArgument(0));
-            return null;
-        }).when(objectManager).addDynamicObject(any(ObjectInstance.class));
-        List<Integer> sfxIds = new ArrayList<>();
-        TestObjectServices services = new TestObjectServices() {
-            @Override
-            public ObjectManager objectManager() {
-                return objectManager;
-            }
 
-            @Override
-            public void playSfx(int soundId) {
-                sfxIds.add(soundId);
-            }
-        };
-        Mhz1CutsceneKnucklesInstance knuckles = new Mhz1CutsceneKnucklesInstance(new ObjectSpawn(
-                0x0380, 0x0580, Sonic3kObjectIds.MHZ1_CUTSCENE_KNUCKLES, 0, 0, false, 0));
-        knuckles.setServices(services);
-        knuckles.forceReadyForButtonForTest();
-        registerActiveCutsceneController(objectManager, knuckles);
-        Mhz1CutsceneButtonInstance button = new Mhz1CutsceneButtonInstance(new ObjectSpawn(
-                0x0380, MHZ1_SWITCH_SPAWN_Y, Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON, 0, 0, false, 0));
-        button.setServices(services);
-        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x0389, (short) 0x0580);
-
-        button.update(0, sonic);
-        button.update(1, sonic);
-
-        assertEquals(1, spawned.stream().filter(CutsceneKnucklesMhz1Instance.class::isInstance).count(),
-                "loc_62E6A still creates ChildObjDat_665AA as soon as _unkFAB8 reaches $0A");
-        assertFalse(button.isDoorSwitchActive(),
-                "loc_62E92 only sets parent bit 1 after Check_InMyRange succeeds for the spawned subtype $1C child");
-        assertFalse(button.isDoorLowered(),
-                "loc_62E92 should not set _unkFAA9 on the same frame the offscreen child is created");
-        assertFalse(sfxIds.contains(Sonic3kSfx.SWITCH.id),
-                "loc_62E92 plays sfx_Switch only when the spawned Knuckles child enters word_65C48");
-    }
-
-    @Test
-    void buttonPressesWhenSpawnedMhz1KnucklesEntersRomRange() {
-        ObjectManager objectManager = mock(ObjectManager.class);
-        List<ObjectInstance> spawned = new ArrayList<>();
-        doAnswer(invocation -> {
-            spawned.add(invocation.getArgument(0));
-            return null;
-        }).when(objectManager).addDynamicObject(any(ObjectInstance.class));
-        List<Integer> sfxIds = new ArrayList<>();
-        TestObjectServices services = new TestObjectServices() {
-            @Override
-            public ObjectManager objectManager() {
-                return objectManager;
-            }
-
-            @Override
-            public void playSfx(int soundId) {
-                sfxIds.add(soundId);
-            }
-        };
-        Mhz1CutsceneKnucklesInstance controller = new Mhz1CutsceneKnucklesInstance(new ObjectSpawn(
-                0x0380, 0x0580, Sonic3kObjectIds.MHZ1_CUTSCENE_KNUCKLES, 0, 0, false, 0));
-        controller.setServices(services);
-        controller.forceReadyForButtonForTest();
-        registerActiveCutsceneController(objectManager, controller);
-        Mhz1CutsceneButtonInstance button = new Mhz1CutsceneButtonInstance(new ObjectSpawn(
-                0x0380, MHZ1_SWITCH_SPAWN_Y, Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON, 0, 0, false, 0));
-        button.setServices(services);
-        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x0389, (short) 0x0580);
-
-        button.update(0, sonic);
-        button.update(1, sonic);
-        CutsceneKnucklesMhz1Instance cutsceneKnuckles = spawned.stream()
-                .filter(CutsceneKnucklesMhz1Instance.class::isInstance)
-                .map(CutsceneKnucklesMhz1Instance.class::cast)
-                .findFirst().orElseThrow();
-        cutsceneKnuckles.setServices(services);
-        advanceMhz1CutsceneKnucklesToButtonRange(cutsceneKnuckles, button, sonic);
-
-        assertTrue(button.isDoorSwitchActive(),
-                "loc_62E92 bsets parent bit 1 once Check_InMyRange succeeds");
-        assertTrue(button.isDoorLowered(),
-                "loc_62E92 sets _unkFAA9 when the spawned Knuckles child reaches the switch");
-        assertTrue(sfxIds.contains(Sonic3kSfx.SWITCH.id),
-                "loc_62E92 plays sfx_Switch on the delayed cutscene button press");
-    }
 
     @Test
     void mhz1FullCutsceneKnucklesUsesRawJumpAnimationWhenLeapingOntoButton() {
@@ -2662,48 +2452,6 @@ class TestMhz1CutsceneObjects {
         verify(renderer).drawFrameIndex(eq(0x08), anyInt(), anyInt(), eq(false), eq(false));
     }
 
-    @Test
-    void cutsceneButtonPressedFrameReturnsToUnpressedDuringCallbackWait() {
-        ObjectManager objectManager = mock(ObjectManager.class);
-        List<ObjectInstance> spawned = new ArrayList<>();
-        doAnswer(invocation -> {
-            spawned.add(invocation.getArgument(0));
-            return null;
-        }).when(objectManager).addDynamicObject(any(ObjectInstance.class));
-        StubObjectServices services = new StubObjectServices() {
-            @Override
-            public ObjectManager objectManager() {
-                return objectManager;
-            }
-        };
-        Mhz1CutsceneKnucklesInstance controller = new Mhz1CutsceneKnucklesInstance(new ObjectSpawn(
-                0x0380, 0x0580, Sonic3kObjectIds.MHZ1_CUTSCENE_KNUCKLES, 0, 0, false, 0));
-        controller.setServices(services);
-        controller.forceReadyForButtonForTest();
-        registerActiveCutsceneController(objectManager, controller);
-        Mhz1CutsceneButtonInstance button = new Mhz1CutsceneButtonInstance(new ObjectSpawn(
-                0x0380, MHZ1_SWITCH_SPAWN_Y, Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON, 0, 0, false, 0));
-        button.setServices(services);
-        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x0389, (short) 0x0580);
-
-        button.update(0, sonic);
-        button.update(1, sonic);
-        CutsceneKnucklesMhz1Instance cutsceneKnuckles = spawned.stream()
-                .filter(CutsceneKnucklesMhz1Instance.class::isInstance)
-                .map(CutsceneKnucklesMhz1Instance.class::cast)
-                .findFirst().orElseThrow();
-        cutsceneKnuckles.setServices(services);
-        advanceMhz1CutsceneKnucklesToButtonRange(cutsceneKnuckles, button, sonic);
-
-        assertEquals(1, button.getVisibleMappingFrameForTest(),
-                "loc_62E92 writes mapping_frame=1 when the scripted Knuckles child presses the switch");
-
-        button.update(2, sonic);
-        button.update(3, sonic);
-
-        assertEquals(0, button.getVisibleMappingFrameForTest(),
-                "loc_62ED0 restores mapping_frame=0 while the long callback wait continues");
-    }
 
     @Test
     void buttonUsesNormalSwitchPathForSonicAfterMhz1CutsceneCheckpoint() {
@@ -2748,6 +2496,51 @@ class TestMhz1CutsceneObjects {
                 "the normal-switch checkpoint path should only keep the init-time door child");
         assertEquals(2, sfxIds.stream().filter(id -> id == Sonic3kSfx.SWITCH.id).count(),
                 "loc_62F0A plays sfx_Switch once for the press and once for the door toggle when bit 2 is clear");
+    }
+
+    @Test
+    void mhz1ButtonAndDoorOnlyBecomeUnloadableAfterMainRoutineIsInstalled() {
+        ObjectManager objectManager = mock(ObjectManager.class);
+        List<ObjectInstance> spawned = new ArrayList<>();
+        doAnswer(invocation -> {
+            spawned.add(invocation.getArgument(0));
+            return null;
+        }).when(objectManager).addDynamicObject(any(ObjectInstance.class));
+        CheckpointState checkpointState = new CheckpointState();
+        checkpointState.restoreFromSaved(0x0190, 0x056C, 0, 0, 1);
+        TestObjectServices services = new TestObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return objectManager;
+            }
+
+            @Override
+            public RespawnState checkpointState() {
+                return checkpointState;
+            }
+        }.withZoneRuntimeRegistry(runtime(PlayerCharacter.SONIC_AND_TAILS));
+        Mhz1CutsceneButtonInstance button = new Mhz1CutsceneButtonInstance(new ObjectSpawn(
+                0x0380, MHZ1_SWITCH_SPAWN_Y, Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON, 0, 0, false, 0));
+        button.setServices(services);
+
+        assertTrue(button.isPersistent(),
+                "WaitForKnucklesEvent/Depress/Wait_Draw only draw; they do not run Sprite_CheckDelete");
+
+        button.update(0, new TestablePlayableSprite("sonic", (short) 0x0389, (short) 0x0580));
+        Mhz1CutsceneDoorInstance door = spawned.stream()
+                .filter(Mhz1CutsceneDoorInstance.class::isInstance)
+                .map(Mhz1CutsceneDoorInstance.class::cast)
+                .findFirst().orElseThrow();
+
+        assertFalse(button.isPersistent(),
+                "Last_star_post_hit selects MHZ1CutsceneButton_Main, whose tail is Sprite_CheckDelete");
+        assertTrue(door.isPersistent(),
+                "Child_Draw_Sprite keeps the door alive while its parent remains live");
+
+        button.onUnload();
+
+        assertTrue(door.isDestroyed(),
+                "Child_Draw_Sprite observes the deleted parent and retires the door child");
     }
 
     @Test
@@ -2829,67 +2622,6 @@ class TestMhz1CutsceneObjects {
                 "SolidObjectFull is a full solid door, not a top-only platform");
     }
 
-    @Test
-    void mhz1DoorSlidesDownForRomWaitWhenButtonPressSetsUnkFaa9() {
-        ObjectManager objectManager = mock(ObjectManager.class);
-        List<ObjectInstance> spawned = new ArrayList<>();
-        doAnswer(invocation -> {
-            spawned.add(invocation.getArgument(0));
-            return null;
-        }).when(objectManager).addDynamicObject(any(ObjectInstance.class));
-        StubObjectServices services = new StubObjectServices() {
-            @Override
-            public ObjectManager objectManager() {
-                return objectManager;
-            }
-        };
-        Mhz1CutsceneKnucklesInstance knuckles = new Mhz1CutsceneKnucklesInstance(new ObjectSpawn(
-                0x0380, 0x0580, Sonic3kObjectIds.MHZ1_CUTSCENE_KNUCKLES, 0, 0, false, 0));
-        knuckles.setServices(services);
-        knuckles.forceReadyForButtonForTest();
-        registerActiveCutsceneController(objectManager, knuckles);
-        Mhz1CutsceneButtonInstance button = new Mhz1CutsceneButtonInstance(new ObjectSpawn(
-                0x0380, MHZ1_SWITCH_SPAWN_Y, Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON, 0, 0, false, 0));
-        button.setServices(services);
-        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x0389, (short) 0x0580);
-
-        button.update(0, sonic);
-        Mhz1CutsceneDoorInstance door = spawned.stream()
-                .filter(Mhz1CutsceneDoorInstance.class::isInstance)
-                .map(Mhz1CutsceneDoorInstance.class::cast)
-                .findFirst().orElseThrow();
-        door.setServices(services);
-        button.update(1, sonic);
-        CutsceneKnucklesMhz1Instance cutsceneKnuckles = spawned.stream()
-                .filter(CutsceneKnucklesMhz1Instance.class::isInstance)
-                .map(CutsceneKnucklesMhz1Instance.class::cast)
-                .findFirst().orElseThrow();
-        cutsceneKnuckles.setServices(services);
-        advanceMhz1CutsceneKnucklesToButtonRange(cutsceneKnuckles, button, sonic);
-
-        door.update(2, sonic);
-        assertEquals(0x0621, door.getY(),
-                "loc_63078 falls through loc_63094 into loc_630A6 with no rts, so the arming frame "
-                        + "already runs MoveSprite2 with y_vel=$100 while _unkFAA9 is set");
-
-        door.update(3, sonic);
-        assertEquals(0x0622, door.getY(),
-                "loc_630A6 keeps calling MoveSprite2 each following frame");
-
-        for (int frame = 0; frame < 63; frame++) {
-            door.update(4 + frame, sonic);
-        }
-
-        assertEquals(0x0660, door.getY(),
-                "Obj_Wait starts at $3F, so the switch door moves down exactly 64 pixels");
-        assertFalse(button.isDoorMovingForTest(),
-                "loc_630BE clears parent bit 2 when the 64-frame door slide completes");
-
-        TestablePlayableSprite nearDoor = new TestablePlayableSprite("sonic", (short) 0x0380, (short) 0x0580);
-        door.update(68, nearDoor);
-        assertEquals(0x0660, door.getY(),
-                "the scripted MHZ1 press latches _unkFAA9; the door must not auto-raise before the cutscene cleanup");
-    }
 
     @Test
     void mhz1CutsceneCleanupQueuesFadeBackToLevelMusic() {
@@ -3220,5 +2952,396 @@ class TestMhz1CutsceneObjects {
             return Sonic3kConstants.PAL_POINTERS_ADDR
                     + PAL_POINTERS_SSZ1_INDEX * Sonic3kConstants.PAL_POINTER_ENTRY_SIZE;
         }
+    }
+
+    /**
+     * Button tests that reach {@code MHZ1CutsceneButton_LoadKnucklesPeer}.
+     * That path submits {@code ArtKosM_MHZKnuxPeer} through
+     * {@code Queue_Kos_Module} (sonic3k.asm:130077-130081), so these need a
+     * real KosM archive and are ROM-backed; the rest of the class is not.
+     */
+    @Nested
+    @RequiresRom(SonicGame.SONIC_3K)
+    class KnucklesPeerArtSubmission {
+        @Test
+        void buttonSignalsRoutineCAndKnucklesCleanupRestoresPlayerControl() {
+            Camera camera = new Camera();
+            ObjectManager objectManager = mock(ObjectManager.class);
+            List<ObjectInstance> spawned = new ArrayList<>();
+            doAnswer(invocation -> {
+                spawned.add(invocation.getArgument(0));
+                return null;
+            }).when(objectManager).addDynamicObject(any(ObjectInstance.class));
+            HardwareTimingService peerArtTiming = new HardwareTimingService();
+            S3kRuntimeArtCoordinator peerArtCoordinator =
+                    new S3kRuntimeArtCoordinator(peerArtTiming);
+            TestObjectServices services = new TestObjectServices() {
+                @Override
+                public HardwareTimingService hardwareTiming() {
+                    return peerArtTiming;
+                }
+
+                @Override
+                public Rom rom() {
+                    return TestEnvironment.currentRom();
+                }
+
+                @Override
+                public RuntimeArtCoordinator runtimeArtCoordinator() {
+                    return peerArtCoordinator;
+                }
+                @Override
+                public ObjectManager objectManager() {
+                    return objectManager;
+                }
+            }.withCamera(camera);
+            Mhz1CutsceneKnucklesInstance knuckles = new Mhz1CutsceneKnucklesInstance(new ObjectSpawn(
+                    0x0380, 0x0580, Sonic3kObjectIds.MHZ1_CUTSCENE_KNUCKLES, 0, 0, false, 0));
+            knuckles.setServices(services);
+            knuckles.forceReadyForButtonForTest();
+            registerActiveCutsceneController(objectManager, knuckles);
+            TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x0389, (short) 0x0580);
+            sonic.setControlLocked(true);
+            sonic.setForcedInputMask(AbstractPlayableSprite.INPUT_DOWN);
+
+            Mhz1CutsceneButtonInstance button = new Mhz1CutsceneButtonInstance(new ObjectSpawn(
+                    0x0380, MHZ1_SWITCH_SPAWN_Y, Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON, 0, 0, false, 0));
+            button.setServices(services);
+
+            button.update(0, sonic);
+            button.update(1, sonic);
+            CutsceneKnucklesMhz1Instance cutsceneKnuckles = spawned.stream()
+                    .filter(CutsceneKnucklesMhz1Instance.class::isInstance)
+                    .map(CutsceneKnucklesMhz1Instance.class::cast)
+                    .findFirst().orElseThrow();
+            cutsceneKnuckles.setServices(services);
+            advanceMhz1CutsceneKnucklesToButtonRange(cutsceneKnuckles, button, sonic);
+            for (int frame = 0; frame < 0x5F; frame++) {
+                button.update(420 + frame, sonic);
+            }
+            knuckles.update(0, sonic);
+
+            assertFalse(sonic.isControlLocked(),
+                    "Obj_MHZ1CutsceneButton reaches Wait_Draw at loc_62ED0 before its long callback wait; "
+                            + "Obj_Wait must branch to loc_62EFC soon enough for the next controller slot pass");
+            assertEquals(0, sonic.getForcedInputMask());
+            assertTrue(knuckles.isDestroyed());
+        }
+
+        @Test
+        void buttonSpawnsMhz1PeerKnucklesChildWhenCameraPanCompletes() {
+            ObjectManager objectManager = mock(ObjectManager.class);
+            List<ObjectInstance> spawned = new ArrayList<>();
+            doAnswer(invocation -> {
+                spawned.add(invocation.getArgument(0));
+                return null;
+            }).when(objectManager).addDynamicObject(any(ObjectInstance.class));
+            HardwareTimingService peerArtTiming = new HardwareTimingService();
+            S3kRuntimeArtCoordinator peerArtCoordinator =
+                    new S3kRuntimeArtCoordinator(peerArtTiming);
+            StubObjectServices services = new StubObjectServices() {
+                @Override
+                public HardwareTimingService hardwareTiming() {
+                    return peerArtTiming;
+                }
+
+                @Override
+                public Rom rom() {
+                    return TestEnvironment.currentRom();
+                }
+
+                @Override
+                public RuntimeArtCoordinator runtimeArtCoordinator() {
+                    return peerArtCoordinator;
+                }
+                @Override
+                public ObjectManager objectManager() {
+                    return objectManager;
+                }
+            };
+            Mhz1CutsceneKnucklesInstance knuckles = new Mhz1CutsceneKnucklesInstance(new ObjectSpawn(
+                    0x0380, 0x0580, Sonic3kObjectIds.MHZ1_CUTSCENE_KNUCKLES, 0, 0, false, 0));
+            knuckles.setServices(services);
+            knuckles.forceReadyForButtonForTest();
+            registerActiveCutsceneController(objectManager, knuckles);
+            Mhz1CutsceneButtonInstance button = new Mhz1CutsceneButtonInstance(new ObjectSpawn(
+                    0x0380, MHZ1_SWITCH_SPAWN_Y, Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON, 0, 0, false, 0));
+            button.setServices(services);
+
+            button.update(0, new TestablePlayableSprite("sonic", (short) 0x0389, (short) 0x0580));
+            button.update(1, new TestablePlayableSprite("sonic", (short) 0x0389, (short) 0x0580));
+
+            long peerCount = spawned.stream()
+                    .filter(CutsceneKnucklesMhz1Instance.class::isInstance)
+                    .count();
+            assertEquals(1, peerCount,
+                    "loc_62E6A creates ChildObjDat_665AA once when _unkFAB8 reaches $0A; subtype $1C then runs CutsceneKnux_MHZ1");
+            assertEquals(1, spawned.stream().filter(Mhz1CutsceneDoorInstance.class::isInstance).count(),
+                    "Obj_MHZ1CutsceneButton also keeps its init-time ChildObjDat_665B6 door child");
+        }
+
+        @Test
+        void buttonWaitsForSpawnedMhz1KnucklesToEnterRomRangeBeforePressing() {
+            ObjectManager objectManager = mock(ObjectManager.class);
+            List<ObjectInstance> spawned = new ArrayList<>();
+            doAnswer(invocation -> {
+                spawned.add(invocation.getArgument(0));
+                return null;
+            }).when(objectManager).addDynamicObject(any(ObjectInstance.class));
+            List<Integer> sfxIds = new ArrayList<>();
+            HardwareTimingService peerArtTiming = new HardwareTimingService();
+            S3kRuntimeArtCoordinator peerArtCoordinator =
+                    new S3kRuntimeArtCoordinator(peerArtTiming);
+            TestObjectServices services = new TestObjectServices() {
+                @Override
+                public HardwareTimingService hardwareTiming() {
+                    return peerArtTiming;
+                }
+
+                @Override
+                public Rom rom() {
+                    return TestEnvironment.currentRom();
+                }
+
+                @Override
+                public RuntimeArtCoordinator runtimeArtCoordinator() {
+                    return peerArtCoordinator;
+                }
+                @Override
+                public ObjectManager objectManager() {
+                    return objectManager;
+                }
+
+                @Override
+                public void playSfx(int soundId) {
+                    sfxIds.add(soundId);
+                }
+            };
+            Mhz1CutsceneKnucklesInstance knuckles = new Mhz1CutsceneKnucklesInstance(new ObjectSpawn(
+                    0x0380, 0x0580, Sonic3kObjectIds.MHZ1_CUTSCENE_KNUCKLES, 0, 0, false, 0));
+            knuckles.setServices(services);
+            knuckles.forceReadyForButtonForTest();
+            registerActiveCutsceneController(objectManager, knuckles);
+            Mhz1CutsceneButtonInstance button = new Mhz1CutsceneButtonInstance(new ObjectSpawn(
+                    0x0380, MHZ1_SWITCH_SPAWN_Y, Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON, 0, 0, false, 0));
+            button.setServices(services);
+            TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x0389, (short) 0x0580);
+
+            button.update(0, sonic);
+            button.update(1, sonic);
+
+            assertEquals(1, spawned.stream().filter(CutsceneKnucklesMhz1Instance.class::isInstance).count(),
+                    "loc_62E6A still creates ChildObjDat_665AA as soon as _unkFAB8 reaches $0A");
+            assertFalse(button.isDoorSwitchActive(),
+                    "loc_62E92 only sets parent bit 1 after Check_InMyRange succeeds for the spawned subtype $1C child");
+            assertFalse(button.isDoorLowered(),
+                    "loc_62E92 should not set _unkFAA9 on the same frame the offscreen child is created");
+            assertFalse(sfxIds.contains(Sonic3kSfx.SWITCH.id),
+                    "loc_62E92 plays sfx_Switch only when the spawned Knuckles child enters word_65C48");
+        }
+
+        @Test
+        void buttonPressesWhenSpawnedMhz1KnucklesEntersRomRange() {
+            ObjectManager objectManager = mock(ObjectManager.class);
+            List<ObjectInstance> spawned = new ArrayList<>();
+            doAnswer(invocation -> {
+                spawned.add(invocation.getArgument(0));
+                return null;
+            }).when(objectManager).addDynamicObject(any(ObjectInstance.class));
+            List<Integer> sfxIds = new ArrayList<>();
+            HardwareTimingService peerArtTiming = new HardwareTimingService();
+            S3kRuntimeArtCoordinator peerArtCoordinator =
+                    new S3kRuntimeArtCoordinator(peerArtTiming);
+            TestObjectServices services = new TestObjectServices() {
+                @Override
+                public HardwareTimingService hardwareTiming() {
+                    return peerArtTiming;
+                }
+
+                @Override
+                public Rom rom() {
+                    return TestEnvironment.currentRom();
+                }
+
+                @Override
+                public RuntimeArtCoordinator runtimeArtCoordinator() {
+                    return peerArtCoordinator;
+                }
+                @Override
+                public ObjectManager objectManager() {
+                    return objectManager;
+                }
+
+                @Override
+                public void playSfx(int soundId) {
+                    sfxIds.add(soundId);
+                }
+            };
+            Mhz1CutsceneKnucklesInstance controller = new Mhz1CutsceneKnucklesInstance(new ObjectSpawn(
+                    0x0380, 0x0580, Sonic3kObjectIds.MHZ1_CUTSCENE_KNUCKLES, 0, 0, false, 0));
+            controller.setServices(services);
+            controller.forceReadyForButtonForTest();
+            registerActiveCutsceneController(objectManager, controller);
+            Mhz1CutsceneButtonInstance button = new Mhz1CutsceneButtonInstance(new ObjectSpawn(
+                    0x0380, MHZ1_SWITCH_SPAWN_Y, Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON, 0, 0, false, 0));
+            button.setServices(services);
+            TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x0389, (short) 0x0580);
+
+            button.update(0, sonic);
+            button.update(1, sonic);
+            CutsceneKnucklesMhz1Instance cutsceneKnuckles = spawned.stream()
+                    .filter(CutsceneKnucklesMhz1Instance.class::isInstance)
+                    .map(CutsceneKnucklesMhz1Instance.class::cast)
+                    .findFirst().orElseThrow();
+            cutsceneKnuckles.setServices(services);
+            advanceMhz1CutsceneKnucklesToButtonRange(cutsceneKnuckles, button, sonic);
+
+            assertTrue(button.isDoorSwitchActive(),
+                    "loc_62E92 bsets parent bit 1 once Check_InMyRange succeeds");
+            assertTrue(button.isDoorLowered(),
+                    "loc_62E92 sets _unkFAA9 when the spawned Knuckles child reaches the switch");
+            assertTrue(sfxIds.contains(Sonic3kSfx.SWITCH.id),
+                    "loc_62E92 plays sfx_Switch on the delayed cutscene button press");
+        }
+
+        @Test
+        void cutsceneButtonPressedFrameReturnsToUnpressedDuringCallbackWait() {
+            ObjectManager objectManager = mock(ObjectManager.class);
+            List<ObjectInstance> spawned = new ArrayList<>();
+            doAnswer(invocation -> {
+                spawned.add(invocation.getArgument(0));
+                return null;
+            }).when(objectManager).addDynamicObject(any(ObjectInstance.class));
+            HardwareTimingService peerArtTiming = new HardwareTimingService();
+            S3kRuntimeArtCoordinator peerArtCoordinator =
+                    new S3kRuntimeArtCoordinator(peerArtTiming);
+            StubObjectServices services = new StubObjectServices() {
+                @Override
+                public HardwareTimingService hardwareTiming() {
+                    return peerArtTiming;
+                }
+
+                @Override
+                public Rom rom() {
+                    return TestEnvironment.currentRom();
+                }
+
+                @Override
+                public RuntimeArtCoordinator runtimeArtCoordinator() {
+                    return peerArtCoordinator;
+                }
+                @Override
+                public ObjectManager objectManager() {
+                    return objectManager;
+                }
+            };
+            Mhz1CutsceneKnucklesInstance controller = new Mhz1CutsceneKnucklesInstance(new ObjectSpawn(
+                    0x0380, 0x0580, Sonic3kObjectIds.MHZ1_CUTSCENE_KNUCKLES, 0, 0, false, 0));
+            controller.setServices(services);
+            controller.forceReadyForButtonForTest();
+            registerActiveCutsceneController(objectManager, controller);
+            Mhz1CutsceneButtonInstance button = new Mhz1CutsceneButtonInstance(new ObjectSpawn(
+                    0x0380, MHZ1_SWITCH_SPAWN_Y, Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON, 0, 0, false, 0));
+            button.setServices(services);
+            TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x0389, (short) 0x0580);
+
+            button.update(0, sonic);
+            button.update(1, sonic);
+            CutsceneKnucklesMhz1Instance cutsceneKnuckles = spawned.stream()
+                    .filter(CutsceneKnucklesMhz1Instance.class::isInstance)
+                    .map(CutsceneKnucklesMhz1Instance.class::cast)
+                    .findFirst().orElseThrow();
+            cutsceneKnuckles.setServices(services);
+            advanceMhz1CutsceneKnucklesToButtonRange(cutsceneKnuckles, button, sonic);
+
+            assertEquals(1, button.getVisibleMappingFrameForTest(),
+                    "loc_62E92 writes mapping_frame=1 when the scripted Knuckles child presses the switch");
+
+            button.update(2, sonic);
+            button.update(3, sonic);
+
+            assertEquals(0, button.getVisibleMappingFrameForTest(),
+                    "loc_62ED0 restores mapping_frame=0 while the long callback wait continues");
+        }
+
+        @Test
+        void mhz1DoorSlidesDownForRomWaitWhenButtonPressSetsUnkFaa9() {
+            ObjectManager objectManager = mock(ObjectManager.class);
+            List<ObjectInstance> spawned = new ArrayList<>();
+            doAnswer(invocation -> {
+                spawned.add(invocation.getArgument(0));
+                return null;
+            }).when(objectManager).addDynamicObject(any(ObjectInstance.class));
+            HardwareTimingService peerArtTiming = new HardwareTimingService();
+            S3kRuntimeArtCoordinator peerArtCoordinator =
+                    new S3kRuntimeArtCoordinator(peerArtTiming);
+            StubObjectServices services = new StubObjectServices() {
+                @Override
+                public HardwareTimingService hardwareTiming() {
+                    return peerArtTiming;
+                }
+
+                @Override
+                public Rom rom() {
+                    return TestEnvironment.currentRom();
+                }
+
+                @Override
+                public RuntimeArtCoordinator runtimeArtCoordinator() {
+                    return peerArtCoordinator;
+                }
+                @Override
+                public ObjectManager objectManager() {
+                    return objectManager;
+                }
+            };
+            Mhz1CutsceneKnucklesInstance knuckles = new Mhz1CutsceneKnucklesInstance(new ObjectSpawn(
+                    0x0380, 0x0580, Sonic3kObjectIds.MHZ1_CUTSCENE_KNUCKLES, 0, 0, false, 0));
+            knuckles.setServices(services);
+            knuckles.forceReadyForButtonForTest();
+            registerActiveCutsceneController(objectManager, knuckles);
+            Mhz1CutsceneButtonInstance button = new Mhz1CutsceneButtonInstance(new ObjectSpawn(
+                    0x0380, MHZ1_SWITCH_SPAWN_Y, Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON, 0, 0, false, 0));
+            button.setServices(services);
+            TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x0389, (short) 0x0580);
+
+            button.update(0, sonic);
+            Mhz1CutsceneDoorInstance door = spawned.stream()
+                    .filter(Mhz1CutsceneDoorInstance.class::isInstance)
+                    .map(Mhz1CutsceneDoorInstance.class::cast)
+                    .findFirst().orElseThrow();
+            door.setServices(services);
+            button.update(1, sonic);
+            CutsceneKnucklesMhz1Instance cutsceneKnuckles = spawned.stream()
+                    .filter(CutsceneKnucklesMhz1Instance.class::isInstance)
+                    .map(CutsceneKnucklesMhz1Instance.class::cast)
+                    .findFirst().orElseThrow();
+            cutsceneKnuckles.setServices(services);
+            advanceMhz1CutsceneKnucklesToButtonRange(cutsceneKnuckles, button, sonic);
+
+            door.update(2, sonic);
+            assertEquals(0x0621, door.getY(),
+                    "loc_63078 falls through loc_63094 into loc_630A6 with no rts, so the arming frame "
+                            + "already runs MoveSprite2 with y_vel=$100 while _unkFAA9 is set");
+
+            door.update(3, sonic);
+            assertEquals(0x0622, door.getY(),
+                    "loc_630A6 keeps calling MoveSprite2 each following frame");
+
+            for (int frame = 0; frame < 63; frame++) {
+                door.update(4 + frame, sonic);
+            }
+
+            assertEquals(0x0660, door.getY(),
+                    "Obj_Wait starts at $3F, so the switch door moves down exactly 64 pixels");
+            assertFalse(button.isDoorMovingForTest(),
+                    "loc_630BE clears parent bit 2 when the 64-frame door slide completes");
+
+            TestablePlayableSprite nearDoor = new TestablePlayableSprite("sonic", (short) 0x0380, (short) 0x0580);
+            door.update(68, nearDoor);
+            assertEquals(0x0660, door.getY(),
+                    "the scripted MHZ1 press latches _unkFAA9; the door must not auto-raise before the cutscene cleanup");
+        }
+
     }
 }

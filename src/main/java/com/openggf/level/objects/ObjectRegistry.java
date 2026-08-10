@@ -23,6 +23,16 @@ public interface ObjectRegistry {
         return ObjectWindowingStrategy.LEGACY;
     }
 
+    /**
+     * Installs game-owned fixed SST occupants before ordinary layout objects
+     * are materialized for a fresh/reset level lifetime.
+     */
+    default void installFixedSstObjects(
+            int romZoneId,
+            int act,
+            FixedSstSlotSink slots) {
+    }
+
     default List<String> getAliases(int objectId) {
         return List.of();
     }

@@ -567,7 +567,6 @@ namespace OpenGGF.BizHawk.Headless
                         recordingDate,
                         runId,
                         playerMode,
-                        HardwareTimingEventEngine.CurrentSchema,
                         loadQueueState)
                     : S3KCompleteRunMetadataWriter.Format(
                         arm,
@@ -576,7 +575,6 @@ namespace OpenGGF.BizHawk.Headless
                         recordingDate,
                         runId,
                         playerMode,
-                        HardwareTimingEventEngine.CurrentSchema,
                         loadQueueState);
                 var entry = new RunManifestSegment(
                     segment.Dir,

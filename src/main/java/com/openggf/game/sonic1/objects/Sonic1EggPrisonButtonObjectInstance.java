@@ -97,7 +97,7 @@ public class Sonic1EggPrisonButtonObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Resolve parent body on first update
         if (!parentResolved) {
@@ -214,7 +214,14 @@ public class Sonic1EggPrisonButtonObjectInstance extends AbstractObjectInstance
             player.setAir(true);
 
             if (parent != null) {
-                parent.onButtonTriggered();
+                // ROM Pri_Switch does addq.w #8,obY(a0) BEFORE advancing its own
+                // routine to Pri_Explosion, and Pri_Explosion/Pri_SpawnAnimals
+                // then read that same obX/obY to place the explosions and the
+                // animals (3E Prison Capsule.asm:96-97,118-120,138,152-156).
+                // The engine's spawner lives on the capsule body, so hand it the
+                // depressed switch's coordinates rather than letting it fall back
+                // to the body's own placement position.
+                parent.onButtonTriggered(spawn.x(), currentY);
             }
         }
     }

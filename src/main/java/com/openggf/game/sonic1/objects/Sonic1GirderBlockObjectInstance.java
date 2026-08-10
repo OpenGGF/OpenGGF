@@ -129,7 +129,7 @@ public class Sonic1GirderBlockObjectInstance extends AbstractObjectInstance
         return y;
     }
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Gird_Action (routine 2):
         // First check delay, then SpeedToPos + duration countdown

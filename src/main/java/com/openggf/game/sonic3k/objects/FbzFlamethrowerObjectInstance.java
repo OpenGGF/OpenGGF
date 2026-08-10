@@ -37,9 +37,9 @@ public final class FbzFlamethrowerObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity ignored) {
+    public void update(int vIntRunCount, PlayableEntity ignored) {
         updateFlameAnimation();
-        int levelFrameCounter = resolveLevelFrameCounter(frameCounter) & 0xFF;
+        int levelFrameCounter = resolveLevelFrameCounter(vIntRunCount) & 0xFF;
         if (mappingFrame != 2 && (levelFrameCounter & 3) == 0) {
             // loc_3CD4C/loc_3CDD0 read render_flags bit 7 from the previous
             // Render_Sprites pass. That flag uses the object's $10-pixel

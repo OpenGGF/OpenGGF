@@ -116,7 +116,9 @@ class TestTitleCardObjectExecution {
         // those sprites, so loaded level objects stay fresh while VBlank ticks.
         File romFile = RomTestUtils.ensureSonic3kRomAvailable();
         Assumptions.assumeTrue(romFile != null, "Sonic 3&K ROM not available — skipping test");
-        runTitleCardAdvancementCheck(SonicGame.SONIC_3K, romFile, 0, 0, true,
+        // Preserve the fresh-AIZ intro's absent initial owner so enterTitleCard
+        // below creates the one title-card owner exercised by this test.
+        runTitleCardAdvancementCheck(SonicGame.SONIC_3K, romFile, 0, 0, false,
                 /* expectObjectAdvance */ false, /* expectLevelAdvance */ false, null);
     }
 
@@ -267,7 +269,9 @@ class TestTitleCardObjectExecution {
                     "the next ordinary iteration runs exactly one level frame");
             afterRelease = OscillationManager.snapshot();
             OscillationManager.restore(beforeRelease);
-            OscillationManager.update(levelFrameBeforeRelease);
+            // LevelLoop publishes the oscillator table for the next object
+            // pass at its tail, before LevelManager increments this counter.
+            OscillationManager.update(levelFrameBeforeRelease + 1);
             OscillationSnapshot expectedAfterOneUpdate = OscillationManager.snapshot();
             OscillationManager.restore(afterRelease);
             assertOscillationEquals(expectedAfterOneUpdate, afterRelease,
@@ -356,7 +360,7 @@ class TestTitleCardObjectExecution {
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             updates++;
         }
 

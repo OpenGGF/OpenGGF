@@ -61,8 +61,11 @@ class TestGameLoopSpecialStageResultsHandoff {
         assertEquals(GameMode.SPECIAL_STAGE_RESULTS, loop.getCurrentGameMode());
         assertEquals(1, provider.resultsResets,
                 "the results screen must be set up exactly once per finished special stage");
-        assertEquals(FadeManager.FadeState.FADING_FROM_WHITE, context.getFadeManager().getState(),
-                "results entry must own the reveal fade");
+        assertEquals(FadeManager.FadeState.NONE, context.getFadeManager().getState(),
+                "results entry reveals the screen with no fade: both ROMs write the"
+                        + " results palette straight to the active palette"
+                        + " (docs/s2disasm/s2.asm:6762-6763 PalLoad_Now,"
+                        + " docs/s1disasm/sonic.asm:3382-3383 PalLoad)");
         assertSame(provider, loop.getActiveSpecialStageProvider());
     }
 

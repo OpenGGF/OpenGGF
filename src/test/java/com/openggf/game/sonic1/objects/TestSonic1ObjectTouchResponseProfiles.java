@@ -43,14 +43,22 @@ class TestSonic1ObjectTouchResponseProfiles {
         Sonic1SpikedBallChainObjectInstance.class.getDeclaredMethod("getTouchResponseProfile", boolean.class);
     }
 
+    /**
+     * ROM {@code Hel_Main} gives every non-parent spike its OWN SST slot and
+     * routine 8 ({@code Hel_ChildSpike}), and each spike sets its own
+     * {@code col_8x32|col_hurt} from {@code Hel_RotateSpikes}
+     * (docs/s1disasm/_incObj/17 GHZ Spiked Pole Helix.asm:56-90,101-116).
+     * So the parent is a single-region hurt source like the spiked-ball chain,
+     * not a multi-region proxy for spikes it does not own.
+     */
     @Test
-    void spikedPoleHelixDeclaresMultiRegionHurtProfile() throws NoSuchMethodException {
+    void spikedPoleHelixParentUsesSingleRegionProfile() throws NoSuchMethodException {
         Sonic1SpikedPoleHelixObjectInstance helix = new Sonic1SpikedPoleHelixObjectInstance(
                 new ObjectSpawn(0x1200, 0x0400, 0x17, 0x10, 0, false, 0));
 
-        assertNotNull(helix.getMultiTouchRegions());
-        assertEquals(multiRegionHurtProfile(), helix.getTouchResponseProfile());
-        assertEquals(multiRegionHurtProfile(), helix.getTouchResponseProfile(true));
+        assertNull(helix.getMultiTouchRegions());
+        assertEquals(singleRegionHurtProfile(), helix.getTouchResponseProfile());
+        assertEquals(singleRegionHurtProfile(), helix.getTouchResponseProfile(true));
         assertEquals(singleRegionHurtProfile(), helix.getTouchResponseProfile(false));
         Sonic1SpikedPoleHelixObjectInstance.class.getDeclaredMethod("getTouchResponseProfile");
         Sonic1SpikedPoleHelixObjectInstance.class.getDeclaredMethod("getTouchResponseProfile", boolean.class);

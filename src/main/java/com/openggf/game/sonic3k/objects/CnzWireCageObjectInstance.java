@@ -109,7 +109,7 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance impl
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite leader = null;
         boolean leaderDplcClobberedD6 = false;
         if (playerEntity instanceof AbstractPlayableSprite player) {
@@ -117,7 +117,7 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance impl
             CageState leaderState = riders.get(player);
             boolean wasLeaderLatched = leaderState != null && leaderState.latched;
             int leaderMappingFrameBefore = player.getMappingFrame();
-            processPlayer(frameCounter, player, false, false);
+            processPlayer(vIntRunCount, player, false, false);
             leaderDplcClobberedD6 = wasLeaderLatched
                     && player.getMappingFrame() != leaderMappingFrameBefore;
             CageState updated = riders.get(player);
@@ -139,7 +139,7 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance impl
         }
         AbstractPlayableSprite nativeP2 = nativeP2From(services, leader);
         if (nativeP2 != null) {
-            processPlayer(frameCounter, nativeP2, true, leaderDplcClobberedD6);
+            processPlayer(vIntRunCount, nativeP2, true, leaderDplcClobberedD6);
         }
         PlayableEntity queryMain = services.playerQuery().mainPlayerOrNull();
         List<PlayableEntity> participants = new ArrayList<>(services.playerQuery().playersFor(
@@ -155,7 +155,7 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance impl
                 // Engine extension: native P1/P2 execute first. Third-plus riders
                 // use the clean P2 standing-bit path with identity-owned CageState;
                 // the ROM's dirty-d6 quirk remains exclusive to native P2 above.
-                processPlayer(frameCounter, extension, true, false);
+                processPlayer(vIntRunCount, extension, true, false);
             }
         }
         releaseMissingRiders(participants);
@@ -166,7 +166,7 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance impl
         // The CNZ cage is drawn as level art; this object owns player control.
     }
 
-    private void processPlayer(int frameCounter, AbstractPlayableSprite player, boolean isSidekick,
+    private void processPlayer(int vIntRunCount, AbstractPlayableSprite player, boolean isSidekick,
                                boolean leaderDplcClobberedD6) {
         CageState state = riders.computeIfAbsent(player, ignored -> new CageState());
         if (state.latched) {
@@ -194,7 +194,7 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance impl
                 restoreObjectLatchIfTerrainClearedIt(player);
                 return;
             }
-            continueRide(frameCounter, player, state, isSidekick);
+            continueRide(vIntRunCount, player, state, isSidekick);
             return;
         }
 
@@ -378,7 +378,7 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance impl
         player.setJumping(false);
     }
 
-    private void continueRide(int frameCounter, AbstractPlayableSprite player, CageState state,
+    private void continueRide(int vIntRunCount, AbstractPlayableSprite player, CageState state,
                               boolean isSidekick) {
         if (player == null || player.getDead() || player.isHurt() || player.isDebugMode()
                 || player.getLatchedSolidObjectId() != Sonic3kObjectIds.CNZ_WIRE_CAGE) {
@@ -387,7 +387,7 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance impl
         }
 
         if (state.cooldown != 0) {
-            if (tryJumpRelease(frameCounter, player, state)) {
+            if (tryJumpRelease(vIntRunCount, player, state)) {
                 return;
             }
             // See beginLatchedCooldown: ROM cage uses bits 1+6 (and 0 on
@@ -400,7 +400,7 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance impl
 
         if (player.getAir()) {
             if (player.isJumping()) {
-                releaseWithJumpImpulse(frameCounter, player, state);
+                releaseWithJumpImpulse(vIntRunCount, player, state);
                 return;
             }
             restoreObjectLatchIfTerrainClearedIt(player);
@@ -416,7 +416,7 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance impl
         }
 
         if (player.getAir()) {
-            releaseWithJumpImpulse(frameCounter, player, state);
+            releaseWithJumpImpulse(vIntRunCount, player, state);
             return;
         }
 
@@ -463,7 +463,7 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance impl
         }
     }
 
-    private boolean tryJumpRelease(int frameCounter, AbstractPlayableSprite player, CageState state) {
+    private boolean tryJumpRelease(int vIntRunCount, AbstractPlayableSprite player, CageState state) {
         // ROM loc_33ADE masks the low byte of Ctrl_1_logical/Ctrl_2_logical
         // for A/B/C (docs/skdisasm/sonic3k.asm:70052-70056; button masks at
         // docs/skdisasm/sonic3k.constants.asm:167-169). The high byte may
@@ -473,11 +473,11 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance impl
         if (!player.isJumpJustPressed()) {
             return false;
         }
-        releaseWithJumpImpulse(frameCounter, player, state);
+        releaseWithJumpImpulse(vIntRunCount, player, state);
         return true;
     }
 
-    private void releaseWithJumpImpulse(int frameCounter, AbstractPlayableSprite player, CageState state) {
+    private void releaseWithJumpImpulse(int vIntRunCount, AbstractPlayableSprite player, CageState state) {
         int xSpeed = player.getCentreX() >= spawn.x() ? JUMP_RELEASE_X_SPEED : -JUMP_RELEASE_X_SPEED;
         player.setAir(true);
         player.setJumping(false);

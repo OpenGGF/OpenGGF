@@ -80,6 +80,26 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
             0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30
     };
 
+    // Ledge_Main obActWid: `move.b #200/2,obActWid(a0)` -- the FixBugs = 0 branch
+    // (docs/s1disasm/_incObj/1A, 53 Collapsing Ledges and Floors.asm:39-48). The
+    // FixBugs = 1 branch would use 96/2 instead; FixBugs is 0 in this build
+    // (docs/s1disasm/sonic.asm:20), so the ledge and every fragment that inherits
+    // obActWid from it render (and therefore survive) 100px past the screen edge.
+    private static final int LEDGE_ACT_WIDTH = 200 / 2;
+
+    // Ledge_Main obHeight: `move.b #112/2,obHeight(a0)` (line 50), consumed by
+    // BuildSprites because Ledge_Main also sets sprite_customheight_bit (line 51).
+    private static final int LEDGE_HEIGHT = 112 / 2;
+
+    // FragmentatePlatform copies obID, obMap, obRender, obX/obY, obGfx, obPriority
+    // and obActWid to each fragment, but never obHeight (lines 332-342). DeleteObject
+    // zeroes the whole $40-byte slot (docs/s1disasm/_incObj/sub DeleteObject.asm:
+    // 15-18), so a FindFreeObj'd slot always starts with obHeight = 0 -- and the
+    // copied obRender still carries sprite_customheight_bit. Fragments therefore
+    // render through BuildSprites' custom-height path with a zero-height band, i.e.
+    // exactly [camY, camY + 224), while the parent keeps its own LEDGE_HEIGHT.
+    private static final int FRAGMENT_HEIGHT = 0;
+
     // Disintegration delay data from CFlo_Data1 (26 bytes).
     // Each value = frame delay before that fragment starts falling.
     // Fragments are created from the "smash" mapping frame pieces.
@@ -146,7 +166,7 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
         return y;
     }
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         transitionFrameSlopeSkip = false;
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (routine) {
@@ -248,11 +268,23 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // Ledge_TimeZero: ObjectFall - apply gravity
+        // ROM `.fragmentFall` (docs/s1disasm/_incObj/1A, 53 Collapsing Ledges and
+        // Floors.asm:116-129). FixBugs = 0 (docs/s1disasm/sonic.asm:20) selects the
+        // `bsr ObjectFall / bsr DisplaySprite / tst.b obRender(a0) / bpl Ledge_Delete`
+        // branch: the fragment is deleted when the LAST BuildSprites pass failed to
+        // render it, so the deciding position is this frame's pre-fall one. (The
+        // FixBugs = 1 branch only moves the test ahead of DisplaySprite to avoid the
+        // display-and-delete null dereference; the delete frame, and therefore the SST
+        // slot lifetime, is identical.)
+        //
+        // The band is the object's own obActWid/obHeight, not a fixed margin:
+        // Ledge_Main sets obActWid = 200/2 under FixBugs = 0 (lines 39-48), obHeight
+        // = 112/2 (line 50), and sets sprite_customheight_bit (line 51), so
+        // BuildSprites takes its custom-height Y path.
+        boolean renderedLastFrame =
+                isWithinBuildSpritesBounds(x, y, LEDGE_ACT_WIDTH, LEDGE_HEIGHT);
         applyObjectFall();
-
-        // Check if offscreen (obRender bit 7 clear = offscreen)
-        if (!isOnScreen()) {
+        if (!renderedLastFrame) {
             destroyWithWindowGatedRespawn();
         }
     }
@@ -351,6 +383,19 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
             this.collapseDelay = COLLAPSE_DELAYS[0];
         }
 
+        // FixBugs = 0 (docs/s1disasm/sonic.asm:20) — the shipped branch, which is what
+        // the traces record. The fragment loop in
+        // docs/s1disasm/_incObj/"1A, 53 Collapsing Ledges and Floors.asm":320-352
+        // allocates with FindFreeObj (scans the SST from the start), so a fragment can
+        // land BELOW the parent, past this frame's ExecuteObjects walk. The shipped
+        // block at lines 344-352 compensates with `bsr.w DisplaySprite2` ONLY — unlike
+        // SmashObject there is no SpeedToPos and no counter-gravity, because these
+        // fragments do not move until their collapsible_timedelay expires, so the
+        // catch-up is purely about getting the piece rendered on its spawn frame.
+        // The engine renders every live object each frame regardless of whether its
+        // slot has already executed, so no extra call is needed here; only the
+        // rendering, not the position, would differ. With FixBugs = 1 the allocator
+        // would be FindNextFreeObj and the block is omitted as redundant.
         // Spawn remaining fragments as dynamic objects
         int maxFragments = Math.min(pieceCount, COLLAPSE_DELAYS.length);
         for (int i = 1; i < maxFragments; i++) {
@@ -552,6 +597,23 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
         @Override
         public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
             return new CollapsingLedgeFragmentInstance(ctx.spawn());
+        }
+
+        @Override
+        protected boolean shouldDeleteBeforeFall() {
+            // ROM `.fragmentFall` deletes on the previous frame's render flag; see
+            // Sonic1CollapsingLedgeObjectInstance.updateFragmentFall for the branch
+            // and the FixBugs note. Evaluating it before the fall is what reads that
+            // previous-frame position.
+            return !isWithinBuildSpritesBounds(
+                    getX(), getY(), LEDGE_ACT_WIDTH, FRAGMENT_HEIGHT);
+        }
+
+        @Override
+        protected boolean shouldDeleteAfterFall() {
+            // The ROM lifetime is entirely the render-flag test above; there is no
+            // second, wider margin check in Ledge_FragmentPiece.
+            return false;
         }
 
         @Override

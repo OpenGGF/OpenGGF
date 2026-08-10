@@ -56,7 +56,7 @@ public class AizIntroBoosterChild implements RewindStateful<AizIntroBoosterChild
         this.animIndex = 0;
     }
 
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Follow parent plane position with fixed offset
         currentX = parent.getX() + xOffset;

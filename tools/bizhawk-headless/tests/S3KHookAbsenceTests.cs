@@ -49,8 +49,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
     ///   hcz_2, hcz_6, mgz, mgz_3 — carried position_write /
     ///   velocity_write / solid_object_cont_entry events, and this file
     ///   pinned them in the OPPOSITE direction so the absence gate could
-    ///   never silently widen to cover a fixture whose reproduction really
-    ///   would require native exec callbacks. Commit 63eccd290 re-captured
+    ///   never silently widen to cover a fixture that would require native
+    ///   exec callbacks. Commit 63eccd290 re-captured
     ///   that run on Linux at Lua 6.32 with the hooks off, so no committed
     ///   S3K fixture needs exec callbacks any more and the counter-gate
     ///   had no subject left. Those exact four segments are therefore

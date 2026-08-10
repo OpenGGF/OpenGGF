@@ -117,7 +117,7 @@ public class AizEndBossBombChild extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (isDestroyed()) return;
 
         // Play SFX on first frame (deferred from constructor since services aren't injected yet)

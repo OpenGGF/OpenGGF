@@ -44,7 +44,7 @@ class TestStandaloneEngineLevelLoad {
 
         engine.loadDefaultStartingLevel(false);
 
-        verify(levels).loadZoneAndAct(0, 0);
+        verify(levels).loadZoneAndActForFreshRuntime(0, 0);
         verify(roms, never()).isRomAvailable();
     }
 

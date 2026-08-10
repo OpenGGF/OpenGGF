@@ -260,7 +260,7 @@ class TestCutsceneKnucklesCnz2Instance {
     }
 
     @Test
-    void firstCnzCutsceneStopsPostObjectCameraScrollExactlyAtNativeLock() {
+    void firstCnzCutsceneLocksAfterCurrentCameraWordReachesNativeBoundary() {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 1)
                 .build();
@@ -277,19 +277,16 @@ class TestCutsceneKnucklesCnz2Instance {
         knuckles.setServices(TestEnvironment.objectServices());
         knuckles.update(0, fixture.sprite());
 
-        // S3K executes objects before ScrollHoriz. Put the camera one frame before
-        // the lock with Sonic far enough right that the uncapped result would be
-        // $1D01. The ROM reference reaches and then holds Camera_X_pos=$1D00
-        // (cnz_completerun physics frames $5494 onward).
+        // loc_85CA4 compares the camera word visible during this object slot; it
+        // does not predict the ScrollHoriz result later in the same LevelLoop.
         camera.setX((short) 0x1CF1);
         fixture.sprite().setCentreX((short) 0x1DA2);
         knuckles.update(1, fixture.sprite());
         camera.updatePosition();
 
-        assertEquals(0x1D00, camera.getX() & 0xFFFF,
-                "loc_85CA4's $1D00/$1D00 lock must not allow the later same-frame "
-                        + "ScrollHoriz step to cross one pixel past the encounter boundary");
-        assertEquals(0x1D00, camera.getMaxX() & 0xFFFF);
+        assertEquals(0x1D02, camera.getX() & 0xFFFF,
+                "the pending ScrollHoriz step remains visible until the next object pass");
+        assertNotEquals(0x1D00, camera.getMaxX() & 0xFFFF);
 
         knuckles.update(2, fixture.sprite());
         assertEquals(0x1D00, camera.getMinX() & 0xFFFF);

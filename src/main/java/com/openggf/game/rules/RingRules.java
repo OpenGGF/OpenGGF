@@ -5,8 +5,15 @@ public record RingRules(
         int ringFloorCheckMask,
         int ringFloorCheckCounterPhase,
         boolean ringFloorProbeRequiresRenderFlag,
+        boolean lostRingBoundaryChecksOnlyOnProbeCadence,
         int lostRingRenderVerticalMargin,
         int ringCollisionWidth,
         int ringCollisionHeight,
         boolean stageRingsUseObjectTouchCollection,
-        boolean stageRingSweepUsesRawCameraWindow) {}
+        boolean stageRingSweepUsesRawCameraWindow) {
+
+    /** Compatibility name retained for the develop trace-fleet fixes. */
+    public int lostRingRenderYMargin() {
+        return lostRingRenderVerticalMargin;
+    }
+}

@@ -39,7 +39,7 @@ public final class FireShieldDissipateInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         // ROM loc_1E6C6: jsr (MoveSprite2).l — velocity only, no gravity.
         SubpixelMotion.moveSprite2(motion);
         updateDynamicSpawn(motion.x, motion.y);

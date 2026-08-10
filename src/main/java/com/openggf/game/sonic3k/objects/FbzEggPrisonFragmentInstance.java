@@ -23,7 +23,7 @@ public final class FbzEggPrisonFragmentInstance extends AbstractObjectInstance i
         int index=(spawn.subtype()>>>1)%VELOCITIES.length;
         xVelocity=VELOCITIES[index][0]; yVelocity=VELOCITIES[index][1];
     }
-    @Override public void update(int frameCounter, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         if (!initialized) {
             initialized=true;
             drawVisible=true; // loc_89D78 tail-jumps to Draw_Sprite on its creation SST entry.

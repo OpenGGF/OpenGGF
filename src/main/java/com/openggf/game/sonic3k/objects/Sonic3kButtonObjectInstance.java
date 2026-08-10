@@ -142,7 +142,7 @@ public class Sonic3kButtonObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         // ROM: move.b #0,mapping_frame(a0) — reset to unpressed each frame
         mappingFrame = FRAME_UNPRESSED;
 

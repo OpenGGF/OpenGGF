@@ -40,7 +40,7 @@ final class FbzAct2CameraResizeWorker extends AbstractObjectInstance
     @Override public boolean isPersistent() { return true; }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         var camera = services().camera();
         switch (boundary) {
             case MAX_X -> {

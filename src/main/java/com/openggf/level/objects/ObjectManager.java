@@ -111,6 +111,8 @@ public class ObjectManager {
      */
     private final ObjectWindowingStrategy windowingStrategy;
     private final ObjectInstance[] execOrder;
+    /** Objects whose ROM retirement belongs to their owned slot rather than a borrowed exec slot. */
+    private final ObjectSlotRetirementController slotRetirement;
     private final int[] playerCentreXAtSlotStart;
     private final int[] playerCentreYAtSlotStart;
     private final boolean[] playerCentreAtSlotStartValid;
@@ -119,6 +121,7 @@ public class ObjectManager {
 
     private final ObjectServices objectServices;
     private final ObjectCallbackRouter objectCallbacks;
+    private final ObjectManagerPopulationView populationView;
     private RewindClassResolver rewindClassResolver = RewindClassResolver.ENGINE_ONLY;
     public void setRewindClassResolver(RewindClassResolver resolver) { rewindClassResolver = java.util.Objects.requireNonNull(resolver, "resolver"); }
 
@@ -205,6 +208,7 @@ public class ObjectManager {
     // of each restore so it never leaks instances across passes.
     private final List<AbstractObjectInstance> rewindReconstructionChildren = new ArrayList<>();
     private boolean rewindReconstructionChildCapture;
+    private final FixedSstObjectInstaller fixedSstObjects;
     private final PlaneSwitchers planeSwitchers;
     private final ObjectSolidContactController solidContacts;
     private final ObjectTouchResponseController touchResponses;
@@ -240,6 +244,7 @@ public class ObjectManager {
         // Indexed by execution slot, which spans the process slots (next's fixed
         // SST slots sit above the dynamic range), not just the dynamic count.
         this.execOrder = new ObjectInstance[slotLayout.processSlotCount()];
+        this.slotRetirement = new ObjectSlotRetirementController(slotLayout.processSlotCount());
         this.playerCentreXAtSlotStart = new int[execOrder.length];
         this.playerCentreYAtSlotStart = new int[execOrder.length];
         this.playerCentreAtSlotStartValid = new boolean[execOrder.length];
@@ -247,6 +252,12 @@ public class ObjectManager {
                 slotLayout.twoAxisCursorPlacement()
                         ? SlotEmptyPredicate.ROUTINE_POINTER
                         : SlotEmptyPredicate.ID_BYTE);
+        this.populationView = new ObjectManagerPopulationView(objectCallbacks, slotLayout,
+                slotAllocator, reservedChildSlots, activeObjects, dynamicObjects,
+                postPlayerHooksScratch);
+        this.fixedSstObjects = new FixedSstObjectInstaller(
+                registry, objectServices, slotLayout, slotAllocator,
+                this::addDynamicObject, this::releaseSlot);
         this.planeSwitchers = planeSwitcherConfig != null
                 ? new PlaneSwitchers(placement, planeSwitcherObjectId, planeSwitcherConfig)
                 : null;
@@ -340,6 +351,34 @@ public class ObjectManager {
         return execIndex;
     }
 
+    private void indexOwnSlotRetirement(AbstractObjectInstance object) {
+        int ownSlot = objectCallbacks.call(object, object::getSlotIndex);
+        int execSlot = executionSlotIndex(object);
+        slotRetirement.index(object, ownSlot, execSlot, isManagedDynamicSlot(ownSlot));
+    }
+
+    /** Retires a consolidated object at its native owned-slot position in the SST walk. */
+    private boolean retireBorrowedExecutionSlotOwnerAtOwnSlot(int cameraX) {
+        ObjectInstance owner = slotRetirement.takeOwner(currentExecSlot);
+        if (owner == null) {
+            return false;
+        }
+        if (!(owner instanceof AbstractObjectInstance object)
+                || objectCallbacks.call(owner, owner::isDestroyed)) {
+            return false;
+        }
+        int execSlot = executionSlotIndex(object);
+        if (!isProcessedSstSlot(execSlot) || execOrder[execIndexForSlot(execSlot)] != owner) {
+            return false;
+        }
+        ObjectSpawn spawn = instanceToSpawn.get(owner);
+        if (!unloadCounterBasedOutOfRange(owner, spawn, execSlot, cameraX)) {
+            return false;
+        }
+        execOrder[execIndexForSlot(execSlot)] = null;
+        return true;
+    }
+
     public void reset(int cameraX) {
         reset(cameraX, null, true);
     }
@@ -384,6 +423,7 @@ public class ObjectManager {
         reservedChildSlots.clear();
         slotAllocator.clear();
         Arrays.fill(execOrder, null);
+        slotRetirement.clearOwners();
         Arrays.fill(playerCentreAtSlotStartValid, false);
         cachedActiveObjects.clear();
         activeObjectsCacheDirty = true;
@@ -405,6 +445,7 @@ public class ObjectManager {
         if (touchResponses != null) {
             touchResponses.reset();
         }
+        fixedSstObjects.installConfiguredObjects();
         // Materialize the current ObjectPlacementController window immediately after reset.
         // S1 needs this for ROM parity at level start; for S2/S3K it keeps
         // manual camera resets and headless probes from sitting on an empty
@@ -477,6 +518,9 @@ public class ObjectManager {
         bucketsDirty = true;
         twoAxisCameraYCoarse = Integer.MIN_VALUE;
         placement.replaceSpawnsAndReset(newSpawns);
+        if (planeSwitchers != null) {
+            planeSwitchers.reset();
+        }
     }
 
     void resetTouchResponses() {
@@ -799,6 +843,12 @@ public class ObjectManager {
         }
     }
 
+    private boolean excludesFromOrdinaryDynamicPass(ObjectInstance instance) {
+        return initialDispatch.excludesFromDynamicPass(instance)
+                || (instance instanceof AbstractObjectInstance object
+                    && FixedRuntimeObjectInstance.ownsFixedPass(object, slotLayout));
+    }
+
     /**
      * ROM-accurate update flow for S1 counter-based respawn.
      * <p>
@@ -828,21 +878,26 @@ public class ObjectManager {
         }
 
         Arrays.fill(execOrder, null);
+        slotRetirement.clearOwners();
         Arrays.fill(playerCentreAtSlotStartValid, false);
+        slotsFreedDuringObjectPass.clear();
+        slotRetirement.clear();
         for (ObjectInstance inst : activeObjects.values()) {
-            if (initialDispatch.excludesFromDynamicPass(inst)) {
+            if (excludesFromOrdinaryDynamicPass(inst)) {
                 continue;
             }
             if (inst instanceof AbstractObjectInstance aoi && slotLayout.isExecutableSlot(executionSlotIndex(aoi))) {
                 execOrder[execIndexForSlot(executionSlotIndex(aoi))] = inst;
+                indexOwnSlotRetirement(aoi);
             }
         }
         for (ObjectInstance inst : dynamicObjects) {
-            if (initialDispatch.excludesFromDynamicPass(inst)) {
+            if (excludesFromOrdinaryDynamicPass(inst)) {
                 continue;
             }
             if (inst instanceof AbstractObjectInstance aoi && slotLayout.isExecutableSlot(executionSlotIndex(aoi))) {
                 execOrder[execIndexForSlot(executionSlotIndex(aoi))] = inst;
+                indexOwnSlotRetirement(aoi);
             }
         }
         // Phase 2: ExecuteObjects — run objects in slot order with inline out_of_range.
@@ -851,6 +906,12 @@ public class ObjectManager {
         try {
             for (currentExecSlot = 0; currentExecSlot < execOrder.length; currentExecSlot++) {
                 capturePlayerCentreAtSlotStart(player);
+                if (slotRetirement.consumeChildRelease(currentExecSlot)) {
+                    releaseSlot(slotIndexForExec(currentExecSlot));
+                }
+                if (retireBorrowedExecutionSlotOwnerAtOwnSlot(cameraX)) {
+                    objectsRemoved = true;
+                }
                 ObjectInstance instance = execOrder[currentExecSlot];
                 if (instance == null) continue;
 
@@ -916,7 +977,7 @@ public class ObjectManager {
             // Fallback: process dynamic objects without valid slots
             populateDynamicFallbackScratch();
             for (ObjectInstance inst : dynamicFallbackScratch) {
-                if (initialDispatch.excludesFromDynamicPass(inst)) {
+                if (excludesFromOrdinaryDynamicPass(inst)) {
                     continue;
                 }
                 if (inst.isDestroyed()) {
@@ -942,7 +1003,7 @@ public class ObjectManager {
             // Fallback: process active objects without valid slots
             populateActiveFallbackScratch();
             for (ObjectInstance inst : activeFallbackScratch) {
-                if (initialDispatch.excludesFromDynamicPass(inst)) {
+                if (excludesFromOrdinaryDynamicPass(inst)) {
                     continue;
                 }
                 ObjectSpawn spawn = instanceToSpawn.get(inst);
@@ -974,6 +1035,8 @@ public class ObjectManager {
                 }
             }
         } finally {
+            slotRetirement.drainChildReleases(
+                    execIndex -> releaseSlot(slotIndexForExec(execIndex)));
             currentExecSlot = -1;
             updating = false;
             deferredDynamicExecThisFrame.clear();
@@ -1008,22 +1071,26 @@ public class ObjectManager {
 
         // ROM parity: Build slot-ordered execution array.
         slotsFreedDuringObjectPass.clear();
+        slotRetirement.clear();
         Arrays.fill(execOrder, null);
+        slotRetirement.clearOwners();
         Arrays.fill(playerCentreAtSlotStartValid, false);
         for (ObjectInstance inst : activeObjects.values()) {
-            if (initialDispatch.excludesFromDynamicPass(inst)) {
+            if (excludesFromOrdinaryDynamicPass(inst)) {
                 continue;
             }
             if (inst instanceof AbstractObjectInstance aoi && slotLayout.isExecutableSlot(executionSlotIndex(aoi))) {
                 execOrder[execIndexForSlot(executionSlotIndex(aoi))] = inst;
+                indexOwnSlotRetirement(aoi);
             }
         }
         for (ObjectInstance inst : dynamicObjects) {
-            if (initialDispatch.excludesFromDynamicPass(inst)) {
+            if (excludesFromOrdinaryDynamicPass(inst)) {
                 continue;
             }
             if (inst instanceof AbstractObjectInstance aoi && slotLayout.isExecutableSlot(executionSlotIndex(aoi))) {
                 execOrder[execIndexForSlot(executionSlotIndex(aoi))] = inst;
+                indexOwnSlotRetirement(aoi);
             }
         }
         updating = true;
@@ -1036,6 +1103,12 @@ public class ObjectManager {
             // ROM parity: Iterate slots in ascending order, matching ExecuteObjects.
             for (currentExecSlot = 0; currentExecSlot < execOrder.length; currentExecSlot++) {
                 capturePlayerCentreAtSlotStart(player);
+                if (slotRetirement.consumeChildRelease(currentExecSlot)) {
+                    releaseSlot(slotIndexForExec(currentExecSlot));
+                }
+                if (retireBorrowedExecutionSlotOwnerAtOwnSlot(unloadCameraX)) {
+                    objectsRemoved = true;
+                }
                 ObjectInstance instance = execOrder[currentExecSlot];
                 if (instance == null) continue;
                 processedInExecLoop.add(instance);
@@ -1088,7 +1161,7 @@ public class ObjectManager {
             // Fallback: process objects without valid slots
             populateDynamicFallbackScratch();
             for (ObjectInstance inst : dynamicFallbackScratch) {
-                if (initialDispatch.excludesFromDynamicPass(inst)) {
+                if (excludesFromOrdinaryDynamicPass(inst)) {
                     continue;
                 }
                 if (inst.isDestroyed()) {
@@ -1114,7 +1187,7 @@ public class ObjectManager {
             }
             populateActiveFallbackScratch();
             for (ObjectInstance inst : activeFallbackScratch) {
-                if (initialDispatch.excludesFromDynamicPass(inst)) {
+                if (excludesFromOrdinaryDynamicPass(inst)) {
                     continue;
                 }
                 ObjectSpawn spawn = instanceToSpawn.get(inst);
@@ -1152,6 +1225,8 @@ public class ObjectManager {
                 }
             }
         } finally {
+            slotRetirement.drainChildReleases(
+                    execIndex -> releaseSlot(slotIndexForExec(execIndex)));
             currentExecSlot = -1;
             updating = false;
             deferredDynamicExecThisFrame.clear();
@@ -1301,10 +1376,19 @@ public class ObjectManager {
         }
     }
 
+    /** Compatibility entry point for ROM plane-switch objects executing in their SST slot. */
+    public void applyPlaneSwitcher(ObjectSpawn spawn, PlayableEntity player) {
+        applyInlinePlaneSwitcher(spawn, player);
+    }
+
+    /** True when this frame's ExecuteObjects walk has already passed {@code object}. */
+    public boolean isSlotAlreadyExecutedThisFrame(ObjectInstance object) {
+        return slotRetirement.isAlreadyExecuted(
+                object, updating, currentExecSlot, this::isManagedDynamicSlot);
+    }
+
     private boolean hasInlinePlaneSwitcher(ObjectSpawn spawn) {
-        return activeObjects.values().stream().anyMatch(instance ->
-                instance instanceof InlinePlaneSwitcher
-                        && java.util.Objects.equals(instance.getSpawn(), spawn));
+        return populationView.hasInlinePlaneSwitcher(spawn);
     }
 
     public int getPlaneSwitcherSideState(ObjectSpawn spawn) {
@@ -1578,45 +1662,18 @@ public class ObjectManager {
      * mutate manager state through it.
      */
     public java.util.Map<Integer, Integer> occupiedDynamicSlotIds() {
-        java.util.Map<Integer, Integer> occupancy = new java.util.HashMap<>();
-        for (ObjectInstance instance : getActiveObjects()) {
-            if (instance instanceof AbstractObjectInstance aoi
-                    && !objectCallbacks.call(instance, instance::isDestroyed)) {
-                ObjectSpawn spawn = objectCallbacks.call(instance, instance::getSpawn);
-                if (spawn == null) continue;
-                int slot = objectCallbacks.call(instance, aoi::getSlotIndex);
-                if (slotLayout.isDynamicSlot(slot)) {
-                    occupancy.put(slot, spawn.objectId() & 0xFF);
-                }
-            }
-        }
-        return occupancy;
+        return populationView.occupiedDynamicSlotIds(getActiveObjects());
+    }
+
+    public static final int SLOT_STATE_RESERVED_CHILD = -2;
+    public static final int SLOT_STATE_UNATTRIBUTED = -3;
+
+    public java.util.Map<Integer, Integer> occupiedDynamicSlotIdsWithReservations() {
+        return populationView.occupiedDynamicSlotIdsWithReservations(getActiveObjects());
     }
 
     public List<TransitionSstOccupant> snapshotPersistentTransitionOccupants() {
-        List<TransitionSstOccupant> snapshot = new ArrayList<>();
-        for (ObjectInstance instance : dynamicObjects) {
-            if (instance == null || objectCallbacks.call(instance, instance::isDestroyed)
-                    || !objectCallbacks.call(instance, instance::isPersistent)) {
-                continue;
-            }
-            // ROM Load_Level clears Dynamic_object_RAM, so a boss object group does
-            // not survive a level reload. Boss component children report persistent
-            // only so they survive the off-screen cull during the fixed-arena fight
-            // (see AbstractBossChild.isPersistent); they must NOT ride a seamless act
-            // reload. Carrying them strands them un-offset in the new act — concretely
-            // the placed AIZ1 miniboss cutscene is dropped on the AIZ1->AIZ2 fire
-            // reload while its persistent body/arm/flame-barrel children were carried,
-            // leaving an art-less (invisible) body and still-hurting flame barrels
-            // partway through AIZ2.
-            if (instance instanceof BossChildComponent) {
-                continue;
-            }
-            snapshot.add(new TransitionSstOccupant(instance,
-                    instance instanceof AbstractObjectInstance object
-                            ? objectCallbacks.call(instance, object::getSlotIndex) : -1));
-        }
-        return snapshot;
+        return populationView.snapshotPersistent();
     }
 
     /**
@@ -1625,62 +1682,15 @@ public class ObjectManager {
      * carry policy and from the later coordinate-offset scan.
      */
     public List<TransitionSstOccupant> snapshotAllLiveSstObjectsForTransition() {
-        List<TransitionSstOccupant> snapshot = new ArrayList<>();
-        for (ObjectInstance instance : activeObjects.values()) {
-            addLiveSlotBackedTransitionOccupant(snapshot, instance);
-        }
-        for (ObjectInstance instance : dynamicObjects) {
-            addLiveSlotBackedTransitionOccupant(snapshot, instance);
-        }
-        snapshot.sort(Comparator.comparingInt(TransitionSstOccupant::originalSlot));
-        return snapshot;
-    }
-
-    private void addLiveSlotBackedTransitionOccupant(
-            List<TransitionSstOccupant> snapshot, ObjectInstance instance) {
-        if (instance == null || objectCallbacks.call(instance, instance::isDestroyed)) {
-            return;
-        }
-        for (TransitionSstOccupant occupant : snapshot) {
-            if (occupant.identity() == instance) {
-                return;
-            }
-        }
-        if (instance instanceof AbstractObjectInstance object) {
-            int slot = objectCallbacks.call(instance, object::getSlotIndex);
-            if (slot >= 0) {
-                snapshot.add(new TransitionSstOccupant(instance, slot));
-            }
-        }
+        return populationView.snapshotAllLiveSstObjects();
     }
 
     /**
      * Runs post-player hooks for legacy object-order modules after the main
      * playable update has completed for the current frame.
      */
-    public void runPostPlayerHooks(PlayableEntity player, int frameCounter) {
-        if (player == null) {
-            return;
-        }
-        // Snapshot the pre-hook population into a reused scratch list so hooks
-        // can mutate the active set without ConcurrentModification while the
-        // per-frame copy allocation is avoided. Cleared in finally; the scratch
-        // never escapes this method.
-        List<ObjectInstance> snapshot = postPlayerHooksScratch;
-        snapshot.clear();
-        snapshot.addAll(getActiveObjects());
-        try {
-            for (ObjectInstance instance : snapshot) {
-                if (instance == null || objectCallbacks.call(instance, instance::isDestroyed)) {
-                    continue;
-                }
-                if (instance instanceof PostPlayerUpdateHook hook) {
-                    objectCallbacks.run(instance, () -> hook.updatePostPlayer(frameCounter, player));
-                }
-            }
-        } finally {
-            postPlayerHooksScratch.clear();
-        }
+    public void runPostPlayerHooks(PlayableEntity player, int vIntRunCount) {
+        populationView.runPostPlayerHooks(getActiveObjects(), player, vIntRunCount);
     }
 
     /**
@@ -1690,14 +1700,7 @@ public class ObjectManager {
      * with {@code render_flags} bit 2 set.
      */
     public void applyLevelRepeatOffsetToActiveObjects(int offsetX, int offsetY) {
-        List<ObjectInstance> snapshot = new ArrayList<>(getActiveObjects());
-        for (ObjectInstance instance : snapshot) {
-            if (instance == null || objectCallbacks.call(instance, instance::isDestroyed)
-                    || !objectCallbacks.call(instance, instance::participatesInLevelRepeatOffset)) {
-                continue;
-            }
-            objectCallbacks.run(instance, () -> instance.applyLevelRepeatOffset(offsetX, offsetY));
-        }
+        populationView.applyLevelRepeatOffset(getActiveObjects(), offsetX, offsetY);
     }
 
     List<ObjectInstance> getSolidProviderObjects() {
@@ -1718,30 +1721,8 @@ public class ObjectManager {
     }
 
     private void rebuildActiveObjectCaches() {
-        if (activeObjectsCacheDirty) {
-            cachedActiveObjects.clear();
-            cachedActiveObjects.addAll(activeObjects.values());
-            cachedActiveObjects.addAll(dynamicObjects);
-            // ReactToItem and SolidObject scan in SST slot order; slotless objects sort last.
-            cachedActiveObjects.sort((a, b) -> {
-                int slotA = a instanceof AbstractObjectInstance aoiA
-                        ? objectCallbacks.call(a, aoiA::getSlotIndex) : Integer.MAX_VALUE;
-                int slotB = b instanceof AbstractObjectInstance aoiB
-                        ? objectCallbacks.call(b, aoiB::getSlotIndex) : Integer.MAX_VALUE;
-                return Integer.compare(slotA, slotB);
-            });
-            cachedSolidProviderObjects.clear();
-            cachedTouchResponseObjects.clear();
-            for (ObjectInstance instance : cachedActiveObjects) {
-                if (instance instanceof SolidObjectProvider) {
-                    cachedSolidProviderObjects.add(instance);
-                }
-                if (instance instanceof TouchResponseProvider) {
-                    cachedTouchResponseObjects.add(instance);
-                }
-            }
-            activeObjectsCacheDirty = false;
-        }
+        activeObjectsCacheDirty = populationView.rebuildCachesIfDirty(activeObjectsCacheDirty,
+                cachedActiveObjects, cachedSolidProviderObjects, cachedTouchResponseObjects);
     }
 
     public int getFrameCounter() {
@@ -2181,6 +2162,9 @@ public class ObjectManager {
     public boolean hasFreeDynamicSlot() {
         return slotAllocator.hasFreeSlot();
     }
+
+    /** Non-mutating {@code FindFreeObj} result for ROM owner-boundary decisions. */
+    public int firstFreeDynamicSlot() { return slotAllocator.firstFreeSlot(); }
 
     /**
      * Reserves the next available dynamic slot for non-ObjectInstance systems
@@ -2638,10 +2622,25 @@ public class ObjectManager {
         if (childSlots != null) {
             for (int slot : childSlots) {
                 if (isManagedDynamicSlot(slot)) {
-                    releaseSlot(slot);
+                    releaseChildSlotAtItsOwnExecPosition(slot);
                 }
             }
         }
+    }
+
+    /**
+     * Releases a consolidated child's reserved SST slot when the ascending ROM
+     * object walk reaches that slot, rather than prematurely at its parent's slot.
+     */
+    private void releaseChildSlotAtItsOwnExecPosition(int slot) {
+        if (updating) {
+            int execIndex = execIndexForSlot(slot);
+            if (slotRetirement.deferChildRelease(
+                    execIndex, true, currentExecSlot, execOrder.length)) {
+                return;
+            }
+        }
+        releaseSlot(slot);
     }
 
     /**
@@ -3385,9 +3384,10 @@ public class ObjectManager {
             if (previousYCoarse == Integer.MIN_VALUE) {
                 previousYCoarse = currentYCoarse;
             }
-            for (ObjectSpawn spawn : placement.drainPendingCursorLoadSpawns()) {
+            for (ObjectSpawn spawn : placement.pendingCursorLoadSpawns()) {
                 changed |= tryLoadPlacementSpawn(spawn, allowVerticalLoadBypassForS2);
             }
+            placement.finishPendingCursorLoadBatch();
             if (currentYCoarse != previousYCoarse) {
                 for (ObjectSpawn spawn : placement.getDeferredVerticalLoadSpawns()) {
                     changed |= tryLoadPlacementSpawnForTwoAxisYPass(spawn, previousYCoarse, currentYCoarse);
@@ -3499,12 +3499,14 @@ public class ObjectManager {
                 || activeObjects.containsKey(spawn)
                 || (placement.isRemembered(spawn) && !placement.isStayActive(spawn))
                 || placement.isDormant(spawn)) {
+            placement.completePendingCursorLoad(spawn);
             return false;
         }
         if (!isSpawnVerticallyEligibleForLoad(spawn, allowVerticalLoadBypassForS2)) {
             if (slotLayout.twoAxisCursorPlacement()) {
                 placement.markDeferredVerticalLoad(spawn);
             }
+            placement.completePendingCursorLoad(spawn);
             return false;
         }
         // Pre-allocate parent slot — consumed by AbstractObjectInstance's
@@ -3533,11 +3535,13 @@ public class ObjectManager {
             }
             registerActiveObject(spawn, instance);
             placement.clearDeferredVerticalLoad(spawn);
+            placement.completePendingCursorLoad(spawn);
             return true;
         }
         if (preSlot >= 0) {
             releaseSlot(preSlot);
         }
+        placement.completePendingCursorLoad(spawn);
         return false;
     }
 

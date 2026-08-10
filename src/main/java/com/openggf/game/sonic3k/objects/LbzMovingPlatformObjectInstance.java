@@ -166,7 +166,7 @@ public final class LbzMovingPlatformObjectInstance extends AbstractObjectInstanc
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         applyMovement();
         standingThisFrame = false;
         updateDynamicSpawn(x, y);

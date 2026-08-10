@@ -17,4 +17,15 @@ public record ObjectInteractionRules(
         boolean animalObjectUsesRenderFlagDeleteBounds,
         boolean solidPushReleaseWritesWalkRunAnimationWord,
         boolean solidPushReleaseSkipsWalkRunWhenRolling,
-        boolean solidPushReleaseSkipsWalkRunWhenSpindashing) {}
+        boolean solidPushReleaseSkipsWalkRunWhenSpindashing,
+        int duckTouchBoxMappingFrame) {
+
+    public static final int NO_DUCK_TOUCH_BOX = -1;
+    public static final int DUCK_TOUCH_BOX_TOP_SHIFT = 12;
+    public static final int DUCK_TOUCH_BOX_HEIGHT = 20;
+
+    public boolean isDuckTouchBoxMappingFrame(int mappingFrame) {
+        return duckTouchBoxMappingFrame != NO_DUCK_TOUCH_BOX
+                && (mappingFrame & 0xFF) == duckTouchBoxMappingFrame;
+    }
+}

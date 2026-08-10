@@ -574,6 +574,20 @@ namespace OpenGGF.BizHawk.Headless
                 S3KRam.S8(host, S3KRam.PlayerBase + S3KRam.OffRadiusY);
             sbyte xRadius =
                 S3KRam.S8(host, S3KRam.PlayerBase + S3KRam.OffRadiusX);
+            // Comparison-only collision-plane context: Player_AnglePos picks
+            // Secondary_collision_addr when top_solid_bit != $C
+            // (sonic3k.asm:18729-18732), and the two addresses are distinct
+            // chunk->collision-block index arrays, not merely solidity bits.
+            int topSolidBit =
+                S3KRam.U8(host, S3KRam.PlayerBase + S3KRam.OffTopSolidBit);
+            int lrbSolidBit =
+                S3KRam.U8(host, S3KRam.PlayerBase + S3KRam.OffLrbSolidBit);
+            int stickToConvex =
+                S3KRam.U8(host, S3KRam.PlayerBase + S3KRam.OffStickToConvex);
+            uint primaryCollision =
+                S3KRam.U32(host, S3KRam.PrimaryCollisionAddr);
+            uint secondaryCollision =
+                S3KRam.U32(host, S3KRam.SecondaryCollisionAddr);
 
             return "{\"frame\":" + Dec(traceFrame)
                 + ",\"vfc\":" + Dec(vfc)
@@ -592,7 +606,14 @@ namespace OpenGGF.BizHawk.Headless
                 + Bool((status & S3KRam.StatusUnderwater) != 0)
                 + ",\"roll_jumping\":"
                 + Bool((status & S3KRam.StatusRollJump) != 0)
-                + "}";
+                + ",\"top_solid_bit\":\"0x" + Hex2(topSolidBit)
+                + "\",\"lrb_solid_bit\":\"0x" + Hex2(lrbSolidBit)
+                + "\",\"stick_to_convex\":\"0x" + Hex2(stickToConvex)
+                + "\",\"primary_collision_addr\":\"0x"
+                + Hex8(primaryCollision)
+                + "\",\"secondary_collision_addr\":\"0x"
+                + Hex8(secondaryCollision)
+                + "\"}";
         }
 
         /// <summary>

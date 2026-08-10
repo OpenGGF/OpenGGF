@@ -100,7 +100,7 @@ public class Sonic1LamppostTwirlInstance extends AbstractObjectInstance implemen
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (finished) {
             return;
         }

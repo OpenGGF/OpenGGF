@@ -47,13 +47,6 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
     private static final String ART_KEY = Sonic3kObjectArtKeys.MGZ_TRIGGER_PLATFORM;
     private static final int PRIORITY_BUCKET = 5; // ROM: priority = $280
 
-    private static final int SCREEN_SHAKE_MASK = 0x3F;
-    private static final int[] SCREEN_SHAKE_CONTINUOUS = {
-            1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0,
-            2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3,
-            1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0,
-            2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3
-    };
 
     private enum Mode {
         HORIZONTAL_DELETE,
@@ -117,7 +110,7 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (isDestroyed()) {
             return;
         }
@@ -141,7 +134,7 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
         if (!completed && activationVisibleThisPass) {
             advanceActiveMotion();
             if (!completed) {
-                applyScreenShake(frameCounter);
+                applyScreenShake(vIntRunCount);
             }
         }
 
@@ -194,16 +187,19 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
         ObjectLifetimeOps.markSpawnRemembered(objectManager, spawn);
     }
 
-    private void applyScreenShake(int frameCounter) {
+    private void applyScreenShake(int vIntRunCount) {
         MgzZoneRuntimeState mgzState = resolveMgzRuntimeState();
         if (mgzState == null) {
             return;
         }
-        // Object updates receive native Level_frame_counter + 2 in this frame
-        // pipeline, while Camera_Y_pos_copy consumes the sample prepared by
-        // ShakeScreen_Setup on the preceding native frame.
-        mgzState.requestScreenShakeOffset(
-                SCREEN_SHAKE_CONTINUOUS[(frameCounter - 3) & SCREEN_SHAKE_MASK]);
+        // ROM: the object only raises Screen_shake_flag; ShakeScreen_Setup
+        // (docs/skdisasm/sonic3k.asm:104188-104210) samples
+        // ScreenShakeArray2[Level_frame_counter & $3F] once per frame from the
+        // zone's background event, and MGZ's screen event consumes the previous
+        // frame's sample into Camera_Y_pos_copy (sonic3k.asm:106257-106260,
+        // :106308). Both the clock and the one-frame publication now live in
+        // that owner, so no object-clock offset is needed here.
+        mgzState.requestContinuousScreenShake();
     }
 
     private MgzZoneRuntimeState resolveMgzRuntimeState() {

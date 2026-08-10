@@ -3,6 +3,7 @@ package com.openggf.tests.trace.runs;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.openggf.GameLoop;
+import com.openggf.GameLoopSpecialStagePacingTestBridge;
 import com.openggf.control.InputHandler;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
@@ -13,7 +14,10 @@ import com.openggf.game.BonusStageType;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
 import com.openggf.game.OscillationManager;
+import com.openggf.game.SpecialStageInputMapper;
+import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.resources.DynamicArtGapTransition;
+import com.openggf.game.resources.DynamicArtDiagnosticsSnapshot;
 import com.openggf.game.resources.DynamicArtLifecycleService;
 import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.session.GameplayModeContext;
@@ -21,16 +25,33 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
+import com.openggf.trace.SpecialStageRunObjectsPassBinder;
 import com.openggf.trace.ToleranceConfig;
 import com.openggf.trace.FrameComparison;
 import com.openggf.trace.TraceData;
+import com.openggf.trace.DynamicArtTransfer;
+import com.openggf.trace.TraceReplayBootstrap;
 import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.live.LiveTraceComparator;
 import com.openggf.trace.live.MismatchEntry;
+import com.openggf.trace.TraceExecutionPhase;
 import com.openggf.trace.replay.TraceReplayDriver;
 import com.openggf.trace.replay.TraceReplayFixture;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker;
+import com.openggf.trace.replay.runs.DestinationAdmissionReceipt;
+import com.openggf.trace.replay.runs.RunBoundarySignal;
+import com.openggf.trace.replay.runs.RunPlaybackObservation;
+import com.openggf.trace.replay.runs.TraceRunBoundaryComparator;
+import com.openggf.trace.replay.runs.TraceRunDynamicArtGapComparator;
+import com.openggf.trace.replay.runs.RunLevelLoadTracker;
+import com.openggf.trace.replay.runs.TraceRunPlaybackCoordinator;
+import com.openggf.trace.replay.runs.TraceRunFrameDriver;
+import com.openggf.trace.replay.runs.TraceRunPresentationClosure;
+import com.openggf.trace.replay.runs.TraceRunSpecialStageRows;
+import com.openggf.trace.replay.runs.TraceRunSpecialStageRowDriver;
+import com.openggf.trace.replay.runs.TraceStructuralRowComparator;
+import com.openggf.trace.replay.TraceReplayRowPolicy;
 import com.openggf.trace.timing.HardwareTimingReplayPort;
 import com.openggf.trace.timing.HardwareTimingSchedule;
 import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
@@ -49,6 +70,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.IntConsumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -83,13 +105,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 abstract class AbstractRunChainTest {
 
     private static final Path REPORT_OUTPUT_DIR = Path.of("target", "trace-reports");
+    private LiveTraceComparator productionComparator;
+    private HeadlessRunCoordinatorAdapter activeRunCoordinator;
 
     protected record DynamicArtGapJournalEvidence(
             int transitionCountAfterFirstArm,
             long lastEdgeOrdinalAfterFirstArm,
-            List<DynamicArtStructuralGapEvidence> structuralGaps) {
+            List<DynamicArtStructuralGapEvidence> structuralGaps,
+            List<TraceRunPlaybackCoordinator.Action> coordinatorActions) {
         protected DynamicArtGapJournalEvidence {
             structuralGaps = List.copyOf(structuralGaps);
+            coordinatorActions = List.copyOf(coordinatorActions);
         }
 
         protected DynamicArtStructuralGapEvidence structuralGap(
@@ -117,8 +143,11 @@ abstract class AbstractRunChainTest {
             long lastEdgeOrdinalAtGapStart,
             int transitionCountAfterNextArm,
             long lastEdgeOrdinalAfterNextArm,
+            TraceRunDynamicArtGapComparator.StructuralOrder structuralOrder,
+            List<DynamicArtTransfer.Descriptor> openingLedger,
             List<DynamicArtGapTransition> transitionsAddedAcrossBoundary) {
         protected DynamicArtStructuralGapEvidence {
+            openingLedger = List.copyOf(openingLedger);
             transitionsAddedAcrossBoundary =
                     List.copyOf(transitionsAddedAcrossBoundary);
         }
@@ -135,6 +164,10 @@ abstract class AbstractRunChainTest {
         private Integer gapStartMovieLogicalFrame;
         private int transitionCountAtGapStart;
         private long lastEdgeOrdinalAtGapStart;
+        private long structuralOrdinal;
+        private Long sourceClosedOrdinal;
+        private Long gapOpenedOrdinal;
+        private List<DynamicArtTransfer.Descriptor> openingLedger = List.of();
 
         private DynamicArtGapJournalProbe(DynamicArtLifecycleService lifecycle) {
             this.lifecycle = lifecycle;
@@ -143,6 +176,15 @@ abstract class AbstractRunChainTest {
             transitionCountAfterFirstArm = firstArmTransitions.size();
             lastEdgeOrdinalAfterFirstArm =
                     lastEdgeOrdinal(firstArmTransitions);
+        }
+
+        private void sourceClosed(String segmentDir) {
+            if (sourceClosedOrdinal != null) {
+                throw new AssertionError(
+                        "dynamic-art source closed twice for " + segmentDir);
+            }
+            representedSegmentDir = segmentDir;
+            sourceClosedOrdinal = ++structuralOrdinal;
         }
 
         private void gapOpened(String segmentDir) {
@@ -154,11 +196,19 @@ abstract class AbstractRunChainTest {
                 }
                 return;
             }
+            if (sourceClosedOrdinal == null
+                    || !Objects.equals(representedSegmentDir, segmentDir)) {
+                throw new AssertionError(
+                        "dynamic-art gap opened before source close for " + segmentDir);
+            }
             List<DynamicArtGapTransition> atGapStart =
                     lifecycle.gapTransitions();
-            representedSegmentDir = segmentDir;
+            gapOpenedOrdinal = ++structuralOrdinal;
             gapStartMovieLogicalFrame =
                     lifecycle.capture().movieLogicalFrame();
+            openingLedger = lifecycle.capture().ledger().stream()
+                    .map(DynamicArtGapJournalProbe::toTraceDescriptor)
+                    .toList();
             transitionCountAtGapStart = atGapStart.size();
             lastEdgeOrdinalAtGapStart =
                     lastEdgeOrdinal(atGapStart);
@@ -171,6 +221,7 @@ abstract class AbstractRunChainTest {
             }
             int nextSegmentArmMovieLogicalFrame =
                     lifecycle.capture().movieLogicalFrame();
+            long destinationOpenedOrdinal = ++structuralOrdinal;
             List<DynamicArtGapTransition> afterNextArm =
                     lifecycle.gapTransitions();
             List<DynamicArtGapTransition> added =
@@ -188,12 +239,90 @@ abstract class AbstractRunChainTest {
                     lastEdgeOrdinalAtGapStart,
                     afterNextArm.size(),
                     lastEdgeOrdinal(afterNextArm),
+                    new TraceRunDynamicArtGapComparator.StructuralOrder(
+                            sourceClosedOrdinal,
+                            gapOpenedOrdinal,
+                            destinationOpenedOrdinal),
+                    openingLedger,
                     added));
             representedSegmentDir = null;
             gapStartMovieLogicalFrame = null;
+            sourceClosedOrdinal = null;
+            gapOpenedOrdinal = null;
+            openingLedger = List.of();
         }
 
-        private DynamicArtGapJournalEvidence evidence() {
+        private void verify(TraceRunManifest run) {
+            for (int sourceIndex = 0;
+                    sourceIndex < structuralGaps.size(); sourceIndex++) {
+                DynamicArtStructuralGapEvidence evidence =
+                        structuralGaps.get(sourceIndex);
+                FrameComparison comparison =
+                        TraceRunDynamicArtGapComparator.compare(
+                                evidence.gapStartMovieLogicalFrame(),
+                                run,
+                                sourceIndex,
+                                new TraceRunDynamicArtGapComparator.RuntimeGap(
+                                        evidence.representedSegmentDir(),
+                                        evidence.nextSegmentDir(),
+                                        evidence.structuralOrder(),
+                                        evidence.openingLedger(),
+                                        evidence.transitionsAddedAcrossBoundary()));
+                if (comparison.hasError()) {
+                    throw new AssertionError(
+                            "shared dynamic-art gap comparison failed for "
+                                    + evidence.representedSegmentDir() + " -> "
+                                    + evidence.nextSegmentDir() + ": "
+                                    + comparison.divergentFields());
+                }
+            }
+        }
+
+        private void verifyTerminal(
+                TraceRunManifest run, int movieFrameCount) {
+            if (gapStartMovieLogicalFrame == null
+                    || sourceClosedOrdinal == null
+                    || gapOpenedOrdinal == null) {
+                throw new AssertionError(
+                        "terminal dynamic-art tail has no open source gap");
+            }
+            // Mirrors the launcher's terminal tail: the movie ends before this
+            // level reaches its main loop, so a transfer still held for the
+            // pre-main-loop tail settles at the tail's earliest row.
+            lifecycle.releaseUnclaimedPreMainLoopPlayerTransfer();
+            int transitionCount = lifecycle.gapTransitions().size();
+            List<DynamicArtGapTransition> added = transitionCount
+                    >= transitionCountAtGapStart
+                    ? lifecycle.gapTransitions().subList(
+                            transitionCountAtGapStart, transitionCount)
+                    : List.of();
+            int sourceIndex = run.segments().size() - 1;
+            FrameComparison comparison =
+                    TraceRunDynamicArtGapComparator.compareTerminalTail(
+                            gapStartMovieLogicalFrame, run, sourceIndex,
+                            movieFrameCount,
+                            new TraceRunDynamicArtGapComparator.RuntimeTerminalTail(
+                                    representedSegmentDir,
+                                    sourceClosedOrdinal,
+                                    gapOpenedOrdinal,
+                                    ++structuralOrdinal,
+                                    openingLedger,
+                                    added));
+            if (comparison.hasError()) {
+                throw new AssertionError(
+                        "shared terminal dynamic-art comparison failed for "
+                                + representedSegmentDir + ": "
+                                + comparison.divergentFields());
+            }
+            representedSegmentDir = null;
+            gapStartMovieLogicalFrame = null;
+            sourceClosedOrdinal = null;
+            gapOpenedOrdinal = null;
+            openingLedger = List.of();
+        }
+
+        private DynamicArtGapJournalEvidence evidence(
+                List<TraceRunPlaybackCoordinator.Action> coordinatorActions) {
             if (structuralGaps.isEmpty()) {
                 throw new AssertionError(
                         "run did not arm a next segment after its first structural gap");
@@ -201,7 +330,8 @@ abstract class AbstractRunChainTest {
             return new DynamicArtGapJournalEvidence(
                     transitionCountAfterFirstArm,
                     lastEdgeOrdinalAfterFirstArm,
-                    structuralGaps);
+                    structuralGaps,
+                    coordinatorActions);
         }
 
         private static long lastEdgeOrdinal(
@@ -209,6 +339,324 @@ abstract class AbstractRunChainTest {
             return transitions.isEmpty()
                     ? -1
                     : transitions.getLast().edge().edgeOrdinal();
+        }
+
+        private static DynamicArtTransfer.Descriptor toTraceDescriptor(
+                DynamicArtLifecycleService.Descriptor descriptor) {
+            return new DynamicArtTransfer.Descriptor(
+                    descriptor.transferId(),
+                    descriptor.owner(),
+                    descriptor.mappingFrame(),
+                    "segment",
+                    descriptor.requests().stream()
+                            .map(request -> new DynamicArtTransfer.Request(
+                                    request.romSourceAddress(),
+                                    request.sourceTileIndex(),
+                                    request.ramSourceAddress(),
+                                    request.vramDestination(),
+                                    request.byteLength()))
+                            .toList(),
+                    null);
+        }
+    }
+
+    /**
+     * Test-side executor for the shared run policy. It samples only production
+     * identities and lifecycle generations, then requires every legacy
+     * handoff to earn a coordinator admission receipt before a new comparator
+     * is allowed to remain attached.
+     */
+    private static final class HeadlessRunCoordinatorAdapter {
+        private final TraceRunManifest run;
+        private final TraceRunPlaybackCoordinator coordinator;
+        private final List<TraceRunPlaybackCoordinator.Action> actions =
+                new ArrayList<>();
+        private final RunLevelLoadTracker levelLoads;
+        private long admittedStepOrdinal;
+        private RunPlaybackObservation productionOwnerObservation;
+        private int productionOwnerSegmentIndex = -1;
+
+        private HeadlessRunCoordinatorAdapter(
+                TraceRunManifest run, Bk2Movie movie,
+                List<SegmentPlan> plans) {
+            this.run = run;
+            this.coordinator = new TraceRunPlaybackCoordinator(
+                    run,
+                    GameServices.module().getTracePlaybackProfile(),
+                    movie.getFrameCount(), plans);
+            this.levelLoads = SessionManager.getCurrentGameplayMode()
+                    .runLevelLoads();
+            this.levelLoads.prime(GameServices.level());
+        }
+
+        private void activateInitial(GameMode mode) {
+            List<TraceRunPlaybackCoordinator.Action> emitted =
+                    coordinator.activateInitialLevel(
+                            observation(mode, false, 0, false));
+            requireAdmission(emitted, 0, 0);
+        }
+
+        private void closeCurrent(GameMode mode, boolean publicationComplete) {
+            int source = coordinator.currentSegmentIndex();
+            if (!publicationComplete) {
+                throw new AssertionError(
+                        "cannot close represented segment " + source
+                                + " before its comparator publication completed");
+            }
+            RunPlaybackObservation current = observation(mode, true, 0, false);
+            RunPlaybackObservation production = productionOwnerSegmentIndex == source
+                    && productionOwnerObservation != null
+                    ? withProductionOwner(current, productionOwnerObservation)
+                    : current;
+            List<TraceRunPlaybackCoordinator.Action> emitted =
+                    coordinator.afterProduction(production);
+            actions.addAll(emitted);
+            if (emitted.isEmpty()
+                    || !(emitted.getFirst()
+                            instanceof TraceRunPlaybackCoordinator.CloseSegment close)
+                    || close.segmentIndex() != source) {
+                throw new AssertionError(
+                        "coordinator did not close represented segment " + source);
+            }
+        }
+
+        private void beforeProduction(GameMode mode) {
+            productionOwnerSegmentIndex = coordinator.currentSegmentIndex();
+            productionOwnerObservation = observation(mode, false, 0, false);
+        }
+
+        private void afterStep(GameMode mode) {
+            admittedStepOrdinal++;
+            RunPlaybackObservation current = observation(mode, false, 0, false);
+            RunPlaybackObservation step = productionOwnerSegmentIndex
+                    == coordinator.currentSegmentIndex()
+                    && productionOwnerObservation != null
+                    ? withProductionOwner(current, productionOwnerObservation)
+                    : current;
+            List<TraceRunPlaybackCoordinator.Action> emitted =
+                    coordinator.afterStep(step);
+            actions.addAll(emitted);
+            if (!emitted.isEmpty()) {
+                TraceRunPlaybackCoordinator.Action action = emitted.getFirst();
+                if (action instanceof TraceRunPlaybackCoordinator.FailRun failure) {
+                    throw new AssertionError(failure.diagnostic());
+                }
+                throw new AssertionError(
+                        "unexpected coordinator action after a headless step: " + action);
+            }
+        }
+
+        private static RunPlaybackObservation withProductionOwner(
+                RunPlaybackObservation current,
+                RunPlaybackObservation owner) {
+            return new RunPlaybackObservation(
+                    owner.mode(), current.sharedBk2Cursor(),
+                    current.admittedStepOrdinal(), owner.level(),
+                    current.initialTitleCardPending(), owner.bonus(),
+                    owner.specialStageIndex(), current.productionOpen(),
+                    current.currentSegmentExhausted(),
+                    current.destinationRowsConsumed(),
+                    current.lagOnlySameLevelContinuation(),
+                    current.timingScheduleGeneration(),
+                    current.dynamicArtGeneration());
+        }
+
+        private DestinationAdmissionReceipt admitInterior(
+                TraceRunManifest.Transition boundary,
+                int observedBk2Frame,
+                GameMode mode,
+                int rowsConsumed) {
+            int destinationIndex = coordinator.currentSegmentIndex() + 1;
+            RunBoundarySignal signal = switch (boundary.entryKind()) {
+                case "starpost_bonus" -> {
+                    var bonus = GameServices.bonusStageOrNull();
+                    if (bonus == null
+                            || bonus.getActiveType() == BonusStageType.NONE) {
+                        throw new AssertionError(
+                                "production bonus identity is unavailable at admission");
+                    }
+                    yield new RunBoundarySignal.BonusRequest(
+                            observedBk2Frame, bonus.getActiveType());
+                }
+                case "giant_ring", "starpost_special" ->
+                        new RunBoundarySignal.SpecialStageRequest(
+                                observedBk2Frame,
+                                GameServices.module().getSpecialStageProvider()
+                                        .getCurrentStage());
+                default -> throw new AssertionError(
+                        "not an interior entry boundary: " + boundary.entryKind());
+            };
+            coordinator.observeBoundary(signal);
+            return requireAdmission(
+                    coordinator.beforeAdmission(
+                            observation(mode, false, rowsConsumed, false)),
+                    destinationIndex,
+                    rowsConsumed);
+        }
+
+        private DestinationAdmissionReceipt admitLevel(
+                TraceRunManifest.Transition boundary,
+                int observedBk2Frame,
+                GameMode mode,
+                int rowsConsumed,
+                boolean lagOnlyContinuation,
+                RunLevelLoadTracker.Receipt observedLoad) {
+            int destinationIndex = coordinator.currentSegmentIndex() + 1;
+            if (lagOnlyContinuation) {
+                return requireAdmission(
+                        coordinator.beforeAdmission(observation(
+                                mode, false, rowsConsumed, true)),
+                        destinationIndex, rowsConsumed);
+            }
+            RunLevelLoadTracker.Receipt load = Objects.requireNonNull(
+                    observedLoad, "production load receipt");
+            if (boundary != null && "stage_exit".equals(boundary.entryKind())) {
+                coordinator.observeBoundary(
+                        new RunBoundarySignal.StageExit(observedBk2Frame));
+            }
+            RunPlaybackObservation observed =
+                    observation(mode, false, rowsConsumed, false);
+            RunBoundarySignal.LevelLoaded loaded =
+                    new RunBoundarySignal.LevelLoaded(
+                            observedBk2Frame, load.cause(), load.identity());
+            List<TraceRunPlaybackCoordinator.Action> emitted =
+                    coordinator.beforeLoadedLevelActivation(loaded, observed);
+            if (emitted.isEmpty()) {
+                emitted = coordinator.beforeAdmission(observed);
+            }
+            return requireAdmission(
+                    emitted, destinationIndex, rowsConsumed);
+        }
+
+        private DestinationAdmissionReceipt admitPresentationBridge(
+                TraceRunManifest.Transition boundary,
+                int observedBk2Frame,
+                GameMode mode) {
+            int destinationIndex = coordinator.currentSegmentIndex() + 1;
+            return requireAdmission(
+                    coordinator.beforeAdmission(
+                            observation(mode, false, 0, false)),
+                    destinationIndex, 0);
+        }
+
+        private TraceRunReplayWalker.TerminalMovieTailPlan terminalPlan() {
+            if (actions.isEmpty()) {
+                throw new AssertionError("coordinator emitted no terminal action");
+            }
+            TraceRunPlaybackCoordinator.Action last = actions.getLast();
+            if (last instanceof TraceRunPlaybackCoordinator.BeginTerminalTail tail) {
+                return tail.plan();
+            }
+            if (last instanceof TraceRunPlaybackCoordinator.CompleteRun) {
+                return null;
+            }
+            throw new AssertionError(
+                    "coordinator did not choose a terminal plan: " + last);
+        }
+
+        private void finishTerminal(GameMode actualMode) {
+            List<TraceRunPlaybackCoordinator.Action> emitted =
+                    coordinator.finishTerminalTail(actualMode);
+            if (!emitted.isEmpty()) {
+                actions.addAll(emitted);
+                if (!(emitted.getFirst()
+                        instanceof TraceRunPlaybackCoordinator.CompleteRun)) {
+                    throw new AssertionError(
+                            "coordinator rejected terminal mode " + actualMode);
+                }
+            }
+            if (coordinator.phase()
+                    != TraceRunPlaybackCoordinator.Phase.COMPLETE) {
+                throw new AssertionError(
+                        "coordinator did not complete the run: "
+                                + coordinator.phase());
+            }
+        }
+
+        private List<TraceRunPlaybackCoordinator.Action> actions() {
+            return List.copyOf(actions);
+        }
+
+        private RunLevelLoadTracker.Receipt latestLoadReceipt() {
+            return levelLoads.latest().orElseThrow(() -> new AssertionError(
+                    "production did not publish a level-load receipt"));
+        }
+
+        private DestinationAdmissionReceipt requireAdmission(
+                List<TraceRunPlaybackCoordinator.Action> emitted,
+                int segmentIndex,
+                int rowsConsumed) {
+            actions.addAll(emitted);
+            if (emitted.size() != 1
+                    || !(emitted.getFirst()
+                            instanceof TraceRunPlaybackCoordinator.AdmitDestination admit)) {
+                throw new AssertionError(
+                        "coordinator denied segment " + segmentIndex
+                                + " admission in phase " + coordinator.phase());
+            }
+            DestinationAdmissionReceipt receipt = admit.receipt();
+            TraceRunManifest.Segment segment = run.segments().get(segmentIndex);
+            if (receipt.segmentIndex() != segmentIndex
+                    || receipt.rowsConsumed() != rowsConsumed
+                    || receipt.absoluteBk2Row()
+                            != segment.bk2FrameOffset() + rowsConsumed) {
+                throw new AssertionError(
+                        "coordinator admitted the wrong destination row: " + receipt);
+            }
+            return receipt;
+        }
+
+        private RunPlaybackObservation observation(
+                GameMode mode,
+                boolean exhausted,
+                int rowsConsumed,
+                boolean lagOnlyContinuation) {
+            var levelManager = GameServices.level();
+            Object currentLevel = levelManager.getCurrentLevel();
+            RunPlaybackObservation.LevelIdentity levelIdentity =
+                    currentLevel == null ? null
+                            : new RunPlaybackObservation.LevelIdentity(
+                                    levelLoads.generation(),
+                                    levelManager.getCurrentZone(),
+                                    levelManager.getRomZoneId(),
+                                    levelManager.getCurrentAct());
+            RunPlaybackObservation.BonusIdentity bonusIdentity = null;
+            var bonus = GameServices.bonusStageOrNull();
+            if (mode == GameMode.BONUS_STAGE && bonus != null
+                    && bonus.getActiveType() != BonusStageType.NONE) {
+                bonusIdentity = new RunPlaybackObservation.BonusIdentity(
+                        levelManager.getRomZoneId(),
+                        levelManager.getCurrentAct(),
+                        bonus.getActiveType());
+            }
+            Integer specialStageIndex =
+                    RunPlaybackObservation.insideRecordedSpecialStageMode(mode)
+                            ? GameServices.module().getSpecialStageProvider()
+                                    .getCurrentStage()
+                            : null;
+            DynamicArtLifecycleService lifecycle =
+                    SessionManager.getCurrentGameplayMode()
+                            .dynamicArtLifecycle();
+            var lifecycleState = lifecycle.capture();
+            long stepOrdinal = admittedStepOrdinal;
+            long dynamicGeneration =
+                    GameServices.captureDynamicArtDiagnostics()
+                            .segmentGeneration();
+            return new RunPlaybackObservation(
+                    mode,
+                    Math.max(0,
+                            GameServices.playbackDebug().getCursorFrame()),
+                    stepOrdinal,
+                    levelIdentity,
+                    levelManager.isTitleCardRequested(),
+                    bonusIdentity,
+                    specialStageIndex,
+                    lifecycleState.comparisonSegmentOpen(),
+                    exhausted,
+                    rowsConsumed,
+                    lagOnlyContinuation,
+                    Math.max(0, coordinator.currentSegmentIndex()),
+                    dynamicGeneration);
         }
     }
 
@@ -223,6 +671,21 @@ abstract class AbstractRunChainTest {
      */
     protected DynamicArtGapJournalEvidence assertChainReplay(Path runDir)
             throws Exception {
+        return assertChainReplay(runDir, null);
+    }
+
+    protected DynamicArtGapJournalEvidence assertChainReplayThroughSegmentRow(
+            Path runDir, int segmentIndex, int committedRows) throws Exception {
+        if (segmentIndex < 0 || committedRows <= 0) {
+            throw new IllegalArgumentException(
+                    "prefix target requires a nonnegative segment and positive row count");
+        }
+        return assertChainReplay(
+                runDir, new ReplayPrefixTarget(segmentIndex, committedRows));
+    }
+
+    private DynamicArtGapJournalEvidence assertChainReplay(
+            Path runDir, ReplayPrefixTarget prefixTarget) throws Exception {
         // --- Step 1: load + validate manifest, plan segments (manifest-driven) --
         TraceRunManifest run;
         try {
@@ -303,6 +766,7 @@ abstract class AbstractRunChainTest {
                 trace0, movie, fixture, loop, fixture::sprite, () -> { },
                 recordedHardwareTiming);
         driver.start(bootZone, bootAct);
+        int initialComparisonCursor = driver.initialCursor();
 
         HardwareTimingCoordinator hardwareTiming =
                 new HardwareTimingCoordinator(
@@ -311,13 +775,17 @@ abstract class AbstractRunChainTest {
                 SessionManager.getCurrentGameplayMode();
         gameplayMode.plcFrameLifecycle()
                 .setComparisonSegmentsExternallyManaged(true);
+        boolean[] firstDynamicArtWindow = {true};
         var dynamicArtSegments =
                 new TraceRunReplayWalker.DynamicArtSegmentController(
                         new TraceRunReplayWalker.DynamicArtSegmentWindow() {
                             @Override
                             public void open() {
-                                gameplayMode.dynamicArtLifecycle()
-                                        .serviceProductionVBlank();
+                                if (firstDynamicArtWindow[0]) {
+                                    firstDynamicArtWindow[0] = false;
+                                    gameplayMode.dynamicArtLifecycle()
+                                            .serviceProductionVBlank();
+                                }
                                 gameplayMode.dynamicArtLifecycle()
                                         .openComparisonSegment();
                             }
@@ -328,11 +796,32 @@ abstract class AbstractRunChainTest {
                                         .closeComparisonSegment();
                             }
                         });
+        // The run's movie spans the first level's load, so the transfer that
+        // load staged for the player belongs to the run — unlike a
+        // segment-scoped replay, which starts at Level_MainLoop and never owns
+        // it. It lands on the row the counted pre-main-loop tail puts it on:
+        // the first main-loop row minus preLevelMainLoopDelayFrames.
+        gameplayMode.dynamicArtLifecycle()
+                .publishInitialLevelLoadPlayerTransfer(
+                        first.segment().bk2FrameOffset(),
+                        GameServices.module().getLevelInitProfile()
+                                .preLevelMainLoopDelayFrames());
         dynamicArtSegments.beginSegment();
+        // The initial standalone bootstrap may omit a recorded pre-level prefix.
+        // Keep the read-only dynamic-art publication clock on the same first
+        // compared row as the comparator/input cursor. This is initial adapter
+        // alignment outside the coordinator transcript; later segments must earn
+        // their publication generation through ordinary close/gap/open actions.
+        gameplayMode.dynamicArtLifecycle()
+                .advanceComparisonCursor(initialComparisonCursor);
         DynamicArtGapJournalProbe dynamicArtGapJournal =
                 new DynamicArtGapJournalProbe(
                         gameplayMode.dynamicArtLifecycle());
+        HeadlessRunCoordinatorAdapter runCoordinator =
+                new HeadlessRunCoordinatorAdapter(run, movie, plans);
+        activeRunCoordinator = runCoordinator;
         Throwable primaryFailure = null;
+        boolean prefixReached = false;
         try {
             PlaybackDebugManager playback = GameServices.playbackDebug();
             RealEngineHooks hooks = new RealEngineHooks(loop);
@@ -343,6 +832,8 @@ abstract class AbstractRunChainTest {
             // delegating comparison to whichever segment comparator is attached.
             playback.setFrameObserver(probe);
             probe.setDelegate(driver.comparator());
+            productionComparator = driver.comparator();
+            runCoordinator.activateInitial(loop.getCurrentGameMode());
 
             // --- Step 3: walk every segment -------------------------------------
             LiveTraceComparator activeComparator = driver.comparator();
@@ -361,14 +852,32 @@ abstract class AbstractRunChainTest {
                 int remainingFrames = TraceRunReplayWalker.remainingSegmentFrames(
                         seg.trace().frameCount(), activeComparator.cursor());
                 stepFrames(loop, remainingFrames);
-                dynamicArtSegments.enterGap();
                 activeComparator.finalizeTerminalDynamicArtComparison();
+                requireComparatorComplete(seg, activeComparator);
+                dynamicArtGapJournal.sourceClosed(seg.segment().dir());
+                dynamicArtSegments.enterGap();
+                runCoordinator.closeCurrent(
+                        loop.getCurrentGameMode(), activeComparator.isComplete());
                 maybeWriteReport(run.runId(), i, activeComparator);
                 dynamicArtGapJournal.gapOpened(seg.segment().dir());
                 if (last) {
+                    productionComparator = null;
+                    TraceRunFrameDriver terminalRows =
+                            new TraceRunFrameDriver();
+                    gameplayMode.installTraceRunFrameDriver(terminalRows);
+                    try {
+                        replayTerminalMovieTail(
+                                runCoordinator.terminalPlan(), loop,
+                                inputHandler, movie, playback, fixture,
+                                terminalRows, runCoordinator);
+                        dynamicArtGapJournal.verifyTerminal(
+                                run, movie.getFrameCount());
+                    } finally {
+                        gameplayMode.clearTraceRunFrameDriver(terminalRows);
+                    }
                     dynamicArtSegments.close();
                     hardwareTiming.close();
-                    replayTerminalMovieTail(run, loop, inputHandler, movie, seg);
+                    runCoordinator.finishTerminal(loop.getCurrentGameMode());
                     break;
                 }
                 SegmentPlan next = plans.get(i + 1);
@@ -380,6 +889,9 @@ abstract class AbstractRunChainTest {
                             GameServices.level().getObjectManager().getVblaCounter());
                     completeInterLevelVblankBudget(seg, next, 0, sourceTailVblank);
                     OscillationManager.suppressNextFrames(1);
+                    runCoordinator.admitLevel(
+                            null, playback.getCursorFrame(),
+                            loop.getCurrentGameMode(), 0, true, null);
                     activeComparator = attachLevelSegment(
                             playback, probe, movie, next, fixture);
                     dynamicArtSegments.beginSegment();
@@ -390,10 +902,18 @@ abstract class AbstractRunChainTest {
                 }
                 // Plain level->level: cross the act/zone title-card cycle and
                 // rebind onto the next level segment.
-                activeComparator = handoffAcrossLevelBoundary(
-                        loop, playback, probe, movie, seg, next, stepCap, fixture,
+                int rowsConsumed = prepareAcrossLevelBoundary(
+                        loop, playback, probe, movie, seg, next, stepCap,
                         levelAtSegmentStart);
+                runCoordinator.admitLevel(
+                        null, playback.getCursorFrame(),
+                        loop.getCurrentGameMode(), rowsConsumed, false,
+                        runCoordinator.latestLoadReceipt());
+                activeComparator = attachPreparedLevelSegment(
+                        playback, probe, movie, next, fixture, rowsConsumed);
                 dynamicArtSegments.beginSegment();
+                gameplayMode.dynamicArtLifecycle()
+                        .advanceComparisonCursor(rowsConsumed);
                 dynamicArtGapJournal.nextSegmentArmed(
                         next.segment().dir());
                 i++;
@@ -402,6 +922,28 @@ abstract class AbstractRunChainTest {
 
             BoundaryEntryMode entryMode = TraceRunReplayWalker.boundaryEntryMode(exit.entryKind());
             if (entryMode == BoundaryEntryMode.LEVEL_MODE) {
+                SegmentPlan returnSegment = plans.get(i + 1);
+                if (TraceRunReplayWalker.isUncomparedInterior(seg.segment())
+                        && returnSegment.executionPolicy()
+                                == TraceRunReplayWalker.SegmentExecutionPolicy
+                                        .LEVEL_PRESENTATION_BRIDGE) {
+                    PresentationBridgeResult bridge =
+                            replaySpecialStagePresentationBridge(
+                                    runDir, run, plans, i, loop, inputHandler,
+                                    movie, playback, probe, fixture,
+                                    hardwareTiming, gameplayMode,
+                                    dynamicArtSegments, dynamicArtGapJournal,
+                                    runCoordinator, prefixTarget, stepCap,
+                                    uncomparedInteriorSourceLevel,
+                                    uncomparedInteriorSourceVblank);
+                    uncomparedInteriorSourceLevel = null;
+                    if (bridge.runComplete()) {
+                        break;
+                    }
+                    activeComparator = bridge.gameplayComparator();
+                    i = bridge.gameplaySegmentIndex();
+                    continue;
+                }
                 // This segment is an INTERIOR; its exit (stage_exit) returns to a
                 // level. Await the mode==LEVEL poll, assert carry-over, rebind.
                 //
@@ -429,41 +971,80 @@ abstract class AbstractRunChainTest {
                 // structural row driver compares only that diagnostic channel.
                 boolean uncomparedInterior = TraceRunReplayWalker.isUncomparedInterior(seg.segment());
                 Runnable stepOneFrame;
-                TraceRunReplayWalker.DynamicArtSegmentComparison
-                        interiorDynamicArt = null;
+                TraceRunSpecialStageRowDriver interiorRows = null;
+                boolean[] dynamicArtGapOpened = {false};
+                boolean[] interiorCoordinatorSourceClosed = {false};
                 if (uncomparedInterior) {
+                    TraceRunSpecialStageRows specialRows;
+                    try {
+                        // The plan already parsed this interior with the
+                        // segment's declared opening dynamic-art ledger; a
+                        // bare re-load restarts that ledger empty and rejects
+                        // a segment whose frame-0 state legitimately carries
+                        // transfers over from the preceding segment.
+                        specialRows = seg.specialStageRows() != null
+                                ? seg.specialStageRows()
+                                : TraceRunSpecialStageRows.load(
+                                        seg.segment().traceProfile(),
+                                        runDir.resolve(seg.segment().dir()),
+                                        seg.segment()
+                                                .dynamicArtInitialLedgerDescriptors());
+                    } catch (IOException e) {
+                        throw new AssertionError(
+                                "Failed to load special-stage row policy for "
+                                        + seg.segment().dir(), e);
+                    }
+                    assertEquals(seg.segment().traceFrameCount(),
+                            specialRows.rowCount(),
+                            "special-stage row policy must cover the represented segment");
                     IntConsumer driveInterior =
-                            uncomparedInteriorStep(loop, inputHandler, movie, seg);
-                    interiorDynamicArt =
-                            new TraceRunReplayWalker.DynamicArtSegmentComparison(
-                                    seg.trace(),
-                                    seg.segment().traceFrameCount());
-                    var dynamicArtComparison = interiorDynamicArt;
+                            uncomparedInteriorStep(
+                                    loop, inputHandler, movie, seg, specialRows);
+                    interiorRows = new TraceRunSpecialStageRowDriver(
+                            specialRows, seg.trace());
+                    var rowDriver = interiorRows;
                     int segmentIndex = i;
-                    int[] traceRow = {0};
-                    boolean[] dynamicArtGapOpened = {false};
                     stepOneFrame = () -> {
-                        if (traceRow[0] < seg.segment().traceFrameCount()) {
-                            do {
-                                int representedRow = traceRow[0];
+                        if (!rowDriver.isComplete()) {
+                            if (!insideRecordedSpecialStageGameMode(
+                                    loop.getCurrentGameMode())) {
+                                throw new AssertionError(
+                                        "special stage exited with "
+                                                + (seg.segment().traceFrameCount()
+                                                - rowDriver.cursor())
+                                                + " represented rows remaining in "
+                                                + seg.segment().dir());
+                            }
+                            DynamicArtDiagnosticsSnapshot before =
+                                    GameServices.captureDynamicArtDiagnostics();
+                            var admitted = rowDriver.admitCurrentRow(before);
+                            int representedRow = admitted.row();
+                            if (admitted.policy()
+                                    .admitHardwareTiming()) {
                                 hardwareTiming.beginSegmentRow(
                                         segmentIndex, representedRow);
-                                driveInterior.accept(representedRow);
-                                traceRow[0]++;
-                                if (traceRow[0]
-                                        == seg.segment().traceFrameCount()) {
-                                    dynamicArtSegments.enterGap();
-                                    dynamicArtGapJournal.gapOpened(
-                                            seg.segment().dir());
-                                    dynamicArtGapOpened[0] = true;
-                                }
-                                dynamicArtComparison.compareRow(
-                                        representedRow,
-                                        GameServices.captureDynamicArtDiagnostics());
-                            } while (traceRow[0]
-                                    < seg.segment().traceFrameCount()
-                                    && loop.getCurrentGameMode()
-                                    != GameMode.SPECIAL_STAGE);
+                            }
+                            driveInterior.accept(representedRow);
+                            rowDriver.publishAdmittedRow(
+                                    GameServices.captureDynamicArtDiagnostics());
+                            if (prefixTarget != null
+                                    && prefixTarget.segmentIndex() == segmentIndex
+                                    && prefixTarget.committedRows()
+                                            == rowDriver.cursor()) {
+                                throw new ReplayPrefixReached();
+                            }
+                            if (rowDriver.isComplete()) {
+                                rowDriver.verifyComplete();
+                                dynamicArtGapJournal.sourceClosed(
+                                        seg.segment().dir());
+                                dynamicArtSegments.enterGap();
+                                dynamicArtGapJournal.gapOpened(
+                                        seg.segment().dir());
+                                dynamicArtGapOpened[0] = true;
+                                runCoordinator.closeCurrent(
+                                        loop.getCurrentGameMode(), true);
+                                interiorCoordinatorSourceClosed[0] = true;
+                            }
                         } else {
                             fixture.enterHardwareTimingGap();
                             if (!dynamicArtGapOpened[0]) {
@@ -520,23 +1101,39 @@ abstract class AbstractRunChainTest {
                 }
                 BoundaryObservation obs =
                         TraceRunReplayWalker.awaitBoundary(probe, exit, stepCap, stepOneFrame);
+                if (activeComparator != null) {
+                    completePinnedSourceTailAfterBoundary(
+                            loop, activeComparator, seg, stepCap,
+                            activeComparator.cursor(), levelAtSegmentStart);
+                }
                 // Write the interior's comparator report BEFORE asserting the
                 // boundary was observed -- a boundary miss is frequently caused
                 // by an upstream interior divergence, and without this report a
                 // failed assertTrue below would otherwise leave no artifact to
                 // triage it from (maybeWriteReport is a no-op for uncompared
                 // special-stage interiors).
-                dynamicArtSegments.enterGap();
                 if (activeComparator != null) {
                     activeComparator.finalizeTerminalDynamicArtComparison();
+                    requireComparatorComplete(seg, activeComparator);
                 }
                 maybeWriteReport(run.runId(), i, activeComparator);
-                if (interiorDynamicArt != null) {
-                    interiorDynamicArt.verifyComplete();
-                    if (interiorDynamicArt.isAdvertised()) {
+                if (interiorRows != null) {
+                    interiorRows.verifyComplete();
+                    if (!interiorRows.comparisons().isEmpty()) {
                         writeDynamicArtInteriorReport(
-                                run.runId(), i, interiorDynamicArt.comparisons());
+                                run.runId(), i, interiorRows.comparisons());
                     }
+                }
+                if (!dynamicArtGapOpened[0]) {
+                    dynamicArtGapJournal.sourceClosed(seg.segment().dir());
+                    dynamicArtSegments.enterGap();
+                }
+                if (!interiorCoordinatorSourceClosed[0]) {
+                    runCoordinator.closeCurrent(
+                            loop.getCurrentGameMode(), uncomparedInterior
+                                    ? dynamicArtGapOpened[0]
+                                    : activeComparator != null
+                                            && activeComparator.isComplete());
                 }
                 assertTrue(obs.observed(),
                         "Interior exit boundary (stage_exit) was never observed within the "
@@ -544,6 +1141,7 @@ abstract class AbstractRunChainTest {
                 assertReturnBoundary(plans, i, runDir);
                 dynamicArtGapJournal.gapOpened(seg.segment().dir());
                 // Attach the return comparator, keying on interior kind.
+                int returnRowsConsumed;
                 if (uncomparedInterior) {
                     if (GameServices.module().getTracePlaybackProfile()
                             .alignUncomparedInteriorReturnVblank()) {
@@ -560,8 +1158,13 @@ abstract class AbstractRunChainTest {
                     // frame consumed the return segment's frame 0 (framesConsumed == 1)
                     // and the cursor is already in lockstep -- attach WITHOUT re-seeking.
                     int framesConsumed = playback.getCursorFrame() - returnOffset;
+                    runCoordinator.admitLevel(
+                            exit, obs.observedBk2Frame(),
+                            loop.getCurrentGameMode(), framesConsumed, false,
+                            runCoordinator.latestLoadReceipt());
                     activeComparator = attachReturnedLevelSegment(
                             probe, plans.get(i + 1), fixture, framesConsumed);
+                    returnRowsConsumed = framesConsumed;
                 } else {
                     // OPTION B (bonus interior): the engine's bonus-exit sequence is
                     // shorter than the recorded post-catch BONUS_STAGE tail, and ~80 of
@@ -573,12 +1176,70 @@ abstract class AbstractRunChainTest {
                     // segment's frame 0. Re-anchor the cursor to returnOffset+1 and
                     // compare the return level from frame 1. Input-cursor alignment only.
                     playback.startSession(movie, returnOffset + 1);
+                    runCoordinator.admitLevel(
+                            exit, obs.observedBk2Frame(),
+                            loop.getCurrentGameMode(), 1, false,
+                            runCoordinator.latestLoadReceipt());
                     activeComparator = attachReturnedLevelSegment(
                             probe, plans.get(i + 1), fixture, 1);
+                    returnRowsConsumed = 1;
                 }
                 dynamicArtSegments.beginSegment();
+                gameplayMode.dynamicArtLifecycle()
+                        .advanceComparisonCursor(returnRowsConsumed);
                 dynamicArtGapJournal.nextSegmentArmed(
                         plans.get(i + 1).segment().dir());
+                i++;
+            } else if (entryMode == BoundaryEntryMode.LEVEL_LOAD) {
+                SegmentPlan next = plans.get(i + 1);
+                RunLevelLoadTracker.Receipt[] observedLoad = {null};
+                BoundaryObservation obs = TraceRunReplayWalker.awaitBoundary(
+                        probe, exit, stepCap, () -> {
+                            stepEngineFrame(loop);
+                            if (isNewActiveLevelSegment(
+                                    next, levelAtSegmentStart)) {
+                                RunLevelLoadTracker.Receipt receipt =
+                                        runCoordinator.latestLoadReceipt();
+                                observedLoad[0] = receipt;
+                                probe.observeSignal(
+                                        new RunBoundarySignal.LevelLoaded(
+                                                playback.getCursorFrame(),
+                                                receipt.cause(),
+                                                receipt.identity()));
+                            }
+                        });
+                completePinnedSourceTailAfterBoundary(
+                        loop, activeComparator, seg, stepCap,
+                        activeComparator.cursor(), levelAtSegmentStart);
+                activeComparator.finalizeTerminalDynamicArtComparison();
+                requireComparatorComplete(seg, activeComparator);
+                dynamicArtGapJournal.sourceClosed(seg.segment().dir());
+                dynamicArtSegments.enterGap();
+                runCoordinator.closeCurrent(
+                        loop.getCurrentGameMode(), activeComparator.isComplete());
+                maybeWriteReport(run.runId(), i, activeComparator);
+                assertTrue(obs.observed(),
+                        "Segment " + i + " (" + seg.segment().dir()
+                                + ") semantic level-load boundary ("
+                                + exit.entryKind()
+                                + ") was never observed within the boundary window for "
+                                + runDir);
+                dynamicArtGapJournal.gapOpened(seg.segment().dir());
+                int rowsConsumed = prepareAcrossLevelBoundary(
+                        loop, playback, probe, movie, seg, next, stepCap,
+                        levelAtSegmentStart);
+                runCoordinator.admitLevel(
+                        exit, obs.observedBk2Frame(),
+                        loop.getCurrentGameMode(),
+                        rowsConsumed, false,
+                        Objects.requireNonNull(observedLoad[0],
+                                "production level-load receipt was not observed"));
+                activeComparator = attachPreparedLevelSegment(
+                        playback, probe, movie, next, fixture, rowsConsumed);
+                dynamicArtSegments.beginSegment();
+                gameplayMode.dynamicArtLifecycle()
+                        .advanceComparisonCursor(rowsConsumed);
+                dynamicArtGapJournal.nextSegmentArmed(next.segment().dir());
                 i++;
             } else {
                 // This segment is a LEVEL; its exit is an ENTRY boundary into the
@@ -592,12 +1253,19 @@ abstract class AbstractRunChainTest {
                 BoundaryObservation obs =
                         TraceRunReplayWalker.awaitBoundary(
                                 probe, exit, stepCap, () -> stepEngineFrame(loop));
+                completePinnedSourceTailAfterBoundary(
+                        loop, activeComparator, seg, stepCap,
+                        initialComparisonCursor, levelAtSegmentStart);
                 // Report BEFORE asserting -- see the stage_exit branch above for
                 // why: a level segment's own interior divergence is the usual
                 // cause of a missed entry boundary, and this is the only report
                 // this segment's comparator will ever get if the assert throws.
-                dynamicArtSegments.enterGap();
                 activeComparator.finalizeTerminalDynamicArtComparison();
+                requireComparatorComplete(seg, activeComparator);
+                dynamicArtGapJournal.sourceClosed(seg.segment().dir());
+                dynamicArtSegments.enterGap();
+                runCoordinator.closeCurrent(
+                        loop.getCurrentGameMode(), activeComparator.isComplete());
                 maybeWriteReport(run.runId(), i, activeComparator);
                 assertTrue(obs.observed(), "Segment " + i + " (" + seg.segment().dir()
                         + ") exit boundary (" + exit.entryKind()
@@ -610,9 +1278,16 @@ abstract class AbstractRunChainTest {
                                     GameServices.level().getObjectManager().getVblaCounter());
                 }
                 dynamicArtGapJournal.gapOpened(seg.segment().dir());
-                activeComparator = handoffIntoInterior(
-                        loop, playback, probe, movie, interior, stepCap, fixture);
+                int rowsConsumed = prepareIntoInterior(
+                        loop, playback, probe, movie, interior, stepCap);
+                runCoordinator.admitInterior(
+                        exit, obs.observedBk2Frame(),
+                        loop.getCurrentGameMode(), rowsConsumed);
+                activeComparator = attachPreparedInterior(
+                        probe, interior, fixture, rowsConsumed);
                 dynamicArtSegments.beginSegment();
+                gameplayMode.dynamicArtLifecycle()
+                        .advanceComparisonCursor(rowsConsumed);
                 dynamicArtGapJournal.nextSegmentArmed(
                         interior.segment().dir());
                 i++;
@@ -620,10 +1295,15 @@ abstract class AbstractRunChainTest {
             }
             dynamicArtSegments.close();
             hardwareTiming.close();
+        } catch (ReplayPrefixReached reached) {
+            prefixReached = true;
+            hardwareTiming.abort();
         } catch (Exception | Error failure) {
             primaryFailure = failure;
             throw failure;
         } finally {
+            activeRunCoordinator = null;
+            productionComparator = null;
             try {
                 dynamicArtSegments.close();
             } catch (RuntimeException | Error closeFailure) {
@@ -643,12 +1323,636 @@ abstract class AbstractRunChainTest {
                 }
             }
         }
-        return dynamicArtGapJournal.evidence();
+        if (!prefixReached) {
+            dynamicArtGapJournal.verify(run);
+        }
+        return dynamicArtGapJournal.evidence(runCoordinator.actions());
+    }
+
+    private record ReplayPrefixTarget(int segmentIndex, int committedRows) {
+    }
+
+    private record PresentationBridgeResult(
+            boolean runComplete,
+            int gameplaySegmentIndex,
+            LiveTraceComparator gameplayComparator) {
+    }
+
+    private static final class ReplayPrefixReached extends RuntimeException {
+        private ReplayPrefixReached() {
+            super(null, null, false, false);
+        }
+    }
+
+    /**
+     * Drives a special-stage return and its recorded native presentation on one
+     * continuous physical BK2 clock. Both the visual launcher and this adapter
+     * use {@link TraceRunFrameDriver}; only the production hook differs.
+     */
+    private PresentationBridgeResult replaySpecialStagePresentationBridge(
+            Path runDir,
+            TraceRunManifest run,
+            List<SegmentPlan> plans,
+            int specialIndex,
+            GameLoop loop,
+            InputHandler inputHandler,
+            Bk2Movie movie,
+            PlaybackDebugManager playback,
+            BoundaryProbe probe,
+            LiveEngineFixture fixture,
+            HardwareTimingCoordinator hardwareTiming,
+            GameplayModeContext gameplayMode,
+            TraceRunReplayWalker.DynamicArtSegmentController dynamicArtSegments,
+            DynamicArtGapJournalProbe dynamicArtGapJournal,
+            HeadlessRunCoordinatorAdapter runCoordinator,
+            ReplayPrefixTarget prefixTarget,
+            int stepCap,
+            SegmentPlan sourceLevel,
+            int sourceVblank) throws Exception {
+        SegmentPlan special = plans.get(specialIndex);
+        int bridgeIndex = specialIndex + 1;
+        SegmentPlan bridge = plans.get(bridgeIndex);
+        TraceRunFrameDriver physicalRows = new TraceRunFrameDriver();
+        gameplayMode.installTraceRunFrameDriver(physicalRows);
+        probe.setDelegate(null);
+        productionComparator = null;
+        try {
+            // Reuse the plan's parse (loaded with the segment's declared
+            // opening dynamic-art ledger); re-loading here would restart the
+            // ledger empty and reject a carried-over frame-0 state.
+            TraceRunSpecialStageRows specialRows =
+                    special.specialStageRows() != null
+                            ? special.specialStageRows()
+                            : TraceRunSpecialStageRows.load(
+                                    special.segment().traceProfile(),
+                                    runDir.resolve(special.segment().dir()),
+                                    special.segment()
+                                            .dynamicArtInitialLedgerDescriptors());
+            TraceRunSpecialStageRowDriver specialDriver =
+                    new TraceRunSpecialStageRowDriver(
+                            specialRows, special.trace());
+            IntConsumer driveSpecial = uncomparedInteriorStep(
+                    loop, inputHandler, movie, special, specialRows);
+            assertEquals(special.segment().bk2FrameOffset(),
+                    playback.getCursorFrame(),
+                    "special-stage shared clock must enter at its manifest offset");
+
+            while (!specialDriver.isComplete()) {
+                int localRow = specialDriver.cursor();
+                int movieRow = playback.getCursorFrame();
+                boolean[] hostStepRan = {false};
+                physicalRows.execute(
+                        new TraceRunFrameDriver.Step(
+                                TraceRunFrameDriver.Disposition.SPECIAL_LOCAL,
+                                movieRow,
+                                localRow == specialDriver.rowCount() - 1),
+                        new TraceRunFrameDriver.Hooks<DynamicArtDiagnosticsSnapshot>() {
+                            @Override
+                            public void preparePhysicalRow(
+                                    TraceRunFrameDriver.Step step) {
+                                assertEquals(
+                                        special.segment().bk2FrameOffset()
+                                                + localRow,
+                                        step.movieRow());
+                                stateMovieLogicalRow(step);
+                            }
+
+                            @Override
+                            public void prepareHardwareTiming(
+                                    TraceRunFrameDriver.Step step) {
+                                var admission = specialRows.admission(localRow);
+                                if (admission.admitHardwareTiming()) {
+                                    hardwareTiming.beginSegmentRow(
+                                            specialIndex, localRow);
+                                } else {
+                                    fixture.enterHardwareTimingGap();
+                                }
+                            }
+
+                            @Override
+                            public DynamicArtDiagnosticsSnapshot captureBefore(
+                                    TraceRunFrameDriver.Step step) {
+                                DynamicArtDiagnosticsSnapshot before =
+                                        GameServices.captureDynamicArtDiagnostics();
+                                specialDriver.admitCurrentRow(before);
+                                return before;
+                            }
+
+                            @Override
+                            public void runProductionLifecycle(
+                                    TraceRunFrameDriver.Step step) {
+                                hostStepRan[0] = specialRows.admission(localRow)
+                                        .executeGameplay();
+                                driveSpecial.accept(localRow);
+                            }
+
+                            @Override
+                            public void advancePhysicalRow(
+                                    TraceRunFrameDriver.Step step) {
+                                playback.onLevelFrameAdvanced();
+                            }
+
+                            @Override
+                            public DynamicArtDiagnosticsSnapshot captureAfter(
+                                    TraceRunFrameDriver.Step step) {
+                                return GameServices.captureDynamicArtDiagnostics();
+                            }
+
+                            @Override
+                            public void compare(
+                                    TraceRunFrameDriver.Step step,
+                                    DynamicArtDiagnosticsSnapshot before,
+                                    DynamicArtDiagnosticsSnapshot after) {
+                                specialDriver.publishAdmittedRow(after);
+                            }
+
+                            @Override
+                            public void afterStep(
+                                    TraceRunFrameDriver.Step step) {
+                                if (!hostStepRan[0]) {
+                                    runCoordinator.afterStep(
+                                            loop.getCurrentGameMode());
+                                }
+                            }
+                        });
+                if (prefixTarget != null
+                        && prefixTarget.segmentIndex() == specialIndex
+                        && prefixTarget.committedRows()
+                                == specialDriver.cursor()) {
+                    throw new ReplayPrefixReached();
+                }
+            }
+            specialDriver.verifyComplete();
+            if (!specialDriver.comparisons().isEmpty()) {
+                writeDynamicArtInteriorReport(
+                        run.runId(), specialIndex,
+                        specialDriver.comparisons());
+            }
+
+            dynamicArtGapJournal.sourceClosed(special.segment().dir());
+            dynamicArtSegments.enterGap();
+            runCoordinator.closeCurrent(
+                    loop.getCurrentGameMode(), true);
+            dynamicArtGapJournal.gapOpened(special.segment().dir());
+
+            int bridgeOffset = bridge.segment().bk2FrameOffset();
+            while (playback.getCursorFrame() < bridgeOffset) {
+                if (playback.getCursorFrame() + 1 > bridgeOffset) {
+                    throw new AssertionError(
+                            "physical clock crossed presentation offset ") ;
+                }
+                driveHeadlessTransitionRow(
+                        physicalRows,
+                        TraceRunFrameDriver.Disposition.SHARED_GAP,
+                        loop, inputHandler, movie, playback, fixture,
+                        runCoordinator);
+            }
+            int stageExitFrame = playback.getCursorFrame();
+            runCoordinator.admitPresentationBridge(
+                    special.exitBoundary(), stageExitFrame,
+                    loop.getCurrentGameMode());
+            if (sourceLevel != null
+                    && GameServices.module().getTracePlaybackProfile()
+                            .alignUncomparedInteriorReturnVblank()) {
+                alignUncomparedInteriorReturnVblank(
+                        sourceLevel, bridge, sourceVblank);
+            }
+
+            dynamicArtSegments.beginSegment();
+            dynamicArtGapJournal.nextSegmentArmed(bridge.segment().dir());
+
+            TraceStructuralRowComparator structural =
+                    new TraceStructuralRowComparator(
+                            bridge.trace(), ToleranceConfig.DEFAULT, 0);
+            List<FrameComparison> comparisons = new ArrayList<>();
+            while (!structural.allRowsConsumed()) {
+                int localRow = structural.cursor();
+                int movieRow = playback.getCursorFrame();
+                var rowPolicy = TraceReplayRowPolicy.resolve(
+                        bridge.trace(), localRow, movieRow);
+                boolean previousObservedVblank = localRow == 0
+                        || TraceReplayRowPolicy.resolve(
+                                bridge.trace(), localRow - 1, movieRow - 1)
+                                .observedVblankCounterAdvance();
+                TraceRunFrameDriver.Disposition disposition =
+                        TraceRunFrameDriver.selectDisposition(
+                                TraceRunPlaybackCoordinator.Phase.CURRENT_SEGMENT,
+                                bridge.executionPolicy(), rowPolicy.phase(),
+                                rowPolicy.observedVblankCounterAdvance(),
+                                previousObservedVblank,
+                                loop.getCurrentGameMode() == GameMode.LEVEL,
+                                localRow + 1 < bridge.trace().frameCount()
+                                        && TraceReplayRowPolicy
+                                                .carriesDeferredVblank(
+                                                        bridge.trace(),
+                                                        localRow + 1));
+                boolean deferBoundaryCommit = false;
+                if (localRow + 1 < bridge.trace().frameCount()) {
+                    TraceReplayRowPolicy nextRowPolicy =
+                            TraceReplayRowPolicy.resolve(
+                                    bridge.trace(), localRow + 1, movieRow + 1);
+                    deferBoundaryCommit = TraceRunFrameDriver
+                            .shouldDeferBoundaryCommit(
+                                    rowPolicy.observedVblankCounterAdvance(),
+                                    nextRowPolicy
+                                            .observedVblankCounterAdvance());
+                }
+                boolean[] hostStepRan = {false};
+                boolean commitDeferredBoundaryAfterClosure = TraceRunFrameDriver
+                        .shouldCommitDeferredBoundaryAfterClosure(
+                                previousObservedVblank,
+                                rowPolicy.observedVblankCounterAdvance());
+                physicalRows.execute(
+                        new TraceRunFrameDriver.Step(
+                                disposition, movieRow,
+                                localRow == bridge.trace().frameCount() - 1,
+                                deferBoundaryCommit,
+                                commitDeferredBoundaryAfterClosure,
+                                rowPolicy.observedVblankCounterAdvance()),
+                        new TraceRunFrameDriver.Hooks<DynamicArtDiagnosticsSnapshot>() {
+                            @Override
+                            public void preparePhysicalRow(
+                                    TraceRunFrameDriver.Step step) {
+                                stateMovieLogicalRow(step);
+                                Bk2FrameInput current =
+                                        playback.currentFrameOrThrow();
+                                Bk2FrameInput previous = movieRow > 0
+                                        ? movie.getFrame(movieRow - 1) : null;
+                                inputHandler.setLogicalOverride(
+                                        RecordedInputSnapshots.fromBk2(
+                                                current, previous));
+                                structural.prepareRow(current);
+                            }
+
+                            @Override
+                            public void prepareHardwareTiming(
+                                    TraceRunFrameDriver.Step step) {
+                                hardwareTiming.beginPlaybackFrame(
+                                        playback.currentFrameOrThrow());
+                            }
+
+                            @Override
+                            public DynamicArtDiagnosticsSnapshot captureBefore(
+                                    TraceRunFrameDriver.Step step) {
+                                return GameServices.captureDynamicArtDiagnostics();
+                            }
+
+                            @Override
+                            public void runProductionLifecycle(
+                                    TraceRunFrameDriver.Step step) {
+                                hostStepRan[0] = true;
+                                assertTrue(inputHandler.hasLogicalOverride(),
+                                        "presentation production must receive "
+                                                + "the physical BK2 input");
+                                if (step.disposition()
+                                        == TraceRunFrameDriver.Disposition
+                                                .PRESENTATION_SUPPRESSED_CLOSURE) {
+                                    runCoordinator.beforeProduction(
+                                            loop.getCurrentGameMode());
+                                    TraceRunPresentationClosure.execute(
+                                            loop, step,
+                                            SessionManager.getCurrentGameplayMode()
+                                                    .getFadeManager()::update);
+                                    runCoordinator.afterStep(
+                                            loop.getCurrentGameMode());
+                                } else {
+                                    stepEngineFrame(loop);
+                                }
+                            }
+
+                            @Override
+                            public void advancePhysicalRow(
+                                    TraceRunFrameDriver.Step step) {
+                                playback.onLevelFrameAdvanced();
+                            }
+
+                            @Override
+                            public DynamicArtDiagnosticsSnapshot captureAfter(
+                                    TraceRunFrameDriver.Step step) {
+                                return GameServices.captureDynamicArtDiagnostics();
+                            }
+
+                            @Override
+                            public void compare(
+                                    TraceRunFrameDriver.Step step,
+                                    DynamicArtDiagnosticsSnapshot before,
+                                    DynamicArtDiagnosticsSnapshot after) {
+                                FrameComparison comparison =
+                                        structural.completePostProduction(
+                                                before, after,
+                                                step.disposition()
+                                                        .runsProductionLifecycle());
+                                if (comparison != null) {
+                                    comparisons.add(comparison);
+                                }
+                                if (prefixTarget != null
+                                        && prefixTarget.segmentIndex()
+                                                == bridgeIndex
+                                        && prefixTarget.committedRows()
+                                                == structural.cursor()) {
+                                    // A special-stage results bridge does NOT
+                                    // end in gameplay. Its recorded rows are the
+                                    // ROM's results card, which ends at
+                                    // SSR_Exit followed by PaletteWhiteOut, so
+                                    // the returning level loads on the FIRST row
+                                    // after the bridge and its title card is
+                                    // what shows there
+                                    // ("_incObj/7E, 7F Special Stage Results and
+                                    // Chaos Emeralds.asm":157-159,
+                                    // sonic.asm:3419-3421). Requiring LEVEL here
+                                    // required the engine to finish the whole
+                                    // card early, which is the divergence this
+                                    // lane exists to catch.
+                                    assertNotEquals(GameMode.SPECIAL_STAGE,
+                                            loop.getCurrentGameMode(),
+                                            "presentation bridge must leave the special stage");
+                                    throw new ReplayPrefixReached();
+                                }
+                            }
+
+                            @Override
+                            public void afterStep(
+                                    TraceRunFrameDriver.Step step) {
+                                try {
+                                    if (!hostStepRan[0]) {
+                                        runCoordinator.afterStep(
+                                                loop.getCurrentGameMode());
+                                    }
+                                } finally {
+                                    inputHandler.clearLogicalOverride();
+                                }
+                            }
+                        });
+            }
+
+            dynamicArtGapJournal.sourceClosed(bridge.segment().dir());
+            dynamicArtSegments.enterGap();
+            FrameComparison terminal = structural.finalizeSegment(
+                    GameServices.captureDynamicArtDiagnostics());
+            if (terminal != null) {
+                comparisons.add(terminal);
+            }
+            assertStructuralComparisonsGreen(
+                    bridge.segment().dir(), comparisons);
+            runCoordinator.closeCurrent(
+                    loop.getCurrentGameMode(), structural.isComplete());
+            dynamicArtGapJournal.gapOpened(bridge.segment().dir());
+
+            if (bridgeIndex == plans.size() - 1) {
+                TraceRunReplayWalker.TerminalMovieTailPlan tail =
+                        runCoordinator.terminalPlan();
+                if (tail != null) {
+                    // rowsToReplay counts rows, so tailStart + rowsToReplay is
+                    // the movie's frame COUNT -- one past the last row a cursor
+                    // can ever hold. Playback pins on its last valid row and
+                    // stops, so waiting for the count itself never returns:
+                    // this loop hung the whole class rather than failing it.
+                    // Drive until the cursor stops advancing, then prove it
+                    // stopped because the movie ended.
+                    int previousCursor = -1;
+                    while (playback.getCursorFrame()
+                                    < tail.tailStart() + tail.rowsToReplay()
+                            && playback.getCursorFrame() != previousCursor) {
+                        previousCursor = playback.getCursorFrame();
+                        driveHeadlessTransitionRow(
+                                physicalRows,
+                                TraceRunFrameDriver.Disposition.TERMINAL_TAIL,
+                                loop, inputHandler, movie, playback, fixture,
+                                runCoordinator);
+                    }
+                    assertEquals(movie.getFrameCount() - 1,
+                            playback.getCursorFrame(),
+                            "terminal tail must consume the movie to its last row");
+                    assertEquals(tail.expectedMode(),
+                            loop.getCurrentGameMode(),
+                            "Complete movie must finish in the manifest-declared mode");
+                }
+                assertReturnBoundary(plans, specialIndex, runDir);
+                dynamicArtGapJournal.verifyTerminal(
+                        run, movie.getFrameCount());
+                dynamicArtSegments.close();
+                hardwareTiming.close();
+                runCoordinator.finishTerminal(
+                        loop.getCurrentGameMode());
+                return new PresentationBridgeResult(true, -1, null);
+            }
+
+            int gameplayIndex = bridgeIndex + 1;
+            SegmentPlan gameplay = plans.get(gameplayIndex);
+            int gameplayOffset = gameplay.segment().bk2FrameOffset();
+            while (playback.getCursorFrame() < gameplayOffset) {
+                driveHeadlessTransitionRow(
+                        physicalRows,
+                        TraceRunFrameDriver.Disposition.SHARED_GAP,
+                        loop, inputHandler, movie, playback, fixture,
+                        runCoordinator);
+            }
+            assertEquals(gameplayOffset, playback.getCursorFrame(),
+                    "gameplay destination must open at its exact physical row");
+            if (loop.getCurrentGameMode() != GameMode.LEVEL
+                    || GameServices.level().isTitleCardRequested()) {
+                throw new AssertionError(
+                        "gameplay destination was not ready at its recorded offset");
+            }
+            assertReturnBoundary(plans, specialIndex, runDir);
+            runCoordinator.admitLevel(
+                    null, gameplayOffset, loop.getCurrentGameMode(),
+                    0, true, null);
+            dynamicArtSegments.beginSegment();
+            dynamicArtGapJournal.nextSegmentArmed(
+                    gameplay.segment().dir());
+            LiveTraceComparator comparator =
+                    attachReturnedLevelSegment(
+                            probe, gameplay, fixture, 0);
+            return new PresentationBridgeResult(
+                    false, gameplayIndex, comparator);
+        } finally {
+            gameplayMode.clearTraceRunFrameDriver(physicalRows);
+        }
+    }
+
+    /**
+     * States the physical BK2 row a dynamic-art gap edge is stamped with, the
+     * way {@code TraceSessionLauncher.driveRunPhysicalRow} does for a live run.
+     *
+     * <p>{@code DynamicArtLifecycleService.movieLogicalFrame} otherwise counts
+     * production iterations, and a chain drives whole spans of rows —
+     * transition gaps, shared gaps, the terminal tail — that run no production
+     * iteration at all. Every such row is silently lost from the stamp, so a
+     * gap edge raised late in a chain reports a row hundreds short of the one
+     * the recorder wrote. The recorder's contract is the movie row it has
+     * consumed ("tools/bizhawk-headless/src/Recording/S1RunCaptureRunner.cs":
+     * 199-215), so the driver states it rather than inferring it.
+     */
+    private static void stateMovieLogicalRow(TraceRunFrameDriver.Step step) {
+        SessionManager.getCurrentGameplayMode()
+                .dynamicArtLifecycle()
+                .setMovieLogicalFrame(step.movieRow());
+    }
+
+    private void driveHeadlessTransitionRow(
+            TraceRunFrameDriver driver,
+            TraceRunFrameDriver.Disposition disposition,
+            GameLoop loop,
+            InputHandler inputHandler,
+            Bk2Movie movie,
+            PlaybackDebugManager playback,
+            LiveEngineFixture fixture,
+            HeadlessRunCoordinatorAdapter coordinator) {
+        int movieRow = playback.getCursorFrame();
+        driver.execute(
+                new TraceRunFrameDriver.Step(disposition, movieRow, false),
+                new TraceRunFrameDriver.Hooks<DynamicArtDiagnosticsSnapshot>() {
+                    @Override
+                    public void preparePhysicalRow(
+                            TraceRunFrameDriver.Step step) {
+                        stateMovieLogicalRow(step);
+                        Bk2FrameInput current = playback.currentFrameOrThrow();
+                        Bk2FrameInput previous = movieRow > 0
+                                ? movie.getFrame(movieRow - 1) : null;
+                        inputHandler.setLogicalOverride(
+                                RecordedInputSnapshots.fromBk2(
+                                        current, previous));
+                    }
+
+                    @Override
+                    public void prepareHardwareTiming(
+                            TraceRunFrameDriver.Step step) {
+                        fixture.enterHardwareTimingGap();
+                    }
+
+                    @Override
+                    public DynamicArtDiagnosticsSnapshot captureBefore(
+                            TraceRunFrameDriver.Step step) {
+                        return GameServices.captureDynamicArtDiagnostics();
+                    }
+
+                    @Override
+                    public void runProductionLifecycle(
+                            TraceRunFrameDriver.Step step) {
+                        stepEngineFrame(loop);
+                    }
+
+                    @Override
+                    public void advancePhysicalRow(
+                            TraceRunFrameDriver.Step step) {
+                        playback.onLevelFrameAdvanced();
+                    }
+
+                    @Override
+                    public DynamicArtDiagnosticsSnapshot captureAfter(
+                            TraceRunFrameDriver.Step step) {
+                        return GameServices.captureDynamicArtDiagnostics();
+                    }
+
+                    @Override
+                    public void compare(
+                            TraceRunFrameDriver.Step step,
+                            DynamicArtDiagnosticsSnapshot before,
+                            DynamicArtDiagnosticsSnapshot after) {
+                    }
+
+                    @Override
+                    public void afterStep(
+                            TraceRunFrameDriver.Step step) {
+                        inputHandler.clearLogicalOverride();
+                        if (!step.disposition().runsProductionLifecycle()) {
+                            coordinator.afterStep(loop.getCurrentGameMode());
+                        }
+                    }
+                });
+    }
+
+    private static void assertStructuralComparisonsGreen(
+            String segmentDir,
+            List<FrameComparison> comparisons) {
+        FrameComparison firstFailure = comparisons.stream()
+                .filter(comparison -> comparison.divergentFields().stream()
+                        .anyMatch(field -> field.severity()
+                                == com.openggf.trace.Severity.ERROR))
+                .findFirst()
+                .orElse(null);
+        if (firstFailure != null) {
+            throw new AssertionError(
+                    "structural presentation comparison failed for "
+                            + segmentDir + " at row " + firstFailure.frame()
+                            + ": " + firstFailure.divergentFields());
+        }
     }
 
     // -------------------------------------------------------------------------
     // Handoffs
     // -------------------------------------------------------------------------
+
+    private void completePinnedSourceTailAfterBoundary(
+            GameLoop loop, LiveTraceComparator comparator,
+            SegmentPlan segment, int stepCap, int initialCursor,
+            Object sourceLevel) {
+        int steps = 0;
+        int startCursor = comparator.cursor();
+        List<GameMode> modePath = new ArrayList<>();
+        while (!comparator.isComplete() && steps < stepCap) {
+            GameMode mode = loop.getCurrentGameMode();
+            if (modePath.isEmpty() || modePath.getLast() != mode) {
+                modePath.add(mode);
+            }
+            GameMode sourceMode = TraceRunReplayWalker.expectedMode(
+                    segment.segment());
+            boolean levelOwnershipChanged = "level".equals(segment.segment().kind())
+                    && GameServices.level().getCurrentLevel() != sourceLevel;
+            if (mode != sourceMode || levelOwnershipChanged) {
+                throw new AssertionError(
+                        "source comparator cannot exhaust after boundary for "
+                                + segment.segment().dir()
+                                + ": production ownership already left " + sourceMode
+                                + " at tail step " + steps + ", comparator cursor "
+                                + comparator.cursor() + " of "
+                                + segment.trace().frameCount()
+                                + " (bootstrap initial cursor " + initialCursor
+                                + "), mode path=" + modePath
+                                + ", level ownership changed="
+                                + levelOwnershipChanged);
+            }
+            try {
+                stepEngineFrame(loop);
+            } catch (RuntimeException | Error failure) {
+                throw new AssertionError(
+                        "pinned source-tail production failed for "
+                                + segment.segment().dir() + " at tail step "
+                                + steps + ", comparator cursor "
+                                + comparator.cursor() + " of "
+                                + segment.trace().frameCount()
+                                + " (bootstrap initial cursor " + initialCursor
+                                + "), mode path="
+                                + modePath + ", current mode=" + mode,
+                        failure);
+            }
+            steps++;
+        }
+        if (!comparator.isComplete()) {
+            throw new AssertionError(
+                    "source comparator did not exhaust after boundary for "
+                            + segment.segment().dir()
+                            + ": cursor " + startCursor + " -> "
+                            + comparator.cursor() + " of "
+                            + segment.trace().frameCount()
+                            + " (bootstrap initial cursor " + initialCursor + ")"
+                            + " after " + steps + " pinned tail steps; mode path="
+                            + modePath + ", final mode="
+                            + loop.getCurrentGameMode());
+        }
+    }
+
+    private static void requireComparatorComplete(
+            SegmentPlan segment, LiveTraceComparator comparator) {
+        if (!comparator.isComplete()) {
+            throw new AssertionError(
+                    "source comparator is not complete for "
+                            + segment.segment().dir() + ": cursor "
+                            + comparator.cursor() + " of "
+                            + segment.trace().frameCount());
+        }
+    }
 
     /**
      * Hands off from a level segment INTO an interior (bonus/special). Detaches
@@ -661,10 +1965,11 @@ abstract class AbstractRunChainTest {
      * ENTRY = 1, special = uncompared) follows the COMPARATOR FRAME BASE contract
      * on {@link #attachReturnedLevelSegment}.
      */
-    private LiveTraceComparator handoffIntoInterior(
+    private int prepareIntoInterior(
             GameLoop loop, PlaybackDebugManager playback, BoundaryProbe probe,
-            Bk2Movie movie, SegmentPlan interior, int stepCap, LiveEngineFixture fixture) {
+            Bk2Movie movie, SegmentPlan interior, int stepCap) {
         probe.setDelegate(null);
+        productionComparator = null;
         int offset = interior.segment().bk2FrameOffset();
         GameMode target = TraceRunReplayWalker.expectedMode(interior.segment());
         if (!TraceRunReplayWalker.isUncomparedInterior(interior.segment())) {
@@ -701,10 +2006,7 @@ abstract class AbstractRunChainTest {
             // entry tick) and advanced the cursor to offset+1, so compare from frame 1
             // (the compared-bonus-ENTRY case of the COMPARATOR FRAME BASE contract on
             // attachReturnedLevelSegment: initialCursor == cursorFrame - offset == 1).
-            LiveTraceComparator comparator = new LiveTraceComparator(
-                    interior.trace(), ToleranceConfig.DEFAULT, 1, fixture::sprite);
-            probe.setDelegate(comparator);
-            return comparator;
+            return 1;
         }
         // UNCOMPARED interior (special stage): the SS is driven separately by
         // uncomparedInteriorStep; the shared cursor is not read for its physics, so
@@ -712,8 +2014,32 @@ abstract class AbstractRunChainTest {
         waitForMode(loop, target, stepCap);
         playback.startSession(movie, offset);
         primeInteriorEntryRngFromMetadata(interior);
-        LiveTraceComparator comparator = attachInteriorComparator(interior, fixture);
+        return 0;
+    }
+
+    private LiveTraceComparator attachPreparedInterior(
+            BoundaryProbe probe, SegmentPlan interior,
+            LiveEngineFixture fixture, int rowsConsumed) {
+        LiveTraceComparator comparator;
+        if (TraceRunReplayWalker.isUncomparedInterior(interior.segment())) {
+            if (rowsConsumed != 0) {
+                throw new AssertionError(
+                        "uncompared interior admission consumed "
+                                + rowsConsumed + " rows");
+            }
+            comparator = attachInteriorComparator(interior, fixture);
+        } else {
+            if (rowsConsumed != 1) {
+                throw new AssertionError(
+                        "compared interior admission expected one published row but saw "
+                                + rowsConsumed);
+            }
+            comparator = new LiveTraceComparator(
+                    interior.trace(), ToleranceConfig.DEFAULT,
+                    rowsConsumed, fixture::sprite);
+        }
         probe.setDelegate(comparator); // null => special-stage advance-uncompared
+        productionComparator = comparator;
         return comparator;
     }
 
@@ -774,6 +2100,7 @@ abstract class AbstractRunChainTest {
         LiveTraceComparator comparator = new LiveTraceComparator(
                 level.trace(), ToleranceConfig.DEFAULT, 0, fixture::sprite);
         probe.setDelegate(comparator);
+        productionComparator = comparator;
         return comparator;
     }
 
@@ -831,6 +2158,7 @@ abstract class AbstractRunChainTest {
         LiveTraceComparator comparator = new LiveTraceComparator(
                 level.trace(), ToleranceConfig.DEFAULT, framesConsumed, fixture::sprite);
         probe.setDelegate(comparator);
+        productionComparator = comparator;
         return comparator;
     }
 
@@ -841,10 +2169,10 @@ abstract class AbstractRunChainTest {
      * segment's recorded tail, the target level is already active and we rebind
      * immediately. Otherwise wait out of LEVEL and back, then rebind.
      */
-    private LiveTraceComparator handoffAcrossLevelBoundary(
+    private int prepareAcrossLevelBoundary(
             GameLoop loop, PlaybackDebugManager playback, BoundaryProbe probe,
             Bk2Movie movie, SegmentPlan currentLevel, SegmentPlan nextLevel,
-            int stepCap, LiveEngineFixture fixture,
+            int stepCap,
         Object levelAtSegmentStart) {
         int sourceTailVblank = TraceRunReplayWalker.sourceTailVblankAtBoundary(
                 currentLevel.segment(), playback.getCursorFrame(),
@@ -862,10 +2190,6 @@ abstract class AbstractRunChainTest {
             }
             completeInterLevelVblankBudget(
                     currentLevel, nextLevel, firstGameplayFrame, sourceTailVblank);
-            LiveTraceComparator comparator = new LiveTraceComparator(
-                    nextLevel.trace(), ToleranceConfig.DEFAULT,
-                    firstGameplayFrame, fixture::sprite);
-            probe.setDelegate(comparator);
             if (loop.getCurrentGameMode() == GameMode.TITLE_CARD
                     || GameServices.level().isTitleCardRequested()) {
                 if (loop.getCurrentGameMode() == GameMode.LEVEL) {
@@ -884,7 +2208,7 @@ abstract class AbstractRunChainTest {
             // budget and cannot leave the destination clock one tick adrift.
             completeInterLevelVblankBudget(
                     currentLevel, nextLevel, settledFramesConsumed, sourceTailVblank);
-            return comparator;
+            return settledFramesConsumed;
         }
 		var profile = GameServices.module().getTracePlaybackProfile();
 		if (profile.reinitializeOscillationAtLoadedLevelAttach()) {
@@ -895,9 +2219,29 @@ abstract class AbstractRunChainTest {
 			// gameplay frame 0. This is movie-clock lifecycle pacing only: no trace
 			// field is read into engine state.
 			OscillationManager.resetForSonic1();
-		}
+        }
         completeInterLevelVblankBudget(currentLevel, nextLevel, 0, sourceTailVblank);
-        return attachLevelSegment(playback, probe, movie, nextLevel, fixture);
+        return 0;
+    }
+
+    private LiveTraceComparator attachPreparedLevelSegment(
+            PlaybackDebugManager playback, BoundaryProbe probe, Bk2Movie movie,
+            SegmentPlan nextLevel, LiveEngineFixture fixture, int rowsConsumed) {
+        int expectedCursor = nextLevel.segment().bk2FrameOffset() + rowsConsumed;
+        if (playback.getCursorFrame() != expectedCursor) {
+            if (rowsConsumed != 0) {
+                throw new AssertionError(
+                        "prepared destination cursor expected " + expectedCursor
+                                + " but was " + playback.getCursorFrame());
+            }
+            playback.startSession(movie, expectedCursor);
+        }
+        LiveTraceComparator comparator = new LiveTraceComparator(
+                nextLevel.trace(), ToleranceConfig.DEFAULT,
+                rowsConsumed, fixture::sprite);
+        probe.setDelegate(comparator);
+        productionComparator = comparator;
+        return comparator;
     }
 
     private void completeInterLevelVblankBudget(
@@ -982,30 +2326,51 @@ abstract class AbstractRunChainTest {
         TraceRunManifest.Transition entry = interior.entryBoundary();
         TraceRunManifest.Transition exit = interior.exitBoundary();
         assertNotNull(entry, "Interior segment must have an entry boundary: " + runDir);
+        assertNotNull(exit, "Interior segment must have an exit boundary: " + runDir);
         SegmentPlan returnLevel = plans.get(interiorIndex + 1);
-
-        ReturnAssertionMode mode = TraceRunReplayWalker.returnAssertionMode(entry);
-        switch (mode) {
-            case POSITIONAL_RESTORE -> assertPositionalRestore(entry, returnLevel, runDir);
-            // Core-review fix: S3K bonus and special-stage returns ALSO restore
-            // the recorded Saved_X_pos/Saved_Y_pos (every starpost_bonus and
-            // giant_ring transition in the committed 25-segment run carries
-            // them non-null); assertPositionalRestore null-guards on field
-            // presence, so adding it here upgrades 11 of that run's 22
-            // transitions from zero positional verification to the same
-            // centre-position comparison the S2 path already gets.
-            case CHECKPOINT_RESTORE -> {
-                assertCheckpointRestore(entry, runDir);
-                assertPositionalRestore(entry, returnLevel, runDir);
-            }
-            case NEXT_ACT -> assertNextActAdvance(plans, interiorIndex, returnLevel, runDir);
-            case RINGS_EMERALDS_ONLY -> assertPositionalRestore(entry, returnLevel, runDir);
-        }
-        boolean liveEmeraldVerifiable = emeraldCarryOverIsVerifiable(interior);
-        assertRingsAndEmeralds(exit, runDir, liveEmeraldVerifiable);
-        if (!liveEmeraldVerifiable) {
-            assertRecordedEmeraldProgression(entry, exit, runDir);
-        }
+        SegmentPlan preEntry = plans.get(entry.fromSegment());
+        assertTrue(returnLevel.trace().frameCount() > 0,
+                "Return level segment has no recorded frames: " + runDir);
+        Integer resolvedReturnZone = returnLevel.segment().zoneId() == null
+                ? null
+                : GameServices.module().getTracePlaybackProfile()
+                        .resolveRecordedLevel(
+                                returnLevel.segment().zoneId(),
+                                returnLevel.segment().act())
+                        .zone();
+        AbstractPlayableSprite sprite =
+                GameServices.camera().getFocusedSprite();
+        assertNotNull(sprite,
+                "Focused sprite missing on special-stage return for " + runDir);
+        TraceRunBoundaryComparator.ExpectedBoundary expected =
+                new TraceRunBoundaryComparator.ExpectedBoundary(
+                        entry,
+                        exit,
+                        preEntry.segment(),
+                        returnLevel.segment(),
+                        returnLevel.trace().getFrame(0),
+                        resolvedReturnZone);
+        TraceRunBoundaryComparator.ActualBoundary actual =
+                new TraceRunBoundaryComparator.ActualBoundary(
+                        (int) sprite.getCentreX(),
+                        (int) sprite.getCentreY(),
+                        GameServices.level().getCheckpointState()
+                                .getLastCheckpointIndex(),
+                        GameServices.level().getCurrentZone(),
+                        GameServices.level().getCurrentAct(),
+                        GameServices.level().getLevelGamestate().getRings(),
+                        GameServices.gameState().getEmeraldCount(),
+                        emeraldCarryOverIsVerifiable(interior));
+        FrameComparison comparison = TraceRunBoundaryComparator.compare(
+                exit.modeChangeBk2Frame(), expected, actual);
+        List<com.openggf.trace.FieldComparison> errors =
+                comparison.divergentFields().stream()
+                        .filter(field -> field.severity()
+                                == com.openggf.trace.Severity.ERROR)
+                        .toList();
+        assertTrue(errors.isEmpty(),
+                "Shared return-boundary comparison failed for " + runDir
+                        + ": " + errors);
     }
 
     /**
@@ -1052,22 +2417,77 @@ abstract class AbstractRunChainTest {
      *
      * <p>This is compounded, and made unrecoverable in code, by a property of the
      * committed run fixtures: the multi-segment run recorder captured each
-     * special-stage segment's {@code physics.csv} (frames + lag column) but wrote an
-     * <b>empty</b> {@code aux_state.jsonl.gz} — no {@code run_objects_end} pass
-     * snapshots and no control-state transitions (verified across the S2
-     * {@code ss}/{@code ss_2} and the S1 {@code ss} segments). The S2 half-pipe in
-     * particular is ROM-object-pass paced: the standalone must-stay-green
-     * {@code TestS2SpecialStageTraceReplay} drives it via
-     * {@code SpecialStageRunObjectsPassBinder}, binding each recurring RunObjects
-     * pass to the exact BK2 row the ROM's V-int sampled. Without those pass records
-     * the chain can only frame-pace the BK2 (one tick per non-lag row), which feeds
-     * the wrong controller sample once the ROM's V-int/RunObjects interleave drifts
-     * from a 1:1 non-lag cadence — the half-pipe player then under-collects rings
-     * (36 vs the recorded 40 at checkpoint 1, at the identical internal frame 939),
-     * fails the checkpoint, and is ejected without the emerald. That is a
-     * fixture-data limitation, not an engine defect: nothing the comparison-only
-     * chain may do (it must not hydrate engine state from the trace) can recover the
-     * unrecorded V-int sampling. The recorded {@code emeralds_after} therefore
+     * special-stage segment's {@code physics.csv} (frames + lag column) but wrote
+     * no {@code run_objects_end} pass snapshots. (The aux stream is <b>not</b>
+     * empty — the committed {@code s2-ehz-halfpipe-roundtrip/ss/aux_state.jsonl.gz}
+     * carries 6762 records, including 5733 {@code dynamic_art_transfer_state} rows,
+     * both {@code control_state} transitions, {@code checkpoint},
+     * {@code stage_finished} and {@code results_started}. Exactly one family is
+     * missing, and it is the pacing one.) The S2 half-pipe is ROM-object-pass
+     * paced: the standalone must-stay-green {@code TestS2SpecialStageTraceReplay}
+     * drives it via {@code SpecialStageRunObjectsPassBinder}, binding each
+     * recurring RunObjects pass to the exact BK2 row the ROM's V-int sampled.
+     *
+     * <p><b>The 36-vs-40 checkpoint failure was neither a recorder gap nor a pacing
+     * gap: it was a stale ring read, and it is now fixed.</b> Probing the interior
+     * row by row against the recorded {@code ss} rows showed the engine reproducing
+     * the recording exactly — {@code current_segment}, {@code speed_factor},
+     * {@code track_anim_frame} and the combined ring count all matched every row up
+     * to the eject. The engine had 42 rings by segment-local row 1588, just as the
+     * ROM did; it simply evaluated checkpoint 1 against the count captured when the
+     * checkpoint marker was passed (36, at row ~1538) rather than the count at the
+     * end of the checkpoint rainbow. The ROM reads {@code (Ring_count)} and
+     * {@code (Ring_count_2P)} live at {@code loc_35978} (docs/s2disasm/s2.asm:
+     * 71843-71853), reached only when the rainbow object's x reaches {@code $E8} and
+     * it deletes itself, so rings picked up during the rainbow still count. With
+     * {@code Sonic2SpecialStageCheckpoint} resolving against a live ring supplier,
+     * checkpoint 1 passes and the interior advances from row 2027 to row 5213 of
+     * 5733.
+     *
+     * <p><b>Remaining, and now the frontier for this lane:</b> the engine leaves
+     * {@code GameMode.SPECIAL_STAGE} 519 represented rows early. The recorded
+     * {@code check_rings_flag} rises at segment-local frame 5191 and the ROM then
+     * spends the rest of the segment (through frame 5732) still in special-stage
+     * mode running the post-flag tail of {@code SS_MainLoop} — emerald/perfect
+     * accounting, {@code Pal_FadeToWhite}, the results screen build and its
+     * {@code Obj6F} tally (s2.asm:6721-6800). The engine reaches its own finish at
+     * row 5213 (22 rows late) and then exits the mode almost immediately. Closing
+     * this needs the special-stage results phase to occupy the ROM's V-blanks; it is
+     * unrelated to ring collection.
+     *
+     * <p>The pacing pieces themselves are now in place:
+     *
+     * <ol>
+     *   <li><b>The re-record.</b> The native harness at HEAD emits run-mode
+     *       special-stage pass records. A scratch re-capture of this run's own
+     *       movie reproduces all five committed segments' {@code physics.csv}
+     *       byte-for-byte and every level segment's aux byte-for-byte, and adds
+     *       2991 {@code run_objects_end} records to {@code ss} and 3291 to
+     *       {@code ss_2} — a strict superset, the rest of each aux stream is
+     *       unchanged — plus a sixth {@code seg4_ehz2} tail segment the committed
+     *       fixture stops short of. Publishing those bytes is a fixture-publication
+     *       decision, not a code one, and the sixth segment widens what the fixture
+     *       claims to cover, so it is not folded in silently.</li>
+     *   <li><b>A pass-paced interior.</b> Landed: {@link #uncomparedInteriorStep}
+     *       now consumes {@code newRunObjectsPassBinder}/{@code passPacedFromRow}.
+     *       It is inert on a segment that recorded no passes, so every committed
+     *       fixture keeps its previous one-step-per-row behaviour.</li>
+     *   <li><b>A V-blank body that can run 0..n object passes.</b> Landed: pass
+     *       pacing cannot be one {@code GameLoop.step()} per pass, because a step
+     *       is one V-blank row and an audited segment's
+     *       {@code TraceRunSpecialStageRowDriver} requires each admitted row to
+     *       publish exactly one dynamic-art delivery ({@code publishAdmittedRow}:
+     *       "advertised special-stage row N was not published atomically"). On the
+     *       re-capture, {@code ss} rows own zero passes 3341 times, one pass 1793
+     *       times and two passes 599 times, so row-to-step and pass-to-step cannot
+     *       both hold. {@link GameLoopSpecialStagePacingTestBridge.ObservationPacing} makes the
+     *       special-stage body run the row's completed-pass count inside its single
+     *       PLC lifecycle iteration, the same split
+     *       {@code S2SpecialStageReplayHarness.stepPasses} already makes.</li>
+     * </ol>
+     *
+     * <p>The recorded
+     * {@code emeralds_after} therefore
      * stays a diagnostic for an advance-uncompared special stage. The always-safe
      * carry-overs — the ROM's on-return position restore and ring zero-out, which
      * happen whether the stage was won or lost — remain asserted.
@@ -1219,41 +2639,206 @@ abstract class AbstractRunChainTest {
      * {@link #specialStageDrivenStep} (no lag-skip) -- correct as long as the
      * interior's actual outcome carry-over is not asserted, or a lane
      * overrides this.
+     *
+     * <p>When the segment recorded ROM {@code RunObjects} completions, the
+     * interior is <b>pass-paced</b> from {@link
+     * TraceRunSpecialStageRows#passPacedFromRow()} onwards: each admitted row
+     * still costs exactly one {@link GameLoop#step()} (one V-blank row, one
+     * dynamic-art publication, which {@code TraceRunSpecialStageRowDriver}
+     * requires), but that step's special-stage body runs however many object
+     * passes the ROM completed for the row, via
+     * {@link GameLoopSpecialStagePacingTestBridge.ObservationPacing}. This is the same split
+     * the standalone {@code TestS2SpecialStageTraceReplay} makes through
+     * {@code S2SpecialStageReplayHarness.stepPasses}. Frame-pacing instead —
+     * one pass per admitted row — advances the S2 half-pipe track roughly 1.77x
+     * too fast, so the recorded ring-requirement reloads land against the wrong
+     * internal frame and the player under-collects at checkpoint 1. A segment
+     * with no recorded passes keeps the previous one-step-per-row behaviour.
      */
+    /**
+     * Whether the engine is still inside the game mode a recorded
+     * {@code special_stage} segment represents.
+     *
+     * <p>The run recorder cuts an {@code ss} segment on the raw ROM byte:
+     * it opens on the first {@code Game_Mode == GameModeID_SpecialStage}
+     * ($10) frame and closes on the first frame that is no longer $10
+     * ({@code S2RunCaptureRunner} Blocks 1 and 2). In the ROM that single
+     * mode spans more than the half-pipe: {@code SS_MainLoop} exits its
+     * object loop when {@code SS_Check_Rings_flag} rises, and the
+     * emerald/perfect accounting, {@code Pal_FadeToWhite}, the results-screen
+     * build and the whole {@code Obj6F} tally loop all run below it, still
+     * under $10 — {@code Game_Mode} is not rewritten until the
+     * {@code move.b #GameModeID_Level,(Game_Mode).w} at the very end
+     * (docs/s2disasm/s2.asm:6721-6800). S1 is the same shape
+     * ({@code GM_Special} owns {@code SS_Finish} through
+     * {@code sonic.asm:3419-3421}).
+     *
+     * <p>The engine splits that one ROM mode into two of its own,
+     * {@code SPECIAL_STAGE} and {@code SPECIAL_STAGE_RESULTS}, so a plain
+     * {@code == SPECIAL_STAGE} test reports a premature exit at the internal
+     * boundary even when the engine is faithfully still in the ROM's mode.
+     * Both engine modes therefore map onto the one recorded segment.
+     */
+    private static boolean insideRecordedSpecialStageGameMode(GameMode mode) {
+        return RunPlaybackObservation.insideRecordedSpecialStageMode(mode);
+    }
+
     protected IntConsumer uncomparedInteriorStep(
-            GameLoop loop, InputHandler inputHandler, Bk2Movie movie, SegmentPlan interior) {
-        return specialStageDrivenStep(loop, inputHandler, movie,
-                interior.segment().bk2FrameOffset(), interior.segment().traceFrameCount());
+            GameLoop loop,
+            InputHandler inputHandler,
+            Bk2Movie movie,
+            SegmentPlan interior,
+            TraceRunSpecialStageRows rows) {
+        int bk2FrameOffset = interior.segment().bk2FrameOffset();
+        SpecialStageRunObjectsPassBinder passBinder =
+                rows.newRunObjectsPassBinder().orElse(null);
+        int passPacedFromRow = passBinder == null
+                ? Integer.MAX_VALUE : rows.passPacedFromRow();
+        return localRow -> {
+            // The recorder hooks both halves of SpecialStage_MainLoop
+            // (docs/s2disasm/s2.asm:6674-6721), so the pre-start loop's passes
+            // are in the stream too. They are already executed by the one-step-
+            // per-row pacing this interior uses before passPacedFromRow, so the
+            // cursor is advanced over them rather than re-stepped -- but it must
+            // be advanced, because the binder rejects a skipped observation.
+            List<SpecialStageRunObjectsPassBinder.CompletedPass> observationPasses =
+                    passBinder == null
+                            ? List.of() : passBinder.passesForObservation(localRow);
+            TraceRunSpecialStageRows.SpecialStageRowAdmission admission =
+                    rows.admission(localRow);
+            // An observation that executes a RunObjects pass is never a lag
+            // V-blank, whatever the recorder's lag heuristic reports:
+            // SS_MainLoop sets VintID_S2SS and waits on it immediately before
+            // the pass (docs/s2disasm/s2.asm:6694-6706), so V_Int cannot have
+            // taken the Vint_Lag branch -- that branch runs only while
+            // Vint_routine is still 0 (docs/s2disasm/s2.asm:483-484). The
+            // binder already relies on this to place the terminal
+            // stage-finished pass on its raw-lag observation
+            // (TraceRunSpecialStageRows.S2Rows.newRunObjectsPassBinder), so
+            // the row driver must execute that observation rather than skip
+            // it -- otherwise the stage's last pass, and the player DPLC pair
+            // it submits, land outside the compared window entirely. Same rule
+            // as S2SpecialStageReplayHarness.stepPasses / observationPhase.
+            boolean ownsCompletedPass = !observationPasses.isEmpty();
+            boolean executeGameplay = admission.executeGameplay() || ownsCompletedPass;
+            var beforeManager = GameServices.level().getObjectManager();
+            int beforeVblank = beforeManager.getVblaCounter();
+            if (!ownsCompletedPass) {
+                admission.syntheticPlcPhase().ifPresent(
+                        AbstractRunChainTest::stepUncomparedInteriorLifecycleRow);
+            }
+            if (executeGameplay
+                    && loop.getCurrentGameMode()
+                            == GameMode.SPECIAL_STAGE_RESULTS) {
+                // Still inside the recorded segment (ROM Game_Mode is still
+                // GameModeID_SpecialStage; see
+                // insideRecordedSpecialStageGameMode), but past the half-pipe
+                // itself: the ROM's post-flag tail runs RunObjects /
+                // BuildSprites / RunPLC_RAM per V-int and samples no player
+                // control at all (docs/s2disasm/s2.asm:6795-6800), so drive a
+                // bare engine frame with no recorded-input override.
+                stepEngineFrame(loop);
+            } else if (executeGameplay
+                    && loop.getCurrentGameMode() == GameMode.SPECIAL_STAGE) {
+                int absoluteRow = bk2FrameOffset + localRow;
+                Bk2FrameInput current = movie.getFrame(absoluteRow);
+                Bk2FrameInput previous = absoluteRow > 0
+                        ? movie.getFrame(absoluteRow - 1) : null;
+                inputHandler.setLogicalOverride(
+                        RecordedInputSnapshots.fromBk2(current, previous));
+                if (localRow >= passPacedFromRow) {
+                    // The recorded pass stream IS the pacing authority for this
+                    // segment, so the runtime's own lag MODEL (which skips an
+                    // update on frames it predicts the ROM lagged) must not also
+                    // pace it -- the standalone S2 special-stage harness turns it
+                    // off for exactly this reason ("Trace-paced replay: disable
+                    // the runtime's own lag compensation").
+                    loop.getActiveSpecialStageProvider().setLagCompensation(0);
+                    GameLoopSpecialStagePacingTestBridge.install(
+                            loop, recordedPassPacing(movie, observationPasses, localRow));
+                }
+                try {
+                    stepEngineFrame(loop);
+                } finally {
+                    GameLoopSpecialStagePacingTestBridge.install(loop, null);
+                    inputHandler.clearLogicalOverride();
+                }
+            }
+            var afterManager = GameServices.level().getObjectManager();
+            if (admission.advancePreservedVblankIfUnchanged()
+                    && afterManager.getVblaCounter() == beforeVblank) {
+                afterManager.advanceVblaCounter();
+            }
+        };
+    }
+
+    /**
+     * Pacing for one observation: run each recorded pass with the controller
+     * sample the ROM's {@code ReadJoypads} actually consumed for it (the pass
+     * record identifies the BK2 rows; the button values it also carries are
+     * diagnostics the binder validates, never an engine input). Mirrors
+     * {@code S2SpecialStageReplayHarness.stepPassBody}.
+     */
+    private static GameLoopSpecialStagePacingTestBridge.ObservationPacing recordedPassPacing(
+            Bk2Movie movie, List<SpecialStageRunObjectsPassBinder.CompletedPass> passes,
+            int observationFrame) {
+        return new GameLoopSpecialStagePacingTestBridge.ObservationPacing() {
+            @Override
+            public int passCount() {
+                return passes.size();
+            }
+
+            @Override
+            public void applyPassInput(int index, SpecialStageProvider provider) {
+                var pass = passes.get(index);
+                SpecialStageInputMapper.MappedInput mapped = SpecialStageInputMapper.map(
+                        RecordedInputSnapshots.fromBk2(
+                                movie.getFrame(pass.inputSampleBk2Frame()),
+                                movie.getFrame(pass.previousInputSampleBk2Frame())));
+                provider.handleInput(mapped.p1Held(), mapped.p1Pressed());
+                provider.handlePlayer2Input(mapped.p2Held(), mapped.p2Logical());
+                provider.bindPendingRecurringPassInput(
+                        mapped.p1Held(), mapped.p1Pressed(),
+                        mapped.p2Held(), mapped.p2Logical());
+            }
+
+            @Override
+            public void afterPass(int index) {
+                if (passes.get(index).completionCursorFrame() >= observationFrame) {
+                    return;
+                }
+                // The pass returned before this observation's V-int on
+                // hardware, so that V-blank already ran ProcessDMAQueue
+                // (docs/s2disasm/s2.asm:1769) over its queued work:
+                // submissions and completions surface together on the bound
+                // row, while a later pass's work in this same observation
+                // stays pending. Identical to the standalone harness's rule in
+                // S2SpecialStageReplayHarness.stepPasses.
+                var lifecycle = GameServices.dynamicArtLifecycleOrNull();
+                if (lifecycle != null && lifecycle.isRunActive()) {
+                    lifecycle.serviceVblankBeforeBoundObservation();
+                }
+            }
+        };
     }
 
     /** Replays and asserts only the terminal behavior declared by the run manifest. */
-    private static void replayTerminalMovieTail(
-            TraceRunManifest run,
-            GameLoop loop, InputHandler inputHandler, Bk2Movie movie, SegmentPlan lastSegment) {
-        int tailStart = lastSegment.segment().bk2FrameOffset()
-                + lastSegment.segment().traceFrameCount();
-        var tailPlan = TraceRunReplayWalker.planTerminalMovieTail(
-                run.expectedMovieEndMode(),
-                tailStart, movie.getFrameCount());
-        if (!tailPlan.shouldAssertExpectedMode()) {
+    private void replayTerminalMovieTail(
+            TraceRunReplayWalker.TerminalMovieTailPlan tailPlan,
+            GameLoop loop, InputHandler inputHandler, Bk2Movie movie,
+            PlaybackDebugManager playback, LiveEngineFixture fixture,
+            TraceRunFrameDriver driver,
+            HeadlessRunCoordinatorAdapter coordinator) {
+        if (tailPlan == null) {
             return;
         }
-
-        // Level-segment comparison is finished. Stop its cursor/observer input
-        // bridge so each remaining physical movie row is fed exactly once by
-        // the local terminal-tail driver, including non-LEVEL modes where the
-        // ordinary playback cursor intentionally remains frozen.
-        GameServices.playbackDebug().endSession();
-        for (int absoluteRow = tailPlan.tailStart();
-                absoluteRow < movie.getFrameCount(); absoluteRow++) {
-            Bk2FrameInput current = movie.getFrame(absoluteRow);
-            Bk2FrameInput previous = absoluteRow > 0 ? movie.getFrame(absoluteRow - 1) : null;
-            inputHandler.setLogicalOverride(RecordedInputSnapshots.fromBk2(current, previous));
-            try {
-                stepEngineFrame(loop);
-            } finally {
-                inputHandler.clearLogicalOverride();
-            }
+        for (int row = 0; row < tailPlan.rowsToReplay(); row++) {
+            assertEquals(tailPlan.tailStart() + row,
+                    playback.getCursorFrame(),
+                    "terminal tail must retain the continuous movie cursor");
+            driveHeadlessTransitionRow(
+                    driver, TraceRunFrameDriver.Disposition.TERMINAL_TAIL,
+                    loop, inputHandler, movie, playback, fixture, coordinator);
         }
 
         System.out.printf("[TRACE-RUN-TAIL] rows=%d finalMode=%s%n",
@@ -1282,7 +2867,7 @@ abstract class AbstractRunChainTest {
      * for the same reason) instead of duplicating {@link #runChain}'s
      * plumbing.
      */
-    static IntConsumer specialStageDrivenStep(
+    IntConsumer specialStageDrivenStep(
             GameLoop loop, InputHandler inputHandler, Bk2Movie movie,
             int bk2FrameOffset, int recordedFrameCount) {
         return localRow -> {
@@ -1311,21 +2896,49 @@ abstract class AbstractRunChainTest {
         };
     }
 
-    protected static void stepUncomparedInteriorLifecycleRow(boolean lagged) {
-        PlcLifecyclePhase phase = lagged
-                ? PlcLifecyclePhase.LAG
-                : PlcLifecyclePhase.SPECIAL_STAGE;
-        SessionManager.getCurrentGameplayMode().plcFrameLifecycle()
-                .runLogicalIteration(() -> {
-                }, row -> {
-                    if (row.claim(phase)) {
-                        row.prepareAfterLoop(phase);
-                    }
-                    return null;
-                });
+    /**
+     * Represents one recorded row the ROM's main loop did not complete an
+     * iteration for.
+     *
+     * <p>A LAG row is run through {@code runSuppressedLagIteration}, not the
+     * ordinary logical iteration, because a lag V-blank does not run the mode's
+     * handler at all: {@code V_Int} branches to {@code Vint_Lag} while
+     * {@code Vint_routine} is still 0 (docs/s2disasm/s2.asm:483-484, 529) —
+     * S1's {@code VBlank_Lag} (docs/s1disasm/sonic.asm:709) has the same shape
+     * — so an in-progress blocking fade's per-V-blank work
+     * ({@code Pal_FadeFromWhite}, s2.asm:3460-3482, whose body runs in the main
+     * loop between its own {@code WaitForVint}s) does not advance on that
+     * V-blank and must not claim the row. The ordinary path lets the active
+     * native blocking fade claim {@code PALETTE_FADE} first, which both steals
+     * the row from {@code LAG} and makes it publish as a non-lag row, so any
+     * dynamic-art edge the row's V-blank produced lands one row early instead
+     * of being carried to the next represented closure. This is the same split
+     * {@code TraceRunPresentationClosure} already makes for a carried lag
+     * closure.
+     */
+    private static void stepUncomparedInteriorLifecycleRow(
+            PlcLifecyclePhase phase) {
+        var lifecycle =
+                SessionManager.getCurrentGameplayMode().plcFrameLifecycle();
+        if (phase == PlcLifecyclePhase.LAG) {
+            lifecycle.runSuppressedLagIteration(row -> {
+                if (row.claim(phase)) {
+                    row.prepareAfterLoop(phase);
+                }
+                return null;
+            });
+            return;
+        }
+        lifecycle.runLogicalIteration(() -> {
+        }, row -> {
+            if (row.claim(phase)) {
+                row.prepareAfterLoop(phase);
+            }
+            return null;
+        });
     }
 
-    private static void stepFrames(GameLoop loop, int frameCount) {
+    private void stepFrames(GameLoop loop, int frameCount) {
         for (int f = 0; f < frameCount; f++) {
             stepEngineFrame(loop);
         }
@@ -1363,7 +2976,7 @@ abstract class AbstractRunChainTest {
         return steps;
     }
 
-    private static void waitForModeToLeaveOrLevelActivate(
+    private void waitForModeToLeaveOrLevelActivate(
             GameLoop loop, GameMode from, SegmentPlan targetLevel,
             Object levelAtSegmentStart, int maxSteps) {
         int steps = 0;
@@ -1397,7 +3010,7 @@ abstract class AbstractRunChainTest {
                 && GameServices.level().getCurrentAct() == identity.act();
     }
 
-    private static void waitForModeToLeave(GameLoop loop, GameMode from, int maxSteps) {
+    private void waitForModeToLeave(GameLoop loop, GameMode from, int maxSteps) {
         int steps = 0;
         while (loop.getCurrentGameMode() == from) {
             stepEngineFrame(loop);
@@ -1408,28 +3021,32 @@ abstract class AbstractRunChainTest {
         }
     }
 
-    /**
-     * Advances one engine frame the way {@code Engine.display()} does in live
-     * play: fade state is updated FIRST (via {@code UiRenderPipeline.updateFade()}
-     * -> {@code FadeManager.update()}), THEN {@code GameLoop.step()} runs gameplay
-     * (Engine.java: {@code uiPipeline.updateFade()} precedes {@code update()} in
-     * the per-frame {@code display()} body). The chain drive steps the headless
-     * {@link GameLoop} directly and never calls {@code Engine.display()}, so
-     * without this the {@code FadeManager} instance {@code GameLoop} installs
-     * (see the boundary-entry {@code fadeManager.startFadeToWhite(...)} calls
-     * gating special/bonus stage entry) never advances and its completion
-     * callback -- the one that flips {@code currentGameMode} to
-     * {@code SPECIAL_STAGE}/{@code BONUS_STAGE} -- never fires, hanging
-     * {@link #waitForMode} forever on a fade-gated boundary. This is bootstrap
-     * plumbing parity with the production per-frame call order, not trace-data
-     * hydration.
-     */
-    static void stepEngineFrame(GameLoop loop) {
-        var fade = GameServices.fadeOrNull();
-        if (fade != null) {
-            fade.update();
+    /** Advances one engine frame through the same outer PLC/fade lifecycle as live play. */
+    void stepEngineFrame(GameLoop loop) {
+        DynamicArtDiagnosticsSnapshot before =
+                GameServices.captureDynamicArtDiagnostics();
+        HeadlessRunCoordinatorAdapter coordinator = activeRunCoordinator;
+        if (coordinator != null) {
+            coordinator.beforeProduction(loop.getCurrentGameMode());
         }
         loop.step();
+        LiveTraceComparator comparator = productionComparator;
+        if (comparator != null) {
+            comparator.consumePostProductionPlayableAnimationAction();
+            DynamicArtDiagnosticsSnapshot after =
+                    GameServices.captureDynamicArtDiagnostics();
+            try {
+                comparator.publishPendingDynamicArtComparison(before, after);
+            } catch (IllegalStateException failure) {
+                throw new IllegalStateException(
+                        failure.getMessage() + "; before=" + before
+                                + "; after=" + after,
+                        failure);
+            }
+        }
+        if (coordinator != null) {
+            coordinator.afterStep(loop.getCurrentGameMode());
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -1443,7 +3060,13 @@ abstract class AbstractRunChainTest {
         if (comparator == null) {
             return;
         }
+        assertCompletedSegmentComparison(segmentIndex, comparator);
         writeChainSegmentReport(runId, segmentIndex, comparator);
+    }
+
+    /** Adapter-neutral assertions a committed route can add at a completed source segment. */
+    protected void assertCompletedSegmentComparison(
+            int segmentIndex, LiveTraceComparator comparator) {
     }
 
     private void writeChainSegmentReport(String runId, int segmentIndex, LiveTraceComparator comparator)
@@ -1674,17 +3297,16 @@ abstract class AbstractRunChainTest {
         }
 
         @Override
-        public void advancePlayableAnimationsOnly() {
-            // Live action, honored identically to the canonical fixtures:
-            // advance every playable sprite's animation manager one step at the
-            // current animation frame counter, without a gameplay tick.
-            var sprites = GameServices.sprites();
-            int animationFrame = sprites.getFrameCounter();
-            for (var candidate : sprites.getAllSprites()) {
-                if (candidate instanceof AbstractPlayableSprite playable) {
-                    playable.getAnimationManager().update(animationFrame);
-                }
+        public void abortHardwareTimingReplayRun() {
+            if (hardwareTimingReplayClosed) {
+                return;
             }
+            hardwareTimingReplayClosed = true;
+            gameplayMode().setHardwareTimingBoundaryObserver(null);
+            gameplayMode().getRewindRegistry()
+                    .deregister(HardwareTimingReplayPort.REWIND_KEY);
+            gameplayMode().clearHardwareTimingReplayCloseHook();
+            hardwareTimingObserver = null;
         }
 
         @Override

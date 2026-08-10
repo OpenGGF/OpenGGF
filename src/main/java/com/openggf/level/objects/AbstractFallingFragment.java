@@ -61,7 +61,7 @@ public abstract class AbstractFallingFragment extends AbstractObjectInstance {
     }
 
     @Override
-    public final void update(int frameCounter, PlayableEntity player) {
+    public final void update(int vIntRunCount, PlayableEntity player) {
         if (isDestroyed()) {
             return;
         }

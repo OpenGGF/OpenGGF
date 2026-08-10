@@ -157,13 +157,13 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
     }
 
     @Override
-    protected void updateBossLogic(int frameCounter, PlayableEntity player) {
+    protected void updateBossLogic(int vIntRunCount, PlayableEntity player) {
         if (state.invulnerable && state.invulnerabilityTimer == 0x1F) {
             status |= STATUS_HIT;
         }
 
         switch (bossSubtype) {
-            case SUB_MAIN -> updateMain(player, frameCounter);
+            case SUB_MAIN -> updateMain(player, vIntRunCount);
             case SUB_LASER_SHOOTER -> updateLaserShooter(player);
             case SUB_SPIKE_CHAIN -> updateSpikeChain(player);
             case SUB_LASER -> updateLaserOrWave();
@@ -174,7 +174,7 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
         }
     }
 
-    private void updateMain(PlayableEntity player, int frameCounter) {
+    private void updateMain(PlayableEntity player, int vIntRunCount) {
         if (state.routineSecondary == MAIN_INIT) {
             initializeMainVehicle(isPlayerLeftOfArena(player));
             return;
@@ -183,7 +183,7 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
             case MAIN_SURFACE -> updateMainSurface();
             case MAIN_WAIT -> updateMainWait();
             case MAIN_DIVE -> updateMainDive();
-            case MAIN_DEFEATED -> updateMainDefeated(frameCounter);
+            case MAIN_DEFEATED -> updateMainDefeated(vIntRunCount);
             default -> state.routineSecondary = MAIN_INIT;
         }
     }
@@ -237,12 +237,12 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
         bossSubtype = (status & STATUS_HIT) != 0 ? SUB_SPIKE_CHAIN : SUB_LASER_SHOOTER;
     }
 
-    private void updateMainDefeated(int frameCounter) {
+    private void updateMainDefeated(int vIntRunCount) {
         bossCountdown--;
         if (bossCountdown >= 0) {
             if (bossCountdown < 0x1E) {
                 mainFrame = 0x0B;
-            } else if ((frameCounter & 0x07) == 0) {
+            } else if ((vIntRunCount & 0x07) == 0) {
                 spawnDefeatExplosion();
             }
             return;

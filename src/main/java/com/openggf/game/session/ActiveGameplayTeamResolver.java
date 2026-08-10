@@ -32,6 +32,9 @@ public final class ActiveGameplayTeamResolver {
             return worldSession.getSaveSessionContext().selectedTeam().mainCharacter();
         }
 
+        if (configService == null) {
+            return "sonic";
+        }
         String configured = configService.getString(SonicConfiguration.MAIN_CHARACTER_CODE);
         if (configured == null || configured.isBlank()) {
             return "sonic";
@@ -99,6 +102,9 @@ public final class ActiveGameplayTeamResolver {
                 && worldSession.getSaveSessionContext() != null
                 && worldSession.getSaveSessionContext().selectedTeam() != null) {
             return List.copyOf(worldSession.getSaveSessionContext().selectedTeam().sidekicks());
+        }
+        if (configService == null) {
+            return List.of();
         }
         String sidekickCode = configService.getString(SonicConfiguration.SIDEKICK_CHARACTER_CODE);
         return parseConfiguredSidekicks(sidekickCode);

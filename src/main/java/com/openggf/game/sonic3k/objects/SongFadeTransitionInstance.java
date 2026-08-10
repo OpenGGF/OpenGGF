@@ -81,15 +81,15 @@ public class SongFadeTransitionInstance extends AbstractObjectInstance implement
         this(delayFrames, musicId, deferCountdownOnFadeStart, false);
     }
 
-    SongFadeTransitionInstance(int nativeWaitWord, int musicId,
-                               boolean deferCountdownOnFadeStart,
-                               boolean deferSameFrameUpdateAfterSpawn) {
+    public SongFadeTransitionInstance(int delayFrames, int musicId,
+                                      boolean deferCountdownOnFadeStart,
+                                      boolean deferSameFrameUpdateAfterSpawn) {
         super(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), "SongFadeTransition");
         // The deferred constructors came from the frame-duration implementation:
         // callers pass the number of post-init countdown ticks. Convert that to
         // the signed native wait word used by the merged implementation.
         this.nativeWaitWord = (short) (deferCountdownOnFadeStart
-                ? nativeWaitWord - 1 : nativeWaitWord);
+                ? delayFrames - 1 : delayFrames);
         this.musicId = musicId;
         this.elapsedUpdates = 0;
         this.fadeStarted = false;

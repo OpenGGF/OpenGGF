@@ -13,7 +13,7 @@ import com.openggf.game.sonic3k.objects.AizMinibossBodyChild;
 import com.openggf.game.sonic3k.objects.AizMinibossFlameBarrelChild;
 import com.openggf.game.sonic3k.objects.AizMinibossFlameChild;
 import com.openggf.game.sonic3k.objects.AizMinibossInstance;
-import com.openggf.game.sonic3k.objects.AizMinibossNapalmController;
+import com.openggf.game.sonic3k.objects.AizMinibossNapalmProjectile;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.ObjectInstance;
@@ -113,6 +113,8 @@ class TestS3kAizMinibossGraphRewind {
         assertSame(graph.boss(), readObjectField(graph.body(), "parent"));
         assertSame(graph.boss(), readObjectField(graph.arm(), "parent"));
         assertSame(graph.boss(), readObjectField(graph.napalm(), "parent"));
+        assertSame(graph.barrel2(), readObjectField(graph.napalm(), "barrel"),
+                "FallingShot must relink to the existing barrel that spawned it");
         assertSame(graph.boss(), readObjectField(graph.barrel0(), "parent"));
         assertSame(graph.boss(), readObjectField(graph.barrel1(), "parent"));
         assertSame(graph.boss(), readObjectField(graph.barrel2(), "parent"));
@@ -173,7 +175,7 @@ class TestS3kAizMinibossGraphRewind {
             AizMinibossInstance boss,
             AizMinibossBodyChild body,
             AizMinibossArmChild arm,
-            AizMinibossNapalmController napalm,
+            AizMinibossNapalmProjectile napalm,
             AizMinibossFlameBarrelChild barrel0,
             AizMinibossFlameBarrelChild barrel1,
             AizMinibossFlameBarrelChild barrel2,
@@ -187,14 +189,15 @@ class TestS3kAizMinibossGraphRewind {
                     () -> new AizMinibossBodyChild(boss));
             AizMinibossArmChild arm = objectManager.createDynamicObject(
                     () -> new AizMinibossArmChild(boss));
-            AizMinibossNapalmController napalm = objectManager.createDynamicObject(
-                    () -> new AizMinibossNapalmController(boss, 0));
             AizMinibossFlameBarrelChild barrel0 = objectManager.createDynamicObject(
                     () -> new AizMinibossFlameBarrelChild(boss, 0, false));
             AizMinibossFlameBarrelChild barrel1 = objectManager.createDynamicObject(
                     () -> new AizMinibossFlameBarrelChild(boss, 1, false));
             AizMinibossFlameBarrelChild barrel2 = objectManager.createDynamicObject(
                     () -> new AizMinibossFlameBarrelChild(boss, 2, false));
+            AizMinibossNapalmProjectile napalm = objectManager.createDynamicObject(
+                    () -> new AizMinibossNapalmProjectile(
+                            boss, barrel2, barrel2.getX(), barrel2.getY() + 4, 2));
             AizMinibossFlameChild flame = objectManager.createDynamicObject(
                     () -> new AizMinibossFlameChild(boss, -0x64, 4, 0));
             AizMinibossBarrelShotChild shot = objectManager.createDynamicObject(
@@ -212,7 +215,7 @@ class TestS3kAizMinibossGraphRewind {
                     only(objectManager, AizMinibossInstance.class),
                     only(objectManager, AizMinibossBodyChild.class),
                     only(objectManager, AizMinibossArmChild.class),
-                    only(objectManager, AizMinibossNapalmController.class),
+                    only(objectManager, AizMinibossNapalmProjectile.class),
                     barrelByIndex(barrels, 0),
                     barrelByIndex(barrels, 1),
                     barrelByIndex(barrels, 2),

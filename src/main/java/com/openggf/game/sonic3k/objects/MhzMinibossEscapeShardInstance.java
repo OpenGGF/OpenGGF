@@ -79,7 +79,7 @@ final class MhzMinibossEscapeShardInstance extends AbstractObjectInstance implem
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (parent == null || parent.isDestroyed()) {
             setDestroyed(true);
             return;
@@ -293,12 +293,12 @@ final class MhzMinibossEscapeShardSplinterInstance extends AbstractObjectInstanc
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (parent.isDestroyed()) {
             setDestroyed(true);
             return;
         }
-        if ((frameCounter & 1) == 0) {
+        if ((vIntRunCount & 1) == 0) {
             refreshPosition();
         }
     }

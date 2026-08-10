@@ -100,7 +100,7 @@ public final class HyperSonicStarsObjectInstance extends AbstractObjectInstance
     public boolean isBoundTo(AbstractPlayableSprite player) { return owner == player; }
 
     @Override
-    public void update(int frameCounter, PlayableEntity ignored) {
+    public void update(int vIntRunCount, PlayableEntity ignored) {
         if (owner.getSuperStateController() == null
                 || !owner.getSuperStateController().isHyperFormActive()) {
             ObjectLifetimeOps.expireDynamic(this);

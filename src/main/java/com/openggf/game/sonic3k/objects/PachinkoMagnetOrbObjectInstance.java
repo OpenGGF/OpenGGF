@@ -54,7 +54,7 @@ public class PachinkoMagnetOrbObjectInstance extends AbstractObjectInstance impl
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite updatePlayer = playerEntity instanceof AbstractPlayableSprite player ? player : null;
         List<PlayableEntity> participants = services().playerQuery().playersFor(
                 ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
@@ -67,15 +67,15 @@ public class PachinkoMagnetOrbObjectInstance extends AbstractObjectInstance impl
 
         for (PlayableEntity participant : participants) {
             if (participant instanceof AbstractPlayableSprite playable) {
-                updatePlayer(playable, frameCounter);
+                updatePlayer(playable, vIntRunCount);
             }
         }
     }
 
-    private void updatePlayer(AbstractPlayableSprite player, int frameCounter) {
+    private void updatePlayer(AbstractPlayableSprite player, int vIntRunCount) {
         PlayerState state = playerStates.computeIfAbsent(player, ignored -> new PlayerState());
         if (state.captured) {
-            updateCapturedPlayer(player, state, frameCounter);
+            updateCapturedPlayer(player, state, vIntRunCount);
             return;
         }
 
@@ -113,18 +113,18 @@ public class PachinkoMagnetOrbObjectInstance extends AbstractObjectInstance impl
     }
 
     private void updateCapturedPlayer(AbstractPlayableSprite player, PlayerState state,
-                                      int frameCounter) {
+                                      int vIntRunCount) {
         if (player.isDebugMode() || player.getDead() || player.isHurt()) {
-            releasePlayer(player, state, frameCounter, false);
+            releasePlayer(player, state, vIntRunCount, false);
             return;
         }
         if (shouldReleaseCapturedSidekick(player)) {
-            releasePlayer(player, state, frameCounter, false);
+            releasePlayer(player, state, vIntRunCount, false);
             return;
         }
 
         if (player.isJumpJustPressed()) {
-            releasePlayer(player, state, frameCounter, true);
+            releasePlayer(player, state, vIntRunCount, true);
             return;
         }
 
@@ -151,7 +151,7 @@ public class PachinkoMagnetOrbObjectInstance extends AbstractObjectInstance impl
         player.setGSpeed((short) 0x0800);
         player.setAir(true);
 
-        if ((frameCounter & (HOVER_SFX_PERIOD - 1)) == 0) {
+        if ((vIntRunCount & (HOVER_SFX_PERIOD - 1)) == 0) {
             playSfx(Sonic3kSfx.HOVERPAD);
         }
     }

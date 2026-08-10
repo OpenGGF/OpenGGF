@@ -175,7 +175,7 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (isDisabledForKnucklesRoute()) {
             onUnload();
             setDestroyed(true);
@@ -186,7 +186,7 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
             updateFlicker();
             // Obj_LBZElevatorCupFlicker flickers every other frame (Level_frame_counter+1 bit 0)
             // and parks itself far away once it leaves the screen (move.w #$7FFF,x_pos).
-            flickerHidden = (frameCounter & 1) != 0;
+            flickerHidden = (vIntRunCount & 1) != 0;
             if (!isOnScreen(WIDTH_PIXELS)) {
                 // Obj_LBZElevatorCupFlicker exits through Sprite_OnScreen_Test,
                 // which clears this layout entry's respawn bit before deleting
@@ -736,6 +736,7 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
         state.cooldown = cooldown;
         player.setPriorityBucket(PLAYER_PRIORITY);
         ObjectControlState.none().applyTo(player);
+        player.setControlLocked(false);
         player.setObjectMappingFrameControl(false);
         player.setLatchedSolidObjectId(0);
         player.setOnObject(false);
@@ -979,7 +980,7 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (parent.isDestroyed() || parent.attachHidden) {
                 setDestroyed(true);
                 return;
@@ -1034,7 +1035,7 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (parent.isDestroyed()) {
                 setDestroyed(true);
             }

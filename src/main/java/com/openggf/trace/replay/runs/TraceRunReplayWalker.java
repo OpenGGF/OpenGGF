@@ -8,6 +8,8 @@ import com.openggf.game.resources.DynamicArtDiagnosticsSnapshot;
 import com.openggf.trace.DynamicArtSpecialStageComparator;
 import com.openggf.trace.FrameComparison;
 import com.openggf.trace.TraceData;
+import com.openggf.trace.TraceEvent;
+import com.openggf.trace.TraceExecutionPhase;
 import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.replay.TraceReplayFixture;
 import com.openggf.trace.timing.HardwareTimingSchedule;
@@ -50,8 +52,75 @@ public final class TraceRunReplayWalker {
         TraceRunManifest.Segment segment,
         TraceData trace,
         TraceRunManifest.Transition entryBoundary,
-        TraceRunManifest.Transition exitBoundary
-    ) {}
+        TraceRunManifest.Transition exitBoundary,
+        TraceRunSpecialStageRows specialStageRows,
+        SegmentExecutionPolicy executionPolicy
+    ) {
+        public SegmentPlan(
+                TraceRunManifest.Segment segment,
+                TraceData trace,
+                TraceRunManifest.Transition entryBoundary,
+                TraceRunManifest.Transition exitBoundary) {
+            this(segment, trace, entryBoundary, exitBoundary, null,
+                    segmentExecutionPolicy(segment, entryBoundary, trace));
+        }
+
+        public SegmentPlan(
+                TraceRunManifest.Segment segment,
+                TraceData trace,
+                TraceRunManifest.Transition entryBoundary,
+                TraceRunManifest.Transition exitBoundary,
+                TraceRunSpecialStageRows specialStageRows) {
+            this(segment, trace, entryBoundary, exitBoundary, specialStageRows,
+                    segmentExecutionPolicy(segment, entryBoundary, trace));
+        }
+    }
+
+    /** Structural execution ownership for one run segment. */
+    public enum SegmentExecutionPolicy {
+        GAMEPLAY,
+        SPECIAL_LOCAL,
+        LEVEL_PRESENTATION_BRIDGE
+    }
+
+    /**
+     * Classifies a segment from manifest topology and recorded row shape. A
+     * stage-exit destination is a presentation bridge only when row zero is the
+     * synthetic full row caused by its missing predecessor and every later row
+     * is canonically non-gameplay.
+     */
+    public static SegmentExecutionPolicy segmentExecutionPolicy(
+            TraceRunManifest.Segment segment,
+            TraceRunManifest.Transition entryBoundary,
+            TraceData trace) {
+        Objects.requireNonNull(segment, "segment");
+        Objects.requireNonNull(trace, "trace");
+        if ("special_stage".equals(segment.kind())) {
+            return SegmentExecutionPolicy.SPECIAL_LOCAL;
+        }
+        if (!"level".equals(segment.kind())
+                || entryBoundary == null
+                || !"stage_exit".equals(entryBoundary.entryKind())
+                || trace.frameCount() < 2) {
+            return SegmentExecutionPolicy.GAMEPLAY;
+        }
+        TraceExecutionPhase first =
+                com.openggf.trace.replay.TraceReplayRowPolicy.resolve(
+                        trace, 0, segment.bk2FrameOffset()).phase();
+        if (first != TraceExecutionPhase.FULL_LEVEL_FRAME) {
+            return SegmentExecutionPolicy.GAMEPLAY;
+        }
+        for (int row = 1; row < trace.frameCount(); row++) {
+            TraceExecutionPhase phase =
+                    com.openggf.trace.replay.TraceReplayRowPolicy.resolve(
+                            trace, row, segment.bk2FrameOffset() + row).phase();
+            if (phase != TraceExecutionPhase.VBLANK_ONLY
+                    && phase != TraceExecutionPhase.ADVANCE_ONLY) {
+                return SegmentExecutionPolicy.GAMEPLAY;
+            }
+        }
+        return SegmentExecutionPolicy.LEVEL_PRESENTATION_BRIDGE;
+    }
 
     /**
      * Hardware-timing view of one structural run segment. Raw frame numbers
@@ -73,11 +142,11 @@ public final class TraceRunReplayWalker {
         }
     }
 
-    /** True when any structural segment declares the timing stream schema. */
+    /** True when any segment has a recorded timing stream. */
     public static boolean hasHardwareTimingStream(List<SegmentPlan> plans) {
         Objects.requireNonNull(plans, "plans");
         return plans.stream().anyMatch(
-                plan -> plan.trace().metadata().hasHardwareTimingStream());
+                plan -> plan.trace().hardwareTimingSchedule().hasRecordedInput());
     }
 
     /**
@@ -185,12 +254,31 @@ public final class TraceRunReplayWalker {
                         "trace row " + traceIndex + " outside segment "
                                 + segmentIndex);
             }
-            if (segmentIndex == currentSegment + 1) {
-                fixture.handoffHardwareTimingReplay(segment.schedule());
-                currentSegment = segmentIndex;
-            }
+            handoffToSegment(segmentIndex);
             fixture.beginTraceRow(
                     traceIndex, segment.rawFrames().get(traceIndex));
+        }
+
+        /**
+         * Verifies the source schedule and commits the next schedule before a
+         * destination adapter opens any comparison or input owner.
+         */
+        public void handoffToSegment(int segmentIndex) {
+            if (closed) {
+                throw new IllegalStateException(
+                        "hardware timing run is already closed");
+            }
+            if (segmentIndex < currentSegment
+                    || segmentIndex > currentSegment + 1) {
+                throw new IllegalStateException(
+                        "hardware timing segment moved out of structural order: "
+                                + currentSegment + " -> " + segmentIndex);
+            }
+            if (segmentIndex == currentSegment + 1) {
+                fixture.handoffHardwareTimingReplay(
+                        segments.get(segmentIndex).schedule());
+                currentSegment = segmentIndex;
+            }
         }
 
         public void close() {
@@ -199,6 +287,15 @@ public final class TraceRunReplayWalker {
             }
             closed = true;
             fixture.closeHardwareTimingReplayRun();
+        }
+
+        /** Abandons an intentionally truncated diagnostic prefix without verification. */
+        public void abort() {
+            if (closed) {
+                return;
+            }
+            closed = true;
+            fixture.abortHardwareTimingReplayRun();
         }
     }
 
@@ -311,7 +408,8 @@ public final class TraceRunReplayWalker {
     public enum BoundaryEntryMode {
         BONUS_REQUEST,
         SPECIAL_STAGE_REQUEST,
-        LEVEL_MODE
+        LEVEL_MODE,
+        LEVEL_LOAD
     }
 
     /**
@@ -324,6 +422,7 @@ public final class TraceRunReplayWalker {
             case "starpost_bonus" -> BoundaryEntryMode.BONUS_REQUEST;
             case "giant_ring", "starpost_special" -> BoundaryEntryMode.SPECIAL_STAGE_REQUEST;
             case "stage_exit" -> BoundaryEntryMode.LEVEL_MODE;
+            case "level_advance", "death_restart" -> BoundaryEntryMode.LEVEL_LOAD;
             default -> throw new IllegalArgumentException("Unknown entry_kind '" + entryKind + "'");
         };
     }
@@ -343,7 +442,8 @@ public final class TraceRunReplayWalker {
      *       + rings + emeralds.</li>
      *   <li>{@link #NEXT_ACT} — {@code giant_ring} with no {@code saved_x_pos}
      *       (S1 SS return): NO positional assertion; assert act/zone advance;
-     *       + rings + emeralds.</li>
+     *       + emeralds. The manifest's exit-ring tally precedes the fresh act
+     *       load and is not co-temporal with the settled return snapshot.</li>
      *   <li>{@link #RINGS_EMERALDS_ONLY} — {@code giant_ring} with a
      *       {@code saved_x_pos} (S3K SS return): rings + emeralds only.</li>
      * </ul>
@@ -437,12 +537,30 @@ public final class TraceRunReplayWalker {
             TraceData trace,
             int frame,
             DynamicArtDiagnosticsSnapshot actual) {
+        return compareDynamicArtRow(
+                trace, frame, actual, new DynamicArtSpecialStageComparator());
+    }
+
+    /**
+     * Compares one advertised DPLC heartbeat row through a caller-owned
+     * comparator.
+     *
+     * <p>The comparator carries the segment's dynamic-art delivery-id origin
+     * (see {@link com.openggf.trace.DynamicArtIdEpoch}), so a segment must pass
+     * the same instance for every one of its rows.
+     */
+    public static FrameComparison compareDynamicArtRow(
+            TraceData trace,
+            int frame,
+            DynamicArtDiagnosticsSnapshot actual,
+            DynamicArtSpecialStageComparator comparator) {
         Objects.requireNonNull(trace, "trace");
         Objects.requireNonNull(actual, "actual");
+        Objects.requireNonNull(comparator, "comparator");
         if (!trace.metadata().hasPerFrameDynamicArtTransferState()) {
             return null;
         }
-        return new DynamicArtSpecialStageComparator().compare(
+        return comparator.compare(
                 trace.dynamicArtTransferStateForFrame(frame), actual);
     }
 
@@ -455,13 +573,35 @@ public final class TraceRunReplayWalker {
      */
     public static final class DynamicArtSegmentComparison {
         private final TraceData trace;
+        private final java.util.Map<Integer, TraceEvent.DynamicArtTransferState>
+                expectedOverride;
         private final int expectedRows;
         private final List<FrameComparison> comparisons = new ArrayList<>();
+        // One accumulator represents one run segment, so it owns that
+        // segment's dynamic-art delivery-id origin.
+        private final DynamicArtSpecialStageComparator comparator =
+                new DynamicArtSpecialStageComparator();
         private int nextRow;
 
         public DynamicArtSegmentComparison(
                 TraceData trace, int expectedRows) {
+            this(trace, expectedRows, java.util.Map.of());
+        }
+
+        /**
+         * As above, but comparing against a caller-supplied per-row expectation
+         * that replaces the raw recorded rows (an empty map keeps them). The
+         * only supported source is the recorder-artifact normalization in
+         * {@link com.openggf.trace.DynamicArtSpillNormalization}, which rebinds
+         * submission edges the ROM's object pass spilled past a V-blank back to
+         * that pass -- a rewrite of the expectation, never of engine state.
+         */
+        public DynamicArtSegmentComparison(
+                TraceData trace, int expectedRows,
+                java.util.Map<Integer, TraceEvent.DynamicArtTransferState> expectedOverride) {
             this.trace = Objects.requireNonNull(trace, "trace");
+            this.expectedOverride = java.util.Map.copyOf(
+                    Objects.requireNonNull(expectedOverride, "expectedOverride"));
             if (expectedRows < 0) {
                 throw new IllegalArgumentException(
                         "expectedRows must be non-negative");
@@ -488,9 +628,10 @@ public final class TraceRunReplayWalker {
             if (!isAdvertised()) {
                 return null;
             }
-            FrameComparison comparison =
-                    TraceRunReplayWalker.compareDynamicArtRow(
-                            trace, row, actual);
+            FrameComparison comparison = expectedOverride.isEmpty()
+                    ? TraceRunReplayWalker.compareDynamicArtRow(
+                            trace, row, actual, comparator)
+                    : comparator.compare(expectedOverride.get(row), actual);
             comparisons.add(comparison);
             return comparison;
         }
@@ -618,6 +759,53 @@ public final class TraceRunReplayWalker {
         return movieRows;
     }
 
+    /**
+     * Calculates the VBlank ticks between a source level's tail anchor and the
+     * first row of the presentation bridge a special stage exits through.
+     *
+     * <p>The ROM's V-int increment is unconditional
+     * ({@code VBlank_Exit: addq.l #1,(v_vblank_count).w},
+     * docs/s1disasm/sonic.asm:684) and runs after whichever routine the mode
+     * table dispatched, {@code VBlank_SpecialStage} included — so every movie
+     * row of the uncompared stage interior carries exactly one tick. An anchor
+     * is the value in effect ENTERING the row after the source's final row, and
+     * the target is the value entering the bridge's first row, so the budget is
+     * the rows strictly between them.
+     */
+    public static int presentationBridgeEntryVblankBudget(
+            TraceRunManifest.Segment sourceLevel,
+            TraceRunManifest.Segment bridge) {
+        if (sourceLevel.traceFrameCount() <= 0) {
+            throw new IllegalArgumentException("source level must contain recorded frames");
+        }
+        int sourceFinalRow = sourceLevel.bk2FrameOffset()
+                + sourceLevel.traceFrameCount() - 1;
+        int movieRows = bridge.bk2FrameOffset() - sourceFinalRow - 1;
+        if (movieRows < 0) {
+            throw new IllegalArgumentException(
+                    "presentation bridge precedes source level tail");
+        }
+        return movieRows;
+    }
+
+    /**
+     * Calculates the VBlank ticks a presentation bridge represents, from the
+     * value entering its first row to the value entering the row after its
+     * last. Every recorded row carries a tick except the profiled ones the ROM
+     * spends building the results screen with interrupts disabled.
+     */
+    public static int presentationBridgeVblankSpan(
+            TraceRunManifest.Segment bridge,
+            int nonAdvancingMovieRows) {
+        if (nonAdvancingMovieRows < 0) {
+            throw new IllegalArgumentException("frame counts must be non-negative");
+        }
+        if (bridge.traceFrameCount() <= 0) {
+            throw new IllegalArgumentException("bridge must contain recorded frames");
+        }
+        return Math.max(0, bridge.traceFrameCount() - nonAdvancingMovieRows);
+    }
+
     /** Projects a source-tail VBlank from the observed playback cursor. */
     public static int sourceTailVblankAtBoundary(
             TraceRunManifest.Segment sourceLevel,
@@ -732,6 +920,8 @@ public final class TraceRunReplayWalker {
         int segmentCount = segments.size();
 
         TraceData[] traces = new TraceData[segmentCount];
+        TraceRunSpecialStageRows[] specialStageRows =
+                new TraceRunSpecialStageRows[segmentCount];
         for (int i = 0; i < segmentCount; i++) {
             TraceRunManifest.Segment segment = segments.get(i);
             Path segmentDir = runDir.resolve(segment.dir());
@@ -741,9 +931,29 @@ public final class TraceRunReplayWalker {
             // which uses a per-game special-stage schema structurally distinct
             // from TraceFrame's primary-level columns -- need not parse there.
             // Metadata loading still exposes its optional DPLC heartbeat.
-            traces[i] = isUncomparedInterior(segment)
-                ? TraceData.loadMetadataOnly(segmentDir)
-                : TraceData.load(segmentDir);
+            try {
+                if (isUncomparedInterior(segment)) {
+                    specialStageRows[i] = TraceRunSpecialStageRows.load(
+                            segment.traceProfile(), segmentDir,
+                            segment.dynamicArtInitialLedgerDescriptors());
+                    traces[i] = TraceData.loadMetadataOnly(
+                            segmentDir,
+                            com.openggf.trace.StoredPhysicsFrameDomain.FrameEncoding.DECIMAL,
+                            segment.dynamicArtInitialLedgerDescriptors());
+                } else {
+                    traces[i] = TraceData.load(
+                            segmentDir,
+                            segment.dynamicArtInitialLedgerDescriptors());
+                }
+            } catch (IOException | RuntimeException failure) {
+                throw new IOException(
+                        "Segment " + i + " parser failed for profile '"
+                                + segment.traceProfile() + "': "
+                                + (failure.getMessage() != null
+                                        ? failure.getMessage()
+                                        : failure.getClass().getSimpleName()),
+                        failure);
+            }
         }
         run.validateDynamicArtRun(java.util.Arrays.asList(traces));
 
@@ -753,7 +963,10 @@ public final class TraceRunReplayWalker {
         for (int i = 0; i < segmentCount; i++) {
             plans.add(new SegmentPlan(
                 segments.get(i), traces[i],
-                pairing.entryBoundaries()[i], pairing.exitBoundaries()[i]));
+                pairing.entryBoundaries()[i], pairing.exitBoundaries()[i],
+                specialStageRows[i],
+                segmentExecutionPolicy(segments.get(i),
+                        pairing.entryBoundaries()[i], traces[i])));
         }
         return plans;
     }
@@ -804,9 +1017,12 @@ public final class TraceRunReplayWalker {
     public static final class BoundaryProbe implements PlaybackDebugManager.PlaybackFrameObserver {
         private final EngineHooks hooks;
         private PlaybackDebugManager.PlaybackFrameObserver delegate;
+        private PlaybackDebugManager.PlaybackFrameObserver preparedDelegate;
         private TraceRunManifest.Transition armed;
         private BoundaryObservation latchedObservation;
         private int pendingSpecialStageRequestFrame = -1;
+        private Bk2FrameInput preparedFrame;
+        private boolean framePrepared;
         private Consumer<Bk2FrameInput> beforeFrameObserver = frame -> {
         };
 
@@ -817,6 +1033,14 @@ public final class TraceRunReplayWalker {
         /** Attaches (or, with {@code null}, detaches) the delegate observer. */
         public void setDelegate(PlaybackDebugManager.PlaybackFrameObserver delegate) {
             this.delegate = delegate;
+            // A handoff may be observed after prepareFrame() but before the
+            // represented row advances. Keep that row pinned to the delegate
+            // which prepared it; afterFrameAdvanced() clears the pin. When no
+            // row is prepared there is no cached ownership to retain.
+            if (!framePrepared) {
+                preparedFrame = null;
+                preparedDelegate = null;
+            }
         }
 
         /**
@@ -871,26 +1095,57 @@ public final class TraceRunReplayWalker {
         }
 
         @Override
-        public boolean shouldSkipGameplayTick(Bk2FrameInput frame) {
+        public void prepareFrame(Bk2FrameInput frame) {
+            if (framePrepared && Objects.equals(preparedFrame, frame)) {
+                return;
+            }
+            preparedFrame = frame;
+            framePrepared = true;
+            preparedDelegate = delegate;
             beforeFrameObserver.accept(frame);
-            return delegate != null && delegate.shouldSkipGameplayTick(frame);
+            if (preparedDelegate != null) {
+                preparedDelegate.prepareFrame(frame);
+            }
+        }
+
+        @Override
+        public int appliedInputOffset(Bk2FrameInput frame) {
+            prepareFrame(frame);
+            return preparedDelegate != null
+                    ? preparedDelegate.appliedInputOffset(frame) : 0;
+        }
+
+        @Override
+        public boolean shouldSkipGameplayTick(Bk2FrameInput frame) {
+            prepareFrame(frame);
+            return preparedDelegate != null
+                    && preparedDelegate.shouldSkipGameplayTick(frame);
         }
 
         @Override
         public boolean shouldAdvanceVblankOnSkippedTick(Bk2FrameInput frame) {
-            return delegate == null || delegate.shouldAdvanceVblankOnSkippedTick(frame);
+            prepareFrame(frame);
+            return preparedDelegate == null
+                    || preparedDelegate.shouldAdvanceVblankOnSkippedTick(frame);
         }
 
         @Override
         public int vblankAdvanceCountOnSkippedTick(Bk2FrameInput frame) {
-            return delegate == null ? 1 : delegate.vblankAdvanceCountOnSkippedTick(frame);
+            prepareFrame(frame);
+            return preparedDelegate == null
+                    ? 1 : preparedDelegate.vblankAdvanceCountOnSkippedTick(frame);
         }
 
         @Override
         public void afterFrameAdvanced(Bk2FrameInput frame, boolean wasSkipped) {
-            if (delegate != null) {
-                delegate.afterFrameAdvanced(frame, wasSkipped);
+            PlaybackDebugManager.PlaybackFrameObserver rowDelegate =
+                    framePrepared ? preparedDelegate : delegate;
+            if (rowDelegate != null) {
+                rowDelegate.afterFrameAdvanced(frame, wasSkipped);
             }
+            preparedFrame = null;
+            framePrepared = false;
+            preparedDelegate = null;
             if (armed == null || latchedObservation != null) {
                 return;
             }
@@ -898,6 +1153,7 @@ public final class TraceRunReplayWalker {
                 case BONUS_REQUEST -> hooks.peekBonusRequest() != null;
                 case SPECIAL_STAGE_REQUEST -> hooks.isSpecialStageRequested();
                 case LEVEL_MODE -> false; // stage_exit is persistent; evaluated in latched().
+                case LEVEL_LOAD -> false; // supplied by the production level-load seam.
             };
             if (transientHit) {
                 int observedFrame = hooks.currentBk2Frame();
@@ -909,8 +1165,10 @@ public final class TraceRunReplayWalker {
 
         @Override
         public void onSpecialStageRequestRaised() {
-            if (delegate != null) {
-                delegate.onSpecialStageRequestRaised();
+            PlaybackDebugManager.PlaybackFrameObserver rowDelegate =
+                    framePrepared ? preparedDelegate : delegate;
+            if (rowDelegate != null) {
+                rowDelegate.onSpecialStageRequestRaised();
             }
             if (armed == null || latchedObservation != null
                 || boundaryEntryMode(armed.entryKind()) != BoundaryEntryMode.SPECIAL_STAGE_REQUEST) {
@@ -922,6 +1180,37 @@ public final class TraceRunReplayWalker {
             // requests raised after that callback and consumed during a context
             // swap before the next frame observer can run.
             pendingSpecialStageRequestFrame = hooks.currentBk2Frame();
+        }
+
+        /**
+         * Latches a value-only semantic signal emitted outside the ordinary
+         * playback callback, notably level advances and death restarts.
+         */
+        public void observeSignal(RunBoundarySignal signal) {
+            Objects.requireNonNull(signal, "signal");
+            if (armed == null || latchedObservation != null
+                    || !withinBoundaryWindow(
+                            signal.physicalBk2Frame(), armed.modeChangeBk2Frame())
+                    || !matchesArmedSignal(signal)) {
+                return;
+            }
+            latchedObservation = new BoundaryObservation(
+                    true, signal.physicalBk2Frame());
+        }
+
+        private boolean matchesArmedSignal(RunBoundarySignal signal) {
+            return switch (armed.entryKind()) {
+                case "starpost_bonus" ->
+                        signal instanceof RunBoundarySignal.BonusRequest;
+                case "giant_ring", "starpost_special" ->
+                        signal instanceof RunBoundarySignal.SpecialStageRequest;
+                case "stage_exit" -> signal instanceof RunBoundarySignal.StageExit;
+                case "level_advance" -> signal instanceof RunBoundarySignal.LevelLoaded loaded
+                        && loaded.cause() == RunLevelLoadCause.LEVEL_ADVANCE;
+                case "death_restart" -> signal instanceof RunBoundarySignal.LevelLoaded loaded
+                        && loaded.cause() == RunLevelLoadCause.DEATH_RESTART;
+                default -> false;
+            };
         }
     }
 

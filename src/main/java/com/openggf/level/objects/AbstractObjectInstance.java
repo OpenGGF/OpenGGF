@@ -221,6 +221,11 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
         return managedSpawn();
     }
 
+    /** Returns the live SST object id, which may differ from the placement record. */
+    public int getLiveObjectId() {
+        return getSpawn() == null ? -1 : (getSpawn().objectId() & 0xFF);
+    }
+
     final ObjectSpawn managedSpawn() { return dynamicSpawn != null ? dynamicSpawn : spawn; }
 
     /**
@@ -656,7 +661,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         // Default no-op.
     }
 
@@ -699,6 +704,19 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      */
     protected boolean isOnScreen() {
         return cameraBounds.contains(getX(), getY());
+    }
+
+    protected static boolean isWithinBuildSpritesBounds(
+            int x, int y, int actWidth, int heightExtent) {
+        return cameraBounds.containsRenderSpriteBounds(x, y, actWidth, heightExtent);
+    }
+
+    protected static int cameraLeft() {
+        return cameraBounds.left();
+    }
+
+    protected static int cameraTop() {
+        return cameraBounds.top();
     }
 
     /**

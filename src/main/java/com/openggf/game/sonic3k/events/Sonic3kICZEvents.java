@@ -1,7 +1,8 @@
 package com.openggf.game.sonic3k.events;
 
 import com.openggf.game.PlayerCharacter;
-import com.openggf.game.GameServices;
+import com.openggf.game.RuntimeArtAdmissionLease;
+import com.openggf.game.RuntimeArtAdmissionOwnerKind;
 import com.openggf.game.mutation.LayoutMutationContext;
 import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.game.mutation.MutationEffects;
@@ -29,6 +30,7 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
 import com.openggf.level.SeamlessLevelTransitionRequest;
+import com.openggf.game.RuntimeArtAdmissionPolicy;
 import com.openggf.level.SeamlessTransitionResourceHandoffId;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.physics.Direction;
@@ -167,6 +169,11 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
     private HardwareWorkHandle act2TransitionArtHandle;
     private long act2TransitionArtOrdinal = -1;
     private long act2TransitionHandoffId = -1;
+    private long act2TransitionAdmissionLeaseId = -1;
+    private long act2TransitionAdmissionGeneration = -1;
+    private long act2TransitionAdmissionBatchFingerprint;
+    private boolean act2TransitionAdmissionAccepted;
+    private boolean act2TransitionPublicationFailed;
     private int activeAct;
     private boolean postTitleAct2SizeChangeActive;
     private int act2MaxXAccumulator;
@@ -206,6 +213,11 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
         act2TransitionArtHandle = null;
         act2TransitionArtOrdinal = -1;
         act2TransitionHandoffId = -1;
+        act2TransitionAdmissionLeaseId = -1;
+        act2TransitionAdmissionGeneration = -1;
+        act2TransitionAdmissionBatchFingerprint = 0;
+        act2TransitionAdmissionAccepted = false;
+        act2TransitionPublicationFailed = false;
         postTitleAct2SizeChangeActive = false;
         act2MaxXAccumulator = 0;
         act2MinYAccumulator = 0;
@@ -315,6 +327,14 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
 
     public boolean isAct2TransitionRequested() {
         return act2TransitionRequested;
+    }
+
+    /**
+     * The shared title owner already models the first post-child Wait2 poll;
+     * ICZ's retained EndSignControl path has two further polls before release.
+     */
+    public int preloadedActCameraReleaseAdditionalDispatches() {
+        return 2;
     }
 
     /**
@@ -691,10 +711,16 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
         SeamlessLevelTransitionRequest request = SeamlessLevelTransitionRequest.builder(
                         SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
                 .targetZoneAct(Sonic3kZoneIds.ZONE_ICZ, 1)
+                .runtimeArtAdmissionPolicy(
+                        RuntimeArtAdmissionPolicy.RESOURCE_HANDOFF_OWNER)
                 .deactivateLevelNow(false)
                 .preserveMusic(true)
                 .preserveLevelGamestate(true)
                 .showInLevelTitleCard(false)
+                // Obj_TitleCardWait2 has a three-dispatch tail after the last
+                // child retires. The title manager owns the first drained-child
+                // observation, so this request carries the two remaining polls.
+                .inLevelTitleCardPreloadedActCameraReleaseDispatches(2)
                 .preserveOffsetCameraPosition(true)
                 .postTransitionMinX(ICZ2_CAMERA_MIN_X)
                 .postTransitionMaxX(ICZ2_CAMERA_MAX_X)
@@ -725,13 +751,31 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
             HardwareWorkHandle chunkHandle,
             HardwareWorkHandle blockHandle,
             S3kKosModuleQueue artQueue,
-            HardwareWorkHandle artHandle) {
+            HardwareWorkHandle artHandle,
+            RuntimeArtAdmissionLease admissionLease) {
         if (activeAct != 1
+                || act2TransitionAdmissionAccepted
+                || act2TransitionPublicationFailed
                 || act2TransitionChunkHandle != null
                 || act2TransitionBlockHandle != null
                 || act2TransitionArtHandle != null) {
             throw new IllegalStateException(
                     "ICZ2 resource owner cannot accept duplicate or out-of-act work");
+        }
+        if (admissionLease == null
+                || admissionLease.ownerKind()
+                        != RuntimeArtAdmissionOwnerKind.RESOURCE_HANDOFF_OWNER) {
+            throw new IllegalStateException(
+                    "ICZ2 resource owner requires an exact resource-owner lease");
+        }
+        RuntimeArtAdmissionLease rebound = module()
+                .getObjectArtProvider()
+                .rebindRuntimeArtAdmission(
+                        admissionLease.id(),
+                        RuntimeArtAdmissionOwnerKind.RESOURCE_HANDOFF_OWNER);
+        if (!rebound.equals(admissionLease)) {
+            throw new IllegalStateException(
+                    "ICZ2 resource-owner lease generation or batch does not match");
         }
         act2TransitionDirectQueue = directQueue;
         act2TransitionChunkHandle = chunkHandle;
@@ -741,34 +785,51 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
         act2TransitionArtQueue = artQueue;
         act2TransitionArtHandle = artHandle;
         act2TransitionArtOrdinal = artHandle.ordinal();
+        act2TransitionAdmissionLeaseId = admissionLease.id();
+        act2TransitionAdmissionGeneration = admissionLease.generation();
+        act2TransitionAdmissionBatchFingerprint =
+                admissionLease.batchFingerprint();
+        act2TransitionAdmissionAccepted = true;
     }
 
     private void publishTransferredIcz2Resources() {
+        if (act2TransitionPublicationFailed) {
+            throw new IllegalStateException(
+                    "ICZ2 resource publication failed terminally");
+        }
         if (!act2TransitionDirectPublished
                 && act2TransitionChunkHandle != null
                 && act2TransitionBlockHandle != null
-                && act2TransitionArtHandle != null
-                && act2TransitionArtQueue.isReady(
-                        act2TransitionArtHandle)) {
-            if (!act2TransitionDirectQueue.isReady(act2TransitionChunkHandle)
-                    || !act2TransitionDirectQueue.isReady(act2TransitionBlockHandle)) {
-                throw new IllegalStateException(
-                        "ICZ2 direct FIFO emptied before both transition payloads became ready");
+                && act2TransitionArtHandle != null) {
+            requirePendingTransferredHardwareWork();
+            if (!(act2TransitionArtQueue.isReady(act2TransitionArtHandle)
+                && act2TransitionDirectQueue.isReady(act2TransitionChunkHandle)
+                && act2TransitionDirectQueue.isReady(act2TransitionBlockHandle))) {
+                return;
             }
-            byte[] chunks128x128 =
-                    act2TransitionDirectQueue.claim(act2TransitionChunkHandle);
-            byte[] blocks16x16 =
-                    act2TransitionDirectQueue.claim(act2TransitionBlockHandle);
-            byte[] tiles8x8 =
-                    act2TransitionArtQueue.claim(act2TransitionArtHandle);
-            applyIcz2PreparedTerrain(chunks128x128, blocks16x16);
-            applyIcz2PreparedArt(tiles8x8);
+            boolean publicationStarted = false;
+            try {
+                publicationStarted = true;
+                byte[] chunks128x128 = claimIcz2ChunkPayload();
+                byte[] blocks16x16 = claimIcz2BlockPayload();
+                byte[] tiles8x8 = claimIcz2ArtPayload();
+                applyIcz2PreparedTerrain(chunks128x128, blocks16x16);
+                applyIcz2PreparedArt(tiles8x8);
+                RuntimeArtAdmissionLease lease = restoredAdmissionLease();
+                module().getObjectArtProvider()
+                        .consumeRuntimeArtAdmission(
+                                lease,
+                                RuntimeArtAdmissionOwnerKind
+                                        .RESOURCE_HANDOFF_OWNER);
+            } catch (RuntimeException failure) {
+                if (publicationStarted) {
+                    act2TransitionPublicationFailed = true;
+                }
+                throw failure;
+            }
             act2TransitionChunkHandle = null;
             act2TransitionBlockHandle = null;
             act2TransitionArtHandle = null;
-            act2TransitionChunkOrdinal = -1;
-            act2TransitionBlockOrdinal = -1;
-            act2TransitionArtOrdinal = -1;
             act2TransitionDirectQueue = null;
             act2TransitionArtQueue = null;
             act2TransitionDirectPublished = true;
@@ -776,7 +837,45 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
         }
     }
 
-    private void applyIcz2PreparedTerrain(
+    private void requirePendingTransferredHardwareWork() {
+        var timing = hardwareTiming();
+        if (timing.isPending(act2TransitionChunkHandle)
+                && timing.isPending(act2TransitionBlockHandle)
+                && timing.isPending(act2TransitionArtHandle)) {
+            return;
+        }
+        act2TransitionPublicationFailed = true;
+        throw new IllegalStateException(
+                "ICZ2 transferred hardware work is missing or already claimed");
+    }
+
+    private RuntimeArtAdmissionLease restoredAdmissionLease() {
+        if (!act2TransitionAdmissionAccepted
+                || act2TransitionAdmissionLeaseId < 0
+                || act2TransitionAdmissionGeneration < 0) {
+            throw new IllegalStateException(
+                    "ICZ2 resource-owner admission lease is missing");
+        }
+        return new RuntimeArtAdmissionLease(
+                act2TransitionAdmissionLeaseId,
+                act2TransitionAdmissionGeneration,
+                act2TransitionAdmissionBatchFingerprint,
+                RuntimeArtAdmissionOwnerKind.RESOURCE_HANDOFF_OWNER);
+    }
+
+    protected byte[] claimIcz2ChunkPayload() {
+        return act2TransitionDirectQueue.claim(act2TransitionChunkHandle);
+    }
+
+    protected byte[] claimIcz2BlockPayload() {
+        return act2TransitionDirectQueue.claim(act2TransitionBlockHandle);
+    }
+
+    protected byte[] claimIcz2ArtPayload() {
+        return act2TransitionArtQueue.claim(act2TransitionArtHandle);
+    }
+
+    protected void applyIcz2PreparedTerrain(
             byte[] chunks128x128,
             byte[] blocks16x16) {
         LevelManager manager = levelManager();
@@ -797,7 +896,7 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
         }, context);
     }
 
-    private void applyIcz2PreparedArt(byte[] tiles8x8) {
+    protected void applyIcz2PreparedArt(byte[] tiles8x8) {
         if (tiles8x8.length % Pattern.PATTERN_SIZE_IN_ROM != 0) {
             throw new IllegalArgumentException(
                     "prepared ICZ2 module art must contain whole patterns");
@@ -827,34 +926,41 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
     }
 
     private void rebindHardwareWorkIfNeeded() {
-        if (((act2TransitionChunkOrdinal >= 0
+        if (!act2TransitionDirectPublished
+                && !act2TransitionPublicationFailed
+                && (((act2TransitionChunkOrdinal >= 0
                         || act2TransitionBlockOrdinal >= 0)
                 && act2TransitionDirectQueue == null)
                 || (act2TransitionArtOrdinal >= 0
-                        && act2TransitionArtQueue == null)) {
+                        && act2TransitionArtQueue == null))) {
             rebindHardwareWorkAfterRewind();
         }
     }
 
     public void rebindHardwareWorkAfterRewind() {
-        var timing = hardwareTiming();
-        act2TransitionChunkHandle = restoredHardwareHandle(
-                timing, HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
-                act2TransitionChunkOrdinal, "ICZ2 secondary chunks");
-        act2TransitionBlockHandle = restoredHardwareHandle(
-                timing, HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
-                act2TransitionBlockOrdinal, "ICZ2 secondary blocks");
-        act2TransitionDirectQueue =
-                act2TransitionChunkHandle != null
-                                || act2TransitionBlockHandle != null
-                        ? directKosQueue()
-                        : null;
-        act2TransitionArtHandle = restoredHardwareHandle(
-                timing, HardwareWorkKind.KOS_MODULE_QUEUE,
-                act2TransitionArtOrdinal, "ICZ2 secondary art");
-        act2TransitionArtQueue = act2TransitionArtHandle != null
-                ? moduleKosQueue()
-                : null;
+        try {
+            var timing = hardwareTiming();
+            act2TransitionChunkHandle = restoredHardwareHandle(
+                    timing, HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
+                    act2TransitionChunkOrdinal, "ICZ2 secondary chunks");
+            act2TransitionBlockHandle = restoredHardwareHandle(
+                    timing, HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
+                    act2TransitionBlockOrdinal, "ICZ2 secondary blocks");
+            act2TransitionDirectQueue =
+                    act2TransitionChunkHandle != null
+                                    || act2TransitionBlockHandle != null
+                            ? directKosQueue()
+                            : null;
+            act2TransitionArtHandle = restoredHardwareHandle(
+                    timing, HardwareWorkKind.KOS_MODULE_QUEUE,
+                    act2TransitionArtOrdinal, "ICZ2 secondary art");
+            act2TransitionArtQueue = act2TransitionArtHandle != null
+                    ? moduleKosQueue()
+                    : null;
+        } catch (RuntimeException failure) {
+            act2TransitionPublicationFailed = true;
+            throw failure;
+        }
     }
 
     public void discardHardwareWorkFacadesAfterRewind() {
@@ -879,8 +985,21 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
                                 + kind + " ordinal " + ordinal));
     }
 
+    /**
+     * ROM {@code ICZ1SE_Init} (sonic3k.asm:110095-110101): while the screen
+     * event is still on its first routine, a live {@code Screen_shake_flag}
+     * with {@code Ctrl_1_locked} clear means the quake came from the snowboard
+     * wall crash, so controller 1 is locked and {@code Ctrl_1_logical} cleared
+     * until {@code Obj_ICZ1BigSnowPile} releases it (sonic3k.asm:110468).
+     *
+     * <p>The predicate is ROM {@code Screen_shake_flag} — the same word
+     * {@code loc_39BEE} writes {@code #$14} into (sonic3k.asm:77370) and
+     * {@code ShakeScreen_Setup} counts down (sonic3k.asm:104193-104198) — not
+     * the shared {@code GameStateManager} shaking flag, which models the
+     * unrelated S2 {@code Screen_Shaking_Flag} and is never written here.
+     */
     private void updateAct1ScreenEvent() {
-        if (backgroundRoutine != ICZ1_BG_INTRO || !gameState().isScreenShakeActive()) {
+        if (backgroundRoutine != ICZ1_BG_INTRO || screenShakeFlag == 0) {
             return;
         }
         lockFocusedPlayerForIntroQuake();

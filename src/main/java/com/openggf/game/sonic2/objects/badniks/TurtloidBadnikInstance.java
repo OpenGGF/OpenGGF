@@ -127,7 +127,7 @@ public class TurtloidBadnikInstance extends AbstractBadnikInstance
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         ensureChildrenSpawned();
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (state) {
@@ -274,7 +274,7 @@ public class TurtloidBadnikInstance extends AbstractBadnikInstance
     }
 
     @Override
-    protected void updateAnimation(int frameCounter) {
+    protected void updateAnimation(int vIntRunCount) {
         // Animation: Ani_obj9A = dc.b 1, 6, 7, $FF (jet exhaust frames)
         // The Turtloid body itself only uses frames 0 (normal) and 1 (neck raised),
         // which are set directly by the state machine above.

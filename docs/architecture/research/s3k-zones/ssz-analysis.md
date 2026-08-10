@@ -14,6 +14,19 @@
 - **Character Branching:** Extreme -- Acts are entirely character-segregated. Act 1 = Sonic/Tails, Act 2 = Knuckles. Different level art, layout, objects, bosses, and event systems.
 - **Special Features:** Vertical wrapping (Act 1, Camera_min_Y_pos = -$100), screen shake, Death Egg launch cutscene, teleporter beam intro, roaming cloud sprites, multi-layer parallax clouds, collapsing tower sequence, custom block/chunk/pattern hot-swap mid-level.
 
+## Current Engine Status (2026-08-08)
+
+The earlier claim that SSZ has a native `SpawnLevelMainSprites` falling
+introduction was stale. In the owning S&K routine, `loc_68A6` is reached by the
+LRZ1 `$0900` comparison and the LRZ boss `$1600` comparison
+(`docs/skdisasm/sonic3k.asm:8161-8178`); SSZ's `$0A00/$0A01` values are listed
+separately as SSZ acts (`sonic3k.asm:10154-10157`) and are not compared there.
+The S3 standalone routine likewise has no SSZ branch
+(`docs/skdisasm/s3.asm:6175-6260`). Existing SSZ event and teleporter behavior
+therefore does not need a falling-introduction override. The negative SSZ gate
+is covered by `TestS3kLrzFallingIntroBootstrap` so a future change cannot
+silently reintroduce the stale attribution.
+
 ## Level Boundaries
 
 From `LevelSizes` (sonic3k.asm line 38112-38113):

@@ -34,6 +34,8 @@ import com.openggf.game.save.SaveSessionContext;
 import com.openggf.game.save.SelectedTeam;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
+import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.solid.DefaultSolidExecutionRegistry;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameRng;
@@ -296,7 +298,7 @@ public class TestGameLoop {
     }
 
     @Test
-    public void traceRealtimeRewindRunsBeforePlaybackInputBridge() throws Exception {
+    public void traceRealtimeRewindRunsBeforePreparedPlaybackAdmission() throws Exception {
         String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
         int rewind = source.indexOf("TraceSessionLauncher.active().handleRealtimeRewindInput(");
         int admission = source.indexOf("LevelFrameResult admission = levelIterationAdmission.admit");
@@ -305,18 +307,39 @@ public class TestGameLoop {
         assertTrue(bridge >= 0, "GameLoop must bridge playback input");
         assertTrue(rewind < bridge,
                 "Rewind release must seek/play the playback timeline before forced input is sampled");
-        assertTrue(admission >= 0 && admission < bridge,
-                "playback forced input must not be published before setup admission");
+        assertTrue(admission > bridge,
+                "prepared playback Start and held input must be published before ROM admission");
+    }
+
+    @Test
+    public void levelAndBonusTraceSuppressionIsClassifiedBeforeGenericTimers()
+            throws Exception {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
+        int classification = source.indexOf(
+                "if (TraceSessionLauncher.admitsRunLogicalGameplayInput(currentGameMode))");
+        int timers = source.indexOf("timerManager.update();", classification);
+        int skipDecision = source.indexOf(
+                "playbackDebugManager.shouldSkipCurrentGameplayTick()", classification);
+
+        assertTrue(classification >= 0 && skipDecision > classification,
+                "run-mode suppression must use the shared LEVEL/BONUS_STAGE admission predicate");
+        assertTrue(timers > skipDecision,
+                "trace suppression must be known before TimerManager advances");
     }
 
     @Test
     public void userRecordingPlaybackPolicyObservesAppliedMovieFrameBeforeCursorAdvance() throws Exception {
-        String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
+        String source = Files.readString(
+                Path.of("src/main/java/com/openggf/LevelIterationAdmissionController.java"));
+        int method = source.indexOf("void advanceTraceRunPhysicalRow(");
+        int capture = source.indexOf("int appliedFrame = playback.getCursorFrame();", method);
+        int advance = source.indexOf("playback.onLevelFrameAdvanced();", capture);
+        int observe = source.indexOf("recordingControls.afterPlaybackFrame(", advance);
+        int observedFrame = source.indexOf("appliedFrame, false,", observe);
 
-        assertTrue(source.contains("int appliedPlaybackFrame = playbackDebugManager.getCursorFrame();"),
+        assertTrue(method >= 0 && capture > method && advance > capture,
                 "GameLoop must capture the BK2 frame before advancing the playback cursor");
-        assertTrue(source.contains("userRecordingControls.afterPlaybackFrame(\n" +
-                        "                    appliedPlaybackFrame,"),
+        assertTrue(observe > advance && observedFrame > observe,
                 "Target/completion policy must classify the frame that was just applied");
     }
 
@@ -969,6 +992,44 @@ public class TestGameLoop {
                 "module reset must clear cached title-card provider so the new module supplies it");
     }
 
+    @Test
+    void traceReplayActivationPreservesPresentationAndRetainedModuleState() {
+        Sonic2GameModule module = spy(new Sonic2GameModule());
+        @SuppressWarnings("unchecked")
+        RewindSnapshottable<Object> retained = mock(RewindSnapshottable.class);
+        when(retained.key()).thenReturn("test-retained-plc");
+        when(module.rewindAdapters()).thenReturn(List.of(retained));
+        TitleCardProvider titleCard = mock(TitleCardProvider.class);
+        when(module.getTitleCardProvider()).thenReturn(titleCard);
+        TestEnvironment.configureGameModuleFixture(module);
+        GameLoop loop = new GameLoop(mockInputHandler);
+        assertSame(titleCard, loop.getTitleCardProvider());
+        GameplayModeContext presentation =
+                SessionManager.getCurrentGameplayMode();
+        presentation.dynamicArtLifecycle().observeRamDplc(
+                "sonic", 1,
+                List.of(new com.openggf.level.render.TileLoadRequest(0, 1)),
+                0x1000, 0xF000);
+        assertFalse(presentation.dynamicArtLifecycle()
+                .capture().ledger().isEmpty());
+        assertEquals(HardwareReadinessAdmissionPolicy.LIVE,
+                presentation.hardwareTiming().admissionPolicy());
+
+        GameplayModeContext replay = presentation;
+        replay.activateRecordedHardwareAdmission();
+
+        assertSame(presentation, replay);
+        assertTrue(presentation.isGameplayRuntimeReady());
+        verify(titleCard, never()).reset();
+        verify(retained, never()).resetForMissingSnapshot();
+        assertEquals(HardwareReadinessAdmissionPolicy.RECORDED,
+                replay.hardwareTiming().admissionPolicy());
+        assertTrue(replay.isGameplayRuntimeReady());
+        assertFalse(replay.dynamicArtLifecycle().capture().ledger().isEmpty(),
+                "production dynamic-art state must remain in the same context");
+        assertSame(replay, SessionManager.getCurrentGameplayMode());
+    }
+
     // ==================== Game Mode Listener Tests ====================
 
     @Test
@@ -1006,7 +1067,7 @@ public class TestGameLoop {
         handler.handleKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_PRESS);
         handler.handleKeyEvent(GLFW_KEY_B, GLFW_PRESS);
 
-        assertEquals(BonusStageType.GUMBALL, GameLoop.resolveBonusStageDebugShortcut(handler));
+        assertEquals(BonusStageType.GUMBALL, GameLoopDebugShortcuts.resolveBonusStageDebugShortcut(handler));
     }
 
     @Test
@@ -1015,7 +1076,7 @@ public class TestGameLoop {
         handler.handleKeyEvent(GLFW_KEY_LEFT_CONTROL, GLFW_PRESS);
         handler.handleKeyEvent(GLFW_KEY_B, GLFW_PRESS);
 
-        assertEquals(BonusStageType.GLOWING_SPHERE, GameLoop.resolveBonusStageDebugShortcut(handler));
+        assertEquals(BonusStageType.GLOWING_SPHERE, GameLoopDebugShortcuts.resolveBonusStageDebugShortcut(handler));
     }
 
     @Test
@@ -1024,7 +1085,7 @@ public class TestGameLoop {
         handler.handleKeyEvent(GLFW_KEY_LEFT_ALT, GLFW_PRESS);
         handler.handleKeyEvent(GLFW_KEY_B, GLFW_PRESS);
 
-        assertEquals(BonusStageType.SLOT_MACHINE, GameLoop.resolveBonusStageDebugShortcut(handler));
+        assertEquals(BonusStageType.SLOT_MACHINE, GameLoopDebugShortcuts.resolveBonusStageDebugShortcut(handler));
     }
 
     @Test
@@ -1034,7 +1095,7 @@ public class TestGameLoop {
         handler.handleKeyEvent(GLFW_KEY_LEFT_CONTROL, GLFW_PRESS);
         handler.handleKeyEvent(GLFW_KEY_B, GLFW_PRESS);
 
-        assertEquals(BonusStageType.NONE, GameLoop.resolveBonusStageDebugShortcut(handler));
+        assertEquals(BonusStageType.NONE, GameLoopDebugShortcuts.resolveBonusStageDebugShortcut(handler));
     }
 
     @Test
@@ -1042,7 +1103,7 @@ public class TestGameLoop {
         InputHandler handler = new InputHandler();
         handler.handleKeyEvent(GLFW_KEY_B, GLFW_PRESS);
 
-        assertEquals(BonusStageType.NONE, GameLoop.resolveBonusStageDebugShortcut(handler));
+        assertEquals(BonusStageType.NONE, GameLoopDebugShortcuts.resolveBonusStageDebugShortcut(handler));
     }
 
     /**
@@ -1064,7 +1125,7 @@ public class TestGameLoop {
         handler.setLogicalOverride(LogicalInputSnapshot.neutral()
                 .withDebugInput(false, false, false, true, false));
 
-        assertEquals(BonusStageType.SLOT_MACHINE, GameLoop.resolveBonusStageDebugShortcut(handler));
+        assertEquals(BonusStageType.SLOT_MACHINE, GameLoopDebugShortcuts.resolveBonusStageDebugShortcut(handler));
     }
 
     @Test
@@ -1075,7 +1136,7 @@ public class TestGameLoop {
         handler.setLogicalOverride(LogicalInputSnapshot.neutral()
                 .withDebugInput(false, false, false, false, false));
 
-        assertEquals(BonusStageType.NONE, GameLoop.resolveBonusStageDebugShortcut(handler));
+        assertEquals(BonusStageType.NONE, GameLoopDebugShortcuts.resolveBonusStageDebugShortcut(handler));
     }
 
     @Test
@@ -1592,7 +1653,7 @@ public class TestGameLoop {
 
         assertEquals(GameMode.DATA_SELECT, gameLoop.getCurrentGameMode());
         assertEquals(1, nativeDelegate.initializeCalls);
-        verify(levelManager, never()).loadZoneAndAct(anyInt(), anyInt());
+        verify(levelManager, never()).loadZoneAndActForFreshRuntime(anyInt(), anyInt());
     }
 
     @Test
@@ -1628,7 +1689,7 @@ public class TestGameLoop {
         invokePrivateMethod(gameLoop, "doExitTitleScreen");
 
         assertEquals(GameMode.DATA_SELECT, gameLoop.getCurrentGameMode());
-        verify(levelManager, never()).loadZoneAndAct(anyInt(), anyInt());
+        verify(levelManager, never()).loadZoneAndActForFreshRuntime(anyInt(), anyInt());
     }
 
     @Test
@@ -1660,7 +1721,7 @@ public class TestGameLoop {
         invokePrivateMethod(gameLoop, "doExitTitleScreen");
 
         assertEquals(GameMode.DATA_SELECT, gameLoop.getCurrentGameMode());
-        verify(levelManager, never()).loadZoneAndAct(anyInt(), anyInt());
+        verify(levelManager, never()).loadZoneAndActForFreshRuntime(anyInt(), anyInt());
     }
 
     @Test
@@ -1691,7 +1752,7 @@ public class TestGameLoop {
 
         assertEquals(GameMode.LEVEL, gameLoop.getCurrentGameMode());
         assertEquals(0, nativeDelegate.initializeCalls);
-        verify(levelManager).loadZoneAndAct(0, 0);
+        verify(levelManager).loadZoneAndActForFreshRuntime(0, 0);
     }
 
     @Test
@@ -1719,7 +1780,7 @@ public class TestGameLoop {
 
         assertEquals(GameMode.LEVEL, gameLoop.getCurrentGameMode());
         verify(titleScreen).reset();
-        verify(levelManager).loadZoneAndAct(0, 0);
+        verify(levelManager).loadZoneAndActForFreshRuntime(0, 0);
         assertTrue(dataSelect.isActive(), "Provider presence alone should not trigger Data Select");
     }
 
@@ -1750,7 +1811,7 @@ public class TestGameLoop {
 
         assertEquals(GameMode.LEVEL, gameLoop.getCurrentGameMode());
         verify(titleScreen).reset();
-        verify(levelManager).loadZoneAndAct(0, 0);
+        verify(levelManager).loadZoneAndActForFreshRuntime(0, 0);
         verify(fadeManager, never()).startFadeToBlack(any());
     }
 
@@ -1781,7 +1842,7 @@ public class TestGameLoop {
 
         assertEquals(GameMode.LEVEL, gameLoop.getCurrentGameMode());
         verify(titleScreen).reset();
-        verify(levelManager).loadZoneAndAct(0, 0);
+        verify(levelManager).loadZoneAndActForFreshRuntime(0, 0);
         verify(fadeManager).startFadeFromBlack(any());
     }
 
@@ -1829,7 +1890,7 @@ public class TestGameLoop {
         titleScreen.triggerExitHandler();
 
         assertEquals(GameMode.LEVEL, gameLoop.getCurrentGameMode());
-        verify(levelManager).loadZoneAndAct(0, 0);
+        verify(levelManager).loadZoneAndActForFreshRuntime(0, 0);
         verify(fadeManager, never()).startFadeToBlack(any());
         assertTrue(dataSelect.isActive(), "Explicit route resolution should prevent OPTIONS from entering Data Select");
     }
@@ -1882,7 +1943,7 @@ public class TestGameLoop {
         assertEquals(GameMode.DATA_SELECT, gameLoop.getCurrentGameMode());
         assertEquals(1, nativeDelegate.initializeCalls);
         verify(fadeManager).startFadeFromBlack(any());
-        verify(levelManager, never()).loadZoneAndAct(anyInt(), anyInt());
+        verify(levelManager, never()).loadZoneAndActForFreshRuntime(anyInt(), anyInt());
     }
 
     @Test
@@ -1921,12 +1982,12 @@ public class TestGameLoop {
 
         assertEquals(GameMode.TITLE_SCREEN, gameLoop.getCurrentGameMode());
         assertNotNull(fadeCallback.get());
-        verify(levelManager, never()).loadZoneAndAct(anyInt(), anyInt());
+        verify(levelManager, never()).loadZoneAndActForFreshRuntime(anyInt(), anyInt());
 
         fadeCallback.get().run();
 
         assertEquals(GameMode.LEVEL, gameLoop.getCurrentGameMode());
-        verify(levelManager).loadZoneAndAct(0, 0);
+        verify(levelManager).loadZoneAndActForFreshRuntime(0, 0);
         verify(fadeManager).startFadeFromBlack(any());
     }
 
@@ -1961,7 +2022,7 @@ public class TestGameLoop {
         invokePrivateMethod(gameLoop, "exitTitleScreen");
 
         assertEquals(GameMode.LEVEL, gameLoop.getCurrentGameMode());
-        verify(levelManager).loadZoneAndAct(0, 0);
+        verify(levelManager).loadZoneAndActForFreshRuntime(0, 0);
         verify(fadeManager, never()).startFadeToBlack(any());
     }
 
@@ -2000,12 +2061,12 @@ public class TestGameLoop {
 
         assertEquals(GameMode.TITLE_SCREEN, gameLoop.getCurrentGameMode());
         assertNotNull(fadeCallback.get());
-        verify(levelManager, never()).loadZoneAndAct(anyInt(), anyInt());
+        verify(levelManager, never()).loadZoneAndActForFreshRuntime(anyInt(), anyInt());
 
         fadeCallback.get().run();
 
         assertEquals(GameMode.LEVEL, gameLoop.getCurrentGameMode());
-        verify(levelManager).loadZoneAndAct(0, 0);
+        verify(levelManager).loadZoneAndActForFreshRuntime(0, 0);
         verify(fadeManager).startFadeFromBlack(any());
     }
 
@@ -2051,13 +2112,13 @@ public class TestGameLoop {
 
         assertEquals(GameMode.TITLE_SCREEN, gameLoop.getCurrentGameMode());
         assertNotNull(fadeCallback.get());
-        verify(levelManager, never()).loadZoneAndAct(anyInt(), anyInt());
+        verify(levelManager, never()).loadZoneAndActForFreshRuntime(anyInt(), anyInt());
         assertEquals(0, nativeDelegate.initializeCalls);
 
         fadeCallback.get().run();
 
         assertEquals(GameMode.LEVEL, gameLoop.getCurrentGameMode());
-        verify(levelManager).loadZoneAndAct(0, 0);
+        verify(levelManager).loadZoneAndActForFreshRuntime(0, 0);
         verify(fadeManager).startFadeFromBlack(any());
     }
 
@@ -2105,7 +2166,7 @@ public class TestGameLoop {
         assertEquals(GameMode.DATA_SELECT, gameLoop.getCurrentGameMode());
         assertEquals(1, nativeDelegate.initializeCalls);
         verify(fadeManager).startFadeFromBlack(any());
-        verify(levelManager, never()).loadZoneAndAct(anyInt(), anyInt());
+        verify(levelManager, never()).loadZoneAndActForFreshRuntime(anyInt(), anyInt());
     }
 
     @Test
@@ -2241,7 +2302,7 @@ public class TestGameLoop {
         assertEquals(GameMode.DATA_SELECT, gameLoop.getCurrentGameMode());
         assertEquals(1, nativeDelegate.initializeCalls);
         verify(fadeManager).startFadeFromBlack(any());
-        verify(levelManager, never()).loadZoneAndAct(anyInt(), anyInt());
+        verify(levelManager, never()).loadZoneAndActForFreshRuntime(anyInt(), anyInt());
     }
 
     @Test
@@ -2268,7 +2329,7 @@ public class TestGameLoop {
         invokePrivateMethod(gameLoop, "doExitTitleScreen");
 
         assertEquals(GameMode.LEVEL, gameLoop.getCurrentGameMode());
-        verify(levelManager).loadZoneAndAct(0, 0);
+        verify(levelManager).loadZoneAndActForFreshRuntime(0, 0);
         assertTrue(dataSelect.isActive(), "Unknown title actions must fail closed instead of entering Data Select");
     }
 
@@ -2301,7 +2362,7 @@ public class TestGameLoop {
         titleScreen.triggerExitHandler();
 
         assertEquals(GameMode.LEVEL_SELECT, gameLoop.getCurrentGameMode());
-        verify(levelManager, never()).loadZoneAndAct(anyInt(), anyInt());
+        verify(levelManager, never()).loadZoneAndActForFreshRuntime(anyInt(), anyInt());
         verify(levelSelect).initializeFromTitleScreen();
         verify(levelSelect, never()).initialize();
         verify((FadeManager) getPrivateField(gameLoop, "fadeManager"), never()).startFadeToBlack(any());

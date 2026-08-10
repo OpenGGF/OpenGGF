@@ -97,7 +97,7 @@ public class Sonic1LavaBallMakerObjectInstance extends AbstractObjectInstance
     // ========================================================================
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // ObjPosLoad instantiates S1 placement objects after the exec loop, so the
         // constructor already mirrors LavaM_Main. The first update must therefore run

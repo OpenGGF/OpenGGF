@@ -11,27 +11,16 @@ namespace OpenGGF.BizHawk.Headless
     /// s1-complete-run-behavior.md section 7): 2-space indent, fixed key
     /// order, LF line endings, and a trailing newline after the closing
     /// brace. Differs from the standard recorder's
-    /// <see cref="S1TraceMetadataWriter"/> in the script version, the
-    /// 9-entry aux_schema_extras list, and the trailing source_bk2 key.
+    /// <see cref="S1TraceMetadataWriter"/> in the 9-entry
+    /// aux_schema_extras list and the trailing source_bk2 key.
     /// All start-captured values come from the segment's arm-frame RAM;
     /// zone/zone_id/act are the raw ROM values (SBZ3 is lz/1/4 and Final
     /// Zone is sbz/5/3 — fixture directory names were renamed by hand, not
     /// by the recorder). The recording date is the only nondeterministic
-    /// field; versus the 3.14-stamped fixtures the lua_script_version line
-    /// is additionally normalized (verified byte-compatible in spec
-    /// section 2).
+    /// field; current strict-v5 output emits no legacy version fields.
     /// </summary>
     public static class S1CompleteRunMetadataWriter
     {
-        /// <summary>
-        /// The version the current Lua stamps. The 3.14 -> 3.18
-        /// output-byte neutrality on
-        /// the stage-free level path was verified against the actual
-        /// version-bump commits (spec section 2): the only level-metadata
-        /// delta is this string.
-        /// </summary>
-        public const string LuaScriptVersion = "3.18";
-
         /// <summary>
         /// The unconditional aux_schema_extras line. The env-gated
         /// rng_call_per_frame entry (spec section 6.3) belongs to the
@@ -62,50 +51,9 @@ namespace OpenGGF.BizHawk.Headless
             int startY,
             uint rngSeed,
             string recordingDate,
-            string sourceBk2)
-        {
-            return Format(
-                zoneId,
-                actRaw,
-                bk2FrameOffset,
-                traceFrameCount,
-                startX,
-                startY,
-                rngSeed,
-                recordingDate,
-                sourceBk2,
-                LuaScriptVersion);
-        }
-
-        /// <summary>
-        /// Overload with an explicit lua_script_version stamp: the run
-        /// runner threads one session stamp through the level, ss and
-        /// manifest writers (level metadata inside a run is byte-identical
-        /// to the plain layout, spec s1-run-mode-behavior.md §7). All
-        /// production paths pass <see cref="LuaScriptVersion"/>; the
-        /// canonical fixtures carry older stamps ("3.14" complete-run,
-        /// "3.15" run/ss — see <see cref="S1RunManifestWriter"/> for the
-        /// provenance chain), which the ROM-backed differential gates
-        /// handle by substituting exactly that one pinned line in the
-        /// comparison, not by injecting a non-production stamp here.
-        /// </summary>
-        public static string Format(
-            int zoneId,
-            int actRaw,
-            int bk2FrameOffset,
-            int traceFrameCount,
-            int startX,
-            int startY,
-            uint rngSeed,
-            string recordingDate,
             string sourceBk2,
-            string luaScriptVersion,
             bool loadQueueState = false)
         {
-            if (luaScriptVersion == null)
-            {
-                throw new ArgumentNullException("luaScriptVersion");
-            }
             if (recordingDate == null)
             {
                 throw new ArgumentNullException("recordingDate");
@@ -147,17 +95,14 @@ namespace OpenGGF.BizHawk.Headless
                 .Append(Hex8(rngSeed)).Append("\",\n");
             json.Append("  \"recording_date\": \"")
                 .Append(recordingDate).Append("\",\n");
-            json.Append("  \"lua_script_version\": \"")
-                .Append(luaScriptVersion).Append("\",\n");
-            json.Append("  \"trace_schema\": ")
-                .Append(loadQueueState ? "5" : "4").Append(",\n");
-            json.Append("  \"csv_version\": 7,\n");
+            TraceContract.AppendNativeEnvelope(json);
             if (loadQueueState)
             {
                 json.Append(AuxSchemaExtrasLine.Substring(
                     0, AuxSchemaExtrasLine.Length - 3));
-                json.Append(", \"load_queue_state_per_frame\","
-                    + " \"dynamic_art_transfer_state_per_frame_v1\"],\n");
+                json.Append(", \"load_queue_state_per_frame\", \"")
+                    .Append(TraceContract.DynamicArtTransferStatePerFrame)
+                    .Append("\"],\n");
             }
             else
             {

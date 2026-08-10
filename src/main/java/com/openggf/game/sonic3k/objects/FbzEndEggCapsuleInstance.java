@@ -40,7 +40,7 @@ public final class FbzEndEggCapsuleInstance extends AbstractObjectInstance
         super(spawn, "FBZEndEggCapsule");
     }
 
-    @Override public void update(int frameCounter, PlayableEntity updatePlayer) {
+    @Override public void update(int vIntRunCount, PlayableEntity updatePlayer) {
         if (!initialized) {
             initialized = true;
             spawnButtonOnce();

@@ -151,6 +151,7 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
     private boolean destroyed;
     private ClamerSpringChild springChildSlot;
     private boolean waitingForOnscreen = true;
+    private boolean initialized;
 
     public ClamerObjectInstance(ObjectSpawn spawn) {
         super(spawn, "Clamer");
@@ -165,7 +166,7 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (destroyed) {
             return;
         }
@@ -178,8 +179,13 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
             waitingForOnscreen = false;
             return;
         }
+        if (!initialized) {
+            initialized = true;
+            ensureSpringChildSlot();
+            return;
+        }
         ensureSpringChildSlot();
-        lastObservedFrameCounter = frameCounter;
+        lastObservedFrameCounter = vIntRunCount;
 
         // ROM Clamer_Index dispatch (sonic3k.asm:185860).
         switch (routine) {
@@ -791,7 +797,7 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             if (deleteNextFrame) {
                 setDestroyed(true);
                 return;
@@ -922,9 +928,9 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
         updateIdle(primary);
     }
 
-    /** Test-only: bypass Obj_WaitOffscreen for unit fixtures without a camera. */
-    void testReleaseWaitOffscreen() {
+    /** Test-only: release Obj_WaitOffscreen, then run the production init dispatch. */
+    void testRunProductionInitializationAfterOffscreenWait() {
         waitingForOnscreen = false;
-        ensureSpringChildSlot();
+        update(0, null);
     }
 }

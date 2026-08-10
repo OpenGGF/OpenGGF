@@ -32,12 +32,12 @@ public class Sonic1ExplosionItemObjectInstance extends ExplosionObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (!spawnedChildren) {
             spawnedChildren = true;
             spawnChildren();
         }
-        super.update(frameCounter, player);
+        super.update(vIntRunCount, player);
     }
 
     private void spawnChildren() {

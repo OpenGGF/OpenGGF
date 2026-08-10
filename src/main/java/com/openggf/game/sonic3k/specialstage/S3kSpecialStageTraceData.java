@@ -44,10 +44,10 @@ public final class S3kSpecialStageTraceData {
         TraceMetadata metadata = TraceMetadata.load(metadataPath);
 
         String traceProfile = metadata.traceProfile();
-        if (!REQUIRED_TRACE_PROFILE.equals(traceProfile)) {
+        if (!"s3k".equals(metadata.game()) || !REQUIRED_TRACE_PROFILE.equals(traceProfile)) {
             throw new IllegalArgumentException(
-                "Expected trace_profile '" + REQUIRED_TRACE_PROFILE + "', got '"
-                    + traceProfile + "' in " + metadataPath);
+                "Expected s3k trace_profile '" + REQUIRED_TRACE_PROFILE + "', got game '"
+                    + metadata.game() + "' profile '" + traceProfile + "' in " + metadataPath);
         }
 
         Path physicsPath = TraceFiles.resolve(traceDirectory, "physics.csv");
@@ -97,13 +97,19 @@ public final class S3kSpecialStageTraceData {
     private static List<S3kSpecialStageTraceFrame> loadPhysicsCsv(Path csvPath) throws IOException {
         List<S3kSpecialStageTraceFrame> frames = new ArrayList<>();
         try (BufferedReader reader = TraceFiles.openReader(csvPath)) {
-            String line = reader.readLine(); // skip header
-            if (line == null) return frames;
+            boolean firstMeaningfulLine = true;
+            String line;
             while ((line = reader.readLine()) != null) {
                 String trimmed = line.trim();
-                if (!trimmed.isEmpty()) {
-                    frames.add(S3kSpecialStageTraceFrame.parseCsvRow(trimmed));
+                if (trimmed.isEmpty() || trimmed.startsWith("#")) {
+                    continue;
                 }
+                if (firstMeaningfulLine && TraceFiles.isCsvHeader(trimmed)) {
+                    firstMeaningfulLine = false;
+                    continue;
+                }
+                firstMeaningfulLine = false;
+                frames.add(S3kSpecialStageTraceFrame.parseCsvRow(trimmed));
             }
         }
         return frames;

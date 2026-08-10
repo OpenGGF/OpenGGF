@@ -224,8 +224,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         "\"event\":\"dynamic_art_transfer_state\""));
                 AssertContains(
                     result.Segments[0].MetadataJson,
-                    "\"dynamic_art_transfer_state_per_frame_v1\"");
-                AssertContains(result.RunManifestJson, "\"run_schema\": 2");
+                    "\"dynamic_art_transfer_state_per_frame\"");
+                AssertContains(result.RunManifestJson, "\"trace_schema\": 5");
                 AssertContains(
                     result.RunManifestJson,
                     "\"dynamic_art_gap_transitions\": [");
@@ -234,7 +234,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     S2SpecialStageMetadataWriter.Format(
                         0, 1, 1, "synthetic.bk2", "2026-07-30",
                         "audit-run", 1, true),
-                    "\"dynamic_art_transfer_state_per_frame_v1\"");
+                    "\"dynamic_art_transfer_state_per_frame\"");
             });
         }
 
@@ -626,8 +626,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// <summary>
         /// The 4b guard uses the injected capture-session movie length when
         /// it is shorter than the BK2's own row count (spec §2 caveat: the
-        /// canonical fixture's seg3 tail is not reproducible from the
-        /// file-derived length). Same schedule as the round trip's seg1,
+        /// historical seg3 tail cannot be inferred from the file-derived
+        /// length). Same schedule as the round trip's seg1,
         /// with the guard pulled in from F=28 to F=12.
         /// </summary>
         private static void HonorsEffectiveMovieLengthOverride()
@@ -856,7 +856,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     3, result.Segments[0].ManifestEntry.TraceFrameCount);
                 AssertEx.Equal(0, result.Transitions.Count);
                 AssertContains(result.RunManifestJson,
-                    "  \"transitions\": [\n  ]\n}\n");
+                    "  \"transitions\": [\n  ],\n"
+                    + "  \"dynamic_art_gap_transitions\": [\n  ]\n}\n");
             });
         }
 
@@ -898,6 +899,20 @@ namespace OpenGGF.BizHawk.Headless.Tests
         }
 
         /// <summary>
+        /// Drives one V-int input sample followed by one RunObjects return,
+        /// exactly as the SS interior does on a non-skipped frame, so the
+        /// run-mode capture sees a completed pass to publish.
+        /// </summary>
+        private static void RunObjectsPass(FakeRunHost host)
+        {
+            host.SetCpuRegister("M68K A0", 0xF608);
+            host.SetCpuRegister("M68K A7", 0x0100);
+            host.SetU32(0x0100, 0x0000088Eu);
+            host.FireExecuteCallback(0x1156);
+            host.FireExecuteCallback(0x52B2);
+        }
+
+        /// <summary>
         /// v9.13-s2 §11.3 SS aux surface, full-event pass: arm at F=3; ss
         /// entry at F=8 with populated SS parameter RAM (pre-trace snapshot
         /// sampled on the entry frame); row 0 at F=9 (control_state from
@@ -932,6 +947,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     {
                         h.Ram[0xDB23] = 1;              // SS started
                         h.Ram[0xDBA7] = 0x0A;           // trigger rings
+                        RunObjectsPass(h);
                     }
                     if (frame == 11)
                     {
@@ -941,6 +957,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     {
                         h.Ram[0xDB86] = 0x01;           // check rings flag
                         h.Ram[0xB000 + 2 * 0x40] = 0x6F; // SS results obj
+                        RunObjectsPass(h);              // terminal pass
                     }
                     if (frame == 13)
                     {
@@ -957,6 +974,46 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 RunSegmentOutput ss = result.Segments[1];
                 AssertEx.Equal("ss", ss.DirToken);
                 AssertEx.Equal(4, ss.ManifestEntry.TraceFrameCount);
+                // The run-mode ss stream now carries the standalone's
+                // run_objects_end pass records too; assert those separately
+                // (their 60-column state blob is covered by
+                // S2SpecialStageCaptureRunnerTests) and keep the exact
+                // equality on the state-sampled events.
+                var passLines = new List<string>();
+                var stateLines = new List<string>();
+                foreach (string line in ss.AuxStateJsonl.Split('\n'))
+                {
+                    if (line.Length == 0)
+                    {
+                        continue;
+                    }
+                    if (line.IndexOf(
+                        "\"type\":\"run_objects_end\"",
+                        StringComparison.Ordinal) >= 0)
+                    {
+                        passLines.Add(line);
+                    }
+                    else
+                    {
+                        stateLines.Add(line);
+                    }
+                }
+                AssertEx.Equal(2, passLines.Count);
+                // Published on the row whose frame completed the pass; the
+                // terminal pass follows the checkpoint edge on a lag row.
+                AssertContains(passLines[0], "{\"frame\":1,");
+                AssertContains(
+                    passLines[0], "\"pass_sequence\":0");
+                AssertContains(
+                    passLines[0], "\"input_sample_frame\":1");
+                AssertContains(
+                    passLines[0], "\"input_sample_bk2_frame\":10");
+                AssertContains(passLines[1], "{\"frame\":3,");
+                AssertContains(
+                    passLines[1], "\"pass_sequence\":1");
+                AssertContains(
+                    passLines[1], "\"completion_cursor_frame\":3");
+                AssertContains(passLines[1], "\"check_rings_flag\":1");
                 AssertEx.Equal(
                     "{\"frame\":-1,\"type\":\"state_snapshot\","
                     + "\"ring_requirement\":\"0x0032\","
@@ -978,7 +1035,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     + "\"check_rings_flag\":\"0x01\"}\n"
                     + "{\"frame\":3,\"type\":\"results_started\","
                     + "\"slot\":2}\n",
-                    ss.AuxStateJsonl);
+                    string.Join("\n", stateLines.ToArray()) + "\n");
             });
         }
 

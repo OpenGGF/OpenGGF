@@ -42,6 +42,13 @@ class TestS1GhzBossGraphRewind {
     private static final int APPROACH_TARGET_X = 0x2A00;
     private static final int DESCENT_TARGET_Y = 0x338;
 
+    /**
+     * Frames GBall_Vanish takes to turn the wrecking ball into an explosion after
+     * Eggman is defeated: BGHZ_BossGenericTimer is seeded with GBall_PosData's last
+     * chain entry $60 and the routine ends on the frame the decrement underflows.
+     */
+    private static final int VANISH_UPDATES = 0x61;
+
     private static final ObjectSpawn BOSS_SPAWN = new ObjectSpawn(
             0x0100,
             0x0100,
@@ -129,12 +136,26 @@ class TestS1GhzBossGraphRewind {
         spawnWreckingBallThroughBossUpdate(boss, player);
         GHZBossWreckingBall ball = only(objectManager, GHZBossWreckingBall.class);
 
-        // GHZBossWreckingBall self-destructs when its managed parent is defeated.
-        // ObjectManager then removes that dynamic child's identity in this same pass.
+        // GHZBossWreckingBall self-destructs once its managed parent is defeated,
+        // but not instantly: ROM GBall_Vanish seeds BGHZ_BossGenericTimer from
+        // GBall_PosData's last chain entry $60 and decrements it once per frame
+        // (subq.b #1,BGHZ_BossGenericTimer(a0) / bpl.s GBall_Display4 /
+        // move.b #id_Explosion,obID(a0) — docs/s1disasm/_incObj/"3D, 48 Boss -
+        // GHZ Main and Wrecking Ball.asm":487, 589-598), so the ball becomes an
+        // explosion on the frame the timer underflows: $60 + 1 = $61 updates.
+        // Drive whole V-int-consistent frames so AbstractBossChild.shouldUpdate
+        // sees the parent already updated at the same V_int_run_count.
+        int vIntRunCount = boss.getState().lastUpdatedVIntRunCount;
         boss.getState().defeated = true;
-        objectManager.update(0, player, List.of(), 0, false);
+        int defeatUpdates = 0;
+        while (!ball.isDestroyed() && defeatUpdates < 2 * VANISH_UPDATES) {
+            objectManager.update(++vIntRunCount, player, List.of(), 0, false);
+            defeatUpdates++;
+        }
 
         assertTrue(ball.isDestroyed(), "precondition: the managed child must self-destruct during parent update");
+        assertEquals(VANISH_UPDATES, defeatUpdates,
+                "GBall_Vanish must count BGHZ_BossGenericTimer down from $60 before the ball becomes an explosion");
         assertFalse(objectManager.getActiveObjects().contains(ball),
                 "the same object pass must remove the destroyed child's managed identity");
         assertFalse(childComponents(boss).contains(ball),
@@ -188,7 +209,7 @@ class TestS1GhzBossGraphRewind {
         boss.getState().y = DESCENT_TARGET_Y;
         boss.getState().xVel = 0;
         boss.getState().yVel = 0;
-        boss.update(boss.getState().lastUpdatedFrame + 1, player);
+        boss.update(boss.getState().lastUpdatedVIntRunCount + 1, player);
     }
 
     private static ObjectInstance genericRecreate(ObjectManager objectManager) {

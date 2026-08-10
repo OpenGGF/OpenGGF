@@ -101,4 +101,4 @@
 {"event":"hardware_work_completed","raw_frame":39367,"boundary":"pre_main_loop","kind":"kos_decompression_queue","ordinal":194,"submission_fingerprint":"sha256:051ccbc91b9dc84f8f139e5cf45adfc5489226d791bdaa542d65d8d338307bb0"}
 {"event":"hardware_work_completed","raw_frame":39371,"boundary":"pre_main_loop","kind":"kos_decompression_queue","ordinal":195,"submission_fingerprint":"sha256:a21211b7c4a305f7e9784974706a34d169eeb78601974860ed6a4b8d2eee73f9"}
 {"event":"hardware_work_completed","raw_frame":39374,"boundary":"pre_main_loop","kind":"kos_decompression_queue","ordinal":196,"submission_fingerprint":"sha256:555b3799e0ac6348265737a808bc435817aa033430c53a9118608be66b0e0089"}
-{"event":"hardware_work_completed","raw_frame":39375,"boundary":"vint_service","kind":"kos_module_queue","ordinal":125,"submission_fingerprint":"sha256:b5567e4f10bffc7360e18d2ca0706b93d6dd0f7a579323cd844299d9bf7dfc24"}
+{"event":"hardware_work_completed","raw_frame":39375,"boundary":"post_objects","kind":"kos_module_queue","ordinal":125,"submission_fingerprint":"sha256:b5567e4f10bffc7360e18d2ca0706b93d6dd0f7a579323cd844299d9bf7dfc24"}

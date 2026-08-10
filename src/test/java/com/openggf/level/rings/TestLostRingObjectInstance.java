@@ -107,6 +107,46 @@ class TestLostRingObjectInstance {
     }
 
     @Test
+    void lostRingBoundaryCheckCadenceUsesTypedGameRule() {
+        assertFalse(GameRules.SONIC_1.ring().lostRingBoundaryChecksOnlyOnProbeCadence());
+        assertFalse(GameRules.SONIC_2.ring().lostRingBoundaryChecksOnlyOnProbeCadence());
+        assertTrue(GameRules.SONIC_3K.ring().lostRingBoundaryChecksOnlyOnProbeCadence());
+
+        SpillAnimationState expired = new SpillAnimationState();
+        BoundaryCadenceRing s3kRising = new BoundaryCadenceRing(
+                0x100, 0x100, -0x0400, 0, true, expired);
+
+        s3kRising.update(0, null);
+
+        assertFalse(s3kRising.isDestroyed(),
+                "S3K Obj_Bouncing_Ring branches around the counter check while rising");
+
+        BoundaryCadenceRing s3kFallingOffCadence = new BoundaryCadenceRing(
+                0x100, 0x100, 0x0400, 1, true, expired);
+        s3kFallingOffCadence.update(0, null);
+        assertFalse(s3kFallingOffCadence.isDestroyed(),
+                "S3K Obj_Bouncing_Ring branches around the counter check off cadence");
+
+        BoundaryCadenceRing s3kFallingOnCadence = new BoundaryCadenceRing(
+                0x100, 0x100, 0x0400, 0, true, expired);
+        s3kFallingOnCadence.update(0, null);
+        assertTrue(s3kFallingOnCadence.isDestroyed(),
+                "S3K expires the ring once its cadence reaches the boundary check");
+
+        BoundaryCadenceRing s1S2Rising = new BoundaryCadenceRing(
+                0x100, 0x100, -0x0400, 0, false, expired);
+        s1S2Rising.update(0, null);
+        assertTrue(s1S2Rising.isDestroyed(),
+                "S1/S2 rising branches still reach their boundary checks");
+
+        BoundaryCadenceRing s1S2FallingOffCadence = new BoundaryCadenceRing(
+                0x100, 0x100, 0x0400, 1, false, expired);
+        s1S2FallingOffCadence.update(0, null);
+        assertTrue(s1S2FallingOffCadence.isDestroyed(),
+                "S1/S2 off-cadence branches still reach their boundary checks");
+    }
+
+    @Test
     void floorCheckCadenceReadsGameRulesMaskS1EveryFourFramesS2EveryEight() {
         // ROM: per-game floor-check cadence (relocated from RingManager.LostRingPool.updatePhysics,
         // RingManager.java:1242-1248). S1 probes every 4 frames (andi.b #3), S2/S3K every 8 (andi.b #7).
@@ -181,6 +221,7 @@ class TestLostRingObjectInstance {
                 GameRules.SONIC_2.ring().lostRingRenderVerticalMargin());
 
         ring.update(0, null);
+        ring.refreshPostCameraRenderState();
 
         assertEquals(1, ring.floorProbeCount,
                 "Obj37_Init starts render_flags at $84, so the first cadence hit may probe");
@@ -204,6 +245,7 @@ class TestLostRingObjectInstance {
                 GameRules.SONIC_3K.ring().lostRingRenderVerticalMargin());
 
         ring.update(0, null);
+        ring.refreshPostCameraRenderState();
 
         assertEquals(1, ring.floorProbeCount,
                 "Obj37_Init starts with render_flags=$84, so the first cadence hit may probe");
@@ -376,6 +418,33 @@ class TestLostRingObjectInstance {
         protected int ringCheckCeilingDist(int x, int y) {
             ceilingProbeCount++;
             return 0;
+        }
+    }
+
+    private static final class BoundaryCadenceRing extends LostRingObjectInstance {
+        private final boolean cadenceOnly;
+
+        private BoundaryCadenceRing(int xPixel, int yPixel, int yVel, int phase,
+                                    boolean cadenceOnly, SpillAnimationState spillAnimation) {
+            super(new ObjectSpawn(xPixel & 0xFFFF, yPixel & 0xFFFF, 0x37, 0, 0, false, 0));
+            initFixedPointForTest(xPixel, yPixel, 0, yVel, phase, 0xFF);
+            this.cadenceOnly = cadenceOnly;
+            setSpillAnimation(spillAnimation);
+        }
+
+        @Override
+        protected int resolveFloorCheckMask() {
+            return 7;
+        }
+
+        @Override
+        protected int resolveVblaCounter() {
+            return 0;
+        }
+
+        @Override
+        protected boolean lostRingBoundaryChecksOnlyOnProbeCadence() {
+            return cadenceOnly;
         }
     }
 

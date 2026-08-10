@@ -40,7 +40,7 @@ public final class FbzMagneticPendulumObjectInstance extends AbstractObjectInsta
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity ignored) {
+    public void update(int vIntRunCount, PlayableEntity ignored) {
         loadRespawnOrientationOnce();
         if (!graphAllocationAttempted) {
             graphAllocationAttempted = true;

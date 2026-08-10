@@ -62,7 +62,7 @@ public final class TechnoSqueekBadnikInstance extends AbstractS3kBadnikInstance
         return new TechnoSqueekBadnikInstance(spawn, true, launchLeft);
     }
 
-    @Override protected void updateMovement(int frameCounter, PlayableEntity player) {
+    @Override protected void updateMovement(int vIntRunCount, PlayableEntity player) {
         if (state == State.WAIT_OFFSCREEN) {
             if (isWithinRenderSpriteBounds(0x20, 0x20)) state = State.INIT;
             else finishCoarseCull();

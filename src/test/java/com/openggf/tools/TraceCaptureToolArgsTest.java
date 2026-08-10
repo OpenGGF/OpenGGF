@@ -65,11 +65,11 @@ class TraceCaptureToolArgsTest {
     @Test
     void multiSegmentRunIsRejectedAsNotCapturable() {
         TraceRunManifest manifest = new TraceRunManifest(
-                TraceRunManifest.SUPPORTED_RUN_SCHEMA, "s3k", "run_aiz_gumball",
-                "shared.bk2", null, null, List.of(), List.of());
+                "s3k", "run_aiz_gumball", "shared.bk2", null,
+                List.of(), List.of());
         assertEquals(TraceRunManifest.ExpectedMovieEndMode.UNSPECIFIED,
                 manifest.expectedMovieEndMode(),
-                "legacy constructor must leave terminal mode unspecified");
+                "convenience constructor must leave terminal mode unspecified");
         TraceEntry run = new TraceEntry(
                 Path.of("traces", "s3k", "runs", "run_aiz_gumball"),
                 "s3k", 0, 0, 6, 500, 0, null, null, null,

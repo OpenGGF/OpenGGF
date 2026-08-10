@@ -40,7 +40,7 @@ public final class HczHarmfulExplosionObjectInstance extends AbstractObjectInsta
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         // The setup dispatch publishes mapping frame 0 and falls through to
         // Draw_And_Touch_Sprite; animation begins on the next SST dispatch.
         if (!initialized) {

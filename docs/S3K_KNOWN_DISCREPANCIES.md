@@ -1305,3 +1305,48 @@ rather than a mutable VRAM window, the P1/P2 `Map_Bubbler`/`Map_Bubbler2` split
 collapses to a single shared sheet with no visible difference. Emulating the DMA
 would mean modelling `ArtTile_DashDust` as mutable VRAM shared with the dash
 dust, which buys nothing the tile rebase doesn't already give us.
+
+## AIZ2 mid-level enemy-art admission (RESOLVED 2026-08-10)
+
+**Status:** RESOLVED. This entry is retained because its original text stated a ROM claim
+that was WRONG, and the correction matters more than the entry did.
+
+### What this entry originally claimed, and why it was wrong
+
+It said the recorded ROM had the direct decompression queue already working on a module
+inside `ArtKosM_AIZ_Bloominator` (0x367DCA) on the admission frame, implying an older
+parent owned that iteration's module step and that the engine failed to model parent
+ownership across a mid-level admission.
+
+**None of that is in the fixtures.** Decoding the recorded `load_queue_state` rows
+directly gives `active_source = 0x36800E` on both admission frames (5542 in
+`aiz1_to_hcz_fullrun`, 6345 in `aiz_completerun`). That is `ArtKosM_AIZ_MonkeyDude + 2`
+— module 0 of the FIRST `PLCKosM_AIZ` entry, in plain PLC order
+(`skdisasm/sonic3k.asm:64349-64351`). The module FIFO was **empty** when `LoadEnemyArt`
+ran; there was no older parent. Bloominator's module 0 is 0x367DCC and it is published
+four rows LATER (5546 / 6349), after MonkeyDude retires. The value 0x367DCE appears
+nowhere in either fixture.
+
+### The actual defect, now fixed
+
+The module queue's held-loop-tail deferral was suppressing the **submission** of a head
+archive's first module, not merely its readiness. Instrumented at the admission row: the
+AIZ2 `LoadEnemyArt` batch is submitted correctly during the event pass (3 parents,
+capacity available), then the same row's POST_OBJECTS step ran with the held-tail flag
+set, took the `activeChild == null && deferFirstChild` early return, and published
+nothing. The next POST_OBJECTS — the held-tail closure — submitted 0x36800E. So the child
+arrived one loop late and the row's snapshot showed an idle direct FIFO.
+
+That deferral has no ROM basis for a level-loop producer. The two producers that set the
+flag are now split: the generic held-loop-tail arm defers only readiness and visibility,
+as its own documentation always said it should, while the locked title-card owner — whose
+`LoadEnemyArt` genuinely runs after that iteration's module step — declares its late
+ordering explicitly. The fix removes a suppression rather than adding a compensator, so
+it holds for any recording.
+
+### Residual, still open
+
+`AIZ2_WAIT_FIRE_REDRAW_FRAMES = 38` and `AIZ2_FIRE_REDRAW_FRAMES = 8` remain documented
+in-code as coming from a fixture regen, i.e. fixture-measured rather than ROM-derived.
+That is a hard rule 3 exposure inherited with the branch and is what makes the admission
+frame fixture-relative in the first place.

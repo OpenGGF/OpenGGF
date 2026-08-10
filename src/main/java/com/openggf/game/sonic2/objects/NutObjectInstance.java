@@ -262,7 +262,7 @@ public class NutObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         List<PlayableEntity> participants = interactionParticipants(playerEntity);
         bindNativeOwners(participants);
         // Latch per-player standing detected during this frame's collision pass.

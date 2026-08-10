@@ -250,6 +250,31 @@ public final class ConfigCatalog {
                 "Capture audio codec: flac, aac or mp3. WARNING: aac and mp3 are"
                         + " LOSSY - the recorded audio will not match what the"
                         + " engine produced. flac is lossless and is the default"));
+        put(CAPTURE_QUEUE_BUDGET_MB, of("capture", "queueBudgetMb", INT,
+                "Memory budget in MB for the live-recording encoder queue. The"
+                        + " queue is sized in whole frames from this budget and"
+                        + " the recording viewport, so it holds fewer frames at"
+                        + " larger window sizes. A deeper queue absorbs longer"
+                        + " encoder stalls -- lossless FFV1 falls behind on"
+                        + " high-motion content such as fast-forwarded trace"
+                        + " playback -- before backpressure stalls the game loop"));
+        put(CAPTURE_ENCODER_THREADS, of("capture", "encoderThreads", INT,
+                "ffmpeg thread count for the encode pass. 0 lets ffmpeg choose,"
+                        + " normally one thread per core. FFV1 is additionally"
+                        + " sliced so threads can be used at all; x264/x265"
+                        + " already thread internally, so raising this rarely"
+                        + " helps them -- use encoderPreset instead"));
+        put(CAPTURE_ENCODER_PRESET, of("capture", "encoderPreset", STRING,
+                "x264/x265 speed preset: ultrafast, superfast, veryfast, faster,"
+                        + " fast, medium, slow, slower, veryslow or placebo."
+                        + " Blank uses the encoder's own default (medium)."
+                        + " Ignored by FFV1, which has no preset. Presets trade"
+                        + " encode speed for file size and never affect"
+                        + " losslessness. Defaults to fast: libx265 at medium"
+                        + " keeps up with ordinary play but not with"
+                        + " high-motion content such as fast-forwarded trace"
+                        + " playback, where each recorded frame is several"
+                        + " gameplay frames from the last"));
         put(CAPTURE_CONTAINER, of("capture", "container", STRING,
                 "Recording file extension, e.g. mkv or mp4. ffmpeg picks its"
                         + " muxer from this. Recent ffmpeg will write every codec"

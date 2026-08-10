@@ -25,9 +25,9 @@ public final class FbzDisappearingPlatformObjectInstance
     offset = ((mask + 1) >>> 4) * ((s.subtype() >>> 4) & 0xF);
     animation = s.subtype() & 3;
   }
-  public void update(int counter, PlayableEntity p) {
+  public void update(int vIntRunCount, PlayableEntity p) {
     if (state == 0) {
-      if (((counter + offset) & mask) != 0) {
+      if (((vIntRunCount + offset) & mask) != 0) {
         coarseCull(spawn.x());
         return;
       }

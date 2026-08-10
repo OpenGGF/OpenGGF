@@ -185,7 +185,7 @@ public class Sonic2CPZBossInstance extends AbstractBossInstance
     }
 
     @Override
-    protected void updateBossLogic(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateBossLogic(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         lookAtPlayer(player);
 
@@ -194,7 +194,7 @@ public class Sonic2CPZBossInstance extends AbstractBossInstance
             case MAIN_MOVE_TOWARD_TARGET -> updateMainMoveTowardTarget();
             case MAIN_WAIT -> updateMainWait();
             case MAIN_FOLLOW_PLAYER -> updateMainFollowPlayer(player);
-            case MAIN_EXPLODE -> updateMainExplode(frameCounter);
+            case MAIN_EXPLODE -> updateMainExplode(vIntRunCount);
             case MAIN_STOP_EXPLODING -> updateMainStopExploding();
             case MAIN_RETREAT -> updateMainRetreat();
         }
@@ -262,10 +262,10 @@ public class Sonic2CPZBossInstance extends AbstractBossInstance
         updateMainPositionAndHover();
     }
 
-    private void updateMainExplode(int frameCounter) {
+    private void updateMainExplode(int vIntRunCount) {
         defeatTimer--;
         if (defeatTimer >= 0) {
-            if ((frameCounter & EXPLOSION_INTERVAL - 1) == 0) {
+            if ((vIntRunCount & EXPLOSION_INTERVAL - 1) == 0) {
                 spawnDefeatExplosion();
             }
         } else {

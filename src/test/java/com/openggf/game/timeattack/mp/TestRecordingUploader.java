@@ -1,9 +1,8 @@
 package com.openggf.game.timeattack.mp;
 
-import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.Test;
 
-import java.net.InetSocketAddress;
+import java.net.http.HttpRequest;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -19,19 +18,17 @@ class TestRecordingUploader {
     void putsBodyWithBearerToken() throws Exception {
         AtomicReference<String> auth = new AtomicReference<>();
         AtomicReference<byte[]> body = new AtomicReference<>();
-        HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
-        server.createContext("/recordings/", exchange -> {
-            auth.set(exchange.getRequestHeaders().getFirst("Authorization"));
-            body.set(exchange.getRequestBody().readAllBytes());
-            exchange.sendResponseHeaders(204, -1);
-            exchange.close();
-        });
-        server.start();
-        try (RecordingUploader uploader = new RecordingUploader("tok123", true)) {
+        RecordingUploader.UploadTransport transport = (request, requestBody) -> {
+            auth.set(request.headers().firstValue("Authorization").orElse(null));
+            body.set(requestBody.clone());
+            assertEquals(HttpRequest.BodyPublishers.ofByteArray(requestBody).contentLength(),
+                    request.bodyPublisher().orElseThrow().contentLength());
+            return 204;
+        };
+        try (RecordingUploader uploader = new RecordingUploader("tok123", transport)) {
             CountDownLatch done = new CountDownLatch(1);
             boolean[] ok = new boolean[1];
-            uploader.upload("http://127.0.0.1:" + server.getAddress().getPort()
-                            + "/recordings/aa", new byte[]{1, 2, 3}, result -> {
+            uploader.upload("https://m.example/recordings/aa", new byte[]{1, 2, 3}, result -> {
                         ok[0] = result;
                         done.countDown();
                     });
@@ -39,8 +36,6 @@ class TestRecordingUploader {
             assertTrue(ok[0]);
             assertEquals("Bearer tok123", auth.get());
             assertArrayEquals(new byte[]{1, 2, 3}, body.get());
-        } finally {
-            server.stop(0);
         }
     }
 

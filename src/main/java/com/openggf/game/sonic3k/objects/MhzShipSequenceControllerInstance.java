@@ -67,14 +67,14 @@ public class MhzShipSequenceControllerInstance extends AbstractObjectInstance im
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         frameCounterByte = (frameCounterByte + 1) & 0xFF;
         motionAccumulator += MOTION_ACCELERATION;
         S3kRuntimeStates.currentMhz(services().zoneRuntimeRegistry()).ifPresent(state -> {
             int swingOffsetPixels = updateSwingOffset(state.isShipControllerSignalFlagSet());
             state.applyShipControllerFrame(motionAccumulator, swingOffsetPixels);
         });
-        if (((frameCounter - 1) & 0x0F) == 0) {
+        if (((vIntRunCount - 1) & 0x0F) == 0) {
             services().playSfx(Sonic3kSfx.LARGE_SHIP.id);
         }
     }

@@ -4,9 +4,13 @@ import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
+import com.openggf.game.RuntimeArtAdmissionOwnerKind;
 import com.openggf.game.sonic3k.Sonic3k;
 import com.openggf.game.sonic3k.Sonic3kLevel;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
+import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
+import com.openggf.game.rewind.snapshot.PlcProgressSnapshot;
+import com.openggf.game.rewind.schema.ZoneEventSchemaSidecar;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.events.Sonic3kICZEvents;
 import com.openggf.game.sonic3k.resources.S3kKosRamDestinations;
@@ -204,6 +208,19 @@ class TestS3kIczAct1TransitionHeadless {
                 "the seamless reload must transfer queue ownership to the new ICZ2 event owner");
         Sonic3kLevel icz2Level =
                 (Sonic3kLevel) GameServices.level().getCurrentLevel();
+        Sonic3kObjectArtProvider artProvider =
+                (Sonic3kObjectArtProvider) GameServices.module()
+                        .getObjectArtProvider();
+        PlcProgressSnapshot heldAdmission = artProvider.capture();
+        assertEquals(RuntimeArtAdmissionOwnerKind.RESOURCE_HANDOFF_OWNER,
+                heldAdmission.runtimeArtAdmissionOwnerKind());
+        assertTrue(heldAdmission.runtimeArtAdmissionBound());
+        assertFalse(heldAdmission.runtimeArtAdmissionConsumed());
+        assertFalse(heldAdmission.kosSubmissionArmed());
+        assertEquals(List.of(), heldAdmission.pendingKosOrdinals());
+        assertEquals(List.of(),
+                heldAdmission.pendingKosModules(),
+                "the resource-owner transition must not speculatively admit ICZ enemy art");
         var beforePost = GameServices.hardwareTiming().capture().jobs();
         assertTrue(beforePost.stream()
                         .filter(job -> job.kind() == HardwareWorkKind.KOS_DECOMPRESSION_QUEUE)
@@ -232,9 +249,7 @@ class TestS3kIczAct1TransitionHeadless {
         int moduleFrames = 0;
         do {
             service(HardwareServiceBoundary.POST_OBJECTS);
-            parent = GameServices.hardwareTiming().capture().jobs().stream()
-                    .filter(job -> job.kind() == HardwareWorkKind.KOS_MODULE_QUEUE)
-                    .findFirst().orElseThrow();
+            parent = kosModuleParent();
             assertFalse(parent.claimed(),
                     "POST module work remains invisible to the gameplay consumer in the same frame");
             assert2dArrayEquals(
@@ -251,6 +266,11 @@ class TestS3kIczAct1TransitionHeadless {
                             icz2Level, patternStart, patternCount),
                     "POST must not publish any pattern prefix before the owning scan");
             if (!parent.ready()) {
+                // Process_Kos_Module_Queue (docs/skdisasm/sonic3k.asm:2750-2752) runs
+                // from LevelLoop's tail (7908), reached at the frame top ahead of
+                // Process_Kos_Queue (7887), so the parent can retire across this
+                // boundary. Re-read it: the object pass that follows a retirement is
+                // the owning publication scan, not an intermediate one.
                 service(HardwareServiceBoundary.PRE_MAIN_LOOP);
                 assert2dArrayEquals(
                         blocksBeforePublication,
@@ -267,6 +287,10 @@ class TestS3kIczAct1TransitionHeadless {
                         snapshotPatternRange(
                                 icz2Level, patternStart, patternCount),
                         "PRE must preserve every deferred pattern byte");
+                parent = kosModuleParent();
+                if (parent.ready()) {
+                    break;
+                }
                 manager.update();
                 assert2dArrayEquals(
                         blocksBeforePublication,
@@ -309,6 +333,30 @@ class TestS3kIczAct1TransitionHeadless {
                 expectedPublishedPatterns,
                 snapshotPatternRange(icz2Level, patternStart, patternCount),
                 "the publication scan must expose every claimed pattern byte");
+        PlcProgressSnapshot admitted = artProvider.capture();
+        assertTrue(admitted.runtimeArtAdmissionConsumed(),
+                "successful terrain and art publication consumes the exact lease last");
+        assertTrue(admitted.kosSubmissionArmed());
+        assertEquals(List.of(), admitted.pendingKosOrdinals(),
+                "lease consumption arms the resource owner without fabricating enemy work");
+        artProvider.processRuntimeArtQueue();
+        assertEquals(List.of(), artProvider.capture().pendingKosOrdinals(),
+                "the following provider pump must not submit speculative enemy work");
+        byte[] publishedOwnerState =
+                ZoneEventSchemaSidecar.capture(icz2Events);
+        var providerAfterPublication = artProvider.capture();
+        int jobsAfterPublication =
+                GameServices.hardwareTiming().capture().jobs().size();
+        Sonic3kICZEvents restoredPublishedOwner = new Sonic3kICZEvents();
+        restoredPublishedOwner.init(1);
+        ZoneEventSchemaSidecar.restore(
+                restoredPublishedOwner, publishedOwnerState);
+        restoredPublishedOwner.update(1, 2);
+        assertEquals(providerAfterPublication, artProvider.capture(),
+                "restoring after successful publication cannot consume or submit twice");
+        assertEquals(jobsAfterPublication,
+                GameServices.hardwareTiming().capture().jobs().size(),
+                "restoring the successful fence cannot duplicate queue work");
         int[][] chunksAfterPublication =
                 snapshotChunkRange(icz2Level, chunkStart, chunkCount);
         manager.update();
@@ -352,10 +400,14 @@ class TestS3kIczAct1TransitionHeadless {
                 "a later ordinary ICZ2 load must synchronously load its KosM art");
     }
 
+    private static HardwareTimingJob.Snapshot kosModuleParent() {
+        return GameServices.hardwareTiming().capture().jobs().stream()
+                .filter(job -> job.kind() == HardwareWorkKind.KOS_MODULE_QUEUE)
+                .findFirst().orElseThrow();
+    }
+
     private static void service(HardwareServiceBoundary boundary) {
-        GameServices.hardwareTiming().service(boundary);
-        S3kRuntimeArtCoordinator.current().directQueue().afterTimingService(boundary);
-        S3kRuntimeArtCoordinator.current().moduleQueue().afterTimingService(boundary);
+        HardwareBoundaryPump.service(boundary);
     }
 
     private static int[][] applyBlockPayload(

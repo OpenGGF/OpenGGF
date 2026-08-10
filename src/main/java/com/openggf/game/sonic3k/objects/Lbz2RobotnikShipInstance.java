@@ -146,13 +146,13 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         registerLaunchAnchor();
         applyLaunchRiderDelta();
         AbstractPlayableSprite player = playerEntity instanceof AbstractPlayableSprite sprite ? sprite : carriedPlayer;
         boolean wasCarryingPlayer = carryingPlayer;
         switch (phase) {
-            case WAIT -> updateWait(player, frameCounter);
+            case WAIT -> updateWait(player, vIntRunCount);
             case RISE -> updateRise();
             case RIDE_INITIAL -> updateTimedRide(Phase.PAUSE_BEFORE_RESUME);
             case PAUSE_BEFORE_RESUME -> updatePause(Phase.RIDE_TO_KNUCKLES);
@@ -161,7 +161,7 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
             case THUMP -> updateThump();
             case POST_THUMP_PAUSE -> updatePause(Phase.LAUNCH_RUMBLE);
             case LAUNCH_RUMBLE -> updateLaunchRumble();
-            case RIDE_TO_RELEASE -> updateRideToRelease(frameCounter);
+            case RIDE_TO_RELEASE -> updateRideToRelease(vIntRunCount);
             case FLY_AWAY -> updateFlyAway();
         }
         if (wasCarryingPlayer && carryingPlayer && carriedPlayer != null) {
@@ -205,7 +205,7 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
         return List.copyOf(spawnedChildren);
     }
 
-    private void updateWait(AbstractPlayableSprite player, int frameCounter) {
+    private void updateWait(AbstractPlayableSprite player, int vIntRunCount) {
         int touchValue = collisionProperty;
         collisionProperty = 0;
         if (touchValue == 0 || touchValue == 2
@@ -319,7 +319,7 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
     }
 
     /** ROM loc_8D47C. */
-    private void updateRideToRelease(int frameCounter) {
+    private void updateRideToRelease(int vIntRunCount) {
         swing();
         move();
         if (unsigned(x) >= RELEASE_X) {
@@ -328,7 +328,7 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
             if (carriedPlayer != null) {
                 pinPlayer(carriedPlayer);
             }
-            releasePlayer(frameCounter);
+            releasePlayer(vIntRunCount);
             phase = Phase.FLY_AWAY;
         }
     }
@@ -383,7 +383,7 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
         player.setObjectMappingFrameControl(true);
     }
 
-    private void releasePlayer(int frameCounter) {
+    private void releasePlayer(int vIntRunCount) {
         if (!carryingPlayer || carriedPlayer == null) {
             return;
         }
@@ -394,7 +394,7 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
         if (services().gameState() != null) {
             services().gameState().setScreenShakeActive(false);
         }
-        player.releaseFromObjectControl(frameCounter);
+        player.releaseFromObjectControl(vIntRunCount);
         player.setObjectMappingFrameControl(false);
         player.setAir(true);
         player.setJumping(false);
@@ -512,9 +512,39 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
 
     private void spawnFinalBoss() {
         finalBossSpawned = true;
+        releaseExhaustFlameForBossSpawn();
         LbzFinalBoss1Instance boss = spawnFreeChild(() -> new LbzFinalBoss1Instance(
                 new ObjectSpawn(FINAL_BOSS_X, FINAL_BOSS_Y, OBJ_LBZ_FINAL_BOSS_1, 0, 0, false, FINAL_BOSS_Y)));
+        // The ROM's AllocateObject writes the boss into the free slot while this
+        // ship still occupies its own SST entry. Obj_LBZFinalBoss1 then runs its
+        // init routine on the next Process_Sprites pass, while the ship remains
+        // in the immediately preceding slot; initialize the graph at that same
+        // allocation boundary so FindNextFreeObj sees the native occupancy.
+        if (services().objectManager() != null) {
+            boss.initializeOnAllocationBeforeParentRelease();
+        }
         spawnedChildren.add(boss);
+    }
+
+    /**
+     * ROM Obj_LBZ2RobotnikShip removes its flame before Obj_LBZFinalBoss1 builds
+     * the child graph (docs/skdisasm/sonic3k.asm:152024-152044). The ship still
+     * occupies its own SST slot at that boundary, so the graph must see the
+     * released flame slot while retaining the ship slot for FindFreeObj.
+     */
+    private void releaseExhaustFlameForBossSpawn() {
+        ObjectManager manager = services().objectManager();
+        if (manager == null) {
+            return;
+        }
+        for (int index = 0; index < spawnedChildren.size(); index++) {
+            AbstractObjectInstance child = spawnedChildren.get(index);
+            if (child instanceof ExhaustFlameChild && !child.isDestroyed()) {
+                manager.removeDynamicObject(child);
+                spawnedChildren.remove(index);
+                return;
+            }
+        }
     }
 
     private java.util.Optional<LbzZoneRuntimeState> runtimeState() {
@@ -547,7 +577,7 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             if (parent.isDestroyed()) {
                 ObjectLifetimeOps.expireDynamic(this);
                 return;
@@ -599,12 +629,12 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             if (parent.isDestroyed()) {
                 ObjectLifetimeOps.expireDynamic(this);
                 return;
             }
-            visibleThisFrame = (frameCounter & 1) == 0;
+            visibleThisFrame = (vIntRunCount & 1) == 0;
             updateDynamicSpawn(getCentreX(), getCentreY());
         }
 

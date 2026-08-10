@@ -39,7 +39,25 @@ class TestHardwareTimingAuthorityGuard {
     private static final Pattern REPLAY_PORT_REFERENCE = Pattern.compile(
             "\\bHardwareTimingReplayPort\\b");
     private static final Pattern REPLAY_PORT_APPLY = Pattern.compile(
-            "(?:\\b[A-Za-z_$][A-Za-z0-9_$]*|\\))\\s*\\.\\s*apply\\s*\\(");
+            "(?:\\b[A-Za-z_$][A-Za-z0-9_$]*|\\))\\s*\\.\\s*"
+                    + "(?:apply|applySuppressedRowCompletion)\\s*\\(");
+    private static final Pattern SUPPRESSED_AUTHORITY_ADMISSION = Pattern.compile(
+            "(?:\\b[A-Za-z_$][A-Za-z0-9_$]*|\\))\\s*\\.\\s*"
+                    + "admitRecordedSuppressedRowCompletion\\s*\\(");
+    private static final Pattern SUPPRESSED_OBSERVER_APPLY = Pattern.compile(
+            "(?:\\b[A-Za-z_$][A-Za-z0-9_$]*|\\))\\s*\\.\\s*"
+                    + "applySuppressedRowCompletion\\s*\\(");
+    private static final Pattern RECORDED_EDGE_LOOKAHEAD = Pattern.compile(
+            "hasPendingCompletionAtCurrentRawFrame\\s*\\(");
+    /**
+     * The replay-only held-tail marker may gate a local delay, but it must
+     * never be handed to another production collaborator as an argument: that
+     * lets recorded timing select what a production owner does, not merely
+     * when engine-created work becomes ready.
+     */
+    private static final Pattern REPLAY_HELD_TAIL_SIGNAL_ARGUMENT = Pattern.compile(
+            "(?<!\\w)(?!if|while|switch|return|assert)[A-Za-z_$][\\w$]*\\s*\\("
+                    + "[^()]*\\.\\s*defersLoopTailPreparation\\s*\\(\\s*\\)");
     private static final Pattern IMPORT_DECLARATION = Pattern.compile(
             "(?m)^import\\s+(?:static\\s+)?([\\w.]+)(?:\\.\\*)?\\s*;");
     private static final Pattern HARDWARE_TIMING_FILE_LITERAL = Pattern.compile(
@@ -121,6 +139,51 @@ class TestHardwareTimingAuthorityGuard {
                     .toList();
             assertEquals(List.of(), violations,
                     "measurement tooling leaked into runtime/replay authority");
+        }
+    }
+
+    @Test
+    void recordedEdgesCannotSelectProductionServiceBoundaries() throws IOException {
+        try (Stream<Path> sources = Files.walk(SRC_MAIN)) {
+            List<String> violations = sources
+                    .filter(path -> path.toString().endsWith(".java"))
+                    .filter(path -> {
+                        try {
+                            return RECORDED_EDGE_LOOKAHEAD.matcher(
+                                    Files.readString(path)).find();
+                        } catch (IOException exception) {
+                            throw new java.io.UncheckedIOException(exception);
+                        }
+                    })
+                    .map(SRC_MAIN::relativize)
+                    .map(Path::toString)
+                    .sorted()
+                    .toList();
+            assertEquals(List.of(), violations,
+                    "recorded timing must not choose which production boundary runs");
+        }
+    }
+
+    @Test
+    void recordedHeldTailSignalCannotBePassedToProductionCollaborators()
+            throws IOException {
+        try (Stream<Path> sources = Files.walk(SRC_MAIN)) {
+            List<String> violations = sources
+                    .filter(path -> path.toString().endsWith(".java"))
+                    .filter(path -> {
+                        try {
+                            return REPLAY_HELD_TAIL_SIGNAL_ARGUMENT.matcher(
+                                    Files.readString(path)).find();
+                        } catch (IOException exception) {
+                            throw new java.io.UncheckedIOException(exception);
+                        }
+                    })
+                    .map(SRC_MAIN::relativize)
+                    .map(Path::toString)
+                    .sorted()
+                    .toList();
+            assertEquals(List.of(), violations,
+                    "recorded timing must not select what a production owner does");
         }
     }
 
@@ -334,6 +397,80 @@ class TestHardwareTimingAuthorityGuard {
                     void drive() { port().apply(null); }
                 }
                 """));
+        assertDetected(scanReplayPortApply("com/openggf/trace/replay/Driver.java", """
+                class Driver { void drive(HardwareTimingReplayPort replayPort) {
+                    replayPort.applySuppressedRowCompletion();
+                } }
+                """));
+        assertTrue(scanReplayPortApply(
+                "com/openggf/trace/timing/TraceHardwareTimingBoundaryObserver.java",
+                """
+                class TraceHardwareTimingBoundaryObserver {
+                    void x() { replayPort.applySuppressedRowCompletion(); }
+                }
+                """).isEmpty());
+    }
+
+    @Test
+    void suppressedRowAuthorityIsConfinedToTheReplayPort() throws IOException {
+        List<String> violations = new ArrayList<>();
+        for (SourceFile source : productionSources()) {
+            violations.addAll(scanSuppressedAuthorityAdmission(
+                    source.relativePath(), source.content()));
+        }
+        assertNoViolations(
+                "suppressed-row completion authority must remain inside the replay port",
+                violations);
+
+        assertDetected(scanSuppressedAuthorityAdmission(
+                "com/openggf/trace/replay/Driver.java", """
+                class Driver {
+                    void drive(RecordedCompletionAuthority authority) {
+                        authority.admitRecordedSuppressedRowCompletion(null, null, 0, null);
+                    }
+                }
+                """));
+        assertTrue(scanSuppressedAuthorityAdmission(
+                "com/openggf/trace/timing/HardwareTimingReplayPort.java", """
+                class HardwareTimingReplayPort {
+                    void x() {
+                        authority.admitRecordedSuppressedRowCompletion(null, null, 0, null);
+                    }
+                }
+                """).isEmpty());
+    }
+
+    @Test
+    void suppressedRowObserverEntryIsConfinedToTheClosure() throws IOException {
+        List<String> violations = new ArrayList<>();
+        for (SourceFile source : productionSources()) {
+            violations.addAll(scanSuppressedObserverApply(
+                    source.relativePath(), source.content()));
+        }
+        assertNoViolations(
+                "suppressed-row observer entry must remain inside the row closure",
+                violations);
+
+        assertDetected(scanSuppressedObserverApply(
+                "com/openggf/trace/replay/Driver.java", """
+                class Driver {
+                    void drive(TraceHardwareTimingBoundaryObserver observer) {
+                        observer.applySuppressedRowCompletion();
+                    }
+                }
+                """));
+        assertTrue(scanSuppressedObserverApply(
+                "com/openggf/trace/replay/TraceSuppressedRowClosure.java", """
+                class TraceSuppressedRowClosure {
+                    void x() { observer.applySuppressedRowCompletion(); }
+                }
+                """).isEmpty());
+        assertTrue(scanSuppressedObserverApply(
+                "com/openggf/trace/timing/TraceHardwareTimingBoundaryObserver.java", """
+                class TraceHardwareTimingBoundaryObserver {
+                    void x() { replayPort.applySuppressedRowCompletion(); }
+                }
+                """).isEmpty());
     }
 
     @Test
@@ -390,7 +527,7 @@ class TestHardwareTimingAuthorityGuard {
             if (!comparisonSource
                     || (!source.content().contains("DynamicArtDiagnosticsSnapshot")
                     && !source.content().contains(
-                            "dynamic_art_transfer_state_per_frame_v1"))) {
+                            "dynamic_art_transfer_state_per_frame"))) {
                 continue;
             }
             violations.addAll(scanForbiddenTimingServiceAccess(
@@ -573,6 +710,34 @@ class TestHardwareTimingAuthorityGuard {
             }
         }
         return List.of();
+    }
+
+    private static List<String> scanSuppressedAuthorityAdmission(
+            String relative, String source) {
+        if (relative.equals(
+                "com/openggf/trace/timing/HardwareTimingReplayPort.java")) {
+            return List.of();
+        }
+        return scanAccess(
+                relative,
+                stripCommentsAndStrings(source),
+                SUPPRESSED_AUTHORITY_ADMISSION,
+                " invokes suppressed-row completion authority outside the replay port");
+    }
+
+    private static List<String> scanSuppressedObserverApply(
+            String relative, String source) {
+        if (relative.equals(
+                "com/openggf/trace/replay/TraceSuppressedRowClosure.java")
+                || relative.equals(
+                "com/openggf/trace/timing/TraceHardwareTimingBoundaryObserver.java")) {
+            return List.of();
+        }
+        return scanAccess(
+                relative,
+                stripCommentsAndStrings(source),
+                SUPPRESSED_OBSERVER_APPLY,
+                " invokes suppressed-row observer entry outside the row closure");
     }
 
     private static List<String> scanAccess(String relative, String source, Pattern access, String message) {

@@ -398,9 +398,14 @@ class TestSampleFlappyIntegration {
                 game.runner().stepIdleFrames(1);
             }
             assertEquals(livesBefore - 1, GameServices.gameState().getLives(),
-                    "the normal death movement/countdown owns the single life decrement");
+                    "entering the normal death-restart routine owns the single life decrement");
+            for (int frame = 0;
+                 frame < 600 && !GameServices.level().isRespawnRequestedForRewind();
+                 frame++) {
+                game.runner().stepIdleFrames(1);
+            }
             assertTrue(GameServices.level().consumeRespawnRequest(),
-                    "the death countdown must request the normal engine restart");
+                    "the later restartime countdown expiry must request the normal engine restart");
 
             GameServices.level().loadCurrentLevel();
             GroundSensor.setLevelManager(GameServices.level());

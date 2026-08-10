@@ -33,7 +33,7 @@ public final class FbzElevatorObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         spawnTimer = (short) (spawnTimer - 1);
         if (spawnTimer < 0) {
             // loc_3CA20 resets before allocation, so slot exhaustion does not
@@ -104,7 +104,7 @@ public final class FbzElevatorObjectInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             travelTimer = (short) (travelTimer - 1);
             if (travelTimer < 0) centreX = 0x7F00;
             // ROM add.w y_vel,y_pos is an integer pixel-word write, not MoveSprite 8.8 motion.

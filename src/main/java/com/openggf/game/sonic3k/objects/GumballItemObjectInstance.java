@@ -243,7 +243,7 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (collected) {
             setDestroyed(true);
             return;
@@ -290,7 +290,7 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
             // the +-24px box on a later frame pushes again in ROM; gating repeats behind
             // `pushedPlayer` here was engine-only debt with no ROM analog.
             if (dockEligible && !collected) {
-                pollPlayerInRange(playerEntity, frameCounter);
+                pollPlayerInRange(playerEntity, vIntRunCount);
             }
         } else if (motionMode == MotionMode.PACHINKO_FLOAT) {
             SubpixelMotion.moveSprite2(motionState);
@@ -322,7 +322,7 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
      * half-open {@code [-$18,$18)} box on both axes centered on the ball, and if so,
      * dispatches the reward exactly like a standard touch.
      */
-    private void pollPlayerInRange(PlayableEntity playerEntity, int frameCounter) {
+    private void pollPlayerInRange(PlayableEntity playerEntity, int vIntRunCount) {
         if (!(playerEntity instanceof AbstractPlayableSprite sprite)) {
             return;
         }
@@ -330,7 +330,7 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
         int dy = sprite.getCentreY() - motionState.y;
         if (dx >= -PROXIMITY_RADIUS && dx < PROXIMITY_RADIUS
                 && dy >= -PROXIMITY_RADIUS && dy < PROXIMITY_RADIUS) {
-            handleGumballReward(playerEntity, frameCounter, subtype);
+            handleGumballReward(playerEntity, vIntRunCount, subtype);
         }
     }
 

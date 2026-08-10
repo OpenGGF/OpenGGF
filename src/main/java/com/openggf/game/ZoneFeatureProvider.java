@@ -135,6 +135,22 @@ public interface ZoneFeatureProvider {
     }
 
     /**
+     * Updates zone features that run after the complete object pass.
+     *
+     * <p>The ROM places some level-event routines after {@code Process_Sprites},
+     * rather than immediately after an individual playable's movement slot.
+     * The default implementation does nothing so providers without such a
+     * post-object routine retain their existing ordering.
+     *
+     * @param player the playable sprite whose post-object state is being observed
+     * @param cameraX the camera X position
+     * @param zoneIndex the current zone
+     */
+    default void updateAfterObjectExecution(AbstractPlayableSprite player, int cameraX, int zoneIndex) {
+        // Default implementation does nothing
+    }
+
+    /**
      * Queues render commands for zone features that should appear after foreground tiles
      * but before sprites (e.g., slot machine display that covers corrupted tiles).
      * Called after high-priority foreground tilemap pass but before sprite passes.

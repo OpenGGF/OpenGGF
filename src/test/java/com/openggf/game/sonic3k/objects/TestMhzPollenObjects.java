@@ -13,9 +13,9 @@ import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.LevelManager;
 import com.openggf.physics.TrigLookupTable;
-import com.openggf.tests.TestablePlayableSprite;
 import com.openggf.tests.FullReset;
 import com.openggf.tests.SingletonResetExtension;
+import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -87,7 +87,7 @@ class TestMhzPollenObjects {
 
         assertEquals(0, harness.spawned.size());
         assertEquals(0, harness.runtimeState.pollenParticleCount(),
-                "loc_3DA60 increments MHZ_pollen_counter only after AllocateObjectAfterCurrent succeeds");
+                "loc_3DA60 increments the pollen counter only after allocation succeeds");
     }
 
     @Test
@@ -175,6 +175,21 @@ class TestMhzPollenObjects {
         assertEquals(6, harness.runtimeState.pollenParticleCount());
         assertEquals(0, harness.spawner.getPlayerOneStoredYVelocity(),
                 "sub_3DA24 clears the stored landing velocity after the hard-landing burst");
+    }
+
+    @Test
+    void landingBurstUsesRomUnsignedWordComparisonForStoredVelocity() {
+        Harness harness = new Harness(false);
+        TestablePlayableSprite player = groundedPlayer(0x1200, 0x0700, 0);
+        player.setAirForTest(true);
+        player.setYSpeed((short) 0xFFF0);
+        harness.spawner.update(0, player);
+
+        player.setAirForTest(false);
+        harness.spawner.update(1, player);
+
+        assertEquals(6, harness.spawned.size(),
+                "cmpi.w #$400 / bhs treats a negative stored y_vel as an unsigned word and takes loc_3DACA");
     }
 
     @Test

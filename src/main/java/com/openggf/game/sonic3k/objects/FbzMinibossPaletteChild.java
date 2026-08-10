@@ -26,7 +26,7 @@ final class FbzMinibossPaletteChild extends AbstractObjectInstance implements Re
     private FbzMinibossPaletteChild(ObjectSpawn spawn) {
         super(spawn, "FBZMinibossPalette");
     }
-    @Override public void update(int frameCounter, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         int[] color = step == 0 ? BRIGHT : DARK;
         if (tryServices() != null && services().currentLevel() != null) {
             S3kPaletteWriteSupport.applyColors(services().paletteOwnershipRegistryOrNull(), services().currentLevel(),

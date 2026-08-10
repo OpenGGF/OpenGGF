@@ -26,7 +26,7 @@ public final class FbzBossPillarInstance extends AbstractObjectInstance
         super(spawn, "FBZBossPillar");
     }
 
-    @Override public void update(int frameCounter, PlayableEntity mainPlayer) {
+    @Override public void update(int vIntRunCount, PlayableEntity mainPlayer) {
         int offsetX = S3kFbzEventWriteSupport.getBossBackgroundOffsetX(services());
         int offsetY = S3kFbzEventWriteSupport.getBossBackgroundOffsetY(services());
         x = (0x2DE0 + offsetX) & 0xFFFF;

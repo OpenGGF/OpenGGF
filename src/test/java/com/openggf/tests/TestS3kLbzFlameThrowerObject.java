@@ -192,8 +192,8 @@ class TestS3kLbzFlameThrowerObject {
         }
 
         @Override
-        public int vIntRunCounter(int objectUpdateCounter) {
-            return objectUpdateCounter + vIntPhase;
+        public int resolveVIntRunCount(int vIntRunCountAtObservation) {
+            return vIntRunCountAtObservation + vIntPhase;
         }
 
         @Override

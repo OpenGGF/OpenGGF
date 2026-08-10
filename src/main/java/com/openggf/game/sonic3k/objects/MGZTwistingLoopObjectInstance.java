@@ -104,20 +104,20 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implem
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (playerEntity instanceof AbstractPlayableSprite player) {
-            processPlayer(frameCounter, player, player1);
+            processPlayer(vIntRunCount, player, player1);
         }
         ObjectServices svc = tryServices();
         if (svc == null) {
             return;
         }
         AbstractPlayableSprite nativeP2 = nativeP2FromQuery(svc, playerEntity);
-        reconcileNativeP2(frameCounter, svc, nativeP2);
+        reconcileNativeP2(vIntRunCount, svc, nativeP2);
         if (nativeP2 != null) {
-            processPlayer(frameCounter, nativeP2, player2);
+            processPlayer(vIntRunCount, nativeP2, player2);
         }
-        updateExtensionPlayers(frameCounter, svc, playerEntity, nativeP2);
+        updateExtensionPlayers(vIntRunCount, svc, playerEntity, nativeP2);
     }
 
     private void reconcileNativeP2(int frameCounter, ObjectServices services,

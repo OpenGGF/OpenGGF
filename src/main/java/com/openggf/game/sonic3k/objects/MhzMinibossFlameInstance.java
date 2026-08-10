@@ -105,7 +105,7 @@ final class MhzMinibossFlameInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (parent == null || parent.isDestroyed()) {
             setDestroyed(true);
             return;
@@ -115,7 +115,7 @@ final class MhzMinibossFlameInstance extends AbstractObjectInstance
         // / btst #0,d0 / bne (skip draw). The thruster is drawn only on even frames
         // so it visibly flickers on/off each frame; the engine previously drew it
         // solid every frame.
-        flickerHidden = (frameCounter & 1) != 0;
+        flickerHidden = (vIntRunCount & 1) != 0;
     }
 
     private void refreshFromParent() {

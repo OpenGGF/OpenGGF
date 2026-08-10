@@ -76,16 +76,10 @@ public final class MantisBadnikInstance extends AbstractS3kBadnikInstance
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         if (isDestroyed()) {
             return;
         }
-
-        // The visual extension is a managed child for the whole live Mantis
-        // lifetime. Keep that structural graph available while Obj_WaitOffscreen
-        // owns the parent's behavioural handoff, so rewind can capture and
-        // restore the child identity independently of the first visible pass.
-        ensureVisualChild();
 
         // Obj_WaitOffscreen keeps the operation pointer at loc_85AD2 while its
         // $20-by-$20 placeholder remains outside Render_Sprites bounds. Engine
@@ -109,6 +103,12 @@ public final class MantisBadnikInstance extends AbstractS3kBadnikInstance
         if (!initialized) {
             initialize();
             initialized = true;
+            // Obj_Mantis creates ChildObjDat_88F9C from loc_88E82, after
+            // Obj_WaitOffscreen has restored the normal operation. The child
+            // must therefore be allocated from this first visible initializer,
+            // not while the placeholder is still waiting off-screen; its slot
+            // participates in the subsequent FindNextFreeObj order.
+            ensureVisualChild();
             updateDynamicSpawn(currentX, currentY);
             return;
         }
@@ -333,7 +333,7 @@ public final class MantisBadnikInstance extends AbstractS3kBadnikInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (parent.isDestroyed()) {
                 setDestroyed(true);
                 return;

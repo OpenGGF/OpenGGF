@@ -1,5 +1,48 @@
 # S3K Complete-Run Recorder — Byte-Level SEGMENTATION Specification
 
+## Current v5 contract
+
+The maintained native complete-run recorder emits only
+`recorder: native-bizhawk-headless`, `recorder_version: 3.0`, and
+`trace_schema: 5`. Provenance is opaque and never selects parser or replay
+behavior. Level and bonus segments use the 42-column level row; special-stage
+segments use the S3K-owned 20-column row. Optional hardware timing uses one
+module-plus-direct timing grammar. No numbered Lua stamp, CSV version, or
+secondary timing-schema axis is emitted or accepted.
+
+Current publication and validation are owned by the native harness,
+`docs/guide/contributing/trace-v5-publication.md`, and the v5 contract tests.
+The detailed material below is retained solely to explain how the native
+segmentation model and frozen predecessor bytes were derived.
+
+## Pre-v5 historical evidence
+
+Everything below this heading is predecessor research. Any use of “current”,
+“maintained”, “canonical”, “authoritative”, or “must” is scoped to the
+historical recorder state being documented; it does not define live output or
+authorize compatibility with a legacy trace.
+
+> **2026-08-02 recorder-order note.** The maintained native complete-run
+> writer is now `6.42-s3k-completerun`, with held-counter final-parent
+> retirements attributed from canonical FIFO state transitions and
+> hardware-timing events serialized
+> in canonical same-frame service order: `vint_service`, module
+> `post_objects`, then direct `pre_main_loop`. Non-Candidate-B fixtures remain
+> immutable at their existing published stamps; the 67-segment super-emerald
+> run and both existing run manifests remain `6.40-s3k-completerun`. This
+> recorder correction does not authorize their rewrite. A replacement
+> super-emerald capture is a separately reviewed and approved publication
+> action.
+> The separate 15-segment Sonic-and-Tails Candidate B publication was
+> explicitly approved and installed: Candidate B supplied exactly 15 metadata
+> files and 14 timing files, while its independent repeat remained
+> validation-only. Installed metadata is canonical 6.42 and the timing delta
+> from 6.40 is exactly 27 in-place `vint_service`-to-`post_objects`
+> substitutions across 14 segments; physics, aux, and ending timing bytes did
+> not move. The permanent capture gate now requires direct installed-6.42
+> equality and retains the exact 6.40 predecessor identities in a cheap
+> non-capture ledger.
+>
 > **2026-07-27 publication note.** The committed fleet is now native
 > recorder v6.37, not the v6.33 Lua fixture generation described in the
 > historical sections below. The Sonic+Tails pass publishes all 15 captured
@@ -886,8 +929,9 @@ equals the *next level segment's* `bk2_frame_offset` for `stage_exit`.
 ## 8. Segmentation-derived `metadata.json` fields
 
 Full byte layout is owned by
-[s3k-trace-recorder-behavior.md](s3k-trace-recorder-behavior.md) §6. Only
-the complete-run deltas are specified here.
+[s3k-trace-recorder-behavior.md](s3k-trace-recorder-behavior.md), under
+"Current v5 container contract". Only the complete-run deltas are specified
+here.
 
 ### 8.1 Level / bonus segments (`write_metadata`)
 

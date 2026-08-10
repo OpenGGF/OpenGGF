@@ -27,13 +27,11 @@ public class TraceBinder {
      * Test-only override for the native-prelude-mode signal consumed by
      * {@link #compareBootstrapFrame0(TraceData, EngineSnapshot)}. When
      * non-{@code null}, the comparator uses this value instead of reading
-     * {@code trace.metadata().nativePreludeMode()}.
+     * {@code trace.metadata().hasNativePreludeBootstrap()}.
      *
      * <p>Test-only hook for synthetic {@link TraceData} fixtures that omit
-     * {@code lua_script_version} or otherwise can't satisfy the production
-     * version-gate. Production callers leave the override {@code null} and
-     * read the real metadata flag, which derives bootstrap eligibility from
-     * {@code luaScriptVersion >= 9.2-s2}.
+     * the native-prelude capability. Production callers leave the override
+     * {@code null} and read the explicit metadata capability.
      */
     private static volatile Boolean NATIVE_PRELUDE_OVERRIDE_FOR_TESTS = null;
 
@@ -42,7 +40,17 @@ public class TraceBinder {
     // held-rewind segment-cache rebuilds in test mode) replace the previous
     // entry instead of accumulating duplicates. Memory bounded by trace length.
     private final TreeMap<Integer, FrameComparison> comparisonsByFrame = new TreeMap<>();
+    // Highest frame stored so far. Once the replay moves past a frame, aux
+    // merges for it can no longer arrive, so its multi-KB ROM/engine
+    // diagnostics strings are released if every field compared clean —
+    // reports and context windows only ever render diagnostics for divergent
+    // frames, and long complete-run segments would otherwise retain tens of
+    // thousands of them.
+    private int highestComparedFrame = Integer.MIN_VALUE;
     private List<BootstrapDivergence> lastBootstrapDivergences = List.of();
+    // One binder compares one replay segment, so it owns that segment's
+    // dynamic-art delivery-id origin. See DynamicArtIdEpoch.
+    private final DynamicArtIdEpoch dynamicArtIdEpoch = new DynamicArtIdEpoch();
 
     public TraceBinder(ToleranceConfig tolerances) {
         this.tolerances = tolerances;
@@ -56,11 +64,11 @@ public class TraceBinder {
     /**
      * Package-private hook used only by tests in this package to flip the
      * native-prelude-mode signal for synthetic {@link TraceData} fixtures
-     * that don't carry a realistic {@code luaScriptVersion}.
+     * that don't carry the native-prelude capability.
      *
      * @param value {@code true} to force native-prelude mode on,
      *              {@code false} to force it off, {@code null} to fall back
-     *              to {@link TraceMetadata#nativePreludeMode()}.
+     *              to {@link TraceMetadata#hasNativePreludeBootstrap()}.
      */
     static void setNativePreludeOverrideForTests(Boolean value) {
         NATIVE_PRELUDE_OVERRIDE_FOR_TESTS = value;
@@ -240,6 +248,12 @@ public class TraceBinder {
             }
         }
 
+        // Ring counts: only compared when BOTH the ROM trace and the engine
+        // recorded them. The engine-side -1 is a genuine "no ring context"
+        // signal for callers that collapse diagnostics without a sprite to
+        // read (EMPTY, formattedOnly, formattedWithCamera); it is not a
+        // blanket opt-out, and comparators holding a sprite must pass the
+        // real count through.
         if (tolerances.ringCountMode() != ToleranceConfig.RingCountMode.DISABLED
                 && expected.rings() >= 0 && engineDiag != null && engineDiag.rings() >= 0) {
             fields.put("rings", compareRingCount(expected.rings(), engineDiag.rings()));
@@ -275,8 +289,35 @@ public class TraceBinder {
         String engDiag = engineDiag != null ? engineDiag.format() : "";
 
         FrameComparison result = new FrameComparison(expected.frame(), fields, romDiag, engDiag);
-        comparisonsByFrame.put(result.frame(), result);
+        putComparison(result);
         return result;
+    }
+
+    /**
+     * Stores a comparison, releasing the diagnostics strings of the
+     * previously-highest frame once the replay has moved past it and it
+     * compared clean. Re-puts of the current frame (aux merges) and
+     * re-comparisons of earlier frames leave prior entries untouched.
+     */
+    private void putComparison(FrameComparison result) {
+        int frame = result.frame();
+        if (frame > highestComparedFrame) {
+            compactFinalizedFrame(highestComparedFrame);
+            highestComparedFrame = frame;
+        }
+        comparisonsByFrame.put(frame, result);
+    }
+
+    private void compactFinalizedFrame(int frame) {
+        FrameComparison finalized = comparisonsByFrame.get(frame);
+        if (finalized == null
+                || finalized.hasDivergence()
+                || (finalized.romDiagnostics().isEmpty()
+                        && finalized.engineDiagnostics().isEmpty())) {
+            return;
+        }
+        comparisonsByFrame.put(frame,
+                new FrameComparison(finalized.frame(), finalized.fields(), "", ""));
     }
 
     /**
@@ -363,7 +404,8 @@ public class TraceBinder {
     }
 
     /**
-     * Merges exact, comparison-only physical load queue fields into a captured frame.
+     * Merges exact, comparison-only physical load queue fields into a captured
+     * frame, creating a structural-only frame when gameplay was not compared.
      */
     public void compareLoadQueues(
             int frame,
@@ -371,7 +413,7 @@ public class TraceBinder {
             List<QueueDiagnosticSnapshot> actualStates) {
         FrameComparison existing = comparisonsByFrame.get(frame);
         if (existing == null) {
-            return;
+            existing = new FrameComparison(frame, Map.of());
         }
         Map<String, TraceEvent.LoadQueueState> expectedByKind = new LinkedHashMap<>();
         for (TraceEvent.LoadQueueState state :
@@ -438,12 +480,12 @@ public class TraceBinder {
                 ? new LinkedHashMap<>(existing.fields())
                 : new LinkedHashMap<>();
         fields.putAll(DynamicArtSpecialStageComparator.comparisonFields(
-                expected, actual));
+                expected, actual, dynamicArtIdEpoch));
         FrameComparison result = new FrameComparison(
                 expected.frame(), fields,
                 existing != null ? existing.romDiagnostics() : "",
                 existing != null ? existing.engineDiagnostics() : "");
-        comparisonsByFrame.put(expected.frame(), result);
+        putComparison(result);
         return result;
     }
 
@@ -1304,8 +1346,7 @@ public class TraceBinder {
     /**
      * Resolves the native-prelude-mode flag for {@code trace}. Tests can
      * override via {@link #setNativePreludeOverrideForTests(Boolean)};
-     * production reads {@link TraceMetadata#nativePreludeMode()} (which
-     * derives eligibility from {@code luaScriptVersion >= 9.2-s2}).
+     * production reads {@link TraceMetadata#hasNativePreludeBootstrap()}.
      */
     private static boolean nativePreludeMode(TraceData trace) {
         Boolean override = NATIVE_PRELUDE_OVERRIDE_FOR_TESTS;
@@ -1315,7 +1356,7 @@ public class TraceBinder {
         if (trace == null || trace.metadata() == null) {
             return false;
         }
-        return trace.metadata().nativePreludeMode();
+        return trace.metadata().hasNativePreludeBootstrap();
     }
 
     private static void comparePlayerHistory(TraceData trace,
@@ -1344,19 +1385,116 @@ public class TraceBinder {
                     "ROM and engine ring-buffer positions disagree"));
         }
 
+        // Slots the ROM has actually written since Obj01_Init; anything from
+        // here up is still the untouched pre-fill remnant. See
+        // untouchedPreFillRemnantStart for why it is sometimes uncomparable.
+        int remnantStart = untouchedPreFillRemnantStart(trace, snapshot, recorded);
+
         compareShortArray("player_history.x", recorded.xHistory(),
-                snapshot.playerXHistory(), out);
+                snapshot.playerXHistory(), remnantStart, out);
         compareShortArray("player_history.y", recorded.yHistory(),
-                snapshot.playerYHistory(), out);
+                snapshot.playerYHistory(), remnantStart, out);
         compareShortArray("player_history.input", recorded.inputHistory(),
                 snapshot.playerInputHistory(), out);
         compareByteArray("player_history.status", recorded.statusHistory(),
                 snapshot.playerStatusHistory(), out);
     }
 
+    /**
+     * Index of the first {@code Sonic_Pos_Record_Buf} slot that this replay
+     * cannot legitimately compare, or {@link Integer#MAX_VALUE} when every
+     * slot is comparable (the normal case).
+     *
+     * <p>{@code Obj01_Init_Continued} pre-fills all 64 ring slots with
+     * {@code (x_pos-$20, y_pos+4)} and zeroes their input/status records, then
+     * resets {@code Sonic_Pos_Record_Index} to 0
+     * (docs/s2disasm/s2.asm:36202-36218). {@code Sonic_RecordPos} then
+     * overwrites one slot per frame from {@code Obj01_Control}, so the slots
+     * below the next-free index hold genuine recorded motion and the slots at
+     * and above it still hold the pre-fill anchor.
+     *
+     * <p>That anchor is {@code x_pos}/{@code y_pos} <em>as they stand when
+     * Obj01_Init runs</em>. {@code LevelSizeLoad} has already placed the leader
+     * by one of two branches: the zone's {@code StartLocations} entry, or --
+     * when {@code Last_star_pole_hit} is non-zero -- {@code Obj79_LoadData}'s
+     * restore of {@code Saved_x_pos}/{@code Saved_y_pos}, which are a star
+     * post's own coordinates saved when the player touched it
+     * (docs/s2disasm/s2.asm:14773-14778, :36190, :44737-44738, :44776-44778).
+     *
+     * <p>A run segment replayed in isolation begins after that star post was
+     * touched, so it has no {@code Last_star_pole_hit} and no
+     * {@code Saved_x_pos}/{@code Saved_y_pos} — the same missing datum already
+     * documented for the segment star-post dongle artifact. Its cold boot
+     * therefore takes the {@code StartLocations}-equivalent path and anchors
+     * the pre-fill at the segment's own first recorded position, which is one
+     * physics tick later than the ROM's anchor. The difference is unrecoverable
+     * from the segment, and trace data is comparison-only, so those slots are
+     * excluded rather than hydrated. Everything the ROM wrote during the
+     * segment — every slot below the next-free index, and the input/status
+     * rings in full — stays compared.
+     *
+     * <p>The exclusion is gated on two independent facts, never on a zone,
+     * route, frame or game name:
+     * <ol>
+     *   <li>the replay's start X differs from the loaded zone/act's ROM
+     *       {@code StartLocations} X, which is what identifies the checkpoint
+     *       branch (a star post's X is never the level's spawn X); and</li>
+     *   <li>the recorded remnant still carries the pre-fill signature — one
+     *       identical coordinate pair across every remnant slot with zero
+     *       input and status — proving the ring has not wrapped past it.</li>
+     * </ol>
+     */
+    private static int untouchedPreFillRemnantStart(TraceData trace,
+                                                    EngineSnapshot snapshot,
+                                                    TraceEvent.PlayerHistorySnapshot recorded) {
+        int levelStartX = snapshot.levelStartX();
+        if (levelStartX == EngineSnapshot.LEVEL_START_X_UNKNOWN
+                || trace.metadata() == null) {
+            return Integer.MAX_VALUE;
+        }
+        if ((trace.metadata().startX() & 0xFFFF) == (levelStartX & 0xFFFF)) {
+            // Level load ran the StartLocations branch: the engine's pre-fill
+            // anchor is the ROM's, so the whole ring is comparable.
+            return Integer.MAX_VALUE;
+        }
+
+        int nextFree = romHistoryByteOffsetToSlot(recorded.historyPos());
+        short[] x = recorded.xHistory();
+        short[] y = recorded.yHistory();
+        short[] input = recorded.inputHistory();
+        byte[] status = recorded.statusHistory();
+        if (x == null || y == null || input == null || status == null
+                || x.length < HISTORY_RING_SLOTS || y.length < HISTORY_RING_SLOTS
+                || input.length < HISTORY_RING_SLOTS
+                || status.length < HISTORY_RING_SLOTS
+                || nextFree >= HISTORY_RING_SLOTS) {
+            return Integer.MAX_VALUE;
+        }
+        for (int i = nextFree; i < HISTORY_RING_SLOTS; i++) {
+            if (x[i] != x[nextFree] || y[i] != y[nextFree]
+                    || input[i] != 0 || status[i] != 0) {
+                // Not the pre-fill signature: the ring wrapped and these slots
+                // are genuine recorded motion. Compare them.
+                return Integer.MAX_VALUE;
+            }
+        }
+        return nextFree;
+    }
+
+    /** {@code Sonic_Pos_Record_Buf} holds 64 four-byte records (s2.asm:36211). */
+    private static final int HISTORY_RING_SLOTS = 64;
+
     private static void compareShortArray(String fieldBase,
                                           short[] expected,
                                           short[] actual,
+                                          List<BootstrapDivergence> out) {
+        compareShortArray(fieldBase, expected, actual, Integer.MAX_VALUE, out);
+    }
+
+    private static void compareShortArray(String fieldBase,
+                                          short[] expected,
+                                          short[] actual,
+                                          int uncomparableFrom,
                                           List<BootstrapDivergence> out) {
         if (expected == null) {
             out.add(new BootstrapDivergence(
@@ -1366,6 +1504,7 @@ public class TraceBinder {
             return;
         }
         int len = Math.min(expected.length, actual == null ? 0 : actual.length);
+        len = Math.min(len, uncomparableFrom);
         for (int i = 0; i < len; i++) {
             short e = expected[i];
             short a = actual[i];

@@ -1,9 +1,11 @@
 # Trace Framework Reference
 
-A deep, end-to-end reference for the OpenGGF trace-replay framework. Covers every moving piece
-from the BizHawk Lua recorders and the stable-retro Python twin, through the on-disk fixture
-format, the Java replay harness, divergence reporting, CI wiring, and the iterative
-agent-driven accuracy loop that consumes all of it.
+A deep, end-to-end reference for the OpenGGF trace-replay framework. The live
+recording and publication path is the native BizHawk headless harness and the
+single v5 contract documented in
+[`trace-v5-publication.md`](trace-v5-publication.md). The Lua and stable-retro
+sections below are retained as historical implementation background and
+diagnostic reference; they are not current publication instructions.
 
 For a shorter contributor-facing guide, see [`trace-replay.md`](trace-replay.md). This document
 is the long-form companion that documents every layer.
@@ -72,8 +74,8 @@ their state frame by frame.
 
 The trace framework is the plumbing that does that:
 
-- **Record** — run the real ROM in BizHawk (Windows) or stable-retro (cross-platform headless)
-  with a deterministic input stream, and snapshot the player/camera/object state every frame.
+- **Record** — run the real ROM through the native BizHawk headless harness
+  with a deterministic input stream, and snapshot player/camera/object state every frame.
 - **Replay** — drive the engine with the same input stream and step it frame by frame,
   honouring the same ROM-internal pacing (gameplay frames vs VBlank-only lag frames).
 - **Compare** — match the engine's per-frame state against the recorded ROM state, with
@@ -92,7 +94,7 @@ tests in the repo for physics, object timing, spawn timing, and collision parity
 ```
                 ┌──────────────────────────────────────────┐
                 │       ROM (Sonic 1 / 2 / 3&K)            │
-                │   running in BizHawk or stable-retro     │
+                │   native BizHawk headless harness        │
                 └──────────────────────────────────────────┘
                                    │
                                    │  per-frame RAM reads
@@ -131,7 +133,7 @@ tests in the repo for physics, object timing, spawn timing, and collision parity
                 │  Agent iteration loop                    │
                 │   - `/loop` skill                        │
                 │   - subagent-driven-development skill    │
-                │   - s1-trace-replay / s1-retro-trace     │
+                │   - trace-replay / bizhawk-headless      │
                 │   - plan/research/spec docs              │
                 └──────────────────────────────────────────┘
 ```
@@ -615,7 +617,8 @@ ROM SHA-1 must be `69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b` (Sonic 1 REV01 Worl
 
 ## 5. Part III — Trace File Formats
 
-Every recorder produces the same three files (plus the BK2 movie for non-credits recordings).
+Every production recorder produces the same v5 envelope and payload set (plus
+the BK2 movie for BK2-owned recordings).
 
 ### 5.1 `metadata.json`
 
@@ -631,9 +634,9 @@ Minimum required fields across all games:
 | `trace_frame_count` | int | number of rows in physics.csv |
 | `start_x`, `start_y` | `"0x….."` | Sonic's starting coordinates |
 | `recording_date` | string | `YYYY-MM-DD` |
-| `lua_script_version` | string | script version (`"3.0"`, `"3.1-s3k"`, `"8.0-s2"`, `"retro-1.0"`, `"credits-retro-1.0"`) |
-| `trace_schema` | int | fixture schema version |
-| `csv_version` | int | column schema version |
+| `recorder` | string | opaque producer identity; canonical fixtures use `native-bizhawk-headless` |
+| `recorder_version` | string | opaque native implementation version, currently `3.0` |
+| `trace_schema` | int | the sole data contract selector; exactly `5` |
 | `rom_checksum` | string | optional |
 | `notes` | string | optional |
 
@@ -650,45 +653,21 @@ Credits-demo additions: `trace_type: "credits_demo"`, `input_source: "rom_ending
 Optional `pre_trace_oscillation_frames` field, consumed by
 `AbstractTraceReplayTest` to pre-advance the engine's oscillation manager (see 6.1).
 
-### 5.2 `physics.csv` — all schema versions
+### 5.2 `physics.csv` — v5
 
-All values hexadecimal except `air`, `rolling`, `ground_mode` (decimal) and
-`*_present` (decimal 0/1 in S2 v6).
-
-**v1** (11 cols) — deprecated baseline:
-
-```
-frame,input,x,y,x_speed,y_speed,g_speed,angle,air,rolling,ground_mode
-```
-
-**v2** (18 cols): adds `x_sub,y_sub,routine,camera_x,camera_y,rings,status_byte`.
-
-**v2.1** (19 cols): adds `gameplay_frame_counter` (originally named `v_framecount`).
-
-**v2.2** (20 cols): adds `stand_on_obj`.
-
-**v3** (22 cols): adds `vblank_counter,lag_counter`. This is the current S1/S3K canonical
-schema. `csv_version = 4` (the field name was retired from schema v2.1 where it equalled the
-major schema number; since v3 it is held at 4 to signal "canonical v3 fields present").
-
-**v5** (37 cols, deprecated): intermediate S2 schema that appended sidekick state to the
-Sonic row.
-
-**v6** (38 cols): current S2 schema. Explicit named blocks (`sonic_*`, `tails_*`) with shared
-per-frame header (`frame`, `input`, `camera_x`, `camera_y`, `rings`,
-`gameplay_frame_counter`, `vblank_counter`, `lag_counter`) first.
-
-`TraceFrame.parseCsvRow(line, traceSchema)` auto-detects by column count and dispatches to
-the right parser.
+Ordinary level traces have one fixed 42-column symmetric
+primary-character/sidekick row. There is no width autodetection and no
+`csv_version`. Dedicated special-stage readers are selected by `game` plus
+`trace_profile`: S1 uses 14 columns, S2 uses 48, and S3K uses 20. All other
+widths are rejected.
 
 **Compared when both sides record them:** `x_sub`, `y_sub`, `routine`, `status_byte`,
 `rings`, `camera_x`, and `camera_y`. These fields are strict frontier fields when the
 trace row has extended data and `EngineDiagnostics` carries the matching engine snapshot.
 
-**Never compared for pass/fail** (diagnostic-only): `gameplay_frame_counter`,
-`vblank_counter`, `lag_counter`, `stand_on_obj`, and aux-only context fields. These appear
-in the context window and in `EngineDiagnostics` for human-readable debugging but do not
-trigger errors.
+Execution counters and aux-only context remain diagnostic unless a named
+comparator contract says otherwise; queue/dynamic-art evidence is strict and
+comparison-only.
 
 **Always compared:** `x`, `y`, `x_speed`, `y_speed`, `g_speed`, `angle`, `air`, `rolling`,
 `ground_mode` (derived from angle), plus the sidekick's copy of those fields in S2/S3K
@@ -1135,8 +1114,8 @@ Skills in `.claude/skills/` that are directly about the trace loop:
 - **`s1-trace-replay`** — "Record a Sonic 1 BizHawk trace, copy it to the test resources,
   run the trace replay tests, and interpret the divergence results." Supports
   `mz1` / `ghz1` / `all` / `test-only` / `interpret` modes.
-- **`s1-retro-trace`** — Same but via stable-retro (cross-platform). Adds credits-demo
-  recording modes.
+- **`bizhawk-headless-trace`** — canonical native capture and publication,
+  including ROM-owned S1 credits-demo recording.
 
 Supporting skills that a trace-driven agent routinely calls:
 
@@ -1334,7 +1313,10 @@ All offsets are from `$FF0000`. See the recorders for authoritative values.
 | `stand_on_obj` | `+0x42` | word BE | **RAM ptr**, convert via `(addr-0xB400)/0x4A` |
 | `ctrl_lock` | `+0x32` | word BE | |
 
-### 11.2 Schema version history
+### 11.2 Pre-v5 schema history
+
+The table below is predecessor history only. Current code accepts exactly
+`trace_schema: 5` and no separate CSV or recorder-derived schema selector.
 
 | Schema | CSV cols | Key additions |
 |---|---|---|
@@ -1349,8 +1331,7 @@ All offsets are from `$FF0000`. See the recorders for authoritative values.
 | v7 (S2) | 38 | + pre-trace `cpu_state_snapshot` for Tails AI |
 | v8 (S2) | 38 | Character-scoped aux events and per-character nearby-object scans |
 
-`csv_version` field in metadata: held at `4` for S1/S3K current schema, `6` for S2
-current schema.
+None of these predecessor versions is a current compatibility target.
 
 ### 11.3 S1/S2/S3K zone name tables
 
@@ -1376,7 +1357,12 @@ current schema.
 
 ### 11.4 Related source files
 
-**Recorders:**
+**Current recorder:**
+
+- `tools/bizhawk-headless/run.sh`
+- `tools/bizhawk-headless/src/Recording/`
+
+**Historical/diagnostic recorder references:**
 
 - `tools/bizhawk/s1_trace_recorder.lua`
 - `tools/bizhawk/s2_trace_recorder.lua`

@@ -18,7 +18,7 @@ class SpecialStageControlStateTest {
     @Test
     void parsesInitialAndUnlockControlStateTransitions() throws Exception {
         Files.writeString(tempDir.resolve("metadata.json"), """
-                {"game":"s2","trace_profile":"s2_special_stage","special_stage_index":0}
+                {"game":"s2","trace_profile":"s2_special_stage","special_stage_index":0,"trace_schema":5}
                 """);
         Files.writeString(tempDir.resolve("physics.csv"), header() + "\n" + row() + "\n");
         Files.writeString(tempDir.resolve("aux_state.jsonl"), """

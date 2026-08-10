@@ -156,7 +156,7 @@ public class Sonic1YadrinBadnikInstance extends AbstractBadnikInstance
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (!initialized) {
             initialize();
@@ -165,7 +165,7 @@ public class Sonic1YadrinBadnikInstance extends AbstractBadnikInstance
 
         switch (secondaryState) {
             case STATE_MOVE -> updateMove();
-            case STATE_FIX_TO_FLOOR -> updateFixToFloor(frameCounter);
+            case STATE_FIX_TO_FLOOR -> updateFixToFloor(vIntRunCount);
         }
     }
 
@@ -235,7 +235,7 @@ public class Sonic1YadrinBadnikInstance extends AbstractBadnikInstance
      * ROM: bsr.w SpeedToPos / bsr.w ObjFloorDist / cmpi.w range checks
      * Also calls Yad_ChkWall which uses (v_framecount + d7) & 3 to throttle checks.
      */
-    private void updateFixToFloor(int frameCounter) {
+    private void updateFixToFloor(int vIntRunCount) {
         // SpeedToPos: apply X velocity with subpixel precision
         motion.x = currentX;
         motion.xVel = xVelocity;
@@ -258,7 +258,7 @@ public class Sonic1YadrinBadnikInstance extends AbstractBadnikInstance
         // Yad_ChkWall: check walls every 4th frame
         // ROM: move.w (v_framecount).w,d0 / add.w d7,d0 / andi.w #3,d0 / bne.s .skip
         // d7 is 0 for Yadrin (no per-object offset in this object code)
-        if ((frameCounter & WALL_CHECK_MASK) == 0) {
+        if ((vIntRunCount & WALL_CHECK_MASK) == 0) {
             if (checkWall()) {
                 returnToPause();
             }
@@ -304,7 +304,7 @@ public class Sonic1YadrinBadnikInstance extends AbstractBadnikInstance
     }
 
     @Override
-    protected void updateAnimation(int frameCounter) {
+    protected void updateAnimation(int vIntRunCount) {
         if (secondaryState == STATE_FIX_TO_FLOOR) {
             // Walk animation: dc.b 7, 0, 3, 1, 4, 0, 3, 2, 5, afEnd
             // Speed 7 = 8 ticks per frame
@@ -482,7 +482,11 @@ public class Sonic1YadrinBadnikInstance extends AbstractBadnikInstance
 
     @Override
     public boolean isPersistent() {
-        return !isDestroyed() && isOnScreenX(160);
+        // Yad_Action ends at RememberState, whose out_of_range macro deletes the
+        // object once its chunk-aligned X leaves the [camera-128, camera-128+0x280]
+        // window (docs/s1disasm/_incObj/50 Badnik - Yadrin.asm:95 ->
+        // _incObj/sub RememberState.asm:9 -> Macros.asm:278-295).
+        return !isDestroyed() && isInRange();
     }
 
     @Override

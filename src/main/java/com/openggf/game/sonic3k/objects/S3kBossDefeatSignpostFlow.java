@@ -72,7 +72,9 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
     private boolean preservesGroundedResultsDispatchBoundary;
     private boolean usesShortResultsChildRetireTail;
     private boolean changeAct2SizesOnTitleComplete;
+    private int nativeControlSlot = -1;
     private boolean initialized;
+    private boolean nativeResultsControlRestored;
 
     /**
      * Creates the defeat-to-signpost flow orchestrator.
@@ -138,6 +140,11 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
         this(0, 0, CleanupAction.NONE);
     }
 
+    S3kBossDefeatSignpostFlow withNativeControlSlot(int slot) {
+        nativeControlSlot = slot;
+        return this;
+    }
+
     @Override
     public int getX() {
         return signpostX;
@@ -168,7 +175,7 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (!initialized) {
             ensureInitialized();
             timer -= initialWaitCatchUpEntries;
@@ -237,6 +244,7 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
                 signpostX, apparentAct, signpostResultsTimerCatchUpEntries, resultsWaitDurationAdjustment,
                 resultsPostControlHandoffDelayEntries, preservesGroundedResultsDispatchBoundary,
                 usesShortResultsChildRetireTail);
+        signpost.preserveNativeControlAllocationBoundary(nativeControlSlot);
         spawnDynamicObject(signpost);
         LOG.fine("S3K defeat flow spawned signpost at X=" + signpostX);
 
@@ -314,14 +322,77 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
     // =========================================================================
 
     private void updateAwaitResults(AbstractPlayableSprite player) {
+        if (restoreNativeControlAtResultsBoundary(player)) {
+            // Obj_EndSignControlAwaitStart owns this boundary independently of
+            // Obj_LevelResults' publication pass. Keep polling End_of_level_active
+            // so the results owner can publish and the normal handoff can set the
+            // next phase on its following owner dispatch.
+            return;
+        }
         if (!services().gameState().isEndOfLevelActive()) {
-            restoreNativePlayerControl(player);
-            if (services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite nativeP2
-                    && nativeP2 != player) {
-                restoreNativePlayerControl(nativeP2);
+            if (!nativeResultsControlRestored) {
+                restoreNativePlayerControlIfNeeded(player);
+                if (services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite nativeP2
+                        && nativeP2 != player) {
+                    restoreNativePlayerControlIfNeeded(nativeP2);
+                }
             }
             phase = Phase.AWAIT_ACT_TRANSITION;
             LOG.fine("S3K defeat flow AWAIT_RESULTS -> AWAIT_ACT_TRANSITION");
+        }
+    }
+
+    private boolean restoreNativeControlAtResultsBoundary(AbstractPlayableSprite player) {
+        if (services().objectManager() == null) {
+            return false;
+        }
+        boolean ready = services().objectManager()
+                .activeObjectsOfType(S3kResultsScreenObjectInstance.class).stream()
+                .anyMatch(S3kResultsScreenObjectInstance::isEndSignControlRestoreBoundaryReady);
+        if (!ready) {
+            return false;
+        }
+        return restoreNativeControlAtResultsPublication(player);
+    }
+
+    /**
+     * Completes the native {@code Obj_EndSignControlAwaitStart} handoff when
+     * the results owner publishes its next routine in the same object pass.
+     * The ordinary polling path uses the same operation when the owner is
+     * observed before publication; this entry point covers the native slot
+     * ordering where {@code Obj_LevelResultsWait2} clears the latch first.
+     */
+    boolean restoreNativeControlAtResultsPublication(AbstractPlayableSprite player) {
+        completeNativeSignpostPoseHandoff();
+        if (nativeResultsControlRestored) {
+            return true;
+        }
+        restoreNativePlayerControlIfNeeded(player);
+        if (services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite nativeP2
+                && nativeP2 != player) {
+            restoreNativePlayerControlIfNeeded(nativeP2);
+        }
+        nativeResultsControlRestored = true;
+        return true;
+    }
+
+    private static void restoreNativePlayerControlIfNeeded(AbstractPlayableSprite player) {
+        if (player == null || (!player.isObjectControlled() && !player.isControlLocked())) {
+            return;
+        }
+        restoreNativePlayerControl(player);
+    }
+
+    private void completeNativeSignpostPoseHandoff() {
+        var objectManager = services().objectManager();
+        if (objectManager == null) {
+            return;
+        }
+        for (S3kSignpostInstance signpost :
+                objectManager.activeObjectsOfType(S3kSignpostInstance.class)) {
+            if (!signpost.isDestroyed()) {
+                signpost.completeNativeResultsControlRestore();
+            }
         }
     }
 

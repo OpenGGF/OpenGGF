@@ -146,7 +146,7 @@ public class GraphicsManager {
 	private boolean instancedBatchingEnabled = true;
 	private boolean instancedBatchActive = false;
 
-	// Vertical wrap Y adjustment for object rendering.
+	// Vertical wrap Y adjustment for sprite/object rendering.
 	// When enabled, adjusts world Y coordinates passed to renderPattern/renderPatternWithId
 	// to account for vertical level wrapping (LZ3/SBZ2). Emulates VDP modular sprite Y
 	// which naturally wraps coordinates, preventing objects from vanishing at wrap boundaries.
@@ -1037,12 +1037,12 @@ public class GraphicsManager {
 	}
 
 	/**
-	 * Enables vertical wrap Y adjustment for object rendering.
+	 * Enables vertical wrap Y adjustment for sprite/object rendering.
 	 * While enabled, Y coordinates passed to renderPattern/renderPatternWithId
 	 * are adjusted to the nearest equivalent position modulo the wrap range,
 	 * emulating the Mega Drive VDP's modular sprite coordinate system.
 	 * <p>
-	 * Call this BEFORE rendering objects in vertically-wrapping zones (LZ3, SBZ2),
+	 * Call this BEFORE rendering sprite/object batches in vertically-wrapping zones,
 	 * and call {@link #disableVerticalWrapAdjust()} afterwards to avoid affecting
 	 * HUD or other non-wrapping renders.
 	 *

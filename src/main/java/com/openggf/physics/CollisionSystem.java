@@ -186,6 +186,42 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
     }
 
     /**
+     * Publishes the angle bytes left by a grounded player AnglePos dispatch.
+     * Native AnglePos seeds both shared registers with the empty-floor sentinel
+     * before its probes, so a missing side writes {@code 3} rather than retaining
+     * an earlier collision routine's value.
+     */
+    public void publishGroundAngleRegisters(SensorResult left, SensorResult right) {
+        publishGroundAngleOutputs(false, left, right);
+    }
+
+    public int getPrimaryAngleRegister() {
+        return primaryAngleOutput;
+    }
+
+    public int getSecondaryAngleRegister() {
+        return secondaryAngleOutput;
+    }
+
+    private void publishPrimaryAngleIfBackedByTile(SensorResult result) {
+        if (result != null && result.tileId() != 0) {
+            applyPrimaryAngleWrites(result);
+        }
+    }
+
+    private void publishAirFloorAngleRegisters(SensorResult[] results) {
+        if (results == null) {
+            return;
+        }
+        SensorResult left = results.length > 0 ? results[0] : null;
+        SensorResult right = results.length > 1 ? results[1] : null;
+        publishPrimaryAngleIfBackedByTile(right);
+        if (left != null && left.tileId() != 0) {
+            applySecondaryAngleWrites(left);
+        }
+    }
+
+    /**
      * Phase 2: Resolve solid object contacts for the legacy batched path.
      * Inline-order modules resolve object solids during object execution instead.
      */
@@ -887,8 +923,8 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
             case 0x00 -> {
                 doWallCheckBoth(sprite);
                 SensorResult[] groundResult = terrainProbes(sprite, sprite.getGroundSensors(), "ground");
-                applyPairedAngleWrites(groundResult);
-                doTerrainCollisionAir(sprite, groundResult, landingHandler);
+                publishAirFloorAngleRegisters(groundResult);
+                doTerrainCollisionAir(sprite, groundResult, landingHandler, landingProbeHandler);
             }
             case 0x40 -> {
                 boolean wallHit = doWallCheck(sprite, 0);
@@ -906,8 +942,9 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
                     // (sonic3k.asm:29000-29008). Do not publish angles from a
                     // helper the native dispatch never invoked.
                     SensorResult[] groundResult = terrainProbes(sprite, sprite.getGroundSensors(), "ground");
-                    applyPairedAngleWrites(groundResult);
-                    doTerrainCollisionAirDirect(sprite, groundResult, landingHandler, forceFloorCheck);
+                    publishAirFloorAngleRegisters(groundResult);
+                    doTerrainCollisionAirDirect(sprite, groundResult, landingHandler,
+                            landingProbeHandler, forceFloorCheck);
                 }
             }
             case 0x80 -> {
@@ -928,8 +965,9 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
                 if (!ceilingHit && (forceFloorCheck || sprite.getYSpeed() >= 0)) {
                     // Mirrored right-moving branch (sonic3k.asm:29095-29103).
                     SensorResult[] groundResult = terrainProbes(sprite, sprite.getGroundSensors(), "ground");
-                    applyPairedAngleWrites(groundResult);
-                    doTerrainCollisionAirDirect(sprite, groundResult, landingHandler, forceFloorCheck);
+                    publishAirFloorAngleRegisters(groundResult);
+                    doTerrainCollisionAirDirect(sprite, groundResult, landingHandler,
+                            landingProbeHandler, forceFloorCheck);
                 }
             }
             default -> {
@@ -1215,6 +1253,20 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
                     sprite.setCentreXPreserveSubpixel((short) centreX);
                 }
                 sprite.setY((short) (sprite.getY() - sprite.getRollHeightAdjustment()));
+                // Sonic_ResetOnFloor's ball branch writes id_Walk before the y_pos
+                // lift (s1disasm/_incObj/01 Sonic.asm:1858-1866). The assembled
+                // FixBugs = 0 branch (sonic.asm:20) is the one modelled here: the
+                // Walk store sits INSIDE `btst #2,obStatus`, so it fires exactly
+                // when the ball flag was set and is skipped otherwise — which is
+                // why a non-rolling S1 landing keeps its Spring/other animation.
+                // (FixBugs = 1 hoists the same store above the btst, making it
+                // unconditional; that is the S2/S3K Player_TouchFloor shape already
+                // covered by publishWalkOnAcceptedLanding.) Without this the
+                // angled ceiling/wall landing left the raw anim byte on Roll for
+                // every game whose angledLandingPublishesWalk is false, so the
+                // player DPLC kept requesting roll mapping frames after the
+                // rolling flag had already been cleared.
+                publishWalkOnRollClearedLanding(sprite);
             }
         }
 
@@ -1249,6 +1301,30 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
             if (walkAnimationId >= 0) {
                 sprite.setAnimationId(walkAnimationId);
             }
+        }
+    }
+
+    /**
+     * The Walk store inside {@code Sonic_ResetOnFloor}'s ball branch
+     * (s1disasm/_incObj/01 Sonic.asm:1863-1865 under {@code FixBugs = 0};
+     * s2.asm's {@code Sonic_ResetOnFloor_Part2} carries the same store). It runs
+     * only where the rolling flag was actually cleared, which is the condition the
+     * caller has already established, and it is independent of the
+     * {@code angledLandingPublishesWalk} rule — that rule describes the FixBugs = 1 /
+     * S3K shape where Walk is published on every accepted landing, rolling or not.
+     */
+    private void publishWalkOnRollClearedLanding(AbstractPlayableSprite sprite) {
+        if (sprite.getSpindash()) {
+            return;
+        }
+        int walkAnimationId = sprite.resolveAnimationId(CanonicalAnimation.WALK);
+        if (walkAnimationId >= 0) {
+            // Looking/crouching are engine-side projections of native anim writes,
+            // not independent ROM status bits, so the explicit Walk store replaces
+            // them here exactly as it does on the floor-landing owner.
+            sprite.setLookingUp(false);
+            sprite.setCrouching(false);
+            sprite.setAnimationId(walkAnimationId);
         }
     }
 

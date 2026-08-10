@@ -328,7 +328,7 @@ public class HczEndBossInstance extends AbstractBossInstance
     // =========================================================================
 
     @Override
-    protected void updateBossLogic(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateBossLogic(int vIntRunCount, PlayableEntity playerEntity) {
         if (pendingDefeatDispatch) {
             pendingDefeatDispatch = false;
             updateCustomFlash();

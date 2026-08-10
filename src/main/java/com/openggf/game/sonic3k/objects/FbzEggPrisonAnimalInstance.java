@@ -39,7 +39,7 @@ public final class FbzEggPrisonAnimalInstance extends AbstractObjectInstance
         mappingBase=((definition.mappingSet().ordinal()*2)+artVariant)*3;
     }
 
-    @Override public void update(int frameCounter, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         if (!initialized) { initializeNative(); return; }
         if (!active) {
             if (--waitTimer < 0) active=true;
@@ -50,7 +50,7 @@ public final class FbzEggPrisonAnimalInstance extends AbstractObjectInstance
         SubpixelMotion.objectFallXY(motion,0x20); x=motion.x;y=motion.y;xSub=motion.xSub;ySub=motion.ySub;yVelocity=motion.yVel;
         var floor=ObjectTerrainUtils.checkFloorDist(x,y,8);
         if(floor.distance()<0){y+=floor.distance();yVelocity=savedYVelocity;}
-        mappingFrame=(frameCounter&8)==0?1:0;
+        mappingFrame=(vIntRunCount&8)==0?1:0;
         coarseXCull(x,0x280);
     }
     @Override public int getX(){return x;} @Override public int getY(){return y;}

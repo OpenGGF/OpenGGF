@@ -9,9 +9,6 @@ public record CollisionRules(
         boolean groundWallPushRequiresFacingIntoWall,
         boolean repeatedObjectRideGroundWallResponseDeferred,
         boolean topSolidLandingAllowsZeroDist,
-        boolean airBottomSolidHitClearsGroundSpeed,
-        boolean airRightWallHitContinuesIntoCeilingSeparation,
-        boolean airLeftWallHitContinuesIntoCeilingSeparation,
         AirCollisionRules air,
         boolean fullSolidBottomOverlapUsesCurrentYRadiusOnly,
         boolean solidObjectOffscreenGate,
@@ -24,16 +21,10 @@ public record CollisionRules(
         boolean solidObjectBarelyPokingResolvesAsSide,
         boolean solidObjectKeepsOnObjWhenJumpedOffSameFrame,
         boolean advanceWaterLevelBeforePlayerPhysics,
-        int defaultCollisionLayoutYMask) {
-    public CollisionRules {
-        airBottomSolidHitClearsGroundSpeed = air.bottomSolidHitClearsGroundSpeed();
-        airRightWallHitContinuesIntoCeilingSeparation =
-                air.rightWallHitContinuesIntoCeilingSeparation();
-        airLeftWallHitContinuesIntoCeilingSeparation =
-                air.leftWallHitContinuesIntoCeilingSeparation();
-    }
+        int defaultCollisionLayoutYMask,
+        boolean layoutYMaskAppliesToAllLookups) {
 
-    /** Convenience constructor for the nested air-rule shape. */
+    /** Backward-compatible constructor for rules that retain targeted Y masking. */
     public CollisionRules(CollisionModel collisionModel,
             boolean groundWallCollisionEnabled, boolean groundWallPushRequiresFacingIntoWall,
             boolean repeatedObjectRideGroundWallResponseDeferred, boolean topSolidLandingAllowsZeroDist,
@@ -46,10 +37,7 @@ public record CollisionRules(
             boolean solidObjectKeepsOnObjWhenJumpedOffSameFrame,
             boolean advanceWaterLevelBeforePlayerPhysics, int defaultCollisionLayoutYMask) {
         this(collisionModel, groundWallCollisionEnabled, groundWallPushRequiresFacingIntoWall,
-                repeatedObjectRideGroundWallResponseDeferred, topSolidLandingAllowsZeroDist,
-                air.bottomSolidHitClearsGroundSpeed(),
-                air.rightWallHitContinuesIntoCeilingSeparation(),
-                air.leftWallHitContinuesIntoCeilingSeparation(), air,
+                repeatedObjectRideGroundWallResponseDeferred, topSolidLandingAllowsZeroDist, air,
                 fullSolidBottomOverlapUsesCurrentYRadiusOnly, solidObjectOffscreenGate,
                 solidObjectRequiresSidekickOnScreen, sidekickPushBypassUsesGraceStatus,
                 sidekickSuppressesFastLeaderTinyFollowNudge,
@@ -57,6 +45,6 @@ public record CollisionRules(
                 solidObjectTopBranchAlwaysLiftsOnUpwardVelocity,
                 rightWallDeepProbePreservesPenetration, solidObjectBarelyPokingResolvesAsSide,
                 solidObjectKeepsOnObjWhenJumpedOffSameFrame,
-                advanceWaterLevelBeforePlayerPhysics, defaultCollisionLayoutYMask);
+                advanceWaterLevelBeforePlayerPhysics, defaultCollisionLayoutYMask, false);
     }
 }

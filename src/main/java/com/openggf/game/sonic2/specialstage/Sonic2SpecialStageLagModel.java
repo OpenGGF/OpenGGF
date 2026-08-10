@@ -13,8 +13,8 @@ public final class Sonic2SpecialStageLagModel {
             new Bucket(0, 12), new BucketRatio(65, 185),
             new Bucket(1, 12), new BucketRatio(82, 202),
             new Bucket(2, 12), new BucketRatio(297, 837),
-            new Bucket(3, 0), new BucketRatio(104, 127),
-            new Bucket(3, 12), new BucketRatio(1121, 3151),
+            new Bucket(3, 0), new BucketRatio(104, 126),
+            new Bucket(3, 12), new BucketRatio(1121, 3152),
             new Bucket(4, 12), new BucketRatio(302, 797));
     private static final BucketRatio FALLBACK_RATIO = new BucketRatio(1971, 5299);
 

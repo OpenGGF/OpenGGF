@@ -177,7 +177,7 @@ public class Sonic1GlassBlockObjectInstance extends AbstractObjectInstance
         return y;
     }
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         // ROM: the reflection child is allocated in Glass_Main (routine 0),
         // after ObjPosLoad has already finished loading this frame's parents.
         // Spawning it during construction lets it steal SST slots from later

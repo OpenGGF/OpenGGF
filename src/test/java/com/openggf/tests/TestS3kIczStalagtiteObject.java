@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.IczStalagtiteObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -42,12 +43,12 @@ class TestS3kIczStalagtiteObject {
     // returns a PlaceholderObjectInstance and the instanceof cast throws under the parallel suite.
     @BeforeEach
     void clearLeakedGameplaySession() {
-        com.openggf.game.session.SessionManager.clear();
+        TestEnvironment.resetAll();
     }
 
     @Test
     void registryCreatesIczStalagtiteInstance() {
-        ObjectInstance instance = new Sonic3kObjectRegistry().create(
+        ObjectInstance instance = new IczRegistry().create(
                 new ObjectSpawn(0x3200, 0x05C0, Sonic3kObjectIds.ICZ_STALAGTITE, 0, 0, false, 0));
 
         assertInstanceOf(IczStalagtiteObjectInstance.class, instance);
@@ -227,6 +228,18 @@ class TestS3kIczStalagtiteObject {
                 children.add(invocation.getArgument(0));
                 return null;
             }).when(objectManager).addDynamicObjectAfterCurrent(org.mockito.ArgumentMatchers.any());
+        }
+    }
+
+    private static final class IczRegistry extends Sonic3kObjectRegistry {
+        @Override
+        protected com.openggf.level.Level currentLevel() {
+            return null;
+        }
+
+        @Override
+        protected int currentRomZoneId() {
+            return Sonic3kZoneIds.ZONE_ICZ;
         }
     }
 }

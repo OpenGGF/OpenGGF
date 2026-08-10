@@ -14,7 +14,18 @@ public final class InLevelTitleCardCoordinator {
     private InLevelTitleCardCoordinator() {
     }
 
-    /** Locks control and runs the game-specific fresh-player prelude for a results-return title card. */
+    /**
+     * Locks control for a results-return title card. The fresh-player prelude
+     * deliberately does NOT run here: the ROM's equivalent pass is
+     * {@code Level_StartGame}'s single ObjPosLoad/ExecuteObjects iteration
+     * after the locked title-card loop drains its PLCs, immediately before
+     * {@code Level_MainLoop} — which the release path already models via
+     * {@link com.openggf.game.TitleCardProvider#shouldRunPlayerPreludeAtRelease()}.
+     */
+    public static void prepareResultsTransition(Consumer<Boolean> controlLock) {
+        controlLock.accept(true);
+    }
+
     public static void prepareResultsTransition(Sprite sprite,
                                                 Consumer<Boolean> controlLock,
                                                 Supplier<GameModule> moduleSupplier,
@@ -36,7 +47,11 @@ public final class InLevelTitleCardCoordinator {
                                            Consumer<Boolean> controlLock) {
         Objects.requireNonNull(levelManager, "levelManager");
         Objects.requireNonNull(controlLock, "controlLock");
-        if (endOfLevelActive || !levelManager.consumeInLevelTitleCardRequest()) {
+        // A pending request is an explicit title-card owner handoff.  Seamless
+        // transitions may preserve End_of_level_active for the carried results
+        // owner while assigning publication to this title-card coordinator;
+        // the request itself is the semantic gate, not the preserved flag.
+        if (!levelManager.consumeInLevelTitleCardRequest()) {
             return false;
         }
         if (provider == null) {

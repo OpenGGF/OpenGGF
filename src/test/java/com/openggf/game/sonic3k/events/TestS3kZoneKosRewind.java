@@ -13,6 +13,7 @@ import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.game.sonic3k.resources.S3kKosDecompressionQueueSnapshot;
 import com.openggf.game.sonic3k.resources.S3kKosRamDestinations;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.tests.HardwareBoundaryPump;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -43,13 +44,21 @@ class TestS3kZoneKosRewind {
         invoke(events, "queueBattleshipKosArt");
 
         List<HardwareWorkHandle> originalHandles = timing.pendingHandles();
-        assertEquals(List.of(0L, 1L),
-                originalHandles.stream().map(HardwareWorkHandle::ordinal).toList());
+        assertEquals(List.of(HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
+                        HardwareWorkKind.KOS_MODULE_QUEUE,
+                        HardwareWorkKind.KOS_MODULE_QUEUE),
+                originalHandles.stream().map(HardwareWorkHandle::kind).toList());
+        assertEquals(List.of(0L), originalHandles.stream()
+                .filter(handle -> handle.kind() == HardwareWorkKind.KOS_DECOMPRESSION_QUEUE)
+                .map(HardwareWorkHandle::ordinal).toList());
+        assertEquals(List.of(0L, 1L), originalHandles.stream()
+                .filter(handle -> handle.kind() == HardwareWorkKind.KOS_MODULE_QUEUE)
+                .map(HardwareWorkHandle::ordinal).toList());
         byte[] eventSnapshot = ZoneEventSchemaSidecar.capture(events);
         HardwareTimingSnapshot timingSnapshot = timing.capture();
 
-        timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
-        timing.service(HardwareServiceBoundary.POST_OBJECTS);
+        HardwareBoundaryPump.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        HardwareBoundaryPump.service(HardwareServiceBoundary.POST_OBJECTS);
         events.init(1);
 
         timing.restore(timingSnapshot);
@@ -57,14 +66,19 @@ class TestS3kZoneKosRewind {
         events.discardHardwareWorkFacadesAfterRewind();
         events.rebindHardwareWorkAfterRewind();
 
+        assertEquals(0L, longField(events, "battleshipTerrainKosOrdinal"));
         assertEquals(0L, longField(events, "battleshipTerrainArtOrdinal"));
         assertEquals(1L, longField(events, "battleshipObjectArtOrdinal"));
-        assertEquals(originalHandles.get(0), field(events, "battleshipTerrainArtHandle"));
-        assertEquals(originalHandles.get(1), field(events, "battleshipObjectArtHandle"));
+        assertEquals(originalHandles.get(0), field(events, "battleshipTerrainKosHandle"));
+        assertEquals(originalHandles.get(1), field(events, "battleshipTerrainArtHandle"));
+        assertEquals(originalHandles.get(2), field(events, "battleshipObjectArtHandle"));
         assertEquals(originalHandles, timing.pendingHandles());
+        assertEquals(1L, nextOrdinal(timing.capture(), HardwareWorkKind.KOS_DECOMPRESSION_QUEUE));
         assertEquals(2L, nextKosOrdinal(timing.capture()));
 
         events.update(1, 1);
+        assertEquals(1L, nextOrdinal(timing.capture(), HardwareWorkKind.KOS_DECOMPRESSION_QUEUE),
+                "AIZ terrain restore must poll the original standard job, not resubmit it");
         assertEquals(2L, nextKosOrdinal(timing.capture()),
                 "AIZ owner restore must poll the original jobs, not resubmit them");
     }
@@ -93,8 +107,7 @@ class TestS3kZoneKosRewind {
         S3kKosDecompressionQueueSnapshot directSnapshot =
                 directQueue.capture();
 
-        timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
-        directQueue.afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        HardwareBoundaryPump.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
         events.init(0);
 
         timing.restore(timingSnapshot);
@@ -143,14 +156,8 @@ class TestS3kZoneKosRewind {
                 .findFirst().orElseThrow();
         int boundaries = 0;
         while (!timing.isReady(moduleHandle) && boundaries++ < 100_000) {
-            timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
-            directQueue.afterTimingService(
-                    HardwareServiceBoundary.PRE_MAIN_LOOP);
-            timing.service(HardwareServiceBoundary.POST_OBJECTS);
-            directQueue.afterTimingService(
-                    HardwareServiceBoundary.POST_OBJECTS);
-            moduleQueue.afterTimingService(
-                    HardwareServiceBoundary.POST_OBJECTS);
+            HardwareBoundaryPump.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            HardwareBoundaryPump.service(HardwareServiceBoundary.POST_OBJECTS);
         }
         assertTrue(timing.isReady(directHandle),
                 "ordinary stream must be ready after its decisive PRE boundary");
@@ -263,8 +270,7 @@ class TestS3kZoneKosRewind {
         S3kKosDecompressionQueueSnapshot directSnapshot =
                 directQueue.capture();
 
-        timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
-        directQueue.afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        HardwareBoundaryPump.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
         events.init(0);
 
         timing.restore(timingSnapshot);
@@ -291,7 +297,7 @@ class TestS3kZoneKosRewind {
         Sonic3kHCZEvents events = new Sonic3kHCZEvents(() -> 0);
         events.init(0);
         events.setEventsFg5(true);
-        timing.service(HardwareServiceBoundary.POST_OBJECTS);
+        HardwareBoundaryPump.service(HardwareServiceBoundary.POST_OBJECTS);
         events.update(0, 0);
 
         List<HardwareWorkHandle> originalHandles = timing.pendingHandles();
@@ -300,8 +306,8 @@ class TestS3kZoneKosRewind {
         byte[] eventSnapshot = ZoneEventSchemaSidecar.capture(events);
         HardwareTimingSnapshot timingSnapshot = timing.capture();
 
-        timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
-        timing.service(HardwareServiceBoundary.POST_OBJECTS);
+        HardwareBoundaryPump.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        HardwareBoundaryPump.service(HardwareServiceBoundary.POST_OBJECTS);
         events.init(0);
 
         timing.restore(timingSnapshot);

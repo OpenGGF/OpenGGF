@@ -115,7 +115,7 @@ public class BubblerObjectInstance extends AbstractObjectInstance implements Rew
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         boolean initializedThisFrame = routine == ROUTINE_INIT;
         if (routine == ROUTINE_INIT) {
             initialize();
@@ -303,7 +303,11 @@ public class BubblerObjectInstance extends AbstractObjectInstance implements Rew
             return false;
         }
 
-        player.replenishAir();
+        if ("sonic".equalsIgnoreCase(player.getCode())) {
+            player.replenishAir();
+        } else {
+            player.replenishAirPreservingRollingStatus();
+        }
         services().playSfx(Sonic3kSfx.BUBBLE.id);
         consumed = true;
         inhalable = false;
@@ -408,6 +412,17 @@ public class BubblerObjectInstance extends AbstractObjectInstance implements Rew
     @Override
     public int getPriorityBucket() {
         return 1;
+    }
+
+    /**
+     * {@code Obj_Bubbler} writes {@code width_pixels=$10} but leaves
+     * {@code height_pixels} at the cleared SST value (sonic3k.asm:64491-64498).
+     * Its rising-child and maker paths both use the resulting zero-height
+     * Render_Sprites bound as the off-screen delete gate.
+     */
+    @Override
+    public int getOnScreenHalfHeight() {
+        return 0;
     }
 
     int getWobbleAngleForTest() {

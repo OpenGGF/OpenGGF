@@ -542,9 +542,10 @@ public class SidekickCpuController {
         // the ROM-visible word is $22FF, so loc_13F94 keeps DOWN held for one
         // more frame and releases at $2300. Bootstrap/VBlank closure paths can
         // source the stale pre-Process_Sprites LevelManager copy; recover the
-        // already-incremented word using the same source semantic as the other
-        // low-byte CPU gates.
-        return projectRetainedResultsSpriteCadence(romVisibleLevelFrameCounter(), leader);
+        // already-incremented word, but do not project through Sonic_RecordPos:
+        // this routine reads Level_frame_counter itself, not a sprite-cadence
+        // table index.
+        return romVisibleLevelFrameCounter();
     }
 
     public void setController2Input(int held, int logical) {
@@ -702,6 +703,18 @@ public class SidekickCpuController {
         return diagnosticCtrl2HeldLatch & 0xFF;
     }
 
+    /**
+     * Returns whether the S3K carry routine has published a non-zero generated
+     * Ctrl_2_logical word for the current object pass. This is the live ROM
+     * carry state used by later object owners; it is not raw controller input
+     * or trace comparison data.
+     */
+    public boolean hasPublishedCarryInput() {
+        return state == State.CARRYING
+                && carryController().isCarryingMainCharacter()
+                && (diagnosticCtrl2HeldLatch & MANUAL_HELD_MASK) != 0;
+    }
+
     public int getDiagnosticGeneratedPressedInput() {
         return diagnosticCtrl2PressedLatch & 0xFF;
     }
@@ -814,7 +827,6 @@ public class SidekickCpuController {
         }
         nativeEndingPosePending = false;
         controller2SignedLocked = false;
-        mirrorRawController2LogicalForEndingPose();
         ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
         sidekick.setControlLocked(false);
         sidekick.setSpindash(false);
@@ -1281,7 +1293,7 @@ public class SidekickCpuController {
         sidekick.setXSpeed((short) 0);
         sidekick.setYSpeed((short) 0);
         sidekick.setGSpeed((short) 0);
-        // Preserve zone-event-set in-air state. S3K MGZ1 / HCZ1 / LRZ1 / SSZ
+        // Preserve zone-event-set in-air state. S3K MGZ1 / HCZ1 / LRZ1
         // set status_InAir on the sidekick during applyZonePlayerState
         // (ROM sonic3k.asm:8132-8205 mirrors loc_6886 / loc_68A6 setting
         // Status_InAir on Player_2). Resetting to false here would
@@ -1909,12 +1921,14 @@ public class SidekickCpuController {
         // FollowRight to preserve the delayed Ctrl_2 word (sonic3k.asm:26702-
         // 26705). A push carrying terrain ground-wall provenance is genuine and
         // must survive to the loc_13DD0 read (AIZ2 reload underwater wall bounce,
-        // trace F14299); only a stale released-object push (no terrain
-        // provenance) is pre-cleared here.
+        // trace F14299). A live SolidObject-owned push is the same native
+        // status source and must also survive; only a stale released-object
+        // push with neither owner provenance is pre-cleared here.
         if (currentPushing
                 && releasedUnderwaterPushConsumed
                 && releasedUnderwaterZeroSpeedPush
-                && !sidekick.isPushFromGroundWallCollision()) {
+                && !sidekick.isPushFromGroundWallCollision()
+                && !hasLiveObjectPushingLatch()) {
             sidekick.setPushing(false);
             currentPushing = false;
         } else if (!releasedUnderwaterObjectSlot) {
@@ -2706,7 +2720,7 @@ public class SidekickCpuController {
             // no trace-profile-gated bridge (sonic3k.asm:26775 loc_13E9C reads the
             // post-increment (Level_frame_counter+1).b low byte).
             int autoJumpFrameCounter = frameCounter;
-            if (titleCardOwnsRetainedResultsHeldLevelCounter()) {
+            if (titleCardOwnsActiveRetainedResultsSpriteCadence()) {
                 // The retained results/title owner continues native
                 // Process_Sprites dispatches while the engine's ordinary
                 // gameplay counter is held. Sonic_RecordPos runs immediately
@@ -3283,6 +3297,15 @@ public class SidekickCpuController {
         GameModule module = sidekick.currentGameModule();
         var titleCardProvider = module != null ? module.getTitleCardProvider() : null;
         return titleCardProvider != null && titleCardProvider.ownsRetainedResultsHeldLevelCounter();
+    }
+
+    private boolean titleCardOwnsActiveRetainedResultsSpriteCadence() {
+        GameModule module = sidekick.currentGameModule();
+        var titleCardProvider = module != null ? module.getTitleCardProvider() : null;
+        return titleCardProvider != null
+                && titleCardProvider.isOverlayActive()
+                && titleCardProvider.ownsRetainedResultsHeldLevelCounter()
+                && titleCardProvider.projectsRetainedResultsSpriteCadence();
     }
 
     private int projectRetainedResultsSpriteCadence(
@@ -3897,8 +3920,6 @@ public class SidekickCpuController {
      * A/B/C/START press, or (b) a 64-frame gate firing while Sonic's
      * object_control sign bit is clear and Sonic is not super. On trigger, teleports Tails to
      * (Sonic.x, Sonic.y - 0xC0), sets routine = 4, and enters flight AI.
-     *
-     * <p>Stubbed in Task 2; body lands in Task 4.
      */
     private void updateCatchUpFlight() {
         // ROM Tails_Catch_Up_Flying (sonic3k.asm:26474-26531)
@@ -3916,7 +3937,9 @@ public class SidekickCpuController {
                             || titleCardOwnsRetainedResultsHeldLevelCounter())
                         ? frameCounter + 1
                         : frameCounter);
-        catchUpFrameCounter = projectRetainedResultsSpriteCadence(catchUpFrameCounter, leader);
+        if (catchUpUsesRomVisibleLevelFrameCounter) {
+            catchUpFrameCounter = projectRetainedResultsSpriteCadence(catchUpFrameCounter, leader);
+        }
         catchUpFrameCounterOverride = -1;
 
         // Ctrl_2_logical A/B/C/START press → immediate trigger
@@ -3997,8 +4020,6 @@ public class SidekickCpuController {
      * it (X step &le; 0xC, Y step = 1 plus optional -0x20 lead), and transitions
      * to {@code NORMAL} (routine 0x06) once Tails is close enough to Sonic and
      * Sonic isn't hurt/dead.
-     *
-     * <p>Stubbed in Task 2; body lands in Task 5.
      */
     private void updateFlightAutoRecovery() {
         // ROM Tails_FlySwim_Unknown (sonic3k.asm:26534-26653).
@@ -5628,6 +5649,29 @@ public class SidekickCpuController {
     public void captureLevelStartLeaderAnchor(int leaderCentreX, int leaderCentreY) {
         this.levelStartLeaderCentreX = leaderCentreX;
         this.levelStartLeaderCentreY = leaderCentreY;
+    }
+
+    /**
+     * Re-captures the spawn anchor from the leader's own current position.
+     *
+     * <p>ROM {@code InitPlayers} copies the sidekick's spawn coordinates from
+     * {@code MainCharacter+x_pos/y_pos} and then applies {@code -$20 / +4}
+     * (docs/s2disasm/s2.asm:5191-5195). It reads the leader's <em>actual</em>
+     * position, never the zone's start-location table: {@code LevelSizeLoad}
+     * establishes that position either from {@code StartLocations} or, when
+     * {@code Last_star_pole_hit} is non-zero, from {@code Obj79_LoadData}'s
+     * {@code Saved_x_pos/Saved_y_pos} checkpoint restore
+     * (docs/s2disasm/s2.asm:14773-14790, :44774-44778), and InitPlayers runs
+     * afterwards (docs/s2disasm/s2.asm:4945) without distinguishing the two.
+     * Anchoring to the leader therefore covers both entry kinds with one rule.
+     */
+    /** The leader's current centre X, for spawn-anchor branch selection. */
+    public int leaderCentreX() {
+        return leader.getCentreX();
+    }
+
+    public void captureLevelStartLeaderAnchorFromLeaderPosition() {
+        captureLevelStartLeaderAnchor(leader.getCentreX(), leader.getCentreY());
     }
 
     /**

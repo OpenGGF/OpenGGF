@@ -10,7 +10,6 @@ import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.snapshot.CameraSnapshot;
 import com.openggf.sprites.Sprite;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-import com.openggf.sprites.playable.Tails;
 
 @com.openggf.game.ModApi
 public class Camera implements RewindSnapshottable<CameraSnapshot> {
@@ -23,10 +22,11 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	private UpdateObserver updateObserver;
 	private short x = 0;
 	private short y = 0;
-	// ROM ScreenEvents snapshots. These are independent words: zone event/deform
-	// code may offset them without changing the live scroll position (and vice versa).
-	private short xCopy = 0;
-	private short yCopy = 0;
+	// ROM Camera_X/Y_pos_copy: the position published by ScreenEvents for
+	// sprite visibility and screen rendering. Zone event code can move the
+	// physical camera after this publication without changing the copy.
+	private short renderCopyX = 0;
+	private short renderCopyY = 0;
 
 	private short minX;
 	private short minY;
@@ -236,22 +236,27 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 
 		short yBeforeVerticalScroll = y;
 
-		// ROM: s2.asm:18121-18132 - Rolling height compensation
-		// When rolling, Sonic's center shifts down by ~5px due to height change.
-		// Subtract 5 from the Y delta to prevent camera jolt.
-		// Tails is 4 pixels shorter, so only subtract 1 for Tails.
-		// loc_1BFEC does not merely substitute two coordinates into Player_1.
+        // loc_1BFEC does not merely substitute two coordinates into Player_1.
 		// It repoints a0 at Scroll_forced_X_pos-x_pos, a synthetic RAM record whose
 		// status and ground-velocity fields are zero for this model. Consequently a
 		// traversal object may set Player_1 airborne while forced MoveCameraY still
 		// follows the grounded path (FBZ spinning-pole capture is the observable
-		// four-pixel case). Do not leak the real player's movement state into it.
-		boolean forcedCoordinateRecord = forcedScrollRequested;
-		if (!forcedCoordinateRecord && focusedSprite.getRolling()) {
+        // four-pixel case). Do not leak the real player's movement state into it.
+        boolean forcedCoordinateRecord = forcedScrollRequested;
+        // ROM: ScrollVerti rolling height compensation. When the player is rolling
+		// their height shrinks, so the Y delta is reduced to stop the camera jolting.
+		//
+		// fixBugs (s2.asm:27 `fixBugs = 0`, block at s2.asm:18156-18165): the engine
+		// implements the SHIPPED (fixBugs=0) branch — a flat `subq.w #5,d0` for whoever
+		// the camera is focused on, character-independent. The fixBugs=1 branch adds
+		// `cmpi.b #ObjID_Tails,id(a0) / addq.w #4,d0`, i.e. only 1 for Tails, because
+		// Tails is four pixels shorter and the flat 5 makes his camera jolt slightly on
+		// entering and leaving a roll. The disassembly notes that not even S3K fixed
+		// this; S1 (`_inc/ScrollHoriz & ScrollVertical.asm`, subq.w
+		// #sonic_height-sonic_roll_height) has no Tails at all, so the flat subtraction
+		// is correct for all three games.
+        if (!forcedCoordinateRecord && focusedSprite.getRolling()) {
 			focusedSpriteRealY -= 5;
-			if (focusedSprite instanceof Tails) {
-				focusedSpriteRealY += 4; // Net: subtract 1 for Tails
-			}
 		}
 
 		// Vertical scroll logic (ROM: ScrollVerti)
@@ -503,6 +508,15 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		// running right the camera only ever consults v_limitright2, so the raised
 		// left boundary never yanks the camera forward. A symmetric clamp here
 		// clamped the camera UP to the new minX a few frames early (S1 LZ1 f12463).
+		// FLAG: FixBugs (docs/s1disasm/sonic.asm:20 -- 0 in the shipped ROM).
+		// MoveScreenHoriz's two deadzone tests are `bcs`/`bcc` (UNSIGNED) under
+		// FixBugs = 0 and `blt`/`bge` (SIGNED) under FixBugs = 1
+		// (docs/s1disasm/_inc/ScrollHoriz & ScrollVertical.asm:38-52). The engine's
+		// signed int compares below agree with BOTH branches for every reachable
+		// value: the first subtraction cannot borrow unless the result is negative,
+		// and the second test only runs once the first proved the value non-negative,
+		// so the "horizontal wrap" the fix targets is unreachable at S1 level extents.
+		// No behavioural choice is being made here.
 		int deadzoneLeft = DeadzoneGeometry.leftEdge(width, deadzoneMode);
 		int deadzoneRight = DeadzoneGeometry.rightEdge(width);
 		if (focusedSpriteRealX < deadzoneLeft) {
@@ -572,14 +586,21 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * ROM SV_BottomBoundary clamp: enforce only the bottom boundary (v_limitbtm2 /
 	 * maxY) when the camera scrolled down (or the bottom boundary is moving). The
 	 * top boundary is never consulted on the down path
-	 * (docs/s1disasm/_inc/ScrollHoriz & ScrollVertical.asm:248-261). Mirror
-	 * {@link #clampAxisWithWrap}'s degenerate handling: if the bottom bound is
-	 * transiently above the top bound, enforce only the top bound.
+	 * (docs/s1disasm/_inc/ScrollHoriz & ScrollVertical.asm:258-271): the routine
+	 * compares d1 against v_limitbtm2 alone and, on the no-wrap branch, writes
+	 * v_limitbtm2 straight into d1.
+	 * <p>
+	 * That holds even when the bottom bound sits ABOVE the top bound. The state is
+	 * ordinary rather than degenerate: DynamicLevelEvents' move-up branch snaps
+	 * v_limitbtm2 to {@code (v_screenposy & $FFFE) - 2} whenever the camera is
+	 * below the new v_limitbtm1 (DynamicLevelEvents.asm:17-28), which drops the
+	 * bottom bound below a v_limittop2 the zone handler left in place. The camera
+	 * then rides the bottom bound upward past the top bound, two pixels per frame,
+	 * and never touches SV_MoveCameraUp's top clamp on the way (S1 MZ1 row 3,220:
+	 * v_limittop2 $340, v_limitbtm2 $33E, recorded camera $33E). Consulting minY
+	 * here left the camera unclamped for the whole ascent.
 	 */
 	private short clampBottomBoundary(short value) {
-		if (maxY < minY) {
-			return value < minY ? minY : value;
-		}
 		return value > maxY ? maxY : value;
 	}
 
@@ -827,9 +848,15 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * Both reduce to {@code ((relY + yMargin) & mask) < height + 2*yMargin}.
 	 */
 	public boolean isVisibleForRenderFlag(AbstractPlayableSprite sprite) {
+		return isVisibleForRenderFlagAtCamera(sprite, getXWithShake(), getYWithShake());
+	}
+
+	private boolean isVisibleForRenderFlagAtCamera(
+			AbstractPlayableSprite sprite, int cameraXCopy, int cameraYCopy) {
+		if (sprite == null) {
+			return false;
+		}
 		int widthPixels = sprite.getRenderFlagWidthPixels();
-		int cameraXCopy = getXWithShake();
-		int cameraYCopy = getYWithShake();
 		int relX = sprite.getRenderCentreX() - cameraXCopy;
 		if (relX + widthPixels < 0 || relX - widthPixels >= width) {
 			return false;
@@ -854,6 +881,8 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		this.focusedSprite = sprite;
 		x = sprite.getX();
 		y = sprite.getY();
+		renderCopyX = x;
+		renderCopyY = y;
 	}
 
 	public AbstractPlayableSprite getFocusedSprite() {
@@ -876,24 +905,42 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		this.y = y;
 	}
 
+	/**
+	 * Publishes the current physical camera position as the ROM render copy.
+	 * ScreenEvents performs this before zone-specific event handlers run.
+	 */
+	public void captureRenderCopy() {
+		renderCopyX = x;
+		renderCopyY = y;
+	}
+
+	/**
+	 * Updates the physical Y position after the render copy has been published.
+	 * This models ROM event routines that move {@code Camera_Y_pos} while
+	 * retaining the already-published {@code Camera_Y_pos_copy}.
+	 */
+	public void setYAfterRenderCopy(short y) {
+		this.y = y;
+	}
+
 	/** Returns ROM {@code Camera_X_pos_copy}, captured at the head of S3K ScreenEvents. */
 	public short getXCopy() {
-		return xCopy;
+		return renderCopyX;
 	}
 
 	/** Writes ROM {@code Camera_X_pos_copy} without changing live camera X. */
 	public void setXCopy(short xCopy) {
-		this.xCopy = xCopy;
+		this.renderCopyX = xCopy;
 	}
 
 	/** Returns ROM {@code Camera_Y_pos_copy}, captured at the head of S3K ScreenEvents. */
 	public short getYCopy() {
-		return yCopy;
+		return renderCopyY;
 	}
 
 	/** Writes ROM {@code Camera_Y_pos_copy} without changing live camera Y. */
 	public void setYCopy(short yCopy) {
-		this.yCopy = yCopy;
+		this.renderCopyY = yCopy;
 	}
 
 	/**
@@ -901,8 +948,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * camera position words before foreground/background event dispatch.
 	 */
 	public void copyLivePositionToScreenEventWords() {
-		xCopy = x;
-		yCopy = y;
+		captureRenderCopy();
 	}
 
 	/**
@@ -935,14 +981,14 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * @return Camera X position with shake offset applied (for rendering)
 	 */
 	public short getXWithShake() {
-		return (short) (x + shakeOffsetX);
+		return (short) (renderCopyX + shakeOffsetX);
 	}
 
 	/**
 	 * @return Camera Y position with shake offset applied (for rendering)
 	 */
 	public short getYWithShake() {
-		return (short) (y + shakeOffsetY);
+		return (short) (renderCopyY + shakeOffsetY);
 	}
 
 	public short getWidth() {
@@ -1324,8 +1370,8 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	public void resetState() {
 		x = 0;
 		y = 0;
-		xCopy = 0;
-		yCopy = 0;
+		renderCopyX = 0;
+		renderCopyY = 0;
 		minX = 0;
 		minY = 0;
 		maxX = 0;
@@ -1420,7 +1466,8 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	@Override
 	public CameraSnapshot capture() {
 		return new CameraSnapshot(
-				x, y, xCopy, yCopy, minX, minY, maxX, maxY,
+				x, y, minX, minY, maxX, maxY,
+				renderCopyX, renderCopyY,
 				shakeOffsetX, shakeOffsetY,
 				minXTarget, minYTarget, maxXTarget, maxYTarget, maxXBeforeBoundaryEasing,
 				maxYChanging, horizScrollDelayFrames, frozen, deferHorizontalBoundaryClampOnce,
@@ -1434,8 +1481,8 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	public void restore(CameraSnapshot snapshot) {
 		x = snapshot.x();
 		y = snapshot.y();
-		xCopy = snapshot.xCopy();
-		yCopy = snapshot.yCopy();
+		renderCopyX = snapshot.renderCopyX();
+		renderCopyY = snapshot.renderCopyY();
 		minX = snapshot.minX();
 		minY = snapshot.minY();
 		maxX = snapshot.maxX();

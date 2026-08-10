@@ -177,7 +177,7 @@ class TestS3kMhzSwingBarLiveRewind {
 
         restored.update(7, sprite);
         assertTrue(sprite.isObjectControlled(), "recreated bar must keep the player hanging on resume");
-        sprite.setJumpInputPressed(true);
+        sprite.setLogicalInputState(false, false, false, false, true, true);
         restored.update(8, sprite);
         assertTrue(sprite.getAir() && !sprite.isObjectControlled(),
                 "jump release after rewind must free the player cleanly (not leave it frozen)");

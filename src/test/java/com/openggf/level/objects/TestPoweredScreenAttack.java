@@ -234,7 +234,7 @@ class TestPoweredScreenAttack {
         }
 
         @Override protected void initializeBossState() { }
-        @Override protected void updateBossLogic(int frameCounter, PlayableEntity player) { }
+        @Override protected void updateBossLogic(int vIntRunCount, PlayableEntity player) { }
         @Override protected int getInitialHitCount() { return 3; }
         @Override protected void onHitTaken(int remainingHits) { attackCount++; }
         @Override protected int getCollisionSizeIndex() { return 8; }

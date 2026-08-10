@@ -65,7 +65,7 @@ public record TraceCharacterState(
      * replay paths so both compare apples-to-apples.
      */
     public static TraceCharacterState fromSprite(AbstractPlayableSprite sprite) {
-        if (sprite == null) {
+        if (sprite == null || !sprite.isNativeSlotPresent()) {
             return absent();
         }
         var level = GameServices.levelOrNull();

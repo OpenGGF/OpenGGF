@@ -31,6 +31,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
@@ -207,6 +208,27 @@ class TestSonic3kSpringObjectInstance {
         spring.update(1847, tails);
         assertTrue(spring.isSolidFor(tails),
                 "Obj_Spring_Horizontal becomes executable on the following object pass");
+    }
+
+    @Test
+    void reverseGravitySwapsVerticalSpringDirectionDuringNativeInit() throws Exception {
+        GameStateManager gameState = new GameStateManager();
+        gameState.setReverseGravityActive(true);
+
+        Sonic3kSpringObjectInstance up = new Sonic3kSpringObjectInstance(
+                new ObjectSpawn(0x100, 0x100, Sonic3kObjectIds.SPRING, 0x00, 0, false, 0));
+        up.setServices(new TestObjectServices().withGameState(gameState));
+        invoke(up, "ensureInitialized");
+
+        Sonic3kSpringObjectInstance down = new Sonic3kSpringObjectInstance(
+                new ObjectSpawn(0x100, 0x100, Sonic3kObjectIds.SPRING, 0x20, 0, false, 0));
+        down.setServices(new TestObjectServices().withGameState(gameState));
+        invoke(down, "ensureInitialized");
+
+        assertEquals(4, intField(up, "springType"),
+                "Reverse_gravity_flag swaps native UP to DOWN during Obj_Spring init");
+        assertEquals(0, intField(down, "springType"),
+                "Reverse_gravity_flag swaps native DOWN to UP during Obj_Spring init");
     }
 
     @Test
@@ -667,6 +689,12 @@ class TestSonic3kSpringObjectInstance {
 
     private static Object invoke(Object target, String methodName) throws Exception {
         return invoke(target, methodName, new Class<?>[0]);
+    }
+
+    private static int intField(Object target, String fieldName) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.getInt(target);
     }
 
     private static Object invoke(Object target, String methodName, Class<?>[] argTypes, Object... args)

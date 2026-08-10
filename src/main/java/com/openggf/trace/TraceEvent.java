@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openggf.level.objects.RomObjectSnapshot;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -760,29 +761,32 @@ public sealed interface TraceEvent {
                     node.get("slot").asInt(),
                     node.has("object_type") ? node.get("object_type").asText() : ""
                 );
+                // Interned text fields: object_near rows are emitted per nearby
+                // object per frame, so complete-run traces carry hundreds of
+                // thousands of them with heavily repeated hex-string values.
                 case "object_near" -> new ObjectNear(
                     frame,
                     parseCharacter(node),
                     node.get("slot").asInt(),
-                    node.has("type") ? node.get("type").asText() : "",
+                    internedText(node, "type"),
                     parseHexShort(node, "x"),
                     parseHexShort(node, "y"),
-                    node.has("routine") ? node.get("routine").asText() : "",
-                    node.has("status") ? node.get("status").asText() : "",
+                    internedText(node, "routine"),
+                    internedText(node, "status"),
                     // obj_frame is a v3.5+ optional field; older traces omit it.
-                    node.has("obj_frame") ? node.get("obj_frame").asText() : "",
+                    internedText(node, "obj_frame"),
                     // routine2 (ob2ndRout) and objoff_3c are v3.8+ optional fields;
                     // older traces omit them so default to "" (legacy-absent-safe).
-                    node.has("routine2") ? node.get("routine2").asText() : "",
-                    node.has("objoff_3c") ? node.get("objoff_3c").asText() : "",
+                    internedText(node, "routine2"),
+                    internedText(node, "objoff_3c"),
                     // objoff_34/36/38 are v3.9+ optional fields; older traces omit
                     // them so default to "" (legacy-absent-safe).
-                    node.has("objoff_34") ? node.get("objoff_34").asText() : "",
-                    node.has("objoff_36") ? node.get("objoff_36").asText() : "",
-                    node.has("objoff_38") ? node.get("objoff_38").asText() : "",
+                    internedText(node, "objoff_34"),
+                    internedText(node, "objoff_36"),
+                    internedText(node, "objoff_38"),
                     // objoff_32 (gmake_timer for makers) is a v3.12+ optional field;
                     // older traces omit it so default to "" (legacy-absent-safe).
-                    node.has("objoff_32") ? node.get("objoff_32").asText() : ""
+                    internedText(node, "objoff_32")
                 );
                 case "s1_obj64_state" -> new S1Obj64State(
                     frame,
@@ -1377,12 +1381,19 @@ public sealed interface TraceEvent {
                         throw new IllegalArgumentException(
                                 "unknown advertised event type: " + event);
                     }
-                    // state_snapshot or unknown: preserve all fields as map
-                    Map<String, Object> fields = new LinkedHashMap<>();
-                    node.fields().forEachRemaining(
-                        entry -> fields.put(entry.getKey(), nodeToValue(entry.getValue()))
-                    );
-                    yield new StateSnapshot(frame, fields);
+                    // state_snapshot or unknown: preserve all fields as map.
+                    // Generic per-frame events (e.g. S3K object_state) dominate
+                    // long complete-run aux files by the hundreds of thousands,
+                    // so store them as a compact array-backed map with interned
+                    // strings instead of one LinkedHashMap per event.
+                    List<String> keys = new ArrayList<>();
+                    List<Object> values = new ArrayList<>();
+                    node.fields().forEachRemaining(entry -> {
+                        keys.add(entry.getKey().intern());
+                        Object value = nodeToValue(entry.getValue());
+                        values.add(value instanceof String s ? s.intern() : value);
+                    });
+                    yield new StateSnapshot(frame, CompactFieldMap.of(keys, values));
                 }
             };
         } catch (Exception e) {
@@ -1494,7 +1505,12 @@ public sealed interface TraceEvent {
             return null;
         }
         String value = node.get("character").asText();
-        return value == null || value.isBlank() ? null : value;
+        return value == null || value.isBlank() ? null : value.intern();
+    }
+
+    /** Optional text field, interned: high-count events repeat a small set of values. */
+    private static String internedText(JsonNode node, String field) {
+        return node.has(field) ? node.get(field).asText().intern() : "";
     }
 
     private static Integer parseNullableInt(JsonNode node, String field) {

@@ -169,7 +169,7 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
     }
 
     @Override
-    protected void updateBossLogic(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateBossLogic(int vIntRunCount, PlayableEntity playerEntity) {
         updateHitFlash();
 
         switch (state.routine) {
@@ -177,13 +177,13 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
             case ROUTINE_WAIT_CAMERA -> updateWaitCamera();
             case ROUTINE_DRILL -> updateDrill();
             case ROUTINE_TUNNEL_UP -> updateTunnelUp();
-            case ROUTINE_SHAKE_CEILING -> updateCeilingShake(frameCounter);
+            case ROUTINE_SHAKE_CEILING -> updateCeilingShake(vIntRunCount);
             case ROUTINE_WAIT -> updateWait(playerEntity);
-            case ROUTINE_DROP_SHAKE -> updateDropShake(frameCounter, playerEntity);
+            case ROUTINE_DROP_SHAKE -> updateDropShake(vIntRunCount, playerEntity);
             case ROUTINE_FALL -> updateFall();
             case ROUTINE_RISE -> updateRise();
             case ROUTINE_RETURN_SWING -> updateReturnSwing();
-            case ROUTINE_DEFEATED -> updateDefeated(frameCounter);
+            case ROUTINE_DEFEATED -> updateDefeated(vIntRunCount);
             default -> {
             }
         }
@@ -246,10 +246,10 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
         }
     }
 
-    private void updateCeilingShake(int frameCounter) {
+    private void updateCeilingShake(int vIntRunCount) {
         enforceArenaLock();
         animateRaw();
-        int vIntLowByte = frameCounter + 3;
+        int vIntLowByte = vIntRunCount + 3;
         state.y += ((vIntLowByte & 1) == 0) ? -2 : 1;
         applyContinuousShake(vIntLowByte);
         if ((vIntLowByte & 7) == 0) {
@@ -284,10 +284,10 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
         }
     }
 
-    private void updateDropShake(int frameCounter, PlayableEntity playerEntity) {
+    private void updateDropShake(int vIntRunCount, PlayableEntity playerEntity) {
         enforceArenaLock();
         animateRaw();
-        int vIntLowByte = frameCounter + 3;
+        int vIntLowByte = vIntRunCount + 3;
         state.y += ((vIntLowByte & 1) == 0) ? 2 : -1;
         applyContinuousShake(vIntLowByte);
         if ((vIntLowByte & 7) == 0) {
@@ -347,7 +347,7 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
         enterTunnelUp();
     }
 
-    private void updateDefeated(int frameCounter) {
+    private void updateDefeated(int vIntRunCount) {
         if (defeatExplosionController != null && !defeatExplosionController.isFinished()) {
             defeatExplosionController.tick();
             ObjectManager objectManager = services().objectManager();
@@ -669,7 +669,8 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
         // defeat, not the camera lock point.
         int signpostX = state.x;
         spawnChild(() -> new S3kBossDefeatSignpostFlow(
-                signpostX, services().currentAct(), S3kBossDefeatSignpostFlow.CleanupAction.NONE));
+                signpostX, services().currentAct(), S3kBossDefeatSignpostFlow.CleanupAction.NONE,
+                0, 0, 1));
     }
 
     private static int segaWordFromColor(Palette.Color color) {
@@ -882,7 +883,7 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (parent.isDestroyed() || parent.state.defeated) {
                 setDestroyed(true);
                 return;
@@ -979,7 +980,7 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             xFixed += xVel;
             yFixed += yVel;
             yVel += GRAVITY;
@@ -1104,7 +1105,7 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             xFixed += xVel;
             yFixed += yVel;
             yVel += GRAVITY;
@@ -1190,7 +1191,7 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (parent.isDestroyed()) {
                 setDestroyed(true);
                 return;
@@ -1348,7 +1349,7 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             var camera = services().camera();
             if (camera == null) {
                 setDestroyed(true);

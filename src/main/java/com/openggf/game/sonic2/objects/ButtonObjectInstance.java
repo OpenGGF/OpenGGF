@@ -102,7 +102,7 @@ public class ButtonObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
 
         // ROM Obj47_Main (s2.asm:50826-50827) gates the ENTIRE button routine

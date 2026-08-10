@@ -64,21 +64,38 @@ public class Sonic2OOZEvents extends Sonic2ZoneEvents {
     }
 
     @Override
+    public void updateReservedObjectSlots(int act, int frameCounter) {
+        if (oilManager == null) {
+            return;
+        }
+        // ROM Obj07_Main (oil surface) runs during object processing, after the
+        // player object (docs/s2disasm/s2.asm:49659-49749). Its SST is the
+        // RESERVED slot `Oil` (aliased with WaterSurface1), which sits between
+        // the player objects and Dynamic_Object_RAM
+        // (docs/s2disasm/s2.constants.asm:1131-1137) - so it executes before
+        // every dynamic object and, crucially, before Tails_Tails (Obj05) in
+        // LevelOnly_Object_RAM (docs/s2disasm/s2.constants.asm:1144-1152).
+        // Obj05 reads `anim(a2)` at its own late execution point
+        // (docs/s2disasm/s2.asm:41735), so the Walk animation this landing
+        // writes via Sonic_ResetOnFloor_Part2 (docs/s2disasm/s2.asm:37780-37786)
+        // must already be visible to it. Running the oil surface in the
+        // post-camera level-event pass instead left Obj05 reading the stale Roll
+        // anim on the landing frame and minted a directional DPLC transfer the
+        // ROM never queues (OOZ1 trace f346, OOZ2 f10684).
+        ObjectPlayerQuery playerQuery = playerQueryFromRuntime();
+        for (PlayableEntity participant :
+                playerQuery.playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (participant instanceof AbstractPlayableSprite playable) {
+                oilManager.updateSurface(playable);
+            }
+        }
+        // Re-arm the per-frame slide cadence for the next frame's pre-physics pass.
+        oilManager.endFrame();
+    }
+
+    @Override
     public void update(int act, int frameCounter) {
         retryPendingPlc();
-        if (oilManager != null) {
-            // ROM Obj07_Main (oil surface) runs during object processing, after the
-            // player object (s2.asm:49659-49749). Mirror that post-physics here.
-            ObjectPlayerQuery playerQuery = playerQueryFromRuntime();
-            for (PlayableEntity participant :
-                    playerQuery.playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
-                if (participant instanceof AbstractPlayableSprite playable) {
-                    oilManager.updateSurface(playable);
-                }
-            }
-            // Re-arm the per-frame slide cadence for the next frame's pre-physics pass.
-            oilManager.endFrame();
-        }
         updateBossEvents(act);
     }
 

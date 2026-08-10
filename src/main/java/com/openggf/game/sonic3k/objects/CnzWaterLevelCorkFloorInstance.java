@@ -50,7 +50,7 @@ public final class CnzWaterLevelCorkFloorInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (corkFloor == null) {
             ObjectSpawn childSpawn = new ObjectSpawn(
                     spawn.x(), spawn.y(), Sonic3kObjectIds.CORK_FLOOR,

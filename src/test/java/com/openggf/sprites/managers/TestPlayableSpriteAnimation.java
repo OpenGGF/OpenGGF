@@ -947,6 +947,46 @@ public class TestPlayableSpriteAnimation {
     }
 
     @Test
+    public void retainedDeletedNativeSlotDoesNotDispatchAnimationScript() {
+        TestablePlayableSprite sprite = createSprite(GameRules.SONIC_1);
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(0x1C, new SpriteAnimationScript(
+                0, List.of(0), SpriteAnimationEndAction.SWITCH, 0));
+        sprite.setAnimationSet(animations);
+        sprite.setAnimationId(0x1C);
+        sprite.setForcedAnimationId(0x1C);
+        sprite.setNativeSlotPresent(false);
+        sprite.setAnimationFrameIndex(1);
+
+        sprite.getAnimationManager().update(0);
+
+        assertEquals(0x1C, sprite.getAnimationId(),
+                "an absent native player SST cannot execute its $FD switch to Walk");
+    }
+
+    @Test
+    public void hiddenObjectControlledNativeSlotStillDispatchesAnimationScript() {
+        TestablePlayableSprite sprite = createSprite(GameRules.SONIC_3K);
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(0x1C, new SpriteAnimationScript(
+                0, List.of(0), SpriteAnimationEndAction.SWITCH, 0));
+        sprite.setAnimationSet(animations);
+        sprite.setAnimationId(0x1C);
+        sprite.setForcedAnimationId(0x1C);
+        sprite.setHidden(true);
+        sprite.setObjectControlled(true);
+        sprite.setObjectControlAllowsCpu(false);
+        sprite.setObjectControlSuppressesMovement(true);
+        sprite.getAnimationManager().update(0);
+        sprite.setAnimationFrameIndex(1);
+
+        sprite.getAnimationManager().update(1);
+
+        assertEquals(0, sprite.getAnimationId(),
+                "visibility and object control must not imply that a native SST slot was deleted");
+    }
+
+    @Test
     public void s1WalkAtAngle18UsesNativeFlippedFourthSlopeBank() {
         TestablePlayableSprite sprite = createSprite(GameRules.SONIC_1);
         SpriteAnimationSet animations = new SpriteAnimationSet();

@@ -170,7 +170,7 @@ public final class ObjectScaffoldTool {
             b.append("    }\n\n");
 
             b.append("    @Override\n");
-            b.append("    protected void updateMovement(int frameCounter, PlayableEntity player) {\n");
+            b.append("    protected void updateMovement(int vIntRunCount, PlayableEntity player) {\n");
             b.append("        // services() is safe here (object is fully constructed and bound).\n");
             b.append("        // CENTER COORDINATES: the ROM stores x_pos/y_pos as CENTER coordinates. For player\n");
             b.append("        // interaction read player.getCentreX()/getCentreY(), NOT getX()/getY() (top-left).\n");
@@ -181,7 +181,7 @@ public final class ObjectScaffoldTool {
             b.append("    }\n\n");
 
             b.append("    @Override\n");
-            b.append("    protected void updateAnimation(int frameCounter) {\n");
+            b.append("    protected void updateAnimation(int vIntRunCount) {\n");
             b.append("        // Set the inherited protected `mappingFrame` field; the base appendRenderCommands\n");
             b.append("        // draws it from the ROM-backed art registered under the rendererKey above.\n");
             b.append("        // TODO: port animation frame stepping from the disassembly.\n");
@@ -202,7 +202,7 @@ public final class ObjectScaffoldTool {
             b.append("    }\n\n");
 
             b.append("    @Override\n");
-            b.append("    protected void updateMovement(int frameCounter, PlayableEntity player) {\n");
+            b.append("    protected void updateMovement(int vIntRunCount, PlayableEntity player) {\n");
             b.append("        // services() is safe here (object is fully constructed and bound).\n");
             b.append("        // CENTER COORDINATES: the ROM stores x_pos/y_pos as CENTER coordinates. For player\n");
             b.append("        // interaction read player.getCentreX()/getCentreY(), NOT getX()/getY() (top-left).\n");
@@ -213,7 +213,7 @@ public final class ObjectScaffoldTool {
             b.append("    }\n\n");
 
             b.append("    @Override\n");
-            b.append("    protected void updateAnimation(int frameCounter) {\n");
+            b.append("    protected void updateAnimation(int vIntRunCount) {\n");
             b.append("        // TODO: port animation frame stepping from the disassembly.\n");
             b.append("    }\n\n");
 
@@ -232,7 +232,7 @@ public final class ObjectScaffoldTool {
             b.append("    }\n\n");
 
             b.append("    @Override\n");
-            b.append("    public void update(int frameCounter, PlayableEntity player) {\n");
+            b.append("    public void update(int vIntRunCount, PlayableEntity player) {\n");
             b.append("        // services() is safe here (object is fully constructed and bound).\n");
             b.append("        // CENTER COORDINATES: the ROM stores x_pos/y_pos as CENTER coordinates. For player\n");
             b.append("        // interaction read player.getCentreX()/getCentreY(), NOT getX()/getY() (top-left).\n");

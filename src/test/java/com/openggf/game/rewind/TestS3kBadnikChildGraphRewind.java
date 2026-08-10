@@ -1066,8 +1066,15 @@ class TestS3kBadnikChildGraphRewind {
         assertEquals(2, sourceParents.size(), "precondition: two Mantis parents must be captured");
         MantisBadnikInstance sourceParentA = sourceParents.get(0);
         MantisBadnikInstance sourceParentB = sourceParents.get(1);
+        AbstractObjectInstance.updateCameraBounds(0x100, 0x80, 0x340, 0x200, 0);
         sourceParentA.update(0, player);
         sourceParentB.update(0, player);
+        sourceParentA.refreshPostCameraRenderState();
+        sourceParentB.refreshPostCameraRenderState();
+        sourceParentA.update(1, player);
+        sourceParentB.update(1, player);
+        sourceParentA.update(2, player);
+        sourceParentB.update(2, player);
         List<ObjectInstance> sourceChildren = liveByClassName(objectManager, MANTIS_CHILD);
         assertEquals(2, sourceChildren.size(), "precondition: each Mantis must create one visual child");
         ObjectInstance sourceChildA = childWithParent(sourceChildren, sourceParentA);

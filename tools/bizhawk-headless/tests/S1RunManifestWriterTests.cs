@@ -4,21 +4,20 @@ using System.IO;
 namespace OpenGGF.BizHawk.Headless.Tests
 {
     /// <summary>
-    /// Literal-byte tests for the S1 run_manifest.json: reconstructing the
-    /// canonical s1-ghz-maze-roundtrip manifest from its recorded values
-    /// must reproduce the recorder-regenerated 3.18 fixture exactly,
-    /// including its level endpoint. The fixture is stored using the run
-    /// bundle's CRLF convention, so its line endings are normalized to the
-    /// Lua's written LF before comparison — the only transformation. Also
-    /// covers the S1-only optional run_id line.
+    /// Strict-v5 assertions for the S1 run_manifest.json writer. The tests
+    /// construct current in-memory segments and transitions, then require
+    /// the v5 recorder fields, explicit empty dynamic-art-gap array, and
+    /// absence of removed version fields. They also cover S1's optional
+    /// run_id and terminal-mode fields without reading or transforming an
+    /// installed fixture.
     /// </summary>
     internal static class S1RunManifestWriterTests
     {
         public static void Register(ICollection<TestMain.TestCase> tests)
         {
             tests.Add(new TestMain.TestCase(
-                "S1RunManifestWriter reproduces the canonical fixture bytes",
-                ReproducesCanonicalFixtureBytes));
+                "S1RunManifestWriter emits current strict v5 fields",
+                EmitsStrictV5ManifestEnvelope));
             tests.Add(new TestMain.TestCase(
                 "S1RunManifestWriter omits the run_id line when no run id"
                 + " was set",
@@ -34,7 +33,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 OmitsUnspecifiedMovieEndpoint));
         }
 
-        private static void ReproducesCanonicalFixtureBytes()
+        private static void EmitsStrictV5ManifestEnvelope()
         {
             var segments = new List<RunManifestSegment>
             {
@@ -60,27 +59,18 @@ namespace OpenGGF.BizHawk.Headless.Tests
             string produced = S1RunManifestWriter.Format(
                 "s1-ghz-maze-roundtrip",
                 "s1-ghz-maze-roundtrip.bk2",
-                "3.18",
                 "level",
                 segments,
                 new List<RunManifestTransition> { giantRing, stageExit });
 
-            // Ground truth: the committed fixture manifest. The capture ran
-            // on Windows EmuHawk whose text-mode io expanded the Lua's "\n"
-            // to CRLF; the native writer emits the written LF, so CRLF
-            // normalization is the single permitted difference here.
-            string fixture = File.ReadAllText(Path.Combine(
-                EndToEndTests.RepositoryRoot,
-                "src", "test", "resources", "traces", "s1", "runs",
-                "s1-ghz-maze-roundtrip", "run_manifest.json"));
-            fixture = fixture.Replace("\r\n", "\n")
-                .Replace("  \"run_schema\": 2,", "  \"run_schema\": 1,");
-            int audit = fixture.IndexOf(
-                ",\n  \"dynamic_art_gap_transitions\": [",
-                System.StringComparison.Ordinal);
-            AssertEx.Equal(true, audit >= 0);
-            fixture = fixture.Substring(0, audit) + "\n}\n";
-            AssertEx.Equal(fixture, produced);
+            AssertEx.Equal(true, produced.Contains(
+                "  \"recorder\": \"native-bizhawk-headless\",\n"
+                + "  \"recorder_version\": \"3.0\",\n"
+                + "  \"trace_schema\": 5,\n"));
+            AssertEx.Equal(true, produced.Contains(
+                "  \"dynamic_art_gap_transitions\": [\n  ]\n"));
+            AssertEx.Equal(false, produced.Contains("run_schema"));
+            AssertEx.Equal(false, produced.Contains("lua_script_version"));
         }
 
         private static void OmitsRunIdLineWhenNoRunIdWasSet()
@@ -93,7 +83,6 @@ namespace OpenGGF.BizHawk.Headless.Tests
             string produced = S1RunManifestWriter.Format(
                 null,
                 "movie.bk2",
-                "3.18",
                 null,
                 new List<RunManifestSegment>
                 {
@@ -108,7 +97,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     "  \"game\": \"s1\",\n"
                     + "  \"source_bk2\": \"movie.bk2\",\n"
                     + "  \"rom_checksum\": \"AFE05EEE\",\n"
-                    + "  \"lua_script_version\": \"3.18\",\n"));
+                    + "  \"recorder\": \"native-bizhawk-headless\",\n"));
             // Zero-valued recorded fields still render (Lua truthiness).
             AssertEx.Equal(
                 true,
@@ -121,14 +110,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
             string produced = S1RunManifestWriter.Format(
                 "run",
                 "movie.bk2",
-                "3.18",
                 "level",
                 OneLevelSegment(),
                 new List<RunManifestTransition>());
             AssertEx.Equal(
                 true,
                 produced.Contains(
-                    "  \"lua_script_version\": \"3.18\",\n"
+                    "  \"trace_schema\": 5,\n"
                     + "  \"expected_movie_end_mode\": \"level\",\n"
                     + "  \"segments\": [\n"));
         }
@@ -138,7 +126,6 @@ namespace OpenGGF.BizHawk.Headless.Tests
             string produced = S1RunManifestWriter.Format(
                 "run",
                 "movie.bk2",
-                "3.18",
                 "title_screen",
                 OneLevelSegment(),
                 new List<RunManifestTransition>());
@@ -153,7 +140,6 @@ namespace OpenGGF.BizHawk.Headless.Tests
             string produced = S1RunManifestWriter.Format(
                 "run",
                 "movie.bk2",
-                "3.18",
                 null,
                 OneLevelSegment(),
                 new List<RunManifestTransition>());

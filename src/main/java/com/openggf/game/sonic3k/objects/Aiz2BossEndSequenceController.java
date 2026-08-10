@@ -8,10 +8,12 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
@@ -41,11 +43,8 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
     private static final int PLAYER_STOP_X_OFFSET = 0x1F8;
     // ROM: loc_695A8 — transition when y_pos >= _unkFA86 + $1E6
     private static final int NEXT_LEVEL_Y_OFFSET = 0x1E6;
-    // Restore_PlayerControl2 reaches a still-riding native P2 through the later
-    // solid-support path before loc_69526 can expose P1's forced walk. Preserve
-    // those two extra object entries from the live Status_OnObj state.
-    private static final int POST_RESULTS_CONTROL_RESTORE_DELAY = 4;
-    private static final int RIDING_SIDEKICK_CONTROL_RESTORE_DELAY = 6;
+    private static final int RELEASE_OWNER_BEFORE_CONTROLLER_DELAY = 1;
+    private static final int RELEASE_OWNER_AFTER_CONTROLLER_DELAY = 2;
     private static final int POST_BUTTON_CAMERA_MAX_Y_TARGET = 0x1000;
     private static final int INC_LEVEL_END_Y_GRADUAL_STEP = 0x8000;
     private static final int AIRBORNE_CAMERA_TARGET_OFFSET = 0x80;
@@ -60,11 +59,10 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
     private boolean buttonHandled;
     private boolean transitionRequested;
     private boolean pendingLookUpInputAfterStop;
+    private boolean pendingButtonInputRelease;
     private boolean postButtonMaxYReleaseActive;
     private int postButtonMaxYAccumulator;
     private int postResultsControlRestoreDelay = -1;
-    private boolean postResultsMaxXActive;
-    private int postResultsMaxXAccumulator;
 
     public Aiz2BossEndSequenceController(int arenaMaxX, int arenaBaseY) {
         super(new ObjectSpawn(arenaMaxX, arenaBaseY, Sonic3kObjectIds.EGG_CAPSULE, 0, 0, false, 0),
@@ -93,7 +91,7 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (!(playerEntity instanceof AbstractPlayableSprite player)) {
             return;
         }
@@ -110,32 +108,34 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
         }
 
         if (postResultsControlRestoreDelay < 0) {
-            postResultsControlRestoreDelay = hasRidingSidekick(player)
-                    ? RIDING_SIDEKICK_CONTROL_RESTORE_DELAY
-                    : POST_RESULTS_CONTROL_RESTORE_DELAY;
+            postResultsControlRestoreDelay = postResultsControlRestoreDelay();
         }
         if (postResultsControlRestoreDelay > 0) {
             postResultsControlRestoreDelay--;
-            holdEndingPose(player);
             clearPositiveLockedSidekickLogicalWord(player);
             if (postResultsControlRestoreDelay == 0) {
-                // The later controller slot reaches loc_69526 after the player
-                // slot but before its separately allocated camera-bound child.
-                // Expose the logical Right word now so the next player pass
-                // owns acceleration/animation without advancing that child.
-                ObjectControlState.none().applyTo(player);
-                forceRightLogicalInput(player);
+                // loc_694D4 calls Restore_PlayerControl/2 after the results
+                // owner clears _unkFAA8.  That entry clears object_control
+                // and publishes WAIT, but leaves Ctrl_1_locked set; the
+                // following loc_69526 entry publishes the first RIGHT word
+                // after the next player pass.
+                restoreNativePlayerControlsAfterResults(player);
+            } else {
+                holdEndingPose(player);
             }
             return;
+        }
+
+        if (pendingButtonInputRelease) {
+            pendingButtonInputRelease = false;
+            player.clearForcedInputMask();
+            player.setForceInputRight(false);
         }
 
         // Start post-capsule sequence (music + walk right)
         boolean startedPostCapsuleSequenceNow = !postCapsuleSequenceStarted;
         if (startedPostCapsuleSequenceNow) {
             startPostCapsuleSequence(player);
-        }
-        if (!startedPostCapsuleSequenceNow) {
-            updatePostResultsCameraMaxX();
         }
         clearPositiveLockedSidekickLogicalWord(player);
         if (pendingLookUpInputAfterStop) {
@@ -180,8 +180,16 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
             // slot. This controller then observes the shared button flag and
             // clears its engine-side forced word so the next player dispatch
             // reads the unlocked raw input, matching loc_65C56/loc_69588.
-            player.clearForcedInputMask();
-            player.setForceInputRight(false);
+            if (Aiz2BossEndSequenceState.isButtonBeforeBridgeDispatch()) {
+                player.clearForcedInputMask();
+                player.setForceInputRight(false);
+            } else {
+                // The lower native button slot clears Ctrl_1_locked before the
+                // later Player_1 slot consumes loc_69588's retained UP word.
+                // Keep the engine's late-write representation through that
+                // player dispatch and release it on the next controller entry.
+                pendingButtonInputRelease = true;
+            }
             player.setControlLocked(false);
             services().camera().setMaxYTarget((short) POST_BUTTON_CAMERA_MAX_Y_TARGET);
             postButtonMaxYReleaseActive = true;
@@ -229,23 +237,44 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
         ObjectControlState.nativeBit7FullControl().applyTo(player);
     }
 
-    private boolean hasRidingSidekick(AbstractPlayableSprite player) {
-        for (PlayableEntity sidekick : services().playerQuery().playersFor(
-                ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
-            if (sidekick != player && sidekick instanceof AbstractPlayableSprite sprite
-                    && sprite.isOnObject()) {
-                return true;
-            }
+    private int postResultsControlRestoreDelay() {
+        // The embedded result children publish one owner entry before
+        // Obj_LevelResultsWait2 clears _unkFAA8. The cutscene's allocation-time
+        // SST-order marker distinguishes whether loc_694D4 precedes that later
+        // lowest-free results owner (retain one entry) or follows it (restore
+        // immediately). The engine folds the bridge/button children, so its
+        // physical Java slots are not the native ordering authority
+        // (sonic3k.asm:62709-62720,138313-138331,181978-181990).
+        if (Aiz2BossEndSequenceState.isButtonBeforeBridgeDispatch()) {
+            return RELEASE_OWNER_AFTER_CONTROLLER_DELAY;
         }
-        return false;
+        return RELEASE_OWNER_BEFORE_CONTROLLER_DELAY;
+    }
+
+    private void restoreNativePlayerControlsAfterResults(AbstractPlayableSprite player) {
+        for (PlayableEntity candidate : services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (!(candidate instanceof AbstractPlayableSprite sprite)) {
+                continue;
+            }
+            ObjectControlState.none().applyTo(sprite);
+            sprite.setAir(false);
+            sprite.setForcedAnimationId(-1);
+            sprite.setAnimationId(Sonic3kAnimationIds.WAIT);
+            sprite.getAnimationManager().publishPreviousAnimationId(
+                    Sonic3kAnimationIds.WAIT.id());
+            sprite.setAnimationFrameIndex(0);
+            sprite.setAnimationTick(0);
+        }
+        // Restore_PlayerControl does not clear Ctrl_1_locked; loc_694D4
+        // explicitly leaves the main input latch asserted for loc_69526.
+        player.setControlLocked(true);
+        spawnChild(() -> new PostResultsGradualMaxX(
+                arenaMaxX + MAX_X_TARGET_OFFSET));
     }
 
     private void startPostCapsuleSequence(AbstractPlayableSprite player) {
         postCapsuleSequenceStarted = true;
-        postResultsMaxXActive = true;
-        // Child6_IncLevX has already reached the last fractional step before
-        // the controller exposes forced-right movement.
-        postResultsMaxXAccumulator = 0xC000;
         ObjectControlState.none().applyTo(player);
         player.setControlLocked(true);
         forceRightLogicalInput(player);
@@ -253,29 +282,12 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
         setSidekickControlLocked(player, true);
     }
 
-    private void updatePostResultsCameraMaxX() {
-        if (!postResultsMaxXActive) {
-            return;
-        }
-        Camera camera = services().camera();
-        postResultsMaxXAccumulator += 0x4000;
-        int delta = (postResultsMaxXAccumulator >>> 16) & 0xFFFF;
-        int target = arenaMaxX + MAX_X_TARGET_OFFSET;
-        int next = (camera.getMaxX() & 0xFFFF) + delta;
-        if (next >= target) {
-            next = target;
-            postResultsMaxXActive = false;
-        }
-        camera.setMaxX((short) next);
-        camera.setMaxXTarget((short) next);
-    }
-
     private void forceRightLogicalInput(AbstractPlayableSprite player) {
-        // ROM writes Ctrl_1_logical while Ctrl_1_locked is set, so Sonic_RecordPos
-        // stores the forced RIGHT word for Tails' delayed CPU replay.
+        // ROM writes Ctrl_1_logical after both playable slots have already run.
+        // The next Sonic_RecordPos call therefore records this word; do not
+        // overwrite the current follower-history slot here.
         player.setForceInputRight(false);
         player.setForcedInputMask(AbstractPlayableSprite.INPUT_RIGHT);
-        player.writeLogicalInputAndCurrentFollowerHistory(AbstractPlayableSprite.INPUT_RIGHT, false);
     }
 
     private void updatePostButtonCameraMaxYRelease() {
@@ -339,6 +351,42 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
                 // object clears Ctrl_2_logical before the frame is observed.
                 sprite.getCpuController().clearController2LogicalLatch();
             }
+        }
+    }
+
+    /** ROM {@code Child6_IncLevX}/{@code Obj_IncLevEndXGradual}. */
+    static final class PostResultsGradualMaxX extends AbstractObjectInstance
+            implements SpawnRewindRecreatable {
+        private static final int ACCELERATION = 0x4000;
+
+        private int targetMaxX;
+        private int accumulator;
+
+        PostResultsGradualMaxX(int targetMaxX) {
+            super(new ObjectSpawn(targetMaxX, 0, 0, 0, 0, false, 0),
+                    "AIZ2PostResultsGradualMaxX");
+            this.targetMaxX = targetMaxX;
+        }
+
+        PostResultsGradualMaxX(ObjectSpawn spawn) {
+            this(spawn.x());
+        }
+
+        @Override
+        public void update(int vIntRunCount, PlayableEntity player) {
+            Camera camera = services().camera();
+            accumulator += ACCELERATION;
+            int next = (camera.getMaxX() & 0xFFFF) + (accumulator >>> 16);
+            if (next >= targetMaxX) {
+                camera.setMaxX((short) targetMaxX);
+                ObjectLifetimeOps.expireDynamic(this);
+                return;
+            }
+            camera.setMaxX((short) next);
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
         }
     }
 

@@ -29,7 +29,7 @@ public final class FbzMineObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity ignored) {
+    public void update(int vIntRunCount, PlayableEntity ignored) {
         switch (state) {
             case IDLE -> services().playerQuery().visitPlayers(
                     ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS, this,

@@ -5,7 +5,12 @@ import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.OscillationManager;
+import com.openggf.game.RuntimeArtAdmissionLease;
+import com.openggf.game.RuntimeArtAdmissionPolicy;
 import com.openggf.level.animation.SeamlessTransitionAnimationClock;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.RomWorldPositionedObject;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.level.resources.DeferredLevelResourceTracker;
@@ -27,12 +32,36 @@ final class LevelActTransitionExecutor {
         if (request == null) {
             return;
         }
+        if (request.runtimeArtAdmissionPolicy()
+                        == RuntimeArtAdmissionPolicy.RESOURCE_HANDOFF_OWNER
+                && request.resourceHandoffId() == null) {
+            throw new IllegalStateException(
+                    "resource-handoff runtime-art admission requires a handoff");
+        }
 
-        SeamlessTransitionResourceHandoff handoff =
+        SeamlessTransitionResourceHandoffRegistry handoffRegistry =
+                GameServices.seamlessTransitionResourceHandoffs();
+        ClaimedTransitionHandoff claimed = new ClaimedTransitionHandoff(
                 request.resourceHandoffId() != null
-                        ? GameServices.seamlessTransitionResourceHandoffs()
-                                .claim(request.resourceHandoffId())
-                        : null;
+                        ? handoffRegistry.claim(request.resourceHandoffId())
+                        : null);
+        try {
+            executeClaimed(request, claimed);
+        } catch (IOException | RuntimeException failure) {
+            if (claimed.handoff != null
+                    && !claimed.transferComplete
+                    && request.resourceHandoffId() != null) {
+                handoffRegistry.recordFailedTransfer(
+                        request.resourceHandoffId(), claimed.handoff);
+            }
+            throw failure;
+        }
+    }
+
+    private void executeClaimed(
+            SeamlessLevelTransitionRequest request,
+            ClaimedTransitionHandoff claimed) throws IOException {
+        SeamlessTransitionResourceHandoff handoff = claimed.handoff;
         DeferredLevelResourceTracker deferredResources =
                 handoff != null
                         ? handoff.deferredResources().newTracker()
@@ -57,8 +86,11 @@ final class LevelActTransitionExecutor {
         // it latched and silenced the *next* real level load instead (music then
         // stayed off until a respawn or another load cleared it).
 
-        if (GameServices.zoneRuntimeRegistry().current()
-                .advancesOscillationOnSeamlessTransition()) {
+        var transitionRuntime = GameServices.zoneRuntimeRegistry().current();
+        boolean transitionOwnsLoopTail =
+                transitionRuntime.advancesOscillationOnSeamlessTransition();
+        if (transitionOwnsLoopTail) {
+            levelManager.markActTransitionOscillationAdvancedDuringFrame();
             OscillationManager.advanceForSeamlessTransition();
         }
 
@@ -83,7 +115,9 @@ final class LevelActTransitionExecutor {
         }
 
         levelManager.initAnimatedContent();
-        if (levelManager.animatedPatternManager instanceof SeamlessTransitionAnimationClock clock) {
+        if (transitionOwnsLoopTail
+                && levelManager.animatedPatternManager
+                        instanceof SeamlessTransitionAnimationClock clock) {
             clock.advanceForSeamlessTransition();
         }
 
@@ -91,11 +125,20 @@ final class LevelActTransitionExecutor {
                 ? levelManager.gameModule.getObjectArtProvider()
                 : null;
         if (artProvider != null) {
-            artProvider.reloadStandaloneArtForActTransition(levelManager.currentZone);
-            artProvider.registerLevelTileArt(levelManager.level, levelManager.currentZone);
-            if (!request.showInLevelTitleCard()) {
-                artProvider.onTitleCardArtRetired();
+            RuntimeArtAdmissionLease admissionLease =
+                    artProvider.prepareRuntimeArtForActTransition(
+                            levelManager.currentZone,
+                            request.runtimeArtAdmissionPolicy());
+            if (request.runtimeArtAdmissionPolicy()
+                    == RuntimeArtAdmissionPolicy.RESOURCE_HANDOFF_OWNER) {
+                if (admissionLease == null) {
+                    throw new IllegalStateException(
+                            "resource-handoff admission did not issue a lease");
+                }
+                handoff = handoff.withAdmissionLease(admissionLease);
+                claimed.handoff = handoff;
             }
+            artProvider.registerLevelTileArt(levelManager.level, levelManager.currentZone);
             if (levelManager.objectRenderManager != null) {
                 levelManager.objectRenderManager.ensurePatternsCached(
                         levelManager.graphicsManager, LevelManager.OBJECT_PATTERN_BASE);
@@ -122,7 +165,7 @@ final class LevelActTransitionExecutor {
         levelManager.rebuildManagersForActTransition(cam, carriedOccupants, request,
                 postOffsetCameraX);
         levelManager.applySeamlessOffsets(request, cam);
-        levelManager.offsetCarriedObjectsForTransition(carriedOccupants, request);
+        offsetCarriedObjectsForTransition(carriedOccupants, request);
 
         levelManager.restoreCameraBoundsForCurrentLevel(cam);
         levelManager.applyPostTransitionCameraOverrides(request, cam);
@@ -132,15 +175,21 @@ final class LevelActTransitionExecutor {
 
         resetSidekickCpuBoundsAfterTransition(cam);
         levelManager.initLevelEventsForCurrentZoneAct();
+        var gameplayMode = com.openggf.game.session.SessionManager
+                .getCurrentGameplayMode();
+        if (gameplayMode != null) {
+            gameplayMode.rebindActTransitionManagerAdapters(
+                    levelManager.objectManager, levelManager.ringManager);
+        }
         if (handoff != null) {
             handoff.transferAfterTargetInit();
+            claimed.transferComplete = true;
         }
 
         // loadLevelData only swaps immutable level data; the live object manager
         // and level-event owner are replaced later in this executor. Rebind the
         // registry after both replacements, while still inside the outer seamless
         // transition boundary, so no Act-2 keyframe can target dead Act-1 owners.
-        var gameplayMode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         if (gameplayMode != null) {
             gameplayMode.registerLevelAdapters(levelManager);
         }
@@ -168,6 +217,46 @@ final class LevelActTransitionExecutor {
         }
     }
 
+    static void offsetCarriedObjectsForTransition(List<TransitionSstOccupant> carried,
+                                                   SeamlessLevelTransitionRequest request) {
+        if (request == null || carried == null || carried.isEmpty()) return;
+        int offsetX = request.playerOffsetX();
+        int offsetY = request.playerOffsetY();
+        CarriedTitlePublicationTiming titleTiming = CarriedTitlePublicationTiming.from(request);
+        LevelManager currentLevelManager = GameServices.levelOrNull();
+        ObjectManager callbacks = currentLevelManager != null
+                ? currentLevelManager.getObjectManager() : null;
+        for (TransitionSstOccupant occupant : carried) {
+            ObjectInstance instance = occupant.identity();
+            if (instance == null || com.openggf.level.objects.ObjectCallbackDispatch.call(
+                    callbacks, instance, instance::isDestroyed)) continue;
+            if (request.objectOffsetPolicy()
+                    == SeamlessLevelTransitionRequest.ObjectOffsetPolicy.ROM_WORLD_OFFSET_RANGE) {
+                int slot = occupant.originalSlot();
+                if (!request.shouldApplyRomWorldOffset(slot, true,
+                        com.openggf.level.objects.ObjectCallbackDispatch.call(callbacks,
+                                instance, instance::participatesInRomWorldTransitionOffset))) continue;
+                if (!(instance instanceof RomWorldPositionedObject positioned)) {
+                    throw new IllegalStateException("SST slot " + slot
+                            + " reports render_flags bit 2 without a native ROM position contract: "
+                            + instance.getClass().getName());
+                }
+                runCallback(callbacks, instance, () -> {
+                    positioned.offsetNativePositionWordsPreserveSubpixel(offsetX, offsetY);
+                    positioned.afterRomWorldTransitionOffset(offsetX, offsetY);
+                });
+            } else {
+                runCallback(callbacks, instance,
+                        () -> instance.onCarriedAcrossSeamlessTransition(offsetX, offsetY, titleTiming));
+            }
+        }
+    }
+
+    private static void runCallback(ObjectManager manager, ObjectInstance instance, Runnable callback) {
+        if (manager == null) callback.run();
+        else com.openggf.level.objects.ObjectCallbackDispatch.run(manager, instance, callback);
+    }
+
     private void resetSidekickCpuBoundsAfterTransition(Camera cam) {
         for (AbstractPlayableSprite sidekick : levelManager.spriteManager.getSidekicks()) {
             SidekickCpuController cpu = sidekick.getCpuController();
@@ -177,6 +266,16 @@ final class LevelActTransitionExecutor {
                         (int) cam.getMaxX(),
                         (int) Math.max(cam.getMaxY(), cam.getMaxYTarget()));
             }
+        }
+    }
+
+    private static final class ClaimedTransitionHandoff {
+        private SeamlessTransitionResourceHandoff handoff;
+        private boolean transferComplete;
+
+        private ClaimedTransitionHandoff(
+                SeamlessTransitionResourceHandoff handoff) {
+            this.handoff = handoff;
         }
     }
 }

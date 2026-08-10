@@ -192,13 +192,13 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         capturedThisUpdateMask = 0;
         List<PlayableEntity> participants = participants();
         AbstractPlayableSprite nativeP2 = currentNativeP2();
-        reconcileNativeP2(nativeP2, participants, frameCounter);
+        reconcileNativeP2(nativeP2, participants, vIntRunCount);
         List<AbstractPlayableSprite> extensionPlayers = extensionPlayers(participants, playerEntity, nativeP2);
-        reconcileExtensionRoster(extensionPlayers, frameCounter);
+        reconcileExtensionRoster(extensionPlayers, vIntRunCount);
         // ROM sub_324C0 / SolidObjectFull (sonic3k.asm:41006-41008): when a
         // rider is offscreen (`tst.b render_flags(a1); bpl.w locret_1DCB4`)
         // the entire SolidObjectFull pass for that rider is skipped, so the
@@ -239,7 +239,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         int previousCenterY = centerY;
         updateMotion();
         currentYVelocity = motionSelector == 0 ? mode0Velocity : ((centerY - previousCenterY) << 8);
-        updateRiderSlots(frameCounter, extensionPlayers);
+        updateRiderSlots(vIntRunCount, extensionPlayers);
         advanceAnimation();
     }
 

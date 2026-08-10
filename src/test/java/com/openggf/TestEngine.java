@@ -31,6 +31,7 @@ import com.openggf.game.session.GameplaySessionFactory;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.WorldSession;
+import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.camera.Camera;
 import com.openggf.level.LevelManager;
@@ -38,6 +39,7 @@ import com.openggf.sprites.playable.Knuckles;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.game.RomDetectionService;
 import com.openggf.graphics.TilemapGpuRenderer;
+import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.api.Test;
@@ -57,6 +59,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -72,11 +75,51 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
+import static org.mockito.Mockito.clearInvocations;
 
 @Isolated
 class TestEngine {
     @TempDir
     Path tempDir;
+
+    @Test
+    void titleAudioBackendReinstallHonorsAudioEnabledLifecycle() throws Exception {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone();
+        config.setConfigValue(SonicConfiguration.AUDIO_ENABLED, false);
+        AudioManager audio = mock(AudioManager.class);
+        Engine engine = new Engine(new EngineContext(
+                config,
+                new GraphicsManager(),
+                audio,
+                mock(RomManager.class),
+                mock(PerformanceProfiler.class),
+                mock(DebugOverlayManager.class),
+                mock(PlaybackDebugManager.class),
+                mock(RomDetectionService.class),
+                mock(CrossGameFeatureProvider.class)));
+        clearInvocations(audio);
+
+        invokePrivateMethod(engine, "ensureMasterTitleAudioBackend", new Class<?>[]{});
+        verify(audio, never()).setBackend(any());
+
+        config.setConfigValue(SonicConfiguration.AUDIO_ENABLED, true);
+        invokePrivateMethod(engine, "ensureMasterTitleAudioBackend", new Class<?>[]{});
+        verify(audio).setBackend(any());
+
+        clearInvocations(audio);
+        invokePrivateMethod(engine, "resetForGameplayFromMasterTitle", new Class<?>[]{});
+        GameModule module = mock(GameModule.class);
+        invokePrivateMethod(engine, "preparePresentationForLaunch",
+                new Class<?>[]{GameModule.class}, module);
+        verify(audio).resetState();
+        verify(audio).setBackendForLaunch(any());
+
+        clearInvocations(audio);
+        invokePrivateMethod(engine, "resetForGameplayFromMasterTitle", new Class<?>[]{});
+        invokePrivateMethod(engine, "showStartupRomError", new Class<?>[]{String.class},
+                "title reconstruction test");
+        verify(audio).ensurePresentationSink();
+    }
 
     @AfterEach
     void tearDown() {
@@ -87,6 +130,23 @@ class TestEngine {
         Engine.clearGlobalInstance();
         SessionManager.clear();
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+    }
+
+    @Test
+    void visualTraceReplayActivationKeepsPreparedRenderManagers() throws Exception {
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
+        GameplayModeContext presentation = SessionManager.getCurrentGameplayMode();
+        Engine engine = new Engine(EngineServices.current());
+
+        GameplayModeContext replay = presentation;
+        replay.activateRecordedHardwareAdmission();
+
+        assertSame(presentation, replay);
+        assertTrue(presentation.isGameplayRuntimeReady());
+        assertSame(replay, SessionManager.getCurrentGameplayMode());
+        assertEquals(HardwareReadinessAdmissionPolicy.RECORDED,
+                replay.hardwareTiming().admissionPolicy());
     }
 
     @Test
@@ -440,7 +500,7 @@ class TestEngine {
             assertEquals(1, harness.cacheManager.renderTaskRuns.get());
             var order = inOrder(harness.graphics, harness.levelManager);
             order.verify(harness.graphics).runPendingRenderThreadTasks();
-            order.verify(harness.levelManager).loadZoneAndAct(0, 0);
+            order.verify(harness.levelManager).loadZoneAndActForFreshRuntime(0, 0);
             order.verifyNoMoreInteractions();
         }
     }
@@ -454,7 +514,7 @@ class TestEngine {
             assertEquals(0, harness.cacheManager.renderTaskRuns.get());
             var order = inOrder(harness.graphics, harness.levelManager);
             order.verify(harness.graphics).runPendingRenderThreadTasks();
-            order.verify(harness.levelManager).loadZoneAndAct(0, 0);
+            order.verify(harness.levelManager).loadZoneAndActForFreshRuntime(0, 0);
             order.verifyNoMoreInteractions();
         }
     }
@@ -466,7 +526,7 @@ class TestEngine {
 
             assertEquals(GameMode.MASTER_TITLE_SCREEN, harness.engine.getCurrentGameMode());
             assertNotNull(harness.engine.getMasterTitleScreen());
-            verify(harness.levelManager, never()).loadZoneAndAct(0, 0);
+            verify(harness.levelManager, never()).loadZoneAndActForFreshRuntime(0, 0);
         }
     }
 
@@ -722,7 +782,7 @@ class TestEngine {
         doAnswer(invocation -> {
             assertEquals(donorActive ? 1 : 0, cacheManager.renderTaskRuns.get());
             return null;
-        }).when(levelManager).loadZoneAndAct(0, 0);
+        }).when(levelManager).loadZoneAndActForFreshRuntime(0, 0);
         when(romDetectionService.detectAndCreateModule(rom)).thenReturn(detectedModule);
 
         MockedStatic<GameplaySessionFactory> gameplayFactory =

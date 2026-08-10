@@ -4,6 +4,7 @@ import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.IczPathFollowPlatformObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kSpringObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
@@ -41,12 +42,12 @@ class TestS3kIczPathFollowPlatformObject {
     // resolves the S3KL zone set (not a leaked SKL zone). Parallel-suite flake fix.
     @BeforeEach
     void clearLeakedGameplaySession() {
-        com.openggf.game.session.SessionManager.clear();
+        TestEnvironment.resetAll();
     }
 
     @Test
     void registryCreatesIczPathFollowPlatformInstance() {
-        ObjectInstance instance = new Sonic3kObjectRegistry().create(
+        ObjectInstance instance = new IczRegistry().create(
                 new ObjectSpawn(0x1200, 0x0700, Sonic3kObjectIds.ICZ_PATH_FOLLOW_PLATFORM, 0, 0, false, 0));
 
         assertInstanceOf(IczPathFollowPlatformObjectInstance.class, instance);
@@ -108,8 +109,8 @@ class TestS3kIczPathFollowPlatformObject {
         IczPathFollowPlatformObjectInstance platform = create(0);
         platform.setServices(new StubObjectServices() {
             @Override
-            public int vIntRunCounter(int objectUpdateCounter) {
-                return objectUpdateCounter;
+            public int resolveVIntRunCount(int vIntRunCountAtObservation) {
+                return vIntRunCountAtObservation;
             }
         });
         PlayableEntity player = mock(PlayableEntity.class);
@@ -127,8 +128,8 @@ class TestS3kIczPathFollowPlatformObject {
         IczPathFollowPlatformObjectInstance platform = create(0);
         platform.setServices(new StubObjectServices() {
             @Override
-            public int vIntRunCounter(int objectUpdateCounter) {
-                return objectUpdateCounter + 1;
+            public int resolveVIntRunCount(int vIntRunCountAtObservation) {
+                return vIntRunCountAtObservation + 1;
             }
         });
         PlayableEntity player = mock(PlayableEntity.class);
@@ -487,6 +488,18 @@ class TestS3kIczPathFollowPlatformObject {
         protected PatternSpriteRenderer getRenderer(String artKey) {
             assertEquals(Sonic3kObjectArtKeys.ICZ_PLATFORMS, artKey);
             return renderer;
+        }
+    }
+
+    private static final class IczRegistry extends Sonic3kObjectRegistry {
+        @Override
+        protected com.openggf.level.Level currentLevel() {
+            return null;
+        }
+
+        @Override
+        protected int currentRomZoneId() {
+            return Sonic3kZoneIds.ZONE_ICZ;
         }
     }
 }

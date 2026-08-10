@@ -27,6 +27,17 @@ public interface TouchResponseProvider {
     }
 
     /**
+     * Returns whether this object's generic touch-hurt path publishes the
+     * sidekick's raw hurt animation byte. Most objects use the shared
+     * {@code Hurt_Sidekick} write; object families whose ROM touch owner leaves
+     * {@code anim} untouched can opt out and keep the prior byte for the next
+     * animation pass.
+     */
+    default boolean sidekickTouchHurtPublishesAnimation() {
+        return true;
+    }
+
+    /**
      * Returns whether S3K {@code Touch_Special} property-style {@code 0xC0}
      * collision flags should dispatch as listener-only special callbacks instead
      * of boss touch handling.

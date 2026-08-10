@@ -74,7 +74,18 @@ public final class Mhz1CutsceneDoorInstance extends AbstractObjectInstance
 
     @Override
     public boolean isPersistent() {
-        return true;
+        // ROM Child_Draw_Sprite retains this structural child only while its
+        // parent is live; once Sprite_CheckDelete marks the parent, the child
+        // installs its own delete routine.
+        return parent != null && !parent.isDestroyed();
+    }
+
+    @Override
+    public void onUnload() {
+        if (parent != null) {
+            parent.detachDoor(this);
+            parent = null;
+        }
     }
 
     @Override
@@ -105,7 +116,7 @@ public final class Mhz1CutsceneDoorInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (state == State.IDLE) {
             if (parent.isDoorSwitchActive()) {
                 parent.clearDoorSwitchActive();
