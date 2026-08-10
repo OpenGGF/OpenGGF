@@ -4,7 +4,7 @@
   "patched_managed_dll_permitted": false,
   "build_recipe": {
     "file": "task7-build-recipe.json",
-    "sha256": "eb58429b3b0bb47b337c60055d849f917842b8e973083d23261bdb2e04783d99"
+    "sha256": "eee5fa9e4eda2480ea76207edc0cbb3b4a89e54ac767e9cba744dca1f4420f71"
   },
   "abi": {
     "version": 1,
@@ -59,14 +59,14 @@
     "bizhawk_common_sha256": "438a49d6a45d9fcac17016240ae205d1af7a4632865f6f70468b684b82323f33"
   },
   "identity": {
-    "sha256": "f3721d457aa867559d6ebad16111a4a1d737b9187c8655b144788a685d869e28"
+    "sha256": "6f4739f28771e55bcec0ca0e6f0c57badb3530d4cee36d39c8b19b14104ddfce"
   },
   "notices": {
     "bizhawk_license_sha256": "6601cab56cb56875001906593a3adf94d52a0b82e6919fcbee81c31a48499121",
     "gpgx_license_sha256": "0a2318b0d9f8ad4cb0c34f8072231417673bcc775746e660cd418b83a9d17600",
     "musl_copyright_sha256": "afe1df384787fce3577f3356b8b0d417381483f7c704eacb63f8050349fac77a",
     "zstd_license_sha256": "7055266497633c9025b777c78eb7235af13922117480ed5c674677adc381c9d8",
-    "llvm_debian_notices_tree_sha256": "5e5e87276b9322d626fe2b3f27242b238760ef419b5842a0fb7b58c2982c46d4"
+    "llvm_debian_notices_tree_sha256": "e8df18fb120730c10d8a30b5665132bed57f074eedfafdfae5a01e7de06ff2b0"
   },
   "toolchain": {
     "clang_sha256": "bb6556bdcdeb00dca0c758da9966a9982542a23ddcaffa784a2de9344ede3fc0",

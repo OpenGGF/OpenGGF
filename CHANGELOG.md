@@ -9,7 +9,8 @@ All notable changes to the OpenGGF project are documented in this file.
   results or cycles. The exact patch, core, complete corresponding source,
   non-commercial notices, Waterbox toolchain, and build recipe are content
   addressed; the stock managed assemblies remain unchanged and use the locked
-  reflection adapter path.
+  reflection adapter path. Installation rejects linked stock artifacts and
+  non-self-contained notice trees before copying or publishing.
 - Tooling: complete-run audio captures now bind a typed, profile-owned observer
   runtime identity and its exact managed adapter/artifact set. The BizHawk 2.11
   GPGX source, historical Waterbox toolchain, and stock core have reproducible

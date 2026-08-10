@@ -20,8 +20,8 @@
     ["${LOCKED_ZSTD}", "--ultra", "-22", "--threads=0", "--no-progress", "--force", "${BUILD_STAGE}/source-bundle.tar", "-o", "${BUILD_STAGE}/source-bundle.tar.zst"]
   ],
   "versioned_inputs": {
-    "build-core.sh": "b54fb4512326bb10657217efe0082eb72dd9c466ded1b1d7ca72306d16feb6cf",
-    "install-core.sh": "c705a2ecc2c50cd05f49594dc92bbf14899bca7068504c18526a2424eeb4fea6",
+    "build-core.sh": "e456f7549b0e01ee69b08e19042265620cb6a49e849b00359233be608ec0c783",
+    "install-core.sh": "ee9d1b4d5788c383b40d3c46a4a04671db649cb0354988b69cefd3e88d186225",
     "0001-buffer-z80-audio-events.patch": "45d85fc19405457c788be4f6c17d2b14281d33fbff163cd42eead76e08f7f6d2",
     "source-lock.json": "348ffd29471bcd9a0f452b6112a7bed941f0dd43f364a315c5cbd68f918205f9",
     "toolchain-lock.json": "e40900cda561e1066db1887712cb8219dc0c5b53a9a249f24061181b7bc3420c",

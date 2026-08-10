@@ -26,6 +26,30 @@ The managed proof later reproduced zero-capacity empty-array drain as
 pointer. The adapter now normalizes that exact case to null, and a fresh empty
 READY frame proves the corrected contract through Waterbox.
 
+Fix round 1 reproduced an installer destination-following flaw with an internal
+stock-core symlink: the actual installer replaced an external scratch canary's
+locked stock bytes with the patched core before its cleanup check failed. The
+same installer accepted and published a top-level notices symlink and accepted
+an external hardlink inside the notices tree. Adversarial registered tests now
+require refusal before external mutation or output publication. Caller stock
+and its private staged copy must be closed regular trees; staged core replacement
+removes the validated destination before copying. Build evidence must be
+single-link regular files. The producer now emits LLVM/Debian notice files and
+directories only (omitting package convenience symlinks, including one broken
+link), and the installer validates that regular self-contained form before and
+after copying. The locked notice-tree SHA-256 is
+`e8df18fb120730c10d8a30b5665132bed57f074eedfafdfae5a01e7de06ff2b0`.
+
+Independent review then found that caller-owned regular files could still be
+changed between validation and copying. A deterministic actual-installer RED
+test waited for the private stage, changed the final managed-source input, and
+observed the changed bytes publish successfully. The installer now validates
+the complete private stage immediately before create-new publication: all six
+unchanged stock artifacts, patched core, build evidence, complete notice-tree
+digest, whole identity, Task 7 recipe and every versioned input, plus the full
+Task 6 recipe graph. The same mutation test is green by refusing publication;
+caller stock remains exact and no partial target exists.
+
 ## Feasibility and ABI proof
 
 Five packed candidates and the 65,536-entry event array were compiled/linked
@@ -86,8 +110,8 @@ source bundle raw SHA-256     6f2e6d6102f594d0ae014be8ff5030dc3599595ecff36e01f8
 source bundle zst SHA-256     abd68651d633a0a75d01cb9569cfb9dc15da4a7540eb072fc2d8eb11e548ed0e
 path manifest SHA-256         ca94c5213d326ab3affac073dff5b67cf6b9c275db6d2c6291688376703709c1
 mode manifest SHA-256         03b81d212882a71329d5d45377bdebe1aa6194a0012bd9a4749ec35cd5683440
-Task 7 recipe SHA-256         eb58429b3b0bb47b337c60055d849f917842b8e973083d23261bdb2e04783d99
-whole identity SHA-256        f3721d457aa867559d6ebad16111a4a1d737b9187c8655b144788a685d869e28
+Task 7 recipe SHA-256         eee5fa9e4eda2480ea76207edc0cbb3b4a89e54ac767e9cba744dca1f4420f71
+whole identity SHA-256        6f4739f28771e55bcec0ca0e6f0c57badb3530d4cee36d39c8b19b14104ddfce
 adapter source SHA-256        770dfcfef0fabc2eb7211add26d7a3716e33b75ddbe7dd3d7ba1568c8cb3a102
 callgraph proof SHA-256       536711d3eada4bc9898c256c7479ee5a651381025f0476499bac76c9e82dd5c6
 ELF proof SHA-256             756b497189800fa7e12a01736e109a2cc0cbaf6cdfa72cb49ef6e1d0a3e21869

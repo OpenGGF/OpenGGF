@@ -127,6 +127,113 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 Run("/usr/bin/bash", "-p", Path.Combine(root, "install-core.sh"), "--build", b,
                     "--stock", stock, "--output", installB);
                 AssertEx.Equal(stockBefore, Sha256(stockCore));
+
+                string linkedStock = Path.Combine(scratch, "linked-stock");
+                Run("/usr/bin/cp", "-a", stock + "/.", linkedStock);
+                string externalCore = Path.Combine(scratch, "external-stock-core.zst");
+                File.Copy(stockCore, externalCore);
+                string linkedStockCore = Path.Combine(linkedStock, "dll", "gpgx.wbx.zst");
+                File.Delete(linkedStockCore);
+                Run("/usr/bin/ln", "-s", externalCore, linkedStockCore);
+                string linkedStockOutput = Path.Combine(scratch, "linked-stock-install");
+                bool linkedStockRejected = false;
+                try
+                {
+                    Run("/usr/bin/bash", "-p", Path.Combine(root, "install-core.sh"), "--build", a,
+                        "--stock", linkedStock, "--output", linkedStockOutput);
+                }
+                catch (InvalidOperationException) { linkedStockRejected = true; }
+                AssertEx.Equal(true, linkedStockRejected);
+                AssertEx.Equal(stockBefore, Sha256(externalCore));
+                AssertEx.Equal(stockBefore, Sha256(stockCore));
+                AssertEx.Equal(false, Directory.Exists(linkedStockOutput));
+
+                string linkedNoticesBuild = Path.Combine(scratch, "linked-notices-build");
+                Run("/usr/bin/cp", "-a", a + "/.", linkedNoticesBuild);
+                string linkedNotices = Path.Combine(linkedNoticesBuild, "llvm-debian-notices");
+                Directory.Delete(linkedNotices, true);
+                Run("/usr/bin/ln", "-s", Path.Combine(a, "llvm-debian-notices"), linkedNotices);
+                string linkedNoticesOutput = Path.Combine(scratch, "linked-notices-install");
+                bool linkedNoticesRejected = false;
+                try
+                {
+                    Run("/usr/bin/bash", "-p", Path.Combine(root, "install-core.sh"), "--build", linkedNoticesBuild,
+                        "--stock", stock, "--output", linkedNoticesOutput);
+                }
+                catch (InvalidOperationException) { linkedNoticesRejected = true; }
+                AssertEx.Equal(true, linkedNoticesRejected);
+                AssertEx.Equal(stockBefore, Sha256(stockCore));
+                AssertEx.Equal(false, Directory.Exists(linkedNoticesOutput));
+
+                string hardLinkedNoticesBuild = Path.Combine(scratch, "hard-linked-notices-build");
+                Run("/usr/bin/cp", "-a", a + "/.", hardLinkedNoticesBuild);
+                string externalNotice = Path.Combine(scratch, "external-notice");
+                string noticeRelative = Path.Combine("clang-16", "TODO.Debian");
+                File.Copy(Path.Combine(a, "llvm-debian-notices", noticeRelative), externalNotice);
+                string hardLinkedNotice = Path.Combine(hardLinkedNoticesBuild, "llvm-debian-notices", noticeRelative);
+                File.Delete(hardLinkedNotice);
+                Run("/usr/bin/ln", externalNotice, hardLinkedNotice);
+                string hardLinkedNoticesOutput = Path.Combine(scratch, "hard-linked-notices-install");
+                bool hardLinkedNoticesRejected = false;
+                try
+                {
+                    Run("/usr/bin/bash", "-p", Path.Combine(root, "install-core.sh"), "--build", hardLinkedNoticesBuild,
+                        "--stock", stock, "--output", hardLinkedNoticesOutput);
+                }
+                catch (InvalidOperationException) { hardLinkedNoticesRejected = true; }
+                AssertEx.Equal(true, hardLinkedNoticesRejected);
+                AssertEx.Equal(stockBefore, Sha256(stockCore));
+                AssertEx.Equal(false, Directory.Exists(hardLinkedNoticesOutput));
+
+                string internallyLinkedNoticesBuild = Path.Combine(scratch, "internally-linked-notices-build");
+                Run("/usr/bin/cp", "-a", a + "/.", internallyLinkedNoticesBuild);
+                string externalLinkedNotice = Path.Combine(scratch, "external-linked-notice");
+                File.Copy(Path.Combine(a, "llvm-debian-notices", noticeRelative), externalLinkedNotice);
+                string internallyLinkedNotice = Path.Combine(
+                    internallyLinkedNoticesBuild, "llvm-debian-notices", noticeRelative);
+                File.Delete(internallyLinkedNotice);
+                Run("/usr/bin/ln", "-s", externalLinkedNotice, internallyLinkedNotice);
+                string internallyLinkedNoticesOutput = Path.Combine(scratch, "internally-linked-notices-install");
+                bool internallyLinkedNoticesRejected = false;
+                try
+                {
+                    Run("/usr/bin/bash", "-p", Path.Combine(root, "install-core.sh"), "--build", internallyLinkedNoticesBuild,
+                        "--stock", stock, "--output", internallyLinkedNoticesOutput);
+                }
+                catch (InvalidOperationException) { internallyLinkedNoticesRejected = true; }
+                AssertEx.Equal(true, internallyLinkedNoticesRejected);
+                AssertEx.Equal(stockBefore, Sha256(stockCore));
+                AssertEx.Equal(false, Directory.Exists(internallyLinkedNoticesOutput));
+
+                string racedBuild = Path.Combine(scratch, "raced-build");
+                Run("/usr/bin/cp", "-a", b + "/.", racedBuild);
+                string racedOutput = Path.Combine(scratch, "raced-install");
+                using (Process process = Start("/usr/bin/bash", "-p", Path.Combine(root, "install-core.sh"),
+                    "--build", racedBuild, "--stock", stock, "--output", racedOutput))
+                {
+                    string stageSource = null;
+                    for (int attempt = 0; attempt < 1000 && !process.HasExited; attempt++)
+                    {
+                        string[] stages = Directory.GetDirectories(scratch, ".gpgx-observer-install-staging.*");
+                        foreach (string candidate in stages)
+                        {
+                            string sourceCandidate = Path.Combine(candidate, "gpgx-audio-observer-source");
+                            if (Directory.Exists(sourceCandidate)) { stageSource = sourceCandidate; break; }
+                        }
+                        if (stageSource != null) break;
+                        System.Threading.Thread.Sleep(2);
+                    }
+                    AssertEx.Equal(true, stageSource != null);
+                    File.AppendAllText(Path.Combine(racedBuild, "GpgxHost.cs"), "\n// concurrent mutation\n");
+                    string stdout = process.StandardOutput.ReadToEnd();
+                    string stderr = process.StandardError.ReadToEnd();
+                    process.WaitForExit();
+                    if (process.ExitCode == 0) throw new InvalidOperationException(
+                        "installer published build bytes changed during staging: " + stdout + stderr);
+                }
+                AssertEx.Equal(stockBefore, Sha256(stockCore));
+                AssertEx.Equal(false, Directory.Exists(racedOutput));
+
                 AssertEx.Equal(true, File.Exists(Path.Combine(install, "dll", "gpgx.wbx.zst")));
                 AssertEx.Equal(true, File.Exists(Path.Combine(install, "gpgx-audio-observer-source", "source-bundle.tar.zst")));
                 AssertEx.Equal(Sha256(Path.Combine(install, "dll", "gpgx.wbx.zst")),
@@ -189,7 +296,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     Path.Combine(root, "install-core.sh"), "--build", binaryOnly, "--stock", stock,
                     "--output", Path.Combine(scratch, "binary-only-install")), "missing source-bundle");
                 string summarized = Path.Combine(scratch, "summarized-license-build");
-                Run("/usr/bin/cp", "-al", a, summarized);
+                Run("/usr/bin/cp", "-a", a, summarized);
                 string summarizedLicense = Path.Combine(summarized, "GPGX-LICENSE.txt");
                 File.Delete(summarizedLicense);
                 File.WriteAllText(summarizedLicense, "Genesis Plus GX license summary only.\n");
@@ -220,7 +327,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             RunCapture(program, arguments);
         }
 
-        private static string RunCapture(string program, params string[] arguments)
+        private static Process Start(string program, params string[] arguments)
         {
             var info = new ProcessStartInfo(program) { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true };
             info.EnvironmentVariables.Clear();
@@ -228,7 +335,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
             info.EnvironmentVariables["PATH"] = "/usr/bin:/bin";
             info.Arguments = string.Empty;
             foreach (string argument in arguments) info.Arguments += " \"" + argument.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
-            using (Process process = Process.Start(info))
+            return Process.Start(info);
+        }
+
+        private static string RunCapture(string program, params string[] arguments)
+        {
+            using (Process process = Start(program, arguments))
             {
                 string stdout = process.StandardOutput.ReadToEnd();
                 string stderr = process.StandardError.ReadToEnd();

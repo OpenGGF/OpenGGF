@@ -40,9 +40,9 @@ public final class CompleteRunAudioProfiles {
     public static final String GPGX_AUDIO_TRACE_TOOLCHAIN_SHA256 =
             "9caa5c02dcd2d9c01e5d0196956787a0f31760195c6544a2ceafcb771f469521";
     public static final String GPGX_AUDIO_TRACE_BUILD_RECIPE_SHA256 =
-            "eb58429b3b0bb47b337c60055d849f917842b8e973083d23261bdb2e04783d99";
+            "eee5fa9e4eda2480ea76207edc0cbb3b4a89e54ac767e9cba744dca1f4420f71";
     public static final String GPGX_AUDIO_TRACE_IDENTITY_SHA256 =
-            "f3721d457aa867559d6ebad16111a4a1d737b9187c8655b144788a685d869e28";
+            "6f4739f28771e55bcec0ca0e6f0c57badb3530d4cee36d39c8b19b14104ddfce";
     public static final String GPGX_AUDIO_TRACE_ADAPTER_SOURCE_SHA256 =
             "770dfcfef0fabc2eb7211add26d7a3716e33b75ddbe7dd3d7ba1568c8cb3a102";
     public static final String GPGX_AUDIO_TRACE_HOST_SOURCE_SHA256 =

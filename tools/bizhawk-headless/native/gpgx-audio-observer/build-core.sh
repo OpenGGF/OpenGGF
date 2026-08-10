@@ -280,7 +280,14 @@ verify_stock "$stock_dir" || fail "snapshotted stock distribution changed"
 /usr/bin/cp -- "$source_dir/waterbox/gpgx/Genesis-Plus-GX/LICENSE.txt" "$stage/GPGX-LICENSE.txt"
 /usr/bin/cp -- "$source_dir/waterbox/musl/COPYRIGHT" "$stage/musl-COPYRIGHT"
 /usr/bin/cp -- "$script_dir/notices/zstd-LICENSE" "$stage/zstd-LICENSE"
-/usr/bin/cp -a -- "$toolchain_dir/clang/usr/share/doc" "$stage/llvm-debian-notices"
+/usr/bin/mkdir "$stage/llvm-debian-notices"
+while IFS= read -r -d '' relative; do
+  /usr/bin/mkdir "$stage/llvm-debian-notices/$relative"
+done < <(cd "$toolchain_dir/clang/usr/share/doc" && /usr/bin/find -P . -mindepth 1 -type d -print0)
+while IFS= read -r -d '' relative; do
+  /usr/bin/cp -p -- "$toolchain_dir/clang/usr/share/doc/$relative" \
+    "$stage/llvm-debian-notices/$relative"
+done < <(cd "$toolchain_dir/clang/usr/share/doc" && /usr/bin/find -P . -type f -print0)
 /usr/bin/cp -- "$adapter_source" "$stage/GpgxAudioObserverAdapter.cs"
 /usr/bin/cp -- "$host_source" "$stage/GpgxHost.cs"
 /usr/bin/printf '{"schema":"openggf.gpgx-audio-observer-build.v1","installation_id":"bizhawk-2.11-gpgx-audio-observer-v1","core_id":"gpgx-audio-observer-v1","adapter":"REFLECTION","adapter_source_sha256":"%s","host_source_sha256":"%s","bizinvoke_sha256":"8d05389bf0e02be1244bdc7a2adcd93b4cff95acf199fc927987ca699760a1b7","bizhawk_common_sha256":"438a49d6a45d9fcac17016240ae205d1af7a4632865f6f70468b684b82323f33","abi_version":1,"event_size":32,"capacity":65536,"patch_sha256":"%s","build_recipe_sha256":"%s","decompressed_sha256":"%s","compressed_sha256":"%s","build_id":"%s","source_bundle_sha256":"%s","source_bundle_uncompressed_sha256":"%s","path_manifest_sha256":"%s","path_mode_manifest_sha256":"%s","build_log_sha256":"%s","native_selftest_sha256":"%s","elf_proof_sha256":"%s","callgraph_proof_sha256":"%s","verified_input_identity_sha256":"%s"}\n' \
