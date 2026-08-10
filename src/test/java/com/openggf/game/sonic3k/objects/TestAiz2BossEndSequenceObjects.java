@@ -225,6 +225,49 @@ class TestAiz2BossEndSequenceObjects {
     }
 
     @Test
+    void earlierButtonOwnerPreservesTheInitializedCollapseCountThroughBridgeEntry() {
+        AizDrawBridgeObjectInstance bridge = AizDrawBridgeObjectInstance.createCutsceneOverride();
+        bridge.setServices(new TestObjectServices().withGameState(new GameStateManager()));
+
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        player.setOnObject(true);
+        bridge.onSolidContact(player, new SolidContact(true, false, false, true, false), 0);
+
+        bridge.beginCollapseFromEarlierButtonSlot();
+        bridge.update(0, player);
+        for (int i = 0; i < 14; i++) {
+            bridge.update(i + 1, player);
+        }
+
+        assertTrue(bridge.isSolidFor(player),
+                "loc_2B2E8 returns with $34=$E before loc_2B452 begins decrementing");
+        assertFalse(player.getAir());
+
+        bridge.update(15, player);
+
+        assertFalse(bridge.isSolidFor(player));
+        assertTrue(player.getAir());
+    }
+
+    @Test
+    void alreadyConsumedBridgeOwnerStartsCountdownOnFollowingJavaEntry() {
+        Aiz2BossEndSequenceState.setButtonBeforeBridgeDispatch(true);
+        AizDrawBridgeObjectInstance bridge = AizDrawBridgeObjectInstance.createCutsceneOverride();
+        bridge.setServices(new TestObjectServices().withGameState(new GameStateManager()));
+
+        bridge.beginCollapseFromEarlierButtonSlot();
+        for (int i = 0; i < 14; i++) {
+            bridge.update(i, null);
+        }
+
+        assertTrue(bridge.isSolidFor(null));
+
+        bridge.update(14, null);
+
+        assertFalse(bridge.isSolidFor(null));
+    }
+
+    @Test
     void eggCapsuleReleasesControllerAfterResultsFinish() throws Exception {
         Camera camera = TestEnvironment.activeGameplayMode().getCamera();
         camera.resetState();

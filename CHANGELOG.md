@@ -3,6 +3,10 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: AIZ2's folded drawbridge now preserves the ROM's collapse-init
+  return boundary when the semantic lower button owner publishes the trigger
+  before the bridge dispatch. Its `$0E` countdown starts on the following SST
+  entry, closing standalone AIZ with complete-run AIZ and HCZ unchanged.
 - Fix/Test: AIZ2's cutscene button now preserves the native logical UP word
   when its lower SST slot unlocks control before the later Player_1 dispatch,
   then releases the engine-side representation on the following controller

@@ -71262,3 +71262,42 @@ landable change, which I implemented directly.
 - Gameplay-order canary: `TestS3kHczCompleteRunTraceReplay` passed independently
   with the same JDK, ROM, and trace profile. Complete-run AIZ and HCZ therefore
   remain green; standalone AIZ raw `20713` is the next target.
+
+## 2026-08-10 — standalone AIZ drawbridge collapse green
+
+- Context: `bugfix/s3k-traces` at `00bc9d9cc`; `git fetch origin develop
+  --prune` confirmed current `origin/develop` (`eb619f787`) was already an
+  ancestor, so no merge commit was needed. Validation used JDK 21.0.12 and
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen`. The six protected user edits
+  remained unstaged, no fixture changed, and ring comparison remained
+  error-level through `ToleranceConfig.DEFAULT` / `RingCountMode.FORCE_ERROR`.
+- Root cause: when the native button's lower semantic SST slot sets `_unkFAA9`,
+  the later bridge slot enters `loc_2B2E8`, writes `$34=$0E`, creates the
+  falling pieces through `loc_2B498`, and returns. The folded callback initialized
+  the bridge before its Java update and then decremented the countdown in that
+  same entry, deleting the parent and ejecting both standing players one frame
+  early. The bridge now preserves the initialization return only when the
+  existing live-occupancy-derived owner-order marker says its native dispatch is
+  still pending; the already-consumed ordering starts the countdown immediately.
+  No trace, frame, route, zone, or fitted constant was introduced
+  (`docs/skdisasm/sonic3k.asm:59614-59623,59764-59791`).
+- Focused command: `mvn -q -Dmse=off
+  -Dtest='com.openggf.game.sonic3k.objects.TestAiz2BossEndSequenceObjects#earlierButtonOwnerPreservesTheInitializedCollapseCountThroughBridgeEntry+alreadyConsumedBridgeOwnerStartsCountdownOnFollowingJavaEntry+drawBridgeDropsPlayersIntoHurtFallAfterButtonPress'
+  test`. Result: 3 tests passed across both semantic owner orderings.
+- Rejected experiment: deferring the first countdown entry in both orderings
+  closed standalone AIZ but regressed complete-run AIZ at raw `25965`
+  (`player_animation_id`, expected `$1B`, actual `$02`; 38 errors). Restricting
+  the return boundary to the occupancy-derived pending-owner ordering removed
+  that regression; the unconditional variant was not retained.
+- Frontier/regression command: `mvn -q -Ptrace-replay -Dmse=off
+  -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s3k.TestS3kAizCompleteRunTraceReplay'
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Standalone AIZ advanced from raw `20713` (`air`, expected `0`, actual `1`;
+  37 errors) to green. Complete-run AIZ also passed with 0 errors and 0 warnings.
+- Gameplay-order canary: `TestS3kHczCompleteRunTraceReplay` passed independently
+  with 0 errors and 0 warnings. The correctly packaged
+  `com.openggf.game.rewind.coverage.TestRewindCoverageGuard` also passed; an
+  earlier command named the nonexistent package `com.openggf.game.rewind` and
+  executed no tests, so it supplied no evidence. Standalone and complete AIZ
+  plus complete-run HCZ are green; HCZ is the next gameplay-order audit target.
