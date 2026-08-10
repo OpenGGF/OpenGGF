@@ -73,7 +73,7 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
     private int buttonTriggerSource;
     private int buttonTriggerVIntRunCount = -1;
     private int openFrame = -1;
-    private boolean laterSupportOwnerEligibilityDeferred;
+    private boolean parentMotionEligibilityDeferred;
     private boolean routeInitPending;
     private S3kBossExplosionController explosionController;
 
@@ -321,15 +321,14 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
             if (candidate instanceof AbstractPlayableSprite player
                     && shouldTriggerButton(player, candidate == nativeP1)) {
                 eligibleCandidateFound = true;
-                int supportSlot = player.getInteractSlotIndex();
-                if (defersCollapsedButtonPastLaterSupportOwner()
-                        && !laterSupportOwnerEligibilityDeferred
-                        && supportSlot > getSlotIndex()) {
-                    // The ROM button is a child in a later SST slot than both
-                    // the capsule and this support owner. A collapsed child in
-                    // the capsule's earlier engine slot cannot observe that
-                    // owner's current dispatch until its next entry.
-                    laterSupportOwnerEligibilityDeferred = true;
+                if (defersButtonEligibilityCreatedByParentMotion()
+                        && !parentMotionEligibilityDeferred
+                        && !shouldTriggerButtonAtX(player, candidate == nativeP1, solidBodyX)) {
+                    // Parent movement and the later button child occupy
+                    // separate native dispatches. Do not let movement folded
+                    // into this entry create eligibility until the next
+                    // child-equivalent entry.
+                    parentMotionEligibilityDeferred = true;
                     continue;
                 }
                 // ROM loc_86770 only switches the button child to loc_867CA
@@ -344,20 +343,25 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
             }
         }
         if (!eligibleCandidateFound) {
-            laterSupportOwnerEligibilityDeferred = false;
+            parentMotionEligibilityDeferred = false;
         }
     }
 
-    protected boolean defersCollapsedButtonPastLaterSupportOwner() {
+    protected boolean defersButtonEligibilityCreatedByParentMotion() {
         return false;
     }
 
     private boolean shouldTriggerButton(AbstractPlayableSprite player, boolean nativeP1) {
+        return shouldTriggerButtonAtX(player, nativeP1, currentX);
+    }
+
+    private boolean shouldTriggerButtonAtX(AbstractPlayableSprite player, boolean nativeP1,
+            int buttonX) {
         // ROM loc_86770 refreshes the button child from parent x/y, runs
         // sub_86A54, then calls Check_PlayerInRange before the parent routine's
         // Swing_UpAndDown render motion (sonic3k.asm:181739-181767,181604-181647).
         int buttonY = currentY + BUTTON_Y_OFFSET;
-        int dx = player.getCentreX() - currentX;
+        int dx = player.getCentreX() - buttonX;
         int dy = player.getCentreY() - buttonY;
         return player.getYSpeed() < 0
                 && isAllowedButtonTriggerCharacterState(player, nativeP1)

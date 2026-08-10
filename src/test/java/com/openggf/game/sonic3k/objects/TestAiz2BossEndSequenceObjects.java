@@ -535,7 +535,37 @@ class TestAiz2BossEndSequenceObjects {
     }
 
     @Test
-    void floatingCapsuleDefersCollapsedButtonCheckPastLaterSupportOwner() throws Exception {
+    void floatingCapsuleDefersEligibilityCreatedByCurrentParentMovement() throws Exception {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        camera.resetState();
+
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        sonic.setCentreX((short) 0x4800);
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        tails.setCentreX((short) 0x49CF);
+        tails.setCentreY((short) 0x0186);
+        tails.setYSpeed((short) -1);
+        tails.setInteractSlotIndex(8);
+
+        Aiz2EndEggCapsuleInstance capsule = new Aiz2EndEggCapsuleInstance(0x49EA, 0x0162);
+        capsule.setSlotIndex(7);
+        capsule.setServices(new QueryOnlyServices(camera, sonic, List.of(tails))
+                .withGameState(new GameStateManager()));
+        setField(capsule, "xDirection", -1);
+
+        capsule.update(0, sonic);
+
+        assertFalse(getBooleanField(capsule, "buttonTriggered"),
+                "The collapsed child cannot consume eligibility created by this parent movement entry");
+
+        capsule.update(1, sonic);
+
+        assertTrue(getBooleanField(capsule, "buttonTriggered"),
+                "The next capsule entry observes the parent's previously published position");
+    }
+
+    @Test
+    void floatingCapsuleDoesNotDeferPlayerAlreadyEligibleBeforeParentMovement() throws Exception {
         Camera camera = TestEnvironment.activeGameplayMode().getCamera();
         camera.resetState();
 
@@ -545,23 +575,21 @@ class TestAiz2BossEndSequenceObjects {
         tails.setCentreX((short) 0x49EA);
         tails.setCentreY((short) 0x0186);
         tails.setYSpeed((short) -1);
+        tails.setAir(true);
+        tails.setOnObject(false);
         tails.setInteractSlotIndex(8);
 
         Aiz2EndEggCapsuleInstance capsule = new Aiz2EndEggCapsuleInstance(0x49EA, 0x0162);
         capsule.setSlotIndex(7);
         capsule.setServices(new QueryOnlyServices(camera, sonic, List.of(tails))
                 .withGameState(new GameStateManager()));
-        setField(capsule, "xDirection", 0);
+        setField(capsule, "xDirection", -1);
 
         capsule.update(0, sonic);
 
-        assertFalse(getBooleanField(capsule, "buttonTriggered"),
-                "The collapsed child cannot observe a later support owner's current SST dispatch");
-
-        capsule.update(1, sonic);
-
         assertTrue(getBooleanField(capsule, "buttonTriggered"),
-                "The next capsule entry observes the later support owner's published state");
+                "A player inside the range at both parent positions needs no collapsed-child delay");
+        assertFalse(getBooleanField(capsule, "parentMotionEligibilityDeferred"));
     }
 
     @Test

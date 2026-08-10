@@ -87,11 +87,10 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
     }
 
     @Override
-    protected boolean defersCollapsedButtonPastLaterSupportOwner() {
-        // AIZ's native capsule button sits after the draw bridge that still
-        // owns Player_2's standing update. The consolidated engine capsule
-        // precedes its replacement bridge, so consume that publication on
-        // the next capsule entry.
+    protected boolean defersButtonEligibilityCreatedByParentMotion() {
+        // The route-8 parent and button child are distinct native dispatches.
+        // Preserve that boundary when the parent's horizontal step is what
+        // first moves the button range over a player.
         return true;
     }
 

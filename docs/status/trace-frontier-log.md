@@ -71160,3 +71160,37 @@ landable change, which I implemented directly.
   one isolated-fork sweep with the same ROM and frontier profile. Result: all
   six passed. Route position remains green through LBZ; standalone AIZ raw
   `19721` is the next gameplay-order target.
+
+## 2026-08-10 — standalone AIZ floating-capsule dispatch frontier
+
+- Context: `bugfix/s3k-traces` at `c1cec7b77`; a fresh `origin/develop` fetch
+  confirmed `eb619f787` is already an ancestor, so no merge was required. The
+  protected user edits remained unstaged. Validation used JDK 21.0.12 and
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen`; no trace fixture changed. Ring
+  comparison remains error-level through `ToleranceConfig.DEFAULT` /
+  `RingCountMode.FORCE_ERROR`.
+- Root cause: route-8 `Obj_EggCapsule` moves the parent and checks the separate
+  button child in distinct native SST dispatches. The folded engine owner could
+  let the parent's horizontal step create button-range eligibility in the same
+  entry. That made the complete-run boundary hit one entry early; the previous
+  interact-slot delay compensated it but also delayed standalone AIZ even when
+  the player was already inside the range before the parent moved. The folded
+  child now defers only when current parent movement creates eligibility. Its
+  decision uses the parent's saved/current ROM positions and player range state,
+  not a trace, frame, route, standing pointer, or zone carve-out.
+- Focused command: `mvn -Dmse=off
+  -Dtest='com.openggf.game.sonic3k.objects.TestAiz2BossEndSequenceObjects#floatingCapsuleDefersEligibilityCreatedByCurrentParentMovement+floatingCapsuleDoesNotDeferPlayerAlreadyEligibleBeforeParentMovement+aizCapsuleButtonTriggerDefersParentOpenUntilNextRoutineEntry'
+  test`. Result: 3 tests passed.
+- Frontier command: `mvn -Dmse=off
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace'
+  -Dtrace.frontierOnly=true
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen' test`. Result:
+  the raw-`19721` 13-error capsule/results cluster and raw-`20297` 8-error
+  ending-control cluster are removed. Comparison reaches the next terminal
+  hardware edge: unconsumed Kosinski module completion `#64` at raw `20794`,
+  with no earlier comparison error or warning reported.
+- Gameplay-order regression sweep: complete-run AIZ, HCZ, MGZ, CNZ, ICZ, and
+  LBZ each passed independently with the same ROM and frontier profile. LBZ's
+  long fixture required `-Dsurefire.argLine='-Xshare:off -Xmx4g'`; its first two
+  1 GiB attempts exhausted heap before executing a test and produced no trace
+  result. The green route remains stable through LBZ.
