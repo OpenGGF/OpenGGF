@@ -23,6 +23,7 @@ import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchResponseAttackable;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -55,6 +56,10 @@ import java.util.logging.Logger;
 public final class LbzFinalBoss2Instance extends AbstractObjectInstance
         implements TouchResponseProvider, TouchResponseAttackable, SpawnRewindRecreatable {
     private static final Logger LOG = Logger.getLogger(LbzFinalBoss2Instance.class.getName());
+    private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE =
+            TouchResponseProfile.fromCanonical(
+                    com.openggf.game.profiles.touchresponse.TouchResponseProfile
+                            .singleRegionContinuousCallbacks());
 
     private static final int OBJECT_ID = Sonic3kObjectIds.LBZ_FINAL_BOSS_2;
 
@@ -265,6 +270,11 @@ public final class LbzFinalBoss2Instance extends AbstractObjectInstance
     public boolean usesCurrentTouchResponseState() {
         // Obj_LBZFinalBoss2 calls Draw_And_Touch_Sprite after its routine dispatch.
         return true;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return TOUCH_RESPONSE_PROFILE;
     }
 
     @Override

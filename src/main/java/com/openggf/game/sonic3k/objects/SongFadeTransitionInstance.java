@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 
@@ -153,7 +154,7 @@ public class SongFadeTransitionInstance extends AbstractObjectInstance implement
             nativeRemaining--;
             if (nativeRemaining < 0) {
                 services().playMusic(musicId);
-                setDestroyed(true);
+                ObjectLifetimeOps.expireDynamic(this);
             }
             return;
         }

@@ -6,6 +6,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
@@ -123,7 +124,7 @@ public final class AizEndBossWaterfallChild extends AbstractObjectInstance
         // marker receives its own dispatch on the following object pass
         // (sonic3k.asm:179136-179143; locked-on ROM $000852A0->$0001ABB6).
         if (routine == STATE_DELETE_PENDING) {
-            setDestroyed(true);
+            ObjectLifetimeOps.expireDynamic(this);
             return;
         }
 

@@ -69,14 +69,19 @@ class TestFbzEndBossChildren {
     @Test
     void sharedBossExplosionUsesNativeFrameDelayColumnOrder() {
         S3kBossExplosionChild explosion = new S3kBossExplosionChild(0x3000, 0x600);
+        explosion.setServices(new TestObjectServices());
         List<Integer> frames = new ArrayList<>();
         int updates = 0;
         while (!explosion.isDestroyed() && updates < 100) {
             explosion.update(updates++, null);
             if (!explosion.isDestroyed()) frames.add(explosion.mappingFrameForTest());
         }
-        assertEquals(22, updates);
-        assertEquals(expandedFrames(new int[]{0, 1, 2, 3, 4, 5}, new int[]{1, 1, 2, 3, 4, 4}), frames);
+        assertEquals(23, updates,
+                "terminal $F4 keeps the SST for one entry before Delete_Current_Sprite");
+        List<Integer> expected = new ArrayList<>(
+                expandedFrames(new int[]{0, 1, 2, 3, 4, 5}, new int[]{1, 1, 2, 3, 4, 4}));
+        expected.add(5); // terminal $F4 still submits the previous mapping
+        assertEquals(expected, frames);
     }
 
     @Test

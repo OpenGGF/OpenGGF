@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Tests: ROM-backed source-data checks no longer read optional local disassembly
+  trees. FBZ placements, MGZ quake chunks, AIZ KosM streams, save/data-select
+  assets, S3K life-icon bytes, and GHZ mappings now execute from the configured
+  canonical ROMs; a tooling guard rejects new executable test dependencies on
+  `docs/*disasm`.
 - Fix: Integrating the reviewed AIZ and LBZ work onto `next` now preserves the
   native boss-owned splash/FallingShot allocation paths and uses the current
   level-transition/fade state names in their regression tests. The explicit

@@ -2,13 +2,16 @@ package com.openggf.game.sonic3k.objects;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.common.CommonPlacementParser;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.tests.RomTestUtils;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -20,13 +23,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@RequiresRom(SonicGame.SONIC_3K)
 class TestFbzObjectInventory {
-    private static final Path ROOT = Path.of("docs/skdisasm/Levels/FBZ/Object Pos");
+    private static final int FBZ1_OBJECTS = 0x1EC5DC;
+    private static final int FBZ2_OBJECTS = 0x1ECFBA;
 
     @Test
     void lockedOnPlacementFilesMatchTheFrozenInventory() throws IOException {
-        assertAct("1.bin", 421, 420, act1());
-        assertAct("2.bin", 441, 440, act2());
+        assertAct(FBZ1_OBJECTS, 421, 420, act1());
+        assertAct(FBZ2_OBJECTS, 441, 440, act2());
     }
 
     @Test
@@ -54,9 +59,9 @@ class TestFbzObjectInventory {
         }
     }
 
-    private static void assertAct(String file, int rawRecords, int runtimeSpawns,
+    private static void assertAct(int address, int rawRecords, int runtimeSpawns,
                                   Map<Integer, Map<Integer, Integer>> expected) throws IOException {
-        byte[] bytes = Files.readAllBytes(ROOT.resolve(file));
+        byte[] bytes = readPlacementBytes(address, rawRecords);
         assertEquals(rawRecords * 6, bytes.length, "raw six-byte record count");
         assertEquals(List.of(0xFF, 0xFF, 0, 0, 0, 0),
                 java.util.stream.IntStream.range(bytes.length - 6, bytes.length)
@@ -69,8 +74,27 @@ class TestFbzObjectInventory {
     }
 
     static List<ObjectSpawn> load(String file) throws IOException {
+        int address = switch (file) {
+            case "1.bin" -> FBZ1_OBJECTS;
+            case "2.bin" -> FBZ2_OBJECTS;
+            default -> throw new IllegalArgumentException("Unknown FBZ act placement: " + file);
+        };
+        int records = "1.bin".equals(file) ? 421 : 441;
         return CommonPlacementParser.parseObjectRecords(
-                new RomByteReader(Files.readAllBytes(ROOT.resolve(file))), 0);
+                new RomByteReader(readPlacementBytes(address, records)), 0);
+    }
+
+    private static byte[] readPlacementBytes(int address, int records) throws IOException {
+        java.io.File romFile = RomTestUtils.ensureSonic3kRomAvailable();
+        if (romFile == null) {
+            throw new IOException("Configured S3K ROM is unavailable");
+        }
+        try (Rom rom = new Rom()) {
+            if (!rom.open(romFile.getAbsolutePath())) {
+                throw new IOException("Failed to open configured S3K ROM");
+            }
+            return rom.readBytes(address, records * 6);
+        }
     }
 
     private static Map<Integer, Map<Integer, Integer>> count(List<ObjectSpawn> spawns) {

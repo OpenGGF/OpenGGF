@@ -7,9 +7,9 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
@@ -35,7 +35,7 @@ import java.util.List;
  * {@code AIZMiniboss_SetFallingShotDelay} reaches the camera-relative drop.</p>
  */
 public class AizMinibossNapalmProjectile extends AbstractObjectInstance
-        implements TouchResponseProvider, RewindRecreatable {
+        implements TouchResponseProvider, SpawnCoordinateRewindRecreatable {
     private static final int COLLISION_FLAGS_HAZARD = 0x98; // ObjDat_AIZMiniboss_BarrelShot
     private static final int FRAME_RISE_A = 0x0C;
     private static final int FRAME_RISE_B = 0x0D;
@@ -178,30 +178,12 @@ public class AizMinibossNapalmProjectile extends AbstractObjectInstance
     }
 
     @Override
-    public AizMinibossNapalmProjectile recreateForRewind(RewindRecreateContext ctx) {
-        if (ctx == null || ctx.spawn() == null) {
-            return null;
-        }
-        AizMinibossInstance boss = AizMinibossRewindLinks.nearestBoss(ctx);
-        AizMinibossFlameBarrelChild restoredBarrel = AizMinibossRewindLinks.nearestBarrel(ctx);
-        if (boss == null || restoredBarrel == null) {
-            return null;
-        }
-        return new AizMinibossNapalmProjectile(
-                boss,
-                restoredBarrel,
-                ctx.spawn().x(),
-                ctx.spawn().y(),
-                ctx.spawn().subtype());
-    }
-
-    @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (parent != null && (parent.isDestroyed() || parent.getState().defeated)) {
             // FallingShot checks parent3(barrel)->parent3(boss).status bit 7
             // before publishing touch/draw; a defeated boss removes the shot,
             // while already-spawned explosion children remain independent.
-            setDestroyed(true);
+            ObjectLifetimeOps.expireDynamic(this);
             return;
         }
         switch (state) {
@@ -326,7 +308,7 @@ public class AizMinibossNapalmProjectile extends AbstractObjectInstance
             int subtype = i * 2; // CreateChild1_Normal's sequential subtype word index.
             spawnChild(() -> new AizMinibossNapalmExplosionChild(x, y, subtype, true));
         }
-        setDestroyed(true);
+        ObjectLifetimeOps.expireDynamic(this);
     }
 
     private void moveSprite2() {

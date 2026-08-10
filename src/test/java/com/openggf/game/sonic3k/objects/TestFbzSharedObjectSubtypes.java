@@ -40,6 +40,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 /** Locked-on FBZ coverage for every counted shared-family subtype. */
+@com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
 class TestFbzSharedObjectSubtypes {
     private static final Map<Integer, String> S3KL_NAMES = Map.ofEntries(
             Map.entry(0x00, "Ring"), Map.entry(0x01, "Monitor"),

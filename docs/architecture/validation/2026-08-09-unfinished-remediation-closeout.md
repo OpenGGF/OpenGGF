@@ -1,17 +1,14 @@
-# Unfinished-remediation closeout and local-branch ledger
+# Unfinished-remediation closeout and `next` integration ledger
 
-Date: 2026-08-09
+Date: 2026-08-10
 
 ## Scope and delivery boundary
 
-This ledger separates delivered `develop` behavior from the second remediation
-wave's local review candidates. The documentation audit used `origin/develop`
-`e2aa50cd5980efc720f70c1c2a6209b2637b3042` as its baseline. At final ledger
-reconciliation, the observed remote tip was
-`eb619f787c13c41c30df842c377b577dbb74d5a2`; the five intervening commits do
-not integrate any candidate listed below. A branch row is not a release claim:
-every listed feature tip remains local, unmerged, and unpushed until a later
-integration explicitly records otherwise.
+This ledger originally separated delivered `develop` behavior from the second
+remediation wave's local review candidates. On 2026-08-10 those reviewed tips
+were integrated locally into `next`, based on exact `origin/next` commit
+`3f510b900c4f897185af4f5d2ab4e1faf4a6cd0e`. The integration remains local:
+`next` has not been pushed by this workflow.
 
 The first remediation wave was delivered by merge `524695cd4`. That merge also
 contains:
@@ -51,26 +48,59 @@ becoming green; exactly two obsolete scalar-only napalm pass rows were removed.
 These are recorded 2026-08-09 integration results, not a rerun performed by this
 documentation branch.
 
-## Local human-review candidates
+## `next` integration mapping
 
-| Scope | Local branch and commit | Bounded result and evidence | Remaining blocker / integration note |
-|---|---|---|---|
-| AIZ2 end-boss splash lifecycle | `feature/ai-aiz2-splash-evidence` at `fdb74aded8ffc4a72d461241e5a17e5498f06a32` | Fixes the one-dispatch `Go_Delete_Sprite` marker and removes the synthetic range tail. Production AIZ2 event/slot and graph-rewind evidence passed 116/116; the focused route passed 1/1, graph rewind 5/5, and timing/compression guards 4/4. | Local/unmerged; six commits behind and one ahead of the final observed `origin/develop`. The full AIZ replay still stops before gameplay on the existing held-`VBLANK_ONLY` POST admission gap; native recapture also needs BizHawk 2.11. |
-| Reserved load-time modes | `feature/ai-load-time-profile-semantics` at `907b2baf214a736b0f78092aa2b06d4d04b848a4` | Keeps `FAST`/`REALISTIC` behavior unchanged while scoping warnings and docs to `HardwareTimingService` admission. Configuration, timing, rewind, and authority coverage passed 87/87. | Local/unmerged; six commits behind and one ahead of the final observed `origin/develop`. Both modes remain unfinished: `FAST` needs an approved safety policy; `REALISTIC` needs uncensored S3K measurements and a confidence/context rule. |
-| AIZ miniboss napalm evidence and rewind identity | `feature/ai-aiz-miniboss-napalm-evidence` at `23e7e5e0609d49cac665b1742566b4bb0b8f3a98` | Replaces nearest-barrel rewind guessing with captured graph identity. A live production route proves Knuckles-only activation, three barrel pairs, native waits/slots, terrain impacts, collision/lifetime, and deterministic restore; the focused gate passed 74/74 and the committed `aiz_3` trace-v5 fixture validated. | Local/unmerged; six commits behind and one ahead of the final observed `origin/develop`. Evidence is bounded to the miniboss route; no 68-segment Knuckles run-chain replay or frontier advance is claimed. |
-| S2 native debug placement | `feature/ai-s2-native-debug-placement` at `85862cdd3056111402e1d5590dfdf0528f27f54f` | Test/docs-only REV01 catalog and lifecycle ratchet: ROM contract 3/3, adjacent owner sweep 22/22, singleton/rewind guards 43/43. No `src/main` scaffold or activation landed. | Local/unmerged; five commits behind and one ahead of the final observed `origin/develop`. No native-debug BK2 exists; four catalog IDs still lack placement-safe factories, and controller/global gates, preview, allocation, rewind, and `hasLevelDebug()` must land atomically. |
-| S2 competition / human P2 | `feature/ai-s2-competition-capability` at `97237c973d5f7e62d4661c62d302aed533f2479a` | Test/docs-only REV01 boundary plus executable architecture plan. The new characterization passed 2/2 and the final adjacent owner sweep 60/60. Singleton and rewind guards passed 43/43; 67/69 architectural methods passed with the same two existing size-ratchet failures, and `src/main` is unchanged. | Local/unmerged; five commits behind and one ahead of the final observed `origin/develop`. There is no native two-player movie or production mode owner; roles, input, two views, object/ring windows, scoring/results, act/zone lifecycle, rewind, and monitor consumption remain required. |
-| LBZ Big Arm | `feature/ai-lbz-big-arm-evidence` at `f50162928805f5f8d4b933eb287770655ef13964` (base `9de7ecf7230100626fb7084b3f678daa6a5f478c`) | Bounded ROM port replaces the inert placeholder with the shipped `FixBugs=0` fight, exact child graph, defeat, capsule/results gate, falling floor, carrier escape, and MHZ handoff. Fresh evidence passed bridge 5/5, behavior 7/7, graph slice 4/4, production route 7/7, graph 10/10, legacy/route/graph/rewind gate 957/957, and consolidated focused/rewind 1,483/1,483. The 69-method architecture guard retained exactly its two known size failures; policy, pre-commit, and synthetic pre-push checks passed. | Clean local/unmerged/unpushed candidate; six commits behind and one ahead of the final observed `origin/develop`. The comparison lane errors before replay at raw frame 6314 because the strict timing-schedule compiler cannot represent its schema-valid VBlank-only `post_objects` completion. No trace parity or frontier movement is claimed. |
-| S3K custom SMPS meta commands | `feature/ai-s3k-smps-custom-meta-capability` at `fbd411c1bb3c683dfef1c127aeff8c8eeb751e41` | Defines shipped-unreachable `FF01`/`FF02`/`FF03` as recognized source-width syntax with custom execution explicitly unsupported. Production changes are comments only; six characterizations (three exact-width and three non-effect) prove no `AudioManager` dispatch, no song-slot halt, and no mutable-Z80-memory copy. Focused tests passed 59/59, `TestBuildToolingGuard` passed 78/78, and 67/69 architectural methods passed with the same two existing size-ratchet failures. | Clean local/unmerged; five commits behind and one ahead of the final observed `origin/develop`. No custom-driver ownership, halt lifetime, mutable-memory/rewind contract, or trace/frontier advance is claimed. |
+The feature histories diverged from `next` through earlier rebases and branch
+rewrites, so literal merges attempted to reintroduce obsolete history. The
+reviewed tip deltas were integrated in order and conflicts were reconciled
+against the current `next` owners. This preserves the reviewed content without
+claiming that the original feature commits are ancestors of `next`.
 
-The documentation-closeout branch itself is `feature/ai-documentation-closeout`.
-Its exact commit and validation commands are reported in the handoff because a
-commit cannot embed its own hash.
+| Scope | Reviewed tip | Integrated `next` commit |
+|---|---|---|
+| AIZ miniboss napalm evidence and rewind identity | `23e7e5e0609d49cac665b1742566b4bb0b8f3a98` | `49fd2de6b` |
+| AIZ2 end-boss splash lifecycle | `fdb74aded8ffc4a72d461241e5a17e5498f06a32` | `f7bc8ce4b` |
+| Reserved load-time modes | `907b2baf214a736b0f78092aa2b06d4d04b848a4` | `5178cf3b3` |
+| S2 native debug placement contract | `85862cdd3056111402e1d5590dfdf0528f27f54f` | `9a650ce3b` |
+| S2 competition / human-P2 boundary | `97237c973d5f7e62d4661c62d302aed533f2479a` | `99ad8f6f2` |
+| S3K custom SMPS meta-command boundary | `fbd411c1bb3c683dfef1c127aeff8c8eeb751e41` | `c4b438bcf` |
+| LBZ Big Arm ROM port | `f50162928805f5f8d4b933eb287770655ef13964` | `2dad85fc6` |
+| Documentation closeout | `638bcfb2b4b2b0449336ddc5c4b348d999e0ba04` | `b7a44d203` |
+
+Integration reconciliation is recorded by `83310bbf4`. It adapts the reviewed
+ports to owners that already existed on `next`: native AIZ barrel/splash
+allocation, Big Arm fade and event boundaries, shared explosion construction,
+and the exact rewind-policy inventory.
+
+## `next` regression comparison
+
+Both sides were run from clean JDK 21 worktrees with one alphabetical Surefire
+fork, a 2 GiB fork heap, and the three canonical ROMs. The initial default 1 GiB
+post-integration fork exhausted its heap; it produced no accepted comparison.
+The corrected clean baseline also showed why the earlier non-clean baseline was
+invalid: its stale compiled test tree omitted source-present tests.
+
+| Exact tree | Total | Pass | Failure | Error | Skipped |
+|---|---:|---:|---:|---:|---:|
+| `next` baseline `3f510b900` | 16,874 | 16,767 | 65 | 29 | 13 |
+| integrated `next` candidate, no disassembly links | 16,988 | 16,881 | 65 | 29 | 13 |
+
+The final comparison has 115 added PASS outcomes and one removed PASS outcome.
+The removed load-profile method was replaced by the renamed, stronger
+`reservedModesWarnOnEveryResolutionAndExposeScopedFallbacks` PASS. No baseline
+failure or error count worsened. The final no-disassembly run retained the exact
+baseline aggregate of 65 failures, 29 errors, and 13 skips; its six red-key
+substitutions are order-dependent singleton/registry tests, and the three
+apparent new failures pass in the isolated six-class check. The earlier
+pre-portability integrated comparison had byte-identical red keys. The focused
+integration-regression selector passed 841/841, and the 46 rewritten
+source-data checks plus two portability-policy checks passed with all five
+`docs/*disasm` worktree links absent.
 
 ## Review rule
 
-Integrate each candidate independently after rebasing or merging the current
-remote tip, rerunning its focused JDK 21 evidence, and comparing policy/guard
-results. Do not infer delivery from a worktree's presence, reuse a branch-local
-test count as current-`develop` evidence, or combine the S2 CPU sidekick with a
-human-P2 role.
+The bounded open items documented by each feature remain open; integration does
+not broaden their evidence. In particular, do not infer LBZ trace parity past
+raw frame 6314, custom SMPS execution, S2 native debug activation, or a human-P2
+competition route. Do not combine the ordinary S2 CPU sidekick with a human-P2
+role.
