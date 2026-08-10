@@ -443,21 +443,35 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                 ? S3kRuntimeStates.currentLbz(registry).orElse(null)
                 : null;
         Camera camera = GameServices.cameraOrNull();
-        if (camera != null && state != null && state.isLbz1KnucklesBoundaryPublishPending()) {
-            boolean snapped = sidekickSpritesFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS).stream()
-                    .map(AbstractPlayableSprite::getCpuController)
-                    .filter(java.util.Objects::nonNull)
-                    .anyMatch(cpu -> Math.abs((short) (camera.getMaxY()
-                            - cpu.getMaxYBound(camera.getMaxY()))) > 8);
-            if (snapped || camera.getMaxY() == camera.getMaxYTarget()) {
+        boolean cnzPublishPending = cnzEvents != null
+                && cnzEvents.consumeSidekickBoundsPublishAfterCameraEasing();
+        boolean lbzPublishPending = state != null
+                && state.isLbz1KnucklesBoundaryPublishPending();
+        if (!cnzPublishPending && !lbzPublishPending) {
+            return;
+        }
+        if (camera == null) {
+            return;
+        }
+        boolean boundsMovedPastSidekickMirror = sidekickSpritesFor(
+                ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS).stream()
+                .map(AbstractPlayableSprite::getCpuController)
+                .filter(java.util.Objects::nonNull)
+                .anyMatch(cpu -> Math.abs((short) (camera.getMaxY()
+                        - cpu.getMaxYBound(camera.getMaxY()))) > 8);
+        if (lbzPublishPending) {
+            if (boundsMovedPastSidekickMirror || camera.getMaxY() == camera.getMaxYTarget()) {
                 state.clearLbz1KnucklesBoundaryPublishPending();
             }
         }
         // Tails_Check_Screen_Boundaries reads the live Camera_* words on the
-        // following player slot. Publish their post-DynamicLevelEvents values,
-        // after updateBoundaryEasing(), so the CPU mirror is not one frame
-        // behind a shrinking death plane (sonic3k.asm:28410-28443).
-        syncSidekickBoundsToCamera();
+        // following player slot. A producer that moves the death plane before
+        // DynamicLevelEvents explicitly publishes that post-easing value;
+        // unrelated gradual resize owners retain their native cadence
+        // (sonic3k.asm:28410-28443).
+        if (cnzPublishPending || boundsMovedPastSidekickMirror) {
+            syncSidekickBoundsToCamera();
+        }
     }
 
     /**
@@ -466,7 +480,11 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
      * before the DynamicLevelEvents tail; the next Tails slot then reads the
      * resulting live Camera_* values.
      */
+    @Override
     public void requestSidekickBoundsPublishAfterCameraEasing() {
+        if (cnzEvents != null) {
+            cnzEvents.requestSidekickBoundsPublishAfterCameraEasing();
+        }
         ZoneRuntimeRegistry registry = GameServices.zoneRuntimeRegistryOrNull();
         if (registry != null) {
             S3kRuntimeStates.currentLbz(registry)

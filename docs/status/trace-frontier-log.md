@@ -71716,3 +71716,36 @@ clean; the divergence is confined to rows 5230..5250.
   expected completion with no engine job pending. The new rule's S3K value is
   true and preserves the preceding production branch exactly; ICZ is the next
   gameplay-order target, not a regression introduced by this change.
+
+## 2026-08-10 — ICZ queue frontier restored without CNZ regression
+
+- Context: `bugfix/s3k-traces` at `2e509a603`; validation used JDK 21.0.12 and
+  the discovered locked-on S3K ROM. The six protected user edits remained
+  unstaged and no trace fixture changed. Historical source exports established
+  that ICZ passed at `c33d22d04` and first failed at `eb26e2783`, isolating the
+  regression to the unconditional post-camera sidekick-bound publication.
+- Root cause: the CNZ fix republished the sidekick camera mirror after every
+  DynamicLevelEvents easing pass. That was correct for the end-cannon owner's
+  discontinuous `$0200` death-plane target, but it also changed the cadence of
+  unrelated gradual resize owners. In ICZ this altered the retained sidekick
+  lifecycle before the boss-art owner could submit its production KosM parent,
+  leaving no matching direct child for recorded completion `#255` at raw frame
+  `21185`. CNZ's cannon and retained boss owner now publish an explicit
+  producer-owned post-easing request through rewind-captured CNZ event state;
+  the shared level-event tail consumes only that semantic request (or the
+  existing LBZ request). No trace, frame, route, zone-name, or game-name branch
+  and no synthetic hardware work was added.
+- Focused ICZ command: `mvn -Ptrace-replay -Dmse=relaxed
+  -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical -DreuseForks=true
+  -Dsurefire.argLine=-Xmx3g
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace'
+  test`. Result: all 25,393 rows pass with 0 failures and 0 errors; direct
+  completion `#255` and the remaining ICZ hardware sequence are consumed.
+- CNZ regression command used the standalone CNZ replay with strict all-field
+  verification and frontier diagnostics. Result: all 42,253 rows pass with 0
+  failures and 0 errors. Ring comparison remains enabled at error severity.
+- Ordered regression command selected standalone/complete-run AIZ, HCZ, MGZ,
+  CNZ, ICZ, and LBZ traces plus gumball, pachinko, slots, and special-stage
+  traces. Result: 59 tests, 0 failures, 0 errors, 0 skipped in 260 seconds.
+  The gameplay-order frontier through LBZ is green at this tree.

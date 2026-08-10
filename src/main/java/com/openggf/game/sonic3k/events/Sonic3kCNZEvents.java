@@ -137,6 +137,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
     private short cameraStoredMaxYPos;
     private boolean cameraClampsActive;
     private boolean bossFlagPrev;
+    private boolean sidekickBoundsPublishAfterCameraEasing;
 
     /**
      * CNZ-local foreground routine mirror.
@@ -292,6 +293,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         cameraStoredMinXPos = 0;
         cameraStoredMinYPos = 0;
         cameraStoredMaxYPos = 0;
+        sidekickBoundsPublishAfterCameraEasing = false;
         cameraClampsActive = false;
         knucklesTeleporterRouteActive = false;
         teleporterBeamSpawned = false;
@@ -1520,6 +1522,14 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
     public void    setCameraStoredMinYPos(short v)      { cameraStoredMinYPos = v; }
     public short   getCameraStoredMaxYPos()             { return cameraStoredMaxYPos; }
     public void    setCameraStoredMaxYPos(short v)      { cameraStoredMaxYPos = v; }
+    public void requestSidekickBoundsPublishAfterCameraEasing() {
+        sidekickBoundsPublishAfterCameraEasing = true;
+    }
+    public boolean consumeSidekickBoundsPublishAfterCameraEasing() {
+        boolean pending = sidekickBoundsPublishAfterCameraEasing;
+        sidekickBoundsPublishAfterCameraEasing = false;
+        return pending;
+    }
     public void    setKnucklesTeleporterRouteActive(boolean v){ knucklesTeleporterRouteActive = v; }
     public void    setTeleporterBeamSpawned(boolean v)  { teleporterBeamSpawned = v; }
     public void    setAct2TransitionRequested(boolean v){ act2TransitionRequested = v; }

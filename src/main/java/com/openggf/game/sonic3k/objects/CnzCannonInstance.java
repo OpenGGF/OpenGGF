@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.events.S3kCnzEventWriteSupport;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -271,6 +272,8 @@ public final class CnzCannonInstance extends AbstractObjectInstance
             // in the same SST pass. Publish the watched-slot consequence here;
             // the boss owner still owns the timer and control-lock transition.
             services().camera().setMaxYTarget((short) 0x0200);
+            S3kCnzEventWriteSupport.requestSidekickBoundsPublishAfterCameraEasing(
+                    services());
         }
     }
 

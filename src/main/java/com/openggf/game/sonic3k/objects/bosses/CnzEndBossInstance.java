@@ -637,6 +637,8 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
             cannonArmed = true;
             cannonLaunchTimer = CANNON_LAUNCH_WAIT;
             services().camera().setMaxYTarget((short) 0x0200);
+            S3kCnzEventWriteSupport.requestSidekickBoundsPublishAfterCameraEasing(
+                    services());
             sprite.setControlLocked(true);
             return;
         }

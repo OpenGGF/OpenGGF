@@ -3,6 +3,14 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: post-camera sidekick-bound publication now remains owned by the
+  object/event path that moved the death plane. CNZ's cannon handoff explicitly
+  carries its `$0200` camera-target write through the DynamicLevelEvents tail,
+  while unrelated gradual-resize owners retain their native cadence. This
+  preserves all 42,253 standalone CNZ rows and restores all 25,393 ICZ
+  complete-run rows, including the ICZ boss-art queue sequence from direct
+  completion `#255`; the selected AIZ-through-LBZ, bonus, and special-stage
+  fleet passes 59 tests with ring comparison at error severity.
 - Fix/Test: spilled-ring lifetime and bottom-boundary checks now follow each
   game's native branch topology: S1/S2 reach them on every object pass, while
   S3K reaches them only through its movement-direction/cadence path. This
