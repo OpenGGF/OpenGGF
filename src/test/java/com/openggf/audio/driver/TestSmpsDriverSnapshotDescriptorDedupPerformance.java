@@ -2,11 +2,22 @@ package com.openggf.audio.driver;
 
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.AudioTestFixtures;
+import com.openggf.audio.presentation.AudioPresentationCommand;
+import com.openggf.audio.presentation.AudioPresentationSourceFactory;
+import com.openggf.audio.presentation.DecodedPcmCache;
+import com.openggf.audio.presentation.ResolvedSmpsSfxSource;
+import com.openggf.audio.presentation.SmpsAssetKey;
+import com.openggf.audio.presentation.SmpsCompositeVoice;
+import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
 import com.openggf.audio.smps.AbstractSmpsData;
+import com.openggf.audio.smps.DacData;
+import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
+import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.audio.smps.SmpsSfxData;
 import com.sun.management.ThreadMXBean;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
@@ -16,6 +27,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.function.IntFunction;
 import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -28,6 +41,65 @@ class TestSmpsDriverSnapshotDescriptorDedupPerformance {
     private static final int SFX_COUNT = 32;
     private static final int CAPTURES_PER_REPETITION = 20;
     private static volatile SmpsDriverSnapshot escapedSnapshot;
+    private static volatile Object escapedInstantiation;
+
+    @Test
+    void registeredMusicAndSfxInstantiationAllocationDoesNotScaleWithProgramSize() {
+        ThreadMXBean bean = allocationBeanOrSkip();
+        InstantiationFixture tiny = instantiationFixture("tiny", 4);
+        InstantiationFixture large = instantiationFixture(
+                "large", 1024 * 1024);
+
+        for (int index = 0; index < 40; index++) {
+            escapedInstantiation = tiny.instantiateSfx();
+            escapedInstantiation = large.instantiateSfx();
+            escapedInstantiation = tiny.instantiateMusic();
+            escapedInstantiation = large.instantiateMusic();
+        }
+
+        long tinySfxControl = allocationSlope(
+                bean, ignored -> tiny.instantiateSfx());
+        long tinySfxSlope = allocationSlope(
+                bean, ignored -> tiny.instantiateSfx());
+        long largeSfxSlope = allocationSlope(
+                bean, ignored -> large.instantiateSfx());
+        long tinyMusicControl = allocationSlope(
+                bean, ignored -> tiny.instantiateMusic());
+        long tinyMusicSlope = allocationSlope(
+                bean, ignored -> tiny.instantiateMusic());
+        long largeMusicSlope = allocationSlope(
+                bean, ignored -> large.instantiateMusic());
+        long sfxTolerance = controlTolerance(
+                tinySfxControl, tinySfxSlope);
+        long musicTolerance = controlTolerance(
+                tinyMusicControl, tinyMusicSlope);
+
+        System.out.printf("smps catalog instantiation slopes sfx=%d/%d/%d "
+                        + "music=%d/%d/%d tolerances=%d/%d bytes%n",
+                tinySfxControl, tinySfxSlope, largeSfxSlope,
+                tinyMusicControl, tinyMusicSlope, largeMusicSlope,
+                sfxTolerance, musicTolerance);
+        assertTrue(Math.abs(largeSfxSlope - tinySfxSlope) <= sfxTolerance,
+                "registered SFX instantiation must not allocate by program size");
+        assertTrue(Math.abs(largeMusicSlope - tinyMusicSlope)
+                        <= musicTolerance,
+                "registered music restore must not allocate by program size");
+        assertEquals(0, tiny.sfxSource.dataReads());
+        assertEquals(0, large.sfxSource.dataReads());
+        assertEquals(0, tiny.musicSource.dataReads());
+        assertEquals(0, large.musicSource.dataReads());
+
+        SmpsSequencer tinySfx = tiny.instantiateSfx();
+        SmpsSequencer largeSfx = large.instantiateSfx();
+        SmpsSequencer tinyMusic = tiny.instantiateMusic()
+                .driver().firstMusicSequencer();
+        SmpsSequencer largeMusic = large.instantiateMusic()
+                .driver().firstMusicSequencer();
+        assertSame(tiny.sfxDescriptor, tinySfx.getSourceDescriptor());
+        assertSame(large.sfxDescriptor, largeSfx.getSourceDescriptor());
+        assertSame(tiny.musicDescriptor, tinyMusic.getSourceDescriptor());
+        assertSame(large.musicDescriptor, largeMusic.getSourceDescriptor());
+    }
 
     @Test
     void sharedLargeFallbackIsHashedOncePerOptimizedCapture() {
@@ -102,6 +174,29 @@ class TestSmpsDriverSnapshotDescriptorDedupPerformance {
                 fallback.dataReads(),
                 workCount,
                 escapedSnapshot);
+    }
+
+    private static long allocationSlope(
+            ThreadMXBean bean, IntFunction<Object> operation) {
+        long small = allocatedBytes(bean, 24, operation);
+        long large = allocatedBytes(bean, 72, operation);
+        return (large - small) / 48;
+    }
+
+    private static long allocatedBytes(
+            ThreadMXBean bean,
+            int operations,
+            IntFunction<Object> operation) {
+        long threadId = Thread.currentThread().threadId();
+        long before = bean.getThreadAllocatedBytes(threadId);
+        for (int index = 0; index < operations; index++) {
+            escapedInstantiation = operation.apply(index);
+        }
+        return bean.getThreadAllocatedBytes(threadId) - before;
+    }
+
+    private static long controlTolerance(long first, long second) {
+        return Math.max(4_096, Math.abs(first - second) + 1_024);
     }
 
     private static void validateRun(CaptureRun run,
@@ -198,6 +293,56 @@ class TestSmpsDriverSnapshotDescriptorDedupPerformance {
         return new Fixture(driver, List.copyOf(sequencers), fallback);
     }
 
+    private static InstantiationFixture instantiationFixture(
+            String gameId, int programSize) {
+        AudioPresentationSourceFactory factory =
+                new AudioPresentationSourceFactory(
+                        () -> true,
+                        new SmpsCoordFlagHandlerOwner(
+                                new SmpsCoordFlagRuntimeState()),
+                        new AudioPresentationSourceFactory.Settings(
+                                48_000, SmpsSequencer.Region.NTSC,
+                                false, false, false, false, 1,
+                                AudioManager.getInstance(),
+                                new DecodedPcmCache(), ignored -> null));
+        DacData dac = new DacData(Map.of(), Map.of(), 288);
+        SmpsSequencerConfig config = new SmpsSequencerConfig.Builder()
+                .fmChannelOrder(new int[] {0})
+                .psgChannelOrder(new int[0])
+                .build();
+        SizedSfxData sfx = new SizedSfxData(programSize, 0xA0);
+        SmpsAssetKey sfxKey = new SmpsAssetKey(
+                gameId, SmpsAssetKey.Route.BASE_ID, 0xA0, null);
+        factory.registerSmpsSfxAsset(
+                sfxKey, 0, sfx, dac, config, false);
+        ResolvedSmpsSfxSource resolvedSfx = factory.resolveSmpsSfx(
+                1, sfxKey, 1 << 16, 0x70, 0, 1, 32);
+        SmpsDriver sfxOwner = new SmpsDriver();
+        SmpsSequencer firstSfx = factory.instantiateCached(
+                resolvedSfx, sfxOwner);
+        SmpsSourceDescriptor sfxDescriptor =
+                firstSfx.getSourceDescriptor();
+
+        SizedMusicData music = new SizedMusicData(programSize, 0x81);
+        AudioPresentationCommand.MusicVoiceEntry musicEntry =
+                factory.musicSmps(
+                        gameId, 0x81, 2, 1,
+                        music, dac, config,
+                        AudioSourceDescriptor.baseMusic(0x81), 32);
+        AudioPresentationCommand.SmpsVoiceDescriptor musicBlueprint =
+                (AudioPresentationCommand.SmpsVoiceDescriptor)
+                        musicEntry.voiceDescriptor();
+        SmpsCompositeVoice firstMusic = factory.recreateSmps(
+                musicBlueprint);
+        SmpsSourceDescriptor musicDescriptor = firstMusic.driver()
+                .firstMusicSequencer().getSourceDescriptor();
+        sfx.resetDataReads();
+        music.resetDataReads();
+        return new InstantiationFixture(
+                factory, sfxOwner, resolvedSfx, musicBlueprint,
+                sfx, music, sfxDescriptor, musicDescriptor);
+    }
+
     private static SmpsSequencer sequencer(AbstractSmpsData data, SmpsDriver driver) {
         return new SmpsSequencer(
                 data,
@@ -237,8 +382,8 @@ class TestSmpsDriverSnapshotDescriptorDedupPerformance {
         }
 
         @Override public byte[] getData() { dataReads++; return super.getData(); }
-        private int dataReads() { return dataReads; }
-        private void resetDataReads() { dataReads = 0; }
+        int dataReads() { return dataReads; }
+        void resetDataReads() { dataReads = 0; }
         @Override protected void parseHeader() { }
         @Override public byte[] getVoice(int voiceId) { return new byte[0]; }
         @Override public byte[] getPsgEnvelope(int id) { return new byte[0]; }
@@ -246,10 +391,86 @@ class TestSmpsDriverSnapshotDescriptorDedupPerformance {
         @Override public int getBaseNoteOffset() { return 0; }
     }
 
+    private abstract static class SizedData extends AbstractSmpsData {
+        private int dataReads;
+
+        private SizedData(int size, int id) {
+            super(program(size), 0);
+            this.id = id;
+            channels = 1;
+            fmPointers = new int[] {1};
+            fmKeyOffsets = new int[] {0};
+            fmVolumeOffsets = new int[] {0};
+        }
+
+        @Override public byte[] getData() {
+            dataReads++;
+            return super.getData();
+        }
+        final int dataReads() { return dataReads; }
+        final void resetDataReads() { dataReads = 0; }
+        @Override protected void parseHeader() { }
+        @Override public byte[] getVoice(int voiceId) {
+            return voiceId == 0 ? new byte[25] : null;
+        }
+        @Override public byte[] getPsgEnvelope(int id) { return null; }
+        @Override public int read16(int offset) {
+            return ((data[offset] & 0xFF) << 8)
+                    | (data[offset + 1] & 0xFF);
+        }
+        @Override public int getBaseNoteOffset() { return 0; }
+
+        private static byte[] program(int size) {
+            byte[] bytes = new byte[Math.max(4, size)];
+            bytes[1] = (byte) 0xF2;
+            return bytes;
+        }
+    }
+
+    private static final class SizedMusicData extends SizedData {
+        private SizedMusicData(int size, int id) {
+            super(size, id);
+        }
+    }
+
+    private static final class SizedSfxData extends SizedData
+            implements SmpsSfxData {
+        private SizedSfxData(int size, int id) {
+            super(size, id);
+        }
+        @Override public int getTickMultiplier() { return 1; }
+        @Override public List<? extends SmpsSfxTrack> getTrackEntries() {
+            return List.of(new SizedSfxTrack(0, 1, 0, 0));
+        }
+    }
+
+    private record SizedSfxTrack(
+            int channelMask, int pointer, int transpose, int volume)
+            implements SmpsSfxData.SmpsSfxTrack {
+    }
+
     private record Fixture(
             SmpsDriver driver,
             List<SmpsSequencer> sequencers,
             CountingSmpsData fallback) {
+    }
+
+    private record InstantiationFixture(
+            AudioPresentationSourceFactory factory,
+            SmpsDriver sfxOwner,
+            ResolvedSmpsSfxSource resolvedSfx,
+            AudioPresentationCommand.SmpsVoiceDescriptor musicBlueprint,
+            SizedSfxData sfxSource,
+            SizedMusicData musicSource,
+            SmpsSourceDescriptor sfxDescriptor,
+            SmpsSourceDescriptor musicDescriptor) {
+        private SmpsSequencer instantiateSfx() {
+            return factory.instantiateCached(resolvedSfx, sfxOwner);
+        }
+
+        private SmpsCompositeVoice instantiateMusic() {
+            return factory.recreateSmps(musicBlueprint);
+        }
     }
 
     private record CaptureRun(

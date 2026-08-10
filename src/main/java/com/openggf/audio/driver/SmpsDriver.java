@@ -567,8 +567,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                         dependency.dacData(),
                         this,
                         dependency.audioManager(),
-                        dependency.config());
-                sequencer.setSourceDescriptor(entry.source());
+                        dependency.config(),
+                        entry.source());
                 sequencer.setRegion(region);
                 sequencer.restoreSnapshot(entry.snapshot());
                 sequencer.setIsSfx(entry.sfx());
@@ -615,7 +615,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         for (SmpsDriverSnapshot.SequencerEntry entry : entries) {
             AbstractSmpsData smpsData = Objects.requireNonNull(
                     resolver.resolveSmpsData(entry), "resolved SMPS data");
-            SmpsSourceDescriptor resolvedSource = SmpsSourceDescriptor.from(smpsData);
+            SmpsSourceDescriptor resolvedSource = smpsData == entry.smpsData()
+                    ? entry.source() : SmpsSourceDescriptor.from(smpsData);
             if (!entry.source().matches(resolvedSource)) {
                 throw new IllegalStateException(
                         "resolved SMPS source does not match snapshot source: expected "

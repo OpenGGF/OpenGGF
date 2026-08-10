@@ -17,6 +17,39 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestSmpsDriverSnapshot {
 
     @Test
+    void storedGenerationDescriptorIsReusedWithoutHashingOnConstructionOrRestore() {
+        CountingSmpsData data = new CountingSmpsData(
+                new byte[] {1, 2, 3, 4}, 0x81);
+        SmpsSourceDescriptor descriptor = SmpsSourceDescriptor.baseMusic(
+                9, data, data.dataLength(),
+                java.util.Arrays.hashCode(data.getDataWithoutCounting()));
+        SmpsSequencerConfig config = new SmpsSequencerConfig.Builder().build();
+        SmpsDriver sourceDriver = new SmpsDriver();
+        data.resetDataReads();
+
+        SmpsSequencer sequencer = new SmpsSequencer(
+                data, AudioTestFixtures.EMPTY_DAC, sourceDriver,
+                AudioManager.getInstance(), config, descriptor);
+        sourceDriver.addSequencer(sequencer, false);
+        SmpsDriverSnapshot snapshot = sourceDriver.captureSnapshot();
+
+        assertEquals(0, data.dataReads());
+        assertSame(descriptor, snapshot.sequencers().getFirst().source());
+        assertEquals(9, descriptor.dependencyGeneration());
+
+        SmpsDriver restoredDriver = new SmpsDriver();
+        restoredDriver.restoreSnapshot(
+                snapshot, SmpsDriverSnapshot.liveReferences());
+        SmpsDriverSnapshot restored = restoredDriver.captureSnapshot();
+
+        assertEquals(0, data.dataReads(),
+                "same registered program identity must not be re-hashed");
+        assertSame(descriptor, restored.sequencers().getFirst().source());
+        assertSame(data, restored.sequencers().getFirst().smpsData());
+        assertSame(config, restored.sequencers().getFirst().config());
+    }
+
+    @Test
     void captureAndRestoreRoundTripsSequencersLocksLatchesAndContinuousSfxState() {
         SmpsDriver driver = new SmpsDriver();
         SmpsSequencer music = newSequencer("music", 0x81, driver);
