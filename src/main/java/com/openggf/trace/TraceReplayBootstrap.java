@@ -139,6 +139,16 @@ public final class TraceReplayBootstrap {
         if (trace == null || trace.frameCount() == 0) {
             return false;
         }
+        Boolean cached = trace.cachedPreLevelPrefix();
+        if (cached != null) {
+            return cached;
+        }
+        boolean computed = computeHasRecordedPreLevelPrefix(trace);
+        trace.cachePreLevelPrefix(computed);
+        return computed;
+    }
+
+    private static boolean computeHasRecordedPreLevelPrefix(TraceData trace) {
         Integer firstRecordedMode = null;
         for (int frame = 0; frame < trace.frameCount(); frame++) {
             for (TraceEvent event : trace.getEventsForFrame(frame)) {

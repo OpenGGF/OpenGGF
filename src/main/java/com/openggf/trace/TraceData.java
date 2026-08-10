@@ -40,6 +40,11 @@ public class TraceData {
     private final Map<Integer, List<TraceEvent.LoadQueueState>> comparisonLoadQueueStatesByFrame;
     private final Map<Integer, HardwareCompletionEdge> unobservedDirectChildrenByFrame;
     private List<DynamicArtTransfer.Descriptor> terminalDynamicArtLedger = List.of();
+    // Memoised pure derivations of the immutable event map. Both are queried
+    // once per replayed frame, and each full computation is O(total events),
+    // so recomputing them made replay quadratic in trace length.
+    private List<TraceEvent.DynamicArtTransferState> cachedDynamicArtTransferStates;
+    private Boolean cachedHasRecordedPreLevelPrefix;
 
     // Package-private so same-package test fixtures in src/test can
     // construct in-memory instances without going through disk I/O.
@@ -537,6 +542,21 @@ public class TraceData {
     }
 
     public List<TraceEvent.DynamicArtTransferState> dynamicArtTransferStates() {
+        if (cachedDynamicArtTransferStates == null) {
+            cachedDynamicArtTransferStates = computeDynamicArtTransferStates();
+        }
+        return cachedDynamicArtTransferStates;
+    }
+
+    Boolean cachedPreLevelPrefix() {
+        return cachedHasRecordedPreLevelPrefix;
+    }
+
+    void cachePreLevelPrefix(boolean value) {
+        cachedHasRecordedPreLevelPrefix = value;
+    }
+
+    private List<TraceEvent.DynamicArtTransferState> computeDynamicArtTransferStates() {
         return eventsByFrame.entrySet().stream()
                 .sorted(Map.Entry.comparingByKey())
                 .flatMap(entry -> entry.getValue().stream())
