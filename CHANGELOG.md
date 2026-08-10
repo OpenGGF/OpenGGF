@@ -3,6 +3,16 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Angel Island's fire-curtain background chain no longer advances on a lag frame, and the
+  act-two half of it is now driven by the ROM's own gates instead of two frame budgets measured
+  off a recording. Every routine in that chain is reached only through the level main loop, so a
+  frame the main loop never finished must not step the fire rise or the delayed plane redraw; the
+  engine was stepping the act-two half on those frames and so ran the ramp one pass ahead. The
+  redraw's length now falls out of the delayed row counter the reload seeds and the two-rows-per
+  -call drain that consumes it, the wait releases when the background Y ramp actually crosses the
+  ROM's threshold after its own re-seat, and the reload no longer overwrites that Y with an
+  invented value the ROM never writes. The act-two enemy art batch now reaches the decompression
+  queue on the frame the ROM submits it.
 - Fix: a fade to white begins on the next vertical interrupt rather than inside the frame that
   requested it, matching the ROM, whose fade routine waits for a vertical interrupt before its
   first colour step. The engine started the fade mid-frame and then still advanced it later in

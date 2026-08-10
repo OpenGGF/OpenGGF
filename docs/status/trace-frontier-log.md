@@ -72253,3 +72253,71 @@ Full profile at 59e59c8fe + both fixes: **769 tests, 12 failures / 4 errors, 10 
   `Sonic3kSSEntryRingObjectInstance.checkDisplayOffscreenRetire` (:233-242) feeds `getX()/getY()`
   (top-left render bounds) into ROM `x_pos`/`y_pos` band tests from `loc_61928`; those must be
   `getCentreX()/getCentreY()`.
+
+## Round 33 — AIZ complete-run: the fire chain must freeze on a lag frame
+
+Command (both targets and the S3K keep-green set, one worktree per run,
+`rm -rf target/surefire-reports` before each):
+
+```
+mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+  "-Dsurefire.argLine=-Xmx4g" -Ds3k.rom.path=<s3k.gen> \
+  "-Dtest=TestS3kAizCompleteRunTraceReplay,TestS3kReplayReferenceClosureIntegration" test
+```
+
+- **Control at 692f3adf8** (worktree `ggf-r33-base`): both classes FAIL, 8 errors,
+  first error frame 6345, `queue.s3k_kos_direct.busy` expected=true actual=false.
+- **After**: both classes FAIL, **1 error**, first error frame **6349**,
+  `queue.s3k_kos_direct.prepared` expected=false actual=true, `cascading: false`.
+  All eight of the 6345 errors were one defect — the act-2 enemy-art batch submitted a
+  frame late — and they are closed. 6349 is the incremental-`Process_Kos_Queue`
+  preparation item round 32 already identified; it is a different subsystem.
+- Broad S3K sweep (`TestS3k*`, `TestSonic3k*`, both rewind coverage guards, 2494 tests):
+  failure set identical to the control's — 9 failures / 7 errors either side, same
+  class+method names — with the two targets moving from 8 errors to 1.
+
+**Root cause (measured, then derived).** `Sonic3kAIZEvents.advanceVblankOnlyState`
+stepped `AIZ2BGE_FireRedraw`/`AIZ2BGE_WaitFire` on VBlank-only rows while leaving the
+AIZ1 half frozen. The AIZ1 half was right: every routine in the chain
+(`AIZ1BGE_FireTransition`/`FireRefresh`/`Finish`, `AIZ2BGE_FireRedraw`/`WaitFire`) is
+reached only through `ScreenEvents`, which `Level`'s main loop calls after `Wait_VSync`
+(sonic3k.asm:7889-7899, :102233-102254, dispatch at :104557-104558 and :105018-105019).
+A lag row is a main-loop pass that never completed, so none of it runs — including
+`AIZ1_FireRise` and the `Draw_PlaneVertBottomUp` drains, which are main-loop work, not
+V-int work.
+
+The fixture pins this exactly: `physics.csv` row **6301** holds
+`gameplay_frame_counter` at 6300 while `vblank_counter` advances (`lag_counter` 0001),
+and it is the only held row between the act-2 art submission and the release. Rows
+6040-6300 have `gameplay_frame_counter == frame`, so the ramp is *not* behind before the
+reload — the surplus pass is entirely that one lag row.
+
+**Anchors used (all trace-visible, no fitted constants):**
+- `AIZ1BGE_FireTransition`'s `cmpi.w #$190` Kos submission lands at row **6216** in both
+  the recording (`load_queue_state`: direct queue gains 3 fingerprints, module queue 1,
+  `remaining_work` 4) and the engine. So the ramp up to $190 was already correct.
+- `Kos_modules_left` reaches zero at row **6299** (module queue `busy` false from 6299),
+  so `AIZ1BGE_Finish` reloads on row **6300** — which the engine already did.
+- From there the release frame is fully determined: the reseat subtracts
+  `(B & ~$7F) - $180`, so with `B` in the $500 band the release is simply the frame the
+  continuous ramp reaches `$310 + $380 = $690`. With row 6301 frozen that is row
+  **6345** — the recorded submission frame — and it is *invariant* to which pass
+  performs the reseat.
+
+**Disproved, from the round-32 brief.** The residual was **not** caused by the AIZ1
+pre-reload spans (`FIRE_REDRAW_FRAMES = 16`, `FIRE_TERRAIN_DECOMPRESS_FRAMES = 20`).
+`AIZ1_FireRise` runs once per pass in *both* `AIZ1BGE_FireRefresh` and `AIZ1BGE_Finish`,
+so moving the boundary between those two phases cannot move the ramp at all, and the
+reload frame is pinned by the module-queue drain at 6299/6300 regardless. Those two
+constants remain unmodelled budgets with no ROM counterpart — a real latent item, but
+not this one, and they were left alone rather than changed speculatively.
+
+**Confirmed, from the round-32 brief.** `AIZ1BGE_Finish` performs the entire act reload
+without a single `Camera_Y_pos_BG_copy` write (zero occurrences in sonic3k.asm:104727-104802),
+so the ramp is continuous across the reload and the invented `0x0140_0000` overwrite at
+`requestAct2Transition` had to go. `TestSonic3kAIZEvents.fireCurtainRenderStateCarriesAcrossSeamlessReload`
+asserted that invented value and now asserts continuity instead.
+
+**Next frontier for this pair:** row 6349, `queue.s3k_kos_direct.prepared` — ROM
+`Process_Kos_Queue` decompresses incrementally with `Set_Kos_Bookmark`/`Restore_Kos_Bookmark`,
+so a direct blob stays un-prepared across frames where the engine prepares in one step.
