@@ -3,6 +3,10 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: CNZ2's first rival-Knuckles camera gate now consumes the current
+  `Camera_X_pos` word instead of predicting the later `ScrollHoriz` result.
+  Standalone CNZ advances from raw frame `25743` to `29181`; complete CNZ and
+  the green AIZ, HCZ, and MGZ traces remain unchanged.
 - Fix/Test: floating S3K end capsules now compose their separate native child
   dispatch rules instead of replacing MGZ's later-support-owner publication
   boundary with AIZ's parent-motion boundary. This restores standalone MGZ's

@@ -71334,3 +71334,42 @@ landable change, which I implemented directly.
   standalone and complete-run AIZ plus complete-run HCZ. All represented tests
   passed with 0 errors and 0 warnings. `TestRewindCoverageGuard` also passed.
   AIZ, HCZ, and MGZ are green in gameplay order; CNZ is the next target.
+
+## 2026-08-10 — standalone CNZ current-camera lock frontier
+
+- Context: `bugfix/s3k-traces` at `af8d09b1a`; validation used JDK 21.0.12 and
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen`. The six protected user edits
+  remained unstaged, no fixture changed, and ring comparison remained
+  error-level through `ToleranceConfig.DEFAULT` / `RingCountMode.FORCE_ERROR`.
+  A fresh fetch had already confirmed `origin/develop` (`eb619f787`) was an
+  ancestor of this branch, so no merge was required.
+- Prior frontier: standalone CNZ stopped at raw `25743` with one comparator
+  error, `camera_x` expected `$1D02` and actual `$1D00`. The later unconsumed
+  Starpost direct-Kosinski completion `#31` at raw `33755` is downstream; a
+  frontier-only run reports it during segment-close verification after halting
+  execution at the earlier comparator error.
+- Root cause: `CutsceneKnux_CNZ2A` calls `loc_85CA4` from its object slot, before
+  the loop's later camera scroll (`docs/skdisasm/sonic3k.asm:129126-129130,
+  180560-180634`). The engine predicted that pending scroll and installed the
+  `$1D00` maximum early, suppressing the native row where `ScrollHoriz` reaches
+  `$1D02`. The owner now compares only the current camera word and retains its
+  approach direction from gate admission; the following object pass installs
+  the `$1D00/$1D00` lock. No trace, frame, route, or zone predicate is used.
+- Focused command: `mvn -Dmse=off -Dsurefire.forkCount=1
+  -Dtest=com.openggf.game.sonic3k.objects.TestCutsceneKnucklesCnz2Instance,com.openggf.game.sonic3k.objects.bosses.TestS3kSharedBossCameraGate
+  test`. Result: 23 tests, 0 failures, 0 errors.
+- Frontier command: `mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1
+  -Dsurefire.runOrder=alphabetical -Dtrace.verification=all
+  -Dtrace.frontierOnly=true
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Comparison advances `3438` rows to raw `29181`, with 7 errors and 0 warnings;
+  the first mismatch is `tails_y` (expected `$065B`, actual `$065C`) over a
+  three-row Tails state cluster. Segment-close verification still reports the
+  downstream raw-`33755` completion because frontier-only execution has not
+  reached it.
+- Gameplay-order regression command used the same profile and ROM with
+  complete-run AIZ, both HCZ methods, standalone and complete-run MGZ, and
+  complete-run CNZ. Result: 6 tests, 0 failures, 0 errors. Ring-count errors
+  remain enabled. Per the stop-at-next-committed-frontier instruction, work
+  stops after this regression-free frontier commit.
