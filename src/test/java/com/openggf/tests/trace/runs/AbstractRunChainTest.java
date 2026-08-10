@@ -2697,11 +2697,28 @@ abstract class AbstractRunChainTest {
                             ? List.of() : passBinder.passesForObservation(localRow);
             TraceRunSpecialStageRows.SpecialStageRowAdmission admission =
                     rows.admission(localRow);
+            // An observation that executes a RunObjects pass is never a lag
+            // V-blank, whatever the recorder's lag heuristic reports:
+            // SS_MainLoop sets VintID_S2SS and waits on it immediately before
+            // the pass (docs/s2disasm/s2.asm:6694-6706), so V_Int cannot have
+            // taken the Vint_Lag branch -- that branch runs only while
+            // Vint_routine is still 0 (docs/s2disasm/s2.asm:483-484). The
+            // binder already relies on this to place the terminal
+            // stage-finished pass on its raw-lag observation
+            // (TraceRunSpecialStageRows.S2Rows.newRunObjectsPassBinder), so
+            // the row driver must execute that observation rather than skip
+            // it -- otherwise the stage's last pass, and the player DPLC pair
+            // it submits, land outside the compared window entirely. Same rule
+            // as S2SpecialStageReplayHarness.stepPasses / observationPhase.
+            boolean ownsCompletedPass = !observationPasses.isEmpty();
+            boolean executeGameplay = admission.executeGameplay() || ownsCompletedPass;
             var beforeManager = GameServices.level().getObjectManager();
             int beforeVblank = beforeManager.getVblaCounter();
-            admission.syntheticPlcPhase().ifPresent(
-                    AbstractRunChainTest::stepUncomparedInteriorLifecycleRow);
-            if (admission.executeGameplay()
+            if (!ownsCompletedPass) {
+                admission.syntheticPlcPhase().ifPresent(
+                        AbstractRunChainTest::stepUncomparedInteriorLifecycleRow);
+            }
+            if (executeGameplay
                     && loop.getCurrentGameMode()
                             == GameMode.SPECIAL_STAGE_RESULTS) {
                 // Still inside the recorded segment (ROM Game_Mode is still
@@ -2712,7 +2729,7 @@ abstract class AbstractRunChainTest {
                 // control at all (docs/s2disasm/s2.asm:6795-6800), so drive a
                 // bare engine frame with no recorded-input override.
                 stepEngineFrame(loop);
-            } else if (admission.executeGameplay()
+            } else if (executeGameplay
                     && loop.getCurrentGameMode() == GameMode.SPECIAL_STAGE) {
                 int absoluteRow = bk2FrameOffset + localRow;
                 Bk2FrameInput current = movie.getFrame(absoluteRow);
