@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: CNZ underwater balloons now preserve retail's clobbered-`a1`
+  behavior by overwriting the fourth spawned Bubbler's random offset with the
+  balloon position. S3K Bubbler pickups also retain the rolling status bit for
+  non-Sonic players while restoring standing radii. Standalone CNZ advances
+  from raw frame `29181` to `29384`; the green AIZ, HCZ, MGZ, and complete-run
+  CNZ traces remain unchanged.
 - Fix/Test: CNZ2's first rival-Knuckles camera gate now consumes the current
   `Camera_X_pos` word instead of predicting the later `ScrollHoriz` result.
   Standalone CNZ advances from raw frame `25743` to `29181`; complete CNZ and

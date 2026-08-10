@@ -1,6 +1,9 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.GameRng;
+import com.openggf.level.WaterSystem;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RomObjectSnapshot;
 import com.openggf.level.objects.TestObjectServices;
@@ -16,11 +19,16 @@ import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestCnzBalloonInstance {
@@ -206,6 +214,49 @@ class TestCnzBalloonInstance {
         assertEquals(0x0B6C, player.getCentreY(),
                 "Repeated popped-balloon contacts still launch but do not repeat the first-touch snap/effects block");
         assertEquals((short) -0x380, player.getYSpeed());
+    }
+
+    @Test
+    void underwaterLaunchOverwritesFourthBubblerOffsetThroughClobberedA1() {
+        ObjectManager objectManager = mock(ObjectManager.class);
+        List<ObjectInstance> spawned = new ArrayList<>();
+        doAnswer(invocation -> {
+            spawned.add(invocation.getArgument(0));
+            return null;
+        }).when(objectManager).addDynamicObject(any(ObjectInstance.class));
+        WaterSystem waterSystem = new WaterSystem() {
+            @Override
+            public boolean hasWater(int zoneId, int actId) {
+                return true;
+            }
+        };
+        TestObjectServices services = new TestObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return objectManager;
+            }
+        };
+        services.withWaterSystem(waterSystem);
+        CnzBalloonInstance balloon =
+                new CnzBalloonInstance(new ObjectSpawn(0x15C0, 0x0B60, 0x41, 0x80, 0, false, 0));
+        balloon.setServices(services);
+        AbstractPlayableSprite player = HeadlessTestFixture.builder()
+                .withZoneAndAct(com.openggf.game.sonic3k.constants.Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build()
+                .sprite();
+
+        balloon.update(0, null);
+        balloon.onTouchResponse(player, new TouchResponseResult(0x17, 8, 8, TouchCategory.SPECIAL), 0);
+        int balloonXAtTouch = balloon.getX();
+        int balloonYAtTouch = balloon.getY();
+        balloon.update(1, null);
+
+        assertEquals(4, spawned.size());
+        ObjectInstance fourth = spawned.get(3);
+        assertEquals(balloonXAtTouch, fourth.getX(),
+                "loc_31808 writes balloon x_pos through a1 after four child allocations");
+        assertEquals(balloonYAtTouch, fourth.getY(),
+                "loc_31808 writes balloon y_pos into the fourth Obj_Bubbler, not the player");
     }
 
     @Test

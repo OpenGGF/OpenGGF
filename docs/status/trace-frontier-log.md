@@ -71373,3 +71373,43 @@ landable change, which I implemented directly.
   complete-run CNZ. Result: 6 tests, 0 failures, 0 errors. Ring-count errors
   remain enabled. Per the stop-at-next-committed-frontier instruction, work
   stops after this regression-free frontier commit.
+
+## 2026-08-10 — standalone CNZ underwater balloon pickup frontier
+
+- Context: `bugfix/s3k-traces` at `05b9c60b5`; validation used JDK 21.0.12 and
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen`. The six protected user edits
+  remained unstaged, no fixture changed, and ring comparison remained
+  error-level through `ToleranceConfig.DEFAULT` / `RingCountMode.FORCE_ERROR`.
+- Prior frontier: standalone CNZ stopped at raw `29181` with 7 errors and 0
+  warnings. Tails fell through `$065B` with `y_vel=$0980`, `g_vel=$0800`, and
+  animation `$00`, while retail stopped at `$065B`, zeroed all velocity, and
+  selected Bubbler-breath animation `$15`.
+- Root cause: the underwater CNZ balloon calls `sub_3181E` four times, leaving
+  `a1` pointing at the fourth Bubbler child. Retail's following intended player
+  snap therefore overwrites that child's randomized position with the balloon
+  position (`docs/skdisasm/sonic3k.asm:66797-66856`). The engine retained the
+  fourth random offset, leaving the inhalable bubble six pixels outside Tails'
+  horizontal pickup range. The S3K Bubbler branch also distinguishes
+  `Obj_Sonic`: non-Sonic players retain `Status_Roll` while receiving standing
+  radii and the one-pixel position adjustment
+  (`docs/skdisasm/sonic3k.asm:64687-64727`). Both behaviors are now modeled at
+  their object/player semantic boundaries without trace, frame, route, or zone
+  predicates.
+- Focused command: `mvn -Dmse=off
+  -Dtest=com.openggf.game.sonic3k.objects.TestCnzBalloonInstance,com.openggf.game.sonic3k.objects.TestBubblerObjectInstance
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen' test`. Result: 18
+  tests, 0 failures, 0 errors.
+- Frontier command: `mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1
+  -Dsurefire.runOrder=alphabetical -Dtrace.verification=all
+  -Dtrace.frontierOnly=true
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  Comparison advances 203 rows to raw `29384`, with 2 errors and 0 warnings;
+  the first mismatch is `tails_cpu_ctrl2_held` (expected `$12`, actual `$02`),
+  paired with the missing `$10` pressed edge. Segment-close verification still
+  reports the downstream raw-`33755` completion because frontier-only execution
+  has not reached it.
+- Gameplay-order regression command used the same profile and ROM with
+  complete-run AIZ, both HCZ methods, standalone and complete-run MGZ, and
+  complete-run CNZ. Result: 6 tests, 0 failures, 0 errors. The new standalone
+  frontier is regression-free and is committed before further diagnosis.

@@ -303,7 +303,11 @@ public class BubblerObjectInstance extends AbstractObjectInstance implements Rew
             return false;
         }
 
-        player.replenishAir();
+        if ("sonic".equalsIgnoreCase(player.getCode())) {
+            player.replenishAir();
+        } else {
+            player.replenishAirPreservingRollingStatus();
+        }
         services().playSfx(Sonic3kSfx.BUBBLE.id);
         consumed = true;
         inhalable = false;

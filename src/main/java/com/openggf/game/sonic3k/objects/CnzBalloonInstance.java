@@ -285,16 +285,26 @@ public final class CnzBalloonInstance extends AbstractObjectInstance
     }
 
     private void spawnUnderwaterBubblerChildren() {
-        for (int childSubtype : UNDERWATER_BUBBLER_CHILD_SUBTYPES) {
+        for (int childIndex = 0; childIndex < UNDERWATER_BUBBLER_CHILD_SUBTYPES.length; childIndex++) {
+            int childSubtype = UNDERWATER_BUBBLER_CHILD_SUBTYPES[childIndex];
             int random = services().rng().nextWord();
             int offset = (random & 0x0F) - 8;
             int childX = getX() + offset;
             int childY = getY() + offset;
+            if (childIndex == UNDERWATER_BUBBLER_CHILD_SUBTYPES.length - 1) {
+                // After the fourth sub_3181E call, a1 still addresses that child.
+                // Retail's intended player-position snap therefore overwrites the
+                // fourth bubble's random offset with the balloon position.
+                childX = getX();
+                childY = getY();
+            }
+            final int spawnX = childX;
+            final int spawnY = childY;
             // sub_3181E uses AllocateObject for each Obj_Bubbler child, so these
             // effects consume the lowest free SST slots before later placement
             // loads (docs/skdisasm/sonic3k.asm:66829-66841).
             spawnFreeChild(() -> new BubblerObjectInstance(
-                    new ObjectSpawn(childX, childY, 0x54, childSubtype, 0, false, 0)));
+                    new ObjectSpawn(spawnX, spawnY, 0x54, childSubtype, 0, false, 0)));
         }
     }
 
