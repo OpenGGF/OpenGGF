@@ -973,7 +973,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 if (shouldStealLockAndObserve(SfxContentionObserver.Bus.FM, ch,
                         fmLocks[ch], (SmpsSequencer) source)) {
                     // Silence channel if stealing from music (not from another SFX or self)
-                    if (fmLocks[ch] != source && !isSfx(fmLocks[ch])) {
+                    if (fmLocks[ch] != source && !isSfx(fmLocks[ch])
+                            && usesForcedFmTakeover(source)) {
                         silenceFmChannel(ch);
                     }
                     fmLocks[ch] = (SmpsSequencer) source;
@@ -1077,7 +1078,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 if (shouldStealLockAndObserve(SfxContentionObserver.Bus.FM, channelId,
                         fmLocks[channelId], (SmpsSequencer) source)) {
                     // Silence channel if stealing from music (not from another SFX or self)
-                    if (fmLocks[channelId] != source && !isSfx(fmLocks[channelId])) {
+                    if (fmLocks[channelId] != source && !isSfx(fmLocks[channelId])
+                            && usesForcedFmTakeover(source)) {
                         silenceFmChannel(channelId);
                     }
                     fmLocks[channelId] = (SmpsSequencer) source;
@@ -1103,7 +1105,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             if (shouldStealLockAndObserve(SfxContentionObserver.Bus.FM, ch,
                     fmLocks[ch], (SmpsSequencer) source)) {
                 // Silence channel if stealing from music (not from another SFX or self)
-                if (fmLocks[ch] != source && !isSfx(fmLocks[ch])) {
+                if (fmLocks[ch] != source && !isSfx(fmLocks[ch])
+                        && usesForcedFmTakeover(source)) {
                     silenceFmChannel(5);
                     super.stopDac(null);
                 }
@@ -1159,6 +1162,11 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             return challengerIdx > currentIdx;
         }
         return false; // Lower priority cannot steal
+    }
+
+    private static boolean usesForcedFmTakeover(Object source) {
+        return ((SmpsSequencer) source).getConfig().getFmSfxTakeoverMode()
+                == SmpsSequencerConfig.FmSfxTakeoverMode.FORCE_RESET;
     }
 
     private boolean shouldStealLockAndObserve(SfxContentionObserver.Bus bus,

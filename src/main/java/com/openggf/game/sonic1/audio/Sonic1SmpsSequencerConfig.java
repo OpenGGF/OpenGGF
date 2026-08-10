@@ -1,6 +1,7 @@
 package com.openggf.game.sonic1.audio;
 
 import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.audio.smps.SmpsSequencerConfig.FmSfxTakeoverMode;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -72,6 +73,9 @@ public final class Sonic1SmpsSequencerConfig {
                 .relativePointers(true)  // S1: PC-relative pointers for F6/F7/F8
                 .tempoOnFirstTick(true)  // S1: process tempo on first frame (DOTEMPO)
                 .direct68kDriver(true)   // S1 writes the YM/PSG cores from the 68k driver
+                // The shipped Sound_PlaySFX initializes track RAM only. SetVoice and the
+                // track's own note-off establish the takeover during UpdateMusic.
+                .fmSfxTakeoverMode(FmSfxTakeoverMode.REGISTER_SEQUENCE)
                 .build();
     }
 

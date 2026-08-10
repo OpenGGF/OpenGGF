@@ -558,6 +558,7 @@ public final class AudioPresentationSourceFactory
                 .relativePointers(sourceConfig.isRelativePointers())
                 .tempoOnFirstTick(sourceConfig.isTempoOnFirstTick())
                 .direct68kDriver(sourceConfig.isDirect68kDriver())
+                .fmSfxTakeoverMode(sourceConfig.getFmSfxTakeoverMode())
                 .volMode(sourceConfig.getVolMode())
                 .psgEnvCmd80(sourceConfig.getPsgEnvCmd80())
                 .noteOnPrevent(sourceConfig.getNoteOnPrevent())

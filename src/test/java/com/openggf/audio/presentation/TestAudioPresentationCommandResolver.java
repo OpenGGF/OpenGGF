@@ -355,6 +355,8 @@ class TestAudioPresentationCommandResolver {
         HashSet<Integer> mutableEndFlags = new HashSet<>(List.of(0xEE));
         fixture.sources.baseConfig = new SmpsSequencerConfig.Builder()
                 .extraTrkEndFlags(mutableEndFlags)
+                .fmSfxTakeoverMode(
+                        SmpsSequencerConfig.FmSfxTakeoverMode.REGISTER_SEQUENCE)
                 .build();
         fixture.sources.baseSfx = original;
         fixture.resolver.submit(new AudioCommand.PlaySfx(
@@ -375,6 +377,8 @@ class TestAudioPresentationCommandResolver {
         assertNotSame(original, snapshot.sequencers().get(0).smpsData());
         assertEquals(Set.of(0xEE), snapshot.sequencers().get(0)
                 .config().getExtraTrkEndFlags());
+        assertEquals(SmpsSequencerConfig.FmSfxTakeoverMode.REGISTER_SEQUENCE,
+                snapshot.sequencers().get(0).config().getFmSfxTakeoverMode());
     }
 
     @Test

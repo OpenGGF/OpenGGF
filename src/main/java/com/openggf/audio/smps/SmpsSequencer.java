@@ -379,8 +379,12 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         this.dacData = dacData;
         this.synth.setDacData(dacData);
 
-        // Enable DAC (YM2612 Reg 2B = 0x80)
-        synth.writeFm(this, 0, 0x2B, 0x80);
+        boolean sfxData = smpsData instanceof SmpsSfxData;
+        if (!sfxData) {
+            // Preserve the existing music-start behavior. Sound_PlaySFX only initializes
+            // track state, so an SFX must not mutate the shared chip before admission.
+            synth.writeFm(this, 0, 0x2B, 0x80);
+        }
 
         dividingTiming = smpsData.getDividingTiming();
         if (dividingTiming == 0) {
@@ -393,12 +397,12 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
 
         int z80Start = smpsData.getZ80StartAddress();
 
-        if (smpsData instanceof SmpsSfxData sfxData) {
+        if (smpsData instanceof SmpsSfxData sfx) {
             CoordFlagHandler handler = config.getCoordFlagHandler();
             if (handler != null) {
                 handler.onSfxStart(smpsData.getId());
             }
-            initSfxTracks(sfxData, z80Start);
+            initSfxTracks(sfx, z80Start);
             setSfxMode(true);
             return;
         }
@@ -792,13 +796,12 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             t.volumeOffset = entry.volume();
             t.dividingTiming = tickMult;
             if (type == TrackType.FM) {
-                // SFX should not inherit music state; center pan/AMS/FMS and preload voice 0 if
-                // available.
+                // SFX should not inherit logical music state. Select voice 0 without
+                // refreshing shared hardware; bytecode SetVoice owns the first upload.
                 t.pan = 0xC0;
                 t.ams = 0;
                 t.fms = 0;
-                loadVoice(t, 0);
-                applyFmPanAmsFms(t);
+                selectVoice(t, 0);
             }
             tracks.add(t);
         }
@@ -1772,6 +1775,15 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
 
     @Override
     public void loadVoice(Track t, int voiceId) {
+        if (selectVoice(t, voiceId) && !t.tieNext) {
+            // Continuous SFX (cfx_*) loop back through smpsSetvoice while tied.
+            // Preserve the existing Z80 HOLD behavior rather than refreshing the
+            // live channel mid-sustain.
+            refreshInstrument(t);
+        }
+    }
+
+    private boolean selectVoice(Track t, int voiceId) {
         byte[] voice = smpsData.getVoice(voiceId);
         if (voice == null && fallbackVoiceData != null) {
             voice = fallbackVoiceData.getVoice(voiceId);
@@ -1782,13 +1794,9 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             // Clear SSG-EG state: new voice may not use SSG-EG, and the song's
             // coordination flags (FF 05) will re-set it if needed.
             Arrays.fill(t.ssgEg, 0);
-            // Continuous SFX (cfx_*) loop back through smpsSetvoice while tied.
-            // Preserve the existing Z80 HOLD behavior rather than refreshing the
-            // live channel mid-sustain.
-            if (!t.tieNext) {
-                refreshInstrument(t);
-            }
+            return true;
         }
+        return false;
     }
 
     private void playNote(Track t) {

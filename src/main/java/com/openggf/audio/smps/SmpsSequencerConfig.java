@@ -58,6 +58,14 @@ public final class SmpsSequencerConfig {
         MOD_Z80
     }
 
+    /** How an FM channel is prepared when an SFX first takes it from music. */
+    public enum FmSfxTakeoverMode {
+        /** Legacy engine behavior: clear internal chip state and inject a key-off. */
+        FORCE_RESET,
+        /** Shipped-driver behavior: let the SFX bytecode perform all visible writes. */
+        REGISTER_SEQUENCE
+    }
+
     // -----------------------------------------------------------------------
     // Default constants shared across all three games (S1, S2, S3K)
     // -----------------------------------------------------------------------
@@ -83,6 +91,7 @@ public final class SmpsSequencerConfig {
     private final boolean relativePointers; // S1: true (68k PC-relative), S2: false (Z80 absolute)
     private final boolean tempoOnFirstTick; // S1: true (DOTEMPO), S2: false (PlayMusic)
     private final boolean direct68kDriver;
+    private final FmSfxTakeoverMode fmSfxTakeoverMode;
 
     // --- S3K-specific config fields ---
     private final VolMode volMode;
@@ -116,6 +125,7 @@ public final class SmpsSequencerConfig {
         this.relativePointers = b.relativePointers;
         this.tempoOnFirstTick = b.tempoOnFirstTick;
         this.direct68kDriver = b.direct68kDriver;
+        this.fmSfxTakeoverMode = b.fmSfxTakeoverMode;
         this.volMode = b.volMode;
         this.psgEnvCmd80 = b.psgEnvCmd80;
         this.noteOnPrevent = b.noteOnPrevent;
@@ -193,6 +203,10 @@ public final class SmpsSequencerConfig {
     /** Whether playback follows the direct 68k chip-write/update contract. */
     public boolean isDirect68kDriver() {
         return direct68kDriver;
+    }
+
+    public FmSfxTakeoverMode getFmSfxTakeoverMode() {
+        return fmSfxTakeoverMode;
     }
 
     /**
@@ -278,6 +292,7 @@ public final class SmpsSequencerConfig {
         private boolean relativePointers = false;
         private boolean tempoOnFirstTick = false;
         private boolean direct68kDriver = false;
+        private FmSfxTakeoverMode fmSfxTakeoverMode = FmSfxTakeoverMode.FORCE_RESET;
 
         // S3K-specific defaults (S2 compatible)
         private VolMode volMode = VolMode.ALGO;
@@ -303,6 +318,7 @@ public final class SmpsSequencerConfig {
         public Builder relativePointers(boolean val) { relativePointers = val; return this; }
         public Builder tempoOnFirstTick(boolean val) { tempoOnFirstTick = val; return this; }
         public Builder direct68kDriver(boolean val) { direct68kDriver = val; return this; }
+        public Builder fmSfxTakeoverMode(FmSfxTakeoverMode val) { fmSfxTakeoverMode = val; return this; }
         public Builder volMode(VolMode val) { volMode = val; return this; }
         public Builder psgEnvCmd80(PsgEnvCmd80 val) { psgEnvCmd80 = val; return this; }
         public Builder noteOnPrevent(NoteOnPrevent val) { noteOnPrevent = val; return this; }
@@ -319,6 +335,7 @@ public final class SmpsSequencerConfig {
             Objects.requireNonNull(fmChannelOrder, "fmChannelOrder");
             Objects.requireNonNull(psgChannelOrder, "psgChannelOrder");
             Objects.requireNonNull(tempoMode, "tempoMode");
+            Objects.requireNonNull(fmSfxTakeoverMode, "fmSfxTakeoverMode");
             return new SmpsSequencerConfig(this);
         }
     }

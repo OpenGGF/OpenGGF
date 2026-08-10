@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Sonic 1 FM sound effects no longer upload their instrument into a
+  still-music-owned channel during construction or forcibly clear the YM2612's
+  internal envelope and feedback state on acquisition. The SFX now takes the
+  channel through the shipped driver's visible SetVoice, note-off, frequency,
+  and note-on sequence, removing the brief badnik-explosion onset artifact
+  without changing operator or chip-port ordering.
 - Tooling: correct the Sonic 1 GHZ1 gameplay-audio timeline's causal boundary.
   Strict schema v2 records raw caller/ROM queue requests at submission and
   resolved driver/presentation admissions separately with one stable ordinal.
