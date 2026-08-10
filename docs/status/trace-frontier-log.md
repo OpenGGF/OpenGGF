@@ -71525,6 +71525,28 @@ landable change, which I implemented directly.
   complete-run CNZ. Result: 6 tests, 0 failures, 0 errors. The physics frontier
   advance is regression-free and is committed before hardware-edge diagnosis.
 
+## 2026-08-10 — standalone CNZ post-merge results-art frontier
+
+- Context: `bugfix/s3k-traces` at merge commit `8d940b9a8`, incorporating
+  `origin/develop` at `0a4642329`; validation used JDK 21.0.12 and
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen`. The six protected user edits
+  remained unstaged and no fixture changed.
+- Frontier command: `mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1
+  -Dsurefire.runOrder=alphabetical -Dtrace.verification=all
+  -Dtrace.frontierOnly=true -Dtrace.context.diagnosticChars=full
+  -Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace
+  -Ds3k.rom.path='./Sonic and Knuckles & Sonic 3 (W) [!].gen' test`.
+  The three ROM-backed results-art module submissions now consume the recorded
+  hardware completion sequence at raw `41262` through `41267`. The comparison
+  advances 687 rows to frame `41949`, with 8 errors and 0 warnings; the first
+  error is player `x`, expected `0x4B24` and actual `0x4B20`. Ring comparison
+  remains enabled at error severity, with no ring mismatch in this run.
+- Gameplay-order regression command at the same tree covered complete-run AIZ,
+  both HCZ methods, standalone and complete-run MGZ, and complete-run CNZ.
+  Result: 6 tests, 0 failures, 0 errors. The merge commit is the code commit
+  associated with this regression-free frontier advance; this entry records
+  the rerun that exposed it before cannon-launch diagnosis continues.
+
 ## 2026-08-10 — round twenty-five: EHZ 45 -> 26, and two disproved briefs
 
 Command: full `-Ptrace-replay` profile, no `-Dtest`. Base eb619f787 (769 / 8 / 64).
