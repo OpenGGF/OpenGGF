@@ -2,6 +2,8 @@ package com.openggf.tools.audio.completerun;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -75,6 +77,46 @@ public final class CompleteRunAudioTrace {
 
     public enum ProducerKind { REFERENCE, OPENGGF }
 
+    /** Concrete runtime artifacts whose hashes prove which producer executed the capture. */
+    public enum RuntimeArtifact { BIZHAWK_EXECUTABLE, BIZHAWK_CORE_DLL, GPGX_CORE, OPENGGF_PRODUCER }
+
+    /**
+     * Explicit producer runtime identity; observer labels are intentionally not used as a
+     * substitute for executable, core, or artifact identity.
+     */
+    public record ProducerRuntimeIdentity(String producerName, String producerVersion,
+            String emulatorName, String emulatorVersion, String coreName, String coreVersion,
+            Map<RuntimeArtifact, String> artifactSha256) {
+        public ProducerRuntimeIdentity {
+            requireText(producerName, "producer name");
+            requireText(producerVersion, "producer version");
+            requireText(emulatorName, "emulator name");
+            requireText(emulatorVersion, "emulator version");
+            requireText(coreName, "core name");
+            requireText(coreVersion, "core version");
+            Objects.requireNonNull(artifactSha256, "runtime artifact SHA-256 values");
+            EnumMap<RuntimeArtifact, String> hashes = new EnumMap<>(RuntimeArtifact.class);
+            for (Map.Entry<RuntimeArtifact, String> entry : artifactSha256.entrySet()) {
+                Objects.requireNonNull(entry.getKey(), "runtime artifact");
+                lowercaseHex(entry.getValue(), SHA256, "runtime artifact SHA-256");
+                hashes.put(entry.getKey(), entry.getValue());
+            }
+            artifactSha256 = Collections.unmodifiableMap(hashes);
+        }
+
+        /** Validates the required executable/core artifact set for the selected producer. */
+        public void validateFor(ProducerKind producerKind) {
+            Set<RuntimeArtifact> required = switch (Objects.requireNonNull(producerKind, "producer kind")) {
+                case REFERENCE -> Set.of(RuntimeArtifact.BIZHAWK_EXECUTABLE, RuntimeArtifact.BIZHAWK_CORE_DLL,
+                        RuntimeArtifact.GPGX_CORE);
+                case OPENGGF -> Set.of(RuntimeArtifact.OPENGGF_PRODUCER);
+            };
+            if (!artifactSha256.keySet().containsAll(required)) {
+                throw new IllegalArgumentException("producer runtime identity is missing required artifacts");
+            }
+        }
+    }
+
     /** Pinning proof for the observer profile and every callback domain it used. */
     public record ObserverProof(String observerProfile, String callbackSource,
             List<CallbackProof> callbacks) {
@@ -107,7 +149,8 @@ public final class CompleteRunAudioTrace {
     }
 
     public record Metadata(String schema, String profileId, CompleteRunFixture fixture,
-            ProducerKind producerKind, ObserverProof observerProof, ChunkPolicy chunkPolicy,
+            ProducerKind producerKind, ProducerRuntimeIdentity producerRuntimeIdentity,
+            ObserverProof observerProof, ChunkPolicy chunkPolicy,
             List<HardwareRole> hardwareRoles, StateInventory stateInventory) {
         public Metadata {
             requireText(schema, "schema");
@@ -117,6 +160,7 @@ public final class CompleteRunAudioTrace {
             }
             Objects.requireNonNull(fixture, "fixture");
             Objects.requireNonNull(producerKind, "producer kind");
+            Objects.requireNonNull(producerRuntimeIdentity, "producer runtime identity").validateFor(producerKind);
             Objects.requireNonNull(observerProof, "observer proof");
             Objects.requireNonNull(chunkPolicy, "chunk policy");
             hardwareRoles = canonicalRoles(hardwareRoles, "metadata hardware roles");
@@ -126,9 +170,18 @@ public final class CompleteRunAudioTrace {
         /** Binds capture metadata to every fixture and inventory selected by its profile. */
         public void validateProfile(CompleteRunAudioProfile profile) {
             Objects.requireNonNull(profile, "profile");
+            Map<ProducerKind, ProducerRuntimeIdentity> allowedRuntimeIdentities =
+                    Objects.requireNonNull(profile.producerRuntimeIdentities(), "profile runtime identities");
+            if (!allowedRuntimeIdentities.keySet().containsAll(EnumSet.allOf(ProducerKind.class))) {
+                throw new IllegalArgumentException("profile must declare an allowed runtime identity for every producer");
+            }
+            for (ProducerKind kind : ProducerKind.values()) {
+                Objects.requireNonNull(allowedRuntimeIdentities.get(kind), "profile runtime identity").validateFor(kind);
+            }
             if (!profileId.equals(profile.id()) || !fixture.equals(profile.fixture())
                     || !hardwareRoles.equals(canonicalRoles(profile.hardwareRoles(), "profile hardware roles"))
-                    || !stateInventory.equals(profile.stateInventory())) {
+                    || !stateInventory.equals(profile.stateInventory())
+                    || !producerRuntimeIdentity.equals(allowedRuntimeIdentities.get(producerKind))) {
                 throw new IllegalArgumentException("metadata does not match the selected complete-run audio profile");
             }
         }

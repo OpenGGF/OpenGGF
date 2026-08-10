@@ -5,6 +5,8 @@ import static com.openggf.tools.audio.completerun.CompleteRunAudioTrace.Hardware
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.CompleteRunFixture;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.NativeSoundIdentity;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.NormalizedState;
+import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.ProducerKind;
+import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.ProducerRuntimeIdentity;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.RawAudioRequest;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.RoleState;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.StateInventory;
@@ -24,6 +26,9 @@ public interface CompleteRunAudioProfile {
 
     /** Complete native request-to-ROM-content resolution owned by this immutable profile. */
     Map<RawAudioRequest, NativeSoundIdentity> nativeSoundIdentities();
+
+    /** Runtime identities explicitly permitted for each capture producer kind. */
+    Map<ProducerKind, ProducerRuntimeIdentity> producerRuntimeIdentities();
 
     default NativeSoundIdentity resolveRequest(RawAudioRequest request) {
         NativeSoundIdentity identity = nativeSoundIdentities().get(Objects.requireNonNull(request, "request"));

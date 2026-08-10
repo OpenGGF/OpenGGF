@@ -3,8 +3,11 @@ package com.openggf.tools.audio.completerun;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.CompleteRunFixture;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.HardwareRole;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.NativeSoundIdentity;
+import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.ProducerKind;
+import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.ProducerRuntimeIdentity;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.RawAudioRequest;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.StateInventory;
+import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -55,7 +58,8 @@ public final class CompleteRunAudioProfiles {
 
     /** Value snapshot prevents later mutations by a profile factory from changing capture validation. */
     private record FrozenProfile(String id, CompleteRunFixture fixture, List<HardwareRole> hardwareRoles,
-            StateInventory stateInventory, Map<RawAudioRequest, NativeSoundIdentity> nativeSoundIdentities)
+            StateInventory stateInventory, Map<RawAudioRequest, NativeSoundIdentity> nativeSoundIdentities,
+            Map<ProducerKind, ProducerRuntimeIdentity> producerRuntimeIdentities)
             implements CompleteRunAudioProfile {
         private FrozenProfile {
             if (id == null || id.isBlank()) {
@@ -65,6 +69,14 @@ public final class CompleteRunAudioProfiles {
             hardwareRoles = CompleteRunAudioTrace.canonicalRoles(hardwareRoles, "profile hardware roles");
             stateInventory = new StateInventory(stateInventory.globalFields(), stateInventory.activeRoleFields());
             nativeSoundIdentities = Map.copyOf(nativeSoundIdentities);
+            producerRuntimeIdentities = Map.copyOf(producerRuntimeIdentities);
+            if (!producerRuntimeIdentities.keySet().containsAll(EnumSet.allOf(ProducerKind.class))) {
+                throw new IllegalArgumentException("profile must declare an allowed runtime identity for every producer");
+            }
+            for (Map.Entry<ProducerKind, ProducerRuntimeIdentity> entry : producerRuntimeIdentities.entrySet()) {
+                Objects.requireNonNull(entry.getKey(), "producer kind");
+                entry.getValue().validateFor(entry.getKey());
+            }
         }
 
         private static FrozenProfile copyOf(CompleteRunAudioProfile profile) {
@@ -74,7 +86,8 @@ public final class CompleteRunAudioProfiles {
                     fixture.bk2Sha256(), fixture.bk2RowCount(), fixture.runManifestSha256(),
                     List.copyOf(fixture.segments()), fixture.firstFrame(), fixture.exclusiveEnd());
             return new FrozenProfile(profile.id(), fixtureCopy, List.copyOf(profile.hardwareRoles()),
-                    profile.stateInventory(), Map.copyOf(profile.nativeSoundIdentities()));
+                    profile.stateInventory(), Map.copyOf(profile.nativeSoundIdentities()),
+                    Map.copyOf(profile.producerRuntimeIdentities()));
         }
     }
 }

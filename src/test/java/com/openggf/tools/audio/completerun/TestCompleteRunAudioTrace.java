@@ -96,10 +96,46 @@ class TestCompleteRunAudioTrace {
     @Test
     void metadataBindsThePinnedProfileFixtureAndInventories() {
         assertDoesNotThrow(() -> fixture.metadata.validateProfile(fixture.profile));
+    }
+
+    @Test
+    void metadataRejectsAnOtherwiseMatchingProfileWithWrongFixture() {
+        CompleteRunFixture wrongFixture = new CompleteRunFixture(
+                "1123456789abcdef0123456789abcdef01234567", "89abcdef",
+                "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", 862,
+                "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210",
+                List.of(new ManifestSegment("green-hill", 860, 862)), 860, 862);
+        CompleteRunAudioProfile wrongFixtureProfile = new TestProfile("test.profile", wrongFixture,
+                List.of(HardwareRole.FM1, HardwareRole.PSG1), List.of("tempo"), List.of("cursor"));
+
+        assertThrows(IllegalArgumentException.class, () -> fixture.metadata.validateProfile(wrongFixtureProfile));
+    }
+
+    @Test
+    void metadataRejectsAnOtherwiseMatchingProfileWithWrongStateInventory() {
+        CompleteRunAudioProfile wrongInventory = new TestProfile("test.profile", fixture.fixture,
+                List.of(HardwareRole.FM1, HardwareRole.PSG1), List.of("tempo_changed"), List.of("cursor"));
+
+        assertThrows(IllegalArgumentException.class, () -> fixture.metadata.validateProfile(wrongInventory));
+    }
+
+    @Test
+    void metadataRejectsAnOtherwiseMatchingProfileWithWrongHardwareRoles() {
         CompleteRunAudioProfile wrongRoles = new TestProfile("test.profile", fixture.fixture,
                 List.of(HardwareRole.FM1), List.of("tempo"), List.of("cursor"));
 
         assertThrows(IllegalArgumentException.class, () -> fixture.metadata.validateProfile(wrongRoles));
+    }
+
+    @Test
+    void metadataRejectsAnOtherwiseMatchingProfileWithWrongProducerRuntimeIdentity() {
+        TestProfile wrongRuntime = new TestProfile("test.profile", fixture.fixture,
+                List.of(HardwareRole.FM1, HardwareRole.PSG1), List.of("tempo"), List.of("cursor"));
+        wrongRuntime.producerIdentities.put(ProducerKind.OPENGGF, new ProducerRuntimeIdentity(
+                "OpenGGF", "different", "OpenGGF", "0.6", "SMPS", "1",
+                Map.of(RuntimeArtifact.OPENGGF_PRODUCER, "4".repeat(64))));
+
+        assertThrows(IllegalArgumentException.class, () -> fixture.metadata.validateProfile(wrongRuntime));
     }
 
     @Test
@@ -125,6 +161,29 @@ class TestCompleteRunAudioTrace {
     }
 
     @Test
+    void producerRuntimeIdentityRequiresKindSpecificArtifactsAndCanonicalHashes() {
+        assertDoesNotThrow(() -> fixture.referenceRuntimeIdentity());
+        assertDoesNotThrow(() -> fixture.openGgfRuntimeIdentity());
+        ProducerRuntimeIdentity missingGpgx = new ProducerRuntimeIdentity(
+                "BizHawk", "2.11", "Genesis Plus GX", "1.0", "GPGX", "1.0",
+                Map.of(RuntimeArtifact.BIZHAWK_EXECUTABLE, "a".repeat(64),
+                        RuntimeArtifact.BIZHAWK_CORE_DLL, "b".repeat(64)));
+        assertThrows(IllegalArgumentException.class, () -> missingGpgx.validateFor(ProducerKind.REFERENCE));
+        assertThrows(IllegalArgumentException.class, () -> new ProducerRuntimeIdentity(
+                "OpenGGF", "0.6", "OpenGGF", "0.6", "SMPS", "1",
+                Map.of(RuntimeArtifact.OPENGGF_PRODUCER, "A".repeat(64))));
+    }
+
+    @Test
+    void registryRejectsProfileThatOmitsAnAllowedProducerKindIdentity() {
+        TestProfile missingReference = new TestProfile("missing.reference.runtime", fixture.fixture,
+                List.of(HardwareRole.FM1, HardwareRole.PSG1), List.of("tempo"), List.of("cursor"));
+        missingReference.producerIdentities.remove(ProducerKind.REFERENCE);
+
+        assertThrows(IllegalArgumentException.class, () -> CompleteRunAudioProfiles.register(missingReference));
+    }
+
+    @Test
     void registrySnapshotsProfileIdentityResolutionAndInventories() {
         String id = "registry.snapshot.profile";
         var mutable = new TestProfile(id, fixture.fixture, new ArrayList<>(List.of(HardwareRole.FM1, HardwareRole.PSG1)),
@@ -133,12 +192,15 @@ class TestCompleteRunAudioTrace {
         mutable.roles.clear();
         mutable.globalFields.clear();
         mutable.identities.clear();
+        mutable.producerIdentities.clear();
 
         CompleteRunAudioProfile frozen = CompleteRunAudioProfiles.require(id);
         assertEquals(List.of(HardwareRole.FM1, HardwareRole.PSG1), frozen.hardwareRoles());
         assertEquals(List.of("tempo"), frozen.stateInventory().globalFields());
         assertEquals(new NativeSoundIdentity(OwnerClass.SFX, "sfx.explosion", 0xC0),
                 frozen.resolveRequest(new RawAudioRequest(OwnerClass.SFX, 0xC0, "mailbox", 0)));
+        assertEquals(fixture.openGgfRuntimeIdentity(),
+                frozen.producerRuntimeIdentities().get(ProducerKind.OPENGGF));
         assertThrows(IllegalArgumentException.class, () -> CompleteRunAudioProfiles.register(
                 new TestProfile(id, fixture.fixture, List.of(HardwareRole.FM1, HardwareRole.PSG1),
                         List.of("tempo"), List.of("cursor"))));
@@ -163,7 +225,7 @@ class TestCompleteRunAudioTrace {
         private final TestProfile profile = new TestProfile("test.profile", fixture,
                 List.of(HardwareRole.FM1, HardwareRole.PSG1), List.of("tempo"), List.of("cursor"));
         private final Metadata metadata = new Metadata("complete_run_audio.v1", "test.profile", fixture,
-                ProducerKind.OPENGGF, new ObserverProof("test.observer.v1", "m68k.execute",
+                ProducerKind.OPENGGF, openGgfRuntimeIdentity(), new ObserverProof("test.observer.v1", "m68k.execute",
                         List.of(new CallbackProof("driver.service", 1))),
                 new ChunkPolicy(4096, "gzip", 0), List.of(HardwareRole.FM1, HardwareRole.PSG1),
                 new StateInventory(List.of("tempo"), List.of("cursor")));
@@ -198,6 +260,18 @@ class TestCompleteRunAudioTrace {
         private CaptureCounts counts(long frameCount) {
             return new CaptureCounts(frameCount, 1, 2, 3, 4, 5, 6);
         }
+
+        private ProducerRuntimeIdentity referenceRuntimeIdentity() {
+            return new ProducerRuntimeIdentity("BizHawk", "2.11", "BizHawk", "2.11", "GPGX", "1.0",
+                    Map.of(RuntimeArtifact.BIZHAWK_EXECUTABLE, "1".repeat(64),
+                            RuntimeArtifact.BIZHAWK_CORE_DLL, "2".repeat(64),
+                            RuntimeArtifact.GPGX_CORE, "3".repeat(64)));
+        }
+
+        private ProducerRuntimeIdentity openGgfRuntimeIdentity() {
+            return new ProducerRuntimeIdentity("OpenGGF", "0.6", "OpenGGF", "0.6", "SMPS", "1",
+                    Map.of(RuntimeArtifact.OPENGGF_PRODUCER, "4".repeat(64)));
+        }
     }
 
     private static final class TestProfile implements CompleteRunAudioProfile {
@@ -207,6 +281,7 @@ class TestCompleteRunAudioTrace {
         private final List<String> globalFields;
         private final List<String> activeRoleFields;
         private final Map<RawAudioRequest, NativeSoundIdentity> identities = new LinkedHashMap<>();
+        private final Map<ProducerKind, ProducerRuntimeIdentity> producerIdentities = new LinkedHashMap<>();
 
         private TestProfile(String id, CompleteRunFixture fixture, List<HardwareRole> roles,
                 List<String> globalFields, List<String> activeRoleFields) {
@@ -217,6 +292,14 @@ class TestCompleteRunAudioTrace {
             this.activeRoleFields = activeRoleFields;
             identities.put(new RawAudioRequest(OwnerClass.SFX, 0xC0, "mailbox", 0),
                     new NativeSoundIdentity(OwnerClass.SFX, "sfx.explosion", 0xC0));
+            producerIdentities.put(ProducerKind.REFERENCE, new ProducerRuntimeIdentity(
+                    "BizHawk", "2.11", "BizHawk", "2.11", "GPGX", "1.0",
+                    Map.of(RuntimeArtifact.BIZHAWK_EXECUTABLE, "1".repeat(64),
+                            RuntimeArtifact.BIZHAWK_CORE_DLL, "2".repeat(64),
+                            RuntimeArtifact.GPGX_CORE, "3".repeat(64))));
+            producerIdentities.put(ProducerKind.OPENGGF, new ProducerRuntimeIdentity(
+                    "OpenGGF", "0.6", "OpenGGF", "0.6", "SMPS", "1",
+                    Map.of(RuntimeArtifact.OPENGGF_PRODUCER, "4".repeat(64))));
         }
 
         @Override
@@ -242,6 +325,11 @@ class TestCompleteRunAudioTrace {
         @Override
         public Map<RawAudioRequest, NativeSoundIdentity> nativeSoundIdentities() {
             return identities;
+        }
+
+        @Override
+        public Map<ProducerKind, ProducerRuntimeIdentity> producerRuntimeIdentities() {
+            return producerIdentities;
         }
     }
 }
