@@ -997,13 +997,31 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     }
 
     private void tick() {
+        tick(false);
+    }
+
+    private void tick(boolean finishSfxTempoFrame) {
         SmpsDriver driver = synth instanceof SmpsDriver smpsDriver
                 ? smpsDriver : null;
         SmpsDriverServiceObserver.ServiceEvent service = driver == null
-                ? null : driver.beginSequencerService(this);
+                ? null : driver.beginSequencerService(this,
+                        SmpsDriverServiceObserver.ServiceKind.SEQUENCER_TICK);
         tickTracks();
+        if (finishSfxTempoFrame) {
+            finishSfxTempoFrame();
+        }
         if (driver != null) {
             driver.endSequencerService(service);
+        }
+    }
+
+    private void finishSfxTempoFrame() {
+        maxTicks--;
+        if (maxTicks <= 0) {
+            for (Track track : tracks) {
+                track.active = false;
+                stopNote(track);
+            }
         }
     }
 
@@ -1130,7 +1148,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     }
 
     private void processTempoFrame() {
-        processFade();
+        processObservedFadeStep();
 
         if (tempoWeight == 0 && config.getTempoMode() == SmpsSequencerConfig.TempoMode.OVERFLOW2) {
             return;
@@ -1150,33 +1168,15 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                     }
                 }
             }
-            tick();
-            if (sfxMode) {
-                maxTicks--;
-                if (maxTicks <= 0) {
-                    for (Track t : tracks) {
-                        t.active = false;
-                        stopNote(t);
-                    }
-                }
-            }
+            tick(sfxMode);
         } else if (config.getTempoMode() == SmpsSequencerConfig.TempoMode.OVERFLOW2) {
             // S2: tick when accumulator overflows. Higher tempo = more ticks = faster.
             tempoAccumulator += tempoWeight;
             if (tempoAccumulator >= tempoModBase) {
                 tempoAccumulator -= tempoModBase;
-                tick();
-                for (int m = 1; m < speedMultiplier; m++) {
-                    tick();
-                }
-                if (sfxMode) {
-                    maxTicks--;
-                    if (maxTicks <= 0) {
-                        for (Track t : tracks) {
-                            t.active = false;
-                            stopNote(t);
-                        }
-                    }
+                int tickCount = Math.max(1, speedMultiplier);
+                for (int tickIndex = 0; tickIndex < tickCount; tickIndex++) {
+                    tick(sfxMode && tickIndex == tickCount - 1);
                 }
             }
         } else {
@@ -1185,14 +1185,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             // independent of music tempo. Without this, tempoWeight=tempoModBase
             // causes overflow every frame → SFX never ticks.
             if (sfxMode) {
-                tick();
-                maxTicks--;
-                if (maxTicks <= 0) {
-                    for (Track t : tracks) {
-                        t.active = false;
-                        stopNote(t);
-                    }
-                }
+                tick(true);
             } else {
                 tempoAccumulator += tempoWeight;
                 if (tempoAccumulator >= tempoModBase) {
@@ -1222,11 +1215,22 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         }
     }
 
-    private void processFade() {
+    private void processObservedFadeStep() {
         if (!fadeState.active) {
             return;
         }
+        SmpsDriver driver = synth instanceof SmpsDriver smpsDriver
+                ? smpsDriver : null;
+        SmpsDriverServiceObserver.ServiceEvent service = driver == null
+                ? null : driver.beginSequencerService(this,
+                        SmpsDriverServiceObserver.ServiceKind.FADE_STEP);
+        processFade();
+        if (driver != null) {
+            driver.endSequencerService(service);
+        }
+    }
 
+    private void processFade() {
         // ROM: Check if fade counter is already 0 BEFORE processing
         // This happens after all steps have been applied
         if (fadeState.steps == 0) {

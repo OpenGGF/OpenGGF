@@ -66,8 +66,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     private long nextServiceOrdinal;
     /** Diagnostic-only sequencer identities; deliberately absent from snapshots. */
     private long nextServiceSequencerOrdinal;
-    private final IdentityHashMap<SmpsSequencer, Long>
-            serviceSequencerOrdinals = new IdentityHashMap<>();
+    private IdentityHashMap<SmpsSequencer, Long> serviceSequencerOrdinals;
     private SmpsDriverServiceObserver serviceObserver =
             SmpsDriverServiceObserver.NONE;
     private SmpsDriverServiceObserver.DriverIdentity diagnosticIdentity =
@@ -161,7 +160,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     public void setServiceObserver(SmpsDriverServiceObserver observer) {
         serviceObserver = Objects.requireNonNull(observer, "observer");
         if (observer == SmpsDriverServiceObserver.NONE) {
-            serviceSequencerOrdinals.clear();
+            serviceSequencerOrdinals = null;
         }
     }
 
@@ -181,9 +180,13 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
 
     /** Begins one actual semantic SMPS sequencer update. */
     public SmpsDriverServiceObserver.ServiceEvent beginSequencerService(
-            SmpsSequencer sequencer) {
+            SmpsSequencer sequencer,
+            SmpsDriverServiceObserver.ServiceKind kind) {
         if (serviceObserver == SmpsDriverServiceObserver.NONE) {
             return null;
+        }
+        if (serviceSequencerOrdinals == null) {
+            serviceSequencerOrdinals = new IdentityHashMap<>();
         }
         long sequencerOrdinal = serviceSequencerOrdinals.computeIfAbsent(
                 Objects.requireNonNull(sequencer, "sequencer"),
@@ -194,7 +197,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                         new SmpsDriverServiceObserver.SequencerIdentity(
                                 sequencerOrdinal,
                                 sequencer.getSourceDescriptor(),
-                                sequencer.isSfx()));
+                                sequencer.isSfx()),
+                        Objects.requireNonNull(kind, "kind"));
         serviceObserver.onServiceBegin(event);
         return event;
     }
@@ -205,6 +209,21 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         if (event != null) {
             serviceObserver.onServiceEnd(event, captureSnapshot());
         }
+    }
+
+    private void forgetSequencerServiceIdentity(SmpsSequencer sequencer) {
+        if (serviceSequencerOrdinals != null) {
+            serviceSequencerOrdinals.remove(sequencer);
+        }
+    }
+
+    int trackedServiceSequencerCountForTesting() {
+        return serviceSequencerOrdinals == null
+                ? 0 : serviceSequencerOrdinals.size();
+    }
+
+    long nextServiceSequencerOrdinalForTesting() {
+        return nextServiceSequencerOrdinal;
     }
 
     /** Reports a completed out-of-service lifecycle mutation. */
@@ -451,6 +470,9 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             contSfxLoopCnt = token.contSfxLoopCnt;
             restoreLiveDacDataReference(token.liveDacDataReference);
             restoreSynthSnapshot(token.synthSnapshot);
+            if (serviceSequencerOrdinals != null) {
+                serviceSequencerOrdinals.keySet().retainAll(sequencers);
+            }
         }
     }
 
@@ -525,6 +547,9 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             pendingRemovals.clear();
             sfxAdmissionOrdinals.clear();
             pendingConflictOwners.clear();
+            if (serviceSequencerOrdinals != null) {
+                serviceSequencerOrdinals.clear();
+            }
             Arrays.fill(fmLocks, null);
             Arrays.fill(psgLocks, null);
 
@@ -674,6 +699,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                     sequencers.remove(existing);
                     releaseLocks(existing);
                     sfxSequencers.remove(existing);
+                    forgetSequencerServiceIdentity(existing);
                 }
 
                 // Channel-based SFX conflict resolution (ROM: s2.sounddriver.asm lines 2203-2266)
@@ -738,6 +764,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                         sequencers.remove(dead);
                         releaseLocks(dead);
                         sfxSequencers.remove(dead);
+                        forgetSequencerServiceIdentity(dead);
                     }
                 }
 
@@ -809,6 +836,9 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             sfxSequencers.clear();
             sfxAdmissionOrdinals.clear();
             pendingConflictOwners.clear();
+            if (serviceSequencerOrdinals != null) {
+                serviceSequencerOrdinals.clear();
+            }
             for (int i = 0; i < 6; i++)
                 fmLocks[i] = null;
             for (int i = 0; i < 4; i++)
@@ -837,6 +867,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 releaseLocks(sfx);
                 sfxSequencers.remove(sfx);
                 sfxAdmissionOrdinals.remove(sfx);
+                forgetSequencerServiceIdentity(sfx);
             }
             pendingConflictOwners.clear();
             continuousSfxId = 0;
@@ -955,14 +986,21 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     }
 
     private void removeCompletedSequencers() {
-        if (!pendingRemovals.isEmpty()) {
-            for (int j = 0; j < pendingRemovals.size(); j++) {
-                SmpsSequencer seq = pendingRemovals.get(j);
+        while (!pendingRemovals.isEmpty()) {
+            SmpsSequencer seq = pendingRemovals.getFirst();
+            SmpsDriverServiceObserver.ServiceEvent service =
+                    beginSequencerService(seq,
+                            SmpsDriverServiceObserver.ServiceKind
+                                    .COMPLETION_CLEANUP);
+            try {
+                pendingRemovals.removeFirst();
                 sequencers.remove(seq);
                 releaseLocks(seq);
                 sfxSequencers.remove(seq);
+                endSequencerService(service);
+            } finally {
+                forgetSequencerServiceIdentity(seq);
             }
-            pendingRemovals.clear();
         }
     }
 

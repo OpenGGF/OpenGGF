@@ -188,3 +188,51 @@ verification:
 No tooling import, game-name branch, reference-reader authority, snapshot
 field, chip-port reorder, SFX lock change, or default-policy behavior was
 introduced. No merge or push was performed.
+
+## Review fix round 3
+
+Service events now identify their authentic semantic boundary with the
+profile-neutral `SEQUENCER_TICK`, `FADE_STEP`, and `COMPLETION_CLEANUP` kinds.
+Each literal sequencer tick still emits its own begin/end pair. Fade processing
+emits a separate pair only while it performs a real fade-state mutation, and
+completion removal brackets lock release, override restoration, terminal
+`forceSilence` writes, and the final post-cleanup snapshot. The typed kind is
+preserved through both presentation and legacy diagnostic adapters.
+
+SFX expiry is performed inside the final literal tick of its tempo frame. An
+OVERFLOW2 speed-up frame therefore retains the shipped update frequency: three
+literal ticks produce three tick services, while `maxTicks` changes only on the
+third (`2, 2, 1`). A still-running FM SFX whose budget expires keys off before
+that tick ends; subsequent force-silence writes occur only in the separately
+ordered cleanup service. Adversarial chip observers fail if any YM2612 or PSG
+write reachable from the exercised fade/tick/cleanup read paths appears outside
+exactly one service pair.
+
+Sequencer service identities are now live-set diagnostics rather than a history
+table. The identity map is allocated lazily only when observation is enabled,
+entries are forgotten on completion, replacement, conflict removal, stop, and
+snapshot reconstruction, and live-command rollback retains only surviving live
+sequencers. The allocation ordinal remains monotonic and is deliberately not
+rewound or reset, so discarded identities are never reused. Package-private
+diagnostics prove the retained count remains bounded by the live sequencer set.
+
+Round-three RED evidence included missing service-kind compilation failures and
+a deliberate retained-identity mutant that failed on the first completed SFX.
+The lifecycle stress exercises 1,000 completions, 1,000 same-ID replacements,
+and 1,000 snapshot reconstructions, then verifies strict identity ordering,
+live-set bounds, rollback survivor stability, and no ordinal reuse. Final JDK
+21 verification:
+
+- Focused observer/chip/snapshot/fade/authority sweep: 56 tests, zero failures
+  and zero errors.
+- Broad AudioManager/backend/presentation/rewind/contention/chip/snapshot/fade
+  sweep: 289 tests, zero failures and zero errors; the 54-test voice-registry
+  suite also passed independently.
+- S1 takeover-order, contention, and SFX-construction-purity sweep: 13 tests,
+  zero failures and zero errors.
+- `git diff --check`: clean.
+
+No game-specific policy, tooling dependency, snapshot field, chip-port change,
+lock-order change, or default-`NONE` audio behavior was introduced. Maven's
+non-fatal hook installer warning remains the sandbox's read-only shared
+`.git/config`; no merge or push was performed.

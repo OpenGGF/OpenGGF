@@ -11,11 +11,120 @@ import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.audio.smps.SmpsSfxData;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class TestSfxContentionObserver {
+
+    @Test
+    void serviceIdentityStorageStaysBoundedAcrossThousandsOfLifecycles() {
+        // Break caught: append-only diagnostic identities retained every historical SFX.
+        SmpsDriver driver = new SmpsDriver(60.0);
+        List<Long> tickIdentities = new ArrayList<>();
+        driver.setServiceObserver(new SmpsDriverServiceObserver() {
+            @Override
+            public void onServiceBegin(ServiceEvent event) {
+                if (event.kind() == ServiceKind.SEQUENCER_TICK) {
+                    tickIdentities.add(event.sequencer().instanceOrdinal());
+                }
+            }
+        });
+
+        for (int iteration = 0; iteration < 1_000; iteration++) {
+            driver.addSequencer(oneTickSfx(driver), true);
+            driver.read(new short[2]);
+            assertEquals(0, driver.sequencersForTesting().size());
+            assertEquals(0, driver.trackedServiceSequencerCountForTesting());
+        }
+
+        for (int iteration = 0; iteration < 1_000; iteration++) {
+            driver.addSequencer(longRunningSfx(driver), true);
+            driver.read(new short[2]);
+            assertEquals(1, driver.sequencersForTesting().size());
+            assertEquals(1, driver.trackedServiceSequencerCountForTesting(),
+                    "same-ID replacement must release the displaced identity");
+        }
+
+        SmpsDriverSnapshot rewindPoint = driver.captureSnapshot();
+        for (int iteration = 0; iteration < 1_000; iteration++) {
+            driver.restoreSnapshot(rewindPoint);
+            assertEquals(0, driver.trackedServiceSequencerCountForTesting(),
+                    "snapshot reconstruction starts with no historical identity");
+            driver.read(new short[2]);
+            assertEquals(1, driver.sequencersForTesting().size());
+            assertEquals(1, driver.trackedServiceSequencerCountForTesting());
+        }
+
+        assertEquals(3_000, tickIdentities.size());
+        for (int index = 1; index < tickIdentities.size(); index++) {
+            assertTrue(tickIdentities.get(index) > tickIdentities.get(index - 1),
+                    "a removed or restored sequencer must receive a fresh monotonic identity");
+        }
+        assertEquals(3_000,
+                driver.nextServiceSequencerOrdinalForTesting());
+
+        driver.stopAllSfx();
+        assertEquals(0, driver.trackedServiceSequencerCountForTesting());
+    }
+
+    @Test
+    void disabledServiceObserverAllocatesNoSequencerIdentityStorage() {
+        SmpsDriver driver = new SmpsDriver(60.0);
+        driver.addSequencer(longRunningSfx(driver), true);
+
+        driver.read(new short[2]);
+
+        assertEquals(SmpsDriverServiceObserver.NONE,
+                driver.serviceObserver());
+        assertEquals(0, driver.trackedServiceSequencerCountForTesting());
+        assertEquals(0, driver.nextServiceSequencerOrdinalForTesting());
+    }
+
+    @Test
+    void rollbackDropsOnlyProvisionalIdentityAndNeverReusesItsOrdinal() {
+        SmpsDriver driver = new SmpsDriver(60.0);
+        List<SmpsDriverServiceObserver.ServiceEvent> ticks =
+                new ArrayList<>();
+        driver.setServiceObserver(new SmpsDriverServiceObserver() {
+            @Override
+            public void onServiceBegin(ServiceEvent event) {
+                if (event.kind() == ServiceKind.SEQUENCER_TICK) {
+                    ticks.add(event);
+                }
+            }
+        });
+        driver.addSequencer(longRunningMusic(driver, 0x81), false);
+        driver.read(new short[2]);
+        SmpsDriver.LiveCommandMutationToken rollback =
+                driver.captureLiveCommandMutation();
+
+        driver.addSequencer(longRunningSfx(driver, 0xA1), true);
+        driver.read(new short[2]);
+        assertEquals(2, driver.trackedServiceSequencerCountForTesting());
+
+        driver.rollbackLiveCommandMutation(rollback);
+        assertEquals(1, driver.trackedServiceSequencerCountForTesting());
+        driver.addSequencer(longRunningSfx(driver, 0xA2), true);
+        driver.read(new short[2]);
+
+        List<Long> musicIdentities = ticks.stream()
+                .filter(event -> event.sequencer().source().id() == 0x81)
+                .map(event -> event.sequencer().instanceOrdinal())
+                .distinct().toList();
+        long a2Identity = ticks.stream()
+                .filter(event -> event.sequencer().source().id() == 0xA2)
+                .map(event -> event.sequencer().instanceOrdinal())
+                .findFirst().orElseThrow();
+        assertEquals(List.of(0L), musicIdentities,
+                "the surviving live sequencer keeps its stable identity");
+        assertEquals(2L, a2Identity,
+                "the rolled-back identity ordinal is not reused");
+
+        driver.stopAll();
+        assertEquals(0, driver.trackedServiceSequencerCountForTesting());
+    }
 
     @Test
     void observerIsDisabledByDefaultAndDoesNotChangeSnapshotIdentity() {
@@ -204,6 +313,91 @@ class TestSfxContentionObserver {
         return new SmpsSequencer(data, AudioTestFixtures.EMPTY_DAC, driver,
                 AudioManager.getInstance(), new SmpsSequencerConfig.Builder()
                 .fmChannelOrder(new int[] {2}).build());
+    }
+
+    private static SmpsSequencer oneTickSfx(SmpsDriver driver) {
+        return sfxSequencer(new LifecycleSfxData(true), driver);
+    }
+
+    private static SmpsSequencer longRunningSfx(SmpsDriver driver) {
+        return longRunningSfx(driver, 0xA0);
+    }
+
+    private static SmpsSequencer longRunningSfx(
+            SmpsDriver driver, int id) {
+        return sfxSequencer(new LifecycleSfxData(false, id), driver);
+    }
+
+    private static SmpsSequencer longRunningMusic(
+            SmpsDriver driver, int id) {
+        AbstractSmpsData data = new LifecycleMusicData(id);
+        SmpsSequencer sequencer = new SmpsSequencer(
+                data, AudioTestFixtures.EMPTY_DAC, driver,
+                AudioManager.getInstance(), new SmpsSequencerConfig.Builder()
+                .tempoMode(SmpsSequencerConfig.TempoMode.TIMEOUT)
+                .fmChannelOrder(new int[] {2}).build());
+        sequencer.setSampleRate(60.0);
+        return sequencer;
+    }
+
+    private static SmpsSequencer sfxSequencer(
+            AbstractSmpsData data, SmpsDriver driver) {
+        SmpsSequencer sequencer = new SmpsSequencer(
+                data, AudioTestFixtures.EMPTY_DAC, driver,
+                AudioManager.getInstance(), new SmpsSequencerConfig.Builder()
+                .tempoMode(SmpsSequencerConfig.TempoMode.TIMEOUT)
+                .fmChannelOrder(new int[] {2}).build());
+        sequencer.setSampleRate(60.0);
+        return sequencer;
+    }
+
+    private static final class LifecycleSfxData extends AbstractSmpsData
+            implements SmpsSfxData {
+        private LifecycleSfxData(boolean oneTick) {
+            this(oneTick, 0xA0);
+        }
+
+        private LifecycleSfxData(boolean oneTick, int id) {
+            super(oneTick
+                    ? new byte[] {0, (byte) 0xF2}
+                    : new byte[] {0, (byte) 0x81, 0x7F, (byte) 0xF2}, 0);
+            setId(id);
+        }
+
+        @Override public int getTickMultiplier() { return 1; }
+        @Override public List<? extends SmpsSfxTrack> getTrackEntries() {
+            return List.of(new SfxTrack(5, 1, 0, 0));
+        }
+        @Override protected void parseHeader() { dividingTiming = 1; tempo = 1; }
+        @Override public byte[] getVoice(int voiceId) { return new byte[25]; }
+        @Override public byte[] getPsgEnvelope(int id) { return null; }
+        @Override public int read16(int offset) { return 0; }
+        @Override public int getBaseNoteOffset() { return 0; }
+    }
+
+    private record SfxTrack(
+            int channelMask, int pointer, int transpose, int volume)
+            implements SmpsSfxData.SmpsSfxTrack {
+    }
+
+    private static final class LifecycleMusicData extends AbstractSmpsData {
+        private LifecycleMusicData(int id) {
+            super(new byte[] {0, (byte) 0x81, 0x7F, (byte) 0xF2}, 0);
+            setId(id);
+        }
+
+        @Override protected void parseHeader() {
+            channels = 1;
+            dividingTiming = 1;
+            tempo = 1;
+            fmPointers = new int[] {1};
+            fmKeyOffsets = new int[] {0};
+            fmVolumeOffsets = new int[] {0};
+        }
+        @Override public byte[] getVoice(int voiceId) { return new byte[25]; }
+        @Override public byte[] getPsgEnvelope(int id) { return null; }
+        @Override public int read16(int offset) { return 0; }
+        @Override public int getBaseNoteOffset() { return 0; }
     }
 
     private static final class SingleFmTrackData extends AbstractSmpsData {

@@ -841,7 +841,7 @@ public final class AudioPresentationSourceFactory
                             "SMPS driver service observer was re-entered");
                 }
                 activeEvent = new ServiceEvent(nextServiceOrdinal++,
-                        event.driver(), event.sequencer());
+                        event.driver(), event.sequencer(), event.kind());
                 ServiceEvent emitted = activeEvent;
                 diagnostics.emit(() ->
                         AudioDiagnosticObserverException.invoke(() ->

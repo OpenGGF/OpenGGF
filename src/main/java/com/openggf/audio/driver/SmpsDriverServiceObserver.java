@@ -66,13 +66,22 @@ public interface SmpsDriverServiceObserver {
         }
     }
 
+    /** The exact semantic mutation boundary represented by one service pair. */
+    enum ServiceKind {
+        SEQUENCER_TICK,
+        FADE_STEP,
+        COMPLETION_CLEANUP
+    }
+
     record ServiceEvent(
             long ordinal,
             DriverIdentity driver,
-            SequencerIdentity sequencer) {
+            SequencerIdentity sequencer,
+            ServiceKind kind) {
         public ServiceEvent {
             Objects.requireNonNull(driver, "driver");
             Objects.requireNonNull(sequencer, "sequencer");
+            Objects.requireNonNull(kind, "kind");
         }
     }
 

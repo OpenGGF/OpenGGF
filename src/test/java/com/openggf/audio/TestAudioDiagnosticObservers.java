@@ -15,6 +15,8 @@ import com.openggf.audio.driver.SmpsDriverServiceObserver;
 import com.openggf.audio.driver.SmpsDriverServiceObserver.LifecycleEvent;
 import com.openggf.audio.driver.SmpsDriverServiceObserver.LifecycleKind;
 import com.openggf.audio.driver.SmpsDriverServiceObserver.LifecycleScope;
+import com.openggf.audio.driver.SmpsDriverServiceObserver.ServiceKind;
+import com.openggf.audio.driver.SmpsDriverServiceObserver.ServiceEvent;
 import com.openggf.audio.driver.SmpsRequestAdmissionPolicy;
 import com.openggf.audio.driver.SmpsRequestAdmissionPolicy.AdmissionResult;
 import com.openggf.audio.driver.SmpsRequestAdmissionPolicy.RejectionReason;
@@ -115,15 +117,19 @@ class TestAudioDiagnosticObservers {
         });
         audio.setDriverServiceObserver(new SmpsDriverServiceObserver() {
             @Override
-            public void onServiceBegin(long ordinal) {
-                begins.add(ordinal);
+            public void onServiceBegin(ServiceEvent event) {
+                if (event.kind() == ServiceKind.SEQUENCER_TICK) {
+                    begins.add(event.ordinal());
+                }
             }
 
             @Override
             public void onServiceEnd(
-                    long ordinal, SmpsDriverSnapshot snapshot) {
+                    ServiceEvent event, SmpsDriverSnapshot snapshot) {
                 assertNotNull(snapshot);
-                ends.add(ordinal);
+                if (event.kind() == ServiceKind.SEQUENCER_TICK) {
+                    ends.add(event.ordinal());
+                }
             }
 
             @Override
@@ -444,8 +450,10 @@ class TestAudioDiagnosticObservers {
         backend.setDriverServiceObserver(new SmpsDriverServiceObserver() {
             @Override
             public void onServiceEnd(
-                    long ordinal, SmpsDriverSnapshot snapshot) {
-                serviceEnds.add(ordinal);
+                    ServiceEvent event, SmpsDriverSnapshot snapshot) {
+                if (event.kind() == ServiceKind.SEQUENCER_TICK) {
+                    serviceEnds.add(event.ordinal());
+                }
             }
 
             @Override
@@ -691,7 +699,8 @@ class TestAudioDiagnosticObservers {
         driver.setServiceObserver(new SmpsDriverServiceObserver() {
             @Override
             public void onServiceBegin(ServiceEvent event) {
-                services.add("begin:" + event.ordinal() + ":"
+                services.add("begin:" + event.kind() + ":"
+                        + event.ordinal() + ":"
                         + event.sequencer().source().id());
             }
 
@@ -699,7 +708,8 @@ class TestAudioDiagnosticObservers {
             public void onServiceEnd(
                     ServiceEvent event, SmpsDriverSnapshot snapshot) {
                 assertNotNull(snapshot);
-                services.add("end:" + event.ordinal() + ":"
+                services.add("end:" + event.kind() + ":"
+                        + event.ordinal() + ":"
                         + event.sequencer().source().id());
             }
         });
@@ -713,67 +723,197 @@ class TestAudioDiagnosticObservers {
 
         restoreTempoState(music, 10, 250, 1, 0);
         driver.read(new short[20]);
-        assertEquals(List.of("begin:0:129", "end:0:129"), services);
+        assertEquals(List.of(
+                "begin:SEQUENCER_TICK:0:129",
+                "end:SEQUENCER_TICK:0:129"), services);
 
         services.clear();
         restoreTempoState(music, 10, 250, 3, 0);
         driver.read(new short[20]);
         assertEquals(List.of(
-                "begin:1:129", "end:1:129",
-                "begin:2:129", "end:2:129",
-                "begin:3:129", "end:3:129"), services,
+                "begin:SEQUENCER_TICK:1:129",
+                "end:SEQUENCER_TICK:1:129",
+                "begin:SEQUENCER_TICK:2:129",
+                "end:SEQUENCER_TICK:2:129",
+                "begin:SEQUENCER_TICK:3:129",
+                "end:SEQUENCER_TICK:3:129"), services,
                 "one OVERFLOW2 tempo frame that invokes tick three times"
                         + " emits three distinct ordered services");
     }
 
     @Test
-    void tempoServiceBracketsAllWritesAndPublishesPostServiceState() {
+    void speedupSubticksConsumeSfxBudgetOnlyOnTheFinalLiteralTick() {
         SmpsDriver driver = new SmpsDriver(60.0);
+        SmpsSequencerConfig config = new SmpsSequencerConfig.Builder()
+                .tempoMode(SmpsSequencerConfig.TempoMode.OVERFLOW2)
+                .tempoModBase(0x100)
+                .fmChannelOrder(new int[] {2}).build();
         SmpsSequencer sfx = new SmpsSequencer(
-                new OneTickFmSfxData(), AudioTestFixtures.EMPTY_DAC,
-                driver, audio, new SmpsSequencerConfig.Builder().build());
+                new LongRunningFmSfxData(), AudioTestFixtures.EMPTY_DAC,
+                driver, audio, config);
         sfx.setSampleRate(60.0);
+        driver.addSequencer(sfx, true);
+        restoreDiagnosticState(sfx, 10, 250, 3, 0, 2,
+                sfx.captureSnapshot().fade());
+        List<Integer> maxTicksAfterService = new ArrayList<>();
+        driver.setServiceObserver(new SmpsDriverServiceObserver() {
+            @Override
+            public void onServiceEnd(
+                    ServiceEvent event, SmpsDriverSnapshot snapshot) {
+                if (event.kind() == ServiceKind.SEQUENCER_TICK) {
+                    maxTicksAfterService.add(snapshot.sequencers()
+                            .getFirst().snapshot().maxTicks());
+                }
+            }
+        });
+
+        driver.read(new short[2]);
+
+        assertEquals(List.of(2, 2, 1), maxTicksAfterService,
+                "speed-up adds literal sequencer ticks but the shipped SFX"
+                        + " budget still decrements once per tempo frame,"
+                        + " on its final tick");
+    }
+
+    @Test
+    void fadeOnlyFrameIsOneTypedServiceAndNoFadeZeroTickIsNone() {
+        SmpsDriver driver = new SmpsDriver(60.0);
+        SmpsSequencerConfig config = new SmpsSequencerConfig.Builder()
+                .tempoMode(SmpsSequencerConfig.TempoMode.OVERFLOW2)
+                .tempoModBase(0x100)
+                .fmChannelOrder(new int[] {2}).build();
+        AbstractSmpsData musicData = new LongRunningMusicData();
+        SmpsSequencer music = new SmpsSequencer(
+                musicData, AudioTestFixtures.EMPTY_DAC,
+                driver, audio, config);
+        music.setSampleRate(60.0);
+        driver.addSequencer(music, false);
         List<String> events = new ArrayList<>();
+        ServiceEvent[] active = {null};
         driver.setChipWriteObserver(new ChipWriteObserver() {
             @Override
             public void onYm2612Write(int port, int register, int value) {
-                events.add("write");
+                assertNotNull(active[0], "fade write must be service-scoped");
+                events.add("write:" + active[0].kind());
             }
 
             @Override
             public void onPsgWrite(int value) {
-                events.add("write");
+                assertNotNull(active[0], "fade write must be service-scoped");
+                events.add("write:" + active[0].kind());
+            }
+        });
+        driver.setServiceObserver(scopedServiceObserver(events, active));
+
+        restoreDiagnosticState(music, 10, 0, 1, 0,
+                Integer.MAX_VALUE,
+                music.captureSnapshot().fade());
+        driver.read(new short[2]);
+        assertEquals(List.of(), events,
+                "a zero-tick tempo frame with no fade has no service");
+
+        restoreDiagnosticState(music, 10, 0, 1, 0,
+                Integer.MAX_VALUE,
+                new SmpsSequencerSnapshot.FadeSnapshot(
+                        1, 0, 0, 1, 1, true, true));
+        driver.read(new short[2]);
+
+        assertEquals("begin:FADE_STEP:0", events.getFirst());
+        assertEquals("end:FADE_STEP:0", events.getLast());
+        assertTrue(events.subList(1, events.size() - 1).stream()
+                .allMatch("write:FADE_STEP"::equals));
+        assertTrue(events.size() > 2,
+                "an actual fade volume step writes inside its service");
+    }
+
+    @Test
+    void finalSfxTickAndCompletionCleanupBracketEveryWrite() {
+        SmpsDriver driver = new SmpsDriver(60.0);
+        SmpsSequencer sfx = new SmpsSequencer(
+                new LongRunningFmSfxData(), AudioTestFixtures.EMPTY_DAC,
+                driver, audio, new SmpsSequencerConfig.Builder().build());
+        sfx.setSampleRate(60.0);
+        List<String> events = new ArrayList<>();
+        ServiceEvent[] active = {null};
+        AtomicInteger finalTickKeyOffs = new AtomicInteger();
+        int[] lastTickYmWrite = {-1, -1};
+        driver.addSequencer(sfx, true);
+        restoreDiagnosticState(sfx, 1, 255, 1, 0, 1,
+                sfx.captureSnapshot().fade());
+        driver.setChipWriteObserver(new ChipWriteObserver() {
+            @Override
+            public void onYm2612Write(int port, int register, int value) {
+                assertNotNull(active[0], "YM write escaped a service");
+                events.add("write:" + active[0].kind());
+                if (active[0].kind() == ServiceKind.SEQUENCER_TICK) {
+                    lastTickYmWrite[0] = register;
+                    lastTickYmWrite[1] = value;
+                    if (register == 0x28 && (value & 0xF0) == 0) {
+                        finalTickKeyOffs.incrementAndGet();
+                    }
+                }
+            }
+
+            @Override
+            public void onPsgWrite(int value) {
+                assertNotNull(active[0], "PSG write escaped a service");
+                events.add("write:" + active[0].kind());
             }
         });
         driver.setServiceObserver(new SmpsDriverServiceObserver() {
             @Override
             public void onServiceBegin(ServiceEvent event) {
-                assertEquals(0xA0, event.sequencer().source().id());
+                assertEquals(null, active[0], "services must not nest");
+                assertEquals(0xA2, event.sequencer().source().id());
                 assertTrue(event.sequencer().sfx());
-                events.add("begin:" + event.ordinal());
+                active[0] = event;
+                events.add("begin:" + event.kind() + ":" + event.ordinal());
             }
 
             @Override
             public void onServiceEnd(
                     ServiceEvent event, SmpsDriverSnapshot snapshot) {
-                assertFalse(snapshot.sequencers().getFirst().snapshot()
-                                .tracks().getFirst().active(),
-                        "the end callback carries state after the semantic"
-                                + " tick, before outer driver cleanup");
-                events.add("end:" + event.ordinal());
+                assertSame(active[0], event);
+                if (event.kind() == ServiceKind.SEQUENCER_TICK) {
+                    assertFalse(snapshot.sequencers().getFirst().snapshot()
+                                    .tracks().getFirst().active(),
+                            "maxTicks expiry belongs to the final literal tick");
+                } else if (event.kind() == ServiceKind.COMPLETION_CLEANUP) {
+                    assertEquals(List.of(), snapshot.sequencers(),
+                            "cleanup publishes post-removal state");
+                    assertTrue(java.util.Arrays.stream(
+                                    snapshot.fmLockSequencerIds())
+                            .allMatch(lock -> lock == -1),
+                            "cleanup publishes post-release lock state");
+                }
+                events.add("end:" + event.kind() + ":" + event.ordinal());
+                active[0] = null;
             }
         });
-        driver.addSequencer(sfx, true);
 
         driver.read(new short[2]);
 
-        assertEquals("begin:0", events.getFirst());
-        int end = events.indexOf("end:0");
-        assertTrue(end > 1);
-        assertTrue(events.subList(1, end).stream()
-                .allMatch("write"::equals));
-        assertTrue(end > 1,
-                "the real tick must produce a write inside its service pair");
+        int tickEnd = events.indexOf("end:SEQUENCER_TICK:0");
+        int cleanupBegin = events.indexOf("begin:COMPLETION_CLEANUP:1");
+        assertEquals("begin:SEQUENCER_TICK:0", events.getFirst());
+        assertTrue(tickEnd > 1);
+        assertTrue(events.subList(1, tickEnd).stream()
+                .allMatch("write:SEQUENCER_TICK"::equals),
+                "the expiry stopNote write belongs to the final tick");
+        assertTrue(finalTickKeyOffs.get() >= 1,
+                "maxTicks expiry keys off the still-running FM track"
+                        + " before the final tick ends");
+        assertEquals(0x28, lastTickYmWrite[0]);
+        assertEquals(0, lastTickYmWrite[1] & 0xF0,
+                "the expiry key-off is the final YM mutation of the tick");
+        assertEquals(tickEnd + 1, cleanupBegin);
+        assertEquals("end:COMPLETION_CLEANUP:1", events.getLast());
+        assertTrue(events.subList(cleanupBegin + 1, events.size() - 1)
+                .stream().allMatch("write:COMPLETION_CLEANUP"::equals),
+                "forceSilence writes belong to completion cleanup");
+        assertTrue(events.size() - cleanupBegin > 2,
+                "completion cleanup includes forceSilence writes");
+        assertEquals(null, active[0]);
     }
 
     @Test
@@ -797,7 +937,9 @@ class TestAudioDiagnosticObservers {
         driver.setServiceObserver(new SmpsDriverServiceObserver() {
             @Override
             public void onServiceBegin(ServiceEvent event) {
-                order.add(event.sequencer().source().id());
+                if (event.kind() == ServiceKind.SEQUENCER_TICK) {
+                    order.add(event.sequencer().source().id());
+                }
             }
         });
 
@@ -1163,15 +1305,51 @@ class TestAudioDiagnosticObservers {
             int speedMultiplier,
             int speedupTimeout) {
         SmpsSequencerSnapshot state = sequencer.captureSnapshot();
+        restoreDiagnosticState(sequencer, tempoWeight, tempoAccumulator,
+                speedMultiplier, speedupTimeout, state.maxTicks(),
+                state.fade());
+    }
+
+    private static void restoreDiagnosticState(
+            SmpsSequencer sequencer,
+            int tempoWeight,
+            int tempoAccumulator,
+            int speedMultiplier,
+            int speedupTimeout,
+            int maxTicks,
+            SmpsSequencerSnapshot.FadeSnapshot fade) {
+        SmpsSequencerSnapshot state = sequencer.captureSnapshot();
         sequencer.restoreSnapshot(new SmpsSequencerSnapshot(
                 state.region(), state.speedShoes(), state.sfxMode(),
                 state.normalTempo(), state.commData(), state.fm6DacOff(),
-                state.maxTicks(), state.pitch(), state.sfxPriority(),
+                maxTicks, state.pitch(), state.sfxPriority(),
                 state.specialSfx(), state.sfx(), state.psgLatchChannel(),
-                speedMultiplier, speedupTimeout, state.fade(),
+                speedMultiplier, speedupTimeout, fade,
                 state.sampleRate(), state.samplesPerFrame(), 0.0,
                 tempoWeight, tempoAccumulator, state.dividingTiming(),
                 state.primed(), state.tracks()));
+    }
+
+    private static SmpsDriverServiceObserver scopedServiceObserver(
+            List<String> events,
+            SmpsDriverServiceObserver.ServiceEvent[] active) {
+        return new SmpsDriverServiceObserver() {
+            @Override
+            public void onServiceBegin(ServiceEvent event) {
+                assertEquals(null, active[0], "services must not nest");
+                active[0] = event;
+                events.add("begin:" + event.kind() + ":" + event.ordinal());
+            }
+
+            @Override
+            public void onServiceEnd(
+                    ServiceEvent event, SmpsDriverSnapshot snapshot) {
+                assertSame(active[0], event);
+                assertNotNull(snapshot);
+                events.add("end:" + event.kind() + ":" + event.ordinal());
+                active[0] = null;
+            }
+        };
     }
 
     private static void serviceOneTick(SmpsDriver driver, int soundId) {
@@ -1406,6 +1584,24 @@ class TestAudioDiagnosticObservers {
             return List.of(new SfxTrack(5, 1, 0, 0));
         }
 
+        @Override protected void parseHeader() { dividingTiming = 1; tempo = 1; }
+        @Override public byte[] getVoice(int voiceId) { return new byte[25]; }
+        @Override public byte[] getPsgEnvelope(int id) { return null; }
+        @Override public int read16(int offset) { return 0; }
+        @Override public int getBaseNoteOffset() { return 0; }
+    }
+
+    private static final class LongRunningFmSfxData extends AbstractSmpsData
+            implements SmpsSfxData {
+        private LongRunningFmSfxData() {
+            super(new byte[] {0, (byte) 0x81, 0x7F, (byte) 0xF2}, 0);
+            setId(0xA2);
+        }
+
+        @Override public int getTickMultiplier() { return 1; }
+        @Override public List<? extends SmpsSfxTrack> getTrackEntries() {
+            return List.of(new SfxTrack(5, 1, 0, 0));
+        }
         @Override protected void parseHeader() { dividingTiming = 1; tempo = 1; }
         @Override public byte[] getVoice(int voiceId) { return new byte[25]; }
         @Override public byte[] getPsgEnvelope(int id) { return null; }

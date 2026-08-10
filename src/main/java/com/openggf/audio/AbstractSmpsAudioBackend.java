@@ -775,7 +775,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                             "SMPS driver service observer was re-entered");
                 }
                 activeEvent = new ServiceEvent(nextServiceOrdinal++,
-                        event.driver(), event.sequencer());
+                        event.driver(), event.sequencer(), event.kind());
                 ServiceEvent emitted = activeEvent;
                 AudioDiagnosticObserverException.invoke(() ->
                         observer.onServiceBegin(emitted));
