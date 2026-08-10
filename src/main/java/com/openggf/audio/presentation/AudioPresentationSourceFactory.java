@@ -823,6 +823,21 @@ public final class AudioPresentationSourceFactory
         }
 
         @Override
+        protected byte[] materializeVoiceForSequencer(int voiceId) {
+            return copyAt(voices, voiceId);
+        }
+
+        @Override
+        protected byte[] materializePsgEnvelopeForSequencer(int envelopeId) {
+            return copyAt(psgEnvelopes, envelopeId);
+        }
+
+        @Override
+        protected byte[] materializeModEnvelopeForSequencer(int envelopeId) {
+            return copyAt(modEnvelopes, envelopeId);
+        }
+
+        @Override
         public int read16(int offset) {
             if (offset < 0 || offset >= words.length) {
                 throw new IndexOutOfBoundsException(offset);

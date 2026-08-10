@@ -1738,12 +1738,10 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
 
     @Override
     public void loadVoice(Track t, int voiceId) {
-        SmpsProgramView source = programView;
-        if (source.voiceLength(voiceId) == 0
-                && fallbackVoiceView != null) {
-            source = fallbackVoiceView;
+        byte[] voice = copyVoice(programView, voiceId);
+        if (voice == null && fallbackVoiceView != null) {
+            voice = copyVoice(fallbackVoiceView, voiceId);
         }
-        byte[] voice = copyVoice(source, voiceId);
         if (voice != null) {
             t.voiceData = voice;
             t.voiceId = voiceId;
@@ -1763,6 +1761,9 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
 
     private static byte[] copyVoice(
             SmpsProgramView source, int voiceId) {
+        if (source instanceof AbstractSmpsData data) {
+            return data.materializeVoiceForSequencer(voiceId);
+        }
         int length = source.voiceLength(voiceId);
         if (length == 0) {
             return null;
@@ -1776,6 +1777,9 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
 
     private static byte[] copyPsgEnvelope(
             SmpsProgramView source, int envelopeId) {
+        if (source instanceof AbstractSmpsData data) {
+            return data.materializePsgEnvelopeForSequencer(envelopeId);
+        }
         int length = source.psgEnvelopeLength(envelopeId);
         if (length == 0) {
             return null;
@@ -1789,6 +1793,9 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
 
     private static byte[] copyModEnvelope(
             SmpsProgramView source, int envelopeId) {
+        if (source instanceof AbstractSmpsData data) {
+            return data.materializeModEnvelopeForSequencer(envelopeId);
+        }
         int length = source.modEnvelopeLength(envelopeId);
         if (length == 0) {
             return null;

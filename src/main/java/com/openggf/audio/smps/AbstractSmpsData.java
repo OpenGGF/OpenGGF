@@ -239,6 +239,26 @@ public abstract class AbstractSmpsData implements SmpsProgramView {
         return getModEnvelope(envelopeId)[index];
     }
 
+    /**
+     * Stateless compatibility lookup for sequencers consuming a legacy
+     * loader. This intentionally preserves the historical one-getter-result
+     * ownership used by raw playback. Frozen programs override it to return a
+     * defensive copy of their private backing table.
+     */
+    protected byte[] materializeVoiceForSequencer(int voiceId) {
+        return getVoice(voiceId);
+    }
+
+    /** See {@link #materializeVoiceForSequencer(int)}. */
+    protected byte[] materializePsgEnvelopeForSequencer(int envelopeId) {
+        return getPsgEnvelope(envelopeId);
+    }
+
+    /** See {@link #materializeVoiceForSequencer(int)}. */
+    protected byte[] materializeModEnvelopeForSequencer(int envelopeId) {
+        return getModEnvelope(envelopeId);
+    }
+
     private static int valueAt(int[] values, int index) {
         return index < values.length ? values[index] : 0;
     }

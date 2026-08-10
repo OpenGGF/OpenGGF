@@ -19,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -51,6 +52,63 @@ class TestFrozenSmpsDataImmutability {
                 () -> frozen.setPalSpeedupDisabled(false));
         assertEquals(0x91, frozen.getId());
         assertTrue(frozen.isPalSpeedupDisabled());
+    }
+
+    @Test
+    void legacyIndexedReadsAllocateEachVoiceAndEnvelopeOnlyOnce() {
+        CountingAllocatingSmpsData source =
+                CountingAllocatingSmpsData.withTracks();
+
+        SmpsSequencer sequencer = new SmpsSequencer(
+                source, EMPTY_DAC, AudioManager.getInstance(),
+                indexedConfig());
+
+        assertEquals(1, source.voiceReads);
+        assertEquals(1, source.psgEnvelopeReads);
+        assertEquals(1, source.modEnvelopeReads);
+        assertEquals(3, source.allocations);
+        assertEquals(2, sequencer.getTracks().size());
+        SmpsSequencer.Track fm = sequencer.getTracks().get(0);
+        SmpsSequencer.Track psg = sequencer.getTracks().get(1);
+        assertEquals(1, fm.pos);
+        assertEquals(11, fm.keyOffset);
+        assertEquals(12, fm.volumeOffset);
+        assertArrayEquals(CountingAllocatingSmpsData.VOICE, fm.voiceData);
+        assertEquals(8, psg.pos);
+        assertEquals(13, psg.keyOffset);
+        assertEquals(14, psg.volumeOffset);
+        assertArrayEquals(CountingAllocatingSmpsData.PSG_ENVELOPE,
+                psg.envData);
+        assertArrayEquals(CountingAllocatingSmpsData.MOD_ENVELOPE,
+                psg.modEnvData);
+        assertSame(source.lastVoice, fm.voiceData);
+        assertSame(source.lastPsgEnvelope, psg.envData);
+        assertSame(source.lastModEnvelope, psg.modEnvData);
+        assertEquals(0xF2,
+                sequencer.programView().dataByteAt(fm.pos) & 0xFF);
+    }
+
+    @Test
+    void fallbackVoiceUsesOneBoundedReadFromEachLegacyProgram() {
+        CountingAllocatingSmpsData primary =
+                CountingAllocatingSmpsData.withoutVoice();
+        CountingAllocatingSmpsData fallback =
+                CountingAllocatingSmpsData.withFallbackVoice();
+        SmpsSequencer sequencer = new SmpsSequencer(
+                primary, EMPTY_DAC, AudioManager.getInstance(),
+                new SmpsSequencerConfig.Builder().build());
+        sequencer.setFallbackVoiceData(fallback);
+        SmpsSequencer.Track track = new SmpsSequencer.Track(
+                0, SmpsSequencer.TrackType.FM, 0);
+
+        sequencer.loadVoice(track, 7);
+
+        assertEquals(1, primary.voiceReads);
+        assertEquals(1, fallback.voiceReads);
+        assertEquals(1, fallback.allocations);
+        assertArrayEquals(CountingAllocatingSmpsData.VOICE,
+                track.voiceData);
+        assertSame(fallback.lastVoice, track.voiceData);
     }
 
     @Test
@@ -97,6 +155,13 @@ class TestFrozenSmpsDataImmutability {
                         new DecodedPcmCache(), ignored -> null));
     }
 
+    private static SmpsSequencerConfig indexedConfig() {
+        return new SmpsSequencerConfig.Builder()
+                .fmChannelOrder(new int[] {0})
+                .psgChannelOrder(new int[] {0x80})
+                .build();
+    }
+
     private static AbstractSmpsData program(
             AudioPresentationSourceFactory factory,
             AudioPresentationCommand.MusicVoiceEntry entry) {
@@ -122,11 +187,11 @@ class TestFrozenSmpsDataImmutability {
     }
 
     private static void assertOriginalValues(AbstractSmpsData frozen) {
-        assertArrayEquals(new byte[] {1, 2, 3}, frozen.getData());
-        assertArrayEquals(new int[] {0}, frozen.getFmPointers());
+        assertArrayEquals(MutableSmpsData.PROGRAM, frozen.getData());
+        assertArrayEquals(new int[] {1}, frozen.getFmPointers());
         assertArrayEquals(new int[] {11}, frozen.getFmKeyOffsets());
         assertArrayEquals(new int[] {12}, frozen.getFmVolumeOffsets());
-        assertArrayEquals(new int[] {0}, frozen.getPsgPointers());
+        assertArrayEquals(new int[] {8}, frozen.getPsgPointers());
         assertArrayEquals(new int[] {13}, frozen.getPsgKeyOffsets());
         assertArrayEquals(new int[] {14}, frozen.getPsgVolumeOffsets());
         assertArrayEquals(new int[] {15}, frozen.getPsgModEnvs());
@@ -134,9 +199,33 @@ class TestFrozenSmpsDataImmutability {
         assertArrayEquals(new byte[] {17, 18}, frozen.getVoice(7));
         assertArrayEquals(new byte[] {19, 20}, frozen.getPsgEnvelope(8));
         assertArrayEquals(new byte[] {21, 22}, frozen.getModEnvelope(9));
+
+        SmpsProgramView view = frozen;
+        assertEquals(MutableSmpsData.PROGRAM.length, view.dataLength());
+        assertEquals(0xF2, view.dataByteAt(1) & 0xFF);
+        assertEquals(1, view.fmPointerCount());
+        assertEquals(1, view.fmPointerAt(0));
+        assertEquals(11, view.fmKeyOffsetAt(0));
+        assertEquals(12, view.fmVolumeOffsetAt(0));
+        assertEquals(1, view.psgPointerCount());
+        assertEquals(8, view.psgPointerAt(0));
+        assertEquals(13, view.psgKeyOffsetAt(0));
+        assertEquals(14, view.psgVolumeOffsetAt(0));
+        assertEquals(15, view.psgModEnvelopeAt(0));
+        assertEquals(16, view.psgInstrumentAt(0));
+        assertEquals(2, view.voiceLength(7));
+        assertEquals(17, view.voiceByteAt(7, 0));
+        assertEquals(2, view.psgEnvelopeLength(8));
+        assertEquals(19, view.psgEnvelopeByteAt(8, 0));
+        assertEquals(2, view.modEnvelopeLength(9));
+        assertEquals(21, view.modEnvelopeByteAt(9, 0));
     }
 
     private static final class MutableSmpsData extends AbstractSmpsData {
+        private static final byte[] PROGRAM = {
+                1, (byte) 0xF2, 0, 0, 0, 0, 0, 0,
+                (byte) 0xF2, 0, 0, 0, 0, 0, 0, 0
+        };
         private final byte[] voice;
         private final byte[] psgEnvelope;
         private final byte[] modEnvelope;
@@ -172,9 +261,9 @@ class TestFrozenSmpsDataImmutability {
 
         static MutableSmpsData complete() {
             return new MutableSmpsData(
-                    new byte[] {1, 2, 3},
-                    new int[] {0}, new int[] {11}, new int[] {12},
-                    new int[] {0}, new int[] {13}, new int[] {14},
+                    PROGRAM.clone(),
+                    new int[] {1}, new int[] {11}, new int[] {12},
+                    new int[] {8}, new int[] {13}, new int[] {14},
                     new int[] {15}, new int[] {16},
                     new byte[] {17, 18}, new byte[] {19, 20},
                     new byte[] {21, 22});
@@ -226,5 +315,94 @@ class TestFrozenSmpsDataImmutability {
         public int getBaseNoteOffset() {
             return 0;
         }
+    }
+
+    private static final class CountingAllocatingSmpsData
+            extends AbstractSmpsData {
+        private static final byte[] VOICE = {
+                1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+                11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+                21, 22, 23, 24, 25
+        };
+        private static final byte[] PSG_ENVELOPE = {3, 4, (byte) 0x81};
+        private static final byte[] MOD_ENVELOPE = {5, 6, (byte) 0x81};
+
+        private final int voiceId;
+        private int voiceReads;
+        private int psgEnvelopeReads;
+        private int modEnvelopeReads;
+        private int allocations;
+        private byte[] lastVoice;
+        private byte[] lastPsgEnvelope;
+        private byte[] lastModEnvelope;
+
+        private CountingAllocatingSmpsData(
+                int voiceId, boolean tracks) {
+            super(new byte[] {
+                    0, (byte) 0xF2, 0, 0, 0, 0, 0, 0,
+                    (byte) 0xF2, 0, 0, 0, 0, 0, 0, 0
+            }, 0);
+            this.voiceId = voiceId;
+            if (tracks) {
+                fmPointers = new int[] {1};
+                fmKeyOffsets = new int[] {11};
+                fmVolumeOffsets = new int[] {12};
+                psgPointers = new int[] {8};
+                psgKeyOffsets = new int[] {13};
+                psgVolumeOffsets = new int[] {14};
+                psgModEnvs = new int[] {9};
+                psgInstruments = new int[] {8};
+            }
+        }
+
+        static CountingAllocatingSmpsData withTracks() {
+            return new CountingAllocatingSmpsData(0, true);
+        }
+
+        static CountingAllocatingSmpsData withoutVoice() {
+            return new CountingAllocatingSmpsData(-1, false);
+        }
+
+        static CountingAllocatingSmpsData withFallbackVoice() {
+            return new CountingAllocatingSmpsData(7, false);
+        }
+
+        @Override protected void parseHeader() { }
+
+        @Override
+        public byte[] getVoice(int requestedVoiceId) {
+            voiceReads++;
+            if (requestedVoiceId != voiceId) {
+                return null;
+            }
+            allocations++;
+            lastVoice = VOICE.clone();
+            return lastVoice;
+        }
+
+        @Override
+        public byte[] getPsgEnvelope(int id) {
+            psgEnvelopeReads++;
+            if (id != 8) {
+                return null;
+            }
+            allocations++;
+            lastPsgEnvelope = PSG_ENVELOPE.clone();
+            return lastPsgEnvelope;
+        }
+
+        @Override
+        public byte[] getModEnvelope(int id) {
+            modEnvelopeReads++;
+            if (id != 9) {
+                return null;
+            }
+            allocations++;
+            lastModEnvelope = MOD_ENVELOPE.clone();
+            return lastModEnvelope;
+        }
+
+        @Override public int read16(int offset) { return 0; }
+        @Override public int getBaseNoteOffset() { return 0; }
     }
 }
