@@ -120,6 +120,54 @@ class TestCompleteRunAudioReplayCadence {
         assertFailureContains(incomplete, "coordinator");
     }
 
+    @Test
+    void rejectsCoordinatorCompletionBeforeTheFinalRow() {
+        for (int earlyRow : List.of(8, 4, 10)) {
+            SyntheticDriver driver = SyntheticDriver.compactRun();
+            driver.completeAtRow = earlyRow;
+
+            IllegalStateException failure = assertThrows(
+                    IllegalStateException.class,
+                    () -> VisualRunReplayHarness.driveCompleteAudioCadence(
+                            new VisualRunReplayHarness.CompleteAudioStop(
+                                    2, 12, 2),
+                            VisualRunReplayHarness.FrameObserver.NONE, driver),
+                    "early completion at row " + earlyRow);
+
+            assertTrue(failure.getMessage().contains(
+                    "coordinator completed before final row"),
+                    failure.getMessage());
+        }
+    }
+
+    @Test
+    void observesCompletionAfterFinalPresentationButReturnsExclusiveCursor()
+            throws Exception {
+        SyntheticDriver driver = SyntheticDriver.compactRun();
+
+        VisualRunReplayHarness.CompleteAudioCadenceResult result =
+                VisualRunReplayHarness.driveCompleteAudioCadence(
+                        new VisualRunReplayHarness.CompleteAudioStop(2, 12, 2),
+                        VisualRunReplayHarness.FrameObserver.NONE, driver);
+
+        assertEquals(11, driver.cursor(),
+                "production cursor remains pinned to the final valid row");
+        assertEquals(12, result.exclusiveCursor(),
+                "capture result exposes the semantic exclusive cursor");
+        int completion = driver.events.indexOf("complete:11");
+        assertTrue(completion >= 0);
+        assertTrue(driver.events.get(completion + 1).startsWith("present:"));
+        assertTrue(driver.events.get(completion + 2).startsWith("audio:"));
+    }
+
+    @Test
+    void rejectsRawCursorAdvancingToExclusiveEnd() {
+        SyntheticDriver driver = SyntheticDriver.compactRun();
+        driver.rawExclusiveAtMovieEnd = true;
+
+        assertFailureContains(driver, "raw terminal cursor");
+    }
+
     private static void assertFailureContains(
             SyntheticDriver driver, String expected) {
         IllegalStateException failure = assertThrows(IllegalStateException.class,
@@ -177,9 +225,11 @@ class TestCompleteRunAudioReplayCadence {
         private int abortAtRow = -1;
         private int stopPlaybackAtRow = -1;
         private int jumpAtRow = -1;
+        private int completeAtRow = -1;
         private int presentationDelta = 1;
         private int audioUpdateDelta = 1;
         private boolean completeAtMovieEnd = true;
+        private boolean rawExclusiveAtMovieEnd;
         private long presentations;
         private long audioUpdates;
 
@@ -261,13 +311,20 @@ class TestCompleteRunAudioReplayCadence {
             if (consumed == abortAtRow) {
                 abortDiagnostic = "synthetic mismatch";
             }
+            if (consumed == completeAtRow) {
+                complete = true;
+            }
             if (consumed == jumpAtRow) {
                 cursor += 2;
                 return;
             }
             if (consumed == exclusiveEnd - 1) {
+                events.add("complete:" + consumed);
                 playing = false;
                 complete = completeAtMovieEnd;
+                if (rawExclusiveAtMovieEnd) {
+                    cursor = exclusiveEnd;
+                }
             } else {
                 cursor++;
                 if (consumed == stopPlaybackAtRow) {

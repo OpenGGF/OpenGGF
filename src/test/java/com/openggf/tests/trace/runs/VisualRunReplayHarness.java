@@ -507,6 +507,11 @@ public final class VisualRunReplayHarness {
             }
 
             boolean finalRow = expectedCursor == stop.exclusiveEnd() - 1;
+            if (!finalRow && driver.coordinatorComplete()) {
+                throw new IllegalStateException(
+                        "complete-audio coordinator completed before final row "
+                                + expectedCursor);
+            }
             if (!finalRow) {
                 if (cursorAfter != expectedCursor + 1) {
                     throw new IllegalStateException(
@@ -522,16 +527,26 @@ public final class VisualRunReplayHarness {
                 // PlaybackTimelineController pins its raw cursor to the final
                 // valid row when playback ends. The semantic terminal cursor
                 // is nevertheless the movie's exclusive frame count.
-                if (cursorAfter != expectedCursor
-                        && cursorAfter != stop.exclusiveEnd()) {
+                if (cursorAfter != expectedCursor) {
                     throw new IllegalStateException(
-                            "complete-audio terminal cursor jump after row "
-                                    + expectedCursor + ": got " + cursorAfter);
+                            "complete-audio raw terminal cursor must remain "
+                                    + "pinned to " + expectedCursor + ", got "
+                                    + cursorAfter);
                 }
                 if (driver.playbackPlaying()) {
                     throw new IllegalStateException(
                             "complete-audio movie still playing at exclusive end "
                                     + stop.exclusiveEnd());
+                }
+                // Completion is observed only after the final row's step,
+                // outer presentation, audio update, and contained-abort check.
+                // This keeps trace/comparator ownership live through every
+                // earlier semantic row while still stopping without another
+                // host presentation after the movie endpoint.
+                if (!driver.coordinatorComplete()) {
+                    throw new IllegalStateException(
+                            "complete-audio movie reached exclusive end before "
+                                    + "the run coordinator completed");
                 }
             }
 
@@ -544,11 +559,6 @@ public final class VisualRunReplayHarness {
         if (!baselineObserved) {
             throw new IllegalStateException(
                     "complete-audio epoch ended without a baseline");
-        }
-        if (!driver.coordinatorComplete()) {
-            throw new IllegalStateException(
-                    "complete-audio movie reached exclusive end before the "
-                            + "run coordinator completed");
         }
         int presentations = Math.toIntExact(driver.outerPresentationCount());
         int updates = Math.toIntExact(driver.audioUpdateCount());
