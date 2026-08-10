@@ -79,13 +79,14 @@ must remain within a small fixed tolerance between the fixtures.
 ### 1. Session-owned immutable asset catalog
 
 `AudioPresentationSourceFactory` remains the owner of presentation assets. Its
-SFX map changes from a repeatedly overwritten warm cache into an immutable
-session catalog. The catalog has two levels:
+SFX map and per-play music snapshots change into one immutable SMPS session
+catalog. The catalog has two levels:
 
 - a game/session dependency entry containing the read-only DAC bank and static
   sequencer configuration; and
-- one SFX program entry per `SmpsAssetKey`, referring to that shared dependency
-  entry rather than embedding another copy of the full DAC bank.
+- one program entry per generation-bearing SMPS asset identity, covering both
+  SFX and music, referring to that shared dependency entry rather than
+  embedding another copy of the full DAC bank.
 
 This distinction is required: copying a DAC bank once for every distinct SFX
 would trade burst allocation for retained duplication and would still be the
@@ -95,8 +96,9 @@ The registration operation will have these semantics:
 
 - On the first game/session dependency key, defensively freeze the DAC bank and
   static sequencer configuration once.
-- On the first `SmpsAssetKey`, defensively freeze its SMPS program and store a
-  reference to the game/session dependency entry.
+- On the first SFX or music asset identity, defensively freeze its SMPS program
+  (including voices and envelope tables) and store a reference to the
+  game/session dependency entry.
 - On a repeated registration of the same key from an equal logical source,
   return the existing entry without copying.
 - On a conflicting registration under the same key, throw a descriptive
@@ -112,7 +114,9 @@ dependency generations. Every source-changing API (`setRom`, `setAudioProfile`,
 donor registration/replacement, and donor clearing) advances the applicable
 generation, and `ShadowSources` exposes that token through an O(1) lookup.
 
-The factory internally keys programs by `(SmpsAssetKey, dependencyGeneration)`.
+The factory internally keys programs by `(SmpsAssetKey, dependencyGeneration)`;
+`SmpsAssetKey` has distinct base/donor music and SFX routes, so an equal numeric
+music/SFX id or base/donor id cannot alias.
 New commands always resolve against the current generation, so lookup-before-
 load cannot return stale bytes after source replacement. Older immutable entries
 remain available for already-live voices and rewind snapshots until session
@@ -121,10 +125,26 @@ silently bind to new ROM/donor dependencies. Tests pin every source-changing API
 
 The resolver performs **lookup before load**. If the `SmpsAssetKey` is already
 registered, it builds the command from catalog metadata and never calls the
-loader or registration path. This is essential for `Sonic2SmpsLoader` named
-routes, which currently create an equal new `AbstractSmpsData` on each
-`loadSfx(String)` call. Their second and later triggers must be O(1) catalog
-lookups, not false conflicts or repeated decodes.
+loader or registration path. This applies to repeated base/donor music starts
+as well as SFX triggers, so music sequence, voice, PSG-envelope, and modulation-
+envelope tables are frozen once per asset generation and shared by every live
+or restored playback. It is essential for `Sonic2SmpsLoader` named SFX routes,
+which currently create an equal new `AbstractSmpsData` on each `loadSfx(String)`
+call. Their second and later triggers must be O(1) catalog lookups, not false
+conflicts or repeated decodes.
+
+Music has an earlier classification probe at the `AudioManager` submission
+boundary today: `playMusic` and `playDonorMusic` call the loader to decide which
+logical route to record before the presentation resolver sees the command. That
+owner path must use the same catalog too. It derives the base/donor music key
+and current generation before probing the loader. A catalog hit records the
+SMPS command without loading. On a miss it loads once, registers that exact
+program and dependency tuple, and only then records the command; the resolver
+therefore consumes the already-registered entry. Base loaders returning null
+retain the existing fallback-WAV route, and donor loaders returning null retain
+the existing no-op behavior. The resolver keeps its own lookup-before-load miss
+path for direct resolver and replay-style callers. Negative-result caching is
+not required.
 
 On a versioned catalog miss, the resolver loads and registers the program. Registration
 captures a small provenance descriptor (session/game dependency identity,
@@ -137,8 +157,10 @@ from the ordinary trigger path. Tests cover the named S2 reconstructed-equal
 case directly.
 
 Naming changes from `warmSmpsSfxAsset` to `registerSmpsSfxAsset`, paired with a
-non-loading `findRegisteredSmpsSfxAsset`. This makes the ownership and hot-path
-contract explicit. Eagerly decoding every SFX is neither required nor desired.
+non-loading `findRegisteredSmpsSfxAsset`; music receives equivalent
+`registerSmpsMusicAsset`/`findRegisteredSmpsMusicAsset` entry points over the
+same catalog. This makes the ownership and hot-path contract explicit. Eagerly
+decoding every asset is neither required nor desired.
 
 ### 2. Share frozen runtime dependencies
 
@@ -172,12 +194,17 @@ ownership contract cannot regress silently.
 
 Source identity is also a registration-time product. The catalog computes the
 `SmpsSourceDescriptor` and program fingerprint once while freezing the program
-and stores them in the program entry. SFX sequencer construction accepts that
-precomputed descriptor; it must not call `SmpsSourceDescriptor.from`,
-`describeSfx`, `getData()`, or any whole-program hash/copy. Rewind restoration
-uses the descriptor already present in the snapshot and resolves the matching
-versioned catalog entry. Allocation tests vary program size as a third
-independent dimension and pin a zero descriptor/instantiation slope.
+and stores them in the program entry. Music and SFX sequencer construction
+accept that precomputed descriptor; neither may call
+`SmpsSourceDescriptor.from`, `describeSfx`, `getData()`, or any whole-program
+hash/copy on a registered path. Rewind restoration uses the descriptor already
+present in the snapshot and resolves the matching versioned catalog entry.
+Allocation tests vary program size as a third independent dimension and pin a
+zero descriptor/instantiation slope.
+
+Only immutable decoded assets are shared. A music or SFX play still creates its
+own mutable sequencer, tracks, channel state, and in-progress envelope state;
+the catalog never pools live playback state.
 
 ### 3. Pure SFX preparation
 

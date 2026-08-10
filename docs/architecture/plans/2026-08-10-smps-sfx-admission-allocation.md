@@ -4,7 +4,7 @@
 
 **Goal:** Make warmed SMPS SFX triggers allocate only new mutable voice state and bounded admission metadata, independent of SMPS/DAC size and unrelated live music, while preserving rewind and frontier observer behavior.
 
-**Architecture:** `AudioPresentationSourceFactory` owns a generation-aware catalog whose immutable dependency entries hold one frozen DAC/config pair and whose program entries hold one frozen SMPS program plus a precomputed source descriptor. Command resolution looks up before loading, and `SmpsDriver` prepares all fallible admission work before a bounded commit. The `develop` path commits without a whole-driver snapshot; the observer-heavy S1 frontier adds a channel-bounded mutation journal only when a potentially throwing observer is active.
+**Architecture:** `AudioPresentationSourceFactory` owns a generation-aware catalog whose immutable dependency entries hold one frozen DAC/config pair and whose music/SFX program entries hold one frozen SMPS program plus a precomputed source descriptor. Command resolution looks up before loading, and `SmpsDriver` prepares all fallible admission work before a bounded commit. The `develop` path commits without a whole-driver snapshot; the observer-heavy S1 frontier adds a channel-bounded mutation journal only when a potentially throwing observer is active.
 
 **Tech Stack:** Java 21, Maven, JUnit Jupiter, `com.sun.management.ThreadMXBean`, existing SMPS/YM2612/PSG snapshot and presentation-command infrastructure.
 
@@ -14,6 +14,7 @@
 - Treat ROM bytes as the only runtime asset source; do not read audio payloads from `docs/`.
 - Preserve exact S1/S2/S3K SMPS behavior, rewind identity, donor routing, continuous SFX, and same-ID/channel-contention semantics.
 - Do not pool mutable sequencers or tracks, and do not make a zero-allocation claim for genuinely new mutable voice state.
+- Reuse immutable music programs, voices, and envelope tables across repeated starts in the same dependency generation; keep every live sequencer/track/envelope cursor independent.
 - The warmed trigger path must not copy/hash whole SMPS programs, copy DAC/config data, or snapshot unrelated music/synth state.
 - Public asset APIs must not expose mutable arrays; zero-copy access is restricted to narrow internal read views.
 - Frontier diagnostic callbacks retain their existing post-mutation timing, typed exception behavior, and retryable queue semantics.
@@ -200,7 +201,7 @@ public interface SmpsProgramView {
 - Modify: `src/test/java/com/openggf/audio/driver/TestSmpsDriverSnapshot.java`
 
 **Interfaces:**
-- Produces: `SmpsAssetCatalog.DependencyKey(String gameId, DependencyKind kind, long generation)`, `ProgramKey(SmpsAssetKey assetKey, long generation)`, `ProgramEntry register(ProgramKey, AbstractSmpsData, DacData, SmpsSequencerConfig, boolean)`, `ProgramEntry find(ProgramKey)`, and `ProgramEntry require(SmpsSourceDescriptor)`.
+- Produces: `SmpsAssetCatalog.DependencyKey(String gameId, DependencyKind kind, long generation)`, `ProgramKey(SmpsAssetKey assetKey, long generation)`, `ProgramEntry register(ProgramKey, AbstractSmpsData, DacData, SmpsSequencerConfig, boolean)`, `ProgramEntry find(ProgramKey)`, and `ProgramEntry require(SmpsSourceDescriptor)`. `SmpsAssetKey` gains distinct `BASE_MUSIC` and `DONOR_MUSIC` routes and asset-oriented accessors while retaining transitional SFX accessors.
 - `ProgramEntry` exposes immutable references `program()`, `programView()`, `dac()`, `staticConfig()`, `sourceDescriptor()`, `specialSfx()`, and provenance identity used for exceptional equality checks.
 - Produces: a `SmpsSequencer` construction overload that accepts the stored `SmpsSourceDescriptor` and does not call `SmpsSourceDescriptor.from`.
 
@@ -211,7 +212,7 @@ final class SmpsAssetCatalog {
     record ProgramKey(SmpsAssetKey assetKey, long generation) {}
     record ProgramEntry(AbstractSmpsData program, SmpsProgramView programView,
             DacData dac, SmpsSequencerConfig staticConfig,
-            SmpsSourceDescriptor sourceDescriptor, int sfxId,
+            SmpsSourceDescriptor sourceDescriptor, int assetId,
             int trackCount, boolean specialSfx) {}
 
     ProgramEntry register(ProgramKey key, AbstractSmpsData data,
@@ -223,7 +224,7 @@ final class SmpsAssetCatalog {
 
 - [ ] **Step 1: Write catalog identity, sharing, and collision tests**
 
-  Cover first registration, same-object O(1) repeat, reconstructed-equal repeat, conflicting bytes under one key, two SFX sharing one dependency identity, base/donor/named/special separation, old/new generation coexistence, and descriptor collisions across donor/base sources. Use identity assertions for frozen program, DAC, config, and descriptor objects.
+  Cover first registration, same-object O(1) repeat, reconstructed-equal repeat, conflicting bytes under one key, two SFX sharing one dependency identity, and repeated base/donor music registrations sharing one frozen sequence/voice/PSG-envelope/modulation-envelope representation. Cover music-vs-SFX/base-vs-donor/named/special separation, old/new generation coexistence, and descriptor collisions across donor/base sources. Use identity assertions for frozen program, DAC, config, and descriptor objects. Assert repeated music instantiation shares the program/view/DAC/config/descriptor identities but creates distinct mutable sequencers and tracks.
 
 - [ ] **Step 2: Run the catalog tests and confirm the type is absent**
 
@@ -239,11 +240,11 @@ final class SmpsAssetCatalog {
 
 - [ ] **Step 5: Route factory registration, instantiation, and rewind through entries**
 
-  Replace `sfxAssets`/`CachedSmpsSource` ownership with catalog entries, rename `warmSmpsSfxAsset` to `registerSmpsSfxAsset`, add `findRegisteredSmpsSfxAsset(SmpsAssetKey,long)`, remove `freshSource` and `copyDac`, and make `sourcesByDescriptor` refer to the exact program entry. Freeze and bind the coordination handler once when creating a dependency entry; never rebuild config per sequencer. `instantiateCached` must pass stored program/DAC/config/descriptor references directly; `recreateSmps` must resolve the descriptor's generation and share those same references. Music descriptor construction receives the current dependency generation too, with a compatibility overload using generation zero only for transitional legacy sources.
+  Replace `sfxAssets`/`CachedSmpsSource` ownership with catalog entries, rename `warmSmpsSfxAsset` to `registerSmpsSfxAsset`, add `findRegisteredSmpsSfxAsset(SmpsAssetKey,long)`, and add equivalent music registration/lookup entry points backed by the same catalog. Remove `freshSource` and `copyDac`, and make `sourcesByDescriptor` refer to the exact program entry. Freeze and bind the coordination handler once when creating a dependency entry; never rebuild config per sequencer. Registered music and SFX instantiation must pass stored program/DAC/config/descriptor references directly; `recreateSmps` must resolve the descriptor's generation and share those same references. Music descriptor construction receives the current dependency generation too, with a compatibility overload using generation zero only for transitional legacy sources. Keep `legacyMusicSmps` outside catalog ownership as its documented transitional exception.
 
 - [ ] **Step 6: Pin descriptor construction cost against program size**
 
-  Extend `TestSmpsDriverSnapshotDescriptorDedupPerformance` with tiny and 1 MiB program fixtures. Warm registration before measurement, instantiate identical track topology repeatedly, and assert `ThreadMXBean` per-trigger allocation slopes differ only within the control-run tolerance; also assert the stored descriptor object is reused.
+  Extend `TestSmpsDriverSnapshotDescriptorDedupPerformance` with tiny and 1 MiB program fixtures. Warm registration before measurement, instantiate identical track topology repeatedly for both SFX and music, and assert `ThreadMXBean` per-instantiation allocation slopes differ only within the control-run tolerance; also assert the stored descriptor object is reused.
 
 - [ ] **Step 7: Verify catalog and rewind behavior**
 
@@ -315,7 +316,7 @@ private record DonorAudioSource(
 
   Commit as `fix(audio): invalidate replaced SMPS sources` with `CHANGELOG.md` staged and all required policy trailers.
 
-### Task 6: Make resolver lookup-before-load the warmed fast path
+### Task 6: Make resolver lookup-before-load the registered fast path
 
 **Files:**
 - Modify: `src/main/java/com/openggf/audio/presentation/AudioPresentationCommandResolver.java`
@@ -324,10 +325,12 @@ private record DonorAudioSource(
 - Modify: `src/test/java/com/openggf/audio/presentation/TestAudioPresentationCommandResolver.java`
 - Modify: `src/test/java/com/openggf/audio/TestShadowAudioPresentationRouting.java`
 - Modify: `src/test/java/com/openggf/audio/presentation/TestHostUiSfx.java`
+- Modify: `src/test/java/com/openggf/audio/TestDonorAudioRouting.java`
+- Modify: `src/test/java/com/openggf/audio/TestAudioManagerPresentationModes.java`
 
 **Interfaces:**
-- Consumes: `findRegisteredSmpsSfxAsset(key,generation)` and `registerSmpsSfxAsset(key,generation,data,dac,config,specialSfx)` from Tasks 4–5.
-- Produces: a resolved command whose `trackCount`, descriptor identity, and dependency references come from `ProgramEntry`; the loader is invoked only on a versioned miss.
+- Consumes: the music and SFX catalog lookup/registration entry points from Tasks 4–5.
+- Produces: owner-submitted and directly resolved music/SFX commands whose descriptor identity and dependency references come from `ProgramEntry`; loaders are invoked only on a versioned miss.
 - Produces: private `SmpsSfxLoader` and `resolveSmpsSfxCommand(String,SmpsAssetKey,int,SmpsSfxLoader,float)`; named routes pass requested id `-1` and registration stores the loaded program id.
 
 ```java
@@ -361,15 +364,17 @@ private AudioPresentationCommand resolveSmpsSfxCommand(
 
 - [ ] **Step 1: Add loader-call-count tests**
 
-  Use a loader that returns a fresh equal `AbstractSmpsData` on every call. Resolve the Sonic 2 `BASE_SMPS_NAME` route twice and assert one loader call/one registration; repeat for id and donor routes. Change generation and assert exactly one additional load. Explicit duplicate registration with reconstructed-equal data must reuse the old entry.
+  Use a loader that returns a fresh equal `AbstractSmpsData` on every call. Resolve the Sonic 2 `BASE_SMPS_NAME` route twice and assert one loader call/one registration; repeat for SFX id and donor routes. Through production `AudioManager.playMusic` and `playDonorMusic`, repeat base and donor SMPS music starts and assert one total loader call/freeze per key/generation across both manager classification and resolver application while each start creates a distinct live voice. Change generation and assert exactly one additional load for each asset kind. Explicit duplicate registration with reconstructed-equal data must reuse the old entry. Also pin a base null result to the existing fallback-WAV command and a donor null result to no command; negative-result caching is not required.
 
 - [ ] **Step 2: Run resolver tests and observe repeated loads**
 
-  Run `mvn -Dtest=TestAudioPresentationCommandResolver,TestShadowAudioPresentationRouting test`. Expect the second named trigger call count to be 2 before the fix.
+  Run `mvn -Dtest=TestAudioPresentationCommandResolver,TestShadowAudioPresentationRouting,TestDonorAudioRouting test`. Expect the second named trigger and second SMPS music start loader call counts to be 2 before the fix.
 
 - [ ] **Step 3: Reorder resolution around catalog lookup**
 
-  Pass each route load as a `SmpsSfxLoader`, read current generation, and ask the factory for the versioned program before invoking it. On a miss, load once, resolve the named route's id from the returned program, and register. Derive id, priority, continuous id, `trackCount`, and special-SFX metadata from the returned entry/current source policy, then enqueue the normal `AddSmpsSfx` command.
+  Pass each SFX route load as a `SmpsSfxLoader`, read current generation, and ask the factory for the versioned program before invoking it. On a miss, load once, resolve the named route's id from the returned program, and register. Derive id, priority, continuous id, `trackCount`, and special-SFX metadata from the returned entry/current source policy, then enqueue the normal `AddSmpsSfx` command. Apply the same lookup-before-load ordering to base/donor SMPS music using its `AudioSourceDescriptor`-derived `SmpsAssetKey`; on a hit allocate only the new mutable music voice/sequencer state from the existing program entry.
+
+  Make the earlier `AudioManager.playMusic`/`playDonorMusic` route-classification boundary catalog-aware as well. Before the existing loader probe, derive the base/donor music key and read the route-specific generation. On a hit, record the SMPS timeline command without loading. On a miss, load exactly once and register that exact result with the current immutable dependency tuple before publishing the command; do not publish if registration fails. Preserve base null-result fallback-WAV behavior and donor null-result no-op behavior. The presentation resolver must hit this registered entry, while its own lazy miss handling remains for direct resolver/replay-style callers and must not load a second time.
 
 - [ ] **Step 4: Update explicit warming callers to registration terminology**
 
@@ -377,11 +382,11 @@ private AudioPresentationCommand resolveSmpsSfxCommand(
 
 - [ ] **Step 5: Verify every route**
 
-  Run `mvn -Dtest=TestAudioPresentationCommandResolver,TestShadowAudioPresentationRouting,TestHostUiSfx,TestDonorAudioRouting test`. Expect one load per key/generation and unchanged resolved command fields.
+  Run `mvn -Dtest=TestAudioPresentationCommandResolver,TestAudioPresentationSourceParity,TestAudioManagerPresentationModes,TestShadowAudioPresentationRouting,TestHostUiSfx,TestDonorAudioRouting test`. Expect one total load/freeze per key/generation through production manager submission plus resolver application, distinct mutable voices/tracks/cursors per music start, shared program/view/voice/envelope/DAC/config/descriptor identities across playback and rewind restoration, and unchanged resolved command fields.
 
 - [ ] **Step 6: Commit lookup-before-load**
 
-  Commit as `perf(audio): reuse registered SMPS SFX` with `CHANGELOG.md` staged and required trailers.
+  Commit as `perf(audio): reuse registered SMPS assets` with `CHANGELOG.md` staged and required trailers.
 
 ### Task 7: Introduce pure, channel-bounded SFX preparation
 
