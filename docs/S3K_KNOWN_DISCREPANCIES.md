@@ -1305,8 +1305,17 @@ submission fingerprint) still lies strictly in the future. `actual=false / expec
 stays a hard error forever — the engine claiming decompression was not in progress while
 the ROM was mid-loop means a completion landed early, which is a real timing defect.
 `busy`, `active_source`, `active_destination`, the waiting fingerprints, and the module
-queue's `prepared` are all still fully compared. Both polarities are pinned in
-`TestLoadQueueTraceComparison`.
+queue's `prepared` are all still fully compared.
+
+The asymmetry is structural, not merely gated. The excusal's only effect is to raise the
+*expected* row's `prepared` to true, which by construction cannot conceal an actual value
+of false. Widening the polarity gate alone is therefore a semantic no-op — verified by
+mutation: forcing the branch to accept both polarities left all of
+`TestLoadQueueTraceComparison` green. The mutation that *would* be dangerous is changing
+the rewrite to mirror the actual value instead of forcing true, and
+`keepsReverseInProgressPolarityAsError` fails on exactly that.
+`keepsInProgressBitComparedWithoutFutureRecordedCompletion` likewise fails when the
+`rawFrame > frame` guard is removed. Both were confirmed by running the mutations.
 
 ### Refuted alternatives — do not rerun these
 
