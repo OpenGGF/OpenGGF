@@ -30,6 +30,8 @@ public interface CnzObjectEventBridge {
     void setWaterMeanLevel(int meanY);
     /** ROM: {@code move.w #frames,(Screen_shake_flag).w} — start a timed shake. */
     void triggerScreenShake(int frames);
+    default void requestSidekickBoundsPublishAfterCameraEasing() {
+    }
     void beginKnucklesTeleporterRoute();
     void endKnucklesTeleporterRoute();
     void markTeleporterBeamSpawned();

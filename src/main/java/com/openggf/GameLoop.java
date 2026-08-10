@@ -2353,7 +2353,7 @@ public class GameLoop {
         try {
             // Suppress auto-music: bonus music plays later in applyDeferredBonusStageSetup
             levelManager.setSuppressNextMusicChange(true);
-            levelManager.loadZoneAndAct(zone, act);
+            levelManager.loadZoneAndActForFreshRuntime(zone, act);
             // Consume the default title card request — we'll show the bonus card instead
             levelManager.consumeTitleCardRequest();
         } catch (IOException e) {
@@ -2533,7 +2533,7 @@ public class GameLoop {
         if (savedState == null) {
             LOGGER.warning("No saved state for bonus stage exit — returning to zone 0,0");
             try {
-                levelManager.loadZoneAndAct(0, 0);
+                levelManager.loadZoneAndActForFreshRuntime(0, 0);
             } catch (IOException e) {
                 throw new RuntimeException("Failed to load fallback level", e);
             }
@@ -2552,7 +2552,7 @@ public class GameLoop {
             // Suppress auto-music: zone music starts below during the title card
             levelManager.setSuppressNextMusicChange(true);
             bonusStageTransitionCoordinator.prepareReturnLoad(levelManager);
-            levelManager.loadZoneAndAct(zone, act);
+            levelManager.loadZoneAndActForFreshRuntime(zone, act);
             // Consume the auto-generated title card request — we initialize it ourselves below
             levelManager.consumeTitleCardRequest();
         } catch (IOException e) {
@@ -2827,7 +2827,7 @@ public class GameLoop {
             // Load the starting level; loadCurrentLevel() will request its own title card.
             GameMode oldMode = changeGameModeForBoundary(GameMode.LEVEL);
             try {
-                levelManager.loadZoneAndAct(0, 0);
+                levelManager.loadZoneAndActForFreshRuntime(0, 0);
             } catch (IOException e) {
                 throw new RuntimeException("Failed to load starting level after special stage", e);
             }
@@ -3352,7 +3352,7 @@ public class GameLoop {
                     module, spriteManager, configService);
             camera.setFocusedSprite(bootstrappedTeam.mainSprite());
             camera.updatePosition(true);
-            levelManager.loadZoneAndAct(context.zone(), context.act());
+            levelManager.loadZoneAndActForFreshRuntime(context.zone(), context.act());
 
             GameMode oldMode = changeGameModeForBoundary(GameMode.LEVEL);
             if (gameModeChangeListener != null) {
@@ -3524,7 +3524,7 @@ public class GameLoop {
     private void startLevelFromTitleScreenImmediate() {
         setGameMode(GameMode.LEVEL);
         try {
-            levelManager.loadZoneAndAct(0, 0);
+            levelManager.loadZoneAndActForFreshRuntime(0, 0);
         } catch (IOException e) {
             throw new RuntimeException("Failed to load title screen start level", e);
         }
@@ -3882,7 +3882,7 @@ public class GameLoop {
 
         // Load the selected zone/act
         try {
-            levelManager.loadZoneAndAct(zone, act);
+            levelManager.loadZoneAndActForFreshRuntime(zone, act);
         } catch (IOException e) {
             LOGGER.severe("Failed to load zone " + zone + " act " + act + ": " + e.getMessage());
             throw new RuntimeException("Failed to load zone " + zone + " act " + act, e);
@@ -4031,7 +4031,7 @@ public class GameLoop {
             if (postLoadMusicId >= 0) {
                 levelManager.setSuppressNextMusicChange(true);
             }
-            levelManager.loadZoneAndAct(zone, act);
+            levelManager.loadZoneAndActForFreshRuntime(zone, act);
             activateScheduledPlaybackForLoadedLevel();
             if (postLoadMusicId >= 0) {
                 audioManager.playMusic(postLoadMusicId);
@@ -4405,7 +4405,7 @@ public class GameLoop {
         try {
             // Suppress zone music — credits music should continue playing
             levelManager.setSuppressNextMusicChange(true);
-            levelManager.loadZoneAndAct(zone, act);
+            levelManager.loadZoneAndActForFreshRuntime(zone, act);
             // Consume the title card request since we don't want a title card
             levelManager.consumeTitleCardRequest();
         } catch (IOException e) {

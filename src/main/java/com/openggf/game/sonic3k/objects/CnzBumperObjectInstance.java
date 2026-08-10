@@ -177,7 +177,8 @@ public class CnzBumperObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        int phase = resolveLevelFrameCounter(vIntRunCount) & 0xFF;
+        int resolvedFrame = resolveLevelFrameCounter(vIntRunCount);
+        int phase = resolvedFrame & 0xFF;
         if (reverseOrbit) {
             phase = (-phase) & 0xFF;
         }
@@ -194,12 +195,9 @@ public class CnzBumperObjectInstance extends AbstractObjectInstance
             // The fresh-load Process_Sprites setup dispatch is represented by
             // ObjectManager's production setup lifecycle. The stored counter
             // therefore owns the adjacent Level_frame_counter epoch read by
-            // Obj_Bumper. A retained results owner that has mutated into the Act 2
-            // title card holds the native counter while engine dispatch continues;
-            // its provenance exposes the additional visible owner dispatch.
-            int retainedResultsDispatch = svc.titleCardProvider() != null
-                    && svc.titleCardProvider().ownsRetainedResultsHeldLevelCounter() ? 1 : 0;
-            return levelManager.getFrameCounter() + 1 + retainedResultsDispatch;
+            // Obj_Bumper. The retained results owner must not add another
+            // orbit tick after its title-card handoff has been published.
+            return levelManager.getFrameCounter() + 1;
         }
         return vIntRunCount + 1;
     }

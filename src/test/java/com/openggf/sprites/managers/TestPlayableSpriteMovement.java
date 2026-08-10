@@ -1563,7 +1563,12 @@ public class TestPlayableSpriteMovement {
                                 (Consumer<SensorResult[]>) publisherMethod.invoke(manager);
                 assertNotNull(publisher, "The configured main player owns the native landing-angle copy");
 
-                SensorResult left = new SensorResult((byte) 0xFF, (byte) -7, 0, Direction.DOWN);
+                setMovementField("latchedNextTilt", 0x22);
+                setMovementField("latchedTilt", 0x44);
+                GameServices.collision().publishGroundAngleRegisters(
+                                new SensorResult((byte) 0x44, (byte) 0, 0x80, Direction.DOWN),
+                                new SensorResult((byte) 0x22, (byte) 0, 0x81, Direction.DOWN));
+                SensorResult left = new SensorResult((byte) 0xFF, (byte) -7, 0x9A, Direction.DOWN);
                 SensorResult right = new SensorResult((byte) 3, (byte) 25, 0, Direction.DOWN);
                 publisher.accept(new SensorResult[]{left, right});
 
@@ -1571,7 +1576,8 @@ public class TestPlayableSpriteMovement {
                 Field tilt = PlayableSpriteMovement.class.getDeclaredField("latchedTilt");
                 nextTilt.setAccessible(true);
                 tilt.setAccessible(true);
-                assertEquals(3, nextTilt.getInt(manager));
+                assertEquals(0x22, nextTilt.getInt(manager),
+                                "an empty FindFloor extension preserves the shared Primary_Angle byte");
                 assertEquals(0xFF, tilt.getInt(manager));
 
                 Tails sidekick = new Tails("tails_p2", (short) 0, (short) 0);
@@ -1591,13 +1597,13 @@ public class TestPlayableSpriteMovement {
                                 "CPU Tails owns its own player-tail next_tilt/tilt copy");
 
                 sidekickPublisher.accept(new SensorResult[]{
-                        new SensorResult((byte) 0x20, (byte) -3, 0, Direction.DOWN),
-                        new SensorResult((byte) 0x40, (byte) 11, 0, Direction.DOWN)});
+                        new SensorResult((byte) 0x20, (byte) -3, 0x81, Direction.DOWN),
+                        new SensorResult((byte) 0x40, (byte) 11, 0x82, Direction.DOWN)});
                 assertEquals(0x40, nextTilt.getInt(sidekickMovement));
                 assertEquals(0x20, tilt.getInt(sidekickMovement));
 
                 // The leader's latched bytes are untouched: separate cadence, no rescan.
-                assertEquals(3, nextTilt.getInt(manager));
+                assertEquals(0x22, nextTilt.getInt(manager));
                 assertEquals(0xFF, tilt.getInt(manager));
         }
 
@@ -2419,9 +2425,10 @@ public class TestPlayableSpriteMovement {
                 setInputState(true, false, true, false, false); // left + down
 
                 // Update crouch state - should lock down key
-                Method crouchMethod = PlayableSpriteMovement.class.getDeclaredMethod("updateCrouchState");
+                Method crouchMethod = PlayableSpriteMovement.class.getDeclaredMethod(
+                                "updateCrouchState", boolean.class);
                 crouchMethod.setAccessible(true);
-                crouchMethod.invoke(manager);
+                crouchMethod.invoke(manager, false);
 
                 // Now move at high speed and try to roll
                 mockSprite.setGSpeed((short) 500);
@@ -2445,9 +2452,10 @@ public class TestPlayableSpriteMovement {
                 setMovementField("preMoveBalanceState", 1);
                 setMovementField("preMoveBalanceDirection", Direction.RIGHT);
 
-                Method crouchMethod = PlayableSpriteMovement.class.getDeclaredMethod("updateCrouchState");
+                Method crouchMethod = PlayableSpriteMovement.class.getDeclaredMethod(
+                                "updateCrouchState", boolean.class);
                 crouchMethod.setAccessible(true);
-                crouchMethod.invoke(manager);
+                crouchMethod.invoke(manager, false);
 
                 assertTrue(mockSprite.getAir(), "AnglePos detach remains visible after the grounded Move dispatch");
                 assertEquals(1, mockSprite.getBalanceState(),
@@ -2471,9 +2479,10 @@ public class TestPlayableSpriteMovement {
                 setMovementField("preMoveBalanceState", 1);
                 setMovementField("preMoveBalanceDirection", Direction.RIGHT);
 
-                Method crouchMethod = PlayableSpriteMovement.class.getDeclaredMethod("updateCrouchState");
+                Method crouchMethod = PlayableSpriteMovement.class.getDeclaredMethod(
+                                "updateCrouchState", boolean.class);
                 crouchMethod.setAccessible(true);
-                crouchMethod.invoke(manager);
+                crouchMethod.invoke(manager, false);
 
                 assertEquals(0, mockSprite.getBalanceState(),
                                 "an object-release frame does not use the terrain AnglePos detach bridge");
@@ -2493,9 +2502,10 @@ public class TestPlayableSpriteMovement {
                 mockSprite.getAnimationManager().suppressGroundMovementAnimationForFrame();
                 setInputState(false, false, true, false, false);
 
-                Method crouchMethod = PlayableSpriteMovement.class.getDeclaredMethod("updateCrouchState");
+                Method crouchMethod = PlayableSpriteMovement.class.getDeclaredMethod(
+                                "updateCrouchState", boolean.class);
                 crouchMethod.setAccessible(true);
-                crouchMethod.invoke(manager);
+                crouchMethod.invoke(manager, false);
 
                 assertFalse(mockSprite.getCrouching(),
                                 "SonicKnux_Roll must see the player-slot Status_OnObj bit and skip Duck");
@@ -2512,9 +2522,10 @@ public class TestPlayableSpriteMovement {
                 setMovementField("preRollGroundSpeed", 0x0D9);
                 setInputState(false, false, true, false, false);
 
-                Method crouchMethod = PlayableSpriteMovement.class.getDeclaredMethod("updateCrouchState");
+                Method crouchMethod = PlayableSpriteMovement.class.getDeclaredMethod(
+                                "updateCrouchState", boolean.class);
                 crouchMethod.setAccessible(true);
-                crouchMethod.invoke(manager);
+                crouchMethod.invoke(manager, false);
 
                 assertTrue(mockSprite.getCrouching(),
                                 "SonicKnux_Roll tests inertia below $100 before SlopeRepel raises it");
@@ -2534,14 +2545,15 @@ public class TestPlayableSpriteMovement {
                 setWasCrouching(true);
                 setInputState(true, false, true, false, false); // left + down
 
-                Method crouchMethod = PlayableSpriteMovement.class.getDeclaredMethod("updateCrouchState");
+                Method crouchMethod = PlayableSpriteMovement.class.getDeclaredMethod(
+                                "updateCrouchState", boolean.class);
                 crouchMethod.setAccessible(true);
-                crouchMethod.invoke(manager);
+                crouchMethod.invoke(manager, false);
 
                 // Release down - should unlock
                 setWasCrouching(false);
                 setInputState(true, false, false, false, false); // left only, no down
-                crouchMethod.invoke(manager);
+                crouchMethod.invoke(manager, false);
 
                 // Now try to roll
                 mockSprite.setGSpeed((short) 500);
@@ -3268,6 +3280,77 @@ public class TestPlayableSpriteMovement {
                 assertEquals(0, mockSprite.getGSpeed(),
                                 "Object support should still suppress arming a fresh slope slip from stale terrain angle");
                 assertFalse(mockSprite.getAir(), "Object support should not create a new airborne slope slip");
+        }
+
+        @Test
+        public void entryActiveMoveLockSuppressesBalanceAfterFinalSlopeRepelTickAcrossGames()
+                        throws Exception {
+                Field objectManagerField = GameServices.level().getClass().getDeclaredField("objectManager");
+                objectManagerField.setAccessible(true);
+                objectManagerField.set(GameServices.level(), new ObjectManager(List.of(), null, 0, null, null));
+                CollisionSystem collisionSystem = new StableGroundCollisionSystem();
+                manager = new PlayableSpriteMovement(mockSprite, collisionSystem, GameServices.gameState());
+                installRuntimeCollisionSystem(collisionSystem);
+                GameServices.camera().setMinX((short) 0);
+                GameServices.camera().setMaxX((short) 0x7FFF);
+                GameServices.camera().setMaxY((short) 0x7FFF);
+
+                GameRules[] sharedRules = {
+                        GameRules.SONIC_1,
+                        GameRules.SONIC_2,
+                        GameRules.SONIC_3K
+                };
+                String[] labels = {"S1", "S2", "S3K"};
+                for (int index = 0; index < sharedRules.length; index++) {
+                        GameRules rules = sharedRules[index];
+                        String label = labels[index];
+                        setGameRulesForTest(rules);
+                        prepareClearedInteractSlotBalanceProbe(0);
+                        manager.handleMovement(false, false, false, false,
+                                false, false, false, false);
+                        assertTrue(mockSprite.getBalanceState() > 0,
+                                label + " control dispatch must prove the edge can balance");
+
+                        prepareClearedInteractSlotBalanceProbe(1);
+                        manager.handleMovement(false, false, false, false,
+                                false, false, false, false);
+
+                        assertEquals(0, mockSprite.getMoveLockTimer(),
+                                label + " SlopeRepel must consume the final move_lock tick");
+                        assertEquals(0, mockSprite.getBalanceState(),
+                                label + " Sonic_Move/Tails_Move must retain the entry-time lock decision");
+                }
+        }
+
+        private void prepareClearedInteractSlotBalanceProbe(int moveLockTimer) throws Exception {
+                Sensor flatLeft = new Sensor(mockSprite, Direction.DOWN, (byte) -9, (byte) 19, true) {
+                        @Override
+                        protected SensorResult doScan(short dx, short dy) {
+                                return new SensorResult((byte) 0, (byte) 0, 0, Direction.DOWN);
+                        }
+                };
+                Sensor flatRight = new Sensor(mockSprite, Direction.DOWN, (byte) 9, (byte) 19, true) {
+                        @Override
+                        protected SensorResult doScan(short dx, short dy) {
+                                return new SensorResult((byte) 0, (byte) 0, 0, Direction.DOWN);
+                        }
+                };
+                mockSprite.setGroundSensors(new Sensor[]{flatLeft, flatRight});
+                mockSprite.setCeilingSensors(new Sensor[]{flatLeft, flatRight});
+                mockSprite.setPushSensors(new Sensor[]{flatLeft, flatRight});
+                mockSprite.setCentreX((short) 0x3C90);
+                mockSprite.setCentreY((short) 0x0200);
+                mockSprite.setXSpeed((short) 0);
+                mockSprite.setYSpeed((short) 0);
+                mockSprite.setGSpeed((short) 0);
+                mockSprite.setAngle((byte) 0);
+                mockSprite.setAir(false);
+                mockSprite.setRolling(false);
+                mockSprite.setSpindash(false);
+                mockSprite.setOnObject(true);
+                mockSprite.setInteractSlotIndex(15);
+                mockSprite.setBalanceState(0);
+                mockSprite.setMoveLockTimer(moveLockTimer);
         }
 
         @Test

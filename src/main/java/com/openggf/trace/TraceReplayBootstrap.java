@@ -709,19 +709,22 @@ public final class TraceReplayBootstrap {
      * Detects a VBlank sample that lands after CPU-sidekick movement selected a
      * new raw animation but before the following {@code Animate_Tails} call.
      *
-     * <p>The normal-step hook proves the CPU path executed, the changed
-     * sidekick physics proves this is still a full playable tick, and the
-     * three-row animation transition proves the first mapping remained visible
-     * for the interrupted dispatch. This is native execution scheduling; no
-     * recorded value is copied into engine state.
+     * <p>The normal-step hook or one {@code Pos_table_index} entry proves the
+     * playable prefix executed: {@code Tails_Control} runs CPU control and
+     * movement, then {@code Sonic_RecordPos}, then {@code Animate_Tails}
+     * (sonic3k.asm:26238-26284). The changed sidekick physics and three-row
+     * animation transition prove the first mapping remained visible when the
+     * sample interrupted that final animation dispatch. This is native
+     * execution scheduling; no recorded value is copied into engine state.
      */
     private static boolean isSidekickAnimationHeldAfterRawTransition(
             TraceData trace, TraceFrame previous, TraceFrame current) {
         if (trace == null || previous == null || current == null
                 || !"s3k".equals(trace.metadata().game())
                 || current.input() != previous.input()
-                || !executionCountersEqual(previous, current)
-                || !hasTailsCpuNormalStep(trace, current)
+                || !(hasTailsCpuNormalStep(trace, current)
+                        || hasPlayableSlotHistoryAdvanceWithoutInputEdge(
+                                trace, previous, current))
                 || current.sidekick() == null || previous.sidekick() == null
                 || current.sidekick().physicsStateEquals(previous.sidekick())) {
             return false;

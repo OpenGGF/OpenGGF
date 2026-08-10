@@ -1796,9 +1796,12 @@ public final class ObjectSolidContactController {
                 && !instance.isWithinSolidContactBounds()) {
             // ROM sub_1E0C2 (sonic3k.asm:41528-41532): off-screen / no-contact
             // path clears the player's push status and the object's pushing-bit
-            // bookkeeping but does not touch ground_vel/x_vel. Matches both
-            // S2 SolidObject_TestClearPush and S1 Solid_NotPushing.
+            // bookkeeping but does not touch ground_vel/x_vel. It still enters
+            // SolidObject_TestClearPush, whose paired Walk/Run word write is
+            // visible before the player animation slot runs. Matches both S2
+            // SolidObject_TestClearPush and S1 Solid_NotPushing.
             if (clearObjectPushingBit(player, instance)) {
+                publishSolidPushReleaseAnimationWord(player, instance);
                 player.setPushing(false);
                 provider.setPlayerPushing(player, false);
             }

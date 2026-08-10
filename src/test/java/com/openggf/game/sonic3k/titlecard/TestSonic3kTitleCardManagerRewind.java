@@ -76,6 +76,123 @@ class TestSonic3kTitleCardManagerRewind {
     }
 
     @Test
+    void phaseOneInLevelResetTargetsNativeDisplayBoundary() {
+        startLevel();
+        GameServices.level().getObjectManager().initVblaCounter(1);
+
+        Sonic3kTitleCardManager title = new Sonic3kTitleCardManager();
+        title.initializeInLevel(0, 1);
+        title.requestLevelGamestateResetAtInLevelDisplay();
+
+        assertEquals(30, title.capture().resetLevelGamestateCountdown(),
+                "phase-one title handoff must reach the ROM display reset row");
+        assertFalse(title.retainedControlPollFollowsTitleCompletion(),
+                "the phase-one title owner runs before the retained control slot");
+    }
+
+    @Test
+    void phaseTwoInLevelResetTargetsNativeDisplayBoundary() {
+        startLevel();
+        GameServices.level().getObjectManager().initVblaCounter(2);
+
+        Sonic3kTitleCardManager title = new Sonic3kTitleCardManager();
+        title.initializeInLevel(0, 1);
+        title.requestLevelGamestateResetAtInLevelDisplay();
+
+        assertEquals(30, title.capture().resetLevelGamestateCountdown(),
+                "phase-two title handoff must reach the ROM display reset row");
+        assertEquals(1, title.capture().inLevelExitDelayFrames(),
+                "phase-two child retirement needs the following Wait2 owner poll");
+        assertTrue(title.retainedControlPollFollowsTitleCompletion(),
+                "the phase-two title owner publishes after the retained control slot");
+    }
+
+    @Test
+    void phaseOneInLevelArtAdmissionFollowsTheSecondExitOwnerPoll()
+            throws Exception {
+        startLevel();
+        GameServices.level().getObjectManager().initVblaCounter(1);
+
+        Sonic3kTitleCardManager title = new Sonic3kTitleCardManager();
+        Sonic3kObjectArtProvider provider = (Sonic3kObjectArtProvider)
+                GameServices.module().getObjectArtProvider();
+        title.initializeInLevel(0, 1);
+        prepareExitForCompletion(title);
+        // LBZ's retained preloaded-act title keeps the camera-release tail alive
+        // for eleven dispatches; LoadEnemyArt still follows the second Wait2 poll.
+        setField(title, "inLevelExitDelayFrames", 11);
+
+        title.update();
+        assertFalse(provider.capture().runtimeArtAdmissionConsumed(),
+                "the first Wait2 poll only observes the drained children");
+        assertFalse(title.hasPublishedInLevelRuntimeArtAdmission(),
+                "the camera handoff must remain behind the first Wait2 poll");
+        assertEquals(10, title.capture().inLevelExitDelayFrames());
+
+        title.update();
+        assertTrue(provider.capture().runtimeArtAdmissionConsumed(),
+                "LoadEnemyArt belongs to the following owner poll");
+        assertTrue(title.hasPublishedInLevelRuntimeArtAdmission(),
+                "the camera handoff follows the native LoadEnemyArt boundary");
+        assertEquals(9, title.capture().inLevelExitDelayFrames());
+    }
+
+    @Test
+    void allocatedInLevelTitleOwnerUsesFollowingWait2PollForArtAdmission()
+            throws Exception {
+        startLevel();
+
+        Sonic3kTitleCardManager title = new Sonic3kTitleCardManager();
+        Sonic3kObjectArtProvider provider = (Sonic3kObjectArtProvider)
+                GameServices.module().getObjectArtProvider();
+        title.initializeInLevel(0, 0);
+        prepareExitForCompletion(title);
+        // The AIZ intro allocates Obj_TitleCard after the current object pass.
+        // Its first dispatch queues the card, and the lower Obj_TitleCardWait2
+        // owner reaches LoadEnemyArt on the following poll.
+        title.requestInLevelExitAdditionalDispatches(1);
+
+        title.update();
+        assertFalse(provider.capture().runtimeArtAdmissionConsumed(),
+                "the allocated owner must retain the first Wait2 poll");
+        assertFalse(title.isComplete());
+        assertEquals(0, title.capture().inLevelExitDelayFrames());
+
+        title.update();
+        assertTrue(provider.capture().runtimeArtAdmissionConsumed(),
+                "LoadEnemyArt belongs to the following Wait2 poll");
+        assertTrue(title.isComplete());
+    }
+
+    @Test
+    void preloadedActCameraReleasesOnThirdPostChildOwnerDispatch()
+            throws Exception {
+        startLevel();
+
+        Sonic3kTitleCardManager title = new Sonic3kTitleCardManager();
+        title.initializeInLevel(5, 1);
+        prepareExitForCompletion(title);
+        GameServices.camera().setScrollLocked(true);
+        // The manager has already observed the drained children. These are
+        // the two remaining Obj_TitleCardWait2 polls before completion.
+        title.requestPreloadedActCameraReleaseOnComplete(2);
+
+        title.update();
+        assertTrue(GameServices.camera().getFrozen());
+        assertEquals(1, title.capture().inLevelExitDelayFrames());
+
+        title.update();
+        assertTrue(GameServices.camera().getFrozen(),
+                "Change_Act2Sizes is prepared while Scroll_lock remains held");
+        assertEquals(0, title.capture().inLevelExitDelayFrames());
+
+        title.update();
+        assertFalse(GameServices.camera().getFrozen(),
+                "the third post-child owner dispatch publishes title completion");
+        assertTrue(title.isComplete());
+    }
+
+    @Test
     void productionRegistryRestoresTitleBeforeProviderAndConsumesTheExactLease()
             throws Exception {
         startLevel();

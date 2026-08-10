@@ -161,3 +161,7 @@ mods/
 # Brainstorming visual-companion sessions
 .superpowers/
 /sdd/
+
+# Local credentials and disposable diagnostic output (never commit)
+/identity/
+/ghosts/

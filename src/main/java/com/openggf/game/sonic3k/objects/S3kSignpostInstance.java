@@ -23,6 +23,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
+import java.util.function.Supplier;
 import java.util.logging.Logger;
 
 /**
@@ -104,11 +105,14 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
     private static final int POST_LAND_TIMER = 0x40;
     private static final int BUMP_COOLDOWN = 0x20;
     private static final int RESULTS_CARRIED_RETIRE_DISPATCHES = 3;
-    // ROM Obj_LevelResultsWait2 observes $30(a0) reaching zero one pass after
-    // the last child SST deletes (children allocate after the parent,
-    // docs/skdisasm/sonic3k.asm:62600, 62691-62693); the player-visible control
-    // release lands on the following dispatch. onExitReady's next-dispatch
-    // scheduling supplies the first pass, so one retained dispatch remains.
+    // Results children are embedded in the engine owner rather than allocated
+    // as twelve later SSTs. The embedded render-flag retire pass already
+    // represents the native child-slot deletes, so a post-object signpost must
+    // not add another synthetic parent pass before Obj_TitleCardInit
+    // (docs/skdisasm/sonic3k.asm:62600, 62691-62734).
+    private static final int RESULTS_POST_OBJECT_RETIRE_DISPATCHES = 0;
+    // A signpost that waits for the player to land still has one native parent
+    // pass after its embedded child retirement.
     private static final int RESULTS_WAITED_LANDING_RETIRE_DISPATCHES = 1;
 
     // Bump detection box relative to signpost center
@@ -143,10 +147,12 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
     private boolean sidekickEndingPoseApplied;
     private boolean sidekickEndingPoseCheckArmed;
     private boolean landingSparklePending;
+    private boolean bumpedFromBelow;
     private boolean preservesPostLandingSparkleGate;
     private boolean preservesPostObjectResultDispatchBoundary;
     private boolean preservesGroundedResultsDispatchBoundary;
     private boolean usesShortResultsChildRetireTail;
+    private int nativeControlSlot = -1;
 
     /**
      * Creates the signpost at the given X position.
@@ -201,6 +207,10 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
 
     private S3kSignpostInstance() {
         this(0, 0);
+    }
+
+    void preserveNativeControlAllocationBoundary(int slot) {
+        nativeControlSlot = slot;
     }
 
     @Override
@@ -353,7 +363,10 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
                 return; // No floor contact yet — keep falling
             }
             landed = true;
-            postLandTimer = Math.max(0, POST_LAND_TIMER - resultsTimerCatchUpEntries);
+            postLandTimer = initialPostLandTimer(
+                    resultsTimerCatchUpEntries,
+                    preservesPostObjectResultDispatchBoundary,
+                    bumpedFromBelow);
             yVel = 0;
             xVel = 0;
             subX = 0;
@@ -416,6 +429,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
         // xVel/yVel are 8.8 fixed-point
         xVel = kickX;
         yVel = -0x200;
+        bumpedFromBelow = true;
 
         try {
             services().playSfx(Sonic3kSfx.SIGNPOST.id);
@@ -485,16 +499,6 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
                 }
             }
             state = State.RESULTS;
-            if (preservesPostObjectResultDispatchBoundary
-                    && player != null && !player.getAir()) {
-                // A sign allocated by the post-object screen event loses one
-                // later-slot entry when that native loop tail is folded into
-                // the engine transition. Publish only the routine-6 player
-                // writes here; results allocation remains on its original
-                // engine entry so the act-transition owner does not move.
-                applyMainPlayerEndingPose(player);
-                sidekickEndingPoseCheckArmed = true;
-            }
             LOG.fine("S3K Signpost LANDED -> RESULTS");
         }
     }
@@ -503,6 +507,18 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
         // Obj_EndSignLanded uses subq.w #1,$2E(a0); bmi.s, so $0000 is still
         // a waiting frame and only $FFFF advances (docs/skdisasm/sonic3k.asm:176198-176208).
         return (short) timerAfterDecrement < 0;
+    }
+
+    static int initialPostLandTimer(int configuredCatchUpEntries,
+            boolean postObjectAllocationBoundary, boolean bumpedFromBelow) {
+        // CNZ's post-object screen event publishes Obj_EndSign after the
+        // engine object walk, so an unbumped sign has already consumed one
+        // native falling/countdown boundary by the time the engine lands it.
+        // A real EndSign_CheckPlayerHit bounce re-phases the falling owner and
+        // retains the full $40 countdown instead (sonic3k.asm:176225-176253,
+        // 176342-176387, 107590-107601).
+        int nativeAllocationCatchUp = postObjectAllocationBoundary && !bumpedFromBelow ? 1 : 0;
+        return Math.max(0, POST_LAND_TIMER - configuredCatchUpEntries - nativeAllocationCatchUp);
     }
 
     // =========================================================================
@@ -524,15 +540,16 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
         boolean preservesRoutineSixDispatch = resultsWaitedForPlayerLanding
                 || preservesPostObjectResultDispatchBoundary
                 || preservesGroundedResultsDispatchBoundary;
-        if (preservesRoutineSixDispatch) {
-            // Obj_EndSignResults has occupied its native routine-6 slot, either
-            // while waiting for the grounded player or through the preserved
-            // post-object boundary. Apply P1 now; P2 belongs to routine 8.
+        if (preservesRoutineSixDispatch || !usesShortResultsChildRetireTail) {
+            // Obj_EndSignResults calls Set_PlayerEndingPose in its routine-6
+            // dispatch, immediately after the grounded-player check.  The
+            // following routine-8 dispatch owns only the sidekick handoff.
             applyMainPlayerEndingPose(player);
             sidekickEndingPoseCheckArmed = true;
         } else {
-            // Preserve the engine's collapsed owner boundary for ordinary
-            // signposts whose routine 6 did not wait.
+            // The short-tail owner retains the native post-object handoff:
+            // its result owner becomes visible before the signpost's routine-8
+            // pose work reaches the player slots.
             mainEndingPosePending = true;
         }
 
@@ -560,7 +577,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
                 resultsWaitedForPlayerLanding,
                 preservesPostObjectResultDispatchBoundary,
                 preservesGroundedResultsDispatchBoundary);
-        spawnFreeChild(() -> new S3kResultsScreenObjectInstance(
+        Supplier<S3kResultsScreenObjectInstance> resultsFactory = () -> new S3kResultsScreenObjectInstance(
                 getPlayerCharacter(), apparentAct, resultsWaitDurationAdjustment,
                 resultsPostControlHandoffDelayEntries
                         + (preservesPostObjectResultDispatchBoundary ? 1 : 0),
@@ -568,7 +585,16 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
                         preservesPostObjectResultDispatchBoundary,
                         usesShortResultsChildRetireTail),
                 resultsChildTimingAdjustment,
-                usesShortResultsChildRetireTail));
+                usesShortResultsChildRetireTail);
+        // Obj_EndSignResults calls AllocateObject.  Its lower free slot has
+        // already passed in the current Process_Sprites walk, so the results
+        // owner is published now but its Obj_LevelResultsInit dispatch starts
+        // on the following pass, matching the native owner contract.
+        if (useFirstFreeResultsOwner()) {
+            spawnFreeChild(resultsFactory);
+        } else {
+            spawnChild(resultsFactory);
+        }
         LOG.fine("S3K Signpost RESULTS -> AFTER (results instance spawned)");
         state = State.AFTER;
         if (preservesPostObjectResultDispatchBoundary && sidekickPoseWasAlreadyArmed) {
@@ -576,12 +602,40 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
         }
     }
 
+    private boolean useFirstFreeResultsOwner() {
+        int firstFreeSlot = services().objectManager() == null
+                ? -1
+                : services().objectManager().firstFreeDynamicSlot();
+        return usesFirstFreeResultsOwner(
+                resultsWaitedForPlayerLanding,
+                preservesGroundedResultsDispatchBoundary,
+                usesShortResultsChildRetireTail,
+                firstFreeSlot,
+                nativeControlSlot);
+    }
+
+    static boolean usesFirstFreeResultsOwner(boolean waitedForPlayerLanding,
+            boolean preservesGroundedBoundary, boolean usesShortRetireTail,
+            int firstFreeSlot, int nativeControlSlot) {
+        // Obj_EndSignControl remains in the defeated boss's SST in the ROM.
+        // The Java flow/sign split can sit later in the pool, so compare
+        // FindFreeObj with that retained native owner boundary: a free slot
+        // after it must stay on the forward, same-pass side of Process_Sprites.
+        if (preservesGroundedBoundary && nativeControlSlot >= 0
+                && firstFreeSlot > nativeControlSlot) {
+            return false;
+        }
+        return preservesGroundedBoundary
+                || (!waitedForPlayerLanding && !usesShortRetireTail);
+    }
+
     static int resultsChildRetireDispatches(boolean waitedForPlayerLanding,
             boolean preservesPostObjectResultDispatchBoundary,
             boolean usesShortResultsChildRetireTail) {
-        return waitedForPlayerLanding
-                        || preservesPostObjectResultDispatchBoundary
-                        || usesShortResultsChildRetireTail
+        if (preservesPostObjectResultDispatchBoundary) {
+            return RESULTS_POST_OBJECT_RETIRE_DISPATCHES;
+        }
+        return waitedForPlayerLanding || usesShortResultsChildRetireTail
                 ? RESULTS_WAITED_LANDING_RETIRE_DISPATCHES
                 : RESULTS_CARRIED_RETIRE_DISPATCHES;
     }
@@ -670,6 +724,20 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
             setDestroyed(true);
             LOG.fine("S3K Signpost destroyed (off-screen)");
         }
+    }
+
+    /**
+     * Ends the deferred ending-pose tail when the retained native
+     * {@code Obj_EndSignControl} owner restores control after the results
+     * owner publishes its next routine. The engine keeps the signpost's
+     * routine-8 work in this object, so without consuming both pending flags
+     * it can reapply the victory pose after {@code Restore_PlayerControl} in
+     * the same object pass (docs/skdisasm/sonic3k.asm:176229-176272,
+     * 180437-180451).
+     */
+    void completeNativeResultsControlRestore() {
+        mainEndingPosePending = false;
+        sidekickEndingPoseApplied = true;
     }
 
     private void applyNativeSidekickEndingPose(AbstractPlayableSprite player) {

@@ -570,14 +570,22 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
                 || state.routine == ROUTINE_WAIT_HIT || state.routine == ROUTINE_CLOSING) {
             return;
         }
+        // CNZMiniboss_CheckPlayerHit runs after the routine body in the boss's
+        // own slot. While $38 bit 3 is set it does not change routine, so the
+        // later-slot update remains the sole Move/Obj_Wait dispatch
+        // (sonic3k.asm:145404-145425). A synthetic move here would make every
+        // blocked player hit decrement $2E a second time.
+        if (playerHitOpeningBlocked) {
+            diagnosticPlayerHitBlocked = true;
+            return;
+        }
         // Engine touch callbacks arrive as the observable equivalent of
         // CNZMiniboss_CheckPlayerHit, but the ROM runs Obj_CNZMinibossMove
         // first in Obj_CNZMinibossStart (sonic3k.asm:144863-144871). Preserve
         // that order before installing Opening so the parent's x/y anchor
         // matches the hit frame (sonic3k.asm:144912-144915, 145404-145425).
         applyMoveStepBeforePlayerHitOpening();
-        if (playerHitOpeningBlocked
-                || state.routine == ROUTINE_OPENING
+        if (state.routine == ROUTINE_OPENING
                 || state.routine == ROUTINE_WAIT_HIT
                 || state.routine == ROUTINE_CLOSING) {
             diagnosticPlayerHitBlocked = true;
@@ -1099,11 +1107,9 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
         // ROM sonic3k.asm:144907-144908 — move.w #$90,$2E(a0) +
         //                                 move.l #Obj_CNZMinibossGo3,$34(a0).
         // The parent dispatcher reaches this callback from Obj_Wait's
-        // post-decrement branch (sonic3k.asm:177944-177949). The local timer
-        // is stored before the next Move body begins ticking, so the compact
-        // representation needs two frame-entry counts to make Go3 appear on
-        // the same ROM-visible frame as trace f14712.
-        setWait(Sonic3kConstants.CNZ_MINIBOSS_GO2_WAIT + 2, WaitCallback.GO3);
+        // post-decrement branch (sonic3k.asm:177944-177949). Store the ROM
+        // word verbatim; each later boss dispatch decrements it exactly once.
+        setWait(Sonic3kConstants.CNZ_MINIBOSS_GO2_WAIT, WaitCallback.GO3);
         // ROM sonic3k.asm:144909 — bra.w SetUp_CNZMinibossSwing (tail call).
         setUpSwing();
     }

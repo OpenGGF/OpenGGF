@@ -476,6 +476,10 @@ public final class CutsceneKnucklesLbz2Instance extends AbstractObjectInstance i
 
         @Override
         public void update(int vIntRunCount, PlayableEntity player) {
+            if (parent.isDestroyed()) {
+                ObjectLifetimeOps.expireDynamic(this);
+                return;
+            }
             if (freeFalling) {
                 updateFreeFall();
             } else if (!swinging) {
@@ -489,6 +493,10 @@ public final class CutsceneKnucklesLbz2Instance extends AbstractObjectInstance i
                 updateSwinging();
             }
             updateDynamicSpawn(x, y);
+            // ROM loc_62A0A/loc_62AAE finish through Sprite_CheckDeleteXY.
+            if (!isInRangeAt(x)) {
+                setDestroyedByOffscreen();
+            }
         }
 
         @Override

@@ -3,6 +3,7 @@ package com.openggf.physics;
 import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.GameServices;
 import com.openggf.game.GroundMode;
+import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rules.CollisionRules;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.PlayerAnimationRules;
@@ -33,12 +34,14 @@ import java.util.logging.Logger;
  * 2. Compatibility solid-object resolution when the active frame path still uses a
  *    batched solid pass
  */
-public class CollisionSystem {
+public class CollisionSystem implements RewindSnapshottable<CollisionSystem.AngleRegisterSnapshot> {
     private static final Logger LOGGER = Logger.getLogger(CollisionSystem.class.getName());
 
     private final TerrainCollisionManager terrainCollisionManager;
     private final GroundSensor calcRoomProbe = new GroundSensor(null, Direction.DOWN, (byte) 0, (byte) 0, true);
     private ObjectManager objectManager;
+    private int primaryAngleRegister;
+    private int secondaryAngleRegister;
 
     // Trace for debugging/testing - defaults to no-op
     private CollisionTrace trace = NoOpCollisionTrace.INSTANCE;
@@ -60,7 +63,41 @@ public class CollisionSystem {
         terrainCollisionManager.resetState();
         objectManager = null;
         trace = NoOpCollisionTrace.INSTANCE;
+        primaryAngleRegister = 0;
+        secondaryAngleRegister = 0;
     }
+
+    @Override
+    public String key() {
+        return "collision";
+    }
+
+    @Override
+    public AngleRegisterSnapshot capture() {
+        return new AngleRegisterSnapshot(primaryAngleRegister, secondaryAngleRegister);
+    }
+
+    @Override
+    public void restore(AngleRegisterSnapshot snapshot) {
+        if (snapshot == null) {
+            resetAngleRegisters();
+            return;
+        }
+        primaryAngleRegister = snapshot.primary();
+        secondaryAngleRegister = snapshot.secondary();
+    }
+
+    @Override
+    public void resetForMissingSnapshot() {
+        resetAngleRegisters();
+    }
+
+    private void resetAngleRegisters() {
+        primaryAngleRegister = 0;
+        secondaryAngleRegister = 0;
+    }
+
+    public record AngleRegisterSnapshot(int primary, int secondary) {}
 
     public void setObjectManager(ObjectManager objectManager) {
         this.objectManager = objectManager;
@@ -146,6 +183,47 @@ public class CollisionSystem {
         }
 
         return results;
+    }
+
+    /**
+     * Publishes the angle bytes left by a grounded player AnglePos dispatch.
+     * Native AnglePos seeds both shared registers with the empty-floor sentinel
+     * before its probes, so a missing side writes {@code 3} rather than retaining
+     * an earlier collision routine's value.
+     */
+    public void publishGroundAngleRegisters(SensorResult left, SensorResult right) {
+        primaryAngleRegister = probeAngleOrEmptySentinel(right);
+        secondaryAngleRegister = probeAngleOrEmptySentinel(left);
+    }
+
+    public int getPrimaryAngleRegister() {
+        return primaryAngleRegister;
+    }
+
+    public int getSecondaryAngleRegister() {
+        return secondaryAngleRegister;
+    }
+
+    private static int probeAngleOrEmptySentinel(SensorResult result) {
+        return result == null ? 3 : result.angle() & 0xFF;
+    }
+
+    private void publishPrimaryAngleIfBackedByTile(SensorResult result) {
+        if (result != null && result.tileId() != 0) {
+            primaryAngleRegister = result.angle() & 0xFF;
+        }
+    }
+
+    private void publishAirFloorAngleRegisters(SensorResult[] results) {
+        if (results == null) {
+            return;
+        }
+        SensorResult left = results.length > 0 ? results[0] : null;
+        SensorResult right = results.length > 1 ? results[1] : null;
+        publishPrimaryAngleIfBackedByTile(right);
+        if (left != null && left.tileId() != 0) {
+            secondaryAngleRegister = left.angle() & 0xFF;
+        }
     }
 
     /**
@@ -843,6 +921,7 @@ public class CollisionSystem {
             case 0x00 -> {
                 doWallCheckBoth(sprite);
                 SensorResult[] groundResult = terrainProbes(sprite, sprite.getGroundSensors(), "ground");
+                publishAirFloorAngleRegisters(groundResult);
                 doTerrainCollisionAir(sprite, groundResult, landingHandler, landingProbeHandler);
             }
             case 0x40 -> {
@@ -856,6 +935,7 @@ public class CollisionSystem {
                 boolean ceilingHit = doCeilingCollisionInternal(sprite, ceilingResult);
                 if (!ceilingHit) {
                     SensorResult[] groundResult = terrainProbes(sprite, sprite.getGroundSensors(), "ground");
+                    publishAirFloorAngleRegisters(groundResult);
                     doTerrainCollisionAirDirect(sprite, groundResult, landingHandler,
                             landingProbeHandler, forceFloorCheck);
                 }
@@ -875,6 +955,7 @@ public class CollisionSystem {
                 boolean ceilingHit = doCeilingCollisionInternal(sprite, ceilingResult);
                 if (!ceilingHit) {
                     SensorResult[] groundResult = terrainProbes(sprite, sprite.getGroundSensors(), "ground");
+                    publishAirFloorAngleRegisters(groundResult);
                     doTerrainCollisionAirDirect(sprite, groundResult, landingHandler,
                             landingProbeHandler, forceFloorCheck);
                 }
@@ -1220,6 +1301,7 @@ public class CollisionSystem {
 
         for (int i = 0; i < 2; i++) {
             SensorResult result = pushSensors[i].scan((short) 0, (short) 0);
+            publishPrimaryAngleIfBackedByTile(result);
 
             if (result != null && result.distance() < 0) {
                 moveForSensorResult(sprite, result);
@@ -1235,6 +1317,7 @@ public class CollisionSystem {
         }
 
         SensorResult result = pushSensors[sensorIndex].scan((short) 0, (short) 0);
+        publishPrimaryAngleIfBackedByTile(result);
         if (result != null && result.distance() < 0) {
             moveForSensorResult(sprite, result);
             sprite.setXSpeed((short) 0);

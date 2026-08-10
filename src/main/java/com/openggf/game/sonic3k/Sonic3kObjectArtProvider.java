@@ -70,6 +70,8 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     private final List<HardwareWorkHandle> enemyKosHandles = new ArrayList<>();
     private S3kKosModuleQueue enemyKosQueue;
     private boolean enemyKosSubmissionArmed;
+    /** Whether a pending ROM admission has already crossed an unheld tail. */
+    private boolean enemyKosAdmissionSawUnheldTail;
     private long runtimeArtAdmissionGeneration;
     private long runtimeArtAdmissionNextLeaseId;
     private RuntimeArtAdmissionLease runtimeArtAdmissionLease;
@@ -79,6 +81,13 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
 
     /** One-pass deferral for {@link #onInLevelTitleCardCompleted(RuntimeArtAdmissionLease)}. */
     private boolean enemyKosArmOnNextRuntimePass;
+
+    /**
+     * A ROM owner admitted enemy art after the current frame's direct FIFO
+     * boundary; the module parent and its first child are published at the
+     * loop-tail handoff rather than being serviced in the admitting frame.
+     */
+    private boolean enemyKosSubmitAfterPreMainLoop;
 
     /**
      * Residual ROM lifetime of the title-card owner when its presentation was
@@ -1040,7 +1049,19 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         }
 
         reloadStandaloneRegistryForActTransition(zoneIndex);
-        scheduleEnemyKosArt(zoneIndex, currentActIndex);
+        // A resource-owner reload only transfers the work that its handoff
+        // prepared.  The native ICZ1BGE transition enters the target through
+        // Load_Sprites/Process_Sprites; it does not run LoadEnemyArt.  Any
+        // target-owned Queue_Kos_Module request (for example the Starpost
+        // bonus-art request made while the initial target objects execute)
+        // must therefore enter the FIFO from that object owner, rather than
+        // being replaced by a speculative zone enemy batch here.
+        if (policy == RuntimeArtAdmissionPolicy.RESOURCE_HANDOFF_OWNER) {
+            scheduleEnemyKosArt(zoneIndex, currentActIndex);
+            pendingEnemyKosEntries = List.of();
+        } else {
+            scheduleEnemyKosArt(zoneIndex, currentActIndex);
+        }
         RuntimeArtAdmissionOwnerKind ownerKind = switch (policy) {
             case IMMEDIATE -> RuntimeArtAdmissionOwnerKind.IMMEDIATE;
             case TITLE_OWNER -> RuntimeArtAdmissionOwnerKind.TITLE_OWNER;
@@ -1057,14 +1078,15 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     }
 
     /**
-     * Issues a fresh title-owner lease when a later in-level title follows a
-     * previously consumed runtime-art admission.
+     * Issues the title owner's next runtime-art lease after a later in-level
+     * title. The results object owns this handoff. The title-card manager
+     * remains a strict consumer of the exact lease and never selects or
+     * fabricates one.
      *
-     * <p>The results object owns this handoff. The title-card manager remains a
-     * strict consumer of the exact lease and never selects or fabricates one.
-     * Any enemy batch already admitted by the previous owner continues through
-     * the provider queue independently; the new presentation lease represents
-     * no replacement enemy batch.
+     * <p>If the previous owner still has admitted work, it continues through
+     * the provider queue independently. Once that work has retired, the ROM's
+     * title-owner {@code LoadEnemyArt} dispatch creates the next zone/act enemy
+     * batch here instead of leaving the queue empty.
      */
     @Override
     public void prepareRuntimeArtForInLevelTitleCard() {
@@ -1081,6 +1103,17 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
                             + runtimeArtAdmissionLease.ownerKind());
         }
 
+        boolean previousBatchStillAdmitted = !pendingEnemyKosEntries.isEmpty()
+                || !enemyKosHandles.isEmpty();
+        if (!previousBatchStillAdmitted) {
+            scheduleEnemyKosArt(currentZoneIndex, currentActIndex);
+            issueRuntimeArtAdmissionLease(RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
+            return;
+        }
+
+        // A carried transition can still own a prepared or active batch. Keep
+        // that exact work independent from the presentation lease; the title
+        // completion callback will arm it at the native LoadEnemyArt boundary.
         issueRuntimeArtAdmissionLease(
                 RuntimeArtAdmissionOwnerKind.TITLE_OWNER,
                 fingerprintEnemyKosBatch(List.of()));
@@ -1501,13 +1534,15 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     public void processRuntimeArtQueue() {
         boolean registeredRuntimeSheet = false;
         advanceTitleCardTeardown();
-        processEnemyKosArt();
         if (enemyKosArmOnNextRuntimePass) {
             // The in-level card owner's LoadEnemyArt dispatch is the level
             // frame after the manager's top-of-frame COMPLETE transition, so
-            // the submission first becomes eligible on the next pass.
+            // the submission first becomes eligible on this following pass.
             enemyKosArmOnNextRuntimePass = false;
             enemyKosSubmissionArmed = true;
+        }
+        if (!enemyKosSubmitAfterPreMainLoop) {
+            processEnemyKosArt();
         }
         if (cnzTeleporterArtState == RuntimeArtState.PENDING) {
             loadCnzTeleporterArt();
@@ -1537,11 +1572,55 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         }
     }
 
+    /** Completes a late ROM {@code LoadEnemyArt} admission after this frame's queue tail. */
+    @Override
+    public void processRuntimeArtQueueAfterPreMainLoop() {
+        processRuntimeArtQueueAfterPreMainLoop(true);
+    }
+
+    @Override
+    public void processRuntimeArtQueueAfterPreMainLoop(boolean heldLoopTail) {
+        if (!enemyKosSubmitAfterPreMainLoop) {
+            return;
+        }
+        if (!heldLoopTail) {
+            // The ROM-owned admission has reached a loop tail whose sampled
+            // iteration is still complete. Retain the real pending request for
+            // the next represented tail so it cannot appear one direct-service
+            // boundary early.
+            enemyKosAdmissionSawUnheldTail = true;
+            return;
+        }
+        boolean admittedOnHeldTail = !enemyKosAdmissionSawUnheldTail;
+        S3kKosModuleQueue moduleQueue =
+                S3kRuntimeArtCoordinator.current().moduleQueue();
+        boolean moduleQueueWasEmpty = !moduleQueue.hasPendingPhysicalModules();
+        enemyKosSubmissionArmed = true;
+        processEnemyKosArt();
+        if (!pendingEnemyKosEntries.isEmpty() || enemyKosHandles.isEmpty()) {
+            return;
+        }
+        enemyKosSubmitAfterPreMainLoop = false;
+        enemyKosAdmissionSawUnheldTail = false;
+        if (admittedOnHeldTail) {
+            moduleQueue.deferChildSubmissionAfterHeldAdmission();
+        }
+        // Process_Kos_Module_Queue runs once after ScreenEvents. A late
+        // LoadEnemyArt publication can therefore start its first parent only
+        // when the native module FIFO was empty; if an older parent is already
+        // live, that head owns this iteration's step and advances next loop.
+        if (moduleQueueWasEmpty) {
+            moduleQueue.stepHeadModuleAfterDirectTail();
+        }
+    }
+
     private void scheduleEnemyKosArt(int zoneIndex, int actIndex) {
         enemyKosHandles.clear();
         enemyKosQueue = null;
         enemyKosSubmissionArmed = false;
+        enemyKosAdmissionSawUnheldTail = false;
         enemyKosArmOnNextRuntimePass = false;
+        enemyKosSubmitAfterPreMainLoop = false;
         titleCardTeardown = null;
         pendingEnemyKosEntries = switch (zoneIndex) {
             case Sonic3kZoneIds.ZONE_AIZ -> List.of(
@@ -1802,11 +1881,13 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
             return;
         }
         if (enemyKosHandles.stream().allMatch(enemyKosQueue::isReady)) {
+            S3kKosModuleQueue completedQueue = enemyKosQueue;
             for (HardwareWorkHandle handle : enemyKosHandles) {
                 enemyKosQueue.claim(handle);
             }
             enemyKosHandles.clear();
             enemyKosQueue = null;
+            completedQueue.allowChildSubmissionAfterHeldAdmission();
         }
     }
 
@@ -1877,6 +1958,16 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     }
 
     /**
+     * Defers a ROM-owned {@code LoadEnemyArt} batch until after the current
+     * frame's direct FIFO service. This preserves the production queue state
+     * when an event owner reaches its load call at the loop-tail boundary.
+     */
+    public void deferEnemyKosArtAdmissionUntilAfterPreMainLoop() {
+        scheduleEnemyKosArt(currentZoneIndex, currentActIndex);
+        enemyKosSubmitAfterPreMainLoop = true;
+    }
+
+    /**
      * Runs one level frame of the modelled title-card owner and its children.
      *
      * <p>{@code Obj_TitleCard} creates its card elements through
@@ -1912,6 +2003,11 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
                 titleCardTeardownLeaseId,
                 RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
         consumeRuntimeArtAdmission(lease, RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
+        var titleCardProvider = GameServices.module().getTitleCardProvider();
+        if (titleCardProvider != null) {
+            titleCardProvider
+                    .completeOmittedPresentationFreshLevelRuntimeArtHandoff();
+        }
         titleCardTeardownLeaseId = -1;
     }
 
@@ -2550,7 +2646,9 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         return new com.openggf.game.rewind.snapshot.PlcProgressSnapshot(
                 loadEpoch, cnzTeleporterArtState.ordinal()
                         | (cnzEndBossArtState.ordinal() << 2)
-                        | (enemyKosArmOnNextRuntimePass ? 1 << 4 : 0),
+                        | (enemyKosArmOnNextRuntimePass ? 1 << 4 : 0)
+                        | (enemyKosSubmitAfterPreMainLoop ? 1 << 5 : 0)
+                        | (enemyKosAdmissionSawUnheldTail ? 1 << 6 : 0),
                 pendingModules,
                 enemyKosHandles.stream().map(HardwareWorkHandle::ordinal).toList(),
                 enemyKosSubmissionArmed,
@@ -2578,6 +2676,8 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         cnzTeleporterArtState = decodeRuntimeArtState(packedState & 3);
         cnzEndBossArtState = decodeRuntimeArtState((packedState >>> 2) & 3);
         enemyKosArmOnNextRuntimePass = (packedState & (1 << 4)) != 0;
+        enemyKosSubmitAfterPreMainLoop = (packedState & (1 << 5)) != 0;
+        enemyKosAdmissionSawUnheldTail = (packedState & (1 << 6)) != 0;
         pendingEnemyKosEntries = snap.pendingKosModules().stream()
                 .map(entry -> new EnemyKosEntry(
                         entry.sourceAddress(), entry.destinationTile()))

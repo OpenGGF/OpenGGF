@@ -12,7 +12,9 @@ import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.resources.S3kKosRamDestinations;
 import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
 import com.openggf.game.timing.HardwareTimingJob;
+import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareWorkKind;
+import com.openggf.tests.HardwareBoundaryPump;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -186,6 +188,44 @@ class TestSonic3kPlcArtRewindSnapshot {
         provider.consumeRuntimeArtAdmission(
                 titleLease, RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
         assertTrue(provider.capture().runtimeArtAdmissionConsumed());
+    }
+
+    @Test
+    void laterInLevelTitleAdmitsFreshEnemyBatchAfterPreviousBatchRetires()
+            throws Exception {
+        Sonic3kObjectArtProvider provider = loadProvider(
+                Sonic3kZoneIds.ZONE_AIZ, 0);
+        RuntimeArtAdmissionLease previous = exactPreparedTitleLease(provider);
+
+        provider.consumeRuntimeArtAdmission(
+                previous, RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
+        provider.processRuntimeArtQueue();
+        for (int frame = 0; frame < 1_000; frame++) {
+            HardwareBoundaryPump.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            HardwareBoundaryPump.service(HardwareServiceBoundary.POST_OBJECTS);
+            provider.processRuntimeArtQueue();
+            PlcProgressSnapshot progress = provider.capture();
+            if (progress.pendingKosModules().isEmpty()
+                    && progress.pendingKosOrdinals().isEmpty()) {
+                break;
+            }
+        }
+        PlcProgressSnapshot beforeTitle = provider.capture();
+        assertEquals(List.of(), beforeTitle.pendingKosModules());
+        assertEquals(List.of(), beforeTitle.pendingKosOrdinals());
+
+        provider.prepareRuntimeArtForInLevelTitleCard();
+
+        PlcProgressSnapshot preparedTitle = provider.capture();
+        assertNotEquals(previous.id(), preparedTitle.runtimeArtAdmissionLeaseId());
+        assertEquals(RuntimeArtAdmissionOwnerKind.TITLE_OWNER,
+                preparedTitle.runtimeArtAdmissionOwnerKind());
+        assertFalse(preparedTitle.runtimeArtAdmissionConsumed());
+        assertEquals(3, preparedTitle.pendingKosModules().size(),
+                "a retired LoadEnemyArt batch must be replaced for the next title owner");
+        assertEquals(previous.batchFingerprint(),
+                preparedTitle.runtimeArtAdmissionBatchFingerprint(),
+                "AIZ reloads the same ROM-owned enemy batch for the next title");
     }
 
     @Test
@@ -374,20 +414,19 @@ class TestSonic3kPlcArtRewindSnapshot {
         PlcProgressSnapshot afterEdge = provider.capture();
         assertTrue(afterEdge.kosSubmissionArmed());
         assertTrue((afterEdge.runtimeState() & (1 << 4)) == 0);
-        assertEquals(List.of(), afterEdge.pendingKosOrdinals(),
-                "the edge pass arms the batch but cannot physically submit it");
+        assertEquals(3, afterEdge.pendingKosOrdinals().size(),
+                "the admitted pass arms and submits the native enemy batch");
 
         Sonic3kObjectArtProvider restoredBefore = new Sonic3kObjectArtProvider();
         restoredBefore.restore(beforeEdge);
-        restoredBefore.processRuntimeArtQueue();
-        assertEquals(afterEdge, restoredBefore.capture(),
-                "rewinding before the edge replays exactly one deferral pass");
+        assertEquals(beforeEdge, restoredBefore.capture(),
+                "rewinding before the edge restores the deferred admission exactly");
 
         Sonic3kObjectArtProvider restoredAfter = new Sonic3kObjectArtProvider();
         restoredAfter.restore(afterEdge);
         restoredAfter.processRuntimeArtQueue();
-        assertEquals(3, restoredAfter.capture().pendingKosOrdinals().size(),
-                "rewinding after the edge submits on the following provider pass");
+        assertEquals(afterEdge, restoredAfter.capture(),
+                "rewinding after the edge preserves the submitted parents");
     }
 
     private static Sonic3kObjectArtProvider loadProvider(int zone, int act) {

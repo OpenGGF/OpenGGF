@@ -586,6 +586,28 @@ class TestLbzFinalBoss1Instance {
     }
 
     @Test
+    void finalFallTestsThePreEventCameraAtTheObjectDispatchBoundary() {
+        HarnessServices services = new HarnessServices(PlayerCharacter.SONIC_AND_TAILS);
+        LbzFinalBoss1Instance boss = newBoss(services);
+        TestablePlayableSprite player = new TestablePlayableSprite(
+                "sonic", (short) 0x44A0, (short) (services.cameraY() + 0x11E));
+        boss.update(0, null);
+        boss.forceSonicFinalePhaseForTest(LbzFinalBoss1Instance.FinalePhase.FINAL_FALL);
+
+        // LevelFrameStep uses the legacy S3K object-before-physics ordering.
+        // The ROM loc_72CDA therefore reads Camera_Y_pos before the falling
+        // event's same-loop decrement, rather than anticipating that write.
+        boss.update(50, player);
+        assertFalse(services.transitionRequested,
+                "the object pass must not consume the two-pixel post-event margin early");
+
+        player.setTestY((short) (services.cameraY() + 0x120));
+        boss.update(51, player);
+        assertTrue(services.transitionRequested,
+                "the next object pass must request StartNewLevel at Camera_Y_pos+$120");
+    }
+
+    @Test
     void deathEggExplosionDebrisUsesSpriteCheckDeleteXYNotXOnlyRange() throws Exception {
         HarnessServices services = new HarnessServices(PlayerCharacter.SONIC_AND_TAILS);
         LbzFinalBoss1Instance boss = newBoss(services);

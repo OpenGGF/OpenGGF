@@ -47,6 +47,8 @@ class TestHardwareTimingAuthorityGuard {
     private static final Pattern SUPPRESSED_OBSERVER_APPLY = Pattern.compile(
             "(?:\\b[A-Za-z_$][A-Za-z0-9_$]*|\\))\\s*\\.\\s*"
                     + "applySuppressedRowCompletion\\s*\\(");
+    private static final Pattern RECORDED_EDGE_LOOKAHEAD = Pattern.compile(
+            "hasPendingCompletionAtCurrentRawFrame\\s*\\(");
     private static final Pattern IMPORT_DECLARATION = Pattern.compile(
             "(?m)^import\\s+(?:static\\s+)?([\\w.]+)(?:\\.\\*)?\\s*;");
     private static final Pattern HARDWARE_TIMING_FILE_LITERAL = Pattern.compile(
@@ -128,6 +130,28 @@ class TestHardwareTimingAuthorityGuard {
                     .toList();
             assertEquals(List.of(), violations,
                     "measurement tooling leaked into runtime/replay authority");
+        }
+    }
+
+    @Test
+    void recordedEdgesCannotSelectProductionServiceBoundaries() throws IOException {
+        try (Stream<Path> sources = Files.walk(SRC_MAIN)) {
+            List<String> violations = sources
+                    .filter(path -> path.toString().endsWith(".java"))
+                    .filter(path -> {
+                        try {
+                            return RECORDED_EDGE_LOOKAHEAD.matcher(
+                                    Files.readString(path)).find();
+                        } catch (IOException exception) {
+                            throw new java.io.UncheckedIOException(exception);
+                        }
+                    })
+                    .map(SRC_MAIN::relativize)
+                    .map(Path::toString)
+                    .sorted()
+                    .toList();
+            assertEquals(List.of(), violations,
+                    "recorded timing must not choose which production boundary runs");
         }
     }
 

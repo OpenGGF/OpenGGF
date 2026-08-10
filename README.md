@@ -214,8 +214,16 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ## Releases
 
+- **Sonic 3 & Knuckles trace parity (`bugfix/s3k-traces`, merged 2026-08-10):** brings 15 of 16 previously-failing S3K trace-replay classes to green — AIZ, CNZ, HCZ, ICZ, LBZ and MGZ (standalone and complete-run), the gumball, pachinko and slots bonus stages, the special stage, and the hardware-timing replay — with no previously-green class regressing. Merged after a three-lane review (`docs/architecture/audits/2026-08-10-s3k-traces-branch-review.md`) whose two blocking findings were fixed first: a sidekick on-screen predicate that added three conditions the ROM does not have, and an art submission that only ran when a trace was driving the replay.
+
 ### v0.6.prerelease (Current development snapshot)
 
+- **Shared movement and S3K trace-parity corrections (2026-08-06):** the
+  shared movement path now keeps ROM `move_lock` semantics through a full
+  dispatch, and the shared oscillator no longer gains a duplicate transition
+  tick. S3K replay work also corrects Bubbler/Air Countdown off-screen
+  lifetimes, results/title-card queue ownership, and fresh-level destination
+  terrain admission without changing trace fixtures.
 - **Sonic 1 GHZ music-driver parity harness (2026-08-09):** a pinned BizHawk
   sound-test movie and read-only driver observer now produce deterministic
   logical-state and ordered YM2612/PSG captures for comparison with OpenGGF.

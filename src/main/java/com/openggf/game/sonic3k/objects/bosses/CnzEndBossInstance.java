@@ -612,6 +612,12 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         if (!defeatHandoffComplete || transitionRequested) {
             return;
         }
+        if (!capsuleResultsComplete && services().gameState().isEndOfLevelFlag()) {
+            // loc_6E724 reads _unkFAA8 itself after the lower-slot
+            // Obj_LevelResults clears it; Obj_EggCapsule is not an
+            // intermediate notification owner (sonic3k.asm:146087-146103).
+            capsuleResultsComplete = true;
+        }
         if (capsuleResultsComplete && !cannonSpawned) {
             releasePostCapsuleStateOnce();
             if (player instanceof AbstractPlayableSprite sprite
@@ -631,6 +637,8 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
             cannonArmed = true;
             cannonLaunchTimer = CANNON_LAUNCH_WAIT;
             services().camera().setMaxYTarget((short) 0x0200);
+            S3kCnzEventWriteSupport.requestSidekickBoundsPublishAfterCameraEasing(
+                    services());
             sprite.setControlLocked(true);
             return;
         }
@@ -669,8 +677,11 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
     }
 
     private void spawnEndCannon() {
+        cnzArtProvider().queueBadnikExplosionArt();
         cannonSpawned = true;
-        endCannon = spawnChild(() -> new CnzCannonInstance(
+        // loc_6E778 calls AllocateObject, so the cannon takes the lowest free
+        // SST even when that slot is behind this retained boss controller.
+        endCannon = spawnFreeChild(() -> new CnzCannonInstance(
                 new ObjectSpawn(CANNON_X, CANNON_Y, Sonic3kObjectIds.CNZ_CANNON,
                         CnzCannonInstance.END_SEQUENCE_SUBTYPE, 0, false, 0)));
     }

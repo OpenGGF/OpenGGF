@@ -2258,6 +2258,11 @@ public class ObjectManager {
         return slotAllocator.hasFreeSlot();
     }
 
+    /** Non-mutating {@code FindFreeObj} result for ROM owner-boundary decisions. */
+    public int firstFreeDynamicSlot() {
+        return slotAllocator.firstFreeSlot();
+    }
+
     /**
      * Reserves the next available dynamic slot for non-ObjectInstance systems
      * that still occupy ROM SST slots. Equivalent to S3K AllocateObject

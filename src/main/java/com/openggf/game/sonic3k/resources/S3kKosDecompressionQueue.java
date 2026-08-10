@@ -39,6 +39,7 @@ public final class S3kKosDecompressionQueue
     private final Map<HardwareWorkHandle, S3kKosDecompressionDescriptor> descriptors =
             new HashMap<>();
     private final Set<HardwareWorkHandle> preparedEntries = new HashSet<>();
+    private boolean deferNewHeadPreparationVisibility;
 
     public S3kKosDecompressionQueue(HardwareTimingService timing) {
         this.timing = Objects.requireNonNull(timing, "timing");
@@ -124,12 +125,18 @@ public final class S3kKosDecompressionQueue
             return;
         }
         HardwareWorkHandle servicedHead = physicalEntries.peekFirst();
-        if (servicedHead != null) {
+        if (servicedHead != null && !deferNewHeadPreparationVisibility) {
             preparedEntries.add(servicedHead);
         }
+        deferNewHeadPreparationVisibility = false;
         while (!physicalEntries.isEmpty() && timing.isReady(physicalEntries.peekFirst())) {
             preparedEntries.remove(physicalEntries.removeFirst());
         }
+    }
+
+    /** Keeps a child published at a held loop tail unarmed until its closure. */
+    void deferNewHeadPreparationVisibilityForHeldLoopTail() {
+        deferNewHeadPreparationVisibility = true;
     }
 
     public boolean decompressionsPending() {
@@ -198,7 +205,7 @@ public final class S3kKosDecompressionQueue
                         entry.getKey(), entry.getValue(),
                         physicalEntries.contains(entry.getKey()),
                         preparedEntries.contains(entry.getKey())))
-                .toList());
+                .toList(), deferNewHeadPreparationVisibility);
     }
 
     @Override
@@ -207,6 +214,8 @@ public final class S3kKosDecompressionQueue
         physicalEntries.clear();
         descriptors.clear();
         preparedEntries.clear();
+        deferNewHeadPreparationVisibility =
+                snapshot.deferNewHeadPreparationVisibility();
         for (S3kKosDecompressionQueueSnapshot.Entry entry : snapshot.entries()) {
             if (timing.pendingHandle(entry.handle().kind(), entry.handle().ordinal()).isEmpty()) {
                 throw new IllegalArgumentException("direct queue snapshot references missing timing job");
@@ -226,6 +235,7 @@ public final class S3kKosDecompressionQueue
         physicalEntries.clear();
         descriptors.clear();
         preparedEntries.clear();
+        deferNewHeadPreparationVisibility = false;
     }
 
     static HardwareWorkPreparation recreatePreparation(S3kKosDecompressionSnapshot snapshot) {

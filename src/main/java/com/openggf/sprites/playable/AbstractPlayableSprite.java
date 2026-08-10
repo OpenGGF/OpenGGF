@@ -1840,6 +1840,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // (invulnerableFrames already set in applyHurt() per ROM behavior)
                 if (!air && this.air && hurt) {
                         hurt = false;
+                        forcedAnimationId = -1;
                         setHighPriority(false);
                         // HurtStop's direct draw path delays decrementing the reset timer by one frame.
                         invulnerableFrames = 0x78;
@@ -1926,6 +1927,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public void completeHurtLandingRecovery() {
                 hurt = false;
+                forcedAnimationId = -1;
                 controller.markHurtRecoveryCompleted();
                 setHighPriority(false);
                 invulnerableFrames = 0x78;
@@ -2529,6 +2531,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         public void setHurt(boolean hurt) {
+                if (!hurt && this.hurt) {
+                        forcedAnimationId = -1;
+                }
                 this.hurt = hurt;
         }
 
@@ -5320,15 +5325,23 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * </ul>
          */
         public void replenishAir() {
+                replenishAir(false);
+        }
+
+        /**
+         * S3K {@code Obj_Bubbler} preserves the rolling status bit for every
+         * playable object other than {@code Obj_Sonic}, even though it restores
+         * that character's standing radii.
+         */
+        public void replenishAirPreservingRollingStatus() {
+                replenishAir(true);
+        }
+
+        private void replenishAir(boolean preserveRollingStatus) {
                 // ROM: clr.w x_vel(a1) / clr.w y_vel(a1) / clr.w inertia(a1)
                 xSpeed = 0;
                 ySpeed = 0;
                 gSpeed = 0;
-
-                // ROM: move.b #AniIDSonAni_Bubble,anim(a1)
-                if (bubbleAnimId >= 0) {
-                        setAnimationId(bubbleAnimId);
-                }
 
                 // ROM: move.w #$23,move_lock(a1) (35 frames)
                 moveLockTimer = 0x23;
@@ -5347,6 +5360,16 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         // ROM restores standing radii, then subtracts the radius delta from y_pos.
                         setRolling(false);
                         setY((short) (getY() - getRollHeightAdjustment()));
+                        if (preserveRollingStatus) {
+                                setRollingFlagPreserveRadii(true);
+                        }
+                }
+
+                // ROM: move.b #AniIDSonAni_Bubble,anim(a1). Apply this after the
+                // rolling-status branch because restoring that bit selects the
+                // roll animation as a normal engine side effect.
+                if (bubbleAnimId >= 0) {
+                        setAnimationId(bubbleAnimId);
                 }
 
                 // Delegate to drowning manager for air timer reset and music handling

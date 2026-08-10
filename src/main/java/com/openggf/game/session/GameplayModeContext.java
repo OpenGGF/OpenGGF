@@ -344,6 +344,7 @@ public final class GameplayModeContext implements ModeContext {
         if (rewindRegistry != null) {
             rewindRegistry.deregister("parallax");
             rewindRegistry.deregister("water");
+            rewindRegistry.deregister("collision");
             rewindRegistry.deregister("sprites");
             rewindRegistry.deregister("palette-colors");
             rewindRegistry.deregisterPostRestoreCallback("parallax-derived-state");
@@ -352,6 +353,7 @@ public final class GameplayModeContext implements ModeContext {
             rewindRegistry.deregisterPostRestoreCallback("sprite-carry-solid-derived-state");
             rewindRegistry.register(parallaxManager);
             rewindRegistry.register(waterSystem);
+            rewindRegistry.register(collisionSystem);
             rewindRegistry.register(spriteManager.rewindSnapshottable());
             rewindRegistry.register(new PaletteColorStateAdapter(
                     () -> levelPalettesOrNull(levelManager),

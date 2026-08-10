@@ -194,9 +194,9 @@ public class LostRingObjectInstance extends AbstractObjectInstance
      * ROM {@code Reverse_gravity_flag} runtime state, NOT a zone/game carve-out. {@code floorCheck}
      * skips the world probe entirely (unit-testable pure-integrate path with no loaded level).
      */
-    private void stepPhysics(int gravity, boolean floorCheck) {
+    private boolean stepPhysics(int gravity, boolean floorCheck) {
         if (collected) {
-            return;
+            return false;
         }
         // ROM: S3K Reverse_gravity_flag negates the gravity accumulation and swaps the floor probe
         // for a ceiling probe. The flag is only ever set by S3K runtime state, so this is ROM-state
@@ -211,35 +211,36 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         yVel += effectiveGravity;
 
         if (!floorCheck) {
-            return;
+            return false;
         }
 
         // Per-game floor-check cadence: S1 every 4 frames (#3), S2/S3K every 8 (#7). The ROM uses
         // v_vbla_byte (not the gameplay frame counter) for this gate (RingManager.java:1242-1248).
         int floorCheckMask = resolveFloorCheckMask();
         int vblaCounter = resolveVblaCounter() + resolveFloorCheckCounterPhase();
-        if (((vblaCounter + phaseOffset) & floorCheckMask) != 0) {
-            return;
+        boolean boundaryChecksOnlyOnCadence =
+                lostRingBoundaryChecksOnlyOnProbeCadence();
+        boolean movingTowardSurface = reverseGravity ? yVel <= 0 : yVel >= 0;
+        if (!movingTowardSurface) {
+            return !boundaryChecksOnlyOnCadence;
         }
-        if (ringFloorProbeRequiresRenderFlag() && !hasRomRenderFlagForFloorProbe()) {
-            return;
+        if (((vblaCounter + phaseOffset) & floorCheckMask) != 0) {
+            return !boundaryChecksOnlyOnCadence;
         }
 
-        if (reverseGravity) {
-            // S3K reverse gravity: probe the ceiling (top edge, y - y_radius) while rising
-            // (RingManager.java:1282-1294, sonic3k.asm RingCheckFloorDist_ReverseGravity).
-            if (yVel <= 0) {
+        if (!ringFloorProbeRequiresRenderFlag() || hasRomRenderFlagForFloorProbe()) {
+            if (reverseGravity) {
+                // S3K reverse gravity: probe the ceiling (top edge, y - y_radius) while rising
+                // (RingManager.java:1282-1294, sonic3k.asm RingCheckFloorDist_ReverseGravity).
                 int dist = ringCheckCeilingDist(getX(), getY() - RING_Y_RADIUS);
                 if (dist < 0) {
                     ySubpixel += (-dist) << 8;
                     yVel -= (yVel >> 2);
                     yVel = -yVel;
                 }
-            }
-        } else {
-            // Normal gravity: probe the floor (bottom edge, y + y_radius) while falling
-            // (RingManager.java:1296-1305, s2.asm RingCheckFloorDist).
-            if (yVel >= 0) {
+            } else {
+                // Normal gravity: probe the floor (bottom edge, y + y_radius) while falling
+                // (RingManager.java:1296-1305, s2.asm RingCheckFloorDist).
                 int dist = ringCheckFloorDist(getX(), getY() + RING_Y_RADIUS);
                 if (dist < 0) {
                     ySubpixel += dist << 8;
@@ -248,6 +249,12 @@ public class LostRingObjectInstance extends AbstractObjectInstance
                 }
             }
         }
+        // S1 RLoss_Bounce and S2 Obj37_Main branch to CheckBoundary from their
+        // rising and off-cadence paths. S3K instead branches directly to
+        // Add_SpriteToCollisionResponseList and reaches its boundary check only
+        // through this cadence path. An off-screen render flag skips only the
+        // terrain probe and still falls through to the boundary check.
+        return true;
     }
 
     /** Object-loop entry: one ring physics step. */
@@ -264,14 +271,16 @@ public class LostRingObjectInstance extends AbstractObjectInstance
      * stays frozen at its spawn point. The override mirrors {@code Obj37_Main}:
      * <ol>
      *   <li>{@link #updateMovement()} = ObjectMove + gravity + cadence floor/ceiling probe;</li>
-     *   <li>{@code Obj37_CheckBoundary}: delete when the shared
+     *   <li>When the current game's native control flow reaches
+     *       {@code Obj37_CheckBoundary}, delete when the shared
      *       {@code Ring_spill_anim_counter} (the {@link SpillAnimationState#counter()})
      *       reaches 0, OR when {@code y_pos} has passed below
      *       {@code Camera_Max_Y_pos + screen_height}.</li>
      * </ol>
      * The shared counter is the lifetime owner (ROM non-{@code fixBugs} path); it is
-     * ticked once per frame by {@code RingManager.LostRingPool}, so every live ring
-     * deletes on the same frame the spin animation finishes, matching the ROM.
+     * ticked once per frame by {@code RingManager.LostRingPool}. S1/S2 reach the
+     * boundary check every object pass; S3K observes zero only when its native
+     * direction/cadence branch next reaches that check.
      */
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
@@ -324,18 +333,18 @@ public class LostRingObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        updateMovement();
+        boolean checksBoundary = stepPhysics(0x18 /* GRAVITY */, true);
 
-
-        // Obj37_CheckBoundary: shared Ring_spill_anim_counter == 0 → delete.
-        if (spillAnimation != null && spillAnimation.counter() == 0) {
+        // S1/S2 reach this from every movement branch; S3K reaches it only while
+        // moving toward the active surface on the floor-probe cadence phase.
+        if (checksBoundary && spillAnimation != null && spillAnimation.counter() == 0) {
             setDestroyed(true);
             return;
         }
 
         // Obj37_CheckBoundary: y_pos below (Camera_Max_Y_pos + screen_height) → delete.
         Camera camera = cameraOrNull();
-        if (camera != null) {
+        if (checksBoundary && camera != null) {
             int boundary = (camera.getMaxY() & 0xFFFF) + (camera.getHeight() & 0xFFFF);
             // FLAG: FixBugs (docs/s1disasm/sonic.asm:20 -- 0 in the shipped ROM).
             // ENGINE IMPLEMENTS: the shipped (FixBugs = 0) branch -- `cmp.w y_pos(a0),d0
@@ -446,6 +455,18 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     protected boolean ringFloorProbeRequiresRenderFlag() {
         RingRules rules = resolveRingRules();
         return rules == null || rules.ringFloorProbeRequiresRenderFlag();
+    }
+
+    /**
+     * S3K's rising/off-cadence branches skip the lifetime and bottom-boundary
+     * checks (sonic3k.asm:35654-35686). S1 and S2 branch to those checks from
+     * both paths (S1 Rings.asm:314-356; s2.asm:25209-25249).
+     */
+    protected boolean lostRingBoundaryChecksOnlyOnProbeCadence() {
+        RingRules rules = resolveRingRules();
+        return rules != null
+                ? rules.lostRingBoundaryChecksOnlyOnProbeCadence()
+                : GameRules.SONIC_2.ring().lostRingBoundaryChecksOnlyOnProbeCadence();
     }
 
     /**

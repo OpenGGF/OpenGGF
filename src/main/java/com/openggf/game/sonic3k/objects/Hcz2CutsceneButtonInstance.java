@@ -64,11 +64,6 @@ public class Hcz2CutsceneButtonInstance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean isPersistent() {
-        return true;
-    }
-
-    @Override
     public int getPriorityBucket() {
         return RenderPriority.clamp(PRIORITY);
     }

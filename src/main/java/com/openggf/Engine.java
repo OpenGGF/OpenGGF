@@ -1165,7 +1165,7 @@ public class Engine {
 			return;
 		}
 		try {
-			levelManager.loadZoneAndAct(0, 0);
+			levelManager.loadZoneAndActForFreshRuntime(0, 0);
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
@@ -1200,7 +1200,7 @@ public class Engine {
 
 	private void loadLevelFromDataSelect(int zone, int act) {
 		try {
-			levelManager.loadZoneAndAct(zone, act);
+			levelManager.loadZoneAndActForFreshRuntime(zone, act);
 		} catch (IOException e) {
 			throw new RuntimeException("Failed to load zone " + zone + " act " + act + " from data select", e);
 		}

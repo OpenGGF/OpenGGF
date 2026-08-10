@@ -12,6 +12,7 @@ import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.events.S3kTransitionEventBridge;
 import com.openggf.camera.Camera;
+import com.openggf.level.CarriedTitlePublicationTiming;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectConstructionContext;
@@ -51,6 +52,8 @@ class TestS3kResultsScreenObjectInstance {
     void shortResultsChildTailRetainsTwoMutatedTitleCreateDispatches() {
         assertEquals(38, S3kResultsScreenObjectInstance.mutatedTitleCardResetDispatches(false));
         assertEquals(40, S3kResultsScreenObjectInstance.mutatedTitleCardResetDispatches(true));
+        assertEquals(39, S3kResultsScreenObjectInstance.mutatedTitleCardResetDispatches(
+                true, -1, true));
     }
 
     @Test
@@ -74,12 +77,17 @@ class TestS3kResultsScreenObjectInstance {
     }
 
     @Test
-    void productionConstructionSurfacesMissingHardwareTimingService() {
-        assertThrows(IllegalStateException.class,
-                () -> ObjectConstructionContext.construct(
-                        new TestObjectServices(),
-                        () -> new S3kResultsScreenObjectInstance(
-                                PlayerCharacter.SONIC_AND_TAILS, 0)));
+    void productionDispatchSurfacesMissingHardwareTimingService() {
+        TestObjectServices services = new TestObjectServices();
+        S3kResultsScreenObjectInstance results = ObjectConstructionContext.construct(
+                services,
+                () -> new S3kResultsScreenObjectInstance(
+                        PlayerCharacter.SONIC_AND_TAILS, 0));
+        results.setServices(services);
+        TestablePlayableSprite player =
+                new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+
+        assertThrows(IllegalStateException.class, () -> results.update(0, player));
     }
 
     @Test
@@ -239,7 +247,10 @@ class TestS3kResultsScreenObjectInstance {
         S3kResultsScreenObjectInstance results = transitionShell(
                 services, PlayerCharacter.SONIC_AND_TAILS, 0);
         results.setServices(services);
-        results.onCarriedAcrossSeamlessTransition(-0x3000, 0x0200);
+        results.onCarriedAcrossSeamlessTransition(
+                -0x3000, 0x0200,
+                new CarriedTitlePublicationTiming(
+                        false, true, false, 0, 0, false, 0, 0, 0));
 
         Method onExitReady = S3kResultsScreenObjectInstance.class.getDeclaredMethod("onExitReady");
         onExitReady.setAccessible(true);
@@ -511,7 +522,7 @@ class TestS3kResultsScreenObjectInstance {
             }
 
             @Override
-            public void requestCnzPostTransitionRelease(int framesUntilRelease) {
+            public void requestCnzPostTransitionRelease() {
             }
         }
     }
@@ -606,7 +617,7 @@ class TestS3kResultsScreenObjectInstance {
             return retainedTransitionFlagOwner;
         }
         @Override public void requestMgzPostTransitionRelease() {}
-        @Override public void requestCnzPostTransitionRelease(int framesUntilRelease) {}
+        @Override public void requestCnzPostTransitionRelease() {}
     }
 
     private static final class IczExitRecordingServices extends TestObjectServices {

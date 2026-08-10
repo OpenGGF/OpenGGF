@@ -512,9 +512,39 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
 
     private void spawnFinalBoss() {
         finalBossSpawned = true;
+        releaseExhaustFlameForBossSpawn();
         LbzFinalBoss1Instance boss = spawnFreeChild(() -> new LbzFinalBoss1Instance(
                 new ObjectSpawn(FINAL_BOSS_X, FINAL_BOSS_Y, OBJ_LBZ_FINAL_BOSS_1, 0, 0, false, FINAL_BOSS_Y)));
+        // The ROM's AllocateObject writes the boss into the free slot while this
+        // ship still occupies its own SST entry. Obj_LBZFinalBoss1 then runs its
+        // init routine on the next Process_Sprites pass, while the ship remains
+        // in the immediately preceding slot; initialize the graph at that same
+        // allocation boundary so FindNextFreeObj sees the native occupancy.
+        if (services().objectManager() != null) {
+            boss.initializeOnAllocationBeforeParentRelease();
+        }
         spawnedChildren.add(boss);
+    }
+
+    /**
+     * ROM Obj_LBZ2RobotnikShip removes its flame before Obj_LBZFinalBoss1 builds
+     * the child graph (docs/skdisasm/sonic3k.asm:152024-152044). The ship still
+     * occupies its own SST slot at that boundary, so the graph must see the
+     * released flame slot while retaining the ship slot for FindFreeObj.
+     */
+    private void releaseExhaustFlameForBossSpawn() {
+        ObjectManager manager = services().objectManager();
+        if (manager == null) {
+            return;
+        }
+        for (int index = 0; index < spawnedChildren.size(); index++) {
+            AbstractObjectInstance child = spawnedChildren.get(index);
+            if (child instanceof ExhaustFlameChild && !child.isDestroyed()) {
+                manager.removeDynamicObject(child);
+                spawnedChildren.remove(index);
+                return;
+            }
+        }
     }
 
     private java.util.Optional<LbzZoneRuntimeState> runtimeState() {

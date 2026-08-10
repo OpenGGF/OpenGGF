@@ -489,8 +489,8 @@ class TestS3kIczMinibossObject {
                 "the separate explosion-controller SST leaves 29 folded Obj_EndSignControl entries");
         assertEquals(true, readField(signpostFlow, "preservesGroundedResultsDispatchBoundary"),
                 "the separately allocated flow must retain the grounded routine-$06 result dispatch");
-        assertEquals(1, readIntField(signpostFlow, "resultsWaitDurationAdjustment"),
-                "the folded results owner must retain its final wait entry before control restoration");
+        assertEquals(0, readIntField(signpostFlow, "resultsWaitDurationAdjustment"),
+                "the preloaded-act camera handoff does not add a results wait entry before control restoration");
         assertTrue(instance.isDestroyed(),
                 "The boss body should delete only after queuing the persistent signpost flow");
     }

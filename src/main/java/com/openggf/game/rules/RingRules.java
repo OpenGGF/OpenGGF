@@ -4,6 +4,7 @@ public record RingRules(
         int ringFloorCheckMask,
         int ringFloorCheckCounterPhase,
         boolean ringFloorProbeRequiresRenderFlag,
+        boolean lostRingBoundaryChecksOnlyOnProbeCadence,
         int lostRingRenderYMargin,
         int ringCollisionWidth,
         int ringCollisionHeight,

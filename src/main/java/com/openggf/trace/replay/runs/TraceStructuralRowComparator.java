@@ -7,6 +7,7 @@ import com.openggf.game.resources.QueueDiagnosticSnapshot;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.trace.FieldComparison;
 import com.openggf.trace.FrameComparison;
+import com.openggf.trace.LoadQueueComparisonProjection;
 import com.openggf.trace.Severity;
 import com.openggf.trace.ToleranceConfig;
 import com.openggf.trace.TraceBinder;
@@ -271,10 +272,15 @@ public final class TraceStructuralRowComparator implements TraceHudModel {
         FrameComparison result = new FrameComparison(
                 expected.frame(), Map.of());
         if (trace.metadata().hasPerFrameLoadQueueState()) {
+            LoadQueueComparisonProjection projection =
+                    LoadQueueComparisonProjection.project(
+                            trace,
+                            expected.frame(),
+                            trace.loadQueueStatesForComparisonFrame(expected.frame()),
+                            queueSnapshots.get(),
+                            GameServices.hardwareTiming().capture());
             binder.compareLoadQueues(
-                    expected.frame(),
-                    trace.loadQueueStatesForFrame(expected.frame()),
-                    queueSnapshots.get());
+                    expected.frame(), projection.expected(), projection.actual());
             result = Objects.requireNonNull(
                     binder.comparisonForFrame(expected.frame()),
                     "queue comparison");

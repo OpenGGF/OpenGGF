@@ -383,14 +383,13 @@ class TestCnzMinibossTopPhysics {
             afterBounceY = top.getY();
             assertTrue(top.usesPreUpdatePositionForSolidContact(p2),
                     "the post-bounce P2 checkpoint samples the prior top publication");
-            p2.setYSpeed((short) 0);
             top.update(1, p1);
         }
 
         assertTrue(top.getY() < afterBounceY,
                 "CNZMinibossTop_CheckPlayerBounce checks native Player_2 after Player_1");
         assertFalse(top.usesPreUpdatePositionForSolidContact(p2),
-                "ordinary P2 checkpoints resume the live top position after vertical contact");
+                "the saved SolidObjectFull position expires after one object dispatch");
     }
 
     @Test
@@ -711,6 +710,32 @@ class TestCnzMinibossTopPhysics {
     }
 
     @Test
+    void blockedBodyHitLeavesMoveDispatchToBossSlot() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build();
+        DefaultObjectServices services = TestEnvironment.objectServices();
+
+        CnzMinibossInstance boss = new CnzMinibossInstance(
+                new ObjectSpawn(0x3300, 0x029B, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
+        boss.setServices(services);
+        boss.forceRoutineForTest(0x04);
+        boss.forceXVelForTest((short) 0x0100);
+
+        boss.onPlayerAttack(fixture.sprite(),
+                new TouchResponseResult(0x0C, 0x14, 0x10, TouchCategory.ENEMY));
+
+        assertEquals(0x3300, boss.getCentreX(),
+                "$38 bit 3 blocks CheckPlayerHit without executing the Move body in the player slot");
+        assertEquals(0x04, boss.getCurrentRoutine());
+
+        boss.update(0, fixture.sprite());
+
+        assertEquals(0x3301, boss.getCentreX(),
+                "the boss's later SST slot remains the sole MoveSprite2/Obj_Wait dispatch");
+    }
+
+    @Test
     void bodyHitOpensAfterCurrentMoveSprite2Step() {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
@@ -788,6 +813,8 @@ class TestCnzMinibossTopPhysics {
                 "The production coil child must receive Touch_Enemy attack callbacks, not just expose flags");
         assertEquals(0x1A, coil.getCollisionFlags());
         assertEquals(0x70, coil.getCollisionProperty());
+        assertTrue(coil.usesCurrentTouchResponseState(),
+                "Refresh_ChildPosition runs before the coil publishes its live SST pointer");
 
         player.setCentreX((short) coil.getX());
         player.setCentreY((short) coil.getY());

@@ -388,6 +388,17 @@ public class TestCamera {
     }
 
     @Test
+    public void renderCopyRemainsPublishedWhenEventMovesPhysicalCamera() {
+        camera.setY((short) 0x0668);
+        camera.captureRenderCopy();
+        camera.setYAfterRenderCopy((short) 0x0666);
+
+        assertEquals(0x0666, camera.getY() & 0xFFFF);
+        assertEquals(0x0668, camera.getYWithShake() & 0xFFFF,
+                "ROM event camera motion must not rewrite Camera_Y_pos_copy");
+    }
+
+    @Test
     public void testPlayableRenderFlagVisibilityUsesGameRules() {
         camera.setX((short) 0);
         camera.setY((short) 100);

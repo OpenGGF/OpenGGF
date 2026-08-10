@@ -827,6 +827,34 @@ class TestS3kLbz1KnucklesSequenceHeadless {
     }
 
     @Test
+    void lbz1RobotnikSecondRiseQueuesMinibossKosmOnce() {
+        HeadlessTestFixture fixture = lbzFixture();
+        AbstractPlayableSprite player = fixture.sprite();
+        removeLbz1GroundLaunchIntro();
+        applyTitleCardHandoff();
+        Lbz1RobotnikEventController robotnik = spawnRobotnikCollapseController();
+        robotnik.forceInitializedForTest(0x3EC0, 0x012C, 0x0C, 0, -0x0400, false);
+        List<HardwareWorkHandle> before = pendingKosModuleHandles();
+
+        robotnik.update(0, player);
+
+        List<HardwareWorkHandle> submitted = addedKosModuleHandles(before);
+        assertEquals(1, submitted.size(),
+                "loc_8CCF6 must submit ArtKosM_LBZMiniboss exactly once.");
+        HardwareWorkHandle handle = submitted.getFirst();
+        var queue = S3kRuntimeArtCoordinator.from(GameServices.runtimeArtCoordinator()).moduleQueue();
+        assertEquals(Sonic3kConstants.ART_KOSM_LBZ_MINIBOSS_ADDR,
+                queue.descriptor(handle).sourceAddress());
+        assertEquals(Sonic3kConstants.ART_TILE_LBZ_MINIBOSS * 32,
+                queue.descriptor(handle).destinationAddress());
+
+        robotnik.update(1, player);
+
+        assertEquals(submitted, addedKosModuleHandles(before),
+                "ROUTINE_DIAGONAL_ESCAPE must not resubmit the miniboss parent.");
+    }
+
+    @Test
     void playerAtOrPastSpawnDeletesLbz1KnucklesOnFirstUpdate() {
         HeadlessTestFixture fixture = lbzFixture();
         AbstractPlayableSprite player = fixture.sprite();

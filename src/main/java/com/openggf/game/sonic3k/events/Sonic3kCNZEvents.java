@@ -76,8 +76,6 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
     /** CNZ2_ScreenEvent stage 8. */
     public static final int FG_ACT2_NORMAL = 0x08;
 
-    static final int ACT1_POST_TRANSITION_CONTROL_RELEASE_FRAMES = 608;
-
     /**
      * Camera X threshold that arms the miniboss arena gate.
      *
@@ -139,6 +137,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
     private short cameraStoredMaxYPos;
     private boolean cameraClampsActive;
     private boolean bossFlagPrev;
+    private boolean sidekickBoundsPublishAfterCameraEasing;
 
     /**
      * CNZ-local foreground routine mirror.
@@ -294,6 +293,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         cameraStoredMinXPos = 0;
         cameraStoredMinYPos = 0;
         cameraStoredMaxYPos = 0;
+        sidekickBoundsPublishAfterCameraEasing = false;
         cameraClampsActive = false;
         knucklesTeleporterRouteActive = false;
         teleporterBeamSpawned = false;
@@ -851,10 +851,10 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         // (docs/skdisasm/sonic3k.asm:62708-62720,180407-180412).
         // The engine rebuilds the object manager for the reload. The persistent
         // results SST is carried into the target manager, while this CNZ event
-        // bridge owns only the delayed player-control release.
+        // bridge retains the removed EndSignControl ownership until the
+        // results object publishes the native _unkFAA8-clear boundary.
         S3kTransitionWriteSupport.requestCnzPostTransitionRelease(
-                module().getLevelEventProvider(),
-                ACT1_POST_TRANSITION_CONTROL_RELEASE_FRAMES);
+                module().getLevelEventProvider());
         Camera camera = camera();
         int postTransitionMinX = offsetCameraBoundWord(camera.getMinX(), transitionWorldOffsetX);
         int postTransitionMaxX = offsetCameraBoundWord(camera.getMaxX(), transitionWorldOffsetX);
@@ -869,6 +869,11 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
                 .preserveLevelGamestate(true)
                 .showInLevelTitleCard(false)
                 .preserveOffsetCameraPosition(true)
+                // CNZ's retained EndSignControl reaches Change_Act2Sizes
+                // directly after the title owner retires; it has no extra
+                // preloaded-camera Wait2 tail (sonic3k.asm:62244-62279,
+                // 180407-180419).
+                .inLevelTitleCardPreloadedActCameraReleaseDispatches(0)
                 // CNZ1BGE_DoTransition offsets the live camera bounds after
                 // Load_Level, and copies the offset max Y into the target max
                 // (docs/skdisasm/sonic3k.asm:107638-107646).
@@ -1517,6 +1522,14 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
     public void    setCameraStoredMinYPos(short v)      { cameraStoredMinYPos = v; }
     public short   getCameraStoredMaxYPos()             { return cameraStoredMaxYPos; }
     public void    setCameraStoredMaxYPos(short v)      { cameraStoredMaxYPos = v; }
+    public void requestSidekickBoundsPublishAfterCameraEasing() {
+        sidekickBoundsPublishAfterCameraEasing = true;
+    }
+    public boolean consumeSidekickBoundsPublishAfterCameraEasing() {
+        boolean pending = sidekickBoundsPublishAfterCameraEasing;
+        sidekickBoundsPublishAfterCameraEasing = false;
+        return pending;
+    }
     public void    setKnucklesTeleporterRouteActive(boolean v){ knucklesTeleporterRouteActive = v; }
     public void    setTeleporterBeamSpawned(boolean v)  { teleporterBeamSpawned = v; }
     public void    setAct2TransitionRequested(boolean v){ act2TransitionRequested = v; }

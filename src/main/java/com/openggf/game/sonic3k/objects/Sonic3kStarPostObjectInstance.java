@@ -275,7 +275,6 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
     private void activate(AbstractPlayableSprite player, CheckpointState checkpointState) {
         activated = true;
         starActive = true;
-
         // 1. ROM: moveq #signextendB(sfx_Starpost),d0 / jsr (Play_SFX).l
         try {
             services().playSfx(Sonic3kSfx.STARPOST.id);
@@ -320,14 +319,6 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
      * S3K requires 20 rings (not 50 like S2).
      */
     private boolean shouldSpawnBonusStars(AbstractPlayableSprite player) {
-        var checkpointState = services().checkpointState();
-        if (checkpointState instanceof CheckpointState cs && cs.isUsedForSpecialStage()) {
-            return false;
-        }
-        int emeralds = services().gameState().getEmeraldCount();
-        if (emeralds >= 7) {
-            return false;
-        }
         int rings = player.getRingCount();
         return rings >= BONUS_STAR_RING_THRESHOLD;
     }

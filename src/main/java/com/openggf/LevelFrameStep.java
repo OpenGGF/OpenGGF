@@ -4,6 +4,7 @@ import com.openggf.camera.Camera;
 import com.openggf.game.BonusStageProvider;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.HardwareBoundaryDispatch;
+import com.openggf.game.InLevelTitleCardCoordinator;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame;
@@ -11,6 +12,7 @@ import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.level.LevelManager;
 import com.openggf.sprites.managers.SpriteManager;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.Objects;
 
@@ -121,11 +123,30 @@ public final class LevelFrameStep {
             throw new IllegalArgumentException("not a VBlank-only PLC phase: " + phase);
         }
         frame.claim(phase);
+        if (frame.consumedHeldLoopTailPreparation()) {
+            context.runtimeArtCoordinator()
+                    .deferProductionSubmissionForHeldLoopTailClosure();
+        }
         serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
     }
 
     public static void serviceHardwareVBlankOnly(LevelFrameContext context) {
         serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
+    }
+
+    /**
+     * Services only the module-queue boundary represented by a suppressed
+     * held-counter row. The ROM still runs this loop-tail boundary even though
+     * it does not run the ordinary object/physics body for that row.
+     */
+    public static void serviceHardwarePostObjectsOnly(LevelFrameContext context) {
+        serviceBoundary(context, HardwareServiceBoundary.POST_OBJECTS);
+    }
+
+    /** Services only the direct-FIFO boundary represented by a held row tail. */
+    public static void serviceHardwarePreMainLoopOnly(LevelFrameContext context) {
+        serviceBoundary(context, HardwareServiceBoundary.PRE_MAIN_LOOP);
+        context.runtimeArtCoordinator().finishHeldLoopTailClosure();
     }
 
     /**
@@ -142,10 +163,15 @@ public final class LevelFrameStep {
             PlcLifecyclePhase phase, Runnable objectScan) {
         Objects.requireNonNull(objectScan, "objectScan");
         frame.claim(phase);
+        if (frame.consumedHeldLoopTailPreparation()) {
+            context.runtimeArtCoordinator()
+                    .deferProductionSubmissionForHeldLoopTailClosure();
+        }
         serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
         objectScan.run();
         serviceBoundary(context, HardwareServiceBoundary.POST_OBJECTS);
         serviceBoundary(context, HardwareServiceBoundary.PRE_MAIN_LOOP);
+        context.runtimeArtCoordinator().finishHeldLoopTailClosure();
         if (frame.isOwnedBy(phase)) {
             frame.prepareAfterLoop(phase);
         }
@@ -179,6 +205,10 @@ public final class LevelFrameStep {
         }
 
         frame.claim(phase);
+        if (frame.consumedHeldLoopTailPreparation()) {
+            context.runtimeArtCoordinator()
+                    .deferProductionSubmissionForHeldLoopTailClosure();
+        }
         serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
 
         // 0a. Drain the per-frame palette-write accumulator at frame top, before
@@ -246,11 +276,14 @@ public final class LevelFrameStep {
             // 3. Object execution after player physics, with inline solid checkpoints
             //    so later objects see earlier contact adjustments.
             Runnable afterExecBeforePlacement = spriteManager != null
-                    ? spriteManager::advancePlayableFixedSlotsAfterObjectExecution
-                    : null;
+                    ? () -> {
+                        spriteManager.advancePlayableFixedSlotsAfterObjectExecution();
+                        levelManager.updateZoneFeaturesAfterObjectExecution();
+                    }
+                    : levelManager::updateZoneFeaturesAfterObjectExecution;
             wrapper.wrap("objects",
                     () -> levelManager.updateObjectPositionsPostPhysicsWithoutTouches(
-                            afterExecBeforePlacement));
+                            afterExecBeforePlacement, false));
         } else {
             LevelEventProvider fixedSlotEvents = context.levelEventProvider();
             if (fixedSlotEvents != null) {
@@ -259,7 +292,7 @@ public final class LevelFrameStep {
 
             // 2. Legacy compatibility path keeps objects before physics. Touch
             //    responses are still deferred to tickPlayablePhysics after movement.
-            wrapper.wrap("objects", levelManager::updateObjectPositionsWithoutTouches);
+            wrapper.wrap("objects", () -> levelManager.updateObjectPositionsWithoutTouches(false));
 
             // 3. Sprite / player physics update (caller-provided).
             wrapper.wrap("physics", spriteUpdate);
@@ -314,6 +347,13 @@ public final class LevelFrameStep {
         // the final player/object updates remain visible on the boundary row.
         boolean levelExitRequestedDuringObjects = levelManager.isLevelInactiveForTransition();
 
+        // Some ROM object workers publish camera boundaries before DeformBgLayer
+        // consumes them. Keep that ordering at the provider boundary so the
+        // shared camera step remains unaware of game- or zone-specific state.
+        if (levelEvents != null && !levelExitRequestedDuringObjects) {
+            wrapper.wrap("events-pre-camera", levelEvents::updateAfterObjectsBeforeCamera);
+        }
+
         // 4a. Camera scroll (ROM ScrollHoriz + ScrollVertical): move + clamp to the
         //     prior-frame bottom boundary, BEFORE the zone event handler runs.
         if (!suppressDefaultCamera && !cameraDrivenScroll
@@ -321,19 +361,45 @@ public final class LevelFrameStep {
                 && !levelExitRequestedDuringObjects) {
             wrapper.wrap("camera-scroll", camera::updatePosition);
         }
-
         // 4b. Dynamic level events — boss arenas, boundary changes, zone
         //     transitions. ROM runs the zone handler (DLE_Index) here, after the
         //     scroll, so camera-X gates and the left-boundary lock see the
         //     post-scroll camera. fixed-in-level objects run alongside.
-        if (levelEvents != null) {
+        if (levelEvents != null && !levelExitRequestedDuringObjects) {
             wrapper.wrap("fixed-objects", levelEvents::updateFixedInLevelObjects);
         }
         if (spriteManager != null && !inlineSolidResolution) {
             wrapper.wrap("fixed-dust", spriteManager::advancePlayableFixedSlotsAfterObjectExecution);
         }
-        if (levelEvents != null) {
+		// ROM ScreenEvents publishes Camera_*_pos_copy before the zone event
+		// handlers. Event-owned camera motion after this point must not move the
+		// render/visibility camera until the next loop publication. A restart
+		// request branches to Level immediately after Process_Sprites, so that
+		// loop does not reach ScreenEvents at all.
+		if (!levelExitRequestedDuringObjects) {
+		    camera.captureRenderCopy();
+		}
+		if (levelEvents != null && !levelExitRequestedDuringObjects) {
             levelEvents.update();
+        }
+
+        // OscillateNumDo is the loop-tail update after ScreenEvents. An
+        // in-loop act reload has already replaced the level data, but the ROM
+        // still reaches this loop tail on that row unless the transition's
+        // provider already performed the ROM-owned oscillator dispatch. The
+        // latter is the CNZ/LBZ-style transition contract; AIZ/HCZ/MGZ retain
+        // the ordinary loop tail. Outer frame-boundary reloads consume their
+        // own dispatch in LevelSeamlessTransitionExecutor before this method
+        // is entered.
+        boolean actTransitionExecutedDuringFrame =
+                levelManager.consumeActTransitionExecutedDuringFrame();
+        boolean actTransitionOscillationAdvancedDuringFrame =
+                levelManager.consumeActTransitionOscillationAdvancedDuringFrame();
+        if (!bonusStageExitRequestedThisFrame
+                && !levelManager.isLevelInactiveForTransition()
+                && !(actTransitionExecutedDuringFrame
+                        && actTransitionOscillationAdvancedDuringFrame)) {
+            levelManager.advanceGlobalOscillationAtLevelLoopTail();
         }
 
         // ROM LevelLoop runs ScreenEvents before Process_Kos_Module_Queue
@@ -346,10 +412,19 @@ public final class LevelFrameStep {
         // ROM LevelLoop reaches its producers in ExecuteObjects
         // (docs/skdisasm/sonic3k.asm:7900-7906), ahead of the
         // Process_Kos_Module_Queue state step in the loop tail (7908).
+        // A results owner can publish an in-level title-card request during
+        // ExecuteObjects. Obj_TitleCardInit queues its KosM parents before the
+        // same frame's Process_Kos_Module_Queue, so consume that request here,
+        // after object/event producers and immediately before the art pump.
+        startPendingInLevelTitleCard(context, levelManager, spriteManager);
         if (context.gameModule().getObjectArtProvider() != null) {
             context.gameModule().getObjectArtProvider().processRuntimeArtQueue();
         }
 
+        if (frame.defersLoopTailPreparation()) {
+            context.runtimeArtCoordinator()
+                    .deferProductionSubmissionForHeldLoopTail();
+        }
         serviceBoundary(context, HardwareServiceBoundary.POST_OBJECTS);
 
         // ROM LevelLoop's Process_Kos_Queue (docs/skdisasm/sonic3k.asm:7887)
@@ -360,6 +435,12 @@ public final class LevelFrameStep {
         // first child decompressed on the same frame, which the frame-top
         // placement could not represent.
         serviceBoundary(context, HardwareServiceBoundary.PRE_MAIN_LOOP);
+        context.runtimeArtCoordinator().finishHeldLoopTailClosure();
+        if (context.gameModule().getObjectArtProvider() != null) {
+            context.gameModule().getObjectArtProvider()
+                    .processRuntimeArtQueueAfterPreMainLoop(
+                            frame.defersLoopTailPreparation());
+        }
         if (frame.isOwnedBy(phase)) {
             frame.prepareAfterLoop(phase);
         }
@@ -436,6 +517,25 @@ public final class LevelFrameStep {
                 context.runtimeArtCoordinator(),
                 context.hardwareTiming(),
                 context.hardwareTimingBoundaryObserver());
+    }
+
+    private static void startPendingInLevelTitleCard(
+            LevelFrameContext context, LevelManager levelManager, SpriteManager spriteManager) {
+        InLevelTitleCardCoordinator.startIfRequested(
+                levelManager,
+                context.gameModule().getTitleCardProvider(),
+                context.gameStateManager() != null
+                        && context.gameStateManager().isEndOfLevelActive(),
+                locked -> {
+                    if (spriteManager == null) {
+                        return;
+                    }
+                    for (var sprite : spriteManager.getAllSprites()) {
+                        if (sprite instanceof AbstractPlayableSprite playable) {
+                            playable.setControlLocked(locked);
+                        }
+                    }
+                });
     }
 
 }

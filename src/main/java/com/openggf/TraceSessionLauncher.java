@@ -668,7 +668,8 @@ public final class TraceSessionLauncher {
                             GameServices.module(),
                             GameServices.sprites(),
                             GameServices.configuration());
-                    GameServices.level().loadZoneAndAct(entry.zone(), entry.act());
+                    GameServices.level().loadZoneAndActForFreshRuntime(
+                            entry.zone(), entry.act());
                     loop.setGameMode(GameMode.LEVEL);
                     GameServices.level().consumeTitleCardRequest();
                     GameServices.level().consumeInLevelTitleCardRequest();

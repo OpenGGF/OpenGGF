@@ -50,6 +50,10 @@ class TestS3kResultsKosQueueRewind {
                         PlayerCharacter.SONIC_AND_TAILS, 0));
         results.setServices(services);
 
+        Sonic player = new Sonic("sonic", (short) 0, (short) 0);
+        assertTrue(timing.pendingHandles().isEmpty(),
+                "results art is submitted by the first object dispatch, not allocation");
+        results.update(0, player);
         List<HardwareWorkHandle> submitted = timing.pendingHandles();
         assertEquals(List.of(0L, 1L, 2L),
                 submitted.stream().map(HardwareWorkHandle::ordinal).toList());
@@ -57,8 +61,6 @@ class TestS3kResultsKosQueueRewind {
         assertEquals(List.of(), readyHandles(timing, submitted),
                 "results art must remain pending before the first hardware service boundary");
 
-        Sonic player = new Sonic("sonic", (short) 0, (short) 0);
-        results.update(0, player);
         assertCreateHasNotRun(results);
         assertEquals(submitted, timing.pendingHandles());
 
@@ -113,12 +115,13 @@ class TestS3kResultsKosQueueRewind {
                 () -> new S3kResultsScreenObjectInstance(
                         PlayerCharacter.SONIC_AND_TAILS, 0));
         results.setServices(services);
+        Sonic player = new Sonic("sonic", (short) 0, (short) 0);
+        results.update(0, player);
         List<HardwareWorkHandle> submitted = timing.pendingHandles();
         serviceResultsArtToReadiness(timing, submitted);
 
-        Sonic player = new Sonic("sonic", (short) 0, (short) 0);
         setField(results, "createGateFrames", 0);
-        results.update(0, player);
+        results.update(1, player);
         assertTrue((boolean) field(results, "resultsChildrenCreated"));
         assertTrue(timing.pendingHandles().isEmpty());
         assertEquals(List.of(0L, 1L, 2L), resultsArtOrdinals(results),

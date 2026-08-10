@@ -669,7 +669,8 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
         // defeat, not the camera lock point.
         int signpostX = state.x;
         spawnChild(() -> new S3kBossDefeatSignpostFlow(
-                signpostX, services().currentAct(), S3kBossDefeatSignpostFlow.CleanupAction.NONE));
+                signpostX, services().currentAct(), S3kBossDefeatSignpostFlow.CleanupAction.NONE,
+                0, 0, 1));
     }
 
     private static int segaWordFromColor(Palette.Color color) {

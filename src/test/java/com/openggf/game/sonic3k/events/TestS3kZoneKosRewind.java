@@ -44,8 +44,16 @@ class TestS3kZoneKosRewind {
         invoke(events, "queueBattleshipKosArt");
 
         List<HardwareWorkHandle> originalHandles = timing.pendingHandles();
-        assertEquals(List.of(0L, 1L),
-                originalHandles.stream().map(HardwareWorkHandle::ordinal).toList());
+        assertEquals(List.of(HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
+                        HardwareWorkKind.KOS_MODULE_QUEUE,
+                        HardwareWorkKind.KOS_MODULE_QUEUE),
+                originalHandles.stream().map(HardwareWorkHandle::kind).toList());
+        assertEquals(List.of(0L), originalHandles.stream()
+                .filter(handle -> handle.kind() == HardwareWorkKind.KOS_DECOMPRESSION_QUEUE)
+                .map(HardwareWorkHandle::ordinal).toList());
+        assertEquals(List.of(0L, 1L), originalHandles.stream()
+                .filter(handle -> handle.kind() == HardwareWorkKind.KOS_MODULE_QUEUE)
+                .map(HardwareWorkHandle::ordinal).toList());
         byte[] eventSnapshot = ZoneEventSchemaSidecar.capture(events);
         HardwareTimingSnapshot timingSnapshot = timing.capture();
 
@@ -58,14 +66,19 @@ class TestS3kZoneKosRewind {
         events.discardHardwareWorkFacadesAfterRewind();
         events.rebindHardwareWorkAfterRewind();
 
+        assertEquals(0L, longField(events, "battleshipTerrainKosOrdinal"));
         assertEquals(0L, longField(events, "battleshipTerrainArtOrdinal"));
         assertEquals(1L, longField(events, "battleshipObjectArtOrdinal"));
-        assertEquals(originalHandles.get(0), field(events, "battleshipTerrainArtHandle"));
-        assertEquals(originalHandles.get(1), field(events, "battleshipObjectArtHandle"));
+        assertEquals(originalHandles.get(0), field(events, "battleshipTerrainKosHandle"));
+        assertEquals(originalHandles.get(1), field(events, "battleshipTerrainArtHandle"));
+        assertEquals(originalHandles.get(2), field(events, "battleshipObjectArtHandle"));
         assertEquals(originalHandles, timing.pendingHandles());
+        assertEquals(1L, nextOrdinal(timing.capture(), HardwareWorkKind.KOS_DECOMPRESSION_QUEUE));
         assertEquals(2L, nextKosOrdinal(timing.capture()));
 
         events.update(1, 1);
+        assertEquals(1L, nextOrdinal(timing.capture(), HardwareWorkKind.KOS_DECOMPRESSION_QUEUE),
+                "AIZ terrain restore must poll the original standard job, not resubmit it");
         assertEquals(2L, nextKosOrdinal(timing.capture()),
                 "AIZ owner restore must poll the original jobs, not resubmit them");
     }
