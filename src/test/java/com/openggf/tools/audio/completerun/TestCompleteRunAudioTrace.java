@@ -139,6 +139,18 @@ class TestCompleteRunAudioTrace {
     }
 
     @Test
+    void metadataRejectsObserverProofOutsideTheExactProducerSpecificProfileContract() {
+        TestProfile wrongObserver = new TestProfile("test.profile", fixture.fixture,
+                List.of(HardwareRole.FM1, HardwareRole.PSG1), List.of("tempo"), List.of("cursor"));
+        wrongObserver.observerProofs.put(ProducerKind.OPENGGF,
+                new ObserverProof("different.observer.v2", "java.different-domain",
+                        List.of(new CallbackProof("different.site", 2))));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> fixture.metadata.validateProfile(wrongObserver));
+    }
+
+    @Test
     void metadataRejectsTerminalWithWrongFrameCountExclusiveEndOrDerivedCounts() {
         assertThrows(IllegalArgumentException.class,
                 () -> fixture.metadata.validateTerminal(fixture.terminal(1), fixture.counts(1)));
@@ -282,6 +294,7 @@ class TestCompleteRunAudioTrace {
         private final List<String> activeRoleFields;
         private final Map<RawAudioRequest, NativeSoundIdentity> identities = new LinkedHashMap<>();
         private final Map<ProducerKind, ProducerRuntimeIdentity> producerIdentities = new LinkedHashMap<>();
+        private final Map<ProducerKind, ObserverProof> observerProofs = new LinkedHashMap<>();
 
         private TestProfile(String id, CompleteRunFixture fixture, List<HardwareRole> roles,
                 List<String> globalFields, List<String> activeRoleFields) {
@@ -300,6 +313,12 @@ class TestCompleteRunAudioTrace {
             producerIdentities.put(ProducerKind.OPENGGF, new ProducerRuntimeIdentity(
                     "OpenGGF", "0.6", "OpenGGF", "0.6", "SMPS", "1",
                     Map.of(RuntimeArtifact.OPENGGF_PRODUCER, "4".repeat(64))));
+            observerProofs.put(ProducerKind.REFERENCE,
+                    new ObserverProof("reference.observer.v1", "m68k.execute",
+                            List.of(new CallbackProof("driver.service", 1))));
+            observerProofs.put(ProducerKind.OPENGGF,
+                    new ObserverProof("test.observer.v1", "m68k.execute",
+                            List.of(new CallbackProof("driver.service", 1))));
         }
 
         @Override
@@ -330,6 +349,27 @@ class TestCompleteRunAudioTrace {
         @Override
         public Map<ProducerKind, ProducerRuntimeIdentity> producerRuntimeIdentities() {
             return producerIdentities;
+        }
+
+        @Override
+        public Map<ProducerKind, ObserverProof> observerProofs() {
+            return observerProofs;
+        }
+
+        @Override
+        public Map<NativeSoundIdentity, List<NativeSoundIdentity>> decisionResolutions() {
+            NativeSoundIdentity identity = new NativeSoundIdentity(OwnerClass.SFX, "sfx.explosion", 0xC0);
+            return Map.of(identity, List.of(identity));
+        }
+
+        @Override
+        public Map<Long, NativeSoundIdentity> baselineOwnerIdentities() {
+            return Map.of();
+        }
+
+        @Override
+        public Map<String, LifecycleRule> lifecycleRules() {
+            return Map.of("pulse", new LifecycleRule("pulse", List.of("payload")));
         }
     }
 }

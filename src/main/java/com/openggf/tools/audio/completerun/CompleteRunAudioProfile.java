@@ -3,8 +3,11 @@ package com.openggf.tools.audio.completerun;
 import static com.openggf.tools.audio.completerun.CompleteRunAudioTrace.HardwareRole;
 
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.CompleteRunFixture;
+import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.Lifecycle;
+import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.LifecycleRule;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.NativeSoundIdentity;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.NormalizedState;
+import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.ObserverProof;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.ProducerKind;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.ProducerRuntimeIdentity;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.RawAudioRequest;
@@ -29,6 +32,18 @@ public interface CompleteRunAudioProfile {
 
     /** Runtime identities explicitly permitted for each capture producer kind. */
     Map<ProducerKind, ProducerRuntimeIdentity> producerRuntimeIdentities();
+
+    /** Exact observer/callback proof pinned independently for each producer kind. */
+    Map<ProducerKind, ObserverProof> observerProofs();
+
+    /** Allowed request-to-admission identity transformations, with no game checks in shared code. */
+    Map<NativeSoundIdentity, List<NativeSoundIdentity>> decisionResolutions();
+
+    /** Owners already live at the comparison baseline and therefore predating captured requests. */
+    Map<Long, NativeSoundIdentity> baselineOwnerIdentities();
+
+    /** Allowed out-of-service lifecycle markers and their exact detail-field inventories. */
+    Map<String, LifecycleRule> lifecycleRules();
 
     default NativeSoundIdentity resolveRequest(RawAudioRequest request) {
         NativeSoundIdentity identity = nativeSoundIdentities().get(Objects.requireNonNull(request, "request"));
@@ -62,6 +77,16 @@ public interface CompleteRunAudioProfile {
             if (roleState.active() && !names.equals(inventory.activeRoleFields())) {
                 throw new IllegalArgumentException("active role fields do not match the profile inventory");
             }
+        }
+    }
+
+    default void validateLifecycle(Lifecycle lifecycle) {
+        Objects.requireNonNull(lifecycle, "lifecycle");
+        LifecycleRule rule = Objects.requireNonNull(lifecycleRules(), "profile lifecycle rules")
+                .get(lifecycle.kind());
+        if (rule == null || !rule.kind().equals(lifecycle.kind())
+                || !rule.detailFields().equals(lifecycle.details().keySet().stream().toList())) {
+            throw new IllegalArgumentException("lifecycle does not match the profile rule");
         }
     }
 }

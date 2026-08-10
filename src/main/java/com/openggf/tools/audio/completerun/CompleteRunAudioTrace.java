@@ -172,16 +172,23 @@ public final class CompleteRunAudioTrace {
             Objects.requireNonNull(profile, "profile");
             Map<ProducerKind, ProducerRuntimeIdentity> allowedRuntimeIdentities =
                     Objects.requireNonNull(profile.producerRuntimeIdentities(), "profile runtime identities");
+            Map<ProducerKind, ObserverProof> allowedObserverProofs =
+                    Objects.requireNonNull(profile.observerProofs(), "profile observer proofs");
             if (!allowedRuntimeIdentities.keySet().containsAll(EnumSet.allOf(ProducerKind.class))) {
                 throw new IllegalArgumentException("profile must declare an allowed runtime identity for every producer");
             }
+            if (!allowedObserverProofs.keySet().containsAll(EnumSet.allOf(ProducerKind.class))) {
+                throw new IllegalArgumentException("profile must declare an observer proof for every producer");
+            }
             for (ProducerKind kind : ProducerKind.values()) {
                 Objects.requireNonNull(allowedRuntimeIdentities.get(kind), "profile runtime identity").validateFor(kind);
+                Objects.requireNonNull(allowedObserverProofs.get(kind), "profile observer proof");
             }
             if (!profileId.equals(profile.id()) || !fixture.equals(profile.fixture())
                     || !hardwareRoles.equals(canonicalRoles(profile.hardwareRoles(), "profile hardware roles"))
                     || !stateInventory.equals(profile.stateInventory())
-                    || !producerRuntimeIdentity.equals(allowedRuntimeIdentities.get(producerKind))) {
+                    || !producerRuntimeIdentity.equals(allowedRuntimeIdentities.get(producerKind))
+                    || !observerProof.equals(allowedObserverProofs.get(producerKind))) {
                 throw new IllegalArgumentException("metadata does not match the selected complete-run audio profile");
             }
         }
@@ -250,6 +257,22 @@ public final class CompleteRunAudioTrace {
             }
             requireText(kind, "lifecycle kind");
             details = immutableMap(details, "lifecycle details");
+        }
+    }
+
+    /** Profile-owned exact lifecycle kind and canonical detail-field inventory. */
+    public record LifecycleRule(String kind, List<String> detailFields) {
+        public LifecycleRule {
+            requireText(kind, "lifecycle rule kind");
+            detailFields = List.copyOf(Objects.requireNonNull(detailFields, "lifecycle rule fields"));
+            String previous = null;
+            for (String field : detailFields) {
+                requireText(field, "lifecycle rule field");
+                if (previous != null && field.compareTo(previous) <= 0) {
+                    throw new IllegalArgumentException("lifecycle rule fields must be unique and sorted");
+                }
+                previous = field;
+            }
         }
     }
 

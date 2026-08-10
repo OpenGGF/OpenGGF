@@ -8,13 +8,23 @@ import com.openggf.tools.audio.completerun.CompleteRunAudioReport.RecordView;
 import com.openggf.tools.audio.completerun.CompleteRunAudioReport.Side;
 import com.openggf.tools.audio.completerun.CompleteRunAudioReport.SourceIdentity;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 
 /** Validation-first, two-pass, no-realignment comparator for canonical complete-run captures. */
@@ -68,6 +78,12 @@ public final class CompleteRunAudioComparator {
             ORDINAL_INVALID,
             STATE_INVALID,
             REQUEST_IDENTITY_INVALID,
+            ROLE_INVALID,
+            DECISION_REFERENCE_INVALID,
+            RESOLUTION_INVALID,
+            OWNER_INVALID,
+            SEGMENT_INVALID,
+            LIFECYCLE_INVALID,
             SOURCE_REPLACED
         }
 
@@ -93,22 +109,31 @@ public final class CompleteRunAudioComparator {
     private static Snapshot validate(CompleteRunAudioCaptureStore store, Path source, Side side,
             ProducerKind expectedProducer) throws ValidationException {
         Path normalized = source.toAbsolutePath().normalize();
-        try (CompleteRunAudioCaptureStore.Reader reader = store.read(normalized)) {
-            Metadata metadata = reader.metadata();
-            CompleteRunAudioProfile profile = validateMetadata(metadata, expectedProducer, side);
-            StreamValidator validator = new StreamValidator(metadata, profile, side);
+        try {
+            PublicationIdentity publication = PublicationIdentity.capture(normalized);
+            Metadata metadata;
             Terminal terminal = null;
-            while (reader.hasNext()) {
-                CompleteRunAudioTrace.Record record = reader.next();
-                validator.accept(record);
-                if (record instanceof Terminal value) terminal = value;
+            try (CompleteRunAudioCaptureStore.Reader reader = store.read(publication.realSource())) {
+                metadata = reader.metadata();
+                CompleteRunAudioProfile profile = validateMetadata(metadata, expectedProducer, side);
+                StreamValidator validator = new StreamValidator(metadata, profile, side);
+                while (reader.hasNext()) {
+                    CompleteRunAudioTrace.Record record = reader.next();
+                    validator.accept(record);
+                    if (record instanceof Terminal value) terminal = value;
+                }
+                validator.finish();
             }
-            validator.finish();
+            if (!publication.equals(PublicationIdentity.capture(normalized))) {
+                throw new ValidationException(ValidationException.Kind.SOURCE_REPLACED, side,
+                        "capture publication changed during validation pass");
+            }
             if (terminal == null) {
                 throw new ValidationException(ValidationException.Kind.CAPTURE_INVALID, side,
                         "validated capture has no terminal record");
             }
-            return new Snapshot(normalized, metadata, terminal.rootDigest());
+            return new Snapshot(normalized, metadata, terminal.rootDigest(), publication,
+                    sha256(CompleteRunAudioJson.writeMetadata(metadata).getBytes(StandardCharsets.UTF_8)));
         } catch (ValidationException failure) {
             throw failure;
         } catch (IOException failure) {
@@ -603,12 +628,103 @@ public final class CompleteRunAudioComparator {
     private record FrameCoordinatesPayload(String segment, boolean lag) { }
     private record PriorityPayload(Integer before, Integer after) { }
 
-    private record Snapshot(Path source, Metadata metadata, String rootDigest) {
+    private record Snapshot(Path source, Metadata metadata, String rootDigest,
+            PublicationIdentity publication, String metadataSha256) {
         private SourceIdentity identity(Side side) {
-            return new SourceIdentity(side, source.toString(), metadata.producerKind(), metadata.profileId(),
-                    metadata.fixture().romSha1(), metadata.fixture().bk2Sha256(),
-                    metadata.fixture().runManifestSha256(), rootDigest);
+            return new SourceIdentity(side, source.toString(), publication.realSource().toString(), metadata,
+                    metadataSha256, rootDigest, publication.manifestSha256(), publication.digest(),
+                    publication.sourceFileKey(), publication.chunks());
         }
+    }
+
+    private record PublicationIdentity(Path realSource, String sourceFileKey, String manifestSha256,
+            List<CompleteRunAudioReport.ChunkIdentity> chunks, String digest) {
+        private PublicationIdentity {
+            Objects.requireNonNull(realSource, "resolved source");
+            Objects.requireNonNull(sourceFileKey, "source file key");
+            Objects.requireNonNull(manifestSha256, "manifest SHA-256");
+            chunks = List.copyOf(chunks);
+            Objects.requireNonNull(digest, "publication digest");
+        }
+
+        static PublicationIdentity capture(Path source) throws IOException {
+            Path realSource = source.toRealPath();
+            BasicFileAttributes sourceAttributes = Files.readAttributes(realSource, BasicFileAttributes.class);
+            if (!sourceAttributes.isDirectory()) {
+                throw new IOException("capture publication is not a directory: " + source);
+            }
+            String sourceFileKey = fileKey(sourceAttributes);
+            String manifestSha256 = sha256(realSource.resolve("manifest.json"));
+            Path chunksDirectory = realSource.resolve("chunks");
+            List<Path> paths;
+            try (var listed = Files.list(chunksDirectory)) {
+                paths = listed.sorted(Comparator.comparing(path -> path.getFileName().toString()))
+                        .limit(CompleteRunAudioCaptureStore.MAX_CAPTURE_CHUNKS + 1L).toList();
+            }
+            if (paths.isEmpty() || paths.size() > CompleteRunAudioCaptureStore.MAX_CAPTURE_CHUNKS) {
+                throw new IOException("capture publication has an invalid chunk count");
+            }
+            List<CompleteRunAudioReport.ChunkIdentity> chunks = new ArrayList<>(paths.size());
+            for (Path path : paths) {
+                Path realPath = path.toRealPath();
+                BasicFileAttributes attributes = Files.readAttributes(realPath, BasicFileAttributes.class);
+                if (!attributes.isRegularFile()) {
+                    throw new IOException("capture chunk is not a regular file: " + path);
+                }
+                chunks.add(new CompleteRunAudioReport.ChunkIdentity(path.getFileName().toString(),
+                        sha256(realPath), realPath.toString(), fileKey(attributes)));
+            }
+            MessageDigest digest = sha256Digest();
+            digestField(digest, realSource.toString());
+            digestField(digest, sourceFileKey);
+            digestField(digest, manifestSha256);
+            for (CompleteRunAudioReport.ChunkIdentity chunk : chunks) {
+                digestField(digest, chunk.file());
+                digestField(digest, chunk.compressedSha256());
+                digestField(digest, chunk.realPath());
+                digestField(digest, chunk.fileKey());
+            }
+            return new PublicationIdentity(realSource, sourceFileKey, manifestSha256, chunks,
+                    HexFormat.of().formatHex(digest.digest()));
+        }
+    }
+
+    private static String fileKey(BasicFileAttributes attributes) {
+        Object key = attributes.fileKey();
+        return key == null ? "unavailable" : key.toString();
+    }
+
+    private static String sha256(Path path) throws IOException {
+        MessageDigest digest = sha256Digest();
+        try (InputStream input = Files.newInputStream(path)) {
+            byte[] buffer = new byte[8192];
+            int count;
+            while ((count = input.read(buffer)) != -1) digest.update(buffer, 0, count);
+        }
+        return HexFormat.of().formatHex(digest.digest());
+    }
+
+    private static String sha256(byte[] bytes) {
+        MessageDigest digest = sha256Digest();
+        digest.update(bytes);
+        return HexFormat.of().formatHex(digest.digest());
+    }
+
+    private static MessageDigest sha256Digest() {
+        try {
+            return MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException impossible) {
+            throw new AssertionError(impossible);
+        }
+    }
+
+    private static void digestField(MessageDigest digest, String value) {
+        byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
+        digest.update((byte) (bytes.length >>> 24));
+        digest.update((byte) (bytes.length >>> 16));
+        digest.update((byte) (bytes.length >>> 8));
+        digest.update((byte) bytes.length);
+        digest.update(bytes);
     }
 
     private record Entry(long index, CompleteRunAudioTrace.Record record) { }
@@ -634,7 +750,12 @@ public final class CompleteRunAudioComparator {
                 ProducerKind producer) throws ValidationException {
             CompleteRunAudioCaptureStore.Reader reader;
             try {
-                reader = store.read(expected.source);
+                PublicationIdentity current = PublicationIdentity.capture(expected.source);
+                if (!current.equals(expected.publication)) {
+                    throw new ValidationException(ValidationException.Kind.SOURCE_REPLACED, side,
+                            "capture publication changed between passes");
+                }
+                reader = store.read(current.realSource());
             } catch (IOException failure) {
                 throw new ValidationException(ValidationException.Kind.IO_FAILURE, side,
                         "comparison pass could not reopen capture", failure);
@@ -685,6 +806,15 @@ public final class CompleteRunAudioComparator {
                 throw new ValidationException(ValidationException.Kind.SOURCE_REPLACED, side,
                         "capture root digest changed between passes");
             }
+            try {
+                if (!PublicationIdentity.capture(expected.source).equals(expected.publication)) {
+                    throw new ValidationException(ValidationException.Kind.SOURCE_REPLACED, side,
+                            "capture publication changed during comparison pass");
+                }
+            } catch (IOException failure) {
+                throw new ValidationException(ValidationException.Kind.IO_FAILURE, side,
+                        "capture publication could not be verified after comparison", failure);
+            }
         }
 
         @Override
@@ -702,10 +832,18 @@ public final class CompleteRunAudioComparator {
         private final Metadata metadata;
         private final CompleteRunAudioProfile profile;
         private final Side side;
+        private final Set<HardwareRole> hardwareRoles;
+        private final Map<NativeSoundIdentity, List<NativeSoundIdentity>> decisionResolutions;
+        private final Map<Long, NativeSoundIdentity> baselineOwners;
+        private final List<NativeSoundIdentity> requestIdentities = new ArrayList<>();
+        private final List<NativeSoundIdentity> admittedIdentities = new ArrayList<>();
+        private final Set<Long> decidedRequests = new HashSet<>();
         private long requestOrdinal;
         private long serviceOrdinal;
         private long chipOrdinal;
         private long lifecycleOrdinal;
+        private int segmentIndex;
+        private int previousSourceFrame = -1;
         private boolean baseline;
         private boolean terminal;
 
@@ -713,6 +851,9 @@ public final class CompleteRunAudioComparator {
             this.metadata = metadata;
             this.profile = profile;
             this.side = side;
+            hardwareRoles = Set.copyOf(profile.hardwareRoles());
+            decisionResolutions = profile.decisionResolutions();
+            baselineOwners = profile.baselineOwnerIdentities();
         }
 
         void accept(CompleteRunAudioTrace.Record record) throws ValidationException {
@@ -722,19 +863,21 @@ public final class CompleteRunAudioComparator {
                     ordinal("baseline is not the unique comparison-epoch baseline");
                 }
                 baseline = true;
+                previousSourceFrame = value.absoluteFrame();
                 state(value.state());
             } else if (record instanceof Frame frame) {
                 if (!baseline) ordinal("frame precedes baseline");
+                sourceCoordinate(frame.absoluteFrame());
+                segment(frame);
                 for (Request request : frame.requests()) {
                     if (request.ordinal() != requestOrdinal++) ordinal("request ordinal is not globally contiguous");
-                    requestIdentity(request);
+                    requestIdentities.add(requestIdentity(request));
+                    admittedIdentities.add(null);
                 }
                 for (DriverService service : frame.services()) {
                     if (service.ordinal() != serviceOrdinal++) ordinal("service ordinal is not globally contiguous");
                     for (Decision decision : service.decisions()) {
-                        if (decision.requestOrdinal() < 0 || decision.requestOrdinal() >= requestOrdinal) {
-                            ordinal("decision references an unavailable request ordinal");
-                        }
+                        decision(decision);
                     }
                     state(service.state());
                     for (ChipEvent event : service.chipEvents()) {
@@ -745,6 +888,7 @@ public final class CompleteRunAudioComparator {
                 if (!baseline || lifecycle.ordinal() != lifecycleOrdinal++) {
                     ordinal("lifecycle ordinal is not globally contiguous after baseline");
                 }
+                lifecycle(lifecycle);
             } else if (record instanceof Terminal) {
                 terminal = true;
             }
@@ -763,7 +907,48 @@ public final class CompleteRunAudioComparator {
             }
         }
 
-        private void requestIdentity(Request request) throws ValidationException {
+        private void segment(Frame frame) throws ValidationException {
+            List<ManifestSegment> segments = metadata.fixture().segments();
+            while (segmentIndex < segments.size()
+                    && frame.absoluteFrame() >= segments.get(segmentIndex).exclusiveEnd()) {
+                segmentIndex++;
+            }
+            String expected = null;
+            if (segmentIndex < segments.size()) {
+                ManifestSegment segment = segments.get(segmentIndex);
+                if (frame.absoluteFrame() >= segment.firstFrame()) expected = segment.id();
+            }
+            if (!Objects.equals(expected, frame.segment())) {
+                throw new ValidationException(ValidationException.Kind.SEGMENT_INVALID, side,
+                        "frame segment does not exactly match the fixture interval");
+            }
+        }
+
+        private void lifecycle(Lifecycle lifecycle) throws ValidationException {
+            if (lifecycle.absoluteFrame() < metadata.fixture().firstFrame()
+                    || lifecycle.absoluteFrame() >= metadata.fixture().exclusiveEnd()
+                    || lifecycle.absoluteFrame() < previousSourceFrame) {
+                throw new ValidationException(ValidationException.Kind.LIFECYCLE_INVALID, side,
+                        "lifecycle coordinates are outside or regress within the fixture interval");
+            }
+            try {
+                profile.validateLifecycle(lifecycle);
+            } catch (RuntimeException failure) {
+                throw new ValidationException(ValidationException.Kind.LIFECYCLE_INVALID, side,
+                        "lifecycle does not match the exact profile rule", failure);
+            }
+            previousSourceFrame = lifecycle.absoluteFrame();
+        }
+
+        private void sourceCoordinate(int absoluteFrame) throws ValidationException {
+            if (absoluteFrame < previousSourceFrame) {
+                throw new ValidationException(ValidationException.Kind.LIFECYCLE_INVALID, side,
+                        "frame coordinates regress behind a lifecycle marker in source order");
+            }
+            previousSourceFrame = absoluteFrame;
+        }
+
+        private NativeSoundIdentity requestIdentity(Request request) throws ValidationException {
             try {
                 NativeSoundIdentity expected = profile.resolveRequest(new RawAudioRequest(
                         request.ownerClass(), request.nativeId(), request.queueSource(), request.queueSlot()));
@@ -772,9 +957,63 @@ public final class CompleteRunAudioComparator {
                         || !expected.contentKey().equals(request.contentKey())) {
                     throw new IllegalArgumentException("resolved request identity differs");
                 }
+                return expected;
             } catch (RuntimeException failure) {
                 throw new ValidationException(ValidationException.Kind.REQUEST_IDENTITY_INVALID, side,
                         "request does not match the exact profile-resolved native identity", failure);
+            }
+        }
+
+        private void decision(Decision decision) throws ValidationException {
+            for (HardwareRole role : decision.requestedRoles()) {
+                if (!hardwareRoles.contains(role)) {
+                    throw new ValidationException(ValidationException.Kind.ROLE_INVALID, side,
+                            "decision requests a role outside the profile hardware inventory");
+                }
+            }
+            for (RoleDecision role : decision.roleDecisions()) {
+                if (!hardwareRoles.contains(role.role())) {
+                    throw new ValidationException(ValidationException.Kind.ROLE_INVALID, side,
+                            "role decision is outside the profile hardware inventory");
+                }
+            }
+            int requestIndex;
+            try {
+                requestIndex = Math.toIntExact(decision.requestOrdinal());
+            } catch (ArithmeticException failure) {
+                throw new ValidationException(ValidationException.Kind.DECISION_REFERENCE_INVALID, side,
+                        "decision request ordinal cannot address captured history", failure);
+            }
+            if (requestIndex < 0 || requestIndex >= requestIdentities.size()
+                    || !decidedRequests.add(decision.requestOrdinal())) {
+                throw new ValidationException(ValidationException.Kind.DECISION_REFERENCE_INVALID, side,
+                        "decision does not reference one unique captured request");
+            }
+            NativeSoundIdentity requested = requestIdentities.get(requestIndex);
+            NativeSoundIdentity resolved = new NativeSoundIdentity(requested.ownerClass(),
+                    decision.resolvedContentKey(), decision.resolvedNativeId());
+            List<NativeSoundIdentity> allowed = decisionResolutions.get(requested);
+            if (allowed == null || !allowed.contains(resolved)) {
+                throw new ValidationException(ValidationException.Kind.RESOLUTION_INVALID, side,
+                        "decision resolution is outside the profile-owned transformation contract");
+            }
+            for (RoleDecision role : decision.roleDecisions()) validateOwner(role.displacedOwner());
+            if (decision.accepted()) admittedIdentities.set(requestIndex, resolved);
+            for (RoleDecision role : decision.roleDecisions()) validateOwner(role.finalOwner());
+        }
+
+        private void validateOwner(OwnerRef owner) throws ValidationException {
+            if (owner.ownerClass() == OwnerClass.NONE) return;
+            NativeSoundIdentity expected = baselineOwners.get(owner.requestOrdinal());
+            if (expected == null && owner.requestOrdinal() >= 0
+                    && owner.requestOrdinal() < admittedIdentities.size()) {
+                expected = admittedIdentities.get((int) owner.requestOrdinal());
+            }
+            if (expected == null || expected.ownerClass() != owner.ownerClass()
+                    || expected.nativeId() != owner.nativeId()
+                    || !expected.contentKey().equals(owner.contentKey())) {
+                throw new ValidationException(ValidationException.Kind.OWNER_INVALID, side,
+                        "owner does not match a baseline or admitted request identity");
             }
         }
 

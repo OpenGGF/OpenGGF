@@ -3,6 +3,7 @@ package com.openggf.tools.audio.completerun;
 import static com.openggf.tools.audio.completerun.CompleteRunAudioTrace.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -51,6 +52,43 @@ class TestCompleteRunAudioComparator {
         assertTrue(report.toJson().contains("\"side\":\"ENGINE\""));
         assertTrue(report.toText().contains("reference_rom_sha1=" + "0".repeat(40)));
         assertTrue(report.toText().contains("engine_bk2_sha256=" + "2".repeat(64)));
+    }
+
+    @Test
+    void reportsSelfContainedExactCaptureProvenanceDeterministically() throws Exception {
+        TestProfile profile = registerProfile(2);
+        Path reference = writeCapture("reference", profile, ProducerKind.REFERENCE, 2, this::plainFrame);
+        Path engine = writeCapture("engine", profile, ProducerKind.OPENGGF, 2, this::plainFrame);
+
+        CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
+
+        CompleteRunAudioReport.SourceIdentity source = report.reference();
+        assertEquals(metadata(profile, ProducerKind.REFERENCE,
+                profile.producerRuntimeIdentities().get(ProducerKind.REFERENCE)), source.metadata());
+        assertEquals("1".repeat(8), source.metadata().fixture().romCrc32());
+        assertEquals(FIRST_FRAME + 2, source.metadata().fixture().bk2RowCount());
+        assertEquals("reference.test.v1", source.metadata().observerProof().observerProfile());
+        assertEquals("1".repeat(64), source.metadata().producerRuntimeIdentity().artifactSha256()
+                .get(RuntimeArtifact.BIZHAWK_EXECUTABLE));
+        assertEquals(1, source.chunks().size());
+        assertEquals(sha256(CompleteRunAudioJson.writeMetadata(source.metadata())), source.metadataSha256());
+        assertEquals(sha256(reference.resolve("manifest.json")), source.captureManifestSha256());
+        assertEquals(sha256(reference.resolve("chunks").resolve(source.chunks().get(0).file())),
+                source.chunks().get(0).compressedSha256());
+        assertTrue(report.toJson().contains("\"metadata_sha256\":\"" + source.metadataSha256() + "\""));
+        assertTrue(report.toJson().contains("\"romCrc32\":\"" + "1".repeat(8) + "\""));
+        assertTrue(report.toJson().contains("\"bk2RowCount\":" + (FIRST_FRAME + 2)));
+        assertTrue(report.toJson().contains("\"observerProfile\":\"reference.test.v1\""));
+        assertTrue(report.toJson().contains("\"BIZHAWK_EXECUTABLE\":\"" + "1".repeat(64) + "\""));
+        assertTrue(report.toJson().contains("\"segments\":[{\"id\":\"test\""));
+        assertTrue(report.toJson().contains("\"firstFrame\":" + FIRST_FRAME));
+        assertTrue(report.toJson().contains("\"capture_manifest_sha256\":\""
+                + source.captureManifestSha256() + "\""));
+        assertTrue(report.toJson().contains("\"publication_digest\":\"" + source.publicationDigest() + "\""));
+        assertTrue(report.toText().contains("reference_metadata_json="));
+        assertTrue(report.toText().contains("\"observerProfile\":\"reference.test.v1\""));
+        assertEquals(report.toJson(), CompleteRunAudioComparator.compare(reference, engine).toJson());
+        assertEquals(report.toText(), CompleteRunAudioComparator.compare(reference, engine).toText());
     }
 
     @Test
@@ -263,6 +301,28 @@ class TestCompleteRunAudioComparator {
     }
 
     @Test
+    void sameMetadataRecordRootReplacementWithDifferentPublicationBytesIsRejected() throws Exception {
+        TestProfile profile = registerProfile(4);
+        Path reference = writeCapture("reference", profile, ProducerKind.REFERENCE, 4, this::plainFrame);
+        Path replacement = writeCapture("replacement", profile, ProducerKind.REFERENCE, 4, this::plainFrame);
+        Path engine = writeCapture("engine", profile, ProducerKind.OPENGGF, 4, this::plainFrame);
+        String originalManifest = sha256(reference.resolve("manifest.json"));
+        String originalChunk = sha256(reference.resolve("chunks/000000.jsonl.gz"));
+        alterGzipHeaderAndManifest(replacement);
+        assertNotEquals(originalManifest, sha256(replacement.resolve("manifest.json")));
+        assertNotEquals(originalChunk, sha256(replacement.resolve("chunks/000000.jsonl.gz")));
+        assertEquals(readAll(reference), readAll(replacement));
+
+        CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine, () -> {
+            Files.delete(reference);
+            Files.move(replacement, reference);
+        });
+
+        assertSemanticFailure(report, CompleteRunAudioReport.Side.REFERENCE,
+                CompleteRunAudioComparator.ValidationException.Kind.SOURCE_REPLACED);
+    }
+
+    @Test
     void rejectsRuntimeIdentityOutsideTheExactRegisteredProfileWithoutParsingProse() throws Exception {
         TestProfile profile = registerProfile(2);
         Metadata wrong = metadata(profile, ProducerKind.REFERENCE, new ProducerRuntimeIdentity(
@@ -315,16 +375,207 @@ class TestCompleteRunAudioComparator {
     }
 
     @Test
+    void rejectsDecisionRoleOutsideTheProfileHardwareInventory() throws Exception {
+        TestProfile profile = registerProfile(2);
+        Decision invalid = decisionForRole(0, 0xc0, HardwareRole.FM2, owner(0, 0xc0));
+        Path reference = writeCapture("reference", profile, ProducerKind.REFERENCE, 2, this::plainFrame);
+        Path engine = writeCapture("engine", profile, ProducerKind.OPENGGF, 2,
+                row -> row == 0 ? requestAndDecisionFrame(row, request(0, 0xc0), invalid, 0) : plainFrame(row));
+
+        CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
+
+        assertSemanticFailure(report, CompleteRunAudioReport.Side.ENGINE,
+                CompleteRunAudioComparator.ValidationException.Kind.ROLE_INVALID);
+    }
+
+    @Test
+    void rejectsDecisionThatReferencesNoCapturedRequest() throws Exception {
+        TestProfile profile = registerProfile(2);
+        Decision invalid = decision(99, 1, 2, owner(99, 0xc0));
+        Path reference = writeCapture("reference", profile, ProducerKind.REFERENCE, 2, this::plainFrame);
+        Path engine = writeCapture("engine", profile, ProducerKind.OPENGGF, 2,
+                row -> row == 0 ? new Frame(FIRST_FRAME, "test", false, List.of(),
+                        List.of(service(0, List.of(invalid), List.of(), state(1)))) : plainFrame(row));
+
+        CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
+
+        assertSemanticFailure(report, CompleteRunAudioReport.Side.ENGINE,
+                CompleteRunAudioComparator.ValidationException.Kind.DECISION_REFERENCE_INVALID);
+    }
+
+    @Test
+    void rejectsOwnerWhoseRequestOrdinalDoesNotExist() throws Exception {
+        TestProfile profile = registerProfile(2);
+        Decision invalid = decision(0, 1, 2, owner(99, 0xc0));
+        Path reference = writeCapture("reference", profile, ProducerKind.REFERENCE, 2, this::plainFrame);
+        Path engine = writeCapture("engine", profile, ProducerKind.OPENGGF, 2,
+                row -> row == 0 ? requestAndDecisionFrame(row, request(0, 0xc0), invalid, 0) : plainFrame(row));
+
+        CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
+
+        assertSemanticFailure(report, CompleteRunAudioReport.Side.ENGINE,
+                CompleteRunAudioComparator.ValidationException.Kind.OWNER_INVALID);
+    }
+
+    @Test
+    void rejectsOwnerIdentityThatDoesNotMatchItsOriginatingAdmission() throws Exception {
+        TestProfile profile = registerProfile(2);
+        Decision invalid = new Decision(0, 0xc0, "sfx.c0", true, "accepted", 1, 2,
+                List.of(HardwareRole.FM1), List.of(new RoleDecision(HardwareRole.FM1, NONE,
+                        owner(0, 0xc1))));
+        Path reference = writeCapture("reference", profile, ProducerKind.REFERENCE, 2, this::plainFrame);
+        Path engine = writeCapture("engine", profile, ProducerKind.OPENGGF, 2,
+                row -> row == 0 ? requestAndDecisionFrame(row, request(0, 0xc0), invalid, 0) : plainFrame(row));
+
+        CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
+
+        assertSemanticFailure(report, CompleteRunAudioReport.Side.ENGINE,
+                CompleteRunAudioComparator.ValidationException.Kind.OWNER_INVALID);
+    }
+
+    @Test
+    void rejectsResolvedIdentityOutsideProfileOwnedTransformationContract() throws Exception {
+        TestProfile profile = registerProfile(2);
+        Decision invalid = decision(0, 1, 2, owner(0, 0xc1));
+        Path reference = writeCapture("reference", profile, ProducerKind.REFERENCE, 2, this::plainFrame);
+        Path engine = writeCapture("engine", profile, ProducerKind.OPENGGF, 2,
+                row -> row == 0 ? requestAndDecisionFrame(row, request(0, 0xc0), invalid, 0) : plainFrame(row));
+
+        CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
+
+        assertSemanticFailure(report, CompleteRunAudioReport.Side.ENGINE,
+                CompleteRunAudioComparator.ValidationException.Kind.RESOLUTION_INVALID);
+    }
+
+    @Test
+    void sameIdOwnersRemainDistinctByOriginatingRequestOrdinal() throws Exception {
+        TestProfile profile = registerProfile(3);
+        IntFunction<Frame> referenceFrames = row -> {
+            if (row == 0) return requestAndDecisionFrame(row, request(0, 0xc0),
+                    decision(0, 1, 2, owner(0, 0xc0)), 0);
+            if (row == 1) return requestAndDecisionFrame(row, request(1, 0xc0),
+                    decision(1, 2, 2, owner(1, 0xc0)), 1);
+            return plainFrame(row);
+        };
+        IntFunction<Frame> engineFrames = row -> {
+            if (row == 0) return requestAndDecisionFrame(row, request(0, 0xc0),
+                    decision(0, 1, 2, owner(0, 0xc0)), 0);
+            if (row == 1) return requestAndDecisionFrame(row, request(1, 0xc0),
+                    decision(1, 2, 2, owner(0, 0xc0)), 1);
+            return plainFrame(row);
+        };
+        Path reference = writeCapture("reference", profile, ProducerKind.REFERENCE, 3, referenceFrames);
+        Path engine = writeCapture("engine", profile, ProducerKind.OPENGGF, 3, engineFrames);
+
+        CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
+
+        assertEquals(CompleteRunAudioReport.Kind.OWNER, report.kind());
+        assertTrue(report.referenceValue().contains("requestOrdinal=1"));
+        assertTrue(report.engineValue().contains("requestOrdinal=0"));
+    }
+
+    @Test
+    void rejectsSegmentLabelsThatDoNotExactlyFollowFixtureIntervalsAndGaps() throws Exception {
+        int frames = 5;
+        TestProfile profile = registerProfile(frames, List.of(
+                new ManifestSegment("first", FIRST_FRAME, FIRST_FRAME + 1),
+                new ManifestSegment("second", FIRST_FRAME + 3, FIRST_FRAME + 4)));
+        IntFunction<Frame> valid = row -> new Frame(FIRST_FRAME + row,
+                row == 0 ? "first" : row == 3 ? "second" : null, false, List.of(), List.of());
+        Path reference = writeCapture("reference", profile, ProducerKind.REFERENCE, frames, valid);
+        Path engine = writeCapture("engine", profile, ProducerKind.OPENGGF, frames,
+                row -> new Frame(FIRST_FRAME + row, row == 0 || row == 1 ? "first"
+                        : row == 3 ? "second" : null, false, List.of(), List.of()));
+
+        CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
+
+        assertSemanticFailure(report, CompleteRunAudioReport.Side.ENGINE,
+                CompleteRunAudioComparator.ValidationException.Kind.SEGMENT_INVALID);
+    }
+
+    @Test
+    void rejectsLifecycleOutsideIntervalOrRegressingInSourceOrder() throws Exception {
+        TestProfile profile = registerProfile(2);
+        Metadata referenceMetadata = metadata(profile, ProducerKind.REFERENCE,
+                profile.producerRuntimeIdentities().get(ProducerKind.REFERENCE));
+        Metadata engineMetadata = metadata(profile, ProducerKind.OPENGGF,
+                profile.producerRuntimeIdentities().get(ProducerKind.OPENGGF));
+        Path reference = writeCapture("reference", referenceMetadata, 2, this::plainFrame);
+        List<CompleteRunAudioTrace.Record> outside = new ArrayList<>();
+        outside.add(new Baseline(FIRST_FRAME, state(1)));
+        outside.add(plainFrame(0));
+        outside.add(plainFrame(1));
+        outside.add(new Lifecycle(0, FIRST_FRAME + 2, "pulse", Map.of("payload", "outside")));
+        Path outsideCapture = writeRecords("outside", engineMetadata, outside);
+
+        CompleteRunAudioReport outsideReport = CompleteRunAudioComparator.compare(reference, outsideCapture);
+        assertSemanticFailure(outsideReport, CompleteRunAudioReport.Side.ENGINE,
+                CompleteRunAudioComparator.ValidationException.Kind.LIFECYCLE_INVALID);
+
+        List<CompleteRunAudioTrace.Record> regressing = new ArrayList<>();
+        regressing.add(new Baseline(FIRST_FRAME, state(1)));
+        regressing.add(new Lifecycle(0, FIRST_FRAME + 1, "pulse", Map.of("payload", "later")));
+        regressing.add(new Lifecycle(1, FIRST_FRAME, "pulse", Map.of("payload", "earlier")));
+        regressing.add(plainFrame(0));
+        regressing.add(plainFrame(1));
+        Path regressingCapture = writeRecords("regressing", engineMetadata, regressing);
+
+        CompleteRunAudioReport regressingReport = CompleteRunAudioComparator.compare(reference, regressingCapture);
+        assertSemanticFailure(regressingReport, CompleteRunAudioReport.Side.ENGINE,
+                CompleteRunAudioComparator.ValidationException.Kind.LIFECYCLE_INVALID);
+
+        List<CompleteRunAudioTrace.Record> futureLifecycleBeforeEarlierFrame = new ArrayList<>();
+        futureLifecycleBeforeEarlierFrame.add(new Baseline(FIRST_FRAME, state(1)));
+        futureLifecycleBeforeEarlierFrame.add(
+                new Lifecycle(0, FIRST_FRAME + 1, "pulse", Map.of("payload", "future")));
+        futureLifecycleBeforeEarlierFrame.add(plainFrame(0));
+        futureLifecycleBeforeEarlierFrame.add(plainFrame(1));
+        Path crossTypeRegression = writeRecords("cross-type-regression", engineMetadata,
+                futureLifecycleBeforeEarlierFrame);
+
+        CompleteRunAudioReport crossTypeReport = CompleteRunAudioComparator.compare(reference,
+                crossTypeRegression);
+        assertSemanticFailure(crossTypeReport, CompleteRunAudioReport.Side.ENGINE,
+                CompleteRunAudioComparator.ValidationException.Kind.LIFECYCLE_INVALID);
+    }
+
+    @Test
+    void rejectsLifecycleOutsideProfileKindAndExactDetailFieldRules() throws Exception {
+        TestProfile profile = registerProfile(1);
+        Metadata referenceMetadata = metadata(profile, ProducerKind.REFERENCE,
+                profile.producerRuntimeIdentities().get(ProducerKind.REFERENCE));
+        Metadata engineMetadata = metadata(profile, ProducerKind.OPENGGF,
+                profile.producerRuntimeIdentities().get(ProducerKind.OPENGGF));
+        Path reference = writeCapture("reference", referenceMetadata, 1, this::plainFrame);
+        List<CompleteRunAudioTrace.Record> records = new ArrayList<>();
+        records.add(new Baseline(FIRST_FRAME, state(1)));
+        records.add(new Lifecycle(0, FIRST_FRAME, "pulse", Map.of("wrong", "field")));
+        records.add(plainFrame(0));
+        Path engine = writeRecords("engine", engineMetadata, records);
+
+        CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
+
+        assertSemanticFailure(report, CompleteRunAudioReport.Side.ENGINE,
+                CompleteRunAudioComparator.ValidationException.Kind.LIFECYCLE_INVALID);
+    }
+
+    @Test
     void streamsFiftyThousandHighEntropyFramesInSeparateThirtyTwoMiBJvm() throws Exception {
         int frames = 50_000;
         TestProfile profile = registerProfile(frames);
         Path reference = writeStreamingCapture("large-reference", profile, ProducerKind.REFERENCE, frames);
         Path engine = writeStreamingCapture("large-engine", profile, ProducerKind.OPENGGF, frames);
-        long compressedBytes = compressedBytes(reference) + compressedBytes(engine);
+        long referenceCompressedBytes = compressedBytes(reference);
+        long engineCompressedBytes = compressedBytes(engine);
+        long compressedBytes = referenceCompressedBytes + engineCompressedBytes;
         long uncompressedBytes = uncompressedGzipBytes(reference) + uncompressedGzipBytes(engine);
-        assertTrue(compressedBytes > 32L * 1024 * 1024,
+        assertTrue(referenceCompressedBytes > 32L * 1024 * 1024,
+                () -> "reference compressed input was only " + referenceCompressedBytes + " bytes");
+        assertTrue(engineCompressedBytes > 32L * 1024 * 1024,
+                () -> "engine compressed input was only " + engineCompressedBytes + " bytes");
+        assertTrue(compressedBytes > 64L * 1024 * 1024,
                 () -> "combined compressed inputs were only " + compressedBytes + " bytes");
-        assertTrue(uncompressedBytes > 64L * 1024 * 1024,
+        assertTrue(uncompressedBytes > 160L * 1024 * 1024,
                 () -> "combined canonical inputs were only " + uncompressedBytes + " bytes");
 
         String java = Path.of(System.getProperty("java.home"), "bin", "java").toString();
@@ -333,7 +584,9 @@ class TestCompleteRunAudioComparator {
                 engine.toString(), profile.id(), Integer.toString(frames))
                 .redirectErrorStream(true).start();
         int status = process.waitFor();
-        assertEquals(0, status, new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8));
+        String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        assertEquals(0, status, output);
+        assertTrue(output.contains("MATCH frames=50000 drained=true"), output);
     }
 
     public static void main(String[] args) {
@@ -346,6 +599,7 @@ class TestCompleteRunAudioComparator {
         if (report.kind() != CompleteRunAudioReport.Kind.MATCH) {
             throw new IllegalStateException(report.toText());
         }
+        System.out.println("MATCH frames=" + args[4] + " drained=true");
     }
 
     private static void assertBothDirections(CompleteRunAudioReport.Kind missing,
@@ -355,17 +609,34 @@ class TestCompleteRunAudioComparator {
         assertEquals(extra, CompleteRunAudioComparator.difference(engine, reference).kind());
     }
 
+    private static void assertSemanticFailure(CompleteRunAudioReport report, CompleteRunAudioReport.Side side,
+            CompleteRunAudioComparator.ValidationException.Kind kind) {
+        assertEquals(CompleteRunAudioReport.Kind.CAPTURE_FAILURE, report.kind());
+        assertEquals(side, report.failureSide());
+        assertEquals(kind, report.validationKind());
+    }
+
     private TestProfile registerProfile(int frames) {
         TestProfile profile = profile("comparator.test." + PROFILE_SEQUENCE.incrementAndGet(), frames);
         CompleteRunAudioProfiles.register(profile);
         return profile;
     }
 
+    private TestProfile registerProfile(int frames, List<ManifestSegment> segments) {
+        TestProfile profile = profile("comparator.test." + PROFILE_SEQUENCE.incrementAndGet(), frames, segments);
+        CompleteRunAudioProfiles.register(profile);
+        return profile;
+    }
+
     private static TestProfile profile(String id, int frames) {
+        return profile(id, frames,
+                List.of(new ManifestSegment("test", FIRST_FRAME, FIRST_FRAME + frames)));
+    }
+
+    private static TestProfile profile(String id, int frames, List<ManifestSegment> segments) {
         int end = FIRST_FRAME + frames;
         CompleteRunFixture fixture = new CompleteRunFixture("0".repeat(40), "1".repeat(8), "2".repeat(64),
-                end, "3".repeat(64), List.of(new ManifestSegment("test", FIRST_FRAME, end)),
-                FIRST_FRAME, end);
+                end, "3".repeat(64), segments, FIRST_FRAME, end);
         return new TestProfile(id, fixture);
     }
 
@@ -386,20 +657,32 @@ class TestCompleteRunAudioComparator {
         return output;
     }
 
+    private Path writeRecords(String name, Metadata metadata, List<CompleteRunAudioTrace.Record> records)
+            throws Exception {
+        List<CompleteRunAudioTrace.Record> complete = new ArrayList<>(records);
+        complete.add(terminal(metadata.fixture().exclusiveEnd(), complete));
+        Path output = temp.resolve(name);
+        new CompleteRunAudioCaptureStore().writeNew(output, metadata, complete.iterator());
+        return output;
+    }
+
     private Path writeStreamingCapture(String name, TestProfile profile, ProducerKind kind, int frames)
             throws Exception {
         String digest = streamingRoot(frames);
         Metadata metadata = metadata(profile, kind, profile.producerRuntimeIdentities().get(kind));
         Iterator<CompleteRunAudioTrace.Record> records = new Iterator<>() {
-            private int cursor = -1;
-            @Override public boolean hasNext() { return cursor <= frames; }
+            private long cursor;
+            @Override public boolean hasNext() { return cursor < 2L * frames + 2; }
             @Override public CompleteRunAudioTrace.Record next() {
                 if (!hasNext()) throw new NoSuchElementException();
-                if (cursor++ == -1) return new Baseline(FIRST_FRAME, state(1));
-                int row = cursor - 1;
-                if (row == frames) return new Terminal(FIRST_FRAME + frames, frames, 0, 0, 0, 0, 0, 0,
-                        digest);
-                return entropyFrame(row);
+                long current = cursor++;
+                if (current == 0) return new Baseline(FIRST_FRAME, state(1));
+                if (current == 2L * frames + 1) {
+                    return new Terminal(FIRST_FRAME + frames, frames, frames, frames, frames,
+                            frames, frames, frames, digest);
+                }
+                int row = (int) ((current - 1) / 2);
+                return (current & 1) == 1 ? entropyLifecycle(row, frames) : entropyFrame(row);
             }
         };
         Path output = temp.resolve(name);
@@ -411,7 +694,10 @@ class TestCompleteRunAudioComparator {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             update(digest, new Baseline(FIRST_FRAME, state(1)));
-            for (int row = 0; row < frames; row++) update(digest, entropyFrame(row));
+            for (int row = 0; row < frames; row++) {
+                update(digest, entropyLifecycle(row, frames));
+                update(digest, entropyFrame(row));
+            }
             return HexFormat.of().formatHex(digest.digest());
         } catch (Exception failure) {
             throw new AssertionError(failure);
@@ -419,7 +705,25 @@ class TestCompleteRunAudioComparator {
     }
 
     private static Frame entropyFrame(int row) {
-        return new Frame(FIRST_FRAME + row, entropy(row), (row & 1) != 0, List.of(), List.of());
+        Request request = request(row, 0xc0);
+        OwnerRef owner = owner(row, 0xc0);
+        Decision decision = new Decision(row, 0xc0, "sfx.c0", true,
+                "accepted." + Integer.toUnsignedString(Integer.rotateLeft(row * 0x9e3779b9, 13), 16),
+                row & 0xff, (row + 1) & 0xff, List.of(HardwareRole.FM1),
+                List.of(new RoleDecision(HardwareRole.FM1, NONE, owner)));
+        NormalizedState state = new NormalizedState(List.of(new StateField("tempo", entropy(row))),
+                List.of(new RoleState(HardwareRole.FM1, true,
+                        List.of(new StateField("cursor", Integer.toUnsignedLong(row * 0x45d9f3b))))));
+        List<ChipEvent> chipEvents = List.of(
+                new YmWrite(2L * row, row & 1, (row >>> 1) & 0xff, (row * 73) & 0xff),
+                new PsgWrite(2L * row + 1, (row * 151) & 0xff));
+        return new Frame(FIRST_FRAME + row, "test", (row & 1) != 0, List.of(request),
+                List.of(service(row, List.of(decision), chipEvents, state,
+                        "driver." + Integer.toUnsignedString(row * 0x9e3779b9, 16))));
+    }
+
+    private static Lifecycle entropyLifecycle(int row, int frames) {
+        return new Lifecycle(row, FIRST_FRAME + row, "pulse", Map.of("payload", entropy(frames + row)));
     }
 
     private static String entropy(int row) {
@@ -461,6 +765,42 @@ class TestCompleteRunAudioComparator {
         }
     }
 
+    private static void alterGzipHeaderAndManifest(Path capture) throws Exception {
+        Path chunk = capture.resolve("chunks/000000.jsonl.gz");
+        byte[] bytes = Files.readAllBytes(chunk);
+        String previous = sha256(chunk);
+        bytes[9] = bytes[9] == 3 ? (byte) 0xff : (byte) 3;
+        Files.write(chunk, bytes);
+        String changed = sha256(chunk);
+        String manifest = Files.readString(capture.resolve("manifest.json"), StandardCharsets.UTF_8);
+        Files.writeString(capture.resolve("manifest.json"), manifest.replace(previous, changed),
+                StandardCharsets.UTF_8);
+    }
+
+    private static String sha256(Path path) throws Exception {
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        try (var input = Files.newInputStream(path)) {
+            byte[] buffer = new byte[8192];
+            int count;
+            while ((count = input.read(buffer)) >= 0) digest.update(buffer, 0, count);
+        }
+        return HexFormat.of().formatHex(digest.digest());
+    }
+
+    private static String sha256(String value) throws Exception {
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        digest.update(value.getBytes(StandardCharsets.UTF_8));
+        return HexFormat.of().formatHex(digest.digest());
+    }
+
+    private static List<CompleteRunAudioTrace.Record> readAll(Path capture) throws Exception {
+        List<CompleteRunAudioTrace.Record> records = new ArrayList<>();
+        try (CompleteRunAudioCaptureStore.Reader reader = new CompleteRunAudioCaptureStore().read(capture)) {
+            while (reader.hasNext()) records.add(reader.next());
+        }
+        return List.copyOf(records);
+    }
+
     private static Metadata metadata(TestProfile profile, ProducerKind kind,
             ProducerRuntimeIdentity runtime) {
         return new Metadata(SCHEMA, profile.id(), profile.fixture(), kind, runtime,
@@ -490,6 +830,12 @@ class TestCompleteRunAudioComparator {
         return new Frame(FIRST_FRAME + row, "test", false, List.of(request), List.of());
     }
 
+    private static Frame requestAndDecisionFrame(int row, Request request, Decision decision,
+            long serviceOrdinal) {
+        return new Frame(FIRST_FRAME + row, "test", false, List.of(request),
+                List.of(service(serviceOrdinal, List.of(decision), List.of(), state(1))));
+    }
+
     private static Frame chipFrame(int row, int value) {
         return new Frame(FIRST_FRAME + row, "test", false, List.of(),
                 List.of(service(0, List.of(), List.of(new YmWrite(0, 0, 0x22, value)), state(1))));
@@ -515,6 +861,12 @@ class TestCompleteRunAudioComparator {
         OwnerRef finalOwner = new OwnerRef(OwnerClass.SFX, key, nativeId, requestOrdinal);
         return new Decision(requestOrdinal, nativeId, key, true, "accepted", 1, 2,
                 List.of(HardwareRole.FM1), List.of(new RoleDecision(HardwareRole.FM1, NONE, finalOwner)));
+    }
+
+    private static Decision decisionForRole(long requestOrdinal, int nativeId, HardwareRole role,
+            OwnerRef finalOwner) {
+        return new Decision(requestOrdinal, nativeId, "sfx." + Integer.toHexString(nativeId), true,
+                "accepted", 1, 2, List.of(role), List.of(new RoleDecision(role, NONE, finalOwner)));
     }
 
     private static OwnerRef owner(long requestOrdinal, int nativeId) {
@@ -579,6 +931,7 @@ class TestCompleteRunAudioComparator {
         private final String id;
         private final CompleteRunFixture fixture;
         private final Map<ProducerKind, ProducerRuntimeIdentity> runtimes = new LinkedHashMap<>();
+        private final Map<ProducerKind, ObserverProof> observers = new LinkedHashMap<>();
 
         private TestProfile(String id, CompleteRunFixture fixture) {
             this.id = id;
@@ -591,6 +944,12 @@ class TestCompleteRunAudioComparator {
             runtimes.put(ProducerKind.OPENGGF, new ProducerRuntimeIdentity(
                     "OpenGGF", "test", "OpenGGF", "test", "SMPS", "test",
                     Map.of(RuntimeArtifact.OPENGGF_PRODUCER, "4".repeat(64))));
+            observers.put(ProducerKind.REFERENCE,
+                    new ObserverProof("reference.test.v1", "m68k.execute",
+                            List.of(new CallbackProof("driver.service", 1))));
+            observers.put(ProducerKind.OPENGGF,
+                    new ObserverProof("openggf.test.v1", "java.observer",
+                            List.of(new CallbackProof("driver.service", 1))));
         }
 
         @Override public String id() { return id; }
@@ -608,6 +967,18 @@ class TestCompleteRunAudioComparator {
         }
         @Override public Map<ProducerKind, ProducerRuntimeIdentity> producerRuntimeIdentities() {
             return Map.copyOf(runtimes);
+        }
+        @Override public Map<ProducerKind, ObserverProof> observerProofs() {
+            return Map.copyOf(observers);
+        }
+        @Override public Map<NativeSoundIdentity, List<NativeSoundIdentity>> decisionResolutions() {
+            NativeSoundIdentity c0 = new NativeSoundIdentity(OwnerClass.SFX, "sfx.c0", 0xc0);
+            NativeSoundIdentity c1 = new NativeSoundIdentity(OwnerClass.SFX, "sfx.c1", 0xc1);
+            return Map.of(c0, List.of(c0), c1, List.of(c1));
+        }
+        @Override public Map<Long, NativeSoundIdentity> baselineOwnerIdentities() { return Map.of(); }
+        @Override public Map<String, LifecycleRule> lifecycleRules() {
+            return Map.of("pulse", new LifecycleRule("pulse", List.of("payload")));
         }
     }
 }

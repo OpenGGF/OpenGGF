@@ -35,6 +35,14 @@ final class CompleteRunAudioJson {
         return out.toString();
     }
 
+    static String writeMetadata(Metadata metadata) throws IOException {
+        StringWriter out = new StringWriter();
+        try (JsonGenerator json = FACTORY.createGenerator(out)) {
+            WRITER.writeValue(json, metadata);
+        }
+        return out.toString();
+    }
+
     static CompleteRunAudioTrace.Record readRecord(String line) {
         try (JsonParser p = FACTORY.createParser(line)) {
             start(p, "record"); field(p, "type"); String type = text(p, "record type"); field(p, "value");

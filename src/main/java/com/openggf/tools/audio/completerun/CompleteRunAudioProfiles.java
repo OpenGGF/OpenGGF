@@ -2,7 +2,9 @@ package com.openggf.tools.audio.completerun;
 
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.CompleteRunFixture;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.HardwareRole;
+import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.LifecycleRule;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.NativeSoundIdentity;
+import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.ObserverProof;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.ProducerKind;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.ProducerRuntimeIdentity;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.RawAudioRequest;
@@ -12,6 +14,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
 /** Strict process-local profile registry. Registration publishes an immutable snapshot. */
@@ -59,7 +62,11 @@ public final class CompleteRunAudioProfiles {
     /** Value snapshot prevents later mutations by a profile factory from changing capture validation. */
     private record FrozenProfile(String id, CompleteRunFixture fixture, List<HardwareRole> hardwareRoles,
             StateInventory stateInventory, Map<RawAudioRequest, NativeSoundIdentity> nativeSoundIdentities,
-            Map<ProducerKind, ProducerRuntimeIdentity> producerRuntimeIdentities)
+            Map<ProducerKind, ProducerRuntimeIdentity> producerRuntimeIdentities,
+            Map<ProducerKind, ObserverProof> observerProofs,
+            Map<NativeSoundIdentity, List<NativeSoundIdentity>> decisionResolutions,
+            Map<Long, NativeSoundIdentity> baselineOwnerIdentities,
+            Map<String, LifecycleRule> lifecycleRules)
             implements CompleteRunAudioProfile {
         private FrozenProfile {
             if (id == null || id.isBlank()) {
@@ -70,12 +77,36 @@ public final class CompleteRunAudioProfiles {
             stateInventory = new StateInventory(stateInventory.globalFields(), stateInventory.activeRoleFields());
             nativeSoundIdentities = Map.copyOf(nativeSoundIdentities);
             producerRuntimeIdentities = Map.copyOf(producerRuntimeIdentities);
+            observerProofs = Map.copyOf(observerProofs);
+            decisionResolutions = freezeResolutions(decisionResolutions);
+            baselineOwnerIdentities = Map.copyOf(baselineOwnerIdentities);
+            lifecycleRules = Map.copyOf(lifecycleRules);
             if (!producerRuntimeIdentities.keySet().containsAll(EnumSet.allOf(ProducerKind.class))) {
                 throw new IllegalArgumentException("profile must declare an allowed runtime identity for every producer");
             }
             for (Map.Entry<ProducerKind, ProducerRuntimeIdentity> entry : producerRuntimeIdentities.entrySet()) {
                 Objects.requireNonNull(entry.getKey(), "producer kind");
                 entry.getValue().validateFor(entry.getKey());
+            }
+            if (!observerProofs.keySet().containsAll(EnumSet.allOf(ProducerKind.class))) {
+                throw new IllegalArgumentException("profile must declare an observer proof for every producer");
+            }
+            for (ProducerKind kind : ProducerKind.values()) {
+                Objects.requireNonNull(observerProofs.get(kind), "profile observer proof");
+            }
+            if (!decisionResolutions.keySet().containsAll(Set.copyOf(nativeSoundIdentities.values()))) {
+                throw new IllegalArgumentException("profile must declare decision resolutions for every request identity");
+            }
+            for (Map.Entry<Long, NativeSoundIdentity> entry : baselineOwnerIdentities.entrySet()) {
+                if (entry.getKey() == null || entry.getKey() < 0 || entry.getValue() == null
+                        || entry.getValue().ownerClass() == CompleteRunAudioTrace.OwnerClass.NONE) {
+                    throw new IllegalArgumentException("baseline owner identities must use non-negative ordinals and live identities");
+                }
+            }
+            for (Map.Entry<String, LifecycleRule> entry : lifecycleRules.entrySet()) {
+                if (!entry.getKey().equals(Objects.requireNonNull(entry.getValue(), "lifecycle rule").kind())) {
+                    throw new IllegalArgumentException("lifecycle rule map key must equal its declared kind");
+                }
             }
         }
 
@@ -87,7 +118,24 @@ public final class CompleteRunAudioProfiles {
                     List.copyOf(fixture.segments()), fixture.firstFrame(), fixture.exclusiveEnd());
             return new FrozenProfile(profile.id(), fixtureCopy, List.copyOf(profile.hardwareRoles()),
                     profile.stateInventory(), Map.copyOf(profile.nativeSoundIdentities()),
-                    Map.copyOf(profile.producerRuntimeIdentities()));
+                    Map.copyOf(profile.producerRuntimeIdentities()), Map.copyOf(profile.observerProofs()),
+                    profile.decisionResolutions(), profile.baselineOwnerIdentities(), profile.lifecycleRules());
+        }
+
+        private static Map<NativeSoundIdentity, List<NativeSoundIdentity>> freezeResolutions(
+                Map<NativeSoundIdentity, List<NativeSoundIdentity>> resolutions) {
+            Objects.requireNonNull(resolutions, "profile decision resolutions");
+            Map<NativeSoundIdentity, List<NativeSoundIdentity>> frozen = new LinkedHashMap<>();
+            for (Map.Entry<NativeSoundIdentity, List<NativeSoundIdentity>> entry : resolutions.entrySet()) {
+                NativeSoundIdentity requested = Objects.requireNonNull(entry.getKey(), "requested identity");
+                List<NativeSoundIdentity> allowed = List.copyOf(
+                        Objects.requireNonNull(entry.getValue(), "allowed decision identities"));
+                if (allowed.isEmpty() || allowed.stream().anyMatch(Objects::isNull)) {
+                    throw new IllegalArgumentException("every request identity needs at least one allowed resolution");
+                }
+                frozen.put(requested, allowed);
+            }
+            return Map.copyOf(frozen);
         }
     }
 }
