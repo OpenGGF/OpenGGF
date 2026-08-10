@@ -423,6 +423,7 @@ public class AudioManager implements MusicRestoreSink {
             installBackendPresentationSink();
             LOGGER.info("AudioBackend initialized: " + backend.getClass().getSimpleName());
         } catch (Exception e) {
+            AudioDiagnosticObserverException.rethrowIfPresent(e);
             LOGGER.log(Level.SEVERE, "Failed to initialize AudioBackend", e);
             destroyBackendQuietly(this.backend, "failed AudioBackend");
             this.backend = new NullAudioBackend();
@@ -440,6 +441,7 @@ public class AudioManager implements MusicRestoreSink {
                     this::handlePresentationSinkFailure,
                     warning -> LOGGER.warning("Speaker output: " + warning));
         } catch (Throwable failure) {
+            AudioDiagnosticObserverException.rethrowIfPresent(failure);
             LOGGER.log(Level.WARNING,
                     "Speaker device unavailable; continuing without audio output",
                     failure);
@@ -483,6 +485,7 @@ public class AudioManager implements MusicRestoreSink {
         try {
             backend.destroy();
         } catch (Exception e) {
+            AudioDiagnosticObserverException.rethrowIfPresent(e);
             LOGGER.log(Level.WARNING, "Failed to destroy " + description, e);
         }
     }
@@ -641,6 +644,7 @@ public class AudioManager implements MusicRestoreSink {
             } catch (RuntimeException rollbackFailure) {
                 failure.addSuppressed(rollbackFailure);
             }
+            AudioDiagnosticObserverException.rethrowIfPresent(failure);
             LOGGER.log(Level.WARNING,
                     "Audio snapshot restore failed; retained prior state",
                     failure);
@@ -661,6 +665,7 @@ public class AudioManager implements MusicRestoreSink {
             mirrorShadowCommand(() ->
                     shadowResolver.submitRawPcm(pcm, spec.sampleRate()));
         } catch (Exception e) {
+            AudioDiagnosticObserverException.rethrowIfPresent(e);
             LOGGER.log(Level.WARNING, "Failed to play SEGA PCM sample", e);
         }
     }
@@ -1087,6 +1092,7 @@ public class AudioManager implements MusicRestoreSink {
         } catch (RuntimeException failure) {
             if (producerCommitted) {
                 publishReverseReleaseLedger(selected, publishedBindings);
+                AudioDiagnosticObserverException.rethrowIfPresent(failure);
                 LOGGER.log(Level.WARNING,
                         "Audio reverse release publication failed after the "
                                 + "producer commit; completed the release from "
@@ -1101,6 +1107,7 @@ public class AudioManager implements MusicRestoreSink {
                 }
                 deferredReverseLogicalPrepared = false;
             }
+            AudioDiagnosticObserverException.rethrowIfPresent(failure);
             LOGGER.log(Level.WARNING,
                     "Audio reverse release failed; retained prior live state",
                     failure);
@@ -1159,6 +1166,7 @@ public class AudioManager implements MusicRestoreSink {
                 // ledger; the failing command and successors remain queued.
                 // The stale selected/prepared target is retained until a
                 // complete drain and fresh capture can replace it.
+                AudioDiagnosticObserverException.rethrowIfPresent(failure);
                 LOGGER.log(Level.WARNING,
                         "Audio post-boundary command publication failed; "
                                 + "retained coherent live state for retry",
@@ -1192,6 +1200,7 @@ public class AudioManager implements MusicRestoreSink {
             return true;
         } catch (RuntimeException failure) {
             deferredReverseLogicalPrepared = false;
+            AudioDiagnosticObserverException.rethrowIfPresent(failure);
             LOGGER.log(Level.WARNING,
                     "Audio reverse target preparation failed; retained live "
                             + "state for retry",
@@ -1995,9 +2004,7 @@ public class AudioManager implements MusicRestoreSink {
             submission.run();
             shadowParity.commandSubmitted();
         } catch (RuntimeException failure) {
-            if (failure instanceof AudioDiagnosticObserverException) {
-                throw failure;
-            }
+            AudioDiagnosticObserverException.rethrowIfPresent(failure);
             LOGGER.log(Level.WARNING,
                     "Presentation shadow command mirror failed", failure);
         }
@@ -2204,6 +2211,7 @@ public class AudioManager implements MusicRestoreSink {
                     live.requestedFrameRate, live.capture.clockSnapshot());
             live.carriedStereoFrames += carried;
         } catch (RuntimeException rebindFailure) {
+            AudioDiagnosticObserverException.rethrowIfPresent(rebindFailure);
             LOGGER.log(Level.WARNING,
                     "Live recording lease could not be carried across a"
                             + " presentation rebuild", rebindFailure);
@@ -2366,8 +2374,10 @@ public class AudioManager implements MusicRestoreSink {
         if (presentationSink instanceof OpenAlPcmSink openAlSink) {
             openAlSink.pause();
         }
-        driverServiceObserver.onLifecycle(
-                SmpsDriverServiceObserver.LifecycleKind.PAUSE);
+        AudioDiagnosticObserverException.invoke(() ->
+                driverServiceObserver.onLifecycle(
+                        SmpsDriverServiceObserver.LifecycleEvent.session(
+                                SmpsDriverServiceObserver.LifecycleKind.PAUSE)));
     }
 
     /**
@@ -2377,7 +2387,9 @@ public class AudioManager implements MusicRestoreSink {
         if (presentationSink instanceof OpenAlPcmSink openAlSink) {
             openAlSink.resume();
         }
-        driverServiceObserver.onLifecycle(
-                SmpsDriverServiceObserver.LifecycleKind.RESUME);
+        AudioDiagnosticObserverException.invoke(() ->
+                driverServiceObserver.onLifecycle(
+                        SmpsDriverServiceObserver.LifecycleEvent.session(
+                                SmpsDriverServiceObserver.LifecycleKind.RESUME)));
     }
 }

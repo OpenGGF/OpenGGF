@@ -1,0 +1,141 @@
+# Task 4 report: pre-construction audio observers and authority guard
+
+Status: DONE
+
+## Delivered
+
+- Added disabled-by-default `AudioAdmissionObserver` and
+  `SmpsDriverServiceObserver` contracts. Service callbacks carry global
+  ordinals and post-service snapshots; lifecycle callbacks cover driver
+  construction, reset/pause/resume, stop, save/restore, and the reserved PCM
+  boundaries needed by the game-specific follow-up plans.
+- Added the game-neutral `SmpsRequestAdmissionPolicy`, with the exact
+  permissive default selected through `GameAudioProfile`. The presentation and
+  legacy backend paths evaluate it once per resolved SFX request before
+  continuous-SFX, sequencer, DAC, or lock mutation. S1 therefore retains its
+  existing driver-owned per-role contention semantics.
+- Propagated admission, service, existing chip-write, and existing SFX
+  contention observers from `AudioManager` into every subsequently constructed
+  presentation or legacy SMPS driver, including first music, overrides,
+  standalone SFX, and reconstructed/restored drivers. Installation occurs
+  after the `SmpsDriver` constructor and before sequencer construction, so
+  constructor silence writes remain unobserved while real sequencer writes are
+  retained.
+- Moved SFX admission notification after sequencer attachment and lock
+  arbitration notification after lock/override mutation, without moving the
+  ensuing YM/PSG write. Restored SFX admissions are emitted in snapshot order
+  with fresh monotonic identities.
+- Marked observer exceptions so resolver, command-mirror, and mixer fallback
+  paths rethrow diagnostic failures instead of treating them as rejected or
+  failed voices.
+- Kept the disabled path literal: ordinary drivers retain the `NONE`
+  sentinels, perform no SFX diagnostic bookkeeping, and skip service-snapshot
+  capture entirely.
+- Added a static authority guard forbidding complete-run tooling references
+  outside production `tools/`, and scanning future complete-run OpenGGF
+  producer constructor parameters for reference/expected/oracle/sidecar
+  authority. A fixture test proves comments do not trigger the constructor
+  check while a reference path does.
+
+## TDD evidence
+
+RED was observed before implementation when the focused tests could not compile
+because the observer and policy interfaces/setters did not exist. Additional
+focused REDs then pinned the subtle boundaries:
+
+- admission notification initially ran before sequencer attachment;
+- arbitration notification initially ran before lock mutation;
+- ordinary drivers initially received wrapper observers even when public state
+  was `NONE`;
+- constructor-time chip observer exceptions were initially converted into
+  presentation rejection warnings;
+- the broad audio sweep exposed hash-order restored admissions and an uncached
+  request reaching policy resolution before the existing cache-miss boundary.
+
+Each RED was corrected at the owning boundary before the corresponding suite
+was rerun.
+
+## Verification
+
+- `mvn -Dmse=off -Dtest=com.openggf.audio.TestAudioDiagnosticObservers,com.openggf.audio.synth.TestChipWriteObserver,com.openggf.audio.driver.TestSmpsDriverSnapshot,com.openggf.tools.audio.completerun.TestCompleteRunAudioAuthorityGuard test`
+  - PASS: 25 tests, 0 failures, 0 errors.
+- `mvn -Dmse=off '-Dtest=com.openggf.audio.AudioManager*,com.openggf.audio.TestAudioManager*,com.openggf.audio.TestAudioPresentation*,com.openggf.audio.TestShadowAudioPresentationRouting,com.openggf.audio.TestUnifiedAudioPresentationIntegration,com.openggf.audio.TestMusicOverrideRestore,com.openggf.audio.TestAudioLogicalSnapshot,com.openggf.audio.TestAudioBackend*,com.openggf.audio.presentation.TestAudioPresentation*,com.openggf.audio.driver.TestSfxContentionObserver,com.openggf.audio.driver.TestSmpsDriverSnapshot*,com.openggf.audio.synth.TestChipWriteObserver,com.openggf.audio.synth.Test*Snapshot' test`
+  - PASS: 255 tests, 0 failures, 0 errors.
+- `mvn -Dmse=off -Dtest=com.openggf.audio.driver.TestSfxContentionObserver,com.openggf.audio.driver.TestS1SfxTakeoverOrder,com.openggf.audio.smps.TestSmpsSfxConstructionPurity test`
+  - PASS: 10 tests, 0 failures, 0 errors.
+- `git diff --check`
+  - PASS.
+
+Maven's hook installer logged that the shared `.git/config` was read-only in
+the sandbox. The Ant step is non-fatal and all requested tests completed on
+JDK 21.
+
+## Remaining scope and concerns
+
+- The observer contract is intentionally pre-construction. Setting an observer
+  after a driver already exists affects future drivers; complete-run producers
+  must install observers before bootstrap/music construction as the design
+  requires.
+- This task only supplies the permissive policy seam. Source-accurate S1
+  mailbox timing, S2 global request priority, S3K two-slot/continuous behavior,
+  and game-specific PCM lifecycle emission remain owned by their later plans.
+- No complete-run tooling type or reference reader/path was introduced into
+  production audio behavior. No game-name checks were added.
+- No merge or push was performed.
+
+## Review fix round 1
+
+The initial report's statement that constructor silence remains unobserved is
+superseded by this review round. An observer supplied to the new synthesizer
+constructor is now installed before `silenceAll()`, so every committed first,
+override, standalone-SFX, legacy, and reconstructed driver reports its exact
+198 YM2612 plus four PSG initialization writes. The uncommitted music blueprint
+remains deliberately unobserved, avoiding a duplicate constructor stream.
+
+Service callbacks moved from `SmpsDriver.read()` to the actual tempo-frame
+service boundary. Zero-length and pre-boundary reads report nothing; each real
+tick reports one begin/end pair, including multiple ordered pairs when one read
+crosses multiple ticks. Begin precedes sequencer mutation and writes, while end
+follows completion removal, lock release, silence writes, and the post-service
+snapshot.
+
+Prepared snapshot restore now opens one dependency-resolver diagnostic
+transaction. Reconstructed drivers bind all chip, contention, service, and
+lifecycle callbacks to a single ordered collector. Preparation and cleanup are
+invisible; successful publication flushes the callbacks once in their original
+cross-observer order; abandoned and failed preparations discard them.
+
+`AudioDiagnosticObserverException` now searches cause and suppressed chains,
+so cache/asset translation, restore rollback, reverse release, raw-PCM,
+resolver, mirror, mixer, backend lifecycle, and cleanup catches cannot demote a
+tooling failure into a cache miss, warning, failed voice, or `false` result.
+
+The presentation and legacy paths now evaluate the game policy exactly once at
+the resolved request boundary before later block/cache/continuous-SFX gates.
+Late engine cache failures reclassify the already-evaluated admission without
+running policy again; genuine pre-command asset-resolution failure runs no
+policy because no request boundary exists. The default remains the exact
+permissive singleton.
+
+Lifecycle callbacks now carry stable driver identity/admission origin, scope,
+and source. Driver stop mutations emit once per affected driver; aggregate
+registry stop duplicates were removed. Registry music-override and reset
+commands, session controls, and raw-PCM enter/leave use distinct non-driver
+scopes. Standalone SFX, base music, and override music are covered together.
+
+Review-round TDD evidence included RED failures for the missing constructor
+observer constructor, read-level service callbacks, missing lifecycle identity,
+blocked-before-policy behavior, and missing diagnostic transaction API. The
+following final verification passed on JDK 21:
+
+- Focused observer/chip/snapshot/contention/authority sweep: 40 tests, zero
+  failures and zero errors.
+- Broad AudioManager/backend/presentation/rewind/SFX contention/chip/snapshot
+  sweep: 256 tests, zero failures and zero errors.
+- S1 takeover-order and SFX-construction-purity sweep: 10 tests, zero failures
+  and zero errors.
+- `git diff --check`: clean.
+
+The static guard additionally pins game-neutral shared diagnostic contracts.
+No tooling import, game-name runtime check, snapshot field, game policy, chip
+port order, lock behavior, or default-`NONE` PCM behavior was introduced.

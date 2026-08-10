@@ -176,9 +176,7 @@ public final class AudioPresentationCommandResolver {
                     ? new PushMusicOverride(voice)
                     : new ReplaceMusic(voice);
         } catch (IOException | RuntimeException failure) {
-            if (failure instanceof AudioDiagnosticObserverException diagnostic) {
-                throw diagnostic;
-            }
+            AudioDiagnosticObserverException.rethrowIfPresent(failure);
             warn("Rejected music " + command.musicId()
                     + " via " + command.route() + ": "
                     + failure.getMessage());
@@ -255,9 +253,7 @@ public final class AudioPresentationCommandResolver {
                                         command.pitch()));
             };
         } catch (IOException | RuntimeException failure) {
-            if (failure instanceof AudioDiagnosticObserverException diagnostic) {
-                throw diagnostic;
-            }
+            AudioDiagnosticObserverException.rethrowIfPresent(failure);
             warn("Rejected SFX " + command.sfxName()
                     + "/" + command.sfxId() + " via "
                     + command.route() + ": " + failure.getMessage());

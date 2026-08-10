@@ -44,12 +44,24 @@ public interface SmpsSfxInstantiation {
                 context.resolvedSoundId()));
     }
 
+    /** Reclassifies an already evaluated request at a later engine gate. */
+    default Admission rejectedAdmission(
+            Admission evaluated, RejectionReason reason) {
+        Objects.requireNonNull(evaluated, "evaluated");
+        Objects.requireNonNull(reason, "reason");
+        SmpsAdmissionContext context = evaluated.context();
+        return new Admission(context, new AdmissionResult(false, reason,
+                evaluated.result().priorityBefore(),
+                evaluated.result().priorityBefore(),
+                evaluated.result().resolvedSoundId()));
+    }
+
     /** Reports a completed decision; the observer has no mutation authority. */
     default void observeAdmission(Admission admission) { }
 
     /** Reports a completed registry lifecycle mutation. */
     default void observeLifecycle(
-            SmpsDriverServiceObserver.LifecycleKind kind) { }
+            SmpsDriverServiceObserver.LifecycleEvent event) { }
 
     private static SmpsAdmissionContext admissionContext(
             ResolvedSmpsSfxSource source, boolean specialSfx) {

@@ -20,6 +20,13 @@ class TestCompleteRunAudioAuthorityGuard {
             Path.of("src/test/java/com/openggf/tools/audio/completerun"));
     private static final String TOOLING_PACKAGE =
             "com.openggf.tools.audio.completerun";
+    private static final List<Path> SHARED_DIAGNOSTIC_BOUNDARIES = List.of(
+            Path.of("src/main/java/com/openggf/audio/AudioAdmissionObserver.java"),
+            Path.of("src/main/java/com/openggf/audio/AudioDiagnosticObserverException.java"),
+            Path.of("src/main/java/com/openggf/audio/driver/SmpsDriverServiceObserver.java"),
+            Path.of("src/main/java/com/openggf/audio/driver/SmpsRequestAdmissionPolicy.java"));
+    private static final Pattern GAME_NAME_CHECK = Pattern.compile(
+            "(?i)\\b(sonic\\s*[123]|sonic3k|s1|s2|s3k)\\b");
     private static final Pattern REFERENCE_AUTHORITY_PARAMETER =
             Pattern.compile("(?i)\\b(reference|expected|oracle|sidecar)"
                     + "[a-z0-9_]*\\b");
@@ -65,6 +72,20 @@ class TestCompleteRunAudioAuthorityGuard {
         assertEquals(List.of(), violations,
                 "OpenGGF producers may accept ROM/run/output identity, never"
                         + " reference capture authority");
+    }
+
+    @Test
+    void sharedDiagnosticBoundariesRemainGameNeutral() throws IOException {
+        List<String> violations = new ArrayList<>();
+        for (Path boundary : SHARED_DIAGNOSTIC_BOUNDARIES) {
+            String source = Files.readString(boundary);
+            if (GAME_NAME_CHECK.matcher(source).find()) {
+                violations.add(boundary.toString());
+            }
+        }
+        assertEquals(List.of(), violations,
+                "shared observer and request-policy contracts cannot contain"
+                        + " game-name checks");
     }
 
     @Test

@@ -25,6 +25,7 @@ import com.openggf.audio.synth.ChipWriteObserver;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -98,6 +99,76 @@ public final class AudioPresentationSourceFactory
             boolean specialSfx) {
     }
 
+    private interface DiagnosticDispatcher {
+        DiagnosticDispatcher IMMEDIATE = Runnable::run;
+
+        void emit(Runnable callback);
+    }
+
+    private final class DeferredDiagnosticTransaction
+            implements DiagnosticTransaction, DiagnosticDispatcher {
+        private enum State {
+            PREPARING,
+            DEFERRED,
+            COMMITTED,
+            DISCARDED
+        }
+
+        private final List<Runnable> callbacks = new ArrayList<>();
+        private State state = State.PREPARING;
+
+        @Override
+        public void emit(Runnable callback) {
+            Objects.requireNonNull(callback, "callback");
+            switch (state) {
+                case PREPARING, DEFERRED -> callbacks.add(callback);
+                case COMMITTED -> callback.run();
+                case DISCARDED -> {
+                    // Provisional voices remain bound here while being stopped.
+                }
+            }
+        }
+
+        @Override
+        public void endPreparation() {
+            if (state != State.PREPARING
+                    || activeDiagnosticTransaction != this) {
+                throw new IllegalStateException(
+                        "diagnostic transaction is not preparing");
+            }
+            activeDiagnosticTransaction = null;
+            state = State.DEFERRED;
+        }
+
+        @Override
+        public void commit() {
+            if (state != State.DEFERRED) {
+                throw new IllegalStateException(
+                        "diagnostic transaction cannot be committed");
+            }
+            state = State.COMMITTED;
+            List<Runnable> deferred = List.copyOf(callbacks);
+            callbacks.clear();
+            for (Runnable callback : deferred) {
+                callback.run();
+            }
+        }
+
+        @Override
+        public void discard() {
+            if (state == State.COMMITTED) {
+                throw new IllegalStateException(
+                        "committed diagnostic transaction cannot be discarded");
+            }
+            if (state == State.PREPARING
+                    && activeDiagnosticTransaction == this) {
+                activeDiagnosticTransaction = null;
+            }
+            state = State.DISCARDED;
+            callbacks.clear();
+        }
+    }
+
     private final BooleanSupplier ownerThreadBoundary;
     private final SmpsCoordFlagHandlerOwner coordFlagHandlers;
     private final Settings settings;
@@ -119,6 +190,8 @@ public final class AudioPresentationSourceFactory
     private SfxContentionObserver sfxContentionObserver =
             SfxContentionObserver.NONE;
     private long nextServiceOrdinal;
+    private long nextDriverInstanceOrdinal;
+    private DeferredDiagnosticTransaction activeDiagnosticTransaction;
 
     public AudioPresentationSourceFactory(
             BooleanSupplier ownerThreadBoundary,
@@ -161,6 +234,17 @@ public final class AudioPresentationSourceFactory
         sfxContentionObserver = Objects.requireNonNull(observer, "observer");
     }
 
+    @Override
+    public DiagnosticTransaction beginDiagnosticTransaction() {
+        assertOwnerBoundary();
+        if (activeDiagnosticTransaction != null) {
+            throw new IllegalStateException(
+                    "nested audio diagnostic transaction");
+        }
+        activeDiagnosticTransaction = new DeferredDiagnosticTransaction();
+        return activeDiagnosticTransaction;
+    }
+
     public MusicVoiceEntry musicSmps(
             String gameId,
             int musicId,
@@ -175,7 +259,8 @@ public final class AudioPresentationSourceFactory
         CachedSmpsSource source = snapshotSource(
                 resolvedGameId, data, dac, config, false);
         SmpsCompositeVoice voice = buildMusicVoice(
-                musicId, voiceId, descriptor, maxStereoFrames, source);
+                musicId, voiceId, descriptor, maxStereoFrames, source,
+                newConfiguredDriver(false, musicOrigin(voiceId, musicId)));
         PresentationVoiceSnapshot.Smps blueprint =
                 (PresentationVoiceSnapshot.Smps) voice.snapshot();
         musicBlueprints.put(voiceId, blueprint);
@@ -209,7 +294,8 @@ public final class AudioPresentationSourceFactory
                 config.getCoordFlagHandler() != null,
                 false);
         return buildMusicVoice(
-                musicId, voiceId, descriptor, maxStereoFrames, source);
+                musicId, voiceId, descriptor, maxStereoFrames, source,
+                newConfiguredDriver(true, musicOrigin(voiceId, musicId)));
     }
 
     /**
@@ -229,8 +315,8 @@ public final class AudioPresentationSourceFactory
             long voiceId,
             AudioSourceDescriptor descriptor,
             int maxStereoFrames,
-            CachedSmpsSource source) {
-        SmpsDriver driver = newConfiguredDriver();
+            CachedSmpsSource source,
+            SmpsDriver driver) {
         SmpsSequencer sequencer = newSequencer(source, driver);
         sequencer.setSourceDescriptor(
                 describeMusic(descriptor, source.data()));
@@ -316,7 +402,9 @@ public final class AudioPresentationSourceFactory
         requireCached(source);
         return new SmpsCompositeVoice(
                 source.standaloneVoiceId(), source.priority(), null, null,
-                source.maxStereoFrames(), newConfiguredDriver());
+                source.maxStereoFrames(), newConfiguredDriver(true,
+                        sfxOrigin(source.standaloneVoiceId(),
+                                source.assetKey().sfxId())));
     }
 
     @Override
@@ -368,12 +456,12 @@ public final class AudioPresentationSourceFactory
 
     @Override
     public void observeLifecycle(
-            SmpsDriverServiceObserver.LifecycleKind kind) {
+            SmpsDriverServiceObserver.LifecycleEvent event) {
         if (driverServiceObserver == SmpsDriverServiceObserver.NONE) {
             return;
         }
         AudioDiagnosticObserverException.invoke(() ->
-                driverServiceObserver.onLifecycle(kind));
+                driverServiceObserver.onLifecycle(event));
     }
 
     public SmpsCompositeVoice recreateSmps(
@@ -381,7 +469,11 @@ public final class AudioPresentationSourceFactory
             SmpsDriverSnapshot.DependencyResolver dependencies) {
         Objects.requireNonNull(snapshot, "snapshot");
         Objects.requireNonNull(dependencies, "dependencies");
-        SmpsDriver driver = newConfiguredDriver();
+        SmpsDriver driver = newConfiguredDriver(true,
+                snapshot.musicId() != null
+                        ? musicOrigin(snapshot.voiceId(), snapshot.musicId())
+                        : sfxOrigin(snapshot.voiceId(),
+                                restoredSfxSoundId(snapshot)));
         SmpsCompositeVoice voice = new SmpsCompositeVoice(
                 snapshot.voiceId(), snapshot.priority(),
                 snapshot.musicId(), snapshot.sourceDescriptor(),
@@ -606,56 +698,64 @@ public final class AudioPresentationSourceFactory
         return sequencer;
     }
 
-    private SmpsDriver newConfiguredDriver() {
+    private SmpsDriver newConfiguredDriver(
+            boolean observed,
+            SmpsDriverServiceObserver.DriverAdmissionOrigin origin) {
+        DiagnosticDispatcher diagnostics = observed
+                ? diagnosticDispatcher()
+                : DiagnosticDispatcher.IMMEDIATE;
         SmpsDriver driver =
-                new SmpsDriver(settings.outputSampleRate());
-        installDiagnosticObservers(driver);
+                new SmpsDriver(settings.outputSampleRate(), observed
+                        ? diagnosticChipWriteObserver(diagnostics)
+                        : ChipWriteObserver.NONE);
+        if (observed) {
+            driver.setDiagnosticIdentity(
+                    new SmpsDriverServiceObserver.DriverIdentity(
+                            nextDriverInstanceOrdinal++, origin));
+            installDiagnosticObservers(driver, diagnostics);
+        }
         driver.setRegion(settings.region());
         driver.setDacInterpolate(settings.dacInterpolate());
         driver.setOutputSampleRate(settings.outputSampleRate());
         driver.setPsgNoiseShiftOnEveryToggle(
                 settings.psgNoiseShiftEveryToggle());
-        driver.observeLifecycle(
-                SmpsDriverServiceObserver.LifecycleKind.DRIVER_CREATED);
+        if (observed) {
+            driver.observeLifecycle(
+                    SmpsDriverServiceObserver.LifecycleKind.DRIVER_CREATED);
+        }
         return driver;
     }
 
-    private void installDiagnosticObservers(SmpsDriver driver) {
-        if (chipWriteObserver != ChipWriteObserver.NONE) {
-            driver.setChipWriteObserver(new ChipWriteObserver() {
-                @Override
-                public void onYm2612Write(
-                        int port, int register, int value) {
-                    AudioDiagnosticObserverException.invoke(() ->
-                            chipWriteObserver.onYm2612Write(
-                                    port, register, value));
-                }
+    private DiagnosticDispatcher diagnosticDispatcher() {
+        return activeDiagnosticTransaction == null
+                ? DiagnosticDispatcher.IMMEDIATE
+                : activeDiagnosticTransaction;
+    }
 
-                @Override
-                public void onPsgWrite(int value) {
-                    AudioDiagnosticObserverException.invoke(() ->
-                            chipWriteObserver.onPsgWrite(value));
-                }
-            });
-        }
+    private void installDiagnosticObservers(
+            SmpsDriver driver, DiagnosticDispatcher diagnostics) {
         if (sfxContentionObserver != SfxContentionObserver.NONE) {
+            SfxContentionObserver observer = sfxContentionObserver;
             driver.setSfxContentionObserver(new SfxContentionObserver() {
                 @Override
                 public void onSfxAdmitted(Admission admission) {
-                    AudioDiagnosticObserverException.invoke(() ->
-                            sfxContentionObserver.onSfxAdmitted(admission));
+                    diagnostics.emit(() ->
+                            AudioDiagnosticObserverException.invoke(() ->
+                                    observer.onSfxAdmitted(admission)));
                 }
 
                 @Override
                 public void onRoleArbitrated(Arbitration arbitration) {
-                    AudioDiagnosticObserverException.invoke(() ->
-                            sfxContentionObserver.onRoleArbitrated(arbitration));
+                    diagnostics.emit(() ->
+                            AudioDiagnosticObserverException.invoke(() ->
+                                    observer.onRoleArbitrated(arbitration)));
                 }
             });
         }
         if (driverServiceObserver == SmpsDriverServiceObserver.NONE) {
             return;
         }
+        SmpsDriverServiceObserver observer = driverServiceObserver;
         driver.setServiceObserver(new SmpsDriverServiceObserver() {
             private long activeOrdinal = -1;
 
@@ -666,8 +766,10 @@ public final class AudioPresentationSourceFactory
                             "SMPS driver service observer was re-entered");
                 }
                 activeOrdinal = nextServiceOrdinal++;
-                AudioDiagnosticObserverException.invoke(() ->
-                        driverServiceObserver.onServiceBegin(activeOrdinal));
+                long ordinal = activeOrdinal;
+                diagnostics.emit(() ->
+                        AudioDiagnosticObserverException.invoke(() ->
+                                observer.onServiceBegin(ordinal)));
             }
 
             @Override
@@ -680,17 +782,69 @@ public final class AudioPresentationSourceFactory
                             "SMPS driver service ended without a begin");
                 }
                 activeOrdinal = -1;
-                AudioDiagnosticObserverException.invoke(() ->
-                        driverServiceObserver.onServiceEnd(
-                                completedOrdinal, snapshot));
+                diagnostics.emit(() ->
+                        AudioDiagnosticObserverException.invoke(() ->
+                                observer.onServiceEnd(
+                                        completedOrdinal, snapshot)));
             }
 
             @Override
-            public void onLifecycle(LifecycleKind kind) {
-                AudioDiagnosticObserverException.invoke(() ->
-                        driverServiceObserver.onLifecycle(kind));
+            public void onLifecycle(LifecycleEvent event) {
+                diagnostics.emit(() ->
+                        AudioDiagnosticObserverException.invoke(() ->
+                                observer.onLifecycle(event)));
             }
         });
+    }
+
+    private static SmpsDriverServiceObserver.DriverAdmissionOrigin musicOrigin(
+            long voiceId, int musicId) {
+        return new SmpsDriverServiceObserver.DriverAdmissionOrigin(
+                SmpsDriverServiceObserver.DriverOriginKind.MUSIC,
+                voiceId, musicId);
+    }
+
+    private static SmpsDriverServiceObserver.DriverAdmissionOrigin sfxOrigin(
+            long voiceId, int sfxId) {
+        return new SmpsDriverServiceObserver.DriverAdmissionOrigin(
+                SmpsDriverServiceObserver.DriverOriginKind.SFX,
+                voiceId, sfxId);
+    }
+
+    private static int restoredSfxSoundId(
+            PresentationVoiceSnapshot.Smps snapshot) {
+        for (SmpsDriverSnapshot.SequencerEntry entry
+                : snapshot.driver().sequencers()) {
+            if (entry.sfx()) {
+                return entry.source().id();
+            }
+        }
+        return -1;
+    }
+
+    private ChipWriteObserver diagnosticChipWriteObserver(
+            DiagnosticDispatcher diagnostics) {
+        if (chipWriteObserver == ChipWriteObserver.NONE) {
+            return ChipWriteObserver.NONE;
+        }
+        ChipWriteObserver observer = chipWriteObserver;
+        return new ChipWriteObserver() {
+            @Override
+            public void onYm2612Write(
+                    int port, int register, int value) {
+                diagnostics.emit(() ->
+                        AudioDiagnosticObserverException.invoke(() ->
+                                observer.onYm2612Write(
+                                        port, register, value)));
+            }
+
+            @Override
+            public void onPsgWrite(int value) {
+                diagnostics.emit(() ->
+                        AudioDiagnosticObserverException.invoke(() ->
+                                observer.onPsgWrite(value)));
+            }
+        };
     }
 
     private SmpsSequencerConfig copyPresentationConfig(
@@ -992,7 +1146,8 @@ public final class AudioPresentationSourceFactory
     private static byte[] safely(ByteArraySource source) {
         try {
             return source.get();
-        } catch (RuntimeException ignored) {
+        } catch (RuntimeException failure) {
+            AudioDiagnosticObserverException.rethrowIfPresent(failure);
             return null;
         }
     }

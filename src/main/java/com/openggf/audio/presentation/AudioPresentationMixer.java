@@ -44,9 +44,7 @@ public final class AudioPresentationMixer {
             try {
                 voice.mixInto(voiceScratch, stereoFrames);
             } catch (RuntimeException failure) {
-                if (failure instanceof AudioDiagnosticObserverException) {
-                    throw failure;
-                }
+                AudioDiagnosticObserverException.rethrowIfPresent(failure);
                 failedVoice.accept(voice);
                 continue;
             }

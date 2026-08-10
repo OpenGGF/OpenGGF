@@ -17,13 +17,19 @@ public class VirtualSynthesizer implements Synthesizer {
     private int[] scratchRight = new int[0];
 
     public VirtualSynthesizer() {
-        this(Ym2612Chip.getDefaultOutputRate());
+        this(Ym2612Chip.getDefaultOutputRate(), ChipWriteObserver.NONE);
     }
 
     public VirtualSynthesizer(double outputSampleRate) {
+        this(outputSampleRate, ChipWriteObserver.NONE);
+    }
+
+    public VirtualSynthesizer(
+            double outputSampleRate, ChipWriteObserver observer) {
         // Use the GPGX PSG core for better timing/pitch parity with Genesis hardware.
         this.psg = new PsgChip(outputSampleRate, PsgChip.ChipType.INTEGRATED);
         this.ym = new Ym2612Chip();
+        setChipWriteObserver(observer);
         setOutputSampleRate(outputSampleRate);
         // Match typical driver init: silence chips on startup to avoid power-on noise.
         silenceAll();
