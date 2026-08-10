@@ -373,6 +373,21 @@ public final class AudioPresentationSourceFactory
                 : registerSmpsMusicAsset(
                 key, dependencyGeneration, data,
                 dependencies.dac(), dependencies.config());
+        return musicSmpsFromRegistered(
+                resolvedGameId, musicId, voiceId, descriptor,
+                maxStereoFrames, source);
+    }
+
+    MusicVoiceEntry musicSmpsFromRegistered(
+            String gameId,
+            int musicId,
+            long voiceId,
+            AudioSourceDescriptor descriptor,
+            int maxStereoFrames,
+            SmpsAssetCatalog.ProgramEntry source) {
+        String resolvedGameId = requireGameId(gameId);
+        Objects.requireNonNull(descriptor, "descriptor");
+        Objects.requireNonNull(source, "source");
         SmpsCompositeVoice voice = buildMusicVoice(
                 musicId, voiceId, descriptor, maxStereoFrames, source,
                 newConfiguredDriver(false, musicOrigin(voiceId, musicId)));
@@ -574,25 +589,6 @@ public final class AudioPresentationSourceFactory
                 ignored -> new CompatibilityDependencies(
                         Objects.requireNonNull(dac, "dac"),
                         Objects.requireNonNull(config, "config")));
-    }
-
-    /** Transitional generation-zero alias for callers migrated in Task 6. */
-    public void warmSmpsSfxAsset(
-            SmpsAssetKey key,
-            AbstractSmpsData data,
-            DacData dac,
-            SmpsSequencerConfig config) {
-        registerSmpsSfxAsset(key, data, dac, config);
-    }
-
-    /** Transitional generation-zero alias for callers migrated in Task 6. */
-    public void warmSmpsSfxAsset(
-            SmpsAssetKey key,
-            AbstractSmpsData data,
-            DacData dac,
-            SmpsSequencerConfig config,
-            boolean specialSfx) {
-        registerSmpsSfxAsset(key, data, dac, config, specialSfx);
     }
 
     public ResolvedSmpsSfxSource resolveSmpsSfx(

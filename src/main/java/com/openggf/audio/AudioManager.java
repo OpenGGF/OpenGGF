@@ -35,6 +35,7 @@ import com.openggf.audio.presentation.AudioVoiceRegistry;
 import com.openggf.audio.presentation.DecodedPcmCache;
 import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.audio.presentation.PresentationVoiceSnapshot;
+import com.openggf.audio.presentation.SmpsAssetKey;
 import com.openggf.audio.presentation.SmpsCompositeVoice;
 import com.openggf.audio.output.NoDeviceAudioSink;
 import com.openggf.audio.output.AudioPresentationSink;
@@ -812,15 +813,15 @@ public class AudioManager implements MusicRestoreSink {
                 standaloneGameId,
                 com.openggf.audio.presentation.SmpsAssetKey.Route.BASE_ID,
                 sfxId, null);
-        shadowFactory.warmSmpsSfxAsset(
-                key, data, dac, base.config(),
+        shadowFactory.registerSmpsSfxAsset(
+                key, base.generation(), data, dac, base.config(),
                 profile.isSpecialSfx(sfxId));
         int continuous = profile.isContinuousSfx(sfxId)
                 ? sfxId : 0;
         int maxFrames = (outputSampleRate() + configuredFrameRate() - 1)
                 / configuredFrameRate();
         var source = shadowFactory.resolveSmpsSfx(
-                standaloneVoiceId++, key,
+                standaloneVoiceId++, key, base.generation(),
                 Math.max(1, Math.round(pitch * 65_536.0f)),
                 profile.getSfxPriority(sfxId), continuous,
                 data.getChannels() + data.getPsgChannels(), maxFrames);
@@ -1563,8 +1564,23 @@ public class AudioManager implements MusicRestoreSink {
         boolean override = profile != null && profile.isMusicOverride(musicId);
 
         if (source.loader() != null) {
-            AbstractSmpsData data = source.loader().loadMusic(musicId);
-            if (data != null) {
+            ensureShadowPresentation();
+            SmpsAssetKey key = new SmpsAssetKey(
+                    baseGameId(source), SmpsAssetKey.Route.BASE_MUSIC,
+                    musicId, null);
+            boolean registered = shadowFactory.findRegisteredSmpsMusicAsset(
+                    key, source.generation()) != null;
+            AbstractSmpsData data = null;
+            if (!registered) {
+                data = source.loader().loadMusic(musicId);
+                if (data != null) {
+                    shadowFactory.registerSmpsMusicAsset(
+                            key, source.generation(), data,
+                            source.dac(), source.config());
+                    registered = true;
+                }
+            }
+            if (registered) {
                 recordTimelineCommand(new AudioCommand.PlayMusic(
                         musicId, AudioCommand.MusicRoute.BASE_SMPS, override, null));
                 if (sendLiveBackendCommands()) {
@@ -1860,8 +1876,23 @@ public class AudioManager implements MusicRestoreSink {
         }
         DonorAudioSource source = donorAudioSources.get(donorGameId);
         if (source != null) {
-            AbstractSmpsData data = source.loader().loadMusic(musicId);
-            if (data != null) {
+            ensureShadowPresentation();
+            SmpsAssetKey key = new SmpsAssetKey(
+                    donorGameId, SmpsAssetKey.Route.DONOR_MUSIC,
+                    musicId, null);
+            boolean registered = shadowFactory.findRegisteredSmpsMusicAsset(
+                    key, source.generation()) != null;
+            AbstractSmpsData data = null;
+            if (!registered) {
+                data = source.loader().loadMusic(musicId);
+                if (data != null) {
+                    shadowFactory.registerSmpsMusicAsset(
+                            key, source.generation(), data,
+                            source.dac(), source.config());
+                    registered = true;
+                }
+            }
+            if (registered) {
                 // Donor music replaces the foreground like any other song. Donor
                 // ids are only ever used for cross-game Super and data-select
                 // music, none of which the ROM saves and restores — only the
@@ -2554,6 +2585,15 @@ public class AudioManager implements MusicRestoreSink {
         }
     }
 
+    private String baseGameId(BaseAudioSource source) {
+        try {
+            return source.profile() != null
+                    ? source.profile().presentationGameId() : "base";
+        } catch (RuntimeException unavailable) {
+            return "base";
+        }
+    }
+
     private final class ShadowSources implements AudioPresentationCommandResolver.Sources {
         private final int maxFrames;
 
@@ -2595,12 +2635,7 @@ public class AudioManager implements MusicRestoreSink {
         }
 
         private String baseGameId(BaseAudioSource source) {
-            try {
-                return source.profile() != null
-                        ? source.profile().presentationGameId() : "base";
-            } catch (RuntimeException unavailable) {
-                return "base";
-            }
+            return AudioManager.this.baseGameId(source);
         }
 
         private AudioPresentationCommandResolver.SfxPolicy policyFor(

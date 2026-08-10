@@ -4,6 +4,7 @@ import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.audio.rewind.AudioCommandTimeline;
 import com.openggf.audio.rewind.AudioReplayReason;
 import com.openggf.audio.rewind.AudioReplayScope;
+import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.game.rewind.InputSource;
 import com.openggf.game.rewind.InMemoryKeyframeStore;
 import com.openggf.game.rewind.RewindController;
@@ -64,7 +65,9 @@ class TestAudioCommandTimeline {
         AudioTestFixtures.StubSmpsLoader donor = new AudioTestFixtures.StubSmpsLoader();
         donor.sfxResults.put(0xA4, new AudioTestFixtures.StubSmpsData("donor-sfx"));
         donor.musicResults.put(0x21, new AudioTestFixtures.StubSmpsData("donor-music"));
-        audio.registerDonorLoader("s3k", donor, AudioTestFixtures.EMPTY_DAC);
+        audio.registerDonorLoader(
+                "s3k", donor, AudioTestFixtures.EMPTY_DAC,
+                new SmpsSequencerConfig.Builder().build());
         audio.registerDonorSound(GameSound.SPINDASH_CHARGE, "s3k", 0xA4);
         audio.beginCommandTimelineFrame(4);
 
