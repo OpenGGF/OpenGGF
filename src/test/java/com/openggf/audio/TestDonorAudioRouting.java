@@ -410,6 +410,8 @@ public class TestDonorAudioRouting {
                         backendCandidateDac, config, backendCandidate));
         assertEquals(java.util.List.of(backendCandidate, oldProfile),
                 backend.lastDonorProfileAttempts(2));
+        assertSame(oldProfile, backend.activeDonorProfile,
+                "a backend that mutates before throwing must be restored");
         assertEquals(initial, observeDonorSfx("s2", 0xE1));
 
         backend.failDonorProfile = null;
@@ -440,6 +442,78 @@ public class TestDonorAudioRouting {
         assertSame(presentationCandidateDac, retried.dac());
         assertNotNull(audioManager.presentationCoordFlagHandlersForTesting()
                 .handlerFor("s2-v2"));
+    }
+
+    @Test
+    void firstDonorBackendErrorRestoresTheExplicitEmptyConfiguration() {
+        SmpsSequencerConfig config = new SmpsSequencerConfig.Builder().build();
+        DonorProfile candidate = new DonorProfile("candidate");
+        DacData candidateDac = dac(315);
+        backend.failDonorErrorProfile = candidate;
+
+        assertThrows(AssertionError.class,
+                () -> audioManager.registerDonorLoader(
+                        "candidate",
+                        loader(candidateDac, 0xE3, (byte) 0x35),
+                        candidateDac, config, candidate));
+
+        assertEquals(2, backend.donorProfileAttempts.size());
+        assertSame(candidate, backend.donorProfileAttempts.get(0));
+        assertNull(backend.donorProfileAttempts.get(1));
+        assertNull(backend.activeDonorProfile,
+                "null is the backend's explicit no-donor rollback state");
+        int commandCount = audioManager.commandTimeline().entryCount();
+        audioManager.playDonorSfx("candidate", 0xE3);
+        assertEquals(commandCount,
+                audioManager.commandTimeline().entryCount());
+    }
+
+    @Test
+    void reentrantDonorReplacementCannotMixOneResolutionTuple() {
+        SmpsSequencerConfig oldConfig = new SmpsSequencerConfig.Builder()
+                .tempoMode(SmpsSequencerConfig.TempoMode.OVERFLOW2)
+                .build();
+        SmpsSequencerConfig newConfig = new SmpsSequencerConfig.Builder()
+                .tempoMode(SmpsSequencerConfig.TempoMode.OVERFLOW)
+                .build();
+        DacData oldDac = dac(316);
+        DacData newDac = dac(317);
+        StubSmpsLoader oldLoader = loader(
+                oldDac, 0xE4, (byte) 0x36);
+        StubSmpsLoader newLoader = loader(
+                newDac, 0xE4, (byte) 0x37);
+        oldLoader.sfxResults.put(
+                0xE3, new StubSmpsData("donor-old", (byte) 0x36));
+        newLoader.sfxResults.put(
+                0xE3, new StubSmpsData("donor-new", (byte) 0x37));
+        audioManager.registerDonorLoader(
+                "s2", oldLoader, oldDac, oldConfig);
+        ObservedSource initial = observeDonorSfx("s2", 0xE3);
+        oldLoader.runOnSfxLoadNumber = oldLoader.sfxLoadCount + 2;
+        oldLoader.onSfxLoad = () -> audioManager.registerDonorLoader(
+                "s2", newLoader, newDac, newConfig);
+
+        audioManager.playDonorSfx("s2", 0xE4);
+        audioManager.presentFrame(PresentationMode.SILENT);
+        var snapshot = audioManager.shadowSmpsDriverSnapshotForTesting();
+        var reentrant = snapshot.sequencers().get(
+                snapshot.sequencers().size() - 1);
+
+        assertEquals(0xE4, reentrant.source().id(),
+                "the reentrant donor command must be admitted");
+        assertEquals(initial.descriptor().dependencyGeneration(),
+                reentrant.source().dependencyGeneration());
+        assertEquals(initial.descriptor().dataHash(),
+                reentrant.source().dataHash(),
+                "the old donor loader/program marker must retain its generation");
+        assertSame(oldDac, reentrant.dacData());
+        assertEquals(SmpsSequencerConfig.TempoMode.OVERFLOW2,
+                reentrant.config().getTempoMode());
+        audioManager.update();
+        ObservedSource replacement = observeDonorSfx("s2", 0xE4);
+        assertSame(newDac, replacement.dac());
+        assertNotEquals(initial.descriptor().dataHash(),
+                replacement.descriptor().dataHash());
     }
 
     @Test
@@ -584,6 +658,9 @@ public class TestDonorAudioRouting {
         final Map<Integer, AbstractSmpsData> musicResults = new HashMap<>();
         final Map<Integer, AbstractSmpsData> sfxResults = new HashMap<>();
         final DacData dac;
+        int sfxLoadCount;
+        int runOnSfxLoadNumber = -1;
+        Runnable onSfxLoad;
 
         StubSmpsLoader() {
             this(EMPTY_DAC);
@@ -600,7 +677,16 @@ public class TestDonorAudioRouting {
 
         @Override
         public AbstractSmpsData loadSfx(int sfxId) {
-            return sfxResults.get(sfxId);
+            AbstractSmpsData result = sfxResults.get(sfxId);
+            sfxLoadCount++;
+            if (sfxLoadCount == runOnSfxLoadNumber) {
+                Runnable callback = onSfxLoad;
+                onSfxLoad = null;
+                if (callback != null) {
+                    callback.run();
+                }
+            }
+            return result;
         }
 
         @Override
@@ -761,13 +847,21 @@ public class TestDonorAudioRouting {
                 new java.util.ArrayList<>();
         GameAudioProfile failDonorProfile;
         GameAudioProfile failDonorRestoreProfile;
+        GameAudioProfile failDonorErrorProfile;
+        GameAudioProfile activeDonorProfile;
 
         @Override
         public void registerAudioProfileCoordHandlers(
                 GameAudioProfile profile) {
             donorProfileAttempts.add(profile);
-            if (profile == failDonorProfile
-                    || profile == failDonorRestoreProfile) {
+            activeDonorProfile = profile;
+            if (profile != null && profile == failDonorErrorProfile) {
+                throw new AssertionError(
+                        "backend rejected donor profile");
+            }
+            if ((failDonorProfile != null && profile == failDonorProfile)
+                    || (failDonorRestoreProfile != null
+                    && profile == failDonorRestoreProfile)) {
                 throw new IllegalStateException(
                         "backend rejected donor profile");
             }
