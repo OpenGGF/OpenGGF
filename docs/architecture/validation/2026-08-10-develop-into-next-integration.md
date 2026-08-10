@@ -61,3 +61,25 @@ The integration deliberately preserves `next`'s public Mod API 0.7 surface.
 Develop-only runtime/trace/load owners remain engine-internal, while the
 merged runtime behavior, trace-v5 fixes, fixture corrections, and ROM-backed
 test contracts are retained. No push is part of this task.
+
+## Post-merge harness reconciliation
+
+The first full run on the real `next` worktree exposed eleven parent-pass
+regressions, all in direct test harnesses rather than production behavior.
+Nine MGZ transition methods changed the live camera without running
+`ScreenEvents`, so they now explicitly publish the render-copy camera words at
+the same boundary production uses before the later transition SST executes.
+The complete MGZ event class passes 39/39.
+
+Two LBZ registry methods inherited a previously loaded global level in the
+single-fork suite. Both classes now use `SingletonResetExtension`; their
+combined 23 tests pass. This retains the zone-set-specific `next` mappings
+instead of weakening the merged registry to satisfy polluted test state.
+
+The post-merge full invocation reached 13,968 executed methods before the
+Surefire JVM exhausted its heap. At that checkpoint it reported 33 failures,
+6 errors, and 5 skips; comparison against both parent manifests isolated only
+the eleven harness regressions above. The portability guards themselves ran
+in that invocation: `TestBuildToolingGuard` passed 80/80 and the architectural
+source guard passed 68/68, confirming that the merge has no executable
+dependency on a local disassembly checkout.
