@@ -77,18 +77,122 @@ public final class VisualRunReplayHarness {
      * always identify the consumed BK2 row when {@link #semanticRow()} is
      * true; bootstrap/title-card presentations remain diagnostic-only.
      */
-    public record FrameView(int consumedBk2Cursor, int segmentIndex,
-                            int segmentRow, int loopStep, boolean lag,
-                            boolean gameplay, boolean semanticRow) {
+    /** Coordinate within a compared manifest segment; absent for gap/tail rows. */
+    public record SegmentCoordinate(int segmentIndex, int segmentRow) {
+        public SegmentCoordinate {
+            if (segmentIndex < 0 || segmentRow < 0) {
+                throw new IllegalArgumentException(
+                        "segment coordinates must be non-negative");
+            }
+        }
     }
 
-    /** Opt-in callback with no access to game-loop or audio mutation owners. */
+    public record FrameView(int consumedBk2Cursor, SegmentCoordinate segment,
+                            int loopStep, boolean lag, boolean gameplay,
+                            boolean semanticRow) {
+        /** Compatibility accessor for focused segment-only capture clients. */
+        public int segmentIndex() {
+            return segment == null ? -1 : segment.segmentIndex();
+        }
+
+        /** Compatibility accessor for focused segment-only capture clients. */
+        public int segmentRow() {
+            return segment == null ? -1 : segment.segmentRow();
+        }
+    }
+
+    /**
+     * Opt-in diagnostic callback. It may install append-only audio observers
+     * at the bootstrap seam but receives no gameplay or replay mutation owner.
+     */
     public interface FrameObserver {
         FrameObserver NONE = new FrameObserver() { };
 
+        /** Installs diagnostic observers before title-card/audio bootstrap. */
+        default void beforeReplayBootstrap() { }
+
         default void beforeFirstSegmentRow(FrameView frame) { }
 
+        /**
+         * Complete-run baseline seam, immediately before the epoch's first
+         * input is consumed. The legacy segment callback remains the default
+         * so focused captures keep their existing observer implementation.
+         */
+        default void beforeFirstEpochRow(FrameView frame) {
+            beforeFirstSegmentRow(frame);
+        }
+
         default void afterOuterFrame(FrameView frame) { }
+    }
+
+    /** Exact half-open complete-audio epoch and diagnostic bootstrap budget. */
+    public record CompleteAudioStop(int firstFrame, int exclusiveEnd,
+                                    int bootstrapPresentationAllowance) {
+        public CompleteAudioStop {
+            if (firstFrame < 0) {
+                throw new IllegalArgumentException("firstFrame must be >= 0");
+            }
+            if (exclusiveEnd <= firstFrame) {
+                throw new IllegalArgumentException(
+                        "exclusiveEnd must be greater than firstFrame");
+            }
+            if (bootstrapPresentationAllowance < 0) {
+                throw new IllegalArgumentException(
+                        "bootstrapPresentationAllowance must be >= 0");
+            }
+            Math.addExact(exclusiveEnd - firstFrame,
+                    bootstrapPresentationAllowance);
+        }
+
+        int iterationBudget() {
+            return Math.addExact(exclusiveEnd - firstFrame,
+                    bootstrapPresentationAllowance);
+        }
+    }
+
+    /** Cadence proof returned only after the exclusive endpoint is verified. */
+    public record CompleteAudioCadenceResult(
+            int exclusiveCursor,
+            int semanticRows,
+            int bootstrapPresentations,
+            int outerPresentations,
+            int audioUpdates) {
+    }
+
+    /**
+     * Narrow driver used by the real visual replay and deterministic cadence
+     * tests. Counts are read back around every operation, so a duplicate or
+     * omitted outer presentation/update fails at the row that caused it.
+     */
+    interface CompleteAudioDriver {
+        int cursor();
+
+        int movieFrameCount();
+
+        boolean playbackPlaying();
+
+        boolean paused();
+
+        String playbackRateDisplay();
+
+        String abortDiagnostic();
+
+        boolean coordinatorComplete();
+
+        long outerPresentationCount();
+
+        long audioUpdateCount();
+
+        void step() throws Exception;
+
+        void presentOuterFrame() throws Exception;
+
+        void updateAudio() throws Exception;
+
+        FrameView frameView(int consumedCursor, int loopStep,
+                            boolean semanticRow);
+
+        default void verifyAfterFrame() { }
     }
 
     /**
@@ -158,6 +262,335 @@ public final class VisualRunReplayHarness {
     public static Result replayAudio(Path runDir, Stop stop,
                                      FrameObserver observer) throws Exception {
         return replay(runDir, stop, observer, true);
+    }
+
+    /**
+     * Drives the validated movie's complete comparison epoch. Unlike the
+     * focused segment lane, every absolute BK2 row is semantic once the epoch
+     * begins, including manifest gaps and the terminal tail.
+     */
+    public static CompleteAudioCadenceResult replayCompleteAudio(
+            Path runDir, CompleteAudioStop stop,
+            FrameObserver observer) throws Exception {
+        java.util.Objects.requireNonNull(stop, "stop");
+        java.util.Objects.requireNonNull(observer, "observer");
+        TraceRunManifest manifest =
+                TraceRunManifest.load(runDir.resolve("run_manifest.json"));
+        Path bk2 = runDir.resolve(manifest.sourceBk2());
+        TraceEntry entry = TraceEntry.forRun(runDir, manifest, bk2);
+        TraceCatalog.PreparedRunLaunch prepared = TraceCatalog.prepareRunLaunch(entry);
+        List<TraceRunReplayWalker.SegmentPlan> segments = prepared.segments();
+        Bk2Movie movie = prepared.movie();
+        TraceData seg0 = segments.get(0).trace();
+        int manifestFirst = segments.get(0).segment().bk2FrameOffset();
+        if (manifestFirst != stop.firstFrame()) {
+            throw new IllegalStateException(
+                    "complete-audio first frame " + stop.firstFrame()
+                            + " does not match manifest first segment row "
+                            + manifestFirst);
+        }
+
+        GraphicsManager.getInstance().resetState();
+        GraphicsManager.getInstance().initHeadless();
+        TraceLaunchStatus.clear();
+        TraceReplaySessionBootstrap.prepareConfiguration(seg0, seg0.metadata());
+
+        boolean recordedHardwareTiming =
+                TraceRunReplayWalker.hasHardwareTimingStream(segments);
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(entry.zone(), entry.act())
+                .withHardwareReadinessAdmissionPolicy(
+                        recordedHardwareTiming
+                                ? HardwareReadinessAdmissionPolicy.RECORDED
+                                : HardwareReadinessAdmissionPolicy.LIVE)
+                .build();
+
+        // HeadlessTestFixture resets transient audio state. Install capture
+        // observers after that reset and before the first title-card or replay
+        // driver can construct a sequencer/chip owner.
+        observer.beforeReplayBootstrap();
+
+        GameLoop loop = new GameLoop(new InputHandler());
+        installCurrentGameLoop(loop);
+        TraceSessionLauncher session = newRunSession(entry, movie, segments);
+        setActiveSession(session);
+        finishRunLaunch(session);
+
+        ArrayDeque<String> recent = new ArrayDeque<>();
+        List<String> timeline = new ArrayList<>();
+        TIMELINE.set(timeline);
+        String[] lastKey = {""};
+
+        CompleteAudioDriver driver = new CompleteAudioDriver() {
+            private long outerPresentations;
+            private long audioUpdates;
+            private int hostSteps;
+
+            @Override
+            public int cursor() {
+                return GameServices.playbackDebug().getCursorFrame();
+            }
+
+            @Override
+            public int movieFrameCount() {
+                return movie.getFrameCount();
+            }
+
+            @Override
+            public boolean playbackPlaying() {
+                return GameServices.playbackDebug().isSessionPlaying();
+            }
+
+            @Override
+            public boolean paused() {
+                return loop.isPaused();
+            }
+
+            @Override
+            public String playbackRateDisplay() {
+                return session.playbackRateDisplay();
+            }
+
+            @Override
+            public String abortDiagnostic() {
+                return null;
+            }
+
+            @Override
+            public boolean coordinatorComplete() {
+                return runFinished(session);
+            }
+
+            @Override
+            public long outerPresentationCount() {
+                return outerPresentations;
+            }
+
+            @Override
+            public long audioUpdateCount() {
+                return audioUpdates;
+            }
+
+            @Override
+            public void step() {
+                loop.step();
+                hostSteps++;
+            }
+
+            @Override
+            public void presentOuterFrame() {
+                loop.presentOuterFrame(false, false);
+                outerPresentations++;
+            }
+
+            @Override
+            public void updateAudio() {
+                GameServices.audio().update();
+                audioUpdates++;
+            }
+
+            @Override
+            public FrameView frameView(int consumedCursor, int loopStep,
+                                       boolean semanticRow) {
+                return VisualRunReplayHarness.frameView(
+                        consumedCursor, loopStep, loop, segments, semanticRow);
+            }
+
+            @Override
+            public void verifyAfterFrame() {
+                record(recent, hostSteps, session, loop);
+                recordTimeline(timeline, lastKey, hostSteps, session, loop);
+                rethrowIfAborted(session, recent);
+            }
+        };
+        return driveCompleteAudioCadence(stop, observer, driver);
+    }
+
+    static CompleteAudioCadenceResult driveCompleteAudioCadence(
+            CompleteAudioStop stop, FrameObserver observer,
+            CompleteAudioDriver driver) throws Exception {
+        java.util.Objects.requireNonNull(stop, "stop");
+        java.util.Objects.requireNonNull(observer, "observer");
+        java.util.Objects.requireNonNull(driver, "driver");
+        if (driver.movieFrameCount() != stop.exclusiveEnd()) {
+            throw new IllegalStateException(
+                    "complete-audio exclusive end " + stop.exclusiveEnd()
+                            + " does not match movie frame count "
+                            + driver.movieFrameCount());
+        }
+
+        int expectedCursor = stop.firstFrame();
+        int bootstrapPresentations = 0;
+        int semanticRows = 0;
+        int iterations = 0;
+        boolean baselineObserved = false;
+        while (expectedCursor < stop.exclusiveEnd()) {
+            if (iterations >= stop.iterationBudget()) {
+                throw new IllegalStateException(
+                        "complete-audio bootstrap allowance exhausted before "
+                                + "exclusive end " + stop.exclusiveEnd());
+            }
+            rejectFastForward(driver);
+            if (driver.paused()) {
+                throw new IllegalStateException(
+                        "complete-audio replay paused before row "
+                                + expectedCursor);
+            }
+
+            int cursorBefore = driver.cursor();
+            boolean consumesEpochRow = baselineObserved;
+            if (!baselineObserved) {
+                if (cursorBefore > stop.firstFrame()) {
+                    throw new IllegalStateException(
+                            "complete-audio cursor crossed comparison epoch "
+                                    + "before baseline: " + cursorBefore);
+                }
+                if (driver.playbackPlaying()
+                        && cursorBefore < stop.firstFrame()) {
+                    throw new IllegalStateException(
+                            "complete-audio playback started before epoch at row "
+                                    + cursorBefore);
+                }
+                if (driver.playbackPlaying()
+                        && cursorBefore == stop.firstFrame()) {
+                    FrameView baseline = driver.frameView(
+                            cursorBefore, iterations + 1, false);
+                    observer.beforeFirstEpochRow(baseline);
+                    baselineObserved = true;
+                    consumesEpochRow = true;
+                }
+            } else if (cursorBefore != expectedCursor) {
+                throw new IllegalStateException(
+                        "complete-audio cursor jump before row "
+                                + expectedCursor + ": got " + cursorBefore);
+            }
+
+            long presentationsBefore = driver.outerPresentationCount();
+            long updatesBefore = driver.audioUpdateCount();
+            driver.step();
+            driver.presentOuterFrame();
+            driver.updateAudio();
+            iterations++;
+            requireSingleOuterWork(driver, presentationsBefore, updatesBefore,
+                    expectedCursor);
+            driver.verifyAfterFrame();
+            rejectFastForward(driver);
+            if (driver.abortDiagnostic() != null) {
+                throw new IllegalStateException(
+                        "complete-audio trace replay aborted: "
+                                + driver.abortDiagnostic());
+            }
+            if (driver.paused()) {
+                throw new IllegalStateException(
+                        "complete-audio replay paused while consuming row "
+                                + expectedCursor);
+            }
+
+            int cursorAfter = driver.cursor();
+            if (!consumesEpochRow) {
+                bootstrapPresentations++;
+                observer.afterOuterFrame(driver.frameView(
+                        cursorAfter, iterations, false));
+                if (bootstrapPresentations
+                        > stop.bootstrapPresentationAllowance()) {
+                    throw new IllegalStateException(
+                            "complete-audio bootstrap allowance exceeded: "
+                                    + bootstrapPresentations + " > "
+                                    + stop.bootstrapPresentationAllowance());
+                }
+                if (cursorAfter > stop.firstFrame()) {
+                    throw new IllegalStateException(
+                            "complete-audio cursor crossed comparison epoch "
+                                    + "during bootstrap: " + cursorAfter);
+                }
+                continue;
+            }
+
+            boolean finalRow = expectedCursor == stop.exclusiveEnd() - 1;
+            if (!finalRow) {
+                if (cursorAfter != expectedCursor + 1) {
+                    throw new IllegalStateException(
+                            "complete-audio cursor jump after row "
+                                    + expectedCursor + ": got " + cursorAfter);
+                }
+                if (!driver.playbackPlaying()) {
+                    throw new IllegalStateException(
+                            "complete-audio premature movie end after row "
+                                    + expectedCursor);
+                }
+            } else {
+                // PlaybackTimelineController pins its raw cursor to the final
+                // valid row when playback ends. The semantic terminal cursor
+                // is nevertheless the movie's exclusive frame count.
+                if (cursorAfter != expectedCursor
+                        && cursorAfter != stop.exclusiveEnd()) {
+                    throw new IllegalStateException(
+                            "complete-audio terminal cursor jump after row "
+                                    + expectedCursor + ": got " + cursorAfter);
+                }
+                if (driver.playbackPlaying()) {
+                    throw new IllegalStateException(
+                            "complete-audio movie still playing at exclusive end "
+                                    + stop.exclusiveEnd());
+                }
+            }
+
+            observer.afterOuterFrame(driver.frameView(
+                    expectedCursor, iterations, true));
+            expectedCursor++;
+            semanticRows++;
+        }
+
+        if (!baselineObserved) {
+            throw new IllegalStateException(
+                    "complete-audio epoch ended without a baseline");
+        }
+        if (!driver.coordinatorComplete()) {
+            throw new IllegalStateException(
+                    "complete-audio movie reached exclusive end before the "
+                            + "run coordinator completed");
+        }
+        int presentations = Math.toIntExact(driver.outerPresentationCount());
+        int updates = Math.toIntExact(driver.audioUpdateCount());
+        if (presentations != semanticRows + bootstrapPresentations
+                || updates != presentations) {
+            throw new IllegalStateException(
+                    "complete-audio outer cadence totals disagree: rows="
+                            + semanticRows + ", bootstrap="
+                            + bootstrapPresentations + ", presentations="
+                            + presentations + ", updates=" + updates);
+        }
+        return new CompleteAudioCadenceResult(
+                stop.exclusiveEnd(), semanticRows, bootstrapPresentations,
+                presentations, updates);
+    }
+
+    private static void rejectFastForward(CompleteAudioDriver driver) {
+        if (!"< 1x >".equals(driver.playbackRateDisplay())) {
+            throw new IllegalStateException(
+                    "complete-audio replay rejects enabled fast-forward: "
+                            + driver.playbackRateDisplay());
+        }
+    }
+
+    private static void requireSingleOuterWork(
+            CompleteAudioDriver driver, long presentationsBefore,
+            long updatesBefore, int expectedCursor) {
+        long presentationDelta =
+                driver.outerPresentationCount() - presentationsBefore;
+        if (presentationDelta != 1) {
+            throw new IllegalStateException(
+                    "complete-audio row " + expectedCursor
+                            + " requires exactly one outer presentation, got "
+                            + presentationDelta);
+        }
+        long updateDelta = driver.audioUpdateCount() - updatesBefore;
+        if (updateDelta != 1) {
+            throw new IllegalStateException(
+                    "complete-audio row " + expectedCursor
+                            + " requires exactly one audio update, got "
+                            + updateDelta);
+        }
     }
 
     public static Result replay(Path runDir, Stop stop,
@@ -289,12 +722,13 @@ public final class VisualRunReplayHarness {
             int row = cursor - start;
             if (row >= 0 && row < plan.trace().frameCount()) {
                 var lagState = plan.trace().lagStateForFrame(row);
-                return new FrameView(cursor, index, row, loopStep,
+                return new FrameView(cursor,
+                        new SegmentCoordinate(index, row), loopStep,
                         lagState != null && lagState.lagged(),
                         loop.getCurrentGameMode() == GameMode.LEVEL, semanticRow);
             }
         }
-        return new FrameView(cursor, -1, -1, loopStep, false,
+        return new FrameView(cursor, null, loopStep, false,
                 loop.getCurrentGameMode() == GameMode.LEVEL, semanticRow);
     }
 
