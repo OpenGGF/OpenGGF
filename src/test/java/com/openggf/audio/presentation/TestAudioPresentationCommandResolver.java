@@ -35,6 +35,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -356,6 +357,14 @@ class TestAudioPresentationCommandResolver {
         fixture.sources.baseConfig = new SmpsSequencerConfig.Builder()
                 .extraTrkEndFlags(mutableEndFlags)
                 .build();
+        byte[] mutableDacBytes = { 0x12 };
+        Map<Integer, byte[]> mutableDacSamples = new HashMap<>();
+        mutableDacSamples.put(1, mutableDacBytes);
+        DacData immutableDac = new DacData(
+                mutableDacSamples,
+                Map.of(0x81, new DacData.DacEntry(1, 4)),
+                297);
+        fixture.sources.baseDac = immutableDac;
         fixture.sources.baseSfx = original;
         fixture.resolver.submit(new AudioCommand.PlaySfx(
                 0xA0, null, AudioCommand.SfxRoute.BASE_SMPS_ID, 1.0f, null));
@@ -363,7 +372,8 @@ class TestAudioPresentationCommandResolver {
 
         original.getData()[0x40] = (byte) 0xE9;
         mutableEndFlags.clear();
-        fixture.sources.baseDac.samples.getOrDefault(1, new byte[0]);
+        mutableDacBytes[0] = 0x55;
+        mutableDacSamples.clear();
 
         AudioVoiceRegistry registry = fixture.registry();
         assertDoesNotThrow(() -> registry.apply(command));
@@ -373,6 +383,9 @@ class TestAudioPresentationCommandResolver {
         assertEquals((byte) 0xF2,
                 snapshot.sequencers().get(0).smpsData().getData()[0x40]);
         assertNotSame(original, snapshot.sequencers().get(0).smpsData());
+        assertSame(immutableDac, snapshot.sequencers().get(0).dacData());
+        assertEquals((byte) 0x12, snapshot.sequencers().get(0)
+                .dacData().sample(1).byteAt(0));
         assertEquals(Set.of(0xEE), snapshot.sequencers().get(0)
                 .config().getExtraTrkEndFlags());
     }

@@ -405,11 +405,9 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         int[] psgPointers = smpsData.getPsgPointers();
 
         // FM tracks mapping
-        int[] fmOrder = config.getFmChannelOrder();
-        int[] psgOrder = config.getPsgChannelOrder();
-
         for (int i = 0; i < fmPointers.length; i++) {
-            int chnVal = (i < fmOrder.length) ? fmOrder[i] : -1;
+            int chnVal = (i < config.fmChannelCount())
+                    ? config.fmChannelAt(i) : -1;
 
             // 0x16 or 0x10 is DAC
             if (chnVal == 0x16 || chnVal == 0x10) {
@@ -452,7 +450,8 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 continue;
             }
 
-            int chnVal = (i < psgOrder.length) ? psgOrder[i] : -1;
+            int chnVal = (i < config.psgChannelCount())
+                    ? config.psgChannelAt(i) : -1;
             int linearCh = mapPsgChannel(chnVal);
             if (linearCh < 0) {
                 // Fallback for extra channels (like Noise if mapped linearly)

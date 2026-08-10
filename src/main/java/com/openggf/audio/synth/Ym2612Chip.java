@@ -405,7 +405,7 @@ public class Ym2612Chip {
 
     private DacData dacData;
     private int currentDacSampleId = -1;
-    private byte[] currentDacSampleData;
+    private DacData.Sample currentDacSampleData;
     private int dacLatchedValue;
     private double dacPos;
     private double dacStep = 1.0;
@@ -833,7 +833,7 @@ public class Ym2612Chip {
     public void restoreSnapshot(Snapshot snapshot) {
         currentDacSampleId = snapshot.currentDacSampleId();
         currentDacSampleData = currentDacSampleId != -1 && dacData != null
-                ? dacData.samples.get(currentDacSampleId)
+                ? dacData.sample(currentDacSampleId)
                 : null;
         dacLatchedValue = snapshot.dacLatchedValue();
         dacPos = snapshot.dacPos();
@@ -1982,16 +1982,16 @@ public class Ym2612Chip {
     public void playDac(int note) {
         if (dacData == null)
             return;
-        DacData.DacEntry entry = dacData.mapping.get(note);
+        DacData.DacEntry entry = dacData.mappingForNote(note);
         if (entry != null) {
-            this.currentDacSampleId = entry.sampleId;
-            this.currentDacSampleData = dacData.samples.get(entry.sampleId);
+            this.currentDacSampleId = entry.sampleId();
+            this.currentDacSampleData = dacData.sample(entry.sampleId());
             this.dacPos = 0;
-            int rateByte = entry.rate & 0xFF;
+            int rateByte = entry.rate() & 0xFF;
             // Z80 djnz loops (N-1) times; first iteration is in BaseCycles.
             // SMPSPlay dac.c:107: Divisor = BaseCycles + LoopCycles * (Rate - 1)
             int effectiveRate = Math.max(1, rateByte);
-            double dacBaseCycles = dacData.baseCycles;
+            double dacBaseCycles = dacData.baseCycles();
             double cyclesPerBlock = dacBaseCycles + (DAC_LOOP_CYCLES * (effectiveRate - 1));
             double cyclesPerSample = cyclesPerBlock / DAC_LOOP_SAMPLES;
             double rateHz = Z80_CLOCK / cyclesPerSample;
@@ -2014,20 +2014,21 @@ public class Ym2612Chip {
         }
         int sample = 0;
         if (currentDacSampleId != -1 && dacData != null) {
-            byte[] data = currentDacSampleData;
-            if (data != null && dacPos < data.length) {
+            DacData.Sample data = currentDacSampleData;
+            if (data != null && dacPos < data.length()) {
                 int idx = (int) dacPos;
                 double frac = dacPos - idx;
-                int s1 = (data[idx] & 0xFF) - 128;
+                int s1 = (data.byteAt(idx) & 0xFF) - 128;
                 if (dacInterpolate) {
-                    int s2 = (idx + 1 < data.length) ? ((data[idx + 1] & 0xFF) - 128) : s1;
+                    int s2 = (idx + 1 < data.length())
+                            ? ((data.byteAt(idx + 1) & 0xFF) - 128) : s1;
                     double lerp = s1 * (1.0 - frac) + s2 * frac;
                     sample = lerp >= 0 ? (int)(lerp + 0.5) : (int)(lerp - 0.5);
                 } else {
                     sample = s1;
                 }
                 dacPos += dacStep;
-                if (dacPos >= data.length) {
+                if (dacPos >= data.length()) {
                     currentDacSampleId = -1;
                     currentDacSampleData = null;
                     dacPos = 0;

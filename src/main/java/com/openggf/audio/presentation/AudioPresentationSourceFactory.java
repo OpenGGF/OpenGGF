@@ -407,7 +407,7 @@ public final class AudioPresentationSourceFactory
                 DacData dac = cached != null
                         ? cached.dac()
                         : delegate.resolveDacData(entry);
-                return copyDac(dac);
+                return Objects.requireNonNull(dac, "dac");
             }
 
             @Override
@@ -458,7 +458,7 @@ public final class AudioPresentationSourceFactory
         return new CachedSmpsSource(
                 requireGameId(gameId),
                 copySmpsData(Objects.requireNonNull(data, "data")),
-                copyDac(Objects.requireNonNull(dac, "dac")),
+                Objects.requireNonNull(dac, "dac"),
                 copyStaticConfig(Objects.requireNonNull(config, "config")),
                 config.getCoordFlagHandler() != null,
                 specialSfx);
@@ -480,15 +480,14 @@ public final class AudioPresentationSourceFactory
      * table, and 256 voices plus envelopes — and a zone like CNZ fires SFX
      * constantly.
      *
-     * <p>The DAC and static config are still copied per instantiation. They are
-     * not covered by the immutability argument above, and this change is
-     * deliberately scoped to the one object proven safe to share.
+     * <p>The immutable DAC data is shared as well. Static config is still copied
+     * per instantiation until the presentation catalog owns its final binding.
      */
     private CachedSmpsSource freshSource(CachedSmpsSource cached) {
         return new CachedSmpsSource(
                 cached.gameId(),
                 cached.data(),
-                copyDac(cached.dac()),
+                cached.dac(),
                 copyStaticConfig(cached.staticConfig()),
                 cached.coordFlagHandlerRequired(),
                 cached.specialSfx());
@@ -659,23 +658,6 @@ public final class AudioPresentationSourceFactory
                     "gameId must not be blank");
         }
         return value;
-    }
-
-    private static DacData copyDac(DacData source) {
-        Objects.requireNonNull(source, "source");
-        Map<Integer, byte[]> samples = new HashMap<>();
-        for (Map.Entry<Integer, byte[]> entry
-                : source.samples.entrySet()) {
-            samples.put(entry.getKey(), entry.getValue().clone());
-        }
-        Map<Integer, DacData.DacEntry> mapping = new HashMap<>();
-        for (Map.Entry<Integer, DacData.DacEntry> entry
-                : source.mapping.entrySet()) {
-            DacData.DacEntry value = entry.getValue();
-            mapping.put(entry.getKey(), new DacData.DacEntry(
-                    value.sampleId, value.rate));
-        }
-        return new DacData(samples, mapping, source.baseCycles);
     }
 
     private static AbstractSmpsData copySmpsData(
