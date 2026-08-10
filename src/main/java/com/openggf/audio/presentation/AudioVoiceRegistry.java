@@ -934,7 +934,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                     throw cacheFailure;
                 }
                 sfxInstantiation.observeAdmission(
-                        sfxInstantiation.rejectedAdmission(source,
+                        sfxInstantiation.rejectedAdmission(admission,
                                 SmpsRequestAdmissionPolicy.RejectionReason.CACHE_MISS));
                 warnRejected(source.standaloneVoiceId(),
                         "SMPS SFX cache rejected " + source.assetKey());
@@ -942,7 +942,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             }
             sfxInstantiation.observeAdmission(attached[0]
                     ? admission
-                    : sfxInstantiation.rejectedAdmission(source,
+                    : sfxInstantiation.rejectedAdmission(admission,
                             SmpsRequestAdmissionPolicy.RejectionReason.CACHE_MISS));
             return;
         }
@@ -956,7 +956,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             rollbackCoordFlagState(coordState, cacheFailure);
             AudioDiagnosticObserverException.rethrowIfPresent(cacheFailure);
             sfxInstantiation.observeAdmission(
-                    sfxInstantiation.rejectedAdmission(source,
+                    sfxInstantiation.rejectedAdmission(admission,
                             SmpsRequestAdmissionPolicy.RejectionReason.CACHE_MISS));
             warnRejected(source.standaloneVoiceId(),
                     "SMPS SFX cache rejected " + source.assetKey());
@@ -965,7 +965,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         if (standalone == null) {
             coordFlagHandlers.state().restore(coordState);
             sfxInstantiation.observeAdmission(
-                    sfxInstantiation.rejectedAdmission(source,
+                    sfxInstantiation.rejectedAdmission(admission,
                             SmpsRequestAdmissionPolicy.RejectionReason.CACHE_MISS));
             warnRejected(source.standaloneVoiceId(),
                     "SMPS SFX cache miss for " + source.assetKey());
@@ -984,7 +984,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                 AudioDiagnosticObserverException.rethrowIfPresent(
                         cacheFailure);
                 sfxInstantiation.observeAdmission(
-                        sfxInstantiation.rejectedAdmission(source,
+                        sfxInstantiation.rejectedAdmission(admission,
                                 SmpsRequestAdmissionPolicy.RejectionReason.CACHE_MISS));
                 warnRejected(source.standaloneVoiceId(),
                         "SMPS SFX cache rejected " + source.assetKey());
@@ -993,7 +993,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             if (sequencer == null) {
                 coordFlagHandlers.state().restore(coordState);
                 sfxInstantiation.observeAdmission(
-                        sfxInstantiation.rejectedAdmission(source,
+                        sfxInstantiation.rejectedAdmission(admission,
                                 SmpsRequestAdmissionPolicy.RejectionReason.CACHE_MISS));
                 warnRejected(source.standaloneVoiceId(),
                         "SMPS SFX cache miss for " + source.assetKey());

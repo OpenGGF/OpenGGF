@@ -23,6 +23,7 @@ import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.synth.ChipWriteObserver;
 import com.openggf.audio.presentation.AudioPresentationCommand;
+import com.openggf.audio.presentation.AudioPresentationDependencyResolver;
 import com.openggf.audio.presentation.AudioPresentationCommandQueue;
 import com.openggf.audio.presentation.AudioPresentationCommandResolver;
 import com.openggf.audio.presentation.AudioPresentationMixer;
@@ -819,6 +820,9 @@ public class AudioManager implements MusicRestoreSink {
                 shadowFactory, shadowFactory, presentationCoordFlagHandlers,
                 warning -> LOGGER.warning(
                         "Presentation rewind staging: " + warning));
+        AudioPresentationDependencyResolver.DiagnosticTransaction
+                stagingDiagnostics =
+                shadowFactory.beginDiagnosticTransaction();
         try {
             stagedRegistry.restore(selected.presentation(), shadowFactory);
             String[] resolutionFailure = new String[1];
@@ -869,8 +873,20 @@ public class AudioManager implements MusicRestoreSink {
                     selected.donorGameIds(),
                     selected.donorBindings());
         } finally {
-            stagedRegistry.clear();
-            presentationCoordFlagHandlers.state().restore(liveCoord);
+            try {
+                stagedRegistry.clear();
+            } finally {
+                try {
+                    stagingDiagnostics.endPreparation();
+                } finally {
+                    try {
+                        stagingDiagnostics.discard();
+                    } finally {
+                        presentationCoordFlagHandlers.state()
+                                .restore(liveCoord);
+                    }
+                }
+            }
         }
     }
 

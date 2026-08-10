@@ -1,6 +1,7 @@
 package com.openggf.audio.driver;
 
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
+import com.openggf.audio.rewind.SmpsSourceDescriptor;
 import java.util.Objects;
 
 /**
@@ -14,6 +15,15 @@ public interface SmpsDriverServiceObserver {
 
     default void onServiceEnd(
             long ordinal, SmpsDriverSnapshot snapshot) { }
+
+    default void onServiceBegin(ServiceEvent event) {
+        onServiceBegin(event.ordinal());
+    }
+
+    default void onServiceEnd(
+            ServiceEvent event, SmpsDriverSnapshot snapshot) {
+        onServiceEnd(event.ordinal(), snapshot);
+    }
 
     default void onLifecycle(LifecycleEvent event) { }
 
@@ -44,6 +54,25 @@ public interface SmpsDriverServiceObserver {
         public static DriverIdentity unspecified() {
             return new DriverIdentity(-1,
                     DriverAdmissionOrigin.unspecified());
+        }
+    }
+
+    record SequencerIdentity(
+            long instanceOrdinal,
+            SmpsSourceDescriptor source,
+            boolean sfx) {
+        public SequencerIdentity {
+            Objects.requireNonNull(source, "source");
+        }
+    }
+
+    record ServiceEvent(
+            long ordinal,
+            DriverIdentity driver,
+            SequencerIdentity sequencer) {
+        public ServiceEvent {
+            Objects.requireNonNull(driver, "driver");
+            Objects.requireNonNull(sequencer, "sequencer");
         }
     }
 

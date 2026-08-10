@@ -30,7 +30,7 @@ public interface SmpsSfxInstantiation {
     /** Evaluates one whole request before any driver or continuous-SFX mutation. */
     default Admission evaluateAdmission(
             ResolvedSmpsSfxSource source, SmpsDriver currentOwner) {
-        SmpsAdmissionContext context = admissionContext(source, false);
+        SmpsAdmissionContext context = admissionContext(source);
         return new Admission(context,
                 SmpsRequestAdmissionPolicy.PERMISSIVE.evaluate(context));
     }
@@ -38,7 +38,7 @@ public interface SmpsSfxInstantiation {
     /** Builds an engine-owned rejection which bypasses the game policy. */
     default Admission rejectedAdmission(
             ResolvedSmpsSfxSource source, RejectionReason reason) {
-        SmpsAdmissionContext context = admissionContext(source, false);
+        SmpsAdmissionContext context = admissionContext(source);
         return new Admission(context, new AdmissionResult(false, reason,
                 context.priorityBefore(), context.priorityBefore(),
                 context.resolvedSoundId()));
@@ -64,10 +64,11 @@ public interface SmpsSfxInstantiation {
             SmpsDriverServiceObserver.LifecycleEvent event) { }
 
     private static SmpsAdmissionContext admissionContext(
-            ResolvedSmpsSfxSource source, boolean specialSfx) {
+            ResolvedSmpsSfxSource source) {
         Objects.requireNonNull(source, "source");
-        int id = source.assetKey().sfxId();
-        return new SmpsAdmissionContext(id, id, source.priority(),
-                SmpsRequestAdmissionPolicy.NO_PRIORITY, specialSfx, false);
+        return new SmpsAdmissionContext(source.assetKey().sfxId(),
+                source.resolvedSoundId(), source.priority(),
+                SmpsRequestAdmissionPolicy.NO_PRIORITY,
+                source.specialSfx(), false);
     }
 }

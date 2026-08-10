@@ -139,3 +139,52 @@ following final verification passed on JDK 21:
 The static guard additionally pins game-neutral shared diagnostic contracts.
 No tooling import, game-name runtime check, snapshot field, game policy, chip
 port order, lock behavior, or default-`NONE` PCM behavior was introduced.
+
+## Review fix round 2
+
+Service observation now surrounds each literal `SmpsSequencer.tick()` call,
+not an inferred read or tempo-frame boundary. The callback event identifies
+both the stable driver and the particular sequencer/source. Adversarial tempo
+snapshots prove that an OVERFLOW2 tempo frame which executes zero, one, or
+three real ticks emits exactly zero, one, or three ordered service pairs.
+Tick-owned chip writes occur inside the pair, the end snapshot is post-tick,
+and the established music-then-SFX tick order is unchanged.
+
+Detached reverse command staging now owns an outer diagnostic transaction.
+The factory supports nested restore savepoints over one cross-observer event
+stream, while driver-instance ordinals are provisionally allocated inside the
+same transaction. Detached reconstruction, admission/lifecycle events, staged
+commands, and cleanup are discarded together. A later live restore therefore
+flushes its constructor and restore events exactly once and receives the next
+visible ordinal without a speculative gap. Both successful staging followed
+by logical discard and failed staging followed by a real commit are covered at
+the `AudioManager` boundary.
+
+Resolved SFX commands now retain the data-resolved sound ID and special-SFX
+classification independently of the mutable asset cache. The game policy is
+therefore evaluated exactly once even if that already-resolved asset is
+evicted before insertion. Every later cache, construction, or presentation
+gate reclassifies the evaluated admission: it preserves the policy's resolved
+ID and `priorityBefore`, and defines rejection `priorityAfter` as that same
+unchanged pre-request priority. Custom nontrivial payload tests cover
+presentation success, policy rejection, block, cache eviction, late
+instantiation failure, and legacy success/block; a genuinely unresolved
+loader failure still creates no request and runs no policy.
+
+Round-two TDD recorded RED failures for the absent sequencer-bearing service
+event, speculative staging event leakage and ordinal consumption, cache-null
+policy bypass, and late rejection payload reconstruction. Final JDK 21
+verification:
+
+- Focused observer/chip/snapshot/authority sweep: 38 tests, zero failures and
+  zero errors.
+- Broad AudioManager/backend/presentation/rewind/registry/contention/chip/
+  snapshot sweep: 310 tests, zero failures and zero errors (the prior
+  256-test selection plus all 54 registry tests).
+- S1 takeover-order, contention, and SFX-construction-purity sweep: 10 tests,
+  zero failures and zero errors.
+- `git diff --check`: clean.
+
+No tooling import, game-name branch, reference-reader authority, snapshot
+field, chip-port reorder, SFX lock change, or default-policy behavior was
+introduced. No merge or push was performed.

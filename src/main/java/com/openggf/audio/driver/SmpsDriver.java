@@ -64,6 +64,10 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     private SfxContentionObserver sfxContentionObserver = SfxContentionObserver.NONE;
     /** Diagnostic-only state; deliberately absent from rewind snapshots. */
     private long nextServiceOrdinal;
+    /** Diagnostic-only sequencer identities; deliberately absent from snapshots. */
+    private long nextServiceSequencerOrdinal;
+    private final IdentityHashMap<SmpsSequencer, Long>
+            serviceSequencerOrdinals = new IdentityHashMap<>();
     private SmpsDriverServiceObserver serviceObserver =
             SmpsDriverServiceObserver.NONE;
     private SmpsDriverServiceObserver.DriverIdentity diagnosticIdentity =
@@ -156,6 +160,9 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     /** Installs the disabled-by-default complete-service diagnostic observer. */
     public void setServiceObserver(SmpsDriverServiceObserver observer) {
         serviceObserver = Objects.requireNonNull(observer, "observer");
+        if (observer == SmpsDriverServiceObserver.NONE) {
+            serviceSequencerOrdinals.clear();
+        }
     }
 
     /** Returns the installed diagnostic observer. */
@@ -170,6 +177,34 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
 
     public SmpsDriverServiceObserver.DriverIdentity diagnosticIdentity() {
         return diagnosticIdentity;
+    }
+
+    /** Begins one actual semantic SMPS sequencer update. */
+    public SmpsDriverServiceObserver.ServiceEvent beginSequencerService(
+            SmpsSequencer sequencer) {
+        if (serviceObserver == SmpsDriverServiceObserver.NONE) {
+            return null;
+        }
+        long sequencerOrdinal = serviceSequencerOrdinals.computeIfAbsent(
+                Objects.requireNonNull(sequencer, "sequencer"),
+                ignored -> nextServiceSequencerOrdinal++);
+        SmpsDriverServiceObserver.ServiceEvent event =
+                new SmpsDriverServiceObserver.ServiceEvent(
+                        nextServiceOrdinal++, diagnosticIdentity,
+                        new SmpsDriverServiceObserver.SequencerIdentity(
+                                sequencerOrdinal,
+                                sequencer.getSourceDescriptor(),
+                                sequencer.isSfx()));
+        serviceObserver.onServiceBegin(event);
+        return event;
+    }
+
+    /** Completes one actual semantic SMPS sequencer update. */
+    public void endSequencerService(
+            SmpsDriverServiceObserver.ServiceEvent event) {
+        if (event != null) {
+            serviceObserver.onServiceEnd(event, captureSnapshot());
+        }
     }
 
     /** Reports a completed out-of-service lifecycle mutation. */
@@ -832,9 +867,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         // breaks audio fidelity because synth state changes mid-batch would be lost.
         synchronized (sequencersLock) {
             for (int i = 0; i < frames; i++) {
-                long serviceOrdinal = advanceSequencersBatch(1);
+                advanceSequencersBatch(1);
                 removeCompletedSequencers();
-                endService(serviceOrdinal);
 
                 super.render(scratchFrameBuf);
                 buffer[i * 2] = scratchFrameBuf[0];
@@ -862,9 +896,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                     continue;
                 }
 
-                long serviceOrdinal = advanceSequencersBatch(safeChunk);
+                advanceSequencersBatch(safeChunk);
                 removeCompletedSequencers();
-                endService(serviceOrdinal);
                 renderChunk(buffer, frameIndex, safeChunk);
                 hybridChunkCountForTesting++;
                 frameIndex += safeChunk;
@@ -897,8 +930,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         return safe;
     }
 
-    private long advanceSequencersBatch(int frames) {
-        long serviceOrdinal = beginServiceIfDue(frames);
+    private void advanceSequencersBatch(int frames) {
         int size = sequencers.size();
         for (int i = 0; i < size; i++) {
             SmpsSequencer seq = sequencers.get(i);
@@ -907,44 +939,15 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 pendingRemovals.add(seq);
             }
         }
-        return serviceOrdinal;
     }
 
     private void renderSingleSample(short[] buffer, int frameIndex) {
-        long serviceOrdinal = advanceSequencersBatch(1);
+        advanceSequencersBatch(1);
         removeCompletedSequencers();
-        endService(serviceOrdinal);
 
         super.render(scratchFrameBuf);
         buffer[frameIndex * 2] = scratchFrameBuf[0];
         buffer[frameIndex * 2 + 1] = scratchFrameBuf[1];
-    }
-
-    private long beginServiceIfDue(int samples) {
-        if (serviceObserver == SmpsDriverServiceObserver.NONE
-                || samples <= 0) {
-            return -1;
-        }
-        boolean due = false;
-        for (int index = 0; index < sequencers.size(); index++) {
-            if (sequencers.get(index).getSamplesUntilNextTempoFrame()
-                    <= samples) {
-                due = true;
-                break;
-            }
-        }
-        if (!due) {
-            return -1;
-        }
-        long ordinal = nextServiceOrdinal++;
-        serviceObserver.onServiceBegin(ordinal);
-        return ordinal;
-    }
-
-    private void endService(long ordinal) {
-        if (ordinal >= 0) {
-            serviceObserver.onServiceEnd(ordinal, captureSnapshot());
-        }
     }
 
     private void renderChunk(short[] target, int frameOffset, int frames) {

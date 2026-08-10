@@ -3,6 +3,7 @@ package com.openggf.audio.smps;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.MusicRestoreSink;
 import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.driver.SmpsDriverServiceObserver;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
 import com.openggf.audio.rewind.SmpsSequencerSnapshot;
 import com.openggf.audio.rewind.SmpsTrackSnapshot;
@@ -996,6 +997,17 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     }
 
     private void tick() {
+        SmpsDriver driver = synth instanceof SmpsDriver smpsDriver
+                ? smpsDriver : null;
+        SmpsDriverServiceObserver.ServiceEvent service = driver == null
+                ? null : driver.beginSequencerService(this);
+        tickTracks();
+        if (driver != null) {
+            driver.endSequencerService(service);
+        }
+    }
+
+    private void tickTracks() {
         for (Track t : tracks) {
             if (!t.active)
                 continue;

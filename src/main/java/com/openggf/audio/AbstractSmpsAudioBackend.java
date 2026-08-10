@@ -766,32 +766,33 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         }
         SmpsDriverServiceObserver observer = driverServiceObserver;
         driver.setServiceObserver(new SmpsDriverServiceObserver() {
-            private long activeOrdinal = -1;
+            private ServiceEvent activeEvent;
 
             @Override
-            public void onServiceBegin(long ignoredDriverOrdinal) {
-                if (activeOrdinal >= 0) {
+            public void onServiceBegin(ServiceEvent event) {
+                if (activeEvent != null) {
                     throw new IllegalStateException(
                             "SMPS driver service observer was re-entered");
                 }
-                activeOrdinal = nextServiceOrdinal++;
-                long ordinal = activeOrdinal;
+                activeEvent = new ServiceEvent(nextServiceOrdinal++,
+                        event.driver(), event.sequencer());
+                ServiceEvent emitted = activeEvent;
                 AudioDiagnosticObserverException.invoke(() ->
-                        observer.onServiceBegin(ordinal));
+                        observer.onServiceBegin(emitted));
             }
 
             @Override
             public void onServiceEnd(
-                    long ignoredDriverOrdinal,
+                    ServiceEvent event,
                     SmpsDriverSnapshot snapshot) {
-                long completedOrdinal = activeOrdinal;
-                if (completedOrdinal < 0) {
+                ServiceEvent completed = activeEvent;
+                if (completed == null) {
                     throw new IllegalStateException(
                             "SMPS driver service ended without a begin");
                 }
-                activeOrdinal = -1;
+                activeEvent = null;
                 AudioDiagnosticObserverException.invoke(() ->
-                        observer.onServiceEnd(completedOrdinal, snapshot));
+                        observer.onServiceEnd(completed, snapshot));
             }
 
             @Override

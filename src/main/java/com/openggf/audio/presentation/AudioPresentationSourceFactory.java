@@ -105,8 +105,8 @@ public final class AudioPresentationSourceFactory
         void emit(Runnable callback);
     }
 
-    private final class DeferredDiagnosticTransaction
-            implements DiagnosticTransaction, DiagnosticDispatcher {
+    private final class DeferredDiagnosticRoot
+            implements DiagnosticDispatcher {
         private enum State {
             PREPARING,
             DEFERRED,
@@ -116,6 +116,8 @@ public final class AudioPresentationSourceFactory
 
         private final List<Runnable> callbacks = new ArrayList<>();
         private State state = State.PREPARING;
+        private long provisionalNextDriverOrdinal =
+                nextDriverInstanceOrdinal;
 
         @Override
         public void emit(Runnable callback) {
@@ -129,15 +131,68 @@ public final class AudioPresentationSourceFactory
             }
         }
 
+        private long allocateDriverOrdinal() {
+            return provisionalNextDriverOrdinal++;
+        }
+
+        private void commitRoot() {
+            state = State.COMMITTED;
+            nextDriverInstanceOrdinal = provisionalNextDriverOrdinal;
+            List<Runnable> deferred = List.copyOf(callbacks);
+            callbacks.clear();
+            for (Runnable callback : deferred) {
+                callback.run();
+            }
+        }
+
+        private void discardRoot() {
+            state = State.DISCARDED;
+            callbacks.clear();
+        }
+
+        private void rollbackTo(int callbackCount, long driverOrdinal) {
+            callbacks.subList(callbackCount, callbacks.size()).clear();
+            provisionalNextDriverOrdinal = driverOrdinal;
+        }
+    }
+
+    private final class DeferredDiagnosticTransaction
+            implements DiagnosticTransaction {
+        private enum State {
+            PREPARING,
+            DEFERRED,
+            COMMITTED,
+            DISCARDED
+        }
+
+        private final DeferredDiagnosticRoot root;
+        private final boolean rootOwner;
+        private final int callbackStart;
+        private final long ordinalStart;
+        private State state = State.PREPARING;
+
+        private DeferredDiagnosticTransaction(
+                DeferredDiagnosticRoot root, boolean rootOwner) {
+            this.root = root;
+            this.rootOwner = rootOwner;
+            callbackStart = root.callbacks.size();
+            ordinalStart = root.provisionalNextDriverOrdinal;
+        }
+
         @Override
         public void endPreparation() {
             if (state != State.PREPARING
-                    || activeDiagnosticTransaction != this) {
+                    || activeDiagnosticTransactions.isEmpty()
+                    || activeDiagnosticTransactions.getLast() != this) {
                 throw new IllegalStateException(
                         "diagnostic transaction is not preparing");
             }
-            activeDiagnosticTransaction = null;
+            activeDiagnosticTransactions.removeLast();
             state = State.DEFERRED;
+            if (activeDiagnosticTransactions.isEmpty()) {
+                activeDiagnosticRoot = null;
+                root.state = DeferredDiagnosticRoot.State.DEFERRED;
+            }
         }
 
         @Override
@@ -147,10 +202,8 @@ public final class AudioPresentationSourceFactory
                         "diagnostic transaction cannot be committed");
             }
             state = State.COMMITTED;
-            List<Runnable> deferred = List.copyOf(callbacks);
-            callbacks.clear();
-            for (Runnable callback : deferred) {
-                callback.run();
+            if (rootOwner) {
+                root.commitRoot();
             }
         }
 
@@ -160,12 +213,22 @@ public final class AudioPresentationSourceFactory
                 throw new IllegalStateException(
                         "committed diagnostic transaction cannot be discarded");
             }
-            if (state == State.PREPARING
-                    && activeDiagnosticTransaction == this) {
-                activeDiagnosticTransaction = null;
+            if (state == State.PREPARING) {
+                if (activeDiagnosticTransactions.isEmpty()
+                        || activeDiagnosticTransactions.getLast() != this) {
+                    throw new IllegalStateException(
+                            "diagnostic transaction is not current");
+                }
+                activeDiagnosticTransactions.removeLast();
             }
             state = State.DISCARDED;
-            callbacks.clear();
+            if (rootOwner) {
+                activeDiagnosticTransactions.clear();
+                activeDiagnosticRoot = null;
+                root.discardRoot();
+            } else {
+                root.rollbackTo(callbackStart, ordinalStart);
+            }
         }
     }
 
@@ -191,7 +254,9 @@ public final class AudioPresentationSourceFactory
             SfxContentionObserver.NONE;
     private long nextServiceOrdinal;
     private long nextDriverInstanceOrdinal;
-    private DeferredDiagnosticTransaction activeDiagnosticTransaction;
+    private DeferredDiagnosticRoot activeDiagnosticRoot;
+    private final List<DeferredDiagnosticTransaction>
+            activeDiagnosticTransactions = new ArrayList<>();
 
     public AudioPresentationSourceFactory(
             BooleanSupplier ownerThreadBoundary,
@@ -237,12 +302,15 @@ public final class AudioPresentationSourceFactory
     @Override
     public DiagnosticTransaction beginDiagnosticTransaction() {
         assertOwnerBoundary();
-        if (activeDiagnosticTransaction != null) {
-            throw new IllegalStateException(
-                    "nested audio diagnostic transaction");
+        boolean rootOwner = activeDiagnosticRoot == null;
+        if (rootOwner) {
+            activeDiagnosticRoot = new DeferredDiagnosticRoot();
         }
-        activeDiagnosticTransaction = new DeferredDiagnosticTransaction();
-        return activeDiagnosticTransaction;
+        DeferredDiagnosticTransaction transaction =
+                new DeferredDiagnosticTransaction(
+                        activeDiagnosticRoot, rootOwner);
+        activeDiagnosticTransactions.add(transaction);
+        return transaction;
     }
 
     public MusicVoiceEntry musicSmps(
@@ -364,9 +432,12 @@ public final class AudioPresentationSourceFactory
             throw new IllegalArgumentException("pitchQ16 must be positive");
         }
         validateKey(Objects.requireNonNull(assetKey, "assetKey"));
+        CachedSmpsSource cached = sfxAssets.get(assetKey);
         return new ResolvedSmpsSfxSource(
                 standaloneVoiceId, assetKey, pitchQ16, priority,
-                continuousSfxId, trackCount, maxStereoFrames);
+                continuousSfxId, trackCount, maxStereoFrames,
+                cached != null ? cached.data().getId() : assetKey.sfxId(),
+                cached != null && cached.specialSfx());
     }
 
     @Override
@@ -411,16 +482,11 @@ public final class AudioPresentationSourceFactory
     public Admission evaluateAdmission(
             ResolvedSmpsSfxSource source, SmpsDriver currentOwner) {
         Objects.requireNonNull(source, "source");
-        CachedSmpsSource cached = sfxAssets.get(source.assetKey());
-        if (cached == null) {
-            return rejectedAdmission(source,
-                    SmpsRequestAdmissionPolicy.RejectionReason.CACHE_MISS);
-        }
         int requestedId = source.assetKey().sfxId();
         SmpsAdmissionContext context = new SmpsAdmissionContext(
-                requestedId, cached.data().getId(), source.priority(),
+                requestedId, source.resolvedSoundId(), source.priority(),
                 SmpsRequestAdmissionPolicy.NO_PRIORITY,
-                cached.specialSfx(), false);
+                source.specialSfx(), false);
         AdmissionResult result = Objects.requireNonNull(
                 sfxAdmissionPolicy.evaluate(context),
                 "SFX admission policy returned no result");
@@ -432,13 +498,10 @@ public final class AudioPresentationSourceFactory
             ResolvedSmpsSfxSource source,
             SmpsRequestAdmissionPolicy.RejectionReason reason) {
         Objects.requireNonNull(source, "source");
-        CachedSmpsSource cached = sfxAssets.get(source.assetKey());
-        int resolvedId = cached != null
-                ? cached.data().getId() : source.assetKey().sfxId();
         SmpsAdmissionContext context = new SmpsAdmissionContext(
-                source.assetKey().sfxId(), resolvedId,
+                source.assetKey().sfxId(), source.resolvedSoundId(),
                 source.priority(), SmpsRequestAdmissionPolicy.NO_PRIORITY,
-                cached != null && cached.specialSfx(), false);
+                source.specialSfx(), false);
         return new Admission(context, new AdmissionResult(false, reason,
                 context.priorityBefore(), context.priorityBefore(),
                 context.resolvedSoundId()));
@@ -449,9 +512,13 @@ public final class AudioPresentationSourceFactory
         if (admissionObserver == AudioAdmissionObserver.NONE) {
             return;
         }
-        AudioDiagnosticObserverException.invoke(() ->
-                admissionObserver.onDecision(new AudioAdmissionDecision(
-                        admission.context(), admission.result())));
+        DiagnosticDispatcher diagnostics = diagnosticDispatcher();
+        diagnostics.emit(() ->
+                AudioDiagnosticObserverException.invoke(() ->
+                        admissionObserver.onDecision(
+                                new AudioAdmissionDecision(
+                                        admission.context(),
+                                        admission.result()))));
     }
 
     @Override
@@ -460,8 +527,10 @@ public final class AudioPresentationSourceFactory
         if (driverServiceObserver == SmpsDriverServiceObserver.NONE) {
             return;
         }
-        AudioDiagnosticObserverException.invoke(() ->
-                driverServiceObserver.onLifecycle(event));
+        DiagnosticDispatcher diagnostics = diagnosticDispatcher();
+        diagnostics.emit(() ->
+                AudioDiagnosticObserverException.invoke(() ->
+                        driverServiceObserver.onLifecycle(event)));
     }
 
     public SmpsCompositeVoice recreateSmps(
@@ -711,7 +780,7 @@ public final class AudioPresentationSourceFactory
         if (observed) {
             driver.setDiagnosticIdentity(
                     new SmpsDriverServiceObserver.DriverIdentity(
-                            nextDriverInstanceOrdinal++, origin));
+                            allocateDriverOrdinal(), origin));
             installDiagnosticObservers(driver, diagnostics);
         }
         driver.setRegion(settings.region());
@@ -727,9 +796,15 @@ public final class AudioPresentationSourceFactory
     }
 
     private DiagnosticDispatcher diagnosticDispatcher() {
-        return activeDiagnosticTransaction == null
+        return activeDiagnosticRoot == null
                 ? DiagnosticDispatcher.IMMEDIATE
-                : activeDiagnosticTransaction;
+                : activeDiagnosticRoot;
+    }
+
+    private long allocateDriverOrdinal() {
+        return activeDiagnosticRoot == null
+                ? nextDriverInstanceOrdinal++
+                : activeDiagnosticRoot.allocateDriverOrdinal();
     }
 
     private void installDiagnosticObservers(
@@ -757,35 +832,35 @@ public final class AudioPresentationSourceFactory
         }
         SmpsDriverServiceObserver observer = driverServiceObserver;
         driver.setServiceObserver(new SmpsDriverServiceObserver() {
-            private long activeOrdinal = -1;
+            private ServiceEvent activeEvent;
 
             @Override
-            public void onServiceBegin(long ignoredDriverOrdinal) {
-                if (activeOrdinal >= 0) {
+            public void onServiceBegin(ServiceEvent event) {
+                if (activeEvent != null) {
                     throw new IllegalStateException(
                             "SMPS driver service observer was re-entered");
                 }
-                activeOrdinal = nextServiceOrdinal++;
-                long ordinal = activeOrdinal;
+                activeEvent = new ServiceEvent(nextServiceOrdinal++,
+                        event.driver(), event.sequencer());
+                ServiceEvent emitted = activeEvent;
                 diagnostics.emit(() ->
                         AudioDiagnosticObserverException.invoke(() ->
-                                observer.onServiceBegin(ordinal)));
+                                observer.onServiceBegin(emitted)));
             }
 
             @Override
             public void onServiceEnd(
-                    long ignoredDriverOrdinal,
+                    ServiceEvent event,
                     SmpsDriverSnapshot snapshot) {
-                long completedOrdinal = activeOrdinal;
-                if (completedOrdinal < 0) {
+                ServiceEvent completed = activeEvent;
+                if (completed == null) {
                     throw new IllegalStateException(
                             "SMPS driver service ended without a begin");
                 }
-                activeOrdinal = -1;
+                activeEvent = null;
                 diagnostics.emit(() ->
                         AudioDiagnosticObserverException.invoke(() ->
-                                observer.onServiceEnd(
-                                        completedOrdinal, snapshot)));
+                                observer.onServiceEnd(completed, snapshot)));
             }
 
             @Override
