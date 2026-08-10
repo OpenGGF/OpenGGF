@@ -149,7 +149,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 if (sequencer.getSmpsData().getId() == sfxId) {
                     return new PreparedSfxAdmission(
                             this, null, true, 0, 0, sfxId, trackCount,
-                            null, null, null, null, null);
+                            null, null, null);
                 }
             }
             return null;
@@ -190,12 +190,10 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 }
             }
 
-            SmpsSequencer[] fmOwners = new SmpsSequencer[fmLocks.length];
-            SmpsSequencer.Track[] fmTracks =
-                    new SmpsSequencer.Track[fmLocks.length];
-            SmpsSequencer[] psgOwners = new SmpsSequencer[psgLocks.length];
-            SmpsSequencer.Track[] psgTracks =
-                    new SmpsSequencer.Track[psgLocks.length];
+            SmpsSequencer[] displacedOwners =
+                    new SmpsSequencer[sequencer.trackCount()];
+            SmpsSequencer.Track[] displacedTracks =
+                    new SmpsSequencer.Track[sequencer.trackCount()];
             int fmMask = 0;
             int psgMask = 0;
 
@@ -223,29 +221,30 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 }
             }
 
-            for (SmpsSequencer existing : sfxSequencers) {
-                if (existing == replaced) {
-                    continue;
-                }
-                for (int trackIndex = 0;
-                        trackIndex < existing.trackCount(); trackIndex++) {
-                    SmpsSequencer.Track track = existing.trackAt(trackIndex);
-                    if (!track.active) {
+            for (int newIndex = 0;
+                    newIndex < sequencer.trackCount(); newIndex++) {
+                SmpsSequencer.Track newTrack = sequencer.trackAt(newIndex);
+                for (SmpsSequencer existing : sfxSequencers) {
+                    if (existing == replaced) {
                         continue;
                     }
-                    if ((track.type == SmpsSequencer.TrackType.FM
-                            || track.type == SmpsSequencer.TrackType.DAC)
-                            && (fmMask & (1 << track.channelId)) != 0
-                            && usesTrack(sequencer, track.type,
-                                    track.channelId)) {
-                        recordDisplacedTrack(fmOwners, fmTracks,
-                                track.channelId, existing, track);
-                    } else if (track.type == SmpsSequencer.TrackType.PSG
-                            && (psgMask & (1 << track.channelId)) != 0
-                            && usesTrack(sequencer, track.type,
-                                    track.channelId)) {
-                        recordDisplacedTrack(psgOwners, psgTracks,
-                                track.channelId, existing, track);
+                    for (int trackIndex = 0;
+                            trackIndex < existing.trackCount(); trackIndex++) {
+                        SmpsSequencer.Track track =
+                                existing.trackAt(trackIndex);
+                        if (!track.active
+                                || track.type != newTrack.type
+                                || track.channelId != newTrack.channelId
+                                || isAlreadyDisplaced(displacedTracks,
+                                        newIndex, track)) {
+                            continue;
+                        }
+                        if (displacedOwners[newIndex] != null) {
+                            throw new IllegalStateException(
+                                    "multiple active SFX tracks own one exact channel type");
+                        }
+                        displacedOwners[newIndex] = existing;
+                        displacedTracks[newIndex] = track;
                     }
                 }
             }
@@ -253,7 +252,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             return new PreparedSfxAdmission(
                     this, sequencer, false, fmMask, psgMask,
                     sfxId, trackCount, replaced,
-                    fmOwners, fmTracks, psgOwners, psgTracks);
+                    displacedOwners, displacedTracks);
         }
     }
 
@@ -265,76 +264,91 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                     "prepared SFX admission belongs to another driver");
         }
         synchronized (sequencersLock) {
-            admission.claimCommit();
             if (admission.continuousExtension()) {
+                admission.claimCommit();
                 continuousSfxFlag = true;
                 contSfxLoopCnt = admission.trackCount();
                 return;
             }
 
-            SmpsSequencer sequencer = admission.sequencer();
-            sequencer.commitSfxAdmissionInitialization();
-            sequencer.setRegion(region);
-            sequencer.setIsSfx(true);
+            admission.claimCommit();
+            LiveCommandMutationToken rollbackState;
+            try {
+                rollbackState = hasChipWriteObserver()
+                        ? captureLiveCommandMutation() : null;
+            } catch (RuntimeException failure) {
+                admission.releaseCommit();
+                throw failure;
+            }
+            try {
+                commitNewSfxAdmission(admission);
+            } catch (RuntimeException failure) {
+                if (rollbackState != null) {
+                    try {
+                        rollbackLiveCommandMutation(rollbackState);
+                    } catch (RuntimeException rollbackFailure) {
+                        failure.addSuppressed(rollbackFailure);
+                    } finally {
+                        admission.releaseCommit();
+                    }
+                }
+                throw failure;
+            }
+        }
+    }
 
-            SmpsSequencer replaced = admission.replacedSequencer;
-            if (replaced != null) {
-                sequencers.remove(replaced);
-                releaseLocks(replaced);
-                sfxSequencers.remove(replaced);
-            }
+    private void commitNewSfxAdmission(PreparedSfxAdmission admission) {
+        SmpsSequencer sequencer = admission.sequencer();
+        sequencer.commitSfxAdmissionInitialization();
+        sequencer.setRegion(region);
+        sequencer.setIsSfx(true);
 
-            boolean killedPsg3Track = false;
-            for (int channel = 0;
-                    channel < admission.displacedFmTracks.length; channel++) {
-                SmpsSequencer.Track track =
-                        admission.displacedFmTracks[channel];
-                if (track == null) {
-                    continue;
-                }
-                SmpsSequencer owner = admission.displacedFmOwners[channel];
-                track.active = false;
-                owner.stopNote(track);
-                if (fmLocks[channel] == owner) {
-                    fmLocks[channel] = null;
-                    updateOverrides(SmpsSequencer.TrackType.FM,
-                            channel, false);
-                }
-            }
-            for (int channel = 0;
-                    channel < admission.displacedPsgTracks.length; channel++) {
-                SmpsSequencer.Track track =
-                        admission.displacedPsgTracks[channel];
-                if (track == null) {
-                    continue;
-                }
-                SmpsSequencer owner = admission.displacedPsgOwners[channel];
-                track.active = false;
-                owner.stopNote(track);
-                if (psgLocks[channel] == owner) {
-                    psgLocks[channel] = null;
-                    updateOverrides(SmpsSequencer.TrackType.PSG,
-                            channel, false);
-                }
-                if (channel == 2) {
-                    killedPsg3Track = true;
-                }
-            }
+        SmpsSequencer replaced = admission.replacedSequencer;
+        if (replaced != null) {
+            sequencers.remove(replaced);
+            releaseLocks(replaced);
+            sfxSequencers.remove(replaced);
+        }
 
-            removeFullyDisplacedSequencers(admission);
-            if (killedPsg3Track) {
-                writeRawPsg(0xDF);
-                writeRawPsg(0xFF);
+        boolean killedPsg3Track = false;
+        for (int action = 0;
+                action < admission.displacedTracks.length; action++) {
+            SmpsSequencer.Track track = admission.displacedTracks[action];
+            if (track == null) {
+                continue;
             }
+            SmpsSequencer owner = admission.displacedOwners[action];
+            track.active = false;
+            owner.stopNote(track);
+            int channel = track.channelId;
+            if (track.type == SmpsSequencer.TrackType.PSG
+                    && psgLocks[channel] == owner) {
+                psgLocks[channel] = null;
+                updateOverrides(SmpsSequencer.TrackType.PSG,
+                        channel, false);
+            } else if (track.type != SmpsSequencer.TrackType.PSG
+                    && fmLocks[channel] == owner) {
+                fmLocks[channel] = null;
+                updateOverrides(SmpsSequencer.TrackType.FM,
+                        channel, false);
+            }
+            killedPsg3Track |= track.type == SmpsSequencer.TrackType.PSG
+                    && channel == 2;
+        }
 
-            sequencers.add(sequencer);
-            sfxSequencers.add(sequencer);
-            restoreMusicDacData();
-            if (admission.continuousSfxId() != 0) {
-                continuousSfxFlag = false;
-                continuousSfxId = admission.continuousSfxId();
-                contSfxLoopCnt = admission.trackCount();
-            }
+        removeFullyDisplacedSequencers(admission);
+        if (killedPsg3Track) {
+            writeRawPsg(0xDF);
+            writeRawPsg(0xFF);
+        }
+
+        sequencers.add(sequencer);
+        sfxSequencers.add(sequencer);
+        restoreMusicDacData();
+        if (admission.continuousSfxId() != 0) {
+            continuousSfxFlag = false;
+            continuousSfxId = admission.continuousSfxId();
+            contSfxLoopCnt = admission.trackCount();
         }
     }
 
@@ -350,27 +364,12 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         }
     }
 
-    private static void recordDisplacedTrack(
-            SmpsSequencer[] owners,
+    private static boolean isAlreadyDisplaced(
             SmpsSequencer.Track[] tracks,
-            int channel,
-            SmpsSequencer owner,
+            int limit,
             SmpsSequencer.Track track) {
-        if (owners[channel] != null) {
-            throw new IllegalStateException(
-                    "multiple active SFX tracks own one hardware channel");
-        }
-        owners[channel] = owner;
-        tracks[channel] = track;
-    }
-
-    private static boolean usesTrack(
-            SmpsSequencer sequencer,
-            SmpsSequencer.TrackType type,
-            int channel) {
-        for (int index = 0; index < sequencer.trackCount(); index++) {
-            SmpsSequencer.Track track = sequencer.trackAt(index);
-            if (track.type == type && track.channelId == channel) {
+        for (int index = 0; index < limit; index++) {
+            if (tracks[index] == track) {
                 return true;
             }
         }
@@ -379,22 +378,11 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
 
     private void removeFullyDisplacedSequencers(
             PreparedSfxAdmission admission) {
-        for (int channel = 0;
-                channel < admission.displacedFmOwners.length; channel++) {
-            SmpsSequencer owner = admission.displacedFmOwners[channel];
+        for (int action = 0;
+                action < admission.displacedOwners.length; action++) {
+            SmpsSequencer owner = admission.displacedOwners[action];
             if (owner != null
-                    && firstDisplacedOwner(admission, owner, channel, true)
-                    && allTracksInactive(owner)) {
-                sequencers.remove(owner);
-                releaseLocks(owner);
-                sfxSequencers.remove(owner);
-            }
-        }
-        for (int channel = 0;
-                channel < admission.displacedPsgOwners.length; channel++) {
-            SmpsSequencer owner = admission.displacedPsgOwners[channel];
-            if (owner != null
-                    && firstDisplacedOwner(admission, owner, channel, false)
+                    && lastDisplacedAction(admission, owner, action)
                     && allTracksInactive(owner)) {
                 sequencers.remove(owner);
                 releaseLocks(owner);
@@ -403,22 +391,14 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         }
     }
 
-    private static boolean firstDisplacedOwner(
+    private static boolean lastDisplacedAction(
             PreparedSfxAdmission admission,
             SmpsSequencer owner,
-            int channel,
-            boolean fm) {
-        int fmLimit = fm ? channel : admission.displacedFmOwners.length;
-        for (int index = 0; index < fmLimit; index++) {
-            if (admission.displacedFmOwners[index] == owner) {
+            int action) {
+        for (int index = action + 1;
+                index < admission.displacedOwners.length; index++) {
+            if (admission.displacedOwners[index] == owner) {
                 return false;
-            }
-        }
-        if (!fm) {
-            for (int index = 0; index < channel; index++) {
-                if (admission.displacedPsgOwners[index] == owner) {
-                    return false;
-                }
             }
         }
         return true;

@@ -142,6 +142,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     public static final class LiveCommandMutationToken {
         private final SmpsSequencer owner;
         private final SmpsSequencerSnapshot snapshot;
+        private final Track[] tracks;
         private final AbstractSmpsData fallbackVoiceData;
         private final SmpsSourceDescriptor sourceDescriptor;
         private final SourceDescriptorTrust sourceDescriptorTrust;
@@ -150,12 +151,14 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         private LiveCommandMutationToken(
                 SmpsSequencer owner,
                 SmpsSequencerSnapshot snapshot,
+                Track[] tracks,
                 AbstractSmpsData fallbackVoiceData,
                 SmpsSourceDescriptor sourceDescriptor,
                 SourceDescriptorTrust sourceDescriptorTrust,
                 Runnable onFadeComplete) {
             this.owner = owner;
             this.snapshot = snapshot;
+            this.tracks = tracks;
             this.fallbackVoiceData = fallbackVoiceData;
             this.sourceDescriptor = sourceDescriptor;
             this.sourceDescriptorTrust = sourceDescriptorTrust;
@@ -165,7 +168,8 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
 
     public LiveCommandMutationToken captureLiveCommandMutation() {
         return new LiveCommandMutationToken(
-                this, captureSnapshot(), fallbackVoiceData,
+                this, captureSnapshot(), tracks.toArray(Track[]::new),
+                fallbackVoiceData,
                 sourceDescriptor, sourceDescriptorTrust, onFadeComplete);
     }
 
@@ -177,6 +181,16 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                     "live command token belongs to another sequencer");
         }
         restoreSnapshot(token.snapshot);
+        if (token.tracks.length != token.snapshot.tracks().size()) {
+            throw new IllegalStateException(
+                    "live rollback track count changed");
+        }
+        tracks.clear();
+        for (int index = 0; index < token.tracks.length; index++) {
+            Track track = token.tracks[index];
+            restoreTrack(track, token.snapshot.tracks().get(index));
+            tracks.add(track);
+        }
         fallbackVoiceData = token.fallbackVoiceData;
         fallbackVoiceView = token.fallbackVoiceData;
         sourceDescriptor = token.sourceDescriptor;
@@ -3143,6 +3157,15 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
 
     private static Track restoreTrack(SmpsTrackSnapshot snapshot) {
         Track track = new Track(snapshot.pos(), snapshot.type(), snapshot.channelId());
+        restoreTrack(track, snapshot);
+        return track;
+    }
+
+    private static void restoreTrack(
+            Track track, SmpsTrackSnapshot snapshot) {
+        track.pos = snapshot.pos();
+        track.type = snapshot.type();
+        track.channelId = snapshot.channelId();
         track.duration = snapshot.duration();
         track.note = snapshot.note();
         track.active = snapshot.active();
@@ -3216,7 +3239,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         track.modEnvStepInEffect = snapshot.modEnvStepInEffect();
         track.modEnvStepChanged = snapshot.modEnvStepChanged();
         track.modEnvStepDelta = snapshot.modEnvStepDelta();
-        return track;
     }
 
     private static byte[] copy(byte[] values) {
