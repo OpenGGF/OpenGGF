@@ -72183,3 +72183,73 @@ Base a3fd49166 (post-merge, definitive frontier 769 / 11 failures / 24 errors, 1
   `move.w #1,anim(a1)`. **`anim` and `prev_anim` are adjacent bytes**, so that writes anim=$00 /
   prev_anim=$01: the hurt byte is erased and the walk script restarted. That is precisely what
   the `AizSpikedLog` hook fakes. FIFTH load-bearing pair; identified but not landed.
+
+## 2026-08-10 — round thirty-one: the EHZ chain's segment 1 closed, CNZ's gradual worker, and three disproved briefs
+
+Full profile at 59e59c8fe + both fixes: **769 tests, 12 failures / 4 errors, 10 red classes**
+(from 11 classes / 24 errors). Green: `TestS3kCnzTraceReplay`,
+`TestAbstractTraceReplayDynamicArtTerminal`. **Errors 24 -> 4.**
+
+- **EHZ chain segment 1: 23 errors -> 0 over 5733 comparisons — and NOT via the routine-0 pair.**
+  ROM `Pal_FadeToWhite`'s first act is `move.b #VintID_Fade / bsr.w WaitForVint`, and only THEN
+  `.UpdateAllColours` (s2.asm:3571-3582). So the V-int on which the loop decided to fade was
+  already spent by the `RunObjects` pass that set `SS_Check_Rings_flag` (:6714-6725). The engine
+  started the fade inside a frame's logic and then still ran `FadeManager.update()` later in that
+  same frame (UiRenderPipeline.java:108), leaving the fade window one V-int short.
+  `GameLoopPlcLifecycle.startToWhite` now defers the first step to the next V-int. No constant;
+  the rule is `Pal_FadeToWhite`'s wait-before-first-step ordering, identical in S1/S2/S3K.
+  Chain frontier moves from segment 1 to segment 2 (`seg2_ehz1` starpost_special exit boundary
+  never observed). `TestS1GhzMazeRoundTripChain` also improved: run_tail delta **36 -> 35**.
+- **THE ROUTINE-0 "PAIR" IS NOT A PAIR, and I called it one for four rounds.** Disproved with
+  two measurements: (a) suppressing the deferred-pass execution of freshly streamed slots
+  reproduces the known `combined_rings` collapse exactly (3386/18002/25103/16382/22883/29057/
+  35203/3200 errors from frames 811/797/682/644/737/692/744/809); (b) removing ONLY the emerald's
+  inline routine-0 leaves all eight standalone stages with exactly 1 error each
+  ("finished_transition_frame ... actual=never"). So the emerald's exit pass is already correct
+  and the exit-flag timing was never the chain's problem.
+- **CNZ: the camera was never misclamped.** At the divergent frames `Camera_X_pos` is pinned
+  exactly to `Camera_max_X_pos` (`MoveCameraX`, sonic3k.asm:38356-38433 wants +$18/frame and
+  saturates on the bound), so `camera_x` is a direct read-out of the bound. The recorded sequence
+  0260,0260,0260,0261,0262,0263,0264,0266,0268,026A,026C,026F is exactly
+  `0x260 + cumsum(floor(k/4))` — precisely what `Obj_IncLevEndXGradual` produces (16.16
+  accumulator in `$30(a0)`, add `$4000`, swap, add the whole swapped high word onto the
+  already-updated bound each pass). Both trace failures land on n=4, the first pass with a
+  non-zero high word, and the third red class `TestS3kCnzAct1EventFlow` fails with expected 608 /
+  actual 609 — literally 0x0260 vs 0x0261 — in a unit test with no camera involved. Same defect
+  three times.
+  **Root cause: `updatePendingCnzAct2LevelSizeChange` armed the workers on the very dispatch it
+  first observed `End_of_level_flag`.** In ROM that flag is published by `Obj_TitleCardWait2`
+  from its own slot inside `Process_Sprites`, while the retained `Obj_EndSignControl` slot is
+  walked AHEAD of it, so its `tst.b (End_of_level_flag) / beq` poll for the publishing pass has
+  already taken the exit and `DoStart` is first satisfied on the FOLLOWING pass.
+  **This reverses round 29's own comment**, which asserted "the ROM delay is therefore zero
+  dispatches -- do not reintroduce". That was wrong, and the slot relationship is already
+  documented for the preloaded-act path at Sonic3kTitleCardManager.java:1076-1081.
+- **The "KosM readiness cluster" I briefed does not exist.** Three unrelated causes:
+  (a) `AizCompleteRun` + `ReplayReferenceClosureIntegration` are a SUBMISSION-timing bug from a
+  self-declared fitted budget — `Sonic3kAIZEvents.java:405-418` comments "reload at trace frame
+  5496, rtn $00->$04 at 5504 (8 ticks), rtn $04->$08 + maxX release at 5542 (38 ticks)", i.e.
+  constants measured off a fixture, one tick too long. A diagnostic 38 -> 37 takes both from 8
+  errors to 1, proving the whole class is that tick, but 37 is as fitted as 38 and was correctly
+  NOT landed. The real gate: `AIZ2BGE_FireRedraw` advances on `Draw_PlaneVertBottomUp` returning
+  negative (sonic3k.asm:105036-105050) and `AIZ2BGE_WaitFire` releases on
+  `cmpi.w #$310,(Camera_Y_pos_BG_copy)` (:105072) — model `AIZ1_FireRise`'s ramp, not a frame
+  count. The surviving 8th error is the one genuine readiness item: frame 6349,
+  `queue.s3k_kos_direct.prepared` expected=false actual=true, because ROM `Process_Kos_Queue`
+  (s3.asm:2973-3086) decompresses incrementally and resumes via
+  `Set_Kos_Bookmark`/`Restore_Kos_Bookmark` (:2949-2962, :3090-3095), so a blob stays
+  un-"prepared" across frames while the engine prepares in one step.
+  (b) `MhzCompleteRun` is a MISSING GAMEPLAY SUBMISSION: `ArtKosM_BadnikExplosion` (fingerprint
+  3c96d8b9) is recorded THREE times (raw frames 1670, 7221, 7986) and the engine produces it
+  ONCE, because a single SS-entry-ring instance exists for the whole run (subtype 0x81 at
+  (448,1664), live 1269, retired 1668 — matching the ROM's FIRST occurrence only). The frontier
+  is SS-entry-ring lifetime/reload, not the Kos queues.
+  (c) `AizPrefixClosureContract` throws from `GameplayModeContext.recordedCompletionAuthority()`
+  (:636-640) and touches no Kos queue at all.
+  Also disproved: the in-level title-card `enemyKosArmOnNextRuntimePass` +1 deferral is not
+  involved — removing it is byte-identical, and the only `onInLevelTitleCardCompleted` events in
+  the AIZ complete run fire at frames 1238 and 12000, nowhere near 6345.
+- **Live CLAUDE.md coordinate violation found:**
+  `Sonic3kSSEntryRingObjectInstance.checkDisplayOffscreenRetire` (:233-242) feeds `getX()/getY()`
+  (top-left render bounds) into ROM `x_pos`/`y_pos` band tests from `loc_61928`; those must be
+  `getCentreX()/getCentreY()`.

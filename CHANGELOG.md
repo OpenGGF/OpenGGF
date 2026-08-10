@@ -3,6 +3,14 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: a fade to white begins on the next vertical interrupt rather than inside the frame that
+  requested it, matching the ROM, whose fade routine waits for a vertical interrupt before its
+  first colour step. The engine started the fade mid-frame and then still advanced it later in
+  that same frame, so every fade ran one interrupt short.
+- Fix: Chemical/Carnival Night's act-two gradual level-size workers start on the dispatch after
+  the end-of-level flag is observed, not the same one. The ROM publishes that flag from an object
+  slot walked after the one that polls it, so the poll for the publishing pass has already taken
+  its exit.
 - Testing: two trace-harness tests built their derived fixtures incorrectly and were rejecting
   themselves. One appended a synthetic per-frame art-state stream on top of a recording that
   already carried a real one, so frame zero legitimately held two states; the other copied a
