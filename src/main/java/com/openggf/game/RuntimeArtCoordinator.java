@@ -33,6 +33,14 @@ public interface RuntimeArtCoordinator extends QueueDiagnosticsProvider {
     default void deferProductionSubmissionForHeldLoopTail() {
     }
 
+    /**
+     * Declares that the producer running right now publishes its module-queue
+     * parents after this iteration's module state step, so their first direct
+     * child belongs to the following loop.
+     */
+    default void deferProductionFirstChildForLateProducer() {
+    }
+
     /** Defers only the child handoff owned by a closure consuming a held tail. */
     default void deferProductionSubmissionForHeldLoopTailClosure() {
     }

@@ -3175,9 +3175,9 @@ public class Engine {
 		if (chord == null) {
 			return false;
 		}
-		return detector.update(chord, input.isKeyDown(chord.keyCode()),
-				input.isShiftDown(), input.isControlDown(),
-				input.isAltDown(), input.isSuperDown());
+        return detector.update(chord, input.isPhysicalKeyDown(chord.keyCode()),
+                input.isPhysicalShiftDown(), input.isPhysicalControlDown(),
+                input.isPhysicalAltDown(), input.isPhysicalSuperDown());
 	}
 
 	private void handleLiveCaptureShortcut() {

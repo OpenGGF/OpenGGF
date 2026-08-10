@@ -41,6 +41,7 @@ public final class S3kKosModuleQueue {
             new HashMap<>();
     private final Set<HardwareWorkHandle> freshLevelHandoffHandles = new HashSet<>();
     private boolean deferChildSubmissionForHeldLoopTail;
+    private boolean deferFirstChildForLateProducer;
     private boolean carryDeferredChildSubmissionForHeldLoopTail;
     private boolean heldLoopTailClosure;
     private boolean deferredChildSubmissionForNextLoop;
@@ -120,6 +121,21 @@ public final class S3kKosModuleQueue {
 
     /** Defers only the next child publication; a ready child may still retire. */
     public void deferChildSubmissionForHeldLoopTail() {
+        deferChildSubmissionForHeldLoopTail = true;
+    }
+
+    /**
+     * Declares that the parents queued by the current producer were published
+     * after this iteration's {@code Process_Kos_Module_Queue} had already run,
+     * so their first module reaches the direct FIFO on the following loop.
+     *
+     * <p>Used by the locked title-card owner, whose {@code LoadEnemyArt} sits
+     * in {@code Obj_TitleCardWait2}'s dispatch
+     * ({@code docs/skdisasm/sonic3k.asm:62295-62312}), not in the level loop's
+     * {@code ScreenEvents} pass ahead of the module step (7898/7908).
+     */
+    public void deferFirstChildForLateProducer() {
+        deferFirstChildForLateProducer = true;
         deferChildSubmissionForHeldLoopTail = true;
     }
 
@@ -311,6 +327,9 @@ public final class S3kKosModuleQueue {
         boolean deferChildSubmission = deferChildSubmissionForHeldLoopTail
                 && !publishDeferredChild;
         deferChildSubmissionForHeldLoopTail = false;
+        boolean deferFirstChildForLateProducer =
+                this.deferFirstChildForLateProducer && !publishDeferredChild;
+        this.deferFirstChildForLateProducer = false;
         for (HardwareWorkHandle handle : timing.pendingHandles()) {
             if (handle.kind() != HardwareWorkKind.KOS_MODULE_QUEUE
                     || timing.isReady(handle)) {
@@ -333,10 +352,26 @@ public final class S3kKosModuleQueue {
                     && directQueue.isReady(preparation.activeChild)) {
                 return;
             }
-            // Queue_Kos_Module's parent remains active between modules. A lag
-            // closure may hold a newly shifted parent's first publication,
-            // but it cannot send an already-active parent back through Init.
-            boolean deferFirstChild = deferChildSubmission
+            // Process_Kos_Module_Queue's bit-7-clear branch has exactly two
+            // gates: Kos_modules_left must be non-zero, and
+            // Kos_decomp_queue_count must be below 4
+            // (docs/skdisasm/sonic3k.asm:2734-2741). It then calls Queue_Kos
+            // for the current module unconditionally. Nothing in that branch
+            // consults the frame counter, so a held loop tail defers only
+            // *when* an already-submitted child becomes ready — the
+            // decompressor's own progress — and can never skip the state step
+            // that submits a head archive's first module. A mid-level
+            // LoadEnemyArt (sonic3k.asm:64281-64313) runs in ScreenEvents
+            // (7898) ahead of the same iteration's Process_Kos_Module_Queue
+            // (7908), so its first PLCKosM entry is in the direct FIFO by the
+            // tail of the admission row itself.
+            //
+            // The one producer whose first child genuinely belongs to the
+            // following loop is the locked title-card owner, whose
+            // LoadEnemyArt runs in Obj_TitleCardWait2's dispatch
+            // (sonic3k.asm:62295-62312) after that iteration's module step has
+            // already executed. That ordering is declared by the producer.
+            boolean deferFirstChild = deferFirstChildForLateProducer
                     && preparation.completedModules == 0;
             if (preparation.activeChild == null && deferFirstChild) {
                 if (heldLoopTailClosure) {

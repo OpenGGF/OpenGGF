@@ -39,7 +39,7 @@ class TestPlcVBlankOrdering {
         org.mockito.Mockito.doAnswer(ignored -> {
             calls.add("objects");
             return null;
-        }).when(level).updateObjectPositionsWithoutTouches();
+        }).when(level).updateObjectPositionsWithoutTouches(false);
 
         LevelFrameTestStep.execute(context(module, calls), level, mock(Camera.class), () -> calls.add("physics"));
 

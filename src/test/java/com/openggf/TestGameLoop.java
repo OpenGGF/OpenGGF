@@ -316,25 +316,30 @@ public class TestGameLoop {
             throws Exception {
         String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
         int classification = source.indexOf(
-                "playbackDebugManager.shouldSkipCurrentGameplayTick();");
+                "if (TraceSessionLauncher.admitsRunLogicalGameplayInput(currentGameMode))");
         int timers = source.indexOf("timerManager.update();", classification);
-        String prefix = source.substring(Math.max(0, classification - 180), classification);
+        int skipDecision = source.indexOf(
+                "playbackDebugManager.shouldSkipCurrentGameplayTick()", classification);
 
-        assertTrue(prefix.contains("currentGameMode == GameMode.LEVEL"));
-        assertTrue(prefix.contains("currentGameMode == GameMode.BONUS_STAGE"),
-                "bonus-stage trace rows must classify suppression before generic timers");
-        assertTrue(classification >= 0 && timers > classification,
+        assertTrue(classification >= 0 && skipDecision > classification,
+                "run-mode suppression must use the shared LEVEL/BONUS_STAGE admission predicate");
+        assertTrue(timers > skipDecision,
                 "trace suppression must be known before TimerManager advances");
     }
 
     @Test
     public void userRecordingPlaybackPolicyObservesAppliedMovieFrameBeforeCursorAdvance() throws Exception {
-        String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
+        String source = Files.readString(
+                Path.of("src/main/java/com/openggf/LevelIterationAdmissionController.java"));
+        int method = source.indexOf("void advanceTraceRunPhysicalRow(");
+        int capture = source.indexOf("int appliedFrame = playback.getCursorFrame();", method);
+        int advance = source.indexOf("playback.onLevelFrameAdvanced();", capture);
+        int observe = source.indexOf("recordingControls.afterPlaybackFrame(", advance);
+        int observedFrame = source.indexOf("appliedFrame, false,", observe);
 
-        assertTrue(source.contains("int appliedPlaybackFrame = playbackDebugManager.getCursorFrame();"),
+        assertTrue(method >= 0 && capture > method && advance > capture,
                 "GameLoop must capture the BK2 frame before advancing the playback cursor");
-        assertTrue(source.contains("userRecordingControls.afterPlaybackFrame(\n" +
-                        "                    appliedPlaybackFrame,"),
+        assertTrue(observe > advance && observedFrame > observe,
                 "Target/completion policy must classify the frame that was just applied");
     }
 

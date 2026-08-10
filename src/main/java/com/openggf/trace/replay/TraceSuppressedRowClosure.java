@@ -95,13 +95,13 @@ public final class TraceSuppressedRowClosure {
                         }
                         if (titleCardProvider
                                 .ownsRetainedResultsHeldLevelCounter()
-                                && context.gameModule().getObjectArtProvider() != null) {
+                                && context.gameModule().getObjectArtProvider()
+                                instanceof com.openggf.game.internal.RuntimeObjectArtQueue runtimeQueue) {
                             // Retained Obj_TitleCardWait2 reaches LoadEnemyArt
                             // during this held object dispatch. Pump the
                             // production ROM-backed provider before the loop
                             // tail services the admitted queue work.
-                            context.gameModule().getObjectArtProvider()
-                                    .processRuntimeArtQueue();
+                            runtimeQueue.processRuntimeArtQueue();
                         }
                     });
             if (titleCardProvider.ownsInLevelPlayerControlLock()) {

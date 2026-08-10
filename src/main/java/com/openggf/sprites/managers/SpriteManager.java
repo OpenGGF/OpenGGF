@@ -421,7 +421,8 @@ public class SpriteManager implements PlayableSstDispatcher {
 		if (handler == null) {
 			return;
 		}
-		boolean suppressInput = inputSuppressed || playbackInputSuppressed;
+		boolean suppressInput = inputSuppressed
+				|| (playbackInputSuppressed && !handler.hasLogicalOverride());
 		PlayerInputState raw = handler.logical().player1();
 		publishedInputHandler = handler;
 		publishedRawPlayerOne = raw;
@@ -444,10 +445,12 @@ public class SpriteManager implements PlayableSstDispatcher {
 
 	public void update(InputHandler handler) {
 		frameCounter++;
-		boolean suppressInput = inputSuppressed || playbackInputSuppressed;
+		boolean suppressInput = inputSuppressed
+				|| (playbackInputSuppressed && !handler.hasLogicalOverride());
 		PlayerInputState p1 = effectivePlayerOneForUpdate(handler);
 		int p1Held = !suppressInput ? p1.heldMask() : 0;
 		int p1Pressed = !suppressInput ? p1.pressedMask() : 0;
+		int p1ActionPressedMask = !suppressInput ? p1.actionPressedMask() : 0;
 		// Controller 2 input (Tails CPU manual override / sidekick respawn).
 		// ROM convention:
 		//   Ctrl_2_held    = bits currently pressed THIS frame
@@ -503,7 +506,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 						frameCounter,
 						currentObjectDispatchOrdinal()),
 				new InitialPlayableInput(
-						p1Held, p1Pressed, p1Pressed, p2Held, p2Logical, true),
+						p1Held, p1Pressed, p1ActionPressedMask, p2Held, p2Logical, true),
 				testButton,
 				speedUp,
 				slowDown,
@@ -573,6 +576,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 		boolean left = (p1Held & AbstractPlayableSprite.INPUT_LEFT) != 0;
 		boolean right = (p1Held & AbstractPlayableSprite.INPUT_RIGHT) != 0;
 		boolean jump = (p1Held & AbstractPlayableSprite.INPUT_JUMP) != 0;
+		boolean rawJumpPress = (input.p1Pressed() & AbstractPlayableSprite.INPUT_JUMP) != 0;
 		LevelManager levelManager = getLevelManager();
 		int cadence = context.epoch().nativeLevelEpoch();
 		try {
@@ -644,7 +648,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 						effectiveTest = false;
 
 						publishInputState(playable,
-								aiUp, aiDown, aiLeft, aiRight, aiJump,
+								aiUp, aiDown, aiLeft, aiRight, aiJump, aiJumpPress,
 								effectiveUp, effectiveDown, effectiveLeft, effectiveRight, effectiveJump,
 								true, aiJumpPress);
 
@@ -679,6 +683,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 						boolean forcedUp = playable.isForcedInputActive(AbstractPlayableSprite.INPUT_UP);
 						boolean forcedDown = playable.isForcedInputActive(AbstractPlayableSprite.INPUT_DOWN);
 						boolean forcedJump = playable.isForcedInputActive(AbstractPlayableSprite.INPUT_JUMP);
+						boolean recordedLogicalJumpPress = false;
 						if (context.useEffectiveRuntimeInput()) {
 							effectiveRight = (!controlLocked && right) || forcedRight;
 							effectiveLeft = ((!controlLocked && left) || forcedLeft) && !forcedRight;
@@ -686,6 +691,8 @@ public class SpriteManager implements PlayableSstDispatcher {
 							effectiveDown = (!controlLocked && down) || forcedDown;
 							effectiveJump = (!controlLocked && jump) || forcedJump;
 							effectiveTest = !controlLocked && context.testButton();
+							recordedLogicalJumpPress = !controlLocked
+									&& input.p1ActionPressedMask() != 0;
 						} else {
 							effectiveRight = false;
 							effectiveLeft = false;
@@ -698,10 +705,15 @@ public class SpriteManager implements PlayableSstDispatcher {
 						// Store RAW input state for objects (like flippers) that need to query
 						// button state even when control is locked. This matches ROM behavior
 						// where obj_control locks movement but objects can still read button state.
+						boolean logicalJumpPress = playable.isForcedJumpPress()
+								|| recordedLogicalJumpPress;
 						publishInputState(playable,
-								up, down, left, right, jump,
+								up, down, left, right, jump, rawJumpPress,
 								effectiveUp, effectiveDown, effectiveLeft, effectiveRight, effectiveJump,
-								false, false);
+								true, logicalJumpPress);
+						if (recordedLogicalJumpPress) {
+							playable.setForcedJumpPress(true);
+						}
 					}
 
 					tickPlayablePhysics(playable, effectiveUp, effectiveDown, effectiveLeft,
@@ -809,6 +821,8 @@ public class SpriteManager implements PlayableSstDispatcher {
 		boolean rawLeft = (held & AbstractPlayableSprite.INPUT_LEFT) != 0;
 		boolean rawRight = (held & AbstractPlayableSprite.INPUT_RIGHT) != 0;
 		boolean rawJump = (held & AbstractPlayableSprite.INPUT_JUMP) != 0;
+		boolean rawJumpPress = ((playable.isCpuControlled() ? input.p2Pressed() : input.p1Pressed())
+				& AbstractPlayableSprite.INPUT_JUMP) != 0;
 		boolean controlLocked = playable.isControlLocked();
 		boolean forcedRight = playable.isForcedInputActive(AbstractPlayableSprite.INPUT_RIGHT)
 				|| playable.isForceInputRight();
@@ -822,7 +836,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 		boolean effectiveDown = (!controlLocked && rawDown) || forcedDown;
 		boolean effectiveJump = (!controlLocked && rawJump) || forcedJump;
 		publishInputState(playable,
-				rawUp, rawDown, rawLeft, rawRight, rawJump,
+				rawUp, rawDown, rawLeft, rawRight, rawJump, rawJumpPress,
 				effectiveUp, effectiveDown, effectiveLeft, effectiveRight, effectiveJump,
 				false, false);
 	}
@@ -975,7 +989,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 					activePlayableUpdate = mainPlayable;
 					mainPlayable.applyQueuedControlStateForFrameStart();
 					publishInputState(mainPlayable,
-							false, false, false, false, false,
+							false, false, false, false, false, false,
 							false, false, false, false, false,
 							false, false);
 					tickPlayablePhysics(mainPlayable,
@@ -1084,7 +1098,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 							boolean effectiveJump = aiJump || forcedJump;
 
 							publishInputState(playable,
-									aiUp, aiDown, aiLeft, aiRight, aiJump,
+									aiUp, aiDown, aiLeft, aiRight, aiJump, aiJumpPress,
 									effectiveUp, effectiveDown, effectiveLeft, effectiveRight, effectiveJump,
 									true, aiJumpPress);
 							if (skipCpuPhysicsThisFrame) {
@@ -1185,7 +1199,8 @@ public class SpriteManager implements PlayableSstDispatcher {
 	}
 
 	private static void publishInputState(AbstractPlayableSprite playable,
-			boolean rawUp, boolean rawDown, boolean rawLeft, boolean rawRight, boolean rawJump,
+			boolean rawUp, boolean rawDown, boolean rawLeft, boolean rawRight,
+			boolean rawJump, boolean rawJumpPress,
 			boolean logicalUp, boolean logicalDown, boolean logicalLeft, boolean logicalRight, boolean logicalJump,
 			boolean explicitLogicalJumpPress, boolean logicalJumpPress) {
 		// Scripted/demo input is ROM Ctrl_*_logical data, not a side channel.
@@ -1197,7 +1212,9 @@ public class SpriteManager implements PlayableSstDispatcher {
 		logicalRight |= playable.isForcedInputActive(AbstractPlayableSprite.INPUT_RIGHT);
 		logicalJump |= playable.isForcedInputActive(AbstractPlayableSprite.INPUT_JUMP);
 		logicalJumpPress |= playable.isForcedInputActive(AbstractPlayableSprite.INPUT_JUMP);
-		playable.setJumpInputPressed(rawJump || playable.isForcedInputActive(AbstractPlayableSprite.INPUT_JUMP));
+		playable.setJumpInputPressed(
+				rawJump || playable.isForcedInputActive(AbstractPlayableSprite.INPUT_JUMP),
+				rawJumpPress || playable.isForcedInputActive(AbstractPlayableSprite.INPUT_JUMP));
 		playable.setDirectionalInputPressed(rawUp, rawDown, rawLeft, rawRight);
 		if (explicitLogicalJumpPress) {
 			playable.setLogicalInputState(logicalUp, logicalDown, logicalLeft, logicalRight, logicalJump,

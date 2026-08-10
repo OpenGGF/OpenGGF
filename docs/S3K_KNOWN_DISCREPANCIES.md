@@ -1306,45 +1306,47 @@ collapses to a single shared sheet with no visible difference. Emulating the DMA
 would mean modelling `ArtTile_DashDust` as mutable VRAM shared with the dash
 dust, which buys nothing the tile rebase doesn't already give us.
 
-## AIZ2 mid-level enemy-art admission: module-queue parent ownership at frame 5542
+## AIZ2 mid-level enemy-art admission (RESOLVED 2026-08-10)
 
-**Status:** open, tracked. Not intentional — a modelling gap with a known shape.
+**Status:** RESOLVED. This entry is retained because its original text stated a ROM claim
+that was WRONG, and the correction matters more than the entry did.
 
-`TestS3kAizTraceReplay` and `TestS3kAizCompleteRunTraceReplay` diverge on a single
-admission frame (raw 5542) across three fields of `queue.s3k_kos_direct`: `busy`
-(expected `true`, actual `false`), `active_source` (expected `0x367DCE`, actual `-1`)
-and `active_destination` (expected `-12288`, actual `-1`).
+### What this entry originally claimed, and why it was wrong
 
-### What the ROM does
+It said the recorded ROM had the direct decompression queue already working on a module
+inside `ArtKosM_AIZ_Bloominator` (0x367DCA) on the admission frame, implying an older
+parent owned that iteration's module step and that the engine failed to model parent
+ownership across a mid-level admission.
 
-`AIZ2BGE_WaitFire`'s completed-redraw branch runs the camera-clamp release and
-`LoadEnemyArt` in one pass (`skdisasm/sonic3k.asm:105084-105096`), and
-`LoadEnemyArt`'s `Queue_Kos_Module` calls (`:64281-64313`) land during the event
-pass, ahead of that iteration's `Process_Kos_Module_Queue`.
+**None of that is in the fixtures.** Decoding the recorded `load_queue_state` rows
+directly gives `active_source = 0x36800E` on both admission frames (5542 in
+`aiz1_to_hcz_fullrun`, 6345 in `aiz_completerun`). That is `ArtKosM_AIZ_MonkeyDude + 2`
+— module 0 of the FIRST `PLCKosM_AIZ` entry, in plain PLC order
+(`skdisasm/sonic3k.asm:64349-64351`). The module FIFO was **empty** when `LoadEnemyArt`
+ran; there was no older parent. Bloominator's module 0 is 0x367DCC and it is published
+four rows LATER (5546 / 6349), after MonkeyDude retires. The value 0x367DCE appears
+nowhere in either fixture.
 
-On the recorded frame the direct decompression queue is **already working on a
-module whose source is inside `ArtKosM_AIZ_Bloominator` (0x367DCA)** — even though
-`PLCKosM_AIZ` lists MonkeyDude first (`:64348-64351`). So the module FIFO was not
-empty when `LoadEnemyArt` ran, and an older parent owned that iteration's single
-module state step (`:2724-2790`).
+### The actual defect, now fixed
 
-### Our implementation
+The module queue's held-loop-tail deferral was suppressing the **submission** of a head
+archive's first module, not merely its readiness. Instrumented at the admission row: the
+AIZ2 `LoadEnemyArt` batch is submitted correctly during the event pass (3 parents,
+capacity available), then the same row's POST_OBJECTS step ran with the held-tail flag
+set, took the `activeChild == null && deferFirstChild` early return, and published
+nothing. The next POST_OBJECTS — the held-tail closure — submitted 0x36800E. So the child
+arrived one loop late and the row's snapshot showed an idle direct FIFO.
 
-The engine publishes no direct child on that frame at all. It does not model which
-parent owns a frame's module state step across a mid-level admission when the FIFO
-is already non-empty.
+That deferral has no ROM basis for a level-loop producer. The two producers that set the
+flag are now split: the generic held-loop-tail arm defers only readiness and visibility,
+as its own documentation always said it should, while the locked title-card owner — whose
+`LoadEnemyArt` genuinely runs after that iteration's module step — declares its late
+ordering explicitly. The fix removes a suppression rather than adding a compensator, so
+it holds for any recording.
 
-### Why it is recorded rather than patched
+### Residual, still open
 
-This surfaced when the AIZ2 art submission stopped being gated on a replay-only
-signal (a hard rule 4 breach: in a plain run the three AIZ2 badnik archives were
-never queued at all). Closing the residual with another timing-shaped compensator
-would reintroduce the same class of defect the ungating removed. The correct fix is
-to model module-queue parent ownership across a mid-level admission, which is
-separable work.
-
-**Related residual, not yet addressed:** `AIZ2_WAIT_FIRE_REDRAW_FRAMES = 38` and
-`AIZ2_FIRE_REDRAW_FRAMES = 8` are documented as coming from a fixture regen
-("trace frame 5496/5504/5542"), i.e. they are fixture-measured rather than derived
-from the ROM, which is what makes the admission frame fixture-relative in the first
-place. That is a hard rule 3 exposure inherited with the branch.
+`AIZ2_WAIT_FIRE_REDRAW_FRAMES = 38` and `AIZ2_FIRE_REDRAW_FRAMES = 8` remain documented
+in-code as coming from a fixture regen, i.e. fixture-measured rather than ROM-derived.
+That is a hard rule 3 exposure inherited with the branch and is what makes the admission
+frame fixture-relative in the first place.

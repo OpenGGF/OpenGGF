@@ -39,6 +39,11 @@ class TestS3kResultsKosQueueAndChildren {
         S3kResultsScreenObjectInstance root = createResults();
         GameServices.level().getObjectManager().addDynamicObject(root);
 
+        assertEquals(0, com.openggf.game.GameServices.hardwareTiming()
+                        .incompleteCount(com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE),
+                "allocation alone must not execute Obj_LevelResultsInit");
+        root.update(0, fixture.sprite());
+
         // The results screen's three KosM loads are scheduled through the
         // hardware-timing service, so that is where they are observable; the
         // pre-enqueued archive above stays on the gameplay queue and is what makes

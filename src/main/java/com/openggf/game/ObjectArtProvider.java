@@ -24,14 +24,6 @@ import java.util.List;
 @com.openggf.game.ModApi
 public interface ObjectArtProvider {
 
-    /** Processes one frame of provider-owned runtime art work. */
-    default void processRuntimeArtQueue() {
-    }
-
-    /** Completes work submitted by an earlier object pass before objects poll readiness. */
-    default void processRuntimeArtQueueBeforeObjects() {
-    }
-
     /**
      * Opens any runtime-art admission held behind level-presentation work.
      *

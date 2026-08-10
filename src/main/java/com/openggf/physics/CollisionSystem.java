@@ -934,6 +934,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
                     }
                 }
                 SensorResult[] ceilingResult = terrainProbes(sprite, sprite.getCeilingSensors(), "ceiling");
+                applyPairedAngleWrites(ceilingResult);
                 boolean ceilingHit = doCeilingCollisionInternal(sprite, ceilingResult);
                 if (!ceilingHit && (forceFloorCheck || sprite.getYSpeed() >= 0)) {
                     // S3K Tails_DoLevelCollision skips sub_11FD6 entirely while
@@ -949,6 +950,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
             case 0x80 -> {
                 doWallCheckBoth(sprite);
                 SensorResult[] ceilingResult = terrainProbes(sprite, sprite.getCeilingSensors(), "ceiling");
+                applyPairedAngleWrites(ceilingResult);
                 doCeilingCollision(sprite, ceilingResult);
             }
             case 0xC0 -> {
@@ -958,6 +960,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
                     }
                 }
                 SensorResult[] ceilingResult = terrainProbes(sprite, sprite.getCeilingSensors(), "ceiling");
+                applyPairedAngleWrites(ceilingResult);
                 boolean ceilingHit = doCeilingCollisionInternal(sprite, ceilingResult);
                 if (!ceilingHit && (forceFloorCheck || sprite.getYSpeed() >= 0)) {
                     // Mirrored right-moving branch (sonic3k.asm:29095-29103).

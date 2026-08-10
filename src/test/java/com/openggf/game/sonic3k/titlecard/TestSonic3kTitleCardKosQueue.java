@@ -496,19 +496,21 @@ class TestSonic3kTitleCardKosQueue {
 
     private static void setPendingFreshLevelTransitionBoundary(boolean pending)
             throws Exception {
-        Field field = GameServices.level().getClass()
-                .getDeclaredField("pendingFreshLevelTransitionBoundary");
+        Field controllerField = GameServices.level().getClass()
+                .getDeclaredField("freshLevelTransitionBoundary");
+        controllerField.setAccessible(true);
+        Object controller = controllerField.get(GameServices.level());
+        Field field = controller.getClass().getDeclaredField("pending");
         field.setAccessible(true);
         if (!pending) {
-            field.set(GameServices.level(), null);
+            field.set(controller, null);
             return;
         }
         var constructor = field.getType().getDeclaredConstructor(
-                short.class, short.class, int.class,
                 short.class, short.class, List.class);
         constructor.setAccessible(true);
-        field.set(GameServices.level(), constructor.newInstance(
-                (short) 0, (short) 0, 0, (short) 0, (short) 0, List.of()));
+        field.set(controller, constructor.newInstance(
+                (short) 0, (short) 0, List.of()));
     }
 
     private static final class CountingObjectArtProvider extends Sonic3kObjectArtProvider {

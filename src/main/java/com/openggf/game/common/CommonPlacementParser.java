@@ -134,7 +134,10 @@ public final class CommonPlacementParser {
         }
 
         if (sortByX) {
-            spawns.sort(Comparator.comparingInt(ObjectSpawn::x));
+            // Native placement lists are ordered by the 0x80-pixel streaming
+            // column. Preserve source order inside a column: SST allocation
+            // order is observable when two records have descending full X.
+            spawns.sort(Comparator.comparingInt(spawn -> spawn.x() & 0xFF80));
         }
         return List.copyOf(spawns);
     }

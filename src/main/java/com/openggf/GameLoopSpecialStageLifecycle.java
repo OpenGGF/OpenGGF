@@ -5,6 +5,7 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.game.GameMode;
 import com.openggf.game.SpecialStageDebugProvider;
+import com.openggf.game.SpecialStageDebugCapabilities;
 import com.openggf.game.SpecialStageEntryPresentationController;
 import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.rewind.LiveRewindManager;
@@ -39,8 +40,16 @@ final class GameLoopSpecialStageLifecycle {
                        LiveRewindManager rewind,
                        GameMode currentMode,
                        Consumer<Boolean> enterResults) {
-        if (isUnmodifiedDebugKeyPressed(debugKeyPressed, org.lwjgl.glfw.GLFW.GLFW_KEY_X)) provider.debugNextStage();
-        if (isUnmodifiedDebugKeyPressed(debugKeyPressed, org.lwjgl.glfw.GLFW.GLFW_KEY_Z)) provider.debugToggleLayoutSet();
+        SpecialStageDebugCapabilities capabilities =
+                SpecialStageDebugCapabilities.orNone(provider.debugCapabilities());
+        if (capabilities.stageSelection()
+                && isUnmodifiedDebugKeyPressed(debugKeyPressed, org.lwjgl.glfw.GLFW.GLFW_KEY_X)) {
+            provider.debugNextStage();
+        }
+        if (capabilities.layoutSelection()
+                && isUnmodifiedDebugKeyPressed(debugKeyPressed, org.lwjgl.glfw.GLFW.GLFW_KEY_Z)) {
+            provider.debugToggleLayoutSet();
+        }
         if (isUnmodifiedDebugKeyPressed(
                 debugKeyPressed, config.getInt(SonicConfiguration.SPECIAL_STAGE_COMPLETE_KEY))) {
             completeWithEmerald.run();
@@ -49,15 +58,15 @@ final class GameLoopSpecialStageLifecycle {
                 debugKeyPressed, config.getInt(SonicConfiguration.SPECIAL_STAGE_FAIL_KEY))) {
             failStage.run();
         }
-        if (isUnmodifiedDebugKeyPressed(
+        if (capabilities.spriteViewer() && isUnmodifiedDebugKeyPressed(
                 debugKeyPressed, config.getInt(SonicConfiguration.SPECIAL_STAGE_SPRITE_DEBUG_KEY))) {
             provider.toggleSpriteDebugMode();
         }
-        if (isUnmodifiedDebugKeyPressed(
+        if (capabilities.planeVisibility() && isUnmodifiedDebugKeyPressed(
                 debugKeyPressed, config.getInt(SonicConfiguration.SPECIAL_STAGE_PLANE_DEBUG_KEY))) {
             provider.cyclePlaneDebugMode();
         }
-        updateDebugNavigation(provider, config, debugKeyPressed);
+        updateDebugNavigation(provider, capabilities, config, debugKeyPressed);
 
         TraceSessionLauncher session = TraceSessionLauncher.active();
         if (session != null) session.applySpecialStageTraceInputIfActive(input);
@@ -82,9 +91,10 @@ final class GameLoopSpecialStageLifecycle {
     }
 
     private static void updateDebugNavigation(SpecialStageProvider provider,
+                                              SpecialStageDebugCapabilities capabilities,
                                               SonicConfigurationService config,
                                               IntPredicate pressed) {
-        if (!provider.isSpriteDebugMode()) return;
+        if (!capabilities.spriteViewer() || !provider.isSpriteDebugMode()) return;
         SpecialStageDebugProvider debug = provider.getDebugProvider();
         if (debug == null) return;
         if (isUnmodifiedDebugKeyPressed(pressed, config.getInt(SonicConfiguration.RIGHT))) debug.nextPage();

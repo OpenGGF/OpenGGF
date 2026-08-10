@@ -135,8 +135,9 @@ public final class LevelFrameStep {
         // remain pending until the next frame, matching Queue_Kos_Module's
         // producer/consumer boundary without making the synchronous ROM loader
         // complete a newly submitted job in its request frame.
-        if (context.gameModule().getObjectArtProvider() != null) {
-            context.gameModule().getObjectArtProvider().processRuntimeArtQueueBeforeObjects();
+        if (context.gameModule().getObjectArtProvider()
+                instanceof com.openggf.game.internal.RuntimeObjectArtQueue runtimeQueue) {
+            runtimeQueue.processRuntimeArtQueueBeforeObjects();
         }
     }
 
@@ -224,8 +225,9 @@ public final class LevelFrameStep {
         // Retire runtime-art work submitted by an earlier object pass before
         // this frame's objects poll it. A request made below during object
         // execution remains pending until the following frame.
-        if (context.gameModule().getObjectArtProvider() != null) {
-            context.gameModule().getObjectArtProvider().processRuntimeArtQueueBeforeObjects();
+        if (context.gameModule().getObjectArtProvider()
+                instanceof com.openggf.game.internal.RuntimeObjectArtQueue runtimeQueue) {
+            runtimeQueue.processRuntimeArtQueueBeforeObjects();
         }
 
         // 0a. Drain the per-frame palette-write accumulator at frame top, before
@@ -436,8 +438,9 @@ public final class LevelFrameStep {
         // same frame's Process_Kos_Module_Queue, so consume that request here,
         // after object/event producers and immediately before the art pump.
         startPendingInLevelTitleCard(context, levelManager, spriteManager);
-        if (context.gameModule().getObjectArtProvider() != null) {
-            context.gameModule().getObjectArtProvider().processRuntimeArtQueue();
+        if (context.gameModule().getObjectArtProvider()
+                instanceof com.openggf.game.internal.RuntimeObjectArtQueue runtimeQueue) {
+            runtimeQueue.processRuntimeArtQueue();
         }
 
         // ROM LevelLoop runs ScreenEvents before Process_Kos_Module_Queue

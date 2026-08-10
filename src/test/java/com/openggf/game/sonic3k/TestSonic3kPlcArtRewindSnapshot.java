@@ -233,6 +233,7 @@ class TestSonic3kPlcArtRewindSnapshot {
     }
 
     @Test
+    @RequiresRom(SonicGame.SONIC_3K)
     void issuedLeaseIsGenerationBatchAndOwnerBoundAndConsumesExactlyOnce()
             throws Exception {
         Sonic3kObjectArtProvider provider = loadProvider(
@@ -254,6 +255,7 @@ class TestSonic3kPlcArtRewindSnapshot {
     }
 
     @Test
+    @RequiresRom(SonicGame.SONIC_3K)
     void laterInLevelTitleGetsFreshTitleOwnerAfterPreviousBatchWasConsumed()
             throws Exception {
         Sonic3kObjectArtProvider provider = loadProvider(
@@ -287,6 +289,7 @@ class TestSonic3kPlcArtRewindSnapshot {
     }
 
     @Test
+    @RequiresRom(SonicGame.SONIC_3K)
     void laterInLevelTitleAdmitsFreshEnemyBatchAfterPreviousBatchRetires()
             throws Exception {
         Sonic3kObjectArtProvider provider = loadProvider(
@@ -325,6 +328,7 @@ class TestSonic3kPlcArtRewindSnapshot {
     }
 
     @Test
+    @RequiresRom(SonicGame.SONIC_3K)
     void missingStaleAndMutatedLeaseIdentitiesFailClosed() throws Exception {
         Sonic3kObjectArtProvider missing = new Sonic3kObjectArtProvider();
         RuntimeArtAdmissionLease fabricated = new RuntimeArtAdmissionLease(
@@ -370,6 +374,7 @@ class TestSonic3kPlcArtRewindSnapshot {
     }
 
     @Test
+    @RequiresRom(SonicGame.SONIC_3K)
     void heldAndConsumedAdmissionLeasesRoundTripWithoutClaimingCurrentBatch()
             throws Exception {
         Sonic3kObjectArtProvider provider = loadProvider(
@@ -397,6 +402,7 @@ class TestSonic3kPlcArtRewindSnapshot {
     }
 
     @Test
+    @RequiresRom(SonicGame.SONIC_3K)
     void skippedTitleSnapshotRetainsItsExactLeaseAfterChildrenDrainOnTickThirtyFour()
             throws Exception {
         Sonic3kObjectArtProvider provider = loadProvider(
@@ -428,6 +434,7 @@ class TestSonic3kPlcArtRewindSnapshot {
     }
 
     @Test
+    @RequiresRom(SonicGame.SONIC_3K)
     void legacyRetirementCannotFabricateOrSelectAnAdmissionLease() {
         Sonic3kObjectArtProvider missing = new Sonic3kObjectArtProvider();
         PlcProgressSnapshot missingBefore = missing.capture();
@@ -448,6 +455,7 @@ class TestSonic3kPlcArtRewindSnapshot {
     }
 
     @Test
+    @RequiresRom(SonicGame.SONIC_3K)
     void skippedPresentationRequiresAnExistingUnboundTitleLease() {
         Sonic3kObjectArtProvider missing = new Sonic3kObjectArtProvider();
         PlcProgressSnapshot missingBefore = missing.capture();
@@ -471,6 +479,7 @@ class TestSonic3kPlcArtRewindSnapshot {
     }
 
     @Test
+    @RequiresRom(SonicGame.SONIC_3K)
     void inLevelCompletionRejectsStaleAndMissingLeasesAtomically() {
         Sonic3kObjectArtProvider provider = loadProvider(
                 Sonic3kZoneIds.ZONE_AIZ, 0);
@@ -494,6 +503,7 @@ class TestSonic3kPlcArtRewindSnapshot {
     }
 
     @Test
+    @RequiresRom(SonicGame.SONIC_3K)
     void inLevelCompletionRewindsAcrossTheNextRuntimePassEdge() {
         Sonic3kObjectArtProvider provider = loadProvider(
                 Sonic3kZoneIds.ZONE_AIZ, 0);
@@ -558,6 +568,7 @@ class TestSonic3kPlcArtRewindSnapshot {
     }
 
     @Test
+    @RequiresRom(SonicGame.SONIC_3K)
     void skippedInitialTitleOwnerHoldsRuntimeArtThroughChildRetirementOnTickThirtyFour()
             throws Exception {
         Sonic3kObjectArtProvider provider = loadProvider(
@@ -577,6 +588,7 @@ class TestSonic3kPlcArtRewindSnapshot {
     }
 
     @Test
+    @RequiresRom(SonicGame.SONIC_3K)
     void skippedInitialTitleOwnerReleasesRuntimeArtOnTickThirtyFiveOnlyOnce()
             throws Exception {
         Sonic3kObjectArtProvider provider = loadProvider(
@@ -602,6 +614,7 @@ class TestSonic3kPlcArtRewindSnapshot {
     }
 
     @Test
+    @RequiresRom(SonicGame.SONIC_3K)
     void productionPumpSubmitsExactFirstEnemyParentAndChildOnlyOnTickThirtyFive()
             throws Exception {
         Sonic3kObjectArtProvider provider = loadProvider(
@@ -636,6 +649,7 @@ class TestSonic3kPlcArtRewindSnapshot {
     }
 
     @Test
+    @RequiresRom(SonicGame.SONIC_3K)
     void postCompletionRestoreCannotReleaseOrSubmitTheEnemyBatchAgain()
             throws Exception {
         Sonic3kObjectArtProvider provider = loadProvider(

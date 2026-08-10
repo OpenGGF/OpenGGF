@@ -2,21 +2,75 @@
 
 ## Status
 
-**Proposal awaiting human decision. Nothing here is implemented.** This document
-is the deliverable of the investigation into the last residual on
-`TestS1GhzMazeRoundTripChain.ghzMazeRoundTrip`
-(`run_tail.edge[0]/[1].movie_logical_frame`, expected 9071, actual 9035,
-delta 36). It answers two questions in order:
+**SUPERSEDED 2026-08-10. Do not implement the extension in sections 4-5.** A follow-up
+investigation tested whether the span could instead be reconciled on the comparison side,
+needing no recorded input and no contract change. It cannot — but the reason rules out the
+extension proposed here as well, and points at a smaller change.
 
-1. Can the span be derived from ROM data, needing no recorded input? **No.**
-   Section 2 gives the evidence.
-2. If not, what extension to the cross-game hardware-timing trace contract
-   would be needed, what invariant keeps it safe, and what would
-   `TestHardwareTimingAuthorityGuard` have to enforce? Sections 3-5.
+### What the follow-up established
 
-Deliberately **not** proposed: a `36`, a per-zone load-span table, or any
-"level load takes N frames" constant. Section 2 shows why each of those is
-wrong even as an approximation.
+**1. Comparison-side normalisation is not expressible for S1, and the lost detection is named.**
+`movie_logical_frame` is the ONLY absolute row-accounting field in the entire terminal-tail
+comparison. `TraceRunDynamicArtGapComparator.compareEdge` otherwise compares `edge_ordinal`,
+`transfer_id`, `phase`, `owner`, `submission_origin`, `mapping_frame`, `gap_edge_index`,
+`requests`, boolean orderings and ledger fingerprints — every one of which is order, identity or
+content, none of which is time. Normalising the one time field to a span-relative or
+ordering-only form makes the tail entirely row-blind: an engine that spent the wrong number of
+frames in `SPECIAL_STAGE_RESULTS` or `TITLE_CARD` before the level load would still pass. That
+is not hypothetical — the sibling S2 chain already records a live "engine title card is longer
+than the ROM's" divergence, so the normalisation would immediately mask a known defect class.
+
+**2. Relative-to-boundary does not help, for a structural reason.** Both sides open the tail on
+the SAME absolute row — segment `ghz2` closes at 8049 + 812 = 8861 — so span-relative and
+absolute are the same measurement and the residual is 36 either way. The only anchor that would
+absorb it is the span's far edge, the returning level's first main-loop row, and that is
+provably unobservable: the ROM's is 9071 + 26 = 9097 (`Level_Delay` 4 + `PalFadeIn_Alt` 22),
+which is BEYOND the movie's last row, 9092. **The recording ends inside the load.**
+
+**3. The blocker is missing DATA, not a missing contract.** The S1 tail carries no per-row data
+at all: the run has three segments (`ghz1`/`ss`/`ghz2`) and the tail rows 8861..9092 lie outside
+every one of them, while `run_manifest.json` holds only four gap transitions and no lag or V-int
+census. So even the one principled normalisation — comparing in V-blank coordinates, counting
+only rows that ran a real V-int, which is the rule `DynamicArtDmaServiceModel` already encodes —
+is **not computable from committed data**. Deriving the 36 from this fixture's own rows would be
+the forbidden fitted constant.
+
+**4. The span is not wholly incomputable, which section 2 overstated.**
+`Level_TtlCardLoop` (`docs/s1disasm/sonic.asm:2812-2839`) DOES `WaitForVBlank` every iteration
+and loops until `tst.l (v_plc_buffer)` is clear, and its drain rate is a FIXED QUOTA —
+`ProcessPLC_9Tiles`, `move.w #9,(v_plc_framepatternsleft)` (`sonic.asm:1429-1436`). So an
+unknown share of the 36 rows is frame-granularity-computable PLC-quota time. Only the
+straight-line block at `sonic.asm:2856-2955` is genuinely incomputable. Without tail row data the
+two cannot be separated — which is a further argument for publishing the rows rather than
+extending the timing contract.
+
+### The superseding recommendation
+
+**Publish the tail rows, or a movie-wide V-int census, as recorded fixture data.** That is a
+recording/fixture extension, not a hardware-timing contract extension: it adds observation, not
+authority. With per-row data the comparison can work in V-blank coordinates using a rule the
+engine already encodes, the computable PLC-quota share separates from the incomputable decoder
+share, and rule 4's authority is untouched.
+
+Leaving the test red with this document as the record remains an acceptable alternative.
+
+### And the S2 sibling is NOT this problem at all
+
+The follow-up disproved the claim that `TestS2EhzHalfpipeRoundTripChain`'s 23 errors were the
+same "engine consumes zero rows where hardware consumes many" shape. **The engine executes every
+one of the 16 recorded lag rows 5214..5229 and correctly services no DMA queue on any of them.**
+All 23 errors reduce to a ONE-V-INT offset in when the exit fade starts: ROM raises
+`SS_Check_Rings_flag` on the pass bound to row 5191, so `Pal_FadeToWhite`'s first `WaitForVint`
+is 5192 and its 22 fade V-ints are 5192..5213; the engine's fade starts one iteration early
+(measured: `FADING_TO_WHITE` first appears at the end of row 5190's iteration), so its first
+`SPECIAL_STAGE_RESULTS` row is 5213 — a non-lag row, which services and retires there.
+**Delta is one row, not seventeen.** Forcing one extra fade row takes the ss DPLC report from 23
+errors to 0 over 5733 comparisons — but that was a throwaway probe, not a fix: `Pal_FadeToWhite`
+is 22 iterations and the engine already runs 22, so a 23rd is a fitted constant. The correct
+owner is the one-pass-early flag raise, i.e. the known
+`streamSpecialStageObjects`/`executeStreamedObjectInitFallthrough` duplicate routine-0
+execution whose removal turns all eight standalone special-stage classes red. **S2 is modellable
+at frame granularity and needs no contract change.**
 
 ## 1. What the span is
 

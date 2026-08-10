@@ -26,6 +26,7 @@ import java.util.Set;
  * The primary CSV is loaded entirely into memory (small: ~100 bytes/frame).
  * Auxiliary events are lazy-loaded and indexed by frame number.
  */
+@com.openggf.game.ModApi
 public class TraceData {
 
     private final TraceMetadata metadata;

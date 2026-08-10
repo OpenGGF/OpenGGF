@@ -57,6 +57,7 @@ class TestSidekickTouchHurtAnimationOwnership {
         ObjectManager objectManager = mock(ObjectManager.class);
         TouchResponseTable table = mock(TouchResponseTable.class);
         SpikedLogTouchObject spikes = new SpikedLogTouchObject();
+        when(objectManager.objectCallbacks()).thenReturn(new ObjectCallbackRouter(null));
         when(objectManager.getTouchResponseObjects()).thenReturn(List.of(spikes));
         when(table.getWidthRadius(0x1C)).thenReturn(16);
         when(table.getHeightRadius(0x1C)).thenReturn(16);

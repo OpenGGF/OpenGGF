@@ -895,7 +895,6 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 
 	public void setX(short x) {
 		this.x = x;
-		this.renderCopyX = x;
 	}
 
 	public short getY() {
@@ -904,7 +903,6 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 
 	public void setY(short y) {
 		this.y = y;
-		this.renderCopyY = y;
 	}
 
 	/**

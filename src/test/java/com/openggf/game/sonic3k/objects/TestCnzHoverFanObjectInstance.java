@@ -1,9 +1,11 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.OscillationManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
 import com.openggf.tests.TestablePlayableSprite;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -11,6 +13,11 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class TestCnzHoverFanObjectInstance {
+
+    @BeforeEach
+    void resetOscillationState() {
+        OscillationManager.reset();
+    }
 
     @Test
     void hoverFanLiftsUniqueEngineParticipantsOnce() {

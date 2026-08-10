@@ -99,18 +99,20 @@ class TestEngine {
                 mock(CrossGameFeatureProvider.class)));
         clearInvocations(audio);
 
-        invokePrivateMethod(engine, "ensureAudioBackend", new Class<?>[]{});
+        invokePrivateMethod(engine, "ensureMasterTitleAudioBackend", new Class<?>[]{});
         verify(audio, never()).setBackend(any());
 
         config.setConfigValue(SonicConfiguration.AUDIO_ENABLED, true);
-        invokePrivateMethod(engine, "ensureAudioBackend", new Class<?>[]{});
+        invokePrivateMethod(engine, "ensureMasterTitleAudioBackend", new Class<?>[]{});
         verify(audio).setBackend(any());
 
         clearInvocations(audio);
         invokePrivateMethod(engine, "resetForGameplayFromMasterTitle", new Class<?>[]{});
-        invokePrivateMethod(engine, "initializeGlobalGameplayServices", new Class<?>[]{});
+        GameModule module = mock(GameModule.class);
+        invokePrivateMethod(engine, "preparePresentationForLaunch",
+                new Class<?>[]{GameModule.class}, module);
         verify(audio).resetState();
-        verify(audio).ensurePresentationSink();
+        verify(audio).setBackendForLaunch(any());
 
         clearInvocations(audio);
         invokePrivateMethod(engine, "resetForGameplayFromMasterTitle", new Class<?>[]{});
