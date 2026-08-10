@@ -1,11 +1,7 @@
 package com.openggf.tools.audio.completerun;
 
-import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.StreamReadFeature;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.Baseline;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.CaptureCounts;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.Frame;
@@ -40,17 +36,22 @@ import java.util.zip.GZIPOutputStream;
 
 /** Strict bounded storage and create-new publication for complete-run audio captures. */
 public final class CompleteRunAudioCaptureStore {
-    private static final JsonFactory JSON_FACTORY = JsonFactory.builder()
-            .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION).build();
-    private static final ObjectMapper JSON = new ObjectMapper(JSON_FACTORY);
-    private final AtomicMover atomicMover;
+    /** Largest pinned complete-run epoch (S3K) fits 107 chunks; reserve 128, never buffer more. */
+    static final int MAX_CAPTURE_CHUNKS = 128;
+    private final PublicationLinker publicationLinker;
+    private final StagingCleaner stagingCleaner;
 
     public CompleteRunAudioCaptureStore() {
-        this(Files::move);
+        this(CompleteRunAudioCaptureStore::publishNewSymlink, CompleteRunAudioCaptureStore::deleteTree);
     }
 
-    CompleteRunAudioCaptureStore(AtomicMover atomicMover) {
-        this.atomicMover = Objects.requireNonNull(atomicMover, "atomic mover");
+    CompleteRunAudioCaptureStore(PublicationLinker publicationLinker) {
+        this(publicationLinker, CompleteRunAudioCaptureStore::deleteTree);
+    }
+
+    CompleteRunAudioCaptureStore(PublicationLinker publicationLinker, StagingCleaner stagingCleaner) {
+        this.publicationLinker = Objects.requireNonNull(publicationLinker, "publication linker");
+        this.stagingCleaner = Objects.requireNonNull(stagingCleaner, "staging cleaner");
     }
 
     public void writeNew(Path output, Metadata metadata, Iterator<Record> records) throws IOException {
@@ -78,8 +79,13 @@ public final class CompleteRunAudioCaptureStore {
     }
 
     @FunctionalInterface
-    interface AtomicMover {
-        Path move(Path source, Path target, java.nio.file.CopyOption... options) throws IOException;
+    interface PublicationLinker {
+        void publish(Path staging, Path target) throws IOException;
+    }
+
+    @FunctionalInterface
+    interface StagingCleaner {
+        void delete(Path path) throws IOException;
     }
 
     public interface Writer extends CompleteRunAudioRecordSink { }
@@ -114,6 +120,10 @@ public final class CompleteRunAudioCaptureStore {
             this.staging = staging;
             this.metadata = Objects.requireNonNull(metadata, "metadata");
             this.chunks = Files.createDirectory(staging.resolve("chunks"));
+            if ((long) metadata.fixture().exclusiveEnd() - metadata.fixture().firstFrame()
+                    > (long) MAX_CAPTURE_CHUNKS * CompleteRunAudioTrace.CHUNK_FRAME_ROWS) {
+                throw new IllegalArgumentException("capture interval exceeds the pinned complete-run chunk bound");
+            }
         }
 
         @Override
@@ -213,6 +223,9 @@ public final class CompleteRunAudioCaptureStore {
             String raw = digest(writer.raw);
             completeChunks.add(new Chunk(writer.file, writer.frameRows, writer.frameStart, writer.frameEnd,
                     compressed, raw));
+            if (completeChunks.size() > MAX_CAPTURE_CHUNKS) {
+                throw new IllegalArgumentException("capture exceeds the fixed complete-run chunk descriptor bound");
+            }
             current = null;
         }
 
@@ -229,12 +242,12 @@ public final class CompleteRunAudioCaptureStore {
                 try (Reader reader = new StoreReader(staging)) {
                     while (reader.hasNext()) reader.next();
                 }
-                atomicMover.move(staging, destination, StandardCopyOption.ATOMIC_MOVE);
+                publicationLinker.publish(staging, destination);
             } catch (AtomicMoveNotSupportedException failure) {
-                deleteTree(staging);
+                suppressCleanupFailure(staging, failure);
                 throw failure;
             } catch (Throwable failure) {
-                deleteTree(staging);
+                suppressCleanupFailure(staging, failure);
                 if (failure instanceof IOException io) throw io;
                 if (failure instanceof RuntimeException runtime) throw runtime;
                 throw new IOException("capture publication failed", failure);
@@ -243,6 +256,35 @@ public final class CompleteRunAudioCaptureStore {
 
         private void requireOpen() throws IOException {
             if (closed) throw new IOException("capture writer is closed");
+        }
+    }
+
+    /**
+     * Directories have no portable create-new atomic rename operation.  Publication therefore uses
+     * a create-new symbolic link to an atomically moved immutable backing directory.  A provider
+     * without atomic symbolic-link creation fails closed rather than accepting replace semantics.
+     */
+    private static void publishNewSymlink(Path staging, Path target) throws IOException {
+        Path parent = target.getParent();
+        Path backing = Files.createTempDirectory(parent, ".audio-published-");
+        try {
+            Files.delete(backing);
+            Files.move(staging, backing, StandardCopyOption.ATOMIC_MOVE);
+            try {
+                Files.createSymbolicLink(target, backing.getFileName());
+            } catch (UnsupportedOperationException failure) {
+                throw new AtomicMoveNotSupportedException(staging.toString(), target.toString(),
+                        "filesystem does not support atomic create-new symbolic-link publication");
+            }
+        } catch (Throwable failure) {
+            try {
+                deleteTree(backing);
+            } catch (IOException cleanupFailure) {
+                failure.addSuppressed(cleanupFailure);
+            }
+            if (failure instanceof IOException io) throw io;
+            if (failure instanceof RuntimeException runtime) throw runtime;
+            throw new IOException("atomic create-new publication failed", failure);
         }
     }
 
@@ -426,11 +468,11 @@ public final class CompleteRunAudioCaptureStore {
     }
 
     private static void writeManifest(Path file, Metadata metadata, List<Chunk> chunks, String root) throws IOException {
-        try (JsonGenerator json = JSON_FACTORY.createGenerator(Files.newBufferedWriter(file, StandardCharsets.UTF_8))) {
+        try (JsonGenerator json = CompleteRunAudioJson.FACTORY.createGenerator(Files.newBufferedWriter(file, StandardCharsets.UTF_8))) {
             json.writeStartObject();
             json.writeStringField("schema", CompleteRunAudioTrace.SCHEMA);
             json.writeFieldName("metadata");
-            JSON.writeValue(json, metadata);
+            new com.fasterxml.jackson.databind.ObjectMapper(CompleteRunAudioJson.FACTORY).writeValue(json, metadata);
             json.writeArrayFieldStart("chunks");
             for (Chunk chunk : chunks) {
                 json.writeStartObject();
@@ -449,33 +491,40 @@ public final class CompleteRunAudioCaptureStore {
     }
 
     private static Manifest parseManifest(Path file) throws IOException {
-        try (JsonParser parser = JSON_FACTORY.createParser(Files.newInputStream(file))) {
-            JsonNode root = JSON.readTree(parser);
-            if (parser.nextToken() != null) throw new IllegalArgumentException("trailing JSON after capture manifest");
-            exact(root, Set.of("schema", "metadata", "chunks", "root_digest"), "capture manifest");
-            if (!CompleteRunAudioTrace.SCHEMA.equals(text(root, "schema", "capture manifest"))) {
+        try (JsonParser parser = CompleteRunAudioJson.FACTORY.createParser(Files.newInputStream(file))) {
+            if (parser.nextToken() != com.fasterxml.jackson.core.JsonToken.START_OBJECT) throw new IllegalArgumentException("capture manifest must be object");
+            manifestField(parser,"schema");
+            if (!CompleteRunAudioTrace.SCHEMA.equals(manifestText(parser, "schema"))) {
                 throw new IllegalArgumentException("unknown capture manifest schema");
             }
-            Metadata metadata = JSON.treeToValue(root.required("metadata"), Metadata.class);
-            if (!root.required("chunks").isArray() || root.required("chunks").isEmpty()) {
+            manifestField(parser,"metadata"); Metadata metadata = CompleteRunAudioJson.readMetadata(parser);
+            manifestField(parser,"chunks");
+            if (parser.currentToken() != com.fasterxml.jackson.core.JsonToken.START_ARRAY) {
                 throw new IllegalArgumentException("capture manifest chunks must be a non-empty array");
             }
             List<Chunk> chunks = new ArrayList<>();
             int expectedFirst = metadata.fixture().firstFrame();
-            for (JsonNode node : root.required("chunks")) {
-                exact(node, Set.of("file", "frame_rows", "first_frame", "exclusive_end", "compressed_sha256", "uncompressed_sha256"), "chunk manifest entry");
-                String name = text(node, "file", "chunk manifest entry");
-                int frames = integer(node, "frame_rows", "chunk manifest entry");
-                int first = integer(node, "first_frame", "chunk manifest entry");
-                int end = integer(node, "exclusive_end", "chunk manifest entry");
+            while(parser.nextToken()!=com.fasterxml.jackson.core.JsonToken.END_ARRAY) {
+                if(parser.currentToken()!=com.fasterxml.jackson.core.JsonToken.START_OBJECT)throw new IllegalArgumentException("chunk manifest entry must be object");
+                manifestField(parser,"file"); String name=manifestText(parser,"chunk file");
+                manifestField(parser,"frame_rows"); int frames=manifestInt(parser,"chunk frames");
+                manifestField(parser,"first_frame"); int first=manifestInt(parser,"chunk first");
+                manifestField(parser,"exclusive_end"); int end=manifestInt(parser,"chunk end");
+                manifestField(parser,"compressed_sha256"); String compressed=manifestHash(parser);
+                manifestField(parser,"uncompressed_sha256"); String raw=manifestHash(parser);
+                if(parser.nextToken()!=com.fasterxml.jackson.core.JsonToken.END_OBJECT)throw new IllegalArgumentException("chunk manifest entry contains unknown/missing fields");
                 if (!name.matches("[0-9]{6}\\.jsonl\\.gz") || frames < 0 || frames > CompleteRunAudioTrace.CHUNK_FRAME_ROWS || first != expectedFirst || end != first + frames) {
                     throw new IllegalArgumentException("invalid deterministic chunk manifest bounds");
                 }
-                chunks.add(new Chunk(name, frames, first, end, hash(node, "compressed_sha256"), hash(node, "uncompressed_sha256")));
+                chunks.add(new Chunk(name, frames, first, end, compressed, raw));
+                if (chunks.size() > MAX_CAPTURE_CHUNKS) throw new IllegalArgumentException("manifest exceeds fixed complete-run chunk bound");
                 expectedFirst = end;
             }
+            if(chunks.isEmpty()) throw new IllegalArgumentException("capture manifest chunks must be non-empty");
+            manifestField(parser,"root_digest"); String root=manifestHash(parser);
+            if(parser.nextToken()!=com.fasterxml.jackson.core.JsonToken.END_OBJECT||parser.nextToken()!=null)throw new IllegalArgumentException("trailing/unknown manifest fields");
             for (int index = 0; index < chunks.size() - 1; index++) if (chunks.get(index).frames != CompleteRunAudioTrace.CHUNK_FRAME_ROWS) throw new IllegalArgumentException("non-final chunks must contain exactly 4,096 frame rows");
-            return new Manifest(metadata, List.copyOf(chunks), hash(root, "root_digest"));
+            return new Manifest(metadata, List.copyOf(chunks), root);
         }
     }
 
@@ -486,9 +535,30 @@ public final class CompleteRunAudioCaptureStore {
     private static void update(MessageDigest digest, String record) { digest.update((record + "\n").getBytes(StandardCharsets.UTF_8)); }
     private static MessageDigest sha256() { try { return MessageDigest.getInstance("SHA-256"); } catch (NoSuchAlgorithmException impossible) { throw new AssertionError(impossible); } }
     private static String digest(MessageDigest digest) { return HexFormat.of().formatHex(digest.digest()); }
-    private static void exact(JsonNode node, Set<String> expected, String label) { if (node == null || !node.isObject() || !node.fieldNames().hasNext() && !expected.isEmpty()) throw new IllegalArgumentException(label + " must be object"); java.util.Set<String> actual = new java.util.LinkedHashSet<>(); node.fieldNames().forEachRemaining(actual::add); if (!actual.equals(expected)) throw new IllegalArgumentException(label + " contains unknown or missing fields"); }
-    private static String text(JsonNode node, String name, String label) { JsonNode value = node.get(name); if (value == null || !value.isTextual()) throw new IllegalArgumentException(label + " " + name + " must be text"); return value.textValue(); }
-    private static int integer(JsonNode node, String name, String label) { JsonNode value=node.get(name); if(value==null||!value.isIntegralNumber()||!value.canConvertToInt()) throw new IllegalArgumentException(label+" "+name+" must be int"); return value.intValue(); }
-    private static String hash(JsonNode node, String name) { String value=text(node,name,"manifest"); if(!value.matches("[0-9a-f]{64}")) throw new IllegalArgumentException("manifest hash must be canonical SHA-256"); return value; }
-    private static void deleteTree(Path root) { try { if (!Files.exists(root)) return; try (var paths = Files.walk(root)) { paths.sorted(Comparator.reverseOrder()).forEach(path -> { try { Files.deleteIfExists(path); } catch (IOException ignored) { } }); } } catch (IOException ignored) { } }
+    private static void manifestField(JsonParser parser,String name)throws IOException{if(parser.nextToken()!=com.fasterxml.jackson.core.JsonToken.FIELD_NAME||!name.equals(parser.currentName())||parser.nextToken()==null)throw new IllegalArgumentException("expected manifest field: "+name);} private static String manifestText(JsonParser parser,String label)throws IOException{if(parser.currentToken()!=com.fasterxml.jackson.core.JsonToken.VALUE_STRING)throw new IllegalArgumentException(label+" must be text");return parser.getText();} private static int manifestInt(JsonParser parser,String label)throws IOException{if(parser.currentToken()!=com.fasterxml.jackson.core.JsonToken.VALUE_NUMBER_INT)throw new IllegalArgumentException(label+" must be int");return parser.getIntValue();} private static String manifestHash(JsonParser parser)throws IOException{String value=manifestText(parser,"manifest hash");if(!value.matches("[0-9a-f]{64}"))throw new IllegalArgumentException("manifest hash must be canonical SHA-256");return value;}
+    private void suppressCleanupFailure(Path root, Throwable primary) {
+        try {
+            stagingCleaner.delete(root);
+        } catch (IOException cleanupFailure) {
+            primary.addSuppressed(cleanupFailure);
+        }
+    }
+
+    private static void deleteTree(Path root) throws IOException {
+        if (!Files.exists(root)) return;
+        IOException failure = null;
+        List<Path> paths;
+        try (var walk = Files.walk(root)) {
+            paths = walk.sorted(Comparator.reverseOrder()).toList();
+        }
+        for (Path path : paths) {
+            try {
+                Files.deleteIfExists(path);
+            } catch (IOException deletionFailure) {
+                if (failure == null) failure = deletionFailure;
+                else failure.addSuppressed(deletionFailure);
+            }
+        }
+        if (failure != null) throw failure;
+    }
 }

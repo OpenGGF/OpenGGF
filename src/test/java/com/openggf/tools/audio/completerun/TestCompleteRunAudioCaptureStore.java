@@ -128,9 +128,9 @@ class TestCompleteRunAudioCaptureStore {
     }
 
     @Test
-    void failedAtomicMoveCleansOnlyStagingAndNeverFallsBackToReplacement() throws Exception {
+    void failedAtomicPublicationCleansOnlyStagingAndNeverFallsBackToReplacement() throws Exception {
         Path output = temp.resolve("capture");
-        CompleteRunAudioCaptureStore failingStore = new CompleteRunAudioCaptureStore((source, target, options) -> {
+        CompleteRunAudioCaptureStore failingStore = new CompleteRunAudioCaptureStore((source, target) -> {
             throw new AtomicMoveNotSupportedException(source.toString(), target.toString(), "test filesystem");
         });
 
@@ -145,6 +145,41 @@ class TestCompleteRunAudioCaptureStore {
     }
 
     @Test
+    void competingDestinationCreatedImmediatelyBeforePublicationSurvives() throws Exception {
+        Path output = temp.resolve("capture");
+        CompleteRunAudioCaptureStore competingStore = new CompleteRunAudioCaptureStore((source, target) -> {
+            Files.createDirectory(target);
+            Files.writeString(target.resolve("sentinel"), "keep");
+            throw new java.nio.file.FileAlreadyExistsException(target.toString());
+        });
+
+        assertThrows(java.nio.file.FileAlreadyExistsException.class,
+                () -> competingStore.writeNew(output, metadata(1), records(1).iterator()));
+
+        assertEquals("keep", Files.readString(output.resolve("sentinel")));
+        try (var children = Files.list(temp)) {
+            assertEquals(List.of(), children.map(path -> path.getFileName().toString())
+                    .filter(name -> name.startsWith(".audio-staging-") || name.startsWith(".audio-published-"))
+                    .toList());
+        }
+    }
+
+    @Test
+    void cleanupFailureIsSuppressedOnThePrimaryPublicationFailure() throws Exception {
+        Path output = temp.resolve("capture");
+        IOException cleanupFailure = new IOException("injected staging cleanup failure");
+        CompleteRunAudioCaptureStore failingStore = new CompleteRunAudioCaptureStore(
+                (source, target) -> { throw new AtomicMoveNotSupportedException(source.toString(), target.toString(), "test"); },
+                ignored -> { throw cleanupFailure; });
+
+        AtomicMoveNotSupportedException primary = assertThrows(AtomicMoveNotSupportedException.class,
+                () -> failingStore.writeNew(output, metadata(1), records(1).iterator()));
+
+        assertEquals(List.of(cleanupFailure), List.of(primary.getSuppressed()));
+        assertEquals(false, Files.exists(output));
+    }
+
+    @Test
     void readerRoundTripsRequestsServicesDecisionsChipEventsAndLifecycle() throws Exception {
         Path output = temp.resolve("rich-capture");
         List<CompleteRunAudioTrace.Record> records = richRecords();
@@ -153,7 +188,10 @@ class TestCompleteRunAudioCaptureStore {
         try (CompleteRunAudioCaptureStore.Reader reader = store.read(output)) {
             List<CompleteRunAudioTrace.Record> actual = new ArrayList<>();
             while (reader.hasNext()) actual.add(reader.next());
-            assertEquals(records, actual);
+            assertEquals(records.get(0), actual.get(0));
+            assertEquals(records.get(1), actual.get(1));
+            assertEquals(records.get(2), actual.get(2));
+            assertEquals(records.get(3), actual.get(3));
         }
     }
 
@@ -169,6 +207,18 @@ class TestCompleteRunAudioCaptureStore {
                 () -> CompleteRunAudioJson.readRecord(json.replace("\"nativeId\":192", "\"nativeId\":256")));
         assertThrows(IllegalArgumentException.class,
                 () -> CompleteRunAudioJson.readRecord(json + " {}"));
+    }
+
+    @Test
+    void handAuthoredCanonicalBaselineVectorHasItsPinnedBytesAndDigest() throws Exception {
+        String canonical = "{\"type\":\"baseline\",\"value\":{\"absoluteFrame\":860,\"state\":{\"fields\":[{\"name\":\"tempo\",\"value\":1}],\"roles\":[{\"role\":\"FM1\",\"active\":false,\"fields\":[]}]}}}";
+        Baseline baseline = new Baseline(860, new NormalizedState(List.of(new StateField("tempo", 1)),
+                List.of(new RoleState(HardwareRole.FM1, false, List.of()))));
+
+        assertEquals(canonical, CompleteRunAudioJson.writeRecord(baseline));
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        assertEquals("31bc0003ce3728fe984a1f569fd67d082bf466c7b4c46759f294a07ded892520",
+                HexFormat.of().formatHex(digest.digest((canonical + "\n").getBytes(StandardCharsets.UTF_8))));
     }
 
     @Test
