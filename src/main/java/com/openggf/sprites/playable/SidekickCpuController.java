@@ -3976,28 +3976,6 @@ public class SidekickCpuController {
         boolean onScreen = sidekick.hasRenderFlagOnScreenState()
                 ? sidekick.isRenderFlagOnScreen()
                 : isCurrentlyVisible();
-        if (!onScreen && usesS3kCatchUpMarker()) {
-            // Tails_FlySwim_Unknown reads the render flag published by the
-            // preceding Render_Sprites pass. The engine's shaken render copy
-            // can be one pixel beyond the native top-edge window while the
-            // object/CPU pass is still using the physical camera position.
-            // Re-admit that prior-frame visibility through the camera-owned
-            // timing bridge; do not change the published render flag used by
-            // rendering or other object consumers.
-            Camera camera = sidekick.currentCamera();
-            boolean screenIsShaken = camera != null
-                    && (camera.getShakeOffsetX() != 0 || camera.getShakeOffsetY() != 0);
-            int physicalTopMargin = camera != null
-                    ? sidekick.getRenderCentreY() - camera.getY()
-                    : Integer.MIN_VALUE;
-            boolean leaderIsAirborne = leader != null && leader.getAir();
-            if (screenIsShaken
-                    && camera.isVisibleForCpuDispatch(sidekick)
-                    && physicalTopMargin > -sidekick.getRenderFlagWidthPixels()
-                    && leaderIsAirborne) {
-                onScreen = true;
-            }
-        }
         if (!onScreen) {
             flightTimer++;
             if (flightTimer >= AUTO_LAND_FRAMES) {

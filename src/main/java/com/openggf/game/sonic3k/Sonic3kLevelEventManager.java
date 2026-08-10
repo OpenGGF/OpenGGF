@@ -94,10 +94,6 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         IczObjectEventBridge, S3kTransitionEventBridge, AizPreparedTransitionArtBridge {
     private static final Logger LOG = Logger.getLogger(Sonic3kLevelEventManager.class.getName());
     private static final int PACHINKO_TOP_EXIT_Y = -0x20;
-    // Dynamic_object_RAM+object_size (sonic3k.asm:7793) == dynamic slot 1, which
-    // is absolute SST slot 4 (Player_1, Player_2, Reserved_object_3 precede the
-    // dynamic range -- sonic3k.constants.asm:303-307).
-    private static final int CNZ_POST_TITLE_CARD_CONTROL_HANDOFF_DISPATCHES = 2;
     private static final int CNZ2_CAMERA_MIN_X = 0x0000;
     private static final int CNZ2_CAMERA_MAX_X = 0x6000;
     private static final int CNZ2_CAMERA_MIN_Y = 0x0580;
@@ -360,15 +356,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         // runs in the object pass before DeformBgLayer consumes its boundary.
         if (currentZone == Sonic3kZoneIds.ZONE_CNZ
                 && currentAct == 1) {
-            boolean titleFlagWasConsumed = cnzPendingPostTransitionAct2SizeFrames < 0
-                    && GameServices.gameState().isEndOfLevelFlag();
             updatePendingCnzAct2LevelSizeChange();
-            if (titleFlagWasConsumed) {
-                // The retained EndSignControl owner consumes the completion
-                // flag and advances its next dispatch in the same object pass
-                // before DeformBgLayer runs.
-                updatePendingCnzAct2LevelSizeChange();
-            }
         }
         if (currentZone == Sonic3kZoneIds.ZONE_MGZ
                 && currentAct == 1
@@ -1389,20 +1377,15 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             if (!GameServices.gameState().isEndOfLevelFlag()) {
                 return;
             }
-            // Obj_EndSignControlDoStart consumes the title-card completion flag
-            // before Change_Act2Sizes allocates the four gradual bound owners.
+            // Obj_EndSignControlDoStart observes End_of_level_flag and calls
+            // Change_Act2Sizes on that same dispatch
+            // (docs/skdisasm/sonic3k.asm:180420-180424); Change_Act2Sizes falls
+            // through into Make_LevelSizeObj (:180580-180604), which creates the
+            // gradual bound children immediately. The ROM delay between
+            // observing the flag and the size change is therefore zero
+            // dispatches -- do not reintroduce a countdown here.
             GameServices.gameState().setEndOfLevelFlag(false);
-            // The later Obj_EndSignControl owner observes the flag after its
-            // retained slot chain advances to DoStart; only then does it call
-            // Change_Act2Sizes (sonic3k.asm:180407-180419).
-            cnzPendingPostTransitionAct2SizeFrames =
-                    CNZ_POST_TITLE_CARD_CONTROL_HANDOFF_DISPATCHES;
-            return;
-        } else if (cnzPendingPostTransitionAct2SizeFrames > 0) {
-            cnzPendingPostTransitionAct2SizeFrames--;
-            if (cnzPendingPostTransitionAct2SizeFrames > 0) {
-                return;
-            }
+            cnzPendingPostTransitionAct2SizeFrames = 0;
             cnzPostTransitionAct2SizeActive = true;
             cnzAct2MinXAccumulator = 0;
             cnzAct2MaxXAccumulator = 0;

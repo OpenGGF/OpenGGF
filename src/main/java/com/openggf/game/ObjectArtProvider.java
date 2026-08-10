@@ -31,22 +31,6 @@ public interface ObjectArtProvider {
     }
 
     /**
-     * Processes provider-owned work admitted after the frame's direct hardware
-     * service boundary. Most providers have no such late loop-tail producer.
-     */
-    default void processRuntimeArtQueueAfterPreMainLoop() {
-    }
-
-    /**
-     * Processes art admitted at the loop tail with its structural timing
-     * context. Providers that own a held-tail handoff may keep an admitted
-     * ROM job pending until the represented iteration reaches that boundary.
-     */
-    default void processRuntimeArtQueueAfterPreMainLoop(boolean heldLoopTail) {
-        processRuntimeArtQueueAfterPreMainLoop();
-    }
-
-    /**
      * Opens any runtime-art admission held behind level-presentation work.
      *
      * <p>A normal level load calls this when title-card art retires. A

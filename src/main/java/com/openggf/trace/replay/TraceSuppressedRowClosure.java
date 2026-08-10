@@ -117,10 +117,6 @@ public final class TraceSuppressedRowClosure {
             }
             if (context.runtimeArtCoordinator().ownsHeldLevelCounterHardwareTail()) {
                 LevelFrameStep.serviceHardwarePostObjectsOnly(context);
-                if (context.gameModule().getObjectArtProvider() != null) {
-                    context.gameModule().getObjectArtProvider()
-                            .processRuntimeArtQueueAfterPreMainLoop();
-                }
                 LevelFrameStep.serviceHardwarePreMainLoopOnly(context);
             } else if (context.hardwareTimingBoundaryObserver()
                     instanceof TraceHardwareTimingBoundaryObserver replayObserver) {

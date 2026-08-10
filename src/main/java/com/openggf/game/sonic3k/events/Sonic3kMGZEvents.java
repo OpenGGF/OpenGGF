@@ -1077,14 +1077,6 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         }
     }
 
-    /** ROM: ScreenShakeArray2 — 64-entry continuous-shake table. */
-    private static final byte[] SCREEN_SHAKE_CONTINUOUS = {
-            1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0,
-            2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3,
-            1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0,
-            2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3
-    };
-
     /** ROM: Events_fg_0 / Screen_shake_flag active while Robotnik is on-screen. */
     private boolean screenShakeActive;
 
@@ -1115,14 +1107,12 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         if (state == null) {
             return;
         }
-        int shakeFrameCounter = GameServices.hasRuntime()
-                ? GameServices.level().getFrameCounter()
-                : frameCounter;
-        int offset = isVisualShakeActive()
-                ? SCREEN_SHAKE_CONTINUOUS[shakeFrameCounter & 0x3F]
-                : 0;
-        if (offset != 0) {
-            state.requestScreenShakeOffset(offset);
+        // ROM MGZ2_ScreenEvent raises Screen_shake_flag (st, sonic3k.asm:106395)
+        // and ShakeScreen_Setup samples ScreenShakeArray2 from
+        // Level_frame_counter at the background event's tail
+        // (sonic3k.asm:104200-104209, :106308). Keep both in that single owner.
+        if (isVisualShakeActive()) {
+            state.requestContinuousScreenShake();
         }
     }
 

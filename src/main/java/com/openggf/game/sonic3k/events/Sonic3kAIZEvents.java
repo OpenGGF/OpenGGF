@@ -1400,14 +1400,13 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                     // act2WaitFireDrawActive.
                     act2WaitFireDrawActive = true;
                     firePhaseFrames++;
-                    if (firePhaseFrames == AIZ2_WAIT_FIRE_REDRAW_FRAMES - 1) {
-                        // The ROM reaches LoadEnemyArt on the redraw's penultimate
-                        // visible tick; the following loop-tail boundary publishes
-                        // the batch. The final redraw tick only releases the camera
-                        // clamp and does not submit a second batch.
-                        admitAct2EnemyArt();
-                    }
                     if (firePhaseFrames >= AIZ2_WAIT_FIRE_REDRAW_FRAMES) {
+                        // ROM order inside the completed-redraw branch is
+                        // Load_PLC, LoadEnemyArt, the palette-line-4 writes and
+                        // only then Camera_max_X_pos (sonic3k.asm:105084-105096),
+                        // so the enemy batch is admitted on the very tick that
+                        // releases the clamp, not the one before it.
+                        admitAct2EnemyArt();
                         // ROM AIZ2BGE_WaitFire releases the post-reload X clamp by
                         // writing Camera_max_X_pos=$6000 once the redraw completes
                         // (sonic3k.asm:105084-105096). Camera_min_X_pos remains at
@@ -1487,10 +1486,8 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
             case AIZ2_WAIT_FIRE -> {
                 act2WaitFireDrawActive = true;
                 firePhaseFrames++;
-                if (firePhaseFrames == AIZ2_WAIT_FIRE_REDRAW_FRAMES - 1) {
-                    admitAct2EnemyArt();
-                }
                 if (firePhaseFrames >= AIZ2_WAIT_FIRE_REDRAW_FRAMES) {
+                    admitAct2EnemyArt();
                     camera().setMaxX((short) AIZ2_POST_FIRE_CAMERA_MAX_X);
                     applyPostFireContinuationPaletteLine4(levelManager());
                     fireSequencePhase = FireSequencePhase.AIZ2_BG_REDRAW;
@@ -2782,18 +2779,24 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     }
 
     /**
-     * ROM: the AIZ2 background continuation falls through to {@code LoadEnemyArt}
-     * when the fire-plane redraw releases the post-reload camera clamp
-     * ({@code docs/skdisasm/sonic3k.asm:105084-105096}). The act reload prepares
-     * standalone art but must not submit the enemy batch before this event-owned
-     * boundary.
+     * ROM: the AIZ2 background continuation falls through to {@code Load_PLC}
+     * and {@code jsr (LoadEnemyArt).l} once the fire-plane redraw has drained
+     * ({@code docs/skdisasm/sonic3k.asm:105084-105091}). That call site is an
+     * ordinary synchronous mid-level {@code LoadEnemyArt}: it runs inside the
+     * background-event dispatch, which {@code LevelLoop} reaches
+     * ({@code DeformBgLayer}/{@code ScreenEvents}, sonic3k.asm:7896-7898) ahead
+     * of the same iteration's {@code Process_Kos_Module_Queue} (7908). The
+     * {@code Queue_Kos_Module} calls in {@code LoadEnemyArt}
+     * ({@code sonic3k.asm:64281-64313}) therefore happen during this frame's
+     * event pass, exactly like {@code HCZGeyser_ReloadEnemyArtAndDelete}
+     * ({@code sonic3k.asm:65002-65004}), and the loop-tail module step sees them.
      */
     private void admitAct2EnemyArt() {
         if (!(GameServices.module().getObjectArtProvider()
                 instanceof Sonic3kObjectArtProvider provider)) {
             return;
         }
-        provider.deferEnemyKosArtAdmissionUntilAfterPreMainLoop();
+        provider.reloadEnemyKosArt();
     }
 
     public int getFireWallCoverHeightPx(int screenHeight) {

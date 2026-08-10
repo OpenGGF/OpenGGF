@@ -21,6 +21,48 @@ All notable changes to the OpenGGF project are documented in this file.
   both white the screen out, rebuild it with interrupts disabled, and then copy the results
   palette straight into the active palette -- and the engine's fade also held the score tally
   frozen for its duration, where the ROM begins counting immediately.
+- Fix: S3K's MGZ screen shake is now owned by the ROM routine that computes it.
+  `ShakeScreen_Setup` (docs/skdisasm/sonic3k.asm:104188-104210) samples
+  `ScreenShakeArray2[Level_frame_counter & $3F]` once per frame at the tail of
+  the zone's background event (`MGZ1BGE_Normal`, sonic3k.asm:106308), while
+  `MGZ1_ScreenEvent`/`MGZ2_ScreenEvent` add the offset into `Camera_Y_pos_copy`
+  at the *start* of the same `ScreenEvents` pass (sonic3k.asm:102232-102253,
+  :106257-106260, :106390-106392) — so `Render_Sprites` consumes the offset the
+  routine produced on the previous frame. The Tunnelbot and the MGZ trigger
+  platform previously indexed that table themselves from the object clock
+  (`V_int_run_count`, plus a hand-tuned `-3`), which de-phased the shaken render
+  copy by the accumulated lag count and moved the sidekick's `render_flags`
+  on-screen bit by a pixel at the top edge. Objects now only raise the
+  continuous-shake flag, as the ROM does (sonic3k.asm:184784/:184886/:184907).
+- Fix: with the shaken render copy correct, `Tails_FlySwim_Unknown`'s off-screen
+  gate is back to the ROM's single `tst.b render_flags(a0)` / `bmi.s`
+  (sonic3k.asm:26534-26535); the shaken/airborne-leader re-admission predicate
+  that compensated the one-pixel discrepancy is removed, along with the
+  `Camera.isVisibleForCpuDispatch` window it used.
+- Fix/Test: post-camera sidekick-bound publication now remains owned by the
+  object/event path that moved the death plane. CNZ's cannon handoff explicitly
+  carries its `$0200` camera-target write through the DynamicLevelEvents tail,
+  while unrelated gradual-resize owners retain their native cadence. This
+  preserves all 42,253 standalone CNZ rows and restores all 25,393 ICZ
+  complete-run rows, including the ICZ boss-art queue sequence from direct
+  completion `#255`; the selected AIZ-through-LBZ, bonus, and special-stage
+  fleet passes 59 tests with ring comparison at error severity.
+- Fix/Test: spilled-ring lifetime and bottom-boundary checks now follow each
+  game's native branch topology: S1/S2 reach them on every object pass, while
+  S3K reaches them only through its movement-direction/cadence path. This
+  restores S1 LZ1's strict ring-loss row and LZ2's lost-ring SST occupancy while
+  retaining the completed standalone CNZ trace.
+- Fix/Test: S3K now republishes sidekick camera bounds after boundary easing,
+  matching Tails' live `Camera_max_Y_pos` death-plane read when an event shrinks
+  the arena. CNZ's post-boss cannon also uses the native lowest-free-slot
+  `AllocateObject` contract. Together these changes close all 42,253 frames of
+  the standalone CNZ trace; the green AIZ, HCZ, MGZ, and complete-run CNZ traces
+  remain unchanged.
+- Fix/Test: CNZ cannons now preserve the shared S3K `SolidObjectTop`
+  zero-distance rejection before setting the standing bit. This delays the
+  end-cannon capture by the one native overlap pixel and advances standalone
+  CNZ from frame `41949` to `41951`; the green AIZ, HCZ, MGZ, and complete-run
+  CNZ traces remain unchanged.
 - Testing: a run chain executes any special-stage observation that owns a completed object
   pass, even where the recording marks that frame a lag frame. The stage's own main loop waits
   on its vertical-interrupt routine immediately before running objects, so a frame that ran a

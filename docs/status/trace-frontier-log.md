@@ -71991,3 +71991,60 @@ After: **769 / 8 / 64, identical failing set** — a correctness-only round.
 - Ring comparison remained error-level throughout:
   `ToleranceConfig.DEFAULT` selects `RingCountMode.FORCE_ERROR`. The full
   replay fleet has no remaining in-scope failing frontier to select.
+
+## 2026-08-10 - S3K MGZ shaken render copy: removing the flight re-admission predicate
+
+- Worktree: detached at `5b3425dca` (origin/bugfix/s3k-traces). JDK 21.0.11.
+  ROMs: `s1.gen`/`s2.gen`/`s3k.gen` in the project root (SHA-1s match the
+  table in CLAUDE.md). No trace payloads changed.
+- Finding under review: `SidekickCpuController.updateFlightAutoRecovery`
+  re-admitted the sidekick as on-screen under
+  `screenIsShaken && isVisibleForCpuDispatch && physicalTopMargin > -width &&
+  leaderIsAirborne` (commit `c7335ad21`). ROM `Tails_FlySwim_Unknown`
+  (sonic3k.asm:26534-26535) tests only `tst.b render_flags(a0)` / `bmi.s`, and
+  the predicate's own comment described it as compensating a one-pixel
+  discrepancy in the shaken render copy.
+- Isolation: removing the predicate alone left exactly one release-blocking
+  error, `TestS3kMgzTraceReplay` frame `23908`,
+  `tails_cpu_respawn_counter` (expected `0x0000`, actual `0x0001`) — the engine
+  went off-screen one frame early.
+- Root cause (comparison-only reading of the fixture, then the ROM):
+  at raw frame 23907 Tails sits at `y_pos - Camera_Y_pos = -23`, i.e. exactly
+  `+1` inside `Render_Sprites`' top-edge window
+  (`(relY + height_pixels) & Screen_Y_wrap_value < 2*height_pixels + 224`,
+  sonic3k.asm:36356-36364). A shake offset of `2` puts it out; `1` keeps it in.
+  ROM `ShakeScreen_Setup` (sonic3k.asm:104188-104210) samples
+  `ScreenShakeArray2[Level_frame_counter & $3F]` at the *tail* of the zone
+  background event (`MGZ1BGE_Normal`'s `jmp ShakeScreen_Setup`,
+  sonic3k.asm:106308), while `MGZ1_ScreenEvent`/`MGZ2_ScreenEvent` add the
+  offset into `Camera_Y_pos_copy` at the *head* of the same `ScreenEvents`
+  pass (sonic3k.asm:102232-102253, :106257-106260, :106390-106392). The offset
+  `Render_Sprites` consumes on a frame is therefore the previous frame's
+  sample. The engine instead had each object compute the table itself from the
+  object clock — Tunnelbot with `V_int_run_count & 0x3F`, the MGZ trigger
+  platform with a hand-tuned `(V_int_run_count - 3)` — which de-phased the
+  shaken copy by the accumulated lag count.
+  Two independent frames pin the model down: raw frame 23907 needs offset
+  `<= 1` (`ScreenShakeArray2[Level_frame_counter-1] = 1`, `[…] = 2`), and raw
+  frame 1488 needs offset `>= 2` (`[Level_frame_counter-1] = 2`, `[…] = 0`).
+  Only the previous-frame sample satisfies both, so no constant was fitted.
+- Fix: objects now only raise the continuous-shake flag, as the ROM does
+  (`st (Screen_shake_flag).w`, sonic3k.asm:184784/:184886/:184907);
+  `SwScrlMgz` owns the `ShakeScreen_Setup` sample and publishes it one frame
+  late. The `Tails_FlySwim_Unknown` gate is back to the ROM's single render-flag
+  test, and `Camera.isVisibleForCpuDispatch` (its only caller) is deleted.
+- Measurement (identical command both sides, own worktree, reports dir wiped
+  between runs):
+  `mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1
+   -Dsurefire.runOrder=alphabetical -Dsurefire.argLine=-Xmx4g
+   -Dtest=com.openggf.tests.trace.s3k.Test* -Dsonic1.rom.path=…
+   -Dsonic2.rom.path=… -Ds3k.rom.path=… test`
+  Baseline: Tests run 90, Failures 0, Errors 2.
+  After:    Tests run 90, Failures 0, Errors 2 — the same two,
+  `TestS3kMgzF498AirRollPhysics` ("gameplay context was not constructed for
+  recorded hardware admission") and `TestS3kMhzCompleteRunTraceReplay`
+  (`KOS_DECOMPRESSION_QUEUE#335` expected completion), both pre-existing and
+  untouched by this change.
+- Route position: AIZ, CNZ, HCZ, ICZ, LBZ and both MGZ replays stay green with
+  the compensator removed. MHZ's KOS completion boundary remains the next S3K
+  target.

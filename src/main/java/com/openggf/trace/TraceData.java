@@ -273,8 +273,11 @@ public class TraceData {
 
     private LoadQueueComparisonNormalization
             buildComparisonLoadQueueStates() {
-        if (!"s3k".equals(metadata.game()) || frames.size() < 2
-                || hardwareTimingSchedule == null) {
+        // Selection below is by queue-kind wire name (s3k_kos_module /
+        // s3k_kos_direct) and by KOS_DECOMPRESSION_QUEUE completion edges, which
+        // no other game emits; a trace without those rows normalizes to an empty
+        // map on its own, so no game-name gate belongs here.
+        if (frames.size() < 2 || hardwareTimingSchedule == null) {
             return LoadQueueComparisonNormalization.empty();
         }
         Map<Integer, List<TraceEvent.LoadQueueState>> normalized = new HashMap<>();

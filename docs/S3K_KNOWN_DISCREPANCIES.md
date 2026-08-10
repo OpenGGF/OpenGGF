@@ -1215,3 +1215,46 @@ rather than a mutable VRAM window, the P1/P2 `Map_Bubbler`/`Map_Bubbler2` split
 collapses to a single shared sheet with no visible difference. Emulating the DMA
 would mean modelling `ArtTile_DashDust` as mutable VRAM shared with the dash
 dust, which buys nothing the tile rebase doesn't already give us.
+
+## AIZ2 mid-level enemy-art admission: module-queue parent ownership at frame 5542
+
+**Status:** open, tracked. Not intentional — a modelling gap with a known shape.
+
+`TestS3kAizTraceReplay` and `TestS3kAizCompleteRunTraceReplay` diverge on a single
+admission frame (raw 5542) across three fields of `queue.s3k_kos_direct`: `busy`
+(expected `true`, actual `false`), `active_source` (expected `0x367DCE`, actual `-1`)
+and `active_destination` (expected `-12288`, actual `-1`).
+
+### What the ROM does
+
+`AIZ2BGE_WaitFire`'s completed-redraw branch runs the camera-clamp release and
+`LoadEnemyArt` in one pass (`skdisasm/sonic3k.asm:105084-105096`), and
+`LoadEnemyArt`'s `Queue_Kos_Module` calls (`:64281-64313`) land during the event
+pass, ahead of that iteration's `Process_Kos_Module_Queue`.
+
+On the recorded frame the direct decompression queue is **already working on a
+module whose source is inside `ArtKosM_AIZ_Bloominator` (0x367DCA)** — even though
+`PLCKosM_AIZ` lists MonkeyDude first (`:64348-64351`). So the module FIFO was not
+empty when `LoadEnemyArt` ran, and an older parent owned that iteration's single
+module state step (`:2724-2790`).
+
+### Our implementation
+
+The engine publishes no direct child on that frame at all. It does not model which
+parent owns a frame's module state step across a mid-level admission when the FIFO
+is already non-empty.
+
+### Why it is recorded rather than patched
+
+This surfaced when the AIZ2 art submission stopped being gated on a replay-only
+signal (a hard rule 4 breach: in a plain run the three AIZ2 badnik archives were
+never queued at all). Closing the residual with another timing-shaped compensator
+would reintroduce the same class of defect the ungating removed. The correct fix is
+to model module-queue parent ownership across a mid-level admission, which is
+separable work.
+
+**Related residual, not yet addressed:** `AIZ2_WAIT_FIRE_REDRAW_FRAMES = 38` and
+`AIZ2_FIRE_REDRAW_FRAMES = 8` are documented as coming from a fixture regen
+("trace frame 5496/5504/5542"), i.e. they are fixture-measured rather than derived
+from the ROM, which is what makes the admission frame fixture-relative in the first
+place. That is a hard rule 3 exposure inherited with the branch.

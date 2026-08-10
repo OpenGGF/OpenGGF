@@ -436,11 +436,6 @@ public final class LevelFrameStep {
         // placement could not represent.
         serviceBoundary(context, HardwareServiceBoundary.PRE_MAIN_LOOP);
         context.runtimeArtCoordinator().finishHeldLoopTailClosure();
-        if (context.gameModule().getObjectArtProvider() != null) {
-            context.gameModule().getObjectArtProvider()
-                    .processRuntimeArtQueueAfterPreMainLoop(
-                            frame.defersLoopTailPreparation());
-        }
         if (frame.isOwnedBy(phase)) {
             frame.prepareAfterLoop(phase);
         }

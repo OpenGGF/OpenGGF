@@ -49,6 +49,15 @@ class TestHardwareTimingAuthorityGuard {
                     + "applySuppressedRowCompletion\\s*\\(");
     private static final Pattern RECORDED_EDGE_LOOKAHEAD = Pattern.compile(
             "hasPendingCompletionAtCurrentRawFrame\\s*\\(");
+    /**
+     * The replay-only held-tail marker may gate a local delay, but it must
+     * never be handed to another production collaborator as an argument: that
+     * lets recorded timing select what a production owner does, not merely
+     * when engine-created work becomes ready.
+     */
+    private static final Pattern REPLAY_HELD_TAIL_SIGNAL_ARGUMENT = Pattern.compile(
+            "(?<!\\w)(?!if|while|switch|return|assert)[A-Za-z_$][\\w$]*\\s*\\("
+                    + "[^()]*\\.\\s*defersLoopTailPreparation\\s*\\(\\s*\\)");
     private static final Pattern IMPORT_DECLARATION = Pattern.compile(
             "(?m)^import\\s+(?:static\\s+)?([\\w.]+)(?:\\.\\*)?\\s*;");
     private static final Pattern HARDWARE_TIMING_FILE_LITERAL = Pattern.compile(
@@ -152,6 +161,29 @@ class TestHardwareTimingAuthorityGuard {
                     .toList();
             assertEquals(List.of(), violations,
                     "recorded timing must not choose which production boundary runs");
+        }
+    }
+
+    @Test
+    void recordedHeldTailSignalCannotBePassedToProductionCollaborators()
+            throws IOException {
+        try (Stream<Path> sources = Files.walk(SRC_MAIN)) {
+            List<String> violations = sources
+                    .filter(path -> path.toString().endsWith(".java"))
+                    .filter(path -> {
+                        try {
+                            return REPLAY_HELD_TAIL_SIGNAL_ARGUMENT.matcher(
+                                    Files.readString(path)).find();
+                        } catch (IOException exception) {
+                            throw new java.io.UncheckedIOException(exception);
+                        }
+                    })
+                    .map(SRC_MAIN::relativize)
+                    .map(Path::toString)
+                    .sorted()
+                    .toList();
+            assertEquals(List.of(), violations,
+                    "recorded timing must not select what a production owner does");
         }
     }
 

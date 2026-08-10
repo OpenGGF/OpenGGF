@@ -437,7 +437,6 @@ class TestS3kKosStructuralSequence {
             provider.processRuntimeArtQueue();
             service(timing, HardwareServiceBoundary.POST_OBJECTS);
             service(timing, HardwareServiceBoundary.PRE_MAIN_LOOP);
-            provider.processRuntimeArtQueueAfterPreMainLoop();
         }
         assertLiteralJob(timing, 3, 0x36800C, 0x548);
         assertLiteralJob(timing, 4, 0x367DCA, 0x52A);
@@ -611,30 +610,26 @@ class TestS3kKosStructuralSequence {
                 HCZ_POINTDEXTER));
     }
 
+    /**
+     * A mid-level {@code jsr (LoadEnemyArt).l} runs {@code Queue_Kos_Module}
+     * for every entry during its caller's own dispatch
+     * ({@code docs/skdisasm/sonic3k.asm:64281-64313}), so the parent batch is
+     * on the module FIFO before that iteration's
+     * {@code Process_Kos_Module_Queue} state step (7908) — no recorded timing
+     * signal is involved.
+     */
     @Test
-    void lateEnemyBatchStepsParentWithoutSecondPostObjectsService() {
+    void midLevelEnemyBatchPublishesDuringItsOwnDispatch() {
         HardwareTimingService timing = startLevel(0, 0);
         Sonic3kObjectArtProvider provider =
                 (Sonic3kObjectArtProvider) GameServices.module()
                         .getObjectArtProvider();
-        service(timing, HardwareServiceBoundary.PRE_MAIN_LOOP);
-        provider.deferEnemyKosArtAdmissionUntilAfterPreMainLoop();
+        int before = moduleJobs(timing).size();
 
-        provider.processRuntimeArtQueueAfterPreMainLoop();
+        provider.reloadEnemyKosArt();
 
-        assertEquals(3, moduleJobs(timing).size(),
-                "the late LoadEnemyArt owner publishes its parent batch");
-        assertEquals(1, timing.capture().jobs().stream()
-                        .filter(job -> job.kind()
-                                == HardwareWorkKind.KOS_DECOMPRESSION_QUEUE)
-                        .count(),
-                "the native module state step publishes the first direct child");
-        assertEquals(HardwareServiceBoundary.PRE_MAIN_LOOP,
-                timing.capture().lastServicedBoundary(),
-                "late publication must not manufacture a second POST service");
-        assertFalse(S3kRuntimeArtCoordinator.current().directQueue()
-                        .captureDiagnostics(List.of()).prepared(),
-                "the direct queue already ran this iteration");
+        assertEquals(before + 3, moduleJobs(timing).size(),
+                "the mid-level LoadEnemyArt owner publishes its parent batch");
     }
 
     private static HardwareTimingService startLevel(int zone, int act) {
