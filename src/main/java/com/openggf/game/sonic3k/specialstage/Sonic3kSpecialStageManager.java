@@ -5,7 +5,11 @@ import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
+import com.openggf.game.timing.HardwareWorkHandle;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.Pattern;
@@ -78,26 +82,29 @@ public class Sonic3kSpecialStageManager {
     private int emeraldTimer;
     private int emeraldInteractIndex;
     /**
-     * Frames remaining before the queued Chaos/Super Emerald Kosinski art
-     * module finishes background-decompressing. ROM models this as
-     * {@code Kos_modules_left} (sonic3k.constants.asm), a byte decremented
-     * once per frame by the VBlank-driven streaming Kosinski decompressor
-     * (Queue_Kos_Module, sonic3k.asm:2668) independently of the special
-     * stage's own per-frame routine; {@code loc_9C5C} (sonic3k.asm:12613-
-     * 12620) polls {@code tst.b Kos_modules_left; bne locret_9C7E} every
-     * frame and only resets {@code Special_stage_clear_timer} to 0 (and
-     * starts the emerald-approach countdown) once it reads zero. The engine
-     * does not model a byte-budgeted streaming Kosinski decompressor, so
-     * (like {@code CnzTeleporterInstance.queuedArtFramesRemaining}) this
-     * approximates the real, measured drain time with a fixed frame count:
-     * BizHawk trace {@code s3-knux-multibonus-ss.bk2} shows
-     * {@code clear_routine} flip 1-&gt;2 at physics.csv row 4362 (the
-     * transition frame itself does not run the {@code loc_9C5C} body -- see
-     * {@code updateClearEmeraldLoad}) with {@code clear_timer} flat at 0x101
-     * through row 4366, only resetting to 0 at row 4367 -- 4 blocked
-     * routine-2 calls (rows 4363-4366) before the module finishes.
+     * The {@code Queue_Kos_Module} workload submitted for the Chaos/Super
+     * Emerald art (ROM {@code loc_9C52}, sonic3k.asm:12608-12610).
+     *
+     * <p>The wait it drives is not a frame count. {@code loc_9C5C}
+     * (sonic3k.asm:12613-12620) tests {@code Kos_modules_left}, a byte owned
+     * entirely by the module state machine
+     * ({@code Process_Kos_Module_Queue_Init} / {@code Process_Kos_Module_Queue},
+     * sonic3k.asm:2694-2790): Init sets it to the archive's module count, and
+     * each module costs one {@code Process_Kos_Module_Queue} call to hand to
+     * the decompression FIFO (2735-2742) plus one to observe
+     * {@code Kos_decomp_queue_count == 0}, clear bit 7 and DMA (2745-2758).
+     * The engine therefore submits the same archive to {@link S3kKosModuleQueue}
+     * and reads the same predicate; how long the FIFO child takes to
+     * decompress is 68000 main-loop budget ({@code Process_Kos_Queue},
+     * sonic3k.asm:2840, bookmarked and resumed across V-ints at 2818-2830),
+     * which is exactly the hardware timing the recorded timing port supplies.
+     *
+     * <p>The ordinal is the rewind-stable identity of that submission; the
+     * handle is rebound from the timing ledger after a restore, the pattern
+     * {@code Sonic3kHCZEvents.rebindHardwareWorkAfterRewind} already uses.
      */
-    private int emeraldArtFramesRemaining;
+    private HardwareWorkHandle emeraldArtWork;
+    private long emeraldArtWorkOrdinal = -1;
 
     // ==================== Remaining rings from sphere conversion ====================
     private int ringsLeft;
@@ -206,7 +213,8 @@ public class Sonic3kSpecialStageManager {
         this.clearTimer = 0;
         this.emeraldTimer = 0;
         this.emeraldInteractIndex = -1;
-        this.emeraldArtFramesRemaining = 0;
+        this.emeraldArtWork = null;
+        this.emeraldArtWorkOrdinal = -1;
         this.ringsLeft = 0;
         this.exitSpinStarted = false;
         this.firstUpdateCall = true;
@@ -968,10 +976,74 @@ public class Sonic3kSpecialStageManager {
         player.setVelocity(CLEAR_VELOCITY);
         emeraldTimer = EMERALD_TIMER_INIT;
 
-        // Emerald art/palette bytes are loaded synchronously (ROM-only asset
-        // pipeline), but the ROM's own Kos_modules_left gate in loc_9C5C is a
-        // real per-frame wait -- see emeraldArtFramesRemaining javadoc above.
-        emeraldArtFramesRemaining = EMERALD_ART_QUEUE_DRAIN_FRAMES;
+        queueEmeraldArtModule();
+    }
+
+    /**
+     * ROM {@code loc_9C28}-{@code loc_9C52} (sonic3k.asm:12595-12610) picks the
+     * Chaos or Super Emerald KosM archive on {@code SK_special_stage_flag},
+     * loads {@code tiles_to_bytes(ArtTile_SStage_Emerald)} into d2 and tail-jumps
+     * into {@code Queue_Kos_Module} (2668). With the module FIFO empty that call
+     * runs {@code Process_Kos_Module_Queue_Init} straight away (2671, 2694),
+     * publishing {@code Kos_modules_left} for {@code loc_9C5C} to poll.
+     */
+    private void queueEmeraldArtModule() {
+        S3kKosModuleQueue queue = emeraldArtQueue();
+        if (queue == null) {
+            // No S3K runtime art coordinator is installed (non-S3K harnesses and
+            // unit fixtures for the SS grid/renderer). Nothing was submitted, so
+            // Kos_modules_left reads zero and loc_9C5C releases immediately.
+            emeraldArtWork = null;
+            emeraldArtWorkOrdinal = -1;
+            return;
+        }
+        try {
+            emeraldArtWork = queue.queue(
+                    GameServices.rom().getRom(),
+                    (int) (superEmeraldMode
+                            ? Sonic3kSpecialStageRomOffsets.ART_KOSM_SUPER_EMERALD
+                            : Sonic3kSpecialStageRomOffsets.ART_KOSM_CHAOS_EMERALD),
+                    ART_TILE_EMERALD);
+            emeraldArtWorkOrdinal = emeraldArtWork.ordinal();
+        } catch (IOException e) {
+            throw new IllegalStateException(
+                    "Unable to queue the special-stage emerald art module", e);
+        }
+    }
+
+    /**
+     * Retires the emerald archive once {@code Kos_modules_left} has reached
+     * zero. ROM does the equivalent inside {@code Process_Kos_Module_Queue}
+     * itself: the last module's DMA (sonic3k.asm:2758-2768) shifts the archive
+     * out of {@code Kos_module_queue} (2778-2788). The engine already installed
+     * the decompressed emerald patterns when the stage was built (see
+     * {@code initialize}'s {@code getChaosEmeraldArt}/{@code getSuperEmeraldArt}
+     * upload), so claiming here releases the ledger slot rather than delivering
+     * new art.
+     */
+    private void claimEmeraldArtModule(S3kKosModuleQueue queue) {
+        if (queue == null || emeraldArtWorkOrdinal < 0) {
+            return;
+        }
+        if (emeraldArtWork == null) {
+            emeraldArtWork = GameServices.hardwareTiming()
+                    .pendingHandle(HardwareWorkKind.KOS_MODULE_QUEUE,
+                            emeraldArtWorkOrdinal)
+                    .orElse(null);
+        }
+        if (emeraldArtWork != null && queue.isReady(emeraldArtWork)) {
+            queue.claim(emeraldArtWork);
+        }
+        emeraldArtWork = null;
+        emeraldArtWorkOrdinal = -1;
+    }
+
+    private S3kKosModuleQueue emeraldArtQueue() {
+        if (!(GameServices.runtimeArtCoordinatorOrNull()
+                instanceof S3kRuntimeArtCoordinator coordinator)) {
+            return null;
+        }
+        return coordinator.moduleQueue();
     }
 
     /**
@@ -982,10 +1054,11 @@ public class Sonic3kSpecialStageManager {
      * Kosinski module finishes.
      */
     private void updateClearEmeraldLoad() {
-        if (emeraldArtFramesRemaining > 0) {
-            emeraldArtFramesRemaining--;
+        S3kKosModuleQueue queue = emeraldArtQueue();
+        if (queue != null && queue.modulesLeft()) {
             return;
         }
+        claimEmeraldArtModule(queue);
         clearTimer = 0;
         emeraldTimer--;
         if (emeraldTimer <= 0) {
@@ -1036,7 +1109,7 @@ public class Sonic3kSpecialStageManager {
                 clearTimer,
                 emeraldTimer,
                 emeraldInteractIndex,
-                emeraldArtFramesRemaining,
+                emeraldArtWorkOrdinal,
                 exitSpinStarted,
                 palFadeDelay,
                 musicSpedUp,
@@ -1091,7 +1164,8 @@ public class Sonic3kSpecialStageManager {
         clearTimer = snapshot.clearTimer();
         emeraldTimer = snapshot.emeraldTimer();
         emeraldInteractIndex = snapshot.emeraldInteractIndex();
-        emeraldArtFramesRemaining = snapshot.emeraldArtFramesRemaining();
+        emeraldArtWorkOrdinal = snapshot.emeraldArtWorkOrdinal();
+        emeraldArtWork = null;
         exitSpinStarted = snapshot.exitSpinStarted();
         palFadeDelay = snapshot.palFadeDelay();
         musicSpedUp = snapshot.musicSpedUp();

@@ -13,6 +13,7 @@ import com.openggf.trace.DivergenceReport;
 import com.openggf.trace.FieldComparison;
 import com.openggf.trace.FrameComparison;
 import com.openggf.trace.Severity;
+import com.openggf.trace.timing.HardwareTimingStreamLoader;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -137,6 +138,12 @@ public abstract class AbstractS3kSpecialStageTraceReplayTest {
 
         S3kSpecialStageReplayHarness harness = bootHarness(trace, dir, romFile);
         DivergenceReport report = compareReplay(trace, harness);
+        // Every recorded hardware-timing edge must have been consumed by a
+        // matching production submission (kind, ordinal and submission
+        // fingerprint). An emerald art module the engine never queued -- or
+        // queued from the wrong ROM address, size or VRAM destination -- leaves
+        // its edge unconsumed and fails here rather than silently drifting.
+        harness.closeHardwareTiming();
 
         int ssIndex = specialStageIndex(trace);
         writeReport(report, ssIndex);
@@ -176,7 +183,11 @@ public abstract class AbstractS3kSpecialStageTraceReplayTest {
         int offset = trace.metadata().bk2FrameOffset();
         int ssIndex = specialStageIndex(trace);
         Path bk2 = dir.resolve(trace.metadata().sourceBk2());
-        return new S3kSpecialStageReplayHarness(bk2, offset, ssIndex);
+        S3kSpecialStageReplayHarness harness =
+                new S3kSpecialStageReplayHarness(bk2, offset, ssIndex);
+        harness.installHardwareTiming(
+                HardwareTimingStreamLoader.load(dir, trace.metadata()));
+        return harness;
     }
 
     // ==================== Comparator ====================

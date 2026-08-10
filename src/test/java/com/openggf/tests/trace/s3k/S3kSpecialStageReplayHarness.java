@@ -1,15 +1,21 @@
 package com.openggf.tests.trace.s3k;
 
+import com.openggf.LevelFrameContext;
+import com.openggf.LevelFrameTestStep;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.control.InputHandler;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.debug.playback.RecordedInputSnapshots;
 import com.openggf.game.GameServices;
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.SpecialStageInputMapper;
 import com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageComparisonState;
 import com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageProvider;
 import com.openggf.tests.trace.RecordedInputRows;
+import com.openggf.trace.timing.HardwareTimingReplayPort;
+import com.openggf.trace.timing.HardwareTimingSchedule;
+import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -76,6 +82,8 @@ final class S3kSpecialStageReplayHarness {
     private final RecordedInputRows recordedInputs;
     private final InputHandler inputHandler;
     private final Sonic3kSpecialStageProvider provider;
+    private TraceHardwareTimingBoundaryObserver timingObserver;
+    private HardwareTimingReplayPort timingPort;
 
     S3kSpecialStageReplayHarness(Path bk2, int bk2FrameOffset, int specialStageIndex)
             throws IOException {
@@ -102,13 +110,51 @@ final class S3kSpecialStageReplayHarness {
      * (consume the trace row without stepping) instead.
      */
     void stepFrame(int traceFrame) {
-        recordedInputs.withLogicalOverride(traceFrame, inputHandler, () -> {
-            SpecialStageInputMapper.MappedInput mapped =
-                    SpecialStageInputMapper.map(inputHandler.logical());
-            provider.handleInput(mapped.p1Held(), mapped.p1Pressed());
-            provider.handlePlayer2Input(mapped.p2Held(), mapped.p2Logical());
-            provider.update();
-        });
+        if (timingObserver != null) {
+            timingObserver.beginRawFrame(traceFrame);
+        }
+        recordedInputs.withLogicalOverride(traceFrame, inputHandler, () ->
+                LevelFrameTestStep.executeHardwareTimedObjectScan(
+                        LevelFrameContext.from(SessionManager.getCurrentGameplayMode()),
+                        () -> {
+                            SpecialStageInputMapper.MappedInput mapped =
+                                    SpecialStageInputMapper.map(inputHandler.logical());
+                            provider.handleInput(mapped.p1Held(), mapped.p1Pressed());
+                            provider.handlePlayer2Input(
+                                    mapped.p2Held(), mapped.p2Logical());
+                            provider.update();
+                        }));
+    }
+
+    /**
+     * Installs the fixture's recorded hardware-timing stream, the sanctioned
+     * comparison-only input that releases already-submitted, production-created
+     * Kosinski work (hard rule 4). The SS loop reaches the same
+     * {@code POST_OBJECTS}/{@code PRE_MAIN_LOOP} boundaries production does
+     * (ROM SpecialStage loop tail, sonic3k.asm:10752-10753), so the emerald
+     * archive's module and its decompression child are released exactly where
+     * the recording observed them.
+     */
+    void installHardwareTiming(HardwareTimingSchedule schedule) {
+        if (!schedule.hasRecordedInput()) {
+            return;
+        }
+        timingPort = new HardwareTimingReplayPort(
+                SessionManager.getCurrentGameplayMode()
+                        .activateRecordedHardwareAdmission());
+        timingPort.install(schedule);
+        timingObserver = new TraceHardwareTimingBoundaryObserver(timingPort);
+        SessionManager.getCurrentGameplayMode()
+                .setHardwareTimingBoundaryObserver(timingObserver);
+    }
+
+    void closeHardwareTiming() {
+        if (timingPort != null) {
+            timingPort.verifyRunComplete();
+            SessionManager.getCurrentGameplayMode().setHardwareTimingBoundaryObserver(null);
+            timingPort = null;
+            timingObserver = null;
+        }
     }
 
     /** Read-only comparison snapshot of the current engine SS state. */

@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the Sonic 3 & Knuckles special stage loads its emerald art through the real Kosinski
+  module queue and waits on the ROM's own modules-left predicate, instead of a fixed four-frame
+  drain measured from a capture. The structural part now comes from the module state machine and
+  the decompression latency from the recorded hardware-timing stream, which refuses to release
+  work whose submission fingerprint does not match.
 - Fix: a run chain's presentation bridge no longer suppresses two consecutive rows where the ROM
   has one. The classifier treated a row as a lag closure whenever the recorded vertical-interrupt
   counter had not advanced on both it and its predecessor, but that counter legitimately holds

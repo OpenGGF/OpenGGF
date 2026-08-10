@@ -67113,3 +67113,93 @@ the fade removal surfaced is now closed. EHZ chain unchanged at 23.
   REJECTED, do not retry: restating the DMA-service rule (service after every pass except the
   last of the observation, in both `stepPasses` and `recordedPassPacing.afterPass`) made it
   worse — chain 3360 -> 12008, and all eight stages red publishing FEWER edges.
+
+## 2026-08-10 — round twenty-eight: the emerald drain constant removed, and the GHZ span settled
+
+Command: full `-Ptrace-replay` profile, no `-Dtest`. Base 60dea7454 (769 / 8 / 64).
+After: **769 / 8 / 64, identical failing set** — a correctness-only round.
+
+- **`EMERALD_ART_QUEUE_DRAIN_FRAMES = 4` IS GONE, and the replacement is PROVEN not merely
+  green.** The S3K special stage now submits the real Chaos/Super Emerald KosM archive to the
+  existing `S3kKosModuleQueue`, and `loc_9C5C` reads `S3kKosModuleQueue.modulesLeft()` — the same
+  `Kos_modules_left` predicate the ROM tests. No constant replaces it: the structural part comes
+  from the module state machine, the decompression latency from the fixture's
+  `hardware_timing.jsonl` through the sanctioned port. With recorded admission active the port
+  refuses to release work whose submission fingerprint differs, and the engine's independently
+  computed fingerprint for `KOS_MODULE_QUEUE#137` matched the recorder's `sha256:e8d2b962…`
+  exactly. **The guard was shown to bite:** perturbing the VRAM destination by one tile fails
+  with `engine pending: … sha256:d16398dd…`. Both recorded edges are consumed (decompression
+  child at raw_frame 4365/pre_main_loop, module parent at 4366/post_objects) and
+  `verifyRunComplete()` is now asserted.
+  **Correction to the earlier decomposition:** the 4 is NOT 2 structural + 2 hardware. Only ONE
+  `Process_Kos_Module_Queue` call is ever blocking at the clear routine — the archive is queued
+  during frame F's `sub_9B62` and handed to the decompression FIFO by frame F's own module-queue
+  call at the loop tail (sonic3k.asm:10753), which runs after the clear routine. So a 1-module
+  archive with instantaneous decompression blocks exactly 1 routine-2 call; the other 3 are
+  `Process_Kos_Queue` main-loop budget (:2840, bookmarked/resumed across V-ints at :2818-2830).
+  Archive confirmed 1 module: `Special Stage Chaos Emerald.bin` header 0x0B00 -> 0x0580 words ->
+  ceil(0x580/0x800) = 1 (Super Emerald 0x0A20 -> 0x0510 -> 1).
+- **THE GHZ MAZE 36-ROW SPAN IS NOT COMPUTABLE. Settled, with evidence.** The committed
+  complete-run manifest contains 21 level-to-level movie gaps, and they decide it:
+  (a) **The arithmetic closes independently of the failing assertion:** modelled GHZ phases
+  22+151+4+22 = 199, and 199+36 = 235 = the recorded GHZ gap (235/236). Nothing else is missing.
+  (b) **The gap is PER-ZONE across a 20-frame spread** — GHZ 235-236, MZ 228, SYZ 230, LZ
+  216-217, SLZ 219-220, SBZ 219-220 — so no single constant exists.
+  (c) **It is NOT a function of the compressed data**, which kills the "derive it like the
+  ArtLoadCues title-card drain" hope: SBZ has the LARGEST input on both decoders (map16 3738 +
+  map256 10848) and one of the SMALLEST gaps; GHZ has 2464+8464 and the LARGEST. No additive
+  model over input sizes fits.
+  (d) **Sub-frame jitter is visible in the fixture:** within a zone the decoder data is identical
+  across acts yet the gap moves by 1 (GHZ 236/235, LZ 216/217, SLZ 220/219, SBZ 219/220) — a
+  cycle total's `ceil()` landing either side of a frame boundary, which no frame-granularity
+  model can produce.
+  Worked estimate: ~4.6M cycles at NTSC ~128k cycles/frame, dominated by EniDec/KosDec bitstream
+  cost (code-mix dependent, NOT byte-count dependent), 4096 VDP data-port writes whose stall cost
+  depends on FIFO/bus arbitration, and ~36 in-span VBlank interrupts. **An estimator 1% out is a
+  third of a frame** — still fails, and "close but not equal" is the documented fitted-model
+  signature.
+  Per CLAUDE.md:111-113 nothing numeric was landed. The deliverable is a contract-extension
+  write-up at `docs/architecture/designs/2026-08-10-s1-pre-main-loop-load-span-timing-extension.md`
+  specifying a row-advance-only `pre_main_loop_span` event, its admission preconditions, and
+  seven concrete `TestHardwareTimingAuthorityGuard` obligations — **presented alongside the
+  equally respectable option of doing nothing and leaving the test red.** This is a decision for
+  a human, not a fix to slip in.
+- **THE HELD PUBLICATION-LAG PAIR IS RETIRED — its justification expired.** The r27 measurement
+  ("all eight standalone stages go green together") was taken at 0a4642329, BEFORE our own fixes
+  landed. At 60dea7454 **all eight standalone stages and all six segment tests are ALREADY
+  GREEN without the pair**, and applying it takes the EHZ chain 23 -> 3357 over 445 divergent
+  rows. It is now a pure regression. **Lesson: a held patch's justification can expire
+  underneath it; re-measure a held patch against the CURRENT tip before landing, not against the
+  baseline it was written on.**
+- **And the chain's remaining cause is NOT a lifecycle-expressiveness problem, contrary to the
+  brief.** The lifecycle can express "submitted this row, retired next row" and demonstrably
+  does — the fixture is full of such pairs the engine reproduces (ss transfers 2755 at rows
+  421/422, 5493 at 5186/5187). The exact ROM retirement rule was derived and implemented end to
+  end (each SS_MainLoop iteration arms VintID_S2SS and waits, s2.asm:6694-6706; the V-int it
+  returns from runs ProcessDMAQueue, :781 -> :1770, over everything the PREVIOUS iteration
+  queued, and that same V-int's ReadJoypads is the pass's `input_sample_frame` — so a transfer
+  retires on the observation the NEXT pass STARTS on) and the chain came out **byte-identical**.
+  **The real cause: at row 428 the engine submits the three transfers during the FIRST of that
+  observation's two passes where the ROM submits them during the SECOND.** Instrumented:
+  `retire [2758, 2759, 2760] lf=428` fires from `beforePass(index=1)`, i.e. all three were
+  already pending before the second pass ran its body. Under the ROM rule that is unavoidable —
+  if pass 182 queues them, pass 183's V-int lands on 428 and MUST retire them there. **No
+  retirement-timing model can produce the recorded row.** It is a gameplay-phase defect: which
+  pass advances the SS player mapping frame. `publishPlayerDynamicArt()` (:2035, called from
+  :2004) is correctly pass-scoped, so the mismatch is upstream of it.
+  **Next step, precisely:** diff the engine's per-pass SS player mapping-frame advance against
+  the recorded `run_objects_end` `player_anim_frame_timer` / `anim_frame` on rows 428, 435, 438
+  and 444 of `ss/aux_state.jsonl.gz` in the halfpipe run. The recording answers it directly.
+  REJECTED, do not retry: suppressing the blanket per-row DMA service in
+  `PlcFrameLifecycleCoordinator.claim` (:470-476, gated by
+  `DynamicArtDmaServiceModel.SONIC_2_PROCESS_DMA_QUEUE`) and letting pass starts own the boundary
+  made the chain WORSE, 3357 -> 3840 over 930 rows, with row 428 unchanged.
+- **The 23-error tail (rows 5213-5230) is sidecar territory too.** SS transfers 5495/5496 are
+  queued by the last pass at 5192 and the ROM does not retire them until 5230, because
+  `Pal_FadeToWhite` runs 22 `VintID_Fade` V-blanks (s2.asm:3570-3581) and **`Vint_Fade` goes to
+  `ProcessDPLC`, never `ProcessDMAQueue`** (s2.asm:1068-1071), and the interrupts-disabled results
+  setup that follows (:6746-6800 — `PalLoad_Now`, `LoadPLC2`, `LoadTitleCardSS`, `NemDec` of
+  `ArtNem_SpecialStageResults`, `ClearScreen`) burns the remaining ~16 raster frames with NO
+  `WaitForVint` at all until the results loop's first `VintID_Level` at 5230. The engine models
+  the 22-frame fade but not the blocking-decompression tail, whose length is wall-clock 68000
+  time.
