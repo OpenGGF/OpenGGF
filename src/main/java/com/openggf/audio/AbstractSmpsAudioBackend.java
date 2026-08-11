@@ -432,23 +432,40 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     @Override
     public void playSfxSmps(AbstractSmpsData data, DacData dacData, float pitch,
                              SmpsSequencerConfig config) {
-        // Look up SFX priority from game-specific audio profile
-        int sfxPriority = (audioProfile != null) ? audioProfile.getSfxPriority(data.getId()) : 0x70;
-        boolean specialSfx = (audioProfile != null) && audioProfile.isSpecialSfx(data.getId());
+        SmpsSfxPlaybackPolicy policy = new SmpsSfxPlaybackPolicy(
+                (audioProfile != null)
+                        ? audioProfile.getSfxPriority(data.getId()) : 0x70,
+                audioProfile != null
+                        && audioProfile.isSpecialSfx(data.getId()),
+                audioProfile != null
+                        && audioProfile.isContinuousSfx(data.getId()));
+        playSfxSmps(data, dacData, pitch, config, policy);
+    }
+
+    @Override
+    public void playSfxSmps(
+            AbstractSmpsData data,
+            DacData dacData,
+             float pitch,
+             SmpsSequencerConfig config,
+             SmpsSfxPlaybackPolicy playbackPolicy) {
+        Objects.requireNonNull(playbackPolicy, "playbackPolicy");
+        int sfxPriority = playbackPolicy.priority();
+        boolean specialSfx = playbackPolicy.special();
 
         // --- Continuous SFX detection (Z80: zPlaySound_Bankswitch lines 1937-1965) ---
         // If this SFX is continuous (S3K >= 0xBC) and the same one is already playing,
         // extend playback (set the flag) instead of restarting from scratch.
-        boolean isContinuous = (audioProfile != null) && audioProfile.isContinuousSfx(data.getId());
+        boolean isContinuous = playbackPolicy.continuous();
         SmpsAdmissionContext admissionContext = new SmpsAdmissionContext(
                 data.getId(), data.getId(), sfxPriority,
                 SmpsRequestAdmissionPolicy.NO_PRIORITY,
                 specialSfx, false);
-        SmpsRequestAdmissionPolicy policy = audioProfile != null
+        SmpsRequestAdmissionPolicy admissionPolicy = audioProfile != null
                 ? audioProfile.getSfxAdmissionPolicy()
                 : SmpsRequestAdmissionPolicy.PERMISSIVE;
         AdmissionResult admission = Objects.requireNonNull(
-                policy.evaluate(admissionContext),
+                admissionPolicy.evaluate(admissionContext),
                 "SFX admission policy returned no result");
         if (!admission.accepted()) {
             observeAdmission(new AudioAdmissionObserver.AudioAdmissionDecision(

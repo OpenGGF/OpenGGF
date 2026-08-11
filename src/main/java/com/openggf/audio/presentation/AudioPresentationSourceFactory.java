@@ -4,6 +4,7 @@ import com.openggf.audio.AudioManager;
 import com.openggf.audio.AudioAdmissionObserver;
 import com.openggf.audio.AudioAdmissionObserver.AudioAdmissionDecision;
 import com.openggf.audio.AudioDiagnosticObserverException;
+import com.openggf.audio.SmpsSfxPlaybackPolicy;
 import com.openggf.audio.MusicRestoreSink;
 import com.openggf.audio.driver.SfxContentionObserver;
 import com.openggf.audio.driver.SmpsDriver;
@@ -94,11 +95,21 @@ public final class AudioPresentationSourceFactory
     public record RegisteredSmpsPlayback(
             AbstractSmpsData program,
             DacData dac,
-            SmpsSequencerConfig config) {
+            SmpsSequencerConfig config,
+            SmpsSfxPlaybackPolicy policy) {
         public RegisteredSmpsPlayback {
             Objects.requireNonNull(program, "program");
             Objects.requireNonNull(dac, "dac");
             Objects.requireNonNull(config, "config");
+            Objects.requireNonNull(policy, "policy");
+        }
+
+        public RegisteredSmpsPlayback(
+                AbstractSmpsData program,
+                DacData dac,
+                SmpsSequencerConfig config) {
+            this(program, dac, config,
+                    SmpsSfxPlaybackPolicy.defaults(false));
         }
     }
 
@@ -518,7 +529,21 @@ public final class AudioPresentationSourceFactory
         validateSfxKey(resolvedKey);
         return register(new SmpsAssetCatalog.ProgramKey(
                 resolvedKey, dependencyGeneration), data, dac, config,
-                specialSfx);
+                SmpsSfxPlaybackPolicy.defaults(specialSfx));
+    }
+
+    public SmpsAssetCatalog.ProgramEntry registerSmpsSfxAsset(
+            SmpsAssetKey key,
+            long dependencyGeneration,
+            AbstractSmpsData data,
+            DacData dac,
+            SmpsSequencerConfig config,
+            SmpsSfxPlaybackPolicy policy) {
+        SmpsAssetKey resolvedKey = Objects.requireNonNull(key, "key");
+        validateSfxKey(resolvedKey);
+        return register(new SmpsAssetCatalog.ProgramKey(
+                resolvedKey, dependencyGeneration), data, dac, config,
+                policy);
     }
 
     public SmpsAssetCatalog.ProgramEntry findRegisteredSmpsSfxAsset(
@@ -550,7 +575,7 @@ public final class AudioPresentationSourceFactory
         validateMusicKey(resolvedKey);
         return register(new SmpsAssetCatalog.ProgramKey(
                 resolvedKey, dependencyGeneration), data, dac, config,
-                false);
+                SmpsSfxPlaybackPolicy.defaults(false));
     }
 
     public SmpsAssetCatalog.ProgramEntry findRegisteredSmpsMusicAsset(
@@ -575,7 +600,8 @@ public final class AudioPresentationSourceFactory
     private static RegisteredSmpsPlayback registeredPlayback(
             SmpsAssetCatalog.ProgramEntry entry) {
         return new RegisteredSmpsPlayback(
-                entry.program(), entry.dac(), entry.staticConfig());
+                entry.program(), entry.dac(), entry.staticConfig(),
+                entry.sfxPolicy());
     }
 
     private SmpsAssetCatalog.ProgramEntry register(
@@ -583,9 +609,9 @@ public final class AudioPresentationSourceFactory
             AbstractSmpsData data,
             DacData dac,
             SmpsSequencerConfig config,
-            boolean specialSfx) {
+            SmpsSfxPlaybackPolicy policy) {
         SmpsAssetCatalog.ProgramEntry entry = assetCatalog.register(
-                key, data, dac, config, specialSfx);
+                key, data, dac, config, policy);
         SmpsAssetCatalog.ProgramEntry previous = sourcesByDescriptor.putIfAbsent(
                 entry.sourceDescriptor(), entry);
         if (previous != null && previous != entry) {
@@ -606,7 +632,8 @@ public final class AudioPresentationSourceFactory
         CompatibilityDependencies dependencies = compatibilityDependencies(
                 resolvedKey, dac, config);
         return register(new SmpsAssetCatalog.ProgramKey(resolvedKey, 0),
-                data, dependencies.dac(), dependencies.config(), specialSfx);
+                data, dependencies.dac(), dependencies.config(),
+                SmpsSfxPlaybackPolicy.defaults(specialSfx));
     }
 
     private SmpsAssetCatalog.ProgramEntry registerCompatibilitySmpsMusicAsset(
@@ -615,7 +642,7 @@ public final class AudioPresentationSourceFactory
             DacData dac,
             SmpsSequencerConfig config) {
         return register(new SmpsAssetCatalog.ProgramKey(key, 0),
-                data, dac, config, false);
+                data, dac, config, SmpsSfxPlaybackPolicy.defaults(false));
     }
 
     private CompatibilityDependencies compatibilityDependencies(

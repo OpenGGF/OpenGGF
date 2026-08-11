@@ -2,6 +2,7 @@ package com.openggf.audio.presentation;
 
 import com.openggf.audio.AudioDiagnosticObserverException;
 import com.openggf.audio.GameSound;
+import com.openggf.audio.SmpsSfxPlaybackPolicy;
 import com.openggf.audio.presentation.AudioPresentationCommand.AddSmpsSfx;
 import com.openggf.audio.presentation.AudioPresentationCommand.ChangeMusicTempo;
 import com.openggf.audio.presentation.AudioPresentationCommand.EndMusicOverride;
@@ -347,7 +348,10 @@ public final class AudioPresentationCommandResolver {
                     key, generation, data,
                     requireDac(key.route(), source),
                     requireConfig(key.route(), source),
-                    source.sfxPolicy().special(resolvedSfxId));
+                    new SmpsSfxPlaybackPolicy(
+                            source.sfxPolicy().priority(resolvedSfxId),
+                            source.sfxPolicy().special(resolvedSfxId),
+                            source.sfxPolicy().continuous(resolvedSfxId)));
         }
         int sfxId = entry.assetId();
         int priority = source.sfxPolicy().priority(sfxId);
