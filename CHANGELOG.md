@@ -17,7 +17,9 @@ All notable changes to the OpenGGF project are documented in this file.
   constructing an invalid catalog key. Cached legacy-backend starts now also
   dispatch the registered priority, special-SFX, and continuous-SFX policy
   with the retained program/DAC/config tuple, so a later profile replacement
-  cannot reclassify an already-registered playback.
+  cannot reclassify an already-registered playback. ROM replacement keeps the
+  existing audio-to-data ownership edge while atomically publishing the new
+  loader, DAC, config, and generation tuple.
 - Performance: prepared SMPS SFX admission now bypasses the presentation
   registry's whole-music-driver rollback capture on the ordinary and rejected
   SFX paths. Coordination still rolls back at its narrow admission boundary,
