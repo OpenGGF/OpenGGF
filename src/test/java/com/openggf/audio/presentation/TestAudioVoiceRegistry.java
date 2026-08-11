@@ -639,11 +639,11 @@ class TestAudioVoiceRegistry {
                 () -> queue.applyPending(registry::apply));
 
         assertSame(musicDac, activeDacData(driver),
-                "rollback must restore the exact pre-command DAC bank");
+                "pre-mutation rejection must retain the exact DAC bank");
         short[] expected = renderFrames(uninterrupted, 128);
         short[] actual = renderFrames(driver, 128);
         assertArrayEquals(expected, actual,
-                "rollback must restore in-flight DAC playback against that bank");
+                "pre-mutation rejection must retain in-flight DAC playback");
         assertEquals(1, queue.size());
 
         queue.applyPending(registry::apply);
@@ -701,7 +701,7 @@ class TestAudioVoiceRegistry {
                 () -> queue.applyPending(registry::apply));
 
         assertEquals(7, state.spindashRevCounter(),
-                "failed constructor/start notification must roll back");
+                "rejected preparation must not publish a start notification");
         assertEquals(1, queue.size());
 
         queue.applyPending(registry::apply);
@@ -824,6 +824,12 @@ class TestAudioVoiceRegistry {
                 "construction precedes the begin/commit coordination snapshot");
         assertEquals(1, queue.size());
         assertEquals(0, registry.orderedVoiceCount());
+        assertEquals(1, instantiation.failedDriver.stopAllCalls,
+                "the rejected standalone voice must be disposed exactly once");
+        assertEquals(0, instantiation.failedDriver.commitCalls,
+                "preparation rejection must not claim or commit an admission");
+        assertTrue(instantiation.failedDriver.sequencersForTesting().isEmpty(),
+                "preparation rejection must leave no standalone SFX attached");
 
         queue.applyPending(registry::apply);
 
@@ -1489,28 +1495,36 @@ class TestAudioVoiceRegistry {
     }
 
     @Test
-    void smpsSfxAdmissionAvoidsWholeOwnerRollbackCapture() {
-        RecordingInstantiation instantiation = new RecordingInstantiation();
-        CapturingDriver ownerDriver = new CapturingDriver();
+    void smpsSfxAdmissionCoordinatesOnceBeforeCommitWithoutWholeOwnerCapture() {
+        List<String> ownerEvents = new ArrayList<>();
+        AdmissionOrderInstantiation instantiation =
+                new AdmissionOrderInstantiation(ownerEvents);
+        CapturingDriver ownerDriver = new CapturingDriver(ownerEvents);
         instantiation.enqueueMusicDriver(ownerDriver);
         AudioVoiceRegistry registry = registry(instantiation, new ArrayList<>());
         registry.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
                 0x81, AudioSourceDescriptor.baseMusic(0x81),
                 composite(1, 0x81, ownerDriver))));
 
-        registry.apply(new AddSmpsSfx(source(2, 0xB0)));
+        registry.apply(new AddSmpsSfx(nonContinuousSource(2, 0xB0)));
 
         assertEquals(0, ownerDriver.liveCommandMutationCaptures,
                 "a new owner-bound SFX must use prepared admission directly");
         assertEquals(1, ownerDriver.sequencersForTesting().size());
+        assertEquals(List.of("begin", "commit"), ownerEvents,
+                "new owner admission must start coordination immediately before commit");
 
-        registry.apply(new AddSmpsSfx(source(3, 0xB0)));
+        ownerEvents.clear();
+        registry.apply(new AddSmpsSfx(nonContinuousSource(3, 0xB0)));
 
         assertEquals(0, ownerDriver.liveCommandMutationCaptures,
                 "same-ID replacement must not restore the whole music owner");
         assertEquals(1, ownerDriver.sequencersForTesting().size(),
                 "same-ID replacement still commits exactly once");
+        assertEquals(List.of("begin", "commit"), ownerEvents,
+                "same-ID replacement must start coordination immediately before commit");
 
+        ownerEvents.clear();
         ResolvedSmpsSfxSource rejected = new ResolvedSmpsSfxSource(
                 4, new SmpsAssetKey("s3k", SmpsAssetKey.Route.BASE_ID,
                 0xB1, null), 1 << 16, 0x70, 0x100, 1,
@@ -1519,11 +1533,15 @@ class TestAudioVoiceRegistry {
                 () -> registry.apply(new AddSmpsSfx(rejected)));
         assertEquals(0, ownerDriver.liveCommandMutationCaptures,
                 "preparation rejection must not capture the whole owner");
+        assertTrue(ownerEvents.isEmpty(),
+                "preparation rejection must not start coordination");
 
-        CapturingDriver continuousDriver = new CapturingDriver();
+        List<String> continuousEvents = new ArrayList<>();
+        CapturingDriver continuousDriver = new CapturingDriver(continuousEvents);
         SmpsSequencer continuous = sequencer(source(5, 0xBC), continuousDriver);
         continuousDriver.addSequencer(continuous, true);
         continuousDriver.startContinuousSfx(0xBC, 1);
+        continuousEvents.clear();
         RecordingInstantiation continuousInstantiation = new RecordingInstantiation();
         continuousInstantiation.failIfCached = true;
         continuousInstantiation.enqueueMusicDriver(continuousDriver);
@@ -1538,9 +1556,12 @@ class TestAudioVoiceRegistry {
         assertEquals(0, continuousDriver.liveCommandMutationCaptures,
                 "continuous extension has neither a new sequencer nor rollback");
         assertEquals(0, continuousInstantiation.cachedCalls);
+        assertEquals(List.of("commit"), continuousEvents,
+                "continuous extension commits without a coordination start");
 
+        List<String> standaloneEvents = new ArrayList<>();
         CapturingStandaloneInstantiation standaloneInstantiation =
-                new CapturingStandaloneInstantiation();
+                new CapturingStandaloneInstantiation(standaloneEvents);
         AudioVoiceRegistry standaloneRegistry = registry(
                 standaloneInstantiation, new ArrayList<>());
 
@@ -1550,6 +1571,8 @@ class TestAudioVoiceRegistry {
                 standaloneInstantiation.standaloneDriver.liveCommandMutationCaptures,
                 "standalone admission remains unpublished until direct commit");
         assertEquals(List.of(7L), orderedIds(standaloneRegistry));
+        assertEquals(List.of("begin", "commit"), standaloneEvents,
+                "standalone admission must start coordination immediately before commit");
     }
 
     @Test
@@ -1927,6 +1950,13 @@ class TestAudioVoiceRegistry {
                 1 << 16, 0x70, sfxId, 1, MAX_STEREO_FRAMES);
     }
 
+    private static ResolvedSmpsSfxSource nonContinuousSource(
+            long standaloneVoiceId, int sfxId) {
+        return new ResolvedSmpsSfxSource(standaloneVoiceId,
+                new SmpsAssetKey("s3k", SmpsAssetKey.Route.BASE_ID, sfxId, null),
+                1 << 16, 0x70, 0, 1, MAX_STEREO_FRAMES);
+    }
+
     private static List<Long> orderedIds(AudioVoiceRegistry registry) {
         List<Long> ids = new ArrayList<>();
         for (int index = 0; index < registry.orderedVoiceCount(); index++) {
@@ -2106,15 +2136,41 @@ class TestAudioVoiceRegistry {
 
     private static final class CapturingStandaloneInstantiation
             extends RecordingInstantiation {
+        private final List<String> events;
         private CapturingDriver standaloneDriver;
+
+        private CapturingStandaloneInstantiation(List<String> events) {
+            this.events = events;
+        }
 
         @Override
         public SmpsCompositeVoice instantiateStandaloneCached(
                 ResolvedSmpsSfxSource source) {
-            standaloneDriver = new CapturingDriver();
+            standaloneDriver = new CapturingDriver(events);
             return new SmpsCompositeVoice(
                     source.standaloneVoiceId(), source.priority(),
                     null, null, source.maxStereoFrames(), standaloneDriver);
+        }
+
+        @Override
+        public SmpsSequencer instantiateCached(
+                ResolvedSmpsSfxSource source, SmpsDriver currentOwner) {
+            return sequencerWithStartEvent(source, currentOwner, events);
+        }
+    }
+
+    private static final class AdmissionOrderInstantiation
+            extends RecordingInstantiation {
+        private final List<String> events;
+
+        private AdmissionOrderInstantiation(List<String> events) {
+            this.events = events;
+        }
+
+        @Override
+        public SmpsSequencer instantiateCached(
+                ResolvedSmpsSfxSource source, SmpsDriver currentOwner) {
+            return sequencerWithStartEvent(source, currentOwner, events);
         }
     }
 
@@ -2122,6 +2178,7 @@ class TestAudioVoiceRegistry {
             extends RecordingInstantiation {
         private final SmpsCoordFlagRuntimeState state;
         private boolean failAttachment = true;
+        private FailingMutationDriver failedDriver;
 
         private StandaloneCoordMutationInstantiation(
                 SmpsCoordFlagRuntimeState state) {
@@ -2138,6 +2195,7 @@ class TestAudioVoiceRegistry {
             if (failAttachment) {
                 driver.failNextSfxAttachment();
                 failAttachment = false;
+                failedDriver = driver;
             }
             return new SmpsCompositeVoice(
                     source.standaloneVoiceId(), source.priority(),
@@ -2290,6 +2348,36 @@ class TestAudioVoiceRegistry {
         return sequencer;
     }
 
+    private static SmpsSequencer sequencerWithStartEvent(
+            ResolvedSmpsSfxSource source, SmpsDriver owner,
+            List<String> events) {
+        SmpsSequencer sequencer = new SmpsSequencer(
+                new FixtureSfxData(source.assetKey().sfxId()), dacData(),
+                owner, AudioManager.getInstance(),
+                new SmpsSequencerConfig.Builder()
+                        .coordFlagHandler(new CoordFlagHandler() {
+                            @Override
+                            public void onSfxStart(int sfxId) {
+                                events.add("begin");
+                            }
+
+                            @Override
+                            public boolean handleFlag(
+                                    CoordFlagContext context,
+                                    SmpsSequencer.Track track, int command) {
+                                return false;
+                            }
+
+                            @Override
+                            public int flagParamLength(int command) {
+                                return -1;
+                            }
+                        })
+                        .build());
+        sequencer.setSfxPriority(source.priority());
+        return sequencer;
+    }
+
     private static final class RecordingDriver extends SmpsDriver {
         private final boolean extendsContinuous;
         private final boolean[] fmMutes = new boolean[6];
@@ -2361,12 +2449,29 @@ class TestAudioVoiceRegistry {
     }
 
     private static final class CapturingDriver extends SmpsDriver {
+        private final List<String> events;
         private int liveCommandMutationCaptures;
+
+        private CapturingDriver() {
+            this(null);
+        }
+
+        private CapturingDriver(List<String> events) {
+            this.events = events;
+        }
 
         @Override
         public LiveCommandMutationToken captureLiveCommandMutation() {
             liveCommandMutationCaptures++;
             return super.captureLiveCommandMutation();
+        }
+
+        @Override
+        public void commitSfxAdmission(PreparedSfxAdmission admission) {
+            if (events != null) {
+                events.add("commit");
+            }
+            super.commitSfxAdmission(admission);
         }
     }
 
@@ -2427,6 +2532,8 @@ class TestAudioVoiceRegistry {
         private boolean failNextSfxAttachment;
         private boolean failNextStopAll;
         private boolean failNextStopAllSfx;
+        private int stopAllCalls;
+        private int commitCalls;
 
         private void failNextControl() {
             failNextControl = true;
@@ -2468,7 +2575,14 @@ class TestAudioVoiceRegistry {
         }
 
         @Override
+        public void commitSfxAdmission(PreparedSfxAdmission admission) {
+            commitCalls++;
+            super.commitSfxAdmission(admission);
+        }
+
+        @Override
         public void stopAll() {
+            stopAllCalls++;
             super.stopAll();
             if (failNextStopAll) {
                 failNextStopAll = false;
