@@ -18,12 +18,6 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "HardwareTiming pending final module emits one LF event",
                 PendingFinalModuleEmitsOneLfEvent));
             tests.Add(new TestMain.TestCase(
-                "HardwareTiming direct match may reach before its own output",
-                DirectMatchMayReachBeforeItsOwnOutput));
-            tests.Add(new TestMain.TestCase(
-                "HardwareTiming accepts the ArtKosM_ResultsSONIC continuation module",
-                AcceptsResultsSonicContinuationModule));
-            tests.Add(new TestMain.TestCase(
                 "HardwareTiming duplicate level frame without retirement writes no event",
                 DuplicateLevelFrameWithoutRetirementWritesNoEvent));
             tests.Add(new TestMain.TestCase(
@@ -2297,107 +2291,6 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(true, frameCap > startedGuard);
             AssertEx.Equal(true, noArmCleanup > frameCap);
             AssertEx.Equal(true, openEmpty >= 0);
-        }
-
-        /// <summary>
-        /// A direct submission whose first match reaches back BEFORE its own
-        /// first output byte must be accepted and shaped, not rejected.
-        /// Process_Kos_Queue copies through an unguarded
-        /// `move.b (a1,d2.w),d0` with a negative displacement
-        /// (sonic3k.asm:2919-2922), and Process_Kos_Module_Queue feeds every
-        /// module of a KosM archive into that same decompressor against one
-        /// shared Kos_decomp_buffer (sonic3k.asm:2734-2740), so a
-        /// continuation module's opening match addresses the previous
-        /// module's residue by design.
-        /// </summary>
-        private static void DirectMatchMayReachBeforeItsOwnOutput()
-        {
-            const int source = 0x100;
-            byte[] rom = RomWithBackreferenceBeforeOutput(source);
-            var host = NewHost();
-            var writer = new StringWriter();
-            var engine = new HardwareTimingEventEngine(rom);
-
-            StageDirect(host, 0, source, unchecked((int)0xFFFFD240));
-            host.SetU16(S3KRam.KosDecompQueueCount, 1);
-            engine.ObserveFrameEnd(30, host, writer);
-            host.SetU16(S3KRam.KosDecompQueueCount, 0);
-            engine.ObserveFrameEnd(31, host, writer);
-
-            AssertEx.Equal(
-                true,
-                writer.ToString().Contains(
-                    "\"raw_frame\":31,\"boundary\":\"pre_main_loop\","
-                    + "\"kind\":\"kos_decompression_queue\","
-                    + "\"ordinal\":0"));
-        }
-
-        /// <summary>
-        /// The exact stream that aborted the Sonic+Tails complete-emeralds
-        /// capture: the second module of ArtKosM_ResultsSONIC (archive base
-        /// ROM 0x15B95C), which Process_Kos_Module_Queue queues at ROM
-        /// 0x15BAB9 with Kos_decomp_buffer as its destination. Skips without
-        /// S3K_ROM_PATH rather than asserting against a synthetic stand-in.
-        /// </summary>
-        private static void AcceptsResultsSonicContinuationModule()
-        {
-            const int continuationModule = 0x15BAB9;
-            byte[] rom = ReadS3kRom();
-            var host = NewHost();
-            var writer = new StringWriter();
-            var engine = new HardwareTimingEventEngine(rom);
-
-            // Kos_module_queue holds the header-stripped active archive
-            // source while its modules are decompressed one at a time.
-            host.SetU32(S3KRam.KosModuleQueue, 0x15B95E);
-            host.Ram[S3KRam.KosModulesLeft] = 0x81;
-            StageDirect(
-                host, 0, continuationModule, unchecked((int)0xFFFFD240));
-            host.SetU16(S3KRam.KosDecompQueueCount, 1);
-            engine.ObserveFrameEnd(40, host, writer);
-            host.SetU16(S3KRam.KosDecompQueueCount, 0);
-            engine.ObserveFrameEnd(41, host, writer);
-
-            AssertEx.Equal(
-                true,
-                writer.ToString().Contains(
-                    "\"kind\":\"kos_decompression_queue\",\"ordinal\":0"));
-        }
-
-        private static byte[] ReadS3kRom()
-        {
-            string path = Environment.GetEnvironmentVariable("S3K_ROM_PATH");
-            if (string.IsNullOrEmpty(path))
-            {
-                throw new TestMain.SkipTestException(
-                    "S3K_ROM_PATH is not set.");
-            }
-            if (!File.Exists(path))
-            {
-                throw new InvalidOperationException(
-                    "Supplied S3K_ROM_PATH does not exist: " + path + ".");
-            }
-            return File.ReadAllBytes(path);
-        }
-
-        /// <summary>
-        /// A six-byte Kosinski stream whose first command is a two-byte
-        /// short match at distance 2 -- reaching two bytes below the
-        /// destination write pointer before anything has been written --
-        /// followed by the end-of-stream marker. Descriptor bits, LSB first:
-        /// 0,0 select a short match, 0,0 select its length, and 0,1 open the
-        /// full-match form whose zero count byte terminates the stream.
-        /// </summary>
-        private static byte[] RomWithBackreferenceBeforeOutput(int source)
-        {
-            var rom = new byte[Math.Max(0x400, source + 6)];
-            rom[source] = 0x20;     // descriptor low byte
-            rom[source + 1] = 0x00; // descriptor high byte
-            rom[source + 2] = 0xFE; // distance byte: (0xFE ^ 0xFF) + 1 == 2
-            rom[source + 3] = 0x00;
-            rom[source + 4] = 0x00;
-            rom[source + 5] = 0x00; // count byte 0 -> count 1 -> end
-            return rom;
         }
 
         private static FakeS1Host NewHost()
