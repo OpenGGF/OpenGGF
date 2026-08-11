@@ -17,19 +17,18 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "S2CompleteAudioCaptureRunnerTests stop a prefix without consuming the preserved tail",
                 StopsPrefixWithoutConsumingPreservedTail));
-            if (Environment.GetEnvironmentVariable(
-                "OPENGGF_S2_COMPLETE_AUDIO_REFERENCE") == "1")
+            string rom = Environment.GetEnvironmentVariable("S2_ROM_PATH");
+            string movie = ReferenceMoviePath();
+            if (File.Exists(rom) && File.Exists(movie))
             {
-                string rom = Environment.GetEnvironmentVariable("S2_ROM_PATH");
-                string movie = Environment.GetEnvironmentVariable("S2_BK2_PATH");
-                if (File.Exists(rom) && File.Exists(movie))
-                {
-                    tests.Add(new TestMain.TestCase(
-                        "S2CompleteAudioCaptureRunnerTests prove real power-on to row 769 publication",
-                        () => ProvesRealPowerOnToRow769Publication(rom, movie),
-                        game: "s2", serial: true,
-                        estimatedSeconds: 20.0));
-                }
+                tests.Add(new TestMain.TestCase(
+                    "S2CompleteAudioCaptureRunnerTests prove real power-on to row 769 publication",
+                    () => ProvesRealPowerOnToRow769Publication(rom, movie),
+                    game: "s2",
+                    movie: "s2-sonic-tails-complete-emeralds",
+                    kind: TestKind.Gate,
+                    serial: true,
+                    estimatedSeconds: 20.0));
             }
         }
 
@@ -145,6 +144,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
         {
             return Path.GetFullPath(Path.Combine(EndToEndTests.ToolDirectory,
                 "fixtures/gpgx-audio-capability-v1.json"));
+        }
+
+        private static string ReferenceMoviePath()
+        {
+            return Path.Combine(EndToEndTests.RepositoryRoot,
+                "src", "test", "resources", "traces", "s2", "runs",
+                "s2-sonic-tails-complete-emeralds",
+                "sonic-2-sonic-tails-complete-emeralds.bk2");
         }
 
         private sealed class RecordingSink : IS2CompleteAudioCaptureSink

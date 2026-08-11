@@ -168,4 +168,4 @@ integration will perform the single final cross-game deterministic repin.
 The clean two-root verifier reproduced production SHA-256
 `9d3d9eb25c29fec4436149c802b3851657c74ea20b65df9bf22d60241d574d31`
 and test SHA-256
-`9c7c898f585942b6bd8c2864a1e2cd8ec7e50816cf400a557244ae2883dbd386`.
+`3a10293d6d41bff0fb637c91953e4f3644e990b49f72b09414437b6b81f1c30b`.
