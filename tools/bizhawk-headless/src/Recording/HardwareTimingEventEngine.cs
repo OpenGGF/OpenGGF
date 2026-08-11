@@ -880,12 +880,26 @@ namespace OpenGGF.BizHawk.Headless
                 }
                 copiedOutputLength = CheckedOutputLength(
                     copiedOutputLength, count);
-                if (outputLength - distance < 0)
-                {
-                    throw new InvalidDataException(
-                        "Kosinski backreference precedes output at ROM"
-                        + " 0x" + position.ToString("X") + ".");
-                }
+                // A match may legitimately reach back BEFORE this stream's
+                // own first output byte, so no "backreference precedes
+                // output" invariant exists to assert. Process_Kos_Queue's
+                // match loop is an unguarded `move.b (a1,d2.w),d0` with a
+                // negative d2 displacement (sonic3k.asm:2919-2922): it copies
+                // whatever currently sits below the write pointer in the
+                // destination buffer, without ever comparing against the
+                // start of the stream. Process_Kos_Module_Queue depends on
+                // exactly that -- it feeds each module of a KosM archive to
+                // Queue_Kos in turn, all decompressing into the same
+                // Kos_decomp_buffer (sonic3k.asm:2734-2740), so a
+                // continuation module's early matches address the residue the
+                // previous module left there. ArtKosM_ResultsSONIC's second
+                // module (ROM 0x15BAB9) is one such stream and aborted the
+                // Sonic+Tails complete-emeralds capture while this threw.
+                // Only the ROM-read bound (RequireRomBytes) and the output
+                // ceiling (CheckedOutputLength) are real limits; neither
+                // CompressedLength nor DestinationLength is affected by the
+                // reach of a match, so shapes recorded before this comment
+                // are unchanged.
                 outputLength = CheckedOutputLength(outputLength, count);
             }
         }

@@ -72815,3 +72815,48 @@ control and after, with an identical set of 41 failing classes.
   toward green, and a change that can move when a malformed fixture fails can
   move those two classes' messages underneath that work. Gate it on a
   MESSAGE-level diff of the red classes, not a pass/fail-count diff.
+
+## 2026-08-11 — S3K Sonic+Tails complete-emeralds run captured and harnessed
+
+New fixture `src/test/resources/traces/s3k/runs/s3k-sonic-tails-complete-emeralds/`
+(63 segments, 40 transitions, 134 MB committed, all payloads gzipped by the
+native harness's own compressor at `--compress-threshold 0`). Captured from
+`docs/BizHawk-2.11-linux-x64/Movies/s3k-sonic-tails-complete-emeralds.bk2` with
+`tools/bizhawk-headless/run.sh --mode trace --run-id
+s3k-sonic-tails-complete-emeralds`, trace schema 5. Worktree branch
+`feature/ai-s3k-sonic-tails-trace` over `e1463081d`.
+
+The capture first aborted outright: `InspectStandardKos` rejected the second
+module of `ArtKosM_ResultsSONIC` (queued at ROM 0x15BAB9 into the direct FIFO
+by `Process_Kos_Module_Queue`) with "Kosinski backreference precedes output".
+That invariant models nothing in the ROM — `Process_Kos_Queue`'s match loop is
+an unguarded `move.b (a1,d2.w),d0` (sonic3k.asm:2919-2922) and every module of
+a KosM archive decompresses into the same `Kos_decomp_buffer`, so a
+continuation module's opening match addresses the previous module's residue by
+design. Removing it is the recorder fix in this commit; it only ever threw, so
+no previously-successful capture's shape values change.
+
+Command for every result below (one invocation, `-Dtest=TestS3kSonicTails*`):
+`mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical`
+`"-Dsurefire.argLine=-Xmx4g" -Ds3k.rom.path=<s3k.gen> test`
+
+Result: 64 tests, 8 failures + 53 errors, 3 passing. All new classes are
+deliberate frontier harnesses and are expected red.
+
+| Outcome | Count | First error |
+|---|---|---|
+| `TestS3kSonicTailsCompleteEmeraldRunChain` | FAIL | segment 0 (`aiz`), raw_frame 1188, `KOS_DECOMPRESSION_QUEUE#16 sha256:dae421a2…`, `engine pending: <none>` |
+| Special stages `ss`, `ss_2`, `ss_6` | PASS | — |
+| Level + SS segments on `KOS_DECOMPRESSION_QUEUE` | 41 | `engine pending: <none>` (28) or a fingerprint mismatch (13); earliest `#16` in `aiz`, latest `#1241` in `zone0c` |
+| `dez23`…`dez23_8` (zone_id 23) | 8 | `IndexOutOfBoundsException: Index 23 out of bounds for length 22` in the S3K zone list |
+| `hpz22`, `hpz22_2` (zone_id 22) | 2 | `IndexOutOfBoundsException: Index 22 out of bounds for length 22` |
+| `ddz` (zone_id 13 act 2) | 1 | `IndexOutOfBoundsException: Index: 1 Size: 1`, `LevelManager.loadCurrentLevel:3217` |
+| Bonus `pachinko`×3, `gumball`×2, `slots` | 6 | `tails_y_speed` at frame 0 (pachinko), `tails_x`/`tails_x_speed` at frame 33 (gumball), `player_mapping_frame` at frame 5 (slots) |
+| `ss_4`, `ss_5` | 2 | `spheres_left` mismatch (frame 1689 / 3906), one sphere ahead |
+
+The chain frontier is the same class as `TestS3kKnucklesSuperEmeraldRunChain`'s
+(`KOS_DECOMPRESSION_QUEUE` completion with `engine pending: <none>`), and it
+bites earlier on this route: raw_frame 1188 in AIZ1 against 1617 there. The
+zone_id 22/23 and DDZ-act-2 index errors are new: this is the first committed
+route whose segments enter HPZ22, DEZ23 and DDZ act 2, and the engine has no
+level entries for them.
