@@ -133,18 +133,20 @@ which currently create an equal new `AbstractSmpsData` on each `loadSfx(String)`
 call. Their second and later triggers must be O(1) catalog lookups, not false
 conflicts or repeated decodes.
 
-Music has an earlier classification probe at the `AudioManager` submission
-boundary today: `playMusic` and `playDonorMusic` call the loader to decide which
-logical route to record before the presentation resolver sees the command. That
-owner path must use the same catalog too. It derives the base/donor music key
-and current generation before probing the loader. A catalog hit records the
-SMPS command without loading. On a miss it loads once, registers that exact
-program and dependency tuple, and only then records the command; the resolver
-therefore consumes the already-registered entry. Base loaders returning null
-retain the existing fallback-WAV route, and donor loaders returning null retain
-the existing no-op behavior. The resolver keeps its own lookup-before-load miss
-path for direct resolver and replay-style callers. Negative-result caching is
-not required.
+`AudioManager` has an earlier classification probe at its public submission
+boundary: music and SFX entry points call the loader to decide which logical
+route to record before the presentation resolver sees the command. Those owner
+paths must use the same catalog too. They derive the requested route key and
+current generation before probing the loader. A catalog hit records the SMPS
+command without loading. On a miss it loads once, registers that exact program
+and dependency tuple, and only then records the command; the resolver consumes
+the already-registered entry against the same captured source tuple. Named SFX
+keep the requested name in their catalog key while policy uses the first
+program's resolved asset id. Base loaders returning null retain the existing
+music/SFX fallback behavior, and direct donor loaders returning null retain the
+existing no-op behavior; a failed GameSound donor probe retains its named
+fallback. The resolver keeps its own lookup-before-load miss path for direct
+resolver and replay-style callers. Negative-result caching is not required.
 
 On a versioned catalog miss, the resolver loads and registers the program. Registration
 captures a small provenance descriptor (session/game dependency identity,

@@ -376,6 +376,16 @@ private AudioPresentationCommand resolveSmpsSfxCommand(
 
   Make the earlier `AudioManager.playMusic`/`playDonorMusic` route-classification boundary catalog-aware as well. Before the existing loader probe, derive the base/donor music key and read the route-specific generation. On a hit, record the SMPS timeline command without loading. On a miss, load exactly once and register that exact result with the current immutable dependency tuple before publishing the command; do not publish if registration fails. Preserve base null-result fallback-WAV behavior and donor null-result no-op behavior. The presentation resolver must hit this registered entry, while its own lazy miss handling remains for direct resolver/replay-style callers and must not load a second time.
 
+  Task 9's public-path benchmark showed that base-id, base-name, direct-donor,
+  and GameSound-donor SFX have the same earlier manager classification owner.
+  Apply the identical lookup/register-before-publication rule there, submit the
+  command with the one captured source tuple, keep requested-name keys with the
+  first program's resolved asset id, and retain the existing null boolean,
+  no-op, and named-fallback semantics. A registration conflict publishes no
+  timeline or presentation command; the dormant live-backend branch reads the
+  retained catalog program and immutable dependencies rather than miss-local
+  nullable data.
+
 - [ ] **Step 4: Update explicit warming callers to registration terminology**
 
   Rename AudioManager/test call sites from `warmSmpsSfxAsset` to `registerSmpsSfxAsset` and require an explicit dependency generation at owner boundaries.

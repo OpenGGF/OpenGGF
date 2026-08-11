@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Performance: repeated public base-id, base-name, and donor SMPS SFX starts
+  now reuse the generation-aware catalog entry already consumed by the
+  presentation resolver. The manager registers the first immutable program
+  and dependency tuple before publishing its command, so later triggers do not
+  reload or recopy asset-sized data and a reentrant source replacement cannot
+  splice a new generation into the in-flight start.
 - Performance: prepared SMPS SFX admission now bypasses the presentation
   registry's whole-music-driver rollback capture on the ordinary and rejected
   SFX paths. Coordination still rolls back at its narrow admission boundary,

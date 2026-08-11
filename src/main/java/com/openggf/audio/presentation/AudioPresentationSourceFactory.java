@@ -76,6 +76,18 @@ public final class AudioPresentationSourceFactory
         }
     }
 
+    /** Immutable catalog-owned values used only by the dormant live backend. */
+    public record RegisteredSmpsPlayback(
+            AbstractSmpsData program,
+            DacData dac,
+            SmpsSequencerConfig config) {
+        public RegisteredSmpsPlayback {
+            Objects.requireNonNull(program, "program");
+            Objects.requireNonNull(dac, "dac");
+            Objects.requireNonNull(config, "config");
+        }
+    }
+
     private record LegacySmpsSource(
             String gameId,
             AbstractSmpsData data,
@@ -317,6 +329,17 @@ public final class AudioPresentationSourceFactory
                 resolvedKey, dependencyGeneration));
     }
 
+    public RegisteredSmpsPlayback requireRegisteredSmpsSfxPlayback(
+            SmpsAssetKey key, long dependencyGeneration) {
+        SmpsAssetCatalog.ProgramEntry entry = findRegisteredSmpsSfxAsset(
+                key, dependencyGeneration);
+        if (entry == null) {
+            throw new IllegalStateException(
+                    "no registered SMPS SFX for " + key);
+        }
+        return registeredPlayback(entry);
+    }
+
     public SmpsAssetCatalog.ProgramEntry registerSmpsMusicAsset(
             SmpsAssetKey key,
             long dependencyGeneration,
@@ -336,6 +359,23 @@ public final class AudioPresentationSourceFactory
         validateMusicKey(resolvedKey);
         return assetCatalog.find(new SmpsAssetCatalog.ProgramKey(
                 resolvedKey, dependencyGeneration));
+    }
+
+    public RegisteredSmpsPlayback requireRegisteredSmpsMusicPlayback(
+            SmpsAssetKey key, long dependencyGeneration) {
+        SmpsAssetCatalog.ProgramEntry entry = findRegisteredSmpsMusicAsset(
+                key, dependencyGeneration);
+        if (entry == null) {
+            throw new IllegalStateException(
+                    "no registered SMPS music for " + key);
+        }
+        return registeredPlayback(entry);
+    }
+
+    private static RegisteredSmpsPlayback registeredPlayback(
+            SmpsAssetCatalog.ProgramEntry entry) {
+        return new RegisteredSmpsPlayback(
+                entry.program(), entry.dac(), entry.staticConfig());
     }
 
     private SmpsAssetCatalog.ProgramEntry register(

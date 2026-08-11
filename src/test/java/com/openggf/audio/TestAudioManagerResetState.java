@@ -357,7 +357,7 @@ public class TestAudioManagerResetState {
         am.setAudioProfile(profile);
         am.setRom(firstRom);
         ObservedSource initial = observeBaseSfx(0x93);
-        firstLoader.runOnSfxLoadNumber = firstLoader.sfxLoadCount + 2;
+        firstLoader.runOnSfxLoadNumber = firstLoader.sfxLoadCount + 1;
         firstLoader.onSfxLoad = () -> am.setRom(secondRom);
 
         assertTrue(am.playSfx(0x94));
@@ -407,7 +407,7 @@ public class TestAudioManagerResetState {
         am.setAudioProfile(oldProfile);
         am.setRom(rom);
         ObservedSource initial = observeBaseSfx(0x94);
-        oldLoader.runOnSfxLoadNumber = oldLoader.sfxLoadCount + 2;
+        oldLoader.runOnSfxLoadNumber = oldLoader.sfxLoadCount + 1;
         oldLoader.onSfxLoad = () -> am.setAudioProfile(newProfile);
 
         assertTrue(am.playSfx(0x95));
