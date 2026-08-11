@@ -1,5 +1,6 @@
 package com.openggf.audio.presentation;
 
+import com.openggf.audio.SmpsSfxPlaybackPolicy;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
@@ -57,7 +58,7 @@ final class SmpsAssetCatalog {
         private final SmpsSourceDescriptor sourceDescriptor;
         private final int assetId;
         private final int trackCount;
-        private final boolean specialSfx;
+        private final SmpsSfxPlaybackPolicy sfxPolicy;
         private final AbstractSmpsData sourceIdentity;
 
         private ProgramEntry(
@@ -67,7 +68,7 @@ final class SmpsAssetCatalog {
                 SmpsSourceDescriptor sourceDescriptor,
                 int assetId,
                 int trackCount,
-                boolean specialSfx,
+                SmpsSfxPlaybackPolicy sfxPolicy,
                 AbstractSmpsData sourceIdentity) {
             this.program = Objects.requireNonNull(program, "program");
             this.programView = Objects.requireNonNull(
@@ -78,7 +79,7 @@ final class SmpsAssetCatalog {
                     sourceDescriptor, "sourceDescriptor");
             this.assetId = assetId;
             this.trackCount = trackCount;
-            this.specialSfx = specialSfx;
+            this.sfxPolicy = Objects.requireNonNull(sfxPolicy, "sfxPolicy");
             this.sourceIdentity = Objects.requireNonNull(
                     sourceIdentity, "sourceIdentity");
         }
@@ -112,7 +113,11 @@ final class SmpsAssetCatalog {
         }
 
         boolean specialSfx() {
-            return specialSfx;
+            return sfxPolicy.special();
+        }
+
+        SmpsSfxPlaybackPolicy sfxPolicy() {
+            return sfxPolicy;
         }
 
         private boolean hasSourceIdentity(AbstractSmpsData source) {
@@ -173,16 +178,27 @@ final class SmpsAssetCatalog {
             DacData dac,
             SmpsSequencerConfig config,
             boolean specialSfx) {
+        return register(key, data, dac, config,
+                SmpsSfxPlaybackPolicy.defaults(specialSfx));
+    }
+
+    ProgramEntry register(
+            ProgramKey key,
+            AbstractSmpsData data,
+            DacData dac,
+            SmpsSequencerConfig config,
+            SmpsSfxPlaybackPolicy sfxPolicy) {
         Objects.requireNonNull(key, "key");
         Objects.requireNonNull(data, "data");
         Objects.requireNonNull(dac, "dac");
         Objects.requireNonNull(config, "config");
+        Objects.requireNonNull(sfxPolicy, "sfxPolicy");
 
         ProgramEntry existing = programs.get(key);
         if (existing != null) {
             existing.dependency().requireProvenance(dac, config);
             if (existing.hasSourceIdentity(data)) {
-                if (existing.specialSfx() != specialSfx) {
+                if (!existing.sfxPolicy().equals(sfxPolicy)) {
                     throw programConflict(key);
                 }
                 return existing;
@@ -192,7 +208,7 @@ final class SmpsAssetCatalog {
         DependencyEntry dependency = requireDependency(
                 key.dependencyKey(), dac, config);
         if (existing != null) {
-            if (existing.specialSfx() == specialSfx
+            if (existing.sfxPolicy().equals(sfxPolicy)
                     && sameProgram(existing.program(), data)) {
                 return existing;
             }
@@ -209,7 +225,7 @@ final class SmpsAssetCatalog {
                 descriptor,
                 resolveAssetId(key.assetKey(), frozen),
                 frozen.getChannels() + frozen.getPsgChannels(),
-                specialSfx,
+                sfxPolicy,
                 data);
         ProgramEntry descriptorOwner = descriptors.get(descriptor);
         if (descriptorOwner != null

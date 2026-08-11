@@ -793,7 +793,10 @@ public class AudioManager implements MusicRestoreSink {
                 sfxId, null);
         shadowFactory.registerSmpsSfxAsset(
                 key, base.generation(), data, dac, base.config(),
-                profile.isSpecialSfx(sfxId));
+                new SmpsSfxPlaybackPolicy(
+                        profile.getSfxPriority(sfxId),
+                        profile.isSpecialSfx(sfxId),
+                        profile.isContinuousSfx(sfxId)));
         int continuous = profile.isContinuousSfx(sfxId)
                 ? sfxId : 0;
         int maxFrames = (outputSampleRate() + configuredFrameRate() - 1)
@@ -1937,7 +1940,10 @@ public class AudioManager implements MusicRestoreSink {
         shadowFactory.registerSmpsSfxAsset(
                 key, source.dependencyGeneration(), data,
                 source.dac(), source.config(),
-                source.sfxPolicy().special(resolvedId));
+                new SmpsSfxPlaybackPolicy(
+                        source.sfxPolicy().priority(resolvedId),
+                        source.sfxPolicy().special(resolvedId),
+                        source.sfxPolicy().continuous(resolvedId)));
     }
 
     private static boolean hasCatalogDependencies(
@@ -2005,7 +2011,7 @@ public class AudioManager implements MusicRestoreSink {
             float pitch) {
         backend.playSfxSmps(
                 playback.program(), playback.dac(), pitch,
-                playback.config());
+                playback.config(), playback.policy());
     }
 
     public void update() {

@@ -14,7 +14,10 @@ All notable changes to the OpenGGF project are documented in this file.
   so its direct and `GameSound` routes are admitted by the presentation owner
   and do not revert to per-trigger loading. Invalid blank/negative requests
   still probe their loader before falling back or returning a no-op, without
-  constructing an invalid catalog key.
+  constructing an invalid catalog key. Cached legacy-backend starts now also
+  dispatch the registered priority, special-SFX, and continuous-SFX policy
+  with the retained program/DAC/config tuple, so a later profile replacement
+  cannot reclassify an already-registered playback.
 - Performance: prepared SMPS SFX admission now bypasses the presentation
   registry's whole-music-driver rollback capture on the ordinary and rejected
   SFX paths. Coordination still rolls back at its narrow admission boundary,

@@ -163,6 +163,14 @@ a sequencer without a profile. Invalid blank names and negative ids are probed
 before catalog-key validation; only a valid lookup request or a successfully
 loaded program with a valid resolved id may create a catalog key.
 
+The catalog-owned live-backend playback value retains the complete SFX
+classification with that tuple: priority, special-SFX, and continuous-SFX.
+The manager dispatches an explicit immutable policy value through the narrow
+SMPS backend overload. Existing backend overloads remain compatible and may
+derive policy from their current profile, but a registered cached hit never
+does; reentrant or later profile replacement therefore cannot reclassify the
+retained playback.
+
 On a versioned catalog miss, the resolver loads and registers the program. Registration
 captures a small provenance descriptor (session/game dependency identity,
 dependency generation, asset key, special-SFX flag, and program metadata). If an explicit caller tries

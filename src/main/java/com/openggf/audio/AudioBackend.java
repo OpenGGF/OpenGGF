@@ -67,6 +67,20 @@ public interface AudioBackend {
     }
 
     /**
+     * Plays an SFX with a fully captured sequencer and classification tuple.
+     * Existing backends retain source compatibility through the explicit-config
+     * overload; SMPS-aware backends override this to consume {@code policy}.
+     */
+    default void playSfxSmps(
+            AbstractSmpsData data,
+            DacData dacData,
+            float pitch,
+            SmpsSequencerConfig config,
+            SmpsSfxPlaybackPolicy policy) {
+        playSfxSmps(data, dacData, pitch, config);
+    }
+
+    /**
      * Plays a sound effect by name (mapped to a WAV file).
      * 
      * @param sfxName The name of the SFX (e.g., "JUMP", "RING").

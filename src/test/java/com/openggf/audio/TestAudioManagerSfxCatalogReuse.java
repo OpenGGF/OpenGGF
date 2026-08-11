@@ -7,6 +7,7 @@ import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.Rom;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -429,6 +430,53 @@ class TestAudioManagerSfxCatalogReuse {
         assertNotSame(replacementConfig, backend.config);
     }
 
+    @Test
+    void legacyCachedHitMakesRealBackendUseRetainedCompletePolicy() {
+        NoDeviceBackend backend = new NoDeviceBackend(
+                SonicConfigurationService.createStandalone());
+        backend.init();
+        audio.setBackend(backend);
+        CountingLoader firstLoader = new CountingLoader(EMPTY_DAC);
+        firstLoader.idResults.put(BASE_ID,
+                () -> new CountingSfxData(
+                        BASE_ID, (byte) 0x73, new AtomicInteger()));
+        audio.setAudioProfile(new PolicyProfile(
+                firstLoader, TestProfile.CONFIG, 0x23, true, true));
+        audio.setRom(new Rom());
+
+        assertTrue(audio.playSfx(BASE_ID));
+        audio.presentFrame(PresentationMode.SILENT);
+        var retainedVoice = currentSfx();
+        var retainedPlayback = audio.shadowFactoryForTesting()
+                .requireRegisteredSmpsSfxPlayback(
+                        new SmpsAssetKey(
+                                "base", SmpsAssetKey.Route.BASE_ID,
+                                BASE_ID, null),
+                        retainedVoice.source().dependencyGeneration());
+        assertEquals(new SmpsSfxPlaybackPolicy(
+                0x23, true, true), retainedPlayback.policy());
+        backend.stopAllSfx();
+
+        CountingLoader replacementLoader = new CountingLoader(EMPTY_DAC);
+        audio.setAudioProfile(new PolicyProfile(
+                replacementLoader, TestProfile.CONFIG,
+                0x66, false, false));
+        audio.setRom(new Rom());
+        audio.dispatchLiveRegisteredSfx(retainedPlayback, 1.0f);
+        audio.dispatchLiveRegisteredSfx(retainedPlayback, 1.0f);
+
+        var state = backend.stateForTesting();
+        assertEquals(1, state.standaloneSfxSequencers().size(),
+                "retained continuous policy must extend the existing SFX");
+        assertEquals(0x23, state.standaloneSfxSequencers()
+                .getFirst().getSfxPriority());
+        assertTrue(state.standaloneSfxSequencers()
+                .getFirst().isSpecialSfx());
+        assertEquals(BASE_ID,
+                state.standaloneSfxDriverSnapshot().continuousSfxId());
+        assertTrue(state.standaloneSfxDriverSnapshot().continuousSfxFlag());
+    }
+
     private void installBase(CountingLoader loader) {
         audio.setAudioProfile(new TestProfile(loader));
         audio.setRom(new Rom());
@@ -589,14 +637,27 @@ class TestAudioManagerSfxCatalogReuse {
     private static final class PolicyProfile extends TestProfile {
         private final SmpsSequencerConfig config;
         private final int priority;
+        private final boolean special;
+        private final boolean continuous;
 
         private PolicyProfile(
                 SmpsLoader loader,
                 SmpsSequencerConfig config,
                 int priority) {
+            this(loader, config, priority, false, false);
+        }
+
+        private PolicyProfile(
+                SmpsLoader loader,
+                SmpsSequencerConfig config,
+                int priority,
+                boolean special,
+                boolean continuous) {
             super(loader);
             this.config = config;
             this.priority = priority;
+            this.special = special;
+            this.continuous = continuous;
         }
 
         @Override public SmpsSequencerConfig getSequencerConfig() {
@@ -606,6 +667,38 @@ class TestAudioManagerSfxCatalogReuse {
         @Override public int getSfxPriority(int sfxId) {
             return priority;
         }
+
+        @Override public boolean isSpecialSfx(int sfxId) {
+            return special;
+        }
+
+        @Override public boolean isContinuousSfx(int sfxId) {
+            return continuous;
+        }
+    }
+
+    private static final class NoDeviceBackend
+            extends AbstractSmpsAudioBackend {
+        private NoDeviceBackend(SonicConfigurationService configuration) {
+            super(configuration, null);
+        }
+
+        @Override protected int getDeviceSampleRate() { return 48_000; }
+        @Override protected void hookInitDevice() { }
+        @Override protected void hookDestroyDevice() { }
+        @Override protected void hookStartStream() { }
+        @Override protected void hookStopStreamSource() { }
+        @Override protected void hookUpdateStream() { }
+        @Override protected void hookStopAndClearMusicSource() { }
+        @Override protected void hookStopAndUnqueueAllMusicBuffers() { }
+        @Override protected void hookStopAndClearAllMusicBuffers() { }
+        @Override protected void hookRestartStreamIfDry() { }
+        @Override protected void hookStopAndDeleteWavSfxSources() { }
+        @Override protected void hookPlayWavSfx(
+                String sfxName, float pitch) { }
+        @Override protected void hookCleanupStoppedWavSfx() { }
+        @Override protected void hookPause() { }
+        @Override protected void hookResume() { }
     }
 
     private static final class RecordingBackend extends NullAudioBackend {
