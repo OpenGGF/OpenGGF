@@ -1691,6 +1691,43 @@ Corollaries earned the same day:
   number is small, check it is small because everything is right, not because
   large errors are cancelling.
 
+### Read the routine before proposing a contract change
+
+A title-card loop that waits on `tst.l (v_plc_buffer).w` looked like un-modelable
+decompression rate, and the proposal was to route S1 PLC through the recorded
+hardware-timing port. That was wrong, and nobody had opened `ProcessPLC` first.
+
+S1 quantises PLC work in explicit ROM code. `RunPLC` (`sonic.asm:1379-1420`) only
+*starts* an entry; the decompression happens in V-int with a fixed per-frame tile
+budget -- `ProcessPLC_9Tiles` sets `move.w #9,(v_plc_framepatternsleft).w`
+(`:1431-1438`) and `ProcessPLC_3Tiles` sets 3 (`:1443-1450`). The disassembly says
+why: *"called from VBlank, probably done to smooth out level loading because of how
+slow Nemesis is"*. `Level_TtlCardLoop` sets `id_VBlank_TitleCards` and waits for
+V-int each iteration (`:2814`), and `VBlank_TitleCards` calls the 9-tile variant
+(`:946`), so one loop row is one V-int is up to 9 tiles. Gameplay's
+`VBlank_UpdateScreen` uses 3 (`:867`).
+
+Two semantics the model must carry: when `patternsleft` hits zero mid-budget,
+`ProcessPLC_ShiftCue` shifts the list and RETURNS, so **the rest of that frame's
+budget is lost** and the next entry starts at the next `RunPLC` -- the total is
+per-entry `ceil(patterns/9)` summed, not `ceil(total/9)`. And `RunPLC` stores the
+section counter before building the code table under `FixBugs=0` (`:1396-1399`).
+
+**The general rule: "the ROM's rate is not frame-derivable" is a claim about a
+routine you must have read.** Contrast S3K's `Process_Kos_Queue`, which genuinely
+has no quantum -- one uninterruptible call, so its in-progress bit is a sub-frame
+cycle position. Same-sounding symptom, opposite answers, and only the listing
+distinguishes them.
+
+**Corollary on the timing port.** Giving the sidecar authority over something the
+engine can compute is fidelity-NEGATIVE: it converts comparison surface into a
+round-trip through recorded data, so the field stops testing the engine. Reach for
+the port only where the information provably does not exist at frame granularity.
+`TestS1S2PlcComparisonOnlyGuard` encodes exactly this line -- "PLC readiness is
+native deterministic service, not timing-stream authority" -- and it is correct.
+If a change requires deleting a guard assertion whose message states the opposite
+architectural intent, that is a decision to escalate, never collateral.
+
 ## Why This Matters
 
 The mission is faithful pixel-for-pixel reimplementation. Trace replay tests are the proof. If they're allowed to lean on synced trace data each frame, the proof is hollow — bugs hide behind the synchronisation and the test green-lights anyway. Honest tests force honest engine fixes. That's how progress compounds: every fix makes the next divergence visible instead of building on top of a masked one.
