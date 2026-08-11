@@ -2891,6 +2891,19 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         if (player == null) {
             return;
         }
+        if (player instanceof AbstractPlayableSprite leaderInit) {
+            // ROM Obj01_Init_Continued (s2.asm:36201-36217) / Sonic_Init_Continued
+            // -> Reset_Player_Position_Array (sonic3k.asm:21931-21941, 22166-22178):
+            // the leader's own init offsets its position by (-$20, +4), zeroes
+            // Sonic_Pos_Record_Index, then runs Sonic_RecordPos 64 times while
+            // re-zeroing each Stat_table entry it writes. Neither buffer sits in a
+            // GM_Level clearRAM range, so without this the previous level's recorded
+            // leader positions/inputs survive a star-post restart or a special-stage
+            // return and drive the delayed sidekick follow from stale data.
+            leaderInit.resetPositionAndStatTableHistoryAtCentre(
+                    (short) (leaderInit.getCentreX() - 0x20),
+                    (short) (leaderInit.getCentreY() + 4));
+        }
         for (AbstractPlayableSprite sidekick : spriteManager.getSidekicks()) {
             sidekick.setCentreXPreserveSubpixel((short) (player.getCentreX() + xOffset));
             sidekick.setCentreYPreserveSubpixel((short) (player.getCentreY() + yOffset));

@@ -3,6 +3,20 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: a level (re)init refills the leader's delayed position ring and clears the status
+  ring, so a star-post restart or a return from a special stage no longer follows the
+  previous level's recorded leader data. ROM `Obj01_Init_Continued` (s2.asm:36201-36217)
+  and its S3K twin `Sonic_Init_Continued` -> `Reset_Player_Position_Array`
+  (sonic3k.asm:21931-21941, 22166-22178) offset the leader by `(-$20, +4)`, zero
+  `Sonic_Pos_Record_Index`, then run `Sonic_RecordPos` 64 times, each iteration
+  re-zeroing the `Sonic_Stat_Record_Buf` entry it just wrote
+  (`subq.w #4,a1 / move.l #0,(a1)`); the `tst.b (Last_star_pole_hit).w /
+  bne.s Obj01_Init_Continued` branch above it skips only the art and saved-position
+  block, never the refill. Neither buffer lies in a `GM_Level` `clearRAM` range, so the
+  engine -- which prefilled the ring only on the trace bootstrap path -- carried the
+  pre-special-stage ring across the return and drove the CPU sidekick's delayed follow
+  from it. In the S2 half-pipe round-trip run this was the missing first inter-segment
+  dynamic-art gap edge (`run_gap.edge_count` 1 vs 0) for `seg1_ehz1 -> ss`.
 - Fix: only a HORIZONTAL spring locks the player's grounded controls. `move_lock` is the
   ROM's sole grounded-input lock, and among the spring family only the horizontal launch
   writes it -- S2 `loc_18B1C` `move.w #$F,move_lock(a1)` (s2.asm:34031), S1

@@ -4765,6 +4765,43 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * spawn-anchored ring even when the controller first ticks after the
          * leader has already moved.
          */
+        /**
+         * Mirrors ROM {@code Obj01_Init_Continued} (S2, s2.asm:36201-36217) and
+         * its S3K twin {@code Sonic_Init_Continued} -> {@code Reset_Player_Position_Array}
+         * (sonic3k.asm:21931-21941, 22166-22178): with the leader's position
+         * temporarily offset by {@code (-$20, +4)}, {@code Sonic_Pos_Record_Index}
+         * is zeroed and {@code Sonic_RecordPos} is called 64 times, each iteration
+         * immediately re-zeroing the {@code Sonic_Stat_Record_Buf} entry it just
+         * wrote ({@code subq.w #4,a1 / move.l #0,(a1)}). The result is a Pos_table
+         * entirely filled with the offset spawn coordinate and a completely zeroed
+         * Stat_table, with the record index wrapped back to 0.
+         *
+         * <p>This runs on EVERY level (re)init, including a star-post restart and
+         * a return from a special stage: the {@code tst.b (Last_star_pole_hit).w /
+         * bne.s Obj01_Init_Continued} branch above it skips only the art / saved-position
+         * block, never the refill itself.
+         *
+         * <p>Distinct from {@link #prefillPositionHistoryWithCentre}, which fills the
+         * Pos_table only; the ROM sequence also clears the Stat_table, so a delayed
+         * {@code Tails_CPU_Control} read cannot see the previous level's recorded
+         * leader input or status bits.
+         */
+        public void resetPositionAndStatTableHistoryAtCentre(short prefillX, short prefillY) {
+                for (int i = 0; i < xHistory.length; i++) {
+                        xHistory[i] = prefillX;
+                        yHistory[i] = prefillY;
+                        inputHistory[i] = 0;
+                        jumpPressHistory[i] = 0;
+                        statusHistory[i] = 0;
+                }
+                // ROM leaves Sonic_Pos_Record_Index at 0 after the 64-iteration wrap,
+                // so the next live Sonic_RecordPos writes slot 0. The engine's
+                // recordFollowerHistoryForTick() increments before writing, so park
+                // the cursor one slot earlier.
+                historyPos = 63;
+                followerHistoryRecordedThisTick = false;
+        }
+
         public void prefillPositionHistoryWithCentre(short prefillX, short prefillY) {
                 for (int i = 0; i < xHistory.length; i++) {
                         xHistory[i] = prefillX;

@@ -73042,3 +73042,35 @@ same iteration). No constant was introduced.
   `S2SpecialStageFinishBoundaryMappingTest`,
   `TestTraceRunDynamicArtGapComparator`, `TestTraceRunDynamicArtGapJournal`,
   `TestVisualTraceRunTerminalTail`.
+
+## 2026-08-12 - S2 run chains: level-init Pos/Stat ring refill
+
+- Dedicated worktree, branch
+  `bugfix/ai-s2-level-init-pos-record-refill`, over `196779c9b`.
+- Command (all runs): `mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1
+  -Dsurefire.runOrder=alphabetical -Dsonic1.rom.path=... -Dsonic2.rom.path=...
+  -Ds3k.rom.path=... -Dtest=<classes> test`, with
+  `rm -rf target/surefire-reports target/trace-reports` before each run.
+- Control at `196779c9b`: `TestS2EhzHalfpipeRoundTripChain` FAIL --
+  `shared dynamic-art gap comparison failed for seg1_ehz1 -> ss:
+  run_gap.edge_count exp 1 act 0`. `TestS2CompleteEmeraldRunChain` FAIL --
+  DPLC divergence in special-stage segment 3, 17071 errors. Chain physics
+  reports: emeralds seg2 62226 errors (first non-camera mismatch frame 1,
+  `sidekick_x` exp 0x0DDE act 0x0DF6); half-pipe seg2 36879 errors (frame 1,
+  `sidekick_x` exp 0x0DDE act 0x0DF9).
+- After the fix: the half-pipe chain's `run_gap` assertion is CLOSED; both
+  chains now fail at the same later assertion, DPLC divergence in
+  special-stage segment 3 (emeralds 17071, half-pipe 17042). Emeralds seg2
+  62226 -> 58184; half-pipe seg2 36879 -> 39645. Both chains' frame-1
+  `sidekick_x` now reads the same value, 0x0DF1 (ROM 0x0DDE) -- the residual
+  is the number of title-card-exit frames the CPU sidekick follows for, not
+  carried-over ring data.
+- Canary sweep (83 tests, 0 failures): `TestS2SpecialStage*TraceReplay`,
+  `TestS2SpecialStageTraceReplay`, `S2SpecialStageFinishBoundaryMappingTest`,
+  `TestS1GhzMazeRoundTripChain`, the S2 act replays (EHZ/CPZ/ARZ/CNZ/HTZ/MCZ/
+  OOZ/MTZ/SCZ/WFZ), `TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`.
+  `TestS2Ehz1Seg2CompleteEmeraldsSegmentTraceReplay` and
+  `TestS2Ehz1Seg2HalfpipeSegmentTraceReplay` remain green standalone, as do
+  `TestRewindCoverageGuard` and `TestStaticStateRewindCoverageGuard`.
+- No constant was introduced. The only literals added are the ROM immediates
+  `-$20` and `+4` from `Obj01_Init_Continued` (s2.asm:36206-36207).
