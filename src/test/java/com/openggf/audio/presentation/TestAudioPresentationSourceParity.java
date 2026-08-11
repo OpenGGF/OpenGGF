@@ -30,6 +30,10 @@ import java.io.ByteArrayInputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -47,6 +51,23 @@ class TestAudioPresentationSourceParity {
     private static final int MAX_FRAMES = 2_048;
     private static final DacData EMPTY_DAC =
             new DacData(Map.of(), Map.of(), 288);
+
+    @Test
+    void immutableRuntimeViewsExposeIndexedReadsInsteadOfRawArrays() {
+        assertEquals(List.of(), publicRawArrayReturns(
+                DacData.class, DacData.Sample.class, SmpsProgramView.class));
+    }
+
+    private static List<String> publicRawArrayReturns(Class<?>... owners) {
+        return Arrays.stream(owners)
+                .flatMap(owner -> Arrays.stream(owner.getMethods()))
+                .filter(method -> Modifier.isPublic(method.getModifiers()))
+                .filter(method -> method.getReturnType().isArray()
+                        || Map.class.isAssignableFrom(method.getReturnType()))
+                .map(Method::toGenericString)
+                .sorted()
+                .toList();
+    }
 
     @AfterEach
     void tearDown() {
