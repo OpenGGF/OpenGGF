@@ -63,7 +63,17 @@ details are in the adjacent `TRUST.md`. No generated core or ROM is committed.
   their authoritative little-endian raw word; disagreeing adapter hints fail
   closed. Both producer
   bindings remain explicitly unavailable, so engine comparison is still not
-  implemented or publication-capable.
+  implemented or publication-capable. The game-owned reference-capture seam
+  now authenticates the locked-on ROM, the reviewed service manifest, and the
+  read-only canonical movie; observes and drains from power-on; performs the
+  ABI v2 prepublication transition at row 810 without resetting the chip,
+  latches, or native stack; and streams every row in `[810,434417)` to a bounded
+  sink. A real prefix against the final shared core reached row 810 with an
+  armed empty boundary frontier, YM address latches `$28/$A1`, arm epoch 1,
+  and 34 native events in published row 810. This is capture capability only:
+  there is no raw-to-canonical store writer, fixed Java reference producer, or
+  published capture, and the profile's reference binding remains
+  `UNAVAILABLE`.
 
 This role/union applicability is derived from
 `docs/skdisasm/Sound/Z80 Sound Driver.asm:25-98`. In particular, the source
@@ -84,6 +94,16 @@ Central integration must additionally prove that a fresh CLI JVM reaches this
 profile through the closed dispatcher without a caller first loading
 `S3kCompleteRunAudioProfile`; the game-local unit test does not authorize
 publishing on its own.
+
+The row-810 proof deliberately read the canonical `_movies` BK2 in place. It
+did not copy, rename, or symlink that read-only input into the absent run-local
+path. The exact command used the durable BizHawk home
+`$AUDIO_SHARED_FRONTIER/target/audio-parity/native/shared-frontier-hotpath-install`,
+whose compressed core SHA-256 is
+`f9c6a1cbaa3c70428ffc1774473ff4f9ba7d1ce1503fa00ab657e497dd584625`.
+The ROM SHA-1 was `cfbf98c36c776677290a872547ac47c53d2761d6`; the
+BK2 SHA-256 was
+`aa892856df22b7bb1fe5accb48db10b90dc26845d1dccee90352da30349f53cc`.
 
 The Sonic 1 reference producer starts observation at power-on, discards
 pre-publication rows while retaining native service/latch state, and publishes
@@ -124,6 +144,9 @@ until that conductor-owned native/schema change lands.
 - Existing Sonic 2 and Sonic 3 & Knuckles capability/lifecycle suite: 10 tests
   passing, with their prior complete-run duplicate evidence unchanged.
 - S3K Task 2 profile/resolver/normalizer: 18 tests passing.
+- S3K game-owned observer profile and bounded capture runner: 7 synthetic
+  tests passing. The opt-in real power-on-to-row-810 gate also passes with the
+  exact boundary values recorded above.
 - S3K engine command-boundary regression guards: 7 tests passing.
 - S3K AIZ release-slice, level-loading, bootstrap, and decoding guards: 52
   tests passing against locked-on ROM SHA-1
@@ -137,3 +160,11 @@ until that conductor-owned native/schema change lands.
 
 These results establish a coherent handoff point; they are not a declaration
 that complete-game audio parity is finished.
+
+Registering the new S3K C# tests changes the shared headless test executable
+SHA-256 from its frozen `0a9b96fa9a63eee4baa53e3ba2179bc670dc8df68351a44d3383feae57282d0e`
+to `0a091b2cb33ec7af174b21920121febc0b2f8ddcc68f16dc86e9452ef67a99a2`.
+The identity-bound capability fixture is intentionally not changed on this
+game-owned branch; central integration must cascade that test-harness identity
+together with the other game-worker additions. The established S3K native
+capability vector itself remains unchanged.
