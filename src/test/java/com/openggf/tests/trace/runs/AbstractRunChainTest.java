@@ -2836,7 +2836,7 @@ abstract class AbstractRunChainTest {
                     // to find the recurring loop's first pass, so the last pass
                     // still reading zero is by construction the pre-start one.
                     // The ROM copies Ctrl_1/Ctrl_2 BEFORE that loop's
-                    // WaitForVint (s2.asm:6684-6685), so it owns no post-V-int
+                    // WaitForVint (s2.asm:6675-6676), so it owns no post-V-int
                     // controller sample for the recurring loop's binding path;
                     // publish it through the startup boundary instead. Without
                     // this the chain bound it as a recurring pass and every

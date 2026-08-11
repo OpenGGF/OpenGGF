@@ -173,7 +173,7 @@ public class GameLoop {
          * <p>{@code SpecialStage_MainLoop} is two loops, not one
          * (docs/s2disasm/s2.asm:6674-6721), and one observation can own a pass
          * from each: the pre-start loop copies {@code Ctrl_1}/{@code Ctrl_2}
-         * <em>before</em> its {@code WaitForVint} (s2.asm:6684-6685), so its
+         * <em>before</em> its {@code WaitForVint} (s2.asm:6675-6676), so its
          * terminal pass owns no post-V-int controller sample for the recurring
          * loop's binding path to consume. A driver that can tell the two apart
          * overrides this to publish such a pass through the startup boundary

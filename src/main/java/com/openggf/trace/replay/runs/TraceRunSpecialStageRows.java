@@ -252,7 +252,7 @@ public sealed interface TraceRunSpecialStageRows
          * sample. The first recorded pass whose {@code started_at_input_sample}
          * is set is therefore, by construction, the recurring loop's first
          * pass. Rows before it stay one step per row: there the ROM copies the
-         * pad words before {@code WaitForVint} (s2.asm:6684-6685), so the
+         * pad words before {@code WaitForVint} (s2.asm:6675-6676), so the
          * recurring pass is not yet the input-binding authority.
          */
         @Override
