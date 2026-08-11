@@ -1728,6 +1728,50 @@ native deterministic service, not timing-stream authority" -- and it is correct.
 If a change requires deleting a guard assertion whose message states the opposite
 architectural intent, that is a decision to escalate, never collateral.
 
+### Before matching a number, ask whether the engine produces it at all
+
+`TraceRunPlaybackCoordinator.destinationReady` gates on
+`sharedBk2Cursor() >= destination.bk2FrameOffset()`, and while the coordinator sits
+in `TRANSITION_GAP`, `GameLoop.suppressesRunNativeLevelBody()` stops the level body
+running. So a **load-window frame count is harness choreography, not engine
+behaviour** — the roadmap says it outright: *"The engine's real load duration is
+never observed, in either direction."*
+
+That changes what a load-window divergence means. The GHZ terminal tail is 34 rows
+early, but neither side of that comparison is the engine: it is the recorder's
+stamping convention against the harness's drive schedule. Closing the gap by
+inserting harness delays, or by importing a recorded span duration, would be
+**fitting the measurement instrument to its own reference** — worse than a fitted
+constant, because a fitted constant at least models something.
+
+Two consequences worth carrying:
+
+- **Leaving such a test red does not preserve a measurement; it preserves an
+  ambiguity.** The red is not evidence about the engine either. The honest close is
+  to compare what the engine *does* produce — work identity, order, ledger — and
+  excuse only the quantity the harness controls, in spans the fixture itself
+  declares unrepresented (no recorded rows). Then write down, in the
+  known-discrepancies entry, that the test now verifies work and order but **not**
+  timing.
+- **A green that does not say what it stopped checking is worse than the red it
+  replaced.** State the limit in the same commit that takes the limit on.
+
+Before proposing any fix for a span-length divergence, find out which component
+actually determines the number. If it is the harness, no amount of ROM derivation
+will help, and the ROM work you do will look convincing while measuring nothing.
+
+### When two of your own measurements disagree, stop and settle it
+
+One round reported four pending production submissions matching the dropped edges;
+a later round reported `pendingSubmissions()` empty and zero submissions in the same
+window. Both cannot be true. That contradiction sat unnoticed across two rounds and
+one design proposal built on the first figure — a mechanism that could not have
+fired, because its precondition was the very thing the second measurement denied.
+
+Contradictions between your own measurements are the cheapest bugs you will ever
+find and the most expensive to leave. Re-run the specific measurement before
+building on either number.
+
 ## Why This Matters
 
 The mission is faithful pixel-for-pixel reimplementation. Trace replay tests are the proof. If they're allowed to lean on synced trace data each frame, the proof is hollow — bugs hide behind the synchronisation and the test green-lights anyway. Honest tests force honest engine fixes. That's how progress compounds: every fix makes the next divergence visible instead of building on top of a masked one.
