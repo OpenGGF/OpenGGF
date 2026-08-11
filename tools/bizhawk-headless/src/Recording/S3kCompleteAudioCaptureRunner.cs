@@ -38,6 +38,22 @@ namespace OpenGGF.BizHawk.Headless
                 S3kAudioObserverProfile.ExclusiveEnd, true);
         }
 
+        internal static CaptureResult CaptureRawPinned(
+            string romPath, string moviePath, string manifestPath,
+            TextWriter output)
+        {
+            return CaptureRawPinnedCore(romPath, moviePath, manifestPath,
+                output, S3kAudioObserverProfile.ExclusiveEnd, true);
+        }
+
+        internal static CaptureResult CaptureRawBoundaryProofPinned(
+            string romPath, string moviePath, string manifestPath,
+            TextWriter output)
+        {
+            return CaptureRawPinnedCore(romPath, moviePath, manifestPath,
+                output, S3kAudioObserverProfile.FirstRow + 1, false);
+        }
+
         internal static CaptureResult CaptureBoundaryProofPinned(
             string romPath, string moviePath, string manifestPath,
             IS3kCompleteAudioCaptureSink sink)
@@ -59,6 +75,26 @@ namespace OpenGGF.BizHawk.Headless
                 CompleteRunAudioObserver observer =
                     S3kAudioObserverProfile.CreateObserver(
                         manifestPath, host.CreateAudioTraceApi());
+                return CaptureCore(movie.OpenFrameStream(), host, observer,
+                    sink, S3kAudioObserverProfile.FirstRow, exclusiveEnd,
+                    requireExactEnd);
+            }
+        }
+
+        private static CaptureResult CaptureRawPinnedCore(
+            string romPath, string moviePath, string manifestPath,
+            TextWriter output, int exclusiveEnd, bool requireExactEnd)
+        {
+            if (output == null) throw new ArgumentNullException("output");
+            S3kAudioObserverProfile.ValidateRom(romPath);
+            Bk2Movie movie = S3kAudioObserverProfile.OpenMovie(moviePath);
+            using (GpgxHost host = GpgxHost.Open(romPath, movie.SyncSettings))
+            {
+                CompleteRunAudioObserver observer =
+                    S3kAudioObserverProfile.CreateObserver(
+                        manifestPath, host.CreateAudioTraceApi());
+                var sink = new S3kCompleteAudioRawSink(
+                    new GpgxS3kCompleteAudioStateSource(host), output);
                 return CaptureCore(movie.OpenFrameStream(), host, observer,
                     sink, S3kAudioObserverProfile.FirstRow, exclusiveEnd,
                     requireExactEnd);

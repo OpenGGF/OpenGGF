@@ -86,6 +86,7 @@
     <Compile Include="src/Recording/TracePayloadCompressor.cs" />
     <Compile Include="src/Recording/TraceContract.cs" />
     <Compile Include="src/Recording/S3kCompleteAudioCaptureRunner.cs" />
+    <Compile Include="src/Recording/S3kCompleteAudioRawSink.cs" />
     <Compile Include="src/Recording/RunManifestWriter.cs" />
     <Compile Include="src/Recording/RunSegmentSink.cs" />
     <Compile Include="src/Recording/StagedRunSegmentSink.cs" />

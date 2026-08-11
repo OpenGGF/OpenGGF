@@ -68,8 +68,18 @@ details are in the adjacent `TRUST.md`. No generated core or ROM is committed.
   latches, or native stack; and streams every row in `[810,434417)` to a bounded
   sink. A real prefix against the final shared core reached row 810 with an
   armed empty boundary frontier, YM address latches `$28/$A1`, arm epoch 1,
-  and 34 native events in published row 810. This is capture capability only:
-  there is no raw-to-canonical store writer, fixed Java reference producer, or
+  and 34 native events in published row 810. The game-owned raw adapter now
+  writes a bounded LF JSONL staging stream with exact ROM/BK2/manifest,
+  interval, `$1C00..$1FFF` state, lag, native event, latch, and cutoff-frontier
+  data. Its strict Java reader rejects duplicate or extra fields, row gaps,
+  oversized records/event arrays, state-width changes, and unsigned payload
+  loss while forwarding one row at a time. This is still capture capability
+  only: the staging reader deliberately has no canonical-store authority. A
+  source-exact decoder from the raw 1 KiB driver image into the existing typed
+  S3K normalizer input, including an authoritative locked-on-ROM asset-range
+  catalog, is the next game-owned step. After that, central integration must
+  supply the pinned producer/runtime proofs and the run-local BK2 before a
+  fixed Java reference producer may write a canonical store. There is no
   published capture, and the profile's reference binding remains
   `UNAVAILABLE`.
 
@@ -93,12 +103,10 @@ profile through the closed dispatcher without a caller first loading
 `S3kCompleteRunAudioProfile`; the game-local unit test does not authorize
 publishing on its own.
 
-The row-810 proof deliberately read the canonical `_movies` BK2 in place. It
+Both row-810 proofs deliberately read the canonical `_movies` BK2 in place. They
 did not copy, rename, or symlink that read-only input into the absent run-local
-path. The exact command used the durable BizHawk home
-`$AUDIO_SHARED_FRONTIER/target/audio-parity/native/shared-frontier-hotpath-install`,
-whose compressed core SHA-256 is
-`f9c6a1cbaa3c70428ffc1774473ff4f9ba7d1ce1503fa00ab657e497dd584625`.
+path. The raw-adapter proof used the ABI-v3 durable BizHawk home
+`$AUDIO_CROSSING_LIFETIME/target/audio-parity/native/crossing-install-final2-a`.
 The ROM SHA-1 was `cfbf98c36c776677290a872547ac47c53d2761d6`; the
 BK2 SHA-256 was
 `aa892856df22b7bb1fe5accb48db10b90dc26845d1dccee90352da30349f53cc`.
@@ -136,9 +144,10 @@ complete-run publication claim.
 - Existing Sonic 2 and Sonic 3 & Knuckles capability/lifecycle suite: 10 tests
   passing, with their prior complete-run duplicate evidence unchanged.
 - S3K Task 2 profile/resolver/normalizer: 18 tests passing.
-- S3K game-owned observer profile and bounded capture runner: 7 synthetic
-  tests passing. The opt-in real power-on-to-row-810 gate also passes with the
-  exact boundary values recorded above.
+- S3K game-owned observer profile, bounded capture runner, and raw sink: 9
+  synthetic tests passing. The strict Java raw adapter adds 3 tests. Both
+  opt-in real power-on-to-row-810 gates pass, including the raw envelope with
+  the exact boundary values recorded above.
 - S3K engine command-boundary regression guards: 7 tests passing.
 - S3K AIZ release-slice, level-loading, bootstrap, and decoding guards: 52
   tests passing against locked-on ROM SHA-1
@@ -151,6 +160,15 @@ complete-run publication claim.
   compressed core SHA-256 is `93be2835112aeb73bd38cd467cfa0a55f38e3b6ceb7bed642033eb73656cc453`
   and the observer identity is
   `b8023a7a80cb961d97c80bcb3835480aca9a78f3eb1ede5490c9295e2ca9bd60`.
+
+The new game-owned raw sink necessarily changes the deterministic production
+harness executable. The shared capability fixture remains frozen on
+`e044d963b53b44003e13a4bef7d5360cf100aea421cb40ebc5ed44e08db8d5dd`,
+while this branch builds
+`b72a804447a445ca3a2d6f34a910a69a3561eb55aa558a3c34642b9a940ad3d4`.
+Its static capability lock is therefore the expected central-integration RED;
+this game branch does not rewrite the shared capability fixture or claim the
+new executable as a pinned producer runtime.
 
 These results establish a coherent handoff point; they are not a declaration
 that complete-game audio parity is finished.
