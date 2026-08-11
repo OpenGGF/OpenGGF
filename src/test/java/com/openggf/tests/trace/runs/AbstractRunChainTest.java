@@ -14,6 +14,8 @@ import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
 import com.openggf.game.OscillationManager;
 import com.openggf.game.SpecialStageInputMapper;
+import com.openggf.game.sonic2.Sonic2SpecialStageProvider;
+import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageReplayTestBridge;
 import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.resources.DynamicArtGapTransition;
 import com.openggf.game.resources.DynamicArtDiagnosticsSnapshot;
@@ -2824,6 +2826,32 @@ abstract class AbstractRunChainTest {
             }
 
             @Override
+            public void runPass(int index, SpecialStageProvider provider) {
+                if (isPreStartPass(passes.get(index))) {
+                    // The pre-start loop's terminal pass. Its own
+                    // started_at_input_sample is still clear, because the
+                    // pre-start loop tests SpecialStage_Started only after the
+                    // pass returns (docs/s2disasm/s2.asm:6689-6692) -- the same
+                    // predicate TraceRunSpecialStageRows.passPacedFromRow uses
+                    // to find the recurring loop's first pass, so the last pass
+                    // still reading zero is by construction the pre-start one.
+                    // The ROM copies Ctrl_1/Ctrl_2 BEFORE that loop's
+                    // WaitForVint (s2.asm:6684-6685), so it owns no post-V-int
+                    // controller sample for the recurring loop's binding path;
+                    // publish it through the startup boundary instead. Without
+                    // this the chain bound it as a recurring pass and every
+                    // later special-stage pass ran one V-int behind the track
+                    // clock. Mirrors S2SpecialStageReplayHarness.stepPasses.
+                    Sonic2SpecialStageReplayTestBridge
+                            .completeTerminalPreStartPassWithoutVint(
+                                    ((Sonic2SpecialStageProvider) provider).getManager());
+                    return;
+                }
+                applyPassInput(index, provider);
+                provider.update();
+            }
+
+            @Override
             public void applyPassInput(int index, SpecialStageProvider provider) {
                 var pass = passes.get(index);
                 SpecialStageInputMapper.MappedInput mapped = SpecialStageInputMapper.map(
@@ -2855,6 +2883,29 @@ abstract class AbstractRunChainTest {
                 }
             }
         };
+    }
+
+    /**
+     * True while a recorded pass's own {@code Vint_S2SS ReadJoypads} sample had
+     * not yet seen {@code SpecialStage_Started} (docs/s2disasm/s2.asm:9745), so
+     * the pass belongs to {@code SpecialStage_MainLoop}'s pre-start loop rather
+     * than its recurring loop (s2.asm:6674-6721).
+     */
+    private static boolean isPreStartPass(
+            SpecialStageRunObjectsPassBinder.CompletedPass pass) {
+        Object raw = pass.snapshot().fields().get("started_at_input_sample");
+        if (raw == null) {
+            throw new IllegalStateException(
+                    "run_objects_end is missing started_at_input_sample at frame "
+                            + pass.snapshot().frame());
+        }
+        if (raw instanceof Number number) {
+            return number.intValue() == 0;
+        }
+        String text = String.valueOf(raw);
+        return (text.startsWith("0x") || text.startsWith("0X")
+                ? Integer.parseUnsignedInt(text.substring(2), 16)
+                : Integer.parseInt(text)) == 0;
     }
 
     /** Replays and asserts only the terminal behavior declared by the run manifest. */

@@ -72870,3 +72870,68 @@ control and after, with an identical set of 41 failing classes.
   `tools/bizhawk-headless/.scratch/s3k-sonic-tails-complete-emeralds/`. Fixture
   publication needs explicit approval of the exact bytes, so the per-level and
   chain tests over it are not written yet.
+
+
+## 2026-08-11 — S2 special-stage pre-start boundary + exit fade row (chains)
+
+Command (isolated worktree, base `746e72a3e`):
+
+```
+rm -rf target/surefire-reports target/trace-reports
+mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+    -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=... \
+    "-Dtest=TestS2EhzHalfpipeRoundTripChain,TestS2CompleteEmeraldRunChain" test
+```
+
+CONTROL at `746e72a3e` (measured):
+
+| Report | errors | first error |
+|---|---|---|
+| `s2-ehz-halfpipe-roundtrip_seg1_dynamic_art` | 0 | — |
+| `s2-ehz-halfpipe-roundtrip_seg3_dynamic_art` | 11292 | 2415 `dynamic_art.edges` exp `[2628]` act `[2628, 2629]` |
+| `s2-sonic-tails-complete-emeralds_seg1_dynamic_art` | 3307 | 4895 `dynamic_art.edges` |
+
+AFTER (measured, same command):
+
+| Report | errors | first error |
+|---|---|---|
+| `s2-ehz-halfpipe-roundtrip_seg1_dynamic_art` | 0 | — |
+| `s2-ehz-halfpipe-roundtrip_seg3_dynamic_art` | **0** | — |
+| `s2-sonic-tails-complete-emeralds_seg1_dynamic_art` | **0** | — |
+| `s2-sonic-tails-complete-emeralds_seg3_dynamic_art` | 17071 (new frontier, never reached before) | 0 `dynamic_art.outstanding_transfer_ids` exp `[0]` act `[]` |
+
+Both chains remain RED, but both moved forward:
+
+- `TestS2CompleteEmeraldRunChain` now fails on special-stage segment 3 (`ss_2`)
+  instead of segment 1; segment 3 was previously unreachable.
+- `TestS2EhzHalfpipeRoundTripChain` now fails structurally at segment 4
+  (`lost production ownership before source closure (mode=TITLE_CARD, …,
+  BK2 cursor=22420)`) instead of on segment 3's DPLC ledger.
+
+Green throughout (measured before and after): `TestS2SpecialStage1..7TraceReplay`,
+`TestS2SpecialStageTraceReplay`, `TestS1GhzMazeRoundTripChain`,
+`S2SpecialStageFinishBoundaryMappingTest`, `Sonic2SpecialStageManagerTest`,
+`Sonic2SpecialStagePreRollTest`.
+
+Full `-Ptrace-replay` sweep after the change: 770 run, 2 failures, 3 errors. The two
+failures are the chains above. The three errors
+(`TestS3kKnucklesSuperEmeraldRunChain`, `TestS3kMegaRunChain`,
+`TestS3kMhzCompleteRunTraceReplay`, all `KOS_DECOMPRESSION_QUEUE` completion
+mismatches) reproduce byte-identically on a clean `746e72a3e` checkout and are
+unrelated.
+
+`Sonic2SpecialStageBootstrapCadenceTest` is red at `746e72a3e` with 8 failures + 1
+error and is red with exactly the same 8 + 1 after this change — unchanged, and not
+part of the `-Ptrace-replay` profile.
+
+Diagnosis (probe-measured, not inferred). The recorded `ss` segment ends its last
+`RunObjects` pass on row 5191, spends rows 5192-5213 in `Pal_FadeToWhite` (22
+`VintID_Fade` rows — `Vint_Fade` never reaches `ProcessDMAQueue`), rows 5214-5229
+in the interrupt-masked results build (`results_started` aux event at 5229), and
+drains the stage's last DPLC pair on row 5230, the results loop's first
+`VintID_Level` (s2.asm:6797-6803). Engine probes showed 22 `PALETTE_FADE` claims on
+5192-5213, 16 `LAG` claims on 5214-5229 — both ROM-correct — plus a 23rd
+`PALETTE_FADE` claim on 5230 carrying the fade's completion callback, because
+`deferFirstStepToNextVint()` swallowed a colour step the special-stage exit had
+already forgone (its `FadeManager.update()` runs before `enterResultsScreen` in the
+same iteration). No constant was introduced.

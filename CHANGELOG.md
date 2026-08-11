@@ -3,6 +3,20 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Sonic 2's special stage leaves its main loop through the same startup boundary in
+  the run chain as in the standalone harness, and its exit `Pal_FadeToWhite` occupies the
+  22 V-ints its `dbf` loop runs rather than 23. Two separate off-by-one-row errors, which
+  had been cancelling: `S2SpecialStageReplayHarness.stepPasses` routed the pre-start loop's
+  terminal pass through the startup boundary but `AbstractRunChainTest.recordedPassPacing`
+  bound every pass identically, so the chain started the stage one V-int late and stayed
+  behind (the pre-start loop copies `Ctrl_1`/`Ctrl_2` before its `WaitForVint`,
+  s2.asm:6684-6685, and tests `SpecialStage_Started` only after `RunObjects` returns,
+  s2.asm:6689-6692, so that pass owns no post-V-int controller sample); and
+  `GameLoopPlcLifecycle.startToWhite` deferred the first colour step for a caller that had
+  already spent its iteration's `FadeManager` tick, stretching `Pal_FadeToWhite`
+  (`move.w #$15,d4` + `dbf`, s2.asm:3571-3582) over 23 rows and pushing the results loop's
+  first `VintID_Level` — with the `ProcessDMAQueue` that retires the stage's last player
+  DPLC pair (s2.asm:6797-6803, 781, 1770) — one row late.
 - Fix: Sonic 2's special stage runs a freshly streamed object exactly once on the iteration
   that allocates it, and binds each `RunObjects` pass to the drawing index the ROM is on.
   `SSObjectsManager` (s2.asm:6935-7001) only allocates -- the object's first execution is the

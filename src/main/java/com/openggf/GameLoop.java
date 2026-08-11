@@ -168,6 +168,24 @@ public class GameLoop {
         void applyPassInput(int index, SpecialStageProvider provider);
 
         /**
+         * Executes pass {@code index}.
+         *
+         * <p>{@code SpecialStage_MainLoop} is two loops, not one
+         * (docs/s2disasm/s2.asm:6674-6721), and one observation can own a pass
+         * from each: the pre-start loop copies {@code Ctrl_1}/{@code Ctrl_2}
+         * <em>before</em> its {@code WaitForVint} (s2.asm:6684-6685), so its
+         * terminal pass owns no post-V-int controller sample for the recurring
+         * loop's binding path to consume. A driver that can tell the two apart
+         * overrides this to publish such a pass through the startup boundary
+         * instead, exactly as {@code S2SpecialStageReplayHarness.stepPasses}
+         * already does. The default treats every pass as a recurring-loop pass.
+         */
+        default void runPass(int index, SpecialStageProvider provider) {
+            applyPassInput(index, provider);
+            provider.update();
+        }
+
+        /**
          * Runs after pass {@code index}'s object scan, for a pass the ROM
          * finished BEFORE this observation's V-int.
          *
@@ -1413,8 +1431,7 @@ public class GameLoop {
                         // inside its single lifecycle iteration.
                         int passes = pacing.passCount();
                         for (int pass = 0; pass < passes; pass++) {
-                            pacing.applyPassInput(pass, ssProvider);
-                            ssProvider.update();
+                            pacing.runPass(pass, ssProvider);
                             pacing.afterPass(pass);
                         }
                     });
@@ -2727,10 +2744,20 @@ public class GameLoop {
             // Go directly to results; doEnterResultsScreen() calls startFadeFromWhite().
             doEnterResultsScreen();
         } else {
-            // Normal path (S2): start fade-to-white, then callback to results
-            GameLoopPlcLifecycle.startToWhite(resolveGameplayModeContext(), fadeManager, () -> {
-                doEnterResultsScreen();
-            });
+            // Normal path (S2): start fade-to-white, then callback to results.
+            // This boundary is raised from updateSpecialStageMode's tail, after
+            // specialStageEntryPresentation.update has already spent this
+            // iteration's FadeManager tick, so the ROM's first
+            // Pal_FadeToWhite WaitForVint is already the NEXT iteration's --
+            // deferring again would give the routine 23 V-ints instead of the
+            // 22 its dbf loop runs (docs/s2disasm/s2.asm:3571-3582) and push
+            // the results loop's first VintID_Level, with the ProcessDMAQueue
+            // that retires the stage's last player DPLC pair (s2.asm:6797-6803,
+            // 781, 1770), one row late.
+            GameLoopPlcLifecycle.startToWhiteAfterFrameFadeTick(
+                    resolveGameplayModeContext(), fadeManager, () -> {
+                        doEnterResultsScreen();
+                    });
         }
 
         LOGGER.info("Starting fade-to-white to exit Special Stage");
