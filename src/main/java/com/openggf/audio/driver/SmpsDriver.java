@@ -13,8 +13,9 @@ import com.openggf.audio.synth.VirtualSynthesizer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.IdentityHashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -336,7 +337,9 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                     && channel == 2;
         }
 
-        removeFullyDisplacedSequencers(admission);
+        if (sequencer.trackCount() > 0) {
+            removeInactiveSfxSequencers();
+        }
         if (killedPsg3Track) {
             writeRawPsg(0xDF);
             writeRawPsg(0xFF);
@@ -376,32 +379,17 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         return false;
     }
 
-    private void removeFullyDisplacedSequencers(
-            PreparedSfxAdmission admission) {
-        for (int action = 0;
-                action < admission.displacedOwners.length; action++) {
-            SmpsSequencer owner = admission.displacedOwners[action];
-            if (owner != null
-                    && lastDisplacedAction(admission, owner, action)
-                    && allTracksInactive(owner)) {
-                sequencers.remove(owner);
-                releaseLocks(owner);
-                sfxSequencers.remove(owner);
+    private void removeInactiveSfxSequencers() {
+        Iterator<SmpsSequencer> iterator = sfxSequencers.iterator();
+        while (iterator.hasNext()) {
+            SmpsSequencer sequencer = iterator.next();
+            if (!allTracksInactive(sequencer)) {
+                continue;
             }
+            sequencers.remove(sequencer);
+            releaseLocks(sequencer);
+            iterator.remove();
         }
-    }
-
-    private static boolean lastDisplacedAction(
-            PreparedSfxAdmission admission,
-            SmpsSequencer owner,
-            int action) {
-        for (int index = action + 1;
-                index < admission.displacedOwners.length; index++) {
-            if (admission.displacedOwners[index] == owner) {
-                return false;
-            }
-        }
-        return true;
     }
 
     private static boolean allTracksInactive(SmpsSequencer sequencer) {
