@@ -154,7 +154,7 @@ class TestTraceReplayStartPositionPolicy {
     }
 
     @Test
-    void s3kEndingHistoryAdvanceProvesPlayableAnimationSliceWithoutNormalHook() throws Exception {
+    void s3kEndingHistoryAdvanceOnACompletedIterationStaysAFullLevelFrame() throws Exception {
         TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s3k/lbz_completerun"));
         TraceFrame previous = trace.getFrame(22067);
         TraceFrame current = trace.getFrame(22068);
@@ -167,9 +167,29 @@ class TestTraceReplayStartPositionPolicy {
                 .anyMatch(TraceEvent.TailsCpuNormalStep.class::isInstance));
         assertEquals(4, (after.posTableIndex() - before.posTableIndex()) & 0xFF,
                 "Sonic_RecordPos still advances one history entry after the playable slots run.");
-        assertEquals(TraceExecutionPhase.VBLANK_ONLY,
+
+        // The history witness above is necessary but never sufficient to
+        // downgrade a row: LevelLoop bumps Level_frame_counter in the
+        // instruction after Wait_VSync returns (skdisasm/sonic3k.asm:7884-7889),
+        // so a row pair that advances Level_frame_counter by one AND
+        // V_int_run_count by one is, by construction, one completed main-loop
+        // iteration that consumed exactly its own V-blank. This pair does
+        // (gameplay_frame_counter $5627 -> $5628, vblank_counter $D4B9 ->
+        // $D4BA), so it is a full level frame however the ending-pose CPU
+        // routine animates inside it.
+        //
+        // This assertion previously expected VBLANK_ONLY /
+        // PLAYABLE_ANIMATION_ONLY. That was written on 2026-07-23 against a
+        // defective lbz_completerun capture whose gameplay_frame_counter column
+        // was pinned at 0000 for every row and whose vblank_counter carried
+        // only a stale high byte ($0E00 -> $0F00); the fixture regeneration in
+        // 8a6313bb3 (2026-08-01) restored the real counters and with them the
+        // ROM-correct classification. PLAYABLE_ANIMATION_ONLY stays gated on a
+        // genuinely V-blank-only row -- see TestTraceReplayRowPolicy and
+        // TestLiveTraceComparatorObserver for its own coverage.
+        assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
                 TraceExecutionModel.forGame("s3k").phaseFor(previous, current));
-        assertEquals(TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY,
+        assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
                 TraceReplayBootstrap.phaseForReplay(trace, previous, current));
     }
 
