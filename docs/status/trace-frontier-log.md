@@ -72521,3 +72521,47 @@ so a direct blob stays un-prepared across frames where the engine prepares in on
   change. The excusal's cost — GHZ now verifies load-window work and order, not load-window
   timing — is recorded in `docs/status/known-discrepancies.md` and cited to finding 1 of
   `docs/architecture/plans/trace/2026-08-06-trace-validation-roadmap.md`.
+
+## 2026-08-11 — Two committed complete runs get an end-to-end chain harness (both deliberately red)
+
+- Worktree on branch `feature/ai-run-chain-harness`, base `3ad874245`.
+- Both runs were committed with full segment payloads but had no run-chain test driving
+  them: `traces/s2/runs/s2-sonic-tails-complete-emeralds` (35 segments) was exercised only
+  by per-segment `*CompleteEmeraldsSegmentTraceReplay` / `TestS2SpecialStage1..7TraceReplay`
+  lanes, and `traces/s3k/runs/s3k-knuckles-complete-superemeralds` (67 segments) only by
+  `TestCommittedHardwareTimingFixtures`, which validates its recorded timing without
+  replaying a frame. Nothing drove the transitions BETWEEN segments.
+- Test-infrastructure only: no `src/main/` file is touched, and no assertion, tolerance or
+  segment span is weakened, skipped or trimmed. **Both classes are expected RED.** They are
+  new frontier harnesses, added to say where each route stops — not regressions.
+- Command (one fork, alphabetical, `target/surefire-reports` + `target/trace-reports` wiped
+  first):
+  `mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+  "-Dsurefire.argLine=-Xmx4g" -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  "-Dtest=TestS2CompleteEmeraldRunChain,TestS3kKnucklesSuperEmeraldRunChain" test`
+- `TestS2CompleteEmeraldRunChain.ehz1ToDeathEggAcrossEverySpecialStage`: FAIL, 1 failure.
+  Reaches segment 1 of 35 (`ss`, the route's first special stage) — segment 0's whole EHZ1
+  act (`seg1_ehz1`, 3,710 rows) replays first. First error is the source tail's
+  `dynamic_art.frame` at trace frame 3,709 (expected 3709, actual 3710, delta 1); the
+  thrown assertion is "DPLC divergence in named-run special-stage segment 1", 10,036 errors
+  over 5,681 comparisons, first row `dynamic_art.edges` at frame 0 (expected `[]`, actual
+  `[0]`) with `dynamic_art.outstanding_transfer_ids` inverted (expected `[0]`, actual `[]`)
+  and holding for thousands of consecutive rows. Same shape as
+  `TestS2EhzHalfpipeRoundTripChain`'s standing seg3 DPLC divergence: the special-stage
+  interior publishes the gap's transfer as an edge instead of carrying it outstanding.
+- `TestS3kKnucklesSuperEmeraldRunChain.aiz1ToDoomsdayAcrossEverySpecialAndBonusStage`:
+  FAIL, 1 error. Stops in segment 0 of 67 (`aiz`, 1,653 rows) at its exit boundary:
+  `IllegalStateException: expected completion: KOS_DECOMPRESSION_QUEUE#14
+  sha256:3c96d8b9...; engine pending: <none>`, suppressed detail "unconsumed hardware
+  completion edge at segment end: raw_frame=1617 boundary=PRE_MAIN_LOOP". This is the known
+  MegaRun frontier, not a new defect — `TestS3kMegaRunChain` fails character-for-character
+  in the same way (`KOS_DECOMPRESSION_QUEUE#15` at raw_frame 4570): the engine performs in
+  one frame the level load the ROM spreads over many, so recorded Kosinski readiness edges
+  have no engine-created counterpart to release. The comparator also logs a first error at
+  trace frame 0 of segment 0 — `camera_x` expected `0x1300`, actual `0x1308`, delta 8, with
+  every physics/animation field matching — which the timing throw pre-empts; that one looks
+  new and is worth its own look.
+- No prefix pin accompanies either class. `assertChainReplayThroughSegmentRow` is honoured
+  only on an INTERIOR segment's row driver; S2's first interior is the failing segment 1
+  and S3K stops inside segment 0's source act, so in both runs a prefix could not be placed
+  short of the frontier. Both javadocs say so and say to add one when the frontier moves.
