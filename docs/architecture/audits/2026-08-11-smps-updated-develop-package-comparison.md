@@ -53,6 +53,28 @@ mvn -Dmse=off -Dtest=com.openggf.TestGameLoopSpecialStageEntryPresentation,com.o
 Result: **59 tests, 0 failures, 0 errors, 0 skipped**, `BUILD SUCCESS`;
 total time **13.262 s**, finished **2026-08-11T07:40:27+01:00**.
 
+## Post-merge develop verification
+
+The exact merged `develop` commit `69f3a051b` was verified in a detached
+worktree with the same full-suite command. It ran **14,729 tests, 52 failures,
+16 errors, and 41 skips**. All 67 baseline failing/erroring testcase identities
+recurred unchanged. The sole merged-only identity was:
+
+```text
+FAIL\tcom.openggf.game.sonic3k.objects.TestMhzMushroomParachuteObjectInstance#fallingPlayerInGrabWindowIsCarriedAtRomOffsetAndParachuteStartsFalling
+```
+
+An immediate isolated rerun used:
+
+```bash
+mvn -Dmse=off -Dtest=com.openggf.game.sonic3k.objects.TestMhzMushroomParachuteObjectInstance test
+```
+
+It passed **12 tests with 0 failures, 0 errors, and 0 skips**. The post-merge
+focused audio/ownership/allocation gate also passed **168/168**, with measured
+program, DAC, and unrelated-music slopes remaining flat at 1,200 allocated
+bytes per trigger.
+
 ## Baseline failing/error identities (67)
 
 ```text
