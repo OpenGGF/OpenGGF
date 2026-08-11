@@ -61,9 +61,10 @@ public class AudioManager implements MusicRestoreSink {
     private static final int REVERSE_RELEASE_CROSSFADE_MS = 45;
     private static AudioManager instance;
     private AudioBackend backend;
-    /** Volatile publication of the complete immutable base dependency tuple. */
+    private volatile Rom rom;
+    /** Volatile publication of the immutable base playback dependency tuple. */
     private volatile BaseAudioSource baseAudioSource =
-            new BaseAudioSource(null, null, null, null, null, 0);
+            new BaseAudioSource(null, null, null, null, 0);
     private Map<GameSound, Integer> soundMap;
     private boolean ringLeft = true;
     private AudioRequestObserver requestObserver = AudioRequestObserver.NONE;
@@ -176,7 +177,6 @@ public class AudioManager implements MusicRestoreSink {
     private record DonorSfxBinding(String gameId, int sfxId) {}
 
     private record BaseAudioSource(
-            Rom rom,
             GameAudioProfile profile,
             SmpsLoader loader,
             DacData dac,
@@ -237,7 +237,7 @@ public class AudioManager implements MusicRestoreSink {
         GameAudioProfile resolvedProfile = java.util.Objects.requireNonNull(
                 profile, "profile");
         manager.baseAudioSource = new BaseAudioSource(
-                null, resolvedProfile, null, null,
+                resolvedProfile, null, null,
                 resolvedProfile.getSequencerConfig(), 1);
         manager.presentationSink = java.util.Objects.requireNonNull(
                 sink, "sink");
@@ -535,8 +535,8 @@ public class AudioManager implements MusicRestoreSink {
         try {
             BaseAudioSource previous = baseAudioSource;
             long candidateGeneration = nextGeneration(previous.generation());
-            SmpsLoader candidateLoader = createLoader(
-                    audioProfile, previous.rom());
+            SmpsLoader candidateLoader = audioProfile != null && rom != null
+                    ? audioProfile.createSmpsLoader(rom) : null;
             DacData candidateDac = loadDac(candidateLoader);
             SmpsSequencerConfig candidateConfig = audioProfile != null
                     ? audioProfile.getSequencerConfig() : null;
@@ -570,7 +570,7 @@ public class AudioManager implements MusicRestoreSink {
             }
             publishPresentationCoordHandlers(presentationPreparation);
              baseAudioSource = new BaseAudioSource(
-                     previous.rom(), audioProfile, candidateLoader, candidateDac,
+                     audioProfile, candidateLoader, candidateDac,
                      candidateConfig, candidateGeneration);
              if (shadowFactory != null) {
                  shadowFactory.setSfxAdmissionPolicy(sfxAdmissionPolicy());
@@ -588,21 +588,18 @@ public class AudioManager implements MusicRestoreSink {
         beginSourceMutation();
         try {
             BaseAudioSource previous = baseAudioSource;
-            SmpsLoader candidateLoader = createLoader(previous.profile(), rom);
+            SmpsLoader candidateLoader = previous.profile() != null
+                    && rom != null
+                    ? previous.profile().createSmpsLoader(rom) : null;
             DacData candidateDac = loadDac(candidateLoader);
+            this.rom = rom;
             baseAudioSource = new BaseAudioSource(
-                    rom, previous.profile(), candidateLoader, candidateDac,
+                    previous.profile(), candidateLoader, candidateDac,
                     previous.config(),
                     nextGeneration(previous.generation()));
         } finally {
             endSourceMutation();
         }
-    }
-
-    private static SmpsLoader createLoader(
-            GameAudioProfile profile, Rom rom) {
-        return profile != null && rom != null
-                ? profile.createSmpsLoader(rom) : null;
     }
 
     private static DacData loadDac(SmpsLoader loader) {
@@ -762,8 +759,9 @@ public class AudioManager implements MusicRestoreSink {
 
     public void playSegaPcm() {
         BaseAudioSource source = baseAudioSource;
+        Rom sourceRom = rom;
         if (suppressingRewindReplay()
-                || source.profile() == null || source.rom() == null) {
+                || source.profile() == null || sourceRom == null) {
             return;
         }
         SegaPcmSpec spec = source.profile().getSegaPcmSpec();
@@ -771,7 +769,7 @@ public class AudioManager implements MusicRestoreSink {
             return;
         }
         try {
-            byte[] pcm = source.rom().readBytes(
+            byte[] pcm = sourceRom.readBytes(
                     spec.address(), spec.length());
             mirrorShadowCommand(() ->
                     shadowResolver.submitRawPcm(pcm, spec.sampleRate()));
@@ -2543,7 +2541,8 @@ public class AudioManager implements MusicRestoreSink {
                 backend.stopPlayback();
             }
              this.baseAudioSource =
-                     new BaseAudioSource(null, null, null, null, null, 0);
+                     new BaseAudioSource(null, null, null, null, 0);
+             this.rom = null;
              this.soundMap = null;
              this.requestObserver = AudioRequestObserver.NONE;
              this.admissionObserver = AudioAdmissionObserver.NONE;
