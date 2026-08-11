@@ -1,7 +1,7 @@
 # SMPS SFX Admission Allocation Design
 
 **Date:** 2026-08-10
-**Status:** Implemented on `develop`; S1 frontier reconciliation pending
+**Status:** Implemented on `develop` and locally reconciled on `bugfix/ai-s1-audio-parity-frontier`
 **Target branches:** `develop` and `bugfix/ai-s1-audio-parity-frontier`
 
 ## Problem

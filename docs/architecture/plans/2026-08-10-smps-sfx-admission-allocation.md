@@ -616,19 +616,19 @@ long slope(long allocationsAt64, long allocationsAt256) {
 **Interfaces:**
 - Produces: pushed `develop` containing immutable versioned assets, lookup-before-load, prepared admission, tests, and documentation.
 
-- [ ] **Step 1: Review the final feature diff and commit ancestry**
+- [x] **Step 1: Review the final feature diff and commit ancestry**
 
   Run `git status --short`, `git log --oneline develop..bugfix/ai-audio-sfx-allocation`, and `git diff --check develop...bugfix/ai-audio-sfx-allocation`. Require a clean intended diff and no untracked architecture artifact.
 
-- [ ] **Step 2: Merge into the main workspace**
+- [x] **Step 2: Merge into the main workspace**
 
   Merge `bugfix/ai-audio-sfx-allocation` into checked-out `develop`, reconciling any late conflict carefully. Ensure the required `README.md` change is staged for the merge policy and never alter the pre-existing user file.
 
-- [ ] **Step 3: Run post-merge verification**
+- [x] **Step 3: Run post-merge verification**
 
   Create a detached temporary verification worktree at the exact merged `develop` HEAD, run the Task 10 focused test set and `mvn test` there, and compare against the official baseline from Task 1. Verify no new/worsened regression, remove classified generated outputs and the detached worktree, and confirm the main workspace's user file hash remains unchanged.
 
-- [ ] **Step 4: Push only develop**
+- [x] **Step 4: Push only develop**
 
   Run `git push origin develop`. Record the pushed merge/feature commit ids and do not push the temporary feature branch.
 
@@ -666,43 +666,43 @@ VirtualSynthesizer.SfxAdmissionState captureSfxAdmissionState(
 void restoreSfxAdmissionState(VirtualSynthesizer.SfxAdmissionState state);
 ```
 
-- [ ] **Step 1: Cherry-pick the semantic develop commits in order**
+- [x] **Step 1: Cherry-pick the semantic develop commits in order**
 
   Cherry-pick Tasks 2–9 commits onto `bugfix/ai-s1-audio-parity-frontier`. Resolve conflicts against frontier observer/admission code, keeping its observer event production and SFX-construction purity. Do not merge the 160 intervening develop commits merely to obtain this fix.
 
-- [ ] **Step 2: Write pre-submission observer-failure tests**
+- [x] **Step 2: Write pre-submission observer-failure tests**
 
   Inject failure at the request observer and any policy callback that runs before `recordTimelineCommand`/presentation command creation. Assert the typed exception escapes with pre-submission state unchanged, no timeline/presentation command is queued, and no automatic retry or `onSfxStart` occurs. Preserve the frontier's existing request event timing and values.
 
-- [ ] **Step 3: Write queued owner-boundary observer-failure tests**
+- [x] **Step 3: Write queued owner-boundary observer-failure tests**
 
   Inject failure at owner-boundary policy, role-admission, contention, driver-service, YM write, PSG write, and registry admission callbacks. For same-ID replacement, FM/PSG contention, continuous extension, and standalone admission, assert: earlier callbacks observe the same committed locks/chip/order as the frontier baseline; thrown type is unchanged; the already-created command remains queued; all internal state equals the pre-command snapshot; retry commits exactly once. Assert `onSfxStart` runs once per new-admission attempt and its state is restored between failed attempt and retry, while continuous extension invokes it zero times.
 
-- [ ] **Step 4: Write selective-chip oracle tests**
+- [x] **Step 4: Write selective-chip oracle tests**
 
   For each legal FM/PSG affected mask, capture both full synth snapshot and selective state, execute representative silence/key-off/noise/DAC takeover writes, restore selectively, and assert a new full snapshot equals restoration through the old full-snapshot oracle, including YM operator/key/envelope/register fields, `ssgEgActiveCount`, DAC selection, PSG noise/latch fields, and resampler-visible state written by admission.
 
-- [ ] **Step 5: Implement affected-channel synth capture/restore**
+- [x] **Step 5: Implement affected-channel synth capture/restore**
 
   Add immutable internal state records to YM/PSG/virtual synth containing only affected channel/operator arrays plus the small global fields mutated by SFX admission. Do not include DAC sample bytes, frozen program/config data, unrelated channels, or unrelated music sequencers.
 
-- [ ] **Step 6: Implement the frontier mutation journal**
+- [x] **Step 6: Implement the frontier mutation journal**
 
   For new-sequencer admission, capture displaced/new track fields, affected locks/latches, driver memberships/removal buffers, continuous counters, DAC source/reference, admission ordinals, the registry-owned coordination snapshot taken before `beginSfxAdmission`, and selective synth state. For continuous extension, omit coordination state/action and capture only its counters/observed ordinal metadata. Allocate the journal only when at least one potentially throwing diagnostic observer is not `NONE`; restore in reverse mutation order and attach rollback failures as suppressed exceptions.
 
-- [ ] **Step 7: Preserve post-mutation observer timing and queue retry**
+- [x] **Step 7: Preserve post-mutation observer timing and queue retry**
 
   For a new sequencer, registry captures the journal/coordination state, invokes `beginSfxAdmission`, commits normally, invokes every observer at its existing point, and holds the journal through the registry-level admission callback. On `AudioDiagnosticObserverException`, restore coordination plus driver/synth state and rethrow before the command queue consumes the head. Continuous extension skips `beginSfxAdmission`. With all observers `NONE`, use the Task 8 narrow coordination-failure handling and no-journal driver commit.
 
-- [ ] **Step 8: Verify frontier observer and allocation behavior**
+- [x] **Step 8: Verify frontier observer and allocation behavior**
 
   Run `mvn -Dtest=TestAudioDiagnosticObservers,TestSfxContentionObserver,TestSmpsSfxConstructionPurity,TestChipWriteObserver,TestSfxAdmissionMutationJournal,TestSmpsSfxAdmissionAllocation test`. Expect exact event-order/state assertions and allocation slopes to pass.
 
-- [ ] **Step 9: Run frontier full regression comparison**
+- [x] **Step 9: Run frontier full regression comparison**
 
   Run `mvn test` and compare exact totals/failures/errors with the untouched baseline from Task 1. No previously passing frontier test may fail and no baseline failure may worsen because of the port. Classify and restore the known test-generated `docs/status/rewind-round-trip-gaps.md` change; preserve/report any unknown change.
 
-- [ ] **Step 10: Commit the frontier reconciliation locally**
+- [x] **Step 10: Commit the frontier reconciliation locally**
 
   Require a clean intended frontier status, then commit conflict resolutions and the observer journal as `perf(audio): bound observed SFX admission state` with required trailers. Leave `bugfix/ai-s1-audio-parity-frontier` and its worktree intact; do not push it without separate user authorization.
 
@@ -714,18 +714,18 @@ void restoreSfxAdmissionState(VirtualSynthesizer.SfxAdmissionState state);
 **Interfaces:**
 - Produces: independently reviewed changes on both branches, cleaned temporary scaffolding, and a reproducible final report.
 
-- [ ] **Step 1: Request independent code review on both diffs**
+- [x] **Step 1: Request independent code review on both diffs**
 
   Provide reviewers the design, this plan, `develop` feature diff, frontier reconciliation diff, focused test results, allocation slopes, and baseline comparisons. Resolve every blocking finding and rerun affected tests until both reviews are green.
 
-- [ ] **Step 2: Re-run verification immediately before completion**
+- [x] **Step 2: Re-run verification immediately before completion**
 
   Use `superpowers:verification-before-completion`; rerun `git diff --check`, the focused suites, and any test changed by review. Confirm pushed `develop` contains the reviewed commits and frontier HEAD contains its local reconciliation.
 
-- [ ] **Step 3: Clean the temporary feature worktree and branch**
+- [x] **Step 3: Clean the temporary feature worktree and branch**
 
   Verify `.worktrees/audio-sfx-allocation` has no uncommitted/unmerged user work. Remove classified test outputs, remove the worktree, verify `bugfix/ai-audio-sfx-allocation` is fully merged into `develop`, delete that local branch, and prune worktree metadata. Do not remove the S1 frontier worktree.
 
-- [ ] **Step 4: Report exact delivery state**
+- [x] **Step 4: Report exact delivery state**
 
   Report the root cause, implementation summary, observer/catalog challenges, upstream/conflict reconciliation, every focused/full test command and outcome, the reproducible historical music/SFX before/after table and allocation slope evidence, pushed `develop` branch/commits, unpushed frontier local commit, preserved dirty user file, and successful temporary worktree/branch cleanup.

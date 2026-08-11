@@ -221,3 +221,20 @@ skips and no failures/errors. Isolated ArchUnit remained exactly **29 run, one
 known `trace -> graphics` failure, zero errors**. The authenticated benchmark
 manifest source did not change, so the paired historical benchmark was not
 rerun.
+
+## S1 frontier reconciliation
+
+The observer-heavy S1 audio frontier was reconciled locally at
+`05ac8e6dce1c59681bbfb927ab78aff2b1015140`. Its affected-channel mutation
+journal preserves post-mutation diagnostic timing and queued-command retry
+without retaining whole synth snapshots; continuous extension uses scalar-only
+journal state. The actual dirty frontier worktree passed a 139-test focused
+observer/journal/allocation/onset gate. Measured slopes remained independent of
+program, DAC, and unrelated-music size (1,368/1,368, 1,344/1,344, and
+1,344/1,344 allocated bytes per trigger respectively).
+
+The actual frontier full run executed 14,902 tests with 36 failures, 14 errors,
+and 42 skips while concurrent unrelated complete-run work added tests. Its 50
+failing/erroring identities were all present in the preserved 56-identity
+pre-port baseline: zero new identities and six absent. The frontier commit is
+intentionally local and unpushed.
