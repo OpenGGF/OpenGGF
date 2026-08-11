@@ -2737,6 +2737,41 @@ public class GameLoop {
     }
 
     /**
+     * The special-stage identity a recorded run segment is cut on: the value
+     * {@code Current_Special_Stage} held when the ROM entered
+     * {@code GameModeID_SpecialStage}, held constant for the whole recorded
+     * segment.
+     *
+     * <p>The ROM's byte is not constant across that segment. A won stage
+     * increments it inside the stage itself, in the same block that raises
+     * {@code SS_Check_Rings_flag} ({@code addi_.b #1,(Current_Special_Stage).w},
+     * docs/s2disasm/s2.asm:72467-72477), and it is zeroed only on a later entry
+     * once it reaches 7 (s2.asm:6538-6540). The run recorder samples it once, at
+     * the first {@code GameModeID_SpecialStage} frame
+     * ({@code S2RunCaptureRunner.StartSsSegment}), so a segment's recorded
+     * {@code special_stage_index} is that pre-increment number for the whole
+     * segment, results tail included.
+     *
+     * <p>The engine splits that one ROM mode into {@code SPECIAL_STAGE} plus
+     * {@code SPECIAL_STAGE_RESULTS}, and entering results deinitialises the
+     * stage manager ({@code SpecialStageProvider#resetForResults}), dropping its
+     * scratch stage index back to 0. Reading the live provider during the
+     * results tail therefore reports 0 for every stage -- which only happened to
+     * match the recorded identity for stage 0. The results phase belongs to the
+     * stage captured at the exit boundary, so report that instead.
+     */
+    public Integer recordedSpecialStageIdentity(GameMode observedMode) {
+        if (observedMode == GameMode.SPECIAL_STAGE_RESULTS) {
+            return ssStageIndex;
+        }
+        if (observedMode != GameMode.SPECIAL_STAGE) {
+            return null;
+        }
+        SpecialStageProvider provider = getActiveSpecialStageProvider();
+        return provider != null ? provider.getCurrentStage() : null;
+    }
+
+    /**
      * Actually enters the results screen after fade-to-white completes.
      */
     void doEnterResultsScreen() {

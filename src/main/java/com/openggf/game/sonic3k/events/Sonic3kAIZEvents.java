@@ -401,21 +401,28 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     private static final int FIRE_TERRAIN_DECOMPRESS_FRAMES = 20;
     // ROM: after the AIZ1BGE_Finish reload (Events_routine_bg cleared, act 0->1),
     // the AIZ2 background event chain re-draws the fire plane before releasing the
-    // post-reload Camera_max_X_pos lock. The release is gated by the
-    // Draw_PlaneVertBottomUp plane redraw COMPLETING, not by Camera_Y_pos_BG_copy
-    // crossing $310 (the continuous AIZ1_FireRise ramp passes $310 well before the
-    // reload). The redraw runs as two AIZ2_BackgroundEvent routines:
-    //   - Events_routine_bg $00 = AIZ2BGE_FireRedraw  (reload .. redraw mid-point)
-    //   - Events_routine_bg $04 = AIZ2BGE_WaitFire    (.. Draw_PlaneVertBottomUp done)
-    // From a fresh ROM regen of the AIZ1->AIZ2 fake-fire transition, the routine
-    // timeline (no lag frames in this window, so trace frames == gameplay ticks):
-    //   reload (rtn $14->$00) at trace frame 5496
-    //   rtn $00->$04                at 5504  (8 ticks of AIZ2BGE_FireRedraw)
-    //   rtn $04->$08 + maxX release at 5542  (38 ticks of AIZ2BGE_WaitFire)
-    // => release is reload+46 gameplay ticks. Model that redraw duration so the
-    // release is reload-relative and ROM-timed rather than bgY-threshold-driven.
-    private static final int AIZ2_FIRE_REDRAW_FRAMES = 8;
-    private static final int AIZ2_WAIT_FIRE_REDRAW_FRAMES = 38;
+    // post-reload Camera_max_X_pos lock. Two routines run in sequence:
+    //   - Events_routine_bg $00 = AIZ2BGE_FireRedraw (sonic3k.asm:105036-105050)
+    //   - Events_routine_bg $04 = AIZ2BGE_WaitFire   (sonic3k.asm:105052-105105)
+    // AIZ1BGE_Finish seeds Draw_delayed_rowcount = $F immediately before clearing
+    // Events_routine_bg (sonic3k.asm:104774-104775). Each AIZ2BGE_FireRedraw pass
+    // calls Draw_PlaneVertBottomUp, which drains TWO rows per call
+    // (Draw_PlaneVertSingleBottomUp runs once, then again while the counter is
+    // still non-negative; sonic3k.asm:103429-103457) and advances the routine when
+    // that counter goes negative. The pass count therefore falls out of the seed
+    // and the drain rate; it is not a measured budget.
+    /** ROM: {@code move.w #$F,(Draw_delayed_rowcount).w} (sonic3k.asm:104774). */
+    private static final int AIZ2_FIRE_REDRAW_ROWCOUNT = 0x0F;
+    // ROM AIZ2BGE_WaitFire (sonic3k.asm:105052-105084): while Events_bg+$00 is
+    // clear, the routine waits for the continuous AIZ1_FireRise ramp to put
+    // (Camera_Y_pos_BG_copy & $7F) inside [$20,$30); on that pass it re-seats the
+    // BG copy to $180 + that residue and latches Events_bg+$00. From then on the
+    // ramp runs on until `cmpi.w #$310,(Camera_Y_pos_BG_copy)` stops branching,
+    // which is what releases Camera_max_X_pos. Both bounds are ROM immediates.
+    private static final int FIRE_BG_WAIT_WINDOW_LOW = 0x20;
+    private static final int FIRE_BG_WAIT_WINDOW_HIGH = 0x30;
+    private static final int FIRE_BG_WAIT_RESEAT_BASE = 0x180;
+    private static final int FIRE_BG_WAIT_RESIDUE_MASK = 0x7F;
     private static final int FIRE_OVERLAY_STAGE_X = 0x2E00;
     // SpawnLevelMainSprites writes Obj_AIZPlaneIntro to
     // Dynamic_object_RAM+(object_size*2): absolute S3K SST slot 3+2 = 5.
@@ -1250,7 +1257,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
      * Equivalent to Camera_Y_pos_BG_copy during AIZ1 fire transition.
      */
     public int getFireTransitionBgY() {
-        return fireBgCopyFixed >> 16;
+        return fireBgCopyWord();
     }
 
     /**
@@ -1364,64 +1371,8 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
 
         if (fireSequencePhase.curtainActive() || fireSequencePhase == FireSequencePhase.AIZ2_BG_REDRAW) {
             switch (fireSequencePhase) {
-                case AIZ2_FIRE_REDRAW -> {
-                    // ROM AIZ2BGE_FireRedraw (Events_routine_bg $00): each frame
-                    // calls Draw_PlaneVertBottomUp to re-draw the fire plane after
-                    // the reload, then AIZ1_FireRise advances the continuous ramp.
-                    // The ramp visual stays cosmetic; the routine advance to
-                    // AIZ2BGE_WaitFire is gated by the redraw, modelled here as the
-                    // ROM-measured frame budget (reload .. rtn $00->$04 = 8 ticks).
-                    advanceFireRise(false);
-                    firePhaseFrames++;
-                    if (firePhaseFrames >= AIZ2_FIRE_REDRAW_FRAMES) {
-                        fireSequencePhase = FireSequencePhase.AIZ2_WAIT_FIRE;
-                        // ROM clears Events_bg+$00 when AIZ2BGE_FireRedraw completes
-                        // (loc_50110, sonic3k.asm:105049); AIZ2BGE_WaitFire later sets
-                        // it on the redraw-row pass.
-                        act2WaitFireDrawActive = false;
-                        firePhaseFrames = 0;
-                    }
-                }
-                case AIZ2_WAIT_FIRE -> {
-                    // ROM AIZ2BGE_WaitFire (Events_routine_bg $04): continues the fire
-                    // ramp + Draw_TileRow redraw and releases Camera_max_X_pos only
-                    // once the Draw_PlaneVertBottomUp plane redraw has fully completed
-                    // (the `cmpi.w #$310,(Camera_Y_pos_BG_copy)` at sonic3k.asm:105084
-                    // gates on the redraw progress, NOT a fixed bgY level — the
-                    // continuous AIZ1_FireRise ramp passes $310 well before the reload,
-                    // and the post-reload ramp is re-armed by the redraw reset). Model
-                    // the release on the ROM-measured redraw frame budget so it lands
-                    // reload-relative (reload+8+38 = reload+46 gameplay ticks), which is
-                    // the frame the ROM writes Camera_max_X_pos=$6000.
-                    advanceFireRise(false);
-                    // ROM sets Events_bg+$00 on the redraw-row pass (st, :105076) and
-                    // FALLS THROUGH to the same-frame release check. Keep the
-                    // same-frame fall-through (the $200 source-strip draw) modelled by
-                    // act2WaitFireDrawActive.
-                    act2WaitFireDrawActive = true;
-                    firePhaseFrames++;
-                    if (firePhaseFrames >= AIZ2_WAIT_FIRE_REDRAW_FRAMES) {
-                        // ROM order inside the completed-redraw branch is
-                        // Load_PLC, LoadEnemyArt, the palette-line-4 writes and
-                        // only then Camera_max_X_pos (sonic3k.asm:105084-105096),
-                        // so the enemy batch is admitted on the very tick that
-                        // releases the clamp, not the one before it.
-                        admitAct2EnemyArt();
-                        // ROM AIZ2BGE_WaitFire releases the post-reload X clamp by
-                        // writing Camera_max_X_pos=$6000 once the redraw completes
-                        // (sonic3k.asm:105084-105096). Camera_min_X_pos remains at
-                        // $0010 so Sonic cannot scroll back into the transition.
-                        // The handler runs after camera.updatePosition() this frame,
-                        // so the released bound is consumed by NEXT frame's scroll —
-                        // matching ROM, where AIZ2BGE_WaitFire runs in ScreenEvents
-                        // AFTER that frame's MoveCameraX (DeformBgLayer), so the new
-                        // Camera_max_X_pos applies to the following frame.
-                        camera().setMaxX((short) AIZ2_POST_FIRE_CAMERA_MAX_X);
-                        applyPostFireContinuationPaletteLine4(levelManager());
-                        fireSequencePhase = FireSequencePhase.AIZ2_BG_REDRAW;
-                        firePhaseFrames = 0;
-                    }
-                }
+                case AIZ2_FIRE_REDRAW -> runAiz2FireRedraw();
+                case AIZ2_WAIT_FIRE -> runAiz2WaitFire();
                 case AIZ2_BG_REDRAW -> {
                     firePhaseFrames++;
                     if (firePhaseFrames >= FIRE_REDRAW_FRAMES) {
@@ -1465,39 +1416,118 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     }
 
     /**
-     * Advances only the VBlank-owned delayed plane redraw. Player physics,
-     * ScreenEvents, fire-rise CPU state, and all other level state stay frozen.
+     * Advances nothing in the AIZ fire chain on a VBlank-only row.
      *
-     * <p>ROM lag rows still run the VBlank handler that drains the queued plane
-     * redraw, even though LevelLoop/ScreenEvents does not execute. This matters
-     * to AIZ2BGE_FireRedraw/WaitFire because Camera_max_X_pos is released only
-     * after that redraw has drained (sonic3k.asm:105049-105096).
+     * <p>Every routine in that chain — {@code AIZ1BGE_FireTransition},
+     * {@code AIZ1BGE_FireRefresh}, {@code AIZ1BGE_Finish},
+     * {@code AIZ2BGE_FireRedraw} and {@code AIZ2BGE_WaitFire} — is reached only
+     * through {@code ScreenEvents}, which the level main loop calls after
+     * {@code Wait_VSync} (sonic3k.asm:7889-7899 and :102233-102254, dispatching
+     * via :104557-104558 and :105018-105019). A lag row is a main-loop pass that
+     * never completed, so {@code Level_frame_counter} does not advance and none
+     * of those routines run — neither their {@code AIZ1_FireRise} calls nor
+     * their {@code Draw_PlaneVertBottomUp} drains, both of which are main-loop
+     * work rather than V-int work. The AIZ1 half of the chain was already
+     * frozen here; the AIZ2 half is main-loop work for exactly the same reason,
+     * so it freezes too and {@code Camera_Y_pos_BG_copy} simply holds.
      */
     public void advanceVblankOnlyState() {
-        switch (fireSequencePhase) {
-            case AIZ2_FIRE_REDRAW -> {
-                firePhaseFrames++;
-                if (firePhaseFrames >= AIZ2_FIRE_REDRAW_FRAMES) {
-                    fireSequencePhase = FireSequencePhase.AIZ2_WAIT_FIRE;
-                    act2WaitFireDrawActive = false;
-                    firePhaseFrames = 0;
-                }
-            }
-            case AIZ2_WAIT_FIRE -> {
-                act2WaitFireDrawActive = true;
-                firePhaseFrames++;
-                if (firePhaseFrames >= AIZ2_WAIT_FIRE_REDRAW_FRAMES) {
-                    admitAct2EnemyArt();
-                    camera().setMaxX((short) AIZ2_POST_FIRE_CAMERA_MAX_X);
-                    applyPostFireContinuationPaletteLine4(levelManager());
-                    fireSequencePhase = FireSequencePhase.AIZ2_BG_REDRAW;
-                    firePhaseFrames = 0;
-                }
-            }
-            default -> {
-                // CPU-owned phases remain frozen on VBlank-only rows.
-            }
+        // ScreenEvents-owned state stays frozen on VBlank-only rows.
+    }
+
+    /**
+     * ROM {@code AIZ2BGE_FireRedraw} (Events_routine_bg $00, sonic3k.asm:105036-105050).
+     *
+     * <p>Each pass runs {@code Draw_PlaneVertBottomUp}, which drains two rows of
+     * {@code Draw_delayed_rowcount} per call (sonic3k.asm:103429-103457). While the
+     * counter stays non-negative the routine falls through to {@code AIZ1_FireRise}
+     * and the plain deformation; when it goes negative the routine clears
+     * {@code Events_bg+$00}, advances {@code Events_routine_bg} and FALLS THROUGH
+     * into {@code AIZ2BGE_WaitFire} in the SAME pass (loc_50110 has no branch), so
+     * that pass runs {@code AIZ1_FireRise} exactly once — from WaitFire's own head.
+     */
+    private void runAiz2FireRedraw() {
+        // Draw_PlaneVertSingleBottomUp: subq #1 always, then again while non-negative.
+        int rowsLeft = firePhaseFrames - 1;
+        if (rowsLeft >= 0) {
+            rowsLeft--;
         }
+        firePhaseFrames = rowsLeft;
+        if (rowsLeft >= 0) {
+            advanceFireRise(false);
+            return;
+        }
+        fireSequencePhase = FireSequencePhase.AIZ2_WAIT_FIRE;
+        // ROM clr.w (Events_bg+$00).w at loc_50110 (sonic3k.asm:105049);
+        // AIZ2BGE_WaitFire re-latches it on the re-seat pass.
+        act2WaitFireDrawActive = false;
+        firePhaseFrames = 0;
+        runAiz2WaitFire();
+    }
+
+    /**
+     * ROM {@code AIZ2BGE_WaitFire} (Events_routine_bg $04, sonic3k.asm:105052-105105).
+     *
+     * <p>Structure, verbatim: {@code AIZ1_FireRise} advances the continuous ramp;
+     * while {@code Events_bg+$00} is clear the routine tests
+     * {@code (Camera_Y_pos_BG_copy & $7F)} against {@code [$20,$30)} and jumps to
+     * {@code PlainDeformation} until the ramp lands inside that window. On the pass
+     * that does, it re-seats {@code Camera_Y_pos_BG_copy} to {@code $180 + residue}
+     * (word write only — the fractional low word carries over), latches
+     * {@code Events_bg+$00} and falls through to the row draw. From then on every
+     * pass reaches {@code cmpi.w #$310,(Camera_Y_pos_BG_copy)}; the first pass that
+     * does not branch low performs {@code Load_PLC}/{@code LoadEnemyArt}, the
+     * palette-line-4 writes and finally {@code Camera_max_X_pos = $6000}.
+     *
+     * <p>The release is therefore the ramp reaching $310 from the re-seat, not a
+     * frame budget: with the ramp at its {@code AIZ1_FireRise} cap of $A000 (i.e.
+     * exactly 10px/pass, s3.asm:70383-70399) the duration follows from the residue
+     * the ramp happens to land on, which is what makes it hold for any recording.
+     */
+    private void runAiz2WaitFire() {
+        advanceFireRise(false);
+        if (!act2WaitFireDrawActive) {
+            int residue = fireBgCopyWord() & FIRE_BG_WAIT_RESIDUE_MASK;
+            if (residue < FIRE_BG_WAIT_WINDOW_LOW || residue >= FIRE_BG_WAIT_WINDOW_HIGH) {
+                // loc_50144: jmp PlainDeformation — no row draw, no release test.
+                return;
+            }
+            setFireBgCopyWord(FIRE_BG_WAIT_RESEAT_BASE + residue);
+            // st (Events_bg+$00).w (sonic3k.asm:105076), then fall through.
+            act2WaitFireDrawActive = true;
+        }
+        // loc_50160: Draw_TileRow, then the unsigned `blo` against $310.
+        if (Integer.compareUnsigned(fireBgCopyWord(), FIRE_BG_FINISH_Y) < 0) {
+            return;
+        }
+        // ROM order inside the completed branch is Load_PLC, LoadEnemyArt, the
+        // palette-line-4 writes and only then Camera_max_X_pos
+        // (sonic3k.asm:105086-105096), so the enemy batch is admitted on the very
+        // pass that releases the clamp, not the one before it.
+        admitAct2EnemyArt();
+        // Camera_min_X_pos remains at $0010 so Sonic cannot scroll back into the
+        // transition. The handler runs after camera.updatePosition() this frame, so
+        // the released bound is consumed by NEXT frame's scroll — matching ROM,
+        // where AIZ2BGE_WaitFire runs in ScreenEvents AFTER that frame's
+        // MoveCameraX (DeformBgLayer).
+        camera().setMaxX((short) AIZ2_POST_FIRE_CAMERA_MAX_X);
+        applyPostFireContinuationPaletteLine4(levelManager());
+        fireSequencePhase = FireSequencePhase.AIZ2_BG_REDRAW;
+        firePhaseFrames = 0;
+    }
+
+    /** ROM {@code Camera_Y_pos_BG_copy} — the high word of the 16.16 fire ramp. */
+    private int fireBgCopyWord() {
+        return (fireBgCopyFixed >>> 16) & 0xFFFF;
+    }
+
+    /**
+     * ROM {@code move.w d0,(Camera_Y_pos_BG_copy).w} — a word write that leaves the
+     * fractional low word (the target of {@code AIZ1_FireRise}'s {@code add.l})
+     * untouched.
+     */
+    private void setFireBgCopyWord(int value) {
+        fireBgCopyFixed = (fireBgCopyFixed & 0xFFFF) | ((value & 0xFFFF) << 16);
     }
 
     /**
@@ -2705,21 +2735,22 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         if (!fireTransitionMutationRequested) {
             applyFireTransitionMutation();
         }
-        // Reset BG_Y to within the fire zone so the act 2 scroll-off renders.
-        // During the linger, BG_Y advanced well past the fire zone (wrapping
-        // handled the visuals). For act 2 the fire needs to start within the
-        // zone and scroll off naturally as the cosmetic ramp. The Camera_max_X_pos
-        // release is now gated on the AIZ2BGE_FireRedraw -> AIZ2BGE_WaitFire redraw
-        // frame budget (see AIZ2_FIRE_REDRAW_FRAMES / AIZ2_WAIT_FIRE_REDRAW_FRAMES),
-        // not on this bgY value, so this is purely the fire-curtain start position.
-        int scrollOffStartY = 0x0140_0000;
+        // ROM AIZ1BGE_Finish does NOT touch Camera_Y_pos_BG_copy across the reload:
+        // AIZ1_FireRise keeps ramping it through the Kos wait and straight into the
+        // AIZ2 background chain (sonic3k.asm:104727-104775). AIZ2BGE_WaitFire's
+        // re-seat to $180 + (bgY & $7F) is the only thing that brings it back into
+        // the fire zone, so the ramp must stay continuous here — the residue it
+        // carries across the reload is exactly what decides the release pass.
+        // ROM also seeds Draw_delayed_rowcount = $F immediately before clearing
+        // Events_routine_bg (sonic3k.asm:104774-104775); firePhaseFrames carries
+        // that counter through AIZ2BGE_FireRedraw.
         pendingFireSequence = new PendingFireSequence(
                 FireSequencePhase.AIZ2_FIRE_REDRAW,
-                scrollOffStartY,
+                fireBgCopyFixed,
                 fireRiseSpeed,
                 fireWavePhase,
                 fireTransitionFrames,
-                0,
+                AIZ2_FIRE_REDRAW_ROWCOUNT,
                 fireTransitionMutationRequested,
                 false);
         persistTransitionCheckpoint();

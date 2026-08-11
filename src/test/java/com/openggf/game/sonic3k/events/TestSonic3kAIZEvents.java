@@ -1016,8 +1016,12 @@ public class TestSonic3kAIZEvents {
         assertTrue(afterReload.active());
         assertEquals(224, afterReload.coverHeightPx());
         assertEquals(beforeReload.wavePhase(), afterReload.wavePhase());
-        // requestAct2Transition() intentionally resets BG Y to 0x140 for scroll-off start.
-        assertEquals(0x0140, afterReload.sourceWorldY());
+        // ROM AIZ1BGE_Finish performs the whole act reload without ever writing
+        // Camera_Y_pos_BG_copy (sonic3k.asm:104727-104802), so the AIZ1_FireRise
+        // ramp carries across the reload untouched; AIZ2BGE_WaitFire's
+        // $180 + (bgY & $7F) re-seat (sonic3k.asm:105070-105076) is the only
+        // thing that ever brings it back into the fire zone.
+        assertEquals(beforeReload.sourceWorldY(), afterReload.sourceWorldY());
         assertEquals(FireCurtainStage.AIZ2_REDRAW, afterReload.stage());
     }
 

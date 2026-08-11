@@ -232,10 +232,16 @@ public class CheckpointObjectInstance extends BoxObjectInstance implements Rewin
     }
 
     private void spawnStars() {
-        // Spawn 4 stars at angle offsets 0, 0x40, 0x80, 0xC0
+        // Spawn 4 stars at angle offsets 0, 0x40, 0x80, 0xC0.
+        // ROM Obj79_MakeSpecialStars allocates with AllocateObjectAfterCurrent, not
+        // AllocateObject (docs/s2disasm/s2.asm:44841-44845; contrast the dongle at
+        // s2.asm:44647, which does use AllocateObject). The stars therefore land in
+        // slots ABOVE the star post's own and run Obj79_Star on the very frame they
+        // are created, so objoff_36 is already 1 at that frame's end. Allocating them
+        // lowest-free let them fall below the post, costing a frame of orbit phase.
         for (int i = 0; i < 4; i++) {
             int angleOffset = i * 0x40;
-            spawnFreeChild(() -> new CheckpointStarInstance(this, angleOffset));
+            spawnChild(() -> new CheckpointStarInstance(this, angleOffset));
         }
     }
 

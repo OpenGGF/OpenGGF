@@ -72048,3 +72048,476 @@ After: **769 / 8 / 64, identical failing set** — a correctness-only round.
 - Route position: AIZ, CNZ, HCZ, ICZ, LBZ and both MGZ replays stay green with
   the compensator removed. MHZ's KOS completion boundary remains the next S3K
   target.
+
+## 2026-08-10 — round twenty-nine: the AIZ submission suppression, and two of my own claims retracted
+
+Base d958fc681 (post-merge). S3K package after: 2516 tests, 11 failures / 7 errors across 16
+classes. **`TestS3kAizTraceReplay` is GREEN** (was 3 errors).
+
+- **RETRACTION 1, and it was committed into a permanent document.** The AIZ entry I added to
+  `docs/S3K_KNOWN_DISCREPANCIES.md` claimed the recorded ROM had the direct decompression queue
+  already working on a module inside `ArtKosM_AIZ_Bloominator` (0x367DCA) on the admission frame,
+  implying an older parent owned that iteration's module step. **None of that is in the
+  fixtures.** Decoding the recorded `load_queue_state` rows directly gives
+  `active_source = 0x36800E` on BOTH admission frames (5542 in `aiz1_to_hcz_fullrun`, 6345 in
+  `aiz_completerun`) — that is `ArtKosM_AIZ_MonkeyDude + 2`, module 0 of the FIRST `PLCKosM_AIZ`
+  entry, in plain PLC order (skdisasm/sonic3k.asm:64349-64351). The FIFO was EMPTY; there was no
+  older parent. Bloominator's module 0 is 0x367DCC and publishes four rows LATER (5546 / 6349).
+  **The value 0x367DCE appears nowhere in either fixture.** I took it from a lane report and
+  promoted it to a documented ROM claim without decoding the fixture myself. The entry is
+  rewritten as RESOLVED with the wrong claim stated explicitly rather than deleted.
+- **The real cause: the held-loop-tail deferral suppressed SUBMISSION, not just readiness.**
+  Instrumented at the admission row: the AIZ2 `LoadEnemyArt` batch is submitted correctly during
+  the event pass (3 parents, capacity available); then the same row's POST_OBJECTS step ran with
+  the held-tail flag set, took the `activeChild == null && deferFirstChild` early return, and
+  published nothing. The next POST_OBJECTS — the held-tail closure — submitted 0x36800E. The
+  child arrived one loop late and the row's snapshot showed an idle direct FIFO. That deferral
+  has no ROM basis for a level-loop producer. The two producers that set the flag are now split:
+  the generic held-loop-tail arm defers only readiness/visibility, as its own doc comment always
+  said, while the locked title-card owner — whose `LoadEnemyArt` genuinely runs after that
+  iteration's module step — declares its late ordering explicitly. **The fix removes a
+  suppression rather than adding a compensator.**
+- **RETRACTION 2: the EHZ row-428 defect DOES NOT EXIST.** At d958fc681 the interior-DPLC
+  comparator compares all 5733 frames with no windowing, and rows 428/429/435/438/444 are CLEAN.
+  All 23 remaining errors are exactly the 5213..5230 tail. The round-28 instrumentation that
+  "proved" the pass-phase defect (`retire [2758,2759,2760] lf=428` from `beforePass(index=1)`)
+  was measured **with the retired publication-lag pair applied** — it described behaviour the
+  pair caused, not a defect at base. I carried it into two briefs as established fact.
+  Cross-checked against the recording: at row 428 the observation carries passes 182
+  (completion_cursor 427) and 183 (cursor 428), transfer 2758 is submitted lf 428 / pf 428 ->
+  completed 429, and the engine reproduces that pair. Rows 435 and 444 record submissions with
+  lf 434/443 and pf 435/444 — the ROM genuinely submits on the FIRST pass there and the SECOND
+  at 428, **and the engine already matches both.** The per-pass mapping-frame advance is
+  correctly modelled.
+- **The EHZ 23-error tail is confirmed wall-clock 68000 time.** The last gameplay pass is
+  sequence 3171 at frame 5191; transfers 5495/5496 are submitted lf 5191 / pf 5192, and there is
+  NO run_objects pass at all between 5192 and `results_started` at 5229. ROM completes them at
+  5230; the engine at 5213 = 5192 + 21, i.e. at the end of the 22 `Pal_FadeToWhite` V-blanks
+  (s2.asm:3570-3581). `Vint_Fade` reaches `ProcessDPLC` and never `ProcessDMAQueue`
+  (s2.asm:1068-1071), so an entry submitted before the fade cannot retire during it, and the
+  interrupts-disabled results setup (`ClearScreen`, `PalLoad_Now`, `LoadPLC2`,
+  `LoadTitleCardSS`, `NemDec` of `ArtNem_SpecialStageResults`, s2.asm:6748-6800) then burns the
+  missing 17 rows with no `WaitForVint` until the results loop's first `VintID_Level` at 5230
+  (:6801-6807). **Sidecar territory under rule 4, not a constant.**
+- **`FRESH_LEVEL_TRANSITION_OWNER_RETIREMENT_FRAMES = 3` removed as DEAD WEIGHT, not a
+  compensator.** The S3K trace package is byte-identical before and after — not merely the same
+  pass/fail counts but the same first-error frames, field names and expected/actual values in
+  every failing class. So the "three post-exit dispatches" were never observable on any
+  committed row; the surviving one-dispatch `exitChildrenGone` step already encodes the honest
+  model (children drain `$30`, the owner sees zero on its NEXT dispatch, and that dispatch
+  reaches `LoadEnemyArt` immediately).
+- **A4 scoped with the answer, not landed.** The title-card phase deltas CAN be derived, and the
+  answer is not a table: `Obj_TitleCardWait` (sonic3k.asm:62221-62223) does
+  `tst.w $34(a0) / beq loc_2D810 / clr.w $34(a0) / rts` — it stalls purely on a flag the
+  children set. EVERY sliding child sets it (`st $34(a1)` at :62328 RedBanner, :62377 Element,
+  :62422 Element2) and each stops the frame its coordinate equals its `$46` target. So the
+  in-level HUD/gamestate reset (:62212-62232) fires on the first owner dispatch after the LAST
+  child stops moving — one dispatch after `all elemAtTarget`, **with no constant and no
+  `getVblaCounter() & 3` key at all.** The engine already tracks `elemAtTarget[]`, so the
+  replacement is mechanical; it is a behavioural change across every S3K title card and deserves
+  its own round.
+
+## 2026-08-10 — round thirty: two harness fixture-construction bugs, and two load-bearing pairs named
+
+Base a3fd49166 (post-merge, definitive frontier 769 / 11 failures / 24 errors, 12 red classes).
+
+- **BOTH HARNESS DEFECTS WERE TEST-SIDE FIXTURE CONSTRUCTION, not validators and not the engine.**
+  Established by decoding the payloads directly rather than trusting the exception text.
+  `TestAbstractTraceReplayDynamicArtTerminal` GREEN (2 failures -> 0): the committed
+  `traces/s2/ehz1_fullrun/aux_state.jsonl.gz` carries exactly 5852 `dynamic_art_transfer_state`
+  events, one per stored physics row, and exactly ONE at frame 0
+  (`{"frame": 0, ..., "outstanding_transfer_ids": [4]}`), with
+  `dynamic_art_transfer_state_per_frame` ALREADY in `metadata.json`'s `aux_schema_extras`. The
+  test was written when the fixture had neither, so it unconditionally re-added the capability
+  and appended its own synthetic empty state for every frame on top of the real stream. Frame 0
+  genuinely carried 2 states and `TraceData.validateDynamicArtTransferStates:520` was correctly
+  rejecting a malformed stream. **The validator was right all along.** No validator weakened, no
+  fixture regenerated, no re-record needed.
+  `TestTraceReplayStartPositionPolicy` 22 reds -> 6, all 20 errors closed, and the "one shared
+  cause" hypothesis was correct: `loadPolicyTrace` copies `metadata.json` VERBATIM but filters
+  `aux_state.jsonl` through `isReplayPolicyEvent`, an allowlist of five families. The fixtures
+  have since been regenerated advertising `load_queue_state_per_frame` (and for the S2 ones
+  `dynamic_art_transfer_state_per_frame`), whose events the allowlist drops — so `TraceData.load`
+  then enforced one typed heartbeat per stored row for an advertised capability whose events had
+  been filtered out.
+- **TITLE CARD: the ROM model is 30, which is the OLD TABLE'S phase-1/2 value — so the defect is
+  narrower and worse than the review stated.** `Obj_TitleCardWait` (skdisasm/sonic3k.asm:
+  62220-62223) stalls purely on `$34`; the sliding children set it (:62328, :62377, :62422) on any
+  dispatch where their coordinate is not yet at `$46`, and the owner sits in an earlier object
+  slot than its `CreateNewSprite4` children (:37894), so the reset (:62212-62232) lands exactly
+  TWO owner dispatches after the last child arrives. `ObjArray_TtlCard` (:62450) needs
+  11/20/24/28 slide steps, so the last child stops at 28 and the reset is dispatch 30 — no
+  constant, no vbla key. (`ObjArray_TtlCard2`'s 12-step child at :62479 is reached only when `$44`
+  is set, which `Obj_TitleCardInit` does only for the 2P competition zones $E-$12, :62108-62115.)
+  **So phase-1/2's 24+6=30 was ROM-correct and phase-0/3's 24 is the fitted value — and 24 is
+  IMPOSSIBLE**, firing four updates before the engine's own children have finished sliding, which
+  `Obj_TitleCardWait` can never do.
+  **Where the 6 frames actually live:** with the ROM model the MGZ divergence is `rings` expected
+  0 / actual 3 spanning frames 14424-14429 — a span of exactly 6, exactly the delta the change
+  adds on a phase-0/3 entry. The phase table's 24 was absorbing a ~6-dispatch skew in WHEN the
+  children BEGIN sliding. The ROM gate on that start is `Obj_TitleCardCreate`'s
+  `tst.b (Kos_modules_left)` (:62169-62171) — children are not allocated until the KosM queue
+  drains — and the engine's equivalent is `Sonic3kTitleCardManager.update()`'s `artLoading` early
+  return. **That is the same KosM-readiness frontier already keeping
+  `TestS3kAizCompleteRunTraceReplay` (KOS_DECOMPRESSION_QUEUE#49) and
+  `TestS3kMhzCompleteRunTraceReplay` (#335) red.** FOURTH load-bearing pair this session: the
+  vbla lookup can only be deleted once the create gate matches `Kos_modules_left`. Applying the
+  ROM model alone moves MGZ standalone and complete-run RED with none green — measured, not
+  predicted — so it was correctly not landed. Note two unit tests
+  (`TestSonic3kTitleCardManagerRewind.phase{One,Two}InLevelResetTargetsNativeDisplayBoundary`)
+  assert countdown == 30 at REQUEST time; when the pair lands they should assert 30 at CHILD
+  ARRIVAL instead.
+- **SIDEKICK HURT HOOK: counterpart identified exactly, and my brief's framing was wrong.** I
+  said the ROM's spike-hit path has guards upstream of `HurtCharacter` so the engine's touch
+  dispatch fires where the ROM's does not. **Disproved from the fixture:** at raw frame 10744 the
+  ROM unambiguously DID run `HurtCharacter` for Tails — physics.csv row 0x29F8 shows sidekick
+  routine 02->04, status 0x40->0x42 (`Status_InAir`), x_vel -$100, y_vel -$200, exactly
+  `HurtCharacter`'s underwater branch, and aux shows `tails_invulnerability_timer` 0x00 -> 0x78.
+  The touch dispatch is correct and the hurt byte IS written — then **clobbered later in the same
+  frame**. `object_state` slot 41 is the AIZ spiked-log parent at (0x2130,0x0530); its status is
+  0x40 on frames 10740-10743 and 0x00 on 10744, and bit 6 is `p2_pushing_bit`
+  (sonic3k.constants.asm:133-139). The log runs `SolidObjectFull`
+  (`AIZSpikedLog_SolidAndDraw`, :60148-60163) and objects run AFTER the player slots, so its
+  no-collision release reaches `loc_1E0A2` (:41517-41526), which tests the pushing bit and —
+  because `anim` is `$1A`, neither `$02` Roll nor `$09` Spindash — executes
+  `move.w #1,anim(a1)`. **`anim` and `prev_anim` are adjacent bytes**, so that writes anim=$00 /
+  prev_anim=$01: the hurt byte is erased and the walk script restarted. That is precisely what
+  the `AizSpikedLog` hook fakes. FIFTH load-bearing pair; identified but not landed.
+
+## 2026-08-10 — round thirty-one: the EHZ chain's segment 1 closed, CNZ's gradual worker, and three disproved briefs
+
+Full profile at 59e59c8fe + both fixes: **769 tests, 12 failures / 4 errors, 10 red classes**
+(from 11 classes / 24 errors). Green: `TestS3kCnzTraceReplay`,
+`TestAbstractTraceReplayDynamicArtTerminal`. **Errors 24 -> 4.**
+
+- **EHZ chain segment 1: 23 errors -> 0 over 5733 comparisons — and NOT via the routine-0 pair.**
+  ROM `Pal_FadeToWhite`'s first act is `move.b #VintID_Fade / bsr.w WaitForVint`, and only THEN
+  `.UpdateAllColours` (s2.asm:3571-3582). So the V-int on which the loop decided to fade was
+  already spent by the `RunObjects` pass that set `SS_Check_Rings_flag` (:6714-6725). The engine
+  started the fade inside a frame's logic and then still ran `FadeManager.update()` later in that
+  same frame (UiRenderPipeline.java:108), leaving the fade window one V-int short.
+  `GameLoopPlcLifecycle.startToWhite` now defers the first step to the next V-int. No constant;
+  the rule is `Pal_FadeToWhite`'s wait-before-first-step ordering, identical in S1/S2/S3K.
+  Chain frontier moves from segment 1 to segment 2 (`seg2_ehz1` starpost_special exit boundary
+  never observed). `TestS1GhzMazeRoundTripChain` also improved: run_tail delta **36 -> 35**.
+- **THE ROUTINE-0 "PAIR" IS NOT A PAIR, and I called it one for four rounds.** Disproved with
+  two measurements: (a) suppressing the deferred-pass execution of freshly streamed slots
+  reproduces the known `combined_rings` collapse exactly (3386/18002/25103/16382/22883/29057/
+  35203/3200 errors from frames 811/797/682/644/737/692/744/809); (b) removing ONLY the emerald's
+  inline routine-0 leaves all eight standalone stages with exactly 1 error each
+  ("finished_transition_frame ... actual=never"). So the emerald's exit pass is already correct
+  and the exit-flag timing was never the chain's problem.
+- **CNZ: the camera was never misclamped.** At the divergent frames `Camera_X_pos` is pinned
+  exactly to `Camera_max_X_pos` (`MoveCameraX`, sonic3k.asm:38356-38433 wants +$18/frame and
+  saturates on the bound), so `camera_x` is a direct read-out of the bound. The recorded sequence
+  0260,0260,0260,0261,0262,0263,0264,0266,0268,026A,026C,026F is exactly
+  `0x260 + cumsum(floor(k/4))` — precisely what `Obj_IncLevEndXGradual` produces (16.16
+  accumulator in `$30(a0)`, add `$4000`, swap, add the whole swapped high word onto the
+  already-updated bound each pass). Both trace failures land on n=4, the first pass with a
+  non-zero high word, and the third red class `TestS3kCnzAct1EventFlow` fails with expected 608 /
+  actual 609 — literally 0x0260 vs 0x0261 — in a unit test with no camera involved. Same defect
+  three times.
+  **Root cause: `updatePendingCnzAct2LevelSizeChange` armed the workers on the very dispatch it
+  first observed `End_of_level_flag`.** In ROM that flag is published by `Obj_TitleCardWait2`
+  from its own slot inside `Process_Sprites`, while the retained `Obj_EndSignControl` slot is
+  walked AHEAD of it, so its `tst.b (End_of_level_flag) / beq` poll for the publishing pass has
+  already taken the exit and `DoStart` is first satisfied on the FOLLOWING pass.
+  **This reverses round 29's own comment**, which asserted "the ROM delay is therefore zero
+  dispatches -- do not reintroduce". That was wrong, and the slot relationship is already
+  documented for the preloaded-act path at Sonic3kTitleCardManager.java:1076-1081.
+- **The "KosM readiness cluster" I briefed does not exist.** Three unrelated causes:
+  (a) `AizCompleteRun` + `ReplayReferenceClosureIntegration` are a SUBMISSION-timing bug from a
+  self-declared fitted budget — `Sonic3kAIZEvents.java:405-418` comments "reload at trace frame
+  5496, rtn $00->$04 at 5504 (8 ticks), rtn $04->$08 + maxX release at 5542 (38 ticks)", i.e.
+  constants measured off a fixture, one tick too long. A diagnostic 38 -> 37 takes both from 8
+  errors to 1, proving the whole class is that tick, but 37 is as fitted as 38 and was correctly
+  NOT landed. The real gate: `AIZ2BGE_FireRedraw` advances on `Draw_PlaneVertBottomUp` returning
+  negative (sonic3k.asm:105036-105050) and `AIZ2BGE_WaitFire` releases on
+  `cmpi.w #$310,(Camera_Y_pos_BG_copy)` (:105072) — model `AIZ1_FireRise`'s ramp, not a frame
+  count. The surviving 8th error is the one genuine readiness item: frame 6349,
+  `queue.s3k_kos_direct.prepared` expected=false actual=true, because ROM `Process_Kos_Queue`
+  (s3.asm:2973-3086) decompresses incrementally and resumes via
+  `Set_Kos_Bookmark`/`Restore_Kos_Bookmark` (:2949-2962, :3090-3095), so a blob stays
+  un-"prepared" across frames while the engine prepares in one step.
+  (b) `MhzCompleteRun` is a MISSING GAMEPLAY SUBMISSION: `ArtKosM_BadnikExplosion` (fingerprint
+  3c96d8b9) is recorded THREE times (raw frames 1670, 7221, 7986) and the engine produces it
+  ONCE, because a single SS-entry-ring instance exists for the whole run (subtype 0x81 at
+  (448,1664), live 1269, retired 1668 — matching the ROM's FIRST occurrence only). The frontier
+  is SS-entry-ring lifetime/reload, not the Kos queues.
+  (c) `AizPrefixClosureContract` throws from `GameplayModeContext.recordedCompletionAuthority()`
+  (:636-640) and touches no Kos queue at all.
+  Also disproved: the in-level title-card `enemyKosArmOnNextRuntimePass` +1 deferral is not
+  involved — removing it is byte-identical, and the only `onInLevelTitleCardCompleted` events in
+  the AIZ complete run fire at frames 1238 and 12000, nowhere near 6345.
+- **Live CLAUDE.md coordinate violation found:**
+  `Sonic3kSSEntryRingObjectInstance.checkDisplayOffscreenRetire` (:233-242) feeds `getX()/getY()`
+  (top-left render bounds) into ROM `x_pos`/`y_pos` band tests from `loc_61928`; those must be
+  `getCentreX()/getCentreY()`.
+
+## Round 33 — AIZ complete-run: the fire chain must freeze on a lag frame
+
+Command (both targets and the S3K keep-green set, one worktree per run,
+`rm -rf target/surefire-reports` before each):
+
+```
+mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+  "-Dsurefire.argLine=-Xmx4g" -Ds3k.rom.path=<s3k.gen> \
+  "-Dtest=TestS3kAizCompleteRunTraceReplay,TestS3kReplayReferenceClosureIntegration" test
+```
+
+- **Control at 692f3adf8** (worktree `ggf-r33-base`): both classes FAIL, 8 errors,
+  first error frame 6345, `queue.s3k_kos_direct.busy` expected=true actual=false.
+- **After**: both classes FAIL, **1 error**, first error frame **6349**,
+  `queue.s3k_kos_direct.prepared` expected=false actual=true, `cascading: false`.
+  All eight of the 6345 errors were one defect — the act-2 enemy-art batch submitted a
+  frame late — and they are closed. 6349 is the incremental-`Process_Kos_Queue`
+  preparation item round 32 already identified; it is a different subsystem.
+- Broad S3K sweep (`TestS3k*`, `TestSonic3k*`, both rewind coverage guards, 2494 tests):
+  failure set identical to the control's — 9 failures / 7 errors either side, same
+  class+method names — with the two targets moving from 8 errors to 1.
+
+**Root cause (measured, then derived).** `Sonic3kAIZEvents.advanceVblankOnlyState`
+stepped `AIZ2BGE_FireRedraw`/`AIZ2BGE_WaitFire` on VBlank-only rows while leaving the
+AIZ1 half frozen. The AIZ1 half was right: every routine in the chain
+(`AIZ1BGE_FireTransition`/`FireRefresh`/`Finish`, `AIZ2BGE_FireRedraw`/`WaitFire`) is
+reached only through `ScreenEvents`, which `Level`'s main loop calls after `Wait_VSync`
+(sonic3k.asm:7889-7899, :102233-102254, dispatch at :104557-104558 and :105018-105019).
+A lag row is a main-loop pass that never completed, so none of it runs — including
+`AIZ1_FireRise` and the `Draw_PlaneVertBottomUp` drains, which are main-loop work, not
+V-int work.
+
+The fixture pins this exactly: `physics.csv` row **6301** holds
+`gameplay_frame_counter` at 6300 while `vblank_counter` advances (`lag_counter` 0001),
+and it is the only held row between the act-2 art submission and the release. Rows
+6040-6300 have `gameplay_frame_counter == frame`, so the ramp is *not* behind before the
+reload — the surplus pass is entirely that one lag row.
+
+**Anchors used (all trace-visible, no fitted constants):**
+- `AIZ1BGE_FireTransition`'s `cmpi.w #$190` Kos submission lands at row **6216** in both
+  the recording (`load_queue_state`: direct queue gains 3 fingerprints, module queue 1,
+  `remaining_work` 4) and the engine. So the ramp up to $190 was already correct.
+- `Kos_modules_left` reaches zero at row **6299** (module queue `busy` false from 6299),
+  so `AIZ1BGE_Finish` reloads on row **6300** — which the engine already did.
+- From there the release frame is fully determined: the reseat subtracts
+  `(B & ~$7F) - $180`, so with `B` in the $500 band the release is simply the frame the
+  continuous ramp reaches `$310 + $380 = $690`. With row 6301 frozen that is row
+  **6345** — the recorded submission frame — and it is *invariant* to which pass
+  performs the reseat.
+
+**Disproved, from the round-32 brief.** The residual was **not** caused by the AIZ1
+pre-reload spans (`FIRE_REDRAW_FRAMES = 16`, `FIRE_TERRAIN_DECOMPRESS_FRAMES = 20`).
+`AIZ1_FireRise` runs once per pass in *both* `AIZ1BGE_FireRefresh` and `AIZ1BGE_Finish`,
+so moving the boundary between those two phases cannot move the ramp at all, and the
+reload frame is pinned by the module-queue drain at 6299/6300 regardless. Those two
+constants remain unmodelled budgets with no ROM counterpart — a real latent item, but
+not this one, and they were left alone rather than changed speculatively.
+
+**Confirmed, from the round-32 brief.** `AIZ1BGE_Finish` performs the entire act reload
+without a single `Camera_Y_pos_BG_copy` write (zero occurrences in sonic3k.asm:104727-104802),
+so the ramp is continuous across the reload and the invented `0x0140_0000` overwrite at
+`requestAct2Transition` had to go. `TestSonic3kAIZEvents.fireCurtainRenderStateCarriesAcrossSeamlessReload`
+asserted that invented value and now asserts continuity instead.
+
+**Next frontier for this pair:** row 6349, `queue.s3k_kos_direct.prepared` — ROM
+`Process_Kos_Queue` decompresses incrementally with `Set_Kos_Bookmark`/`Restore_Kos_Bookmark`,
+so a direct blob stays un-prepared across frames where the engine prepares in one step.
+
+## 2026-08-11 - S2 EHZ halfpipe round trip: title-card oscillator overtick closed
+
+- Worktree `wt/r38-halfpipe`, branch
+  `bugfix/ai-title-card-oscillator-overtick`, over base `b7da4a7f4`.
+- Command (control and candidate, identical): `mvn -Ptrace-replay -Dmse=off
+  -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+  "-Dsurefire.argLine=-Xmx4g"` with all three ROM properties and
+  `-Dtest=TestS2*TraceReplay, TestS2Ehz1Seg2HalfpipeSegmentTraceReplay,
+  TestS2EhzHalfpipeRoundTripChain, TestS1GhzMazeRoundTripChain,
+  TestS2Ehz1*Regression, TestS2HtzLiftPlatformSurfaceRegression,
+  TestOscillation*, TestS3kAiz1SkipHeadless, TestSonic3kLevelLoading,
+  TestSonic3kBootstrapResolver, TestSonic3kDecodingUtils,
+  TestLevelFrameHardwareTimingBoundaries, TestRewindParityAgainstTrace`.
+- Control at `b7da4a7f4`: 127 tests, 2 failures -- `TestS2EhzHalfpipeRoundTripChain`
+  ("Segment 2 (seg2_ehz1) exit boundary (starpost_special) was never observed";
+  seg2 comparator `errorCount` 82176, `complete` true, first non-camera mismatch
+  frame 1 `sidekick_x`, rom `0x0DDE` engine `0x0DF9`) and
+  `TestS1GhzMazeRoundTripChain` (`run_tail.edge[*].movie_logical_frame` expected
+  9071, actual 9036).
+- Candidate: 127 tests, 2 failures. `TestS1GhzMazeRoundTripChain` fails with a
+  byte-identical message, so it is pre-existing and untouched. Everything else
+  stays green, including all S2 level-select and special-stage replays,
+  `TestS2Ehz1Seg2HalfpipeSegmentTraceReplay`, the S3K keep-green set,
+  `TestOscillationManagerSnapshot` / `TestOscillationStaticAdapter` and
+  `TestRewindParityAgainstTrace`.
+- Frontier moved: seg2's exit boundary is now observed -- the engine reaches the
+  second star post and enters the special stage. The new first failure is
+  `completePinnedSourceTailAfterBoundary`: "production ownership already left
+  LEVEL at tail step 0, comparator cursor 2900 of 2903", i.e. the special-stage
+  entry happens three recorded level rows early. That is the next frontier and a
+  distinct defect.
+- Root cause, measured. At seg2 frame 907 the recorded Obj18 subtype-2 platform
+  at x=$07C0 is at y=734 (`object_near` slot 20 in
+  `seg2_ehz1/aux_state.jsonl.gz`) while the engine put it at y=610, and the
+  player landed on it instead of falling past. Obj18 subtype 2 is
+  `Obj18_Vertical.normal` (s2.asm:23426): y = y_origin + (osc - $40) with the
+  oscillator byte at `Oscillating_Data+$18`. Simulating `OscillateNumDo` from
+  `OscillateNumInit`'s state reproduces the recorded platform y across seg2 to
+  within a frame, so the ROM's table is freshly initialised at the re-entry and
+  ticked once per main-loop frame. A `LevelManager.frameCounter` probe showed the
+  engine's table exactly 128 ticks ahead: the title card runs 128 passes and each
+  called `advanceGlobalOscillationAtLevelLoopTail()`, which ignored the one-shot
+  `suppressGlobalOscillationForTitleCardPass` flag that the other implementation
+  of the same contract honours. No constant was introduced.
+- Disproved on the way: the briefed claim that the player's g_speed was already
+  wrong before row 907 and that the engine "failed to leave the ground". Measured
+  with a comparator probe, the engine matches the recording exactly through frame
+  906 including the walk-off at 901, and the terrain air-collision probe at 907
+  reports floor distance +29 (no floor found). The landing came from the object
+  solid path, not terrain.
+## 2026-08-11 - S1 GHZ/maze round trip: SSR_Exit frame recovered, 34 rows still open
+
+- Worktree a detached round-39 worktree, branch
+  `bugfix/ai-s1-ssr-exit-frame`, over `b7da4a7f4`.
+- Command: `mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1
+  -Dsurefire.runOrder=alphabetical "-Dsurefire.argLine=-Xmx4g"
+  -Dsonic1.rom.path=s1.gen -Dsonic2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen
+  -Dtest=TestS1GhzMazeRoundTripChain,TestS1CompleteEmeraldRunPrefix,TestS1CompleteEmeraldVisualRun,TestS2EhzHalfpipeRoundTripChain,TestS1SpecialStage*TraceReplay,Sonic1SpecialStageResultsScreenTest,TestSonic1SpecialStageResultsPlcReadiness,TestS1SpecialStageHeadlessBoot test`
+  Result: 22 tests, 2 failures, both also failing at the base commit.
+- `TestS1GhzMazeRoundTripChain` still fails on
+  `run_tail.edge[0..1].movie_logical_frame`, expected 9071. Baseline actual
+  9036 (delta 35); with the `SSR_Exit` frame restored, 9037 (delta 34).
+- Measured by per-row instrumentation of the terminal tail (added, read, then
+  reverted) rather than inferred: the engine enters `SPECIAL_STAGE_RESULTS` on
+  row 8116, the same row the recorded physics rows go all-zero for
+  `SS_NormalExit`'s `clearRAM`; the results card runs 705 engine frames against
+  the ROM's 706; the exit `PaletteWhiteOut` occupies rows 8838-8859, a full 22;
+  and `GM_Level`'s `PaletteFadeOut` is already modelled by
+  `Sonic1LevelInitProfile.preLevelFadeOutFrames()` = 22, across rows 8861-8882.
+- The remaining 34 rows all sit in `Level_TtlCardLoop`, whose exit is gated on
+  `tst.l (v_plc_buffer).w` (sonic.asm:2814-2841): engine rows 8884-9034 against
+  the ROM's ~185. That span is decompression-rate bound, not a countable ROM
+  constant, so it belongs to the recorded hardware-timing contract rather than
+  to any value derivable from the disassembly.
+- `TestS2EhzHalfpipeRoundTripChain` fails identically before and after
+  (segment 2 `starpost_special` boundary never observed) - pre-existing.
+
+## 2026-08-11 - S2 EHZ halfpipe round trip: seg2 star-post boundary closed, frontier moves to segment 3
+
+- Worktree a detached round-40 worktree, branch
+  `bugfix/ai-s2-checkpoint-star-orbit`, over `e13080ad8`.
+- Command: `mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1
+  -Dsurefire.runOrder=alphabetical "-Dsurefire.argLine=-Xmx4g"
+  -Dsonic1.rom.path=s1.gen -Dsonic2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen
+  "-Dtest=TestS2*TraceReplay,TestS1GhzMazeRoundTripChain,TestS3kMegaRunChain,TestS2EhzHalfpipeRoundTripChain" test`
+- Control at `e13080ad8`: 38 tests, 2 failures + 1 error.
+  `TestS2EhzHalfpipeRoundTripChain` - "source comparator cannot exhaust after
+  boundary for seg2_ehz1 ... comparator cursor 2900 of 2903 ...
+  mode path=[SPECIAL_STAGE]".
+- After: 38 tests, 2 failures + 1 error, the SAME three classes.
+  `TestS1GhzMazeRoundTripChain` (`run_tail.edge[*].movie_logical_frame` 9071 vs
+  9037) and `TestS3kMegaRunChain` (unconsumed `KOS_DECOMPRESSION_QUEUE#15`
+  completion edge at raw_frame 4570) fail with byte-identical messages before
+  and after; all 34 S2 act and special-stage replays stay green.
+  `TestS2EhzHalfpipeRoundTripChain` now consumes all 2903 seg2 rows and fails
+  further on at "segment 3 lost production ownership before source closure
+  (mode=SPECIAL_STAGE_RESULTS, ... BK2 cursor=19159)" - the ss_2 interior,
+  which the control never reached.
+- Root cause was Obj79's special-stage stars, two independent defects, both
+  measured before they were theorised:
+  - `Obj79_MakeSpecialStars` allocates with `AllocateObjectAfterCurrent`
+    (s2.asm:44841-44845), so the stars sit ABOVE the post's slot and run
+    `Obj79_Star` on their creation frame. `spawnFreeChild` put them lowest-free,
+    costing exactly one frame of orbit phase. (The dongle at s2.asm:44647 really
+    does use `AllocateObject` and keeps `spawnFreeChild`.)
+  - The orbit maths used `Math.sin`/`Math.cos` instead of `CalcSine`'s
+    `Sine_Data` table, and mis-ported `neg.w d2 / andi.w #7,d2` (s2.asm:44900)
+    as `-(d2 & 7)` instead of `(-d2) & 7`, which also left the following
+    `lsr.w #1,d2` loop running on a negative value. Retranscribed instruction
+    for instruction in 16-bit word arithmetic.
+- Evidence: a Python transcription of s2.asm:44880-44943 driven only by
+  (lifetime, angle offset) reproduces all four recorded stars' x/y EXACTLY for
+  every frame of the seg2 tail (rows 2890-2902), and pins ROM lifetime = row
+  - 2769. Post-fix engine instrumentation (added, read, reverted) matches the
+  same rows exactly, all four stars.
+- The touch itself now goes through the shared `TouchResponse` pass with
+  `collision_flags = $D8` (Touch_Special, Touch_Sizes index $18 = 4,4;
+  s2.asm:44926, 85286-85302) instead of an invented `dx<16 && dy<16` test that
+  compared the player's TOP-LEFT bounds against the star's centre. With ROM
+  geometry the touch lands on frame 2903, the first frame outside the recorded
+  level segment, exactly as the recording requires.
+- No constant was introduced; every value in the change is read out of
+  `s2.asm` and cited at the site.
+
+## 2026-08-11 -- TestS2EhzHalfpipeRoundTripChain segment 3 (ss_2) ownership
+
+- Command (one fork, alphabetical, isolated worktree, base `746d3de04`):
+  `mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+  "-Dsurefire.argLine=-Xmx4g" -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  "-Dtest=TestS2*TraceReplay,TestS1GhzMazeRoundTripChain,TestS3kMegaRunChain,TestS2EhzHalfpipeRoundTripChain" test`
+- CONTROL at `746d3de04`: 38 tests, 2 failures + 1 error. `TestS2EhzHalfpipeRoundTripChain`
+  failed with "segment 3 lost production ownership before source closure
+  (mode=SPECIAL_STAGE_RESULTS, level=LevelIdentity[loadGeneration=3, progressionZone=0,
+  romZone=0, act=0], BK2 cursor=19159)".
+- AFTER: 38 tests, 2 failures + 1 error. The two other failures
+  (`TestS1GhzMazeRoundTripChain` run_tail.edge movie_logical_frame 9071 vs 9037;
+  `TestS3kMegaRunChain` unconsumed KOS_DECOMPRESSION_QUEUE#15 at raw_frame 4570) are
+  character-for-character identical to the control. All 34 `TestS2*TraceReplay` classes
+  green in both.
+- Diagnosis was MEASURED, not inferred: an instrumented `ownsCurrentSegment` showed the
+  observation's `specialStageIndex` going 1 -> 0 on the exact step the engine entered
+  `SPECIAL_STAGE_RESULTS`, against a segment identity of 1. The mode was never the problem
+  (`insideRecordedSpecialStageMode` already accepts it). Segment 1 passed the same predicate
+  for 504 results-phase steps only because its recorded identity is 0 and the zeroed live
+  reading matched by coincidence.
+- New frontier: `TestS2EhzHalfpipeRoundTripChain` now fails in
+  `writeDynamicArtInteriorReport` for segment 3 --
+  `target/trace-reports/s2-ehz-halfpipe-roundtrip_seg3_dynamic_art_report.json`, 16113
+  errors over 3125 of 6381 compared rows, first error row 0
+  (`dynamic_art.outstanding_transfer_ids` expected `[0]`, actual `[]`; the engine has
+  already published `edges=[0]`). Segment 1's interior report is clean: 5733 rows, 0 errors.
+  The open question is why the second special-stage entry retires its entry DPLC a row
+  early where the first does not.
+- No constant was introduced; the identity rule is read out of the recorder's own sampling
+  point and the ROM sites cited above.
+
+## 2026-08-11 — S1 GHZ round-trip terminal tail: row stamps excused in unrepresented, unclosed spans
+
+- Isolated worktree on branch `bugfix/ai-ghz-tail-span-policy`, base `a42c06722`, with a
+  second detached control worktree at the same commit.
+- Command (one fork, alphabetical):
+  `mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+  "-Dsurefire.argLine=-Xmx4g" -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  "-Dtest=TestS1*CompleteRunTraceReplay,TestS1Ghz1TraceReplay,TestS2EhzHalfpipeRoundTripChain,
+  TestS3kMegaRunChain,TestS3kAizCompleteRunTraceReplay,TestTraceRunDynamicArtGapComparator,
+  TestTraceRunDynamicArtGapJournal" test` (`target/surefire-reports` wiped first).
+- CONTROL, `TestS1GhzMazeRoundTripChain` at `a42c06722`: FAIL, 2 errors —
+  `run_tail.edge[0].movie_logical_frame` and `run_tail.edge[1].movie_logical_frame`,
+  expected 9071, actual 9037, delta 34, thrown from
+  `AbstractRunChainTest$DynamicArtGapJournalProbe.verifyTerminal:314`.
+- AFTER: both row-stamp errors are gone. The class is still FAIL, but at a **different,
+  previously unreachable** assertion — `TestS1GhzMazeRoundTripChain:113`, "the real S1
+  represented-segment -> named-run gap -> next-segment boundary must grow the journal beyond
+  first-arm bootstrap". Nothing after line 99 had ever executed, because `verifyTerminal`
+  threw first.
+- MEASURED at that new frontier (instrumented probe, reverted before commit):
+  `firstArm=2 atGapStart=2 afterNextArm=2 gapStartRow=8047 armRow=8048 added=0`. The
+  fixture's own `run_manifest.json` carries exactly four gap edges — a submitted/completed
+  pair for transfer 0 at movie row 748 and a pair for transfer 2349 at 9071 — so the
+  `ss -> ghz2` gap slice `[8048, 8049)` is empty on the recorded side too. Expected and
+  observed both say "no dynamic-art edge across that boundary"; the comparator agrees, and
+  the assertion demands a non-empty journal growth this fixture cannot supply. Left red and
+  untouched: weakening an assertion that has never been satisfied is not this lane's work.
+- Canaries, run identically in both worktrees: 19 `TestS1*CompleteRunTraceReplay`,
+  `TestS1Ghz1TraceReplay`, `TestS3kAizCompleteRunTraceReplay`,
+  `TestTraceRunDynamicArtGap{Comparator,Journal}` all green.
+  `TestS2EhzHalfpipeRoundTripChain` (seg3 DPLC divergence) and `TestS3kMegaRunChain`
+  (unconsumed `KOS_DECOMPRESSION_QUEUE#15` at raw_frame 4570) fail **character-for-character
+  identically** at base and after — pre-existing, not attributable to this change.
+- Note for future briefs: there is no `TestS1GhzTraceReplay` class; the S1 GHZ act-1 canary
+  is `TestS1Ghz1TraceReplay`.
+- Mutation tests, both observed red before restoring the file: neutering the coverage
+  predicate so every span is excused fails
+  `comparesTheRowStampByRowWhereRecordedCoverageFollowsTheSpan`; routing `mapping_frame`
+  through the excusal fails `stillFailsOnEdgeIdentityInsideAnUnrepresentedUnclosedSpan`.
+- No constant was introduced, and no arithmetic producing 34 or 35 appears anywhere in the
+  change. The excusal's cost — GHZ now verifies load-window work and order, not load-window
+  timing — is recorded in `docs/status/known-discrepancies.md` and cited to finding 1 of
+  `docs/architecture/plans/trace/2026-08-06-trace-validation-roadmap.md`.

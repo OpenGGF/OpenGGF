@@ -140,6 +140,41 @@
                mvn -Ptrace-replay test
         -->
         <profile>
+            <!--
+              Performance measurements, separated from the correctness suites because they
+              are wall-clock sensitive. TestVerifierCostBenchmark asserts fps() over 100
+              ("headless replay implausibly slow"), which is a real signal on a quiet box
+              and pure noise beside a parallel trace sweep. Together the two heavy classes
+              were about 16 minutes, 37 percent of the trace-replay profile, and neither
+              verifies a trace field: TestVerifierPoolBenchmark's own javadoc says per-frame
+              trace validation is excluded, being the trace suite's job and not a verifier's.
+              Selected by tag rather than filename, because most Benchmark-named classes in
+              this tree are fast unit tests about benchmark tooling.
+              Run with: mvn -Pbenchmarks test
+            -->
+            <id>benchmarks</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <version>3.2.5</version>
+                        <configuration combine.self="override">
+                            <argLine>${surefire.argLine}</argLine>
+                            <forkCount>1</forkCount>
+                            <reuseForks>true</reuseForks>
+                            <groups>performance-measurement</groups>
+                            <systemPropertyVariables>
+                                <java.util.logging.config.file>${test.logging.config.file}</java.util.logging.config.file>
+                                <slf4j.internal.verbosity>${test.slf4j.verbosity}</slf4j.internal.verbosity>
+                                <project.basedir>${project.basedir}</project.basedir>
+                            </systemPropertyVariables>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
             <id>trace-replay</id>
             <build>
                 <plugins>
@@ -162,6 +197,7 @@
                                 <include>**/tests/trace/**/*ReplayBootstrap.java</include>
                                 <include>**/tests/trace/s2/*Regression.java</include>
                             </includes>
+                            <excludedGroups>performance-measurement</excludedGroups>
                             <excludes>
                                 <exclude>**/Debug*.java</exclude>
                                 <exclude>**/*Debug*.java</exclude>

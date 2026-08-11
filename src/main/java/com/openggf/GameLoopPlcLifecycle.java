@@ -46,6 +46,13 @@ final class GameLoopPlcLifecycle {
 
     static void startToWhite(GameplayModeContext context, FadeManager fade, Runnable completion) {
         fade.startFadeToWhite(wrap(context, completion));
+        // Pal_FadeToWhite's first act is a V-int wait, before any colour update
+        // (docs/s2disasm/s2.asm:3571-3582). The frame that decided to fade has
+        // already spent its V-int on the loop iteration that raised the
+        // decision -- for the special stage exit that is the RunObjects pass
+        // which set SS_Check_Rings_flag (s2.asm:6714-6725) -- so the first fade
+        // step belongs to the next V-int, not to this one.
+        fade.deferFirstStepToNextVint();
     }
 
     static void startFromWhite(GameplayModeContext context, FadeManager fade, Runnable completion) {

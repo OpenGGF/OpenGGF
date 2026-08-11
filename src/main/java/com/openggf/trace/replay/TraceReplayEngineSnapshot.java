@@ -12,6 +12,17 @@ public final class TraceReplayEngineSnapshot {
     private TraceReplayEngineSnapshot() {
     }
 
+    /**
+     * Frame-0 bootstrap coverage is deliberately partial, and the gap must stay
+     * visible rather than read as a parity proof. Sidekick CPU state is now
+     * captured (see {@code captureFirstSidekickCpu}), so a recorded
+     * {@code cpu_state_snapshot} is genuinely compared. Per-slot SST snapshots
+     * are still left empty -- the {@code Map.of()} argument below -- because
+     * the engine exposes no object-slot view here, so a recorded
+     * {@code object_state_snapshot} yields a warning-only bootstrap gap rather
+     * than a strict failure. Tracked as REL-035 in
+     * docs/architecture/audits/release-architecture-review-issues.md.
+     */
     public static EngineSnapshot capture(AbstractPlayableSprite sprite) {
         return EngineSnapshot.capture(
                 sprite != null ? sprite.copyXHistory() : null,

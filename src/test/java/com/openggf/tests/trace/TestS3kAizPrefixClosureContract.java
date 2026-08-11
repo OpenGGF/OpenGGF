@@ -2,6 +2,7 @@ package com.openggf.tests.trace;
 
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.objects.AizPlaneIntroInstance;
+import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.rules.RequiresRom;
@@ -65,7 +66,7 @@ class TestS3kAizPrefixClosureContract {
                     "unexpected prefix admission at trace row " + traceIndex);
 
             int remainingBefore = fixture.runner().getRecordingFramesRemaining();
-            int input = drive(trace, fixture, phase, objects);
+            int input = drive(trace, fixture, traceIndex, current, phase, objects);
             Observation after = observe(fixture, objects, input, usePreviousInput);
             assertEquals(current.input(), input,
                     "prefix input alignment at trace row " + traceIndex + ": " + after);
@@ -94,7 +95,7 @@ class TestS3kAizPrefixClosureContract {
                     TraceReplayBootstrap.phaseForReplay(trace, previous, current);
             assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME, phase,
                     "ordinary AIZ intro row must be a full closure at " + traceIndex);
-            int input = drive(trace, fixture, phase, objects);
+            int input = drive(trace, fixture, traceIndex, current, phase, objects);
             assertEquals(current.input(), input,
                     "ordinary input alignment at trace row " + traceIndex);
             previous = current;
@@ -105,8 +106,13 @@ class TestS3kAizPrefixClosureContract {
         TraceExecutionPhase phase720 =
                 TraceReplayBootstrap.phaseForReplay(trace, previous, row720);
         assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME, phase720);
-        int input720 = drive(trace, fixture, phase720, objects);
+        int input720 = drive(trace, fixture, 720, row720, phase720, objects);
         assertEquals(row720.input(), input720, "input alignment at trace row 720");
+
+        // A semantically complete trace prefix, not a whole run: close recorded
+        // timing at the last driven raw frame so this prefix's own edges and
+        // submissions are verified while later, undriven edges are left alone.
+        fixture.closeHardwareTimingReplayPrefix(row720.frame());
 
         Observation post431 = observe(fixture, objects, -1, usePreviousInput);
         assertAll(
@@ -144,12 +150,13 @@ class TestS3kAizPrefixClosureContract {
         int initialDispatchCount = objects.getFrameCounter();
         int fullClosures = 0;
         int rows = 64;
+        int lastDrivenRawFrame = -1;
         for (int i = 0; i < rows; i++, traceIndex++) {
             TraceFrame current = mgz.getFrame(traceIndex);
             TraceExecutionPhase phase =
                     TraceReplayBootstrap.phaseForReplay(mgz, previous, current);
             int remainingBefore = fixture.runner().getRecordingFramesRemaining();
-            int input = drive(mgz, fixture, phase, objects);
+            int input = drive(mgz, fixture, traceIndex, current, phase, objects);
             assertEquals(current.input(), input, "MGZ input alignment at " + traceIndex);
             assertEquals(remainingBefore - 1, fixture.runner().getRecordingFramesRemaining(),
                     "MGZ row must consume exactly one BK2 row at " + traceIndex);
@@ -158,8 +165,12 @@ class TestS3kAizPrefixClosureContract {
                     && phase != TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY) {
                 fullClosures++;
             }
+            lastDrivenRawFrame = current.frame();
             previous = current;
         }
+
+        // Prefix, not a whole run -- see the AIZ closure above.
+        fixture.closeHardwareTimingReplayPrefix(lastDrivenRawFrame);
 
         assertEquals(initialDispatchCount + fullClosures, objects.getFrameCounter(),
                 "MGZ object dispatch count must equal admitted FULL closures");
@@ -177,7 +188,16 @@ class TestS3kAizPrefixClosureContract {
                 .withZoneAndAct(zone, act)
                 .withRecording(bk2)
                 .withRecordingStartFrame(
-                        TraceReplayBootstrap.recordingStartFrameForTraceReplay(trace));
+                        TraceReplayBootstrap.recordingStartFrameForTraceReplay(trace))
+                // Same selection AbstractTraceReplayTest makes: when the trace
+                // carries recorded hardware timing input, the gameplay context
+                // must own recorded admission before the level load submits any
+                // hardware work, because applyBootstrap installs the timing
+                // replay port against that authority.
+                .withHardwareReadinessAdmissionPolicy(
+                        trace.hardwareTimingSchedule().hasRecordedInput()
+                                ? HardwareReadinessAdmissionPolicy.RECORDED
+                                : HardwareReadinessAdmissionPolicy.LIVE);
         if (metadataStart) {
             builder.startPosition(trace.metadata().startX(), trace.metadata().startY())
                     .startPositionIsCentre();
@@ -200,8 +220,17 @@ class TestS3kAizPrefixClosureContract {
     private static int drive(
             TraceData trace,
             HeadlessTestFixture fixture,
+            int traceIndex,
+            TraceFrame current,
             TraceExecutionPhase phase,
             ObjectManager objects) {
+        // Same per-row announcement AbstractTraceReplayTest makes before it
+        // drives a row (AbstractTraceReplayTest.java:774). Without it the
+        // installed timing replay port never latches a raw frame, so every
+        // recorded completion edge these prefixes drive over stays unconsumed
+        // and the run's close verification throws -- in whichever test class
+        // happens to tear this lazily-destroyed session down.
+        fixture.beginTraceRow(traceIndex, current.frame());
         int input = TraceReplayFrameClosureDriver.driveS3k(
                 phase,
                 TraceReplayBootstrap.shouldUsePreviousRecordingInputForTraceReplay(trace),

@@ -38,6 +38,122 @@ All notable changes to the OpenGGF project are documented in this file.
   reuse stale programs. Source-changing callbacks are rejected if they try to re-enter a base,
   donor, clear, or reset transaction, preventing nested publications from reusing a generation
   or invalidating the outer transaction's rollback state.
+- Change: dynamic-art gap/tail comparison no longer treats an edge's movie row stamp as
+  engine evidence inside a span the run fixture's own recorded coverage declares
+  unrepresented and unclosed -- no recorded row inside the span, and no recorded coverage
+  after it. `TraceRunDynamicArtGapComparator` derives that predicate from segment
+  `bk2_frame_offset` / `trace_frame_count` alone, never from a zone, act, route, segment
+  name, game or frame index, and downgrades only `movie_logical_frame` to a warning there.
+  Everything else about the edge -- presence, count, ordinal, transfer id, phase, owner,
+  submission origin, mapping frame, gap edge index, requests, forwarded completion, and the
+  before/after ledger fingerprints -- stays a hard error inside the span, and every field
+  including the row stamp stays a hard error outside it. The reason is finding 1 of
+  `docs/architecture/plans/trace/2026-08-06-trace-validation-roadmap.md`:
+  `TraceRunPlaybackCoordinator.destinationReady` gates on the shared BK2 cursor against a
+  recorded offset and `GameLoop.suppressesRunNativeLevelBody()` stops the level body while
+  the coordinator is in `TRANSITION_GAP`, so "the engine's real load duration is never
+  observed, in either direction" -- the row count there is harness choreography, and
+  matching it by delaying the harness or importing the recorded span length would fit the
+  measurement instrument to its own reference. The cost is written down in
+  `docs/status/known-discrepancies.md`: the S1 GHZ round-trip chain now verifies
+  load-window work and order but **not** load-window timing, which stays unobserved until
+  the roadmap's level-load-span strand reworks admission. No constant was introduced.
+- Fix: a recorded run's special-stage segment identity is now read from the stage the engine
+  is presenting, not from the live provider. The run recorder samples
+  `Current_Special_Stage` once, on the first `GameModeID_SpecialStage` frame
+  (`S2RunCaptureRunner.StartSsSegment`), so a segment's `special_stage_index` is that
+  pre-increment number for the whole segment -- the ROM byte itself is not constant, since a
+  won stage increments it inside the stage alongside `SS_Check_Rings_flag`
+  (`s2.asm:72467-72477`) and it is zeroed only on a later entry past 7 (`s2.asm:6538-6540`).
+  The engine splits that one ROM mode into `SPECIAL_STAGE` plus `SPECIAL_STAGE_RESULTS`, and
+  entering results deinitialises the stage manager, dropping its scratch index to 0. Segment
+  ownership therefore failed for every recorded stage but stage 0, where the zeroed reading
+  matched by coincidence: the EHZ half-pipe round trip lost ownership of its `ss_2` segment
+  the moment the results screen opened. Both observation builders -- the production
+  `TraceSessionLauncher` and the headless run-chain adapter -- now read
+  `GameLoop.recordedSpecialStageIdentity`, and `ss_2` replays all 6381 rows.
+- Fix: Sonic 2's star-post special-stage stars now orbit and collide the way `Obj79_Star`
+  does. Three ROM divergences moved the star the player jumps into: `Obj79_MakeSpecialStars`
+  allocates with `AllocateObjectAfterCurrent` (`s2.asm:44841-44845`) so the four stars sit
+  above the post's own slot and run on their creation frame, but the engine allocated them
+  lowest-free and lost a frame of orbit phase; the orbit maths used `Math.sin`/`Math.cos`
+  rather than `CalcSine`'s `Sine_Data` table (`s2.asm:4012-4024`, whose index $93 holds -117,
+  not a rounded -115) and mis-ported `neg.w d2 / andi.w #7,d2` (`s2.asm:44900`) as
+  `-(d2 & 7)` instead of `(-d2) & 7`, leaving the following `lsr.w` loop on a negative value;
+  and the touch used an invented `dx<16 && dy<16` test against the player's top-left render
+  bounds instead of the shared `TouchResponse` pass, which the star joins with
+  `collision_flags = $D8` (Touch_Special, Touch_Sizes index $18 = 4,4; `s2.asm:44926`,
+  `s2.asm:85286-85302`). With ROM geometry the second EHZ 1 star post's special-stage entry
+  lands on the frame the recording requires instead of three frames early.
+- Fix: the level title card no longer advances the global oscillation table. `OscillateNumDo`
+  is reached only from the main level loop in all three games (S1 `sonic.asm:3033`, S2
+  `s2.asm:5108`, S3K `sonic3k.asm:7909`), with `OscillateNumInit` running once at level init,
+  so the title-card / level-load passes must not tick it. The title-card lifecycle already
+  raised a one-shot suppression flag, but the canonical level-loop-tail advance -- a second
+  implementation of the same contract -- ignored it, so every title-card frame stepped the
+  table. On the Sonic 2 EHZ 1 star-post re-entry that was 128 extra ticks, which left the
+  Obj18 subtype-2 vertical platform at x=$07C0 at the opposite end of its $80-pixel travel;
+  the player landed on it at seg2 frame 907 where the ROM falls past, and the recorded route
+  to the second star post was never reached.
+- Fix: Sonic 1's special-stage results card now runs its `SSR_Exit` frame. The wait that ends
+  the card only advances `obRoutine`; `SSR_Exit` is a routine of its own ("_incObj/7E, 7F Special
+  Stage Results and Chaos Emeralds.asm":156-158), so `ExecuteObjects` has to reach it -- and set
+  `f_restart` -- on a further whole `SS_NormalExit` iteration before that loop's
+  `tst.w (f_restart).w` can see it (sonic.asm:3401-3412). The engine ended the card one row
+  early on both the plain (routine $A) and post-continue (routine $12) exits, so everything
+  downstream of it -- the exit white-out, `GM_Level`'s fade-out, the title card and the
+  returning level's art -- landed one movie row early.
+- Fix: Sonic 3&K's star-post bonus star now tests the player with the ROM's own touch geometry
+  and at the ROM's point in the frame. It had used an invented 16x16 box evaluated after the
+  star had already been repositioned; the ROM reads `collision_property` first (`loc_2D47E`)
+  and the box comes from `collision_flags` $D8 -> `Touch_Sizes` entry $18 = 4x4 against the
+  player's `Touch_NoInstaShield` extents. The star was capturing the player two frames early.
+- Fix: the S3K direct-decompression queue's `prepared` heartbeat no longer reports a false
+  divergence when the engine's boundary-granular model of it runs ahead of the ROM. The recorded
+  field is bit 15 of `Kos_decomp_queue_count`, which the ROM sets only once execution is inside
+  `Process_Kos_Queue_Loop`, so a recorded sample reads it set only when that frame's vertical
+  interrupt happened to land mid-decompression -- a sub-frame position no frame-granularity model
+  can reconstruct. The comparator now excuses exactly one polarity, the engine reading true while
+  the recording read false and the head's own completion is still ahead of it; the opposite
+  polarity, which would mean a completion landed early, stays an error, and every other queue
+  field is compared unchanged.
+- Fix: the S3K load-queue comparator no longer rewrites a recorded direct-queue row on a held
+  loop tail. That substitution was itself measured off a single recording -- its unit fixture
+  hardcoded the very Carnival Night child it was written for -- and it hid a real recorded state:
+  `Process_Kos_Queue` decompresses incrementally and resumes through `Set_Kos_Bookmark` /
+  `Restore_Kos_Bookmark`, so an unfinished FIFO head at the `Wait_VSync` sample is exactly as
+  legitimate on a held tail as anywhere else. Recorded rows are now compared as sampled.
+- Fix: Angel Island's fire-curtain background chain no longer advances on a lag frame, and the
+  act-two half of it is now driven by the ROM's own gates instead of two frame budgets measured
+  off a recording. Every routine in that chain is reached only through the level main loop, so a
+  frame the main loop never finished must not step the fire rise or the delayed plane redraw; the
+  engine was stepping the act-two half on those frames and so ran the ramp one pass ahead. The
+  redraw's length now falls out of the delayed row counter the reload seeds and the two-rows-per
+  -call drain that consumes it, the wait releases when the background Y ramp actually crosses the
+  ROM's threshold after its own re-seat, and the reload no longer overwrites that Y with an
+  invented value the ROM never writes. The act-two enemy art batch now reaches the decompression
+  queue on the frame the ROM submits it.
+- Fix: a fade to white begins on the next vertical interrupt rather than inside the frame that
+  requested it, matching the ROM, whose fade routine waits for a vertical interrupt before its
+  first colour step. The engine started the fade mid-frame and then still advanced it later in
+  that same frame, so every fade ran one interrupt short.
+- Fix: Chemical/Carnival Night's act-two gradual level-size workers start on the dispatch after
+  the end-of-level flag is observed, not the same one. The ROM publishes that flag from an object
+  slot walked after the one that polls it, so the poll for the publishing pass has already taken
+  its exit.
+- Testing: two trace-harness tests built their derived fixtures incorrectly and were rejecting
+  themselves. One appended a synthetic per-frame art-state stream on top of a recording that
+  already carried a real one, so frame zero legitimately held two states; the other copied a
+  recording's metadata verbatim while filtering its event stream through an allowlist, so a
+  capability the metadata advertised had all its events removed. Both are fixed in the tests; no
+  validator was weakened and no fixture regenerated.
+- Fix: a deferred art-module producer no longer has its first submission suppressed. The
+  held-loop-tail signal is meant to delay when work becomes visible, but for a level-loop
+  producer it was also skipping the submission itself, so the Angel Island act 2 enemy art
+  arrived a loop late and the frame's queue snapshot showed an idle decompression queue. The two
+  producers that set the signal are now distinguished: the ordinary one defers only readiness,
+  and the title-card owner, whose load genuinely runs after that iteration's module step,
+  declares its late ordering explicitly.
 - Fix: the Sonic 3 & Knuckles special stage loads its emerald art through the real Kosinski
   module queue and waits on the ROM's own modules-left predicate, instead of a fixed four-frame
   drain measured from a capture. The structural part now comes from the module state machine and

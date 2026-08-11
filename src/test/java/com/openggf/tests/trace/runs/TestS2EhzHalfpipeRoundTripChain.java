@@ -286,6 +286,42 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * ({@link AbstractRunChainTest#assertRecordedEmeraldProgression}: emeralds_after ==
  * emeralds_before + 1). The always-safe carry-overs (position restore + ring zero-out)
  * remain asserted.
+ *
+ * <h2>Segment 3 (ss_2) ownership: FIXED 2026-08-11</h2>
+ *
+ * <p>The chain used to fail with {@code "segment 3 lost production ownership before
+ * source closure (mode=SPECIAL_STAGE_RESULTS, ...)"}. The mode was a red herring --
+ * {@code ownsCurrentSegment} already accepts {@code SPECIAL_STAGE_RESULTS} via
+ * {@code RunPlaybackObservation.insideRecordedSpecialStageMode}. Instrumenting the
+ * ownership predicate showed the observation's {@code specialStageIndex} dropping from
+ * 1 to 0 on the exact step the engine entered {@code SPECIAL_STAGE_RESULTS}, against a
+ * segment identity of 1. Segment 1 (the first {@code ss}) survived only because its
+ * recorded identity is 0, so the zeroed reading matched by coincidence -- 504 of its
+ * results-phase steps were compared against an accidentally-correct identity.
+ *
+ * <p>Cause: the observation read the LIVE
+ * {@code SpecialStageProvider#getCurrentStage()}, and entering results calls
+ * {@code resetForResults()} -> {@code reset()}, which drops the manager's scratch stage
+ * index to 0. The recorded identity is not live: {@code S2RunCaptureRunner.StartSsSegment}
+ * samples {@code Current_Special_Stage} once, on the first
+ * {@code GameModeID_SpecialStage} frame. The ROM byte is not constant over that segment
+ * either -- a won stage increments it inside the stage, alongside
+ * {@code SS_Check_Rings_flag} (docs/s2disasm/s2.asm:72467-72477) -- so the segment's
+ * identity is the pre-increment number for the whole segment, results tail included.
+ * Both observation builders (this test's adapter and the production
+ * {@code TraceSessionLauncher}) now read {@code GameLoop#recordedSpecialStageIdentity},
+ * which reports the stage captured at the exit boundary while results are showing.
+ *
+ * <h2>Current RED: segment 3 interior DPLC, 16113 errors from row 0</h2>
+ *
+ * <p>With ownership fixed, segment 3 replays all 6381 rows and reaches
+ * {@code writeDynamicArtInteriorReport}, which fails
+ * ({@code s2-ehz-halfpipe-roundtrip_seg3_dynamic_art_report.json}: 16113 errors over
+ * 3125 of 6381 rows, first at row 0). Segment 1's interior is now clean (5733 rows, 0
+ * errors). Row 0 has the recording holding {@code outstanding_transfer_ids=[0]} where
+ * the engine has already published {@code edges=[0]} -- the second special-stage entry
+ * retires its entry DPLC a row early, where the first entry does not. That difference
+ * between first and second entry is the next thing to chase.
  */
 @RequiresRom(SonicGame.SONIC_2)
 class TestS2EhzHalfpipeRoundTripChain extends AbstractRunChainTest {

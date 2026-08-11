@@ -1114,6 +1114,25 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         // consume rather than reusing the completed frame's counter. This is
         // the ROM order in LevelLoop (sonic3k.asm:7889, 7928-7931): the next
         // Process_Sprites pass reads the table after this tail update.
+        //
+        // OscillateNumDo is reached ONLY from the main level loop in all three
+        // games -- S1 Level_MainLoop (sonic.asm:3033), S2 Level_MainLoop
+        // (s2.asm:5108) and S3K Level_MainLoop (sonic3k.asm:7909) -- while
+        // OscillateNumInit runs once during level init (S1 sonic.asm:2916,
+        // S2 s2.asm:4999). The title-card / level-load sequence never reaches
+        // that loop tail, so its passes must not tick the oscillators. The
+        // title-card lifecycle already raises the one-shot suppression flag for
+        // each of those passes; this tail is the second implementation of the
+        // same OscillateNumDo contract and has to honour it exactly as
+        // advanceGlobalOscillation() does. Without it every title-card frame
+        // advanced the global table, so the level began that many frames out of
+        // phase (S2 EHZ1 star-post re-entry: 128 title-card passes, leaving the
+        // Obj18 subtype-2 vertical platform at x=$07C0 at the opposite end of
+        // its travel and catching a player the ROM lets fall past).
+        if (suppressGlobalOscillationForTitleCardPass) {
+            suppressGlobalOscillationForTitleCardPass = false;
+            return;
+        }
         OscillationManager.update(frameCounter + 1);
     }
 

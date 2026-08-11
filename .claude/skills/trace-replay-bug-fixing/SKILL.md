@@ -1608,6 +1608,170 @@ ROM's actual wait loops in the listing, and check whether the fixture already
 pins the quantity as an invariant across zones with very different workloads. An
 elapsed hardware cost varies with payload; a counted loop does not.
 
+### A green test that leaves state behind blames the next class
+
+A test can pass its own assertions and still be broken. Two S3K fixtures drove
+trace rows with hand-rolled loops that never called `fixture.beginTraceRow(...)`,
+the per-row announcement `AbstractTraceReplayTest` makes. The timing port never
+latched a raw frame, so `apply()` returned early at every service boundary and no
+recorded completion edge was ever admitted. Both tests went green. The unconsumed
+edge then detonated in `verifyRunComplete` during the *next* class's teardown, and
+surefire attributed it to whichever class happened to start next in that fork.
+
+Two tells, both cheap:
+
+- **A failing class with an absurd elapsed time.** `Time elapsed: 0.003 s` on a
+  replay that takes 13 s alone means it never ran; you are looking at the previous
+  class's teardown. Run the suspect alone before believing the accusation.
+- **A red set that changes shape while the count stays the same.** Going "9 red
+  classes -> 9 red classes" reads as no change, and hides one class fixed and a
+  different one newly broken. Diff the *names*, not the count — the same discipline
+  as diffing failing fields rather than failing-class counts.
+
+When you fix one, verify with the classes run TOGETHER in one fork in alphabetical
+order. Individual passes are exactly what hid the defect.
+
+### Mutation-test any comparison excusal you add
+
+If you make the comparator excuse a divergence, the test that pins the excusal's
+boundary is the entire safety property — and an assertion nobody has watched fail
+proves nothing. Break the guard on purpose and confirm the test goes red.
+
+For the S3K direct-queue in-progress bit, dropping the future-completion
+requirement (so a stray `true` would also be excused) must fail
+`keepsInProgressBitComparedWithoutFutureRecordedCompletion`. It does. Restore the
+file afterwards.
+
+**Mutate the thing you actually claim, not a neighbouring guard.** On that same
+excusal, widening the *polarity gate* to accept both directions leaves every test
+green — so "both polarities are pinned by tests" would have been false. The
+asymmetry there is structural: the rewrite only ever raises the *expected* value
+to true, which by construction cannot conceal an actual false. The dangerous
+mutation is changing the rewrite to mirror the actual value, and a different test
+catches that one. Two guards sitting next to each other are not interchangeable
+evidence; name the property, then break precisely it.
+
+Make excusals **asymmetric** wherever the engine's model is a known
+over-approximation in one direction only: excuse the polarity the model can
+produce spuriously, and keep the opposite polarity a hard error forever. A blanket
+"stop comparing this field" throws away the half of the signal that still catches
+real defects.
+
+### A mechanism that would explain the symptom is not evidence that it fires
+
+Twice in one session a confident diagnosis named real code, cited the ROM correctly,
+and was still wrong -- because nobody checked whether the code executes.
+
+The EHZ checkpoint case: `shouldSpawnStars` refuses to spawn while a
+`usedForSpecialStage` flag is set; the flag is level-global and the special-stage
+return path cannot clear it. That explains the symptom exactly -- first entry
+works, later ones cannot. It is also an invention with no ROM counterpart, so
+deleting it was doubly attractive. One `System.err` line settled it: the branch
+**never prints**, and `activate()` fires exactly once in the whole run. The star
+post never activates, so the suppression is never reached. Deleting it would have
+been a no-op shipped as a fix.
+
+Both ROM readings underpinning that diagnosis were correct. The causal step was
+not. Sound ROM work does not transfer its soundness to the conclusion built on it.
+
+Before believing any "X causes Y" where a print can settle it: **print it.** If a
+branch is load-bearing, prove it executes; if a flag matters, log its value at the
+moment you claim it matters. Instrument, then theorise.
+
+Corollaries earned the same day:
+
+- **The first ASSERT to fire is not the first DIVERGENCE.** EHZ's boundary
+  assertion looked like a clean single failure; the segment underneath it had
+  82,176 errors in `target/trace-reports/*_seg2_report.json`. Read the segment
+  report before characterising a failure, and never repeat a "passed green" claim
+  you have not read.
+- **A residual can be several errors that nearly cancel.** GHZ's 35-row tail
+  deficit decomposed into +47, -5, -44 and -34. Landing any single correct fix
+  makes the reported number worse while making the engine more accurate. When a
+  number is small, check it is small because everything is right, not because
+  large errors are cancelling.
+
+### Read the routine before proposing a contract change
+
+A title-card loop that waits on `tst.l (v_plc_buffer).w` looked like un-modelable
+decompression rate, and the proposal was to route S1 PLC through the recorded
+hardware-timing port. That was wrong, and nobody had opened `ProcessPLC` first.
+
+S1 quantises PLC work in explicit ROM code. `RunPLC` (`sonic.asm:1379-1420`) only
+*starts* an entry; the decompression happens in V-int with a fixed per-frame tile
+budget -- `ProcessPLC_9Tiles` sets `move.w #9,(v_plc_framepatternsleft).w`
+(`:1431-1438`) and `ProcessPLC_3Tiles` sets 3 (`:1443-1450`). The disassembly says
+why: *"called from VBlank, probably done to smooth out level loading because of how
+slow Nemesis is"*. `Level_TtlCardLoop` sets `id_VBlank_TitleCards` and waits for
+V-int each iteration (`:2814`), and `VBlank_TitleCards` calls the 9-tile variant
+(`:946`), so one loop row is one V-int is up to 9 tiles. Gameplay's
+`VBlank_UpdateScreen` uses 3 (`:867`).
+
+Two semantics the model must carry: when `patternsleft` hits zero mid-budget,
+`ProcessPLC_ShiftCue` shifts the list and RETURNS, so **the rest of that frame's
+budget is lost** and the next entry starts at the next `RunPLC` -- the total is
+per-entry `ceil(patterns/9)` summed, not `ceil(total/9)`. And `RunPLC` stores the
+section counter before building the code table under `FixBugs=0` (`:1396-1399`).
+
+**The general rule: "the ROM's rate is not frame-derivable" is a claim about a
+routine you must have read.** Contrast S3K's `Process_Kos_Queue`, which genuinely
+has no quantum -- one uninterruptible call, so its in-progress bit is a sub-frame
+cycle position. Same-sounding symptom, opposite answers, and only the listing
+distinguishes them.
+
+**Corollary on the timing port.** Giving the sidecar authority over something the
+engine can compute is fidelity-NEGATIVE: it converts comparison surface into a
+round-trip through recorded data, so the field stops testing the engine. Reach for
+the port only where the information provably does not exist at frame granularity.
+`TestS1S2PlcComparisonOnlyGuard` encodes exactly this line -- "PLC readiness is
+native deterministic service, not timing-stream authority" -- and it is correct.
+If a change requires deleting a guard assertion whose message states the opposite
+architectural intent, that is a decision to escalate, never collateral.
+
+### Before matching a number, ask whether the engine produces it at all
+
+`TraceRunPlaybackCoordinator.destinationReady` gates on
+`sharedBk2Cursor() >= destination.bk2FrameOffset()`, and while the coordinator sits
+in `TRANSITION_GAP`, `GameLoop.suppressesRunNativeLevelBody()` stops the level body
+running. So a **load-window frame count is harness choreography, not engine
+behaviour** — the roadmap says it outright: *"The engine's real load duration is
+never observed, in either direction."*
+
+That changes what a load-window divergence means. The GHZ terminal tail is 34 rows
+early, but neither side of that comparison is the engine: it is the recorder's
+stamping convention against the harness's drive schedule. Closing the gap by
+inserting harness delays, or by importing a recorded span duration, would be
+**fitting the measurement instrument to its own reference** — worse than a fitted
+constant, because a fitted constant at least models something.
+
+Two consequences worth carrying:
+
+- **Leaving such a test red does not preserve a measurement; it preserves an
+  ambiguity.** The red is not evidence about the engine either. The honest close is
+  to compare what the engine *does* produce — work identity, order, ledger — and
+  excuse only the quantity the harness controls, in spans the fixture itself
+  declares unrepresented (no recorded rows). Then write down, in the
+  known-discrepancies entry, that the test now verifies work and order but **not**
+  timing.
+- **A green that does not say what it stopped checking is worse than the red it
+  replaced.** State the limit in the same commit that takes the limit on.
+
+Before proposing any fix for a span-length divergence, find out which component
+actually determines the number. If it is the harness, no amount of ROM derivation
+will help, and the ROM work you do will look convincing while measuring nothing.
+
+### When two of your own measurements disagree, stop and settle it
+
+One round reported four pending production submissions matching the dropped edges;
+a later round reported `pendingSubmissions()` empty and zero submissions in the same
+window. Both cannot be true. That contradiction sat unnoticed across two rounds and
+one design proposal built on the first figure — a mechanism that could not have
+fired, because its precondition was the very thing the second measurement denied.
+
+Contradictions between your own measurements are the cheapest bugs you will ever
+find and the most expensive to leave. Re-run the specific measurement before
+building on either number.
+
 ## Why This Matters
 
 The mission is faithful pixel-for-pixel reimplementation. Trace replay tests are the proof. If they're allowed to lean on synced trace data each frame, the proof is hollow — bugs hide behind the synchronisation and the test green-lights anyway. Honest tests force honest engine fixes. That's how progress compounds: every fix makes the next divergence visible instead of building on top of a masked one.

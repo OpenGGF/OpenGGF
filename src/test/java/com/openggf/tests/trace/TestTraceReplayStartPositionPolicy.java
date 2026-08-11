@@ -31,6 +31,10 @@ class TestTraceReplayStartPositionPolicy {
     @TempDir
     Path tempDir;
 
+    private static final List<String> UNRETAINED_PER_FRAME_CAPABILITIES = List.of(
+            "load_queue_state_per_frame",
+            "dynamic_art_transfer_state_per_frame");
+
     private int policyTraceCopyIndex;
 
     @Test
@@ -139,16 +143,18 @@ class TestTraceReplayStartPositionPolicy {
         assertEquals(TraceExecutionPhase.VBLANK_ONLY,
                 TraceReplayBootstrap.phaseForReplay(trace, beforeTransition, transition),
                 "The zone_act_state transition into live LEVEL mode is still the setup boundary.");
-        assertEquals(transition.gameplayFrameCounter(), firstDrivenPrefixRow.gameplayFrameCounter());
-        assertEquals(transition.vblankCounter(), firstDrivenPrefixRow.vblankCounter());
+        assertEquals(transition.gameplayFrameCounter() + 1,
+                firstDrivenPrefixRow.gameplayFrameCounter(),
+                "the regenerated fixture exposes the first native LevelLoop counter increment");
+        assertEquals(transition.vblankCounter() + 1, firstDrivenPrefixRow.vblankCounter());
         assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
                 TraceReplayBootstrap.phaseForReplay(trace, transition, firstDrivenPrefixRow),
-                "The first row after the LEVEL boundary must run native gameplay even while "
-                        + "the sampled execution counters remain pinned.");
+                "The first row after the LEVEL boundary must run native gameplay, which the "
+                        + "regenerated fixture shows directly as the first counter increment.");
     }
 
     @Test
-    void s3kEndingHistoryAdvanceProvesPlayableAnimationSliceWithoutNormalHook() throws Exception {
+    void s3kEndingHistoryAdvanceOnACompletedIterationStaysAFullLevelFrame() throws Exception {
         TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s3k/lbz_completerun"));
         TraceFrame previous = trace.getFrame(22067);
         TraceFrame current = trace.getFrame(22068);
@@ -161,9 +167,29 @@ class TestTraceReplayStartPositionPolicy {
                 .anyMatch(TraceEvent.TailsCpuNormalStep.class::isInstance));
         assertEquals(4, (after.posTableIndex() - before.posTableIndex()) & 0xFF,
                 "Sonic_RecordPos still advances one history entry after the playable slots run.");
-        assertEquals(TraceExecutionPhase.VBLANK_ONLY,
+
+        // The history witness above is necessary but never sufficient to
+        // downgrade a row: LevelLoop bumps Level_frame_counter in the
+        // instruction after Wait_VSync returns (skdisasm/sonic3k.asm:7884-7889),
+        // so a row pair that advances Level_frame_counter by one AND
+        // V_int_run_count by one is, by construction, one completed main-loop
+        // iteration that consumed exactly its own V-blank. This pair does
+        // (gameplay_frame_counter $5627 -> $5628, vblank_counter $D4B9 ->
+        // $D4BA), so it is a full level frame however the ending-pose CPU
+        // routine animates inside it.
+        //
+        // This assertion previously expected VBLANK_ONLY /
+        // PLAYABLE_ANIMATION_ONLY. That was written on 2026-07-23 against a
+        // defective lbz_completerun capture whose gameplay_frame_counter column
+        // was pinned at 0000 for every row and whose vblank_counter carried
+        // only a stale high byte ($0E00 -> $0F00); the fixture regeneration in
+        // 8a6313bb3 (2026-08-01) restored the real counters and with them the
+        // ROM-correct classification. PLAYABLE_ANIMATION_ONLY stays gated on a
+        // genuinely V-blank-only row -- see TestTraceReplayRowPolicy and
+        // TestLiveTraceComparatorObserver for its own coverage.
+        assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
                 TraceExecutionModel.forGame("s3k").phaseFor(previous, current));
-        assertEquals(TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY,
+        assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
                 TraceReplayBootstrap.phaseForReplay(trace, previous, current));
     }
 
@@ -188,42 +214,23 @@ class TestTraceReplayStartPositionPolicy {
     }
 
     @Test
-    void preLevelPrefixInputEdgeWithoutStateAdvanceOnlyConsumesMovieInput() throws Exception {
+    void regeneratedPreLevelPrefixContainsNoSyntheticInputOnlyLatchRow() throws Exception {
         TraceData trace = loadPolicyTrace(Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun"));
 
-        int inputOnlyIndex = firstInputOnlyStateRow(trace);
-        TraceFrame previous = trace.getFrame(inputOnlyIndex - 1);
-        TraceFrame current = trace.getFrame(inputOnlyIndex);
-
-        assertEquals(TraceExecutionPhase.ADVANCE_ONLY,
-                TraceReplayBootstrap.phaseForReplay(trace, previous, current),
-                "Pre-level-prefix rows can record a new held input before the ROM applies it. "
-                        + "Replay must latch the BK2 row without dispatching the already-resident "
-                        + "level or changing timing counters.");
-        assertEquals(TraceExecutionPhase.VBLANK_ONLY,
-                TraceReplayBootstrap.phaseForReplay(trace, current, trace.getFrame(inputOnlyIndex + 1)),
-                "The following row remains before the structural LEVEL boundary.");
+        assertEquals(-1, firstInputOnlyStateRow(trace),
+                "the regenerated fixture exposes direct execution counters and no longer "
+                        + "contains the legacy input-only latch shape");
     }
 
     @Test
-    void preLevelPrefixInputEdgeWithStateAdvanceStillTicksGameplay() throws Exception {
+    void regeneratedPreLevelPrefixContainsNoPinnedStateAdvancingInputLatchRow() throws Exception {
         TraceData trace = loadPolicyTrace(Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun"));
 
-        int inputLatchIndex = firstStateAdvancingInputLatchRow(trace);
-        TraceFrame previous = trace.getFrame(inputLatchIndex - 1);
-        TraceFrame current = trace.getFrame(inputLatchIndex);
-
-        assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
-                TraceReplayBootstrap.phaseForReplay(trace, previous, current),
-                "When a pre-level-prefix row changes the sampled input while state still reflects "
-                        + "the prior input, replay should still tick gameplay with the previous "
-                        + "movie row (selected trace row " + current.frame() + ").");
-        assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
-                TraceReplayBootstrap.phaseForReplay(trace, current, trace.getFrame(inputLatchIndex + 1)),
-                "The following row should step with the latched input.");
+        assertEquals(-1, firstStateAdvancingInputLatchRow(trace),
+                "the regenerated fixture has no state-advancing input edge with all execution "
+                        + "counters pinned");
         assertTrue(TraceReplayBootstrap.shouldUsePreviousRecordingInputForTraceReplay(trace),
-                "Pre-level-prefix replay should validate the current BK2 row while driving "
-                        + "state-advancing frames with the previous row.");
+                "pre-level-prefix replay still preserves its recording-input epoch contract");
     }
 
     @Test
@@ -234,12 +241,10 @@ class TestTraceReplayStartPositionPolicy {
 
         assertFalse(previous.input() == current.input());
         assertTrue(current.stateEquals(previous));
-        assertEquals(previous.gameplayFrameCounter(), current.gameplayFrameCounter());
-        assertEquals(previous.vblankCounter(), current.vblankCounter());
-        assertEquals(previous.lagCounter(), current.lagCounter());
         assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
                 TraceReplayBootstrap.phaseForReplay(trace, previous, current),
-                "The pre-level input-latch exception must end after the gameplay_start checkpoint.");
+                "After gameplay_start, an unchanged player row with a native counter increment "
+                        + "still follows normal execution.");
     }
 
     @Test
@@ -256,13 +261,20 @@ class TestTraceReplayStartPositionPolicy {
 
     @Test
     void frameZeroSidekickAndObjectBootstrapCoverageIsDocumentedAsPartial() throws Exception {
-        String testBase = Files.readString(Path.of(
-                "src/test/java/com/openggf/tests/trace/AbstractTraceReplayTest.java"));
-        String releaseIssues = Files.readString(Path.of("docs/release-architecture-review-issues.md"));
+        // The frame-0 projection moved out of the test base into production
+        // code (AbstractTraceReplayTest.captureEngineSnapshot now delegates to
+        // TraceReplayEngineSnapshot.capture), so the coverage-debt note lives
+        // with the code that owns the gap. The empty per-slot SST map is the
+        // structural half of the assertion, not just prose.
+        String snapshot = Files.readString(Path.of(
+                "src/main/java/com/openggf/trace/replay/TraceReplayEngineSnapshot.java"));
+        String releaseIssues = Files.readString(Path.of("docs/architecture/audits/release-architecture-review-issues.md"));
 
-        assertTrue(testBase.contains("Sidekick CPU state is now captured")
-                        && testBase.contains("Per-slot SST snapshots are still left empty"),
-                "The trace test base must keep captured sidekick CPU state and missing frame-0 SST views visible.");
+        assertTrue(snapshot.contains("Sidekick CPU state is now")
+                        && snapshot.contains("Per-slot SST snapshots")
+                        && snapshot.contains("Map.of()"),
+                "The frame-zero engine projection must keep captured sidekick CPU state and the "
+                        + "empty per-slot SST view visible.");
         assertTrue(releaseIssues.contains("not a full sidekick/SST parity proof"),
                 "Release notes must not claim warning-only bootstrap gaps prove strict parity.");
     }
@@ -344,9 +356,8 @@ class TestTraceReplayStartPositionPolicy {
                     route + " uses default native replay state; phase policy handles handoff rows.");
             assertEquals(0, TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace),
                     route + " complete-run segments must not receive the sidekick seed-row prelude.");
-            assertEquals(1, TraceReplayBootstrap.levelObjectTitleCardPreludeFramesForTraceReplay(trace),
-                    route + " complete-run segments must reproduce the native S3K setup Process_Sprites pass "
-                            + "before the frame-zero RNG seed is installed.");
+            assertEquals(0, TraceReplayBootstrap.levelObjectTitleCardPreludeFramesForTraceReplay(trace),
+                    route + " represented complete-run state must not schedule replay-owned object setup.");
             assertEquals(0,
                     TraceReplayBootstrap.preTraceOscillationFramesForTraceReplay(trace, -1),
                     route + " must not schedule oscillator prelude from frame-zero outcome shape.");
@@ -471,8 +482,8 @@ class TestTraceReplayStartPositionPolicy {
                 "src/main/java/com/openggf/trace/TraceReplayBootstrap.java"));
         String sessionBootstrap = Files.readString(Path.of(
                 "src/main/java/com/openggf/trace/replay/TraceReplaySessionBootstrap.java"));
-        String discrepancies = Files.readString(Path.of("docs/KNOWN_DISCREPANCIES.md"));
-        String releaseIssues = Files.readString(Path.of("docs/release-architecture-review-issues.md"));
+        String discrepancies = Files.readString(Path.of("docs/status/known-discrepancies.md"));
+        String releaseIssues = Files.readString(Path.of("docs/architecture/audits/release-architecture-review-issues.md"));
 
         assertFalse(sessionBootstrap.contains("seedS3kCompleteRunStartState"),
                 "The retired S3K complete-run trace-state seed helper must not return.");
@@ -629,8 +640,7 @@ class TestTraceReplayStartPositionPolicy {
         Path target = tempDir.resolve("policy-"
                 + policyTraceCopyIndex++ + "-" + source.getFileName());
         Files.createDirectories(target);
-        Files.copy(source.resolve("metadata.json"), target.resolve("metadata.json"),
-                StandardCopyOption.REPLACE_EXISTING);
+        writePolicyMetadata(source, target);
         copyTraceFile(source, target, "physics.csv");
         try (BufferedReader reader = traceReader(source, "aux_state.jsonl");
              BufferedWriter writer = Files.newBufferedWriter(
@@ -644,6 +654,32 @@ class TestTraceReplayStartPositionPolicy {
             }
         }
         return TraceData.load(target);
+    }
+
+    /**
+     * Copies {@code metadata.json} minus the per-frame aux capabilities whose
+     * event families {@link #isReplayPolicyEvent} deliberately drops.
+     * {@link TraceData#load} enforces one typed heartbeat per stored physics
+     * row for every advertised per-frame family
+     * ({@code validateAdvertisedLoadQueueStates} /
+     * {@code validateAdvertisedDynamicArtTransferStates}), so a derived
+     * fixture that keeps the capability while discarding its events
+     * contradicts itself and fails to load at frame 0. The curated event set
+     * is what these policy assertions are written against, so the capability
+     * list follows the payload rather than the payload following the list.
+     */
+    private static void writePolicyMetadata(Path source, Path target) throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode metadata = (ObjectNode) mapper.readTree(source.resolve("metadata.json").toFile());
+        ArrayNode extras = metadata.withArray("aux_schema_extras");
+        for (int i = extras.size() - 1; i >= 0; i--) {
+            String value = extras.get(i).asText();
+            if (UNRETAINED_PER_FRAME_CAPABILITIES.contains(value)) {
+                extras.remove(i);
+            }
+        }
+        mapper.writerWithDefaultPrettyPrinter()
+                .writeValue(target.resolve("metadata.json").toFile(), metadata);
     }
 
     private static boolean isReplayPolicyEvent(String line) {
@@ -708,7 +744,7 @@ class TestTraceReplayStartPositionPolicy {
             for (TraceEvent event : trace.getEventsForFrame(i)) {
                 if (event instanceof TraceEvent.Checkpoint checkpoint
                         && "gameplay_start".equals(checkpoint.name())) {
-                    throw new AssertionError("No input-only state row found before gameplay_start");
+                    return -1;
                 }
             }
             TraceFrame previous = trace.getFrame(i - 1);
@@ -721,7 +757,7 @@ class TestTraceReplayStartPositionPolicy {
                 return i;
             }
         }
-        throw new AssertionError("No input-only state row found");
+        return -1;
     }
 
     private static int firstStateAdvancingInputLatchRow(TraceData trace) {
@@ -746,6 +782,6 @@ class TestTraceReplayStartPositionPolicy {
                 return i;
             }
         }
-        throw new AssertionError("No state-advancing input latch row found");
+        return -1;
     }
 }

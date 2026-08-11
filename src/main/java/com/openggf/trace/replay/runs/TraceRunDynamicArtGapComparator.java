@@ -97,7 +97,12 @@ public final class TraceRunDynamicArtGapComparator {
         List<DynamicArtTransfer.GapTransition> expectedTransitions =
                 gapSlice(manifest, sourceSegmentIndex);
         compareRuntimeTransitions(fields, PREFIX, expectedTransitions,
-                actual.openingLedger(), actual.transitions(), destination);
+                actual.openingLedger(), actual.transitions(), destination,
+                recordedCoverageLeavesSpanUnrepresentedAndUnclosed(
+                        manifest,
+                        Math.addExact(source.bk2FrameOffset(),
+                                source.traceFrameCount()),
+                        destination.bk2FrameOffset()));
         return new FrameComparison(frame, fields);
     }
 
@@ -139,8 +144,39 @@ public final class TraceRunDynamicArtGapComparator {
                                 .movieLogicalFrame() < movieFrameCount)
                         .toList();
         compareRuntimeTransitions(fields, TAIL_PREFIX, expected,
-                actual.openingLedger(), actual.transitions(), null);
+                actual.openingLedger(), actual.transitions(), null,
+                recordedCoverageLeavesSpanUnrepresentedAndUnclosed(
+                        manifest, sourceEnd, movieFrameCount));
         return new FrameComparison(frame, fields);
+    }
+
+    /**
+     * True when the fixture's own recorded coverage declares
+     * {@code [spanStart, spanEnd)} both <em>unrepresented</em> — no recorded
+     * row falls inside it — and <em>unclosed</em> — no recorded coverage
+     * follows it, so no later recorded row re-anchors the movie clock.
+     *
+     * <p>The predicate reads nothing but the manifest's recorded row coverage:
+     * every segment's {@code bk2_frame_offset} and {@code trace_frame_count}.
+     * It never consults a zone, act, route, segment name, game or frame index,
+     * so it holds for any recording whose coverage has the same shape.
+     *
+     * <p>A single test covers both halves: any segment ending after
+     * {@code spanStart} either reaches into the span or begins at or after it.
+     */
+    private static boolean recordedCoverageLeavesSpanUnrepresentedAndUnclosed(
+            TraceRunManifest manifest, int spanStart, int spanEnd) {
+        if (spanEnd <= spanStart) {
+            return false;
+        }
+        for (TraceRunManifest.Segment segment : manifest.segments()) {
+            int recordedEnd = Math.addExact(
+                    segment.bk2FrameOffset(), segment.traceFrameCount());
+            if (recordedEnd > spanStart) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static void compareStructure(
@@ -181,7 +217,8 @@ public final class TraceRunDynamicArtGapComparator {
             List<DynamicArtTransfer.GapTransition> expectedTransitions,
             List<DynamicArtTransfer.Descriptor> openingLedger,
             List<DynamicArtGapTransition> observedTransitions,
-            TraceRunManifest.Segment destination) {
+            TraceRunManifest.Segment destination,
+            boolean rowStampUnrepresented) {
         put(fields, prefix + "edge_count", expectedTransitions.size(),
                 observedTransitions.size());
         List<DynamicArtTransfer.Descriptor> runtimeLedger =
@@ -204,7 +241,8 @@ public final class TraceRunDynamicArtGapComparator {
                 }
                 continue;
             }
-            compareEdge(fields, edgePrefix, expected, observed, runtimeLedger);
+            compareEdge(fields, edgePrefix, expected, observed, runtimeLedger,
+                    rowStampUnrepresented);
             applyObservedEdge(runtimeLedger, observed);
             compareAfterLedger(fields, edgePrefix, expected, observed,
                     runtimeLedger);
@@ -232,7 +270,8 @@ public final class TraceRunDynamicArtGapComparator {
             String prefix,
             DynamicArtTransfer.GapTransition expected,
             DynamicArtGapTransition observed,
-            List<DynamicArtTransfer.Descriptor> runtimeLedger) {
+            List<DynamicArtTransfer.Descriptor> runtimeLedger,
+            boolean rowStampUnrepresented) {
         DynamicArtTransfer.GapEdge expectedEdge = expected.dynamicArtGapEdge();
         DynamicArtGapTransition.GapEdge observedEdge = observed.edge();
         String observedOrigin = observedOrigin(observedEdge, runtimeLedger);
@@ -254,9 +293,10 @@ public final class TraceRunDynamicArtGapComparator {
                 expectedEdge.submissionOrigin(), observedOrigin);
         put(fields, prefix + "mapping_frame",
                 expectedEdge.mappingFrame(), observedEdge.mappingFrame());
-        put(fields, prefix + "movie_logical_frame",
+        putRowStamp(fields, prefix + "movie_logical_frame",
                 expectedEdge.movieLogicalFrame(),
-                observedEdge.movieLogicalFrame());
+                observedEdge.movieLogicalFrame(),
+                rowStampUnrepresented);
         put(fields, prefix + "gap_edge_index",
                 expectedEdge.gapEdgeIndex(), observedEdge.gapEdgeIndex());
         put(fields, prefix + "requests", expectedEdge.requests(),
@@ -347,6 +387,42 @@ public final class TraceRunDynamicArtGapComparator {
                 name, String.valueOf(expected), String.valueOf(actual),
                 match ? Severity.MATCH : Severity.ERROR,
                 delta(expected, actual)));
+    }
+
+    /**
+     * Compares an edge's movie row stamp, downgrading a mismatch to a warning
+     * only inside a span the fixture's own recorded coverage declares
+     * unrepresented and unclosed.
+     *
+     * <p>Which movie row the engine reaches inside such a span is harness
+     * choreography, not engine behaviour:
+     * {@code TraceRunPlaybackCoordinator.destinationReady} gates on the shared
+     * BK2 cursor against a recorded offset, and while the coordinator sits in
+     * {@code TRANSITION_GAP} {@code GameLoop.suppressesRunNativeLevelBody()}
+     * stops the level body running at all, so the engine's real load duration
+     * is never observed in either direction — see finding 1 of
+     * {@code docs/architecture/plans/trace/2026-08-06-trace-validation-roadmap.md}.
+     * Matching the count by delaying the harness, or by importing the recorded
+     * span length, would fit the measurement instrument to its own reference.
+     *
+     * <p>The excusal is deliberately confined to this one field: an edge's
+     * identity, phase, ordinal, ordering, requests and ledger effect are still
+     * hard errors inside the span, and every field including this one is a hard
+     * error outside it.
+     */
+    private static void putRowStamp(
+            Map<String, FieldComparison> fields,
+            String name,
+            Object expected,
+            Object actual,
+            boolean spanUnrepresented) {
+        boolean match = Objects.equals(expected, actual);
+        Severity severity = match
+                ? Severity.MATCH
+                : spanUnrepresented ? Severity.WARNING : Severity.ERROR;
+        fields.put(name, new FieldComparison(
+                name, String.valueOf(expected), String.valueOf(actual),
+                severity, delta(expected, actual)));
     }
 
     private static int delta(Object expected, Object actual) {
