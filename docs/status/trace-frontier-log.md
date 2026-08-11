@@ -72731,3 +72731,63 @@ Canaries: `TestS1GhzMazeRoundTripChain` green before and after.
 at control and after (`KOS_DECOMPRESSION_QUEUE#15` raw_frame 4570 /
 `#14`). Full `mvn test` (no profile): 14706 tests, 53 failures + 21 errors at
 control and after, with an identical set of 41 failing classes.
+
+## 2026-08-11 — trace-replay profile heap: why the Knuckles chain OOM'd, measured
+
+- Worktree `trace-memory` (outside the repo), branch `bugfix/ai-trace-memory`,
+  over `e1463081d`. No `src/main/`, comparator, fixture or recorder change.
+- `TestS3kKnucklesSuperEmeraldRunChain` was reported as OOMing its fork even at
+  `-Xmx4g`, producing no report. That is not reproducible. At `-Xmx4g` it runs
+  in 12.27 s, peaks at 1245 MB post-GC live heap with zero Full GCs, and writes
+  its report — consistent with the harness entry above, whose own command
+  carried `"-Dsurefire.argLine=-Xmx4g"`, and whose frontier record for this
+  class (segment 0 `aiz`, raw_frame 1617, `KOS_DECOMPRESSION_QUEUE#14`) this
+  round reproduces character-for-character.
+- It OOMs at `-Xmx1g`, which is what the profile actually gave it:
+  `pom.xml:24` sets the shared `surefire.argLine` to `-Xmx1g` and the
+  `trace-replay` profile inherited it. Symptom there is exactly
+  `[ERROR] Java heap space`, `Tests run: 0`, no report.
+- MEASURED live heap retained by `TraceRunReplayWalker.plan()` alone
+  (standalone harness on the test classpath, 5x `System.gc()`):
+
+  | run fixture | segments | live heap |
+  |---|---|---|
+  | `s3k-knuckles-complete-superemeralds` | 67 | **1041 MB** |
+  | `s2-sonic-tails-complete-emeralds` | 35 | 449 MB |
+  | `s1-sonic-complete-withemeralds` | 34 | 322 MB |
+  | `s3k-multibonus` / `s3-knux-multibonus-ss` | 25 | 286 MB |
+
+  Only the Knuckles run exceeds 1g, which is why it alone died. Its largest
+  single segment (`soz_2`, 154 MB uncompressed) is 105 MB on its own, so no
+  segment is individually near the heap — what retains them is
+  `plan()` (`TraceRunReplayWalker.java:929-976`) building all segments into one
+  `TraceData[]` and returning a `List<SegmentPlan>` that holds them for the
+  whole walk.
+- The cost is aux EVENTS, not physics rows. Across that run `aux_state.jsonl`
+  is 1476 MB uncompressed against 56 MB of `physics.csv`; heap histogram of the
+  retained 1041 MB: `Object[]` 214 MB, `TraceEvent$ObjectNear` 166 MB,
+  `byte[]` 116 MB, `Integer` 93 MB, `CompactFieldMap` 86 MB, `String` 67 MB,
+  `StateSnapshot` 65 MB, `AirCountdownState` 64 MB, `LoadQueueState` 46 MB,
+  `TraceFrame` **32 MB (3%)**. Streaming or chunking rows would have recovered
+  3%; int-keying the frame indexes has an 8.9% ceiling. Note `TraceData` is
+  already denser than its source text (154 MB text → 105 MB heap).
+- At `forkCount=1` the OOM truncated the whole profile: control run aborted
+  after **399 tests in 2m24s**. With the profile at `-Xmx2g` the sweep
+  completes: **770 tests, 2 failures, 3 errors, 4 skipped, 7m51s**. All 39
+  classes common to both runs are identical in counts and pass/fail; only
+  elapsed times differ. Command for both:
+  `mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1
+  -Dsurefire.runOrder=alphabetical -Dsonic1.rom.path=... -Dsonic2.rom.path=...
+  -Ds3k.rom.path=... test` (reports wiped first).
+- Red set unchanged at 5: `TestS2CompleteEmeraldRunChain` (seg1 DPLC),
+  `TestS2EhzHalfpipeRoundTripChain` (seg3 DPLC),
+  `TestS3kKnucklesSuperEmeraldRunChain` (`KOS_DECOMPRESSION_QUEUE#14`,
+  raw_frame 1617), `TestS3kMegaRunChain` (`#15`, raw_frame 4570),
+  `TestS3kMhzCompleteRunTraceReplay` (`#335`, same sha256 as the Knuckles
+  edge — three reds, one probable root).
+- Not landed, offered: releasing each segment after the walker passes it would
+  cut peak from 1041 MB to ~105-250 MB, and walker access is strictly forward
+  with lookahead 1-2. It is held back because `plan()` currently loads *and
+  validates* all segments up front, so deferring the load moves when a
+  malformed fixture fails and could change the messages of the five red
+  classes.
