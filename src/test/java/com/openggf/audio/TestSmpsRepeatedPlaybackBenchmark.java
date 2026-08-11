@@ -14,10 +14,17 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
+import java.io.IOException;
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.Field;
+import java.net.URISyntaxException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 
@@ -46,6 +53,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @EnabledIfSystemProperty(
         named = "openggf.audio.repeatedPlaybackBenchmark", matches = "true")
 class TestSmpsRepeatedPlaybackBenchmark {
+    private static final String MANIFEST_RELATIVE =
+            "src/test/java/com/openggf/audio/"
+                    + "TestSmpsRepeatedPlaybackBenchmark.java";
     private static final int MUSIC_ID = 0x81;
     private static final int SFX_ID = 0xA0;
     private static final int TINY_PROGRAM_BYTES = 64;
@@ -91,7 +101,7 @@ class TestSmpsRepeatedPlaybackBenchmark {
                         + "tinyProgram=%d largeProgram=%d tinyDac=%d "
                         + "largeDac=%d simpleMusicTracks=%d "
                         + "maxMusicTracks=%d vmNoiseMargin=%d%n",
-                requiredManifestHash(),
+                executedManifestHash(),
                 System.getProperty("java.runtime.version"),
                 stableToken(System.getProperty("java.vm.name")),
                 stableToken(System.getProperty("java.vm.vendor")),
@@ -140,12 +150,34 @@ class TestSmpsRepeatedPlaybackBenchmark {
         }
     }
 
-    private static String requiredManifestHash() {
-        String hash = System.getProperty(
-                "openggf.audio.benchmark.manifestSha256", "");
-        assertTrue(hash.matches("[0-9a-f]{64}"),
-                "benchmark manifest SHA-256 must bind raw output");
-        return hash;
+    static String executedManifestHash() {
+        return manifestHashForCodeSource(
+                TestSmpsRepeatedPlaybackBenchmark.class);
+    }
+
+    static String manifestHashForCodeSource(Class<?> anchor) {
+        try {
+            Path testClasses = Path.of(anchor.getProtectionDomain()
+                    .getCodeSource().getLocation().toURI())
+                    .toAbsolutePath().normalize();
+            if (!testClasses.endsWith(Path.of("target", "test-classes"))) {
+                throw new IllegalStateException(
+                        "benchmark did not execute from target/test-classes");
+            }
+            Path worktree = testClasses.getParent().getParent();
+            Path manifest = worktree.resolve(MANIFEST_RELATIVE);
+            if (!Files.isRegularFile(manifest)) {
+                throw new IllegalStateException(
+                        "executed benchmark manifest is missing");
+            }
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(
+                    digest.digest(Files.readAllBytes(manifest)));
+        } catch (IOException | NoSuchAlgorithmException
+                | URISyntaxException failure) {
+            throw new IllegalStateException(
+                    "cannot hash executed benchmark manifest", failure);
+        }
     }
 
     private static Sample[] measureCounts(

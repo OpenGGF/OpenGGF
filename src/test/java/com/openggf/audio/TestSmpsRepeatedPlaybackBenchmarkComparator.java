@@ -7,11 +7,15 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.net.URLClassLoader;
+import javax.tools.ToolProvider;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 class TestSmpsRepeatedPlaybackBenchmarkComparator {
     private static final String MANIFEST_RELATIVE =
@@ -177,6 +181,54 @@ class TestSmpsRepeatedPlaybackBenchmarkComparator {
                         passingBaseline(),
                         write("feature.txt", passingFeatureText()),
                         baselineManifest, featureManifest));
+    }
+
+    @Test
+    void executedBenchmarkIgnoresCallerManifestHashSpoof() throws IOException {
+        String spoof = "f".repeat(64);
+        String previous = System.setProperty(
+                "openggf.audio.benchmark.manifestSha256", spoof);
+        try {
+            String computed = TestSmpsRepeatedPlaybackBenchmark
+                    .executedManifestHash();
+            assertNotEquals(spoof, computed);
+            assertEquals(SmpsRepeatedPlaybackBenchmarkComparator.manifestHash(
+                    Path.of(System.getProperty("project.basedir"))), computed);
+        } finally {
+            if (previous == null) {
+                System.clearProperty(
+                        "openggf.audio.benchmark.manifestSha256");
+            } else {
+                System.setProperty(
+                        "openggf.audio.benchmark.manifestSha256", previous);
+            }
+        }
+    }
+
+    @Test
+    void executedSourceOneByteMutationChangesComputedDigest() throws Exception {
+        Path root = temp.resolve("executed-worktree");
+        Path classes = root.resolve("target/test-classes");
+        Path source = root.resolve(MANIFEST_RELATIVE);
+        Path anchorSource = temp.resolve("Anchor.java");
+        Files.createDirectories(classes);
+        Files.createDirectories(source.getParent());
+        Files.writeString(source, "a");
+        Files.writeString(anchorSource, "package probe; public class Anchor {}");
+        assertEquals(0, ToolProvider.getSystemJavaCompiler().run(
+                null, null, null, "-d", classes.toString(),
+                anchorSource.toString()));
+
+        try (URLClassLoader loader = new URLClassLoader(
+                new java.net.URL[]{classes.toUri().toURL()}, null)) {
+            Class<?> anchor = loader.loadClass("probe.Anchor");
+            String before = TestSmpsRepeatedPlaybackBenchmark
+                    .manifestHashForCodeSource(anchor);
+            Files.writeString(source, "b");
+            String after = TestSmpsRepeatedPlaybackBenchmark
+                    .manifestHashForCodeSource(anchor);
+            assertNotEquals(before, after);
+        }
     }
 
     private Path passingBaseline() throws IOException {
