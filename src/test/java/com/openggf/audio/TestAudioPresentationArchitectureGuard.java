@@ -13,7 +13,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -103,6 +105,149 @@ class TestAudioPresentationArchitectureGuard {
             "alSourcei(",
             "AL_LOOPING",
             "AL_PITCH");
+
+    @Test
+    void smpsOwnershipDetectorRejectsRepresentativeHotPathRegressions() {
+        Map<String, String> sources = new LinkedHashMap<>();
+        sources.put("audio/smps/DacData.java",
+                "public byte[] rawSample() { return bytes; }");
+        sources.put("audio/smps/SmpsProgramView.java",
+                "public int[] rawPointers();");
+        sources.put("audio/presentation/AudioPresentationSourceFactory.java",
+                "void freshSource() {} void copyDac() {} "
+                        + "void newSequencer() { SmpsSourceDescriptor.from(data); }");
+        sources.put("audio/presentation/AudioPresentationCommandResolver.java",
+                "void resolveSmpsSfxCommand() { loader.load(); "
+                        + "factory.findRegisteredSmpsSfxAsset(key, generation); }");
+        sources.put("audio/presentation/AudioVoiceRegistry.java",
+                "void addSmpsSfxToOwner() { captureLiveCommandMutation(); }");
+        sources.put("audio/driver/SmpsDriver.java",
+                "void commitSfxAdmission() { captureLiveCommandMutation(); }");
+
+        assertEquals(List.of(
+                "public raw DAC array @ audio/smps/DacData.java",
+                "public raw SMPS array @ audio/smps/SmpsProgramView.java",
+                "freshSource/copyDac @ audio/presentation/AudioPresentationSourceFactory.java",
+                "load before lookup @ audio/presentation/AudioPresentationCommandResolver.java",
+                "observer-free registry snapshot @ audio/presentation/AudioVoiceRegistry.java",
+                "warmed descriptor materialization @ audio/presentation/AudioPresentationSourceFactory.java",
+                "unguarded driver snapshot @ audio/driver/SmpsDriver.java"),
+                smpsOwnershipViolations(sources));
+    }
+
+    @Test
+    void productionSmpsOwnershipKeepsAssetWorkOutOfTheWarmedPath()
+            throws IOException {
+        Map<String, String> sources = new LinkedHashMap<>();
+        for (String relative : List.of(
+                "audio/smps/DacData.java",
+                "audio/smps/SmpsProgramView.java",
+                "audio/presentation/AudioPresentationSourceFactory.java",
+                "audio/presentation/AudioPresentationCommandResolver.java",
+                "audio/presentation/AudioVoiceRegistry.java",
+                "audio/driver/SmpsDriver.java")) {
+            sources.put(relative,
+                    Files.readString(PRODUCTION_ROOT.resolve(relative)));
+        }
+        assertEquals(List.of(), smpsOwnershipViolations(sources));
+    }
+
+    private static List<String> smpsOwnershipViolations(
+            Map<String, String> sources) {
+        List<String> violations = new ArrayList<>();
+        String dac = source(sources, "audio/smps/DacData.java");
+        if (Pattern.compile(
+                "\\bpublic\\s+(?:final\\s+)?(?:byte|short|int|long)\\[\\]"
+                        + "\\s+\\w+")
+                .matcher(dac).find()
+                || Pattern.compile(
+                "\\bpublic\\s+(?:final\\s+)?Map<[^>]*\\[\\][^>]*>")
+                .matcher(dac).find()) {
+            violations.add("public raw DAC array @ audio/smps/DacData.java");
+        }
+
+        String programView = source(
+                sources, "audio/smps/SmpsProgramView.java");
+        if (Pattern.compile(
+                "\\b(?:byte|short|int|long)\\[\\]\\s+\\w+\\s*\\(")
+                .matcher(programView).find()) {
+            violations.add(
+                    "public raw SMPS array @ audio/smps/SmpsProgramView.java");
+        }
+
+        String factory = source(sources,
+                "audio/presentation/AudioPresentationSourceFactory.java");
+        if (factory.contains("freshSource") || factory.contains("copyDac")) {
+            violations.add("freshSource/copyDac @ "
+                    + "audio/presentation/AudioPresentationSourceFactory.java");
+        }
+
+        String resolver = methodBody(source(sources,
+                        "audio/presentation/AudioPresentationCommandResolver.java"),
+                "resolveSmpsSfxCommand(");
+        int load = resolver.indexOf("loader.load(");
+        int lookup = resolver.indexOf("findRegisteredSmpsSfxAsset(");
+        if (load >= 0 && (lookup < 0 || load < lookup)) {
+            violations.add("load before lookup @ "
+                    + "audio/presentation/AudioPresentationCommandResolver.java");
+        }
+
+        String registry = methodBody(source(sources,
+                        "audio/presentation/AudioVoiceRegistry.java"),
+                "addSmpsSfxToOwner(");
+        if (registry.contains("captureLiveCommandMutation(")) {
+            violations.add("observer-free registry snapshot @ "
+                    + "audio/presentation/AudioVoiceRegistry.java");
+        }
+
+        String instantiation = methodBody(factory, "newSequencer(");
+        if (instantiation.contains("SmpsSourceDescriptor.from(")
+                || instantiation.contains("getData()")
+                || instantiation.contains("describeSfx(")) {
+            violations.add("warmed descriptor materialization @ "
+                    + "audio/presentation/AudioPresentationSourceFactory.java");
+        }
+
+        String driver = methodBody(source(sources,
+                        "audio/driver/SmpsDriver.java"),
+                "commitSfxAdmission(");
+        if (driver.contains("captureLiveCommandMutation(")
+                && !driver.contains("hasChipWriteObserver()")) {
+            violations.add("unguarded driver snapshot @ "
+                    + "audio/driver/SmpsDriver.java");
+        }
+        return List.copyOf(violations);
+    }
+
+    private static String source(
+            Map<String, String> sources, String path) {
+        String source = sources.get(path);
+        if (source == null) {
+            throw new AssertionError("missing guard source " + path);
+        }
+        return source;
+    }
+
+    private static String methodBody(String source, String marker) {
+        int markerIndex = source.indexOf(marker);
+        if (markerIndex < 0) {
+            return "";
+        }
+        int open = source.indexOf('{', markerIndex + marker.length());
+        if (open < 0) {
+            return "";
+        }
+        int depth = 0;
+        for (int index = open; index < source.length(); index++) {
+            char character = source.charAt(index);
+            if (character == '{') {
+                depth++;
+            } else if (character == '}' && --depth == 0) {
+                return source.substring(open + 1, index);
+            }
+        }
+        return source.substring(open + 1);
+    }
 
     @Test
     void lwjglBackendDoesNotOwnIndependentMusicOrSfxSources()
