@@ -20,11 +20,20 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.RecordComponent;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -204,7 +213,8 @@ public class TestAudioManagerResetState {
     }
 
     @Test
-    void failedRomLoaderConstructionOrDacLoadLeavesTheWholeTuplePublished() {
+    void failedRomLoaderConstructionOrDacLoadLeavesTheWholeTuplePublished()
+            throws Exception {
         Rom firstRom = new Rom();
         Rom throwingCreateRom = new Rom();
         Rom throwingDacRom = new Rom();
@@ -228,6 +238,7 @@ public class TestAudioManagerResetState {
         assertThrows(IllegalStateException.class,
                 () -> am.setRom(throwingCreateRom));
         assertSame(am.getAudioProfile(), profile);
+        assertSame(firstRom, baseSourceComponent("rom"));
         ObservedSource afterCreateFailure = observeBaseSfx(0x91);
         assertEquals(initial, afterCreateFailure);
         profile.throwCreateFor = null;
@@ -240,6 +251,7 @@ public class TestAudioManagerResetState {
         dacRetry.dacFailure = new IllegalStateException("DAC load failed");
         assertThrows(IllegalStateException.class,
                 () -> am.setRom(throwingDacRom));
+        assertSame(throwingCreateRom, baseSourceComponent("rom"));
         assertEquals(afterCreateRetry, observeBaseSfx(0x91));
         dacRetry.dacFailure = null;
         am.setRom(throwingDacRom);
@@ -250,7 +262,8 @@ public class TestAudioManagerResetState {
     }
 
     @Test
-    void failedProfilePreparationOrBackendPublicationIsAtomicAndRetryable() {
+    void failedProfilePreparationOrBackendPublicationIsAtomicAndRetryable()
+            throws Exception {
         Rom currentRom = new Rom();
         DacData oldDac = dac(311);
         StubSmpsLoader oldLoader = loader(oldDac, 0x92, (byte) 0x51);
@@ -264,6 +277,7 @@ public class TestAudioManagerResetState {
         throwingProfile.throwCreateFor = currentRom;
         assertThrows(IllegalStateException.class,
                 () -> am.setAudioProfile(throwingProfile));
+        assertSame(currentRom, baseSourceComponent("rom"));
         assertSame(oldProfile, am.getAudioProfile());
         assertEquals(initial, observeBaseSfx(0x92));
 
@@ -274,6 +288,7 @@ public class TestAudioManagerResetState {
                 new SwitchingAudioProfile(throwingDacLoader);
         assertThrows(IllegalStateException.class,
                 () -> am.setAudioProfile(throwingDacProfile));
+        assertSame(currentRom, baseSourceComponent("rom"));
         assertSame(oldProfile, am.getAudioProfile());
         assertEquals(initial, observeBaseSfx(0x92));
 
@@ -285,6 +300,7 @@ public class TestAudioManagerResetState {
                 () -> am.setAudioProfile(replacement));
         assertEquals(java.util.List.of(replacement, oldProfile),
                 backend.lastProfileAttempts(2));
+        assertSame(currentRom, baseSourceComponent("rom"));
         assertSame(oldProfile, am.getAudioProfile());
         assertEquals(initial, observeBaseSfx(0x92));
 
@@ -713,6 +729,141 @@ public class TestAudioManagerResetState {
                 .getDeclaredField("donorAudioSources").getModifiers()));
     }
 
+    @Test
+    void baseSourcePublishesRomInsideTheOnlyEffectiveImmutableTuple()
+            throws Exception {
+        Field publication = AudioManager.class.getDeclaredField(
+                "baseAudioSource");
+        publication.setAccessible(true);
+        Class<?> sourceType = publication.getType();
+        assertTrue(sourceType.isRecord(),
+                "the base source publication must remain immutable");
+        assertEquals(List.of("rom", "profile", "loader", "dac", "config",
+                        "generation"),
+                Arrays.stream(sourceType.getRecordComponents())
+                        .map(RecordComponent::getName)
+                        .toList());
+
+        RecordingRom publishedRom = new RecordingRom((byte) 0x31);
+        PcmSwitchingProfile profile = new PcmSwitchingProfile();
+        am.setAudioProfile(profile);
+        am.setRom(publishedRom);
+
+        assertSame(publishedRom, baseSourceComponent("rom"));
+        Field frozenDependencyShape = AudioManager.class.getDeclaredField(
+                "rom");
+        frozenDependencyShape.setAccessible(true);
+        assertTrue(Modifier.isFinal(frozenDependencyShape.getModifiers()),
+                "the historical AudioManager -> Rom field may only remain "
+                        + "as a non-effective architecture sentinel");
+        assertFalse(Modifier.isVolatile(frozenDependencyShape.getModifiers()));
+        assertNull(frozenDependencyShape.get(am),
+                "the frozen dependency-shape sentinel must never publish ROM state");
+    }
+
+    @Test
+    void overflowedSetRomCannotReachConcurrentPcmOrLaterProfileReplacement()
+            throws Exception {
+        RecordingRom retainedRom = new RecordingRom((byte) 0x41);
+        RecordingRom rejectedRom = new RecordingRom((byte) 0x42);
+        PcmSwitchingProfile retainedProfile = new PcmSwitchingProfile();
+        am.setAudioProfile(retainedProfile);
+        am.setRom(retainedRom);
+        am.playSegaPcm();
+        retainedRom.resetReads();
+        replaceBaseGeneration(Long.MAX_VALUE);
+        Object retainedTuple = baseSourcePublication();
+
+        ExecutorService workers = Executors.newFixedThreadPool(2);
+        CountDownLatch start = new CountDownLatch(1);
+        CountDownLatch mutationFinished = new CountDownLatch(1);
+        try {
+            Future<Throwable> mutation = workers.submit(() -> {
+                start.await();
+                try {
+                    am.setRom(rejectedRom);
+                    return null;
+                } catch (Throwable failure) {
+                    return failure;
+                } finally {
+                    mutationFinished.countDown();
+                }
+            });
+            Future<?> pcmRead = workers.submit(() -> {
+                start.await();
+                mutationFinished.await();
+                am.playSegaPcm();
+                return null;
+            });
+
+            start.countDown();
+            assertInstanceOf(ArithmeticException.class, mutation.get());
+            pcmRead.get();
+        } finally {
+            workers.shutdownNow();
+        }
+
+        assertSame(retainedTuple, baseSourcePublication(),
+                "overflow must not publish any part of the candidate tuple");
+        assertTrue(retainedRom.readCount() > 0,
+                "a reader on another thread must retain the old ROM/profile pair");
+        assertEquals(0, rejectedRom.readCount(),
+                "failed setRom must never expose the candidate to playSegaPcm");
+
+        replaceBaseGeneration(41);
+        PcmSwitchingProfile replacement = new PcmSwitchingProfile();
+        am.setAudioProfile(replacement);
+        assertSame(retainedRom, replacement.lastRom,
+                "later setAudioProfile must rebuild from the retained tuple ROM");
+        retainedRom.resetReads();
+        rejectedRom.resetReads();
+        am.playSegaPcm();
+        assertEquals(1, retainedRom.readCount());
+        assertEquals(0, rejectedRom.readCount());
+    }
+
+    private Object baseSourcePublication() throws ReflectiveOperationException {
+        Field field = AudioManager.class.getDeclaredField("baseAudioSource");
+        field.setAccessible(true);
+        return field.get(am);
+    }
+
+    private Object baseSourceComponent(String name)
+            throws ReflectiveOperationException {
+        Object source = baseSourcePublication();
+        for (RecordComponent component
+                : source.getClass().getRecordComponents()) {
+            if (component.getName().equals(name)) {
+                component.getAccessor().setAccessible(true);
+                return component.getAccessor().invoke(source);
+            }
+        }
+        throw new AssertionError("missing base source component " + name);
+    }
+
+    private void replaceBaseGeneration(long generation)
+            throws ReflectiveOperationException {
+        Field field = AudioManager.class.getDeclaredField("baseAudioSource");
+        field.setAccessible(true);
+        Object previous = field.get(am);
+        RecordComponent[] components = previous.getClass()
+                .getRecordComponents();
+        Class<?>[] parameterTypes = Arrays.stream(components)
+                .map(RecordComponent::getType)
+                .toArray(Class<?>[]::new);
+        Object[] arguments = new Object[components.length];
+        for (int index = 0; index < components.length; index++) {
+            components[index].getAccessor().setAccessible(true);
+            arguments[index] = components[index].getName().equals("generation")
+                    ? generation
+                    : components[index].getAccessor().invoke(previous);
+        }
+        Constructor<?> constructor = previous.getClass()
+                .getDeclaredConstructor(parameterTypes);
+        constructor.setAccessible(true);
+        field.set(am, constructor.newInstance(arguments));
+    }
+
     private static Stream<Arguments> baseMutationCallbackCases() {
         return Arrays.stream(OuterBaseMutation.values())
                 .flatMap(outer -> Arrays.stream(BaseCallbackStage.values())
@@ -991,6 +1142,46 @@ public class TestAudioManagerResetState {
                 throw error;
             }
             return super.getSequencerConfig();
+        }
+    }
+
+    private static final class PcmSwitchingProfile extends StubAudioProfile {
+        private Rom lastRom;
+
+        @Override
+        public SmpsLoader createSmpsLoader(Rom rom) {
+            lastRom = rom;
+            return loader;
+        }
+
+        @Override
+        public SegaPcmSpec getSegaPcmSpec() {
+            return new SegaPcmSpec(0x20, 1, 8_000);
+        }
+    }
+
+    private static final class RecordingRom extends Rom {
+        private final byte value;
+        private final AtomicInteger reads = new AtomicInteger();
+
+        private RecordingRom(byte value) {
+            this.value = value;
+        }
+
+        @Override
+        public byte[] readBytes(long offset, int count) {
+            reads.incrementAndGet();
+            byte[] result = new byte[count];
+            Arrays.fill(result, value);
+            return result;
+        }
+
+        private int readCount() {
+            return reads.get();
+        }
+
+        private void resetReads() {
+            reads.set(0);
         }
     }
 
