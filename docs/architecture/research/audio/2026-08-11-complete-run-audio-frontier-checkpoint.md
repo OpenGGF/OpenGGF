@@ -32,7 +32,25 @@ details are in the adjacent `TRUST.md`. No generated core or ROM is committed.
 - Sonic 3 & Knuckles: the complete reference movie has two identical observer
   runs: 434,417 frames, 254,921,281 events, maximum frame occupancy 1,446,
   event digest prefix `08c2f624`, and the source-correct nonempty cutoff
-  frontier. Engine comparison is not implemented yet.
+  frontier. The game-local Task 2 profile, native identity resolver, and strict
+  `$1C00` state normalizer are now implemented. They retain the shipped
+  `fix_sndbugs=0` one-up save-loop behavior and treat the overlapping RAM as
+  either seven live SFX tracks or nine saved music tracks. Both producer
+  bindings remain explicitly unavailable, so engine comparison is still not
+  implemented or publication-capable.
+
+The S3K profile cannot become publication-capable until central integration
+provides the read-only run-local movie at
+`src/test/resources/traces/s3k/runs/s3k-knuckles-complete-superemeralds/s3k-knuckles-complete-superemeralds.bk2`.
+It must be the existing pinned movie byte-for-byte, SHA-256
+`aa892856df22b7bb1fe5accb48db10b90dc26845d1dccee90352da30349f53cc`;
+capture and publication must never rewrite it. Central Tasks 3 and 6 must also
+install the actual reference and OpenGGF producer runtime/observer identities,
+proofs, and capability vectors before either unavailable binding is replaced.
+Central integration must additionally prove that a fresh CLI JVM reaches this
+profile through the closed dispatcher without a caller first loading
+`S3kCompleteRunAudioProfile`; the game-local unit test does not authorize
+publishing on its own.
 
 The Sonic 1 reference producer starts observation at power-on, discards
 pre-publication rows while retaining native service/latch state, and publishes
@@ -62,6 +80,17 @@ this real S1 prefix are the affected gates.
 - Native observer selftests: six harnesses passing.
 - Existing Sonic 2 and Sonic 3 & Knuckles capability/lifecycle suite: 10 tests
   passing, with their prior complete-run duplicate evidence unchanged.
+- S3K Task 2 profile/resolver/normalizer and engine command-boundary regression:
+  11 tests passing.
+- S3K AIZ release-slice, level-loading, bootstrap, and decoding guards: 52
+  tests passing against locked-on ROM SHA-1
+  `cfbf98c36c776677290a872547ac47c53d2761d6`.
+
+The shared complete-run CLI guard has a checkpoint-local pre-existing failure:
+`TestCompleteRunAudioCli.orchestratorPinsItsJavaClassAndRejectsAmbientInjection`
+expects `tools/audio/run_complete_audio_parity.sh` to be executable, while the
+checkpoint tracks and checks it out as mode `100644`. The S3K Task 2 diff does
+not touch that shared runner.
 
 These results establish a coherent handoff point; they are not a declaration
 that complete-game audio parity is finished.
