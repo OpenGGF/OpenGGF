@@ -20,6 +20,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -209,6 +210,45 @@ class TestAudioManagerSfxCatalogReuse {
     }
 
     @Test
+    void configlessDonorMusicDefersUntilBaseOwnerWithoutChangingGeneration() {
+        int musicId = 0x21;
+        CountingLoader donor = new CountingLoader(dac(314));
+        donor.musicResults.put(musicId,
+                () -> new CountingSfxData(
+                        musicId, (byte) 0x34, new AtomicInteger()));
+        audio.registerDonorLoader("s3k", donor, donor.dac);
+        int beforeOwner = audio.commandTimeline().entryCount();
+
+        assertDoesNotThrow(() -> audio.playDonorMusic("s3k", musicId));
+
+        assertEquals(0, donor.musicLoads.get(),
+                "a config-less donor must remain deferred without an owner");
+        assertEquals(beforeOwner, audio.commandTimeline().entryCount());
+
+        installBase(new CountingLoader(EMPTY_DAC));
+        audio.playDonorMusic("s3k", musicId);
+        audio.presentFrame(PresentationMode.SILENT);
+        var first = audio.shadowSmpsDriverSnapshotForTesting()
+                .sequencers().getFirst();
+        audio.playDonorMusic("s3k", musicId);
+        audio.presentFrame(PresentationMode.SILENT);
+
+        assertEquals(1, donor.musicLoads.get());
+        assertEquals(1, first.source().dependencyGeneration(),
+                "deferred completion must retain the registration generation");
+        assertSame(donor.dac, first.dacData());
+        assertEquals(TestProfile.CONFIG.getTempoMode(),
+                first.config().getTempoMode());
+
+        int beforeNullMiss = audio.commandTimeline().entryCount();
+        audio.playDonorMusic("s3k", musicId + 1);
+        assertEquals(2, donor.musicLoads.get(),
+                "null misses need not be negatively cached");
+        assertEquals(beforeNullMiss, audio.commandTimeline().entryCount(),
+                "a donor null result remains a no-op");
+    }
+
+    @Test
     void repeatedGameSoundDonorLoadsOnceAndNullDonorFallsBackByName() {
         AtomicInteger materializations = new AtomicInteger();
         CountingLoader loader = new CountingLoader(EMPTY_DAC);
@@ -380,6 +420,33 @@ class TestAudioManagerSfxCatalogReuse {
     }
 
     @Test
+    void queuedAdmissionRetainsPolicyFrozenByManagerRegistration() {
+        CountingLoader loader = new CountingLoader(EMPTY_DAC);
+        loader.idResults.put(BASE_ID,
+                () -> new CountingSfxData(
+                        BASE_ID, (byte) 0x70, new AtomicInteger()));
+        MutatingPolicyProfile profile = new MutatingPolicyProfile(loader);
+        audio.setAudioProfile(profile);
+        audio.setRom(new Rom());
+
+        assertTrue(audio.playSfx(BASE_ID));
+        audio.presentFrame(PresentationMode.SILENT);
+        assertTrue(audio.playSfx(BASE_ID));
+        audio.presentFrame(PresentationMode.SILENT);
+
+        var state = audio.shadowSmpsDriverSnapshotForTesting();
+        assertEquals(1, state.sequencers().size(),
+                "the retained continuous policy must extend the first voice");
+        var voice = state.sequencers().getFirst();
+        assertEquals(0x23, voice.snapshot().sfxPriority());
+        assertTrue(voice.snapshot().specialSfx());
+        assertEquals(BASE_ID, state.continuousSfxId());
+        assertTrue(state.continuousSfxFlag());
+        assertEquals(1, loader.idLoads.get(),
+                "the second admission must remain a catalog hit");
+    }
+
+    @Test
     void legacyCachedHitDispatchesTheRetainedProgramDacConfigAndPolicy() {
         RecordingBackend backend = new RecordingBackend();
         audio.setBackend(backend);
@@ -509,9 +576,12 @@ class TestAudioManagerSfxCatalogReuse {
         private final DacData dac;
         private final Map<Integer, Supplier<AbstractSmpsData>> idResults =
                 new java.util.HashMap<>();
+        private final Map<Integer, Supplier<AbstractSmpsData>> musicResults =
+                new java.util.HashMap<>();
         private final Map<String, Supplier<AbstractSmpsData>> nameResults =
                 new java.util.HashMap<>();
         private final AtomicInteger idLoads = new AtomicInteger();
+        private final AtomicInteger musicLoads = new AtomicInteger();
         private final AtomicInteger nameLoads = new AtomicInteger();
         private Runnable afterIdLoad;
 
@@ -521,7 +591,9 @@ class TestAudioManagerSfxCatalogReuse {
 
         @Override
         public AbstractSmpsData loadMusic(int musicId) {
-            return null;
+            musicLoads.incrementAndGet();
+            Supplier<AbstractSmpsData> result = musicResults.get(musicId);
+            return result != null ? result.get() : null;
         }
 
         @Override
@@ -674,6 +746,36 @@ class TestAudioManagerSfxCatalogReuse {
 
         @Override public boolean isContinuousSfx(int sfxId) {
             return continuous;
+        }
+    }
+
+    private static final class MutatingPolicyProfile extends TestProfile {
+        private int priority = 0x23;
+        private boolean special = true;
+        private boolean continuous = true;
+        private boolean firstRegistrationPolicy = true;
+
+        private MutatingPolicyProfile(SmpsLoader loader) {
+            super(loader);
+        }
+
+        @Override public int getSfxPriority(int sfxId) {
+            return priority;
+        }
+
+        @Override public boolean isSpecialSfx(int sfxId) {
+            return special;
+        }
+
+        @Override public boolean isContinuousSfx(int sfxId) {
+            boolean result = continuous;
+            if (firstRegistrationPolicy) {
+                firstRegistrationPolicy = false;
+                priority = 0x66;
+                special = false;
+                continuous = false;
+            }
+            return result;
         }
     }
 

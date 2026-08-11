@@ -351,10 +351,9 @@ public final class AudioPresentationCommandResolver {
                             source.sfxPolicy().continuous(resolvedSfxId)));
         }
         int sfxId = entry.assetId();
-        int priority = source.sfxPolicy().priority(sfxId);
-        int continuousId =
-                source.sfxPolicy().continuous(sfxId)
-                        ? sfxId : 0;
+        SmpsSfxPlaybackPolicy policy = entry.sfxPolicy();
+        int priority = policy.priority();
+        int continuousId = policy.continuous() ? sfxId : 0;
         return new AddSmpsSfx(factory.resolveSmpsSfx(
                 allocateVoiceId(),
                 key,
