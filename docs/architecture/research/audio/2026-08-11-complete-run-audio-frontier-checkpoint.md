@@ -26,7 +26,20 @@ details are in the adjacent `TRUST.md`. No generated core or ROM is committed.
   crosses row 523 and reaches the row-860 publication boundary with its carried
   native service still live. Prepublication rows are drained and validated but
   are not published; row 860 resets only publication coordinates/inventories,
-  preserving the physical chip, YM latches, service tokens, and ancestry.
+  preserving the physical chip, YM latches, service tokens, and ancestry. The
+  game-owned recorder now ignores raw `SERVICE_PROMOTE` events for managed
+  callback correlation and tracks simultaneously open M68K services by native
+  token, so the real frontier advances through the nested row-877 lifetime to
+  row 1219. There it stops fail-closed on native first-fault reason 5 at REV01
+  `$72E04` (`rts`): source CPU M68K, active kind 2, depth count 3, continuation
+  `0/4`. The adjusted return PC is the legal continuation `$71C10`; the exact
+  stack is token 1 kind 4 parent 0 depth 0, token 2 kind 4 parent 1 depth 1,
+  and token 8 kind 2 parent 2 depth 2. No snapshot, END, promotion, or chip
+  event occurs before hook selection fails. Central observer work must add a
+  predicate-gated direct-parent action: the legal-return branch is a strict
+  KEEP/NOOP, while an outside return reuses action 8's atomic snapshot,
+  direct-parent END, compaction, and adjacent promotion. No reference capture
+  is published at this frontier.
 - Sonic 2: the complete reference movie has two identical observer runs:
   259,590 frames, 169,986,419 events, maximum frame occupancy 1,825, event
   digest prefix `c2b2f823`, and an empty cutoff frontier. Engine comparison is
@@ -107,7 +120,8 @@ raw core SHA-256 is
 `c29a3631c5aa6b4566dd80f2dcca5138426adaa624dbb7c450cdaead09cd4bd6`,
 Build ID is `822895adb39463ad`, and observer identity is
 `b8023a7a80cb961d97c80bcb3835480aca9a78f3eb1ede5490c9295e2ca9bd60`.
-The row-860 proof remains a bounded prefix/capture-boundary result, not a
+The row-860 proof remains a bounded prefix/capture-boundary result. The later
+row-1219 first fault above is the current strict real-run frontier, not a
 complete-run publication claim.
 
 ## Verified checkpoint gates

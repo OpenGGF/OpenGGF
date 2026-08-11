@@ -625,6 +625,35 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
         private static void RequiresNativeMarkersForCrossCpuOrder()
         {
+            AssertEx.Equal(true,
+                S1CompleteRunAudioReferenceCapture.IsManagedCorrelationEventKind(1));
+            AssertEx.Equal(true,
+                S1CompleteRunAudioReferenceCapture.IsManagedCorrelationEventKind(2));
+            AssertEx.Equal(true,
+                S1CompleteRunAudioReferenceCapture.IsManagedCorrelationEventKind(10));
+            AssertEx.Equal(false,
+                S1CompleteRunAudioReferenceCapture.IsManagedCorrelationEventKind(11));
+            var tracker = new S1CompleteRunAudioReferenceCapture.ManagedServiceTracker();
+            tracker.Begin(3, 0xFF1000);
+            tracker.Begin(5, 0xFF1000);
+            AssertEx.Equal(2, tracker.Count);
+            AssertEx.Equal(true, tracker.Matches(3, 0xFF1000));
+            AssertEx.Equal(true, tracker.Matches(5, 0xFF1000));
+            AssertEx.Equal(false, tracker.Matches(5, 0xFF1004));
+            tracker.End(5);
+            AssertEx.Equal(1, tracker.Count);
+            AssertEx.Equal((ushort)3, tracker.SingleToken);
+            tracker.End(3);
+            AssertEx.Equal(0, tracker.Count);
+            AssertEx.Throws<InvalidOperationException>(
+                () => tracker.End(3), "no open managed M68K service token");
+            for (ushort token=1;token<=8;token++)
+                tracker.Begin(token, (uint)(0xFF1000+token*4));
+            AssertEx.Throws<InvalidOperationException>(
+                () => tracker.Begin(9, 0xFF2000), "overflowed");
+            AssertEx.Throws<InvalidOperationException>(
+                () => tracker.Begin(8, 0xFF2000), "reused");
+            tracker.Clear();
             var api = new FakeTraceApi
             {
                 Events = new[]

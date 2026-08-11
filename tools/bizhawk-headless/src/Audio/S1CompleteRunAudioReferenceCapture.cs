@@ -121,6 +121,61 @@ namespace OpenGGF.BizHawk.Headless
             internal int CompletedFrames { get; private set; }
         }
 
+        internal static bool IsManagedCorrelationEventKind(byte kind)
+        {
+            return kind == 1 || kind == 2 || kind == 10;
+        }
+
+        internal sealed class ManagedServiceTracker
+        {
+            private sealed class Entry
+            {
+                internal ushort Token;
+                internal uint Stack;
+            }
+            private readonly List<Entry> entries = new List<Entry>();
+            internal int Count { get { return entries.Count; } }
+            internal ushort SingleToken
+            {
+                get
+                {
+                    if (entries.Count != 1)
+                        throw new InvalidOperationException(
+                            "Exactly one managed M68K service is required.");
+                    return entries[0].Token;
+                }
+            }
+            internal void Begin(ushort token, uint stack)
+            {
+                if (MatchesToken(token) || entries.Count >= 8)
+                    throw new InvalidOperationException(
+                        "Managed service begin reused or overflowed its native token.");
+                entries.Add(new Entry { Token=token, Stack=stack });
+            }
+            internal bool Matches(ushort token, uint stack)
+            {
+                for (int i=entries.Count-1;i>=0;i--)
+                    if (entries[i].Token==token)
+                        return entries[i].Stack==stack;
+                return false;
+            }
+            internal void End(ushort token)
+            {
+                for (int i=entries.Count-1;i>=0;i--)
+                    if (entries[i].Token==token)
+                    { entries.RemoveAt(i); return; }
+                throw new InvalidOperationException(
+                    "Native completion had no open managed M68K service token.");
+            }
+            internal void Clear(){entries.Clear();}
+            private bool MatchesToken(ushort token)
+            {
+                for(int i=0;i<entries.Count;i++)
+                    if(entries[i].Token==token)return true;
+                return false;
+            }
+        }
+
         internal static Manifest LoadManifest(string path, byte[] rom)
         {
             if (string.IsNullOrEmpty(path) || !Path.IsPathRooted(path))
@@ -588,7 +643,7 @@ namespace OpenGGF.BizHawk.Headless
             private sealed class PendingManagedOccurrence
             {
                 internal ManagedHook Hook;
-                internal bool Retry;
+                internal uint Stack;
                 internal bool ClosesService;
                 internal bool ConditionalPopMarkerSeen;
                 internal readonly List<JObject> Records = new List<JObject>();
@@ -625,9 +680,8 @@ namespace OpenGGF.BizHawk.Headless
             private int lastRow = -1;
             private int frameRecords;
             private long nextManagedCorrelationOrdinal;
-            private uint serviceStack;
-            private bool serviceOpen;
-            private ushort managedServiceToken;
+            private readonly ManagedServiceTracker managedServices =
+                new ManagedServiceTracker();
             private long nextRequestId = 1;
             private readonly long?[] pendingRequestIds = new long?[3];
             private readonly byte[] pendingRequestSounds = new byte[3];
@@ -786,7 +840,7 @@ namespace OpenGGF.BizHawk.Headless
                     expectedResetCancellationSeen = false;
                     expectedResetCancellationOrdinal = 0;
                     resetInputAssertedThisFrame = false;
-                    frameServiceOpenBeforeAdvance = serviceOpen;
+                    frameServiceOpenBeforeAdvance = managedServices.Count != 0;
                     if (input != null && (input.Power || input.Reset))
                     {
                         resetInputAssertedThisFrame = true;
@@ -797,23 +851,25 @@ namespace OpenGGF.BizHawk.Headless
                             ["type"]="input_reset", ["row"]=row,
                             ["power"]=input.Power, ["reset"]=input.Reset
                         };
-                        if (serviceOpen)
+                        if (managedServices.Count != 0)
                         {
-                            if (managedServiceToken == 0)
+                            if (managedServices.Count != 1)
                                 throw new InvalidOperationException(
-                                    "An open managed service lacked its native token at reset.");
-                            pendingResetCancelledServiceToken = managedServiceToken;
+                                    "Reset with multiple open M68K services requires"
+                                    + " distinct managed snapshots.");
+                            pendingResetCancelledServiceToken =
+                                managedServices.SingleToken;
                             pendingResetServiceSnapshot = new JObject
                             {
                                 ["type"]="managed_reset_service_snapshot",
                                 ["row"]=row,
                                 ["state_start"]=manifest.DriverStateStart,
                                 ["state_hex"]=CaptureDriverState(),
-                                ["cancelled_service_token"]=managedServiceToken
+                                ["cancelled_service_token"]=
+                                    pendingResetCancelledServiceToken
                             };
                         }
-                        serviceOpen = false;
-                        serviceStack = 0;
+                        managedServices.Clear();
                     }
                     observer.CaptureFrame(advance, (events, count) =>
                     {
@@ -860,7 +916,7 @@ namespace OpenGGF.BizHawk.Headless
                 if (capturing) throw new InvalidOperationException("Cannot terminate inside a frame.");
                 if (lastRow < manifest.FirstRow || exclusiveEnd != lastRow + 1)
                     throw new InvalidOperationException("The S1 audio terminal does not follow the final row.");
-                if (serviceOpen)
+                if (managedServices.Count != 0)
                     throw new InvalidOperationException("An M68K audio service is open at the terminal.");
                 Write(new JObject
                 {
@@ -903,23 +959,11 @@ namespace OpenGGF.BizHawk.Headless
 
                     if (hook.Action == "SERVICE_BEGIN")
                     {
-                        uint stack = ReadM68kRegister("A7");
-                        occurrence.Retry = serviceOpen;
-                        if (serviceOpen)
-                        {
-                            if (stack != serviceStack)
-                                throw new InvalidOperationException(
-                                    "Overlapping M68K audio service begins have different stacks.");
-                        }
-                        else
-                        {
-                            serviceOpen = true;
-                            serviceStack = stack;
-                        }
+                        occurrence.Stack = ReadM68kRegister("A7");
                     }
                     else if (hook.Action == "SERVICE_CLOSE")
                     {
-                        if (!serviceOpen)
+                        if (!HasManagedServiceCandidate())
                             throw new InvalidOperationException(
                                 "An orphan M68K audio service close was observed.");
                         occurrence.ClosesService = true;
@@ -927,7 +971,7 @@ namespace OpenGGF.BizHawk.Headless
                     }
                     else if (hook.Action == "CLOSE_IF_RETURN_OUTSIDE")
                     {
-                        if (!serviceOpen)
+                        if (!HasManagedServiceCandidate())
                             throw new InvalidOperationException(
                                 "An orphan adjusted-return audio close was observed.");
                         if (!manifest.LegalContinuations.Contains(returnPc.Value))
@@ -968,12 +1012,18 @@ namespace OpenGGF.BizHawk.Headless
                 finally
                 {
                     collectingManaged = null;
-                    if (captured) pendingManaged.Enqueue(occurrence);
+                    if (captured)
+                        pendingManaged.Enqueue(occurrence);
                 }
             }
 
             private void CorrelateManaged(GpgxAudioTraceEvent value)
             {
+                // SERVICE_PROMOTE uses Subject for the promoted service token,
+                // not a managed-hook token. Service tokens and manifest hook
+                // tokens occupy independent bounded spaces and may coincide.
+                if (!IsManagedCorrelationEventKind(value.Kind))
+                    return;
                 ManagedHook expected;
                 if (!manifest.ManagedByNativeToken.TryGetValue(value.Subject, out expected))
                     return;
@@ -1014,28 +1064,26 @@ namespace OpenGGF.BizHawk.Headless
                             throw new InvalidOperationException(
                                 "Native conditional completion lacked its POP marker.");
                         completeOccurrence = true;
-                        managedServiceToken = 0;
+                        managedServices.End(value.ServiceToken);
                     }
                     else return;
                 }
                 else if (expected.Action == "SERVICE_BEGIN")
                 {
-                    if (occurrence.Retry)
+                    if (value.Kind == 10 && value.Value == 2)
                     {
-                        if (value.Kind != 10 || value.Value != 2)
+                        if (!managedServices.Matches(
+                            value.ServiceToken, occurrence.Stack))
                             throw new InvalidOperationException(
-                                "Managed retry did not match a native retry marker.");
-                        if (managedServiceToken == 0
-                            || value.ServiceToken != managedServiceToken)
-                            throw new InvalidOperationException(
-                                "Managed retry changed its native service token.");
+                                "Managed retry changed its native service identity.");
                     }
-                    else if (value.Kind != 1)
+                    else if (value.Kind == 1)
                     {
-                        throw new InvalidOperationException(
-                            "Managed service begin did not match a native begin.");
+                        managedServices.Begin(value.ServiceToken,
+                            occurrence.Stack);
                     }
-                    if (value.Kind == 1) managedServiceToken = value.ServiceToken;
+                    else throw new InvalidOperationException(
+                        "Managed service begin did not match a native begin.");
                     completeOccurrence = true;
                 }
                 else if (expected.Action == "SERVICE_CLOSE")
@@ -1044,7 +1092,7 @@ namespace OpenGGF.BizHawk.Headless
                         throw new InvalidOperationException(
                             "Managed service close did not match a native completion.");
                     completeOccurrence = true;
-                    managedServiceToken = 0;
+                    managedServices.End(value.ServiceToken);
                 }
                 else
                 {
@@ -1077,6 +1125,17 @@ namespace OpenGGF.BizHawk.Headless
                         ? new JValue(value.Value) : JValue.CreateNull();
                     EmitFrame(record);
                 }
+            }
+
+            private bool HasManagedServiceCandidate()
+            {
+                int count = managedServices.Count;
+                foreach (PendingManagedOccurrence pending in pendingManaged)
+                {
+                    if (pending.Hook.Action == "SERVICE_BEGIN") count++;
+                    if (pending.ClosesService) count--;
+                }
+                return count > 0;
             }
 
             private static JObject NativeCorrelationEvent(
@@ -1182,7 +1241,7 @@ namespace OpenGGF.BizHawk.Headless
                         pendingResetEvidence = null;
                         pendingResetServiceSnapshot = null;
                         pendingResetCancelledServiceToken = 0;
-                        managedServiceToken = 0;
+                        managedServices.Clear();
                     }
                 }
                 activeResetToken = 0;
@@ -1288,8 +1347,6 @@ namespace OpenGGF.BizHawk.Headless
                 };
                 if (returnPc.HasValue) snapshot["return_pc"] = returnPc.Value;
                 WriteFrame(snapshot);
-                serviceOpen = false;
-                serviceStack = 0;
             }
 
             private uint ReadReturnPc()
