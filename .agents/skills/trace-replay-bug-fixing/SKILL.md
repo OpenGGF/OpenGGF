@@ -1908,6 +1908,36 @@ hundreds of ring collections per stage fail immediately on any phase error, whil
 the first bomb contact waits thousands of frames — so different first-symptom
 times can be one defect seen at two rates, not two defects.
 
+### Check whether the engine already implements it before prescribing a port
+
+Two consecutive rounds on the same defect were briefed to "port this ROM gate",
+and both times the engine already had it, faithfully, with the ROM citation
+already in the comment. Both prescriptions would have been no-ops on correct code.
+
+- `SSPlayer_SetAnimation`'s two-level `ss_last_angle_index` dedup: present at
+  `Sonic2SpecialStagePlayer.java:828-836`, matching `s2.asm:69599-69613`, with its
+  `byte_33E90` table matching entry-for-entry.
+- `LoadSSTailsDynPLC`'s `ss_dplc_timer` parity gate: present, armed at the ROM's
+  own site, one decrement per pass, odd suppressing post-decrement, and all four
+  of the ROM's `ss_dplc_timer` writers mirrored.
+
+**One grep costs seconds; a round costs hours.** Before writing "port X", search
+for X's ROM symbol name in `src/main` — the citation is usually in a comment
+already.
+
+**And read your own citation before calling a number decisive.** The second brief
+argued the gate "suppresses exactly half the passes during hurt", from an arm site
+it had quoted in the same paragraph — `ss_dplc_timer` is armed at the hurt-timer
+*wrap*, inside the `bne.s` that clears `routine_secondary`, so it is armed when
+hurt ENDS and is zero for the whole hurt animation. The quoted listing refuted the
+claim built on it.
+
+**Method trap that cost a wrong intermediate conclusion in the same round:** trace
+report and aux frame numbers are ROW INDICES into `physics.csv`, not values of its
+`frame` column. `ss_2`'s `frame` column runs 0..0x25472 across 6381 rows, so
+filtering on `frame` lands in a completely different part of the movie. Index the
+rows.
+
 ## Why This Matters
 
 The mission is faithful pixel-for-pixel reimplementation. Trace replay tests are the proof. If they're allowed to lean on synced trace data each frame, the proof is hollow — bugs hide behind the synchronisation and the test green-lights anyway. Honest tests force honest engine fixes. That's how progress compounds: every fix makes the next divergence visible instead of building on top of a masked one.
