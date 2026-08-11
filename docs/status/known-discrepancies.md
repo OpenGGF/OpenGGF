@@ -1073,6 +1073,61 @@ expanded with its own guarded schema.
 
 ---
 
+## Dynamic-Art Row Stamps Are Not Compared In Unrepresented, Unclosed Spans
+
+**Location:** `TraceRunDynamicArtGapComparator` —
+`recordedCoverageLeavesSpanUnrepresentedAndUnclosed` and `putRowStamp`.
+**Scope:** the `movie_logical_frame` field of `run_gap.edge[N]` /
+`run_tail.edge[N]`, and nothing else.
+
+A run fixture's recorded coverage is the union of its segments'
+`[bk2_frame_offset, bk2_frame_offset + trace_frame_count)` ranges. Where a
+comparison span contains no recorded row **and** no recorded coverage follows
+it, the fixture itself declares that span unrepresented and leaves the movie
+clock unanchored at its far end. In such a span a dynamic-art edge's movie row
+stamp is downgraded from `ERROR` to `WARNING`; it is still reported, and every
+other property of the edge — presence, count, ordinal, transfer id, phase,
+owner, submission origin, mapping frame, gap edge index, requests, forwarded
+completion, and the before/after ledger fingerprints — remains a hard error.
+Outside such a span, including every ordinary segment-to-segment gap, the row
+stamp is a hard error exactly as before.
+
+**Why the row stamp is not engine evidence there.** Finding 1 of
+`docs/architecture/plans/trace/2026-08-06-trace-validation-roadmap.md`
+("Why the current green is not yet proof") establishes that
+`TraceRunPlaybackCoordinator.destinationReady` gates on
+`sharedBk2Cursor() >= destination.bk2FrameOffset()`, and that while the
+coordinator sits in `TRANSITION_GAP`, `GameLoop.suppressesRunNativeLevelBody()`
+stops the level body running at all: *"The engine's real load duration is never
+observed, in either direction."* How many movie rows the engine spends inside
+such a span is therefore harness choreography, not engine behaviour. Closing a
+row-stamp divergence by inserting harness delays, or by importing a recorded
+span duration, would fit the measurement instrument to its own reference —
+worse than a fitted constant, because a fitted constant at least models
+something.
+
+**What this costs, stated plainly.** After this change the S1 GHZ round-trip
+chain verifies load-window **work** and **order** — which transfers exist, for
+which owner and mapping frame, in which order, with which requests and which
+resulting ledger — but **not** load-window **timing**. Load-window timing
+remains unobserved, and cannot be observed, until `destinationReady` /
+`suppressesRunNativeLevelBody()` are reworked by the roadmap's level-load-span
+strand (section 4 of the same document).
+
+**Guards.** `TestTraceRunDynamicArtGapComparator` pins both halves of the
+asymmetry:
+`excusesOnlyTheRowStampInsideAnUnrepresentedUnclosedSpan`,
+`stillFailsOnEdgeIdentityInsideAnUnrepresentedUnclosedSpan`, and
+`comparesTheRowStampByRowWhereRecordedCoverageFollowsTheSpan`. Both mutations
+were run and observed red: widening the coverage predicate to accept any span
+fails the third; extending the excusal to an identity field fails the second.
+
+**Removal condition.** When the level-load-span strand makes the engine's own
+load duration observable, delete the excusal and restore the row stamp to a
+hard error in every span.
+
+---
+
 ## Hardware-Timing Replay Input Exception
 
 **Location:** Dedicated hardware-timing fixture stream and the bounded

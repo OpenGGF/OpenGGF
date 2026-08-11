@@ -3,6 +3,26 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Change: dynamic-art gap/tail comparison no longer treats an edge's movie row stamp as
+  engine evidence inside a span the run fixture's own recorded coverage declares
+  unrepresented and unclosed -- no recorded row inside the span, and no recorded coverage
+  after it. `TraceRunDynamicArtGapComparator` derives that predicate from segment
+  `bk2_frame_offset` / `trace_frame_count` alone, never from a zone, act, route, segment
+  name, game or frame index, and downgrades only `movie_logical_frame` to a warning there.
+  Everything else about the edge -- presence, count, ordinal, transfer id, phase, owner,
+  submission origin, mapping frame, gap edge index, requests, forwarded completion, and the
+  before/after ledger fingerprints -- stays a hard error inside the span, and every field
+  including the row stamp stays a hard error outside it. The reason is finding 1 of
+  `docs/architecture/plans/trace/2026-08-06-trace-validation-roadmap.md`:
+  `TraceRunPlaybackCoordinator.destinationReady` gates on the shared BK2 cursor against a
+  recorded offset and `GameLoop.suppressesRunNativeLevelBody()` stops the level body while
+  the coordinator is in `TRANSITION_GAP`, so "the engine's real load duration is never
+  observed, in either direction" -- the row count there is harness choreography, and
+  matching it by delaying the harness or importing the recorded span length would fit the
+  measurement instrument to its own reference. The cost is written down in
+  `docs/status/known-discrepancies.md`: the S1 GHZ round-trip chain now verifies
+  load-window work and order but **not** load-window timing, which stays unobserved until
+  the roadmap's level-load-span strand reworks admission. No constant was introduced.
 - Fix: a recorded run's special-stage segment identity is now read from the stage the engine
   is presenting, not from the live provider. The run recorder samples
   `Current_Special_Stage` once, on the first `GameModeID_SpecialStage` frame

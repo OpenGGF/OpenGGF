@@ -72477,3 +72477,47 @@ so a direct blob stays un-prepared across frames where the engine prepares in on
   early where the first does not.
 - No constant was introduced; the identity rule is read out of the recorder's own sampling
   point and the ROM sites cited above.
+
+## 2026-08-11 — S1 GHZ round-trip terminal tail: row stamps excused in unrepresented, unclosed spans
+
+- Isolated worktree on branch `bugfix/ai-ghz-tail-span-policy`, base `a42c06722`, with a
+  second detached control worktree at the same commit.
+- Command (one fork, alphabetical):
+  `mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+  "-Dsurefire.argLine=-Xmx4g" -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  "-Dtest=TestS1*CompleteRunTraceReplay,TestS1Ghz1TraceReplay,TestS2EhzHalfpipeRoundTripChain,
+  TestS3kMegaRunChain,TestS3kAizCompleteRunTraceReplay,TestTraceRunDynamicArtGapComparator,
+  TestTraceRunDynamicArtGapJournal" test` (`target/surefire-reports` wiped first).
+- CONTROL, `TestS1GhzMazeRoundTripChain` at `a42c06722`: FAIL, 2 errors —
+  `run_tail.edge[0].movie_logical_frame` and `run_tail.edge[1].movie_logical_frame`,
+  expected 9071, actual 9037, delta 34, thrown from
+  `AbstractRunChainTest$DynamicArtGapJournalProbe.verifyTerminal:314`.
+- AFTER: both row-stamp errors are gone. The class is still FAIL, but at a **different,
+  previously unreachable** assertion — `TestS1GhzMazeRoundTripChain:113`, "the real S1
+  represented-segment -> named-run gap -> next-segment boundary must grow the journal beyond
+  first-arm bootstrap". Nothing after line 99 had ever executed, because `verifyTerminal`
+  threw first.
+- MEASURED at that new frontier (instrumented probe, reverted before commit):
+  `firstArm=2 atGapStart=2 afterNextArm=2 gapStartRow=8047 armRow=8048 added=0`. The
+  fixture's own `run_manifest.json` carries exactly four gap edges — a submitted/completed
+  pair for transfer 0 at movie row 748 and a pair for transfer 2349 at 9071 — so the
+  `ss -> ghz2` gap slice `[8048, 8049)` is empty on the recorded side too. Expected and
+  observed both say "no dynamic-art edge across that boundary"; the comparator agrees, and
+  the assertion demands a non-empty journal growth this fixture cannot supply. Left red and
+  untouched: weakening an assertion that has never been satisfied is not this lane's work.
+- Canaries, run identically in both worktrees: 19 `TestS1*CompleteRunTraceReplay`,
+  `TestS1Ghz1TraceReplay`, `TestS3kAizCompleteRunTraceReplay`,
+  `TestTraceRunDynamicArtGap{Comparator,Journal}` all green.
+  `TestS2EhzHalfpipeRoundTripChain` (seg3 DPLC divergence) and `TestS3kMegaRunChain`
+  (unconsumed `KOS_DECOMPRESSION_QUEUE#15` at raw_frame 4570) fail **character-for-character
+  identically** at base and after — pre-existing, not attributable to this change.
+- Note for future briefs: there is no `TestS1GhzTraceReplay` class; the S1 GHZ act-1 canary
+  is `TestS1Ghz1TraceReplay`.
+- Mutation tests, both observed red before restoring the file: neutering the coverage
+  predicate so every span is excused fails
+  `comparesTheRowStampByRowWhereRecordedCoverageFollowsTheSpan`; routing `mapping_frame`
+  through the excusal fails `stillFailsOnEdgeIdentityInsideAnUnrepresentedUnclosedSpan`.
+- No constant was introduced, and no arithmetic producing 34 or 35 appears anywhere in the
+  change. The excusal's cost — GHZ now verifies load-window work and order, not load-window
+  timing — is recorded in `docs/status/known-discrepancies.md` and cited to finding 1 of
+  `docs/architecture/plans/trace/2026-08-06-trace-validation-roadmap.md`.
