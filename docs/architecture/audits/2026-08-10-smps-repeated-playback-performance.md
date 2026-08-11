@@ -4,7 +4,7 @@
 **Status:** Accepted
 **Baseline:** `d958fc681c4e272f7ba7072a4b344f533ca614d8`
 **Feature evidence HEAD:** `27011b350ed119b888a1a855f68ed7e114e52c98`
-**Final implementation HEAD:** `f899907cc9`
+**Final implementation HEAD:** `19183e2b3`
 
 ## Decision
 
@@ -194,3 +194,30 @@ probe) all passed together in an immediate 59-test isolated rerun, confirming
 the aggregate delta as suite-order noise rather than an attributable audio
 regression. The reconciled 165-test focused audio/ownership/allocation gate
 also passed in full.
+
+The exact full-package commands and totals, both sorted identity lists, their
+seven-entry `comm` delta, and the literal 59-test rerun command/outcome are
+preserved in [the updated-develop package comparison evidence](2026-08-11-smps-updated-develop-package-comparison.md).
+
+## Pre-merge review corrections
+
+`2ed13b923` retains the catalog entry's frozen SFX policy during queued
+admission and completes a config-less donor-music source coherently when its
+base owner arrives. Policy mutation after manager registration therefore
+cannot change priority, special, continuous, or extension behavior, while a
+donor registered before its base remains deferred without changing generation,
+fallback, or null-result semantics.
+
+`19183e2b3` makes warmed-materialization checks traverse annotated helpers and
+makes lookup-before-load analysis merge branch state across every exclusive
+path. The new mutations cover helper descriptor creation, data/hash/copy
+materialization, and lookup/load split across opposite branches.
+
+Post-correction verification completed **177/177** runtime tests, **105/105**
+source transaction/reentrancy tests, **41/41** guard/comparator tests, **58**
+ordinary Task 9 tests with one expected opt-in skip, **58/58** opt-in Task 9
+tests, **131/131** Task 7/8 tests, and **639** broad audio tests with eight
+skips and no failures/errors. Isolated ArchUnit remained exactly **29 run, one
+known `trace -> graphics` failure, zero errors**. The authenticated benchmark
+manifest source did not change, so the paired historical benchmark was not
+rerun.
