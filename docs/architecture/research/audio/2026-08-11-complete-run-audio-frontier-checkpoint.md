@@ -17,13 +17,31 @@ details are in the adjacent `TRUST.md`. No generated core or ROM is committed.
   the former row-521 unowned `$0066` DAC-enable write. The current S1 manifest's
   typed sample-setup service (`$003A` into DPCM at `$0077` or Sega PCM at
   `$00C1`) is therefore proven on the real movie. The next deterministic stop is
-  BK2 row 523: native `end_frame` returns the undifferentiated ABI status `-3`.
-  The drained tail is a valid open DPCM service (kind 2, token 188); its final
-  event is the YM address write at instruction-start PC `$009C`, opcode
-  `DD 73 00`, from `zPlayPCMLoop` (`docs/s1disasm/sound/z80.asm:155-161`).
-  ABI v2 now exposes the first hook/proof/ownership/continuation failure through
-  the read-only packed diagnostic described below. The next S1 run can attribute
-  row 523 without adding a speculative game-scoped manifest edge.
+  BK2 row 523. The reviewed ABI v2 diagnostic now attributes it exactly as
+  `first_fault=5:1:ac:4:2:0:255`: Z80 hook proof at instruction-start PC
+  `$00AC`, while an M68K update service (kind 4) is the depth-2 active child of
+  the DPCM iteration. `$00AC` is the REV01 `jp nz,zCheckForSamples` boundary in
+  `zPlayPCMLoop` (`docs/s1disasm/sound/z80.asm:171-181`), and its armed opcode
+  proof is the source-exact `C2 32 00`. The fault is therefore not an opcode,
+  continuation, capacity, or chip-ownership mismatch: the manifest has only the
+  ordinary kind-2 DPCM completion at that PC, while the native observer permits
+  completion only at the top of its single LIFO service stack.
+
+  The complete failed frame establishes the crossing lifetime. Native ordinal
+  0 begins root DPCM token 1 at `$0077`; ordinals 1-4 are that iteration's two
+  YM `$2A` address/data pairs. Ordinal 5 begins M68K `UpdateMusic` token 2 at
+  `$071B4C`, parent token 1, kind 4, depth 1. The packed diagnostic proves that
+  the first `$00AC` observation faults while token 2 is live (between its begin
+  at ordinal 5 and end at ordinal 10), because token 1 cannot complete beneath
+  it; ABI v2 does not attach an event ordinal to that fault. Ordinal 6 records
+  the M68K `$071BB2` observation, ordinals 7-9 its terminal state snapshot, and
+  ordinal 10 closes token 2 at `$071C4C`. There is no chip write or new Z80
+  service anywhere in that live-child interval.
+  Immediately afterwards, ordinals 11-14 are the next DPCM iteration's YM
+  writes, but the failed stack transition leaves them mis-owned by stale token
+  1; ordinals 15-18 finally close token 1 at a later `$00AC`, and ordinal 19
+  begins token 3 at `$0077`. The rest of the frame repeats valid root DPCM
+  iterations through token 188.
 - Sonic 2: the complete reference movie has two identical observer runs:
   259,590 frames, 169,986,419 events, maximum frame occupancy 1,825, event
   digest prefix `c2b2f823`, and an empty cutoff frontier. Engine comparison is
@@ -74,17 +92,27 @@ proven but not yet real-run proven. The real frontier is now row 523, still
 before publication. No game has published a final reference vs OpenGGF MATCH
 artifact at this checkpoint.
 
-The row-523 reproduction used Sonic 1 World REV01 SHA-1
+The row-523 round-two reproduction used Sonic 1 World REV01 SHA-1
 `69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b`, BK2 SHA-256
 `f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b`,
-and the durable BizHawk home whose `dll/gpgx.wbx.zst` SHA-256 is
+and the reviewed durable BizHawk home whose `dll/gpgx.wbx.zst` SHA-256 is
 `f9c6a1cbaa3c70428ffc1774473ff4f9ba7d1ce1503fa00ab657e497dd584625`.
-Two runs reproduced the same row, status, and native tail. The required central
-change is now delivered as a read-only 16-byte first-fault diagnostic returned
-after failed `end_frame`: stable reason, CPU, instruction-start PC, active
-kind/depth, and continuation count and limit. It preserves the first failure,
-does not append an event or alter emulation state, and clears only on successful
-configure or disable. A game-worker rerun is still required to decode row 523.
+Two unmodified runs reproduced the same row, packed first fault, native tail,
+and M68K/lifecycle sequence. The observer identity-file SHA-256 was
+`1f0147ecc101d4d726ed09536db87c125f305eccdca986c620d735714543c5cc`.
+
+The next change belongs to the central native service model, not the S1
+manifest. It must represent the kind-2 ancestor completing at `$00AC` while the
+kind-4 child remains live until `$071C4C`; after that close, the existing
+`$003A` sample-setup to `$0077` DPCM transition can own the next YM writes. The
+final event encoding is a conductor-owned design decision: both the raw physical
+close order and the canonical semantic ownership/ancestry must remain
+reconstructible, rather than being collapsed into a convenient LIFO history. A
+native matrix regression should pin DPCM begin, nested M68K begin, the crossing
+DPCM completion, M68K completion, and the next root DPCM begin. Adding a no-op
+`$00AC` hook or delaying the old DPCM completion would preserve a stale owner
+and contradict the observed source order. The real frontier remains row 523
+until that conductor-owned native/schema change lands.
 
 ## Verified checkpoint gates
 
