@@ -65,6 +65,89 @@ class TestS2CompleteRunStateNormalizer {
     }
 
     @Test
+    void futureIrrelevantUnionBytesNormalizeIdenticallyAcrossRoleLayerAndPlaybackModes() {
+        var base = liveState(false);
+        List<S2CompleteRunStateNormalizer.SourceSlot> baseSlots = new ArrayList<>(base.sourceSlots());
+        baseSlots.set(9, new S2CompleteRunStateNormalizer.SourceSlot(MUSIC, HardwareRole.PSG3,
+                activeTrack(EHZ.key(), 0x1390, 0xc0)));
+        base = new S2CompleteRunStateNormalizer.LiveState(base.globals(), baseSlots, null);
+
+        List<S2CompleteRunStateNormalizer.SourceSlot> changedSlots = new ArrayList<>(baseSlots);
+        changedSlots.set(0, new S2CompleteRunStateNormalizer.SourceSlot(MUSIC, HardwareRole.DAC,
+                activeTrack(EHZ.key(), 0x1390, 6, 0x90,
+                        new UnionBytes(0x1234, 0x13a0, 0x21, 0x22, 0x23, 0x24, 0x2526,
+                                0x27, 0x28, 0x13a2, 0x13a4), 0x2a,
+                        List.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10))));
+        changedSlots.set(3, new S2CompleteRunStateNormalizer.SourceSlot(MUSIC, HardwareRole.FM3,
+                activeTrack(EHZ.key(), 0x1390, 2, 0x90,
+                        new UnionBytes(0x1234, 0x13a0, 0x21, 0x22, 0x23, 0x24, 0x2526,
+                                0, 0, 0x13a2, 0x1390), 0x2a,
+                        List.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10))));
+        changedSlots.set(9, new S2CompleteRunStateNormalizer.SourceSlot(MUSIC, HardwareRole.PSG3,
+                activeTrack(EHZ.key(), 0x1390, 0xc0, 0x90,
+                        new UnionBytes(0x1234, 0x13a0, 0x21, 0x22, 0x23, 0x24, 0x2526,
+                                0x27, 0x28, 0x13a2, 0x13a4), 0x2a,
+                        List.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10))));
+        var changed = new S2CompleteRunStateNormalizer.LiveState(base.globals(), changedSlots, null);
+
+        assertEquals(S2CompleteRunStateNormalizer.normalizeReference(base, ASSETS),
+                S2CompleteRunStateNormalizer.normalizeReference(changed, ASSETS));
+    }
+
+    @Test
+    void applicableUnionFieldsAndSharedLoopReturnPartitionRemainExact() {
+        var base = liveState(false);
+        List<S2CompleteRunStateNormalizer.SourceSlot> slots = new ArrayList<>(base.sourceSlots());
+        slots.set(3, new S2CompleteRunStateNormalizer.SourceSlot(MUSIC, HardwareRole.FM3,
+                activeTrack(EHZ.key(), 0x1390, 2, 0x98,
+                        new UnionBytes(0x1234, 0x1390, 8, 9, 1, 10, 0x10,
+                                0x0f, 0xe7, 0x1394, 0x1398), 0x26,
+                        List.of(1, 2, 3, 4, 5, 6, 0x94, 0x13, 0x98, 0x13))));
+        slots.set(9, new S2CompleteRunStateNormalizer.SourceSlot(MUSIC, HardwareRole.PSG3,
+                activeTrack(EHZ.key(), 0x1390, 0xe0, 0x98,
+                        new UnionBytes(0x1234, 0x1390, 8, 9, 1, 10, 0x10,
+                                0x0f, 0xe7, 0x1394, 0x1398), 0x2a,
+                        List.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10))));
+        slots.set(10, new S2CompleteRunStateNormalizer.SourceSlot(SFX, HardwareRole.FM3,
+                activeTrack(JUMP.key(), 0x8010, 2, 0x90,
+                        new UnionBytes(0x1234, 0x8010, 8, 9, 1, 10, 0x10,
+                                0x0e, 0xe7, 0x8008, 0x800c), 0x2a,
+                        List.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10))));
+        var normalized = S2CompleteRunStateNormalizer.normalizeReference(
+                new S2CompleteRunStateNormalizer.LiveState(base.globals(), slots, null), ASSETS);
+
+        assertEquals(0x34, slotValue(normalized, 0, "savedDac"));
+        assertEquals(0, slotValue(normalized, 0, "frequency"));
+        assertEquals(0, slotValue(normalized, 3, "savedDac"));
+        assertEquals(0x1234, slotValue(normalized, 3, "frequency"));
+        assertEquals(true, slotValue(normalized, 3, "modulationEnabled"));
+        assertEquals(Map.of("active", true, "assetKey", EHZ.key(), "cursor", 0x10),
+                slotValue(normalized, 3, "modulationCursor"));
+        assertEquals(8, slotValue(normalized, 3, "modulationWait"));
+        assertEquals(9, slotValue(normalized, 3, "modulationSpeed"));
+        assertEquals(1, slotValue(normalized, 3, "modulationDelta"));
+        assertEquals(10, slotValue(normalized, 3, "modulationSteps"));
+        assertEquals(0x10, slotValue(normalized, 3, "modulationValue"));
+        assertEquals(0x0f, slotValue(normalized, 3, "volumeTlMask"));
+        assertEquals(Map.of("active", false), slotValue(normalized, 3, "voicePointer"));
+        assertEquals(Map.of("active", true, "assetKey", EHZ.key(), "cursor", 0x18),
+                slotValue(normalized, 3, "tlPointer"));
+        assertEquals(List.of(1, 2, 3, 4, 5, 6), slotValue(normalized, 3, "loopCounters"));
+        assertEquals(List.of(0x14, 0x18), slotValue(normalized, 3, "returnStack"));
+
+        assertEquals(0xe7, slotValue(normalized, 9, "psgNoise"));
+        assertEquals(0, slotValue(normalized, 9, "volumeTlMask"));
+        assertEquals(Map.of("active", false), slotValue(normalized, 9, "voicePointer"));
+        assertEquals(Map.of("active", false), slotValue(normalized, 9, "tlPointer"));
+
+        assertEquals(0x0e, slotValue(normalized, 10, "volumeTlMask"));
+        assertEquals(Map.of("active", true, "assetKey", JUMP.key(), "cursor", 8),
+                slotValue(normalized, 10, "voicePointer"));
+        assertEquals(Map.of("active", true, "assetKey", JUMP.key(), "cursor", 12),
+                slotValue(normalized, 10, "tlPointer"));
+    }
+
+    @Test
     void oneUpRequiresAndSerializesTheExactTenTrackSavedPayload() {
         assertThrows(NullPointerException.class,
                 () -> S2CompleteRunStateNormalizer.normalizeReference(liveState(true), ASSETS));
@@ -107,6 +190,13 @@ class TestS2CompleteRunStateNormalizer {
             HardwareRole role, String name) {
         return state.roles().get(role.ordinal()).fields().stream()
                 .filter(field -> field.name().equals(name)).findFirst().orElseThrow().value();
+    }
+
+    private static Object slotValue(
+            com.openggf.tools.audio.completerun.CompleteRunAudioTrace.NormalizedState state,
+            int slot, String name) {
+        List<?> slots = (List<?>) value(state, "sourceSlots");
+        return ((Map<?, ?>) slots.get(slot)).get(name);
     }
 
     private static S2CompleteRunStateNormalizer.LiveState liveState(boolean oneUpWithoutSavedState) {
@@ -160,10 +250,23 @@ class TestS2CompleteRunStateNormalizer {
     }
 
     private static S2CompleteRunStateNormalizer.Track activeTrack(String asset, int pointer, int voiceControl) {
-        return new S2CompleteRunStateNormalizer.Track(true, asset, pointer, 0x90, voiceControl, 1,
-                0, 1, 0xc0, 2, 3, 0x2a, 4, 5, 0x1234,
-                6, 7, pointer, 8, 9, 1, 10, 0x0010, 0,
-                0, 0, pointer, pointer,
+        return activeTrack(asset, pointer, voiceControl, 0x90,
+                new UnionBytes(0x1234, pointer, 8, 9, 1, 10, 0x10,
+                        0, 0, pointer, pointer), 0x2a,
                 List.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10));
     }
+
+    private static S2CompleteRunStateNormalizer.Track activeTrack(String asset, int pointer, int voiceControl,
+            int playbackControl, UnionBytes union, int stackPointer, List<Integer> loopAndStack) {
+        return new S2CompleteRunStateNormalizer.Track(true, asset, pointer, playbackControl, voiceControl, 1,
+                0, 1, 0xc0, 2, 3, stackPointer, 4, 5, union.frequency(),
+                6, 7, union.modulationPointer(), union.modulationWait(), union.modulationSpeed(),
+                union.modulationDelta(), union.modulationSteps(), union.modulationValue(), 0,
+                union.volumeTlMask(), union.psgNoise(), union.voicePointer(), union.tlPointer(),
+                loopAndStack);
+    }
+
+    private record UnionBytes(int frequency, int modulationPointer, int modulationWait,
+            int modulationSpeed, int modulationDelta, int modulationSteps, int modulationValue,
+            int volumeTlMask, int psgNoise, int voicePointer, int tlPointer) { }
 }

@@ -216,7 +216,8 @@ public final class S2CompleteRunStateNormalizer {
             SourceSlot slot = effective.get(role);
             roles.add(slot == null
                     ? new CompleteRunAudioTrace.RoleState(role, false, List.of())
-                    : new CompleteRunAudioTrace.RoleState(role, true, trackFields(slot.track(), role, assets)));
+                    : new CompleteRunAudioTrace.RoleState(role, true,
+                            trackFields(slot.track(), slot.layer(), role, assets)));
         }
         return new CompleteRunAudioTrace.NormalizedState(fields, roles);
     }
@@ -271,7 +272,8 @@ public final class S2CompleteRunStateNormalizer {
             Map<String, Object> value = new LinkedHashMap<>();
             value.put("layer", slot.layer().name()); value.put("role", slot.role().name());
             value.put("active", slot.track().active());
-            if (slot.track().active()) for (var field : trackFields(slot.track(), slot.role(), assets)) {
+            if (slot.track().active()) for (var field : trackFields(
+                    slot.track(), slot.layer(), slot.role(), assets)) {
                 value.put(field.name(), field.value());
             }
             result.add(Map.copyOf(value));
@@ -288,7 +290,7 @@ public final class S2CompleteRunStateNormalizer {
         return Map.copyOf(value);
     }
 
-    private static List<CompleteRunAudioTrace.StateField> trackFields(Track track,
+    private static List<CompleteRunAudioTrace.StateField> trackFields(Track track, SourceLayer layer,
             CompleteRunAudioTrace.HardwareRole role, Map<String, Asset> assets) {
         Asset asset = asset(track.assetKey(), assets);
         validateVoiceControl(track.voiceControl(), role);
@@ -296,6 +298,9 @@ public final class S2CompleteRunStateNormalizer {
                 || role == CompleteRunAudioTrace.HardwareRole.PSG2
                 || role == CompleteRunAudioTrace.HardwareRole.PSG3;
         boolean dac = role == CompleteRunAudioTrace.HardwareRole.DAC;
+        boolean fm = !psg && !dac;
+        boolean modulationEnabled = !dac && (track.playbackControl() & 8) != 0;
+        boolean customVoicePointer = layer == SourceLayer.SFX && fm;
         int firstStack = track.stackPointer() - 0x20;
         List<Integer> loops = track.loopAndStack().subList(0, firstStack);
         List<Integer> returns = new ArrayList<>();
@@ -315,18 +320,23 @@ public final class S2CompleteRunStateNormalizer {
                 field("savedDac", dac ? track.frequency() & 0xff : 0),
                 field("frequency", dac ? 0 : track.frequency()), field("noteFillTimeout", dac ? 0 : track.noteFillTimeout()),
                 field("noteFillMaster", dac ? 0 : track.noteFillMaster()),
-                field("modulationEnabled", !dac && (track.playbackControl() & 8) != 0),
-                field("modulationCursor", track.modulationPointer() == 0 ? Map.of("active", false)
+                field("modulationEnabled", modulationEnabled),
+                field("modulationCursor", !modulationEnabled || track.modulationPointer() == 0
+                        ? Map.of("active", false)
                         : Map.of("active", true, "assetKey", asset.key(),
                                 "cursor", relative(track.modulationPointer(), asset, false, "modulation pointer"))),
-                field("modulationWait", dac ? 0 : track.modulationWait()),
-                field("modulationSpeed", dac ? 0 : track.modulationSpeed()),
-                field("modulationDelta", dac ? 0 : signedByte(track.modulationDelta())),
-                field("modulationSteps", dac ? 0 : track.modulationSteps()),
-                field("modulationValue", dac ? 0 : signedWord(track.modulationValue())),
-                field("detune", dac ? 0 : signedByte(track.detune())), field("volumeTlMask", psg || dac ? 0 : track.volumeTlMask()),
-                field("psgNoise", role == CompleteRunAudioTrace.HardwareRole.PSG3 ? track.psgNoise() : 0),
-                field("voicePointer", pointer(track.voicePointer(), asset)), field("tlPointer", pointer(track.tlPointer(), asset)),
+                field("modulationWait", modulationEnabled ? track.modulationWait() : 0),
+                field("modulationSpeed", modulationEnabled ? track.modulationSpeed() : 0),
+                field("modulationDelta", modulationEnabled ? signedByte(track.modulationDelta()) : 0),
+                field("modulationSteps", modulationEnabled ? track.modulationSteps() : 0),
+                field("modulationValue", modulationEnabled ? signedWord(track.modulationValue()) : 0),
+                field("detune", dac ? 0 : signedByte(track.detune())),
+                field("volumeTlMask", fm ? track.volumeTlMask() : 0),
+                field("psgNoise", role == CompleteRunAudioTrace.HardwareRole.PSG3
+                        && track.voiceControl() == 0xe0 ? track.psgNoise() : 0),
+                field("voicePointer", customVoicePointer
+                        ? pointer(track.voicePointer(), asset) : Map.of("active", false)),
+                field("tlPointer", fm ? pointer(track.tlPointer(), asset) : Map.of("active", false)),
                 field("loopCounters", List.copyOf(loops)), field("returnStack", List.copyOf(returns)),
                 field("overridden", (track.playbackControl() & 4) != 0));
     }

@@ -52,13 +52,19 @@ owners, and includes the complete saved one-up payload while it is active.
 The focused command was run before production classes existed and failed at
 test compilation on the missing `S2CompleteRunAudioProfile`,
 `S2NativeSoundResolver`, and `S2CompleteRunStateNormalizer` types. After the
-game-local implementation, the same command passed 10 tests:
+game-local implementation, the same command passed 12 tests after review added
+two applicability vectors:
 
 ```bash
 mvn -Dmse=off \
   -Dtest='com.openggf.tools.audio.completerun.s2.TestS2CompleteRunAudioFixture,com.openggf.tools.audio.completerun.s2.TestS2NativeSoundResolver,com.openggf.tools.audio.completerun.s2.TestS2CompleteRunStateNormalizer' \
   test
 ```
+
+The review-fix final tree reran that focused set together with the shared trace
+and authority guards and the ROM-backed Sonic 2 unified-audio integration: 63
+tests passed with no failures or errors. This is the same selection previously
+reported as the 61-test gate, plus the two new union-byte applicability tests.
 
 A broader 162-test gate covered the shared authority/schema/store/CLI/
 comparator surface, the three S2 classes, and the ROM-backed Sonic 2 unified
@@ -79,3 +85,13 @@ install those native owners and expose their fixed Java reference adapter
 binding without changing the shared trace schema. Until that central work is
 rolled into the integration baseline, the S2 reference producer must remain
 typed unavailable and Task 3 must not leapfrog Task 2.
+
+Fresh CLI JVM bootstrap has a separate shared dependency: static registration
+in `S2CompleteRunAudioProfile` does nothing until that class is loaded. The
+closed `CompleteRunAudioProducerRegistry` must reserve
+`s2_rev01_complete_emeralds.v1` and name the fixed profile class so
+`CompleteRunAudioProfiles.require(...)` can load it without an ambient
+caller-selected class. Integration checkpoint `ef83b7e6b` already contains
+that S2 dispatcher entry; this game-local commit depends on it remaining in the
+integration baseline. If a target baseline lacks the entry, adding it is a
+central shared-registry change, not an S2 profile workaround.
