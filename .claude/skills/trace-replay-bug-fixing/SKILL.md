@@ -495,11 +495,32 @@ The ROM plainly disagrees — `SSObjectsManager` only allocates, and the same it
 - turned **all eight** standalone `TestS2SpecialStage*TraceReplay` classes red on
   `combined_rings` from about frame 700, at 5,287–35,203 errors each, all green beforehand.
 
-It is compensating for something in the ring depth cadence that has not been found yet. The
-rule: **when removing a behaviour you can prove wrong from the ROM makes the numbers worse,
-stop and find what it was propping up.** That is a second defect, not a reason to keep the
-first — but the pair has to come out together, and the write-up should name the pair so the
-next agent does not retry the removal in isolation.
+The rule: **when removing a behaviour you can prove wrong from the ROM makes the numbers
+worse, stop and find what it was propping up.** That is a second defect, not a reason to keep
+the first — but the pair has to come out together, and the write-up should name the pair so
+the next agent does not retry the removal in isolation.
+
+**Update, 2026-08-11 — and the update is the more useful lesson.** What it was propping up
+was measured, and it turned out **not to be a second defect at all**. Per-object probes on
+the depth decrement showed the removal gives every object exactly one decrement per pass and
+shifts each ring's collection one pass later with the *same* decrement count (one ring: pass
+428 with 79 decrements becomes pass 429 with 79). The surviving divergence localised to a
+single ring, where by the pass at which the correctly-one-per-pass engine has consumed 76
+decrements, the ROM has consumed 77. So the streamed object joins the engine's object pass
+**one observation later** than the ROM's allocation iteration, and the duplicate execution was
+supplying the missing *early* decrement while leaving the late one in place.
+
+Two wrongs, one cause. The fix is a single coherent change — make the freshly streamed object
+join the pass belonging to the observation in which `SSObjectsManager` ran, keeping exactly one
+execution — not "remove the duplicate, then separately fix the cadence".
+
+So extend the rule: **when a removal exposes a second symptom, first ask whether it is a second
+defect or the same defect seen from the other side.** A compensator often pairs with a phase or
+ordering error rather than an independent bug, and framing it as two fixes sends the next round
+looking for a bug that does not exist. Note also that the direction of the exposed symptom is
+worth measuring rather than assuming: this one was reported as the engine collecting *fewer*
+rings and was in fact collecting *more* — 1626 of 1714 mismatches had the engine higher, and
+total collections went 183 to 185.
 
 This is the mirror image of the fitted-constant case. There, two wrongs cancelled and both
 came out cleanly (the MZ2 geyser guard and its fitted launch). Here they do not cancel, and
