@@ -423,6 +423,52 @@ class TestAudioPresentationArchitectureGuard {
     }
 
     @Test
+    void warmedMaterializationGuardTraversesAnnotatedHelpers() {
+        for (String forbidden : List.of(
+                "SmpsSourceDescriptor.from(data);",
+                "data.getData();",
+                "describeSfx(data);")) {
+            Map<String, String> sources = representativeSafeSmpsSources();
+            sources.put(
+                    "audio/presentation/AudioPresentationSourceFactory.java",
+                    "private void newSequencer() { materialize(); } "
+                            + "@SuppressWarnings(value = nested(\"unsafe\")) "
+                            + "@Deprecated private final void materialize() { "
+                            + forbidden + " }");
+
+            assertTrue(smpsOwnershipViolations(sources).contains(
+                    "warmed descriptor materialization @ "
+                            + "audio/presentation/AudioPresentationSourceFactory.java"),
+                    forbidden);
+        }
+    }
+
+    @Test
+    void lookupGuardRejectsMutuallyExclusiveLookupAndLoadBranches() {
+        Map<String, String> resolverMutation = representativeSafeSmpsSources();
+        resolverMutation.put(
+                "audio/presentation/AudioPresentationCommandResolver.java",
+                "private Object resolveSmpsSfxCommand() { "
+                        + "if (catalogReady) { "
+                        + "factory.findRegisteredSmpsSfxAsset(); "
+                        + "} else { return loader.load(); } return null; }");
+        assertTrue(smpsOwnershipViolations(resolverMutation).contains(
+                "load before lookup @ "
+                        + "audio/presentation/AudioPresentationCommandResolver.java"));
+
+        Map<String, String> managerMutation = representativeSafeSmpsSources();
+        managerMutation.put("audio/AudioManager.java",
+                safeAudioManagerClassificationMethods()
+                        + " private boolean ensureRegisteredSmpsSfx() { "
+                        + "if (catalogReady) { "
+                        + "catalog.findRegisteredSmpsSfxAsset(); "
+                        + "} else { return source.loader().loadSfx(1) != null; } "
+                        + "return true; }");
+        assertTrue(smpsOwnershipViolations(managerMutation).contains(
+                "load before lookup @ audio/AudioManager.java"));
+    }
+
+    @Test
     void frozenRomDependencyShapeFieldHasNoRuntimeAccesses() {
         JavaClasses classes = new ClassFileImporter()
                 .importClasses(AudioManager.class);
@@ -569,9 +615,9 @@ class TestAudioPresentationArchitectureGuard {
                 "audio/presentation/AudioPresentationSourceFactory.java",
                 violations);
         if (instantiation != null
-                && (instantiation.contains("SmpsSourceDescriptor.from(")
-                || instantiation.contains("getData()")
-                || instantiation.contains("describeSfx("))) {
+                && reachableContainsAny(factory, "newSequencer", List.of(
+                "SmpsSourceDescriptor.from(", "getData()",
+                "describeSfx("))) {
             violations.add("warmed descriptor materialization @ "
                     + "audio/presentation/AudioPresentationSourceFactory.java");
         }
@@ -654,6 +700,46 @@ class TestAudioPresentationArchitectureGuard {
             Map<MethodSignature, String> methods,
             boolean lookupSeen,
             Set<MethodSignature> activeMethods) {
+        ConditionalBranch branch = firstRelevantConditional(body);
+        if (branch == null) {
+            return inspectLinearLookupOrder(
+                    body, methods, lookupSeen, activeMethods);
+        }
+        String prefix = body.substring(0, branch.start())
+                + branch.condition() + ";";
+        LookupInspection beforeBranch = inspectLinearLookupOrder(
+                prefix, methods, lookupSeen,
+                new HashSet<>(activeMethods));
+        if (!beforeBranch.valid()) {
+            return beforeBranch;
+        }
+        String whenTrue = branch.compatibilityCondition()
+                ? maskCompatibilityLoads(branch.whenTrue())
+                : branch.whenTrue();
+        LookupInspection trueBranch = inspectLookupOrder(
+                whenTrue, methods, beforeBranch.lookupSeen(),
+                new HashSet<>(activeMethods));
+        if (!trueBranch.valid()) {
+            return trueBranch;
+        }
+        LookupInspection falseBranch = inspectLookupOrder(
+                branch.whenFalse(), methods, beforeBranch.lookupSeen(),
+                new HashSet<>(activeMethods));
+        if (!falseBranch.valid()) {
+            return falseBranch;
+        }
+        boolean everyBranchSeesLookup = trueBranch.lookupSeen()
+                && falseBranch.lookupSeen();
+        return inspectLookupOrder(
+                body.substring(branch.end()), methods,
+                everyBranchSeesLookup, activeMethods);
+    }
+
+    private static LookupInspection inspectLinearLookupOrder(
+            String body,
+            Map<MethodSignature, String> methods,
+            boolean lookupSeen,
+            Set<MethodSignature> activeMethods) {
         List<GuardEvent> events = new ArrayList<>();
         addEvents(events, body, "findRegisteredSmpsSfxAsset(", "lookup");
         addEvents(events, body, "loader.load(", "load");
@@ -691,6 +777,118 @@ class TestAudioPresentationArchitectureGuard {
             }
         }
         return new LookupInspection(true, seen);
+    }
+
+    private static ConditionalBranch firstRelevantConditional(String body) {
+        Matcher matcher = Pattern.compile("(?<![A-Za-z0-9_$])if\\s*\\(")
+                .matcher(body);
+        while (matcher.find()) {
+            int conditionOpen = body.indexOf('(', matcher.start());
+            int conditionClose = matching(body, conditionOpen, '(', ')');
+            if (conditionClose < 0) {
+                return null;
+            }
+            int thenOpen = skipWhitespace(body, conditionClose + 1);
+            if (thenOpen >= body.length() || body.charAt(thenOpen) != '{') {
+                continue;
+            }
+            int thenClose = matching(body, thenOpen, '{', '}');
+            if (thenClose < 0) {
+                return null;
+            }
+            int end = thenClose + 1;
+            String whenFalse = "";
+            int elseStart = skipWhitespace(body, end);
+            if (body.startsWith("else", elseStart)
+                    && identifierEndsAt(body, elseStart + 4)) {
+                int elseOpen = skipWhitespace(body, elseStart + 4);
+                if (elseOpen < body.length()
+                        && body.charAt(elseOpen) == '{') {
+                    int elseClose = matching(body, elseOpen, '{', '}');
+                    if (elseClose < 0) {
+                        return null;
+                    }
+                    whenFalse = body.substring(elseOpen + 1, elseClose);
+                    end = elseClose + 1;
+                }
+            }
+            String whenTrue = body.substring(thenOpen + 1, thenClose);
+            if (containsLookupEvent(whenTrue)
+                    || containsLookupEvent(whenFalse)) {
+                String condition = body.substring(
+                        conditionOpen + 1, conditionClose);
+                return new ConditionalBranch(
+                        matcher.start(), end, condition,
+                        whenTrue, whenFalse,
+                        isExplicitCompatibilityCondition(condition));
+            }
+        }
+        return null;
+    }
+
+    private static boolean containsLookupEvent(String body) {
+        return body.contains("findRegisteredSmpsSfxAsset(")
+                || body.contains("loader.load(")
+                || body.contains(".loadSfx(");
+    }
+
+    private static int skipWhitespace(String source, int offset) {
+        int cursor = offset;
+        while (cursor < source.length()
+                && Character.isWhitespace(source.charAt(cursor))) {
+            cursor++;
+        }
+        return cursor;
+    }
+
+    private static boolean identifierEndsAt(String source, int offset) {
+        return offset >= source.length()
+                || !Character.isJavaIdentifierPart(source.charAt(offset));
+    }
+
+    private static boolean isExplicitCompatibilityCondition(
+            String condition) {
+        return condition.contains("< 0")
+                || condition.contains(".isBlank(")
+                || condition.contains("!hasCatalogDependencies(");
+    }
+
+    private static String maskCompatibilityLoads(String body) {
+        return body.replace("loader.load(", "loader.compatibilityLoad(")
+                .replace(".loadSfx(", ".compatibilityLoadSfx(");
+    }
+
+    private static boolean reachableContainsAny(
+            String source, String rootMethod, List<String> tokens) {
+        Map<MethodSignature, String> methods = methodBodies(source);
+        return methodsNamed(methods, rootMethod).stream().anyMatch(root ->
+                reachableContainsAny(root.getValue(), methods, tokens,
+                        new HashSet<>(Set.of(root.getKey()))));
+    }
+
+    private static boolean reachableContainsAny(
+            String body,
+            Map<MethodSignature, String> methods,
+            List<String> tokens,
+            Set<MethodSignature> activeMethods) {
+        if (tokens.stream().anyMatch(body::contains)) {
+            return true;
+        }
+        for (Map.Entry<MethodSignature, String> method : methods.entrySet()) {
+            if (!localCallPattern(method.getKey().name())
+                    .matcher(body).find()) {
+                continue;
+            }
+            if (activeMethods.add(method.getKey())) {
+                boolean forbidden = reachableContainsAny(
+                        method.getValue(), methods, tokens, activeMethods);
+                activeMethods.remove(method.getKey());
+                if (forbidden) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private static void addEvents(
@@ -992,6 +1190,15 @@ class TestAudioPresentationArchitectureGuard {
     }
 
     private record LookupInspection(boolean valid, boolean lookupSeen) {
+    }
+
+    private record ConditionalBranch(
+            int start,
+            int end,
+            String condition,
+            String whenTrue,
+            String whenFalse,
+            boolean compatibilityCondition) {
     }
 
     @Test
