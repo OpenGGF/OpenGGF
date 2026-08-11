@@ -284,6 +284,17 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **Repeated SMPS playback no longer recopies whole audio assets (2026-08-11):**
+  music, base/donor SFX, and named SFX now reuse one immutable,
+  generation-aware program/DAC/configuration catalog entry while retaining
+  independent live sequencers, tracks, and rewind cursors. Prepared SFX
+  admission replaces the ordinary whole-music-driver rollback snapshot with
+  hardware-bounded conflict state. In the authenticated public-API comparison,
+  repeated SFX allocation fell from 27,328–8,415,808 bytes per trigger to a
+  flat 1,344 bytes, with zero program-, DAC-, or unrelated-music-size slope;
+  repeated music allocation also fell by 5.1%. See the
+  [performance audit](docs/architecture/audits/2026-08-10-smps-repeated-playback-performance.md).
+
 - **Strict trace-v5 recorder fleet (2026-08-04):** the native BizHawk recorder,
   contract tests, and published S1/S2/S3K fixtures now share one strict v5
   schema with deterministic gzip payloads and no legacy runtime compatibility

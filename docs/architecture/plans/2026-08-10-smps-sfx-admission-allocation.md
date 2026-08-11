@@ -45,23 +45,23 @@
 **Interfaces:**
 - Produces: exact post-fetch `develop` baseline and exact pre-port frontier baseline for regression comparison, plus a feature worktree rebased by merge onto the fetched integration head.
 
-- [ ] **Step 1: Verify workspace and toolchain state**
+- [x] **Step 1: Verify workspace and toolchain state**
 
   In the main workspace run `git status --short --branch`, `git worktree list --porcelain`, and `mvn -v`. Confirm `develop`, the known dirty user file, clean frontier, feature branch commits, and Java 21.
 
-- [ ] **Step 2: Fetch and fast-forward develop safely**
+- [x] **Step 2: Fetch and fast-forward develop safely**
 
   Run `git fetch origin`, then `git pull --ff-only` in the main workspace only if Git confirms the dirty user file will not be overwritten. If upstream overlaps that file, stop and report the authority blocker without stashing or discarding it.
 
-- [ ] **Step 3: Record the official develop baseline**
+- [x] **Step 3: Record the official develop baseline**
 
   Because the suite is known to rewrite the same status file that is user-dirty in the main workspace, create a detached temporary worktree at the updated `develop` commit under `.worktrees/audio-develop-baseline` and run `mvn test` there. Record exact totals and failing/erroring test names. Classify/remove its generated status-file change, remove the detached worktree, and verify the main workspace's user file hash is unchanged; do not run the mutating full suite over that file in place.
 
-- [ ] **Step 4: Reconcile updated develop into the feature worktree**
+- [x] **Step 4: Reconcile updated develop into the feature worktree**
 
   Merge updated `develop` into `bugfix/ai-audio-sfx-allocation`, resolve conflicts without losing user/upstream work, and verify `git merge-base --is-ancestor develop HEAD` succeeds before implementation begins.
 
-- [ ] **Step 5: Record the untouched frontier baseline**
+- [x] **Step 5: Record the untouched frontier baseline**
 
   In `.worktrees/s1-audio-parity-frontier`, confirm clean status and Java 21, then run `mvn test`. Record exact totals and failures/errors before applying any feature commit. Remove only test-generated artifacts after classifying them.
 
@@ -99,27 +99,27 @@ public final class DacData {
 }
 ```
 
-- [ ] **Step 1: Write failing immutability and sample-read tests**
+- [x] **Step 1: Write failing immutability and sample-read tests**
 
   Add tests which construct a mutable `Map<Integer, byte[]>`, mutate the original map and byte array, and assert `sample(1).length()`/`sample(1).byteAt(0)` retain the original values. Reflect over `DacData` public fields/method return types and assert no `byte[]` or `Map<Integer, byte[]>` is exposed. Assert out-of-range `byteAt` uses the normal indexed-read exception and missing sample/note lookups return `null`.
 
-- [ ] **Step 2: Run the new test and capture the expected failure**
+- [x] **Step 2: Run the new test and capture the expected failure**
 
   Run `mvn -Dtest=TestDacDataImmutability test`. Expect failure because `samples` is public and constructor input arrays are shared.
 
-- [ ] **Step 3: Implement immutable DAC samples**
+- [x] **Step 3: Implement immutable DAC samples**
 
   Make `DacData` final; deep-copy each non-null input array into a private immutable `Sample` object whose public API is exactly `int length()` and `byte byteAt(int index)`. Store private unmodifiable sample/mapping maps; keep `DacEntry` as an immutable final value with primitive fields/accessors so existing loaders remain source-compatible; expose only scalar/sample lookup APIs; and update `Ym2612Chip` to retain/read `Sample` instead of `byte[]`. Because the constructor is now the defensive-copy boundary, remove `AudioPresentationSourceFactory.copyDac` in this task and pass the immutable `DacData` reference through `snapshotSource`/`freshSource`; later catalog work removes `freshSource` itself.
 
-- [ ] **Step 4: Add indexed config access without per-sequencer clones**
+- [x] **Step 4: Add indexed config access without per-sequencer clones**
 
   Keep the public copying getters, add package-private scalar accessors over the already-owned channel-order arrays, and update `SmpsSequencer` call sites to populate tracks via count/index rather than calling an array-copying getter.
 
-- [ ] **Step 5: Verify DAC playback and snapshot parity**
+- [x] **Step 5: Verify DAC playback and snapshot parity**
 
   Replace direct test map inspection with `sampleCount`, `mappingCount`, `hasSample`, and `sample(...).byteAt(...)`, then run `mvn -Dtest=TestDacDataImmutability,TestYm2612ChipSnapshot,TestSmpsSequencerSnapshot,TestAudioPresentationCommandResolver,TestRomAudioIntegration test`. Expect all selected tests to pass and existing YM snapshot restore to retain the same sample id/offset behavior.
 
-- [ ] **Step 6: Commit the immutable dependency boundary**
+- [x] **Step 6: Commit the immutable dependency boundary**
 
   Stage only the nine listed files and commit `perf(audio): share immutable DAC dependencies` with required policy trailers and `Changelog: n/a: internal ownership groundwork with no user-visible behavior change`.
 
@@ -163,27 +163,27 @@ public interface SmpsProgramView {
 }
 ```
 
-- [ ] **Step 1: Write failing frozen-data API tests**
+- [x] **Step 1: Write failing frozen-data API tests**
 
   Register a source containing sequence, voice, PSG-envelope, modulation-envelope, every pointer/offset table, id, and PAL metadata. Mutate every loader-owned input after registration; mutate every array returned by public getters; call `setId` and `setPalSpeedupDisabled`; assert a newly instantiated and rewind-restored voice still sees the originally registered bytes and metadata. Assert `CoordFlagContext` exposes only `SmpsProgramView`, not `byte[]`.
 
-- [ ] **Step 2: Run the frozen-data tests and confirm mutation leaks**
+- [x] **Step 2: Run the frozen-data tests and confirm mutation leaks**
 
   Run `mvn -Dtest=TestFrozenSmpsDataImmutability,TestAudioPresentationSourceParity test`. Expect at least the raw public accessor/setter assertions to fail.
 
-- [ ] **Step 3: Add the narrow internal view and frozen implementation**
+- [x] **Step 3: Add the narrow internal view and frozen implementation**
 
   Define `SmpsProgramView` without any array-returning method. Replace the factory's partially frozen nested classes with one implementation that clones all loader arrays at construction, returns defensive copies through `AbstractSmpsData`, rejects post-construction mutation, and services the indexed internal view without cloning.
 
-- [ ] **Step 4: Convert sequencer hot reads to the internal view**
+- [x] **Step 4: Convert sequencer hot reads to the internal view**
 
   Store a `SmpsProgramView` beside the public metadata object in `SmpsSequencer`; replace constructor data/pointer/offset array reads and voice/envelope getter calls with indexed reads. Replace `CoordFlagContext.getData()` with `programView()` and convert `Sonic3kCoordFlagHandler`'s length/byte reads accordingly, so a game-specific handler cannot mutate frozen bytes. Keep fallback voice behavior by accepting another `SmpsProgramView`, not a raw loader array.
 
-- [ ] **Step 5: Verify sequence behavior and public immutability**
+- [x] **Step 5: Verify sequence behavior and public immutability**
 
   Run `mvn -Dtest=TestFrozenSmpsDataImmutability,TestAudioPresentationSourceParity,TestSmpsSequencerSnapshot,TestSmpsSequencerTempoMath test`. Expect all selected tests to pass.
 
-- [ ] **Step 6: Commit the frozen-program boundary**
+- [x] **Step 6: Commit the frozen-program boundary**
 
   Commit the listed production/tests as `perf(audio): freeze shared SMPS programs` with required trailers and `Changelog: n/a: internal asset ownership groundwork with no user-visible behavior change`.
 
@@ -222,35 +222,35 @@ final class SmpsAssetCatalog {
 }
 ```
 
-- [ ] **Step 1: Write catalog identity, sharing, and collision tests**
+- [x] **Step 1: Write catalog identity, sharing, and collision tests**
 
   Cover first registration, same-object O(1) repeat, reconstructed-equal repeat, conflicting bytes under one key, two SFX sharing one dependency identity, and repeated base/donor music registrations sharing one frozen sequence/voice/PSG-envelope/modulation-envelope representation. Cover music-vs-SFX/base-vs-donor/named/special separation, old/new generation coexistence, and descriptor collisions across donor/base sources. Use identity assertions for frozen program, DAC, config, and descriptor objects. Assert repeated music instantiation shares the program/view/DAC/config/descriptor identities but creates distinct mutable sequencers and tracks.
 
-- [ ] **Step 2: Run the catalog tests and confirm the type is absent**
+- [x] **Step 2: Run the catalog tests and confirm the type is absent**
 
   Run `mvn -Dtest=TestSmpsAssetCatalog test`. Expect compilation failure until `SmpsAssetCatalog` exists.
 
-- [ ] **Step 3: Implement two-level catalog ownership**
+- [x] **Step 3: Implement two-level catalog ownership**
 
   Use a dependency map keyed by `DependencyKey` (including base/donor provenance) and a program map keyed by `ProgramKey`. Freeze DAC/config only when the dependency is first registered; record their source-object identities and reject different dependency objects under the same generation before program publication. Freeze program and calculate descriptor/fingerprint in the same copying pass only when the program is first registered. On an existing program key, return immediately for the identical source object; otherwise perform one exceptional semantic comparison and either return the old entry or throw an `IllegalStateException` naming the conflicting key/generation.
 
-- [ ] **Step 4: Make descriptors generation-bearing and registration-time only**
+- [x] **Step 4: Make descriptors generation-bearing and registration-time only**
 
   Add `long dependencyGeneration` to `SmpsSourceDescriptor`; update the named/base/donor factory methods to accept it and to consume the frozen program's already-computed length/hash rather than calling `getData()` again. Preserve current overloads with generation zero for the transitional legacy backend and direct driver tests. Retain `matchesData` only for exceptional registration/debug paths. Add a sequencer constructor/setter path receiving the catalog descriptor so SFX instantiation and restore never recompute a whole-program hash; keep legacy constructor and fallback snapshot hashing out of the warmed presentation path.
 
-- [ ] **Step 5: Route factory registration, instantiation, and rewind through entries**
+- [x] **Step 5: Route factory registration, instantiation, and rewind through entries**
 
   Replace `sfxAssets`/`CachedSmpsSource` ownership with catalog entries, rename `warmSmpsSfxAsset` to `registerSmpsSfxAsset`, add `findRegisteredSmpsSfxAsset(SmpsAssetKey,long)`, and add equivalent music registration/lookup entry points backed by the same catalog. Remove `freshSource` and `copyDac`, and make `sourcesByDescriptor` refer to the exact program entry. Freeze and bind the coordination handler once when creating a dependency entry; never rebuild config per sequencer. Registered music and SFX instantiation must pass stored program/DAC/config/descriptor references directly; `recreateSmps` must resolve the descriptor's generation and share those same references. Music descriptor construction receives the current dependency generation too, with a compatibility overload using generation zero only for transitional legacy sources. Keep `legacyMusicSmps` outside catalog ownership as its documented transitional exception.
 
-- [ ] **Step 6: Pin descriptor construction cost against program size**
+- [x] **Step 6: Pin descriptor construction cost against program size**
 
   Extend `TestSmpsDriverSnapshotDescriptorDedupPerformance` with tiny and 1 MiB program fixtures. Warm registration before measurement, instantiate identical track topology repeatedly for both SFX and music, and assert `ThreadMXBean` per-instantiation allocation slopes differ only within the control-run tolerance; also assert the stored descriptor object is reused.
 
-- [ ] **Step 7: Verify catalog and rewind behavior**
+- [x] **Step 7: Verify catalog and rewind behavior**
 
   Run `mvn -Dtest=TestSmpsAssetCatalog,TestAudioPresentationSourceParity,TestSmpsDriverSnapshotDescriptorDedupPerformance,TestSmpsDriverSnapshot,TestSmpsSequencerSnapshot,TestAudioPresentationSnapshotParity test`. Expect all selected tests to pass.
 
-- [ ] **Step 8: Commit the versioned catalog**
+- [x] **Step 8: Commit the versioned catalog**
 
   Commit as `perf(audio): catalog immutable SMPS assets` with required trailers and `Changelog: n/a: internal presentation cache ownership change`.
 
@@ -288,31 +288,31 @@ private record DonorAudioSource(
         GameAudioProfile profile, long generation) {}
 ```
 
-- [ ] **Step 1: Write stale-source replacement tests for every mutator**
+- [x] **Step 1: Write stale-source replacement tests for every mutator**
 
   In one existing shadow-factory session, register/play a key, then call each of `setRom`, `setAudioProfile`, donor register, donor replace, and `clearDonorAudio`. Assert the applicable generation strictly increases, a new command cannot use the old program, and an old live/snapshot voice still resolves its original descriptor. Assert unrelated donor generations remain unchanged. Add profiles whose `createSmpsLoader`, loader `loadDacData`, and backend `setAudioProfile` throw; after each failure assert the complete previous ROM/profile/loader/DAC/generation tuple remains published, and a retry can publish exactly one next generation.
 
-- [ ] **Step 2: Run the generation tests and capture stale reuse**
+- [x] **Step 2: Run the generation tests and capture stale reuse**
 
   Run `mvn -Dtest=TestAudioManagerResetState,TestDonorAudioRouting,TestAudioPresentationCommandResolver test`. Expect new assertions to fail because current keys contain no generation.
 
-- [ ] **Step 3: Prepare and publish base source tuples transactionally**
+- [x] **Step 3: Prepare and publish base source tuples transactionally**
 
   Replace separately published base fields with `BaseAudioSource`. `setRom(candidate)` first constructs the candidate profile's loader and loads its DAC into local variables, then publishes one new tuple with `generation + 1`; any construction/load failure leaves the old tuple untouched. `setAudioProfile(candidate)` likewise constructs the candidate loader/DAC against the current ROM before changing either manager or backend state, calls `backend.setAudioProfile(candidate)`, and only after success publishes the tuple with `generation + 1`. If the backend call throws, attempt `backend.setAudioProfile(previous.profile())`, attach restore failure as suppressed, keep the previous manager tuple/generation, and rethrow. A null ROM/profile produces a tuple with null loader/DAC rather than retaining incompatible dependencies.
 
-- [ ] **Step 4: Publish donor entries as one versioned value**
+- [x] **Step 4: Publish donor entries as one versioned value**
 
   Replace parallel donor loader/DAC/config/profile maps with a map of `DonorAudioSource`; validate all arguments and configure required backend/presentation coordination handlers before the single map publication. Successful register/replace uses the retained per-id counter plus one. `clearDonorAudio` advances and retains the counter for every currently registered donor before removing entries, so re-registering an id cannot reuse an old generation. On a pre-publication failure, restore the previous handler/profile configuration and keep the previous entry/generation. If restoration itself fails, remove the affected donor entry, advance its retained counter, attach the restore failure as suppressed, and rethrow so no stale catalog entry can be selected.
 
-- [ ] **Step 5: Carry generation through command resolution and cache keys**
+- [x] **Step 5: Carry generation through command resolution and cache keys**
 
   Read the route-specific token before lookup/load, include it in the catalog `ProgramKey` and resolved command, and reject application if the queued entry for that exact generation is missing. Preserve the old entry for live and rewind descriptors.
 
-- [ ] **Step 6: Verify source replacement and routing**
+- [x] **Step 6: Verify source replacement and routing**
 
   Run `mvn -Dtest=TestAudioManagerResetState,TestDonorAudioRouting,TestAudioPresentationCommandResolver,TestAudioPresentationSnapshotParity test`. Expect all selected tests to pass.
 
-- [ ] **Step 7: Commit dependency invalidation**
+- [x] **Step 7: Commit dependency invalidation**
 
   Commit as `fix(audio): invalidate replaced SMPS sources` with `CHANGELOG.md` staged and all required policy trailers.
 
@@ -362,15 +362,15 @@ private AudioPresentationCommand resolveSmpsSfxCommand(
 }
 ```
 
-- [ ] **Step 1: Add loader-call-count tests**
+- [x] **Step 1: Add loader-call-count tests**
 
   Use a loader that returns a fresh equal `AbstractSmpsData` on every call. Resolve the Sonic 2 `BASE_SMPS_NAME` route twice and assert one loader call/one registration; repeat for SFX id and donor routes. Through production `AudioManager.playMusic` and `playDonorMusic`, repeat base and donor SMPS music starts and assert one total loader call/freeze per key/generation across both manager classification and resolver application while each start creates a distinct live voice. Change generation and assert exactly one additional load for each asset kind. Explicit duplicate registration with reconstructed-equal data must reuse the old entry. Also pin a base null result to the existing fallback-WAV command and a donor null result to no command; negative-result caching is not required.
 
-- [ ] **Step 2: Run resolver tests and observe repeated loads**
+- [x] **Step 2: Run resolver tests and observe repeated loads**
 
   Run `mvn -Dtest=TestAudioPresentationCommandResolver,TestShadowAudioPresentationRouting,TestDonorAudioRouting test`. Expect the second named trigger and second SMPS music start loader call counts to be 2 before the fix.
 
-- [ ] **Step 3: Reorder resolution around catalog lookup**
+- [x] **Step 3: Reorder resolution around catalog lookup**
 
   Pass each SFX route load as a `SmpsSfxLoader`, read current generation, and ask the factory for the versioned program before invoking it. On a miss, load once, resolve the named route's id from the returned program, and register. Derive id, priority, continuous id, `trackCount`, and special-SFX metadata from the returned entry/current source policy, then enqueue the normal `AddSmpsSfx` command. Apply the same lookup-before-load ordering to base/donor SMPS music using its `AudioSourceDescriptor`-derived `SmpsAssetKey`; on a hit allocate only the new mutable music voice/sequencer state from the existing program entry.
 
@@ -386,15 +386,15 @@ private AudioPresentationCommand resolveSmpsSfxCommand(
   retained catalog program and immutable dependencies rather than miss-local
   nullable data.
 
-- [ ] **Step 4: Update explicit warming callers to registration terminology**
+- [x] **Step 4: Update explicit warming callers to registration terminology**
 
   Rename AudioManager/test call sites from `warmSmpsSfxAsset` to `registerSmpsSfxAsset` and require an explicit dependency generation at owner boundaries.
 
-- [ ] **Step 5: Verify every route**
+- [x] **Step 5: Verify every route**
 
   Run `mvn -Dtest=TestAudioPresentationCommandResolver,TestAudioPresentationSourceParity,TestAudioManagerPresentationModes,TestShadowAudioPresentationRouting,TestHostUiSfx,TestDonorAudioRouting test`. Expect one total load/freeze per key/generation through production manager submission plus resolver application, distinct mutable voices/tracks/cursors per music start, shared program/view/voice/envelope/DAC/config/descriptor identities across playback and rewind restoration, and unchanged resolved command fields.
 
-- [ ] **Step 6: Commit lookup-before-load**
+- [x] **Step 6: Commit lookup-before-load**
 
   Commit as `perf(audio): reuse registered SMPS assets` with `CHANGELOG.md` staged and required trailers.
 
@@ -434,31 +434,31 @@ public void commitSfxAdmission(PreparedSfxAdmission admission);
 public void beginSfxAdmission();
 ```
 
-- [ ] **Step 1: Write preparation-purity tests**
+- [x] **Step 1: Write preparation-purity tests**
 
   Capture driver, coordination, full synth, locks/latches, and registry state; prepare same-ID, FM-contention, PSG-contention, continuous-extension, and standalone cases; assert every captured state is byte/identity-equal before commit. Assert matching continuous extension produces a prepared admission without constructing a sequencer or invoking `onSfxStart`. Add invalid channel/pointer/continuous metadata cases and assert they fail during preparation.
 
-- [ ] **Step 2: Run purity tests and confirm no preparation API exists**
+- [x] **Step 2: Run purity tests and confirm no preparation API exists**
 
   Run `mvn -Dtest=TestPreparedSfxAdmission test`. Expect compilation failure until the new type/methods exist.
 
-- [ ] **Step 3: Implement allocation-bounded conflict analysis**
+- [x] **Step 3: Implement allocation-bounded conflict analysis**
 
   Analyze live SFX using hardware-channel masks and pre-sized ordered action arrays sized from the new sequencer's track count; do not use streams, `HashSet`, or a growing list. Preserve the new program's header/track order because PSG writes and the final latch are order-sensitive. Represent FM and DAC exact types independently on channel 5, and do not schedule the same displaced track twice for duplicate new entries. Scanning unrelated live SFX is allowed, but allocated storage must remain independent of unrelated live channel/track counts.
 
-- [ ] **Step 4: Separate construction from live chip writes**
+- [x] **Step 4: Separate construction from live chip writes**
 
   Ensure sequencer construction, dependency binding, descriptor assignment, priority setup, and preparation do not enable DAC, silence channels, write YM/PSG, acquire locks, or publish coordination/observer events. Remove the constructor's `onSfxStart` call and expose it only through `beginSfxAdmission`; driver commit does not own or invoke coordination handlers. In this same commit, update the registry's existing atomic SFX path to instantiate and prepare first, then capture coordination state, invoke `beginSfxAdmission` immediately before driver commit, and restore only that snapshot if start/commit fails; continuous extension returns without capturing coordination or invoking start.
 
-- [ ] **Step 5: Implement deterministic commit**
+- [x] **Step 5: Implement deterministic commit**
 
   Convert the registry's still-atomic SFX path to call the prepared APIs. Commit in the existing native program/header order: extend when applicable; retire same-ID/displaced tracks; update locks/latches and channel silence/takeover; insert the sequencer; install continuous state. Guard against committing a prepared object to a different driver or twice. With chip observers disabled, every post-validation driver step must be internally non-throwing. With a develop chip observer enabled, use the reviewed transitional driver-local full snapshot only around commit, restore/release the claim on callback failure, and rethrow; the observer-free path must not capture it. Task 8 removes the registry whole-voice wrapper, and frontier reconciliation replaces this diagnostic fallback with the selective journal.
 
-- [ ] **Step 6: Verify admission parity**
+- [x] **Step 6: Verify admission parity**
 
   Run `mvn -Dtest=TestPreparedSfxAdmission,TestSmpsDriverSnapshot,TestAudioVoiceRegistry,TestMusicOverrideRestore,TestChipWriteObserver test`. Expect all cases to match the pre-change post-commit state. Include mixed FM6/DAC conflicts, duplicate exact-type entries, reversed multi-PSG header order with full latch/event comparison, explicit zero-track continuous metadata, complete pre/post preparation snapshots, unrelated-live-set allocation slopes, and real YM/PSG observer exceptions with exact driver/synth rollback and retry.
 
-- [ ] **Step 7: Commit prepared admission**
+- [x] **Step 7: Commit prepared admission**
 
   Commit as `refactor(audio): prepare SMPS SFX admission` with required trailers and `Changelog: n/a: behavior-preserving admission decomposition`.
 
@@ -496,27 +496,27 @@ if (admission == null) {
 }
 ```
 
-- [ ] **Step 1: Add rollback-capture spy tests**
+- [x] **Step 1: Add rollback-capture spy tests**
 
   Count `captureLiveCommandMutation` and `onSfxStart` calls for existing-owner, same-ID replacement, rejected, continuous, and standalone SFX. Assert zero rollback-token calls; exactly one coordination start immediately before commit for each new sequencer; zero for preparation rejection and continuous extension; unchanged state on cache/preparation/coordination rejection; and exactly one committed insertion on success. Preserve command-queue retry behavior for failures that occur before commit.
 
-- [ ] **Step 2: Run registry tests and observe full snapshot capture**
+- [x] **Step 2: Run registry tests and observe full snapshot capture**
 
   Run `mvn -Dtest=TestAudioVoiceRegistry,TestAudioPresentationCommandQueue test`. Expect rollback-capture counts to fail on the current `mutateVoicesAtomically` path.
 
-- [ ] **Step 3: Rework owner and standalone publication**
+- [x] **Step 3: Rework owner and standalone publication**
 
   Try continuous extension first and commit it without construction or coordination start. Otherwise instantiate and prepare before registry publication, snapshot `coordFlagHandlers.state()`, and wrap both `sequencer.beginSfxAdmission()` and `driver.commitSfxAdmission(admission)` in the same try/catch. On any `RuntimeException`, restore the coordination snapshot (attaching restore failure as suppressed) and rethrow; the driver-local observer fallback owns only driver/synth restoration and prepared-claim release. Existing owners use this sequence directly. Standalone drivers remain unpublished until all preparation, coordination work, and commit succeed; on failure dispose only the new unpublished voice and restore the narrow coordination snapshot. Publish `standaloneSmps`/voice id only after commit. Continuous extension remains outside this scope because it invokes no coordination start.
 
-- [ ] **Step 4: Keep generic atomic mutation for non-SFX commands**
+- [x] **Step 4: Keep generic atomic mutation for non-SFX commands**
 
   Remove the registry whole-voice wrapper only from SMPS SFX admission. Music override, stop, sample voice, restore, and other live mutations continue using their existing rollback contracts. Assert observer-free driver commit captures no snapshot; an enabled throwing chip observer uses the reviewed driver-local fallback, restores exactly, leaves the command retryable, and is later replaced by the frontier selective journal.
 
-- [ ] **Step 5: Verify registry and queue semantics**
+- [x] **Step 5: Verify registry and queue semantics**
 
   Run `mvn -Dtest=TestAudioVoiceRegistry,TestAudioPresentationCommandQueue,TestAudioPresentationSnapshotParity,TestUnifiedAudioPresentationIntegration test`. Expect all selected tests to pass and the SFX rollback-capture spy to remain zero. Inject real YM and PSG observer failures through registry/queue admission; assert exact driver/synth and coordination-byte restoration, released prepared claim, the same command retained for retry, and exactly one eventual commit.
 
-- [ ] **Step 6: Commit the common-path optimization**
+- [x] **Step 6: Commit the common-path optimization**
 
   Commit as `perf(audio): bound SMPS SFX admission state` with `CHANGELOG.md` staged and required trailers.
 
@@ -540,19 +540,19 @@ long slope(long allocationsAt64, long allocationsAt256) {
 }
 ```
 
-- [ ] **Step 1: Build constant-topology allocation fixtures**
+- [x] **Step 1: Build constant-topology allocation fixtures**
 
   Create tiny/large pairs with identical SFX track count, pitch, priority, command route, registry topology, and trigger counts. Vary only one dimension per pair: program bytes (64 bytes vs 1 MiB), DAC bytes (64 bytes vs 4 MiB), or unrelated music tracks/state (minimal vs maximum legal topology). Use replacement/retrigger so live voice count stays constant.
 
-- [ ] **Step 2: Implement anti-flake measurement protocol**
+- [x] **Step 2: Implement anti-flake measurement protocol**
 
   Require supported/enabled `ThreadMXBean`; warm the exact call site with discarded runs; measure at multiple counts such as 64, 128, and 256; repeat controls; compute least-squares or endpoint per-trigger slope; derive tolerance from the maximum repeated control spread plus a small documented fixed VM noise margin. On unsupported VMs, retain identity/structural assertions and skip only byte accounting.
 
-- [ ] **Step 3: Run the allocation test against the optimized path**
+- [x] **Step 3: Run the allocation test against the optimized path**
 
   Run `mvn -Dtest=TestSmpsSfxAdmissionAllocation test`. Expect all dimension slopes to remain within the derived tolerance and the absolute slope to reflect only new sequencer/track plus bounded metadata.
 
-- [ ] **Step 4: Capture an apples-to-apples historical benchmark**
+- [x] **Step 4: Capture an apples-to-apples historical benchmark**
 
   Add `TestSmpsRepeatedPlaybackBenchmark` as an opt-in benchmark (excluded from ordinary budget assertions) whose measured caller uses only the same public `AudioManager.playMusic`/SFX submission APIs available on updated `develop`. Keep loader/program/DAC/config/driver topology, replacement/retrigger behavior, live voice count, warmup counts, measurement counts (including 64/128/256 operations), and JVM properties constant. The byte-identical test-local loader returns a fresh instrumented `AbstractSmpsData` whose primitive `programMaterializations` counter advances exactly once on its first program-data/defensive-copy access; this paired semantic counter and loader-call counter exist on both commits without a feature API. Assert feature-only catalog registration identity separately outside the paired metric. Record at least five warmed repetitions per music and SFX scenario, plus tiny/large program, DAC, and unrelated-music controls. Emit raw allocated bytes, elapsed nanoseconds, operation count, loader/materialization counts, and GC deltas in a stable line format; calculate median bytes/op, control spread, median warmed ns/op, and percentage delta outside the measured region. Treat allocation as normative and timing as descriptive.
 
@@ -560,15 +560,15 @@ long slope(long allocationsAt64, long allocationsAt256) {
 
   Copy the exact benchmark manifest (main class plus every test-local helper/fixture) into a detached clean worktree at the official updated `develop` baseline; it must compile without changing production code. Hash the complete manifest, run it there and archive raw output, then run the byte-identical manifest and command on the completed feature worktree under the same JDK 21/JVM settings. Reject and repeat the comparison if manifest hash, fixture constants, route, environment, allocation-counter support, or operation counts differ. Remove the temporary baseline worktree after archiving results.
 
-- [ ] **Step 5: Add production API/write guards**
+- [x] **Step 5: Add production API/write guards**
 
   Extend architecture guards to reject public raw DAC/SMPS arrays, `freshSource`/`copyDac` reintroduction, resolver load-before-lookup ordering, observer-free SFX-path `captureLiveCommandMutation`, and calls to `SmpsSourceDescriptor.from` from warmed instantiation. Allow the explicitly observer-gated driver-local transitional snapshot until frontier reconciliation replaces it; allow asset-sized hashing/copy only inside registration/freezing and ordinary rewind snapshot capture where documented.
 
-- [ ] **Step 6: Run the focused ownership and budget suite**
+- [x] **Step 6: Run the focused ownership and budget suite**
 
   Run `mvn -Dtest=TestSmpsSfxAdmissionAllocation,TestSmpsRepeatedPlaybackBenchmark,TestAudioPresentationArchitectureGuard,TestAudioPresentationAllocationBudget,TestAudioPresentationSourceParity test`. Expect all selected tests to pass and preserve the benchmark source hash used on the detached baseline.
 
-- [ ] **Step 7: Commit performance contracts**
+- [x] **Step 7: Commit performance contracts**
 
   Commit as `test(audio): guard bounded SFX allocation` with required trailers and `Changelog: n/a: regression coverage for the accompanying performance fix`.
 
@@ -584,27 +584,27 @@ long slope(long allocationsAt64, long allocationsAt256) {
 **Interfaces:**
 - Produces: release-note text explaining reduced repeated-SFX GC pressure and the final design/plan status.
 
-- [ ] **Step 1: Mark architecture artifacts implemented**
+- [x] **Step 1: Mark architecture artifacts implemented**
 
   Change design status to `Implemented`, check completed plan steps as execution proceeds, and record any reviewed deviation with the exact replacement interface and rationale.
 
-- [ ] **Step 2: Add release documentation**
+- [x] **Step 2: Add release documentation**
 
   Add a concise `CHANGELOG.md` entry for repeated SMPS music/SFX no longer cloning ROM audio assets/unrelated driver state. Add the required `README.md` release/change-log summary before the branch is merged into `develop`. Stage a performance audit containing baseline/feature commits, complete manifest hash, exact environment/commands, fixture topology and sizes, allocation-accounting support, all raw repetitions, median allocated bytes/op, paired tolerance/pass-fail result, loader/materialization counts, feature-only catalog identity evidence, control spreads, descriptive warmed ns/op, percentage deltas, and the size-slope evidence; do not summarize incompatible runs.
 
-- [ ] **Step 3: Run the focused develop verification set**
+- [x] **Step 3: Run the focused develop verification set**
 
   Run `mvn -Dtest=TestDacDataImmutability,TestFrozenSmpsDataImmutability,TestSmpsAssetCatalog,TestAudioPresentationCommandResolver,TestPreparedSfxAdmission,TestAudioVoiceRegistry,TestSmpsSfxAdmissionAllocation,TestAudioPresentationSnapshotParity,TestAudioPresentationArchitectureGuard test`. Record test count and outcome.
 
-- [ ] **Step 4: Run the full feature-worktree suite**
+- [x] **Step 4: Run the full feature-worktree suite**
 
   Run `mvn test` on JDK 21. Compare exact failures/errors with the official updated `develop` baseline; no baseline-passing test may newly fail and no baseline failure may worsen due to the feature.
 
-- [ ] **Step 5: Remove generated non-deliverables from the feature worktree**
+- [x] **Step 5: Remove generated non-deliverables from the feature worktree**
 
   Inspect `git status`; restore only the known test-generated `docs/status/rewind-round-trip-gaps.md` change to the worktree HEAD, and preserve/report any unknown change instead of discarding it.
 
-- [ ] **Step 6: Commit documentation and final develop implementation state**
+- [x] **Step 6: Commit documentation and final develop implementation state**
 
   Commit as `perf(audio): eliminate repeated SFX asset copies`, staging `CHANGELOG.md`, `README.md`, both architecture artifacts, and any remaining intended code/tests, with all required trailers.
 
