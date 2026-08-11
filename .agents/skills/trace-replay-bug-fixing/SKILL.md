@@ -1869,6 +1869,45 @@ Generalise the lens rather than the instance:
 - The same shape exists wherever a per-pass input, camera or scroll value is
   sampled outside the object loop but written inside it.
 
+### Name the lever, or you will pull it four times
+
+Four consecutive rounds on the same S2 special-stage defect changed exactly one
+thing under four different names: "remove the duplicate streamed-object
+execution", "fix the streamed-object cadence", "make the object join its
+allocating observation", and "resolve the object/player clock skew". Each was
+briefed as new work. Each altered the number of first-pass depth decrements a
+streamed object receives.
+
+**The tell was in the numbers.** Every attempt produced `combined_rings` error
+counts of 5287 (`TestS2SpecialStage1TraceReplay`) through 35203 (`Stage7`). Those
+counts are a *fingerprint of a lever*, not of a fix. When a change reproduces an
+error profile you have seen before, you are pulling the same lever again however
+different your description of it sounds.
+
+Write the fingerprint down the first time. A round that reports "5287 on stage 1"
+should be recognisable in one line by the next agent.
+
+**Why that lever could never win**, and the shape worth generalising: one object
+couples two clocks. Its depth step is slaved to the track — `loc_3512A`
+(`s2.asm:70914-70926`) branches on `cmpi.b #4,(SSTrack_drawing_index).w` and
+subtracts `$CCCC` on index 4 but `$CCCD` otherwise, so **both branches decrement,
+by different amounts, and the magnitude depends on track phase**. Its collision
+reads the player (`Obj61_TestCollision`, `:70840-70844`). In the ROM those are one
+clock; in the engine they were one pass apart.
+
+So deleting a decrement is *not* a one-pass shift of the object clock — it
+permanently desynchronises depth from the gate cadence for the object's whole
+life. That is why it cost 1448 of 1449 rows of ring collections, a permanent count
+loss rather than a phase slip. And the lever only ever chose **which** coupling
+broke: keep the extra step and object-vs-player events land early; remove it and
+object-vs-track accumulation is wrong forever.
+
+**When one component couples two clocks that disagree, no adjustment to that
+component is correct.** Fix the clocks. Frequency also disguises the cause:
+hundreds of ring collections per stage fail immediately on any phase error, while
+the first bomb contact waits thousands of frames — so different first-symptom
+times can be one defect seen at two rates, not two defects.
+
 ## Why This Matters
 
 The mission is faithful pixel-for-pixel reimplementation. Trace replay tests are the proof. If they're allowed to lean on synced trace data each frame, the proof is hollow — bugs hide behind the synchronisation and the test green-lights anyway. Honest tests force honest engine fixes. That's how progress compounds: every fix makes the next divergence visible instead of building on top of a masked one.
