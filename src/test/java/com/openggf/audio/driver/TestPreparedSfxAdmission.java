@@ -11,6 +11,7 @@ import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.smps.SmpsSfxData;
 import com.openggf.audio.synth.ChipWriteObserver;
 import com.openggf.audio.synth.PsgChip;
+import com.openggf.audio.synth.VirtualSynthesizer;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Array;
@@ -20,6 +21,7 @@ import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -216,6 +218,86 @@ class TestPreparedSfxAdmission {
                 "only owners with no active tracks are legacy-cleaned");
         assertTrue(partial.trackAt(1).active,
                 "cleanup must retain a partially active unrelated owner");
+    }
+
+    @Test
+    void inactiveOwnerLocksReleaseInLegacyCandidateDeathOrder() {
+        SmpsDriver driver = new SmpsDriver();
+        OwnerPair owners = reverseHashOrderedOwners(driver);
+        SmpsSequencer first = owners.first();
+        SmpsSequencer second = owners.second();
+        driver.addSequencer(first, true);
+        driver.addSequencer(second, true);
+
+        first.trackAt(1).active = false;
+        driver.writePsg(first, 0xDF);
+        second.trackAt(1).active = false;
+        driver.writeFm(second, 1, 0xA1, 0x22);
+        driver.writePsg(second, 0xFF);
+
+        SmpsSequencer candidate = sequencer(driver, 0xA2, config(null),
+                track(0x80, 1), track(0xA0, 2));
+        PreparedSfxAdmission admission = driver.prepareNewSfxAdmission(
+                candidate, 0, 2);
+        VirtualSynthesizer.Snapshot before = driver.captureSynthSnapshot();
+        List<String> writes = new ArrayList<>();
+        driver.setChipWriteObserver(new ChipWriteObserver() {
+            @Override
+            public void onYm2612Write(
+                    int port, int register, int value) {
+                writes.add("YM:" + port + ":" + register + ":" + value);
+            }
+
+            @Override
+            public void onPsgWrite(int value) {
+                writes.add("PSG:" + value);
+            }
+        });
+
+        candidate.beginSfxAdmission();
+        driver.commitSfxAdmission(admission);
+
+        assertEquals(List.of(
+                "YM:0:43:128",
+                "PSG:159",
+                "PSG:159",
+                "PSG:191",
+                "PSG:191",
+                "PSG:223",
+                "YM:1:129:255",
+                "YM:1:137:255",
+                "YM:1:133:255",
+                "YM:1:141:255",
+                "YM:1:65:127",
+                "YM:1:73:127",
+                "YM:1:69:127",
+                "YM:1:77:127",
+                "YM:0:40:5",
+                "PSG:255"), writes,
+                "dead owners release in the candidate-header action "
+                        + "that exhausted them");
+
+        VirtualSynthesizer legacyOracle = new VirtualSynthesizer();
+        legacyOracle.restoreSynthSnapshot(before);
+        legacyOracle.writeFm(null, 0, 0x2B, 0x80);
+        legacyOracle.writePsg(null, 0x9F);
+        legacyOracle.writePsg(null, 0xBF);
+        legacyOracle.writePsg(null, 0xDF);
+        legacyOracle.writeFm(null, 1, 0x81, 0xFF);
+        legacyOracle.writeFm(null, 1, 0x89, 0xFF);
+        legacyOracle.writeFm(null, 1, 0x85, 0xFF);
+        legacyOracle.writeFm(null, 1, 0x8D, 0xFF);
+        legacyOracle.writeFm(null, 1, 0x41, 0x7F);
+        legacyOracle.writeFm(null, 1, 0x49, 0x7F);
+        legacyOracle.writeFm(null, 1, 0x45, 0x7F);
+        legacyOracle.writeFm(null, 1, 0x4D, 0x7F);
+        legacyOracle.writeFm(null, 0, 0x28, 5);
+        legacyOracle.writePsg(null, 0xFF);
+        assertDeepEquals(legacyOracle.captureSynthSnapshot(),
+                driver.captureSynthSnapshot());
+        assertEquals(7, driver.captureSynthSnapshot().psg().latch(),
+                "header-later owner leaves PSG3 volume as the final latch");
+        assertEquals(List.of(candidate), driver.sequencersForTesting());
     }
 
     @Test
@@ -591,6 +673,22 @@ class TestPreparedSfxAdmission {
         return sequencer;
     }
 
+    private static OwnerPair reverseHashOrderedOwners(SmpsDriver driver) {
+        for (int attempt = 0; attempt < 1_000; attempt++) {
+            SmpsSequencer first = sequencer(driver, 0xA0, config(null),
+                    track(0x80, 1), track(0xC0, 2));
+            SmpsSequencer second = sequencer(driver, 0xA1, config(null),
+                    track(0xA0, 1), track(5, 2));
+            HashSet<SmpsSequencer> hashOrder = new HashSet<>();
+            hashOrder.add(first);
+            hashOrder.add(second);
+            if (hashOrder.iterator().next() == second) {
+                return new OwnerPair(first, second);
+            }
+        }
+        throw new AssertionError("could not construct reverse HashSet order");
+    }
+
     private static FixtureTrack track(int channelMask, int pointer) {
         return new FixtureTrack(channelMask, pointer, 0, 0);
     }
@@ -759,6 +857,10 @@ class TestPreparedSfxAdmission {
 
     private record AllocationFixture(
             SmpsDriver driver, SmpsSequencer candidate) {
+    }
+
+    private record OwnerPair(
+            SmpsSequencer first, SmpsSequencer second) {
     }
 
     private record FixtureTrack(

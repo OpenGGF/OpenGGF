@@ -338,7 +338,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         }
 
         if (sequencer.trackCount() > 0) {
-            removeInactiveSfxSequencers();
+            removeInactiveSfxSequencers(admission);
         }
         if (killedPsg3Track) {
             writeRawPsg(0xDF);
@@ -379,17 +379,36 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         return false;
     }
 
-    private void removeInactiveSfxSequencers() {
-        Iterator<SmpsSequencer> iterator = sfxSequencers.iterator();
-        while (iterator.hasNext()) {
-            SmpsSequencer sequencer = iterator.next();
-            if (!allTracksInactive(sequencer)) {
-                continue;
+    private void removeInactiveSfxSequencers(
+            PreparedSfxAdmission admission) {
+        for (int action = 0;
+                action < admission.displacedOwners.length; action++) {
+            Iterator<SmpsSequencer> iterator = sfxSequencers.iterator();
+            while (iterator.hasNext()) {
+                SmpsSequencer sequencer = iterator.next();
+                if (!allTracksInactive(sequencer)) {
+                    continue;
+                }
+                if (legacyDeathAction(admission, sequencer) != action) {
+                    continue;
+                }
+                sequencers.remove(sequencer);
+                releaseLocks(sequencer);
+                iterator.remove();
             }
-            sequencers.remove(sequencer);
-            releaseLocks(sequencer);
-            iterator.remove();
         }
+    }
+
+    private static int legacyDeathAction(
+            PreparedSfxAdmission admission, SmpsSequencer sequencer) {
+        int lastAction = 0;
+        for (int action = 0;
+                action < admission.displacedOwners.length; action++) {
+            if (admission.displacedOwners[action] == sequencer) {
+                lastAction = action;
+            }
+        }
+        return lastAction;
     }
 
     private static boolean allTracksInactive(SmpsSequencer sequencer) {
