@@ -901,7 +901,7 @@ public final class TraceSessionLauncher {
         }
         Integer specialStageIndex =
                 RunPlaybackObservation.insideRecordedSpecialStageMode(mode)
-                        ? getActiveSpecialStageIndex() : null;
+                        ? getActiveSpecialStageIndex(mode) : null;
         long dynamicGeneration = GameServices.captureDynamicArtDiagnostics()
                 .segmentGeneration();
         return new RunPlaybackObservation(
@@ -920,11 +920,12 @@ public final class TraceSessionLauncher {
                 dynamicGeneration);
     }
 
-    private Integer getActiveSpecialStageIndex() {
+    private Integer getActiveSpecialStageIndex(GameMode mode) {
+        // The stage identity a recorded segment is cut on, which the live
+        // provider stops reporting once the engine's results phase
+        // deinitialises it -- see GameLoop#recordedSpecialStageIdentity.
         GameLoop loop = Engine.currentGameLoop();
-        SpecialStageProvider provider = loop != null
-                ? loop.getActiveSpecialStageProvider() : null;
-        return provider != null ? provider.getCurrentStage() : null;
+        return loop != null ? loop.recordedSpecialStageIdentity(mode) : null;
     }
 
     private int currentRunSegmentIndex() {
@@ -1382,9 +1383,9 @@ public final class TraceSessionLauncher {
             // boundary's own physical row, so waiting costs the signal nothing.
             case "giant_ring", "starpost_special" ->
                     mode == GameMode.SPECIAL_STAGE
-                    && getActiveSpecialStageIndex() != null
+                    && getActiveSpecialStageIndex(mode) != null
                     ? new RunBoundarySignal.SpecialStageRequest(
-                            frame, getActiveSpecialStageIndex()) : null;
+                            frame, getActiveSpecialStageIndex(mode)) : null;
             case "stage_exit" -> null; // emitted by the semantic results-entry seam
             default -> null; // level-load signals are forwarded at their load seam
         };

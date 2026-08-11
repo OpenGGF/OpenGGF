@@ -3,6 +3,20 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: a recorded run's special-stage segment identity is now read from the stage the engine
+  is presenting, not from the live provider. The run recorder samples
+  `Current_Special_Stage` once, on the first `GameModeID_SpecialStage` frame
+  (`S2RunCaptureRunner.StartSsSegment`), so a segment's `special_stage_index` is that
+  pre-increment number for the whole segment -- the ROM byte itself is not constant, since a
+  won stage increments it inside the stage alongside `SS_Check_Rings_flag`
+  (`s2.asm:72467-72477`) and it is zeroed only on a later entry past 7 (`s2.asm:6538-6540`).
+  The engine splits that one ROM mode into `SPECIAL_STAGE` plus `SPECIAL_STAGE_RESULTS`, and
+  entering results deinitialises the stage manager, dropping its scratch index to 0. Segment
+  ownership therefore failed for every recorded stage but stage 0, where the zeroed reading
+  matched by coincidence: the EHZ half-pipe round trip lost ownership of its `ss_2` segment
+  the moment the results screen opened. Both observation builders -- the production
+  `TraceSessionLauncher` and the headless run-chain adapter -- now read
+  `GameLoop.recordedSpecialStageIdentity`, and `ss_2` replays all 6381 rows.
 - Fix: Sonic 2's star-post special-stage stars now orbit and collide the way `Obj79_Star`
   does. Three ROM divergences moved the star the player jumps into: `Obj79_MakeSpecialStars`
   allocates with `AllocateObjectAfterCurrent` (`s2.asm:44841-44845`) so the four stars sit

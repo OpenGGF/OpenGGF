@@ -72445,3 +72445,35 @@ so a direct blob stays un-prepared across frames where the engine prepares in on
   level segment, exactly as the recording requires.
 - No constant was introduced; every value in the change is read out of
   `s2.asm` and cited at the site.
+
+## 2026-08-11 -- TestS2EhzHalfpipeRoundTripChain segment 3 (ss_2) ownership
+
+- Command (one fork, alphabetical, isolated worktree, base `746d3de04`):
+  `mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+  "-Dsurefire.argLine=-Xmx4g" -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...
+  "-Dtest=TestS2*TraceReplay,TestS1GhzMazeRoundTripChain,TestS3kMegaRunChain,TestS2EhzHalfpipeRoundTripChain" test`
+- CONTROL at `746d3de04`: 38 tests, 2 failures + 1 error. `TestS2EhzHalfpipeRoundTripChain`
+  failed with "segment 3 lost production ownership before source closure
+  (mode=SPECIAL_STAGE_RESULTS, level=LevelIdentity[loadGeneration=3, progressionZone=0,
+  romZone=0, act=0], BK2 cursor=19159)".
+- AFTER: 38 tests, 2 failures + 1 error. The two other failures
+  (`TestS1GhzMazeRoundTripChain` run_tail.edge movie_logical_frame 9071 vs 9037;
+  `TestS3kMegaRunChain` unconsumed KOS_DECOMPRESSION_QUEUE#15 at raw_frame 4570) are
+  character-for-character identical to the control. All 34 `TestS2*TraceReplay` classes
+  green in both.
+- Diagnosis was MEASURED, not inferred: an instrumented `ownsCurrentSegment` showed the
+  observation's `specialStageIndex` going 1 -> 0 on the exact step the engine entered
+  `SPECIAL_STAGE_RESULTS`, against a segment identity of 1. The mode was never the problem
+  (`insideRecordedSpecialStageMode` already accepts it). Segment 1 passed the same predicate
+  for 504 results-phase steps only because its recorded identity is 0 and the zeroed live
+  reading matched by coincidence.
+- New frontier: `TestS2EhzHalfpipeRoundTripChain` now fails in
+  `writeDynamicArtInteriorReport` for segment 3 --
+  `target/trace-reports/s2-ehz-halfpipe-roundtrip_seg3_dynamic_art_report.json`, 16113
+  errors over 3125 of 6381 compared rows, first error row 0
+  (`dynamic_art.outstanding_transfer_ids` expected `[0]`, actual `[]`; the engine has
+  already published `edges=[0]`). Segment 1's interior report is clean: 5733 rows, 0 errors.
+  The open question is why the second special-stage entry retires its entry DPLC a row
+  early where the first does not.
+- No constant was introduced; the identity rule is read out of the recorder's own sampling
+  point and the ROM sites cited above.

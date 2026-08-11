@@ -371,14 +371,16 @@ abstract class AbstractRunChainTest {
         private final List<TraceRunPlaybackCoordinator.Action> actions =
                 new ArrayList<>();
         private final RunLevelLoadTracker levelLoads;
+        private final GameLoop loop;
         private long admittedStepOrdinal;
         private RunPlaybackObservation productionOwnerObservation;
         private int productionOwnerSegmentIndex = -1;
 
         private HeadlessRunCoordinatorAdapter(
                 TraceRunManifest run, Bk2Movie movie,
-                List<SegmentPlan> plans) {
+                List<SegmentPlan> plans, GameLoop loop) {
             this.run = run;
+            this.loop = loop;
             this.coordinator = new TraceRunPlaybackCoordinator(
                     run,
                     GameServices.module().getTracePlaybackProfile(),
@@ -628,10 +630,14 @@ abstract class AbstractRunChainTest {
                         levelManager.getCurrentAct(),
                         bonus.getActiveType());
             }
+            // The stage identity the recorded segment is cut on, which the
+            // live provider stops reporting once the engine's results phase
+            // deinitialises it -- see GameLoop#recordedSpecialStageIdentity.
+            // Production reads exactly the same accessor through
+            // TraceSessionLauncher#getActiveSpecialStageIndex.
             Integer specialStageIndex =
                     RunPlaybackObservation.insideRecordedSpecialStageMode(mode)
-                            ? GameServices.module().getSpecialStageProvider()
-                                    .getCurrentStage()
+                            ? loop.recordedSpecialStageIdentity(mode)
                             : null;
             DynamicArtLifecycleService lifecycle =
                     SessionManager.getCurrentGameplayMode()
@@ -817,7 +823,7 @@ abstract class AbstractRunChainTest {
                 new DynamicArtGapJournalProbe(
                         gameplayMode.dynamicArtLifecycle());
         HeadlessRunCoordinatorAdapter runCoordinator =
-                new HeadlessRunCoordinatorAdapter(run, movie, plans);
+                new HeadlessRunCoordinatorAdapter(run, movie, plans, loop);
         activeRunCoordinator = runCoordinator;
         Throwable primaryFailure = null;
         boolean prefixReached = false;
