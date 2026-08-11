@@ -3,6 +3,16 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fixed: Knuckles' glide-slide get-up now grounds him the way
+  `Knuckles_Sliding .getUp`'s `bsr.w Knux_TouchFloor` does
+  (sonic3k.asm:30984, `loc_17B6A` tail at 32854-32864). The slide deliberately
+  runs with `Status_InAir` still set, so the get-up frame is where Knuckles
+  becomes grounded; leaving the flag set kept the next few frames on the
+  airborne control path, which `move_lock` does not gate, and a held direction
+  re-accelerated `x_vel` away from the ROM's zero. The tail's `flip_type` and
+  `flips_remaining` clears are ported alongside it; the fields with no modelled
+  engine state at that site are named in the code comment rather than silently
+  dropped.
 - Fixed: the Sonic 2 special-stage player DPLC dedup baseline is now seeded the
   way each object's init routine writes its own `LastLoadedDPLC` register --
   Obj09 (s2.asm:69095), Obj10 (s2.asm:70378) and the Obj88 tail (s2.asm:70403)

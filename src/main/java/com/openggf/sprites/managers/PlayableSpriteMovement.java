@@ -1940,6 +1940,28 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		sprite.setDoubleJumpFlag(0);
 		sprite.setDoubleJumpProperty((byte) 0);
 
+		// ROM: bsr.w Knux_TouchFloor (sonic3k.asm:30984). The slide itself runs
+		// with Status_InAir still set — loc_1693E deliberately leaves it set when
+		// the glide first touches ground — so .getUp is where Knuckles actually
+		// becomes grounded. Knux_TouchFloor's loc_17B6A tail
+		// (sonic3k.asm:32854-32864) clears Status_InAir, Status_Push and
+		// Status_RollJump, and zeroes jumping, Chain_bonus_counter, flip_angle,
+		// flip_type, flips_remaining, scroll_delay_counter and double_jump_flag.
+		// Without the InAir clear the get-up frame stays airborne and the
+		// following frames run the airborne control path, which move_lock does
+		// not gate: a held direction then accelerates x_vel away from the ROM's
+		// zero.
+		// (This build is FixBugs = 0; the site carries no bug-fix conditional.)
+		// double_jump_flag / double_jump_property are already zeroed above.
+		// Status_RollJump, Chain_bonus_counter and scroll_delay_counter have no
+		// modelled engine state at this site; flip_type and flips_remaining do.
+		sprite.setAir(false);
+		sprite.setPushing(false);
+		sprite.setJumping(false);
+		sprite.setFlipAngle(0);
+		sprite.setFlipType(0);
+		sprite.setFlipsRemaining(0);
+
 		// ROM: move.w #$F,move_lock — 15-frame input lock
 		sprite.setMoveLockTimer(0x0F);
 		// ROM: move.b #$22,anim — GLIDE_LAND animation (brief get-up/crouch pose)

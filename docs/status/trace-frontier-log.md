@@ -72597,3 +72597,44 @@ so a direct blob stays un-prepared across frames where the engine prepares in on
 - Focused unit/guard sweep (`*DynamicArt*`, `*HardwareTiming*`,
   `*SpecialStage*`, rewind coverage guards): 714 tests, identical
   11-name failure set at base and after.
+
+## Round 52 — S3K Knuckles super-emerald run, AIZ1 glide-slide get-up
+
+- Command: `mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1
+  -Dsurefire.runOrder=alphabetical "-Dsurefire.argLine=-Xmx4g"
+  -Ds3k.rom.path=s3k.gen -Dtest=TestS3kKnucklesSuperEmeraldRunChain test`
+  (worktree `wt/r52-ssring`, base `091008f02`).
+- `TestS3kKnucklesSuperEmeraldRunChain` stays RED at the same edge in control
+  and after: segment 0 (`aiz`), `KOS_DECOMPRESSION_QUEUE#14`
+  `sha256:3c96d8b9...d408d91`, recorded `raw_frame=1617`, engine pending
+  `<none>`.
+- **Disproved**: that edge is not an `Obj_SSEntryRing` implementation defect.
+  Measured with a lifecycle print — the AIZ1 layout does contain object 0x85 at
+  (7112, 1216) subtype 1, but `Sonic3kSSEntryRingObjectInstance` is never
+  constructed and `ObjectPlacementController.trySpawn` is never called for it.
+  The ROM reaches the ring (physics stream frame 0x64B: `player_x=0x1BB0`,
+  `anim=0x1C`), the engine's camera high-water in the same segment is 0x16DE.
+  The cause is the same class as the MHZ instance: a physics divergence leaves
+  the player ~1000 px behind, so the ring never comes on screen.
+- First physics divergence (stream: `physics.csv.gz`, clock: trace frame index,
+  aligned 1:1 with engine gameplay frames): **control frame 228**, engine
+  `player_x=0x16C2` vs ROM `0x16C1`, all ROM speeds zero.
+  Root cause measured: Knuckles glide-slide `.getUp` fired at frame 223 and
+  zeroed the speeds, but left the airborne flag set; frames 224-227 then ran
+  the airborne control path (which `move_lock` does not gate) and a held
+  right re-accelerated `x_vel` to 0x30.
+- After the `Knux_TouchFloor` tail fix, first physics divergence moves to
+  **frame 447** (`player_y` 0x3F6 vs 0x03EE; `player_x` exact) — 219 frames
+  later. The segment-0 hardware edge is unchanged; the remaining gap is a
+  separate AIZ1 divergence at frame 447.
+- `TestS3kMhzCompleteRunTraceReplay` unchanged: same
+  `KOS_DECOMPRESSION_QUEUE#335` failure, byte-identical message at base and
+  after.
+- Canaries (77 tests, one fork, alphabetical): identical at base and after —
+  `TestS3kAizCompleteRunTraceReplay`, `TestS3kCnzCompleteRunTraceReplay`,
+  `TestS3kMgzTraceReplay`, `TestSonic3kLevelLoading`, `TestS3kAiz1SkipHeadless`
+  green; `TestHardwareTimingAuthorityGuard` 24/24 green and unmodified;
+  `TestS3kMegaRunChain` and `TestS3kMhzCompleteRunTraceReplay` fail identically
+  in both. `TestS3kAizTraceReplay` (16), `TestS3kLbz1KnucklesSequenceHeadless`
+  (30), `TestKnucklesRespawnStrategy`, `TestSonic3kSuperTransformationEligibility`
+  green after.
