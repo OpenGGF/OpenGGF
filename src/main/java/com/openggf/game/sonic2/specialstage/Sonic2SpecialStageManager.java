@@ -1067,6 +1067,38 @@ public class Sonic2SpecialStageManager {
         if (tailsPlayer != null) {
             tailsPlayer.initializeScalarStateFromRomObjectRoutine();
         }
+        primeDynamicArtDedupBaselines();
+    }
+
+    /**
+     * Reproduces the {@code LastLoadedDPLC} writes each special-stage player
+     * object's init routine performs.
+     *
+     * <p>Obj09's init writes {@code #1} to {@code Sonic_LastLoadedDPLC}
+     * (s2.asm:69095), Obj10's writes {@code #1} to {@code Tails_LastLoadedDPLC}
+     * (s2.asm:70378), and the Obj88 tail Obj10's init runs writes {@code #1} to
+     * {@code TailsTails_LastLoadedDPLC} (s2.asm:70403). Those registers are the
+     * ROM's own per-owner DPLC dedup: {@code LoadSSPlayerDynPLC} compares
+     * {@code mapping_frame} against the register and skips the transfer only on
+     * an exact match (s2.asm:69209-69213), and
+     * {@code LoadSSTailsTailsDynPLC} does the same against its own register
+     * (s2.asm:70586-70588). Because init rewrites them, a value a previous
+     * special-stage instance left behind can never suppress the first transfer
+     * of the next one.
+     */
+    private void primeDynamicArtDedupBaselines() {
+        DynamicArtLifecycleService lifecycle =
+                GameServices.dynamicArtLifecycleOrNull();
+        if (lifecycle == null || !lifecycle.isRunActive()) {
+            return;
+        }
+        if (sonicPlayer != null) {
+            lifecycle.primeDplcDedupBaseline("ss-sonic", 1);
+        }
+        if (tailsPlayer != null) {
+            lifecycle.primeDplcDedupBaseline("ss-tails", 1);
+            lifecycle.primeDplcDedupBaseline("ss-tails-tails", 1);
+        }
     }
 
     /**

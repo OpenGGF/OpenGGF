@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fixed: the Sonic 2 special-stage player DPLC dedup baseline is now seeded the
+  way each object's init routine writes its own `LastLoadedDPLC` register --
+  Obj09 (s2.asm:69095), Obj10 (s2.asm:70378) and the Obj88 tail (s2.asm:70403)
+  each store `#1`. Previously the engine carried the register value left behind
+  by an earlier special-stage instance, so a second entry whose first pass used
+  the same mapping frame suppressed a transfer the ROM performs.
 - Performance: repeated public base-id, base-name, and donor SMPS SFX starts
   now reuse the generation-aware catalog entry already consumed by the
   presentation resolver. The manager registers the first immutable program

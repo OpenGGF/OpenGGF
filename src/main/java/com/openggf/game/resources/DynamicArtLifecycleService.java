@@ -561,6 +561,27 @@ public final class DynamicArtLifecycleService
         return update;
     }
 
+    /**
+     * Seeds an owner's last-loaded-DPLC dedup baseline the way the owning ROM
+     * object's init routine writes its own dedup register, without publishing
+     * or staging any transfer.
+     *
+     * <p>The dedup register is object-owned state that the object's init
+     * rewrites, so a value left behind by an earlier visit to the same object
+     * never suppresses the new instance's first transfer.
+     *
+     * @param owner        dynamic-art owner whose baseline is being seeded
+     * @param mappingFrame value the ROM init routine writes to the register
+     */
+    public void primeDplcDedupBaseline(String owner, int mappingFrame) {
+        validateOwner(owner);
+        if (mappingFrame < 0) {
+            throw new IllegalArgumentException(
+                    "mappingFrame must be nonnegative");
+        }
+        lastMappingFrames.put(owner, mappingFrame);
+    }
+
     private ArtUpdate observeDplc(
             String owner,
             int mappingFrame,

@@ -72565,3 +72565,35 @@ so a direct blob stays un-prepared across frames where the engine prepares in on
   only on an INTERIOR segment's row driver; S2's first interior is the failing segment 1
   and S3K stops inside segment 0's source act, so in both runs a prefix could not be placed
   short of the frontier. Both javadocs say so and say to add one when the frontier moves.
+## 2026-08-11 - S2 EHZ halfpipe round-trip: special-stage DPLC dedup carry-over
+
+- Worktree a detached worktree, branch
+  `bugfix/ai-s2-ss-dplc-dedup-baseline`, over base `3ad874245`.
+- Command (control and after, one fork, alphabetical):
+  `mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1
+  -Dsurefire.runOrder=alphabetical "-Dsurefire.argLine=-Xmx4g"
+  -Dsonic1.rom.path=s1.gen -Dsonic2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen
+  -Dtest=TestS2EhzHalfpipeRoundTripChain test`
+- `TestS2EhzHalfpipeRoundTripChain` remains RED. Segment 3 dynamic-art report
+  errors: 16113 (control) -> 12232 (after) over 6381 comparisons. Segment 1
+  stays 0/5733.
+- First error frame is unchanged at 0, field
+  `dynamic_art.edges` / `dynamic_art.outstanding_transfer_ids`. That row-0
+  divergence is the unresolved transition-gap carry: the ROM holds one
+  player-art transfer outstanding from before the segment's row 0 and publishes
+  its edge at row 126, which the engine does not model.
+- Closed by this change: the suppressed `ss-tails` submission at segment-3
+  logical row 135. Measured directly - the engine's dedup map held
+  `ss-tails -> mapping frame 0` from the first special stage while the ROM's
+  `Tails_LastLoadedDPLC` had been reinitialised to 1 by Obj10's init. All
+  owner mismatches (rows 135 and 137) and the second unit of index skew are
+  gone; the residual index divergence is a constant +1 from the single
+  remaining missed transfer.
+- Canaries measured identically at base and after: 37 tests, one pre-existing
+  `TestS3kMegaRunChain` error (unconsumed KOS completion edge at raw_frame
+  4570) present in both. `TestS1GhzMazeRoundTripChain`, all seven
+  `TestS2SpecialStage*TraceReplay`, `TestS2Ehz1TraceReplay`, every S2
+  level-select and complete-emeralds segment replay green in both runs.
+- Focused unit/guard sweep (`*DynamicArt*`, `*HardwareTiming*`,
+  `*SpecialStage*`, rewind coverage guards): 714 tests, identical
+  11-name failure set at base and after.
