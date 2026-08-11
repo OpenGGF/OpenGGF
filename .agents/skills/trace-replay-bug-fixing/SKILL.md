@@ -1838,6 +1838,37 @@ fixes the stream at source and the projection can be retired. Write that
 retirement condition into the projection's javadoc — a bridge over a known
 recorder defect is legitimate; an open-ended excusal is not.
 
+### A flag set inside the object loop but read before it has one pass of latency
+
+Sonic 2's special-stage loop tests `SS_Pause_Only_flag` and builds
+`Ctrl_1_Logical` / `Ctrl_2_Logical` **before** `jsr (RunObjects)`
+(`s2.asm:6699-6721`), while `Obj59_Init` **sets** that flag from inside
+`RunObjects` (`:72319-72321`). `SSObjectsManager` allocates the emerald earlier in
+the same pass, so the object exists and its Init runs — but the inputs for that
+pass were already built unmasked. **The mask first bites the following pass.**
+
+An engine that reads such a flag as live object state, or that computes inputs
+after running objects, engages it one pass early. Here that cost a
+`SSPlayer_MoveRight` branch, which left the slowing bit set, skipped an
+`ss_slide_timer` re-arm, and let traction resume ~24 passes early — surfacing much
+later as an animation-band crossing in a DPLC comparison, three subsystems away
+from the cause.
+
+**The fix is a latch, never a delay.** Consume the value latched at pass start, and
+cite the two sites — the read and the write — with a comment naming the one-pass
+visibility. A "wait one pass" counter reproduces the recording and desyncs the next
+one; it is the single most tempting fitted model when the symptom is literally
+"one pass early".
+
+Generalise the lens rather than the instance:
+
+- Audit **every** setter of a flag that is consumed before the loop that sets it.
+  Any of them carries the same latency.
+- Check **all** consumers. This mask covers `Ctrl_2_Logical` too, so latching only
+  player 1 desyncs the sidekick a pass later in Sonic-and-Tails runs.
+- The same shape exists wherever a per-pass input, camera or scroll value is
+  sampled outside the object loop but written inside it.
+
 ## Why This Matters
 
 The mission is faithful pixel-for-pixel reimplementation. Trace replay tests are the proof. If they're allowed to lean on synced trace data each frame, the proof is hollow — bugs hide behind the synchronisation and the test green-lights anyway. Honest tests force honest engine fixes. That's how progress compounds: every fix makes the next divergence visible instead of building on top of a masked one.
