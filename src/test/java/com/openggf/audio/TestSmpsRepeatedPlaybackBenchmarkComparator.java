@@ -1,6 +1,7 @@
 package com.openggf.audio;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
@@ -13,8 +14,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSmpsRepeatedPlaybackBenchmarkComparator {
-    private static final String HASH = "a".repeat(64);
-    private static final String OTHER_HASH = "b".repeat(64);
+    private static final String MANIFEST_RELATIVE =
+            "src/test/java/com/openggf/audio/"
+                    + "TestSmpsRepeatedPlaybackBenchmark.java";
     private static final String[] SCENARIOS = {
             "music-repeat",
             "sfx-program-tiny", "sfx-program-large",
@@ -26,6 +28,14 @@ class TestSmpsRepeatedPlaybackBenchmarkComparator {
 
     @TempDir
     Path temp;
+    private Path baselineManifest;
+    private Path featureManifest;
+
+    @BeforeEach
+    void createIdenticalManifestArchives() throws IOException {
+        baselineManifest = manifest("baseline-manifest", "manifest-v1");
+        featureManifest = manifest("feature-manifest", "manifest-v1");
+    }
 
     @Test
     void acceptsOnlyACompletePassingPairedComparison() throws IOException {
@@ -35,7 +45,7 @@ class TestSmpsRepeatedPlaybackBenchmarkComparator {
                 900, 80, 80, 80, 80, 80, 80)));
 
         var result = SmpsRepeatedPlaybackBenchmarkComparator.compare(
-                baseline, feature, HASH, HASH);
+                baseline, feature, baselineManifest, featureManifest);
 
         assertTrue(result.render().contains("SMPS_COMPARATOR_RESULT PASS"));
         assertTrue(result.render().contains("control=program"));
@@ -54,7 +64,7 @@ class TestSmpsRepeatedPlaybackBenchmarkComparator {
 
         assertThrows(IllegalArgumentException.class,
                 () -> SmpsRepeatedPlaybackBenchmarkComparator.compare(
-                        baseline, feature, HASH, HASH));
+                        baseline, feature, baselineManifest, featureManifest));
     }
 
     @Test
@@ -66,7 +76,7 @@ class TestSmpsRepeatedPlaybackBenchmarkComparator {
                 "/feature/target/test-tmp"));
 
         var result = SmpsRepeatedPlaybackBenchmarkComparator.compare(
-                baseline, feature, HASH, HASH);
+                baseline, feature, baselineManifest, featureManifest);
 
         assertTrue(result.render().contains("SMPS_COMPARATOR_ENV identity=PASS"));
     }
@@ -81,7 +91,7 @@ class TestSmpsRepeatedPlaybackBenchmarkComparator {
 
         assertThrows(IllegalArgumentException.class,
                 () -> SmpsRepeatedPlaybackBenchmarkComparator.compare(
-                        baseline, feature, HASH, HASH));
+                        baseline, feature, baselineManifest, featureManifest));
     }
 
     @Test
@@ -94,7 +104,7 @@ class TestSmpsRepeatedPlaybackBenchmarkComparator {
 
         assertThrows(IllegalArgumentException.class,
                 () -> SmpsRepeatedPlaybackBenchmarkComparator.compare(
-                        baseline, feature, HASH, HASH));
+                        baseline, feature, baselineManifest, featureManifest));
     }
 
     @Test
@@ -107,7 +117,7 @@ class TestSmpsRepeatedPlaybackBenchmarkComparator {
 
         assertThrows(IllegalArgumentException.class,
                 () -> SmpsRepeatedPlaybackBenchmarkComparator.compare(
-                        baseline, feature, HASH, HASH));
+                        baseline, feature, baselineManifest, featureManifest));
     }
 
     @Test
@@ -120,7 +130,7 @@ class TestSmpsRepeatedPlaybackBenchmarkComparator {
 
         assertThrows(IllegalArgumentException.class,
                 () -> SmpsRepeatedPlaybackBenchmarkComparator.compare(
-                        baseline, feature, HASH, HASH));
+                        baseline, feature, baselineManifest, featureManifest));
     }
 
     @Test
@@ -132,25 +142,77 @@ class TestSmpsRepeatedPlaybackBenchmarkComparator {
 
         assertThrows(IllegalArgumentException.class,
                 () -> SmpsRepeatedPlaybackBenchmarkComparator.compare(
-                        baseline, feature, HASH, HASH));
+                        baseline, feature, baselineManifest, featureManifest));
     }
 
     @Test
-    void rejectsManifestHashMismatch() throws IOException {
+    void rejectsOneByteManifestMutation() throws IOException {
+        featureManifest = manifest("feature-mutated", "manifest-v2");
         assertThrows(IllegalArgumentException.class,
                 () -> SmpsRepeatedPlaybackBenchmarkComparator.compare(
                         passingBaseline(),
                         write("feature.txt", passingFeatureText()),
-                        HASH, OTHER_HASH));
+                        baselineManifest, featureManifest));
+    }
+
+    @Test
+    void rejectsArbitraryEqualRawHeaderHashes() throws IOException {
+        String arbitrary = "a".repeat(64);
+        Path baseline = write("baseline.txt",
+                passingBaselineText(arbitrary));
+        Path feature = write("feature.txt",
+                passingFeatureText(arbitrary));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> SmpsRepeatedPlaybackBenchmarkComparator.compare(
+                        baseline, feature,
+                        baselineManifest, featureManifest));
+    }
+
+    @Test
+    void rejectsMissingManifestFile() throws IOException {
+        Files.delete(featureManifest.resolve(MANIFEST_RELATIVE));
+        assertThrows(IOException.class,
+                () -> SmpsRepeatedPlaybackBenchmarkComparator.compare(
+                        passingBaseline(),
+                        write("feature.txt", passingFeatureText()),
+                        baselineManifest, featureManifest));
     }
 
     private Path passingBaseline() throws IOException {
-        return write("baseline.txt", run(false, medians(
-                1000, 100, 1000, 100, 1100, 100, 400)));
+        return write("baseline.txt", passingBaselineText(manifestHash()));
+    }
+
+    private String passingBaselineText(String manifestHash) {
+        return run(false, medians(
+                1000, 100, 1000, 100, 1100, 100, 400), manifestHash);
     }
 
     private String passingFeatureText() {
-        return run(true, medians(900, 80, 80, 80, 80, 80, 80));
+        return passingFeatureText(manifestHash());
+    }
+
+    private String passingFeatureText(String manifestHash) {
+        return run(true, medians(900, 80, 80, 80, 80, 80, 80),
+                manifestHash);
+    }
+
+    private String manifestHash() {
+        try {
+            return SmpsRepeatedPlaybackBenchmarkComparator.manifestHash(
+                    baselineManifest);
+        } catch (IOException failure) {
+            throw new AssertionError(failure);
+        }
+    }
+
+    private Path manifest(String directory, String contents)
+            throws IOException {
+        Path root = temp.resolve(directory);
+        Path file = root.resolve(MANIFEST_RELATIVE);
+        Files.createDirectories(file.getParent());
+        Files.writeString(file, contents);
+        return root;
     }
 
     private Path write(String name, String value) throws IOException {
@@ -167,10 +229,17 @@ class TestSmpsRepeatedPlaybackBenchmarkComparator {
         return result;
     }
 
-    private static String run(
+    private String run(
             boolean feature, Map<String, Long> medians) {
+        return run(feature, medians, manifestHash());
+    }
+
+    private static String run(
+            boolean feature, Map<String, Long> medians,
+            String manifestHash) {
         StringBuilder raw = new StringBuilder();
-        raw.append("SMPS_BENCHMARK_HEADER schema=2 java=21.0.11+10 ")
+        raw.append("SMPS_BENCHMARK_HEADER schema=3 manifestSha256=")
+                .append(manifestHash).append(" java=21.0.11+10 ")
                 .append("vm=OpenJDK_64-Bit_Server_VM vmVendor=Debian ")
                 .append("vmVersion=21.0.11+10 os=Linux arch=amd64 ")
                 .append("vmArgs=-Dpair=stable,"

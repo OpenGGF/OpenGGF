@@ -3,9 +3,13 @@ package com.openggf.audio;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -18,6 +22,9 @@ public final class SmpsRepeatedPlaybackBenchmarkComparator {
     private static final Pattern FIELD = Pattern.compile(
             "([A-Za-z][A-Za-z0-9]*)=(.*?)(?= [A-Za-z][A-Za-z0-9]*=|$)");
     private static final Pattern SHA_256 = Pattern.compile("[0-9a-f]{64}");
+    private static final List<String> MANIFEST_FILES = List.of(
+            "src/test/java/com/openggf/audio/"
+                    + "TestSmpsRepeatedPlaybackBenchmark.java");
     private static final List<String> SCENARIOS = List.of(
             "music-repeat",
             "sfx-program-tiny", "sfx-program-large",
@@ -29,16 +36,27 @@ public final class SmpsRepeatedPlaybackBenchmarkComparator {
     }
 
     public static void main(String[] arguments) {
+        if (arguments.length == 2
+                && arguments[0].equals("--hash-manifest")) {
+            try {
+                System.out.println(manifestHash(Path.of(arguments[1])));
+            } catch (IOException | RuntimeException failure) {
+                System.err.println("SMPS_COMPARATOR_RESULT FAIL reason="
+                        + stable(failure.getMessage()));
+                System.exit(1);
+            }
+            return;
+        }
         if (arguments.length != 4) {
             System.err.println("usage: <baseline-raw> <feature-raw> "
-                    + "<baseline-manifest-sha256> "
-                    + "<feature-manifest-sha256>");
+                    + "<baseline-manifest-root> "
+                    + "<feature-manifest-root>");
             System.exit(2);
         }
         try {
             ComparisonResult result = compare(
                     Path.of(arguments[0]), Path.of(arguments[1]),
-                    arguments[2], arguments[3]);
+                    Path.of(arguments[2]), Path.of(arguments[3]));
             System.out.print(result.render());
         } catch (IOException | RuntimeException failure) {
             System.err.println("SMPS_COMPARATOR_RESULT FAIL reason="
@@ -50,12 +68,10 @@ public final class SmpsRepeatedPlaybackBenchmarkComparator {
     public static ComparisonResult compare(
             Path baselineRaw,
             Path featureRaw,
-            String baselineManifestHash,
-            String featureManifestHash) throws IOException {
-        require(SHA_256.matcher(baselineManifestHash).matches(),
-                "invalid baseline manifest SHA-256");
-        require(SHA_256.matcher(featureManifestHash).matches(),
-                "invalid feature manifest SHA-256");
+            Path baselineManifestRoot,
+            Path featureManifestRoot) throws IOException {
+        String baselineManifestHash = manifestHash(baselineManifestRoot);
+        String featureManifestHash = manifestHash(featureManifestRoot);
         require(baselineManifestHash.equals(featureManifestHash),
                 "benchmark manifest hashes differ");
 
@@ -63,6 +79,12 @@ public final class SmpsRepeatedPlaybackBenchmarkComparator {
         RunData feature = parse(featureRaw);
         validateRun("baseline", baseline, false);
         validateRun("feature", feature, true);
+        require(baselineManifestHash.equals(
+                        value(baseline.header(), "manifestSha256")),
+                "baseline raw is not bound to its archived manifest");
+        require(featureManifestHash.equals(
+                        value(feature.header(), "manifestSha256")),
+                "feature raw is not bound to its archived manifest");
         require(comparableEnvironment(baseline.header()).equals(
                         comparableEnvironment(feature.header())),
                 "benchmark environment/header identity differs");
@@ -94,6 +116,9 @@ public final class SmpsRepeatedPlaybackBenchmarkComparator {
                         .append(before.medianBytesPerOp())
                         .append(" featureMedian=")
                         .append(after.medianBytesPerOp())
+                        .append(" allocationDeltaPercent=")
+                        .append(percentDelta(before.medianBytesPerOp(),
+                                after.medianBytesPerOp()))
                         .append(" tolerance=").append(tolerance)
                         .append(" result=PASS\n");
             }
@@ -146,6 +171,9 @@ public final class SmpsRepeatedPlaybackBenchmarkComparator {
                 .append(" baselineSlope=").append(baselineSlope)
                 .append(" featureSlope=").append(featureSlope)
                 .append(" largeImprovement=").append(largeImprovement)
+                .append(" largeAllocationDeltaPercent=")
+                .append(percentDelta(baselineLarge.medianBytesPerOp(),
+                        featureLarge.medianBytesPerOp()))
                 .append(" tolerance=").append(tolerance)
                 .append(" result=PASS\n");
     }
@@ -204,8 +232,11 @@ public final class SmpsRepeatedPlaybackBenchmarkComparator {
 
     private static void validateRun(
             String label, RunData run, boolean feature) {
-        require("2".equals(value(run.header(), "schema")),
-                label + " benchmark schema is not 2");
+        require("3".equals(value(run.header(), "schema")),
+                label + " benchmark schema is not 3");
+        require(SHA_256.matcher(value(
+                        run.header(), "manifestSha256")).matches(),
+                label + " manifest SHA-256 header is invalid");
         require(value(run.header(), "java").startsWith("21."),
                 label + " did not run on JDK 21");
         require("true".equals(value(
@@ -295,6 +326,31 @@ public final class SmpsRepeatedPlaybackBenchmarkComparator {
         Map<String, String> comparable = new LinkedHashMap<>(header);
         comparable.remove("vmArgsRaw");
         return Map.copyOf(comparable);
+    }
+
+    static String manifestHash(Path manifestRoot) throws IOException {
+        MessageDigest digest;
+        try {
+            digest = MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException impossible) {
+            throw new IllegalStateException("SHA-256 unavailable", impossible);
+        }
+        for (String relative : MANIFEST_FILES) {
+            Path file = manifestRoot.resolve(relative);
+            if (!Files.isRegularFile(file)) {
+                throw new IOException("missing manifest file " + relative);
+            }
+            digest.update(Files.readAllBytes(file));
+        }
+        return HexFormat.of().formatHex(digest.digest());
+    }
+
+    private static String percentDelta(long baseline, long feature) {
+        if (baseline == 0) {
+            return feature == 0 ? "0.000%" : "unbounded";
+        }
+        return String.format(Locale.ROOT, "%.3f%%",
+                100.0 * (feature - baseline) / baseline);
     }
 
     private static void validateVmArguments(

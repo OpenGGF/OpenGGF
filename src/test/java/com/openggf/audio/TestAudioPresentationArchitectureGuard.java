@@ -209,6 +209,52 @@ class TestAudioPresentationArchitectureGuard {
                 "unguarded driver snapshot @ audio/driver/SmpsDriver.java"));
     }
 
+    @Test
+    void smpsOwnershipDetectorRejectsPublicAndExtractedLoadBeforeLookup() {
+        for (String mutation : List.of(
+                "source.loader().loadSfx(sfxName); "
+                        + "ensureRegisteredSmpsSfx();",
+                "loadBeforeOwner(); ensureRegisteredSmpsSfx(); "
+                        + "} private final void loadBeforeOwner() { "
+                        + "source.loader().loadSfx(7);",
+                "this.source.loader().loadSfx(7); "
+                        + "ensureRegisteredSmpsSfx();")) {
+            Map<String, String> sources = representativeSafeSmpsSources();
+            sources.put("audio/AudioManager.java",
+                    safeAudioManagerClassificationMethods().replace(
+                            "ensureRegisteredSmpsSfx(); } "
+                                    + "public void playSfx(GameSound",
+                            mutation + " } public void playSfx(GameSound")
+                            + " private synchronized boolean "
+                            + "ensureRegisteredSmpsSfx() { "
+                            + "catalog.findRegisteredSmpsSfxAsset(); "
+                            + "return source.loader().loadSfx(1) != null; }");
+
+            assertTrue(smpsOwnershipViolations(sources).contains(
+                    "load before lookup @ audio/AudioManager.java"),
+                    mutation);
+        }
+    }
+
+    @Test
+    void observerGuardRejectsEveryUnconditionalOrExtractedCapture() {
+        for (String driver : List.of(
+                "public void commitSfxAdmission() { Object state = "
+                        + "hasChipWriteObserver() ? "
+                        + "captureLiveCommandMutation() : null; "
+                        + "captureLiveCommandMutation(); }",
+                "public synchronized void commitSfxAdmission() { "
+                        + "captureFallback(); } private final void "
+                        + "captureFallback() { captureLiveCommandMutation(); }")) {
+            Map<String, String> sources = representativeSafeSmpsSources();
+            sources.put("audio/driver/SmpsDriver.java", driver);
+
+            assertTrue(smpsOwnershipViolations(sources).contains(
+                    "unguarded driver snapshot @ audio/driver/SmpsDriver.java"),
+                    driver);
+        }
+    }
+
     private static Map<String, String> representativeSafeSmpsSources() {
         Map<String, String> sources = new LinkedHashMap<>();
         sources.put("audio/smps/DacData.java", "final class DacData {}");
@@ -309,6 +355,20 @@ class TestAudioPresentationArchitectureGuard {
                 managerSource, "ensureRegisteredSmpsSfx")) {
             violations.add("load before lookup @ audio/AudioManager.java");
         }
+        Map<String, String> managerMethods = methodBodies(managerSource);
+        for (String marker : List.of(
+                "public void playSfx(String sfxName, float pitch)",
+                "public void playSfx(GameSound sound, float pitch)",
+                "public boolean playSfx(int sfxId, float pitch)",
+                "public void playDonorSfx(String donorGameId, int sfxId)")) {
+            String route = methodBody(managerSource, marker);
+            if (route != null && !inspectLookupOrder(route, managerMethods,
+                    false, new HashSet<>()).valid()
+                    && !violations.contains(
+                    "load before lookup @ audio/AudioManager.java")) {
+                violations.add("load before lookup @ audio/AudioManager.java");
+            }
+        }
 
         String registrySource = sanitizedSource(source(sources,
                 "audio/presentation/AudioVoiceRegistry.java"));
@@ -337,8 +397,8 @@ class TestAudioPresentationArchitectureGuard {
         String driver = requiredMethodBody(driverSource,
                 "commitSfxAdmission(", "audio/driver/SmpsDriver.java",
                 violations);
-        if (driver != null && driver.contains("captureLiveCommandMutation(")
-                && !observerControlsSnapshot(driver)) {
+        if (driver != null && !observerSafeReachable(
+                driverSource, "commitSfxAdmission")) {
             violations.add("unguarded driver snapshot @ "
                     + "audio/driver/SmpsDriver.java");
         }
@@ -421,7 +481,8 @@ class TestAudioPresentationArchitectureGuard {
             if (event.kind().equals("lookup")) {
                 seen = true;
             } else if (event.kind().equals("load")) {
-                if (!seen) {
+                if (!seen && !isExplicitCompatibilityLoad(
+                        body, event.offset())) {
                     return new LookupInspection(false, seen);
                 }
             } else {
@@ -453,7 +514,8 @@ class TestAudioPresentationArchitectureGuard {
 
     private static Map<String, String> methodBodies(String source) {
         Pattern declarations = Pattern.compile(
-                "(?:public|protected|private)\\s+(?:static\\s+)?"
+                "(?:(?:public|protected|private|static|final|synchronized|"
+                        + "native|abstract|strictfp)\\s+)*"
                         + "(?:[\\w<>?.,\\[\\]]+\\s+)+"
                         + "([A-Za-z][A-Za-z0-9_]*)\\s*"
                         + "\\([^;{}]*\\)\\s*\\{");
@@ -480,14 +542,119 @@ class TestAudioPresentationArchitectureGuard {
         return "";
     }
 
-    private static boolean observerControlsSnapshot(String body) {
-        return Pattern.compile("hasChipWriteObserver\\s*\\(\\s*\\)\\s*"
-                        + "\\?\\s*captureLiveCommandMutation\\s*\\(")
-                .matcher(body).find()
-                || Pattern.compile("if\\s*\\(\\s*hasChipWriteObserver"
-                        + "\\s*\\(\\s*\\)\\s*\\)\\s*\\{[^}]*"
-                        + "captureLiveCommandMutation\\s*\\(",
-                        Pattern.DOTALL).matcher(body).find();
+    private static boolean isExplicitCompatibilityLoad(
+            String body, int loadOffset) {
+        int search = 0;
+        while ((search = body.indexOf("if", search)) >= 0) {
+            int conditionOpen = body.indexOf('(', search + 2);
+            if (conditionOpen < 0) {
+                return false;
+            }
+            int conditionClose = matching(body, conditionOpen, '(', ')');
+            int blockOpen = conditionClose < 0 ? -1
+                    : body.indexOf('{', conditionClose);
+            int blockClose = blockOpen < 0 ? -1
+                    : matching(body, blockOpen, '{', '}');
+            if (blockOpen >= 0 && loadOffset > blockOpen
+                    && loadOffset < blockClose) {
+                String condition = body.substring(
+                        conditionOpen + 1, conditionClose);
+                if (condition.contains("< 0")
+                        || condition.contains(".isBlank(")
+                        || condition.contains("!hasCatalogDependencies(")) {
+                    return true;
+                }
+            }
+            search += 2;
+        }
+        return false;
+    }
+
+    private static boolean observerSafeReachable(
+            String source, String rootMethod) {
+        Map<String, String> methods = methodBodies(source);
+        String root = methods.get(rootMethod);
+        return root != null && observerSafe(
+                root, methods, false, new HashSet<>());
+    }
+
+    private static boolean observerSafe(
+            String body,
+            Map<String, String> methods,
+            boolean inheritedObserverDominance,
+            Set<String> activeMethods) {
+        int capture = body.indexOf("captureLiveCommandMutation(");
+        while (capture >= 0) {
+            if (!inheritedObserverDominance
+                    && !observerDominates(body, capture)) {
+                return false;
+            }
+            capture = body.indexOf(
+                    "captureLiveCommandMutation(", capture + 1);
+        }
+        for (Map.Entry<String, String> method : methods.entrySet()) {
+            String called = method.getKey();
+            if (called.equals("captureLiveCommandMutation")
+                    || called.equals("hasChipWriteObserver")) {
+                continue;
+            }
+            int call = body.indexOf(called + "(");
+            while (call >= 0) {
+                if (activeMethods.add(called)) {
+                    boolean dominated = inheritedObserverDominance
+                            || observerDominates(body, call);
+                    boolean safe = observerSafe(method.getValue(), methods,
+                            dominated, activeMethods);
+                    activeMethods.remove(called);
+                    if (!safe) {
+                        return false;
+                    }
+                }
+                call = body.indexOf(called + "(", call + 1);
+            }
+        }
+        return true;
+    }
+
+    private static boolean observerDominates(String body, int offset) {
+        int observer = body.lastIndexOf("hasChipWriteObserver()", offset);
+        if (observer >= 0) {
+            int question = body.indexOf('?', observer);
+            int colon = question < 0 ? -1 : body.indexOf(':', question);
+            if (question < offset && colon > offset) {
+                return true;
+            }
+        }
+        int search = 0;
+        while ((search = body.indexOf("if", search)) >= 0) {
+            int conditionOpen = body.indexOf('(', search + 2);
+            int conditionClose = conditionOpen < 0 ? -1
+                    : matching(body, conditionOpen, '(', ')');
+            int blockOpen = conditionClose < 0 ? -1
+                    : body.indexOf('{', conditionClose);
+            int blockClose = blockOpen < 0 ? -1
+                    : matching(body, blockOpen, '{', '}');
+            if (blockOpen >= 0 && offset > blockOpen && offset < blockClose
+                    && body.substring(conditionOpen + 1, conditionClose)
+                    .contains("hasChipWriteObserver()")) {
+                return true;
+            }
+            search += 2;
+        }
+        return false;
+    }
+
+    private static int matching(
+            String source, int open, char opening, char closing) {
+        int depth = 0;
+        for (int index = open; index < source.length(); index++) {
+            if (source.charAt(index) == opening) {
+                depth++;
+            } else if (source.charAt(index) == closing && --depth == 0) {
+                return index;
+            }
+        }
+        return -1;
     }
 
     private static String sanitizedSource(String source) {
