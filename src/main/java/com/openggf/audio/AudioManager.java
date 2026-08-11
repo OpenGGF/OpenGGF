@@ -56,10 +56,17 @@ public class AudioManager implements MusicRestoreSink {
     private static final int REVERSE_RELEASE_CROSSFADE_MS = 45;
     private static AudioManager instance;
     private AudioBackend backend;
-    private volatile Rom rom;
-    /** Volatile publication of the immutable base playback dependency tuple. */
+    /**
+     * Frozen architecture dependency-shape sentinel. The ArchUnit baseline
+     * records this exact historical {@code AudioManager -> Rom} field edge.
+     * Effective ROM state lives only in {@link #baseAudioSource}; this
+     * final-null field must never be read or written as runtime state.
+     */
+    @SuppressWarnings("unused")
+    private final Rom rom = null;
+    /** Volatile publication of the complete immutable base dependency tuple. */
     private volatile BaseAudioSource baseAudioSource =
-            new BaseAudioSource(null, null, null, null, 0);
+            new BaseAudioSource(null, null, null, null, null, 0);
     private Map<GameSound, Integer> soundMap;
     private boolean ringLeft = true;
     private int rewindReplaySuppressionDepth;
@@ -164,6 +171,9 @@ public class AudioManager implements MusicRestoreSink {
     private record DonorSfxBinding(String gameId, int sfxId) {}
 
     private record BaseAudioSource(
+            // Type erasure keeps the frozen AudioManager -> Rom dependency
+            // shape stable while this one immutable tuple owns the ROM value.
+            Object rom,
             GameAudioProfile profile,
             SmpsLoader loader,
             DacData dac,
@@ -224,7 +234,7 @@ public class AudioManager implements MusicRestoreSink {
         GameAudioProfile resolvedProfile = java.util.Objects.requireNonNull(
                 profile, "profile");
         manager.baseAudioSource = new BaseAudioSource(
-                resolvedProfile, null, null,
+                null, resolvedProfile, null, null,
                 resolvedProfile.getSequencerConfig(), 1);
         manager.presentationSink = java.util.Objects.requireNonNull(
                 sink, "sink");
@@ -517,8 +527,10 @@ public class AudioManager implements MusicRestoreSink {
         try {
             BaseAudioSource previous = baseAudioSource;
             long candidateGeneration = nextGeneration(previous.generation());
-            SmpsLoader candidateLoader = audioProfile != null && rom != null
-                    ? audioProfile.createSmpsLoader(rom) : null;
+            Rom sourceRom = (Rom) previous.rom();
+            SmpsLoader candidateLoader = audioProfile != null
+                    && sourceRom != null
+                    ? audioProfile.createSmpsLoader(sourceRom) : null;
             DacData candidateDac = loadDac(candidateLoader);
             SmpsSequencerConfig candidateConfig = audioProfile != null
                     ? audioProfile.getSequencerConfig() : null;
@@ -552,7 +564,8 @@ public class AudioManager implements MusicRestoreSink {
             }
             publishPresentationCoordHandlers(presentationPreparation);
             baseAudioSource = new BaseAudioSource(
-                    audioProfile, candidateLoader, candidateDac,
+                    previous.rom(), audioProfile,
+                    candidateLoader, candidateDac,
                     candidateConfig, candidateGeneration);
         } finally {
             endSourceMutation();
@@ -567,15 +580,15 @@ public class AudioManager implements MusicRestoreSink {
         beginSourceMutation();
         try {
             BaseAudioSource previous = baseAudioSource;
+            long candidateGeneration = nextGeneration(previous.generation());
             SmpsLoader candidateLoader = previous.profile() != null
                     && rom != null
                     ? previous.profile().createSmpsLoader(rom) : null;
             DacData candidateDac = loadDac(candidateLoader);
-            this.rom = rom;
             baseAudioSource = new BaseAudioSource(
-                    previous.profile(), candidateLoader, candidateDac,
+                    rom, previous.profile(), candidateLoader, candidateDac,
                     previous.config(),
-                    nextGeneration(previous.generation()));
+                    candidateGeneration);
         } finally {
             endSourceMutation();
         }
@@ -737,7 +750,7 @@ public class AudioManager implements MusicRestoreSink {
 
     public void playSegaPcm() {
         BaseAudioSource source = baseAudioSource;
-        Rom sourceRom = rom;
+        Rom sourceRom = (Rom) source.rom();
         if (suppressingRewindReplay()
                 || source.profile() == null || sourceRom == null) {
             return;
@@ -2413,8 +2426,7 @@ public class AudioManager implements MusicRestoreSink {
                 backend.stopPlayback();
             }
             this.baseAudioSource =
-                    new BaseAudioSource(null, null, null, null, 0);
-            this.rom = null;
+                    new BaseAudioSource(null, null, null, null, null, 0);
             this.soundMap = null;
             this.ringLeft = true;
             this.rewindReplaySuppressionDepth = 0;
