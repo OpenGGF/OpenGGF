@@ -72638,3 +72638,58 @@ so a direct blob stays un-prepared across frames where the engine prepares in on
   in both. `TestS3kAizTraceReplay` (16), `TestS3kLbz1KnucklesSequenceHeadless`
   (30), `TestKnucklesRespawnStrategy`, `TestSonic3kSuperTransformationEligibility`
   green after.
+
+## 2026-08-11 — S2 special-stage entry-fade DMA service boundary (round 49)
+
+Worktree `<wt>/r49-s2ss`, branch `bugfix/ai-s2ss-rungap-r49`,
+base commit `672128117`. Command (one fork, alphabetical):
+
+```
+rm -rf target/surefire-reports target/trace-reports
+mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+    "-Dsurefire.argLine=-Xmx4g" -Dsonic1.rom.path=<s1> -Dsonic2.rom.path=<s2> \
+    -Ds3k.rom.path=<s3k> "-Dtest=TestS2EhzHalfpipeRoundTripChain,TestS2CompleteEmeraldRunChain" test
+```
+
+| Class / dynamic-art report | Base 672128117 | After |
+|---|---|---|
+| `TestS2EhzHalfpipeRoundTripChain` seg3 | FAIL 6381 comparisons / **12232** errors; first `frame 0 dynamic_art.edges` `[]` vs `[0]` | FAIL 6381 / **11293**; first **frame 126** `edge[0].submission_origin` `run_gap` vs `segment` |
+| `TestS2CompleteEmeraldRunChain` seg1 | FAIL 5681 / **10036**; same frame-0 mismatch | FAIL 5681 / **3308**; same frame-126 first error |
+
+Root cause (measured, then derived): instrumenting `PlcFrameLifecycleCoordinator`'s
+phase claim over the `ss_2` segment showed the engine claiming
+`SPECIAL_STAGE` (a `SONIC_2_PROCESS_DMA_QUEUE` service boundary) for rows 0-21,
+`LAG` for rows 22-125 and `SPECIAL_STAGE` again from row 126. Rows 0-21 are the
+ROM's `Pal_FadeToWhite` window (s2.asm:6547; 22 `dbf` iterations at
+s2.asm:3571-3581, each setting `VintID_Fade` and waiting for a V-int), and
+`Vint_Fade` (s2.asm:1068-1070) never reaches `ProcessDMAQueue`. The engine's
+row-126 resume already matches the ROM's first `move.b #VintID_S2SS` /
+`WaitForVint` at s2.asm:6642-6643 — the load span was already correct — so
+servicing the fade rows retired the inherited run-gap transfer at frame 0
+instead of frame 126. No constant was introduced; the entry-load length was
+neither measured nor fitted.
+
+Discriminator is the segment's **initial ledger**, not first-vs-second entry:
+`s2-ehz-halfpipe-roundtrip/run_manifest.json` gives `ss` an empty
+`dynamic_art_initial_ledger_descriptors` (green) and `ss_2` transfer 8078
+(`tails-tails`, `run_gap`); the complete-emeralds run's `ss` carries transfer
+3283 (`sonic`, `run_gap`) and is the report labelled `seg1`.
+
+Remaining frontier: one label error at frame 126
+(`submission_origin` `run_gap` vs `segment`) — the engine's `seg2_ehz1`
+comparison segment publishes 2904 rows where the fixture declares
+`trace_frame_count` 2903, so the run-gap submission on the engine's row 2903 is
+still stamped `segment`. Level segments publish exactly one row past their
+fixture (gen 1: 2970 vs 2969; gen 3: 2904 vs 2903) while special-stage segments
+publish exactly their count — a separate, unfixed defect. Beyond that, both
+reports are clean until an unrelated extra `ss-sonic` submission at frame 2415
+(EHZ) / 4895 (complete-emeralds).
+
+Regression check: `-Dtest=TestS2*TraceReplay,TestS1*TraceReplay,
+TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,
+TestSonic3kDecodingUtils` — 124 tests, 0 failures. `TestS1GhzMazeRoundTripChain`
+green. `TestS3kMegaRunChain` fails identically at base and after
+(`KOS_DECOMPRESSION_QUEUE#15`, raw_frame 4570). Guard/unit sweep
+`-Dtest=*Guard*,*SpecialStage*,*DynamicArt*,*PlcFrameLifecycle*`: 19 failures at
+base, 19 after (the two mock-only `NullPointer phase` failures the new interface
+method introduced were fixed in the same change by stubbing the mocks).

@@ -3,6 +3,19 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fixed: the Sonic 2 special stage's entry fade rows are no longer treated as
+  DMA-queue service boundaries. `SpecialStage` opens with `Pal_FadeToWhite`
+  (s2.asm:6547), whose 22 `dbf` iterations each set `VintID_Fade` and wait for a
+  V-int (s2.asm:3571-3581); `Vint_Fade` (s2.asm:1068-1070) never reaches
+  `ProcessDMAQueue`, and the stage's own `VintID_S2SS` is not installed until
+  after the entry load at s2.asm:6642. The engine claimed `SPECIAL_STAGE` for
+  those rows, so a player-art transfer still queued when the stage was entered
+  retired on the segment's first row instead of surviving the whole entry load.
+  Any run whose special-stage entry inherits an outstanding transfer therefore
+  carried a permanent transfer-id/edge-ordinal skew from frame 0.
+  Special-stage providers now report the lifecycle phase their current row
+  belongs to, and Sonic 2 reports `PALETTE_FADE` for the `Pal_FadeToWhite`
+  window.
 - Fixed: Knuckles' glide-slide get-up now grounds him the way
   `Knuckles_Sliding .getUp`'s `bsr.w Knux_TouchFloor` does
   (sonic3k.asm:30984, `loc_17B6A` tail at 32854-32864). The slide deliberately

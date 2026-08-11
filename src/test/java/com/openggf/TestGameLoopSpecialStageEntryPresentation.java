@@ -1,5 +1,6 @@
 package com.openggf;
 
+import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.GameMusic;
 import com.openggf.control.InputHandler;
@@ -236,6 +237,8 @@ class TestGameLoopSpecialStageEntryPresentation {
         when(provider.getStageMusicId()).thenReturn(-1);
         when(provider.rewindAdapter()).thenReturn(Optional.empty());
         when(provider.isFinished()).thenReturn(false);
+        when(provider.specialStagePlcLifecyclePhase())
+                .thenReturn(PlcLifecyclePhase.SPECIAL_STAGE);
         return provider;
     }
 

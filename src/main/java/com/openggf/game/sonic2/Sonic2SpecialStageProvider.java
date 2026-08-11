@@ -15,6 +15,8 @@ import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.resources.Sonic2PlcService;
 import com.openggf.game.sonic2.resources.Sonic2RuntimePlcPublisher;
 import com.openggf.game.sonic2.objects.SpecialStageResultsScreenObjectInstance;
+import com.openggf.game.resources.PlcLifecyclePhase;
+import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageIntro;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageManager;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageRewindAdapter;
 import com.openggf.game.session.SessionManager;
@@ -50,6 +52,31 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
 
     public Sonic2SpecialStageProvider(Sonic2SpecialStageManager manager) {
         this.manager = manager;
+    }
+
+    /**
+     * Sonic 2's special-stage entry opens with {@code Pal_FadeToWhite}, which
+     * sets {@code VintID_Fade} and waits for a V-int on each of its 22 {@code dbf}
+     * iterations (docs/s2disasm/s2.asm:3571-3581, called from {@code SpecialStage}
+     * at s2.asm:6547). Those rows run {@code Vint_Fade}
+     * (docs/s2disasm/s2.asm:1068-1070 -- {@code Do_ControllerPal}, the H-int
+     * counter reload and {@code ProcessDPLC}), which never reaches
+     * {@code ProcessDMAQueue}; the stage's own {@code VintID_S2SS} is not
+     * installed until after the entry load, at s2.asm:6642. So the fade rows are
+     * palette-fade rows, not special-stage rows, and a transfer still queued on
+     * entry survives them.
+     *
+     * <p>{@code Pal_FadeFromWhite} (s2.asm:3477, called at s2.asm:6672) uses the
+     * same handler, but the engine already routes that window through the shared
+     * fade lifecycle, which claims the phase itself.</p>
+     */
+    @Override
+    public PlcLifecyclePhase specialStagePlcLifecyclePhase() {
+        Sonic2SpecialStageIntro intro = manager != null ? manager.getIntro() : null;
+        return intro != null
+                && intro.getCurrentPhase() == Sonic2SpecialStageIntro.Phase.PRE_ROLL
+                ? PlcLifecyclePhase.PALETTE_FADE
+                : PlcLifecyclePhase.SPECIAL_STAGE;
     }
 
     @Override

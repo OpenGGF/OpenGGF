@@ -1400,7 +1400,7 @@ public class GameLoop {
             SpecialStageObservationPacing pacing = specialStageObservationPacing;
             LevelFrameStep.executeHardwareTimedObjectScan(
                     LevelFrameContext.from(gameplayMode), activePlcLifecycleFrame,
-                    PlcLifecyclePhase.SPECIAL_STAGE, () -> {
+                    ssProvider.specialStagePlcLifecyclePhase(), () -> {
                         if (pacing == null) {
                             updateSpecialStageInput();
                             ssProvider.update();
