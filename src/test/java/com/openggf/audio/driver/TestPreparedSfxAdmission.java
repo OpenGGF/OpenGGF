@@ -16,6 +16,9 @@ import org.junit.jupiter.api.Test;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.RecordComponent;
+import java.lang.management.ManagementFactory;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -31,6 +34,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestPreparedSfxAdmission {
+    private static final int[] ALLOCATION_LIVE_COUNTS = {0, 1, 8, 32, 128};
+    private static final long VM_ALLOCATION_TOLERANCE_BYTES_PER_OP = 128;
+    private static volatile Object allocationSink;
+
     @Test
     void sfxConstructionAndPreparationDoNotMutateDriverSynthOrCoordination() {
         SmpsDriver driver = new SmpsDriver();
@@ -166,6 +173,49 @@ class TestPreparedSfxAdmission {
                 driver.captureSynthSnapshot().psg());
         assertEquals(1, driver.captureSynthSnapshot().psg().latch(),
                 "the final PSG latch must belong to header-last channel 0");
+    }
+
+    @Test
+    void commitRemovesAnUnrelatedZeroTrackSfxBeforeAddingDifferentId() {
+        SmpsDriver driver = new SmpsDriver();
+        SmpsSequencer empty = sequencer(driver, 0xA0, config(null));
+        driver.addSequencer(empty, true);
+        SmpsSequencer candidate = sequencer(
+                driver, 0xA1, config(null), track(0, 1));
+        PreparedSfxAdmission admission = driver.prepareNewSfxAdmission(
+                candidate, 0, 1);
+
+        candidate.beginSfxAdmission();
+        driver.commitSfxAdmission(admission);
+
+        assertEquals(List.of(candidate), driver.sequencersForTesting(),
+                "legacy admission cleans an unrelated zero-track SFX");
+    }
+
+    @Test
+    void commitRemovesEveryFullyInactiveUnrelatedSfxButKeepsPartialOwner() {
+        SmpsDriver driver = new SmpsDriver();
+        SmpsSequencer inactive = sequencer(
+                driver, 0xA0, config(null), track(0x80, 1));
+        inactive.trackAt(0).active = false;
+        driver.addSequencer(inactive, true);
+        SmpsSequencer partial = sequencer(driver, 0xA1, config(null),
+                track(0xA0, 1), track(0xC0, 2));
+        partial.trackAt(0).active = false;
+        driver.addSequencer(partial, true);
+        SmpsSequencer candidate = sequencer(
+                driver, 0xA2, config(null), track(0, 1));
+        PreparedSfxAdmission admission = driver.prepareNewSfxAdmission(
+                candidate, 0, 1);
+
+        candidate.beginSfxAdmission();
+        driver.commitSfxAdmission(admission);
+
+        assertEquals(List.of(partial, candidate),
+                driver.sequencersForTesting(),
+                "only owners with no active tracks are legacy-cleaned");
+        assertTrue(partial.trackAt(1).active,
+                "cleanup must retain a partially active unrelated owner");
     }
 
     @Test
@@ -395,13 +445,12 @@ class TestPreparedSfxAdmission {
     @Test
     void retainedConflictStorageDoesNotGrowWithUnrelatedLiveSfx() {
         for (int unrelatedCount : new int[] {0, 1, 8, 32, 128}) {
-            SmpsDriver driver = new SmpsDriver();
-            for (int index = 0; index < unrelatedCount; index++) {
-                driver.addSequencer(sequencer(
-                        driver, 0x200 + index, config(null)), true);
-            }
-            SmpsSequencer candidate = sequencer(
-                    driver, 0xA0, config(null), track(0, 1));
+            AllocationFixture fixture = allocationFixture(unrelatedCount);
+            SmpsDriver driver = fixture.driver;
+            SmpsSequencer candidate = fixture.candidate;
+
+            assertEquals(unrelatedCount,
+                    driver.sequencersForTesting().size());
 
             for (int repetition = 0; repetition < 20; repetition++) {
                 PreparedSfxAdmission admission =
@@ -419,6 +468,114 @@ class TestPreparedSfxAdmission {
                 assertNull(admission.displacedTracks[0]);
             }
         }
+    }
+
+    @Test
+    void preparationAllocationSlopeIsIndependentOfUnrelatedLiveSfx() {
+        java.lang.management.ThreadMXBean baseBean =
+                ManagementFactory.getThreadMXBean();
+        org.junit.jupiter.api.Assumptions.assumeTrue(
+                baseBean instanceof com.sun.management.ThreadMXBean);
+        com.sun.management.ThreadMXBean bean =
+                (com.sun.management.ThreadMXBean) baseBean;
+        org.junit.jupiter.api.Assumptions.assumeTrue(
+                bean.isThreadAllocatedMemorySupported());
+        if (!bean.isThreadAllocatedMemoryEnabled()) {
+            bean.setThreadAllocatedMemoryEnabled(true);
+        }
+
+        AllocationFixture[] fixtures =
+                new AllocationFixture[ALLOCATION_LIVE_COUNTS.length];
+        for (int index = 0; index < ALLOCATION_LIVE_COUNTS.length; index++) {
+            fixtures[index] = allocationFixture(
+                    ALLOCATION_LIVE_COUNTS[index]);
+            warmPreparation(fixtures[index], 50_000);
+        }
+
+        long[] minimumBytes = new long[fixtures.length];
+        Arrays.fill(minimumBytes, Long.MAX_VALUE);
+        long controlBeforeMinimum = Long.MAX_VALUE;
+        long controlAfterMinimum = Long.MAX_VALUE;
+        for (int repetition = 0; repetition < 7; repetition++) {
+            controlBeforeMinimum = Math.min(controlBeforeMinimum,
+                    allocatedPerPreparation(bean, fixtures[0], 5_000));
+            for (int step = 0; step < fixtures.length; step++) {
+                int index = (repetition & 1) == 0
+                        ? step : fixtures.length - 1 - step;
+                minimumBytes[index] = Math.min(minimumBytes[index],
+                        allocatedPerPreparation(
+                                bean, fixtures[index], 5_000));
+            }
+            controlAfterMinimum = Math.min(controlAfterMinimum,
+                    allocatedPerPreparation(bean, fixtures[0], 5_000));
+        }
+
+        long minimum = Arrays.stream(minimumBytes).min().orElseThrow();
+        long maximum = Arrays.stream(minimumBytes).max().orElseThrow();
+        long controlSpread = Math.abs(
+                controlBeforeMinimum - controlAfterMinimum);
+        long allowedSlope = controlSpread
+                + VM_ALLOCATION_TOLERANCE_BYTES_PER_OP;
+        assertTrue(maximum - minimum <= allowedSlope,
+                () -> "preparation allocation grew with unrelated live SFX: "
+                        + Arrays.toString(minimumBytes)
+                        + " bytes/op for "
+                        + Arrays.toString(ALLOCATION_LIVE_COUNTS)
+                        + "; controlSpread=" + controlSpread
+                        + ", vmTolerance="
+                        + VM_ALLOCATION_TOLERANCE_BYTES_PER_OP);
+    }
+
+    private static AllocationFixture allocationFixture(int unrelatedCount) {
+        SmpsDriver driver = new SmpsDriver();
+        List<SmpsDriverSnapshot.SequencerEntry> entries =
+                new ArrayList<>(unrelatedCount);
+        for (int index = 0; index < unrelatedCount; index++) {
+            SmpsSequencer unrelated = sequencer(
+                    driver, 0x200 + index, config(null));
+            entries.add(new SmpsDriverSnapshot.SequencerEntry(
+                    true,
+                    unrelated.getSourceDescriptor(),
+                    null,
+                    unrelated.getSmpsData(),
+                    unrelated.getDacData(),
+                    unrelated.getAudioManager(),
+                    unrelated.getConfig(),
+                    unrelated.captureSnapshot()));
+        }
+        int[] fmLocks = {-1, -1, -1, -1, -1, -1};
+        int[] psgLocks = {-1, -1, -1, -1};
+        driver.restoreSnapshot(new SmpsDriverSnapshot(
+                SmpsSequencer.Region.NTSC,
+                SmpsDriver.ReadMode.HYBRID,
+                0,
+                false,
+                0,
+                entries,
+                fmLocks,
+                psgLocks,
+                driver.captureSynthSnapshot()));
+        return new AllocationFixture(driver, sequencer(
+                driver, 0xA0, config(null), track(0, 1)));
+    }
+
+    private static void warmPreparation(
+            AllocationFixture fixture, int iterations) {
+        for (int index = 0; index < iterations; index++) {
+            allocationSink = fixture.driver.prepareNewSfxAdmission(
+                    fixture.candidate, 0, 1);
+        }
+    }
+
+    private static long allocatedPerPreparation(
+            com.sun.management.ThreadMXBean bean,
+            AllocationFixture fixture,
+            int iterations) {
+        long threadId = Thread.currentThread().threadId();
+        long before = bean.getThreadAllocatedBytes(threadId);
+        warmPreparation(fixture, iterations);
+        return (bean.getThreadAllocatedBytes(threadId) - before)
+                / iterations;
     }
 
     private static SmpsSequencer sequencer(
@@ -598,6 +755,10 @@ class TestPreparedSfxAdmission {
         public int getBaseNoteOffset() {
             return 0;
         }
+    }
+
+    private record AllocationFixture(
+            SmpsDriver driver, SmpsSequencer candidate) {
     }
 
     private record FixtureTrack(

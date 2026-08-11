@@ -1534,10 +1534,6 @@ class TestAudioVoiceRegistry {
                 "only begin-time coordination changes are transactional");
         assertEquals(0, driver.commitCalls,
                 "a failed begin cannot reach live driver mutation");
-        assertEquals(0, driver.commandCaptures,
-                "SFX admission no longer uses the whole-command wrapper");
-        assertEquals(0, driver.commandRollbacks,
-                "coordination rollback precedes any live driver mutation");
     }
 
     @Test
@@ -2382,13 +2378,16 @@ class TestAudioVoiceRegistry {
 
         @Override
         public void commitSfxAdmission(PreparedSfxAdmission admission) {
-            if (failNextSfxAttachment
-                    && !admission.continuousExtension()) {
+            boolean failAfterMutation = failNextSfxAttachment
+                    && !admission.continuousExtension();
+            if (failAfterMutation) {
                 failNextSfxAttachment = false;
+            }
+            super.commitSfxAdmission(admission);
+            if (failAfterMutation) {
                 throw new IllegalStateException(
                         "injected SFX attachment failure");
             }
-            super.commitSfxAdmission(admission);
         }
 
         @Override
@@ -2487,8 +2486,6 @@ class TestAudioVoiceRegistry {
         private final SmpsCoordFlagRuntimeState state;
         private final List<String> events;
         private int commitCalls;
-        private int commandCaptures;
-        private int commandRollbacks;
 
         private AdmissionBoundaryDriver(
                 SmpsCoordFlagRuntimeState state, List<String> events) {
@@ -2511,19 +2508,6 @@ class TestAudioVoiceRegistry {
         public void commitSfxAdmission(PreparedSfxAdmission admission) {
             commitCalls++;
             super.commitSfxAdmission(admission);
-        }
-
-        @Override
-        public LiveCommandMutationToken captureLiveCommandMutation() {
-            commandCaptures++;
-            return super.captureLiveCommandMutation();
-        }
-
-        @Override
-        public void rollbackLiveCommandMutation(
-                LiveCommandMutationToken token) {
-            commandRollbacks++;
-            super.rollbackLiveCommandMutation(token);
         }
     }
 
