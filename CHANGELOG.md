@@ -3,6 +3,20 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: only a HORIZONTAL spring locks the player's grounded controls. `move_lock` is the
+  ROM's sole grounded-input lock, and among the spring family only the horizontal launch
+  writes it -- S2 `loc_18B1C` `move.w #$F,move_lock(a1)` (s2.asm:34031), S1
+  `move.w #15,locktime(a1)` (`_incObj/41 Springs.asm`:144), S3K `loc_231BE`
+  `move.w #$F,$32(a1)` (sonic3k.asm:47907). The up, down and diagonal launches (S2
+  `loc_189CA`/`loc_18CC6`, S1 `Spring_Up`/`Spring_Down`, S3K `sub_22F98`), the S2
+  springboard `Obj40` and the CPZ pipe-exit spring `Obj7B` write no lock at all, yet the
+  engine's `springing` marker -- which those objects set for their own re-contact and carry
+  tests -- also gated horizontal input, inventing a 15-frame grounded control lock. Because
+  the ROM's `move_lock` is decremented only in the grounded `Sonic_SlopeRepel`, the invented
+  lock survived the whole airborne arc and then ate the first grounded frames: in the S2
+  half-pipe round-trip run's third EHZ1 segment it swallowed two frames of post-landing
+  acceleration after a down-spring at row 381, and the resulting drift ended the act 191
+  rows before the recording does.
 - Fix: Sonic 2's special stage leaves its main loop through the same startup boundary in
   the run chain as in the standalone harness, and its exit `Pal_FadeToWhite` occupies the
   22 V-ints its `dbf` loop runs rather than 23. Two separate off-by-one-row errors, which

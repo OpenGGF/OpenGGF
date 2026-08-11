@@ -1717,3 +1717,32 @@ ROM addresses, and (c) S3K's larger animated-state and PLC system. When
 adding an entry that's specifically S3K-flavoured (e.g. zone-set
 mis-resolution, S&K-vs-S3 address confusion), tag it with a leading
 "**S3K-specific:**" marker so it doesn't get duplicated to the S2 file.
+
+## P48 -- Only the horizontal spring locks the player's grounded controls
+
+**Symptom.** After a vertical or diagonal launcher, the player's first grounded
+frames ignore held left/right. The trace shows both sides landing with the same
+`inertia`, then the ROM applying acceleration on the very next frame while the
+engine holds the landing value for several frames before catching up. The drift
+is small at first and compounds for the rest of the act.
+
+**Root cause.** `move_lock` is the ROM's only grounded-input lock, and in the
+spring family only the horizontal spring `sub_23190` (`loc_231BE`, `move.w #$F,$32(a1)`) writes it. The vertical/diagonal launch `sub_22F98` (sonic3k.asm:47700-47772)
+write no lock of any kind. An engine "springing"/"recently launched" marker used
+by objects for their own re-contact and carry tests must not also gate
+horizontal input -- doing so invents a control lock the ROM has nowhere. It is
+easy to miss because `move_lock` is decremented only in the grounded
+slope-repel step, so an invented timer that ticks every frame looks harmless in
+the air and then bites on the landing frame, several hundred rows from the
+object that set it.
+
+**Correct pattern.** Gate grounded input on the modelled `move_lock` timer
+alone. A spring that really does set `move_lock` should call the engine's
+move-lock setter; keep any launch marker free of input semantics.
+
+**ROM citation.** docs/skdisasm/sonic3k.asm:47907. Cross-game: S2 `loc_18B1C` at
+`docs/s2disasm/s2.asm:34031`, S3K `loc_231BE` at
+`docs/skdisasm/sonic3k.asm:47907`, S1 `.doBounce` at
+`docs/s1disasm/_incObj/41 Springs.asm:144`.
+
+**Originating commit.** `<pending: spring grounded control lock milestone>`.

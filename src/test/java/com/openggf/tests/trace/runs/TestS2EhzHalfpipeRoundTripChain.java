@@ -312,16 +312,40 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * {@code TraceSessionLauncher}) now read {@code GameLoop#recordedSpecialStageIdentity},
  * which reports the stage captured at the exit boundary while results are showing.
  *
- * <h2>Current RED: segment 3 interior DPLC, 16113 errors from row 0</h2>
+ * <h2>Segment 4 (seg3_ehz1) ownership: FIXED 2026-08-11</h2>
  *
- * <p>With ownership fixed, segment 3 replays all 6381 rows and reaches
- * {@code writeDynamicArtInteriorReport}, which fails
- * ({@code s2-ehz-halfpipe-roundtrip_seg3_dynamic_art_report.json}: 16113 errors over
- * 3125 of 6381 rows, first at row 0). Segment 1's interior is now clean (5733 rows, 0
- * errors). Row 0 has the recording holding {@code outstanding_transfer_ids=[0]} where
- * the engine has already published {@code edges=[0]} -- the second special-stage entry
- * retires its entry DPLC a row early, where the first entry does not. That difference
- * between first and second entry is the next thing to chase.
+ * <p>The chain used to fail with {@code "segment 4 lost production ownership before
+ * source closure (mode=TITLE_CARD, ..., BK2 cursor=22420)"}. That was a downstream
+ * symptom, not a segment-close model error, and the three candidate explanations
+ * (engine runs too few rows / comparator closes too early / the declared row count
+ * omits ROM rows) were all wrong in their structural form. {@code seg3_ehz1} is
+ * recorded entirely in {@code Game_Mode == 12} with {@code apparent_act} never leaving
+ * 0, so the ROM never starts act 2 within its 3452 rows; the engine ended the act at
+ * row 3261 because its player had reached the signpost ~400 rows early.
+ *
+ * <p>The first divergence is row 381. Both sides land on row 380 with
+ * {@code inertia == 0x180}; the ROM then adds {@code +$C} for four frames while the
+ * engine holds {@code 0x180} for two. The cause was the engine's {@code springing}
+ * timer, set to 15 frames by the down-spring that launched the arc, participating in
+ * the grounded control lock. {@code move_lock} is the ROM's only grounded-input lock
+ * and only the HORIZONTAL spring writes it (s2.asm:34031, S1
+ * {@code _incObj/41 Springs.asm}:144, sonic3k.asm:47907); the up, down and diagonal
+ * launches write none. Fixed in {@code PlayableSpriteMovement} by gating grounded
+ * input on {@code move_lock} alone.
+ *
+ * <h2>Current RED: the run's terminal dynamic-art comparison</h2>
+ *
+ * <p>With segment 4 replaying all 3452 rows, the newly reachable terminal assertion
+ * fails: {@code shared terminal dynamic-art comparison failed for seg3_ehz1} with
+ * {@code run_tail.edge_count} expected 1 / actual 0, {@code run_tail.edge[0].present}
+ * expected true / actual false, and one missing {@code final_ledger_fingerprint}. The
+ * run's tail produces no production art edge where the recording has one; that is the
+ * next thing to chase.
+ *
+ * <p>Segment 4's own physics report closes at 45814 errors whose first mismatch is
+ * {@code sidekick_x} at frame 1 -- the same CPU-Tails title-card-duration diagnostic
+ * documented above for {@code seg2_ehz1} (36879, identical before and after the fix),
+ * not a player-trajectory divergence.
  */
 @RequiresRom(SonicGame.SONIC_2)
 class TestS2EhzHalfpipeRoundTripChain extends AbstractRunChainTest {

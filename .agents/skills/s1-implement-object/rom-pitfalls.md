@@ -572,3 +572,32 @@ animation traces green; MZ1 f749 → f2596). Earlier examples: Obj56 floating
 block (`ab3112b73`) and Obj61 Labyrinth block (`fc5d5e922`). Obj31 chained
 stomper was the next exposed instance: raw `$38/$30/$10`, not the collision
 argument extended by `$B`.
+
+## P31 -- Only the horizontal spring locks the player's grounded controls
+
+**Symptom.** After a vertical or diagonal launcher, the player's first grounded
+frames ignore held left/right. The trace shows both sides landing with the same
+`inertia`, then the ROM applying acceleration on the very next frame while the
+engine holds the landing value for several frames before catching up. The drift
+is small at first and compounds for the rest of the act.
+
+**Root cause.** `move_lock` is the ROM's only grounded-input lock, and in the
+spring family only the left/right spring `.doBounce` (`move.w #15,locktime(a1)`) writes it. `Spring_Up` `.bounceUp` (lines 88-101) and `Spring_Down` `.bounceDown` (lines 193-200)
+write no lock of any kind. An engine "springing"/"recently launched" marker used
+by objects for their own re-contact and carry tests must not also gate
+horizontal input -- doing so invents a control lock the ROM has nowhere. It is
+easy to miss because `move_lock` is decremented only in the grounded
+slope-repel step, so an invented timer that ticks every frame looks harmless in
+the air and then bites on the landing frame, several hundred rows from the
+object that set it.
+
+**Correct pattern.** Gate grounded input on the modelled `move_lock` timer
+alone. A spring that really does set `move_lock` should call the engine's
+move-lock setter; keep any launch marker free of input semantics.
+
+**ROM citation.** docs/s1disasm/_incObj/41 Springs.asm:144. Cross-game: S2 `loc_18B1C` at
+`docs/s2disasm/s2.asm:34031`, S3K `loc_231BE` at
+`docs/skdisasm/sonic3k.asm:47907`, S1 `.doBounce` at
+`docs/s1disasm/_incObj/41 Springs.asm:144`.
+
+**Originating commit.** `<pending: spring grounded control lock milestone>`.

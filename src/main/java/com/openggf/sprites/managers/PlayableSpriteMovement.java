@@ -528,9 +528,25 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		inputRawRight = right;
 
 		// ROM-accurate control lock behavior:
-		// - move_lock and springing only block input when GROUNDED (checked in Sonic_Move, not Sonic_ChgJumpDir)
+		// - move_lock only blocks input when GROUNDED (checked in Sonic_Move, not Sonic_ChgJumpDir)
 		// - obj_control and hurt block input in ALL states
-		boolean groundedControlLock = !sprite.getAir() && (moveLocked || sprite.getSpringing());
+		//
+		// move_lock is the ROM's ONLY grounded-input lock, and among the spring
+		// family only the HORIZONTAL spring writes it: S2 loc_18B1C
+		// `move.w #$F,move_lock(a1)` (docs/s2disasm/s2.asm:34031), S1
+		// `move.w #15,locktime(a1)` (docs/s1disasm/_incObj/41 Springs.asm:144),
+		// S3K loc_231BE `move.w #$F,$32(a1)` (docs/skdisasm/sonic3k.asm:47907).
+		// The up, down and diagonal launches (S2 loc_189CA :33924-33966,
+		// loc_18CC6 :34177-34196; S1 Spring_Up .bounceUp :88-101,
+		// Spring_Down .bounceDown :193-200; S3K sub_22F98 :47700-47772) write no
+		// lock of any kind, and neither do the S2 springboard Obj40 (:52262) or
+		// the CPZ pipe-exit spring Obj7B (:56341). The engine's `springing`
+		// timer is a marker those objects set for their own re-contact and carry
+		// tests; making it also gate horizontal input invented a 15-frame
+		// grounded control lock the ROM has nowhere. Each engine spring that
+		// models a real move_lock already calls setMoveLockTimer alongside it,
+		// so the horizontal case is unaffected.
+		boolean groundedControlLock = !sprite.getAir() && moveLocked;
 		if (groundedControlLock || objControlLocked || sprite.isHurt()) {
 			if (!sprite.isForcedInputActive(AbstractPlayableSprite.INPUT_LEFT)) {
 				left = false;

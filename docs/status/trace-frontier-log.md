@@ -72328,7 +72328,7 @@ so a direct blob stays un-prepared across frames where the engine prepares in on
   `bugfix/ai-title-card-oscillator-overtick`, over base `b7da4a7f4`.
 - Command (control and candidate, identical): `mvn -Ptrace-replay -Dmse=off
   -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
-  "-Dsurefire.argLine=-Xmx4g"` with all three ROM properties and
+  "-Dsurefire.argLine=-Xmx4g"` with all three ROM properties (repo-root `.gen` files) and
   `-Dtest=TestS2*TraceReplay, TestS2Ehz1Seg2HalfpipeSegmentTraceReplay,
   TestS2EhzHalfpipeRoundTripChain, TestS1GhzMazeRoundTripChain,
   TestS2Ehz1*Regression, TestS2HtzLiftPlatformSurfaceRegression,
@@ -72935,3 +72935,55 @@ drains the stage's last DPLC pair on row 5230, the results loop's first
 `deferFirstStepToNextVint()` swallowed a colour step the special-stage exit had
 already forgone (its `FadeManager.update()` runs before `enterResultsScreen` in the
 same iteration). No constant was introduced.
+
+## 2026-08-11 - S2 half-pipe round trip: seg4 ownership closed (spring control lock)
+
+- Dedicated worktree over `921c8abd5`, branch `bugfix/ai-spring-grounded-control-lock`.
+- Command (control and after, identical):
+  `mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical`
+  with all three ROM properties (repo-root `.gen` files) and
+  `-Dtest=TestS2EhzHalfpipeRoundTripChain,TestS2CompleteEmeraldRunChain,TestS2SpecialStage1..7TraceReplay,TestS2SpecialStageTraceReplay,S2SpecialStageFinishBoundaryMappingTest,TestS1GhzMazeRoundTripChain`.
+- CONTROL at `921c8abd5`: `TestS2EhzHalfpipeRoundTripChain` FAILS -
+  "segment 4 lost production ownership before source closure (mode=TITLE_CARD,
+  level=LevelIdentity[loadGeneration=5, progressionZone=0, romZone=0, act=1],
+  BK2 cursor=22420)". `TestS2CompleteEmeraldRunChain` FAILS on the seg3 DPLC
+  interior report. All 13 other tests pass.
+- Diagnosis (instrumented, not inferred). The assertion was a downstream
+  symptom, not a segment-close model error. Segment 4 (`seg3_ehz1`, offset
+  19159, 3452 rows) is recorded entirely in `Game_Mode == 12` with
+  `apparent_act` never leaving 0, so the ROM never reaches act 2. The engine
+  ended the act at row 3261. Stepping the engine's own player against the
+  recorded rows put the first divergence at row 381: both land on row 380 with
+  `inertia == 0x180`, the ROM then adds `+$C` per frame for four frames while
+  the engine holds `0x180` for two. Probing `doGroundMove` showed
+  `inR=false inRawR=true ... spring=true` on exactly those two rows - the
+  engine's `springing` timer, set to 15 by the down-spring that launched the
+  arc, was gating horizontal input. The resulting drift reached the signpost
+  ~400 rows early and ran the whole end-of-act sequence early.
+- Fix: `PlayableSpriteMovement`'s grounded control lock now consults
+  `move_lock` alone. Only the horizontal spring writes `move_lock` in any of
+  the three ROMs (s2.asm:34031, `_incObj/41 Springs.asm`:144,
+  sonic3k.asm:47907); the vertical/diagonal launches, `Obj40` and `Obj7B`
+  write no lock. Every engine spring that models a real `move_lock` already
+  calls `setMoveLockTimer` beside `setSpringing`, so the horizontal case is
+  unchanged. No constant was introduced and no fixture value was measured into
+  the engine.
+- AFTER: the half-pipe chain's segment 4 replays all 3452 rows and never
+  leaves LEVEL; the frontier moved to a newly reachable terminal assertion,
+  `shared terminal dynamic-art comparison failed for seg3_ehz1`
+  (`run_tail.edge_count` expected 1, actual 0; `run_tail.edge[0].present`
+  expected true, actual false; one missing `final_ledger_fingerprint`).
+  `TestS2CompleteEmeraldRunChain` is unchanged (still seg3 DPLC). The other 13
+  tests stay green.
+- Segment physics reports: `seg2` 36879 errors before AND after (identical,
+  first mismatch `sidekick_x` frame 1); `seg4` now closes and reports 45814
+  with the same frame-1 `sidekick_x` first mismatch - the CPU-Tails
+  title-card-duration diagnostic this chain's javadoc already documents as
+  non-fatal. Segment 4 produced no report at all in the control.
+- Blast radius: `-Dtest=*TraceReplay` plus the S3K keep-green set, one fork,
+  alphabetical, all three ROMs: 181 tests, 1 error -
+  `TestS3kMhzCompleteRunTraceReplay` (`KOS_DECOMPRESSION_QUEUE#335` expected
+  completion), reproduced identically at `921c8abd5` with the fix reverted, so
+  pre-existing. Unit sweep over the spring/movement classes: 293 tests, 3
+  failures (`TestSpringObjectInstance` x2, `TestCPZSpinTubeObjectInstance` x1),
+  all three reproduced identically at the base commit.
