@@ -55,6 +55,8 @@ class TestSmpsRepeatedPlaybackBenchmark {
     private static final int SIMPLE_MUSIC_TRACKS = 1;
     private static final int MAX_MUSIC_TRACKS = 10;
     private static final int WARMUP_OPERATIONS = 64;
+    private static final int WRAPPER_WARMUP_INVOCATIONS = 10_000;
+    private static final int DISCARDED_SCENARIO_REPETITIONS = 1;
     private static final int[] OPERATION_COUNTS = {64, 128, 256};
     private static final int REPETITIONS = 5;
     /** Printed fixed term in the paired control-spread acceptance rule. */
@@ -76,19 +78,42 @@ class TestSmpsRepeatedPlaybackBenchmark {
                 new Sample[scenarios.length][REPETITIONS][];
 
         System.out.printf(
-                "SMPS_BENCHMARK_HEADER schema=1 java=%s vm=%s "
+                "SMPS_BENCHMARK_HEADER schema=2 java=%s vm=%s "
+                        + "vmVendor=%s vmVersion=%s os=%s arch=%s "
+                        + "vmArgs=%s vmArgsRaw=%s "
+                        + "forkCount=%s forkNumber=%s "
+                        + "reuseForks=%s "
                         + "allocationSupported=true allocationEnabled=true "
-                        + "warmup=%d counts=%s repetitions=%d "
+                        + "warmup=%d wrapperWarmup=%d "
+                        + "discardedScenarioRepetitions=%d "
+                        + "counts=%s repetitions=%d "
                         + "tinyProgram=%d largeProgram=%d tinyDac=%d "
                         + "largeDac=%d simpleMusicTracks=%d "
                         + "maxMusicTracks=%d vmNoiseMargin=%d%n",
                 System.getProperty("java.runtime.version"),
                 stableToken(System.getProperty("java.vm.name")),
-                WARMUP_OPERATIONS, Arrays.toString(OPERATION_COUNTS),
+                stableToken(System.getProperty("java.vm.vendor")),
+                stableToken(System.getProperty("java.vm.version")),
+                stableToken(System.getProperty("os.name")),
+                stableToken(System.getProperty("os.arch")),
+                stableToken(normalizedVmArguments()),
+                stableToken(rawVmArguments()),
+                stableToken(System.getProperty(
+                        "surefire.forkCount", "unset")),
+                stableToken(System.getProperty(
+                        "surefire.forkNumber", "unset")),
+                stableToken(System.getProperty(
+                        "openggf.audio.benchmark.reuseForks", "unset")),
+                WARMUP_OPERATIONS, WRAPPER_WARMUP_INVOCATIONS,
+                DISCARDED_SCENARIO_REPETITIONS,
+                Arrays.toString(OPERATION_COUNTS),
                 REPETITIONS, TINY_PROGRAM_BYTES, LARGE_PROGRAM_BYTES,
                 TINY_DAC_BYTES, LARGE_DAC_BYTES,
                 SIMPLE_MUSIC_TRACKS, MAX_MUSIC_TRACKS,
                 VM_NOISE_MARGIN_BYTES_PER_OPERATION);
+
+        warmMeasurementWrapper(allocation, scenarios);
+        warmRecordedScenarioPaths(allocation, scenarios);
 
         // Repetition is outermost and scenario order alternates to distribute
         // host/JIT drift across controls. Operation-count order alternates too.
@@ -102,7 +127,7 @@ class TestSmpsRepeatedPlaybackBenchmark {
                         WARMUP_OPERATIONS);
                 fixture.assertFixedTopology();
                 samples[scenarioIndex][repetition] =
-                        measureCounts(allocation, fixture, repetition);
+                        measureCounts(allocation, fixture, repetition, true);
                 fixture.assertFixedTopology();
             }
         }
@@ -116,20 +141,21 @@ class TestSmpsRepeatedPlaybackBenchmark {
     private static Sample[] measureCounts(
             ThreadMXBean allocation,
             BenchmarkFixture fixture,
-            int repetition) {
+            int repetition,
+            boolean emit) {
         Sample[] samples = new Sample[OPERATION_COUNTS.length];
         if ((repetition & 1) == 0) {
             for (int index = 0; index < OPERATION_COUNTS.length; index++) {
                 samples[index] = measure(
                         allocation, fixture, repetition,
-                        OPERATION_COUNTS[index]);
+                        OPERATION_COUNTS[index], emit);
             }
         } else {
             for (int index = OPERATION_COUNTS.length - 1; index >= 0;
                     index--) {
                 samples[index] = measure(
                         allocation, fixture, repetition,
-                        OPERATION_COUNTS[index]);
+                        OPERATION_COUNTS[index], emit);
             }
         }
         return samples;
@@ -139,7 +165,8 @@ class TestSmpsRepeatedPlaybackBenchmark {
             ThreadMXBean allocation,
             BenchmarkFixture fixture,
             int repetition,
-            int operations) {
+            int operations,
+            boolean emit) {
         long threadId = Thread.currentThread().threadId();
         long gcCountBefore = totalGcCount();
         long gcTimeBefore = totalGcTimeMillis();
@@ -157,18 +184,61 @@ class TestSmpsRepeatedPlaybackBenchmark {
                 fixture.loaderCalls(), fixture.programMaterializations(),
                 gcCountDelta, gcTimeDelta,
                 topology.liveVoices(), topology.driverSequencers());
-        System.out.printf(
-                "SMPS_BENCHMARK_SAMPLE scenario=%s repetition=%d "
-                        + "operations=%d allocatedBytes=%d elapsedNanos=%d "
-                        + "loaderCalls=%d programMaterializations=%d "
-                        + "gcCountDelta=%d gcTimeMillisDelta=%d "
-                        + "liveVoices=%d driverSequencers=%d%n",
-                fixture.scenario.label, repetition, operations,
-                sample.allocatedBytes(), sample.elapsedNanos(),
-                sample.loaderCalls(), sample.programMaterializations(),
-                sample.gcCountDelta(), sample.gcTimeMillisDelta(),
-                sample.liveVoices(), sample.driverSequencers());
+        if (emit) {
+            System.out.printf(
+                    "SMPS_BENCHMARK_SAMPLE scenario=%s repetition=%d "
+                            + "operations=%d allocatedBytes=%d elapsedNanos=%d "
+                            + "loaderCalls=%d programMaterializations=%d "
+                            + "gcCountDelta=%d gcTimeMillisDelta=%d "
+                            + "liveVoices=%d driverSequencers=%d%n",
+                    fixture.scenario.label, repetition, operations,
+                    sample.allocatedBytes(), sample.elapsedNanos(),
+                    sample.loaderCalls(), sample.programMaterializations(),
+                    sample.gcCountDelta(), sample.gcTimeMillisDelta(),
+                    sample.liveVoices(), sample.driverSequencers());
+        }
         return sample;
+    }
+
+    private static void warmMeasurementWrapper(
+            ThreadMXBean allocation, Scenario[] scenarios) {
+        BenchmarkFixture fixture = new BenchmarkFixture(
+                Scenario.SFX_PROGRAM_TINY);
+        runOperations(fixture.audio, fixture.scenario.route,
+                WARMUP_OPERATIONS);
+        fixture.assertFixedTopology();
+        for (int invocation = 0;
+                invocation < WRAPPER_WARMUP_INVOCATIONS; invocation++) {
+            measure(allocation, fixture, -1, 1, false);
+        }
+        fixture.assertFixedTopology();
+    }
+
+    private static void warmRecordedScenarioPaths(
+            ThreadMXBean allocation, Scenario[] scenarios) {
+        for (int repetition = 0;
+                repetition < DISCARDED_SCENARIO_REPETITIONS; repetition++) {
+            for (Scenario scenario : scenarios) {
+                BenchmarkFixture fixture = new BenchmarkFixture(scenario);
+                runOperations(fixture.audio, scenario.route,
+                        WARMUP_OPERATIONS);
+                fixture.assertFixedTopology();
+                measureCounts(allocation, fixture, repetition, false);
+                fixture.assertFixedTopology();
+            }
+        }
+    }
+
+    private static String rawVmArguments() {
+        return String.join(",",
+                ManagementFactory.getRuntimeMXBean().getInputArguments());
+    }
+
+    private static String normalizedVmArguments() {
+        return rawVmArguments().replace(
+                "-Djava.io.tmpdir="
+                        + System.getProperty("java.io.tmpdir"),
+                "-Djava.io.tmpdir=<WORKTREE>/target/test-tmp");
     }
 
     /** The complete measured caller; identical on baseline and feature. */
@@ -184,8 +254,8 @@ class TestSmpsRepeatedPlaybackBenchmark {
             // mixer cost that is unrelated to admission. It also leaves every
             // persistent fixture track live for the next replacement.
             audio.presentFrame(PresentationMode.SILENT);
-            workloadEscape = audio;
         }
+        workloadEscape = audio;
     }
 
     private static void emitSummary(

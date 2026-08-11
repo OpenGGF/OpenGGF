@@ -61,8 +61,6 @@ class TestSmpsSfxAdmissionAllocation {
      * not a fitted value from this fixture.
      */
     private static final long MAX_BOUNDED_TRIGGER_BYTES = 32 * 1024;
-    private static volatile Object allocationEscape;
-
     @Test
     void warmedAdmissionAllocationIsIndependentOfAssetAndUnrelatedMusicSize() {
         Fixture programTiny = fixture(
@@ -90,15 +88,22 @@ class TestSmpsSfxAdmissionAllocation {
         assertPairTopology(dacTiny, dacLarge, "DAC-size control");
         assertPairTopology(musicSimple, musicComplex,
                 "unrelated-music control", false);
+        ThreadMXBean bean = allocationBeanOrNull();
+        if (bean == null) {
+            for (Fixture fixture : fixtures) {
+                warmTriggers(fixture, WARM_TRIGGERS);
+                fixture.assertOneMaterializationPerKey();
+                fixture.assertFixedLiveTopology();
+            }
+            Assumptions.assumeTrue(false,
+                    "ThreadMXBean allocation accounting unavailable");
+            return;
+        }
         for (Fixture fixture : fixtures) {
-            warmTriggers(fixture, WARM_TRIGGERS);
+            warmAllocatedBytesCallSite(bean, fixture);
             fixture.assertOneMaterializationPerKey();
             fixture.assertFixedLiveTopology();
         }
-
-        ThreadMXBean bean = allocationBeanOrNull();
-        Assumptions.assumeTrue(bean != null,
-                "ThreadMXBean allocation accounting unavailable");
 
         PairMeasurement program = measureAlternating(
                 bean, "program", programTiny, programLarge);
@@ -240,6 +245,18 @@ class TestSmpsSfxAdmissionAllocation {
         }
     }
 
+    private static void warmAllocatedBytesCallSite(
+            ThreadMXBean bean, Fixture fixture) {
+        int remaining = WARM_TRIGGERS;
+        while (remaining > 0) {
+            int operations = Math.min(
+                    MEASURED_COUNTS[MEASURED_COUNTS.length - 1],
+                    remaining);
+            allocatedBytes(bean, fixture, operations);
+            remaining -= operations;
+        }
+    }
+
     private static PairMeasurement measureAlternating(
             ThreadMXBean bean, String label, Fixture left, Fixture right) {
         long[] leftSlopes = new long[REPETITIONS];
@@ -298,12 +315,16 @@ class TestSmpsSfxAdmissionAllocation {
 
     private static long allocatedBytes(
             ThreadMXBean bean, Fixture fixture, int operations) {
+        int topologyInspectionsBefore = fixture.topologyInspections;
         long threadId = Thread.currentThread().threadId();
         long before = bean.getThreadAllocatedBytes(threadId);
         for (int index = 0; index < operations; index++) {
             fixture.trigger();
         }
-        return bean.getThreadAllocatedBytes(threadId) - before;
+        long allocated = bean.getThreadAllocatedBytes(threadId) - before;
+        assertEquals(topologyInspectionsBefore, fixture.topologyInspections,
+                "measured trigger must not inspect live topology");
+        return allocated;
     }
 
     private static long endpointSlope(long[] allocatedAtCounts) {
@@ -363,6 +384,7 @@ class TestSmpsSfxAdmissionAllocation {
         private final int sfxProgramBytes;
         private final int dacBytes;
         private final int musicTracks;
+        private int topologyInspections;
 
         private Fixture(
                 AudioPresentationCommandResolver resolver,
@@ -397,7 +419,6 @@ class TestSmpsSfxAdmissionAllocation {
                     SFX_ID, null, AudioCommand.SfxRoute.BASE_SMPS_ID,
                     1.0f, null));
             queue.applyPending(registry::apply);
-            allocationEscape = liveSfx();
         }
 
         private SmpsCompositeVoice musicVoice() {
@@ -411,6 +432,7 @@ class TestSmpsSfxAdmissionAllocation {
         }
 
         private SmpsSequencer liveSfx() {
+            topologyInspections++;
             return driver().sequencersForTesting().stream()
                     .filter(SmpsSequencer::isSfx)
                     .findFirst()
