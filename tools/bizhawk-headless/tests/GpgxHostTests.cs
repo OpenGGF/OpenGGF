@@ -298,7 +298,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 GpgxHost.CreateGhz1SyncSettings()))
             {
                 GpgxAudioObserverAdapter adapter = host.CreateAudioObserverAdapter();
-                AssertEx.Equal(2u, adapter.AbiVersion());
+                AssertEx.Equal(3u, adapter.AbiVersion());
                 AssertEx.Equal(32u, adapter.EventSize());
                 AssertEx.Equal(65536u, adapter.Capacity());
                 AssertEx.Equal(16, Marshal.SizeOf(typeof(GpgxAudioObserverAdapter.FirstFault)));

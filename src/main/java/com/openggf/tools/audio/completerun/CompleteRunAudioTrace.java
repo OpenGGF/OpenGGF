@@ -154,8 +154,8 @@ public final class CompleteRunAudioTrace {
                     || hookSize != 32 || rangeSize != 16 || capacity <= 0) {
                 throw new IllegalArgumentException("native observer ABI bounds must be positive");
             }
-            if (!"bizhawk-2.11-gpgx-audio-observer-v2".equals(installationId)
-                    || !"gpgx-audio-observer-v2".equals(coreId)) {
+            if (!"bizhawk-2.11-gpgx-audio-observer-v3".equals(installationId)
+                    || !"gpgx-audio-observer-v3".equals(coreId)) {
                 throw new IllegalArgumentException("native observer logical installation/core IDs are not pinned");
             }
             lowercaseHex(coreBuildId, Pattern.compile("[0-9a-f]{16}"), "native observer core BuildID");
@@ -442,7 +442,7 @@ public final class CompleteRunAudioTrace {
                             nativeService.token());
                     semanticCoordinates.put(nativeService.token(), new SemanticServiceCoordinates(
                             new CutoffCoordinate(semantic.beginFrame(), semantic.beginOrdinal()),
-                            nativeCoordinates.end()));
+                            nativeCoordinates.end(), nativeCoordinates.transitions()));
                 }
                 for (int index = 0; index < nativePending.size(); index++) {
                     FrontierService nativeService = nativePending.get(index);
@@ -453,7 +453,8 @@ public final class CompleteRunAudioTrace {
                     }
                     semanticCoordinates.put(nativeService.token(), new SemanticServiceCoordinates(
                             new CutoffCoordinate(semantic.beginFrame(), semantic.beginOrdinal()),
-                            new CutoffCoordinate(semantic.endFrame(), semantic.endOrdinal())));
+                            new CutoffCoordinate(semantic.endFrame(), semantic.endOrdinal()),
+                            semanticCoordinates.get(nativeService.token()).transitions()));
                 }
                 List<CutoffService> projectedActive = nativeActive.stream().map(service -> {
                     CutoffService projected = CutoffService.fromNative(service, servicesByToken,
@@ -555,18 +556,28 @@ public final class CompleteRunAudioTrace {
             List<FrontierOwnedChip> rawChipInventory,
             List<FrontierOwnedSnapshot> rawSnapshotInventory,
             List<NativeResetDiagnostic> resets,
-            List<NativeManagedCorrelation> managedCorrelations) {
+            List<NativeManagedCorrelation> managedCorrelations,
+            List<FrontierOwnedAncestryTransition> rawAncestryTransitionInventory) {
         public FrameNativeDiagnostics(List<FrontierService> services,
                 List<FrontierOwnedChip> rawChipInventory,
                 List<FrontierOwnedSnapshot> rawSnapshotInventory) {
-            this(services, rawChipInventory, rawSnapshotInventory, List.of(), List.of());
+            this(services, rawChipInventory, rawSnapshotInventory, List.of(), List.of(), List.of());
         }
 
         public FrameNativeDiagnostics(List<FrontierService> services,
                 List<FrontierOwnedChip> rawChipInventory,
                 List<FrontierOwnedSnapshot> rawSnapshotInventory,
                 List<NativeResetDiagnostic> resets) {
-            this(services, rawChipInventory, rawSnapshotInventory, resets, List.of());
+            this(services, rawChipInventory, rawSnapshotInventory, resets, List.of(), List.of());
+        }
+
+        public FrameNativeDiagnostics(List<FrontierService> services,
+                List<FrontierOwnedChip> rawChipInventory,
+                List<FrontierOwnedSnapshot> rawSnapshotInventory,
+                List<NativeResetDiagnostic> resets,
+                List<NativeManagedCorrelation> managedCorrelations) {
+            this(services, rawChipInventory, rawSnapshotInventory, resets,
+                    managedCorrelations, List.of());
         }
 
         public FrameNativeDiagnostics {
@@ -577,13 +588,16 @@ public final class CompleteRunAudioTrace {
                     "native frame snapshot inventory"));
             resets = List.copyOf(Objects.requireNonNull(resets, "native frame resets"));
             managedCorrelations = canonicalManagedCorrelations(managedCorrelations);
+            rawAncestryTransitionInventory = List.copyOf(Objects.requireNonNull(
+                    rawAncestryTransitionInventory, "native frame ancestry-transition inventory"));
             if (resets.size() > 8) throw new IllegalArgumentException("native reset bound exceeded");
             if (managedCorrelations.size() > MAX_NATIVE_FRAME_EVENTS
                     || managedCorrelations.stream().mapToLong(value -> value.events().size()).sum()
                             > MAX_NATIVE_FRAME_EVENTS) {
                 throw new IllegalArgumentException("native managed-correlation bound exceeded");
             }
-            if (services.size() > MAX_CUTOFF_SERVICES) {
+            if (services.size() > MAX_CUTOFF_SERVICES
+                    || rawAncestryTransitionInventory.size() > MAX_CUTOFF_SERVICES * 7) {
                 throw new IllegalArgumentException("native frame service bound exceeded");
             }
             long chipCount = services.stream().mapToLong(service -> service.chipEvents().size()).sum();
@@ -607,10 +621,16 @@ public final class CompleteRunAudioTrace {
                 }
                 if (service.parentToken() != 0) {
                     FrontierService parent = byToken.get(service.parentToken());
-                    if (parent == null || service.depth() != parent.depth() + 1
-                            || !nativeBeginsBefore(parent, service)
-                            || parent.state() != FrontierServiceState.OPEN
-                                    && !nativeEndsBefore(service, parent)) {
+                    boolean releasedParent = parent == null
+                            && !service.ancestryTransitions().isEmpty()
+                            && service.ancestryTransitions().getFirst().previousParentToken()
+                                    == service.parentToken()
+                            && service.ancestryTransitions().getFirst().previousDepth() == service.depth();
+                    if (!releasedParent && (parent == null || service.depth() != parent.depth() + 1
+                                    || !nativeBeginsBefore(parent, service)
+                                    || parent.state() != FrontierServiceState.OPEN
+                                            && !nativeEndsBefore(service, parent)
+                                            && !nativePromotionClosesParent(service, parent))) {
                         throw new IllegalArgumentException("native frame service parent is not earlier");
                     }
                 } else if (service.depth() != 0) {
@@ -618,6 +638,15 @@ public final class CompleteRunAudioTrace {
                 }
                 priorFrame = service.beginFrame();
                 priorOrdinal = service.beginOrdinal();
+            }
+            for (FrontierService service : services) {
+                for (NativeAncestryTransition transition : service.ancestryTransitions()) {
+                    FrontierService parent = byToken.get(transition.previousParentToken());
+                    if (parent != null && !nativePromotionClosesParent(service, parent, transition)) {
+                        throw new IllegalArgumentException(
+                                "native ancestry transition has no exact completed direct parent");
+                    }
+                }
             }
             List<FrontierOwnedChip> expectedChips = services.stream()
                     .flatMap(service -> service.chipEvents().stream()
@@ -659,6 +688,14 @@ public final class CompleteRunAudioTrace {
             Map<Long, Long> nativeOrdinalByCoordinate = new TreeMap<>();
             for (FrontierOwnedChip owned : rawChipInventory) {
                 nativeOrdinalByCoordinate.put(owned.event().coordinate(), owned.event().ordinal());
+            }
+            for (FrontierOwnedAncestryTransition owned : rawAncestryTransitionInventory) {
+                NativeAncestryTransition transition = owned.event();
+                if (nativeOrdinalByCoordinate.putIfAbsent(
+                        transition.coordinate(), transition.ordinal()) != null) {
+                    throw new IllegalArgumentException(
+                            "native ancestry transition inventory overlaps another raw coordinate");
+                }
             }
             for (NativeManagedCorrelation correlation : managedCorrelations) {
                 if (correlation.managedCorrelationOrdinal() != expectedManagedOrdinal++) {
@@ -760,8 +797,27 @@ public final class CompleteRunAudioTrace {
                 throw new IllegalArgumentException("raw chip stream is not an exact service ownership partition");
             }
             if (nativeDiagnostics != null) {
+                for (FrontierOwnedAncestryTransition ownedTransition
+                        : nativeDiagnostics.rawAncestryTransitionInventory()) {
+                    if (ownedTransition.event().frame() != absoluteFrame) {
+                        throw new IllegalArgumentException(
+                                "native ancestry transition is outside its captured frame");
+                    }
+                }
                 if (nativeDiagnostics.services().size() != services.size()) {
                     throw new IllegalArgumentException("native and canonical service counts differ");
+                }
+                Map<Long, FrontierService> nativeByToken = new LinkedHashMap<>();
+                nativeDiagnostics.services().forEach(service -> nativeByToken.put(service.token(), service));
+                Map<Long, SemanticServiceCoordinates> serviceCoordinates = semanticServiceCoordinates(
+                        nativeDiagnostics.services(), List.of());
+                Map<Long, ChipEvent> semanticChips = new LinkedHashMap<>();
+                int semanticChipIndex = 0;
+                for (FrontierOwnedChip rawOwnedEntry : nativeDiagnostics.rawChipInventory()) {
+                    if (rawOwnedEntry.event().data()) {
+                        semanticChips.put(rawOwnedEntry.event().coordinate(),
+                                rawChipEvents.get(semanticChipIndex++));
+                    }
                 }
                 for (int index = 0; index < services.size(); index++) {
                     DriverService semantic = services.get(index);
@@ -770,6 +826,19 @@ public final class CompleteRunAudioTrace {
                             ? FrontierServiceState.COMPLETED : FrontierServiceState.RESET_CANCELLED;
                     if (!semantic.kind().equals(raw.kind()) || raw.state() != expected) {
                         throw new IllegalArgumentException("native and canonical service identities differ");
+                    }
+                    CutoffService projected = CutoffService.fromNative(raw, nativeByToken,
+                            semanticChips, serviceCoordinates);
+                    if (!semantic.ancestry().equals(projected.ancestry())) {
+                        throw new IllegalArgumentException("native and canonical service ancestry differs");
+                    }
+                    if (!semantic.ancestry().transitions().isEmpty()
+                            && (!Objects.equals(semantic.beginCoordinate(),
+                                    new ServiceCoordinate(projected.beginFrame(), projected.beginOrdinal()))
+                                    || !Objects.equals(semantic.endCoordinate(),
+                                            new ServiceCoordinate(projected.endFrame(), projected.endOrdinal())))) {
+                        throw new IllegalArgumentException(
+                                "native and canonical service lifetime coordinates differ");
                     }
                     List<FrontierChipEvent> rawOwned = raw.chipEvents().stream()
                             .filter(FrontierChipEvent::data).toList();
@@ -803,11 +872,85 @@ public final class CompleteRunAudioTrace {
 
     public enum ServiceCompletion { COMPLETED, RESET_CANCELLED }
 
+    /** Producer-neutral service-boundary coordinate, independent of native tokens and PCs. */
+    public record ServiceCoordinate(int frame, long ordinal) {
+        public ServiceCoordinate {
+            if (frame < 0) throw new IllegalArgumentException("service-coordinate frame is invalid");
+            nonNegative(ordinal, "service-coordinate ordinal");
+        }
+    }
+
+    /** One canonical effective-ancestry transition, included in semantic comparison. */
+    public record ServiceAncestryTransition(ServiceCoordinate previousParent, int previousDepth,
+            ServiceCoordinate currentParent, int currentDepth, int transitionFrame, long transitionOrdinal) {
+        public ServiceAncestryTransition {
+            if (previousDepth <= 0 || previousDepth > 7 || currentDepth != previousDepth - 1
+                    || (previousParent == null) || (currentDepth == 0) != (currentParent == null)
+                    || transitionFrame < 0 || transitionOrdinal < 0) {
+                throw new IllegalArgumentException("semantic ancestry transition is invalid");
+            }
+        }
+
+        ServiceCoordinate transitionCoordinate() {
+            return new ServiceCoordinate(transitionFrame, transitionOrdinal);
+        }
+    }
+
+    /** Immutable begin ancestry plus the effective ancestry after bounded promotions. */
+    public record ServiceAncestry(ServiceCoordinate beginParent, int beginDepth,
+            ServiceCoordinate currentParent, int currentDepth,
+            List<ServiceAncestryTransition> transitions) {
+        public ServiceAncestry {
+            transitions = List.copyOf(Objects.requireNonNull(transitions, "service ancestry transitions"));
+            if (beginDepth < 0 || beginDepth > 7 || currentDepth < 0 || currentDepth > 7
+                    || (beginDepth == 0) != (beginParent == null)
+                    || (currentDepth == 0) != (currentParent == null)
+                    || transitions.size() > 7) {
+                throw new IllegalArgumentException("service ancestry is invalid");
+            }
+            ServiceCoordinate parent = beginParent;
+            int depth = beginDepth;
+            ServiceCoordinate priorTransition = null;
+            for (ServiceAncestryTransition transition : transitions) {
+                if (!Objects.equals(parent, transition.previousParent()) || depth != transition.previousDepth()
+                        || priorTransition != null && compareCoordinate(
+                                priorTransition, transition.transitionCoordinate()) >= 0) {
+                    throw new IllegalArgumentException("service ancestry transition chain is invalid");
+                }
+                parent = transition.currentParent();
+                depth = transition.currentDepth();
+                priorTransition = transition.transitionCoordinate();
+            }
+            if (!Objects.equals(parent, currentParent) || depth != currentDepth) {
+                throw new IllegalArgumentException("service effective ancestry is inconsistent");
+            }
+        }
+
+        public static ServiceAncestry root() {
+            return new ServiceAncestry(null, 0, null, 0, List.of());
+        }
+    }
+
     public record DriverService(long ordinal, String kind, ServiceCompletion completion, List<Decision> decisions,
-            NormalizedState state, List<ChipEvent> chipEvents, Long carriedBoundaryOrdinal) {
+            NormalizedState state, List<ChipEvent> chipEvents, Long carriedBoundaryOrdinal,
+            ServiceCoordinate beginCoordinate, ServiceCoordinate endCoordinate, ServiceAncestry ancestry) {
         public DriverService(long ordinal, String kind, ServiceCompletion completion, List<Decision> decisions,
                 NormalizedState state, List<ChipEvent> chipEvents) {
-            this(ordinal, kind, completion, decisions, state, chipEvents, null);
+            this(ordinal, kind, completion, decisions, state, chipEvents, null,
+                    null, null, ServiceAncestry.root());
+        }
+
+        public DriverService(long ordinal, String kind, ServiceCompletion completion, List<Decision> decisions,
+                NormalizedState state, List<ChipEvent> chipEvents, Long carriedBoundaryOrdinal) {
+            this(ordinal, kind, completion, decisions, state, chipEvents, carriedBoundaryOrdinal,
+                    null, null, ServiceAncestry.root());
+        }
+
+        public DriverService(long ordinal, String kind, ServiceCompletion completion, List<Decision> decisions,
+                NormalizedState state, List<ChipEvent> chipEvents, Long carriedBoundaryOrdinal,
+                ServiceAncestry ancestry) {
+            this(ordinal, kind, completion, decisions, state, chipEvents, carriedBoundaryOrdinal,
+                    null, null, ancestry);
         }
 
         public DriverService {
@@ -816,11 +959,18 @@ public final class CompleteRunAudioTrace {
             Objects.requireNonNull(completion, "service completion");
             decisions = List.copyOf(Objects.requireNonNull(decisions, "decisions"));
             Objects.requireNonNull(state, "state");
+            Objects.requireNonNull(ancestry, "service ancestry");
             chipEvents = List.copyOf(Objects.requireNonNull(chipEvents, "chipEvents"));
             if (carriedBoundaryOrdinal != null
                     && (carriedBoundaryOrdinal < 0 || carriedBoundaryOrdinal >= 8)) {
                 throw new IllegalArgumentException("carried boundary ordinal is invalid");
             }
+            if ((beginCoordinate == null) != (endCoordinate == null)
+                    || beginCoordinate != null && compareCoordinate(beginCoordinate, endCoordinate) >= 0) {
+                throw new IllegalArgumentException("service lifetime coordinates are invalid");
+            }
+            validateAncestryLifetime(ancestry, beginCoordinate, endCoordinate,
+                    "completed service ancestry");
             strictlyIncreasing(decisions.stream().map(Decision::requestOrdinal).toList(),
                     "decision request ordinals");
             strictlyIncreasing(chipEvents.stream().map(ChipEvent::ordinal).toList(), "chip event ordinals");
@@ -884,12 +1034,53 @@ public final class CompleteRunAudioTrace {
         }
     }
 
+    /** Raw event-11 proof for one effective-ancestry promotion. */
+    public record NativeAncestryTransition(long coordinate, int frame, long ordinal,
+            long previousParentToken, int previousDepth, long currentParentToken, int currentDepth,
+            int hookToken, String sourceCpu, int pc) {
+        public NativeAncestryTransition {
+            nonNegative(coordinate, "native ancestry-transition coordinate");
+            nonNegative(ordinal, "native ancestry-transition ordinal");
+            if (frame < 0 || ordinal >= MAX_NATIVE_FRAME_EVENTS || previousParentToken <= 0
+                    || previousParentToken > 0xffff || previousDepth <= 0 || previousDepth > 7
+                    || currentParentToken < 0 || currentParentToken > 0xffff
+                    || currentDepth != previousDepth - 1
+                    || (currentDepth == 0) != (currentParentToken == 0)
+                    || hookToken <= 0 || hookToken > 0xffff) {
+                throw new IllegalArgumentException("native ancestry transition is invalid");
+            }
+            validateSourcePc(sourceCpu, pc, "native ancestry transition");
+        }
+    }
+
     /** One active or withheld completed service; chip and snapshot ownership is exclusive. */
     public record FrontierService(long token, long parentToken, int depth, String kind,
             FrontierServiceState state, int beginFrame, long beginOrdinal, int beginPc,
             int beginHookToken, String beginSourceCpu, Integer endFrame, Long endOrdinal,
             Integer endPc, Integer endHookToken, List<FrontierSnapshot> snapshots,
-            List<FrontierChipEvent> chipEvents) {
+            List<FrontierChipEvent> chipEvents, long currentParentToken, int currentDepth,
+            List<NativeAncestryTransition> ancestryTransitions, ServiceAncestry semanticAncestry) {
+        public FrontierService(long token, long parentToken, int depth, String kind,
+                FrontierServiceState state, int beginFrame, long beginOrdinal, int beginPc,
+                int beginHookToken, String beginSourceCpu, Integer endFrame, Long endOrdinal,
+                Integer endPc, Integer endHookToken, List<FrontierSnapshot> snapshots,
+                List<FrontierChipEvent> chipEvents) {
+            this(token, parentToken, depth, kind, state, beginFrame, beginOrdinal, beginPc,
+                    beginHookToken, beginSourceCpu, endFrame, endOrdinal, endPc, endHookToken,
+                    snapshots, chipEvents, parentToken, depth, List.of(), null);
+        }
+
+        public FrontierService(long token, long parentToken, int depth, String kind,
+                FrontierServiceState state, int beginFrame, long beginOrdinal, int beginPc,
+                int beginHookToken, String beginSourceCpu, Integer endFrame, Long endOrdinal,
+                Integer endPc, Integer endHookToken, List<FrontierSnapshot> snapshots,
+                List<FrontierChipEvent> chipEvents, long currentParentToken, int currentDepth,
+                List<NativeAncestryTransition> ancestryTransitions) {
+            this(token, parentToken, depth, kind, state, beginFrame, beginOrdinal, beginPc,
+                    beginHookToken, beginSourceCpu, endFrame, endOrdinal, endPc, endHookToken,
+                    snapshots, chipEvents, currentParentToken, currentDepth, ancestryTransitions, null);
+        }
+
         public FrontierService {
             boolean resetRoot = beginHookToken == 0 || "RESET".equals(beginSourceCpu);
             if (token <= 0 || token > 0xffff || parentToken < 0 || parentToken > 0xffff
@@ -942,6 +1133,47 @@ public final class CompleteRunAudioTrace {
             }
             snapshots = List.copyOf(Objects.requireNonNull(snapshots, "frontier snapshots"));
             chipEvents = List.copyOf(Objects.requireNonNull(chipEvents, "frontier chip events"));
+            ancestryTransitions = List.copyOf(Objects.requireNonNull(ancestryTransitions,
+                    "native ancestry transitions"));
+            if (currentParentToken < 0 || currentParentToken > 0xffff
+                    || currentDepth < 0 || currentDepth > 7
+                    || (currentDepth == 0) != (currentParentToken == 0)
+                    || ancestryTransitions.size() > 7) {
+                throw new IllegalArgumentException("frontier effective ancestry is invalid");
+            }
+            long effectiveParent = parentToken;
+            int effectiveDepth = depth;
+            long priorCoordinate = -1;
+            long priorOrdinal = -1;
+            for (NativeAncestryTransition transition : ancestryTransitions) {
+                if (transition.previousParentToken() != effectiveParent
+                        || transition.previousDepth() != effectiveDepth
+                        || transition.coordinate() <= priorCoordinate
+                        || transition.ordinal() <= priorOrdinal
+                        || compareFrameOrdinal(beginFrame, beginOrdinal,
+                                transition.frame(), transition.ordinal()) >= 0
+                        || endFrame != null && compareFrameOrdinal(
+                                transition.frame(), transition.ordinal(), endFrame, endOrdinal) >= 0) {
+                    throw new IllegalArgumentException("native ancestry transition chain is invalid");
+                }
+                effectiveParent = transition.currentParentToken();
+                effectiveDepth = transition.currentDepth();
+                priorCoordinate = transition.coordinate();
+                priorOrdinal = transition.ordinal();
+            }
+            if (effectiveParent != currentParentToken || effectiveDepth != currentDepth) {
+                throw new IllegalArgumentException("frontier effective ancestry is inconsistent");
+            }
+            if (semanticAncestry != null
+                    && (semanticAncestry.beginDepth() != depth
+                            || semanticAncestry.currentDepth() != currentDepth
+                            || semanticAncestry.transitions().size() != ancestryTransitions.size())) {
+                throw new IllegalArgumentException("frontier semantic ancestry does not match native shape");
+            }
+            validateAncestryLifetime(semanticAncestry,
+                    new ServiceCoordinate(beginFrame, beginOrdinal),
+                    endFrame == null ? null : new ServiceCoordinate(endFrame, endOrdinal),
+                    "frontier semantic ancestry");
             if (chipEvents.stream().anyMatch(event -> resetRoot
                     ? !"RESET".equals(event.sourceCpu()) || event.pc() != 0
                     : !beginSourceCpu.equals(event.sourceCpu()))) {
@@ -965,12 +1197,25 @@ public final class CompleteRunAudioTrace {
 
     /** Producer-neutral service state retained at the exclusive terminal cutoff. */
     private record CutoffCoordinate(int frame, long ordinal) {}
-    private record NativeBoundary(long token, boolean begin, int frame, long ordinal) {}
-    private record SemanticServiceCoordinates(CutoffCoordinate begin, CutoffCoordinate end) {}
+    private record NativeBoundary(long token, int kind, int index, int frame, long ordinal) {}
+    private record SemanticServiceCoordinates(CutoffCoordinate begin, CutoffCoordinate end,
+            List<CutoffCoordinate> transitions) {}
 
     public record CutoffService(Integer parentFrame, long parentOrdinal, int depth, String kind,
             FrontierServiceState state, int beginFrame,
-            long beginOrdinal, Integer endFrame, Long endOrdinal, List<ChipEvent> chipEvents) {
+            long beginOrdinal, Integer endFrame, Long endOrdinal, List<ChipEvent> chipEvents,
+            ServiceAncestry ancestry) {
+        public CutoffService(Integer parentFrame, long parentOrdinal, int depth, String kind,
+                FrontierServiceState state, int beginFrame,
+                long beginOrdinal, Integer endFrame, Long endOrdinal, List<ChipEvent> chipEvents) {
+            this(parentFrame, parentOrdinal, depth, kind, state, beginFrame, beginOrdinal,
+                    endFrame, endOrdinal, chipEvents,
+                    new ServiceAncestry(parentFrame == null ? null
+                            : new ServiceCoordinate(parentFrame, parentOrdinal), depth,
+                            parentFrame == null ? null : new ServiceCoordinate(parentFrame, parentOrdinal),
+                            depth, List.of()));
+        }
+
         public CutoffService {
             requireText(kind, "cutoff service kind");
             Objects.requireNonNull(state, "cutoff service state");
@@ -987,6 +1232,15 @@ public final class CompleteRunAudioTrace {
                 throw new IllegalArgumentException("cutoff service completion identity is invalid");
             }
             chipEvents = List.copyOf(Objects.requireNonNull(chipEvents, "cutoff chip events"));
+            Objects.requireNonNull(ancestry, "cutoff service ancestry");
+            ServiceCoordinate declaredParent = parentFrame == null ? null
+                    : new ServiceCoordinate(parentFrame, parentOrdinal);
+            if (!Objects.equals(declaredParent, ancestry.beginParent()) || depth != ancestry.beginDepth()) {
+                throw new IllegalArgumentException("cutoff immutable ancestry is inconsistent");
+            }
+            validateAncestryLifetime(ancestry, new ServiceCoordinate(beginFrame, beginOrdinal),
+                    endFrame == null ? null : new ServiceCoordinate(endFrame, endOrdinal),
+                    "cutoff service ancestry");
             strictlyIncreasing(chipEvents.stream().map(ChipEvent::ordinal).toList(),
                     "cutoff semantic chip ordinals");
         }
@@ -999,18 +1253,56 @@ public final class CompleteRunAudioTrace {
                             "native cutoff semantic chip"))
                     .toList();
             FrontierService parent = service.parentToken() == 0 ? null
-                    : Objects.requireNonNull(servicesByToken.get(service.parentToken()),
-                            "native cutoff parent service");
+                    : servicesByToken.get(service.parentToken());
+            if (service.parentToken() != 0 && parent == null && service.semanticAncestry() == null) {
+                throw new NullPointerException("native cutoff parent service");
+            }
             SemanticServiceCoordinates coordinates = Objects.requireNonNull(
                     semanticCoordinates.get(service.token()), "native cutoff semantic coordinates");
             SemanticServiceCoordinates parentCoordinates = parent == null ? null
                     : Objects.requireNonNull(semanticCoordinates.get(parent.token()),
                             "native cutoff parent semantic coordinates");
-            return new CutoffService(parentCoordinates == null ? null : parentCoordinates.begin().frame(),
-                    parentCoordinates == null ? -1 : parentCoordinates.begin().ordinal(), service.depth(),
+            List<ServiceAncestryTransition> transitions = new ArrayList<>();
+            for (int index = 0; service.semanticAncestry() == null
+                    && index < service.ancestryTransitions().size(); index++) {
+                NativeAncestryTransition nativeTransition = service.ancestryTransitions().get(index);
+                FrontierService previous = Objects.requireNonNull(
+                        servicesByToken.get(nativeTransition.previousParentToken()),
+                        "native previous ancestry parent");
+                FrontierService current = nativeTransition.currentParentToken() == 0 ? null
+                        : Objects.requireNonNull(servicesByToken.get(nativeTransition.currentParentToken()),
+                                "native current ancestry parent");
+                CutoffCoordinate transitionCoordinate = coordinates.transitions().get(index);
+                transitions.add(new ServiceAncestryTransition(
+                        toServiceCoordinate(semanticCoordinates.get(previous.token()).begin()),
+                        nativeTransition.previousDepth(),
+                        current == null ? null
+                                : toServiceCoordinate(semanticCoordinates.get(current.token()).begin()),
+                        nativeTransition.currentDepth(), transitionCoordinate.frame(),
+                        transitionCoordinate.ordinal()));
+            }
+            ServiceAncestry ancestry = service.semanticAncestry();
+            if (ancestry == null) {
+                ServiceCoordinate beginParent = parentCoordinates == null ? null
+                        : toServiceCoordinate(parentCoordinates.begin());
+                FrontierService currentParent = service.currentParentToken() == 0 ? null
+                        : Objects.requireNonNull(servicesByToken.get(service.currentParentToken()),
+                                "native effective ancestry parent");
+                ancestry = new ServiceAncestry(beginParent, service.depth(),
+                        currentParent == null ? null
+                                : toServiceCoordinate(semanticCoordinates.get(currentParent.token()).begin()),
+                        service.currentDepth(), transitions);
+            }
+            ServiceCoordinate ancestryParent = ancestry.beginParent();
+            return new CutoffService(ancestryParent == null ? null : ancestryParent.frame(),
+                    ancestryParent == null ? -1 : ancestryParent.ordinal(), service.depth(),
                     service.kind(), service.state(), coordinates.begin().frame(), coordinates.begin().ordinal(),
                     coordinates.end() == null ? null : coordinates.end().frame(),
-                    coordinates.end() == null ? null : coordinates.end().ordinal(), chips);
+                    coordinates.end() == null ? null : coordinates.end().ordinal(), chips, ancestry);
+        }
+
+        private static ServiceCoordinate toServiceCoordinate(CutoffCoordinate coordinate) {
+            return new ServiceCoordinate(coordinate.frame(), coordinate.ordinal());
         }
     }
 
@@ -1019,15 +1311,23 @@ public final class CompleteRunAudioTrace {
         List<FrontierService> services = java.util.stream.Stream.concat(active.stream(), pending.stream()).toList();
         List<NativeBoundary> boundaries = new ArrayList<>();
         for (FrontierService service : services) {
-            boundaries.add(new NativeBoundary(service.token(), true, service.beginFrame(), service.beginOrdinal()));
+            boundaries.add(new NativeBoundary(service.token(), 0, -1,
+                    service.beginFrame(), service.beginOrdinal()));
             if (service.endFrame() != null) {
-                boundaries.add(new NativeBoundary(service.token(), false, service.endFrame(), service.endOrdinal()));
+                boundaries.add(new NativeBoundary(service.token(), 1, -1,
+                        service.endFrame(), service.endOrdinal()));
+            }
+            for (int index = 0; index < service.ancestryTransitions().size(); index++) {
+                NativeAncestryTransition transition = service.ancestryTransitions().get(index);
+                boundaries.add(new NativeBoundary(service.token(), 2, index,
+                        transition.frame(), transition.ordinal()));
             }
         }
         boundaries.sort(java.util.Comparator.comparingInt(NativeBoundary::frame)
                 .thenComparingLong(NativeBoundary::ordinal));
         Map<Long, CutoffCoordinate> begins = new LinkedHashMap<>();
         Map<Long, CutoffCoordinate> ends = new LinkedHashMap<>();
+        Map<Long, List<CutoffCoordinate>> transitions = new LinkedHashMap<>();
         int frame = -1;
         long semanticOrdinal = 0;
         NativeBoundary previous = null;
@@ -1041,14 +1341,16 @@ public final class CompleteRunAudioTrace {
                 semanticOrdinal = 0;
             }
             CutoffCoordinate coordinate = new CutoffCoordinate(frame, semanticOrdinal++);
-            (boundary.begin() ? begins : ends).put(boundary.token(), coordinate);
+            if (boundary.kind() == 0) begins.put(boundary.token(), coordinate);
+            else if (boundary.kind() == 1) ends.put(boundary.token(), coordinate);
+            else transitions.computeIfAbsent(boundary.token(), ignored -> new ArrayList<>()).add(coordinate);
             previous = boundary;
         }
         Map<Long, SemanticServiceCoordinates> result = new LinkedHashMap<>();
         for (FrontierService service : services) {
             result.put(service.token(), new SemanticServiceCoordinates(
                     Objects.requireNonNull(begins.get(service.token()), "native cutoff begin coordinate"),
-                    ends.get(service.token())));
+                    ends.get(service.token()), List.copyOf(transitions.getOrDefault(service.token(), List.of()))));
         }
         return Collections.unmodifiableMap(result);
     }
@@ -1083,9 +1385,9 @@ public final class CompleteRunAudioTrace {
         Map<Long, FrontierService> servicesByToken = new LinkedHashMap<>();
         for (int index = 0; index < activeStack.size(); index++) {
             FrontierService service = activeStack.get(index);
-            if (service.state() != FrontierServiceState.OPEN || service.depth() != index
-                    || (index == 0 ? service.parentToken() != 0
-                            : service.parentToken() != activeStack.get(index - 1).token())
+            if (service.state() != FrontierServiceState.OPEN || service.currentDepth() != index
+                    || (index == 0 ? service.currentParentToken() != 0
+                            : service.currentParentToken() != activeStack.get(index - 1).token())
                     || index > 0 && !nativeBeginsBefore(activeStack.get(index - 1), service)
                     || !tokens.add(service.token())) {
                 throw new IllegalArgumentException("native cutoff active stack is not outer-to-inner");
@@ -1103,8 +1405,8 @@ public final class CompleteRunAudioTrace {
                     || !tokens.add(service.token())) {
                 throw new IllegalArgumentException("native pending services are not unique begin order");
             }
-            FrontierService parent = servicesByToken.get(service.parentToken());
-            if (parent == null || service.depth() != parent.depth() + 1
+            FrontierService parent = servicesByToken.get(service.currentParentToken());
+            if (parent == null || service.currentDepth() != parent.currentDepth() + 1
                     || !nativeBeginsBefore(parent, service)
                     || parent.state() != FrontierServiceState.OPEN && !nativeEndsBefore(service, parent)) {
                 throw new IllegalArgumentException("native pending descendant has no earlier parent");
@@ -1179,6 +1481,26 @@ public final class CompleteRunAudioTrace {
                 || child.endFrame().equals(parent.endFrame()) && child.endOrdinal() < parent.endOrdinal();
     }
 
+    private static boolean nativePromotionClosesParent(FrontierService child, FrontierService parent) {
+        if (parent.endFrame() == null || child.ancestryTransitions().isEmpty()) return false;
+        NativeAncestryTransition transition = child.ancestryTransitions().getFirst();
+        return nativePromotionClosesParent(child, parent, transition);
+    }
+
+    private static boolean nativePromotionClosesParent(FrontierService child, FrontierService parent,
+            NativeAncestryTransition transition) {
+        if (parent.endFrame() == null) return false;
+        return transition.previousParentToken() == parent.token()
+                && transition.previousDepth() == child.depth()
+                && transition.currentParentToken() == parent.currentParentToken()
+                && transition.currentDepth() == parent.currentDepth()
+                && transition.frame() == parent.endFrame()
+                && transition.ordinal() == parent.endOrdinal() + 1
+                && transition.hookToken() == parent.endHookToken()
+                && transition.sourceCpu().equals(parent.beginSourceCpu())
+                && transition.pc() == parent.endPc();
+    }
+
     /** One globally ordered raw chip callback and its exclusive frontier owner. */
     public record FrontierOwnedChip(long ownerToken, FrontierChipEvent event) {
         public FrontierOwnedChip {
@@ -1186,6 +1508,19 @@ public final class CompleteRunAudioTrace {
                 throw new IllegalArgumentException("frontier chip owner token is invalid");
             }
             Objects.requireNonNull(event, "frontier owned chip event");
+        }
+    }
+
+    /** One raw event-11 promotion and the child whose effective ancestry it changes. */
+    public record FrontierOwnedAncestryTransition(long ownerToken, NativeAncestryTransition event) {
+        public FrontierOwnedAncestryTransition {
+            if (ownerToken <= 0 || ownerToken > 0xffff) {
+                throw new IllegalArgumentException("native ancestry-transition owner token is invalid");
+            }
+            Objects.requireNonNull(event, "native ancestry-transition event");
+            if (ownerToken == event.previousParentToken()) {
+                throw new IllegalArgumentException("native ancestry transition cannot promote its parent");
+            }
         }
     }
 
@@ -1280,11 +1615,12 @@ public final class CompleteRunAudioTrace {
                 CutoffService service = activeStack.get(index);
                 boolean active = service.state() == FrontierServiceState.OPEN
                         || service.state() == FrontierServiceState.CARRIED_IN_OPEN;
-                if (!active || service.depth() != index
-                        || index == 0 && (service.parentFrame() != null || service.parentOrdinal() != -1)
-                        || index > 0 && (!Objects.equals(service.parentFrame(),
-                                    activeStack.get(index - 1).beginFrame())
-                                || service.parentOrdinal() != activeStack.get(index - 1).beginOrdinal())) {
+                ServiceCoordinate effectiveParent = service.ancestry().currentParent();
+                if (!active || service.ancestry().currentDepth() != index
+                        || index == 0 && effectiveParent != null
+                        || index > 0 && !Objects.equals(effectiveParent,
+                                new ServiceCoordinate(activeStack.get(index - 1).beginFrame(),
+                                        activeStack.get(index - 1).beginOrdinal()))) {
                     throw new IllegalArgumentException("boundary active stack is not outer-to-inner");
                 }
             }
@@ -1302,9 +1638,10 @@ public final class CompleteRunAudioTrace {
             int previousFrame = -1;
             long previousOrdinal = -1;
             for (CutoffService service : pendingDescendants) {
-                CutoffService parent = service.parentFrame() == null ? null
-                        : services.get(new CutoffCoordinate(service.parentFrame(), service.parentOrdinal()));
-                if (parent == null || service.depth() != parent.depth() + 1
+                ServiceCoordinate effectiveParent = service.ancestry().currentParent();
+                CutoffService parent = effectiveParent == null ? null
+                        : services.get(new CutoffCoordinate(effectiveParent.frame(), effectiveParent.ordinal()));
+                if (parent == null || service.ancestry().currentDepth() != parent.ancestry().currentDepth() + 1
                         || !boundaryBeginsBefore(parent, service)
                         || parent.state() != FrontierServiceState.OPEN
                                 && parent.state() != FrontierServiceState.CARRIED_IN_OPEN
@@ -1325,19 +1662,18 @@ public final class CompleteRunAudioTrace {
                 if (service.endFrame() != null) {
                     boundaries.add(new CutoffCoordinate(service.endFrame(), service.endOrdinal()));
                 }
+                for (ServiceAncestryTransition transition : service.ancestry().transitions()) {
+                    boundaries.add(new CutoffCoordinate(
+                            transition.transitionFrame(), transition.transitionOrdinal()));
+                }
             }
             boundaries.sort(java.util.Comparator.comparingInt(CutoffCoordinate::frame)
                     .thenComparingLong(CutoffCoordinate::ordinal));
-            int frame = -1;
-            long ordinal = 0;
+            Set<CutoffCoordinate> uniqueBoundaries = new LinkedHashSet<>();
             for (CutoffCoordinate coordinate : boundaries) {
-                if (coordinate.frame() != frame) {
-                    frame = coordinate.frame();
-                    ordinal = 0;
-                }
-                if (coordinate.ordinal() != ordinal++) {
+                if (!uniqueBoundaries.add(coordinate)) {
                     throw new IllegalArgumentException(
-                            "boundary semantic service coordinates are not contiguous per frame");
+                            "boundary semantic service coordinate is duplicated");
                 }
             }
             long chipCount = java.util.stream.Stream.concat(activeStack.stream(), pendingDescendants.stream())
@@ -1491,11 +1827,12 @@ public final class CompleteRunAudioTrace {
             long previousBeginOrdinal = -1;
             for (int i = 0; i < activeStack.size(); i++) {
                 CutoffService service = activeStack.get(i);
-                if (service.state() != FrontierServiceState.OPEN || service.depth() != i
-                        || i == 0 && (service.parentFrame() != null || service.parentOrdinal() != -1)
-                        || i > 0 && (!Objects.equals(service.parentFrame(),
-                                    activeStack.get(i - 1).beginFrame())
-                                || service.parentOrdinal() != activeStack.get(i - 1).beginOrdinal()
+                ServiceCoordinate effectiveParent = service.ancestry().currentParent();
+                if (service.state() != FrontierServiceState.OPEN || service.ancestry().currentDepth() != i
+                        || i == 0 && effectiveParent != null
+                        || i > 0 && (!Objects.equals(effectiveParent,
+                                    new ServiceCoordinate(activeStack.get(i - 1).beginFrame(),
+                                            activeStack.get(i - 1).beginOrdinal()))
                                 || !beginsBefore(activeStack.get(i - 1), service))) {
                     throw new IllegalArgumentException("frontier active stack is not outer-to-inner");
                 }
@@ -1510,19 +1847,18 @@ public final class CompleteRunAudioTrace {
                 if (service.endFrame() != null) {
                     semanticBoundaries.add(new CutoffCoordinate(service.endFrame(), service.endOrdinal()));
                 }
+                for (ServiceAncestryTransition transition : service.ancestry().transitions()) {
+                    semanticBoundaries.add(new CutoffCoordinate(
+                            transition.transitionFrame(), transition.transitionOrdinal()));
+                }
             }
             semanticBoundaries.sort(java.util.Comparator.comparingInt(CutoffCoordinate::frame)
                     .thenComparingLong(CutoffCoordinate::ordinal));
-            int boundaryFrame = -1;
-            long boundaryOrdinal = 0;
+            Set<CutoffCoordinate> uniqueSemanticBoundaries = new LinkedHashSet<>();
             for (CutoffCoordinate coordinate : semanticBoundaries) {
-                if (coordinate.frame() != boundaryFrame) {
-                    boundaryFrame = coordinate.frame();
-                    boundaryOrdinal = 0;
-                }
-                if (coordinate.ordinal() != boundaryOrdinal++) {
+                if (!uniqueSemanticBoundaries.add(coordinate)) {
                     throw new IllegalArgumentException(
-                            "cutoff semantic service boundaries are not contiguous per frame");
+                            "cutoff semantic service boundary is duplicated");
                 }
             }
             Map<CutoffCoordinate, CutoffService> semanticByOrdinal = new LinkedHashMap<>();
@@ -1539,10 +1875,12 @@ public final class CompleteRunAudioTrace {
                                 && service.beginOrdinal() <= previousBeginOrdinal)) {
                     throw new IllegalArgumentException("frontier pending services must be completed in begin order");
                 }
-                CutoffService parent = service.parentFrame() == null ? null
-                        : semanticByOrdinal.get(new CutoffCoordinate(service.parentFrame(),
-                                service.parentOrdinal()));
-                if (parent == null || service.depth() != parent.depth() + 1 || !beginsBefore(parent, service)
+                ServiceCoordinate effectiveParent = service.ancestry().currentParent();
+                CutoffService parent = effectiveParent == null ? null
+                        : semanticByOrdinal.get(new CutoffCoordinate(
+                                effectiveParent.frame(), effectiveParent.ordinal()));
+                if (parent == null || service.ancestry().currentDepth() != parent.ancestry().currentDepth() + 1
+                        || !beginsBefore(parent, service)
                         || parent.state() != FrontierServiceState.OPEN && !endsBefore(service, parent)
                         || semanticByOrdinal.putIfAbsent(new CutoffCoordinate(service.beginFrame(),
                                 service.beginOrdinal()), service) != null) {
@@ -1590,7 +1928,7 @@ public final class CompleteRunAudioTrace {
                             nativeService.token());
                     semanticCoordinates.put(nativeService.token(), new SemanticServiceCoordinates(
                             new CutoffCoordinate(semanticService.beginFrame(), semanticService.beginOrdinal()),
-                            nativeCoordinates.end()));
+                            nativeCoordinates.end(), nativeCoordinates.transitions()));
                 }
                 List<CutoffService> nativeActive = nativeDiagnostics.activeStack().stream()
                         .map(service -> CutoffService.fromNative(service, servicesByToken,
@@ -2204,6 +2542,27 @@ public final class CompleteRunAudioTrace {
     private static void nonNegative(long value, String name) {
         if (value < 0) {
             throw new IllegalArgumentException(name + " must be non-negative");
+        }
+    }
+
+    private static int compareCoordinate(ServiceCoordinate left, ServiceCoordinate right) {
+        int frame = Integer.compare(left.frame(), right.frame());
+        return frame != 0 ? frame : Long.compare(left.ordinal(), right.ordinal());
+    }
+
+    private static int compareFrameOrdinal(int leftFrame, long leftOrdinal,
+            int rightFrame, long rightOrdinal) {
+        int frame = Integer.compare(leftFrame, rightFrame);
+        return frame != 0 ? frame : Long.compare(leftOrdinal, rightOrdinal);
+    }
+
+    private static void validateAncestryLifetime(ServiceAncestry ancestry,
+            ServiceCoordinate begin, ServiceCoordinate end, String label) {
+        if (ancestry == null || ancestry.transitions().isEmpty()) return;
+        if (begin == null || compareCoordinate(begin, ancestry.transitions().getFirst().transitionCoordinate()) >= 0
+                || end != null && compareCoordinate(
+                        ancestry.transitions().getLast().transitionCoordinate(), end) >= 0) {
+            throw new IllegalArgumentException(label + " is outside its owner lifetime");
         }
     }
 

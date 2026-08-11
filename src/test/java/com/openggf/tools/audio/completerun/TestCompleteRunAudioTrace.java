@@ -39,7 +39,9 @@ class TestCompleteRunAudioTrace {
         DriverService parent = new DriverService(0, "parent", ServiceCompletion.COMPLETED, List.of(), state,
                 List.of(new PsgWrite(0, 0x90), new PsgWrite(2, 0x92)));
         DriverService child = new DriverService(1, "child", ServiceCompletion.COMPLETED, List.of(), state,
-                List.of(new PsgWrite(1, 0x91)));
+                List.of(new PsgWrite(1, 0x91)), null,
+                new ServiceAncestry(new ServiceCoordinate(1, 0), 1,
+                        new ServiceCoordinate(1, 0), 1, List.of()));
         FrontierChipEvent first = new FrontierChipEvent(1, 1, "Z80", 0x100, 4, 0, 0x90,
                 true, null, null);
         FrontierChipEvent nested = new FrontierChipEvent(2, 2, "Z80", 0x200, 4, 0, 0x91,
@@ -130,6 +132,82 @@ class TestCompleteRunAudioTrace {
         assertThrows(IllegalArgumentException.class, () -> new NativeManagedCorrelation(0,
                 List.of(new NativeManagedEvent(42, 13, "M68K", 0x72c24,
                                 10, 1, 9, 0, 4, 0, 102, true), conditionalEnd)));
+    }
+
+    @Test
+    void nativeAncestryTransitionsRetainPromotionWithoutChangingSemanticBytes() {
+        ServiceCoordinate parentBegin = new ServiceCoordinate(5, 0);
+        ServiceAncestryTransition semanticPromotion = new ServiceAncestryTransition(
+                parentBegin, 1, null, 0, 5, 3);
+        ServiceAncestry childAncestry = new ServiceAncestry(
+                parentBegin, 1, null, 0, List.of(semanticPromotion));
+        NormalizedState state = new NormalizedState(List.of(), List.of());
+        DriverService semanticParent = new DriverService(0, "dpcm", ServiceCompletion.COMPLETED,
+                List.of(), state, List.of(), null, ServiceAncestry.root());
+        DriverService semanticChild = new DriverService(1, "update", ServiceCompletion.COMPLETED,
+                List.of(), state, List.of(), null,
+                new ServiceCoordinate(5, 0), new ServiceCoordinate(6, 0), childAncestry);
+        FrontierService parent = new FrontierService(1, 0, 0, "dpcm",
+                FrontierServiceState.COMPLETED, 5, 0, 0x77, 1, "Z80",
+                5, 5L, 0xac, 4, List.of(), List.of());
+        NativeAncestryTransition rawPromotion = new NativeAncestryTransition(
+                6, 5, 6, 1, 1, 0, 0, 4, "Z80", 0xac);
+        FrontierService child = new FrontierService(2, 1, 1, "update",
+                FrontierServiceState.COMPLETED, 5, 1, 0x71b4c, 2, "M68K",
+                6, 2L, 0x71c4c, 3, List.of(), List.of(), 0, 0,
+                List.of(rawPromotion), childAncestry);
+        FrameNativeDiagnostics parentDiagnostics = new FrameNativeDiagnostics(
+                List.of(parent), List.of(), List.of(), List.of(), List.of(),
+                List.of(new FrontierOwnedAncestryTransition(2, rawPromotion)));
+        FrameNativeDiagnostics childDiagnostics = new FrameNativeDiagnostics(
+                List.of(child), List.of(), List.of(), List.of(), List.of(), List.of());
+        Frame rawParent = new Frame(5, "crossing", false, List.of(),
+                List.of(semanticParent), List.of(), parentDiagnostics);
+        Frame raw = new Frame(6, "crossing", false, List.of(),
+                List.of(semanticChild), List.of(), childDiagnostics);
+        Frame without = new Frame(6, "crossing", false, List.of(),
+                List.of(semanticChild), List.of(), null);
+        DriverService forgedLifetime = new DriverService(1, "update", ServiceCompletion.COMPLETED,
+                List.of(), state, List.of(), null,
+                new ServiceCoordinate(5, 1), new ServiceCoordinate(6, 1), childAncestry);
+        assertThrows(IllegalArgumentException.class, () -> new Frame(6, "crossing", false,
+                List.of(), List.of(forgedLifetime), List.of(), childDiagnostics));
+
+        assertEquals(rawParent, CompleteRunAudioJson.readRecord(assertDoesNotThrow(
+                () -> CompleteRunAudioJson.writeRecord(rawParent))));
+        assertEquals(raw, CompleteRunAudioJson.readRecord(assertDoesNotThrow(
+                () -> CompleteRunAudioJson.writeRecord(raw))));
+        assertNotEquals(assertDoesNotThrow(() -> CompleteRunAudioJson.writeRecord(raw)),
+                assertDoesNotThrow(() -> CompleteRunAudioJson.writeRecord(without)));
+        assertEquals(assertDoesNotThrow(() -> CompleteRunAudioJson.writeSemanticRecord(raw)),
+                assertDoesNotThrow(() -> CompleteRunAudioJson.writeSemanticRecord(without)));
+        DriverService changedSemanticChild = new DriverService(1, "update",
+                ServiceCompletion.COMPLETED, List.of(), state, List.of(), null,
+                new ServiceAncestry(parentBegin, 1, parentBegin, 1, List.of()));
+        Frame changedSemantic = new Frame(5, "crossing", false, List.of(),
+                List.of(semanticParent, changedSemanticChild), List.of(), null);
+        assertNotEquals(assertDoesNotThrow(() -> CompleteRunAudioJson.writeSemanticRecord(raw)),
+                assertDoesNotThrow(() -> CompleteRunAudioJson.writeSemanticRecord(changedSemantic)));
+        assertThrows(IllegalArgumentException.class, () -> new FrontierService(2, 1, 1, "update",
+                FrontierServiceState.COMPLETED, 5, 1, 0x71b4c, 2, "M68K",
+                5, 8L, 0x71c4c, 3, List.of(), List.of(), 0, 0,
+                List.of(new NativeAncestryTransition(6, 5, 6, 9, 1, 0, 0, 4, "Z80", 0xac))));
+        assertThrows(IllegalArgumentException.class, () -> new FrontierService(2, 1, 1, "update",
+                FrontierServiceState.COMPLETED, 5, 1, 0x71b4c, 2, "M68K",
+                6, 2L, 0x71c4c, 3, List.of(), List.of(), 0, 0,
+                List.of(new NativeAncestryTransition(6, 5, 1, 1, 1, 0, 0, 4, "Z80", 0xac)),
+                childAncestry));
+        assertThrows(IllegalArgumentException.class, () -> new FrontierService(2, 1, 1, "update",
+                FrontierServiceState.COMPLETED, 5, 1, 0x71b4c, 2, "M68K",
+                6, 2L, 0x71c4c, 3, List.of(), List.of(), 0, 0,
+                List.of(new NativeAncestryTransition(6, 6, 2, 1, 1, 0, 0, 4, "Z80", 0xac)),
+                childAncestry));
+        assertThrows(IllegalArgumentException.class, () -> new DriverService(1, "update",
+                ServiceCompletion.COMPLETED, List.of(), state, List.of(), null,
+                new ServiceCoordinate(5, 3), new ServiceCoordinate(6, 1), childAncestry));
+        assertThrows(IllegalArgumentException.class, () -> new DriverService(1, "update",
+                ServiceCompletion.COMPLETED, List.of(), state, List.of(), null,
+                new ServiceCoordinate(5, 1), new ServiceCoordinate(5, 3), childAncestry));
     }
 
     @Test
@@ -541,22 +619,22 @@ class TestCompleteRunAudioTrace {
         assertThrows(IllegalArgumentException.class, () -> new BufferedNativeObserverIdentity(
                 TEST_ABI_NAME, TEST_ABI_VERSION, TEST_EVENT_SIZE, TEST_CONFIG_SIZE, TEST_KIND_SIZE,
                 TEST_HOOK_SIZE, TEST_RANGE_SIZE, TEST_CAPACITY,
-                "bizhawk-2.11-gpgx-audio-observer-v2", "gpgx-audio-observer-v2", "9f0e01c17bf47019",
+                "bizhawk-2.11-gpgx-audio-observer-v3", "gpgx-audio-observer-v3", "9f0e01c17bf47019",
                 digest, digest, false, 1, 0));
         assertThrows(IllegalArgumentException.class, () -> new BufferedNativeObserverIdentity(
                 TEST_ABI_NAME, TEST_ABI_VERSION, TEST_EVENT_SIZE, TEST_CONFIG_SIZE, TEST_KIND_SIZE,
                 TEST_HOOK_SIZE, TEST_RANGE_SIZE, TEST_CAPACITY,
-                "bizhawk-2.11-gpgx-audio-observer-v2", "gpgx-audio-observer-v2", "9f0e01c17bf47019",
+                "bizhawk-2.11-gpgx-audio-observer-v3", "gpgx-audio-observer-v3", "9f0e01c17bf47019",
                 digest, digest, true, TEST_CAPACITY + 1, 0));
         assertThrows(IllegalArgumentException.class, () -> new BufferedNativeObserverIdentity(
                 TEST_ABI_NAME, TEST_ABI_VERSION, TEST_EVENT_SIZE, TEST_CONFIG_SIZE, TEST_KIND_SIZE,
                 TEST_HOOK_SIZE, TEST_RANGE_SIZE, TEST_CAPACITY,
-                "bizhawk-2.11-gpgx-audio-observer-v2", "gpgx-audio-observer-v2", "9f0e01c17bf47019",
+                "bizhawk-2.11-gpgx-audio-observer-v3", "gpgx-audio-observer-v3", "9f0e01c17bf47019",
                 digest, digest, true, 1, 1));
         assertThrows(IllegalArgumentException.class, () -> new BufferedNativeObserverIdentity(
                 TEST_ABI_NAME, TEST_ABI_VERSION, TEST_EVENT_SIZE, TEST_CONFIG_SIZE, TEST_KIND_SIZE,
                 TEST_HOOK_SIZE, TEST_RANGE_SIZE, TEST_CAPACITY,
-                "/tmp/observer", "gpgx-audio-observer-v2", "9f0e01c17bf47019",
+                "/tmp/observer", "gpgx-audio-observer-v3", "9f0e01c17bf47019",
                 digest, digest, true, 1, 0));
     }
 
@@ -580,7 +658,7 @@ class TestCompleteRunAudioTrace {
         BufferedNativeObserverIdentity nativeIdentity = new BufferedNativeObserverIdentity(
                 TEST_ABI_NAME, TEST_ABI_VERSION, TEST_EVENT_SIZE, TEST_CONFIG_SIZE, TEST_KIND_SIZE,
                 TEST_HOOK_SIZE, TEST_RANGE_SIZE, TEST_CAPACITY,
-                "bizhawk-2.11-gpgx-audio-observer-v2", "gpgx-audio-observer-v2", "9f0e01c17bf47019",
+                "bizhawk-2.11-gpgx-audio-observer-v3", "gpgx-audio-observer-v3", "9f0e01c17bf47019",
                 digest, digest, true, 1, 0);
         ProducerRuntimeIdentity reflection = new ProducerRuntimeIdentity(
                 "BizHawk", "2.11", "BizHawk", "2.11", "GPGX", "1.0",
@@ -679,7 +757,7 @@ class TestCompleteRunAudioTrace {
                 new BufferedNativeObserverIdentity(TEST_ABI_NAME, TEST_ABI_VERSION,
                         TEST_EVENT_SIZE, TEST_CONFIG_SIZE, TEST_KIND_SIZE, TEST_HOOK_SIZE, TEST_RANGE_SIZE,
                         TEST_CAPACITY,
-                        "bizhawk-2.11-gpgx-audio-observer-v2", "gpgx-audio-observer-v2",
+                        "bizhawk-2.11-gpgx-audio-observer-v3", "gpgx-audio-observer-v3",
                         CompleteRunAudioProfiles.GPGX_AUDIO_TRACE_CORE_BUILD_ID,
                         "b".repeat(64), "c".repeat(64), true, 1, 0),
                 new ObserverProof("reference.observer.v1", "native.buffer",
@@ -687,18 +765,18 @@ class TestCompleteRunAudioTrace {
                 new ChunkPolicy(4096, "gzip", 0), List.of(HardwareRole.FM1, HardwareRole.PSG1),
                 new StateInventory(List.of("tempo"), List.of("cursor")));
         String baseCanonical = """
-{"schema":"complete_run_audio.v1","profileId":"test.profile","fixture":{"romSha1":"0123456789abcdef0123456789abcdef01234567","romCrc32":"89abcdef","bk2Sha256":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","bk2RowCount":862,"runManifestSha256":"fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210","segments":[{"id":"green-hill","firstFrame":860,"exclusiveEnd":862}],"firstFrame":860,"exclusiveEnd":862},"producerKind":"REFERENCE","producerRuntimeIdentity":{"producerName":"BizHawk","producerVersion":"2.11","emulatorName":"BizHawk","emulatorVersion":"2.11","coreName":"GPGX","coreVersion":"1.0","observerAdapter":"REFLECTION","artifactSha256":{"BIZHAWK_EXECUTABLE":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","BIZHAWK_CORE_DLL":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","BIZHAWK_COMMON_DLL":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","WATERBOX_HOST":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","GPGX_CORE":"f9c6a1cbaa3c70428ffc1774473ff4f9ba7d1ce1503fa00ab657e497dd584625","GPGX_CORE_UNCOMPRESSED":"e8f85805bbc46de4e3cb3e1c20fe79cc1381c9e86537db8f327b4b21c49ca16c","GPGX_OBSERVER_PATCH":"755805989ebdcc1edb3fda379e9e9cc45f66c9fb334a476399172babeadcd118","GPGX_OBSERVER_SOURCE_BUNDLE":"452c7b320000817e4b35e621d2f8b12bfaef3588f211d14ac508a34d9cc65e7b","GPGX_OBSERVER_TOOLCHAIN":"9caa5c02dcd2d9c01e5d0196956787a0f31760195c6544a2ceafcb771f469521","GPGX_OBSERVER_BUILD_RECIPE":"139561696a2ac225fefe2d1ab5375402076f38ad040e2fdda46d4ba382a6f001","GPGX_OBSERVER_IDENTITY":"1f0147ecc101d4d726ed09536db87c125f305eccdca986c620d735714543c5cc","GPGX_OBSERVER_ADAPTER_SOURCE":"046ab11f4ffaf100651dda49625e14f3b08e54a33f61ed415d039a0d27b9bb93","GPGX_HOST_BRIDGE_SOURCE":"af9da7ed2f08d27c663176f4f1c852504c4a515e437655abb0fd5d20a3364bf1","BIZHAWK_BIZINVOKE_DLL":"8d05389bf0e02be1244bdc7a2adcd93b4cff95acf199fc927987ca699760a1b7","BIZHAWK_BASE_COMMON_DLL":"438a49d6a45d9fcac17016240ae205d1af7a4632865f6f70468b684b82323f33"}},"observerRuntimeIdentity":{"kind":"BUFFERED_NATIVE","abiName":"gpgx.audio-trace.v1","abiVersion":2,"eventSize":32,"capacity":65536,"installationId":"bizhawk-2.11-gpgx-audio-observer-v2","coreId":"gpgx-audio-observer-v2","coreBuildId":"b49036a848890682","watchMaskSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","serviceManifestSha256":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","enabled":true,"maximumFrameOccupancy":1,"overflowCount":0},"observerProof":{"observerProfile":"reference.observer.v1","callbackSource":"native.buffer","callbacks":[{"callback":"driver.service","observations":1}]},"chunkPolicy":{"frameRows":4096,"compression":"gzip","gzipTimestamp":0},"hardwareRoles":["FM1","PSG1"],"stateInventory":{"globalFields":["tempo"],"activeRoleFields":["cursor"]}}""";
+{"schema":"complete_run_audio.v1","profileId":"test.profile","fixture":{"romSha1":"0123456789abcdef0123456789abcdef01234567","romCrc32":"89abcdef","bk2Sha256":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","bk2RowCount":862,"runManifestSha256":"fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210","segments":[{"id":"green-hill","firstFrame":860,"exclusiveEnd":862}],"firstFrame":860,"exclusiveEnd":862},"producerKind":"REFERENCE","producerRuntimeIdentity":{"producerName":"BizHawk","producerVersion":"2.11","emulatorName":"BizHawk","emulatorVersion":"2.11","coreName":"GPGX","coreVersion":"1.0","observerAdapter":"REFLECTION","artifactSha256":{"BIZHAWK_EXECUTABLE":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","BIZHAWK_CORE_DLL":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","BIZHAWK_COMMON_DLL":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","WATERBOX_HOST":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","GPGX_CORE":"93be2835112aeb73bd38cd467cfa0a55f38e3b6ceb7bed642033eb73656cc453","GPGX_CORE_UNCOMPRESSED":"c29a3631c5aa6b4566dd80f2dcca5138426adaa624dbb7c450cdaead09cd4bd6","GPGX_OBSERVER_PATCH":"eba32c88f0b1465de0a307a2cdd53e53e655e56e70a70ffc3a1e3b0cf1198e46","GPGX_OBSERVER_SOURCE_BUNDLE":"618ad57012a8a80d57a1e0d6369f97842d62c6c7938eda82f3155b9f8cde0191","GPGX_OBSERVER_TOOLCHAIN":"9caa5c02dcd2d9c01e5d0196956787a0f31760195c6544a2ceafcb771f469521","GPGX_OBSERVER_BUILD_RECIPE":"9ed3eb7bf92b630b30911bc9b628879597999c22817b785e245343d7e7e08194","GPGX_OBSERVER_IDENTITY":"b8023a7a80cb961d97c80bcb3835480aca9a78f3eb1ede5490c9295e2ca9bd60","GPGX_OBSERVER_ADAPTER_SOURCE":"046ab11f4ffaf100651dda49625e14f3b08e54a33f61ed415d039a0d27b9bb93","GPGX_HOST_BRIDGE_SOURCE":"af9da7ed2f08d27c663176f4f1c852504c4a515e437655abb0fd5d20a3364bf1","BIZHAWK_BIZINVOKE_DLL":"8d05389bf0e02be1244bdc7a2adcd93b4cff95acf199fc927987ca699760a1b7","BIZHAWK_BASE_COMMON_DLL":"438a49d6a45d9fcac17016240ae205d1af7a4632865f6f70468b684b82323f33"}},"observerRuntimeIdentity":{"kind":"BUFFERED_NATIVE","abiName":"gpgx.audio-trace.v1","abiVersion":3,"eventSize":32,"capacity":65536,"installationId":"bizhawk-2.11-gpgx-audio-observer-v3","coreId":"gpgx-audio-observer-v3","coreBuildId":"822895adb39463ad","watchMaskSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","serviceManifestSha256":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","enabled":true,"maximumFrameOccupancy":1,"overflowCount":0},"observerProof":{"observerProfile":"reference.observer.v1","callbackSource":"native.buffer","callbacks":[{"callback":"driver.service","observations":1}]},"chunkPolicy":{"frameRows":4096,"compression":"gzip","gzipTimestamp":0},"hardwareRoles":["FM1","PSG1"],"stateInventory":{"globalFields":["tempo"],"activeRoleFields":["cursor"]}}""";
 
         String canonical = baseCanonical.replace("\"eventSize\":32,",
                 "\"eventSize\":32,\"configSize\":64,\"kindSize\":16,\"hookSize\":32,\"rangeSize\":16,")
                 .replace(
                 "\"BIZHAWK_BASE_COMMON_DLL\":\"438a49d6a45d9fcac17016240ae205d1af7a4632865f6f70468b684b82323f33\"",
                 "\"BIZHAWK_BASE_COMMON_DLL\":\"438a49d6a45d9fcac17016240ae205d1af7a4632865f6f70468b684b82323f33\""
-                        + ",\"TASK8_HARNESS_EXECUTABLE\":\"0a9b96fa9a63eee4baa53e3ba2179bc670dc8df68351a44d3383feae57282d0e\""
-                        + ",\"TASK8_COLLECTOR_SOURCE\":\"eec1e07411b177c13d721a2721164e629d708a8f85cb2f030c8e7d1506651716\""
+                        + ",\"TASK8_HARNESS_EXECUTABLE\":\"62e3f3d73b735e2301045452443519b9d8e0276d1bb08c06caa05294c32cb6ac\""
+                        + ",\"TASK8_COLLECTOR_SOURCE\":\"d9b525bf7c5b4620833d4eeeda5acf75bef82ab3ee7d1e5a74aa715b641cb69c\""
                         + ",\"TASK8_HOST_SOURCE\":\"c45d7de53bd29101d896fadb0a69eda1ae206d1fac43a5733afb3f4bd7f86be7\""
-                        + ",\"GPGX_OBSERVER_CAPABILITY\":\"6eb828c1b5927b1afe859ced8268b753ca63825576b1596767678383eddb9243\""
-                        + ",\"REFERENCE_INSTALLATION_TREE\":\"b82c327ed456ce604f294e062e9e262a817db09f232acc891bc134054f2f4b67\"");
+                        + ",\"GPGX_OBSERVER_CAPABILITY\":\"93f467c27036e395bdacf44b28dd09e690000169036bf7a76d3eb29c93a70de1\""
+                        + ",\"REFERENCE_INSTALLATION_TREE\":\"eb8f3252afa634e3abe97fca6eb7d766df47d16eff76b250a48777ca7433c12b\"");
         assertEquals(canonical, CompleteRunAudioJson.writeMetadata(metadata));
         assertEquals(metadata, readMetadata(canonical));
         assertThrows(IllegalArgumentException.class,

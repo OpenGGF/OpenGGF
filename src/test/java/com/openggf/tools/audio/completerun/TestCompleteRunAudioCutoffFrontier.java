@@ -1,6 +1,7 @@
 package com.openggf.tools.audio.completerun;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -19,7 +20,11 @@ import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.FrontierSnapsho
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.FrontierServiceRule;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.FrontierSnapshotRule;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.NormalizedState;
+import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.NativeAncestryTransition;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.PsgWrite;
+import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.ServiceAncestry;
+import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.ServiceAncestryTransition;
+import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.ServiceCoordinate;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.Terminal;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -29,6 +34,56 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class TestCompleteRunAudioCutoffFrontier {
+    @Test
+    void promotedOpenServiceRetainsCanonicalAncestryAfterItsParentWasPublished() throws Exception {
+        ServiceCoordinate parentBegin = new ServiceCoordinate(800, 0);
+        ServiceAncestryTransition transition = new ServiceAncestryTransition(
+                parentBegin, 1, null, 0, 900, 0);
+        ServiceAncestry ancestry = new ServiceAncestry(parentBegin, 1, null, 0,
+                List.of(transition));
+        NativeAncestryTransition rawTransition = new NativeAncestryTransition(
+                50, 900, 4, 1, 1, 0, 0, 6, "Z80", 0xac);
+        FrontierService promoted = new FrontierService(2, 1, 1, "update",
+                FrontierServiceState.OPEN, 801, 0, 0x71b4c, 3, "M68K",
+                null, null, null, null, List.of(), List.of(), 0, 0,
+                List.of(rawTransition), ancestry);
+        CutoffFrontier reference = CutoffFrontier.fromNative(List.of(promoted), List.of(),
+                List.of(), List.of(), 0, 0, 1, true, STATE, "a".repeat(64));
+        CutoffFrontier engine = new CutoffFrontier(reference.activeStack(), List.of(), List.of(),
+                null, 0, 0, STATE);
+
+        assertEquals(null, CompleteRunAudioComparator.difference(reference, engine));
+        assertEquals(ancestry, reference.activeStack().getFirst().ancestry());
+        assertEquals(reference, CompleteRunAudioJson.readRecord(
+                CompleteRunAudioJson.writeRecord(reference)));
+        CutoffFrontier missingActive = CutoffFrontier.empty(STATE);
+        assertNotEquals(null, CompleteRunAudioComparator.difference(engine, missingActive));
+        assertThrows(IllegalArgumentException.class, () -> new CutoffFrontier(
+                reference.activeStack(), List.of(), List.of(),
+                new CompleteRunAudioTrace.CutoffNativeDiagnostics(
+                        List.of(), List.of(), List.of(), List.of(), 1, true, "a".repeat(64)),
+                0, 0, STATE));
+
+        CutoffService outer = new CutoffService(null, -1, 0, "outer",
+                FrontierServiceState.OPEN, 901, 0, null, null, List.of());
+        CutoffService pending = new CutoffService(901, 0, 1, "child",
+                FrontierServiceState.COMPLETED, 901, 1, 901, 2L, List.of());
+        CutoffFrontier withPending = new CutoffFrontier(
+                List.of(outer), List.of(pending), List.of(), null, 0, 0, STATE);
+        CutoffFrontier missingPending = new CutoffFrontier(
+                List.of(outer), List.of(), List.of(), null, 0, 0, STATE);
+        assertNotEquals(null, CompleteRunAudioComparator.difference(withPending, missingPending));
+
+        ServiceAncestry beforeBegin = new ServiceAncestry(parentBegin, 1, null, 0,
+                List.of(new ServiceAncestryTransition(parentBegin, 1, null, 0, 801, 0)));
+        assertThrows(IllegalArgumentException.class, () -> new CutoffService(800, 0, 1, "open",
+                FrontierServiceState.OPEN, 801, 0, null, null, List.of(), beforeBegin));
+        ServiceAncestry atCompletedEnd = new ServiceAncestry(parentBegin, 1, null, 0,
+                List.of(new ServiceAncestryTransition(parentBegin, 1, null, 0, 802, 2)));
+        assertThrows(IllegalArgumentException.class, () -> new CutoffService(800, 0, 1, "complete",
+                FrontierServiceState.COMPLETED, 801, 0, 802, 2L, List.of(), atCompletedEnd));
+    }
+
     @Test
     void ordinaryCutoffChipWritesRejectResetOwnership() {
         FrontierChipEvent reset = new FrontierChipEvent(1, 1, "RESET", 0, 4, 0, 0x9f,
@@ -160,7 +215,7 @@ class TestCompleteRunAudioCutoffFrontier {
 
         CutoffService gappedBoundary = new CutoffService(null, -1, 0, "service",
                 FrontierServiceState.OPEN, 900, 1, null, null, List.of());
-        assertThrows(IllegalArgumentException.class, () -> new CutoffFrontier(
+        assertDoesNotThrow(() -> new CutoffFrontier(
                 List.of(gappedBoundary), List.of(), List.of(), null, 0, 0, STATE));
         PsgWrite gappedChip = new PsgWrite(1, 0x9f);
         CutoffService gappedOwner = new CutoffService(null, -1, 0, "service",

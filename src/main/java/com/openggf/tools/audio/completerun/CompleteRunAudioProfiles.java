@@ -26,28 +26,28 @@ import java.util.concurrent.atomic.AtomicReference;
 /** Strict process-local profile registry. Registration publishes an immutable snapshot. */
 public final class CompleteRunAudioProfiles {
     public static final String GPGX_AUDIO_TRACE_ABI_NAME = "gpgx.audio-trace.v1";
-    public static final int GPGX_AUDIO_TRACE_ABI_VERSION = 2;
+    public static final int GPGX_AUDIO_TRACE_ABI_VERSION = 3;
     public static final int GPGX_AUDIO_TRACE_EVENT_SIZE = 32;
     public static final int GPGX_AUDIO_TRACE_CONFIG_SIZE = 64;
     public static final int GPGX_AUDIO_TRACE_KIND_SIZE = 16;
     public static final int GPGX_AUDIO_TRACE_HOOK_SIZE = 32;
     public static final int GPGX_AUDIO_TRACE_RANGE_SIZE = 16;
     public static final int GPGX_AUDIO_TRACE_CAPACITY = 65_536;
-    public static final String GPGX_AUDIO_TRACE_CORE_BUILD_ID = "b49036a848890682";
+    public static final String GPGX_AUDIO_TRACE_CORE_BUILD_ID = "822895adb39463ad";
     public static final String GPGX_AUDIO_TRACE_PATCH_SHA256 =
-            "755805989ebdcc1edb3fda379e9e9cc45f66c9fb334a476399172babeadcd118";
+            "eba32c88f0b1465de0a307a2cdd53e53e655e56e70a70ffc3a1e3b0cf1198e46";
     public static final String GPGX_AUDIO_TRACE_CORE_SHA256 =
-            "f9c6a1cbaa3c70428ffc1774473ff4f9ba7d1ce1503fa00ab657e497dd584625";
+            "93be2835112aeb73bd38cd467cfa0a55f38e3b6ceb7bed642033eb73656cc453";
     public static final String GPGX_AUDIO_TRACE_CORE_UNCOMPRESSED_SHA256 =
-            "e8f85805bbc46de4e3cb3e1c20fe79cc1381c9e86537db8f327b4b21c49ca16c";
+            "c29a3631c5aa6b4566dd80f2dcca5138426adaa624dbb7c450cdaead09cd4bd6";
     public static final String GPGX_AUDIO_TRACE_SOURCE_BUNDLE_SHA256 =
-            "452c7b320000817e4b35e621d2f8b12bfaef3588f211d14ac508a34d9cc65e7b";
+            "618ad57012a8a80d57a1e0d6369f97842d62c6c7938eda82f3155b9f8cde0191";
     public static final String GPGX_AUDIO_TRACE_TOOLCHAIN_SHA256 =
             "9caa5c02dcd2d9c01e5d0196956787a0f31760195c6544a2ceafcb771f469521";
     public static final String GPGX_AUDIO_TRACE_BUILD_RECIPE_SHA256 =
-            "139561696a2ac225fefe2d1ab5375402076f38ad040e2fdda46d4ba382a6f001";
+            "9ed3eb7bf92b630b30911bc9b628879597999c22817b785e245343d7e7e08194";
     public static final String GPGX_AUDIO_TRACE_IDENTITY_SHA256 =
-            "1f0147ecc101d4d726ed09536db87c125f305eccdca986c620d735714543c5cc";
+            "b8023a7a80cb961d97c80bcb3835480aca9a78f3eb1ede5490c9295e2ca9bd60";
     public static final String GPGX_AUDIO_TRACE_ADAPTER_SOURCE_SHA256 =
             "046ab11f4ffaf100651dda49625e14f3b08e54a33f61ed415d039a0d27b9bb93";
     public static final String GPGX_AUDIO_TRACE_HOST_BRIDGE_SOURCE_SHA256 =
@@ -57,15 +57,15 @@ public final class CompleteRunAudioProfiles {
     public static final String BIZHAWK_BASE_COMMON_SHA256 =
             "438a49d6a45d9fcac17016240ae205d1af7a4632865f6f70468b684b82323f33";
     public static final String TASK8_HARNESS_EXECUTABLE_SHA256 =
-            "0a9b96fa9a63eee4baa53e3ba2179bc670dc8df68351a44d3383feae57282d0e";
+            "62e3f3d73b735e2301045452443519b9d8e0276d1bb08c06caa05294c32cb6ac";
     public static final String TASK8_COLLECTOR_SOURCE_SHA256 =
-            "eec1e07411b177c13d721a2721164e629d708a8f85cb2f030c8e7d1506651716";
+            "d9b525bf7c5b4620833d4eeeda5acf75bef82ab3ee7d1e5a74aa715b641cb69c";
     public static final String TASK8_HOST_SOURCE_SHA256 =
             "c45d7de53bd29101d896fadb0a69eda1ae206d1fac43a5733afb3f4bd7f86be7";
     public static final String GPGX_AUDIO_CAPABILITY_SHA256 =
-            "6eb828c1b5927b1afe859ced8268b753ca63825576b1596767678383eddb9243";
+            "93f467c27036e395bdacf44b28dd09e690000169036bf7a76d3eb29c93a70de1";
     public static final String REFERENCE_INSTALLATION_TREE_SHA256 =
-            "b82c327ed456ce604f294e062e9e262a817db09f232acc891bc134054f2f4b67";
+            "eb8f3252afa634e3abe97fca6eb7d766df47d16eff76b250a48777ca7433c12b";
 
     private static final AtomicReference<Map<String, CompleteRunAudioProfile>> PROFILES =
             new AtomicReference<>(Map.of());

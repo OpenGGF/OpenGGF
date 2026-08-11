@@ -5,43 +5,28 @@ cross-game complete-run audio parity effort. It contains the reproducible GPGX
 observer build/install toolchain, the native BizHawk headless bridge, the
 lossless raw/semantic trace schema, and the first Sonic 1 reference producer.
 
-The reviewed canonical native patch at this checkpoint is ABI v2, SHA-256
-`755805989ebdcc1edb3fda379e9e9cc45f66c9fb334a476399172babeadcd118`.
+The reviewed canonical native patch at this checkpoint is ABI v3, SHA-256
+`eba32c88f0b1465de0a307a2cdd53e53e655e56e70a70ffc3a1e3b0cf1198e46`.
 Build and create-new installation instructions are in
 `tools/bizhawk-headless/native/gpgx-audio-observer/README.md`; trust-boundary
 details are in the adjacent `TRUST.md`. No generated core or ROM is committed.
 
 ## Current frontier
 
-- Sonic 1: a post-fix real power-on run with the reviewed prototype core clears
-  the former row-521 unowned `$0066` DAC-enable write. The current S1 manifest's
-  typed sample-setup service (`$003A` into DPCM at `$0077` or Sega PCM at
-  `$00C1`) is therefore proven on the real movie. The next deterministic stop is
-  BK2 row 523. The reviewed ABI v2 diagnostic now attributes it exactly as
-  `first_fault=5:1:ac:4:2:0:255`: Z80 hook proof at instruction-start PC
-  `$00AC`, while an M68K update service (kind 4) is the depth-2 active child of
-  the DPCM iteration. `$00AC` is the REV01 `jp nz,zCheckForSamples` boundary in
-  `zPlayPCMLoop` (`docs/s1disasm/sound/z80.asm:171-181`), and its armed opcode
-  proof is the source-exact `C2 32 00`. The fault is therefore not an opcode,
-  continuation, capacity, or chip-ownership mismatch: the manifest has only the
-  ordinary kind-2 DPCM completion at that PC, while the native observer permits
-  completion only at the top of its single LIFO service stack.
-
-  The complete failed frame establishes the crossing lifetime. Native ordinal
-  0 begins root DPCM token 1 at `$0077`; ordinals 1-4 are that iteration's two
-  YM `$2A` address/data pairs. Ordinal 5 begins M68K `UpdateMusic` token 2 at
-  `$071B4C`, parent token 1, kind 4, depth 1. The packed diagnostic proves that
-  the first `$00AC` observation faults while token 2 is live (between its begin
-  at ordinal 5 and end at ordinal 10), because token 1 cannot complete beneath
-  it; ABI v2 does not attach an event ordinal to that fault. Ordinal 6 records
-  the M68K `$071BB2` observation, ordinals 7-9 its terminal state snapshot, and
-  ordinal 10 closes token 2 at `$071C4C`. There is no chip write or new Z80
-  service anywhere in that live-child interval.
-  Immediately afterwards, ordinals 11-14 are the next DPCM iteration's YM
-  writes, but the failed stack transition leaves them mis-owned by stale token
-  1; ordinals 15-18 finally close token 1 at a later `$00AC`, and ordinal 19
-  begins token 3 at `$0077`. The rest of the frame repeats valid root DPCM
-  iterations through token 188.
+- Sonic 1: the ABI v3 direct-parent-close action resolves the row-523 crossing
+  lifetime without reordering physical events. At `$00AC` it snapshots and ends
+  the kind-2 DPCM parent, compacts the still-open kind-4 M68K child to the
+  parent's effective ancestry, and emits one adjacent raw `SERVICE_PROMOTE`
+  proof. The child's immutable begin parent/depth remain canonical, while its
+  bounded effective-ancestry transition is producer-neutral semantic state.
+  The same-PC ordinary POP remains selected when kind 2 is top. Synthetic tests
+  cover both crossing directions, atomic capacity, reset/cutoff/continuation,
+  malformed promotion, forged ancestry, and interposed parent snapshots.
+  A final real power-on run with Sonic 1 REV01 and the all-emeralds movie now
+  crosses row 523 and reaches the row-860 publication boundary with its carried
+  native service still live. Prepublication rows are drained and validated but
+  are not published; row 860 resets only publication coordinates/inventories,
+  preserving the physical chip, YM latches, service tokens, and ancestry.
 - Sonic 2: the complete reference movie has two identical observer runs:
   259,590 frames, 169,986,419 events, maximum frame occupancy 1,825, event
   digest prefix `c2b2f823`, and an empty cutoff frontier. Engine comparison is
@@ -108,38 +93,31 @@ BK2 SHA-256 was
 The Sonic 1 reference producer starts observation at power-on, discards
 pre-publication rows while retaining native service/latch state, and publishes
 a mandatory carried-in boundary frontier at row 860. That transition is unit
-proven but not yet real-run proven. The real frontier is now row 523, still
-before publication. No game has published a final reference vs OpenGGF MATCH
-artifact at this checkpoint.
+and real-run proven through the former row-523 crossing. No game has published
+a final reference vs OpenGGF MATCH artifact at this checkpoint.
 
-The row-523 round-two reproduction used Sonic 1 World REV01 SHA-1
+The final row-523-to-row-860 reproduction used Sonic 1 World REV01 SHA-1
 `69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b`, BK2 SHA-256
 `f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b`,
-and the reviewed durable BizHawk home whose `dll/gpgx.wbx.zst` SHA-256 is
-`f9c6a1cbaa3c70428ffc1774473ff4f9ba7d1ce1503fa00ab657e497dd584625`.
-Two unmodified runs reproduced the same row, packed first fault, native tail,
-and M68K/lifecycle sequence. The observer identity-file SHA-256 was
-`1f0147ecc101d4d726ed09536db87c125f305eccdca986c620d735714543c5cc`.
-
-The next change belongs to the central native service model, not the S1
-manifest. It must represent the kind-2 ancestor completing at `$00AC` while the
-kind-4 child remains live until `$071C4C`; after that close, the existing
-`$003A` sample-setup to `$0077` DPCM transition can own the next YM writes. The
-final event encoding is a conductor-owned design decision: both the raw physical
-close order and the canonical semantic ownership/ancestry must remain
-reconstructible, rather than being collapsed into a convenient LIFO history. A
-native matrix regression should pin DPCM begin, nested M68K begin, the crossing
-DPCM completion, M68K completion, and the next root DPCM begin. Adding a no-op
-`$00AC` hook or delaying the old DPCM completion would preserve a stale owner
-and contradict the observed source order. The real frontier remains row 523
-until that conductor-owned native/schema change lands.
+and durable BizHawk home
+`target/audio-parity/native/crossing-install-final2-a`. Its compressed core
+SHA-256 is
+`93be2835112aeb73bd38cd467cfa0a55f38e3b6ceb7bed642033eb73656cc453`,
+raw core SHA-256 is
+`c29a3631c5aa6b4566dd80f2dcca5138426adaa624dbb7c450cdaead09cd4bd6`,
+Build ID is `822895adb39463ad`, and observer identity is
+`b8023a7a80cb961d97c80bcb3835480aca9a78f3eb1ede5490c9295e2ca9bd60`.
+The row-860 proof remains a bounded prefix/capture-boundary result, not a
+complete-run publication claim.
 
 ## Verified checkpoint gates
 
-- Complete-run Java schema/store/comparator/CLI: 151 tests passing.
+- Complete-run Java schema/store/comparator/CLI focused gate: 154 tests passing
+  (47 trace, 21 store, 61 comparator, 13 cutoff, 8 CLI).
 - Sonic 1 normalized state/profile: 68 tests passing.
 - Sonic 1 native/managed reference session: 19 tests passing.
-- Shared observer projection: 17 tests passing.
+- Shared observer projection: 19 tests passing, including direct-parent
+  promotion and the no-action8 allocation-stable legacy fast path.
 - Native observer selftests: six harnesses passing.
 - Existing Sonic 2 and Sonic 3 & Knuckles capability/lifecycle suite: 10 tests
   passing, with their prior complete-run duplicate evidence unchanged.
@@ -151,20 +129,28 @@ until that conductor-owned native/schema change lands.
 - S3K AIZ release-slice, level-loading, bootstrap, and decoding guards: 52
   tests passing against locked-on ROM SHA-1
   `cfbf98c36c776677290a872547ac47c53d2761d6`.
-- Paired interleaved observer performance: S2 passed two consecutive frozen
-  repetitions at 9.82% and 9.88% median slowdown; S3K passed at 9.77%.
+- Paired interleaved observer performance on the final managed collector: S2
+  passed two consecutive frozen repetitions at 9.98% and 9.91% median slowdown
+  (worst 10.04% and 12.09%); S3K passed at 9.88% and 8.94% (worst 10.95% and
+  10.74%). The capability fixture binds the second-run samples.
 - Two fresh locked builds and two create-new installs are byte-identical. The
-  compressed core SHA-256 is `f9c6a1cbaa3c70428ffc1774473ff4f9ba7d1ce1503fa00ab657e497dd584625`
+  compressed core SHA-256 is `93be2835112aeb73bd38cd467cfa0a55f38e3b6ceb7bed642033eb73656cc453`
   and the observer identity is
-  `1f0147ecc101d4d726ed09536db87c125f305eccdca986c620d735714543c5cc`.
+  `b8023a7a80cb961d97c80bcb3835480aca9a78f3eb1ede5490c9295e2ca9bd60`.
 
 These results establish a coherent handoff point; they are not a declaration
 that complete-game audio parity is finished.
 
-Registering the new S3K C# tests changes the shared headless test executable
-SHA-256 from its frozen `0a9b96fa9a63eee4baa53e3ba2179bc670dc8df68351a44d3383feae57282d0e`
-to `0a091b2cb33ec7af174b21920121febc0b2f8ddcc68f16dc86e9452ef67a99a2`.
-The identity-bound capability fixture is intentionally not changed on this
-game-owned branch; central integration must cascade that test-harness identity
-together with the other game-worker additions. The established S3K native
-capability vector itself remains unchanged.
+The capability fixture now binds collector source SHA-256
+`d9b525bf7c5b4620833d4eeeda5acf75bef82ab3ee7d1e5a74aa715b641cb69c`,
+production harness SHA-256
+`62e3f3d73b735e2301045452443519b9d8e0276d1bb08c06caa05294c32cb6ac`,
+and full raw fixture SHA-256
+`93f467c27036e395bdacf44b28dd09e690000169036bf7a76d3eb29c93a70de1`.
+To avoid a self-hash cycle while preserving production-executable authority,
+the S2 runtime pins normalized template SHA-256
+`97b800c1421a5a15d4dc53acd99fa853399a57a9c46c7b79a3eff1032eb7f098`:
+exactly the one canonical 64-hex executable field is zeroed for that template
+hash, while runtime validation separately requires its actual value to equal
+SHA-256 of `typeof(GpgxHost).Assembly.Location`. Every other raw byte remains
+identity-sensitive, and Java metadata retains the full raw capability hash.

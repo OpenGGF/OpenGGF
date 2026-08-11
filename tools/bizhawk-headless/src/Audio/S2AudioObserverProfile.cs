@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using System.IO;
 using System.Security.Cryptography;
+using System.Text;
 using Newtonsoft.Json.Linq;
 
 namespace OpenGGF.BizHawk.Headless
@@ -23,10 +24,10 @@ namespace OpenGGF.BizHawk.Headless
             "e850798f882b8c580aad148bc97cb50f260cae1d336dd649fe2f4dfae6796aa5";
         internal const string ServiceManifestSha256 =
             "ef8f8103c38d70e41cb09cb29751f56815a0401709dc509071aa514d614813a0";
-        internal const string CapabilitySha256 =
-            "6eb828c1b5927b1afe859ced8268b753ca63825576b1596767678383eddb9243";
+        internal const string CapabilityTemplateSha256Expected =
+            "97b800c1421a5a15d4dc53acd99fa853399a57a9c46c7b79a3eff1032eb7f098";
         internal const string ObserverIdentitySha256 =
-            "1f0147ecc101d4d726ed09536db87c125f305eccdca986c620d735714543c5cc";
+            "b8023a7a80cb961d97c80bcb3835480aca9a78f3eb1ede5490c9295e2ca9bd60";
         internal const string CompleteEventDigestSha256 =
             "c2b2f82374aaa16144b6bf121df051dcd5b4ba095431c16cf6224adc633de41d";
         internal const string TerminalZ80Sha256 =
@@ -35,9 +36,9 @@ namespace OpenGGF.BizHawk.Headless
             "2afa645a9471a7e084fa4273a9cfa0978868fe7be4f9a33f72f73de2ca907804";
 
         private const string CompressedCoreSha256 =
-            "f9c6a1cbaa3c70428ffc1774473ff4f9ba7d1ce1503fa00ab657e497dd584625";
+            "93be2835112aeb73bd38cd467cfa0a55f38e3b6ceb7bed642033eb73656cc453";
         private const string DecompressedCoreSha256 =
-            "e8f85805bbc46de4e3cb3e1c20fe79cc1381c9e86537db8f327b4b21c49ca16c";
+            "c29a3631c5aa6b4566dd80f2dcca5138426adaa624dbb7c450cdaead09cd4bd6";
         private const string ManagedCoreSha256 =
             "0144e6e236be68ce126eb771dcb5a9ae7c153a083fa0333f345ac37b4a60acf7";
         private const string ManagedCommonSha256 =
@@ -101,10 +102,14 @@ namespace OpenGGF.BizHawk.Headless
             RequireAbsoluteFile(capabilityPath, "capability");
             RequireEqual(ServiceManifestSha256,
                 Sha256File(serviceManifestPath), "service manifest identity");
-            RequireEqual(CapabilitySha256,
-                Sha256File(capabilityPath), "capability file identity");
+            RequireEqual(CapabilityTemplateSha256Expected,
+                CapabilityTemplateSha256(capabilityPath),
+                "capability template identity");
 
             JObject root = JObject.Parse(File.ReadAllText(capabilityPath));
+            RequireEqual(Sha256File(typeof(GpgxHost).Assembly.Location),
+                RequiredString(root,"task8_harness_executable_sha256"),
+                "capability executable identity");
             RequireEqual("openggf.gpgx-audio-capability.v1",
                 RequiredString(root, "schema"), "capability schema");
             RequireEqual(ServiceManifestSha256,
@@ -180,7 +185,7 @@ namespace OpenGGF.BizHawk.Headless
                 RequiredString(identity, "decompressed_sha256"),
                 "installed decompressed core identity");
             int abi = RequiredInt(identity, "abi_version");
-            if (abi != 2 || RequiredInt(identity, "event_size") != 32
+            if (abi != 3 || RequiredInt(identity, "event_size") != 32
                 || RequiredInt(identity, "capacity") != 65536)
                 throw new InvalidDataException(
                     "Installed observer ABI identity changed.");
@@ -229,6 +234,45 @@ namespace OpenGGF.BizHawk.Headless
             using (FileStream input = File.OpenRead(path))
             using (SHA256 digest = SHA256.Create())
                 return ToHex(digest.ComputeHash(input));
+        }
+
+        internal static string CapabilityTemplateSha256(string path)
+        {
+            RequireAbsoluteFile(path,"capability");
+            byte[] raw=File.ReadAllBytes(path);
+            byte[] name=Encoding.ASCII.GetBytes(
+                "\"task8_harness_executable_sha256\"");
+            byte[] prefix=Encoding.ASCII.GetBytes(
+                "\"task8_harness_executable_sha256\": \"");
+            int occurrences=0,start=-1;
+            for(int i=0;i<=raw.Length-name.Length;i++)
+                if(Matches(raw,i,name)) occurrences++;
+            for(int i=0;i<=raw.Length-prefix.Length;i++)
+                if(Matches(raw,i,prefix))
+                {if(start!=-1)throw new InvalidDataException(
+                    "Capability must contain exactly one executable identity field.");
+                    start=i+prefix.Length;}
+            if(occurrences!=1||start<0||start+64>=raw.Length||raw[start+64]!='\"')
+                throw new InvalidDataException(
+                    "Capability must contain exactly one executable identity field.");
+            byte[] normalized=(byte[])raw.Clone();
+            for(int i=0;i<64;i++)
+            {
+                byte value=raw[start+i];
+                if(!((value>='0'&&value<='9')||(value>='a'&&value<='f')))
+                    throw new InvalidDataException(
+                        "Capability executable identity must be lowercase hexadecimal.");
+                normalized[start+i]=(byte)'0';
+            }
+            using(SHA256 digest=SHA256.Create())
+                return ToHex(digest.ComputeHash(normalized));
+        }
+
+        private static bool Matches(byte[] value,int offset,byte[] expected)
+        {
+            for(int i=0;i<expected.Length;i++)
+                if(value[offset+i]!=expected[i])return false;
+            return true;
         }
 
         private static string ToHex(byte[] value)

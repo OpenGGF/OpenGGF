@@ -52,7 +52,7 @@ static void config_negatives(void)
   fixture(0); assert(gpgx_audio_trace_configure(&config,mask,&kind,NULL,&range)==TRACE_INVALID_ARGUMENT);
   fixture(0); assert(gpgx_audio_trace_configure(&config,mask,&kind,hooks,NULL)==TRACE_INVALID_ARGUMENT);
 #define BAD(field,value) do { fixture(0); config.field=(value); assert(configure()==TRACE_ABI_OR_CONFIG_LIMIT); } while(0)
-  BAD(magic,0); BAD(abi_version,3); BAD(struct_size,63); BAD(kind_size,15); BAD(hook_size,31);
+  BAD(magic,0); BAD(abi_version,4); BAD(struct_size,63); BAD(kind_size,15); BAD(hook_size,31);
   BAD(range_size,15); BAD(event_size,31); BAD(max_depth,9); BAD(max_opcode_bytes,7);
   BAD(watch_mask_bytes,8191); BAD(watch_mask_bytes,8193); BAD(event_capacity,65535);
   BAD(max_service_tokens_per_frame,65534); BAD(kind_count,0); BAD(hook_count,0); BAD(range_count,0);
@@ -949,6 +949,195 @@ static void observation_marker_alternatives(void)
   assert(gpgx_audio_trace_abort_frame()==TRACE_OK);
 }
 
+static void direct_parent_close_promotes_top_child(void)
+{
+  struct gpgx_audio_trace_config_v1 local_config;
+  struct gpgx_audio_service_kind_v1 local_kinds[3];
+  struct gpgx_audio_service_hook_v1 local_hooks[8];
+  struct gpgx_audio_service_hook_v1 ordered_hooks[8];
+  struct gpgx_audio_snapshot_range_v1 local_range;
+  uint8_t local_mask[8192], rom_page[65536];
+  uint8_t previous;
+  uint16_t parent_token, child_token;
+  uint32_t before, count, overflow, drained;
+  struct gpgx_audio_trace_event drained_events[16];
+  memset(&local_config,0,sizeof(local_config));
+  memset(local_kinds,0,sizeof(local_kinds));
+  memset(local_hooks,0,sizeof(local_hooks));
+  memset(&local_range,0,sizeof(local_range));
+  memset(local_mask,0,sizeof(local_mask));
+  memset(rom_page,0,sizeof(rom_page));
+  local_config.magic=0x31544147; local_config.abi_version=3;
+  local_config.struct_size=64; local_config.kind_size=16;
+  local_config.hook_size=32; local_config.range_size=16;
+  local_config.event_size=32; local_config.max_depth=8;
+  local_config.max_opcode_bytes=8; local_config.reset_service_kind=1;
+  local_config.watch_mask_bytes=8192; local_config.kind_count=3;
+  local_config.hook_count=8; local_config.range_count=1;
+  local_config.snapshot_bytes_total=7; local_config.event_capacity=65536;
+  local_config.max_service_tokens_per_frame=65535;
+  local_config.max_continuation_frames=1;
+  local_kinds[0].kind_id=1; local_kinds[0].cancellation_range_count=1;
+  local_kinds[1].kind_id=2; local_kinds[1].flags=KIND_ALLOW_CHILDREN;
+  local_kinds[1].cancellation_range_count=1;
+  local_kinds[2].kind_id=4;
+  local_kinds[2].flags=KIND_ALLOW_CONTINUATION|KIND_ALLOW_CHILDREN;
+  local_kinds[2].continuation_frame_limit=1;
+  local_kinds[2].cancellation_range_count=1;
+  local_range.range_id=1; local_range.start=0x100; local_range.length=1;
+  local_hooks[0].hook_token=1; local_hooks[0].action=ACTION_PUSH_BEGIN;
+  local_hooks[0].cpu=GPGX_AUDIO_TRACE_CPU_Z80; local_hooks[0].service_kind=2;
+  local_hooks[0].opcode_length=1; local_hooks[0].opcode[0]=0xa0;
+  local_hooks[1].hook_token=3; local_hooks[1].action=ACTION_POP_END_AT_PC;
+  local_hooks[1].cpu=GPGX_AUDIO_TRACE_CPU_Z80; local_hooks[1].pc=1;
+  local_hooks[1].expected_active_kind=2; local_hooks[1].range_count=1;
+  local_hooks[1].opcode_length=1; local_hooks[1].opcode[0]=0xa1;
+  local_hooks[2]=local_hooks[1]; local_hooks[2].hook_token=4;
+  local_hooks[2].action=ACTION_POP_DIRECT_PARENT_PROMOTE_TOP;
+  local_hooks[2].expected_active_kind=4; local_hooks[2].service_kind=2;
+  local_hooks[3].hook_token=2; local_hooks[3].action=ACTION_PUSH_BEGIN;
+  local_hooks[3].cpu=GPGX_AUDIO_TRACE_CPU_M68K; local_hooks[3].pc=0x100;
+  local_hooks[3].service_kind=4; local_hooks[3].expected_active_kind=2;
+  local_hooks[3].opcode_length=1; local_hooks[3].opcode[0]=0xb0;
+  local_hooks[4].hook_token=5; local_hooks[4].action=ACTION_POP_END_AT_PC;
+  local_hooks[4].cpu=GPGX_AUDIO_TRACE_CPU_M68K; local_hooks[4].pc=0x102;
+  local_hooks[4].expected_active_kind=4; local_hooks[4].range_count=1;
+  local_hooks[4].opcode_length=1; local_hooks[4].opcode[0]=0xb1;
+  local_hooks[5]=local_hooks[0]; local_hooks[5].hook_token=6;
+  local_hooks[5].expected_active_kind=4;
+  local_hooks[6]=local_hooks[3]; local_hooks[6].hook_token=7;
+  local_hooks[6].expected_active_kind=0;
+  local_hooks[7]=local_hooks[4]; local_hooks[7].hook_token=8;
+  local_hooks[7].action=ACTION_POP_DIRECT_PARENT_PROMOTE_TOP;
+  local_hooks[7].service_kind=4; local_hooks[7].expected_active_kind=2;
+  ordered_hooks[0]=local_hooks[0]; ordered_hooks[1]=local_hooks[5];
+  ordered_hooks[2]=local_hooks[1]; ordered_hooks[3]=local_hooks[2];
+  ordered_hooks[4]=local_hooks[3]; ordered_hooks[5]=local_hooks[6];
+  ordered_hooks[6]=local_hooks[4]; ordered_hooks[7]=local_hooks[7];
+  memcpy(local_hooks,ordered_hooks,sizeof(local_hooks));
+  local_mask[0]=3; zram[0]=0xa0; zram[1]=0xa1; zram[0x100]=0x5a;
+  rom_page[0x100^1]=0xb0; rom_page[0x102^1]=0xb1;
+  memset(&m68k,0,sizeof(m68k)); m68k.memory_map[0].base=rom_page;
+
+  assert(gpgx_audio_trace_disable()==TRACE_OK);
+  local_config.abi_version=2;
+  assert(gpgx_audio_trace_configure(&local_config,local_mask,local_kinds,
+    local_hooks,&local_range)==TRACE_ABI_OR_CONFIG_LIMIT);
+  local_config.abi_version=3;
+  assert(gpgx_audio_trace_configure(&local_config,local_mask,local_kinds,
+    local_hooks,&local_range)==TRACE_OK);
+  assert(gpgx_audio_trace_begin_frame()==TRACE_OK);
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_Z80,0);
+  parent_token=trace_stack[0].token;
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_M68K,0x100);
+  child_token=trace_stack[1].token;
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_Z80,1);
+  assert(trace_depth==1 && trace_stack[0].token==child_token
+    && trace_stack[0].parent==0 && trace_stack[0].depth==0);
+  assert(trace_event_count_value==7);
+  assert(trace_events[2].kind==EVENT_SNAPSHOT_BEGIN
+    && trace_events[2].service_token==parent_token);
+  assert(trace_events[5].kind==EVENT_SERVICE_END
+    && trace_events[5].service_token==parent_token);
+  assert(trace_events[6].kind==EVENT_SERVICE_PROMOTE
+    && trace_events[6].service_token==child_token
+    && trace_events[6].parent_token==0 && trace_events[6].depth==0);
+  previous=gpgx_audio_trace_enter_cpu(GPGX_AUDIO_TRACE_CPU_M68K);
+  gpgx_audio_trace_fm_write(0,0x2a);
+  gpgx_audio_trace_leave_cpu(previous);
+  assert(trace_events[7].service_token==child_token
+    && trace_events[7].parent_token==0 && trace_events[7].depth==0);
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_M68K,0x102);
+  assert(trace_depth==0);
+  assert(gpgx_audio_trace_abort_frame()==TRACE_OK);
+
+  assert(gpgx_audio_trace_disable()==TRACE_OK);
+  assert(gpgx_audio_trace_configure(&local_config,local_mask,local_kinds,
+    local_hooks,&local_range)==TRACE_OK);
+  assert(gpgx_audio_trace_begin_frame()==TRACE_OK);
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_M68K,0x100);
+  parent_token=trace_stack[0].token;
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_Z80,0);
+  child_token=trace_stack[1].token;
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_M68K,0x102);
+  assert(trace_depth==1 && trace_stack[0].token==child_token
+    && trace_stack[0].parent==0 && trace_stack[0].depth==0);
+  assert(trace_events[5].kind==EVENT_SERVICE_END
+    && trace_events[5].service_token==parent_token);
+  assert(trace_events[6].kind==EVENT_SERVICE_PROMOTE
+    && trace_events[6].service_token==child_token);
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_Z80,1);
+  assert(trace_depth==0);
+  assert(gpgx_audio_trace_abort_frame()==TRACE_OK);
+
+  assert(gpgx_audio_trace_disable()==TRACE_OK);
+  assert(gpgx_audio_trace_configure(&local_config,local_mask,local_kinds,
+    local_hooks,&local_range)==TRACE_OK);
+  assert(gpgx_audio_trace_begin_frame()==TRACE_OK);
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_Z80,0);
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_M68K,0x100);
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_Z80,1);
+  child_token=trace_stack[0].token;
+  assert(gpgx_audio_trace_end_frame()==TRACE_OK);
+  assert(gpgx_audio_trace_event_count(&count,&overflow)==TRACE_OK
+    && count<=16 && overflow==0);
+  assert(gpgx_audio_trace_drain(drained_events,16,&drained)==TRACE_OK
+    && drained==count);
+  assert(gpgx_audio_trace_begin_frame()==TRACE_OK);
+  assert(trace_depth==1 && trace_stack[0].token==child_token
+    && trace_stack[0].parent==0 && trace_stack[0].depth==0
+    && trace_stack[0].carried_frames==1);
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_M68K,0x102);
+  assert(trace_depth==0);
+  assert(gpgx_audio_trace_abort_frame()==TRACE_OK);
+
+  assert(gpgx_audio_trace_disable()==TRACE_OK);
+  assert(gpgx_audio_trace_configure(&local_config,local_mask,local_kinds,
+    local_hooks,&local_range)==TRACE_OK);
+  assert(gpgx_audio_trace_begin_frame()==TRACE_OK);
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_Z80,0);
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_M68K,0x100);
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_Z80,1);
+  child_token=trace_stack[0].token; before=trace_event_count_value;
+  gpgx_audio_trace_reset_begin(0);
+  assert(trace_depth==1 && trace_stack[0].kind==1);
+  assert(trace_events[before].kind==EVENT_RESET_BEGIN);
+  assert(trace_events[before+4].kind==EVENT_SERVICE_END
+    && trace_events[before+4].service_token==child_token
+    && trace_events[before+4].parent_token==0
+    && trace_events[before+4].depth==0);
+  gpgx_audio_trace_reset_end(0);
+  assert(trace_depth==0);
+  assert(gpgx_audio_trace_abort_frame()==TRACE_OK);
+
+  assert(gpgx_audio_trace_disable()==TRACE_OK);
+  assert(gpgx_audio_trace_configure(&local_config,local_mask,local_kinds,
+    local_hooks,&local_range)==TRACE_OK);
+  assert(gpgx_audio_trace_begin_frame()==TRACE_OK);
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_Z80,0);
+  before=trace_event_count_value;
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_Z80,1);
+  assert(trace_event_count_value==before+4 && trace_depth==0);
+  assert(trace_events[before+3].kind==EVENT_SERVICE_END);
+  assert(gpgx_audio_trace_abort_frame()==TRACE_OK);
+
+  assert(gpgx_audio_trace_disable()==TRACE_OK);
+  assert(gpgx_audio_trace_configure(&local_config,local_mask,local_kinds,
+    local_hooks,&local_range)==TRACE_OK);
+  assert(gpgx_audio_trace_begin_frame()==TRACE_OK);
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_Z80,0);
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_M68K,0x100);
+  parent_token=trace_stack[0].token; child_token=trace_stack[1].token;
+  trace_event_count_value=GPGX_AUDIO_TRACE_EVENT_CAPACITY-4;
+  trace_omitted_count=0;
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_Z80,1);
+  assert(trace_event_count_value==GPGX_AUDIO_TRACE_EVENT_CAPACITY-4);
+  assert(trace_omitted_count==5 && trace_depth==2
+    && trace_stack[0].token==parent_token && trace_stack[1].token==child_token);
+  assert(gpgx_audio_trace_end_frame()==TRACE_OVERFLOW);
+  assert(gpgx_audio_trace_abort_frame()==TRACE_OK);
+}
+
 int main(void)
 {
   struct gpgx_audio_trace_event vector;
@@ -970,5 +1159,6 @@ int main(void)
   cpu_index_and_same_pc_alternatives();
   conditional_m68k_return_predicate();
   observation_marker_alternatives();
+  direct_parent_close_promotes_top_child();
   return 0;
 }

@@ -705,7 +705,8 @@ public final class CompleteRunAudioComparator {
     private static ServicePayload servicePayload(DriverService service) {
         return new ServicePayload(service.kind(), service.completion(), service.decisions().stream()
                 .map(CompleteRunAudioComparator::decisionOrderPayload).toList(), service.state(),
-                service.chipEvents().stream().map(CompleteRunAudioComparator::chipPayload).toList());
+                service.chipEvents().stream().map(CompleteRunAudioComparator::chipPayload).toList(),
+                service.ancestry());
     }
 
     private static DecisionPayload decisionPayload(Decision decision) {
@@ -804,7 +805,7 @@ public final class CompleteRunAudioComparator {
             String queueSource, Integer queueSlot) { }
     private record ServicePayload(String kind, ServiceCompletion completion,
             List<DecisionOrderPayload> decisions, NormalizedState state,
-            List<Object> chips) { }
+            List<Object> chips, ServiceAncestry ancestry) { }
     private record DecisionPayload(int nativeId, String contentKey, boolean accepted, String reason,
             Integer priorityBefore, Integer priorityAfter, List<HardwareRole> requestedRoles,
             List<RoleDecision> roles) { }
@@ -1068,6 +1069,8 @@ public final class CompleteRunAudioComparator {
         private final Map<Long, ManagedServiceEvidence> activeManagedServices = new LinkedHashMap<>();
         private final Map<NativeBeginCoordinate, ManagedServiceEvidence> completedManagedServices =
                 new LinkedHashMap<>();
+        private final Map<Long, List<NativeAncestryTransition>> nativePromotionEvidence =
+                new LinkedHashMap<>();
         private final LinkedHashMap<Long, CutoffService> carriedServices = new LinkedHashMap<>();
         private final Map<Long, FrontierService> nativeCarriedServices = new LinkedHashMap<>();
         private final Set<Long> releasedNativeCarriedTokens = new HashSet<>();
@@ -1245,6 +1248,7 @@ public final class CompleteRunAudioComparator {
                         }
                         previousNativeBeginFrame = service.beginFrame();
                         previousNativeBeginOrdinal = service.beginOrdinal();
+                        consumeNativePromotions(service);
                     }
                     managedCutoff(terminalServices);
                     continuedNativeCarriedTokens.clear();
@@ -1274,7 +1278,8 @@ public final class CompleteRunAudioComparator {
                     throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
                             "terminal leaves carried-in services unresolved");
                 }
-                if (!activeManagedServices.isEmpty() || !completedManagedServices.isEmpty()) {
+                if (!activeManagedServices.isEmpty() || !completedManagedServices.isEmpty()
+                        || !nativePromotionEvidence.isEmpty()) {
                     throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
                             "terminal leaves native managed-service evidence unaccounted");
                 }
@@ -1422,15 +1427,71 @@ public final class CompleteRunAudioComparator {
 
         private void nativeRawOrder(FrameNativeDiagnostics diagnostics) throws ValidationException {
             List<Long> coordinates = java.util.stream.Stream.concat(
-                    diagnostics.rawChipInventory().stream().map(owned -> owned.event().coordinate()),
-                    diagnostics.managedCorrelations().stream().flatMap(correlation -> correlation.events().stream())
-                            .map(NativeManagedEvent::coordinate))
+                    java.util.stream.Stream.concat(
+                            diagnostics.rawChipInventory().stream().map(owned -> owned.event().coordinate()),
+                            diagnostics.managedCorrelations().stream()
+                                    .flatMap(correlation -> correlation.events().stream())
+                                    .map(NativeManagedEvent::coordinate)),
+                    diagnostics.rawAncestryTransitionInventory().stream()
+                            .map(owned -> owned.event().coordinate()))
                     .sorted().toList();
             for (long coordinate : coordinates) {
                 if (coordinate <= previousNativeRawCoordinate) {
                     throw nativeEvidence("native managed/chip coordinates are not globally increasing");
                 }
                 previousNativeRawCoordinate = coordinate;
+            }
+            recordNativePromotions(diagnostics);
+        }
+
+        private void recordNativePromotions(FrameNativeDiagnostics diagnostics)
+                throws ValidationException {
+            Map<Long, FrontierService> services = diagnostics.services().stream().collect(
+                    java.util.stream.Collectors.toMap(FrontierService::token, value -> value));
+            for (FrontierOwnedAncestryTransition owned
+                    : diagnostics.rawAncestryTransitionInventory()) {
+                NativeAncestryTransition transition = owned.event();
+                FrontierService parent = services.get(transition.previousParentToken());
+                if (parent == null || parent.state() != FrontierServiceState.COMPLETED
+                        || parent.endFrame() == null || parent.endOrdinal() == null
+                        || transition.frame() != parent.endFrame()
+                        || transition.ordinal() != parent.endOrdinal() + 1
+                        || transition.currentParentToken() != parent.currentParentToken()
+                        || transition.currentDepth() != parent.currentDepth()
+                        || transition.hookToken() != parent.endHookToken()
+                        || !transition.sourceCpu().equals(parent.beginSourceCpu())
+                        || transition.pc() != parent.endPc()) {
+                    throw nativeEvidence("native promotion has no exact adjacent direct-parent completion");
+                }
+                List<NativeAncestryTransition> prior = nativePromotionEvidence.get(owned.ownerToken());
+                if (prior == null) prior = List.of();
+                if (!prior.isEmpty()) {
+                    NativeAncestryTransition last = prior.getLast();
+                    if (transition.previousParentToken() != last.currentParentToken()
+                            || transition.previousDepth() != last.currentDepth()) {
+                        throw nativeEvidence("native promotion history is not contiguous");
+                    }
+                }
+                if (prior.size() == 7) {
+                    throw nativeEvidence("native promotion history exceeds its bound");
+                }
+                List<NativeAncestryTransition> updated = new ArrayList<>(prior);
+                updated.add(transition);
+                nativePromotionEvidence.put(owned.ownerToken(), List.copyOf(updated));
+            }
+            long retained = nativePromotionEvidence.values().stream().mapToLong(List::size).sum();
+            if (retained > MAX_CUTOFF_SERVICES * 7L) {
+                throw nativeEvidence("retained native promotion evidence exceeds its bound");
+            }
+        }
+
+        private void consumeNativePromotions(FrontierService service) throws ValidationException {
+            List<NativeAncestryTransition> expected = nativePromotionEvidence.remove(service.token());
+            if (expected == null) expected = List.of();
+            List<NativeAncestryTransition> published = service.ancestryTransitions().stream()
+                    .filter(transition -> transition.frame() >= metadata.fixture().firstFrame()).toList();
+            if (!published.equals(expected)) {
+                throw nativeEvidence("native service ancestry does not consume exact promotion evidence");
             }
         }
 
@@ -1466,17 +1527,19 @@ public final class CompleteRunAudioComparator {
                 }
             }
             for (FrontierService service : diagnostics.services()) {
-                if (!"M68K".equals(service.beginSourceCpu())) continue;
-                if (service.state() == FrontierServiceState.COMPLETED) {
-                    if (releasedNativeCarriedTokens.remove(service.token())) continue;
-                    NativeBeginCoordinate key = new NativeBeginCoordinate(
-                            service.beginFrame(), service.beginOrdinal());
-                    ManagedServiceEvidence evidence = completedManagedServices.remove(key);
-                    if (evidence == null) {
-                        throw nativeEvidence("M68K service has no retained managed begin/end evidence");
+                if ("M68K".equals(service.beginSourceCpu())
+                        && service.state() == FrontierServiceState.COMPLETED) {
+                    if (!releasedNativeCarriedTokens.remove(service.token())) {
+                        NativeBeginCoordinate key = new NativeBeginCoordinate(
+                                service.beginFrame(), service.beginOrdinal());
+                        ManagedServiceEvidence evidence = completedManagedServices.remove(key);
+                        if (evidence == null) {
+                            throw nativeEvidence("M68K service has no retained managed begin/end evidence");
+                        }
+                        requireManagedService(evidence, service, true);
                     }
-                    requireManagedService(evidence, service, true);
                 }
+                consumeNativePromotions(service);
             }
             managedEvidenceBound();
         }
@@ -1494,9 +1557,16 @@ public final class CompleteRunAudioComparator {
 
         private void endManagedService(int frame, NativeManagedEvent event) throws ValidationException {
             ManagedServiceEvidence begin = activeManagedServices.remove(event.serviceToken());
-            if (begin == null || event.parentToken() != begin.beginEvent().parentToken()
+            List<NativeAncestryTransition> promotions = nativePromotionEvidence.get(event.serviceToken());
+            long expectedParent = promotions == null || promotions.isEmpty()
+                    ? begin == null ? -1 : begin.beginEvent().parentToken()
+                    : promotions.getLast().currentParentToken();
+            int expectedDepth = promotions == null || promotions.isEmpty()
+                    ? begin == null ? -1 : begin.beginEvent().depth()
+                    : promotions.getLast().currentDepth();
+            if (begin == null || event.parentToken() != expectedParent
                     || event.serviceKind() != begin.beginEvent().serviceKind()
-                    || event.depth() != begin.beginEvent().depth()) {
+                    || event.depth() != expectedDepth) {
                 throw nativeEvidence("native managed completion has no exact active begin");
             }
             ManagedServiceEvidence complete = new ManagedServiceEvidence(
@@ -1562,8 +1632,8 @@ public final class CompleteRunAudioComparator {
                         || !Objects.equals(service.endPc(), end.pc())
                         || !Objects.equals(service.endHookToken(), end.hookToken())
                         || service.token() != end.serviceToken()
-                        || service.parentToken() != end.parentToken()
-                        || service.depth() != end.depth()) {
+                        || service.currentParentToken() != end.parentToken()
+                        || service.currentDepth() != end.depth()) {
                     throw nativeEvidence("M68K service does not match its managed completion evidence");
                 }
             } else if (evidence.endEvent() != null) {

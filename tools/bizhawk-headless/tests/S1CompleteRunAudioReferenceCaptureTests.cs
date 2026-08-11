@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Security.Cryptography;
 using BizHawk.Headless.Gpgx;
 using Newtonsoft.Json.Linq;
 
@@ -69,6 +70,66 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "S1CompleteRunAudioReferenceCaptureTests report native failure row",
                 ReportsNativeFailureRow));
+            tests.Add(new TestMain.TestCase(
+                "S1CompleteRunAudioReferenceCaptureTests cross row 523 and reach the row 860 boundary",
+                CrossesRealRow523AndReachesBoundary,
+                game: "s1", serial: true, estimatedSeconds: 15.0));
+        }
+
+        private static void CrossesRealRow523AndReachesBoundary()
+        {
+            if (Environment.GetEnvironmentVariable("OPENGGF_S1_AUDIO_PREFIX") != "1")
+                throw new TestMain.SkipTestException("OPENGGF_S1_AUDIO_PREFIX is not enabled.");
+            string romPath = Environment.GetEnvironmentVariable("S1_ROM_PATH");
+            string moviePath = Environment.GetEnvironmentVariable("S1_AUDIO_BK2_PATH");
+            if (string.IsNullOrEmpty(romPath) || !File.Exists(romPath))
+                throw new InvalidOperationException("S1_ROM_PATH is required for the real audio prefix.");
+            if (string.IsNullOrEmpty(moviePath) || !File.Exists(moviePath))
+                throw new InvalidOperationException("S1_AUDIO_BK2_PATH is required for the real audio prefix.");
+            AssertEx.Equal("f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b",
+                Sha256(moviePath));
+            Bk2Movie movie = Bk2Reader.Read(moviePath);
+            AssertEx.Equal(225101, movie.FrameCount);
+            byte[] rom = File.ReadAllBytes(romPath);
+            string manifestPath = Path.Combine(EndToEndTests.ToolDirectory, "fixtures", FixtureName);
+            S1CompleteRunAudioReferenceCapture.Manifest manifest =
+                S1CompleteRunAudioReferenceCapture.LoadManifest(manifestPath, rom);
+            var output = new StringWriter();
+            using (var host = GpgxHost.Open(romPath, movie.SyncSettings))
+            using (IEnumerator<Bk2Frame> frames = movie.OpenFrameStream().GetEnumerator())
+            using (var session = new S1CompleteRunAudioReferenceCapture.Session(
+                host, host, host.CreateAudioTraceApi(), manifest, output))
+            {
+                for (int row=0;row<manifest.FirstRow;row++)
+                {
+                    AssertEx.Equal(true, frames.MoveNext());
+                    Bk2Frame frame = frames.Current;
+                    int observed = row;
+                    session.ObservePreEpochFrame(observed, frame, () =>
+                    {
+                        S1TraceCaptureRunner.ApplyFrame(frame, host);
+                        host.Advance();
+                    });
+                }
+                session.BeginEpoch();
+            }
+            JObject baseline = null;
+            foreach (string line in output.ToString().Split(new[]{'\n'},
+                StringSplitOptions.RemoveEmptyEntries))
+            {
+                JObject record = JObject.Parse(line);
+                if ((string)record["type"] == "baseline") baseline = record;
+            }
+            AssertEx.Equal(true, baseline != null);
+            AssertEx.Equal(860, (int)baseline["row"]);
+            AssertEx.Equal(true, ((JArray)baseline["active_services"]).Count > 0);
+        }
+
+        private static string Sha256(string path)
+        {
+            using (SHA256 value = SHA256.Create())
+            using (FileStream stream = File.OpenRead(path))
+                return BitConverter.ToString(value.ComputeHash(stream)).Replace("-", "").ToLowerInvariant();
         }
 
         private static void PinsReviewedRev01Boundaries()
@@ -85,6 +146,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertHook(manifest, 0x001394, "11c0f00b", "QueueSound2", "REQUEST_QUEUE_1");
             AssertHook(manifest, 0x00139A, "11c0f00c", "QueueSound3", "REQUEST_QUEUE_2");
             AssertHook(manifest, 0x071B4C, "33fc010000a11100", "UpdateMusic", "SERVICE_BEGIN");
+            AssertObservationKinds(manifest, 0x071BB2, 2, 3, 4);
             AssertHook(manifest, 0x071FD2, "0c070088", "PlaySoundID", "BGM_CANDIDATE");
             AssertHook(manifest, 0x072098, "08d10007", ".bgm_fmloadloop", "LOAD_FM_DAC");
             AssertHook(manifest, 0x072126, "08d10007", ".bgm_psgloadloop", "LOAD_PSG");
@@ -112,6 +174,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertHook(manifest, 0x072320, "660000a4", "Sound_PlaySpecial", "SPECIAL_BLOCK_FADEIN");
             AssertHook(manifest, 0x0723C6, "4e75", "Sound_PlaySpecial", "SPECIAL_BLOCK_EXIT");
             AssertHook(manifest, 0x071C4C, "4e75", "UpdateMusic", "SERVICE_CLOSE");
+            AssertCloseAlternatives(manifest, 0x071C4C);
             AssertHook(manifest, 0x071FD0, "4e75", "PlaySegaSound", "SERVICE_CLOSE");
             AssertHook(manifest, 0x0721B8, "4e75", "Sound_PlayBGM", "SERVICE_CLOSE");
             AssertHook(manifest, 0x072B9C, "4e75", "cfFadeInToPrevious", "SERVICE_CLOSE");
@@ -125,6 +188,40 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertNative(manifest, 0x00D0, "c2c100", "zPlaySEGAPCMLoop", "POP_END_AT_PC");
             AssertNative(manifest, 0x00134A, "4e71", "DACDriverLoad", "PUSH_BEGIN");
             AssertNative(manifest, 0x00138C, "4e75", "DACDriverLoad", "POP_END_AT_PC");
+        }
+
+        private static void AssertObservationKinds(
+            S1CompleteRunAudioReferenceCapture.Manifest manifest,
+            uint pc, params byte[] expectedKinds)
+        {
+            var actual = new List<byte>();
+            foreach (GpgxAudioObserverAdapter.ServiceHook hook in manifest.NativeServiceHooks)
+                if (hook.Cpu == 2 && hook.Pc == pc && hook.Action == 7)
+                    actual.Add(hook.ExpectedActiveKind);
+            actual.Sort();
+            Array.Sort(expectedKinds);
+            AssertEx.Equal(expectedKinds.Length, actual.Count);
+            for (int i=0;i<expectedKinds.Length;i++)
+                AssertEx.Equal(expectedKinds[i], actual[i]);
+        }
+
+        private static void AssertCloseAlternatives(
+            S1CompleteRunAudioReferenceCapture.Manifest manifest, uint pc)
+        {
+            int ordinary=0;var crossing=new List<byte>();
+            foreach (GpgxAudioObserverAdapter.ServiceHook hook in manifest.NativeServiceHooks)
+            {
+                if (hook.Cpu!=2||hook.Pc!=pc) continue;
+                if (hook.Action==2&&hook.ServiceKindId==0&&hook.ExpectedActiveKind==4)
+                    ordinary++;
+                else if (hook.Action==8&&hook.ServiceKindId==4)
+                    crossing.Add(hook.ExpectedActiveKind);
+            }
+            crossing.Sort();
+            AssertEx.Equal(1,ordinary);
+            AssertEx.Equal(2,crossing.Count);
+            AssertEx.Equal((byte)2,crossing[0]);
+            AssertEx.Equal((byte)3,crossing[1]);
         }
 
         private static void RejectsMalformedAndMismatchedManifest()
@@ -1102,7 +1199,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             private GpgxAudioObserverAdapter.SnapshotRange[] ranges;
             private GpgxAudioObserverAdapter.ServiceKind[] kinds;
             private ushort nextServiceToken = 1;
-            public uint AbiVersion { get { return 2; } }
+            public uint AbiVersion { get { return 3; } }
             public uint EventSize { get { return 32; } }
             public uint Capacity { get { return 65536; } }
             public int Configure(ref GpgxAudioObserverAdapter.Config config,
@@ -1111,7 +1208,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 GpgxAudioObserverAdapter.SnapshotRange[] ranges)
             {
                 Calls.Add("configure");
-                if (config.AbiVersion != 2 || config.StructSize != 64
+                if (config.AbiVersion != 3 || config.StructSize != 64
                     || config.HookSize != 32 || config.RangeSize != 16
                     || config.EventSize != 32 || config.KindSize != 16
                     || config.Flags != 1 || config.MaxContinuationFrames != 255
@@ -1183,6 +1280,18 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         if (hook.Cpu != 2 || hook.ServiceKindId != 0
                             || hook.RangeCount != 0 || hook.Reserved != 0)
                             return -2;
+                    }
+                    else if (hook.Action == 8)
+                    {
+                        GpgxAudioObserverAdapter.ServiceKind ended =
+                            Array.Find(kinds, value => value.KindId == hook.ServiceKindId);
+                        if ((hook.Cpu != 1 && hook.Cpu != 2) || hook.ServiceKindId == 0
+                            || hook.ExpectedActiveKind == 0
+                            || hook.ServiceKindId == hook.ExpectedActiveKind
+                            || ended.KindId == 0 || hook.RangeCount == 0
+                            || ended.CancellationRangeFirst != hook.RangeFirst
+                            || ended.CancellationRangeCount != hook.RangeCount
+                            || hook.Reserved != 0) return -2;
                     }
                     else return -2;
                 }

@@ -18,6 +18,7 @@ namespace OpenGGF.BizHawk.Headless
         private List<ushort> activeTokens = new List<ushort>();
         private readonly Guid runtimeInstanceId = Guid.NewGuid();
         private readonly ushort armHookToken;
+        private readonly bool hasPromotionHooks;
         private readonly GpgxAudioObserverAdapter.ServiceKind[] kindById =
             new GpgxAudioObserverAdapter.ServiceKind[256];
         private readonly bool[] hasKind = new bool[256];
@@ -29,6 +30,10 @@ namespace OpenGGF.BizHawk.Headless
         private readonly bool[] hasRange = new bool[ushort.MaxValue+1];
         private readonly List<ServiceBuilder> activeServices = new List<ServiceBuilder>();
         private readonly List<ServiceBuilder> pendingCompleted = new List<ServiceBuilder>();
+        private readonly List<ServiceBuilder> projectionActive = new List<ServiceBuilder>(8);
+        private readonly List<ServiceBuilder> projectionComplete = new List<ServiceBuilder>(128);
+        private readonly List<ServiceBuilder> projectionPending = new List<ServiceBuilder>(128);
+        private readonly List<ResetRecord> projectionResets = new List<ResetRecord>(8);
         private long globalEventCoordinate;
         private byte ymPort0Address;
         private byte ymPort1Address;
@@ -44,6 +49,12 @@ namespace OpenGGF.BizHawk.Headless
         public FrameCapture LastCapture { get; private set; }
         internal int ActiveServiceDepth { get { return activeTokens.Count; } }
         internal int PendingServiceCount { get { return pendingCompleted.Count; } }
+        internal bool PromotionTransactionsEnabled { get { return hasPromotionHooks; } }
+        internal int ProjectionScratchCapacity { get { return projectionActive.Capacity
+            +projectionComplete.Capacity+projectionPending.Capacity+projectionResets.Capacity; } }
+        internal ushort PendingRootTokenForTesting(ushort token)
+        {for(int i=0;i<pendingCompleted.Count;i++)if(pendingCompleted[i].Token==token)
+            return pendingCompleted[i].RootToken;throw new InvalidOperationException("Pending token not found.");}
 
         public sealed class CutoffFrontier
         {
@@ -149,6 +160,18 @@ namespace OpenGGF.BizHawk.Headless
             public uint Pc { get; private set; }
             public byte[] Bytes { get { return (byte[])bytes.Clone(); } }
         }
+        public sealed class AncestryTransition
+        {
+            internal AncestryTransition(AncestryRecord r)
+            {Coordinate=r.Coordinate;NativeOrdinal=r.NativeOrdinal;PreviousParentToken=r.PreviousParentToken;
+                PreviousDepth=r.PreviousDepth;CurrentParentToken=r.CurrentParentToken;CurrentDepth=r.CurrentDepth;
+                HookToken=r.HookToken;SourceCpu=r.SourceCpu;Pc=r.Pc;}
+            public long Coordinate{get;private set;} public uint NativeOrdinal{get;private set;}
+            public ushort PreviousParentToken{get;private set;} public byte PreviousDepth{get;private set;}
+            public ushort CurrentParentToken{get;private set;} public byte CurrentDepth{get;private set;}
+            public ushort HookToken{get;private set;} public byte SourceCpu{get;private set;}
+            public uint Pc{get;private set;}
+        }
         public sealed class DriverService
         {
             private readonly WriteRecord chip0,chip1,chip2,chip3;
@@ -165,9 +188,13 @@ namespace OpenGGF.BizHawk.Headless
             private readonly int snapshotRecordCount;
             private SnapshotGroup[] snapshots;
             private ReadOnlyCollection<SnapshotGroup> snapshotsView;
+            private readonly AncestryRecord[] ancestryRecords;
+            private AncestryTransition[] ancestryTransitions;
+            private ReadOnlyCollection<AncestryTransition> ancestryTransitionsView;
             internal DriverService(ServiceBuilder b,bool complete=true)
             {
                 Token=b.Token;ParentToken=b.ParentToken;Kind=b.Kind;Depth=b.Depth;
+                CurrentParentToken=b.CurrentParentToken;CurrentDepth=b.CurrentDepth;
                 BeginCoordinate=b.BeginCoordinate;EndCoordinate=b.EndCoordinate;
                 BeginPc=b.BeginPc;EndPc=b.EndPc;Cancelled=b.Cancelled;
                 BeginHookToken=b.BeginHookToken;BeginSourceCpu=b.BeginSourceCpu;
@@ -176,9 +203,11 @@ namespace OpenGGF.BizHawk.Headless
                 chip0=b.Chip0;chip1=b.Chip1;chip2=b.Chip2;chip3=b.Chip3;
                 additionalChipRecords=b.AdditionalChipRecords;chipRecordCount=b.ChipRecordCount;
                 firstSnapshot=b.FirstSnapshot;additionalSnapshots=b.AdditionalSnapshots;snapshotRecordCount=b.SnapshotRecordCount;
+                ancestryRecords=b.AncestryRecords==null?new AncestryRecord[0]:(AncestryRecord[])b.AncestryRecords.Clone();
             }
             public ushort Token{get;private set;} public ushort ParentToken{get;private set;}
             public byte Kind{get;private set;} public byte Depth{get;private set;}
+            public ushort CurrentParentToken{get;private set;} public byte CurrentDepth{get;private set;}
             public long BeginCoordinate{get;private set;} public long EndCoordinate{get;private set;}
             public uint BeginPc{get;private set;} public uint EndPc{get;private set;}
             public ushort BeginHookToken{get;private set;} public byte BeginSourceCpu{get;private set;}
@@ -211,6 +240,10 @@ namespace OpenGGF.BizHawk.Headless
             {get{if(ownedChipEvents==null){ownedChipEvents=new OwnedChipEvent[chipRecordCount];
                 for(int i=0;i<ownedChipEvents.Length;i++)ownedChipEvents[i]=new OwnedChipEvent(ChipAt(i));
                 ownedChipEventsView=Array.AsReadOnly(ownedChipEvents);}return ownedChipEventsView;}}
+            public IReadOnlyList<AncestryTransition> AncestryTransitions
+            {get{if(ancestryTransitions==null){ancestryTransitions=new AncestryTransition[ancestryRecords.Length];
+                for(int i=0;i<ancestryTransitions.Length;i++)ancestryTransitions[i]=new AncestryTransition(ancestryRecords[i]);
+                ancestryTransitionsView=Array.AsReadOnly(ancestryTransitions);}return ancestryTransitionsView;}}
             private WriteRecord ChipAt(int index)
             {if(index==0)return chip0;if(index==1)return chip1;if(index==2)return chip2;if(index==3)return chip3;
                 return additionalChipRecords[index-4];}
@@ -259,6 +292,7 @@ namespace OpenGGF.BizHawk.Headless
         internal sealed class ServiceBuilder
         {
             internal ushort Token,ParentToken; internal byte Kind,Depth; internal long BeginCoordinate,EndCoordinate;
+            internal ushort CurrentParentToken; internal byte CurrentDepth;
             internal ushort RootToken;
             internal uint BeginPc,EndPc; internal ushort BeginHookToken;internal byte BeginSourceCpu;
             internal bool Cancelled,IsReset,ResetPower;
@@ -271,6 +305,10 @@ namespace OpenGGF.BizHawk.Headless
             internal ulong ActivePayload;
             internal byte ActiveSnapshotSource; internal uint ActiveSnapshotPc;
             internal ushort EndHookToken;
+            internal AncestryRecord[] AncestryRecords;
+            internal void AddAncestry(AncestryRecord record)
+            {int count=AncestryRecords==null?0:AncestryRecords.Length;if(count>=7)throw Invalid("ancestry transition bound");
+                Array.Resize(ref AncestryRecords,count+1);AncestryRecords[count]=record;}
             internal void AddChip(WriteRecord record)
             {if(ChipRecordCount==0)Chip0=record;else if(ChipRecordCount==1)Chip1=record;
                 else if(ChipRecordCount==2)Chip2=record;else if(ChipRecordCount==3)Chip3=record;else
@@ -301,6 +339,11 @@ namespace OpenGGF.BizHawk.Headless
                 if(Kind==3)return new YmWrite(Coordinate,Ordinal,Token,Port,Register,Value);
                 return new PsgWrite(Coordinate,Ordinal,Token,Value);
             }
+        }
+        internal struct AncestryRecord
+        {
+            internal long Coordinate;internal uint NativeOrdinal;internal ushort PreviousParentToken,CurrentParentToken;
+            internal byte PreviousDepth,CurrentDepth;internal ushort HookToken;internal byte SourceCpu;internal uint Pc;
         }
 
         public sealed class Checkpoint
@@ -339,14 +382,17 @@ namespace OpenGGF.BizHawk.Headless
             for(int i=0;i<this.ranges.Length;i++){rangeById[this.ranges[i].RangeId]=this.ranges[i];hasRange[this.ranges[i].RangeId]=true;}
             for(int i=0;i<this.hooks.Length;i++){hookByToken[this.hooks[i].HookToken]=this.hooks[i];hasHook[this.hooks[i].HookToken]=true;}
             ushort foundArmHook = 0;
+            bool foundPromotionHook = false;
             for (int i = 0; i < this.hooks.Length; i++)
             {
+                if (this.hooks[i].Action == 8) foundPromotionHook = true;
                 if ((this.hooks[i].Flags & 1) == 0) continue;
                 if (foundArmHook != 0)
                     throw new ArgumentException("Only one Z80 proof-arm completion is permitted.", "hooks");
                 foundArmHook = this.hooks[i].HookToken;
             }
             armHookToken = foundArmHook;
+            hasPromotionHooks = foundPromotionHook;
             armed = armHookToken == 0;
             RequireOk(api.Configure(ref this.config, this.mask, this.kinds, this.hooks, this.ranges), "configure");
         }
@@ -501,12 +547,14 @@ namespace OpenGGF.BizHawk.Headless
 
         private ProjectionResult Project(GpgxAudioTraceEvent[] events,int count,bool retainRaw)
         {
-            var active=new List<ServiceBuilder>();
+            var active=projectionActive;active.Clear();
             for(int i=0;i<activeServices.Count;i++)active.Add(Clone(activeServices[i]));
-            var complete=new List<ServiceBuilder>();var pending=new List<ServiceBuilder>(pendingCompleted);
-            var resets=new List<ResetRecord>();
+            var complete=projectionComplete;complete.Clear();
+            var pending=projectionPending;pending.Clear();pending.AddRange(pendingCompleted);
+            var resets=projectionResets;resets.Clear();
             ServiceBuilder reset=null;int rawChipCount=0,ownedChipCount=0;
             byte port0=ymPort0Address,port1=ymPort1Address; long epoch=armEpoch; bool nowArmed=armed;
+            bool promotionHooks=hasPromotionHooks;
             for(int i=0;i<count;i++)
             {
                 ref GpgxAudioTraceEvent e=ref events[i]; long coordinate=globalEventCoordinate+i;
@@ -529,7 +577,8 @@ namespace OpenGGF.BizHawk.Headless
                         throw Invalid("begin token/parent/depth");
                     if(!hasKind[e.ServiceKindId])throw Invalid("unknown service kind");
                     var b=new ServiceBuilder{Token=e.ServiceToken,ParentToken=e.ParentToken,Kind=e.ServiceKindId,
-                        Depth=e.Depth,BeginCoordinate=coordinate,BeginPc=e.Pc,EventCount=1,
+                        Depth=e.Depth,CurrentParentToken=e.ParentToken,CurrentDepth=e.Depth,
+                        BeginCoordinate=coordinate,BeginPc=e.Pc,EventCount=1,
                         BeginHookToken=e.Subject,BeginSourceCpu=e.SourceCpu,
                         RootToken=active.Count==0?e.ServiceToken:active[0].RootToken};
                     active.Add(b);
@@ -538,9 +587,13 @@ namespace OpenGGF.BizHawk.Headless
                 case 2:
                 {
                     if(active.Count==0)throw Invalid("completion without active service");
-                    ServiceBuilder b=active[active.Count-1]; ValidateOwnership(ref e,b);
-                    b.EventCount++;
                     bool cancelled=(e.Flags&2)!=0;
+                    GpgxAudioObserverAdapter.ServiceHook completionHook=cancelled
+                        ?default(GpgxAudioObserverAdapter.ServiceHook):RequireHook(e.Subject,"completion");
+                    bool promotes=!cancelled&&promotionHooks&&completionHook.Action==8;
+                    if(promotes&&active.Count<2)throw Invalid("promotion completion without direct parent");
+                    ServiceBuilder b=active[promotes?active.Count-2:active.Count-1]; ValidateOwnership(ref e,b);
+                    b.EventCount++;
                     if(e.Offset!=0||e.PayloadLength!=0||e.Payload!=0||e.Value!=0)
                         throw Invalid("completion fields");
                     if(reset!=null&&!cancelled)throw Invalid("non-cancelled service end during reset cancellation");
@@ -553,20 +606,35 @@ namespace OpenGGF.BizHawk.Headless
                     else
                     {
                         if(e.Flags!=0)throw Invalid("completion flags");
-                        GpgxAudioObserverAdapter.ServiceHook hook=RequireHook(e.Subject,"completion");
-                        if(hook.Action!=2&&hook.Action!=3&&hook.Action!=4&&hook.Action!=5)
+                        GpgxAudioObserverAdapter.ServiceHook hook=completionHook;
+                        if((hook.Action<2||hook.Action>5)&&hook.Action!=8)
                             throw Invalid("completion hook action");
                         if(hook.Action==4)ValidateTailEnd(events,i,ref e,hook,b);
-                        if(e.Pc!=hook.Pc||e.SourceCpu!=hook.Cpu||hook.ExpectedActiveKind!=b.Kind)
+                        if(e.Pc!=hook.Pc||e.SourceCpu!=hook.Cpu
+                            ||(hook.Action==8?hook.ServiceKindId!=b.Kind
+                                ||hook.ExpectedActiveKind!=active[active.Count-1].Kind
+                                :hook.ExpectedActiveKind!=b.Kind))
                             throw Invalid("unexpected completion PC/kind/source");
                         ValidateSnapshots(b,hook.RangeFirst,hook.RangeCount,e.SourceCpu,e.Pc);
                         if(hook.Action==5)
                             ValidateConditionalCompletion(events,i,ref e,hook);
                     }
                     b.EndCoordinate=coordinate;b.EndPc=e.Pc;b.EndHookToken=cancelled?(ushort)0:e.Subject;
-                    active.RemoveAt(active.Count-1);
+                    active.RemoveAt(promotes?active.Count-2:active.Count-1);
                     pending.Add(b);
                     if(cancelled&&reset==null)throw Invalid("cancellation outside reset");
+                    if(promotes)
+                    {
+                        if(cancelled||i+1>=count||events[i+1].Kind!=11)throw Invalid("promotion adjacency");
+                        ServiceBuilder child=active[active.Count-1];
+                        ref GpgxAudioTraceEvent promote=ref events[i+1];
+                        if(promote.Ordinal!=e.Ordinal+1||promote.ServiceToken!=child.Token
+                            ||promote.ParentToken!=b.CurrentParentToken||promote.Depth!=b.CurrentDepth
+                            ||promote.ServiceKindId!=child.Kind||promote.Subject!=e.Subject
+                            ||promote.Pc!=e.Pc||promote.SourceCpu!=e.SourceCpu||promote.Offset!=0
+                            ||promote.PayloadLength!=0||promote.Payload!=0||promote.Value!=0||promote.Flags!=0)
+                            throw Invalid("promotion fields");
+                    }
                     break;
                 }
                 case 3:
@@ -605,7 +673,10 @@ namespace OpenGGF.BizHawk.Headless
                 case 6:
                 case 7:
                 {
-                    ServiceBuilder b=OwnedBuilder(ref e,active,reset);Snapshot(ref e,b);
+                    ServiceBuilder b=promotionHooks
+                        ?OwnedSnapshotBuilder(events,i,count,ref e,active,reset)
+                        :OwnedBuilder(ref e,active,reset);
+                    Snapshot(ref e,b);
                     break;
                 }
                 case 8:
@@ -614,7 +685,7 @@ namespace OpenGGF.BizHawk.Headless
                         ||e.ServiceKindId!=config.ResetServiceKind||e.Subject!=active.Count||(e.Flags&~1)!=0
                         ||e.Offset!=0||e.PayloadLength!=0||e.Payload!=0||e.Value!=0)
                         throw Invalid("reset begin fields");
-                    reset=new ServiceBuilder{Token=e.ServiceToken,Kind=e.ServiceKindId,Depth=0,
+                    reset=new ServiceBuilder{Token=e.ServiceToken,Kind=e.ServiceKindId,Depth=0,CurrentDepth=0,
                         BeginCoordinate=coordinate,BeginPc=0,IsReset=true,ResetPower=(e.Flags&1)!=0,EventCount=1,
                         RootToken=e.ServiceToken};
                     port0=port1=0;nowArmed=armHookToken==0;epoch++;
@@ -676,6 +747,32 @@ namespace OpenGGF.BizHawk.Headless
                     else throw Invalid("marker value");
                     break;
                 }
+                case 11:
+                {
+                    if(i==0||events[i-1].Kind!=2||active.Count==0)throw Invalid("orphan promotion");
+                    ref GpgxAudioTraceEvent ended=ref events[i-1];
+                    GpgxAudioObserverAdapter.ServiceHook hook=RequireHook(e.Subject,"promotion");
+                    if(hook.Action!=8||ended.Subject!=e.Subject||ended.Pc!=e.Pc
+                        ||ended.SourceCpu!=e.SourceCpu)throw Invalid("promotion hook adjacency");
+                    ServiceBuilder child=active[active.Count-1];
+                    if(e.ServiceToken!=child.Token||e.ServiceKindId!=child.Kind
+                        ||e.ParentToken!=child.CurrentParentToken&&e.ParentToken!=ended.ParentToken
+                        ||e.Depth+1!=child.CurrentDepth||e.ParentToken!=ended.ParentToken
+                        ||e.Offset!=0||e.PayloadLength!=0||e.Payload!=0||e.Value!=0||e.Flags!=0)
+                        throw Invalid("promotion ownership");
+                    ushort oldRoot=child.RootToken;
+                    child.AddAncestry(new AncestryRecord{Coordinate=coordinate,NativeOrdinal=e.Ordinal,
+                        PreviousParentToken=child.CurrentParentToken,PreviousDepth=child.CurrentDepth,
+                        CurrentParentToken=e.ParentToken,CurrentDepth=e.Depth,HookToken=e.Subject,
+                        SourceCpu=e.SourceCpu,Pc=e.Pc});
+                    child.CurrentParentToken=e.ParentToken;child.CurrentDepth=e.Depth;
+                    if(e.ParentToken==0)
+                    {
+                        child.RootToken=child.Token;
+                        ReassignDescendantRoots(pending,child.Token,oldRoot);
+                    }
+                    break;
+                }
                 }
             }
             if(reset!=null)throw Invalid("partial snapshot/reset state");
@@ -685,9 +782,14 @@ namespace OpenGGF.BizHawk.Headless
             ulong continuation=(ulong)(config.MaxContinuationFrames==0?1:config.MaxContinuationFrames+1);
             ulong depth=(ulong)(config.MaxDepth==0?1:config.MaxDepth);
             if(pendingEvents>(ulong)config.EventCapacity*continuation*depth)throw Invalid("pending event bound");
-            var held=new List<ServiceBuilder>();
+            int heldCount=0;
             for(int i=0;i<pending.Count;i++)
-            {if(ContainsToken(active,pending[i].RootToken))held.Add(pending[i]);else complete.Add(pending[i]);}
+            {
+                ServiceBuilder candidate=pending[i];
+                if(ContainsToken(active,candidate.RootToken))pending[heldCount++]=candidate;
+                else complete.Add(candidate);
+            }
+            if(heldCount<pending.Count)pending.RemoveRange(heldCount,pending.Count-heldCount);
             if(retainRaw)
             {
                 SortByBegin(complete);
@@ -698,7 +800,7 @@ namespace OpenGGF.BizHawk.Headless
             GpgxAudioTraceEvent[] raw=EmptyEvents;
             if(retainRaw){raw=new GpgxAudioTraceEvent[count];Array.Copy(events,raw,count);}
             return new ProjectionResult{Capture=retainRaw?new FrameCapture(raw,complete,resets,globalEventCoordinate):null,
-                Active=active,Completed=complete,Pending=held,
+                Active=active,Completed=complete,Pending=pending,
                 Port0=port0,Port1=port1,Epoch=epoch,Armed=nowArmed,EventCount=count};
         }
 
@@ -711,6 +813,7 @@ namespace OpenGGF.BizHawk.Headless
             LastCapture=p.Capture;globalEventCoordinate+=p.EventCount;
             for(int i=0;i<p.Completed.Count;i++)
             { ServiceBuilder s=p.Completed[i]; if(!s.Cancelled&&armHookToken!=0&&HookArms(s)) {armed=true;armEpoch++;} }
+            projectionActive.Clear();projectionComplete.Clear();projectionPending.Clear();projectionResets.Clear();
         }
 
         private bool HookArms(ServiceBuilder s)
@@ -718,6 +821,27 @@ namespace OpenGGF.BizHawk.Headless
 
         private static bool ContainsToken(List<ServiceBuilder> active,ushort token)
         {for(int i=0;i<active.Count;i++)if(active[i].Token==token)return true;return false;}
+
+        private static void ReassignDescendantRoots(List<ServiceBuilder> pending,ushort childToken,ushort oldRoot)
+        {
+            for(int i=0;i<pending.Count;i++)
+            {
+                ServiceBuilder candidate=pending[i];
+                if(candidate.RootToken!=oldRoot)continue;
+                ushort parent=candidate.ParentToken;
+                for(int steps=0;parent!=0&&steps<8;steps++)
+                {
+                    if(parent==childToken)
+                    {
+                        candidate=Clone(candidate);candidate.RootToken=childToken;
+                        pending[i]=candidate;break;
+                    }
+                    ServiceBuilder next=null;
+                    for(int j=0;j<pending.Count;j++)if(pending[j].Token==parent){next=pending[j];break;}
+                    if(next==null)break;parent=next.ParentToken;
+                }
+            }
+        }
 
         private static void ValidateTailEnd(GpgxAudioTraceEvent[] events,int index,
             ref GpgxAudioTraceEvent end,GpgxAudioObserverAdapter.ServiceHook hook,ServiceBuilder oldService)
@@ -784,21 +908,58 @@ namespace OpenGGF.BizHawk.Headless
             {if(active.Count!=0)throw Invalid("reset root event before service cancellations");b=reset;}
             else if(active.Count!=0&&e.ServiceToken==active[active.Count-1].Token)b=active[active.Count-1];
             if(b==null)throw Invalid("orphan event is not owned by the innermost service");
-            if(e.ParentToken!=b.ParentToken||e.ServiceKindId!=b.Kind||e.Depth!=b.Depth)
+            if(e.ParentToken!=b.CurrentParentToken||e.ServiceKindId!=b.Kind||e.Depth!=b.CurrentDepth)
                 throw Invalid("token/parent/depth/kind ownership");
             b.EventCount++;
             return b;
         }
+
+        private ServiceBuilder OwnedSnapshotBuilder(GpgxAudioTraceEvent[] events,int index,int count,
+            ref GpgxAudioTraceEvent e,List<ServiceBuilder> active,ServiceBuilder reset)
+        {
+            if(reset!=null||active.Count==0||e.ServiceToken==active[active.Count-1].Token)
+                return OwnedBuilder(ref e,active,reset);
+            if(active.Count<2)return OwnedBuilder(ref e,active,reset);
+            ServiceBuilder parent=active[active.Count-2];
+            ServiceBuilder child=active[active.Count-1];
+            if(e.ServiceToken!=parent.Token||e.ParentToken!=parent.CurrentParentToken
+                ||e.ServiceKindId!=parent.Kind||e.Depth!=parent.CurrentDepth)
+                return OwnedBuilder(ref e,active,reset);
+            int at=index;
+            while(at<count&&events[at].Kind>=5&&events[at].Kind<=7)
+            {
+                ref GpgxAudioTraceEvent snapshot=ref events[at];
+                if(snapshot.ServiceToken!=parent.Token||snapshot.ParentToken!=parent.CurrentParentToken
+                    ||snapshot.ServiceKindId!=parent.Kind||snapshot.Depth!=parent.CurrentDepth)
+                    throw Invalid("promotion snapshot ownership");
+                at++;
+            }
+            if(at+1>=count||events[at].Kind!=2||events[at+1].Kind!=11)
+                throw Invalid("promotion snapshot adjacency");
+            ref GpgxAudioTraceEvent end=ref events[at];
+            ref GpgxAudioTraceEvent promote=ref events[at+1];
+            GpgxAudioObserverAdapter.ServiceHook hook=RequireHook(end.Subject,"promotion completion");
+            if(hook.Action!=8||end.ServiceToken!=parent.Token
+                ||end.ParentToken!=parent.CurrentParentToken||end.ServiceKindId!=parent.Kind
+                ||end.Depth!=parent.CurrentDepth||end.Pc!=hook.Pc||end.SourceCpu!=hook.Cpu
+                ||hook.ServiceKindId!=parent.Kind||hook.ExpectedActiveKind!=child.Kind
+                ||promote.Ordinal!=end.Ordinal+1||promote.ServiceToken!=child.Token
+                ||promote.Subject!=end.Subject||promote.Pc!=end.Pc||promote.SourceCpu!=end.SourceCpu)
+                throw Invalid("promotion snapshot adjacency");
+            parent.EventCount++;
+            return parent;
+        }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void ValidateOwnership(ref GpgxAudioTraceEvent e,ServiceBuilder b)
         {
-            if(e.ServiceToken!=b.Token||e.ParentToken!=b.ParentToken||e.ServiceKindId!=b.Kind||e.Depth!=b.Depth)
+            if(e.ServiceToken!=b.Token||e.ParentToken!=b.CurrentParentToken
+                ||e.ServiceKindId!=b.Kind||e.Depth!=b.CurrentDepth)
                 throw Invalid("token/parent/depth/kind ownership");
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ValidateCommon(ref GpgxAudioTraceEvent e)
         {
-            if(e.Kind<1||e.Kind>10)throw Invalid("unknown event kind");
+            if(e.Kind<1||e.Kind>11)throw Invalid("unknown event kind");
             if(e.Reserved!=0)throw Invalid("reserved field");
             if(e.Kind!=6&&e.Payload!=0)throw Invalid("unexpected payload");
             if(e.Kind!=3&&e.Kind!=4&&e.Kind!=10&&e.Value!=0)throw Invalid("unexpected value");
@@ -854,6 +1015,7 @@ namespace OpenGGF.BizHawk.Headless
         private static ServiceBuilder Clone(ServiceBuilder b)
         {
             var n=new ServiceBuilder{Token=b.Token,ParentToken=b.ParentToken,Kind=b.Kind,Depth=b.Depth,
+                CurrentParentToken=b.CurrentParentToken,CurrentDepth=b.CurrentDepth,
                 RootToken=b.RootToken,
                 BeginCoordinate=b.BeginCoordinate,EndCoordinate=b.EndCoordinate,BeginPc=b.BeginPc,EndPc=b.EndPc,
                 BeginHookToken=b.BeginHookToken,BeginSourceCpu=b.BeginSourceCpu,
@@ -862,7 +1024,8 @@ namespace OpenGGF.BizHawk.Headless
                 EndHookToken=b.EndHookToken,
                 ActiveSnapshotSource=b.ActiveSnapshotSource,ActiveSnapshotPc=b.ActiveSnapshotPc,
                 ActiveByteCount=b.ActiveByteCount,ActiveByteLength=b.ActiveByteLength,ActivePayload=b.ActivePayload,
-                ActiveBytes=b.ActiveBytes==null?null:(byte[])b.ActiveBytes.Clone()};
+                ActiveBytes=b.ActiveBytes==null?null:(byte[])b.ActiveBytes.Clone(),
+                AncestryRecords=b.AncestryRecords==null?null:(AncestryRecord[])b.AncestryRecords.Clone()};
             if(b.ChipRecordCount!=0){n.Chip0=b.Chip0;n.Chip1=b.Chip1;n.Chip2=b.Chip2;n.Chip3=b.Chip3;
                 n.ChipRecordCount=b.ChipRecordCount;if(b.AdditionalChipRecords!=null)
                 {n.AdditionalChipRecords=new WriteRecord[b.AdditionalChipRecords.Length];

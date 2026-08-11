@@ -302,12 +302,12 @@ index 74d5053..7fb4fd9 100644
  
  /****************************************************************************
   * Get all registers in given buffer
-diff --git a/audio_trace.c b/waterbox/gpgx/cinterface/audio_trace.c
+diff --git a/waterbox/gpgx/cinterface/audio_trace.c b/waterbox/gpgx/cinterface/audio_trace.c
 new file mode 100644
-index 0000000..2440af7
+index 000000000..d6e863558
 --- /dev/null
 +++ b/waterbox/gpgx/cinterface/audio_trace.c
-@@ -0,0 +1,1083 @@
+@@ -0,0 +1,1129 @@
 +#include <limits.h>
 +#include <stddef.h>
 +#include <stdint.h>
@@ -349,6 +349,7 @@ index 0000000..2440af7
 +#define ACTION_POP_END_IF_RETURN_OUTSIDE 5u
 +#define ACTION_RETRY_MARKER 6u
 +#define ACTION_OBSERVATION_MARKER 7u
++#define ACTION_POP_DIRECT_PARENT_PROMOTE_TOP 8u
 +
 +#define HOOK_ARM_Z80_PROOFS_ON_COMPLETION 0x01u
 +#define HOOK_PREARM_PERMITTED 0x02u
@@ -377,6 +378,7 @@ index 0000000..2440af7
 +#define EVENT_RESET_BEGIN 8u
 +#define EVENT_RESET_END 9u
 +#define EVENT_HOOK_MARKER 10u
++#define EVENT_SERVICE_PROMOTE 11u
 +
 +#define FLAG_POWER 0x01u
 +#define FLAG_RESET_CANCELLED 0x02u
@@ -641,7 +643,8 @@ index 0000000..2440af7
 +  memset(trace_kind_reservation, 0, sizeof(trace_kind_reservation));
 +
 +  if (trace_config.magic != TRACE_MAGIC
-+      || (trace_config.abi_version != 1u && trace_config.abi_version != GPGX_AUDIO_TRACE_ABI_VERSION)
++      || (trace_config.abi_version != 1u && trace_config.abi_version != 2u
++        && trace_config.abi_version != GPGX_AUDIO_TRACE_ABI_VERSION)
 +      || trace_config.struct_size != sizeof(trace_config)
 +      || trace_config.kind_size != sizeof(trace_kinds[0])
 +      || trace_config.hook_size != sizeof(trace_hooks[0])
@@ -722,8 +725,9 @@ index 0000000..2440af7
 +    const struct gpgx_audio_service_kind_v1 *ended = NULL;
 +    uint32_t bytes = 0;
 +    if (!hook->hook_token || hook->action < ACTION_PUSH_BEGIN
-+        || hook->action > (trace_config.abi_version == 1u
-+          ? ACTION_TAIL_POP_PUSH : ACTION_OBSERVATION_MARKER)
++        || hook->action > (trace_config.abi_version == 1u ? ACTION_TAIL_POP_PUSH
++          : trace_config.abi_version == 2u ? ACTION_OBSERVATION_MARKER
++          : ACTION_POP_DIRECT_PARENT_PROMOTE_TOP)
 +        || (hook->cpu != GPGX_AUDIO_TRACE_CPU_Z80 && hook->cpu != GPGX_AUDIO_TRACE_CPU_M68K)
 +        || (hook->flags & ~HOOK_FLAGS_ALL) || !hook->opcode_length || hook->opcode_length > 8
 +        || !bytes_are_zero(hook->opcode + hook->opcode_length, 8u - hook->opcode_length)) return 0;
@@ -773,6 +777,18 @@ index 0000000..2440af7
 +      if (hook->cpu != GPGX_AUDIO_TRACE_CPU_M68K || hook->service_kind
 +          || hook->flags || hook->range_first || hook->range_count
 +          || (hook->expected_active_kind && !kind_for(hook->expected_active_kind))) return 0;
++    }
++    else if (hook->action == ACTION_POP_DIRECT_PARENT_PROMOTE_TOP)
++    {
++      if (trace_config.abi_version != 3u || !hook->expected_active_kind
++          || !kind_for(hook->expected_active_kind) || !hook->service_kind
++          || hook->service_kind == hook->expected_active_kind
++          || !(ended = kind_for(hook->service_kind)) || hook->flags
++          || !hook->range_count || hook->range_first != ended->cancellation_range_first
++          || hook->range_count != ended->cancellation_range_count
++          || !validate_slice(hook->range_first, hook->range_count, &bytes)) return 0;
++      if (declared > TRACE_MAX_DECLARED_SNAPSHOT_BYTES - bytes) return 0;
++      declared += bytes;
 +    }
 +    else
 +    {
@@ -965,6 +981,34 @@ index 0000000..2440af7
 +  return 1;
 +}
 +
++static int pop_direct_parent_promote_top(
++  const struct gpgx_audio_service_hook_v1 *hook, uint8_t source, uint32_t pc)
++{
++  struct trace_stack_entry parent, promoted;
++  struct gpgx_audio_trace_event *event;
++  uint32_t reservation = range_group_reservation(
++    hook->range_first, hook->range_count, 0) + 1u;
++  if (trace_depth < 2
++      || trace_stack[trace_depth - 1].kind != hook->expected_active_kind
++      || trace_stack[trace_depth - 2].kind != hook->service_kind)
++  { fail_runtime(GPGX_AUDIO_TRACE_FAULT_SERVICE); return 0; }
++  if (!reserve_events(reservation)) return 0;
++  parent = trace_stack[trace_depth - 2];
++  promoted = trace_stack[trace_depth - 1];
++  promoted.parent = parent.parent;
++  promoted.depth = parent.depth;
++  if (!emit_completion(&parent, hook->range_first, hook->range_count,
++      source, pc, hook->hook_token, 0)) return 0;
++  event = new_event(EVENT_SERVICE_PROMOTE);
++  if (!event) return 0;
++  fill_ownership(event, &promoted);
++  event->pc = pc; event->subject = hook->hook_token; event->source_cpu = source;
++  trace_stack[trace_depth - 2] = promoted;
++  memset(&trace_stack[trace_depth - 1], 0, sizeof(trace_stack[0]));
++  trace_depth--;
++  return 1;
++}
++
 +static int proof_matches(const struct gpgx_audio_service_hook_v1 *hook)
 +{
 +  uint32_t i;
@@ -1129,6 +1173,8 @@ index 0000000..2440af7
 +    retry_marker(selected, cpu, pc);
 +  else if (selected->action == ACTION_OBSERVATION_MARKER)
 +    observation_marker(selected, cpu, pc);
++  else if (selected->action == ACTION_POP_DIRECT_PARENT_PROMOTE_TOP)
++    pop_direct_parent_promote_top(selected, cpu, pc);
 +}
 +
 +static void record_chip(uint8_t kind, uint16_t subject, uint8_t value)
@@ -1391,9 +1437,9 @@ index 0000000..2440af7
 +  trace_phase = PHASE_DISABLED; gpgx_audio_trace_enabled = 0;
 +  return TRACE_OK;
 +}
-diff --git a/audio_trace.h b/waterbox/gpgx/cinterface/audio_trace.h
+diff --git a/waterbox/gpgx/cinterface/audio_trace.h b/waterbox/gpgx/cinterface/audio_trace.h
 new file mode 100644
-index 0000000..ecabe79
+index 000000000..738b6b619
 --- /dev/null
 +++ b/waterbox/gpgx/cinterface/audio_trace.h
 @@ -0,0 +1,174 @@
@@ -1402,7 +1448,7 @@ index 0000000..ecabe79
 +
 +#include <stdint.h>
 +
-+#define GPGX_AUDIO_TRACE_ABI_VERSION 2u
++#define GPGX_AUDIO_TRACE_ABI_VERSION 3u
 +#define GPGX_AUDIO_TRACE_EVENT_CAPACITY 65536u
 +#define GPGX_AUDIO_TRACE_EVENT_SIZE 32u
 +

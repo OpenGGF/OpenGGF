@@ -67,13 +67,38 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 string manifest = Path.Combine(root, "manifest.json");
                 string capability = Path.Combine(root, "capability.json");
                 File.Copy(Fixture("gpgx-audio-service-manifests-v1.json"), manifest);
+                string original = File.ReadAllText(
+                    Fixture("gpgx-audio-capability-v1.json"));
+                string executable = (string)JObject.Parse(original)
+                    ["task8_harness_executable_sha256"];
+                string alternateExecutable = new string('0',64);
+                File.WriteAllText(capability,original.Replace(
+                    executable,alternateExecutable));
+                AssertEx.Equal(
+                    S2AudioObserverProfile.CapabilityTemplateSha256(
+                        Fixture("gpgx-audio-capability-v1.json")),
+                    S2AudioObserverProfile.CapabilityTemplateSha256(capability));
+
                 JObject value = JObject.Parse(File.ReadAllText(
                     Fixture("gpgx-audio-capability-v1.json")));
                 value["runs"]["s2"]["complete"]["events"] = 169986418;
                 File.WriteAllText(capability, value.ToString());
                 AssertEx.Throws<InvalidDataException>(
                     () => S2AudioObserverProfile.LoadCapability(manifest, capability),
-                    "capability file identity");
+                    "capability template identity");
+
+                File.WriteAllText(capability,original.Replace(
+                    "{", "{\n  \"task8_harness_executable_sha256\": \""
+                        +new string('0',64)+"\","));
+                AssertEx.Throws<InvalidDataException>(() =>
+                    S2AudioObserverProfile.CapabilityTemplateSha256(capability),
+                    "exactly one");
+
+                File.WriteAllText(capability,original.Replace(
+                    executable,new string('F',64)));
+                AssertEx.Throws<InvalidDataException>(() =>
+                    S2AudioObserverProfile.CapabilityTemplateSha256(capability),
+                    "lowercase");
 
                 value = JObject.Parse(File.ReadAllText(
                     Fixture("gpgx-audio-capability-v1.json")));
@@ -81,15 +106,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 File.WriteAllText(capability, value.ToString());
                 AssertEx.Throws<InvalidDataException>(
                     () => S2AudioObserverProfile.LoadCapability(manifest, capability),
-                    "capability file identity");
+                    "capability template identity");
 
-                value = JObject.Parse(File.ReadAllText(
-                    Fixture("gpgx-audio-capability-v1.json")));
-                value["task8_harness_executable_sha256"] = new string('f', 64);
-                File.WriteAllText(capability, value.ToString());
+                File.WriteAllText(capability,original.Replace(
+                    executable,new string('f',64)));
                 AssertEx.Throws<InvalidDataException>(
                     () => S2AudioObserverProfile.LoadCapability(manifest, capability),
-                    "capability file identity");
+                    "capability executable identity");
             }
             finally
             {
@@ -105,11 +128,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     "BIZHAWK_HOME must name the final observer installation.");
             S2AudioObserverProfile.InstallationIdentity identity =
                 S2AudioObserverProfile.VerifyInstallation(home);
-            AssertEx.Equal("bizhawk-2.11-gpgx-audio-observer-v2",
+            AssertEx.Equal("bizhawk-2.11-gpgx-audio-observer-v3",
                 identity.InstallationId);
-            AssertEx.Equal("gpgx-audio-observer-v2", identity.CoreId);
-            AssertEx.Equal(2, identity.AbiVersion);
-            AssertEx.Equal("b49036a848890682", identity.BuildId);
+            AssertEx.Equal("gpgx-audio-observer-v3", identity.CoreId);
+            AssertEx.Equal(3, identity.AbiVersion);
+            AssertEx.Equal("822895adb39463ad", identity.BuildId);
 
             string root = TestScratch.CreateRootPath("s2-audio-install");
             Directory.CreateDirectory(Path.Combine(root,

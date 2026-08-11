@@ -125,6 +125,7 @@
       { "token": 10, "action": "PUSH_BEGIN", "pc": 58, "kind": 6, "expected_kind": 4, "opcode": "d681", "source_label": "zCheckForSamples", "source": "docs/s1disasm/sound/z80.asm:71-82", "ranges": [], "flags": [] },
       { "token": 1, "action": "PUSH_BEGIN", "pc": 119, "kind": 2, "expected_kind": 0, "opcode": "1a", "source_label": "zPlayPCMLoop", "source": "docs/s1disasm/sound/z80.asm:115-180", "ranges": [], "flags": [] },
       { "token": 2, "action": "POP_END_AT_PC", "pc": 172, "kind": 0, "expected_kind": 2, "opcode": "c23200", "source_label": "zPlayPCMLoop", "source": "docs/s1disasm/sound/z80.asm:171-181", "ranges": [2], "flags": [] },
+      { "token": 13, "action": "POP_DIRECT_PARENT_PROMOTE_TOP", "pc": 172, "kind": 2, "expected_kind": 4, "opcode": "c23200", "source_label": "zPlayPCMLoop", "source": "docs/s1disasm/sound/z80.asm:171-181", "ranges": [2], "flags": [] },
       { "token": 3, "action": "PUSH_BEGIN", "pc": 193, "kind": 3, "expected_kind": 0, "opcode": "1a", "source_label": "zPlaySEGAPCMLoop", "source": "docs/s1disasm/sound/z80.asm:192-206", "ranges": [], "flags": [] },
       { "token": 4, "action": "POP_END_AT_PC", "pc": 208, "kind": 0, "expected_kind": 3, "opcode": "c2c100", "source_label": "zPlaySEGAPCMLoop", "source": "docs/s1disasm/sound/z80.asm:192-206", "ranges": [2], "flags": [] },
       { "token": 5, "action": "PUSH_BEGIN", "pc": 119, "kind": 2, "expected_kind": 4, "opcode": "1a", "source_label": "zPlayPCMLoop", "source": "docs/s1disasm/sound/z80.asm:115-180", "ranges": [], "flags": [] },

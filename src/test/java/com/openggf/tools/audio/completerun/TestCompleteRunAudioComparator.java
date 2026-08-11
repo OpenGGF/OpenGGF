@@ -254,8 +254,8 @@ class TestCompleteRunAudioComparator {
         Path engine = writeCaptureWithCutoff("baseline-open-cutoff-engine", profile,
                 ProducerKind.OPENGGF, actual, plainFrame(0), engineCutoff);
 
-        assertEquals(CompleteRunAudioReport.Kind.MATCH,
-                CompleteRunAudioComparator.compare(reference, engine).kind());
+        CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
+        assertEquals(CompleteRunAudioReport.Kind.MATCH, report.kind(), report.toText());
 
         CutoffService wrongOpen = new CutoffService(null, -1, 0, "UpdateMusic",
                 FrontierServiceState.OPEN, FIRST_FRAME + 1, 0, null, null, List.of());
@@ -439,6 +439,113 @@ class TestCompleteRunAudioComparator {
         assertSemanticFailure(CompleteRunAudioComparator.compare(duplicateToken, emptyEngine),
                 CompleteRunAudioReport.Side.REFERENCE,
                 CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+    }
+
+    @Test
+    void promotedManagedChildConsumesTheEarlierRawTransitionAndClosesAtEffectiveRoot() throws Exception {
+        TestProfile profile = profile("comparator.buffered.promotion."
+                + PROFILE_SEQUENCE.incrementAndGet(), 2);
+        profile.useBufferedReference(
+                new FrontierServiceRule("dpcm", FrontierServiceState.COMPLETED,
+                        10, "Z80", 0x77, 11, 0xac, List.of()),
+                new FrontierServiceRule("driver", FrontierServiceState.COMPLETED,
+                        12, "M68K", 0x71b4c, 13, 0x71c4c, List.of()));
+        CompleteRunAudioProfiles.register(profile);
+        NormalizedState state = state(1);
+        ServiceCoordinate parentCoordinate = new ServiceCoordinate(FIRST_FRAME, 0);
+        ServiceAncestry ancestry = new ServiceAncestry(parentCoordinate, 1, null, 0,
+                List.of(new ServiceAncestryTransition(
+                        parentCoordinate, 1, null, 0, FIRST_FRAME, 3)));
+        DriverService parentSemantic = new DriverService(0, "dpcm", ServiceCompletion.COMPLETED,
+                List.of(), state, List.of(), null, ServiceAncestry.root());
+        DriverService childSemantic = new DriverService(1, "driver", ServiceCompletion.COMPLETED,
+                List.of(), state, List.of(), null,
+                new ServiceCoordinate(FIRST_FRAME, 0),
+                new ServiceCoordinate(FIRST_FRAME + 1, 0), ancestry);
+        FrontierService parent = new FrontierService(1, 0, 0, "dpcm",
+                FrontierServiceState.COMPLETED, FIRST_FRAME, 0, 0x77, 10, "Z80",
+                FIRST_FRAME, 2L, 0xac, 11, List.of(), List.of());
+        NativeAncestryTransition promotion = new NativeAncestryTransition(
+                3, FIRST_FRAME, 3, 1, 1, 0, 0, 11, "Z80", 0xac);
+        FrontierService child = new FrontierService(2, 1, 1, "driver",
+                FrontierServiceState.COMPLETED, FIRST_FRAME, 1, 0x71b4c, 12, "M68K",
+                FIRST_FRAME + 1, 0L, 0x71c4c, 13, List.of(), List.of(), 0, 0,
+                List.of(promotion), ancestry);
+        NativeManagedCorrelation begin = new NativeManagedCorrelation(0, List.of(
+                new NativeManagedEvent(1, 1, "M68K", 0x71b4c,
+                        1, 0, 2, 1, 4, 1, 12, true)));
+        NativeManagedCorrelation end = new NativeManagedCorrelation(0, List.of(
+                new NativeManagedEvent(4, 0, "M68K", 0x71c4c,
+                        2, 0, 2, 0, 4, 0, 13, true)));
+        Frame referenceParent = new Frame(FIRST_FRAME, "test", false, List.of(),
+                List.of(parentSemantic), List.of(), new FrameNativeDiagnostics(
+                        List.of(parent), List.of(), List.of(), List.of(), List.of(begin),
+                        List.of(new FrontierOwnedAncestryTransition(2, promotion))));
+        Frame referenceChild = new Frame(FIRST_FRAME + 1, "test", false, List.of(),
+                List.of(childSemantic), List.of(), new FrameNativeDiagnostics(
+                        List.of(child), List.of(), List.of(), List.of(), List.of(end), List.of()));
+        Frame engineParent = new Frame(FIRST_FRAME, "test", false, List.of(), List.of(parentSemantic));
+        Frame engineChild = new Frame(FIRST_FRAME + 1, "test", false, List.of(), List.of(childSemantic));
+
+        Path reference = writeCapture("promotion-reference", profile, ProducerKind.REFERENCE, 2,
+                row -> row == 0 ? referenceParent : referenceChild);
+        Path engine = writeCapture("promotion-engine", profile, ProducerKind.OPENGGF, 2,
+                row -> row == 0 ? engineParent : engineChild);
+        CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
+        assertEquals(CompleteRunAudioReport.Kind.MATCH, report.kind(), report.toText());
+
+        Frame missingProofParent = new Frame(FIRST_FRAME, "test", false, List.of(),
+                List.of(parentSemantic), List.of(), new FrameNativeDiagnostics(
+                        List.of(parent), List.of(), List.of(), List.of(), List.of(begin), List.of()));
+        Path missingProof = writeCapture("promotion-missing-proof", profile, ProducerKind.REFERENCE, 2,
+                row -> row == 0 ? missingProofParent : referenceChild);
+        assertSemanticFailure(CompleteRunAudioComparator.compare(missingProof, engine),
+                CompleteRunAudioReport.Side.REFERENCE,
+                CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+
+        Frame wrongOwnerParent = new Frame(FIRST_FRAME, "test", false, List.of(),
+                List.of(parentSemantic), List.of(), new FrameNativeDiagnostics(
+                        List.of(parent), List.of(), List.of(), List.of(), List.of(begin),
+                        List.of(new FrontierOwnedAncestryTransition(3, promotion))));
+        Path wrongOwner = writeCapture("promotion-wrong-owner", profile, ProducerKind.REFERENCE, 2,
+                row -> row == 0 ? wrongOwnerParent : referenceChild);
+        assertSemanticFailure(CompleteRunAudioComparator.compare(wrongOwner, engine),
+                CompleteRunAudioReport.Side.REFERENCE,
+                CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+
+        assertThrows(IllegalArgumentException.class, () -> new FrameNativeDiagnostics(
+                List.of(parent), List.of(), List.of(), List.of(), List.of(begin),
+                List.of(new FrontierOwnedAncestryTransition(2, promotion),
+                        new FrontierOwnedAncestryTransition(2, promotion))));
+
+        TestProfile cutoffProfile = profile("comparator.buffered.promotion.cutoff."
+                + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        FrontierServiceRule parentRule = new FrontierServiceRule("dpcm",
+                FrontierServiceState.COMPLETED, 10, "Z80", 0x77, 11, 0xac, List.of());
+        FrontierServiceRule childRule = new FrontierServiceRule("driver",
+                FrontierServiceState.OPEN, 12, "M68K", 0x71b4c, null, null, List.of());
+        cutoffProfile.useBufferedReference(parentRule, childRule);
+        FrontierService openChild = new FrontierService(2, 1, 1, "driver",
+                FrontierServiceState.OPEN, FIRST_FRAME, 1, 0x71b4c, 12, "M68K",
+                null, null, null, null, List.of(), List.of(), 0, 0,
+                List.of(promotion), ancestry);
+        CutoffFrontier nativeCutoff = CutoffFrontier.fromNative(List.of(openChild), List.of(),
+                List.of(), List.of(), 0, 0, 0, false, state, "f".repeat(64));
+        CutoffFrontier semanticCutoff = new CutoffFrontier(nativeCutoff.activeStack(),
+                nativeCutoff.pendingDescendants(), nativeCutoff.rawChipEvents(), null,
+                nativeCutoff.ymPort0Latch(), nativeCutoff.ymPort1Latch(), state);
+        cutoffProfile.cutoffPolicy = new CutoffFrontierPolicy(List.of(parentRule, childRule),
+                1, 0, 0, 0, 0, 0, 0, 0, false, "f".repeat(64),
+                CutoffFrontierPolicy.capabilityDigest(nativeCutoff),
+                CutoffFrontierPolicy.nativeCapabilityDigest(nativeCutoff.nativeDiagnostics()));
+        CompleteRunAudioProfiles.register(cutoffProfile);
+        Path cutoffReference = writeCaptureWithCutoff("promotion-cutoff-reference", cutoffProfile,
+                ProducerKind.REFERENCE, referenceParent, nativeCutoff);
+        Path cutoffEngine = writeCaptureWithCutoff("promotion-cutoff-engine", cutoffProfile,
+                ProducerKind.OPENGGF, engineParent, semanticCutoff);
+        CompleteRunAudioReport cutoffReport = CompleteRunAudioComparator.compare(
+                cutoffReference, cutoffEngine);
+        assertEquals(CompleteRunAudioReport.Kind.MATCH, cutoffReport.kind(), cutoffReport.toText());
     }
 
     @Test
@@ -2314,7 +2421,7 @@ class TestCompleteRunAudioComparator {
                     CompleteRunAudioProfiles.GPGX_AUDIO_TRACE_HOOK_SIZE,
                     CompleteRunAudioProfiles.GPGX_AUDIO_TRACE_RANGE_SIZE,
                     CompleteRunAudioProfiles.GPGX_AUDIO_TRACE_CAPACITY,
-                    "bizhawk-2.11-gpgx-audio-observer-v2", "gpgx-audio-observer-v2",
+                    "bizhawk-2.11-gpgx-audio-observer-v3", "gpgx-audio-observer-v3",
                     "0123456789abcdef", "a".repeat(64), "a".repeat(64), true, 1, 0));
             CutoffNativeDiagnostics emptyNative = new CutoffNativeDiagnostics(List.of(), List.of(),
                     List.of(), List.of(), 0, false, "f".repeat(64));

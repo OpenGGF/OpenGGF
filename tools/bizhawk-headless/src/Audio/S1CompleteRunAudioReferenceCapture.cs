@@ -438,6 +438,15 @@ namespace OpenGGF.BizHawk.Headless
                         hookTokens, managedHook, ref nextToken, 2, 0, serviceKind,
                         proofFirst, proofCount, 0);
                     snapshotBytes = checked(snapshotBytes + RangeLength(ranges, proofFirst, proofCount));
+                    for (int i=0;i<kinds.Length;i++)
+                    {
+                        if ((kinds[i].Flags&5)!=5) continue;
+                        AddManagedNativeHook(hookList, publicHooks, managedByToken,
+                            hookTokens, managedHook, ref nextToken, 8, serviceKind,
+                            kinds[i].KindId, proofFirst, proofCount, 0);
+                        snapshotBytes=checked(snapshotBytes
+                            +RangeLength(ranges,proofFirst,proofCount));
+                    }
                 }
                 else if (managedHook.Action == "CLOSE_IF_RETURN_OUTSIDE")
                 {
@@ -449,6 +458,11 @@ namespace OpenGGF.BizHawk.Headless
                 }
                 else
                 {
+                    for (int i=0;i<kinds.Length;i++)
+                        if ((kinds[i].Flags&5)==5)
+                            AddManagedNativeHook(hookList, publicHooks, managedByToken,
+                                hookTokens, managedHook, ref nextToken, 7, 0,
+                                kinds[i].KindId, 0, 0, 0);
                     AddManagedNativeHook(hookList, publicHooks, managedByToken,
                         hookTokens, managedHook, ref nextToken, 7, 0, serviceKind, 0, 0, 0);
                 }
@@ -473,7 +487,7 @@ namespace OpenGGF.BizHawk.Headless
             GpgxAudioObserverAdapter.ServiceHook[] hooks = hookList.ToArray();
             var config = new GpgxAudioObserverAdapter.Config
             {
-                Magic=0x31544147, AbiVersion=2, StructSize=64,
+                Magic=0x31544147, AbiVersion=3, StructSize=64,
                 HookSize=32, RangeSize=16, EventSize=32,
                 MaxDepth=8, MaxOpcodeBytes=8, ResetServiceKind=1,
                 MaxContinuationFrames=maximumContinuation, Flags=1, WatchMaskBytes=8192,
@@ -705,10 +719,30 @@ namespace OpenGGF.BizHawk.Headless
             private JObject BoundaryService(
                 CompleteRunAudioObserver.DriverService service, bool carriedIn)
             {
+                var transitions = new JArray();
+                foreach (CompleteRunAudioObserver.AncestryTransition transition
+                    in service.AncestryTransitions)
+                {
+                    transitions.Add(new JObject
+                    {
+                        ["coordinate"]=transition.Coordinate,
+                        ["native_ordinal"]=transition.NativeOrdinal,
+                        ["previous_parent_token"]=transition.PreviousParentToken,
+                        ["previous_depth"]=transition.PreviousDepth,
+                        ["current_parent_token"]=transition.CurrentParentToken,
+                        ["current_depth"]=transition.CurrentDepth,
+                        ["hook_token"]=transition.HookToken,
+                        ["source_cpu"]=transition.SourceCpu,
+                        ["pc"]=transition.Pc
+                    });
+                }
                 return new JObject
                 {
                     ["token"]=service.Token,["parent_token"]=service.ParentToken,
                     ["kind"]=service.Kind,["depth"]=service.Depth,
+                    ["current_parent_token"]=service.CurrentParentToken,
+                    ["current_depth"]=service.CurrentDepth,
+                    ["ancestry_transitions"]=transitions,
                     ["state"]=carriedIn ? "CARRIED_IN_OPEN" : "COMPLETED",
                     ["begin_coordinate"]=service.BeginCoordinate,
                     ["begin_pc"]=service.BeginPc,
@@ -1422,7 +1456,8 @@ namespace OpenGGF.BizHawk.Headless
                 Source=managed.Source, SourceLabel=managed.SourceLabel,
                 Action=action==1?"PUSH_BEGIN":action==2?"POP_END_AT_PC":
                     action==5?"POP_END_IF_RETURN_OUTSIDE":
-                    action==6?"RETRY_MARKER":"OBSERVATION_MARKER"
+                    action==6?"RETRY_MARKER":
+                    action==8?"POP_DIRECT_PARENT_PROMOTE_TOP":"OBSERVATION_MARKER"
             };
             AddPublicHook(publicHooks, native);
             managedByToken.Add(token, managed);
@@ -1473,6 +1508,7 @@ namespace OpenGGF.BizHawk.Headless
             if (value == "PUSH_BEGIN") return 1;
             if (value == "POP_END_AT_PC") return 2;
             if (value == "TAIL_POP_PUSH") return 4;
+            if (value == "POP_DIRECT_PARENT_PROMOTE_TOP") return 8;
             throw Invalid("unknown native action " + value);
         }
 

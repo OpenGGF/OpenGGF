@@ -75,6 +75,204 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "CompleteRunAudioObserverTests report bounded native tail on end failure",
                 ReportsBoundedNativeTailOnEndFailure,
                 serial: true));
+            tests.Add(new TestMain.TestCase(
+                "CompleteRunAudioObserverTests retain immutable begin ancestry across promotion",
+                RetainsImmutableBeginAncestryAcrossPromotion,
+                serial: true));
+            tests.Add(new TestMain.TestCase(
+                "CompleteRunAudioObserverTests roll back pending ancestry after rejected promotion",
+                RollsBackPendingAncestryAfterRejectedPromotion,
+                serial: true));
+        }
+
+        private static void RollsBackPendingAncestryAfterRejectedPromotion()
+        {
+            var api = new FakeTraceApi { Events = PendingDescendantFrame() };
+            CompleteRunAudioObserver observer = CreateCrossingWithPendingDescendant(api);
+            observer.CaptureFrame(() => { });
+            AssertEx.Equal((ushort)1, observer.PendingRootTokenForTesting(3));
+
+            api.Events = new[]
+            {
+                Canonical(0,2,1,0,2,0,6,0x120,0),
+                Canonical(1,11,2,0,3,0,6,0x120,0),
+                new GpgxAudioTraceEvent {Ordinal=2,Kind=3,ServiceToken=2,
+                    ParentToken=0,ServiceKindId=3,Depth=0,SourceCpu=1,
+                    Pc=0x121,Subject=0,Value=0x2a,Reserved=1}
+            };
+            AssertEx.Throws<InvalidOperationException>(
+                () => observer.CaptureFrame(() => { }), "reserved");
+            AssertEx.Equal((ushort)1, observer.PendingRootTokenForTesting(3));
+
+            var rejectedApi = new FakeTraceApi { Events = PendingDescendantFrame() };
+            CompleteRunAudioObserver rejected =
+                CreateCrossingWithPendingDescendant(rejectedApi);
+            rejected.CaptureFrame(() => { });
+            rejectedApi.Events = new[]
+            {
+                Canonical(0,2,1,0,2,0,6,0x120,0),
+                Canonical(1,11,2,0,3,0,6,0x120,0)
+            };
+            AssertEx.Throws<InvalidOperationException>(() => rejected.CaptureFrame(
+                () => { }, (events, count) =>
+                {
+                    AssertEx.Equal((ushort)1,
+                        rejected.PendingRootTokenForTesting(3));
+                    throw new InvalidOperationException("consumer rejected promotion");
+                }), "consumer rejected promotion");
+            AssertEx.Equal((ushort)1, rejected.PendingRootTokenForTesting(3));
+        }
+
+        private static GpgxAudioTraceEvent[] PendingDescendantFrame()
+        {
+            return new[]
+            {
+                Canonical(0,1,1,0,2,0,1,0x100,0),
+                Canonical(1,1,2,1,3,1,3,0x110,0),
+                Canonical(2,1,3,2,4,2,7,0x115,0),
+                Canonical(3,2,3,2,4,2,8,0x118,0)
+            };
+        }
+
+        private static void RetainsImmutableBeginAncestryAcrossPromotion()
+        {
+            var ordinaryEvents = new[]
+            {
+                Canonical(0,1,1,0,2,0,1,0x100,0),
+                Canonical(1,5,1,0,2,0,7,0x120,0),
+                Canonical(2,6,1,0,2,0,7,0x120,0,payloadLength:2,payload:0x2211),
+                Canonical(3,7,1,0,2,0,7,0x120,2),
+                Canonical(4,2,1,0,2,0,2,0x120,0)
+            };
+            var legacyApi = new FakeTraceApi { Events = ordinaryEvents };
+            var promotionCapableApi = new FakeTraceApi { Events = ordinaryEvents };
+            CompleteRunAudioObserver legacy = CreateCanonical(legacyApi);
+            CompleteRunAudioObserver promotionCapable = CreateCanonical(
+                promotionCapableApi, true);
+            AssertEx.Equal(false, legacy.PromotionTransactionsEnabled);
+            AssertEx.Equal(true, promotionCapable.PromotionTransactionsEnabled);
+            CompleteRunAudioObserver.DriverService legacyService =
+                legacy.CaptureCanonicalFrame(() => { }).Services[0];
+            CompleteRunAudioObserver.DriverService promotionService =
+                promotionCapable.CaptureCanonicalFrame(() => { }).Services[0];
+            AssertEx.Equal(legacyService.Token, promotionService.Token);
+            AssertEx.Equal(legacyService.ParentToken, promotionService.ParentToken);
+            AssertEx.Equal(legacyService.CurrentParentToken,
+                promotionService.CurrentParentToken);
+            AssertEx.Equal(legacyService.BeginCoordinate,
+                promotionService.BeginCoordinate);
+            AssertEx.Equal(legacyService.EndCoordinate,
+                promotionService.EndCoordinate);
+            AssertEx.Equal(legacyService.Snapshots[0].Bytes[0],
+                promotionService.Snapshots[0].Bytes[0]);
+            int settledScratchCapacity = legacy.ProjectionScratchCapacity;
+            legacyApi.Events = ordinaryEvents;
+            legacy.CaptureCanonicalFrame(() => { });
+            AssertEx.Equal(settledScratchCapacity, legacy.ProjectionScratchCapacity);
+
+            var snapshotApi = new FakeTraceApi
+            {
+                Events = new[]
+                {
+                    Canonical(0,1,1,0,2,0,1,0x100,0),
+                    Canonical(1,1,2,1,3,1,3,0x110,0),
+                    Canonical(2,5,1,0,2,0,7,0x120,0),
+                    Canonical(3,6,1,0,2,0,7,0x120,0,payloadLength:2,payload:0x2211),
+                    Canonical(4,7,1,0,2,0,7,0x120,2),
+                    Canonical(5,2,1,0,2,0,6,0x120,0),
+                    Canonical(6,11,2,0,3,0,6,0x120,0),
+                    Canonical(7,2,2,0,3,0,4,0x114,0)
+                }
+            };
+            CompleteRunAudioObserver snapshotObserver = CreateCrossingWithSnapshots(snapshotApi);
+            CompleteRunAudioObserver.FrameCapture snapshotCapture =
+                snapshotObserver.CaptureCanonicalFrame(() => { });
+            AssertEx.Equal(2, snapshotCapture.Services.Count);
+            AssertEx.Equal(1, snapshotCapture.Services[0].Snapshots.Count);
+            AssertEx.Equal((ushort)0, snapshotCapture.Services[1].CurrentParentToken);
+            var interposedApi = new FakeTraceApi
+            {
+                Events = new[]
+                {
+                    Canonical(0,1,1,0,2,0,1,0x100,0),
+                    Canonical(1,1,2,1,3,1,3,0x110,0),
+                    Canonical(2,5,1,0,2,0,7,0x120,0),
+                    Canonical(3,3,2,1,3,1,0,0x111,0,0x2a),
+                    Canonical(4,6,1,0,2,0,7,0x120,0,payloadLength:2,payload:0x2211),
+                    Canonical(5,7,1,0,2,0,7,0x120,2),
+                    Canonical(6,2,1,0,2,0,6,0x120,0),
+                    Canonical(7,11,2,0,3,0,6,0x120,0)
+                }
+            };
+            AssertEx.Throws<InvalidOperationException>(() =>
+                CreateCrossingWithSnapshots(interposedApi).CaptureCanonicalFrame(() => { }),
+                "promotion snapshot adjacency");
+
+            var api = new FakeTraceApi
+            {
+                Events = new[]
+                {
+                    Canonical(0,1,1,0,2,0,1,0x100,0),
+                    Canonical(1,1,2,1,3,1,3,0x110,0),
+                    Canonical(2,2,1,0,2,0,6,0x120,0),
+                    Canonical(3,11,2,0,3,0,6,0x120,0),
+                    Canonical(4,3,2,0,3,0,0,0x121,0,0x2a),
+                    Canonical(5,2,2,0,3,0,4,0x114,0)
+                }
+            };
+            CompleteRunAudioObserver observer = CreateCrossing(api);
+            CompleteRunAudioObserver.FrameCapture capture =
+                observer.CaptureCanonicalFrame(() => { });
+            AssertEx.Equal(2, capture.Services.Count);
+            CompleteRunAudioObserver.DriverService parent = capture.Services[0];
+            CompleteRunAudioObserver.DriverService child = capture.Services[1];
+            AssertEx.Equal((ushort)0, parent.ParentToken);
+            AssertEx.Equal((byte)0, parent.Depth);
+            AssertEx.Equal((ushort)1, child.ParentToken);
+            AssertEx.Equal((byte)1, child.Depth);
+            AssertEx.Equal((ushort)0, child.CurrentParentToken);
+            AssertEx.Equal((byte)0, child.CurrentDepth);
+            AssertEx.Equal(1, child.AncestryTransitions.Count);
+            AssertEx.Equal((ushort)1,
+                child.AncestryTransitions[0].PreviousParentToken);
+            AssertEx.Equal((ushort)0,
+                child.AncestryTransitions[0].CurrentParentToken);
+            AssertEx.Equal(3L, child.AncestryTransitions[0].Coordinate);
+            AssertEx.Equal(1, child.OwnedChipEvents.Count);
+
+            var resetApi = new FakeTraceApi
+            {
+                Events = new[]
+                {
+                    Canonical(0,1,1,0,2,0,1,0x100,0),
+                    Canonical(1,1,2,1,3,1,3,0x110,0),
+                    Canonical(2,2,1,0,2,0,6,0x120,0),
+                    Canonical(3,11,2,0,3,0,6,0x120,0)
+                }
+            };
+            CompleteRunAudioObserver resetObserver = CreateCrossing(resetApi);
+            CompleteRunAudioObserver.FrameCapture parentFrame =
+                resetObserver.CaptureCanonicalFrame(() => { });
+            AssertEx.Equal(1, parentFrame.Services.Count);
+            resetApi.Events = new[]
+            {
+                new GpgxAudioTraceEvent { Ordinal=0,Kind=8,ServiceToken=9,
+                    ServiceKindId=2,SourceCpu=3,Subject=1 },
+                new GpgxAudioTraceEvent { Ordinal=1,Kind=2,ServiceToken=2,
+                    ParentToken=0,ServiceKindId=3,Depth=0,SourceCpu=3,Flags=2 },
+                new GpgxAudioTraceEvent { Ordinal=2,Kind=9,ServiceToken=9,
+                    ServiceKindId=2,SourceCpu=3 }
+            };
+            CompleteRunAudioObserver.FrameCapture resetFrame =
+                resetObserver.CaptureCanonicalFrame(() => { });
+            AssertEx.Equal(2, resetFrame.Services.Count);
+            CompleteRunAudioObserver.DriverService cancelled = resetFrame.Services[0];
+            AssertEx.Equal(true, cancelled.Cancelled);
+            AssertEx.Equal((ushort)1, cancelled.ParentToken);
+            AssertEx.Equal((byte)1, cancelled.Depth);
+            AssertEx.Equal((ushort)0, cancelled.CurrentParentToken);
+            AssertEx.Equal((byte)0, cancelled.CurrentDepth);
+            AssertEx.Equal(1, cancelled.AncestryTransitions.Count);
         }
 
         private static void ExposesBoundedCollector()
@@ -460,9 +658,71 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
         private static CompleteRunAudioObserver CreateCanonical(FakeTraceApi api)
         {
+            return CreateCanonical(api, false);
+        }
+
+        private static CompleteRunAudioObserver CreateCanonical(FakeTraceApi api,
+            bool includeUnusedPromotion)
+        {
             var config = new GpgxAudioObserverAdapter.Config
             {
                 Magic=0x31544147, AbiVersion=1, StructSize=64, KindSize=16,
+                HookSize=32, RangeSize=16, EventSize=32, MaxDepth=8,
+                WatchMaskBytes=8192, HookCount=(uint)(includeUnusedPromotion?6:5), RangeCount=1,
+                EventCapacity=65536, KindCount=2, ResetServiceKind=2
+            };
+            var kinds = new[]
+            {
+                new GpgxAudioObserverAdapter.ServiceKind { KindId=2, Flags=4 },
+                new GpgxAudioObserverAdapter.ServiceKind { KindId=3 }
+            };
+            var hooks = new List<GpgxAudioObserverAdapter.ServiceHook>
+            {
+                new GpgxAudioObserverAdapter.ServiceHook { HookToken=1,Action=1,Cpu=1,Pc=0x100,ServiceKindId=2 },
+                new GpgxAudioObserverAdapter.ServiceHook { HookToken=3,Action=1,Cpu=1,Pc=0x110,ServiceKindId=3,ExpectedActiveKind=2 },
+                new GpgxAudioObserverAdapter.ServiceHook { HookToken=4,Action=2,Cpu=1,Pc=0x114,ExpectedActiveKind=3,RangeCount=1 },
+                new GpgxAudioObserverAdapter.ServiceHook { HookToken=2,Action=2,Cpu=1,Pc=0x120,ExpectedActiveKind=2,RangeCount=1 },
+                new GpgxAudioObserverAdapter.ServiceHook { HookToken=5,Action=4,Cpu=1,Pc=0x130,ServiceKindId=3,ExpectedActiveKind=2 }
+            };
+            if(includeUnusedPromotion)hooks.Add(new GpgxAudioObserverAdapter.ServiceHook
+                {HookToken=6,Action=8,Cpu=1,Pc=0x124,ServiceKindId=2,
+                    ExpectedActiveKind=3,RangeCount=1});
+            var ranges = new[] { new GpgxAudioObserverAdapter.SnapshotRange
+                { RangeId=7, Start=0, Length=2 } };
+            return new CompleteRunAudioObserver(api,config,new byte[8192],kinds,hooks.ToArray(),ranges);
+        }
+
+        private static CompleteRunAudioObserver CreateCrossing(FakeTraceApi api)
+        {
+            var config = new GpgxAudioObserverAdapter.Config
+            {
+                Magic=0x31544147, AbiVersion=3, StructSize=64, KindSize=16,
+                HookSize=32, RangeSize=16, EventSize=32, MaxDepth=8,
+                WatchMaskBytes=8192, HookCount=5, RangeCount=0,
+                EventCapacity=65536, KindCount=2, ResetServiceKind=2
+            };
+            var kinds = new[]
+            {
+                new GpgxAudioObserverAdapter.ServiceKind { KindId=2, Flags=4 },
+                new GpgxAudioObserverAdapter.ServiceKind { KindId=3 }
+            };
+            var hooks = new[]
+            {
+                new GpgxAudioObserverAdapter.ServiceHook { HookToken=1,Action=1,Cpu=1,Pc=0x100,ServiceKindId=2 },
+                new GpgxAudioObserverAdapter.ServiceHook { HookToken=3,Action=1,Cpu=1,Pc=0x110,ServiceKindId=3,ExpectedActiveKind=2 },
+                new GpgxAudioObserverAdapter.ServiceHook { HookToken=4,Action=2,Cpu=1,Pc=0x114,ExpectedActiveKind=3 },
+                new GpgxAudioObserverAdapter.ServiceHook { HookToken=2,Action=2,Cpu=1,Pc=0x120,ExpectedActiveKind=2 },
+                new GpgxAudioObserverAdapter.ServiceHook { HookToken=6,Action=8,Cpu=1,Pc=0x120,ServiceKindId=2,ExpectedActiveKind=3 }
+            };
+            return new CompleteRunAudioObserver(api,config,new byte[8192],
+                kinds,hooks,new GpgxAudioObserverAdapter.SnapshotRange[0]);
+        }
+
+        private static CompleteRunAudioObserver CreateCrossingWithSnapshots(FakeTraceApi api)
+        {
+            var config = new GpgxAudioObserverAdapter.Config
+            {
+                Magic=0x31544147, AbiVersion=3, StructSize=64, KindSize=16,
                 HookSize=32, RangeSize=16, EventSize=32, MaxDepth=8,
                 WatchMaskBytes=8192, HookCount=5, RangeCount=1,
                 EventCapacity=65536, KindCount=2, ResetServiceKind=2
@@ -476,13 +736,42 @@ namespace OpenGGF.BizHawk.Headless.Tests
             {
                 new GpgxAudioObserverAdapter.ServiceHook { HookToken=1,Action=1,Cpu=1,Pc=0x100,ServiceKindId=2 },
                 new GpgxAudioObserverAdapter.ServiceHook { HookToken=3,Action=1,Cpu=1,Pc=0x110,ServiceKindId=3,ExpectedActiveKind=2 },
-                new GpgxAudioObserverAdapter.ServiceHook { HookToken=4,Action=2,Cpu=1,Pc=0x114,ExpectedActiveKind=3,RangeCount=1 },
-                new GpgxAudioObserverAdapter.ServiceHook { HookToken=2,Action=2,Cpu=1,Pc=0x120,ExpectedActiveKind=2,RangeCount=1 },
-                new GpgxAudioObserverAdapter.ServiceHook { HookToken=5,Action=4,Cpu=1,Pc=0x130,ServiceKindId=3,ExpectedActiveKind=2 }
+                new GpgxAudioObserverAdapter.ServiceHook { HookToken=4,Action=2,Cpu=1,Pc=0x114,ExpectedActiveKind=3 },
+                new GpgxAudioObserverAdapter.ServiceHook { HookToken=2,Action=2,Cpu=1,Pc=0x120,ExpectedActiveKind=2 },
+                new GpgxAudioObserverAdapter.ServiceHook { HookToken=6,Action=8,Cpu=1,Pc=0x120,ServiceKindId=2,ExpectedActiveKind=3,RangeCount=1 }
             };
             var ranges = new[] { new GpgxAudioObserverAdapter.SnapshotRange
                 { RangeId=7, Start=0, Length=2 } };
             return new CompleteRunAudioObserver(api,config,new byte[8192],kinds,hooks,ranges);
+        }
+
+        private static CompleteRunAudioObserver CreateCrossingWithPendingDescendant(
+            FakeTraceApi api)
+        {
+            var config = new GpgxAudioObserverAdapter.Config
+            {
+                Magic=0x31544147,AbiVersion=3,StructSize=64,KindSize=16,
+                HookSize=32,RangeSize=16,EventSize=32,MaxDepth=8,
+                WatchMaskBytes=8192,HookCount=6,EventCapacity=65536,
+                KindCount=3,ResetServiceKind=2
+            };
+            var kinds = new[]
+            {
+                new GpgxAudioObserverAdapter.ServiceKind {KindId=2,Flags=4},
+                new GpgxAudioObserverAdapter.ServiceKind {KindId=3},
+                new GpgxAudioObserverAdapter.ServiceKind {KindId=4}
+            };
+            var hooks = new[]
+            {
+                new GpgxAudioObserverAdapter.ServiceHook {HookToken=1,Action=1,Cpu=1,Pc=0x100,ServiceKindId=2},
+                new GpgxAudioObserverAdapter.ServiceHook {HookToken=3,Action=1,Cpu=1,Pc=0x110,ServiceKindId=3,ExpectedActiveKind=2},
+                new GpgxAudioObserverAdapter.ServiceHook {HookToken=7,Action=1,Cpu=1,Pc=0x115,ServiceKindId=4,ExpectedActiveKind=3},
+                new GpgxAudioObserverAdapter.ServiceHook {HookToken=8,Action=2,Cpu=1,Pc=0x118,ExpectedActiveKind=4},
+                new GpgxAudioObserverAdapter.ServiceHook {HookToken=4,Action=2,Cpu=1,Pc=0x114,ExpectedActiveKind=3},
+                new GpgxAudioObserverAdapter.ServiceHook {HookToken=6,Action=8,Cpu=1,Pc=0x120,ServiceKindId=2,ExpectedActiveKind=3}
+            };
+            return new CompleteRunAudioObserver(api,config,new byte[8192],kinds,
+                hooks,new GpgxAudioObserverAdapter.SnapshotRange[0]);
         }
 
         private static CompleteRunAudioObserver Create(FakeTraceApi api)

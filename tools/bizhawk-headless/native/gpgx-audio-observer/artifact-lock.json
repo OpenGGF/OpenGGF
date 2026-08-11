@@ -4,10 +4,10 @@
   "patched_managed_dll_permitted": false,
   "build_recipe": {
     "file": "task7-build-recipe.json",
-    "sha256": "139561696a2ac225fefe2d1ab5375402076f38ad040e2fdda46d4ba382a6f001"
+    "sha256": "9ed3eb7bf92b630b30911bc9b628879597999c22817b785e245343d7e7e08194"
   },
   "abi": {
-    "version": 2,
+    "version": 3,
     "config_size": 64,
     "kind_size": 16,
     "hook_size": 32,
@@ -18,21 +18,21 @@
   },
   "native_patch": {
     "file": "0001-buffer-z80-audio-events.patch",
-    "sha256": "755805989ebdcc1edb3fda379e9e9cc45f66c9fb334a476399172babeadcd118"
+    "sha256": "eba32c88f0b1465de0a307a2cdd53e53e655e56e70a70ffc3a1e3b0cf1198e46"
   },
   "core": {
-    "decompressed_size": 41740032,
-    "decompressed_sha256": "e8f85805bbc46de4e3cb3e1c20fe79cc1381c9e86537db8f327b4b21c49ca16c",
-    "compressed_size": 414021,
-    "compressed_sha256": "f9c6a1cbaa3c70428ffc1774473ff4f9ba7d1ce1503fa00ab657e497dd584625",
-    "build_id": "b49036a848890682",
+    "decompressed_size": 41740080,
+    "decompressed_sha256": "c29a3631c5aa6b4566dd80f2dcca5138426adaa624dbb7c450cdaead09cd4bd6",
+    "compressed_size": 414672,
+    "compressed_sha256": "93be2835112aeb73bd38cd467cfa0a55f38e3b6ceb7bed642033eb73656cc453",
+    "build_id": "822895adb39463ad",
     "invis_size": 2140400,
     "invis_alignment": 32,
     "observer_added_invis_bytes": 2137056
   },
   "source_bundle": {
-    "uncompressed_sha256": "34e6cecb6bcd65a14c9f6f80716a3b423c5d0d7924c85e192662e070d6609977",
-    "compressed_sha256": "452c7b320000817e4b35e621d2f8b12bfaef3588f211d14ac508a34d9cc65e7b",
+    "uncompressed_sha256": "184f23c0ac2507fba41e409de003ae56a2e744eb4a40548da3fb3968543d8e53",
+    "compressed_sha256": "618ad57012a8a80d57a1e0d6369f97842d62c6c7938eda82f3155b9f8cde0191",
     "path_manifest_sha256": "ca94c5213d326ab3affac073dff5b67cf6b9c275db6d2c6291688376703709c1",
     "path_mode_manifest_sha256": "03b81d212882a71329d5d45377bdebe1aa6194a0012bd9a4749ec35cd5683440",
     "source_date_epoch": 1758367997,
@@ -59,7 +59,7 @@
     "bizhawk_common_sha256": "438a49d6a45d9fcac17016240ae205d1af7a4632865f6f70468b684b82323f33"
   },
   "identity": {
-    "sha256": "1f0147ecc101d4d726ed09536db87c125f305eccdca986c620d735714543c5cc"
+    "sha256": "b8023a7a80cb961d97c80bcb3835480aca9a78f3eb1ede5490c9295e2ca9bd60"
   },
   "notices": {
     "bizhawk_license_sha256": "6601cab56cb56875001906593a3adf94d52a0b82e6919fcbee81c31a48499121",

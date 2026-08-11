@@ -7,13 +7,19 @@ or savestated state. The observer is disabled until explicitly configured.
 
 The supported managed integration is `REFLECTION` against the exact stock
 BizHawk assemblies locked by Task 6. No patched managed DLL is built or shipped.
-The native API reports ABI v2 while continuing to accept exact legacy v1
-configurations. Events remain little-endian, 32 bytes each, with a fixed
-capacity of 65,536. ABI v2 adds profile-gated pre-arm filtering and a one-shot
+The native API reports ABI v3 while continuing to accept exact legacy v1 and
+v2 configurations. Events remain little-endian, 32 bytes each, with a fixed
+capacity of 65,536. ABI v2 added profile-gated pre-arm filtering and a one-shot
 publication-epoch transition: prepublication frames are fully validated and
 drained without aging continuation budgets, then a drained, proof-armed READY
 boundary resets only publication ages while preserving active tokens and chip
-latches.
+latches. ABI v3 adds the narrowly configured direct-parent-close action. It
+atomically snapshots and closes the direct parent below the current top,
+compacts the stack, and emits the adjacent `SERVICE_PROMOTE` event that proves
+the surviving child's effective parent/depth change. Begin ancestry remains
+immutable; managed and stored diagnostics retain the bounded transition
+history, while producer-neutral semantic records retain the effective ancestry
+without depending on native event coordinates.
 
 `gpgx_audio_trace_first_fault` returns a read-only, packed 16-byte snapshot of
 the first runtime fault in the configured session: stable reason, source CPU,
@@ -35,6 +41,15 @@ the diagnostic; disable ends the session and clears it. Reason values are:
 | 9 | continuation limit |
 
 `artifact-lock.json` is the authority for all artifact hashes.
+
+The capability fixture avoids a self-referential executable hash without
+weakening it. Its S2 profile authenticates a raw-byte template SHA-256 after
+requiring exactly one lowercase-hex
+`task8_harness_executable_sha256` field and replacing only that 64-byte value
+with ASCII zeroes. Every other byte remains identity-sensitive. The field is
+then independently required to equal the SHA-256 of the production
+`BizHawk.Headless.Gpgx` executable. Java metadata continues to pin the complete,
+unnormalized capability-file SHA-256.
 
 From a fresh checkout at the repository root, create durable inputs and build
 outputs beneath the ignored `target/audio-parity/native/` tree. The package

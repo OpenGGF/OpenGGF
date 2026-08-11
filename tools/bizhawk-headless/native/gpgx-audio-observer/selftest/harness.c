@@ -63,7 +63,7 @@ int main(void)
   assert(gpgx_audio_trace_event_count(&count,&overflow)==-3);
   assert(gpgx_audio_trace_drain(events,32,&drained)==-3);
   assert(gpgx_audio_trace_abort_frame()==-3);
-  assert(gpgx_audio_trace_abi_version()==2 && gpgx_audio_trace_event_size()==32
+  assert(gpgx_audio_trace_abi_version()==3 && gpgx_audio_trace_event_size()==32
     && gpgx_audio_trace_capacity()==65536);
   assert(gpgx_audio_trace_disable()==0);
   puts("native-observer-selftest: 12 ordered nested events; scoped CPU PCs; READY reset sticky fail-closed");
