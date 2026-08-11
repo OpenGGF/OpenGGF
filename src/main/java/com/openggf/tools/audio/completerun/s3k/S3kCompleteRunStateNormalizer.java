@@ -22,11 +22,12 @@ public final class S3kCompleteRunStateNormalizer {
     public static final List<String> ACTIVE_ROLE_FIELDS = List.of(
             "sourceLayer", "assetKey", "cursor", "playbackControl", "voiceControl", "tempoDivider",
             "transpose", "volume", "modulationControl", "voiceIndex", "stackPointer", "amsFmsPan",
-            "durationTimeout", "savedDuration", "frequencyOrDac", "voiceSongId", "detune",
-            "unknown11", "volumeEnvelope", "fmVolumeEnvelope", "ssgEgPointer", "feedbackAlgorithm",
-            "totalLevelPointer", "noteFillTimeout", "noteFillMaster", "modulationPointer",
-            "modulationValue", "modulationWait", "modulationSpeed", "modulationDelta",
-            "modulationSteps", "loopCounters", "voicesPointer", "returnStack");
+            "durationTimeout", "savedDuration", "savedDac", "frequency", "voiceSongId", "detune",
+            "unknown11", "volumeEnvelope", "fmVolumeEnvelope", "fmVolumeEnvelopeMask",
+            "ssgEgPointer", "psgNoise", "feedbackAlgorithm", "totalLevelPointer", "noteFillTimeout",
+            "noteFillMaster", "modulationMode", "modulationPointer", "modulationValue",
+            "modulationEnvelopeSensitivity", "modulationWait", "modulationSpeed",
+            "modulationEnvelopeIndex", "modulationDelta", "modulationSteps", "sharedStackStorage");
 
     private static final List<CompleteRunAudioTrace.HardwareRole> MUSIC_ROLES = List.of(
             CompleteRunAudioTrace.HardwareRole.DAC,
@@ -70,12 +71,13 @@ public final class S3kCompleteRunStateNormalizer {
             int tempoDivider, int transpose, int volume, int modulationControl, int voiceIndex,
             int stackPointer, int amsFmsPan, int durationTimeout, int savedDuration, int frequencyOrDac,
             int voiceSongId, int detune, int unknown11, int volumeEnvelope, int fmVolumeEnvelope,
-            RomPointer ssgEgPointer, int feedbackAlgorithm, RomPointer totalLevelPointer,
+            int fmVolumeEnvelopeMask, RomPointer ssgEgPointer, int psgNoise,
+            int feedbackAlgorithm, RomPointer totalLevelPointer,
             int noteFillTimeout, int noteFillMaster, RomPointer modulationPointer, int modulationValue,
             int modulationWait, int modulationSpeed, int modulationDelta, int modulationSteps,
-            List<Integer> loopCounters, RomPointer voicesPointer, List<RomPointer> returnStack) {
+            List<Integer> sharedStorage, RomPointer voicesPointer, List<RomPointer> returnStack) {
         public Track {
-            loopCounters = loopCounters == null ? List.of() : List.copyOf(loopCounters);
+            sharedStorage = sharedStorage == null ? List.of() : List.copyOf(sharedStorage);
             returnStack = returnStack == null ? List.of() : List.copyOf(returnStack);
             if (populated) {
                 Objects.requireNonNull(dataPointer, "populated track data pointer");
@@ -96,6 +98,8 @@ public final class S3kCompleteRunStateNormalizer {
                 unsignedByte(unknown11, "track unknown $11 byte");
                 unsignedByte(volumeEnvelope, "track volume envelope");
                 unsignedByte(fmVolumeEnvelope, "track FM volume envelope");
+                unsignedByte(fmVolumeEnvelopeMask, "track FM volume envelope mask");
+                unsignedByte(psgNoise, "track PSG noise");
                 unsignedByte(feedbackAlgorithm, "track feedback/algorithm");
                 unsignedByte(noteFillTimeout, "track note-fill timeout");
                 unsignedByte(noteFillMaster, "track note-fill master");
@@ -104,19 +108,23 @@ public final class S3kCompleteRunStateNormalizer {
                 unsignedByte(modulationSpeed, "track modulation speed");
                 unsignedByte(modulationDelta, "track modulation delta");
                 unsignedByte(modulationSteps, "track modulation steps");
-                if (loopCounters.size() != 2
-                        || loopCounters.stream().anyMatch(value -> !isUnsignedByte(value))) {
-                    throw new IllegalArgumentException("populated S3K track requires two unsigned loop counters");
+                if (sharedStorage.size() != 8
+                        || sharedStorage.stream().anyMatch(value -> !isUnsignedByte(value))) {
+                    throw new IllegalArgumentException("populated S3K track requires all eight shared $28-$2F bytes");
                 }
-                if (returnStack.size() > 2 || returnStack.stream().anyMatch(Objects::isNull)) {
-                    throw new IllegalArgumentException("S3K track return stack exceeds its two-entry capacity");
+                if (stackPointer < 0x2c || stackPointer > 0x30 || ((0x30 - stackPointer) & 1) != 0) {
+                    throw new IllegalArgumentException("S3K stack pointer must partition its $2C-$30 capacity");
+                }
+                int expectedReturns = (0x30 - stackPointer) / 2;
+                if (returnStack.size() != expectedReturns || returnStack.stream().anyMatch(Objects::isNull)) {
+                    throw new IllegalArgumentException("S3K return stack must match the stack pointer depth");
                 }
             }
         }
 
         public static Track inactive() {
             return new Track(false, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, null, 0, null, 0, 0, null, 0, 0, 0, 0, 0, List.of(), null, List.of());
+                    0, 0, null, 0, 0, null, 0, 0, null, 0, 0, 0, 0, 0, List.of(), null, List.of());
         }
 
         boolean playing() {
@@ -231,19 +239,22 @@ public final class S3kCompleteRunStateNormalizer {
         add(fields, "sfxTempoDivider", globals.sfxTempoDivider());
         add(fields, "songBank", globals.songBank());
         add(fields, "segaPcmPlaying", globals.segaPcmPlaying());
-        add(fields, "musicTracks", canonicalTracks(snapshot.musicTracks(), assets));
+        add(fields, "musicTracks", canonicalTracks(snapshot.musicTracks(), MUSIC_ROLES,
+                TrackLayer.MUSIC, globals.updatingSfx(), assets));
         add(fields, "overlap", canonicalOverlap(globals, snapshot.overlap(), assets));
 
         EnumMap<CompleteRunAudioTrace.HardwareRole, EffectiveTrack> effective = new EnumMap<>(
                 CompleteRunAudioTrace.HardwareRole.class);
         for (int index = 0; index < MUSIC_ROLES.size(); index++) {
             Track track = snapshot.musicTracks().get(index);
-            if (track.playing()) effective.put(MUSIC_ROLES.get(index), new EffectiveTrack("MUSIC", track));
+            if (track.playing()) effective.put(MUSIC_ROLES.get(index),
+                    new EffectiveTrack(TrackLayer.MUSIC, MUSIC_ROLES.get(index), track));
         }
         if (snapshot.overlap() instanceof LiveSfx live) {
             for (int index = 0; index < SFX_ROLES.size(); index++) {
                 Track track = live.tracks().get(index);
-                if (track.playing()) effective.put(SFX_ROLES.get(index), new EffectiveTrack("SFX", track));
+                if (track.playing()) effective.put(SFX_ROLES.get(index),
+                        new EffectiveTrack(TrackLayer.SFX, SFX_ROLES.get(index), track));
             }
         }
         List<CompleteRunAudioTrace.RoleState> roles = new ArrayList<>(MUSIC_ROLES.size());
@@ -252,7 +263,7 @@ public final class S3kCompleteRunStateNormalizer {
             roles.add(source == null
                     ? new CompleteRunAudioTrace.RoleState(role, false, List.of())
                     : new CompleteRunAudioTrace.RoleState(role, true,
-                            roleFields(source.sourceLayer(), source.track(), assets)));
+                            roleFields(source.layer(), source.role(), source.track(), globals.updatingSfx(), assets)));
         }
         return new CompleteRunAudioTrace.NormalizedState(fields, roles);
     }
@@ -262,40 +273,63 @@ public final class S3kCompleteRunStateNormalizer {
         Map<String, Object> result = new LinkedHashMap<>();
         if (overlap instanceof LiveSfx live) {
             result.put("mode", "LIVE_SFX");
-            result.put("tracks", canonicalTracks(live.tracks(), assets));
+            result.put("tracks", canonicalTracks(live.tracks(), SFX_ROLES,
+                    TrackLayer.SFX, globals.updatingSfx(), assets));
         } else if (overlap instanceof SavedMusic saved) {
             result.put("mode", "SAVED_MUSIC");
             result.put("savedVoiceTablePointer", requiredPointer(globals.savedVoiceTablePointer(), assets));
             result.put("savedCurrentTempo", globals.savedCurrentTempo());
             result.put("savedSongBank", globals.savedSongBank());
             result.put("savedTempoSpeedup", globals.savedTempoSpeedup());
-            result.put("savedTracks", canonicalTracks(saved.tracks(), assets));
+            result.put("savedTracks", canonicalTracks(saved.tracks(), MUSIC_ROLES,
+                    TrackLayer.SAVED_MUSIC, 0, assets));
         }
         return Map.copyOf(result);
     }
 
-    private static List<Map<String, Object>> canonicalTracks(List<Track> tracks, Map<String, Asset> assets) {
+    private static List<Map<String, Object>> canonicalTracks(List<Track> tracks,
+            List<CompleteRunAudioTrace.HardwareRole> roles, TrackLayer layer, int updatingSfx,
+            Map<String, Asset> assets) {
         List<Map<String, Object>> result = new ArrayList<>(tracks.size());
-        for (Track track : tracks) {
+        for (int index = 0; index < tracks.size(); index++) {
+            Track track = tracks.get(index);
             Map<String, Object> values = new LinkedHashMap<>();
             values.put("populated", track.populated());
-            if (track.populated()) putTrackValues(values, track, assets);
+            if (track.populated()) putTrackValues(values, layer, roles.get(index), track, updatingSfx, assets);
             result.add(Map.copyOf(values));
         }
         return List.copyOf(result);
     }
 
     private static List<CompleteRunAudioTrace.StateField> roleFields(
-            String sourceLayer, Track track, Map<String, Asset> assets) {
+            TrackLayer layer, CompleteRunAudioTrace.HardwareRole role, Track track, int updatingSfx,
+            Map<String, Asset> assets) {
         Map<String, Object> values = new LinkedHashMap<>();
-        values.put("sourceLayer", sourceLayer);
-        putTrackValues(values, track, assets);
+        values.put("sourceLayer", layer.name());
+        putTrackValues(values, layer, role, track, updatingSfx, assets);
         List<CompleteRunAudioTrace.StateField> fields = new ArrayList<>(ACTIVE_ROLE_FIELDS.size());
         for (String name : ACTIVE_ROLE_FIELDS) fields.add(new CompleteRunAudioTrace.StateField(name, values.get(name)));
         return List.copyOf(fields);
     }
 
-    private static void putTrackValues(Map<String, Object> values, Track track, Map<String, Asset> assets) {
+    private static void putTrackValues(Map<String, Object> values, TrackLayer layer,
+            CompleteRunAudioTrace.HardwareRole role, Track track, int updatingSfx,
+            Map<String, Asset> assets) {
+        boolean psg = isPsg(role);
+        boolean dac = role == CompleteRunAudioTrace.HardwareRole.DAC && layer != TrackLayer.SFX;
+        boolean fm = !psg && !dac;
+        boolean pitched = fm || psg;
+        if (psg != ((track.voiceControl() & 0x80) != 0)) {
+            throw new IllegalArgumentException("S3K track voice control disagrees with its hardware role");
+        }
+        boolean fmEnvelope = fm && track.fmVolumeEnvelope() > 0 && track.fmVolumeEnvelope() < 0x80;
+        boolean ssgEg = fm && (track.fmVolumeEnvelope() & 0x80) != 0;
+        boolean psgEnvelope = psg && track.voiceIndex() != 0;
+        boolean psgNoise = psg && (track.playbackControl() & 1) != 0;
+        String modulationMode = !pitched || track.modulationControl() == 0
+                ? "OFF" : track.modulationControl() == 0x80 ? "NORMAL" : "ENVELOPE";
+        boolean normalModulation = modulationMode.equals("NORMAL");
+        boolean modulationEnvelope = modulationMode.equals("ENVELOPE");
         Map<String, Object> data = requiredPointer(track.dataPointer(), assets);
         values.put("assetKey", data.get("assetKey"));
         values.put("cursor", data.get("cursor"));
@@ -304,32 +338,86 @@ public final class S3kCompleteRunStateNormalizer {
         values.put("tempoDivider", track.tempoDivider());
         values.put("transpose", track.transpose());
         values.put("volume", track.volume());
-        values.put("modulationControl", track.modulationControl());
+        values.put("modulationControl", pitched ? track.modulationControl() : 0);
         values.put("voiceIndex", track.voiceIndex());
         values.put("stackPointer", track.stackPointer());
-        values.put("amsFmsPan", track.amsFmsPan());
+        values.put("amsFmsPan", psg ? 0 : track.amsFmsPan());
         values.put("durationTimeout", track.durationTimeout());
         values.put("savedDuration", track.savedDuration());
-        values.put("frequencyOrDac", track.frequencyOrDac());
+        values.put("savedDac", dac ? track.frequencyOrDac() & 0xff : 0);
+        values.put("frequency", pitched ? track.frequencyOrDac() : 0);
         values.put("voiceSongId", track.voiceSongId());
-        values.put("detune", track.detune());
+        values.put("detune", pitched ? track.detune() : 0);
         values.put("unknown11", track.unknown11());
-        values.put("volumeEnvelope", track.volumeEnvelope());
-        values.put("fmVolumeEnvelope", track.fmVolumeEnvelope());
-        values.put("ssgEgPointer", optionalPointer(track.ssgEgPointer(), assets));
-        values.put("feedbackAlgorithm", track.feedbackAlgorithm());
-        values.put("totalLevelPointer", optionalPointer(track.totalLevelPointer(), assets));
+        values.put("volumeEnvelope", fmEnvelope || psgEnvelope ? track.volumeEnvelope() : 0);
+        values.put("fmVolumeEnvelope", fm ? track.fmVolumeEnvelope() : 0);
+        values.put("fmVolumeEnvelopeMask", fmEnvelope ? track.fmVolumeEnvelopeMask() : 0);
+        values.put("ssgEgPointer", ssgEg ? requiredPointer(track.ssgEgPointer(), assets)
+                : Map.of("active", false));
+        values.put("psgNoise", psgNoise ? track.psgNoise() : 0);
+        values.put("feedbackAlgorithm", fm ? track.feedbackAlgorithm() : 0);
+        values.put("totalLevelPointer", fm ? optionalPointer(track.totalLevelPointer(), assets)
+                : Map.of("active", false));
         values.put("noteFillTimeout", track.noteFillTimeout());
         values.put("noteFillMaster", track.noteFillMaster());
-        values.put("modulationPointer", optionalPointer(track.modulationPointer(), assets));
-        values.put("modulationValue", track.modulationValue());
-        values.put("modulationWait", track.modulationWait());
-        values.put("modulationSpeed", track.modulationSpeed());
-        values.put("modulationDelta", track.modulationDelta());
-        values.put("modulationSteps", track.modulationSteps());
-        values.put("loopCounters", track.loopCounters());
-        values.put("voicesPointer", optionalPointer(track.voicesPointer(), assets));
-        values.put("returnStack", track.returnStack().stream().map(pointer -> requiredPointer(pointer, assets)).toList());
+        values.put("modulationMode", modulationMode);
+        values.put("modulationPointer", normalModulation
+                ? requiredPointer(track.modulationPointer(), assets) : Map.of("active", false));
+        values.put("modulationValue", normalModulation ? track.modulationValue() : 0);
+        values.put("modulationEnvelopeSensitivity", modulationEnvelope ? track.modulationValue() & 0xff : 0);
+        values.put("modulationWait", normalModulation ? track.modulationWait() : 0);
+        values.put("modulationSpeed", normalModulation ? track.modulationSpeed() : 0);
+        values.put("modulationEnvelopeIndex", modulationEnvelope ? track.modulationSpeed() : 0);
+        values.put("modulationDelta", normalModulation ? track.modulationDelta() : 0);
+        values.put("modulationSteps", normalModulation ? track.modulationSteps() : 0);
+        boolean sfxVoicesLive = layer == TrackLayer.SFX && fm && updatingSfx != 0;
+        values.put("sharedStackStorage", sharedStackStorage(track, sfxVoicesLive, assets));
+    }
+
+    private static List<Map<String, Object>> sharedStackStorage(
+            Track track, boolean sfxVoicesLive, Map<String, Asset> assets) {
+        List<Map<String, Object>> result = new ArrayList<>(4);
+        for (int cell = 0; cell < 4; cell++) {
+            int offset = 0x28 + cell * 2;
+            if (offset >= track.stackPointer()) {
+                int returnIndex = (offset - track.stackPointer()) / 2;
+                result.add(Map.of("kind", "RETURN_POINTER",
+                        "pointer", sharedPointer(track, cell, track.returnStack().get(returnIndex), assets)));
+            } else if (offset == 0x2a && sfxVoicesLive) {
+                result.add(Map.of("kind", "VOICES_POINTER",
+                        "pointer", sharedPointer(track, cell, track.voicesPointer(), assets)));
+            } else {
+                result.add(Map.of("kind", "RAW",
+                        "bytes", List.of(track.sharedStorage().get(cell * 2),
+                                track.sharedStorage().get(cell * 2 + 1))));
+            }
+        }
+        return List.copyOf(result);
+    }
+
+    private static Map<String, Object> sharedPointer(
+            Track track, int cell, RomPointer hint, Map<String, Asset> assets) {
+        Objects.requireNonNull(hint, "live S3K shared-storage pointer");
+        Asset asset = assets.get(hint.assetKey());
+        if (asset == null) throw new IllegalArgumentException("unknown S3K ROM asset: " + hint.assetKey());
+        int rawWord = track.sharedStorage().get(cell * 2)
+                | track.sharedStorage().get(cell * 2 + 1) << 8;
+        long baseLowWord = asset.romBase() & 0xffffL;
+        long resolved = asset.romBase() + ((rawWord - baseLowWord) & 0xffffL);
+        if (resolved >= asset.romEndExclusive() || resolved + 0x10000L < asset.romEndExclusive()) {
+            throw new IllegalArgumentException("S3K shared-storage word does not identify one asset address");
+        }
+        if (hint.pointer() != resolved) {
+            throw new IllegalArgumentException("S3K shared-storage pointer hint disagrees with its raw word");
+        }
+        return requiredPointer(new RomPointer(hint.assetKey(), resolved), assets);
+    }
+
+    private static boolean isPsg(CompleteRunAudioTrace.HardwareRole role) {
+        return switch (role) {
+            case PSG1, PSG2, PSG3 -> true;
+            case DAC, FM1, FM2, FM3, FM4, FM5, FM6 -> false;
+        };
     }
 
     private static Map<String, Object> optionalPointer(RomPointer pointer, Map<String, Asset> assets) {
@@ -374,5 +462,7 @@ public final class S3kCompleteRunStateNormalizer {
         if (value == null || value.isBlank()) throw new IllegalArgumentException(label + " must not be blank");
     }
 
-    private record EffectiveTrack(String sourceLayer, Track track) { }
+    private enum TrackLayer { MUSIC, SFX, SAVED_MUSIC }
+
+    private record EffectiveTrack(TrackLayer layer, CompleteRunAudioTrace.HardwareRole role, Track track) { }
 }

@@ -35,9 +35,25 @@ details are in the adjacent `TRUST.md`. No generated core or ROM is committed.
   frontier. The game-local Task 2 profile, native identity resolver, and strict
   `$1C00` state normalizer are now implemented. They retain the shipped
   `fix_sndbugs=0` one-up save-loop behavior and treat the overlapping RAM as
-  either seven live SFX tracks or nine saved music tracks. Both producer
+  either seven live SFX tracks or nine saved music tracks. Track unions are
+  canonicalized by physical role and live driver mode: DAC/FM frequency,
+  PSG noise, FM volume-envelope/SSG-EG/TL state, normal versus envelope
+  modulation, SFX voice pointers, and the two-entry return stack compare only
+  while their owning branch can affect future output. The complete `$28-$2F`
+  shared loop/voice/return region remains canonical: unchecked F7 loop indices
+  retain every raw byte below the live stack pointer, while live voice and
+  return pointer cells compare by the unique asset/cursor address encoded by
+  their authoritative little-endian raw word; disagreeing adapter hints fail
+  closed. Both producer
   bindings remain explicitly unavailable, so engine comparison is still not
   implemented or publication-capable.
+
+This role/union applicability is derived from
+`docs/skdisasm/Sound/Z80 Sound Driver.asm:25-98`. In particular, the source
+declares only two loop bytes but warns that they may overflow into the voice
+pointer and stack region (`:92-95`); the F7/F8 handlers use an unchecked index
+from `$28` (`:3249`, `:3615`), and F8/F9 partition the live return stack through
+`StackPointer` (`:3649-3677`).
 
 The S3K profile cannot become publication-capable until central integration
 provides the read-only run-local movie at
@@ -80,8 +96,8 @@ this real S1 prefix are the affected gates.
 - Native observer selftests: six harnesses passing.
 - Existing Sonic 2 and Sonic 3 & Knuckles capability/lifecycle suite: 10 tests
   passing, with their prior complete-run duplicate evidence unchanged.
-- S3K Task 2 profile/resolver/normalizer and engine command-boundary regression:
-  11 tests passing.
+- S3K Task 2 profile/resolver/normalizer: 18 tests passing.
+- S3K engine command-boundary regression guards: 7 tests passing.
 - S3K AIZ release-slice, level-loading, bootstrap, and decoding guards: 52
   tests passing against locked-on ROM SHA-1
   `cfbf98c36c776677290a872547ac47c53d2761d6`.
