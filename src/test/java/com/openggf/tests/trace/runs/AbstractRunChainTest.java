@@ -279,6 +279,27 @@ abstract class AbstractRunChainTest {
             }
         }
 
+        /**
+         * Compares the run's terminal dynamic-art tail.
+         *
+         * <p><b>Callers must gate this on the coordinator having actually
+         * begun a terminal tail</b> ({@code terminalPlan() != null}), which is
+         * the same manifest-declared opt-in the walker and the production
+         * launcher use. {@code TraceRunReplayWalker.planTerminalMovieTail}
+         * states the contract outright -- "an unspecified endpoint
+         * deliberately leaves both tail replay and terminal assertion
+         * disabled" -- and {@code
+         * TraceSessionLauncher.compareRunTerminalDynamicArtTail} is reachable
+         * only from the {@code BeginTerminalTail} action, so a manifest with
+         * no {@code expected_movie_end_mode} never compares a tail in
+         * production. This probe used to compare unconditionally, which asked
+         * the engine for art from movie rows the harness had declined to drive
+         * at all: with an unspecified endpoint the coordinator emits {@code
+         * CompleteRun} straight after the final segment closes, zero tail rows
+         * are stepped, and no production submission can occur. Runs whose
+         * manifest does declare an endpoint (currently the two S1 runs) are
+         * unaffected and still assert their tail.
+         */
         private void verifyTerminal(
                 TraceRunManifest run, int movieFrameCount) {
             if (gapStartMovieLogicalFrame == null
@@ -883,8 +904,10 @@ abstract class AbstractRunChainTest {
                                 runCoordinator.terminalPlan(), loop,
                                 inputHandler, movie, playback, fixture,
                                 terminalRows, runCoordinator);
-                        dynamicArtGapJournal.verifyTerminal(
-                                run, movie.getFrameCount());
+                        if (runCoordinator.terminalPlan() != null) {
+                            dynamicArtGapJournal.verifyTerminal(
+                                    run, movie.getFrameCount());
+                        }
                     } finally {
                         gameplayMode.clearTraceRunFrameDriver(terminalRows);
                     }
@@ -1741,8 +1764,10 @@ abstract class AbstractRunChainTest {
                             "Complete movie must finish in the manifest-declared mode");
                 }
                 assertReturnBoundary(plans, specialIndex, runDir);
-                dynamicArtGapJournal.verifyTerminal(
-                        run, movie.getFrameCount());
+                if (tail != null) {
+                    dynamicArtGapJournal.verifyTerminal(
+                            run, movie.getFrameCount());
+                }
                 dynamicArtSegments.close();
                 hardwareTiming.close();
                 runCoordinator.finishTerminal(

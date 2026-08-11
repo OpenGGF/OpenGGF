@@ -72987,3 +72987,58 @@ same iteration). No constant was introduced.
   pre-existing. Unit sweep over the spring/movement classes: 293 tests, 3
   failures (`TestSpringObjectInstance` x2, `TestCPZSpinTubeObjectInstance` x1),
   all three reproduced identically at the base commit.
+
+## 2026-08-12 - S2 EHZ half-pipe chain: the terminal dynamic-art tail was never driven
+
+- Command: `mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1
+  -Dsurefire.runOrder=alphabetical` with all three ROM paths, one fork.
+  Dedicated worktree on `bugfix/ai-r78-tail`, base
+  commit `5795ff48f`; control measured in a second detached worktree at the
+  same commit.
+- CONTROL at `5795ff48f`: `TestS2EhzHalfpipeRoundTripChain` FAILS with
+  `shared terminal dynamic-art comparison failed for seg3_ehz1`
+  (`run_tail.edge_count` expected 1 / actual 0, `run_tail.edge[0].present`
+  expected true / actual false, one missing `final_ledger_fingerprint`).
+  `TestS2CompleteEmeraldRunChain` FAILS on `DPLC divergence in named-run
+  special-stage segment 3`. `TestS1GhzMazeRoundTripChain` GREEN.
+- MEASURED root cause: the harness never drove a single terminal tail row. A
+  probe printing from `replayTerminalMovieTail` produced no output, because
+  `terminalPlan()` is null - this run's `run_manifest.json` declares no
+  `expected_movie_end_mode`, so `TraceRunReplayWalker.planTerminalMovieTail`
+  returns a zero-row plan and the coordinator emits `CompleteRun` rather than
+  `BeginTerminalTail`. The comparator meanwhile draws its single expected edge
+  from `dynamic_art_gap_transitions` filtered to `[sourceEnd=22611,
+  movieFrameCount)`, a window over which the engine was never stepped, so it
+  could not have produced an edge by construction.
+- Two paths that should agree and did not: the walker's own javadoc states "an
+  unspecified endpoint deliberately leaves both tail replay and terminal
+  assertion disabled", and production honours it -
+  `TraceSessionLauncher.compareRunTerminalDynamicArtTail` is reachable only
+  from the `BeginTerminalTail` action. Only `AbstractRunChainTest`'s
+  `DynamicArtGapJournalProbe.verifyTerminal` was called unconditionally.
+- FIX (test harness only, no `src/main` change, no constant introduced): both
+  `verifyTerminal` call sites now gate on the coordinator having begun a
+  terminal tail, the same manifest-declared opt-in production uses. Data
+  driven from the manifest; no zone, route, game or frame predicate.
+- What this stops checking: the terminal tail of any run whose manifest omits
+  `expected_movie_end_mode` - both S2 runs and all three S3K runs - is no
+  longer compared, matching production. Only the two S1 runs declare the field
+  and they still assert their tails. Restoring the comparison needs the
+  manifest republished with the field so the tail rows are actually driven; a
+  fixture-publication decision.
+- AFTER: `TestS2EhzHalfpipeRoundTripChain` frontier MOVED far earlier in the
+  run. It now reaches its epilogue `dynamicArtGapJournal.verify(run)` for the
+  first time (previously unreachable: `verifyTerminal` threw inside the walk's
+  `try`) and fails on the FIRST structural gap - `shared dynamic-art gap
+  comparison failed for seg1_ehz1 -> ss`, `run_gap.edge_count` expected 1 /
+  actual 0, `run_gap.edge[0].present` expected true / actual false. Pre-existing
+  and masked, not introduced.
+- Regression check: `-Dtest=*RunChain,TestS2Ehz1TraceReplay,TestS2Mtz1TraceReplay,TestS2Cpz1TraceReplay,TestS2Arz1TraceReplay,TestS2Ooz1TraceReplay`
+  produces an IDENTICAL failure set at base and with the fix
+  (`TestS2CompleteEmeraldRunChain`, `TestS3kKnucklesSuperEmeraldRunChain`,
+  `TestS3kMegaRunChain`; only stack-frame line numbers shift). Separately green
+  with the fix: `TestS1GhzMazeRoundTripChain`,
+  `TestS2SpecialStage1..7TraceReplay`, `TestS2SpecialStageTraceReplay`,
+  `S2SpecialStageFinishBoundaryMappingTest`,
+  `TestTraceRunDynamicArtGapComparator`, `TestTraceRunDynamicArtGapJournal`,
+  `TestVisualTraceRunTerminalTail`.

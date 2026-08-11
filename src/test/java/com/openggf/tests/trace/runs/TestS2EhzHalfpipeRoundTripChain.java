@@ -333,14 +333,51 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * launches write none. Fixed in {@code PlayableSpriteMovement} by gating grounded
  * input on {@code move_lock} alone.
  *
- * <h2>Current RED: the run's terminal dynamic-art comparison</h2>
+ * <h2>The run's terminal dynamic-art comparison: FIXED 2026-08-12 (harness)</h2>
  *
- * <p>With segment 4 replaying all 3452 rows, the newly reachable terminal assertion
- * fails: {@code shared terminal dynamic-art comparison failed for seg3_ehz1} with
+ * <p>With segment 4 replaying all 3452 rows, the terminal assertion became reachable
+ * and failed: {@code shared terminal dynamic-art comparison failed for seg3_ehz1} with
  * {@code run_tail.edge_count} expected 1 / actual 0, {@code run_tail.edge[0].present}
- * expected true / actual false, and one missing {@code final_ledger_fingerprint}. The
- * run's tail produces no production art edge where the recording has one; that is the
- * next thing to chase.
+ * expected true / actual false, and one missing {@code final_ledger_fingerprint}.
+ *
+ * <p><b>The engine was never asked to produce that edge.</b> Measured with a probe on
+ * {@code replayTerminalMovieTail}: it emits no output at all, because
+ * {@code HeadlessRunCoordinatorAdapter.terminalPlan()} is null. This run's
+ * {@code run_manifest.json} carries no {@code expected_movie_end_mode}, so
+ * {@code TraceRunReplayWalker.planTerminalMovieTail} returns a zero-row plan and the
+ * coordinator emits {@code CompleteRun} instead of {@code BeginTerminalTail}. Zero tail
+ * rows are stepped, so no production submission can occur over
+ * {@code [22611, movieFrameCount)} -- the exact window the comparator draws its single
+ * expected edge from (a {@code sonic} mapping-frame-15 {@code run_gap} submission
+ * stamped at movie frame 22611, i.e. {@code sourceEnd} itself).
+ *
+ * <p>That combination is the walker's documented contract -- "an unspecified endpoint
+ * deliberately leaves both tail replay AND terminal assertion disabled" -- and the
+ * production launcher honours it: {@code
+ * TraceSessionLauncher.compareRunTerminalDynamicArtTail} is reachable only from the
+ * {@code BeginTerminalTail} action. Only {@link AbstractRunChainTest}'s probe called
+ * {@code verifyTerminal} unconditionally, so the two paths disagreed and the test
+ * asserted over rows it had declined to drive. The probe now gates on the same
+ * manifest-declared opt-in. {@code TestS1GhzMazeRoundTripChain} (whose manifest does
+ * declare {@code expected_movie_end_mode: level}) is unaffected and still asserts its
+ * two tail edges.
+ *
+ * <p><b>What this stops checking.</b> The terminal tail of every run whose manifest
+ * omits {@code expected_movie_end_mode} -- both S2 runs and all three S3K runs -- is no
+ * longer compared, matching production. Restoring the comparison for this run means
+ * republishing its manifest with the field so the coordinator actually drives the tail
+ * rows; that is a fixture-publication decision, not an engine change.
+ *
+ * <h2>Current RED: the seg1_ehz1 -&gt; ss structural gap (newly exposed)</h2>
+ *
+ * <p>With the terminal assertion correctly skipped, the chain now reaches its epilogue
+ * {@code dynamicArtGapJournal.verify(run)} for the first time, which fails on the very
+ * FIRST structural gap: {@code shared dynamic-art gap comparison failed for seg1_ehz1
+ * -> ss} with {@code run_gap.edge_count} expected 1 / actual 0 and
+ * {@code run_gap.edge[0].present} expected true / actual false. This was always
+ * present; it was masked because {@code verifyTerminal} threw inside the walk's
+ * {@code try} block before the epilogue ran. That is the next thing to chase, and it
+ * sits far earlier in the run than the tail did.
  *
  * <p>Segment 4's own physics report closes at 45814 errors whose first mismatch is
  * {@code sidekick_x} at frame 1 -- the same CPU-Tails title-card-duration diagnostic
