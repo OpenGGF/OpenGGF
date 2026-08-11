@@ -72815,3 +72815,58 @@ control and after, with an identical set of 41 failing classes.
   toward green, and a change that can move when a malformed fixture fails can
   move those two classes' messages underneath that work. Gate it on a
   MESSAGE-level diff of the red classes, not a pass/fail-count diff.
+
+## 2026-08-11 - S3K recorder: direct-FIFO sample landing inside Process_Kos_Queue_EndReached
+
+- Worktree `<scratch-worktree>` over `f8a266aad`; uncommitted
+  candidate touching `tools/bizhawk-headless/src/Recording/HardwareTimingEventEngine.cs`
+  and `tools/bizhawk-headless/tests/HardwareTimingEventEngineTests.cs`.
+- CONTROL at `f8a266aad`: capturing
+  `docs/BizHawk-2.11-linux-x64/Movies/s3k-sonic-tails-complete-emeralds.bk2`
+  (`./run.sh --mode trace --run-id <id> --rom <s3k> --movie <bk2> --output <dir>`)
+  aborts deterministically with
+  `Error: Kosinski backreference precedes output at ROM 0x15BAC1`, in AIZ act 2.
+- The brief's diagnosis — a wrong per-module source computed by the recorder's
+  Kos_module_queue mirror — is DISPROVEN by instrumentation. At the failing
+  sample `Kos_module_queue` held `0x0015B95E`, the correct single-module source
+  of `ArtKosM_ResultsSONIC` (`0x15B95C`, uncompressed-size word `0x0240`), and
+  every module-child callback observation was correct.
+- MEASURED cause: the recorder's frame-end RAM sample landed at M68K
+  `PC=0x001CE0`, inside `Process_Kos_Queue_EndReached` (`sonic3k.asm`), on raw
+  frame 6119 of the movie's own frame stream. That routine stores the finished
+  stream's read cursors over slot zero (`move.l a0,(Kos_decomp_queue).w` at ROM
+  `0x1CD2`, `move.l a1,(Kos_decomp_destination).w` at `0x1CD6`), clears the busy
+  bit (`0x1CDA`), decrements `Kos_decomp_queue_count` (`0x1CE0`) and only then
+  shifts the queue up. Sampled between the clear and the decrement, RAM read
+  `count=0x0001` with slot zero `= (0x0015BAB9, 0xFFFFD240)` — the post-decode
+  cursors, `0x15B95E + 0x15B` compressed bytes and `0xFFFFD000 + 0x240` output
+  bytes, not the start of any archive. The recorder read that as a fresh
+  submission and scanned `0x15BAB9` as Kosinski.
+- Fix: the recorder recognises that state from the mirrored head's own
+  ROM-derived shape (`Source + CompressedLength`, `Destination +
+  DestinationLength`) and reads the sample as the post-retirement state the ROM
+  is two instructions from committing — head retired, surviving entries still
+  one physical slot high. No decode check was relaxed, caught or skipped.
+- AFTER: the same capture runs to completion, 63 segments plus
+  `run_manifest.json`.
+- Harness suite `./test.sh --no-gates`: 506 tests, 504 passed, 2 failed. Both
+  failures (`S2 standalone special-stage runner includes first mode frame and
+  stops on exit`, `S2RunCaptureRunner emits the special-stage aux event stream`)
+  reproduce identically at `f8a266aad` and are unrelated to this change.
+- Regression check by re-capture: the committed
+  `s3k-knuckles-complete-superemeralds` run recaptured with this change is
+  byte-identical to
+  `src/test/resources/traces/s3k/runs/s3k-knuckles-complete-superemeralds/`
+  in all 67 segments for both `physics.csv` and `hardware_timing.jsonl` — the
+  stream this change can touch. The `aux_state.jsonl` difference is the
+  recapture omitting `--load-queue-state`, which the committed fixture carries;
+  the extra lines are `load_queue_state` events only.
+- ROM-backed gates `./test.sh --gates-only`: 5 passed, 1 failed
+  (`S1 credits captures twice with deterministic logical evidence`, a missing
+  uncompressed `src/test/resources/traces/s1/credits_00_ghz1/physics.csv`),
+  identical at `f8a266aad`.
+- The new 63-segment, 514,619-row Sonic-and-Tails capture is STAGED, not
+  installed, at
+  `tools/bizhawk-headless/.scratch/s3k-sonic-tails-complete-emeralds/`. Fixture
+  publication needs explicit approval of the exact bytes, so the per-level and
+  chain tests over it are not written yet.

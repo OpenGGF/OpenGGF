@@ -83,6 +83,7 @@ namespace OpenGGF.BizHawk.Headless
         private bool moduleResetClearPending;
         private bool titleCardLoadLoopActive;
         private bool priorDirectBusy;
+        private int directEntryShift;
         private readonly List<DirectSubmission> stagedDirectRetirements =
             new List<DirectSubmission>();
         private readonly TextWriter measurementWriter;
@@ -528,6 +529,41 @@ namespace OpenGGF.BizHawk.Headless
             bool directServiceAdmitted,
             ref List<DeferredDirectCompletion> deferredCompletions)
         {
+            directEntryShift = 0;
+            if (HeadRetirementWriteInFlight(host, physicalCount, busy))
+            {
+                // Read the sample as the post-retirement state the ROM has
+                // already committed everywhere except the count decrement
+                // and the entry shift-up.
+                directEntryShift = 1;
+                physicalCount--;
+            }
+            try
+            {
+                ObserveDirectQueueCore(
+                    rawFrame,
+                    host,
+                    writer,
+                    physicalCount,
+                    busy,
+                    directServiceAdmitted,
+                    ref deferredCompletions);
+            }
+            finally
+            {
+                directEntryShift = 0;
+            }
+        }
+
+        private void ObserveDirectQueueCore(
+            int rawFrame,
+            IGpgxHost host,
+            TextWriter writer,
+            int physicalCount,
+            bool busy,
+            bool directServiceAdmitted,
+            ref List<DeferredDirectCompletion> deferredCompletions)
+        {
             if (physicalCount < 0
                 || physicalCount > S3KRam.KosDecompQueueCapacity)
             {
@@ -716,13 +752,61 @@ namespace OpenGGF.BizHawk.Headless
             return 0;
         }
 
+        /// <summary>
+        /// Address of physical FIFO entry <paramref name="index"/> as seen
+        /// after the ROM finishes the retirement write sequence in
+        /// Process_Kos_Queue_EndReached. While that sequence is mid-flight
+        /// the entries have not been shifted up yet, so logical entry n
+        /// still lives in physical slot n+1.
+        /// </summary>
+        private int DirectEntryAddress(int index)
+        {
+            return S3KRam.KosDecompQueue
+                + (index + directEntryShift)
+                    * S3KRam.KosDecompQueueEntrySize;
+        }
+
+        /// <summary>
+        /// Process_Kos_Queue_EndReached (sonic3k.asm) writes the finished
+        /// stream's read cursor over the head entry
+        /// (<c>move.l a0,(Kos_decomp_queue).w</c> /
+        /// <c>move.l a1,(Kos_decomp_destination).w</c>), then clears the
+        /// busy bit, then decrements Kos_decomp_queue_count, and only then
+        /// shifts the remaining entries up. A frame-end RAM sample can land
+        /// on any instruction boundary inside that sequence — measured at
+        /// PC 0x001CE0, between the <c>andi.w #$7FFF</c> and the
+        /// <c>subq.w #1</c>, in
+        /// docs/BizHawk-2.11-linux-x64/Movies/s3k-sonic-tails-complete-emeralds.bk2.
+        /// There the count still claims the retired head is occupied while
+        /// slot zero already holds the decompressor's post-decode cursors,
+        /// which are not the start of any archive. Recognising that state
+        /// from the mirrored head's own ROM-derived shape lets the sample be
+        /// read as the stable state the ROM is two instructions away from
+        /// committing.
+        /// </summary>
+        private bool HeadRetirementWriteInFlight(
+            IGpgxHost host, int physicalCount, bool busy)
+        {
+            if (busy || physicalCount < 1 || directQueue.Count < 1)
+            {
+                return false;
+            }
+            DirectSubmission head = directQueue[0];
+            uint retiredSource = head.Source
+                + (uint)head.Shape.CompressedLength;
+            uint retiredDestination = head.Destination
+                + (uint)head.Shape.DestinationLength;
+            return S3KRam.U32(host, S3KRam.KosDecompQueue) == retiredSource
+                && S3KRam.U32(host, S3KRam.KosDecompQueue + 4)
+                    == retiredDestination;
+        }
+
         private bool DirectEntryMatches(
             IGpgxHost host,
             int index,
             DirectSubmission submission)
         {
-            int entry = S3KRam.KosDecompQueue
-                + index * S3KRam.KosDecompQueueEntrySize;
+            int entry = DirectEntryAddress(index);
             return S3KRam.U32(host, entry) == submission.Source
                 && S3KRam.U32(host, entry + 4)
                     == submission.Destination;
@@ -734,8 +818,7 @@ namespace OpenGGF.BizHawk.Headless
             bool exactCallback,
             int submissionRawFrame)
         {
-            int entry = S3KRam.KosDecompQueue
-                + index * S3KRam.KosDecompQueueEntrySize;
+            int entry = DirectEntryAddress(index);
             uint source = S3KRam.U32(host, entry);
             uint destination = S3KRam.U32(host, entry + 4);
             StandardKosShape shape = InspectStandardKos(source);
