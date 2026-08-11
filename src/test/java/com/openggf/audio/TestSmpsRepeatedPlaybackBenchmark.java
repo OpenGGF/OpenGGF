@@ -78,7 +78,8 @@ class TestSmpsRepeatedPlaybackBenchmark {
                 new Sample[scenarios.length][REPETITIONS][];
 
         System.out.printf(
-                "SMPS_BENCHMARK_HEADER schema=2 java=%s vm=%s "
+                "SMPS_BENCHMARK_HEADER schema=3 manifestSha256=%s "
+                        + "java=%s vm=%s "
                         + "vmVendor=%s vmVersion=%s os=%s arch=%s "
                         + "vmArgs=%s vmArgsRaw=%s "
                         + "forkCount=%s forkNumber=%s "
@@ -90,6 +91,7 @@ class TestSmpsRepeatedPlaybackBenchmark {
                         + "tinyProgram=%d largeProgram=%d tinyDac=%d "
                         + "largeDac=%d simpleMusicTracks=%d "
                         + "maxMusicTracks=%d vmNoiseMargin=%d%n",
+                requiredManifestHash(),
                 System.getProperty("java.runtime.version"),
                 stableToken(System.getProperty("java.vm.name")),
                 stableToken(System.getProperty("java.vm.vendor")),
@@ -136,6 +138,14 @@ class TestSmpsRepeatedPlaybackBenchmark {
                 scenarioIndex < scenarios.length; scenarioIndex++) {
             emitSummary(scenarios[scenarioIndex], samples[scenarioIndex]);
         }
+    }
+
+    private static String requiredManifestHash() {
+        String hash = System.getProperty(
+                "openggf.audio.benchmark.manifestSha256", "");
+        assertTrue(hash.matches("[0-9a-f]{64}"),
+                "benchmark manifest SHA-256 must bind raw output");
+        return hash;
     }
 
     private static Sample[] measureCounts(
