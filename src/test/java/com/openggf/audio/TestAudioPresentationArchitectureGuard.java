@@ -469,6 +469,24 @@ class TestAudioPresentationArchitectureGuard {
     }
 
     @Test
+    void lookupGuardRejectsMutuallyExclusiveAnnotatedHelperBranches() {
+        Map<String, String> sources = representativeSafeSmpsSources();
+        sources.put(
+                "audio/presentation/AudioPresentationCommandResolver.java",
+                "private Object resolveSmpsSfxCommand() { "
+                        + "if (catalogReady) { lookupHelper(); } "
+                        + "else { return loadHelper(); } return null; } "
+                        + "@Deprecated private void lookupHelper() { "
+                        + "factory.findRegisteredSmpsSfxAsset(); } "
+                        + "@SuppressWarnings(value = nested(\"unsafe\")) "
+                        + "private Object loadHelper() { return loader.load(); }");
+
+        assertTrue(smpsOwnershipViolations(sources).contains(
+                "load before lookup @ "
+                        + "audio/presentation/AudioPresentationCommandResolver.java"));
+    }
+
+    @Test
     void frozenRomDependencyShapeFieldHasNoRuntimeAccesses() {
         JavaClasses classes = new ClassFileImporter()
                 .importClasses(AudioManager.class);
@@ -586,13 +604,16 @@ class TestAudioPresentationArchitectureGuard {
             violations.add("load before lookup @ audio/AudioManager.java");
         }
         Map<MethodSignature, String> managerMethods = methodBodies(managerSource);
+        Set<String> managerRelevantMethods =
+                lookupRelevantMethods(managerMethods);
         for (String marker : List.of(
                 "public void playSfx(String sfxName, float pitch)",
                 "public void playSfx(GameSound sound, float pitch)",
                 "public boolean playSfx(int sfxId, float pitch)",
                 "public void playDonorSfx(String donorGameId, int sfxId)")) {
             String route = methodBody(managerSource, marker);
-            if (route != null && !inspectLookupOrder(route, managerMethods,
+            if (route != null && !inspectLookupOrder(
+                    route, managerMethods, managerRelevantMethods,
                     false, new HashSet<>()).valid()
                     && !violations.contains(
                     "load before lookup @ audio/AudioManager.java")) {
@@ -688,27 +709,32 @@ class TestAudioPresentationArchitectureGuard {
     private static boolean lookupPrecedesEveryLoad(
             String source, String rootMethod) {
         Map<MethodSignature, String> methods = methodBodies(source);
+        Set<String> relevantMethods = lookupRelevantMethods(methods);
         List<Map.Entry<MethodSignature, String>> roots =
                 methodsNamed(methods, rootMethod);
         return !roots.isEmpty() && roots.stream().allMatch(root ->
-                inspectLookupOrder(root.getValue(), methods, false,
+                inspectLookupOrder(root.getValue(), methods,
+                        relevantMethods, false,
                         new HashSet<>(Set.of(root.getKey()))).valid());
     }
 
     private static LookupInspection inspectLookupOrder(
             String body,
             Map<MethodSignature, String> methods,
+            Set<String> relevantMethods,
             boolean lookupSeen,
             Set<MethodSignature> activeMethods) {
-        ConditionalBranch branch = firstRelevantConditional(body);
+        ConditionalBranch branch = firstRelevantConditional(
+                body, relevantMethods);
         if (branch == null) {
             return inspectLinearLookupOrder(
-                    body, methods, lookupSeen, activeMethods);
+                    body, methods, relevantMethods,
+                    lookupSeen, activeMethods);
         }
         String prefix = body.substring(0, branch.start())
                 + branch.condition() + ";";
         LookupInspection beforeBranch = inspectLinearLookupOrder(
-                prefix, methods, lookupSeen,
+                prefix, methods, relevantMethods, lookupSeen,
                 new HashSet<>(activeMethods));
         if (!beforeBranch.valid()) {
             return beforeBranch;
@@ -717,13 +743,15 @@ class TestAudioPresentationArchitectureGuard {
                 ? maskCompatibilityLoads(branch.whenTrue())
                 : branch.whenTrue();
         LookupInspection trueBranch = inspectLookupOrder(
-                whenTrue, methods, beforeBranch.lookupSeen(),
+                whenTrue, methods, relevantMethods,
+                beforeBranch.lookupSeen(),
                 new HashSet<>(activeMethods));
         if (!trueBranch.valid()) {
             return trueBranch;
         }
         LookupInspection falseBranch = inspectLookupOrder(
-                branch.whenFalse(), methods, beforeBranch.lookupSeen(),
+                branch.whenFalse(), methods, relevantMethods,
+                beforeBranch.lookupSeen(),
                 new HashSet<>(activeMethods));
         if (!falseBranch.valid()) {
             return falseBranch;
@@ -731,13 +759,14 @@ class TestAudioPresentationArchitectureGuard {
         boolean everyBranchSeesLookup = trueBranch.lookupSeen()
                 && falseBranch.lookupSeen();
         return inspectLookupOrder(
-                body.substring(branch.end()), methods,
+                body.substring(branch.end()), methods, relevantMethods,
                 everyBranchSeesLookup, activeMethods);
     }
 
     private static LookupInspection inspectLinearLookupOrder(
             String body,
             Map<MethodSignature, String> methods,
+            Set<String> relevantMethods,
             boolean lookupSeen,
             Set<MethodSignature> activeMethods) {
         List<GuardEvent> events = new ArrayList<>();
@@ -764,7 +793,8 @@ class TestAudioPresentationArchitectureGuard {
                         : methodsNamed(methods, called)) {
                     if (activeMethods.add(target.getKey())) {
                         LookupInspection nested = inspectLookupOrder(
-                                target.getValue(), methods, seen,
+                                target.getValue(), methods,
+                                relevantMethods, seen,
                                 activeMethods);
                         activeMethods.remove(target.getKey());
                         if (!nested.valid()) {
@@ -779,7 +809,8 @@ class TestAudioPresentationArchitectureGuard {
         return new LookupInspection(true, seen);
     }
 
-    private static ConditionalBranch firstRelevantConditional(String body) {
+    private static ConditionalBranch firstRelevantConditional(
+            String body, Set<String> relevantMethods) {
         Matcher matcher = Pattern.compile("(?<![A-Za-z0-9_$])if\\s*\\(")
                 .matcher(body);
         while (matcher.find()) {
@@ -813,8 +844,8 @@ class TestAudioPresentationArchitectureGuard {
                 }
             }
             String whenTrue = body.substring(thenOpen + 1, thenClose);
-            if (containsLookupEvent(whenTrue)
-                    || containsLookupEvent(whenFalse)) {
+            if (containsLookupEvent(whenTrue, relevantMethods)
+                    || containsLookupEvent(whenFalse, relevantMethods)) {
                 String condition = body.substring(
                         conditionOpen + 1, conditionClose);
                 return new ConditionalBranch(
@@ -826,10 +857,39 @@ class TestAudioPresentationArchitectureGuard {
         return null;
     }
 
-    private static boolean containsLookupEvent(String body) {
-        return body.contains("findRegisteredSmpsSfxAsset(")
+    private static boolean containsLookupEvent(
+            String body, Set<String> relevantMethods) {
+        if (body.contains("findRegisteredSmpsSfxAsset(")
                 || body.contains("loader.load(")
-                || body.contains(".loadSfx(");
+                || body.contains(".loadSfx(")) {
+            return true;
+        }
+        return relevantMethods.stream().anyMatch(method ->
+                localCallPattern(method).matcher(body).find());
+    }
+
+    private static Set<String> lookupRelevantMethods(
+            Map<MethodSignature, String> methods) {
+        Set<String> relevant = new HashSet<>();
+        methods.forEach((signature, body) -> {
+            if (containsLookupEvent(body, Set.of())) {
+                relevant.add(signature.name());
+            }
+        });
+        boolean changed;
+        do {
+            changed = false;
+            for (Map.Entry<MethodSignature, String> method
+                    : methods.entrySet()) {
+                if (!relevant.contains(method.getKey().name())
+                        && relevant.stream().anyMatch(name ->
+                        localCallPattern(name).matcher(
+                                method.getValue()).find())) {
+                    changed |= relevant.add(method.getKey().name());
+                }
+            }
+        } while (changed);
+        return Set.copyOf(relevant);
     }
 
     private static int skipWhitespace(String source, int offset) {
