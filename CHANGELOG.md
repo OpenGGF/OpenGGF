@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Performance: prepared SMPS SFX admission now bypasses the presentation
+  registry's whole-music-driver rollback capture on the ordinary and rejected
+  SFX paths. Coordination still rolls back at its narrow admission boundary,
+  while diagnostic chip observers retain the driver-local fallback needed to
+  make their callbacks retryable.
 - Performance: repeated SMPS SFX resolution and base/donor music starts now consult the
   generation-aware asset catalog before invoking a loader. Each program and immutable
   dependency tuple is frozen once per generation, while every music start still receives

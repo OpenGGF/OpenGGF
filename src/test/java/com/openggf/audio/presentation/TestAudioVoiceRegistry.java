@@ -573,7 +573,7 @@ class TestAudioVoiceRegistry {
     }
 
     @Test
-    void failedSfxAttachmentPreservesMusicSequencerAndRetriesWithoutResidue() {
+    void failedSfxPreparationPreservesMusicSequencerAndRetriesWithoutResidue() {
         RecordingInstantiation instantiation = new RecordingInstantiation();
         AudioVoiceRegistry registry = registry(instantiation, new ArrayList<>());
         FailingMutationDriver driver = populatedFailingMutationDriver();
@@ -611,7 +611,7 @@ class TestAudioVoiceRegistry {
     }
 
     @Test
-    void failedSfxAttachmentRestoresExactDacBankAndPlaybackBeforeRetry() {
+    void failedSfxPreparationLeavesExactDacBankAndPlaybackBeforeRetry() {
         DacData musicDac = dacData(
                 new byte[] {0, 24, 64, 127, (byte) 255, (byte) 196, 96, 32});
         DacData sfxDac = dacData(
@@ -655,7 +655,7 @@ class TestAudioVoiceRegistry {
     }
 
     @Test
-    void failedSfxAttachmentRestoresCoordFlagCounterBeforeRetry() {
+    void failedSfxPreparationLeavesCoordFlagCounterForRetry() {
         SmpsCoordFlagRuntimeState state = new SmpsCoordFlagRuntimeState();
         state.setSpindashRevCounter(7);
         SmpsCoordFlagHandlerOwner owner =
@@ -800,7 +800,7 @@ class TestAudioVoiceRegistry {
     }
 
     @Test
-    void failedStandaloneSfxAttachmentRestoresOnlyPostPreparationCoordState() {
+    void failedStandaloneSfxPreparationLeavesOnlyPrePreparationCoordState() {
         SmpsCoordFlagRuntimeState state = new SmpsCoordFlagRuntimeState();
         state.setSpindashRevCounter(7);
         StandaloneCoordMutationInstantiation instantiation =
@@ -818,7 +818,7 @@ class TestAudioVoiceRegistry {
                 IllegalStateException.class,
                 () -> queue.applyPending(registry::apply));
 
-        assertEquals("injected SFX attachment failure",
+        assertEquals("injected SFX preparation failure",
                 failure.getMessage());
         assertEquals(8, state.spindashRevCounter(),
                 "construction precedes the begin/commit coordination snapshot");
@@ -1489,6 +1489,70 @@ class TestAudioVoiceRegistry {
     }
 
     @Test
+    void smpsSfxAdmissionAvoidsWholeOwnerRollbackCapture() {
+        RecordingInstantiation instantiation = new RecordingInstantiation();
+        CapturingDriver ownerDriver = new CapturingDriver();
+        instantiation.enqueueMusicDriver(ownerDriver);
+        AudioVoiceRegistry registry = registry(instantiation, new ArrayList<>());
+        registry.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
+                0x81, AudioSourceDescriptor.baseMusic(0x81),
+                composite(1, 0x81, ownerDriver))));
+
+        registry.apply(new AddSmpsSfx(source(2, 0xB0)));
+
+        assertEquals(0, ownerDriver.liveCommandMutationCaptures,
+                "a new owner-bound SFX must use prepared admission directly");
+        assertEquals(1, ownerDriver.sequencersForTesting().size());
+
+        registry.apply(new AddSmpsSfx(source(3, 0xB0)));
+
+        assertEquals(0, ownerDriver.liveCommandMutationCaptures,
+                "same-ID replacement must not restore the whole music owner");
+        assertEquals(1, ownerDriver.sequencersForTesting().size(),
+                "same-ID replacement still commits exactly once");
+
+        ResolvedSmpsSfxSource rejected = new ResolvedSmpsSfxSource(
+                4, new SmpsAssetKey("s3k", SmpsAssetKey.Route.BASE_ID,
+                0xB1, null), 1 << 16, 0x70, 0x100, 1,
+                MAX_STEREO_FRAMES);
+        assertThrows(IllegalArgumentException.class,
+                () -> registry.apply(new AddSmpsSfx(rejected)));
+        assertEquals(0, ownerDriver.liveCommandMutationCaptures,
+                "preparation rejection must not capture the whole owner");
+
+        CapturingDriver continuousDriver = new CapturingDriver();
+        SmpsSequencer continuous = sequencer(source(5, 0xBC), continuousDriver);
+        continuousDriver.addSequencer(continuous, true);
+        continuousDriver.startContinuousSfx(0xBC, 1);
+        RecordingInstantiation continuousInstantiation = new RecordingInstantiation();
+        continuousInstantiation.failIfCached = true;
+        continuousInstantiation.enqueueMusicDriver(continuousDriver);
+        AudioVoiceRegistry continuousRegistry = registry(
+                continuousInstantiation, new ArrayList<>());
+        continuousRegistry.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
+                0x82, AudioSourceDescriptor.baseMusic(0x82),
+                composite(5, 0x82, continuousDriver))));
+
+        continuousRegistry.apply(new AddSmpsSfx(source(6, 0xBC)));
+
+        assertEquals(0, continuousDriver.liveCommandMutationCaptures,
+                "continuous extension has neither a new sequencer nor rollback");
+        assertEquals(0, continuousInstantiation.cachedCalls);
+
+        CapturingStandaloneInstantiation standaloneInstantiation =
+                new CapturingStandaloneInstantiation();
+        AudioVoiceRegistry standaloneRegistry = registry(
+                standaloneInstantiation, new ArrayList<>());
+
+        standaloneRegistry.apply(new AddSmpsSfx(source(7, 0xB2)));
+
+        assertEquals(0,
+                standaloneInstantiation.standaloneDriver.liveCommandMutationCaptures,
+                "standalone admission remains unpublished until direct commit");
+        assertEquals(List.of(7L), orderedIds(standaloneRegistry));
+    }
+
+    @Test
     void registryOwnsNewSfxPreparationCoordinationAndCommitOrder() {
         List<String> events = new ArrayList<>();
         PreparedOnlyDriver driver = new PreparedOnlyDriver(events);
@@ -2040,6 +2104,20 @@ class TestAudioVoiceRegistry {
         }
     }
 
+    private static final class CapturingStandaloneInstantiation
+            extends RecordingInstantiation {
+        private CapturingDriver standaloneDriver;
+
+        @Override
+        public SmpsCompositeVoice instantiateStandaloneCached(
+                ResolvedSmpsSfxSource source) {
+            standaloneDriver = new CapturingDriver();
+            return new SmpsCompositeVoice(
+                    source.standaloneVoiceId(), source.priority(),
+                    null, null, source.maxStereoFrames(), standaloneDriver);
+        }
+    }
+
     private static final class StandaloneCoordMutationInstantiation
             extends RecordingInstantiation {
         private final SmpsCoordFlagRuntimeState state;
@@ -2282,6 +2360,16 @@ class TestAudioVoiceRegistry {
         }
     }
 
+    private static final class CapturingDriver extends SmpsDriver {
+        private int liveCommandMutationCaptures;
+
+        @Override
+        public LiveCommandMutationToken captureLiveCommandMutation() {
+            liveCommandMutationCaptures++;
+            return super.captureLiveCommandMutation();
+        }
+    }
+
     private static final class ThrowingDriver extends SmpsDriver {
         @Override
         public int read(short[] buffer, int length) {
@@ -2367,27 +2455,16 @@ class TestAudioVoiceRegistry {
         }
 
         @Override
-        public void addSequencer(SmpsSequencer sequencer, boolean sfx) {
-            if (failNextSfxAttachment && sfx) {
+        public PreparedSfxAdmission prepareNewSfxAdmission(
+                SmpsSequencer sequencer, int continuousSfxId,
+                int trackCount) {
+            if (failNextSfxAttachment) {
                 failNextSfxAttachment = false;
                 throw new IllegalStateException(
-                        "injected SFX attachment failure");
+                        "injected SFX preparation failure");
             }
-            super.addSequencer(sequencer, sfx);
-        }
-
-        @Override
-        public void commitSfxAdmission(PreparedSfxAdmission admission) {
-            boolean failAfterMutation = failNextSfxAttachment
-                    && !admission.continuousExtension();
-            if (failAfterMutation) {
-                failNextSfxAttachment = false;
-            }
-            super.commitSfxAdmission(admission);
-            if (failAfterMutation) {
-                throw new IllegalStateException(
-                        "injected SFX attachment failure");
-            }
+            return super.prepareNewSfxAdmission(
+                    sequencer, continuousSfxId, trackCount);
         }
 
         @Override

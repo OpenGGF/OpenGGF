@@ -846,8 +846,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                 ? composite : standaloneSmps;
         if (owner != null) {
             try {
-                mutateVoicesAtomically(
-                        () -> addSmpsSfxToOwner(source, owner), owner);
+                addSmpsSfxToOwner(source, owner);
             } catch (RuntimeException cacheFailure) {
                 if (!(cacheFailure instanceof SfxCacheRejection)) {
                     throw cacheFailure;
