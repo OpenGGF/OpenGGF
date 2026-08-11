@@ -21,17 +21,44 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S2AudioObserverProfileTests verify the final observer installation",
                 VerifiesFinalObserverInstallation,
                 serial: true));
+            tests.Add(new TestMain.TestCase(
+                "S2AudioObserverProfileTests pin the complete movie and comparison boundary",
+                PinsCompleteMovieAndComparisonBoundary));
+            tests.Add(new TestMain.TestCase(
+                "S2AudioObserverProfileTests reject changed service manifest bytes",
+                RejectsChangedServiceManifestBytes));
+            tests.Add(new TestMain.TestCase(
+                "S2AudioObserverProfileTests reject a wrong ROM before host construction",
+                RejectsWrongRomBeforeHostConstruction));
+            if (File.Exists(MoviePath()))
+            {
+                tests.Add(new TestMain.TestCase(
+                    "S2AudioObserverProfileTests authenticate the tracked complete movie",
+                    AuthenticatesTrackedCompleteMovie));
+                tests.Add(new TestMain.TestCase(
+                    "S2AudioObserverProfileTests reject changed complete movie bytes",
+                    RejectsChangedMovieBytes));
+            }
         }
 
         private static void ConfiguresReviewedServiceGraph()
         {
-            var api = new FakeTraceApi();
+            var api = new RecordingTraceApi();
             CompleteRunAudioObserver observer = S2AudioObserverProfile.CreateObserver(
                 Fixture("gpgx-audio-service-manifests-v1.json"),
                 Fixture("gpgx-audio-capability-v1.json"), api);
 
             AssertEx.Equal(true, observer != null);
             AssertEx.Equal(1, api.ConfigureCalls);
+            AssertEx.Equal((ushort)2, api.Config.AbiVersion);
+            AssertEx.Equal(1u, api.Config.Flags);
+            AssertEx.Equal((byte)2, FindHook(api.Hooks, 9).Flags);
+            AssertEx.Equal((byte)3, FindHook(api.Hooks, 10).Flags);
+            foreach (GpgxAudioObserverAdapter.ServiceHook hook in api.Hooks)
+            {
+                if (hook.HookToken != 9 && hook.HookToken != 10)
+                    AssertEx.Equal((byte)0, hook.Flags);
+            }
             AssertEx.Equal(9, api.Kinds.Length);
             AssertEx.Equal(23, api.Hooks.Length);
             AssertEx.Equal(2, api.Ranges.Length);
@@ -42,7 +69,6 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(false, Watched(api.Mask, 0x0178));
             AssertEx.Equal(0xEC000u, FindHook(api.Hooks, 9).Pc);
             AssertEx.Equal(0xEC036u, FindHook(api.Hooks, 10).Pc);
-            AssertEx.Equal((byte)1, FindHook(api.Hooks, 10).Flags);
 
             S2AudioObserverProfile.Capability capability =
                 S2AudioObserverProfile.LoadCapability(
@@ -156,9 +182,98 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
         }
 
+        private static void PinsCompleteMovieAndComparisonBoundary()
+        {
+            AssertEx.Equal(769, S2AudioObserverProfile.FirstRow);
+            AssertEx.Equal(259590, S2AudioObserverProfile.ExclusiveEnd);
+            AssertEx.Equal("9FEEB724052C39982D432A7851C98D3E",
+                S2AudioObserverProfile.MovieHeaderHash);
+            AssertEx.Equal(RomIdentity.Sonic2Rev01Sha1.ToLowerInvariant(),
+                S2AudioObserverProfile.RomSha1);
+        }
+
+        private static void AuthenticatesTrackedCompleteMovie()
+        {
+            Bk2Movie movie = S2AudioObserverProfile.OpenMovie(MoviePath());
+            AssertEx.Equal(259590, movie.FrameCount);
+            AssertEx.Equal("9FEEB724052C39982D432A7851C98D3E", movie.Sha1);
+        }
+
+        private static void RejectsWrongRomBeforeHostConstruction()
+        {
+            string root = TestScratch.CreateRootPath("s2-audio-rom");
+            try
+            {
+                Directory.CreateDirectory(root);
+                string changed = Path.Combine(root, "wrong.gen");
+                File.WriteAllBytes(changed, new byte[] { 1, 2, 3 });
+                AssertEx.Throws<InvalidDataException>(
+                    () => S2CompleteAudioCaptureRunner.CapturePinned(
+                        changed, MoviePath(),
+                        Fixture("gpgx-audio-service-manifests-v1.json"),
+                        Fixture("gpgx-audio-capability-v1.json"),
+                        new NeverCalledSink()), "ROM");
+            }
+            finally
+            {
+                if (Directory.Exists(root)) Directory.Delete(root, true);
+            }
+        }
+
+        private static void RejectsChangedMovieBytes()
+        {
+            string root = TestScratch.CreateRootPath("s2-audio-inputs");
+            try
+            {
+                Directory.CreateDirectory(root);
+                string movie = Path.Combine(root, "changed.bk2");
+                byte[] movieBytes = File.ReadAllBytes(MoviePath());
+                movieBytes[movieBytes.Length - 1] ^= 1;
+                File.WriteAllBytes(movie, movieBytes);
+                AssertEx.Throws<InvalidDataException>(
+                    () => S2AudioObserverProfile.OpenMovie(movie),
+                    "movie identity");
+            }
+            finally
+            {
+                if (Directory.Exists(root)) Directory.Delete(root, true);
+            }
+        }
+
+        private static void RejectsChangedServiceManifestBytes()
+        {
+            string root = TestScratch.CreateRootPath("s2-audio-manifest");
+            try
+            {
+                Directory.CreateDirectory(root);
+                string manifest = Path.Combine(root, "changed.json");
+                File.WriteAllText(manifest,
+                    File.ReadAllText(Fixture(
+                        "gpgx-audio-service-manifests-v1.json")) + "\n");
+                AssertEx.Throws<InvalidDataException>(
+                    () => S2AudioObserverProfile.CreateObserver(
+                        manifest,
+                        Fixture("gpgx-audio-capability-v1.json"),
+                        new RecordingTraceApi()),
+                    "service manifest identity");
+            }
+            finally
+            {
+                if (Directory.Exists(root)) Directory.Delete(root, true);
+            }
+        }
+
         private static string Fixture(string name)
         {
             return Path.Combine(EndToEndTests.ToolDirectory, "fixtures", name);
+        }
+
+        private static string MoviePath()
+        {
+            return Path.Combine(EndToEndTests.RepositoryRoot,
+                "src", "test", "resources", "traces", "s2", "runs",
+                "s2-sonic-tails-complete-emeralds",
+                "sonic-2-sonic-tails-complete-emeralds.bk2");
         }
 
         private static bool Watched(byte[] mask, int pc)
@@ -174,9 +289,21 @@ namespace OpenGGF.BizHawk.Headless.Tests
             throw new InvalidOperationException("Missing hook token.");
         }
 
-        private sealed class FakeTraceApi : IGpgxAudioTraceApi
+        private sealed class NeverCalledSink : IS2CompleteAudioCaptureSink
+        {
+            public void Begin(CompleteRunAudioObserver.CutoffFrontier boundary)
+            { throw new InvalidOperationException("sink must not be called"); }
+            public void Frame(int row, CompleteRunAudioObserver.FrameCapture frame)
+            { throw new InvalidOperationException("sink must not be called"); }
+            public void Complete(CompleteRunAudioObserver.CutoffFrontier cutoff)
+            { throw new InvalidOperationException("sink must not be called"); }
+        }
+
+        internal sealed class RecordingTraceApi : IGpgxAudioTraceApi
         {
             internal int ConfigureCalls;
+            internal int PublicationCalls;
+            internal GpgxAudioObserverAdapter.Config Config;
             internal byte[] Mask;
             internal GpgxAudioObserverAdapter.ServiceKind[] Kinds;
             internal GpgxAudioObserverAdapter.ServiceHook[] Hooks;
@@ -190,6 +317,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 GpgxAudioObserverAdapter.SnapshotRange[] ranges)
             {
                 ConfigureCalls++;
+                Config = config;
                 Mask = (byte[])mask.Clone();
                 Kinds = (GpgxAudioObserverAdapter.ServiceKind[])kinds.Clone();
                 Hooks = (GpgxAudioObserverAdapter.ServiceHook[])hooks.Clone();
@@ -204,7 +332,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 out uint count) { count = 0; return 0; }
             public int GetFirstFault(out GpgxAudioObserverAdapter.FirstFault fault)
             { fault = new GpgxAudioObserverAdapter.FirstFault(); return 0; }
-            public int BeginPublicationEpoch() { return 0; }
+            public int BeginPublicationEpoch() { PublicationCalls++; return 0; }
             public int AbortFrame() { return 0; }
             public int Disable() { return 0; }
         }

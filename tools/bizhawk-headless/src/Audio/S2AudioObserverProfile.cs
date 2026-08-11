@@ -22,6 +22,10 @@ namespace OpenGGF.BizHawk.Headless
             "sonic-2-sonic-tails-complete-emeralds.bk2";
         internal const string MovieSha256 =
             "e850798f882b8c580aad148bc97cb50f260cae1d336dd649fe2f4dfae6796aa5";
+        internal const string MovieHeaderHash =
+            "9FEEB724052C39982D432A7851C98D3E";
+        internal const int FirstRow = 769;
+        internal const int ExclusiveEnd = 259590;
         internal const string ServiceManifestSha256 =
             "ef8f8103c38d70e41cb09cb29751f56815a0401709dc509071aa514d614813a0";
         internal const string CapabilityTemplateSha256Expected =
@@ -45,6 +49,10 @@ namespace OpenGGF.BizHawk.Headless
             "f20cd009f6f5b0a95bd47b66c48dc8de85afcd7ae0cc6aab3486baf55f501fb4";
         private const string WaterboxHostSha256 =
             "d2367818aafb4e520ad5ab005b5762c61506b0c819c4d79687235acfb0fc0c78";
+        private const ushort UploadBeginToken = 9;
+        private const ushort UploadCompletionToken = 10;
+        private const byte ArmProofCompletion = 1;
+        private const byte PrearmPermitted = 2;
 
         internal sealed class Capability
         {
@@ -92,7 +100,7 @@ namespace OpenGGF.BizHawk.Headless
             if (api == null) throw new ArgumentNullException("api");
             LoadCapability(serviceManifestPath, capabilityPath);
             return GpgxAudioServiceManifest.Load(
-                serviceManifestPath, Game, api);
+                serviceManifestPath, Game, new PrepublicationApi(api));
         }
 
         internal static Capability LoadCapability(
@@ -193,6 +201,44 @@ namespace OpenGGF.BizHawk.Headless
                 RequiredString(identity, "installation_id"),
                 RequiredString(identity, "core_id"), abi,
                 RequiredString(identity, "build_id"));
+        }
+
+        internal static Bk2Movie OpenMovie(string moviePath)
+        {
+            RequireAbsoluteFile(moviePath, "complete audio movie");
+            RequireEqual(MovieSha256, Sha256File(moviePath),
+                "complete audio movie identity");
+            Bk2Movie movie = Bk2Reader.Read(moviePath);
+            if (movie.FrameCount != ExclusiveEnd
+                || !string.Equals(movie.Sha1, MovieHeaderHash,
+                    StringComparison.Ordinal))
+            {
+                throw new InvalidDataException(
+                    "S2 complete audio movie header identity changed.");
+            }
+            return movie;
+        }
+
+        internal static void ValidateRom(string romPath)
+        {
+            if (string.IsNullOrEmpty(romPath) || !Path.IsPathRooted(romPath))
+                throw new ArgumentException(
+                    "The S2 REV01 ROM path must be absolute.", "romPath");
+            if (!File.Exists(romPath))
+                throw new FileNotFoundException(
+                    "The S2 REV01 ROM is absent.", romPath);
+            string actual;
+            try
+            {
+                actual = RomIdentity.ValidateSonic2Rev01(
+                    File.ReadAllBytes(romPath)).ToLowerInvariant();
+            }
+            catch (Exception error)
+            {
+                throw new InvalidDataException(
+                    "The S2 REV01 ROM identity is not exact.", error);
+            }
+            RequireEqual(RomSha1, actual, "S2 REV01 ROM identity");
         }
 
         private static void RequireFileHash(
@@ -328,6 +374,80 @@ namespace OpenGGF.BizHawk.Headless
         {
             if (!string.Equals(expected, actual, StringComparison.Ordinal))
                 throw new InvalidDataException(label + " changed.");
+        }
+
+        private sealed class PrepublicationApi : IGpgxAudioTraceApi
+        {
+            private readonly IGpgxAudioTraceApi inner;
+
+            internal PrepublicationApi(IGpgxAudioTraceApi innerApi)
+            {
+                inner = innerApi;
+            }
+
+            public uint AbiVersion { get { return inner.AbiVersion; } }
+            public uint EventSize { get { return inner.EventSize; } }
+            public uint Capacity { get { return inner.Capacity; } }
+
+            public int Configure(ref GpgxAudioObserverAdapter.Config config,
+                byte[] mask, GpgxAudioObserverAdapter.ServiceKind[] kinds,
+                GpgxAudioObserverAdapter.ServiceHook[] hooks,
+                GpgxAudioObserverAdapter.SnapshotRange[] ranges)
+            {
+                if (config.AbiVersion != 1 || config.Flags != 0
+                    || config.MaxContinuationFrames != 4)
+                    throw new InvalidDataException(
+                        "The reviewed S2 manifest did not produce its legacy exact configuration.");
+                bool beginSeen = false;
+                bool completionSeen = false;
+                for (int index = 0; index < hooks.Length; index++)
+                {
+                    GpgxAudioObserverAdapter.ServiceHook hook = hooks[index];
+                    if (hook.HookToken == UploadBeginToken)
+                    {
+                        if (beginSeen || hook.Action != 1 || hook.Cpu != 2
+                            || hook.Pc != 0xEC000 || hook.ServiceKindId != 2
+                            || hook.ExpectedActiveKind != 0 || hook.Flags != 0)
+                            throw InvalidUploadChain();
+                        hook.Flags = PrearmPermitted;
+                        beginSeen = true;
+                    }
+                    else if (hook.HookToken == UploadCompletionToken)
+                    {
+                        if (completionSeen || hook.Action != 2 || hook.Cpu != 2
+                            || hook.Pc != 0xEC036 || hook.ServiceKindId != 0
+                            || hook.ExpectedActiveKind != 2
+                            || hook.Flags != ArmProofCompletion)
+                            throw InvalidUploadChain();
+                        hook.Flags = ArmProofCompletion | PrearmPermitted;
+                        completionSeen = true;
+                    }
+                    hooks[index] = hook;
+                }
+                if (!beginSeen || !completionSeen) throw InvalidUploadChain();
+                config.AbiVersion = 2;
+                config.Flags = 1;
+                return inner.Configure(ref config, mask, kinds, hooks, ranges);
+            }
+
+            private static InvalidDataException InvalidUploadChain()
+            {
+                return new InvalidDataException(
+                    "The reviewed S2 SoundDriverLoad proof chain changed.");
+            }
+
+            public int BeginFrame() { return inner.BeginFrame(); }
+            public int EndFrame() { return inner.EndFrame(); }
+            public int EventCount(out uint count, out uint overflow)
+            { return inner.EventCount(out count, out overflow); }
+            public int Drain(GpgxAudioTraceEvent[] events, uint capacity,
+                out uint count) { return inner.Drain(events, capacity, out count); }
+            public int GetFirstFault(out GpgxAudioObserverAdapter.FirstFault fault)
+            { return inner.GetFirstFault(out fault); }
+            public int BeginPublicationEpoch()
+            { return inner.BeginPublicationEpoch(); }
+            public int AbortFrame() { return inner.AbortFrame(); }
+            public int Disable() { return inner.Disable(); }
         }
     }
 }

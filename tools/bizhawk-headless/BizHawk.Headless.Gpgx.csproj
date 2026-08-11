@@ -99,6 +99,7 @@
     <Compile Include="src/Recording/S1InputMask.cs" />
     <Compile Include="src/Recording/S1Ram.cs" />
     <Compile Include="src/Recording/S1RunCaptureRunner.cs" />
+    <Compile Include="src/Recording/S2CompleteAudioCaptureRunner.cs" />
     <Compile Include="src/Recording/S1RunManifestWriter.cs" />
     <Compile Include="src/Recording/S1SmokeRecorder.cs" />
     <Compile Include="src/Recording/S1SpecialStageCsvWriter.cs" />

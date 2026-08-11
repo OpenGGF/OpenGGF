@@ -129,3 +129,43 @@ unavailable. Headless `Program.cs` and `TestMain`/project registration are
 shared integration seams; this round changed only the minimal test/project
 registration needed to exercise the S2-owned profile and leaves CLI routing to
 the conductor.
+
+## Round 3: bounded native capture runner
+
+The next game-owned slice is now implemented as
+`S2CompleteAudioCaptureRunner`. It authenticates Sonic 2 World REV01, the
+read-only 259,590-row all-emeralds BK2, the reviewed service manifest and
+capability, and the final ABI 3 observer installation before opening the host.
+It observes and drains from power-on, starts publication at the fixed row-769
+comparison boundary, and streams every row in `[769,259590)` to a bounded sink.
+The exact-end path rejects both short and overlong movie streams; the bounded
+proof path stops without consuming the preserved movie tail.
+
+The shared manifest remains the legacy ABI 1 source description. The S2-owned
+profile validates its exact `$EC000`/`$EC036` `SoundDriverLoad` begin/completion
+chain, then enables only those two hooks for ABI 2 prepublication. This follows
+`docs/s2disasm/s2.asm:91301-91323`: the unique routine owns the full driver
+upload and reaches one common release after all 8 KiB are final. The transition
+changes publication coordinates only; physical chip latches and native service
+lifetime state remain continuous.
+
+A real read-only power-on proof against
+`crossing-install-final2-a` reached row 769 with publication armed at epoch 1,
+one carried kind-4 DPCM service, no pending services, YM address latches
+`$2A/$A1`, and 1,491 raw events in the first published row. The exact ROM and
+BK2 identities remained
+`8bca5dcef1af3e00098666fd892dc1c2a76333f9` and
+`e850798f882b8c580aad148bc97cb50f260cae1d336dd649fe2f4dfae6796aa5`.
+The already-reviewed complete evidence remains 259,590 frames, 169,986,419
+events, maximum occupancy 1,825, and an empty cutoff frontier.
+
+This is capture capability only. It does not add CLI routing, a shared raw
+staging writer, or the fixed Java reference adapter, and the S2 profile's
+reference binding remains typed unavailable. Adding the production C# class
+necessarily changed the deterministic harness executable; the provisional
+game-branch identity is recorded in the capability fixture while central
+integration will perform the single final cross-game deterministic repin.
+The clean two-root verifier reproduced production SHA-256
+`9d3d9eb25c29fec4436149c802b3851657c74ea20b65df9bf22d60241d574d31`
+and test SHA-256
+`9c7c898f585942b6bd8c2864a1e2cd8ec7e50816cf400a557244ae2883dbd386`.
