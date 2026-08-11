@@ -316,6 +316,119 @@ class TestAudioPresentationArchitectureGuard {
                 "unguarded driver snapshot @ audio/driver/SmpsDriver.java"));
     }
 
+    @Test
+    void lookupGuardTraversesAnnotatedHelpersIncludingArgumentsAndStacks() {
+        for (String declaration : List.of(
+                "@Deprecated private void annotatedLoad() { "
+                        + "source.loader().loadSfx(7); }",
+                "@SuppressWarnings(value = \"unchecked\") @Deprecated "
+                        + "private final synchronized void annotatedLoad() "
+                        + "throws IOException { source.loader().loadSfx(7); }",
+                "@Outer(value = @Inner(factory(\"unsafe\"))) @Deprecated "
+                        + "private void annotatedLoad() { "
+                        + "source.loader().loadSfx(7); }")) {
+            Map<String, String> sources = representativeSafeSmpsSources();
+            sources.put("audio/AudioManager.java",
+                    safeAudioManagerClassificationMethods().replace(
+                            "ensureRegisteredSmpsSfx(); } "
+                                    + "public void playSfx(GameSound",
+                            "annotatedLoad(); ensureRegisteredSmpsSfx(); } "
+                                    + "public void playSfx(GameSound")
+                            + declaration
+                            + " private boolean ensureRegisteredSmpsSfx() { "
+                            + "catalog.findRegisteredSmpsSfxAsset(); "
+                            + "return source.loader().loadSfx(1) != null; }");
+
+            assertTrue(smpsOwnershipViolations(sources).contains(
+                    "load before lookup @ audio/AudioManager.java"),
+                    declaration);
+        }
+    }
+
+    @Test
+    void observerGuardTraversesUnsafeAnnotatedDriverHelpers() {
+        for (String declaration : List.of(
+                "@Deprecated private void annotatedCapture() { "
+                        + "captureLiveCommandMutation(); }",
+                "@SuppressWarnings(value = \"unchecked\") @Deprecated "
+                        + "private final void annotatedCapture() "
+                        + "throws IOException { "
+                        + "captureLiveCommandMutation(); }",
+                "@Outer(value = @Inner(factory(\"unsafe\"))) @Deprecated "
+                        + "private void annotatedCapture() { "
+                        + "captureLiveCommandMutation(); }")) {
+            Map<String, String> sources = representativeSafeSmpsSources();
+            sources.put("audio/driver/SmpsDriver.java",
+                    "public void commitSfxAdmission() { "
+                            + "annotatedCapture(); } " + declaration);
+
+            assertTrue(smpsOwnershipViolations(sources).contains(
+                    "unguarded driver snapshot @ audio/driver/SmpsDriver.java"),
+                    declaration);
+        }
+    }
+
+    @Test
+    void registryGuardRejectsEveryCaptureEvenUnderPositiveObserverGate() {
+        for (String registry : List.of(
+                "private void addSmpsSfxToOwner() { "
+                        + "captureLiveCommandMutation(); }",
+                "private void addSmpsSfxToOwner() { "
+                        + "if (hasChipWriteObserver()) { "
+                        + "captureLiveCommandMutation(); } }",
+                "private void addSmpsSfxToOwner() { "
+                        + "if (this.hasChipWriteObserver()) { "
+                        + "annotatedCapture(); } } "
+                        + "@SuppressWarnings(value = nested(\"unchecked\")) "
+                        + "@Deprecated private final void annotatedCapture() "
+                        + "throws IOException { "
+                        + "captureLiveCommandMutation(); }")) {
+            Map<String, String> sources = representativeSafeSmpsSources();
+            sources.put("audio/presentation/AudioVoiceRegistry.java",
+                    registry);
+
+            assertTrue(smpsOwnershipViolations(sources).contains(
+                    "observer-free registry snapshot @ "
+                            + "audio/presentation/AudioVoiceRegistry.java"),
+                    registry);
+        }
+    }
+
+    @Test
+    void driverGuardAllowsOnlyItsExactPositiveObserverBranches() {
+        for (String driver : List.of(
+                "public void commitSfxAdmission() { "
+                        + "if (hasChipWriteObserver()) { "
+                        + "captureLiveCommandMutation(); } }",
+                "public void commitSfxAdmission() { Object state = "
+                        + "this.hasChipWriteObserver() "
+                        + "? captureLiveCommandMutation() : null; }")) {
+            Map<String, String> sources = representativeSafeSmpsSources();
+            sources.put("audio/driver/SmpsDriver.java", driver);
+
+            assertFalse(smpsOwnershipViolations(sources).contains(
+                    "unguarded driver snapshot @ audio/driver/SmpsDriver.java"),
+                    driver);
+        }
+    }
+
+    @Test
+    void frozenRomDependencyShapeFieldHasNoRuntimeAccesses() {
+        JavaClasses classes = new ClassFileImporter()
+                .importClasses(AudioManager.class);
+        List<String> runtimeAccesses = classes.get(AudioManager.class)
+                .getField("rom")
+                .getAccessesToSelf().stream()
+                .filter(access -> !access.getOrigin().isConstructor())
+                .map(access -> access.getOrigin().getFullName())
+                .sorted()
+                .toList();
+
+        assertEquals(List.of(), runtimeAccesses,
+                "the frozen AudioManager -> Rom field is architecture-only; "
+                        + "runtime ROM state must come from BaseAudioSource");
+    }
+
     private static Map<String, String> representativeSafeSmpsSources() {
         Map<String, String> sources = new LinkedHashMap<>();
         sources.put("audio/smps/DacData.java", "final class DacData {}");
@@ -437,7 +550,7 @@ class TestAudioPresentationArchitectureGuard {
                 "addSmpsSfxToOwner(",
                 "audio/presentation/AudioVoiceRegistry.java", violations);
         if (registry != null && !observerSafeReachable(
-                registrySource, "addSmpsSfxToOwner")) {
+                registrySource, "addSmpsSfxToOwner", false)) {
             violations.add("observer-free registry snapshot @ "
                     + "audio/presentation/AudioVoiceRegistry.java");
         }
@@ -459,7 +572,7 @@ class TestAudioPresentationArchitectureGuard {
                 "commitSfxAdmission(", "audio/driver/SmpsDriver.java",
                 violations);
         if (driver != null && !observerSafeReachable(
-                driverSource, "commitSfxAdmission")) {
+                driverSource, "commitSfxAdmission", true)) {
             violations.add("unguarded driver snapshot @ "
                     + "audio/driver/SmpsDriver.java");
         }
@@ -594,6 +707,7 @@ class TestAudioPresentationArchitectureGuard {
     }
 
     private static Map<MethodSignature, String> methodBodies(String source) {
+        String declarationsSource = annotationsElided(source);
         Pattern declarations = Pattern.compile(
                 "(?:^|[;}])\\s*"
                         + "(?:(?:public|protected|private|static|final|synchronized|"
@@ -602,7 +716,7 @@ class TestAudioPresentationArchitectureGuard {
                         + "([A-Za-z][A-Za-z0-9_]*)\\s*"
                         + "\\(([^;{}]*)\\)\\s*"
                         + "(?:throws\\s+[\\w.,\\s]+)?\\{");
-        Matcher matcher = declarations.matcher(source);
+        Matcher matcher = declarations.matcher(declarationsSource);
         Map<MethodSignature, String> methods = new LinkedHashMap<>();
         while (matcher.find()) {
             String name = matcher.group(1);
@@ -610,12 +724,57 @@ class TestAudioPresentationArchitectureGuard {
                     "else", "do", "synchronized").contains(name)) {
                 continue;
             }
-            String body = bracedBody(source, matcher.end() - 1);
+            String body = bracedBody(
+                    declarationsSource, matcher.end() - 1);
             MethodSignature signature = new MethodSignature(
                     name, matcher.group(2).replaceAll("\\s+", " ").trim());
             methods.put(signature, body);
         }
         return methods;
+    }
+
+    private static String annotationsElided(String source) {
+        char[] elided = source.toCharArray();
+        for (int index = 0; index < source.length(); index++) {
+            if (source.charAt(index) != '@'
+                    || source.startsWith("@interface", index)) {
+                continue;
+            }
+            int cursor = index + 1;
+            if (cursor >= source.length()
+                    || !Character.isJavaIdentifierStart(
+                    source.charAt(cursor))) {
+                continue;
+            }
+            cursor++;
+            while (cursor < source.length()) {
+                char current = source.charAt(cursor);
+                if (Character.isJavaIdentifierPart(current)
+                        || current == '.') {
+                    cursor++;
+                } else {
+                    break;
+                }
+            }
+            while (cursor < source.length()
+                    && Character.isWhitespace(source.charAt(cursor))) {
+                cursor++;
+            }
+            if (cursor < source.length() && source.charAt(cursor) == '(') {
+                int close = matching(source, cursor, '(', ')');
+                if (close < 0) {
+                    continue;
+                }
+                cursor = close + 1;
+            }
+            for (int blank = index; blank < cursor; blank++) {
+                if (elided[blank] != '\n' && elided[blank] != '\r') {
+                    elided[blank] = ' ';
+                }
+            }
+            index = cursor - 1;
+        }
+        return new String(elided);
     }
 
     private static Set<String> methodNames(
@@ -674,24 +833,28 @@ class TestAudioPresentationArchitectureGuard {
     }
 
     private static boolean observerSafeReachable(
-            String source, String rootMethod) {
+            String source, String rootMethod,
+            boolean allowDriverObserverGate) {
         Map<MethodSignature, String> methods = methodBodies(source);
         List<Map.Entry<MethodSignature, String>> roots =
                 methodsNamed(methods, rootMethod);
         return !roots.isEmpty() && roots.stream().allMatch(root ->
-                observerSafe(root.getValue(), methods, false,
+                observerSafe(root.getValue(), methods,
+                        allowDriverObserverGate, false,
                         new HashSet<>(Set.of(root.getKey()))));
     }
 
     private static boolean observerSafe(
             String body,
             Map<MethodSignature, String> methods,
+            boolean allowDriverObserverGate,
             boolean inheritedObserverDominance,
             Set<MethodSignature> activeMethods) {
         int capture = body.indexOf("captureLiveCommandMutation(");
         while (capture >= 0) {
-            if (!inheritedObserverDominance
-                    && !observerDominates(body, capture)) {
+            if (!allowDriverObserverGate
+                    || (!inheritedObserverDominance
+                    && !observerDominates(body, capture))) {
                 return false;
             }
             capture = body.indexOf(
@@ -707,10 +870,11 @@ class TestAudioPresentationArchitectureGuard {
             while (calls.find()) {
                 int call = calls.start();
                 if (activeMethods.add(method.getKey())) {
-                    boolean dominated = inheritedObserverDominance
-                            || observerDominates(body, call);
+                    boolean dominated = allowDriverObserverGate
+                            && (inheritedObserverDominance
+                            || observerDominates(body, call));
                     boolean safe = observerSafe(method.getValue(), methods,
-                            dominated, activeMethods);
+                            allowDriverObserverGate, dominated, activeMethods);
                     activeMethods.remove(method.getKey());
                     if (!safe) {
                         return false;
