@@ -4,7 +4,7 @@
   "patched_managed_dll_permitted": false,
   "build_recipe": {
     "file": "task7-build-recipe.json",
-    "sha256": "e71f5b83616556577aabc01057fc3bc2a5b4e6c74792adfbc83e5e1f97e8b3e0"
+    "sha256": "139561696a2ac225fefe2d1ab5375402076f38ad040e2fdda46d4ba382a6f001"
   },
   "abi": {
     "version": 2,
@@ -18,21 +18,21 @@
   },
   "native_patch": {
     "file": "0001-buffer-z80-audio-events.patch",
-    "sha256": "dd1e860795ac4e3055081b83ccb77368ae470280911787da849845c9570e8fa1"
+    "sha256": "755805989ebdcc1edb3fda379e9e9cc45f66c9fb334a476399172babeadcd118"
   },
   "core": {
-    "decompressed_size": 41731544,
-    "decompressed_sha256": "642cf1ce651e95dab1143c0a718e9ab95cf617c07d66590831368fdeb0b4202a",
-    "compressed_size": 412363,
-    "compressed_sha256": "3b632c65bca7372b8f70c7526b51e7ca14f53a43224790534a200274c0351ebf",
-    "build_id": "d2011feb908faa14",
+    "decompressed_size": 41740032,
+    "decompressed_sha256": "e8f85805bbc46de4e3cb3e1c20fe79cc1381c9e86537db8f327b4b21c49ca16c",
+    "compressed_size": 414021,
+    "compressed_sha256": "f9c6a1cbaa3c70428ffc1774473ff4f9ba7d1ce1503fa00ab657e497dd584625",
+    "build_id": "b49036a848890682",
     "invis_size": 2140400,
     "invis_alignment": 32,
     "observer_added_invis_bytes": 2137056
   },
   "source_bundle": {
-    "uncompressed_sha256": "a1e07b266ebd1c5d43e757513edd0fbcabcd6361558742789e8b7fd89ca7ce2b",
-    "compressed_sha256": "7f1a3558f3b74aa3f8f03ee0e66c8cfb9806ac00c1496e48614a3da2f058b91a",
+    "uncompressed_sha256": "34e6cecb6bcd65a14c9f6f80716a3b423c5d0d7924c85e192662e070d6609977",
+    "compressed_sha256": "452c7b320000817e4b35e621d2f8b12bfaef3588f211d14ac508a34d9cc65e7b",
     "path_manifest_sha256": "ca94c5213d326ab3affac073dff5b67cf6b9c275db6d2c6291688376703709c1",
     "path_mode_manifest_sha256": "03b81d212882a71329d5d45377bdebe1aa6194a0012bd9a4749ec35cd5683440",
     "source_date_epoch": 1758367997,
@@ -47,19 +47,19 @@
     "log_sha256": "74d5e2fe2e120dc862514040507d7be836fd5a43f48be0712647255f4f0773a2"
   },
   "elf_proof": {
-    "sha256": "d6c2a1093ccc3484e4f353e8f01dac3bc1aa26487080d6addd5bff815bcfd630"
+    "sha256": "e96cbb5eb3016192e4ad072d088c70d7942d46e04db87f385e0fb36245b43cc2"
   },
   "callgraph_proof": {
     "sha256": "536711d3eada4bc9898c256c7479ee5a651381025f0476499bac76c9e82dd5c6"
   },
   "managed_reflection": {
-    "adapter_source_sha256": "9689ba255d2b14e7e31b533437855faddf9f068dfdf18b8a13f4662dfd2dbbba",
+    "adapter_source_sha256": "046ab11f4ffaf100651dda49625e14f3b08e54a33f61ed415d039a0d27b9bb93",
     "host_bridge_source_sha256": "af9da7ed2f08d27c663176f4f1c852504c4a515e437655abb0fd5d20a3364bf1",
     "bizinvoke_sha256": "8d05389bf0e02be1244bdc7a2adcd93b4cff95acf199fc927987ca699760a1b7",
     "bizhawk_common_sha256": "438a49d6a45d9fcac17016240ae205d1af7a4632865f6f70468b684b82323f33"
   },
   "identity": {
-    "sha256": "b72175c3c7e15db66e37b64e15bc3e8f27ba1ac71a4896cd5a8363f4205d51b8"
+    "sha256": "1f0147ecc101d4d726ed09536db87c125f305eccdca986c620d735714543c5cc"
   },
   "notices": {
     "bizhawk_license_sha256": "6601cab56cb56875001906593a3adf94d52a0b82e6919fcbee81c31a48499121",

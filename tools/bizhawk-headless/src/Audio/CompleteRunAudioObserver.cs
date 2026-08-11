@@ -386,6 +386,14 @@ namespace OpenGGF.BizHawk.Headless
                 int endStatus = api.EndFrame();
                 if (endStatus != 0)
                 {
+                    GpgxAudioObserverAdapter.FirstFault firstFault;
+                    int faultStatus = api.GetFirstFault(out firstFault);
+                    string nativeFault = faultStatus == 0
+                        ? firstFault.Reason + ":" + firstFault.SourceCpu + ":"
+                            + firstFault.Pc.ToString("x") + ":" + firstFault.ActiveKind
+                            + ":" + firstFault.ActiveDepth + ":"
+                            + firstFault.ContinuationCount + ":" + firstFault.ContinuationLimit
+                        : "unavailable:" + faultStatus;
                     string nativeTail = "";
                     string nativeM68k = "";
                     string nativeLifecycle = "";
@@ -443,7 +451,7 @@ namespace OpenGGF.BizHawk.Headless
                         }
                     }
                     throw new InvalidOperationException("GPGX audio observer end frame failed with status "
-                        + endStatus + ". native_tail=" + nativeTail
+                        + endStatus + ". first_fault=" + nativeFault + " native_tail=" + nativeTail
                         + " native_m68k=" + nativeM68k
                         + " native_lifecycle=" + nativeLifecycle);
                 }

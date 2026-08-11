@@ -1214,6 +1214,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 if(events!=null)frameEvents.CopyTo(events);return 0; }
             public int AbortFrame() { Calls.Add("abort"); return 0; }
             public int Disable() { Calls.Add("disable"); return 0; }
+            public int GetFirstFault(out GpgxAudioObserverAdapter.FirstFault fault)
+            { Calls.Add("fault"); fault=default(GpgxAudioObserverAdapter.FirstFault); return 0; }
             public int BeginPublicationEpoch()
             {
                 Calls.Add("publication");

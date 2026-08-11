@@ -9,6 +9,9 @@ uint8_t work_ram[0x10000];
 uint32_t selftest_m68k_a7;
 #include "audio_trace.c"
 
+extern int32_t gpgx_audio_trace_first_fault(
+  struct gpgx_audio_trace_first_fault_v1 *out);
+
 static struct gpgx_audio_trace_config_v1 config;
 static struct gpgx_audio_service_kind_v1 kind;
 static struct gpgx_audio_service_hook_v1 hooks[2];
@@ -70,7 +73,12 @@ static void config_negatives(void)
   fixture(0); kind.flags|=KIND_ALLOW_CONTINUATION; kind.continuation_frame_limit=0;
   assert(configure()==TRACE_ABI_OR_CONFIG_LIMIT);
   fixture(0); kind.flags|=KIND_ALLOW_CONTINUATION; kind.continuation_frame_limit=5;
+  config.max_continuation_frames=4; assert(configure()==TRACE_ABI_OR_CONFIG_LIMIT);
+  fixture(0); kind.flags|=KIND_ALLOW_CONTINUATION; kind.continuation_frame_limit=5;
   config.max_continuation_frames=5; assert(configure()==TRACE_ABI_OR_CONFIG_LIMIT);
+  fixture(0); config.abi_version=2; kind.flags|=KIND_ALLOW_CONTINUATION;
+  kind.continuation_frame_limit=5; config.max_continuation_frames=5;
+  assert(configure()==TRACE_OK);
   fixture(0); kind.cancellation_range_count=0; assert(configure()==TRACE_ABI_OR_CONFIG_LIMIT);
   fixture(0); kind.cancellation_range_first=1; assert(configure()==TRACE_ABI_OR_CONFIG_LIMIT);
   fixture(0); kind.reserved0=1; assert(configure()==TRACE_ABI_OR_CONFIG_LIMIT);
@@ -146,6 +154,127 @@ static void phases_copy_and_drain(void)
   assert(gpgx_audio_trace_drain(NULL,0,&drained)==TRACE_OK && drained==0);
   assert(gpgx_audio_trace_begin_frame()==TRACE_OK && gpgx_audio_trace_abort_frame()==TRACE_OK);
   assert(gpgx_audio_trace_disable()==TRACE_OK && gpgx_audio_trace_disable()==TRACE_OK);
+}
+
+static void first_fault_is_read_only_and_session_scoped(void)
+{
+  struct gpgx_audio_trace_first_fault_v1 fault, preserved;
+  uint32_t before;
+  assert(gpgx_audio_trace_disable()==TRACE_OK);
+  memset(&fault,0xa5,sizeof(fault));
+  assert(sizeof(fault)==16);
+  assert(gpgx_audio_trace_first_fault(NULL)==TRACE_INVALID_ARGUMENT);
+  assert(gpgx_audio_trace_first_fault(&fault)==TRACE_INVALID_PHASE);
+
+  fixture(1); assert(configure()==TRACE_OK);
+  assert(gpgx_audio_trace_first_fault(&fault)==TRACE_OK);
+  assert(fault.reason==GPGX_AUDIO_TRACE_FAULT_NONE && fault.pc==0
+    && fault.source_cpu==0 && fault.active_kind==0 && fault.active_depth==0
+    && fault.continuation_count==0 && fault.continuation_limit==0
+    && fault.reserved[0]==0 && fault.reserved[1]==0 && fault.reserved[2]==0);
+  assert(gpgx_audio_trace_begin_frame()==TRACE_OK);
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_Z80,0);
+  zram[1]=0xa2;
+  before=trace_event_count_value;
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_Z80,1);
+  assert(trace_event_count_value==before && trace_runtime_error);
+  assert(gpgx_audio_trace_end_frame()==TRACE_ABI_OR_CONFIG_LIMIT);
+  assert(gpgx_audio_trace_first_fault(&fault)==TRACE_OK);
+  assert(fault.reason==GPGX_AUDIO_TRACE_FAULT_HOOK_PROOF && fault.pc==1
+    && fault.source_cpu==GPGX_AUDIO_TRACE_CPU_Z80 && fault.active_kind==1
+    && fault.active_depth==1 && fault.continuation_count==0
+    && fault.continuation_limit==0);
+  preserved=fault;
+  trace_issue_source=0;
+  gpgx_audio_trace_fm_write(0,0x2a);
+  assert(gpgx_audio_trace_first_fault(&fault)==TRACE_OK);
+  assert(!memcmp(&fault,&preserved,sizeof(fault)));
+  assert(gpgx_audio_trace_abort_frame()==TRACE_OK);
+  memset(&fault,0,sizeof(fault));
+  assert(gpgx_audio_trace_first_fault(&fault)==TRACE_OK);
+  assert(!memcmp(&fault,&preserved,sizeof(fault)));
+  assert(gpgx_audio_trace_disable()==TRACE_OK);
+  assert(gpgx_audio_trace_first_fault(&fault)==TRACE_INVALID_PHASE);
+  zram[1]=0xa1;
+  fixture(1); assert(configure()==TRACE_OK);
+  assert(gpgx_audio_trace_first_fault(&fault)==TRACE_OK
+    && fault.reason==GPGX_AUDIO_TRACE_FAULT_NONE);
+  assert(gpgx_audio_trace_disable()==TRACE_OK);
+}
+
+static void prearm_filter_and_publication_epoch(void)
+{
+  struct gpgx_audio_trace_config_v1 c;
+  struct gpgx_audio_service_kind_v1 kinds[2];
+  struct gpgx_audio_service_hook_v1 hs[4];
+  struct gpgx_audio_snapshot_range_v1 r;
+  struct gpgx_audio_trace_event events[1100];
+  uint8_t m[8192], rom[65536];
+  uint32_t count, overflow, drained;
+  uint16_t carried_token;
+  memset(&c,0,sizeof(c)); memset(kinds,0,sizeof(kinds)); memset(hs,0,sizeof(hs));
+  memset(&r,0,sizeof(r)); memset(m,0,sizeof(m)); memset(rom,0,sizeof(rom));
+  c.magic=0x31544147; c.abi_version=2; c.struct_size=64; c.kind_size=16;
+  c.hook_size=32; c.range_size=16; c.event_size=32; c.max_depth=8;
+  c.max_opcode_bytes=8; c.reset_service_kind=2; c.max_continuation_frames=4;
+  c.flags=1; c.watch_mask_bytes=8192; c.kind_count=2; c.hook_count=4;
+  c.range_count=1; c.snapshot_bytes_total=0x6000; c.event_capacity=65536;
+  c.max_service_tokens_per_frame=65535;
+  kinds[0].kind_id=1; kinds[0].flags=KIND_ALLOW_CONTINUATION;
+  kinds[0].cancellation_range_count=1; kinds[0].continuation_frame_limit=4;
+  kinds[1]=kinds[0]; kinds[1].kind_id=2;
+  r.range_id=1; r.length=0x2000;
+  hs[0].hook_token=1; hs[0].action=ACTION_PUSH_BEGIN; hs[0].cpu=GPGX_AUDIO_TRACE_CPU_Z80;
+  hs[0].service_kind=2; hs[0].opcode_length=1; hs[0].opcode[0]=0xa0; m[0]=1;
+  hs[1].hook_token=2; hs[1].action=ACTION_PUSH_BEGIN; hs[1].cpu=GPGX_AUDIO_TRACE_CPU_M68K;
+  hs[1].pc=0x100; hs[1].service_kind=1; hs[1].flags=HOOK_PREARM_PERMITTED;
+  hs[1].opcode_length=1; hs[1].opcode[0]=0xb0;
+  hs[2].hook_token=3; hs[2].action=ACTION_POP_END_AT_PC; hs[2].cpu=GPGX_AUDIO_TRACE_CPU_M68K;
+  hs[2].pc=0x102; hs[2].expected_active_kind=1;
+  hs[2].flags=HOOK_ARM_Z80_PROOFS_ON_COMPLETION|HOOK_PREARM_PERMITTED;
+  hs[2].opcode_length=1; hs[2].opcode[0]=0xb1; hs[2].range_count=1;
+  hs[3].hook_token=4; hs[3].action=ACTION_PUSH_BEGIN; hs[3].cpu=GPGX_AUDIO_TRACE_CPU_M68K;
+  hs[3].pc=0x200; hs[3].service_kind=2; hs[3].opcode_length=1; hs[3].opcode[0]=0xb2;
+  rom[0x100^1]=0xb0; rom[0x102^1]=0xb1; rom[0x200^1]=0xb2;
+  memset(&m68k,0,sizeof(m68k)); m68k.memory_map[0].base=rom; zram[0]=0xa0;
+
+  assert(gpgx_audio_trace_disable()==TRACE_OK);
+  c.abi_version=1;
+  assert(gpgx_audio_trace_configure(&c,m,kinds,hs,&r)==TRACE_ABI_OR_CONFIG_LIMIT);
+  c.flags=0; hs[1].flags=0; hs[2].flags=HOOK_ARM_Z80_PROOFS_ON_COMPLETION;
+  assert(gpgx_audio_trace_configure(&c,m,kinds,hs,&r)==TRACE_OK);
+  assert(gpgx_audio_trace_disable()==TRACE_OK);
+  c.flags=1; hs[1].flags=HOOK_PREARM_PERMITTED;
+  hs[2].flags=HOOK_ARM_Z80_PROOFS_ON_COMPLETION|HOOK_PREARM_PERMITTED;
+  c.abi_version=2;
+  assert(gpgx_audio_trace_configure(&c,m,kinds,hs,&r)==TRACE_OK);
+  assert(gpgx_audio_trace_begin_frame()==TRACE_OK);
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_M68K,0x200);
+  trace_issue_source=GPGX_AUDIO_TRACE_CPU_Z80; trace_z80_instruction_pc=0x44;
+  gpgx_audio_trace_fm_write(0,0x2a); gpgx_audio_trace_psg_write(0x9f);
+  assert(trace_depth==0 && trace_event_count_value==0 && !trace_runtime_error);
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_M68K,0x100);
+  assert(trace_depth==1 && trace_stack[0].kind==1);
+  trace_issue_source=GPGX_AUDIO_TRACE_CPU_M68K; trace_m68k_instruction_pc=0x101;
+  gpgx_audio_trace_fm_write(0,0x22);
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_M68K,0x102);
+  assert(trace_z80_proofs_armed && trace_depth==0);
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_Z80,0);
+  assert(trace_depth==1 && trace_stack[0].kind==2);
+  carried_token=trace_stack[0].token;
+  assert(gpgx_audio_trace_end_frame()==TRACE_OK);
+  assert(gpgx_audio_trace_event_count(&count,&overflow)==TRACE_OK && count!=0 && overflow==0);
+  assert(gpgx_audio_trace_drain(events,1100,&drained)==TRACE_OK && drained==count);
+  assert(gpgx_audio_trace_begin_publication_epoch()==TRACE_OK);
+  assert(trace_depth==1 && trace_stack[0].token==carried_token
+    && trace_stack[0].carried_frames==0 && trace_z80_proofs_armed);
+  assert(gpgx_audio_trace_begin_publication_epoch()==TRACE_INVALID_PHASE);
+  assert(gpgx_audio_trace_begin_frame()==TRACE_OK);
+  trace_issue_source=0; gpgx_audio_trace_fm_write(0,0x2a);
+  assert(trace_runtime_error);
+  assert(gpgx_audio_trace_end_frame()==TRACE_ABI_OR_CONFIG_LIMIT);
+  assert(gpgx_audio_trace_abort_frame()==TRACE_OK);
+  assert(gpgx_audio_trace_disable()==TRACE_OK);
 }
 
 static void chip_port_vectors(void)
@@ -831,6 +960,8 @@ int main(void)
   assert(bytes[0]==1 && bytes[3]==4 && bytes[4]==5 && bytes[5]==6
     && bytes[8]==9 && bytes[11]==12 && bytes[24]==0x18);
   config_negatives(); phases_copy_and_drain(); chip_port_vectors();
+  first_fault_is_read_only_and_session_scoped();
+  prearm_filter_and_publication_epoch();
   m68k_proof_and_stack_bounds(); overflow_and_reset_bounds();
   guarded_tail_continuation_and_failures();
   suspended_parent_continuation_exposure();

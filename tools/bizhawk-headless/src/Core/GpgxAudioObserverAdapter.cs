@@ -96,6 +96,21 @@ namespace OpenGGF.BizHawk.Headless
             [FieldOffset(24)] public ulong Payload;
         }
 
+        [StructLayout(LayoutKind.Explicit, Pack = 1, Size = 16)]
+        public struct FirstFault
+        {
+            [FieldOffset(0)] public uint Reason;
+            [FieldOffset(4)] public uint Pc;
+            [FieldOffset(8)] public byte SourceCpu;
+            [FieldOffset(9)] public byte ActiveKind;
+            [FieldOffset(10)] public byte ActiveDepth;
+            [FieldOffset(11)] public byte ContinuationCount;
+            [FieldOffset(12)] public byte ContinuationLimit;
+            [FieldOffset(13)] public byte Reserved0;
+            [FieldOffset(14)] public byte Reserved1;
+            [FieldOffset(15)] public byte Reserved2;
+        }
+
         private readonly GpgxAudioObserverDepartures departures;
         private readonly IImportResolver resolver;
         private readonly IMonitor monitor;
@@ -153,6 +168,8 @@ namespace OpenGGF.BizHawk.Headless
         }
         internal int AbortFrame() { return departures.gpgx_audio_trace_abort_frame(); }
         internal int BeginPublicationEpoch() { return departures.gpgx_audio_trace_begin_publication_epoch(); }
+        internal int GetFirstFault(out FirstFault fault)
+        { return departures.gpgx_audio_trace_first_fault(out fault); }
         internal int Disable() { return departures.gpgx_audio_trace_disable(); }
 
         private static void RequireExactLength(Array value, uint expected, string name)
@@ -180,6 +197,8 @@ namespace OpenGGF.BizHawk.Headless
             uint capacity, out uint count);
         [BizImport(CallingConvention.Cdecl)] public abstract int gpgx_audio_trace_abort_frame();
         [BizImport(CallingConvention.Cdecl)] public abstract int gpgx_audio_trace_begin_publication_epoch();
+        [BizImport(CallingConvention.Cdecl)]
+        public abstract int gpgx_audio_trace_first_fault(out GpgxAudioObserverAdapter.FirstFault fault);
         [BizImport(CallingConvention.Cdecl)] public abstract int gpgx_audio_trace_disable();
     }
 }

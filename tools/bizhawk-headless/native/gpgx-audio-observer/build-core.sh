@@ -214,14 +214,14 @@ bad_state=$(/usr/bin/readelf -Ws "$stage/gpgx.wbx" \
 [[ -z "$bad_state" ]] || fail "observer state escaped .invis: $bad_state"
 enabled_symbol=$(/usr/bin/readelf -Ws "$stage/gpgx.wbx" \
   | /usr/bin/awk '$8 == "gpgx_audio_trace_enabled" { print $2, $3, $4, $5, $7 }')
-[[ "$enabled_symbol" = "0000036f0035d071 1 OBJECT LOCAL 10" ]] \
+[[ "$enabled_symbol" = "0000036f0035f074 1 OBJECT LOCAL 10" ]] \
   || fail "observer enable flag escaped .invis: $enabled_symbol"
 events_symbol=$(/usr/bin/readelf -Ws "$stage/gpgx.wbx" \
   | /usr/bin/awk '$8 == "trace_events" { print $2, $3, $4, $5, $7 }')
-[[ "$events_symbol" = "0000036f0035eae0 0x200000 OBJECT LOCAL 10" ]] \
+[[ "$events_symbol" = "0000036f00360ae0 0x200000 OBJECT LOCAL 10" ]] \
   || fail "observer event array layout differs: $events_symbol"
-((0x0035eae0 % 32 == 0 && 0x0035eae0 >= 0x00355000 \
-  && 0x0035eae0 + 0x200000 <= 0x00355000 + 0x20a8f0)) \
+((0x00360ae0 % 32 == 0 && 0x00360ae0 >= 0x00357000 \
+  && 0x00360ae0 + 0x200000 <= 0x00357000 + 0x20a8f0)) \
   || fail "observer event array is not aligned and contained in .invis"
 bad_internal=$(/usr/bin/readelf -Ws "$stage/gpgx.wbx" \
   | /usr/bin/awk '$4 == "FUNC" && $8 ~ /^gpgx_audio_trace_(enter_cpu|leave_cpu|instruction|fm_write|psg_write|reset_begin|reset_end)$/ && $5 != "LOCAL" { print $8 }')
@@ -232,13 +232,15 @@ exports=$(/usr/bin/readelf -Ws "$stage/gpgx.wbx" \
 expected_exports='gpgx_audio_trace_abi_version
 gpgx_audio_trace_abort_frame
 gpgx_audio_trace_begin_frame
+gpgx_audio_trace_begin_publication_epoch
 gpgx_audio_trace_capacity
 gpgx_audio_trace_configure
 gpgx_audio_trace_disable
 gpgx_audio_trace_drain
 gpgx_audio_trace_end_frame
 gpgx_audio_trace_event_count
-gpgx_audio_trace_event_size'
+gpgx_audio_trace_event_size
+gpgx_audio_trace_first_fault'
 [[ "$exports" = "$expected_exports" ]] || fail "observer departure exports differ"
 /usr/bin/readelf -d "$stage/gpgx.wbx" | /usr/bin/grep -Fx 'There is no dynamic section in this file.' >/dev/null \
   || fail "observer core unexpectedly has a dynamic section"

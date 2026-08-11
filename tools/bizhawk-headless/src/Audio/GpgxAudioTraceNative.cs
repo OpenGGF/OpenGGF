@@ -52,6 +52,8 @@ namespace OpenGGF.BizHawk.Headless
             return drainDepartures.gpgx_audio_trace_drain(reusableNativeEvents, capacity, out count);
         }
         public int AbortFrame() { return adapter.AbortFrame(); }
+        public int GetFirstFault(out GpgxAudioObserverAdapter.FirstFault fault)
+        { return adapter.GetFirstFault(out fault); }
         public int BeginPublicationEpoch() { return adapter.BeginPublicationEpoch(); }
         public int Disable() { return adapter.Disable(); }
 

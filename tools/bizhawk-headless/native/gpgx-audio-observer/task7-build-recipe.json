@@ -20,9 +20,9 @@
     ["${LOCKED_ZSTD}", "--ultra", "-22", "--threads=0", "--no-progress", "--force", "${BUILD_STAGE}/source-bundle.tar", "-o", "${BUILD_STAGE}/source-bundle.tar.zst"]
   ],
   "versioned_inputs": {
-    "build-core.sh": "cf8e56ca1bff222c8ccf8a95e111fe4e45b6839f91e5415f3517244738fad16f",
+    "build-core.sh": "53e996781880fe46481ec7c13ae219edb95b27071417a47168f5d4cd3880adf0",
     "install-core.sh": "107a4661cb6fd837d94fa3ecc879a1d931a9bfa26b015ffdcd19c0a5b12744c1",
-    "0001-buffer-z80-audio-events.patch": "dd1e860795ac4e3055081b83ccb77368ae470280911787da849845c9570e8fa1",
+    "0001-buffer-z80-audio-events.patch": "755805989ebdcc1edb3fda379e9e9cc45f66c9fb334a476399172babeadcd118",
     "source-lock.json": "348ffd29471bcd9a0f452b6112a7bed941f0dd43f364a315c5cbd68f918205f9",
     "toolchain-lock.json": "e40900cda561e1066db1887712cb8219dc0c5b53a9a249f24061181b7bc3420c",
     "verify-inputs.sh": "33126e725b52d511b8b20360512d054f36666fa23ad884ca4d7c4fe0d99dcef5",
@@ -34,12 +34,12 @@
     ,"selftest/shared.h": "7b884c4ebea3e4639f48070122e44df3c5cc03c8760e2502b60f210d61e144ce"
     ,"selftest/emulibc.h": "449757babbb19ef05cf3d6c859d5bdeba60124ff49a2e0695a28364886c4afc8"
     ,"selftest/wrap_harness.c": "f5afa77f98e4c99a8be643718a831350f96a1ed9a6ffa9a22535b2c091df2b9c"
-    ,"selftest/matrix_harness.c": "acc16d859ada072eec4934fc1c7cc562c1c09e3ff3a7c86f7c7b726ff2fb67a7"
+    ,"selftest/matrix_harness.c": "277900d609e5fc04c1800e5a13f824b52a0af2f311e97769b098de1b5d9fe1fc"
     ,"selftest/cpu_boundary_harness.c": "7e9aa324446d4f15306dfe472b90c14f6f434f14b92e470027055b8ea31651d8"
     ,"selftest/m68k_boundary_harness.c": "d15d893b51e8a372fa88e6ce2854df3db91f828b6224776d9bd2afa2b2bc118c"
   },
   "managed_reflection_inputs": {
-    "adapter_source_sha256": "9689ba255d2b14e7e31b533437855faddf9f068dfdf18b8a13f4662dfd2dbbba",
+    "adapter_source_sha256": "046ab11f4ffaf100651dda49625e14f3b08e54a33f61ed415d039a0d27b9bb93",
     "host_bridge_source_sha256": "af9da7ed2f08d27c663176f4f1c852504c4a515e437655abb0fd5d20a3364bf1",
     "bizinvoke_sha256": "8d05389bf0e02be1244bdc7a2adcd93b4cff95acf199fc927987ca699760a1b7",
     "bizhawk_common_sha256": "438a49d6a45d9fcac17016240ae205d1af7a4632865f6f70468b684b82323f33"

@@ -302,65 +302,12 @@ index 74d5053..7fb4fd9 100644
  
  /****************************************************************************
   * Get all registers in given buffer
-diff --git a/waterbox/gpgx/Makefile b/waterbox/gpgx/Makefile
-index 32e2f2004..2bbcd0c67 100644
---- a/waterbox/gpgx/Makefile
-+++ b/waterbox/gpgx/Makefile
-@@ -87,8 +87,9 @@ SRCS = \
- 	$(GPGX_DIR)/core/vdp_ctrl.c \
- 	$(GPGX_DIR)/core/vdp_render.c \
- 	$(GPGX_DIR)/core/z80/z80.c \
--	cinterface/cdStreamImpl.c \
--	cinterface/cinterface.c \
-+	cinterface/cdStreamImpl.c \
-+	cinterface/audio_trace.c \
-+	cinterface/cinterface.c \
- 	util/scrc32.c
- 
- include ../common.mak
-diff --git a/waterbox/gpgx/cinterface/cinterface.c b/waterbox/gpgx/cinterface/cinterface.c
-index 847a5f1d8..bc115997a 100644
---- a/waterbox/gpgx/cinterface/cinterface.c
-+++ b/waterbox/gpgx/cinterface/cinterface.c
-@@ -2,7 +2,8 @@
- #include <stdarg.h>
- #include <stdio.h>
- #include <emulibc.h>
--#include "callbacks.h"
-+#include "callbacks.h"
-+#include "audio_trace.h"
- 
- #include <shared.h>
- #include <genesis.h>
-@@ -1017,13 +1018,15 @@ GPGX_EX void gpgx_clear_deepfreeze_list()
- 
- #endif
- 
--GPGX_EX void gpgx_reset(int hard)
--{
--	if (hard)
--		system_reset();
--	else
--		gen_reset(0);
--}
-+GPGX_EX void gpgx_reset(int hard)
-+{
-+	gpgx_audio_trace_reset_begin((uint8_t)!!hard);
-+	if (hard)
-+		system_reset();
-+	else
-+		gen_reset(0);
-+	gpgx_audio_trace_reset_end((uint8_t)!!hard);
-+}
- 
- GPGX_EX void gpgx_set_mem_callback(ECL_ENTRY unsigned (*read)(unsigned, unsigned), ECL_ENTRY unsigned (*write)(unsigned, unsigned), ECL_ENTRY unsigned (*exec)(unsigned, unsigned))
- {
-diff --git a/waterbox/gpgx/cinterface/audio_trace.c b/waterbox/gpgx/cinterface/audio_trace.c
+diff --git a/audio_trace.c b/waterbox/gpgx/cinterface/audio_trace.c
 new file mode 100644
-index 000000000..2bf68a789
+index 0000000..2440af7
 --- /dev/null
 +++ b/waterbox/gpgx/cinterface/audio_trace.c
-@@ -0,0 +1,966 @@
+@@ -0,0 +1,1083 @@
 +#include <limits.h>
 +#include <stddef.h>
 +#include <stdint.h>
@@ -404,7 +351,11 @@ index 000000000..2bf68a789
 +#define ACTION_OBSERVATION_MARKER 7u
 +
 +#define HOOK_ARM_Z80_PROOFS_ON_COMPLETION 0x01u
-+#define HOOK_FLAGS_ALL 0x01u
++#define HOOK_PREARM_PERMITTED 0x02u
++#define HOOK_FLAGS_ALL 0x03u
++
++#define CONFIG_PREPUBLICATION_EPOCH 0x01u
++#define CONFIG_FLAGS_ALL 0x01u
 +
 +#define RANGE_Z80_RAM 0u
 +#define RANGE_M68K_RETURN_PC 0x01u
@@ -499,6 +450,15 @@ index 000000000..2bf68a789
 +STATIC_ASSERT(event_flags_offset, offsetof(struct gpgx_audio_trace_event, flags) == 22);
 +STATIC_ASSERT(event_reserved_offset, offsetof(struct gpgx_audio_trace_event, reserved) == 23);
 +STATIC_ASSERT(event_payload_offset, offsetof(struct gpgx_audio_trace_event, payload) == 24);
++STATIC_ASSERT(first_fault_size, sizeof(struct gpgx_audio_trace_first_fault_v1) == 16);
++STATIC_ASSERT(first_fault_reason_offset, offsetof(struct gpgx_audio_trace_first_fault_v1, reason) == 0);
++STATIC_ASSERT(first_fault_pc_offset, offsetof(struct gpgx_audio_trace_first_fault_v1, pc) == 4);
++STATIC_ASSERT(first_fault_source_offset, offsetof(struct gpgx_audio_trace_first_fault_v1, source_cpu) == 8);
++STATIC_ASSERT(first_fault_kind_offset, offsetof(struct gpgx_audio_trace_first_fault_v1, active_kind) == 9);
++STATIC_ASSERT(first_fault_depth_offset, offsetof(struct gpgx_audio_trace_first_fault_v1, active_depth) == 10);
++STATIC_ASSERT(first_fault_count_offset, offsetof(struct gpgx_audio_trace_first_fault_v1, continuation_count) == 11);
++STATIC_ASSERT(first_fault_limit_offset, offsetof(struct gpgx_audio_trace_first_fault_v1, continuation_limit) == 12);
++STATIC_ASSERT(first_fault_reserved_offset, offsetof(struct gpgx_audio_trace_first_fault_v1, reserved) == 13);
 +
 +struct trace_stack_entry
 +{
@@ -515,6 +475,9 @@ index 000000000..2bf68a789
 +ECL_INVISIBLE static uint8_t trace_runtime_error;
 +ECL_INVISIBLE static uint8_t trace_ready_invalid;
 +ECL_INVISIBLE static uint8_t trace_z80_proofs_armed;
++ECL_INVISIBLE static uint8_t trace_prepublication;
++ECL_INVISIBLE static uint8_t trace_ready_drained;
++ECL_INVISIBLE static struct gpgx_audio_trace_first_fault_v1 trace_first_fault;
 +ECL_INVISIBLE static uint16_t trace_arm_hook_index;
 +ECL_INVISIBLE static uint8_t trace_reset_active;
 +ECL_INVISIBLE static uint8_t trace_issue_source;
@@ -538,6 +501,31 @@ index 000000000..2bf68a789
 +ECL_INVISIBLE static struct trace_stack_entry trace_stack[TRACE_MAX_DEPTH];
 +ECL_INVISIBLE static struct gpgx_audio_trace_event trace_events[GPGX_AUDIO_TRACE_EVENT_CAPACITY]
 +  __attribute__((used, aligned(32)));
++
++static const struct gpgx_audio_service_kind_v1 *kind_for(uint8_t kind);
++
++static void fail_runtime_at(uint32_t reason, uint8_t source_cpu, uint32_t pc)
++{
++  const struct trace_stack_entry *active = trace_depth ? &trace_stack[trace_depth - 1] : NULL;
++  const struct gpgx_audio_service_kind_v1 *kind = active ? kind_for(active->kind) : NULL;
++  trace_runtime_error = 1;
++  if (trace_first_fault.reason) return;
++  trace_first_fault.reason = reason;
++  trace_first_fault.source_cpu = source_cpu;
++  trace_first_fault.pc = pc;
++  trace_first_fault.active_kind = active ? active->kind : 0;
++  trace_first_fault.active_depth = trace_depth;
++  trace_first_fault.continuation_count = active ? active->carried_frames : 0;
++  trace_first_fault.continuation_limit = kind ? kind->continuation_frame_limit : 0;
++}
++
++static void fail_runtime(uint32_t reason)
++{
++  uint32_t pc = trace_issue_source == GPGX_AUDIO_TRACE_CPU_Z80
++    ? trace_z80_instruction_pc : trace_issue_source == GPGX_AUDIO_TRACE_CPU_M68K
++      ? trace_m68k_instruction_pc : 0;
++  fail_runtime_at(reason, trace_issue_source, pc);
++}
 +
 +static int bytes_are_zero(const uint8_t *bytes, uint32_t count)
 +{
@@ -660,7 +648,9 @@ index 000000000..2bf68a789
 +      || trace_config.range_size != sizeof(trace_ranges[0])
 +      || trace_config.event_size != sizeof(trace_events[0])
 +      || trace_config.max_depth != TRACE_MAX_DEPTH || trace_config.max_opcode_bytes != 8
-+      || trace_config.flags || trace_config.watch_mask_bytes != TRACE_MASK_BYTES
++      || (trace_config.flags & ~CONFIG_FLAGS_ALL)
++      || (trace_config.abi_version == 1u && trace_config.flags)
++      || trace_config.watch_mask_bytes != TRACE_MASK_BYTES
 +      || !trace_config.kind_count || trace_config.kind_count > TRACE_MAX_KINDS
 +      || !trace_config.hook_count || trace_config.hook_count > TRACE_MAX_HOOKS
 +      || !trace_config.range_count || trace_config.range_count > TRACE_MAX_RANGES
@@ -711,7 +701,8 @@ index 000000000..2bf68a789
 +        || !validate_slice(kind->cancellation_range_first, kind->cancellation_range_count, &bytes)) return 0;
 +    if (kind->flags & KIND_ALLOW_CONTINUATION)
 +    {
-+      if (!kind->continuation_frame_limit || kind->continuation_frame_limit > 4) return 0;
++      if (!kind->continuation_frame_limit) return 0;
++      if (trace_config.abi_version == 1u && kind->continuation_frame_limit > 4u) return 0;
 +      if (kind->continuation_frame_limit > max_continuation) max_continuation = kind->continuation_frame_limit;
 +    }
 +    else if (kind->continuation_frame_limit) return 0;
@@ -817,15 +808,24 @@ index 000000000..2bf68a789
 +  {
 +    const struct gpgx_audio_service_hook_v1 *arm = &trace_hooks[trace_arm_hook_index];
 +    uint32_t root_entries = 0, exits = 0;
++    int prepublication = (trace_config.flags & CONFIG_PREPUBLICATION_EPOCH) != 0;
++    if (prepublication
++        ? (arm->flags & (HOOK_ARM_Z80_PROOFS_ON_COMPLETION|HOOK_PREARM_PERMITTED))
++            != (HOOK_ARM_Z80_PROOFS_ON_COMPLETION|HOOK_PREARM_PERMITTED)
++        : (arm->flags & HOOK_PREARM_PERMITTED) != 0) return 0;
 +    for (i = 0; i < trace_config.hook_count; i++)
 +    {
 +      const struct gpgx_audio_service_hook_v1 *hook = &trace_hooks[i];
 +      if (hook->service_kind == arm->expected_active_kind)
 +      {
 +        if (hook->cpu != GPGX_AUDIO_TRACE_CPU_M68K || hook->action != ACTION_PUSH_BEGIN
-+            || hook->expected_active_kind) return 0;
++            || hook->expected_active_kind
++            || (prepublication ? hook->flags != HOOK_PREARM_PERMITTED
++              : (hook->flags & HOOK_PREARM_PERMITTED) != 0)) return 0;
 +        root_entries++;
 +      }
++      else if ((hook->flags & HOOK_PREARM_PERMITTED)
++          && (!prepublication || hook != arm)) return 0;
 +      if (hook->expected_active_kind == arm->expected_active_kind && hook->action != ACTION_PUSH_BEGIN)
 +      {
 +        exits++;
@@ -834,6 +834,9 @@ index 000000000..2bf68a789
 +    }
 +    if (root_entries != 1 || exits != 1) return 0;
 +  }
++  else for (i = 0; i < trace_config.hook_count; i++)
++    if (trace_hooks[i].flags & HOOK_PREARM_PERMITTED) return 0;
++  if ((trace_config.flags & CONFIG_PREPUBLICATION_EPOCH) && !arm_count) return 0;
 +  if (memcmp(expected_mask, gpgx_audio_trace_z80_watch_mask, sizeof(expected_mask))) return 0;
 +  return declared == trace_config.snapshot_bytes_total;
 +}
@@ -854,11 +857,11 @@ index 000000000..2bf68a789
 +    uint16_t token = trace_next_token++;
 +    uint32_t i;
 +    int used = 0;
-+    if (!token) { trace_runtime_error = 1; return 0; }
++    if (!token) { fail_runtime(GPGX_AUDIO_TRACE_FAULT_TOKEN); return 0; }
 +    for (i = 0; i < trace_depth; i++) if (trace_stack[i].token == token) used = 1;
 +    if (!used) return token;
 +  }
-+  trace_runtime_error = 1;
++  fail_runtime(GPGX_AUDIO_TRACE_FAULT_TOKEN);
 +  return 0;
 +}
 +
@@ -888,7 +891,7 @@ index 000000000..2bf68a789
 +        uint32_t j;
 +        cpu_memory_map *page = &m68k.memory_map[0xff];
 +        if (page->base != work_ram || page->read8 || page->read16)
-+        { trace_runtime_error = 1; return 0; }
++        { fail_runtime(GPGX_AUDIO_TRACE_FAULT_SNAPSHOT); return 0; }
 +        for (j = 0; j < amount; j++)
 +          event->payload[j] = READ_BYTE(work_ram, range->start + offset + j);
 +      }
@@ -924,11 +927,12 @@ index 000000000..2bf68a789
 +  struct trace_stack_entry *entry;
 +  struct gpgx_audio_trace_event *event;
 +  const struct gpgx_audio_service_kind_v1 *parent_kind;
-+  if (trace_depth >= TRACE_MAX_DEPTH) { trace_runtime_error = 1; return 0; }
++  if (trace_depth >= TRACE_MAX_DEPTH) { fail_runtime(GPGX_AUDIO_TRACE_FAULT_STACK); return 0; }
 +  if (trace_depth)
 +  {
 +    parent_kind = kind_for(trace_stack[trace_depth - 1].kind);
-+    if (!parent_kind || !(parent_kind->flags & KIND_ALLOW_CHILDREN)) { trace_runtime_error = 1; return 0; }
++    if (!parent_kind || !(parent_kind->flags & KIND_ALLOW_CHILDREN))
++    { fail_runtime(GPGX_AUDIO_TRACE_FAULT_STACK); return 0; }
 +  }
 +  entry = &trace_stack[trace_depth];
 +  memset(entry, 0, sizeof(*entry));
@@ -954,7 +958,7 @@ index 000000000..2bf68a789
 +{
 +  struct trace_stack_entry entry;
 +  if (!trace_depth || trace_stack[trace_depth - 1].kind != hook->expected_active_kind)
-+  { trace_runtime_error = 1; return 0; }
++  { fail_runtime(GPGX_AUDIO_TRACE_FAULT_SERVICE); return 0; }
 +  entry = trace_stack[trace_depth - 1];
 +  if (!emit_completion(&entry, hook->range_first, hook->range_count, source, pc, hook->hook_token, 0)) return 0;
 +  memset(&trace_stack[--trace_depth], 0, sizeof(trace_stack[0]));
@@ -1008,9 +1012,9 @@ index 000000000..2bf68a789
 +  uint32_t reservation;
 +  struct gpgx_audio_trace_event *event;
 +  if (!trace_depth || trace_stack[trace_depth - 1].kind != hook->expected_active_kind)
-+  { trace_runtime_error = 1; return; }
++  { fail_runtime(GPGX_AUDIO_TRACE_FAULT_SERVICE); return; }
 +  allowed = conditional_return_is_allowed(hook);
-+  if (allowed < 0) { trace_runtime_error = 1; return; }
++  if (allowed < 0) { fail_runtime(GPGX_AUDIO_TRACE_FAULT_HOOK_PROOF); return; }
 +  reservation = 1u + (allowed ? 0u
 +    : range_group_reservation(hook->range_first, hook->range_count, 0));
 +  if (!reserve_events(reservation)) return;
@@ -1027,7 +1031,7 @@ index 000000000..2bf68a789
 +{
 +  struct gpgx_audio_trace_event *event;
 +  if (!trace_depth || trace_stack[trace_depth - 1].kind != hook->expected_active_kind)
-+  { trace_runtime_error = 1; return; }
++  { fail_runtime(GPGX_AUDIO_TRACE_FAULT_SERVICE); return; }
 +  event = new_event(EVENT_HOOK_MARKER);
 +  if (!event) return;
 +  fill_ownership(event, &trace_stack[trace_depth - 1]);
@@ -1042,7 +1046,7 @@ index 000000000..2bf68a789
 +  if ((hook->expected_active_kind == 0 && trace_depth)
 +      || (hook->expected_active_kind != 0
 +        && (!trace_depth || trace_stack[trace_depth - 1].kind != hook->expected_active_kind)))
-+  { trace_runtime_error = 1; return; }
++  { fail_runtime(GPGX_AUDIO_TRACE_FAULT_SERVICE); return; }
 +  event = new_event(EVENT_HOOK_MARKER);
 +  if (!event) return;
 +  if (trace_depth) fill_ownership(event, &trace_stack[trace_depth - 1]);
@@ -1083,17 +1087,29 @@ index 000000000..2bf68a789
 +      && trace_hooks[i].pc == pc; i++)
 +  {
 +    const struct gpgx_audio_service_hook_v1 *hook = &trace_hooks[i];
++    if (cpu == GPGX_AUDIO_TRACE_CPU_M68K
++        && __builtin_expect(trace_prepublication != 0, 0)
++        && !trace_z80_proofs_armed)
++    {
++      uint8_t arm_kind = trace_hooks[trace_arm_hook_index].expected_active_kind;
++      if (!(hook->flags & HOOK_PREARM_PERMITTED)
++          || (!active_kind && (hook->action != ACTION_PUSH_BEGIN
++            || hook->expected_active_kind || hook->service_kind != arm_kind))
++          || (active_kind && (active_kind != arm_kind
++            || hook->expected_active_kind != arm_kind))) continue;
++    }
 +    pc_matches++;
 +    if (hook->expected_active_kind == active_kind) { selected = hook; matches++; }
 +  }
 +  if (!pc_matches) return;
-+  if (matches != 1 || !proof_matches(selected)) { trace_runtime_error = 1; return; }
++  if (matches != 1 || !proof_matches(selected))
++  { fail_runtime_at(GPGX_AUDIO_TRACE_FAULT_HOOK_PROOF, cpu, pc); return; }
 +  if (selected->action == ACTION_PUSH_BEGIN) push_service(selected, cpu, pc);
 +  else if (selected->action == ACTION_POP_END_AT_PC || selected->action == ACTION_POP_END_FALLTHROUGH)
 +  {
 +    if (pop_service(selected, cpu, pc)
 +        && (selected->flags & HOOK_ARM_Z80_PROOFS_ON_COMPLETION)
-+        && !arm_z80_proofs()) trace_runtime_error = 1;
++        && !arm_z80_proofs()) fail_runtime_at(GPGX_AUDIO_TRACE_FAULT_ARM_PROOF, cpu, pc);
 +  }
 +  else if (selected->action == ACTION_TAIL_POP_PUSH)
 +  {
@@ -1102,7 +1118,8 @@ index 000000000..2bf68a789
 +      ? kind_for(trace_stack[trace_depth - 2].kind) : NULL;
 +    uint32_t reservation = range_group_reservation(selected->range_first, selected->range_count, 0) + 1u;
 +    if (!trace_depth || trace_stack[trace_depth - 1].kind != selected->expected_active_kind
-+        || (parent_kind && !(parent_kind->flags & KIND_ALLOW_CHILDREN))) trace_runtime_error = 1;
++        || (parent_kind && !(parent_kind->flags & KIND_ALLOW_CHILDREN)))
++      fail_runtime(GPGX_AUDIO_TRACE_FAULT_SERVICE);
 +    else if (reserve_events(reservation) && (token = allocate_token()) != 0
 +      && pop_service(selected, cpu, pc)) push_service_with_token(selected, cpu, pc, token);
 +  }
@@ -1118,10 +1135,17 @@ index 000000000..2bf68a789
 +{
 +  struct gpgx_audio_trace_event *event;
 +  if (trace_phase != PHASE_RECORDING) return;
++  if (__builtin_expect(trace_prepublication != 0, 0) && !trace_z80_proofs_armed
++      && trace_arm_hook_index != UINT16_MAX)
++  {
++    uint8_t arm_kind = trace_hooks[trace_arm_hook_index].expected_active_kind;
++    if (!trace_depth || trace_stack[trace_depth - 1].kind != arm_kind
++        || trace_issue_source != GPGX_AUDIO_TRACE_CPU_M68K) return;
++  }
 +  if (!trace_depth || (trace_issue_source != GPGX_AUDIO_TRACE_CPU_Z80
 +      && trace_issue_source != GPGX_AUDIO_TRACE_CPU_M68K
 +      && trace_issue_source != GPGX_AUDIO_TRACE_CPU_RESET))
-+  { trace_runtime_error = 1; return; }
++  { fail_runtime(GPGX_AUDIO_TRACE_FAULT_CHIP_OWNERSHIP); return; }
 +  event = new_event(kind);
 +  if (!event) return;
 +  fill_ownership(event, &trace_stack[trace_depth - 1]);
@@ -1155,7 +1179,8 @@ index 000000000..2bf68a789
 +  memset(&reset_entry, 0, sizeof(reset_entry));
 +  reset_entry.token = allocate_token();
 +  if (!reset_entry.token) return;
-+  if (!reserve_events(reserve)) { trace_runtime_error = 1; trace_depth = 0; trace_issue_source = GPGX_AUDIO_TRACE_CPU_RESET; return; }
++  if (!reserve_events(reserve))
++  { fail_runtime(GPGX_AUDIO_TRACE_FAULT_CAPACITY); trace_depth = 0; trace_issue_source = GPGX_AUDIO_TRACE_CPU_RESET; return; }
 +  reset_entry.kind = reset_kind->kind_id;
 +  event = new_event(EVENT_RESET_BEGIN);
 +  fill_ownership(event, &reset_entry);
@@ -1186,7 +1211,8 @@ index 000000000..2bf68a789
 +      || !trace_reset_active) return;
 +  entry = trace_stack[0]; kind = kind_for(entry.kind); tail = trace_protected_tail;
 +  trace_protected_tail = 0;
-+  if (!reserve_events(tail)) { trace_runtime_error = 1; trace_depth = 0; return; }
++  if (!reserve_events(tail))
++  { fail_runtime(GPGX_AUDIO_TRACE_FAULT_CAPACITY); trace_depth = 0; return; }
 +  emit_snapshot_ranges(&entry, kind->cancellation_range_first, kind->cancellation_range_count,
 +    GPGX_AUDIO_TRACE_CPU_RESET, 0);
 +  event = new_event(EVENT_RESET_END);
@@ -1233,7 +1259,34 @@ index 000000000..2bf68a789
 +        |= (uint8_t)(1u << (trace_hooks[i].pc & 7));
 +  }
 +  trace_z80_proofs_armed = trace_arm_hook_index == UINT16_MAX;
++  trace_prepublication = (trace_config.flags & CONFIG_PREPUBLICATION_EPOCH) != 0;
++  trace_ready_drained = 0;
++  memset(&trace_first_fault, 0, sizeof(trace_first_fault));
 +  trace_phase = PHASE_CONFIGURED; gpgx_audio_trace_enabled = 1;
++  return TRACE_OK;
++}
++
++ECL_EXPORT int32_t gpgx_audio_trace_first_fault(
++  struct gpgx_audio_trace_first_fault_v1 *out)
++{
++  if (!out) return TRACE_INVALID_ARGUMENT;
++  if (trace_phase == PHASE_DISABLED) return TRACE_INVALID_PHASE;
++  memcpy(out, &trace_first_fault, sizeof(*out));
++  return TRACE_OK;
++}
++
++ECL_EXPORT int32_t gpgx_audio_trace_begin_publication_epoch(void)
++{
++  uint32_t i;
++  if (trace_ready_invalid || trace_runtime_error) return TRACE_ABI_OR_CONFIG_LIMIT;
++  if (trace_omitted_count) return TRACE_OVERFLOW;
++  if (trace_phase != PHASE_CONFIGURED || !trace_prepublication || !trace_ready_drained
++      || trace_event_count_value || trace_protected_tail || trace_reset_active)
++    return TRACE_INVALID_PHASE;
++  if (!trace_z80_proofs_armed) return TRACE_ABI_OR_CONFIG_LIMIT;
++  for (i = 0; i < trace_depth; i++) trace_stack[i].carried_frames = 0;
++  trace_prepublication = 0;
++  trace_ready_drained = 0;
 +  return TRACE_OK;
 +}
 +
@@ -1244,10 +1297,16 @@ index 000000000..2bf68a789
 +  if (trace_phase != PHASE_CONFIGURED) return TRACE_INVALID_PHASE;
 +  trace_event_count_value = trace_omitted_count = trace_protected_tail = 0;
 +  trace_runtime_error = trace_ready_invalid = trace_reset_active = 0; trace_issue_source = 0;
++  trace_ready_drained = 0;
 +  trace_z80_instruction_pc = trace_m68k_instruction_pc = 0; trace_next_token = 1;
 +  for (i = 0; i < trace_depth; i++)
 +    while (trace_next_token == trace_stack[i].token) trace_next_token++;
-+  if (trace_depth) trace_stack[trace_depth - 1].carried_frames++;
++  if (trace_depth && !trace_prepublication)
++  {
++    if (trace_stack[trace_depth - 1].carried_frames == UINT8_MAX)
++      fail_runtime(GPGX_AUDIO_TRACE_FAULT_CONTINUATION);
++    else trace_stack[trace_depth - 1].carried_frames++;
++  }
 +  trace_phase = PHASE_RECORDING;
 +  return TRACE_OK;
 +}
@@ -1257,13 +1316,14 @@ index 000000000..2bf68a789
 +  uint32_t i;
 +  if (trace_ready_invalid) return TRACE_ABI_OR_CONFIG_LIMIT;
 +  if (trace_phase != PHASE_RECORDING) return TRACE_INVALID_PHASE;
-+  for (i = 0; i < trace_depth; i++)
-+  {
-+    const struct gpgx_audio_service_kind_v1 *kind = kind_for(trace_stack[i].kind);
-+    if (!kind || !(kind->flags & KIND_ALLOW_CONTINUATION)
-+        || trace_stack[i].carried_frames > kind->continuation_frame_limit)
-+      trace_runtime_error = 1;
-+  }
++  if (!trace_prepublication)
++    for (i = 0; i < trace_depth; i++)
++    {
++      const struct gpgx_audio_service_kind_v1 *kind = kind_for(trace_stack[i].kind);
++      if (!kind || !(kind->flags & KIND_ALLOW_CONTINUATION)
++          || trace_stack[i].carried_frames > kind->continuation_frame_limit)
++        fail_runtime(GPGX_AUDIO_TRACE_FAULT_CONTINUATION);
++    }
 +  trace_phase = PHASE_READY;
 +  if (trace_omitted_count) return TRACE_OVERFLOW;
 +  return trace_runtime_error ? TRACE_ABI_OR_CONFIG_LIMIT : TRACE_OK;
@@ -1289,12 +1349,13 @@ index 000000000..2bf68a789
 +  if (!trace_event_count_value)
 +  {
 +    if (out || out_capacity) return TRACE_INVALID_ARGUMENT;
-+    trace_phase = PHASE_CONFIGURED; return TRACE_OK;
++    trace_phase = PHASE_CONFIGURED; trace_ready_drained = 1; return TRACE_OK;
 +  }
 +  if (!out) return TRACE_INVALID_ARGUMENT;
 +  if (out_capacity < trace_event_count_value) return TRACE_OUTPUT_CAPACITY;
 +  memcpy(out, trace_events, trace_event_count_value * sizeof(trace_events[0]));
-+  trace_phase = PHASE_CONFIGURED;
++  trace_event_count_value = 0;
++  trace_phase = PHASE_CONFIGURED; trace_ready_drained = 1;
 +  return TRACE_OK;
 +}
 +
@@ -1304,6 +1365,7 @@ index 000000000..2bf68a789
 +  if (trace_phase != PHASE_RECORDING && trace_phase != PHASE_READY) return TRACE_INVALID_PHASE;
 +  trace_event_count_value = trace_omitted_count = trace_protected_tail = 0;
 +  trace_runtime_error = trace_ready_invalid = trace_reset_active = 0; trace_issue_source = 0;
++  trace_ready_drained = 0;
 +  trace_z80_instruction_pc = trace_m68k_instruction_pc = 0;
 +  trace_depth = 0; memset(trace_stack, 0, sizeof(trace_stack));
 +  trace_phase = PHASE_CONFIGURED;
@@ -1320,19 +1382,21 @@ index 000000000..2bf68a789
 +  memset(trace_hook_count, 0, sizeof(trace_hook_count));
 +  memset(gpgx_audio_trace_m68k_watch_mask, 0, sizeof(gpgx_audio_trace_m68k_watch_mask));
 +  memset(trace_stack, 0, sizeof(trace_stack));
++  memset(&trace_first_fault, 0, sizeof(trace_first_fault));
 +  trace_event_count_value = trace_omitted_count = trace_protected_tail = 0;
-+  trace_runtime_error = trace_ready_invalid = trace_z80_proofs_armed = trace_reset_active = trace_issue_source = trace_depth = 0;
++  trace_runtime_error = trace_ready_invalid = trace_z80_proofs_armed = trace_prepublication = 0;
++  trace_ready_drained = trace_reset_active = trace_issue_source = trace_depth = 0;
 +  trace_arm_hook_index = UINT16_MAX;
 +  trace_z80_instruction_pc = trace_m68k_instruction_pc = 0; trace_next_token = 1;
 +  trace_phase = PHASE_DISABLED; gpgx_audio_trace_enabled = 0;
 +  return TRACE_OK;
 +}
-diff --git a/waterbox/gpgx/cinterface/audio_trace.h b/waterbox/gpgx/cinterface/audio_trace.h
+diff --git a/audio_trace.h b/waterbox/gpgx/cinterface/audio_trace.h
 new file mode 100644
-index 000000000..296d04026
+index 0000000..ecabe79
 --- /dev/null
 +++ b/waterbox/gpgx/cinterface/audio_trace.h
-@@ -0,0 +1,149 @@
+@@ -0,0 +1,174 @@
 +#ifndef GPGX_AUDIO_TRACE_H
 +#define GPGX_AUDIO_TRACE_H
 +
@@ -1345,6 +1409,17 @@ index 000000000..296d04026
 +#define GPGX_AUDIO_TRACE_CPU_Z80 1u
 +#define GPGX_AUDIO_TRACE_CPU_M68K 2u
 +#define GPGX_AUDIO_TRACE_CPU_RESET 3u
++
++#define GPGX_AUDIO_TRACE_FAULT_NONE 0u
++#define GPGX_AUDIO_TRACE_FAULT_TOKEN 1u
++#define GPGX_AUDIO_TRACE_FAULT_SNAPSHOT 2u
++#define GPGX_AUDIO_TRACE_FAULT_STACK 3u
++#define GPGX_AUDIO_TRACE_FAULT_SERVICE 4u
++#define GPGX_AUDIO_TRACE_FAULT_HOOK_PROOF 5u
++#define GPGX_AUDIO_TRACE_FAULT_ARM_PROOF 6u
++#define GPGX_AUDIO_TRACE_FAULT_CHIP_OWNERSHIP 7u
++#define GPGX_AUDIO_TRACE_FAULT_CAPACITY 8u
++#define GPGX_AUDIO_TRACE_FAULT_CONTINUATION 9u
 +
 +struct __attribute__((packed)) gpgx_audio_trace_config_v1
 +{
@@ -1425,6 +1500,18 @@ index 000000000..296d04026
 +  uint8_t payload[8];
 +};
 +
++struct __attribute__((packed)) gpgx_audio_trace_first_fault_v1
++{
++  uint32_t reason;
++  uint32_t pc;
++  uint8_t source_cpu;
++  uint8_t active_kind;
++  uint8_t active_depth;
++  uint8_t continuation_count;
++  uint8_t continuation_limit;
++  uint8_t reserved[3];
++};
++
 +extern volatile uint8_t gpgx_audio_trace_enabled;
 +extern uint8_t gpgx_audio_trace_z80_watch_mask[8192];
 +extern uint8_t gpgx_audio_trace_m68k_watch_mask[8192];
@@ -1446,6 +1533,8 @@ index 000000000..296d04026
 +  const struct gpgx_audio_service_kind_v1 *kinds,
 +  const struct gpgx_audio_service_hook_v1 *hooks,
 +  const struct gpgx_audio_snapshot_range_v1 *ranges);
++int32_t gpgx_audio_trace_begin_publication_epoch(void);
++int32_t gpgx_audio_trace_first_fault(struct gpgx_audio_trace_first_fault_v1 *out);
 +int32_t gpgx_audio_trace_begin_frame(void);
 +int32_t gpgx_audio_trace_end_frame(void);
 +int32_t gpgx_audio_trace_event_count(uint32_t *required_count, uint32_t *overflow_count);
@@ -1482,3 +1571,56 @@ index 000000000..296d04026
 +} while (0)
 +
 +#endif
+diff --git a/waterbox/gpgx/Makefile b/waterbox/gpgx/Makefile
+index 32e2f2004..2bbcd0c67 100644
+--- a/waterbox/gpgx/Makefile
++++ b/waterbox/gpgx/Makefile
+@@ -87,8 +87,9 @@ SRCS = \
+ 	$(GPGX_DIR)/core/vdp_ctrl.c \
+ 	$(GPGX_DIR)/core/vdp_render.c \
+ 	$(GPGX_DIR)/core/z80/z80.c \
+-	cinterface/cdStreamImpl.c \
+-	cinterface/cinterface.c \
++	cinterface/cdStreamImpl.c \
++	cinterface/audio_trace.c \
++	cinterface/cinterface.c \
+ 	util/scrc32.c
+ 
+ include ../common.mak
+diff --git a/waterbox/gpgx/cinterface/cinterface.c b/waterbox/gpgx/cinterface/cinterface.c
+index 847a5f1d8..bc115997a 100644
+--- a/waterbox/gpgx/cinterface/cinterface.c
++++ b/waterbox/gpgx/cinterface/cinterface.c
+@@ -2,7 +2,8 @@
+ #include <stdarg.h>
+ #include <stdio.h>
+ #include <emulibc.h>
+-#include "callbacks.h"
++#include "callbacks.h"
++#include "audio_trace.h"
+ 
+ #include <shared.h>
+ #include <genesis.h>
+@@ -1017,13 +1018,15 @@ GPGX_EX void gpgx_clear_deepfreeze_list()
+ 
+ #endif
+ 
+-GPGX_EX void gpgx_reset(int hard)
+-{
+-	if (hard)
+-		system_reset();
+-	else
+-		gen_reset(0);
+-}
++GPGX_EX void gpgx_reset(int hard)
++{
++	gpgx_audio_trace_reset_begin((uint8_t)!!hard);
++	if (hard)
++		system_reset();
++	else
++		gen_reset(0);
++	gpgx_audio_trace_reset_end((uint8_t)!!hard);
++}
+ 
+ GPGX_EX void gpgx_set_mem_callback(ECL_ENTRY unsigned (*read)(unsigned, unsigned), ECL_ENTRY unsigned (*write)(unsigned, unsigned), ECL_ENTRY unsigned (*exec)(unsigned, unsigned))
+ {

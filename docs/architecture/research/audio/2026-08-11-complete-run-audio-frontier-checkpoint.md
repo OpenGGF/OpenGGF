@@ -6,7 +6,7 @@ observer build/install toolchain, the native BizHawk headless bridge, the
 lossless raw/semantic trace schema, and the first Sonic 1 reference producer.
 
 The reviewed canonical native patch at this checkpoint is ABI v2, SHA-256
-`dd1e860795ac4e3055081b83ccb77368ae470280911787da849845c9570e8fa1`.
+`755805989ebdcc1edb3fda379e9e9cc45f66c9fb334a476399172babeadcd118`.
 Build and create-new installation instructions are in
 `tools/bizhawk-headless/native/gpgx-audio-observer/README.md`; trust-boundary
 details are in the adjacent `TRUST.md`. No generated core or ROM is committed.
@@ -21,10 +21,9 @@ details are in the adjacent `TRUST.md`. No generated core or ROM is committed.
   The drained tail is a valid open DPCM service (kind 2, token 188); its final
   event is the YM address write at instruction-start PC `$009C`, opcode
   `DD 73 00`, from `zPlayPCMLoop` (`docs/s1disasm/sound/z80.asm:155-161`).
-  Because ABI v2 collapses hook/proof/ownership/continuation runtime faults into
-  the same status, the exact first fault cannot be attributed without a central
-  native diagnostic contract. No additional game-scoped manifest edge is
-  justified from this evidence.
+  ABI v2 now exposes the first hook/proof/ownership/continuation failure through
+  the read-only packed diagnostic described below. The next S1 run can attribute
+  row 523 without adding a speculative game-scoped manifest edge.
 - Sonic 2: the complete reference movie has two identical observer runs:
   259,590 frames, 169,986,419 events, maximum frame occupancy 1,825, event
   digest prefix `c2b2f823`, and an empty cutoff frontier. Engine comparison is
@@ -79,13 +78,13 @@ The row-523 reproduction used Sonic 1 World REV01 SHA-1
 `69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b`, BK2 SHA-256
 `f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b`,
 and the durable BizHawk home whose `dll/gpgx.wbx.zst` SHA-256 is
-`55ce7ae32be0b8f5e25c819d578937acd85b80615b985bedde5c780211c3a305`.
+`f9c6a1cbaa3c70428ffc1774473ff4f9ba7d1ce1503fa00ab657e497dd584625`.
 Two runs reproduced the same row, status, and native tail. The required central
-change is a read-only first-fault diagnostic returned after failed `end_frame`:
-reason, CPU, instruction-start PC, active kind/depth, and continuation count and
-limit. It must not alter event recording or emulation state. Native selftests,
-the managed adapter/native binding tests, `CompleteRunAudioObserverTests`, and
-this real S1 prefix are the affected gates.
+change is now delivered as a read-only 16-byte first-fault diagnostic returned
+after failed `end_frame`: stable reason, CPU, instruction-start PC, active
+kind/depth, and continuation count and limit. It preserves the first failure,
+does not append an event or alter emulation state, and clears only on successful
+configure or disable. A game-worker rerun is still required to decode row 523.
 
 ## Verified checkpoint gates
 
@@ -101,12 +100,12 @@ this real S1 prefix are the affected gates.
 - S3K AIZ release-slice, level-loading, bootstrap, and decoding guards: 52
   tests passing against locked-on ROM SHA-1
   `cfbf98c36c776677290a872547ac47c53d2761d6`.
-
-The shared complete-run CLI guard has a checkpoint-local pre-existing failure:
-`TestCompleteRunAudioCli.orchestratorPinsItsJavaClassAndRejectsAmbientInjection`
-expects `tools/audio/run_complete_audio_parity.sh` to be executable, while the
-checkpoint tracks and checks it out as mode `100644`. The S3K Task 2 diff does
-not touch that shared runner.
+- Paired interleaved observer performance: S2 passed two consecutive frozen
+  repetitions at 9.82% and 9.88% median slowdown; S3K passed at 9.77%.
+- Two fresh locked builds and two create-new installs are byte-identical. The
+  compressed core SHA-256 is `f9c6a1cbaa3c70428ffc1774473ff4f9ba7d1ce1503fa00ab657e497dd584625`
+  and the observer identity is
+  `1f0147ecc101d4d726ed09536db87c125f305eccdca986c620d735714543c5cc`.
 
 These results establish a coherent handoff point; they are not a declaration
 that complete-game audio parity is finished.

@@ -53,8 +53,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(32, (int)artifact["abi"]["event_size"]);
             AssertEx.Equal(65536, (int)artifact["abi"]["capacity"]);
             AssertEx.Equal("little-endian", (string)artifact["abi"]["byte_order"]);
-            AssertEx.Equal(41731544, (int)artifact["core"]["decompressed_size"]);
-            AssertEx.Equal(412363, (int)artifact["core"]["compressed_size"]);
+            AssertEx.Equal(41740032, (int)artifact["core"]["decompressed_size"]);
+            AssertEx.Equal(414021, (int)artifact["core"]["compressed_size"]);
             AssertEx.Equal(32, (int)artifact["core"]["invis_alignment"]);
         }
 
@@ -91,6 +91,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(true, patch.Contains("gpgx_audio_trace_reset_begin"));
             AssertEx.Equal(true, patch.Contains("HOOK_ARM_Z80_PROOFS_ON_COMPLETION"));
             AssertEx.Equal(true, patch.Contains("trace_z80_proofs_armed"));
+            AssertEx.Equal(true, patch.Contains("CONFIG_PREPUBLICATION_EPOCH"));
+            AssertEx.Equal(true, patch.Contains("gpgx_audio_trace_begin_publication_epoch"));
+            AssertEx.Equal(true, patch.Contains("struct __attribute__((packed)) gpgx_audio_trace_first_fault_v1"));
+            AssertEx.Equal(true, patch.Contains("gpgx_audio_trace_first_fault"));
             AssertEx.Equal(true, patch.Contains("ECL_INVISIBLE static struct gpgx_audio_trace_event"));
             AssertEx.Equal(true, patch.Contains("STATIC_ASSERT(event_size"));
             AssertEx.Equal(null, artifact["managed_reflection"]["host_source_sha256"]);

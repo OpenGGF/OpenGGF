@@ -301,6 +301,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 AssertEx.Equal(2u, adapter.AbiVersion());
                 AssertEx.Equal(32u, adapter.EventSize());
                 AssertEx.Equal(65536u, adapter.Capacity());
+                AssertEx.Equal(16, Marshal.SizeOf(typeof(GpgxAudioObserverAdapter.FirstFault)));
                 var config = new GpgxAudioObserverAdapter.Config
                 {
                     Magic = 0x31544147, AbiVersion = 1, StructSize = 64, KindSize = 16,
@@ -335,6 +336,15 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 AssertEx.Throws<ArgumentException>(() => adapter.Configure(
                     ref config, mask, kinds, hooks, new GpgxAudioObserverAdapter.SnapshotRange[2]), "length");
                 AssertEx.Equal(0, adapter.Configure(ref config, mask, kinds, hooks, ranges));
+                GpgxAudioObserverAdapter.FirstFault firstFault;
+                AssertEx.Equal(0, adapter.GetFirstFault(out firstFault));
+                AssertEx.Equal(0u, firstFault.Reason);
+                AssertEx.Equal(0u, firstFault.Pc);
+                AssertEx.Equal((byte)0, firstFault.SourceCpu);
+                AssertEx.Equal((byte)0, firstFault.ActiveKind);
+                AssertEx.Equal((byte)0, firstFault.ActiveDepth);
+                AssertEx.Equal((byte)0, firstFault.ContinuationCount);
+                AssertEx.Equal((byte)0, firstFault.ContinuationLimit);
                 Array.Clear(mask, 0, mask.Length); kinds[0] = new GpgxAudioObserverAdapter.ServiceKind();
                 hooks[0] = new GpgxAudioObserverAdapter.ServiceHook();
                 ranges[0] = new GpgxAudioObserverAdapter.SnapshotRange();

@@ -14,6 +14,7 @@ namespace OpenGGF.BizHawk.Headless
         int EndFrame();
         int EventCount(out uint count, out uint overflow);
         int Drain(GpgxAudioTraceEvent[] events, uint capacity, out uint count);
+        int GetFirstFault(out GpgxAudioObserverAdapter.FirstFault fault);
         int BeginPublicationEpoch();
         int AbortFrame();
         int Disable();

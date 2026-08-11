@@ -94,6 +94,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
             var api = new FakeTraceApi
             {
                 EndStatus = -3,
+                FirstFault = new GpgxAudioObserverAdapter.FirstFault
+                    { Reason=5, SourceCpu=1, Pc=0x9C, ActiveKind=2,
+                      ActiveDepth=1, ContinuationCount=4, ContinuationLimit=4 },
                 Events = new[]
                 {
                     new GpgxAudioTraceEvent { Ordinal=0, Kind=1,
@@ -107,7 +110,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             CompleteRunAudioObserver observer = Create(api);
             AssertEx.Throws<InvalidOperationException>(
                 () => observer.CaptureFrame(() => { }, (events, count) => { }),
-                "native_tail=0:1:1:0:1:0:71b4c:100:0:0|"
+                "first_fault=5:1:9c:2:1:4:4 native_tail=0:1:1:0:1:0:71b4c:100:0:0|"
                     + "1:1:2:1:2:1:77:1:0:0");
             AssertEx.Equal(0, api.AbortCalls);
         }
@@ -516,6 +519,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             public GpgxAudioTraceEvent[] Events = new GpgxAudioTraceEvent[0];
             public uint Overflow;
             public int EndStatus;
+            public GpgxAudioObserverAdapter.FirstFault FirstFault;
             public int AbortCalls;
             public int DisableCalls;
             public uint LastDrainCapacity;
@@ -539,6 +543,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 return 0;
             }
             public int AbortFrame() { Calls.Add("abort"); AbortCalls++; return 0; }
+            public int GetFirstFault(out GpgxAudioObserverAdapter.FirstFault fault)
+            { Calls.Add("fault"); fault=FirstFault; return 0; }
             public int Disable() { Calls.Add("disable"); DisableCalls++; return 0; }
             public int BeginPublicationEpoch() { Calls.Add("publication"); return 0; }
         }
