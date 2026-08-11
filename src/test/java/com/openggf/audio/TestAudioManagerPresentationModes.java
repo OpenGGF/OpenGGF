@@ -445,9 +445,9 @@ class TestAudioManagerPresentationModes {
         AudioTestFixtures.StubSmpsData smps =
                 new AudioTestFixtures.StubSmpsData("queued-smps");
         smps.setId(0xA0);
-        audio.shadowFactoryForTesting().warmSmpsSfxAsset(
-                smpsKey, smps, AudioTestFixtures.EMPTY_DAC,
-                new SmpsSequencerConfig.Builder().build());
+        audio.shadowFactoryForTesting().registerSmpsSfxAsset(
+                smpsKey, 0, smps, AudioTestFixtures.EMPTY_DAC,
+                new SmpsSequencerConfig.Builder().build(), false);
         commands.submit(new AudioPresentationCommand.AddSmpsSfx(
                         audio.shadowFactoryForTesting().resolveSmpsSfx(
                                 4, smpsKey, 1 << 16, 0x70,

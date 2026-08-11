@@ -142,6 +142,22 @@ public final class SmpsSequencerConfig {
         return Arrays.copyOf(psgChannelOrder, psgChannelOrder.length);
     }
 
+    int fmChannelCount() {
+        return fmChannelOrder.length;
+    }
+
+    int fmChannelAt(int index) {
+        return fmChannelOrder[index];
+    }
+
+    int psgChannelCount() {
+        return psgChannelOrder.length;
+    }
+
+    int psgChannelAt(int index) {
+        return psgChannelOrder[index];
+    }
+
     public TempoMode getTempoMode() {
         return tempoMode;
     }

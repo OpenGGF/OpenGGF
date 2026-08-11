@@ -1,6 +1,7 @@
 package com.openggf.audio.presentation;
 
 import com.openggf.audio.GameSound;
+import com.openggf.audio.SmpsSfxPlaybackPolicy;
 import com.openggf.audio.presentation.AudioPresentationCommand.AddSmpsSfx;
 import com.openggf.audio.presentation.AudioPresentationCommand.ChangeMusicTempo;
 import com.openggf.audio.presentation.AudioPresentationCommand.EndMusicOverride;
@@ -19,6 +20,7 @@ import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
+import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 
 import java.io.IOException;
@@ -31,35 +33,47 @@ import java.util.function.Consumer;
  * Resolves logical audio commands into immutable presentation mutations.
  *
  * <p>This class has no registry or backend reference. Loading, WAV decoding,
- * and cache warming happen synchronously during submission; queued SMPS SFX
- * contain only an asset key and primitive metadata.
+ * and catalog registration happen synchronously during submission; queued
+ * SMPS SFX contain only an asset key and primitive metadata.
  */
 public final class AudioPresentationCommandResolver {
 
     public interface Sources {
-        String baseGameId();
-
-        AbstractSmpsData loadBaseMusic(int musicId);
-
-        AbstractSmpsData loadDonorMusic(String donorGameId, int musicId);
-
-        AbstractSmpsData loadBaseSfx(int sfxId);
-
-        AbstractSmpsData loadBaseSfx(String name);
-
-        AbstractSmpsData loadDonorSfx(String donorGameId, int sfxId);
-
-        DacData dacFor(String gameId);
-
-        SmpsSequencerConfig configFor(String gameId);
-
-        int sfxPriority(String gameId, int sfxId);
-
-        boolean specialSfx(String gameId, int sfxId);
-
-        boolean continuousSfx(String gameId, int sfxId);
+        SourceAccess sourceFor(
+                SmpsAssetKey.Route route, String donorGameId);
 
         int maxStereoFrames();
+    }
+
+    /** Immutable policy captured with one loader/dependency publication. */
+    public interface SfxPolicy {
+        int priority(int sfxId);
+
+        boolean special(int sfxId);
+
+        boolean continuous(int sfxId);
+    }
+
+    /**
+     * One immutable route source handle. Resolution performs every loader,
+     * dependency, and policy lookup through this captured value so a reentrant
+     * source replacement cannot compose two published generations.
+     */
+    public record SourceAccess(
+            String gameId,
+            long dependencyGeneration,
+            SmpsLoader loader,
+            DacData dac,
+            SmpsSequencerConfig config,
+            SfxPolicy sfxPolicy) {
+        public SourceAccess {
+            requireGameId(gameId);
+            if (dependencyGeneration < 0) {
+                throw new IllegalArgumentException(
+                        "dependencyGeneration must be non-negative");
+            }
+            Objects.requireNonNull(sfxPolicy, "sfxPolicy");
+        }
     }
 
     private final AudioPresentationCommandQueue queue;
@@ -124,6 +138,28 @@ public final class AudioPresentationCommandResolver {
         }
     }
 
+    /**
+     * Submits an SMPS SFX against the source tuple captured by its caller.
+     *
+     * <p>Public manager entry points classify and register before publishing
+     * their logical command. Retaining that exact source here prevents a
+     * reentrant ROM/profile/donor replacement during the first loader call
+     * from resolving the published command against another generation.
+     * Direct resolver callers continue to use {@link #submit(AudioCommand)}
+     * and retain lookup-before-load miss handling.</p>
+     */
+    public void submitRegisteredSmpsSfx(
+            AudioCommand.PlaySfx command, SourceAccess source) {
+        Objects.requireNonNull(command, "command");
+        Objects.requireNonNull(source, "source");
+        if (command.route() == AudioCommand.SfxRoute.FALLBACK_NAME
+                || command.route() == AudioCommand.SfxRoute.RING_RESOLVED) {
+            throw new IllegalArgumentException(
+                    "registered SMPS submission requires an SMPS route");
+        }
+        submitSfx(command, source);
+    }
+
     public void submitRawPcm(byte[] pcm, int sourceRate) {
         byte[] source = Objects.requireNonNull(pcm, "pcm").clone();
         String assetId = "sega-pcm:" + sourceRate + ":"
@@ -148,21 +184,27 @@ public final class AudioPresentationCommandResolver {
         try {
             AudioPresentationCommand.MusicVoiceEntry voice =
                     switch (command.route()) {
-                        case BASE_SMPS -> resolveSmpsMusic(
-                                sources.baseGameId(),
-                                command.musicId(),
-                                sources.loadBaseMusic(command.musicId()),
-                                AudioSourceDescriptor.baseMusic(
-                                        command.musicId()));
-                        case DONOR_SMPS -> resolveSmpsMusic(
-                                requireGameId(command.donorGameId()),
-                                command.musicId(),
-                                sources.loadDonorMusic(
-                                        command.donorGameId(),
-                                        command.musicId()),
-                                AudioSourceDescriptor.donorMusic(
-                                        command.donorGameId(),
-                                        command.musicId()));
+                        case BASE_SMPS -> {
+                            SourceAccess source = sources.sourceFor(
+                                    SmpsAssetKey.Route.BASE_MUSIC, null);
+                            yield resolveSmpsMusic(
+                                    SmpsAssetKey.Route.BASE_MUSIC,
+                                    source, command.musicId(),
+                                    AudioSourceDescriptor.baseMusic(
+                                            command.musicId()));
+                        }
+                        case DONOR_SMPS -> {
+                            String gameId = requireGameId(
+                                    command.donorGameId());
+                            SourceAccess source = sources.sourceFor(
+                                    SmpsAssetKey.Route.DONOR_MUSIC, gameId);
+                            yield resolveSmpsMusic(
+                                    SmpsAssetKey.Route.DONOR_MUSIC,
+                                    source, command.musicId(),
+                                    AudioSourceDescriptor.donorMusic(
+                                            command.donorGameId(),
+                                            command.musicId()));
+                        }
                         case FALLBACK_WAV -> factory.fallbackMusic(
                                 allocateVoiceId(),
                                 command.musicId(),
@@ -184,25 +226,38 @@ public final class AudioPresentationCommandResolver {
     }
 
     private AudioPresentationCommand.MusicVoiceEntry resolveSmpsMusic(
-            String gameId,
+            SmpsAssetKey.Route route,
+            SourceAccess source,
             int musicId,
-            AbstractSmpsData data,
             AudioSourceDescriptor descriptor) {
-        if (data == null) {
-            throw new IllegalStateException("loader returned no SMPS data");
+        SmpsAssetKey key = new SmpsAssetKey(
+                source.gameId(), route, musicId, null);
+        SmpsAssetCatalog.ProgramEntry entry =
+                factory.findRegisteredSmpsMusicAsset(
+                        key, source.dependencyGeneration());
+        if (entry == null) {
+            AbstractSmpsData data = Objects.requireNonNull(
+                    loadMusic(source, musicId),
+                    "loader returned no SMPS data");
+            entry = factory.registerSmpsMusicAsset(
+                    key, source.dependencyGeneration(), data,
+                    requireDac(route, source),
+                    requireConfig(route, source));
         }
-        return factory.musicSmps(
-                gameId,
+        return factory.musicSmpsFromRegistered(
+                source.gameId(),
                 musicId,
                 allocateVoiceId(),
-                data,
-                requireDac(gameId),
-                requireConfig(gameId),
                 descriptor,
-                sources.maxStereoFrames());
+                sources.maxStereoFrames(), entry);
     }
 
     private void submitSfx(AudioCommand.PlaySfx command) {
+        submitSfx(command, null);
+    }
+
+    private void submitSfx(
+            AudioCommand.PlaySfx command, SourceAccess capturedSource) {
         if (command.route() == AudioCommand.SfxRoute.RING_RESOLVED) {
             enqueue(new ResetRingAlternation(
                     !GameSound.RING_LEFT.name().equals(command.sfxName())));
@@ -210,38 +265,51 @@ public final class AudioPresentationCommandResolver {
         AudioPresentationCommand resolved;
         try {
             resolved = switch (command.route()) {
-                case BASE_SMPS_ID -> resolveSmpsSfxCommand(
-                        sources.baseGameId(),
-                        new SmpsAssetKey(
-                                sources.baseGameId(),
-                                SmpsAssetKey.Route.BASE_ID,
-                                command.sfxId(), null),
-                        command.sfxId(),
-                        sources.loadBaseSfx(command.sfxId()),
-                        command.pitch());
-                case BASE_SMPS_NAME -> {
-                    AbstractSmpsData data =
-                            sources.loadBaseSfx(command.sfxName());
+                case BASE_SMPS_ID -> {
+                    SourceAccess source = capturedSource != null
+                            ? capturedSource
+                            : sources.sourceFor(
+                            SmpsAssetKey.Route.BASE_ID, null);
+                    SmpsAssetKey key = new SmpsAssetKey(
+                            source.gameId(), SmpsAssetKey.Route.BASE_ID,
+                            command.sfxId(), null);
                     yield resolveSmpsSfxCommand(
-                            sources.baseGameId(),
-                            new SmpsAssetKey(
-                                    sources.baseGameId(),
-                                    SmpsAssetKey.Route.BASE_NAME,
-                                    -1, command.sfxName()),
-                            data != null ? data.getId() : -1,
-                            data,
+                            source, key, command.sfxId(),
+                            () -> loadSfx(source, command.sfxId()),
                             command.pitch());
                 }
-                case DONOR_SMPS -> resolveSmpsSfxCommand(
-                        requireGameId(command.donorGameId()),
-                        new SmpsAssetKey(
-                                command.donorGameId(),
-                                SmpsAssetKey.Route.DONOR_ID,
-                                command.sfxId(), null),
-                        command.sfxId(),
-                        sources.loadDonorSfx(
-                                command.donorGameId(), command.sfxId()),
-                        command.pitch());
+                case BASE_SMPS_NAME -> {
+                    SourceAccess source = capturedSource != null
+                            ? capturedSource
+                            : sources.sourceFor(
+                            SmpsAssetKey.Route.BASE_NAME, null);
+                    SmpsAssetKey key = new SmpsAssetKey(
+                            source.gameId(), SmpsAssetKey.Route.BASE_NAME,
+                            -1, command.sfxName());
+                    yield resolveSmpsSfxCommand(
+                            source, key, -1,
+                            () -> loadSfx(source, command.sfxName()),
+                            command.pitch());
+                }
+                case DONOR_SMPS -> {
+                    String gameId = requireGameId(command.donorGameId());
+                    SourceAccess source = capturedSource != null
+                            ? capturedSource
+                            : sources.sourceFor(
+                            SmpsAssetKey.Route.DONOR_ID, gameId);
+                    if (!gameId.equals(source.gameId())) {
+                        throw new IllegalArgumentException(
+                                "captured donor source does not match "
+                                        + gameId);
+                    }
+                    SmpsAssetKey key = new SmpsAssetKey(
+                            source.gameId(), SmpsAssetKey.Route.DONOR_ID,
+                            command.sfxId(), null);
+                    yield resolveSmpsSfxCommand(
+                            source, key, command.sfxId(),
+                            () -> loadSfx(source, command.sfxId()),
+                            command.pitch());
+                }
                 case FALLBACK_NAME, RING_RESOLVED ->
                         StartSampleSfx.fromVoice(
                                 factory.fallbackSfx(
@@ -260,40 +328,80 @@ public final class AudioPresentationCommandResolver {
     }
 
     private AudioPresentationCommand resolveSmpsSfxCommand(
-            String gameId,
+            SourceAccess source,
             SmpsAssetKey key,
-            int sfxId,
-            AbstractSmpsData data,
+            int requestedSfxId,
+            SmpsSfxLoader loader,
             float pitch) {
-        if (data == null) {
-            throw new IllegalStateException("loader returned no SMPS data");
+        long generation = source.dependencyGeneration();
+        SmpsAssetCatalog.ProgramEntry entry =
+                factory.findRegisteredSmpsSfxAsset(key, generation);
+        if (entry == null) {
+            AbstractSmpsData data = Objects.requireNonNull(
+                    loader.load(), "loader returned no SMPS data");
+            int resolvedSfxId = requestedSfxId >= 0
+                    ? requestedSfxId : data.getId();
+            entry = factory.registerSmpsSfxAsset(
+                    key, generation, data,
+                    requireDac(key.route(), source),
+                    requireConfig(key.route(), source),
+                    new SmpsSfxPlaybackPolicy(
+                            source.sfxPolicy().priority(resolvedSfxId),
+                            source.sfxPolicy().special(resolvedSfxId),
+                            source.sfxPolicy().continuous(resolvedSfxId)));
         }
-        int priority = sources.sfxPriority(gameId, sfxId);
-        factory.warmSmpsSfxAsset(
-                key, data, requireDac(gameId), requireConfig(gameId),
-                sources.specialSfx(gameId, sfxId));
-        int continuousId =
-                sources.continuousSfx(gameId, sfxId) ? sfxId : 0;
+        int sfxId = entry.assetId();
+        SmpsSfxPlaybackPolicy policy = entry.sfxPolicy();
+        int priority = policy.priority();
+        int continuousId = policy.continuous() ? sfxId : 0;
         return new AddSmpsSfx(factory.resolveSmpsSfx(
                 allocateVoiceId(),
                 key,
+                generation,
                 pitchQ16(pitch),
                 priority,
                 continuousId,
-                data.getChannels() + data.getPsgChannels(),
+                entry.trackCount(),
                 sources.maxStereoFrames()));
     }
 
-    private DacData requireDac(String gameId) {
-        return Objects.requireNonNull(
-                sources.dacFor(gameId),
-                "no DAC data for " + gameId);
+    @FunctionalInterface
+    private interface SmpsSfxLoader {
+        AbstractSmpsData load();
     }
 
-    private SmpsSequencerConfig requireConfig(String gameId) {
+    private static AbstractSmpsData loadMusic(
+            SourceAccess source, int musicId) {
+        return source.loader() != null
+                ? source.loader().loadMusic(musicId) : null;
+    }
+
+    private static AbstractSmpsData loadSfx(
+            SourceAccess source, int sfxId) {
+        return source.loader() != null
+                ? source.loader().loadSfx(sfxId) : null;
+    }
+
+    private static AbstractSmpsData loadSfx(
+            SourceAccess source, String name) {
+        return source.loader() != null
+                ? source.loader().loadSfx(name) : null;
+    }
+
+    private static DacData requireDac(
+            SmpsAssetKey.Route route, SourceAccess source) {
         return Objects.requireNonNull(
-                sources.configFor(gameId),
-                "no sequencer config for " + gameId);
+                source.dac(),
+                "no DAC data for " + source.gameId()
+                        + " via " + route);
+    }
+
+    private static SmpsSequencerConfig requireConfig(
+            SmpsAssetKey.Route route, SourceAccess source) {
+        return Objects.requireNonNull(
+                source.config(),
+                "no sequencer config for " + source.gameId()
+                        + " via " + route);
     }
 
     private void enqueue(AudioPresentationCommand command) {
@@ -343,60 +451,21 @@ public final class AudioPresentationCommandResolver {
 
     private static final class EmptySources implements Sources {
         @Override
-        public String baseGameId() {
-            return "unconfigured";
-        }
-
-        @Override
-        public AbstractSmpsData loadBaseMusic(int musicId) {
-            return null;
-        }
-
-        @Override
-        public AbstractSmpsData loadDonorMusic(
-                String donorGameId, int musicId) {
-            return null;
-        }
-
-        @Override
-        public AbstractSmpsData loadBaseSfx(int sfxId) {
-            return null;
-        }
-
-        @Override
-        public AbstractSmpsData loadBaseSfx(String name) {
-            return null;
-        }
-
-        @Override
-        public AbstractSmpsData loadDonorSfx(
-                String donorGameId, int sfxId) {
-            return null;
-        }
-
-        @Override
-        public DacData dacFor(String gameId) {
-            return null;
-        }
-
-        @Override
-        public SmpsSequencerConfig configFor(String gameId) {
-            return null;
-        }
-
-        @Override
-        public int sfxPriority(String gameId, int sfxId) {
-            return 0;
-        }
-
-        @Override
-        public boolean specialSfx(String gameId, int sfxId) {
-            return false;
-        }
-
-        @Override
-        public boolean continuousSfx(String gameId, int sfxId) {
-            return false;
+        public SourceAccess sourceFor(
+                SmpsAssetKey.Route route, String donorGameId) {
+            String gameId = donorGameId != null
+                    ? requireGameId(donorGameId) : "unconfigured";
+            return new SourceAccess(
+                    gameId, 0, null, null, null,
+                    new SfxPolicy() {
+                        @Override public int priority(int sfxId) { return 0; }
+                        @Override public boolean special(int sfxId) {
+                            return false;
+                        }
+                        @Override public boolean continuous(int sfxId) {
+                            return false;
+                        }
+                    });
         }
 
         @Override

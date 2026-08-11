@@ -391,10 +391,29 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     @Override
     public void playSfxSmps(AbstractSmpsData data, DacData dacData, float pitch,
                              SmpsSequencerConfig config) {
+        SmpsSfxPlaybackPolicy policy = new SmpsSfxPlaybackPolicy(
+                (audioProfile != null)
+                        ? audioProfile.getSfxPriority(data.getId()) : 0x70,
+                audioProfile != null
+                        && audioProfile.isSpecialSfx(data.getId()),
+                audioProfile != null
+                        && audioProfile.isContinuousSfx(data.getId()));
+        playSfxSmps(data, dacData, pitch, config, policy);
+    }
+
+    @Override
+    public void playSfxSmps(
+            AbstractSmpsData data,
+            DacData dacData,
+            float pitch,
+            SmpsSequencerConfig config,
+            SmpsSfxPlaybackPolicy policy) {
         // ROM behavior: completely block SFX during override jingle and fade-in period
         if (sfxBlocked) {
             return;
         }
+
+        Objects.requireNonNull(policy, "policy");
 
         SmpsSequencerConfig effectiveConfig = legacySequencerConfig(
                 (config != null) ? config : requireSmpsConfig());
@@ -402,14 +421,13 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         boolean dacInterpolate = configService.getBoolean(SonicConfiguration.DAC_INTERPOLATE);
         boolean fm6DacOff = configService.getBoolean(SonicConfiguration.FM6_DAC_OFF);
 
-        // Look up SFX priority from game-specific audio profile
-        int sfxPriority = (audioProfile != null) ? audioProfile.getSfxPriority(data.getId()) : 0x70;
-        boolean specialSfx = (audioProfile != null) && audioProfile.isSpecialSfx(data.getId());
+        int sfxPriority = policy.priority();
+        boolean specialSfx = policy.special();
 
         // --- Continuous SFX detection (Z80: zPlaySound_Bankswitch lines 1937-1965) ---
         // If this SFX is continuous (S3K >= 0xBC) and the same one is already playing,
         // extend playback (set the flag) instead of restarting from scratch.
-        boolean isContinuous = (audioProfile != null) && audioProfile.isContinuousSfx(data.getId());
+        boolean isContinuous = policy.continuous();
         int contTrackCount = data.getChannels() + data.getPsgChannels();
         if (isContinuous) {
             SmpsDriver targetDriver = null;

@@ -1,8 +1,11 @@
 package com.openggf.audio.presentation;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.AudioTestFixtures;
 import com.openggf.audio.ChannelType;
+import com.openggf.audio.driver.PreparedSfxAdmission;
 import com.openggf.audio.driver.SmpsDriver;
 import com.openggf.audio.presentation.AudioPresentationCommand.AddSmpsSfx;
 import com.openggf.audio.presentation.AudioPresentationCommand.EndMusicOverride;
@@ -32,6 +35,7 @@ import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.smps.SmpsSfxData;
 import com.openggf.audio.synth.VirtualSynthesizer;
+import com.openggf.audio.synth.ChipWriteObserver;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
@@ -56,6 +60,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestAudioVoiceRegistry {
     private static final int OUTPUT_RATE = 48_000;
     private static final int MAX_STEREO_FRAMES = 16;
+    private static final ObjectMapper JSON = new ObjectMapper()
+            .disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
 
     @Test
     void iterationOrderIsMusicThenSmpsThenRawPcmThenSampleSfxByVoiceId() {
@@ -567,7 +573,7 @@ class TestAudioVoiceRegistry {
     }
 
     @Test
-    void failedSfxAttachmentPreservesMusicSequencerAndRetriesWithoutResidue() {
+    void failedSfxPreparationPreservesMusicSequencerAndRetriesWithoutResidue() {
         RecordingInstantiation instantiation = new RecordingInstantiation();
         AudioVoiceRegistry registry = registry(instantiation, new ArrayList<>());
         FailingMutationDriver driver = populatedFailingMutationDriver();
@@ -605,7 +611,7 @@ class TestAudioVoiceRegistry {
     }
 
     @Test
-    void failedSfxAttachmentRestoresExactDacBankAndPlaybackBeforeRetry() {
+    void failedSfxPreparationLeavesExactDacBankAndPlaybackBeforeRetry() {
         DacData musicDac = dacData(
                 new byte[] {0, 24, 64, 127, (byte) 255, (byte) 196, 96, 32});
         DacData sfxDac = dacData(
@@ -633,11 +639,11 @@ class TestAudioVoiceRegistry {
                 () -> queue.applyPending(registry::apply));
 
         assertSame(musicDac, activeDacData(driver),
-                "rollback must restore the exact pre-command DAC bank");
+                "pre-mutation rejection must retain the exact DAC bank");
         short[] expected = renderFrames(uninterrupted, 128);
         short[] actual = renderFrames(driver, 128);
         assertArrayEquals(expected, actual,
-                "rollback must restore in-flight DAC playback against that bank");
+                "pre-mutation rejection must retain in-flight DAC playback");
         assertEquals(1, queue.size());
 
         queue.applyPending(registry::apply);
@@ -649,7 +655,7 @@ class TestAudioVoiceRegistry {
     }
 
     @Test
-    void failedSfxAttachmentRestoresCoordFlagCounterBeforeRetry() {
+    void failedSfxPreparationLeavesCoordFlagCounterForRetry() {
         SmpsCoordFlagRuntimeState state = new SmpsCoordFlagRuntimeState();
         state.setSpindashRevCounter(7);
         SmpsCoordFlagHandlerOwner owner =
@@ -695,7 +701,7 @@ class TestAudioVoiceRegistry {
                 () -> queue.applyPending(registry::apply));
 
         assertEquals(7, state.spindashRevCounter(),
-                "failed constructor/start notification must roll back");
+                "rejected preparation must not publish a start notification");
         assertEquals(1, queue.size());
 
         queue.applyPending(registry::apply);
@@ -706,7 +712,95 @@ class TestAudioVoiceRegistry {
     }
 
     @Test
-    void failedStandaloneSfxAttachmentRestoresPreConstructionCoordStateBeforeRetry() {
+    void realYmObserverFailureRollsBackRegistryCommandAndQueueBeforeRetry() {
+        assertRealObserverFailureRollsBackRegistryCommand(false);
+    }
+
+    @Test
+    void realPsgObserverFailureRollsBackRegistryCommandAndQueueBeforeRetry() {
+        assertRealObserverFailureRollsBackRegistryCommand(true);
+    }
+
+    private static void assertRealObserverFailureRollsBackRegistryCommand(
+            boolean psg) {
+        SmpsCoordFlagRuntimeState state = new SmpsCoordFlagRuntimeState();
+        state.setSpindashRevCounter(7);
+        SmpsCoordFlagHandlerOwner handlerOwner =
+                new SmpsCoordFlagHandlerOwner(state);
+        handlerOwner.register("observer-test", shared -> new CoordFlagHandler() {
+            @Override
+            public void onSfxStart(int sfxId) {
+                shared.setSpindashRevCounter(
+                        shared.spindashRevCounter() + 1);
+            }
+
+            @Override
+            public boolean handleFlag(
+                    CoordFlagContext context,
+                    SmpsSequencer.Track track,
+                    int command) {
+                return false;
+            }
+
+            @Override
+            public int flagParamLength(int command) {
+                return -1;
+            }
+        });
+        int channelMask = psg ? 0x80 : 0;
+        ObserverSfxInstantiation instantiation =
+                new ObserverSfxInstantiation(
+                        channelMask, handlerOwner.handlerFor("observer-test"));
+        SmpsDriver driver = new SmpsDriver();
+        if (psg) {
+            SmpsSequencer existing = new SmpsSequencer(
+                    new FixtureSfxData(0xAF,
+                            new FixtureSfxTrack(0x80, 1, 0, 0)),
+                    dacData(), driver, AudioManager.getInstance(),
+                    new SmpsSequencerConfig.Builder().build());
+            driver.addSequencer(existing, true);
+        }
+        instantiation.enqueueMusicDriver(driver);
+        AudioVoiceRegistry registry = new AudioVoiceRegistry(
+                instantiation, instantiation, handlerOwner, ignored -> {
+                });
+        registry.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
+                0x82, AudioSourceDescriptor.baseMusic(0x82),
+                composite(1, 0x82, driver))));
+        PresentationVoice ownerIdentity = registry.orderedVoiceAt(0);
+        List<SmpsSequencer> sequencerIdentities =
+                driver.sequencersForTesting();
+        Object registryBefore = JSON.valueToTree(registry.snapshot());
+        driver.setChipWriteObserver(new FailOnceChipObserver(psg));
+        AudioPresentationCommandQueue queue =
+                new AudioPresentationCommandQueue();
+        queue.submit(new AddSmpsSfx(source(2, 0xB0)),
+                () -> true, registry::apply);
+
+        assertThrows(IllegalStateException.class,
+                () -> queue.applyPending(registry::apply));
+
+        assertEquals(registryBefore, JSON.valueToTree(registry.snapshot()),
+                "registry and full driver/synth state roll back exactly");
+        assertSame(ownerIdentity, registry.orderedVoiceAt(0));
+        assertSequencerIdentities(sequencerIdentities,
+                driver.sequencersForTesting());
+        assertEquals(7, state.spindashRevCounter());
+        assertEquals(1, queue.size(),
+                "the failed command remains queued for retry");
+
+        queue.applyPending(registry::apply);
+
+        assertEquals(8, state.spindashRevCounter(),
+                "retry publishes coordination exactly once");
+        assertEquals(0, queue.size());
+        assertEquals(1, driver.sequencersForTesting().size());
+        assertEquals(0xB0, driver.sequencersForTesting().get(0)
+                .getSmpsData().getId());
+    }
+
+    @Test
+    void failedStandaloneSfxPreparationLeavesOnlyPrePreparationCoordState() {
         SmpsCoordFlagRuntimeState state = new SmpsCoordFlagRuntimeState();
         state.setSpindashRevCounter(7);
         StandaloneCoordMutationInstantiation instantiation =
@@ -724,23 +818,29 @@ class TestAudioVoiceRegistry {
                 IllegalStateException.class,
                 () -> queue.applyPending(registry::apply));
 
-        assertEquals("injected SFX attachment failure",
+        assertEquals("injected SFX preparation failure",
                 failure.getMessage());
-        assertEquals(7, state.spindashRevCounter(),
-                "failure must undo state mutated while constructing the standalone owner");
+        assertEquals(8, state.spindashRevCounter(),
+                "construction precedes the begin/commit coordination snapshot");
         assertEquals(1, queue.size());
         assertEquals(0, registry.orderedVoiceCount());
+        assertEquals(1, instantiation.failedDriver.stopAllCalls,
+                "the rejected standalone voice must be disposed exactly once");
+        assertEquals(0, instantiation.failedDriver.commitCalls,
+                "preparation rejection must not claim or commit an admission");
+        assertTrue(instantiation.failedDriver.sequencersForTesting().isEmpty(),
+                "preparation rejection must leave no standalone SFX attached");
 
         queue.applyPending(registry::apply);
 
-        assertEquals(8, state.spindashRevCounter(),
-                "retry must apply standalone construction state exactly once");
+        assertEquals(9, state.spindashRevCounter(),
+                "retry constructs once more and then commits");
         assertEquals(0, queue.size());
         assertEquals(1, registry.orderedVoiceCount());
     }
 
     @Test
-    void standaloneConstructionMissAndFailureRestoreCoordState() {
+    void standaloneConstructionMissAndFailurePrecedeCoordTransaction() {
         SmpsCoordFlagRuntimeState state = new SmpsCoordFlagRuntimeState();
         state.setSpindashRevCounter(7);
         StandaloneConstructionExitInstantiation instantiation =
@@ -751,12 +851,12 @@ class TestAudioVoiceRegistry {
                 });
 
         registry.apply(new AddSmpsSfx(source(2, 0xB0)));
-        assertEquals(7, state.spindashRevCounter(),
-                "a throwing standalone constructor must restore coord state");
+        assertEquals(8, state.spindashRevCounter(),
+                "constructor failure occurs before a coord snapshot exists");
 
         registry.apply(new AddSmpsSfx(source(3, 0xB1)));
-        assertEquals(7, state.spindashRevCounter(),
-                "a null standalone constructor result must restore coord state");
+        assertEquals(9, state.spindashRevCounter(),
+                "a cache miss also occurs before the coord transaction");
         assertEquals(0, registry.orderedVoiceCount());
     }
 
@@ -1381,6 +1481,7 @@ class TestAudioVoiceRegistry {
         RecordingInstantiation instantiation = new RecordingInstantiation();
         AudioVoiceRegistry registry = registry(instantiation, new ArrayList<>());
         RecordingDriver driver = new RecordingDriver(true);
+        driver.primeContinuousSfx(0xBC);
         instantiation.enqueueMusicDriver(driver);
         registry.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
                 0x81, AudioSourceDescriptor.baseMusic(0x81),
@@ -1391,6 +1492,135 @@ class TestAudioVoiceRegistry {
         assertEquals(1, driver.extensionCalls);
         assertEquals(0, instantiation.cachedCalls);
         assertEquals(0, driver.addedSequencers);
+    }
+
+    @Test
+    void smpsSfxAdmissionCoordinatesOnceBeforeCommitWithoutWholeOwnerCapture() {
+        List<String> ownerEvents = new ArrayList<>();
+        AdmissionOrderInstantiation instantiation =
+                new AdmissionOrderInstantiation(ownerEvents);
+        CapturingDriver ownerDriver = new CapturingDriver(ownerEvents);
+        instantiation.enqueueMusicDriver(ownerDriver);
+        AudioVoiceRegistry registry = registry(instantiation, new ArrayList<>());
+        registry.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
+                0x81, AudioSourceDescriptor.baseMusic(0x81),
+                composite(1, 0x81, ownerDriver))));
+
+        registry.apply(new AddSmpsSfx(nonContinuousSource(2, 0xB0)));
+
+        assertEquals(0, ownerDriver.liveCommandMutationCaptures,
+                "a new owner-bound SFX must use prepared admission directly");
+        assertEquals(1, ownerDriver.sequencersForTesting().size());
+        assertEquals(List.of("begin", "commit"), ownerEvents,
+                "new owner admission must start coordination immediately before commit");
+
+        ownerEvents.clear();
+        registry.apply(new AddSmpsSfx(nonContinuousSource(3, 0xB0)));
+
+        assertEquals(0, ownerDriver.liveCommandMutationCaptures,
+                "same-ID replacement must not restore the whole music owner");
+        assertEquals(1, ownerDriver.sequencersForTesting().size(),
+                "same-ID replacement still commits exactly once");
+        assertEquals(List.of("begin", "commit"), ownerEvents,
+                "same-ID replacement must start coordination immediately before commit");
+
+        ownerEvents.clear();
+        ResolvedSmpsSfxSource rejected = new ResolvedSmpsSfxSource(
+                4, new SmpsAssetKey("s3k", SmpsAssetKey.Route.BASE_ID,
+                0xB1, null), 1 << 16, 0x70, 0x100, 1,
+                MAX_STEREO_FRAMES);
+        assertThrows(IllegalArgumentException.class,
+                () -> registry.apply(new AddSmpsSfx(rejected)));
+        assertEquals(0, ownerDriver.liveCommandMutationCaptures,
+                "preparation rejection must not capture the whole owner");
+        assertTrue(ownerEvents.isEmpty(),
+                "preparation rejection must not start coordination");
+
+        List<String> continuousEvents = new ArrayList<>();
+        CapturingDriver continuousDriver = new CapturingDriver(continuousEvents);
+        SmpsSequencer continuous = sequencer(source(5, 0xBC), continuousDriver);
+        continuousDriver.addSequencer(continuous, true);
+        continuousDriver.startContinuousSfx(0xBC, 1);
+        continuousEvents.clear();
+        RecordingInstantiation continuousInstantiation = new RecordingInstantiation();
+        continuousInstantiation.failIfCached = true;
+        continuousInstantiation.enqueueMusicDriver(continuousDriver);
+        AudioVoiceRegistry continuousRegistry = registry(
+                continuousInstantiation, new ArrayList<>());
+        continuousRegistry.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
+                0x82, AudioSourceDescriptor.baseMusic(0x82),
+                composite(5, 0x82, continuousDriver))));
+
+        continuousRegistry.apply(new AddSmpsSfx(source(6, 0xBC)));
+
+        assertEquals(0, continuousDriver.liveCommandMutationCaptures,
+                "continuous extension has neither a new sequencer nor rollback");
+        assertEquals(0, continuousInstantiation.cachedCalls);
+        assertEquals(List.of("commit"), continuousEvents,
+                "continuous extension commits without a coordination start");
+
+        List<String> standaloneEvents = new ArrayList<>();
+        CapturingStandaloneInstantiation standaloneInstantiation =
+                new CapturingStandaloneInstantiation(standaloneEvents);
+        AudioVoiceRegistry standaloneRegistry = registry(
+                standaloneInstantiation, new ArrayList<>());
+
+        standaloneRegistry.apply(new AddSmpsSfx(source(7, 0xB2)));
+
+        assertEquals(0,
+                standaloneInstantiation.standaloneDriver.liveCommandMutationCaptures,
+                "standalone admission remains unpublished until direct commit");
+        assertEquals(List.of(7L), orderedIds(standaloneRegistry));
+        assertEquals(List.of("begin", "commit"), standaloneEvents,
+                "standalone admission must start coordination immediately before commit");
+    }
+
+    @Test
+    void registryOwnsNewSfxPreparationCoordinationAndCommitOrder() {
+        List<String> events = new ArrayList<>();
+        PreparedOnlyDriver driver = new PreparedOnlyDriver(events);
+        OrderedSfxInstantiation instantiation =
+                new OrderedSfxInstantiation(events);
+        instantiation.enqueueMusicDriver(driver);
+        AudioVoiceRegistry registry = registry(instantiation,
+                new ArrayList<>());
+        registry.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
+                0x81, AudioSourceDescriptor.baseMusic(0x81),
+                composite(1, 0x81, driver))));
+
+        registry.apply(new AddSmpsSfx(source(2, 0xB0)));
+
+        assertEquals(List.of("instantiate", "prepare", "begin", "commit"),
+                events);
+        assertEquals(1, driver.sequencersForTesting().size());
+    }
+
+    @Test
+    void failedBeginRestoresCoordSnapshotTakenAfterInstantiationAndPreparation() {
+        SmpsCoordFlagRuntimeState state = new SmpsCoordFlagRuntimeState();
+        state.setSpindashRevCounter(7);
+        List<String> events = new ArrayList<>();
+        AdmissionBoundaryDriver driver =
+                new AdmissionBoundaryDriver(state, events);
+        AdmissionBoundaryInstantiation instantiation =
+                new AdmissionBoundaryInstantiation(state, events);
+        instantiation.enqueueMusicDriver(driver);
+        AudioVoiceRegistry registry = new AudioVoiceRegistry(
+                instantiation, instantiation,
+                new SmpsCoordFlagHandlerOwner(state), ignored -> {
+                });
+        registry.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
+                0x81, AudioSourceDescriptor.baseMusic(0x81),
+                composite(1, 0x81, driver))));
+
+        assertThrows(IllegalStateException.class,
+                () -> registry.apply(new AddSmpsSfx(source(2, 0xB0))));
+
+        assertEquals(List.of("instantiate", "prepare", "begin"), events);
+        assertEquals(9, state.spindashRevCounter(),
+                "only begin-time coordination changes are transactional");
+        assertEquals(0, driver.commitCalls,
+                "a failed begin cannot reach live driver mutation");
     }
 
     @Test
@@ -1417,7 +1647,9 @@ class TestAudioVoiceRegistry {
         RecordingInstantiation instantiation = new RecordingInstantiation();
         instantiation.failIfCached = true;
         AudioVoiceRegistry registry = registry(instantiation, new ArrayList<>());
-        instantiation.enqueueMusicDriver(new RecordingDriver(true));
+        RecordingDriver driver = new RecordingDriver(true);
+        driver.primeContinuousSfx(0xBC);
+        instantiation.enqueueMusicDriver(driver);
         registry.apply(new ReplaceMusic(MusicVoiceEntry.fromVoice(
                 0x81, AudioSourceDescriptor.baseMusic(0x81),
                 composite(1, 0x81, new RecordingDriver(true)))));
@@ -1718,6 +1950,13 @@ class TestAudioVoiceRegistry {
                 1 << 16, 0x70, sfxId, 1, MAX_STEREO_FRAMES);
     }
 
+    private static ResolvedSmpsSfxSource nonContinuousSource(
+            long standaloneVoiceId, int sfxId) {
+        return new ResolvedSmpsSfxSource(standaloneVoiceId,
+                new SmpsAssetKey("s3k", SmpsAssetKey.Route.BASE_ID, sfxId, null),
+                1 << 16, 0x70, 0, 1, MAX_STEREO_FRAMES);
+    }
+
     private static List<Long> orderedIds(AudioVoiceRegistry registry) {
         List<Long> ids = new ArrayList<>();
         for (int index = 0; index < registry.orderedVoiceCount(); index++) {
@@ -1853,7 +2092,7 @@ class TestAudioVoiceRegistry {
             }
             cachedCalls++;
             lastCachedOwner = currentOwner;
-            return cacheMiss ? null : sequencer(source);
+            return cacheMiss ? null : sequencer(source, currentOwner);
         }
 
         @Override
@@ -1895,10 +2134,51 @@ class TestAudioVoiceRegistry {
         }
     }
 
+    private static final class CapturingStandaloneInstantiation
+            extends RecordingInstantiation {
+        private final List<String> events;
+        private CapturingDriver standaloneDriver;
+
+        private CapturingStandaloneInstantiation(List<String> events) {
+            this.events = events;
+        }
+
+        @Override
+        public SmpsCompositeVoice instantiateStandaloneCached(
+                ResolvedSmpsSfxSource source) {
+            standaloneDriver = new CapturingDriver(events);
+            return new SmpsCompositeVoice(
+                    source.standaloneVoiceId(), source.priority(),
+                    null, null, source.maxStereoFrames(), standaloneDriver);
+        }
+
+        @Override
+        public SmpsSequencer instantiateCached(
+                ResolvedSmpsSfxSource source, SmpsDriver currentOwner) {
+            return sequencerWithStartEvent(source, currentOwner, events);
+        }
+    }
+
+    private static final class AdmissionOrderInstantiation
+            extends RecordingInstantiation {
+        private final List<String> events;
+
+        private AdmissionOrderInstantiation(List<String> events) {
+            this.events = events;
+        }
+
+        @Override
+        public SmpsSequencer instantiateCached(
+                ResolvedSmpsSfxSource source, SmpsDriver currentOwner) {
+            return sequencerWithStartEvent(source, currentOwner, events);
+        }
+    }
+
     private static final class StandaloneCoordMutationInstantiation
             extends RecordingInstantiation {
         private final SmpsCoordFlagRuntimeState state;
         private boolean failAttachment = true;
+        private FailingMutationDriver failedDriver;
 
         private StandaloneCoordMutationInstantiation(
                 SmpsCoordFlagRuntimeState state) {
@@ -1915,6 +2195,7 @@ class TestAudioVoiceRegistry {
             if (failAttachment) {
                 driver.failNextSfxAttachment();
                 failAttachment = false;
+                failedDriver = driver;
             }
             return new SmpsCompositeVoice(
                     source.standaloneVoiceId(), source.priority(),
@@ -1947,9 +2228,16 @@ class TestAudioVoiceRegistry {
 
     private static final class FixtureSfxData extends AbstractSmpsData
             implements SmpsSfxData {
+        private final List<FixtureSfxTrack> tracks;
+
         private FixtureSfxData(int id) {
-            super(new byte[0], 0);
+            this(id, new FixtureSfxTrack[0]);
+        }
+
+        private FixtureSfxData(int id, FixtureSfxTrack... tracks) {
+            super(new byte[16], 0);
             setId(id);
+            this.tracks = List.of(tracks);
         }
 
         @Override
@@ -1959,7 +2247,7 @@ class TestAudioVoiceRegistry {
 
         @Override
         public List<? extends SmpsSfxTrack> getTrackEntries() {
-            return List.of();
+            return tracks;
         }
 
         @Override
@@ -1968,7 +2256,7 @@ class TestAudioVoiceRegistry {
 
         @Override
         public byte[] getVoice(int voiceId) {
-            return new byte[0];
+            return new byte[25];
         }
 
         @Override
@@ -1987,14 +2275,106 @@ class TestAudioVoiceRegistry {
         }
     }
 
-    private static SmpsSequencer sequencer(ResolvedSmpsSfxSource source) {
+    private record FixtureSfxTrack(
+            int channelMask, int pointer, int transpose, int volume)
+            implements SmpsSfxData.SmpsSfxTrack {
+    }
+
+    private static final class ObserverSfxInstantiation
+            extends RecordingInstantiation {
+        private final int channelMask;
+        private final CoordFlagHandler handler;
+
+        private ObserverSfxInstantiation(
+                int channelMask, CoordFlagHandler handler) {
+            this.channelMask = channelMask;
+            this.handler = handler;
+        }
+
+        @Override
+        public SmpsSequencer instantiateCached(
+                ResolvedSmpsSfxSource source, SmpsDriver currentOwner) {
+            SmpsSequencer sequencer = new SmpsSequencer(
+                    new FixtureSfxData(source.assetKey().sfxId(),
+                            new FixtureSfxTrack(channelMask, 1, 0, 0)),
+                    dacData(), currentOwner, AudioManager.getInstance(),
+                    new SmpsSequencerConfig.Builder()
+                            .coordFlagHandler(handler)
+                            .build());
+            sequencer.setSfxPriority(source.priority());
+            return sequencer;
+        }
+    }
+
+    private static final class FailOnceChipObserver
+            implements ChipWriteObserver {
+        private final boolean failPsg;
+        private boolean failed;
+
+        private FailOnceChipObserver(boolean failPsg) {
+            this.failPsg = failPsg;
+        }
+
+        @Override
+        public void onYm2612Write(int port, int register, int value) {
+            if (!failPsg && !failed) {
+                failed = true;
+                throw new IllegalStateException(
+                        "injected YM observer failure");
+            }
+        }
+
+        @Override
+        public void onPsgWrite(int value) {
+            if (failPsg && !failed) {
+                failed = true;
+                throw new IllegalStateException(
+                        "injected PSG observer failure");
+            }
+        }
+    }
+
+    private static SmpsSequencer sequencer(
+            ResolvedSmpsSfxSource source, SmpsDriver owner) {
         AudioTestFixtures.StubSmpsData data =
                 new AudioTestFixtures.StubSmpsData(source.assetKey().gameId());
         data.setId(source.assetKey().sfxId());
-        SmpsSequencer sequencer = new SmpsSequencer(data, AudioTestFixtures.EMPTY_DAC,
-                AudioManager.getInstance(), new SmpsSequencerConfig.Builder().build());
+        SmpsSequencer sequencer = new SmpsSequencer(
+                data, AudioTestFixtures.EMPTY_DAC, owner,
+                AudioManager.getInstance(),
+                new SmpsSequencerConfig.Builder().build());
         sequencer.setSfxPriority(source.priority());
         sequencer.setPitch(source.pitchQ16() / (float) (1 << 16));
+        return sequencer;
+    }
+
+    private static SmpsSequencer sequencerWithStartEvent(
+            ResolvedSmpsSfxSource source, SmpsDriver owner,
+            List<String> events) {
+        SmpsSequencer sequencer = new SmpsSequencer(
+                new FixtureSfxData(source.assetKey().sfxId()), dacData(),
+                owner, AudioManager.getInstance(),
+                new SmpsSequencerConfig.Builder()
+                        .coordFlagHandler(new CoordFlagHandler() {
+                            @Override
+                            public void onSfxStart(int sfxId) {
+                                events.add("begin");
+                            }
+
+                            @Override
+                            public boolean handleFlag(
+                                    CoordFlagContext context,
+                                    SmpsSequencer.Track track, int command) {
+                                return false;
+                            }
+
+                            @Override
+                            public int flagParamLength(int command) {
+                                return -1;
+                            }
+                        })
+                        .build());
+        sequencer.setSfxPriority(source.priority());
         return sequencer;
     }
 
@@ -2012,9 +2392,21 @@ class TestAudioVoiceRegistry {
         }
 
         @Override
-        public boolean extendContinuousSfx(int sfxId, int trackCount) {
+        public PreparedSfxAdmission prepareContinuousSfxExtension(
+                int sfxId, int trackCount) {
             extensionCalls++;
-            return extendsContinuous;
+            return super.prepareContinuousSfxExtension(sfxId, trackCount);
+        }
+
+        private void primeContinuousSfx(int sfxId) {
+            SmpsSequencer existing = new SmpsSequencer(
+                    new FixtureSfxData(sfxId), dacData(), this,
+                    AudioManager.getInstance(),
+                    new SmpsSequencerConfig.Builder().build());
+            super.addSequencer(existing, true);
+            startContinuousSfx(sfxId, 1);
+            extensionCalls = 0;
+            addedSequencers = 0;
         }
 
         @Override
@@ -2039,6 +2431,47 @@ class TestAudioVoiceRegistry {
             }
             addedSequencers++;
             super.addSequencer(sequencer, sfx);
+        }
+
+        @Override
+        public void commitSfxAdmission(PreparedSfxAdmission admission) {
+            if (!admission.continuousExtension()) {
+                if (addedSequencers == 0) {
+                    System.arraycopy(fmMutes, 0, fmMuteAtFirstAttachment, 0,
+                            fmMutes.length);
+                    System.arraycopy(psgMutes, 0, psgMuteAtFirstAttachment, 0,
+                            psgMutes.length);
+                }
+                addedSequencers++;
+            }
+            super.commitSfxAdmission(admission);
+        }
+    }
+
+    private static final class CapturingDriver extends SmpsDriver {
+        private final List<String> events;
+        private int liveCommandMutationCaptures;
+
+        private CapturingDriver() {
+            this(null);
+        }
+
+        private CapturingDriver(List<String> events) {
+            this.events = events;
+        }
+
+        @Override
+        public LiveCommandMutationToken captureLiveCommandMutation() {
+            liveCommandMutationCaptures++;
+            return super.captureLiveCommandMutation();
+        }
+
+        @Override
+        public void commitSfxAdmission(PreparedSfxAdmission admission) {
+            if (events != null) {
+                events.add("commit");
+            }
+            super.commitSfxAdmission(admission);
         }
     }
 
@@ -2099,6 +2532,8 @@ class TestAudioVoiceRegistry {
         private boolean failNextSfxAttachment;
         private boolean failNextStopAll;
         private boolean failNextStopAllSfx;
+        private int stopAllCalls;
+        private int commitCalls;
 
         private void failNextControl() {
             failNextControl = true;
@@ -2127,17 +2562,27 @@ class TestAudioVoiceRegistry {
         }
 
         @Override
-        public void addSequencer(SmpsSequencer sequencer, boolean sfx) {
-            if (failNextSfxAttachment && sfx) {
+        public PreparedSfxAdmission prepareNewSfxAdmission(
+                SmpsSequencer sequencer, int continuousSfxId,
+                int trackCount) {
+            if (failNextSfxAttachment) {
                 failNextSfxAttachment = false;
                 throw new IllegalStateException(
-                        "injected SFX attachment failure");
+                        "injected SFX preparation failure");
             }
-            super.addSequencer(sequencer, sfx);
+            return super.prepareNewSfxAdmission(
+                    sequencer, continuousSfxId, trackCount);
+        }
+
+        @Override
+        public void commitSfxAdmission(PreparedSfxAdmission admission) {
+            commitCalls++;
+            super.commitSfxAdmission(admission);
         }
 
         @Override
         public void stopAll() {
+            stopAllCalls++;
             super.stopAll();
             if (failNextStopAll) {
                 failNextStopAll = false;
@@ -2154,6 +2599,154 @@ class TestAudioVoiceRegistry {
                 throw new IllegalStateException(
                         "injected stop-all-SFX failure");
             }
+        }
+    }
+
+    private static final class PreparedOnlyDriver extends SmpsDriver {
+        private final List<String> events;
+
+        private PreparedOnlyDriver(List<String> events) {
+            this.events = events;
+        }
+
+        @Override
+        public void addSequencer(SmpsSequencer sequencer, boolean sfx) {
+            if (sfx) {
+                throw new AssertionError(
+                        "registry must not use legacy SFX attachment");
+            }
+            super.addSequencer(sequencer, false);
+        }
+
+        @Override
+        public PreparedSfxAdmission prepareNewSfxAdmission(
+                SmpsSequencer sequencer, int continuousSfxId,
+                int trackCount) {
+            events.add("prepare");
+            return super.prepareNewSfxAdmission(
+                    sequencer, continuousSfxId, trackCount);
+        }
+
+        @Override
+        public void commitSfxAdmission(PreparedSfxAdmission admission) {
+            events.add("commit");
+            super.commitSfxAdmission(admission);
+        }
+    }
+
+    private static final class OrderedSfxInstantiation
+            extends RecordingInstantiation {
+        private final List<String> events;
+
+        private OrderedSfxInstantiation(List<String> events) {
+            this.events = events;
+        }
+
+        @Override
+        public SmpsSequencer instantiateCached(
+                ResolvedSmpsSfxSource source, SmpsDriver currentOwner) {
+            events.add("instantiate");
+            return new SmpsSequencer(
+                    new FixtureSfxData(source.assetKey().sfxId()),
+                    dacData(), currentOwner, AudioManager.getInstance(),
+                    new SmpsSequencerConfig.Builder()
+                            .coordFlagHandler(new CoordFlagHandler() {
+                                @Override
+                                public void onSfxStart(int sfxId) {
+                                    events.add("begin");
+                                }
+
+                                @Override
+                                public boolean handleFlag(
+                                        CoordFlagContext context,
+                                        SmpsSequencer.Track track,
+                                        int command) {
+                                    return false;
+                                }
+
+                                @Override
+                                public int flagParamLength(int command) {
+                                    return -1;
+                                }
+                            })
+                            .build());
+        }
+    }
+
+    private static final class AdmissionBoundaryDriver extends SmpsDriver {
+        private final SmpsCoordFlagRuntimeState state;
+        private final List<String> events;
+        private int commitCalls;
+
+        private AdmissionBoundaryDriver(
+                SmpsCoordFlagRuntimeState state, List<String> events) {
+            this.state = state;
+            this.events = events;
+        }
+
+        @Override
+        public PreparedSfxAdmission prepareNewSfxAdmission(
+                SmpsSequencer sequencer, int continuousSfxId,
+                int trackCount) {
+            events.add("prepare");
+            state.setSpindashRevCounter(
+                    state.spindashRevCounter() + 1);
+            return super.prepareNewSfxAdmission(
+                    sequencer, continuousSfxId, trackCount);
+        }
+
+        @Override
+        public void commitSfxAdmission(PreparedSfxAdmission admission) {
+            commitCalls++;
+            super.commitSfxAdmission(admission);
+        }
+    }
+
+    private static final class AdmissionBoundaryInstantiation
+            extends RecordingInstantiation {
+        private final SmpsCoordFlagRuntimeState state;
+        private final List<String> events;
+
+        private AdmissionBoundaryInstantiation(
+                SmpsCoordFlagRuntimeState state, List<String> events) {
+            this.state = state;
+            this.events = events;
+        }
+
+        @Override
+        public SmpsSequencer instantiateCached(
+                ResolvedSmpsSfxSource source, SmpsDriver currentOwner) {
+            events.add("instantiate");
+            state.setSpindashRevCounter(
+                    state.spindashRevCounter() + 1);
+            return new SmpsSequencer(
+                    new FixtureSfxData(source.assetKey().sfxId()),
+                    dacData(), currentOwner, AudioManager.getInstance(),
+                    new SmpsSequencerConfig.Builder()
+                            .coordFlagHandler(new CoordFlagHandler() {
+                                @Override
+                                public void onSfxStart(int sfxId) {
+                                    events.add("begin");
+                                    state.setSpindashRevCounter(
+                                            state.spindashRevCounter() + 1);
+                                    throw new IllegalStateException(
+                                            "injected begin failure");
+                                }
+
+                                @Override
+                                public boolean handleFlag(
+                                        CoordFlagContext context,
+                                        SmpsSequencer.Track track,
+                                        int command) {
+                                    return false;
+                                }
+
+                                @Override
+                                public int flagParamLength(int command) {
+                                    return -1;
+                                }
+                            })
+                            .build());
         }
     }
 

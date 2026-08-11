@@ -35,6 +35,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -42,6 +43,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -49,6 +51,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -123,6 +126,349 @@ class TestAudioPresentationCommandResolver {
         assertEquals(new AudioPresentationCommand.ResetRingAlternation(true),
                 commands.get(6));
         assertInstanceOf(StartSampleSfx.class, commands.get(7));
+    }
+
+    @Test
+    void repeatedNamedSfxLoadsAndMaterializesOncePerGeneration() {
+        Fixture fixture = fixture();
+        AtomicInteger materializations = new AtomicInteger();
+        fixture.sources.namedSfxFactory = () -> countingSfx(
+                0xA1, materializations, (byte) 0xF2);
+
+        fixture.resolver.submit(new AudioCommand.PlaySfx(
+                -1, "JUMP", AudioCommand.SfxRoute.BASE_SMPS_NAME,
+                0.5f, null));
+        fixture.resolver.submit(new AudioCommand.PlaySfx(
+                -1, "JUMP", AudioCommand.SfxRoute.BASE_SMPS_NAME,
+                1.25f, null));
+
+        List<AudioPresentationCommand> firstGeneration = drain(fixture.queue);
+        AddSmpsSfx first = assertInstanceOf(
+                AddSmpsSfx.class, firstGeneration.get(0));
+        AddSmpsSfx second = assertInstanceOf(
+                AddSmpsSfx.class, firstGeneration.get(1));
+        assertEquals(1, fixture.sources.calls.get(),
+                "a registered named route must not call the loader again");
+        assertEquals(1, materializations.get(),
+                "a catalog hit must not hash or compare reconstructed data");
+        assertNotEquals(first.source().standaloneVoiceId(),
+                second.source().standaloneVoiceId());
+        assertEquals(0xA1,
+                fixture.factory.findRegisteredSmpsSfxAsset(
+                        first.source().assetKey(), 0).assetId());
+        assertEquals(1, first.source().trackCount());
+
+        fixture.sources.baseGeneration = 1;
+        fixture.resolver.submit(new AudioCommand.PlaySfx(
+                -1, "JUMP", AudioCommand.SfxRoute.BASE_SMPS_NAME,
+                1.0f, null));
+        fixture.resolver.submit(new AudioCommand.PlaySfx(
+                -1, "JUMP", AudioCommand.SfxRoute.BASE_SMPS_NAME,
+                1.0f, null));
+        List<AudioPresentationCommand> secondGeneration = drain(fixture.queue);
+
+        assertEquals(2, fixture.sources.calls.get(),
+                "a new generation must cause exactly one additional load");
+        assertEquals(2, materializations.get(),
+                "a new generation must cause exactly one additional freeze");
+        assertEquals(1, ((AddSmpsSfx) secondGeneration.get(0)).source()
+                .dependencyGeneration());
+        assertEquals(1, ((AddSmpsSfx) secondGeneration.get(1)).source()
+                .dependencyGeneration());
+
+        SmpsAssetCatalog.ProgramEntry registered =
+                fixture.factory.findRegisteredSmpsSfxAsset(
+                        first.source().assetKey(), 1);
+        SmpsAssetCatalog.ProgramEntry duplicate =
+                fixture.factory.registerSmpsSfxAsset(
+                        first.source().assetKey(), 1,
+                        countingSfx(0xA1, materializations, (byte) 0xF2),
+                        fixture.sources.baseDac,
+                        fixture.sources.baseConfig, false);
+        assertSame(registered, duplicate,
+                "explicit reconstructed-equal registration must reuse the entry");
+    }
+
+    @Test
+    void repeatedNumericSfxLoadsAndMaterializesOnlyOnce() {
+        Fixture fixture = fixture();
+        AtomicInteger materializations = new AtomicInteger();
+        fixture.sources.baseSfxFactory = () -> countingSfx(
+                0xA0, materializations, (byte) 0xF2);
+
+        fixture.resolver.submit(new AudioCommand.PlaySfx(
+                0xA0, null, AudioCommand.SfxRoute.BASE_SMPS_ID,
+                1.0f, null));
+        fixture.resolver.submit(new AudioCommand.PlaySfx(
+                0xA0, null, AudioCommand.SfxRoute.BASE_SMPS_ID,
+                1.0f, null));
+
+        List<AudioPresentationCommand> commands = drain(fixture.queue);
+        assertEquals(1, fixture.sources.calls.get());
+        assertEquals(1, materializations.get());
+        assertNotEquals(((AddSmpsSfx) commands.get(0)).source()
+                        .standaloneVoiceId(),
+                ((AddSmpsSfx) commands.get(1)).source()
+                        .standaloneVoiceId());
+    }
+
+    @Test
+    void repeatedDonorSfxLoadsAndMaterializesOnlyOnce() {
+        Fixture fixture = fixture();
+        AtomicInteger materializations = new AtomicInteger();
+        fixture.sources.donorSfxFactory = () -> countingSfx(
+                0xB0, materializations, (byte) 0xF2);
+
+        fixture.resolver.submit(new AudioCommand.PlaySfx(
+                0xB0, null, AudioCommand.SfxRoute.DONOR_SMPS,
+                1.0f, "s3k"));
+        fixture.resolver.submit(new AudioCommand.PlaySfx(
+                0xB0, null, AudioCommand.SfxRoute.DONOR_SMPS,
+                1.0f, "s3k"));
+
+        List<AudioPresentationCommand> commands = drain(fixture.queue);
+        assertEquals(1, fixture.sources.calls.get());
+        assertEquals(1, materializations.get());
+        assertNotEquals(((AddSmpsSfx) commands.get(0)).source()
+                        .standaloneVoiceId(),
+                ((AddSmpsSfx) commands.get(1)).source()
+                        .standaloneVoiceId());
+    }
+
+    @Test
+    void sourceGenerationSeparatesReplacedBaseProgramsAndRetainsOldCommands() {
+        Fixture fixture = fixture();
+        fixture.sources.baseGeneration = 7;
+        fixture.sources.baseSfx = sfx(0xA0, (byte) 0xF2);
+        fixture.resolver.submit(new AudioCommand.PlaySfx(
+                0xA0, null, AudioCommand.SfxRoute.BASE_SMPS_ID,
+                1.0f, null));
+        AddSmpsSfx oldCommand = assertInstanceOf(
+                AddSmpsSfx.class, drain(fixture.queue).get(0));
+
+        fixture.sources.baseGeneration = 8;
+        fixture.sources.baseSfx = sfx(
+                0xA0, (byte) 0xE9, (byte) 0xF2);
+        fixture.resolver.submit(new AudioCommand.PlaySfx(
+                0xA0, null, AudioCommand.SfxRoute.BASE_SMPS_ID,
+                1.0f, null));
+        AddSmpsSfx newCommand = assertInstanceOf(
+                AddSmpsSfx.class, drain(fixture.queue).get(0));
+
+        assertEquals(7, oldCommand.source().dependencyGeneration());
+        assertEquals(8, newCommand.source().dependencyGeneration());
+        AudioVoiceRegistry oldRegistry = fixture.registry();
+        AudioVoiceRegistry newRegistry = fixture.registry();
+        oldRegistry.apply(oldCommand);
+        newRegistry.apply(newCommand);
+        assertEquals(7, standaloneDescriptor(oldRegistry)
+                .dependencyGeneration());
+        assertEquals(8, standaloneDescriptor(newRegistry)
+                .dependencyGeneration());
+    }
+
+    @Test
+    void baseAndDonorGenerationsRemainRouteSpecificForEqualGameIds() {
+        Fixture fixture = fixture(new SmpsCoordFlagHandlerOwner(
+                new SmpsCoordFlagRuntimeState()), "shared");
+        fixture.sources.baseGeneration = 3;
+        fixture.sources.donorGenerations.put("shared", 11L);
+        fixture.sources.baseSfx = sfx(0xA0, (byte) 0xE9, (byte) 0xF2);
+        fixture.sources.donorSfx = sfx(0xB0, (byte) 0xEA, (byte) 0xF2);
+        fixture.sources.baseDac = new DacData(
+                Collections.emptyMap(), Collections.emptyMap(), 301);
+        DacData donorDac = new DacData(
+                Collections.emptyMap(), Collections.emptyMap(), 302);
+        fixture.sources.donorDacs.put("shared", donorDac);
+        fixture.sources.baseConfig = new SmpsSequencerConfig.Builder()
+                .tempoMode(SmpsSequencerConfig.TempoMode.TIMEOUT)
+                .build();
+        SmpsSequencerConfig donorConfig = new SmpsSequencerConfig.Builder()
+                .tempoMode(SmpsSequencerConfig.TempoMode.OVERFLOW)
+                .build();
+        fixture.sources.donorConfigs.put("shared", donorConfig);
+        fixture.sources.basePriority = 0x31;
+        fixture.sources.donorPriorities.put("shared", 0x42);
+        fixture.sources.baseSpecial = false;
+        fixture.sources.donorSpecial.put("shared", true);
+        fixture.sources.baseContinuous = true;
+        fixture.sources.donorContinuous.put("shared", false);
+
+        fixture.resolver.submit(new AudioCommand.PlaySfx(
+                0xA0, null, AudioCommand.SfxRoute.BASE_SMPS_ID,
+                1.0f, null));
+        fixture.resolver.submit(new AudioCommand.PlaySfx(
+                0xB0, null, AudioCommand.SfxRoute.DONOR_SMPS,
+                1.0f, "shared"));
+
+        List<AudioPresentationCommand> commands = drain(fixture.queue);
+        AddSmpsSfx baseCommand = (AddSmpsSfx) commands.get(0);
+        AddSmpsSfx donorCommand = (AddSmpsSfx) commands.get(1);
+        assertEquals(3, baseCommand.source().dependencyGeneration());
+        assertEquals(11, donorCommand.source().dependencyGeneration());
+        assertEquals(0x31, baseCommand.source().priority());
+        assertEquals(0x42, donorCommand.source().priority());
+        assertEquals(0xA0, baseCommand.source().continuousSfxId());
+        assertEquals(0, donorCommand.source().continuousSfxId());
+
+        SmpsAssetCatalog.ProgramEntry baseEntry =
+                fixture.factory.findRegisteredSmpsSfxAsset(
+                        baseCommand.source().assetKey(), 3);
+        SmpsAssetCatalog.ProgramEntry donorEntry =
+                fixture.factory.findRegisteredSmpsSfxAsset(
+                        donorCommand.source().assetKey(), 11);
+        assertSame(fixture.sources.baseDac, baseEntry.dac());
+        assertSame(donorDac, donorEntry.dac());
+        assertEquals(SmpsSequencerConfig.TempoMode.TIMEOUT,
+                baseEntry.staticConfig().getTempoMode());
+        assertEquals(SmpsSequencerConfig.TempoMode.OVERFLOW,
+                donorEntry.staticConfig().getTempoMode());
+        assertFalse(baseEntry.specialSfx());
+        assertTrue(donorEntry.specialSfx());
+        assertNotEquals(baseEntry.sourceDescriptor().dataHash(),
+                donorEntry.sourceDescriptor().dataHash(),
+                "route-specific catalog entries must retain their program bytes");
+    }
+
+    @Test
+    void baseResolutionRetainsOneSourceTupleAcrossReentrantLoaderMutation() {
+        Fixture fixture = fixture();
+        DacData oldDac = new DacData(
+                Collections.emptyMap(), Collections.emptyMap(), 311);
+        SmpsSequencerConfig oldConfig = new SmpsSequencerConfig.Builder()
+                .tempoMode(SmpsSequencerConfig.TempoMode.TIMEOUT)
+                .build();
+        fixture.sources.baseGeneration = 4;
+        fixture.sources.baseSfx = sfx(0xA4, (byte) 0x14, (byte) 0xF2);
+        fixture.sources.baseDac = oldDac;
+        fixture.sources.baseConfig = oldConfig;
+        fixture.sources.basePriority = 0x34;
+        fixture.sources.baseSpecial = true;
+        fixture.sources.baseContinuous = true;
+        fixture.sources.afterBaseSfxLoad = () -> {
+            fixture.sources.baseGeneration = 5;
+            fixture.sources.baseSfx = sfx(
+                    0xA4, (byte) 0x25, (byte) 0xF2);
+            fixture.sources.baseDac = new DacData(
+                    Collections.emptyMap(), Collections.emptyMap(), 312);
+            fixture.sources.baseConfig = new SmpsSequencerConfig.Builder()
+                    .tempoMode(SmpsSequencerConfig.TempoMode.OVERFLOW)
+                    .build();
+            fixture.sources.basePriority = 0x45;
+            fixture.sources.baseSpecial = false;
+            fixture.sources.baseContinuous = false;
+        };
+
+        fixture.resolver.submit(new AudioCommand.PlaySfx(
+                0xA4, null, AudioCommand.SfxRoute.BASE_SMPS_ID,
+                1.0f, null));
+        AddSmpsSfx oldCommand = assertInstanceOf(
+                AddSmpsSfx.class, drain(fixture.queue).get(0));
+        SmpsAssetCatalog.ProgramEntry oldEntry =
+                fixture.factory.findRegisteredSmpsSfxAsset(
+                        oldCommand.source().assetKey(), 4);
+
+        fixture.resolver.submit(new AudioCommand.PlaySfx(
+                0xA4, null, AudioCommand.SfxRoute.BASE_SMPS_ID,
+                1.0f, null));
+        AddSmpsSfx newCommand = assertInstanceOf(
+                AddSmpsSfx.class, drain(fixture.queue).get(0));
+        SmpsAssetCatalog.ProgramEntry newEntry =
+                fixture.factory.findRegisteredSmpsSfxAsset(
+                        newCommand.source().assetKey(), 5);
+
+        assertEquals(4, oldCommand.source().dependencyGeneration());
+        assertEquals(0x34, oldCommand.source().priority());
+        assertEquals(0xA4, oldCommand.source().continuousSfxId());
+        assertSame(oldDac, oldEntry.dac());
+        assertEquals(SmpsSequencerConfig.TempoMode.TIMEOUT,
+                oldEntry.staticConfig().getTempoMode());
+        assertTrue(oldEntry.specialSfx());
+        assertEquals(5, newCommand.source().dependencyGeneration());
+        assertEquals(0x45, newCommand.source().priority());
+        assertNotEquals(oldEntry.sourceDescriptor().dataHash(),
+                newEntry.sourceDescriptor().dataHash(),
+                "the captured old loader must register the old program");
+    }
+
+    @Test
+    void donorResolutionRetainsOneSourceTupleAcrossReentrantReplacement() {
+        Fixture fixture = fixture();
+        DacData oldDac = new DacData(
+                Collections.emptyMap(), Collections.emptyMap(), 321);
+        SmpsSequencerConfig oldConfig = new SmpsSequencerConfig.Builder()
+                .tempoMode(SmpsSequencerConfig.TempoMode.OVERFLOW2)
+                .build();
+        fixture.sources.donorGenerations.put("s2", 7L);
+        fixture.sources.donorSfx = sfx(0xE0, (byte) 0x17, (byte) 0xF2);
+        fixture.sources.donorDacs.put("s2", oldDac);
+        fixture.sources.donorConfigs.put("s2", oldConfig);
+        fixture.sources.donorPriorities.put("s2", 0x37);
+        fixture.sources.donorSpecial.put("s2", true);
+        fixture.sources.donorContinuous.put("s2", true);
+        fixture.sources.afterDonorSfxLoad = () -> {
+            fixture.sources.donorGenerations.put("s2", 8L);
+            fixture.sources.donorSfx = sfx(
+                    0xE0, (byte) 0x28, (byte) 0xF2);
+            fixture.sources.donorDacs.put("s2", new DacData(
+                    Collections.emptyMap(), Collections.emptyMap(), 322));
+            fixture.sources.donorConfigs.put("s2",
+                    new SmpsSequencerConfig.Builder()
+                            .tempoMode(SmpsSequencerConfig.TempoMode.OVERFLOW)
+                            .build());
+            fixture.sources.donorPriorities.put("s2", 0x48);
+            fixture.sources.donorSpecial.put("s2", false);
+            fixture.sources.donorContinuous.put("s2", false);
+        };
+
+        fixture.resolver.submit(new AudioCommand.PlaySfx(
+                0xE0, null, AudioCommand.SfxRoute.DONOR_SMPS,
+                1.0f, "s2"));
+        AddSmpsSfx oldCommand = assertInstanceOf(
+                AddSmpsSfx.class, drain(fixture.queue).get(0));
+        SmpsAssetCatalog.ProgramEntry oldEntry =
+                fixture.factory.findRegisteredSmpsSfxAsset(
+                        oldCommand.source().assetKey(), 7);
+
+        fixture.resolver.submit(new AudioCommand.PlaySfx(
+                0xE0, null, AudioCommand.SfxRoute.DONOR_SMPS,
+                1.0f, "s2"));
+        AddSmpsSfx newCommand = assertInstanceOf(
+                AddSmpsSfx.class, drain(fixture.queue).get(0));
+        SmpsAssetCatalog.ProgramEntry newEntry =
+                fixture.factory.findRegisteredSmpsSfxAsset(
+                        newCommand.source().assetKey(), 8);
+
+        assertEquals(7, oldCommand.source().dependencyGeneration());
+        assertEquals(0x37, oldCommand.source().priority());
+        assertEquals(0xE0, oldCommand.source().continuousSfxId());
+        assertSame(oldDac, oldEntry.dac());
+        assertEquals(SmpsSequencerConfig.TempoMode.OVERFLOW2,
+                oldEntry.staticConfig().getTempoMode());
+        assertTrue(oldEntry.specialSfx());
+        assertEquals(8, newCommand.source().dependencyGeneration());
+        assertEquals(0x48, newCommand.source().priority());
+        assertNotEquals(oldEntry.sourceDescriptor().dataHash(),
+                newEntry.sourceDescriptor().dataHash(),
+                "the captured old donor loader must register the old program");
+    }
+
+    @Test
+    void queuedGenerationIsRejectedWhenOnlyAnotherGenerationIsRegistered() {
+        Fixture fixture = fixture();
+        SmpsAssetKey key = new SmpsAssetKey(
+                "base", SmpsAssetKey.Route.BASE_ID, 0xA0, null);
+        fixture.factory.registerSmpsSfxAsset(
+                key, 4, sfx(0xA0, (byte) 0xF2), EMPTY_DAC,
+                fixture.sources.baseConfig, false);
+        ResolvedSmpsSfxSource stale = fixture.factory.resolveSmpsSfx(
+                1, key, 5, 1 << 16, 0x70, 0, 1, 64);
+        AudioVoiceRegistry registry = fixture.registry();
+
+        registry.apply(new AddSmpsSfx(stale));
+
+        assertEquals(0, registry.orderedVoiceCount());
+        assertEquals(1, fixture.warnings.size());
     }
 
     @Test
@@ -349,13 +695,21 @@ class TestAudioPresentationCommandResolver {
     }
 
     @Test
-    void mutatingOriginalLoadedObjectsAfterWarmAndQueueDoesNotChangeAppliedSfx() {
+    void mutatingOriginalLoadedObjectsAfterRegistrationAndQueueDoesNotChangeAppliedSfx() {
         Fixture fixture = fixture();
         MutableSfxData original = sfx(0xA0, (byte) 0xF2);
         HashSet<Integer> mutableEndFlags = new HashSet<>(List.of(0xEE));
         fixture.sources.baseConfig = new SmpsSequencerConfig.Builder()
                 .extraTrkEndFlags(mutableEndFlags)
                 .build();
+        byte[] mutableDacBytes = { 0x12 };
+        Map<Integer, byte[]> mutableDacSamples = new HashMap<>();
+        mutableDacSamples.put(1, mutableDacBytes);
+        DacData immutableDac = new DacData(
+                mutableDacSamples,
+                Map.of(0x81, new DacData.DacEntry(1, 4)),
+                297);
+        fixture.sources.baseDac = immutableDac;
         fixture.sources.baseSfx = original;
         fixture.resolver.submit(new AudioCommand.PlaySfx(
                 0xA0, null, AudioCommand.SfxRoute.BASE_SMPS_ID, 1.0f, null));
@@ -363,7 +717,8 @@ class TestAudioPresentationCommandResolver {
 
         original.getData()[0x40] = (byte) 0xE9;
         mutableEndFlags.clear();
-        fixture.sources.baseDac.samples.getOrDefault(1, new byte[0]);
+        mutableDacBytes[0] = 0x55;
+        mutableDacSamples.clear();
 
         AudioVoiceRegistry registry = fixture.registry();
         assertDoesNotThrow(() -> registry.apply(command));
@@ -373,6 +728,9 @@ class TestAudioPresentationCommandResolver {
         assertEquals((byte) 0xF2,
                 snapshot.sequencers().get(0).smpsData().getData()[0x40]);
         assertNotSame(original, snapshot.sequencers().get(0).smpsData());
+        assertSame(immutableDac, snapshot.sequencers().get(0).dacData());
+        assertEquals((byte) 0x12, snapshot.sequencers().get(0)
+                .dacData().sample(1).byteAt(0));
         assertEquals(Set.of(0xEE), snapshot.sequencers().get(0)
                 .config().getExtraTrkEndFlags());
     }
@@ -382,11 +740,11 @@ class TestAudioPresentationCommandResolver {
         Fixture fixture = fixtureWithS3kOwner();
         MutableSfxData first = sfx(0xA0, (byte) 0xF2);
         MutableSfxData second = sfx(0xA1, (byte) 0xF2);
-        fixture.factory.warmSmpsSfxAsset(
+        fixture.factory.registerSmpsSfxAsset(
                 new SmpsAssetKey("s3k", SmpsAssetKey.Route.BASE_ID,
                         0xA0, null),
                 first, EMPTY_DAC, s3kConfig(new ArbitraryHandler()));
-        fixture.factory.warmSmpsSfxAsset(
+        fixture.factory.registerSmpsSfxAsset(
                 new SmpsAssetKey("s3k", SmpsAssetKey.Route.BASE_ID,
                         0xA1, null),
                 second, EMPTY_DAC, s3kConfig(new ArbitraryHandler()));
@@ -488,7 +846,7 @@ class TestAudioPresentationCommandResolver {
     void continuousRetriggerExtendsMusicAndStandaloneWithoutDuplicateSequencer() {
         for (boolean withMusic : List.of(false, true)) {
             Fixture fixture = fixture();
-            fixture.sources.continuous = true;
+            fixture.sources.baseContinuous = true;
             fixture.sources.baseSfx = sfx(0xBC, (byte) 0xFC, (byte) 0x40, (byte) 0,
                     (byte) 0xF2);
             if (withMusic) {
@@ -610,6 +968,13 @@ class TestAudioPresentationCommandResolver {
         return fixture(handlers, "s3k");
     }
 
+    private static com.openggf.audio.rewind.SmpsSourceDescriptor
+            standaloneDescriptor(AudioVoiceRegistry registry) {
+        SmpsCompositeVoice voice = (SmpsCompositeVoice)
+                registry.orderedVoiceAt(0);
+        return voice.driver().captureSnapshot().sequencers().get(0).source();
+    }
+
     private static Fixture fixture(
             SmpsCoordFlagHandlerOwner handlers, String baseGameId) {
         AtomicBoolean owner = new AtomicBoolean(true);
@@ -662,75 +1027,111 @@ class TestAudioPresentationCommandResolver {
         AbstractSmpsData baseSfx;
         AbstractSmpsData namedSfx;
         AbstractSmpsData donorSfx;
+        Supplier<AbstractSmpsData> baseSfxFactory;
+        Supplier<AbstractSmpsData> namedSfxFactory;
+        Supplier<AbstractSmpsData> donorSfxFactory;
         DacData baseDac = EMPTY_DAC;
         SmpsSequencerConfig baseConfig =
                 new SmpsSequencerConfig.Builder().build();
-        boolean continuous;
+        long baseGeneration;
+        final Map<String, Long> donorGenerations = new HashMap<>();
+        final Map<String, DacData> donorDacs = new HashMap<>();
+        final Map<String, SmpsSequencerConfig> donorConfigs = new HashMap<>();
+        final Map<String, Integer> donorPriorities = new HashMap<>();
+        final Map<String, Boolean> donorSpecial = new HashMap<>();
+        final Map<String, Boolean> donorContinuous = new HashMap<>();
+        int basePriority = 0x70;
+        boolean baseSpecial;
+        boolean baseContinuous;
+        Runnable afterBaseSfxLoad;
+        Runnable afterDonorSfxLoad;
 
         FakeSources(String baseGameId) {
             this.baseGameId = baseGameId;
         }
 
         @Override
-        public String baseGameId() {
-            return baseGameId;
-        }
+        public AudioPresentationCommandResolver.SourceAccess sourceFor(
+                SmpsAssetKey.Route route, String donorGameId) {
+            boolean donor = route == SmpsAssetKey.Route.DONOR_MUSIC
+                    || route == SmpsAssetKey.Route.DONOR_ID;
+            String gameId = donor ? donorGameId : baseGameId;
+            long generation = donor
+                    ? donorGenerations.getOrDefault(gameId, 0L)
+                    : baseGeneration;
+            DacData dac = donor
+                    ? donorDacs.getOrDefault(gameId, baseDac) : baseDac;
+            SmpsSequencerConfig config = donor
+                    ? donorConfigs.getOrDefault(gameId, baseConfig)
+                    : baseConfig;
+            int priority = donor
+                    ? donorPriorities.getOrDefault(gameId, 0x70)
+                    : basePriority;
+            boolean special = donor
+                    ? donorSpecial.getOrDefault(gameId, false) : baseSpecial;
+            boolean continuous = donor
+                    ? donorContinuous.getOrDefault(gameId, false)
+                    : baseContinuous;
+            AbstractSmpsData capturedMusic = donor
+                    ? donorMusic : baseMusic;
+            AbstractSmpsData capturedSfx = donor
+                    ? donorSfx : baseSfx;
+            AbstractSmpsData capturedNamedSfx = namedSfx;
+            Supplier<AbstractSmpsData> capturedSfxFactory = donor
+                    ? donorSfxFactory : baseSfxFactory;
+            Supplier<AbstractSmpsData> capturedNamedSfxFactory =
+                    namedSfxFactory;
+            Runnable capturedSfxCallback = donor
+                    ? afterDonorSfxLoad : afterBaseSfxLoad;
+            if (donor) {
+                afterDonorSfxLoad = null;
+            } else {
+                afterBaseSfxLoad = null;
+            }
+            com.openggf.audio.smps.SmpsLoader loader =
+                    new com.openggf.audio.smps.SmpsLoader() {
+                        @Override
+                        public AbstractSmpsData loadMusic(int musicId) {
+                            calls.incrementAndGet();
+                            return capturedMusic;
+                        }
 
-        @Override
-        public AbstractSmpsData loadBaseMusic(int musicId) {
-            calls.incrementAndGet();
-            return baseMusic;
-        }
+                        @Override
+                        public AbstractSmpsData loadSfx(int sfxId) {
+                            calls.incrementAndGet();
+                            if (capturedSfxCallback != null) {
+                                capturedSfxCallback.run();
+                            }
+                            return capturedSfxFactory != null
+                                    ? capturedSfxFactory.get() : capturedSfx;
+                        }
 
-        @Override
-        public AbstractSmpsData loadDonorMusic(
-                String donorGameId, int musicId) {
-            calls.incrementAndGet();
-            return donorMusic;
-        }
+                        @Override
+                        public AbstractSmpsData loadSfx(String name) {
+                            calls.incrementAndGet();
+                            return capturedNamedSfxFactory != null
+                                    ? capturedNamedSfxFactory.get()
+                                    : capturedNamedSfx;
+                        }
 
-        @Override
-        public AbstractSmpsData loadBaseSfx(int sfxId) {
-            calls.incrementAndGet();
-            return baseSfx;
-        }
+                        @Override public DacData loadDacData() { return dac; }
+                    };
+            AudioPresentationCommandResolver.SfxPolicy policy =
+                    new AudioPresentationCommandResolver.SfxPolicy() {
+                        @Override public int priority(int sfxId) {
+                            return priority;
+                        }
 
-        @Override
-        public AbstractSmpsData loadBaseSfx(String name) {
-            calls.incrementAndGet();
-            return namedSfx;
-        }
+                        @Override public boolean special(int sfxId) {
+                            return special;
+                        }
 
-        @Override
-        public AbstractSmpsData loadDonorSfx(
-                String donorGameId, int sfxId) {
-            calls.incrementAndGet();
-            return donorSfx;
-        }
-
-        @Override
-        public DacData dacFor(String gameId) {
-            return baseDac;
-        }
-
-        @Override
-        public SmpsSequencerConfig configFor(String gameId) {
-            return baseConfig;
-        }
-
-        @Override
-        public int sfxPriority(String gameId, int sfxId) {
-            return 0x70;
-        }
-
-        @Override
-        public boolean specialSfx(String gameId, int sfxId) {
-            return false;
-        }
-
-        @Override
-        public boolean continuousSfx(String gameId, int sfxId) {
-            return continuous;
+                        @Override public boolean continuous(int sfxId) {
+                            return continuous;
+                        }
+                    };
+            return new AudioPresentationCommandResolver.SourceAccess(
+                    gameId, generation, loader, dac, config, policy);
         }
 
         @Override
@@ -785,6 +1186,19 @@ class TestAudioPresentationCommandResolver {
     }
 
     private static MutableSfxData sfx(int id, byte... track) {
+        return sfx(id, MutableSfxData::new, track);
+    }
+
+    private static MutableSfxData countingSfx(
+            int id, AtomicInteger materializations, byte... track) {
+        return sfx(id,
+                data -> new CountingSfxData(data, materializations), track);
+    }
+
+    private static MutableSfxData sfx(
+            int id,
+            java.util.function.Function<byte[], MutableSfxData> factory,
+            byte... track) {
         byte[] data = new byte[0x100];
         data[2] = 1;
         data[3] = 1;
@@ -792,7 +1206,7 @@ class TestAudioPresentationCommandResolver {
         data[5] = 2;
         data[6] = 0x40;
         System.arraycopy(track, 0, data, 0x40, track.length);
-        MutableSfxData result = new MutableSfxData(data);
+        MutableSfxData result = factory.apply(data);
         result.setId(id);
         return result;
     }
@@ -888,7 +1302,7 @@ class TestAudioPresentationCommandResolver {
         }
     }
 
-    private static final class MutableSfxData extends MutableMusicData
+    private static class MutableSfxData extends MutableMusicData
             implements SmpsSfxData {
         private final List<SmpsSfxTrack> tracks;
 
@@ -908,6 +1322,22 @@ class TestAudioPresentationCommandResolver {
         @Override
         public List<? extends SmpsSfxTrack> getTrackEntries() {
             return tracks;
+        }
+    }
+
+    private static final class CountingSfxData extends MutableSfxData {
+        private final AtomicInteger materializations;
+
+        private CountingSfxData(
+                byte[] data, AtomicInteger materializations) {
+            super(data);
+            this.materializations = materializations;
+        }
+
+        @Override
+        public byte[] getData() {
+            materializations.incrementAndGet();
+            return super.getData();
         }
     }
 

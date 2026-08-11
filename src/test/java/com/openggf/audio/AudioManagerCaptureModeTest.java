@@ -392,7 +392,8 @@ class AudioManagerCaptureModeTest {
         byte[] segaPcm = rampPcm(2_000);
         when(rom.readBytes(0x10, segaPcm.length)).thenReturn(segaPcm);
         audio.setAudioProfile(new CaptureModeProfile(
-                loader, new SegaPcmSpec(0x10, segaPcm.length, 8_000)));
+                loader, new SegaPcmSpec(0x10, segaPcm.length, 8_000),
+                new SmpsSequencerConfig.Builder().build()));
         audio.setRom(rom);
         // Pre-decode the fallback WAV asset so the sample voice resolves
         // without a classpath asset, exactly as a decoded ROM-era asset would.
@@ -645,12 +646,13 @@ class AudioManagerCaptureModeTest {
         return field.get(audio);
     }
 
-    private record CaptureModeProfile(SmpsLoader loader, SegaPcmSpec spec)
+    private record CaptureModeProfile(
+            SmpsLoader loader,
+            SegaPcmSpec spec,
+            SmpsSequencerConfig config)
             implements GameAudioProfile {
         @Override public SmpsLoader createSmpsLoader(Rom rom) { return loader; }
-        @Override public SmpsSequencerConfig getSequencerConfig() {
-            return new SmpsSequencerConfig.Builder().build();
-        }
+        @Override public SmpsSequencerConfig getSequencerConfig() { return config; }
         @Override public int getSpeedShoesOnCommandId() { return -1; }
         @Override public int getSpeedShoesOffCommandId() { return -1; }
         @Override public int getInvincibilityMusicId() { return -1; }

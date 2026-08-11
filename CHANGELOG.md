@@ -3,6 +3,41 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Performance: repeated public base-id, base-name, and donor SMPS SFX starts
+  now reuse the generation-aware catalog entry already consumed by the
+  presentation resolver. The manager registers the first immutable program
+  and dependency tuple before publishing its command, so later triggers do not
+  reload or recopy asset-sized data and a reentrant source replacement cannot
+  splice a new generation into the in-flight start. The legacy donor overload
+  that supplies only loader and DAC now freezes the active base profile's
+  sequencer configuration and SFX policy as its explicit compatibility owner,
+  so its direct and `GameSound` routes are admitted by the presentation owner
+  and do not revert to per-trigger loading. Invalid blank/negative requests
+  still probe their loader before falling back or returning a no-op, without
+  constructing an invalid catalog key. Cached legacy-backend starts now also
+  dispatch the registered priority, special-SFX, and continuous-SFX policy
+  with the retained program/DAC/config tuple, so a later profile replacement
+  cannot reclassify an already-registered playback. ROM replacement keeps the
+  existing audio-to-data ownership edge while atomically publishing the new
+  loader, DAC, config, and generation tuple.
+- Performance: prepared SMPS SFX admission now bypasses the presentation
+  registry's whole-music-driver rollback capture on the ordinary and rejected
+  SFX paths. Coordination still rolls back at its narrow admission boundary,
+  while diagnostic chip observers retain the driver-local fallback needed to
+  make their callbacks retryable.
+- Performance: repeated SMPS SFX resolution and base/donor music starts now consult the
+  generation-aware asset catalog before invoking a loader. Each program and immutable
+  dependency tuple is frozen once per generation, while every music start still receives
+  distinct mutable playback state and rewind restores reuse the registered identities.
+- Fix: replacing a base ROM/audio profile or donor SMPS source now publishes its loader,
+  DAC, configuration, and monotonically increasing catalog generation as one transaction.
+  Command resolution captures that complete source and its SFX policy once, so reentrant or
+  concurrent replacement cannot mix generations. Failed source, coordination-handler, or
+  backend/profile setup (including fatal error paths) restores the prior configuration, while
+  live and rewind voices retain their original generation without allowing new commands to
+  reuse stale programs. Source-changing callbacks are rejected if they try to re-enter a base,
+  donor, clear, or reset transaction, preventing nested publications from reusing a generation
+  or invalidating the outer transaction's rollback state.
 - Change: dynamic-art gap/tail comparison no longer treats an edge's movie row stamp as
   engine evidence inside a span the run fixture's own recorded coverage declares
   unrepresented and unclosed -- no recorded row inside the span, and no recorded coverage

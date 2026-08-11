@@ -14,8 +14,8 @@ public interface CoordFlagContext {
     // Data / config access
     // -----------------------------------------------------------------------
 
-    /** Raw SMPS data bytes. */
-    byte[] getData();
+    /** Allocation-free indexed access to the immutable SMPS program. */
+    SmpsProgramView programView();
 
     /** The parsed SMPS header data. */
     AbstractSmpsData getSmpsData();

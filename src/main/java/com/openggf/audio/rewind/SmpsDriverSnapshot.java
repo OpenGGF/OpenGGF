@@ -99,6 +99,7 @@ public record SmpsDriverSnapshot(
     public record SequencerEntry(
             boolean sfx,
             SmpsSourceDescriptor source,
+            SmpsSequencer.SourceDescriptorTrust sourceDescriptorTrust,
             SmpsSourceDescriptor fallbackVoiceSource,
             AbstractSmpsData smpsData,
             DacData dacData,
@@ -108,10 +109,27 @@ public record SmpsDriverSnapshot(
 
         public SequencerEntry {
             Objects.requireNonNull(source, "source");
+            Objects.requireNonNull(
+                    sourceDescriptorTrust, "sourceDescriptorTrust");
             Objects.requireNonNull(smpsData, "smpsData");
             Objects.requireNonNull(audioManager, "audioManager");
             Objects.requireNonNull(config, "config");
             Objects.requireNonNull(snapshot, "snapshot");
+        }
+
+        public SequencerEntry(
+                boolean sfx,
+                SmpsSourceDescriptor source,
+                SmpsSourceDescriptor fallbackVoiceSource,
+                AbstractSmpsData smpsData,
+                DacData dacData,
+                MusicRestoreSink audioManager,
+                SmpsSequencerConfig config,
+                SmpsSequencerSnapshot snapshot) {
+            this(sfx, source,
+                    SmpsSequencer.SourceDescriptorTrust.LEGACY_RECOMPUTE,
+                    fallbackVoiceSource, smpsData, dacData, audioManager,
+                    config, snapshot);
         }
     }
 }

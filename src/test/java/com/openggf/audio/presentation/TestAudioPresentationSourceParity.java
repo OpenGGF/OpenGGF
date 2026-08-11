@@ -18,6 +18,7 @@ import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
+import com.openggf.audio.smps.SmpsProgramView;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.configuration.SonicConfiguration;
@@ -29,6 +30,10 @@ import java.io.ByteArrayInputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -36,6 +41,9 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestAudioPresentationSourceParity {
@@ -43,6 +51,23 @@ class TestAudioPresentationSourceParity {
     private static final int MAX_FRAMES = 2_048;
     private static final DacData EMPTY_DAC =
             new DacData(Map.of(), Map.of(), 288);
+
+    @Test
+    void immutableRuntimeViewsExposeIndexedReadsInsteadOfRawArrays() {
+        assertEquals(List.of(), publicRawArrayReturns(
+                DacData.class, DacData.Sample.class, SmpsProgramView.class));
+    }
+
+    private static List<String> publicRawArrayReturns(Class<?>... owners) {
+        return Arrays.stream(owners)
+                .flatMap(owner -> Arrays.stream(owner.getMethods()))
+                .filter(method -> Modifier.isPublic(method.getModifiers()))
+                .filter(method -> method.getReturnType().isArray()
+                        || Map.class.isAssignableFrom(method.getReturnType()))
+                .map(Method::toGenericString)
+                .sorted()
+                .toList();
+    }
 
     @AfterEach
     void tearDown() {
@@ -68,7 +93,7 @@ class TestAudioPresentationSourceParity {
         AbstractSmpsData sfx = data("sfx", 0xA0);
         SmpsAssetKey key = new SmpsAssetKey(
                 "base", SmpsAssetKey.Route.BASE_ID, 0xA0, null);
-        fixture.factory.warmSmpsSfxAsset(
+        fixture.factory.registerSmpsSfxAsset(
                 key, sfx, EMPTY_DAC, config());
         registry.apply(new AudioPresentationCommand.AddSmpsSfx(
                 fixture.factory.resolveSmpsSfx(
@@ -310,6 +335,72 @@ class TestAudioPresentationSourceParity {
     }
 
     @Test
+    void frozenProgramSurvivesLoaderAndPublicMutationAcrossRewindRestore() {
+        MutableParitySmpsData source = MutableParitySmpsData.complete();
+        FactoryFixture fixture = factoryFixture();
+        AudioPresentationCommand.MusicVoiceEntry entry =
+                fixture.factory.musicSmps(
+                        "base", 0x91, 12, source, EMPTY_DAC,
+                        indexedConfig(),
+                        AudioSourceDescriptor.baseMusic(0x91), MAX_FRAMES);
+
+        source.mutateOwnedInputs();
+        SmpsCompositeVoice first = fixture.factory.recreateSmps(
+                (AudioPresentationCommand.SmpsVoiceDescriptor)
+                        entry.voiceDescriptor());
+        SmpsCompositeVoice second = fixture.factory.recreateSmps(
+                (AudioPresentationCommand.SmpsVoiceDescriptor)
+                        entry.voiceDescriptor());
+        SmpsSequencer firstSequencer =
+                first.driver().firstMusicSequencer();
+        SmpsSequencer secondSequencer =
+                second.driver().firstMusicSequencer();
+        AbstractSmpsData frozen = firstSequencer.getSmpsData();
+        mutateFrozenPublicCopies(frozen);
+
+        assertFrozenProgram(frozen);
+        PresentationVoiceSnapshot.Smps snapshot =
+                (PresentationVoiceSnapshot.Smps) first.snapshot();
+        firstSequencer.getTracks().get(0).pos = 6;
+        SmpsCompositeVoice recreated = fixture.factory.recreateSmps(snapshot);
+        SmpsSequencer recreatedSequencer =
+                recreated.driver().firstMusicSequencer();
+
+        assertSame(frozen, secondSequencer.getSmpsData());
+        assertSame(frozen, recreatedSequencer.getSmpsData());
+        assertSame(firstSequencer.programView(),
+                secondSequencer.programView());
+        assertSame(firstSequencer.programView(),
+                recreatedSequencer.programView());
+        assertSame(firstSequencer.getDacData(),
+                secondSequencer.getDacData());
+        assertSame(firstSequencer.getDacData(),
+                recreatedSequencer.getDacData());
+        assertSame(firstSequencer.getSourceDescriptor(),
+                secondSequencer.getSourceDescriptor());
+        assertSame(firstSequencer.getSourceDescriptor(),
+                recreatedSequencer.getSourceDescriptor());
+
+        assertNotSame(firstSequencer, secondSequencer);
+        assertNotSame(firstSequencer, recreatedSequencer);
+        assertNotSame(firstSequencer.getTracks(),
+                secondSequencer.getTracks());
+        assertNotSame(firstSequencer.getTracks(),
+                recreatedSequencer.getTracks());
+        assertEquals(2, firstSequencer.getTracks().size());
+        assertEquals(2, secondSequencer.getTracks().size());
+        assertEquals(2, recreatedSequencer.getTracks().size());
+        assertNotSame(firstSequencer.getTracks().get(0),
+                secondSequencer.getTracks().get(0));
+        assertNotSame(firstSequencer.getTracks().get(0),
+                recreatedSequencer.getTracks().get(0));
+        assertEquals(1, secondSequencer.getTracks().get(0).pos);
+        assertEquals(1, recreatedSequencer.getTracks().get(0).pos);
+        assertEquals(6, firstSequencer.getTracks().get(0).pos);
+        assertFrozenProgram(recreatedSequencer.getSmpsData());
+    }
+
+    @Test
     void legacyFallbackWavMetadataMatchesDecodedPresentationAsset()
             throws Exception {
         byte[] wav = wav(new short[] {100, -100, 300, -300},
@@ -396,6 +487,13 @@ class TestAudioPresentationSourceParity {
         return new SmpsSequencerConfig.Builder().build();
     }
 
+    private static SmpsSequencerConfig indexedConfig() {
+        return new SmpsSequencerConfig.Builder()
+                .fmChannelOrder(new int[] {0})
+                .psgChannelOrder(new int[] {0x80})
+                .build();
+    }
+
     private static boolean ArraysAreAllZero(short[] samples) {
         for (short sample : samples) {
             if (sample != 0) {
@@ -449,6 +547,147 @@ class TestAudioPresentationSourceParity {
         driver.writePsg(driver, 0x84);
         driver.writePsg(driver, 0x12);
         driver.writePsg(driver, 0x92);
+    }
+
+    private static void mutateFrozenPublicCopies(AbstractSmpsData frozen) {
+        frozen.getData()[0] = 0x55;
+        frozen.getFmPointers()[0] = 0x55;
+        frozen.getFmKeyOffsets()[0] = 0x55;
+        frozen.getFmVolumeOffsets()[0] = 0x55;
+        frozen.getPsgPointers()[0] = 0x55;
+        frozen.getPsgKeyOffsets()[0] = 0x55;
+        frozen.getPsgVolumeOffsets()[0] = 0x55;
+        frozen.getPsgModEnvs()[0] = 0x55;
+        frozen.getPsgInstruments()[0] = 0x55;
+        frozen.getVoice(7)[0] = 0x55;
+        frozen.getPsgEnvelope(8)[0] = 0x55;
+        frozen.getModEnvelope(9)[0] = 0x55;
+        assertThrows(UnsupportedOperationException.class,
+                () -> frozen.setId(0x55));
+        assertThrows(UnsupportedOperationException.class,
+                () -> frozen.setPalSpeedupDisabled(false));
+    }
+
+    private static void assertFrozenProgram(AbstractSmpsData frozen) {
+        assertArrayEquals(MutableParitySmpsData.PROGRAM,
+                frozen.getData());
+        assertArrayEquals(new int[] {1}, frozen.getFmPointers());
+        assertArrayEquals(new int[] {11}, frozen.getFmKeyOffsets());
+        assertArrayEquals(new int[] {12}, frozen.getFmVolumeOffsets());
+        assertArrayEquals(new int[] {8}, frozen.getPsgPointers());
+        assertArrayEquals(new int[] {13}, frozen.getPsgKeyOffsets());
+        assertArrayEquals(new int[] {14}, frozen.getPsgVolumeOffsets());
+        assertArrayEquals(new int[] {15}, frozen.getPsgModEnvs());
+        assertArrayEquals(new int[] {16}, frozen.getPsgInstruments());
+        assertArrayEquals(new byte[] {17, 18}, frozen.getVoice(7));
+        assertArrayEquals(new byte[] {19, 20}, frozen.getPsgEnvelope(8));
+        assertArrayEquals(new byte[] {21, 22}, frozen.getModEnvelope(9));
+        assertEquals(0x91, frozen.getId());
+        assertTrue(frozen.isPalSpeedupDisabled());
+
+        SmpsProgramView view = frozen;
+        assertEquals(MutableParitySmpsData.PROGRAM.length,
+                view.dataLength());
+        assertEquals(0xF2, view.dataByteAt(1) & 0xFF);
+        assertEquals(1, view.fmPointerCount());
+        assertEquals(1, view.fmPointerAt(0));
+        assertEquals(11, view.fmKeyOffsetAt(0));
+        assertEquals(12, view.fmVolumeOffsetAt(0));
+        assertEquals(1, view.psgPointerCount());
+        assertEquals(8, view.psgPointerAt(0));
+        assertEquals(13, view.psgKeyOffsetAt(0));
+        assertEquals(14, view.psgVolumeOffsetAt(0));
+        assertEquals(15, view.psgModEnvelopeAt(0));
+        assertEquals(16, view.psgInstrumentAt(0));
+        assertEquals(2, view.voiceLength(7));
+        assertEquals(17, view.voiceByteAt(7, 0));
+        assertEquals(2, view.psgEnvelopeLength(8));
+        assertEquals(19, view.psgEnvelopeByteAt(8, 0));
+        assertEquals(2, view.modEnvelopeLength(9));
+        assertEquals(21, view.modEnvelopeByteAt(9, 0));
+    }
+
+    private static final class MutableParitySmpsData
+            extends AbstractSmpsData {
+        private static final byte[] PROGRAM = {
+                1, (byte) 0xF2, 0, 0, 0, 0, 0, 0,
+                (byte) 0xF2, 0, 0, 0, 0, 0, 0, 0
+        };
+        private final byte[] voice;
+        private final byte[] psgEnvelope;
+        private final byte[] modEnvelope;
+
+        private MutableParitySmpsData(
+                byte[] data,
+                int[] fmPointers,
+                int[] fmKeyOffsets,
+                int[] fmVolumeOffsets,
+                int[] psgPointers,
+                int[] psgKeyOffsets,
+                int[] psgVolumeOffsets,
+                int[] psgModEnvs,
+                int[] psgInstruments,
+                byte[] voice,
+                byte[] psgEnvelope,
+                byte[] modEnvelope) {
+            super(data, 0);
+            this.fmPointers = fmPointers;
+            this.fmKeyOffsets = fmKeyOffsets;
+            this.fmVolumeOffsets = fmVolumeOffsets;
+            this.psgPointers = psgPointers;
+            this.psgKeyOffsets = psgKeyOffsets;
+            this.psgVolumeOffsets = psgVolumeOffsets;
+            this.psgModEnvs = psgModEnvs;
+            this.psgInstruments = psgInstruments;
+            this.voice = voice;
+            this.psgEnvelope = psgEnvelope;
+            this.modEnvelope = modEnvelope;
+            setId(0x91);
+            setPalSpeedupDisabled(true);
+        }
+
+        private static MutableParitySmpsData complete() {
+            return new MutableParitySmpsData(
+                    PROGRAM.clone(),
+                    new int[] {1}, new int[] {11}, new int[] {12},
+                    new int[] {8}, new int[] {13}, new int[] {14},
+                    new int[] {15}, new int[] {16},
+                    new byte[] {17, 18}, new byte[] {19, 20},
+                    new byte[] {21, 22});
+        }
+
+        private void mutateOwnedInputs() {
+            data[0] = 0x66;
+            fmPointers[0] = 0x66;
+            fmKeyOffsets[0] = 0x66;
+            fmVolumeOffsets[0] = 0x66;
+            psgPointers[0] = 0x66;
+            psgKeyOffsets[0] = 0x66;
+            psgVolumeOffsets[0] = 0x66;
+            psgModEnvs[0] = 0x66;
+            psgInstruments[0] = 0x66;
+            voice[0] = 0x66;
+            psgEnvelope[0] = 0x66;
+            modEnvelope[0] = 0x66;
+            setId(0x66);
+            setPalSpeedupDisabled(false);
+        }
+
+        @Override protected void parseHeader() { }
+        @Override public byte[] getVoice(int voiceId) {
+            return voiceId == 0 || voiceId == 7 ? voice : null;
+        }
+        @Override public byte[] getPsgEnvelope(int id) {
+            return id == 8 ? psgEnvelope : null;
+        }
+        @Override public byte[] getModEnvelope(int id) {
+            return id == 9 ? modEnvelope : null;
+        }
+        @Override public int read16(int offset) {
+            return ((data[offset] & 0xFF) << 8)
+                    | (data[offset + 1] & 0xFF);
+        }
+        @Override public int getBaseNoteOffset() { return 0; }
     }
 
     private static final class NoDeviceBackend

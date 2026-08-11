@@ -100,12 +100,13 @@ public class TestRomAudioIntegration {
     public void testDacDataLoading() {
         DacData dac = loader.loadDacData();
         assertNotNull(dac, "DAC Data should load");
-        assertFalse(dac.samples.isEmpty(), "Should have samples");
-        assertFalse(dac.mapping.isEmpty(), "Should have mapping");
-        assertTrue(dac.samples.containsKey(0x81), "Should have Sample 81");
-        byte[] sample = dac.samples.get(0x81);
-        assertTrue(sample.length > 0, "Sample 81 should have data");
-        System.out.println("DAC Loaded. Sample 81 size: " + sample.length);
+        assertTrue(dac.sampleCount() > 0, "Should have samples");
+        assertTrue(dac.mappingCount() > 0, "Should have mapping");
+        assertTrue(dac.hasSample(0x81), "Should have Sample 81");
+        DacData.Sample sample = dac.sample(0x81);
+        assertNotNull(sample, "Sample 81 should be readable");
+        assertTrue(sample.length() > 0, "Sample 81 should have data");
+        System.out.println("DAC Loaded. Sample 81 size: " + sample.length());
     }
 
     @Test
@@ -182,8 +183,8 @@ public class TestRomAudioIntegration {
         seq.read(buffer);
 
         assertSame(dacData, synth.configuredDacData, "Sequencer should wire ROM DAC data into the synthesizer");
-        assertFalse(dacData.samples.isEmpty(), "ROM DAC table should expose samples");
-        assertTrue(dacData.mapping.containsKey(0x81), "ROM DAC table should map drum notes");
+        assertTrue(dacData.sampleCount() > 0, "ROM DAC table should expose samples");
+        assertNotNull(dacData.mappingForNote(0x81), "ROM DAC table should map drum notes");
     }
 
     @Test
@@ -281,5 +282,4 @@ public class TestRomAudioIntegration {
         assertEquals(0x87, game.getMusicId(19), "Death Egg Music ID");
     }
 }
-
 

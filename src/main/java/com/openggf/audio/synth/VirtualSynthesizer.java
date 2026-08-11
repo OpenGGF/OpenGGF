@@ -8,6 +8,7 @@ public class VirtualSynthesizer implements Synthesizer {
     private final PsgChip psg;
     private final Ym2612Chip ym;
     private double outputSampleRate = Ym2612Chip.getDefaultOutputRate();
+    private boolean chipWriteObserverEnabled;
 
     // Output headroom: reduce overall level so 6 FM channels + PSG don't clip 16-bit output.
     private static final int MASTER_GAIN_SHIFT = 1; // -6 dB
@@ -49,6 +50,13 @@ public class VirtualSynthesizer implements Synthesizer {
     public void setChipWriteObserver(ChipWriteObserver observer) {
         ym.setWriteObserver(observer);
         psg.setWriteObserver(observer);
+        chipWriteObserverEnabled = observer != null
+                && observer != ChipWriteObserver.NONE;
+    }
+
+    /** Returns whether chip writes can currently invoke user code. */
+    protected final boolean hasChipWriteObserver() {
+        return chipWriteObserverEnabled;
     }
 
     public Snapshot captureSynthSnapshot() {
