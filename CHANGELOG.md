@@ -8,7 +8,13 @@ All notable changes to the OpenGGF project are documented in this file.
   presentation resolver. The manager registers the first immutable program
   and dependency tuple before publishing its command, so later triggers do not
   reload or recopy asset-sized data and a reentrant source replacement cannot
-  splice a new generation into the in-flight start.
+  splice a new generation into the in-flight start. The legacy donor overload
+  that supplies only loader and DAC now freezes the active base profile's
+  sequencer configuration and SFX policy as its explicit compatibility owner,
+  so its direct and `GameSound` routes are admitted by the presentation owner
+  and do not revert to per-trigger loading. Invalid blank/negative requests
+  still probe their loader before falling back or returning a no-op, without
+  constructing an invalid catalog key.
 - Performance: prepared SMPS SFX admission now bypasses the presentation
   registry's whole-music-driver rollback capture on the ordinary and rejected
   SFX paths. Coordination still rolls back at its narrow admission boundary,

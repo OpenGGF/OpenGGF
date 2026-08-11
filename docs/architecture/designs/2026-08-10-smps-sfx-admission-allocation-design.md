@@ -148,6 +148,21 @@ existing no-op behavior; a failed GameSound donor probe retains its named
 fallback. The resolver keeps its own lookup-before-load miss path for direct
 resolver and replay-style callers. Negative-result caching is not required.
 
+The public donor registration overload that supplies loader and DAC but no
+sequencer configuration is a supported legacy compatibility route. Its old
+backend contract selected the active base backend's configuration and SFX
+policy. Registration now captures those two values from one immutable base
+source tuple and stores them with the donor loader/DAC generation; an explicit
+donor profile remains authoritative when supplied, while an explicit config
+without a donor profile retains the legacy default SFX policy rather than
+borrowing the base policy. It never combines a later current configuration
+with an earlier policy. A config-less
+donor registered before a base owner exists remains unmaterialized until a
+complete owner is available, matching the legacy backend's inability to create
+a sequencer without a profile. Invalid blank names and negative ids are probed
+before catalog-key validation; only a valid lookup request or a successfully
+loaded program with a valid resolved id may create a catalog key.
+
 On a versioned catalog miss, the resolver loads and registers the program. Registration
 captures a small provenance descriptor (session/game dependency identity,
 dependency generation, asset key, special-SFX flag, and program metadata). If an explicit caller tries
