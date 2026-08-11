@@ -2186,6 +2186,10 @@ public class AudioManager implements MusicRestoreSink {
         }
         DonorAudioSource source = donorAudioSources.get(donorGameId);
         if (source != null) {
+            source = completeLegacyDonorSource(donorGameId, source);
+            if (!hasCatalogDependencies(source.dac(), source.config())) {
+                return;
+            }
             ensureShadowPresentation();
             SmpsAssetKey key = new SmpsAssetKey(
                     donorGameId, SmpsAssetKey.Route.DONOR_MUSIC,
