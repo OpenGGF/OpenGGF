@@ -72771,6 +72771,17 @@ control and after, with an identical set of 41 failing classes.
   `TraceFrame` **32 MB (3%)**. Streaming or chunking rows would have recovered
   3%; int-keying the frame indexes has an 8.9% ceiling. Note `TraceData` is
   already denser than its source text (154 MB text → 105 MB heap).
+- **The trap worth remembering, which is not the heap number.** At
+  `forkCount=1` the OOM did not merely lose one class's report — it killed the
+  fork and truncated the profile at **399 of 770 tests**. Everything
+  alphabetically after `TestS3kKnucklesSuperEmeraldRunChain` never ran, and the
+  run still exited reporting a plausible-looking **2 red** instead of 5. The
+  count looked BETTER than the truth, not obviously broken, so nothing about
+  the summary line invited suspicion. This is the same family as this
+  project's stale-surefire-XML trap and is nastier, because under-reporting
+  disguised as improvement reads like progress. Whenever a sweep's red set
+  shrinks, check the test COUNT reached the expected total before believing it;
+  a truncated run and a fixed regression look identical in the summary.
 - At `forkCount=1` the OOM truncated the whole profile: control run aborted
   after **399 tests in 2m24s**. With the profile at `-Xmx2g` the sweep
   completes: **770 tests, 2 failures, 3 errors, 4 skipped, 7m51s**. All 39
@@ -72799,4 +72810,8 @@ control and after, with an identical set of 41 failing classes.
   with lookahead 1-2. It is held back because `plan()` currently loads *and
   validates* all segments up front, so deferring the load moves when a
   malformed fixture fails and could change the messages of the five red
-  classes.
+  classes. A second reason to leave it alone for now: the S2 lane is actively
+  measuring `TestS2CompleteEmeraldRunChain` and `TestS2EhzHalfpipeRoundTripChain`
+  toward green, and a change that can move when a malformed fixture fails can
+  move those two classes' messages underneath that work. Gate it on a
+  MESSAGE-level diff of the red classes, not a pass/fail-count diff.
