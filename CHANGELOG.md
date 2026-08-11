@@ -3,6 +3,15 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Sonic 2's special stage runs a freshly streamed object exactly once on the iteration
+  that allocates it, and binds each `RunObjects` pass to the drawing index the ROM is on.
+  `SSObjectsManager` (s2.asm:6935-7001) only allocates -- the object's first execution is the
+  same main-loop iteration's `jsr (RunObjects)` two calls later (s2.asm:6684-6686) -- but the
+  engine both ran the object inline at allocation and ran it again in the deferred pass, and
+  from the `SpecialStage_Started` boundary onward executed each pass one drawing index behind
+  the ROM. The two errors concealed each other: the inline execution supplied the depth
+  decrement the late pass binding had lost, so every streamed ring and bomb carried the right
+  total while reaching each depth on the wrong pass.
 - Fixed: the level main-loop iteration whose object pass writes the next game
   mode is no longer counted as a row of the level's dynamic-art comparison
   window. S2 `Obj79_Star` does `move.b #GameModeID_SpecialStage,(Game_Mode).w`
