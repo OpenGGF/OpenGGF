@@ -550,6 +550,16 @@ public final class GameplayModeContext implements ModeContext {
      * Closes an open dynamic-art comparison window at a structural replay
      * boundary. Expected trace values never cross this production-owned seam.
      */
+    /**
+     * Ends the level's comparison window on the ROM iteration whose object pass
+     * wrote the next game mode.
+     *
+     * @see com.openggf.game.resources.DynamicArtLifecycleService#endComparisonSegmentAtRomModeChange()
+     */
+    public void endDynamicArtComparisonSegmentAtRomModeChange() {
+        dynamicArtLifecycle.endComparisonSegmentAtRomModeChange();
+    }
+
     public void endDynamicArtComparisonSegment() {
         if (dynamicArtLifecycle.isComparisonSegmentOpen()) {
             dynamicArtLifecycle.closeComparisonSegment();

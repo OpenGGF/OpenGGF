@@ -797,8 +797,13 @@ abstract class AbstractRunChainTest {
 
                             @Override
                             public void close() {
-                                gameplayMode.dynamicArtLifecycle()
-                                        .closeComparisonSegment();
+                                // The window may already have closed itself on
+                                // the ROM iteration that wrote the
+                                // special-stage game mode (LevelManager's
+                                // Obj79_Star seam, docs/s2disasm/s2.asm:44877);
+                                // that iteration still runs to completion, so
+                                // the structural close arrives afterwards.
+                                gameplayMode.endDynamicArtComparisonSegment();
                             }
                         });
         // The run's movie spans the first level's load, so the transfer that

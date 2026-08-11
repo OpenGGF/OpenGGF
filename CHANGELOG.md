@@ -3,6 +3,21 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fixed: the level main-loop iteration whose object pass writes the next game
+  mode is no longer counted as a row of the level's dynamic-art comparison
+  window. S2 `Obj79_Star` does `move.b #GameModeID_SpecialStage,(Game_Mode).w`
+  from inside `RunObjects` (s2.asm:44877) and the iteration then runs to
+  completion — `BuildSprites` at s2.asm:5108, the mode test that leaves
+  `Level_MainLoop` only at s2.asm:5122-5125 — so the engine correctly keeps
+  running it, but nothing samples it: the run recorder finalizes the level
+  segment on the first frame that reads `$10` and writes no row for it
+  (`S2RunCaptureRunner.cs`:249-259), reclassifying that iteration's whole edge
+  batch as `run_gap` (`S2DynamicArtObserver.cs`:867-897). The engine published
+  a segment row for it instead and stamped its submissions `segment`, so every
+  transfer queued on a special-stage entry frame — including player art queued
+  earlier in the same iteration, Sonic running in a lower slot than the star
+  post — carried the wrong `submission_origin` into the following special-stage
+  segment's inherited ledger.
 - Fixed: the Sonic 2 special stage's entry fade rows are no longer treated as
   DMA-queue service boundaries. `SpecialStage` opens with `Pal_FadeToWhite`
   (s2.asm:6547), whose 22 `dbf` iterations each set `VintID_Fade` and wait for a

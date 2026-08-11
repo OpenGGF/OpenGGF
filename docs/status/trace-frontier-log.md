@@ -72693,3 +72693,41 @@ green. `TestS3kMegaRunChain` fails identically at base and after
 `-Dtest=*Guard*,*SpecialStage*,*DynamicArt*,*PlcFrameLifecycle*`: 19 failures at
 base, 19 after (the two mock-only `NullPointer phase` failures the new interface
 method introduced were fixed in the same change by stubbing the mocks).
+
+
+## 2026-08-11 — S2 run chains: level→special-stage boundary row (frame 126 closed)
+
+Measured in two isolated worktrees, both at 64a618bae (one patched, one clean
+control).
+
+Command (both):
+`mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical`
+`"-Dsurefire.argLine=-Xmx4g" -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=...`
+`"-Dtest=TestS2EhzHalfpipeRoundTripChain,TestS2CompleteEmeraldRunChain,TestS1GhzMazeRoundTripChain"`
+
+| Report | Control | After |
+|---|---|---|
+| `s2-ehz-halfpipe-roundtrip_seg3` | 6381 comparisons, 11293 errors, first `frame 126 dynamic_art.edge[0].submission_origin` | 6381 / 11292, first `frame 2415 dynamic_art.edges` |
+| `s2-sonic-tails-complete-emeralds_seg1` | 5681 / 3308, first `frame 126 submission_origin` | 5681 / 3307, first `frame 4895 dynamic_art.edges` |
+
+Both classes still FAIL on the pre-existing extra `ss-sonic` submission
+(`expected [2628] actual [2628, 2629]` / `[5427]` vs `[5427, 5428]`), which is
+untouched by this change.
+
+Measured cause (not the row-count theory the round was briefed with): level
+segments published one row past `trace_frame_count` because the engine runs the
+ROM's mode-change iteration — S2 `Obj79_Star` sets `Game_Mode` inside
+`RunObjects` (s2.asm:44877) and `Level_MainLoop` completes the iteration before
+its mode test (s2.asm:5108, 5122-5125). Per-step instrumentation put the star
+touch, the request, and the extra publication all on that single iteration
+(halfpipe `seg1_ehz1`: last compared row bk2 3794, extra row bk2 3795). The
+recorder writes no row for it and reclassifies its edges to `run_gap`
+(`S2RunCaptureRunner.cs`:219, 249-259; `S2DynamicArtObserver.cs`:867-897), so
+the fix ends the window on that iteration and re-emits its buffered batch into
+the gap ledger with the same before/after membership. No constant introduced.
+
+Canaries: `TestS1GhzMazeRoundTripChain` green before and after.
+`TestS3kMegaRunChain` / `TestS3kKnucklesSuperEmeraldRunChain` fail identically
+at control and after (`KOS_DECOMPRESSION_QUEUE#15` raw_frame 4570 /
+`#14`). Full `mvn test` (no profile): 14706 tests, 53 failures + 21 errors at
+control and after, with an identical set of 41 failing classes.

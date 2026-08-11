@@ -153,11 +153,15 @@ public final class DynamicArtLifecycleService
             int logicalFrame,
             int logicalEdgeIndex,
             List<DynamicArtDiagnosticsSnapshot.Request> requests,
-            String submissionOrigin) {
+            String submissionOrigin,
+            List<Long> beforeOutstanding,
+            List<Long> afterOutstanding) {
         public BufferedEdge {
             requests = List.copyOf(requests);
             submissionOrigin = submissionOrigin == null
                     ? "segment" : submissionOrigin;
+            beforeOutstanding = List.copyOf(beforeOutstanding);
+            afterOutstanding = List.copyOf(afterOutstanding);
         }
     }
 
@@ -323,6 +327,50 @@ public final class DynamicArtLifecycleService
         logicalFrame = 0;
         nextLogicalEdgeIndex = 0;
         nextPublicationFrame = 0;
+    }
+
+    /**
+     * Ends the comparison window on the ROM iteration that writes the next
+     * game mode from inside {@code RunObjects}: S2 {@code Obj79_Star} does
+     * {@code move.b #GameModeID_SpecialStage,(Game_Mode).w}
+     * (docs/s2disasm/s2.asm:44877) and S3K {@code SSEntryFlash_GoSS} the same.
+     * That iteration still runs to completion -- the mode test that leaves
+     * {@code Level_MainLoop} is at its tail (docs/s2disasm/s2.asm:5122-5125),
+     * after {@code BuildSprites} (:5108) -- but it is no longer a row of the
+     * level: nothing samples it, so its whole edge batch belongs to the
+     * transition gap, whichever object produced it and in whatever order.
+     * Player art queued earlier in the same iteration (Sonic runs before the
+     * star post's higher slot) is therefore re-stamped {@code run_gap} too.
+     * No row is published for the iteration.
+     */
+    public void endComparisonSegmentAtRomModeChange() {
+        if (!runActive || !comparisonSegmentOpen) {
+            return;
+        }
+        List<BufferedEdge> boundaryEdges = List.copyOf(bufferedEdges);
+        bufferedEdges.clear();
+        comparisonSegmentOpen = false;
+        Set<Long> boundarySubmissions = new java.util.LinkedHashSet<>();
+        for (BufferedEdge edge : boundaryEdges) {
+            if ("submitted".equals(edge.phase())) {
+                boundarySubmissions.add(edge.transferId());
+            }
+        }
+        for (long transferId : boundarySubmissions) {
+            Descriptor descriptor = ledger.get(transferId);
+            if (descriptor != null) {
+                ledger.put(transferId, new Descriptor(
+                        descriptor.transferId(), descriptor.owner(),
+                        descriptor.mappingFrame(), "run_gap",
+                        descriptor.requests()));
+            }
+        }
+        for (BufferedEdge edge : boundaryEdges) {
+            emitGapEdge(edge.edgeOrdinal(), edge.transferId(), edge.phase(),
+                    edge.owner(), edge.mappingFrame(), edge.requests(),
+                    edge.beforeOutstanding(), edge.afterOutstanding());
+        }
+        publishedOutstanding = List.copyOf(ledger.keySet());
     }
 
     public void closeComparisonSegment() {
@@ -1052,11 +1100,28 @@ public final class DynamicArtLifecycleService
             String submissionOrigin) {
         long edgeOrdinal = nextEdgeOrdinal++;
         if (comparisonSegmentOpen) {
+            // The ledger snapshots ride along so an iteration later found to be
+            // the ROM's mode-change boundary can be re-emitted into the gap
+            // ledger with the same before/after membership it observed here.
             bufferedEdges.add(new BufferedEdge(edgeOrdinal, transferId,
                     phase, owner, mappingFrame, logicalFrame,
-                    nextLogicalEdgeIndex++, requests, submissionOrigin));
+                    nextLogicalEdgeIndex++, requests, submissionOrigin,
+                    beforeOutstanding, List.copyOf(ledger.keySet())));
             return;
         }
+        emitGapEdge(edgeOrdinal, transferId, phase, owner, mappingFrame,
+                requests, beforeOutstanding, List.copyOf(ledger.keySet()));
+    }
+
+    private void emitGapEdge(
+            long edgeOrdinal,
+            long transferId,
+            String phase,
+            String owner,
+            int mappingFrame,
+            List<DynamicArtDiagnosticsSnapshot.Request> requests,
+            List<Long> beforeOutstanding,
+            List<Long> afterOutstanding) {
         DynamicArtGapTransition.GapEdge edge =
                 new DynamicArtGapTransition.GapEdge(
                         edgeOrdinal, transferId, phase, owner,
@@ -1064,7 +1129,7 @@ public final class DynamicArtLifecycleService
                 nextGapEdgeIndexByFrame.merge(movieLogicalFrame, 1, Integer::sum) - 1,
                 requests);
         gapTransitions.add(new DynamicArtGapTransition(edge, beforeOutstanding,
-                List.copyOf(ledger.keySet())));
+                afterOutstanding));
     }
 
     private Descriptor requirePending(long transferId) {

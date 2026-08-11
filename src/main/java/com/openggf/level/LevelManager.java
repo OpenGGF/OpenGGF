@@ -3901,6 +3901,29 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     public void requestSpecialStageEntry() {
         transitions.requestSpecialStageEntry();
         GameServices.playbackDebug().onSpecialStageRequestRaised();
+        endLevelDynamicArtComparisonSegmentAtRomModeChange();
+    }
+
+    /**
+     * Ends the level's dynamic-art comparison window on the ROM iteration that
+     * writes the special-stage game mode. {@code Obj79_Star} performs
+     * {@code move.b #GameModeID_SpecialStage,(Game_Mode).w} from inside
+     * {@code RunObjects} (docs/s2disasm/s2.asm:44877), and S3K's
+     * {@code SSEntryFlash_GoSS} does the same from its object tick, so the rest
+     * of that iteration -- {@code BuildSprites} and its DPLC queueing at
+     * docs/s2disasm/s2.asm:5108-5110 -- already runs with the level's game mode
+     * gone. The iteration itself still completes (the mode test that leaves
+     * {@code Level_MainLoop} is at :5122-5125), which is why the engine keeps
+     * running it; it simply is not a row of the level segment any more, exactly
+     * as the run recorder finalizes the level segment on the first frame that
+     * reads {@code $10} and writes no row for it. Production only: no expected
+     * trace value crosses this seam.
+     */
+    private void endLevelDynamicArtComparisonSegmentAtRomModeChange() {
+        GameplayModeContext gameplayMode = SessionManager.getCurrentGameplayMode();
+        if (gameplayMode != null) {
+            gameplayMode.endDynamicArtComparisonSegmentAtRomModeChange();
+        }
     }
 
     /**

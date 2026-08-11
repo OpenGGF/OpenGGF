@@ -389,7 +389,12 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
             }
             return;
         }
-        if (dynamicArtLifecycle != null) {
+        if (dynamicArtLifecycle != null
+                && dynamicArtLifecycle.isComparisonSegmentOpen()) {
+            // The window can already have closed itself on the ROM iteration
+            // that wrote the special-stage game mode (Obj79_Star,
+            // docs/s2disasm/s2.asm:44877); that iteration still completes, so
+            // this structural close arrives after it.
             dynamicArtLifecycle.closeComparisonSegment();
         }
     }
