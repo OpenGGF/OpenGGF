@@ -169,6 +169,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             RegisterSerial(tests, CompleteRunAudioObserverTests.Register);
             RegisterSerial(tests, S1CompleteRunAudioReferenceCaptureTests.Register);
             RegisterSerial(tests, GpgxZ80AudioCapabilityTests.Register);
+            RegisterSerial(tests, S2AudioObserverProfileTests.Register);
             S1SmokeRecorderTests.Register(tests);
             S1TraceCsvWriterTests.Register(tests);
             S1TraceMetadataWriterTests.Register(tests);

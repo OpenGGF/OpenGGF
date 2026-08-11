@@ -95,3 +95,37 @@ caller-selected class. Integration checkpoint `ef83b7e6b` already contains
 that S2 dispatcher entry; this game-local commit depends on it remaining in the
 integration baseline. If a target baseline lacks the entry, adding it is a
 central shared-registry change, not an S2 profile workaround.
+
+## Round 2: native observer profile
+
+The first game-owned part of Task 2 is now implemented. The headless
+`S2AudioObserverProfile` selects the reviewed S2 portion of the shared native
+service manifest, rejects any change to the pinned manifest, movie, observer,
+complete-run event, terminal-Z80, or cutoff-frontier identities, and verifies
+the exact final observer installation before it can be used. Its configured
+graph retains the source-derived `$0038` VInt, `$0110` music, and `$017A` DPCM
+iteration boundaries while continuing to exclude the persistent `$0178`
+busy-wait.
+
+The installation verified in this round is
+`bizhawk-2.11-gpgx-audio-observer-v2` / `gpgx-audio-observer-v2`, ABI 2,
+BuildID `b49036a848890682`, observer identity
+`1f0147ecc101d4d726ed09536db87c125f305eccdca986c620d735714543c5cc`.
+The already-proven complete S2 evidence remains unchanged: 259,590 frames,
+169,986,419 events, maximum occupancy 1,825, no open or pending service at
+cutoff, and event digest
+`c2b2f82374aaa16144b6bf121df051dcd5b4ba095431c16cf6224adc633de41d`.
+
+Focused RED failed at compilation because `S2AudioObserverProfile` did not
+exist. Focused GREEN used the final observer installation and passed all three
+new profile tests. No new native capture was performed and no ROM, BK2, core,
+or captured payload was copied or published.
+
+The next exact boundary remains the S2-owned
+`S2CompleteAudioCaptureRunner` and `S2CompleteRunReferenceProducer`. They must
+serialize the observer's canonical services into the shared raw staging
+contract before the profile may change its reference binding from typed
+unavailable. Headless `Program.cs` and `TestMain`/project registration are
+shared integration seams; this round changed only the minimal test/project
+registration needed to exercise the S2-owned profile and leaves CLI routing to
+the conductor.

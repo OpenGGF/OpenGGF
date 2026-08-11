@@ -66,6 +66,7 @@
     <Compile Include="src/Audio/GpgxAudioTraceEvent.cs" />
     <Compile Include="src/Audio/CompleteRunAudioObserver.cs" />
     <Compile Include="src/Audio/S1CompleteRunAudioReferenceCapture.cs" />
+    <Compile Include="src/Audio/S2AudioObserverProfile.cs" />
     <Compile Include="src/Core/GpgxHost.cs" />
     <Compile Include="src/Core/GpgxHost.AudioObserver.cs" />
     <Compile Include="src/Core/GpgxAudioObserverAdapter.cs" />
