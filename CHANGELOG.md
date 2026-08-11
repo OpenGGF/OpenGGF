@@ -3,6 +3,19 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Sonic 2's star-post special-stage stars now orbit and collide the way `Obj79_Star`
+  does. Three ROM divergences moved the star the player jumps into: `Obj79_MakeSpecialStars`
+  allocates with `AllocateObjectAfterCurrent` (`s2.asm:44841-44845`) so the four stars sit
+  above the post's own slot and run on their creation frame, but the engine allocated them
+  lowest-free and lost a frame of orbit phase; the orbit maths used `Math.sin`/`Math.cos`
+  rather than `CalcSine`'s `Sine_Data` table (`s2.asm:4012-4024`, whose index $93 holds -117,
+  not a rounded -115) and mis-ported `neg.w d2 / andi.w #7,d2` (`s2.asm:44900`) as
+  `-(d2 & 7)` instead of `(-d2) & 7`, leaving the following `lsr.w` loop on a negative value;
+  and the touch used an invented `dx<16 && dy<16` test against the player's top-left render
+  bounds instead of the shared `TouchResponse` pass, which the star joins with
+  `collision_flags = $D8` (Touch_Special, Touch_Sizes index $18 = 4,4; `s2.asm:44926`,
+  `s2.asm:85286-85302`). With ROM geometry the second EHZ 1 star post's special-stage entry
+  lands on the frame the recording requires instead of three frames early.
 - Fix: the level title card no longer advances the global oscillation table. `OscillateNumDo`
   is reached only from the main level loop in all three games (S1 `sonic.asm:3033`, S2
   `s2.asm:5108`, S3K `sonic3k.asm:7909`), with `OscillateNumInit` running once at level init,

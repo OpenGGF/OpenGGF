@@ -72398,3 +72398,50 @@ so a direct blob stays un-prepared across frames where the engine prepares in on
   to any value derivable from the disassembly.
 - `TestS2EhzHalfpipeRoundTripChain` fails identically before and after
   (segment 2 `starpost_special` boundary never observed) - pre-existing.
+
+## 2026-08-11 - S2 EHZ halfpipe round trip: seg2 star-post boundary closed, frontier moves to segment 3
+
+- Worktree a detached round-40 worktree, branch
+  `bugfix/ai-s2-checkpoint-star-orbit`, over `e13080ad8`.
+- Command: `mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1
+  -Dsurefire.runOrder=alphabetical "-Dsurefire.argLine=-Xmx4g"
+  -Dsonic1.rom.path=s1.gen -Dsonic2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen
+  "-Dtest=TestS2*TraceReplay,TestS1GhzMazeRoundTripChain,TestS3kMegaRunChain,TestS2EhzHalfpipeRoundTripChain" test`
+- Control at `e13080ad8`: 38 tests, 2 failures + 1 error.
+  `TestS2EhzHalfpipeRoundTripChain` - "source comparator cannot exhaust after
+  boundary for seg2_ehz1 ... comparator cursor 2900 of 2903 ...
+  mode path=[SPECIAL_STAGE]".
+- After: 38 tests, 2 failures + 1 error, the SAME three classes.
+  `TestS1GhzMazeRoundTripChain` (`run_tail.edge[*].movie_logical_frame` 9071 vs
+  9037) and `TestS3kMegaRunChain` (unconsumed `KOS_DECOMPRESSION_QUEUE#15`
+  completion edge at raw_frame 4570) fail with byte-identical messages before
+  and after; all 34 S2 act and special-stage replays stay green.
+  `TestS2EhzHalfpipeRoundTripChain` now consumes all 2903 seg2 rows and fails
+  further on at "segment 3 lost production ownership before source closure
+  (mode=SPECIAL_STAGE_RESULTS, ... BK2 cursor=19159)" - the ss_2 interior,
+  which the control never reached.
+- Root cause was Obj79's special-stage stars, two independent defects, both
+  measured before they were theorised:
+  - `Obj79_MakeSpecialStars` allocates with `AllocateObjectAfterCurrent`
+    (s2.asm:44841-44845), so the stars sit ABOVE the post's slot and run
+    `Obj79_Star` on their creation frame. `spawnFreeChild` put them lowest-free,
+    costing exactly one frame of orbit phase. (The dongle at s2.asm:44647 really
+    does use `AllocateObject` and keeps `spawnFreeChild`.)
+  - The orbit maths used `Math.sin`/`Math.cos` instead of `CalcSine`'s
+    `Sine_Data` table, and mis-ported `neg.w d2 / andi.w #7,d2` (s2.asm:44900)
+    as `-(d2 & 7)` instead of `(-d2) & 7`, which also left the following
+    `lsr.w #1,d2` loop running on a negative value. Retranscribed instruction
+    for instruction in 16-bit word arithmetic.
+- Evidence: a Python transcription of s2.asm:44880-44943 driven only by
+  (lifetime, angle offset) reproduces all four recorded stars' x/y EXACTLY for
+  every frame of the seg2 tail (rows 2890-2902), and pins ROM lifetime = row
+  - 2769. Post-fix engine instrumentation (added, read, reverted) matches the
+  same rows exactly, all four stars.
+- The touch itself now goes through the shared `TouchResponse` pass with
+  `collision_flags = $D8` (Touch_Special, Touch_Sizes index $18 = 4,4;
+  s2.asm:44926, 85286-85302) instead of an invented `dx<16 && dy<16` test that
+  compared the player's TOP-LEFT bounds against the star's centre. With ROM
+  geometry the touch lands on frame 2903, the first frame outside the recorded
+  level segment, exactly as the recording requires.
+- No constant was introduced; every value in the change is read out of
+  `s2.asm` and cited at the site.
