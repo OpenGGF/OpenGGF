@@ -163,6 +163,51 @@ class TestAudioManagerSfxCatalogReuse {
     }
 
     @Test
+    void configlessDirectDonorCapturesBaseOwnerAndReplacesByGeneration() {
+        CountingLoader baseLoader = new CountingLoader(EMPTY_DAC);
+        CountingLoader firstLoader = new CountingLoader(dac(311));
+        firstLoader.idResults.put(DONOR_ID,
+                () -> new CountingSfxData(
+                        DONOR_ID, (byte) 0x32, new AtomicInteger()));
+        audio.registerDonorLoader("s2", firstLoader, firstLoader.dac);
+        installBase(baseLoader);
+
+        audio.playDonorSfx("s2", DONOR_ID);
+        audio.presentFrame(PresentationMode.SILENT);
+        var first = currentSfx();
+        audio.playDonorSfx("s2", DONOR_ID);
+        audio.presentFrame(PresentationMode.SILENT);
+
+        assertEquals(1, firstLoader.idLoads.get());
+        assertEquals(AudioCommand.SfxRoute.DONOR_SMPS,
+                lastCommand().route());
+        assertSame(first.dacData(), currentSfx().dacData());
+        assertSame(first.config(), currentSfx().config());
+        assertEquals(TestProfile.CONFIG.getTempoMode(),
+                first.config().getTempoMode());
+
+        CountingLoader replacementLoader = new CountingLoader(dac(312));
+        replacementLoader.idResults.put(DONOR_ID,
+                () -> new CountingSfxData(
+                        DONOR_ID, (byte) 0x33, new AtomicInteger()));
+        audio.registerDonorLoader(
+                "s2", replacementLoader, replacementLoader.dac);
+        audio.playDonorSfx("s2", DONOR_ID);
+        audio.presentFrame(PresentationMode.SILENT);
+        var replacement = currentSfx();
+
+        assertEquals(1, replacementLoader.idLoads.get());
+        assertNotEquals(first.source().dependencyGeneration(),
+                replacement.source().dependencyGeneration());
+        assertSame(replacementLoader.dac, replacement.dacData());
+
+        int commands = audio.commandTimeline().entryCount();
+        audio.playDonorSfx("s2", DONOR_ID + 1);
+        assertEquals(2, replacementLoader.idLoads.get());
+        assertEquals(commands, audio.commandTimeline().entryCount());
+    }
+
+    @Test
     void repeatedGameSoundDonorLoadsOnceAndNullDonorFallsBackByName() {
         AtomicInteger materializations = new AtomicInteger();
         CountingLoader loader = new CountingLoader(EMPTY_DAC);
@@ -190,6 +235,75 @@ class TestAudioManagerSfxCatalogReuse {
                 GameSound.FIRE_SHIELD, "s2", DONOR_ID + 1);
         audio.playSfx(GameSound.FIRE_SHIELD);
 
+        assertEquals(AudioCommand.SfxRoute.FALLBACK_NAME,
+                lastCommand().route());
+        assertEquals(GameSound.FIRE_SHIELD.name(),
+                lastCommand().sfxName());
+    }
+
+    @Test
+    void configlessGameSoundDonorPresentsAndNullMissFallsBackByName() {
+        CountingLoader baseLoader = new CountingLoader(EMPTY_DAC);
+        installBase(baseLoader);
+        CountingLoader donor = new CountingLoader(dac(313));
+        donor.idResults.put(DONOR_ID,
+                () -> new CountingSfxData(
+                        DONOR_ID, (byte) 0x42, new AtomicInteger()));
+        audio.registerDonorLoader("s2", donor, donor.dac);
+        audio.setSoundMap(Map.of());
+        audio.registerDonorSound(
+                GameSound.SPINDASH_CHARGE, "s2", DONOR_ID);
+
+        audio.playSfx(GameSound.SPINDASH_CHARGE);
+        audio.presentFrame(PresentationMode.SILENT);
+        audio.playSfx(GameSound.SPINDASH_CHARGE);
+        audio.presentFrame(PresentationMode.SILENT);
+
+        assertEquals(1, donor.idLoads.get());
+        assertEquals(AudioCommand.SfxRoute.DONOR_SMPS,
+                lastCommand().route());
+        assertSame(donor.dac, currentSfx().dacData());
+        assertEquals(TestProfile.CONFIG.getTempoMode(),
+                currentSfx().config().getTempoMode());
+
+        audio.registerDonorSound(
+                GameSound.FIRE_SHIELD, "s2", DONOR_ID + 1);
+        audio.playSfx(GameSound.FIRE_SHIELD);
+
+        assertEquals(2, donor.idLoads.get());
+        assertEquals(AudioCommand.SfxRoute.FALLBACK_NAME,
+                lastCommand().route());
+        assertEquals(GameSound.FIRE_SHIELD.name(),
+                lastCommand().sfxName());
+    }
+
+    @Test
+    void invalidRequestsProbeLoaderBeforeCatalogKeyValidation() {
+        CountingLoader baseLoader = new CountingLoader(EMPTY_DAC);
+        installBase(baseLoader);
+
+        audio.playSfx("", 0.75f);
+
+        assertEquals(1, baseLoader.nameLoads.get());
+        assertEquals(AudioCommand.SfxRoute.FALLBACK_NAME,
+                lastCommand().route());
+        assertEquals("", lastCommand().sfxName());
+
+        int commands = audio.commandTimeline().entryCount();
+        assertFalse(audio.playSfx(-7));
+        assertEquals(1, baseLoader.idLoads.get());
+        assertEquals(commands, audio.commandTimeline().entryCount());
+
+        CountingLoader donor = new CountingLoader(EMPTY_DAC);
+        registerDonor("s2", donor);
+        audio.playDonorSfx("s2", -8);
+        assertEquals(1, donor.idLoads.get());
+        assertEquals(commands, audio.commandTimeline().entryCount());
+
+        audio.setSoundMap(Map.of());
+        audio.registerDonorSound(GameSound.FIRE_SHIELD, "s2", -9);
+        audio.playSfx(GameSound.FIRE_SHIELD);
+        assertEquals(2, donor.idLoads.get());
         assertEquals(AudioCommand.SfxRoute.FALLBACK_NAME,
                 lastCommand().route());
         assertEquals(GameSound.FIRE_SHIELD.name(),
@@ -262,6 +376,57 @@ class TestAudioManagerSfxCatalogReuse {
 
         assertEquals(0, audio.commandTimeline().entryCount(),
                 "a rejected registration must publish no logical command");
+    }
+
+    @Test
+    void legacyCachedHitDispatchesTheRetainedProgramDacConfigAndPolicy() {
+        RecordingBackend backend = new RecordingBackend();
+        audio.setBackend(backend);
+        DacData firstDac = dac(321);
+        SmpsSequencerConfig firstConfig =
+                new SmpsSequencerConfig.Builder()
+                        .tempoMode(SmpsSequencerConfig.TempoMode.OVERFLOW)
+                        .build();
+        CountingLoader firstLoader = new CountingLoader(firstDac);
+        firstLoader.idResults.put(BASE_ID,
+                () -> new CountingSfxData(
+                        BASE_ID, (byte) 0x71, new AtomicInteger()));
+        audio.setAudioProfile(new PolicyProfile(
+                firstLoader, firstConfig, 0x23));
+        audio.setRom(new Rom());
+
+        assertTrue(audio.playSfx(BASE_ID));
+        audio.presentFrame(PresentationMode.SILENT);
+        var retainedVoice = currentSfx();
+        assertEquals(0x23, retainedVoice.snapshot().sfxPriority());
+        var retainedPlayback = audio.shadowFactoryForTesting()
+                .requireRegisteredSmpsSfxPlayback(
+                        new SmpsAssetKey(
+                                "base", SmpsAssetKey.Route.BASE_ID,
+                                BASE_ID, null),
+                        retainedVoice.source().dependencyGeneration());
+
+        DacData replacementDac = dac(322);
+        SmpsSequencerConfig replacementConfig =
+                new SmpsSequencerConfig.Builder()
+                        .tempoMode(SmpsSequencerConfig.TempoMode.TIMEOUT)
+                        .build();
+        CountingLoader replacementLoader =
+                new CountingLoader(replacementDac);
+        audio.setAudioProfile(new PolicyProfile(
+                replacementLoader, replacementConfig, 0x66));
+        audio.setRom(new Rom());
+
+        audio.dispatchLiveRegisteredSfx(retainedPlayback, 0.8f);
+
+        assertEquals(0, backend.currentConfigCalls,
+                "a cached hit must not select the backend's current tuple");
+        assertEquals(1, backend.explicitConfigCalls);
+        assertSame(retainedPlayback.program(), backend.program);
+        assertSame(retainedPlayback.dac(), backend.dac);
+        assertSame(retainedPlayback.config(), backend.config);
+        assertNotSame(replacementDac, backend.dac);
+        assertNotSame(replacementConfig, backend.config);
     }
 
     private void installBase(CountingLoader loader) {
@@ -418,6 +583,57 @@ class TestAudioManagerSfxCatalogReuse {
         @Override
         public SmpsLoader createSmpsLoader(Rom rom) {
             return loaders.get(rom);
+        }
+    }
+
+    private static final class PolicyProfile extends TestProfile {
+        private final SmpsSequencerConfig config;
+        private final int priority;
+
+        private PolicyProfile(
+                SmpsLoader loader,
+                SmpsSequencerConfig config,
+                int priority) {
+            super(loader);
+            this.config = config;
+            this.priority = priority;
+        }
+
+        @Override public SmpsSequencerConfig getSequencerConfig() {
+            return config;
+        }
+
+        @Override public int getSfxPriority(int sfxId) {
+            return priority;
+        }
+    }
+
+    private static final class RecordingBackend extends NullAudioBackend {
+        private int currentConfigCalls;
+        private int explicitConfigCalls;
+        private AbstractSmpsData program;
+        private DacData dac;
+        private SmpsSequencerConfig config;
+
+        @Override
+        public void playSfxSmps(
+                AbstractSmpsData data, DacData dacData, float pitch) {
+            currentConfigCalls++;
+            program = data;
+            dac = dacData;
+            config = null;
+        }
+
+        @Override
+        public void playSfxSmps(
+                AbstractSmpsData data,
+                DacData dacData,
+                float pitch,
+                SmpsSequencerConfig sequencerConfig) {
+            explicitConfigCalls++;
+            program = data;
+            dac = dacData;
+            config = sequencerConfig;
         }
     }
 }

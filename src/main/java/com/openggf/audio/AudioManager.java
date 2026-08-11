@@ -189,6 +189,7 @@ public class AudioManager implements MusicRestoreSink {
             DacData dac,
             SmpsSequencerConfig config,
             GameAudioProfile profile,
+            GameAudioProfile sfxPolicyProfile,
             long generation) {
     }
 
@@ -1636,6 +1637,20 @@ public class AudioManager implements MusicRestoreSink {
         }
         BaseAudioSource source = baseAudioSource;
         if (source.loader() != null) {
+            if (sfxName.isBlank()) {
+                AbstractSmpsData loaded = source.loader().loadSfx(sfxName);
+                if (loaded != null && loaded.getId() >= 0) {
+                    playLoadedBaseSfx(source, loaded, pitch);
+                    return;
+                }
+                recordTimelineCommand(new AudioCommand.PlaySfx(
+                        -1, sfxName, AudioCommand.SfxRoute.FALLBACK_NAME,
+                        pitch, null));
+                if (sendLiveBackendCommands()) {
+                    backend.playSfx(sfxName, pitch);
+                }
+                return;
+            }
             if (!hasCatalogDependencies(source.dac(), source.config())) {
                 AbstractSmpsData sfx = source.loader().loadSfx(sfxName);
                 if (sfx != null) {
@@ -1670,8 +1685,7 @@ public class AudioManager implements MusicRestoreSink {
                     var playback = shadowFactory
                             .requireRegisteredSmpsSfxPlayback(
                                     key, captured.dependencyGeneration());
-                    backend.playSfxSmps(
-                            playback.program(), playback.dac(), pitch);
+                    dispatchLiveRegisteredSfx(playback, pitch);
                 }
                 return;
             }
@@ -1722,7 +1736,17 @@ public class AudioManager implements MusicRestoreSink {
                 DonorAudioSource donor = donorAudioSources.get(
                         binding.gameId());
                 if (donor != null) {
-                    if (!hasCatalogDependencies(
+                    donor = completeLegacyDonorSource(
+                            binding.gameId(), donor);
+                    if (binding.sfxId() < 0) {
+                        AbstractSmpsData loaded = donor.loader().loadSfx(
+                                binding.sfxId());
+                        if (loaded != null && loaded.getId() >= 0) {
+                            played = playLoadedDonorSfx(
+                                    binding.gameId(), donor, loaded,
+                                    effectivePitch, sound.name());
+                        }
+                    } else if (!hasCatalogDependencies(
                             donor.dac(), donor.config())) {
                         AbstractSmpsData sfx = donor.loader().loadSfx(
                                 binding.sfxId());
@@ -1795,6 +1819,11 @@ public class AudioManager implements MusicRestoreSink {
     private boolean playBaseSfx(
             BaseAudioSource source, int sfxId, float pitch) {
         if (source.loader() != null) {
+            if (sfxId < 0) {
+                AbstractSmpsData loaded = source.loader().loadSfx(sfxId);
+                return loaded != null && loaded.getId() >= 0
+                        && playLoadedBaseSfx(source, loaded, pitch);
+            }
             if (!hasCatalogDependencies(source.dac(), source.config())) {
                 AbstractSmpsData sfx = source.loader().loadSfx(sfxId);
                 if (sfx != null) {
@@ -1823,8 +1852,7 @@ public class AudioManager implements MusicRestoreSink {
                     var playback = shadowFactory
                             .requireRegisteredSmpsSfxPlayback(
                                     key, captured.dependencyGeneration());
-                    backend.playSfxSmps(
-                            playback.program(), playback.dac(), pitch);
+                    dispatchLiveRegisteredSfx(playback, pitch);
                 }
                 return true;
             }
@@ -1904,6 +1932,60 @@ public class AudioManager implements MusicRestoreSink {
         return AudioRequestObserver.RequestClass.SFX;
     }
 
+    private boolean playLoadedBaseSfx(
+            BaseAudioSource source,
+            AbstractSmpsData loaded,
+            float pitch) {
+        if (!hasCatalogDependencies(source.dac(), source.config())) {
+            return false;
+        }
+        ensureShadowPresentation();
+        var captured = baseSfxSource(source);
+        int resolvedId = loaded.getId();
+        SmpsAssetKey key = new SmpsAssetKey(
+                captured.gameId(), SmpsAssetKey.Route.BASE_ID,
+                resolvedId, null);
+        registerLoadedSmpsSfx(key, captured, loaded, resolvedId);
+        AudioCommand.PlaySfx command = new AudioCommand.PlaySfx(
+                resolvedId, null, AudioCommand.SfxRoute.BASE_SMPS_ID,
+                pitch, null);
+        recordRegisteredSmpsSfxCommand(command, captured);
+        if (sendLiveBackendCommands()) {
+            dispatchLiveRegisteredSfx(
+                    shadowFactory.requireRegisteredSmpsSfxPlayback(
+                            key, captured.dependencyGeneration()),
+                    pitch);
+        }
+        return true;
+    }
+
+    private boolean playLoadedDonorSfx(
+            String gameId,
+            DonorAudioSource source,
+            AbstractSmpsData loaded,
+            float pitch,
+            String requestedName) {
+        if (!hasCatalogDependencies(source.dac(), source.config())) {
+            return false;
+        }
+        ensureShadowPresentation();
+        var captured = donorSfxSource(gameId, source);
+        int resolvedId = loaded.getId();
+        SmpsAssetKey key = new SmpsAssetKey(
+                captured.gameId(), SmpsAssetKey.Route.DONOR_ID,
+                resolvedId, null);
+        registerLoadedSmpsSfx(key, captured, loaded, resolvedId);
+        AudioCommand.PlaySfx command = new AudioCommand.PlaySfx(
+                resolvedId, requestedName,
+                AudioCommand.SfxRoute.DONOR_SMPS,
+                pitch, gameId);
+        recordRegisteredSmpsSfxCommand(command, captured);
+        if (sendLiveBackendCommands()) {
+            playLiveRegisteredDonorSfx(key, captured, pitch);
+        }
+        return true;
+    }
+
     /**
      * Plays an SFX from a donor game's SMPS loader with the donor's sequencer config.
      * Used for cross-game SFX that aren't in the base game's sound map (e.g., S3K
@@ -1918,6 +2000,15 @@ public class AudioManager implements MusicRestoreSink {
         }
         DonorAudioSource source = donorAudioSources.get(donorGameId);
         if (source != null) {
+            source = completeLegacyDonorSource(donorGameId, source);
+            if (sfxId < 0) {
+                AbstractSmpsData loaded = source.loader().loadSfx(sfxId);
+                if (loaded != null && loaded.getId() >= 0) {
+                    playLoadedDonorSfx(
+                            donorGameId, source, loaded, 1.0f, null);
+                }
+                return;
+            }
             if (!hasCatalogDependencies(source.dac(), source.config())) {
                 AbstractSmpsData sfx = source.loader().loadSfx(sfxId);
                 if (sfx != null) {
@@ -1962,11 +2053,19 @@ public class AudioManager implements MusicRestoreSink {
         }
         int resolvedId = key.route() == SmpsAssetKey.Route.BASE_NAME
                 ? data.getId() : key.assetId();
+        registerLoadedSmpsSfx(key, source, data, resolvedId);
+        return true;
+    }
+
+    private void registerLoadedSmpsSfx(
+            SmpsAssetKey key,
+            AudioPresentationCommandResolver.SourceAccess source,
+            AbstractSmpsData data,
+            int resolvedId) {
         shadowFactory.registerSmpsSfxAsset(
                 key, source.dependencyGeneration(), data,
                 source.dac(), source.config(),
                 source.sfxPolicy().special(resolvedId));
-        return true;
     }
 
     private static boolean hasCatalogDependencies(
@@ -1985,7 +2084,27 @@ public class AudioManager implements MusicRestoreSink {
             String gameId, DonorAudioSource source) {
         return new AudioPresentationCommandResolver.SourceAccess(
                 gameId, source.generation(), source.loader(), source.dac(),
-                source.config(), sfxPolicyFor(source.profile()));
+                source.config(), sfxPolicyFor(source.sfxPolicyProfile()));
+    }
+
+    private synchronized DonorAudioSource completeLegacyDonorSource(
+            String gameId, DonorAudioSource observed) {
+        if (observed.config() != null || observed.profile() != null) {
+            return observed;
+        }
+        DonorAudioSource current = donorAudioSources.get(gameId);
+        if (current == null || current != observed) {
+            return current != null ? current : observed;
+        }
+        BaseAudioSource legacyOwner = baseAudioSource;
+        if (legacyOwner.config() == null || legacyOwner.profile() == null) {
+            return observed;
+        }
+        DonorAudioSource completed = new DonorAudioSource(
+                observed.loader(), observed.dac(), legacyOwner.config(),
+                null, legacyOwner.profile(), observed.generation());
+        publishDonorSource(gameId, completed);
+        return completed;
     }
 
     private AudioTimelineEntry recordRegisteredSmpsSfxCommand(
@@ -2006,6 +2125,12 @@ public class AudioManager implements MusicRestoreSink {
             float pitch) {
         var playback = shadowFactory.requireRegisteredSmpsSfxPlayback(
                 key, source.dependencyGeneration());
+        dispatchLiveRegisteredSfx(playback, pitch);
+    }
+
+    void dispatchLiveRegisteredSfx(
+            AudioPresentationSourceFactory.RegisteredSmpsPlayback playback,
+            float pitch) {
         backend.playSfxSmps(
                 playback.program(), playback.dac(), pitch,
                 playback.config());
@@ -2258,6 +2383,15 @@ public class AudioManager implements MusicRestoreSink {
             String resolvedGameId = requireDonorGameId(gameId);
             SmpsLoader resolvedLoader = Objects.requireNonNull(loader, "loader");
             DacData resolvedDac = Objects.requireNonNull(dacData, "dacData");
+            BaseAudioSource legacyOwner = baseAudioSource;
+            SmpsSequencerConfig resolvedConfig = config != null
+                    ? config
+                    : donorProfile != null
+                    ? donorProfile.getSequencerConfig()
+                    : legacyOwner.config();
+            GameAudioProfile resolvedSfxPolicyProfile = donorProfile != null
+                    ? donorProfile
+                    : config == null ? legacyOwner.profile() : null;
             DonorAudioSource previous = donorAudioSources.get(resolvedGameId);
             long retainedGeneration = donorGenerationCounters.getOrDefault(
                     resolvedGameId,
@@ -2298,8 +2432,8 @@ public class AudioManager implements MusicRestoreSink {
             }
             publishPresentationCoordHandlers(presentationPreparation);
             publishDonorSource(resolvedGameId, new DonorAudioSource(
-                    resolvedLoader, resolvedDac, config, donorProfile,
-                    candidateGeneration));
+                    resolvedLoader, resolvedDac, resolvedConfig, donorProfile,
+                    resolvedSfxPolicyProfile, candidateGeneration));
         } finally {
             endSourceMutation();
         }
@@ -2817,7 +2951,7 @@ public class AudioManager implements MusicRestoreSink {
                             source != null ? source.dac() : null,
                             source != null ? source.config() : null,
                             policyFor(source != null
-                                    ? source.profile() : null));
+                                    ? source.sfxPolicyProfile() : null));
                 }
                 case FALLBACK_NAME -> throw new IllegalArgumentException(
                         "fallback assets have no SMPS source");
