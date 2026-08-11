@@ -1,9 +1,9 @@
 # Repeated SMPS Playback Performance Audit
 
-**Date:** 2026-08-11  
-**Status:** Accepted  
-**Baseline:** `d958fc681c4e272f7ba7072a4b344f533ca614d8`  
-**Feature evidence HEAD:** `27011b350ed119b888a1a855f68ed7e114e52c98`  
+**Date:** 2026-08-11
+**Status:** Accepted
+**Baseline:** `d958fc681c4e272f7ba7072a4b344f533ca614d8`
+**Feature evidence HEAD:** `27011b350ed119b888a1a855f68ed7e114e52c98`
 **Final implementation HEAD:** `f899907cc9`
 
 ## Decision
