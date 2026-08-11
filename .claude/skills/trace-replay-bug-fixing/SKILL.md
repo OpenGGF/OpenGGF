@@ -1772,6 +1772,51 @@ Contradictions between your own measurements are the cheapest bugs you will ever
 find and the most expensive to leave. Re-run the specific measurement before
 building on either number.
 
+### The fixture is ground truth about the RECORDER, not about the ROM
+
+A compared field can be fiction. Not stale, not mis-scaled — describing something
+that never happened on hardware.
+
+Sonic 2's special-stage entry is the clean example. `clearRAM
+SS_Shared_RAM,SS_Shared_RAM_End+4` overshoots by four bytes
+(`s2.asm:6597-6600`, and the disassembly annotates its own bug), and
+`VDP_Command_Buffer` sits immediately after `SS_Shared_RAM_End`
+(`s2.constants.asm:1183-1186`), so the overshoot zeroes the queue's first word.
+Under `fixBugs = 0` the real queue reset never runs, so the buffer word is cleared
+but `VDP_Command_Buffer_Slot` is not. `ProcessDMAQueue` then reads zero, takes
+`beq .done`, and **issues no VDP command at all** (`s2.asm:1770-1790`). The queued
+DPLC is discarded; that VRAM is never written.
+
+But the recorder's `OnProcessDmaQueue` hook drains its **own ledger**
+unconditionally and never reads `VDP_Command_Buffer`. So the trace records a
+complete transfer lifecycle — outstanding for 126 rows, retired on the frame the
+first `ProcessDMAQueue` happened to run — for a transfer the hardware never
+performed.
+
+Three parties, three behaviours: **the ROM discards, the recorder invents a
+lifecycle, the engine performs the write.** Nobody is right, and no amount of
+engine timing work can reconcile the engine to a lifecycle that never existed.
+
+**Ask what a compared field MEANS before modelling it.** Two of this codebase's
+hardest frontiers dissolved on exactly that question and nothing else: the S3K
+`s3k_kos_direct.prepared` bit turned out to be the ROM's sub-frame
+decompression-in-progress sign, and this one turned out to be recorder
+bookkeeping. In both cases months of plausible engine theories were aimed at a
+field whose semantics nobody had checked.
+
+Signals that you are looking at recorder fiction rather than an engine defect:
+
+- The recorded lifecycle depends on a RAM location the observer never reads.
+- The ROM path that *would* produce the recorded behaviour is behind
+  `fixBugs`/`FixBugs = 1` and therefore not in the shipped build.
+- The engine, the ROM and the fixture disagree three ways rather than two.
+
+The fix is then a **comparison-side projection keyed on the engine's own modelled
+ROM behaviour**, plus a recorder-defect note so the next approved regeneration
+fixes the stream at source and the projection can be retired. Write that
+retirement condition into the projection's javadoc — a bridge over a known
+recorder defect is legitimate; an open-ended excusal is not.
+
 ## Why This Matters
 
 The mission is faithful pixel-for-pixel reimplementation. Trace replay tests are the proof. If they're allowed to lean on synced trace data each frame, the proof is hollow — bugs hide behind the synchronisation and the test green-lights anyway. Honest tests force honest engine fixes. That's how progress compounds: every fix makes the next divergence visible instead of building on top of a masked one.
