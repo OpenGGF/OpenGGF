@@ -518,7 +518,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 t.modEnabled = t.modEnvData != null;
             }
             t.instrumentId = programView.psgInstrumentAt(i);
-            if (t.instrumentId != 0) {
+            if (i < programView.psgInstrumentCount()) {
                 loadPsgEnvelope(t, t.instrumentId);
             }
             t.dividingTiming = dividingTiming;
@@ -765,23 +765,12 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         }
     }
 
-    /**
-     * Applies the chip writes formerly performed by SFX construction.
-     * The owning driver calls this only after admission has been validated.
-     */
+    /** Publishes the SFX DAC source only after admission has been validated. */
     public void commitSfxAdmissionInitialization() {
         if (!(smpsData instanceof SmpsSfxData)) {
             return;
         }
         synth.setDacData(dacData);
-        synth.writeFm(this, 0, 0x2B, 0x80);
-        for (int index = 0; index < tracks.size(); index++) {
-            Track track = tracks.get(index);
-            if (track.type == TrackType.FM) {
-                refreshInstrument(track);
-                applyFmPanAmsFms(track);
-            }
-        }
     }
 
     /** Validates the raw SFX entries retained by the immutable program. */

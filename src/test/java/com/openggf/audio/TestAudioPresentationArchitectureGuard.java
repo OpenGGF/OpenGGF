@@ -670,7 +670,12 @@ class TestAudioPresentationArchitectureGuard {
             List<String> violations) {
         String path = "audio/AudioManager.java";
         String body = requiredMethodBody(source, marker, path, violations);
-        if (body != null && !body.contains(ownerCall)) {
+        boolean delegatedGameSoundClassification = marker.contains(
+                "playSfx(GameSound sound, float pitch)")
+                && body != null
+                && body.contains("playGameSfxResolved(");
+        if (body != null && !body.contains(ownerCall)
+                && !delegatedGameSoundClassification) {
             violations.add("classification bypass " + marker + " @ " + path);
         }
     }
@@ -1186,7 +1191,12 @@ class TestAudioPresentationArchitectureGuard {
     private static boolean isPositiveObserverCondition(String condition) {
         String compact = condition.replaceAll("\\s+", "");
         return compact.equals("hasChipWriteObserver()")
-                || compact.equals("this.hasChipWriteObserver()");
+                || compact.equals("this.hasChipWriteObserver()")
+                || compact.equals("hasPotentiallyThrowingAdmissionObserver()")
+                || compact.equals(
+                        "this.hasPotentiallyThrowingAdmissionObserver()")
+                || compact.contains(
+                        "&&hasPotentiallyThrowingAdmissionObserver()");
     }
 
     private static int matching(

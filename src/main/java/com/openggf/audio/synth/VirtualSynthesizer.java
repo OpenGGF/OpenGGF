@@ -75,6 +75,31 @@ public class VirtualSynthesizer implements Synthesizer {
         psg.restoreSnapshot(snapshot.psg());
     }
 
+    /** Channel-bounded rollback state for one prepared SFX admission. */
+    public static final class SfxAdmissionState {
+        private final Ym2612Chip.SfxAdmissionState ym;
+        private final PsgChip.SfxAdmissionState psg;
+
+        private SfxAdmissionState(
+                Ym2612Chip.SfxAdmissionState ym,
+                PsgChip.SfxAdmissionState psg) {
+            this.ym = ym;
+            this.psg = psg;
+        }
+    }
+
+    public SfxAdmissionState captureSfxAdmissionState(
+            int affectedFmMask, int affectedPsgMask) {
+        return new SfxAdmissionState(
+                ym.captureSfxAdmissionState(affectedFmMask),
+                psg.captureSfxAdmissionState(affectedPsgMask));
+    }
+
+    public void restoreSfxAdmissionState(SfxAdmissionState state) {
+        ym.restoreSfxAdmissionState(state.ym);
+        psg.restoreSfxAdmissionState(state.psg);
+    }
+
     public void setDacData(DacData data) {
         ym.setDacData(data);
     }

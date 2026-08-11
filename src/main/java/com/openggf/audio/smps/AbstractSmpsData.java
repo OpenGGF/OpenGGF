@@ -205,6 +205,11 @@ public abstract class AbstractSmpsData implements SmpsProgramView {
     }
 
     @Override
+    public int psgInstrumentCount() {
+        return psgInstruments.length;
+    }
+
+    @Override
     public int psgInstrumentAt(int index) {
         return valueAt(psgInstruments, index);
     }

@@ -244,7 +244,7 @@ class TestS1Ghz1OpenGgfAudioTimelineReduction {
 
     private static SfxContentionObserver.Source source(int soundId, long ordinal) {
         var descriptor = new SmpsSourceDescriptor(SmpsSourceDescriptor.Kind.BASE_SFX_ID,
-                soundId, null, null, 0, 1, soundId, false);
+                soundId, null, null, 0, 1, soundId, false, 0);
         return new SfxContentionObserver.Source(descriptor, ordinal, true, false);
     }
 

@@ -258,7 +258,6 @@ class TestPreparedSfxAdmission {
         driver.commitSfxAdmission(admission);
 
         assertEquals(List.of(
-                "YM:0:43:128",
                 "PSG:159",
                 "PSG:159",
                 "PSG:191",
@@ -279,7 +278,6 @@ class TestPreparedSfxAdmission {
 
         VirtualSynthesizer legacyOracle = new VirtualSynthesizer();
         legacyOracle.restoreSynthSnapshot(before);
-        legacyOracle.writeFm(null, 0, 0x2B, 0x80);
         legacyOracle.writePsg(null, 0x9F);
         legacyOracle.writePsg(null, 0xBF);
         legacyOracle.writePsg(null, 0xDF);
@@ -413,8 +411,8 @@ class TestPreparedSfxAdmission {
         owner.commitSfxAdmission(admission);
         assertThrows(IllegalStateException.class,
                 () -> owner.commitSfxAdmission(admission));
-        assertEquals(1, owner.captureCalls,
-                "an already-used claim must fail before fallback capture");
+        assertEquals(0, owner.captureCalls,
+                "the selective journal never captures whole-driver state");
         assertEquals(List.of(sequencer), owner.sequencersForTesting());
     }
 
@@ -437,6 +435,9 @@ class TestPreparedSfxAdmission {
     @Test
     void ymObserverFailureRestoresFullStateAndReleasesAdmissionForRetry() {
         CountingRollbackDriver driver = new CountingRollbackDriver();
+        SmpsSequencer existing = sequencer(driver, 0xA1, config(null),
+                track(0, 1));
+        driver.addSequencer(existing, true);
         SmpsSequencer sequencer = sequencer(driver, 0xA0, config(null),
                 track(0, 1));
         PreparedSfxAdmission admission = driver.prepareNewSfxAdmission(
@@ -460,9 +461,9 @@ class TestPreparedSfxAdmission {
 
         assertEquals("injected YM observer failure", failure.getMessage());
         assertDriverStateEquals(before, driver.captureSnapshot());
-        assertTrue(driver.sequencersForTesting().isEmpty());
-        assertEquals(1, driver.captureCalls);
-        assertEquals(1, driver.rollbackCalls);
+        assertEquals(List.of(existing), driver.sequencersForTesting());
+        assertEquals(0, driver.captureCalls);
+        assertEquals(0, driver.rollbackCalls);
 
         driver.setChipWriteObserver(null);
         driver.commitSfxAdmission(admission);
@@ -505,13 +506,123 @@ class TestPreparedSfxAdmission {
                 "live rollback preserves prepared track identities");
         assertTrue(existing.trackAt(0).active,
                 "the displaced track is live again after observer rollback");
-        assertEquals(1, driver.captureCalls);
-        assertEquals(1, driver.rollbackCalls);
+        assertEquals(0, driver.captureCalls);
+        assertEquals(0, driver.rollbackCalls);
 
         driver.setChipWriteObserver(null);
         driver.commitSfxAdmission(admission);
         assertEquals(List.of(replacement), driver.sequencersForTesting());
         assertFalse(existing.trackAt(0).active);
+    }
+
+    @Test
+    void observedContentionRollbackRestoresAffectedMusicOverride() {
+        SmpsDriver driver = new SmpsDriver();
+        SmpsSequencer music = sequencer(
+                driver, 0x81, config(null), track(0, 1));
+        driver.addSequencer(music, false);
+        music.writeFm(0, 0xA2, 0x22);
+        SmpsSequencer candidate = sequencer(
+                driver, 0xA0, config(null), track(0, 1));
+        PreparedSfxAdmission admission = driver.prepareNewSfxAdmission(
+                candidate, 0, 1);
+        driver.setSfxContentionObserver(new SfxContentionObserver() {
+            @Override
+            public void onSfxAdmitted(Admission ignored) {
+                throw new IllegalStateException("stop after commit");
+            }
+        });
+
+        candidate.beginSfxAdmission();
+        assertThrows(IllegalStateException.class,
+                () -> driver.commitSfxAdmission(admission));
+
+        assertFalse(music.trackAt(0).overridden,
+                "rollback must restore the affected music channel override");
+    }
+
+    @Test
+    void sameIdReplacementJournalsOldOnlyChannelState() {
+        SmpsDriver driver = new SmpsDriver();
+        SmpsSequencer existing = sequencer(
+                driver, 0xA0, config(null), track(0, 1));
+        driver.addSequencer(existing, true);
+        existing.writeFm(0, 0xA2, 0x22);
+        SmpsSequencer replacement = sequencer(
+                driver, 0xA0, config(null), track(1, 1));
+        PreparedSfxAdmission admission = driver.prepareNewSfxAdmission(
+                replacement, 0, 1);
+        VirtualSynthesizer.Snapshot before = driver.captureSynthSnapshot();
+        driver.setChipWriteObserver(new ChipWriteObserver() {
+            @Override
+            public void onYm2612Write(int port, int register, int value) { }
+
+            @Override
+            public void onPsgWrite(int value) { }
+        });
+        AtomicInteger failAdmission = new AtomicInteger();
+        driver.setSfxContentionObserver(new SfxContentionObserver() {
+            @Override
+            public void onSfxAdmitted(Admission ignored) {
+                if (failAdmission.get() != 0) {
+                    throw new IllegalStateException("after old-only release");
+                }
+            }
+        });
+        failAdmission.set(1);
+
+        replacement.beginSfxAdmission();
+        assertThrows(IllegalStateException.class,
+                () -> driver.commitSfxAdmission(admission));
+
+        assertDeepEquals(before, driver.captureSynthSnapshot());
+    }
+
+    @Test
+    void failedReplacementRestoresDeferredConflictAttribution() {
+        SmpsDriver driver = new SmpsDriver();
+        SmpsSequencer displaced = sequencer(
+                driver, 0xA0, config(null), track(0x80, 1));
+        driver.addSequencer(displaced, true);
+        displaced.writePsg(0x90);
+        SmpsSequencer first = sequencer(
+                driver, 0xA1, config(null), track(0x80, 1));
+        PreparedSfxAdmission firstAdmission = driver.prepareNewSfxAdmission(
+                first, 0, 1);
+        List<SfxContentionObserver.Arbitration> arbitrations =
+                new ArrayList<>();
+        AtomicInteger failAdmissions = new AtomicInteger();
+        driver.setSfxContentionObserver(new SfxContentionObserver() {
+            @Override
+            public void onSfxAdmitted(Admission ignored) {
+                if (failAdmissions.get() != 0) {
+                    throw new IllegalStateException("replace failed");
+                }
+            }
+
+            @Override
+            public void onRoleArbitrated(Arbitration arbitration) {
+                arbitrations.add(arbitration);
+            }
+        });
+        first.beginSfxAdmission();
+        driver.commitSfxAdmission(firstAdmission);
+
+        SmpsSequencer replacement = sequencer(
+                driver, 0xA1, config(null), track(0xA0, 1));
+        PreparedSfxAdmission replacementAdmission =
+                driver.prepareNewSfxAdmission(replacement, 0, 1);
+        failAdmissions.set(1);
+        replacement.beginSfxAdmission();
+        assertThrows(IllegalStateException.class,
+                () -> driver.commitSfxAdmission(replacementAdmission));
+
+        failAdmissions.set(0);
+        arbitrations.clear();
+        first.writePsg(0x90);
+        assertEquals(1, arbitrations.size());
+        assertEquals(displaced.getSourceDescriptor(),
+                arbitrations.getFirst().previousOwner().descriptor());
     }
 
     @Test

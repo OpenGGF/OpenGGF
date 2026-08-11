@@ -63,6 +63,11 @@ public interface SmpsSfxInstantiation {
     default void observeLifecycle(
             SmpsDriverServiceObserver.LifecycleEvent event) { }
 
+    /** Whether this admission path can invoke a throwing diagnostic callback. */
+    default boolean hasPotentiallyThrowingObserver() {
+        return false;
+    }
+
     private static SmpsAdmissionContext admissionContext(
             ResolvedSmpsSfxSource source) {
         Objects.requireNonNull(source, "source");

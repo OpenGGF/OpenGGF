@@ -3,6 +3,7 @@ package com.openggf.audio.presentation;
 import com.openggf.audio.AudioDiagnosticObserverException;
 import com.openggf.audio.ChannelType;
 import com.openggf.audio.driver.PreparedSfxAdmission;
+import com.openggf.audio.driver.SfxAdmissionMutationJournal;
 import com.openggf.audio.driver.SmpsDriver;
 import com.openggf.audio.driver.SmpsDriverServiceObserver;
 import com.openggf.audio.driver.SmpsRequestAdmissionPolicy;
@@ -920,7 +921,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             return;
         }
         if (owner != null) {
-            boolean attached;
+            AttachedSfxAdmission attached;
             try {
                 attached = addSmpsSfxToOwner(source, owner);
             } catch (RuntimeException cacheFailure) {
@@ -936,10 +937,15 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                         "SMPS SFX cache rejected " + source.assetKey());
                 return;
             }
-            sfxInstantiation.observeAdmission(attached
-                    ? admission
-                    : sfxInstantiation.rejectedAdmission(admission,
-                            SmpsRequestAdmissionPolicy.RejectionReason.CACHE_MISS));
+            try {
+                sfxInstantiation.observeAdmission(attached.attached()
+                        ? admission
+                        : sfxInstantiation.rejectedAdmission(admission,
+                                SmpsRequestAdmissionPolicy.RejectionReason.CACHE_MISS));
+            } catch (RuntimeException failure) {
+                restoreAdmissionJournal(attached.journal(), failure);
+                throw failure;
+            }
             return;
         }
 
@@ -993,12 +999,19 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
                     standalone.driver().prepareNewSfxAdmission(
                             sequencer, source.continuousSfxId(),
                             source.trackCount());
-            beginAndCommitSfxAdmission(
+            SfxAdmissionMutationJournal journal = beginAndCommitSfxAdmission(
                     standalone.driver(), sequencer, preparedAdmission);
             standaloneSmps = standalone;
             noteVoiceId(standalone);
             published = true;
-            sfxInstantiation.observeAdmission(admission);
+            try {
+                sfxInstantiation.observeAdmission(admission);
+            } catch (RuntimeException failure) {
+                restoreAdmissionJournal(journal, failure);
+                standaloneSmps = null;
+                published = false;
+                throw failure;
+            }
         } catch (RuntimeException failure) {
             primaryFailure = failure;
             throw failure;
@@ -1019,14 +1032,21 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         }
     }
 
-    private boolean addSmpsSfxToOwner(
+    private AttachedSfxAdmission addSmpsSfxToOwner(
             ResolvedSmpsSfxSource source, SmpsCompositeVoice owner) {
         PreparedSfxAdmission extension =
                 owner.driver().prepareContinuousSfxExtension(
                         source.continuousSfxId(), source.trackCount());
         if (extension != null) {
-            owner.driver().commitSfxAdmission(extension);
-            return true;
+            SfxAdmissionMutationJournal journal = captureAdmissionJournal(
+                    owner.driver(), extension, null);
+            try {
+                commitAdmission(owner.driver(), extension, journal);
+                return new AttachedSfxAdmission(true, journal);
+            } catch (RuntimeException failure) {
+                restoreAdmissionJournal(journal, failure);
+                throw failure;
+            }
         }
         SmpsSequencer sequencer;
         try {
@@ -1038,30 +1058,76 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         if (sequencer == null) {
             warnRejected(source.standaloneVoiceId(),
                     "SMPS SFX cache miss for " + source.assetKey());
-            return false;
+            return new AttachedSfxAdmission(false, null);
         }
         PreparedSfxAdmission admission =
                 owner.driver().prepareNewSfxAdmission(
                         sequencer, source.continuousSfxId(),
                         source.trackCount());
-        beginAndCommitSfxAdmission(owner.driver(), sequencer, admission);
-        return true;
+        SfxAdmissionMutationJournal journal = beginAndCommitSfxAdmission(
+                owner.driver(), sequencer, admission);
+        return new AttachedSfxAdmission(true, journal);
     }
 
-    private void beginAndCommitSfxAdmission(
+    private SfxAdmissionMutationJournal beginAndCommitSfxAdmission(
             SmpsDriver driver,
             SmpsSequencer sequencer,
             PreparedSfxAdmission admission) {
         SmpsCoordFlagRuntimeState.Snapshot coordState =
                 coordFlagHandlers.state().snapshot();
+        SfxAdmissionMutationJournal journal = captureAdmissionJournal(
+                driver, admission, coordState);
         try {
             sequencer.beginSfxAdmission();
-            driver.commitSfxAdmission(admission);
+            commitAdmission(driver, admission, journal);
+            return journal;
         } catch (RuntimeException failure) {
-            rollbackCoordFlagState(coordState, failure);
+            if (journal != null) {
+                restoreAdmissionJournal(journal, failure);
+            } else {
+                rollbackCoordFlagState(coordState, failure);
+            }
             throw failure;
         }
     }
+
+    private SfxAdmissionMutationJournal captureAdmissionJournal(
+            SmpsDriver driver,
+            PreparedSfxAdmission admission,
+            SmpsCoordFlagRuntimeState.Snapshot coordState) {
+        if (!sfxInstantiation.hasPotentiallyThrowingObserver()) {
+            return null;
+        }
+        return SfxAdmissionMutationJournal.capture(
+                driver, admission, coordFlagHandlers.state(), coordState);
+    }
+
+    private static void commitAdmission(
+            SmpsDriver driver,
+            PreparedSfxAdmission admission,
+            SfxAdmissionMutationJournal journal) {
+        if (journal != null) {
+            driver.commitSfxAdmissionUnderJournal(admission);
+        } else {
+            driver.commitSfxAdmission(admission);
+        }
+    }
+
+    private static void restoreAdmissionJournal(
+            SfxAdmissionMutationJournal journal,
+            RuntimeException primaryFailure) {
+        if (journal == null) {
+            return;
+        }
+        try {
+            journal.restore();
+        } catch (RuntimeException rollbackFailure) {
+            primaryFailure.addSuppressed(rollbackFailure);
+        }
+    }
+
+    private record AttachedSfxAdmission(
+            boolean attached, SfxAdmissionMutationJournal journal) { }
 
     private static final class SfxCacheRejection extends RuntimeException {
         private SfxCacheRejection(RuntimeException cause) {

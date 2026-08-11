@@ -828,6 +828,41 @@ public class Ym2612Chip {
                 mutes);
     }
 
+    SfxAdmissionState captureSfxAdmissionState(int affectedChannelMask) {
+        int mask = affectedChannelMask & 0x3F;
+        ChannelSnapshot[] selected = new ChannelSnapshot[channels.length];
+        for (int channel = 0; channel < selected.length; channel++) {
+            if ((mask & (1 << channel)) != 0) {
+                selected[channel] = captureChannel(channels[channel]);
+            }
+        }
+        return new SfxAdmissionState(
+                mask, selected, currentDacSampleId, dacLatchedValue,
+                dacPos, dacStep, dacEnabled, dacHasLatched, dac_highpass,
+                ssgEgActiveCount, addressLatch, busyCycles);
+    }
+
+    void restoreSfxAdmissionState(SfxAdmissionState state) {
+        ChannelSnapshot[] selected = state.channels();
+        for (int channel = 0; channel < channels.length; channel++) {
+            if ((state.affectedChannelMask() & (1 << channel)) != 0) {
+                restoreChannel(channels[channel], selected[channel]);
+            }
+        }
+        currentDacSampleId = state.currentDacSampleId();
+        currentDacSampleData = currentDacSampleId != -1 && dacData != null
+                ? dacData.sample(currentDacSampleId) : null;
+        dacLatchedValue = state.dacLatchedValue();
+        dacPos = state.dacPos();
+        dacStep = state.dacStep();
+        dacEnabled = state.dacEnabled();
+        dacHasLatched = state.dacHasLatched();
+        dac_highpass = state.dacHighpass();
+        ssgEgActiveCount = state.ssgEgActiveCount();
+        addressLatch = state.addressLatch();
+        busyCycles = state.busyCycles();
+    }
+
     public void restoreSnapshot(Snapshot snapshot) {
         currentDacSampleId = snapshot.currentDacSampleId();
         currentDacSampleData = currentDacSampleId != -1 && dacData != null
@@ -2462,6 +2497,29 @@ public class Ym2612Chip {
 
         @Override
         public boolean[] mutes() { return Arrays.copyOf(mutes, mutes.length); }
+    }
+
+    record SfxAdmissionState(
+            int affectedChannelMask,
+            ChannelSnapshot[] channels,
+            int currentDacSampleId,
+            int dacLatchedValue,
+            double dacPos,
+            double dacStep,
+            boolean dacEnabled,
+            boolean dacHasLatched,
+            int dacHighpass,
+            int ssgEgActiveCount,
+            int addressLatch,
+            double busyCycles) {
+        SfxAdmissionState {
+            channels = Arrays.copyOf(channels, channels.length);
+        }
+
+        @Override
+        public ChannelSnapshot[] channels() {
+            return Arrays.copyOf(channels, channels.length);
+        }
     }
 
     public record ChannelSnapshot(

@@ -158,6 +158,27 @@ class TestAudioCommandTimeline {
     }
 
     @Test
+    void requestObserverFailureCreatesNoCommandAndDoesNotAdvanceRing() {
+        EnumMap<GameSound, Integer> map = new EnumMap<>(GameSound.class);
+        map.put(GameSound.RING_RIGHT, 0xB5);
+        map.put(GameSound.RING_LEFT, 0xCE);
+        audio.setSoundMap(map);
+        audio.setRequestObserver((requestClass, rawId) -> {
+            throw new IllegalStateException("request failed");
+        });
+
+        assertThrows(IllegalStateException.class,
+                () -> audio.playSfx(GameSound.RING));
+        assertTrue(audio.commandTimeline().entries().isEmpty());
+
+        audio.setRequestObserver(null);
+        audio.playSfx(GameSound.RING);
+        AudioCommand.PlaySfx command = (AudioCommand.PlaySfx)
+                audio.commandTimeline().entryAt(0).command();
+        assertEquals("RING_LEFT", command.sfxName());
+    }
+
+    @Test
     void recordsSpeedShoesAsSemanticCommands() {
         audio.beginCommandTimelineFrame(9);
 

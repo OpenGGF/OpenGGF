@@ -1810,8 +1810,11 @@ public class AudioManager implements MusicRestoreSink {
             AudioCommand.SfxRoute route = sound == GameSound.RING_LEFT || sound == GameSound.RING_RIGHT
                     ? AudioCommand.SfxRoute.RING_RESOLVED
                     : AudioCommand.SfxRoute.FALLBACK_NAME;
+            int resolvedId = route == AudioCommand.SfxRoute.RING_RESOLVED
+                    && soundMap != null && soundMap.containsKey(sound)
+                    ? soundMap.get(sound) : -1;
             recordTimelineCommand(new AudioCommand.PlaySfx(
-                    -1, sound.name(), route, effectivePitch, null));
+                    resolvedId, sound.name(), route, effectivePitch, null));
             if (sendLiveBackendCommands()) {
                 backend.playSfx(sound.name(), effectivePitch);
             }

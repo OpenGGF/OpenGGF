@@ -784,6 +784,14 @@ public final class AudioPresentationSourceFactory
                         driverServiceObserver.onLifecycle(event)));
     }
 
+    @Override
+    public boolean hasPotentiallyThrowingObserver() {
+        return admissionObserver != AudioAdmissionObserver.NONE
+                || driverServiceObserver != SmpsDriverServiceObserver.NONE
+                || chipWriteObserver != ChipWriteObserver.NONE
+                || sfxContentionObserver != SfxContentionObserver.NONE;
+    }
+
     public SmpsCompositeVoice recreateSmps(
             PresentationVoiceSnapshot.Smps snapshot,
             SmpsDriverSnapshot.DependencyResolver dependencies) {

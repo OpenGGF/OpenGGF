@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openggf.audio.driver.SfxContentionObserver;
@@ -45,8 +46,10 @@ import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.smps.SmpsSfxData;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
+import com.openggf.audio.smps.CoordFlagHandler;
 import com.openggf.audio.synth.ChipWriteObserver;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.data.Rom;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -138,7 +141,7 @@ class TestAudioDiagnosticObservers {
             }
         });
         audio.setAudioProfile(profile(SmpsRequestAdmissionPolicy.PERMISSIVE));
-        audio.setRom(null);
+        audio.setRom(mock(Rom.class));
 
         audio.playMusic(0x81);
         audio.presentFrame(PresentationMode.SILENT);
@@ -214,7 +217,7 @@ class TestAudioDiagnosticObservers {
             }
         });
         audio.setAudioProfile(profile(rejecting));
-        audio.setRom(null);
+        audio.setRom(mock(Rom.class));
         audio.playMusic(0x81);
         audio.presentFrame(PresentationMode.SILENT);
 
@@ -246,7 +249,7 @@ class TestAudioDiagnosticObservers {
             return new AdmissionResult(true, RejectionReason.NONE,
                     0x33, 0x72, 0xE2);
         }));
-        audio.setRom(null);
+        audio.setRom(mock(Rom.class));
         audio.playMusic(0x81);
         audio.presentFrame(PresentationMode.SILENT);
         setPresentationSfxBlocked(true);
@@ -335,7 +338,7 @@ class TestAudioDiagnosticObservers {
             unresolvedEvaluations.incrementAndGet();
             return SmpsRequestAdmissionPolicy.PERMISSIVE.evaluate(context);
         }));
-        audio.setRom(null);
+        audio.setRom(mock(Rom.class));
         audio.playSfx(0xA1);
         audio.presentFrame(PresentationMode.SILENT);
         assertEquals(0, unresolvedEvaluations.get(),
@@ -365,7 +368,7 @@ class TestAudioDiagnosticObservers {
         SmpsAssetKey key = new SmpsAssetKey(
                 "fixture", SmpsAssetKey.Route.BASE_ID, 0xA0, null);
         AbstractSmpsData resolvedData = data("resolved", 0xB7);
-        factory.warmSmpsSfxAsset(key, resolvedData,
+        factory.registerSmpsSfxAsset(key, resolvedData,
                 AudioTestFixtures.EMPTY_DAC,
                 new SmpsSequencerConfig.Builder().build(), true);
         ResolvedSmpsSfxSource source = factory.resolveSmpsSfx(
@@ -400,7 +403,7 @@ class TestAudioDiagnosticObservers {
     @Test
     void defaultManagerLeavesDriverDiagnosticsActuallyDisabled() {
         audio.setAudioProfile(profile(null));
-        audio.setRom(null);
+        audio.setRom(mock(Rom.class));
         audio.playMusic(0x81);
         audio.presentFrame(PresentationMode.SILENT);
 
@@ -433,7 +436,7 @@ class TestAudioDiagnosticObservers {
         };
         GameAudioProfile backendProfile = profile(policy);
         audio.setAudioProfile(backendProfile);
-        audio.setRom(null);
+        audio.setRom(mock(Rom.class));
         HeadlessSmpsAudioBackend backend = new HeadlessSmpsAudioBackend(
                 SonicConfigurationService.getInstance(), null);
         backend.setAdmissionObserver(decision -> {
@@ -526,7 +529,7 @@ class TestAudioDiagnosticObservers {
             }
         });
         audio.setAudioProfile(profile(SmpsRequestAdmissionPolicy.PERMISSIVE));
-        audio.setRom(null);
+        audio.setRom(mock(Rom.class));
         audio.playSfx(0xA0);
         audio.presentFrame(PresentationMode.SILENT);
         audio.playMusic(0x81);
@@ -586,7 +589,7 @@ class TestAudioDiagnosticObservers {
     @Test
     void preparedRestoreDefersCrossObserverEventsUntilCommitAndDiscardsThem() {
         audio.setAudioProfile(profile(SmpsRequestAdmissionPolicy.PERMISSIVE));
-        audio.setRom(null);
+        audio.setRom(mock(Rom.class));
         audio.playMusic(0x81);
         audio.presentFrame(PresentationMode.SILENT);
         AudioPresentationSnapshot snapshot =
@@ -630,7 +633,7 @@ class TestAudioDiagnosticObservers {
     @Test
     void failedPreparedRestoreDiscardsEventsFromAlreadyRecreatedDrivers() {
         audio.setAudioProfile(profile(SmpsRequestAdmissionPolicy.PERMISSIVE));
-        audio.setRom(null);
+        audio.setRom(mock(Rom.class));
         audio.playMusic(0x81);
         audio.presentFrame(PresentationMode.SILENT);
         audio.playMusic(0x82);
@@ -989,11 +992,14 @@ class TestAudioDiagnosticObservers {
 
     @Test
     void observerFailuresAbortAdmissionAndServiceCaptureLoudly() {
+        AtomicInteger admissionAttempts = new AtomicInteger();
         audio.setAdmissionObserver(decision -> {
-            throw new IllegalStateException("admission capture failed");
+            if (admissionAttempts.getAndIncrement() == 0) {
+                throw new IllegalStateException("admission capture failed");
+            }
         });
         audio.setAudioProfile(profile(SmpsRequestAdmissionPolicy.PERMISSIVE));
-        audio.setRom(null);
+        audio.setRom(mock(Rom.class));
         audio.playMusic(0x81);
         audio.presentFrame(PresentationMode.SILENT);
         audio.playSfx(0xA0);
@@ -1001,6 +1007,13 @@ class TestAudioDiagnosticObservers {
                 AudioDiagnosticObserverException.class,
                 () -> audio.presentFrame(PresentationMode.SILENT));
         assertTrue(rootMessage(admission).contains("admission capture failed"));
+        SmpsDriver admissionDriver = activeDriver();
+        assertEquals(1, admissionDriver.sequencersForTesting().size(),
+                "a failed registry admission observer rolls the SFX back");
+        audio.presentFrame(PresentationMode.SILENT);
+        assertEquals(2, admissionDriver.sequencersForTesting().size(),
+                "the queued command retries and commits exactly once");
+        assertEquals(2, admissionAttempts.get());
 
         audio.destroy();
         audio.resetState();
@@ -1014,7 +1027,7 @@ class TestAudioDiagnosticObservers {
         });
         loader.musicResults.put(0x81, new LongRunningMusicData());
         audio.setAudioProfile(profile(SmpsRequestAdmissionPolicy.PERMISSIVE));
-        audio.setRom(null);
+        audio.setRom(mock(Rom.class));
         audio.playMusic(0x81);
         audio.presentFrame(PresentationMode.SILENT);
 
@@ -1023,6 +1036,232 @@ class TestAudioDiagnosticObservers {
                 AudioDiagnosticObserverException.class,
                 () -> serviceOneTick(observedDriver, 0x81));
         assertTrue(rootMessage(service).contains("service capture failed"));
+    }
+
+    @Test
+    void standaloneAdmissionObserverFailureRollsBackAndRetriesQueuedCommand() {
+        AtomicInteger attempts = new AtomicInteger();
+        audio.setAdmissionObserver(decision -> {
+            if (attempts.getAndIncrement() == 0) {
+                throw new IllegalStateException("standalone failed");
+            }
+        });
+        audio.setAudioProfile(profile(SmpsRequestAdmissionPolicy.PERMISSIVE));
+        audio.setRom(mock(Rom.class));
+
+        audio.playSfx(0xA0);
+        RuntimeException failure = assertThrows(
+                AudioDiagnosticObserverException.class,
+                () -> audio.presentFrame(PresentationMode.SILENT));
+        assertTrue(rootMessage(failure).contains("standalone failed"));
+        assertEquals(0, presentationRegistry().orderedVoiceCount());
+
+        audio.presentFrame(PresentationMode.SILENT);
+        assertEquals(1, presentationRegistry().orderedVoiceCount());
+        assertEquals(2, attempts.get());
+    }
+
+    @Test
+    void coordinationStartRollsBackAndContinuousRetryDoesNotStartAgain() {
+        SmpsCoordFlagRuntimeState state = new SmpsCoordFlagRuntimeState();
+        SmpsCoordFlagHandlerOwner owner = new SmpsCoordFlagHandlerOwner(state);
+        owner.register("fixture", runtime -> new CoordFlagHandler() {
+            @Override
+            public void onSfxStart(int sfxId) {
+                runtime.setSpindashRevCounter(
+                        runtime.spindashRevCounter() + 1);
+            }
+
+            @Override
+            public boolean handleFlag(
+                    com.openggf.audio.smps.CoordFlagContext context,
+                    SmpsSequencer.Track track, int command) {
+                return false;
+            }
+
+            @Override
+            public int flagParamLength(int command) {
+                return -1;
+            }
+        });
+        AudioPresentationSourceFactory factory =
+                new AudioPresentationSourceFactory(() -> true, owner);
+        AtomicInteger observerFailures = new AtomicInteger();
+        factory.setAdmissionObserver(decision -> {
+            if (observerFailures.getAndDecrement() > 0) {
+                throw new IllegalStateException("decision failed");
+            }
+        });
+        SmpsAssetKey key = new SmpsAssetKey(
+                "fixture", SmpsAssetKey.Route.BASE_ID, 0xA0, null);
+        factory.registerSmpsSfxAsset(
+                key, new OneTickFmSfxData(), AudioTestFixtures.EMPTY_DAC,
+                new SmpsSequencerConfig.Builder()
+                        .coordFlagHandler(new CoordFlagHandler() {
+                            @Override
+                            public boolean handleFlag(
+                                    com.openggf.audio.smps.CoordFlagContext context,
+                                    SmpsSequencer.Track track, int command) {
+                                return false;
+                            }
+
+                            @Override
+                            public int flagParamLength(int command) {
+                                return -1;
+                            }
+                        }).build());
+        ResolvedSmpsSfxSource source = factory.resolveSmpsSfx(
+                900, key, 65_536, 0x60, 0xA0, 1, 900);
+        AudioVoiceRegistry registry = new AudioVoiceRegistry(
+                factory, factory, owner, ignored -> { });
+
+        observerFailures.set(1);
+        assertThrows(AudioDiagnosticObserverException.class,
+                () -> registry.apply(
+                        new AudioPresentationCommand.AddSmpsSfx(source)));
+        assertEquals(0, state.spindashRevCounter());
+        assertEquals(0, registry.orderedVoiceCount());
+
+        registry.apply(new AudioPresentationCommand.AddSmpsSfx(source));
+        assertEquals(1, state.spindashRevCounter());
+        assertEquals(1, registry.orderedVoiceCount());
+
+        observerFailures.set(1);
+        assertThrows(AudioDiagnosticObserverException.class,
+                () -> registry.apply(
+                        new AudioPresentationCommand.AddSmpsSfx(source)));
+        assertEquals(1, state.spindashRevCounter(),
+                "continuous extension skips onSfxStart even when retried");
+        registry.apply(new AudioPresentationCommand.AddSmpsSfx(source));
+        assertEquals(1, state.spindashRevCounter());
+    }
+
+    @Test
+    void queuedYmObserverFailureRestoresAndRetriesOnce() {
+        loader.sfxResults.put(0xA0, new OneTickFmSfxData(0xA0));
+        loader.sfxResults.put(0xA1, new OneTickFmSfxData(0xA1));
+        AtomicInteger failures = new AtomicInteger();
+        audio.setChipWriteObserver(new ChipWriteObserver() {
+            @Override
+            public void onYm2612Write(int port, int register, int value) {
+                if (failures.getAndDecrement() > 0) {
+                    throw new IllegalStateException("YM failed");
+                }
+            }
+
+            @Override
+            public void onPsgWrite(int value) { }
+        });
+        audio.setAudioProfile(profile(SmpsRequestAdmissionPolicy.PERMISSIVE));
+        audio.setRom(mock(Rom.class));
+        audio.playMusic(0x81);
+        audio.presentFrame(PresentationMode.SILENT);
+        audio.playSfx(0xA0);
+        audio.presentFrame(PresentationMode.SILENT);
+        SmpsDriver driver = activeDriver();
+        SmpsDriverSnapshot before = driver.captureSnapshot();
+        failures.set(1);
+
+        audio.playSfx(0xA1);
+        assertThrows(AudioDiagnosticObserverException.class,
+                () -> audio.presentFrame(PresentationMode.SILENT));
+        assertDriverStateEquals(before, driver.captureSnapshot());
+
+        audio.setChipWriteObserver(null);
+        audio.presentFrame(PresentationMode.SILENT);
+        assertEquals(2, driver.sequencersForTesting().size());
+    }
+
+    @Test
+    void queuedPsgObserverFailureRestoresAndRetriesOnce() {
+        loader.sfxResults.put(0xA0, new OneTickPsgSfxData(0xA0));
+        loader.sfxResults.put(0xA1, new OneTickPsgSfxData(0xA1));
+        AtomicInteger failures = new AtomicInteger();
+        audio.setChipWriteObserver(new ChipWriteObserver() {
+            @Override
+            public void onYm2612Write(int port, int register, int value) { }
+
+            @Override
+            public void onPsgWrite(int value) {
+                if (failures.getAndDecrement() > 0) {
+                    throw new IllegalStateException("PSG failed");
+                }
+            }
+        });
+        audio.setAudioProfile(profile(SmpsRequestAdmissionPolicy.PERMISSIVE));
+        audio.setRom(mock(Rom.class));
+        audio.playMusic(0x81);
+        audio.presentFrame(PresentationMode.SILENT);
+        audio.playSfx(0xA0);
+        audio.presentFrame(PresentationMode.SILENT);
+        SmpsDriver driver = activeDriver();
+        SmpsSequencer firstSfx = driver.sequencersForTesting().getLast();
+        firstSfx.writePsg(0x90);
+        SmpsDriverSnapshot before = driver.captureSnapshot();
+        failures.set(1);
+
+        audio.playSfx(0xA1);
+        assertThrows(AudioDiagnosticObserverException.class,
+                () -> audio.presentFrame(PresentationMode.SILENT));
+        assertDriverStateEquals(before, driver.captureSnapshot());
+
+        audio.setChipWriteObserver(null);
+        audio.presentFrame(PresentationMode.SILENT);
+        assertEquals(2, driver.sequencersForTesting().size());
+    }
+
+    @Test
+    void queuedContentionObserverFailureRestoresAndRetriesOnce() {
+        loader.sfxResults.put(0xA0, new OneTickFmSfxData());
+        AtomicInteger failures = new AtomicInteger();
+        audio.setSfxContentionObserver(new SfxContentionObserver() {
+            @Override
+            public void onSfxAdmitted(Admission admission) {
+                if (failures.getAndDecrement() > 0) {
+                    throw new IllegalStateException("contention failed");
+                }
+            }
+        });
+        audio.setAudioProfile(profile(SmpsRequestAdmissionPolicy.PERMISSIVE));
+        audio.setRom(mock(Rom.class));
+        audio.playMusic(0x81);
+        audio.presentFrame(PresentationMode.SILENT);
+        SmpsDriver driver = activeDriver();
+        SmpsDriverSnapshot before = driver.captureSnapshot();
+        failures.set(1);
+
+        audio.playSfx(0xA0);
+        assertThrows(AudioDiagnosticObserverException.class,
+                () -> audio.presentFrame(PresentationMode.SILENT));
+        assertDriverStateEquals(before, driver.captureSnapshot());
+
+        audio.setSfxContentionObserver(null);
+        audio.presentFrame(PresentationMode.SILENT);
+        assertEquals(2, driver.sequencersForTesting().size());
+    }
+
+    @Test
+    void queuedDriverLifecycleFailurePublishesNoStandaloneVoiceAndRetries() {
+        AtomicInteger failures = new AtomicInteger(1);
+        audio.setDriverServiceObserver(new SmpsDriverServiceObserver() {
+            @Override
+            public void onLifecycle(LifecycleEvent event) {
+                if (event.kind() == SmpsDriverServiceObserver.LifecycleKind.DRIVER_CREATED
+                        && failures.getAndDecrement() > 0) {
+                    throw new IllegalStateException("driver failed");
+                }
+            }
+        });
+        audio.setAudioProfile(profile(SmpsRequestAdmissionPolicy.PERMISSIVE));
+        audio.setRom(mock(Rom.class));
+
+        audio.playSfx(0xA0);
+        assertThrows(AudioDiagnosticObserverException.class,
+                () -> audio.presentFrame(PresentationMode.SILENT));
+        assertEquals(0, presentationRegistry().orderedVoiceCount());
+
+        audio.presentFrame(PresentationMode.SILENT);
+        assertEquals(1, presentationRegistry().orderedVoiceCount());
     }
 
     @Test
@@ -1039,7 +1278,7 @@ class TestAudioDiagnosticObservers {
             }
         });
         audio.setAudioProfile(profile(SmpsRequestAdmissionPolicy.PERMISSIVE));
-        audio.setRom(null);
+        audio.setRom(mock(Rom.class));
 
         audio.playMusic(0x81);
         RuntimeException failure = assertThrows(
@@ -1076,7 +1315,7 @@ class TestAudioDiagnosticObservers {
             }
         });
         audio.setAudioProfile(profile(SmpsRequestAdmissionPolicy.PERMISSIVE));
-        audio.setRom(null);
+        audio.setRom(mock(Rom.class));
         audio.playMusic(0x81);
         audio.presentFrame(PresentationMode.SILENT);
         AudioLogicalSnapshot selected = audio.captureLogicalSnapshot();
@@ -1120,7 +1359,7 @@ class TestAudioDiagnosticObservers {
             }
         });
         audio.setAudioProfile(profile(SmpsRequestAdmissionPolicy.PERMISSIVE));
-        audio.setRom(null);
+        audio.setRom(mock(Rom.class));
         audio.playMusic(0x81);
         audio.presentFrame(PresentationMode.SILENT);
         AudioLogicalSnapshot selected = audio.captureLogicalSnapshot();
@@ -1161,7 +1400,7 @@ class TestAudioDiagnosticObservers {
             }
         });
         audio.setAudioProfile(profile(SmpsRequestAdmissionPolicy.PERMISSIVE));
-        audio.setRom(null);
+        audio.setRom(mock(Rom.class));
         audio.playSfx(0xA0);
         RuntimeException cacheFailure = assertThrows(
                 AudioDiagnosticObserverException.class,
@@ -1173,7 +1412,7 @@ class TestAudioDiagnosticObservers {
         audio.resetState();
         audio.setBackend(new NullAudioBackend());
         audio.setAudioProfile(profile(SmpsRequestAdmissionPolicy.PERMISSIVE));
-        audio.setRom(null);
+        audio.setRom(mock(Rom.class));
         audio.playMusic(0x81);
         audio.presentFrame(PresentationMode.SILENT);
         AudioLogicalSnapshot restoreTarget = audio.captureLogicalSnapshot();
@@ -1190,7 +1429,7 @@ class TestAudioDiagnosticObservers {
         audio.resetState();
         audio.setBackend(new NullAudioBackend());
         audio.setAudioProfile(profile(SmpsRequestAdmissionPolicy.PERMISSIVE));
-        audio.setRom(null);
+        audio.setRom(mock(Rom.class));
         audio.playMusic(0x81);
         audio.presentFrame(PresentationMode.SILENT);
         AudioLogicalSnapshot reverseTarget = audio.captureLogicalSnapshot();
@@ -1435,14 +1674,27 @@ class TestAudioDiagnosticObservers {
         }
     }
 
-    @SuppressWarnings("unchecked")
+    private AudioVoiceRegistry presentationRegistry() {
+        try {
+            var field = AudioManager.class.getDeclaredField("shadowRegistry");
+            field.setAccessible(true);
+            return (AudioVoiceRegistry) field.get(audio);
+        } catch (ReflectiveOperationException failure) {
+            throw new AssertionError(failure);
+        }
+    }
+
     private static void clearFactorySfxCache(
             AudioPresentationSourceFactory factory) {
         try {
-            var field = AudioPresentationSourceFactory.class
-                    .getDeclaredField("sfxAssets");
-            field.setAccessible(true);
-            ((Map<SmpsAssetKey, ?>) field.get(factory)).clear();
+            var catalogField = AudioPresentationSourceFactory.class
+                    .getDeclaredField("assetCatalog");
+            catalogField.setAccessible(true);
+            Object catalog = catalogField.get(factory);
+            var programsField = catalog.getClass()
+                    .getDeclaredField("programs");
+            programsField.setAccessible(true);
+            ((Map<?, ?>) programsField.get(catalog)).clear();
         } catch (ReflectiveOperationException failure) {
             throw new AssertionError(failure);
         }
@@ -1570,8 +1822,12 @@ class TestAudioDiagnosticObservers {
     private static final class OneTickFmSfxData extends AbstractSmpsData
             implements SmpsSfxData {
         private OneTickFmSfxData() {
+            this(0xA0);
+        }
+
+        private OneTickFmSfxData(int id) {
             super(new byte[] {0, (byte) 0xF2}, 0);
-            setId(0xA0);
+            setId(id);
         }
 
         @Override
@@ -1586,6 +1842,24 @@ class TestAudioDiagnosticObservers {
 
         @Override protected void parseHeader() { dividingTiming = 1; tempo = 1; }
         @Override public byte[] getVoice(int voiceId) { return new byte[25]; }
+        @Override public byte[] getPsgEnvelope(int id) { return null; }
+        @Override public int read16(int offset) { return 0; }
+        @Override public int getBaseNoteOffset() { return 0; }
+    }
+
+    private static final class OneTickPsgSfxData extends AbstractSmpsData
+            implements SmpsSfxData {
+        private OneTickPsgSfxData(int id) {
+            super(new byte[] {0, (byte) 0xF2}, 0);
+            setId(id);
+        }
+
+        @Override public int getTickMultiplier() { return 1; }
+        @Override public List<? extends SmpsSfxTrack> getTrackEntries() {
+            return List.of(new SfxTrack(0x80, 1, 0, 0));
+        }
+        @Override protected void parseHeader() { dividingTiming = 1; tempo = 1; }
+        @Override public byte[] getVoice(int voiceId) { return null; }
         @Override public byte[] getPsgEnvelope(int id) { return null; }
         @Override public int read16(int offset) { return 0; }
         @Override public int getBaseNoteOffset() { return 0; }
