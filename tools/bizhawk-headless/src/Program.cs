@@ -348,6 +348,8 @@ namespace BizHawk.Headless.Gpgx
             string traceProfile;
             values.TryGetValue("--trace-profile", out traceProfile);
             bool credits = traceProfile == "credits_demo";
+            bool audioReference = traceProfile
+                == S1CompleteRunAudioReferenceCapture.TraceProfile;
             bool hasRawPath = values.ContainsKey("--credits-raw-observations");
             bool hasRawId = values.ContainsKey("--credits-raw-observation-id");
             if (hasRawPath != hasRawId)
@@ -433,6 +435,17 @@ namespace BizHawk.Headless.Gpgx
             {
                 throw new ArgumentException(
                     "credits_demo cannot be combined with run, segment, movie-length or load-queue arguments.");
+            }
+            if (audioReference && (runId != null || gameplaySegment.HasValue
+                || values.ContainsKey("--effective-movie-length")
+                || values.ContainsKey("--load-queue-state")
+                || values.ContainsKey("--credits-target")
+                || hasRawPath))
+            {
+                throw new ArgumentException(
+                    S1CompleteRunAudioReferenceCapture.TraceProfile
+                    + " cannot be combined with run, segment, movie-length,"
+                    + " load-queue, or credits arguments.");
             }
             if (runId != null && gameplaySegment.HasValue)
             {
@@ -528,6 +541,31 @@ namespace BizHawk.Headless.Gpgx
                     fullOutputDirectory, 0, 0, traceProfile, null, null, 0,
                     false, true, 0, creditsTarget, rawPath,
                     hasRawId ? values["--credits-raw-observation-id"] : null);
+            }
+            if (audioReference)
+            {
+                if (values.ContainsKey("--compress")
+                    || values.ContainsKey("--no-compress")
+                    || values.ContainsKey("--compress-threshold"))
+                {
+                    throw new ArgumentException(
+                        S1CompleteRunAudioReferenceCapture.TraceProfile
+                        + " publishes one fixed uncompressed staging stream;"
+                        + " compression arguments are not supported.");
+                }
+                string rawPath = Path.Combine(fullOutputDirectory,
+                    S1CompleteRunAudioReferenceCapture.RawFileName);
+                if (LinuxPathEntry.Exists(rawPath))
+                {
+                    throw new IOException(
+                        "Final output already exists and will not be replaced: "
+                        + rawPath);
+                }
+                return new CommandLineOptions(
+                    CaptureMode.Trace, Path.GetFullPath(romPath),
+                    Path.GetFullPath(moviePath), fullOutputDirectory,
+                    0, 0, traceProfile, null, null, 0, false, false,
+                    TracePayloadCompressor.DefaultThresholdBytes);
             }
             if (runId != null)
             {
@@ -833,6 +871,13 @@ namespace BizHawk.Headless.Gpgx
                                 "Argument --gameplay-segment is only"
                                 + " supported with the Sonic 2 ROM.");
                         }
+                        if (options.TraceProfile
+                            == S1CompleteRunAudioReferenceCapture.TraceProfile)
+                        {
+                            return RunS1AudioReference(
+                                options, installation, romSha1, romBytes,
+                                movie, stdout, stderr, openHost);
+                        }
                         if (options.TraceProfile != null
                             && options.TraceProfile
                                 != S1RunCaptureRunner.LevelTraceProfile)
@@ -1095,6 +1140,59 @@ namespace BizHawk.Headless.Gpgx
                     + "Aux state JSONL: " + auxStatePath + "\n"
                     + "Metadata JSON: " + metadataPath + "\n",
                 new NoReplacePublisher(options.CreateCompressor()));
+        }
+
+        private static int RunS1AudioReference(
+            CommandLineOptions options,
+            BizHawkInstallation installation,
+            string romSha1,
+            byte[] romBytes,
+            Bk2Movie movie,
+            TextWriter stdout,
+            TextWriter stderr,
+            Func<string, GPGX.GPGXSyncSettings, IGpgxHost> openHost)
+        {
+            string manifestPath = Path.Combine(
+                AppDomain.CurrentDomain.BaseDirectory, "fixtures",
+                S1CompleteRunAudioReferenceCapture.ManifestFileName);
+            string outputPath = Path.Combine(options.OutputDirectory,
+                S1CompleteRunAudioReferenceCapture.RawFileName);
+            return RunTraceCapture(
+                options.OutputDirectory,
+                stdout,
+                stderr,
+                () => new NativeStandardOutputSilencer(),
+                () => openHost(options.RomPath, movie.SyncSettings),
+                (host, writers) =>
+                {
+                    var concrete = host as GpgxHost;
+                    var registers = host as ICpuRegisterReader;
+                    if (concrete == null || registers == null)
+                    {
+                        throw new InvalidOperationException(
+                            "The fixed S1 audio reference mode requires the"
+                            + " pinned concrete GPGX host and register reader.");
+                    }
+                    S1CompleteRunAudioReferenceCapture.Manifest manifest =
+                        S1CompleteRunAudioReferenceCapture.LoadManifest(
+                            manifestPath, romBytes);
+                    return S1CompleteRunAudioReferenceCapture.Capture(
+                        movie, host, registers,
+                        concrete.CreateAudioTraceApi(), manifest, writers[0]);
+                },
+                result =>
+                    "BizHawk: " + installation.ManagedVersion + "\n"
+                    + "ROM SHA-1: " + romSha1 + "\n"
+                    + "Movie frames: " + movie.FrameCount.ToString(
+                        CultureInfo.InvariantCulture) + "\n"
+                    + "Audio rows: " + result.RowCount.ToString(
+                        CultureInfo.InvariantCulture) + "\n"
+                    + "Completed GPGX frames: "
+                    + result.CompletedFrames.ToString(
+                        CultureInfo.InvariantCulture) + "\n"
+                    + "Raw audio JSONL: " + outputPath + "\n",
+                new NoReplacePublisher(),
+                new[] { S1CompleteRunAudioReferenceCapture.RawFileName });
         }
 
         private static int RunS1CreditsDemo(

@@ -3,6 +3,7 @@ package com.openggf.tools.audio.completerun;
 import static com.openggf.tools.audio.completerun.CompleteRunAudioTrace.HardwareRole;
 
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.CompleteRunFixture;
+import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.CutoffFrontierPolicy;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.Lifecycle;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.LifecycleRule;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.NativeSoundIdentity;
@@ -38,11 +39,22 @@ public interface CompleteRunAudioProfile {
     /** Runtime identities explicitly permitted for each capture producer kind. */
     Map<ProducerKind, ProducerRuntimeIdentity> producerRuntimeIdentities();
 
+    default Map<ProducerKind, CompleteRunAudioTrace.ProducerBinding> producerBindings() {
+        return producerRuntimeIdentities().entrySet().stream().collect(java.util.stream.Collectors.toUnmodifiableMap(
+                Map.Entry::getKey, entry -> new CompleteRunAudioTrace.PinnedProducerBinding(entry.getValue())));
+    }
+
     /** Exact observer/callback proof pinned independently for each producer kind. */
     Map<ProducerKind, ObserverProof> observerProofs();
 
     /** Typed observer runtime identities explicitly permitted for each capture producer kind. */
     Map<ProducerKind, ObserverRuntimeIdentity> observerRuntimeIdentities();
+
+    /** Exact service-manifest inventory and bounds accepted at an arbitrary movie cutoff. */
+    CutoffFrontierPolicy cutoffFrontierPolicy();
+
+    /** Exact full-run capability vector required from each producer that exposes native observation. */
+    Map<ProducerKind, CompleteRunAudioTrace.NativeCapabilitySummary> completeRunCapabilities();
 
     /** Allowed request-to-admission identity transformations, with no game checks in shared code. */
     Map<NativeSoundIdentity, List<NativeSoundIdentity>> decisionResolutions();

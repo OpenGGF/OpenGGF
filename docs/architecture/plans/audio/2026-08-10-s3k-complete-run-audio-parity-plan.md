@@ -78,6 +78,10 @@ git commit -m "test(trace): complete the S3K super-emerald run fixture"
 
 **Interfaces:**
 - Produces: profile `s3k_locked_on_knuckles_superemeralds.v1`, content resolver, and strict Z80 state inventory.
+- The fixed profile class statically registers that exact immutable profile so
+  fresh production CLI JVMs can resolve it through the closed dispatcher.
+- Reserves the closed Task 9 dispatcher profile. Tasks 3 and 6 supply its fixed
+  reference and OpenGGF adapters only when their production capture owners exist.
 
 - [ ] **Step 1: Write failing content/state vectors**
 
@@ -117,6 +121,7 @@ git commit -m "feat(tools): define S3K complete-run audio profile"
 ### Task 3: Native S3K Z80 reference observer
 
 **Files:**
+- Create: `src/main/java/com/openggf/tools/audio/completerun/s3k/S3kCompleteRunReferenceProducer.java`
 - Create: `tools/bizhawk-headless/src/Audio/S3kAudioObserverProfile.cs`
 - Create: `tools/bizhawk-headless/src/Recording/S3kCompleteAudioCaptureRunner.cs`
 - Create: `tools/bizhawk-headless/tests/S3kAudioObserverProfileTests.cs`
@@ -165,6 +170,7 @@ and a strict `-Xmx32m` read.
 ```bash
 git add tools/bizhawk-headless/src/Audio/S3kAudioObserverProfile.cs \
         tools/bizhawk-headless/src/Recording/S3kCompleteAudioCaptureRunner.cs \
+        src/main/java/com/openggf/tools/audio/completerun/s3k/S3kCompleteRunReferenceProducer.java \
         tools/bizhawk-headless/tests/S3kAudioObserverProfileTests.cs \
         tools/bizhawk-headless/tests/S3kCompleteAudioCaptureRunnerTests.cs \
         tools/bizhawk-headless/src/Program.cs
@@ -287,10 +293,11 @@ git commit -m "fix(audio): preserve S3K temporary music and PCM cadence"
 ### Task 6: Natural S3K OpenGGF producer
 
 **Files:**
-- Create: `src/test/java/com/openggf/tools/audio/completerun/s3k/S3kCompleteRunOpenGgfCapture.java`
+- Create: `src/main/java/com/openggf/tools/audio/completerun/s3k/S3kCompleteRunOpenGgfCapture.java`
+- Create: `src/main/java/com/openggf/tools/audio/completerun/s3k/S3kCompleteRunOpenGgfProducer.java`
 - Create: `src/test/java/com/openggf/tools/audio/completerun/s3k/TestS3kCompleteRunOpenGgfCapture.java`
+- Create: `src/test/java/com/openggf/tools/audio/completerun/s3k/TestS3kCompleteRunPublication.java`
 - Create: `tools/audio/run_s3k_complete_audio_parity.sh`
-- Modify: `src/main/java/com/openggf/tools/audio/completerun/CompleteRunAudioProfiles.java`
 
 **Interfaces:**
 - Produces: natural S3K capture from run/ROM/output/profile inputs only.
@@ -318,8 +325,9 @@ run.
 - [ ] **Step 4: Commit producer/runner**
 
 ```bash
-git add src/test/java/com/openggf/tools/audio/completerun/s3k \
-        src/main/java/com/openggf/tools/audio/completerun/CompleteRunAudioProfiles.java \
+git add src/main/java/com/openggf/tools/audio/completerun/s3k/S3kCompleteRunOpenGgfCapture.java \
+        src/main/java/com/openggf/tools/audio/completerun/s3k/S3kCompleteRunOpenGgfProducer.java \
+        src/test/java/com/openggf/tools/audio/completerun/s3k \
         tools/audio/run_s3k_complete_audio_parity.sh
 git commit -m "feat(tools): capture natural S3K complete-run audio"
 ```

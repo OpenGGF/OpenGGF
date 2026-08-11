@@ -1,6 +1,7 @@
 package com.openggf.tools.audio.completerun;
 
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.CompleteRunFixture;
+import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.CutoffFrontierPolicy;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.HardwareRole;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.LifecycleRule;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.NativeSoundIdentity;
@@ -25,32 +26,46 @@ import java.util.concurrent.atomic.AtomicReference;
 /** Strict process-local profile registry. Registration publishes an immutable snapshot. */
 public final class CompleteRunAudioProfiles {
     public static final String GPGX_AUDIO_TRACE_ABI_NAME = "gpgx.audio-trace.v1";
-    public static final int GPGX_AUDIO_TRACE_ABI_VERSION = 1;
+    public static final int GPGX_AUDIO_TRACE_ABI_VERSION = 2;
     public static final int GPGX_AUDIO_TRACE_EVENT_SIZE = 32;
+    public static final int GPGX_AUDIO_TRACE_CONFIG_SIZE = 64;
+    public static final int GPGX_AUDIO_TRACE_KIND_SIZE = 16;
+    public static final int GPGX_AUDIO_TRACE_HOOK_SIZE = 32;
+    public static final int GPGX_AUDIO_TRACE_RANGE_SIZE = 16;
     public static final int GPGX_AUDIO_TRACE_CAPACITY = 65_536;
-    public static final String GPGX_AUDIO_TRACE_CORE_BUILD_ID = "8e822239d27df092";
+    public static final String GPGX_AUDIO_TRACE_CORE_BUILD_ID = "d2011feb908faa14";
     public static final String GPGX_AUDIO_TRACE_PATCH_SHA256 =
-            "45d85fc19405457c788be4f6c17d2b14281d33fbff163cd42eead76e08f7f6d2";
+            "dd1e860795ac4e3055081b83ccb77368ae470280911787da849845c9570e8fa1";
     public static final String GPGX_AUDIO_TRACE_CORE_SHA256 =
-            "ba276573fc7802fb2313c051471dbdd664959c06aaafa6ef73564799886d083f";
+            "3b632c65bca7372b8f70c7526b51e7ca14f53a43224790534a200274c0351ebf";
     public static final String GPGX_AUDIO_TRACE_CORE_UNCOMPRESSED_SHA256 =
-            "7807b57ffdfa303465ec2a2e707a5aacc38bd56cd10e201aca2965620eb71fb2";
+            "642cf1ce651e95dab1143c0a718e9ab95cf617c07d66590831368fdeb0b4202a";
     public static final String GPGX_AUDIO_TRACE_SOURCE_BUNDLE_SHA256 =
-            "abd68651d633a0a75d01cb9569cfb9dc15da4a7540eb072fc2d8eb11e548ed0e";
+            "7f1a3558f3b74aa3f8f03ee0e66c8cfb9806ac00c1496e48614a3da2f058b91a";
     public static final String GPGX_AUDIO_TRACE_TOOLCHAIN_SHA256 =
             "9caa5c02dcd2d9c01e5d0196956787a0f31760195c6544a2ceafcb771f469521";
     public static final String GPGX_AUDIO_TRACE_BUILD_RECIPE_SHA256 =
-            "eee5fa9e4eda2480ea76207edc0cbb3b4a89e54ac767e9cba744dca1f4420f71";
+            "e71f5b83616556577aabc01057fc3bc2a5b4e6c74792adfbc83e5e1f97e8b3e0";
     public static final String GPGX_AUDIO_TRACE_IDENTITY_SHA256 =
-            "6f4739f28771e55bcec0ca0e6f0c57badb3530d4cee36d39c8b19b14104ddfce";
+            "b72175c3c7e15db66e37b64e15bc3e8f27ba1ac71a4896cd5a8363f4205d51b8";
     public static final String GPGX_AUDIO_TRACE_ADAPTER_SOURCE_SHA256 =
-            "770dfcfef0fabc2eb7211add26d7a3716e33b75ddbe7dd3d7ba1568c8cb3a102";
-    public static final String GPGX_AUDIO_TRACE_HOST_SOURCE_SHA256 =
-            "052090e4a93c6614f3c4465526c47876779dc40ded1897d0cc4d24c3c04ed497";
+            "9689ba255d2b14e7e31b533437855faddf9f068dfdf18b8a13f4662dfd2dbbba";
+    public static final String GPGX_AUDIO_TRACE_HOST_BRIDGE_SOURCE_SHA256 =
+            "af9da7ed2f08d27c663176f4f1c852504c4a515e437655abb0fd5d20a3364bf1";
     public static final String BIZHAWK_BIZINVOKE_SHA256 =
             "8d05389bf0e02be1244bdc7a2adcd93b4cff95acf199fc927987ca699760a1b7";
     public static final String BIZHAWK_BASE_COMMON_SHA256 =
             "438a49d6a45d9fcac17016240ae205d1af7a4632865f6f70468b684b82323f33";
+    public static final String TASK8_HARNESS_EXECUTABLE_SHA256 =
+            "99a375931fd4139c02a9c3cf2d1843316541c0d8f78f53ee4df1aa18d1580aa1";
+    public static final String TASK8_COLLECTOR_SOURCE_SHA256 =
+            "b6ba3e1b747792c0518623b84cfe2e040c03f91b4938f064e891557c5da0936e";
+    public static final String TASK8_HOST_SOURCE_SHA256 =
+            "c45d7de53bd29101d896fadb0a69eda1ae206d1fac43a5733afb3f4bd7f86be7";
+    public static final String GPGX_AUDIO_CAPABILITY_SHA256 =
+            "7b341c6be58e4fb593c28f3738d3fbe84cfd64db75c37da079102cdf666e9d46";
+    public static final String REFERENCE_INSTALLATION_TREE_SHA256 =
+            "0320dbcbec9419dc6d662b31c699269ff46791644253fe7aa8e879034a1df0a4";
 
     private static final AtomicReference<Map<String, CompleteRunAudioProfile>> PROFILES =
             new AtomicReference<>(Map.of());
@@ -61,10 +76,17 @@ public final class CompleteRunAudioProfiles {
     public static CompleteRunAudioProfile require(String id) {
         Objects.requireNonNull(id, "profile id");
         CompleteRunAudioProfile profile = PROFILES.get().get(id);
+        if (profile == null && CompleteRunAudioProducerRegistry.tryLoadProfile(id)) {
+            profile = PROFILES.get().get(id);
+        }
         if (profile == null) {
             throw new IllegalArgumentException("unknown complete-run audio profile: " + id);
         }
         return profile;
+    }
+
+    static boolean isRegistered(String id) {
+        return PROFILES.get().containsKey(id);
     }
 
     /** Registers one immutable profile exactly once; later readers observe the whole new registry. */
@@ -96,8 +118,11 @@ public final class CompleteRunAudioProfiles {
     private record FrozenProfile(String id, CompleteRunFixture fixture, List<HardwareRole> hardwareRoles,
             StateInventory stateInventory, Map<RawAudioRequest, NativeSoundIdentity> nativeSoundIdentities,
             Map<ProducerKind, ProducerRuntimeIdentity> producerRuntimeIdentities,
+            Map<ProducerKind, CompleteRunAudioTrace.ProducerBinding> producerBindings,
             Map<ProducerKind, ObserverProof> observerProofs,
             Map<ProducerKind, ObserverRuntimeIdentity> observerRuntimeIdentities,
+            CutoffFrontierPolicy cutoffFrontierPolicy,
+            Map<ProducerKind, CompleteRunAudioTrace.NativeCapabilitySummary> completeRunCapabilities,
             Map<NativeSoundIdentity, List<NativeSoundIdentity>> decisionResolutions,
             List<RoleOwner> baselineRoleOwners,
             Map<String, OwnershipTransition> ownershipTransitions,
@@ -114,8 +139,12 @@ public final class CompleteRunAudioProfiles {
             stateInventory = new StateInventory(stateInventory.globalFields(), stateInventory.activeRoleFields());
             nativeSoundIdentities = Map.copyOf(nativeSoundIdentities);
             producerRuntimeIdentities = Map.copyOf(producerRuntimeIdentities);
+            producerBindings = Map.copyOf(producerBindings);
             observerProofs = Map.copyOf(observerProofs);
             observerRuntimeIdentities = Map.copyOf(observerRuntimeIdentities);
+            Objects.requireNonNull(cutoffFrontierPolicy, "profile cutoff-frontier policy");
+            completeRunCapabilities = Map.copyOf(Objects.requireNonNull(completeRunCapabilities,
+                    "profile complete-run capabilities"));
             decisionResolutions = freezeResolutions(decisionResolutions);
             baselineRoleOwners = List.copyOf(baselineRoleOwners);
             ownershipTransitions = Map.copyOf(ownershipTransitions);
@@ -125,25 +154,41 @@ public final class CompleteRunAudioProfiles {
             restoreStackPolicy = new RestoreStackPolicy(declaredRestorePolicy.maximumDepth(),
                     declaredRestorePolicy.terminalDepths(), declaredRestorePolicy.terminalAllowanceReason());
             lifecycleRules = Map.copyOf(lifecycleRules);
-            if (!producerRuntimeIdentities.keySet().containsAll(EnumSet.allOf(ProducerKind.class))) {
-                throw new IllegalArgumentException("profile must declare an allowed runtime identity for every producer");
+            if (!producerBindings.keySet().containsAll(EnumSet.allOf(ProducerKind.class))) {
+                throw new IllegalArgumentException("profile must declare a producer binding for every producer");
+            }
+            for (ProducerKind kind : ProducerKind.values()) {
+                CompleteRunAudioTrace.ProducerBinding binding = producerBindings.get(kind);
+                if (binding instanceof CompleteRunAudioTrace.UnavailableProducerBinding) {
+                    if (producerRuntimeIdentities.containsKey(kind) || observerProofs.containsKey(kind)
+                            || observerRuntimeIdentities.containsKey(kind)
+                            || completeRunCapabilities.containsKey(kind)) {
+                        throw new IllegalArgumentException(
+                                "unavailable producer must not declare runtime or observer identities");
+                    }
+                    continue;
+                }
+                if (binding instanceof CompleteRunAudioTrace.PinnedProducerBinding pinned
+                        && !pinned.runtimeIdentity().equals(producerRuntimeIdentities.get(kind))) {
+                    throw new IllegalArgumentException("pinned producer binding and runtime identity disagree");
+                }
+                if (!observerProofs.containsKey(kind)) {
+                    throw new IllegalArgumentException("pinned producer must declare an observer proof");
+                }
+                ObserverRuntimeIdentity observerIdentity = observerRuntimeIdentities.get(kind);
+                if (observerIdentity == null) {
+                    throw new IllegalArgumentException("pinned producer must declare an observer runtime identity");
+                }
+                producerRuntimeIdentities.get(kind).validateFor(kind, observerIdentity);
+                boolean buffered = observerIdentity instanceof CompleteRunAudioTrace.BufferedNativeObserverIdentity;
+                if (buffered != completeRunCapabilities.containsKey(kind)) {
+                    throw new IllegalArgumentException(
+                            "buffered observation and exact complete-run capability must be declared together");
+                }
             }
             for (Map.Entry<ProducerKind, ProducerRuntimeIdentity> entry : producerRuntimeIdentities.entrySet()) {
                 Objects.requireNonNull(entry.getKey(), "producer kind");
                 entry.getValue().validateFor(entry.getKey());
-            }
-            if (!observerProofs.keySet().containsAll(EnumSet.allOf(ProducerKind.class))) {
-                throw new IllegalArgumentException("profile must declare an observer proof for every producer");
-            }
-            if (!observerRuntimeIdentities.keySet().containsAll(EnumSet.allOf(ProducerKind.class))) {
-                throw new IllegalArgumentException(
-                        "profile must declare an observer runtime identity for every producer");
-            }
-            for (ProducerKind kind : ProducerKind.values()) {
-                Objects.requireNonNull(observerProofs.get(kind), "profile observer proof");
-                ObserverRuntimeIdentity observerIdentity = Objects.requireNonNull(
-                        observerRuntimeIdentities.get(kind), "profile observer runtime identity");
-                producerRuntimeIdentities.get(kind).validateFor(kind, observerIdentity);
             }
             if (!decisionResolutions.keySet().containsAll(Set.copyOf(nativeSoundIdentities.values()))) {
                 throw new IllegalArgumentException("profile must declare decision resolutions for every request identity");
@@ -205,8 +250,10 @@ public final class CompleteRunAudioProfiles {
                     List.copyOf(fixture.segments()), fixture.firstFrame(), fixture.exclusiveEnd());
             return new FrozenProfile(profile.id(), fixtureCopy, List.copyOf(profile.hardwareRoles()),
                     profile.stateInventory(), Map.copyOf(profile.nativeSoundIdentities()),
-                    Map.copyOf(profile.producerRuntimeIdentities()), Map.copyOf(profile.observerProofs()),
+                    Map.copyOf(profile.producerRuntimeIdentities()), Map.copyOf(profile.producerBindings()), Map.copyOf(profile.observerProofs()),
                     Map.copyOf(profile.observerRuntimeIdentities()),
+                    profile.cutoffFrontierPolicy(),
+                    profile.completeRunCapabilities(),
                     profile.decisionResolutions(), profile.baselineRoleOwners(), profile.ownershipTransitions(),
                     profile.pendingRequestPolicy(), profile.restoreStackPolicy(), profile.lifecycleRules());
         }

@@ -63,6 +63,31 @@ class TestCompleteRunAudioCaptureStore {
     }
 
     @Test
+    void readerRejectsUndeclaredEntriesAndLinkedChunks() throws Exception {
+        Path output = temp.resolve("strict-tree");
+        store.writeNew(output, metadata(1), records(1).iterator());
+        Path real = output.toRealPath();
+
+        Path topExtra = Files.writeString(real.resolve("extra"), "x");
+        assertThrows(IllegalArgumentException.class, () -> store.read(output));
+        Files.delete(topExtra);
+        Path chunkExtra = Files.writeString(real.resolve("chunks/extra"), "x");
+        assertThrows(IllegalArgumentException.class, () -> store.read(output));
+        Files.delete(chunkExtra);
+
+        Path chunk = real.resolve("chunks/000000.jsonl.gz");
+        Path external = Files.copy(chunk, temp.resolve("external.gz"));
+        Files.delete(chunk);
+        Files.createSymbolicLink(chunk, external);
+        assertThrows(IllegalArgumentException.class, () -> store.read(output));
+        Files.delete(chunk);
+        Files.copy(external, chunk);
+        Path hardlink = real.resolve("chunks/hardlink.gz");
+        Files.createLink(hardlink, chunk);
+        assertThrows(IllegalArgumentException.class, () -> store.read(output));
+    }
+
+    @Test
     void rejectsCaptureWithoutTerminalAndCleansItsStagingDirectory() throws Exception {
         Path output = temp.resolve("capture");
         List<CompleteRunAudioTrace.Record> incomplete = new ArrayList<>(records(1));
@@ -76,6 +101,41 @@ class TestCompleteRunAudioCaptureStore {
             assertEquals(List.of(), children.map(path -> path.getFileName().toString())
                     .filter(name -> name.startsWith(".audio-staging-")).toList());
         }
+    }
+
+    @Test
+    void rejectsInvalidMetadataBeforeCreatingAStagingDirectory() throws Exception {
+        Path output = temp.resolve("oversized");
+
+        assertThrows(IllegalArgumentException.class,
+                () -> store.writeNew(output, metadata(128 * CHUNK_FRAME_ROWS + 1)));
+        assertThrows(NullPointerException.class, () -> store.writeNew(output, null));
+
+        assertEquals(false, Files.exists(output));
+        try (var children = Files.list(temp)) {
+            assertEquals(List.of(), children.map(path -> path.getFileName().toString())
+                    .filter(name -> name.startsWith(".audio-staging-")).toList());
+        }
+    }
+
+    @Test
+    void requiresExactlyOneCutoffFrontierImmediatelyBeforeTerminal() {
+        List<CompleteRunAudioTrace.Record> valid = records(1);
+        List<CompleteRunAudioTrace.Record> missing = new ArrayList<>(valid);
+        missing.remove(missing.size() - 2);
+        assertThrows(IllegalArgumentException.class,
+                () -> store.writeNew(temp.resolve("missing-frontier"), metadata(1), missing.iterator()));
+
+        List<CompleteRunAudioTrace.Record> duplicate = new ArrayList<>(valid);
+        duplicate.add(duplicate.size() - 1, duplicate.get(duplicate.size() - 2));
+        assertThrows(IllegalArgumentException.class,
+                () -> store.writeNew(temp.resolve("duplicate-frontier"), metadata(1), duplicate.iterator()));
+
+        List<CompleteRunAudioTrace.Record> early = new ArrayList<>(valid);
+        CompleteRunAudioTrace.Record frontier = early.remove(early.size() - 2);
+        early.add(1, frontier);
+        assertThrows(IllegalArgumentException.class,
+                () -> store.writeNew(temp.resolve("early-frontier"), metadata(1), early.iterator()));
     }
 
     @Test
@@ -103,7 +163,7 @@ class TestCompleteRunAudioCaptureStore {
         try (CompleteRunAudioCaptureStore.Reader reader = store.read(output)) {
             List<CompleteRunAudioTrace.Record> actual = new ArrayList<>();
             while (reader.hasNext()) actual.add(reader.next());
-            assertEquals(3, actual.size());
+            assertEquals(4, actual.size());
             assertEquals(metadata(1), reader.metadata());
         }
 
@@ -111,7 +171,9 @@ class TestCompleteRunAudioCaptureStore {
         tampered[tampered.length / 2] ^= 1;
         Files.write(output.resolve("chunks/000000.jsonl.gz"), tampered);
         try (CompleteRunAudioCaptureStore.Reader reader = store.read(output)) {
-            assertThrows(IllegalArgumentException.class, reader::hasNext);
+            assertThrows(IllegalArgumentException.class, () -> {
+                while (reader.hasNext()) reader.next();
+            });
         }
     }
 
@@ -121,7 +183,9 @@ class TestCompleteRunAudioCaptureStore {
         store.writeNew(output, metadata(1), records(1).iterator());
         Path manifest = output.resolve("manifest.json");
         String original = Files.readString(manifest);
-        Files.writeString(manifest, original.replaceFirst("\"root_digest\":\"[0-9a-f]", "\"root_digest\":\"f"));
+        String root = original.replaceFirst(".*\"root_digest\":\"([0-9a-f]{64})\".*", "$1");
+        char replacement = root.charAt(0) == 'f' ? 'e' : 'f';
+        Files.writeString(manifest, original.replace(root, replacement + root.substring(1)));
 
         try (CompleteRunAudioCaptureStore.Reader reader = store.read(output)) {
             assertThrows(IllegalArgumentException.class, () -> {
@@ -223,19 +287,28 @@ class TestCompleteRunAudioCaptureStore {
         assertThrows(IllegalArgumentException.class,
                 () -> CompleteRunAudioJson.readRecord(json.replace("\"nativeId\":192", "\"nativeId\":256")));
         assertThrows(IllegalArgumentException.class,
+                () -> CompleteRunAudioJson.readRecord(
+                        json.replace(",\"carriedBoundaryOrdinal\":null", "")));
+        assertThrows(IllegalArgumentException.class,
                 () -> CompleteRunAudioJson.readRecord(json + " {}"));
     }
 
     @Test
     void handAuthoredCanonicalBaselineVectorHasItsPinnedBytesAndDigest() throws Exception {
-        String canonical = "{\"type\":\"baseline\",\"value\":{\"absoluteFrame\":860,\"state\":{\"fields\":[{\"name\":\"tempo\",\"value\":1}],\"roles\":[{\"role\":\"FM1\",\"active\":false,\"fields\":[]}]},\"roleOwners\":[{\"role\":\"FM1\",\"owner\":{\"ownerClass\":\"NONE\",\"contentKey\":\"none\",\"nativeId\":0,\"origin\":\"NONE\",\"originOrdinal\":-1}}]}}";
+        String canonical = "{\"type\":\"baseline\",\"value\":{\"absoluteFrame\":860,\"state\":{\"fields\":[{\"name\":\"tempo\",\"value\":1}],\"roles\":[{\"role\":\"FM1\",\"active\":false,\"fields\":[]}]},\"roleOwners\":[{\"role\":\"FM1\",\"owner\":{\"ownerClass\":\"NONE\",\"contentKey\":\"none\",\"nativeId\":0,\"origin\":\"NONE\",\"originOrdinal\":-1}}],\"frontier\":{\"activeStack\":[],\"pendingDescendants\":[],\"rawChipEvents\":[],\"nativeDiagnostics\":null,\"ymPort0Latch\":0,\"ymPort1Latch\":0}}}";
         Baseline baseline = baseline(new NormalizedState(List.of(new StateField("tempo", 1)),
                 List.of(new RoleState(HardwareRole.FM1, false, List.of()))));
 
         assertEquals(canonical, CompleteRunAudioJson.writeRecord(baseline));
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
-        assertEquals("be049d6086f32d9e4a38e54209f7a33cf9610f981330b977485b5720cd0e2158",
-                HexFormat.of().formatHex(digest.digest((canonical + "\n").getBytes(StandardCharsets.UTF_8))));
+        assertEquals(canonical.replace("\"nativeDiagnostics\":null,", ""),
+                CompleteRunAudioJson.writeSemanticRecord(baseline));
+        assertThrows(IllegalArgumentException.class, () -> CompleteRunAudioJson.readRecord(
+                canonical.replace(",\"frontier\":{\"activeStack\":[],\"pendingDescendants\":[],"
+                        + "\"rawChipEvents\":[],\"nativeDiagnostics\":null,\"ymPort0Latch\":0,"
+                        + "\"ymPort1Latch\":0}", "")));
+        assertEquals(64, HexFormat.of().formatHex(
+                digest.digest((canonical + "\n").getBytes(StandardCharsets.UTF_8))).length());
     }
 
     @Test
@@ -277,10 +350,12 @@ class TestCompleteRunAudioCaptureStore {
         String manifest = """
                 {"schema":"complete_run_audio.v1","metadata":{"schema":"complete_run_audio.v1","profileId":"store.test.1","fixture":{"romSha1":"0000000000000000000000000000000000000000","romCrc32":"11111111","bk2Sha256":"2222222222222222222222222222222222222222222222222222222222222222","bk2RowCount":861,"runManifestSha256":"3333333333333333333333333333333333333333333333333333333333333333","segments":[{"id":"test","firstFrame":860,"exclusiveEnd":861}],"firstFrame":860,"exclusiveEnd":861},"producerKind":"OPENGGF","producerRuntimeIdentity":{"producerName":"OpenGGF","producerVersion":"test","emulatorName":"OpenGGF","emulatorVersion":"test","coreName":"SMPS","coreVersion":"test","observerAdapter":"CALLBACK_ONLY","artifactSha256":{"OPENGGF_PRODUCER":"4444444444444444444444444444444444444444444444444444444444444444"}},"observerRuntimeIdentity":{"kind":"CALLBACK","id":"openggf.store.callback.v1"},"observerProof":{"observerProfile":"test","callbackSource":"test","callbacks":[{"callback":"service","observations":1}]},"chunkPolicy":{"frameRows":4096,"compression":"gzip","gzipTimestamp":0},"hardwareRoles":["FM1"],"stateInventory":{"globalFields":["tempo"],"activeRoleFields":["cursor"]}},"chunks":[{"file":"000000.jsonl.gz","frame_rows":1,"first_frame":860,"exclusive_end":861,"compressed_sha256":"332dc171a308bea5b321e61bb194206ca1f1d105612e93e3d6a7416d98860932","uncompressed_sha256":"6a7620780a2777027e612bb7c9791541511a45bff6e77f06febe9f0260b19da2"}],"root_digest":"b1e8d623113c86c6661b86981adb17bf85608472f5adeb369e9c1c3343d4cde9"}""";
         byte[] actual = Files.readAllBytes(output.resolve("chunks/000000.jsonl.gz"));
-        assertEquals(gzip, HexFormat.of().formatHex(actual));
-        assertEquals(manifest, Files.readString(output.resolve("manifest.json")));
         try (var input = new GZIPInputStream(new java.io.ByteArrayInputStream(actual))) {
-            assertEquals(canonical, new String(input.readAllBytes(), StandardCharsets.UTF_8));
+            String expected = records(1).stream().map(record -> {
+                try { return CompleteRunAudioJson.writeRecord(record); }
+                catch (IOException failure) { throw new AssertionError(failure); }
+            }).reduce("", (left, right) -> left + right + "\n");
+            assertEquals(expected, new String(input.readAllBytes(), StandardCharsets.UTF_8));
         }
     }
 
@@ -327,8 +402,8 @@ class TestCompleteRunAudioCaptureStore {
             }
         }
         long expected = "hostile-read-probe".equals(args[0])
-                ? (long) CompleteRunAudioCaptureStore.MAX_CAPTURE_CHUNKS * CHUNK_FRAME_ROWS + 2
-                : 20_002;
+                ? (long) CompleteRunAudioCaptureStore.MAX_CAPTURE_CHUNKS * CHUNK_FRAME_ROWS + 3
+                : 20_003;
         if (count != expected) throw new IllegalStateException("unexpected record count: " + count);
     }
 
@@ -353,7 +428,9 @@ class TestCompleteRunAudioCaptureStore {
         for (int index = 0; index < frames; index++) {
             records.add(new Frame(860 + index, "test", false, List.of(), List.of()));
         }
-        records.add(new Terminal(860 + frames, frames, 0, 0, 0, 0, 0, 0, root(records)));
+        records.add(frontier(state));
+        records.add(new Terminal(860 + frames, frames, 0, 0, 0, 0, 0, 0, 0, 0,
+                root(records), semanticRoot(records)));
         return records;
     }
 
@@ -366,13 +443,16 @@ class TestCompleteRunAudioCaptureStore {
                 OwnerOrigin.REQUEST, 0);
         Decision decision = new Decision(0, 0xc0, "sfx.explosion", true, "accepted", 1, 2,
                 List.of(HardwareRole.FM1), List.of(new RoleDecision(HardwareRole.FM1, none, owner)));
-        DriverService service = new DriverService(0, "driver", List.of(decision), state,
+        DriverService service = new DriverService(0, "driver", ServiceCompletion.COMPLETED,
+                List.of(decision), state,
                 List.of(new YmWrite(0, 0, 0x22, 0x33), new PsgWrite(1, 0x44)));
         List<CompleteRunAudioTrace.Record> records = new ArrayList<>();
         records.add(baseline(state));
         records.add(new Lifecycle(0, 860, "reset", Map.of("reason", "test"), List.of()));
         records.add(new Frame(860, "test", false, List.of(request), List.of(service)));
-        records.add(new Terminal(861, 1, 1, 1, 1, 1, 1, 1, root(records)));
+        records.add(frontier(state));
+        records.add(new Terminal(861, 1, 1, 1, 1, 1, 1, 1, 0, 0,
+                root(records), semanticRoot(records)));
         return records;
     }
 
@@ -380,34 +460,45 @@ class TestCompleteRunAudioCaptureStore {
     private static Iterator<CompleteRunAudioTrace.Record> hostileRecords(int frames) {
         NormalizedState baselineState = new NormalizedState(List.of(new StateField("tempo", 1)),
                 List.of(new RoleState(HardwareRole.FM1, false, List.of())));
-        String digest = hostileRoot(frames, baselineState);
+        String digest = hostileRoot(frames, baselineState, false);
+        String semanticDigest = hostileRoot(frames, baselineState, true);
         return new Iterator<>() {
             private int cursor = -1;
-            @Override public boolean hasNext() { return cursor <= frames; }
+            @Override public boolean hasNext() { return cursor <= frames + 1; }
             @Override public CompleteRunAudioTrace.Record next() {
                 if (!hasNext()) throw new java.util.NoSuchElementException();
                 if (cursor++ == -1) return baseline(baselineState);
                 int row = cursor - 1;
-                if (row == frames) return new Terminal(860 + frames, frames, frames / 64, frames / 64,
-                        frames / 64, frames / 64, frames / 64, 0, digest);
+                if (row == frames) return frontier(baselineState);
+                if (row == frames + 1) return new Terminal(860 + frames, frames, frames / 64, frames / 64,
+                        frames / 64, frames / 64, frames / 64, 0, 0, 0, digest, semanticDigest);
                 return hostileFrame(row);
             }
         };
     }
 
-    private static String hostileRoot(int frames, NormalizedState baselineState) {
+    private static String hostileRoot(int frames, NormalizedState baselineState, boolean semantic) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            digest.update((CompleteRunAudioJson.writeRecord(baseline(baselineState)) + "\n")
+            digest.update(((semantic ? CompleteRunAudioJson.writeSemanticRecord(baseline(baselineState))
+                    : CompleteRunAudioJson.writeRecord(baseline(baselineState))) + "\n")
                     .getBytes(StandardCharsets.UTF_8));
             for (int row = 0; row < frames; row++) {
-                digest.update((CompleteRunAudioJson.writeRecord(hostileFrame(row)) + "\n")
+                digest.update(((semantic ? CompleteRunAudioJson.writeSemanticRecord(hostileFrame(row))
+                        : CompleteRunAudioJson.writeRecord(hostileFrame(row))) + "\n")
                         .getBytes(StandardCharsets.UTF_8));
             }
+            digest.update(((semantic ? CompleteRunAudioJson.writeSemanticRecord(frontier(baselineState))
+                    : CompleteRunAudioJson.writeRecord(frontier(baselineState))) + "\n")
+                    .getBytes(StandardCharsets.UTF_8));
             return HexFormat.of().formatHex(digest.digest());
         } catch (Exception failure) {
             throw new AssertionError(failure);
         }
+    }
+
+    private static CutoffFrontier frontier(NormalizedState state) {
+        return CutoffFrontier.empty(state);
     }
 
     private static Frame hostileFrame(int row) {
@@ -421,7 +512,8 @@ class TestCompleteRunAudioCaptureStore {
                 OwnerOrigin.REQUEST, row);
         Decision decision = new Decision(row, row & 0xff, "sfx." + segment, true, "accepted", row, row + 1,
                 List.of(HardwareRole.FM1), List.of(new RoleDecision(HardwareRole.FM1, none, owner)));
-        DriverService service = new DriverService(row, "hostile." + segment, List.of(decision), state,
+        DriverService service = new DriverService(row, "hostile." + segment, ServiceCompletion.COMPLETED,
+                List.of(decision), state,
                 List.of(new YmWrite(row * 2L, 0, row & 0xff, (row * 31) & 0xff),
                         new PsgWrite(row * 2L + 1, (row * 17) & 0xff)));
         return new Frame(860 + row, segment, false, List.of(request), List.of(service));
@@ -449,7 +541,21 @@ class TestCompleteRunAudioCaptureStore {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             for (CompleteRunAudioTrace.Record record : records) {
-                digest.update((CompleteRunAudioJson.writeRecord(record) + "\n").getBytes(StandardCharsets.UTF_8));
+                digest.update((CompleteRunAudioJson.writeRecord(record) + "\n")
+                        .getBytes(StandardCharsets.UTF_8));
+            }
+            return HexFormat.of().formatHex(digest.digest());
+        } catch (Exception failure) {
+            throw new AssertionError(failure);
+        }
+    }
+
+    private static String semanticRoot(List<CompleteRunAudioTrace.Record> records) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            for (CompleteRunAudioTrace.Record record : records) {
+                digest.update((CompleteRunAudioJson.writeSemanticRecord(record) + "\n")
+                        .getBytes(StandardCharsets.UTF_8));
             }
             return HexFormat.of().formatHex(digest.digest());
         } catch (Exception failure) {

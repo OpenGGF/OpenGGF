@@ -1,0 +1,123 @@
+{
+  "schema": "openggf.gpgx-audio-service-manifests.v1",
+  "abi": "gpgx.audio-trace.v1",
+  "games": {
+    "s2": {
+      "rom_sha1": "8bca5dcef1af3e00098666fd892dc1c2a76333f9d",
+      "watch_mask_bytes": 8192,
+      "z80_watch_pc_union": [0, 56, 231, 271, 272, 331, 369, 378, 432, 1808, 1842, 3508, 4744, 4860],
+      "upload": {
+        "entry_pc": 966656,
+        "completion_pc": 966710,
+        "snapshot_start": 0,
+        "snapshot_exclusive_end": 8192,
+        "completion_policy": "ARM_Z80_PROOFS_ON_COMPLETION",
+        "source_file": "docs/s2disasm/s2.asm",
+        "source_label": "SoundDriverLoad",
+        "source_lines": "91301-91324",
+        "proof": "The sole root routine obtains the Z80 bus, fully decompresses the driver, releases reset/bus, waits, releases reset, restores registers/SR, and returns at the common completion."
+      },
+      "ranges": [
+        {"id": 1, "subject": "Z80_RAM", "start": 0, "exclusive_end": 8192},
+        {"id": 2, "subject": "Z80_RAM", "start": 0, "exclusive_end": 1}
+      ],
+      "kinds": [
+        {"id": 1, "name": "Reset", "flags": [], "canonical_ranges": [2]},
+        {"id": 2, "name": "SoundDriverLoad", "flags": ["ALLOW_CONTINUATION"], "canonical_ranges": [1]},
+        {"id": 3, "name": "VInt", "flags": ["ALLOW_CONTINUATION", "ALLOW_CHILDREN"], "canonical_ranges": [2]},
+        {"id": 4, "name": "DpcmIteration", "flags": ["TYPED_ASYNC", "ALLOW_CONTINUATION", "ALLOW_CHILDREN"], "canonical_ranges": [2]},
+        {"id": 5, "name": "BootstrapPsgInit", "flags": [], "canonical_ranges": [2]},
+        {"id": 6, "name": "DacDispatch", "flags": ["ALLOW_CONTINUATION"], "canonical_ranges": [2]},
+        {"id": 7, "name": "SegaPcmIteration", "flags": ["ALLOW_CONTINUATION"], "canonical_ranges": [2]},
+        {"id": 8, "name": "SaxmanIteration", "flags": ["ALLOW_CONTINUATION"], "canonical_ranges": [2]},
+        {"id": 9, "name": "UpdateMusic", "flags": ["ALLOW_CONTINUATION"], "canonical_ranges": [2]}
+      ],
+      "hooks": [
+        {"token":11,"cpu":"Z80","pc":0,"action":"PUSH_BEGIN","kind":6,"expected_kind":0,"opcode":"f331","ranges":[],"flags":[],"source_file":"docs/s2disasm/s2.sounddriver.asm","source_label":"zStartup","completion_proof":"Driver startup is a one-shot root dispatch boundary before the VInt/DAC loop."},
+        {"token":1,"cpu":"Z80","pc":56,"action":"PUSH_BEGIN","kind":3,"expected_kind":0,"opcode":"f5","ranges":[],"flags":[],"source_file":"docs/s2disasm/s2.sounddriver.asm","source_label":"zVInt","completion_proof":"Interrupt entry is before all VInt queue, music, SFX and DAC work."},
+        {"token":2,"cpu":"Z80","pc":56,"action":"PUSH_BEGIN","kind":3,"expected_kind":4,"opcode":"f5","ranges":[],"flags":[],"source_file":"docs/s2disasm/s2.sounddriver.asm","source_label":"zVInt","completion_proof":"An admitted interrupt begins a VInt child nested under the still-open bounded DPCM iteration."},
+        {"token":3,"cpu":"Z80","pc":231,"action":"POP_END_AT_PC","kind":0,"expected_kind":3,"opcode":"c9","ranges":[2],"flags":[],"source_file":"docs/s2disasm/s2.sounddriver.asm","source_label":"zUpdateDAC return path","completion_proof":"The VInt restores registers and reaches its common return with all VInt-owned state final."},
+        {"token":4,"cpu":"Z80","pc":271,"action":"POP_END_AT_PC","kind":0,"expected_kind":3,"opcode":"c9","ranges":[2],"flags":[],"source_file":"docs/s2disasm/s2.sounddriver.asm","source_label":"zVInt DAC-queued return","completion_proof":"The queued-DAC path has committed its self-modifying pointers before returning from VInt."},
+        {"token":21,"cpu":"Z80","pc":272,"action":"PUSH_BEGIN","kind":9,"expected_kind":3,"opcode":"cd4c01","ranges":[],"flags":[],"source_file":"docs/s2disasm/s2.sounddriver.asm","source_label":"zUpdateMusic","completion_proof":"The call instruction begins one synchronous music update nested under VInt."},
+        {"token":22,"cpu":"Z80","pc":331,"action":"POP_END_AT_PC","kind":0,"expected_kind":9,"opcode":"c9","ranges":[2],"flags":[],"source_file":"docs/s2disasm/s2.sounddriver.asm","source_label":"zUpdateMusic return","completion_proof":"All music track loops have completed and the routine is at its canonical return."},
+        {"token":12,"cpu":"Z80","pc":369,"action":"POP_END_AT_PC","kind":0,"expected_kind":6,"opcode":"110000","ranges":[2],"flags":[],"source_file":"docs/s2disasm/s2.sounddriver.asm","source_label":"zWriteToDAC dispatch","completion_proof":"Startup/DAC dispatch state is final immediately before the one-shot DPCM iteration boundary."},
+        {"token":5,"cpu":"Z80","pc":378,"action":"PUSH_BEGIN","kind":4,"expected_kind":0,"opcode":"f3","ranges":[],"flags":[],"source_file":"docs/s2disasm/s2.sounddriver.asm","source_label":"zWriteToDAC iteration fallthrough","completion_proof":"DI at $017A is the one-shot iteration start after the persistent $0178 DJNZ busy wait."},
+        {"token":13,"cpu":"Z80","pc":378,"action":"TAIL_POP_PUSH","kind":4,"expected_kind":3,"opcode":"f3","ranges":[2],"flags":[],"source_file":"docs/s2disasm/s2.sounddriver.asm","source_label":"zWriteToDAC iteration fallthrough","completion_proof":"VInt ends at the same one-shot DPCM iteration start; tail composition emits one completion and one begin."},
+        {"token":20,"cpu":"Z80","pc":378,"action":"TAIL_POP_PUSH","kind":4,"expected_kind":4,"opcode":"f3","ranges":[2],"flags":[],"source_file":"docs/s2disasm/s2.sounddriver.asm","source_label":"zWriteToDAC iteration fallthrough","completion_proof":"A prior bounded iteration ends before the next DI begins; $0178 remains deliberately excluded."},
+        {"token":6,"cpu":"Z80","pc":432,"action":"POP_END_AT_PC","kind":0,"expected_kind":4,"opcode":"c37401","ranges":[2],"flags":[],"source_file":"docs/s2disasm/s2.sounddriver.asm","source_label":"zWriteToDAC loop jump","completion_proof":"The sample byte and delay loop are complete before the jump back to the persistent wait loop."},
+        {"token":14,"cpu":"Z80","pc":1808,"action":"TAIL_POP_PUSH","kind":7,"expected_kind":3,"opcode":"7e32","ranges":[2],"flags":[],"source_file":"docs/s2disasm/s2.sounddriver.asm","source_label":"S2 SEGA PCM byte iteration","completion_proof":"VInt completes before the next SEGA PCM byte is fetched and written."},
+        {"token":15,"cpu":"Z80","pc":1808,"action":"TAIL_POP_PUSH","kind":7,"expected_kind":7,"opcode":"7e32","ranges":[2],"flags":[],"source_file":"docs/s2disasm/s2.sounddriver.asm","source_label":"S2 SEGA PCM byte iteration","completion_proof":"One SEGA PCM byte iteration is final before the next begins."},
+        {"token":16,"cpu":"Z80","pc":1842,"action":"TAIL_POP_PUSH","kind":3,"expected_kind":7,"opcode":"cd63","ranges":[2],"flags":[],"source_file":"docs/s2disasm/s2.sounddriver.asm","source_label":"S2 SEGA PCM interrupt handoff","completion_proof":"The SEGA PCM iteration ends synchronously before handing control to VInt work."},
+        {"token":23,"cpu":"Z80","pc":3508,"action":"POP_END_AT_PC","kind":0,"expected_kind":9,"opcode":"c3cc00","ranges":[2],"flags":[],"source_file":"docs/s2disasm/s2.sounddriver.asm","source_label":"cfFadeInToPrevious nonlocal exit","completion_proof":"With FixDriverBugs=0, the shipped driver restores saved tracks, pops three return frames, and reaches JP zUpdateDAC at $0DB4; this is the alternate completion of the nested zUpdateMusic service before control bypasses its normal $014B return."},
+        {"token":17,"cpu":"Z80","pc":4744,"action":"TAIL_POP_PUSH","kind":8,"expected_kind":3,"opcode":"d9","ranges":[2],"flags":[],"source_file":"docs/s2disasm/s2.sounddriver.asm","source_label":"zSaxmanDec iteration","completion_proof":"VInt state is final before the decompressor resumes one bounded iteration."},
+        {"token":18,"cpu":"Z80","pc":4744,"action":"TAIL_POP_PUSH","kind":8,"expected_kind":8,"opcode":"d9","ranges":[2],"flags":[],"source_file":"docs/s2disasm/s2.sounddriver.asm","source_label":"zSaxmanDec iteration","completion_proof":"One decompressor iteration is final before the next begins."},
+        {"token":19,"cpu":"Z80","pc":4860,"action":"TAIL_POP_PUSH","kind":3,"expected_kind":8,"opcode":"e1","ranges":[2],"flags":[],"source_file":"docs/s2disasm/s2.sounddriver.asm","source_label":"zSaxmanDec VInt handoff","completion_proof":"The decompressor iteration ends before restoring the VInt context."},
+        {"token":7,"cpu":"M68K","pc":638,"action":"PUSH_BEGIN","kind":5,"expected_kind":0,"opcode":"7a03","ranges":[],"flags":[],"source_file":"docs/s2disasm/s2.asm","source_label":"InitSound PSG silence loop","completion_proof":"This root bootstrap owns exactly the four PSG silence writes before its loop exit."},
+        {"token":8,"cpu":"M68K","pc":648,"action":"POP_END_AT_PC","kind":0,"expected_kind":5,"opcode":"3480","ranges":[2],"flags":[],"source_file":"docs/s2disasm/s2.asm","source_label":"InitSound PSG silence completion","completion_proof":"The fourth PSG latch write is complete and bootstrap chip state is final."},
+        {"token":9,"cpu":"M68K","pc":966656,"action":"PUSH_BEGIN","kind":2,"expected_kind":0,"opcode":"40e7","ranges":[],"flags":[],"source_file":"docs/s2disasm/s2.asm","source_label":"SoundDriverLoad","completion_proof":"The sole root entry precedes the first decompressed ZRAM write."},
+        {"token":10,"cpu":"M68K","pc":966710,"action":"POP_END_AT_PC","kind":0,"expected_kind":2,"opcode":"3482","ranges":[1],"flags":["ARM_Z80_PROOFS_ON_COMPLETION"],"source_file":"docs/s2disasm/s2.asm","source_label":"SoundDriverLoad release","completion_proof":"All 8 KiB are final; the common release path has no bypass and atomically proves the complete Z80 hook set."}
+      ]
+    },
+    "s3k": {
+      "rom_sha1": "cfbf98c36c776677290a872547ac47c53d2761d6",
+      "watch_mask_bytes": 8192,
+      "z80_watch_pc_union": [0, 56, 69, 132, 283, 289, 4234, 4256, 4300, 4357, 4390, 4432, 4453],
+      "upload": {
+        "entry_pc": 4814,
+        "completion_pc": 4934,
+        "snapshot_start": 0,
+        "snapshot_exclusive_end": 8192,
+        "completion_policy": "ARM_Z80_PROOFS_ON_COMPLETION",
+        "source_file": "docs/skdisasm/sonic3k.asm",
+        "source_label": "SndDrvInit",
+        "source_lines": "1404-1438",
+        "proof": "The sole SndDrvInit root decompresses driver and tables, copies defaults, applies PAL state, resets/releases the Z80, starts it, and returns through one common completion."
+      },
+      "ranges": [
+        {"id": 1, "subject": "Z80_RAM", "start": 0, "exclusive_end": 8192},
+        {"id": 2, "subject": "Z80_RAM", "start": 0, "exclusive_end": 1}
+      ],
+      "kinds": [
+        {"id":1,"name":"Reset","flags":[],"canonical_ranges":[2]},
+        {"id":2,"name":"SoundDriverLoad","flags":["ALLOW_CONTINUATION"],"canonical_ranges":[1]},
+        {"id":3,"name":"VInt","flags":["ALLOW_CONTINUATION","ALLOW_CHILDREN"],"canonical_ranges":[2]},
+        {"id":5,"name":"BootstrapPsgInit","flags":[],"canonical_ranges":[2]},
+        {"id":6,"name":"DriverInit","flags":["ALLOW_CONTINUATION"],"canonical_ranges":[2]},
+        {"id":7,"name":"DpcmIteration","flags":["TYPED_ASYNC","ALLOW_CONTINUATION","ALLOW_CHILDREN"],"canonical_ranges":[2]},
+        {"id":8,"name":"SegaPcmIteration","flags":["TYPED_ASYNC","ALLOW_CONTINUATION"],"canonical_ranges":[2]},
+        {"id":9,"name":"DigitalAudioDispatch","flags":["ALLOW_CONTINUATION"],"canonical_ranges":[2]},
+        {"id":10,"name":"SegaPcmDispatch","flags":["ALLOW_CONTINUATION"],"canonical_ranges":[2]},
+        {"id":11,"name":"UpdateEverything","flags":["ALLOW_CONTINUATION"],"canonical_ranges":[2]},
+        {"id":12,"name":"UpdateMusic","flags":["ALLOW_CONTINUATION"],"canonical_ranges":[2]}
+      ],
+      "hooks": [
+        {"token":1,"cpu":"Z80","pc":0,"action":"PUSH_BEGIN","kind":6,"expected_kind":0,"opcode":"f3f3ed56","ranges":[],"flags":[],"source_file":"docs/skdisasm/Sound/Z80 Sound Driver.asm","source_label":"zStartup","completion_proof":"Driver startup is a one-shot root before initialization and digital-audio dispatch."},
+        {"token":2,"cpu":"Z80","pc":56,"action":"PUSH_BEGIN","kind":3,"expected_kind":0,"opcode":"f3","ranges":[],"flags":[],"source_file":"docs/skdisasm/Sound/Z80 Sound Driver.asm","source_label":"zVInt","completion_proof":"Interrupt entry precedes all VInt update work."},
+        {"token":4,"cpu":"Z80","pc":56,"action":"TAIL_POP_PUSH","kind":3,"expected_kind":6,"opcode":"f3","ranges":[2],"flags":[],"source_file":"docs/skdisasm/Sound/Z80 Sound Driver.asm","source_label":"zVInt","completion_proof":"Initialization state is final before the admitted VInt begins."},
+        {"token":17,"cpu":"Z80","pc":56,"action":"TAIL_POP_PUSH","kind":3,"expected_kind":9,"opcode":"f3","ranges":[2],"flags":[],"source_file":"docs/skdisasm/Sound/Z80 Sound Driver.asm","source_label":"zVInt","completion_proof":"Digital-audio dispatch state is final before VInt."},
+        {"token":21,"cpu":"Z80","pc":56,"action":"PUSH_BEGIN","kind":3,"expected_kind":7,"opcode":"f3","ranges":[],"flags":[],"source_file":"docs/skdisasm/Sound/Z80 Sound Driver.asm","source_label":"zVInt nested under DPCM iteration","completion_proof":"The admitted interrupt begins a VInt child nested under the still-open bounded DPCM iteration."},
+        {"token":25,"cpu":"Z80","pc":69,"action":"POP_END_AT_PC","kind":0,"expected_kind":12,"opcode":"3a021c","ranges":[2],"flags":[],"source_file":"docs/skdisasm/Sound/Z80 Sound Driver.asm","source_label":"zVInt music return","completion_proof":"Nested music state is final before VInt continues at the next instruction."},
+        {"token":3,"cpu":"Z80","pc":132,"action":"POP_END_AT_PC","kind":0,"expected_kind":3,"opcode":"c9","ranges":[2],"flags":[],"source_file":"docs/skdisasm/Sound/Z80 Sound Driver.asm","source_label":"zVInt return","completion_proof":"All VInt work is committed before the common return to digital audio."},
+        {"token":23,"cpu":"Z80","pc":283,"action":"PUSH_BEGIN","kind":11,"expected_kind":3,"opcode":"cdff07","ranges":[],"flags":[],"source_file":"docs/skdisasm/Sound/Z80 Sound Driver.asm","source_label":"zUpdateEverything","completion_proof":"The call starts one update-everything child under VInt."},
+        {"token":24,"cpu":"Z80","pc":289,"action":"TAIL_POP_PUSH","kind":12,"expected_kind":11,"opcode":"cdcc09","ranges":[2],"flags":[],"source_file":"docs/skdisasm/Sound/Z80 Sound Driver.asm","source_label":"zUpdateMusic normal tail","completion_proof":"UpdateEverything queue/SFX work is final before its normal music child begins; only this pre-action alternative fires."},
+        {"token":26,"cpu":"Z80","pc":289,"action":"TAIL_POP_PUSH","kind":12,"expected_kind":12,"opcode":"cdcc09","ranges":[2],"flags":[],"source_file":"docs/skdisasm/Sound/Z80 Sound Driver.asm","source_label":"zUpdateMusic speedup revisit","completion_proof":"One music pass is final before the speedup revisit begins; the newly pushed kind cannot trigger again on the same visit."},
+        {"token":18,"cpu":"Z80","pc":4234,"action":"PUSH_BEGIN","kind":9,"expected_kind":0,"opcode":"f33e2b","ranges":[],"flags":[],"source_file":"docs/skdisasm/Sound/Z80 Sound Driver.asm","source_label":"zPlayDigitalAudio","completion_proof":"Entry begins one long-lived digital-audio dispatch boundary."},
+        {"token":19,"cpu":"Z80","pc":4234,"action":"TAIL_POP_PUSH","kind":9,"expected_kind":6,"opcode":"f33e2b","ranges":[2],"flags":[],"source_file":"docs/skdisasm/Sound/Z80 Sound Driver.asm","source_label":"zPlayDigitalAudio after init","completion_proof":"Driver initialization is final before digital audio dispatch begins."},
+        {"token":9,"cpu":"Z80","pc":4256,"action":"PUSH_BEGIN","kind":9,"expected_kind":0,"opcode":"3e2b","ranges":[],"flags":[],"source_file":"docs/skdisasm/Sound/Z80 Sound Driver.asm","source_label":"zPlayDigitalAudio loop","completion_proof":"The persistent loop enters a bounded dispatch service only at its source-owned entry."},
+        {"token":20,"cpu":"Z80","pc":4256,"action":"TAIL_POP_PUSH","kind":9,"expected_kind":9,"opcode":"3e2b","ranges":[2],"flags":[],"source_file":"docs/skdisasm/Sound/Z80 Sound Driver.asm","source_label":"zPlayDigitalAudio loop revisit","completion_proof":"One dispatch iteration is final before the next starts."},
+        {"token":22,"cpu":"Z80","pc":4256,"action":"TAIL_POP_PUSH","kind":9,"expected_kind":7,"opcode":"3e2b","ranges":[2],"flags":[],"source_file":"docs/skdisasm/Sound/Z80 Sound Driver.asm","source_label":"zPlayDigitalAudio DPCM return","completion_proof":"One bounded DPCM iteration is final before dispatch resumes."},
+        {"token":10,"cpu":"Z80","pc":4300,"action":"PUSH_BEGIN","kind":7,"expected_kind":0,"opcode":"fb","ranges":[],"flags":[],"source_file":"docs/skdisasm/Sound/Z80 Sound Driver.asm","source_label":"zPlayDigitalAudio DPCM iteration","completion_proof":"The one-shot EI boundary starts one bounded DPCM iteration."},
+        {"token":11,"cpu":"Z80","pc":4300,"action":"TAIL_POP_PUSH","kind":7,"expected_kind":9,"opcode":"fb","ranges":[2],"flags":[],"source_file":"docs/skdisasm/Sound/Z80 Sound Driver.asm","source_label":"zPlayDigitalAudio DPCM iteration","completion_proof":"Dispatch state is final before one DPCM iteration begins."},
+        {"token":12,"cpu":"Z80","pc":4357,"action":"POP_END_AT_PC","kind":0,"expected_kind":7,"opcode":"f29210","ranges":[2],"flags":[],"source_file":"docs/skdisasm/Sound/Z80 Sound Driver.asm","source_label":"zPlayDigitalAudio DPCM paired-write completion","completion_proof":"Both DAC data writes and the playing-flag read are final before the common JP P decision; this closes exactly one typed pair on both continue and early-cancel paths, before chip-free loop bookkeeping."},
+        {"token":13,"cpu":"Z80","pc":4390,"action":"PUSH_BEGIN","kind":10,"expected_kind":0,"opcode":"f3","ranges":[],"flags":[],"source_file":"docs/skdisasm/Sound/Z80 Sound Driver.asm","source_label":"zPlaySEGAPCM","completion_proof":"DI begins the SEGA-PCM dispatch boundary."},
+        {"token":14,"cpu":"Z80","pc":4432,"action":"PUSH_BEGIN","kind":8,"expected_kind":0,"opcode":"7e32","ranges":[],"flags":[],"source_file":"docs/skdisasm/Sound/Z80 Sound Driver.asm","source_label":"zPlaySEGAPCM byte iteration","completion_proof":"One byte fetch/write starts a bounded SEGA-PCM inner iteration."},
+        {"token":15,"cpu":"Z80","pc":4432,"action":"TAIL_POP_PUSH","kind":8,"expected_kind":10,"opcode":"7e32","ranges":[2],"flags":[],"source_file":"docs/skdisasm/Sound/Z80 Sound Driver.asm","source_label":"zPlaySEGAPCM first byte","completion_proof":"Dispatch setup is final before the first bounded byte iteration."},
+        {"token":16,"cpu":"Z80","pc":4453,"action":"POP_END_AT_PC","kind":0,"expected_kind":8,"opcode":"20e9","ranges":[2],"flags":[],"source_file":"docs/skdisasm/Sound/Z80 Sound Driver.asm","source_label":"zPlaySEGAPCM byte-loop branch","completion_proof":"The SEGA-PCM byte and delay loop are final before the next branch."},
+        {"token":5,"cpu":"M68K","pc":642,"action":"PUSH_BEGIN","kind":5,"expected_kind":0,"opcode":"7a03","ranges":[],"flags":[],"source_file":"docs/skdisasm/sonic3k.asm","source_label":"InitSound PSG silence loop","completion_proof":"This bootstrap root owns the four PSG silence writes."},
+        {"token":6,"cpu":"M68K","pc":652,"action":"POP_END_AT_PC","kind":0,"expected_kind":5,"opcode":"3480","ranges":[2],"flags":[],"source_file":"docs/skdisasm/sonic3k.asm","source_label":"InitSound PSG silence completion","completion_proof":"The fourth PSG latch write is complete before the root exits."},
+        {"token":7,"cpu":"M68K","pc":4814,"action":"PUSH_BEGIN","kind":2,"expected_kind":0,"opcode":"4e71","ranges":[],"flags":[],"source_file":"docs/skdisasm/sonic3k.asm","source_label":"SndDrvInit","completion_proof":"The sole root entry precedes the first Kosinski write to Z80 RAM."},
+        {"token":8,"cpu":"M68K","pc":4934,"action":"POP_END_AT_PC","kind":0,"expected_kind":2,"opcode":"4e75","ranges":[1],"flags":["ARM_Z80_PROOFS_ON_COMPLETION"],"source_file":"docs/skdisasm/sonic3k.asm","source_label":"SndDrvInit return","completion_proof":"All driver/table/default bytes and PAL state are final; reset release/start precede the sole common return, which atomically proves all Z80 hooks."}
+      ]
+    }
+  }
+}

@@ -14,6 +14,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "GpgxHost GHZ1 sync settings match tracked movie",
                 Ghz1SyncSettingsMatchTrackedMovie));
+            tests.Add(new TestMain.TestCase(
+                "GpgxHost selects an exact managed game name for every supported ROM",
+                SelectsManagedGameNames));
 
             string romPath = Environment.GetEnvironmentVariable("S1_ROM_PATH");
             if (string.IsNullOrEmpty(romPath) || !File.Exists(romPath))
@@ -72,6 +75,15 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     serial: true,
                     estimatedSeconds: 10.0));
             }
+        }
+
+        private static void SelectsManagedGameNames()
+        {
+            AssertEx.Equal("Sonic The Hedgehog", GpgxHost.ResolveManagedGameName("s1"));
+            AssertEx.Equal("Sonic The Hedgehog 2", GpgxHost.ResolveManagedGameName("s2"));
+            AssertEx.Equal("Sonic 3 & Knuckles", GpgxHost.ResolveManagedGameName("s3k"));
+            AssertEx.Throws<InvalidOperationException>(
+                () => GpgxHost.ResolveManagedGameName("unknown"), "Unsupported");
         }
 
         private static void BindsPinnedMainRamDomain()
@@ -286,7 +298,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 GpgxHost.CreateGhz1SyncSettings()))
             {
                 GpgxAudioObserverAdapter adapter = host.CreateAudioObserverAdapter();
-                AssertEx.Equal(1u, adapter.AbiVersion());
+                AssertEx.Equal(2u, adapter.AbiVersion());
                 AssertEx.Equal(32u, adapter.EventSize());
                 AssertEx.Equal(65536u, adapter.Capacity());
                 var config = new GpgxAudioObserverAdapter.Config

@@ -46,6 +46,10 @@
     <Compile Include="tests/GpgxHostTests.cs" />
     <Compile Include="tests/GpgxAudioObserverSourceLockTests.cs" />
     <Compile Include="tests/GpgxAudioObserverBuildTests.cs" />
+    <Compile Include="tests/GpgxAudioTraceNativeTests.cs" />
+    <Compile Include="tests/CompleteRunAudioObserverTests.cs" />
+    <Compile Include="tests/S1CompleteRunAudioReferenceCaptureTests.cs" />
+    <Compile Include="tests/GpgxZ80AudioCapabilityTests.cs" />
     <Compile Include="tests/NoReplacePublisherTests.cs" />
     <Compile Include="tests/EndToEndTests.cs" />
     <Compile Include="tests/RunSegmentCollector.cs" />

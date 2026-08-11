@@ -13,11 +13,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.HexFormat;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntFunction;
@@ -57,6 +59,470 @@ class TestCompleteRunAudioComparator {
     }
 
     @Test
+    void baselineSemanticFrontierComparesAcrossProducersAndIgnoresNativeSidecar() throws Exception {
+        TestProfile profile = profile("comparator.baseline-frontier."
+                + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        profile.useBufferedReference(
+                new FrontierServiceRule("UpdateMusic", FrontierServiceState.OPEN,
+                        1, "M68K", 0x71b4c, null, null, List.of()),
+                new FrontierServiceRule("UpdateMusic", FrontierServiceState.COMPLETED,
+                        1, "M68K", 0x71b4c, 2, 0x71c4c, List.of()));
+        CompleteRunAudioProfiles.register(profile);
+        NormalizedState state = baselineState(profile);
+        CutoffService carried = new CutoffService(null, -1, 0, "UpdateMusic",
+                FrontierServiceState.CARRIED_IN_OPEN, FIRST_FRAME, 0, null, null, List.of());
+        BoundaryFrontier semantic = new BoundaryFrontier(
+                List.of(carried), List.of(), List.of(), null, 0, 0);
+        FrontierService nativeOpen = new FrontierService(1, 0, 0, "UpdateMusic",
+                FrontierServiceState.OPEN, FIRST_FRAME - 1, 0, 0x71b4c, 1, "M68K",
+                null, null, null, null, List.of(), List.of());
+        BoundaryFrontier reference = new BoundaryFrontier(
+                semantic.activeStack(), semantic.pendingDescendants(), semantic.rawChipEvents(),
+                new CutoffNativeDiagnostics(List.of(nativeOpen), List.of(), List.of(), List.of(),
+                        0, false, "f".repeat(64)), 0, 0);
+        List<RoleOwner> owners = profile.baselineRoleOwners();
+        Baseline expected = new Baseline(FIRST_FRAME, state, owners, reference);
+        Baseline actual = new Baseline(FIRST_FRAME, state, owners, semantic);
+
+        assertEquals(null, CompleteRunAudioComparator.difference(expected, actual));
+        assertNotEquals(CompleteRunAudioJson.writeRecord(expected), CompleteRunAudioJson.writeRecord(actual));
+        assertEquals(CompleteRunAudioJson.writeSemanticRecord(expected),
+                CompleteRunAudioJson.writeSemanticRecord(actual));
+
+        DriverService carriedCompletion = new DriverService(0, "UpdateMusic",
+                ServiceCompletion.COMPLETED, List.of(), state, List.of(), 0L);
+        Frame engineFrame = new Frame(FIRST_FRAME, "test", false, List.of(),
+                List.of(carriedCompletion));
+        FrontierService nativeCompletion = new FrontierService(1, 0, 0, "UpdateMusic",
+                FrontierServiceState.COMPLETED, FIRST_FRAME - 1, 0, 0x71b4c, 1, "M68K",
+                FIRST_FRAME, 0L, 0x71c4c, 2, List.of(), List.of());
+        Frame referenceFrame = new Frame(FIRST_FRAME, "test", false, List.of(),
+                List.of(carriedCompletion), List.of(),
+                new FrameNativeDiagnostics(List.of(nativeCompletion), List.of(), List.of()));
+        Path referenceCapture = writeCapture("baseline-frontier-reference",
+                metadata(profile, ProducerKind.REFERENCE,
+                        profile.producerRuntimeIdentities().get(ProducerKind.REFERENCE)),
+                expected, 1, ignored -> referenceFrame);
+        Path engineCapture = writeCapture("baseline-frontier-engine",
+                metadata(profile, ProducerKind.OPENGGF,
+                        profile.producerRuntimeIdentities().get(ProducerKind.OPENGGF)),
+                actual, 1, ignored -> engineFrame);
+        CompleteRunAudioReport report = CompleteRunAudioComparator.compare(referenceCapture, engineCapture);
+        assertEquals(CompleteRunAudioReport.Kind.MATCH, report.kind(), report.toText());
+        assertNotEquals(report.reference().rootDigest(), report.engine().rootDigest());
+
+        DriverService wrongLink = new DriverService(0, "UpdateMusic", ServiceCompletion.COMPLETED,
+                List.of(), state, List.of(), 1L);
+        Path wrongEngine = writeCapture("baseline-frontier-wrong-link",
+                metadata(profile, ProducerKind.OPENGGF,
+                        profile.producerRuntimeIdentities().get(ProducerKind.OPENGGF)),
+                actual, 1, ignored -> new Frame(FIRST_FRAME, "test", false, List.of(), List.of(wrongLink)));
+        assertSemanticFailure(CompleteRunAudioComparator.compare(referenceCapture, wrongEngine),
+                CompleteRunAudioReport.Side.ENGINE,
+                CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+        Path missingEngine = writeCapture("baseline-frontier-missing-closure",
+                metadata(profile, ProducerKind.OPENGGF,
+                        profile.producerRuntimeIdentities().get(ProducerKind.OPENGGF)),
+                actual, 1, this::plainFrame);
+        assertSemanticFailure(CompleteRunAudioComparator.compare(referenceCapture, missingEngine),
+                CompleteRunAudioReport.Side.ENGINE,
+                CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+
+        CutoffService outer = new CutoffService(null, -1, 0, "UpdateMusic",
+                FrontierServiceState.CARRIED_IN_OPEN, FIRST_FRAME, 0, null, null, List.of());
+        CutoffService inner = new CutoffService(FIRST_FRAME, 0, 1, "UpdateMusic",
+                FrontierServiceState.CARRIED_IN_OPEN, FIRST_FRAME, 1, null, null, List.of());
+        Baseline nested = new Baseline(FIRST_FRAME, state, owners,
+                new BoundaryFrontier(List.of(outer, inner), List.of(), List.of(), null, 0, 0));
+        DriverService outerFirst = new DriverService(0, "UpdateMusic",
+                ServiceCompletion.COMPLETED, List.of(), state, List.of(), 0L);
+        Path wrongReleaseOrder = writeCapture("baseline-frontier-outer-first",
+                metadata(profile, ProducerKind.OPENGGF,
+                        profile.producerRuntimeIdentities().get(ProducerKind.OPENGGF)),
+                nested, 1, ignored -> new Frame(FIRST_FRAME, "test", false, List.of(),
+                        List.of(outerFirst)));
+        assertSemanticFailure(CompleteRunAudioComparator.compare(referenceCapture, wrongReleaseOrder),
+                CompleteRunAudioReport.Side.ENGINE,
+                CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+    }
+
+    @Test
+    void baselineNativeCarryProofRejectsAFirstOwnedChipBeforeItsCarryInInventory() throws Exception {
+        TestProfile profile = profile("comparator.baseline-chip-order."
+                + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        profile.useBufferedReference(
+                new FrontierServiceRule("UpdateMusic", FrontierServiceState.OPEN,
+                        1, "M68K", 0x71b4c, null, null, List.of()),
+                new FrontierServiceRule("UpdateMusic", FrontierServiceState.COMPLETED,
+                        1, "M68K", 0x71b4c, 2, 0x71c4c, List.of()));
+        CompleteRunAudioProfiles.register(profile);
+        NormalizedState state = baselineState(profile);
+        CutoffService carried = new CutoffService(null, -1, 0, "UpdateMusic",
+                FrontierServiceState.CARRIED_IN_OPEN, FIRST_FRAME, 0, null, null, List.of());
+        FrontierChipEvent address = new FrontierChipEvent(100, 0, "M68K", 0x71b4c,
+                3, 0, 0x22, false, 0, 0x22);
+        FrontierService nativeOpen = new FrontierService(1, 0, 0, "UpdateMusic",
+                FrontierServiceState.OPEN, FIRST_FRAME - 1, 0, 0x71b4c, 1, "M68K",
+                null, null, null, null, List.of(), List.of(address));
+        Baseline referenceBaseline = new Baseline(FIRST_FRAME, state, profile.baselineRoleOwners(),
+                new BoundaryFrontier(List.of(carried), List.of(), List.of(),
+                        new CutoffNativeDiagnostics(List.of(nativeOpen), List.of(),
+                                List.of(new FrontierOwnedChip(1, address)), List.of(),
+                                0, false, "f".repeat(64)), 0x22, 0));
+        Baseline engineBaseline = new Baseline(FIRST_FRAME, state, profile.baselineRoleOwners(),
+                new BoundaryFrontier(List.of(carried), List.of(), List.of(), null, 0x22, 0));
+        YmWrite semanticWrite = new YmWrite(0, 0, 0x22, 7);
+        DriverService completion = new DriverService(0, "UpdateMusic", ServiceCompletion.COMPLETED,
+                List.of(), state, List.of(semanticWrite), 0L);
+        FrontierChipEvent regressing = new FrontierChipEvent(99, 0, "M68K", 0x71c4c,
+                3, 1, 7, true, 0, 0x22);
+        FrontierService nativeCompletion = new FrontierService(1, 0, 0, "UpdateMusic",
+                FrontierServiceState.COMPLETED, FIRST_FRAME - 1, 0, 0x71b4c, 1, "M68K",
+                FIRST_FRAME, 0L, 0x71c4c, 2, List.of(), List.of(regressing));
+        Frame badReferenceFrame = new Frame(FIRST_FRAME, "test", false, List.of(), List.of(completion),
+                List.of(semanticWrite), new FrameNativeDiagnostics(List.of(nativeCompletion),
+                        List.of(new FrontierOwnedChip(1, regressing)), List.of()));
+        Frame engineFrame = new Frame(FIRST_FRAME, "test", false, List.of(), List.of(completion));
+
+        Path reference = writeCapture("baseline-chip-order-reference",
+                metadata(profile, ProducerKind.REFERENCE,
+                        profile.producerRuntimeIdentities().get(ProducerKind.REFERENCE)),
+                referenceBaseline, 1, ignored -> badReferenceFrame);
+        Path engine = writeCapture("baseline-chip-order-engine",
+                metadata(profile, ProducerKind.OPENGGF,
+                        profile.producerRuntimeIdentities().get(ProducerKind.OPENGGF)),
+                engineBaseline, 1, ignored -> engineFrame);
+
+        assertSemanticFailure(CompleteRunAudioComparator.compare(reference, engine),
+                CompleteRunAudioReport.Side.REFERENCE,
+                CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+    }
+
+    @Test
+    void carriedBoundaryLinkIsForbiddenWithoutBaselineCarryIn() throws Exception {
+        TestProfile profile = registerProfile(1);
+        NormalizedState state = baselineState(profile);
+        Path reference = writeCapture("ordinary-service-reference", profile, ProducerKind.REFERENCE,
+                1, this::plainFrame);
+        DriverService impossibleLink = new DriverService(0, "UpdateMusic",
+                ServiceCompletion.COMPLETED, List.of(), state, List.of(), 0L);
+        Path engine = writeCapture("ordinary-service-carried-link", profile, ProducerKind.OPENGGF,
+                1, ignored -> new Frame(FIRST_FRAME, "test", false, List.of(),
+                        List.of(impossibleLink)));
+
+        assertSemanticFailure(CompleteRunAudioComparator.compare(reference, engine),
+                CompleteRunAudioReport.Side.ENGINE,
+                CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+    }
+
+    @Test
+    void unresolvedCarryMustContinueAsTheSameOpenCutoffService() throws Exception {
+        TestProfile profile = profile("comparator.baseline-open-cutoff."
+                + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        FrontierServiceRule openRule = new FrontierServiceRule("UpdateMusic",
+                FrontierServiceState.OPEN, 1, "M68K", 0x71b4c, null, null, List.of());
+        profile.useBufferedReference(openRule);
+        NormalizedState state = baselineState(profile);
+        CutoffService carried = new CutoffService(null, -1, 0, "UpdateMusic",
+                FrontierServiceState.CARRIED_IN_OPEN, FIRST_FRAME, 0, null, null, List.of());
+        CutoffService open = new CutoffService(null, -1, 0, "UpdateMusic",
+                FrontierServiceState.OPEN, FIRST_FRAME, 0, null, null, List.of());
+        FrontierService nativeOpen = new FrontierService(1, 0, 0, "UpdateMusic",
+                FrontierServiceState.OPEN, FIRST_FRAME - 1, 0, 0x71b4c, 1, "M68K",
+                null, null, null, null, List.of(), List.of());
+        CutoffNativeDiagnostics nativeProof = new CutoffNativeDiagnostics(List.of(nativeOpen),
+                List.of(), List.of(), List.of(), 0, false, "f".repeat(64));
+        CutoffFrontier referenceCutoff = new CutoffFrontier(List.of(open), List.of(), List.of(),
+                nativeProof, 0, 0, state);
+        CutoffFrontier engineCutoff = new CutoffFrontier(List.of(open), List.of(), List.of(),
+                null, 0, 0, state);
+        profile.cutoffPolicy = new CutoffFrontierPolicy(List.of(openRule), 1, 0,
+                0, 0, 0, 0, 0, 0, false, "f".repeat(64),
+                CutoffFrontierPolicy.capabilityDigest(referenceCutoff),
+                CutoffFrontierPolicy.nativeCapabilityDigest(nativeProof));
+        CompleteRunAudioProfiles.register(profile);
+        BoundaryFrontier semanticBaseline = new BoundaryFrontier(List.of(carried), List.of(),
+                List.of(), null, 0, 0);
+        BoundaryFrontier nativeBaseline = new BoundaryFrontier(List.of(carried), List.of(),
+                List.of(), nativeProof, 0, 0);
+        Baseline expected = new Baseline(FIRST_FRAME, state, profile.baselineRoleOwners(), nativeBaseline);
+        Baseline actual = new Baseline(FIRST_FRAME, state, profile.baselineRoleOwners(), semanticBaseline);
+
+        Path reference = writeCaptureWithCutoff("baseline-open-cutoff-reference", profile,
+                ProducerKind.REFERENCE, expected,
+                bufferedFrame(0, List.of(), List.of()), referenceCutoff);
+        Path engine = writeCaptureWithCutoff("baseline-open-cutoff-engine", profile,
+                ProducerKind.OPENGGF, actual, plainFrame(0), engineCutoff);
+
+        assertEquals(CompleteRunAudioReport.Kind.MATCH,
+                CompleteRunAudioComparator.compare(reference, engine).kind());
+
+        CutoffService wrongOpen = new CutoffService(null, -1, 0, "UpdateMusic",
+                FrontierServiceState.OPEN, FIRST_FRAME + 1, 0, null, null, List.of());
+        CutoffFrontier wrongCutoff = new CutoffFrontier(List.of(wrongOpen), List.of(),
+                List.of(), null, 0, 0, state);
+        Path wrongEngine = writeCaptureWithCutoff("baseline-open-cutoff-wrong", profile,
+                ProducerKind.OPENGGF, actual, plainFrame(0), wrongCutoff);
+        assertSemanticFailure(CompleteRunAudioComparator.compare(reference, wrongEngine),
+                CompleteRunAudioReport.Side.ENGINE,
+                CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+    }
+
+    @Test
+    void bufferedReferenceDiagnosticsRoundTripAndCompareSemanticallyToOpenGgf() throws Exception {
+        TestProfile profile = profile("comparator.buffered." + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        profile.useBufferedReference(new FrontierServiceRule("driver", FrontierServiceState.COMPLETED,
+                1, "Z80", 0x38, 2, 0x40, List.of()));
+        CompleteRunAudioProfiles.register(profile);
+        NormalizedState state = state(1);
+        DriverService semantic = service(0, List.of(), List.of(new PsgWrite(0, 0x9f)), state, "driver");
+        FrontierChipEvent rawWrite = new FrontierChipEvent(1, 1, "Z80", 0x39, 4, 0, 0x9f,
+                true, null, null);
+        FrontierService rawService = new FrontierService(1, 0, 0, "driver", FrontierServiceState.COMPLETED,
+                FIRST_FRAME, 1, 0x38, 1, "Z80", FIRST_FRAME, 3L, 0x40, 2,
+                List.of(), List.of(rawWrite));
+        FrameNativeDiagnostics diagnostics = new FrameNativeDiagnostics(List.of(rawService),
+                List.of(new FrontierOwnedChip(1, rawWrite)), List.of());
+        Frame referenceFrame = new Frame(FIRST_FRAME, "test", false, List.of(), List.of(semantic),
+                List.of(new PsgWrite(0, 0x9f)), diagnostics);
+        Frame engineFrame = new Frame(FIRST_FRAME, "test", false, List.of(), List.of(semantic));
+
+        Path reference = writeCapture("buffered-reference", profile, ProducerKind.REFERENCE, 1,
+                ignored -> referenceFrame);
+        Path engine = writeCapture("buffered-engine", profile, ProducerKind.OPENGGF, 1,
+                ignored -> engineFrame);
+
+        CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
+        assertEquals(CompleteRunAudioReport.Kind.MATCH, report.kind(), report.toText());
+        assertNotEquals(report.reference().rootDigest(), report.engine().rootDigest());
+        assertNotEquals(readAll(reference).get(1), readAll(engine).get(1));
+
+        CutoffFrontier semanticOnly = CutoffFrontier.empty(state);
+        Path missingReferenceDiagnostics = writeCaptureWithCutoff("missing-reference-cutoff-diagnostics",
+                profile, ProducerKind.REFERENCE, referenceFrame, semanticOnly);
+        CompleteRunAudioReport missing = CompleteRunAudioComparator.compare(missingReferenceDiagnostics, engine);
+        assertSemanticFailure(missing, CompleteRunAudioReport.Side.REFERENCE,
+                CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+
+        CutoffFrontier unexpectedNative = new CutoffFrontier(List.of(), List.of(), List.of(),
+                new CutoffNativeDiagnostics(List.of(), List.of(), List.of(), List.of(),
+                        0, false, "f".repeat(64)), 0, 0, state);
+        Path engineWithDiagnostics = writeCaptureWithCutoff("engine-with-cutoff-diagnostics",
+                profile, ProducerKind.OPENGGF, engineFrame, unexpectedNative);
+        CompleteRunAudioReport unexpected = CompleteRunAudioComparator.compare(reference, engineWithDiagnostics);
+        assertSemanticFailure(unexpected, CompleteRunAudioReport.Side.ENGINE,
+                CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+    }
+
+    @Test
+    void bufferedM68kManagedBoundariesRemainBoundAcrossFramesAndAreAccountedAtCutoff() throws Exception {
+        TestProfile profile = profile("comparator.buffered.crossframe."
+                + PROFILE_SEQUENCE.incrementAndGet(), 2);
+        profile.useBufferedReference(new FrontierServiceRule("driver", FrontierServiceState.COMPLETED,
+                10, "M68K", 0x71b4c, 11, 0x71c4, List.of()));
+        CompleteRunAudioProfiles.register(profile);
+        long beginCoordinate = (long) FIRST_FRAME << 32 | 1;
+        long endCoordinate = (long) (FIRST_FRAME + 1) << 32 | 3;
+        NativeManagedCorrelation begin = new NativeManagedCorrelation(0, List.of(
+                new NativeManagedEvent(beginCoordinate, 1, "M68K", 0x71b4c,
+                        1, 0, 7, 0, 4, 0, 10, true)));
+        NativeManagedCorrelation wrongBegin = new NativeManagedCorrelation(0, List.of(
+                new NativeManagedEvent(beginCoordinate, 1, "M68K", 0x71b4e,
+                        1, 0, 7, 0, 4, 0, 10, true)));
+        NativeManagedCorrelation end = new NativeManagedCorrelation(0, List.of(
+                new NativeManagedEvent(endCoordinate, 3, "M68K", 0x71c4,
+                        2, 0, 7, 0, 4, 0, 11, true)));
+        FrontierService rawService = new FrontierService(7, 0, 0, "driver",
+                FrontierServiceState.COMPLETED, FIRST_FRAME, 1, 0x71b4c, 10, "M68K",
+                FIRST_FRAME + 1, 3L, 0x71c4, 11, List.of(), List.of());
+        DriverService semantic = service(0, List.of(), List.of(), state(1));
+        Frame beginFrame = bufferedFrame(0, List.of(), List.of(), begin);
+        Frame endFrame = bufferedFrame(1, List.of(semantic), List.of(rawService), end);
+        Frame engineBegin = plainFrame(0);
+        Frame engineEnd = new Frame(FIRST_FRAME + 1, "test", false, List.of(), List.of(semantic));
+
+        Path reference = writeCapture("crossframe-reference", profile, ProducerKind.REFERENCE, 2,
+                row -> row == 0 ? beginFrame : endFrame);
+        Path engine = writeCapture("crossframe-engine", profile, ProducerKind.OPENGGF, 2,
+                row -> row == 0 ? engineBegin : engineEnd);
+        assertEquals(CompleteRunAudioReport.Kind.MATCH,
+                CompleteRunAudioComparator.compare(reference, engine).kind());
+
+        Path badBegin = writeCapture("crossframe-wrong-begin", profile, ProducerKind.REFERENCE, 2,
+                row -> row == 0 ? bufferedFrame(0, List.of(), List.of(), wrongBegin) : endFrame);
+        assertSemanticFailure(CompleteRunAudioComparator.compare(badBegin, engine),
+                CompleteRunAudioReport.Side.REFERENCE,
+                CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+
+        Path missingBegin = writeCapture("crossframe-missing-begin", profile, ProducerKind.REFERENCE, 2,
+                row -> row == 0 ? bufferedFrame(0, List.of(), List.of()) : endFrame);
+        assertSemanticFailure(CompleteRunAudioComparator.compare(missingBegin, engine),
+                CompleteRunAudioReport.Side.REFERENCE,
+                CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+
+        Path missingEnd = writeCapture("crossframe-missing-end", profile, ProducerKind.REFERENCE, 2,
+                row -> row == 0 ? beginFrame
+                        : bufferedFrame(1, List.of(semantic), List.of(rawService)));
+        assertSemanticFailure(CompleteRunAudioComparator.compare(missingEnd, engine),
+                CompleteRunAudioReport.Side.REFERENCE,
+                CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+
+        TestProfile wrongEndProfile = profile("comparator.buffered.crossframe.wrongend."
+                + PROFILE_SEQUENCE.incrementAndGet(), 3);
+        wrongEndProfile.useBufferedReference(new FrontierServiceRule("driver",
+                FrontierServiceState.COMPLETED, 10, "M68K", 0x71b4c, 11, 0x71c4, List.of()));
+        CompleteRunAudioProfiles.register(wrongEndProfile);
+        NativeManagedCorrelation earlyEnd = new NativeManagedCorrelation(0, List.of(
+                new NativeManagedEvent(endCoordinate, 3, "M68K", 0x71c4,
+                        2, 0, 7, 0, 4, 0, 11, true)));
+        FrontierService lateService = new FrontierService(7, 0, 0, "driver",
+                FrontierServiceState.COMPLETED, FIRST_FRAME, 1, 0x71b4c, 10, "M68K",
+                FIRST_FRAME + 2, 5L, 0x71c4, 11, List.of(), List.of());
+        Frame lateServiceFrame = bufferedFrame(2, List.of(semantic), List.of(lateService));
+        Path wrongEnd = writeCapture("crossframe-wrong-end", wrongEndProfile,
+                ProducerKind.REFERENCE, 3, row -> switch (row) {
+                    case 0 -> beginFrame;
+                    case 1 -> bufferedFrame(1, List.of(), List.of(), earlyEnd);
+                    default -> lateServiceFrame;
+                });
+        Path lateEngine = writeCapture("crossframe-late-engine", wrongEndProfile,
+                ProducerKind.OPENGGF, 3, row -> row == 2
+                        ? new Frame(FIRST_FRAME + 2, "test", false, List.of(), List.of(semantic))
+                        : plainFrame(row));
+        assertSemanticFailure(CompleteRunAudioComparator.compare(wrongEnd, lateEngine),
+                CompleteRunAudioReport.Side.REFERENCE,
+                CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+
+        FrontierService openService = new FrontierService(7, 0, 0, "driver",
+                FrontierServiceState.OPEN, FIRST_FRAME, 1, 0x71b4c, 10, "M68K",
+                null, null, null, null, List.of(), List.of());
+        CutoffFrontier nativeOpenCutoff = CutoffFrontier.fromNative(List.of(openService), List.of(),
+                List.of(), List.of(), 0, 0, 0, false, state(1), "f".repeat(64));
+        CutoffFrontier semanticOpenCutoff = new CutoffFrontier(nativeOpenCutoff.activeStack(),
+                nativeOpenCutoff.pendingDescendants(), nativeOpenCutoff.rawChipEvents(), null,
+                0, 0, state(1));
+        TestProfile openProfile = profile("comparator.buffered.crossframe.open."
+                + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        FrontierServiceRule openRule = new FrontierServiceRule("driver", FrontierServiceState.OPEN,
+                10, "M68K", 0x71b4c, null, null, List.of());
+        openProfile.useBufferedReference(openRule);
+        openProfile.cutoffPolicy = new CutoffFrontierPolicy(List.of(openRule), 1, 0,
+                0, 0, 0, 0, 0, 0, false, "f".repeat(64),
+                CutoffFrontierPolicy.capabilityDigest(nativeOpenCutoff),
+                CutoffFrontierPolicy.nativeCapabilityDigest(nativeOpenCutoff.nativeDiagnostics()));
+        CompleteRunAudioProfiles.register(openProfile);
+        Path openReference = writeCaptureWithCutoff("crossframe-open-reference", openProfile,
+                ProducerKind.REFERENCE, beginFrame, nativeOpenCutoff);
+        Path openEngine = writeCaptureWithCutoff("crossframe-open-engine", openProfile,
+                ProducerKind.OPENGGF, plainFrame(0), semanticOpenCutoff);
+        assertEquals(CompleteRunAudioReport.Kind.MATCH,
+                CompleteRunAudioComparator.compare(openReference, openEngine).kind());
+
+        TestProfile cutoffProfile = profile("comparator.buffered.crossframe.cutoff."
+                + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        cutoffProfile.useBufferedReference(new FrontierServiceRule("driver", FrontierServiceState.COMPLETED,
+                10, "M68K", 0x71b4c, 11, 0x71c4, List.of()));
+        CompleteRunAudioProfiles.register(cutoffProfile);
+        Path unaccounted = writeCapture("crossframe-unaccounted-cutoff", cutoffProfile,
+                ProducerKind.REFERENCE, 1, ignored -> beginFrame);
+        Path emptyEngine = writeCapture("crossframe-empty-engine", cutoffProfile,
+                ProducerKind.OPENGGF, 1, this::plainFrame);
+        assertSemanticFailure(CompleteRunAudioComparator.compare(unaccounted, emptyEngine),
+                CompleteRunAudioReport.Side.REFERENCE,
+                CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+        NativeManagedCorrelation duplicateBegin = new NativeManagedCorrelation(1, List.of(
+                new NativeManagedEvent(beginCoordinate + 1, 2, "M68K", 0x71b4c,
+                        1, 0, 7, 0, 4, 0, 10, true)));
+        Path duplicateToken = writeCapture("crossframe-duplicate-token", cutoffProfile,
+                ProducerKind.REFERENCE, 1,
+                ignored -> bufferedFrame(0, List.of(), List.of(), begin, duplicateBegin));
+        assertSemanticFailure(CompleteRunAudioComparator.compare(duplicateToken, emptyEngine),
+                CompleteRunAudioReport.Side.REFERENCE,
+                CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+    }
+
+    @Test
+    void bufferedResetDiagnosticsClearLatchesAndBindImmediateTypedLifecycleToCanonicalService() throws Exception {
+        TestProfile profile = profile("comparator.buffered.reset." + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        profile.useBufferedReference(
+                new FrontierServiceRule("driver", FrontierServiceState.COMPLETED,
+                        1, "Z80", 0x38, 2, 0x40, List.of()),
+                new FrontierServiceRule("reset", FrontierServiceState.COMPLETED,
+                        0, "RESET", 0, 0, 0, List.of()));
+        profile.lifecycleRules = Map.of(
+                "power", new LifecycleRule("power", List.of("service_ordinal"),
+                        LifecycleOwnershipAction.NONE),
+                "pulse", new LifecycleRule("pulse", List.of("payload"), LifecycleOwnershipAction.NONE),
+                "reset", new LifecycleRule("reset", List.of("service_ordinal"),
+                        LifecycleOwnershipAction.NONE));
+        CompleteRunAudioProfiles.register(profile);
+        DriverService reset = service(1, List.of(), List.of(new YmWrite(1, 0, 0, 0x33)), state(1), "reset");
+        DriverService power = service(2, List.of(), List.of(), state(1), "reset");
+        long coordinateBase = (long) FIRST_FRAME << 32;
+        FrontierChipEvent beforeAddress = new FrontierChipEvent(coordinateBase + 1, 1, "Z80", 0x100,
+                3, 0, 0x2a, false, 0, 0);
+        FrontierChipEvent beforeData = new FrontierChipEvent(coordinateBase + 2, 2, "Z80", 0x101,
+                3, 1, 0x7f, true, 0, 0x2a);
+        FrontierChipEvent afterData = new FrontierChipEvent(coordinateBase + 5, 5, "RESET", 0,
+                3, 1, 0x33, true, 0, 0);
+        FrontierService ordinary = new FrontierService(1, 0, 0, "driver",
+                FrontierServiceState.COMPLETED, FIRST_FRAME, 0, 0x38, 1, "Z80",
+                FIRST_FRAME, 3L, 0x40, 2, List.of(), List.of(beforeAddress, beforeData));
+        FrontierService resetRoot = new FrontierService(7, 0, 0, "reset",
+                FrontierServiceState.COMPLETED, FIRST_FRAME, 4, 0, 0, "RESET",
+                FIRST_FRAME, 6L, 0, 0, List.of(), List.of(afterData));
+        FrontierService powerRoot = new FrontierService(8, 0, 0, "reset",
+                FrontierServiceState.COMPLETED, FIRST_FRAME, 7, 0, 0, "RESET",
+                FIRST_FRAME, 8L, 0, 0, List.of(), List.of());
+        FrameNativeDiagnostics diagnostics = new FrameNativeDiagnostics(List.of(ordinary, resetRoot, powerRoot),
+                List.of(new FrontierOwnedChip(1, beforeAddress), new FrontierOwnedChip(1, beforeData),
+                        new FrontierOwnedChip(7, afterData)), List.of(),
+                List.of(new NativeResetDiagnostic(7, false), new NativeResetDiagnostic(8, true)));
+        Frame referenceFrame = new Frame(FIRST_FRAME, "test", false, List.of(),
+                List.of(service(0, List.of(), List.of(new YmWrite(0, 0, 0x2a, 0x7f)), state(1), "driver"),
+                        reset, power), List.of(new YmWrite(0, 0, 0x2a, 0x7f),
+                                new YmWrite(1, 0, 0, 0x33)), diagnostics);
+        Frame engineFrame = new Frame(FIRST_FRAME, "test", false, List.of(),
+                referenceFrame.services(), referenceFrame.rawChipEvents(), null);
+        Lifecycle lifecycle = new Lifecycle(0, FIRST_FRAME, "reset", Map.of("service_ordinal", 1L), List.of());
+        Lifecycle powerLifecycle = new Lifecycle(1, FIRST_FRAME, "power",
+                Map.of("service_ordinal", 2L), List.of());
+
+        Path reference = writeSequence("reset-reference", profile, ProducerKind.REFERENCE,
+                List.of(referenceFrame, lifecycle, powerLifecycle));
+        Path engine = writeSequence("reset-engine", profile, ProducerKind.OPENGGF,
+                List.of(engineFrame, lifecycle, powerLifecycle));
+        assertEquals(CompleteRunAudioReport.Kind.MATCH,
+                CompleteRunAudioComparator.compare(reference, engine).kind());
+
+        Path wrongOrdinal = writeSequence("reset-wrong-ordinal", profile, ProducerKind.REFERENCE,
+                List.of(referenceFrame, new Lifecycle(0, FIRST_FRAME, "reset",
+                        Map.of("service_ordinal", 0L), List.of()), powerLifecycle));
+        assertSemanticFailure(CompleteRunAudioComparator.compare(wrongOrdinal, engine),
+                CompleteRunAudioReport.Side.REFERENCE,
+                CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+        Path wrongPower = writeSequence("reset-wrong-power", profile, ProducerKind.REFERENCE,
+                List.of(new Frame(FIRST_FRAME, "test", false, List.of(), referenceFrame.services(),
+                                referenceFrame.rawChipEvents(), new FrameNativeDiagnostics(
+                                        diagnostics.services(), diagnostics.rawChipInventory(),
+                                        diagnostics.rawSnapshotInventory(),
+                                        List.of(new NativeResetDiagnostic(7, true),
+                                                new NativeResetDiagnostic(8, true)))),
+                        lifecycle, powerLifecycle));
+        assertSemanticFailure(CompleteRunAudioComparator.compare(wrongPower, engine),
+                CompleteRunAudioReport.Side.REFERENCE,
+                CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+        Path intervening = writeSequence("reset-intervening", profile, ProducerKind.REFERENCE,
+                List.of(referenceFrame, new Lifecycle(0, FIRST_FRAME, "pulse",
+                        Map.of("payload", "x"), List.of()),
+                        new Lifecycle(1, FIRST_FRAME, "reset", Map.of("service_ordinal", 1L), List.of()),
+                        new Lifecycle(2, FIRST_FRAME, "power", Map.of("service_ordinal", 2L), List.of())));
+        assertSemanticFailure(CompleteRunAudioComparator.compare(intervening, engine),
+                CompleteRunAudioReport.Side.REFERENCE,
+                CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+    }
+
+    @Test
     void reportsSelfContainedExactCaptureProvenanceDeterministically() throws Exception {
         TestProfile profile = registerProfile(2);
         Path reference = writeCapture("reference", profile, ProducerKind.REFERENCE, 2, this::plainFrame);
@@ -87,6 +553,9 @@ class TestCompleteRunAudioComparator {
         assertTrue(report.toJson().contains("\"capture_manifest_sha256\":\""
                 + source.captureManifestSha256() + "\""));
         assertTrue(report.toJson().contains("\"publication_digest\":\"" + source.publicationDigest() + "\""));
+        Path relocated = writeCapture("relocated-reference", profile, ProducerKind.REFERENCE, 2,
+                this::plainFrame);
+        assertEquals(report.toJson(), CompleteRunAudioComparator.compare(relocated, engine).toJson());
         assertTrue(report.toText().contains("reference_metadata_json="));
         assertTrue(report.toText().contains("\"observerProfile\":\"reference.test.v1\""));
         assertEquals(report.toJson(), CompleteRunAudioComparator.compare(reference, engine).toJson());
@@ -211,7 +680,7 @@ class TestCompleteRunAudioComparator {
                 CompleteRunAudioComparator.difference(reference, engine);
 
         assertEquals(CompleteRunAudioReport.Kind.TERMINAL_DIGEST, difference.kind());
-        assertEquals("terminal.root_digest", difference.location());
+        assertEquals("terminal.semantic_digest", difference.location());
     }
 
     @Test
@@ -362,6 +831,20 @@ class TestCompleteRunAudioComparator {
     }
 
     @Test
+    void rejectsArbitraryRootSymlinksBeforeResolvingTheirTargets() throws Exception {
+        TestProfile profile = registerProfile(1);
+        Path reference = writeCapture("canonical-reference", profile, ProducerKind.REFERENCE, 1,
+                this::plainFrame);
+        Path arbitrary = temp.resolve("arbitrary-link");
+        Files.createSymbolicLink(arbitrary, reference.toRealPath());
+
+        CompleteRunAudioComparator.ValidationException failure = org.junit.jupiter.api.Assertions.assertThrows(
+                CompleteRunAudioComparator.ValidationException.class,
+                () -> CompleteRunAudioComparator.validate(arbitrary, ProducerKind.REFERENCE));
+        assertEquals(CompleteRunAudioComparator.ValidationException.Kind.IO_FAILURE, failure.kind());
+    }
+
+    @Test
     void rejectsRuntimeIdentityOutsideTheExactRegisteredProfileWithoutParsingProse() throws Exception {
         TestProfile profile = registerProfile(2);
         Metadata wrong = metadata(profile, ProducerKind.REFERENCE, new ProducerRuntimeIdentity(
@@ -376,9 +859,9 @@ class TestCompleteRunAudioComparator {
 
         assertEquals(CompleteRunAudioReport.Kind.CAPTURE_FAILURE, report.kind());
         assertEquals(CompleteRunAudioReport.Side.REFERENCE, report.failureSide());
-        assertEquals(CompleteRunAudioComparator.ValidationException.Kind.METADATA_PROFILE_MISMATCH,
+        assertEquals(CompleteRunAudioComparator.ValidationException.Kind.RUNTIME_IDENTITY_INVALID,
                 report.validationKind());
-        assertEquals(reference.toAbsolutePath().normalize().toString(), report.failureSource());
+        assertEquals("reference", report.failureSource());
     }
 
     @Test
@@ -1282,11 +1765,93 @@ class TestCompleteRunAudioComparator {
 
     private Path writeCapture(String name, Metadata metadata, int frames, IntFunction<Frame> framesFactory)
             throws Exception {
+        CompleteRunAudioProfile profile = CompleteRunAudioProfiles.require(metadata.profileId());
+        return writeCapture(name, metadata,
+                new Baseline(FIRST_FRAME, baselineState(profile), profile.baselineRoleOwners()),
+                frames, framesFactory);
+    }
+
+    private Path writeCapture(String name, Metadata metadata, Baseline baseline, int frames,
+            IntFunction<Frame> framesFactory) throws Exception {
         List<CompleteRunAudioTrace.Record> records = new ArrayList<>();
         CompleteRunAudioProfile profile = CompleteRunAudioProfiles.require(metadata.profileId());
-        records.add(new Baseline(FIRST_FRAME, baselineState(profile), profile.baselineRoleOwners()));
+        records.add(baseline);
         for (int row = 0; row < frames; row++) records.add(framesFactory.apply(row));
-        records.add(terminal(metadata.fixture().exclusiveEnd(), records));
+        CutoffFrontier cutoff = emptyFrontier(records);
+        if (metadata.observerRuntimeIdentity() instanceof BufferedNativeObserverIdentity) {
+            cutoff = new CutoffFrontier(cutoff.activeStack(), cutoff.pendingDescendants(),
+                    cutoff.rawChipEvents(), new CutoffNativeDiagnostics(List.of(), List.of(), List.of(),
+                            List.of(), 0, false, "f".repeat(64)), cutoff.ymPort0Latch(),
+                    cutoff.ymPort1Latch(), cutoff.terminalState());
+        }
+        records.add(cutoff);
+        Terminal terminal = terminal(metadata.fixture().exclusiveEnd(), records);
+        NativeCapabilitySummary capability = profile.completeRunCapabilities().get(metadata.producerKind());
+        if (capability != null) {
+            terminal = new Terminal(terminal.exclusiveEnd(), terminal.frameCount(), terminal.requestCount(),
+                    terminal.serviceCount(), terminal.decisionCount(), terminal.ymCount(), terminal.psgCount(),
+                    terminal.lifecycleCount(), terminal.cutoffActiveCount(), terminal.cutoffPendingCount(),
+                    capability, terminal.rootDigest(), terminal.semanticDigest());
+        }
+        records.add(terminal);
+        Path output = temp.resolve(name);
+        new CompleteRunAudioCaptureStore().writeNew(output, metadata, records.iterator());
+        return output;
+    }
+
+    private Path writeCaptureWithCutoff(String name, TestProfile profile, ProducerKind kind,
+            Frame frame, CutoffFrontier cutoff) throws Exception {
+        return writeCaptureWithCutoff(name, profile, kind,
+                new Baseline(FIRST_FRAME, baselineState(profile), profile.baselineRoleOwners()),
+                frame, cutoff);
+    }
+
+    private Path writeCaptureWithCutoff(String name, TestProfile profile, ProducerKind kind,
+            Baseline baseline, Frame frame, CutoffFrontier cutoff) throws Exception {
+        Metadata metadata = metadata(profile, kind, profile.producerRuntimeIdentities().get(kind));
+        List<CompleteRunAudioTrace.Record> records = new ArrayList<>();
+        records.add(baseline);
+        records.add(frame);
+        records.add(cutoff);
+        Terminal terminal = terminal(metadata.fixture().exclusiveEnd(), records);
+        NativeCapabilitySummary capability = profile.completeRunCapabilities().get(kind);
+        if (capability != null) {
+            terminal = new Terminal(terminal.exclusiveEnd(), terminal.frameCount(), terminal.requestCount(),
+                    terminal.serviceCount(), terminal.decisionCount(), terminal.ymCount(), terminal.psgCount(),
+                    terminal.lifecycleCount(), terminal.cutoffActiveCount(), terminal.cutoffPendingCount(),
+                    capability, terminal.rootDigest(), terminal.semanticDigest());
+        }
+        records.add(terminal);
+        Path output = temp.resolve(name);
+        new CompleteRunAudioCaptureStore().writeNew(output, metadata, records.iterator());
+        return output;
+    }
+
+    private Path writeSequence(String name, TestProfile profile, ProducerKind kind,
+            List<CompleteRunAudioTrace.Record> body) throws Exception {
+        Metadata metadata = metadata(profile, kind, profile.producerRuntimeIdentities().get(kind));
+        List<CompleteRunAudioTrace.Record> records = new ArrayList<>();
+        records.add(new Baseline(FIRST_FRAME, baselineState(profile), profile.baselineRoleOwners()));
+        records.addAll(body);
+        CutoffFrontier cutoff = CutoffFrontier.empty(body.stream()
+                .filter(Frame.class::isInstance).map(Frame.class::cast).toList().getLast()
+                .services().getLast().state());
+        if (kind == ProducerKind.REFERENCE
+                && metadata.observerRuntimeIdentity() instanceof BufferedNativeObserverIdentity) {
+            cutoff = new CutoffFrontier(List.of(), List.of(), List.of(),
+                    new CutoffNativeDiagnostics(List.of(), List.of(), List.of(), List.of(),
+                            0, false, "f".repeat(64)), 0, 0, cutoff.terminalState());
+        }
+        records.add(cutoff);
+        Terminal terminal = terminal(metadata.fixture().exclusiveEnd(), records);
+        NativeCapabilitySummary capability = profile.completeRunCapabilities().get(kind);
+        if (capability != null) {
+            terminal = new Terminal(terminal.exclusiveEnd(), terminal.frameCount(), terminal.requestCount(),
+                    terminal.serviceCount(), terminal.decisionCount(), terminal.ymCount(), terminal.psgCount(),
+                    terminal.lifecycleCount(), terminal.cutoffActiveCount(), terminal.cutoffPendingCount(),
+                    capability, terminal.rootDigest(), terminal.semanticDigest());
+        }
+        records.add(terminal);
         Path output = temp.resolve(name);
         new CompleteRunAudioCaptureStore().writeNew(output, metadata, records.iterator());
         return output;
@@ -1295,6 +1860,7 @@ class TestCompleteRunAudioComparator {
     private Path writeRecords(String name, Metadata metadata, List<CompleteRunAudioTrace.Record> records)
             throws Exception {
         List<CompleteRunAudioTrace.Record> complete = new ArrayList<>(records);
+        complete.add(emptyFrontier(complete));
         complete.add(terminal(metadata.fixture().exclusiveEnd(), complete));
         Path output = temp.resolve(name);
         new CompleteRunAudioCaptureStore().writeNew(output, metadata, complete.iterator());
@@ -1303,18 +1869,21 @@ class TestCompleteRunAudioComparator {
 
     private Path writeStreamingCapture(String name, TestProfile profile, ProducerKind kind, int frames)
             throws Exception {
-        String digest = streamingRoot(frames);
+        String digest = streamingRoot(frames, false);
+        String semanticDigest = streamingRoot(frames, true);
         Metadata metadata = metadata(profile, kind, profile.producerRuntimeIdentities().get(kind));
         Iterator<CompleteRunAudioTrace.Record> records = new Iterator<>() {
             private long cursor;
-            @Override public boolean hasNext() { return cursor < 2L * frames + 2; }
+            @Override public boolean hasNext() { return cursor < 2L * frames + 3; }
             @Override public CompleteRunAudioTrace.Record next() {
                 if (!hasNext()) throw new NoSuchElementException();
                 long current = cursor++;
                 if (current == 0) return baseline(state(1));
-                if (current == 2L * frames + 1) {
+                if (current == 2L * frames + 1) return CutoffFrontier.empty(
+                        entropyFrame(frames - 1).services().getFirst().state());
+                if (current == 2L * frames + 2) {
                     return new Terminal(FIRST_FRAME + frames, frames, frames, frames, frames,
-                            frames, frames, frames, digest);
+                            frames, frames, frames, 0, 0, digest, semanticDigest);
                 }
                 int row = (int) ((current - 1) / 2);
                 return (current & 1) == 1 ? entropyLifecycle(row, frames) : entropyFrame(row);
@@ -1325,14 +1894,15 @@ class TestCompleteRunAudioComparator {
         return output;
     }
 
-    private static String streamingRoot(int frames) {
+    private static String streamingRoot(int frames, boolean semantic) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            update(digest, baseline(state(1)));
+            update(digest, baseline(state(1)), semantic);
             for (int row = 0; row < frames; row++) {
-                update(digest, entropyLifecycle(row, frames));
-                update(digest, entropyFrame(row));
+                update(digest, entropyLifecycle(row, frames), semantic);
+                update(digest, entropyFrame(row), semantic);
             }
+            update(digest, CutoffFrontier.empty(entropyFrame(frames - 1).services().getFirst().state()), semantic);
             return HexFormat.of().formatHex(digest.digest());
         } catch (Exception failure) {
             throw new AssertionError(failure);
@@ -1365,12 +1935,17 @@ class TestCompleteRunAudioComparator {
     private static Iterator<CompleteRunAudioTrace.Record> stressRecords(int frames) {
         return new Iterator<>() {
             private int cursor = -1;
-            @Override public boolean hasNext() { return cursor <= frames; }
+            @Override public boolean hasNext() { return cursor <= frames + 1; }
             @Override public CompleteRunAudioTrace.Record next() {
                 if (!hasNext()) throw new NoSuchElementException();
                 if (cursor++ == -1) return baseline(state(1));
                 int row = cursor - 1;
-                if (row == frames) {
+                if (row == frames) return CutoffFrontier.empty(
+                        requestAndDecisionFrame(frames - 1, request(frames - 1, 0xc0),
+                                ownershipDecision(frames - 1, true, "accepted",
+                                        frames == 1 ? NONE : owner(frames - 2L, 0xc0),
+                                        owner(frames - 1L, 0xc0)), frames - 1).services().getFirst().state());
+                if (row == frames + 1) {
                     return new Terminal(FIRST_FRAME + frames, frames, frames, frames, frames,
                             0, 0, 0, "a".repeat(64));
                 }
@@ -1482,6 +2057,13 @@ class TestCompleteRunAudioComparator {
         return new Frame(FIRST_FRAME + row, "test", false, List.of(), List.of());
     }
 
+    private static Frame bufferedFrame(int row, List<DriverService> semanticServices,
+            List<FrontierService> nativeServices, NativeManagedCorrelation... correlations) {
+        return new Frame(FIRST_FRAME + row, "test", false, List.of(), semanticServices, List.of(),
+                new FrameNativeDiagnostics(nativeServices, List.of(), List.of(), List.of(),
+                        List.of(correlations)));
+    }
+
     private static Frame requestFrame(int row, Request request) {
         return new Frame(FIRST_FRAME + row, "test", false, List.of(request), List.of());
     }
@@ -1568,7 +2150,7 @@ class TestCompleteRunAudioComparator {
 
     private static DriverService service(long ordinal, List<Decision> decisions, List<ChipEvent> chipEvents,
             NormalizedState state, String kind) {
-        return new DriverService(ordinal, kind, decisions, state, chipEvents);
+        return new DriverService(ordinal, kind, ServiceCompletion.COMPLETED, decisions, state, chipEvents);
     }
 
     private static NormalizedState state(int tempo) {
@@ -1601,6 +2183,7 @@ class TestCompleteRunAudioComparator {
 
     private static Terminal terminal(int exclusiveEnd, List<CompleteRunAudioTrace.Record> records) {
         long frames = 0, requests = 0, services = 0, decisions = 0, ym = 0, psg = 0, lifecycles = 0;
+        long cutoffActive = 0, cutoffPending = 0;
         for (CompleteRunAudioTrace.Record record : records) {
             if (record instanceof Frame frame) {
                 frames++;
@@ -1614,16 +2197,41 @@ class TestCompleteRunAudioComparator {
                 }
             } else if (record instanceof Lifecycle) {
                 lifecycles++;
+            } else if (record instanceof CutoffFrontier frontier) {
+                cutoffActive = frontier.activeStack().size();
+                cutoffPending = frontier.pendingDescendants().size();
             }
         }
         return new Terminal(exclusiveEnd, frames, requests, services, decisions, ym, psg, lifecycles,
-                root(records));
+                cutoffActive, cutoffPending, root(records), semanticRoot(records));
+    }
+
+    private static CutoffFrontier emptyFrontier(List<CompleteRunAudioTrace.Record> records) {
+        for (int index = records.size() - 1; index >= 0; index--) {
+            if (records.get(index) instanceof Frame frame && !frame.services().isEmpty()) {
+                return CutoffFrontier.empty(frame.services().getLast().state());
+            }
+            if (records.get(index) instanceof Baseline baseline) {
+                return CutoffFrontier.empty(baseline.state());
+            }
+        }
+        throw new IllegalArgumentException("capture records lack a state boundary");
     }
 
     private static String root(List<CompleteRunAudioTrace.Record> records) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            for (CompleteRunAudioTrace.Record record : records) update(digest, record);
+            for (CompleteRunAudioTrace.Record record : records) update(digest, record, false);
+            return HexFormat.of().formatHex(digest.digest());
+        } catch (Exception failure) {
+            throw new AssertionError(failure);
+        }
+    }
+
+    private static String semanticRoot(List<CompleteRunAudioTrace.Record> records) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            for (CompleteRunAudioTrace.Record record : records) update(digest, record, true);
             return HexFormat.of().formatHex(digest.digest());
         } catch (Exception failure) {
             throw new AssertionError(failure);
@@ -1631,7 +2239,14 @@ class TestCompleteRunAudioComparator {
     }
 
     private static void update(MessageDigest digest, CompleteRunAudioTrace.Record record) throws IOException {
-        digest.update((CompleteRunAudioJson.writeRecord(record) + "\n").getBytes(StandardCharsets.UTF_8));
+        update(digest, record, true);
+    }
+
+    private static void update(MessageDigest digest, CompleteRunAudioTrace.Record record, boolean semantic)
+            throws IOException {
+        digest.update(((semantic ? CompleteRunAudioJson.writeSemanticRecord(record)
+                : CompleteRunAudioJson.writeRecord(record)) + "\n")
+                .getBytes(StandardCharsets.UTF_8));
     }
 
     private static final class TestProfile implements CompleteRunAudioProfile {
@@ -1650,6 +2265,10 @@ class TestCompleteRunAudioComparator {
         private Map<String, LifecycleRule> lifecycleRules = Map.of(
                 "pulse", new LifecycleRule("pulse", List.of("payload"),
                         LifecycleOwnershipAction.NONE));
+        private CutoffFrontierPolicy cutoffPolicy = new CutoffFrontierPolicy(List.of(), 0, 0, 0, 0, 0,
+                0, 0, 0, false, "f".repeat(64), CutoffFrontierPolicy.capabilityDigest(
+                        CutoffFrontier.empty(new NormalizedState(List.of(), List.of()))), null);
+        private Map<ProducerKind, NativeCapabilitySummary> capabilities = Map.of();
 
         private TestProfile(String id, CompleteRunFixture fixture) {
             this.id = id;
@@ -1674,6 +2293,39 @@ class TestCompleteRunAudioComparator {
                             List.of(new CallbackProof("driver.service", 1))));
         }
 
+        private void useBufferedReference(FrontierServiceRule... serviceRules) {
+            EnumMap<RuntimeArtifact, String> hashes = new EnumMap<>(RuntimeArtifact.class);
+            for (RuntimeArtifact artifact : RuntimeArtifact.values()) {
+                if (artifact != RuntimeArtifact.BIZHAWK_OBSERVER_MANAGED_PATCH
+                        && artifact != RuntimeArtifact.BIZHAWK_OBSERVER_CORES_DLL
+                        && artifact != RuntimeArtifact.OPENGGF_PRODUCER) {
+                    hashes.put(artifact, "a".repeat(64));
+                }
+            }
+            runtimes.put(ProducerKind.REFERENCE, new ProducerRuntimeIdentity(
+                    "BizHawk", "2.11", "BizHawk", "2.11", "GPGX", "1.0",
+                    ManagedObserverAdapter.REFLECTION, hashes));
+            observerRuntimeIdentities.put(ProducerKind.REFERENCE, new BufferedNativeObserverIdentity(
+                    CompleteRunAudioProfiles.GPGX_AUDIO_TRACE_ABI_NAME,
+                    CompleteRunAudioProfiles.GPGX_AUDIO_TRACE_ABI_VERSION,
+                    CompleteRunAudioProfiles.GPGX_AUDIO_TRACE_EVENT_SIZE,
+                    CompleteRunAudioProfiles.GPGX_AUDIO_TRACE_CONFIG_SIZE,
+                    CompleteRunAudioProfiles.GPGX_AUDIO_TRACE_KIND_SIZE,
+                    CompleteRunAudioProfiles.GPGX_AUDIO_TRACE_HOOK_SIZE,
+                    CompleteRunAudioProfiles.GPGX_AUDIO_TRACE_RANGE_SIZE,
+                    CompleteRunAudioProfiles.GPGX_AUDIO_TRACE_CAPACITY,
+                    "bizhawk-2.11-gpgx-audio-observer-v2", "gpgx-audio-observer-v2",
+                    "0123456789abcdef", "a".repeat(64), "a".repeat(64), true, 1, 0));
+            CutoffNativeDiagnostics emptyNative = new CutoffNativeDiagnostics(List.of(), List.of(),
+                    List.of(), List.of(), 0, false, "f".repeat(64));
+            cutoffPolicy = new CutoffFrontierPolicy(List.of(serviceRules), 0, 0, 0, 0, 0,
+                    0, 0, 0, false, "f".repeat(64), CutoffFrontierPolicy.capabilityDigest(
+                            CutoffFrontier.empty(new NormalizedState(List.of(), List.of()))),
+                    CutoffFrontierPolicy.nativeCapabilityDigest(emptyNative));
+            capabilities = Map.of(ProducerKind.REFERENCE,
+                    new NativeCapabilitySummary(1, 1, "b".repeat(64), "c".repeat(64)));
+        }
+
         @Override public String id() { return id; }
         @Override public CompleteRunFixture fixture() { return fixture; }
         @Override public List<HardwareRole> hardwareRoles() { return hardwareRoles; }
@@ -1695,6 +2347,12 @@ class TestCompleteRunAudioComparator {
         }
         @Override public Map<ProducerKind, ObserverRuntimeIdentity> observerRuntimeIdentities() {
             return Map.copyOf(observerRuntimeIdentities);
+        }
+        @Override public CutoffFrontierPolicy cutoffFrontierPolicy() {
+            return cutoffPolicy;
+        }
+        @Override public Map<ProducerKind, NativeCapabilitySummary> completeRunCapabilities() {
+            return capabilities;
         }
         @Override public Map<NativeSoundIdentity, List<NativeSoundIdentity>> decisionResolutions() {
             NativeSoundIdentity c0 = new NativeSoundIdentity(OwnerClass.SFX, "sfx.c0", 0xc0);

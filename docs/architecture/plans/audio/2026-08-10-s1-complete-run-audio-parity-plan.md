@@ -24,13 +24,25 @@
 ### Task 1: S1 complete-run fixture and state profile
 
 **Files:**
+- Modify: `src/main/java/com/openggf/tools/audio/completerun/CompleteRunAudioProfile.java`
+- Modify: `src/main/java/com/openggf/tools/audio/completerun/CompleteRunAudioProfiles.java`
+- Modify: `src/main/java/com/openggf/tools/audio/completerun/CompleteRunAudioTrace.java`
 - Create: `src/main/java/com/openggf/tools/audio/completerun/s1/S1CompleteRunAudioProfile.java`
 - Create: `src/main/java/com/openggf/tools/audio/completerun/s1/S1CompleteRunStateNormalizer.java`
+- Modify: `src/test/java/com/openggf/tools/audio/completerun/TestCompleteRunAudioTrace.java`
+- Modify: `src/test/java/com/openggf/tools/audio/completerun/TestCompleteRunAudioCli.java`
 - Create: `src/test/java/com/openggf/tools/audio/completerun/s1/TestS1CompleteRunAudioFixture.java`
 - Create: `src/test/java/com/openggf/tools/audio/completerun/s1/TestS1CompleteRunStateNormalizer.java`
 
 **Interfaces:**
 - Produces: profile id `s1_rev01_complete_emeralds.v1` and strict S1 live/saved-state inventory.
+- The fixed profile class statically registers that exact immutable profile so
+  fresh production CLI JVMs can resolve it through the closed dispatcher.
+- Reserves the closed Task 9 dispatcher profile. Tasks 2 and 5 supply its fixed
+  reference and OpenGGF adapters only when their production capture owners exist.
+- Producer bindings are typed `UNAVAILABLE` or immutable `PINNED`; zero hashes and
+  synthetic placeholder identities are forbidden. Task 1 registers both bindings
+  unavailable, and validation/publication rejects them before metadata comparison.
 - Consumes: shared profile/model and existing `S1AudioStateNormalizer` field knowledge without importing GHZ recurrence constants.
 
 - [ ] **Step 1: Write failing fixture identity tests**
@@ -44,9 +56,25 @@ tail is 10,943 rows.
 
 Build one active-music/SFX state and one 1-up saved-state vector. Require roles
 `DAC,FM1,FM2,FM3,FM4,FM5,FM6,PSG1,PSG2,PSG3` in fixed order, pointer fields as
-asset key plus relative cursor, three queue slots, global priority, tempo/fade,
-`f_1up_playing`, and the complete saved music state. Mutate each field once and
-assert canonical bytes change.
+asset key plus relative cursor, and a fixed source-slot inventory: ten music,
+six normal-SFX, and two special-SFX slots may coexist even when they target the
+same hardware role. Derive effective hardware ownership separately; do not
+collapse or reject shadowed source slots. The saved `$220` projection contains
+exactly the ten music slots.
+
+Retain every future-affecting global in live and saved state: priority, main
+tempo/timeout, pause, explicit fade-out counter/delay, `v_sound_id`, three queue
+slots, normalized music/special voice pointers, explicit fade-in flag/delay/
+counter, `f_1up_playing`, tempo modifier, speed-up tempo/flag, ring-speaker and
+push latches. Track state additionally retains rest, tempo divider, note-fill
+timeout/master, full modulation cursor/wait/speed/delta/steps/value, and
+PSG-noise/FM-feedback-algorithm storage alongside the existing sequence/voice/frequency fields;
+canonical future state retains only the algorithm bits read by the driver, while chip snapshots
+own the current feedback setting.
+`f_updating_dac` and `f_voice_selector` may be omitted only with completed-
+service invariant assertions; communication and unused padding are omitted.
+Mutate each retained field once and assert canonical bytes change; mutations
+of live or saved inactive capacity must not change canonical bytes.
 
 - [ ] **Step 3: Run RED**
 
@@ -60,6 +88,8 @@ Register native S1 sound IDs without remapping. Normalize ROM pointers relative
 to their validated ROM-backed song/SFX asset and normalize engine positions
 from the same loader coordinates. Inactive tracks emit only role/hardware and
 `active=false`; saved inactive capacity never leaks stale bytes.
+Add fresh-JVM/dispatcher tests proving the registered profile resolves while both
+producer bindings remain unavailable and publication leaves no output.
 
 - [ ] **Step 5: Run GREEN and shared schema tests**
 
@@ -68,7 +98,12 @@ Run Step 3 plus `TestCompleteRunAudioTrace`. Expected: all pass.
 - [ ] **Step 6: Commit the S1 profile**
 
 ```bash
-git add src/main/java/com/openggf/tools/audio/completerun/s1 \
+git add src/main/java/com/openggf/tools/audio/completerun/CompleteRunAudioProfile.java \
+        src/main/java/com/openggf/tools/audio/completerun/CompleteRunAudioProfiles.java \
+        src/main/java/com/openggf/tools/audio/completerun/CompleteRunAudioTrace.java \
+        src/main/java/com/openggf/tools/audio/completerun/s1 \
+        src/test/java/com/openggf/tools/audio/completerun/TestCompleteRunAudioTrace.java \
+        src/test/java/com/openggf/tools/audio/completerun/TestCompleteRunAudioCli.java \
         src/test/java/com/openggf/tools/audio/completerun/s1
 git commit -m "feat(tools): define S1 complete-run audio profile"
 ```
@@ -76,6 +111,14 @@ git commit -m "feat(tools): define S1 complete-run audio profile"
 ### Task 2: Complete-run S1 reference observer
 
 **Files:**
+- Modify: `src/main/java/com/openggf/tools/audio/completerun/s1/S1CompleteRunAudioProfile.java`
+- Create: `src/main/java/com/openggf/tools/audio/completerun/s1/S1CompleteRunReferenceProducer.java`
+- Modify: `tools/bizhawk-headless/BizHawk.Headless.Gpgx.csproj`
+- Modify: `tools/bizhawk-headless/BizHawk.Headless.Gpgx.Tests.csproj`
+- Modify: `tools/bizhawk-headless/src/Program.cs`
+- Create: `tools/bizhawk-headless/src/Audio/S1CompleteRunAudioReferenceCapture.cs`
+- Create: `tools/bizhawk-headless/tests/S1CompleteRunAudioReferenceCaptureTests.cs`
+- Create: `tools/bizhawk-headless/fixtures/s1-audio-service-manifest-v1.json`
 - Create: `tools/bizhawk/audio/s1_complete_run_audio_contract.lua`
 - Create: `tools/bizhawk/audio/s1_complete_run_audio_contract_test.lua`
 - Create: `tools/bizhawk/probes/s1_complete_run_audio_probe.lua`
@@ -83,8 +126,22 @@ git commit -m "feat(tools): define S1 complete-run audio profile"
 - Create: `src/test/java/com/openggf/tools/audio/completerun/s1/TestS1CompleteRunProbeContract.java`
 
 **Interfaces:**
-- Produces: raw canonical staging records for frames 860–225100.
-- Consumes: verified `probe_runtime.lua` callbacks and the shared Java publisher.
+- Produces: a bounded typed raw stream from the fixed headless executable,
+  then canonical Java store records for frames 860–225100.
+- Consumes: verified `probe_runtime.lua` callbacks, the exact Task 7 buffered
+  observer bridge for typed Z80 DAC services, and the shared Java publisher.
+- Atomically replaces the S1 reference binding from `UNAVAILABLE` with immutable
+  `PINNED`, using the actual fixed producer class/artifact hashes; the OpenGGF
+  binding remains unavailable. The same evidence pass replaces Task 1's
+  publication-inert baseline-owner/cutoff policy with the actual row-860
+  baseline and row-225101 canonical cutoff literals. A fresh-JVM bootstrap
+  test proves that exact state; no capture validates against invented bootstrap
+  values.
+- The fixed C# production mode owns one GPGX execution and combines reviewed
+  M68K execute callbacks with the buffered native observer. Lua remains the
+  pure source/contract proof; it is not a second emulator pass and cannot
+  supply asynchronous Z80 DAC writes. Use a separate pinned S1 manifest so the
+  reviewed S2/S3K Task 8 capability fixture and manifest hash do not roll.
 
 - [ ] **Step 1: Write RED Lua lifecycle and priority cases**
 
@@ -92,7 +149,13 @@ The pure Lua harness must cover queue writes consumed on a later service,
 duplicate IDs, deferred queue0, lower/equal priority, normal/special SFX,
 stop-all, death/restart, act transitions, multiple services in one frame, zero
 services, and 1-up save/block/restore. Encode the real 3698/3699/3702/3910
-oracle as a contract fixture.
+oracle as a contract fixture. Prove the shipped `FixBugs=0` queue trigger:
+queue2 alone does not invoke `CycleSoundQueue`, while queue2 participates in
+source order when queue0 or queue1 triggers the cycle.
+Distinguish the blocked paths: normal SFX tests at `$721C6/$721CA` (and fade
+tests `$721D6/$721DA`) converge at `$722C6` and clear global priority; special
+SFX tests at `$7230C/$72310` (fade `$7231C/$72320`) return at `$723C6` without
+clearing it. Prove both during `$88` and its 40-step restore fade.
 
 ```lua
 local oneup = contract.newPriorityModel()
@@ -114,16 +177,46 @@ mvn -Dmse=off -Dtest='com.openggf.tools.audio.completerun.s1.TestS1CompleteRunLu
 Port the proven request correlation and YM decoder, but remove GHZ `$81`
 arming, cycle convergence, one-tick-per-frame, and `[860,4975)` assumptions.
 Explicitly model the abnormal-return sites already verified by the GHZ1 probe.
-Every hook has exact REV01 opcode bytes and a source label.
+Every hook has exact REV01 opcode bytes and a source label. Give `$E1`
+`PlaySegaSound` an explicit service outcome: prove it is outside the armed
+epoch for the pinned movie, or emit its abnormal close rather than silently
+abandoning an open service. Do not inherit the GHZ probe's hardcoded six-role
+music ownership: hook the real `$72098` FM/DAC and `$72126` PSG track-load
+loops and derive ownership from each song header. The complete movie includes
+7-FM/DAC songs `$89/$93`, zero-PSG song `$92`, and 6-FM/DAC `$87/$88`.
+The M68K `DACUpdateTrack` writes sample IDs to ZRAM; asynchronous Z80 `$2A`
+data writes belong to typed native DAC services. Consume and validate those
+Task 7 events directly, and remove the GHZ-only assumption that every bus
+write occurs inside the M68K `UpdateMusic` callback. Model accepted-sample
+setup from `$003A`: it owns the DAC-enable writes at `$0066/$006F` and tails
+atomically into DPCM at `$0077` or SEGA PCM at `$00C1`; beginning only at the
+format loop leaves the physical setup pair orphaned. Prove zero orphan,
+opcode-mismatch, and overflow events across the complete interval.
 
 - [ ] **Step 4: Implement the read-only full-run probe**
 
-Arm only when row 860 is about to be consumed, sample the baseline first, and
-close at row 225100. Record requests at queue writes, decisions at actual
+Configure and drain the native observer from power-on. Discard pre-epoch
+publication while retaining its bounded service stack, pending descendants,
+YM latches, and arm state. Use the fixed ABI-v2 prepublication flag so those
+fully validated/drained frames do not consume continuation ages. Immediately
+before row 860, at an empty drained READY boundary, invoke the one-shot native
+publication transition; preserve tokens/stack/arm/latches, reset only carried
+continuation ages and host publication coordinates/inventories, and reject a
+duplicate or faulted/in-frame transition. Then emit the mandatory
+baseline `BoundaryFrontier`; mark every crossing service explicitly
+`CARRIED_IN_OPEN`, retain its true native begin proof only in the reference
+sidecar, and restart published coordinates/chip inventories so the carried
+service owns the first row-860 write and closes normally. Sample the normalized
+baseline state at that boundary and close at row 225100. Record requests at queue writes, decisions at actual
 dispatch, complete service state/writes at lifecycle close, and transition-gap
 frames even when they contain no service. Reject unbracketed post-arm closes,
 callback contamination, speed-up/fade lifecycle contradictions, missing rows,
 and missing terminal.
+
+The production C# runner emits a bounded, strictly typed raw stream; the fixed
+Java producer validates it and writes `CompleteRunAudioCaptureStore`. Do not
+teach C# to synthesize Java's canonical store or run Lua and native capture in
+separate emulation passes.
 
 - [ ] **Step 5: Run Lua and Java GREEN**
 
@@ -141,6 +234,14 @@ the strict Java reader, not `jq` alone.
 git add tools/bizhawk/audio/s1_complete_run_audio_contract.lua \
         tools/bizhawk/audio/s1_complete_run_audio_contract_test.lua \
         tools/bizhawk/probes/s1_complete_run_audio_probe.lua \
+        tools/bizhawk-headless/BizHawk.Headless.Gpgx.csproj \
+        tools/bizhawk-headless/BizHawk.Headless.Gpgx.Tests.csproj \
+        tools/bizhawk-headless/src/Program.cs \
+        tools/bizhawk-headless/src/Audio/S1CompleteRunAudioReferenceCapture.cs \
+        tools/bizhawk-headless/tests/S1CompleteRunAudioReferenceCaptureTests.cs \
+        tools/bizhawk-headless/fixtures/s1-audio-service-manifest-v1.json \
+        src/main/java/com/openggf/tools/audio/completerun/s1/S1CompleteRunAudioProfile.java \
+        src/main/java/com/openggf/tools/audio/completerun/s1/S1CompleteRunReferenceProducer.java \
         src/test/java/com/openggf/tools/audio/completerun/s1
 git commit -m "feat(tools): observe complete S1 gameplay audio"
 ```
@@ -215,15 +316,27 @@ git commit -m "fix(audio): consume S1 requests at driver service boundaries"
 
 Start `$87` plus FM/PSG SFX, retain `driver.synthesizerForTesting()` identity,
 start `$88`, request SFX while blocked, finish the jingle, and restore. Assert
-the exact same driver and synth objects throughout, all SFX removed, blocked
-requests rejected, and saved music tracks restored.
+the exact same driver and synth objects throughout, the six normal-SFX tracks
+(FM3/FM4/FM5/PSG1/PSG2/PSG3) removed, the two special-SFX tracks preserved and
+applied as FM4/PSG3 overrides to the jingle at `$72182/$7218E`, blocked normal and special-SFX requests
+rejected with their distinct priority side effects (normal clears priority;
+special preserves it), both during the jingle and 40-step fade, and
+saved music tracks restored. Do not synthesize special override bits on the
+restored `$87`: `$71FE6` cleared music override bits before the save, so later
+driver updates and `cfStopSpecial` own the post-restore ordering.
 
 - [ ] **Step 2: Write failing ordered-write regression**
 
 Use `ChipWriteObserver` to assert the ROM sequence: SFX stop/key-off, jingle
 voice/note writes on the same chip, restore active FM voices, PSG note-offs,
-then 40-step fade. Assert there is no constructor silence/reset burst and no
-`refreshAllVoices()` approximation. Include the `FixBugs=0` FM6/DAC behavior.
+then 40-step fade. Pin the exact ordered writes/counts of the one ROM-authentic
+`InitMusicPlayback` `FMSilenceAll`/`PSGSilenceAll` sequence on that existing
+chip, and reject only an additional constructor/host reset or silence burst.
+Assert there is no `refreshAllVoices()` approximation. Include the
+`FixBugs=0` FM6/DAC behavior. Keep the mandatory real `$87 -> $88 -> $87`
+frame-3698..3910 oracle for the DAC/fade omission, and add an independent
+7-FM/DAC `$89` or `$93 -> $88 -> restore` vector: `$87` has no FM6 and cannot
+prove the shipped omission of the bug-fixed `$2B=0` write at `$72B24`.
 
 - [ ] **Step 3: Run RED**
 
@@ -234,7 +347,9 @@ mvn -Dmse=off -Dtest='com.openggf.audio.driver.TestS1TemporaryMusicState,com.ope
 - [ ] **Step 4: Implement temporary music inside the live driver**
 
 Snapshot only the source-equivalent global/music-track state and ROM-backed
-dependencies. Remove active SFX, retain one `VirtualSynthesizer`, install the
+dependencies. Remove the six normal-SFX tracks while preserving the two
+special-SFX tracks; apply their FM4/PSG3 overrides only to the jingle as the
+ROM does, and do not synthesize them on restored music; retain one `VirtualSynthesizer`, install the
 jingle music sequencer into that driver, and restore the saved music sequencer
 state on the coord-flag boundary. Keep rewind snapshots deterministic and
 capture the saved temporary state explicitly.
@@ -260,14 +375,19 @@ git commit -m "fix(audio): preserve one chip across S1 extra-life music"
 ### Task 5: Natural S1 complete-run OpenGGF producer
 
 **Files:**
-- Create: `src/test/java/com/openggf/tools/audio/completerun/s1/S1CompleteRunOpenGgfCapture.java`
+- Modify: `src/main/java/com/openggf/tools/audio/completerun/s1/S1CompleteRunAudioProfile.java`
+- Create: `src/main/java/com/openggf/tools/audio/completerun/s1/S1CompleteRunOpenGgfCapture.java`
+- Create: `src/main/java/com/openggf/tools/audio/completerun/s1/S1CompleteRunOpenGgfProducer.java`
 - Create: `src/test/java/com/openggf/tools/audio/completerun/s1/TestS1CompleteRunOpenGgfCapture.java`
+- Create: `src/test/java/com/openggf/tools/audio/completerun/s1/TestS1CompleteRunPublication.java`
 - Create: `tools/audio/run_s1_complete_audio_parity.sh`
-- Modify: `src/main/java/com/openggf/tools/audio/completerun/CompleteRunAudioProfiles.java`
 
 **Interfaces:**
 - Produces: validated S1 OpenGGF capture directory from only run path, ROM property, and output path.
 - Consumes: natural complete-run replay, Task 1 normalizer, and pre-construction observers.
+- Atomically replaces the S1 OpenGGF binding from `UNAVAILABLE` with immutable
+  `PINNED`, using the actual fixed producer class/artifact hashes. Publication is
+  enabled only after both closed bindings are pinned and fresh-JVM verified.
 
 - [ ] **Step 1: Write failing producer isolation tests**
 
@@ -299,8 +419,10 @@ and all six roles restore to `$87`.
 - [ ] **Step 5: Commit the S1 producer and runner**
 
 ```bash
-git add src/test/java/com/openggf/tools/audio/completerun/s1 \
-        src/main/java/com/openggf/tools/audio/completerun/CompleteRunAudioProfiles.java \
+git add src/main/java/com/openggf/tools/audio/completerun/s1/S1CompleteRunOpenGgfCapture.java \
+        src/main/java/com/openggf/tools/audio/completerun/s1/S1CompleteRunOpenGgfProducer.java \
+        src/main/java/com/openggf/tools/audio/completerun/s1/S1CompleteRunAudioProfile.java \
+        src/test/java/com/openggf/tools/audio/completerun/s1 \
         tools/audio/run_s1_complete_audio_parity.sh
 git commit -m "feat(tools): capture natural S1 complete-run audio"
 ```

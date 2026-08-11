@@ -45,7 +45,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(
                 "openggf.gpgx-audio-observer-artifact-lock.v1",
                 (string)artifact["schema"]);
-            AssertEx.Equal(1, (int)artifact["abi"]["version"]);
+            AssertEx.Equal(2, (int)artifact["abi"]["version"]);
             AssertEx.Equal(64, (int)artifact["abi"]["config_size"]);
             AssertEx.Equal(16, (int)artifact["abi"]["kind_size"]);
             AssertEx.Equal(32, (int)artifact["abi"]["hook_size"]);
@@ -53,8 +53,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(32, (int)artifact["abi"]["event_size"]);
             AssertEx.Equal(65536, (int)artifact["abi"]["capacity"]);
             AssertEx.Equal("little-endian", (string)artifact["abi"]["byte_order"]);
-            AssertEx.Equal(41718744, (int)artifact["core"]["decompressed_size"]);
-            AssertEx.Equal(409653, (int)artifact["core"]["compressed_size"]);
+            AssertEx.Equal(41731544, (int)artifact["core"]["decompressed_size"]);
+            AssertEx.Equal(412363, (int)artifact["core"]["compressed_size"]);
             AssertEx.Equal(32, (int)artifact["core"]["invis_alignment"]);
         }
 
@@ -80,15 +80,24 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal((string)artifact["native_patch"]["sha256"], Sha256(patchPath));
             AssertEx.Equal((string)artifact["build_recipe"]["sha256"], Sha256(Path.Combine(root, "task7-build-recipe.json")));
             AssertEx.Equal(Sha256(Path.Combine(root, "build-core.sh")), (string)recipe["versioned_inputs"]["build-core.sh"]);
-            AssertEx.Equal(true, patch.Contains("gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_Z80, PCD);"));
-            AssertEx.Equal(true, patch.Contains("gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_M68K, REG_PC);"));
+            AssertEx.Equal(true, patch.Contains(
+                "GPGX_AUDIO_TRACE_INSTRUCTION_ENABLED(GPGX_AUDIO_TRACE_CPU_Z80, PCD);"));
+            AssertEx.Equal(true, patch.Contains(
+                "GPGX_AUDIO_TRACE_INSTRUCTION_ENABLED(GPGX_AUDIO_TRACE_CPU_M68K, REG_PC);"));
             AssertEx.Equal(true, patch.Contains("GPGX_AUDIO_TRACE_INSTRUCTION(GPGX_AUDIO_TRACE_CPU_M68K, REG_PC)"));
             AssertEx.Equal(true, patch.Contains("static void (*fm_write_impl)"));
             AssertEx.Equal(true, patch.Contains("gpgx_audio_trace_fm_write(address, data)"));
             AssertEx.Equal(true, patch.Contains("gpgx_audio_trace_psg_write(data)"));
             AssertEx.Equal(true, patch.Contains("gpgx_audio_trace_reset_begin"));
+            AssertEx.Equal(true, patch.Contains("HOOK_ARM_Z80_PROOFS_ON_COMPLETION"));
+            AssertEx.Equal(true, patch.Contains("trace_z80_proofs_armed"));
             AssertEx.Equal(true, patch.Contains("ECL_INVISIBLE static struct gpgx_audio_trace_event"));
             AssertEx.Equal(true, patch.Contains("STATIC_ASSERT(event_size"));
+            AssertEx.Equal(null, artifact["managed_reflection"]["host_source_sha256"]);
+            AssertEx.Equal(null, recipe["managed_reflection_inputs"]["host_source_sha256"]);
+            AssertEx.Equal(Sha256(Path.Combine(EndToEndTests.ToolDirectory,
+                "src/Core/GpgxHost.AudioObserver.cs")),
+                (string)artifact["managed_reflection"]["host_bridge_source_sha256"]);
         }
 
         private static void ReproducesAndInstallsTwice()
@@ -224,7 +233,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         System.Threading.Thread.Sleep(2);
                     }
                     AssertEx.Equal(true, stageSource != null);
-                    File.AppendAllText(Path.Combine(racedBuild, "GpgxHost.cs"), "\n// concurrent mutation\n");
+                    File.AppendAllText(Path.Combine(racedBuild, "GpgxHost.AudioObserver.cs"), "\n// concurrent mutation\n");
                     string stdout = process.StandardOutput.ReadToEnd();
                     string stderr = process.StandardError.ReadToEnd();
                     process.WaitForExit();
@@ -265,7 +274,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     "artifact-lock.json", "task7-build-recipe.json", "build-core.sh", "install-core.sh",
                     "native-selftest.log", "elf-proof.txt", "callgraph-proof.txt", "build.log",
                     "BizHawk-LICENSE", "GPGX-LICENSE.txt", "musl-COPYRIGHT", "zstd-LICENSE",
-                    "GpgxAudioObserverAdapter.cs", "GpgxHost.cs" })
+                    "GpgxAudioObserverAdapter.cs", "GpgxHost.AudioObserver.cs" })
                 {
                     AssertEx.Equal(true, File.Exists(Path.Combine(evidence, file)));
                 }

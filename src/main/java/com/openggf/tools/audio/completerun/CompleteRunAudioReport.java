@@ -45,13 +45,14 @@ public final class CompleteRunAudioReport {
         LIFECYCLE_EXTRA,
         LIFECYCLE_ORDER,
         LIFECYCLE_VALUE,
+        CUTOFF_FRONTIER_VALUE,
         TERMINAL_COUNT,
         TERMINAL_DIGEST
     }
 
     public enum Side { REFERENCE, ENGINE }
 
-    /** Actual compressed publication artifact, including its resolved filesystem identity. */
+    /** Stable content identity; transient paths and inode keys remain internal validation evidence. */
     public record ChunkIdentity(String file, String compressedSha256, String realPath,
             String fileKey) {
         public ChunkIdentity {

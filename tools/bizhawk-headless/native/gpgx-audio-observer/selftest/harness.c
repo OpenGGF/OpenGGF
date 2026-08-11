@@ -7,6 +7,8 @@
 
 struct selftest_m68k m68k;
 uint8_t zram[0x2000];
+uint8_t work_ram[0x10000];
+uint32_t selftest_m68k_a7;
 
 static void watch(uint8_t *mask, unsigned pc) { mask[pc >> 3] |= 1u << (pc & 7); }
 
@@ -58,9 +60,12 @@ int main(void)
   for (unsigned i=0;i<count;i++) assert(events[i].ordinal==i);
   assert(gpgx_audio_trace_begin_frame()==0 && gpgx_audio_trace_end_frame()==0);
   gpgx_audio_trace_reset_begin(0);
-  assert(gpgx_audio_trace_event_count(&count,&overflow)==-2);
-  assert(gpgx_audio_trace_drain(events,32,&drained)==-2);
-  assert(gpgx_audio_trace_abort_frame()==0);
-  puts("native-observer-selftest: 12 ordered nested events; scoped CPU PCs; READY reset fail-closed");
+  assert(gpgx_audio_trace_event_count(&count,&overflow)==-3);
+  assert(gpgx_audio_trace_drain(events,32,&drained)==-3);
+  assert(gpgx_audio_trace_abort_frame()==-3);
+  assert(gpgx_audio_trace_abi_version()==2 && gpgx_audio_trace_event_size()==32
+    && gpgx_audio_trace_capacity()==65536);
+  assert(gpgx_audio_trace_disable()==0);
+  puts("native-observer-selftest: 12 ordered nested events; scoped CPU PCs; READY reset sticky fail-closed");
   return 0;
 }

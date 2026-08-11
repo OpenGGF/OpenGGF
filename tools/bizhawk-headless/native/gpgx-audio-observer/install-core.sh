@@ -72,7 +72,7 @@ done
 for file in gpgx.wbx gpgx.wbx.zst source-bundle.tar source-bundle.tar.zst source-bundle.paths \
   source-bundle.path-modes identity.json build.log BizHawk-LICENSE GPGX-LICENSE.txt \
   musl-COPYRIGHT zstd-LICENSE native-selftest.log elf-proof.txt callgraph-proof.txt \
-  GpgxAudioObserverAdapter.cs GpgxHost.cs; do
+  GpgxAudioObserverAdapter.cs GpgxHost.AudioObserver.cs; do
   [[ -e "$build/$file" || -L "$build/$file" ]] || fail "build output missing $file"
   [[ -f "$build/$file" && ! -L "$build/$file" \
     && "$(/usr/bin/stat -c %h "$build/$file")" = 1 ]] || fail "build output is not a private regular file: $file"
@@ -109,7 +109,7 @@ for tuple in \
   "elf-proof.txt:elf_proof.sha256" \
   "callgraph-proof.txt:callgraph_proof.sha256" \
   "GpgxAudioObserverAdapter.cs:managed_reflection.adapter_source_sha256" \
-  "GpgxHost.cs:managed_reflection.host_source_sha256" \
+  "GpgxHost.AudioObserver.cs:managed_reflection.host_bridge_source_sha256" \
   "BizHawk-LICENSE:notices.bizhawk_license_sha256" \
   "GPGX-LICENSE.txt:notices.gpgx_license_sha256" "musl-COPYRIGHT:notices.musl_copyright_sha256" \
   "zstd-LICENSE:notices.zstd_license_sha256"; do
@@ -154,7 +154,7 @@ validate_plain_tree "$stage" staged-stock || fail "staged stock tree is unsafe"
   "$build/musl-COPYRIGHT" "$build/zstd-LICENSE" "$build/native-selftest.log" \
   "$build/elf-proof.txt" \
   "$build/callgraph-proof.txt" \
-  "$build/GpgxAudioObserverAdapter.cs" "$build/GpgxHost.cs" \
+  "$build/GpgxAudioObserverAdapter.cs" "$build/GpgxHost.AudioObserver.cs" \
   "$stage/gpgx-audio-observer-source/"
 /usr/bin/cp -a -- "$build/llvm-debian-notices" "$stage/gpgx-audio-observer-source/"
 validate_notice_tree "$stage/gpgx-audio-observer-source/llvm-debian-notices" \
@@ -205,7 +205,7 @@ for tuple in \
   "native-selftest.log:native_selftest.log_sha256" "elf-proof.txt:elf_proof.sha256" \
   "callgraph-proof.txt:callgraph_proof.sha256" \
   "GpgxAudioObserverAdapter.cs:managed_reflection.adapter_source_sha256" \
-  "GpgxHost.cs:managed_reflection.host_source_sha256" \
+  "GpgxHost.AudioObserver.cs:managed_reflection.host_bridge_source_sha256" \
   "BizHawk-LICENSE:notices.bizhawk_license_sha256" \
   "GPGX-LICENSE.txt:notices.gpgx_license_sha256" \
   "musl-COPYRIGHT:notices.musl_copyright_sha256" \

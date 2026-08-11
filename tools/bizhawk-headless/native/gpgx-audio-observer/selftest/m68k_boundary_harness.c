@@ -6,6 +6,7 @@
 #include "audio_trace.h"
 
 uint8_t zram[0x2000];
+uint8_t work_ram[0x10000];
 static uint8_t page0[0x10000];
 static unsigned int writes;
 static unsigned int invoke_irq_delay;

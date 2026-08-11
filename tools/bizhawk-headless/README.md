@@ -310,6 +310,41 @@ pre-publication gate failure as a defect in the recorder or its proposed
 contract, never as a reason to relax the comparison or silently replace a
 fixture.
 
+## S2/S3K native audio observer gates
+
+Task 8 uses a separately installed, exact-hash Task 7 GPGX core. Supply the
+reviewed ROMs and complete BK2s by absolute path; the capability fixture rejects
+the wrong movie name, SHA-256, or row count before opening the core.
+
+```bash
+export BIZHAWK_HOME=/absolute/task7-observer-install
+export OPENGGF_GPGX_Z80_CAPABILITY=1
+export S2_ROM_PATH=/absolute/sonic2-rev01.gen
+export S2_BK2_PATH=/absolute/sonic-2-sonic-tails-complete-emeralds.bk2
+export S3K_ROM_PATH=/absolute/sonic3k-locked-on.gen
+export S3K_BK2_PATH=/absolute/s3k-knuckles-complete-superemeralds.bk2
+tools/bizhawk-headless/test.sh --filter GpgxZ80AudioCapabilityTests --jobs 1
+```
+
+Add `OPENGGF_GPGX_Z80_PERFORMANCE=1` for the bounded three-lane performance
+gate, or `OPENGGF_GPGX_Z80_FULL_RUN=1` for duplicate complete-movie event
+digests. These gates stream aggregates only. They do not publish ROM, movie,
+core, or reconstructive event payloads.
+
+The streaming `CaptureFrame(..., consumer)` overload validates and projects the
+frame transactionally while reusing its exact-count drain buffer; it does not
+retain a `LastCapture`. Call `CaptureCanonicalFrame(...)` when the immutable raw
+events, begin-ordered services, snapshots, reset lifecycle, and projected chip
+writes must remain available after the synchronous consumer boundary.
+
+At a complete-movie cutoff, call `CaptureCutoffFrontier()` before cleanup. The
+immutable frontier preserves the outer-to-inner open stack, completed
+descendants withheld in global begin order, their exact owned chip/snapshot
+data, YM latches, and arm epoch. Record the normalized terminal Z80 state with
+it, then call the internal cutoff cleanup. Task 9 must serialize this as a
+canonical store/comparator record; `DiscardCutoffState()` is cleanup only and
+must never stand in for terminal semantic publication.
+
 ## Specs
 
 `docs/` holds the byte-level porting contracts — RAM maps, format strings,

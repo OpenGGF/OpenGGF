@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Tooling: require a canonical cutoff-frontier record in every complete-run
+  audio capture, preserving open and withheld service ownership at arbitrary
+  movie cutoffs. Add create-new duplicate-gated orchestration with strict
+  validation, fixed exit classes, sanitized producer environments, and atomic
+  report publication.
 - Tooling: add a deterministic, separately installed BizHawk 2.11 GPGX audio
   observer core. Its bounded native ABI records nested driver-service, FM, PSG,
   reset, and synchronous Z80-RAM snapshot events without changing emulated

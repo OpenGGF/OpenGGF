@@ -60,7 +60,14 @@
     <Compile Include="src/Bk2/Bk2Frame.cs" />
     <Compile Include="src/Bk2/Bk2Movie.cs" />
     <Compile Include="src/Bk2/Bk2Reader.cs" />
+    <Compile Include="src/Audio/IGpgxAudioTraceApi.cs" />
+    <Compile Include="src/Audio/GpgxAudioTraceNative.cs" />
+    <Compile Include="src/Audio/GpgxAudioServiceManifest.cs" />
+    <Compile Include="src/Audio/GpgxAudioTraceEvent.cs" />
+    <Compile Include="src/Audio/CompleteRunAudioObserver.cs" />
+    <Compile Include="src/Audio/S1CompleteRunAudioReferenceCapture.cs" />
     <Compile Include="src/Core/GpgxHost.cs" />
+    <Compile Include="src/Core/GpgxHost.AudioObserver.cs" />
     <Compile Include="src/Core/GpgxAudioObserverAdapter.cs" />
     <Compile Include="src/Core/IGpgxHost.cs" />
     <Compile Include="src/Core/IMainRamWriter.cs" />
@@ -128,7 +135,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="fixtures/*.txt" />
-    <None Include="fixtures/*.json" />
+    <Content Include="fixtures/*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)/Microsoft.CSharp.targets" />
 </Project>

@@ -1,13 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using BizHawk.Emulation.Common;
 using BizHawk.Emulation.Cores;
 using BizHawk.Emulation.Cores.Consoles.Sega.gpgx;
 
 namespace OpenGGF.BizHawk.Headless
 {
-    public sealed class GpgxHost : IGpgxHost, ICpuRegisterReader, IMainRamWriter
+    public sealed partial class GpgxHost : IGpgxHost, ICpuRegisterReader, IMainRamWriter
     {
         private readonly GPGX core;
         private readonly MutableController controller;
@@ -15,11 +16,15 @@ namespace OpenGGF.BizHawk.Headless
         private readonly MemoryDomain z80Ram;
         private readonly IMemoryCallbackSystem memoryCallbacks;
         private readonly IDebuggable debugger;
+        private readonly IVideoProvider videoProvider;
+        private readonly ISoundProvider soundProvider;
         private readonly List<ExecuteCallbackRegistration>
             executeCallbackRegistrations =
                 new List<ExecuteCallbackRegistration>();
         private Exception pendingExecuteCallbackException;
         private bool disposed;
+        internal int LastCheckpointVideoLength { get; private set; }
+        internal int LastCheckpointAudioFrames { get; private set; }
 
         private GpgxHost(GPGX core)
         {
@@ -54,6 +59,8 @@ namespace OpenGGF.BizHawk.Headless
             }
             debugger =
                 core.ServiceProvider.GetService<IDebuggable>();
+            videoProvider = core.ServiceProvider.GetService<IVideoProvider>();
+            soundProvider = core.ServiceProvider.GetService<ISoundProvider>();
             if (debugger == null
                 || !debugger.MemoryCallbacks.ExecuteCallbacksAvailable)
             {
@@ -104,10 +111,10 @@ namespace OpenGGF.BizHawk.Headless
             get { return mainRam.Size; }
         }
 
-        internal GpgxAudioObserverAdapter CreateAudioObserverAdapter()
+        internal IGpgxAudioTraceApi CreateAudioTraceApi()
         {
             if (disposed) throw new ObjectDisposedException("GpgxHost");
-            return new GpgxAudioObserverAdapter(core);
+            return new GpgxAudioTraceNative(new GpgxAudioObserverAdapter(core));
         }
 
         internal byte[] CloneSavestate()
@@ -122,10 +129,41 @@ namespace OpenGGF.BizHawk.Headless
             return z80Ram.PeekByte(offset);
         }
 
+        internal byte[] CaptureDeterministicCheckpoint()
+        {
+            if (disposed) throw new ObjectDisposedException("GpgxHost");
+            using (var stream = new MemoryStream())
+            using (var writer = new BinaryWriter(stream))
+            {
+                writer.Write(core.Frame); writer.Write(IsLagged); writer.Write(LagCount);
+                for (long i = 0; i < mainRam.Size; i++) writer.Write(mainRam.PeekByte(i));
+                for (long i = 0; i < z80Ram.Size; i++) writer.Write(z80Ram.PeekByte(i));
+                foreach (var register in debugger.GetCpuFlagsAndRegisters().OrderBy(x => x.Key, StringComparer.Ordinal))
+                { writer.Write(register.Key); writer.Write(register.Value.Value); }
+                int[] video = videoProvider.GetVideoBuffer();
+                LastCheckpointVideoLength = video.Length;
+                writer.Write(video.Length); for (int i = 0; i < video.Length; i++) writer.Write(video[i]);
+                short[] samples; int count; soundProvider.GetSamplesSync(out samples, out count);
+                LastCheckpointAudioFrames = count;
+                writer.Write(count); for (int i = 0; i < count * 2; i++) writer.Write(samples[i]);
+                writer.Flush(); return stream.ToArray();
+            }
+        }
+
         internal void LoadSavestate(byte[] state)
         {
             if (disposed) throw new ObjectDisposedException("GpgxHost");
             ((IStatable)core).LoadStateBinary(state);
+            soundProvider.DiscardSamples();
+        }
+
+        internal void LoadSavestate(byte[] state, CompleteRunAudioObserver observer,
+            CompleteRunAudioObserver.Checkpoint checkpoint)
+        {
+            if (observer == null) throw new ArgumentNullException("observer");
+            observer.ValidateCheckpoint(checkpoint);
+            LoadSavestate(state);
+            observer.ApplyCheckpoint(checkpoint);
         }
 
         public static GpgxHost Open(
@@ -148,9 +186,7 @@ namespace OpenGGF.BizHawk.Headless
             string romSha1 = RomIdentity.ComputeSha1(romBytes);
             var game = new GameInfo
             {
-                Name = traceGame == "s2"
-                    ? "Sonic The Hedgehog 2"
-                    : "Sonic The Hedgehog",
+                Name = ResolveManagedGameName(traceGame),
                 System = VSystemID.Raw.GEN,
                 Hash = romSha1
             };
@@ -171,6 +207,14 @@ namespace OpenGGF.BizHawk.Headless
                     DeterministicEmulationRequested = true
                 });
             return new GpgxHost(core);
+        }
+
+        internal static string ResolveManagedGameName(string traceGame)
+        {
+            if (traceGame == "s1") return "Sonic The Hedgehog";
+            if (traceGame == "s2") return "Sonic The Hedgehog 2";
+            if (traceGame == "s3k") return "Sonic 3 & Knuckles";
+            throw new InvalidOperationException("Unsupported trace game identity: " + traceGame);
         }
 
         public static GPGX.GPGXSyncSettings CreateGhz1SyncSettings()

@@ -216,6 +216,13 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Sonic 2/Sonic 3&K source-owned audio parity observer (2026-08-11):** a
+  reproducible, separately installed BizHawk 2.11 GPGX observer now records
+  ordered Z80 service, YM2612, PSG, DAC, DPCM, and SEGA-PCM ownership from
+  reviewed disassembly boundaries. Exact movie/hash gates, Reset/Power reupload,
+  savestate epochs, stock/disabled/enabled identity, bounded performance, and
+  duplicate complete S2 and S3K runs are locked without shipping ROMs or native
+  binaries in the repository.
 - **Sonic 1 GHZ1 gameplay-audio causal timeline (2026-08-09):** the pinned
   complete-game replay now records raw caller/ROM queue requests separately
   from resolved driver/presentation admissions. Both producers agree on the

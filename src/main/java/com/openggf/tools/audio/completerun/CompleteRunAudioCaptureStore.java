@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.Baseline;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.CaptureCounts;
+import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.CutoffFrontier;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.Frame;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.Lifecycle;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.Metadata;
@@ -17,6 +18,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.security.DigestInputStream;
@@ -26,6 +28,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HexFormat;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -36,6 +39,8 @@ import java.util.zip.GZIPOutputStream;
 
 /** Strict bounded storage and create-new publication for complete-run audio captures. */
 public final class CompleteRunAudioCaptureStore {
+    private static final int MAX_RECORD_CHARACTERS = 16 * 1024 * 1024;
+    private static final long MAX_MANIFEST_BYTES = 4L * 1024 * 1024;
     /** Largest pinned complete-run epoch (S3K) fits 107 chunks; reserve 128, never buffer more. */
     static final int MAX_CAPTURE_CHUNKS = 128;
     private final PublicationLinker publicationLinker;
@@ -63,6 +68,11 @@ public final class CompleteRunAudioCaptureStore {
     }
 
     public Writer writeNew(Path output, Metadata metadata) throws IOException {
+        Objects.requireNonNull(metadata, "metadata");
+        if ((long) metadata.fixture().exclusiveEnd() - metadata.fixture().firstFrame()
+                > (long) MAX_CAPTURE_CHUNKS * CompleteRunAudioTrace.CHUNK_FRAME_ROWS) {
+            throw new IllegalArgumentException("capture interval exceeds the pinned complete-run chunk bound");
+        }
         Path destination = output.toAbsolutePath().normalize();
         Path parent = destination.getParent();
         if (parent == null) {
@@ -71,7 +81,17 @@ public final class CompleteRunAudioCaptureStore {
         if (Files.exists(destination)) {
             throw new FileAlreadyExistsException(destination.toString());
         }
-        return new StoreWriter(destination, Files.createTempDirectory(parent, ".audio-staging-"), metadata);
+        Path staging = Files.createTempDirectory(parent, ".audio-staging-");
+        try {
+            return new StoreWriter(destination, staging, metadata);
+        } catch (IOException | RuntimeException | Error failure) {
+            try {
+                stagingCleaner.delete(staging);
+            } catch (IOException cleanupFailure) {
+                failure.addSuppressed(cleanupFailure);
+            }
+            throw failure;
+        }
     }
 
     public Reader read(Path capture) throws IOException {
@@ -101,9 +121,11 @@ public final class CompleteRunAudioCaptureStore {
         private final Path chunks;
         private final Metadata metadata;
         private final MessageDigest rootDigest = sha256();
+        private final MessageDigest semanticDigest = sha256();
         private final List<Chunk> completeChunks = new ArrayList<>();
         private ChunkWriter current;
         private boolean baselineSeen;
+        private boolean cutoffSeen;
         private boolean terminalSeen;
         private boolean closed;
         private String root;
@@ -114,16 +136,14 @@ public final class CompleteRunAudioCaptureStore {
         private long ym;
         private long psg;
         private long lifecycles;
+        private long cutoffActive;
+        private long cutoffPending;
 
         StoreWriter(Path destination, Path staging, Metadata metadata) throws IOException {
             this.destination = destination;
             this.staging = staging;
             this.metadata = Objects.requireNonNull(metadata, "metadata");
             this.chunks = Files.createDirectory(staging.resolve("chunks"));
-            if ((long) metadata.fixture().exclusiveEnd() - metadata.fixture().firstFrame()
-                    > (long) MAX_CAPTURE_CHUNKS * CompleteRunAudioTrace.CHUNK_FRAME_ROWS) {
-                throw new IllegalArgumentException("capture interval exceeds the pinned complete-run chunk bound");
-            }
         }
 
         @Override
@@ -132,10 +152,14 @@ public final class CompleteRunAudioCaptureStore {
             if (terminalSeen) {
                 throw new IllegalArgumentException("terminal must be the final complete-run record");
             }
-            if (record instanceof Baseline) {
+            if (cutoffSeen && !(record instanceof Terminal)) {
+                throw new IllegalArgumentException("cutoff frontier must be immediately before terminal");
+            }
+            if (record instanceof Baseline baseline) {
                 if (baselineSeen || frames != 0) {
                     throw new IllegalArgumentException("one baseline must precede all frame rows");
                 }
+                validateBaselineBoundary(metadata, baseline);
                 baselineSeen = true;
             } else if (record instanceof Frame frame) {
                 if (!baselineSeen) {
@@ -157,12 +181,20 @@ public final class CompleteRunAudioCaptureStore {
                     throw new IllegalArgumentException("baseline is required before lifecycle records");
                 }
                 lifecycles++;
+            } else if (record instanceof CutoffFrontier frontier) {
+                if (!baselineSeen || cutoffSeen) {
+                    throw new IllegalArgumentException("exactly one cutoff frontier is required after baseline");
+                }
+                cutoffActive = frontier.activeStack().size();
+                cutoffPending = frontier.pendingDescendants().size();
+                cutoffSeen = true;
             } else if (record instanceof Terminal terminal) {
-                if (!baselineSeen) {
-                    throw new IllegalArgumentException("baseline is required before terminal");
+                if (!baselineSeen || !cutoffSeen) {
+                    throw new IllegalArgumentException("cutoff frontier is required immediately before terminal");
                 }
                 root = digest(rootDigest);
-                if (!root.equals(terminal.rootDigest())) {
+                String semantic = digest(semanticDigest);
+                if (!root.equals(terminal.rootDigest()) || !semantic.equals(terminal.semanticDigest())) {
                     throw new IllegalArgumentException("terminal root digest does not match emitted canonical records");
                 }
                 metadata.validateTerminal(terminal, counts());
@@ -173,6 +205,7 @@ public final class CompleteRunAudioCaptureStore {
             write(record);
             if (!(record instanceof Terminal)) {
                 update(rootDigest, CompleteRunAudioJson.writeRecord(record));
+                update(semanticDigest, CompleteRunAudioJson.writeSemanticRecord(record));
             }
         }
 
@@ -189,7 +222,8 @@ public final class CompleteRunAudioCaptureStore {
         }
 
         private CaptureCounts counts() {
-            return new CaptureCounts(frames, requests, services, decisions, ym, psg, lifecycles);
+            return new CaptureCounts(frames, requests, services, decisions, ym, psg, lifecycles,
+                    cutoffActive, cutoffPending);
         }
 
         private ChunkWriter current() throws IOException {
@@ -234,8 +268,8 @@ public final class CompleteRunAudioCaptureStore {
             if (closed) return;
             closed = true;
             try {
-                if (!baselineSeen || !terminalSeen) {
-                    throw new IllegalArgumentException("capture must contain a baseline and terminal");
+                if (!baselineSeen || !cutoffSeen || !terminalSeen) {
+                    throw new IllegalArgumentException("capture must contain baseline, cutoff frontier, and terminal");
                 }
                 finishChunk();
                 writeManifest(staging.resolve("manifest.json"), metadata, completeChunks, root);
@@ -294,6 +328,7 @@ public final class CompleteRunAudioCaptureStore {
         private final List<Chunk> chunks;
         private final String expectedRoot;
         private final MessageDigest rootDigest = sha256();
+        private final MessageDigest semanticDigest = sha256();
         private final Validator validator;
         private int chunkIndex;
         private Chunk expectedChunk;
@@ -304,8 +339,10 @@ public final class CompleteRunAudioCaptureStore {
         private boolean complete;
 
         StoreReader(Path root) throws IOException {
-            this.root = root;
-            Manifest manifest = parseManifest(root.resolve("manifest.json"));
+            this.root = canonicalCaptureRoot(root);
+            validateCaptureRoot(this.root);
+            Manifest manifest = parseManifest(this.root.resolve("manifest.json"));
+            validateChunkTree(this.root.resolve("chunks"), manifest.chunks);
             metadata = manifest.metadata;
             chunks = manifest.chunks;
             expectedRoot = manifest.root;
@@ -321,7 +358,7 @@ public final class CompleteRunAudioCaptureStore {
             try {
                 while (true) {
                     if (input == null) openChunk();
-                    String line = input.readLine();
+                    String line = boundedLine(input);
                     if (line != null) {
                         byte[] bytes = (line + "\n").getBytes(StandardCharsets.UTF_8);
                         rawDigest.update(bytes);
@@ -330,7 +367,7 @@ public final class CompleteRunAudioCaptureStore {
                     }
                     closeChunk();
                     if (chunkIndex == chunks.size()) {
-                        validator.finish(digest(rootDigest), expectedRoot);
+                        validator.finish(digest(rootDigest), digest(semanticDigest), expectedRoot);
                         complete = true;
                         return false;
                     }
@@ -346,7 +383,10 @@ public final class CompleteRunAudioCaptureStore {
             Record result = next;
             next = null;
             validator.accept(result);
-            if (!(result instanceof Terminal)) update(rootDigest, recordJson(result));
+            if (!(result instanceof Terminal)) {
+                update(rootDigest, recordJson(result));
+                update(semanticDigest, semanticRecordJson(result));
+            }
             return result;
         }
 
@@ -357,7 +397,7 @@ public final class CompleteRunAudioCaptureStore {
             if (!file.normalize().getParent().equals(root.resolve("chunks"))) {
                 throw new IllegalArgumentException("chunk path escapes capture chunks directory");
             }
-            compressedInput = new DigestInputStream(Files.newInputStream(file), sha256());
+            compressedInput = new DigestInputStream(Files.newInputStream(file, LinkOption.NOFOLLOW_LINKS), sha256());
             input = new BufferedReader(new InputStreamReader(new GZIPInputStream(compressedInput), StandardCharsets.UTF_8));
             rawDigest = sha256();
         }
@@ -386,19 +426,27 @@ public final class CompleteRunAudioCaptureStore {
     private static final class Validator {
         private final Metadata metadata;
         private boolean baseline;
+        private boolean cutoff;
         private boolean terminal;
+        private String terminalRoot;
+        private String terminalSemantic;
         private int frames;
         private int currentChunkFrames;
         private int currentChunkFirst = -1;
         private int currentChunkEnd = -1;
         private long requests, services, decisions, ym, psg, lifecycles;
+        private long cutoffActive, cutoffPending;
 
         Validator(Metadata metadata) { this.metadata = metadata; }
 
         void accept(Record record) {
             if (terminal) throw new IllegalArgumentException("records follow terminal");
-            if (record instanceof Baseline) {
+            if (cutoff && !(record instanceof Terminal)) {
+                throw new IllegalArgumentException("cutoff frontier must be immediately before terminal");
+            }
+            if (record instanceof Baseline value) {
                 if (baseline || frames != 0) throw new IllegalArgumentException("baseline must be first");
+                validateBaselineBoundary(metadata, value);
                 baseline = true;
             } else if (record instanceof Frame frame) {
                 if (!baseline || frame.absoluteFrame() != metadata.fixture().firstFrame() + frames) {
@@ -419,9 +467,17 @@ public final class CompleteRunAudioCaptureStore {
             } else if (record instanceof Lifecycle) {
                 if (!baseline) throw new IllegalArgumentException("lifecycle precedes baseline");
                 lifecycles = Math.addExact(lifecycles, 1);
+            } else if (record instanceof CutoffFrontier value) {
+                if (!baseline || cutoff) throw new IllegalArgumentException("invalid cutoff frontier position");
+                cutoff = true;
+                cutoffActive = value.activeStack().size();
+                cutoffPending = value.pendingDescendants().size();
             } else if (record instanceof Terminal value) {
-                if (!baseline) throw new IllegalArgumentException("terminal precedes baseline");
-                metadata.validateTerminal(value, new CaptureCounts(frames, requests, services, decisions, ym, psg, lifecycles));
+                if (!baseline || !cutoff) throw new IllegalArgumentException("terminal lacks cutoff frontier");
+                metadata.validateTerminal(value, new CaptureCounts(frames, requests, services, decisions, ym, psg,
+                        lifecycles, cutoffActive, cutoffPending));
+                terminalRoot = value.rootDigest();
+                terminalSemantic = value.semanticDigest();
                 terminal = true;
             }
         }
@@ -435,14 +491,31 @@ public final class CompleteRunAudioCaptureStore {
             currentChunkEnd = -1;
         }
 
-        void finish(String root, String expectedRoot) {
-            if (!baseline || !terminal) throw new IllegalArgumentException("capture is missing baseline or terminal");
+        void finish(String root, String semantic, String expectedRoot) {
+            if (!baseline || !cutoff || !terminal) {
+                throw new IllegalArgumentException("capture is missing baseline, cutoff frontier, or terminal");
+            }
             if (!root.equals(expectedRoot)) throw new IllegalArgumentException("capture root digest mismatch");
+            if (!root.equals(terminalRoot)) throw new IllegalArgumentException("terminal root digest mismatch");
+            if (!semantic.equals(terminalSemantic)) {
+                throw new IllegalArgumentException("terminal semantic digest mismatch");
+            }
         }
     }
 
     private record Chunk(String file, int frames, int first, int end, String compressed, String raw) { }
     private record Manifest(Metadata metadata, List<Chunk> chunks, String root) { }
+
+    private static void validateBaselineBoundary(Metadata metadata, Baseline baseline) {
+        if (baseline.absoluteFrame() != metadata.fixture().firstFrame()) {
+            throw new IllegalArgumentException("baseline does not match metadata first frame");
+        }
+        boolean buffered = metadata.observerRuntimeIdentity()
+                instanceof CompleteRunAudioTrace.BufferedNativeObserverIdentity;
+        if (!buffered && baseline.frontier().nativeDiagnostics() != null) {
+            throw new IllegalArgumentException("callback baseline cannot carry native frontier proof");
+        }
+    }
     private static final class ChunkWriter {
         private final String file;
         private final Path path;
@@ -490,8 +563,71 @@ public final class CompleteRunAudioCaptureStore {
         }
     }
 
+    private static Path canonicalCaptureRoot(Path root) throws IOException {
+        if (Files.isSymbolicLink(root)) {
+            Path target = Files.readSymbolicLink(root);
+            if (target.isAbsolute() || target.getNameCount() != 1
+                    || !target.getFileName().toString().startsWith(".audio-published-")) {
+                throw new IllegalArgumentException("capture root has a noncanonical publication link");
+            }
+            root = root.getParent().resolve(target).normalize();
+        }
+        if (!Files.isDirectory(root, LinkOption.NOFOLLOW_LINKS) || Files.isSymbolicLink(root)) {
+            throw new IllegalArgumentException("capture root must be a plain directory");
+        }
+        return root;
+    }
+
+    private static void validateCaptureRoot(Path root) throws IOException {
+        Set<String> actual = new HashSet<>();
+        try (var entries = Files.list(root)) {
+            for (Path entry : entries.limit(3).toList()) actual.add(entry.getFileName().toString());
+        }
+        if (!actual.equals(Set.of("manifest.json", "chunks"))) {
+            throw new IllegalArgumentException("capture root contains undeclared entries");
+        }
+        requirePlainSingleLinkFile(root.resolve("manifest.json"), "capture manifest");
+        Path chunks = root.resolve("chunks");
+        if (!Files.isDirectory(chunks, LinkOption.NOFOLLOW_LINKS) || Files.isSymbolicLink(chunks)) {
+            throw new IllegalArgumentException("capture chunks must be a plain directory");
+        }
+    }
+
+    private static void validateChunkTree(Path directory, List<Chunk> chunks) throws IOException {
+        Set<String> expected = new HashSet<>();
+        for (Chunk chunk : chunks) {
+            if (!expected.add(chunk.file)) {
+                throw new IllegalArgumentException("capture manifest repeats a chunk file");
+            }
+        }
+        Set<String> actual = new HashSet<>();
+        try (var entries = Files.list(directory)) {
+            for (Path entry : entries.limit(MAX_CAPTURE_CHUNKS + 1L).toList()) {
+                actual.add(entry.getFileName().toString());
+                requirePlainSingleLinkFile(entry, "capture chunk");
+            }
+        }
+        if (!actual.equals(expected)) {
+            throw new IllegalArgumentException("capture chunks do not match their manifest");
+        }
+    }
+
+    private static void requirePlainSingleLinkFile(Path file, String label) throws IOException {
+        if (!Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS) || Files.isSymbolicLink(file)) {
+            throw new IllegalArgumentException(label + " must be a plain regular file");
+        }
+        Object links = Files.getAttribute(file, "unix:nlink", LinkOption.NOFOLLOW_LINKS);
+        if (!(links instanceof Number count) || count.longValue() != 1) {
+            throw new IllegalArgumentException(label + " must have exactly one link");
+        }
+    }
+
     private static Manifest parseManifest(Path file) throws IOException {
-        try (JsonParser parser = CompleteRunAudioJson.FACTORY.createParser(Files.newInputStream(file))) {
+        if (Files.size(file) > MAX_MANIFEST_BYTES) {
+            throw new IllegalArgumentException("capture manifest exceeds its byte bound");
+        }
+        try (JsonParser parser = CompleteRunAudioJson.FACTORY.createParser(
+                Files.newInputStream(file, LinkOption.NOFOLLOW_LINKS))) {
             if (parser.nextToken() != com.fasterxml.jackson.core.JsonToken.START_OBJECT) throw new IllegalArgumentException("capture manifest must be object");
             manifestField(parser,"schema");
             if (!CompleteRunAudioTrace.SCHEMA.equals(manifestText(parser, "schema"))) {
@@ -534,6 +670,26 @@ public final class CompleteRunAudioCaptureStore {
         try { return CompleteRunAudioJson.writeRecord(record); }
         catch (IOException failure) { throw new IllegalArgumentException("cannot canonicalize complete-run record", failure); }
     }
+
+    private static String boundedLine(BufferedReader input) throws IOException {
+        StringBuilder line = new StringBuilder(Math.min(8192, MAX_RECORD_CHARACTERS));
+        int value;
+        while ((value = input.read()) >= 0) {
+            if (value == '\n') return line.toString();
+            if (value == '\r') throw new IllegalArgumentException("capture records require LF line endings");
+            if (line.length() == MAX_RECORD_CHARACTERS) {
+                throw new IllegalArgumentException("capture record exceeds its byte bound");
+            }
+            line.append((char) value);
+        }
+        return line.isEmpty() ? null : line.toString();
+    }
+
+    private static String semanticRecordJson(Record record) {
+        try { return CompleteRunAudioJson.writeSemanticRecord(record); }
+        catch (IOException failure) { throw new IllegalArgumentException("cannot canonicalize record", failure); }
+    }
+
     private static void update(MessageDigest digest, String record) { digest.update((record + "\n").getBytes(StandardCharsets.UTF_8)); }
     private static MessageDigest sha256() { try { return MessageDigest.getInstance("SHA-256"); } catch (NoSuchAlgorithmException impossible) { throw new AssertionError(impossible); } }
     private static String digest(MessageDigest digest) { return HexFormat.of().formatHex(digest.digest()); }

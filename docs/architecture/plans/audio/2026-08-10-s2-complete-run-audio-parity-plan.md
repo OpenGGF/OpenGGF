@@ -34,6 +34,10 @@
 
 **Interfaces:**
 - Produces: profile id `s2_rev01_complete_emeralds.v1`, native content resolver, and strict Z80 state inventory.
+- The fixed profile class statically registers that exact immutable profile so
+  fresh production CLI JVMs can resolve it through the closed dispatcher.
+- Reserves the closed Task 9 dispatcher profile. Tasks 2 and 5 supply its fixed
+  reference and OpenGGF adapters only when their production capture owners exist.
 - Consumes: ROM-backed S2 loader addresses and shared schema.
 
 - [ ] **Step 1: Write failing fixture and resolver tests**
@@ -79,6 +83,7 @@ git commit -m "feat(tools): define S2 complete-run audio profile"
 ### Task 2: Native S2 Z80 reference observer
 
 **Files:**
+- Create: `src/main/java/com/openggf/tools/audio/completerun/s2/S2CompleteRunReferenceProducer.java`
 - Create: `tools/bizhawk-headless/src/Audio/S2AudioObserverProfile.cs`
 - Create: `tools/bizhawk-headless/src/Recording/S2CompleteAudioCaptureRunner.cs`
 - Create: `tools/bizhawk-headless/tests/S2AudioObserverProfileTests.cs`
@@ -127,6 +132,7 @@ directories. Strictly read the full output at `-Xmx32m`.
 ```bash
 git add tools/bizhawk-headless/src/Audio \
         tools/bizhawk-headless/src/Recording/S2CompleteAudioCaptureRunner.cs \
+        src/main/java/com/openggf/tools/audio/completerun/s2/S2CompleteRunReferenceProducer.java \
         tools/bizhawk-headless/tests/S2AudioObserverProfileTests.cs \
         tools/bizhawk-headless/tests/S2CompleteAudioCaptureRunnerTests.cs \
         tools/bizhawk-headless/src/Program.cs
@@ -261,10 +267,11 @@ git commit -m "fix(audio): preserve S2 queue and extra-life state"
 ### Task 5: Natural S2 complete-run OpenGGF producer
 
 **Files:**
-- Create: `src/test/java/com/openggf/tools/audio/completerun/s2/S2CompleteRunOpenGgfCapture.java`
+- Create: `src/main/java/com/openggf/tools/audio/completerun/s2/S2CompleteRunOpenGgfCapture.java`
+- Create: `src/main/java/com/openggf/tools/audio/completerun/s2/S2CompleteRunOpenGgfProducer.java`
 - Create: `src/test/java/com/openggf/tools/audio/completerun/s2/TestS2CompleteRunOpenGgfCapture.java`
+- Create: `src/test/java/com/openggf/tools/audio/completerun/s2/TestS2CompleteRunPublication.java`
 - Create: `tools/audio/run_s2_complete_audio_parity.sh`
-- Modify: `src/main/java/com/openggf/tools/audio/completerun/CompleteRunAudioProfiles.java`
 
 **Interfaces:**
 - Produces: natural S2 capture using only run/ROM/output/profile inputs.
@@ -291,8 +298,9 @@ Resolve every first mismatch before scaling to the full run.
 - [ ] **Step 4: Commit the S2 producer**
 
 ```bash
-git add src/test/java/com/openggf/tools/audio/completerun/s2 \
-        src/main/java/com/openggf/tools/audio/completerun/CompleteRunAudioProfiles.java \
+git add src/main/java/com/openggf/tools/audio/completerun/s2/S2CompleteRunOpenGgfCapture.java \
+        src/main/java/com/openggf/tools/audio/completerun/s2/S2CompleteRunOpenGgfProducer.java \
+        src/test/java/com/openggf/tools/audio/completerun/s2 \
         tools/audio/run_s2_complete_audio_parity.sh
 git commit -m "feat(tools): capture natural S2 complete-run audio"
 ```

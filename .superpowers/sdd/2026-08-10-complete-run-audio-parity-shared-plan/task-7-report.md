@@ -9,6 +9,12 @@ The selected managed lane is the Task 6 exact-hash `REFLECTION` adapter. No
 replacement managed DLL or provisional S2/S3K profile is shipped. Game-specific
 real Z80 capability remains Task 8.
 
+Task 8's first real S2 bootstrap probe reopened the candidate artifact before
+publication: row 3 executed future watched Z80 PCs while ZRAM was still zero
+and before the source-cited `$0EC000` upload routine. The eager-proof candidate
+correctly returned `-3`, proving that proof readiness had to be an explicit
+native state rather than a movie-row or managed-RAM heuristic.
+
 ## RED/GREEN
 
 The registered initial C# test failed because the native patch and artifact
@@ -62,9 +68,9 @@ savestate serialization. Exactly ten `gpgx_audio_trace_*` departures are
 GLOBAL; no host/interior pointer is retained after configure.
 
 ```text
-.invis size       0x2088d0 (2,132,176 bytes)
+.invis size       0x20a8f0 (2,140,400 bytes)
 stock .invis      0x000d10 (3,344 bytes)
-observer addition 0x207bc0 (2,128,832 bytes)
+observer addition 0x209be0 (2,137,056 bytes)
 event array       2,097,152 bytes
 ```
 
@@ -80,41 +86,63 @@ event array       2,097,152 bytes
 - copied manifests drive a depth-eight stack, deterministic same-PC selection,
   atomic snapshots/tails, typed iterations, continuation, saturation, and the
   disabled/configured/recording/ready state machine.
+- configured hooks are sorted into exact CPU/PC ranges; Z80 and low-16 M68K
+  masks reject unwatched instructions before binary lookup while every
+  instruction still updates the exact start-PC latch used by chip writes.
 - reset pre-reserves cancellation groups and its protected tail, cancels inner
   to outer, attributes reset writes to the reset root, and fails closed without
   discarding retained in-frame events.
+- the sole optional M68K root upload completion retains its ordinary full-ZRAM
+  snapshot/end, scans the complete Z80 proof set, and arms atomically; watched
+  Z80 PCs are inert before it. Reset/Power disarm before post-reset execution
+  and the next complete upload rearms in the same or a later native frame.
+- API 2 still accepts byte-identical ABI-1 configs under the legacy action and
+  zero-reserved-field rules. ABI-2 configs may use the bounded M68K direct-RAM
+  return-PC predicate, an owned active-service retry marker, and an exact
+  top-of-stack observation marker. Predicate keep/pop, retry, and observation
+  are values 0/1/2/3 of event kind 10 in the same native order as chip writes;
+  malformed stacks, indirect/custom memory pages, odd PCs, missing same-PC
+  alternatives, and insufficient atomic capacity fail closed.
+- illegal reset in CONFIGURED or READY is sticky `-3` for status departures;
+  the three unsigned capability queries remain fixed and `disable` alone
+  clears the condition.
 
 The exact-Clang native suite produced:
 
 ```text
-native-observer-selftest: 12 ordered nested events; scoped CPU PCs; READY reset fail-closed
+native-observer-selftest: 12 ordered nested events; scoped CPU PCs; READY reset sticky fail-closed
 ```
 
-Five linked harnesses prove copied inputs, ordered nested ownership, distinct
+Six linked harnesses prove copied inputs, ordered nested ownership, distinct
 snapshots, exact FM-port/PSG vectors, phase/drain/overflow/reset behavior, token
 wrap, and ordinal continuity. Two harnesses execute the actual patched Z80 and
 M68K interpreters: ordinary and post-IRQ Z80 admission, plus a multiword M68K
 write at PC 4 and the IRQ-delay extra-fetch seam at PC 8. These are synthetic
 CPU-boundary proofs, not real-game capability claims.
+The sixth harness proves zero-filled pre-upload visits are ignored, one
+complete 8 KiB upload service arms atomically, proof mismatch never partially
+arms, and an in-frame reset/reupload preserves ordered cancellation/reset
+events before capturing the first rearmed Z80 service.
 
 ## Frozen identities
 
 ```text
-patch SHA-256                 45d85fc19405457c788be4f6c17d2b14281d33fbff163cd42eead76e08f7f6d2
-raw core size                 41718744
-raw core SHA-256              7807b57ffdfa303465ec2a2e707a5aacc38bd56cd10e201aca2965620eb71fb2
-compressed core size          409653
-compressed core SHA-256       ba276573fc7802fb2313c051471dbdd664959c06aaafa6ef73564799886d083f
-Waterbox BuildID              8e822239d27df092
-source bundle raw SHA-256     6f2e6d6102f594d0ae014be8ff5030dc3599595ecff36e01f8517e3a5d111b5a
-source bundle zst SHA-256     abd68651d633a0a75d01cb9569cfb9dc15da4a7540eb072fc2d8eb11e548ed0e
+patch SHA-256                 dd1e860795ac4e3055081b83ccb77368ae470280911787da849845c9570e8fa1
+raw core size                 41731544
+raw core SHA-256              642cf1ce651e95dab1143c0a718e9ab95cf617c07d66590831368fdeb0b4202a
+compressed core size          412363
+compressed core SHA-256       3b632c65bca7372b8f70c7526b51e7ca14f53a43224790534a200274c0351ebf
+Waterbox BuildID              d2011feb908faa14
+source bundle raw SHA-256     a1e07b266ebd1c5d43e757513edd0fbcabcd6361558742789e8b7fd89ca7ce2b
+source bundle zst SHA-256     7f1a3558f3b74aa3f8f03ee0e66c8cfb9806ac00c1496e48614a3da2f058b91a
 path manifest SHA-256         ca94c5213d326ab3affac073dff5b67cf6b9c275db6d2c6291688376703709c1
 mode manifest SHA-256         03b81d212882a71329d5d45377bdebe1aa6194a0012bd9a4749ec35cd5683440
-Task 7 recipe SHA-256         eee5fa9e4eda2480ea76207edc0cbb3b4a89e54ac767e9cba744dca1f4420f71
-whole identity SHA-256        6f4739f28771e55bcec0ca0e6f0c57badb3530d4cee36d39c8b19b14104ddfce
-adapter source SHA-256        770dfcfef0fabc2eb7211add26d7a3716e33b75ddbe7dd3d7ba1568c8cb3a102
+Task 7 recipe SHA-256         e71f5b83616556577aabc01057fc3bc2a5b4e6c74792adfbc83e5e1f97e8b3e0
+whole identity SHA-256        b72175c3c7e15db66e37b64e15bc3e8f27ba1ac71a4896cd5a8363f4205d51b8
+adapter source SHA-256        9689ba255d2b14e7e31b533437855faddf9f068dfdf18b8a13f4662dfd2dbbba
+host bridge source SHA-256    af9da7ed2f08d27c663176f4f1c852504c4a515e437655abb0fd5d20a3364bf1
 callgraph proof SHA-256       536711d3eada4bc9898c256c7479ee5a651381025f0476499bac76c9e82dd5c6
-ELF proof SHA-256             756b497189800fa7e12a01736e109a2cc0cbaf6cdfa72cb49ef6e1d0a3e21869
+ELF proof SHA-256             d6c2a1093ccc3484e4f353e8f01dac3bc1aa26487080d6addd5bff815bcfd630
 Task 6 input identity         36dde84c81429343b2f4425ff66c04f8fbdf54bcaf42a2459e68c52f95e9a0d4
 ```
 
@@ -141,12 +169,30 @@ all five Genesis FM selectors. No runtime performance percentage is claimed
 from this short prefix; disabled execution takes one enable split and then an
 observer-free loop.
 
-Task 8 owns real S2/S3K hook manifests and the first positive headless capture.
+Task 8's complete S2 route exposed that wall-clock continuation aging was too
+strict for a parent suspended under a bounded child. The reviewed execution-
+exposure amendment increments only the service that is top-of-stack across a
+frame boundary. A direct native regression suspends a parent for three frames,
+then proves the parent retains its own budget while the child ages; it also
+proves a continuously exposed top service still fails at its configured limit
+and Reset cancels both without aging either. Two fresh builds and installations
+reproduced the amended identities above byte-for-byte. The complete 259,590-
+frame S2 movie then replayed twice with 169,986,419 events, maximum occupancy
+1,825, no overflow, and identical digest
+`c2b2f82374aaa16144b6bf121df051dcd5b4ba095431c16cf6224adc633de41d`.
+
+Task 8's canonical 1,000-frame S2 and S3K capability runs preserve their exact
+event digests after indexing. Streaming capture overhead is 6.33% median / 9.29%
+worst for S2 and 9.41% median / 9.54% worst for S3K, below the 10%/15% gates; maximum
+occupancies are 1,611 and 1,446 of 65,536. The complete 434,417-frame S3K
+Knuckles movie also replayed twice with 254,921,281 events, maximum occupancy
+1,446, no overflow, and identical digest
+`08c2f6249dc379b18b0362c04ed757f4f053a3c1cf7c28c110b09b82af6cee7e`.
 
 ## Final verification
 
 ```text
-selftest/run.sh                                      PASS (5 native harnesses)
+selftest/run.sh                                      PASS (6 native harnesses)
 fresh locked build A / fresh locked build B          PASS (byte-identical)
 independent install A / independent install B         PASS (create-new)
 GpgxHost departure/reset/savestate proof              PASS
@@ -157,6 +203,7 @@ GpgxHost 10-frame 64 KiB RAM digest                   PASS (de2f2560...)
 The registered slow gate passed and exercises two fresh builds/installs,
 outside-root/existing-root refusal, a failure after stock verification,
 unchanged caller stock, no symlinks/hard links, and full notice/source
-publication. The final focused Java Task 1–3 regression is 103/103, the C#
-source-lock suite is 3/3 with the slow gate intentionally skipped by default,
-and the separately enabled slow gate is 1/1.
+publication. The final focused Java Task 1–3 regression is 115/115. The final
+C# evidence is 10/10 GPGX-audio tests, 9/9 Waterbox host tests, 15/15 collector
+tests, and 10/10 real S2/S3K capability/lifecycle tests; the separately enabled
+two-build/two-install slow gate and both complete duplicate gates pass.

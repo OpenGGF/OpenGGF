@@ -8,6 +8,7 @@ source_dir=${1-}; toolchain=${2-}; scratch=${3-}
   "$source_dir/waterbox/gpgx/cinterface/audio_trace.h" "$scratch/native-selftest/"
 /usr/bin/cp -- "$root/shared.h" "$root/emulibc.h" "$root/harness.c" "$root/wrap_harness.c" \
   "$root/matrix_harness.c" \
+  "$root/arming_harness.c" \
   "$root/cpu_boundary_harness.c" "$root/m68k_boundary_harness.c" \
   "$scratch/native-selftest/"
 /usr/bin/env -i PATH=/usr/bin:/bin \
@@ -26,6 +27,12 @@ source_dir=${1-}; toolchain=${2-}; scratch=${3-}
   "$toolchain/clang/usr/bin/clang-16" -std=c99 -DLSB_FIRST -O2 -Wall -Wextra -Werror \
   "$scratch/native-selftest/matrix_harness.c" -o "$scratch/native-selftest/matrix-harness"
 "$scratch/native-selftest/matrix-harness"
+/usr/bin/env -i PATH=/usr/bin:/bin \
+  LD_LIBRARY_PATH="$toolchain/clang/usr/lib/x86_64-linux-gnu:$toolchain/clang/usr/lib/llvm-16/lib" \
+  "$toolchain/clang/usr/bin/clang-16" -std=c99 -DLSB_FIRST -O2 -Wall -Wextra -Werror \
+  "$scratch/native-selftest/audio_trace.c" "$scratch/native-selftest/arming_harness.c" \
+  -o "$scratch/native-selftest/arming-harness"
+"$scratch/native-selftest/arming-harness"
 /usr/bin/env -i PATH=/usr/bin:/bin \
   LD_LIBRARY_PATH="$toolchain/clang/usr/lib/x86_64-linux-gnu:$toolchain/clang/usr/lib/llvm-16/lib" \
   "$toolchain/clang/usr/bin/clang-16" -std=c99 -DLSB_FIRST -DcdStream=cdStream \

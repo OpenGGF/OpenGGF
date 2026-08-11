@@ -97,18 +97,27 @@ namespace OpenGGF.BizHawk.Headless
         }
 
         private readonly GpgxAudioObserverDepartures departures;
+        private readonly IImportResolver resolver;
+        private readonly IMonitor monitor;
+        private readonly ICallbackAdjuster adjuster;
 
         internal GpgxAudioObserverAdapter(object gpgx)
         {
             FieldInfo field = gpgx.GetType().GetField("_elf", BindingFlags.Instance | BindingFlags.NonPublic);
             if (field == null) throw new InvalidOperationException("Pinned GPGX Waterbox host field is absent.");
             object waterbox = field.GetValue(gpgx);
-            var resolver = waterbox as IImportResolver;
-            var monitor = waterbox as IMonitor;
-            var adjuster = waterbox as ICallbackAdjuster;
+            resolver = waterbox as IImportResolver;
+            monitor = waterbox as IMonitor;
+            adjuster = waterbox as ICallbackAdjuster;
             if (resolver == null || monitor == null || adjuster == null)
                 throw new InvalidOperationException("Pinned GPGX Waterbox reflection contracts are absent.");
             departures = BizInvoker.GetInvoker<GpgxAudioObserverDepartures>(resolver, monitor,
+                CallingConventionAdapters.MakeWaterboxDepartureOnly(adjuster));
+        }
+
+        internal T BindDeparture<T>() where T : class
+        {
+            return BizInvoker.GetInvoker<T>(resolver, monitor,
                 CallingConventionAdapters.MakeWaterboxDepartureOnly(adjuster));
         }
 
@@ -143,6 +152,7 @@ namespace OpenGGF.BizHawk.Headless
             return departures.gpgx_audio_trace_drain(events, capacity, out count);
         }
         internal int AbortFrame() { return departures.gpgx_audio_trace_abort_frame(); }
+        internal int BeginPublicationEpoch() { return departures.gpgx_audio_trace_begin_publication_epoch(); }
         internal int Disable() { return departures.gpgx_audio_trace_disable(); }
 
         private static void RequireExactLength(Array value, uint expected, string name)
@@ -169,6 +179,7 @@ namespace OpenGGF.BizHawk.Headless
         public abstract int gpgx_audio_trace_drain([Out] GpgxAudioObserverAdapter.Event[] events,
             uint capacity, out uint count);
         [BizImport(CallingConvention.Cdecl)] public abstract int gpgx_audio_trace_abort_frame();
+        [BizImport(CallingConvention.Cdecl)] public abstract int gpgx_audio_trace_begin_publication_epoch();
         [BizImport(CallingConvention.Cdecl)] public abstract int gpgx_audio_trace_disable();
     }
 }

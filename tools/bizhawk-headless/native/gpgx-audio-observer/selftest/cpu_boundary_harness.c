@@ -7,6 +7,8 @@
 
 struct selftest_m68k m68k;
 uint8_t zram[0x2000];
+uint8_t work_ram[0x10000];
+uint32_t selftest_m68k_a7;
 static uint8_t memory[0x10000];
 
 static void write_memory(unsigned int address, unsigned char data)

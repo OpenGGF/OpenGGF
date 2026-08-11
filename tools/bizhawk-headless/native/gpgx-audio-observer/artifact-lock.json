@@ -4,10 +4,10 @@
   "patched_managed_dll_permitted": false,
   "build_recipe": {
     "file": "task7-build-recipe.json",
-    "sha256": "eee5fa9e4eda2480ea76207edc0cbb3b4a89e54ac767e9cba744dca1f4420f71"
+    "sha256": "e71f5b83616556577aabc01057fc3bc2a5b4e6c74792adfbc83e5e1f97e8b3e0"
   },
   "abi": {
-    "version": 1,
+    "version": 2,
     "config_size": 64,
     "kind_size": 16,
     "hook_size": 32,
@@ -18,21 +18,21 @@
   },
   "native_patch": {
     "file": "0001-buffer-z80-audio-events.patch",
-    "sha256": "45d85fc19405457c788be4f6c17d2b14281d33fbff163cd42eead76e08f7f6d2"
+    "sha256": "dd1e860795ac4e3055081b83ccb77368ae470280911787da849845c9570e8fa1"
   },
   "core": {
-    "decompressed_size": 41718744,
-    "decompressed_sha256": "7807b57ffdfa303465ec2a2e707a5aacc38bd56cd10e201aca2965620eb71fb2",
-    "compressed_size": 409653,
-    "compressed_sha256": "ba276573fc7802fb2313c051471dbdd664959c06aaafa6ef73564799886d083f",
-    "build_id": "8e822239d27df092",
-    "invis_size": 2132176,
+    "decompressed_size": 41731544,
+    "decompressed_sha256": "642cf1ce651e95dab1143c0a718e9ab95cf617c07d66590831368fdeb0b4202a",
+    "compressed_size": 412363,
+    "compressed_sha256": "3b632c65bca7372b8f70c7526b51e7ca14f53a43224790534a200274c0351ebf",
+    "build_id": "d2011feb908faa14",
+    "invis_size": 2140400,
     "invis_alignment": 32,
-    "observer_added_invis_bytes": 2128832
+    "observer_added_invis_bytes": 2137056
   },
   "source_bundle": {
-    "uncompressed_sha256": "6f2e6d6102f594d0ae014be8ff5030dc3599595ecff36e01f8517e3a5d111b5a",
-    "compressed_sha256": "abd68651d633a0a75d01cb9569cfb9dc15da4a7540eb072fc2d8eb11e548ed0e",
+    "uncompressed_sha256": "a1e07b266ebd1c5d43e757513edd0fbcabcd6361558742789e8b7fd89ca7ce2b",
+    "compressed_sha256": "7f1a3558f3b74aa3f8f03ee0e66c8cfb9806ac00c1496e48614a3da2f058b91a",
     "path_manifest_sha256": "ca94c5213d326ab3affac073dff5b67cf6b9c275db6d2c6291688376703709c1",
     "path_mode_manifest_sha256": "03b81d212882a71329d5d45377bdebe1aa6194a0012bd9a4749ec35cd5683440",
     "source_date_epoch": 1758367997,
@@ -44,22 +44,22 @@
     "recipe_sha256": "74b7fd8af13f27653479a4170a946ef0fe0a1002fbae1b62ad627f4148ab41b2"
   },
   "native_selftest": {
-    "log_sha256": "d108268309f984b3d88641ac9395fabb10447577d9bf001471874db9f6d83264"
+    "log_sha256": "74d5e2fe2e120dc862514040507d7be836fd5a43f48be0712647255f4f0773a2"
   },
   "elf_proof": {
-    "sha256": "756b497189800fa7e12a01736e109a2cc0cbaf6cdfa72cb49ef6e1d0a3e21869"
+    "sha256": "d6c2a1093ccc3484e4f353e8f01dac3bc1aa26487080d6addd5bff815bcfd630"
   },
   "callgraph_proof": {
     "sha256": "536711d3eada4bc9898c256c7479ee5a651381025f0476499bac76c9e82dd5c6"
   },
   "managed_reflection": {
-    "adapter_source_sha256": "770dfcfef0fabc2eb7211add26d7a3716e33b75ddbe7dd3d7ba1568c8cb3a102",
-    "host_source_sha256": "052090e4a93c6614f3c4465526c47876779dc40ded1897d0cc4d24c3c04ed497",
+    "adapter_source_sha256": "9689ba255d2b14e7e31b533437855faddf9f068dfdf18b8a13f4662dfd2dbbba",
+    "host_bridge_source_sha256": "af9da7ed2f08d27c663176f4f1c852504c4a515e437655abb0fd5d20a3364bf1",
     "bizinvoke_sha256": "8d05389bf0e02be1244bdc7a2adcd93b4cff95acf199fc927987ca699760a1b7",
     "bizhawk_common_sha256": "438a49d6a45d9fcac17016240ae205d1af7a4632865f6f70468b684b82323f33"
   },
   "identity": {
-    "sha256": "6f4739f28771e55bcec0ca0e6f0c57badb3530d4cee36d39c8b19b14104ddfce"
+    "sha256": "b72175c3c7e15db66e37b64e15bc3e8f27ba1ac71a4896cd5a8363f4205d51b8"
   },
   "notices": {
     "bizhawk_license_sha256": "6601cab56cb56875001906593a3adf94d52a0b82e6919fcbee81c31a48499121",

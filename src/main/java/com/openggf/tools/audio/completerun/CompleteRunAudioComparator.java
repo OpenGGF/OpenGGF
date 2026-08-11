@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.security.MessageDigest;
@@ -20,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -35,12 +37,41 @@ public final class CompleteRunAudioComparator {
         Object key = attributes.fileKey();
         if (key == null || key.toString().isBlank()) {
             throw new PublicationIdentityUnavailableException(
-                    "filesystem publication identity is unavailable for " + path);
+                    "filesystem publication identity is unavailable");
         }
         return key.toString();
     };
 
     private CompleteRunAudioComparator() {
+    }
+
+    /** Performs the same strict first-pass validation used by comparison. */
+    public static void validate(Path capture, ProducerKind producerKind) throws ValidationException {
+        Side side = producerKind == ProducerKind.REFERENCE ? Side.REFERENCE : Side.ENGINE;
+        validate(new CompleteRunAudioCaptureStore(), capture, side, producerKind, PLATFORM_FILE_IDENTITIES);
+    }
+
+    /** Also binds orchestration to the exact requested profile rather than producer-selected metadata. */
+    public static void validate(Path capture, ProducerKind producerKind, String profileId)
+            throws ValidationException {
+        Side side = producerKind == ProducerKind.REFERENCE ? Side.REFERENCE : Side.ENGINE;
+        // The caller-selected binding is authority. Reject it before opening or interpreting any
+        // attacker-controlled capture, including one that names a different pinned profile.
+        try {
+            CompleteRunAudioProducerRegistry.requirePinned(profileId, producerKind);
+        } catch (CompleteRunAudioProducerRegistry.ProducerUnavailableException unavailable) {
+            throw new ValidationException(ValidationException.Kind.PRODUCER_UNAVAILABLE, side,
+                    unavailable.getMessage(), unavailable);
+        } catch (IllegalArgumentException unknown) {
+            throw new ValidationException(ValidationException.Kind.PROFILE_UNKNOWN, side,
+                    "requested profile is not registered", unknown);
+        }
+        Snapshot snapshot = validate(new CompleteRunAudioCaptureStore(), capture, side, producerKind,
+                PLATFORM_FILE_IDENTITIES);
+        if (!snapshot.metadata.profileId().equals(profileId)) {
+            throw new ValidationException(ValidationException.Kind.METADATA_PROFILE_MISMATCH, side,
+                    "capture profile does not match the orchestrator request");
+        }
     }
 
     public static CompleteRunAudioReport compare(Path reference, Path engine) {
@@ -101,7 +132,13 @@ public final class CompleteRunAudioComparator {
         Objects.requireNonNull(profile, "profile");
         Objects.requireNonNull(records, "records");
         try {
-            metadata.validateProfile(profile);
+            metadata.validateRuntimeProfile(profile);
+        } catch (RuntimeException failure) {
+            throw new ValidationException(ValidationException.Kind.RUNTIME_IDENTITY_INVALID, side,
+                    "diagnostic stream runtime identity does not match its profile", failure);
+        }
+        try {
+            metadata.validateFixtureProfile(profile);
         } catch (RuntimeException failure) {
             throw new ValidationException(ValidationException.Kind.METADATA_PROFILE_MISMATCH, side,
                     "diagnostic stream metadata does not match its profile", failure);
@@ -118,7 +155,9 @@ public final class CompleteRunAudioComparator {
             IO_FAILURE,
             CAPTURE_INVALID,
             PROFILE_UNKNOWN,
+            PRODUCER_UNAVAILABLE,
             METADATA_PROFILE_MISMATCH,
+            RUNTIME_IDENTITY_INVALID,
             PRODUCER_KIND_MISMATCH,
             ORDINAL_INVALID,
             STATE_INVALID,
@@ -182,7 +221,7 @@ public final class CompleteRunAudioComparator {
                 throw new ValidationException(ValidationException.Kind.CAPTURE_INVALID, side,
                         "validated capture has no terminal record");
             }
-            return new Snapshot(normalized, metadata, terminal.rootDigest(), publication,
+            return new Snapshot(normalized, metadata, terminal.rootDigest(), terminal.semanticDigest(), publication,
                     sha256(CompleteRunAudioJson.writeMetadata(metadata).getBytes(StandardCharsets.UTF_8)));
         } catch (ValidationException failure) {
             throw failure;
@@ -212,10 +251,16 @@ public final class CompleteRunAudioComparator {
                     "capture profile is not registered", failure);
         }
         try {
-            metadata.validateProfile(profile);
+            metadata.validateRuntimeProfile(profile);
+        } catch (RuntimeException failure) {
+            throw new ValidationException(ValidationException.Kind.RUNTIME_IDENTITY_INVALID, side,
+                    "capture runtime identity is not the exact registered profile identity", failure);
+        }
+        try {
+            metadata.validateFixtureProfile(profile);
         } catch (RuntimeException failure) {
             throw new ValidationException(ValidationException.Kind.METADATA_PROFILE_MISMATCH, side,
-                    "capture metadata is not the exact registered profile identity", failure);
+                    "capture fixture metadata is not the exact registered profile identity", failure);
         }
         return profile;
     }
@@ -268,7 +313,7 @@ public final class CompleteRunAudioComparator {
     private static CompleteRunAudioReport failure(Snapshot reference, Snapshot engine,
             ValidationException failure, Path referenceSource, Path engineSource) {
         Context empty = emptyContext();
-        String source = (failure.side() == Side.REFERENCE ? referenceSource : engineSource).toString();
+        String source = failure.side() == Side.REFERENCE ? "reference" : "engine";
         return new CompleteRunAudioReport(Kind.CAPTURE_FAILURE,
                 reference == null ? null : reference.identity(Side.REFERENCE),
                 engine == null ? null : engine.identity(Side.ENGINE), -1, null, null, null,
@@ -321,8 +366,15 @@ public final class CompleteRunAudioComparator {
                 return diff(Kind.OWNER, expected.absoluteFrame(), "baseline.role_owners",
                         expected.roleOwners(), actual.roleOwners());
             }
-            return expected.equals(actual) ? null
-                    : diff(Kind.OWNER, expected.absoluteFrame(), "baseline", expected, actual);
+            try {
+                String expectedSemantic = CompleteRunAudioJson.writeSemanticRecord(expected);
+                String actualSemantic = CompleteRunAudioJson.writeSemanticRecord(actual);
+                return expectedSemantic.equals(actualSemantic) ? null
+                        : diff(Kind.CUTOFF_FRONTIER_VALUE, expected.absoluteFrame(),
+                                "baseline.frontier", expected.frontier(), actual.frontier());
+            } catch (IOException failure) {
+                throw new AssertionError("validated baseline frontier could not be canonicalized", failure);
+            }
         }
         if (reference instanceof Frame expected && engine instanceof Frame actual) {
             return frameDifference(expected, actual);
@@ -352,6 +404,17 @@ public final class CompleteRunAudioComparator {
             return expected.equals(actual) ? null
                     : diff(Kind.LIFECYCLE_VALUE, frame, location, expected, actual);
         }
+        if (reference instanceof CutoffFrontier expected && engine instanceof CutoffFrontier actual) {
+            try {
+                String expectedSemantic = CompleteRunAudioJson.writeSemanticRecord(expected);
+                String actualSemantic = CompleteRunAudioJson.writeSemanticRecord(actual);
+                return expectedSemantic.equals(actualSemantic) ? null
+                        : diff(Kind.CUTOFF_FRONTIER_VALUE, -1, "cutoff_frontier",
+                                expectedSemantic, actualSemantic);
+            } catch (IOException failure) {
+                throw new AssertionError("validated frontier could not be canonicalized", failure);
+            }
+        }
         if (reference instanceof Terminal expected && engine instanceof Terminal actual) {
             if (expected.exclusiveEnd() != actual.exclusiveEnd()
                     || expected.frameCount() != actual.frameCount()
@@ -360,15 +423,15 @@ public final class CompleteRunAudioComparator {
                     || expected.decisionCount() != actual.decisionCount()
                     || expected.ymCount() != actual.ymCount()
                     || expected.psgCount() != actual.psgCount()
-                    || expected.lifecycleCount() != actual.lifecycleCount()) {
+                    || expected.lifecycleCount() != actual.lifecycleCount()
+                    || expected.cutoffActiveCount() != actual.cutoffActiveCount()
+                    || expected.cutoffPendingCount() != actual.cutoffPendingCount()) {
                 return diff(Kind.TERMINAL_COUNT, Math.min(expected.exclusiveEnd(), actual.exclusiveEnd()),
                         "terminal.counts", expected.counts(), actual.counts());
             }
-            // Store roots cover canonical baseline/frame/lifecycle records only, so they are producer-neutral
-            // semantic digests as well as the per-source stability identities checked between passes.
-            if (!expected.rootDigest().equals(actual.rootDigest())) {
-                return diff(Kind.TERMINAL_DIGEST, expected.exclusiveEnd(), "terminal.root_digest",
-                        expected.rootDigest(), actual.rootDigest());
+            if (!expected.semanticDigest().equals(actual.semanticDigest())) {
+                return diff(Kind.TERMINAL_DIGEST, expected.exclusiveEnd(), "terminal.semantic_digest",
+                        expected.semanticDigest(), actual.semanticDigest());
             }
             return null;
         }
@@ -445,8 +508,9 @@ public final class CompleteRunAudioComparator {
         if (requests != null) return requests;
         Difference services = serviceDifference(reference.services(), engine.services(), frame);
         if (services != null) return services;
-        return reference.equals(engine) ? null
-                : diff(Kind.FRAME_VALUE, frame, "frame", reference, engine);
+        return reference.rawChipEvents().equals(engine.rawChipEvents()) ? null
+                : diff(Kind.CHIP_EVENT_VALUE, frame, "frame.raw_chip_events",
+                        reference.rawChipEvents(), engine.rawChipEvents());
     }
 
     private static Difference frameCoordinate(int reference, int engine, String location) {
@@ -639,7 +703,7 @@ public final class CompleteRunAudioComparator {
     }
 
     private static ServicePayload servicePayload(DriverService service) {
-        return new ServicePayload(service.kind(), service.decisions().stream()
+        return new ServicePayload(service.kind(), service.completion(), service.decisions().stream()
                 .map(CompleteRunAudioComparator::decisionOrderPayload).toList(), service.state(),
                 service.chipEvents().stream().map(CompleteRunAudioComparator::chipPayload).toList());
     }
@@ -738,7 +802,8 @@ public final class CompleteRunAudioComparator {
 
     private record RequestPayload(OwnerClass ownerClass, String contentKey, int nativeId,
             String queueSource, Integer queueSlot) { }
-    private record ServicePayload(String kind, List<DecisionOrderPayload> decisions, NormalizedState state,
+    private record ServicePayload(String kind, ServiceCompletion completion,
+            List<DecisionOrderPayload> decisions, NormalizedState state,
             List<Object> chips) { }
     private record DecisionPayload(int nativeId, String contentKey, boolean accepted, String reason,
             Integer priorityBefore, Integer priorityAfter, List<HardwareRole> requestedRoles,
@@ -754,12 +819,18 @@ public final class CompleteRunAudioComparator {
     private record FrameCoordinatesPayload(String segment, boolean lag) { }
     private record PriorityPayload(Integer before, Integer after) { }
 
-    private record Snapshot(Path source, Metadata metadata, String rootDigest,
+    private record Snapshot(Path source, Metadata metadata, String rootDigest, String semanticDigest,
             PublicationIdentity publication, String metadataSha256) {
         private SourceIdentity identity(Side side) {
-            return new SourceIdentity(side, source.toString(), publication.realSource().toString(), metadata,
+            String logicalSource = side == Side.REFERENCE ? "reference" : "engine";
+            List<CompleteRunAudioReport.ChunkIdentity> stableChunks = publication.chunks().stream()
+                    .map(chunk -> new CompleteRunAudioReport.ChunkIdentity(chunk.file(),
+                            chunk.compressedSha256(), "chunks/" + chunk.file(),
+                            "sha256:" + chunk.compressedSha256()))
+                    .toList();
+            return new SourceIdentity(side, logicalSource, logicalSource, metadata,
                     metadataSha256, rootDigest, publication.manifestSha256(), publication.digest(),
-                    publication.sourceFileKey(), publication.chunks());
+                    "sha256:" + publication.digest(), stableChunks);
         }
     }
 
@@ -775,7 +846,17 @@ public final class CompleteRunAudioComparator {
 
         static PublicationIdentity capture(Path source, FileIdentityProvider fileIdentities)
                 throws IOException {
-            Path realSource = source.toRealPath();
+            Path realSource;
+            if (Files.isSymbolicLink(source)) {
+                Path link = Files.readSymbolicLink(source);
+                if (link.isAbsolute() || link.getNameCount() != 1
+                        || !link.getFileName().toString().startsWith(".audio-published-")) {
+                    throw new IOException("capture publication has a noncanonical root link: " + source);
+                }
+                realSource = source.getParent().resolve(link).normalize().toRealPath(LinkOption.NOFOLLOW_LINKS);
+            } else {
+                realSource = source.toRealPath(LinkOption.NOFOLLOW_LINKS);
+            }
             BasicFileAttributes sourceAttributes = Files.readAttributes(realSource, BasicFileAttributes.class);
             if (!sourceAttributes.isDirectory()) {
                 throw new IOException("capture publication is not a directory: " + source);
@@ -794,9 +875,10 @@ public final class CompleteRunAudioComparator {
             }
             List<CompleteRunAudioReport.ChunkIdentity> chunks = new ArrayList<>(paths.size());
             for (Path path : paths) {
-                Path realPath = path.toRealPath();
-                BasicFileAttributes attributes = Files.readAttributes(realPath, BasicFileAttributes.class);
-                if (!attributes.isRegularFile()) {
+                Path realPath = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
+                BasicFileAttributes attributes = Files.readAttributes(realPath, BasicFileAttributes.class,
+                        LinkOption.NOFOLLOW_LINKS);
+                if (attributes.isSymbolicLink() || !attributes.isRegularFile()) {
                     throw new IOException("capture chunk is not a regular file: " + path);
                 }
                 chunks.add(new CompleteRunAudioReport.ChunkIdentity(path.getFileName().toString(),
@@ -804,14 +886,10 @@ public final class CompleteRunAudioComparator {
                                 fileIdentities.fileKey(realPath, attributes))));
             }
             MessageDigest digest = sha256Digest();
-            digestField(digest, realSource.toString());
-            digestField(digest, sourceFileKey);
             digestField(digest, manifestSha256);
             for (CompleteRunAudioReport.ChunkIdentity chunk : chunks) {
                 digestField(digest, chunk.file());
                 digestField(digest, chunk.compressedSha256());
-                digestField(digest, chunk.realPath());
-                digestField(digest, chunk.fileKey());
             }
             return new PublicationIdentity(realSource, sourceFileKey, manifestSha256, chunks,
                     HexFormat.of().formatHex(digest.digest()));
@@ -822,7 +900,7 @@ public final class CompleteRunAudioComparator {
             throws PublicationIdentityUnavailableException {
         if (fileKey == null || fileKey.isBlank()) {
             throw new PublicationIdentityUnavailableException(
-                    "filesystem publication identity is unavailable for " + path);
+                    "filesystem publication identity is unavailable");
         }
         return fileKey;
     }
@@ -944,7 +1022,8 @@ public final class CompleteRunAudioComparator {
         }
 
         void verifyStable(FileIdentityProvider fileIdentities) throws ValidationException {
-            if (!finished || terminal == null || !terminal.rootDigest().equals(expected.rootDigest)) {
+            if (!finished || terminal == null || !terminal.rootDigest().equals(expected.rootDigest)
+                    || !terminal.semanticDigest().equals(expected.semanticDigest)) {
                 throw new ValidationException(ValidationException.Kind.SOURCE_REPLACED, side,
                         "capture root digest changed between passes");
             }
@@ -985,10 +1064,23 @@ public final class CompleteRunAudioComparator {
         private final Map<HardwareRole, OwnerRef> liveOwners = new EnumMap<>(HardwareRole.class);
         private final Map<HardwareRole, ArrayDeque<OwnerRef>> savedOwners =
                 new EnumMap<>(HardwareRole.class);
+        private final ArrayDeque<NativeResetExpectation> nativeResets = new ArrayDeque<>();
+        private final Map<Long, ManagedServiceEvidence> activeManagedServices = new LinkedHashMap<>();
+        private final Map<NativeBeginCoordinate, ManagedServiceEvidence> completedManagedServices =
+                new LinkedHashMap<>();
+        private final LinkedHashMap<Long, CutoffService> carriedServices = new LinkedHashMap<>();
+        private final Map<Long, FrontierService> nativeCarriedServices = new LinkedHashMap<>();
+        private final Set<Long> releasedNativeCarriedTokens = new HashSet<>();
+        private final Set<Long> continuedNativeCarriedTokens = new HashSet<>();
         private long requestOrdinal;
         private long serviceOrdinal;
         private long chipOrdinal;
         private long lifecycleOrdinal;
+        private int previousNativeBeginFrame = -1;
+        private long previousNativeBeginOrdinal = -1;
+        private long previousNativeRawCoordinate = -1;
+        private Integer nativeYmPort0Latch;
+        private Integer nativeYmPort1Latch;
         private int segmentIndex;
         private int previousSourceFrame = -1;
         private int peakPendingRequests;
@@ -1018,7 +1110,9 @@ public final class CompleteRunAudioComparator {
                 previousSourceFrame = value.absoluteFrame();
                 baselineOwners(value);
                 state(value.state());
+                baselineFrontier(value.frontier());
             } else if (record instanceof Frame frame) {
+                if (!nativeResets.isEmpty()) ordinal("native reset is not followed by its typed lifecycle");
                 if (!baseline) ordinal("frame precedes baseline");
                 sourceCoordinate(frame.absoluteFrame());
                 segment(frame);
@@ -1031,22 +1125,165 @@ public final class CompleteRunAudioComparator {
                     pendingRequests.put(request.ordinal(), requestIdentity(request));
                     peakPendingRequests = Math.max(peakPendingRequests, pendingRequests.size());
                 }
-                for (DriverService service : frame.services()) {
+                for (int serviceIndex = 0; serviceIndex < frame.services().size(); serviceIndex++) {
+                    DriverService service = frame.services().get(serviceIndex);
                     if (service.ordinal() != serviceOrdinal++) ordinal("service ordinal is not globally contiguous");
+                    releaseCarriedService(service, frame.nativeDiagnostics(), serviceIndex);
                     for (Decision decision : service.decisions()) {
                         decision(decision);
                     }
                     state(service.state());
-                    for (ChipEvent event : service.chipEvents()) {
-                        if (event.ordinal() != chipOrdinal++) ordinal("chip-event ordinal is not globally contiguous");
+                }
+                for (ChipEvent event : frame.rawChipEvents()) {
+                    if (event.ordinal() != chipOrdinal++) ordinal("chip-event ordinal is not globally contiguous");
+                }
+                boolean buffered = metadata.observerRuntimeIdentity() instanceof BufferedNativeObserverIdentity;
+                if (buffered != (frame.nativeDiagnostics() != null)) {
+                    throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
+                            "native frame diagnostics do not match the observer identity");
+                }
+                if (buffered) {
+                    nativeRawOrder(frame.nativeDiagnostics());
+                    for (int serviceIndex = 0;
+                            serviceIndex < frame.nativeDiagnostics().services().size(); serviceIndex++) {
+                        FrontierService service = frame.nativeDiagnostics().services().get(serviceIndex);
+                        boolean carried = frame.services().get(serviceIndex).carriedBoundaryOrdinal() != null;
+                        if (!carried && (service.beginFrame() < previousNativeBeginFrame
+                                || service.beginFrame() == previousNativeBeginFrame
+                                        && service.beginOrdinal() <= previousNativeBeginOrdinal
+                                || service.endFrame() == null || service.endFrame() > frame.absoluteFrame()
+                                || service.parentToken() == 0 && service.endFrame() != frame.absoluteFrame())) {
+                            throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
+                                    "native frame services violate global begin or release order");
+                        }
+                        if (profile.cutoffFrontierPolicy().serviceRules().stream()
+                                .noneMatch(rule -> rule.matches(service) && rule.acceptsChipSources(service))) {
+                            throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
+                                    "native frame service is outside the exact observer manifest");
+                        }
+                        if (!carried) {
+                            previousNativeBeginFrame = service.beginFrame();
+                            previousNativeBeginOrdinal = service.beginOrdinal();
+                        }
+                    }
+                    managedBoundaries(frame.absoluteFrame(), frame.nativeDiagnostics());
+                    List<FrontierService> resetRoots = new ArrayList<>();
+                    for (NativeResetDiagnostic reset : frame.nativeDiagnostics().resets()) {
+                        int serviceIndex = -1;
+                        for (int index = 0; index < frame.nativeDiagnostics().services().size(); index++) {
+                            if (frame.nativeDiagnostics().services().get(index).token() == reset.serviceToken()) {
+                                serviceIndex = index;
+                                break;
+                            }
+                        }
+                        if (serviceIndex < 0) throw new ValidationException(
+                                ValidationException.Kind.STATE_INVALID, side,
+                                "native reset diagnostic has no canonical service");
+                        FrontierService resetRoot = frame.nativeDiagnostics().services().get(serviceIndex);
+                        if (resetRoot.beginFrame() != frame.absoluteFrame()) {
+                            throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
+                                    "native reset root does not begin in its captured frame");
+                        }
+                        resetRoots.add(resetRoot);
+                        nativeResets.addLast(new NativeResetExpectation(frame.absoluteFrame(), reset.power(),
+                                frame.services().get(serviceIndex).ordinal()));
+                    }
+                    int resetIndex = 0;
+                    for (FrontierOwnedChip owned : frame.nativeDiagnostics().rawChipInventory()) {
+                        while (resetIndex < resetRoots.size()
+                                && resetRoots.get(resetIndex).beginOrdinal() < owned.event().ordinal()) {
+                            nativeYmPort0Latch = 0;
+                            nativeYmPort1Latch = 0;
+                            resetIndex++;
+                        }
+                        replayNativeYm(owned.event());
+                    }
+                    while (resetIndex < resetRoots.size()) {
+                        nativeYmPort0Latch = 0;
+                        nativeYmPort1Latch = 0;
+                        resetIndex++;
                     }
                 }
             } else if (record instanceof Lifecycle lifecycle) {
                 if (!baseline || lifecycle.ordinal() != lifecycleOrdinal++) {
                     ordinal("lifecycle ordinal is not globally contiguous after baseline");
                 }
+                if (!nativeResets.isEmpty()) {
+                    NativeResetExpectation reset = nativeResets.removeFirst();
+                    String expected = reset.power() ? "power" : "reset";
+                    Object serviceOrdinal = lifecycle.details().get("service_ordinal");
+                    if (lifecycle.absoluteFrame() != reset.frame()
+                            || !lifecycle.kind().equalsIgnoreCase(expected)
+                            || !(serviceOrdinal instanceof Number number)
+                            || number.longValue() != reset.serviceOrdinal()) {
+                        throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
+                                "native reset diagnostic and typed lifecycle disagree");
+                    }
+                }
                 lifecycle(lifecycle);
+            } else if (record instanceof CutoffFrontier frontier) {
+                if (!nativeResets.isEmpty()) ordinal("native reset lifecycle is missing before cutoff");
+                boolean buffered = metadata.observerRuntimeIdentity() instanceof BufferedNativeObserverIdentity;
+                if (buffered != (frontier.nativeDiagnostics() != null)) {
+                    throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
+                            "native cutoff diagnostics do not match the observer identity");
+                }
+                accountCarriedAtCutoff(frontier);
+                if (buffered) {
+                    List<FrontierService> terminalServices = java.util.stream.Stream.concat(
+                            frontier.nativeDiagnostics().activeStack().stream(),
+                            frontier.nativeDiagnostics().pendingDescendants().stream())
+                            .sorted(java.util.Comparator.comparingInt(FrontierService::beginFrame)
+                                    .thenComparingLong(FrontierService::beginOrdinal)).toList();
+                    for (FrontierService service : terminalServices) {
+                        boolean continuedCarry = continuedNativeCarriedTokens.contains(service.token());
+                        if (!continuedCarry && (service.beginFrame() < previousNativeBeginFrame
+                                || service.beginFrame() == previousNativeBeginFrame
+                                        && service.beginOrdinal() <= previousNativeBeginOrdinal)) {
+                            throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
+                                    "native cutoff service begins outside global order");
+                        }
+                        previousNativeBeginFrame = service.beginFrame();
+                        previousNativeBeginOrdinal = service.beginOrdinal();
+                    }
+                    managedCutoff(terminalServices);
+                    continuedNativeCarriedTokens.clear();
+                    for (FrontierOwnedChip owned : frontier.nativeDiagnostics().rawChipInventory()) {
+                        if (owned.event().coordinate() <= previousNativeRawCoordinate) {
+                            throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
+                                    "native cutoff chip coordinates are not globally increasing");
+                        }
+                        previousNativeRawCoordinate = owned.event().coordinate();
+                        replayNativeYm(owned.event());
+                    }
+                    if (nativeYmPort0Latch != null && nativeYmPort0Latch != frontier.ymPort0Latch()
+                            || nativeYmPort1Latch != null && nativeYmPort1Latch != frontier.ymPort1Latch()) {
+                        throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
+                                "native YM latch replay disagrees with the terminal cutoff");
+                    }
+                }
+                try {
+                    profile.cutoffFrontierPolicy().validate(frontier);
+                } catch (RuntimeException failure) {
+                    throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
+                            "cutoff frontier does not match its exact service manifest", failure);
+                }
+                state(frontier.terminalState());
             } else if (record instanceof Terminal) {
+                if (!carriedServices.isEmpty() || !nativeCarriedServices.isEmpty()) {
+                    throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
+                            "terminal leaves carried-in services unresolved");
+                }
+                if (!activeManagedServices.isEmpty() || !completedManagedServices.isEmpty()) {
+                    throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
+                            "terminal leaves native managed-service evidence unaccounted");
+                }
+                CompleteRunAudioTrace.NativeCapabilitySummary expectedCapability =
+                        profile.completeRunCapabilities().get(metadata.producerKind());
+                if (!Objects.equals(expectedCapability, ((Terminal) record).nativeCapability())) {
+                    throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
+                            "terminal native capability does not match the exact profile literal");
+                }
                 if (pendingRequests.size() > pendingPolicy.maximumAtTerminal()) {
                     throw new ValidationException(ValidationException.Kind.PENDING_UNRESOLVED, side,
                             "capture terminates with unresolved requests outside the profile allowance");
@@ -1066,6 +1303,305 @@ public final class CompleteRunAudioComparator {
                 terminal = true;
             }
         }
+
+        private void baselineFrontier(BoundaryFrontier frontier) throws ValidationException {
+            for (CutoffService service : frontier.activeStack()) {
+                carriedServices.put(service.beginOrdinal(), service);
+            }
+            chipOrdinal = frontier.rawChipEvents().size();
+            boolean buffered = metadata.observerRuntimeIdentity() instanceof BufferedNativeObserverIdentity;
+            if (!buffered && frontier.nativeDiagnostics() != null) {
+                throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
+                        "callback baseline cannot carry buffered-native proof");
+            }
+            if (frontier.nativeDiagnostics() == null) return;
+            List<FrontierService> nativeBoundaryServices = java.util.stream.Stream.concat(
+                    frontier.nativeDiagnostics().activeStack().stream(),
+                    frontier.nativeDiagnostics().pendingDescendants().stream())
+                    .sorted(java.util.Comparator.comparingInt(FrontierService::beginFrame)
+                            .thenComparingLong(FrontierService::beginOrdinal)).toList();
+            for (FrontierService service : nativeBoundaryServices) {
+                if (profile.cutoffFrontierPolicy().serviceRules().stream()
+                        .noneMatch(rule -> rule.matches(service) && rule.acceptsChipSources(service))) {
+                    throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
+                            "baseline native carry-in is outside the exact observer manifest");
+                }
+                previousNativeBeginFrame = service.beginFrame();
+                previousNativeBeginOrdinal = service.beginOrdinal();
+            }
+            for (int index = 0; index < frontier.nativeDiagnostics().activeStack().size(); index++) {
+                FrontierService service = frontier.nativeDiagnostics().activeStack().get(index);
+                nativeCarriedServices.put(frontier.activeStack().get(index).beginOrdinal(), service);
+            }
+            for (FrontierOwnedChip owned : frontier.nativeDiagnostics().rawChipInventory()) {
+                if (owned.event().coordinate() <= previousNativeRawCoordinate) {
+                    throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
+                            "baseline native chip coordinates are not globally increasing");
+                }
+                previousNativeRawCoordinate = owned.event().coordinate();
+                replayNativeYm(owned.event());
+            }
+            if (nativeYmPort0Latch != null && nativeYmPort0Latch != frontier.ymPort0Latch()
+                    || nativeYmPort1Latch != null && nativeYmPort1Latch != frontier.ymPort1Latch()) {
+                throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
+                        "baseline native YM latch replay disagrees with semantic carry-in");
+            }
+        }
+
+        private void releaseCarriedService(DriverService service, FrameNativeDiagnostics diagnostics,
+                int serviceIndex) throws ValidationException {
+            Long carriedOrdinal = service.carriedBoundaryOrdinal();
+            if (carriedOrdinal == null) return;
+            if (carriedServices.isEmpty() || !carriedServices.containsKey(carriedOrdinal)
+                    || !carriedServices.keySet().stream().toList().getLast().equals(carriedOrdinal)) {
+                throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
+                        "service carry link is absent or violates inner-to-outer release order");
+            }
+            CutoffService carried = carriedServices.get(carriedOrdinal);
+            if (!carried.kind().equals(service.kind())) {
+                throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
+                        "service carry link kind differs from its baseline service");
+            }
+            if (diagnostics != null) {
+                FrontierService proof = nativeCarriedServices.get(carriedOrdinal);
+                FrontierService release = diagnostics.services().get(serviceIndex);
+                FrontierServiceState expected = service.completion() == ServiceCompletion.COMPLETED
+                        ? FrontierServiceState.COMPLETED : FrontierServiceState.RESET_CANCELLED;
+                if (proof == null || release.token() != proof.token() || release.parentToken() != proof.parentToken()
+                        || release.depth() != proof.depth() || !release.kind().equals(proof.kind())
+                        || release.beginFrame() != proof.beginFrame()
+                        || release.beginOrdinal() != proof.beginOrdinal()
+                        || release.beginPc() != proof.beginPc()
+                        || release.beginHookToken() != proof.beginHookToken()
+                        || !release.beginSourceCpu().equals(proof.beginSourceCpu())
+                        || release.state() != expected) {
+                    throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
+                            "native carried-service release disagrees with baseline proof");
+                }
+                nativeCarriedServices.remove(carriedOrdinal);
+                releasedNativeCarriedTokens.add(proof.token());
+            }
+            carriedServices.remove(carriedOrdinal);
+        }
+
+        private void accountCarriedAtCutoff(CutoffFrontier frontier) throws ValidationException {
+            if (carriedServices.isEmpty()) return;
+            List<CutoffService> remaining = List.copyOf(carriedServices.values());
+            if (frontier.activeStack().size() < remaining.size()) {
+                throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
+                        "cutoff omits unresolved carried-in services");
+            }
+            for (int index = 0; index < remaining.size(); index++) {
+                CutoffService carried = remaining.get(index);
+                CutoffService open = frontier.activeStack().get(index);
+                if (open.state() != FrontierServiceState.OPEN || open.depth() != carried.depth()
+                        || !open.kind().equals(carried.kind())
+                        || open.beginFrame() != carried.beginFrame()
+                        || open.beginOrdinal() != carried.beginOrdinal()) {
+                    throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
+                            "cutoff frontier does not continue the same carried-in stack");
+                }
+                if (frontier.nativeDiagnostics() != null) {
+                    FrontierService proof = nativeCarriedServices.get(carried.beginOrdinal());
+                    FrontierService continued = frontier.nativeDiagnostics().activeStack().get(index);
+                    if (proof == null || continued.token() != proof.token()
+                            || continued.beginFrame() != proof.beginFrame()
+                            || continued.beginOrdinal() != proof.beginOrdinal()
+                            || continued.beginPc() != proof.beginPc()
+                            || continued.beginHookToken() != proof.beginHookToken()
+                            || !continued.beginSourceCpu().equals(proof.beginSourceCpu())) {
+                        throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
+                                "native cutoff does not continue the same carried-in service");
+                    }
+                    continuedNativeCarriedTokens.add(proof.token());
+                }
+            }
+            carriedServices.clear();
+            nativeCarriedServices.clear();
+        }
+
+        private void nativeRawOrder(FrameNativeDiagnostics diagnostics) throws ValidationException {
+            List<Long> coordinates = java.util.stream.Stream.concat(
+                    diagnostics.rawChipInventory().stream().map(owned -> owned.event().coordinate()),
+                    diagnostics.managedCorrelations().stream().flatMap(correlation -> correlation.events().stream())
+                            .map(NativeManagedEvent::coordinate))
+                    .sorted().toList();
+            for (long coordinate : coordinates) {
+                if (coordinate <= previousNativeRawCoordinate) {
+                    throw nativeEvidence("native managed/chip coordinates are not globally increasing");
+                }
+                previousNativeRawCoordinate = coordinate;
+            }
+        }
+
+        private void managedBoundaries(int frame, FrameNativeDiagnostics diagnostics)
+                throws ValidationException {
+            List<ManagedBoundaryOperation> operations = new ArrayList<>();
+            for (NativeManagedCorrelation correlation : diagnostics.managedCorrelations()) {
+                for (NativeManagedEvent event : correlation.events()) {
+                    if (event.eventKind() == 1 || event.eventKind() == 2) {
+                        operations.add(new ManagedBoundaryOperation(event.ordinal(), event, null));
+                    }
+                }
+            }
+            for (FrontierService service : diagnostics.services()) {
+                if ("M68K".equals(service.beginSourceCpu())
+                        && service.state() == FrontierServiceState.RESET_CANCELLED) {
+                    operations.add(new ManagedBoundaryOperation(service.endOrdinal(), null, service));
+                }
+            }
+            operations.sort(Comparator.comparingLong(ManagedBoundaryOperation::ordinal));
+            long priorOrdinal = -1;
+            for (ManagedBoundaryOperation operation : operations) {
+                if (operation.ordinal() <= priorOrdinal) {
+                    throw nativeEvidence("native managed-service boundaries reuse an event ordinal");
+                }
+                priorOrdinal = operation.ordinal();
+                if (operation.cancelled() != null) {
+                    cancelManagedService(operation.cancelled());
+                } else if (operation.event().eventKind() == 1) {
+                    beginManagedService(frame, operation.event());
+                } else {
+                    endManagedService(frame, operation.event());
+                }
+            }
+            for (FrontierService service : diagnostics.services()) {
+                if (!"M68K".equals(service.beginSourceCpu())) continue;
+                if (service.state() == FrontierServiceState.COMPLETED) {
+                    if (releasedNativeCarriedTokens.remove(service.token())) continue;
+                    NativeBeginCoordinate key = new NativeBeginCoordinate(
+                            service.beginFrame(), service.beginOrdinal());
+                    ManagedServiceEvidence evidence = completedManagedServices.remove(key);
+                    if (evidence == null) {
+                        throw nativeEvidence("M68K service has no retained managed begin/end evidence");
+                    }
+                    requireManagedService(evidence, service, true);
+                }
+            }
+            managedEvidenceBound();
+        }
+
+        private void beginManagedService(int frame, NativeManagedEvent event) throws ValidationException {
+            NativeBeginCoordinate key = new NativeBeginCoordinate(frame, event.ordinal());
+            boolean duplicateCoordinate = completedManagedServices.containsKey(key)
+                    || activeManagedServices.values().stream().anyMatch(evidence -> evidence.begin().equals(key));
+            ManagedServiceEvidence evidence = new ManagedServiceEvidence(key, event, null, null);
+            if (duplicateCoordinate || activeManagedServices.putIfAbsent(event.serviceToken(), evidence) != null) {
+                throw nativeEvidence("native managed begin duplicates an active token or begin coordinate");
+            }
+            managedEvidenceBound();
+        }
+
+        private void endManagedService(int frame, NativeManagedEvent event) throws ValidationException {
+            ManagedServiceEvidence begin = activeManagedServices.remove(event.serviceToken());
+            if (begin == null || event.parentToken() != begin.beginEvent().parentToken()
+                    || event.serviceKind() != begin.beginEvent().serviceKind()
+                    || event.depth() != begin.beginEvent().depth()) {
+                throw nativeEvidence("native managed completion has no exact active begin");
+            }
+            ManagedServiceEvidence complete = new ManagedServiceEvidence(
+                    begin.begin(), begin.beginEvent(), frame, event);
+            if (completedManagedServices.putIfAbsent(begin.begin(), complete) != null) {
+                throw nativeEvidence("native managed completion duplicates retained evidence");
+            }
+            managedEvidenceBound();
+        }
+
+        private void cancelManagedService(FrontierService service) throws ValidationException {
+            ManagedServiceEvidence evidence = activeManagedServices.remove(service.token());
+            if (evidence == null) {
+                throw nativeEvidence("reset-cancelled M68K service has no active managed begin");
+            }
+            requireManagedService(evidence, service, false);
+        }
+
+        private void managedCutoff(List<FrontierService> terminalServices) throws ValidationException {
+            for (FrontierService service : terminalServices) {
+                if (!"M68K".equals(service.beginSourceCpu())) continue;
+                if (continuedNativeCarriedTokens.contains(service.token())) continue;
+                ManagedServiceEvidence evidence;
+                if (service.state() == FrontierServiceState.OPEN) {
+                    evidence = activeManagedServices.remove(service.token());
+                    if (evidence == null) {
+                        throw nativeEvidence("open cutoff M68K service has no active managed begin");
+                    }
+                    requireManagedService(evidence, service, false);
+                } else if (service.state() == FrontierServiceState.COMPLETED) {
+                    evidence = completedManagedServices.remove(new NativeBeginCoordinate(
+                            service.beginFrame(), service.beginOrdinal()));
+                    if (evidence == null) {
+                        throw nativeEvidence("completed cutoff M68K service has no retained begin/end evidence");
+                    }
+                    requireManagedService(evidence, service, true);
+                } else {
+                    throw nativeEvidence("reset-cancelled M68K service was withheld until cutoff");
+                }
+            }
+            if (!activeManagedServices.isEmpty() || !completedManagedServices.isEmpty()) {
+                throw nativeEvidence("cutoff does not account for every retained M68K boundary");
+            }
+        }
+
+        private void requireManagedService(ManagedServiceEvidence evidence, FrontierService service,
+                boolean requireEnd) throws ValidationException {
+            NativeManagedEvent begin = evidence.beginEvent();
+            if (service.token() != begin.serviceToken()
+                    || service.parentToken() != begin.parentToken()
+                    || service.depth() != begin.depth()
+                    || service.beginFrame() != evidence.begin().frame()
+                    || service.beginOrdinal() != begin.ordinal()
+                    || service.beginPc() != begin.pc()
+                    || service.beginHookToken() != begin.hookToken()
+                    || !service.beginSourceCpu().equals(begin.sourceCpu())) {
+                throw nativeEvidence("M68K service does not match its managed begin evidence");
+            }
+            if (requireEnd) {
+                NativeManagedEvent end = evidence.endEvent();
+                if (end == null || !Objects.equals(service.endFrame(), evidence.endFrame())
+                        || !Objects.equals(service.endOrdinal(), end.ordinal())
+                        || !Objects.equals(service.endPc(), end.pc())
+                        || !Objects.equals(service.endHookToken(), end.hookToken())
+                        || service.token() != end.serviceToken()
+                        || service.parentToken() != end.parentToken()
+                        || service.depth() != end.depth()) {
+                    throw nativeEvidence("M68K service does not match its managed completion evidence");
+                }
+            } else if (evidence.endEvent() != null) {
+                throw nativeEvidence("open/reset M68K service unexpectedly has managed completion evidence");
+            }
+        }
+
+        private void managedEvidenceBound() throws ValidationException {
+            if ((long) activeManagedServices.size() + completedManagedServices.size()
+                    > MAX_CUTOFF_SERVICES) {
+                throw nativeEvidence("retained native managed-service evidence exceeds its bound");
+            }
+        }
+
+        private ValidationException nativeEvidence(String message) {
+            return new ValidationException(ValidationException.Kind.STATE_INVALID, side, message);
+        }
+
+        private record NativeBeginCoordinate(int frame, long ordinal) {}
+        private record ManagedServiceEvidence(NativeBeginCoordinate begin, NativeManagedEvent beginEvent,
+                Integer endFrame, NativeManagedEvent endEvent) {}
+        private record ManagedBoundaryOperation(long ordinal, NativeManagedEvent event,
+                FrontierService cancelled) {}
+
+        private void replayNativeYm(FrontierChipEvent event) throws ValidationException {
+            if (event.eventKind() != 3) return;
+            Integer prior = event.port() == 0 ? nativeYmPort0Latch : nativeYmPort1Latch;
+            if (prior != null && event.register() != prior) {
+                throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
+                        "native YM write register disagrees with its prior address latch");
+            }
+            if (!event.data()) {
+                if (event.port() == 0) nativeYmPort0Latch = event.value();
+                else nativeYmPort1Latch = event.value();
+            }
+        }
+
+        private record NativeResetExpectation(int frame, boolean power, long serviceOrdinal) {}
 
         void finish() throws ValidationException {
             if (!baseline || !terminal) ordinal("capture ended without baseline or terminal");

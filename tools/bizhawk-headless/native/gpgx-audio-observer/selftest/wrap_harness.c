@@ -5,6 +5,8 @@
 
 struct selftest_m68k m68k;
 uint8_t zram[0x2000];
+uint8_t work_ram[0x10000];
+uint32_t selftest_m68k_a7;
 
 /* Include the implementation to exercise its private token-wrap boundary without a production seam. */
 #include "audio_trace.c"
