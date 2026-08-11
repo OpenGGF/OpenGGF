@@ -40,8 +40,16 @@ unmaintained Lua is fine; it is not the fixture publisher.
 
 ## Requirements
 
-- **Mono 6.12** with `xbuild` on `PATH`. The projects are non-SDK `.csproj` and
-  the source is **C# 7.x** — newer language features will not compile.
+- **Mono 6.12** with `xbuild` on `PATH`, plus Mono's Roslyn compiler at
+  `/usr/lib/mono/msbuild/Current/bin/Roslyn/csc.exe`. The build fails closed
+  unless that compiler is version `3.9.0-6.21124.20 (db94f4cc)` with SHA-256
+  `81e98ade50f3e4127237128211778bd6ebe0c3998c9cc2f5eb44f3196a0297f8`.
+  The projects are non-SDK `.csproj` and the source is **C# 7.x** — newer
+  language features will not compile. `build.sh` always uses this Roslyn path,
+  deterministic PE/MVID generation, and a canonical source path map; direct
+  ambient `mcs`/`xbuild` compilation is rejected by the project contract. Its
+  response file is created under `obj/` for one build and removed on exit.
+  `test.sh` and `run.sh` both rebuild through this contract before execution.
 - A **BizHawk 2.11 distribution**. `common-env.sh` defaults `BIZHAWK_HOME` to the
   repo-local `docs/BizHawk-2.11-linux-x64`, validates that it is an existing
   absolute path, and checks the required DLLs are present under `dll/`.
@@ -58,6 +66,21 @@ unmaintained Lua is fine; it is not the fixture publisher.
 ./test.sh --game s3k             # just the S3K gates
 ./test.sh --jobs 1               # sequential, the debugging path
 ```
+
+To prove the pinned production and test executables are independent of checkout
+location, run two clean builds under a new durable output root:
+
+```bash
+./verify-deterministic-build.sh \
+  --bizhawk-home /abs/path/to/BizHawk-2.11-linux-x64 \
+  --output /abs/path/to/repo/target/audio-parity/deterministic-headless-build
+```
+
+The output root must not already exist. One copied checkout includes spaces in
+its path and hostile ambient compiler properties. The verifier byte-compares
+both executables and PDBs, proves direct ambient `xbuild` is rejected, and runs
+the strict S2 capability binding against each production assembly. It retains
+the two build roots and direct-build failure log as durable evidence.
 
 `test.sh` skips cleanly when a ROM variable or the BizHawk distribution is
 absent, and fails loudly when one is present but wrong (it re-verifies the ROM

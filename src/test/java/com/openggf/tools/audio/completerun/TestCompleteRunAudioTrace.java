@@ -772,10 +772,10 @@ class TestCompleteRunAudioTrace {
                 .replace(
                 "\"BIZHAWK_BASE_COMMON_DLL\":\"438a49d6a45d9fcac17016240ae205d1af7a4632865f6f70468b684b82323f33\"",
                 "\"BIZHAWK_BASE_COMMON_DLL\":\"438a49d6a45d9fcac17016240ae205d1af7a4632865f6f70468b684b82323f33\""
-                        + ",\"TASK8_HARNESS_EXECUTABLE\":\"62e3f3d73b735e2301045452443519b9d8e0276d1bb08c06caa05294c32cb6ac\""
+                        + ",\"TASK8_HARNESS_EXECUTABLE\":\"e044d963b53b44003e13a4bef7d5360cf100aea421cb40ebc5ed44e08db8d5dd\""
                         + ",\"TASK8_COLLECTOR_SOURCE\":\"d9b525bf7c5b4620833d4eeeda5acf75bef82ab3ee7d1e5a74aa715b641cb69c\""
                         + ",\"TASK8_HOST_SOURCE\":\"c45d7de53bd29101d896fadb0a69eda1ae206d1fac43a5733afb3f4bd7f86be7\""
-                        + ",\"GPGX_OBSERVER_CAPABILITY\":\"93f467c27036e395bdacf44b28dd09e690000169036bf7a76d3eb29c93a70de1\""
+                        + ",\"GPGX_OBSERVER_CAPABILITY\":\"d7b2e8f3a78cf34dae7cb882ad8a12aeeb883542499cf8b7d023ccd68deeb795\""
                         + ",\"REFERENCE_INSTALLATION_TREE\":\"eb8f3252afa634e3abe97fca6eb7d766df47d16eff76b250a48777ca7433c12b\"");
         assertEquals(canonical, CompleteRunAudioJson.writeMetadata(metadata));
         assertEquals(metadata, readMetadata(canonical));

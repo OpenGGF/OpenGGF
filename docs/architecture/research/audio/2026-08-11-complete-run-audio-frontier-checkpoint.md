@@ -144,9 +144,9 @@ that complete-game audio parity is finished.
 The capability fixture now binds collector source SHA-256
 `d9b525bf7c5b4620833d4eeeda5acf75bef82ab3ee7d1e5a74aa715b641cb69c`,
 production harness SHA-256
-`62e3f3d73b735e2301045452443519b9d8e0276d1bb08c06caa05294c32cb6ac`,
+`e044d963b53b44003e13a4bef7d5360cf100aea421cb40ebc5ed44e08db8d5dd`,
 and full raw fixture SHA-256
-`93f467c27036e395bdacf44b28dd09e690000169036bf7a76d3eb29c93a70de1`.
+`d7b2e8f3a78cf34dae7cb882ad8a12aeeb883542499cf8b7d023ccd68deeb795`.
 To avoid a self-hash cycle while preserving production-executable authority,
 the S2 runtime pins normalized template SHA-256
 `97b800c1421a5a15d4dc53acd99fa853399a57a9c46c7b79a3eff1032eb7f098`:
@@ -154,3 +154,13 @@ exactly the one canonical 64-hex executable field is zeroed for that template
 hash, while runtime validation separately requires its actual value to equal
 SHA-256 of `typeof(GpgxHost).Assembly.Location`. Every other raw byte remains
 identity-sensitive, and Java metadata retains the full raw capability hash.
+
+The harness executable is now built by the project contract with the pinned
+Mono Roslyn 3.9 compiler, `/deterministic+`, and a canonical checkout-root path
+map. A clean two-root build, including a root with spaces and hostile ambient
+compiler properties, produced identical production executable SHA-256
+`e044d963b53b44003e13a4bef7d5360cf100aea421cb40ebc5ed44e08db8d5dd`
+and test executable SHA-256
+`7afbd2b0e9f80a717b4438d46ef91dc8dfc44c74107789afa982877f5700b2d2`.
+Their PDBs are byte-identical as well. Direct ambient `xbuild` is rejected, and
+both copied production assemblies pass the strict S2 capability binding.
