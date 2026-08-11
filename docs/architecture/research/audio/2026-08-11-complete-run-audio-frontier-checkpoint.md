@@ -13,13 +13,18 @@ details are in the adjacent `TRUST.md`. No generated core or ROM is committed.
 
 ## Current frontier
 
-- Sonic 1: the last completed real power-on reference run stopped at BK2 row
-  521 on an unowned Z80 DAC-enable write at instruction-start PC `$0066`.
-  Source inspection showed that the prior DPCM boundary at `$0077` began after
-  sample setup had already written YM register `$2B`. The current S1 manifest
-  models a typed sample-setup service beginning at `$003A`, tailing into DPCM at
-  `$0077` or Sega PCM at `$00C1`. Native unit/matrix coverage is green, but a
-  post-fix real run through the row-860 publication boundary is still pending.
+- Sonic 1: a post-fix real power-on run with the reviewed prototype core clears
+  the former row-521 unowned `$0066` DAC-enable write. The current S1 manifest's
+  typed sample-setup service (`$003A` into DPCM at `$0077` or Sega PCM at
+  `$00C1`) is therefore proven on the real movie. The next deterministic stop is
+  BK2 row 523: native `end_frame` returns the undifferentiated ABI status `-3`.
+  The drained tail is a valid open DPCM service (kind 2, token 188); its final
+  event is the YM address write at instruction-start PC `$009C`, opcode
+  `DD 73 00`, from `zPlayPCMLoop` (`docs/s1disasm/sound/z80.asm:155-161`).
+  Because ABI v2 collapses hook/proof/ownership/continuation runtime faults into
+  the same status, the exact first fault cannot be attributed without a central
+  native diagnostic contract. No additional game-scoped manifest edge is
+  justified from this evidence.
 - Sonic 2: the complete reference movie has two identical observer runs:
   259,590 frames, 169,986,419 events, maximum frame occupancy 1,825, event
   digest prefix `c2b2f823`, and an empty cutoff frontier. Engine comparison is
@@ -32,8 +37,21 @@ details are in the adjacent `TRUST.md`. No generated core or ROM is committed.
 The Sonic 1 reference producer starts observation at power-on, discards
 pre-publication rows while retaining native service/latch state, and publishes
 a mandatory carried-in boundary frontier at row 860. That transition is unit
-proven but not yet real-run proven. No game has published a final reference vs
-OpenGGF MATCH artifact at this checkpoint.
+proven but not yet real-run proven. The real frontier is now row 523, still
+before publication. No game has published a final reference vs OpenGGF MATCH
+artifact at this checkpoint.
+
+The row-523 reproduction used Sonic 1 World REV01 SHA-1
+`69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b`, BK2 SHA-256
+`f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b`,
+and the durable BizHawk home whose `dll/gpgx.wbx.zst` SHA-256 is
+`55ce7ae32be0b8f5e25c819d578937acd85b80615b985bedde5c780211c3a305`.
+Two runs reproduced the same row, status, and native tail. The required central
+change is a read-only first-fault diagnostic returned after failed `end_frame`:
+reason, CPU, instruction-start PC, active kind/depth, and continuation count and
+limit. It must not alter event recording or emulation state. Native selftests,
+the managed adapter/native binding tests, `CompleteRunAudioObserverTests`, and
+this real S1 prefix are the affected gates.
 
 ## Verified checkpoint gates
 
