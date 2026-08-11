@@ -576,7 +576,7 @@ public class TestDonorAudioRouting {
         audioManager.registerDonorLoader(
                 "s2", oldLoader, oldDac, oldConfig);
         ObservedSource initial = observeDonorSfx("s2", 0xE3);
-        oldLoader.runOnSfxLoadNumber = oldLoader.sfxLoadCount + 2;
+        oldLoader.runOnSfxLoadNumber = oldLoader.sfxLoadCount + 1;
         oldLoader.onSfxLoad = () -> audioManager.registerDonorLoader(
                 "s2", newLoader, newDac, newConfig);
 

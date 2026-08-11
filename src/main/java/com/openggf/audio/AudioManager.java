@@ -1584,8 +1584,11 @@ public class AudioManager implements MusicRestoreSink {
                 recordTimelineCommand(new AudioCommand.PlayMusic(
                         musicId, AudioCommand.MusicRoute.BASE_SMPS, override, null));
                 if (sendLiveBackendCommands()) {
+                    var playback = shadowFactory
+                            .requireRegisteredSmpsMusicPlayback(
+                                    key, source.generation());
                     backend.prepareLogicalMusicSource(AudioSourceDescriptor.baseMusic(musicId));
-                    backend.playSmps(data, source.dac());
+                    backend.playSmps(playback.program(), playback.dac());
                 }
                 return;
             }
@@ -1622,14 +1625,53 @@ public class AudioManager implements MusicRestoreSink {
         if (suppressingRewindReplay()) {
             return;
         }
+        if (sfxName == null) {
+            recordTimelineCommand(new AudioCommand.PlaySfx(
+                    -1, null, AudioCommand.SfxRoute.FALLBACK_NAME,
+                    pitch, null));
+            if (sendLiveBackendCommands()) {
+                backend.playSfx(null, pitch);
+            }
+            return;
+        }
         BaseAudioSource source = baseAudioSource;
         if (source.loader() != null) {
-            AbstractSmpsData sfx = source.loader().loadSfx(sfxName);
-            if (sfx != null) {
+            if (!hasCatalogDependencies(source.dac(), source.config())) {
+                AbstractSmpsData sfx = source.loader().loadSfx(sfxName);
+                if (sfx != null) {
+                    recordTimelineCommand(new AudioCommand.PlaySfx(
+                            -1, sfxName,
+                            AudioCommand.SfxRoute.BASE_SMPS_NAME,
+                            pitch, null));
+                    if (sendLiveBackendCommands()) {
+                        backend.playSfxSmps(sfx, source.dac(), pitch);
+                    }
+                    return;
+                }
                 recordTimelineCommand(new AudioCommand.PlaySfx(
-                        -1, sfxName, AudioCommand.SfxRoute.BASE_SMPS_NAME, pitch, null));
+                        -1, sfxName, AudioCommand.SfxRoute.FALLBACK_NAME,
+                        pitch, null));
                 if (sendLiveBackendCommands()) {
-                    backend.playSfxSmps(sfx, source.dac(), pitch);
+                    backend.playSfx(sfxName, pitch);
+                }
+                return;
+            }
+            ensureShadowPresentation();
+            var captured = baseSfxSource(source);
+            SmpsAssetKey key = new SmpsAssetKey(
+                    captured.gameId(), SmpsAssetKey.Route.BASE_NAME,
+                    -1, sfxName);
+            if (ensureRegisteredSmpsSfx(key, captured)) {
+                AudioCommand.PlaySfx command = new AudioCommand.PlaySfx(
+                        -1, sfxName, AudioCommand.SfxRoute.BASE_SMPS_NAME,
+                        pitch, null);
+                recordRegisteredSmpsSfxCommand(command, captured);
+                if (sendLiveBackendCommands()) {
+                    var playback = shadowFactory
+                            .requireRegisteredSmpsSfxPlayback(
+                                    key, captured.dependencyGeneration());
+                    backend.playSfxSmps(
+                            playback.program(), playback.dac(), pitch);
                 }
                 return;
             }
@@ -1665,12 +1707,14 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     private void playGameSfxResolved(GameSound sound, float pitch) {
-        GameAudioProfile profile = baseAudioSource.profile();
+        BaseAudioSource base = baseAudioSource;
+        GameAudioProfile profile = base.profile();
         float effectivePitch = profile != null
                 ? profile.adjustSfxPitch(sound, pitch) : pitch;
         boolean played = false;
         if (soundMap != null && soundMap.containsKey(sound)) {
-            played = playSfxResolved(soundMap.get(sound), effectivePitch);
+            played = playBaseSfx(
+                    base, soundMap.get(sound), effectivePitch);
         }
         if (!played) {
             DonorSfxBinding binding = donorSoundBindings.get(sound);
@@ -1678,25 +1722,48 @@ public class AudioManager implements MusicRestoreSink {
                 DonorAudioSource donor = donorAudioSources.get(
                         binding.gameId());
                 if (donor != null) {
-                    AbstractSmpsData sfx = donor.loader().loadSfx(
-                            binding.sfxId());
-                    if (sfx != null) {
-                        recordTimelineCommand(new AudioCommand.PlaySfx(
-                                binding.sfxId(),
-                                sound.name(),
-                                AudioCommand.SfxRoute.DONOR_SMPS,
-                                effectivePitch,
-                                binding.gameId()));
-                        if (sendLiveBackendCommands()) {
-                            if (donor.config() != null) {
-                                backend.playSfxSmps(sfx, donor.dac(),
-                                        effectivePitch, donor.config());
-                            } else {
+                    if (!hasCatalogDependencies(
+                            donor.dac(), donor.config())) {
+                        AbstractSmpsData sfx = donor.loader().loadSfx(
+                                binding.sfxId());
+                        if (sfx != null) {
+                            recordTimelineCommand(new AudioCommand.PlaySfx(
+                                    binding.sfxId(), sound.name(),
+                                    AudioCommand.SfxRoute.DONOR_SMPS,
+                                    effectivePitch, binding.gameId()));
+                            if (sendLiveBackendCommands()) {
                                 backend.playSfxSmps(
                                         sfx, donor.dac(), effectivePitch);
                             }
+                            played = true;
                         }
-                        played = true;
+                        if (played) {
+                            return;
+                        }
+                    } else {
+                        ensureShadowPresentation();
+                        var captured = donorSfxSource(
+                                binding.gameId(), donor);
+                        SmpsAssetKey key = new SmpsAssetKey(
+                                captured.gameId(),
+                                SmpsAssetKey.Route.DONOR_ID,
+                                binding.sfxId(), null);
+                        if (ensureRegisteredSmpsSfx(key, captured)) {
+                            AudioCommand.PlaySfx command =
+                                    new AudioCommand.PlaySfx(
+                                            binding.sfxId(),
+                                            sound.name(),
+                                            AudioCommand.SfxRoute.DONOR_SMPS,
+                                            effectivePitch,
+                                            binding.gameId());
+                            recordRegisteredSmpsSfxCommand(
+                                    command, captured);
+                            if (sendLiveBackendCommands()) {
+                                playLiveRegisteredDonorSfx(
+                                        key, captured, effectivePitch);
+                            }
+                            played = true;
+                        }
                     }
                 }
             }
@@ -1722,18 +1789,42 @@ public class AudioManager implements MusicRestoreSink {
             return false;
         }
         requestObserver.onRequested(sfxRequestClass(sfxId), sfxId);
-        return playSfxResolved(sfxId, pitch);
+        return playBaseSfx(baseAudioSource, sfxId, pitch);
     }
 
-    private boolean playSfxResolved(int sfxId, float pitch) {
-        BaseAudioSource source = baseAudioSource;
+    private boolean playBaseSfx(
+            BaseAudioSource source, int sfxId, float pitch) {
         if (source.loader() != null) {
-            AbstractSmpsData sfx = source.loader().loadSfx(sfxId);
-            if (sfx != null) {
-                recordTimelineCommand(new AudioCommand.PlaySfx(
-                        sfxId, null, AudioCommand.SfxRoute.BASE_SMPS_ID, pitch, null));
+            if (!hasCatalogDependencies(source.dac(), source.config())) {
+                AbstractSmpsData sfx = source.loader().loadSfx(sfxId);
+                if (sfx != null) {
+                    recordTimelineCommand(new AudioCommand.PlaySfx(
+                            sfxId, null,
+                            AudioCommand.SfxRoute.BASE_SMPS_ID,
+                            pitch, null));
+                    if (sendLiveBackendCommands()) {
+                        backend.playSfxSmps(sfx, source.dac(), pitch);
+                    }
+                    return true;
+                }
+                return false;
+            }
+            ensureShadowPresentation();
+            var captured = baseSfxSource(source);
+            SmpsAssetKey key = new SmpsAssetKey(
+                    captured.gameId(), SmpsAssetKey.Route.BASE_ID,
+                    sfxId, null);
+            if (ensureRegisteredSmpsSfx(key, captured)) {
+                AudioCommand.PlaySfx command = new AudioCommand.PlaySfx(
+                        sfxId, null, AudioCommand.SfxRoute.BASE_SMPS_ID,
+                        pitch, null);
+                recordRegisteredSmpsSfxCommand(command, captured);
                 if (sendLiveBackendCommands()) {
-                    backend.playSfxSmps(sfx, source.dac(), pitch);
+                    var playback = shadowFactory
+                            .requireRegisteredSmpsSfxPlayback(
+                                    key, captured.dependencyGeneration());
+                    backend.playSfxSmps(
+                            playback.program(), playback.dac(), pitch);
                 }
                 return true;
             }
@@ -1827,20 +1918,97 @@ public class AudioManager implements MusicRestoreSink {
         }
         DonorAudioSource source = donorAudioSources.get(donorGameId);
         if (source != null) {
-            AbstractSmpsData sfx = source.loader().loadSfx(sfxId);
-            if (sfx != null) {
-                recordTimelineCommand(new AudioCommand.PlaySfx(
-                        sfxId, null, AudioCommand.SfxRoute.DONOR_SMPS, 1.0f, donorGameId));
-                if (sendLiveBackendCommands()) {
-                    if (source.config() != null) {
-                        backend.playSfxSmps(
-                                sfx, source.dac(), 1.0f, source.config());
-                    } else {
+            if (!hasCatalogDependencies(source.dac(), source.config())) {
+                AbstractSmpsData sfx = source.loader().loadSfx(sfxId);
+                if (sfx != null) {
+                    recordTimelineCommand(new AudioCommand.PlaySfx(
+                            sfxId, null, AudioCommand.SfxRoute.DONOR_SMPS,
+                            1.0f, donorGameId));
+                    if (sendLiveBackendCommands()) {
                         backend.playSfxSmps(sfx, source.dac(), 1.0f);
                     }
                 }
+                return;
+            }
+            ensureShadowPresentation();
+            var captured = donorSfxSource(donorGameId, source);
+            SmpsAssetKey key = new SmpsAssetKey(
+                    captured.gameId(), SmpsAssetKey.Route.DONOR_ID,
+                    sfxId, null);
+            if (ensureRegisteredSmpsSfx(key, captured)) {
+                AudioCommand.PlaySfx command = new AudioCommand.PlaySfx(
+                        sfxId, null, AudioCommand.SfxRoute.DONOR_SMPS,
+                        1.0f, donorGameId);
+                recordRegisteredSmpsSfxCommand(command, captured);
+                if (sendLiveBackendCommands()) {
+                    playLiveRegisteredDonorSfx(key, captured, 1.0f);
+                }
             }
         }
+    }
+
+    private boolean ensureRegisteredSmpsSfx(
+            SmpsAssetKey key,
+            AudioPresentationCommandResolver.SourceAccess source) {
+        if (shadowFactory.findRegisteredSmpsSfxAsset(
+                key, source.dependencyGeneration()) != null) {
+            return true;
+        }
+        AbstractSmpsData data = key.route() == SmpsAssetKey.Route.BASE_NAME
+                ? source.loader().loadSfx(key.assetName())
+                : source.loader().loadSfx(key.assetId());
+        if (data == null) {
+            return false;
+        }
+        int resolvedId = key.route() == SmpsAssetKey.Route.BASE_NAME
+                ? data.getId() : key.assetId();
+        shadowFactory.registerSmpsSfxAsset(
+                key, source.dependencyGeneration(), data,
+                source.dac(), source.config(),
+                source.sfxPolicy().special(resolvedId));
+        return true;
+    }
+
+    private static boolean hasCatalogDependencies(
+            DacData dac, SmpsSequencerConfig config) {
+        return dac != null && config != null;
+    }
+
+    private AudioPresentationCommandResolver.SourceAccess baseSfxSource(
+            BaseAudioSource source) {
+        return new AudioPresentationCommandResolver.SourceAccess(
+                baseGameId(source), source.generation(), source.loader(),
+                source.dac(), source.config(), sfxPolicyFor(source.profile()));
+    }
+
+    private AudioPresentationCommandResolver.SourceAccess donorSfxSource(
+            String gameId, DonorAudioSource source) {
+        return new AudioPresentationCommandResolver.SourceAccess(
+                gameId, source.generation(), source.loader(), source.dac(),
+                source.config(), sfxPolicyFor(source.profile()));
+    }
+
+    private AudioTimelineEntry recordRegisteredSmpsSfxCommand(
+            AudioCommand.PlaySfx command,
+            AudioPresentationCommandResolver.SourceAccess source) {
+        if (suppressingRewindReplay()) {
+            return null;
+        }
+        AudioTimelineEntry entry = commandTimeline.record(command);
+        mirrorShadowCommand(() ->
+                shadowResolver.submitRegisteredSmpsSfx(command, source));
+        return entry;
+    }
+
+    private void playLiveRegisteredDonorSfx(
+            SmpsAssetKey key,
+            AudioPresentationCommandResolver.SourceAccess source,
+            float pitch) {
+        var playback = shadowFactory.requireRegisteredSmpsSfxPlayback(
+                key, source.dependencyGeneration());
+        backend.playSfxSmps(
+                playback.program(), playback.dac(), pitch,
+                playback.config());
     }
 
     public void update() {
@@ -1900,9 +2068,13 @@ public class AudioManager implements MusicRestoreSink {
                 recordTimelineCommand(new AudioCommand.PlayMusic(
                         musicId, AudioCommand.MusicRoute.DONOR_SMPS, false, donorGameId));
                 if (sendLiveBackendCommands()) {
+                    var playback = shadowFactory
+                            .requireRegisteredSmpsMusicPlayback(
+                                    key, source.generation());
                     backend.prepareLogicalMusicSource(AudioSourceDescriptor.donorMusic(donorGameId, musicId));
                     backend.playSmps(
-                            data, source.dac(), source.config(), false);
+                            playback.program(), playback.dac(),
+                            playback.config(), false);
                 }
             }
         }
@@ -2594,6 +2766,24 @@ public class AudioManager implements MusicRestoreSink {
         }
     }
 
+    private AudioPresentationCommandResolver.SfxPolicy sfxPolicyFor(
+            GameAudioProfile profile) {
+        return new AudioPresentationCommandResolver.SfxPolicy() {
+            @Override public int priority(int sfxId) {
+                return profile != null
+                        ? profile.getSfxPriority(sfxId) : 0x70;
+            }
+
+            @Override public boolean special(int sfxId) {
+                return profile != null && profile.isSpecialSfx(sfxId);
+            }
+
+            @Override public boolean continuous(int sfxId) {
+                return profile != null && profile.isContinuousSfx(sfxId);
+            }
+        };
+    }
+
     private final class ShadowSources implements AudioPresentationCommandResolver.Sources {
         private final int maxFrames;
 
@@ -2640,21 +2830,7 @@ public class AudioManager implements MusicRestoreSink {
 
         private AudioPresentationCommandResolver.SfxPolicy policyFor(
                 GameAudioProfile profile) {
-            return new AudioPresentationCommandResolver.SfxPolicy() {
-                @Override public int priority(int sfxId) {
-                    return profile != null
-                            ? profile.getSfxPriority(sfxId) : 0x70;
-                }
-
-                @Override public boolean special(int sfxId) {
-                    return profile != null && profile.isSpecialSfx(sfxId);
-                }
-
-                @Override public boolean continuous(int sfxId) {
-                    return profile != null
-                            && profile.isContinuousSfx(sfxId);
-                }
-            };
+            return sfxPolicyFor(profile);
         }
 
         @Override public int maxStereoFrames() {

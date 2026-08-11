@@ -138,6 +138,28 @@ public final class AudioPresentationCommandResolver {
         }
     }
 
+    /**
+     * Submits an SMPS SFX against the source tuple captured by its caller.
+     *
+     * <p>Public manager entry points classify and register before publishing
+     * their logical command. Retaining that exact source here prevents a
+     * reentrant ROM/profile/donor replacement during the first loader call
+     * from resolving the published command against another generation.
+     * Direct resolver callers continue to use {@link #submit(AudioCommand)}
+     * and retain lookup-before-load miss handling.</p>
+     */
+    public void submitRegisteredSmpsSfx(
+            AudioCommand.PlaySfx command, SourceAccess source) {
+        Objects.requireNonNull(command, "command");
+        Objects.requireNonNull(source, "source");
+        if (command.route() == AudioCommand.SfxRoute.FALLBACK_NAME
+                || command.route() == AudioCommand.SfxRoute.RING_RESOLVED) {
+            throw new IllegalArgumentException(
+                    "registered SMPS submission requires an SMPS route");
+        }
+        submitSfx(command, source);
+    }
+
     public void submitRawPcm(byte[] pcm, int sourceRate) {
         byte[] source = Objects.requireNonNull(pcm, "pcm").clone();
         String assetId = "sega-pcm:" + sourceRate + ":"
@@ -232,6 +254,11 @@ public final class AudioPresentationCommandResolver {
     }
 
     private void submitSfx(AudioCommand.PlaySfx command) {
+        submitSfx(command, null);
+    }
+
+    private void submitSfx(
+            AudioCommand.PlaySfx command, SourceAccess capturedSource) {
         if (command.route() == AudioCommand.SfxRoute.RING_RESOLVED) {
             enqueue(new ResetRingAlternation(
                     !GameSound.RING_LEFT.name().equals(command.sfxName())));
@@ -240,7 +267,9 @@ public final class AudioPresentationCommandResolver {
         try {
             resolved = switch (command.route()) {
                 case BASE_SMPS_ID -> {
-                    SourceAccess source = sources.sourceFor(
+                    SourceAccess source = capturedSource != null
+                            ? capturedSource
+                            : sources.sourceFor(
                             SmpsAssetKey.Route.BASE_ID, null);
                     SmpsAssetKey key = new SmpsAssetKey(
                             source.gameId(), SmpsAssetKey.Route.BASE_ID,
@@ -251,7 +280,9 @@ public final class AudioPresentationCommandResolver {
                             command.pitch());
                 }
                 case BASE_SMPS_NAME -> {
-                    SourceAccess source = sources.sourceFor(
+                    SourceAccess source = capturedSource != null
+                            ? capturedSource
+                            : sources.sourceFor(
                             SmpsAssetKey.Route.BASE_NAME, null);
                     SmpsAssetKey key = new SmpsAssetKey(
                             source.gameId(), SmpsAssetKey.Route.BASE_NAME,
@@ -263,8 +294,15 @@ public final class AudioPresentationCommandResolver {
                 }
                 case DONOR_SMPS -> {
                     String gameId = requireGameId(command.donorGameId());
-                    SourceAccess source = sources.sourceFor(
+                    SourceAccess source = capturedSource != null
+                            ? capturedSource
+                            : sources.sourceFor(
                             SmpsAssetKey.Route.DONOR_ID, gameId);
+                    if (!gameId.equals(source.gameId())) {
+                        throw new IllegalArgumentException(
+                                "captured donor source does not match "
+                                        + gameId);
+                    }
                     SmpsAssetKey key = new SmpsAssetKey(
                             source.gameId(), SmpsAssetKey.Route.DONOR_ID,
                             command.sfxId(), null);
