@@ -72784,7 +72784,16 @@ control and after, with an identical set of 41 failing classes.
   `TestS3kKnucklesSuperEmeraldRunChain` (`KOS_DECOMPRESSION_QUEUE#14`,
   raw_frame 1617), `TestS3kMegaRunChain` (`#15`, raw_frame 4570),
   `TestS3kMhzCompleteRunTraceReplay` (`#335`, same sha256 as the Knuckles
-  edge — three reds, one probable root).
+  edge — three reds, one probable root). That fingerprint is the SS entry
+  ring's badnik-explosion art restore: `SSEntryRing_Display`'s retirement tail
+  does `lea (ArtKosM_BadnikExplosion).l,a1` / `move.w
+  #tiles_to_bytes(ArtTile_Explosion),d2` / `jsr (Queue_Kos_Module).l`
+  ("Restore the overwritten badnik explosion art", `sonic3k.asm:128485-128487`)
+  — verified in the listing this round. The causal reading carried over from
+  the MHZ lane, NOT re-measured here, is that the engine's camera falls behind
+  the ROM's, the ring never comes on screen, and so `retireRing` never queues
+  the art (attributed to commit `672128117`). The Knuckles route therefore dies
+  on the same defect as MHZ, 321 ordinals earlier.
 - Not landed, offered: releasing each segment after the walker passes it would
   cut peak from 1041 MB to ~105-250 MB, and walker access is strictly forward
   with lookahead 1-2. It is held back because `plan()` currently loads *and
