@@ -1,6 +1,26 @@
 # Design review request: an S1 PLC hardware-timing completion kind
 
-Status: **request, not a design.** No code landed. This document exists because the
+> **SUPERSEDED 2026-08-11 — WITHDRAWN. Do not act on this request.**
+>
+> [`../audits/2026-08-11-s1-plc-hardware-timing-audit.md`](../audits/2026-08-11-s1-plc-hardware-timing-audit.md)
+> produced the missing audit output and **refuted this document's premise.**
+> `Level_TtlCardLoop`'s drain rate *is* ROM-derivable: `VBlank_TitleCards` calls
+> `ProcessPLC_9Tiles`, which decodes exactly 9 patterns per frame
+> (`docs/s1disasm/sonic.asm:946,1431-1440,1472-1478`). For this load the ROM runs
+> `1 + Σ ceil(Nᵢ/9) = 1 + 150 = 151` iterations, and the engine already runs
+> exactly 151. The gate is correct; the 34-row deficit is the un-modelled
+> blocking level-load span (`sonic.asm:2857-2900`), which is pure 68000 cycle
+> cost and is not a polled readiness gate at all.
+>
+> Consequently: **no S1 PLC hardware-timing kind is warranted**, and
+> `TestS1S2PlcComparisonOnlyGuard` should be left exactly as it is — this audit
+> is evidence *for* the guard, not against it. The sections below remain accurate
+> as a description of what *would* block such a change, and the "What blocks it
+> today (MEASURED)" section is still correct. The claim in "Why this was raised"
+> that the gate is "decompression-rate bound" with "no wait constant to derive"
+> is **false** and is retained only so the record shows what was corrected.
+
+Status: **request, not a design. Withdrawn.** No code landed. This document exists because the
 gate described in
 [2026-07-27-cross-game-hardware-timing-trace-contract.md](2026-07-27-cross-game-hardware-timing-trace-contract.md)
 requires a review *before* an S1 PLC completion kind is implemented, and that review
