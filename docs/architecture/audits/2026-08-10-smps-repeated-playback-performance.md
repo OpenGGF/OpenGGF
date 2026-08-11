@@ -182,3 +182,15 @@ test had passed minutes earlier in the 165-test focused gate with flat measured
 slopes, and it passes in the dedicated Task 7/8 gates. Repository-wide failures
 are pre-existing or independently reproduced parallel-order noise; no focused
 audio regression is attributable to this change.
+
+After reconciling the completed work with updated `develop` at
+`3c50b09a4f231cd081b6a72d58ea714e2c6d0c32`, the official detached baseline
+ran 14,579 tests with 51 failures, 16 errors, and 40 skips. The reconciled
+feature ran 14,724 tests with 55 failures, 19 errors, and 41 skips. Every one
+of the baseline's 67 failing or erroring testcase identities remained
+unchanged. The seven feature-only failing/erroring cases (three special-stage
+presentation cases, three Madmole cases, and the prepared-admission allocation
+probe) all passed together in an immediate 59-test isolated rerun, confirming
+the aggregate delta as suite-order noise rather than an attributable audio
+regression. The reconciled 165-test focused audio/ownership/allocation gate
+also passed in full.
