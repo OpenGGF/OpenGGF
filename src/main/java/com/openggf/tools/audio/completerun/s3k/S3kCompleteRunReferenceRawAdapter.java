@@ -36,17 +36,23 @@ public final class S3kCompleteRunReferenceRawAdapter {
     private S3kCompleteRunReferenceRawAdapter() { }
 
     public interface Sink {
+        /** Opens a private transaction; callbacks below must remain invisible until commit. */
+        void begin() throws IOException;
         void header(Header value) throws IOException;
         void baseline(RawBoundary value) throws IOException;
         void frame(RawFrame value) throws IOException;
         void cutoff(RawBoundary value) throws IOException;
+        /** Atomically makes the staged callbacks visible. */
+        void commit() throws IOException;
+        /** Discards every staged callback and is safe after any pre-commit failure. */
+        void abort() throws IOException;
     }
 
     public record Header(int firstRow, int exclusiveEnd, int stateStart, int stateExclusiveEnd) { }
 
     public record RawBoundary(int row, int exclusiveEnd, byte[] driverState,
             int ymPort0Latch, int ymPort1Latch, long nativeArmEpoch, boolean nativeArmed,
-            List<String> activeServices, List<String> pendingDescendants) {
+            List<RawService> activeServices, List<RawService> pendingDescendants) {
         public RawBoundary {
             driverState = driverState.clone();
             activeServices = List.copyOf(activeServices);
@@ -67,6 +73,30 @@ public final class S3kCompleteRunReferenceRawAdapter {
             int subject, int offset, int kind, int serviceKind, int depth, int sourceCpu,
             int payloadLength, int value, int flags, int reserved, BigInteger payload) { }
 
+    public record RawService(int token, int parentToken, int kind, int depth,
+            int currentParentToken, int currentDepth, long beginCoordinate, long endCoordinate,
+            long beginPc, long endPc, int beginHookToken, int endHookToken, int beginSourceCpu,
+            boolean cancelled, boolean complete, List<RawChip> chips,
+            List<RawSnapshot> snapshots, List<RawAncestryTransition> ancestryTransitions) {
+        public RawService {
+            chips = List.copyOf(chips);
+            snapshots = List.copyOf(snapshots);
+            ancestryTransitions = List.copyOf(ancestryTransitions);
+        }
+    }
+
+    public record RawChip(long coordinate, long nativeOrdinal, int eventKind, int subject,
+            int value, long pc, int sourceCpu, boolean data, int port, int register) { }
+
+    public record RawSnapshot(int rangeId, int sourceCpu, long pc, byte[] bytes) {
+        public RawSnapshot { bytes = bytes.clone(); }
+        @Override public byte[] bytes() { return bytes.clone(); }
+    }
+
+    public record RawAncestryTransition(long coordinate, long nativeOrdinal,
+            int previousParentToken, int previousDepth, int currentParentToken,
+            int currentDepth, int hookToken, int sourceCpu, long pc) { }
+
     public static void scan(Path raw, Sink sink) throws IOException {
         scan(raw, sink, true);
     }
@@ -78,13 +108,17 @@ public final class S3kCompleteRunReferenceRawAdapter {
     private static void scan(Path raw, Sink sink, boolean requireFull) throws IOException {
         Objects.requireNonNull(raw, "S3K raw staging path");
         Objects.requireNonNull(sink, "S3K raw staging sink");
+        boolean transactionStarted = false;
+        boolean committed = false;
         try (BufferedReader input = Files.newBufferedReader(raw, StandardCharsets.UTF_8)) {
             Header header = header(object(requiredLine(input), "metadata"));
-            sink.header(header);
             RawBoundary baseline = boundary(object(requiredLine(input), "baseline"), true);
             if (baseline.row() != header.firstRow()) {
                 throw invalid("baseline row does not match the pinned first row");
             }
+            transactionStarted = true;
+            sink.begin();
+            sink.header(header);
             sink.baseline(baseline);
             int expected = header.firstRow();
             while (true) {
@@ -99,8 +133,14 @@ public final class S3kCompleteRunReferenceRawAdapter {
                     if (requireFull && cutoff.exclusiveEnd() != header.exclusiveEnd()) {
                         throw invalid("full S3K raw capture ended before the pinned exclusive end");
                     }
+                    if (requireFull && (cutoff.activeServices().size() != 1
+                            || cutoff.pendingDescendants().size() != 4)) {
+                        throw invalid("full S3K raw cutoff frontier is not the pinned 1/4 shape");
+                    }
                     if (boundedLine(input) != null) throw invalid("raw records follow the cutoff");
                     sink.cutoff(cutoff);
+                    sink.commit();
+                    committed = true;
                     return;
                 }
                 RawFrame frame = frame(value);
@@ -110,6 +150,14 @@ public final class S3kCompleteRunReferenceRawAdapter {
                 sink.frame(frame);
                 expected++;
             }
+        } catch (IOException | RuntimeException | Error failure) {
+            if (transactionStarted && !committed) {
+                try { sink.abort(); }
+                catch (IOException | RuntimeException | Error abortFailure) {
+                    failure.addSuppressed(abortFailure);
+                }
+            }
+            throw failure;
         }
     }
 
@@ -144,10 +192,25 @@ public final class S3kCompleteRunReferenceRawAdapter {
         }
         int row = baseline ? integer(value, "row") : -1;
         int end = baseline ? -1 : integer(value, "exclusive_end");
-        return new RawBoundary(row, end, state(value), unsignedByte(value, "ym_port0_latch"),
+        RawBoundary result = new RawBoundary(row, end, state(value), unsignedByte(value, "ym_port0_latch"),
                 unsignedByte(value, "ym_port1_latch"), nonNegativeLong(value, "native_arm_epoch"),
                 bool(value, "native_armed"), serviceJson(value, "active_services", 8),
                 serviceJson(value, "pending_descendants", MAX_EVENTS));
+        if (baseline) {
+            require(result.ymPort0Latch() == 0x28 && result.ymPort1Latch() == 0xa1,
+                    "S3K raw baseline YM latches changed");
+            require(result.nativeArmEpoch() == 1 && result.nativeArmed(),
+                    "S3K raw baseline native arm proof changed");
+            require(result.activeServices().isEmpty() && result.pendingDescendants().isEmpty(),
+                    "S3K raw baseline frontier is not empty");
+        } else {
+            require(result.nativeArmed() && result.nativeArmEpoch() >= 1,
+                    "S3K raw cutoff lost its native arm proof");
+            require(result.activeServices().stream().noneMatch(RawService::complete)
+                            && result.pendingDescendants().stream().allMatch(RawService::complete),
+                    "S3K raw cutoff active/pending lifecycle partition changed");
+        }
+        return result;
     }
 
     private static RawFrame frame(JsonNode value) {
@@ -165,17 +228,40 @@ public final class S3kCompleteRunReferenceRawAdapter {
             long ordinal = nonNegativeLong(event, "ordinal");
             require(ordinal == expectedOrdinal++, "S3K raw event ordinals are not contiguous");
             BigInteger payload;
-            try { payload = new BigInteger(text(event, "payload")); }
+            String payloadText = text(event, "payload");
+            require(payloadText.matches("0|[1-9][0-9]*"),
+                    "S3K raw payload is not canonical unsigned decimal");
+            try { payload = new BigInteger(payloadText); }
             catch (NumberFormatException failure) { throw invalid("S3K raw payload is not unsigned decimal", failure); }
             require(payload.signum() >= 0 && payload.compareTo(MAX_U64) <= 0,
                     "S3K raw payload is outside uint64");
+            int kind = unsignedByte(event, "kind");
+            int sourceCpu = sourceCpu(event, "source_cpu");
+            int payloadLength = unsignedByte(event, "payload_length");
+            int flags = unsignedByte(event, "flags");
+            int reserved = unsignedByte(event, "reserved");
+            require(kind >= 1 && kind <= 11, "S3K raw event kind is outside ABI v3");
+            require(payloadLength <= 8, "S3K raw payload length is outside ABI v3");
+            require(reserved == 0, "S3K raw reserved field is nonzero");
+            require(validFlags(kind, flags), "S3K raw event flags are outside ABI v3");
+            require(kind == 6 || payload.signum() == 0,
+                    "S3K raw non-snapshot event carries payload bytes");
+            int valueByte = unsignedByte(event, "value");
+            require(kind == 3 || kind == 4 || kind == 10 || valueByte == 0,
+                    "S3K raw event kind carries an unexpected value byte");
+            require((kind == 6 && payloadLength >= 1)
+                            || (kind != 6 && payloadLength == 0),
+                    "S3K raw event payload length disagrees with its ABI kind");
+            require(payloadLength == 8 || payload.shiftRight(payloadLength * 8).signum() == 0,
+                    "S3K raw payload has nonzero bytes outside its declared length");
+            long pc = unsignedInt(event, "pc");
+            requirePc(sourceCpu, pc, "event");
             events.add(new RawEvent(ordinal, unsignedWord(event, "service_token"),
                     unsignedWord(event, "parent_token"), unsignedInt(event, "pc"),
                     unsignedWord(event, "subject"), unsignedWord(event, "offset"),
-                    unsignedByte(event, "kind"), unsignedByte(event, "service_kind"),
-                    unsignedByte(event, "depth"), unsignedByte(event, "source_cpu"),
-                    unsignedByte(event, "payload_length"), unsignedByte(event, "value"),
-                    unsignedByte(event, "flags"), unsignedByte(event, "reserved"), payload));
+                    kind, serviceKind(event, "service_kind"),
+                    depth(event, "depth"), sourceCpu, payloadLength,
+                    valueByte, flags, reserved, payload));
         }
         return new RawFrame(integer(value, "row"), bool(value, "lag"), state(value), events);
     }
@@ -190,14 +276,129 @@ public final class S3kCompleteRunReferenceRawAdapter {
         return bytes;
     }
 
-    private static List<String> serviceJson(JsonNode value, String field, int maximum) {
+    private static List<RawService> serviceJson(JsonNode value, String field, int maximum) {
         JsonNode array = value.get(field);
         require(array != null && array.isArray() && array.size() <= maximum,
                 "S3K raw boundary service list is not bounded");
-        List<String> result = new ArrayList<>(array.size());
+        List<RawService> result = new ArrayList<>(array.size());
         for (JsonNode service : array) {
             require(service.isObject(), "S3K raw boundary service is not an object");
-            result.add(service.toString());
+            exact(service, "token", "parent_token", "kind", "depth", "current_parent_token",
+                    "current_depth", "begin_coordinate", "end_coordinate", "begin_pc", "end_pc",
+                    "begin_hook_token", "end_hook_token", "begin_source_cpu", "cancelled", "complete",
+                    "chips", "snapshots", "ancestry_transitions");
+            int kind = serviceKind(service, "kind");
+            int beginHookToken = unsignedWord(service, "begin_hook_token");
+            int sourceCpu = integer(service, "begin_source_cpu");
+            long beginPc = unsignedInt(service, "begin_pc");
+            long endPc = unsignedInt(service, "end_pc");
+            boolean resetService = kind == 1;
+            if (resetService) {
+                require(sourceCpu == 0 && beginPc == 0 && endPc == 0 && beginHookToken == 0,
+                        "S3K raw reset service begin-source shape changed");
+            } else {
+                require(sourceCpu >= 1 && sourceCpu <= 3,
+                        "S3K raw begin_source_cpu is outside ABI v3");
+                requirePc(sourceCpu, beginPc, "service begin");
+                if (endPc != 0) requirePc(sourceCpu, endPc, "service end");
+            }
+            int parentToken = unsignedWord(service, "parent_token");
+            int serviceDepth = depth(service, "depth");
+            int currentParentToken = unsignedWord(service, "current_parent_token");
+            int currentDepth = depth(service, "current_depth");
+            require((serviceDepth == 0) == (parentToken == 0),
+                    "S3K raw frontier immutable ancestry is inconsistent");
+            require((currentDepth == 0) == (currentParentToken == 0),
+                    "S3K raw frontier effective ancestry is inconsistent");
+            boolean complete = bool(service, "complete");
+            boolean cancelled = bool(service, "cancelled");
+            long beginCoordinate = nonNegativeLong(service, "begin_coordinate");
+            long endCoordinate = nonNegativeLong(service, "end_coordinate");
+            int endHookToken = unsignedWord(service, "end_hook_token");
+            require(!resetService || (parentToken == 0 && serviceDepth == 0
+                    && currentParentToken == 0 && currentDepth == 0 && complete
+                    && endHookToken == 0), "S3K raw reset service lifecycle shape changed");
+            require(!complete || endCoordinate >= beginCoordinate,
+                    "S3K raw frontier service ends before it begins");
+            require(complete || (!cancelled && endCoordinate == 0 && endPc == 0
+                    && endHookToken == 0),
+                    "S3K raw open frontier service carries completion state");
+            result.add(new RawService(nonZeroWord(service, "token"),
+                    parentToken, kind, serviceDepth,
+                    currentParentToken, currentDepth, beginCoordinate, endCoordinate,
+                    beginPc, endPc, beginHookToken, endHookToken,
+                    sourceCpu, cancelled, complete,
+                    chips(service.get("chips")), snapshots(service.get("snapshots")),
+                    ancestry(service.get("ancestry_transitions"))));
+        }
+        return List.copyOf(result);
+    }
+
+    private static List<RawChip> chips(JsonNode array) {
+        require(array != null && array.isArray() && array.size() <= MAX_EVENTS,
+                "S3K raw frontier chip list is not bounded");
+        List<RawChip> result = new ArrayList<>(array.size());
+        for (JsonNode chip : array) {
+            exact(chip, "coordinate", "native_ordinal", "event_kind", "subject", "value", "pc",
+                    "source_cpu", "data", "port", "register");
+            int kind = unsignedByte(chip, "event_kind");
+            int subject = unsignedByte(chip, "subject");
+            int source = sourceCpu(chip, "source_cpu");
+            long pc = unsignedInt(chip, "pc");
+            requirePc(source, pc, "frontier chip");
+            boolean data = bool(chip, "data");
+            int port = unsignedByte(chip, "port");
+            int register = unsignedByte(chip, "register");
+            require(kind == 3 || kind == 4, "S3K raw frontier chip kind is not YM/PSG");
+            require(kind != 3 || (subject <= 3 && port == (subject < 2 ? 0 : 1)
+                    && data == (subject == 1 || subject == 3)), "S3K raw frontier YM shape changed");
+            require(kind != 4 || (subject == 0 && data && port == 0 && register == 0),
+                    "S3K raw frontier PSG shape changed");
+            result.add(new RawChip(nonNegativeLong(chip, "coordinate"),
+                    unsignedInt(chip, "native_ordinal"), kind, subject,
+                    unsignedByte(chip, "value"), pc, source, data, port, register));
+        }
+        return List.copyOf(result);
+    }
+
+    private static List<RawSnapshot> snapshots(JsonNode array) {
+        require(array != null && array.isArray() && array.size() <= MAX_EVENTS,
+                "S3K raw frontier snapshot list is not bounded");
+        List<RawSnapshot> result = new ArrayList<>(array.size());
+        for (JsonNode snapshot : array) {
+            exact(snapshot, "range_id", "source_cpu", "pc", "bytes_hex");
+            int range = unsignedWord(snapshot, "range_id");
+            require(range == 1 || range == 2, "S3K raw frontier snapshot range is unknown");
+            int source = sourceCpu(snapshot, "source_cpu");
+            long pc = unsignedInt(snapshot, "pc");
+            requirePc(source, pc, "frontier snapshot");
+            String hex = text(snapshot, "bytes_hex");
+            int expected = range == 1 ? 8192 : 1;
+            require(hex.length() == expected * 2 && hex.matches("[0-9a-f]+"),
+                    "S3K raw frontier snapshot width changed");
+            result.add(new RawSnapshot(range, source, pc, hex(hex)));
+        }
+        return List.copyOf(result);
+    }
+
+    private static List<RawAncestryTransition> ancestry(JsonNode array) {
+        require(array != null && array.isArray() && array.size() <= 7,
+                "S3K raw frontier ancestry list is not bounded");
+        List<RawAncestryTransition> result = new ArrayList<>(array.size());
+        for (JsonNode transition : array) {
+            exact(transition, "coordinate", "native_ordinal", "previous_parent_token",
+                    "previous_depth", "current_parent_token", "current_depth", "hook_token",
+                    "source_cpu", "pc");
+            int source = sourceCpu(transition, "source_cpu");
+            long pc = unsignedInt(transition, "pc");
+            requirePc(source, pc, "frontier ancestry");
+            result.add(new RawAncestryTransition(nonNegativeLong(transition, "coordinate"),
+                    unsignedInt(transition, "native_ordinal"),
+                    unsignedWord(transition, "previous_parent_token"),
+                    depth(transition, "previous_depth"),
+                    unsignedWord(transition, "current_parent_token"),
+                    depth(transition, "current_depth"), nonZeroWord(transition, "hook_token"),
+                    source, pc));
         }
         return List.copyOf(result);
     }
@@ -226,7 +427,8 @@ public final class S3kCompleteRunReferenceRawAdapter {
 
     private static int integer(JsonNode value, String field) {
         JsonNode node = value.get(field);
-        require(node != null && node.canConvertToInt(), "S3K raw " + field + " is not int");
+        require(node != null && node.isIntegralNumber() && node.canConvertToInt(),
+                "S3K raw " + field + " is not canonical int");
         return node.intValue();
     }
 
@@ -238,8 +440,9 @@ public final class S3kCompleteRunReferenceRawAdapter {
 
     private static long nonNegativeLong(JsonNode value, String field) {
         JsonNode node = value.get(field);
-        require(node != null && node.canConvertToLong() && node.longValue() >= 0,
-                "S3K raw " + field + " is not a non-negative long");
+        require(node != null && node.isIntegralNumber() && node.canConvertToLong()
+                        && node.longValue() >= 0,
+                "S3K raw " + field + " is not a canonical non-negative long");
         return node.longValue();
     }
 
@@ -255,9 +458,58 @@ public final class S3kCompleteRunReferenceRawAdapter {
         return result;
     }
 
+    private static int nonZeroWord(JsonNode value, String field) {
+        int result = unsignedWord(value, field);
+        require(result != 0, "S3K raw " + field + " is zero");
+        return result;
+    }
+
+    private static int sourceCpu(JsonNode value, String field) {
+        int result = unsignedByte(value, field);
+        require(result >= 1 && result <= 3, "S3K raw " + field + " is outside ABI v3");
+        return result;
+    }
+
+    private static int depth(JsonNode value, String field) {
+        int result = unsignedByte(value, field);
+        require(result <= 7, "S3K raw " + field + " exceeds the ABI stack bound");
+        return result;
+    }
+
+    private static int serviceKind(JsonNode value, String field) {
+        int result = unsignedByte(value, field);
+        require(result == 0 || result == 1 || result == 2 || result == 3
+                        || (result >= 5 && result <= 12),
+                "S3K raw " + field + " is outside the reviewed S3K manifest");
+        return result;
+    }
+
+    private static boolean validFlags(int kind, int flags) {
+        return switch (kind) {
+            case 2 -> flags == 0 || flags == 2;
+            case 8, 9 -> flags == 0 || flags == 1;
+            default -> flags == 0;
+        };
+    }
+
+    private static void requirePc(int sourceCpu, long pc, String label) {
+        require((sourceCpu == 1 && pc <= 0xffffL)
+                        || (sourceCpu == 2 && pc <= 0xff_ffffL)
+                        || (sourceCpu == 3 && pc == 0),
+                "S3K raw " + label + " PC is outside its ABI source CPU");
+    }
+
+    private static byte[] hex(String value) {
+        byte[] result = new byte[value.length() / 2];
+        for (int index = 0; index < result.length; index++)
+            result[index] = (byte) Integer.parseInt(value, index * 2, index * 2 + 2, 16);
+        return result;
+    }
+
     private static long unsignedInt(JsonNode value, String field) {
         JsonNode node = value.get(field);
-        require(node != null && node.isIntegralNumber(), "S3K raw " + field + " is not uint32");
+        require(node != null && node.isIntegralNumber() && node.canConvertToLong(),
+                "S3K raw " + field + " is not uint32");
         long result = node.longValue();
         require(result >= 0 && result <= 0xffff_ffffL, "S3K raw " + field + " is not uint32");
         return result;

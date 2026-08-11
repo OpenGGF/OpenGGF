@@ -40,18 +40,53 @@ namespace OpenGGF.BizHawk.Headless
 
         internal static CaptureResult CaptureRawPinned(
             string romPath, string moviePath, string manifestPath,
-            TextWriter output)
+            string outputPath)
         {
-            return CaptureRawPinnedCore(romPath, moviePath, manifestPath,
-                output, S3kAudioObserverProfile.ExclusiveEnd, true);
+            CaptureResult result = null;
+            PublishRaw(outputPath, output =>
+            {
+                result = CaptureRawPinnedCore(romPath, moviePath, manifestPath,
+                    output, S3kAudioObserverProfile.ExclusiveEnd, true);
+            });
+            return result;
         }
 
-        internal static CaptureResult CaptureRawBoundaryProofPinned(
+        internal static CaptureResult CaptureRawBoundaryProofPinnedForTesting(
             string romPath, string moviePath, string manifestPath,
             TextWriter output)
         {
             return CaptureRawPinnedCore(romPath, moviePath, manifestPath,
                 output, S3kAudioObserverProfile.FirstRow + 1, false);
+        }
+
+        internal static void PublishRawForTesting(
+            string outputPath, Action<TextWriter> capture)
+        {
+            PublishRaw(outputPath, capture);
+        }
+
+        private static void PublishRaw(
+            string outputPath, Action<TextWriter> capture)
+        {
+            if (string.IsNullOrEmpty(outputPath) || !Path.IsPathRooted(outputPath))
+                throw new ArgumentException(
+                    "The S3K raw staging output path must be absolute.",
+                    "outputPath");
+            if (capture == null) throw new ArgumentNullException("capture");
+            string fullPath = Path.GetFullPath(outputPath);
+            string fileName = Path.GetFileName(fullPath);
+            if (string.IsNullOrEmpty(fileName))
+                throw new ArgumentException(
+                    "The S3K raw staging output path must name a file.",
+                    "outputPath");
+            string directory = Path.GetDirectoryName(fullPath);
+            var publisher = new NoReplacePublisher();
+            using (NoReplacePublisher.StagedPublicationSet staged =
+                publisher.StageAll(directory, new[] { fileName },
+                    writers => capture(writers[0])))
+            {
+                staged.Publish();
+            }
         }
 
         internal static CaptureResult CaptureBoundaryProofPinned(

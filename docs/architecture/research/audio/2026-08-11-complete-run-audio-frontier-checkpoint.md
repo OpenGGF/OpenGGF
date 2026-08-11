@@ -68,12 +68,18 @@ details are in the adjacent `TRUST.md`. No generated core or ROM is committed.
   latches, or native stack; and streams every row in `[810,434417)` to a bounded
   sink. A real prefix against the final shared core reached row 810 with an
   armed empty boundary frontier, YM address latches `$28/$A1`, arm epoch 1,
-  and 34 native events in published row 810. The game-owned raw adapter now
+  and 34 native events in published row 810. The game-owned native sink now
   writes a bounded LF JSONL staging stream with exact ROM/BK2/manifest,
   interval, `$1C00..$1FFF` state, lag, native event, latch, and cutoff-frontier
-  data. Its strict Java reader rejects duplicate or extra fields, row gaps,
-  oversized records/event arrays, state-width changes, and unsigned payload
-  loss while forwarding one row at a time. This is still capture capability
+  data through a create-new sibling-staging transaction; a failed capture or
+  competing final path publishes nothing. Its strict Java reader requires a
+  transactional sink and rejects duplicate, missing, or extra fields, row
+  gaps, oversized records/event arrays, state-width changes, noncanonical
+  numerics, ABI-invalid native events, malformed service/chip/snapshot/
+  ancestry frontiers, and unsigned payload loss while forwarding one row at a
+  time. The row-810 arm epoch, YM latches, and empty boundary frontier are
+  pinned, as is the known one-active/four-pending full cutoff shape. This is
+  still capture capability
   only: the staging reader deliberately has no canonical-store authority. A
   source-exact decoder from the raw 1 KiB driver image into the existing typed
   S3K normalizer input, including an authoritative locked-on-ROM asset-range
@@ -144,8 +150,8 @@ complete-run publication claim.
 - Existing Sonic 2 and Sonic 3 & Knuckles capability/lifecycle suite: 10 tests
   passing, with their prior complete-run duplicate evidence unchanged.
 - S3K Task 2 profile/resolver/normalizer: 18 tests passing.
-- S3K game-owned observer profile, bounded capture runner, and raw sink: 9
-  synthetic tests passing. The strict Java raw adapter adds 3 tests. Both
+- S3K game-owned observer profile, bounded capture runner, and raw sink: 12
+  synthetic tests passing. The strict Java raw adapter adds 9 tests. Both
   opt-in real power-on-to-row-810 gates pass, including the raw envelope with
   the exact boundary values recorded above.
 - S3K engine command-boundary regression guards: 7 tests passing.
@@ -165,7 +171,7 @@ The new game-owned raw sink necessarily changes the deterministic production
 harness executable. The shared capability fixture remains frozen on
 `e044d963b53b44003e13a4bef7d5360cf100aea421cb40ebc5ed44e08db8d5dd`,
 while this branch builds
-`b72a804447a445ca3a2d6f34a910a69a3561eb55aa558a3c34642b9a940ad3d4`.
+`da6517a98992a1c9c7869c8eb28d9f79e8dcefd008172e00f5d8346d30939ec3`.
 Its static capability lock is therefore the expected central-integration RED;
 this game branch does not rewrite the shared capability fixture or claim the
 new executable as a pinned producer runtime.
