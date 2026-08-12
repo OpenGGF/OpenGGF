@@ -118,6 +118,17 @@ public final class DynamicArtLifecycleService
      */
     private final Map<Integer, Integer> nextGapEdgeIndexByFrame =
             new HashMap<>();
+    /**
+     * Gap-ledger size observed at the start of the last COMPLETED production
+     * iteration, and at the start of the one now running. Together they name
+     * the gap edges a single completed iteration emitted, which is what
+     * {@link #adoptGapResidentOpeningRow()} needs: admission is polled between
+     * host steps, so the iteration that satisfied the destination's readiness
+     * has already finished by the time the destination's comparison window
+     * opens.
+     */
+    private int gapEdgesBeforeLastIteration;
+    private int gapEdgesBeforeCurrentIteration;
 
     private record ProductionArtProfile(
             int romArtBase,
@@ -212,6 +223,8 @@ public final class DynamicArtLifecycleService
             int nextGapEdgeIndex,
             int gapOpeningTransitionCount,
             int gapOpeningMovieLogicalFrame,
+            int gapEdgesBeforeLastIteration,
+            int gapEdgesBeforeCurrentIteration,
             List<Descriptor> gapOpeningLedger) {
         public RewindState {
             lastMappingFrames = Map.copyOf(lastMappingFrames);
@@ -361,6 +374,88 @@ public final class DynamicArtLifecycleService
         nextPublicationFrame = Math.addExact(
                 nextPublicationFrame, consumedRows);
         nextLogicalEdgeIndex = 0;
+    }
+
+    /**
+     * Adopts the one destination iteration that already ran while the run was
+     * structurally still in the preceding transition gap, publishing it as the
+     * opening segment's row zero.
+     *
+     * <p>This is the exact inverse of
+     * {@link #endComparisonSegmentAtRomModeChange()}. There the ROM's mode
+     * write happens inside {@code RunObjects}, so an iteration the engine had
+     * treated as a segment row turns out to belong to the gap and its whole
+     * edge batch is re-stamped {@code run_gap}. Here the destination's
+     * readiness is only observable after the row it belongs to has run —
+     * {@code TraceRunPlaybackCoordinator.destinationReady} requires
+     * {@code observation.mode() == LEVEL}, which cannot be true until the row
+     * executed, and production carries the same one-row drop through
+     * {@code DestinationAdmissionReceipt.rowsConsumed()} — so an iteration the
+     * engine had treated as a gap row turns out to be the segment's row zero
+     * and its whole edge batch is re-stamped {@code segment}.
+     *
+     * <p>The recorder agrees on the boundary objectively: the gap's edge
+     * ordinals end contiguously with the destination segment's row-zero
+     * ordinal. Measured on {@code s2-ehz-halfpipe-roundtrip}'s
+     * {@code ss_2 -> seg3_ehz1} gap, the sole edge this iteration emitted is
+     * ordinal 22634 / transfer 11317 / submitted / sonic / mapping frame 15,
+     * which is exactly and only what the fixture's {@code seg3_ehz1} row 0
+     * carries.
+     *
+     * <p>Adopting rather than skipping is what makes row zero COMPARED: the
+     * previous {@code advanceComparisonCursor(1)} left the row unpublished, so
+     * its edges stayed gap-resident and the transfer they opened completed on
+     * row 1 still carrying the {@code run_gap} stamp its gap-time submission
+     * gave it. An iteration that emitted no art adopts nothing and publishes
+     * an empty row zero, which is equally what the fixture records.
+     */
+    public void adoptGapResidentOpeningRow() {
+        requireComparisonSegmentOpen();
+        if (nextPublicationFrame != 0 || latest.published()
+                || !bufferedEdges.isEmpty()) {
+            throw new IllegalStateException(
+                    "an opening row can be adopted only before the first publication");
+        }
+        int watermark = gapEdgesBeforeLastIteration;
+        if (watermark < 0 || watermark > gapTransitions.size()) {
+            throw new IllegalStateException(
+                    "gap iteration watermark " + watermark
+                            + " is outside the gap ledger of size "
+                            + gapTransitions.size());
+        }
+        List<DynamicArtGapTransition> adopted = List.copyOf(
+                gapTransitions.subList(watermark, gapTransitions.size()));
+        gapTransitions.subList(watermark, gapTransitions.size()).clear();
+        Set<Long> adoptedSubmissions = new java.util.LinkedHashSet<>();
+        for (DynamicArtGapTransition transition : adopted) {
+            DynamicArtGapTransition.GapEdge edge = transition.edge();
+            nextGapEdgeIndexByFrame.computeIfPresent(
+                    edge.movieLogicalFrame(), (frame, count) -> count - 1);
+            if ("submitted".equals(edge.phase())) {
+                adoptedSubmissions.add(edge.transferId());
+                Descriptor descriptor = ledger.get(edge.transferId());
+                if (descriptor != null) {
+                    ledger.put(edge.transferId(), new Descriptor(
+                            descriptor.transferId(), descriptor.owner(),
+                            descriptor.mappingFrame(), "segment",
+                            descriptor.requests()));
+                }
+            }
+        }
+        for (DynamicArtGapTransition transition : adopted) {
+            DynamicArtGapTransition.GapEdge edge = transition.edge();
+            // A completion whose submission stayed in the gap keeps the gap's
+            // stamp: the origin follows where the transfer was SUBMITTED.
+            String origin = adoptedSubmissions.contains(edge.transferId())
+                    ? "segment" : "run_gap";
+            bufferedEdges.add(new BufferedEdge(
+                    edge.edgeOrdinal(), edge.transferId(), edge.phase(),
+                    edge.owner(), edge.mappingFrame(), 0,
+                    nextLogicalEdgeIndex++, edge.requests(), origin,
+                    transition.beforeOutstandingTransferIds(),
+                    transition.afterOutstandingTransferIds()));
+        }
+        publishRow(nextPublicationFrame++, false);
     }
 
     /** Cancels an unpublished reservation without publishing a synthetic row. */
@@ -1043,6 +1138,8 @@ public final class DynamicArtLifecycleService
         if (!movieLogicalFrameSuppliedExternally) {
             movieLogicalFrame++;
         }
+        gapEdgesBeforeLastIteration = gapEdgesBeforeCurrentIteration;
+        gapEdgesBeforeCurrentIteration = gapTransitions.size();
     }
 
     private DynamicArtDiagnosticsSnapshot publishBuffered(
@@ -1108,6 +1205,7 @@ public final class DynamicArtLifecycleService
                 movieLogicalFrame, preMainLoopTailRows,
                 nextGapEdgeIndexByFrame.getOrDefault(movieLogicalFrame, 0),
                 gapOpeningTransitionCount, gapOpeningMovieLogicalFrame,
+                gapEdgesBeforeLastIteration, gapEdgesBeforeCurrentIteration,
                 gapOpeningLedger);
     }
 
@@ -1144,6 +1242,9 @@ public final class DynamicArtLifecycleService
         movieLogicalFrame = snapshot.movieLogicalFrame();
         gapOpeningTransitionCount = snapshot.gapOpeningTransitionCount();
         gapOpeningMovieLogicalFrame = snapshot.gapOpeningMovieLogicalFrame();
+        gapEdgesBeforeLastIteration = snapshot.gapEdgesBeforeLastIteration();
+        gapEdgesBeforeCurrentIteration =
+                snapshot.gapEdgesBeforeCurrentIteration();
         gapOpeningLedger = List.copyOf(snapshot.gapOpeningLedger());
         preMainLoopTailRows = snapshot.preMainLoopTailRows();
         // The snapshot carries the counter for the frame it was taken on,
@@ -1183,6 +1284,8 @@ public final class DynamicArtLifecycleService
         movieLogicalFrameSuppliedExternally = false;
         gapOpeningTransitionCount = 0;
         gapOpeningMovieLogicalFrame = 0;
+        gapEdgesBeforeLastIteration = 0;
+        gapEdgesBeforeCurrentIteration = 0;
         gapOpeningLedger = List.of();
         preMainLoopTailRows = -1;
         nextGapEdgeIndexByFrame.clear();

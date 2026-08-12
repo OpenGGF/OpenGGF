@@ -284,6 +284,30 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **The run chains adopt the destination row that already ran in the gap
+  (2026-08-12):** the last segment-physics error on both S2 chains was a row the
+  harness could not compare at all. The destination segment's row 0 — the
+  recorder's row 0, at `bk2_frame_offset` — is executed while the run is still
+  structurally in the transition gap, because admission is polled between steps and
+  the destination cannot report `LEVEL` mode until the row has already run. Art
+  submitted on it was therefore stamped `run_gap` and never compared as a segment
+  row, which the lifecycle's own javadoc described as a deliberate skip. Rather
+  than move the transition mid-frame — a new coordination point across four
+  components — the gap-resident opening row is now adopted when admission fires:
+  the last iteration's ledger tail moves into the opening segment as row 0, with
+  only submissions re-stamped (completions whose submission genuinely stayed in the
+  gap keep `run_gap`), re-buffered at logical frame 0 and published through the
+  ordinary comparator inside the existing first-publication window. The clock
+  compensation it replaces survives intact for gaps with real gap-side production.
+  The row is *compared*, not relabelled — a new test fails if any adopting site
+  stops comparing, verified by mutation in both directions. Production compares it
+  too, closing a two-paths-should-agree gap where the launcher had published it
+  uncompared. The bonus-stage interior is explicitly excluded: its consumed row is
+  not row 0's analogue, since it re-anchors past rows the engine never ran, and
+  that path skips locally so it must not silently take a new branch. Both chains
+  lose their returned-level segment-4 physics axis and the surplus edge on the
+  later gaps; the emerald chain drops to 8 failing axes and the halfpipe chain to
+  3, all now dynamic-art gap row-placement rather than engine behaviour.
 - **A throwaway fixture load was priming the art ledger before the replay
   started (2026-08-12):** with the run chains' gap comparison finally reachable and
   the surplus-work defects closed, the gap axes failed only on identity and clock.

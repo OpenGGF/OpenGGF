@@ -529,6 +529,32 @@ public final class LiveTraceComparator implements PlaybackFrameObserver, TraceHu
     }
 
     /**
+     * Compares an opening row this comparator will never reach live.
+     *
+     * <p>A destination admitted after its first row already ran attaches with
+     * that row consumed, so live comparison starts at row one and the adopted
+     * row zero would otherwise be published but never checked. The engine's
+     * state at attach time IS that row's end state, so comparing the row-zero
+     * publication against the fixture's row zero here is an ordinary
+     * comparison-only check, not a reconstruction.
+     */
+    public void compareAdoptedOpeningRow(
+            int row, DynamicArtDiagnosticsSnapshot published) {
+        Objects.requireNonNull(published, "published");
+        if (row < 0 || row >= trace.frameCount()) {
+            throw new IllegalArgumentException(
+                    "opening row out of range: " + row);
+        }
+        FrameComparison comparison = binder.compareDynamicArt(
+                trace.dynamicArtTransferStateForFrame(
+                        trace.getFrame(row).frame()),
+                published);
+        if (comparison != null) {
+            ingestExternalComparison(comparison);
+        }
+    }
+
+    /**
      * Publishes a comparison produced by an external, gameplay-uncompared
      * structural row through the same observer, counters, first-error callback,
      * and HUD mismatch ring as ordinary live frame comparisons.

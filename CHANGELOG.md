@@ -3,6 +3,22 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: a run-chain destination adopts the row that already ran during its transition
+  gap instead of skipping it. Admission is polled between host steps and the
+  coordinator's readiness test needs an observed LEVEL mode, so the destination's
+  first row has always executed by the time its comparison window opens. Skipping it
+  left its player-DPLC work in the transition-gap ledger as a surplus gap edge and let
+  the transfer it opened complete on segment row 1 still stamped `run_gap`. The new
+  `DynamicArtLifecycleService.adoptGapResidentOpeningRow()` is the exact inverse of
+  `endComparisonSegmentAtRomModeChange()`: it moves that iteration's gap transitions
+  into the opening segment, re-stamps their submissions `segment`, and publishes them
+  as row zero, which `LiveTraceComparator.compareAdoptedOpeningRow` then compares
+  against the fixture's row zero on both the production launcher and the run-chain
+  harness. Adoption is scoped to a consumed row the playback cursor reached by RUNNING
+  it: production derives its count from the cursor's own position, while the harness's
+  bonus-exit path re-anchors the cursor past rows the engine never ran and so keeps
+  advancing the comparison cursor instead. An iteration that emitted no art adopts
+  nothing.
 - Fix: S2 does not run the level-only fixed object slots during the title card. `RunObjects`
   picks its slot count from the game mode -- it walks only the first `$80` slots unless
   `Game_Mode` equals `GameModeID_Level` exactly (s2.asm:29805-29819) -- and `Level` sets
