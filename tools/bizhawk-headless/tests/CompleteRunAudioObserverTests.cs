@@ -97,6 +97,30 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 ConsumesDeferredNestedBeginTransaction,
                 serial: true));
             tests.Add(new TestMain.TestCase(
+                "CompleteRunAudioObserverTests project one deferred tail owner transfer",
+                ProjectsDeferredTailOwnerTransfer,
+                serial: true));
+            tests.Add(new TestMain.TestCase(
+                "CompleteRunAudioObserverTests project a promoted deferred tail owner transfer",
+                ProjectsPromotedDeferredTailOwnerTransfer,
+                serial: true));
+            tests.Add(new TestMain.TestCase(
+                "CompleteRunAudioObserverTests reject malformed deferred tail owner transfers",
+                RejectsMalformedDeferredTailOwnerTransfers,
+                serial: true));
+            tests.Add(new TestMain.TestCase(
+                "CompleteRunAudioObserverTests preserve deferred shared PC selection outcomes",
+                PreservesDeferredSharedPcSelectionOutcomes,
+                serial: true));
+            tests.Add(new TestMain.TestCase(
+                "CompleteRunAudioObserverTests roll back deferred tail owner transfers",
+                RollsBackDeferredTailOwnerTransfers,
+                serial: true));
+            tests.Add(new TestMain.TestCase(
+                "CompleteRunAudioObserverTests carry deferred current owner through cutoffs",
+                CarriesDeferredCurrentOwnerThroughCutoffs,
+                serial: true));
+            tests.Add(new TestMain.TestCase(
                 "CompleteRunAudioObserverTests reject corrupt deferred begin transactions",
                 RejectsCorruptDeferredBeginTransactions,
                 serial: true));
@@ -108,6 +132,222 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "CompleteRunAudioObserverTests reserve again after deferred child end",
                 ReservesAgainAfterDeferredChildEnd,
                 serial: true));
+        }
+
+        private static void ProjectsDeferredTailOwnerTransfer()
+        {
+            AssertProjectedDeferredTailOwnerTransfer(2,10);
+            AssertProjectedDeferredTailOwnerTransfer(3,12);
+
+            Type evidence=typeof(CompleteRunAudioObserver.DeferredBeginEvidence);
+            AssertEx.Equal(true,evidence.GetProperty("CurrentOwnerToken")==null);
+            AssertEx.Equal(true,evidence.GetProperty("CurrentOwnerParentToken")==null);
+            AssertEx.Equal(true,evidence.GetProperty("CurrentOwnerKind")==null);
+            AssertEx.Equal(true,evidence.GetProperty("CurrentOwnerDepth")==null);
+        }
+
+        private static void ProjectsPromotedDeferredTailOwnerTransfer()
+        {
+            var api=new FakeTraceApi{Events=DeferredPromotedOriginTransferFrame()};
+            CompleteRunAudioObserver observer=CreateDeferred(api);
+            CompleteRunAudioObserver.FrameCapture capture=
+                observer.CaptureCanonicalFrame(()=>{});
+            AssertEx.Equal(1,capture.DeferredBegins.Count);
+            CompleteRunAudioObserver.DeferredBeginEvidence reservation=
+                capture.DeferredBegins[0];
+            AssertEx.Equal((ushort)2,reservation.BlockerToken);
+            AssertEx.Equal((ushort)0,reservation.BlockerParentToken);
+            AssertEx.Equal((byte)0,reservation.BlockerDepth);
+            AssertEx.Equal((ushort)3,reservation.CurrentOwnerToken);
+            AssertEx.Equal((ushort)0,reservation.CurrentOwnerParentToken);
+            AssertEx.Equal((byte)2,reservation.CurrentOwnerKind);
+            AssertEx.Equal((byte)0,reservation.CurrentOwnerDepth);
+            AssertEx.Equal((ushort)1,capture.Services[1].ParentToken);
+            AssertEx.Equal((ushort)0,capture.Services[1].CurrentParentToken);
+            AssertEx.Equal((byte)1,capture.Services[1].Depth);
+            AssertEx.Equal((byte)0,capture.Services[1].CurrentDepth);
+            AssertCutoffCurrent(observer,3,2);
+        }
+
+        private static void AssertProjectedDeferredTailOwnerTransfer(byte successorKind,
+            ushort consumeHook)
+        {
+            var api=new FakeTraceApi{Events=DeferredTransferFrame(successorKind)};
+            CompleteRunAudioObserver observer=CreateDeferred(api);
+            CompleteRunAudioObserver.FrameCapture transfer=
+                observer.CaptureCanonicalFrame(()=>{});
+            AssertEx.Equal(1,transfer.DeferredBegins.Count);
+            AssertEx.Equal((ushort)2,transfer.DeferredBegins[0].BlockerToken);
+            AssertEx.Equal((byte)6,transfer.DeferredBegins[0].BlockerKind);
+            AssertEx.Equal(1L,transfer.DeferredBegins[0].FirstCoordinate);
+            AssertEx.Equal(1L,transfer.DeferredBegins[0].LatestCoordinate);
+            AssertEx.Equal(false,transfer.DeferredBegins[0].Consumed);
+            AssertEx.Equal((ushort)3,
+                transfer.DeferredBegins[0].CurrentOwnerToken);
+            AssertEx.Equal(successorKind,
+                transfer.DeferredBegins[0].CurrentOwnerKind);
+            AssertDeferredCurrent(observer,3,0,successorKind,0);
+            AssertCutoffCurrent(observer,3,successorKind);
+
+            api.Events=DeferredTransferredConsumeFrame(successorKind,consumeHook,3);
+            CompleteRunAudioObserver.FrameCapture consumed=
+                observer.CaptureCanonicalFrame(()=>{});
+            AssertEx.Equal(1,consumed.DeferredBegins.Count);
+            AssertEx.Equal((ushort)2,consumed.DeferredBegins[0].BlockerToken);
+            AssertEx.Equal((byte)6,consumed.DeferredBegins[0].BlockerKind);
+            AssertEx.Equal(1L,consumed.DeferredBegins[0].FirstCoordinate);
+            AssertEx.Equal(1L,consumed.DeferredBegins[0].LatestCoordinate);
+            AssertEx.Equal(true,consumed.DeferredBegins[0].Consumed);
+            AssertEx.Equal((ushort)4,consumed.DeferredBegins[0].ConsumedToken);
+            AssertEx.Equal((ushort)3,
+                consumed.DeferredBegins[0].CurrentOwnerToken);
+            AssertEx.Equal(successorKind,
+                consumed.DeferredBegins[0].CurrentOwnerKind);
+            AssertEx.Equal(0,observer.PendingDeferredObservationCountForTesting);
+            CompleteRunAudioObserver.CutoffFrontier cutoff=
+                observer.CaptureCutoffFrontier();
+            AssertEx.Equal(1,cutoff.ActiveServices.Count);
+            AssertEx.Equal((ushort)3,cutoff.ActiveServices[0].Token);
+            AssertEx.Equal(successorKind,cutoff.ActiveServices[0].Kind);
+            AssertEx.Equal(1,cutoff.PendingServices.Count);
+            AssertEx.Equal((ushort)4,cutoff.PendingServices[0].Token);
+            AssertEx.Equal((ushort)3,cutoff.PendingServices[0].ParentToken);
+        }
+
+        private static void RejectsMalformedDeferredTailOwnerTransfers()
+        {
+            AssertDeferredTransferInvalid(events=>events[2].Ordinal=5,"ordinal");
+            AssertDeferredTransferReplacementInvalid(events=>InsertEvent(events,3,
+                Canonical(3,4,2,0,6,0,0,0x78,0,0x9f)),"tail");
+            AssertDeferredTransferInvalid(events=>events[3].Subject=8,"tail");
+            AssertDeferredTransferInvalid(events=>events[3].Pc=0x78,"tail");
+            AssertDeferredTransferInvalid(events=>events[3].SourceCpu=2,"tail");
+            AssertDeferredTransferInvalid(events=>events[2].ServiceToken=9,"ownership");
+            AssertDeferredTransferInvalid(events=>events[3].ServiceToken=2,"tail");
+            AssertDeferredTransferInvalid(events=>events[3].ParentToken=9,"tail");
+            AssertDeferredTransferInvalid(events=>events[3].Depth=1,"tail");
+            AssertDeferredTransferInvalid(events=>events[3].ServiceKindId=3,"tail");
+            AssertDeferredTransferReplacementInvalid(events=>Truncate(events,3),"tail");
+            AssertDeferredTransferReplacementInvalid(events=>RemoveEvent(events,2),"tail");
+
+            GpgxAudioTraceEvent[] duplicate=DeferredTransferFrame(2);
+            duplicate=Append(duplicate,
+                Canonical(4,2,3,0,2,0,8,0x00C1,0),
+                Canonical(5,1,4,0,3,0,8,0x00C1,0));
+            AssertDeferredTransferReplacementInvalid(events=>duplicate,"deferred");
+
+            var api=new FakeTraceApi{Events=DeferredTransferFrame(2)};
+            CompleteRunAudioObserver observer=CreateDeferred(api);
+            observer.CaptureCanonicalFrame(()=>{});
+            api.Events=DeferredTransferredConsumeFrame(2,10,2);
+            AssertEx.Throws<InvalidOperationException>(
+                ()=>observer.CaptureCanonicalFrame(()=>{}),"deferred consume ownership");
+
+            var wrongHookApi=new FakeTraceApi{Events=DeferredTransferFrame(2)};
+            CompleteRunAudioObserver wrongHook=CreateDeferred(wrongHookApi);
+            wrongHook.CaptureCanonicalFrame(()=>{});
+            wrongHookApi.Events=DeferredTransferredConsumeFrame(2,5,3);
+            AssertEx.Throws<InvalidOperationException>(
+                ()=>wrongHook.CaptureCanonicalFrame(()=>{}),
+                "deferred consume ownership");
+        }
+
+        private static void PreservesDeferredSharedPcSelectionOutcomes()
+        {
+            var observationApi=new FakeTraceApi
+                {Events=UnreservedTailObservationFrame()};
+            CompleteRunAudioObserver observation=CreateDeferred(observationApi);
+            CompleteRunAudioObserver.FrameCapture observed=
+                observation.CaptureCanonicalFrame(()=>{});
+            AssertEx.Equal(5,observed.RawEvents.Count);
+            AssertEx.Equal((byte)10,observed.RawEvents[4].Kind);
+            AssertEx.Equal((ushort)9,observed.RawEvents[4].Subject);
+            AssertEx.Equal((byte)3,observed.RawEvents[4].Value);
+            AssertEx.Equal(0,observed.DeferredBegins.Count);
+
+            var mismatchApi=new FakeTraceApi{Events=DeferredTransferFrame(2)};
+            CompleteRunAudioObserver mismatch=CreateDeferred(mismatchApi);
+            mismatch.CaptureCanonicalFrame(()=>{});
+            CompleteRunAudioObserver.FrameCapture before=mismatch.LastCapture;
+            mismatchApi.Events=new GpgxAudioTraceEvent[0];
+            mismatchApi.EndStatus=-3;
+            mismatchApi.FirstFault=new GpgxAudioObserverAdapter.FirstFault
+                {Reason=4,SourceCpu=2,Pc=0x71B82,ActiveKind=2};
+            AssertEx.Throws<InvalidOperationException>(
+                ()=>mismatch.CaptureCanonicalFrame(()=>{}),
+                "first_fault=4:2:71b82:2:0:0:0 native_tail=");
+            AssertEx.Equal(true,object.ReferenceEquals(before,mismatch.LastCapture));
+            AssertDeferredCurrentStorage(mismatch,3,0,2,0);
+            AssertActiveCurrentStorage(mismatch,3,0,2,0);
+        }
+
+        private static void RollsBackDeferredTailOwnerTransfers()
+        {
+            AssertDeferredTransferRollback(false);
+            AssertDeferredTransferRollback(true);
+        }
+
+        private static void AssertDeferredTransferRollback(bool consumerFailure)
+        {
+            var api=new FakeTraceApi{Events=DeferredFrame(1,false)};
+            CompleteRunAudioObserver observer=CreateDeferred(api);
+            observer.CaptureCanonicalFrame(()=>{});
+            CompleteRunAudioObserver.FrameCapture before=observer.LastCapture;
+            long coordinate=ObserverCoordinate(observer);
+            AssertDeferredCurrent(observer,2,0,6,0);
+
+            api.Events=DeferredTransferOnlyFrame(2);
+            if(consumerFailure)
+            {
+                AssertEx.Throws<InvalidOperationException>(()=>observer.CaptureFrame(
+                    ()=>{},(events,count)=>
+                    {throw new InvalidOperationException("consumer rejected owner transfer");}),
+                    "consumer rejected owner transfer");
+            }
+            else
+            {
+                api.Events=Append(api.Events,
+                    Canonical(2,3,3,0,2,0,0,0x78,0,0x2a),
+                    Canonical(3,3,3,0,2,0,2,0x79,0,0x30),
+                    new GpgxAudioTraceEvent{Ordinal=4,Kind=4,ServiceToken=3,
+                        ServiceKindId=2,SourceCpu=1,Pc=0x79,Value=0x9f,Reserved=1});
+                AssertEx.Throws<InvalidOperationException>(
+                    ()=>observer.CaptureCanonicalFrame(()=>{}),"reserved");
+            }
+            AssertEx.Equal(true,object.ReferenceEquals(before,observer.LastCapture));
+            AssertEx.Equal((byte)0,observer.YmPort0Address);
+            AssertEx.Equal((byte)0,observer.YmPort1Address);
+            AssertEx.Equal(1,observer.ActiveServiceDepth);
+            AssertEx.Equal(0,observer.PendingServiceCount);
+            AssertEx.Equal(coordinate,ObserverCoordinate(observer));
+            AssertDeferredCurrentStorage(observer,2,0,6,0);
+            AssertActiveCurrentStorage(observer,2,0,6,0);
+        }
+
+        private static void CarriesDeferredCurrentOwnerThroughCutoffs()
+        {
+            var api=new FakeTraceApi{Events=DeferredTransferFrame(3)};
+            CompleteRunAudioObserver observer=CreateDeferred(api);
+            observer.CaptureCanonicalFrame(()=>{});
+            CompleteRunAudioObserver.CutoffFrontier cutoff=
+                observer.CaptureCutoffFrontier();
+            AssertCutoffCurrent(cutoff,3,3);
+            AssertEx.Equal((ushort)2,cutoff.PendingDeferredBegin.BlockerToken);
+            AssertEx.Equal((byte)6,cutoff.PendingDeferredBegin.BlockerKind);
+
+            CompleteRunAudioObserver.CutoffFrontier boundary=
+                observer.CaptureBoundaryFrontierAndResetPublication();
+            AssertCutoffCurrent(boundary,3,3);
+            AssertEx.Equal((ushort)2,boundary.PendingDeferredBegin.BlockerToken);
+            AssertEx.Equal(true,observer.LastCapture==null);
+            AssertCutoffCurrent(observer.CaptureCutoffFrontier(),3,3);
+
+            var corruptApi=new FakeTraceApi{Events=DeferredTransferFrame(2)};
+            CompleteRunAudioObserver corrupt=CreateDeferred(corruptApi);
+            corrupt.CaptureCanonicalFrame(()=>{});
+            SetDeferredCurrentToken(corrupt,9);
+            AssertEx.Throws<InvalidOperationException>(
+                ()=>corrupt.CaptureCutoffFrontier(),"cutoff current owner");
         }
 
         private static void ReservesAgainAfterDeferredChildEnd()
@@ -139,6 +379,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 capture.DeferredBegins[0];
             AssertEx.Equal((ushort)2, consumed.BlockerToken);
             AssertEx.Equal((byte)6, consumed.BlockerKind);
+            AssertEx.Equal((ushort)2,consumed.CurrentOwnerToken);
+            AssertEx.Equal((ushort)0,consumed.CurrentOwnerParentToken);
+            AssertEx.Equal((byte)6,consumed.CurrentOwnerKind);
+            AssertEx.Equal((byte)0,consumed.CurrentOwnerDepth);
             AssertEx.Equal((byte)4, consumed.TargetKind);
             AssertEx.Equal((ushort)3, consumed.HookToken);
             AssertEx.Equal(4, consumed.ObservationCount);
@@ -281,6 +525,210 @@ namespace OpenGGF.BizHawk.Headless.Tests
             for(int i=0;i<values.Length;i++)
             {GpgxAudioTraceEvent m68k=values[i];m68k.SourceCpu=2;values[i]=m68k;}
             return values;
+        }
+
+        private static GpgxAudioTraceEvent[] DeferredTransferFrame(byte successorKind)
+        {
+            ushort hook=successorKind==2?(ushort)7:(ushort)8;
+            uint pc=successorKind==2?0x0077u:0x00C1u;
+            GpgxAudioTraceEvent root=Canonical(0,1,2,0,6,0,4,0x003A,0);
+            GpgxAudioTraceEvent marker=DeferredMarker(1,2);
+            GpgxAudioTraceEvent end=Canonical(2,2,2,0,6,0,hook,pc,0);
+            GpgxAudioTraceEvent begin=Canonical(3,1,3,0,successorKind,0,hook,pc,0);
+            return new[]{root,marker,end,begin};
+        }
+
+        private static GpgxAudioTraceEvent[] DeferredPromotedOriginTransferFrame()
+        {
+            GpgxAudioTraceEvent marker=DeferredMarker(4,2);
+            marker.ParentToken=0;marker.Depth=0;
+            return new[]
+            {
+                Canonical(0,1,1,0,2,0,13,0x0020,0),
+                Canonical(1,1,2,1,6,1,4,0x003A,0),
+                Canonical(2,2,1,0,2,0,14,0x0022,0),
+                Canonical(3,11,2,0,6,0,14,0x0022,0),
+                marker,
+                Canonical(5,2,2,0,6,0,7,0x0077,0),
+                Canonical(6,1,3,0,2,0,7,0x0077,0)
+            };
+        }
+
+        private static GpgxAudioTraceEvent[] DeferredTransferOnlyFrame(byte successorKind)
+        {
+            ushort hook=successorKind==2?(ushort)7:(ushort)8;
+            uint pc=successorKind==2?0x0077u:0x00C1u;
+            return new[]
+            {
+                Canonical(0,2,2,0,6,0,hook,pc,0),
+                Canonical(1,1,3,0,successorKind,0,hook,pc,0)
+            };
+        }
+
+        private static GpgxAudioTraceEvent[] DeferredTransferredConsumeFrame(
+            byte successorKind,ushort consumeHook,ushort parentToken)
+        {
+            GpgxAudioTraceEvent begin=Canonical(0,1,4,parentToken,4,1,
+                consumeHook,0x71B82,0);
+            GpgxAudioTraceEvent end=Canonical(1,2,4,parentToken,4,1,
+                2,0x71C4C,0);
+            begin.SourceCpu=2;end.SourceCpu=2;
+            return new[]{begin,end};
+        }
+
+        private static GpgxAudioTraceEvent[] UnreservedTailObservationFrame()
+        {
+            GpgxAudioTraceEvent marker=Canonical(4,10,3,0,2,0,9,
+                0x71B82,0,3);
+            marker.SourceCpu=2;
+            return new[]
+            {
+                Canonical(0,1,2,0,6,0,4,0x003A,0),
+                Canonical(1,2,2,0,6,0,7,0x0077,0),
+                Canonical(2,1,3,0,2,0,7,0x0077,0),
+                Canonical(3,4,3,0,2,0,0,0x78,0,0x9f),
+                marker
+            };
+        }
+
+        private static void AssertDeferredTransferInvalid(
+            Action<GpgxAudioTraceEvent[]> corrupt,string message)
+        {
+            GpgxAudioTraceEvent[] events=DeferredTransferFrame(2);
+            corrupt(events);
+            AssertDeferredTransferEventsInvalid(events,message);
+        }
+
+        private static void AssertDeferredTransferReplacementInvalid(
+            Func<GpgxAudioTraceEvent[],GpgxAudioTraceEvent[]> corrupt,string message)
+        {
+            AssertDeferredTransferEventsInvalid(
+                corrupt(DeferredTransferFrame(2)),message);
+        }
+
+        private static void AssertDeferredTransferEventsInvalid(
+            GpgxAudioTraceEvent[] events,string message)
+        {
+            var api=new FakeTraceApi{Events=events};
+            AssertEx.Throws<InvalidOperationException>(
+                ()=>CreateDeferred(api).CaptureCanonicalFrame(()=>{}),message);
+        }
+
+        private static GpgxAudioTraceEvent[] InsertEvent(
+            GpgxAudioTraceEvent[] source,int index,GpgxAudioTraceEvent value)
+        {
+            var result=new GpgxAudioTraceEvent[source.Length+1];
+            Array.Copy(source,0,result,0,index);result[index]=value;
+            Array.Copy(source,index,result,index+1,source.Length-index);
+            Reordinal(result);return result;
+        }
+
+        private static GpgxAudioTraceEvent[] RemoveEvent(
+            GpgxAudioTraceEvent[] source,int index)
+        {
+            var result=new GpgxAudioTraceEvent[source.Length-1];
+            Array.Copy(source,0,result,0,index);
+            Array.Copy(source,index+1,result,index,source.Length-index-1);
+            Reordinal(result);return result;
+        }
+
+        private static GpgxAudioTraceEvent[] Truncate(
+            GpgxAudioTraceEvent[] source,int length)
+        {
+            var result=new GpgxAudioTraceEvent[length];
+            Array.Copy(source,result,length);Reordinal(result);return result;
+        }
+
+        private static GpgxAudioTraceEvent[] Append(
+            GpgxAudioTraceEvent[] source,params GpgxAudioTraceEvent[] tail)
+        {
+            var result=new GpgxAudioTraceEvent[source.Length+tail.Length];
+            Array.Copy(source,result,source.Length);
+            Array.Copy(tail,0,result,source.Length,tail.Length);
+            Reordinal(result);return result;
+        }
+
+        private static void Reordinal(GpgxAudioTraceEvent[] events)
+        {for(int i=0;i<events.Length;i++)events[i].Ordinal=(uint)i;}
+
+        private static void AssertCutoffCurrent(CompleteRunAudioObserver observer,
+            ushort token,byte kind)
+        {AssertCutoffCurrent(observer.CaptureCutoffFrontier(),token,kind);}
+
+        private static void AssertCutoffCurrent(
+            CompleteRunAudioObserver.CutoffFrontier cutoff,ushort token,byte kind)
+        {
+            AssertEx.Equal(1,cutoff.ActiveServices.Count);
+            CompleteRunAudioObserver.DriverService current=
+                cutoff.ActiveServices[cutoff.ActiveServices.Count-1];
+            AssertEx.Equal(token,current.Token);AssertEx.Equal(kind,current.Kind);
+        }
+
+        private static void AssertDeferredCurrent(CompleteRunAudioObserver observer,
+            ushort token,ushort parent,byte kind,byte depth)
+        {
+            CompleteRunAudioObserver.DeferredBeginEvidence reservation=
+                observer.CaptureCutoffFrontier().PendingDeferredBegin;
+            AssertEx.Equal(true,reservation!=null);
+            AssertEx.Equal(token,reservation.CurrentOwnerToken);
+            AssertEx.Equal(parent,reservation.CurrentOwnerParentToken);
+            AssertEx.Equal(kind,reservation.CurrentOwnerKind);
+            AssertEx.Equal(depth,reservation.CurrentOwnerDepth);
+        }
+
+        private static void AssertDeferredCurrentStorage(
+            CompleteRunAudioObserver observer,ushort token,ushort parent,
+            byte kind,byte depth)
+        {
+            object reservation=typeof(CompleteRunAudioObserver).GetField(
+                "pendingDeferredBegin",BindingFlags.Instance|BindingFlags.NonPublic)
+                .GetValue(observer);
+            AssertEx.Equal(true,reservation!=null);
+            Type type=reservation.GetType();
+            AssertEx.Equal(token,(ushort)type.GetField("CurrentOwnerToken",
+                BindingFlags.Instance|BindingFlags.NonPublic).GetValue(reservation));
+            AssertEx.Equal(parent,(ushort)type.GetField("CurrentOwnerParentToken",
+                BindingFlags.Instance|BindingFlags.NonPublic).GetValue(reservation));
+            AssertEx.Equal(kind,(byte)type.GetField("CurrentOwnerKind",
+                BindingFlags.Instance|BindingFlags.NonPublic).GetValue(reservation));
+            AssertEx.Equal(depth,(byte)type.GetField("CurrentOwnerDepth",
+                BindingFlags.Instance|BindingFlags.NonPublic).GetValue(reservation));
+        }
+
+        private static void SetDeferredCurrentToken(
+            CompleteRunAudioObserver observer,ushort token)
+        {
+            object reservation=typeof(CompleteRunAudioObserver).GetField(
+                "pendingDeferredBegin",BindingFlags.Instance|BindingFlags.NonPublic)
+                .GetValue(observer);
+            reservation.GetType().GetField("CurrentOwnerToken",
+                BindingFlags.Instance|BindingFlags.NonPublic).SetValue(reservation,token);
+        }
+
+        private static void AssertActiveCurrentStorage(
+            CompleteRunAudioObserver observer,ushort token,ushort parent,
+            byte kind,byte depth)
+        {
+            var active=(System.Collections.IList)typeof(CompleteRunAudioObserver)
+                .GetField("activeServices",BindingFlags.Instance|BindingFlags.NonPublic)
+                .GetValue(observer);
+            AssertEx.Equal(1,active.Count);
+            object current=active[0];Type type=current.GetType();
+            AssertEx.Equal(token,(ushort)type.GetField("Token",
+                BindingFlags.Instance|BindingFlags.NonPublic).GetValue(current));
+            AssertEx.Equal(parent,(ushort)type.GetField("CurrentParentToken",
+                BindingFlags.Instance|BindingFlags.NonPublic).GetValue(current));
+            AssertEx.Equal(kind,(byte)type.GetField("Kind",
+                BindingFlags.Instance|BindingFlags.NonPublic).GetValue(current));
+            AssertEx.Equal(depth,(byte)type.GetField("CurrentDepth",
+                BindingFlags.Instance|BindingFlags.NonPublic).GetValue(current));
+        }
+
+        private static long ObserverCoordinate(CompleteRunAudioObserver observer)
+        {
+            return (long)typeof(CompleteRunAudioObserver).GetField(
+                "globalEventCoordinate",BindingFlags.Instance|BindingFlags.NonPublic)
+                .GetValue(observer);
         }
 
         private static GpgxAudioTraceEvent DeferredMarker(uint ordinal, ushort blocker)
@@ -992,13 +1440,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
             {
                 Magic=0x31544147,AbiVersion=3,StructSize=64,KindSize=16,
                 HookSize=32,RangeSize=16,EventSize=32,MaxDepth=8,
-                WatchMaskBytes=8192,HookCount=7,RangeCount=1,
-                EventCapacity=65536,KindCount=4,ResetServiceKind=1
+                WatchMaskBytes=8192,HookCount=14,RangeCount=1,
+                EventCapacity=65536,KindCount=5,ResetServiceKind=1
             };
             var kinds = new[]
             {
                 new GpgxAudioObserverAdapter.ServiceKind {KindId=1},
-                new GpgxAudioObserverAdapter.ServiceKind {KindId=2},
+                new GpgxAudioObserverAdapter.ServiceKind {KindId=2,Flags=4},
+                new GpgxAudioObserverAdapter.ServiceKind {KindId=3,Flags=4},
                 new GpgxAudioObserverAdapter.ServiceKind {KindId=4,Flags=4},
                 new GpgxAudioObserverAdapter.ServiceKind {KindId=6}
             };
@@ -1010,7 +1459,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 new GpgxAudioObserverAdapter.ServiceHook {HookToken=4,Action=1,Cpu=1,Pc=0x003A,ServiceKindId=6},
                 new GpgxAudioObserverAdapter.ServiceHook {HookToken=5,Action=12,Cpu=2,Pc=0x71B82,ServiceKindId=4,ExpectedActiveKind=6},
                 new GpgxAudioObserverAdapter.ServiceHook {HookToken=6,Action=7,Cpu=2,Pc=0x71BB2,ExpectedActiveKind=4},
-                new GpgxAudioObserverAdapter.ServiceHook {HookToken=7,Action=4,Cpu=1,Pc=0x0077,ServiceKindId=2,ExpectedActiveKind=6}
+                new GpgxAudioObserverAdapter.ServiceHook {HookToken=7,Action=4,Cpu=1,Pc=0x0077,ServiceKindId=2,ExpectedActiveKind=6},
+                new GpgxAudioObserverAdapter.ServiceHook {HookToken=8,Action=4,Cpu=1,Pc=0x00C1,ServiceKindId=3,ExpectedActiveKind=6},
+                new GpgxAudioObserverAdapter.ServiceHook {HookToken=9,Action=7,Cpu=2,Pc=0x71B82,ExpectedActiveKind=2},
+                new GpgxAudioObserverAdapter.ServiceHook {HookToken=10,Action=12,Cpu=2,Pc=0x71B82,ServiceKindId=4,ExpectedActiveKind=2},
+                new GpgxAudioObserverAdapter.ServiceHook {HookToken=11,Action=7,Cpu=2,Pc=0x71B82,ExpectedActiveKind=3},
+                new GpgxAudioObserverAdapter.ServiceHook {HookToken=12,Action=12,Cpu=2,Pc=0x71B82,ServiceKindId=4,ExpectedActiveKind=3},
+                new GpgxAudioObserverAdapter.ServiceHook {HookToken=13,Action=1,Cpu=1,Pc=0x0020,ServiceKindId=2},
+                new GpgxAudioObserverAdapter.ServiceHook {HookToken=14,Action=8,Cpu=1,Pc=0x0022,ServiceKindId=2,ExpectedActiveKind=6}
             };
             var ranges = new[] { new GpgxAudioObserverAdapter.SnapshotRange
                 {RangeId=7,Start=0,Length=0} };

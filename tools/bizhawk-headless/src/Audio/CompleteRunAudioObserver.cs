@@ -68,6 +68,9 @@ namespace OpenGGF.BizHawk.Headless
             {
                 BlockerToken=value.BlockerToken;BlockerParentToken=value.BlockerParentToken;
                 BlockerKind=value.BlockerKind;BlockerDepth=value.BlockerDepth;
+                CurrentOwnerToken=value.CurrentOwnerToken;
+                CurrentOwnerParentToken=value.CurrentOwnerParentToken;
+                CurrentOwnerKind=value.CurrentOwnerKind;CurrentOwnerDepth=value.CurrentOwnerDepth;
                 TargetKind=value.TargetKind;HookToken=value.HookToken;SourceCpu=value.SourceCpu;
                 Pc=value.Pc;FirstCoordinate=value.FirstCoordinate;LatestCoordinate=value.LatestCoordinate;
                 FirstOrdinal=value.FirstOrdinal;LatestOrdinal=value.LatestOrdinal;
@@ -76,6 +79,10 @@ namespace OpenGGF.BizHawk.Headless
             }
             public ushort BlockerToken{get;private set;} public ushort BlockerParentToken{get;private set;}
             public byte BlockerKind{get;private set;} public byte BlockerDepth{get;private set;}
+            internal ushort CurrentOwnerToken{get;private set;}
+            internal ushort CurrentOwnerParentToken{get;private set;}
+            internal byte CurrentOwnerKind{get;private set;}
+            internal byte CurrentOwnerDepth{get;private set;}
             public byte TargetKind{get;private set;} public ushort HookToken{get;private set;}
             public byte SourceCpu{get;private set;} public uint Pc{get;private set;}
             public long FirstCoordinate{get;private set;} public long LatestCoordinate{get;private set;}
@@ -88,6 +95,8 @@ namespace OpenGGF.BizHawk.Headless
         {
             internal ushort BlockerToken,BlockerParentToken,HookToken,ConsumedToken;
             internal byte BlockerKind,BlockerDepth,TargetKind,SourceCpu;
+            internal ushort CurrentOwnerToken,CurrentOwnerParentToken;
+            internal byte CurrentOwnerKind,CurrentOwnerDepth;
             internal uint Pc,FirstOrdinal,LatestOrdinal;
             internal long FirstCoordinate,LatestCoordinate,ConsumeCoordinate;
             internal int ObservationCount;internal bool Consumed;
@@ -101,6 +110,7 @@ namespace OpenGGF.BizHawk.Headless
             internal CutoffFrontier(List<ServiceBuilder> active,List<ServiceBuilder> pending,
                 DeferredBeginReservation deferred,byte port0,byte port1,long epoch,bool armed)
             {
+                ValidateDeferredCurrentOwner(active,deferred);
                 ActiveServices=Materialize(active,false,false);PendingServices=Materialize(pending,true,true);
                 PendingDeferredBegin=deferred==null?null:new DeferredBeginEvidence(deferred);
                 YmPort0Address=port0;YmPort1Address=port1;ArmEpoch=epoch;IsArmed=armed;
@@ -116,6 +126,18 @@ namespace OpenGGF.BizHawk.Headless
                 if(sort)Array.Sort(copy,(a,b)=>a.BeginCoordinate.CompareTo(b.BeginCoordinate));
                 var result=new DriverService[copy.Length];for(int i=0;i<result.Length;i++)result[i]=new DriverService(copy[i],complete);
                 return Array.AsReadOnly(result);
+            }
+            private static void ValidateDeferredCurrentOwner(List<ServiceBuilder> active,
+                DeferredBeginReservation deferred)
+            {
+                if(deferred==null)return;
+                if(active.Count==0)throw Invalid("deferred cutoff without current owner");
+                ServiceBuilder current=active[active.Count-1];
+                if(current.Token!=deferred.CurrentOwnerToken
+                    ||current.CurrentParentToken!=deferred.CurrentOwnerParentToken
+                    ||current.Kind!=deferred.CurrentOwnerKind
+                    ||current.CurrentDepth!=deferred.CurrentOwnerDepth)
+                    throw Invalid("deferred cutoff current owner");
             }
         }
 
@@ -610,6 +632,14 @@ namespace OpenGGF.BizHawk.Headless
             internal int EventCount;
         }
 
+        private struct DeferredOwnerTransfer
+        {
+            internal bool Pending;
+            internal int BeginIndex;
+            internal ushort Token,ParentToken;
+            internal byte Kind,Depth;
+        }
+
         private ProjectionResult Project(GpgxAudioTraceEvent[] events,int count,bool retainRaw)
         {
             var active=projectionActive;active.Clear();
@@ -622,6 +652,7 @@ namespace OpenGGF.BizHawk.Headless
             byte port0=ymPort0Address,port1=ymPort1Address; long epoch=armEpoch; bool nowArmed=armed;
             bool promotionHooks=hasPromotionHooks;
             DeferredBeginReservation deferred=Clone(pendingDeferredBegin);
+            DeferredOwnerTransfer deferredTransfer=default(DeferredOwnerTransfer);
             for(int i=0;i<count;i++)
             {
                 ref GpgxAudioTraceEvent e=ref events[i]; long coordinate=globalEventCoordinate+i;
@@ -640,14 +671,14 @@ namespace OpenGGF.BizHawk.Headless
                         if(deferred==null||deferred.Consumed||active.Count!=1)
                             throw Invalid("orphan deferred consume");
                         ServiceBuilder blocker=active[0];
-                        if(blocker.Token!=deferred.BlockerToken
-                            ||blocker.CurrentParentToken!=deferred.BlockerParentToken
-                            ||blocker.Kind!=deferred.BlockerKind
-                            ||blocker.CurrentDepth!=deferred.BlockerDepth
+                        if(blocker.Token!=deferred.CurrentOwnerToken
+                            ||blocker.CurrentParentToken!=deferred.CurrentOwnerParentToken
+                            ||blocker.Kind!=deferred.CurrentOwnerKind
+                            ||blocker.CurrentDepth!=deferred.CurrentOwnerDepth
                             ||hook.ServiceKindId!=deferred.TargetKind
-                            ||hook.ExpectedActiveKind!=deferred.BlockerKind
-                            ||e.ParentToken!=deferred.BlockerToken
-                            ||e.Depth!=deferred.BlockerDepth+1)
+                            ||hook.ExpectedActiveKind!=deferred.CurrentOwnerKind
+                            ||e.ParentToken!=deferred.CurrentOwnerToken
+                            ||e.Depth!=deferred.CurrentOwnerDepth+1)
                             throw Invalid("deferred consume ownership");
                     }
                     if(hook.Action==4)
@@ -666,6 +697,21 @@ namespace OpenGGF.BizHawk.Headless
                         BeginHookToken=e.Subject,BeginSourceCpu=e.SourceCpu,
                         RootToken=active.Count==0?e.ServiceToken:active[0].RootToken};
                     active.Add(b);
+                    if(hook.Action==4&&deferredTransfer.Pending)
+                    {
+                        if(i!=deferredTransfer.BeginIndex
+                            ||b.Token!=deferredTransfer.Token
+                            ||b.CurrentParentToken!=deferredTransfer.ParentToken
+                            ||b.Kind!=deferredTransfer.Kind
+                            ||b.CurrentDepth!=deferredTransfer.Depth
+                            ||deferred==null||deferred.Consumed)
+                            throw Invalid("deferred tail transfer begin");
+                        deferred.CurrentOwnerToken=b.Token;
+                        deferred.CurrentOwnerParentToken=b.CurrentParentToken;
+                        deferred.CurrentOwnerKind=b.Kind;
+                        deferred.CurrentOwnerDepth=b.CurrentDepth;
+                        deferredTransfer=default(DeferredOwnerTransfer);
+                    }
                     if(deferredConsume)
                     {
                         deferred.Consumed=true;deferred.ConsumedToken=e.ServiceToken;
@@ -687,7 +733,21 @@ namespace OpenGGF.BizHawk.Headless
                     ServiceBuilder b=active[promotes?active.Count-2:active.Count-1]; ValidateOwnership(ref e,b);
                     bool deferredBlocker=deferred!=null&&!deferred.Consumed;
                     if(deferredBlocker)
-                        throw Invalid("deferred blocker completion before consume");
+                    {
+                        if(cancelled||promotes||completionHook.Action!=4
+                            ||!MatchesCurrentOwner(deferred,b)
+                            ||!CurrentOwnerIsOrigin(deferred)
+                            ||completionHook.ExpectedActiveKind!=deferred.CurrentOwnerKind
+                            ||!HasDeferredConsumeRoute(completionHook.ServiceKindId,
+                                deferred.TargetKind))
+                            throw Invalid("deferred blocker completion before consume");
+                        ValidateTailEnd(events,i,ref e,completionHook,b);
+                        ref GpgxAudioTraceEvent successor=ref events[i+1];
+                        deferredTransfer=new DeferredOwnerTransfer
+                        {Pending=true,BeginIndex=i+1,Token=successor.ServiceToken,
+                            ParentToken=successor.ParentToken,Kind=successor.ServiceKindId,
+                            Depth=successor.Depth};
+                    }
                     b.EventCount++;
                     if(e.Offset!=0||e.PayloadLength!=0||e.Payload!=0||e.Value!=0)
                         throw Invalid("completion fields");
@@ -824,6 +884,10 @@ namespace OpenGGF.BizHawk.Headless
                             deferred=new DeferredBeginReservation
                             {BlockerToken=blocker.Token,BlockerParentToken=blocker.CurrentParentToken,
                                 BlockerKind=blocker.Kind,BlockerDepth=blocker.CurrentDepth,
+                                CurrentOwnerToken=blocker.Token,
+                                CurrentOwnerParentToken=blocker.CurrentParentToken,
+                                CurrentOwnerKind=blocker.Kind,
+                                CurrentOwnerDepth=blocker.CurrentDepth,
                                 TargetKind=hook.ServiceKindId,HookToken=e.Subject,SourceCpu=e.SourceCpu,
                                 Pc=e.Pc,FirstCoordinate=coordinate,LatestCoordinate=coordinate,
                                 FirstOrdinal=e.Ordinal,LatestOrdinal=e.Ordinal,ObservationCount=1};
@@ -927,6 +991,7 @@ namespace OpenGGF.BizHawk.Headless
                     &&!(e.Kind==10&&e.Value==4))
                     throw Invalid("interposed M68K event during deferred begin");
             }
+            if(deferredTransfer.Pending)throw Invalid("partial deferred tail transfer");
             if(reset!=null)throw Invalid("partial snapshot/reset state");
             for(int i=0;i<active.Count;i++)if(active[i].ActiveByteLength!=0)throw Invalid("partial snapshot/reset state");
             if((uint)pending.Count>config.EventCapacity)throw Invalid("pending service bound");
@@ -979,6 +1044,32 @@ namespace OpenGGF.BizHawk.Headless
         private static bool ContainsToken(List<ServiceBuilder> active,ushort token)
         {for(int i=0;i<active.Count;i++)if(active[i].Token==token)return true;return false;}
 
+        private static bool MatchesCurrentOwner(DeferredBeginReservation deferred,
+            ServiceBuilder service)
+        {
+            return service.Token==deferred.CurrentOwnerToken
+                &&service.CurrentParentToken==deferred.CurrentOwnerParentToken
+                &&service.Kind==deferred.CurrentOwnerKind
+                &&service.CurrentDepth==deferred.CurrentOwnerDepth;
+        }
+
+        private static bool CurrentOwnerIsOrigin(DeferredBeginReservation deferred)
+        {
+            return deferred.CurrentOwnerToken==deferred.BlockerToken
+                &&deferred.CurrentOwnerParentToken==deferred.BlockerParentToken
+                &&deferred.CurrentOwnerKind==deferred.BlockerKind
+                &&deferred.CurrentOwnerDepth==deferred.BlockerDepth;
+        }
+
+        private bool HasDeferredConsumeRoute(byte currentKind,byte targetKind)
+        {
+            int matches=0;
+            for(int i=0;i<hooks.Length;i++)
+                if(hooks[i].Action==12&&hooks[i].ExpectedActiveKind==currentKind
+                    &&hooks[i].ServiceKindId==targetKind)matches++;
+            return matches==1;
+        }
+
         private static void ReassignDescendantRoots(List<ServiceBuilder> pending,ushort childToken,ushort oldRoot)
         {
             for(int i=0;i<pending.Count;i++)
@@ -1007,7 +1098,7 @@ namespace OpenGGF.BizHawk.Headless
             ref GpgxAudioTraceEvent begin=ref events[index+1];
             if(begin.Kind!=1||begin.Ordinal!=end.Ordinal+1||begin.Subject!=end.Subject||begin.Pc!=end.Pc
                 ||begin.SourceCpu!=end.SourceCpu||begin.ServiceToken==0||begin.ServiceToken==oldService.Token
-                ||begin.ParentToken!=oldService.ParentToken||begin.Depth!=oldService.Depth
+                ||begin.ParentToken!=oldService.CurrentParentToken||begin.Depth!=oldService.CurrentDepth
                 ||begin.ServiceKindId!=hook.ServiceKindId||oldService.Kind!=hook.ExpectedActiveKind)
                 throw Invalid("tail completion/begin pair");
         }
@@ -1197,6 +1288,10 @@ namespace OpenGGF.BizHawk.Headless
             return new DeferredBeginReservation
             {BlockerToken=b.BlockerToken,BlockerParentToken=b.BlockerParentToken,
                 BlockerKind=b.BlockerKind,BlockerDepth=b.BlockerDepth,
+                CurrentOwnerToken=b.CurrentOwnerToken,
+                CurrentOwnerParentToken=b.CurrentOwnerParentToken,
+                CurrentOwnerKind=b.CurrentOwnerKind,
+                CurrentOwnerDepth=b.CurrentOwnerDepth,
                 TargetKind=b.TargetKind,HookToken=b.HookToken,SourceCpu=b.SourceCpu,
                 Pc=b.Pc,FirstOrdinal=b.FirstOrdinal,LatestOrdinal=b.LatestOrdinal,
                 FirstCoordinate=b.FirstCoordinate,LatestCoordinate=b.LatestCoordinate,
