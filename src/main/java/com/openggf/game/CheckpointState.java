@@ -146,7 +146,7 @@ public class CheckpointState implements RespawnState {
      *   subq.b #1,(Timer_second).w
      * </pre>
      *
-     * S2 {@code Obj79_LoadData} docs/s2disasm/s2.asm:4783-4785,
+     * S2 {@code Obj79_LoadData} docs/s2disasm/s2.asm:44783-44785,
      * S1 docs/s1disasm/_incObj/79 Lamppost.asm:193-195,
      * S3K docs/skdisasm/sonic3k.asm:61776-61778 (and the Saved2 big-ring path
      * at :61803-61805).

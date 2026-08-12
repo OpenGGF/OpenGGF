@@ -166,7 +166,7 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen
      * sits in routine 2 ({@code loc_14102}) stepping through
      * {@code Obj34_MoveTowardsTargetPosition} and advances to routine $A only
      * once {@code x_pixel} equals {@code titlecard_x_target}
-     * (docs/s2disasm/s2.asm:28128-28131). The length is therefore derived from
+     * (docs/s2disasm/s2.asm:27847-27853). The length is therefore derived from
      * the row-0 start/target and the routine's fixed 16px step:
      * (288 - 32) / 16 = 16 frames. The shared base class's 60-frame default is
      * not a ROM value.
