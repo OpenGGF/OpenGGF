@@ -1550,13 +1550,13 @@ static void deferred_reserve_consume_matrix(void)
   struct gpgx_audio_service_kind_v1 k[6], base_k[6];
   struct gpgx_audio_service_hook_v1 h[16], base_h[16], swap;
   struct gpgx_audio_snapshot_range_v1 r;
-  struct gpgx_audio_trace_event drained_events[32];
+  struct gpgx_audio_trace_event drained_events[2048];
   struct gpgx_audio_trace_first_fault_v1 fault, preserved_fault;
   struct trace_deferred_begin_reservation reservation_before;
   struct trace_stack_entry stack_before[TRACE_MAX_DEPTH];
   uint8_t mask[8192], base_mask[8192], rom[65536], previous;
   uint16_t blocker, child, next_token, successor;
-  uint32_t before, count, overflow, drained;
+  uint32_t before, count, overflow, drained, age;
   memset(&c,0,sizeof(c)); memset(k,0,sizeof(k)); memset(h,0,sizeof(h));
   memset(&r,0,sizeof(r)); memset(mask,0,sizeof(mask)); memset(rom,0,sizeof(rom));
   c.magic=0x31544147; c.abi_version=3; c.struct_size=64; c.kind_size=16;
@@ -2267,6 +2267,123 @@ static void deferred_reserve_consume_matrix(void)
   assert(gpgx_audio_trace_end_frame()==TRACE_OK);
   assert(gpgx_audio_trace_drain(drained_events,32,&drained)==TRACE_OK);
   assert(trace_deferred_begin.pending);
+  assert(gpgx_audio_trace_disable()==TRACE_OK && !trace_deferred_begin.pending);
+
+  /* A new kind-6 reservation completes at ages zero through four.  Consuming
+     at the boundary and closing its child is legal. */
+  c.max_continuation_frames=4;
+  k[1].continuation_frame_limit=4;
+  k[2].continuation_frame_limit=4;
+  k[5].continuation_frame_limit=4;
+  START_RESERVED_ROOT();
+  assert(trace_stack[0].carried_frames==0 && trace_deferred_begin.pending);
+  assert(gpgx_audio_trace_end_frame()==TRACE_OK);
+  assert(gpgx_audio_trace_event_count(&count,&overflow)==TRACE_OK && overflow==0);
+  assert(gpgx_audio_trace_drain(count?drained_events:NULL,
+    count?2048:0,&drained)==TRACE_OK && drained==count);
+  for(age=1;age<=4;age++)
+  {
+    assert(gpgx_audio_trace_begin_frame()==TRACE_OK);
+    assert(trace_depth==1 && trace_stack[0].carried_frames==age
+      && trace_deferred_begin.pending);
+    if(age==4)
+    {
+      gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_M68K,0x71b82);
+      assert(!trace_deferred_begin.pending && trace_depth==2);
+      gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_M68K,0x71c4c);
+      gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_Z80,0x77);
+      assert(trace_depth==1 && trace_stack[0].kind==2);
+    }
+    assert(gpgx_audio_trace_end_frame()==TRACE_OK);
+    assert(gpgx_audio_trace_event_count(&count,&overflow)==TRACE_OK && overflow==0);
+    assert(gpgx_audio_trace_drain(count?drained_events:NULL,
+      count?2048:0,&drained)==TRACE_OK && drained==count);
+  }
+
+  /* A sixth completion begins at age five and is rejected by native state. */
+  START_RESERVED_ROOT();
+  assert(gpgx_audio_trace_end_frame()==TRACE_OK);
+  assert(gpgx_audio_trace_event_count(&count,&overflow)==TRACE_OK && overflow==0);
+  assert(gpgx_audio_trace_drain(count?drained_events:NULL,
+    count?2048:0,&drained)==TRACE_OK && drained==count);
+  for(age=1;age<=4;age++)
+  {
+    assert(gpgx_audio_trace_begin_frame()==TRACE_OK);
+    assert(trace_stack[0].carried_frames==age);
+    assert(gpgx_audio_trace_end_frame()==TRACE_OK);
+    assert(gpgx_audio_trace_event_count(&count,&overflow)==TRACE_OK && overflow==0);
+    assert(gpgx_audio_trace_drain(count?drained_events:NULL,
+      count?2048:0,&drained)==TRACE_OK && drained==count);
+  }
+  assert(gpgx_audio_trace_begin_frame()==TRACE_OK);
+  assert(trace_stack[0].carried_frames==5 && trace_deferred_begin.pending);
+  assert(gpgx_audio_trace_end_frame()==TRACE_ABI_OR_CONFIG_LIMIT);
+  assert(gpgx_audio_trace_abort_frame()==TRACE_ABI_OR_CONFIG_LIMIT);
+
+  /* Publication resets a cutoff-carried reservation to age zero.  Its first
+     published frame starts at age one, so exactly four can complete. */
+  START_RESERVED_ROOT();
+  trace_prepublication=1;
+  assert(trace_stack[0].carried_frames==0 && trace_deferred_begin.pending);
+  assert(gpgx_audio_trace_end_frame()==TRACE_OK);
+  assert(gpgx_audio_trace_event_count(&count,&overflow)==TRACE_OK && overflow==0);
+  assert(gpgx_audio_trace_drain(count?drained_events:NULL,
+    count?2048:0,&drained)==TRACE_OK && drained==count);
+  assert(gpgx_audio_trace_begin_publication_epoch()==TRACE_OK);
+  assert(trace_stack[0].carried_frames==0 && trace_deferred_begin.pending);
+  for(age=1;age<=4;age++)
+  {
+    assert(gpgx_audio_trace_begin_frame()==TRACE_OK);
+    assert(trace_depth==1 && trace_stack[0].carried_frames==age
+      && trace_deferred_begin.pending);
+    if(age==4)
+    {
+      gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_M68K,0x71b82);
+      gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_M68K,0x71c4c);
+      gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_Z80,0x77);
+      assert(trace_depth==1 && trace_stack[0].kind==2
+        && !trace_deferred_begin.pending);
+    }
+    assert(gpgx_audio_trace_end_frame()==TRACE_OK);
+    assert(gpgx_audio_trace_event_count(&count,&overflow)==TRACE_OK && overflow==0);
+    assert(gpgx_audio_trace_drain(count?drained_events:NULL,
+      count?2048:0,&drained)==TRACE_OK && drained==count);
+  }
+  START_RESERVED_ROOT();
+  trace_prepublication=1;
+  assert(gpgx_audio_trace_end_frame()==TRACE_OK);
+  assert(gpgx_audio_trace_event_count(&count,&overflow)==TRACE_OK && overflow==0);
+  assert(gpgx_audio_trace_drain(count?drained_events:NULL,
+    count?2048:0,&drained)==TRACE_OK && drained==count);
+  assert(gpgx_audio_trace_begin_publication_epoch()==TRACE_OK);
+  for(age=1;age<=4;age++)
+  {
+    assert(gpgx_audio_trace_begin_frame()==TRACE_OK);
+    assert(trace_stack[0].carried_frames==age && trace_deferred_begin.pending);
+    assert(gpgx_audio_trace_end_frame()==TRACE_OK);
+    assert(gpgx_audio_trace_event_count(&count,&overflow)==TRACE_OK && overflow==0);
+    assert(gpgx_audio_trace_drain(count?drained_events:NULL,
+      count?2048:0,&drained)==TRACE_OK && drained==count);
+  }
+  assert(gpgx_audio_trace_begin_frame()==TRACE_OK);
+  assert(trace_stack[0].carried_frames==5 && trace_deferred_begin.pending);
+  assert(gpgx_audio_trace_end_frame()==TRACE_ABI_OR_CONFIG_LIMIT);
+  assert(gpgx_audio_trace_abort_frame()==TRACE_ABI_OR_CONFIG_LIMIT);
+  /* The consume then reserve ordering creates a replacement reservation even
+     when the blocker identity is unchanged. */
+  START_RESERVED_ROOT();
+  blocker=trace_stack[0].token;
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_M68K,0x71b82);
+  assert(!trace_deferred_begin.pending && trace_depth==2);
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_M68K,0x71c4c);
+  before=trace_event_count_value;
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_M68K,0x71b4c);
+  assert(trace_deferred_begin.pending && trace_depth==1
+    && TRACE_DEFERRED_ORIGIN(trace_deferred_begin).token==blocker
+    && trace_events[before].kind==EVENT_HOOK_MARKER
+    && trace_events[before].value==4
+    && trace_events[before].service_token==blocker);
+  assert(gpgx_audio_trace_abort_frame()==TRACE_ABI_OR_CONFIG_LIMIT);
   assert(gpgx_audio_trace_disable()==TRACE_OK && !trace_deferred_begin.pending);
 #undef ASSERT_FIRST_FAULT
 #undef START_TRANSFERRED_ROOT
