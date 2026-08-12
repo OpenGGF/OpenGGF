@@ -4392,6 +4392,11 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     /** @see LevelTransitionCoordinator#isLevelInactiveForTransition() */
     public boolean isLevelInactiveForTransition() { return transitions.isLevelInactiveForTransition(); }
 
+    /** @see LevelTransitionCoordinator#setLevelInactiveForTransition(boolean) */
+    public void setLevelInactiveForTransition(boolean inactive) {
+        transitions.setLevelInactiveForTransition(inactive);
+    }
+
     /** @see LevelTransitionCoordinator#requestCreditsTransition() */
     public void requestCreditsTransition() { transitions.requestCreditsTransition(); }
 

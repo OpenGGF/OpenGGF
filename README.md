@@ -284,6 +284,27 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **The post-act fade is a frozen fade, and the chain admits a level the way
+  production does (2026-08-12):** two more divergences behind the emerald run.
+  ROM `Level_MainLoop` tests `Level_Inactive_flag` in the instruction immediately
+  after `RunObjects` and branches straight back to `Level` (`s2.asm:5095-5097`),
+  which runs `ClearPLC` then `Pal_FadeToBlack` — a `move.w #$15,d4` plus `dbf`
+  loop of 22 iterations doing `WaitForVint`, palette work and `RunPLC_RAM`, with
+  **no `RunObjects` at all** (`:3370-3382`). The engine ran those same 22 frames as
+  live gameplay, submitting a fresh player DPLC on nearly every one. The span
+  length already matched; only its content was wrong. An earlier attempt at this
+  was correctly rejected as a net wash because it introduced a `camera_y`
+  mismatch — that turned out to be a missing one-object-pass split rather than the
+  freeze itself, and with the split landed as its precondition the regression does
+  not appear. Separately, the chain harness admitted a level destination one-shot
+  where production polls `beforeAdmission` every tick and steps while denied; the
+  coordinator's refusal was correct, since the destination act's title card was
+  still running and the cursor sat 150 rows short. Stepping until admissible is
+  additive — a boundary already admissible exits on iteration zero. Surplus gap
+  edges fall 84 to 60 and the run now reaches past segment 7's last recorded row.
+  Recorded honestly: neither closes its axis. The remaining 60 surplus edges are
+  **not** the fade, no segment-7 report is emitted yet so nothing establishes that
+  EHZ2 compares clean, and segment 6 still carries 5 errors on its terminal row.
 - **Four S2 gameplay divergences behind the emerald run's last segment
   (2026-08-12):** with the halfpipe chain green, the emerald chain's remaining
   failures decomposed into four real engine defects, each found by a comparison

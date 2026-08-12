@@ -73504,3 +73504,132 @@ unchanged shape, same pre-existing S3K `KOS_DECOMPRESSION_QUEUE` #14/#15/#335.
 classes, both S1 emerald-run classes, the gap journal/comparator, the terminal
 tail, the hardware-timing and rewind guards, `TestAdoptedOpeningRowComparison`
 and `TestDynamicArtLifecycleService` all green (103/103 in one fork).
+
+## 2026-08-12 — S2 complete-emerald chain: segment 7 admission (harness parity)
+
+Worktree at `a957fcad9` (`<scratch-worktree>`), branch
+`bugfix/ai-s2-runchain-admission`.
+
+```
+rm -rf target/surefire-reports target/trace-reports
+mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+    -Dsonic1.rom.path=<s1.gen> -Dsonic2.rom.path=<s2.gen> -Ds3k.rom.path=<s3k.gen> test
+```
+
+CONTROL (`a957fcad9`, `-Dtest=TestS2CompleteEmeraldRunChain`): 2 axes —
+`[walk-failure] coordinator denied segment 7 admission in phase TRANSITION_GAP`
+and `[segment-physics] segment 6, 5 errors, frame 1287 dynamic_art.frame
+rom=1287 engine=1309`.
+
+ROOT CAUSE (harness, not engine): at a `level_advance` boundary the chain took
+its `isNewActiveLevelSegment == true` path in `prepareAcrossLevelBoundary` (true
+by construction, since `awaitBoundary` only exits once the new level is active),
+so it never waited for the destination act's title card to hand back to LEVEL
+and never let the shared movie cursor reach the destination's first recorded
+row. It then called `admitLevel` **once** and failed on the denial. The denial
+was correct. Production does not admit one-shot: `TraceSessionLauncher`'s
+`runCoordinatorTick` polls `TraceRunPlaybackCoordinator#beforeAdmission` every
+frame and keeps stepping while it is denied — two implementations of one
+contract, only one of which had the retry.
+
+FIX: `AbstractRunChainTest#admitLevelWhenReady` mirrors production — re-offer
+the destination each frame, step the engine while the coordinator denies,
+bounded by the same manifest-derived `stepCap`, reporting
+`rowsConsumed = cursor - destinationOffset`. Additive: a boundary already
+admissible exits on iteration 0 with the prepared count unchanged. No admission
+rule, window or assertion was weakened; the engine must still become genuinely
+admissible.
+
+AFTER: segment 7 (EHZ2) is admitted and replays every recorded row with no
+segment-physics axis of its own. The frontier moves to segment 7's own exit
+boundary: `[walk-failure] segment 7 lost production ownership before source
+closure (mode=TITLE_CARD, level=LevelIdentity[loadGeneration=7,
+progressionZone=0, romZone=0, act=1], BK2 cursor=37620)`. The newly reached
+seg6->seg7 gap comparison now also reports
+`[dynamic-art-gap] seg4_ehz1 -> seg5_ehz2: run_gap.edge_count expected=12
+actual=96`. Both are newly reached comparisons, not regressions.
+
+DISPROVED THIS ROUND — do not retry as briefed. The terminal-row axis was
+attributed to `LiveTraceComparator#finalizeTerminalDynamicArtComparison`
+reading the LIVE snapshot 22 stepped frames after the row it compares, with the
+prescription "latch the snapshot at the row it means to compare". Measured: the
+live snapshot at the very top of the LEVEL_LOAD branch, before `awaitBoundary`
+steps a single frame, is already
+`DynamicArtDiagnosticsSnapshot[frame=0, ... Edge[edgeOrdinal=37492,
+transferId=18746, phase=submitted, logicalFrame=0, publicationFrame=0 ...]]` —
+a fresh row 0, not the terminal row 1287. There is no moment at which the live
+ledger holds row 1287, so latching earlier makes segment 6 **worse**: 5 -> 16
+errors, `dynamic_art.frame rom=1287 engine=0`. Reverted; landed nothing on that
+axis. Whatever owns the terminal row's identity resets the ledger before the
+comparison, and that reset — not the 22-frame delay — is the thing to find.
+
+Full profile after the change: 770 tests / 1 failure / 3 errors / 4 skipped —
+identical shape to the control, same pre-existing S3K KOS #14/#15/#335 errors.
+Verified green in the same run: `TestS2EhzHalfpipeRoundTripChain`, both Seg2
+oracles, all eight S2 standalone special-stage classes,
+`TestS1GhzMazeRoundTripChain`, `TestS1CompleteEmeraldVisualRun`,
+`TestS1CompleteEmeraldRunPrefix`, `TestTraceRunDynamicArtGapJournal`,
+`TestTraceRunDynamicArtGapComparator`; and in a companion run
+`TestVisualTraceRunTerminalTail`, `TestHardwareTimingAuthorityGuard`,
+`TestRewindCoverageGuard`, `TestStaticStateRewindCoverageGuard`,
+`TestAdoptedOpeningRowComparison`, `TestDynamicArtLifecycleService`,
+`TestCheckpointStateRewind` (66/66).
+
+## 2026-08-12 — S2 post-act fade stops running as live gameplay (Obj3A `Level_Inactive_flag`)
+
+Worktree `<scratch-worktree>` at base `5b4004b27`.
+Command: `mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1
+-Dsurefire.runOrder=alphabetical -Dsonic{1,2}.rom.path=... -Ds3k.rom.path=... test`.
+
+ROM ground re-verified in the listing this round:
+`Level_MainLoop` tests `Level_Inactive_flag` in the instruction immediately after
+`jsr (RunObjects).l` and branches to `Level` (s2.asm:5095-5097), *before*
+`JmpTo_DeformBgLayer` (:5098) — so the flag-set pass takes no camera step.
+`Level` then runs `ClearPLC` + `Pal_FadeToBlack` (:4764-4765), and
+`Pal_FadeToBlack` is `move.w #$15,d4` plus a `dbf` loop of
+`WaitForVint`/`UpdateAllColours`/`RunPLC_RAM` with no `RunObjects` (:3369-3382):
+22 frozen frames, zero object passes, zero DPLC submissions.
+
+The frame the flag is written was settled from the routine split, not a probe.
+`Obj3A`'s wait routine `loc_1419C` (:27906-27913) decrements
+`anim_frame_duration`, and on the pass that reaches zero it does only
+`addq.b #2,routine(a0)` and falls into `BranchTo18_DisplaySprite` — it never
+reaches `loc_14270`. `loc_14270`/`loc_1429C` (:27987-28004), which writes
+`Level_Inactive_flag`, therefore runs on the FOLLOWING pass. The engine's shared
+`AbstractResultsScreen.updateWait` fired `onExitReady()` on the expiry pass, one
+pass early — which is exactly why the earlier attempt at raising the flag inside
+`triggerFadeToBlack` produced `camera_y` row 1287 rom=0x0268 engine=0x0262: it
+suppressed a camera step the ROM still took. Sonic 1's `GotThroughCard` has the
+identical two-routine shape (`_incObj/3A Got Through Card.asm`:110-115,193-210);
+that site was left unchanged.
+
+Landed: the one-pass hold in the S2 object plus the `Level_Inactive_flag` write.
+No constant was introduced beyond `ROM_EXIT_ROUTINE_PASS = 1`, which is the
+routine split itself.
+
+`TestS2CompleteEmeraldRunChain` — still fails, 3 axes, measured before -> after:
+
+- `[dynamic-art-gap]` seg4_ehz1 -> seg5_ehz2 `run_gap.edge_count`
+  expected 12, actual **96 -> 72** (surplus 84 -> 60). Edge-0 field mismatches
+  remain. Not closed.
+- `[walk-failure]` segment 7 ownership, BK2 cursor **37620 -> 38993**
+  (mode=TITLE_CARD). 38993 is past segment 7's last recorded row 38976, but **no
+  seg7 report is emitted**, so nothing here establishes that EHZ2 compares clean.
+- `[segment-physics]` segment 6 **5 errors -> 5 errors**, same five
+  `dynamic_art.*` fields on terminal row 1287; `dynamic_art.frame` engine value
+  1309 -> 1310. No `camera_y` error appeared.
+
+Full profile after: 770 / 1 failure / 3 errors / 4 skipped — identical to the
+control, same pre-existing S3K KOS #14/#15/#335 errors. Green in the companion
+run: `TestS2EhzHalfpipeRoundTripChain` (its Seg2 oracle at 0 errors), all eight
+S2 standalone special-stage classes, `TestS1GhzMazeRoundTripChain`,
+`TestS1CompleteEmeraldVisualRun`, `TestS1CompleteEmeraldRunPrefix`,
+`TestTraceRunDynamicArtGapJournal`, `TestTraceRunDynamicArtGapComparator`,
+`TestVisualTraceRunTerminalTail`, `TestHardwareTimingAuthorityGuard`,
+`TestRewindCoverageGuard`, `TestStaticStateRewindCoverageGuard`,
+`TestAdoptedOpeningRowComparison`, `TestDynamicArtLifecycleService`,
+`TestCheckpointStateRewind` (93/93).
+
+Next: 60 surplus gap edges survive the freeze. They are not the post-act fade
+frames — those are gone. Find which span still submits them before touching
+segment 6's terminal row again.
