@@ -204,6 +204,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     waitEndOrdinal=(uint)record["ordinal"];
                     AssertEx.Equal(waitServiceToken,
                         (ushort)record["service_token"]);
+                    AssertEx.Equal(0x0077,(int)record["pc"]);
+                    AssertEx.Equal(1,(int)record["source_cpu"]);
                     AssertEx.Equal(0,(int)record["parent_token"]);
                     AssertEx.Equal(0,(int)record["depth"]);
                 }
@@ -236,10 +238,19 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal((uint)13,waitBeginOrdinal);
             AssertEx.Equal((uint)20,waitEndOrdinal);
             AssertEx.Equal(3,deferredEvidence.Count);
+            var markerOrdinals=new List<uint>();
             for(int i=0;i<deferredEvidence.Count;i++)
             {
                 JArray chain=(JArray)deferredEvidence[i]["native_correlation_events"];
                 AssertEx.Equal(1,chain.Count);
+                uint markerOrdinal=(uint)chain[0]["ordinal"];
+                AssertEx.Equal(true,markerOrdinal>waitBeginOrdinal
+                    &&markerOrdinal<waitEndOrdinal);
+                AssertEx.Equal(false,markerOrdinals.Contains(markerOrdinal));
+                if(markerOrdinals.Count!=0)
+                    AssertEx.Equal(true,
+                        markerOrdinals[markerOrdinals.Count-1]<markerOrdinal);
+                markerOrdinals.Add(markerOrdinal);
                 AssertEx.Equal(10,(int)chain[0]["event_kind"]);
                 AssertEx.Equal(4,(int)chain[0]["value"]);
                 AssertEx.Equal(4,(int)deferredEvidence[i]["native_marker_value"]);
@@ -271,6 +282,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(1,deferredBegins);
             AssertEx.Equal((uint)21,deferredBeginOrdinal);
             AssertEx.Equal(waitEndOrdinal+1,deferredBeginOrdinal);
+            AssertEx.Equal(true,releasedServiceToken!=0);
+            AssertEx.Equal(false,releasedServiceToken==waitServiceToken);
         }
 
         private static string Sha256(string path)
