@@ -33,21 +33,21 @@ public final class CompleteRunAudioProfiles {
     public static final int GPGX_AUDIO_TRACE_HOOK_SIZE = 32;
     public static final int GPGX_AUDIO_TRACE_RANGE_SIZE = 16;
     public static final int GPGX_AUDIO_TRACE_CAPACITY = 65_536;
-    public static final String GPGX_AUDIO_TRACE_CORE_BUILD_ID = "822895adb39463ad";
+    public static final String GPGX_AUDIO_TRACE_CORE_BUILD_ID = "44fb4d8c232fc98f";
     public static final String GPGX_AUDIO_TRACE_PATCH_SHA256 =
-            "eba32c88f0b1465de0a307a2cdd53e53e655e56e70a70ffc3a1e3b0cf1198e46";
+            "8eca789eaf52dd57704f34956356044f37b7a8ca312b158b349b9daa66613eaa";
     public static final String GPGX_AUDIO_TRACE_CORE_SHA256 =
-            "93be2835112aeb73bd38cd467cfa0a55f38e3b6ceb7bed642033eb73656cc453";
+            "bad0aa996672e3e344c3450ad846dbc15e4fb29bfb6fb247eecf2ba826ec5790";
     public static final String GPGX_AUDIO_TRACE_CORE_UNCOMPRESSED_SHA256 =
-            "c29a3631c5aa6b4566dd80f2dcca5138426adaa624dbb7c450cdaead09cd4bd6";
+            "4715106ed3711e610b900f0dee19dcfc34de347be2717692d1c25f836d957bf5";
     public static final String GPGX_AUDIO_TRACE_SOURCE_BUNDLE_SHA256 =
-            "618ad57012a8a80d57a1e0d6369f97842d62c6c7938eda82f3155b9f8cde0191";
+            "d6dbc370e05ed1732500cd8262e0c77f3a1dafc0ddf01fa0e44fbaa45299f1bc";
     public static final String GPGX_AUDIO_TRACE_TOOLCHAIN_SHA256 =
             "9caa5c02dcd2d9c01e5d0196956787a0f31760195c6544a2ceafcb771f469521";
     public static final String GPGX_AUDIO_TRACE_BUILD_RECIPE_SHA256 =
-            "9ed3eb7bf92b630b30911bc9b628879597999c22817b785e245343d7e7e08194";
+            "3b01a7c86be24e563defc30bd3f6bc52630218efcf97b6ab4d02aad508263abf";
     public static final String GPGX_AUDIO_TRACE_IDENTITY_SHA256 =
-            "b8023a7a80cb961d97c80bcb3835480aca9a78f3eb1ede5490c9295e2ca9bd60";
+            "f9e986419ac08b4bd51212a2169fbbf1b6d85a1552aa2364792b1b77836fb8b2";
     public static final String GPGX_AUDIO_TRACE_ADAPTER_SOURCE_SHA256 =
             "046ab11f4ffaf100651dda49625e14f3b08e54a33f61ed415d039a0d27b9bb93";
     public static final String GPGX_AUDIO_TRACE_HOST_BRIDGE_SOURCE_SHA256 =
@@ -57,15 +57,15 @@ public final class CompleteRunAudioProfiles {
     public static final String BIZHAWK_BASE_COMMON_SHA256 =
             "438a49d6a45d9fcac17016240ae205d1af7a4632865f6f70468b684b82323f33";
     public static final String TASK8_HARNESS_EXECUTABLE_SHA256 =
-            "9d3d9eb25c29fec4436149c802b3851657c74ea20b65df9bf22d60241d574d31";
+            "01b0a5faf1f3b08346c86c45e327ad796f3db4fc7f5af239fb21b7249186bdec";
     public static final String TASK8_COLLECTOR_SOURCE_SHA256 =
-            "d9b525bf7c5b4620833d4eeeda5acf75bef82ab3ee7d1e5a74aa715b641cb69c";
+            "516555cdef86d403fca64571bf0300711894da16b74ca46856cbdfce817a49b0";
     public static final String TASK8_HOST_SOURCE_SHA256 =
             "c45d7de53bd29101d896fadb0a69eda1ae206d1fac43a5733afb3f4bd7f86be7";
     public static final String GPGX_AUDIO_CAPABILITY_SHA256 =
-            "8dfce7c36b28a347a6b24ec670cf3f5ef13bca520a34061ca1b80a8dc7aa8a81";
+            "0a2be19ae646e3a06da37e05f87dff0616c81a2b531725c9b736cf5b0bda5eaf";
     public static final String REFERENCE_INSTALLATION_TREE_SHA256 =
-            "eb8f3252afa634e3abe97fca6eb7d766df47d16eff76b250a48777ca7433c12b";
+            "3baf6a12d2ddf7a97f26aad4222285cd7a1cfc7288ffacd06af6c71baf0a0130";
 
     private static final AtomicReference<Map<String, CompleteRunAudioProfile>> PROFILES =
             new AtomicReference<>(Map.of());

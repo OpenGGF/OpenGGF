@@ -1,9 +1,9 @@
 {
   "schema": "openggf.gpgx-audio-capability.v1",
   "service_manifest_sha256": "ef8f8103c38d70e41cb09cb29751f56815a0401709dc509071aa514d614813a0",
-  "observer_identity_sha256": "b8023a7a80cb961d97c80bcb3835480aca9a78f3eb1ede5490c9295e2ca9bd60",
-  "task8_harness_executable_sha256": "9d3d9eb25c29fec4436149c802b3851657c74ea20b65df9bf22d60241d574d31",
-  "collector_source_sha256": "d9b525bf7c5b4620833d4eeeda5acf75bef82ab3ee7d1e5a74aa715b641cb69c",
+  "observer_identity_sha256": "f9e986419ac08b4bd51212a2169fbbf1b6d85a1552aa2364792b1b77836fb8b2",
+  "task8_harness_executable_sha256": "01b0a5faf1f3b08346c86c45e327ad796f3db4fc7f5af239fb21b7249186bdec",
+  "collector_source_sha256": "516555cdef86d403fca64571bf0300711894da16b74ca46856cbdfce817a49b0",
   "host_source_sha256": "c45d7de53bd29101d896fadb0a69eda1ae206d1fac43a5733afb3f4bd7f86be7",
   "runs": {
     "s2": {
@@ -23,7 +23,7 @@
       "state_digest_sha256": "b9933a71bebbf7ea4d546a28e0e3895c4704ec9c16155ced7d03a3276ebc0541",
       "lifecycle": {"reset":{"events":91122,"warmup_frame":595,"reset_frame":0,"reset_ordinal":0,"reset_end_frame":0,"reset_end_ordinal":12,"arm_frame":8,"arm_ordinal":1026,"first_z80_frame":13,"first_z80_ordinal":0,"action_frame_events":13,"cancelled":2,"cancelled_depth":2},"power":{"events":52729,"warmup_frame":112,"reset_frame":0,"reset_ordinal":0,"reset_end_frame":0,"reset_end_ordinal":4,"arm_frame":112,"arm_ordinal":1026,"first_z80_frame":117,"first_z80_ordinal":0,"action_frame_events":5,"cancelled":0,"cancelled_depth":0}},
       "complete": {"frames":259590,"events":169986419,"maximum_frame_occupancy":1825,"open_services_at_cutoff":0,"pending_services_at_cutoff":0,"frontier_digest_sha256":"2afa645a9471a7e084fa4273a9cfa0978868fe7be4f9a33f72f73de2ca907804","terminal_z80_sha256":"355ee9b9b697e674482dd8fe9329e0216d5d32a136454a223f79e784b74ccc02","event_digest_sha256":"c2b2f82374aaa16144b6bf121df051dcd5b4ba095431c16cf6224adc633de41d"},
-      "performance": {"method":"paired_interleaved_v1","warmup_orders":["AB","BA"],"measured_orders":["AB","BA","AB","BA","AB"],"disabled_ticks":[1829014,1848930,1878508,1865971,1834721],"enabled_ticks":[2016574,2032095,2015457,2013226,2056628],"paired_slowdowns":[0.1025,0.0991,0.0729,0.0789,0.1209],"median_slowdown":0.0991,"worst_slowdown":0.1209}
+      "performance": {"method":"paired_interleaved_v1","warmup_orders":["AB","BA"],"measured_orders":["AB","BA","AB","BA","AB"],"disabled_ticks":[1853397,1829623,1830953,1854937,1842947],"enabled_ticks":[2022358,2012184,2003340,2007353,2021203],"paired_slowdowns":[0.0912,0.0998,0.0942,0.0822,0.0967],"median_slowdown":0.0942,"worst_slowdown":0.0998}
     },
     "s3k": {
       "movie": {"name":"s3k-knuckles-complete-superemeralds.bk2","sha256":"aa892856df22b7bb1fe5accb48db10b90dc26845d1dccee90352da30349f53cc","rows":434417},
@@ -42,7 +42,7 @@
       "state_digest_sha256": "c5874c833d75f17cdfdfecb455c50e2f4f7a6b11aabd0ddff75645c21d12fce9",
       "lifecycle": {"reset":{"events":176014,"warmup_frame":236,"reset_frame":0,"reset_ordinal":0,"reset_end_frame":0,"reset_end_ordinal":12,"arm_frame":9,"arm_ordinal":1026,"first_z80_frame":9,"first_z80_ordinal":1027,"action_frame_events":13,"cancelled":2,"cancelled_depth":2},"power":{"events":175902,"warmup_frame":100,"reset_frame":0,"reset_ordinal":0,"reset_end_frame":0,"reset_end_ordinal":8,"arm_frame":13,"arm_ordinal":1026,"first_z80_frame":13,"first_z80_ordinal":1027,"action_frame_events":9,"cancelled":1,"cancelled_depth":1}},
       "complete": {"frames":434417,"events":254921281,"maximum_frame_occupancy":1446,"open_services_at_cutoff":1,"pending_services_at_cutoff":4,"frontier_digest_sha256":"88d87b134b63df1b819321a95f4244f5204f45aa4be85267d0ab3f0876ec6c0c","terminal_z80_sha256":"96837adb198c520e42cc3a3a7aef5b6802fde97cfe0ec5f2afd9f6e230bbe373","event_digest_sha256":"08c2f6249dc379b18b0362c04ed757f4f053a3c1cf7c28c110b09b82af6cee7e"},
-      "performance": {"method":"paired_interleaved_v1","warmup_orders":["AB","BA"],"measured_orders":["AB","BA","AB","BA","AB"],"disabled_ticks":[2198307,2234778,2250588,2224302,2209903],"enabled_ticks":[2432851,2421910,2408189,2463215,2407381],"paired_slowdowns":[0.1067,0.0837,0.0700,0.1074,0.0894],"median_slowdown":0.0894,"worst_slowdown":0.1074}
+      "performance": {"method":"paired_interleaved_v1","warmup_orders":["AB","BA"],"measured_orders":["AB","BA","AB","BA","AB"],"disabled_ticks":[2235484,2205044,2204171,2237392,2219908],"enabled_ticks":[2412232,2406921,2469038,2441899,2439846],"paired_slowdowns":[0.0791,0.0916,0.1202,0.0914,0.0991],"median_slowdown":0.0916,"worst_slowdown":0.1202}
     }
   }
 }

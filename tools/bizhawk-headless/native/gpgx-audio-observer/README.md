@@ -13,10 +13,15 @@ capacity of 65,536. ABI v2 added profile-gated pre-arm filtering and a one-shot
 publication-epoch transition: prepublication frames are fully validated and
 drained without aging continuation budgets, then a drained, proof-armed READY
 boundary resets only publication ages while preserving active tokens and chip
-latches. ABI v3 adds the narrowly configured direct-parent-close action. It
-atomically snapshots and closes the direct parent below the current top,
-compacts the stack, and emits the adjacent `SERVICE_PROMOTE` event that proves
-the surviving child's effective parent/depth change. Begin ancestry remains
+latches. ABI v3 adds two narrowly configured direct-parent-close actions.
+Action 8 always atomically snapshots and closes the direct parent below the
+current top, compacts the stack, and emits the adjacent `SERVICE_PROMOTE` event
+that proves the surviving child's effective parent/depth change. Action 9 first
+applies the same direct-work-RAM M68K return-address predicate as action 5. A
+listed return emits the existing exact KEEP observation marker and leaves the
+stack unchanged; an unlisted return performs the same atomic close and
+promotion as action 8. Both actions require exact expected-child and
+direct-parent kinds; there is no wildcard alternative. Begin ancestry remains
 immutable; managed and stored diagnostics retain the bounded transition
 history, while producer-neutral semantic records retain the effective ancestry
 without depending on native event coordinates.

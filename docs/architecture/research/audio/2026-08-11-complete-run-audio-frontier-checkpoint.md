@@ -6,7 +6,7 @@ observer build/install toolchain, the native BizHawk headless bridge, the
 lossless raw/semantic trace schema, and the first Sonic 1 reference producer.
 
 The reviewed canonical native patch at this checkpoint is ABI v3, SHA-256
-`eba32c88f0b1465de0a307a2cdd53e53e655e56e70a70ffc3a1e3b0cf1198e46`.
+`8eca789eaf52dd57704f34956356044f37b7a8ca312b158b349b9daa66613eaa`.
 Build and create-new installation instructions are in
 `tools/bizhawk-headless/native/gpgx-audio-observer/README.md`; trust-boundary
 details are in the adjacent `TRUST.md`. No generated core or ROM is committed.
@@ -29,17 +29,24 @@ details are in the adjacent `TRUST.md`. No generated core or ROM is committed.
   preserving the physical chip, YM latches, service tokens, and ancestry. The
   game-owned recorder now ignores raw `SERVICE_PROMOTE` events for managed
   callback correlation and tracks simultaneously open M68K services by native
-  token, so the real frontier advances through the nested row-877 lifetime to
-  row 1219. There it stops fail-closed on native first-fault reason 5 at REV01
-  `$72E04` (`rts`): source CPU M68K, active kind 2, depth count 3, continuation
-  `0/4`. The adjusted return PC is the legal continuation `$71C10`; the exact
-  stack is token 1 kind 4 parent 0 depth 0, token 2 kind 4 parent 1 depth 1,
-  and token 8 kind 2 parent 2 depth 2. No snapshot, END, promotion, or chip
-  event occurs before hook selection fails. Central observer work must add a
-  predicate-gated direct-parent action: the legal-return branch is a strict
-  KEEP/NOOP, while an outside return reuses action 8's atomic snapshot,
-  direct-parent END, compaction, and adjacent promotion. No reference capture
-  is published at this frontier.
+  token, so the real frontier advances through the nested row-877 lifetime.
+  ABI-v3 action 9 now resolves the row-1219 `$72E04` crossing. It applies the
+  exact action-5 direct-RAM return predicate while async kind 2 or 3 is top and
+  kind 4 is its direct parent. A listed return emits the existing event-10
+  KEEP proof with no stack mutation; an outside return atomically emits the
+  parent snapshots and END followed by the adjacent action-8-compatible
+  `SERVICE_PROMOTE`. No new semantic record type is introduced.
+
+  The same real no-replace capture crosses row 1219 and next stops fail-closed
+  at row 1548 with no published output. The preserved first fault is
+  `5:2:1394:4:1:0:255`: hook/opcode proof, Z80 instruction-start PC `$1394`,
+  active kind 4, depth 1, continuation `0/255`. The final native lifecycle has
+  M68K token 3 kind 4 beginning at `$71B4C`, async token 4 kind 2 beneath a
+  nested M68K token 5 kind 4, token 5 ending at `$71C4C`, and token 4 ending at
+  `$00AC`, followed by ordinary root DPCM iterations. The managed queue at the
+  failed frame ends with `normal_close,queue1`. This checkpoint records that
+  diagnostic as the next frontier without proposing a new hook or action. No
+  reference capture is published at this frontier.
 - Sonic 2: the complete reference movie has two identical observer runs:
   259,590 frames, 169,986,419 events, maximum frame occupancy 1,825, event
   digest prefix `c2b2f823`, and an empty cutoff frontier. Engine comparison is
@@ -123,19 +130,19 @@ a mandatory carried-in boundary frontier at row 860. That transition is unit
 and real-run proven through the former row-523 crossing. No game has published
 a final reference vs OpenGGF MATCH artifact at this checkpoint.
 
-The final row-523-to-row-860 reproduction used Sonic 1 World REV01 SHA-1
+The final power-on-to-row-860 and row-1548 frontier reproductions used Sonic 1 World REV01 SHA-1
 `69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b`, BK2 SHA-256
 `f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b`,
 and durable BizHawk home
-`target/audio-parity/native/crossing-install-final2-a`. Its compressed core
+`target/audio-parity/native/action9-install-a`. Its compressed core
 SHA-256 is
-`93be2835112aeb73bd38cd467cfa0a55f38e3b6ceb7bed642033eb73656cc453`,
+`bad0aa996672e3e344c3450ad846dbc15e4fb29bfb6fb247eecf2ba826ec5790`,
 raw core SHA-256 is
-`c29a3631c5aa6b4566dd80f2dcca5138426adaa624dbb7c450cdaead09cd4bd6`,
-Build ID is `822895adb39463ad`, and observer identity is
-`b8023a7a80cb961d97c80bcb3835480aca9a78f3eb1ede5490c9295e2ca9bd60`.
+`4715106ed3711e610b900f0dee19dcfc34de347be2717692d1c25f836d957bf5`,
+Build ID is `44fb4d8c232fc98f`, and observer identity is
+`f9e986419ac08b4bd51212a2169fbbf1b6d85a1552aa2364792b1b77836fb8b2`.
 The row-860 proof remains a bounded prefix/capture-boundary result. The later
-row-1219 first fault above is the current strict real-run frontier, not a
+row-1548 first fault above is the current strict real-run frontier, not a
 complete-run publication claim.
 
 ## Verified checkpoint gates
@@ -143,9 +150,11 @@ complete-run publication claim.
 - Complete-run Java schema/store/comparator/CLI focused gate: 154 tests passing
   (47 trace, 21 store, 61 comparator, 13 cutoff, 8 CLI).
 - Sonic 1 normalized state/profile: 68 tests passing.
-- Sonic 1 native/managed reference session: 19 tests passing.
-- Shared observer projection: 19 tests passing, including direct-parent
-  promotion and the no-action8 allocation-stable legacy fast path.
+- Sonic 1 native/managed reference session: 20 tests passing, including exact
+  action-9 KEEP and direct-parent promotion correlation.
+- Shared observer projection: 21 tests passing, including conditional
+  direct-parent promotion and the allocation-free per-frame projection-result
+  wrapper.
 - Native observer selftests: six harnesses passing.
 - Existing Sonic 2 and Sonic 3 & Knuckles capability/lifecycle suite: 10 tests
   passing, with their prior complete-run duplicate evidence unchanged.
@@ -158,36 +167,30 @@ complete-run publication claim.
 - S3K AIZ release-slice, level-loading, bootstrap, and decoding guards: 52
   tests passing against locked-on ROM SHA-1
   `cfbf98c36c776677290a872547ac47c53d2761d6`.
-- Paired interleaved observer performance on the final managed collector: S2
-  passed two consecutive frozen repetitions at 9.98% and 9.91% median slowdown
-  (worst 10.04% and 12.09%); S3K passed at 9.88% and 8.94% (worst 10.95% and
-  10.74%). The capability fixture binds the second-run samples.
+- Paired interleaved observer performance on the final optimized managed
+  collector and action-9 core passed at 9.67% median slowdown for S2 (12.09%
+  worst) and 8.67% for S3K (10.41% worst). The identity-bound fixture retains
+  the immediately preceding same-source measurements: S2 9.42% median/9.98%
+  worst and S3K 9.16% median/12.02% worst. Earlier candidate and predecessor
+  diagnostics demonstrated near-threshold host variance and are not used as
+  acceptance evidence.
 - Two fresh locked builds and two create-new installs are byte-identical. The
-  compressed core SHA-256 is `93be2835112aeb73bd38cd467cfa0a55f38e3b6ceb7bed642033eb73656cc453`
+  compressed core SHA-256 is `bad0aa996672e3e344c3450ad846dbc15e4fb29bfb6fb247eecf2ba826ec5790`
   and the observer identity is
-  `b8023a7a80cb961d97c80bcb3835480aca9a78f3eb1ede5490c9295e2ca9bd60`.
-
-The new game-owned raw sink necessarily changes the deterministic production
-harness executable. The shared capability fixture remains frozen on
-`e044d963b53b44003e13a4bef7d5360cf100aea421cb40ebc5ed44e08db8d5dd`,
-while this branch builds
-`da6517a98992a1c9c7869c8eb28d9f79e8dcefd008172e00f5d8346d30939ec3`.
-Its static capability lock is therefore the expected central-integration RED;
-this game branch does not rewrite the shared capability fixture or claim the
-new executable as a pinned producer runtime.
+  `f9e986419ac08b4bd51212a2169fbbf1b6d85a1552aa2364792b1b77836fb8b2`.
 
 These results establish a coherent handoff point; they are not a declaration
 that complete-game audio parity is finished.
 
 The capability fixture now binds collector source SHA-256
-`d9b525bf7c5b4620833d4eeeda5acf75bef82ab3ee7d1e5a74aa715b641cb69c`,
+`516555cdef86d403fca64571bf0300711894da16b74ca46856cbdfce817a49b0`,
 production harness SHA-256
-`9d3d9eb25c29fec4436149c802b3851657c74ea20b65df9bf22d60241d574d31`,
+`01b0a5faf1f3b08346c86c45e327ad796f3db4fc7f5af239fb21b7249186bdec`,
 and full raw fixture SHA-256
-`8dfce7c36b28a347a6b24ec670cf3f5ef13bca520a34061ca1b80a8dc7aa8a81`.
+`0a2be19ae646e3a06da37e05f87dff0616c81a2b531725c9b736cf5b0bda5eaf`.
 To avoid a self-hash cycle while preserving production-executable authority,
 the S2 runtime pins normalized template SHA-256
-`97b800c1421a5a15d4dc53acd99fa853399a57a9c46c7b79a3eff1032eb7f098`:
+`cd495746b7c8bd877586aa59b570797c075712e4a2e4412d3c8f07e935ca6397`:
 exactly the one canonical 64-hex executable field is zeroed for that template
 hash, while runtime validation separately requires its actual value to equal
 SHA-256 of `typeof(GpgxHost).Assembly.Location`. Every other raw byte remains
@@ -197,8 +200,8 @@ The harness executable is now built by the project contract with the pinned
 Mono Roslyn 3.9 compiler, `/deterministic+`, and a canonical checkout-root path
 map. A clean two-root build, including a root with spaces and hostile ambient
 compiler properties, produced identical production executable SHA-256
-`9d3d9eb25c29fec4436149c802b3851657c74ea20b65df9bf22d60241d574d31`
+`01b0a5faf1f3b08346c86c45e327ad796f3db4fc7f5af239fb21b7249186bdec`
 and test executable SHA-256
-`3a10293d6d41bff0fb637c91953e4f3644e990b49f72b09414437b6b81f1c30b`.
+`505ca52b78bf99d286eb8f3ec4a2b5b9a04696bd5508e29bcc532a2c1884018f`.
 Their PDBs are byte-identical as well. Direct ambient `xbuild` is rejected, and
 both copied production assemblies pass the strict S2 capability binding.

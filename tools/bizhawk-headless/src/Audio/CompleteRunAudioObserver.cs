@@ -385,7 +385,8 @@ namespace OpenGGF.BizHawk.Headless
             bool foundPromotionHook = false;
             for (int i = 0; i < this.hooks.Length; i++)
             {
-                if (this.hooks[i].Action == 8) foundPromotionHook = true;
+                if (this.hooks[i].Action == 8 || this.hooks[i].Action == 9)
+                    foundPromotionHook = true;
                 if ((this.hooks[i].Flags & 1) == 0) continue;
                 if (foundArmHook != 0)
                     throw new ArgumentException("Only one Z80 proof-arm completion is permitted.", "hooks");
@@ -536,7 +537,7 @@ namespace OpenGGF.BizHawk.Headless
             finally { capturing = false; }
         }
 
-        private sealed class ProjectionResult
+        private struct ProjectionResult
         {
             internal FrameCapture Capture; internal List<ServiceBuilder> Active;
             internal List<ServiceBuilder> Completed;
@@ -590,7 +591,8 @@ namespace OpenGGF.BizHawk.Headless
                     bool cancelled=(e.Flags&2)!=0;
                     GpgxAudioObserverAdapter.ServiceHook completionHook=cancelled
                         ?default(GpgxAudioObserverAdapter.ServiceHook):RequireHook(e.Subject,"completion");
-                    bool promotes=!cancelled&&promotionHooks&&completionHook.Action==8;
+                    bool promotes=!cancelled&&promotionHooks
+                        &&(completionHook.Action==8||completionHook.Action==9);
                     if(promotes&&active.Count<2)throw Invalid("promotion completion without direct parent");
                     ServiceBuilder b=active[promotes?active.Count-2:active.Count-1]; ValidateOwnership(ref e,b);
                     b.EventCount++;
@@ -607,11 +609,12 @@ namespace OpenGGF.BizHawk.Headless
                     {
                         if(e.Flags!=0)throw Invalid("completion flags");
                         GpgxAudioObserverAdapter.ServiceHook hook=completionHook;
-                        if((hook.Action<2||hook.Action>5)&&hook.Action!=8)
+                        if((hook.Action<2||hook.Action>5)
+                            &&hook.Action!=8&&hook.Action!=9)
                             throw Invalid("completion hook action");
                         if(hook.Action==4)ValidateTailEnd(events,i,ref e,hook,b);
                         if(e.Pc!=hook.Pc||e.SourceCpu!=hook.Cpu
-                            ||(hook.Action==8?hook.ServiceKindId!=b.Kind
+                            ||(hook.Action==8||hook.Action==9?hook.ServiceKindId!=b.Kind
                                 ||hook.ExpectedActiveKind!=active[active.Count-1].Kind
                                 :hook.ExpectedActiveKind!=b.Kind))
                             throw Invalid("unexpected completion PC/kind/source");
@@ -713,9 +716,13 @@ namespace OpenGGF.BizHawk.Headless
                         throw Invalid("marker fields");
                     if(e.Value==0||e.Value==1)
                     {
-                        if(hook.Action!=5||active.Count==0
+                        if((e.Value==0?(hook.Action!=5&&hook.Action!=9):hook.Action!=5)
+                            ||active.Count==0
                             ||hook.ExpectedActiveKind!=active[active.Count-1].Kind)
                             throw Invalid("conditional marker action/ownership");
+                        if(hook.Action==9&&(active.Count<2
+                            ||hook.ServiceKindId!=active[active.Count-2].Kind))
+                            throw Invalid("conditional marker direct parent");
                         ServiceBuilder b=OwnedBuilder(ref e,active,reset);
                         if(e.Value==1&&(i+1>=count||events[i+1].Kind!=5
                             ||events[i+1].ServiceToken!=b.Token))
@@ -752,7 +759,8 @@ namespace OpenGGF.BizHawk.Headless
                     if(i==0||events[i-1].Kind!=2||active.Count==0)throw Invalid("orphan promotion");
                     ref GpgxAudioTraceEvent ended=ref events[i-1];
                     GpgxAudioObserverAdapter.ServiceHook hook=RequireHook(e.Subject,"promotion");
-                    if(hook.Action!=8||ended.Subject!=e.Subject||ended.Pc!=e.Pc
+                    if((hook.Action!=8&&hook.Action!=9)
+                        ||ended.Subject!=e.Subject||ended.Pc!=e.Pc
                         ||ended.SourceCpu!=e.SourceCpu)throw Invalid("promotion hook adjacency");
                     ServiceBuilder child=active[active.Count-1];
                     if(e.ServiceToken!=child.Token||e.ServiceKindId!=child.Kind
@@ -939,7 +947,7 @@ namespace OpenGGF.BizHawk.Headless
             ref GpgxAudioTraceEvent end=ref events[at];
             ref GpgxAudioTraceEvent promote=ref events[at+1];
             GpgxAudioObserverAdapter.ServiceHook hook=RequireHook(end.Subject,"promotion completion");
-            if(hook.Action!=8||end.ServiceToken!=parent.Token
+            if((hook.Action!=8&&hook.Action!=9)||end.ServiceToken!=parent.Token
                 ||end.ParentToken!=parent.CurrentParentToken||end.ServiceKindId!=parent.Kind
                 ||end.Depth!=parent.CurrentDepth||end.Pc!=hook.Pc||end.SourceCpu!=hook.Cpu
                 ||hook.ServiceKindId!=parent.Kind||hook.ExpectedActiveKind!=child.Kind

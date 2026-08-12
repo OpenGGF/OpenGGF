@@ -22,7 +22,7 @@
   "versioned_inputs": {
     "build-core.sh": "2db214fd32968350411901ebc043c494d265858a1d02d6853361bd7baab21240",
     "install-core.sh": "107a4661cb6fd837d94fa3ecc879a1d931a9bfa26b015ffdcd19c0a5b12744c1",
-    "0001-buffer-z80-audio-events.patch": "eba32c88f0b1465de0a307a2cdd53e53e655e56e70a70ffc3a1e3b0cf1198e46",
+    "0001-buffer-z80-audio-events.patch": "8eca789eaf52dd57704f34956356044f37b7a8ca312b158b349b9daa66613eaa",
     "source-lock.json": "348ffd29471bcd9a0f452b6112a7bed941f0dd43f364a315c5cbd68f918205f9",
     "toolchain-lock.json": "e40900cda561e1066db1887712cb8219dc0c5b53a9a249f24061181b7bc3420c",
     "verify-inputs.sh": "33126e725b52d511b8b20360512d054f36666fa23ad884ca4d7c4fe0d99dcef5",
@@ -34,7 +34,7 @@
     ,"selftest/shared.h": "7b884c4ebea3e4639f48070122e44df3c5cc03c8760e2502b60f210d61e144ce"
     ,"selftest/emulibc.h": "449757babbb19ef05cf3d6c859d5bdeba60124ff49a2e0695a28364886c4afc8"
     ,"selftest/wrap_harness.c": "f5afa77f98e4c99a8be643718a831350f96a1ed9a6ffa9a22535b2c091df2b9c"
-    ,"selftest/matrix_harness.c": "739cf397784730d0fdd98b2e90ed8e9e94ebdc5adc9a8cac6acf7116eedf7518"
+    ,"selftest/matrix_harness.c": "7de485164955607bfa2cf2fa4cc6f67c3725b3dff5a09f414bb17fc69c7e0270"
     ,"selftest/cpu_boundary_harness.c": "7e9aa324446d4f15306dfe472b90c14f6f434f14b92e470027055b8ea31651d8"
     ,"selftest/m68k_boundary_harness.c": "d15d893b51e8a372fa88e6ce2854df3db91f828b6224776d9bd2afa2b2bc118c"
   },

@@ -53,8 +53,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(32, (int)artifact["abi"]["event_size"]);
             AssertEx.Equal(65536, (int)artifact["abi"]["capacity"]);
             AssertEx.Equal("little-endian", (string)artifact["abi"]["byte_order"]);
-            AssertEx.Equal(41740080, (int)artifact["core"]["decompressed_size"]);
-            AssertEx.Equal(414672, (int)artifact["core"]["compressed_size"]);
+            AssertEx.Equal(41740152, (int)artifact["core"]["decompressed_size"]);
+            AssertEx.Equal(414887, (int)artifact["core"]["compressed_size"]);
             AssertEx.Equal(32, (int)artifact["core"]["invis_alignment"]);
         }
 

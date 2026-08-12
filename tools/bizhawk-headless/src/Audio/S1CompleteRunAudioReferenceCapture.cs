@@ -69,6 +69,7 @@ namespace OpenGGF.BizHawk.Headless
             internal Dictionary<uint, ManagedHook> ManagedByPc;
             internal Dictionary<uint, List<NativeHook>> NativeByPc;
             internal Dictionary<ushort, ManagedHook> ManagedByNativeToken;
+            internal Dictionary<ushort, byte> NativeActionByToken;
             internal HashSet<uint> LegalContinuations;
             internal GpgxAudioObserverAdapter.Config NativeConfig;
             internal byte[] NativeMask;
@@ -510,6 +511,18 @@ namespace OpenGGF.BizHawk.Headless
                         hookTokens, managedHook, ref nextToken, 5, 0, serviceKind,
                         proofFirst, proofCount, predicate);
                     snapshotBytes = checked(snapshotBytes + RangeLength(ranges, proofFirst, proofCount));
+                    if (managedHook.Pc == 0x072E04)
+                    {
+                        for (int i=0;i<kinds.Length;i++)
+                        {
+                            if ((kinds[i].Flags&5)!=5) continue;
+                            AddManagedNativeHook(hookList,publicHooks,managedByToken,
+                                hookTokens,managedHook,ref nextToken,9,serviceKind,
+                                kinds[i].KindId,proofFirst,proofCount,predicate);
+                            snapshotBytes=checked(snapshotBytes
+                                +RangeLength(ranges,proofFirst,proofCount));
+                        }
+                    }
                 }
                 else
                 {
@@ -540,6 +553,9 @@ namespace OpenGGF.BizHawk.Headless
                 throw Invalid("Z80 watch mask is not the exact hook union");
 
             GpgxAudioObserverAdapter.ServiceHook[] hooks = hookList.ToArray();
+            var nativeActionByToken = new Dictionary<ushort, byte>();
+            foreach (GpgxAudioObserverAdapter.ServiceHook hook in hooks)
+                nativeActionByToken.Add(hook.HookToken,hook.Action);
             var config = new GpgxAudioObserverAdapter.Config
             {
                 Magic=0x31544147, AbiVersion=3, StructSize=64,
@@ -554,6 +570,7 @@ namespace OpenGGF.BizHawk.Headless
             return new Manifest
             {
                 NativeByPc=publicHooks, ManagedByNativeToken=managedByToken,
+                NativeActionByToken=nativeActionByToken,
                 NativeConfig=config, NativeMask=mask, NativeKinds=kinds,
                 NativeServiceHooks=hooks, NativeRanges=ranges,
                 MaximumRecordsPerFrame=maximum
@@ -1039,16 +1056,22 @@ namespace OpenGGF.BizHawk.Headless
                 bool completeOccurrence = false;
                 if (expected.Action == "CLOSE_IF_RETURN_OUTSIDE")
                 {
+                    byte nativeAction;
+                    if (!manifest.NativeActionByToken.TryGetValue(
+                        value.Subject,out nativeAction))
+                        throw new InvalidOperationException(
+                            "Managed conditional marker has no native action identity.");
                     if (value.Kind == 10 && value.Value == 0)
                     {
-                        if (occurrence.ClosesService)
+                        if ((nativeAction != 5 && nativeAction != 9)
+                            || occurrence.ClosesService)
                             throw new InvalidOperationException(
                                 "Native conditional keep disagreed with the managed return snapshot.");
                         completeOccurrence = true;
                     }
                     else if (value.Kind == 10 && value.Value == 1)
                     {
-                        if (!occurrence.ClosesService
+                        if (nativeAction != 5 || !occurrence.ClosesService
                             || occurrence.ConditionalPopMarkerSeen)
                             throw new InvalidOperationException(
                                 "Native conditional POP disagreed with the managed return snapshot.");
@@ -1060,7 +1083,10 @@ namespace OpenGGF.BizHawk.Headless
                     else if (value.Kind == 2)
                     {
                         if (!occurrence.ClosesService
-                            || !occurrence.ConditionalPopMarkerSeen)
+                            || (nativeAction == 5
+                                ? !occurrence.ConditionalPopMarkerSeen
+                                : nativeAction != 9
+                                    || occurrence.ConditionalPopMarkerSeen))
                             throw new InvalidOperationException(
                                 "Native conditional completion lacked its POP marker.");
                         completeOccurrence = true;
@@ -1514,7 +1540,9 @@ namespace OpenGGF.BizHawk.Headless
                 Action=action==1?"PUSH_BEGIN":action==2?"POP_END_AT_PC":
                     action==5?"POP_END_IF_RETURN_OUTSIDE":
                     action==6?"RETRY_MARKER":
-                    action==8?"POP_DIRECT_PARENT_PROMOTE_TOP":"OBSERVATION_MARKER"
+                    action==8?"POP_DIRECT_PARENT_PROMOTE_TOP":
+                    action==9?"POP_DIRECT_PARENT_PROMOTE_TOP_IF_RETURN_OUTSIDE":
+                    "OBSERVATION_MARKER"
             };
             AddPublicHook(publicHooks, native);
             managedByToken.Add(token, managed);
@@ -1566,6 +1594,7 @@ namespace OpenGGF.BizHawk.Headless
             if (value == "POP_END_AT_PC") return 2;
             if (value == "TAIL_POP_PUSH") return 4;
             if (value == "POP_DIRECT_PARENT_PROMOTE_TOP") return 8;
+            if (value == "POP_DIRECT_PARENT_PROMOTE_TOP_IF_RETURN_OUTSIDE") return 9;
             throw Invalid("unknown native action " + value);
         }
 

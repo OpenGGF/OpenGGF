@@ -886,6 +886,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 int maximumOccupancy = 0;
                 long events = 0;
                 int frames = Math.Min(1000, movie.FrameCount);
+                Action advance = host.Advance;
+                Action<GpgxAudioTraceEvent[], int> consume = (buffer, count) =>
+                {
+                    if (count > maximumOccupancy) maximumOccupancy = count;
+                    events += count;
+                };
                 var stopwatch = Stopwatch.StartNew();
                 using (IEnumerator<Bk2Frame> rows = movie.OpenFrameStream().GetEnumerator())
                 {
@@ -896,15 +902,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         if (mode < 2) host.Advance();
                         else if (mode == 2)
                         {
-                            observer.CaptureFrame(host.Advance, (buffer, count) =>
-                            {
-                                if (count > maximumOccupancy) maximumOccupancy = count;
-                                events += count;
-                            });
+                            observer.CaptureFrame(advance, consume);
                         }
                         else if (mode == 3)
                         {
-                            GpgxAudioTraceEvent[] captured = observer.CaptureFrame(host.Advance);
+                            GpgxAudioTraceEvent[] captured = observer.CaptureFrame(advance);
                             if (captured.Length > maximumOccupancy) maximumOccupancy = captured.Length;
                             events += captured.Length;
                         }
@@ -937,6 +939,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
             int maximumOccupancy = 0;
             long events = 0;
             int frames = Math.Min(1000, movie.FrameCount);
+            Action advance = host.Advance;
+            Action<GpgxAudioTraceEvent[], int> consume = (buffer, count) =>
+            {
+                if (count > maximumOccupancy) maximumOccupancy = count;
+                events += count;
+            };
             var stopwatch = Stopwatch.StartNew();
             using (IEnumerator<Bk2Frame> rows = movie.OpenFrameStream().GetEnumerator())
             {
@@ -947,15 +955,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     if (mode == 0 || mode == 1) host.Advance();
                     else if (mode == 2)
                     {
-                        observer.CaptureFrame(host.Advance, (buffer, count) =>
-                        {
-                            if (count > maximumOccupancy) maximumOccupancy = count;
-                            events += count;
-                        });
+                        observer.CaptureFrame(advance, consume);
                     }
                     else if (mode == 3)
                     {
-                        GpgxAudioTraceEvent[] captured = observer.CaptureFrame(host.Advance);
+                        GpgxAudioTraceEvent[] captured = observer.CaptureFrame(advance);
                         if (captured.Length > maximumOccupancy) maximumOccupancy = captured.Length;
                         events += captured.Length;
                     }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 
 namespace OpenGGF.BizHawk.Headless.Tests
 {
@@ -83,6 +84,77 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "CompleteRunAudioObserverTests roll back pending ancestry after rejected promotion",
                 RollsBackPendingAncestryAfterRejectedPromotion,
                 serial: true));
+            tests.Add(new TestMain.TestCase(
+                "CompleteRunAudioObserverTests compose conditional keep with direct-parent promotion",
+                ComposesConditionalKeepWithDirectParentPromotion,
+                serial: true));
+            tests.Add(new TestMain.TestCase(
+                "CompleteRunAudioObserverTests keep projection result allocation-free",
+                KeepsProjectionResultAllocationFree,
+                serial: true));
+        }
+
+        private static void KeepsProjectionResultAllocationFree()
+        {
+            Type projection = typeof(CompleteRunAudioObserver).GetNestedType(
+                "ProjectionResult", BindingFlags.NonPublic);
+            AssertEx.Equal(true, projection != null && projection.IsValueType);
+        }
+
+        private static void ComposesConditionalKeepWithDirectParentPromotion()
+        {
+            var forgedRootKeepApi = new FakeTraceApi
+            {
+                Events = new[]
+                {
+                    Canonical(0,1,1,0,3,0,3,0x110,0),
+                    new GpgxAudioTraceEvent {Ordinal=1,Kind=10,
+                        ServiceToken=1,ParentToken=0,ServiceKindId=3,Depth=0,
+                        Subject=6,Pc=0x120,SourceCpu=2,Value=0}
+                }
+            };
+            AssertEx.Throws<InvalidOperationException>(() =>
+                CreateConditionalCrossing(forgedRootKeepApi)
+                    .CaptureCanonicalFrame(() => { }), "direct parent");
+
+            var keepApi = new FakeTraceApi
+            {
+                Events = new[]
+                {
+                    Canonical(0,1,1,0,2,0,1,0x100,0),
+                    Canonical(1,1,2,1,3,1,3,0x110,0),
+                    new GpgxAudioTraceEvent {Ordinal=2,Kind=10,
+                        ServiceToken=2,ParentToken=1,ServiceKindId=3,Depth=1,
+                        Subject=6,Pc=0x120,SourceCpu=2,Value=0}
+                }
+            };
+            CompleteRunAudioObserver keep = CreateConditionalCrossing(keepApi);
+            AssertEx.Equal(true, keep.PromotionTransactionsEnabled);
+            keep.CaptureCanonicalFrame(() => { });
+
+            var promoteApi = new FakeTraceApi
+            {
+                Events = new[]
+                {
+                    Canonical(0,1,1,0,2,0,1,0x100,0),
+                    Canonical(1,1,2,1,3,1,3,0x110,0),
+                    new GpgxAudioTraceEvent {Ordinal=2,Kind=2,
+                        ServiceToken=1,ParentToken=0,ServiceKindId=2,Depth=0,
+                        Subject=6,Pc=0x120,SourceCpu=2},
+                    new GpgxAudioTraceEvent {Ordinal=3,Kind=11,
+                        ServiceToken=2,ParentToken=0,ServiceKindId=3,Depth=0,
+                        Subject=6,Pc=0x120,SourceCpu=2}
+                }
+            };
+            CompleteRunAudioObserver promoted = CreateConditionalCrossing(promoteApi);
+            CompleteRunAudioObserver.FrameCapture capture =
+                promoted.CaptureCanonicalFrame(() => { });
+            AssertEx.Equal(1,capture.Services.Count);
+            CompleteRunAudioObserver.DriverService child = promoted
+                .CaptureBoundaryFrontierAndResetPublication().ActiveServices[0];
+            AssertEx.Equal(1, child.AncestryTransitions.Count);
+            AssertEx.Equal((ushort)0,
+                child.AncestryTransitions[0].CurrentParentToken);
         }
 
         private static void RollsBackPendingAncestryAfterRejectedPromotion()
@@ -713,6 +785,33 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 new GpgxAudioObserverAdapter.ServiceHook { HookToken=4,Action=2,Cpu=1,Pc=0x114,ExpectedActiveKind=3 },
                 new GpgxAudioObserverAdapter.ServiceHook { HookToken=2,Action=2,Cpu=1,Pc=0x120,ExpectedActiveKind=2 },
                 new GpgxAudioObserverAdapter.ServiceHook { HookToken=6,Action=8,Cpu=1,Pc=0x120,ServiceKindId=2,ExpectedActiveKind=3 }
+            };
+            return new CompleteRunAudioObserver(api,config,new byte[8192],
+                kinds,hooks,new GpgxAudioObserverAdapter.SnapshotRange[0]);
+        }
+
+        private static CompleteRunAudioObserver CreateConditionalCrossing(
+            FakeTraceApi api)
+        {
+            var config = new GpgxAudioObserverAdapter.Config
+            {
+                Magic=0x31544147,AbiVersion=3,StructSize=64,KindSize=16,
+                HookSize=32,RangeSize=16,EventSize=32,MaxDepth=8,
+                WatchMaskBytes=8192,HookCount=5,EventCapacity=65536,
+                KindCount=2,ResetServiceKind=2
+            };
+            var kinds = new[]
+            {
+                new GpgxAudioObserverAdapter.ServiceKind {KindId=2,Flags=4},
+                new GpgxAudioObserverAdapter.ServiceKind {KindId=3}
+            };
+            var hooks = new[]
+            {
+                new GpgxAudioObserverAdapter.ServiceHook {HookToken=1,Action=1,Cpu=1,Pc=0x100,ServiceKindId=2},
+                new GpgxAudioObserverAdapter.ServiceHook {HookToken=3,Action=1,Cpu=1,Pc=0x110,ServiceKindId=3,ExpectedActiveKind=2},
+                new GpgxAudioObserverAdapter.ServiceHook {HookToken=4,Action=2,Cpu=1,Pc=0x114,ExpectedActiveKind=3},
+                new GpgxAudioObserverAdapter.ServiceHook {HookToken=2,Action=2,Cpu=1,Pc=0x122,ExpectedActiveKind=2},
+                new GpgxAudioObserverAdapter.ServiceHook {HookToken=6,Action=9,Cpu=2,Pc=0x120,ServiceKindId=2,ExpectedActiveKind=3}
             };
             return new CompleteRunAudioObserver(api,config,new byte[8192],
                 kinds,hooks,new GpgxAudioObserverAdapter.SnapshotRange[0]);
