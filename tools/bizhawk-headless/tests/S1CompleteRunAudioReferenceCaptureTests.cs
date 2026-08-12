@@ -110,6 +110,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S1CompleteRunAudioReferenceCaptureTests reject invalid driverinput ownership",
                 RejectsInvalidDriverInputOwnership));
             tests.Add(new TestMain.TestCase(
+                "S1CompleteRunAudioReferenceCaptureTests track a deferred child wholly before the epoch",
+                TracksDeferredChildWhollyBeforeEpoch));
+            tests.Add(new TestMain.TestCase(
+                "S1CompleteRunAudioReferenceCaptureTests carry a consumed deferred child across the epoch",
+                CarriesConsumedDeferredChildAcrossEpoch));
+            tests.Add(new TestMain.TestCase(
                 "S1CompleteRunAudioReferenceCaptureTests consume one deferred child begin during row 8775 wait service",
                 MaterializesDeferredBeginAfterWaitService,
                 game: "s1", serial: true, estimatedSeconds: 300.0));
@@ -826,6 +832,119 @@ namespace OpenGGF.BizHawk.Headless.Tests
             using(var session=CreateSession(host,api,new StringWriter()))
                 AssertEx.Throws<InvalidOperationException>(
                     ()=>session.CaptureFrame(860,host.Advance),message);
+        }
+
+        private static void TracksDeferredChildWhollyBeforeEpoch()
+        {
+            AssertDeferredChildWhollyBeforeEpoch(0x0077,0x00AC);
+            AssertDeferredChildWhollyBeforeEpoch(0x00C1,0x00D0);
+            RollsBackCorruptPreEpochDeferredChildObservation();
+        }
+
+        private static void AssertDeferredChildWhollyBeforeEpoch(
+            uint asyncBegin,uint asyncEnd)
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDB2);
+                current.SetU32(0xFDB2,0x00000B64);
+                api.VisitZ80(0x003A,current);
+                Visit(current,api,0x071B4C);
+                Visit(current,api,0x071B82);
+                api.VisitZ80(asyncBegin,current);
+                Visit(current,api,0x071B82);
+                api.VisitZ80(asyncEnd,current);
+                Visit(current,api,0x071C4C);
+                api.VisitZ80(0x0077,current);
+                api.VisitZ80(0x00AC,current);
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                session.ObservePreEpochFrame(859,null,host.Advance);
+                AssertEx.Equal(0,output.ToString().Length);
+                AssertEx.Equal(0,session.BoundaryManagedServiceCountForTesting);
+                session.BeginEpoch();
+            }
+            JObject baseline=Record(output.ToString(),"baseline",0);
+            AssertEx.Equal(0,((JArray)baseline["active_services"]).Count);
+            AssertEx.Equal(0,CountRecords(output.ToString(),"native_event"));
+            AssertEx.Equal(0,CountRecords(output.ToString(),
+                "managed_hook_evidence"));
+        }
+
+        private static void RollsBackCorruptPreEpochDeferredChildObservation()
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDB2);
+                current.SetU32(0xFDB2,0x00000B64);
+                if(frame==1)
+                {
+                    api.VisitZ80(0x003A,current);
+                    Visit(current,api,0x071B4C);
+                    Visit(current,api,0x071B82);
+                    return;
+                }
+                current.SetCpuRegister("A7",0x00FFFDB6);
+                Visit(current,api,0x071B82);
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                session.ObservePreEpochFrame(858,null,host.Advance);
+                AssertEx.Equal(1,session.BoundaryManagedServiceCountForTesting);
+                AssertEx.Throws<InvalidOperationException>(()=>
+                    session.ObservePreEpochFrame(859,null,host.Advance),"ancestor");
+                AssertEx.Equal(1,session.BoundaryManagedServiceCountForTesting);
+                AssertEx.Equal(0,output.ToString().Length);
+            }
+        }
+
+        private static void CarriesConsumedDeferredChildAcrossEpoch()
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDB2);
+                current.SetU32(0xFDB2,0x00000B64);
+                if(frame==1)
+                {
+                    api.VisitZ80(0x003A,current);
+                    Visit(current,api,0x071B4C);
+                    Visit(current,api,0x071B82);
+                    return;
+                }
+                Visit(current,api,0x071B82);
+                Visit(current,api,0x071C4C);
+                api.VisitZ80(0x0077,current);
+                api.VisitZ80(0x00AC,current);
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                session.ObservePreEpochFrame(859,null,host.Advance);
+                AssertEx.Equal(0,output.ToString().Length);
+                AssertEx.Equal(1,session.BoundaryManagedServiceCountForTesting);
+                session.BeginEpoch();
+                JObject baseline=Record(output.ToString(),"baseline",0);
+                JArray active=(JArray)baseline["active_services"];
+                AssertEx.Equal(2,active.Count);
+                AssertEx.Equal(6,(int)active[0]["kind"]);
+                AssertEx.Equal(4,(int)active[1]["kind"]);
+                AssertEx.Equal((ushort)active[0]["token"],
+                    (ushort)active[1]["parent_token"]);
+                AssertEx.Equal(1,(int)active[1]["depth"]);
+                AssertEx.Equal(0,CountRecords(output.ToString(),"native_event"));
+                AssertEx.Equal(0,CountRecords(output.ToString(),
+                    "managed_hook_evidence"));
+                session.CaptureFrame(860,host.Advance);
+                session.Complete(861);
+            }
+            AssertEx.Equal(1,Records(output.ToString(),"managed_hook_evidence",
+                value=>(uint)value["pc"]==0x071B82).Count);
         }
 
         private static void AssertDeferredObservationCount(int count)
