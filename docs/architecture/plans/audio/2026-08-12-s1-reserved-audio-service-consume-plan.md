@@ -85,6 +85,24 @@
 - [ ] Run Trace, CutoffFrontier, CaptureStore, Comparator, Replay, Authority, and CLI classes on JDK 21 with zero failures/errors.
 - [ ] Commit the raw-schema/validator checkpoint with policy trailers.
 
+### Task 3A: Make managed lifecycle identity-only
+
+**Files:**
+- Modify: `tools/bizhawk-headless/src/Audio/S1CompleteRunAudioReferenceCapture.cs`
+- Modify: `tools/bizhawk-headless/tests/S1CompleteRunAudioReferenceCaptureTests.cs`
+
+**Interfaces:**
+- Consumes: native-validated service tokens, current ownership, action-8/event-11 promotion, reset lifecycle, and cutoff active services.
+- Produces: one managed token+A7 identity tracker shared by pre-publication and published correlation, with no cached ancestry.
+
+- [ ] Write a synthetic RED for the exact row-523 order: kind-2 root, kind-4 child begin, action-8 parent END plus event-11 promotion, `$71B82` action-7 with kind-4 token as root, `$71C4C` close; verify current tracker rejects stale depth.
+- [ ] Add REDs for kind-4 observations with wrong token/A7; kind-2/3 observations with wrong parent token/A7; duplicate kind-4 token; close/retry with wrong token; cutoff missing/extra/duplicate tokens; reset/power cancellation; malformed reset rollback; and identical pre-publication/published behavior.
+- [ ] Remove `ParentToken` and `Depth` from `ManagedServiceTracker.Entry`. Match kind-4 observations by `ServiceToken+A7` and kind-2/3 observations by `ParentToken+A7`; leave topology fields to `CompleteRunAudioObserver` validation.
+- [ ] Change cutoff handoff to exact set equality between managed open tokens and active native kind-4 tokens, including duplicate/cardinality rejection, without comparing ancestry.
+- [ ] Preserve A7 capture, exact callback/native order and PC, reservation A7/return binding, transaction rollback, reset cancellation, and zero pre-publication output.
+- [ ] Run S1 capture and CompleteRunAudioObserver suites, then run the exact real row-523 prefix against the disposable revised core before claiming GREEN.
+- [ ] Request independent review of the authority split and adversarial coverage; commit with policy trailers and no push.
+
 ### Task 4: Reproduce the clean S1 transaction and terminal frontier
 
 **Files:**

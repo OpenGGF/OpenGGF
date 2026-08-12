@@ -91,6 +91,25 @@ managed evidence retains all physical retry callbacks plus the accepted-entry
 callback and child token. Consumer rejection and later validation failure must
 roll back both active service state and the reservation transactionally.
 
+The managed service tracker is an identity correlator, not a second native
+topology engine. It retains only each open kind-4 native token and its captured
+A7. Native `CompleteRunAudioObserver` remains the sole authority for begin and
+current parent/depth, action-8 promotion, ownership, reset ordering, and LIFO
+validation. A kind-4 managed observation matches its exact `ServiceToken` and
+A7; a kind-2/3 observation matches its exact current `ParentToken` and that
+parent kind-4 token's A7. Retry and close operations remain exact-token
+operations. At a publication boundary the managed token set must equal the set
+of active native kind-4 tokens, with no duplicates or cardinality mismatch;
+managed code does not compare or cache ancestry.
+
+This split is intentional. At real row 523, native action 8 closes a kind-2
+parent and event 11 promotes the surviving kind-4 child from `(parent=1,
+depth=1)` to `(parent=0, depth=0)`. A managed tracker that freezes begin
+ancestry becomes stale even though token and A7 identity remain exact. Copying
+every native topology transition into C# would create a competing lifecycle
+machine and another drift surface. The identity-only tracker retains the
+independent managed proof without weakening native topology validation.
+
 ## Raw and canonical schema
 
 Raw diagnostics gain a bounded `NativeDeferredServiceBegin` record containing:
@@ -153,3 +172,8 @@ Acceptance further requires a terminal reference-observer probe, unchanged
 legacy S2/S3 semantic vectors, deterministic paired builds/installs, identity-
 bound performance gates, and independent review. No capture is published merely
 because row 8775 clears.
+
+Managed acceptance additionally requires the real row-523 promotion sequence,
+kind-4 and kind-2/3 token+A7 matches before and after promotion, forged token/A7
+rejection, exact cutoff token-set equality, reset/power cancellation, malformed
+rollback, and identical behavior in pre-publication and published epochs.
