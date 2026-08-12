@@ -1180,6 +1180,21 @@ public class TitleCardManager implements TitleCardProvider {
         return leavePass > 0;
     }
 
+    /**
+     * ROM {@code RunObjects} extends its slot count to {@code LevelOnly_Object_RAM}
+     * only when {@code Game_Mode} is exactly {@code GameModeID_Level}
+     * (docs/s2disasm/s2.asm:29812-29818); {@code GameModeFlag_TitleCard} is set for
+     * the whole pre-{@code Level_MainLoop} window (set s2.asm:4758, cleared
+     * s2.asm:5087). So the 26 pre-main-loop passes above run Sonic and Tails --
+     * both inside {@code Object_RAM} -- but never Obj05 Tails' tails or the
+     * dust/shield/bubble/star slots that follow {@code Object_RAM_End}
+     * (docs/s2disasm/s2.constants.asm:1145-1176).
+     */
+    @Override
+    public boolean shouldRunLevelOnlyFixedSlotsDuringLockedPhase() {
+        return false;
+    }
+
 
     /**
      * Gets the current zone index.

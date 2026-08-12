@@ -284,6 +284,27 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **`RunObjects` never reaches the level-only slots while the title card holds
+  (2026-08-12):** the engine was making two dynamic-art transfers at every
+  special-stage return that the ROM never makes — the whole of the transition
+  gap's edge-count divergence. A BizHawk PC-execute capture on `Obj05_Main` showed
+  the real ROM executing it first at `Level_frame_counter == 1` on *both* a fresh
+  entry and a return, with hooks armed 326 and 302 frames earlier recording none.
+  The reason is structural rather than anything to do with Tails: `RunObjects`
+  picks its slot count from the game mode, walking only the first `$80` slots
+  unless `Game_Mode` equals `GameModeID_Level` exactly
+  (`s2.asm:29805-29819`), and `Level` sets `GameModeFlag_TitleCard` on entry
+  (`:4758`) which only `Level_StartGame` clears just before `Level_MainLoop`
+  (`:5087`). So every pre-main-loop pass runs with the flag set and never reaches
+  `LevelOnly_Object_RAM`, which begins at `Tails_Tails`. The engine ran those slots
+  anyway, and Tails' tails object took 16 spurious passes while the parked,
+  control-locked Tails had animated into Wait. Being a slot-range rule it also
+  covers spindash dust, shields, bubbles and invincibility stars. S3K's
+  `Process_Sprites` has no such gate and S1 has no level-only fixed-slot family, so
+  it is a `TitleCardProvider` predicate rather than a game-name branch. Four
+  surplus edges leave each return gap in both chains; `ss → seg2_ehz1` now matches
+  exactly, and the single edge still surplus on the later gaps is the separately
+  tracked row-0-executed-in-gap defect.
 - **The gap journal sampled its opening ledger one batch too late (2026-08-12):**
   with the gap comparison finally reachable, the level→special-stage gaps reported
   `run_gap.edge_count` expected 1, actual 0 — the engine appearing to emit nothing.

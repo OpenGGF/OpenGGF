@@ -3,6 +3,24 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: S2 does not run the level-only fixed object slots during the title card. `RunObjects`
+  picks its slot count from the game mode -- it walks only the first `$80` slots unless
+  `Game_Mode` equals `GameModeID_Level` exactly (s2.asm:29805-29819) -- and `Level` sets
+  `GameModeFlag_TitleCard` on entry (:4758), which only `Level_StartGame` clears immediately
+  before `Level_MainLoop` (:5087). So every pre-main-loop `RunObjects`, the one at :5006 and
+  all 25 leave-loop iterations at :5060-5066, runs with the flag set and never reaches
+  `LevelOnly_Object_RAM`, which begins at `Tails_Tails` (s2.constants.asm:1145-1176). A
+  hardware capture confirmed the first `Obj05_Main` execution is at `Level_frame_counter == 1`
+  on both a fresh entry and a special-stage return. The engine ran those slots anyway, so
+  Tails' tails object took 16 spurious passes while the parked, control-locked Tails had
+  animated into Wait, publishing two dynamic-art transfers the ROM never makes. This is a
+  slot-range rule, not an Obj05 property: it also covers spindash dust, shields, bubbles and
+  invincibility stars. S3K's `Process_Sprites` has no such gate and always walks
+  `Level_object_RAM` (sonic3k.asm:35963-35976), and S1 has no level-only fixed-slot family, so
+  the rule is expressed as a `TitleCardProvider` predicate defaulting to true with an S2
+  override. Removes 4 surplus edges from each special-stage-return gap in both S2 run chains;
+  `ss -> seg2_ehz1` edge_count now matches exactly, and the single remaining surplus on the
+  later gaps is the separately-tracked row-0-executed-in-gap boundary defect.
 - Fix: the run-chain transition-gap journal snapshots the opening ledger at the segment
   boundary itself. The engine was emitting the correct level-to-special-stage gap edge --
   right phase, owner, mapping frame and requests -- but the journal sampled the ledger
