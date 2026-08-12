@@ -218,8 +218,12 @@ expected active kind, service kind, parent, and depth. Every normal completion,
 reset cancellation, and reset end consumes exactly its manifest-declared
 canonical snapshot slice; the active row-769 kind-4 service therefore accepts
 range 2 only, never the 8 KiB upload range 1.
+Because that manifest contains no promotion actions, every frontier service's
+effective ancestry must equal its immutable begin ancestry. Active frontier
+services are also one root-first ordered stack; the sole row-769 kind-4 service
+is therefore necessarily a depth-zero root rather than an orphaned child.
 
-Focused verification passed 32 S2 Java tests, eight S2 profile tests, eight S2
+Focused verification passed 34 S2 Java tests, eight S2 profile tests, eight S2
 capture/raw-sink synthetic tests, and the one opt-in real boundary gate. The
 production C# addition changes the deterministic harness identities to
 `ec8c2b6745faf72dca885d918372a8e3d678235681ab954b948f75a31de4c4c6`

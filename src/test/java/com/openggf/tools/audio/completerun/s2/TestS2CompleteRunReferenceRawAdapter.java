@@ -375,6 +375,38 @@ class TestS2CompleteRunReferenceRawAdapter {
                 () -> S2CompleteRunReferenceRawAdapter.scanPrefixForTesting(raw, new RecordingSink()));
     }
 
+    @Test
+    void rejectsEffectiveAncestryRewriteWithoutAnyTransition() throws Exception {
+        String state = "00".repeat(8192);
+        String changed = service()
+                .replace("\"current_parent_token\":0", "\"current_parent_token\":2")
+                .replace("\"current_depth\":0", "\"current_depth\":1");
+        Path raw = temporary.resolve("rewritten-ancestry-without-transition.jsonl");
+        Files.writeString(raw, metadata() + boundary("baseline", "\"row\":769,", state)
+                + boundary("cutoff", "\"exclusive_end\":769,", state)
+                .replace("\"active_services\":[]", "\"active_services\":[" + changed + "]"));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> S2CompleteRunReferenceRawAdapter.scanPrefixForTesting(raw, new RecordingSink()));
+    }
+
+    @Test
+    void rejectsSoleBaselineServiceWhoseParentIsAbsent() throws Exception {
+        String state = "00".repeat(8192);
+        String changed = dpcmService()
+                .replace("\"parent_token\":0", "\"parent_token\":2")
+                .replace("\"depth\":0", "\"depth\":1")
+                .replace("\"current_parent_token\":0", "\"current_parent_token\":2")
+                .replace("\"current_depth\":0", "\"current_depth\":1");
+        Path raw = temporary.resolve("baseline-absent-parent.jsonl");
+        Files.writeString(raw, metadata()
+                + boundary("baseline", "\"row\":769,", state).replace(dpcmService(), changed)
+                + boundary("cutoff", "\"exclusive_end\":769,", state));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> S2CompleteRunReferenceRawAdapter.scanPrefixForTesting(raw, new RecordingSink()));
+    }
+
     private static String metadata() {
         return "{\"type\":\"metadata\",\"schema\":\"openggf.s2-complete-run-audio-raw.v1\","
                 + "\"rom_sha1\":\"8bca5dcef1af3e00098666fd892dc1c2a76333f9\","

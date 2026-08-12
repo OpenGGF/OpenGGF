@@ -318,6 +318,8 @@ public final class S2CompleteRunReferenceRawAdapter {
                     "S2 raw frontier immutable ancestry is inconsistent");
             require((currentDepth == 0) == (currentParentToken == 0),
                     "S2 raw frontier effective ancestry is inconsistent");
+            require(currentParentToken == parentToken && currentDepth == serviceDepth,
+                    "S2 raw frontier effective ancestry differs without promotion hooks");
             boolean complete = bool(service, "complete");
             boolean cancelled = bool(service, "cancelled");
             long beginCoordinate = nonNegativeLong(service, "begin_coordinate");
@@ -344,7 +346,17 @@ public final class S2CompleteRunReferenceRawAdapter {
             validateFrontierServiceShape(parsed);
             result.add(parsed);
         }
+        if (field.equals("active_services")) validateActiveStack(result);
         return List.copyOf(result);
+    }
+
+    private static void validateActiveStack(List<RawService> services) {
+        for (int i = 0; i < services.size(); i++) {
+            RawService service = services.get(i);
+            int parent = i == 0 ? 0 : services.get(i - 1).token();
+            require(service.parentToken() == parent && service.depth() == i,
+                    "S2 raw active services are not one coherent ordered stack");
+        }
     }
 
     private static List<RawChip> chips(JsonNode array) {
