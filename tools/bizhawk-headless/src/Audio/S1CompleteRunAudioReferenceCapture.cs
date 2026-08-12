@@ -462,7 +462,7 @@ namespace OpenGGF.BizHawk.Headless
                 "proof_range", "predicate_ranges", "queue_expected_kinds",
                 "begin_expected_kinds", "direct_parent_retry_async_kinds",
                 "deferred_begin_blocker_kind",
-                "deferred_consume_observation_kind",
+                "deferred_consume_observation_kinds",
                 "retry_expected_kind", "internal_expected_kind");
             ushort nextToken = StrictUShort(binding["first_token"], "M68K first token");
             byte serviceKind = StrictByte(binding["service_kind"], "M68K service kind");
@@ -492,11 +492,8 @@ namespace OpenGGF.BizHawk.Headless
                 binding["deferred_begin_blocker_kind"],"deferred begin blocker kind");
             if(deferredBeginBlockerKind!=6)
                 throw Invalid("deferred begin blocker kind differs");
-            byte deferredConsumeObservationKind=StrictByte(
-                binding["deferred_consume_observation_kind"],
-                "deferred consume observation kind");
-            if(deferredConsumeObservationKind!=serviceKind)
-                throw Invalid("deferred consume observation kind differs");
+            byte[] deferredConsumeObservationKinds=ExactKindList(binding,
+                "deferred_consume_observation_kinds",2,3,4);
 
             var managedHooks = new List<ManagedHook>(managed.Values);
             managedHooks.Sort((left, right) => left.Pc.CompareTo(right.Pc));
@@ -529,9 +526,10 @@ namespace OpenGGF.BizHawk.Headless
                 }
                 else if(managedHook.Action=="DEFERRED_SERVICE_CONSUME")
                 {
-                    AddManagedNativeHook(hookList,publicHooks,managedByToken,
-                        hookTokens,managedHook,ref nextToken,7,0,
-                        deferredConsumeObservationKind,0,0,0);
+                    foreach(byte expected in deferredConsumeObservationKinds)
+                        AddManagedNativeHook(hookList,publicHooks,managedByToken,
+                            hookTokens,managedHook,ref nextToken,7,0,
+                            expected,0,0,0);
                     AddManagedNativeHook(hookList,publicHooks,managedByToken,
                         hookTokens,managedHook,ref nextToken,12,serviceKind,
                         deferredBeginBlockerKind,0,0,0);
@@ -767,6 +765,8 @@ namespace OpenGGF.BizHawk.Headless
             private long nextManagedCorrelationOrdinal;
             private readonly ManagedServiceTracker managedServices =
                 new ManagedServiceTracker();
+            private readonly ManagedServiceTracker boundaryManagedServices =
+                new ManagedServiceTracker();
             private long nextRequestId = 1;
             private readonly long?[] pendingRequestIds = new long?[3];
             private readonly byte[] pendingRequestSounds = new byte[3];
@@ -829,6 +829,8 @@ namespace OpenGGF.BizHawk.Headless
                     frontier.PendingDeferredBegin);
                 frontier=observer.CaptureBoundaryFrontierAndResetPublication();
                 pendingDeferredBegin=carriedDeferred;
+                managedServices.Restore(boundaryManagedServices);
+                boundaryManagedServices.Clear();
                 boundaryDeferredBegin=null;
                 Write(new JObject
                 {
@@ -921,6 +923,8 @@ namespace OpenGGF.BizHawk.Headless
                 if (row != expected || publish && row >= manifest.ExclusiveEnd)
                     throw new InvalidOperationException("Missing or out-of-order S1 audio row.");
                 ManagedServiceTracker servicesBefore=managedServices.Clone();
+                ManagedServiceTracker boundaryServicesBefore=
+                    boundaryManagedServices.Clone();
                 DeferredManagedBegin deferredBefore=CloneDeferred(pendingDeferredBegin);
                 DeferredManagedBegin boundaryDeferredBefore=
                     CloneDeferred(boundaryDeferredBegin);
@@ -1017,6 +1021,7 @@ namespace OpenGGF.BizHawk.Headless
                 catch (Exception error)
                 {
                     managedServices.Restore(servicesBefore);
+                    boundaryManagedServices.Restore(boundaryServicesBefore);
                     pendingDeferredBegin=deferredBefore;
                     boundaryDeferredBegin=boundaryDeferredBefore;
                     pendingManaged.Clear();
@@ -1079,7 +1084,8 @@ namespace OpenGGF.BizHawk.Headless
                 if (!publishing)
                 {
                     if(hook.Action!="SERVICE_BEGIN"
-                        &&hook.Action!="DEFERRED_SERVICE_CONSUME")return;
+                        &&hook.Action!="DEFERRED_SERVICE_CONSUME"
+                        &&hook.Action!="SERVICE_CLOSE")return;
                     if(pendingBoundaryManaged.Count>=manifest.MaximumRecordsPerFrame)
                         throw new InvalidOperationException(
                             "The bounded S1 boundary-correlation stream overflowed.");
@@ -1210,7 +1216,8 @@ namespace OpenGGF.BizHawk.Headless
                 ManagedHook expected;
                 if(!manifest.ManagedByNativeToken.TryGetValue(value.Subject,out expected)
                     ||expected.Action!="SERVICE_BEGIN"
-                        &&expected.Action!="DEFERRED_SERVICE_CONSUME")return;
+                        &&expected.Action!="DEFERRED_SERVICE_CONSUME"
+                        &&expected.Action!="SERVICE_CLOSE")return;
                 if(pendingBoundaryManaged.Count==0)return;
                 PendingManagedOccurrence occurrence=pendingBoundaryManaged.Peek();
                 if(!object.ReferenceEquals(occurrence.Hook,expected)
@@ -1271,6 +1278,9 @@ namespace OpenGGF.BizHawk.Headless
                         ||value.Kind==10&&value.Value==2
                             &&(nativeAction==6||nativeAction==10))
                     {
+                        if(value.Kind==1)
+                            boundaryManagedServices.Begin(value.ServiceToken,
+                                occurrence.Stack);
                         pendingBoundaryManaged.Dequeue();
                         return;
                     }
@@ -1278,6 +1288,19 @@ namespace OpenGGF.BizHawk.Headless
                 }
                 if(nativeAction==7&&value.Kind==10&&value.Value==3)
                 {
+                    if(!MatchesManagedObservationOwner(boundaryManagedServices,
+                        value,occurrence.Stack))
+                        throw new InvalidOperationException(
+                            "Ordinary S1 driverinput managed ancestor differs.");
+                    pendingBoundaryManaged.Dequeue();
+                    return;
+                }
+                if(expected.Action=="SERVICE_CLOSE")
+                {
+                    if(value.Kind!=2)
+                        throw new InvalidOperationException(
+                            "Managed boundary close did not match a native completion.");
+                    boundaryManagedServices.End(value.ServiceToken);
                     pendingBoundaryManaged.Dequeue();
                     return;
                 }
@@ -1367,6 +1390,10 @@ namespace OpenGGF.BizHawk.Headless
                         if(value.Kind!=10||value.Value!=3)
                             throw new InvalidOperationException(
                                 "Ordinary S1 driverinput observation differs.");
+                        if(!MatchesManagedObservationOwner(managedServices,value,
+                                occurrence.Stack))
+                            throw new InvalidOperationException(
+                                "Ordinary S1 driverinput managed ancestor differs.");
                         completeOccurrence=true;
                     }
                     else if(nativeAction!=12
@@ -1520,6 +1547,18 @@ namespace OpenGGF.BizHawk.Headless
                             (JObject)record.DeepClone());
                     }
                 }
+            }
+
+            private static bool MatchesManagedObservationOwner(
+                ManagedServiceTracker services,GpgxAudioTraceEvent value,
+                uint stack)
+            {
+                if(value.ServiceKindId==4)
+                    return value.Depth==0
+                        &&services.Matches(value.ServiceToken,stack);
+                return (value.ServiceKindId==2||value.ServiceKindId==3)
+                    &&value.Depth==1
+                    &&services.Matches(value.ParentToken,stack);
             }
 
             private bool HasManagedServiceCandidate()

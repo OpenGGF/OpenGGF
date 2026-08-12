@@ -400,7 +400,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private static void AssertDeferredBeginHooks(
             S1CompleteRunAudioReferenceCapture.Manifest manifest)
         {
-            int reserve=0,consume=0,ordinaryEntry=0;var ordinary=new List<byte>();
+            int reserve=0,consume=0;var ordinary=new List<byte>();
+            var ordinaryEntry=new List<byte>();
             foreach(GpgxAudioObserverAdapter.ServiceHook hook in manifest.NativeServiceHooks)
             {
                 if(hook.Cpu!=2)continue;
@@ -415,6 +416,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 else if(hook.Pc==0x071B82&&hook.Action==12)
                 {
                     consume++;
+                    AssertEx.Equal(true,object.ReferenceEquals(
+                        manifest.FindManagedHook(0x071B82),
+                        manifest.ManagedByNativeToken[hook.HookToken]));
                     AssertEx.Equal((byte)4,hook.ServiceKindId);
                     AssertEx.Equal((byte)6,hook.ExpectedActiveKind);
                     AssertEx.Equal((ushort)0,hook.RangeCount);
@@ -422,12 +426,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 }
                 else if(hook.Pc==0x071B82&&hook.Action==7)
                 {
-                    ordinaryEntry++;
+                    ordinaryEntry.Add(hook.ExpectedActiveKind);
                     AssertEx.Equal(true,object.ReferenceEquals(
                         manifest.FindManagedHook(0x071B82),
                         manifest.ManagedByNativeToken[hook.HookToken]));
                     AssertEx.Equal((byte)0,hook.ServiceKindId);
-                    AssertEx.Equal((byte)4,hook.ExpectedActiveKind);
                     AssertEx.Equal((ushort)0,hook.RangeCount);
                     AssertEx.Equal((ulong)0,hook.Reserved);
                 }
@@ -437,7 +440,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
             ordinary.Sort();
             AssertEx.Equal(1,reserve);
             AssertEx.Equal(1,consume);
-            AssertEx.Equal(1,ordinaryEntry);
+            ordinaryEntry.Sort();
+            AssertEx.Equal(3,ordinaryEntry.Count);
+            AssertEx.Equal((byte)2,ordinaryEntry[0]);
+            AssertEx.Equal((byte)3,ordinaryEntry[1]);
+            AssertEx.Equal((byte)4,ordinaryEntry[2]);
             AssertEx.Equal(3,ordinary.Count);
             AssertEx.Equal((byte)0,ordinary[0]);
             AssertEx.Equal((byte)2,ordinary[1]);
@@ -727,11 +734,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
         private static void ObservesOrdinaryDriverInputEntryWithoutConsuming()
         {
-            AssertOrdinaryDriverInputEntry(false);
-            AssertOrdinaryDriverInputEntry(true);
+            AssertOrdinaryDriverInputEntry(0,0,4,false);
+            AssertOrdinaryDriverInputEntry(0x0077,0x00AC,2,false);
+            AssertOrdinaryDriverInputEntry(0x00C1,0x00D0,3,false);
+            AssertOrdinaryDriverInputEntry(0x0077,0x00AC,2,true);
         }
 
-        private static void AssertOrdinaryDriverInputEntry(bool preEpoch)
+        private static void AssertOrdinaryDriverInputEntry(uint childBegin,
+            uint childEnd,byte observedKind,bool preEpoch)
         {
             var api=new FakeTraceApi();
             var host=new FakeS1Host((current,frame)=>
@@ -739,7 +749,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 current.SetCpuRegister("A7",0x00FFFDB2);
                 current.SetU32(0xFDB2,0x00000B64);
                 Visit(current,api,0x071B4C);
+                if(childBegin!=0)api.VisitZ80(childBegin,current);
                 Visit(current,api,0x071B82);
+                if(childEnd!=0)api.VisitZ80(childEnd,current);
                 Visit(current,api,0x071C4C);
             });
             var output=new StringWriter();
@@ -760,8 +772,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
             string raw=output.ToString();
             AssertEx.Equal(1,CountNativeMarkerValue(raw,3));
-            AssertEx.Equal(1,CountNativeKind(raw,1));
-            AssertEx.Equal(1,CountNativeKind(raw,2));
+            AssertEx.Equal(childBegin==0?1:2,CountNativeKind(raw,1));
+            AssertEx.Equal(childEnd==0?1:2,CountNativeKind(raw,2));
             AssertEx.Equal(0,CountNativeMarkerValue(raw,4));
             JObject evidence=Records(raw,"managed_hook_evidence",
                 value=>(uint)value["pc"]==0x071B82)[0];
@@ -769,17 +781,35 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(1,correlation.Count);
             AssertEx.Equal(10,(int)correlation[0]["event_kind"]);
             AssertEx.Equal(3,(int)correlation[0]["value"]);
-            AssertEx.Equal(4,(int)correlation[0]["service_kind"]);
+            AssertEx.Equal(observedKind,(byte)correlation[0]["service_kind"]);
+            AssertEx.Equal(observedKind==4?0:1,
+                (int)correlation[0]["depth"]);
         }
 
         private static void RejectsInvalidDriverInputOwnership()
         {
             AssertDriverInputVisitFails((current,api)=>
-                api.VisitZ80(0x0077,current),"active-kind");
-            AssertDriverInputVisitFails((current,api)=>
-                api.VisitZ80(0x00C1,current),"active-kind");
+                api.VisitZ80(0x0077,current),"ancestor");
             AssertDriverInputVisitFails((current,api)=>
                 api.VisitZ80(0x003A,current),"reservation");
+            AssertDriverInputManagedIdentityFails();
+        }
+
+        private static void AssertDriverInputManagedIdentityFails()
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDB2);
+                current.SetU32(0xFDB2,0x00000B64);
+                Visit(current,api,0x071B4C);
+                api.VisitZ80(0x0077,current);
+                current.SetCpuRegister("A7",0x00FFFDB6);
+                Visit(current,api,0x071B82);
+            });
+            using(var session=CreateSession(host,api,new StringWriter()))
+                AssertEx.Throws<InvalidOperationException>(
+                    ()=>session.CaptureFrame(860,host.Advance),"ancestor");
         }
 
         private static void AssertDriverInputVisitFails(

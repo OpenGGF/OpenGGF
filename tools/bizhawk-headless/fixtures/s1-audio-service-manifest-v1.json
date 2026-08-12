@@ -150,7 +150,7 @@
       "begin_expected_kinds": [0, 2, 3],
       "direct_parent_retry_async_kinds": [2, 3],
       "deferred_begin_blocker_kind": 6,
-      "deferred_consume_observation_kind": 4,
+      "deferred_consume_observation_kinds": [2, 3, 4],
       "retry_expected_kind": 4,
       "internal_expected_kind": 4
     }
