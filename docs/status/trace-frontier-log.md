@@ -66437,36 +66437,61 @@ for. Read the count with that in mind.
   native pending-state, reset/overflow behavior, managed correlation, and raw
   proof representation remain explicit design questions.
 
-## 2026-08-12 - S1 action-11 reference observation reaches the terminal
+## 2026-08-12 - S1 reserve/consume transaction green; terminal frontier row 12525
 
 - Worktree/branch: `.worktrees/audio-retry-only-direct-parent`,
-  `bugfix/ai-audio-retry-only-direct-parent`, commit context `827853924`.
-  Exact inputs: Sonic 1 World REV01 SHA-1
-  `69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b`; all-emeralds BK2 SHA-256
+  `bugfix/ai-audio-retry-only-direct-parent`, base `6dbfe0406`. Exact regular-file
+  inputs, used in place without copying, renaming, or symlinking: Sonic 1 World
+  REV01 `Sonic The Hedgehog (W) (REV01) [!].gen`, SHA-1
+  `69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b`; BK2
+  `sonic1-complete-withemeralds.bk2`, SHA-256
   `f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b`.
-- A create-new diagnostic action-11 core/install was built from the locked
-  source/toolchain without repinning committed identity literals. Patch
-  SHA-256 is
-  `3d7d3c411f27b8490aa1675557d2f8ef6ae2ae09495cfebb7e9c8e03760e5388`,
-  raw core SHA-256
-  `b1f33a0e030c1998fd56d9ed28142c2c198c0d46bdfaea9462bf5e26a6f7bc08`,
-  compressed core SHA-256
-  `76fe444068231ddcebed11947f1d6cd5c77aa70417e54892088e9cd637a419e1`,
-  Build ID `db8cab4f70430a16`.
-- Exact opt-in command: `OPENGGF_S1_AUDIO_PREFIX=1 S1_ROM_PATH=<REV01>
-  S1_AUDIO_BK2_PATH=<all-emeralds BK2>
-  BIZHAWK_HOME=target/audio-parity/native/action11-diagnostic/install
-  tools/bizhawk-headless/test.sh --filter 'S1CompleteRunAudioReferenceCaptureTests
-  materialize one deferred begin after row 8775 wait service' --jobs 1`.
-  Result: GREEN. Row 8775 has prior kind-4 END ordinal 12, root kind-6 BEGIN
-  ordinal 13, three marker-value-4 correlations with identical
-  `A7=$FFFDB2`/return `$000B64`, kind-6 END ordinal 20, and exactly one
-  released root kind-4 BEGIN ordinal 21.
-- Bounded probes used the same command with diagnostic-only loop ends of
-  row 20000 and row 50000; both were clean. The reproducible final probe added
-  `OPENGGF_S1_AUDIO_TERMINAL_PROBE=1` to that command, processed every
-  manifest row, and accepted `Complete(225101)`. The next exact S1
-  reference-observer frontier is therefore the clean exclusive bound 225101;
-  there is no later observer-contract fault in this movie. No partial raw file
-  was published by any probe, and this does not claim reference-vs-OpenGGF
-  semantic MATCH.
+- The complete old release-at-END RED is preserved at
+  `target/audio-parity/native/action11-final-row8775-repro.log` (68 lines,
+  SHA-256
+  `07f9a1965b4a9c1e82f56193975ecbf00f290a8c14de5e497dcdb423099b8e24`).
+  It proves the source-false model fails at M68K `$71BB2` while kind 6 is still
+  the active root. The stale 12/13/20/21 released-root sequence and terminal
+  `Complete(225101)` claim are retracted.
+- Strict real RED against that old install used `OPENGGF_S1_AUDIO_PREFIX=1`,
+  the exact paths above, `BIZHAWK_HOME=target/audio-parity/native/action11-diagnostic/install`,
+  and `tools/bizhawk-headless/test.sh --filter 'S1CompleteRunAudioReferenceCaptureTests
+  consume one deferred child begin during row 8775 wait service' --jobs 1`.
+  It failed configuration with status `-3`, as the old core has no paired
+  action-12 consume. Log:
+  `target/audio-parity/native/task4-old-action11-real-red.log`, SHA-256
+  `cb703f0f753ffd58e3c6d0c25c3957be580db6a716aafda4dcc154de460c170c`.
+- A create-new diagnostic core/install was then built from locked input identity
+  `36dde84c81429343b2f4425ff66c04f8fbdf54bcaf42a2459e68c52f95e9a0d4`.
+  All six native selftests passed. Committed patch SHA-256 was
+  `fefab1d5f69ff1657d14eb744e3c4b57c0eefa351ee236c3166fe2614faa8504`;
+  raw core SHA-256 was
+  `ae8d7176bc283a1ec8db288eb634c31bcdfb4b610280a458cefb407427394e35`;
+  compressed core SHA-256 was
+  `a383b3762fc8000a0354b54397832208728863f559905ec6e8d163e66ab1bb35`;
+  diagnostic Build ID was `23efb896258c515d`. No committed identity,
+  capability, recipe, or artifact lock was changed by Task 4.
+- Reviewed managed authority fixes through `2b123f4bc` advanced the same real
+  gate through the pre-epoch `$71B82` topologies and made the exact row-8775
+  transaction GREEN. The row proves root kind-6 BEGIN `$003A`; three distinct,
+  strictly ordered marker-value-4 `$71B4C` retries with identical
+  `A7=$FFFDB2` / return `$000B64`; `$71B82` consume and fresh depth-1 kind-4
+  child BEGIN; `$71BB2` owned by the child; depth-1 child END `$71C4C`; an empty
+  manifest M68K callback inventory between child END and the kind-6 `$0077`
+  END; and the adjacent fresh root DPCM BEGIN. Exact command: the real command
+  above with
+  `BIZHAWK_HOME=target/audio-parity/native/task4-reserve-consume-diagnostic-install`.
+  GREEN log: `target/audio-parity/native/task4-row8775-2b123f4bc-green.log`,
+  SHA-256
+  `7c4e6da896a56f896e0e36befaa44335ede52715c073fd858b7a419b3a36b761`.
+- Adding `OPENGGF_S1_AUDIO_TERMINAL_PROBE=1` to the same command stopped at the
+  next exact observer frontier, movie row 12525:
+  `first_fault=5:2:72c24:2:2:0:4`. At M68K `$72C24`
+  (`cfStopSpecialFM4`), kind-2 DPCM token 6 is the active depth-1 child of root
+  kind-4 token 5. The current conditional-close hook set does not admit that
+  topology. Log: `target/audio-parity/native/task4-terminal-2b123f4bc.log`,
+  SHA-256
+  `22dccba2f6c221fdbfc8428133182e07cdebd61577865ee83a3b506e6976942c`.
+  No capture or partial output was published. Row 12525 `$72C24` is the next
+  reference-observer frontier; this is not a reference-vs-OpenGGF semantic
+  MATCH, and Task 4 did not broaden the conditional-close contract.

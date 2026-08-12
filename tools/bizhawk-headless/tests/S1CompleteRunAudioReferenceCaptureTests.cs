@@ -199,6 +199,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
             ushort retryToken=0;
             ushort deferredHookToken=0;
             ushort consumeHookToken=0;
+            ushort waitBeginHookToken=0;
+            ushort waitTailHookToken=0;
+            ushort childObservationHookToken=0;
+            ushort childEndHookToken=0;
             foreach (GpgxAudioObserverAdapter.ServiceHook hook
                 in manifest.NativeServiceHooks)
             {
@@ -210,6 +214,18 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 if(hook.Cpu==2&&hook.Pc==0x071B82&&hook.Action==12
                     &&hook.ExpectedActiveKind==6)
                     consumeHookToken=hook.HookToken;
+                if(hook.Cpu==1&&hook.Pc==0x003A&&hook.Action==1
+                    &&hook.ExpectedActiveKind==0&&hook.ServiceKindId==6)
+                    waitBeginHookToken=hook.HookToken;
+                if(hook.Cpu==1&&hook.Pc==0x0077&&hook.Action==4
+                    &&hook.ExpectedActiveKind==6&&hook.ServiceKindId==2)
+                    waitTailHookToken=hook.HookToken;
+                if(hook.Cpu==2&&hook.Pc==0x071BB2&&hook.Action==7
+                    &&hook.ExpectedActiveKind==4)
+                    childObservationHookToken=hook.HookToken;
+                if(hook.Cpu==2&&hook.Pc==0x071C4C&&hook.Action==2
+                    &&hook.ExpectedActiveKind==4)
+                    childEndHookToken=hook.HookToken;
             }
             uint waitBeginOrdinal=uint.MaxValue;
             uint waitEndOrdinal=uint.MaxValue;
@@ -217,10 +233,17 @@ namespace OpenGGF.BizHawk.Headless.Tests
             uint consumeBeginOrdinal=uint.MaxValue;
             uint childObservationOrdinal=uint.MaxValue;
             uint childEndOrdinal=uint.MaxValue;
+            uint dpcmBeginOrdinal=uint.MaxValue;
             ushort waitServiceToken=0;
             ushort consumedServiceToken=0;
+            ushort dpcmServiceToken=0;
             int deferredBegins=0;
+            int childObservations=0;
+            int childEnds=0;
+            int waitEnds=0;
             var deferredEvidence=new List<JObject>();
+            var row8775ManagedEvidence=new List<JObject>();
+            var row8775DpcmBegins=new List<JObject>();
             foreach (string line in output.ToString().Split(new[]{'\n'},
                 StringSplitOptions.RemoveEmptyEntries))
             {
@@ -239,6 +262,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 {
                     waitBeginOrdinal=(uint)record["ordinal"];
                     waitServiceToken=(ushort)record["service_token"];
+                    AssertEx.Equal(1,(int)record["source_cpu"]);
+                    AssertEx.Equal(waitBeginHookToken,
+                        (ushort)record["subject"]);
                     AssertEx.Equal(0,(int)record["parent_token"]);
                     AssertEx.Equal(0,(int)record["depth"]);
                 }
@@ -250,6 +276,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     &&(int)record["row"]==8775&&(int)record["kind"]==2
                     &&(int)record["service_kind"]==6)
                 {
+                    waitEnds++;
                     waitEndOrdinal=(uint)record["ordinal"];
                     AssertEx.Equal(waitServiceToken,
                         (ushort)record["service_token"]);
@@ -276,6 +303,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     &&(int)record["row"]==8775&&(int)record["kind"]==10
                     &&(int)record["pc"]==0x071BB2)
                 {
+                    childObservations++;
                     childObservationOrdinal=(uint)record["ordinal"];
                     AssertEx.Equal(consumedServiceToken,
                         (ushort)record["service_token"]);
@@ -283,17 +311,38 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         (ushort)record["parent_token"]);
                     AssertEx.Equal(4,(int)record["service_kind"]);
                     AssertEx.Equal(1,(int)record["depth"]);
+                    AssertEx.Equal(2,(int)record["source_cpu"]);
+                    AssertEx.Equal(childObservationHookToken,
+                        (ushort)record["subject"]);
                 }
                 if((string)record["type"]=="native_event"
                     &&(int)record["row"]==8775&&(int)record["kind"]==2
                     &&(int)record["pc"]==0x071C4C
                     &&(int)record["service_kind"]==4
+                    &&(int)record["depth"]==1
                     &&(ushort)record["parent_token"]==waitServiceToken)
+                {
+                    childEnds++;
                     childEndOrdinal=(uint)record["ordinal"];
+                    AssertEx.Equal(consumedServiceToken,
+                        (ushort)record["service_token"]);
+                    AssertEx.Equal(1,(int)record["depth"]);
+                    AssertEx.Equal(2,(int)record["source_cpu"]);
+                    AssertEx.Equal(childEndHookToken,
+                        (ushort)record["subject"]);
+                }
+                if((string)record["type"]=="native_event"
+                    &&(int)record["row"]==8775&&(int)record["kind"]==1
+                    &&(int)record["pc"]==0x0077
+                    &&(int)record["service_kind"]==2)
+                    row8775DpcmBegins.Add(record);
                 if((string)record["type"]=="managed_hook_evidence"
                     &&(int)record["row"]==8775
                     &&(int)record["pc"]==0x071B4C)
                     deferredEvidence.Add(record);
+                if((string)record["type"]=="managed_hook_evidence"
+                    &&(int)record["row"]==8775)
+                    row8775ManagedEvidence.Add(record);
             }
             AssertEx.Equal(true, baseline != null);
             AssertEx.Equal(860, (int)baseline["row"]);
@@ -303,6 +352,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(0,(int)directParentRetry["depth"]);
             AssertEx.Equal((uint)12,priorMusicEndOrdinal);
             AssertEx.Equal((uint)13,waitBeginOrdinal);
+            AssertEx.Equal(1,waitEnds);
             AssertEx.Equal(3,deferredEvidence.Count);
             var markerOrdinals=new List<uint>();
             for(int i=0;i<deferredEvidence.Count;i++)
@@ -348,11 +398,47 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     (uint)deferredEvidence[i]["consume_begin_ordinal"]);
             }
             AssertEx.Equal(1,deferredBegins);
+            AssertEx.Equal(1,childObservations);
+            AssertEx.Equal(1,childEnds);
+            int tailDpcmBegins=0;
+            foreach(JObject record in row8775DpcmBegins)
+            {
+                if((uint)record["ordinal"]!=waitEndOrdinal+1)continue;
+                tailDpcmBegins++;
+                dpcmBeginOrdinal=(uint)record["ordinal"];
+                dpcmServiceToken=(ushort)record["service_token"];
+                AssertEx.Equal(0,(int)record["parent_token"]);
+                AssertEx.Equal(0,(int)record["depth"]);
+                AssertEx.Equal(1,(int)record["source_cpu"]);
+                AssertEx.Equal(waitTailHookToken,
+                    (ushort)record["subject"]);
+            }
+            AssertEx.Equal(1,tailDpcmBegins);
             AssertEx.Equal(true,consumeBeginOrdinal<childObservationOrdinal
                 &&childObservationOrdinal<childEndOrdinal
-                &&childEndOrdinal<waitEndOrdinal);
+                &&childEndOrdinal<waitEndOrdinal
+                &&waitEndOrdinal<dpcmBeginOrdinal);
+            AssertEx.Equal(waitEndOrdinal+1,dpcmBeginOrdinal);
             AssertEx.Equal(true,consumedServiceToken!=0);
             AssertEx.Equal(false,consumedServiceToken==waitServiceToken);
+            AssertEx.Equal(true,dpcmServiceToken!=0);
+            AssertEx.Equal(false,dpcmServiceToken==waitServiceToken);
+            AssertEx.Equal(false,dpcmServiceToken==consumedServiceToken);
+            var postChildPreTailHooks=new List<string>();
+            foreach(JObject evidence in row8775ManagedEvidence)
+            {
+                foreach(JObject correlation in
+                    (JArray)evidence["native_correlation_events"])
+                {
+                    uint ordinal=(uint)correlation["ordinal"];
+                    if(ordinal>childEndOrdinal&&ordinal<waitEndOrdinal)
+                        postChildPreTailHooks.Add(string.Format(
+                            "{0}:{1:x6}:{2}:{3}",ordinal,
+                            (uint)evidence["pc"],(string)evidence["name"],
+                            (string)evidence["action"]));
+                }
+            }
+            AssertEx.Equal("",string.Join("|",postChildPreTailHooks));
         }
 
         private static string Sha256(string path)

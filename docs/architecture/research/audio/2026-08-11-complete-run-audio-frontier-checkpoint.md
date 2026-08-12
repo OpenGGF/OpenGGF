@@ -258,28 +258,54 @@ Build ID is `5c7cc70998c8b5b1`, and observer identity is
 `6a9dbc44f83429f08845cb609ef14a8b595b11279bc0c12271d8579bedda6cd3`.
 The row-860 proof remains a bounded prefix/capture-boundary result. Row 1548
 was the action-10 contract fault; the clean bounded diagnostic through row 5000
-was the predecessor strict real-run frontier. The action-11 diagnostic used the
-same ROM and BK2 with patch SHA-256
-`3d7d3c411f27b8490aa1675557d2f8ef6ae2ae09495cfebb7e9c8e03760e5388`,
-raw core SHA-256
-`b1f33a0e030c1998fd56d9ed28142c2c198c0d46bdfaea9462bf5e26a6f7bc08`,
-compressed core SHA-256
-`76fe444068231ddcebed11947f1d6cd5c77aa70417e54892088e9cd637a419e1`,
-and Build ID `db8cab4f70430a16`. It was built and installed only beneath ignored
-`target/audio-parity/native/action11-diagnostic`; no committed native,
-managed, capability, or Java identity literal was repinned. Task 5 owns the
-deterministic paired build and final identity cascade.
+was the predecessor strict real-run frontier. The old release-at-END action-11
+model did not prove row 8775 or the terminal. Its complete preserved RED log is
+`target/audio-parity/native/action11-final-row8775-repro.log`, SHA-256
+`07f9a1965b4a9c1e82f56193975ecbf00f290a8c14de5e497dcdb423099b8e24`;
+it fails at M68K `$71BB2` while kind 6 remains the active root. The earlier
+12/13/20/21 released-root sequence and terminal acceptance are retracted.
+
+Task 4 built a create-new reserve/consume diagnostic from locked input identity
+`36dde84c81429343b2f4425ff66c04f8fbdf54bcaf42a2459e68c52f95e9a0d4`
+without changing committed identity, capability, recipe, or artifact-lock files.
+The committed patch SHA-256 was
+`fefab1d5f69ff1657d14eb744e3c4b57c0eefa351ee236c3166fe2614faa8504`,
+the raw core was
+`ae8d7176bc283a1ec8db288eb634c31bcdfb4b610280a458cefb407427394e35`,
+the compressed core was
+`a383b3762fc8000a0354b54397832208728863f559905ec6e8d163e66ab1bb35`,
+and its diagnostic Build ID was `23efb896258c515d`. All six native selftests
+passed.
+
+With the reviewed managed authority fixes through `2b123f4bc`, the exact real
+gate proves row 8775's revised physical transaction: prior root kind-4 END at
+`$71C4C`; root kind-6 BEGIN at `$003A`; three distinct, strictly ordered
+marker-value-4 `$71B4C` retries with `A7=$FFFDB2` and return `$000B64`; exact
+`$71B82` consume and a fresh depth-1 kind-4 child BEGIN; `$71BB2` owned by that
+child; depth-1 child END at `$71C4C`; no manifest M68K callback between that
+child END and the kind-6 `$0077` END; then the adjacent fresh root DPCM BEGIN.
+The GREEN log is `target/audio-parity/native/task4-row8775-2b123f4bc-green.log`,
+SHA-256
+`7c4e6da896a56f896e0e36befaa44335ede52715c073fd858b7a419b3a36b761`.
+
+The terminal probe then stopped at the next exact frontier, movie row 12525,
+with `first_fault=5:2:72c24:2:2:0:4`. M68K `$72C24`
+(`cfStopSpecialFM4`) executes while kind-2 DPCM is the active depth-1 child of
+root kind 4, a topology not admitted by the current conditional-close hooks.
+The terminal log is `target/audio-parity/native/task4-terminal-2b123f4bc.log`,
+SHA-256
+`22dccba2f6c221fdbfc8428133182e07cdebd61577865ee83a3b506e6976942c`.
+No capture or partial output was published. This is a reference-observer
+frontier, not a reference-vs-OpenGGF semantic MATCH.
 
 ## Verified checkpoint gates
 
 - Complete-run Java schema/store/comparator/CLI and authority focused gate: 155
   tests passing.
 - Sonic 1 normalized state/profile: 68 tests passing.
-- Sonic 1 native/managed reference session: 28 synthetic tests passing.
-  The opt-in action-11 real gate proves row 8775's exact 12/13/20/21 physical
-  order, three identical callback identities, and one release. A separate
-  diagnostic terminal probe is clean through row 225100 and
-  `Complete(225101)`.
+- Sonic 1 native/managed reserve/consume synthetic gates pass. The strengthened
+  opt-in real row-8775 transaction gate passes; the terminal probe advances to
+  row 12525 and stops at the exact `$72C24` topology above.
 - Shared observer projection: 21 tests passing, including conditional
   direct-parent promotion and the allocation-free per-frame projection-result
   wrapper.
