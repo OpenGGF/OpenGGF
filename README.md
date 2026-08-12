@@ -284,6 +284,29 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **The run chains' transition-gap comparison had never once been evaluated
+  (2026-08-12):** `DynamicArtGapJournalProbe.verify(run)` sat after
+  `assertChainReplay`'s try/catch, and the catch rethrew — so any earlier assertion
+  aborted the run before the gap ledger was ever compared. Both S2 chains died in
+  `assertReturnedLevelSegmentPhysics`, meaning the transition-gap comparison graded
+  nothing for the entire life of those tests. This is the same defect shape as the
+  unasserted returned-level segment above, one layer down, and it is why that
+  segment's fixes could look complete while the gap ledger stayed wrong. Every
+  chain axis is now recorded rather than thrown — segment physics, every structural
+  gap, the terminal tail, and any walk failure — and a run fails once at the end
+  enumerating all failing axes, each tagged, with a gap report artifact written
+  whichever axis failed. Only the throw *site* moved: no predicate relaxed, no
+  comparison made advisory, no field excluded. The newly visible truth is larger
+  than expected. The halfpipe chain fails on 5 axes and the emerald chain on 9,
+  including a previously invisible segment-6 physics divergence of 13,837 errors
+  and a segment-6 boundary that is never observed. The level→special-stage gaps are
+  missing their recorded edges entirely (expected 1–2, actual 0), and the return
+  gaps carry 12–13 against 8 expected while diverging on ordinal, transfer id,
+  owner, mapping frame and `movie_logical_frame` (8,933 against a recorded 9,675).
+  Recorded honestly: the S3K chains report zero gaps not because they agree but
+  because their walks error before any gap forms — that axis is **unmeasured**, not
+  green. The S1 chains compare two gaps each with no failures and were already
+  reachable.
 - **The special stage and the level share Sonic 2's three last-loaded-DPLC
   registers (2026-08-12):** dumping the run chains' transition-gap art ledger
   against the fixture showed the engine never submitting Tails' body art at a
@@ -299,8 +322,12 @@ Development since `v0.5.20260411` is the active 0.6 prerelease line. The release
   the level's, so the returned level suppressed a player's first mapping-frame
   transfer against a value stale since before the stage. Dedup now keys on the ROM
   register rather than the comparison owner, and the registers are cleared where
-  `Level_ClrRam` clears them. Both gaps now carry both recorded owners at the
-  recorded row in the recorded order. S1 has the same shape (`v_sonframenum`
+  `Level_ClrRam` clears them. Both gaps then carried both recorded owners at the
+  recorded row in the recorded order **as measured by a bespoke probe** — but read
+  through the real gap comparator, once that was made reachable (see the entry
+  above), the gaps still diverge substantially on count, ordinal, owner and frame.
+  So this is a genuine ROM correction, not a closure of the gap ledger; the
+  narrower claim is what the evidence supports. S1 has the same shape (`v_sonframenum`
   inside `clearRAM v_levelvariables`, `sonic.asm:2742`). Measured en route and
   worth recording: placing the clear in the mid-gameplay art-refresh path instead
   wipes an established dedup mid-segment and turns both standalone oracles red at
