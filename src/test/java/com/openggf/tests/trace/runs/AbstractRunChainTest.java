@@ -1454,9 +1454,36 @@ abstract class AbstractRunChainTest {
             } else if (entryMode == BoundaryEntryMode.LEVEL_LOAD) {
                 SegmentPlan next = plans.get(i + 1);
                 RunLevelLoadTracker.Receipt[] observedLoad = {null};
+                // The source comparison segment closes when the run movie clock
+                // LEAVES the source segment's manifest-declared recorded coverage
+                // (bk2_frame_offset + trace_frame_count) -- exactly the predicate
+                // TraceRunDynamicArtGapComparator.gapSlice partitions the EXPECTED
+                // slice on, and exactly what the special-stage interior branch
+                // above already does at rowDriver.isComplete(). Closing on the
+                // observed level-load boundary instead left every production
+                // iteration between coverage exhaustion and that boundary inside
+                // the comparison window, so transfers submitted there were
+                // buffered as segment edges rather than gap edges. Manifest
+                // structure only: no frame index, zone, route or measured value.
+                boolean[] sourceArtWindowClosed = {false};
+                LiveTraceComparator sourceComparator = activeComparator;
+                Runnable closeSourceArtWindow = () -> {
+                    if (sourceArtWindowClosed[0]
+                            || !sourceComparatorExhausted(seg, sourceComparator)) {
+                        return;
+                    }
+                    dynamicArtSegments.enterGap();
+                    // Observed after the window actually closes: the close is what
+                    // records the state the gap opens on, so reading the snapshot
+                    // first leaves the source's own final edges out of it.
+                    dynamicArtGapJournal.sourceClosed(seg.segment().dir());
+                    sourceArtWindowClosed[0] = true;
+                };
+                closeSourceArtWindow.run();
                 BoundaryObservation obs = TraceRunReplayWalker.awaitBoundary(
                         probe, exit, stepCap, () -> {
                             stepEngineFrame(loop);
+                            closeSourceArtWindow.run();
                             if (isNewActiveLevelSegment(
                                     next, levelAtSegmentStart)) {
                                 RunLevelLoadTracker.Receipt receipt =
@@ -1474,11 +1501,10 @@ abstract class AbstractRunChainTest {
                         activeComparator.cursor(), levelAtSegmentStart);
                 activeComparator.finalizeTerminalDynamicArtComparison();
                 requireComparatorComplete(seg, activeComparator);
-                dynamicArtSegments.enterGap();
-                // Observed after the window actually closes: the close is what
-                // records the state the gap opens on, so reading the snapshot
-                // first leaves the source's own final edges out of it.
-                dynamicArtGapJournal.sourceClosed(seg.segment().dir());
+                // Normally already closed inside the boundary wait, the moment
+                // recorded coverage was exhausted; this covers a source whose
+                // comparator only exhausts in the pinned tail above.
+                closeSourceArtWindow.run();
                 runCoordinator.closeCurrent(
                         loop.getCurrentGameMode(),
                         sourceComparatorExhausted(seg, activeComparator));
