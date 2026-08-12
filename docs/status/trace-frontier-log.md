@@ -66495,3 +66495,37 @@ for. Read the count with that in mind.
   No capture or partial output was published. Row 12525 `$72C24` is the next
   reference-observer frontier; this is not a reference-vs-OpenGGF semantic
   MATCH, and Task 4 did not broaden the conditional-close contract.
+
+## 2026-08-12 - S1 row-12525 action-9 proof green; capture-sink frontier row 21766
+
+- Worktree/branch: `.worktrees/audio-retry-only-direct-parent`,
+  `bugfix/ai-audio-retry-only-direct-parent`; managed action-9 base
+  `7ba71fc889dd91f39347d117864c9cf16740e9ca`, plus separately reviewed
+  callback-stack prerequisite `71a8d889c35d0977a055ffd883b1bc9dcc744124`.
+  Exact regular-file inputs were Sonic 1 World REV01 SHA-1
+  `69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b` and complete-run BK2 SHA-256
+  `f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b`.
+- The unchanged Task 4 diagnostic install retained compressed core SHA-256
+  `a383b3762fc8000a0354b54397832208728863f559905ec6e8d163e66ab1bb35`
+  and installed regular-file aggregate SHA-256
+  `be7850247e8b011fa85c20f558edd9349cbac44360a5217c41eacc2215e28e1f`.
+- Exact command: `OPENGGF_S1_AUDIO_ROW12525=1 S1_ROM_PATH=<REV01>
+  S1_AUDIO_BK2_PATH=<BK2> BIZHAWK_HOME=<Task4-install>
+  tools/bizhawk-headless/test.sh --jobs 1 --filter 'S1CompleteRunAudioReferenceCaptureTests
+  prove row 12525 action 9 keep and promotion'`. Result: PASS. Row 12525 proves
+  `$72C24` action-9 KEEP/value 0 with callback `A7=$FFFDAE`, return `$71C38`,
+  kind-2 child token 6 parented by kind-4 token 5, unchanged begin ancestry,
+  marker ordinal 219, later adjacent `$71C4C` root END/action-8 child promotion
+  at ordinals 223/224, then `$AC` child close at ordinal 230. The selector binds
+  identities relationally before secondarily checking the deterministic token
+  values. Final exact-gate log SHA-256:
+  `c9169ac7644eaf3eae8b9cc9f09571e81117d5f44d7822b0f05320018a446bfd`.
+- One bounded configured-terminal run then crossed row 12525 and stopped at
+  the sole next frontier, row 21766: `StringBuilder.Append` rejected the
+  test-only real-proof aggregate `StringWriter` during `Session.ProcessFrame`.
+  The production `NoReplacePublisher` was not involved. This is an
+  infrastructure frontier, not a native first fault or semantic mismatch.
+  Error count: 1; first-error row/field: `21766` / test aggregate-writer
+  capacity. No raw file was published, and the run was not retried or
+  broadened. Terminal log SHA-256:
+  `b0a1473e3d827cf037bb4759ec266bf25a01b28b003b268a31695bd99586c9d7`.

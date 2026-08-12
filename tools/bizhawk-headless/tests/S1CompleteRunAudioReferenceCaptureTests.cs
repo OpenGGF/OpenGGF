@@ -140,6 +140,16 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S1CompleteRunAudioReferenceCaptureTests consume one deferred child begin during row 8775 wait service",
                 MaterializesDeferredBeginAfterWaitService,
                 game: "s1", serial: true, estimatedSeconds: 300.0));
+            tests.Add(new TestMain.TestCase(
+                "S1CompleteRunAudioReferenceCaptureTests prove row 12525 action 9 keep and promotion",
+                ProvesRow12525Action9KeepAndPromotion,
+                game: "s1", serial: true, estimatedSeconds: 300.0));
+        }
+
+        private sealed class RealPrefixResult
+        {
+            internal S1CompleteRunAudioReferenceCapture.Manifest Manifest;
+            internal string Output;
         }
 
         private static void MaterializesDeferredBeginAfterWaitService()
@@ -148,52 +158,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 throw new TestMain.SkipTestException("OPENGGF_S1_AUDIO_PREFIX is not enabled.");
             bool terminalProbe=Environment.GetEnvironmentVariable(
                 "OPENGGF_S1_AUDIO_TERMINAL_PROBE")=="1";
-            string romPath = Environment.GetEnvironmentVariable("S1_ROM_PATH");
-            string moviePath = Environment.GetEnvironmentVariable("S1_AUDIO_BK2_PATH");
-            if (string.IsNullOrEmpty(romPath) || !File.Exists(romPath))
-                throw new InvalidOperationException("S1_ROM_PATH is required for the real audio prefix.");
-            if (string.IsNullOrEmpty(moviePath) || !File.Exists(moviePath))
-                throw new InvalidOperationException("S1_AUDIO_BK2_PATH is required for the real audio prefix.");
-            AssertEx.Equal("f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b",
-                Sha256(moviePath));
-            Bk2Movie movie = Bk2Reader.Read(moviePath);
-            AssertEx.Equal(225101, movie.FrameCount);
-            byte[] rom = File.ReadAllBytes(romPath);
-            string manifestPath = Path.Combine(EndToEndTests.ToolDirectory, "fixtures", FixtureName);
-            S1CompleteRunAudioReferenceCapture.Manifest manifest =
-                S1CompleteRunAudioReferenceCapture.LoadManifest(manifestPath, rom);
-            var output = new StringWriter();
-            using (var host = GpgxHost.Open(romPath, movie.SyncSettings))
-            using (IEnumerator<Bk2Frame> frames = movie.OpenFrameStream().GetEnumerator())
-            using (var session = new S1CompleteRunAudioReferenceCapture.Session(
-                host, host, host.CreateAudioTraceApi(), manifest, output))
-            {
-                for (int row=0;row<manifest.FirstRow;row++)
-                {
-                    AssertEx.Equal(true, frames.MoveNext());
-                    Bk2Frame frame = frames.Current;
-                    int observed = row;
-                    session.ObservePreEpochFrame(observed, frame, () =>
-                    {
-                        S1TraceCaptureRunner.ApplyFrame(frame, host);
-                        host.Advance();
-                    });
-                }
-                session.BeginEpoch();
-                int finalRow=terminalProbe?manifest.ExclusiveEnd-1:8775;
-                for (int row=manifest.FirstRow;row<=finalRow;row++)
-                {
-                    AssertEx.Equal(true, frames.MoveNext());
-                    Bk2Frame frame=frames.Current;
-                    int captured=row;
-                    session.CaptureFrame(captured,frame,() =>
-                    {
-                        S1TraceCaptureRunner.ApplyFrame(frame,host);
-                        host.Advance();
-                    });
-                }
-                session.Complete(finalRow+1);
-            }
+            RealPrefixResult result=CaptureRealPrefix(
+                terminalProbe?-1:8775,true);
+            S1CompleteRunAudioReferenceCapture.Manifest manifest=result.Manifest;
+            string rawOutput=result.Output;
             JObject baseline = null;
             JObject directParentRetry = null;
             ushort retryToken=0;
@@ -244,7 +212,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             var deferredEvidence=new List<JObject>();
             var row8775ManagedEvidence=new List<JObject>();
             var row8775DpcmBegins=new List<JObject>();
-            foreach (string line in output.ToString().Split(new[]{'\n'},
+            foreach (string line in rawOutput.Split(new[]{'\n'},
                 StringSplitOptions.RemoveEmptyEntries))
             {
                 JObject record = JObject.Parse(line);
@@ -439,6 +407,164 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 }
             }
             AssertEx.Equal("",string.Join("|",postChildPreTailHooks));
+        }
+
+        private static RealPrefixResult CaptureRealPrefix(int finalRow,bool complete)
+        {
+            string romPath = Environment.GetEnvironmentVariable("S1_ROM_PATH");
+            string moviePath = Environment.GetEnvironmentVariable("S1_AUDIO_BK2_PATH");
+            if (string.IsNullOrEmpty(romPath) || !File.Exists(romPath))
+                throw new InvalidOperationException("S1_ROM_PATH is required for the real audio prefix.");
+            if (string.IsNullOrEmpty(moviePath) || !File.Exists(moviePath))
+                throw new InvalidOperationException("S1_AUDIO_BK2_PATH is required for the real audio prefix.");
+            AssertEx.Equal("f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b",
+                Sha256(moviePath));
+            Bk2Movie movie = Bk2Reader.Read(moviePath);
+            AssertEx.Equal(225101, movie.FrameCount);
+            byte[] rom = File.ReadAllBytes(romPath);
+            string manifestPath = Path.Combine(EndToEndTests.ToolDirectory, "fixtures", FixtureName);
+            S1CompleteRunAudioReferenceCapture.Manifest manifest =
+                S1CompleteRunAudioReferenceCapture.LoadManifest(manifestPath, rom);
+            if(finalRow<0)finalRow=manifest.ExclusiveEnd-1;
+            var output = new StringWriter();
+            using (var host = GpgxHost.Open(romPath, movie.SyncSettings))
+            using (IEnumerator<Bk2Frame> frames = movie.OpenFrameStream().GetEnumerator())
+            using (var session = new S1CompleteRunAudioReferenceCapture.Session(
+                host, host, host.CreateAudioTraceApi(), manifest, output))
+            {
+                for (int row=0;row<manifest.FirstRow;row++)
+                {
+                    AssertEx.Equal(true, frames.MoveNext());
+                    Bk2Frame frame = frames.Current;
+                    int observed = row;
+                    session.ObservePreEpochFrame(observed, frame, () =>
+                    {
+                        S1TraceCaptureRunner.ApplyFrame(frame, host);
+                        host.Advance();
+                    });
+                }
+                session.BeginEpoch();
+                for (int row=manifest.FirstRow;row<=finalRow;row++)
+                {
+                    AssertEx.Equal(true, frames.MoveNext());
+                    Bk2Frame frame=frames.Current;
+                    int captured=row;
+                    session.CaptureFrame(captured,frame,() =>
+                    {
+                        S1TraceCaptureRunner.ApplyFrame(frame,host);
+                        host.Advance();
+                    });
+                }
+                if(complete)session.Complete(finalRow+1);
+            }
+            return new RealPrefixResult
+            {
+                Manifest=manifest,
+                Output=output.ToString()
+            };
+        }
+
+        private static void ProvesRow12525Action9KeepAndPromotion()
+        {
+            if(Environment.GetEnvironmentVariable("OPENGGF_S1_AUDIO_ROW12525")!="1")
+                throw new TestMain.SkipTestException(
+                    "OPENGGF_S1_AUDIO_ROW12525 is not enabled.");
+            RealPrefixResult result=CaptureRealPrefix(12525,false);
+            List<JObject> row=NativeRecords(result.Output,12525);
+            JObject rootBegin=SingleNative(row,value=>(byte)value["kind"]==1
+                &&(uint)value["pc"]==0x071B4C
+                &&(byte)value["service_kind"]==4
+                &&(ushort)value["parent_token"]==0
+                &&(byte)value["depth"]==0);
+            ushort rootToken=(ushort)rootBegin["service_token"];
+            JObject childBegin=SingleNative(row,value=>(byte)value["kind"]==1
+                &&(uint)value["pc"]==0x000077
+                &&(byte)value["service_kind"]==2
+                &&(ushort)value["parent_token"]==rootToken
+                &&(byte)value["depth"]==1);
+            ushort childToken=(ushort)childBegin["service_token"];
+            JObject keep=SingleNative(row,value=>(byte)value["kind"]==10
+                &&(uint)value["pc"]==0x072C24
+                &&(ushort)value["service_token"]==childToken
+                &&(ushort)value["parent_token"]==rootToken);
+            JObject rootEnd=SingleNative(row,value=>(byte)value["kind"]==2
+                &&(uint)value["pc"]==0x071C4C
+                &&(ushort)value["service_token"]==rootToken);
+            JObject promotion=SingleNative(row,value=>(byte)value["kind"]==11
+                &&(uint)value["pc"]==0x071C4C
+                &&(ushort)value["service_token"]==childToken);
+            JObject childEnd=SingleNative(row,value=>(byte)value["kind"]==2
+                &&(uint)value["pc"]==0x0000AC
+                &&(ushort)value["service_token"]==childToken);
+
+            AssertServiceTopology(rootBegin,4,0,0);
+            AssertServiceTopology(childBegin,2,rootToken,1);
+            AssertServiceTopology(keep,2,rootToken,1);
+            AssertEx.Equal((ushort)5,rootToken);
+            AssertEx.Equal((ushort)6,childToken);
+            AssertEx.Equal(0,(int)keep["value"]);
+            AssertEx.Equal((byte)9,
+                result.Manifest.NativeActionByToken[(ushort)keep["subject"]]);
+            AssertServiceTopology(rootEnd,4,0,0);
+            AssertServiceTopology(promotion,2,0,0);
+            AssertEx.Equal((byte)8,
+                result.Manifest.NativeActionByToken[(ushort)promotion["subject"]]);
+            AssertServiceTopology(childEnd,2,0,0);
+            AssertEx.Equal((uint)rootEnd["ordinal"]+1,
+                (uint)promotion["ordinal"]);
+            AssertEx.Equal(true,(uint)keep["ordinal"]<(uint)rootEnd["ordinal"]);
+            AssertEx.Equal(true,(uint)promotion["ordinal"]<(uint)childEnd["ordinal"]);
+
+            List<JObject> evidence=Records(result.Output,"managed_hook_evidence",
+                value=>(int)value["row"]==12525
+                    &&(uint)value["pc"]==0x072C24);
+            AssertEx.Equal(1,evidence.Count);
+            JObject callback=evidence[0];
+            AssertEx.Equal("CLOSE_IF_RETURN_OUTSIDE",(string)callback["action"]);
+            AssertEx.Equal((uint)0x00FFFDAE,
+                (uint)callback["registers"]["A7"]);
+            AssertEx.Equal((uint)0x00071C38,(uint)callback["return_pc"]);
+            AssertEx.Equal(childToken,(ushort)callback["native_service_token"]);
+            AssertEx.Equal(rootToken,(ushort)callback["native_parent_token"]);
+            AssertEx.Equal((ushort)keep["subject"],
+                (ushort)callback["native_hook_token"]);
+            AssertEx.Equal(0,(int)callback["native_marker_value"]);
+            JArray chain=(JArray)callback["native_correlation_events"];
+            AssertEx.Equal(1,chain.Count);
+            AssertEx.Equal((uint)keep["ordinal"],(uint)chain[0]["ordinal"]);
+            AssertEx.Equal(childToken,(ushort)chain[0]["service_token"]);
+            AssertEx.Equal(rootToken,(ushort)chain[0]["parent_token"]);
+            AssertEx.Equal(2,(int)chain[0]["service_kind"]);
+            AssertEx.Equal(1,(int)chain[0]["depth"]);
+            AssertEx.Equal(10,(int)chain[0]["event_kind"]);
+            AssertEx.Equal(0,(int)chain[0]["value"]);
+            AssertEx.Equal(true,(bool)chain[0]["terminal"]);
+            Console.WriteLine(
+                "ROW12525_PROOF root={0} child={1} keep_ordinal={2} "
+                +"callback_a7={3:X8} return_pc={4:X8} "
+                +"root_end_ordinal={5} promotion_ordinal={6} child_end_ordinal={7}",
+                rootToken,childToken,(uint)keep["ordinal"],
+                (uint)callback["registers"]["A7"],(uint)callback["return_pc"],
+                (uint)rootEnd["ordinal"],(uint)promotion["ordinal"],
+                (uint)childEnd["ordinal"]);
+        }
+
+        private static JObject SingleNative(List<JObject> row,
+            Func<JObject,bool> predicate)
+        {
+            var matches=new List<JObject>();
+            foreach(JObject value in row)
+                if(predicate(value))matches.Add(value);
+            AssertEx.Equal(1,matches.Count);
+            return matches[0];
+        }
+
+        private static void AssertServiceTopology(JObject value,byte kind,
+            ushort parent,byte depth)
+        {
+            AssertEx.Equal(kind,(byte)value["service_kind"]);
+            AssertEx.Equal(parent,(ushort)value["parent_token"]);
+            AssertEx.Equal(depth,(byte)value["depth"]);
         }
 
         private static string Sha256(string path)

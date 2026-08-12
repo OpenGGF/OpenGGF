@@ -335,6 +335,27 @@ frontier, not a reference-vs-OpenGGF semantic MATCH.
 These results establish a coherent handoff point; they are not a declaration
 that complete-game audio parity is finished.
 
+## Task 4 diagnostic real-proof continuation (2026-08-12)
+
+The strict row-12525 gate is now green on managed action-9 commit `7ba71fc889`
+plus the separately reviewed callback-stack prerequisite `71a8d889c`, using
+the unchanged Task 4 diagnostic install. It proves `$72C24` KEEP/value 0 at
+`A7=$FFFDAE`, return `$71C38`, with kind-2 token 6 remaining the child of
+kind-4 token 5; `$71C4C` later ends the root and immediately promotes the child,
+whose immutable begin ancestry remains parent 5/depth 1, before `$AC` closes
+the promoted child. The exact selector binds those identities relationally and
+only then checks deterministic token values.
+
+One bounded configured-terminal continuation stopped at the sole next exact
+frontier, row 21766, when the test-only real-proof aggregate `StringWriter`
+exceeded its capacity during `Session.ProcessFrame`. The production
+`NoReplacePublisher` was not involved. This is an infrastructure frontier, not
+a native observer first fault or semantic audio mismatch. No final reference
+was published, and the run was neither retried nor semantically broadened.
+Full evidence and hashes are recorded in
+`docs/architecture/validation/trace/2026-08-12-s1-row12525-managed-action9.md`
+and `docs/status/trace-frontier-log.md`.
+
 The capability fixture now binds collector source SHA-256
 `92fb4c4541931c30240ec0b62d00fba2d7e26dbaf12230dc2ab0d15b42465560`,
 production harness SHA-256
