@@ -78,6 +78,9 @@ final class LevelCheckpointCoordinator {
             if (ctx.hasCheckpointSolidBits()) {
                 cs.saveSolidBits(ctx.getCheckpointTopSolidBit(), ctx.getCheckpointLrbSolidBit());
             }
+            if (ctx.hasCheckpointTimer()) {
+                cs.saveActTimer(ctx.getCheckpointTimerFrames());
+            }
         }
         levelManager.waterCoordinator.restoreWaterFromCheckpoint(ctx);
     }

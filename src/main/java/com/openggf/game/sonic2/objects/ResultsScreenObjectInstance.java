@@ -41,6 +41,19 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen
     };
     private static final int PERFECT_BONUS_POINTS = 5000;
 
+    // Obj3A master sub-object slide geometry. Row 0 of Obj3A_SubObjectMetadata
+    // (docs/s2disasm/s2.asm:28159) is the row loc_140CE writes over the
+    // spawner's own slot, so it is the object whose routine-2 handler
+    // (loc_14102) decides when the whole screen leaves the slide.
+    // spriteScreenPositionX(0-96) and spriteScreenPositionXCentered(0) expand
+    // through docs/s2disasm/s2.macros.asm:276,280 with
+    // sprite_left_boundary = $80 and screen_width = 320
+    // (docs/s2disasm/s2.constants.asm:1051,1061).
+    private static final int ROM_MASTER_START_X = 0x80 + (0 - 96);
+    private static final int ROM_MASTER_TARGET_X = 0x80 + (320 / 2);
+    /** Obj34_MoveTowardsTargetPosition: moveq #$10,d0 (docs/s2disasm/s2.asm:27494). */
+    private static final int ROM_SLIDE_STEP_PIXELS = 0x10;
+
     // Bonus values
     private int timeBonus;
     private int ringBonus;
@@ -146,6 +159,21 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen
         totalBonus += totalIncrement;
 
         return tallyResult(anyRemaining, totalIncrement);
+    }
+
+    /**
+     * ROM {@code Obj3A} has no slide-in duration constant. The master object
+     * sits in routine 2 ({@code loc_14102}) stepping through
+     * {@code Obj34_MoveTowardsTargetPosition} and advances to routine $A only
+     * once {@code x_pixel} equals {@code titlecard_x_target}
+     * (docs/s2disasm/s2.asm:28128-28131). The length is therefore derived from
+     * the row-0 start/target and the routine's fixed 16px step:
+     * (288 - 32) / 16 = 16 frames. The shared base class's 60-frame default is
+     * not a ROM value.
+     */
+    @Override
+    protected int getSlideDuration() {
+        return (ROM_MASTER_TARGET_X - ROM_MASTER_START_X) / ROM_SLIDE_STEP_PIXELS;
     }
 
     @Override

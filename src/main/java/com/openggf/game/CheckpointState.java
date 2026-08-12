@@ -39,6 +39,14 @@ public class CheckpointState implements RespawnState {
     private byte savedTopSolidBit = 0x0C;
     private byte savedLrbSolidBit = 0x0D;
     private boolean hasSolidBits;
+    // ROM Saved_Timer / v_lamp_time / Saved_timer: the act timer banked by the
+    // star post and reinstated by its load routine, so an act's elapsed time
+    // survives a death respawn and a special-stage detour.
+    //   S2  save  docs/s2disasm/s2.asm:44743
+    //   S1  save  docs/s1disasm/_incObj/79 Lamppost.asm:158
+    //   S3K save  docs/skdisasm/sonic3k.asm:61721 (and Saved2 at :61745)
+    private long savedTimerFrames;
+    private boolean hasSavedTimer;
 
     public record RewindState(
             int lastCheckpointIndex,
@@ -57,7 +65,9 @@ public class CheckpointState implements RespawnState {
             boolean hasS3kRuntimeState,
             byte savedTopSolidBit,
             byte savedLrbSolidBit,
-            boolean hasSolidBits) {}
+            boolean hasSolidBits,
+            long savedTimerFrames,
+            boolean hasSavedTimer) {}
 
     /**
      * Clear checkpoint state (called on level start/change).
@@ -80,6 +90,8 @@ public class CheckpointState implements RespawnState {
         savedTopSolidBit = 0x0C;
         savedLrbSolidBit = 0x0D;
         hasSolidBits = false;
+        savedTimerFrames = 0;
+        hasSavedTimer = false;
     }
 
     /**
@@ -99,8 +111,69 @@ public class CheckpointState implements RespawnState {
         this.savedCameraY = camera.getY();
         saveProviderRuntimeStateIfPresent(camera);
         savePlayerSolidBitsIfPresent();
+        saveActTimerIfPresent();
 
         LOGGER.fine("Saved checkpoint " + lastCheckpointIndex + " at (" + savedX + ", " + savedY + ")");
+    }
+
+    /**
+     * ROM {@code move.l (Timer).w,(Saved_Timer).w} at the star post's save
+     * routine -- S2 docs/s2disasm/s2.asm:44743,
+     * S1 docs/s1disasm/_incObj/79 Lamppost.asm:158,
+     * S3K docs/skdisasm/sonic3k.asm:61721. All three games bank the running act
+     * timer alongside position, rings and camera.
+     */
+    private void saveActTimerIfPresent() {
+        LevelState levelState = GameServices.levelOrNull() != null
+                ? GameServices.levelOrNull().getLevelGamestate()
+                : null;
+        if (levelState == null) {
+            savedTimerFrames = 0;
+            hasSavedTimer = false;
+            return;
+        }
+        savedTimerFrames = levelState.getTimerFrames();
+        hasSavedTimer = true;
+    }
+
+    /**
+     * ROM checkpoint-load timer reinstatement. All three games run the same
+     * three instructions:
+     *
+     * <pre>
+     *   move.l (Saved_Timer).w,(Timer).w
+     *   move.b #59,(Timer_frame).w
+     *   subq.b #1,(Timer_second).w
+     * </pre>
+     *
+     * S2 {@code Obj79_LoadData} docs/s2disasm/s2.asm:4783-4785,
+     * S1 docs/s1disasm/_incObj/79 Lamppost.asm:193-195,
+     * S3K docs/skdisasm/sonic3k.asm:61776-61778 (and the Saved2 big-ring path
+     * at :61803-61805).
+     *
+     * <p>{@code Timer} is minute/second/frame with {@code Timer_frame} counting
+     * UP and rolling at 60 in {@code HudUpdate} (docs/s2disasm/s2.asm:87775-87786),
+     * so elapsed frames are {@code minute*3600 + second*60 + frame}. Forcing
+     * frame to 59 and rolling the second back one therefore discards the stored
+     * partial second and re-ticks it on the very next HUD update: elapsed
+     * becomes {@code minute*3600 + second*60 - 1}. (When the stored second is 0
+     * the ROM's byte {@code subq} wraps it to 255 and the next HUD tick carries
+     * it straight back to 0, which is the same observable minute/second as the
+     * clamped expression below.)
+     */
+    private void restoreActTimerIfSaved() {
+        if (!hasSavedTimer) {
+            return;
+        }
+        com.openggf.level.LevelManager level = GameServices.levelOrNull();
+        LevelState levelState = level != null ? level.getLevelGamestate() : null;
+        if (levelState == null) {
+            return;
+        }
+        long minutes = savedTimerFrames / 3600;
+        long seconds = (savedTimerFrames / 60) % 60;
+        long restored = minutes * 3600 + seconds * 60 - 1;
+        levelState.setTimerFrames(Math.max(0, restored));
     }
 
     private void savePlayerSolidBitsIfPresent() {
@@ -152,6 +225,8 @@ public class CheckpointState implements RespawnState {
         // Clear rings (ROM behavior)
         player.setRingCount(0);
 
+        restoreActTimerIfSaved();
+
         if (camera != null) {
             camera.setFocusedSprite(player);
             if (hasS3kRuntimeState) {
@@ -199,6 +274,28 @@ public class CheckpointState implements RespawnState {
         }
 
         LOGGER.info("Restored from checkpoint " + lastCheckpointIndex);
+    }
+
+    /**
+     * Re-seats the banked act timer across a level reload, alongside the water,
+     * runtime and solid-bit state carried on {@link LevelLoadContext}. The ROM
+     * keeps {@code Saved_Timer} in main RAM across the reload rather than
+     * re-deriving it, so the engine's per-load {@code CheckpointState} has to
+     * carry it the same way.
+     */
+    public void saveActTimer(long timerFrames) {
+        this.savedTimerFrames = timerFrames;
+        this.hasSavedTimer = true;
+    }
+
+    /** ROM {@code Saved_Timer} banked at the star post; see {@link #saveActTimerIfPresent()}. */
+    public long getSavedTimerFrames() {
+        return savedTimerFrames;
+    }
+
+    /** True once a star post has banked an act timer this life. */
+    public boolean hasSavedTimer() {
+        return hasSavedTimer;
     }
 
     public boolean isActive() {
@@ -338,7 +435,9 @@ public class CheckpointState implements RespawnState {
                 hasS3kRuntimeState,
                 savedTopSolidBit,
                 savedLrbSolidBit,
-                hasSolidBits);
+                hasSolidBits,
+                savedTimerFrames,
+                hasSavedTimer);
     }
 
     public void restoreRewindState(RewindState state) {
@@ -363,5 +462,7 @@ public class CheckpointState implements RespawnState {
         this.savedTopSolidBit = state.savedTopSolidBit();
         this.savedLrbSolidBit = state.savedLrbSolidBit();
         this.hasSolidBits = state.hasSolidBits();
+        this.savedTimerFrames = state.savedTimerFrames();
+        this.hasSavedTimer = state.hasSavedTimer();
     }
 }

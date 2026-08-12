@@ -73446,3 +73446,61 @@ not reach a new active level segment within
 round, stated as a hypothesis: the walk failure and the +122 residual may be one
 defect — "the engine's post-signpost results/fade tail runs longer than the
 ROM's" — but no causal measurement was taken.
+
+
+## 2026-08-12 — S2 emerald run seg6 (seg4_ehz1): 24 -> 5 errors, boundary now reached
+
+Command (scratch worktree at 22b31ec3b + this change):
+
+```
+rm -rf target/surefire-reports target/trace-reports
+mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+    -Dsonic1.rom.path=<s1.gen> -Dsonic2.rom.path=<s2.gen> -Ds3k.rom.path=<s3k.gen> \
+    "-Dtest=TestS2CompleteEmeraldRunChain" test
+```
+
+CONTROL at 22b31ec3b reproduced exactly: 2 axes, `[segment-physics]` seg6 24
+errors all on the terminal row 1287, first non-camera mismatch
+`dynamic_art.frame` rom=1287 engine=1409; `[walk-failure]` `level_advance`
+never observed.
+
+MEASURED VERDICT on the previous round's open hypothesis: the two axes ARE one
+defect. Instrumenting `AbstractResultsScreen` showed the engine's end-of-act
+sequence running 1040 frames against the ROM's 403, so it never reached the
+level advance inside `TraceRunReplayWalker.LATE_BOUNDARY_GRACE_FRAMES` (120).
+CORRECTION to the previous round's framing: "+122" was never an engine
+quantity — 122 is the grace window, and the reported `dynamic_art.frame` is
+capped by it, so that number is insensitive to the size of the overrun.
+
+ROM ground truth for the sequence, from the fixture's own aux (Obj3A appears
+seg6 row 821, sub-objects 885, segment ends 1287) and `Obj3A`:
+PLC wait 64 + slide 16 + routine $A 180 + tally 27 + routine $E 180 = 403,
+landing `loc_14270` (`Level_Inactive_flag`) on 1288. Every term derived, then
+confirmed against the recording.
+
+Two invented durations found and replaced by ROM-derived rules:
+`AbstractResultsScreen.DEFAULT_SLIDE_DURATION = 60` against the ROM's
+position-driven 16, and a missing `Saved_Timer` bank/reinstate that made the
+time bonus 5000 instead of 100.
+
+AFTER: seg6 24 -> 5 errors, still all on row 1287; `dynamic_art.frame` rom=1287
+engine=1309. Engine phase lengths now match the ROM exactly (16 / 180 / 27 /
+180). The `[walk-failure]` axis moved from "boundary never observed" to
+"coordinator denied segment 7 admission in phase TRANSITION_GAP".
+
+NEW FRONTIER, measured not inferred: `AbstractResultsScreen.STATE_EXIT` runs 21
+further frames because `ResultsScreenObjectInstance.triggerFadeToBlack` fades to
+black and then calls `advanceToNextLevel`. The ROM does no such fade: `loc_14270`
+writes `Current_ZoneAndAct` + `Level_Inactive_flag`, and the same iteration's
+`tst.w (Level_Inactive_flag).w / bne.w Level` (s2.asm:5096-5097) leaves
+`Level_MainLoop` immediately. That engine-side fade is the whole of the
+remaining 22-row terminal offset and is the next target; it was left alone this
+round because removing a transition fade is a visual-lifecycle change, not a
+results-timing one.
+
+Full profile after the change: 770 tests / 1 failure / 3 errors / 4 skipped —
+unchanged shape, same pre-existing S3K `KOS_DECOMPRESSION_QUEUE` #14/#15/#335.
+`TestS2EhzHalfpipeRoundTripChain`, all eight S2 standalone special-stage
+classes, both S1 emerald-run classes, the gap journal/comparator, the terminal
+tail, the hardware-timing and rewind guards, `TestAdoptedOpeningRowComparison`
+and `TestDynamicArtLifecycleService` all green (103/103 in one fork).
