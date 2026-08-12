@@ -132,8 +132,6 @@ namespace OpenGGF.BizHawk.Headless
             private sealed class Entry
             {
                 internal ushort Token;
-                internal ushort ParentToken;
-                internal byte Depth;
                 internal uint Stack;
             }
             private readonly List<Entry> entries = new List<Entry>();
@@ -150,39 +148,16 @@ namespace OpenGGF.BizHawk.Headless
             }
             internal void Begin(ushort token, uint stack)
             {
-                Begin(token,stack,0,0);
-            }
-            internal void Begin(ushort token,uint stack,ushort parentToken,
-                byte depth)
-            {
                 if (MatchesToken(token) || entries.Count >= 8)
                     throw new InvalidOperationException(
                         "Managed service begin reused or overflowed its native token.");
-                entries.Add(new Entry {Token=token,ParentToken=parentToken,
-                    Depth=depth,Stack=stack});
+                entries.Add(new Entry {Token=token,Stack=stack});
             }
             internal bool Matches(ushort token, uint stack)
             {
                 for (int i=entries.Count-1;i>=0;i--)
                     if (entries[i].Token==token)
                         return entries[i].Stack==stack;
-                return false;
-            }
-            internal bool MatchesOwner(ushort token,byte depth,uint stack)
-            {
-                for(int i=entries.Count-1;i>=0;i--)
-                    if(entries[i].Token==token)
-                        return entries[i].Depth==depth
-                            &&entries[i].Stack==stack;
-                return false;
-            }
-            internal bool MatchesDirectChild(ushort parentToken,
-                byte childDepth,uint stack)
-            {
-                for(int i=entries.Count-1;i>=0;i--)
-                    if(entries[i].Token==parentToken)
-                        return entries[i].Depth+1==childDepth
-                            &&entries[i].Stack==stack;
                 return false;
             }
             internal void End(ushort token)
@@ -198,8 +173,7 @@ namespace OpenGGF.BizHawk.Headless
             {
                 var copy=new ManagedServiceTracker();
                 for(int i=0;i<entries.Count;i++)copy.entries.Add(new Entry
-                    {Token=entries[i].Token,ParentToken=entries[i].ParentToken,
-                        Depth=entries[i].Depth,Stack=entries[i].Stack});
+                    {Token=entries[i].Token,Stack=entries[i].Stack});
                 return copy;
             }
             internal void Restore(ManagedServiceTracker source)
@@ -207,8 +181,6 @@ namespace OpenGGF.BizHawk.Headless
                 entries.Clear();
                 for(int i=0;i<source.entries.Count;i++)entries.Add(new Entry
                     {Token=source.entries[i].Token,
-                        ParentToken=source.entries[i].ParentToken,
-                        Depth=source.entries[i].Depth,
                         Stack=source.entries[i].Stack});
             }
             internal bool MatchesBoundary(
@@ -219,13 +191,10 @@ namespace OpenGGF.BizHawk.Headless
                 {
                     if(active[i].Kind!=4)continue;
                     nativeCount++;
-                    bool found=false;
-                    for(int j=0;j<entries.Count;j++)
-                        if(entries[j].Token==active[i].Token
-                            &&entries[j].ParentToken==active[i].ParentToken
-                            &&entries[j].Depth==active[i].Depth)
-                        {found=true;break;}
-                    if(!found)return false;
+                    for(int j=0;j<i;j++)
+                        if(active[j].Kind==4
+                            &&active[j].Token==active[i].Token)return false;
+                    if(!MatchesToken(active[i].Token))return false;
                 }
                 return nativeCount==entries.Count;
             }
@@ -886,7 +855,7 @@ namespace OpenGGF.BizHawk.Headless
                 if(!boundaryManagedServices.MatchesBoundary(
                     frontier.ActiveServices))
                     throw new InvalidOperationException(
-                        "Native/managed service boundary ancestry differs.");
+                        "Native/managed service boundary token set differs.");
                 DeferredManagedBegin carriedDeferred=ValidateBoundaryDeferredBegin(
                     frontier.PendingDeferredBegin);
                 frontier=observer.CaptureBoundaryFrontierAndResetPublication();
@@ -1369,7 +1338,7 @@ namespace OpenGGF.BizHawk.Headless
                     {
                         if(value.Kind==1)
                             boundaryManagedServices.Begin(value.ServiceToken,
-                                occurrence.Stack,value.ParentToken,value.Depth);
+                                occurrence.Stack);
                         pendingBoundaryManaged.Dequeue();
                         return;
                     }
@@ -1380,7 +1349,7 @@ namespace OpenGGF.BizHawk.Headless
                     if(!MatchesManagedObservationOwner(boundaryManagedServices,
                         value,occurrence.Stack))
                         throw new InvalidOperationException(
-                            "Ordinary S1 driverinput managed ancestor differs.");
+                            "Ordinary S1 driverinput managed identity differs.");
                     pendingBoundaryManaged.Dequeue();
                     return;
                 }
@@ -1404,7 +1373,7 @@ namespace OpenGGF.BizHawk.Headless
                     throw new InvalidOperationException(
                         "Deferred S1 boundary consume identity or nested begin differs.");
                 boundaryManagedServices.Begin(value.ServiceToken,
-                    occurrence.Stack,value.ParentToken,value.Depth);
+                    occurrence.Stack);
                 boundaryDeferredBegin=null;
                 pendingBoundaryManaged.Dequeue();
             }
@@ -1484,7 +1453,7 @@ namespace OpenGGF.BizHawk.Headless
                         if(!MatchesManagedObservationOwner(managedServices,value,
                                 occurrence.Stack))
                             throw new InvalidOperationException(
-                                "Ordinary S1 driverinput managed ancestor differs.");
+                                "Ordinary S1 driverinput managed identity differs.");
                         completeOccurrence=true;
                     }
                     else if(nativeAction!=12
@@ -1645,11 +1614,9 @@ namespace OpenGGF.BizHawk.Headless
                 uint stack)
             {
                 if(value.ServiceKindId==4)
-                    return services.MatchesOwner(value.ServiceToken,
-                        value.Depth,stack);
+                    return services.Matches(value.ServiceToken,stack);
                 return (value.ServiceKindId==2||value.ServiceKindId==3)
-                    &&services.MatchesDirectChild(value.ParentToken,
-                        value.Depth,stack);
+                    &&services.Matches(value.ParentToken,stack);
             }
 
             private bool HasManagedServiceCandidate()

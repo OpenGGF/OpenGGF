@@ -110,6 +110,18 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S1CompleteRunAudioReferenceCaptureTests reject invalid driverinput ownership",
                 RejectsInvalidDriverInputOwnership));
             tests.Add(new TestMain.TestCase(
+                "S1CompleteRunAudioReferenceCaptureTests correlate promoted managed identity in both epochs",
+                CorrelatesPromotedManagedIdentityInBothEpochs));
+            tests.Add(new TestMain.TestCase(
+                "S1CompleteRunAudioReferenceCaptureTests enforce managed token A7 and cutoff set identity",
+                EnforcesManagedTokenA7AndCutoffSetIdentity));
+            tests.Add(new TestMain.TestCase(
+                "S1CompleteRunAudioReferenceCaptureTests carry promoted managed identity across epoch",
+                CarriesPromotedManagedIdentityAcrossEpoch));
+            tests.Add(new TestMain.TestCase(
+                "S1CompleteRunAudioReferenceCaptureTests cancel and roll back promoted managed identity",
+                CancelsAndRollsBackPromotedManagedIdentity));
+            tests.Add(new TestMain.TestCase(
                 "S1CompleteRunAudioReferenceCaptureTests track a deferred child wholly before the epoch",
                 TracksDeferredChildWhollyBeforeEpoch));
             tests.Add(new TestMain.TestCase(
@@ -798,7 +810,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private static void RejectsInvalidDriverInputOwnership()
         {
             AssertDriverInputVisitFails((current,api)=>
-                api.VisitZ80(0x0077,current),"ancestor");
+                api.VisitZ80(0x0077,current),"identity");
             AssertDriverInputVisitFails((current,api)=>
                 api.VisitZ80(0x003A,current),"reservation");
             AssertDriverInputManagedIdentityFails();
@@ -818,7 +830,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             });
             using(var session=CreateSession(host,api,new StringWriter()))
                 AssertEx.Throws<InvalidOperationException>(
-                    ()=>session.CaptureFrame(860,host.Advance),"ancestor");
+                    ()=>session.CaptureFrame(860,host.Advance),"identity");
         }
 
         private static void AssertDriverInputVisitFails(
@@ -835,6 +847,341 @@ namespace OpenGGF.BizHawk.Headless.Tests
             using(var session=CreateSession(host,api,new StringWriter()))
                 AssertEx.Throws<InvalidOperationException>(
                     ()=>session.CaptureFrame(860,host.Advance),message);
+        }
+
+        private static void CorrelatesPromotedManagedIdentityInBothEpochs()
+        {
+            AssertPromotedManagedIdentity(true);
+            AssertPromotedManagedIdentity(false);
+            AssertPromotedDirectChildIdentity(0x0077,0x00AC,2,true);
+            AssertPromotedDirectChildIdentity(0x0077,0x00AC,2,false);
+            AssertPromotedDirectChildIdentity(0x00C1,0x00D0,3,true);
+            AssertPromotedDirectChildIdentity(0x00C1,0x00D0,3,false);
+        }
+
+        private static void AssertPromotedManagedIdentity(bool preEpoch)
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDAE);
+                current.SetU32(0xFDAE,0x00000B64);
+                api.VisitZ80(0x0077,current);
+                Visit(current,api,0x071B4C);
+                api.VisitZ80(0x00AC,current);
+                Visit(current,api,0x071B82);
+                Visit(current,api,0x071C4C);
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                if(preEpoch)
+                {
+                    session.ObservePreEpochFrame(859,null,host.Advance);
+                    AssertEx.Equal(0,output.ToString().Length);
+                    AssertEx.Equal(0,session.BoundaryManagedServiceCountForTesting);
+                    session.BeginEpoch();
+                    AssertEx.Equal(0,CountRecords(output.ToString(),"native_event"));
+                    AssertEx.Equal(0,CountRecords(output.ToString(),
+                        "managed_hook_evidence"));
+                    return;
+                }
+                session.CaptureFrame(860,host.Advance);
+                session.Complete(861);
+            }
+            string raw=output.ToString();
+            AssertEx.Equal(1,CountNativeKind(raw,11));
+            JObject observation=Records(raw,"managed_hook_evidence",
+                value=>(uint)value["pc"]==0x071B82)[0];
+            JArray correlation=(JArray)observation["native_correlation_events"];
+            AssertEx.Equal(1,correlation.Count);
+            AssertEx.Equal(4,(int)correlation[0]["service_kind"]);
+            AssertEx.Equal(0,(int)correlation[0]["parent_token"]);
+            AssertEx.Equal(0,(int)correlation[0]["depth"]);
+        }
+
+        private static void AssertPromotedDirectChildIdentity(
+            uint childBegin,uint childEnd,byte childKind,bool preEpoch)
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDAE);
+                current.SetU32(0xFDAE,0x00000B64);
+                api.VisitZ80(0x0077,current);
+                Visit(current,api,0x071B4C);
+                api.VisitZ80(0x00AC,current);
+                api.VisitZ80(childBegin,current);
+                Visit(current,api,0x071B82);
+                api.VisitZ80(childEnd,current);
+                Visit(current,api,0x071C4C);
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                if(preEpoch)
+                {
+                    session.ObservePreEpochFrame(859,null,host.Advance);
+                    AssertEx.Equal(0,output.ToString().Length);
+                    session.BeginEpoch();
+                    AssertEx.Equal(0,CountRecords(output.ToString(),
+                        "managed_hook_evidence"));
+                    return;
+                }
+                session.CaptureFrame(860,host.Advance);
+                session.Complete(861);
+            }
+            JObject observation=Records(output.ToString(),
+                "managed_hook_evidence",value=>(uint)value["pc"]==0x071B82)[0];
+            JObject correlation=(JObject)observation[
+                "native_correlation_events"][0];
+            AssertEx.Equal(childKind,(byte)correlation["service_kind"]);
+            AssertEx.Equal(1,(int)correlation["depth"]);
+            AssertEx.Equal((ushort)2,(ushort)correlation["parent_token"]);
+        }
+
+        private static void EnforcesManagedTokenA7AndCutoffSetIdentity()
+        {
+            AssertPromotedObservationA7Fails(0,0);
+            AssertPromotedObservationA7Fails(0x0077,0x00AC);
+            AssertPromotedObservationA7Fails(0x00C1,0x00D0);
+            AssertPromotedObservationTokenFails(0,0);
+            AssertPromotedObservationTokenFails(0x0077,0x00AC);
+            AssertPromotedObservationTokenFails(0x00C1,0x00D0);
+
+            var tracker=new S1CompleteRunAudioReferenceCapture.ManagedServiceTracker();
+            tracker.Begin(3,0x00FFFDAE);
+            AssertEx.Equal(false,tracker.Matches(4,0x00FFFDAE));
+            AssertEx.Equal(false,tracker.Matches(3,0x00FFFDB2));
+            AssertEx.Throws<InvalidOperationException>(
+                ()=>tracker.Begin(3,0x00FFFDAE),"reused");
+            AssertEx.Throws<InvalidOperationException>(
+                ()=>tracker.End(4),"no open");
+            AssertEx.Equal(1,tracker.Count);
+
+            CompleteRunAudioObserver.DriverService promoted=ManagedBoundaryService(
+                3,1,1,0,0);
+            AssertEx.Equal(true,tracker.MatchesBoundary(
+                new[]{promoted}));
+            AssertEx.Equal(false,tracker.MatchesBoundary(
+                new CompleteRunAudioObserver.DriverService[0]));
+            AssertEx.Equal(false,tracker.MatchesBoundary(new[]{promoted,
+                ManagedBoundaryService(4,0,0,0,0)}));
+            AssertEx.Equal(false,tracker.MatchesBoundary(new[]{
+                ManagedBoundaryService(4,0,0,0,0)}));
+            AssertEx.Equal(false,tracker.MatchesBoundary(new[]{promoted,
+                promoted}));
+        }
+
+        private static void AssertPromotedObservationA7Fails(
+            uint childBegin,uint childEnd)
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDAE);
+                api.VisitZ80(0x0077,current);
+                Visit(current,api,0x071B4C);
+                api.VisitZ80(0x00AC,current);
+                if(childBegin!=0)api.VisitZ80(childBegin,current);
+                current.SetCpuRegister("A7",0x00FFFDB2);
+                Visit(current,api,0x071B82);
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                session.BeginEpoch();
+                int before=output.ToString().Length;
+                AssertEx.Throws<InvalidOperationException>(
+                    ()=>session.CaptureFrame(860,host.Advance),"identity");
+                AssertEx.Equal(before,output.ToString().Length);
+            }
+        }
+
+        private static void AssertPromotedObservationTokenFails(
+            uint childBegin,uint childEnd)
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDAE);
+                api.VisitZ80(0x0077,current);
+                Visit(current,api,0x071B4C);
+                api.VisitZ80(0x00AC,current);
+                if(childBegin!=0)api.VisitZ80(childBegin,current);
+                Visit(current,api,0x071B82);
+                api.MutateLast(value=>
+                {
+                    if(childBegin==0)value.ServiceToken++;
+                    else value.ParentToken++;
+                    return value;
+                });
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                session.BeginEpoch();
+                int before=output.ToString().Length;
+                AssertEx.Throws<InvalidOperationException>(
+                    ()=>session.CaptureFrame(860,host.Advance),
+                    "native audio observer returned invalid");
+                AssertEx.Equal(before,output.ToString().Length);
+            }
+        }
+
+        private static CompleteRunAudioObserver.DriverService
+            ManagedBoundaryService(ushort token,ushort parent,byte depth,
+                ushort currentParent,byte currentDepth)
+        {
+            return new CompleteRunAudioObserver.DriverService(
+                new CompleteRunAudioObserver.ServiceBuilder
+                {
+                    Token=token,ParentToken=parent,Kind=4,Depth=depth,
+                    CurrentParentToken=currentParent,CurrentDepth=currentDepth
+                },false);
+        }
+
+        private static void CarriesPromotedManagedIdentityAcrossEpoch()
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDAE);
+                if(frame==1)
+                {
+                    api.VisitZ80(0x0077,current);
+                    Visit(current,api,0x071B4C);
+                    api.VisitZ80(0x00AC,current);
+                    return;
+                }
+                Visit(current,api,0x071B82);
+                Visit(current,api,0x071C4C);
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                session.ObservePreEpochFrame(859,null,host.Advance);
+                AssertEx.Equal(0,output.ToString().Length);
+                AssertEx.Equal(1,session.BoundaryManagedServiceCountForTesting);
+                session.BeginEpoch();
+                JObject baseline=Record(output.ToString(),"baseline",0);
+                JArray active=(JArray)baseline["active_services"];
+                AssertEx.Equal(1,active.Count);
+                AssertEx.Equal(4,(int)active[0]["kind"]);
+                AssertEx.Equal(1,(int)active[0]["parent_token"]);
+                AssertEx.Equal(1,(int)active[0]["depth"]);
+                AssertEx.Equal(0,(int)active[0]["current_parent_token"]);
+                AssertEx.Equal(0,(int)active[0]["current_depth"]);
+                AssertEx.Equal(1,
+                    ((JArray)active[0]["ancestry_transitions"]).Count);
+                AssertEx.Equal(0,CountRecords(output.ToString(),"native_event"));
+                AssertEx.Equal(0,CountRecords(output.ToString(),
+                    "managed_hook_evidence"));
+                session.CaptureFrame(860,host.Advance);
+                session.Complete(861);
+            }
+            AssertEx.Equal(1,Records(output.ToString(),"managed_hook_evidence",
+                value=>(uint)value["pc"]==0x071B82).Count);
+        }
+
+        private static void CancelsAndRollsBackPromotedManagedIdentity()
+        {
+            AssertPromotedBoundaryReset(false,true,false);
+            AssertPromotedBoundaryReset(true,false,false);
+            AssertPromotedBoundaryReset(true,true,false);
+            AssertPromotedBoundaryReset(false,true,true);
+            RollsBackPromotedObservationAfterMalformedTail(false);
+            RollsBackPromotedObservationAfterMalformedTail(true);
+        }
+
+        private static void AssertPromotedBoundaryReset(
+            bool power,bool reset,bool malformed)
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDAE);
+                if(frame==1)
+                {
+                    api.VisitZ80(0x0077,current);
+                    Visit(current,api,0x071B4C);
+                    api.VisitZ80(0x00AC,current);
+                    return;
+                }
+                if(power)api.EmitReset(true,current);
+                if(reset)api.EmitReset(false,current);
+                if(malformed)api.RemoveFirst(value=>value.Kind==2
+                    &&(value.Flags&2)!=0&&value.ServiceKindId==4);
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                session.ObservePreEpochFrame(858,null,host.Advance);
+                AssertEx.Equal(1,session.BoundaryManagedServiceCountForTesting);
+                if(malformed)
+                {
+                    AssertEx.Throws<InvalidOperationException>(()=>
+                        session.ObservePreEpochFrame(859,
+                            new Bk2Frame{Power=power,Reset=reset},host.Advance),
+                        "native audio observer returned invalid");
+                    AssertEx.Equal(1,
+                        session.BoundaryManagedServiceCountForTesting);
+                    AssertEx.Equal(true,session.ResetScratchClearForTesting);
+                }
+                else
+                {
+                    session.ObservePreEpochFrame(859,
+                        new Bk2Frame{Power=power,Reset=reset},host.Advance);
+                    AssertEx.Equal(0,
+                        session.BoundaryManagedServiceCountForTesting);
+                    session.BeginEpoch();
+                    AssertEx.Equal(0,((JArray)Record(output.ToString(),
+                        "baseline",0)["active_services"]).Count);
+                }
+            }
+            if(malformed)AssertEx.Equal(0,output.ToString().Length);
+        }
+
+        private static void RollsBackPromotedObservationAfterMalformedTail(
+            bool preEpoch)
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDAE);
+                if(frame==1)
+                {
+                    api.VisitZ80(0x0077,current);
+                    Visit(current,api,0x071B4C);
+                    api.VisitZ80(0x00AC,current);
+                    return;
+                }
+                Visit(current,api,0x071B82);
+                Visit(current,api,0x071C4C);
+                api.MutateLast(value=>{value.ServiceToken++;return value;});
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                if(preEpoch)
+                {
+                    session.ObservePreEpochFrame(858,null,host.Advance);
+                    AssertEx.Throws<InvalidOperationException>(()=>
+                        session.ObservePreEpochFrame(859,null,host.Advance),
+                        "native audio observer returned invalid");
+                    AssertEx.Equal(1,
+                        session.BoundaryManagedServiceCountForTesting);
+                    AssertEx.Equal(0,output.ToString().Length);
+                    return;
+                }
+                session.BeginEpoch();
+                session.CaptureFrame(860,host.Advance);
+                int before=output.ToString().Length;
+                AssertEx.Throws<InvalidOperationException>(()=>
+                    session.CaptureFrame(861,host.Advance),
+                    "native audio observer returned invalid");
+                AssertEx.Equal(before,output.ToString().Length);
+            }
         }
 
         private static void TracksDeferredChildWhollyBeforeEpoch()
@@ -900,7 +1247,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 session.ObservePreEpochFrame(858,null,host.Advance);
                 AssertEx.Equal(1,session.BoundaryManagedServiceCountForTesting);
                 AssertEx.Throws<InvalidOperationException>(()=>
-                    session.ObservePreEpochFrame(859,null,host.Advance),"ancestor");
+                    session.ObservePreEpochFrame(859,null,host.Advance),"identity");
                 AssertEx.Equal(1,session.BoundaryManagedServiceCountForTesting);
                 AssertEx.Equal(0,output.ToString().Length);
             }
@@ -2747,6 +3094,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 if (hook.Action == 1) Push(hook);
                 else if (hook.Action == 2) SnapshotAndPop(hook, host);
                 else if(hook.Action==4)SnapshotTailAndPush(hook,host);
+                else if(hook.Action==8)
+                    SnapshotDirectParentAndPromote(hook,host);
                 else throw new InvalidOperationException(
                     "Fake native Z80 visit used an unsupported action.");
             }
