@@ -14,6 +14,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -631,6 +632,47 @@ public final class S2CompleteRunReferenceRawAdapter {
         };
     }
 
+    private static final int PUSH_BEGIN = 1;
+    private static final int POP_END = 2;
+    private static final int TAIL_POP_PUSH = 4;
+    private static final Map<Integer, List<Integer>> KIND_RANGES = Map.of(
+            1, List.of(2), 2, List.of(1), 3, List.of(2),
+            4, List.of(2), 5, List.of(2), 6, List.of(2),
+            7, List.of(2), 8, List.of(2), 9, List.of(2));
+    private static final Map<Integer, Hook> HOOKS = Map.ofEntries(
+            hook(11, PUSH_BEGIN, 0, 6, 1, 0),
+            hook(1, PUSH_BEGIN, 0, 3, 1, 56),
+            hook(2, PUSH_BEGIN, 4, 3, 1, 56),
+            hook(3, POP_END, 3, 0, 1, 231, 2),
+            hook(4, POP_END, 3, 0, 1, 271, 2),
+            hook(21, PUSH_BEGIN, 3, 9, 1, 272),
+            hook(22, POP_END, 9, 0, 1, 331, 2),
+            hook(12, POP_END, 6, 0, 1, 369, 2),
+            hook(5, PUSH_BEGIN, 0, 4, 1, 378),
+            hook(13, TAIL_POP_PUSH, 3, 4, 1, 378, 2),
+            hook(20, TAIL_POP_PUSH, 4, 4, 1, 378, 2),
+            hook(6, POP_END, 4, 0, 1, 432, 2),
+            hook(14, TAIL_POP_PUSH, 3, 7, 1, 1808, 2),
+            hook(15, TAIL_POP_PUSH, 7, 7, 1, 1808, 2),
+            hook(16, TAIL_POP_PUSH, 7, 3, 1, 1842, 2),
+            hook(23, POP_END, 9, 0, 1, 3508, 2),
+            hook(17, TAIL_POP_PUSH, 3, 8, 1, 4744, 2),
+            hook(18, TAIL_POP_PUSH, 8, 8, 1, 4744, 2),
+            hook(19, TAIL_POP_PUSH, 8, 3, 1, 4860, 2),
+            hook(7, PUSH_BEGIN, 0, 5, 2, 638),
+            hook(8, POP_END, 5, 0, 2, 648, 2),
+            hook(9, PUSH_BEGIN, 0, 2, 2, 966656),
+            hook(10, POP_END, 2, 0, 2, 966710, 1));
+
+    private static Map.Entry<Integer, Hook> hook(int token, int action, int expectedKind,
+            int serviceKind, int sourceCpu, long pc, int... ranges) {
+        return Map.entry(token, new Hook(token, action, expectedKind, serviceKind,
+                sourceCpu, pc, List.of(java.util.Arrays.stream(ranges).boxed().toArray(Integer[]::new))));
+    }
+
+    private record Hook(int token, int action, int expectedKind, int serviceKind,
+            int sourceCpu, long pc, List<Integer> ranges) { }
+
     /** Cross-event ABI state that must be complete at every native frame boundary. */
     private static final class FrameValidator {
         private final List<Owner> activeServices = new ArrayList<>();
@@ -643,40 +685,75 @@ public final class S2CompleteRunReferenceRawAdapter {
 
         private void validate(List<RawEvent> events) {
             RawEvent snapshot = null;
+            Owner snapshotOwner = null;
             int snapshotLength = 0;
             int snapshotOffset = 0;
             Owner reset = null;
             int resetPower = 0;
+            Hook pendingTail = null;
             for (RawEvent event : events) {
                 if (snapshot != null && event.kind() != 6 && event.kind() != 7) {
                     throw invalid("S2 raw snapshot events are not contiguous");
                 }
+                if (pendingTail != null && (event.kind() != 1
+                        || event.subject() != pendingTail.token())) {
+                    throw invalid("S2 raw tail completion has no adjacent manifest begin");
+                }
                 switch (event.kind()) {
                     case 1 -> {
                         require(reset == null, "S2 raw service begins during reset cancellation");
+                        Hook hook = requireHook(event.subject());
+                        require(hook.action() == PUSH_BEGIN || hook.action() == TAIL_POP_PUSH,
+                                "S2 raw service begin does not name a begin hook");
+                        if (hook.action() == TAIL_POP_PUSH) {
+                            require(pendingTail == hook,
+                                    "S2 raw tail begin lacks its adjacent completion");
+                        } else {
+                            require(pendingTail == null && topKind() == hook.expectedKind(),
+                                    "S2 raw begin expected-active-kind changed");
+                        }
                         int parent = activeServices.isEmpty() ? 0
-                                : activeServices.getLast().token();
+                                : activeServices.getLast().token;
                         require(event.parentToken() == parent
-                                        && event.depth() == activeServices.size(),
-                                "S2 raw service begin does not extend the active stack");
+                                        && event.depth() == activeServices.size()
+                                        && event.serviceKind() == hook.serviceKind()
+                                        && event.sourceCpu() == hook.sourceCpu()
+                                        && event.pc() == hook.pc(),
+                                "S2 raw service begin does not match its manifest hook/parent");
                         activeServices.add(Owner.of(event));
+                        pendingTail = null;
                     }
                     case 2 -> {
                         require(!activeServices.isEmpty()
                                         && activeServices.getLast().matches(event),
                                 "S2 raw service end does not own the active stack top");
+                        Owner owner = activeServices.getLast();
                         if (reset != null) require(event.flags() == 2,
                                 "S2 raw non-cancelled service end occurs during reset");
-                        if (event.flags() == 2) require(reset != null,
-                                "S2 raw cancellation occurs outside a reset");
+                        if (event.flags() == 2) {
+                            require(reset != null, "S2 raw cancellation occurs outside a reset");
+                            owner.requireSnapshots(canonicalRanges(owner.kind), event.sourceCpu(), event.pc());
+                        } else {
+                            Hook hook = requireHook(event.subject());
+                            require((hook.action() == POP_END || hook.action() == TAIL_POP_PUSH)
+                                            && hook.expectedKind() == owner.kind
+                                            && event.sourceCpu() == hook.sourceCpu()
+                                            && event.pc() == hook.pc(),
+                                    "S2 raw service end does not match its manifest hook");
+                            owner.requireSnapshots(hook.ranges(), event.sourceCpu(), event.pc());
+                            if (hook.action() == TAIL_POP_PUSH) pendingTail = hook;
+                        }
                         activeServices.removeLast();
                     }
                     case 3, 4 -> require(owned(event, activeServices, reset),
                             "S2 raw chip event is not owned by the active service");
                     case 5 -> {
-                        require(owned(event, activeServices, reset),
+                        snapshotOwner = owner(event, activeServices, reset);
+                        require(snapshotOwner != null,
                                 "S2 raw snapshot begin is not owned by the active service");
                         require(snapshot == null, "S2 raw snapshot begin overlaps another snapshot");
+                        require(canonicalRanges(snapshotOwner.kind).contains(event.subject()),
+                                "S2 raw snapshot range is outside its owning service manifest slice");
                         snapshot = event;
                         snapshotLength = event.subject() == 1 ? 8192 : 1;
                         snapshotOffset = 0;
@@ -693,7 +770,10 @@ public final class S2CompleteRunReferenceRawAdapter {
                         sameSnapshotOwner(snapshot, event);
                         require(snapshotOffset == snapshotLength && event.offset() == snapshotLength,
                                 "S2 raw snapshot byte count changed");
+                        snapshotOwner.snapshots.add(new SnapshotEvidence(event.subject(),
+                                event.sourceCpu(), event.pc()));
                         snapshot = null;
+                        snapshotOwner = null;
                     }
                     case 8 -> {
                         require(reset == null && event.subject() == activeServices.size(),
@@ -706,6 +786,7 @@ public final class S2CompleteRunReferenceRawAdapter {
                                         && reset.matches(event)
                                         && event.flags() == resetPower,
                                 "S2 raw reset begin/end pairing changed");
+                        reset.requireSnapshots(canonicalRanges(1), event.sourceCpu(), event.pc());
                         reset = null;
                     }
                     default -> { }
@@ -713,6 +794,13 @@ public final class S2CompleteRunReferenceRawAdapter {
             }
             require(snapshot == null, "S2 raw snapshot stream ended before END");
             require(reset == null, "S2 raw reset stream ended before reset end");
+            require(pendingTail == null, "S2 raw tail completion ended without its begin");
+            require(activeServices.stream().allMatch(owner -> owner.snapshots.isEmpty()),
+                    "S2 raw manifest snapshot is not adjacent to service completion");
+        }
+
+        private int topKind() {
+            return activeServices.isEmpty() ? 0 : activeServices.getLast().kind;
         }
 
         private static void sameSnapshotOwner(RawEvent begin, RawEvent event) {
@@ -726,12 +814,30 @@ public final class S2CompleteRunReferenceRawAdapter {
                     "S2 raw snapshot owner/range/source changed mid-stream");
         }
 
-        private static boolean owned(RawEvent event, List<Owner> active, Owner reset) {
-            return reset != null && reset.matches(event)
-                    || !active.isEmpty() && active.getLast().matches(event);
+        private static Owner owner(RawEvent event, List<Owner> active, Owner reset) {
+            if (reset != null && reset.matches(event)) return reset;
+            if (!active.isEmpty() && active.getLast().matches(event)) return active.getLast();
+            return null;
         }
 
-        private record Owner(int token, int parentToken, int kind, int depth) {
+        private static boolean owned(RawEvent event, List<Owner> active, Owner reset) {
+            return owner(event, active, reset) != null;
+        }
+
+        private static final class Owner {
+            private final int token;
+            private final int parentToken;
+            private final int kind;
+            private final int depth;
+            private final List<SnapshotEvidence> snapshots = new ArrayList<>();
+
+            private Owner(int token, int parentToken, int kind, int depth) {
+                this.token = token;
+                this.parentToken = parentToken;
+                this.kind = kind;
+                this.depth = depth;
+            }
+
             private static Owner of(RawEvent event) {
                 return new Owner(event.serviceToken(), event.parentToken(),
                         event.serviceKind(), event.depth());
@@ -741,7 +847,33 @@ public final class S2CompleteRunReferenceRawAdapter {
                 return token == event.serviceToken() && parentToken == event.parentToken()
                         && kind == event.serviceKind() && depth == event.depth();
             }
+
+            private void requireSnapshots(List<Integer> ranges, int sourceCpu, long pc) {
+                require(snapshots.size() == ranges.size(),
+                        "S2 raw service is missing its exact manifest snapshot slice");
+                for (int i = 0; i < ranges.size(); i++) {
+                    SnapshotEvidence snapshot = snapshots.get(i);
+                    require(snapshot.range() == ranges.get(i)
+                                    && snapshot.sourceCpu() == sourceCpu && snapshot.pc() == pc,
+                            "S2 raw service snapshot range/source/PC differs from its manifest hook");
+                }
+                snapshots.clear();
+            }
         }
+
+        private record SnapshotEvidence(int range, int sourceCpu, long pc) { }
+    }
+
+    private static Hook requireHook(int token) {
+        Hook hook = HOOKS.get(token);
+        require(hook != null, "S2 raw event hook is absent from the pinned manifest");
+        return hook;
+    }
+
+    private static List<Integer> canonicalRanges(int serviceKind) {
+        List<Integer> ranges = KIND_RANGES.get(serviceKind);
+        require(ranges != null, "S2 raw service kind has no canonical manifest range slice");
+        return ranges;
     }
 
     private static boolean validFlags(int kind, int flags) {

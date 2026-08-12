@@ -172,8 +172,17 @@ class TestS2CompleteRunReferenceRawAdapter {
         for (String events : List.of(
                 resetBegin(0, 0),
                 resetEnd(0, 0),
-                resetBegin(1, 1) + "," + resetCancellation(1) + "," + resetEnd(2, 0),
-                resetBegin(1, 0) + "," + normalDpcmCompletion(1) + "," + resetEnd(2, 0))) {
+                resetBegin(1, 1) + ","
+                        + snapshotTransaction(1, 1, 0, 4, 0, 3, 0, 2) + ","
+                        + resetCancellation(4) + "," + resetEnd(5, 1),
+                resetBegin(1, 1) + ","
+                        + snapshotTransaction(1, 1, 0, 4, 0, 3, 0, 2) + ","
+                        + resetCancellation(4) + ","
+                        + snapshotTransaction(5, 9, 0, 1, 0, 3, 0, 2) + ","
+                        + resetEnd(8, 0),
+                resetBegin(1, 0) + ","
+                        + snapshotTransaction(1, 1, 0, 4, 0, 1, 378, 2) + ","
+                        + normalDpcmCompletion(4) + "," + resetEnd(5, 0))) {
             Path raw = temporary.resolve("bad-reset-" + Math.abs(events.hashCode()) + ".jsonl");
             Files.writeString(raw, metadata() + boundary("baseline", "\"row\":769,", state)
                     + "{\"type\":\"frame\",\"row\":769,\"lag\":false,\"state_hex\":\"" + state
@@ -185,9 +194,13 @@ class TestS2CompleteRunReferenceRawAdapter {
     }
 
     @Test
-    void acceptsExactlyPairedResetWithMatchingPowerAndCancellationCount() throws Exception {
+    void acceptsResetWithExactServiceAndResetManifestSnapshots() throws Exception {
         String state = "00".repeat(8192);
-        String events = resetBegin(1, 1) + "," + resetCancellation(1) + "," + resetEnd(2, 1);
+        String events = resetBegin(1, 1) + ","
+                + snapshotTransaction(1, 1, 0, 4, 0, 3, 0, 2) + ","
+                + resetCancellation(4) + ","
+                + snapshotTransaction(5, 9, 0, 1, 0, 3, 0, 2) + ","
+                + resetEnd(8, 1);
         Path raw = temporary.resolve("valid-reset.jsonl");
         Files.writeString(raw, metadata() + boundary("baseline", "\"row\":769,", state)
                 + "{\"type\":\"frame\",\"row\":769,\"lag\":false,\"state_hex\":\"" + state
@@ -195,6 +208,28 @@ class TestS2CompleteRunReferenceRawAdapter {
                 + boundary("cutoff", "\"exclusive_end\":770,", state));
 
         S2CompleteRunReferenceRawAdapter.scanPrefixForTesting(raw, new RecordingSink());
+    }
+
+    @Test
+    void rejectsNormalCompletionWithoutItsManifestSnapshotRange() throws Exception {
+        assertFrameRejected("missing-completion-range", normalDpcmCompletion(0));
+    }
+
+    @Test
+    void rejectsSnapshotRangeOutsideTheOwningServiceManifestSlice() throws Exception {
+        assertFrameRejected("wrong-owner-range",
+                snapshotTransaction(0, 1, 0, 4, 0, 1, 432, 1));
+    }
+
+    @Test
+    void rejectsBeginHookWhoseExpectedTopKindDoesNotMatchItsParent() throws Exception {
+        String nestedRootOnlyVint = "{" + event()
+                .replace("\"pc\":4660", "\"pc\":56")
+                .replace("\"kind\":6", "\"kind\":1")
+                .replace("\"service_kind\":2", "\"service_kind\":3")
+                .replace("\"payload_length\":8", "\"payload_length\":0")
+                .replace("\"payload\":\"18446744073709551615\"", "\"payload\":\"0\"") + "}";
+        assertFrameRejected("wrong-begin-parent", nestedRootOnlyVint);
     }
 
     @Test
@@ -367,7 +402,8 @@ class TestS2CompleteRunReferenceRawAdapter {
     }
 
     private static String snapshotEvents() {
-        return "{" + snapshotBegin() + "},{" + snapshotChunk() + "},{" + snapshotEnd() + "}";
+        return "{" + snapshotBegin() + "},{" + snapshotChunk() + "},{" + snapshotEnd() + "},"
+                + dpcmPopCompletion(3);
     }
 
     private static String snapshotBegin() {
@@ -436,12 +472,61 @@ class TestS2CompleteRunReferenceRawAdapter {
                 .replace("\"payload\":\"18446744073709551615\"", "\"payload\":\"0\"") + "}";
     }
 
+    private void assertFrameRejected(String name, String events) throws Exception {
+        String state = "00".repeat(8192);
+        Path raw = temporary.resolve(name + ".jsonl");
+        Files.writeString(raw, metadata() + boundary("baseline", "\"row\":769,", state)
+                + "{\"type\":\"frame\",\"row\":769,\"lag\":false,\"state_hex\":\"" + state
+                + "\",\"events\":[" + events + "]}\n"
+                + boundary("cutoff", "\"exclusive_end\":770,", state));
+        assertThrows(IllegalArgumentException.class,
+                () -> S2CompleteRunReferenceRawAdapter.scanPrefixForTesting(raw, new RecordingSink()));
+    }
+
+    private static String snapshotTransaction(int firstOrdinal, int token, int parent,
+            int serviceKind, int depth, int source, int pc, int range) {
+        int length = range == 1 ? 8192 : 1;
+        StringBuilder result = new StringBuilder();
+        result.append(snapshotEvent(firstOrdinal, token, parent, pc, range, 0,
+                5, serviceKind, depth, source, 0, "0"));
+        int ordinal = firstOrdinal + 1;
+        for (int offset = 0; offset < length; offset += 8) {
+            int count = Math.min(8, length - offset);
+            if (!result.isEmpty()) result.append(',');
+            result.append(snapshotEvent(ordinal++, token, parent, pc, range, offset,
+                    6, serviceKind, depth, source, count,
+                    count == 1 ? "255" : "18446744073709551615"));
+        }
+        result.append(',').append(snapshotEvent(ordinal, token, parent, pc, range, length,
+                7, serviceKind, depth, source, 0, "0"));
+        return result.toString();
+    }
+
+    private static String snapshotEvent(int ordinal, int token, int parent, int pc,
+            int range, int offset, int kind, int serviceKind, int depth, int source,
+            int payloadLength, String payload) {
+        return "{\"ordinal\":" + ordinal + ",\"service_token\":" + token
+                + ",\"parent_token\":" + parent + ",\"pc\":" + pc
+                + ",\"subject\":" + range + ",\"offset\":" + offset
+                + ",\"kind\":" + kind + ",\"service_kind\":" + serviceKind
+                + ",\"depth\":" + depth + ",\"source_cpu\":" + source
+                + ",\"payload_length\":" + payloadLength
+                + ",\"value\":0,\"flags\":0,\"reserved\":0,\"payload\":\""
+                + payload + "\"}";
+    }
+
     private static String normalDpcmCompletion(int ordinal) {
         return resetCancellation(ordinal)
                 .replace("\"pc\":0", "\"pc\":378")
                 .replace("\"subject\":0", "\"subject\":20")
                 .replace("\"source_cpu\":3", "\"source_cpu\":1")
                 .replace("\"flags\":2", "\"flags\":0");
+    }
+
+    private static String dpcmPopCompletion(int ordinal) {
+        return normalDpcmCompletion(ordinal)
+                .replace("\"pc\":378", "\"pc\":432")
+                .replace("\"subject\":20", "\"subject\":6");
     }
 
     private static String service() {

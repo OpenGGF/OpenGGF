@@ -212,9 +212,14 @@ marker/promotion hooks; and frontier kind zero is invalid. Snapshot events must
 form one contiguous BEGIN/CHUNK/END transaction with stable owner, range,
 source, and PC. Reset begin/end events must pair within their frame, name the
 exact active-service cancellation count, and preserve the power bit. The
-row-769 kind-4 baseline must remain open and noncancelled.
+row-769 kind-4 baseline must remain open and noncancelled. A pinned immutable
+copy of the S2 hook graph additionally checks each begin against its action,
+expected active kind, service kind, parent, and depth. Every normal completion,
+reset cancellation, and reset end consumes exactly its manifest-declared
+canonical snapshot slice; the active row-769 kind-4 service therefore accepts
+range 2 only, never the 8 KiB upload range 1.
 
-Focused verification passed 29 S2 Java tests, eight S2 profile tests, eight S2
+Focused verification passed 32 S2 Java tests, eight S2 profile tests, eight S2
 capture/raw-sink synthetic tests, and the one opt-in real boundary gate. The
 production C# addition changes the deterministic harness identities to
 `ec8c2b6745faf72dca885d918372a8e3d678235681ab954b948f75a31de4c4c6`
