@@ -284,6 +284,27 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **The special stage and the level share Sonic 2's three last-loaded-DPLC
+  registers (2026-08-12):** dumping the run chains' transition-gap art ledger
+  against the fixture showed the engine never submitting Tails' body art at a
+  level reload — it submitted Tails' *tail* art instead. The ROM has exactly three
+  such registers, one per player art bank (`Sonic_LastLoadedDPLC`,
+  `Tails_LastLoadedDPLC`, `TailsTails_LastLoadedDPLC` at
+  `s2.constants.asm:1556,1625-1626`), and the special stage *shares* them with the
+  level: `Obj09`/`Obj10`/`Obj88` initialise them to `#1` and the stage's own DPLC
+  loaders keep deduplicating against those same bytes. `Level_ClrRam` then zeroes
+  all three on every level load, since they lie inside `Misc_Variables`
+  (`:1484-1629`) — the same clear behind two earlier fixes today. The engine had
+  given the special-stage submitters a private dedup namespace and never cleared
+  the level's, so the returned level suppressed a player's first mapping-frame
+  transfer against a value stale since before the stage. Dedup now keys on the ROM
+  register rather than the comparison owner, and the registers are cleared where
+  `Level_ClrRam` clears them. Both gaps now carry both recorded owners at the
+  recorded row in the recorded order. S1 has the same shape (`v_sonframenum`
+  inside `clearRAM v_levelvariables`, `sonic.asm:2742`). Measured en route and
+  worth recording: placing the clear in the mid-gameplay art-refresh path instead
+  wipes an established dedup mid-segment and turns both standalone oracles red at
+  3,051 and 2,232 errors — the oracles caught it before it landed.
 - **One title-card tail for displayed and omitted cards, and both S2 run chains
   clear the returned level (2026-08-12):** `TitleCardManager` held two
   implementations of ROM `Obj34_WaitAndGoAway` (`s2.asm:27605-27637`), the routine

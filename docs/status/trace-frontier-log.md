@@ -73175,3 +73175,50 @@ same iteration). No constant was introduced.
   `VintID_Menu` (s2.asm:12468) and `Vint_Menu` calls `ProcessDMAQueue`
   (:1138); `SPECIAL_STAGE_PAUSE` is classified true but
   `Vint_Pause_specialStage` (:818-836) never reaches `ProcessDMAQueue`.
+
+## 2026-08-12 - S2 special-stage-return dynamic-art gap ledger: owner split closed
+
+- Worktree `<wt>/s2gapledger`, branch
+  `bugfix/ai-s2-gap-ledger-owner`, over `458cf2c6e`.
+- Measured control (temporary probe on `AbstractRunChainTest`'s gap journal,
+  reverted before commit): both S2 run chains' special-stage-return gaps
+  disagreed with the fixture on OWNER. Gap `ss -> seg2_ehz1` engine carried 8
+  edges (`sonic mf1` sub/comp, `tails-tails mf10` sub/comp, `tails mf16`,
+  `tails mf17`) against the fixture's 8 (`sonic mf1` + `tails mf1` submitted,
+  both completed, `tails mf16`, `tails mf17`); gap `ss_2 -> seg3_ehz1` engine
+  carried 11 against the fixture's 8. The comparison had never been evaluated:
+  the probe's `verify(run)` runs at the end of `assertChainReplay` and the
+  segment-4 physics assertion aborts first.
+- Root cause: the ROM has one last-loaded-DPLC register per player art bank and
+  the special stage shares them with the level (s2.asm:69095, 69205, 70378,
+  70403, 70504, 70586-70588 against :38834-38836, 41639-41641, 41663-41665),
+  and `Level_ClrRam` zeroes all three on every level load
+  (`clearRAM Misc_Variables,Misc_Variables_End`; s2.constants.asm:1484, 1556,
+  1625-1626, 1629). The engine kept a private special-stage dedup namespace and
+  never cleared the level's.
+- After: both gaps carry `sonic mf1` and `tails mf1` submitted on the same row,
+  in the recorded order (idx 0 then idx 1), with matching completions.
+- Residual, NOT closed this round: each gap still carries a spurious
+  `tails-tails mf9` (idx 2) and `tails-tails mf10` pair - 4 extra edges per gap.
+  The engine's Obj05 selects `Obj05Ani_Swish` because its Tails parent is in
+  `TailsAni_Wait` at the reload; the fixture's Obj05 emits nothing until
+  `seg2_ehz1` frame 99 (mf $51, `Obj05Ani_Down`). ROM DPLC entry counts read out
+  of the ROM for frames 9-$D are 1 each and frame 0 is 0, so the ROM's Obj05
+  must be holding the blank frame through that window - the next question is the
+  ROM's Tails `anim` timeline across the pre-main-loop tail, which no committed
+  aux carries. Setting `TailsTailsController.lastParentAnim`'s initial value to
+  the ROM's cleared `Obj05_parent_prev_anim` (0, not -1) was tried and changed
+  nothing; it was reverted rather than landed unmeasured.
+- The `sonic mf15` edge at the end of gap `ss_2 -> seg3_ehz1` persists; it is
+  the separately known harness defect (segment row 0 executed inside the gap).
+- Full profile: `mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1
+  -Dsurefire.runOrder=alphabetical` with all three ROM paths - 770 tests,
+  2 failures, 3 errors, 4 skipped, identical to the control at `458cf2c6e`.
+  `TestS2Ehz1Seg2CompleteEmeraldsSegmentTraceReplay`,
+  `TestS2Ehz1Seg2HalfpipeSegmentTraceReplay` and `TestS1GhzMazeRoundTripChain`
+  stay green.
+- Placement note: an earlier candidate cleared the registers inside
+  `LevelPlayableArtInitializer.initialize()`, which is also the mid-gameplay
+  `refreshPlayableSpriteArt` path; that wiped an established dedup mid-segment
+  and turned both S2 segment oracles red (3051 and 2232 errors). The clear
+  belongs on the level-load phase only, matching `Level_ClrRam`.

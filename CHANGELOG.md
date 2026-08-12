@@ -3,6 +3,25 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the S2 player last-loaded-DPLC registers are one byte per art bank and are
+  cleared by every level load. Sonic 2 has exactly three
+  (`Sonic_LastLoadedDPLC` / `Tails_LastLoadedDPLC` / `TailsTails_LastLoadedDPLC`,
+  s2.constants.asm:1556, 1625-1626), and the special stage writes the very same
+  bytes as the level does -- `Obj09`/`Obj10`/`Obj88` init them to `#1`
+  (s2.asm:69095, 70378, 70403) and `LoadSSSonicDynPLC` / `LoadSSTailsDynPLC` /
+  `LoadSSTailsTailsDynPLC` keep deduping against them (:69205, 70504,
+  70586-70588), while the level's `LoadSonicDynPLC` / `LoadTailsDynPLC` /
+  `LoadTailsTailsDynPLC` read and write them at :38834-38836, 41639-41641,
+  41663-41665. The engine instead gave the special-stage submitters a private
+  dedup namespace and never reset the level's, so a level entered after a
+  special stage suppressed a player's first mapping-frame transfer against a
+  value stale since before the stage. Dedup is now keyed by the ROM register
+  (bank), and `LevelManager.initArt` clears the registers where `Level_ClrRam`
+  does (`clearRAM Misc_Variables,Misc_Variables_End`; S1's
+  `clearRAM v_levelvariables`, sonic.asm:2742, covers `v_sonframenum`
+  identically). Both S2 run chains' special-stage-return gap ledgers now carry
+  the recorded `sonic mf1` and `tails mf1` submissions, in the recorded order,
+  where before each gap was missing one of the two owners.
 - Fix: S2's displayed title card runs the same `Obj34_WaitAndGoAway` tail as the omitted
   one. `TitleCardManager` carried two implementations of that ROM routine
   (s2.asm:27605-27637) -- the omitted-presentation tail modelled it exactly, while the
