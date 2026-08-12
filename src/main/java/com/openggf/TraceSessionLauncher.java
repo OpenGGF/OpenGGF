@@ -2428,16 +2428,55 @@ public final class TraceSessionLauncher {
     static boolean runGapRowContinuesSourceLevelMainLoop(
             GameMode mode, boolean levelExitWritten) {
         TraceSessionLauncher session = active();
-        if (session == null
-                || session.activeRunDisposition
-                        != TraceRunFrameDriver.Disposition.SHARED_GAP) {
+        if (session != null) {
+            if (session.activeRunDisposition
+                    != TraceRunFrameDriver.Disposition.SHARED_GAP) {
+                return false;
+            }
+            boolean firstGapRow = !session.runGapSourceLevelMainLoopEnded;
+            session.runGapSourceLevelMainLoopEnded = true;
+            return firstGapRow
+                    && !levelExitWritten
+                    && suppressesRunNativeLevelBody(mode);
+        }
+        // Driver-only run replay (no launcher session): the same rule, read
+        // from the installed run frame driver. Both drivers implement one
+        // contract and must not disagree about which gap rows belong to the
+        // source level's own main loop.
+        GameplayModeContext context = SessionManager.getCurrentGameplayMode();
+        TraceRunFrameDriver.Disposition disposition = context == null
+                ? null
+                : context.traceRunFrameDriver()
+                        .map(TraceRunFrameDriver::currentDisposition)
+                        .orElse(null);
+        if (disposition != TraceRunFrameDriver.Disposition.SHARED_GAP) {
             return false;
         }
-        boolean firstGapRow = !session.runGapSourceLevelMainLoopEnded;
-        session.runGapSourceLevelMainLoopEnded = true;
+        boolean firstGapRow = context.consumeRunGapFirstRow();
         return firstGapRow
                 && !levelExitWritten
                 && suppressesRunNativeLevelBody(mode);
+    }
+
+    /**
+     * Announces the start of a shared transition gap for a driver-only run
+     * replay, the counterpart of the launcher's
+     * {@code EnterTransitionGap} coordinator action
+     * ({@link #runGapSourceLevelMainLoopEnded} reset above). It carries no
+     * trace data and decides nothing about the gap's content: it only re-arms
+     * the one-row latch that
+     * {@link #runGapRowContinuesSourceLevelMainLoop} consumes.
+     *
+     * <p>The latch lives on the current session's {@link GameplayModeContext},
+     * not in a static: a static one is armed at some gaps and consumed at
+     * others, so the answer a gap gets depends on what ran before it -- across
+     * gaps within a run, and across test classes sharing a surefire fork.
+     */
+    public static void beginDriverOnlyRunTransitionGap() {
+        GameplayModeContext context = SessionManager.getCurrentGameplayMode();
+        if (context != null) {
+            context.beginRunTransitionGap();
+        }
     }
 
     static boolean shouldSkipRunGameplayTick(

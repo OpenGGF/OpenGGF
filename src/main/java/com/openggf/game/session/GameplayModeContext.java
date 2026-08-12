@@ -94,6 +94,12 @@ public final class GameplayModeContext implements ModeContext {
     private final DynamicArtLifecycleService dynamicArtLifecycle;
     private final RunLevelLoadTracker runLevelLoads = new RunLevelLoadTracker();
     private TraceRunFrameDriver traceRunFrameDriver;
+    /**
+     * Latched once the source level's main loop has stopped owning the current
+     * run-chain transition gap's rows. Session-scoped so no earlier gap, test
+     * class, or replay run can decide it for a later one.
+     */
+    private boolean runGapSourceLevelMainLoopEnded;
 
     private Camera camera;
     private TimerManager timerManager;
@@ -534,6 +540,25 @@ public final class GameplayModeContext implements ModeContext {
 
     public Optional<TraceRunFrameDriver> traceRunFrameDriver() {
         return Optional.ofNullable(traceRunFrameDriver);
+    }
+
+    /**
+     * Re-arms the one-row latch that decides which rows of a run-chain
+     * transition gap are still owned by the source level's own main loop (see
+     * {@code TraceSessionLauncher.runGapRowContinuesSourceLevelMainLoop}).
+     */
+    public void beginRunTransitionGap() {
+        runGapSourceLevelMainLoopEnded = false;
+    }
+
+    /**
+     * Consumes that latch: true exactly once per armed gap, on the first row
+     * that asks.
+     */
+    public boolean consumeRunGapFirstRow() {
+        boolean first = !runGapSourceLevelMainLoopEnded;
+        runGapSourceLevelMainLoopEnded = true;
+        return first;
     }
 
     public void installTraceRunFrameDriver(TraceRunFrameDriver driver) {

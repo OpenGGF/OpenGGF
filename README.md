@@ -284,6 +284,40 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **The engine ran a level body across a run-chain transition gap, and a static
+  latch decided gap behaviour from whatever ran before (2026-08-12):** the
+  emerald run's `seg4_ehz1 → seg5_ehz2` gap emitted 72 art edges against a
+  recorded 12. A stack-trace probe put every surplus edge on
+  `SpriteManager.tickPlayablePhysics` — the ordinary level body, running for all
+  163 gap rows with the mode never leaving `LEVEL`. The production suppression
+  gate was already correct: `suppressesRunNativeLevelBody` requires an installed
+  `TraceRunFrameDriver`, and the chain harness installed one for special-stage
+  interiors and terminal tails but not for level→level gaps, so the gate was inert
+  and the adapter stepped the whole gap with a bare `loop.step()`. Driving those
+  steps through an installed driver removes all 60 surplus edges using only
+  pre-existing production rules — no count, window, offset or position was
+  introduced. The same work left a static latch armed at one of eight `gapOpened`
+  sites and consumed on a different path, so the value any gap saw came from an
+  earlier gap or an earlier test class in a reused surefire fork — this project's
+  documented flaky-test shape. It is now a per-session field on
+  `GameplayModeContext` and the static is deleted, with behaviour identical across
+  isolated, paired and full-profile runs.
+- **The Sonic-and-Tails all-emeralds S3K run is captured, and the trace profile
+  has the heap it measures (2026-08-12):** the run lost in an earlier revert is
+  re-captured and landed — 63 segments, 514,619 rows, 40 transitions, with 64 new
+  replay classes. The revert is vindicated by measurement rather than argument:
+  the recorder's Kosinski "backreference precedes output" check was kept fully
+  intact and **never fired**, confirming that its removal was never necessary and
+  that the sampling-race fix was the real cause. Three special-stage classes pass
+  outright; the rest are frontier harnesses reporting precise first divergences,
+  and they surface genuinely unimplemented territory — `HPZ22`, `DEZ23` and `DDZ`
+  act 2 have no engine level-list entries at all, this being the first committed
+  route to reach them. The capture also made the profile die with an
+  `OutOfMemoryError` that presented as a *better* result — 401 tests, 1 failure, 2
+  errors — because every class after `TestS3kMegaRunChain` alphabetically, including
+  the 64 new ones, never ran. Measured with GC logging, the profile's peak live set
+  is 2,069 MB, 21 MB above the 2 GB it had; it now runs at 3 GB and completes all
+  834 tests.
 - **The S2 title card holds for its PLC drain, not a fitted 60 frames
   (2026-08-12):** `TitleCardManager` carried `DISPLAY_HOLD_DURATION = 60` under a
   comment openly rationalising it as a stand-in for hardware decompression time —
