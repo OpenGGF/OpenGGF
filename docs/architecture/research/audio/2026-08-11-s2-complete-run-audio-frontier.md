@@ -206,13 +206,15 @@ no ROM, movie, raw payload, or native binary was copied or published.
 
 Follow-up adversarial review hardened the adapter against shapes that strict
 JSON typing alone did not exclude: every event kind now obeys its ABI-v3 field
-shape and the pinned S2 begin/completion hooks; kinds 10/11 are rejected because
-the reviewed S2 manifest has no marker/promotion hooks; frontier kind zero is
-invalid; and ancestry transitions must form one exact chain from immutable
-begin ancestry to current ancestry. The row-769 kind-4 baseline must remain
-open and noncancelled.
+shape and the pinned S2 begin/completion hooks; kinds 10/11 and all ancestry
+transitions are rejected because the reviewed S2 manifest has no
+marker/promotion hooks; and frontier kind zero is invalid. Snapshot events must
+form one contiguous BEGIN/CHUNK/END transaction with stable owner, range,
+source, and PC. Reset begin/end events must pair within their frame, name the
+exact active-service cancellation count, and preserve the power bit. The
+row-769 kind-4 baseline must remain open and noncancelled.
 
-Focused verification passed 25 S2 Java tests, eight S2 profile tests, eight S2
+Focused verification passed 29 S2 Java tests, eight S2 profile tests, eight S2
 capture/raw-sink synthetic tests, and the one opt-in real boundary gate. The
 production C# addition changes the deterministic harness identities to
 `ec8c2b6745faf72dca885d918372a8e3d678235681ab954b948f75a31de4c4c6`

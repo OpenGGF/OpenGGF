@@ -23,7 +23,7 @@ class TestS2CompleteRunReferenceRawAdapter {
         Files.writeString(raw, metadata()
                 + boundary("baseline", "\"row\":769,", state)
                 + "{\"type\":\"frame\",\"row\":769,\"lag\":true,\"state_hex\":\"" + state
-                + "\",\"events\":[{" + event() + "}]}\n"
+                + "\",\"events\":[" + snapshotEvents() + "]}\n"
                 + boundary("cutoff", "\"exclusive_end\":770,", state));
         var sink = new RecordingSink();
 
@@ -33,8 +33,8 @@ class TestS2CompleteRunReferenceRawAdapter {
         assertEquals(1, sink.frames.size());
         assertEquals(true, sink.frames.getFirst().lag());
         assertArrayEquals(new byte[8192], sink.frames.getFirst().driverState());
-        assertEquals(new BigInteger("18446744073709551615"),
-                sink.frames.getFirst().events().getFirst().payload());
+        assertEquals(new BigInteger("255"),
+                sink.frames.getFirst().events().get(1).payload());
         assertEquals(770, sink.cutoff.exclusiveEnd());
     }
 
@@ -134,6 +134,70 @@ class TestS2CompleteRunReferenceRawAdapter {
     }
 
     @Test
+    void rejectsLoneSnapshotChunkWithoutTransactionalEnvelope() throws Exception {
+        String state = "00".repeat(8192);
+        Path raw = temporary.resolve("lone-snapshot-chunk.jsonl");
+        Files.writeString(raw, metadata() + boundary("baseline", "\"row\":769,", state)
+                + "{\"type\":\"frame\",\"row\":769,\"lag\":false,\"state_hex\":\"" + state
+                + "\",\"events\":[{" + event() + "}]}\n"
+                + boundary("cutoff", "\"exclusive_end\":770,", state));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> S2CompleteRunReferenceRawAdapter.scanPrefixForTesting(raw, new RecordingSink()));
+    }
+
+    @Test
+    void rejectsSnapshotOwnerRangeOffsetAndTailChangesMidStream() throws Exception {
+        String state = "00".repeat(8192);
+        for (String changed : List.of(
+                snapshotChunk().replace("\"subject\":2", "\"subject\":1"),
+                snapshotChunk().replace("\"source_cpu\":1", "\"source_cpu\":2"),
+                snapshotChunk().replace("\"pc\":432", "\"pc\":433"),
+                snapshotChunk().replace("\"offset\":0", "\"offset\":1"),
+                snapshotChunk().replace("\"payload\":\"255\"", "\"payload\":\"256\""))) {
+            String events = "{" + snapshotBegin() + "},{" + changed + "},{" + snapshotEnd() + "}";
+            Path raw = temporary.resolve("bad-snapshot-stream-" + Math.abs(changed.hashCode()) + ".jsonl");
+            Files.writeString(raw, metadata() + boundary("baseline", "\"row\":769,", state)
+                    + "{\"type\":\"frame\",\"row\":769,\"lag\":false,\"state_hex\":\"" + state
+                    + "\",\"events\":[" + events + "]}\n"
+                    + boundary("cutoff", "\"exclusive_end\":770,", state));
+            assertThrows(IllegalArgumentException.class,
+                    () -> S2CompleteRunReferenceRawAdapter.scanPrefixForTesting(raw, new RecordingSink()));
+        }
+    }
+
+    @Test
+    void rejectsUnpairedResetAndPowerOrActiveCountMismatch() throws Exception {
+        String state = "00".repeat(8192);
+        for (String events : List.of(
+                resetBegin(0, 0),
+                resetEnd(0, 0),
+                resetBegin(1, 1) + "," + resetCancellation(1) + "," + resetEnd(2, 0),
+                resetBegin(1, 0) + "," + normalDpcmCompletion(1) + "," + resetEnd(2, 0))) {
+            Path raw = temporary.resolve("bad-reset-" + Math.abs(events.hashCode()) + ".jsonl");
+            Files.writeString(raw, metadata() + boundary("baseline", "\"row\":769,", state)
+                    + "{\"type\":\"frame\",\"row\":769,\"lag\":false,\"state_hex\":\"" + state
+                    + "\",\"events\":[" + events + "]}\n"
+                    + boundary("cutoff", "\"exclusive_end\":770,", state));
+            assertThrows(IllegalArgumentException.class,
+                    () -> S2CompleteRunReferenceRawAdapter.scanPrefixForTesting(raw, new RecordingSink()));
+        }
+    }
+
+    @Test
+    void acceptsExactlyPairedResetWithMatchingPowerAndCancellationCount() throws Exception {
+        String state = "00".repeat(8192);
+        String events = resetBegin(1, 1) + "," + resetCancellation(1) + "," + resetEnd(2, 1);
+        Path raw = temporary.resolve("valid-reset.jsonl");
+        Files.writeString(raw, metadata() + boundary("baseline", "\"row\":769,", state)
+                + "{\"type\":\"frame\",\"row\":769,\"lag\":false,\"state_hex\":\"" + state
+                + "\",\"events\":[" + events + "]}\n"
+                + boundary("cutoff", "\"exclusive_end\":770,", state));
+
+        S2CompleteRunReferenceRawAdapter.scanPrefixForTesting(raw, new RecordingSink());
+    }
+
+    @Test
     void rejectsMalformedFrontierServiceAndAbortsAfterLateFailure() throws Exception {
         String state = "00".repeat(8192);
         String invalidService = boundary("cutoff", "\"exclusive_end\":770,", state)
@@ -194,23 +258,16 @@ class TestS2CompleteRunReferenceRawAdapter {
     }
 
     @Test
-    void parsesTypedChipSnapshotAndAncestryEvidenceLosslessly() throws Exception {
+    void parsesTypedChipAndSnapshotEvidenceLosslessly() throws Exception {
         Path raw = temporary.resolve("typed-frontier.jsonl");
         String state = "00".repeat(8192);
         String typed = service()
-                .replace("\"current_parent_token\":0", "\"current_parent_token\":2")
-                .replace("\"current_depth\":0", "\"current_depth\":1")
                 .replace("\"chips\":[]", "\"chips\":[{\"coordinate\":7,"
                         + "\"native_ordinal\":8,\"event_kind\":3,\"subject\":1,"
                         + "\"value\":42,\"pc\":56,\"source_cpu\":1,\"data\":true,"
                         + "\"port\":0,\"register\":42}]")
                 .replace("\"snapshots\":[]", "\"snapshots\":[{\"range_id\":2,"
-                        + "\"source_cpu\":1,\"pc\":56,\"bytes_hex\":\"ab\"}]")
-                .replace("\"ancestry_transitions\":[]", "\"ancestry_transitions\":[{"
-                        + "\"coordinate\":9,\"native_ordinal\":10,"
-                        + "\"previous_parent_token\":0,\"previous_depth\":0,"
-                        + "\"current_parent_token\":2,\"current_depth\":1,"
-                        + "\"hook_token\":20,\"source_cpu\":1,\"pc\":378}]");
+                        + "\"source_cpu\":1,\"pc\":56,\"bytes_hex\":\"ab\"}]");
         Files.writeString(raw, metadata()
                 + boundary("baseline", "\"row\":769,", state)
                 + boundary("cutoff", "\"exclusive_end\":769,", state)
@@ -222,7 +279,7 @@ class TestS2CompleteRunReferenceRawAdapter {
         var parsed = sink.cutoff.activeServices().getFirst();
         assertEquals(42, parsed.chips().getFirst().register());
         assertArrayEquals(new byte[] {(byte) 0xab}, parsed.snapshots().getFirst().bytes());
-        assertEquals(20, parsed.ancestryTransitions().getFirst().hookToken());
+        assertEquals(0, parsed.ancestryTransitions().size());
     }
 
     @Test
@@ -266,26 +323,21 @@ class TestS2CompleteRunReferenceRawAdapter {
     }
 
     @Test
-    void rejectsBrokenAncestryTransitionChains() throws Exception {
+    void rejectsAnyAncestryTransitionWithoutPinnedPromotionHooks() throws Exception {
         String state = "00".repeat(8192);
         String transition = "{\"coordinate\":9,\"native_ordinal\":10,"
                 + "\"previous_parent_token\":0,\"previous_depth\":0,"
                 + "\"current_parent_token\":2,\"current_depth\":1,"
                 + "\"hook_token\":20,\"source_cpu\":1,\"pc\":378}";
-        for (String broken : List.of(
-                transition.replace("\"previous_parent_token\":0", "\"previous_parent_token\":7"),
-                transition.replace("\"current_parent_token\":2", "\"current_parent_token\":0"),
-                transition.replace("\"current_depth\":1", "\"current_depth\":2"))) {
-            String changed = service().replace("\"current_parent_token\":0", "\"current_parent_token\":2")
-                    .replace("\"current_depth\":0", "\"current_depth\":1")
-                    .replace("\"ancestry_transitions\":[]", "\"ancestry_transitions\":[" + broken + "]");
-            Path raw = temporary.resolve("bad-ancestry-" + Math.abs(broken.hashCode()) + ".jsonl");
-            Files.writeString(raw, metadata() + boundary("baseline", "\"row\":769,", state)
-                    + boundary("cutoff", "\"exclusive_end\":769,", state)
-                    .replace("\"active_services\":[]", "\"active_services\":[" + changed + "]"));
-            assertThrows(IllegalArgumentException.class,
-                    () -> S2CompleteRunReferenceRawAdapter.scanPrefixForTesting(raw, new RecordingSink()));
-        }
+        String changed = service().replace("\"current_parent_token\":0", "\"current_parent_token\":2")
+                .replace("\"current_depth\":0", "\"current_depth\":1")
+                .replace("\"ancestry_transitions\":[]", "\"ancestry_transitions\":[" + transition + "]");
+        Path raw = temporary.resolve("bad-ancestry.jsonl");
+        Files.writeString(raw, metadata() + boundary("baseline", "\"row\":769,", state)
+                + boundary("cutoff", "\"exclusive_end\":769,", state)
+                .replace("\"active_services\":[]", "\"active_services\":[" + changed + "]"));
+        assertThrows(IllegalArgumentException.class,
+                () -> S2CompleteRunReferenceRawAdapter.scanPrefixForTesting(raw, new RecordingSink()));
     }
 
     private static String metadata() {
@@ -312,6 +364,84 @@ class TestS2CompleteRunReferenceRawAdapter {
                 + "\"subject\":1,\"offset\":0,\"kind\":6,\"service_kind\":2,"
                 + "\"depth\":1,\"source_cpu\":1,\"payload_length\":8,\"value\":0,"
                 + "\"flags\":0,\"reserved\":0,\"payload\":\"18446744073709551615\"";
+    }
+
+    private static String snapshotEvents() {
+        return "{" + snapshotBegin() + "},{" + snapshotChunk() + "},{" + snapshotEnd() + "}";
+    }
+
+    private static String snapshotBegin() {
+        return snapshotBase().replace("\"kind\":6", "\"kind\":5")
+                .replace("\"subject\":1", "\"subject\":2")
+                .replace("\"payload_length\":8", "\"payload_length\":0")
+                .replace("\"payload\":\"18446744073709551615\"", "\"payload\":\"0\"");
+    }
+
+    private static String snapshotChunk() {
+        return snapshotBase().replace("\"ordinal\":0", "\"ordinal\":1")
+                .replace("\"subject\":1", "\"subject\":2")
+                .replace("\"payload_length\":8", "\"payload_length\":1")
+                .replace("\"payload\":\"18446744073709551615\"", "\"payload\":\"255\"");
+    }
+
+    private static String snapshotEnd() {
+        return snapshotBase().replace("\"ordinal\":0", "\"ordinal\":2")
+                .replace("\"kind\":6", "\"kind\":7")
+                .replace("\"subject\":1", "\"subject\":2")
+                .replace("\"offset\":0", "\"offset\":1")
+                .replace("\"payload_length\":8", "\"payload_length\":0")
+                .replace("\"payload\":\"18446744073709551615\"", "\"payload\":\"0\"");
+    }
+
+    private static String snapshotBase() {
+        return event().replace("\"service_token\":2", "\"service_token\":1")
+                .replace("\"parent_token\":1", "\"parent_token\":0")
+                .replace("\"pc\":4660", "\"pc\":432")
+                .replace("\"service_kind\":2", "\"service_kind\":4")
+                .replace("\"depth\":1", "\"depth\":0");
+    }
+
+    private static String resetBegin(int activeCount, int power) {
+        return "{" + event().replace("\"service_token\":2", "\"service_token\":9")
+                .replace("\"parent_token\":1", "\"parent_token\":0")
+                .replace("\"pc\":4660", "\"pc\":0")
+                .replace("\"subject\":1", "\"subject\":" + activeCount)
+                .replace("\"kind\":6", "\"kind\":8")
+                .replace("\"service_kind\":2", "\"service_kind\":1")
+                .replace("\"depth\":1", "\"depth\":0")
+                .replace("\"source_cpu\":1", "\"source_cpu\":3")
+                .replace("\"payload_length\":8", "\"payload_length\":0")
+                .replace("\"flags\":0", "\"flags\":" + power)
+                .replace("\"payload\":\"18446744073709551615\"", "\"payload\":\"0\"") + "}";
+    }
+
+    private static String resetEnd(int ordinal, int power) {
+        String begin = resetBegin(0, power);
+        return begin.replace("\"ordinal\":0", "\"ordinal\":" + ordinal)
+                .replace("\"kind\":8", "\"kind\":9");
+    }
+
+    private static String resetCancellation(int ordinal) {
+        return "{" + event().replace("\"ordinal\":0", "\"ordinal\":" + ordinal)
+                .replace("\"service_token\":2", "\"service_token\":1")
+                .replace("\"parent_token\":1", "\"parent_token\":0")
+                .replace("\"pc\":4660", "\"pc\":0")
+                .replace("\"subject\":1", "\"subject\":0")
+                .replace("\"kind\":6", "\"kind\":2")
+                .replace("\"service_kind\":2", "\"service_kind\":4")
+                .replace("\"depth\":1", "\"depth\":0")
+                .replace("\"source_cpu\":1", "\"source_cpu\":3")
+                .replace("\"payload_length\":8", "\"payload_length\":0")
+                .replace("\"flags\":0", "\"flags\":2")
+                .replace("\"payload\":\"18446744073709551615\"", "\"payload\":\"0\"") + "}";
+    }
+
+    private static String normalDpcmCompletion(int ordinal) {
+        return resetCancellation(ordinal)
+                .replace("\"pc\":0", "\"pc\":378")
+                .replace("\"subject\":0", "\"subject\":20")
+                .replace("\"source_cpu\":3", "\"source_cpu\":1")
+                .replace("\"flags\":2", "\"flags\":0");
     }
 
     private static String service() {

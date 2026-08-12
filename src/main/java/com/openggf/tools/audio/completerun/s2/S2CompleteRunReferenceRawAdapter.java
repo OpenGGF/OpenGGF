@@ -120,6 +120,7 @@ public final class S2CompleteRunReferenceRawAdapter {
             sink.begin();
             sink.header(header);
             sink.baseline(baseline);
+            FrameValidator frameValidator = new FrameValidator(baseline.activeServices());
             int expected = header.firstRow();
             while (true) {
                 String line = requiredLine(input);
@@ -143,7 +144,7 @@ public final class S2CompleteRunReferenceRawAdapter {
                     committed = true;
                     return;
                 }
-                RawFrame frame = frame(value);
+                RawFrame frame = frame(value, frameValidator);
                 if (frame.row() != expected || expected >= header.exclusiveEnd()) {
                     throw invalid("S2 raw frame rows are not contiguous and in range");
                 }
@@ -217,7 +218,7 @@ public final class S2CompleteRunReferenceRawAdapter {
         return result;
     }
 
-    private static RawFrame frame(JsonNode value) {
+    private static RawFrame frame(JsonNode value, FrameValidator validator) {
         exact(value, "type", "row", "lag", "state_hex", "events");
         require(text(value, "type").equals("frame"), "unknown S2 raw record type");
         JsonNode source = value.get("events");
@@ -268,6 +269,7 @@ public final class S2CompleteRunReferenceRawAdapter {
             validateEventShape(parsed);
             events.add(parsed);
         }
+        validator.validate(events);
         return new RawFrame(integer(value, "row"), bool(value, "lag"), state(value), events);
     }
 
@@ -329,6 +331,8 @@ public final class S2CompleteRunReferenceRawAdapter {
                     && endHookToken == 0),
                     "S2 raw open frontier service carries completion state");
             List<RawAncestryTransition> transitions = ancestry(service.get("ancestry_transitions"));
+            require(transitions.isEmpty(),
+                    "S2 raw ancestry transitions require absent promotion hooks");
             RawService parsed = new RawService(nonZeroWord(service, "token"),
                     parentToken, kind, serviceDepth,
                     currentParentToken, currentDepth, beginCoordinate, endCoordinate,
@@ -337,7 +341,6 @@ public final class S2CompleteRunReferenceRawAdapter {
                     chips(service.get("chips")), snapshots(service.get("snapshots")),
                     transitions);
             validateFrontierServiceShape(parsed);
-            validateAncestryChain(parsed);
             result.add(parsed);
         }
         return List.copyOf(result);
@@ -571,20 +574,6 @@ public final class S2CompleteRunReferenceRawAdapter {
         }
     }
 
-    private static void validateAncestryChain(RawService service) {
-        int parent = service.parentToken();
-        int depth = service.depth();
-        for (RawAncestryTransition transition : service.ancestryTransitions()) {
-            require(transition.previousParentToken() == parent
-                            && transition.previousDepth() == depth,
-                    "S2 raw ancestry transition does not continue its service chain");
-            parent = transition.currentParentToken();
-            depth = transition.currentDepth();
-        }
-        require(parent == service.currentParentToken() && depth == service.currentDepth(),
-                "S2 raw ancestry chain does not reach the service frontier");
-    }
-
     private static void validateFrontierServiceShape(RawService service) {
         if (service.kind() == 1) return;
         require(beginKind(service.beginHookToken()) == service.kind()
@@ -640,6 +629,119 @@ public final class S2CompleteRunReferenceRawAdapter {
             case 14, 15 -> 1808; case 16 -> 1842; case 17, 18 -> 4744;
             case 19 -> 4860; case 8 -> 648; case 10 -> 966710; default -> -1;
         };
+    }
+
+    /** Cross-event ABI state that must be complete at every native frame boundary. */
+    private static final class FrameValidator {
+        private final List<Owner> activeServices = new ArrayList<>();
+
+        private FrameValidator(List<RawService> initialActiveServices) {
+            for (RawService service : initialActiveServices) activeServices.add(
+                    new Owner(service.token(), service.currentParentToken(),
+                            service.kind(), service.currentDepth()));
+        }
+
+        private void validate(List<RawEvent> events) {
+            RawEvent snapshot = null;
+            int snapshotLength = 0;
+            int snapshotOffset = 0;
+            Owner reset = null;
+            int resetPower = 0;
+            for (RawEvent event : events) {
+                if (snapshot != null && event.kind() != 6 && event.kind() != 7) {
+                    throw invalid("S2 raw snapshot events are not contiguous");
+                }
+                switch (event.kind()) {
+                    case 1 -> {
+                        require(reset == null, "S2 raw service begins during reset cancellation");
+                        int parent = activeServices.isEmpty() ? 0
+                                : activeServices.getLast().token();
+                        require(event.parentToken() == parent
+                                        && event.depth() == activeServices.size(),
+                                "S2 raw service begin does not extend the active stack");
+                        activeServices.add(Owner.of(event));
+                    }
+                    case 2 -> {
+                        require(!activeServices.isEmpty()
+                                        && activeServices.getLast().matches(event),
+                                "S2 raw service end does not own the active stack top");
+                        if (reset != null) require(event.flags() == 2,
+                                "S2 raw non-cancelled service end occurs during reset");
+                        if (event.flags() == 2) require(reset != null,
+                                "S2 raw cancellation occurs outside a reset");
+                        activeServices.removeLast();
+                    }
+                    case 3, 4 -> require(owned(event, activeServices, reset),
+                            "S2 raw chip event is not owned by the active service");
+                    case 5 -> {
+                        require(owned(event, activeServices, reset),
+                                "S2 raw snapshot begin is not owned by the active service");
+                        require(snapshot == null, "S2 raw snapshot begin overlaps another snapshot");
+                        snapshot = event;
+                        snapshotLength = event.subject() == 1 ? 8192 : 1;
+                        snapshotOffset = 0;
+                    }
+                    case 6 -> {
+                        require(snapshot != null, "S2 raw snapshot chunk has no begin");
+                        sameSnapshotOwner(snapshot, event);
+                        require(event.offset() == snapshotOffset,
+                                "S2 raw snapshot chunks are not contiguous");
+                        snapshotOffset += event.payloadLength();
+                    }
+                    case 7 -> {
+                        require(snapshot != null, "S2 raw snapshot end has no begin");
+                        sameSnapshotOwner(snapshot, event);
+                        require(snapshotOffset == snapshotLength && event.offset() == snapshotLength,
+                                "S2 raw snapshot byte count changed");
+                        snapshot = null;
+                    }
+                    case 8 -> {
+                        require(reset == null && event.subject() == activeServices.size(),
+                                "S2 raw reset begin active-service count changed");
+                        reset = Owner.of(event);
+                        resetPower = event.flags();
+                    }
+                    case 9 -> {
+                        require(reset != null && activeServices.isEmpty()
+                                        && reset.matches(event)
+                                        && event.flags() == resetPower,
+                                "S2 raw reset begin/end pairing changed");
+                        reset = null;
+                    }
+                    default -> { }
+                }
+            }
+            require(snapshot == null, "S2 raw snapshot stream ended before END");
+            require(reset == null, "S2 raw reset stream ended before reset end");
+        }
+
+        private static void sameSnapshotOwner(RawEvent begin, RawEvent event) {
+            require(event.serviceToken() == begin.serviceToken()
+                            && event.parentToken() == begin.parentToken()
+                            && event.serviceKind() == begin.serviceKind()
+                            && event.depth() == begin.depth()
+                            && event.subject() == begin.subject()
+                            && event.sourceCpu() == begin.sourceCpu()
+                            && event.pc() == begin.pc(),
+                    "S2 raw snapshot owner/range/source changed mid-stream");
+        }
+
+        private static boolean owned(RawEvent event, List<Owner> active, Owner reset) {
+            return reset != null && reset.matches(event)
+                    || !active.isEmpty() && active.getLast().matches(event);
+        }
+
+        private record Owner(int token, int parentToken, int kind, int depth) {
+            private static Owner of(RawEvent event) {
+                return new Owner(event.serviceToken(), event.parentToken(),
+                        event.serviceKind(), event.depth());
+            }
+
+            private boolean matches(RawEvent event) {
+                return token == event.serviceToken() && parentToken == event.parentToken()
+                        && kind == event.serviceKind() && depth == event.depth();
+            }
+        }
     }
 
     private static boolean validFlags(int kind, int flags) {
