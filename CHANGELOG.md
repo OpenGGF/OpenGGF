@@ -3,6 +3,16 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the one-row latch that decides which rows of a run-chain transition gap still
+  belong to the source level's own main loop lives on the current session's
+  `GameplayModeContext` instead of a static field on `TraceSessionLauncher`. As a static
+  it was armed on one boundary flavour (the plain level->level path) and consumed on
+  another (the semantic level-load path, the only place the chain steps rows under
+  `SHARED_GAP`), so the answer any given gap got depended on what had run before it --
+  earlier gaps in the same run, and earlier test classes sharing a reused surefire fork.
+  The latch is now re-armed where it is consumed, once per gap. Behaviour is unchanged on
+  every measured run style (isolated, paired and full `-Ptrace-replay` all report the same
+  chain frontier before and after).
 - Fix: the run-chain replay adapter drives a level-advance transition gap under the same
   `SHARED_GAP` disposition the visual launcher uses, so the source level's body stops
   running once its own main loop has ended. The adapter previously stepped the whole gap

@@ -2627,6 +2627,11 @@ abstract class AbstractRunChainTest {
             int segmentIndex,
             Path runDir) {
         int destinationOffset = next.segment().bk2FrameOffset();
+        // Arm the production one-row gap latch HERE: this loop is the only
+        // place the chain steps rows under SHARED_GAP, so arming anywhere else
+        // leaves the answer to whatever the previous gap (or the previous test
+        // class in this fork) happened to leave behind.
+        gameplayMode.beginRunTransitionGap();
         for (int step = 0; step <= stepCap; step++) {
             int cursor = playback.getCursorFrame();
             int rowsConsumed = step == 0

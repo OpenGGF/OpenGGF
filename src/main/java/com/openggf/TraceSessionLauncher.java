@@ -156,7 +156,6 @@ public final class TraceSessionLauncher {
      * never hands the rows back to the loop it left.
      */
     private boolean runGapSourceLevelMainLoopEnded;
-    private static boolean driverOnlyRunGapSourceLevelMainLoopEnded;
     private TraceStructuralRowComparator runStructuralComparator;
     private TraceRunReplayWalker.BoundaryProbe runBoundaryProbe;
     private final List<TraceRunPlaybackCoordinator.Action>
@@ -2453,8 +2452,7 @@ public final class TraceSessionLauncher {
         if (disposition != TraceRunFrameDriver.Disposition.SHARED_GAP) {
             return false;
         }
-        boolean firstGapRow = !driverOnlyRunGapSourceLevelMainLoopEnded;
-        driverOnlyRunGapSourceLevelMainLoopEnded = true;
+        boolean firstGapRow = context.consumeRunGapFirstRow();
         return firstGapRow
                 && !levelExitWritten
                 && suppressesRunNativeLevelBody(mode);
@@ -2468,9 +2466,17 @@ public final class TraceSessionLauncher {
      * trace data and decides nothing about the gap's content: it only re-arms
      * the one-row latch that
      * {@link #runGapRowContinuesSourceLevelMainLoop} consumes.
+     *
+     * <p>The latch lives on the current session's {@link GameplayModeContext},
+     * not in a static: a static one is armed at some gaps and consumed at
+     * others, so the answer a gap gets depends on what ran before it -- across
+     * gaps within a run, and across test classes sharing a surefire fork.
      */
     public static void beginDriverOnlyRunTransitionGap() {
-        driverOnlyRunGapSourceLevelMainLoopEnded = false;
+        GameplayModeContext context = SessionManager.getCurrentGameplayMode();
+        if (context != null) {
+            context.beginRunTransitionGap();
+        }
     }
 
     static boolean shouldSkipRunGameplayTick(
