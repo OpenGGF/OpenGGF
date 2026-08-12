@@ -323,7 +323,7 @@ new file mode 100644
 index 000000000..963e2dc48
 --- /dev/null
 +++ b/waterbox/gpgx/cinterface/audio_trace.c
-@@ -0,0 +1,1367 @@
+@@ -0,0 +1,1463 @@
 +#include <limits.h>
 +#include <stddef.h>
 +#include <stdint.h>
@@ -666,11 +666,97 @@ index 000000000..963e2dc48
 +  return 1;
 +}
 +
++static int same_deferred_consume_proof(
++  const struct gpgx_audio_service_hook_v1 *a,
++  const struct gpgx_audio_service_hook_v1 *b)
++{
++  return a->cpu == b->cpu && a->pc == b->pc
++    && a->expected_active_kind == b->expected_active_kind
++    && a->opcode_length == b->opcode_length
++    && !memcmp(a->opcode, b->opcode, a->opcode_length);
++}
++
++static int validate_deferred_family(uint32_t reserve_count,
++  const struct gpgx_audio_service_hook_v1 *reserve)
++{
++  const struct gpgx_audio_service_hook_v1 *consume[256];
++  uint16_t consume_count[256], tail_count[256], observation_count[256];
++  uint8_t successors[256];
++  const struct gpgx_audio_service_hook_v1 *origin_consume;
++  uint32_t i, j, total_consumes = 0, total_successors = 0;
++  uint8_t origin, target;
++  memset(consume, 0, sizeof(consume));
++  memset(consume_count, 0, sizeof(consume_count));
++  memset(tail_count, 0, sizeof(tail_count));
++  memset(observation_count, 0, sizeof(observation_count));
++  memset(successors, 0, sizeof(successors));
++  for (i = 0; i < trace_config.hook_count; i++)
++  {
++    const struct gpgx_audio_service_hook_v1 *hook = &trace_hooks[i];
++    if (hook->action == ACTION_CONSUME_DEFERRED_BEGIN)
++    {
++      if (consume_count[hook->expected_active_kind] == UINT16_MAX) return 0;
++      consume_count[hook->expected_active_kind]++;
++      consume[hook->expected_active_kind] = hook;
++      total_consumes++;
++    }
++  }
++  if (!reserve_count) return total_consumes == 0;
++  if (reserve_count != 1u) return 0;
++  origin = reserve->expected_active_kind;
++  target = reserve->service_kind;
++  if (consume_count[origin] != 1u) return 0;
++  origin_consume = consume[origin];
++  for (i = 0; i < trace_config.hook_count; i++)
++  {
++    const struct gpgx_audio_service_hook_v1 *hook = &trace_hooks[i];
++    if (hook->action == ACTION_TAIL_POP_PUSH && hook->expected_active_kind == origin)
++    {
++      const struct gpgx_audio_service_kind_v1 *successor = kind_for(hook->service_kind);
++      if (hook->cpu != GPGX_AUDIO_TRACE_CPU_Z80 || !successor
++          || hook->service_kind == origin || hook->service_kind == target
++          || !(successor->flags & KIND_ALLOW_CHILDREN)
++          || tail_count[hook->service_kind] == UINT16_MAX) return 0;
++      if (++tail_count[hook->service_kind] != 1u) return 0;
++      successors[hook->service_kind] = 1;
++      total_successors++;
++    }
++  }
++  if (total_consumes != total_successors + 1u) return 0;
++  for (i = 1; i < 256u; i++)
++  {
++    int required = i == origin || successors[i];
++    if (consume_count[i] != (required ? 1u : 0u)) return 0;
++    if (!required) continue;
++    if (consume[i]->service_kind != target
++        || consume[i]->cpu != origin_consume->cpu
++        || consume[i]->pc != origin_consume->pc
++        || consume[i]->opcode_length != origin_consume->opcode_length
++        || memcmp(consume[i]->opcode, origin_consume->opcode,
++          origin_consume->opcode_length)) return 0;
++    for (j = 0; j < trace_config.hook_count; j++)
++    {
++      const struct gpgx_audio_service_hook_v1 *observation = &trace_hooks[j];
++      if (observation->action == ACTION_OBSERVATION_MARKER
++          && same_deferred_consume_proof(observation, consume[i]))
++        observation_count[i]++;
++    }
++    if (observation_count[i] != (successors[i] ? 1u : 0u)) return 0;
++  }
++  for (i = 0; i < trace_config.hook_count; i++)
++  {
++    const struct gpgx_audio_service_hook_v1 *hook = &trace_hooks[i];
++    if (hook->action == ACTION_TAIL_POP_PUSH && successors[hook->expected_active_kind])
++      return 0;
++  }
++  return 1;
++}
++
 +static int validate_config(void)
 +{
 +  uint32_t i, j, declared = 0, max_continuation = 0, arm_count = 0;
-+  uint32_t deferred_reserve_count = 0, deferred_consume_count = 0;
-+  const struct gpgx_audio_service_hook_v1 *deferred_reserve = NULL, *deferred_consume = NULL;
++  uint32_t deferred_reserve_count = 0;
++  const struct gpgx_audio_service_hook_v1 *deferred_reserve = NULL;
 +  uint8_t expected_mask[TRACE_MASK_BYTES];
 +  memset(expected_mask, 0, sizeof(expected_mask));
 +  memset(trace_kind_lookup, 0, sizeof(trace_kind_lookup));
@@ -792,13 +878,29 @@ index 000000000..963e2dc48
 +          && trace_hooks[j].expected_active_kind == hook->expected_active_kind)
 +      {
 +        const struct gpgx_audio_service_hook_v1 *other = &trace_hooks[j];
-+        int paired = (hook->action == ACTION_DIRECT_PARENT_RETRY_MARKER
++        int direct_parent_pair = (hook->action == ACTION_DIRECT_PARENT_RETRY_MARKER
 +            && other->action == ACTION_PUSH_BEGIN)
 +          || (hook->action == ACTION_PUSH_BEGIN
 +            && other->action == ACTION_DIRECT_PARENT_RETRY_MARKER);
-+        if (!paired || hook->service_kind != other->service_kind
-+            || hook->opcode_length != other->opcode_length
-+            || memcmp(hook->opcode, other->opcode, hook->opcode_length)) return 0;
++        int deferred_pair = (hook->action == ACTION_CONSUME_DEFERRED_BEGIN
++            && other->action == ACTION_OBSERVATION_MARKER)
++          || (hook->action == ACTION_OBSERVATION_MARKER
++            && other->action == ACTION_CONSUME_DEFERRED_BEGIN);
++        if (direct_parent_pair)
++        {
++          if (hook->service_kind != other->service_kind
++              || hook->opcode_length != other->opcode_length
++              || memcmp(hook->opcode, other->opcode, hook->opcode_length)) return 0;
++        }
++        else if (deferred_pair)
++        {
++          const struct gpgx_audio_service_hook_v1 *observation =
++            hook->action == ACTION_OBSERVATION_MARKER ? hook : other;
++          const struct gpgx_audio_service_hook_v1 *consume = observation == hook ? other : hook;
++          if (observation->service_kind || !consume->service_kind
++              || !same_deferred_consume_proof(observation, consume)) return 0;
++        }
++        else return 0;
 +      }
 +    }
 +    if (hook->action == ACTION_PUSH_BEGIN)
@@ -847,13 +949,13 @@ index 000000000..963e2dc48
 +          || !hook->service_kind || !kind_for(hook->service_kind)
 +          || !hook->expected_active_kind
 +          || !(blocker = kind_for(hook->expected_active_kind))
-+          || (blocker->flags & KIND_ALLOW_CHILDREN)
 +          || hook->flags || hook->range_first || hook->range_count
 +          || !bytes_are_zero(hook->reserved, sizeof(hook->reserved))) return 0;
 +      if (hook->action == ACTION_RESERVE_DEFERRED_BEGIN)
-+      { deferred_reserve_count++; deferred_reserve = hook; }
-+      else
-+      { deferred_consume_count++; deferred_consume = hook; }
++      {
++        if (blocker->flags & KIND_ALLOW_CHILDREN) return 0;
++        deferred_reserve_count++; deferred_reserve = hook;
++      }
 +    }
 +    else if (hook->action == ACTION_OBSERVATION_MARKER)
 +    {
@@ -906,13 +1008,7 @@ index 000000000..963e2dc48
 +      trace_arm_hook_index = (uint16_t)i;
 +    }
 +  }
-+  if (deferred_reserve_count || deferred_consume_count)
-+  {
-+    if (deferred_reserve_count != 1u || deferred_consume_count != 1u
-+        || deferred_reserve->service_kind != deferred_consume->service_kind
-+        || deferred_reserve->expected_active_kind != deferred_consume->expected_active_kind)
-+      return 0;
-+  }
++  if (!validate_deferred_family(deferred_reserve_count, deferred_reserve)) return 0;
 +  if (arm_count)
 +  {
 +    const struct gpgx_audio_service_hook_v1 *arm = &trace_hooks[trace_arm_hook_index];
