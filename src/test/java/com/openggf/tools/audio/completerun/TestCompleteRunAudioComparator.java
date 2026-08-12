@@ -315,14 +315,14 @@ class TestCompleteRunAudioComparator {
     }
 
     @Test
-    void bufferedDeferredBeginConsumesExactMarkersAndAdjacentBlockerRelease() throws Exception {
+    void bufferedDeferredBeginConsumesExactMarkersAtNestedChildEntry() throws Exception {
         TestProfile profile = profile("comparator.buffered.deferred."
                 + PROFILE_SEQUENCE.incrementAndGet(), 1);
         profile.useBufferedReference(
                 new FrontierServiceRule("blocker", FrontierServiceState.COMPLETED,
                         10, "Z80", 0x3a, 11, 0x77, List.of()),
-                new FrontierServiceRule("released", FrontierServiceState.COMPLETED,
-                        77, "M68K", 0x71b4c, 78, 0x71c4c, List.of()));
+                new FrontierServiceRule("consumed", FrontierServiceState.COMPLETED,
+                        78, "M68K", 0x71b82, 79, 0x71c4c, List.of()));
         CompleteRunAudioProfiles.register(profile);
         long coordinateBase = (long) FIRST_FRAME << 32;
         NativeManagedCorrelation marker1 = new NativeManagedCorrelation(0, List.of(
@@ -331,28 +331,34 @@ class TestCompleteRunAudioComparator {
         NativeManagedCorrelation marker2 = new NativeManagedCorrelation(1, List.of(
                 new NativeManagedEvent(coordinateBase + 2, 2, "M68K", 0x71b4c,
                         10, 4, 13, 0, 6, 0, 77, true)));
-        NativeManagedCorrelation releasedEnd = new NativeManagedCorrelation(2, List.of(
-                new NativeManagedEvent(coordinateBase + 7, 7, "M68K", 0x71c4c,
-                        2, 0, 14, 0, 4, 0, 78, true)));
+        NativeManagedCorrelation consumeBegin = new NativeManagedCorrelation(2, List.of(
+                new NativeManagedEvent(coordinateBase + 3, 3, "M68K", 0x71b82,
+                        1, 0, 14, 13, 4, 1, 78, true)));
+        NativeManagedCorrelation consumedEnd = new NativeManagedCorrelation(3, List.of(
+                new NativeManagedEvent(coordinateBase + 5, 5, "M68K", 0x71c4c,
+                        2, 0, 14, 13, 4, 1, 79, true)));
         NativeDeferredServiceBegin deferred = new NativeDeferredServiceBegin(
                 13, 0, 6, 0, 4, 77, 2, 0x71b4c,
                 coordinateBase + 1, coordinateBase + 2, 1, 2, 2,
-                true, 14, coordinateBase + 5);
+                true, 14, coordinateBase + 3);
         FrontierService blocker = new FrontierService(13, 0, 0, "blocker",
                 FrontierServiceState.COMPLETED, FIRST_FRAME, 0, 0x3a, 10, "Z80",
-                FIRST_FRAME, 4L, 0x77, 11, List.of(), List.of());
-        FrontierService released = new FrontierService(14, 0, 0, "released",
-                FrontierServiceState.COMPLETED, FIRST_FRAME, 5, 0x71b4c, 77, "M68K",
-                FIRST_FRAME, 7L, 0x71c4c, 78, List.of(), List.of());
+                FIRST_FRAME, 6L, 0x77, 11, List.of(), List.of());
+        FrontierService consumed = new FrontierService(14, 13, 1, "consumed",
+                FrontierServiceState.COMPLETED, FIRST_FRAME, 3, 0x71b82, 78, "M68K",
+                FIRST_FRAME, 5L, 0x71c4c, 79, List.of(), List.of());
         DriverService semanticBlocker = service(0, List.of(), List.of(), state(1), "blocker");
-        DriverService semanticReleased = service(1, List.of(), List.of(), state(1), "released");
+        DriverService semanticConsumed = new DriverService(1, "consumed",
+                ServiceCompletion.COMPLETED, List.of(), state(1), List.of(), null,
+                new ServiceAncestry(new ServiceCoordinate(FIRST_FRAME, 0), 1,
+                        new ServiceCoordinate(FIRST_FRAME, 0), 1, List.of()));
         Frame referenceFrame = new Frame(FIRST_FRAME, "test", false, List.of(),
-                List.of(semanticBlocker, semanticReleased), List.of(),
-                new FrameNativeDiagnostics(List.of(blocker, released), List.of(), List.of(),
-                        List.of(), List.of(marker1, marker2, releasedEnd),
+                List.of(semanticBlocker, semanticConsumed), List.of(),
+                new FrameNativeDiagnostics(List.of(blocker, consumed), List.of(), List.of(),
+                        List.of(), List.of(marker1, marker2, consumeBegin, consumedEnd),
                         List.of(deferred), List.of()));
         Frame engineFrame = new Frame(FIRST_FRAME, "test", false, List.of(),
-                List.of(semanticBlocker, semanticReleased));
+                List.of(semanticBlocker, semanticConsumed));
 
         Path reference = writeCapture("deferred-reference", profile, ProducerKind.REFERENCE, 1,
                 ignored -> referenceFrame);
@@ -363,38 +369,53 @@ class TestCompleteRunAudioComparator {
         assertEquals(CompleteRunAudioReport.Kind.MATCH, report.kind(), report.toText());
 
         Frame missingDiagnostic = new Frame(FIRST_FRAME, "test", false, List.of(),
-                List.of(semanticBlocker, semanticReleased), List.of(),
-                new FrameNativeDiagnostics(List.of(blocker, released), List.of(), List.of(),
-                        List.of(), List.of(marker1, marker2, releasedEnd), List.of()));
+                List.of(semanticBlocker, semanticConsumed), List.of(),
+                new FrameNativeDiagnostics(List.of(blocker, consumed), List.of(), List.of(),
+                        List.of(), List.of(marker1, marker2, consumeBegin, consumedEnd), List.of()));
         Path missing = writeCapture("deferred-missing-diagnostic", profile, ProducerKind.REFERENCE, 1,
                 ignored -> missingDiagnostic);
         assertSemanticFailure(CompleteRunAudioComparator.compare(missing, engine),
                 CompleteRunAudioReport.Side.REFERENCE,
                 CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
 
-        NativeManagedCorrelation markerlessEnd = new NativeManagedCorrelation(0,
-                releasedEnd.events());
+        NativeManagedCorrelation markerlessBegin = new NativeManagedCorrelation(0,
+                consumeBegin.events());
+        NativeManagedCorrelation markerlessEnd = new NativeManagedCorrelation(1,
+                consumedEnd.events());
         Frame missingMarkers = new Frame(FIRST_FRAME, "test", false, List.of(),
-                List.of(semanticBlocker, semanticReleased), List.of(),
-                new FrameNativeDiagnostics(List.of(blocker, released), List.of(), List.of(),
-                        List.of(), List.of(markerlessEnd), List.of(deferred), List.of()));
+                List.of(semanticBlocker, semanticConsumed), List.of(),
+                new FrameNativeDiagnostics(List.of(blocker, consumed), List.of(), List.of(),
+                        List.of(), List.of(markerlessBegin, markerlessEnd), List.of(deferred), List.of()));
         Path markerless = writeCapture("deferred-missing-markers", profile, ProducerKind.REFERENCE, 1,
                 ignored -> missingMarkers);
         assertSemanticFailure(CompleteRunAudioComparator.compare(markerless, engine),
                 CompleteRunAudioReport.Side.REFERENCE,
                 CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
 
-        NativeDeferredServiceBegin wrongReleased = new NativeDeferredServiceBegin(
+        NativeManagedCorrelation missingBeginEnd = new NativeManagedCorrelation(2,
+                consumedEnd.events());
+        Frame missingConsumeProof = new Frame(FIRST_FRAME, "test", false, List.of(),
+                List.of(semanticBlocker, semanticConsumed), List.of(),
+                new FrameNativeDiagnostics(List.of(blocker, consumed), List.of(), List.of(),
+                        List.of(), List.of(marker1, marker2, missingBeginEnd),
+                        List.of(deferred), List.of()));
+        Path missingConsume = writeCapture("deferred-missing-consume-begin", profile,
+                ProducerKind.REFERENCE, 1, ignored -> missingConsumeProof);
+        assertSemanticFailure(CompleteRunAudioComparator.compare(missingConsume, engine),
+                CompleteRunAudioReport.Side.REFERENCE,
+                CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+
+        NativeDeferredServiceBegin wrongConsumed = new NativeDeferredServiceBegin(
                 13, 0, 6, 0, 4, 77, 2, 0x71b4c,
                 coordinateBase + 1, coordinateBase + 2, 1, 2, 2,
-                true, 15, coordinateBase + 5);
-        Frame forgedRelease = new Frame(FIRST_FRAME, "test", false, List.of(),
-                List.of(semanticBlocker, semanticReleased), List.of(),
-                new FrameNativeDiagnostics(List.of(blocker, released), List.of(), List.of(),
-                        List.of(), List.of(marker1, marker2, releasedEnd),
-                        List.of(wrongReleased), List.of()));
-        Path forged = writeCapture("deferred-forged-release", profile, ProducerKind.REFERENCE, 1,
-                ignored -> forgedRelease);
+                true, 15, coordinateBase + 3);
+        Frame forgedConsume = new Frame(FIRST_FRAME, "test", false, List.of(),
+                List.of(semanticBlocker, semanticConsumed), List.of(),
+                new FrameNativeDiagnostics(List.of(blocker, consumed), List.of(), List.of(),
+                        List.of(), List.of(marker1, marker2, consumeBegin, consumedEnd),
+                        List.of(wrongConsumed), List.of()));
+        Path forged = writeCapture("deferred-forged-consume", profile, ProducerKind.REFERENCE, 1,
+                ignored -> forgedConsume);
         assertSemanticFailure(CompleteRunAudioComparator.compare(forged, engine),
                 CompleteRunAudioReport.Side.REFERENCE,
                 CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
@@ -403,9 +424,9 @@ class TestCompleteRunAudioComparator {
                 new NativeManagedEvent(coordinateBase + 2, 2, "M68K", 0x71b4e,
                         10, 4, 13, 0, 6, 0, 77, true)));
         Frame changedIdentity = new Frame(FIRST_FRAME, "test", false, List.of(),
-                List.of(semanticBlocker, semanticReleased), List.of(),
-                new FrameNativeDiagnostics(List.of(blocker, released), List.of(), List.of(),
-                        List.of(), List.of(marker1, changedMarker, releasedEnd),
+                List.of(semanticBlocker, semanticConsumed), List.of(),
+                new FrameNativeDiagnostics(List.of(blocker, consumed), List.of(), List.of(),
+                        List.of(), List.of(marker1, changedMarker, consumeBegin, consumedEnd),
                         List.of(deferred), List.of()));
         Path changed = writeCapture("deferred-changed-marker", profile, ProducerKind.REFERENCE, 1,
                 ignored -> changedIdentity);
@@ -413,18 +434,46 @@ class TestCompleteRunAudioComparator {
                 CompleteRunAudioReport.Side.REFERENCE,
                 CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
 
-        NativeDeferredServiceBegin changedReleaseCoordinate = new NativeDeferredServiceBegin(
+        NativeDeferredServiceBegin changedConsumeCoordinate = new NativeDeferredServiceBegin(
                 13, 0, 6, 0, 4, 77, 2, 0x71b4c,
                 coordinateBase + 1, coordinateBase + 2, 1, 2, 2,
-                true, 14, coordinateBase + 6);
-        Frame shiftedRelease = new Frame(FIRST_FRAME, "test", false, List.of(),
-                List.of(semanticBlocker, semanticReleased), List.of(),
-                new FrameNativeDiagnostics(List.of(blocker, released), List.of(), List.of(),
-                        List.of(), List.of(marker1, marker2, releasedEnd),
-                        List.of(changedReleaseCoordinate), List.of()));
-        Path shifted = writeCapture("deferred-shifted-release-coordinate", profile,
-                ProducerKind.REFERENCE, 1, ignored -> shiftedRelease);
+                true, 14, coordinateBase + 4);
+        Frame shiftedConsume = new Frame(FIRST_FRAME, "test", false, List.of(),
+                List.of(semanticBlocker, semanticConsumed), List.of(),
+                new FrameNativeDiagnostics(List.of(blocker, consumed), List.of(), List.of(),
+                        List.of(), List.of(marker1, marker2, consumeBegin, consumedEnd),
+                        List.of(changedConsumeCoordinate), List.of()));
+        Path shifted = writeCapture("deferred-shifted-consume-coordinate", profile,
+                ProducerKind.REFERENCE, 1, ignored -> shiftedConsume);
         assertSemanticFailure(CompleteRunAudioComparator.compare(shifted, engine),
+                CompleteRunAudioReport.Side.REFERENCE,
+                CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+
+        NativeManagedCorrelation oldRootBegin = new NativeManagedCorrelation(2, List.of(
+                new NativeManagedEvent(coordinateBase + 7, 7, "M68K", 0x71b4c,
+                        1, 0, 15, 0, 4, 0, 77, true)));
+        NativeManagedCorrelation oldRootEnd = new NativeManagedCorrelation(3, List.of(
+                new NativeManagedEvent(coordinateBase + 9, 9, "M68K", 0x71c4c,
+                        2, 0, 15, 0, 4, 0, 79, true)));
+        NativeDeferredServiceBegin oldRelease = new NativeDeferredServiceBegin(
+                13, 0, 6, 0, 4, 77, 2, 0x71b4c,
+                coordinateBase + 1, coordinateBase + 2, 1, 2, 2,
+                true, 15, coordinateBase + 7);
+        FrontierService oldBlocker = new FrontierService(13, 0, 0, "blocker",
+                FrontierServiceState.COMPLETED, FIRST_FRAME, 0, 0x3a, 10, "Z80",
+                FIRST_FRAME, 6L, 0x77, 11, List.of(), List.of());
+        FrontierService oldRoot = new FrontierService(15, 0, 0, "consumed",
+                FrontierServiceState.COMPLETED, FIRST_FRAME, 7, 0x71b4c, 77, "M68K",
+                FIRST_FRAME, 9L, 0x71c4c, 79, List.of(), List.of());
+        Frame oldReleaseFrame = new Frame(FIRST_FRAME, "test", false, List.of(),
+                List.of(semanticBlocker,
+                        service(1, List.of(), List.of(), state(1), "consumed")), List.of(),
+                new FrameNativeDiagnostics(List.of(oldBlocker, oldRoot), List.of(), List.of(),
+                        List.of(), List.of(marker1, marker2, oldRootBegin, oldRootEnd),
+                        List.of(oldRelease), List.of()));
+        Path oldReleaseCapture = writeCapture("deferred-old-blocker-release", profile,
+                ProducerKind.REFERENCE, 1, ignored -> oldReleaseFrame);
+        assertSemanticFailure(CompleteRunAudioComparator.compare(oldReleaseCapture, engine),
                 CompleteRunAudioReport.Side.REFERENCE,
                 CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
     }
@@ -484,14 +533,63 @@ class TestCompleteRunAudioComparator {
     }
 
     @Test
-    void bufferedDeferredBeginRetainsReleasedNativeBeginUntilLaterCompletion() throws Exception {
+    void bufferedDeferredConsumeCarriesOrdinaryNestedServicesToCutoff() throws Exception {
+        TestProfile profile = profile("comparator.buffered.deferred.consumed-cutoff."
+                + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        FrontierServiceRule blockerRule = new FrontierServiceRule("blocker",
+                FrontierServiceState.OPEN, 10, "Z80", 0x3a, null, null, List.of());
+        FrontierServiceRule childRule = new FrontierServiceRule("consumed",
+                FrontierServiceState.OPEN, 78, "M68K", 0x71b82, null, null, List.of());
+        profile.useBufferedReference(blockerRule, childRule);
+        long coordinateBase = (long) FIRST_FRAME << 32;
+        NativeManagedCorrelation marker = new NativeManagedCorrelation(0, List.of(
+                new NativeManagedEvent(coordinateBase + 1, 1, "M68K", 0x71b4c,
+                        10, 4, 13, 0, 6, 0, 77, true)));
+        NativeManagedCorrelation consumeBegin = new NativeManagedCorrelation(1, List.of(
+                new NativeManagedEvent(coordinateBase + 2, 2, "M68K", 0x71b82,
+                        1, 0, 14, 13, 4, 1, 78, true)));
+        NativeDeferredServiceBegin consumed = new NativeDeferredServiceBegin(
+                13, 0, 6, 0, 4, 77, 2, 0x71b4c,
+                coordinateBase + 1, coordinateBase + 1, 1, 1, 1,
+                true, 14, coordinateBase + 2);
+        Frame referenceFrame = new Frame(FIRST_FRAME, "test", false, List.of(), List.of(), List.of(),
+                new FrameNativeDiagnostics(List.of(), List.of(), List.of(), List.of(),
+                        List.of(marker, consumeBegin), List.of(consumed), List.of()));
+        Frame engineFrame = plainFrame(0);
+        FrontierService blocker = new FrontierService(13, 0, 0, "blocker",
+                FrontierServiceState.OPEN, FIRST_FRAME, 0, 0x3a, 10, "Z80",
+                null, null, null, null, List.of(), List.of());
+        FrontierService child = new FrontierService(14, 13, 1, "consumed",
+                FrontierServiceState.OPEN, FIRST_FRAME, 2, 0x71b82, 78, "M68K",
+                null, null, null, null, List.of(), List.of());
+        CutoffFrontier projected = CutoffFrontier.fromNative(List.of(blocker, child), List.of(),
+                List.of(), List.of(), 0, 0, 0, false, state(1), "f".repeat(64));
+        CutoffNativeDiagnostics nativeProof = projected.nativeDiagnostics();
+        CutoffFrontier engineCutoff = new CutoffFrontier(projected.activeStack(), List.of(), List.of(),
+                null, 0, 0, state(1));
+        profile.cutoffPolicy = new CutoffFrontierPolicy(List.of(blockerRule, childRule), 2, 0,
+                0, 0, 0, 0, 0, 0, false, "f".repeat(64),
+                CutoffFrontierPolicy.capabilityDigest(projected),
+                CutoffFrontierPolicy.nativeCapabilityDigest(nativeProof));
+        CompleteRunAudioProfiles.register(profile);
+
+        Path reference = writeCaptureWithCutoff("deferred-consumed-cutoff-reference", profile,
+                ProducerKind.REFERENCE, referenceFrame, projected);
+        Path engine = writeCaptureWithCutoff("deferred-consumed-cutoff-engine", profile,
+                ProducerKind.OPENGGF, engineFrame, engineCutoff);
+        CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
+        assertEquals(CompleteRunAudioReport.Kind.MATCH, report.kind(), report.toText());
+    }
+
+    @Test
+    void bufferedDeferredBeginRetainsConsumedChildUntilLaterCompletion() throws Exception {
         TestProfile profile = profile("comparator.buffered.deferred.crossframe."
                 + PROFILE_SEQUENCE.incrementAndGet(), 2);
         profile.useBufferedReference(
                 new FrontierServiceRule("blocker", FrontierServiceState.COMPLETED,
                         10, "Z80", 0x3a, 11, 0x77, List.of()),
-                new FrontierServiceRule("released", FrontierServiceState.COMPLETED,
-                        77, "M68K", 0x71b4c, 78, 0x71c4c, List.of()));
+                new FrontierServiceRule("consumed", FrontierServiceState.COMPLETED,
+                        78, "M68K", 0x71b82, 79, 0x71c4c, List.of()));
         CompleteRunAudioProfiles.register(profile);
         long firstBase = (long) FIRST_FRAME << 32;
         long secondBase = (long) (FIRST_FRAME + 1) << 32;
@@ -501,60 +599,77 @@ class TestCompleteRunAudioComparator {
         NativeDeferredServiceBegin consumed = new NativeDeferredServiceBegin(
                 13, 0, 6, 0, 4, 77, 2, 0x71b4c,
                 firstBase + 1, firstBase + 1, 1, 1, 1,
-                true, 14, firstBase + 5);
+                true, 14, firstBase + 2);
+        NativeManagedCorrelation consumeBegin = new NativeManagedCorrelation(1, List.of(
+                new NativeManagedEvent(firstBase + 2, 2, "M68K", 0x71b82,
+                        1, 0, 14, 13, 4, 1, 78, true)));
+        Frame consumeFrame = new Frame(FIRST_FRAME, "test", false, List.of(), List.of(), List.of(),
+                new FrameNativeDiagnostics(List.of(), List.of(), List.of(), List.of(),
+                        List.of(marker, consumeBegin), List.of(consumed), List.of()));
         FrontierService blocker = new FrontierService(13, 0, 0, "blocker",
                 FrontierServiceState.COMPLETED, FIRST_FRAME, 0, 0x3a, 10, "Z80",
-                FIRST_FRAME, 4L, 0x77, 11, List.of(), List.of());
-        Frame releaseFrame = new Frame(FIRST_FRAME, "test", false, List.of(),
-                List.of(service(0, List.of(), List.of(), state(1), "blocker")), List.of(),
-                new FrameNativeDiagnostics(List.of(blocker), List.of(), List.of(), List.of(),
-                        List.of(marker), List.of(consumed), List.of()));
-        NativeManagedCorrelation releasedEnd = new NativeManagedCorrelation(0, List.of(
+                FIRST_FRAME + 1, 2L, 0x77, 11, List.of(), List.of());
+        NativeManagedCorrelation consumedEnd = new NativeManagedCorrelation(0, List.of(
                 new NativeManagedEvent(secondBase + 1, 1, "M68K", 0x71c4c,
-                        2, 0, 14, 0, 4, 0, 78, true)));
-        FrontierService released = new FrontierService(14, 0, 0, "released",
-                FrontierServiceState.COMPLETED, FIRST_FRAME, 5, 0x71b4c, 77, "M68K",
-                FIRST_FRAME + 1, 1L, 0x71c4c, 78, List.of(), List.of());
+                        2, 0, 14, 13, 4, 1, 79, true)));
+        FrontierService child = new FrontierService(14, 13, 1, "consumed",
+                FrontierServiceState.COMPLETED, FIRST_FRAME, 2, 0x71b82, 78, "M68K",
+                FIRST_FRAME + 1, 1L, 0x71c4c, 79, List.of(), List.of());
+        DriverService semanticBlocker = service(0, List.of(), List.of(), state(1), "blocker");
+        DriverService semanticChild = new DriverService(1, "consumed", ServiceCompletion.COMPLETED,
+                List.of(), state(1), List.of(), null,
+                new ServiceAncestry(new ServiceCoordinate(FIRST_FRAME, 0), 1,
+                        new ServiceCoordinate(FIRST_FRAME, 0), 1, List.of()));
         Frame completionFrame = new Frame(FIRST_FRAME + 1, "test", false, List.of(),
-                List.of(service(1, List.of(), List.of(), state(1), "released")), List.of(),
-                new FrameNativeDiagnostics(List.of(released), List.of(), List.of(), List.of(),
-                        List.of(releasedEnd)));
-        Frame engineRelease = new Frame(FIRST_FRAME, "test", false, List.of(),
-                releaseFrame.services());
+                List.of(semanticBlocker, semanticChild), List.of(),
+                new FrameNativeDiagnostics(List.of(blocker, child), List.of(), List.of(), List.of(),
+                        List.of(consumedEnd)));
+        Frame engineConsume = plainFrame(0);
         Frame engineCompletion = new Frame(FIRST_FRAME + 1, "test", false, List.of(),
                 completionFrame.services());
 
         Path reference = writeCapture("deferred-crossframe-reference", profile,
-                ProducerKind.REFERENCE, 2, row -> row == 0 ? releaseFrame : completionFrame);
+                ProducerKind.REFERENCE, 2, row -> row == 0 ? consumeFrame : completionFrame);
         Path engine = writeCapture("deferred-crossframe-engine", profile,
-                ProducerKind.OPENGGF, 2, row -> row == 0 ? engineRelease : engineCompletion);
+                ProducerKind.OPENGGF, 2, row -> row == 0 ? engineConsume : engineCompletion);
         CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
         assertEquals(CompleteRunAudioReport.Kind.MATCH, report.kind(), report.toText());
 
         Path missingCompletion = writeCapture("deferred-crossframe-missing", profile,
                 ProducerKind.REFERENCE, 2,
-                row -> row == 0 ? releaseFrame : bufferedFrame(1, List.of(), List.of()));
+                row -> row == 0 ? consumeFrame : bufferedFrame(1, List.of(), List.of()));
         Path emptyCompletionEngine = writeCapture("deferred-crossframe-empty-engine", profile,
-                ProducerKind.OPENGGF, 2, row -> row == 0 ? engineRelease : plainFrame(1));
+                ProducerKind.OPENGGF, 2, row -> row == 0 ? engineConsume : plainFrame(1));
         assertSemanticFailure(CompleteRunAudioComparator.compare(missingCompletion, emptyCompletionEngine),
+                CompleteRunAudioReport.Side.REFERENCE,
+                CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+
+        Frame duplicateConsumeFrame = new Frame(FIRST_FRAME + 1, "test", false, List.of(),
+                completionFrame.services(), List.of(),
+                new FrameNativeDiagnostics(List.of(blocker, child), List.of(), List.of(), List.of(),
+                        List.of(consumedEnd), List.of(consumed), List.of()));
+        Path duplicateConsume = writeCapture("deferred-crossframe-duplicate-consume", profile,
+                ProducerKind.REFERENCE, 2,
+                row -> row == 0 ? consumeFrame : duplicateConsumeFrame);
+        assertSemanticFailure(CompleteRunAudioComparator.compare(duplicateConsume, engine),
                 CompleteRunAudioReport.Side.REFERENCE,
                 CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
     }
 
     @Test
-    void bufferedDeferredReleaseOwnsEmptyFrameRawSlotsAndAdvancesGlobalOrder() throws Exception {
+    void bufferedDeferredConsumeParticipatesInGlobalRawOrder() throws Exception {
         TestProfile profile = profile("comparator.buffered.deferred.raw-order."
                 + PROFILE_SEQUENCE.incrementAndGet(), 3);
         profile.useBufferedReference(
                 new FrontierServiceRule("blocker", FrontierServiceState.COMPLETED,
                         10, "Z80", 0x3a, 11, 0x77, List.of()),
-                new FrontierServiceRule("released", FrontierServiceState.COMPLETED,
-                        77, "M68K", 0x71b4c, 78, 0x71c4c, List.of()),
+                new FrontierServiceRule("consumed", FrontierServiceState.COMPLETED,
+                        78, "M68K", 0x71b82, 79, 0x71c4c, List.of()),
                 new FrontierServiceRule("reset", FrontierServiceState.COMPLETED,
                         0, "RESET", 0, 0, 0, List.of()));
         CompleteRunAudioProfiles.register(profile);
         long firstBase = (long) FIRST_FRAME << 32;
-        long releaseBase = (long) (FIRST_FRAME + 1) << 32;
+        long consumeBase = (long) (FIRST_FRAME + 1) << 32;
         long completionBase = (long) (FIRST_FRAME + 2) << 32;
         NativeManagedCorrelation marker = new NativeManagedCorrelation(0, List.of(
                 new NativeManagedEvent(firstBase + 1, 1, "M68K", 0x71b4c,
@@ -566,79 +681,65 @@ class TestCompleteRunAudioComparator {
         NativeDeferredServiceBegin consumed = new NativeDeferredServiceBegin(
                 13, 0, 6, 0, 4, 77, 2, 0x71b4c,
                 firstBase + 1, firstBase + 1, 1, 1, 1,
-                true, 14, releaseBase + 5);
+                true, 14, consumeBase + 1);
         FrontierService blocker = new FrontierService(13, 0, 0, "blocker",
                 FrontierServiceState.COMPLETED, FIRST_FRAME, 0, 0x3a, 10, "Z80",
-                FIRST_FRAME + 1, 4L, 0x77, 11, List.of(), List.of());
+                FIRST_FRAME + 2, 2L, 0x77, 11, List.of(), List.of());
         Frame pendingFrame = new Frame(FIRST_FRAME, "test", false, List.of(), List.of(), List.of(),
                 new FrameNativeDiagnostics(List.of(), List.of(), List.of(), List.of(),
                         List.of(marker), List.of(pending), List.of()));
-        DriverService semanticBlocker = service(0, List.of(), List.of(), state(1), "blocker");
-        Frame releaseFrame = new Frame(FIRST_FRAME + 1, "test", false, List.of(),
-                List.of(semanticBlocker), List.of(),
-                new FrameNativeDiagnostics(List.of(blocker), List.of(), List.of(), List.of(),
-                        List.of(), List.of(consumed), List.of()));
-        NativeManagedCorrelation releasedEnd = new NativeManagedCorrelation(0, List.of(
+        NativeManagedCorrelation consumeBegin = new NativeManagedCorrelation(0, List.of(
+                new NativeManagedEvent(consumeBase + 1, 1, "M68K", 0x71b82,
+                        1, 0, 14, 13, 4, 1, 78, true)));
+        Frame consumeFrame = new Frame(FIRST_FRAME + 1, "test", false, List.of(), List.of(), List.of(),
+                new FrameNativeDiagnostics(List.of(), List.of(), List.of(), List.of(),
+                        List.of(consumeBegin), List.of(consumed), List.of()));
+        NativeManagedCorrelation consumedEnd = new NativeManagedCorrelation(0, List.of(
                 new NativeManagedEvent(completionBase + 1, 1, "M68K", 0x71c4c,
-                        2, 0, 14, 0, 4, 0, 78, true)));
-        FrontierService released = new FrontierService(14, 0, 0, "released",
-                FrontierServiceState.COMPLETED, FIRST_FRAME + 1, 5, 0x71b4c, 77, "M68K",
-                FIRST_FRAME + 2, 1L, 0x71c4c, 78, List.of(), List.of());
-        DriverService semanticReleased = service(1, List.of(), List.of(), state(1), "released");
+                        2, 0, 14, 13, 4, 1, 79, true)));
+        FrontierService child = new FrontierService(14, 13, 1, "consumed",
+                FrontierServiceState.COMPLETED, FIRST_FRAME + 1, 1, 0x71b82, 78, "M68K",
+                FIRST_FRAME + 2, 1L, 0x71c4c, 79, List.of(), List.of());
+        DriverService semanticBlocker = service(0, List.of(), List.of(), state(1), "blocker");
+        DriverService semanticChild = new DriverService(1, "consumed", ServiceCompletion.COMPLETED,
+                List.of(), state(1), List.of(), null,
+                new ServiceAncestry(new ServiceCoordinate(FIRST_FRAME, 0), 1,
+                        new ServiceCoordinate(FIRST_FRAME, 0), 1, List.of()));
         Frame completionFrame = new Frame(FIRST_FRAME + 2, "test", false, List.of(),
-                List.of(semanticReleased), List.of(),
-                new FrameNativeDiagnostics(List.of(released), List.of(), List.of(), List.of(),
-                        List.of(releasedEnd)));
+                List.of(semanticBlocker, semanticChild), List.of(),
+                new FrameNativeDiagnostics(List.of(blocker, child), List.of(), List.of(), List.of(),
+                        List.of(consumedEnd)));
         Frame enginePending = plainFrame(0);
-        Frame engineRelease = new Frame(FIRST_FRAME + 1, "test", false, List.of(),
-                List.of(semanticBlocker));
+        Frame engineConsume = plainFrame(1);
         Frame engineCompletion = new Frame(FIRST_FRAME + 2, "test", false, List.of(),
-                List.of(semanticReleased));
+                List.of(semanticBlocker, semanticChild));
 
-        Path reference = writeCapture("deferred-empty-release-frame", profile,
+        Path reference = writeCapture("deferred-consume-frame", profile,
                 ProducerKind.REFERENCE, 3, row -> switch (row) {
                     case 0 -> pendingFrame;
-                    case 1 -> releaseFrame;
+                    case 1 -> consumeFrame;
                     default -> completionFrame;
                 });
-        Path engine = writeCapture("deferred-empty-release-engine", profile,
+        Path engine = writeCapture("deferred-consume-engine", profile,
                 ProducerKind.OPENGGF, 3, row -> switch (row) {
                     case 0 -> enginePending;
-                    case 1 -> engineRelease;
+                    case 1 -> engineConsume;
                     default -> engineCompletion;
                 });
         CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
         assertEquals(CompleteRunAudioReport.Kind.MATCH, report.kind(), report.toText());
 
         NativeManagedCorrelation regressedEnd = new NativeManagedCorrelation(0, List.of(
-                new NativeManagedEvent(releaseBase + 5, 1, "M68K", 0x71c4c,
-                        2, 0, 14, 0, 4, 0, 78, true)));
+                new NativeManagedEvent(consumeBase + 1, 1, "M68K", 0x71c4c,
+                        2, 0, 14, 13, 4, 1, 79, true)));
         Frame regressionFrame = new Frame(FIRST_FRAME + 2, "test", false, List.of(),
-                List.of(semanticReleased), List.of(),
-                new FrameNativeDiagnostics(List.of(released), List.of(), List.of(), List.of(),
+                List.of(semanticBlocker, semanticChild), List.of(),
+                new FrameNativeDiagnostics(List.of(blocker, child), List.of(), List.of(), List.of(),
                         List.of(regressedEnd)));
-        Path regression = writeCapture("deferred-post-release-regression", profile,
+        Path regression = writeCapture("deferred-post-consume-regression", profile,
                 ProducerKind.REFERENCE, 3, row -> row == 0 ? pendingFrame
-                        : row == 1 ? releaseFrame : regressionFrame);
+                        : row == 1 ? consumeFrame : regressionFrame);
         assertSemanticFailure(CompleteRunAudioComparator.compare(regression, engine),
-                CompleteRunAudioReport.Side.REFERENCE,
-                CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
-
-        NativeManagedCorrelation collidingMarker = new NativeManagedCorrelation(0, List.of(
-                new NativeManagedEvent(releaseBase + 4, 4, "M68K", 0x71b4c,
-                        10, 4, 13, 0, 6, 0, 77, true)));
-        NativeDeferredServiceBegin collided = new NativeDeferredServiceBegin(
-                13, 0, 6, 0, 4, 77, 2, 0x71b4c,
-                firstBase + 1, releaseBase + 4, 1, 4, 2,
-                true, 14, releaseBase + 5);
-        Frame collisionFrame = new Frame(FIRST_FRAME + 1, "test", false, List.of(),
-                List.of(semanticBlocker), List.of(),
-                new FrameNativeDiagnostics(List.of(blocker), List.of(), List.of(), List.of(),
-                        List.of(collidingMarker), List.of(collided), List.of()));
-        Path collision = writeCapture("deferred-release-raw-slot-collision", profile,
-                ProducerKind.REFERENCE, 3, row -> row == 0 ? pendingFrame
-                        : row == 1 ? collisionFrame : completionFrame);
-        assertSemanticFailure(CompleteRunAudioComparator.compare(collision, engine),
                 CompleteRunAudioReport.Side.REFERENCE,
                 CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
 
@@ -652,7 +753,7 @@ class TestCompleteRunAudioComparator {
                         List.of(pending), List.of()));
         Path resetWhilePending = writeCapture("deferred-reset-while-pending", profile,
                 ProducerKind.REFERENCE, 3, row -> row == 0 ? resetPending
-                        : row == 1 ? releaseFrame : completionFrame);
+                        : row == 1 ? consumeFrame : completionFrame);
         assertSemanticFailure(CompleteRunAudioComparator.compare(resetWhilePending, engine),
                 CompleteRunAudioReport.Side.REFERENCE,
                 CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);

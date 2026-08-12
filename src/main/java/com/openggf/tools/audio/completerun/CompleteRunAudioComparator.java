@@ -1444,7 +1444,6 @@ public final class CompleteRunAudioComparator {
                             .map(owned -> new NativeRawSlot(
                                     owned.event().coordinate(), owned.event().ordinal())))
                     .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
-            slots.addAll(deferred.rawSlots());
             slots.sort(Comparator.comparingLong(NativeRawSlot::coordinate)
                     .thenComparingLong(NativeRawSlot::ordinal));
             long previousOrdinal = -1;
@@ -1463,11 +1462,11 @@ public final class CompleteRunAudioComparator {
                 previousNativeRawCoordinate = slot.coordinate();
                 previousOrdinal = slot.ordinal();
             }
-            if (deferred.releasedBegin() != null
+            if (deferred.consumeBegin() != null
                     && (coordinateBase == null
-                            || deferred.releasedBegin().coordinate()
-                                    != coordinateBase + deferred.releasedBegin().ordinal())) {
-                throw nativeEvidence("deferred service-begin release coordinate is not exact");
+                            || deferred.consumeBegin().coordinate()
+                                    != coordinateBase + deferred.consumeBegin().ordinal())) {
+                throw nativeEvidence("deferred service-begin consume coordinate is not exact");
             }
             recordNativePromotions(diagnostics);
         }
@@ -1508,8 +1507,8 @@ public final class CompleteRunAudioComparator {
             NativeDeferredServiceBegin expected = new NativeDeferredServiceBegin(
                     blockerToken, blockerParent, blockerKind, blockerDepth, targetKind,
                     hookToken, 2, pc, firstCoordinate, latestCoordinate, firstOrdinal,
-                    latestOrdinal, observations, published.consumed(), published.releasedToken(),
-                    published.releaseCoordinate());
+                    latestOrdinal, observations, published.consumed(), published.consumedToken(),
+                    published.consumeCoordinate());
             for (NativeManagedEvent marker : markers) {
                 if (!"M68K".equals(marker.sourceCpu()) || marker.pc() != pc
                         || marker.serviceToken() != blockerToken
@@ -1526,48 +1525,43 @@ public final class CompleteRunAudioComparator {
                 throw nativeEvidence("reset occurs while a deferred service begin is retained");
             }
             if (!published.consumed()) {
-                return new DeferredFrameEvidence(published, null, -1, List.of());
+                return new DeferredFrameEvidence(published, null);
             }
-            FrontierService blocker = diagnostics.services().stream()
-                    .filter(service -> service.token() == blockerToken).findFirst().orElse(null);
-            if (blocker == null || blocker.state() != FrontierServiceState.COMPLETED
-                    || blocker.parentToken() != blockerParent || blocker.depth() != blockerDepth
-                    || blocker.currentParentToken() != blockerParent
-                    || blocker.currentDepth() != blockerDepth || blocker.endFrame() == null
-                    || blocker.endOrdinal() == null || blocker.endPc() == null
-                    || blocker.endHookToken() == null || blocker.endFrame() != frame) {
-                throw nativeEvidence("deferred service-begin release has no exact blocker completion");
+            List<NativeManagedEvent> consumeBegins = diagnostics.managedCorrelations().stream()
+                    .flatMap(correlation -> correlation.events().stream())
+                    .filter(event -> event.eventKind() == 1
+                            && event.serviceToken() == published.consumedToken()).toList();
+            if (consumeBegins.size() != 1) {
+                throw nativeEvidence("deferred service-begin consume has no unique child begin proof");
             }
-            long releaseOrdinal = blocker.endOrdinal() + 1;
-            if (releaseOrdinal >= MAX_NATIVE_FRAME_EVENTS) {
-                throw nativeEvidence("deferred service-begin release ordinal exceeds native capacity");
+            NativeManagedEvent consumeBegin = consumeBegins.getFirst();
+            if (consumeBegin.coordinate() != published.consumeCoordinate()
+                    || !"M68K".equals(consumeBegin.sourceCpu())
+                    || consumeBegin.parentToken() != blockerToken
+                    || consumeBegin.serviceKind() != targetKind
+                    || consumeBegin.depth() != blockerDepth + 1) {
+                throw nativeEvidence("deferred service-begin consume identity is not exact");
             }
-            FrontierService released = diagnostics.services().stream()
-                    .filter(service -> service.token() == published.releasedToken()).findFirst().orElse(null);
-            // The native BEGIN is mandatory in the consumed reservation and becomes retained
-            // managed evidence here. Its completed FrontierService may be published in a later
-            // frame; cutoff/terminal validation rejects that evidence if it is never discharged.
-            if (released != null && (released.parentToken() != 0 || released.depth() != 0
-                    || released.beginFrame() != blocker.endFrame()
-                    || released.beginOrdinal() != releaseOrdinal || released.beginPc() != pc
-                    || released.beginHookToken() != hookToken
-                    || !"M68K".equals(released.beginSourceCpu()))) {
-                throw nativeEvidence("deferred service-begin release is not the exact adjacent root");
+            FrontierService consumed = diagnostics.services().stream()
+                    .filter(service -> service.token() == published.consumedToken()).findFirst().orElse(null);
+            // A completed child may be retained in this frame, or its ordinary begin may remain
+            // active until a later frame/cutoff. In either case, the real managed BEGIN owns the
+            // transaction; no blocker-END-to-root boundary is synthesized.
+            if (consumed != null && (consumed.parentToken() != blockerToken
+                    || consumed.depth() != blockerDepth + 1
+                    || consumed.beginFrame() != frame
+                    || consumed.beginOrdinal() != consumeBegin.ordinal()
+                    || consumed.beginPc() != consumeBegin.pc()
+                    || consumed.beginHookToken() != consumeBegin.hookToken()
+                    || !consumed.beginSourceCpu().equals(consumeBegin.sourceCpu()))) {
+                throw nativeEvidence("deferred service-begin child does not match its consume proof");
             }
-            NativeManagedEvent syntheticBegin = new NativeManagedEvent(
-                    published.releaseCoordinate(), releaseOrdinal, "M68K", pc, 1, 0,
-                    published.releasedToken(), 0, targetKind, 0, hookToken, true);
-            return new DeferredFrameEvidence(null, syntheticBegin, blocker.endFrame(), List.of(
-                    new NativeRawSlot(published.releaseCoordinate() - 1, blocker.endOrdinal()),
-                    new NativeRawSlot(published.releaseCoordinate(), releaseOrdinal)));
+            return new DeferredFrameEvidence(null, consumeBegin);
         }
 
         private void commitDeferredServiceBegin(DeferredFrameEvidence deferred)
                 throws ValidationException {
             pendingDeferredBegin = deferred.pending();
-            if (deferred.releasedBegin() != null) {
-                beginManagedService(deferred.releaseFrame(), deferred.releasedBegin());
-            }
         }
 
         private void deferredCutoff(NativeDeferredServiceBegin cutoff) throws ValidationException {
@@ -1788,13 +1782,9 @@ public final class CompleteRunAudioComparator {
         private record NativeBeginCoordinate(int frame, long ordinal) {}
         private record NativeRawSlot(long coordinate, long ordinal) {}
         private record DeferredFrameEvidence(NativeDeferredServiceBegin pending,
-                NativeManagedEvent releasedBegin, int releaseFrame, List<NativeRawSlot> rawSlots) {
-            private DeferredFrameEvidence {
-                rawSlots = List.copyOf(rawSlots);
-            }
-
+                NativeManagedEvent consumeBegin) {
             static DeferredFrameEvidence empty() {
-                return new DeferredFrameEvidence(null, null, -1, List.of());
+                return new DeferredFrameEvidence(null, null);
             }
         }
         private record ManagedServiceEvidence(NativeBeginCoordinate begin, NativeManagedEvent beginEvent,

@@ -485,11 +485,11 @@ public final class CompleteRunAudioTrace {
         }
     }
 
-    /** One lossless native reservation for a service begin deferred until its blocker ends. */
+    /** One lossless native reservation for a service begin deferred until its consume hook. */
     public record NativeDeferredServiceBegin(long blockerToken, long blockerParentToken,
             int blockerKind, int blockerDepth, int targetKind, int hookToken, int sourceCpu, int pc,
             long firstCoordinate, long latestCoordinate, long firstOrdinal, long latestOrdinal,
-            int observationCount, boolean consumed, long releasedToken, long releaseCoordinate) {
+            int observationCount, boolean consumed, long consumedToken, long consumeCoordinate) {
         public NativeDeferredServiceBegin {
             if (blockerToken <= 0 || blockerToken > 0xffff
                     || blockerParentToken < 0 || blockerParentToken > 0xffff
@@ -506,11 +506,11 @@ public final class CompleteRunAudioTrace {
                     || observationCount <= 0
                     || (observationCount == 1)
                             != (firstCoordinate == latestCoordinate && firstOrdinal == latestOrdinal)
-                    || consumed != (releasedToken > 0)
-                    || releasedToken < 0 || releasedToken > 0xffff
-                    || consumed && (releasedToken == blockerToken
-                            || releaseCoordinate <= latestCoordinate)
-                    || !consumed && releaseCoordinate != 0) {
+                    || consumed != (consumedToken > 0)
+                    || consumedToken < 0 || consumedToken > 0xffff
+                    || consumed && (consumedToken == blockerToken
+                            || consumeCoordinate <= latestCoordinate)
+                    || !consumed && consumeCoordinate != 0) {
                 throw new IllegalArgumentException("native deferred service-begin evidence is invalid");
             }
         }

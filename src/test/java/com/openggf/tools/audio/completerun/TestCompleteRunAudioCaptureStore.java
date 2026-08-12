@@ -278,13 +278,13 @@ class TestCompleteRunAudioCaptureStore {
     }
 
     @Test
-    void deferredReservationChangesRawStorageRootButNotSemanticRoot() {
+    void deferredConsumeChangesRawStorageRootButNotSemanticRoot() {
         NativeDeferredServiceBegin first = new NativeDeferredServiceBegin(
                 13, 0, 6, 0, 4, 77, 2, 0x71b4c,
-                40, 41, 12, 13, 2, false, 0, 0);
+                40, 41, 12, 13, 2, true, 14, 42);
         NativeDeferredServiceBegin changed = new NativeDeferredServiceBegin(
                 13, 0, 6, 0, 4, 77, 2, 0x71b4c,
-                40, 42, 12, 14, 2, false, 0, 0);
+                40, 41, 12, 13, 2, true, 15, 43);
         Frame left = new Frame(860, "test", false, List.of(), List.of(), List.of(),
                 new FrameNativeDiagnostics(List.of(), List.of(), List.of(), List.of(), List.of(),
                         List.of(first), List.of()));

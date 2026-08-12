@@ -63,6 +63,78 @@ class TestCompleteRunAudioTrace {
         assertThrows(IllegalArgumentException.class, () -> new NativeDeferredServiceBegin(
                 13, 0, 6, 0, 4, 77, 2, 0x71b4c,
                 40, 41, 12, 13, 2, true, 13, 42));
+
+        NativeDeferredServiceBegin consumed = new NativeDeferredServiceBegin(
+                13, 0, 6, 0, 4, 77, 2, 0x71b4c,
+                40, 41, 12, 13, 2, true, 14, 42);
+        ArrayList<NativeDeferredServiceBegin> callerDeferred = new ArrayList<>(List.of(consumed));
+        Frame consumedFrame = new Frame(3, "deferred", false, List.of(), List.of(), List.of(),
+                new FrameNativeDiagnostics(List.of(), List.of(), List.of(), List.of(), List.of(),
+                        callerDeferred, List.of()));
+        String consumedJson = assertDoesNotThrow(() -> CompleteRunAudioJson.writeRecord(consumedFrame));
+        callerDeferred.clear();
+        assertTrue(consumedJson.contains("\"consumedToken\":14"));
+        assertTrue(consumedJson.contains("\"consumeCoordinate\":42"));
+        assertEquals(consumedFrame, CompleteRunAudioJson.readRecord(consumedJson));
+        assertThrows(IllegalArgumentException.class, () -> CompleteRunAudioJson.readRecord(
+                consumedJson.replace("\"consumedToken\"", "\"releasedToken\"")));
+        assertThrows(IllegalArgumentException.class, () -> CompleteRunAudioJson.readRecord(
+                consumedJson.replace("\"consumeCoordinate\"", "\"releaseCoordinate\"")));
+        assertEquals(14, consumed.consumedToken());
+        assertEquals(42, consumed.consumeCoordinate());
+        assertEquals(List.of(consumed), consumedFrame.nativeDiagnostics().deferredServiceBegins());
+    }
+
+    @Test
+    void nativeDeferredConsumeCannotForgeChildAncestryOrReuseRawSlots() {
+        NativeManagedCorrelation marker = new NativeManagedCorrelation(0, List.of(
+                new NativeManagedEvent(40, 1, "M68K", 0x71b4c,
+                        10, 4, 13, 0, 6, 0, 77, true)));
+        NativeManagedEvent begin = new NativeManagedEvent(41, 2, "M68K", 0x71b82,
+                1, 0, 14, 13, 4, 1, 78, true);
+        NativeManagedCorrelation consume = new NativeManagedCorrelation(1, List.of(begin));
+        NativeManagedCorrelation end = new NativeManagedCorrelation(2, List.of(
+                new NativeManagedEvent(43, 4, "M68K", 0x71c4c,
+                        2, 0, 14, 13, 4, 1, 79, true)));
+        NativeDeferredServiceBegin consumed = new NativeDeferredServiceBegin(
+                13, 0, 6, 0, 4, 77, 2, 0x71b4c,
+                40, 40, 1, 1, 1, true, 14, 41);
+        FrontierService blocker = new FrontierService(13, 0, 0, "blocker",
+                FrontierServiceState.COMPLETED, 3, 0, 0x3a, 10, "Z80",
+                3, 5L, 0x77, 11, List.of(), List.of());
+        FrontierService child = new FrontierService(14, 13, 1, "child",
+                FrontierServiceState.COMPLETED, 3, 2, 0x71b82, 78, "M68K",
+                3, 4L, 0x71c4c, 79, List.of(), List.of());
+
+        assertDoesNotThrow(() -> new FrameNativeDiagnostics(List.of(blocker, child),
+                List.of(), List.of(), List.of(), List.of(marker, consume, end),
+                List.of(consumed), List.of()));
+
+        NativeManagedCorrelation wrongParent = new NativeManagedCorrelation(1, List.of(
+                new NativeManagedEvent(41, 2, "M68K", 0x71b82,
+                        1, 0, 14, 0, 4, 0, 78, true)));
+        assertThrows(IllegalArgumentException.class, () -> new FrameNativeDiagnostics(
+                List.of(blocker, child), List.of(), List.of(), List.of(),
+                List.of(marker, wrongParent, end), List.of(consumed), List.of()));
+
+        NativeManagedCorrelation duplicateConsume = new NativeManagedCorrelation(2, List.of(
+                new NativeManagedEvent(42, 3, "M68K", 0x71b82,
+                        1, 0, 14, 13, 4, 1, 78, true)));
+        NativeManagedCorrelation shiftedEnd = new NativeManagedCorrelation(3, end.events());
+        assertThrows(IllegalArgumentException.class, () -> new FrameNativeDiagnostics(
+                List.of(blocker, child), List.of(), List.of(), List.of(),
+                List.of(marker, consume, duplicateConsume, shiftedEnd),
+                List.of(consumed), List.of()));
+
+        FrontierChipEvent collision = new FrontierChipEvent(41, 2, "M68K", 0x71b84,
+                4, 0, 0x90, true, null, null);
+        FrontierService childWithCollision = new FrontierService(14, 13, 1, "child",
+                FrontierServiceState.COMPLETED, 3, 2, 0x71b82, 78, "M68K",
+                3, 4L, 0x71c4c, 79, List.of(), List.of(collision));
+        assertThrows(IllegalArgumentException.class, () -> new FrameNativeDiagnostics(
+                List.of(blocker, childWithCollision),
+                List.of(new FrontierOwnedChip(14, collision)), List.of(), List.of(),
+                List.of(marker, consume, end), List.of(consumed), List.of()));
     }
 
     @Test

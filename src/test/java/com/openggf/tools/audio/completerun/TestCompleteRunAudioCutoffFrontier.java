@@ -312,6 +312,40 @@ class TestCompleteRunAudioCutoffFrontier {
     }
 
     @Test
+    void consumedDeferredChildUsesOrdinaryImmutableActiveCutoffHierarchy() throws Exception {
+        FrontierService blocker = service(13, 0, 0, FrontierServiceState.OPEN, 10);
+        FrontierService child = new FrontierService(14, 13, 1, "service",
+                FrontierServiceState.OPEN, 900, 11, 0x71b82, 78, "M68K",
+                null, null, null, null, List.of(), List.of());
+        CutoffFrontier projected = CutoffFrontier.fromNative(List.of(blocker, child), List.of(),
+                List.of(), List.of(), 1, 0, 0, true, STATE, "c".repeat(64));
+        ArrayList<FrontierService> callerActive = new ArrayList<>(List.of(blocker, child));
+        CompleteRunAudioTrace.CutoffNativeDiagnostics raw =
+                new CompleteRunAudioTrace.CutoffNativeDiagnostics(
+                        callerActive, List.of(), List.of(), List.of(), null,
+                        1, true, "c".repeat(64));
+        CutoffFrontier withRaw = new CutoffFrontier(projected.activeStack(), List.of(), List.of(),
+                raw, 0, 0, STATE);
+        CutoffFrontier semanticOnly = new CutoffFrontier(projected.activeStack(), List.of(), List.of(),
+                null, 0, 0, STATE);
+        String json = CompleteRunAudioJson.writeRecord(withRaw);
+        String digest = CutoffFrontierPolicy.nativeCapabilityDigest(raw);
+
+        callerActive.clear();
+
+        assertEquals(List.of(blocker, child), raw.activeStack());
+        assertEquals(null, raw.pendingDeferredServiceBegin());
+        assertEquals(withRaw, CompleteRunAudioJson.readRecord(json));
+        assertEquals(json, CompleteRunAudioJson.writeRecord(withRaw));
+        assertEquals(digest, CutoffFrontierPolicy.nativeCapabilityDigest(raw));
+        assertNotEquals(CompleteRunAudioJson.writeRecord(withRaw),
+                CompleteRunAudioJson.writeRecord(semanticOnly));
+        assertEquals(CompleteRunAudioJson.writeSemanticRecord(withRaw),
+                CompleteRunAudioJson.writeSemanticRecord(semanticOnly));
+        assertThrows(UnsupportedOperationException.class, raw.activeStack()::clear);
+    }
+
+    @Test
     void exactPolicyRejectsTruncatedOwnershipAndPinsCanonicalCapabilityBytes() {
         CutoffFrontier empty = CutoffFrontier.empty(STATE);
         assertEquals("2f2c00122d6e952e8f3fe2bdb1aa853acd70dba92630a6fe885fac34c3880d9a",
