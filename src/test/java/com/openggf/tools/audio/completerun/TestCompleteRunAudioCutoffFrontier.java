@@ -312,6 +312,40 @@ class TestCompleteRunAudioCutoffFrontier {
     }
 
     @Test
+    void pendingDeferredBeginAcceptsAOneHopAttestedCurrentOwnerWithoutRewritingOrigin() throws Exception {
+        CompleteRunAudioTrace.NativeDeferredServiceBegin origin =
+                new CompleteRunAudioTrace.NativeDeferredServiceBegin(
+                        13, 0, 6, 0, 4, 77, 2, 0x71b4c,
+                        40, 41, 12, 13, 2, false, 0, 0);
+        FrontierService successor = new FrontierService(20, 0, 0, "dpcm",
+                FrontierServiceState.OPEN, 900, 6, 0x77, 11, "Z80",
+                null, null, null, null, List.of(), List.of());
+
+        CompleteRunAudioTrace.CutoffNativeDiagnostics attested = assertDoesNotThrow(() ->
+                new CompleteRunAudioTrace.CutoffNativeDiagnostics(
+                        List.of(successor), List.of(), List.of(), List.of(), origin,
+                        1, true, "b".repeat(64)));
+
+        assertEquals(origin, attested.pendingDeferredServiceBegin());
+        assertEquals(successor, attested.activeStack().getLast());
+        String json = CompleteRunAudioJson.writeNativeCutoffDiagnostics(attested);
+        assertEquals(true, json.contains("\"pendingDeferredServiceBegin\":{\"blockerToken\":13,"
+                + "\"blockerParentToken\":0,\"blockerKind\":6,\"blockerDepth\":0,"
+                + "\"targetKind\":4,\"hookToken\":77,\"sourceCpu\":2,\"pc\":465740,"
+                + "\"firstCoordinate\":40,\"latestCoordinate\":41,\"firstOrdinal\":12,"
+                + "\"latestOrdinal\":13,\"observationCount\":2,\"consumed\":false,"
+                + "\"consumedToken\":0,\"consumeCoordinate\":0},\"armEpoch\":1"));
+
+        FrontierService wrongDepth = new FrontierService(20, 13, 1, "dpcm",
+                FrontierServiceState.OPEN, 900, 6, 0x77, 11, "Z80",
+                null, null, null, null, List.of(), List.of());
+        assertThrows(IllegalArgumentException.class, () ->
+                new CompleteRunAudioTrace.CutoffNativeDiagnostics(
+                        List.of(successor, wrongDepth), List.of(), List.of(), List.of(), origin,
+                        1, true, "b".repeat(64)));
+    }
+
+    @Test
     void consumedDeferredChildUsesOrdinaryImmutableActiveCutoffHierarchy() throws Exception {
         FrontierService blocker = service(13, 0, 0, FrontierServiceState.OPEN, 10);
         FrontierService child = new FrontierService(14, 13, 1, "service",

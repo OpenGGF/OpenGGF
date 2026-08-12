@@ -479,6 +479,112 @@ class TestCompleteRunAudioComparator {
     }
 
     @Test
+    void bufferedDeferredBeginConsumesUnderExactSameFrameTailSuccessorForBothRoutes() throws Exception {
+        for (int successorKind : List.of(2, 3)) {
+            int tailPc = successorKind == 2 ? 0x77 : 0xc1;
+            int tailHook = successorKind == 2 ? 11 : 12;
+            String successorName = successorKind == 2 ? "dpcm" : "sega-pcm";
+            TestProfile profile = profile("comparator.buffered.deferred.transfer."
+                    + successorKind + "." + PROFILE_SEQUENCE.incrementAndGet(), 1);
+            profile.useBufferedReference(
+                    new FrontierServiceRule("blocker", FrontierServiceState.COMPLETED,
+                            10, "Z80", 0x3a, tailHook, tailPc, List.of()),
+                    new FrontierServiceRule(successorName, FrontierServiceState.COMPLETED,
+                            tailHook, "Z80", tailPc, tailHook + 20, tailPc + 0x35, List.of()),
+                    new FrontierServiceRule("consumed", FrontierServiceState.COMPLETED,
+                            78, "M68K", 0x71b82, 79, 0x71c4c, List.of()));
+            CompleteRunAudioProfiles.register(profile);
+            long base = (long) FIRST_FRAME << 32;
+            NativeManagedCorrelation marker = new NativeManagedCorrelation(0, List.of(
+                    new NativeManagedEvent(base + 1, 1, "M68K", 0x71b4c,
+                            10, 4, 13, 0, 6, 0, 77, true)));
+            NativeManagedCorrelation consumeBegin = new NativeManagedCorrelation(1, List.of(
+                    new NativeManagedEvent(base + 5, 5, "M68K", 0x71b82,
+                            1, 0, 21, 20, 4, 1, 78, true)));
+            NativeManagedCorrelation consumeEnd = new NativeManagedCorrelation(2, List.of(
+                    new NativeManagedEvent(base + 7, 7, "M68K", 0x71c4c,
+                            2, 0, 21, 20, 4, 1, 79, true)));
+            NativeDeferredServiceBegin deferred = new NativeDeferredServiceBegin(
+                    13, 0, 6, 0, 4, 77, 2, 0x71b4c,
+                    base + 1, base + 1, 1, 1, 1, true, 21, base + 5);
+            FrontierService blocker = new FrontierService(13, 0, 0, "blocker",
+                    FrontierServiceState.COMPLETED, FIRST_FRAME, 0, 0x3a, 10, "Z80",
+                    FIRST_FRAME, 3L, tailPc, tailHook, List.of(), List.of());
+            FrontierService successor = new FrontierService(20, 0, 0, successorName,
+                    FrontierServiceState.COMPLETED, FIRST_FRAME, 4, tailPc, tailHook, "Z80",
+                    FIRST_FRAME, 8L, tailPc + 0x35, tailHook + 20, List.of(), List.of());
+            FrontierService child = new FrontierService(21, 20, 1, "consumed",
+                    FrontierServiceState.COMPLETED, FIRST_FRAME, 5, 0x71b82, 78, "M68K",
+                    FIRST_FRAME, 7L, 0x71c4c, 79, List.of(), List.of());
+            DriverService semanticBlocker = service(0, List.of(), List.of(), state(1), "blocker");
+            DriverService semanticSuccessor = service(1, List.of(), List.of(), state(1), successorName);
+            DriverService semanticChild = new DriverService(2, "consumed",
+                    ServiceCompletion.COMPLETED, List.of(), state(1), List.of(), null,
+                    new ServiceAncestry(new ServiceCoordinate(FIRST_FRAME, 2), 1,
+                            new ServiceCoordinate(FIRST_FRAME, 2), 1, List.of()));
+            Frame referenceFrame = new Frame(FIRST_FRAME, "test", false, List.of(),
+                    List.of(semanticBlocker, semanticSuccessor, semanticChild), List.of(),
+                    new FrameNativeDiagnostics(List.of(blocker, successor, child), List.of(), List.of(),
+                            List.of(), List.of(marker, consumeBegin, consumeEnd),
+                            List.of(deferred), List.of()));
+            Frame engineFrame = new Frame(FIRST_FRAME, "test", false, List.of(),
+                    List.of(semanticBlocker, semanticSuccessor, semanticChild));
+
+            Path reference = writeCapture("deferred-transfer-reference-" + successorKind, profile,
+                    ProducerKind.REFERENCE, 1, ignored -> referenceFrame);
+            Path engine = writeCapture("deferred-transfer-engine-" + successorKind, profile,
+                    ProducerKind.OPENGGF, 1, ignored -> engineFrame);
+            CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
+            assertEquals(CompleteRunAudioReport.Kind.MATCH, report.kind(), report.toText());
+
+            NativeManagedCorrelation consumeUnderOrigin = new NativeManagedCorrelation(1, List.of(
+                    new NativeManagedEvent(base + 5, 5, "M68K", 0x71b82,
+                            1, 0, 21, 13, 4, 1, 78, true)));
+            NativeDeferredServiceBegin staleOwner = new NativeDeferredServiceBegin(
+                    13, 0, 6, 0, 4, 77, 2, 0x71b4c,
+                    base + 1, base + 1, 1, 1, 1, true, 21, base + 5);
+            Frame staleOwnerFrame = new Frame(FIRST_FRAME, "test", false, List.of(),
+                    List.of(semanticBlocker, semanticSuccessor), List.of(),
+                    new FrameNativeDiagnostics(List.of(blocker, successor), List.of(), List.of(),
+                            List.of(), List.of(marker, consumeUnderOrigin),
+                            List.of(staleOwner), List.of()));
+            Frame engineOwnerFrame = new Frame(FIRST_FRAME, "test", false, List.of(),
+                    staleOwnerFrame.services());
+            Path staleOwnerCapture = writeCapture(
+                    "deferred-transfer-stale-origin-" + successorKind, profile,
+                    ProducerKind.REFERENCE, 1, ignored -> staleOwnerFrame);
+            Path engineOwnerCapture = writeCapture(
+                    "deferred-transfer-stale-origin-engine-" + successorKind, profile,
+                    ProducerKind.OPENGGF, 1, ignored -> engineOwnerFrame);
+            assertSemanticFailure(CompleteRunAudioComparator.compare(
+                            staleOwnerCapture, engineOwnerCapture),
+                    CompleteRunAudioReport.Side.REFERENCE,
+                    CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+
+            NativeManagedCorrelation collidingConsume = new NativeManagedCorrelation(1, List.of(
+                    new NativeManagedEvent(base + 4, 4, "M68K", 0x71b82,
+                            1, 0, 21, 20, 4, 1, 78, true)));
+            NativeDeferredServiceBegin colliding = new NativeDeferredServiceBegin(
+                    13, 0, 6, 0, 4, 77, 2, 0x71b4c,
+                    base + 1, base + 1, 1, 1, 1, true, 21, base + 4);
+            Frame collidingFrame = new Frame(FIRST_FRAME, "test", false, List.of(),
+                    List.of(semanticBlocker, semanticSuccessor), List.of(),
+                    new FrameNativeDiagnostics(List.of(blocker, successor), List.of(), List.of(),
+                            List.of(), List.of(marker, collidingConsume),
+                            List.of(colliding), List.of()));
+            Path collisionCapture = writeCapture(
+                    "deferred-transfer-colliding-successor-" + successorKind, profile,
+                    ProducerKind.REFERENCE, 1, ignored -> collidingFrame);
+            CompleteRunAudioReport collisionReport = CompleteRunAudioComparator.compare(
+                    collisionCapture, engineOwnerCapture);
+            assertSemanticFailure(collisionReport, CompleteRunAudioReport.Side.REFERENCE,
+                    CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+            assertEquals("retained tail service collides with another native raw event",
+                    collisionReport.validationDetail());
+        }
+    }
+
+    @Test
     void bufferedDeferredBeginCarriesExactPendingSidecarToCutoff() throws Exception {
         TestProfile profile = profile("comparator.buffered.deferred.cutoff."
                 + PROFILE_SEQUENCE.incrementAndGet(), 1);
@@ -519,7 +625,8 @@ class TestCompleteRunAudioComparator {
         Path engine = writeCaptureWithCutoff("deferred-cutoff-engine", profile,
                 ProducerKind.OPENGGF, engineFrame, engineCutoff);
         CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
-        assertEquals(CompleteRunAudioReport.Kind.MATCH, report.kind(), report.toText());
+        assertSemanticFailure(report, CompleteRunAudioReport.Side.REFERENCE,
+                CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
 
         CutoffNativeDiagnostics missingProof = new CutoffNativeDiagnostics(List.of(blocker), List.of(),
                 List.of(), List.of(), 0, false, "f".repeat(64));
@@ -530,6 +637,85 @@ class TestCompleteRunAudioComparator {
         assertSemanticFailure(CompleteRunAudioComparator.compare(missing, engine),
                 CompleteRunAudioReport.Side.REFERENCE,
                 CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+    }
+
+    @Test
+    void bufferedDeferredTransferRequiresItsExactCurrentOwnerAtCutoff() throws Exception {
+        TestProfile profile = profile("comparator.buffered.deferred.transfer.cutoff."
+                + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        FrontierServiceRule blockerRule = new FrontierServiceRule("blocker",
+                FrontierServiceState.COMPLETED, 10, "Z80", 0x3a, 11, 0x77, List.of());
+        FrontierServiceRule successorRule = new FrontierServiceRule("dpcm",
+                FrontierServiceState.OPEN, 11, "Z80", 0x77, null, null, List.of());
+        profile.useBufferedReference(blockerRule, successorRule);
+        long base = (long) FIRST_FRAME << 32;
+        NativeManagedCorrelation marker = new NativeManagedCorrelation(0, List.of(
+                new NativeManagedEvent(base + 1, 1, "M68K", 0x71b4c,
+                        10, 4, 13, 0, 6, 0, 77, true)));
+        NativeDeferredServiceBegin pending = new NativeDeferredServiceBegin(
+                13, 0, 6, 0, 4, 77, 2, 0x71b4c,
+                base + 1, base + 1, 1, 1, 1, false, 0, 0);
+        FrontierService blocker = new FrontierService(13, 0, 0, "blocker",
+                FrontierServiceState.COMPLETED, FIRST_FRAME, 0, 0x3a, 10, "Z80",
+                FIRST_FRAME, 3L, 0x77, 11, List.of(), List.of());
+        DriverService semanticBlocker = service(0, List.of(), List.of(), state(1), "blocker");
+        Frame transfer = new Frame(FIRST_FRAME, "test", false, List.of(),
+                List.of(semanticBlocker), List.of(),
+                new FrameNativeDiagnostics(List.of(blocker), List.of(), List.of(), List.of(),
+                        List.of(marker), List.of(pending), List.of()));
+        Frame engineFrame = new Frame(FIRST_FRAME, "test", false, List.of(), List.of(semanticBlocker));
+        FrontierService successor = new FrontierService(20, 0, 0, "dpcm",
+                FrontierServiceState.OPEN, FIRST_FRAME, 4, 0x77, 11, "Z80",
+                null, null, null, null, List.of(), List.of());
+        CutoffFrontier projection = CutoffFrontier.fromNative(List.of(successor), List.of(),
+                List.of(), List.of(), 0, 0, 0, false, state(1), "f".repeat(64));
+        CutoffNativeDiagnostics proof = new CutoffNativeDiagnostics(List.of(successor), List.of(),
+                List.of(), List.of(), pending, 0, false, "f".repeat(64));
+        CutoffFrontier cutoff = new CutoffFrontier(projection.activeStack(), List.of(), List.of(),
+                proof, 0, 0, state(1));
+        CutoffFrontier engineCutoff = new CutoffFrontier(projection.activeStack(), List.of(),
+                List.of(), null, 0, 0, state(1));
+        profile.cutoffPolicy = new CutoffFrontierPolicy(List.of(blockerRule, successorRule),
+                1, 0, 0, 0, 0, 0, 0, 0, false, "f".repeat(64),
+                CutoffFrontierPolicy.capabilityDigest(projection),
+                CutoffFrontierPolicy.nativeCapabilityDigest(proof));
+        CompleteRunAudioProfiles.register(profile);
+
+        Path reference = writeCaptureWithCutoff("deferred-transfer-cutoff-reference", profile,
+                ProducerKind.REFERENCE, transfer, cutoff);
+        Path engine = writeCaptureWithCutoff("deferred-transfer-cutoff-engine", profile,
+                ProducerKind.OPENGGF, engineFrame, engineCutoff);
+        CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
+        assertSemanticFailure(report, CompleteRunAudioReport.Side.REFERENCE,
+                CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+        assertEquals("terminal leaves native managed-service evidence unaccounted",
+                report.validationDetail());
+
+        for (FrontierService wrongOwner : List.of(
+                new FrontierService(13, 0, 0, "blocker", FrontierServiceState.OPEN,
+                        FIRST_FRAME, 4, 0x77, 11, "Z80",
+                        null, null, null, null, List.of(), List.of()),
+                new FrontierService(20, 0, 0, "dpcm", FrontierServiceState.OPEN,
+                        FIRST_FRAME, 4, 0x79, 11, "Z80",
+                        null, null, null, null, List.of(), List.of()))) {
+            CutoffNativeDiagnostics wrongProof = new CutoffNativeDiagnostics(
+                    List.of(wrongOwner), List.of(), List.of(), List.of(), pending,
+                    0, false, "f".repeat(64));
+            CutoffFrontier wrongProjection = CutoffFrontier.fromNative(List.of(wrongOwner),
+                    List.of(), List.of(), List.of(), 0, 0, 0, false,
+                    state(1), "f".repeat(64));
+            CutoffFrontier wrongCutoff = new CutoffFrontier(wrongProjection.activeStack(),
+                    List.of(), List.of(), wrongProof, 0, 0, state(1));
+            Path wrong = writeCaptureWithCutoff(
+                    "deferred-transfer-cutoff-wrong-" + wrongOwner.token()
+                            + "-" + wrongOwner.beginPc(), profile,
+                    ProducerKind.REFERENCE, transfer, wrongCutoff);
+            CompleteRunAudioReport wrongReport = CompleteRunAudioComparator.compare(wrong, engine);
+            assertSemanticFailure(wrongReport, CompleteRunAudioReport.Side.REFERENCE,
+                    CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+            assertNotEquals("terminal leaves native managed-service evidence unaccounted",
+                    wrongReport.validationDetail());
+        }
     }
 
     @Test
@@ -579,6 +765,7 @@ class TestCompleteRunAudioComparator {
                 ProducerKind.OPENGGF, engineFrame, engineCutoff);
         CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
         assertEquals(CompleteRunAudioReport.Kind.MATCH, report.kind(), report.toText());
+
     }
 
     @Test
@@ -654,6 +841,213 @@ class TestCompleteRunAudioComparator {
         assertSemanticFailure(CompleteRunAudioComparator.compare(duplicateConsume, engine),
                 CompleteRunAudioReport.Side.REFERENCE,
                 CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+    }
+
+    @Test
+    void bufferedDeferredTransferReconcilesAParentReleasedOnTheFollowingFrame() throws Exception {
+        for (int successorKind : List.of(2, 3)) {
+        int tailPc = successorKind == 2 ? 0x77 : 0xc1;
+        int tailHook = successorKind == 2 ? 11 : 12;
+        String successorName = successorKind == 2 ? "dpcm" : "sega-pcm";
+        TestProfile profile = profile("comparator.buffered.deferred.transfer.crossframe."
+                + successorKind + "." + PROFILE_SEQUENCE.incrementAndGet(), 2);
+        profile.useBufferedReference(
+                new FrontierServiceRule("blocker", FrontierServiceState.COMPLETED,
+                        10, "Z80", 0x3a, tailHook, tailPc, List.of()),
+                new FrontierServiceRule(successorName, FrontierServiceState.COMPLETED,
+                        tailHook, "Z80", tailPc, tailHook + 20, tailPc + 0x35, List.of()),
+                new FrontierServiceRule("consumed", FrontierServiceState.COMPLETED,
+                        78, "M68K", 0x71b82, 79, 0x71c4c, List.of()));
+        CompleteRunAudioProfiles.register(profile);
+        long firstBase = (long) FIRST_FRAME << 32;
+        long secondBase = (long) (FIRST_FRAME + 1) << 32;
+        NativeDeferredServiceBegin pending = new NativeDeferredServiceBegin(
+                13, 0, 6, 0, 4, 77, 2, 0x71b4c,
+                firstBase + 1, firstBase + 1, 1, 1, 1, false, 0, 0);
+        NativeManagedCorrelation marker = new NativeManagedCorrelation(0, List.of(
+                new NativeManagedEvent(firstBase + 1, 1, "M68K", 0x71b4c,
+                        10, 4, 13, 0, 6, 0, 77, true)));
+        FrontierService blocker = new FrontierService(13, 0, 0, "blocker",
+                FrontierServiceState.COMPLETED, FIRST_FRAME, 0, 0x3a, 10, "Z80",
+                FIRST_FRAME, 3L, tailPc, tailHook, List.of(), List.of());
+        Frame transfer = new Frame(FIRST_FRAME, "test", false, List.of(),
+                List.of(service(0, List.of(), List.of(), state(1), "blocker")), List.of(),
+                new FrameNativeDiagnostics(List.of(blocker), List.of(), List.of(), List.of(),
+                        List.of(marker), List.of(pending), List.of()));
+        NativeDeferredServiceBegin consumed = new NativeDeferredServiceBegin(
+                13, 0, 6, 0, 4, 77, 2, 0x71b4c,
+                firstBase + 1, firstBase + 1, 1, 1, 1, true, 21, secondBase + 2);
+        NativeManagedCorrelation childBegin = new NativeManagedCorrelation(0, List.of(
+                new NativeManagedEvent(secondBase + 2, 2, "M68K", 0x71b82,
+                        1, 0, 21, 20, 4, 1, 78, true)));
+        NativeManagedCorrelation childEnd = new NativeManagedCorrelation(1, List.of(
+                new NativeManagedEvent(secondBase + 4, 4, "M68K", 0x71c4c,
+                        2, 0, 21, 20, 4, 1, 79, true)));
+        FrontierService successor = new FrontierService(20, 0, 0, successorName,
+                FrontierServiceState.COMPLETED, FIRST_FRAME, 4, tailPc, tailHook, "Z80",
+                FIRST_FRAME + 1, 5L, tailPc + 0x35, tailHook + 20, List.of(), List.of());
+        FrontierService child = new FrontierService(21, 20, 1, "consumed",
+                FrontierServiceState.COMPLETED, FIRST_FRAME + 1, 2, 0x71b82, 78, "M68K",
+                FIRST_FRAME + 1, 4L, 0x71c4c, 79, List.of(), List.of());
+        DriverService semanticSuccessor = service(1, List.of(), List.of(), state(1), successorName);
+        DriverService semanticChild = new DriverService(2, "consumed", ServiceCompletion.COMPLETED,
+                List.of(), state(1), List.of(), null,
+                new ServiceAncestry(new ServiceCoordinate(FIRST_FRAME, 0), 1,
+                        new ServiceCoordinate(FIRST_FRAME, 0), 1, List.of()));
+        Frame release = new Frame(FIRST_FRAME + 1, "test", false, List.of(),
+                List.of(semanticSuccessor, semanticChild), List.of(),
+                new FrameNativeDiagnostics(List.of(successor, child), List.of(), List.of(), List.of(),
+                        List.of(childBegin, childEnd), List.of(consumed), List.of()));
+        Frame engineTransfer = new Frame(FIRST_FRAME, "test", false, List.of(), transfer.services());
+        Frame engineRelease = new Frame(FIRST_FRAME + 1, "test", false, List.of(), release.services());
+
+        Path reference = writeCapture("deferred-transfer-crossframe-reference-" + successorKind, profile,
+                ProducerKind.REFERENCE, 2, row -> row == 0 ? transfer : release);
+        Path engine = writeCapture("deferred-transfer-crossframe-engine-" + successorKind, profile,
+                ProducerKind.OPENGGF, 2, row -> row == 0 ? engineTransfer : engineRelease);
+        CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
+        assertEquals(CompleteRunAudioReport.Kind.MATCH, report.kind(), report.toText());
+
+        FrontierService nonAdjacentSuccessor = new FrontierService(20, 0, 0, successorName,
+                FrontierServiceState.COMPLETED, FIRST_FRAME, 5, tailPc, tailHook, "Z80",
+                FIRST_FRAME + 1, 6L, tailPc + 0x35, tailHook + 20, List.of(), List.of());
+        Frame malformedRelease = new Frame(FIRST_FRAME + 1, "test", false, List.of(),
+                List.of(semanticSuccessor, semanticChild), List.of(),
+                new FrameNativeDiagnostics(List.of(nonAdjacentSuccessor, child), List.of(), List.of(),
+                        List.of(), List.of(childBegin, childEnd), List.of(consumed), List.of()));
+        Path malformed = writeCapture("deferred-transfer-crossframe-nonadjacent-" + successorKind, profile,
+                ProducerKind.REFERENCE, 2, row -> row == 0 ? transfer : malformedRelease);
+        assertSemanticFailure(CompleteRunAudioComparator.compare(malformed, engine),
+                CompleteRunAudioReport.Side.REFERENCE,
+                CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+
+        NativeManagedCorrelation collidingTailSlot = new NativeManagedCorrelation(1, List.of(
+                new NativeManagedEvent(firstBase + 4, 4, "M68K", 0x71b4c,
+                        10, 3, 13, 0, 6, 0, 77, true)));
+        NativeDeferredServiceBegin collidingPending = new NativeDeferredServiceBegin(
+                13, 0, 6, 0, 4, 77, 2, 0x71b4c,
+                firstBase + 1, firstBase + 1, 1, 1, 1, false, 0, 0);
+        Frame collidingTransfer = new Frame(FIRST_FRAME, "test", false, List.of(),
+                transfer.services(), List.of(),
+                new FrameNativeDiagnostics(List.of(blocker), List.of(), List.of(), List.of(),
+                        List.of(marker, collidingTailSlot), List.of(collidingPending), List.of()));
+        Path collision = writeCapture("deferred-transfer-crossframe-collision-" + successorKind,
+                profile, ProducerKind.REFERENCE, 2,
+                row -> row == 0 ? collidingTransfer : release);
+        CompleteRunAudioReport collisionReport = CompleteRunAudioComparator.compare(collision, engine);
+        assertSemanticFailure(collisionReport, CompleteRunAudioReport.Side.REFERENCE,
+                CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+        assertEquals("retained tail service collides with another native raw event",
+                collisionReport.validationDetail());
+
+        Frame danglingConsume = new Frame(FIRST_FRAME + 1, "test", false, List.of(),
+                List.of(), List.of(),
+                new FrameNativeDiagnostics(List.of(), List.of(), List.of(), List.of(),
+                        List.of(childBegin), List.of(consumed), List.of()));
+        Frame engineDanglingConsume = new Frame(FIRST_FRAME + 1, "test", false, List.of(), List.of());
+        Path dangling = writeCapture("deferred-transfer-crossframe-dangling-" + successorKind,
+                profile, ProducerKind.REFERENCE, 2,
+                row -> row == 0 ? transfer : danglingConsume);
+        Path danglingEngine = writeCapture(
+                "deferred-transfer-crossframe-dangling-engine-" + successorKind,
+                profile, ProducerKind.OPENGGF, 2,
+                row -> row == 0 ? engineTransfer : engineDanglingConsume);
+        assertSemanticFailure(CompleteRunAudioComparator.compare(dangling, danglingEngine),
+                CompleteRunAudioReport.Side.REFERENCE,
+                CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+        }
+    }
+
+    @Test
+    void attestedTransferredBaselineConsumesWithoutInventingPreBaselineCausality() throws Exception {
+        TestProfile profile = profile("comparator.buffered.deferred.attested."
+                + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        FrontierServiceRule blockerTail = new FrontierServiceRule("blocker",
+                FrontierServiceState.COMPLETED, 10, "Z80", 0x3a, 11, 0x77, List.of());
+        FrontierServiceRule successorOpen = new FrontierServiceRule("dpcm",
+                FrontierServiceState.OPEN, 11, "Z80", 0x77, null, null, List.of());
+        FrontierServiceRule successorComplete = new FrontierServiceRule("dpcm",
+                FrontierServiceState.COMPLETED, 11, "Z80", 0x77, 31, 0xac, List.of());
+        FrontierServiceRule childComplete = new FrontierServiceRule("consumed",
+                FrontierServiceState.COMPLETED, 78, "M68K", 0x71b82, 79, 0x71c4c, List.of());
+        profile.useBufferedReference(blockerTail, successorOpen, successorComplete, childComplete);
+        CompleteRunAudioProfiles.register(profile);
+        NativeDeferredServiceBegin origin = new NativeDeferredServiceBegin(
+                13, 0, 6, 0, 4, 77, 2, 0x71b4c,
+                40, 41, 12, 13, 2, false, 0, 0);
+        FrontierService openSuccessor = new FrontierService(20, 0, 0, "dpcm",
+                FrontierServiceState.OPEN, FIRST_FRAME - 1, 4, 0x77, 11, "Z80",
+                null, null, null, null, List.of(), List.of());
+        CutoffNativeDiagnostics proof = new CutoffNativeDiagnostics(List.of(openSuccessor), List.of(),
+                List.of(), List.of(), origin, 0, false, "f".repeat(64));
+        CutoffService carriedSuccessor = new CutoffService(null, -1, 0, "dpcm",
+                FrontierServiceState.CARRIED_IN_OPEN, FIRST_FRAME, 0, null, null, List.of());
+        BoundaryFrontier frontier = new BoundaryFrontier(List.of(carriedSuccessor), List.of(), List.of(),
+                proof, 0, 0);
+        Baseline baseline = new Baseline(FIRST_FRAME, state(1), profile.baselineRoleOwners(), frontier);
+        long base = (long) FIRST_FRAME << 32;
+        NativeDeferredServiceBegin consumed = new NativeDeferredServiceBegin(
+                13, 0, 6, 0, 4, 77, 2, 0x71b4c,
+                40, 41, 12, 13, 2, true, 21, base + 2);
+        NativeManagedCorrelation begin = new NativeManagedCorrelation(0, List.of(
+                new NativeManagedEvent(base + 2, 2, "M68K", 0x71b82,
+                        1, 0, 21, 20, 4, 1, 78, true)));
+        NativeManagedCorrelation end = new NativeManagedCorrelation(1, List.of(
+                new NativeManagedEvent(base + 4, 4, "M68K", 0x71c4c,
+                        2, 0, 21, 20, 4, 1, 79, true)));
+        FrontierService releasedSuccessor = new FrontierService(20, 0, 0, "dpcm",
+                FrontierServiceState.COMPLETED, FIRST_FRAME - 1, 4, 0x77, 11, "Z80",
+                FIRST_FRAME, 5L, 0xac, 31, List.of(), List.of());
+        FrontierService child = new FrontierService(21, 20, 1, "consumed",
+                FrontierServiceState.COMPLETED, FIRST_FRAME, 2, 0x71b82, 78, "M68K",
+                FIRST_FRAME, 4L, 0x71c4c, 79, List.of(), List.of(), 20, 1, List.of(),
+                new ServiceAncestry(new ServiceCoordinate(FIRST_FRAME, 0), 1,
+                        new ServiceCoordinate(FIRST_FRAME, 0), 1, List.of()));
+        DriverService semanticSuccessor = new DriverService(0, "dpcm", ServiceCompletion.COMPLETED,
+                List.of(), state(1), List.of(), 0L);
+        DriverService semanticChild = new DriverService(1, "consumed", ServiceCompletion.COMPLETED,
+                List.of(), state(1), List.of(), null,
+                new ServiceAncestry(new ServiceCoordinate(FIRST_FRAME, 0), 1,
+                        new ServiceCoordinate(FIRST_FRAME, 0), 1, List.of()));
+        Frame release = new Frame(FIRST_FRAME, "test", false, List.of(),
+                List.of(semanticSuccessor, semanticChild), List.of(),
+                new FrameNativeDiagnostics(List.of(releasedSuccessor, child), List.of(), List.of(),
+                        List.of(), List.of(begin, end), List.of(consumed), List.of()));
+        Frame engineRelease = new Frame(FIRST_FRAME, "test", false, List.of(), release.services());
+        Baseline engineBaseline = new Baseline(FIRST_FRAME, state(1), profile.baselineRoleOwners(),
+                new BoundaryFrontier(List.of(carriedSuccessor), List.of(), List.of(), null, 0, 0));
+
+        Path reference = writeCapture("deferred-attested-reference", metadata(profile,
+                ProducerKind.REFERENCE, profile.producerRuntimeIdentities().get(ProducerKind.REFERENCE)),
+                baseline, 1, ignored -> release);
+        Path engine = writeCapture("deferred-attested-engine", metadata(profile,
+                ProducerKind.OPENGGF, profile.producerRuntimeIdentities().get(ProducerKind.OPENGGF)),
+                engineBaseline, 1, ignored -> engineRelease);
+        CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
+        assertEquals(CompleteRunAudioReport.Kind.MATCH, report.kind(), report.toText());
+
+        for (FrontierService illegalOwner : List.of(
+                new FrontierService(20, 0, 0, "dpcm", FrontierServiceState.OPEN,
+                        FIRST_FRAME - 1, 4, 0x78, 11, "Z80",
+                        null, null, null, null, List.of(), List.of()),
+                new FrontierService(13, 0, 0, "dpcm", FrontierServiceState.OPEN,
+                        FIRST_FRAME - 1, 4, 0x77, 11, "Z80",
+                        null, null, null, null, List.of(), List.of()))) {
+            CutoffNativeDiagnostics illegalProof = new CutoffNativeDiagnostics(
+                    List.of(illegalOwner), List.of(), List.of(), List.of(), origin,
+                    0, false, "f".repeat(64));
+            Baseline illegalBaseline = new Baseline(FIRST_FRAME, state(1),
+                    profile.baselineRoleOwners(),
+                    new BoundaryFrontier(List.of(carriedSuccessor), List.of(), List.of(),
+                            illegalProof, 0, 0));
+            Path illegal = writeCapture("deferred-attested-illegal-" + illegalOwner.token()
+                    + "-" + illegalOwner.beginPc(), metadata(profile, ProducerKind.REFERENCE,
+                            profile.producerRuntimeIdentities().get(ProducerKind.REFERENCE)),
+                    illegalBaseline, 1, ignored -> release);
+            assertSemanticFailure(CompleteRunAudioComparator.compare(illegal, engine),
+                    CompleteRunAudioReport.Side.REFERENCE,
+                    CompleteRunAudioComparator.ValidationException.Kind.STATE_INVALID);
+        }
     }
 
     @Test

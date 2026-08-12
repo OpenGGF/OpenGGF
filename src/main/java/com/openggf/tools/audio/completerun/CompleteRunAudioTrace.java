@@ -1438,15 +1438,14 @@ public final class CompleteRunAudioTrace {
             lowercaseHex(terminalZ80Digest, SHA256, "native cutoff terminal Z80 digest");
             validateNativeFrontier(activeStack, pendingDescendants, rawChipInventory, rawSnapshotInventory);
             if (pendingDeferredServiceBegin != null) {
-                FrontierService blocker = activeStack.isEmpty() ? null : activeStack.getLast();
-                if (blocker == null || blocker.token() != pendingDeferredServiceBegin.blockerToken()
-                        || blocker.currentParentToken()
+                FrontierService currentOwner = activeStack.isEmpty() ? null : activeStack.getLast();
+                if (currentOwner == null
+                        || currentOwner.currentParentToken()
                                 != pendingDeferredServiceBegin.blockerParentToken()
-                        || blocker.kind().isBlank()
-                        || blocker.currentDepth() != pendingDeferredServiceBegin.blockerDepth()
-                        || blocker.state() != FrontierServiceState.OPEN) {
+                        || currentOwner.currentDepth() != pendingDeferredServiceBegin.blockerDepth()
+                        || currentOwner.state() != FrontierServiceState.OPEN) {
                     throw new IllegalArgumentException(
-                            "native cutoff deferred begin has no exact active blocker");
+                            "native cutoff deferred begin has no structurally legal active owner");
                 }
             }
         }

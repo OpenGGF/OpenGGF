@@ -297,6 +297,57 @@ class TestCompleteRunAudioCaptureStore {
     }
 
     @Test
+    void attestedDeferredCurrentOwnerIdentityChangesOnlyTheRawStorageRoot() {
+        NormalizedState state = new NormalizedState(List.of(), List.of());
+        NativeDeferredServiceBegin origin = new NativeDeferredServiceBegin(
+                13, 0, 6, 0, 4, 77, 2, 0x71b4c,
+                40, 41, 12, 13, 2, false, 0, 0);
+        FrontierService firstOwner = new FrontierService(20, 0, 0, "dpcm",
+                FrontierServiceState.OPEN, 859, 6, 0x77, 11, "Z80",
+                null, null, null, null, List.of(), List.of());
+        List<FrontierService> changedOwners = List.of(
+                new FrontierService(21, 0, 0, "dpcm",
+                        FrontierServiceState.OPEN, 859, 6, 0x77, 11, "Z80",
+                        null, null, null, null, List.of(), List.of()),
+                new FrontierService(20, 0, 0, "dpcm",
+                        FrontierServiceState.OPEN, 859, 6, 0x77, 12, "Z80",
+                        null, null, null, null, List.of(), List.of()),
+                new FrontierService(20, 0, 0, "dpcm",
+                        FrontierServiceState.OPEN, 859, 6, 0x79, 11, "Z80",
+                        null, null, null, null, List.of(), List.of()),
+                new FrontierService(20, 0, 0, "dpcm",
+                        FrontierServiceState.OPEN, 859, 6, 0x77, 11, "M68K",
+                        null, null, null, null, List.of(), List.of()));
+        CutoffFrontier firstProjection = CutoffFrontier.fromNative(List.of(firstOwner), List.of(),
+                List.of(), List.of(), 0, 0, 0, false, state, "f".repeat(64));
+        CutoffFrontier first = new CutoffFrontier(firstProjection.activeStack(), List.of(), List.of(),
+                new CutoffNativeDiagnostics(List.of(firstOwner), List.of(), List.of(), List.of(),
+                        origin, 0, false, "f".repeat(64)), 0, 0, state);
+
+        for (FrontierService changedOwner : changedOwners) {
+            CutoffFrontier changedProjection = CutoffFrontier.fromNative(
+                    List.of(changedOwner), List.of(), List.of(), List.of(),
+                    0, 0, 0, false, state, "f".repeat(64));
+            CutoffFrontier changed = new CutoffFrontier(changedProjection.activeStack(),
+                    List.of(), List.of(),
+                    new CutoffNativeDiagnostics(List.of(changedOwner), List.of(), List.of(),
+                            List.of(), origin, 0, false, "f".repeat(64)), 0, 0, state);
+            assertNotEquals(root(List.of(first)), root(List.of(changed)));
+            assertEquals(semanticRoot(List.of(first)), semanticRoot(List.of(changed)));
+        }
+
+        NativeDeferredServiceBegin changedOrigin = new NativeDeferredServiceBegin(
+                13, 0, 6, 0, 4, 78, 2, 0x71b4c,
+                40, 41, 12, 13, 2, false, 0, 0);
+        CutoffFrontier originChanged = new CutoffFrontier(firstProjection.activeStack(),
+                List.of(), List.of(),
+                new CutoffNativeDiagnostics(List.of(firstOwner), List.of(), List.of(), List.of(),
+                        changedOrigin, 0, false, "f".repeat(64)), 0, 0, state);
+        assertNotEquals(root(List.of(first)), root(List.of(originChanged)));
+        assertEquals(semanticRoot(List.of(first)), semanticRoot(List.of(originChanged)));
+    }
+
+    @Test
     void strictRecordCodecRejectsUnknownDuplicateWrongTypedAndTrailingNestedJson() throws Exception {
         String json = CompleteRunAudioJson.writeRecord(richRecords().get(2));
 

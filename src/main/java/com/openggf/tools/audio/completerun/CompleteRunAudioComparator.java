@@ -1071,7 +1071,7 @@ public final class CompleteRunAudioComparator {
                 new LinkedHashMap<>();
         private final Map<Long, List<NativeAncestryTransition>> nativePromotionEvidence =
                 new LinkedHashMap<>();
-        private NativeDeferredServiceBegin pendingDeferredBegin;
+        private DeferredReservationState deferredReservation;
         private final LinkedHashMap<Long, CutoffService> carriedServices = new LinkedHashMap<>();
         private final Map<Long, FrontierService> nativeCarriedServices = new LinkedHashMap<>();
         private final Set<Long> releasedNativeCarriedTokens = new HashSet<>();
@@ -1149,7 +1149,7 @@ public final class CompleteRunAudioComparator {
                 if (buffered) {
                     DeferredFrameEvidence deferred = deferredServiceBegins(
                             frame.absoluteFrame(), frame.nativeDiagnostics());
-                    nativeRawOrder(frame.nativeDiagnostics(), deferred);
+                    nativeRawOrder(frame.absoluteFrame(), frame.nativeDiagnostics(), deferred);
                     for (int serviceIndex = 0;
                             serviceIndex < frame.nativeDiagnostics().services().size(); serviceIndex++) {
                         FrontierService service = frame.nativeDiagnostics().services().get(serviceIndex);
@@ -1237,7 +1237,7 @@ public final class CompleteRunAudioComparator {
                 }
                 accountCarriedAtCutoff(frontier);
                 if (buffered) {
-                    deferredCutoff(frontier.nativeDiagnostics().pendingDeferredServiceBegin());
+                    deferredCutoff(frontier.nativeDiagnostics());
                     List<FrontierService> terminalServices = java.util.stream.Stream.concat(
                             frontier.nativeDiagnostics().activeStack().stream(),
                             frontier.nativeDiagnostics().pendingDescendants().stream())
@@ -1284,7 +1284,7 @@ public final class CompleteRunAudioComparator {
                             "terminal leaves carried-in services unresolved");
                 }
                 if (!activeManagedServices.isEmpty() || !completedManagedServices.isEmpty()
-                        || !nativePromotionEvidence.isEmpty() || pendingDeferredBegin != null) {
+                        || !nativePromotionEvidence.isEmpty() || deferredReservation != null) {
                     throw new ValidationException(ValidationException.Kind.STATE_INVALID, side,
                             "terminal leaves native managed-service evidence unaccounted");
                 }
@@ -1325,7 +1325,14 @@ public final class CompleteRunAudioComparator {
                         "callback baseline cannot carry buffered-native proof");
             }
             if (frontier.nativeDiagnostics() == null) return;
-            pendingDeferredBegin = frontier.nativeDiagnostics().pendingDeferredServiceBegin();
+            NativeDeferredServiceBegin deferred =
+                    frontier.nativeDiagnostics().pendingDeferredServiceBegin();
+            if (deferred != null) {
+                FrontierService currentOwner = frontier.nativeDiagnostics().activeStack().getLast();
+                validateAttestedDeferredOwner(deferred, currentOwner);
+                deferredReservation = new DeferredReservationState(deferred,
+                        DeferredOwner.from(currentOwner), null, false);
+            }
             List<FrontierService> nativeBoundaryServices = java.util.stream.Stream.concat(
                     frontier.nativeDiagnostics().activeStack().stream(),
                     frontier.nativeDiagnostics().pendingDescendants().stream())
@@ -1431,7 +1438,7 @@ public final class CompleteRunAudioComparator {
             nativeCarriedServices.clear();
         }
 
-        private void nativeRawOrder(FrameNativeDiagnostics diagnostics,
+        private void nativeRawOrder(int frame, FrameNativeDiagnostics diagnostics,
                 DeferredFrameEvidence deferred) throws ValidationException {
             List<NativeRawSlot> slots = java.util.stream.Stream.concat(
                     java.util.stream.Stream.concat(
@@ -1468,7 +1475,47 @@ public final class CompleteRunAudioComparator {
                                     != coordinateBase + deferred.consumeBegin().ordinal())) {
                 throw nativeEvidence("deferred service-begin consume coordinate is not exact");
             }
+            DeferredReservationState reservation = deferred.reservation();
+            TailTransferProof transfer = reservation == null ? null : reservation.transferProof();
+            if (transfer != null) {
+                FrontierService origin = transfer.originCompletion();
+                int latestMarkerFrame = Math.toIntExact(
+                        reservation.origin().latestCoordinate() >>> 32);
+                if (compareNativePosition(latestMarkerFrame, reservation.origin().latestOrdinal(),
+                        origin.endFrame(), origin.endOrdinal()) >= 0) {
+                    throw nativeEvidence("deferred origin completion does not follow its latest marker");
+                }
+                rejectRetainedServiceCollision(frame, origin.endFrame(), origin.endOrdinal(), slots);
+                rejectRetainedServiceCollision(
+                        frame, origin.endFrame(), origin.endOrdinal() + 1, slots);
+                DeferredOwner current = reservation.currentOwner();
+                if (transfer.reconciled()) {
+                    if (deferred.consumeBegin() != null) {
+                        int consumeFrame = Math.toIntExact(
+                                deferred.consumeBegin().coordinate() >>> 32);
+                        if (compareNativePosition(current.beginFrame(), current.beginOrdinal(),
+                                consumeFrame, deferred.consumeBegin().ordinal()) >= 0) {
+                            throw nativeEvidence(
+                                    "deferred consume does not follow its exact tail successor");
+                        }
+                    }
+                }
+            }
             recordNativePromotions(diagnostics);
+        }
+
+        private void rejectRetainedServiceCollision(int frame, int serviceFrame,
+                long serviceOrdinal, List<NativeRawSlot> slots) throws ValidationException {
+            if (serviceFrame == frame
+                    && slots.stream().anyMatch(slot -> slot.ordinal() == serviceOrdinal)) {
+                throw nativeEvidence("retained tail service collides with another native raw event");
+            }
+        }
+
+        private int compareNativePosition(int leftFrame, long leftOrdinal,
+                int rightFrame, long rightOrdinal) {
+            int frameOrder = Integer.compare(leftFrame, rightFrame);
+            return frameOrder != 0 ? frameOrder : Long.compare(leftOrdinal, rightOrdinal);
         }
 
         private DeferredFrameEvidence deferredServiceBegins(int frame,
@@ -1480,15 +1527,24 @@ public final class CompleteRunAudioComparator {
             NativeDeferredServiceBegin published = diagnostics.deferredServiceBegins().isEmpty()
                     ? null : diagnostics.deferredServiceBegins().getFirst();
             if (published == null) {
-                if (!markers.isEmpty() || pendingDeferredBegin != null) {
+                if (!markers.isEmpty()
+                        || deferredReservation != null && !deferredReservation.consumed()) {
                     throw nativeEvidence("deferred service-begin evidence is missing");
                 }
-                return DeferredFrameEvidence.empty();
+                if (deferredReservation != null) {
+                    deferredReservation = reconcileDeferredSuccessor(
+                            deferredReservation, diagnostics.services());
+                }
+                return new DeferredFrameEvidence(deferredReservation, null);
             }
-            if (pendingDeferredBegin == null && markers.isEmpty()) {
+            if (deferredReservation != null && deferredReservation.consumed()) {
+                throw nativeEvidence("deferred service-begin consume is duplicated");
+            }
+            NativeDeferredServiceBegin prior = deferredReservation == null
+                    ? null : deferredReservation.origin();
+            if (prior == null && markers.isEmpty()) {
                 throw nativeEvidence("deferred service-begin evidence has no first marker");
             }
-            NativeDeferredServiceBegin prior = pendingDeferredBegin;
             NativeManagedEvent first = markers.isEmpty() ? null : markers.getFirst();
             NativeManagedEvent latest = markers.isEmpty() ? null : markers.getLast();
             long firstCoordinate = prior == null ? first.coordinate() : prior.firstCoordinate();
@@ -1525,7 +1581,12 @@ public final class CompleteRunAudioComparator {
                 throw nativeEvidence("reset occurs while a deferred service begin is retained");
             }
             if (!published.consumed()) {
-                return new DeferredFrameEvidence(published, null);
+                DeferredReservationState state = deferredReservation == null
+                        ? DeferredReservationState.atOrigin(published)
+                        : new DeferredReservationState(published, deferredReservation.currentOwner(),
+                                deferredReservation.transferProof(), false);
+                state = observeDeferredTransfer(state, null, diagnostics.services());
+                return new DeferredFrameEvidence(state, null);
             }
             List<NativeManagedEvent> consumeBegins = diagnostics.managedCorrelations().stream()
                     .flatMap(correlation -> correlation.events().stream())
@@ -1535,11 +1596,16 @@ public final class CompleteRunAudioComparator {
                 throw nativeEvidence("deferred service-begin consume has no unique child begin proof");
             }
             NativeManagedEvent consumeBegin = consumeBegins.getFirst();
+            DeferredReservationState state = deferredReservation == null
+                    ? DeferredReservationState.atOrigin(published)
+                    : new DeferredReservationState(published, deferredReservation.currentOwner(),
+                            deferredReservation.transferProof(), false);
+            state = observeDeferredTransfer(state, consumeBegin, diagnostics.services());
             if (consumeBegin.coordinate() != published.consumeCoordinate()
                     || !"M68K".equals(consumeBegin.sourceCpu())
-                    || consumeBegin.parentToken() != blockerToken
+                    || consumeBegin.parentToken() != state.currentOwner().token()
                     || consumeBegin.serviceKind() != targetKind
-                    || consumeBegin.depth() != blockerDepth + 1) {
+                    || consumeBegin.depth() != state.currentOwner().depth() + 1) {
                 throw nativeEvidence("deferred service-begin consume identity is not exact");
             }
             FrontierService consumed = diagnostics.services().stream()
@@ -1547,8 +1613,8 @@ public final class CompleteRunAudioComparator {
             // A completed child may be retained in this frame, or its ordinary begin may remain
             // active until a later frame/cutoff. In either case, the real managed BEGIN owns the
             // transaction; no blocker-END-to-root boundary is synthesized.
-            if (consumed != null && (consumed.parentToken() != blockerToken
-                    || consumed.depth() != blockerDepth + 1
+            if (consumed != null && (consumed.parentToken() != state.currentOwner().token()
+                    || consumed.depth() != state.currentOwner().depth() + 1
                     || consumed.beginFrame() != frame
                     || consumed.beginOrdinal() != consumeBegin.ordinal()
                     || consumed.beginPc() != consumeBegin.pc()
@@ -1556,19 +1622,153 @@ public final class CompleteRunAudioComparator {
                     || !consumed.beginSourceCpu().equals(consumeBegin.sourceCpu()))) {
                 throw nativeEvidence("deferred service-begin child does not match its consume proof");
             }
-            return new DeferredFrameEvidence(null, consumeBegin);
+            state = new DeferredReservationState(published, state.currentOwner(),
+                    state.transferProof(), true);
+            return new DeferredFrameEvidence(state, consumeBegin);
         }
 
         private void commitDeferredServiceBegin(DeferredFrameEvidence deferred)
                 throws ValidationException {
-            pendingDeferredBegin = deferred.pending();
+            DeferredReservationState reservation = deferred.reservation();
+            deferredReservation = reservation != null && reservation.consumed()
+                    && (reservation.transferProof() == null
+                            || reservation.transferProof().reconciled())
+                    ? null : reservation;
         }
 
-        private void deferredCutoff(NativeDeferredServiceBegin cutoff) throws ValidationException {
-            if (!Objects.equals(pendingDeferredBegin, cutoff)) {
+        private void deferredCutoff(CutoffNativeDiagnostics diagnostics) throws ValidationException {
+            if (deferredReservation != null) {
+                deferredReservation = reconcileDeferredSuccessor(deferredReservation,
+                        java.util.stream.Stream.concat(diagnostics.activeStack().stream(),
+                                diagnostics.pendingDescendants().stream()).toList());
+                if (deferredReservation.consumed()
+                        && deferredReservation.transferProof() != null
+                        && deferredReservation.transferProof().reconciled()) {
+                    deferredReservation = null;
+                }
+            }
+            NativeDeferredServiceBegin cutoff = diagnostics.pendingDeferredServiceBegin();
+            NativeDeferredServiceBegin expected = deferredReservation == null
+                    || deferredReservation.consumed() ? null : deferredReservation.origin();
+            if (!Objects.equals(expected, cutoff)) {
                 throw nativeEvidence("native cutoff does not carry the exact deferred service begin");
             }
-            pendingDeferredBegin = null;
+            if (expected != null) {
+                TailTransferProof transfer = deferredReservation.transferProof();
+                if (transfer != null && !transfer.reconciled()) {
+                    throw nativeEvidence(
+                            "native cutoff omits the exact retained tail successor");
+                }
+                FrontierService current = diagnostics.activeStack().isEmpty()
+                        ? null : diagnostics.activeStack().getLast();
+                if (current == null || !deferredReservation.currentOwner().matches(current)) {
+                    throw nativeEvidence("native cutoff does not carry the exact deferred current owner");
+                }
+            }
+        }
+
+        private DeferredReservationState observeDeferredTransfer(DeferredReservationState state,
+                NativeManagedEvent consumeBegin, List<FrontierService> services)
+                throws ValidationException {
+            boolean consumeUnderOrigin = consumeBegin != null
+                    && consumeBegin.parentToken() == state.origin().blockerToken();
+            FrontierService originCompletion = services.stream()
+                    .filter(service -> service.token() == state.origin().blockerToken())
+                    .findFirst().orElse(null);
+            boolean releasedAdjacentSuccessor = originCompletion != null
+                    && originCompletion.endFrame() != null
+                    && services.stream().anyMatch(service ->
+                            service.token() != originCompletion.token()
+                                    && service.beginFrame() == originCompletion.endFrame()
+                                    && service.beginOrdinal() == originCompletion.endOrdinal() + 1);
+            TailTransferProof proof = state.transferProof();
+            if (proof == null && originCompletion != null
+                    && (!consumeUnderOrigin || releasedAdjacentSuccessor)) {
+                if (originCompletion.state() != FrontierServiceState.COMPLETED
+                        || originCompletion.endFrame() == null) {
+                    throw nativeEvidence("deferred origin owner ends without an exact transfer completion");
+                }
+                proof = new TailTransferProof(originCompletion,
+                        consumeBegin == null ? 0 : consumeBegin.parentToken(), false);
+            }
+            DeferredOwner owner = state.currentOwner();
+            if (proof != null && consumeBegin != null) {
+                if (proof.successorToken() != 0
+                        && proof.successorToken() != consumeBegin.parentToken()) {
+                    throw nativeEvidence("deferred transfer and action-12 parent tokens disagree");
+                }
+                proof = new TailTransferProof(proof.originCompletion(),
+                        consumeBegin.parentToken(), proof.reconciled());
+                owner = DeferredOwner.provisional(consumeBegin.parentToken(),
+                        state.origin().blockerParentToken(), state.origin().blockerDepth());
+            }
+            DeferredReservationState updated = new DeferredReservationState(
+                    state.origin(), owner, proof, state.consumed());
+            return reconcileDeferredSuccessor(updated, services);
+        }
+
+        private DeferredReservationState reconcileDeferredSuccessor(DeferredReservationState state,
+                List<FrontierService> services) throws ValidationException {
+            TailTransferProof proof = state.transferProof();
+            if (proof == null || proof.reconciled()) return state;
+            TailTransferProof expectedProof = proof;
+            FrontierService successor = services.stream().filter(service ->
+                    expectedProof.successorToken() == 0
+                            ? service.beginFrame() == expectedProof.originCompletion().endFrame()
+                                    && service.beginOrdinal()
+                                            == expectedProof.originCompletion().endOrdinal() + 1
+                            : service.token() == expectedProof.successorToken()).findFirst().orElse(null);
+            if (successor == null) return state;
+            validateTailSuccessor(proof.originCompletion(), successor);
+            long token = proof.successorToken() == 0 ? successor.token() : proof.successorToken();
+            if (successor.token() != token) {
+                throw nativeEvidence("deferred transfer successor token is not exact");
+            }
+            return new DeferredReservationState(state.origin(), DeferredOwner.from(successor),
+                    new TailTransferProof(proof.originCompletion(), token, true), state.consumed());
+        }
+
+        private void validateTailSuccessor(FrontierService origin, FrontierService successor)
+                throws ValidationException {
+            if (origin.token() == successor.token()
+                    || successor.parentToken() != origin.currentParentToken()
+                    || successor.depth() != origin.currentDepth()
+                    || successor.beginFrame() != origin.endFrame()
+                    || successor.beginOrdinal() != origin.endOrdinal() + 1
+                    || successor.beginHookToken() != origin.endHookToken()
+                    || successor.beginPc() != origin.endPc()
+                    || !successor.beginSourceCpu().equals(origin.beginSourceCpu())
+                    || successor.kind().equals(origin.kind())
+                    || !matchesServiceRule(origin) || !matchesServiceRule(successor)) {
+                throw nativeEvidence("deferred transfer lacks exact adjacent tail successor proof");
+            }
+        }
+
+        private boolean matchesServiceRule(FrontierService service) {
+            return profile.cutoffFrontierPolicy().serviceRules().stream()
+                    .anyMatch(rule -> rule.matches(service) && rule.acceptsChipSources(service));
+        }
+
+        private void validateAttestedDeferredOwner(NativeDeferredServiceBegin origin,
+                FrontierService currentOwner) throws ValidationException {
+            if (!matchesServiceRule(currentOwner)) {
+                throw nativeEvidence("attested deferred owner is outside the exact observer manifest");
+            }
+            boolean legalRoute = profile.cutoffFrontierPolicy().serviceRules().stream()
+                    .filter(rule -> rule.state() == FrontierServiceState.COMPLETED)
+                    .anyMatch(rule -> !rule.kind().equals(currentOwner.kind())
+                            && Objects.equals(rule.endHookToken(), currentOwner.beginHookToken())
+                            && Objects.equals(rule.endPc(), currentOwner.beginPc())
+                            && rule.beginSourceCpu().equals(currentOwner.beginSourceCpu()));
+            if (currentOwner.token() == origin.blockerToken()) {
+                if (legalRoute) {
+                    throw nativeEvidence("attested deferred successor reuses the immutable origin token");
+                }
+                return;
+            }
+            if (!legalRoute) {
+                throw nativeEvidence("attested deferred owner has no configured one-hop tail route");
+            }
         }
 
         private void recordNativePromotions(FrameNativeDiagnostics diagnostics)
@@ -1781,7 +1981,44 @@ public final class CompleteRunAudioComparator {
 
         private record NativeBeginCoordinate(int frame, long ordinal) {}
         private record NativeRawSlot(long coordinate, long ordinal) {}
-        private record DeferredFrameEvidence(NativeDeferredServiceBegin pending,
+        /** Derived only from immutable origin diagnostics plus ordinary native topology. */
+        private record DeferredReservationState(NativeDeferredServiceBegin origin,
+                DeferredOwner currentOwner, TailTransferProof transferProof, boolean consumed) {
+            static DeferredReservationState atOrigin(NativeDeferredServiceBegin origin) {
+                return new DeferredReservationState(origin,
+                        DeferredOwner.provisional(origin.blockerToken(),
+                                origin.blockerParentToken(), origin.blockerDepth()), null, false);
+            }
+        }
+        private record DeferredOwner(long token, long parentToken, int depth, String kind,
+                Integer beginFrame, Long beginOrdinal, Integer beginHookToken, Integer beginPc,
+                String beginSourceCpu) {
+            static DeferredOwner provisional(long token, long parentToken, int depth) {
+                return new DeferredOwner(token, parentToken, depth,
+                        null, null, null, null, null, null);
+            }
+
+            static DeferredOwner from(FrontierService service) {
+                return new DeferredOwner(service.token(), service.currentParentToken(),
+                        service.currentDepth(), service.kind(), service.beginFrame(),
+                        service.beginOrdinal(), service.beginHookToken(), service.beginPc(),
+                        service.beginSourceCpu());
+            }
+
+            boolean matches(FrontierService service) {
+                return token == service.token() && parentToken == service.currentParentToken()
+                        && depth == service.currentDepth()
+                        && (kind == null || kind.equals(service.kind())
+                                && beginFrame == service.beginFrame()
+                                && beginOrdinal == service.beginOrdinal()
+                                && beginHookToken == service.beginHookToken()
+                                && beginPc == service.beginPc()
+                                && beginSourceCpu.equals(service.beginSourceCpu()));
+            }
+        }
+        private record TailTransferProof(FrontierService originCompletion,
+                long successorToken, boolean reconciled) {}
+        private record DeferredFrameEvidence(DeferredReservationState reservation,
                 NativeManagedEvent consumeBegin) {
             static DeferredFrameEvidence empty() {
                 return new DeferredFrameEvidence(null, null);
