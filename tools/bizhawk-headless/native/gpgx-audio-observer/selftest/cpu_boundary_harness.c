@@ -82,28 +82,30 @@ int main(void)
 
   {
     struct gpgx_audio_service_kind_v1 kinds[6];
-    struct gpgx_audio_service_hook_v1 deferred_hooks[5];
+    struct gpgx_audio_service_hook_v1 deferred_hooks[7];
     uint8_t rom[65536];
     memset(kinds,0,sizeof(kinds)); memset(deferred_hooks,0,sizeof(deferred_hooks));
     memset(mask,0,sizeof(mask)); memset(memory,0,sizeof(memory)); memset(zram,0,sizeof(zram));
     memset(rom,0,sizeof(rom)); memset(&m68k,0,sizeof(m68k));
     assert(gpgx_audio_trace_disable()==0);
-    config.abi_version=3; config.kind_count=6; config.hook_count=5;
-    config.snapshot_bytes_total=8; config.max_continuation_frames=1;
+    config.abi_version=3; config.kind_count=6; config.hook_count=7;
+    config.snapshot_bytes_total=8; config.max_continuation_frames=2;
     for (i=0;i<6;i++)
     {
       kinds[i].kind_id=(uint8_t)(i+1); kinds[i].cancellation_range_count=1;
     }
-    kinds[3].flags=2; kinds[3].continuation_frame_limit=1;
-    kinds[5].flags=3; kinds[5].continuation_frame_limit=1;
+    kinds[1].flags=7; kinds[1].continuation_frame_limit=2;
+    kinds[3].flags=4;
+    kinds[5].flags=3; kinds[5].continuation_frame_limit=2;
     deferred_hooks[0].hook_token=1; deferred_hooks[0].action=1;
     deferred_hooks[0].cpu=1; deferred_hooks[0].service_kind=6;
     deferred_hooks[0].opcode_length=3; deferred_hooks[0].opcode[0]=0x32;
     deferred_hooks[0].opcode[1]=0x00; deferred_hooks[0].opcode[2]=0x40;
-    deferred_hooks[1].hook_token=2; deferred_hooks[1].action=2;
-    deferred_hooks[1].cpu=1; deferred_hooks[1].pc=3;
+    deferred_hooks[1].hook_token=2; deferred_hooks[1].action=4;
+    deferred_hooks[1].cpu=1; deferred_hooks[1].pc=0x77;
+    deferred_hooks[1].service_kind=2;
     deferred_hooks[1].expected_active_kind=6; deferred_hooks[1].range_count=1;
-    deferred_hooks[1].opcode_length=1;
+    deferred_hooks[1].opcode_length=1; deferred_hooks[1].opcode[0]=0x1a;
     deferred_hooks[2].hook_token=3; deferred_hooks[2].action=11;
     deferred_hooks[2].cpu=2; deferred_hooks[2].pc=0x71b4c;
     deferred_hooks[2].service_kind=4; deferred_hooks[2].expected_active_kind=6;
@@ -112,21 +114,27 @@ int main(void)
     deferred_hooks[2].opcode[3]=0x00; deferred_hooks[2].opcode[4]=0x00;
     deferred_hooks[2].opcode[5]=0xa1; deferred_hooks[2].opcode[6]=0x11;
     deferred_hooks[2].opcode[7]=0x00;
-    deferred_hooks[3].hook_token=4; deferred_hooks[3].action=12;
+    deferred_hooks[3].hook_token=4; deferred_hooks[3].action=7;
     deferred_hooks[3].cpu=2; deferred_hooks[3].pc=0x71b82;
-    deferred_hooks[3].service_kind=4; deferred_hooks[3].expected_active_kind=6;
+    deferred_hooks[3].expected_active_kind=2;
     deferred_hooks[3].opcode_length=6; deferred_hooks[3].opcode[0]=0x4d;
     deferred_hooks[3].opcode[1]=0xf9; deferred_hooks[3].opcode[2]=0x00;
     deferred_hooks[3].opcode[3]=0xff; deferred_hooks[3].opcode[4]=0xf0;
     deferred_hooks[3].opcode[5]=0x00;
-    deferred_hooks[4].hook_token=5; deferred_hooks[4].action=2;
-    deferred_hooks[4].cpu=2; deferred_hooks[4].pc=0x71c4c;
-    deferred_hooks[4].expected_active_kind=4; deferred_hooks[4].range_count=1;
-    deferred_hooks[4].opcode_length=2; deferred_hooks[4].opcode[0]=0x4e;
-    deferred_hooks[4].opcode[1]=0x75;
-    mask[0]=9; zram[0]=memory[0]=0x32; zram[1]=memory[1]=0;
-    zram[2]=memory[2]=0x40;
-    for (i=2;i<5;i++)
+    deferred_hooks[4]=deferred_hooks[3]; deferred_hooks[4].hook_token=5;
+    deferred_hooks[4].action=12; deferred_hooks[4].service_kind=4;
+    deferred_hooks[5]=deferred_hooks[4]; deferred_hooks[5].hook_token=6;
+    deferred_hooks[5].expected_active_kind=6;
+    deferred_hooks[6].hook_token=7; deferred_hooks[6].action=2;
+    deferred_hooks[6].cpu=2; deferred_hooks[6].pc=0x71c4c;
+    deferred_hooks[6].expected_active_kind=4; deferred_hooks[6].range_count=1;
+    deferred_hooks[6].opcode_length=2; deferred_hooks[6].opcode[0]=0x4e;
+    deferred_hooks[6].opcode[1]=0x75;
+    mask[0]=(uint8_t)(1u<<0); mask[0x77>>3]|=(uint8_t)(1u<<(0x77&7));
+    zram[0]=memory[0]=0x32; zram[1]=memory[1]=0;
+    zram[2]=memory[2]=0x40; zram[0x77]=memory[0x77]=0x1a;
+    memory[3]=0xc3; memory[4]=0x77; memory[5]=0x00;
+    for (i=2;i<7;i++)
     {
       unsigned int j;
       for (j=0;j<deferred_hooks[i].opcode_length;j++)
@@ -140,7 +148,7 @@ int main(void)
     z80_writemem=write_memory; z80_readmem=read_memory;
     z80_writeport=write_port; z80_readport=read_port;
     defer_on_write=1;
-    assert(gpgx_audio_trace_begin_frame()==0); z80_run(13);
+    assert(gpgx_audio_trace_begin_frame()==0); z80_run(450);
     defer_on_write=0;
     {
       uint8_t previous=gpgx_audio_trace_enter_cpu(GPGX_AUDIO_TRACE_CPU_M68K);
@@ -149,20 +157,24 @@ int main(void)
       gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_M68K,0x71c4c);
       gpgx_audio_trace_leave_cpu(previous);
     }
-    z80_run(255);
     assert(gpgx_audio_trace_end_frame()==0);
-    assert(gpgx_audio_trace_drain(events,16,&count)==0 && count==13);
+    assert(gpgx_audio_trace_drain(events,16,&count)==0 && count==14);
     assert(events[1].kind==10 && events[1].value==4
       && events[1].service_kind==6 && events[1].source_cpu==2);
     assert(events[2].kind==3 && events[2].service_kind==6 && events[2].source_cpu==1);
-    assert(events[3].kind==1 && events[3].service_kind==4
-      && events[3].parent_token==events[0].service_token && events[3].depth==1
-      && events[3].subject==4 && events[3].pc==0x71b82 && events[3].source_cpu==2);
-    assert(events[4].kind==3 && events[4].service_kind==4 && events[4].source_cpu==2);
-    assert(events[8].kind==2 && events[8].service_kind==4
-      && events[8].service_token==events[3].service_token);
-    assert(events[12].kind==2 && events[12].service_kind==6
-      && events[12].service_token==events[0].service_token);
+    assert(events[3].kind==5 && events[4].kind==6 && events[5].kind==7);
+    assert(events[6].kind==2 && events[6].service_kind==6
+      && events[6].service_token==events[0].service_token && events[6].subject==2);
+    assert(events[7].kind==1 && events[7].service_kind==2
+      && events[7].parent_token==0 && events[7].depth==0 && events[7].subject==2);
+    assert(events[8].kind==1 && events[8].service_kind==4
+      && events[8].parent_token==events[7].service_token && events[8].depth==1
+      && events[8].subject==5 && events[8].pc==0x71b82 && events[8].source_cpu==2);
+    assert(events[9].kind==3 && events[9].service_kind==4 && events[9].source_cpu==2);
+    assert(events[13].kind==2 && events[13].service_kind==4
+      && events[13].service_token==events[8].service_token);
+    assert(events[1].service_token==events[0].service_token
+      && events[1].service_kind==6 && events[1].parent_token==0 && events[1].depth==0);
   }
   return 0;
 }

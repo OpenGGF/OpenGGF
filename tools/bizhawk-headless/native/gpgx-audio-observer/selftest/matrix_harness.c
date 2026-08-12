@@ -9,6 +9,13 @@ uint8_t work_ram[0x10000];
 uint32_t selftest_m68k_a7;
 #include "audio_trace.c"
 
+#ifndef TRACE_DEFERRED_ORIGIN
+#define TRACE_DEFERRED_ORIGIN(reservation) ((reservation).blocker)
+#endif
+#ifndef TRACE_DEFERRED_CURRENT_OWNER
+#define TRACE_DEFERRED_CURRENT_OWNER(reservation) ((reservation).blocker)
+#endif
+
 #ifndef ACTION_RESERVE_DEFERRED_BEGIN
 #define ACTION_RESERVE_DEFERRED_BEGIN 11u
 #endif
@@ -1544,8 +1551,11 @@ static void deferred_reserve_consume_matrix(void)
   struct gpgx_audio_service_hook_v1 h[16], base_h[16], swap;
   struct gpgx_audio_snapshot_range_v1 r;
   struct gpgx_audio_trace_event drained_events[32];
+  struct gpgx_audio_trace_first_fault_v1 fault, preserved_fault;
+  struct trace_deferred_begin_reservation reservation_before;
+  struct trace_stack_entry stack_before[TRACE_MAX_DEPTH];
   uint8_t mask[8192], base_mask[8192], rom[65536], previous;
-  uint16_t blocker, child, next_token;
+  uint16_t blocker, child, next_token, successor;
   uint32_t before, count, overflow, drained;
   memset(&c,0,sizeof(c)); memset(k,0,sizeof(k)); memset(h,0,sizeof(h));
   memset(&r,0,sizeof(r)); memset(mask,0,sizeof(mask)); memset(rom,0,sizeof(rom));
@@ -1558,8 +1568,10 @@ static void deferred_reserve_consume_matrix(void)
   {
     k[i].kind_id=(uint8_t)(i+1); k[i].cancellation_range_count=1;
   }
-  k[1].flags=KIND_ALLOW_CHILDREN;
-  k[2].flags=KIND_ALLOW_CHILDREN;
+  k[1].flags=KIND_TYPED_ASYNC|KIND_ALLOW_CONTINUATION|KIND_ALLOW_CHILDREN;
+  k[1].continuation_frame_limit=2;
+  k[2].flags=KIND_TYPED_ASYNC|KIND_ALLOW_CONTINUATION|KIND_ALLOW_CHILDREN;
+  k[2].continuation_frame_limit=2;
   k[3].flags=KIND_ALLOW_CHILDREN;
   k[5].flags=KIND_TYPED_ASYNC|KIND_ALLOW_CONTINUATION;
   k[5].continuation_frame_limit=2;
@@ -1708,6 +1720,37 @@ static void deferred_reserve_consume_matrix(void)
   assert(gpgx_audio_trace_configure(&c,mask,k,h,&r)==TRACE_ABI_OR_CONFIG_LIMIT);
 #undef REJECT_DEFERRED_PAIR
   RESTORE_DEFERRED_PAIR();
+  memmove(&h[11],&h[10],2*sizeof(h[0]));
+  memset(&h[10],0,sizeof(h[10]));
+  h[10].hook_token=13; h[10].action=ACTION_OBSERVATION_MARKER;
+  h[10].cpu=GPGX_AUDIO_TRACE_CPU_M68K; h[10].pc=0x71ba0;
+  h[10].expected_active_kind=2; h[10].opcode_length=2;
+  h[10].opcode[0]=0x4e; h[10].opcode[1]=0x71;
+  rom[(0x71ba0u&0xffffu)^1u]=0x4e;
+  rom[((0x71ba0u+1u)&0xffffu)^1u]=0x71;
+  c.hook_count=13;
+#define START_RESERVED_ROOT() do { \
+  assert(gpgx_audio_trace_disable()==TRACE_OK); \
+  assert(gpgx_audio_trace_configure(&c,mask,k,h,&r)==TRACE_OK); \
+  assert(gpgx_audio_trace_begin_frame()==TRACE_OK); \
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_Z80,0x3a); \
+  blocker=trace_stack[0].token; \
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_M68K,0x71b4c); \
+  assert(trace_deferred_begin.pending && trace_stack[0].token==blocker); \
+} while(0)
+#define START_TRANSFERRED_ROOT(tail_pc, successor_kind) do { \
+  START_RESERVED_ROOT(); \
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_Z80,(tail_pc)); \
+  assert(!trace_runtime_error && trace_deferred_begin.pending && trace_depth==1 \
+    && trace_stack[0].kind==(successor_kind)); \
+  successor=trace_stack[0].token; \
+} while(0)
+#define ASSERT_FIRST_FAULT(expected_reason, expected_cpu, expected_pc, expected_kind) do { \
+  memset(&fault,0,sizeof(fault)); \
+  assert(gpgx_audio_trace_first_fault(&fault)==TRACE_OK); \
+  assert(fault.reason==(expected_reason) && fault.source_cpu==(expected_cpu) \
+    && fault.pc==(expected_pc) && fault.active_kind==(expected_kind)); \
+} while(0)
 
   assert(gpgx_audio_trace_disable()==TRACE_OK);
   assert(gpgx_audio_trace_configure(&c,mask,k,h,&r)==TRACE_OK);
@@ -1730,9 +1773,10 @@ static void deferred_reserve_consume_matrix(void)
   for (uint32_t i=0;i<4;i++)
     gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_M68K,0x71b4c);
   assert(trace_event_count_value==before+4 && trace_depth==1);
-  assert(trace_deferred_begin.pending && trace_deferred_begin.blocker.token==blocker
-    && trace_deferred_begin.blocker.kind==6 && trace_deferred_begin.blocker.parent==0
-    && trace_deferred_begin.blocker.depth==0 && trace_deferred_begin.target_kind==4
+  assert(trace_deferred_begin.pending && TRACE_DEFERRED_ORIGIN(trace_deferred_begin).token==blocker
+    && TRACE_DEFERRED_ORIGIN(trace_deferred_begin).kind==6
+    && TRACE_DEFERRED_ORIGIN(trace_deferred_begin).parent==0
+    && TRACE_DEFERRED_ORIGIN(trace_deferred_begin).depth==0 && trace_deferred_begin.target_kind==4
     && trace_deferred_begin.hook_token==5 && trace_deferred_begin.cpu==GPGX_AUDIO_TRACE_CPU_M68K
     && trace_deferred_begin.pc==0x71b4c);
   assert(trace_events[before].kind==EVENT_HOOK_MARKER && trace_events[before].value==4
@@ -1776,6 +1820,301 @@ static void deferred_reserve_consume_matrix(void)
   assert(trace_depth==1 && trace_stack[0].kind==2 && trace_stack[0].parent==0
     && trace_stack[0].depth==0 && !trace_runtime_error);
   assert(gpgx_audio_trace_abort_frame()==TRACE_OK);
+
+  /* With no reservation, the kind-2 partner at the shared PC stays action 7. */
+  assert(gpgx_audio_trace_disable()==TRACE_OK);
+  assert(gpgx_audio_trace_configure(&c,mask,k,h,&r)==TRACE_OK);
+  assert(gpgx_audio_trace_begin_frame()==TRACE_OK);
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_Z80,0x3a);
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_Z80,0x77);
+  successor=trace_stack[0].token; before=trace_event_count_value;
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_M68K,0x71b82);
+  assert(trace_event_count_value==before+1 && !trace_deferred_begin.pending
+    && trace_depth==1 && trace_stack[0].token==successor && trace_stack[0].kind==2);
+  assert(trace_events[before].kind==EVENT_HOOK_MARKER
+    && trace_events[before].service_token==successor
+    && trace_events[before].service_kind==2 && trace_events[before].value==3
+    && trace_events[before].subject==6 && trace_events[before].pc==0x71b82);
+  assert(gpgx_audio_trace_abort_frame()==TRACE_OK);
+
+  /* Kind 6 -> kind 2 is one exact five-event transaction, then action 12 consumes. */
+  assert(gpgx_audio_trace_disable()==TRACE_OK);
+  assert(gpgx_audio_trace_configure(&c,mask,k,h,&r)==TRACE_OK);
+  assert(gpgx_audio_trace_begin_frame()==TRACE_OK);
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_Z80,0x3a);
+  blocker=trace_stack[0].token;
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_M68K,0x71b4c);
+  reservation_before=trace_deferred_begin;
+  before=trace_event_count_value; next_token=trace_next_token;
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_Z80,0x77);
+  assert(!trace_runtime_error && trace_event_count_value==before+5
+    && trace_next_token==(uint16_t)(next_token+1) && trace_depth==1);
+  assert(trace_events[before].kind==EVENT_SNAPSHOT_BEGIN
+    && trace_events[before+1].kind==EVENT_SNAPSHOT_CHUNK
+    && trace_events[before+2].kind==EVENT_SNAPSHOT_END
+    && trace_events[before+3].kind==EVENT_SERVICE_END
+    && trace_events[before+4].kind==EVENT_SERVICE_BEGIN);
+  assert(trace_events[before+3].service_token==blocker
+    && trace_events[before+3].service_kind==6 && trace_events[before+3].subject==2
+    && trace_events[before+3].pc==0x77 && trace_events[before+3].source_cpu==GPGX_AUDIO_TRACE_CPU_Z80);
+  successor=trace_events[before+4].service_token;
+  assert(successor==next_token && successor!=blocker
+    && trace_events[before+4].service_kind==2 && trace_events[before+4].parent_token==0
+    && trace_events[before+4].depth==0 && trace_events[before+4].subject==2
+    && trace_events[before+4].pc==0x77 && trace_events[before+4].source_cpu==GPGX_AUDIO_TRACE_CPU_Z80);
+  assert(trace_stack[0].token==successor && trace_stack[0].kind==2
+    && trace_stack[0].parent==0 && trace_stack[0].depth==0);
+  assert(trace_deferred_begin.pending
+    && !memcmp(&TRACE_DEFERRED_ORIGIN(trace_deferred_begin),
+      &TRACE_DEFERRED_ORIGIN(reservation_before),sizeof(struct trace_stack_entry))
+    && TRACE_DEFERRED_ORIGIN(trace_deferred_begin).token==blocker
+    && TRACE_DEFERRED_CURRENT_OWNER(trace_deferred_begin).token==successor
+    && TRACE_DEFERRED_CURRENT_OWNER(trace_deferred_begin).kind==2);
+  previous=gpgx_audio_trace_enter_cpu(GPGX_AUDIO_TRACE_CPU_Z80);
+  gpgx_audio_trace_fm_write(0,0x2a); gpgx_audio_trace_leave_cpu(previous);
+  assert(trace_events[trace_event_count_value-1].kind==EVENT_FM_WRITE
+    && trace_events[trace_event_count_value-1].service_token==successor
+    && trace_events[trace_event_count_value-1].service_kind==2
+    && trace_events[trace_event_count_value-1].source_cpu==GPGX_AUDIO_TRACE_CPU_Z80);
+  before=trace_event_count_value; next_token=trace_next_token;
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_M68K,0x71b82);
+  assert(!trace_runtime_error && !trace_deferred_begin.pending
+    && trace_event_count_value==before+1 && trace_next_token==(uint16_t)(next_token+1)
+    && trace_depth==2 && trace_stack[0].token==successor && trace_stack[0].kind==2);
+  child=trace_stack[1].token;
+  assert(trace_stack[1].kind==4 && trace_stack[1].parent==successor
+    && trace_stack[1].depth==1 && trace_events[before].kind==EVENT_SERVICE_BEGIN
+    && trace_events[before].service_token==child && trace_events[before].service_kind==4
+    && trace_events[before].parent_token==successor && trace_events[before].depth==1
+    && trace_events[before].subject==7 && trace_events[before].pc==0x71b82);
+  assert(gpgx_audio_trace_abort_frame()==TRACE_OK);
+
+  /* The configured kind-3 route is symmetric and needs no route-specific runtime branch. */
+  assert(gpgx_audio_trace_disable()==TRACE_OK);
+  assert(gpgx_audio_trace_configure(&c,mask,k,h,&r)==TRACE_OK);
+  assert(gpgx_audio_trace_begin_frame()==TRACE_OK);
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_Z80,0x3a);
+  blocker=trace_stack[0].token;
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_M68K,0x71b4c);
+  reservation_before=trace_deferred_begin;
+  before=trace_event_count_value; next_token=trace_next_token;
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_Z80,0xc1);
+  assert(!trace_runtime_error && trace_event_count_value==before+5
+    && trace_next_token==(uint16_t)(next_token+1) && trace_depth==1
+    && trace_stack[0].kind==3 && trace_stack[0].parent==0 && trace_stack[0].depth==0);
+  assert(trace_events[before].kind==EVENT_SNAPSHOT_BEGIN
+    && trace_events[before+1].kind==EVENT_SNAPSHOT_CHUNK
+    && trace_events[before+2].kind==EVENT_SNAPSHOT_END
+    && trace_events[before+3].kind==EVENT_SERVICE_END
+    && trace_events[before+4].kind==EVENT_SERVICE_BEGIN
+    && trace_events[before+3].service_token==blocker
+    && trace_events[before+3].subject==3 && trace_events[before+4].subject==3);
+  successor=trace_stack[0].token;
+  assert(trace_deferred_begin.pending
+    && !memcmp(&TRACE_DEFERRED_ORIGIN(trace_deferred_begin),
+      &TRACE_DEFERRED_ORIGIN(reservation_before),sizeof(struct trace_stack_entry))
+    && TRACE_DEFERRED_CURRENT_OWNER(trace_deferred_begin).token==successor
+    && TRACE_DEFERRED_CURRENT_OWNER(trace_deferred_begin).kind==3);
+  before=trace_event_count_value;
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_M68K,0x71b82);
+  assert(!trace_runtime_error && !trace_deferred_begin.pending
+    && trace_event_count_value==before+1 && trace_depth==2
+    && trace_stack[0].token==successor && trace_stack[0].kind==3
+    && trace_stack[1].kind==4 && trace_stack[1].parent==successor
+    && trace_events[before].subject==9 && trace_events[before].parent_token==successor);
+  assert(gpgx_audio_trace_abort_frame()==TRACE_OK);
+
+  /* A pending token/parent/kind/depth mismatch selects neither shared-PC hook. */
+#define ASSERT_PENDING_OWNER_MISMATCH(change, fault_kind) do { \
+  START_TRANSFERRED_ROOT(0x77,2); \
+  change; \
+  memcpy(stack_before,trace_stack,sizeof(trace_stack)); \
+  reservation_before=trace_deferred_begin; before=trace_event_count_value; \
+  next_token=trace_next_token; \
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_M68K,0x71b82); \
+  assert(trace_event_count_value==before && trace_next_token==next_token \
+    && !memcmp(stack_before,trace_stack,sizeof(trace_stack)) \
+    && !memcmp(&reservation_before,&trace_deferred_begin,sizeof(reservation_before)) \
+    && trace_deferred_begin.pending); \
+  ASSERT_FIRST_FAULT(GPGX_AUDIO_TRACE_FAULT_SERVICE,GPGX_AUDIO_TRACE_CPU_M68K,0x71b82,(fault_kind)); \
+} while(0)
+  ASSERT_PENDING_OWNER_MISMATCH(trace_stack[0].token++,2);
+  ASSERT_PENDING_OWNER_MISMATCH(trace_stack[0].parent=9,2);
+  ASSERT_PENDING_OWNER_MISMATCH(trace_stack[0].kind=3,3);
+  ASSERT_PENDING_OWNER_MISMATCH(trace_stack[0].depth=1,2);
+#undef ASSERT_PENDING_OWNER_MISMATCH
+
+  /* An unrelated M68K hook cannot replace the pending consume. */
+  START_TRANSFERRED_ROOT(0x77,2);
+  memcpy(stack_before,trace_stack,sizeof(trace_stack));
+  reservation_before=trace_deferred_begin; before=trace_event_count_value;
+  next_token=trace_next_token;
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_M68K,0x71ba0);
+  assert(trace_event_count_value==before && trace_next_token==next_token
+    && !memcmp(stack_before,trace_stack,sizeof(trace_stack))
+    && !memcmp(&reservation_before,&trace_deferred_begin,sizeof(reservation_before)));
+  ASSERT_FIRST_FAULT(GPGX_AUDIO_TRACE_FAULT_SERVICE,GPGX_AUDIO_TRACE_CPU_M68K,0x71ba0,2);
+
+  /* Five free slots succeed atomically; one-short capacity preserves every state scalar. */
+  START_RESERVED_ROOT();
+  reservation_before=trace_deferred_begin; next_token=trace_next_token;
+  trace_event_count_value=GPGX_AUDIO_TRACE_EVENT_CAPACITY-5; trace_omitted_count=0;
+  before=trace_event_count_value;
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_Z80,0x77);
+  assert(trace_event_count_value==GPGX_AUDIO_TRACE_EVENT_CAPACITY
+    && trace_omitted_count==0 && trace_next_token==(uint16_t)(next_token+1)
+    && trace_depth==1 && trace_stack[0].kind==2 && trace_deferred_begin.pending
+    && !memcmp(&TRACE_DEFERRED_ORIGIN(trace_deferred_begin),
+      &TRACE_DEFERRED_ORIGIN(reservation_before),sizeof(struct trace_stack_entry)));
+  assert(trace_events[before].kind==EVENT_SNAPSHOT_BEGIN
+    && trace_events[before+1].kind==EVENT_SNAPSHOT_CHUNK
+    && trace_events[before+2].kind==EVENT_SNAPSHOT_END
+    && trace_events[before+3].kind==EVENT_SERVICE_END
+    && trace_events[before+4].kind==EVENT_SERVICE_BEGIN);
+
+  START_RESERVED_ROOT();
+  memcpy(stack_before,trace_stack,sizeof(trace_stack));
+  reservation_before=trace_deferred_begin; next_token=trace_next_token;
+  trace_event_count_value=GPGX_AUDIO_TRACE_EVENT_CAPACITY-4; trace_omitted_count=0;
+  before=trace_event_count_value;
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_Z80,0x77);
+  assert(trace_event_count_value==before && trace_omitted_count==5
+    && trace_next_token==next_token && !memcmp(stack_before,trace_stack,sizeof(trace_stack))
+    && !memcmp(&reservation_before,&trace_deferred_begin,sizeof(reservation_before))
+    && trace_deferred_begin.pending);
+
+  /* Successor token exhaustion is preflighted without advancing the cursor or ending origin. */
+  START_RESERVED_ROOT();
+  memcpy(stack_before,trace_stack,sizeof(trace_stack));
+  reservation_before=trace_deferred_begin; trace_next_token=0;
+  before=trace_event_count_value;
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_Z80,0x77);
+  assert(trace_event_count_value==before && trace_omitted_count==0
+    && trace_next_token==0 && !memcmp(stack_before,trace_stack,sizeof(trace_stack))
+    && !memcmp(&reservation_before,&trace_deferred_begin,sizeof(reservation_before)));
+  ASSERT_FIRST_FAULT(GPGX_AUDIO_TRACE_FAULT_TOKEN,GPGX_AUDIO_TRACE_CPU_Z80,0x77,6);
+
+  /* Wrong reservation target and a non-family tail fail before topology mutation. */
+  START_RESERVED_ROOT();
+  trace_deferred_begin.target_kind=5;
+  memcpy(stack_before,trace_stack,sizeof(trace_stack));
+  reservation_before=trace_deferred_begin; next_token=trace_next_token;
+  before=trace_event_count_value;
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_Z80,0x77);
+  assert(trace_event_count_value==before && trace_next_token==next_token
+    && !memcmp(stack_before,trace_stack,sizeof(trace_stack))
+    && !memcmp(&reservation_before,&trace_deferred_begin,sizeof(reservation_before)));
+  ASSERT_FIRST_FAULT(GPGX_AUDIO_TRACE_FAULT_SERVICE,GPGX_AUDIO_TRACE_CPU_Z80,0x77,6);
+
+  /* A late snapshot-source proof failure cannot publish a partial completion. */
+  START_RESERVED_ROOT();
+  trace_ranges[0].flags=RANGE_M68K_RAM;
+  memcpy(stack_before,trace_stack,sizeof(trace_stack));
+  reservation_before=trace_deferred_begin; next_token=trace_next_token;
+  before=trace_event_count_value;
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_Z80,0x77);
+  assert(trace_event_count_value==before && trace_next_token==next_token
+    && !memcmp(stack_before,trace_stack,sizeof(trace_stack))
+    && !memcmp(&reservation_before,&trace_deferred_begin,sizeof(reservation_before)));
+  ASSERT_FIRST_FAULT(GPGX_AUDIO_TRACE_FAULT_SNAPSHOT,GPGX_AUDIO_TRACE_CPU_Z80,0x77,6);
+  trace_ranges[0].flags=RANGE_Z80_RAM;
+
+  START_RESERVED_ROOT();
+  swap=h[1]; swap.hook_token=15;
+  memcpy(stack_before,trace_stack,sizeof(trace_stack));
+  reservation_before=trace_deferred_begin; next_token=trace_next_token;
+  before=trace_event_count_value;
+  tail_pop_push(&swap,GPGX_AUDIO_TRACE_CPU_Z80,0x77);
+  assert(trace_runtime_error && trace_event_count_value==before && trace_next_token==next_token
+    && !memcmp(stack_before,trace_stack,sizeof(trace_stack))
+    && !memcmp(&reservation_before,&trace_deferred_begin,sizeof(reservation_before)));
+
+  /* A second tail after transfer cannot produce a second owner or token. */
+  START_TRANSFERRED_ROOT(0x77,2);
+  memcpy(stack_before,trace_stack,sizeof(trace_stack));
+  reservation_before=trace_deferred_begin; next_token=trace_next_token;
+  before=trace_event_count_value;
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_Z80,0x77);
+  assert(trace_runtime_error && trace_event_count_value==before && trace_next_token==next_token
+    && !memcmp(stack_before,trace_stack,sizeof(trace_stack))
+    && !memcmp(&reservation_before,&trace_deferred_begin,sizeof(reservation_before)));
+
+  /* Consume succeeds with one slot and is atomic with zero slots or no token. */
+  START_TRANSFERRED_ROOT(0x77,2);
+  trace_event_count_value=GPGX_AUDIO_TRACE_EVENT_CAPACITY-1; trace_omitted_count=0;
+  before=trace_event_count_value; next_token=trace_next_token;
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_M68K,0x71b82);
+  assert(trace_event_count_value==GPGX_AUDIO_TRACE_EVENT_CAPACITY
+    && trace_omitted_count==0 && trace_next_token==(uint16_t)(next_token+1)
+    && !trace_deferred_begin.pending && trace_depth==2
+    && trace_stack[1].parent==successor && trace_stack[1].kind==4
+    && trace_events[before].kind==EVENT_SERVICE_BEGIN);
+
+  START_TRANSFERRED_ROOT(0x77,2);
+  memcpy(stack_before,trace_stack,sizeof(trace_stack));
+  reservation_before=trace_deferred_begin; next_token=trace_next_token;
+  trace_event_count_value=GPGX_AUDIO_TRACE_EVENT_CAPACITY; trace_omitted_count=0;
+  before=trace_event_count_value;
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_M68K,0x71b82);
+  assert(trace_event_count_value==before && trace_omitted_count==1
+    && trace_next_token==next_token && !memcmp(stack_before,trace_stack,sizeof(trace_stack))
+    && !memcmp(&reservation_before,&trace_deferred_begin,sizeof(reservation_before)));
+
+  START_TRANSFERRED_ROOT(0x77,2);
+  memcpy(stack_before,trace_stack,sizeof(trace_stack));
+  reservation_before=trace_deferred_begin; trace_next_token=0;
+  before=trace_event_count_value;
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_M68K,0x71b82);
+  assert(trace_event_count_value==before && trace_omitted_count==0
+    && trace_next_token==0 && !memcmp(stack_before,trace_stack,sizeof(trace_stack))
+    && !memcmp(&reservation_before,&trace_deferred_begin,sizeof(reservation_before)));
+  ASSERT_FIRST_FAULT(GPGX_AUDIO_TRACE_FAULT_TOKEN,GPGX_AUDIO_TRACE_CPU_M68K,0x71b82,2);
+
+  /* Transfer can cross a frame; only the real current owner ages before consume. */
+  START_TRANSFERRED_ROOT(0x77,2);
+  reservation_before=trace_deferred_begin;
+  assert(gpgx_audio_trace_end_frame()==TRACE_OK);
+  assert(gpgx_audio_trace_event_count(&count,&overflow)==TRACE_OK && overflow==0);
+  assert(gpgx_audio_trace_drain(drained_events,32,&drained)==TRACE_OK && drained==count);
+  assert(gpgx_audio_trace_begin_frame()==TRACE_OK);
+  assert(trace_depth==1 && trace_stack[0].token==successor
+    && trace_stack[0].kind==2 && trace_stack[0].carried_frames==1
+    && trace_deferred_begin.pending
+    && !memcmp(&TRACE_DEFERRED_ORIGIN(trace_deferred_begin),
+      &TRACE_DEFERRED_ORIGIN(reservation_before),sizeof(struct trace_stack_entry))
+    && TRACE_DEFERRED_CURRENT_OWNER(trace_deferred_begin).token==successor);
+  before=trace_event_count_value;
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_M68K,0x71b82);
+  assert(trace_event_count_value==before+1 && !trace_deferred_begin.pending
+    && trace_depth==2 && trace_stack[0].carried_frames==1
+    && trace_stack[1].parent==successor && trace_stack[1].carried_frames==0);
+
+  /* Reset/power/abort fail closed after transfer, while disable clears both identities. */
+  START_TRANSFERRED_ROOT(0x77,2);
+  memcpy(stack_before,trace_stack,sizeof(trace_stack));
+  reservation_before=trace_deferred_begin; next_token=trace_next_token;
+  before=trace_event_count_value; gpgx_audio_trace_reset_begin(1);
+  assert(trace_event_count_value==before && trace_next_token==next_token
+    && !memcmp(stack_before,trace_stack,sizeof(trace_stack))
+    && !memcmp(&reservation_before,&trace_deferred_begin,sizeof(reservation_before)));
+  ASSERT_FIRST_FAULT(GPGX_AUDIO_TRACE_FAULT_SERVICE,GPGX_AUDIO_TRACE_CPU_RESET,0,2);
+  assert(gpgx_audio_trace_abort_frame()==TRACE_ABI_OR_CONFIG_LIMIT
+    && !memcmp(stack_before,trace_stack,sizeof(trace_stack))
+    && !memcmp(&reservation_before,&trace_deferred_begin,sizeof(reservation_before)));
+  assert(gpgx_audio_trace_disable()==TRACE_OK && !trace_deferred_begin.pending
+    && trace_depth==0);
+
+  /* The first fault is preserved when later pending violations occur. */
+  START_TRANSFERRED_ROOT(0x77,2);
+  before=trace_event_count_value;
+  previous=gpgx_audio_trace_enter_cpu(GPGX_AUDIO_TRACE_CPU_M68K);
+  gpgx_audio_trace_fm_write(0,0x2a); gpgx_audio_trace_leave_cpu(previous);
+  assert(trace_event_count_value==before);
+  ASSERT_FIRST_FAULT(GPGX_AUDIO_TRACE_FAULT_CHIP_OWNERSHIP,GPGX_AUDIO_TRACE_CPU_M68K,0x71b4c,2);
+  preserved_fault=fault;
+  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_M68K,0x71ba0);
+  assert(gpgx_audio_trace_first_fault(&fault)==TRACE_OK
+    && !memcmp(&fault,&preserved_fault,sizeof(fault)));
 
   assert(gpgx_audio_trace_disable()==TRACE_OK);
   assert(gpgx_audio_trace_configure(&c,mask,k,h,&r)==TRACE_OK);
@@ -1861,7 +2200,8 @@ static void deferred_reserve_consume_matrix(void)
   assert(gpgx_audio_trace_end_frame()==TRACE_OK);
   assert(gpgx_audio_trace_event_count(&count,&overflow)==TRACE_OK && overflow==0);
   assert(gpgx_audio_trace_drain(drained_events,32,&drained)==TRACE_OK && drained==count);
-  assert(trace_deferred_begin.pending && trace_deferred_begin.blocker.token==blocker);
+  assert(trace_deferred_begin.pending
+    && TRACE_DEFERRED_ORIGIN(trace_deferred_begin).token==blocker);
   assert(gpgx_audio_trace_begin_frame()==TRACE_OK);
   assert(trace_depth==1 && trace_stack[0].token==blocker
     && trace_stack[0].carried_frames==1 && trace_deferred_begin.pending);
@@ -1917,16 +2257,7 @@ static void deferred_reserve_consume_matrix(void)
   assert(trace_event_count_value==before+1
     && trace_events[before].kind==EVENT_HOOK_MARKER
     && trace_events[before].service_token==blocker);
-  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_M68K,0x71b4c);
-  assert(trace_deferred_begin.pending && trace_deferred_begin.blocker.token==blocker
-    && trace_stack[0].token==blocker && trace_stack[0].kind==6);
-  before=trace_event_count_value; next_token=trace_next_token;
-  gpgx_audio_trace_instruction(GPGX_AUDIO_TRACE_CPU_Z80,0x77);
-  assert(trace_event_count_value==before && trace_depth==1
-    && trace_stack[0].token==blocker && trace_stack[0].kind==6
-    && trace_deferred_begin.pending && trace_next_token==next_token);
-  assert(gpgx_audio_trace_end_frame()==TRACE_ABI_OR_CONFIG_LIMIT);
-  assert(gpgx_audio_trace_abort_frame()==TRACE_ABI_OR_CONFIG_LIMIT);
+  assert(gpgx_audio_trace_abort_frame()==TRACE_OK);
 
   assert(gpgx_audio_trace_disable()==TRACE_OK);
   assert(gpgx_audio_trace_configure(&c,mask,k,h,&r)==TRACE_OK);
@@ -1937,6 +2268,9 @@ static void deferred_reserve_consume_matrix(void)
   assert(gpgx_audio_trace_drain(drained_events,32,&drained)==TRACE_OK);
   assert(trace_deferred_begin.pending);
   assert(gpgx_audio_trace_disable()==TRACE_OK && !trace_deferred_begin.pending);
+#undef ASSERT_FIRST_FAULT
+#undef START_TRANSFERRED_ROOT
+#undef START_RESERVED_ROOT
 #undef RESTORE_DEFERRED_PAIR
 }
 
