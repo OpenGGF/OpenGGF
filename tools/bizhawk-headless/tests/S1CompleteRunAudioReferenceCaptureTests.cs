@@ -1829,8 +1829,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 Visit(current, api, 0x071C4C);
                 current.SetCpuRegister("A7", 0x00FFF014);
                 Visit(current, api, 0x071B4C);
-                current.SetCpuRegister("A7", 0x00FFF010);
-                current.SetU32(0xF010, 0x00010000);
+                current.SetU32(0xF014, 0x00010000);
                 Visit(current, api, 0x072C24);
             });
             var output = new StringWriter();
@@ -1874,12 +1873,32 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 AssertConditionalDirectParent(pc,0x00C1,0x00D0,3,true,true);
                 AssertConditionalDirectParent(pc,0x00C1,0x00D0,3,false,true);
             }
-            AssertConditionalTopKindFourAt72C24(true);
-            AssertConditionalTopKindFourAt72C24(false);
-            AssertConditionalCallbackIdentityFails(false,false);
-            AssertConditionalCallbackIdentityFails(false,true);
-            AssertConditionalCallbackIdentityFails(true,false);
-            AssertConditionalCallbackIdentityFails(true,true);
+            foreach(bool preEpoch in new[]{false,true})
+            {
+                AssertConditionalTopKindFourAt72C24(true,preEpoch);
+                AssertConditionalTopKindFourAt72C24(false,preEpoch);
+                AssertConditionalCallbackStackRelationFails(
+                    false,true,preEpoch);
+                AssertConditionalCallbackStackRelationFails(
+                    false,false,preEpoch);
+                AssertConditionalCallbackStackRelationFails(
+                    true,true,preEpoch);
+                AssertConditionalCallbackStackRelationFails(
+                    true,false,preEpoch);
+                foreach(bool directParent in new[]{false,true})
+                {
+                    AssertConditionalStackBoundary(
+                        directParent,true,0x00FFFFF8,true,preEpoch);
+                    AssertConditionalStackBoundary(
+                        directParent,true,0x00FFFFFA,false,preEpoch);
+                    AssertConditionalStackBoundary(
+                        directParent,true,0x00FFFFFC,false,preEpoch);
+                    AssertConditionalStackBoundary(
+                        directParent,false,0x00FFFFFC,true,preEpoch);
+                    AssertConditionalDecisionShapeRollback(
+                        directParent,preEpoch);
+                }
+            }
             AssertInvalidConditionalReturnProof(0x0000FDAE,0x00071C38);
             AssertInvalidConditionalReturnProof(0x00FFFDAF,0x00071C38);
             AssertInvalidConditionalReturnProof(0x00FFFFFE,0x00071C38);
@@ -1905,8 +1924,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 current.SetU32(0xFDB2,0x00000B64);
                 Visit(current,api,0x071B4C);
                 api.VisitZ80(childBegin,current);
-                current.SetCpuRegister("A7",0x00FFFDAE);
-                current.SetU32(0xFDAE,keep?0x00071C38u:0x00010000u);
+                uint callbackStack=keep?0x00FFFDAEu:0x00FFFDB2u;
+                current.SetCpuRegister("A7",callbackStack);
+                current.SetU32((int)(callbackStack&0xFFFF),
+                    keep?0x00071C38u:0x00010000u);
                 Visit(current,api,pc);
                 if(preEpoch)return;
                 if(keep)
@@ -1993,15 +2014,18 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
         }
 
-        private static void AssertConditionalTopKindFourAt72C24(bool keep)
+        private static void AssertConditionalTopKindFourAt72C24(
+            bool keep,bool preEpoch)
         {
             var api=new FakeTraceApi();
             var host=new FakeS1Host((current,frame)=>
             {
                 current.SetCpuRegister("A7",0x00FFFDB2);
                 Visit(current,api,0x071B4C);
-                current.SetCpuRegister("A7",0x00FFFDAE);
-                current.SetU32(0xFDAE,keep?0x00071C38u:0x00010000u);
+                uint callbackStack=keep?0x00FFFDAEu:0x00FFFDB2u;
+                current.SetCpuRegister("A7",callbackStack);
+                current.SetU32((int)(callbackStack&0xFFFF),
+                    keep?0x00071C38u:0x00010000u);
                 Visit(current,api,0x072C24);
                 if(keep)
                 {
@@ -2012,6 +2036,18 @@ namespace OpenGGF.BizHawk.Headless.Tests
             var output=new StringWriter();
             using(var session=CreateSession(host,api,output))
             {
+                if(preEpoch)
+                {
+                    session.ObservePreEpochFrame(859,null,host.Advance);
+                    AssertEx.Equal(0,
+                        session.BoundaryManagedServiceCountForTesting);
+                    session.BeginEpoch();
+                    AssertEx.Equal(0,((JArray)Record(
+                        output.ToString(),"baseline",0)["active_services"]).Count);
+                    AssertEx.Equal(0,CountRecords(output.ToString(),
+                        "native_event"));
+                    return;
+                }
                 session.CaptureFrame(860,host.Advance);
                 session.Complete(861);
             }
@@ -2020,7 +2056,104 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(0,CountNativeKind(output.ToString(),11));
         }
 
-        private static void AssertConditionalCallbackIdentityFails(
+        private static void AssertConditionalCallbackStackRelationFails(
+            bool directParent,bool keep,bool preEpoch)
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDB2);
+                Visit(current,api,0x071B4C);
+                if(directParent)api.VisitZ80(0x0077,current);
+                uint invalidStack=keep?0x00FFFDB2u:0x00FFFDAEu;
+                current.SetCpuRegister("A7",invalidStack);
+                current.SetU32((int)(invalidStack&0xFFFF),
+                    keep?0x00071C38u:0x00010000u);
+                Visit(current,api,0x072E04);
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                if(preEpoch)
+                {
+                    AssertEx.Throws<InvalidOperationException>(()=>
+                        session.ObservePreEpochFrame(859,null,host.Advance),
+                        "conditional managed identity");
+                    AssertEx.Equal(0,output.ToString().Length);
+                    AssertEx.Equal(0,
+                        session.BoundaryManagedServiceCountForTesting);
+                    return;
+                }
+                session.BeginEpoch();
+                int before=output.ToString().Length;
+                AssertEx.Throws<InvalidOperationException>(()=>
+                    session.CaptureFrame(860,host.Advance),
+                    "conditional managed identity");
+                AssertEx.Equal(before,output.ToString().Length);
+            }
+        }
+
+        private static void AssertConditionalStackBoundary(
+            bool directParent,bool keep,uint callbackStack,
+            bool accepted,bool preEpoch)
+        {
+            var api=new FakeTraceApi();
+            uint rootStack=callbackStack+(keep?4u:0u);
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",rootStack);
+                Visit(current,api,0x071B4C);
+                if(directParent)api.VisitZ80(0x0077,current);
+                current.SetCpuRegister("A7",callbackStack);
+                current.SetU32((int)(callbackStack&0xFFFF),
+                    keep?0x00071C38u:0x00010000u);
+                Visit(current,api,0x072E04);
+                if(keep)
+                {
+                    current.SetCpuRegister("A7",rootStack);
+                    Visit(current,api,0x071C4C);
+                }
+                if(directParent)api.VisitZ80(0x00AC,current);
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                if(preEpoch)
+                {
+                    if(!accepted)
+                    {
+                        AssertEx.Throws<InvalidOperationException>(()=>
+                            session.ObservePreEpochFrame(859,null,host.Advance),
+                            "conditional managed identity");
+                        AssertEx.Equal(0,output.ToString().Length);
+                        AssertEx.Equal(0,
+                            session.BoundaryManagedServiceCountForTesting);
+                        return;
+                    }
+                    session.ObservePreEpochFrame(859,null,host.Advance);
+                    AssertEx.Equal(0,
+                        session.BoundaryManagedServiceCountForTesting);
+                    session.BeginEpoch();
+                    AssertEx.Equal(0,((JArray)Record(output.ToString(),
+                        "baseline",0)["active_services"]).Count);
+                    return;
+                }
+                session.BeginEpoch();
+                if(!accepted)
+                {
+                    int before=output.ToString().Length;
+                    AssertEx.Throws<InvalidOperationException>(()=>
+                        session.CaptureFrame(860,host.Advance),
+                        "conditional managed identity");
+                    AssertEx.Equal(before,output.ToString().Length);
+                    return;
+                }
+                session.CaptureFrame(860,host.Advance);
+                session.Complete(861);
+            }
+        }
+
+        private static void AssertConditionalDecisionShapeRollback(
             bool directParent,bool preEpoch)
         {
             var api=new FakeTraceApi();
@@ -2029,9 +2162,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 current.SetCpuRegister("A7",0x00FFFDB2);
                 Visit(current,api,0x071B4C);
                 if(directParent)api.VisitZ80(0x0077,current);
-                current.SetCpuRegister("A7",0x00FFFDAA);
-                current.SetU32(0xFDAA,0x00071C38);
-                Visit(current,api,0x072E04);
+                current.SetU32(0xFDB2,0x00010000);
+                Visit(current,api,0x072C24);
+                api.ForgeConditionalOutsideAsKeep(0x072C24,directParent);
             });
             var output=new StringWriter();
             using(var session=CreateSession(host,api,output))
@@ -2084,8 +2217,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     current.SetCpuRegister("A7",0x00FFFDB2);
                     Visit(current,api,0x071B4C);
                     api.VisitZ80(0x0077,current);
-                    current.SetCpuRegister("A7",0x00FFFDAE);
-                    current.SetU32(0xFDAE,0x00010000);
+                    current.SetCpuRegister("A7",0x00FFFDB2);
+                    current.SetU32(0xFDB2,0x00010000);
                     Visit(current,api,0x072C24);
                     return;
                 }
@@ -2143,8 +2276,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     api.VisitZ80(0x0077,current);
                     return;
                 }
-                current.SetCpuRegister("A7",0x00FFFDAE);
-                current.SetU32(0xFDAE,0x00010000);
+                current.SetCpuRegister("A7",0x00FFFDB2);
+                current.SetU32(0xFDB2,0x00010000);
                 Visit(current,api,0x072C24);
                 api.RemoveFirst(value=>value.Pc==0x072C24
                     &&value.Kind==(removePromotion?(byte)11:(byte)2));
@@ -3620,6 +3753,36 @@ namespace OpenGGF.BizHawk.Headless.Tests
             {
                 int last = frameEvents.Count-1;
                 frameEvents[last] = mutate(frameEvents[last]);
+            }
+
+            internal void ForgeConditionalOutsideAsKeep(
+                uint pc,bool directParent)
+            {
+                int first=-1;
+                GpgxAudioTraceEvent end=default(GpgxAudioTraceEvent);
+                GpgxAudioTraceEvent promotion=default(GpgxAudioTraceEvent);
+                for(int i=0;i<frameEvents.Count;i++)
+                {
+                    GpgxAudioTraceEvent value=frameEvents[i];
+                    if(value.Pc!=pc)continue;
+                    if(first<0)first=i;
+                    if(value.Kind==2&&value.ServiceKindId==4)end=value;
+                    else if(value.Kind==11)promotion=value;
+                }
+                if(first<0||end.Kind!=2||(directParent&&promotion.Kind!=11))
+                    throw new InvalidOperationException(
+                        "Missing fake conditional outside events for forgery.");
+                frameEvents.RemoveRange(first,frameEvents.Count-first);
+                Add(new GpgxAudioTraceEvent
+                {
+                    ServiceToken=directParent
+                        ?promotion.ServiceToken:end.ServiceToken,
+                    ParentToken=directParent?end.ServiceToken:(ushort)0,
+                    Pc=pc,Subject=end.Subject,Kind=10,
+                    ServiceKindId=directParent?(byte)2:(byte)4,
+                    Depth=directParent?(byte)1:(byte)0,
+                    SourceCpu=2,Value=0
+                });
             }
 
             internal void DuplicateLast()

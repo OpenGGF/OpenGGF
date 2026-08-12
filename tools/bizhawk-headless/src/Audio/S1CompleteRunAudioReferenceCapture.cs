@@ -1685,10 +1685,16 @@ namespace OpenGGF.BizHawk.Headless
                 ManagedServiceTracker services,GpgxAudioTraceEvent value,
                 PendingManagedOccurrence occurrence,byte nativeAction)
             {
-                ushort rootToken=nativeAction==9&&value.Kind==10
+                bool inside=value.Kind==10&&value.Value==0;
+                uint delta=inside?4u:0u;
+                ushort rootToken=nativeAction==9&&inside
                     ?value.ParentToken:value.ServiceToken;
-                return occurrence.Stack<=0x00FFFFFC
-                    &&services.Matches(rootToken,occurrence.Stack+4);
+                // An inside return continues within UpdateMusic after the callback,
+                // so its adjusted A7 is four bytes below the service-entry A7. An
+                // outside return leaves UpdateMusic and already has the entry A7.
+                return (occurrence.Stack&0xFFFF0001u)==0x00FF0000u
+                    &&occurrence.Stack<=0x00FFFFFCu-delta
+                    &&services.Matches(rootToken,occurrence.Stack+delta);
             }
 
             private bool HasManagedServiceCandidate()
