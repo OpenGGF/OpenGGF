@@ -188,3 +188,58 @@ the two opt-in real S1 gates skipped and no failures. No configured-terminal
 capture was run for this correction. Therefore row 21766 remains the last
 observed infrastructure frontier until the separate real-proof continuation;
 this result does not claim a new native/semantic frontier or a terminal.
+
+## Fresh configured-terminal continuation
+
+Starting at selective-sink commit `348aa119624ad514656ccbc4f013fcffb1a1c3a1`,
+one fresh configured-terminal session used the unchanged Task 4 diagnostic
+install and the same verified inputs. Before launch, the Sonic 1 World REV01
+ROM SHA-1 was
+`69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b`, the complete-run BK2 SHA-256
+was `f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b`,
+the compressed diagnostic core SHA-256 was
+`a383b3762fc8000a0354b54397832208728863f559905ec6e8d163e66ab1bb35`,
+and the sorted installed-regular-file aggregate remained
+`be7850247e8b011fa85c20f558edd9349cbac44360a5217c41eacc2215e28e1f`.
+The install contained no symlinks. The optional row-12525 selector was not
+repeated because the terminal test flow did not require it; no managed or
+native observer contract had changed after its exact passing proof.
+
+The exact bounded command was:
+
+```bash
+OPENGGF_S1_AUDIO_PREFIX=1 OPENGGF_S1_AUDIO_TERMINAL_PROBE=1 \
+S1_ROM_PATH=<S1-REV01> S1_AUDIO_BK2_PATH=<complete-run-bk2> \
+BIZHAWK_HOME=target/audio-parity/native/task4-reserve-consume-diagnostic-install \
+tools/bizhawk-headless/test.sh --jobs 1 \
+  --filter 'S1CompleteRunAudioReferenceCaptureTests consume one deferred child begin during row 8775 wait service'
+```
+
+The row-21766 aggregate-writer failure did not recur and the selective writer
+did not fault. The one session stopped at the next exact native observer
+frontier, movie row 119247, with status `-3` and
+`first_fault=4:1:77:6:1:0:4`. In the packed first-fault contract this is reason
+4 (`SERVICE`), source CPU 1 (Z80), PC `$0077`, active service kind 6 at depth
+1, and continuation count/limit 0/4. The configured `$0077` `TAIL_POP_PUSH`
+expects active kind 6 and would replace it with kind 2; the first-fault tuple
+establishes that a service invariant rejected this depth-1 topology, but does
+not distinguish the action's native deferred-pending and parent-kind service
+guards.
+
+The native lifecycle diagnostic records the earlier root kind-6 begin at
+`$003A` (ordinal 32), deferred kind-4 child begin at `$71B82` (ordinal 37),
+child end at `$71C4C` (ordinal 46), kind-6 end at `$0077` (ordinal 54), and
+the first root kind-2 begin at the same `$0077` (ordinal 55). The diagnostic
+tail, which is a separate last-16-event excerpt rather than the fault site,
+has token 185 end at `$AC` (ordinal 1692), token 186 begin at `$0077`
+(ordinal 1693), and chip events at ordinals 1694-1695. Pending managed
+evidence was empty.
+
+The failed session was not retried. It did not reach `Complete(225101)`, and
+no final raw reference or partial output was published. The preserved log is
+`target/audio-parity/native/row21766-348aa1196-configured-terminal.log` (69
+lines, 7,765 bytes), SHA-256
+`71e9549406dfa7bb7b9baacf913558878c4371beb7dd7ad224fe3cfc02dcbe9e`.
+This is a reference-observer frontier, not a reference-vs-OpenGGF semantic
+MATCH. The separate production deferred-retention issue was neither exercised
+as a claimed fix nor changed by this proof.

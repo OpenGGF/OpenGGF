@@ -66542,3 +66542,47 @@ for. Read the count with that in mind.
   `CompleteRunAudioObserverTests` command passed 25 synthetics. Error count: 0.
   A long terminal capture was intentionally not run, so row 21766 remains the
   last observed infrastructure frontier pending the separate real-proof task.
+
+## 2026-08-12 - S1 selective sink clears row 21766; native frontier row 119247
+
+- Worktree/branch: `.worktrees/audio-retry-only-direct-parent`,
+  `bugfix/ai-audio-retry-only-direct-parent`; selective-sink commit
+  `348aa119624ad514656ccbc4f013fcffb1a1c3a1`. Exact inputs remained Sonic 1
+  World REV01 SHA-1
+  `69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b` and complete-run BK2 SHA-256
+  `f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b`.
+  The unchanged Task 4 install retained compressed-core SHA-256
+  `a383b3762fc8000a0354b54397832208728863f559905ec6e8d163e66ab1bb35`,
+  installed regular-file aggregate SHA-256
+  `be7850247e8b011fa85c20f558edd9349cbac44360a5217c41eacc2215e28e1f`,
+  and zero symlinks.
+- Exact command: `OPENGGF_S1_AUDIO_PREFIX=1
+  OPENGGF_S1_AUDIO_TERMINAL_PROBE=1 S1_ROM_PATH=<REV01>
+  S1_AUDIO_BK2_PATH=<BK2> BIZHAWK_HOME=<Task4-install>
+  tools/bizhawk-headless/test.sh --jobs 1 --filter
+  'S1CompleteRunAudioReferenceCaptureTests consume one deferred child begin
+  during row 8775 wait service'`. The optional row-12525 selector was not
+  repeated because this unchanged test flow did not require it.
+- The sole fresh session crossed row 21766 without the prior test aggregate
+  failure and stopped at movie row 119247 with native status `-3`:
+  `first_fault=4:1:77:6:1:0:4`. This decodes to native `SERVICE` fault, Z80
+  `$0077`, active kind 6 at depth 1, continuation count 0 and limit 4. The
+  configured `$0077` `TAIL_POP_PUSH` expects active kind 6 and would replace
+  it with kind 2. The tuple proves that a service invariant rejected this
+  depth-1 topology, but not whether the native deferred-pending or parent-kind
+  guard was decisive.
+- Diagnostic lifecycle excerpt: kind-6 root begin `$003A` at ordinal 32;
+  deferred kind-4 child begin `$71B82` at 37; child end `$71C4C` at 46;
+  kind-6 end `$0077` at 54; root kind-2 begin `$0077` at 55. The separate
+  last-16-event tail has token 185 end `$AC` at 1692, token 186 begin `$0077`
+  at 1693, and chip events at 1694-1695. `pending_managed` was empty.
+- Error count: 1; first-error row/field: `119247` / native observer service
+  topology at Z80 `$0077`. The failed session was not retried and did not reach
+  `Complete(225101)`. No final reference or partial output was published.
+  Preserved log:
+  `target/audio-parity/native/row21766-348aa1196-configured-terminal.log` (69
+  lines, 7,765 bytes), SHA-256
+  `71e9549406dfa7bb7b9baacf913558878c4371beb7dd7ad224fe3cfc02dcbe9e`.
+- This moves the reference-observer frontier; it is not a semantic audio MATCH.
+  The separate production deferred-retention issue remains unmodified and is
+  not claimed fixed by the test-only selective sink.

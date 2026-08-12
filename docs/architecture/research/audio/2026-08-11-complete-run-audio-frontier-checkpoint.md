@@ -363,9 +363,23 @@ row-12525 proof records, and terminal when requested. Explicit line and
 retained-output ceilings fail closed; malformed, partial, CRLF, duplicate,
 unexpected, or overflowing input poisons the sink and requires a fresh capture
 session. The unchanged S1 proof assertions pass in the 43-test synthetic class,
-and all 25 shared Observer synthetics pass. No long configured-terminal run was
-performed here, so the last observed real frontier remains row 21766 for the
-separate continuation task.
+and all 25 shared Observer synthetics pass.
+
+A later, sole fresh configured-terminal session at selective-sink commit
+`348aa119624ad514656ccbc4f013fcffb1a1c3a1` crossed row 21766 without the
+former aggregate-writer failure and stopped at the next exact native observer
+frontier, movie row 119247: status `-3`,
+`first_fault=4:1:77:6:1:0:4`. This is native reason `SERVICE`, Z80 `$0077`,
+active kind 6 at depth 1, continuation count/limit 0/4; the configured
+`TAIL_POP_PUSH` expects active kind 6 and would replace it with kind 2. The
+tuple identifies a rejected service invariant at that depth but does not
+distinguish the native deferred-pending and parent-kind guards. The session was
+not retried and did not reach `Complete(225101)`. No final reference or partial
+output was published. The preserved log SHA-256 is
+`71e9549406dfa7bb7b9baacf913558878c4371beb7dd7ad224fe3cfc02dcbe9e`.
+The separate production deferred-retention issue remains unmodified and is not
+claimed fixed by this test-only proof-sink result. Full evidence is in the
+row-12525 validation and trace-frontier log.
 
 The capability fixture now binds collector source SHA-256
 `92fb4c4541931c30240ec0b62d00fba2d7e26dbaf12230dc2ab0d15b42465560`,
