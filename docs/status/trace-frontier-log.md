@@ -66390,3 +66390,24 @@ for. Read the count with that in mind.
   with the current native harness, then land ss_1.**
   Recorded rejected alternative, so it is not retried blindly: publishing at
   `completion_cursor_frame` instead of the bound observation turns ss_1..ss_7 ALL red.
+
+## 2026-08-12 - S1 complete-run audio reference frontier reaches row 8775
+
+- Worktree/branch: `.worktrees/s1-complete-audio-frontier-r5`,
+  `bugfix/ai-s1-complete-audio-frontier-r5`, based on `94ea332d9` with the
+  final action-10 BizHawk installation. The bounded opt-in reference gate is
+  green through row 5000 (one test, 152.8 seconds).
+- Full no-replace command: `tools/bizhawk-headless/run.sh --mode trace
+  --rom <S1 REV01> --movie <all-emeralds BK2> --output
+  target/audio-parity/s1-r5-full --trace-profile
+  complete_run_audio_reference`. Result: one capture error, first at row 8775,
+  `first_fault=5:2:71b4c:6:1:0:4`; no final raw file was published.
+- The fault is the `UpdateMusic` restart at
+  `docs/s1disasm/s1.sounddriver.asm:147-165` while the direct-child
+  `zCheckForSamples` wait service from `docs/s1disasm/sound/z80.asm:71-82`
+  remains active. This is the same kind-4 managed invocation, not a nested
+  call. The S1 manifest pins a retry-only action-10 top-kind-6/direct-parent-4
+  selector without granting kind 6 child ownership or inventing a PUSH
+  fallback. The opt-in row-8775 gate remains intentionally RED at observer
+  configuration until the conductor-owned native selector admits that exact
+  retry-only contract and fails closed when its direct parent is absent.

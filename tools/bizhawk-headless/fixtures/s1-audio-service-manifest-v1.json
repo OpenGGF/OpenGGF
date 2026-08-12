@@ -147,7 +147,7 @@
       "predicate_ranges": [20, 21, 22, 23, 24, 25, 26],
       "queue_expected_kinds": [0, 2, 3],
       "begin_expected_kinds": [0, 2, 3],
-      "direct_parent_retry_async_kinds": [2, 3],
+      "direct_parent_retry_async_kinds": [2, 3, 6],
       "retry_expected_kind": 4,
       "internal_expected_kind": 4
     }

@@ -470,8 +470,13 @@ namespace OpenGGF.BizHawk.Headless
                     throw Invalid("M68K predicate range is not source-exact");
             byte[] queueKinds = ExactKindList(binding, "queue_expected_kinds", 0, 2, 3);
             byte[] beginKinds = ExactKindList(binding, "begin_expected_kinds", 0, 2, 3);
+            // zCheckForSamples kind 6 cannot own children. UpdateMusic can
+            // nevertheless re-enter while that wait service is the direct
+            // child of the original kind-4 invocation, so this selector is
+            // intentionally retry-only: there is no source-valid PUSH_BEGIN
+            // fallback for expected kind 6.
             byte[] directParentRetryKinds = ExactKindList(binding,
-                "direct_parent_retry_async_kinds", 2, 3);
+                "direct_parent_retry_async_kinds", 2, 3, 6);
 
             var managedHooks = new List<ManagedHook>(managed.Values);
             managedHooks.Sort((left, right) => left.Pc.CompareTo(right.Pc));

@@ -74,6 +74,29 @@ details are in the adjacent `TRUST.md`. No generated core or ROM is committed.
   then closes the async child and that parent normally. A bounded diagnostic
   capture also terminates cleanly after row 5000, so the proven S1 reference
   frontier is now **through row 5000** with no published partial output.
+
+  The next full no-replace run with the same inputs and action-10 core crosses
+  that bound and fails closed at row 8775, again publishing no raw file. The
+  exact native fault is `5:2:71b4c:6:1:0:4`: M68K hook/opcode proof at the
+  `UpdateMusic` entry, with kind 6 active at depth 1. Kind 6 is the Z80
+  `zCheckForSamples` wait service entered at `$003A`
+  (`docs/s1disasm/sound/z80.asm:71-82`). The M68K driver has already entered
+  its kind-4 `UpdateMusic` service, stopped the Z80, observed that DAC input is
+  unavailable, restarted the Z80, and branched back to `UpdateMusic`
+  (`docs/s1disasm/s1.sounddriver.asm:147-165`). The re-entry is therefore the
+  same managed invocation while the wait service remains its direct child,
+  not a nested kind-4 call.
+
+  The S1 manifest now pins an exact retry-only action-10 selector for top kind
+  6/direct parent kind 4. It deliberately does **not** add kind 6 to
+  `begin_expected_kinds` or grant kind 6 `ALLOW_CHILDREN`: the Z80 wait service
+  has no source-valid M68K child. The current ABI-v3 core rejects this manifest
+  at configure time because action 10 still requires a same-PC `PUSH_BEGIN`
+  pair. The conductor contract is to permit the retry-only selector exactly
+  when the selected top kind disallows children; at runtime it must require
+  the declared immutable direct parent and fail closed when that parent is
+  absent, never fall back to a push. The opt-in row-8775 gate is intentionally
+  RED at observer configuration until that native contract lands.
 - Sonic 2: the complete reference movie has two identical observer runs:
   259,590 frames, 169,986,419 events, maximum frame occupancy 1,825, event
   digest prefix `c2b2f823`, and an empty cutoff frontier. Engine comparison is
@@ -206,9 +229,11 @@ is the current strict real-run frontier, not a complete-run publication claim.
 - Complete-run Java schema/store/comparator/CLI and authority focused gate: 155
   tests passing.
 - Sonic 1 normalized state/profile: 68 tests passing.
-- Sonic 1 native/managed reference session: 22 synthetic tests passing plus
-  the opt-in real row-1548 proof, including exact action-9 KEEP/direct-parent
-  promotion correlation and action-10 parent-token retry correlation.
+- Sonic 1 native/managed reference session: 22 synthetic tests passing. The
+  predecessor manifest's opt-in real gate passed through row 5000, including
+  exact action-9 KEEP/direct-parent promotion and action-10 parent-token retry
+  correlation. The new row-8775 retry-only gate is intentionally RED at native
+  observer configuration as documented above.
 - Shared observer projection: 21 tests passing, including conditional
   direct-parent promotion and the allocation-free per-frame projection-result
   wrapper.
