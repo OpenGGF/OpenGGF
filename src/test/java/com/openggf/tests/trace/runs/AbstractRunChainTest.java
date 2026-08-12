@@ -334,7 +334,8 @@ abstract class AbstractRunChainTest {
                                     afterNextArm.size())
                             : List.of();
             added = TraceRunDynamicArtGapJournal.rowsCountedBackFromAdmission(
-                    added, nextSegmentArmUnannouncedRows);
+                    added, nextSegmentArmMovieLogicalFrame,
+                    nextSegmentArmUnannouncedRows);
             // The same recovery for the gap's own first row: a frozen cursor
             // reports the gap's END row at both ends of the span.
             int recoveredGapStartMovieLogicalFrame =

@@ -3,6 +3,17 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the run-gap edge stamp recovery only rewinds a stamp that is actually stale. The
+  end-anchored recovery in `TraceRunDynamicArtGapJournal` counts back from admission over
+  rows that passed with nothing announced, which is correct for a gap whose shared cursor is
+  frozen -- and every special-stage-return gap in the S2 emerald run is exactly that, with
+  every edge carrying the admission row. The `seg4_ehz1 -> seg5_ehz2` level-advance gap is
+  not: its cursor stays live and its edges march 32760 to 32837 against an admission stamp of
+  32930. The recovery subtracted from two already-live stamps and moved them off their own
+  rows. It now applies only to a stamp equal to the admission's own `movie_logical_frame` --
+  the mechanism's own javadoc premise expressed as a predicate rather than assumed. Both
+  inputs remain engine-produced; no recorded row, offset or constant is involved. The gap's
+  errors fall 12 to 10, with those two edges exact.
 - Fix: the one-row latch that decides which rows of a run-chain transition gap still
   belong to the source level's own main loop lives on the current session's
   `GameplayModeContext` instead of a static field on `TraceSessionLauncher`. As a static
