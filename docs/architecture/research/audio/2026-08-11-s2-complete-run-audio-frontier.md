@@ -238,3 +238,41 @@ the normalized capability is
 `a5b5a07529f3e7c908601e7dc1ce552c8fd70390a9619e6847ccb00e16f984d3`,
 and the raw capability is
 `8a06a63e4a5c8b1d4c9445e4333537caed3c8e67df7df946135e273d911ab0fb`.
+
+## Round 5: source-exact raw-state decoder
+
+S2 now owns the missing strict decoder from the complete 8 KiB raw Z80 image
+into `S2CompleteRunStateNormalizer.LiveState`. The layout is taken directly
+from `s2.sounddriver.asm:31-227`: `zVar` at `$1B80`, ten live music tracks at
+`$1B98`, six live SFX tracks at `$1D3C`, and the `fixBugs=0` saved `zVar` plus
+ten music tracks at `$1E38..$1FFF`. Each shipped `zTrack` is exactly `$2A`
+bytes. The decoder suppresses every inactive track's stale union, validates
+physical-slot voice controls, stack partitions, and every live data,
+modulation, voice, TL, and return pointer before normalization.
+
+The accompanying catalog authenticates World REV01 by exact 1 MiB size and
+SHA-1 `8bca5dcef1af3e00098666fd892dc1c2a76333f9`. It reads the two shipped music
+pointer banks and the 81-entry SFX pointer table from the ROM, derives occupied
+asset ends from the next source pointer, and decodes each Saxman-compressed song
+to its real `$1380..$1B7F` address extent. This matters because compressed songs
+share one mutable buffer: `zMusicData=$1380` and the shipped decompressor in
+`s2.sounddriver.asm:3931-4045` overwrite it on each music load. During one-up
+playback, saved tracks are therefore attributed only when the saved bank,
+pointer extent, and full current decompressed-buffer bytes identify exactly one
+source song. Unknown, ambiguous, padding, and out-of-window pointers fail
+closed. No asset bytes are loaded from the disassembly at runtime.
+
+The shipped one-up union follows `s2.sounddriver.asm:1667-1724` and
+`:3087-3155`. In particular, `fixBugs=0` copies the original nonzero SFX
+priority before clearing the live priority, and the decoder preserves that
+saved value. Inactive saved bytes are ignored unless the live one-up flag says
+the saved region owns future behavior.
+
+An opt-in row-769 gate now asks the existing native proof to publish its
+transactional raw envelope to a fresh temporary path, then passes both the
+baseline and first frame through the strict Java adapter, decoder, normalizer,
+and S2 profile validator. Enable it with
+`OPENGGF_S2_COMPLETE_AUDIO_DECODE_GATE=1`,
+`OPENGGF_S2_COMPLETE_AUDIO_REFERENCE=1`, `S2_ROM_PATH`, `S2_BK2_PATH`, and the
+reviewed `BIZHAWK_HOME`. Reference and OpenGGF producer bindings intentionally
+remain unavailable; this round does not publish a canonical trace.

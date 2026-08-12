@@ -375,7 +375,11 @@ public final class S2CompleteRunStateNormalizer {
     }
 
     private static void completedService(DriverGlobals globals, String label) {
-        if (globals.dacUpdating() != 0 || globals.doingSfx()) {
+        // s2.sounddriver.asm:399-458 sets zDoSFXFlag for the SFX half of every
+        // VInt and never clears it before the completed end-of-frame boundary;
+        // the next zVInt clears it before music processing. It is therefore a
+        // real retained byte, not evidence of a mid-service observation.
+        if (globals.dacUpdating() != 0) {
             throw new IllegalArgumentException(label + " is not a completed driver service");
         }
     }

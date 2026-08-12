@@ -197,11 +197,31 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private static void ProvesRealRow769RawBoundary(
             string romPath, string moviePath)
         {
+            string requestedOutput = Environment.GetEnvironmentVariable(
+                "OPENGGF_S2_ROW769_RAW_OUTPUT");
             var output = new StringWriter();
-                S2CompleteAudioCaptureRunner.CaptureResult result =
+            string captured;
+            S2CompleteAudioCaptureRunner.CaptureResult result;
+            if (!string.IsNullOrEmpty(requestedOutput))
+            {
+                result = null;
+                S2CompleteAudioCaptureRunner.PublishRawForTesting(
+                    requestedOutput, writer =>
+                    {
+                        result = S2CompleteAudioCaptureRunner.
+                            CaptureRawBoundaryProofPinnedForTesting(
+                                romPath, moviePath, ManifestPath(), CapabilityPath(), writer);
+                    });
+                captured = File.ReadAllText(requestedOutput);
+            }
+            else
+            {
+                result =
                 S2CompleteAudioCaptureRunner.CaptureRawBoundaryProofPinnedForTesting(
                     romPath, moviePath, ManifestPath(), CapabilityPath(), output);
-            string[] lines = output.ToString().Split(
+                captured = output.ToString();
+            }
+            string[] lines = captured.Split(
                 new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
             AssertEx.Equal(770, result.ObservedRows);
             AssertEx.Equal(1, result.PublishedRows);
