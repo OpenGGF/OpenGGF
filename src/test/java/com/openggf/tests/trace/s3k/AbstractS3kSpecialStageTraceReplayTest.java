@@ -182,12 +182,31 @@ public abstract class AbstractS3kSpecialStageTraceReplayTest {
 
         int offset = trace.metadata().bk2FrameOffset();
         int ssIndex = specialStageIndex(trace);
-        Path bk2 = dir.resolve(trace.metadata().sourceBk2());
+        Path bk2 = resolveSourceBk2(dir, trace.metadata().sourceBk2());
         S3kSpecialStageReplayHarness harness =
                 new S3kSpecialStageReplayHarness(bk2, offset, ssIndex);
         harness.installHardwareTiming(
                 HardwareTimingStreamLoader.load(dir, trace.metadata()));
         return harness;
+    }
+
+    /**
+     * Locates the movie named by {@code metadata.source_bk2}. A standalone
+     * trace keeps its movie beside its own {@code metadata.json}; a segment of
+     * a multi-segment run has no movie of its own, because the run commits one
+     * copy at the run root beside {@code run_manifest.json} and every segment
+     * indexes into it from its own {@code bk2_frame_offset}. This mirrors the
+     * placement {@code AbstractTraceReplayTest#resolveBk2File} already accepts
+     * for level and bonus segments; it is file location only, and reads
+     * nothing from the run manifest.
+     */
+    static Path resolveSourceBk2(Path traceDir, String sourceBk2) {
+        Path inSegment = traceDir.resolve(sourceBk2);
+        if (Files.exists(inSegment)) {
+            return inSegment;
+        }
+        Path runRoot = traceDir.getParent();
+        return runRoot == null ? inSegment : runRoot.resolve(sourceBk2);
     }
 
     // ==================== Comparator ====================
