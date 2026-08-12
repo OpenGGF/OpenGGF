@@ -1019,8 +1019,11 @@ abstract class AbstractRunChainTest {
                 stepFrames(loop, remainingFrames);
                 activeComparator.finalizeTerminalDynamicArtComparison();
                 requireComparatorComplete(seg, activeComparator);
-                dynamicArtGapJournal.sourceClosed(seg.segment().dir());
                 dynamicArtSegments.enterGap();
+                // Observed after the window actually closes: the close is what
+                // records the state the gap opens on, so reading the snapshot
+                // first leaves the source's own final edges out of it.
+                dynamicArtGapJournal.sourceClosed(seg.segment().dir());
                 runCoordinator.closeCurrent(
                         loop.getCurrentGameMode(),
                         sourceComparatorExhausted(seg, activeComparator));
@@ -1203,9 +1206,12 @@ abstract class AbstractRunChainTest {
                             }
                             if (rowDriver.isComplete()) {
                                 rowDriver.verifyComplete();
+                                dynamicArtSegments.enterGap();
+                                // Observed after the window actually closes: the close is what
+                                // records the state the gap opens on, so reading the snapshot
+                                // first leaves the source's own final edges out of it.
                                 dynamicArtGapJournal.sourceClosed(
                                         seg.segment().dir());
-                                dynamicArtSegments.enterGap();
                                 dynamicArtGapJournal.gapOpened(
                                         seg.segment().dir());
                                 dynamicArtGapOpened[0] = true;
@@ -1293,8 +1299,11 @@ abstract class AbstractRunChainTest {
                     }
                 }
                 if (!dynamicArtGapOpened[0]) {
-                    dynamicArtGapJournal.sourceClosed(seg.segment().dir());
                     dynamicArtSegments.enterGap();
+                    // Observed after the window actually closes: the close is what
+                    // records the state the gap opens on, so reading the snapshot
+                    // first leaves the source's own final edges out of it.
+                    dynamicArtGapJournal.sourceClosed(seg.segment().dir());
                 }
                 if (!interiorCoordinatorSourceClosed[0]) {
                     runCoordinator.closeCurrent(
@@ -1404,8 +1413,11 @@ abstract class AbstractRunChainTest {
                         activeComparator.cursor(), levelAtSegmentStart);
                 activeComparator.finalizeTerminalDynamicArtComparison();
                 requireComparatorComplete(seg, activeComparator);
-                dynamicArtGapJournal.sourceClosed(seg.segment().dir());
                 dynamicArtSegments.enterGap();
+                // Observed after the window actually closes: the close is what
+                // records the state the gap opens on, so reading the snapshot
+                // first leaves the source's own final edges out of it.
+                dynamicArtGapJournal.sourceClosed(seg.segment().dir());
                 runCoordinator.closeCurrent(
                         loop.getCurrentGameMode(),
                         sourceComparatorExhausted(seg, activeComparator));
@@ -1454,8 +1466,11 @@ abstract class AbstractRunChainTest {
                 // this segment's comparator will ever get if the assert throws.
                 activeComparator.finalizeTerminalDynamicArtComparison();
                 requireComparatorComplete(seg, activeComparator);
-                dynamicArtGapJournal.sourceClosed(seg.segment().dir());
                 dynamicArtSegments.enterGap();
+                // Observed after the window actually closes: the close is what
+                // records the state the gap opens on, so reading the snapshot
+                // first leaves the source's own final edges out of it.
+                dynamicArtGapJournal.sourceClosed(seg.segment().dir());
                 runCoordinator.closeCurrent(
                         loop.getCurrentGameMode(),
                         sourceComparatorExhausted(seg, activeComparator));
@@ -1728,8 +1743,11 @@ abstract class AbstractRunChainTest {
                         specialDriver.comparisons());
             }
 
-            dynamicArtGapJournal.sourceClosed(special.segment().dir());
             dynamicArtSegments.enterGap();
+            // Observed after the window actually closes: the close is what
+            // records the state the gap opens on, so reading the snapshot
+            // first leaves the source's own final edges out of it.
+            dynamicArtGapJournal.sourceClosed(special.segment().dir());
             runCoordinator.closeCurrent(
                     loop.getCurrentGameMode(), true);
             dynamicArtGapJournal.gapOpened(special.segment().dir());
@@ -1921,8 +1939,11 @@ abstract class AbstractRunChainTest {
                         });
             }
 
-            dynamicArtGapJournal.sourceClosed(bridge.segment().dir());
             dynamicArtSegments.enterGap();
+            // Observed after the window actually closes: the close is what
+            // records the state the gap opens on, so reading the snapshot
+            // first leaves the source's own final edges out of it.
+            dynamicArtGapJournal.sourceClosed(bridge.segment().dir());
             FrameComparison terminal = structural.finalizeSegment(
                     GameServices.captureDynamicArtDiagnostics());
             if (terminal != null) {

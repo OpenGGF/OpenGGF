@@ -3,6 +3,21 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the run-chain transition-gap journal opens on the ledger its own boundary batch was
+  measured against, and the harness closes the source window before reading the snapshot.
+  Two observer-side snapshot-timing bugs, neither of which changed any engine behaviour or
+  transfer lifecycle. `endComparisonSegmentAtRomModeChange` re-stamps the ROM-mode-change
+  iteration's buffered batch as the gap's first edges, but recorded the gap-opening state
+  against the live ledger those same edges had already mutated -- so an edge whose own
+  `before` membership listed an outstanding transfer was replayed onto a ledger that no
+  longer had it. Separately, `AbstractRunChainTest` called `sourceClosed(...)` before
+  `enterGap()` at all seven sites, capturing the snapshot recorded at the segment's open,
+  where production's walker already does close-then-`sourceClosed`. Every ledger,
+  fingerprint, submission-origin and forwarded-completion error is now green on both
+  affected axes; the halfpipe chain goes 3 axes / 66 gap fields to 2 / 28 with its first
+  gap fully green, and the emerald chain 8 axes / 132 fields to 5 / 42. Every remaining
+  gap failure on both chains is now exactly `movie_logical_frame` and `gap_edge_index` --
+  the separately-tracked row-placement defect and nothing else.
 - Fix: a run-chain destination adopts the row that already ran during its transition
   gap instead of skipping it. Admission is polled between host steps and the
   coordinator's readiness test needs an observed LEVEL mode, so the destination's
