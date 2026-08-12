@@ -104,6 +104,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S1CompleteRunAudioReferenceCaptureTests reserve again after deferred child end",
                 ReservesAgainAfterDeferredChildEnd));
             tests.Add(new TestMain.TestCase(
+                "S1CompleteRunAudioReferenceCaptureTests observe ordinary driverinput entry without consuming",
+                ObservesOrdinaryDriverInputEntryWithoutConsuming));
+            tests.Add(new TestMain.TestCase(
+                "S1CompleteRunAudioReferenceCaptureTests reject invalid driverinput ownership",
+                RejectsInvalidDriverInputOwnership));
+            tests.Add(new TestMain.TestCase(
                 "S1CompleteRunAudioReferenceCaptureTests consume one deferred child begin during row 8775 wait service",
                 MaterializesDeferredBeginAfterWaitService,
                 game: "s1", serial: true, estimatedSeconds: 300.0));
@@ -394,7 +400,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private static void AssertDeferredBeginHooks(
             S1CompleteRunAudioReferenceCapture.Manifest manifest)
         {
-            int reserve=0,consume=0;var ordinary=new List<byte>();
+            int reserve=0,consume=0,ordinaryEntry=0;var ordinary=new List<byte>();
             foreach(GpgxAudioObserverAdapter.ServiceHook hook in manifest.NativeServiceHooks)
             {
                 if(hook.Cpu!=2)continue;
@@ -414,12 +420,24 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     AssertEx.Equal((ushort)0,hook.RangeCount);
                     AssertEx.Equal((ulong)0,hook.Reserved);
                 }
+                else if(hook.Pc==0x071B82&&hook.Action==7)
+                {
+                    ordinaryEntry++;
+                    AssertEx.Equal(true,object.ReferenceEquals(
+                        manifest.FindManagedHook(0x071B82),
+                        manifest.ManagedByNativeToken[hook.HookToken]));
+                    AssertEx.Equal((byte)0,hook.ServiceKindId);
+                    AssertEx.Equal((byte)4,hook.ExpectedActiveKind);
+                    AssertEx.Equal((ushort)0,hook.RangeCount);
+                    AssertEx.Equal((ulong)0,hook.Reserved);
+                }
                 else if(hook.Pc==0x071B4C&&hook.Action==1)
                     ordinary.Add(hook.ExpectedActiveKind);
             }
             ordinary.Sort();
             AssertEx.Equal(1,reserve);
             AssertEx.Equal(1,consume);
+            AssertEx.Equal(1,ordinaryEntry);
             AssertEx.Equal(3,ordinary.Count);
             AssertEx.Equal((byte)0,ordinary[0]);
             AssertEx.Equal((byte)2,ordinary[1]);
@@ -705,6 +723,79 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 value=>value["native_marker_value"]!=null
                     &&value["native_marker_value"].Type==JTokenType.Integer
                     &&(int)value["native_marker_value"]==4).Count);
+        }
+
+        private static void ObservesOrdinaryDriverInputEntryWithoutConsuming()
+        {
+            AssertOrdinaryDriverInputEntry(false);
+            AssertOrdinaryDriverInputEntry(true);
+        }
+
+        private static void AssertOrdinaryDriverInputEntry(bool preEpoch)
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDB2);
+                current.SetU32(0xFDB2,0x00000B64);
+                Visit(current,api,0x071B4C);
+                Visit(current,api,0x071B82);
+                Visit(current,api,0x071C4C);
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                if(preEpoch)
+                {
+                    session.ObservePreEpochFrame(859,null,host.Advance);
+                    AssertEx.Equal(0,output.ToString().Length);
+                    session.BeginEpoch();
+                    AssertEx.Equal(0,CountRecords(output.ToString(),"native_event"));
+                    AssertEx.Equal(0,CountRecords(output.ToString(),
+                        "managed_hook_evidence"));
+                    return;
+                }
+                session.CaptureFrame(860,host.Advance);
+                session.Complete(861);
+            }
+            string raw=output.ToString();
+            AssertEx.Equal(1,CountNativeMarkerValue(raw,3));
+            AssertEx.Equal(1,CountNativeKind(raw,1));
+            AssertEx.Equal(1,CountNativeKind(raw,2));
+            AssertEx.Equal(0,CountNativeMarkerValue(raw,4));
+            JObject evidence=Records(raw,"managed_hook_evidence",
+                value=>(uint)value["pc"]==0x071B82)[0];
+            JArray correlation=(JArray)evidence["native_correlation_events"];
+            AssertEx.Equal(1,correlation.Count);
+            AssertEx.Equal(10,(int)correlation[0]["event_kind"]);
+            AssertEx.Equal(3,(int)correlation[0]["value"]);
+            AssertEx.Equal(4,(int)correlation[0]["service_kind"]);
+        }
+
+        private static void RejectsInvalidDriverInputOwnership()
+        {
+            AssertDriverInputVisitFails((current,api)=>
+                api.VisitZ80(0x0077,current),"active-kind");
+            AssertDriverInputVisitFails((current,api)=>
+                api.VisitZ80(0x00C1,current),"active-kind");
+            AssertDriverInputVisitFails((current,api)=>
+                api.VisitZ80(0x003A,current),"reservation");
+        }
+
+        private static void AssertDriverInputVisitFails(
+            Action<FakeS1Host,FakeTraceApi> begin,string message)
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDB2);
+                current.SetU32(0xFDB2,0x00000B64);
+                begin(current,api);
+                Visit(current,api,0x071B82);
+            });
+            using(var session=CreateSession(host,api,new StringWriter()))
+                AssertEx.Throws<InvalidOperationException>(
+                    ()=>session.CaptureFrame(860,host.Advance),message);
         }
 
         private static void AssertDeferredObservationCount(int count)

@@ -462,6 +462,7 @@ namespace OpenGGF.BizHawk.Headless
                 "proof_range", "predicate_ranges", "queue_expected_kinds",
                 "begin_expected_kinds", "direct_parent_retry_async_kinds",
                 "deferred_begin_blocker_kind",
+                "deferred_consume_observation_kind",
                 "retry_expected_kind", "internal_expected_kind");
             ushort nextToken = StrictUShort(binding["first_token"], "M68K first token");
             byte serviceKind = StrictByte(binding["service_kind"], "M68K service kind");
@@ -491,6 +492,11 @@ namespace OpenGGF.BizHawk.Headless
                 binding["deferred_begin_blocker_kind"],"deferred begin blocker kind");
             if(deferredBeginBlockerKind!=6)
                 throw Invalid("deferred begin blocker kind differs");
+            byte deferredConsumeObservationKind=StrictByte(
+                binding["deferred_consume_observation_kind"],
+                "deferred consume observation kind");
+            if(deferredConsumeObservationKind!=serviceKind)
+                throw Invalid("deferred consume observation kind differs");
 
             var managedHooks = new List<ManagedHook>(managed.Values);
             managedHooks.Sort((left, right) => left.Pc.CompareTo(right.Pc));
@@ -523,6 +529,9 @@ namespace OpenGGF.BizHawk.Headless
                 }
                 else if(managedHook.Action=="DEFERRED_SERVICE_CONSUME")
                 {
+                    AddManagedNativeHook(hookList,publicHooks,managedByToken,
+                        hookTokens,managedHook,ref nextToken,7,0,
+                        deferredConsumeObservationKind,0,0,0);
                     AddManagedNativeHook(hookList,publicHooks,managedByToken,
                         hookTokens,managedHook,ref nextToken,12,serviceKind,
                         deferredBeginBlockerKind,0,0,0);
@@ -1267,6 +1276,11 @@ namespace OpenGGF.BizHawk.Headless
                     }
                     return;
                 }
+                if(nativeAction==7&&value.Kind==10&&value.Value==3)
+                {
+                    pendingBoundaryManaged.Dequeue();
+                    return;
+                }
                 if(nativeAction!=12||value.Kind!=1
                     ||boundaryDeferredBegin==null
                     ||occurrence.Stack!=boundaryDeferredBegin.Stack
@@ -1345,7 +1359,17 @@ namespace OpenGGF.BizHawk.Headless
                 {
                     byte nativeAction;
                     if(!manifest.NativeActionByToken.TryGetValue(value.Subject,
-                            out nativeAction)||nativeAction!=12
+                            out nativeAction))
+                        throw new InvalidOperationException(
+                            "Deferred S1 consume has no native action identity.");
+                    if(nativeAction==7)
+                    {
+                        if(value.Kind!=10||value.Value!=3)
+                            throw new InvalidOperationException(
+                                "Ordinary S1 driverinput observation differs.");
+                        completeOccurrence=true;
+                    }
+                    else if(nativeAction!=12
                         ||value.Kind!=1||pendingDeferredBegin==null
                         ||occurrence.Stack!=pendingDeferredBegin.Stack
                         ||occurrence.ReturnPc!=pendingDeferredBegin.ReturnPc
@@ -1355,10 +1379,13 @@ namespace OpenGGF.BizHawk.Headless
                         ||value.SourceCpu!=pendingDeferredBegin.SourceCpu)
                         throw new InvalidOperationException(
                             "Deferred S1 consume identity or nested begin differs.");
-                    EmitDeferredManaged(value);
-                    managedServices.Begin(value.ServiceToken,occurrence.Stack);
-                    pendingDeferredBegin=null;
-                    completeOccurrence=true;
+                    else
+                    {
+                        EmitDeferredManaged(value);
+                        managedServices.Begin(value.ServiceToken,occurrence.Stack);
+                        pendingDeferredBegin=null;
+                        completeOccurrence=true;
+                    }
                 }
                 else if (expected.Action == "SERVICE_BEGIN")
                 {
