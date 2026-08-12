@@ -3015,6 +3015,17 @@ public class GameLoop {
                 sidekick.setDirection(playable.getDirection());
                 if (sidekick.getCpuController() != null) {
                     sidekick.getCpuController().reset();
+                    // ROM LevelSizeLoad re-writes Tails_Min/Max_X_pos and
+                    // Tails_Min/Max_Y_pos from the LevelSize table on every
+                    // entry to the Level: routine, and the special-stage return
+                    // re-runs that routine in full
+                    // (docs/s2disasm/s2.asm:14695-14706). reset() clears the
+                    // controller's copies of those words, so restore them
+                    // exactly as the level-load path does; without this
+                    // Tails_Max_Y_pos stays unset and Obj02_CheckGameOver's
+                    // kill plane (s2.asm:41146-41155) can never fire after a
+                    // special-stage return.
+                    levelManager.applySidekickLevelBounds(sidekick);
                 }
             }
         }

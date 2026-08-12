@@ -284,6 +284,26 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **Four S2 gameplay divergences behind the emerald run's last segment
+  (2026-08-12):** with the halfpipe chain green, the emerald chain's remaining
+  failures decomposed into four real engine defects, each found by a comparison
+  that had only just become capable of failing. The special-stage return never
+  re-established the sidekick's level boundaries — ROM `LevelSizeLoad` writes
+  `Tails_Min/Max_X/Y_pos` from the same `LevelSize` longs as the camera bounds on
+  every entry (`s2.asm:14695-14706`) — so `Tails_Max_Y_pos` stayed unset and
+  **Tails' kill plane was disabled for the whole rest of the run**; the dead-fall
+  threshold resolver returned `Integer.MIN_VALUE` on all 864 calls. End of act
+  fired on the bug-*fixed* branch of `Obj0D_Main_State3`, a `fixBugs` site
+  (`:34815-34838`) whose shipped `fixBugs = 0` path lets an airborne player skip
+  only the control lock and still trigger — the engine instead burned 29 extra
+  airborne frames before queueing the results art. `CheckpointState` mirrored the
+  ROM's `Saved_*` set but omitted `Saved_Timer` (`:44783-44785`), so the act timer
+  restarted at every return and the time bonus tallied from 12 seconds instead of
+  188. And the results screen carried yet another invented duration — a 60-frame
+  slide where the ROM derives 16 — the fourth fitted "N seconds" constant found in
+  a results sequence this session. Segment 6 falls from 13,836 errors to 5, every
+  ROM phase length now matches exactly (16/180/27/180), and the level-load
+  boundary the run had never reached is now reached.
 - **`TestS2EhzHalfpipeRoundTripChain` is green, and the S2 special stage runs the
   ROM's results length (2026-08-12):** three fixes closed the last of the run
   chains' transition-gap divergences. The gap journal was opening on a ledger its

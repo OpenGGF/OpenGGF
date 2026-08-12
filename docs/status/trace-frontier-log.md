@@ -73383,3 +73383,124 @@ Command (dedicated worktree, base `803384822`):
   `com/openggf/trace/replay/TraceReplaySessionBootstrap.java`, whose
   `DynamicArtLifecycleService` import was introduced by `1761bcf9a`, already on
   `develop`. The class is outside the `trace-replay` profile.
+
+## 2026-08-12 -- S2 signpost walk-off took the `fixBugs = 1` branch (seg4_ehz1 f821)
+
+Worktree `<scratch-worktree>` detached at `ef9f0630b`
+(`bugfix/ai-s2-runchain-gaps`). Command for every measurement below:
+
+```
+rm -rf target/surefire-reports target/trace-reports
+mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+    -Dsonic1.rom.path=<s1.gen> -Dsonic2.rom.path=<s2.gen> -Ds3k.rom.path=<s3k.gen> \
+    "-Dtest=TestS2CompleteEmeraldRunChain" test
+```
+
+- CONTROL at `ef9f0630b`: FAIL, 2 axes. `[segment-physics]` segment 6
+  (`seg4_ehz1`) 11348 errors, first non-camera mismatch frame 821 field
+  `queue.s2_nemesis_plc.busy` rom=true engine=false. `[walk-failure]` segment 6
+  semantic `level_advance` never observed.
+- AFTER: FAIL, 2 axes. Segment 6 **24** errors, first non-camera mismatch frame
+  **1287** field `dynamic_art.frame` rom=1287 engine=1409. `[walk-failure]`
+  unchanged.
+
+ROOT CAUSE (measured, then ROM-cited). The frame-821 queue submission was
+identified by brute-forcing the recorder's own fingerprint function
+(`tools/bizhawk-headless/src/Recording/LoadQueueStateEvent.cs`:23-47, kindId 2,
+destination = vram bytes / 32, totalWork = Nemesis pattern count) against every
+list in `ArtLoadCues` (`Sonic2Constants.ART_LOAD_CUES_ADDR` = 0x42660). The
+three queued fingerprints are entries 1-3 of **PLC 38 = `PLCptr_Results`**
+(`docs/s2disasm/s2.asm:89232`), i.e. the end-of-act results art submitted by
+`Load_EndOfAct`'s `LoadPLC2` (`s2.asm:34856-34862`). The 1-entry load at f657 is
+PLC 39 `PLCptr_Signpost` (`s2.asm:89233`), and the engine already matched it.
+So frame 821 is the frame the ROM's `Obj0D_Main_State3` triggers end-of-act.
+
+`Obj0D_Main_State3` is a `fixBugs` site (`s2.asm:34815-34838`); the disassembly
+is built with `fixBugs = 0` (`s2.asm:27`), which is the shipped REV01
+behaviour. On the un-fixed branch an airborne player takes `bne.s loc_19434`,
+which skips **only** the `Control_Locked` / `Ctrl_1_Logical` writes and falls
+through to the `x_pos >= Camera_Max_X_pos + $128` test — so the end of act
+triggers mid-air. `SignpostObjectInstance.updateWalkOff` implemented the
+bug-fixed branch (`bne.w return_194D0`): it returned outright while airborne,
+deferring `Load_EndOfAct` until Sonic landed.
+
+Instrumented (throwaway probe, removed before commit): the engine's first
+walk-off frame already had `centreX=10966` against a trigger of
+`camMaxX 10656 + 0x128 = 10952`, and it then burned 29 further airborne frames
+before spawning the results on the landing frame. Taking the `fixBugs = 0`
+branch fires it on the first walk-off frame.
+
+RESIDUAL, unaddressed and pre-existing in kind: all 24 remaining segment-6
+errors are on the segment's **last** row (1287 of 1288 rows), on the two
+terminal gap edges — `dynamic_art.frame` / `logical_frame` /
+`publication_frame` engine 1409 vs rom 1287 (+122 production iterations),
+`edge_ordinal` +140, `transfer_id` +70, and `edge[0].owner` sonic vs tails. The
+control run's `recentMismatches` were already this same frame-1287 family.
+
+MEASURED VERDICT on the `[walk-failure]` axis: it is **NOT** downstream of the
+frame-821 PLC divergence. Closing 821 entirely (11348 -> 24 errors) left it
+byte-identical, reproducing the previous round's finding at a much larger
+movement. The engine does reach `Load_EndOfAct` and does queue PLC 38; it does
+not reach a new active level segment within
+`TraceRunReplayWalker.interSegmentStepCap`. Unmeasured hypothesis for the next
+round, stated as a hypothesis: the walk failure and the +122 residual may be one
+defect — "the engine's post-signpost results/fade tail runs longer than the
+ROM's" — but no causal measurement was taken.
+
+
+## 2026-08-12 — S2 emerald run seg6 (seg4_ehz1): 24 -> 5 errors, boundary now reached
+
+Command (scratch worktree at 22b31ec3b + this change):
+
+```
+rm -rf target/surefire-reports target/trace-reports
+mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+    -Dsonic1.rom.path=<s1.gen> -Dsonic2.rom.path=<s2.gen> -Ds3k.rom.path=<s3k.gen> \
+    "-Dtest=TestS2CompleteEmeraldRunChain" test
+```
+
+CONTROL at 22b31ec3b reproduced exactly: 2 axes, `[segment-physics]` seg6 24
+errors all on the terminal row 1287, first non-camera mismatch
+`dynamic_art.frame` rom=1287 engine=1409; `[walk-failure]` `level_advance`
+never observed.
+
+MEASURED VERDICT on the previous round's open hypothesis: the two axes ARE one
+defect. Instrumenting `AbstractResultsScreen` showed the engine's end-of-act
+sequence running 1040 frames against the ROM's 403, so it never reached the
+level advance inside `TraceRunReplayWalker.LATE_BOUNDARY_GRACE_FRAMES` (120).
+CORRECTION to the previous round's framing: "+122" was never an engine
+quantity — 122 is the grace window, and the reported `dynamic_art.frame` is
+capped by it, so that number is insensitive to the size of the overrun.
+
+ROM ground truth for the sequence, from the fixture's own aux (Obj3A appears
+seg6 row 821, sub-objects 885, segment ends 1287) and `Obj3A`:
+PLC wait 64 + slide 16 + routine $A 180 + tally 27 + routine $E 180 = 403,
+landing `loc_14270` (`Level_Inactive_flag`) on 1288. Every term derived, then
+confirmed against the recording.
+
+Two invented durations found and replaced by ROM-derived rules:
+`AbstractResultsScreen.DEFAULT_SLIDE_DURATION = 60` against the ROM's
+position-driven 16, and a missing `Saved_Timer` bank/reinstate that made the
+time bonus 5000 instead of 100.
+
+AFTER: seg6 24 -> 5 errors, still all on row 1287; `dynamic_art.frame` rom=1287
+engine=1309. Engine phase lengths now match the ROM exactly (16 / 180 / 27 /
+180). The `[walk-failure]` axis moved from "boundary never observed" to
+"coordinator denied segment 7 admission in phase TRANSITION_GAP".
+
+NEW FRONTIER, measured not inferred: `AbstractResultsScreen.STATE_EXIT` runs 21
+further frames because `ResultsScreenObjectInstance.triggerFadeToBlack` fades to
+black and then calls `advanceToNextLevel`. The ROM does no such fade: `loc_14270`
+writes `Current_ZoneAndAct` + `Level_Inactive_flag`, and the same iteration's
+`tst.w (Level_Inactive_flag).w / bne.w Level` (s2.asm:5096-5097) leaves
+`Level_MainLoop` immediately. That engine-side fade is the whole of the
+remaining 22-row terminal offset and is the next target; it was left alone this
+round because removing a transition fade is a visual-lifecycle change, not a
+results-timing one.
+
+Full profile after the change: 770 tests / 1 failure / 3 errors / 4 skipped —
+unchanged shape, same pre-existing S3K `KOS_DECOMPRESSION_QUEUE` #14/#15/#335.
+`TestS2EhzHalfpipeRoundTripChain`, all eight S2 standalone special-stage
+classes, both S1 emerald-run classes, the gap journal/comparator, the terminal
+tail, the hardware-timing and rewind guards, `TestAdoptedOpeningRowComparison`
+and `TestDynamicArtLifecycleService` all green (103/103 in one fork).

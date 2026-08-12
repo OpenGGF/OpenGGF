@@ -39,6 +39,8 @@ public class LevelLoadContext {
     private boolean hasCheckpointSolidBits;
     private byte checkpointTopSolidBit;
     private byte checkpointLrbSolidBit;
+    private boolean hasCheckpointTimer;
+    private long checkpointTimerFrames;
 
     // Post-load assembly fields
     private boolean includePostLoadAssembly;
@@ -91,6 +93,9 @@ public class LevelLoadContext {
     public boolean hasCheckpointSolidBits() { return hasCheckpointSolidBits; }
     public byte getCheckpointTopSolidBit() { return checkpointTopSolidBit; }
     public byte getCheckpointLrbSolidBit() { return checkpointLrbSolidBit; }
+    /** ROM Saved_Timer / v_lamp_time / Saved_timer -- see CheckpointState. */
+    public boolean hasCheckpointTimer() { return hasCheckpointTimer; }
+    public long getCheckpointTimerFrames() { return checkpointTimerFrames; }
 
     // Post-load assembly accessors
 
@@ -195,6 +200,8 @@ public class LevelLoadContext {
             hasCheckpointSolidBits = false;
             checkpointTopSolidBit = 0;
             checkpointLrbSolidBit = 0;
+            hasCheckpointTimer = false;
+            checkpointTimerFrames = 0;
             return;
         }
         hasCheckpoint = true;
@@ -232,6 +239,14 @@ public class LevelLoadContext {
             hasCheckpointSolidBits = false;
             checkpointTopSolidBit = 0;
             checkpointLrbSolidBit = 0;
+        }
+
+        if (state instanceof CheckpointState cs && cs.hasSavedTimer()) {
+            hasCheckpointTimer = true;
+            checkpointTimerFrames = cs.getSavedTimerFrames();
+        } else {
+            hasCheckpointTimer = false;
+            checkpointTimerFrames = 0;
         }
     }
 }

@@ -3,6 +3,59 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the star post banks and reinstates the act timer, and S2's end-of-act slide-in runs
+  the ROM's own length. Two independent invented durations were driving the emerald run's
+  end-of-EHZ1 results screen 600+ frames long. (1) `CheckpointState` mirrored the ROM
+  `Saved_*` set but omitted `Saved_Timer`; all three games bank the running act timer at the
+  star post (S2 s2.asm:44743, S1 `_incObj/79 Lamppost.asm`:158, S3K sonic3k.asm:61721) and
+  reinstate it in the checkpoint-load routine with `move.l (Saved_Timer),(Timer)` /
+  `move.b #59,(Timer_frame)` / `subq.b #1,(Timer_second)` (s2.asm:4783-4785,
+  `79 Lamppost.asm`:193-195, sonic3k.asm:61776-61778 and :61803-61805). `Level_ClrHUD`
+  correspondingly skips the timer clear when the star-post flag is set (s2.asm:4971-4977,
+  sonic.asm:2901-2905, sonic3k.asm:7538-7539). The engine instead restarted the act timer at
+  every special-stage return, so `TimeBonuses` was indexed at 12s rather than 188s and the
+  tally ran 500 frames instead of 26. Carried across the level reload on `LevelLoadContext`
+  alongside the existing water/runtime/solid-bit checkpoint state. (2) `Obj3A` has no
+  slide-in duration: its master sub-object leaves routine 2 only when `x_pixel` reaches
+  `titlecard_x_target` (s2.asm:28128-28131), and metadata row 0 (s2.asm:28159) slides
+  (288-32) px at `moveq #$10,d0` (s2.asm:27494) = 16 frames, where the shared base class
+  defaulted to 60. Measured on the emerald chain's segment 6: every ROM phase now matches
+  exactly -- slide 16, pre-tally 180, tally 27, wait 180 -- and the segment goes 24 to 5
+  errors, with its level-load boundary now reached instead of never observed.
+- Fix: S2's signpost end-of-act fires on the shipped ROM's `fixBugs = 0` branch, so the
+  results art is queued on the first walk-off frame instead of 29 frames later.
+  `Obj0D_Main_State3` is a `fixBugs` site (s2.asm:34815-34838), and the disassembly is built
+  with `fixBugs = 0` (s2.asm:27) because that is what the shipped ROM does. On that un-fixed
+  branch an airborne player takes `bne.s loc_19434`, which skips *only* the `Control_Locked`
+  and `Ctrl_1_Logical` writes and then falls through to the `x_pos >= Camera_Max_X_pos + $128`
+  test -- so end of act fires mid-air. The disassembly's own comment calls the checks "a mess"
+  and describes the edge case. `SignpostObjectInstance.updateWalkOff` had implemented the
+  bug-*fixed* branch (`bne.w return_194D0`), returning outright while airborne, so the engine
+  burned 29 extra airborne frames and only spawned results on landing. Measured: the engine's
+  first walk-off frame already had `centreX` 10966 against a trigger of 10952. The submission
+  at the divergence was identified by brute-forcing the recorder's own fingerprint function
+  against every list in `ArtLoadCues` -- PLC 38 = `PLCptr_Results` (s2.asm:89232), queued by
+  `Load_EndOfAct`'s `LoadPLC2` (:34856-34862) -- not by inference. Emerald-chain segment 6
+  goes 11348 to 24 errors, with the residual now a single terminal row.
+- Fix: the S2 special-stage return re-establishes the sidekick's level boundaries, so Tails'
+  kill plane survives a return. ROM `LevelSizeLoad` writes `Tails_Min/Max_X_pos` and
+  `Tails_Min/Max_Y_pos` from the same `LevelSize` longs that seed `Camera_Min/Max_*`
+  (s2.asm:14695-14706), on every entry to `Level:` -- and a special-stage return re-runs that
+  routine in full. `GameLoop`'s special-stage-return re-init is a hand-rolled replica of
+  `InitPlayers` that calls the sidekick controller's `reset()` but, unlike
+  `LevelManager.spawnSidekicks`, never re-established those boundary words, so
+  `Tails_Max_Y_pos` stayed unset and the sidekick's kill plane was disabled for the whole
+  remainder of the run. Measured: the dead-fall threshold resolver returned `Integer.MIN_VALUE`
+  on all 864 calls of the run. In the recording, a dead falling Tails crossing
+  `Tails_Max_Y_pos + $100` reaches `TailsCPU_Despawn`, which warps her to `x_pos = $4000,
+  y_pos = 0` with `TailsAni_Fly` and `in_air` (s2.asm:39396-39405 via `Obj02_CheckGameOver`,
+  :41146-41155) -- the `sidekick_x = 0x4000` the comparator was reporting. The engine already
+  modelled that branch faithfully; it simply never fired. The boundary application is now one
+  helper shared by both entry paths, with no constant introduced. Emerald-chain segment 6 goes
+  13836 to 11348 errors and its first non-camera mismatch moves from frame 615 to 821, with no
+  player or sidekick physics mismatch remaining -- the residual is entirely PLC/dynamic-art.
+  Recorded honestly: the segment-6 `level_advance` walk failure is NOT downstream of this and
+  is unchanged.
 - Fix: transition-gap art edges are stamped from rows that actually passed, not from a frozen
   playback cursor -- `TestS2EhzHalfpipeRoundTripChain` is now fully green. During an S2 gap the
   shared cursor is pre-seeked to the destination and never advances (measured: 3908 calls
