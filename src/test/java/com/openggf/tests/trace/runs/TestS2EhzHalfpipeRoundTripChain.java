@@ -368,7 +368,30 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * republishing its manifest with the field so the coordinator actually drives the tail
  * rows; that is a fixture-publication decision, not an engine change.
  *
- * <h2>Current RED: the seg1_ehz1 -&gt; ss structural gap (newly exposed)</h2>
+ * <h2>Current RED (2026-08-12): seg2_ehz1's returned-level physics, now ASSERTED</h2>
+ *
+ * <p>{@link AbstractRunChainTest} now asserts the returned-level segment's physics
+ * comparator error count -- the number it already computed and wrote into
+ * {@code target/trace-reports/s2-ehz-halfpipe-roundtrip_seg2_report.json}. It was never
+ * asserted, so this chain walked past {@code seg2_ehz1} carrying 39645 errors while
+ * reporting the segment {@code complete}, and every candidate fix for the downstream
+ * symptoms was being judged by which route a broken-but-unasserted segment happened to
+ * take. {@code TestS2Ehz1Seg2CompleteEmeraldsSegmentTraceReplay} is the oracle: it
+ * replays the identical rows standalone to ZERO errors, so the rows can replay clean and
+ * the divergence is owned by this chain's special-stage return path.
+ *
+ * <p>Closed in that count: the {@code camera_x} column. The engine restored
+ * {@code Camera_X_pos} from its banked {@code Saved_Camera_X_pos}, but every ROM
+ * overwrites that value immediately -- {@code Obj79_LoadData} (s2.asm:44793-44794)
+ * returns into {@code LevelSizeLoad}'s {@code subi.w #$A0,d1} clamped tail
+ * (s2.asm:14775-14814), which recomputes the camera from the RESTORED player position.
+ * 39645 -&gt; 39612.
+ *
+ * <p>The residual's first non-camera mismatch is {@code sidekick_x} at frame 1
+ * (rom 0x0DDE / engine 0x0DF1) -- the CPU-Tails title-card-duration divergence already
+ * documented above, which is now a hard failure rather than a diagnostic note.
+ *
+ * <h2>Superseded RED: the seg1_ehz1 -&gt; ss structural gap</h2>
  *
  * <p>With the terminal assertion correctly skipped, the chain now reaches its epilogue
  * {@code dynamicArtGapJournal.verify(run)} for the first time, which fails on the very

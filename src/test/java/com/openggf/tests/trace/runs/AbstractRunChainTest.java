@@ -108,6 +108,35 @@ abstract class AbstractRunChainTest {
     private static final Path REPORT_OUTPUT_DIR = Path.of("target", "trace-reports");
     private LiveTraceComparator productionComparator;
     private HeadlessRunCoordinatorAdapter activeRunCoordinator;
+    /**
+     * Segment indices whose comparator was attached by
+     * {@link #attachReturnedLevelSegment} -- i.e. the level a run RETURNS to
+     * after an interior (special stage / bonus). Their physics comparator error
+     * count is asserted in {@link #maybeWriteReport}.
+     *
+     * <p><b>Why this exists.</b> Both S2 run chains carried a returned-level
+     * segment with tens of thousands of physics errors (58184 on
+     * {@code s2-sonic-tails-complete-emeralds} seg2, 39645 on
+     * {@code s2-ehz-halfpipe-roundtrip} seg2) while the chain reported the
+     * segment {@code complete} and walked straight past it: the only things
+     * asserted at that seam were the boundary observation and dynamic art, never
+     * the comparator's own {@code errorCount()} -- which the chain had already
+     * computed and written into
+     * {@code target/trace-reports/<run>_seg<N>_report.json}. Thirteen rounds of
+     * candidate fixes were consequently judged by which route a broken-but-
+     * unasserted segment happened to take downstream, which measured noise.
+     *
+     * <p>{@code TestS2Ehz1Seg2CompleteEmeraldsSegmentTraceReplay} is the oracle:
+     * it replays the IDENTICAL 3377 rows of that same fixture standalone to ZERO
+     * errors. So the rows can replay clean, and the divergence is owned by the
+     * chain's return path, not by the recording.
+     *
+     * <p>Turning this assertion on makes both S2 chains fail at seg2. That is
+     * not a regression -- it is the true state of the return path becoming
+     * visible, and it replaces symptom-chasing with one measurable target.
+     */
+    private final java.util.Set<Integer> returnedLevelSegmentIndices =
+            new java.util.HashSet<>();
 
     protected record DynamicArtGapJournalEvidence(
             int transitionCountAfterFirstArm,
@@ -1200,7 +1229,7 @@ abstract class AbstractRunChainTest {
                             loop.getCurrentGameMode(), framesConsumed, false,
                             runCoordinator.latestLoadReceipt());
                     activeComparator = attachReturnedLevelSegment(
-                            probe, plans.get(i + 1), fixture, framesConsumed);
+                            probe, plans.get(i + 1), fixture, framesConsumed, i + 1);
                     returnRowsConsumed = framesConsumed;
                 } else {
                     // OPTION B (bonus interior): the engine's bonus-exit sequence is
@@ -1218,7 +1247,7 @@ abstract class AbstractRunChainTest {
                             loop.getCurrentGameMode(), 1, false,
                             runCoordinator.latestLoadReceipt());
                     activeComparator = attachReturnedLevelSegment(
-                            probe, plans.get(i + 1), fixture, 1);
+                            probe, plans.get(i + 1), fixture, 1, i + 1);
                     returnRowsConsumed = 1;
                 }
                 dynamicArtSegments.beginSegment();
@@ -1801,7 +1830,7 @@ abstract class AbstractRunChainTest {
                     gameplay.segment().dir());
             LiveTraceComparator comparator =
                     attachReturnedLevelSegment(
-                            probe, gameplay, fixture, 0);
+                            probe, gameplay, fixture, 0, gameplayIndex);
             return new PresentationBridgeResult(
                     false, gameplayIndex, comparator);
         } finally {
@@ -2216,7 +2245,9 @@ abstract class AbstractRunChainTest {
      * </ul>
      */
     private LiveTraceComparator attachReturnedLevelSegment(
-            BoundaryProbe probe, SegmentPlan level, LiveEngineFixture fixture, int framesConsumed) {
+            BoundaryProbe probe, SegmentPlan level, LiveEngineFixture fixture, int framesConsumed,
+            int segmentIndex) {
+        returnedLevelSegmentIndices.add(segmentIndex);
         LiveTraceComparator comparator = new LiveTraceComparator(
                 level.trace(), ToleranceConfig.DEFAULT, framesConsumed, fixture::sprite);
         probe.setDelegate(comparator);
@@ -3173,6 +3204,36 @@ abstract class AbstractRunChainTest {
         }
         assertCompletedSegmentComparison(segmentIndex, comparator);
         writeChainSegmentReport(runId, segmentIndex, comparator);
+        assertReturnedLevelSegmentPhysics(runId, segmentIndex, comparator);
+    }
+
+    /**
+     * Asserts the physics comparator error count of a RETURNED-level segment --
+     * a level the run re-enters after an interior, attached by
+     * {@link #attachReturnedLevelSegment}. No new comparison logic: this asserts
+     * exactly the {@code errorCount()} the chain already computed and just wrote
+     * into {@code <runId>_seg<N>_report.json}.
+     *
+     * <p>See {@link #returnedLevelSegmentIndices} for why the count was going
+     * unasserted, and why turning it on is the true state becoming visible
+     * rather than a regression.
+     */
+    private void assertReturnedLevelSegmentPhysics(
+            String runId, int segmentIndex, LiveTraceComparator comparator) {
+        if (!returnedLevelSegmentIndices.contains(segmentIndex)) {
+            return;
+        }
+        MismatchEntry first = comparator.firstNonCameraPhysicsMismatch();
+        assertEquals(0, comparator.errorCount(),
+                "returned-level segment " + segmentIndex + " of " + runId
+                        + " diverged: " + comparator.errorCount()
+                        + " physics comparator errors"
+                        + (first == null ? "" : ", first non-camera mismatch at frame "
+                                + first.frame() + " field " + first.field()
+                                + " rom=" + first.romValue()
+                                + " engine=" + first.engineValue())
+                        + "; report=" + REPORT_OUTPUT_DIR.resolve(
+                                runId + "_seg" + segmentIndex + "_report.json"));
     }
 
     /** Adapter-neutral assertions a committed route can add at a completed source segment. */
