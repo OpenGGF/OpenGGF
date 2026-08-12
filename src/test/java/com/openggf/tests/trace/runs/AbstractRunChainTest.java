@@ -156,8 +156,22 @@ abstract class AbstractRunChainTest {
      * <p>Turning this assertion on makes both S2 chains fail at seg2. That is
      * not a regression -- it is the true state of the return path becoming
      * visible, and it replaces symptom-chasing with one measurable target.
+     *
+     * <p><b>2026-08-12 -- extended to level_advance entries.</b> The same hole
+     * existed one boundary kind over. Segment 7 (seg5_ehz2) of
+     * {@code TestS2CompleteEmeraldRunChain} is entered by a {@code level_advance}
+     * (LEVEL_LOAD) boundary rather than a special-stage return, so it was never
+     * registered here -- and its own comparator report
+     * ({@code s2-sonic-tails-complete-emeralds_seg7_report.json}) carried
+     * errorCount = 149522 over 6046 rows with {@code complete: true} while the
+     * chain walked past it and reported only the missed exit boundary. Every
+     * level-boundary attach now registers the segment it attaches, so the chain
+     * reports the segment truthfully. THE CHAIN GOES REDDER AS A RESULT: that is
+     * the deliverable, not a regression. Segments 0/2/4/6 (the EHZ1 levels) are
+     * at 0 errors and are unaffected; {@code TestS2EhzHalfpipeRoundTripChain} has
+     * no {@code level_advance} boundary at all and is untouched.
      */
-    private final java.util.Set<Integer> returnedLevelSegmentIndices =
+    private final java.util.Set<Integer> assertedPhysicsSegmentIndices =
             new java.util.HashSet<>();
 
     protected record DynamicArtGapJournalEvidence(
@@ -1126,7 +1140,7 @@ abstract class AbstractRunChainTest {
                             null, playback.getCursorFrame(),
                             loop.getCurrentGameMode(), 0, true, null);
                     activeComparator = attachLevelSegment(
-                            playback, probe, movie, next, fixture);
+                            playback, probe, movie, next, fixture, i + 1);
                     dynamicArtSegments.beginSegment();
                     dynamicArtGapJournal.nextSegmentArmed(
                             next.segment().dir());
@@ -1143,7 +1157,8 @@ abstract class AbstractRunChainTest {
                         loop.getCurrentGameMode(), rowsConsumed, false,
                         runCoordinator.latestLoadReceipt());
                 activeComparator = attachPreparedLevelSegment(
-                        playback, probe, movie, next, fixture, rowsConsumed);
+                        playback, probe, movie, next, fixture, rowsConsumed,
+                        i + 1);
                 dynamicArtSegments.beginSegment();
                 gameplayMode.dynamicArtLifecycle()
                         .advanceComparisonCursor(rowsConsumed);
@@ -1527,7 +1542,8 @@ abstract class AbstractRunChainTest {
                                 "production level-load receipt was not observed"),
                         i, runDir);
                 activeComparator = attachPreparedLevelSegment(
-                        playback, probe, movie, next, fixture, rowsConsumed);
+                        playback, probe, movie, next, fixture, rowsConsumed,
+                        i + 1);
                 dynamicArtSegments.beginSegment();
                 gameplayMode.dynamicArtLifecycle()
                         .advanceComparisonCursor(rowsConsumed);
@@ -2489,7 +2505,9 @@ abstract class AbstractRunChainTest {
      */
     private LiveTraceComparator attachLevelSegment(
             PlaybackDebugManager playback, BoundaryProbe probe,
-            Bk2Movie movie, SegmentPlan level, LiveEngineFixture fixture) {
+            Bk2Movie movie, SegmentPlan level, LiveEngineFixture fixture,
+            int segmentIndex) {
+        assertedPhysicsSegmentIndices.add(segmentIndex);
         playback.startSession(movie, level.segment().bk2FrameOffset());
         LiveTraceComparator comparator = new LiveTraceComparator(
                 level.trace(), ToleranceConfig.DEFAULT, 0, fixture::sprite);
@@ -2550,7 +2568,7 @@ abstract class AbstractRunChainTest {
     private LiveTraceComparator attachReturnedLevelSegment(
             BoundaryProbe probe, SegmentPlan level, LiveEngineFixture fixture, int framesConsumed,
             int segmentIndex) {
-        returnedLevelSegmentIndices.add(segmentIndex);
+        assertedPhysicsSegmentIndices.add(segmentIndex);
         LiveTraceComparator comparator = new LiveTraceComparator(
                 level.trace(), ToleranceConfig.DEFAULT, framesConsumed, fixture::sprite);
         probe.setDelegate(comparator);
@@ -2694,7 +2712,9 @@ abstract class AbstractRunChainTest {
 
     private LiveTraceComparator attachPreparedLevelSegment(
             PlaybackDebugManager playback, BoundaryProbe probe, Bk2Movie movie,
-            SegmentPlan nextLevel, LiveEngineFixture fixture, int rowsConsumed) {
+            SegmentPlan nextLevel, LiveEngineFixture fixture, int rowsConsumed,
+            int segmentIndex) {
+        assertedPhysicsSegmentIndices.add(segmentIndex);
         int expectedCursor = nextLevel.segment().bk2FrameOffset() + rowsConsumed;
         if (playback.getCursorFrame() != expectedCursor) {
             if (rowsConsumed != 0) {
@@ -3660,23 +3680,26 @@ abstract class AbstractRunChainTest {
         }
         assertCompletedSegmentComparison(segmentIndex, comparator);
         writeChainSegmentReport(runId, segmentIndex, comparator);
-        assertReturnedLevelSegmentPhysics(runId, segmentIndex, comparator);
+        assertSegmentPhysics(runId, segmentIndex, comparator);
     }
 
     /**
-     * Asserts the physics comparator error count of a RETURNED-level segment --
-     * a level the run re-enters after an interior, attached by
-     * {@link #attachReturnedLevelSegment}. No new comparison logic: this asserts
+     * Asserts the physics comparator error count of any segment whose comparator
+     * the chain attached over a level boundary: a level re-entered after an
+     * interior ({@link #attachReturnedLevelSegment}), and -- since 2026-08-12 --
+     * a level entered by a {@code level_advance} boundary
+     * ({@link #attachPreparedLevelSegment} / {@link #attachLevelSegment}).
+     * No new comparison logic: this asserts
      * exactly the {@code errorCount()} the chain already computed and just wrote
      * into {@code <runId>_seg<N>_report.json}.
      *
-     * <p>See {@link #returnedLevelSegmentIndices} for why the count was going
+     * <p>See {@link #assertedPhysicsSegmentIndices} for why the count was going
      * unasserted, and why turning it on is the true state becoming visible
      * rather than a regression.
      */
-    private void assertReturnedLevelSegmentPhysics(
+    private void assertSegmentPhysics(
             String runId, int segmentIndex, LiveTraceComparator comparator) {
-        if (!returnedLevelSegmentIndices.contains(segmentIndex)) {
+        if (!assertedPhysicsSegmentIndices.contains(segmentIndex)) {
             return;
         }
         if (comparator.errorCount() == 0) {
@@ -3686,7 +3709,7 @@ abstract class AbstractRunChainTest {
         // Recorded, not thrown: see chainAxisFailures. The predicate is
         // unchanged (errorCount() must be 0); only the throw site moved to the
         // end of the walk so the gap-ledger axis is also evaluated.
-        chainAxisFailures.add("[segment-physics] returned-level segment "
+        chainAxisFailures.add("[segment-physics] segment "
                 + segmentIndex + " of " + runId
                 + " diverged: " + comparator.errorCount()
                 + " physics comparator errors"

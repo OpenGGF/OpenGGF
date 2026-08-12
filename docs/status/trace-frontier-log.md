@@ -73723,3 +73723,65 @@ Red set, unchanged from the pre-capture baseline apart from the new route:
 | `TestS3kKnucklesSuperEmeraldRunChain`, `TestS3kMegaRunChain`, `TestS3kMhzCompleteRunTraceReplay` | ERROR (3) — pre-existing |
 | `TestS3kSonicTails*` (64 classes) | 8 FAIL + 53 ERROR — new frontier, as captured above |
 | `TestS2EhzHalfpipeRoundTripChain` | PASS |
+
+## 2026-08-12 — level_advance segments now have their physics asserted (S2 emerald chain)
+
+Isolated worktree at parent `b2be8633c`. Command (both runs identical; the control
+ran in a second worktree at the same commit):
+
+```
+rm -rf target/surefire-reports target/trace-reports
+mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+    -Dsonic1.rom.path=<s1.gen> -Dsonic2.rom.path=<s2.gen> -Ds3k.rom.path=<s3k.gen> test
+```
+
+`AbstractRunChainTest` only registered a segment for its `[segment-physics]` axis
+when the segment was attached by `attachReturnedLevelSegment` (a special-stage
+return). A level entered by a `level_advance` (LEVEL_LOAD) boundary was never
+registered, so segment 7 (`seg5_ehz2`) of `TestS2CompleteEmeraldRunChain` carried
+**errorCount = 149522 over 6046 rows with `complete: true`** in its own report
+(`target/trace-reports/s2-sonic-tails-complete-emeralds_seg7_report.json`) while the
+chain walked past it and reported only its missed exit boundary. This is the third
+unasserted comparison found in this effort. Every level-boundary attach now registers
+its segment; no new comparison logic — the assertion reads the `errorCount()` the
+comparator already computed.
+
+`TestS2CompleteEmeraldRunChain` now fails on **3 axes** instead of 2:
+
+| Axis | Detail |
+|---|---|
+| `[walk-failure]` | segment 7 (`seg5_ehz2`) exit boundary `starpost_special` never observed (pre-existing) |
+| `[segment-physics]` | **NEW** — segment 7 diverged: 149522 errors, first non-camera mismatch frame 0 `sidekick_x` rom=0x004D engine=0x004E |
+| `[dynamic-art-gap]` | `seg4_ehz1 -> seg5_ehz2`, `run_gap.edge[2..11].movie_logical_frame` 12/93 rows early (pre-existing) |
+
+Segments 0/2/4/6 (the EHZ1 levels) are at 0 errors and surfaced nothing.
+`TestS2EhzHalfpipeRoundTripChain` has no `level_advance` boundary and stayed PASS.
+
+Full profile: **Tests run: 834, Failures: 9, Errors: 56, Skipped: 4** — byte-identical
+to the control at the same commit, and the 65 red class names diff empty. No new red.
+
+### Open target — the seg7 sidekick is exactly one frame ahead at its own row 0
+
+Measured: at seg7 row 0 the sidekick reads `x` 0x004E vs 0x004D, `x_sub` 0xA800 vs
+0x1800, `x_speed`/`g_speed` 0x0090 vs 0x0084; the *player* matches exactly. The engine
+value at row N equals the ROM value at row N+1 for the first ~12 rows. The first PLAYER
+divergence is `rings` at frame 162 (inferred, not measured: Tails collecting into the
+shared 1P `Ring_count`).
+
+`Obj02_Control` (`docs/s2disasm/s2.asm:38950-38969`) calls `TailsCPU_Control`
+unconditionally in 1P Sonic+Tails mode, with no title-card gate, so the follow ramp runs
+during the title card in the ROM too. The engine's ramp is right at the run's FIRST level
+entry (pre-row-0 speed 120, row 0 = 132) and one pass ahead at the `level_advance` entry.
+So the open question is **not** the ramp: it is how many `RunObjects`/`Obj02` passes the
+engine executes between the `level_advance` level load and the row the recorder stamps as
+row 0, versus the ROM. Any change that shortens/lengthens the engine's 91-step admission
+freeze by a measured number of frames is a fitted duration constant and is forbidden.
+
+### Recorded, not fixed — invented `isUsedForSpecialStage()` gate
+
+`CheckpointObjectInstance.shouldSpawnStars` gates on an `isUsedForSpecialStage()` flag
+with no ROM counterpart at that site: `Obj79_MakeSpecialStars`
+(`docs/s2disasm/s2.asm:44627-44670`) gates only on 2P mode, `Emerald_count != 7` and
+`Ring_count >= 50`. It is provably NOT implicated in the seg7 failure — star-post
+activation never occurs in EHZ2 at all — so it was left alone here. Recorded so it is
+not lost.
