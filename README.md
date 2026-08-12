@@ -284,6 +284,26 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **The special-stage return inherited the previous segment's level frame
+  counter, and Tails stopped jumping (2026-08-12):** with the returned-level
+  segment finally asserting its own physics, the S2 emerald chain surfaced an
+  engine-only player death mid-segment — a divergence the extra title-card ticks
+  had been masking, and one the segment's production-ownership assertion caught
+  rather than hid. The kill was spikes, 906px off-route and 1,678 rows
+  downstream of anything real. The actual onset was Tails failing to make a jump
+  the recording makes: her CPU auto-jump is gated on `andi.b #$3F` over
+  `Level_frame_counter` (`s2.asm:39368-39376`), and the engine reset that counter
+  only when a load requested a sprite-lifecycle change, which a returned-level
+  load does not — so the level inherited `0xE9B` where the ROM had `0x0002` and
+  the gate never lined up. `GM_Level` clears the counter on every non-demo entry
+  (`:4771-4773`), the only increment before `Level_MainLoop` is that loop's own
+  `addq` (`:5092`), and the counter lives in `CrossResetRAM`
+  (`s2.constants.asm:1661-1665`) so `Level_ClrRam` never touches it. Resetting at
+  the title-card release boundary rather than at load also drops the 26
+  pre-main-loop passes' worth of drift the ROM's passes do not produce. The
+  emerald chain stops dying and reaches its physics assert at 8,633 errors;
+  halfpipe segment 2 falls 22,426 → 7,662. Both chains now share one first
+  mismatch, `dynamic_art.edges` at frame 1.
 - **S2 run chains: the returned-level segment now asserts its own physics, and
   the title card stops ticking players (2026-08-12):** both S2 run chains were
   computing a full physics comparison for the segment they return into after a
