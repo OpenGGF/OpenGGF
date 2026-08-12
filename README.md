@@ -284,6 +284,30 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **A third unasserted comparison, and the one-frame sidekick behind it
+  (2026-08-12):** the emerald chain looked two axes from done. It was not: segment
+  7 carried **149,522 physics errors** with `complete: true` and nothing asserted
+  them, because the assertion covered only special-stage returns and that segment
+  is entered by `level_advance`. That is the third comparison in these chains found
+  computed-but-unasserted, after the returned-level segment (58,184) and the
+  transition-gap journal, which had never been evaluated once. Registering every
+  segment attached over a level boundary surfaced it — one axis added to a class
+  already red, with the profile numerically identical and the red-class list
+  unchanged. What it exposed was precise: the **sidekick was exactly one frame
+  ahead at the destination's row 0** while the player matched exactly, with the
+  engine's value at row N equalling the ROM's at row N+1. `GameLoop` carries a
+  one-row latch meaning "this gap row still belongs to the source level's main
+  loop"; a locked title-card iteration returns `SETUP_ONLY` and never reaches the
+  gap-body suppression test, so across a level advance the latch survived all 26
+  title-card rows and was consumed by the release row — a 27th pre-row-0 object
+  pass where the ROM gives 26, and the only such row in the whole 35-segment run.
+  The ROM cannot dispatch there: the release is `Level_StartGame`
+  (`s2.asm:5081-5082`) and `Level_MainLoop` runs `PauseGame` and `WaitForVint`
+  before its `jsr (RunObjects).l` (`:5088-5095`), an ordering that holds in S1 and
+  S3K too. Segment 7 falls to 23,128 errors, the player stops dying short of the
+  star post, its `starpost_special` boundary is observed for the first time,
+  segments 8–10 report zero, and the walk advances four segments. It also clears a
+  pre-existing `TestS1CompleteEmeraldVisualRun` error.
 - **The engine ran a level body across a run-chain transition gap, and a static
   latch decided gap behaviour from whatever ran before (2026-08-12):** the
   emerald run's `seg4_ehz1 → seg5_ehz2` gap emitted 72 art edges against a

@@ -94,7 +94,8 @@ public final class TraceRunDynamicArtGapJournal {
                                 transitions.size())
                         : List.of();
         added = rowsCountedBackFromAdmission(
-                added, admission.unannouncedRows());
+                added, admission.movieLogicalFrame(),
+                admission.unannouncedRows());
 
         TraceRunManifest.Segment source = manifest.segments().get(sourceSegmentIndex);
         TraceRunManifest.Segment destination =
@@ -174,19 +175,34 @@ public final class TraceRunDynamicArtGapJournal {
      * read and no engine state is written; the re-stamped edges are comparison
      * copies.
      *
+     * <p>Recovery only applies to a stamp that is actually stale. Staleness is
+     * visible without any recorded row: a frozen cursor re-announces the row
+     * the admission itself reports, so a stale edge carries
+     * {@code admissionMovieLogicalFrame} exactly, and an edge carrying any
+     * other row was stamped while the cursor was still announcing — it is
+     * already the row it happened on and has nothing to count back. Not every
+     * gap freezes the cursor; where the harness keeps announcing across the
+     * span, the unannounced counter still advances for the frames the engine
+     * spends off-cursor, and counting those back off a live stamp would move a
+     * correct row backwards.
+     *
      * <p>{@code gapEdgeIndex} is renumbered against the recovered rows for the
      * same reason the recorder numbers it per frame: two edges sharing a row
      * are 0 and 1, and a later row restarts at 0.
      */
     public static List<DynamicArtGapTransition> rowsCountedBackFromAdmission(
             List<DynamicArtGapTransition> added,
+            int admissionMovieLogicalFrame,
             int admissionUnannouncedRows) {
         Map<Integer, Integer> nextIndexByRow = new HashMap<>();
         List<DynamicArtGapTransition> rowed = new ArrayList<>(added.size());
         for (DynamicArtGapTransition transition : added) {
             DynamicArtGapTransition.GapEdge edge = transition.edge();
-            int row = rowCountedBackFromAdmission(edge.movieLogicalFrame(),
-                    admissionUnannouncedRows, edge.unannouncedRowsAtEmit());
+            int row = edge.movieLogicalFrame() == admissionMovieLogicalFrame
+                    ? rowCountedBackFromAdmission(edge.movieLogicalFrame(),
+                            admissionUnannouncedRows,
+                            edge.unannouncedRowsAtEmit())
+                    : edge.movieLogicalFrame();
             int index = nextIndexByRow.merge(row, 1, Integer::sum) - 1;
             rowed.add(new DynamicArtGapTransition(
                     new DynamicArtGapTransition.GapEdge(

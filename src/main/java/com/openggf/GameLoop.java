@@ -944,6 +944,13 @@ public class GameLoop {
     }
 
     /**
+     * Set when {@link #exitTitleCard()} releases into {@link GameMode#LEVEL}
+     * during the current iteration, and cleared at the top of every iteration.
+     * Read only by {@link #runGapRowContinuesSourceLevelMainLoop()}.
+     */
+    private boolean titleCardReleasedIntoLevelThisIteration;
+
+    /**
      * True while a run's shared transition-gap row is still the source level's
      * own main-loop iteration, so the ordinary level body must run on it.
      *
@@ -954,10 +961,36 @@ public class GameLoop {
      * or an in-flight blocking transition ({@link #isRewindBlocked()}, which
      * covers a native blocking fade's pending completion and the
      * bonus/ending/zone-act flags); either means the loop has already ended.
+     *
+     * <p>A title-card release into LEVEL on THIS iteration is a third such
+     * write, and it is the one a level-to-level gap actually lands on. Once the
+     * destination level has loaded and its card has been released, the source
+     * level's main loop is provably over: the release IS
+     * {@code Level_StartGame}, which the ROM reaches only after the title-card
+     * leave loop's last iteration (docs/s2disasm/s2.asm:5060-5066, :5081-5082).
+     * The destination's first object pass then comes from
+     * {@code Level_MainLoop}, which runs {@code PauseGame} and
+     * {@code WaitForVint} BEFORE its {@code jsr (RunObjects).l}
+     * (docs/s2disasm/s2.asm:5088-5095) -- so the release row itself dispatches
+     * no object pass at all, and the first one belongs to the destination's
+     * next V-blank, i.e. its recorded row 0. S1 orders the same two routines the
+     * same way ({@code Level_StartGame} at docs/s1disasm/sonic.asm:2990-2991,
+     * then {@code Level_MainLoop}'s {@code WaitForVBlank} at :2998-3001 ahead of
+     * {@code jsr (ExecuteObjects).l} at :3006), and so does S3K
+     * ({@code bclr #7,(Game_mode).w} at docs/skdisasm/sonic3k.asm:7882, then
+     * {@code Wait_VSync} at :7888 ahead of {@code Process_Sprites} at :7894).
+     *
+     * <p>Without this term the latch survived every locked title-card row (a
+     * title-card iteration never reaches the gap-body test) and was consumed by
+     * the release row instead, handing the freshly loaded destination one extra
+     * pre-row-0 object pass. That put its CPU sidekick exactly one
+     * {@code Tails_acceleration} step ahead for the rest of the segment
+     * (docs/s2disasm/s2.asm:38907).
      */
     private boolean runGapRowContinuesSourceLevelMainLoop() {
         boolean levelExitWritten = levelManager == null
                 || levelManager.hasPendingLevelExit()
+                || titleCardReleasedIntoLevelThisIteration
                 || isRewindBlocked();
         return TraceSessionLauncher.runGapRowContinuesSourceLevelMainLoop(
                 currentGameMode, levelExitWritten);
@@ -1176,6 +1209,7 @@ public class GameLoop {
             return;
         }
 
+        titleCardReleasedIntoLevelThisIteration = false;
         if (!prepareAdmittedIteration(doFrameStep)) {
             return;
         }
@@ -3209,6 +3243,10 @@ public class GameLoop {
             TraceSessionLauncher.admitRunDestinationBeforeProductionIfActive(
                     currentGameMode);
             syncPlaybackInputBridge();
+        }
+
+        if (currentGameMode == GameMode.LEVEL) {
+            titleCardReleasedIntoLevelThisIteration = true;
         }
 
         if (gameModeChangeListener != null) {
