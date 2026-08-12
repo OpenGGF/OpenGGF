@@ -110,19 +110,29 @@ details are in the adjacent `TRUST.md`. No generated core or ROM is committed.
   unpaired action-10 experiment was rejected and its production/identity
   cascade was discarded.
 
-  The corrected RED contract is one bounded deferred/coalesced begin: the
+  The corrected contract is one bounded deferred/coalesced begin: the
   three source-identical `$71B4C` observations while the root wait service
   blocks must yield exactly one new kind-4 semantic begin, ordered after the
   kind-6 completion, without retroactively parenting kind 6 and without a
-  push, retry, or recently-closed-ancestry fiction. The native action and
-  state representation remain deliberately unspecified pending design. That
-  design must answer how the bounded deferred record proves CPU/PC/opcode,
-  stack identity and multiplicity; how cancellation/reset/overflow act while
-  it is pending; how three managed callbacks correlate to one semantic begin;
-  and whether raw ABI events need a distinct deferral/materialization proof or
-  can express the order with existing events without ambiguity. The opt-in
-  real gate now asserts only the externally required order and multiplicity;
-  it remains intentionally RED at row 8775.
+  push, retry, or recently-closed-ancestry fiction. ABI-v3 action 11 reserves
+  that future begin against the exact non-child-bearing blocker token. Every
+  physical callback emits marker value 4 and retains the identical managed
+  identity; the blocker's atomic END then emits one adjacent ordinary root
+  BEGIN and consumes the reservation.
+
+  **2026-08-12 action-11 real proof.** A diagnostic core built from the locked
+  source/toolchain at commit `827853924` crosses row 8775 with the required
+  physical order: the prior kind-4 service ends at ordinal 12, kind 6 begins
+  as a root at ordinal 13, three marker-value-4 correlations retain
+  `A7=$FFFDB2` and return `$000B64`, kind 6 ends at ordinal 20, and exactly one
+  new root kind-4 service begins at ordinal 21. The restored opt-in gate checks
+  all four ordinals, all three raw correlations and their common managed
+  identity, and the single release. A diagnostic terminal probe over every
+  remaining manifest row, selected by
+  `OPENGGF_S1_AUDIO_TERMINAL_PROBE=1`, is clean through row 225100 and
+  `Complete(225101)`. The strict S1 reference-observer frontier is therefore
+  the clean exclusive bound **225101**. This is a complete reference
+  observation interval, not a published reference-vs-OpenGGF MATCH claim.
 - Sonic 2: the complete reference movie has two identical observer runs:
   259,590 frames, 169,986,419 events, maximum frame occupancy 1,825, event
   digest prefix `c2b2f823`, and an empty cutoff frontier. Engine comparison is
@@ -248,18 +258,28 @@ Build ID is `5c7cc70998c8b5b1`, and observer identity is
 `6a9dbc44f83429f08845cb609ef14a8b595b11279bc0c12271d8579bedda6cd3`.
 The row-860 proof remains a bounded prefix/capture-boundary result. Row 1548
 was the action-10 contract fault; the clean bounded diagnostic through row 5000
-is the current strict real-run frontier, not a complete-run publication claim.
+was the predecessor strict real-run frontier. The action-11 diagnostic used the
+same ROM and BK2 with patch SHA-256
+`3d7d3c411f27b8490aa1675557d2f8ef6ae2ae09495cfebb7e9c8e03760e5388`,
+raw core SHA-256
+`b1f33a0e030c1998fd56d9ed28142c2c198c0d46bdfaea9462bf5e26a6f7bc08`,
+compressed core SHA-256
+`76fe444068231ddcebed11947f1d6cd5c77aa70417e54892088e9cd637a419e1`,
+and Build ID `db8cab4f70430a16`. It was built and installed only beneath ignored
+`target/audio-parity/native/action11-diagnostic`; no committed native,
+managed, capability, or Java identity literal was repinned. Task 5 owns the
+deterministic paired build and final identity cascade.
 
 ## Verified checkpoint gates
 
 - Complete-run Java schema/store/comparator/CLI and authority focused gate: 155
   tests passing.
 - Sonic 1 normalized state/profile: 68 tests passing.
-- Sonic 1 native/managed reference session: 22 synthetic tests passing. The
-  predecessor manifest's opt-in real gate passed through row 5000, including
-  exact action-9 KEEP/direct-parent promotion and action-10 parent-token retry
-  correlation. The new row-8775 retry-only gate is intentionally RED at native
-  observer configuration as documented above.
+- Sonic 1 native/managed reference session: 28 synthetic tests passing.
+  The opt-in action-11 real gate proves row 8775's exact 12/13/20/21 physical
+  order, three identical callback identities, and one release. A separate
+  diagnostic terminal probe is clean through row 225100 and
+  `Complete(225101)`.
 - Shared observer projection: 21 tests passing, including conditional
   direct-parent promotion and the allocation-free per-frame projection-result
   wrapper.

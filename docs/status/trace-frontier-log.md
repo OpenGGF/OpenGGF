@@ -66436,3 +66436,37 @@ for. Read the count with that in mind.
   opt-in gate remains RED and now pins that required order/multiplicity while
   native pending-state, reset/overflow behavior, managed correlation, and raw
   proof representation remain explicit design questions.
+
+## 2026-08-12 - S1 action-11 reference observation reaches the terminal
+
+- Worktree/branch: `.worktrees/audio-retry-only-direct-parent`,
+  `bugfix/ai-audio-retry-only-direct-parent`, commit context `827853924`.
+  Exact inputs: Sonic 1 World REV01 SHA-1
+  `69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b`; all-emeralds BK2 SHA-256
+  `f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b`.
+- A create-new diagnostic action-11 core/install was built from the locked
+  source/toolchain without repinning committed identity literals. Patch
+  SHA-256 is
+  `3d7d3c411f27b8490aa1675557d2f8ef6ae2ae09495cfebb7e9c8e03760e5388`,
+  raw core SHA-256
+  `b1f33a0e030c1998fd56d9ed28142c2c198c0d46bdfaea9462bf5e26a6f7bc08`,
+  compressed core SHA-256
+  `76fe444068231ddcebed11947f1d6cd5c77aa70417e54892088e9cd637a419e1`,
+  Build ID `db8cab4f70430a16`.
+- Exact opt-in command: `OPENGGF_S1_AUDIO_PREFIX=1 S1_ROM_PATH=<REV01>
+  S1_AUDIO_BK2_PATH=<all-emeralds BK2>
+  BIZHAWK_HOME=target/audio-parity/native/action11-diagnostic/install
+  tools/bizhawk-headless/test.sh --filter 'S1CompleteRunAudioReferenceCaptureTests
+  materialize one deferred begin after row 8775 wait service' --jobs 1`.
+  Result: GREEN. Row 8775 has prior kind-4 END ordinal 12, root kind-6 BEGIN
+  ordinal 13, three marker-value-4 correlations with identical
+  `A7=$FFFDB2`/return `$000B64`, kind-6 END ordinal 20, and exactly one
+  released root kind-4 BEGIN ordinal 21.
+- Bounded probes used the same command with diagnostic-only loop ends of
+  row 20000 and row 50000; both were clean. The reproducible final probe added
+  `OPENGGF_S1_AUDIO_TERMINAL_PROBE=1` to that command, processed every
+  manifest row, and accepted `Complete(225101)`. The next exact S1
+  reference-observer frontier is therefore the clean exclusive bound 225101;
+  there is no later observer-contract fault in this movie. No partial raw file
+  was published by any probe, and this does not claim reference-vs-OpenGGF
+  semantic MATCH.

@@ -104,6 +104,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
         {
             if (Environment.GetEnvironmentVariable("OPENGGF_S1_AUDIO_PREFIX") != "1")
                 throw new TestMain.SkipTestException("OPENGGF_S1_AUDIO_PREFIX is not enabled.");
+            bool terminalProbe=Environment.GetEnvironmentVariable(
+                "OPENGGF_S1_AUDIO_TERMINAL_PROBE")=="1";
             string romPath = Environment.GetEnvironmentVariable("S1_ROM_PATH");
             string moviePath = Environment.GetEnvironmentVariable("S1_AUDIO_BK2_PATH");
             if (string.IsNullOrEmpty(romPath) || !File.Exists(romPath))
@@ -136,7 +138,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     });
                 }
                 session.BeginEpoch();
-                for (int row=manifest.FirstRow;row<=8775;row++)
+                int finalRow=terminalProbe?manifest.ExclusiveEnd-1:8775;
+                for (int row=manifest.FirstRow;row<=finalRow;row++)
                 {
                     AssertEx.Equal(true, frames.MoveNext());
                     Bk2Frame frame=frames.Current;
@@ -147,29 +150,49 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         host.Advance();
                     });
                 }
-                session.Complete(8776);
+                session.Complete(finalRow+1);
             }
             JObject baseline = null;
             JObject directParentRetry = null;
             ushort retryToken=0;
+            ushort deferredHookToken=0;
             foreach (GpgxAudioObserverAdapter.ServiceHook hook
                 in manifest.NativeServiceHooks)
+            {
                 if (hook.Cpu==2&&hook.Pc==0x071B4C&&hook.Action==10
                     &&hook.ExpectedActiveKind==2) retryToken=hook.HookToken;
+                if(hook.Cpu==2&&hook.Pc==0x071B4C&&hook.Action==11
+                    &&hook.ExpectedActiveKind==6)
+                    deferredHookToken=hook.HookToken;
+            }
             uint waitBeginOrdinal=uint.MaxValue;
             uint waitEndOrdinal=uint.MaxValue;
+            uint priorMusicEndOrdinal=uint.MaxValue;
             uint deferredBeginOrdinal=uint.MaxValue;
+            ushort waitServiceToken=0;
+            ushort releasedServiceToken=0;
             int deferredBegins=0;
+            var deferredEvidence=new List<JObject>();
             foreach (string line in output.ToString().Split(new[]{'\n'},
                 StringSplitOptions.RemoveEmptyEntries))
             {
                 JObject record = JObject.Parse(line);
                 if ((string)record["type"] == "baseline") baseline = record;
                 if ((string)record["type"]=="native_event"
+                    &&(int)record["row"]==8775&&(int)record["kind"]==2
+                    &&(int)record["pc"]==0x071C4C
+                    &&(int)record["service_kind"]==4)
+                    priorMusicEndOrdinal=(uint)record["ordinal"];
+                if ((string)record["type"]=="native_event"
                     &&(int)record["row"]==8775&&(int)record["kind"]==1
                     &&(int)record["pc"]==0x003A
                     &&(int)record["service_kind"]==6)
+                {
                     waitBeginOrdinal=(uint)record["ordinal"];
+                    waitServiceToken=(ushort)record["service_token"];
+                    AssertEx.Equal(0,(int)record["parent_token"]);
+                    AssertEx.Equal(0,(int)record["depth"]);
+                }
                 if ((string)record["type"]=="native_event"
                     &&(int)record["row"]==1548&&(int)record["kind"]==10
                     &&(int)record["subject"]==retryToken
@@ -177,7 +200,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 if ((string)record["type"]=="native_event"
                     &&(int)record["row"]==8775&&(int)record["kind"]==2
                     &&(int)record["service_kind"]==6)
+                {
                     waitEndOrdinal=(uint)record["ordinal"];
+                    AssertEx.Equal(waitServiceToken,
+                        (ushort)record["service_token"]);
+                    AssertEx.Equal(0,(int)record["parent_token"]);
+                    AssertEx.Equal(0,(int)record["depth"]);
+                }
                 if ((string)record["type"]=="native_event"
                     &&(int)record["row"]==8775&&(int)record["kind"]==1
                     &&(int)record["pc"]==0x071B4C
@@ -185,7 +214,17 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 {
                     deferredBegins++;
                     deferredBeginOrdinal=(uint)record["ordinal"];
+                    releasedServiceToken=(ushort)record["service_token"];
+                    AssertEx.Equal(0,(int)record["parent_token"]);
+                    AssertEx.Equal(0,(int)record["depth"]);
+                    AssertEx.Equal(2,(int)record["source_cpu"]);
+                    AssertEx.Equal(deferredHookToken,
+                        (ushort)record["subject"]);
                 }
+                if((string)record["type"]=="managed_hook_evidence"
+                    &&(int)record["row"]==8775
+                    &&(int)record["pc"]==0x071B4C)
+                    deferredEvidence.Add(record);
             }
             AssertEx.Equal(true, baseline != null);
             AssertEx.Equal(860, (int)baseline["row"]);
@@ -193,10 +232,45 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(true,directParentRetry!=null);
             AssertEx.Equal(4,(int)directParentRetry["service_kind"]);
             AssertEx.Equal(0,(int)directParentRetry["depth"]);
+            AssertEx.Equal((uint)12,priorMusicEndOrdinal);
             AssertEx.Equal((uint)13,waitBeginOrdinal);
             AssertEx.Equal((uint)20,waitEndOrdinal);
+            AssertEx.Equal(3,deferredEvidence.Count);
+            for(int i=0;i<deferredEvidence.Count;i++)
+            {
+                JArray chain=(JArray)deferredEvidence[i]["native_correlation_events"];
+                AssertEx.Equal(1,chain.Count);
+                AssertEx.Equal(10,(int)chain[0]["event_kind"]);
+                AssertEx.Equal(4,(int)chain[0]["value"]);
+                AssertEx.Equal(4,(int)deferredEvidence[i]["native_marker_value"]);
+                AssertEx.Equal("update_begin",(string)deferredEvidence[i]["name"]);
+                AssertEx.Equal("SERVICE_BEGIN",(string)deferredEvidence[i]["action"]);
+                AssertEx.Equal(deferredHookToken,
+                    (ushort)deferredEvidence[i]["native_hook_token"]);
+                AssertEx.Equal(waitServiceToken,
+                    (ushort)deferredEvidence[i]["native_service_token"]);
+                AssertEx.Equal((ushort)0,
+                    (ushort)deferredEvidence[i]["native_parent_token"]);
+                AssertEx.Equal(waitServiceToken,(ushort)chain[0]["service_token"]);
+                AssertEx.Equal((ushort)0,(ushort)chain[0]["parent_token"]);
+                AssertEx.Equal(deferredHookToken,(ushort)chain[0]["hook_token"]);
+                AssertEx.Equal(6,(int)chain[0]["service_kind"]);
+                AssertEx.Equal(0,(int)chain[0]["depth"]);
+                AssertEx.Equal(2,(int)chain[0]["source_cpu"]);
+                AssertEx.Equal((uint)0x00FFFDB2,
+                    (uint)deferredEvidence[i]["deferred_a7"]);
+                AssertEx.Equal((uint)0x00000B64,
+                    (uint)deferredEvidence[i]["deferred_return_pc"]);
+                AssertEx.Equal(waitEndOrdinal,
+                    (uint)deferredEvidence[i]["blocker_end_ordinal"]);
+                AssertEx.Equal(releasedServiceToken,
+                    (ushort)deferredEvidence[i]["released_service_token"]);
+                AssertEx.Equal(deferredBeginOrdinal,
+                    (uint)deferredEvidence[i]["released_begin_ordinal"]);
+            }
             AssertEx.Equal(1,deferredBegins);
             AssertEx.Equal((uint)21,deferredBeginOrdinal);
+            AssertEx.Equal(waitEndOrdinal+1,deferredBeginOrdinal);
         }
 
         private static string Sha256(string path)
