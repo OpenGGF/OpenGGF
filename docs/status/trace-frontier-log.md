@@ -73696,3 +73696,30 @@ has no level-list entries for them.
 Next: the shared `engine pending: <none>` frontier — the engine never submits
 the Kosinski job the recording expects — is the single highest-value S3K target,
 now witnessed by three independent routes.
+
+## 2026-08-12 — full `-Ptrace-replay` sweep with the Sonic+Tails capture present
+
+Isolated worktree on branch `feature/ai-s3k-st-emeralds-recapture`, on the pom heap raise
+(parent `ec4d4763d`). Command:
+
+```
+rm -rf target/surefire-reports target/trace-reports
+mvn -Ptrace-replay -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+    -Dsonic1.rom.path=<s1.gen> -Dsonic2.rom.path=<s2.gen> -Ds3k.rom.path=<s3k.gen> test
+```
+
+**Tests run: 834, Failures: 9, Errors: 56, Skipped: 4** (220 surefire report
+files, no `OutOfMemoryError`). At the previous `-Xmx2g` the same command died
+mid-fork and reported a truncated 401 — a truncation that looks *better* than
+the real result, because every class alphabetically after `TestS3kMegaRunChain`
+never executed. Any trace-suite number below 834 on this branch is a truncation,
+whatever its failure counts say.
+
+Red set, unchanged from the pre-capture baseline apart from the new route:
+
+| Class | Result |
+|---|---|
+| `TestS2CompleteEmeraldRunChain` | FAIL (1) — pre-existing |
+| `TestS3kKnucklesSuperEmeraldRunChain`, `TestS3kMegaRunChain`, `TestS3kMhzCompleteRunTraceReplay` | ERROR (3) — pre-existing |
+| `TestS3kSonicTails*` (64 classes) | 8 FAIL + 53 ERROR — new frontier, as captured above |
+| `TestS2EhzHalfpipeRoundTripChain` | PASS |
