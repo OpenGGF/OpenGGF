@@ -113,15 +113,28 @@ details are in the adjacent `TRUST.md`. No generated core or ROM is committed.
   ancestry frontiers, and unsigned payload loss while forwarding one row at a
   time. The row-810 arm epoch, YM latches, and empty boundary frontier are
   pinned, as is the known one-active/four-pending full cutoff shape. This is
-  still capture capability
-  only: the staging reader deliberately has no canonical-store authority. A
-  source-exact decoder from the raw 1 KiB driver image into the existing typed
-  S3K normalizer input, including an authoritative locked-on-ROM asset-range
-  catalog, is the next game-owned step. After that, central integration must
-  supply the pinned producer/runtime proofs and the run-local BK2 before a
-  fixed Java reference producer may write a canonical store. There is no
-  published capture, and the profile's reference binding remains
-  `UNAVAILABLE`.
+  still capture capability only: the staging reader deliberately has no
+  canonical-store authority. The raw 1 KiB image now has a source-exact Java
+  decoder into the existing typed S3K normalizer input. It authenticates the
+  4 MiB locked-on ROM before installing the shipped bank catalog, resolves
+  little-endian Z80 window pointers through their owning music/SFX bank, and
+  separately identifies the two ROM-installed Z80 driver images. Unknown bank
+  bytes, pointers outside `$8000..$FFFF`, the unused prefix of music bank `$1C`,
+  invalid stack partitions, and live pointer unions outside their owning range
+  fail closed. Inactive live tracks do not promote stale union bytes into
+  semantic state. The `fix_sndbugs=0` one-up interpretation instead decodes all
+  nine saved tracks: the shipped routine copies all nine, clears their playing
+  bits, and later forces every copied track live during restore.
+
+  The real row-810 boundary image from the final shared core decodes as nine
+  populated music tracks plus the live-SFX overlap, then passes the existing
+  normalizer. That proof also corrected an initially too-short driver-data
+  hypothesis: `Size_of_Snd_driver2_guess` reserves compressed ROM space, while
+  the installed Z80 tables occupy `$1300..$1BFF` under the source guard at
+  `Sound/Z80 Sound Driver.asm:5305-5307`. Central integration must now supply
+  the pinned producer/runtime proofs and the run-local BK2 before a fixed Java
+  reference producer may write a canonical store. There is no published
+  capture, and the profile's reference binding remains `UNAVAILABLE`.
 
 This role/union applicability is derived from
 `docs/skdisasm/Sound/Z80 Sound Driver.asm:25-98`. In particular, the source
@@ -187,7 +200,10 @@ is the current strict real-run frontier, not a complete-run publication claim.
 - Native observer selftests: six harnesses passing.
 - Existing Sonic 2 and Sonic 3 & Knuckles capability/lifecycle suite: 10 tests
   passing, with their prior complete-run duplicate evidence unchanged.
-- S3K Task 2 profile/resolver/normalizer: 18 tests passing.
+- S3K Task 2 profile/resolver/normalizer plus the strict ROM-backed raw-state
+  decoder: 26 tests passing. The decoder covers the shipped bank ranges,
+  installed driver-data pointers, live pointer unions, inactive stale bytes,
+  the nine-track one-up overlap, and strict width/bank/window/stack rejection.
 - S3K game-owned observer profile, bounded capture runner, and raw sink: 12
   synthetic tests passing. The strict Java raw adapter adds 9 tests. Both
   opt-in real power-on-to-row-810 gates pass, including the raw envelope with
