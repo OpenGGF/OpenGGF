@@ -320,10 +320,10 @@ index 32e2f2004..2bbcd0c67 100644
  include ../common.mak
 diff --git a/waterbox/gpgx/cinterface/audio_trace.c b/waterbox/gpgx/cinterface/audio_trace.c
 new file mode 100644
-index 000000000..52a635ab4
+index 000000000..963e2dc48
 --- /dev/null
 +++ b/waterbox/gpgx/cinterface/audio_trace.c
-@@ -0,0 +1,1388 @@
+@@ -0,0 +1,1367 @@
 +#include <limits.h>
 +#include <stddef.h>
 +#include <stdint.h>
@@ -368,7 +368,8 @@ index 000000000..52a635ab4
 +#define ACTION_POP_DIRECT_PARENT_PROMOTE_TOP 8u
 +#define ACTION_POP_DIRECT_PARENT_PROMOTE_TOP_IF_RETURN_OUTSIDE 9u
 +#define ACTION_DIRECT_PARENT_RETRY_MARKER 10u
-+#define ACTION_DEFER_BEGIN_UNTIL_TOP_END 11u
++#define ACTION_RESERVE_DEFERRED_BEGIN 11u
++#define ACTION_CONSUME_DEFERRED_BEGIN 12u
 +
 +#define HOOK_ARM_Z80_PROOFS_ON_COMPLETION 0x01u
 +#define HOOK_PREARM_PERMITTED 0x02u
@@ -495,6 +496,7 @@ index 000000000..52a635ab4
 +{
 +  struct trace_stack_entry blocker;
 +  uint16_t hook_token;
++  uint16_t consume_hook_token;
 +  uint8_t target_kind;
 +  uint8_t cpu;
 +  uint32_t pc;
@@ -667,7 +669,8 @@ index 000000000..52a635ab4
 +static int validate_config(void)
 +{
 +  uint32_t i, j, declared = 0, max_continuation = 0, arm_count = 0;
-+  uint32_t deferred_begin_count = 0;
++  uint32_t deferred_reserve_count = 0, deferred_consume_count = 0;
++  const struct gpgx_audio_service_hook_v1 *deferred_reserve = NULL, *deferred_consume = NULL;
 +  uint8_t expected_mask[TRACE_MASK_BYTES];
 +  memset(expected_mask, 0, sizeof(expected_mask));
 +  memset(trace_kind_lookup, 0, sizeof(trace_kind_lookup));
@@ -758,7 +761,7 @@ index 000000000..52a635ab4
 +    if (!hook->hook_token || hook->action < ACTION_PUSH_BEGIN
 +        || hook->action > (trace_config.abi_version == 1u ? ACTION_TAIL_POP_PUSH
 +          : trace_config.abi_version == 2u ? ACTION_OBSERVATION_MARKER
-+          : ACTION_DEFER_BEGIN_UNTIL_TOP_END)
++          : ACTION_CONSUME_DEFERRED_BEGIN)
 +        || (hook->cpu != GPGX_AUDIO_TRACE_CPU_Z80 && hook->cpu != GPGX_AUDIO_TRACE_CPU_M68K)
 +        || (hook->flags & ~HOOK_FLAGS_ALL) || !hook->opcode_length || hook->opcode_length > 8
 +        || !bytes_are_zero(hook->opcode + hook->opcode_length, 8u - hook->opcode_length)) return 0;
@@ -835,10 +838,11 @@ index 000000000..52a635ab4
 +      }
 +      if (pair_count != 1u) return 0;
 +    }
-+    else if (hook->action == ACTION_DEFER_BEGIN_UNTIL_TOP_END)
++    else if (hook->action == ACTION_RESERVE_DEFERRED_BEGIN
++        || hook->action == ACTION_CONSUME_DEFERRED_BEGIN)
 +    {
 +      const struct gpgx_audio_service_kind_v1 *blocker;
-+      if (trace_config.abi_version != 3u || ++deferred_begin_count != 1u
++      if (trace_config.abi_version != 3u
 +          || hook->cpu != GPGX_AUDIO_TRACE_CPU_M68K
 +          || !hook->service_kind || !kind_for(hook->service_kind)
 +          || !hook->expected_active_kind
@@ -846,6 +850,10 @@ index 000000000..52a635ab4
 +          || (blocker->flags & KIND_ALLOW_CHILDREN)
 +          || hook->flags || hook->range_first || hook->range_count
 +          || !bytes_are_zero(hook->reserved, sizeof(hook->reserved))) return 0;
++      if (hook->action == ACTION_RESERVE_DEFERRED_BEGIN)
++      { deferred_reserve_count++; deferred_reserve = hook; }
++      else
++      { deferred_consume_count++; deferred_consume = hook; }
 +    }
 +    else if (hook->action == ACTION_OBSERVATION_MARKER)
 +    {
@@ -897,6 +905,13 @@ index 000000000..52a635ab4
 +      if (end != 0x2000u) return 0;
 +      trace_arm_hook_index = (uint16_t)i;
 +    }
++  }
++  if (deferred_reserve_count || deferred_consume_count)
++  {
++    if (deferred_reserve_count != 1u || deferred_consume_count != 1u
++        || deferred_reserve->service_kind != deferred_consume->service_kind
++        || deferred_reserve->expected_active_kind != deferred_consume->expected_active_kind)
++      return 0;
 +  }
 +  if (arm_count)
 +  {
@@ -1051,41 +1066,11 @@ index 000000000..52a635ab4
 +static int pop_service(const struct gpgx_audio_service_hook_v1 *hook, uint8_t source, uint32_t pc)
 +{
 +  struct trace_stack_entry entry;
-+  struct gpgx_audio_trace_event *event;
-+  uint16_t token;
 +  if (!trace_depth || trace_stack[trace_depth - 1].kind != hook->expected_active_kind)
 +  { fail_runtime(GPGX_AUDIO_TRACE_FAULT_SERVICE); return 0; }
 +  entry = trace_stack[trace_depth - 1];
 +  if (trace_deferred_begin.pending)
-+  {
-+    uint32_t reservation = range_group_reservation(
-+      hook->range_first, hook->range_count, 0) + 1u;
-+    if (entry.token != trace_deferred_begin.blocker.token
-+        || entry.parent != trace_deferred_begin.blocker.parent
-+        || entry.kind != trace_deferred_begin.blocker.kind
-+        || entry.depth != trace_deferred_begin.blocker.depth)
-+    { fail_runtime(GPGX_AUDIO_TRACE_FAULT_SERVICE); return 0; }
-+    if (!reserve_events(reservation)) return 0;
-+    token = allocate_token();
-+    if (!token) return 0;
-+    if (!emit_completion(&entry, hook->range_first, hook->range_count,
-+        source, pc, hook->hook_token, 0)) return 0;
-+    memset(&trace_stack[--trace_depth], 0, sizeof(trace_stack[0]));
-+    if (trace_depth)
-+    { fail_runtime(GPGX_AUDIO_TRACE_FAULT_STACK); return 0; }
-+    memset(&trace_stack[0], 0, sizeof(trace_stack[0]));
-+    trace_stack[0].token = token;
-+    trace_stack[0].kind = trace_deferred_begin.target_kind;
-+    event = new_event(EVENT_SERVICE_BEGIN);
-+    if (!event) return 0;
-+    fill_ownership(event, &trace_stack[0]);
-+    event->pc = trace_deferred_begin.pc;
-+    event->subject = trace_deferred_begin.hook_token;
-+    event->source_cpu = trace_deferred_begin.cpu;
-+    trace_depth = 1;
-+    memset(&trace_deferred_begin, 0, sizeof(trace_deferred_begin));
-+    return 1;
-+  }
++  { fail_runtime(GPGX_AUDIO_TRACE_FAULT_SERVICE); return 0; }
 +  if (!emit_completion(&entry, hook->range_first, hook->range_count, source, pc, hook->hook_token, 0)) return 0;
 +  memset(&trace_stack[--trace_depth], 0, sizeof(trace_stack[0]));
 +  return 1;
@@ -1101,62 +1086,13 @@ index 000000000..52a635ab4
 +    hook->range_first, hook->range_count, 0) + 1u;
 +  if (!trace_depth || trace_stack[trace_depth - 1].kind != hook->expected_active_kind)
 +  { fail_runtime(GPGX_AUDIO_TRACE_FAULT_SERVICE); return; }
-+  if (!trace_deferred_begin.pending)
-+  {
-+    if (parent_kind && !(parent_kind->flags & KIND_ALLOW_CHILDREN))
-+    { fail_runtime(GPGX_AUDIO_TRACE_FAULT_SERVICE); return; }
-+    if (reserve_events(reservation) && (token = allocate_token()) != 0
-+        && pop_service(hook, source, pc))
-+      push_service_with_token(hook, source, pc, token);
-+    return;
-+  }
-+  else
-+  {
-+    struct trace_stack_entry blocker, root, child;
-+    struct gpgx_audio_trace_event *event;
-+    uint16_t child_token;
-+    const struct gpgx_audio_service_kind_v1 *deferred_kind =
-+      kind_for(trace_deferred_begin.target_kind);
-+    blocker = trace_stack[trace_depth - 1];
-+    if (trace_depth != 1
-+        || blocker.token != trace_deferred_begin.blocker.token
-+        || blocker.parent != trace_deferred_begin.blocker.parent
-+        || blocker.kind != trace_deferred_begin.blocker.kind
-+        || blocker.depth != trace_deferred_begin.blocker.depth
-+        || !deferred_kind || !(deferred_kind->flags & KIND_ALLOW_CHILDREN))
-+    { fail_runtime(GPGX_AUDIO_TRACE_FAULT_SERVICE); return; }
-+    reservation++;
-+    if (!reserve_events(reservation)) return;
-+    token = allocate_token();
-+    if (!token) return;
-+    child_token = allocate_token();
-+    if (!child_token) return;
-+    memset(&root, 0, sizeof(root));
-+    root.token = token;
-+    root.kind = trace_deferred_begin.target_kind;
-+    memset(&child, 0, sizeof(child));
-+    child.token = child_token;
-+    child.parent = token;
-+    child.kind = hook->service_kind;
-+    child.depth = 1;
-+    if (!emit_completion(&blocker, hook->range_first, hook->range_count,
-+        source, pc, hook->hook_token, 0)) return;
-+    event = new_event(EVENT_SERVICE_BEGIN);
-+    if (!event) return;
-+    fill_ownership(event, &root);
-+    event->pc = trace_deferred_begin.pc;
-+    event->subject = trace_deferred_begin.hook_token;
-+    event->source_cpu = trace_deferred_begin.cpu;
-+    event = new_event(EVENT_SERVICE_BEGIN);
-+    if (!event) return;
-+    fill_ownership(event, &child);
-+    event->pc = pc; event->subject = hook->hook_token; event->source_cpu = source;
-+    memset(trace_stack, 0, sizeof(trace_stack));
-+    trace_stack[0] = root;
-+    trace_stack[1] = child;
-+    trace_depth = 2;
-+    memset(&trace_deferred_begin, 0, sizeof(trace_deferred_begin));
-+  }
++  if (trace_deferred_begin.pending)
++  { fail_runtime(GPGX_AUDIO_TRACE_FAULT_SERVICE); return; }
++  if (parent_kind && !(parent_kind->flags & KIND_ALLOW_CHILDREN))
++  { fail_runtime(GPGX_AUDIO_TRACE_FAULT_SERVICE); return; }
++  if (reserve_events(reservation) && (token = allocate_token()) != 0
++      && pop_service(hook, source, pc))
++    push_service_with_token(hook, source, pc, token);
 +}
 +
 +static int pop_direct_parent_promote_top(
@@ -1316,11 +1252,12 @@ index 000000000..52a635ab4
 +  event->value = 3u;
 +}
 +
-+static void defer_begin_until_top_end(
++static void reserve_deferred_begin(
 +  const struct gpgx_audio_service_hook_v1 *hook, uint8_t source, uint32_t pc)
 +{
 +  struct gpgx_audio_trace_event *event;
 +  const struct trace_stack_entry *blocker;
++  uint32_t i;
 +  if (trace_depth != 1 || trace_stack[0].kind != hook->expected_active_kind)
 +  { fail_runtime(GPGX_AUDIO_TRACE_FAULT_SERVICE); return; }
 +  blocker = &trace_stack[0];
@@ -1340,6 +1277,9 @@ index 000000000..52a635ab4
 +  {
 +    trace_deferred_begin.blocker = *blocker;
 +    trace_deferred_begin.hook_token = hook->hook_token;
++    for (i = 0; i < trace_config.hook_count; i++)
++      if (trace_hooks[i].action == ACTION_CONSUME_DEFERRED_BEGIN)
++        trace_deferred_begin.consume_hook_token = trace_hooks[i].hook_token;
 +    trace_deferred_begin.target_kind = hook->service_kind;
 +    trace_deferred_begin.cpu = source;
 +    trace_deferred_begin.pc = pc;
@@ -1350,6 +1290,41 @@ index 000000000..52a635ab4
 +  fill_ownership(event, blocker);
 +  event->pc = pc; event->subject = hook->hook_token; event->source_cpu = source;
 +  event->value = 4u;
++}
++
++static void consume_deferred_begin(
++  const struct gpgx_audio_service_hook_v1 *hook, uint8_t source, uint32_t pc)
++{
++  struct trace_stack_entry blocker, child;
++  struct gpgx_audio_trace_event *event;
++  uint16_t token;
++  if (!trace_deferred_begin.pending || trace_depth != 1)
++  { fail_runtime(GPGX_AUDIO_TRACE_FAULT_SERVICE); return; }
++  blocker = trace_stack[0];
++  if (blocker.token != trace_deferred_begin.blocker.token
++      || blocker.parent != trace_deferred_begin.blocker.parent
++      || blocker.kind != trace_deferred_begin.blocker.kind
++      || blocker.depth != trace_deferred_begin.blocker.depth
++      || hook->hook_token != trace_deferred_begin.consume_hook_token
++      || hook->service_kind != trace_deferred_begin.target_kind
++      || hook->expected_active_kind != trace_deferred_begin.blocker.kind)
++  { fail_runtime(GPGX_AUDIO_TRACE_FAULT_SERVICE); return; }
++  if (trace_depth >= TRACE_MAX_DEPTH)
++  { fail_runtime(GPGX_AUDIO_TRACE_FAULT_STACK); return; }
++  if (!reserve_events(1u)) return;
++  token = allocate_token();
++  if (!token) return;
++  memset(&child, 0, sizeof(child));
++  child.token = token;
++  child.parent = blocker.token;
++  child.kind = trace_deferred_begin.target_kind;
++  child.depth = 1;
++  event = new_event(EVENT_SERVICE_BEGIN);
++  if (!event) return;
++  fill_ownership(event, &child);
++  event->pc = pc; event->subject = hook->hook_token; event->source_cpu = source;
++  trace_stack[trace_depth++] = child;
++  memset(&trace_deferred_begin, 0, sizeof(trace_deferred_begin));
 +}
 +
 +uint8_t gpgx_audio_trace_enter_cpu(uint8_t cpu)
@@ -1416,8 +1391,10 @@ index 000000000..52a635ab4
 +  if (matches != 1 || !proof_matches(selected))
 +  { fail_runtime_at(GPGX_AUDIO_TRACE_FAULT_HOOK_PROOF, cpu, pc); return; }
 +  if (trace_deferred_begin.pending && cpu == GPGX_AUDIO_TRACE_CPU_M68K
-+      && (selected->action != ACTION_DEFER_BEGIN_UNTIL_TOP_END
-+        || selected->hook_token != trace_deferred_begin.hook_token))
++      && !((selected->action == ACTION_RESERVE_DEFERRED_BEGIN
++          && selected->hook_token == trace_deferred_begin.hook_token)
++        || (selected->action == ACTION_CONSUME_DEFERRED_BEGIN
++          && selected->hook_token == trace_deferred_begin.consume_hook_token)))
 +  { fail_runtime_at(GPGX_AUDIO_TRACE_FAULT_SERVICE, cpu, pc); return; }
 +  if (selected->action == ACTION_PUSH_BEGIN) push_service(selected, cpu, pc);
 +  else if (selected->action == ACTION_POP_END_AT_PC || selected->action == ACTION_POP_END_FALLTHROUGH)
@@ -1440,8 +1417,10 @@ index 000000000..52a635ab4
 +    pop_direct_parent_promote_top(selected, cpu, pc);
 +  else if (selected->action == ACTION_POP_DIRECT_PARENT_PROMOTE_TOP_IF_RETURN_OUTSIDE)
 +    conditional_pop_direct_parent_promote_top(selected, cpu, pc);
-+  else if (selected->action == ACTION_DEFER_BEGIN_UNTIL_TOP_END)
-+    defer_begin_until_top_end(selected, cpu, pc);
++  else if (selected->action == ACTION_RESERVE_DEFERRED_BEGIN)
++    reserve_deferred_begin(selected, cpu, pc);
++  else if (selected->action == ACTION_CONSUME_DEFERRED_BEGIN)
++    consume_deferred_begin(selected, cpu, pc);
 +}
 +
 +static void record_chip(uint8_t kind, uint16_t subject, uint8_t value)
