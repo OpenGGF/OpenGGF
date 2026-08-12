@@ -3,6 +3,7 @@ package com.openggf.tools.audio.completerun.s3k;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace;
 import java.nio.file.Files;
@@ -28,7 +29,7 @@ class TestS3kCompleteRunReferencePreflight {
         var result = S3kCompleteRunReferencePreflight.preflightPrefixForTesting(
                 raw, TestS3kCompleteRunReferencePreflight::state);
 
-        assertEquals(810, result.baseline().absoluteFrame());
+        assertEquals(810, result.boundaryCandidate().absoluteFrame());
         assertEquals(1, result.frameRows());
         assertEquals(1, result.lagRows());
         assertEquals(1, result.rawEvents());
@@ -42,7 +43,26 @@ class TestS3kCompleteRunReferencePreflight {
                 S3kCompleteRunReferencePreflight.Dependency.RAW_EVENT_SEMANTICS,
                 S3kCompleteRunReferencePreflight.Dependency.CUTOFF_SERVICE_COORDINATES,
                 S3kCompleteRunReferencePreflight.Dependency.REFERENCE_RUNTIME_AUTHORITY,
-                S3kCompleteRunReferencePreflight.Dependency.RUN_LOCAL_BK2), result.dependencies());
+                S3kCompleteRunReferencePreflight.Dependency.RUN_LOCAL_BK2,
+                S3kCompleteRunReferencePreflight.Dependency.BASELINE_OWNERSHIP_PREPUBLICATION),
+                result.dependencies());
+    }
+
+    @Test
+    void blocksAnActiveDecodedBoundaryWhoseProfileOwnerIsNone() throws Exception {
+        Path raw = temporary.resolve("active-boundary.jsonl");
+        String state = "00".repeat(1024);
+        Files.writeString(raw, metadata()
+                + boundary("baseline", "\"row\":810,", state)
+                + boundary("cutoff", "\"exclusive_end\":810,", state));
+
+        var result = S3kCompleteRunReferencePreflight.preflightPrefixForTesting(raw,
+                TestS3kCompleteRunReferencePreflight::activeState);
+
+        assertFalse(result.baselineOwnershipCoherent(),
+                "shared comparison rejects an active role whose exact baseline owner is NONE");
+        assertTrue(result.dependencies().contains(
+                S3kCompleteRunReferencePreflight.Dependency.BASELINE_OWNERSHIP_PREPUBLICATION));
     }
 
     @Test
@@ -82,6 +102,17 @@ class TestS3kCompleteRunReferencePreflight {
                 .map(role -> new CompleteRunAudioTrace.RoleState(role, false, List.of()))
                 .toList();
         return new CompleteRunAudioTrace.NormalizedState(fields, roles);
+    }
+
+    private static CompleteRunAudioTrace.NormalizedState activeState(byte[] ignored) {
+        var inactive = state(ignored);
+        List<CompleteRunAudioTrace.RoleState> roles = new ArrayList<>(inactive.roles());
+        List<CompleteRunAudioTrace.StateField> fields = new ArrayList<>();
+        for (String name : S3kCompleteRunStateNormalizer.ACTIVE_ROLE_FIELDS) {
+            fields.add(new CompleteRunAudioTrace.StateField(name, 0));
+        }
+        roles.set(0, new CompleteRunAudioTrace.RoleState(roles.getFirst().role(), true, fields));
+        return new CompleteRunAudioTrace.NormalizedState(inactive.fields(), roles);
     }
 
     private static String metadata() {

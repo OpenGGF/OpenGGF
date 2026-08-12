@@ -42,11 +42,13 @@ class TestS3kCompleteRunRealRow810DecodeGate {
                 var snapshot = S3kCompleteRunStateDecoder.decode(bytes, catalog);
                 return S3kCompleteRunStateNormalizer.normalizeReference(snapshot, catalog.assets());
             });
-            assertEquals(810, result.baseline().absoluteFrame());
+            assertEquals(810, result.boundaryCandidate().absoluteFrame());
             assertEquals(1, result.frameRows());
             assertEquals(34, result.rawEvents());
             assertEquals(0, result.cutoffActiveServices());
             assertEquals(0, result.cutoffPendingDescendants());
+            assertEquals(false, result.baselineOwnershipCoherent(),
+                    "row 810 has active tracks but no truthful prepublication owners yet");
         } finally {
             Files.deleteIfExists(raw);
         }

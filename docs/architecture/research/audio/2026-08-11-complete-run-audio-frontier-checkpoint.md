@@ -206,20 +206,27 @@ details are in the adjacent `TRUST.md`. No generated core or ROM is committed.
 
   The next game-owned boundary is now implemented as a transactional,
   publication-inert Java preflight over the strict raw stream. It constructs
-  the actual canonical `Baseline`, decodes and profile-validates every frame
+  a decoded boundary-state candidate with no ownership claim, then decodes and
+  profile-validates every frame
   and cutoff state without retaining 433,607 expanded states, assigns each row
   to the exact 67-segment manifest interval or one of its retained gaps, and
   counts every already-validated ABI event kind. A late decoder or normalizer
   failure aborts the entire result. The exact row-810 gate now enters through
-  this preflight and proves baseline row 810, one frame, 34 raw events, and the
+  this preflight and proves boundary row 810, one frame, 34 raw events, and the
   empty prefix cutoff. The preflight cannot write a canonical store and reports
-  four explicit unsatisfied dependencies: native events still need
+  five explicit unsatisfied dependencies: native events still need
   source-owned request/decision/service/lifecycle semantics; global native
   coordinates still need producer-neutral row/ordinal projection for the real
   one-active/four-pending cutoff; reference runtime/observer/capability policy
-  remains centrally unpinned; and the manifest-declared run-local BK2 is still
-  absent. No runtime hash is inferred, no raw event is silently omitted from a
-  fabricated canonical frame, and the `_movies` BK2 remains read-only in place.
+  remains centrally unpinned; the manifest-declared run-local BK2 is still
+  absent; and row-810 ownership still needs prepublication derivation. All nine
+  music roles are active at row 810 while the placeholder profile owners are
+  `NONE`, which the shared comparator correctly rejects. Post-row-810 raw events
+  cannot reconstruct which pre-epoch requests own those live tracks, so the
+  preflight exposes `BASELINE_OWNERSHIP_PREPUBLICATION` rather than fabricating
+  identities. No runtime hash is inferred, no raw event is silently omitted
+  from a fabricated canonical frame, and the `_movies` BK2 remains read-only
+  in place.
 
 This role/union applicability is derived from
 `docs/skdisasm/Sound/Z80 Sound Driver.asm:25-98`. In particular, the source
@@ -330,8 +337,9 @@ frontier, not a reference-vs-OpenGGF semantic MATCH.
   installed driver-data pointers, live pointer unions, inactive stale bytes,
   the `$29`/`$FF` nine-track one-up overlap, and strict
   width/bank/window/hole/stack rejection.
-- S3K publication-inert canonical-state preflight: 3 synthetic tests passing,
-  including transactional rollback and exact segment/gap placement. The
+- S3K publication-inert canonical-state preflight: 4 synthetic tests passing,
+  including transactional rollback, exact segment/gap placement, and the
+  shared-equivalent active-role/`NONE`-owner rejection. The
   opt-in real row-810 test also passes through this boundary with 34 events;
   canonical event/lifecycle and cutoff-coordinate conversion remain the next
   game-owned work rather than an implied publication claim.

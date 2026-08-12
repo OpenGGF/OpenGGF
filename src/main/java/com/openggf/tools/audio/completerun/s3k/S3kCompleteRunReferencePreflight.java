@@ -1,9 +1,9 @@
 package com.openggf.tools.audio.completerun.s3k;
 
 import com.openggf.tools.audio.completerun.CompleteRunAudioProfile;
-import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.Baseline;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.ManifestSegment;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.NormalizedState;
+import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.OwnerOrigin;
 import com.openggf.tools.audio.completerun.s3k.S3kCompleteRunReferenceRawAdapter.Header;
 import com.openggf.tools.audio.completerun.s3k.S3kCompleteRunReferenceRawAdapter.RawBoundary;
 import com.openggf.tools.audio.completerun.s3k.S3kCompleteRunReferenceRawAdapter.RawFrame;
@@ -32,15 +32,24 @@ public final class S3kCompleteRunReferencePreflight {
         RAW_EVENT_SEMANTICS,
         CUTOFF_SERVICE_COORDINATES,
         REFERENCE_RUNTIME_AUTHORITY,
-        RUN_LOCAL_BK2
+        RUN_LOCAL_BK2,
+        BASELINE_OWNERSHIP_PREPUBLICATION
     }
 
-    public record Result(Baseline baseline, NormalizedState terminalState,
+    /** Decoded state at an epoch boundary; it deliberately carries no ownership claim. */
+    public record DecodedBoundaryCandidate(int absoluteFrame, NormalizedState state) {
+        public DecodedBoundaryCandidate {
+            if (absoluteFrame < 0) throw new IllegalArgumentException("boundary frame is negative");
+            Objects.requireNonNull(state, "S3K decoded boundary state");
+        }
+    }
+
+    public record Result(DecodedBoundaryCandidate boundaryCandidate, NormalizedState terminalState,
             long frameRows, long lagRows, long rawEvents, Map<Integer, Long> rawEventKinds,
             Map<String, Long> segmentRows, long gapRows, int cutoffActiveServices,
             int cutoffPendingDescendants, List<Dependency> dependencies) {
         public Result {
-            Objects.requireNonNull(baseline, "S3K preflight baseline");
+            Objects.requireNonNull(boundaryCandidate, "S3K preflight boundary candidate");
             Objects.requireNonNull(terminalState, "S3K preflight terminal state");
             rawEventKinds = Map.copyOf(Objects.requireNonNull(rawEventKinds, "raw event kinds"));
             segmentRows = Map.copyOf(Objects.requireNonNull(segmentRows, "segment rows"));
@@ -54,6 +63,19 @@ public final class S3kCompleteRunReferencePreflight {
 
         /** Publication remains closed until all explicit authority dependencies are removed. */
         public boolean canonicalRecordsReady() { return dependencies.isEmpty(); }
+
+        /** Mirrors the shared comparator's exact role activity/live-owner coherence rule. */
+        public boolean baselineOwnershipCoherent() {
+            var owners = PROFILE.baselineRoleOwners();
+            if (owners.size() != boundaryCandidate.state().roles().size()) return false;
+            for (int index = 0; index < owners.size(); index++) {
+                var role = boundaryCandidate.state().roles().get(index);
+                var owner = owners.get(index);
+                if (role.role() != owner.role()
+                        || role.active() != (owner.owner().origin() != OwnerOrigin.NONE)) return false;
+            }
+            return true;
+        }
     }
 
     /** Runs the exact full raw interval using the authenticated locked-on ROM catalog. */
@@ -96,7 +118,7 @@ public final class S3kCompleteRunReferencePreflight {
         private final Map<Integer, Long> eventKinds = new LinkedHashMap<>();
         private final Map<String, Long> segmentRows = new LinkedHashMap<>();
         private Header header;
-        private Baseline baseline;
+        private DecodedBoundaryCandidate baselineCandidate;
         private NormalizedState terminalState;
         private long frames;
         private long lagRows;
@@ -121,7 +143,7 @@ public final class S3kCompleteRunReferencePreflight {
         @Override
         public void baseline(RawBoundary value) {
             NormalizedState state = project(value.driverState());
-            baseline = new Baseline(value.row(), state, PROFILE.baselineRoleOwners());
+            baselineCandidate = new DecodedBoundaryCandidate(value.row(), state);
         }
 
         @Override
@@ -152,7 +174,7 @@ public final class S3kCompleteRunReferencePreflight {
         @Override
         public void abort() {
             header = null;
-            baseline = null;
+            baselineCandidate = null;
             terminalState = null;
             eventKinds.clear();
             segmentRows.clear();
@@ -169,15 +191,16 @@ public final class S3kCompleteRunReferencePreflight {
         }
 
         private Result result() {
-            if (!committed || header == null || baseline == null || terminalState == null) {
+            if (!committed || header == null || baselineCandidate == null || terminalState == null) {
                 throw new IllegalStateException("S3K reference preflight did not commit");
             }
-            return new Result(baseline, terminalState, frames, lagRows, events, eventKinds,
+            return new Result(baselineCandidate, terminalState, frames, lagRows, events, eventKinds,
                     segmentRows, gaps, cutoffActive, cutoffPending, List.of(
                             Dependency.RAW_EVENT_SEMANTICS,
                             Dependency.CUTOFF_SERVICE_COORDINATES,
                             Dependency.REFERENCE_RUNTIME_AUTHORITY,
-                            Dependency.RUN_LOCAL_BK2));
+                            Dependency.RUN_LOCAL_BK2,
+                            Dependency.BASELINE_OWNERSHIP_PREPUBLICATION));
         }
     }
 
