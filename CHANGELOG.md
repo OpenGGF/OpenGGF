@@ -3,6 +3,21 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: S2's signpost end-of-act fires on the shipped ROM's `fixBugs = 0` branch, so the
+  results art is queued on the first walk-off frame instead of 29 frames later.
+  `Obj0D_Main_State3` is a `fixBugs` site (s2.asm:34815-34838), and the disassembly is built
+  with `fixBugs = 0` (s2.asm:27) because that is what the shipped ROM does. On that un-fixed
+  branch an airborne player takes `bne.s loc_19434`, which skips *only* the `Control_Locked`
+  and `Ctrl_1_Logical` writes and then falls through to the `x_pos >= Camera_Max_X_pos + $128`
+  test -- so end of act fires mid-air. The disassembly's own comment calls the checks "a mess"
+  and describes the edge case. `SignpostObjectInstance.updateWalkOff` had implemented the
+  bug-*fixed* branch (`bne.w return_194D0`), returning outright while airborne, so the engine
+  burned 29 extra airborne frames and only spawned results on landing. Measured: the engine's
+  first walk-off frame already had `centreX` 10966 against a trigger of 10952. The submission
+  at the divergence was identified by brute-forcing the recorder's own fingerprint function
+  against every list in `ArtLoadCues` -- PLC 38 = `PLCptr_Results` (s2.asm:89232), queued by
+  `Load_EndOfAct`'s `LoadPLC2` (:34856-34862) -- not by inference. Emerald-chain segment 6
+  goes 11348 to 24 errors, with the residual now a single terminal row.
 - Fix: the S2 special-stage return re-establishes the sidekick's level boundaries, so Tails'
   kill plane survives a return. ROM `LevelSizeLoad` writes `Tails_Min/Max_X_pos` and
   `Tails_Min/Max_Y_pos` from the same `LevelSize` longs that seed `Camera_Min/Max_*`

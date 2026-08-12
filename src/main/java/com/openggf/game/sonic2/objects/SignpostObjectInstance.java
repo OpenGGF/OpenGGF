@@ -306,23 +306,34 @@ public class SignpostObjectInstance extends BoxObjectInstance implements PostPla
      * ROM: Obj0D_Main_State3 (s2.asm:34593-34621)
      * <p>
      * Each frame:
-     * 1. If player is airborne, return immediately (fixBugs path)
+     * 1. If player is airborne, skip the Control_Locked / forced-right writes
+     *    (fixBugs = 0 branch) but still run the x_pos test
      * 2. Otherwise set Control_Locked and force right input
      * 3. Check: player_center_x >= Camera_Max_X_pos + $128 → trigger end of act
      */
     private void updateWalkOff(AbstractPlayableSprite player) {
-        // Sonic 2 REV01's fixBugs build returns immediately while airborne.
-        // That means both the control lock and the off-screen results trigger
-        // wait until Sonic has actually landed.
-        if (player.getAir()) {
-            return;
+        // fixBugs conditional (docs/s2disasm/s2.asm:34815-34838). The
+        // disassembly is built with fixBugs = 0 (s2.asm:27), which is what the
+        // shipped REV01 ROM does, so the engine takes the UNFIXED branch:
+        //
+        //   fixBugs = 0 (taken): "btst #status.player.in_air,... / bne.s
+        //       loc_19434" -- an airborne player skips ONLY the Control_Locked /
+        //       Ctrl_1_Logical writes and falls straight through to the x_pos
+        //       test, so Load_EndOfAct can and does trigger mid-air.
+        //   fixBugs = 1 (not taken): "bne.w return_194D0" -- returns outright,
+        //       so both the control lock and the results trigger wait for a
+        //       landing. The fix exists because the un-fixed path lets the
+        //       player dodge the control lock by jumping at the right edge.
+        //
+        // The engine previously returned early here, i.e. it implemented the
+        // bug-fixed branch, which deferred Load_EndOfAct until Sonic landed.
+        if (!player.getAir()) {
+            // Obj0D runs after Sonic's own slot in ExecuteObjects, so its
+            // Control_Locked / Ctrl_1_Logical writes affect the next frame's
+            // player control pass, not the current one.
+            player.queueForceInputRightForNextFrame(true);
+            player.queueControlLockedForNextFrame(true);
         }
-
-        // Obj0D runs after Sonic's own slot in ExecuteObjects, so its
-        // Control_Locked / Ctrl_1_Logical writes affect the next frame's
-        // player control pass, not the current one.
-        player.queueForceInputRightForNextFrame(true);
-        player.queueControlLockedForNextFrame(true);
 
         // ROM: move.w (MainCharacter+x_pos).w,d0
         //      move.w (Camera_Max_X_pos).w,d1
