@@ -284,6 +284,25 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **The S2 title card holds for its PLC drain, not a fitted 60 frames
+  (2026-08-12):** `TitleCardManager` carried `DISPLAY_HOLD_DURATION = 60` under a
+  comment openly rationalising it as a stand-in for hardware decompression time —
+  the sixth invented duration found in this line of work. It needed no recorded
+  data to remove, because the ROM computes it: `Level_TtlCard` loops while the
+  zone-name piece is off-target **or** `tst.l (Plc_Buffer).w` is nonzero
+  (`s2.asm:4914-4924`), and `ProcessDPLC` decompresses exactly six patterns per
+  VBlank (`:2202-2213`, the ROM's own comment noting S1 processed nine). The hold
+  is therefore outstanding patterns ÷ 6, and S2 now matches the S1 implementation
+  that already modelled it. Recorded plainly: this has **zero** measured effect on
+  any trace axis, because the replay path routes headless loads through the
+  skipped-presentation lifecycle and never executes this code — it is an accuracy
+  fix for the visual path, and nothing in the suite yet compares visual
+  title-card length against a recording. The investigation that produced it also
+  retired a live design question: the surplus gap edges were thought to need the
+  recorded hardware-timing sidecar, but with the drain rate a ROM constant the
+  duration is fully derivable, so no contract amendment is warranted. The 60
+  surplus edges and the 144 un-vsynced level-load rows behind them remain
+  unexplained.
 - **The post-act fade is a frozen fade, and the chain admits a level the way
   production does (2026-08-12):** two more divergences behind the emerald run.
   ROM `Level_MainLoop` tests `Level_Inactive_flag` in the instruction immediately
