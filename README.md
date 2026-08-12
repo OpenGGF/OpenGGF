@@ -284,6 +284,26 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **The title card was not treated as a DMA service boundary, and four player
+  DPLC transfers rode across the gap (2026-08-12):** with the returned-level
+  segment asserting its physics and the frame counter fixed, both S2 chains
+  converged on one shared first mismatch — `dynamic_art.edges` at frame 1 — which
+  turned out to be a single wrong rule. `DynamicArtDmaServiceModel` classified
+  `LEVEL_TITLE_CARD` as *not* a dynamic-art DMA service boundary, while the enum's
+  own doc comment already listed `Vint_TitleCard` among the `ProcessDMAQueue`
+  callers. The ROM sides with the comment: the `Level_TtlCard` wait loop
+  (`s2.asm:4914-4925`) and the 25 leave-loop iterations after `InitPlayers`
+  (`:5060-5066`) both set `Vint_routine = VintID_TitleCard`, and that V-int
+  (`:1005`) calls `ProcessDMAQueue` at `:1046`. So the four player DPLC transfers
+  queued by the returned level's pre-`Level_MainLoop` passes were never drained
+  during the transition gap; the engine carried all four across it and retired
+  them together on the first serviced V-blank, publishing spurious `completed`
+  edges on the segment's first row and skewing every later edge ordinal for the
+  rest of the segment. Moving one enum constant between switch arms took the
+  emerald chain's returned segment 8,633 → 65 errors and the halfpipe chain's
+  7,662 → 65, with both now diverging first at the same deeper frontier
+  (`queue.s2_nemesis_plc.busy` at frame 52) — a PLC-queue question rather than a
+  dynamic-art one.
 - **The special-stage return inherited the previous segment's level frame
   counter, and Tails stopped jumping (2026-08-12):** with the returned-level
   segment finally asserting its own physics, the S2 emerald chain surfaced an

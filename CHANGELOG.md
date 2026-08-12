@@ -3,6 +3,25 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: S2's title-card V-int is a dynamic-art DMA service boundary.
+  `Level_TtlCard`'s wait loop (s2.asm:4914-4925) and the 25 leave-loop iterations
+  that follow `InitPlayers` (:5060-5066) both run with
+  `Vint_routine = VintID_TitleCard`, so their V-int is `Vint_TitleCard`
+  (:1005), which calls `ProcessDMAQueue` at :1046 -- a site
+  `DynamicArtDmaServiceModel.SONIC_2_PROCESS_DMA_QUEUE`'s own doc comment
+  already listed while the switch classified `LEVEL_TITLE_CARD` as no service.
+  Player DPLC work those pre-`Level_MainLoop` passes queue is therefore drained
+  by the very next V-int and never survives into the level's first main-loop
+  row. The engine instead carried it across the whole transition gap and retired
+  all of it on the returned level's first serviced V-blank, publishing spurious
+  `completed` gap edges on segment row 1 and skewing every later edge ordinal by
+  the same count for the rest of the segment. Measured on the returned-level
+  seg2 physics assert: `TestS2EhzHalfpipeRoundTripChain` 7662 -> 65 errors and
+  `TestS2CompleteEmeraldRunChain` 8633 -> 65, both now first diverging at frame
+  52 on `queue.s2_nemesis_plc.busy`. Both standalone seg2 oracles stay at 0
+  errors, `TestS1GhzMazeRoundTripChain` stays green, and the full
+  `-Ptrace-replay` profile is unchanged elsewhere (770 tests; the same three
+  pre-existing S3K `KOS_DECOMPRESSION_QUEUE` errors before and after).
 - Fix: S2 resets `Level_frame_counter` when the title card releases, on a
   special-stage return as well as a fresh entry. `GM_Level` clears the counter on every
   non-demo level entry (s2.asm:4771-4773) and nothing before `Level_MainLoop` advances it

@@ -73143,3 +73143,35 @@ same iteration). No constant was introduced.
 - Next frontier: the seg2 leader-physics residual that kills Sonic on the emerald route.
   The seg2 report exposes only `errorCount`, `firstNonCameraPhysicsMismatch` and
   `recentMismatches`, so a per-frame first-leader-divergence probe is the next step.
+
+## 2026-08-12 - S2 returned-level seg2 dynamic-art edge frontier moved to frame 52
+
+- Worktree `<scratch>/edge-r53`, branch
+  `bugfix/ai-s2-titlecard-dma-queue`, over `c30d6e8f8`.
+- Command (control and after, identical):
+  `rm -rf target/surefire-reports target/trace-reports; mvn -Ptrace-replay
+  -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+  -Dsonic1.rom.path=<s1.gen> -Dsonic2.rom.path=<s2.gen>
+  -Ds3k.rom.path=<s3k.gen> "-Dtest=..." test`.
+- Control at `c30d6e8f8`: `TestS2CompleteEmeraldRunChain` seg2 8633 errors,
+  first non-camera mismatch frame 1 `dynamic_art.edges` rom=[] engine=[0..5];
+  `TestS2EhzHalfpipeRoundTripChain` seg2 7662 errors, frame 1
+  `dynamic_art.edges` rom=[0] engine=[0..4].
+- After: both chains 65 errors, first non-camera mismatch frame 52
+  `queue.s2_nemesis_plc.busy` rom=true engine=false. That is the new frontier
+  for both chains.
+- Cause: `DynamicArtDmaServiceModel.SONIC_2_PROCESS_DMA_QUEUE` classified
+  `LEVEL_TITLE_CARD` as not servicing the DMA queue, but `Vint_TitleCard`
+  (s2.asm:1005) calls `ProcessDMAQueue` (:1046). Four player DPLC transfers
+  submitted by the returned level's pre-main-loop title-card passes survived the
+  whole transition gap and were retired together on segment row 1.
+- Regression scope: `"-Dtest=*TraceReplay"` 127 run / 0 failures / 1 error
+  (pre-existing `TestS3kMhzCompleteRunTraceReplay`
+  `KOS_DECOMPRESSION_QUEUE#335`), identical to control. Full `-Ptrace-replay`
+  profile 770 run / 2 failures / 3 errors both before and after, with the same
+  three S3K `KOS_DECOMPRESSION_QUEUE` errors on each side.
+- Open, ROM-derived, deliberately NOT changed this round (no measurement):
+  `LEVEL_SELECT` is classified false but `LevelSelect_Main` runs
+  `VintID_Menu` (s2.asm:12468) and `Vint_Menu` calls `ProcessDMAQueue`
+  (:1138); `SPECIAL_STAGE_PAUSE` is classified true but
+  `Vint_Pause_specialStage` (:818-836) never reaches `ProcessDMAQueue`.
