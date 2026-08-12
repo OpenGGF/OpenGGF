@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using BizHawk.Headless.Gpgx;
 using Newtonsoft.Json.Linq;
@@ -22,6 +23,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "S1CompleteRunAudioReferenceCaptureTests reject malformed and mismatched manifests",
                 RejectsMalformedAndMismatchedManifest));
+            tests.Add(new TestMain.TestCase(
+                "S1CompleteRunAudioReferenceCaptureTests bound manifest bytes strings and UTF8",
+                BoundsManifestBytesStringsAndUtf8));
             tests.Add(new TestMain.TestCase(
                 "S1CompleteRunAudioReferenceCaptureTests keep retries in one managed service",
                 KeepsRetryInOneManagedService));
@@ -115,6 +119,21 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "S1CompleteRunAudioReferenceCaptureTests reserve again after deferred child end",
                 ReservesAgainAfterDeferredChildEnd));
+            tests.Add(new TestMain.TestCase(
+                "S1CompleteRunAudioReferenceCaptureTests rotate publication after same blocker relay",
+                RotatesPublicationAfterSameBlockerRelay));
+            tests.Add(new TestMain.TestCase(
+                "S1CompleteRunAudioReferenceCaptureTests bound rotating blocker relays",
+                BoundsRotatingBlockerRelays));
+            tests.Add(new TestMain.TestCase(
+                "S1CompleteRunAudioReferenceCaptureTests enforce held frame and evidence caps",
+                EnforcesHeldFrameAndEvidenceCaps));
+            tests.Add(new TestMain.TestCase(
+                "S1CompleteRunAudioReferenceCaptureTests make output failures terminal",
+                MakesOutputFailuresTerminal));
+            tests.Add(new TestMain.TestCase(
+                "S1CompleteRunAudioReferenceCaptureTests preserve successful raw bytes",
+                PreservesSuccessfulRawBytes));
             tests.Add(new TestMain.TestCase(
                 "S1CompleteRunAudioReferenceCaptureTests observe ordinary driverinput entry without consuming",
                 ObservesOrdinaryDriverInputEntryWithoutConsuming));
@@ -408,6 +427,27 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 line.Length=0;
                 if(inner==null)throw new InvalidDataException(message);
                 throw new InvalidDataException(message,inner);
+            }
+        }
+
+        private sealed class FailingWriter : StringWriter
+        {
+            internal int RemainingCharacters;
+
+            internal FailingWriter(int remainingCharacters)
+                :base(System.Globalization.CultureInfo.InvariantCulture)
+            {
+                RemainingCharacters=remainingCharacters;
+            }
+
+            public override void Write(string value)
+            {
+                if(value==null)return;
+                int accepted=Math.Min(RemainingCharacters,value.Length);
+                if(accepted!=0)base.Write(value.Substring(0,accepted));
+                RemainingCharacters-=accepted;
+                if(accepted!=value.Length)throw new IOException(
+                    "injected output failure");
             }
         }
 
@@ -1373,7 +1413,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 AssertEx.Throws<InvalidOperationException>(()=>
                     session.CaptureFrame(861,()=>{}),"faulted");
                 AssertEx.Throws<InvalidOperationException>(()=>
-                    session.Complete(861),"pending");
+                    session.Complete(861),"faulted");
             }
         }
 
@@ -1571,6 +1611,409 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 value=>value["native_marker_value"]!=null
                     &&value["native_marker_value"].Type==JTokenType.Integer
                     &&(int)value["native_marker_value"]==4).Count);
+        }
+
+        private static void RotatesPublicationAfterSameBlockerRelay()
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDB2);
+                current.SetU32(0xFDB2,0x00000B64);
+                if(frame==1)
+                {
+                    api.VisitZ80(0x003A,current);
+                    Visit(current,api,0x071B4C);
+                    return;
+                }
+                Visit(current,api,0x071B82);
+                Visit(current,api,0x071C4C);
+                if(frame==2)
+                {
+                    Visit(current,api,0x071B4C);
+                    return;
+                }
+                api.VisitZ80(0x0077,current);
+                api.VisitZ80(0x00AC,current);
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                session.CaptureFrame(860,host.Advance);
+                long firstGeneration=session.PendingGenerationIdForTesting;
+                AssertEx.Equal(0,CountRecords(output.ToString(),"frame_begin"));
+                session.CaptureFrame(861,host.Advance);
+                AssertEx.Equal(1,session.HeldFrameCountForTesting);
+                AssertEx.Equal(true,session.PendingGenerationIdForTesting
+                    >firstGeneration);
+                AssertEx.Equal(1,CountRecords(output.ToString(),"frame_begin"));
+                AssertEx.Equal(860,(int)Record(output.ToString(),"frame_begin",0)["row"]);
+                session.CaptureFrame(862,host.Advance);
+                session.Complete(863);
+            }
+            string raw=output.ToString();
+            AssertEx.Equal(3,CountRecords(raw,"frame_begin"));
+            AssertEx.Equal(3,CountRecords(raw,"frame_end"));
+            AssertEx.Equal(2,Records(raw,"managed_hook_evidence",value=>(uint)value["pc"]
+                ==0x071B4C&&(int)value["native_marker_value"]==4).Count);
+        }
+
+        private static void EnforcesHeldFrameAndEvidenceCaps()
+        {
+            int exactFrameCharacters=JsonLine(new JObject
+                {{"type","frame_begin"},{"row",860}}).Length
+                +JsonLine(new JObject{{"type","frame_end"},{"row",860}}).Length;
+            var exactFrameApi=new FakeTraceApi();
+            var exactFrameHost=new FakeS1Host(null);
+            using(var session=CreateSession(exactFrameHost,exactFrameApi,
+                new StringWriter(),new S1CompleteRunAudioReferenceCapture
+                    .DeferredPublicationLimits(
+                        frameCharacters:exactFrameCharacters)))
+                session.CaptureFrame(860,exactFrameHost.Advance);
+            var shortFrameApi=new FakeTraceApi();
+            var shortFrameHost=new FakeS1Host(null);
+            using(var session=CreateSession(shortFrameHost,shortFrameApi,
+                new StringWriter(),new S1CompleteRunAudioReferenceCapture
+                    .DeferredPublicationLimits(
+                        frameCharacters:exactFrameCharacters-1)))
+                AssertEx.Throws<InvalidOperationException>(()=>
+                    session.CaptureFrame(860,shortFrameHost.Advance),
+                    "character limit");
+
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDB2);
+                current.SetU32(0xFDB2,0x00000B64);
+                if(frame==1)
+                {
+                    api.VisitZ80(0x003A,current);
+                    Visit(current,api,0x071B4C);
+                }
+            });
+            var limits=new S1CompleteRunAudioReferenceCapture
+                .DeferredPublicationLimits(newHeldFrames:2,evidenceRecords:1);
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output,limits))
+            {
+                session.CaptureFrame(860,host.Advance);
+                long generation=session.PendingGenerationIdForTesting;
+                long evidenceCharge=session.RetainedEvidenceCharactersForTesting;
+                AssertEx.Equal(1,session.HeldFrameCountForTesting);
+                AssertEx.Equal(1,session.RetainedEvidenceCountForTesting);
+                session.CaptureFrame(861,host.Advance);
+                AssertEx.Equal(2,session.HeldFrameCountForTesting);
+                AssertEx.Equal(generation,session.PendingGenerationIdForTesting);
+                long characters=session.HeldFrameCharactersForTesting;
+                AssertEx.Throws<InvalidOperationException>(()=>
+                    session.CaptureFrame(862,host.Advance),"held-frame limit");
+                AssertEx.Equal(2,session.HeldFrameCountForTesting);
+                AssertEx.Equal(characters,session.HeldFrameCharactersForTesting);
+                AssertEx.Equal(0,output.ToString().IndexOf(
+                    "{\"type\":\"metadata\"",StringComparison.Ordinal));
+                AssertEx.Throws<InvalidOperationException>(()=>
+                    session.CaptureFrame(862,()=>{}),"faulted");
+
+                var exactEvidenceApi=new FakeTraceApi();
+                var exactEvidenceHost=new FakeS1Host((current,frame)=>
+                {
+                    current.SetCpuRegister("A7",0x00FFFDB2);
+                    current.SetU32(0xFDB2,0x00000B64);
+                    exactEvidenceApi.VisitZ80(0x003A,current);
+                    Visit(current,exactEvidenceApi,0x071B4C);
+                });
+                using(var exactSession=CreateSession(exactEvidenceHost,
+                    exactEvidenceApi,new StringWriter(),
+                    new S1CompleteRunAudioReferenceCapture
+                        .DeferredPublicationLimits(
+                            evidenceCharacters:evidenceCharge)))
+                    exactSession.CaptureFrame(860,exactEvidenceHost.Advance);
+                var shortEvidenceApi=new FakeTraceApi();
+                var shortEvidenceHost=new FakeS1Host((current,frame)=>
+                {
+                    current.SetCpuRegister("A7",0x00FFFDB2);
+                    current.SetU32(0xFDB2,0x00000B64);
+                    shortEvidenceApi.VisitZ80(0x003A,current);
+                    Visit(current,shortEvidenceApi,0x071B4C);
+                });
+                using(var shortSession=CreateSession(shortEvidenceHost,
+                    shortEvidenceApi,new StringWriter(),
+                    new S1CompleteRunAudioReferenceCapture
+                        .DeferredPublicationLimits(
+                            evidenceCharacters:evidenceCharge-1)))
+                    AssertEx.Throws<InvalidOperationException>(()=>
+                        shortSession.CaptureFrame(860,shortEvidenceHost.Advance),
+                        "evidence character limit");
+            }
+
+            var overflowApi=new FakeTraceApi();
+            var overflowHost=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDB2);
+                current.SetU32(0xFDB2,0x00000B64);
+                overflowApi.VisitZ80(0x003A,current);
+                Visit(current,overflowApi,0x071B4C);
+                Visit(current,overflowApi,0x071B4C);
+            });
+            using(var session=CreateSession(overflowHost,overflowApi,
+                new StringWriter(),limits))
+                AssertEx.Throws<InvalidOperationException>(()=>
+                    session.CaptureFrame(860,overflowHost.Advance),
+                    "evidence record limit");
+
+            var cutoffApi=new FakeTraceApi();
+            var cutoffHost=new FakeS1Host((current,frame)=>
+            {
+                if(frame!=1)return;
+                current.SetCpuRegister("A7",0x00FFFDB2);
+                current.SetU32(0xFDB2,0x00000B64);
+                cutoffApi.VisitZ80(0x003A,current);
+                Visit(current,cutoffApi,0x071B4C);
+            });
+            using(var session=CreateSession(cutoffHost,cutoffApi,
+                new StringWriter()))
+            {
+                session.ObservePreEpochFrame(859,null,cutoffHost.Advance);
+                session.BeginEpoch();
+                for(int row=860;row<=863;row++)
+                    session.CaptureFrame(row,cutoffHost.Advance);
+                AssertEx.Equal(4,session.HeldFrameCountForTesting);
+                AssertEx.Throws<InvalidOperationException>(()=>
+                    session.CaptureFrame(864,cutoffHost.Advance),
+                    "end frame failed");
+                AssertEx.Equal(4,session.HeldFrameCountForTesting);
+            }
+        }
+
+        private static void BoundsRotatingBlockerRelays()
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDB2);
+                current.SetU32(0xFDB2,0x00000B64);
+                if(frame!=1)
+                {
+                    Visit(current,api,0x071B82);
+                    Visit(current,api,0x071C4C);
+                    api.VisitZ80(0x0077,current);
+                    api.VisitZ80(0x00AC,current);
+                }
+                if(frame<=10)
+                {
+                    api.VisitZ80(0x003A,current);
+                    Visit(current,api,0x071B4C);
+                }
+            });
+            var output=new StringWriter();
+            long previousGeneration=0,peakCharacters=0;
+            using(var session=CreateSession(host,api,output))
+            {
+                for(int row=860;row<=869;row++)
+                {
+                    session.CaptureFrame(row,host.Advance);
+                    AssertEx.Equal(1,session.HeldFrameCountForTesting);
+                    AssertEx.Equal(true,session.PendingGenerationIdForTesting
+                        >previousGeneration);
+                    previousGeneration=session.PendingGenerationIdForTesting;
+                    peakCharacters=Math.Max(peakCharacters,
+                        session.HeldFrameCharactersForTesting);
+                }
+                session.CaptureFrame(870,host.Advance);
+                AssertEx.Equal(0,session.HeldFrameCountForTesting);
+                AssertEx.Equal(0L,session.HeldFrameCharactersForTesting);
+                session.Complete(871);
+            }
+            AssertEx.Equal(11,CountRecords(output.ToString(),"frame_begin"));
+            AssertEx.Equal(true,peakCharacters>0);
+        }
+
+        private static void MakesOutputFailuresTerminal()
+        {
+            var metadataApi=new FakeTraceApi();
+            var metadataHost=new FakeS1Host(null);
+            var metadataOutput=new FailingWriter(0);
+            using(var session=CreateSession(metadataHost,metadataApi,
+                metadataOutput))
+            {
+                AssertEx.Throws<IOException>(()=>session.BeginEpoch(),
+                    "injected output failure");
+                int calls=metadataApi.Calls.Count;
+                AssertEx.Throws<InvalidOperationException>(()=>
+                    session.CaptureFrame(860,metadataHost.Advance),"faulted");
+                AssertEx.Throws<InvalidOperationException>(()=>
+                    session.Complete(860),"faulted");
+                AssertEx.Equal(calls,metadataApi.Calls.Count);
+            }
+
+            var frameApi=new FakeTraceApi();
+            var frameHost=new FakeS1Host(null);
+            var frameOutput=new FailingWriter(int.MaxValue);
+            using(var session=CreateSession(frameHost,frameApi,frameOutput))
+            {
+                session.BeginEpoch();
+                frameOutput.RemainingCharacters=7;
+                AssertEx.Throws<InvalidOperationException>(()=>
+                    session.CaptureFrame(860,frameHost.Advance),
+                    "injected output failure");
+                AssertEx.Equal(0,session.HeldFrameCountForTesting);
+                int calls=frameApi.Calls.Count;
+                AssertEx.Throws<InvalidOperationException>(()=>
+                    session.CaptureFrame(860,frameHost.Advance),"faulted");
+                AssertEx.Throws<InvalidOperationException>(()=>
+                    session.Complete(861),"faulted");
+                AssertEx.Equal(calls,frameApi.Calls.Count);
+            }
+
+            var capApi=new FakeTraceApi();
+            var capHost=new FakeS1Host(null);
+            using(var session=CreateSession(capHost,capApi,new StringWriter(),
+                new S1CompleteRunAudioReferenceCapture.DeferredPublicationLimits(
+                    frameCharacters:1)))
+            {
+                session.BeginEpoch();
+                int calls=capApi.Calls.Count;
+                AssertEx.Throws<InvalidOperationException>(()=>
+                    session.CaptureFrame(860,capHost.Advance),
+                    "character limit");
+                AssertEx.Throws<InvalidOperationException>(()=>
+                    session.CaptureFrame(860,capHost.Advance),"faulted");
+                AssertEx.Equal(calls,capApi.Calls.Count);
+            }
+
+            var baselineApi=new FakeTraceApi();
+            var baselineHost=new FakeS1Host(null);
+            var baselineOutput=new StringWriter();
+            using(var session=CreateSession(baselineHost,baselineApi,
+                baselineOutput))session.BeginEpoch();
+            string[] baselineLines=baselineOutput.ToString().Split('\n');
+            long baselineCharacters=baselineLines[1].Length+1;
+            using(var session=CreateSession(new FakeS1Host(null),
+                new FakeTraceApi(),new StringWriter(),
+                new S1CompleteRunAudioReferenceCapture.DeferredPublicationLimits(
+                    aggregateLineCharacters:baselineCharacters)))
+                session.BeginEpoch();
+            var shortBaselineOutput=new StringWriter();
+            using(var session=CreateSession(new FakeS1Host(null),
+                new FakeTraceApi(),shortBaselineOutput,
+                new S1CompleteRunAudioReferenceCapture.DeferredPublicationLimits(
+                    aggregateLineCharacters:baselineCharacters-1)))
+            {
+                AssertEx.Throws<InvalidDataException>(()=>session.BeginEpoch(),
+                    "character limit");
+                AssertEx.Equal(0,shortBaselineOutput.ToString().Length);
+            }
+
+            var activeApi=new FakeTraceApi();
+            var activeHost=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDB2);
+                current.SetU32(0xFDB2,0x00000B64);
+                Visit(current,activeApi,0x071B4C);
+                activeApi.VisitZ80(0x003A,current);
+            });
+            var activeOutput=new StringWriter();
+            using(var session=CreateSession(activeHost,activeApi,activeOutput,
+                new S1CompleteRunAudioReferenceCapture.DeferredPublicationLimits(
+                    baselineActiveServices:1)))
+            {
+                session.ObservePreEpochFrame(859,null,activeHost.Advance);
+                AssertEx.Throws<InvalidOperationException>(()=>
+                    session.BeginEpoch(),"active service bound");
+                AssertEx.Equal(0,activeOutput.ToString().Length);
+            }
+        }
+
+        private static void PreservesSuccessfulRawBytes()
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host(null);
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                session.CaptureFrame(860,host.Advance);
+                session.Complete(861);
+            }
+            string zeros=new string('0',1472*2);
+            string expected=JsonLine(new JObject
+                {
+                    ["type"]="metadata",
+                    ["schema"]="openggf.s1-complete-run-audio-raw.v1",
+                    ["rom_sha1"]=RomIdentity.Sonic1Rev01Sha1,
+                    ["first_row"]=860,["exclusive_end"]=225101,
+                    ["native_abi"]=3,["native_event_size"]=32,
+                    ["native_capacity"]=65536
+                })+JsonLine(new JObject
+                {
+                    ["type"]="baseline",["row"]=860,
+                    ["state_start"]=0xF000,["state_hex"]=zeros,
+                    ["ym_port0_latch"]=0,["ym_port1_latch"]=0,
+                    ["active_services"]=new JArray(),
+                    ["pending_descendants"]=new JArray(),
+                    ["native_arm_epoch"]=0,["native_armed"]=false
+                })+JsonLine(new JObject{{"type","frame_begin"},{"row",860}})
+                +JsonLine(new JObject{{"type","frame_end"},{"row",860}})
+                +JsonLine(new JObject
+                {
+                    ["type"]="terminal",["exclusive_end"]=861,["rows"]=1,
+                    ["orphan_closes"]=0,["opcode_mismatches"]=0,
+                    ["overflows"]=0
+                });
+            AssertEx.Equal(expected,output.ToString());
+            AssertEx.Equal(false,output.ToString().Contains("\r"));
+            AssertEx.Equal(false,output.ToString().StartsWith("\ufeff",
+                StringComparison.Ordinal));
+
+            var deferredApi=new FakeTraceApi();
+            var deferredHost=SameFrameDeferredHost(deferredApi);
+            var deferredOutput=new StringWriter();
+            using(var session=CreateSession(deferredHost,deferredApi,
+                deferredOutput))
+            {
+                session.CaptureFrame(860,deferredHost.Advance);
+                session.Complete(861);
+            }
+            string path=Path.Combine(Path.GetTempPath(),
+                "openggf-s1-audio-bytes-"+Guid.NewGuid().ToString("N"));
+            try
+            {
+                var stagedApi=new FakeTraceApi();
+                var stagedHost=SameFrameDeferredHost(stagedApi);
+                using(var stream=new FileStream(path,FileMode.CreateNew,
+                    FileAccess.Write,FileShare.None))
+                using(var writer=new StreamWriter(stream,
+                    new System.Text.UTF8Encoding(false)))
+                {
+                    using(var session=CreateSession(stagedHost,stagedApi,writer))
+                    {
+                        session.CaptureFrame(860,stagedHost.Advance);
+                        session.Complete(861);
+                    }
+                }
+                byte[] staged=File.ReadAllBytes(path);
+                byte[] expectedBytes=new System.Text.UTF8Encoding(false)
+                    .GetBytes(deferredOutput.ToString());
+                AssertEx.Equal(Convert.ToBase64String(expectedBytes),
+                    Convert.ToBase64String(staged));
+                AssertEx.Equal(false,staged.Length>=3&&staged[0]==0xEF
+                    &&staged[1]==0xBB&&staged[2]==0xBF);
+            }
+            finally{if(File.Exists(path))File.Delete(path);}
+        }
+
+        private static FakeS1Host SameFrameDeferredHost(FakeTraceApi api)
+        {
+            return new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDB2);
+                current.SetU32(0xFDB2,0x00000B64);
+                api.VisitZ80(0x003A,current);
+                Visit(current,api,0x071B4C);
+                Visit(current,api,0x071B82);
+                Visit(current,api,0x071C4C);
+                api.VisitZ80(0x0077,current);
+                api.VisitZ80(0x00AC,current);
+            });
         }
 
         private static void AcceptsVariableDeferredObservationCounts()
@@ -2562,6 +3005,55 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     duplicate, RomForManifest(duplicate)), "duplicate");
         }
 
+        private static void BoundsManifestBytesStringsAndUtf8()
+        {
+            string exact=null,longString=null,invalid=null,fifo=null;
+            try
+            {
+                JObject root=JObject.Parse(File.ReadAllText(FixturePath()));
+                exact=WriteScratch(root.ToString(Newtonsoft.Json.Formatting.None));
+                byte[] rom=RomForManifest(exact);
+                long exactBytes=new FileInfo(exact).Length;
+                var exactLimits=new S1CompleteRunAudioReferenceCapture
+                    .DeferredPublicationLimits(manifestBytes:exactBytes);
+                S1CompleteRunAudioReferenceCapture.LoadManifest(exact,rom,exactLimits);
+                AssertEx.Throws<InvalidDataException>(()=>
+                    S1CompleteRunAudioReferenceCapture.LoadManifest(exact,rom,
+                        new S1CompleteRunAudioReferenceCapture.DeferredPublicationLimits(
+                            manifestBytes:exactBytes-1)),"byte limit");
+
+                root["m68k_hooks"][0]["name"]=new string('x',1025);
+                longString=WriteScratch(
+                    root.ToString(Newtonsoft.Json.Formatting.None));
+                AssertEx.Throws<InvalidDataException>(()=>
+                    S1CompleteRunAudioReferenceCapture.LoadManifest(
+                        longString,RomForManifest(longString)),"string");
+
+                invalid=Path.Combine(Path.GetTempPath(),
+                "openggf-s1-audio-manifest-"+Guid.NewGuid().ToString("N")+".json");
+                File.WriteAllBytes(invalid,new byte[]{(byte)'{',0xC3,(byte)'}'});
+                AssertEx.Throws<InvalidDataException>(()=>
+                    S1CompleteRunAudioReferenceCapture.LoadManifest(
+                        invalid,rom),"UTF-8");
+
+                fifo=Path.Combine(Path.GetTempPath(),
+                    "openggf-s1-audio-manifest-"+Guid.NewGuid().ToString("N"));
+                AssertEx.Equal(0,MkFifo(fifo,384));
+                AssertEx.Throws<InvalidDataException>(()=>
+                    S1CompleteRunAudioReferenceCapture.LoadManifest(
+                        fifo,rom),"regular file");
+            }
+            finally
+            {
+                foreach(string path in new[]{exact,longString,invalid,fifo})
+                    if(path!=null&&File.Exists(path))File.Delete(path);
+            }
+        }
+
+        [DllImport("libc",EntryPoint="mkfifo",CharSet=CharSet.Ansi,
+            SetLastError=true)]
+        private static extern int MkFifo(string path,uint mode);
+
         private static void KeepsRetryInOneManagedService()
         {
             var api = new FakeTraceApi();
@@ -3367,12 +3859,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 AssertEx.Equal(0, output.ToString().Length);
 
                 api.PublicationStatus = 0;
-                session.BeginEpoch();
                 AssertEx.Throws<InvalidOperationException>(
-                    () => session.BeginEpoch(), "already began");
+                    () => session.BeginEpoch(), "faulted");
             }
-            AssertEx.Equal(2, api.PublicationCalls);
-            AssertEx.Equal(1, CountRecords(output.ToString(), "baseline"));
+            AssertEx.Equal(1, api.PublicationCalls);
+            AssertEx.Equal(0, CountRecords(output.ToString(), "baseline"));
         }
 
         private static void CorrelatesRequestsToLaterDecisions()
@@ -3830,10 +4321,19 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private static S1CompleteRunAudioReferenceCapture.Session CreateSession(
             FakeS1Host host, FakeTraceApi api, TextWriter output)
         {
+            return CreateSession(host,api,output,
+                S1CompleteRunAudioReferenceCapture.DeferredPublicationLimits
+                    .Production);
+        }
+
+        private static S1CompleteRunAudioReferenceCapture.Session CreateSession(
+            FakeS1Host host,FakeTraceApi api,TextWriter output,
+            S1CompleteRunAudioReferenceCapture.DeferredPublicationLimits limits)
+        {
             return new S1CompleteRunAudioReferenceCapture.Session(
                 host, new StrictM68kRegisterReader(host), api,
                 S1CompleteRunAudioReferenceCapture.LoadManifest(
-                    FixturePath(), RomForManifest(FixturePath())), output);
+                    FixturePath(), RomForManifest(FixturePath())), output,limits);
         }
 
         private static void UsesPinnedM68kDebuggerRegisterNames()
@@ -4104,6 +4604,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
             throw new InvalidOperationException("Missing raw record type " + type + ".");
         }
 
+        private static string JsonLine(JObject value)
+        {
+            return value.ToString(Newtonsoft.Json.Formatting.None)+"\n";
+        }
+
         private static List<JObject> Records(string jsonl,string type,
             Func<JObject,bool> predicate)
         {
@@ -4183,6 +4688,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 internal ushort Parent;
                 internal byte Kind;
                 internal byte Depth;
+                internal byte CarriedFrames;
             }
 
             public readonly List<string> Calls = new List<string>();
@@ -4201,6 +4707,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 deferredConsumeHooks=
                     new List<GpgxAudioObserverAdapter.ServiceHook>();
             private bool hasDeferredPair;
+            private bool prepublication;
             private bool deferredPending;
             private ushort deferredOriginToken,deferredOriginParentToken;
             private ushort deferredCurrentToken,deferredCurrentParentToken;
@@ -4378,11 +4885,15 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 deferredCurrentToken=deferredCurrentParentToken=0;
                 deferredOriginKind=deferredOriginDepth=0;
                 deferredCurrentKind=deferredCurrentDepth=0;
+                prepublication=(config.Flags&1)!=0;
                 return 0;
             }
             public int BeginFrame()
             {
                 Calls.Add("begin");
+                if(!prepublication&&active.Count!=0
+                    &&active[active.Count-1].CarriedFrames<byte.MaxValue)
+                    active[active.Count-1].CarriedFrames++;
                 frameEvents.Clear();
                 for (int i = 0; i < Events.Length; i++)
                 {
@@ -4394,7 +4905,21 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 Events = new GpgxAudioTraceEvent[0];
                 return 0;
             }
-            public int EndFrame() { Calls.Add("end"); return EndFrameStatus; }
+            public int EndFrame()
+            {
+                Calls.Add("end");
+                if(EndFrameStatus!=0)return EndFrameStatus;
+                if(!prepublication)
+                    for(int i=0;i<active.Count;i++)
+                    {
+                        GpgxAudioObserverAdapter.ServiceKind kind=Array.Find(
+                            kinds,value=>value.KindId==active[i].Kind);
+                        if(kind.KindId==0||(kind.Flags&2)==0
+                            ||active[i].CarriedFrames
+                                >kind.ContinuationFrameLimit)return -2;
+                    }
+                return 0;
+            }
             public int EventCount(out uint count, out uint overflow)
             { Calls.Add("count"); count=(uint)frameEvents.Count; overflow=0;
                 return EventCountStatus; }
@@ -4410,7 +4935,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
             {
                 Calls.Add("publication");
                 PublicationCalls++;
-                return PublicationStatus;
+                if(PublicationStatus!=0)return PublicationStatus;
+                for(int i=0;i<active.Count;i++)active[i].CarriedFrames=0;
+                prepublication=false;
+                return 0;
             }
 
             internal void VisitManaged(uint pc, FakeS1Host host)

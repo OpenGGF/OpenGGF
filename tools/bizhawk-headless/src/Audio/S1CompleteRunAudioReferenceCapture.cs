@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Runtime.InteropServices;
+using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -25,6 +27,98 @@ namespace OpenGGF.BizHawk.Headless
             "openggf.s1-audio-service-manifest.v1";
         private const string RawSchema =
             "openggf.s1-complete-run-audio-raw.v1";
+
+        internal sealed class DeferredPublicationLimits
+        {
+            internal const long ProductionManifestBytes=1048576;
+            internal const int ProductionManifestStringCharacters=1024;
+            internal const long ProductionFixedLineCharacters=65536;
+            internal const long ProductionAggregateLineCharacters=33554432;
+            internal const int ProductionBaselineActiveServices=8;
+            internal const int ProductionBaselinePendingServices=65536;
+            internal const int ProductionBaselineTotalServices=65536;
+            internal const int ProductionTransitionsPerService=7;
+            internal const long ProductionTotalTransitions=458752;
+            internal const long ProductionFrameCharacters=33554432;
+            internal const int ProductionNewHeldFrames=5;
+            internal const int ProductionCarriedHeldFrames=4;
+            internal const long ProductionHeldCharacters=167772160;
+            internal const int ProductionEvidenceRecords=4096;
+            internal const long ProductionEvidenceCharacters=33554432;
+
+            internal static readonly DeferredPublicationLimits Production=
+                new DeferredPublicationLimits();
+
+            internal readonly long ManifestBytes,FixedLineCharacters,
+                AggregateLineCharacters,FrameCharacters,HeldCharacters,
+                EvidenceCharacters,TotalTransitions;
+            internal readonly int ManifestStringCharacters,
+                BaselineActiveServices,BaselinePendingServices,
+                BaselineTotalServices,TransitionsPerService,NewHeldFrames,
+                CarriedHeldFrames,EvidenceRecords;
+
+            internal DeferredPublicationLimits(
+                long manifestBytes=ProductionManifestBytes,
+                int manifestStringCharacters=ProductionManifestStringCharacters,
+                long fixedLineCharacters=ProductionFixedLineCharacters,
+                long aggregateLineCharacters=ProductionAggregateLineCharacters,
+                int baselineActiveServices=ProductionBaselineActiveServices,
+                int baselinePendingServices=ProductionBaselinePendingServices,
+                int baselineTotalServices=ProductionBaselineTotalServices,
+                int transitionsPerService=ProductionTransitionsPerService,
+                long totalTransitions=ProductionTotalTransitions,
+                long frameCharacters=ProductionFrameCharacters,
+                int newHeldFrames=ProductionNewHeldFrames,
+                int carriedHeldFrames=ProductionCarriedHeldFrames,
+                long heldCharacters=ProductionHeldCharacters,
+                int evidenceRecords=ProductionEvidenceRecords,
+                long evidenceCharacters=ProductionEvidenceCharacters)
+            {
+                if(manifestBytes<=0||manifestStringCharacters<=0
+                    ||fixedLineCharacters<=0||aggregateLineCharacters<=0
+                    ||baselineActiveServices<=0||baselinePendingServices<=0
+                    ||baselineTotalServices<=0||transitionsPerService<=0
+                    ||totalTransitions<=0||frameCharacters<=0||newHeldFrames<=0
+                    ||carriedHeldFrames<=0||heldCharacters<=0
+                    ||evidenceRecords<=0||evidenceCharacters<=0)
+                    throw new ArgumentOutOfRangeException("limits");
+                ManifestBytes=manifestBytes;
+                ManifestStringCharacters=manifestStringCharacters;
+                FixedLineCharacters=fixedLineCharacters;
+                AggregateLineCharacters=aggregateLineCharacters;
+                BaselineActiveServices=baselineActiveServices;
+                BaselinePendingServices=baselinePendingServices;
+                BaselineTotalServices=baselineTotalServices;
+                TransitionsPerService=transitionsPerService;
+                TotalTransitions=totalTransitions;
+                FrameCharacters=frameCharacters;
+                NewHeldFrames=newHeldFrames;
+                CarriedHeldFrames=carriedHeldFrames;
+                HeldCharacters=heldCharacters;
+                EvidenceRecords=evidenceRecords;
+                EvidenceCharacters=evidenceCharacters;
+            }
+        }
+
+        private sealed class BoundedTextWriter : TextWriter
+        {
+            private readonly StringBuilder value=new StringBuilder();
+            private readonly long limit;
+            internal int Length{get{return value.Length;}}
+            internal BoundedTextWriter(long limit){this.limit=limit;}
+            public override Encoding Encoding{get{return Encoding.UTF8;}}
+            public override void Write(char c)
+            {Ensure(1);value.Append(c);}
+            public override void Write(string text)
+            {if(text==null)return;Ensure(text.Length);value.Append(text);}
+            public override void Write(char[] buffer,int index,int count)
+            {if(buffer==null)throw new ArgumentNullException("buffer");Ensure(count);
+                value.Append(buffer,index,count);}
+            private void Ensure(int count)
+            {if(count<0||count>limit-value.Length)throw new InvalidDataException(
+                "The S1 audio JSONL line exceeded its character limit.");}
+            public override string ToString(){return value.ToString();}
+        }
 
         internal sealed class ManagedHook
         {
@@ -208,22 +302,30 @@ namespace OpenGGF.BizHawk.Headless
 
         internal static Manifest LoadManifest(string path, byte[] rom)
         {
+            return LoadManifest(path,rom,DeferredPublicationLimits.Production);
+        }
+
+        internal static Manifest LoadManifest(string path,byte[] rom,
+            DeferredPublicationLimits limits)
+        {
             if (string.IsNullOrEmpty(path) || !Path.IsPathRooted(path))
             {
                 throw new ArgumentException(
                     "The S1 audio manifest path must be absolute.", "path");
             }
             if (rom == null) throw new ArgumentNullException("rom");
+            if(limits==null)throw new ArgumentNullException("limits");
             JObject root;
             try
             {
-                root = JObject.Parse(File.ReadAllText(path));
+                root = JObject.Parse(ReadBoundedManifest(path,limits.ManifestBytes));
             }
             catch (JsonException exception)
             {
                 throw new InvalidDataException(
                     "The S1 audio manifest is not strict JSON.", exception);
             }
+            ValidateManifestStrings(root,limits.ManifestStringCharacters);
             ExactProperties(root, "root", "schema", "game", "rom_sha1",
                 "interval", "raw_stream", "driver_state",
                 "legal_continuations", "m68k_hooks", "native_observer");
@@ -329,6 +431,99 @@ namespace OpenGGF.BizHawk.Headless
             manifest.ManagedByPc = managed;
             manifest.LegalContinuations = continuations;
             return manifest;
+        }
+
+        private static string ReadBoundedManifest(string path,long limit)
+        {
+            try
+            {
+                using(var stream=OpenRegularManifest(path))
+                {
+                    if(stream.Length>limit)throw new InvalidDataException(
+                        "The S1 audio manifest exceeded its byte limit.");
+                    var decoder=new UTF8Encoding(false,true).GetDecoder();
+                    var bytes=new byte[4096];
+                    var chars=new char[4096];
+                    var result=new StringBuilder((int)Math.Min(stream.Length,int.MaxValue));
+                    long total=0;
+                    int read;
+                    while((read=stream.Read(bytes,0,bytes.Length))!=0)
+                    {
+                        if(read>limit-total)throw new InvalidDataException(
+                            "The S1 audio manifest exceeded its byte limit.");
+                        total+=read;
+                        int byteAt=0;
+                        while(byteAt<read)
+                        {
+                            int usedBytes,usedChars;bool completed;
+                            decoder.Convert(bytes,byteAt,read-byteAt,chars,0,
+                                chars.Length,false,out usedBytes,out usedChars,
+                                out completed);
+                            result.Append(chars,0,usedChars);byteAt+=usedBytes;
+                        }
+                    }
+                    int finalBytes,finalChars;bool finalComplete;
+                    decoder.Convert(bytes,0,0,chars,0,chars.Length,true,
+                        out finalBytes,out finalChars,out finalComplete);
+                    result.Append(chars,0,finalChars);
+                    return result.ToString();
+                }
+            }
+            catch(DecoderFallbackException error)
+            {
+                throw new InvalidDataException(
+                    "The S1 audio manifest is not strict UTF-8.",error);
+            }
+        }
+
+        private static FileStream OpenRegularManifest(string path)
+        {
+            const int OReadOnly=0;
+            const int ONonBlock=0x800;
+            const int ONoFollow=0x20000;
+            const int OCloseOnExec=0x80000;
+            int descriptor=Open(path,OReadOnly|ONonBlock|ONoFollow|OCloseOnExec);
+            if(descriptor<0)throw new InvalidDataException(
+                "The S1 audio manifest must be a regular file.");
+            IntPtr status=Marshal.AllocHGlobal(144);
+            bool closed=false;
+            try
+            {
+                if(FStat(descriptor,status)!=0
+                    ||(Marshal.ReadInt32(status,24)&0xF000)!=0x8000)
+                    throw new InvalidDataException(
+                        "The S1 audio manifest must be a regular file.");
+                var stream=new FileStream("/proc/self/fd/"+descriptor.ToString(
+                    CultureInfo.InvariantCulture),FileMode.Open,FileAccess.Read,
+                    FileShare.Read,4096,FileOptions.SequentialScan);
+                Close(descriptor);closed=true;
+                return stream;
+            }
+            catch
+            {
+                if(!closed)Close(descriptor);
+                throw;
+            }
+            finally{Marshal.FreeHGlobal(status);}
+        }
+
+        [DllImport("libc",EntryPoint="open",CharSet=CharSet.Ansi,
+            SetLastError=true)]
+        private static extern int Open(string path,int flags);
+
+        [DllImport("libc",EntryPoint="fstat",SetLastError=true)]
+        private static extern int FStat(int descriptor,IntPtr status);
+
+        [DllImport("libc",EntryPoint="close",SetLastError=true)]
+        private static extern int Close(int descriptor);
+
+        private static void ValidateManifestStrings(JToken token,int limit)
+        {
+            if(token.Type==JTokenType.String&&((string)token).Length>limit)
+                throw Invalid("manifest string exceeds the raw-output bound");
+            if(token is JContainer)
+                foreach(JToken child in token.Children())
+                    ValidateManifestStrings(child,limit);
         }
 
         private static Manifest ParseNative(JObject root, int maximum,
@@ -736,9 +931,12 @@ namespace OpenGGF.BizHawk.Headless
                 internal long ManagedCorrelationOrdinal;
                 internal bool ClosesService;
                 internal bool ConditionalPopMarkerSeen;
+                internal bool DeferredEvidenceCandidate;
                 internal readonly List<JObject> Records = new List<JObject>();
                 internal readonly List<JObject> NativeCorrelationEvents =
                     new List<JObject>();
+                internal long ReservedCharacters;
+                internal readonly List<long> RecordReservations=new List<long>();
             }
 
             private sealed class DeferredManagedBegin
@@ -748,9 +946,33 @@ namespace OpenGGF.BizHawk.Headless
                 internal ushort CurrentOwnerToken,CurrentOwnerParentToken;
                 internal byte CurrentOwnerKind,CurrentOwnerDepth;
                 internal uint Pc,Stack,ReturnPc;
+                internal long GenerationId;
+                internal int HeldFrameLimit;
                 internal int CorrelatedObservationCount;
+                internal int EvidenceRecordCount;
+                internal long EvidenceCharacters;
                 internal readonly List<PendingManagedOccurrence> Observations=
                     new List<PendingManagedOccurrence>();
+            }
+
+            private sealed class DeferredEvidenceLine
+            {
+                internal int Row,RecordIndex;
+                internal long ManagedCorrelationOrdinal;
+                internal string Jsonl;
+            }
+
+            private sealed class HeldFrame
+            {
+                internal int Row,LogicalRecordCount,MissingEvidenceCount;
+                internal string Jsonl;
+            }
+
+            private sealed class DeferredPublicationBatch
+            {
+                internal long GenerationId,FrameCharacters;
+                internal int HeldFrameLimit;
+                internal readonly List<HeldFrame> Frames=new List<HeldFrame>();
             }
 
             private static readonly string[] RegisterNames =
@@ -763,6 +985,7 @@ namespace OpenGGF.BizHawk.Headless
             private readonly IGpgxAudioTraceApi api;
             private readonly Manifest manifest;
             private readonly TextWriter output;
+            private readonly DeferredPublicationLimits limits;
             private readonly CompleteRunAudioObserver observer;
             private readonly List<IDisposable> callbacks = new List<IDisposable>();
             private readonly Queue<PendingManagedOccurrence> pendingManaged =
@@ -772,10 +995,9 @@ namespace OpenGGF.BizHawk.Headless
             private PendingManagedOccurrence collectingManaged;
             private DeferredManagedBegin pendingDeferredBegin;
             private DeferredManagedBegin boundaryDeferredBegin;
-            private StringWriter frameTransaction;
-            private StringWriter deferredPublication;
-            private readonly List<JObject> deferredEvidencePublication=
-                new List<JObject>();
+            private BoundedTextWriter frameTransaction;
+            private DeferredPublicationBatch deferredPublicationBatch;
+            private List<DeferredEvidenceLine> frameDeferredEvidence;
             private JObject pendingResetEvidence;
             private JObject pendingResetServiceSnapshot;
             private ushort pendingResetCancelledServiceToken;
@@ -806,7 +1028,16 @@ namespace OpenGGF.BizHawk.Headless
             private bool publishing;
             private bool epochStarted;
             private bool complete;
+            private bool faulted;
             private bool disposed;
+            private long nextGenerationId=1;
+            private long frameEvidenceCharacters;
+            private long frameOrdinaryCharacters;
+            private long framePendingManagedCharacters;
+            private long frameFinalizedEvidenceCharacters;
+            private int frameEvidenceRecords;
+            private int frameManagedCallbackCount,frameManagedRecordCount;
+            private long frameConsumedBatchGeneration;
             internal int PendingDeferredObservationCountForTesting
             {get{return pendingDeferredBegin==null
                 ?0:pendingDeferredBegin.CorrelatedObservationCount;}}
@@ -821,9 +1052,26 @@ namespace OpenGGF.BizHawk.Headless
                 &&expectedResetCancellationOrdinal==0
                 &&!frameServiceOpenBeforeAdvance
                 &&!resetInputAssertedThisFrame;}}
+            internal int HeldFrameCountForTesting{get{return
+                deferredPublicationBatch==null?0:deferredPublicationBatch.Frames.Count;}}
+            internal long HeldFrameCharactersForTesting{get{return
+                deferredPublicationBatch==null?0:deferredPublicationBatch.FrameCharacters;}}
+            internal int RetainedEvidenceCountForTesting{get{return
+                pendingDeferredBegin==null?0:pendingDeferredBegin.EvidenceRecordCount;}}
+            internal long RetainedEvidenceCharactersForTesting{get{return
+                pendingDeferredBegin==null?0:pendingDeferredBegin.EvidenceCharacters;}}
+            internal long PendingGenerationIdForTesting{get{return
+                pendingDeferredBegin==null?0:pendingDeferredBegin.GenerationId;}}
 
             internal Session(IGpgxHost host, ICpuRegisterReader registers,
                 IGpgxAudioTraceApi api, Manifest manifest, TextWriter output)
+                :this(host,registers,api,manifest,output,
+                    DeferredPublicationLimits.Production)
+            {}
+
+            internal Session(IGpgxHost host, ICpuRegisterReader registers,
+                IGpgxAudioTraceApi api, Manifest manifest, TextWriter output,
+                DeferredPublicationLimits limits)
             {
                 this.host = host ?? throw new ArgumentNullException("host");
                 this.registers = registers
@@ -832,6 +1080,7 @@ namespace OpenGGF.BizHawk.Headless
                 this.manifest = manifest
                     ?? throw new ArgumentNullException("manifest");
                 this.output = output ?? throw new ArgumentNullException("output");
+                this.limits=limits??throw new ArgumentNullException("limits");
                 observer = manifest.CreateObserver(api);
                 try
                 {
@@ -851,61 +1100,63 @@ namespace OpenGGF.BizHawk.Headless
 
             internal void ObservePreEpochFrame(int row, Bk2Frame input, Action advance)
             {
+                EnsureUsable();
                 if (epochStarted) throw new InvalidOperationException("The comparison epoch has begun.");
                 ProcessFrame(row, input, advance, false);
             }
 
             internal void BeginEpoch()
             {
+                EnsureUsable();
                 if (epochStarted) throw new InvalidOperationException("The comparison epoch already began.");
                 if (capturing || pendingManaged.Count != 0
                     || pendingBoundaryManaged.Count != 0)
                     throw new InvalidOperationException("Cannot begin the epoch with an incomplete native drain.");
-                CompleteRunAudioObserver.CutoffFrontier frontier =
-                    observer.CaptureCutoffFrontier();
-                if(!boundaryManagedServices.MatchesBoundary(
-                    frontier.ActiveServices))
-                    throw new InvalidOperationException(
-                        "Native/managed service boundary token set differs.");
-                DeferredManagedBegin carriedDeferred=ValidateBoundaryDeferredBegin(
-                    frontier.PendingDeferredBegin,frontier.ActiveServices);
-                frontier=observer.CaptureBoundaryFrontierAndResetPublication();
-                pendingDeferredBegin=carriedDeferred;
-                managedServices.Restore(boundaryManagedServices);
-                boundaryManagedServices.Clear();
-                boundaryDeferredBegin=null;
-                Write(new JObject
+                try
                 {
-                    ["type"]="metadata", ["schema"]=RawSchema,
-                    ["rom_sha1"]=manifest.RomSha1,
-                    ["first_row"]=manifest.FirstRow,
-                    ["exclusive_end"]=manifest.ExclusiveEnd,
-                    ["native_abi"]=api.AbiVersion,
-                    ["native_event_size"]=api.EventSize,
-                    ["native_capacity"]=api.Capacity
-                });
-                var active = new JArray();
-                foreach (CompleteRunAudioObserver.DriverService service in frontier.ActiveServices)
-                    active.Add(BoundaryService(service, true));
-                var pending = new JArray();
-                foreach (CompleteRunAudioObserver.DriverService service in frontier.PendingServices)
-                    pending.Add(BoundaryService(service, false));
-                Write(new JObject
+                    observer.ValidateCutoffFrontierBounds(limits.BaselineActiveServices,
+                        limits.BaselinePendingServices,limits.BaselineTotalServices,
+                        limits.TransitionsPerService,limits.TotalTransitions);
+                    CompleteRunAudioObserver.CutoffFrontier frontier =
+                        observer.CaptureCutoffFrontier();
+                    if(!boundaryManagedServices.MatchesBoundary(
+                        frontier.ActiveServices))
+                        throw new InvalidOperationException(
+                            "Native/managed service boundary token set differs.");
+                    DeferredManagedBegin carriedDeferred=ValidateBoundaryDeferredBegin(
+                        frontier.PendingDeferredBegin,frontier.ActiveServices);
+                    if(carriedDeferred!=null)
+                    {
+                        carriedDeferred.GenerationId=AllocateGenerationId();
+                        carriedDeferred.HeldFrameLimit=limits.CarriedHeldFrames;
+                    }
+                    string metadata=SerializeFixed(new JObject
+                    {
+                        ["type"]="metadata", ["schema"]=RawSchema,
+                        ["rom_sha1"]=manifest.RomSha1,
+                        ["first_row"]=manifest.FirstRow,
+                        ["exclusive_end"]=manifest.ExclusiveEnd,
+                        ["native_abi"]=api.AbiVersion,
+                        ["native_event_size"]=api.EventSize,
+                        ["native_capacity"]=api.Capacity
+                    });
+                    string baseline=SerializeBaseline(frontier);
+                    observer.CaptureBoundaryFrontierAndResetPublication();
+                    output.Write(metadata);output.Write(baseline);
+                    pendingDeferredBegin=carriedDeferred;
+                    managedServices.Restore(boundaryManagedServices);
+                    boundaryManagedServices.Clear();
+                    boundaryDeferredBegin=null;
+                    for (int i=0;i<pendingRequestIds.Length;i++) pendingRequestIds[i]=null;
+                    cycleQueue=-1;cycleRequestId=null;selectedRequestId=null;
+                    nextRequestId=1;nextManagedCorrelationOrdinal=0;lastRow=-1;
+                    epochStarted=true;
+                }
+                catch
                 {
-                    ["type"]="baseline", ["row"]=manifest.FirstRow,
-                    ["state_start"]=manifest.DriverStateStart,
-                    ["state_hex"]=CaptureDriverState(),
-                    ["ym_port0_latch"]=frontier.YmPort0Address,
-                    ["ym_port1_latch"]=frontier.YmPort1Address,
-                    ["active_services"]=active,
-                    ["pending_descendants"]=pending,
-                    ["native_arm_epoch"]=frontier.ArmEpoch,
-                    ["native_armed"]=frontier.IsArmed
-                });
-                for (int i=0;i<pendingRequestIds.Length;i++) pendingRequestIds[i]=null;
-                cycleQueue=-1;cycleRequestId=null;selectedRequestId=null;
-                nextRequestId=1;nextManagedCorrelationOrdinal=0;lastRow=-1;
-                epochStarted=true;
+                    faulted=true;
+                    throw;
+                }
             }
 
             private JObject BoundaryService(
@@ -958,22 +1209,34 @@ namespace OpenGGF.BizHawk.Headless
 
             private void ProcessFrame(int row, Bk2Frame input, Action advance, bool publish)
             {
-                if (disposed) throw new ObjectDisposedException("Session");
+                EnsureUsable();
                 if (complete) throw new InvalidOperationException("The S1 audio capture is complete.");
                 if (advance == null) throw new ArgumentNullException("advance");
                 int expected = publish ? (lastRow < 0 ? manifest.FirstRow : lastRow + 1) : row;
                 if (row != expected || publish && row >= manifest.ExclusiveEnd)
                     throw new InvalidOperationException("Missing or out-of-order S1 audio row.");
-                ManagedServiceTracker servicesBefore=managedServices.Clone();
-                ManagedServiceTracker boundaryServicesBefore=
-                    boundaryManagedServices.Clone();
-                DeferredManagedBegin deferredBefore=CloneDeferred(pendingDeferredBegin);
-                DeferredManagedBegin boundaryDeferredBefore=
-                    CloneDeferred(boundaryDeferredBegin);
-                PendingManagedOccurrence[] managedBefore=pendingManaged.ToArray();
-                PendingManagedOccurrence[] boundaryManagedBefore=
-                    pendingBoundaryManaged.ToArray();
-                int deferredEvidenceBefore=deferredEvidencePublication.Count;
+                ManagedServiceTracker servicesBefore;
+                ManagedServiceTracker boundaryServicesBefore;
+                DeferredManagedBegin deferredBefore,boundaryDeferredBefore;
+                PendingManagedOccurrence[] managedBefore,boundaryManagedBefore;
+                BoundedTextWriter transaction;
+                try
+                {
+                    servicesBefore=managedServices.Clone();
+                    boundaryServicesBefore=boundaryManagedServices.Clone();
+                    deferredBefore=CloneDeferred(pendingDeferredBegin);
+                    boundaryDeferredBefore=CloneDeferred(boundaryDeferredBegin);
+                    managedBefore=pendingManaged.ToArray();
+                    boundaryManagedBefore=pendingBoundaryManaged.ToArray();
+                    transaction=new BoundedTextWriter(limits.FrameCharacters);
+                    frameDeferredEvidence=new List<DeferredEvidenceLine>();
+                }
+                catch
+                {
+                    faulted=true;
+                    throw;
+                }
+                long nextGenerationBefore=nextGenerationId;
                 JObject resetEvidenceBefore=pendingResetEvidence==null?null
                     :(JObject)pendingResetEvidence.DeepClone();
                 JObject resetServiceSnapshotBefore=
@@ -987,13 +1250,23 @@ namespace OpenGGF.BizHawk.Headless
                 uint resetCancellationOrdinalBefore=expectedResetCancellationOrdinal;
                 bool serviceOpenBeforeAdvanceBefore=frameServiceOpenBeforeAdvance;
                 bool resetInputAssertedBefore=resetInputAssertedThisFrame;
-                var transaction=new StringWriter(CultureInfo.InvariantCulture);
                 frameTransaction=transaction;
                     currentRow = row;
                     frameRecords = 0;
                     nextManagedCorrelationOrdinal = 0;
+                    frameEvidenceRecords=pendingDeferredBegin==null?0
+                        :pendingDeferredBegin.EvidenceRecordCount;
+                    frameEvidenceCharacters=pendingDeferredBegin==null?0
+                        :pendingDeferredBegin.EvidenceCharacters;
+                    frameOrdinaryCharacters=0;
+                    framePendingManagedCharacters=pendingDeferredBegin==null?0
+                        :pendingDeferredBegin.EvidenceCharacters;
+                    frameFinalizedEvidenceCharacters=0;
+                    frameManagedCallbackCount=0;frameManagedRecordCount=0;
+                    frameConsumedBatchGeneration=0;
                 capturing = true;
                 publishing = publish;
+                bool nativeCaptureStarted=false;
                 try
                 {
                     WriteFrame(new JObject { ["type"]="frame_begin", ["row"]=row });
@@ -1041,6 +1314,7 @@ namespace OpenGGF.BizHawk.Headless
                         }
                         if(publish)managedServices.Clear();
                     }
+                    nativeCaptureStarted=true;
                     observer.CaptureFrame(advance, (events, count) =>
                     {
                         for (int i = 0; i < count; i++)
@@ -1060,22 +1334,10 @@ namespace OpenGGF.BizHawk.Headless
                         throw new InvalidOperationException(
                             "A managed S1 callback had no native ordered marker.");
                     WriteFrame(new JObject { ["type"]="frame_end", ["row"]=row });
-                    if (publish) lastRow = row;
-                    if(pendingDeferredBegin!=null)
+                    if(publish)
                     {
-                        if(deferredPublication==null)
-                            deferredPublication=new StringWriter(
-                                CultureInfo.InvariantCulture);
-                        deferredPublication.Write(transaction.ToString());
-                    }
-                    else
-                    {
-                        if(deferredPublication!=null)
-                        {
-                            FlushDeferredPublication();
-                            deferredPublication=null;
-                        }
-                        output.Write(transaction.ToString());
+                        CommitPublishedFrame(row,transaction.ToString());
+                        lastRow=row;
                     }
                 }
                 catch (Exception error)
@@ -1089,9 +1351,7 @@ namespace OpenGGF.BizHawk.Headless
                     pendingBoundaryManaged.Clear();
                     for(int i=0;i<boundaryManagedBefore.Length;i++)
                         pendingBoundaryManaged.Enqueue(boundaryManagedBefore[i]);
-                    if(deferredEvidencePublication.Count>deferredEvidenceBefore)
-                        deferredEvidencePublication.RemoveRange(deferredEvidenceBefore,
-                            deferredEvidencePublication.Count-deferredEvidenceBefore);
+                    nextGenerationId=nextGenerationBefore;
                     pendingResetEvidence=resetEvidenceBefore;
                     pendingResetServiceSnapshot=resetServiceSnapshotBefore;
                     pendingResetCancelledServiceToken=resetCancelledTokenBefore;
@@ -1102,6 +1362,9 @@ namespace OpenGGF.BizHawk.Headless
                     expectedResetCancellationOrdinal=resetCancellationOrdinalBefore;
                     frameServiceOpenBeforeAdvance=serviceOpenBeforeAdvanceBefore;
                     resetInputAssertedThisFrame=resetInputAssertedBefore;
+                    if(nativeCaptureStarted||error is InvalidDataException
+                        ||error is IOException||error is OverflowException
+                        ||error is OutOfMemoryException)faulted=true;
                     var pendingNames = new List<string>();
                     foreach (PendingManagedOccurrence occurrence in pendingManaged)
                         pendingNames.Add(occurrence.Hook.Name);
@@ -1118,12 +1381,13 @@ namespace OpenGGF.BizHawk.Headless
                     publishing = false;
                     currentRow = -1;
                     frameTransaction=null;
+                    frameDeferredEvidence=null;
                 }
             }
 
             internal void Complete(int exclusiveEnd)
             {
-                if (disposed) throw new ObjectDisposedException("Session");
+                EnsureUsable();
                 if (complete) throw new InvalidOperationException("The S1 audio terminal already exists.");
                 if (capturing) throw new InvalidOperationException("Cannot terminate inside a frame.");
                 if (lastRow < manifest.FirstRow || exclusiveEnd != lastRow + 1)
@@ -1133,14 +1397,21 @@ namespace OpenGGF.BizHawk.Headless
                 if(pendingDeferredBegin!=null)
                     throw new InvalidOperationException(
                         "A deferred M68K audio service begin is pending at the terminal.");
-                Write(new JObject
+                if(deferredPublicationBatch!=null)
+                    throw new InvalidOperationException(
+                        "A deferred publication batch remains at the terminal.");
+                try
                 {
-                    ["type"]="terminal", ["exclusive_end"]=exclusiveEnd,
-                    ["rows"]=exclusiveEnd-manifest.FirstRow,
-                    ["orphan_closes"]=0, ["opcode_mismatches"]=0,
-                    ["overflows"]=0
-                });
-                complete = true;
+                    output.Write(SerializeFixed(new JObject
+                    {
+                        ["type"]="terminal", ["exclusive_end"]=exclusiveEnd,
+                        ["rows"]=exclusiveEnd-manifest.FirstRow,
+                        ["orphan_closes"]=0, ["opcode_mismatches"]=0,
+                        ["overflows"]=0
+                    }));
+                    complete = true;
+                }
+                catch{faulted=true;throw;}
             }
 
             private void OnHook(ManagedHook hook)
@@ -1176,6 +1447,9 @@ namespace OpenGGF.BizHawk.Headless
                     pendingBoundaryManaged.Enqueue(boundaryOccurrence);
                     return;
                 }
+                if(frameManagedCallbackCount>=manifest.MaximumRecordsPerFrame)
+                    throw new InvalidDataException(
+                        "The bounded S1 managed callback stream overflowed.");
                 var occurrence = new PendingManagedOccurrence { Hook=hook };
                 collectingManaged = occurrence;
                 bool captured = false;
@@ -1257,7 +1531,45 @@ namespace OpenGGF.BizHawk.Headless
                 {
                     collectingManaged = null;
                     if (captured)
+                    {
+                        if(occurrence.Records.Count>manifest.MaximumRecordsPerFrame
+                                -frameManagedRecordCount)
+                            throw new InvalidDataException(
+                                "The bounded S1 managed callback record stream overflowed.");
+                        occurrence.DeferredEvidenceCandidate=
+                            hook.Action=="SERVICE_BEGIN"&&hook.Pc==0x071B4C;
+                        long charge=0;
+                        foreach(JObject retained in occurrence.Records)
+                        {
+                            long reserve=DeferredEvidenceReservation(retained);
+                            if(reserve>limits.FrameCharacters-charge
+                                ||reserve>limits.FrameCharacters
+                                    -framePendingManagedCharacters
+                                    -frameOrdinaryCharacters-charge)
+                                throw new InvalidDataException(
+                                    "The S1 managed callback character limit was exceeded.");
+                            charge+=reserve;
+                            occurrence.RecordReservations.Add(reserve);
+                        }
+                        if(occurrence.DeferredEvidenceCandidate)
+                        {
+                            if(occurrence.Records.Count>limits.EvidenceRecords
+                                    -frameEvidenceRecords)
+                                throw new InvalidDataException(
+                                    "The S1 deferred evidence record limit was exceeded.");
+                            if(charge>limits.EvidenceCharacters
+                                    -frameEvidenceCharacters)
+                                throw new InvalidDataException(
+                                    "The S1 deferred evidence character limit was exceeded.");
+                            frameEvidenceRecords+=occurrence.Records.Count;
+                            frameEvidenceCharacters+=charge;
+                        }
+                        occurrence.ReservedCharacters=charge;
+                        framePendingManagedCharacters+=charge;
+                        frameManagedCallbackCount++;
+                        frameManagedRecordCount+=occurrence.Records.Count;
                         pendingManaged.Enqueue(occurrence);
+                    }
                 }
             }
 
@@ -1645,6 +1957,11 @@ namespace OpenGGF.BizHawk.Headless
                             "Deferred S1 consume identity or nested begin differs.");
                     else
                     {
+                        if(deferredPublicationBatch!=null
+                            &&pendingDeferredBegin.GenerationId
+                                ==deferredPublicationBatch.GenerationId)
+                            frameConsumedBatchGeneration=
+                                pendingDeferredBegin.GenerationId;
                         EmitDeferredManaged(value);
                         managedServices.Begin(value.ServiceToken,occurrence.Stack);
                         pendingDeferredBegin=null;
@@ -1670,7 +1987,10 @@ namespace OpenGGF.BizHawk.Headless
                                 CurrentOwnerKind=value.ServiceKindId,
                                 CurrentOwnerDepth=value.Depth,
                                 TargetKind=4,HookToken=value.Subject,SourceCpu=value.SourceCpu,
-                                Pc=value.Pc,Stack=occurrence.Stack,ReturnPc=occurrence.ReturnPc};
+                                Pc=value.Pc,Stack=occurrence.Stack,
+                                ReturnPc=occurrence.ReturnPc,
+                                GenerationId=AllocateGenerationId(),
+                                HeldFrameLimit=limits.NewHeldFrames};
                         }
                         else if(pendingDeferredBegin.BlockerToken!=value.ServiceToken
                             ||pendingDeferredBegin.BlockerParentToken!=value.ParentToken
@@ -1690,10 +2010,15 @@ namespace OpenGGF.BizHawk.Headless
                                 >manifest.MaximumRecordsPerFrame)
                             throw new InvalidOperationException(
                                 "The bounded S1 managed-correlation stream overflowed.");
+                        ReserveDeferredOccurrence(occurrence);
                         occurrence.ManagedCorrelationOrdinal=
                             nextManagedCorrelationOrdinal++;
                         frameRecords+=occurrence.Records.Count;
                         pendingDeferredBegin.CorrelatedObservationCount++;
+                        pendingDeferredBegin.EvidenceRecordCount+=
+                            occurrence.Records.Count;
+                        pendingDeferredBegin.EvidenceCharacters+=
+                            occurrence.ReservedCharacters;
                         pendingDeferredBegin.Observations.Add(occurrence);
                         pendingManaged.Dequeue();
                         return;
@@ -1733,6 +2058,7 @@ namespace OpenGGF.BizHawk.Headless
                 occurrence.NativeCorrelationEvents.Add(
                     NativeCorrelationEvent(value, true));
                 pendingManaged.Dequeue();
+                ReleasePendingManagedReservation(occurrence);
                 if (nextManagedCorrelationOrdinal >= manifest.MaximumRecordsPerFrame)
                     throw new InvalidOperationException(
                         "The bounded S1 managed-correlation stream overflowed.");
@@ -1762,8 +2088,10 @@ namespace OpenGGF.BizHawk.Headless
                     PendingManagedOccurrence occurrence=
                         pendingDeferredBegin.Observations[i];
                     var chain=new JArray(occurrence.NativeCorrelationEvents);
-                    foreach(JObject record in occurrence.Records)
+                    for(int recordIndex=0;recordIndex<occurrence.Records.Count;
+                        recordIndex++)
                     {
+                        JObject record=occurrence.Records[recordIndex];
                         record["managed_correlation_ordinal"]=
                             occurrence.ManagedCorrelationOrdinal;
                         record["native_correlation_events"]=chain.DeepClone();
@@ -1779,15 +2107,90 @@ namespace OpenGGF.BizHawk.Headless
                         record["consume_pc"]=consumed.Pc;
                         record["consumed_service_token"]=consumed.ServiceToken;
                         record["consume_begin_ordinal"]=consumed.Ordinal;
+                        string jsonl=SerializeFixed(record);
+                        if(recordIndex>=occurrence.RecordReservations.Count
+                            ||jsonl.Length>occurrence.RecordReservations[recordIndex])
+                            throw new InvalidDataException(
+                                "Deferred S1 evidence exceeded its reserved charge.");
+                        if(jsonl.Length>limits.FrameCharacters
+                                -frameTransaction.Length
+                                -framePendingManagedCharacters
+                                -frameFinalizedEvidenceCharacters)
+                            throw new InvalidDataException(
+                                "The S1 audio frame character limit was exceeded.");
                         if((int)record["row"]==currentRow)
                         {
-                            frameTransaction.Write(record.ToString(Formatting.None));
-                            frameTransaction.Write('\n');
+                            frameTransaction.Write(jsonl);
                         }
-                        else deferredEvidencePublication.Add(
-                            (JObject)record.DeepClone());
+                        else
+                        {
+                            frameFinalizedEvidenceCharacters+=jsonl.Length;
+                            frameDeferredEvidence.Add(new DeferredEvidenceLine
+                            {
+                                Row=(int)record["row"],
+                                ManagedCorrelationOrdinal=
+                                    occurrence.ManagedCorrelationOrdinal,
+                                RecordIndex=recordIndex,Jsonl=jsonl
+                            });
+                        }
                     }
                 }
+            }
+
+            private void ReserveDeferredOccurrence(
+                PendingManagedOccurrence occurrence)
+            {
+                if(!occurrence.DeferredEvidenceCandidate)
+                    throw new InvalidDataException(
+                        "Deferred S1 evidence was not reserved at callback time.");
+                if(occurrence.Records.Count>limits.EvidenceRecords
+                        -pendingDeferredBegin.EvidenceRecordCount)
+                    throw new InvalidDataException(
+                        "The S1 deferred evidence record limit was exceeded.");
+                if(occurrence.ReservedCharacters>limits.EvidenceCharacters
+                        -pendingDeferredBegin.EvidenceCharacters)
+                    throw new InvalidDataException(
+                        "The S1 deferred evidence character limit was exceeded.");
+            }
+
+            private void ReleasePendingManagedReservation(
+                PendingManagedOccurrence occurrence)
+            {
+                framePendingManagedCharacters-=occurrence.ReservedCharacters;
+                if(!occurrence.DeferredEvidenceCandidate)return;
+                frameEvidenceRecords-=occurrence.Records.Count;
+                frameEvidenceCharacters-=occurrence.ReservedCharacters;
+            }
+
+            private long DeferredEvidenceReservation(JObject record)
+            {
+                JObject maximum=(JObject)record.DeepClone();
+                maximum["managed_correlation_ordinal"]=long.MaxValue;
+                var correlation=new JObject
+                {
+                    ["ordinal"]=uint.MaxValue,
+                    ["service_token"]=ushort.MaxValue,
+                    ["parent_token"]=ushort.MaxValue,
+                    ["pc"]=uint.MaxValue,["hook_token"]=ushort.MaxValue,
+                    ["event_kind"]=byte.MaxValue,
+                    ["service_kind"]=byte.MaxValue,["depth"]=byte.MaxValue,
+                    ["source_cpu"]=byte.MaxValue,["value"]=byte.MaxValue,
+                    ["flags"]=byte.MaxValue,["terminal"]=true
+                };
+                maximum["native_correlation_events"]=new JArray(
+                    correlation,correlation.DeepClone());
+                maximum["native_ordinal"]=uint.MaxValue;
+                maximum["native_hook_token"]=ushort.MaxValue;
+                maximum["native_service_token"]=ushort.MaxValue;
+                maximum["native_parent_token"]=ushort.MaxValue;
+                maximum["native_marker_value"]=byte.MaxValue;
+                maximum["deferred_a7"]=uint.MaxValue;
+                maximum["deferred_return_pc"]=uint.MaxValue;
+                maximum["consume_hook_token"]=ushort.MaxValue;
+                maximum["consume_pc"]=uint.MaxValue;
+                maximum["consumed_service_token"]=ushort.MaxValue;
+                maximum["consume_begin_ordinal"]=uint.MaxValue;
+                return SerializeFixed(maximum).Length;
             }
 
             private static bool MatchesManagedObservationOwner(
@@ -1861,6 +2264,10 @@ namespace OpenGGF.BizHawk.Headless
                     CurrentOwnerDepth=source.CurrentOwnerDepth,
                     SourceCpu=source.SourceCpu,Pc=source.Pc,Stack=source.Stack,
                     ReturnPc=source.ReturnPc,
+                    GenerationId=source.GenerationId,
+                    HeldFrameLimit=source.HeldFrameLimit,
+                    EvidenceRecordCount=source.EvidenceRecordCount,
+                    EvidenceCharacters=source.EvidenceCharacters,
                     CorrelatedObservationCount=source.CorrelatedObservationCount};
                 for(int i=0;i<source.Observations.Count;i++)
                     copy.Observations.Add(CloneOccurrence(source.Observations[i]));
@@ -1874,38 +2281,165 @@ namespace OpenGGF.BizHawk.Headless
                 {Hook=source.Hook,Stack=source.Stack,ReturnPc=source.ReturnPc,
                     ManagedCorrelationOrdinal=source.ManagedCorrelationOrdinal,
                     ClosesService=source.ClosesService,
-                    ConditionalPopMarkerSeen=source.ConditionalPopMarkerSeen};
+                    ConditionalPopMarkerSeen=source.ConditionalPopMarkerSeen,
+                    DeferredEvidenceCandidate=source.DeferredEvidenceCandidate,
+                    ReservedCharacters=source.ReservedCharacters};
                 for(int i=0;i<source.Records.Count;i++)
                     copy.Records.Add((JObject)source.Records[i].DeepClone());
                 for(int i=0;i<source.NativeCorrelationEvents.Count;i++)
                     copy.NativeCorrelationEvents.Add((JObject)
                         source.NativeCorrelationEvents[i].DeepClone());
+                copy.RecordReservations.AddRange(source.RecordReservations);
                 return copy;
             }
 
-            private void FlushDeferredPublication()
+            private long AllocateGenerationId()
             {
-                using(var reader=new StringReader(deferredPublication.ToString()))
+                if(nextGenerationId==long.MaxValue)throw new InvalidDataException(
+                    "The S1 deferred generation id space was exhausted.");
+                return nextGenerationId++;
+            }
+
+            private void CommitPublishedFrame(int row,string jsonl)
+            {
+                int missing=CountPendingEvidenceForRow(row);
+                var frame=new HeldFrame{Row=row,Jsonl=jsonl,
+                    LogicalRecordCount=frameRecords,
+                    MissingEvidenceCount=missing};
+                DeferredPublicationBatch old=deferredPublicationBatch;
+                DeferredManagedBegin final=pendingDeferredBegin;
+                if(old==null)
                 {
-                    string line;
-                    while((line=reader.ReadLine())!=null)
-                    {
-                        JObject value=JObject.Parse(line);
-                        if((string)value["type"]=="frame_end")
-                        {
-                            int row=(int)value["row"];
-                            for(int i=0;i<deferredEvidencePublication.Count;i++)
-                                if((int)deferredEvidencePublication[i]["row"]==row)
-                                {
-                                    output.Write(deferredEvidencePublication[i]
-                                        .ToString(Formatting.None));
-                                    output.Write('\n');
-                                }
-                        }
-                        output.Write(line);output.Write('\n');
-                    }
+                    if(final==null)output.Write(jsonl);
+                    else deferredPublicationBatch=AppendBatch(null,final,frame);
+                    return;
                 }
-                deferredEvidencePublication.Clear();
+                if(final!=null&&final.GenerationId==old.GenerationId
+                    &&frameConsumedBatchGeneration==0)
+                {
+                    deferredPublicationBatch=AppendBatch(old,final,frame);
+                    return;
+                }
+                if(frameConsumedBatchGeneration!=old.GenerationId)
+                    throw new InvalidDataException(
+                        "The S1 deferred publication generation lifecycle differs.");
+                DeferredPublicationBatch replacement=null;
+                if(final!=null)
+                {
+                    if(final.GenerationId==old.GenerationId)
+                        throw new InvalidDataException(
+                            "A consumed S1 deferred generation was reused.");
+                    replacement=AppendBatch(null,final,frame);
+                }
+                ValidateBatchMerge(old,frameDeferredEvidence);
+                WriteBatchMerge(old,frameDeferredEvidence);
+                if(final==null)output.Write(jsonl);
+                deferredPublicationBatch=replacement;
+            }
+
+            private int CountPendingEvidenceForRow(int row)
+            {
+                if(pendingDeferredBegin==null)return 0;
+                int count=0;
+                foreach(PendingManagedOccurrence occurrence
+                    in pendingDeferredBegin.Observations)
+                    foreach(JObject record in occurrence.Records)
+                        if((int)record["row"]==row)count++;
+                return count;
+            }
+
+            private DeferredPublicationBatch AppendBatch(
+                DeferredPublicationBatch source,DeferredManagedBegin generation,
+                HeldFrame frame)
+            {
+                var result=new DeferredPublicationBatch
+                {GenerationId=generation.GenerationId,
+                    HeldFrameLimit=generation.HeldFrameLimit};
+                if(source!=null)
+                {
+                    if(source.GenerationId!=generation.GenerationId
+                        ||source.HeldFrameLimit!=generation.HeldFrameLimit)
+                        throw new InvalidDataException(
+                            "The S1 deferred publication batch generation differs.");
+                    result.Frames.AddRange(source.Frames);
+                    result.FrameCharacters=source.FrameCharacters;
+                }
+                if(result.Frames.Count>=result.HeldFrameLimit)
+                    throw new InvalidDataException(
+                        "The S1 deferred publication held-frame limit was exceeded.");
+                if(result.Frames.Count!=0
+                    &&frame.Row<=result.Frames[result.Frames.Count-1].Row)
+                    throw new InvalidDataException(
+                        "The S1 deferred publication row order regressed.");
+                if(frame.Jsonl.Length>limits.HeldCharacters-result.FrameCharacters)
+                    throw new InvalidDataException(
+                        "The S1 deferred publication character limit was exceeded.");
+                result.Frames.Add(frame);result.FrameCharacters+=frame.Jsonl.Length;
+                return result;
+            }
+
+            private void ValidateBatchMerge(DeferredPublicationBatch batch,
+                List<DeferredEvidenceLine> evidence)
+            {
+                int at=0;
+                for(int i=0;i<batch.Frames.Count;i++)
+                {
+                    HeldFrame frame=batch.Frames[i];int count=0;
+                    string end=FrameEndLine(frame.Row);
+                    int prefix=frame.Jsonl.Length-end.Length;
+                    if(prefix<0||string.CompareOrdinal(frame.Jsonl,prefix,end,0,
+                        end.Length)!=0)throw new InvalidDataException(
+                            "The S1 deferred frame_end boundary differs.");
+                    while(at<evidence.Count&&evidence[at].Row==frame.Row)
+                    {
+                        if(at>0&&(evidence[at].Row<evidence[at-1].Row
+                            ||evidence[at].Row==evidence[at-1].Row
+                                &&(evidence[at].ManagedCorrelationOrdinal
+                                    <evidence[at-1].ManagedCorrelationOrdinal
+                                ||evidence[at].ManagedCorrelationOrdinal
+                                    ==evidence[at-1].ManagedCorrelationOrdinal
+                                    &&evidence[at].RecordIndex
+                                        <=evidence[at-1].RecordIndex)))
+                            throw new InvalidDataException(
+                                "The S1 deferred evidence order regressed.");
+                        count++;at++;
+                    }
+                    if(count!=frame.MissingEvidenceCount)
+                        throw new InvalidDataException(
+                            "The S1 deferred evidence count differs.");
+                    if(CountLf(frame.Jsonl)+count!=frame.LogicalRecordCount)
+                        throw new InvalidDataException(
+                            "The S1 deferred logical record count differs.");
+                }
+                if(at!=evidence.Count)throw new InvalidDataException(
+                    "S1 deferred evidence falls outside its publication batch.");
+            }
+
+            private void WriteBatchMerge(DeferredPublicationBatch batch,
+                List<DeferredEvidenceLine> evidence)
+            {
+                int at=0;
+                foreach(HeldFrame frame in batch.Frames)
+                {
+                    string end=FrameEndLine(frame.Row);
+                    int prefix=frame.Jsonl.Length-end.Length;
+                    output.Write(frame.Jsonl.Substring(0,prefix));
+                    while(at<evidence.Count&&evidence[at].Row==frame.Row)
+                        output.Write(evidence[at++].Jsonl);
+                    output.Write(end);
+                }
+            }
+
+            private string FrameEndLine(int row)
+            {
+                return SerializeFixed(new JObject
+                    {{"type","frame_end"},{"row",row}});
+            }
+
+            private static int CountLf(string value)
+            {
+                int count=0;for(int i=0;i<value.Length;i++)if(value[i]=='\n')count++;
+                return count;
             }
 
             private void ApplyNativeLifecycle(GpgxAudioTraceEvent value)
@@ -2189,8 +2723,62 @@ namespace OpenGGF.BizHawk.Headless
             private void Write(JObject record)
             {
                 TextWriter target=frameTransaction==null?output:frameTransaction;
-                target.Write(record.ToString(Formatting.None));
+                string jsonl=SerializeFixed(record);
+                if(frameTransaction!=null
+                    &&jsonl.Length>limits.FrameCharacters
+                        -framePendingManagedCharacters-frameOrdinaryCharacters)
+                    throw new InvalidDataException(
+                        "The S1 audio frame character limit was exceeded.");
+                target.Write(jsonl);
+                if(frameTransaction!=null)frameOrdinaryCharacters+=jsonl.Length;
+            }
+
+            private string SerializeFixed(JObject record)
+            {
+                var target=new BoundedTextWriter(limits.FixedLineCharacters);
+                using(var json=new JsonTextWriter(target)
+                {Formatting=Formatting.None,CloseOutput=false})record.WriteTo(json);
                 target.Write('\n');
+                return target.ToString();
+            }
+
+            private string SerializeBaseline(
+                CompleteRunAudioObserver.CutoffFrontier frontier)
+            {
+                var target=new BoundedTextWriter(limits.AggregateLineCharacters);
+                using(var json=new JsonTextWriter(target)
+                    {Formatting=Formatting.None,CloseOutput=false})
+                {
+                    json.WriteStartObject();
+                    json.WritePropertyName("type");json.WriteValue("baseline");
+                    json.WritePropertyName("row");json.WriteValue(manifest.FirstRow);
+                    json.WritePropertyName("state_start");
+                    json.WriteValue(manifest.DriverStateStart);
+                    json.WritePropertyName("state_hex");json.WriteValue(CaptureDriverState());
+                    json.WritePropertyName("ym_port0_latch");
+                    json.WriteValue(frontier.YmPort0Address);
+                    json.WritePropertyName("ym_port1_latch");
+                    json.WriteValue(frontier.YmPort1Address);
+                    json.WritePropertyName("active_services");json.WriteStartArray();
+                    foreach(CompleteRunAudioObserver.DriverService service
+                        in frontier.ActiveServices)BoundaryService(service,true).WriteTo(json);
+                    json.WriteEndArray();
+                    json.WritePropertyName("pending_descendants");json.WriteStartArray();
+                    foreach(CompleteRunAudioObserver.DriverService service
+                        in frontier.PendingServices)BoundaryService(service,false).WriteTo(json);
+                    json.WriteEndArray();
+                    json.WritePropertyName("native_arm_epoch");json.WriteValue(frontier.ArmEpoch);
+                    json.WritePropertyName("native_armed");json.WriteValue(frontier.IsArmed);
+                    json.WriteEndObject();
+                }
+                target.Write('\n');return target.ToString();
+            }
+
+            private void EnsureUsable()
+            {
+                if(disposed)throw new ObjectDisposedException("Session");
+                if(faulted)throw new InvalidOperationException(
+                    "The S1 audio capture is faulted and requires a fresh session.");
             }
 
             public void Dispose()
@@ -2200,6 +2788,13 @@ namespace OpenGGF.BizHawk.Headless
                     callbacks[i].Dispose();
                 callbacks.Clear();
                 api.Disable();
+                deferredPublicationBatch=null;pendingDeferredBegin=null;
+                boundaryDeferredBegin=null;frameDeferredEvidence=null;
+                frameEvidenceCharacters=0;frameEvidenceRecords=0;
+                frameOrdinaryCharacters=0;
+                framePendingManagedCharacters=0;
+                frameFinalizedEvidenceCharacters=0;
+                frameManagedCallbackCount=0;frameManagedRecordCount=0;
                 disposed = true;
             }
         }

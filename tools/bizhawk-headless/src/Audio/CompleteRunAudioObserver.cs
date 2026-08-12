@@ -149,6 +149,37 @@ namespace OpenGGF.BizHawk.Headless
                 ymPort0Address,ymPort1Address,armEpoch,armed);
         }
 
+        internal void ValidateCutoffFrontierBounds(int activeLimit,
+            int pendingLimit,int totalLimit,int transitionLimit,
+            long totalTransitionLimit)
+        {
+            if(capturing)throw new InvalidOperationException(
+                "Cannot validate a cutoff frontier during capture.");
+            if(faulted)throw new InvalidOperationException(
+                "The audio observer is faulted after a failed publication.");
+            if(activeServices.Count>activeLimit)throw Invalid(
+                "baseline active service bound");
+            if(pendingCompleted.Count>pendingLimit)throw Invalid(
+                "baseline pending service bound");
+            if(activeServices.Count>totalLimit-pendingCompleted.Count)
+                throw Invalid("baseline total service bound");
+            long transitions=0;
+            for(int group=0;group<2;group++)
+            {
+                List<ServiceBuilder> values=group==0?activeServices:pendingCompleted;
+                for(int i=0;i<values.Count;i++)
+                {
+                    int count=values[i].AncestryRecords==null
+                        ?0:values[i].AncestryRecords.Length;
+                    if(count>transitionLimit)throw Invalid(
+                        "baseline per-service transition bound");
+                    if(count>totalTransitionLimit-transitions)throw Invalid(
+                        "baseline total transition bound");
+                    transitions+=count;
+                }
+            }
+        }
+
         /// <summary>
         /// Captures the immutable state at a comparison-epoch boundary, then
         /// discards only ownership which belongs wholly to the preceding
