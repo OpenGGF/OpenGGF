@@ -18,6 +18,7 @@ public final class S3kCompleteRunStateDecoder {
     private static final int MUSIC_TRACKS = 0x40;
     private static final int OVERLAP_TRACKS = MUSIC_TRACKS + 9 * TRACK_BYTES;
     private static final int ONE_UP_FADE_TO_PREVIOUS = 0x29;
+    private static final int RESTORE_PREVIOUS_IN_PROGRESS = 0xff;
     private static final int[] MUSIC_VOICES = {0x06, 0x00, 0x01, 0x02, 0x04, 0x05, 0x80, 0xa0, 0xc0};
     private static final int[] SFX_VOICES = {0x02, 0x04, 0x05, 0x06, 0x80, 0xa0, 0xc0};
 
@@ -33,7 +34,11 @@ public final class S3kCompleteRunStateDecoder {
         int currentBank = u8(raw, 0x3e);
         int fadeToPrevious = u8(raw, 0x16);
         int savedBank = u8(raw, 0x2d);
-        boolean savedMode = fadeToPrevious == ONE_UP_FADE_TO_PREVIOUS;
+        // Z80 Sound Driver.asm:662-688 and 3067-3079 accept both $29 and $FF
+        // while the overlap still owns saved music. zFadeInToPrevious clears the
+        // flag before restoring tracks (2725-2747), so zero is post-restore SFX.
+        boolean savedMode = fadeToPrevious == ONE_UP_FADE_TO_PREVIOUS
+                || fadeToPrevious == RESTORE_PREVIOUS_IN_PROGRESS;
 
         DriverGlobals globals = new DriverGlobals(
                 u8(raw, 0x02), u8(raw, 0x04),

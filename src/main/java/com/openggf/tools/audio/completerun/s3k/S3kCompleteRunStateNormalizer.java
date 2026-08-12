@@ -182,8 +182,11 @@ public final class S3kCompleteRunStateNormalizer {
             musicTracks = exactTracks(musicTracks, 9, "live S3K music");
             Objects.requireNonNull(overlap, "S3K overlap interpretation");
             boolean oneUpSaved = overlap instanceof SavedMusic;
-            if (oneUpSaved != (globals.fadeToPreviousFlag() == 0x29)) {
-                throw new IllegalArgumentException("fade-to-previous $29 must select the saved-music overlap");
+            int fadeToPrevious = globals.fadeToPreviousFlag();
+            boolean savedOverlapFlag = fadeToPrevious == 0x29 || fadeToPrevious == 0xff;
+            if (oneUpSaved != savedOverlapFlag) {
+                throw new IllegalArgumentException(
+                        "fade-to-previous $29/$FF must select the saved-music overlap");
             }
         }
     }

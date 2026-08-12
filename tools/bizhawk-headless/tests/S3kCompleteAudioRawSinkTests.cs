@@ -194,11 +194,29 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private static void ProvesRealRow810RawBoundary(
             string romPath, string moviePath)
         {
+            string requestedOutput = Environment.GetEnvironmentVariable(
+                "OPENGGF_S3K_ROW810_RAW_OUTPUT");
             var output = new StringWriter();
-                S3kCompleteAudioCaptureRunner.CaptureResult result =
-                S3kCompleteAudioCaptureRunner.CaptureRawBoundaryProofPinnedForTesting(
-                    romPath, moviePath, ManifestPath(), output);
-            string[] lines = output.ToString().Split(
+            string captured = null;
+            S3kCompleteAudioCaptureRunner.CaptureResult result = null;
+            if (!string.IsNullOrEmpty(requestedOutput))
+            {
+                S3kCompleteAudioCaptureRunner.PublishRawForTesting(
+                    requestedOutput, writer =>
+                    {
+                        result = S3kCompleteAudioCaptureRunner.
+                            CaptureRawBoundaryProofPinnedForTesting(
+                                romPath, moviePath, ManifestPath(), writer);
+                    });
+                captured = File.ReadAllText(requestedOutput);
+            }
+            else
+            {
+                result = S3kCompleteAudioCaptureRunner.CaptureRawBoundaryProofPinnedForTesting(
+                        romPath, moviePath, ManifestPath(), output);
+                captured = output.ToString();
+            }
+            string[] lines = captured.Split(
                 new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
             AssertEx.Equal(811, result.ObservedRows);
             AssertEx.Equal(1, result.PublishedRows);

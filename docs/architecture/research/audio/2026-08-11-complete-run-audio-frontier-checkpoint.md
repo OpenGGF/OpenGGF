@@ -116,19 +116,32 @@ details are in the adjacent `TRUST.md`. No generated core or ROM is committed.
   still capture capability only: the staging reader deliberately has no
   canonical-store authority. The raw 1 KiB image now has a source-exact Java
   decoder into the existing typed S3K normalizer input. It authenticates the
-  4 MiB locked-on ROM before installing the shipped bank catalog, resolves
-  little-endian Z80 window pointers through their owning music/SFX bank, and
-  separately identifies the two ROM-installed Z80 driver images. Unknown bank
-  bytes, pointers outside `$8000..$FFFF`, the unused prefix of music bank `$1C`,
-  invalid stack partitions, and live pointer unions outside their owning range
-  fail closed. Inactive live tracks do not promote stale union bytes into
-  semantic state. The `fix_sndbugs=0` one-up interpretation instead decodes all
-  nine saved tracks: the shipped routine copies all nine, clears their playing
-  bits, and later forces every copied track live during restore.
+  4 MiB locked-on ROM before installing the shipped asset catalog, resolves
+  little-endian Z80 window pointers to one exact per-song/per-SFX occupied
+  source range, and separately identifies the two ROM-installed Z80 driver
+  images. The catalog comes from `sonic3k.lst`, `s3.lst`, and `Lockon S3/LockOn
+  Data.asm:1289-1334`: bank `$59` ends at locked-on CNZ1 `$2CEBF1`, bank `$5A`
+  ends at LBZ1 `$2D17A7`, and bank `$5B` owns only `$2D8AE8..$2DFEAC`. Thus the
+  `$5B` `org` prefix, every bank tail/alignment byte, and the SFX prefix before
+  `Sound_33` `$FDE30` and tail after `Sound_DB` `$FFDA9` fail closed. Unknown
+  banks, pointers outside `$8000..$FFFF`, invalid stack partitions, and live
+  pointer unions in any unoccupied hole also fail closed. Inactive live tracks
+  do not promote stale union bytes into semantic state. The `fix_sndbugs=0`
+  one-up interpretation decodes all nine saved tracks: the shipped routine
+  copies all nine, clears their playing bits, and later forces every copied
+  track live during restore. `zFadeToPrevFlag` values `$29` and `$FF` both
+  identify that saved overlap before restoration (`Z80 Sound Driver.asm:662-688,
+  3067-3079`); `zFadeInToPrevious` clears it before copying tracks back
+  (`:2725-2747`), so zero correctly selects the post-restore live-SFX overlap.
 
   The real row-810 boundary image from the final shared core decodes as nine
   populated music tracks plus the live-SFX overlap, then passes the existing
-  normalizer. That proof also corrected an initially too-short driver-data
+  normalizer and the S3K profile. This is now a committed opt-in Java gate: it
+  asks the native headless test to transactionally capture the four-record raw
+  row-810 prefix to a fresh temporary path, reads it through the strict raw
+  adapter, and invokes decoder, normalizer, and profile for both boundary and
+  frame state. It reads the canonical ROM and `_movies` BK2 in place and does
+  not create a fixture copy. That proof also corrected an initially too-short driver-data
   hypothesis: `Size_of_Snd_driver2_guess` reserves compressed ROM space, while
   the installed Z80 tables occupy `$1300..$1BFF` under the source guard at
   `Sound/Z80 Sound Driver.asm:5305-5307`. Central integration must now supply
@@ -160,6 +173,8 @@ Both row-810 proofs deliberately read the canonical `_movies` BK2 in place. They
 did not copy, rename, or symlink that read-only input into the absent run-local
 path. The raw-adapter proof used the ABI-v3 durable BizHawk home
 `$AUDIO_CROSSING_LIFETIME/target/audio-parity/native/crossing-install-final2-a`.
+The decoder/normalizer/profile gate used the current action-9 install at
+`.worktrees/audio-conditional-promotion/target/audio-parity/native/action9-install-a`.
 The ROM SHA-1 was `cfbf98c36c776677290a872547ac47c53d2761d6`; the
 BK2 SHA-256 was
 `aa892856df22b7bb1fe5accb48db10b90dc26845d1dccee90352da30349f53cc`.
@@ -201,13 +216,15 @@ is the current strict real-run frontier, not a complete-run publication claim.
 - Existing Sonic 2 and Sonic 3 & Knuckles capability/lifecycle suite: 10 tests
   passing, with their prior complete-run duplicate evidence unchanged.
 - S3K Task 2 profile/resolver/normalizer plus the strict ROM-backed raw-state
-  decoder: 26 tests passing. The decoder covers the shipped bank ranges,
+  decoder: focused gates passing. The decoder covers exact occupied assets,
   installed driver-data pointers, live pointer unions, inactive stale bytes,
-  the nine-track one-up overlap, and strict width/bank/window/stack rejection.
+  the `$29`/`$FF` nine-track one-up overlap, and strict
+  width/bank/window/hole/stack rejection.
 - S3K game-owned observer profile, bounded capture runner, and raw sink: 12
   synthetic tests passing. The strict Java raw adapter adds 9 tests. Both
   opt-in real power-on-to-row-810 gates pass, including the raw envelope with
-  the exact boundary values recorded above.
+  the exact boundary values recorded above and its Java decoder/normalizer/
+  profile consumer gate.
 - S3K engine command-boundary regression guards: 7 tests passing.
 - S3K AIZ release-slice, level-loading, bootstrap, and decoding guards: 52
   tests passing against locked-on ROM SHA-1
