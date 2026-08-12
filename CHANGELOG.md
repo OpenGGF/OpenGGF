@@ -3,6 +3,24 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: a title-card release row no longer inherits the source level's main-loop latch, so the
+  sidekick is not one frame ahead when the next act begins. `GameLoop`'s one-row "this gap row
+  still belongs to the source level's main loop" latch is cleared when the source loop is seen
+  to end, but a locked title-card iteration returns `SETUP_ONLY` and never reaches the
+  gap-body suppression test -- so across a level advance the latch survived all 26 title-card
+  rows and was consumed by the release row, giving the sidekick a 27th pre-row-0 object pass
+  where the ROM gives 26. Measured: it is the only such row in the entire 35-segment run.
+  The ROM cannot dispatch there -- the release is `Level_StartGame` (s2.asm:5081-5082), reached
+  only after the leave loop's last iteration (:5060-5066), and `Level_MainLoop` runs
+  `PauseGame` and `WaitForVint` before its `jsr (RunObjects).l` (:5088-5095), so the first pass
+  is the destination's next V-blank, its own recorded row 0. Same ordering holds in S1
+  (sonic.asm:2990-3006) and S3K (sonic3k.asm:7882-7894). Special-stage and bonus returns are
+  untouched: their fall-through row runs under a different disposition where the latch is never
+  consulted. Segment 7 of the emerald run falls from 149,522 to 23,128 errors, the entire
+  sidekick-phase cascade with it; the player stops dying short of the star post, the
+  `starpost_special` boundary is observed for the first time, segments 8-10 report zero errors,
+  and the walk advances four segments. Also clears a pre-existing `TestS1CompleteEmeraldVisualRun`
+  error ("hardware timing run is already closed").
 - Fix: the run-gap edge stamp recovery only rewinds a stamp that is actually stale. The
   end-anchored recovery in `TraceRunDynamicArtGapJournal` counts back from admission over
   rows that passed with nothing announced, which is correct for a gap whose shared cursor is
