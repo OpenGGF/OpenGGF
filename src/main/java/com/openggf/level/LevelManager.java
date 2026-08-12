@@ -819,6 +819,24 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      */
     public void initArt() {
         initObjectArt();
+        // Level_ClrRam zeroes the RAM block holding the player
+        // last-loaded-DPLC registers on every level load, before the level's
+        // players are created and their art primed (S2:
+        // clearRAM Misc_Variables,Misc_Variables_End, with
+        // Sonic_LastLoadedDPLC / Tails_LastLoadedDPLC /
+        // TailsTails_LastLoadedDPLC inside it at
+        // docs/s2disasm/s2.constants.asm:1484, 1556, 1625-1626, 1629; S1:
+        // clearRAM v_levelvariables, docs/s1disasm/sonic.asm:2742, with
+        // v_sonframenum inside it at docs/s1disasm/_Variables.asm:179, 230,
+        // 301). A level entered after a special stage must therefore not dedup
+        // its first player transfer against the mapping frame that stage left
+        // in the shared register. Only the level-load phase does this;
+        // refreshPlayableSpriteArt rebuilds renderers mid-gameplay, where no
+        // clearRAM runs.
+        var levelLoadLifecycle = GameServices.dynamicArtLifecycleOrNull();
+        if (levelLoadLifecycle != null) {
+            levelLoadLifecycle.clearPlayerDplcDedupRegistersForLevelLoad();
+        }
         playableArtInitializer.initialize();
     }
 

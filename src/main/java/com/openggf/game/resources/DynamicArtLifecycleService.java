@@ -504,7 +504,7 @@ public final class DynamicArtLifecycleService
         List<TileLoadRequest> requests = dplcFrame != null
                 && dplcFrame.requests() != null
                 ? List.copyOf(dplcFrame.requests()) : List.of();
-        Integer previous = lastMappingFrames.put(owner, mappingFrame);
+        Integer previous = lastMappingFrames.put(dedupRegister(owner), mappingFrame);
         if (previous != null && previous == mappingFrame) {
             return new ArtUpdate(false, -1, List.of());
         }
@@ -627,7 +627,38 @@ public final class DynamicArtLifecycleService
             throw new IllegalArgumentException(
                     "mappingFrame must be nonnegative");
         }
-        lastMappingFrames.put(owner, mappingFrame);
+        lastMappingFrames.put(dedupRegister(owner), mappingFrame);
+    }
+
+    /**
+     * Zeroes every player last-loaded-DPLC register the way a level load does.
+     *
+     * <p>The registers are level-scoped RAM, not persistent state. Sonic 2's
+     * {@code Level_ClrRam} runs {@code clearRAM Misc_Variables,Misc_Variables_End}
+     * (docs/s2disasm/s2.asm, {@code Level_ClrRam}), and all three registers live
+     * inside that block — {@code Sonic_LastLoadedDPLC}
+     * (docs/s2disasm/s2.constants.asm:1556), {@code Tails_LastLoadedDPLC} and
+     * {@code TailsTails_LastLoadedDPLC} (:1625-1626), between
+     * {@code Misc_Variables} (:1484) and {@code Misc_Variables_End} (:1629).
+     * Sonic 1 is the same shape: {@code Level_ClrRam} runs
+     * {@code clearRAM v_levelvariables} (docs/s1disasm/sonic.asm:2742) and
+     * {@code v_sonframenum} sits inside it
+     * (docs/s1disasm/_Variables.asm:179, 230, 301).
+     *
+     * <p>Consequently a level entered after a special stage starts with the
+     * registers at zero, not at the values the stage left behind: the stage
+     * writes the very same bytes (docs/s2disasm/s2.asm:69095, 69205, 70378,
+     * 70403, 70504, 70586-70588), so without the clear the returned level
+     * suppresses the player's first mapping-frame transfer against a special
+     * stage's frame number.
+     *
+     * <p>Modelled as an absent register rather than a stored zero: the engine
+     * treats "no value yet" as the fresh-level state its own level-load
+     * priming path expects, and the ROM's cleared byte is only ever read
+     * again after that priming has rewritten it.
+     */
+    public void clearPlayerDplcDedupRegistersForLevelLoad() {
+        lastMappingFrames.clear();
     }
 
     private ArtUpdate observeDplc(
@@ -644,7 +675,7 @@ public final class DynamicArtLifecycleService
         }
         List<TileLoadRequest> checked =
                 List.copyOf(Objects.requireNonNull(tileRequests, "tileRequests"));
-        Integer previous = lastMappingFrames.put(owner, mappingFrame);
+        Integer previous = lastMappingFrames.put(dedupRegister(owner), mappingFrame);
         if (previous != null && previous == mappingFrame) {
             return new ArtUpdate(false, -1, List.of());
         }
@@ -677,7 +708,7 @@ public final class DynamicArtLifecycleService
         }
         List<TileLoadRequest> checked =
                 List.copyOf(Objects.requireNonNull(tileRequests, "tileRequests"));
-        Integer previous = lastMappingFrames.put(owner, mappingFrame);
+        Integer previous = lastMappingFrames.put(dedupRegister(owner), mappingFrame);
         if (previous != null && previous == mappingFrame) {
             return new ArtUpdate(false, -1, List.of());
         }
@@ -1189,6 +1220,37 @@ public final class DynamicArtLifecycleService
             throw new IllegalStateException(
                     "dynamic-art comparison segment is not open");
         }
+    }
+
+    /**
+     * Resolves the ROM last-loaded-DPLC register an owner dedups against.
+     *
+     * <p>Sonic 2 has exactly three such registers — {@code Sonic_LastLoadedDPLC},
+     * {@code Tails_LastLoadedDPLC} and {@code TailsTails_LastLoadedDPLC}
+     * (docs/s2disasm/s2.constants.asm:1556, 1625-1626) — one per permanently
+     * allocated player art bank, and the special stage shares them with the
+     * level rather than owning private ones. {@code Obj09}'s init writes
+     * {@code #1} to {@code Sonic_LastLoadedDPLC} (docs/s2disasm/s2.asm:69095)
+     * and {@code LoadSSSonicDynPLC} keeps deduping against that same register
+     * (docs/s2disasm/s2.asm:69205); {@code Obj10} and the {@code Obj88} tail do
+     * the same to {@code Tails_LastLoadedDPLC} and
+     * {@code TailsTails_LastLoadedDPLC} (docs/s2disasm/s2.asm:70378, 70403,
+     * 70504, 70586-70588). The level's {@code LoadSonicDynPLC},
+     * {@code LoadTailsDynPLC} and {@code LoadTailsTailsDynPLC} read and write
+     * the very same bytes (docs/s2disasm/s2.asm:38834-38836, 41639-41641,
+     * 41663-41665), and only a character swap clears them
+     * (docs/s2disasm/s2.asm:26039-26041).
+     *
+     * <p>The engine keeps distinct comparison owners for the level and
+     * special-stage submitters because the recorder labels their edges apart,
+     * but the dedup state behind them is one ROM byte per bank. Keying it by
+     * the bank rather than by the submitter makes a special stage leave the
+     * level's register dirty exactly as the ROM does, so the returned level
+     * re-submits the player's first mapping frame instead of suppressing it
+     * against a value stale since before the stage.
+     */
+    private static String dedupRegister(String owner) {
+        return owner.startsWith("ss-") ? owner.substring(3) : owner;
     }
 
     private static void validateOwner(String owner) {
