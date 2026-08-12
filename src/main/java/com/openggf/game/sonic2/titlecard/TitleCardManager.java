@@ -588,8 +588,20 @@ public class TitleCardManager implements TitleCardProvider {
             case EXIT_LEFT_SWOOSH -> updateExitLeftSwoosh();
             case EXIT_BOTTOM_BAR -> updateExitBottomBar();
             case EXIT_BACKGROUND -> updateExitBackground();
-            case TEXT_WAIT -> updateTextWait();
-            case TEXT_EXIT -> updateTextExit();
+            // The overlay states below animate the pieces for display; the ROM
+            // routine that owns when their art loads fire runs alongside them.
+            case TEXT_WAIT -> {
+                if (advanceZoneNamePieceTail()) {
+                    queueExitPlcs();
+                }
+                updateTextWait();
+            }
+            case TEXT_EXIT -> {
+                if (advanceZoneNamePieceTail()) {
+                    queueExitPlcs();
+                }
+                updateTextExit();
+            }
             case COMPLETE -> {}
         }
     }
@@ -670,6 +682,11 @@ public class TitleCardManager implements TitleCardProvider {
         state = TitleCardState.TEXT_WAIT;
         stateTimer = 0;
         leavePass = 0;
+        // s2.asm:5066-5080 writes routine $16 and anim_frame_duration $2D to
+        // the surviving pieces here, after the leave loop and before
+        // Level_MainLoop, whether or not the card was displayed.
+        exitTailWaitFrames = TEXT_WAIT_DURATION;
+        exitTailZoneNameX = EXIT_TAIL_ZONE_NAME_X_TARGET;
         LOGGER.fine("Title card entered TEXT_WAIT state at frame " + frameCounter);
     }
 
@@ -779,9 +796,9 @@ public class TitleCardManager implements TitleCardProvider {
         boolean zoneTextExited = (zoneTextElement == null || zoneTextElement.hasExited());
         boolean actNumberExited = (actNumberElement == null || actNumberElement.hasExited());
 
-        if (zoneNameExited) {
-            queueExitPlcs();
-        }
+        // The two art loads are owned by advanceZoneNamePieceTail(), which
+        // models Obj34_WaitAndGoAway's own x_pixel test rather than this
+        // overlay element's viewport-relative exit.
 
         if (zoneNameExited && zoneTextExited && actNumberExited) {
             // Mark transition as pending - actual transition happens next frame
@@ -842,23 +859,41 @@ public class TitleCardManager implements TitleCardProvider {
      * docs/s2disasm/s2.asm:27605-27637
      */
     private void updateOmittedPresentationExitTail() {
+        if (advanceZoneNamePieceTail()) {
+            finishOmittedPresentationExitTail();
+        }
+    }
+
+    /**
+     * One gameplay pass of {@code Obj34_WaitAndGoAway} for the zone-name piece,
+     * returning true on the pass that reaches {@code
+     * Obj34_LoadStandardWaterAndAnimalArt} (docs/s2disasm/s2.asm:27605-27637).
+     *
+     * <p>This is the single owner of that routine's timing. {@code Level}
+     * arms it identically whether or not the card was displayed: the routine
+     * byte and {@code anim_frame_duration = $2D} are written after the leave
+     * loop and immediately before {@code Level_MainLoop}
+     * (docs/s2disasm/s2.asm:5066-5080), so the count always starts on the
+     * first main-loop iteration. The presentation path previously decided the
+     * same event from its overlay elements' viewport-relative {@code
+     * hasExited()} plus a state-transition pass that consumed a frame without
+     * moving the piece, which fired the two art loads two frames late.
+     */
+    private boolean advanceZoneNamePieceTail() {
         // tst.w anim_frame_duration(a0) / subq.w #1 / bra DisplaySprite
         if (exitTailWaitFrames > 0) {
             exitTailWaitFrames--;
-            return;
+            return false;
         }
         // cmp.w titlecard_x_source(a0),d1 / beq Obj34_LoadStandardWaterAndAnimalArt
         if (exitTailZoneNameX == EXIT_TAIL_ZONE_NAME_X_SOURCE) {
-            finishOmittedPresentationExitTail();
-            return;
+            return true;
         }
         // sub.w d0,x_pixel(a0) with d0 negated while below the source position
         exitTailZoneNameX += EXIT_TAIL_SLIDE_SPEED;
         // cmpi.w #$200,x_pixel(a0) / bhi Obj34_LoadStandardWaterAndAnimalArt
-        if (exitTailZoneNameX == EXIT_TAIL_ZONE_NAME_X_SOURCE
-                || exitTailZoneNameX > EXIT_TAIL_OFFSCREEN_LIMIT) {
-            finishOmittedPresentationExitTail();
-        }
+        return exitTailZoneNameX == EXIT_TAIL_ZONE_NAME_X_SOURCE
+                || exitTailZoneNameX > EXIT_TAIL_OFFSCREEN_LIMIT;
     }
 
     private void finishOmittedPresentationExitTail() {
