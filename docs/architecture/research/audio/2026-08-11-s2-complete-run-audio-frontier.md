@@ -225,10 +225,16 @@ is therefore necessarily a depth-zero root rather than an orphaned child.
 
 Focused verification passed 34 S2 Java tests, eight S2 profile tests, eight S2
 capture/raw-sink synthetic tests, and the one opt-in real boundary gate. The
-production C# addition changes the deterministic harness identities to
+round-local pre-integration build produced main executable
 `ec8c2b6745faf72dca885d918372a8e3d678235681ab954b948f75a31de4c4c6`
-for the main executable and
-`0fde5216cfb819919d29e10287ffd500e4a63b1e72437eb8b0ea78db7a05d3a2`
-for the test executable in this worktree. The tracked capability remains on the
-integration identity; the conductor must perform the single combined
-cross-game deterministic rebuild and repin after merging all game rounds.
+and test executable
+`0fde5216cfb819919d29e10287ffd500e4a63b1e72437eb8b0ea78db7a05d3a2`.
+The completed combined cross-game cascade supersedes those provisional values:
+the integrated main executable is
+`a4e2b74cb05db8152e18e6d5c6d8c6c12bb12b470f33a4e83b3b5d9bb7e36965`,
+the test executable is
+`1c110cf9011af53100a48e9a414d0d06da5510710840db944af8336d1a428bfd`,
+the normalized capability is
+`a5b5a07529f3e7c908601e7dc1ce552c8fd70390a9619e6847ccb00e16f984d3`,
+and the raw capability is
+`8a06a63e4a5c8b1d4c9445e4333537caed3c8e67df7df946135e273d911ab0fb`.
