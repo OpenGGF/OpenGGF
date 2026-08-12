@@ -27,7 +27,6 @@
 - Modify: `tools/bizhawk-headless/native/gpgx-audio-observer/selftest/matrix_harness.c`
 - Modify: `tools/bizhawk-headless/native/gpgx-audio-observer/selftest/cpu_boundary_harness.c`
 - Modify: `tools/bizhawk-headless/native/gpgx-audio-observer/0001-buffer-z80-audio-events.patch`
-- Modify: `tools/bizhawk-headless/native/gpgx-audio-observer/README.md`
 
 **Interfaces:**
 - Consumes: action-11 marker value 4, existing service stack/push/pop, hook proof, one native reservation.
@@ -113,6 +112,7 @@
 - Modify: `tools/bizhawk-headless/native/gpgx-audio-observer/artifact-lock.json`
 - Modify: `tools/bizhawk-headless/native/gpgx-audio-observer/task7-build-recipe.json`
 - Modify: `tools/bizhawk-headless/native/gpgx-audio-observer/build-core.sh`
+- Modify: `tools/bizhawk-headless/native/gpgx-audio-observer/README.md`
 - Modify: `tools/bizhawk-headless/fixtures/gpgx-audio-capability-v1.json`
 - Modify: `src/main/java/com/openggf/tools/audio/completerun/CompleteRunAudioProfiles.java`
 - Modify: identity assertions under `src/test/` and `tools/bizhawk-headless/tests/`
