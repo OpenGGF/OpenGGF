@@ -110,29 +110,25 @@ details are in the adjacent `TRUST.md`. No generated core or ROM is committed.
   unpaired action-10 experiment was rejected and its production/identity
   cascade was discarded.
 
-  The corrected contract is one bounded deferred/coalesced begin: the
-  three source-identical `$71B4C` observations while the root wait service
-  blocks must yield exactly one new kind-4 semantic begin, ordered after the
-  kind-6 completion, without retroactively parenting kind 6 and without a
-  push, retry, or recently-closed-ancestry fiction. ABI-v3 action 11 reserves
-  that future begin against the exact non-child-bearing blocker token. Every
-  physical callback emits marker value 4 and retains the identical managed
-  identity; the blocker's atomic END then emits one adjacent ordinary root
-  BEGIN and consumes the reservation.
+  **Superseded action-11 design (historical evidence only).** The next
+  experiment proposed one bounded deferred/coalesced begin: three
+  source-identical `$71B4C` observations while the root wait service blocked
+  would yield one new kind-4 semantic begin after kind-6 completion. ABI-v3
+  action 11 reserved that future begin against the blocker token, and the
+  blocker's END emitted an adjacent ordinary root BEGIN. The physical RED
+  described below disproved this release-after-END design; these statements
+  preserve its rationale but do not specify the current contract.
 
-  **2026-08-12 action-11 real proof.** A diagnostic core built from the locked
-  source/toolchain at commit `827853924` crosses row 8775 with the required
-  physical order: the prior kind-4 service ends at ordinal 12, kind 6 begins
-  as a root at ordinal 13, three marker-value-4 correlations retain
-  `A7=$FFFDB2` and return `$000B64`, kind 6 ends at ordinal 20, and exactly one
-  new root kind-4 service begins at ordinal 21. The restored opt-in gate checks
-  all four ordinals, all three raw correlations and their common managed
-  identity, and the single release. A diagnostic terminal probe over every
-  remaining manifest row, selected by
-  `OPENGGF_S1_AUDIO_TERMINAL_PROBE=1`, is clean through row 225100 and
-  `Complete(225101)`. The strict S1 reference-observer frontier is therefore
-  the clean exclusive bound **225101**. This is a complete reference
-  observation interval, not a published reference-vs-OpenGGF MATCH claim.
+  **Superseded 2026-08-12 action-11 experiment (historical evidence only).**
+  The diagnostic core built from the locked source/toolchain at commit
+  `827853924` appeared to cross row 8775 with ordinals 12/13/20/21 and appeared
+  to reach `Complete(225101)`. That interpretation released a new root kind-4
+  service only after the kind-6 END. The later preserved physical RED disproved
+  it at `$71BB2` while kind 6 was still active, so neither the released-root
+  sequence nor its terminal result is current acceptance evidence. The
+  corrected reserve/consume proof and current terminal frontier are recorded
+  below: row 8775 is GREEN, and row 12525 `$72C24` stops with
+  `first_fault=5:2:72c24:2:2:0:4`.
 - Sonic 2: the complete reference movie has two identical observer runs:
   259,590 frames, 169,986,419 events, maximum frame occupancy 1,825, event
   digest prefix `c2b2f823`, and an empty cutoff frontier. Engine comparison is

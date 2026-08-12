@@ -101,3 +101,11 @@ SHA-256
 Task 4 stops here for a new reviewed frontier round. It does not broaden the
 conditional-close contract, claim `Complete(225101)`, claim reference-vs-OpenGGF
 semantic MATCH, or publish any complete or partial capture.
+
+## Review correction
+
+Follow-up review found an earlier checkpoint paragraph still stated the
+superseded release-after-END experiment and `Complete(225101)` result in the
+present tense. That historical paragraph is now explicitly labeled
+superseded, retains the useful old evidence, and points to row 12525 `$72C24`
+with `first_fault=5:2:72c24:2:2:0:4` as the sole current terminal claim.
