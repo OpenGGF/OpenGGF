@@ -356,6 +356,17 @@ Full evidence and hashes are recorded in
 `docs/architecture/validation/trace/2026-08-12-s1-row12525-managed-action9.md`
 and `docs/status/trace-frontier-log.md`.
 
+The immediate correction replaces only that test aggregate with a selective
+JSONL `TextWriter`. It parses all complete LF-terminated records as they pass,
+discards unselected rows, and retains only the baseline, row-1548/8775 or
+row-12525 proof records, and terminal when requested. Explicit line and
+retained-output ceilings fail closed; malformed, partial, CRLF, duplicate,
+unexpected, or overflowing input poisons the sink and requires a fresh capture
+session. The unchanged S1 proof assertions pass in the 43-test synthetic class,
+and all 25 shared Observer synthetics pass. No long configured-terminal run was
+performed here, so the last observed real frontier remains row 21766 for the
+separate continuation task.
+
 The capability fixture now binds collector source SHA-256
 `92fb4c4541931c30240ec0b62d00fba2d7e26dbaf12230dc2ab0d15b42465560`,
 production harness SHA-256

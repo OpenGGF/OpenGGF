@@ -10,6 +10,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
     internal static class S1CompleteRunAudioReferenceCaptureTests
     {
         private const string FixtureName = "s1-audio-service-manifest-v1.json";
+        private const int ProofMaxLineCharacters = 256 * 1024;
+        private const int ProofMaxRetainedRecords = 2 * 65536 + 2;
+        private const int ProofMaxRetainedCharacters = 16 * 1024 * 1024;
 
         public static void Register(ICollection<TestMain.TestCase> tests)
         {
@@ -137,6 +140,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S1CompleteRunAudioReferenceCaptureTests cancel boundary deferred child on reset",
                 CancelsBoundaryDeferredChildOnReset));
             tests.Add(new TestMain.TestCase(
+                "S1CompleteRunAudioReferenceCaptureTests selectively retain bounded proof JSONL",
+                SelectivelyRetainsBoundedProofJsonl));
+            tests.Add(new TestMain.TestCase(
+                "S1CompleteRunAudioReferenceCaptureTests reject invalid selective proof JSONL",
+                RejectsInvalidSelectiveProofJsonl));
+            tests.Add(new TestMain.TestCase(
                 "S1CompleteRunAudioReferenceCaptureTests consume one deferred child begin during row 8775 wait service",
                 MaterializesDeferredBeginAfterWaitService,
                 game: "s1", serial: true, estimatedSeconds: 300.0));
@@ -149,7 +158,366 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private sealed class RealPrefixResult
         {
             internal S1CompleteRunAudioReferenceCapture.Manifest Manifest;
-            internal string Output;
+            internal IList<JObject> Records;
+            internal long TotalRecordCount;
+            internal int RetainedCharacterCount;
+        }
+
+        private sealed class SelectiveJsonlProofWriter : TextWriter
+        {
+            private static readonly HashSet<string> RowRecordTypes=
+                new HashSet<string>(StringComparer.Ordinal)
+                {
+                    "baseline", "frame_begin", "input_reset",
+                    "managed_reset_service_snapshot", "request", "decision",
+                    "managed_service_snapshot", "native_event",
+                    "managed_hook_evidence", "dispatch", "frame_end"
+                };
+            private static readonly HashSet<string> RecordTypes=
+                new HashSet<string>(RowRecordTypes,StringComparer.Ordinal)
+                {
+                    "metadata", "terminal"
+                };
+
+            private readonly HashSet<int> retainedRows;
+            private readonly int firstRow;
+            private readonly int finalRow;
+            private readonly bool expectTerminal;
+            private readonly int maxLineCharacters;
+            private readonly int maxRetainedRecords;
+            private readonly int maxRetainedCharacters;
+            private readonly System.Text.StringBuilder line=
+                new System.Text.StringBuilder();
+            private readonly List<JObject> retainedRecords=new List<JObject>();
+            private bool metadataSeen;
+            private bool baselineSeen;
+            private bool terminalSeen;
+            private bool faulted;
+            private bool finished;
+            private long totalRecordCount;
+            private int retainedCharacterCount;
+
+            internal SelectiveJsonlProofWriter(int firstRow,int finalRow,
+                IEnumerable<int> retainedRows,bool expectTerminal,
+                int maxLineCharacters,
+                int maxRetainedRecords,int maxRetainedCharacters)
+            {
+                if(retainedRows==null)throw new ArgumentNullException("retainedRows");
+                if(firstRow<0||finalRow<firstRow)
+                    throw new ArgumentOutOfRangeException("finalRow");
+                if(maxLineCharacters<=0)throw new ArgumentOutOfRangeException(
+                    "maxLineCharacters");
+                if(maxRetainedRecords<=0)throw new ArgumentOutOfRangeException(
+                    "maxRetainedRecords");
+                if(maxRetainedCharacters<=0)throw new ArgumentOutOfRangeException(
+                    "maxRetainedCharacters");
+                this.retainedRows=new HashSet<int>(retainedRows);
+                foreach(int row in this.retainedRows)
+                    if(row<firstRow||row>finalRow)
+                        throw new ArgumentOutOfRangeException("retainedRows");
+                this.firstRow=firstRow;
+                this.finalRow=finalRow;
+                this.expectTerminal=expectTerminal;
+                this.maxLineCharacters=maxLineCharacters;
+                this.maxRetainedRecords=maxRetainedRecords;
+                this.maxRetainedCharacters=maxRetainedCharacters;
+            }
+
+            public override System.Text.Encoding Encoding
+            {
+                get { return new System.Text.UTF8Encoding(false); }
+            }
+
+            internal IList<JObject> RetainedRecords
+            {
+                get { return retainedRecords.AsReadOnly(); }
+            }
+
+            internal int RetainedRecordCount
+            {
+                get { return retainedRecords.Count; }
+            }
+
+            internal int RetainedCharacterCount
+            {
+                get { return retainedCharacterCount; }
+            }
+
+            internal long TotalRecordCount
+            {
+                get { return totalRecordCount; }
+            }
+
+            public override void Write(char value)
+            {
+                EnsureWritable();
+                Accept(value);
+            }
+
+            public override void Write(char[] buffer,int index,int count)
+            {
+                if(buffer==null)throw new ArgumentNullException("buffer");
+                if(index<0||count<0||buffer.Length-index<count)
+                    throw new ArgumentOutOfRangeException();
+                EnsureWritable();
+                for(int i=0;i<count;i++)Accept(buffer[index+i]);
+            }
+
+            public override void Write(string value)
+            {
+                EnsureWritable();
+                if(value==null)return;
+                for(int i=0;i<value.Length;i++)Accept(value[i]);
+            }
+
+            internal void Finish()
+            {
+                EnsureWritable();
+                if(line.Length!=0)Fail("The selective proof JSONL has a partial non-LF-terminated line.");
+                if(!metadataSeen||!baselineSeen)
+                    Fail("The selective proof JSONL is missing metadata or baseline.");
+                if(terminalSeen!=expectTerminal)
+                    Fail("The selective proof JSONL terminal presence is unexpected.");
+                finished=true;
+            }
+
+            private void EnsureWritable()
+            {
+                if(faulted)throw new InvalidOperationException(
+                    "A selective proof sink failure requires a fresh writer and session.");
+                if(finished)throw new InvalidOperationException(
+                    "The selective proof JSONL writer is already finished.");
+            }
+
+            private void Accept(char value)
+            {
+                if(value=='\r')
+                    Fail("The selective proof JSONL must use LF without CR.");
+                if(value=='\n')
+                {
+                    ProcessLine();
+                    line.Length=0;
+                    return;
+                }
+                if(line.Length>=maxLineCharacters)
+                    Fail("The selective proof JSONL exceeded its line-character limit.");
+                line.Append(value);
+            }
+
+            private void ProcessLine()
+            {
+                JObject record;
+                try
+                {
+                    record=JObject.Parse(line.ToString());
+                }
+                catch(Exception error)
+                {
+                    Fail("The selective proof JSONL line is not valid JSON.",error);
+                    return;
+                }
+                JToken typeToken=record["type"];
+                if(typeToken==null||typeToken.Type!=JTokenType.String
+                    ||!RecordTypes.Contains((string)typeToken))
+                    Fail("The selective proof JSONL has an unexpected record type.");
+                string type=(string)typeToken;
+                if(type=="metadata")
+                {
+                    if(metadataSeen)Fail("The selective proof JSONL has duplicate metadata.");
+                    metadataSeen=true;
+                }
+                else if(type=="baseline")
+                {
+                    if(baselineSeen)Fail("The selective proof JSONL has a duplicate baseline.");
+                    baselineSeen=true;
+                }
+                else if(type=="terminal")
+                {
+                    if(terminalSeen)Fail("The selective proof JSONL has a duplicate terminal.");
+                    if(!expectTerminal)
+                        Fail("The selective proof JSONL has an unexpected terminal.");
+                    long exclusiveEnd=RequireInteger(record["exclusive_end"],
+                        "The selective proof JSONL terminal has no allowed integer exclusive_end.");
+                    if(exclusiveEnd!=(long)finalRow+1)
+                        Fail("The selective proof JSONL terminal exclusive_end is unexpected.");
+                    terminalSeen=true;
+                }
+                if(terminalSeen&&type!="terminal")
+                    Fail("The selective proof JSONL has data after terminal.");
+
+                int row=-1;
+                if(RowRecordTypes.Contains(type))
+                {
+                    long parsedRow=RequireInteger(record["row"],
+                        "The selective proof JSONL row record has no allowed integer row.");
+                    if(parsedRow<firstRow||parsedRow>finalRow)
+                        Fail("The selective proof JSONL row is outside the allowed capture range.");
+                    row=(int)parsedRow;
+                    if(type=="baseline"&&row!=firstRow)
+                        Fail("The selective proof JSONL baseline row is unexpected.");
+                }
+                if(totalRecordCount==long.MaxValue)
+                    Fail("The selective proof JSONL exceeded its record-count limit.");
+                totalRecordCount++;
+                if(type=="baseline"||retainedRows.Contains(row)
+                    ||type=="terminal")
+                    Retain(record,line.Length+1);
+            }
+
+            private long RequireInteger(JToken token,string message)
+            {
+                if(token==null||token.Type!=JTokenType.Integer)Fail(message);
+                try
+                {
+                    return token.Value<long>();
+                }
+                catch(Exception error)
+                {
+                    Fail(message,error);
+                    return -1;
+                }
+            }
+
+            private void Retain(JObject record,int characters)
+            {
+                if(retainedRecords.Count>=maxRetainedRecords)
+                    Fail("The selective proof JSONL exceeded its retained-record limit.");
+                if(characters>maxRetainedCharacters-retainedCharacterCount)
+                    Fail("The selective proof JSONL exceeded its retained-character limit.");
+                retainedRecords.Add(record);
+                retainedCharacterCount+=characters;
+            }
+
+            private void Fail(string message)
+            {
+                Fail(message,null);
+            }
+
+            private void Fail(string message,Exception inner)
+            {
+                faulted=true;
+                line.Length=0;
+                if(inner==null)throw new InvalidDataException(message);
+                throw new InvalidDataException(message,inner);
+            }
+        }
+
+        private static void SelectivelyRetainsBoundedProofJsonl()
+        {
+            var writer=new SelectiveJsonlProofWriter(
+                0,10000,new[]{7},true,256,3,192);
+            string metadata="{\"type\":\"metadata\",\"schema\":\"test\"}\n";
+            string baseline="{\"type\":\"baseline\",\"row\":0}\n";
+            writer.Write(metadata.Substring(0,11));
+            writer.Write(metadata.Substring(11)+baseline);
+            for(int row=1;row<=10000;row++)
+            {
+                if(row==7)continue;
+                writer.Write("{\"type\":\"native_event\",\"row\":"
+                    +row.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                    +",\"kind\":10}\n");
+            }
+            string selected="{\"type\":\"native_event\",\"row\":7,\"kind\":10}\n";
+            for(int i=0;i<selected.Length;i++)writer.Write(selected[i]);
+            writer.Write("{\"type\":\"terminal\",\"exclusive_end\":10001}\n");
+            writer.Finish();
+
+            AssertEx.Equal(10003L,writer.TotalRecordCount);
+            AssertEx.Equal(3,writer.RetainedRecordCount);
+            AssertEx.Equal(true,writer.RetainedCharacterCount<192);
+            AssertEx.Equal("baseline",(string)writer.RetainedRecords[0]["type"]);
+            AssertEx.Equal(7,(int)writer.RetainedRecords[1]["row"]);
+            AssertEx.Equal("terminal",(string)writer.RetainedRecords[2]["type"]);
+        }
+
+        private static void RejectsInvalidSelectiveProofJsonl()
+        {
+            AssertSelectiveWriterFails(
+                writer=>writer.Write("{\"type\":\"native_event\",\"row\":1}\r\n"),
+                "LF");
+            AssertSelectiveWriterFails(
+                writer=>writer.Write("{not-json}\n"),"valid JSON");
+            AssertSelectiveWriterFails(
+                writer=>writer.Write("{\"type\":\"surprise\",\"row\":1}\n"),
+                "record type");
+            AssertSelectiveWriterFails(
+                writer=>writer.Write("{\"type\":\"native_event\"}\n"),"row");
+            AssertSelectiveWriterFails(
+                writer=>writer.Write("{\"type\":\"native_event\",\"row\":2}\n"),
+                "allowed capture range");
+            AssertSelectiveWriterFails(
+                writer=>writer.Write(
+                    "{\"type\":\"native_event\",\"row\":999999999999999999999999}\n"),
+                "allowed integer row");
+            AssertSelectiveWriterFails(writer=>
+            {
+                writer.Write("{\"type\":\"baseline\",\"row\":0}\n");
+                writer.Write("{\"type\":\"baseline\",\"row\":0}\n");
+            },"duplicate");
+            AssertSelectiveWriterFails(writer=>
+            {
+                writer.Write("{\"type\":\"terminal\",\"exclusive_end\":2}\n");
+                writer.Write("{\"type\":\"terminal\",\"exclusive_end\":2}\n");
+            },"duplicate");
+            AssertSelectiveWriterFails(
+                writer=>writer.Write(
+                    "{\"type\":\"terminal\",\"exclusive_end\":3}\n"),
+                "exclusive_end");
+            AssertSelectiveWriterFails(writer=>
+            {
+                writer.Write("{\"type\":\"terminal\",\"exclusive_end\":2}\n");
+                writer.Write("{\"type\":\"native_event\",\"row\":1}\n");
+            },"after terminal");
+            AssertSelectiveWriterFails(writer=>
+                writer.Write(new string('x',257)),"line-character");
+
+            var partial=new SelectiveJsonlProofWriter(
+                0,1,new[]{1},true,256,3,192);
+            partial.Write("{\"type\":\"native_event\",\"row\":1}");
+            AssertEx.Throws<InvalidDataException>(()=>partial.Finish(),"partial");
+            AssertEx.Throws<InvalidOperationException>(
+                ()=>partial.Write("\n"),"fresh writer and session");
+
+            var recordOverflow=new SelectiveJsonlProofWriter(
+                0,1,new[]{1},true,256,1,192);
+            recordOverflow.Write("{\"type\":\"baseline\",\"row\":0}\n");
+            AssertEx.Throws<InvalidDataException>(()=>recordOverflow.Write(
+                "{\"type\":\"native_event\",\"row\":1}\n"),
+                "retained-record");
+            AssertEx.Throws<InvalidOperationException>(
+                ()=>recordOverflow.Write("{\"type\":\"native_event\",\"row\":2}\n"),
+                "fresh writer and session");
+
+            var characterOverflow=new SelectiveJsonlProofWriter(
+                0,1,new[]{1},true,256,3,27);
+            AssertEx.Throws<InvalidDataException>(()=>characterOverflow.Write(
+                "{\"type\":\"baseline\",\"row\":0}\n"),
+                "retained-character");
+
+            var unexpectedTerminal=new SelectiveJsonlProofWriter(
+                0,1,new[]{1},false,256,3,192);
+            AssertEx.Throws<InvalidDataException>(()=>unexpectedTerminal.Write(
+                "{\"type\":\"terminal\",\"exclusive_end\":2}\n"),
+                "unexpected terminal");
+
+            var incomplete=new SelectiveJsonlProofWriter(
+                0,1,new[]{1},false,256,2,192);
+            incomplete.Write("{\"type\":\"metadata\",\"schema\":\"test\"}\n");
+            incomplete.Write("{\"type\":\"baseline\",\"row\":0}\n");
+            incomplete.Write("{\"type\":\"native_event\",\"row\":1}\n");
+            incomplete.Finish();
+            AssertEx.Equal(2,incomplete.RetainedRecordCount);
+        }
+
+        private static void AssertSelectiveWriterFails(
+            Action<SelectiveJsonlProofWriter> action,string message)
+        {
+            var writer=new SelectiveJsonlProofWriter(
+                0,1,new[]{1},true,256,3,192);
+            AssertEx.Throws<InvalidDataException>(()=>action(writer),message);
+            AssertEx.Throws<InvalidOperationException>(
+                ()=>writer.Write("{\"type\":\"native_event\",\"row\":1}\n"),
+                "fresh writer and session");
         }
 
         private static void MaterializesDeferredBeginAfterWaitService()
@@ -159,9 +527,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
             bool terminalProbe=Environment.GetEnvironmentVariable(
                 "OPENGGF_S1_AUDIO_TERMINAL_PROBE")=="1";
             RealPrefixResult result=CaptureRealPrefix(
-                terminalProbe?-1:8775,true);
+                terminalProbe?-1:8775,true,new[]{1548,8775});
             S1CompleteRunAudioReferenceCapture.Manifest manifest=result.Manifest;
-            string rawOutput=result.Output;
             JObject baseline = null;
             JObject directParentRetry = null;
             ushort retryToken=0;
@@ -212,10 +579,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
             var deferredEvidence=new List<JObject>();
             var row8775ManagedEvidence=new List<JObject>();
             var row8775DpcmBegins=new List<JObject>();
-            foreach (string line in rawOutput.Split(new[]{'\n'},
-                StringSplitOptions.RemoveEmptyEntries))
+            foreach (JObject record in result.Records)
             {
-                JObject record = JObject.Parse(line);
                 if ((string)record["type"] == "baseline") baseline = record;
                 if ((string)record["type"]=="native_event"
                     &&(int)record["row"]==8775&&(int)record["kind"]==2
@@ -407,9 +772,24 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 }
             }
             AssertEx.Equal("",string.Join("|",postChildPreTailHooks));
+            if(terminalProbe)
+            {
+                List<JObject> terminals=Records(result.Records,"terminal",
+                    value=>true);
+                AssertEx.Equal(1,terminals.Count);
+                AssertEx.Equal(manifest.ExclusiveEnd,
+                    (int)terminals[0]["exclusive_end"]);
+                AssertEx.Equal(manifest.ExclusiveEnd-manifest.FirstRow,
+                    (int)terminals[0]["rows"]);
+                Console.WriteLine(
+                    "S1_TERMINAL_PROOF total_records={0} retained_records={1} retained_chars={2}",
+                    result.TotalRecordCount,result.Records.Count,
+                    result.RetainedCharacterCount);
+            }
         }
 
-        private static RealPrefixResult CaptureRealPrefix(int finalRow,bool complete)
+        private static RealPrefixResult CaptureRealPrefix(int finalRow,bool complete,
+            IEnumerable<int> retainedRows)
         {
             string romPath = Environment.GetEnvironmentVariable("S1_ROM_PATH");
             string moviePath = Environment.GetEnvironmentVariable("S1_AUDIO_BK2_PATH");
@@ -426,7 +806,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
             S1CompleteRunAudioReferenceCapture.Manifest manifest =
                 S1CompleteRunAudioReferenceCapture.LoadManifest(manifestPath, rom);
             if(finalRow<0)finalRow=manifest.ExclusiveEnd-1;
-            var output = new StringWriter();
+            var output=new SelectiveJsonlProofWriter(
+                manifest.FirstRow,finalRow,retainedRows,complete,
+                ProofMaxLineCharacters,ProofMaxRetainedRecords,
+                ProofMaxRetainedCharacters);
             using (var host = GpgxHost.Open(romPath, movie.SyncSettings))
             using (IEnumerator<Bk2Frame> frames = movie.OpenFrameStream().GetEnumerator())
             using (var session = new S1CompleteRunAudioReferenceCapture.Session(
@@ -457,10 +840,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 }
                 if(complete)session.Complete(finalRow+1);
             }
+            output.Finish();
             return new RealPrefixResult
             {
                 Manifest=manifest,
-                Output=output.ToString()
+                Records=output.RetainedRecords,
+                TotalRecordCount=output.TotalRecordCount,
+                RetainedCharacterCount=output.RetainedCharacterCount
             };
         }
 
@@ -469,8 +855,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
             if(Environment.GetEnvironmentVariable("OPENGGF_S1_AUDIO_ROW12525")!="1")
                 throw new TestMain.SkipTestException(
                     "OPENGGF_S1_AUDIO_ROW12525 is not enabled.");
-            RealPrefixResult result=CaptureRealPrefix(12525,false);
-            List<JObject> row=NativeRecords(result.Output,12525);
+            RealPrefixResult result=CaptureRealPrefix(
+                12525,false,new[]{12525});
+            List<JObject> row=NativeRecords(result.Records,12525);
             JObject rootBegin=SingleNative(row,value=>(byte)value["kind"]==1
                 &&(uint)value["pc"]==0x071B4C
                 &&(byte)value["service_kind"]==4
@@ -515,7 +902,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(true,(uint)keep["ordinal"]<(uint)rootEnd["ordinal"]);
             AssertEx.Equal(true,(uint)promotion["ordinal"]<(uint)childEnd["ordinal"]);
 
-            List<JObject> evidence=Records(result.Output,"managed_hook_evidence",
+            List<JObject> evidence=Records(result.Records,"managed_hook_evidence",
                 value=>(int)value["row"]==12525
                     &&(uint)value["pc"]==0x072C24);
             AssertEx.Equal(1,evidence.Count);
@@ -3385,6 +3772,16 @@ namespace OpenGGF.BizHawk.Headless.Tests
             return result;
         }
 
+        private static List<JObject> NativeRecords(
+            IEnumerable<JObject> records,int row)
+        {
+            var result=new List<JObject>();
+            foreach(JObject record in records)
+                if((string)record["type"]=="native_event"
+                    &&(int)record["row"]==row)result.Add(record);
+            return result;
+        }
+
         private static int FindNative(
             List<JObject> records, Func<JObject, bool> predicate)
         {
@@ -3422,6 +3819,15 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     if((string)value["type"]==type&&predicate(value))result.Add(value);
                 }
             }
+            return result;
+        }
+
+        private static List<JObject> Records(IEnumerable<JObject> records,
+            string type,Func<JObject,bool> predicate)
+        {
+            var result=new List<JObject>();
+            foreach(JObject value in records)
+                if((string)value["type"]==type&&predicate(value))result.Add(value);
             return result;
         }
 

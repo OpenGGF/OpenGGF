@@ -66529,3 +66529,16 @@ for. Read the count with that in mind.
   capacity. No raw file was published, and the run was not retried or
   broadened. Terminal log SHA-256:
   `b0a1473e3d827cf037bb4759ec266bf25a01b28b003b268a31695bd99586c9d7`.
+- A follow-up test-only sink change replaces that whole-run aggregate with a
+  line-validating selective JSONL writer. It streams and discards every valid
+  unselected line, retains only baseline/selected proof rows/terminal under
+  explicit line, record, and character limits, and requires a fresh writer and
+  session after any sink failure. No `Session`, `NoReplacePublisher`, native,
+  ABI, capability, or Task 5 identity changed.
+- RED: the focused selector failed to compile with `CS0246` before the writer
+  existed. GREEN: `tools/bizhawk-headless/test.sh --jobs 1 --no-gates --filter
+  'S1CompleteRunAudioReferenceCaptureTests'` passed 43 synthetics, with the two
+  opt-in real gates skipped; the corresponding
+  `CompleteRunAudioObserverTests` command passed 25 synthetics. Error count: 0.
+  A long terminal capture was intentionally not run, so row 21766 remains the
+  last observed infrastructure frontier pending the separate real-proof task.

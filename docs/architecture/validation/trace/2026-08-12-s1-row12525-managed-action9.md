@@ -147,3 +147,44 @@ Fresh prerequisite verification passed 41 non-opt-in S1 managed synthetics and
 25 observer synthetics. Two independent re-reviews found no critical or
 important issue after the FF-RAM range hardening. The proof does not claim a
 reference-vs-OpenGGF semantic MATCH or complete-game reference publication.
+
+## Immediate selective proof-sink correction
+
+The follow-up row-21766 infrastructure change is test-only. The real-prefix
+helper no longer accumulates every published record in one `StringWriter` or
+calls `ToString()` over the complete run. A selective `TextWriter` reconstructs
+one LF-terminated JSONL line at a time, parses every line (including discarded
+lines), accepts only the declared raw record types and capture-row range, and
+retains only the baseline, requested proof rows, and requested terminal. The
+row-8775 gate retains rows 1548 and 8775; the row-12525 gate retains row 12525.
+Their relational assertions are otherwise unchanged.
+
+The writer has explicit ceilings of 262,144 characters per line, 131,074
+retained records, and 16,777,216 retained characters. Synthetic coverage uses
+deliberately smaller limits and writes 10,003 records while retaining exactly
+three. It also rejects CRLF, a partial final line, malformed JSON, unknown
+record types, missing/out-of-range/oversized rows, duplicate baseline or
+terminal, data after terminal, the wrong terminal boundary, and retained
+record/character overflow. Any such failure poisons the writer; because the
+capture `Session` owns that writer, recovery requires a fresh writer and fresh
+session rather than retrying the advanced session.
+
+The test-first RED was a compiler failure (`CS0246`) because
+`SelectiveJsonlProofWriter` did not exist. After the implementation, the fresh
+synthetic commands were:
+
+```bash
+BIZHAWK_HOME="$REPO_ROOT/docs/BizHawk-2.11-linux-x64" \
+  tools/bizhawk-headless/test.sh --jobs 1 --no-gates \
+  --filter 'S1CompleteRunAudioReferenceCaptureTests'
+
+BIZHAWK_HOME="$REPO_ROOT/docs/BizHawk-2.11-linux-x64" \
+  tools/bizhawk-headless/test.sh --jobs 1 --no-gates \
+  --filter 'CompleteRunAudioObserverTests'
+```
+
+Results were 43 S1 synthetics passing and 25 Observer synthetics passing, with
+the two opt-in real S1 gates skipped and no failures. No configured-terminal
+capture was run for this correction. Therefore row 21766 remains the last
+observed infrastructure frontier until the separate real-proof continuation;
+this result does not claim a new native/semantic frontier or a terminal.
