@@ -3,6 +3,22 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: S2's special-stage results sequence runs the ROM's length instead of two invented
+  durations. `Obj6F`'s main object slides 448 -> 160 at 16 px per frame, so it arrives on
+  frame 19 (metadata row s2.asm:28537, mover s2.asm:27494), latches `anim_frame_duration`
+  `$B4` = 180 (:28247-28248), tallies `Bonus_Countdown_1` at 1/frame and
+  `Total_Bonus_Countdown` at 10/frame (:28380-28392), then holds `$78` = 120 frames
+  (:28399-28400) before `Obj6F_DisplayOnly` raises `Level_Inactive_flag` (:28428-28430),
+  which is the mode loop's exit test (:6804-6806). The ROM length is therefore not fixed --
+  it is 19 + 180 + the ring tally + 120 + 1, ring-count dependent. The engine carried
+  `RESULTS_SLIDE_DURATION = 60` commented "1 second slide-in" against the ROM's 19, and
+  `RESULTS_WAIT_DURATION = 180` commented "3 seconds after tally" against the ROM's 120 --
+  two fitted constants whose combined error was exactly 101 frames. Measured on the
+  halfpipe chain, the results sequence goes 583 -> 482 frames, exactly -101. Recorded
+  honestly: this does NOT move the run chains' transition-gap axis, whose reports are
+  byte-identical before and after -- `movie_logical_frame` is invariant to how many
+  iterations the engine spends in results, so the remaining gap defect is the frozen
+  pre-seeked movie cursor and not sequence length.
 - Fix: the run-chain transition-gap journal opens on the ledger its own boundary batch was
   measured against, and the harness closes the source window before reading the snapshot.
   Two observer-side snapshot-timing bugs, neither of which changed any engine behaviour or
