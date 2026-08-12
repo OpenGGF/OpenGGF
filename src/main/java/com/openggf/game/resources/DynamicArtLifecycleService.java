@@ -81,6 +81,29 @@ public final class DynamicArtLifecycleService
     private int movieLogicalFrame;
     private boolean movieLogicalFrameSuppliedExternally;
     /**
+     * Rows the movie advanced without anyone announcing them.
+     *
+     * <p>A run advances the movie one row per driven frame, and a driver that
+     * knows the row announces it ({@link #setMovieLogicalFrame}). Some spans
+     * are driven with no announcement at all: a harness that pre-seeks the
+     * shared cursor for an uncompared interior keeps re-announcing the same
+     * frozen row for the whole interior and the transition gap after it, so
+     * every gap edge is stamped with one stale row however many rows apart
+     * they were emitted. Across such a span the engine's own production
+     * iterations are the only evidence rows are passing, and one iteration is
+     * one row.
+     *
+     * <p>Counting them makes a stale stamp recoverable: an edge whose stamp
+     * was followed by {@code n} unannounced iterations is {@code n} rows
+     * earlier than it says. Where rows are announced this count never moves
+     * and the stamp is already right.
+     */
+    private int unannouncedRows;
+    /** Last row announced, so a re-announced row is not a row advance. */
+    private int lastAnnouncedMovieRow = -1;
+    /** Whether a NEW row was announced since the last iteration closed. */
+    private boolean newMovieRowAnnouncedSinceIteration;
+    /**
      * Gap-ledger length, movie row and outstanding ledger as they stood the
      * instant the comparison segment closed — the state a transition gap
      * opens on.
@@ -101,6 +124,18 @@ public final class DynamicArtLifecycleService
     private int gapOpeningTransitionCount;
     private int gapOpeningMovieLogicalFrame;
     private List<Descriptor> gapOpeningLedger = List.of();
+    /**
+     * Outstanding ledger as it stood before the currently buffered edge batch
+     * began — the state the batch's own {@code before} membership was taken
+     * against.
+     *
+     * <p>A batch accumulates across one production iteration and is flushed
+     * whole, either onto a published row or, at the ROM mode-change boundary,
+     * into the transition gap. In the boundary case the batch's edges are the
+     * gap's first edges, so the ledger a comparator replays them onto has to
+     * precede them; the live ledger at that moment already has them applied.
+     */
+    private List<Descriptor> ledgerBeforeBufferedBatch = List.of();
     /**
      * Counted V-int rows separating a staged pre-main-loop player transfer
      * from the level's first main-loop row, or {@code -1} when no staged
@@ -225,7 +260,11 @@ public final class DynamicArtLifecycleService
             int gapOpeningMovieLogicalFrame,
             int gapEdgesBeforeLastIteration,
             int gapEdgesBeforeCurrentIteration,
-            List<Descriptor> gapOpeningLedger) {
+            int unannouncedRows,
+            int lastAnnouncedMovieRow,
+            boolean newMovieRowAnnouncedSinceIteration,
+            List<Descriptor> gapOpeningLedger,
+            List<Descriptor> ledgerBeforeBufferedBatch) {
         public RewindState {
             lastMappingFrames = Map.copyOf(lastMappingFrames);
             ledger = List.copyOf(ledger);
@@ -237,20 +276,31 @@ public final class DynamicArtLifecycleService
             latestOutstandingTransferIds =
                     List.copyOf(latestOutstandingTransferIds);
             gapOpeningLedger = List.copyOf(gapOpeningLedger);
+            ledgerBeforeBufferedBatch =
+                    List.copyOf(ledgerBeforeBufferedBatch);
         }
+    }
+
+    /** Starts a fresh buffered edge batch from the live ledger. */
+    private void beginBufferedEdgeBatch() {
+        bufferedEdges.clear();
+        ledgerBeforeBufferedBatch = List.copyOf(ledger.values());
     }
 
     /** Records the state a transition gap opens on, at the segment's close. */
     private void recordGapOpeningState() {
         gapOpeningTransitionCount = gapTransitions.size();
         gapOpeningMovieLogicalFrame = movieLogicalFrame;
-        gapOpeningLedger = List.copyOf(ledger.values());
+        gapOpeningLedger = bufferedEdges.isEmpty()
+                ? List.copyOf(ledger.values())
+                : ledgerBeforeBufferedBatch;
     }
 
     @Override
     public DynamicArtGapDiagnosticsSnapshot gapOpeningSnapshot() {
         return new DynamicArtGapDiagnosticsSnapshot(
                 gapOpeningMovieLogicalFrame,
+                unannouncedRows,
                 gapTransitions.subList(0, Math.min(
                         gapOpeningTransitionCount, gapTransitions.size())),
                 gapOpeningLedger.stream()
@@ -268,6 +318,7 @@ public final class DynamicArtLifecycleService
     public DynamicArtGapDiagnosticsSnapshot gapSnapshot() {
         return new DynamicArtGapDiagnosticsSnapshot(
                 movieLogicalFrame,
+                unannouncedRows,
                 gapTransitions,
                 ledger.values().stream()
                         .map(descriptor ->
@@ -487,6 +538,10 @@ public final class DynamicArtLifecycleService
 
     private void initializeComparisonSegment() {
         segmentGeneration++;
+        // Gap edges mutate the ledger without buffering, so a window's first
+        // batch has to start from the ledger the window opens on rather than
+        // from whatever the previous window's last batch stood on.
+        ledgerBeforeBufferedBatch = List.copyOf(ledger.values());
         publishedOutstanding = List.copyOf(ledger.keySet());
         latest = new DynamicArtDiagnosticsSnapshot(
                 -1, List.of(), publishedOutstanding,
@@ -515,8 +570,10 @@ public final class DynamicArtLifecycleService
             return;
         }
         List<BufferedEdge> boundaryEdges = List.copyOf(bufferedEdges);
-        bufferedEdges.clear();
+        // Recorded before the batch is discarded, so the gap opens on the
+        // ledger its own first edges were observed against.
         recordGapOpeningState();
+        beginBufferedEdgeBatch();
         comparisonSegmentOpen = false;
         Set<Long> boundarySubmissions = new java.util.LinkedHashSet<>();
         for (BufferedEdge edge : boundaryEdges) {
@@ -584,7 +641,7 @@ public final class DynamicArtLifecycleService
             throw new IllegalStateException(
                     "only an unpublished dynamic-art segment may be abandoned");
         }
-        bufferedEdges.clear();
+        beginBufferedEdgeBatch();
         recordGapOpeningState();
         comparisonSegmentOpen = false;
         publishedOutstanding = List.copyOf(ledger.keySet());
@@ -935,6 +992,10 @@ public final class DynamicArtLifecycleService
         }
         movieLogicalFrame = movieRow;
         movieLogicalFrameSuppliedExternally = true;
+        if (movieRow != lastAnnouncedMovieRow) {
+            lastAnnouncedMovieRow = movieRow;
+            newMovieRowAnnouncedSinceIteration = true;
+        }
     }
 
     public void serviceProductionVBlank() {
@@ -1140,6 +1201,11 @@ public final class DynamicArtLifecycleService
         }
         gapEdgesBeforeLastIteration = gapEdgesBeforeCurrentIteration;
         gapEdgesBeforeCurrentIteration = gapTransitions.size();
+        if (newMovieRowAnnouncedSinceIteration) {
+            newMovieRowAnnouncedSinceIteration = false;
+        } else {
+            unannouncedRows++;
+        }
     }
 
     private DynamicArtDiagnosticsSnapshot publishBuffered(
@@ -1163,7 +1229,7 @@ public final class DynamicArtLifecycleService
                     terminalForwarded, edge.requests(),
                     edge.submissionOrigin()));
         }
-        bufferedEdges.clear();
+        beginBufferedEdgeBatch();
         publishedOutstanding = List.copyOf(ledger.keySet());
         return new DynamicArtDiagnosticsSnapshot(
                 publicationFrame, edges, publishedOutstanding,
@@ -1206,7 +1272,9 @@ public final class DynamicArtLifecycleService
                 nextGapEdgeIndexByFrame.getOrDefault(movieLogicalFrame, 0),
                 gapOpeningTransitionCount, gapOpeningMovieLogicalFrame,
                 gapEdgesBeforeLastIteration, gapEdgesBeforeCurrentIteration,
-                gapOpeningLedger);
+                unannouncedRows, lastAnnouncedMovieRow,
+                newMovieRowAnnouncedSinceIteration,
+                gapOpeningLedger, ledgerBeforeBufferedBatch);
     }
 
     @Override
@@ -1245,7 +1313,13 @@ public final class DynamicArtLifecycleService
         gapEdgesBeforeLastIteration = snapshot.gapEdgesBeforeLastIteration();
         gapEdgesBeforeCurrentIteration =
                 snapshot.gapEdgesBeforeCurrentIteration();
+        unannouncedRows = snapshot.unannouncedRows();
+        lastAnnouncedMovieRow = snapshot.lastAnnouncedMovieRow();
+        newMovieRowAnnouncedSinceIteration =
+                snapshot.newMovieRowAnnouncedSinceIteration();
         gapOpeningLedger = List.copyOf(snapshot.gapOpeningLedger());
+        ledgerBeforeBufferedBatch =
+                List.copyOf(snapshot.ledgerBeforeBufferedBatch());
         preMainLoopTailRows = snapshot.preMainLoopTailRows();
         // The snapshot carries the counter for the frame it was taken on,
         // which is the only one a restore inside a gap can continue.
@@ -1282,11 +1356,15 @@ public final class DynamicArtLifecycleService
         nextPublicationFrame = 0;
         movieLogicalFrame = 0;
         movieLogicalFrameSuppliedExternally = false;
+        unannouncedRows = 0;
+        lastAnnouncedMovieRow = -1;
+        newMovieRowAnnouncedSinceIteration = false;
         gapOpeningTransitionCount = 0;
         gapOpeningMovieLogicalFrame = 0;
         gapEdgesBeforeLastIteration = 0;
         gapEdgesBeforeCurrentIteration = 0;
         gapOpeningLedger = List.of();
+        ledgerBeforeBufferedBatch = List.of();
         preMainLoopTailRows = -1;
         nextGapEdgeIndexByFrame.clear();
     }
@@ -1344,6 +1422,10 @@ public final class DynamicArtLifecycleService
                         edgeOrdinal, transferId, phase, owner,
                 mappingFrame, movieLogicalFrame,
                 nextGapEdgeIndexByFrame.merge(movieLogicalFrame, 1, Integer::sum) - 1,
+                // The edge's own iteration is itself an unannounced row
+                // when nothing announced one for it.
+                unannouncedRows
+                        + (newMovieRowAnnouncedSinceIteration ? 0 : 1),
                 requests);
         gapTransitions.add(new DynamicArtGapTransition(edge, beforeOutstanding,
                 afterOutstanding));

@@ -3,6 +3,58 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: transition-gap art edges are stamped from rows that actually passed, not from a frozen
+  playback cursor -- `TestS2EhzHalfpipeRoundTripChain` is now fully green. During an S2 gap the
+  shared cursor is pre-seeked to the destination and never advances (measured: 3908 calls
+  announcing the identical row 9701, 4203 announcing 19159), so all eight of a gap's edges
+  carried the same stale row and their indices collapsed with them. The engine's work cadence
+  was already exactly right, anchored at the end of the gap: its edge iterations counting back
+  from admission are -26, -26, -25, -25, -10, -9, -2, -1 in all five gaps, identical to the
+  recorded rows' offsets from the destination's first main-loop row. The rule landed counts
+  rows that pass with no row announced -- re-announcing the same row is not an advance, and an
+  iteration with nothing announced is one row -- so an edge followed by n unannounced rows sits
+  n rows before its stamp. That is an identity where the cursor is live and the only available
+  answer where it is frozen, and it is anchored at admission rather than run forward from the
+  gap start (a forward run cannot work: engine gap iterations are 156/139/200/136/133 against
+  the ROM's invariant 173). Recorded because it contradicts the obvious approach: counting back
+  *gap iterations* instead of unannounced rows regressed `TestS1CompleteEmeraldVisualRun`, whose
+  gap runs on a live cursor that advances 9730 to 9741 while barely one production iteration
+  completes -- iterations and movie rows are different clocks and only S2's freezes. Both
+  implementations of the contract now share one helper; the chains use the harness's own probe
+  rather than the production journal. No constant was introduced: the only literals in the diff
+  are 0 and 1. Every `run_gap` axis on both S2 chains is green, and the emerald chain's only
+  remaining failures are its segment-6 walk failure and segment-6 physics divergence.
+- Fix: S2's special-stage results sequence runs the ROM's length instead of two invented
+  durations. `Obj6F`'s main object slides 448 -> 160 at 16 px per frame, so it arrives on
+  frame 19 (metadata row s2.asm:28537, mover s2.asm:27494), latches `anim_frame_duration`
+  `$B4` = 180 (:28247-28248), tallies `Bonus_Countdown_1` at 1/frame and
+  `Total_Bonus_Countdown` at 10/frame (:28380-28392), then holds `$78` = 120 frames
+  (:28399-28400) before `Obj6F_DisplayOnly` raises `Level_Inactive_flag` (:28428-28430),
+  which is the mode loop's exit test (:6804-6806). The ROM length is therefore not fixed --
+  it is 19 + 180 + the ring tally + 120 + 1, ring-count dependent. The engine carried
+  `RESULTS_SLIDE_DURATION = 60` commented "1 second slide-in" against the ROM's 19, and
+  `RESULTS_WAIT_DURATION = 180` commented "3 seconds after tally" against the ROM's 120 --
+  two fitted constants whose combined error was exactly 101 frames. Measured on the
+  halfpipe chain, the results sequence goes 583 -> 482 frames, exactly -101. Recorded
+  honestly: this does NOT move the run chains' transition-gap axis, whose reports are
+  byte-identical before and after -- `movie_logical_frame` is invariant to how many
+  iterations the engine spends in results, so the remaining gap defect is the frozen
+  pre-seeked movie cursor and not sequence length.
+- Fix: the run-chain transition-gap journal opens on the ledger its own boundary batch was
+  measured against, and the harness closes the source window before reading the snapshot.
+  Two observer-side snapshot-timing bugs, neither of which changed any engine behaviour or
+  transfer lifecycle. `endComparisonSegmentAtRomModeChange` re-stamps the ROM-mode-change
+  iteration's buffered batch as the gap's first edges, but recorded the gap-opening state
+  against the live ledger those same edges had already mutated -- so an edge whose own
+  `before` membership listed an outstanding transfer was replayed onto a ledger that no
+  longer had it. Separately, `AbstractRunChainTest` called `sourceClosed(...)` before
+  `enterGap()` at all seven sites, capturing the snapshot recorded at the segment's open,
+  where production's walker already does close-then-`sourceClosed`. Every ledger,
+  fingerprint, submission-origin and forwarded-completion error is now green on both
+  affected axes; the halfpipe chain goes 3 axes / 66 gap fields to 2 / 28 with its first
+  gap fully green, and the emerald chain 8 axes / 132 fields to 5 / 42. Every remaining
+  gap failure on both chains is now exactly `movie_logical_frame` and `gap_edge_index` --
+  the separately-tracked row-placement defect and nothing else.
 - Fix: a run-chain destination adopts the row that already ran during its transition
   gap instead of skipping it. Admission is polled between host steps and the
   coordinator's readiness test needs an observed LEVEL mode, so the destination's

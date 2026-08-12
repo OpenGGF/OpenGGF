@@ -335,8 +335,39 @@ public final class Sonic2SpecialStageConstants {
     public static final int VRAM_TITLE_LETTERS_BASE = 0x0002;   // Title card letters base
 
     /** Results screen timing (in frames @ 60fps) */
-    public static final int RESULTS_SLIDE_DURATION = 60;    // 1 second slide-in
-    public static final int RESULTS_WAIT_DURATION = 180;    // 3 seconds after tally
+    public static final int RESULTS_SLIDE_DURATION = 60;    // render-only slide alpha ramp
+
+    /**
+     * Frames the "Special Stage" title -- the object that owns Obj6F's routine
+     * chain -- takes to reach its target and latch the pre-tally wait.
+     *
+     * <p>ROM: the first {@code Obj6F_SubObjectMetaData} row starts the main
+     * object at {@code spriteScreenPositionX(screen_width+128)} with target
+     * {@code spriteScreenPositionXCentered(0)} (docs/s2disasm/s2.asm:28537),
+     * i.e. 320+128 = 448 down to 160, a distance of 288 px.
+     * {@code Obj34_MoveTowardsTargetPosition} steps 16 px per frame
+     * ({@code moveq #$10,d0}, docs/s2disasm/s2.asm:27494), so the object is
+     * still moving on frames 1..18 and is first seen at its target on frame 19,
+     * which is where {@code Obj6F_InitEmeraldText} writes
+     * {@code move.b #$1C,routine(a0) / move.w #$B4,anim_frame_duration(a0)}
+     * (docs/s2disasm/s2.asm:28247-28248).
+     *
+     * <p>The other results rows (score, rings, gems bonus) start further off
+     * screen and keep sliding underneath that wait; they never gate the chain.
+     */
+    public static final int RESULTS_TITLE_ARRIVAL_FRAMES = 288 / 16 + 1;
+
+    /**
+     * Frames the results screen holds after the tally empties, before it raises
+     * {@code Level_Inactive_flag} and lets the special-stage mode loop leave.
+     *
+     * <p>ROM: {@code Obj6F_TallyScore}'s exhausted branch does
+     * {@code addq.b #2,routine(a0) / move.w #$78,anim_frame_duration(a0)}
+     * (docs/s2disasm/s2.asm:28399-28400); {@code Obj6F_TimedDisplay} counts that
+     * $78 = 120 down (s2.asm:28367-28371) and {@code Obj6F_DisplayOnly} sets the
+     * flag on the following frame (s2.asm:28428-28430).
+     */
+    public static final int RESULTS_WAIT_DURATION = 0x78;
     public static final int RESULTS_TALLY_TICK_INTERVAL = 4; // Sound every 4 frames
 
     /** Results screen bonus values */

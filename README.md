@@ -284,6 +284,30 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **`TestS2EhzHalfpipeRoundTripChain` is green, and the S2 special stage runs the
+  ROM's results length (2026-08-12):** three fixes closed the last of the run
+  chains' transition-gap divergences. The gap journal was opening on a ledger its
+  own boundary batch had already mutated, and the harness read the snapshot before
+  the close that records it — two opposite-signed instances of the same
+  wrong-moment fault, one leaving an outstanding transfer missing from the opening
+  ledger and the other leaving a retired one present. Separately, the engine's
+  special-stage results screen carried two invented durations — a 60-frame "1
+  second slide-in" where `Obj6F` slides 288px at 16px/frame and arrives on frame
+  19, and a 180-frame "3 seconds after tally" where the ROM holds `$78` = 120
+  (`s2.asm:28537`, `:27494`, `:28399-28400`, `:28428-28430`) — a combined 101
+  frames, with the ROM's real length being ring-count dependent, which is why the
+  overrun varied per run. Finally, gap art edges were stamped from a playback
+  cursor pre-seeked to the destination and frozen there (measured: 3,908 calls
+  announcing the same row). The engine's cadence was already exactly right,
+  anchored at the *end* of the gap — its edge iterations counting back from
+  admission are −26, −26, −25, −25, −10, −9, −2, −1 in all five gaps, matching the
+  recorded offsets identically — so edges are now stamped by counting rows that
+  passed with nothing announced. That is an identity where the cursor is live and
+  the only available answer where it is frozen; counting *iterations* instead
+  regressed the S1 visual run, whose gap genuinely advances its cursor, because
+  iterations and movie rows are different clocks and only S2's freezes. The
+  halfpipe chain now passes in full, every `run_gap` axis of the emerald chain is
+  green, and the profile improves to 770 tests / 1 failure / 3 errors.
 - **The run chains adopt the destination row that already ran in the gap
   (2026-08-12):** the last segment-physics error on both S2 chains was a row the
   harness could not compare at all. The destination segment's row 0 — the

@@ -682,8 +682,13 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
     // ── State machine (inlined from AbstractResultsScreen) ─────────────
 
     private void updateSlideIn() {
-        slideProgress = Math.min(stateTimer, Sonic2SpecialStageConstants.RESULTS_SLIDE_DURATION);
-        if (stateTimer >= Sonic2SpecialStageConstants.RESULTS_SLIDE_DURATION) {
+        // ROM: the routine chain is owned by the "Special Stage" title object,
+        // which arrives after 288/16 = 18 move frames and latches its $B4 wait
+        // on the frame after that (Obj6F_InitEmeraldText, s2.asm:28243-28248).
+        // The remaining rows are still sliding in at that point -- their offsets
+        // are driven independently by getSlideOffset()'s 16 px/frame ramp -- so
+        // this state must not wait for them.
+        if (stateTimer >= Sonic2SpecialStageConstants.RESULTS_TITLE_ARRIVAL_FRAMES) {
             state = STATE_PRE_TALLY_DELAY;
             stateTimer = 0;
         }
@@ -765,6 +770,9 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
         }
         stateTimer++;
         totalFrames++;
+        // Render-only fade ramp for the sliding rows; runs off the object's own
+        // lifetime so it is unaffected by when the title object latches.
+        slideProgress = Math.min(totalFrames, Sonic2SpecialStageConstants.RESULTS_SLIDE_DURATION);
 
         if (state == STATE_SUPER_SONIC_DISPLAY) {
             updateSuperSonicMessages();
