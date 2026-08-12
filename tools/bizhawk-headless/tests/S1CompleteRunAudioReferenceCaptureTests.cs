@@ -92,6 +92,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S1CompleteRunAudioReferenceCaptureTests preserve frame order across deferred release",
                 PreservesFrameOrderAcrossDeferredRelease));
             tests.Add(new TestMain.TestCase(
+                "S1CompleteRunAudioReferenceCaptureTests accept variable deferred observation counts",
+                AcceptsVariableDeferredObservationCounts));
+            tests.Add(new TestMain.TestCase(
                 "S1CompleteRunAudioReferenceCaptureTests materialize one deferred begin after row 8775 wait service",
                 MaterializesDeferredBeginAfterWaitService,
                 game: "s1", serial: true, estimatedSeconds: 300.0));
@@ -421,10 +424,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 {
                     api.VisitZ80(0x003A,current);
                     Visit(current,api,0x071B4C);
-                    Visit(current,api,0x071B4C);
-                    Visit(current,api,0x071B4C);
                     return;
                 }
+                Visit(current,api,0x071B4C);
                 api.VisitZ80(0x0077,current);
                 api.VisitZ80(0x00AC,current);
                 Visit(current,api,0x071C4C);
@@ -446,8 +448,49 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 StringComparison.Ordinal);
             int begin861=raw.IndexOf("\"type\":\"frame_begin\",\"row\":861",
                 StringComparison.Ordinal);
+            int evidence861=raw.IndexOf("\"type\":\"managed_hook_evidence\",\"row\":861",
+                StringComparison.Ordinal);
+            int end861=raw.IndexOf("\"type\":\"frame_end\",\"row\":861",
+                StringComparison.Ordinal);
             AssertEx.Equal(true,begin860>=0&&begin860<evidence860
-                &&evidence860<end860&&end860<begin861);
+                &&evidence860<end860&&end860<begin861
+                &&begin861<evidence861&&evidence861<end861);
+            AssertEx.Equal(2,Records(raw,"managed_hook_evidence",
+                value=>value["native_marker_value"]!=null
+                    &&value["native_marker_value"].Type==JTokenType.Integer
+                    &&(int)value["native_marker_value"]==4).Count);
+        }
+
+        private static void AcceptsVariableDeferredObservationCounts()
+        {
+            AssertDeferredObservationCount(1);
+            AssertDeferredObservationCount(4);
+        }
+
+        private static void AssertDeferredObservationCount(int count)
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDB2);
+                current.SetU32(0xFDB2,0x00000B64);
+                api.VisitZ80(0x003A,current);
+                for(int i=0;i<count;i++)Visit(current,api,0x071B4C);
+                api.VisitZ80(0x0077,current);
+                api.VisitZ80(0x00AC,current);
+                Visit(current,api,0x071C4C);
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                session.CaptureFrame(860,host.Advance);
+                session.Complete(861);
+            }
+            AssertEx.Equal(count,CountNativeMarkerValue(output.ToString(),4));
+            AssertEx.Equal(count,Records(output.ToString(),"managed_hook_evidence",
+                value=>value["native_marker_value"]!=null
+                    &&value["native_marker_value"].Type==JTokenType.Integer
+                    &&(int)value["native_marker_value"]==4).Count);
         }
 
         private static void AssertObservationKinds(

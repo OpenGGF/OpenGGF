@@ -1333,7 +1333,7 @@ namespace OpenGGF.BizHawk.Headless
                         record["blocker_end_ordinal"]=pendingDeferredBegin.EndOrdinal;
                         record["released_service_token"]=released.ServiceToken;
                         record["released_begin_ordinal"]=released.Ordinal;
-                        if(deferredPublication==null)
+                        if((int)record["row"]==currentRow)
                         {
                             frameTransaction.Write(record.ToString(Formatting.None));
                             frameTransaction.Write('\n');
