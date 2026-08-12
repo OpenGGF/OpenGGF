@@ -81,6 +81,27 @@ public final class DynamicArtLifecycleService
     private int movieLogicalFrame;
     private boolean movieLogicalFrameSuppliedExternally;
     /**
+     * Gap-ledger length, movie row and outstanding ledger as they stood the
+     * instant the comparison segment closed — the state a transition gap
+     * opens on.
+     *
+     * <p>A close can itself emit gap edges: the ROM mode-change boundary
+     * re-stamps the iteration's whole buffered batch {@code run_gap} and emits
+     * it here, because that iteration is no longer a row of the level. A
+     * comparator that snapshots when the harness later announces the close
+     * therefore starts counting past those edges and never compares them, and
+     * their transfers have already left the ledger that resolves an edge's
+     * submission origin. Recording the state at the close itself makes the
+     * boundary batch the first edges of the gap it belongs to.
+     *
+     * <p>Recorded at both ends of a comparison segment, so a source that never
+     * opened one — an uncompared interior segment — inherits the state of the
+     * boundary that armed it rather than a stale earlier gap's.
+     */
+    private int gapOpeningTransitionCount;
+    private int gapOpeningMovieLogicalFrame;
+    private List<Descriptor> gapOpeningLedger = List.of();
+    /**
      * Counted V-int rows separating a staged pre-main-loop player transfer
      * from the level's first main-loop row, or {@code -1} when no staged
      * transfer is waiting on that tail.
@@ -188,7 +209,10 @@ public final class DynamicArtLifecycleService
             int nextPublicationFrame,
             int movieLogicalFrame,
             int preMainLoopTailRows,
-            int nextGapEdgeIndex) {
+            int nextGapEdgeIndex,
+            int gapOpeningTransitionCount,
+            int gapOpeningMovieLogicalFrame,
+            List<Descriptor> gapOpeningLedger) {
         public RewindState {
             lastMappingFrames = Map.copyOf(lastMappingFrames);
             ledger = List.copyOf(ledger);
@@ -199,7 +223,32 @@ public final class DynamicArtLifecycleService
             latestEdges = List.copyOf(latestEdges);
             latestOutstandingTransferIds =
                     List.copyOf(latestOutstandingTransferIds);
+            gapOpeningLedger = List.copyOf(gapOpeningLedger);
         }
+    }
+
+    /** Records the state a transition gap opens on, at the segment's close. */
+    private void recordGapOpeningState() {
+        gapOpeningTransitionCount = gapTransitions.size();
+        gapOpeningMovieLogicalFrame = movieLogicalFrame;
+        gapOpeningLedger = List.copyOf(ledger.values());
+    }
+
+    @Override
+    public DynamicArtGapDiagnosticsSnapshot gapOpeningSnapshot() {
+        return new DynamicArtGapDiagnosticsSnapshot(
+                gapOpeningMovieLogicalFrame,
+                gapTransitions.subList(0, Math.min(
+                        gapOpeningTransitionCount, gapTransitions.size())),
+                gapOpeningLedger.stream()
+                        .map(descriptor ->
+                                new DynamicArtGapDiagnosticsSnapshot.Descriptor(
+                                        descriptor.transferId(),
+                                        descriptor.owner(),
+                                        descriptor.mappingFrame(),
+                                        descriptor.submissionOrigin(),
+                                        descriptor.requests()))
+                        .toList());
     }
 
     @Override
@@ -233,6 +282,7 @@ public final class DynamicArtLifecycleService
                     "dynamic-art comparison segment is already open or reserved");
         }
         validateComparisonSegmentActivation();
+        recordGapOpeningState();
         comparisonSegmentOpen = true;
         initializeComparisonSegment();
     }
@@ -349,6 +399,7 @@ public final class DynamicArtLifecycleService
         }
         List<BufferedEdge> boundaryEdges = List.copyOf(bufferedEdges);
         bufferedEdges.clear();
+        recordGapOpeningState();
         comparisonSegmentOpen = false;
         Set<Long> boundarySubmissions = new java.util.LinkedHashSet<>();
         for (BufferedEdge edge : boundaryEdges) {
@@ -391,6 +442,7 @@ public final class DynamicArtLifecycleService
                             : List.of();
             latest = publishBuffered(terminalFrame, true, alreadyPublished);
         }
+        recordGapOpeningState();
         comparisonSegmentOpen = false;
     }
 
@@ -416,6 +468,7 @@ public final class DynamicArtLifecycleService
                     "only an unpublished dynamic-art segment may be abandoned");
         }
         bufferedEdges.clear();
+        recordGapOpeningState();
         comparisonSegmentOpen = false;
         publishedOutstanding = List.copyOf(ledger.keySet());
         latest = DynamicArtDiagnosticsSnapshot.unpublished(
@@ -1031,7 +1084,9 @@ public final class DynamicArtLifecycleService
                 nextTransferId, nextEdgeOrdinal,
                 logicalFrame, nextLogicalEdgeIndex, nextPublicationFrame,
                 movieLogicalFrame, preMainLoopTailRows,
-                nextGapEdgeIndexByFrame.getOrDefault(movieLogicalFrame, 0));
+                nextGapEdgeIndexByFrame.getOrDefault(movieLogicalFrame, 0),
+                gapOpeningTransitionCount, gapOpeningMovieLogicalFrame,
+                gapOpeningLedger);
     }
 
     @Override
@@ -1065,6 +1120,9 @@ public final class DynamicArtLifecycleService
         nextLogicalEdgeIndex = snapshot.nextLogicalEdgeIndex();
         nextPublicationFrame = snapshot.nextPublicationFrame();
         movieLogicalFrame = snapshot.movieLogicalFrame();
+        gapOpeningTransitionCount = snapshot.gapOpeningTransitionCount();
+        gapOpeningMovieLogicalFrame = snapshot.gapOpeningMovieLogicalFrame();
+        gapOpeningLedger = List.copyOf(snapshot.gapOpeningLedger());
         preMainLoopTailRows = snapshot.preMainLoopTailRows();
         // The snapshot carries the counter for the frame it was taken on,
         // which is the only one a restore inside a gap can continue.
@@ -1101,6 +1159,9 @@ public final class DynamicArtLifecycleService
         nextPublicationFrame = 0;
         movieLogicalFrame = 0;
         movieLogicalFrameSuppliedExternally = false;
+        gapOpeningTransitionCount = 0;
+        gapOpeningMovieLogicalFrame = 0;
+        gapOpeningLedger = List.of();
         preMainLoopTailRows = -1;
         nextGapEdgeIndexByFrame.clear();
     }

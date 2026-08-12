@@ -25,6 +25,19 @@ public final class TraceRunDynamicArtGapJournal {
     private int transitionCountAtGapStart;
     private int gapStartMovieLogicalFrame;
     private List<DynamicArtTransfer.Descriptor> openingLedger = List.of();
+    /**
+     * Lifecycle state observed the instant the source segment closed, before
+     * the lifecycle entered the gap.
+     *
+     * <p>Closing a comparison segment flushes work the segment submitted whose
+     * completion falls after the segment's last compared row, and the close
+     * itself appends those edges to the gap ledger. A snapshot taken after the
+     * close starts counting past them, so each one is dropped from the gap's
+     * compared slice and its transfer is already gone from the opening ledger
+     * that resolves an edge's submission origin. A gap begins where its source
+     * ended, so the opening state is taken there.
+     */
+    private DynamicArtGapDiagnosticsSnapshot sourceClosedSnapshot;
 
     public TraceRunDynamicArtGapJournal(
             TraceRunManifest manifest,
@@ -43,6 +56,7 @@ public final class TraceRunDynamicArtGapJournal {
         }
         sourceSegmentIndex = segmentIndex;
         sourceClosedOrdinal = ++structuralOrdinal;
+        sourceClosedSnapshot = diagnostics.gapOpeningSnapshot();
     }
 
     public void gapOpened(int segmentIndex) {
@@ -53,7 +67,8 @@ public final class TraceRunDynamicArtGapJournal {
         if (gapOpenedOrdinal > sourceClosedOrdinal) {
             return;
         }
-        DynamicArtGapDiagnosticsSnapshot state = diagnostics.gapSnapshot();
+        DynamicArtGapDiagnosticsSnapshot state = sourceClosedSnapshot != null
+                ? sourceClosedSnapshot : diagnostics.gapSnapshot();
         gapOpenedOrdinal = ++structuralOrdinal;
         gapStartMovieLogicalFrame = state.movieLogicalFrame();
         transitionCountAtGapStart = state.transitions().size();
@@ -90,6 +105,7 @@ public final class TraceRunDynamicArtGapJournal {
         sourceClosedOrdinal = 0;
         gapOpenedOrdinal = 0;
         openingLedger = List.of();
+        sourceClosedSnapshot = null;
         return comparison;
     }
 
@@ -122,6 +138,7 @@ public final class TraceRunDynamicArtGapJournal {
         sourceClosedOrdinal = 0;
         gapOpenedOrdinal = 0;
         openingLedger = List.of();
+        sourceClosedSnapshot = null;
         return comparison;
     }
 

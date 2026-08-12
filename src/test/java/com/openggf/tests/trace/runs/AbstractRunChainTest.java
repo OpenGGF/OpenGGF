@@ -17,6 +17,7 @@ import com.openggf.game.SpecialStageInputMapper;
 import com.openggf.game.sonic2.Sonic2SpecialStageProvider;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageReplayTestBridge;
 import com.openggf.game.SpecialStageProvider;
+import com.openggf.game.resources.DynamicArtGapDiagnosticsSnapshot;
 import com.openggf.game.resources.DynamicArtGapTransition;
 import com.openggf.game.resources.DynamicArtDiagnosticsSnapshot;
 import com.openggf.game.resources.DynamicArtLifecycleService;
@@ -223,6 +224,26 @@ abstract class AbstractRunChainTest {
         private Long sourceClosedOrdinal;
         private Long gapOpenedOrdinal;
         private List<DynamicArtTransfer.Descriptor> openingLedger = List.of();
+        /**
+         * Gap-ledger length, movie row and outstanding ledger observed the
+         * instant the source segment closed, before the lifecycle entered the
+         * gap.
+         *
+         * <p>Closing a comparison segment flushes work the segment submitted
+         * whose completion falls after its last compared row, and the close
+         * itself appends those edges to the gap ledger. Snapshotting after the
+         * close starts counting past them, so each is dropped from the gap's
+         * compared slice and its transfer is already absent from the opening
+         * ledger that resolves an edge's submission origin. A gap begins where
+         * its source ended, so the opening state is taken there.
+         *
+         * <p>Mirrors {@link TraceRunDynamicArtGapJournal}, which implements the
+         * same contract for the production visual run path.
+         */
+        private Integer sourceClosedTransitionCount;
+        private Integer sourceClosedMovieLogicalFrame;
+        private Long sourceClosedLastEdgeOrdinal;
+        private List<DynamicArtTransfer.Descriptor> sourceClosedLedger;
 
         private DynamicArtGapJournalProbe(DynamicArtLifecycleService lifecycle) {
             this.lifecycle = lifecycle;
@@ -240,6 +261,14 @@ abstract class AbstractRunChainTest {
             }
             representedSegmentDir = segmentDir;
             sourceClosedOrdinal = ++structuralOrdinal;
+            DynamicArtGapDiagnosticsSnapshot atSourceClose =
+                    lifecycle.gapOpeningSnapshot();
+            sourceClosedTransitionCount = atSourceClose.transitions().size();
+            sourceClosedLastEdgeOrdinal = lastEdgeOrdinal(atSourceClose.transitions());
+            sourceClosedMovieLogicalFrame = atSourceClose.movieLogicalFrame();
+            sourceClosedLedger = atSourceClose.ledger().stream()
+                    .map(DynamicArtGapJournalProbe::toGapDescriptor)
+                    .toList();
         }
 
         private void gapOpened(String segmentDir) {
@@ -256,17 +285,23 @@ abstract class AbstractRunChainTest {
                 throw new AssertionError(
                         "dynamic-art gap opened before source close for " + segmentDir);
             }
-            List<DynamicArtGapTransition> atGapStart =
-                    lifecycle.gapTransitions();
             gapOpenedOrdinal = ++structuralOrdinal;
-            gapStartMovieLogicalFrame =
-                    lifecycle.capture().movieLogicalFrame();
-            openingLedger = lifecycle.capture().ledger().stream()
-                    .map(DynamicArtGapJournalProbe::toTraceDescriptor)
-                    .toList();
-            transitionCountAtGapStart = atGapStart.size();
-            lastEdgeOrdinalAtGapStart =
-                    lastEdgeOrdinal(atGapStart);
+            if (sourceClosedTransitionCount != null) {
+                gapStartMovieLogicalFrame = sourceClosedMovieLogicalFrame;
+                openingLedger = sourceClosedLedger;
+                transitionCountAtGapStart = sourceClosedTransitionCount;
+                lastEdgeOrdinalAtGapStart = sourceClosedLastEdgeOrdinal;
+            } else {
+                List<DynamicArtGapTransition> atGapStart =
+                        lifecycle.gapTransitions();
+                gapStartMovieLogicalFrame =
+                        lifecycle.capture().movieLogicalFrame();
+                openingLedger = lifecycle.capture().ledger().stream()
+                        .map(DynamicArtGapJournalProbe::toTraceDescriptor)
+                        .toList();
+                transitionCountAtGapStart = atGapStart.size();
+                lastEdgeOrdinalAtGapStart = lastEdgeOrdinal(atGapStart);
+            }
         }
 
         private void nextSegmentArmed(String nextSegmentDir) {
@@ -305,6 +340,10 @@ abstract class AbstractRunChainTest {
             sourceClosedOrdinal = null;
             gapOpenedOrdinal = null;
             openingLedger = List.of();
+            sourceClosedTransitionCount = null;
+            sourceClosedMovieLogicalFrame = null;
+            sourceClosedLastEdgeOrdinal = null;
+            sourceClosedLedger = null;
         }
 
         /**
@@ -406,6 +445,10 @@ abstract class AbstractRunChainTest {
             sourceClosedOrdinal = null;
             gapOpenedOrdinal = null;
             openingLedger = List.of();
+            sourceClosedTransitionCount = null;
+            sourceClosedMovieLogicalFrame = null;
+            sourceClosedLastEdgeOrdinal = null;
+            sourceClosedLedger = null;
         }
 
         private DynamicArtGapJournalEvidence evidence(
@@ -426,6 +469,29 @@ abstract class AbstractRunChainTest {
             return transitions.isEmpty()
                     ? -1
                     : transitions.getLast().edge().edgeOrdinal();
+        }
+
+        /**
+         * Mirrors {@code TraceRunDynamicArtGapJournal#toTraceDescriptor}: the
+         * descriptor keeps the submission origin the lifecycle recorded, which
+         * is what resolves a completion edge's origin during the gap.
+         */
+        private static DynamicArtTransfer.Descriptor toGapDescriptor(
+                DynamicArtGapDiagnosticsSnapshot.Descriptor descriptor) {
+            return new DynamicArtTransfer.Descriptor(
+                    descriptor.transferId(),
+                    descriptor.owner(),
+                    descriptor.mappingFrame(),
+                    descriptor.submissionOrigin(),
+                    descriptor.requests().stream()
+                            .map(request -> new DynamicArtTransfer.Request(
+                                    request.romSourceAddress(),
+                                    request.sourceTileIndex(),
+                                    request.ramSourceAddress(),
+                                    request.vramDestination(),
+                                    request.byteLength()))
+                            .toList(),
+                    null);
         }
 
         private static DynamicArtTransfer.Descriptor toTraceDescriptor(
