@@ -38,7 +38,6 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 24. [Special-stage Live Rewind Scope](#special-stage-live-rewind-scope)
 25. [S2 CPZ Debug Placement Capability Boundary](#s2-cpz-debug-placement-capability-boundary)
 26. [S2 Native Human-P2 Monitor Branch Unavailable](#s2-native-human-p2-monitor-branch-unavailable)
-27. [S2 Level-Advance Load Span Is Not Captured](#s2-level-advance-load-span-is-not-captured)
 
 ---
 
@@ -1629,68 +1628,3 @@ shift moves spilled-ring floor-probe cadence in all three games, the S3K slot
 bonus-stage RNG seed, LBZ/MGZ/ICZ object phasing, and every rewind snapshot's
 stored scalar. Any such change needs a full S1/S2/S3K trace fleet plus rewind
 determinism measurement of its own.
-
----
-
-## S2 Level-Advance Load Span Is Not Captured
-
-`TestS2CompleteEmeraldRunChain` cannot reach zero on its remaining three axes with the
-current fixture, because the span it disagrees about contains no recorded rows.
-
-### Original Implementation
-
-Between one act ending and the next act's first main-loop row, the ROM executes
-`Level:` (`docs/s2disasm/s2.asm:4755` onward). Measured across all 19 `level_advance`
-boundaries of `s2-sonic-tails-complete-emeralds`, that span is **156-198 raw frames**
-(SCZ 149, DEZ 148, EHZ 162, HTZ 187/190, WFZ 190 VBlanks), decomposing as:
-
-- **8 frames with no VBlank at all** — the `move #$2700,sr` window around `ClearScreen`
-  and `LoadTitleCard` (`s2.asm:4766-4770`). Exact and zone-independent: measured as
-  `rows_from_mode_change - 8` at every one of the 19 boundaries, zero variance.
-- **22 frames of `Pal_FadeToBlack`** — `move.w #$15,d4` plus `dbf` (`s2.asm:3370-3382`).
-  A ROM constant, fully derivable.
-- **~140 remaining frames** — `LoadPLC`, `Level_ClrRam`, VDP init, palette and music
-  setup, the `Level_TtlCard` loop, then `LevelSizeLoad`, Kosinski `LoadZoneTiles`,
-  block maps, animated blocks, `DrawInitialBG`, collision array conversion and
-  `InitPlayers`, with three separate object-dispatching sites (`:4915-4926`, `:5007`,
-  `:5060-5066`).
-
-The 42-frame spread across boundaries tracks level-art volume: this is Kosinski/Nemesis
-decompression and plane-draw duration, i.e. genuine 68000 execution time.
-
-### Our Implementation
-
-The engine's level load is synchronous and effectively free, so it presents the
-destination title card early and runs many more object-dispatching iterations across the
-span than the ROM does. This surfaces as 60 surplus transition-gap art edges
-(72 against a recorded 12), segment 7 losing production ownership while still in
-`TITLE_CARD`, and five terminal-row errors in segment 6.
-
-### Rationale
-
-The span is **not recorded**. Between the last row of `seg4_ehz1` (BK2 32759) and the
-first row of `seg5_ehz2` (BK2 32931) the fixture contains zero physics rows, no lag
-flags, and no `hardware_timing` entries — only `bk2_frame_offset` and a `vblank_counter`
-jump attest to its length.
-
-The design doc's own inventory assigns these rows to contract 1 (main-loop admission /
-lag), which is the correct owner in principle. It cannot be implemented against this
-capture, because contract 1 needs per-row lag data and the rows do not exist. Deriving
-the duration from `bk2_frame_offset` or the `vblank_counter` delta would be
-trace-supplied duration, which hard rule 4 forbids; inventing a constant would be a
-fitted model, and the ~42-frame per-zone spread proves no single constant could be
-correct anyway. The rule-4 hardware-timing sidecar does not apply either: it delays
-readiness of engine-submitted art jobs, and nothing polls the PLC buffer until the
-`Level_TtlCard` exit test, so drain cannot account for the ~140 pre-loop frames.
-
-Closing this correctly requires **re-capturing the run with the level-load span's lag
-rows recorded**, then implementing contract 1 against them. That is capture-side work,
-not an engine fix.
-
-### Verification
-
-`TestS2EhzHalfpipeRoundTripChain` is fully green and does not exercise a `level_advance`
-boundary mid-run. `TestS2CompleteEmeraldRunChain` retains exactly three axes, all
-downstream of this span; every field describing what the engine *did* — edge counts,
-owners, mapping frames, requests, transfer ids, edge ordinals, ledgers, fingerprints,
-submission origins — matches the recording on both chains.
