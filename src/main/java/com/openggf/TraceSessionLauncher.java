@@ -1508,10 +1508,31 @@ public final class TraceSessionLauncher {
         if (runCoordinator == null) {
             armRunSpecialDynamicArtComparison(receipt.segmentIndex());
         }
+        boolean adoptedOpeningRow = false;
         if (runDynamicArtSegments != null) {
             runDynamicArtSegments.beginSegment();
-            dynamicArtSegmentGameplayMode.dynamicArtLifecycle()
-                    .advanceComparisonCursor(receipt.rowsConsumed());
+            if (receipt.rowsConsumed() == 1) {
+                // Admission is polled between host steps, so a destination
+                // whose readiness only became observable once its first row
+                // had run reports that row consumed. Adopt it as the opening
+                // segment's row zero instead of skipping past it, so the art
+                // it produced is stamped and published as segment work rather
+                // than left gap-resident.
+                //
+                // The count is organic here by construction:
+                // destinationRowsConsumedForAdmission() derives it from the
+                // playback cursor's own position relative to the destination's
+                // bk2FrameOffset, so a non-zero count means the engine really
+                // executed that row. Adoption is only correct on that footing;
+                // a cursor re-anchored past rows the engine never ran has no
+                // row zero to adopt.
+                dynamicArtSegmentGameplayMode.dynamicArtLifecycle()
+                        .adoptGapResidentOpeningRow();
+                adoptedOpeningRow = true;
+            } else {
+                dynamicArtSegmentGameplayMode.dynamicArtLifecycle()
+                        .advanceComparisonCursor(receipt.rowsConsumed());
+            }
             bindRunSpecialDynamicArtTargetGeneration();
             if (runDynamicArtGapJournal != null
                     && receipt.segmentIndex() > 0) {
@@ -1542,6 +1563,15 @@ public final class TraceSessionLauncher {
         } else if (receipt.inputClock()
                 == DestinationAdmissionReceipt.InputClock.SHARED) {
             installRunComparator(segment, receipt.rowsConsumed(), receipt.absoluteBk2Row());
+            if (adoptedOpeningRow) {
+                // The live comparator starts at row one, so the adopted row
+                // zero would be published but never checked. Compare it here,
+                // through the ordinary binder and counters, so production and
+                // AbstractRunChainTest agree that row zero is compared.
+                comparator.compareAdoptedOpeningRow(0,
+                        dynamicArtSegmentGameplayMode.dynamicArtLifecycle()
+                                .latestSnapshot());
+            }
             GameLoop destinationLoop = Engine.currentGameLoop();
             if (destinationLoop != null) {
                 // A direct level-load admission may continue into gameplay in
