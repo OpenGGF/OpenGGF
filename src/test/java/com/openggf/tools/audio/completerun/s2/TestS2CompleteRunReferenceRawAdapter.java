@@ -105,6 +105,35 @@ class TestS2CompleteRunReferenceRawAdapter {
     }
 
     @Test
+    void rejectsPerKindAbi3EventShapeViolations() throws Exception {
+        String state = "00".repeat(8192);
+        for (String changed : List.of(
+                event().replace("\"service_token\":2", "\"service_token\":0"),
+                event().replace("\"parent_token\":1", "\"parent_token\":0"),
+                event().replace("\"kind\":6", "\"kind\":3")
+                        .replace("\"payload_length\":8", "\"payload_length\":0")
+                        .replace("\"payload\":\"18446744073709551615\"", "\"payload\":\"0\"")
+                        .replace("\"subject\":1", "\"subject\":4"),
+                event().replace("\"kind\":6", "\"kind\":8")
+                        .replace("\"service_kind\":2", "\"service_kind\":1")
+                        .replace("\"payload_length\":8", "\"payload_length\":0")
+                        .replace("\"payload\":\"18446744073709551615\"", "\"payload\":\"0\"")
+                        .replace("\"source_cpu\":1", "\"source_cpu\":2"),
+                event().replace("\"kind\":6", "\"kind\":10")
+                        .replace("\"payload_length\":8", "\"payload_length\":0")
+                        .replace("\"payload\":\"18446744073709551615\"", "\"payload\":\"0\"")
+                        .replace("\"value\":0", "\"value\":4"))) {
+            Path raw = temporary.resolve("bad-kind-shape-" + Math.abs(changed.hashCode()) + ".jsonl");
+            Files.writeString(raw, metadata() + boundary("baseline", "\"row\":769,", state)
+                    + "{\"type\":\"frame\",\"row\":769,\"lag\":false,\"state_hex\":\"" + state
+                    + "\",\"events\":[{" + changed + "]}\n"
+                    + boundary("cutoff", "\"exclusive_end\":770,", state));
+            assertThrows(IllegalArgumentException.class,
+                    () -> S2CompleteRunReferenceRawAdapter.scanPrefixForTesting(raw, new RecordingSink()));
+        }
+    }
+
+    @Test
     void rejectsMalformedFrontierServiceAndAbortsAfterLateFailure() throws Exception {
         String state = "00".repeat(8192);
         String invalidService = boundary("cutoff", "\"exclusive_end\":770,", state)
@@ -169,6 +198,8 @@ class TestS2CompleteRunReferenceRawAdapter {
         Path raw = temporary.resolve("typed-frontier.jsonl");
         String state = "00".repeat(8192);
         String typed = service()
+                .replace("\"current_parent_token\":0", "\"current_parent_token\":2")
+                .replace("\"current_depth\":0", "\"current_depth\":1")
                 .replace("\"chips\":[]", "\"chips\":[{\"coordinate\":7,"
                         + "\"native_ordinal\":8,\"event_kind\":3,\"subject\":1,"
                         + "\"value\":42,\"pc\":56,\"source_cpu\":1,\"data\":true,"
@@ -214,6 +245,49 @@ class TestS2CompleteRunReferenceRawAdapter {
         assertEquals(0, reset.beginHookToken());
     }
 
+    @Test
+    void rejectsKindZeroFrontierServicesAndClosedBaselineDpcm() throws Exception {
+        String state = "00".repeat(8192);
+        for (String changed : List.of(
+                service().replace("\"kind\":3", "\"kind\":0"),
+                dpcmService()
+                        .replace("\"cancelled\":false", "\"cancelled\":true"),
+                dpcmService()
+                        .replace("\"complete\":false", "\"complete\":true")
+                        .replace("\"end_coordinate\":0", "\"end_coordinate\":2"))) {
+            Path raw = temporary.resolve("bad-frontier-kind-" + Math.abs(changed.hashCode()) + ".jsonl");
+            String baseline = boundary("baseline", "\"row\":769,", state)
+                    .replace(dpcmService(), changed);
+            Files.writeString(raw, metadata() + baseline
+                    + boundary("cutoff", "\"exclusive_end\":769,", state));
+            assertThrows(IllegalArgumentException.class,
+                    () -> S2CompleteRunReferenceRawAdapter.scanPrefixForTesting(raw, new RecordingSink()));
+        }
+    }
+
+    @Test
+    void rejectsBrokenAncestryTransitionChains() throws Exception {
+        String state = "00".repeat(8192);
+        String transition = "{\"coordinate\":9,\"native_ordinal\":10,"
+                + "\"previous_parent_token\":0,\"previous_depth\":0,"
+                + "\"current_parent_token\":2,\"current_depth\":1,"
+                + "\"hook_token\":20,\"source_cpu\":1,\"pc\":378}";
+        for (String broken : List.of(
+                transition.replace("\"previous_parent_token\":0", "\"previous_parent_token\":7"),
+                transition.replace("\"current_parent_token\":2", "\"current_parent_token\":0"),
+                transition.replace("\"current_depth\":1", "\"current_depth\":2"))) {
+            String changed = service().replace("\"current_parent_token\":0", "\"current_parent_token\":2")
+                    .replace("\"current_depth\":0", "\"current_depth\":1")
+                    .replace("\"ancestry_transitions\":[]", "\"ancestry_transitions\":[" + broken + "]");
+            Path raw = temporary.resolve("bad-ancestry-" + Math.abs(broken.hashCode()) + ".jsonl");
+            Files.writeString(raw, metadata() + boundary("baseline", "\"row\":769,", state)
+                    + boundary("cutoff", "\"exclusive_end\":769,", state)
+                    .replace("\"active_services\":[]", "\"active_services\":[" + changed + "]"));
+            assertThrows(IllegalArgumentException.class,
+                    () -> S2CompleteRunReferenceRawAdapter.scanPrefixForTesting(raw, new RecordingSink()));
+        }
+    }
+
     private static String metadata() {
         return "{\"type\":\"metadata\",\"schema\":\"openggf.s2-complete-run-audio-raw.v1\","
                 + "\"rom_sha1\":\"8bca5dcef1af3e00098666fd892dc1c2a76333f9\","
@@ -225,7 +299,7 @@ class TestS2CompleteRunReferenceRawAdapter {
 
     private static String boundary(String type, String coordinate, String state) {
         String active = type.equals("baseline")
-                ? "[" + service().replace("\"kind\":3", "\"kind\":4") + "]"
+                ? "[" + dpcmService() + "]"
                 : "[]";
         return "{\"type\":\"" + type + "\"," + coordinate + "\"state_hex\":\"" + state
                 + "\",\"ym_port0_latch\":42,\"ym_port1_latch\":161,"
@@ -234,7 +308,7 @@ class TestS2CompleteRunReferenceRawAdapter {
     }
 
     private static String event() {
-        return "\"ordinal\":0,\"service_token\":2,\"parent_token\":0,\"pc\":4660,"
+        return "\"ordinal\":0,\"service_token\":2,\"parent_token\":1,\"pc\":4660,"
                 + "\"subject\":1,\"offset\":0,\"kind\":6,\"service_kind\":2,"
                 + "\"depth\":1,\"source_cpu\":1,\"payload_length\":8,\"value\":0,"
                 + "\"flags\":0,\"reserved\":0,\"payload\":\"18446744073709551615\"";
@@ -248,6 +322,12 @@ class TestS2CompleteRunReferenceRawAdapter {
                 + "\"end_hook_token\":0,\"begin_source_cpu\":1,"
                 + "\"cancelled\":false,\"complete\":false,\"chips\":[],"
                 + "\"snapshots\":[],\"ancestry_transitions\":[]}";
+    }
+
+    private static String dpcmService() {
+        return service().replace("\"kind\":3", "\"kind\":4")
+                .replace("\"begin_pc\":56", "\"begin_pc\":378")
+                .replace("\"begin_hook_token\":1", "\"begin_hook_token\":5");
     }
 
     private static String resetService() {

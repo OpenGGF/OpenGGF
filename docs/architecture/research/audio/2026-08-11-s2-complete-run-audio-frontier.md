@@ -204,7 +204,15 @@ zero pending descendants, YM latches `$2A/$A1`, 1,491 events, and a 16,384-digit
 lowercase state snapshot. The pinned ROM and BK2 identities were unchanged and
 no ROM, movie, raw payload, or native binary was copied or published.
 
-Focused verification passed 22 S2 Java tests, eight S2 profile tests, eight S2
+Follow-up adversarial review hardened the adapter against shapes that strict
+JSON typing alone did not exclude: every event kind now obeys its ABI-v3 field
+shape and the pinned S2 begin/completion hooks; kinds 10/11 are rejected because
+the reviewed S2 manifest has no marker/promotion hooks; frontier kind zero is
+invalid; and ancestry transitions must form one exact chain from immutable
+begin ancestry to current ancestry. The row-769 kind-4 baseline must remain
+open and noncancelled.
+
+Focused verification passed 25 S2 Java tests, eight S2 profile tests, eight S2
 capture/raw-sink synthetic tests, and the one opt-in real boundary gate. The
 production C# addition changes the deterministic harness identities to
 `ec8c2b6745faf72dca885d918372a8e3d678235681ab954b948f75a31de4c4c6`

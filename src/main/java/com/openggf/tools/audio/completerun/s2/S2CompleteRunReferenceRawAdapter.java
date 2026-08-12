@@ -203,6 +203,8 @@ public final class S2CompleteRunReferenceRawAdapter {
                     "S2 raw baseline native arm proof changed");
             require(result.activeServices().size() == 1
                             && result.activeServices().getFirst().kind() == 4
+                            && !result.activeServices().getFirst().complete()
+                            && !result.activeServices().getFirst().cancelled()
                             && result.pendingDescendants().isEmpty(),
                     "S2 raw baseline frontier is not the pinned 1/0 kind-4 shape");
         } else {
@@ -258,12 +260,13 @@ public final class S2CompleteRunReferenceRawAdapter {
                     "S2 raw payload has nonzero bytes outside its declared length");
             long pc = unsignedInt(event, "pc");
             requirePc(sourceCpu, pc, "event");
-            events.add(new RawEvent(ordinal, unsignedWord(event, "service_token"),
-                    unsignedWord(event, "parent_token"), unsignedInt(event, "pc"),
+            RawEvent parsed = new RawEvent(ordinal, unsignedWord(event, "service_token"),
+                    unsignedWord(event, "parent_token"), pc,
                     unsignedWord(event, "subject"), unsignedWord(event, "offset"),
-                    kind, serviceKind(event, "service_kind"),
-                    depth(event, "depth"), sourceCpu, payloadLength,
-                    valueByte, flags, reserved, payload));
+                    kind, serviceKind(event, "service_kind"), depth(event, "depth"),
+                    sourceCpu, payloadLength, valueByte, flags, reserved, payload);
+            validateEventShape(parsed);
+            events.add(parsed);
         }
         return new RawFrame(integer(value, "row"), bool(value, "lag"), state(value), events);
     }
@@ -325,13 +328,17 @@ public final class S2CompleteRunReferenceRawAdapter {
             require(complete || (!cancelled && endCoordinate == 0 && endPc == 0
                     && endHookToken == 0),
                     "S2 raw open frontier service carries completion state");
-            result.add(new RawService(nonZeroWord(service, "token"),
+            List<RawAncestryTransition> transitions = ancestry(service.get("ancestry_transitions"));
+            RawService parsed = new RawService(nonZeroWord(service, "token"),
                     parentToken, kind, serviceDepth,
                     currentParentToken, currentDepth, beginCoordinate, endCoordinate,
                     beginPc, endPc, beginHookToken, endHookToken,
                     sourceCpu, cancelled, complete,
                     chips(service.get("chips")), snapshots(service.get("snapshots")),
-                    ancestry(service.get("ancestry_transitions"))));
+                    transitions);
+            validateFrontierServiceShape(parsed);
+            validateAncestryChain(parsed);
+            result.add(parsed);
         }
         return List.copyOf(result);
     }
@@ -394,12 +401,17 @@ public final class S2CompleteRunReferenceRawAdapter {
             int source = sourceCpu(transition, "source_cpu");
             long pc = unsignedInt(transition, "pc");
             requirePc(source, pc, "frontier ancestry");
+            int previousParent = unsignedWord(transition, "previous_parent_token");
+            int previousDepth = depth(transition, "previous_depth");
+            int currentParent = unsignedWord(transition, "current_parent_token");
+            int currentDepth = depth(transition, "current_depth");
+            require((previousParent == 0) == (previousDepth == 0)
+                            && (currentParent == 0) == (currentDepth == 0),
+                    "S2 raw ancestry transition parent/depth is inconsistent");
             result.add(new RawAncestryTransition(nonNegativeLong(transition, "coordinate"),
                     unsignedInt(transition, "native_ordinal"),
-                    unsignedWord(transition, "previous_parent_token"),
-                    depth(transition, "previous_depth"),
-                    unsignedWord(transition, "current_parent_token"),
-                    depth(transition, "current_depth"), nonZeroWord(transition, "hook_token"),
+                    previousParent, previousDepth, currentParent, currentDepth,
+                    nonZeroWord(transition, "hook_token"),
                     source, pc));
         }
         return List.copyOf(result);
@@ -480,9 +492,154 @@ public final class S2CompleteRunReferenceRawAdapter {
 
     private static int serviceKind(JsonNode value, String field) {
         int result = unsignedByte(value, field);
-        require(result >= 0 && result <= 9,
+        require(result >= 1 && result <= 9,
                 "S2 raw " + field + " is outside the reviewed S2 manifest");
         return result;
+    }
+
+    private static void validateEventShape(RawEvent event) {
+        require((event.parentToken() == 0) == (event.depth() == 0),
+                "S2 raw event parent/depth is inconsistent");
+        require(event.serviceToken() != 0 && event.serviceKind() >= 1 && event.serviceKind() <= 9,
+                "S2 raw event is not owned by a pinned service kind");
+        switch (event.kind()) {
+            case 1 -> require(event.subject() != 0 && event.offset() == 0
+                            && event.payloadLength() == 0 && event.payload().signum() == 0
+                            && event.value() == 0 && event.flags() == 0
+                            && beginKind(event.subject()) == event.serviceKind()
+                            && beginSource(event.subject()) == event.sourceCpu()
+                            && beginPc(event.subject()) == event.pc(),
+                    "S2 raw service-begin shape changed");
+            case 2 -> {
+                require(event.offset() == 0 && event.payloadLength() == 0
+                                && event.payload().signum() == 0 && event.value() == 0
+                                && (event.flags() == 0 || event.flags() == 2),
+                        "S2 raw service-end shape changed");
+                if (event.flags() == 2) require(event.subject() == 0 && event.sourceCpu() == 3
+                                && event.pc() == 0,
+                        "S2 raw reset-cancellation shape changed");
+                else require(event.subject() != 0
+                                && completionKind(event.subject()) == event.serviceKind()
+                                && completionSource(event.subject()) == event.sourceCpu()
+                                && completionPc(event.subject()) == event.pc(),
+                        "S2 raw service completion has no pinned hook token");
+            }
+            case 3 -> require(event.subject() <= 3 && event.offset() == 0
+                            && event.payloadLength() == 0 && event.payload().signum() == 0
+                            && event.flags() == 0,
+                    "S2 raw YM event shape changed");
+            case 4 -> require(event.subject() == 0 && event.offset() == 0
+                            && event.payloadLength() == 0 && event.payload().signum() == 0
+                            && event.flags() == 0,
+                    "S2 raw PSG event shape changed");
+            case 5 -> require((event.subject() == 1 || event.subject() == 2)
+                            && event.offset() == 0 && event.payloadLength() == 0
+                            && event.payload().signum() == 0 && event.value() == 0
+                            && event.flags() == 0,
+                    "S2 raw snapshot-begin shape changed");
+            case 6 -> require((event.subject() == 1 || event.subject() == 2)
+                            && event.payloadLength() >= 1 && event.payloadLength() <= 8
+                            && event.offset() + event.payloadLength()
+                                <= (event.subject() == 1 ? 8192 : 1)
+                            && event.value() == 0 && event.flags() == 0,
+                    "S2 raw snapshot-chunk shape changed");
+            case 7 -> require((event.subject() == 1 || event.subject() == 2)
+                            && event.offset() == (event.subject() == 1 ? 8192 : 1)
+                            && event.payloadLength() == 0 && event.payload().signum() == 0
+                            && event.value() == 0 && event.flags() == 0,
+                    "S2 raw snapshot-end shape changed");
+            case 8 -> require(event.serviceKind() == 1 && event.sourceCpu() == 3
+                            && event.pc() == 0 && event.parentToken() == 0 && event.depth() == 0
+                            && event.offset() == 0 && event.payloadLength() == 0
+                            && event.payload().signum() == 0 && event.value() == 0
+                            && (event.flags() == 0 || event.flags() == 1),
+                    "S2 raw reset-begin shape changed");
+            case 9 -> require(event.serviceKind() == 1 && event.sourceCpu() == 3
+                            && event.pc() == 0 && event.parentToken() == 0 && event.depth() == 0
+                            && event.subject() == 0 && event.offset() == 0
+                            && event.payloadLength() == 0 && event.payload().signum() == 0
+                            && (event.flags() == 0 || event.flags() == 1),
+                    "S2 raw reset-end shape changed");
+            case 10 -> {
+                require(event.value() >= 0 && event.value() <= 3,
+                        "S2 raw marker value is outside ABI v3");
+                throw invalid("S2 raw marker has no hook in the pinned S2 manifest");
+            }
+            case 11 -> require(false,
+                    "S2 raw promotion has no hook in the pinned S2 manifest");
+            default -> throw invalid("S2 raw event kind is outside ABI v3");
+        }
+    }
+
+    private static void validateAncestryChain(RawService service) {
+        int parent = service.parentToken();
+        int depth = service.depth();
+        for (RawAncestryTransition transition : service.ancestryTransitions()) {
+            require(transition.previousParentToken() == parent
+                            && transition.previousDepth() == depth,
+                    "S2 raw ancestry transition does not continue its service chain");
+            parent = transition.currentParentToken();
+            depth = transition.currentDepth();
+        }
+        require(parent == service.currentParentToken() && depth == service.currentDepth(),
+                "S2 raw ancestry chain does not reach the service frontier");
+    }
+
+    private static void validateFrontierServiceShape(RawService service) {
+        if (service.kind() == 1) return;
+        require(beginKind(service.beginHookToken()) == service.kind()
+                        && beginSource(service.beginHookToken()) == service.beginSourceCpu()
+                        && beginPc(service.beginHookToken()) == service.beginPc(),
+                "S2 raw frontier begin is not a pinned S2 hook");
+        if (service.complete() && service.cancelled()) require(service.endHookToken() == 0
+                        && service.endPc() == 0,
+                "S2 raw frontier cancellation shape changed");
+        else if (service.complete()) require(completionKind(service.endHookToken()) == service.kind()
+                            && completionSource(service.endHookToken()) == service.beginSourceCpu()
+                            && completionPc(service.endHookToken()) == service.endPc(),
+                    "S2 raw frontier completion is not a pinned S2 hook");
+    }
+
+    private static int beginKind(int hook) {
+        return switch (hook) {
+            case 9 -> 2; case 1, 2, 16, 19 -> 3; case 5, 13, 20 -> 4;
+            case 7 -> 5; case 11 -> 6; case 14, 15 -> 7; case 17, 18 -> 8;
+            case 21 -> 9;
+            default -> -1;
+        };
+    }
+
+    private static int beginSource(int hook) {
+        return hook == 7 || hook == 9 ? 2 : beginKind(hook) > 0 ? 1 : -1;
+    }
+
+    private static long beginPc(int hook) {
+        return switch (hook) {
+            case 11 -> 0; case 1, 2 -> 56; case 21 -> 272; case 5, 13, 20 -> 378;
+            case 14, 15 -> 1808; case 17, 18 -> 4744; case 7 -> 638; case 9 -> 966656;
+            default -> -1;
+        };
+    }
+
+    private static int completionKind(int hook) {
+        return switch (hook) {
+            case 10 -> 2; case 3, 4, 13, 14, 17 -> 3; case 6, 20 -> 4;
+            case 8 -> 5; case 12 -> 6; case 15, 16 -> 7; case 18, 19 -> 8;
+            case 22, 23 -> 9; default -> -1;
+        };
+    }
+
+    private static int completionSource(int hook) {
+        return hook == 8 || hook == 10 ? 2 : completionKind(hook) > 0 ? 1 : -1;
+    }
+
+    private static long completionPc(int hook) {
+        return switch (hook) {
+            case 3 -> 231; case 4 -> 271; case 22 -> 331; case 12 -> 369;
+            case 6 -> 432; case 23 -> 3508; case 13, 20 -> 378;
+            case 14, 15 -> 1808; case 16 -> 1842; case 17, 18 -> 4744;
+            case 19 -> 4860; case 8 -> 648; case 10 -> 966710; default -> -1;
+        };
     }
 
     private static boolean validFlags(int kind, int flags) {
