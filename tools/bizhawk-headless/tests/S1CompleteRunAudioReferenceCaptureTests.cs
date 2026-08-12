@@ -92,6 +92,15 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S1CompleteRunAudioReferenceCaptureTests correlate deferred begin callbacks to one consume",
                 CorrelatesDeferredBeginCallbacksToOneConsume));
             tests.Add(new TestMain.TestCase(
+                "S1CompleteRunAudioReferenceCaptureTests correlate deferred tail successor identity",
+                CorrelatesDeferredTailSuccessorIdentity));
+            tests.Add(new TestMain.TestCase(
+                "S1CompleteRunAudioReferenceCaptureTests carry deferred tail successor across cutoff",
+                CarriesDeferredTailSuccessorAcrossCutoff));
+            tests.Add(new TestMain.TestCase(
+                "S1CompleteRunAudioReferenceCaptureTests roll back deferred tail successor identity",
+                RollsBackDeferredTailSuccessorIdentity));
+            tests.Add(new TestMain.TestCase(
                 "S1CompleteRunAudioReferenceCaptureTests reject corrupt deferred begin identity and consume",
                 RejectsCorruptDeferredBeginIdentityAndConsume));
             tests.Add(new TestMain.TestCase(
@@ -971,7 +980,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(860, manifest.FirstRow);
             AssertEx.Equal(225101, manifest.ExclusiveEnd);
             AssertEx.Equal(RomIdentity.Sonic1Rev01Sha1, manifest.RomSha1);
-            AssertEx.Equal((uint)285,manifest.NativeConfig.HookCount);
+            AssertEx.Equal((uint)287,manifest.NativeConfig.HookCount);
             AssertEx.Equal((uint)16412,
                 manifest.NativeConfig.SnapshotBytesTotal);
             AssertHook(manifest, 0x00138E, "11c0f00a", "QueueSound1", "REQUEST_QUEUE_0");
@@ -1030,7 +1039,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private static void AssertDeferredBeginHooks(
             S1CompleteRunAudioReferenceCapture.Manifest manifest)
         {
-            int reserve=0,consume=0;var ordinary=new List<byte>();
+            int reserve=0;var consume=new List<byte>();
+            var consumeTokens=new HashSet<ushort>();
+            var ordinary=new List<byte>();
             var ordinaryEntry=new List<byte>();
             foreach(GpgxAudioObserverAdapter.ServiceHook hook in manifest.NativeServiceHooks)
             {
@@ -1045,12 +1056,15 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 }
                 else if(hook.Pc==0x071B82&&hook.Action==12)
                 {
-                    consume++;
+                    consume.Add(hook.ExpectedActiveKind);
+                    AssertEx.Equal(true,consumeTokens.Add(hook.HookToken));
                     AssertEx.Equal(true,object.ReferenceEquals(
                         manifest.FindManagedHook(0x071B82),
                         manifest.ManagedByNativeToken[hook.HookToken]));
                     AssertEx.Equal((byte)4,hook.ServiceKindId);
-                    AssertEx.Equal((byte)6,hook.ExpectedActiveKind);
+                    AssertEx.Equal((byte)2,hook.Cpu);
+                    AssertEx.Equal((byte)6,hook.OpcodeLength);
+                    AssertEx.Equal((ulong)0x00F0FF00F94D,hook.Opcode);
                     AssertEx.Equal((ushort)0,hook.RangeCount);
                     AssertEx.Equal((ulong)0,hook.Reserved);
                 }
@@ -1069,7 +1083,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
             ordinary.Sort();
             AssertEx.Equal(1,reserve);
-            AssertEx.Equal(1,consume);
+            consume.Sort();
+            AssertEx.Equal(3,consume.Count);
+            AssertEx.Equal((byte)2,consume[0]);
+            AssertEx.Equal((byte)3,consume[1]);
+            AssertEx.Equal((byte)6,consume[2]);
+            AssertEx.Equal(3,consumeTokens.Count);
             ordinaryEntry.Sort();
             AssertEx.Equal(3,ordinaryEntry.Count);
             AssertEx.Equal((byte)2,ordinaryEntry[0]);
@@ -1151,6 +1170,240 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(child,(ushort)native[chip]["service_token"]);
             AssertEx.Equal(blocker,(ushort)native[observation]["parent_token"]);
             AssertEx.Equal(blocker,(ushort)native[chip]["parent_token"]);
+        }
+
+        private static void CorrelatesDeferredTailSuccessorIdentity()
+        {
+            AssertDeferredTailSuccessorIdentity(0x0077,0x00AC,2,false);
+            AssertDeferredTailSuccessorIdentity(0x00C1,0x00D0,3,true);
+        }
+
+        private static void AssertDeferredTailSuccessorIdentity(uint tailPc,
+            uint successorEndPc,byte successorKind,bool crossFrame)
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDB2);
+                current.SetU32(0xFDB2,0x00000B64);
+                if(frame==1)
+                {
+                    api.VisitZ80(0x003A,current);
+                    Visit(current,api,0x071B4C);
+                    Visit(current,api,0x071B4C);
+                    api.VisitZ80(tailPc,current);
+                    if(crossFrame)return;
+                }
+                Visit(current,api,0x071B82);
+                Visit(current,api,0x071C4C);
+                api.VisitZ80(successorEndPc,current);
+            });
+            var output=new StringWriter();
+            S1CompleteRunAudioReferenceCapture.Manifest manifest;
+            using(var session=CreateSession(host,api,output))
+            {
+                manifest=S1CompleteRunAudioReferenceCapture.LoadManifest(
+                    FixturePath(),RomForManifest(FixturePath()));
+                session.BeginEpoch();
+                int baselineLength=output.ToString().Length;
+                session.CaptureFrame(860,host.Advance);
+                if(crossFrame)
+                {
+                    AssertEx.Equal(2,
+                        session.PendingDeferredObservationCountForTesting);
+                    AssertEx.Equal(baselineLength,output.ToString().Length);
+                    session.CaptureFrame(861,host.Advance);
+                    session.Complete(862);
+                }
+                else session.Complete(861);
+            }
+            string raw=output.ToString();
+            List<JObject> markers=Records(raw,"managed_hook_evidence",
+                value=>value["native_marker_value"]!=null
+                    &&value["native_marker_value"].Type==JTokenType.Integer
+                    &&(int)value["native_marker_value"]==4);
+            AssertEx.Equal(2,markers.Count);
+            ushort origin=(ushort)markers[0]["native_service_token"];
+            AssertEx.Equal((ushort)0,(ushort)markers[0]["native_parent_token"]);
+            AssertEx.Equal(origin,(ushort)markers[1]["native_service_token"]);
+            AssertEx.Equal((ushort)0,(ushort)markers[1]["native_parent_token"]);
+            AssertEx.Equal((uint)0x00FFFDB2,(uint)markers[0]["deferred_a7"]);
+            AssertEx.Equal((uint)0x00000B64,(uint)markers[0]["deferred_return_pc"]);
+
+            List<JObject> native=NativeRecords(raw,crossFrame?861:860);
+            int consume=FindNative(native,value=>(int)value["kind"]==1
+                &&(int)value["service_kind"]==4
+                &&(uint)value["pc"]==0x071B82);
+            ushort successor=(ushort)native[consume]["parent_token"];
+            AssertEx.Equal(true,successor!=origin);
+            AssertEx.Equal(1,(int)native[consume]["depth"]);
+            AssertEx.Equal(successorKind,FindServiceKind(raw,successor));
+            ushort consumeHook=FindHookToken(manifest,0x071B82,12,
+                successorKind);
+            AssertEx.Equal(consumeHook,(ushort)native[consume]["subject"]);
+            AssertEx.Equal(0,CountNative(raw,value=>(uint)value["pc"]==0x071B82
+                &&(int)value["kind"]==10&&(int)value["value"]==3));
+            for(int i=0;i<markers.Count;i++)
+            {
+                AssertEx.Equal(origin,(ushort)markers[i]["native_service_token"]);
+                AssertEx.Equal(successor,(ushort)native[consume]["parent_token"]);
+                AssertEx.Equal((ushort)native[consume]["service_token"],
+                    (ushort)markers[i]["consumed_service_token"]);
+            }
+        }
+
+        private static void CarriesDeferredTailSuccessorAcrossCutoff()
+        {
+            AssertDeferredTailSuccessorAcrossCutoff(0x0077,0x00AC,2);
+            AssertDeferredTailSuccessorAcrossCutoff(0x00C1,0x00D0,3);
+            AssertDeferredTailSuccessorWhollyBeforeEpoch(0x0077,0x00AC);
+            AssertDeferredTailSuccessorWhollyBeforeEpoch(0x00C1,0x00D0);
+        }
+
+        private static void AssertDeferredTailSuccessorAcrossCutoff(uint tailPc,
+            uint successorEndPc,byte successorKind)
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDB2);
+                current.SetU32(0xFDB2,0x00000B64);
+                if(frame==1)
+                {
+                    api.VisitZ80(0x003A,current);
+                    Visit(current,api,0x071B4C);
+                    api.VisitZ80(tailPc,current);
+                    return;
+                }
+                Visit(current,api,0x071B82);
+                Visit(current,api,0x071C4C);
+                api.VisitZ80(successorEndPc,current);
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                session.ObservePreEpochFrame(859,null,host.Advance);
+                AssertEx.Equal(0,output.ToString().Length);
+                AssertEx.Equal(0,session.BoundaryManagedServiceCountForTesting);
+                session.BeginEpoch();
+                JObject baseline=Record(output.ToString(),"baseline",0);
+                JArray active=(JArray)baseline["active_services"];
+                AssertEx.Equal(1,active.Count);
+                AssertEx.Equal(successorKind,(byte)active[0]["kind"]);
+                AssertEx.Equal((ushort)0,(ushort)active[0]["parent_token"]);
+                AssertEx.Equal((byte)0,(byte)active[0]["depth"]);
+                AssertEx.Equal(tailPc,(uint)active[0]["begin_pc"]);
+                session.CaptureFrame(860,host.Advance);
+                session.Complete(861);
+            }
+            AssertEx.Equal(0,CountNativeMarkerValue(output.ToString(),4));
+            JObject consume=Records(output.ToString(),"managed_hook_evidence",
+                value=>(uint)value["pc"]==0x071B82)[0];
+            AssertEx.Equal((uint)0x00FFFDB2,(uint)consume["registers"]["A7"]);
+        }
+
+        private static void AssertDeferredTailSuccessorWhollyBeforeEpoch(
+            uint tailPc,uint successorEndPc)
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDB2);
+                current.SetU32(0xFDB2,0x00000B64);
+                api.VisitZ80(0x003A,current);
+                Visit(current,api,0x071B4C);
+                api.VisitZ80(tailPc,current);
+                Visit(current,api,0x071B82);
+                Visit(current,api,0x071C4C);
+                api.VisitZ80(successorEndPc,current);
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                session.ObservePreEpochFrame(859,null,host.Advance);
+                session.BeginEpoch();
+            }
+            AssertEx.Equal(0,((JArray)Record(output.ToString(),"baseline",0)
+                ["active_services"]).Count);
+            AssertEx.Equal(0,CountRecords(output.ToString(),"native_event"));
+            AssertEx.Equal(0,CountRecords(output.ToString(),
+                "managed_hook_evidence"));
+        }
+
+        private static void RollsBackDeferredTailSuccessorIdentity()
+        {
+            AssertTransferredConsumeIdentityFails(current=>
+                current.SetCpuRegister("A7",0x00FFFDB6));
+            AssertTransferredConsumeIdentityFails(current=>
+                current.SetU32(0xFDB2,0x00000B68));
+            AssertTransferredPendingRejectsResetAndTerminal(false,true);
+            AssertTransferredPendingRejectsResetAndTerminal(true,false);
+        }
+
+        private static void AssertTransferredConsumeIdentityFails(
+            Action<FakeS1Host> corrupt)
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDB2);
+                current.SetU32(0xFDB2,0x00000B64);
+                if(frame==1)
+                {
+                    api.VisitZ80(0x003A,current);
+                    Visit(current,api,0x071B4C);
+                    return;
+                }
+                api.VisitZ80(0x0077,current);
+                corrupt(current);
+                Visit(current,api,0x071B82);
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                session.BeginEpoch();
+                int baselineLength=output.ToString().Length;
+                session.CaptureFrame(860,host.Advance);
+                AssertEx.Equal(1,session.PendingDeferredObservationCountForTesting);
+                AssertEx.Equal(baselineLength,output.ToString().Length);
+                AssertEx.Throws<InvalidOperationException>(()=>
+                    session.CaptureFrame(861,host.Advance),"identity");
+                AssertEx.Equal(1,session.PendingDeferredObservationCountForTesting);
+                AssertEx.Equal(baselineLength,output.ToString().Length);
+                AssertEx.Throws<InvalidOperationException>(()=>
+                    session.CaptureFrame(861,()=>{}),"faulted");
+                AssertEx.Throws<InvalidOperationException>(()=>
+                    session.Complete(861),"pending");
+            }
+        }
+
+        private static void AssertTransferredPendingRejectsResetAndTerminal(
+            bool power,bool reset)
+        {
+            var api=new FakeTraceApi();
+            var host=new FakeS1Host((current,frame)=>
+            {
+                current.SetCpuRegister("A7",0x00FFFDB2);
+                current.SetU32(0xFDB2,0x00000B64);
+                api.VisitZ80(0x003A,current);
+                Visit(current,api,0x071B4C);
+                api.VisitZ80(0x0077,current);
+            });
+            var output=new StringWriter();
+            using(var session=CreateSession(host,api,output))
+            {
+                session.BeginEpoch();
+                int baselineLength=output.ToString().Length;
+                session.CaptureFrame(860,host.Advance);
+                AssertEx.Equal(1,session.PendingDeferredObservationCountForTesting);
+                AssertEx.Equal(baselineLength,output.ToString().Length);
+                AssertEx.Throws<InvalidOperationException>(()=>session.CaptureFrame(
+                    861,new Bk2Frame{Power=power,Reset=reset},()=>{}),"pending");
+                AssertEx.Equal(1,session.PendingDeferredObservationCountForTesting);
+                AssertEx.Equal(baselineLength,output.ToString().Length);
+                AssertEx.Throws<InvalidOperationException>(()=>
+                    session.Complete(861),"pending");
+            }
         }
 
         private static void RejectsCorruptDeferredBeginIdentityAndConsume()
@@ -1564,11 +1817,28 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Throws<InvalidOperationException>(
                 ()=>tracker.End(4),"no open");
             AssertEx.Equal(1,tracker.Count);
+            Type entry=typeof(S1CompleteRunAudioReferenceCapture
+                .ManagedServiceTracker).GetNestedType("Entry",
+                    System.Reflection.BindingFlags.NonPublic);
+            var entryFields=entry.GetFields(System.Reflection.BindingFlags.Instance
+                |System.Reflection.BindingFlags.NonPublic);
+            Array.Sort(entryFields,(left,right)=>string.CompareOrdinal(
+                left.Name,right.Name));
+            AssertEx.Equal(2,entryFields.Length);
+            AssertEx.Equal("Stack",entryFields[0].Name);
+            AssertEx.Equal(typeof(uint),entryFields[0].FieldType);
+            AssertEx.Equal("Token",entryFields[1].Name);
+            AssertEx.Equal(typeof(ushort),entryFields[1].FieldType);
 
             CompleteRunAudioObserver.DriverService promoted=ManagedBoundaryService(
                 3,1,1,0,0);
             AssertEx.Equal(true,tracker.MatchesBoundary(
                 new[]{promoted}));
+            AssertEx.Equal(true,tracker.MatchesBoundary(new[]{
+                ManagedBoundaryService(8,0,0,0,0,2),promoted}));
+            AssertEx.Equal(true,tracker.MatchesBoundary(new[]{
+                ManagedBoundaryService(9,0,0,0,0,3),promoted}));
+            AssertEx.Equal(1,tracker.Count);
             AssertEx.Equal(false,tracker.MatchesBoundary(
                 new CompleteRunAudioObserver.DriverService[0]));
             AssertEx.Equal(false,tracker.MatchesBoundary(new[]{promoted,
@@ -1709,12 +1979,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
         private static CompleteRunAudioObserver.DriverService
             ManagedBoundaryService(ushort token,ushort parent,byte depth,
-                ushort currentParent,byte currentDepth)
+                ushort currentParent,byte currentDepth,byte kind=4)
         {
             return new CompleteRunAudioObserver.DriverService(
                 new CompleteRunAudioObserver.ServiceBuilder
                 {
-                    Token=token,ParentToken=parent,Kind=4,Depth=depth,
+                    Token=token,ParentToken=parent,Kind=kind,Depth=depth,
                     CurrentParentToken=currentParent,CurrentDepth=currentDepth
                 },false);
         }
@@ -3772,6 +4042,34 @@ namespace OpenGGF.BizHawk.Headless.Tests
             return result;
         }
 
+        private static byte FindServiceKind(string jsonl,ushort token)
+        {
+            List<JObject> begins=Records(jsonl,"native_event",value=>
+                (int)value["kind"]==1&&(ushort)value["service_token"]==token);
+            if(begins.Count!=1)throw new InvalidOperationException(
+                "Expected exactly one native service begin for token.");
+            return (byte)begins[0]["service_kind"];
+        }
+
+        private static ushort FindHookToken(
+            S1CompleteRunAudioReferenceCapture.Manifest manifest,uint pc,
+            byte action,byte expectedKind)
+        {
+            ushort token=0;
+            foreach(GpgxAudioObserverAdapter.ServiceHook hook
+                in manifest.NativeServiceHooks)
+            {
+                if(hook.Pc!=pc||hook.Action!=action
+                    ||hook.ExpectedActiveKind!=expectedKind)continue;
+                if(token!=0)throw new InvalidOperationException(
+                    "Expected one native hook identity.");
+                token=hook.HookToken;
+            }
+            if(token==0)throw new InvalidOperationException(
+                "Missing native hook identity.");
+            return token;
+        }
+
         private static List<JObject> NativeRecords(
             IEnumerable<JObject> records,int row)
         {
@@ -3899,9 +4197,15 @@ namespace OpenGGF.BizHawk.Headless.Tests
             private GpgxAudioObserverAdapter.SnapshotRange[] ranges;
             private GpgxAudioObserverAdapter.ServiceKind[] kinds;
             private GpgxAudioObserverAdapter.ServiceHook deferredReserveHook;
-            private GpgxAudioObserverAdapter.ServiceHook deferredConsumeHook;
+            private readonly List<GpgxAudioObserverAdapter.ServiceHook>
+                deferredConsumeHooks=
+                    new List<GpgxAudioObserverAdapter.ServiceHook>();
             private bool hasDeferredPair;
             private bool deferredPending;
+            private ushort deferredOriginToken,deferredOriginParentToken;
+            private ushort deferredCurrentToken,deferredCurrentParentToken;
+            private byte deferredOriginKind,deferredOriginDepth;
+            private byte deferredCurrentKind,deferredCurrentDepth;
             private ushort nextServiceToken = 1;
             public uint AbiVersion { get { return 3; } }
             public uint EventSize { get { return 32; } }
@@ -3998,10 +4302,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                     else if(hook.Action==12)
                     {
-                        GpgxAudioObserverAdapter.ServiceKind blocker=Array.Find(
-                            kinds,value=>value.KindId==hook.ExpectedActiveKind);
                         if(hook.Cpu!=2||hook.ServiceKindId==0
-                            ||hook.ExpectedActiveKind==0||(blocker.Flags&4)!=0
+                            ||hook.ExpectedActiveKind==0
                             ||hook.RangeCount!=0||hook.Flags!=0||hook.Reserved!=0)
                             return -2;
                     }
@@ -4037,20 +4339,45 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 this.hooks = (GpgxAudioObserverAdapter.ServiceHook[])hooks.Clone();
                 this.ranges = (GpgxAudioObserverAdapter.SnapshotRange[])ranges.Clone();
                 this.kinds = (GpgxAudioObserverAdapter.ServiceKind[])kinds.Clone();
-                int reserveCount=0,consumeCount=0;
+                int reserveCount=0;
+                deferredConsumeHooks.Clear();
                 for(int i=0;i<hooks.Length;i++)
                 {
                     if(hooks[i].Action==11)
                     {deferredReserveHook=hooks[i];reserveCount++;}
                     else if(hooks[i].Action==12)
-                    {deferredConsumeHook=hooks[i];consumeCount++;}
+                        deferredConsumeHooks.Add(hooks[i]);
                 }
-                hasDeferredPair=reserveCount==1&&consumeCount==1
-                    &&deferredReserveHook.ServiceKindId==deferredConsumeHook.ServiceKindId
-                    &&deferredReserveHook.ExpectedActiveKind
-                        ==deferredConsumeHook.ExpectedActiveKind;
-                if((reserveCount!=0||consumeCount!=0)&&!hasDeferredPair)return -2;
+                var expectedConsumeKinds=new HashSet<byte>();
+                if(reserveCount==1)
+                {
+                    expectedConsumeKinds.Add(
+                        deferredReserveHook.ExpectedActiveKind);
+                    for(int i=0;i<hooks.Length;i++)
+                        if(hooks[i].Action==4&&hooks[i].ExpectedActiveKind
+                            ==deferredReserveHook.ExpectedActiveKind)
+                            expectedConsumeKinds.Add(hooks[i].ServiceKindId);
+                }
+                var actualConsumeKinds=new HashSet<byte>();
+                hasDeferredPair=reserveCount==1
+                    &&deferredConsumeHooks.Count==expectedConsumeKinds.Count;
+                for(int i=0;i<deferredConsumeHooks.Count;i++)
+                {
+                    GpgxAudioObserverAdapter.ServiceHook consume=
+                        deferredConsumeHooks[i];
+                    if(consume.ServiceKindId!=deferredReserveHook.ServiceKindId
+                        ||!expectedConsumeKinds.Contains(
+                            consume.ExpectedActiveKind)
+                        ||!actualConsumeKinds.Add(consume.ExpectedActiveKind))
+                        hasDeferredPair=false;
+                }
+                if((reserveCount!=0||deferredConsumeHooks.Count!=0)
+                    &&!hasDeferredPair)return -2;
                 deferredPending=false;
+                deferredOriginToken=deferredOriginParentToken=0;
+                deferredCurrentToken=deferredCurrentParentToken=0;
+                deferredOriginKind=deferredOriginDepth=0;
+                deferredCurrentKind=deferredCurrentDepth=0;
                 return 0;
             }
             public int BeginFrame()
@@ -4099,6 +4426,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     if (hooks[i].Cpu == 2 && hooks[i].Pc == pc
                         && hooks[i].ExpectedActiveKind == activeKind)
                     {
+                        if(hooks[i].Action==12)
+                        {
+                            if(!deferredPending||!DeferredCurrentMatchesTop())
+                                continue;
+                        }
+                        else if(hooks[i].Action==7&&deferredPending
+                            &&HasDeferredConsumeHook(pc,activeKind))continue;
                         bool directParent = hooks[i].Action == 10
                             && active.Count >= 2
                             && active[active.Count-2].Kind
@@ -4120,8 +4454,15 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                 }
                 if (!found)
+                {
+                    if (!deferredPending && HasDeferredConsumeHook(pc, activeKind))
+                    {
+                        throw new InvalidOperationException(
+                            "Fake native deferred consume had no exact reservation.");
+                    }
                     throw new InvalidOperationException(
                         "Fake native M68K visit had no active-kind alternative.");
+                }
                 if (hook.Action == 1)
                 {
                     Push(hook);
@@ -4172,12 +4513,30 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     if(!hasDeferredPair)
                         throw new InvalidOperationException(
                             "Fake native deferred reserve had no consume pair.");
+                    if(active.Count==0)throw new InvalidOperationException(
+                        "Fake native deferred reserve had no owner.");
+                    ActiveService owner=active[active.Count-1];
+                    if(!deferredPending)
+                    {
+                        deferredOriginToken=deferredCurrentToken=owner.Token;
+                        deferredOriginParentToken=deferredCurrentParentToken=
+                            owner.Parent;
+                        deferredOriginKind=deferredCurrentKind=owner.Kind;
+                        deferredOriginDepth=deferredCurrentDepth=owner.Depth;
+                        deferredPending=true;
+                    }
+                    else if(owner.Token!=deferredOriginToken
+                        ||owner.Parent!=deferredOriginParentToken
+                        ||owner.Kind!=deferredOriginKind
+                        ||owner.Depth!=deferredOriginDepth)
+                        throw new InvalidOperationException(
+                            "Fake native deferred retry changed origin.");
                     Add(Owned(hook,10,4));
-                    deferredPending=true;
                 }
                 else if(hook.Action==12)
                 {
                     if(!deferredPending||active.Count!=1
+                        ||!DeferredCurrentMatchesTop()
                         ||active[0].Kind!=hook.ExpectedActiveKind)
                         throw new InvalidOperationException(
                             "Fake native deferred consume had no exact reservation.");
@@ -4387,6 +4746,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             {
                 if(active.Count==0)throw new InvalidOperationException(
                     "Fake native tail had no active service.");
+                ActiveService owner=active[active.Count-1];
                 GpgxAudioObserverAdapter.SnapshotRange range=ranges[hook.RangeFirst];
                 Add(Owned(hook,5,0,range.RangeId));
                 GpgxAudioTraceEvent chunk=Owned(hook,6,0,range.RangeId);
@@ -4396,6 +4756,40 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 Add(Owned(hook,2,0,hook.HookToken));
                 active.RemoveAt(active.Count-1);
                 Push(hook);
+                if(deferredPending&&owner.Token==deferredCurrentToken
+                    &&owner.Parent==deferredCurrentParentToken
+                    &&owner.Kind==deferredCurrentKind
+                    &&owner.Depth==deferredCurrentDepth
+                    &&deferredCurrentToken==deferredOriginToken
+                    &&deferredCurrentParentToken==deferredOriginParentToken
+                    &&deferredCurrentKind==deferredOriginKind
+                    &&deferredCurrentDepth==deferredOriginDepth)
+                {
+                    ActiveService successor=active[active.Count-1];
+                    deferredCurrentToken=successor.Token;
+                    deferredCurrentParentToken=successor.Parent;
+                    deferredCurrentKind=successor.Kind;
+                    deferredCurrentDepth=successor.Depth;
+                }
+            }
+
+            private bool HasDeferredConsumeHook(uint pc,byte expectedKind)
+            {
+                for(int i=0;i<deferredConsumeHooks.Count;i++)
+                    if(deferredConsumeHooks[i].Pc==pc
+                        &&deferredConsumeHooks[i].ExpectedActiveKind
+                            ==expectedKind)return true;
+                return false;
+            }
+
+            private bool DeferredCurrentMatchesTop()
+            {
+                if(active.Count==0)return false;
+                ActiveService owner=active[active.Count-1];
+                return owner.Token==deferredCurrentToken
+                    &&owner.Parent==deferredCurrentParentToken
+                    &&owner.Kind==deferredCurrentKind
+                    &&owner.Depth==deferredCurrentDepth;
             }
 
             private void SnapshotDirectParentAndPromote(

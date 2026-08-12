@@ -510,6 +510,17 @@ namespace OpenGGF.BizHawk.Headless
                 throw Invalid("deferred begin blocker kind differs");
             byte[] deferredConsumeObservationKinds=ExactKindList(binding,
                 "deferred_consume_observation_kinds",2,3,4);
+            var deferredConsumeKinds=new List<byte>{deferredBeginBlockerKind};
+            for(int i=0;i<hookList.Count;i++)
+            {
+                GpgxAudioObserverAdapter.ServiceHook hook=hookList[i];
+                if(hook.Action!=4
+                    ||hook.ExpectedActiveKind!=deferredBeginBlockerKind
+                    ||Array.IndexOf(deferredConsumeObservationKinds,
+                        hook.ServiceKindId)<0
+                    ||deferredConsumeKinds.Contains(hook.ServiceKindId))continue;
+                deferredConsumeKinds.Add(hook.ServiceKindId);
+            }
 
             var managedHooks = new List<ManagedHook>(managed.Values);
             managedHooks.Sort((left, right) => left.Pc.CompareTo(right.Pc));
@@ -546,9 +557,10 @@ namespace OpenGGF.BizHawk.Headless
                         AddManagedNativeHook(hookList,publicHooks,managedByToken,
                             hookTokens,managedHook,ref nextToken,7,0,
                             expected,0,0,0);
-                    AddManagedNativeHook(hookList,publicHooks,managedByToken,
-                        hookTokens,managedHook,ref nextToken,12,serviceKind,
-                        deferredBeginBlockerKind,0,0,0);
+                    foreach(byte expected in deferredConsumeKinds)
+                        AddManagedNativeHook(hookList,publicHooks,managedByToken,
+                            hookTokens,managedHook,ref nextToken,12,serviceKind,
+                            expected,0,0,0);
                 }
                 else if (managedHook.Action == "SERVICE_CLOSE")
                 {
@@ -733,6 +745,8 @@ namespace OpenGGF.BizHawk.Headless
             {
                 internal ushort BlockerToken,BlockerParentToken,HookToken;
                 internal byte BlockerKind,BlockerDepth,TargetKind,SourceCpu;
+                internal ushort CurrentOwnerToken,CurrentOwnerParentToken;
+                internal byte CurrentOwnerKind,CurrentOwnerDepth;
                 internal uint Pc,Stack,ReturnPc;
                 internal int CorrelatedObservationCount;
                 internal readonly List<PendingManagedOccurrence> Observations=
@@ -854,7 +868,7 @@ namespace OpenGGF.BizHawk.Headless
                     throw new InvalidOperationException(
                         "Native/managed service boundary token set differs.");
                 DeferredManagedBegin carriedDeferred=ValidateBoundaryDeferredBegin(
-                    frontier.PendingDeferredBegin);
+                    frontier.PendingDeferredBegin,frontier.ActiveServices);
                 frontier=observer.CaptureBoundaryFrontierAndResetPublication();
                 pendingDeferredBegin=carriedDeferred;
                 managedServices.Restore(boundaryManagedServices);
@@ -1033,6 +1047,7 @@ namespace OpenGGF.BizHawk.Headless
                         {
                             WriteNative(events[i]);
                             ApplyNativeLifecycle(events[i]);
+                            ApplyDeferredOwnerTransfer(events,i,publish);
                             if (publish) CorrelateManaged(events[i]);
                             else CorrelateBoundaryManaged(events[i]);
                         }
@@ -1247,7 +1262,8 @@ namespace OpenGGF.BizHawk.Headless
             }
 
             private DeferredManagedBegin ValidateBoundaryDeferredBegin(
-                CompleteRunAudioObserver.DeferredBeginEvidence native)
+                CompleteRunAudioObserver.DeferredBeginEvidence native,
+                IReadOnlyList<CompleteRunAudioObserver.DriverService> active)
             {
                 if(native==null)
                 {
@@ -1265,6 +1281,14 @@ namespace OpenGGF.BizHawk.Headless
                         !=boundaryDeferredBegin.BlockerParentToken
                     ||native.BlockerKind!=boundaryDeferredBegin.BlockerKind
                     ||native.BlockerDepth!=boundaryDeferredBegin.BlockerDepth
+                    ||native.CurrentOwnerToken
+                        !=boundaryDeferredBegin.CurrentOwnerToken
+                    ||native.CurrentOwnerParentToken
+                        !=boundaryDeferredBegin.CurrentOwnerParentToken
+                    ||native.CurrentOwnerKind
+                        !=boundaryDeferredBegin.CurrentOwnerKind
+                    ||native.CurrentOwnerDepth
+                        !=boundaryDeferredBegin.CurrentOwnerDepth
                     ||native.TargetKind!=boundaryDeferredBegin.TargetKind
                     ||native.HookToken!=boundaryDeferredBegin.HookToken
                     ||native.SourceCpu!=boundaryDeferredBegin.SourceCpu
@@ -1273,7 +1297,41 @@ namespace OpenGGF.BizHawk.Headless
                         !=boundaryDeferredBegin.CorrelatedObservationCount)
                     throw new InvalidOperationException(
                         "Native/managed deferred boundary identity differs.");
+                ValidateBoundaryCurrentOwner(native,active);
                 return CloneDeferred(boundaryDeferredBegin);
+            }
+
+            private void ValidateBoundaryCurrentOwner(
+                CompleteRunAudioObserver.DeferredBeginEvidence native,
+                IReadOnlyList<CompleteRunAudioObserver.DriverService> active)
+            {
+                if(active.Count==0)throw new InvalidOperationException(
+                    "Native deferred boundary reservation has no current owner.");
+                CompleteRunAudioObserver.DriverService current=
+                    active[active.Count-1];
+                if(current.Token!=native.CurrentOwnerToken
+                    ||current.CurrentParentToken!=native.CurrentOwnerParentToken
+                    ||current.Kind!=native.CurrentOwnerKind
+                    ||current.CurrentDepth!=native.CurrentOwnerDepth)
+                    throw new InvalidOperationException(
+                        "Native deferred boundary current owner differs.");
+                bool origin=current.Token==native.BlockerToken
+                    &&current.CurrentParentToken==native.BlockerParentToken
+                    &&current.Kind==native.BlockerKind
+                    &&current.CurrentDepth==native.BlockerDepth;
+                if(origin)return;
+                if(current.Token==native.BlockerToken
+                    ||current.CurrentParentToken!=native.BlockerParentToken
+                    ||current.CurrentDepth!=native.BlockerDepth)
+                    throw new InvalidOperationException(
+                        "Native deferred boundary carried owner is not legal.");
+                GpgxAudioObserverAdapter.ServiceHook hook=
+                    FindNativeServiceHook(current.BeginHookToken);
+                if(hook.Action!=4||hook.ExpectedActiveKind!=native.BlockerKind
+                    ||hook.ServiceKindId!=current.Kind||hook.Pc!=current.BeginPc
+                    ||hook.Cpu!=current.BeginSourceCpu)
+                    throw new InvalidOperationException(
+                        "Native deferred boundary carried owner route differs.");
             }
 
             private void CorrelateBoundaryManaged(GpgxAudioTraceEvent value)
@@ -1354,6 +1412,10 @@ namespace OpenGGF.BizHawk.Headless
                                 BlockerParentToken=value.ParentToken,
                                 BlockerKind=value.ServiceKindId,
                                 BlockerDepth=value.Depth,
+                                CurrentOwnerToken=value.ServiceToken,
+                                CurrentOwnerParentToken=value.ParentToken,
+                                CurrentOwnerKind=value.ServiceKindId,
+                                CurrentOwnerDepth=value.Depth,
                                 TargetKind=4,
                                 HookToken=value.Subject,
                                 SourceCpu=value.SourceCpu,
@@ -1422,9 +1484,9 @@ namespace OpenGGF.BizHawk.Headless
                     ||boundaryDeferredBegin==null
                     ||occurrence.Stack!=boundaryDeferredBegin.Stack
                     ||occurrence.ReturnPc!=boundaryDeferredBegin.ReturnPc
-                    ||value.ParentToken!=boundaryDeferredBegin.BlockerToken
+                    ||value.ParentToken!=boundaryDeferredBegin.CurrentOwnerToken
                     ||value.ServiceKindId!=boundaryDeferredBegin.TargetKind
-                    ||value.Depth!=boundaryDeferredBegin.BlockerDepth+1
+                    ||value.Depth!=boundaryDeferredBegin.CurrentOwnerDepth+1
                     ||value.SourceCpu!=boundaryDeferredBegin.SourceCpu)
                     throw new InvalidOperationException(
                         "Deferred S1 boundary consume identity or nested begin differs.");
@@ -1432,6 +1494,59 @@ namespace OpenGGF.BizHawk.Headless
                     occurrence.Stack);
                 boundaryDeferredBegin=null;
                 pendingBoundaryManaged.Dequeue();
+            }
+
+            private void ApplyDeferredOwnerTransfer(
+                GpgxAudioTraceEvent[] events,int index,bool publish)
+            {
+                DeferredManagedBegin deferred=publish
+                    ?pendingDeferredBegin:boundaryDeferredBegin;
+                if(deferred==null||index==0)return;
+                ref GpgxAudioTraceEvent begin=ref events[index];
+                byte action;
+                if(begin.Kind!=1
+                    ||!manifest.NativeActionByToken.TryGetValue(begin.Subject,
+                        out action)||action!=4)return;
+                ref GpgxAudioTraceEvent end=ref events[index-1];
+                GpgxAudioObserverAdapter.ServiceHook hook=
+                    FindNativeServiceHook(begin.Subject);
+                bool currentIsOrigin=deferred.CurrentOwnerToken
+                        ==deferred.BlockerToken
+                    &&deferred.CurrentOwnerParentToken
+                        ==deferred.BlockerParentToken
+                    &&deferred.CurrentOwnerKind==deferred.BlockerKind
+                    &&deferred.CurrentOwnerDepth==deferred.BlockerDepth;
+                if(!currentIsOrigin||end.Kind!=2
+                    ||end.Ordinal+1!=begin.Ordinal
+                    ||end.Subject!=begin.Subject||end.Pc!=begin.Pc
+                    ||end.SourceCpu!=begin.SourceCpu
+                    ||end.ServiceToken!=deferred.CurrentOwnerToken
+                    ||end.ParentToken!=deferred.CurrentOwnerParentToken
+                    ||end.ServiceKindId!=deferred.CurrentOwnerKind
+                    ||end.Depth!=deferred.CurrentOwnerDepth
+                    ||begin.ServiceToken==end.ServiceToken
+                    ||begin.ParentToken!=end.ParentToken
+                    ||begin.Depth!=end.Depth
+                    ||hook.Action!=4
+                    ||hook.ExpectedActiveKind!=end.ServiceKindId
+                    ||hook.ServiceKindId!=begin.ServiceKindId
+                    ||hook.Pc!=begin.Pc||hook.Cpu!=begin.SourceCpu)
+                    throw new InvalidOperationException(
+                        "Deferred S1 tail successor proof differs.");
+                deferred.CurrentOwnerToken=begin.ServiceToken;
+                deferred.CurrentOwnerParentToken=begin.ParentToken;
+                deferred.CurrentOwnerKind=begin.ServiceKindId;
+                deferred.CurrentOwnerDepth=begin.Depth;
+            }
+
+            private GpgxAudioObserverAdapter.ServiceHook FindNativeServiceHook(
+                ushort token)
+            {
+                for(int i=0;i<manifest.NativeServiceHooks.Length;i++)
+                    if(manifest.NativeServiceHooks[i].HookToken==token)
+                        return manifest.NativeServiceHooks[i];
+                throw new InvalidOperationException(
+                    "Native S1 lifecycle event has no configured hook identity.");
             }
 
             private void CorrelateManaged(GpgxAudioTraceEvent value)
@@ -1522,9 +1637,9 @@ namespace OpenGGF.BizHawk.Headless
                         ||value.Kind!=1||pendingDeferredBegin==null
                         ||occurrence.Stack!=pendingDeferredBegin.Stack
                         ||occurrence.ReturnPc!=pendingDeferredBegin.ReturnPc
-                        ||value.ParentToken!=pendingDeferredBegin.BlockerToken
+                        ||value.ParentToken!=pendingDeferredBegin.CurrentOwnerToken
                         ||value.ServiceKindId!=pendingDeferredBegin.TargetKind
-                        ||value.Depth!=pendingDeferredBegin.BlockerDepth+1
+                        ||value.Depth!=pendingDeferredBegin.CurrentOwnerDepth+1
                         ||value.SourceCpu!=pendingDeferredBegin.SourceCpu)
                         throw new InvalidOperationException(
                             "Deferred S1 consume identity or nested begin differs.");
@@ -1550,6 +1665,10 @@ namespace OpenGGF.BizHawk.Headless
                             pendingDeferredBegin=new DeferredManagedBegin
                             {BlockerToken=value.ServiceToken,BlockerParentToken=value.ParentToken,
                                 BlockerKind=value.ServiceKindId,BlockerDepth=value.Depth,
+                                CurrentOwnerToken=value.ServiceToken,
+                                CurrentOwnerParentToken=value.ParentToken,
+                                CurrentOwnerKind=value.ServiceKindId,
+                                CurrentOwnerDepth=value.Depth,
                                 TargetKind=4,HookToken=value.Subject,SourceCpu=value.SourceCpu,
                                 Pc=value.Pc,Stack=occurrence.Stack,ReturnPc=occurrence.ReturnPc};
                         }
@@ -1736,6 +1855,10 @@ namespace OpenGGF.BizHawk.Headless
                 {BlockerToken=source.BlockerToken,BlockerParentToken=source.BlockerParentToken,
                     HookToken=source.HookToken,BlockerKind=source.BlockerKind,
                     BlockerDepth=source.BlockerDepth,TargetKind=source.TargetKind,
+                    CurrentOwnerToken=source.CurrentOwnerToken,
+                    CurrentOwnerParentToken=source.CurrentOwnerParentToken,
+                    CurrentOwnerKind=source.CurrentOwnerKind,
+                    CurrentOwnerDepth=source.CurrentOwnerDepth,
                     SourceCpu=source.SourceCpu,Pc=source.Pc,Stack=source.Stack,
                     ReturnPc=source.ReturnPc,
                     CorrelatedObservationCount=source.CorrelatedObservationCount};
